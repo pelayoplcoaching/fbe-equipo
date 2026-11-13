@@ -1,9 +1,9 @@
-// Que la app sepa de su vida, en la base: la migración 067 en un Postgres local (PGlite). Su agenda de vida (eventos,
+// Que la app sepa de su vida, en la base: la migración 069 en un Postgres local (PGlite). Su agenda de vida (eventos,
 // semanas difíciles, guardias, hitos y el reto del coach) y su manual de instrucciones.
 //   node test/personal-vida.test.mjs
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
-console.log('La migración 067 (PGlite)');
+console.log('La migración 069 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const db = new PGlite();
@@ -66,6 +66,6 @@ await q('update atletas set estado = $2 where id = $1', [atletaL, 'baja']);
 await como(luis);
 check(await falla(`select agenda_guardar(null, '{"tipo": "guardia", "fecha": "${mas(1)}"}'::jsonb)`), 'de baja, no apunta nada');
 await su();
-check((await q('select count(*)::int as n from fbe_migraciones where numero = 67'))[0].n === 1, 'la 067 queda apuntada');
+check((await q('select count(*)::int as n from fbe_migraciones where numero = 69'))[0].n === 1, 'la 069 queda apuntada');
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

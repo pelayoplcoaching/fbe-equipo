@@ -1900,7 +1900,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     };
     const vecesElegido = (pid) => [...new Set(tabla('comunidad_votos_semana').filter((v) => v.para === pid && v.semana < lunesHoy()).map((v) => v.semana))].filter((w) => mejoresDe(w).some((x) => x.pid === pid)).length;
     const semanasAnimando = (pid) => { let l = lunesHoy(), n = 0; const hay = (w) => tabla('comunidad_animos').some((a) => a.de === pid && a.semana === w); if (!hay(l)) l = sumar(l, -7); while (hay(l) && n < 520) { n++; l = sumar(l, -7); } return n; };
-    // (068) compañero afín: quien busca (y sale en el ranking) ve a los demás que buscan, con su franja y sus días
+    // (070) compañero afín: quien busca (y sale en el ranking) ve a los demás que buscan, con su franja y sus días
     if (nombre === 'comunidad_busco_companero') {
       if (!soyMiembro()) throw new Error('Para buscar compañero tienes que estar en la comunidad');
       const m = miembroMio();
@@ -3719,7 +3719,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // sustituye entera); el coach lo lee sin nombres (un código por dispositivo) y lo puede borrar
       // (050) la personalización: lo de cada atleta, por sus funciones (nadie toca la tabla); los mensajes del coach
       const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, genero: x.genero ?? null, tono: x.tono ?? null, meta_nombre: x.meta_nombre ?? null, meta_fecha: x.meta_fecha ?? null, meta_cifra: x.meta_cifra ?? null, meta_unidad: x.meta_unidad ?? null, manual_feedback: x.manual_feedback ?? null, manual_motiva: x.manual_motiva ? [...x.manual_motiva] : null, manual_evitar: x.manual_evitar ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
-      // (067) su agenda de vida y su manual
+      // (069) su agenda de vida y su manual
       const agendaDe = (p) => { if (esCoach()) { if (!p || !tabla('atletas').some((x) => x.id === p)) throw new Error('Ese atleta no existe'); return p; } const a = miAtletaId(); if (!a) throw new Error('Solo el atleta o su coach'); return a; };
       const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
       if (nombre === 'agenda_lista') {

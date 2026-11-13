@@ -40,7 +40,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -129,11 +129,11 @@ const falta031 = (e) => {
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
 // (pulido 4, migración 049) ¿El error es que la base aún no tiene las funciones del rendimiento?
 // (050) sin la migración de la personalización, no hay nada de eso (y no se rompe nada)
-// (personalización 3) sin la 067: la agenda y el manual no están
-const falta067 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
+// (personalización 3) sin la 069: la agenda y el manual no están
+const falta069 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const avisarAgenda = () => { try { globalThis.dispatchEvent?.(new Event('fbe-agenda')); } catch { /* */ } };
-const AVISO_068 = 'Esto aún no está disponible: hay que poner al día la base (migración 068, supabase/migraciones/068_personal_voz.sql)';
-const AVISO_067 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 067, supabase/migraciones/067_personal_vida.sql)';
+const AVISO_070 = 'Esto aún no está disponible: hay que poner al día la base (migración 070, supabase/migraciones/070_personal_voz.sql)';
+const AVISO_069 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 069, supabase/migraciones/069_personal_vida.sql)';
 const falta050 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /personal_(mio|guardar|atletas|musica_abierta)|mensajes?_coach|musica_(coach|para)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -852,32 +852,32 @@ export function crearApi(backend) {
         return r || null;
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
-    // (personalización 2, migración 066) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
     // (personalización 3, tanda 9) las fechas en que le escribió el coach (los últimos 150 días), para «lo que le hace volver»
     async fechasMensajesCoach(atletaId) {
       const desde = sumarDias(hoyISO(), -150);
       const r = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${desde}T00:00:00` }, order: [['creado_en', 'desc']], limit: 300, cols: 'creado_en,eliminado_en' }).catch(() => []);
       return r.filter((c) => !c.eliminado_en).map((c) => String(c.creado_en).slice(0, 10));
     },
-    // (personalización 3, tanda 8; migración 068) la voz del coach en sus mensajes y el compañero afín
+    // (personalización 3, tanda 8; migración 070) la voz del coach en sus mensajes y el compañero afín
     async subirVozCoach(archivo, tipo = 'audio/webm') {
       const ext = /wav/.test(tipo) ? 'wav' : /ogg/.test(tipo) ? 'ogg' : /mp4|m4a/.test(tipo) ? 'm4a' : /mpeg|mp3/.test(tipo) ? 'mp3' : /aac/.test(tipo) ? 'aac' : 'webm';
       const ruta = `voz/${crypto.randomUUID()}.${ext}`;
       await b.storage.subir(ruta, archivo, tipo.split(';')[0], { bucket: 'coach-voz' }).catch((e) => {
-        if (/bucket|not found|no existe/i.test(`${e?.message || ''}`)) throw new Error(AVISO_068);
+        if (/bucket|not found|no existe/i.test(`${e?.message || ''}`)) throw new Error(AVISO_070);
         throw e;
       });
       return ruta;
     },
     async guardarAudioMensaje(momento, ruta, segundos) {
       try { await b.rpc('mensaje_coach_audio', { p_momento: momento, p_ruta: ruta, p_segundos: ruta ? Math.max(1, Math.min(120, Math.round(segundos || 1))) : null }); mensajesMemo = null; }
-      catch (e) { if (/mensaje_coach_audio|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_068); throw e; }
+      catch (e) { if (/mensaje_coach_audio|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_070); throw e; }
     },
-    async urlVozCoach(ruta) { return ruta ? b.storage.url(ruta, 3600, 'coach-voz') : null; },
+    // (v0.157) urlVozMensaje: urlVozCoach ya es la de las frases del coach (068, «voces-coach»)
+    async urlVozMensaje(ruta) { return ruta ? b.storage.url(ruta, 3600, 'coach-voz') : null; },
     async afinesComunidad() { try { return (await b.rpc('comunidad_afines', {})) ?? null; } catch { return null; } },
     async buscoCompanero(si) {
       try { return await b.rpc('comunidad_busco_companero', { p_si: !!si }); }
-      catch (e) { if (/comunidad_busco_companero|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_068); throw e; }
+      catch (e) { if (/comunidad_busco_companero|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_070); throw e; }
     },
     // (personalización 3, tanda 7) sus molestias del check-in (las últimas 100 semanas-zona), para su informe
     async molestiasAtleta(atletaId) {
@@ -892,18 +892,18 @@ export function crearApi(backend) {
       const ej = porId(await b.select('ejercicios', { in: { id: unicos(altas.map((x) => x.ejercicio_id)) }, cols: 'id,nombre' }));
       return altas.map((x) => ({ sesion_id: x.sesion_id, nombre: ej[x.ejercicio_id]?.nombre || 'Ejercicio' }));
     },
-    // (personalización 3; migración 067) su agenda de vida y su manual de instrucciones
+    // (personalización 3; migración 069) su agenda de vida y su manual de instrucciones
     async agenda(atletaId = null, { desde = null, hasta = null } = {}) {
-      try { return (await b.rpc('agenda_lista', { p_atleta: atletaId, p_desde: desde, p_hasta: hasta })) || []; } catch (e) { if (falta067(e)) return null; throw e; }
+      try { return (await b.rpc('agenda_lista', { p_atleta: atletaId, p_desde: desde, p_hasta: hasta })) || []; } catch (e) { if (falta069(e)) return null; throw e; }
     },
     async guardarAgenda(atletaId, datos) {
-      try { const r = await b.rpc('agenda_guardar', { p_atleta: atletaId, p_datos: datos }); avisarAgenda(); return r; } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+      try { const r = await b.rpc('agenda_guardar', { p_atleta: atletaId, p_datos: datos }); avisarAgenda(); return r; } catch (e) { if (falta069(e)) throw new Error(AVISO_069); throw e; }
     },
     async borrarAgenda(id) {
-      try { await b.rpc('agenda_borrar', { p_id: id }); avisarAgenda(); } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+      try { await b.rpc('agenda_borrar', { p_id: id }); avisarAgenda(); } catch (e) { if (falta069(e)) throw new Error(AVISO_069); throw e; }
     },
     async responderAgenda(id, respuesta, nota = null) {
-      try { const r = await b.rpc('agenda_responder', { p_id: id, p_respuesta: respuesta, p_nota: nota }); avisarAgenda(); return r; } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+      try { const r = await b.rpc('agenda_responder', { p_id: id, p_respuesta: respuesta, p_nota: nota }); avisarAgenda(); return r; } catch (e) { if (falta069(e)) throw new Error(AVISO_069); throw e; }
     },
     async guardarManual(datos) {
       try {
@@ -911,8 +911,9 @@ export function crearApi(backend) {
         personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
         try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
         return r;
-      } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+      } catch (e) { if (falta069(e)) throw new Error(AVISO_069); throw e; }
     },
+    // (personalización 2, migración 066) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
     async guardarTrato(datos) {
       const permitidas = ['genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_cifra', 'meta_unidad'];
       const limpio = Object.fromEntries(Object.entries(datos || {}).filter(([k]) => permitidas.includes(k)).map(([k, v]) => [k, v === '' || v === undefined ? null : v]));
@@ -1384,7 +1385,9 @@ export function crearApi(backend) {
       // (v0.154) los apuntes con los demás (064 y 065): con la 063 pero sin la 065, la 2026-12.28
       if ((await api.apuntes065().catch(() => null)) !== true) return VERSION_LEGAL_SIN_065;
       // (v0.155) cómo le hablamos y su meta (066): con la 065 pero sin la 066, la 2026-12.29
-      return (await api.personal066().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_066;
+      if ((await api.personal066().catch(() => null)) !== true) return VERSION_LEGAL_SIN_066;
+      // (v0.157) la agenda, el manual, la voz del coach y «Busco compañero» (069 y 070): con la 066 pero sin la 070, la 2026-12.30
+      return (await api.personal070().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_070;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2716,7 +2719,7 @@ export function crearApi(backend) {
         // (v0.73) y las fotos de los momentos que caducan (bucket «comunidad», 045)
         // (v0.73, 045) la cola va por bucket y ruta: se quita de la de cada bucket (sin la 045, todas las de esas rutas)
         // (065, revisión) y los audios de los apuntes del coach (bucket «apuntes»)
-        for (const cubo of ['archivos', 'voz', 'comunidad', 'apuntes']) {
+        for (const cubo of ['archivos', 'voz', 'comunidad', 'apuntes', 'coach-voz']) {
           const rs = items.filter((x) => x.bucket === cubo).map((x) => x.ruta);
           if (!rs.length) continue;
           await b.storage.borrar(rs, cubo);
@@ -2730,7 +2733,7 @@ export function crearApi(backend) {
       if (!(await api.esCoachAhora())) return 0;
       let rutas;
       // (v0.56) con su bucket (la 034); sin ella, todo es de «archivos»
-      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad', 'apuntes'].includes(x.bucket) ? x.bucket : 'archivos' })); }
+      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad', 'apuntes', 'coach-voz'].includes(x.bucket) ? x.bucket : 'archivos' })); }
       catch {
         try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
         rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean).map((ruta) => ({ ruta, bucket: 'archivos' }));
@@ -4361,6 +4364,18 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v060 === pr) api._v060 = null; });
       }
       return api._v060;
+    },
+    // (v0.157) ¿Está la 070? Sonda de consulta: comunidad_afines() (sin la 070, la función no existe; fuera de la comunidad, null)
+    async personal070() {
+      if (!api._v070) {
+        const pr = b.rpc('comunidad_afines', {}).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          return /PGRST202|42883|could not find|schema cache|does not exist/i.test(m) ? false : null;
+        });
+        api._v070 = pr;
+        pr.then((x) => { if (x == null && api._v070 === pr) api._v070 = null; });
+      }
+      return api._v070;
     },
     // (v0.155) ¿Está la 066? Sonda sin escribir nada: personal_ajustes_guardar con datos vacíos (con la 066, avisa de que
     // faltan los datos, o de que solo el atleta guarda lo suyo; sin ella, la función no existe)

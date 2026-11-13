@@ -1,9 +1,9 @@
-// Que le acompañe más allá de la app, en la base: la migración 068 en un Postgres local (PGlite). La voz del coach en
+// Que le acompañe más allá de la app, en la base: la migración 070 en un Postgres local (PGlite). La voz del coach en
 // sus mensajes, el momento de bienvenida y el compañero afín.
 //   node test/personal-voz.test.mjs
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
-console.log('La migración 068 (PGlite)');
+console.log('La migración 070 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const { MOMENTO_VALIDO } = await import('../web/src/logica/personal.js');
@@ -66,6 +66,6 @@ check((await q('select comunidad_afines() as r'))[0].r === null && await falla('
 await como(gente.ana.u); await q('select comunidad_busco_companero(false)');
 check((await q('select comunidad_afines() as r'))[0].r.afines.length === 0, 'al dejar de buscar, deja de ver');
 await su();
-check((await q('select count(*)::int as n from fbe_migraciones where numero = 68'))[0].n === 1, 'la 068 queda apuntada');
+check((await q('select count(*)::int as n from fbe_migraciones where numero = 70'))[0].n === 1, 'la 070 queda apuntada');
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

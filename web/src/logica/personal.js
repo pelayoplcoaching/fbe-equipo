@@ -101,7 +101,7 @@ export const MOMENTOS_COACH = [
   // (personalización 2, tanda 4; migración 067)
   ['primera_vez', 'La primera vez que hace un ejercicio', 'Primera vez con {ejercicio}, {nombre}: sin prisa, la técnica primero. Luego me cuentas.'],
   ['viaje', 'Al volver al gimnasio tras un viaje', 'De vuelta en casa, {nombre}. Hoy, a coger el ritmo sin pasarte.'],
-  // (personalización 3; migración 068)
+  // (personalización 3; migración 070)
   ['bienvenida', 'En su primer mes (en Hoy)', 'Bienvenido al equipo, {nombre}. Este primer mes vamos paso a paso: cualquier duda, aquí me tienes.'],
 ];
 // (personalización 2, tanda 3; migración 067) los avisos del coach por zona, para quien dijo que le molesta

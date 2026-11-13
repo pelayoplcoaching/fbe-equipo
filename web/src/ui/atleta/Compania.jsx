@@ -16,7 +16,7 @@ export function VozCoach({ ruta, segundos }) {
   if (!ruta) return null;
   const oir = async () => {
     try {
-      if (!url) { const u = await api.urlVozCoach(ruta); setUrl(u); setTimeout(() => ref.current?.play().catch(() => {}), 50); return; }
+      if (!url) { const u = await api.urlVozMensaje(ruta); setUrl(u); setTimeout(() => ref.current?.play().catch(() => {}), 50); return; }
       ref.current?.play().catch(() => {});
     } catch { setError(true); }
   };

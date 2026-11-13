@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.157': {
+    atleta: [
+      'Tu sesión, a tu medida: «¿Cuánto tiempo tienes hoy?», tu calentamiento y tu yo de hace un año. Siempre como consejo.',
+      'La app sabe de tu vida: tu agenda, semanas difíciles y guardias, y cómo te gusta que te entrenen.',
+      'Y más: tu reto del mes, «Busco compañero», tu álbum de hitos y un informe para tu médico o fisio.',
+    ],
+    coach: [
+      '«Para hablarle»: su vida, lo que le hace volver y su alerta temprana; tu voz en los mensajes. Migraciones 069 y 070.',
+    ],
+  },
   '0.156': {
     atleta: [
       'La app suena a FBE: series que suben de nota, fanfarria de récord, aviso a mitad del descanso y cuenta atrás que sube.',

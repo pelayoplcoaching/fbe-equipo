@@ -1,6 +1,6 @@
 // (personalización 3, tanda 6) Que la app sepa de su vida, siempre como consejo (la programación del coach no se toca):
 // lo que viene en su vida (y preguntarle después qué tal), las semanas difíciles, sus guardias y el seguimiento del
-// check-in. La agenda va a la base (migración 067): la ven él y su coach.
+// check-in. La agenda va a la base (migración 069): la ven él y su coach.
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono } from '../comunes.jsx';
 import { useTrato } from '../trato.js';

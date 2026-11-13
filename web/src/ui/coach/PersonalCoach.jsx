@@ -231,7 +231,7 @@ function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado 
         <button class="btn btn-primario btn-grande" disabled={guardando}><Icono n="hecho" /> Guardar</button>
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar el mensaje</button>}
       </form>
-      {/* (personalización 3, tanda 8; 068) su voz: con el mensaje ya guardado, un audio suyo que sale con él */}
+      {/* (personalización 3, tanda 8; 070) su voz: con el mensaje ya guardado, un audio suyo que sale con él */}
       {actual && !prefijo && <VozMensaje momento={momento} audio={audio} alCambiar={alAudio} />}
     </Hoja>
   );
