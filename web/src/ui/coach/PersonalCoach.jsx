@@ -6,6 +6,7 @@
 //     (v0.129: con el nombre y la portada de cada lista, y su ficha al pegar el enlace)
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
+import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../logica/conocerte.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
 import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
@@ -99,12 +100,49 @@ export function MensajesAutomaticos() {
   );
 }
 
-function HojaMensaje({ momento, actual, alCerrar, alGuardar }) {
+// (personalización 2, tanda 3; migración 066) El aviso de cada zona: al atleta que dijo en el cuestionario que le molesta
+// (y con su consentimiento de salud), en los ejercicios que la cargan. Hasta que lo escribas o apruebes, no sale nada.
+export function AvisosZona() {
+  const { api } = useApp();
+  const lista = useCarga(() => api.mensajesCoach().catch(() => null), []);
+  const [editar, setEditar] = useState(null);
+  if (lista.datos === null && !lista.cargando) return null;
+  return (
+    <section class="seccion avisos-zona">
+      <h2>Avisos por zona</h2>
+      <div class="panel">
+        <ul class="lista">
+          {ZONAS_AVISO.map((z) => {
+            const t = mensajeDe(lista.datos, momentoZona(z));
+            return (
+              <li key={z}>
+                <button class="fila-ios fila-boton" data-zona={z} onClick={() => setEditar(z)} aria-label={`${NOMBRE_ZONA_TU[z]}: ${t ? 'cambiar el aviso' : 'escribir el aviso'}`}>
+                  <span class="fila-ios-texto">
+                    <span class="fila-ios-titulo">{NOMBRE_ZONA_TU[z].replace(/^Tu /, '').replace(/^./, (c) => c.toLocaleUpperCase('es'))}</span>
+                    <span class="peq terciario">{t || 'Sin aviso: no sale nada'}</span>
+                  </span>
+                  <Icono n="editar" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <p class="mini terciario">Sale en la sesión, en los ejercicios que cargan esa zona, solo a quien dijo en el cuestionario que le molesta y ha dado el consentimiento de datos de salud. Es consejo: no cambia tu pauta.</p>
+      {editar && <HojaMensaje momento={momentoZona(editar)} titulo={`Aviso: ${NOMBRE_ZONA_TU[editar].replace(/^Tu /, '').toLocaleLowerCase('es')}`} ejemplo={EJEMPLO_ZONA[editar]}
+        prefijo={`${NOMBRE_ZONA_TU[editar]}: `} actual={mensajeDe(lista.datos, momentoZona(editar)) || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
+    </section>
+  );
+}
+
+function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado = null, ejemplo: ejemploDado = null, prefijo = '' }) {
   const { api, aviso } = useApp();
-  const [, titulo, ejemplo] = MOMENTOS_COACH.find(([k]) => k === momento);
+  const [, tituloM, ejemploM] = MOMENTOS_COACH.find(([k]) => k === momento) || [];
+  const titulo = tituloDado || tituloM, ejemplo = ejemploDado || ejemploM;
   const [t, setT] = useState(actual);
   const [guardando, setGuardando] = useState(false);
-  const muestra = textoMensajeCoach(t || '', { nombre: 'Ana', ejercicio: 'press banca', semanas: 8 });
+  // (los avisos por zona van tal cual, detrás de «Tu hombro: »)
+  const muestra = prefijo ? (t.trim() || null) : textoMensajeCoach(t || '', { nombre: 'Ana', ejercicio: 'press banca', semanas: 8 });
   const guardar = async (texto) => {
     setGuardando(true);
     try { await api.guardarMensajeCoach(momento, texto); aviso(texto.trim() ? 'Mensaje guardado' : 'Mensaje quitado'); alGuardar(); } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
@@ -118,7 +156,7 @@ function HojaMensaje({ momento, actual, alCerrar, alGuardar }) {
           <span class="ayuda num">{t.trim().length} / {LIMITES.mensaje}</span>
         </div>
         {!t.trim() && <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => setT(ejemplo)}>Usar el de ejemplo</button>}
-        {muestra && <figure class="cita-coach mensaje-coach muestra"><div><blockquote>{muestra}</blockquote><figcaption>Así lo verá Ana</figcaption></div></figure>}
+        {muestra && <figure class="cita-coach mensaje-coach muestra"><div><blockquote>{prefijo}{muestra}</blockquote><figcaption>Así lo verá Ana</figcaption></div></figure>}
         <button class="btn btn-primario btn-grande" disabled={guardando}><Icono n="hecho" /> Guardar</button>
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar el mensaje</button>}
       </form>

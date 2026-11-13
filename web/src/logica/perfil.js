@@ -129,7 +129,7 @@ export function horaMadrid(ts) {
   return Number(new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', hourCycle: 'h23' }).format(d));
 }
 export const FRANJAS = [['manana', 'Por la mañana', 5, 12], ['mediodia', 'A mediodía', 12, 16], ['tarde', 'Por la tarde', 16, 21], ['noche', 'Por la noche', 21, 29]];
-const franjaDe = (h) => (h == null ? null : (FRANJAS.find(([, , a, b]) => (h < 5 ? h + 24 : h) >= a && (h < 5 ? h + 24 : h) < b) || [null])[0]);
+export const franjaDe = (h) => (h == null ? null : (FRANJAS.find(([, , a, b]) => (h < 5 ? h + 24 : h) >= a && (h < 5 ? h + 24 : h) < b) || [null])[0]);
 export const DIAS_CORTOS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 export const DIAS_LARGOS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos'];
 // Tus costumbres: en qué días de la semana y a qué hora sueles entrenar, y cuánto te duran las sesiones
