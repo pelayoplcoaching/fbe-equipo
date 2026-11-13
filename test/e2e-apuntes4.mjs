@@ -70,6 +70,8 @@ export async function probarApuntes4({ navegador, check, base = 'http://localhos
     // --- Mandárselo a un atleta ---
     await fila.click();
     await form.waitFor();
+    // (el nombre del ejercicio sale cuando llega la biblioteca: se espera a que llegue)
+    for (let i = 0; i < 50 && (await form.getByLabel(/Ejercicio/).inputValue()) !== ejercicio.nombre; i++) await p.waitForTimeout(100);
     check(await form.getByLabel(/Ejercicio/).inputValue() === ejercicio.nombre && await tipos.nth(1).getAttribute('aria-pressed') === 'true', 'al abrirlo, su tipo y su ejercicio');
     const antes = (await tabla('comentarios')).length;
     await form.getByRole('button', { name: /Mandar a un atleta/ }).click();
