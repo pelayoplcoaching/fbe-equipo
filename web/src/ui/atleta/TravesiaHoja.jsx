@@ -75,7 +75,8 @@ export function HojaTravesia({ alCerrar }) {
           <div class="tv-ruta" role="img" aria-label={`${km(pos.km * 1000)} de ${pos.largo} kilómetros`}>
             <span class="tv-ruta-hecho" style={{ width: `${pos.pct * 100}%` }} />
             {pos.ruta.hitos.map(([nombre, k], i) => <span key={nombre} class={`tv-hito${i < pos.pasados ? ' pasado' : ''}`} style={{ left: `${(k / pos.largo) * 100}%` }} />)}
-            <span class="tv-ruta-lobo" style={{ left: `${pos.pct * 100}%` }} />
+            {/* (belleza) el lobo camina hasta su punto: va en un carril del ancho de la ruta, que es lo que se mueve */}
+            <span class="tv-ruta-carril" style={{ '--tv-p': `${pos.pct * 100}%` }}><span class="tv-ruta-lobo" /></span>
           </div>
           <div class="tv-ruta-extremos"><span>{pos.ruta.hitos[0][0]}</span><span>{pos.ruta.hitos[pos.ruta.hitos.length - 1][0]} · {pos.largo} km</span></div>
           <p class="mini terciario">En total, {textoDistancia(t.total)}{t.estrellas > 0 ? ` y ${t.estrellas} ${t.estrellas === 1 ? 'estrella' : 'estrellas'}` : ''}. Solo avanza en los descansos de tus entrenos.</p>

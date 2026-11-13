@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.151': {
+    atleta: [
+      'La tarjeta del juego, con el cielo de la hora y tu lobo; y en el juego, un ciervo, un búho y un marco en los diez últimos segundos.',
+    ],
+    coach: [
+      'Lo nuevo de la rama travesia-bella que no estaba en la v0.150; sin migración.',
+    ],
+  },
   '0.150': {
     atleta: [
       'La travesía, más bonita: cielo con Vía Láctea y estrellas fugaces, ríos que reflejan la luna y un lobo que aúlla al acabar.',
