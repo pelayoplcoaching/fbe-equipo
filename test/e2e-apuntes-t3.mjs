@@ -84,6 +84,7 @@ export async function probarApuntesCamino({ navegador, check, base = 'http://loc
     await enSemana.getByRole('button', { name: 'Tu progreso' }).click();
     const prog = p.locator('.hoja-progreso-apuntes');
     await prog.waitFor();
+    await prog.locator('.anillo-meta').first().waitFor({ timeout: 6000 }).catch(() => {});   // (CI, más lento)
     check(await prog.locator('.anillo-meta').count() >= 1 && await prog.getByRole('button', { name: '3 al día' }).getAttribute('aria-pressed') === 'true', '«Tu progreso»: el anillo del día y el objetivo (3 al día, de entrada)');
     await prog.getByRole('button', { name: '1 al día' }).click();
     check((await estado()).meta === 1, 'se cambia el objetivo (1, 3 o 5)');
@@ -132,6 +133,7 @@ export async function probarApuntesCamino({ navegador, check, base = 'http://loc
     await enSemana.waitFor({ timeout: 8000 });
     await enSemana.getByRole('button', { name: 'Tu progreso' }).click();
     await prog.waitFor();
+    await prog.getByRole('button', { name: 'Hacer el examen final' }).waitFor({ timeout: 6000 }).catch(() => {});   // (CI, más lento)
     check(await prog.getByRole('button', { name: 'Hacer el examen final' }).count() === 1 && /80 %/.test(await prog.locator('.prog-ruta').textContent()), 'con todos los módulos, «Hacer el examen final» (con el 80 %, el certificado)');
     await prog.getByRole('button', { name: 'Hacer el examen final' }).click();
     await tarjeta.waitFor();
