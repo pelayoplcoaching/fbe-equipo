@@ -17,6 +17,7 @@ import './panel-hoy.css';
 import './tiempo.css';
 import './viaje.css';
 import './travesia.css';
+import './sonido.css';
 import './apuntes.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
@@ -66,6 +67,8 @@ async function arrancar() {
   // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
   api.usarCola(() => cola.operaciones());
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
+  // (sonido, tanda 2) el audio de la app, listo con el primer toque (sin sonar nada)
+  import('./ui/sonido.js').then((m) => m.prepararAlTocar()).catch(() => {});
 
   // (v0.65) en localhost solo si se pide (localStorage «fbe-sw-local» = 1): para probar «abrir sin cobertura» con la app empaquetada
   const swLocal = location.hostname === 'localhost' && (() => { try { return localStorage.getItem('fbe-sw-local') === '1'; } catch { return false; } })();

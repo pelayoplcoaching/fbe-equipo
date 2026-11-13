@@ -4,6 +4,7 @@
 // Apagada de entrada (su botón, en el juego); respeta el ajuste general de sonido y va por el mismo canal que el resto.
 import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
 import { leerAjustes } from '../ajustes.js';
+import { volumenDe } from '../../logica/sonido.js';
 
 const PULSO = 60 / 96 / 2;   // una corchea, en s
 // Los acordes (en semitonos sobre La 220 Hz) y la escala de la que salen las notas
@@ -16,7 +17,7 @@ export function crearMusica() {
   const ac = contextoAudio();
   if (!ac || !leerAjustes().sonido) return null;
   const salida = ac.createGain(); salida.gain.value = 0.0001; salida.connect(ac.destination);
-  salida.gain.exponentialRampToValueAtTime(0.5 * Math.min(1, Math.max(0.1, Number(leerAjustes().volumen) || 1)), ac.currentTime + 1.2);
+  salida.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.5 * volumenDe(leerAjustes(), 'juego')), ac.currentTime + 1.2);   // (sonido, tanda 1) su apartado
   const capa = (v) => { const g = ac.createGain(); g.gain.value = v; g.connect(salida); return g; };
   const capas = { fondo: capa(1), bajo: capa(0), arpegio: capa(0), campanas: capa(0) };
   let estado = { serie: 0, combo: 1 }, paso = 0, siguiente = ac.currentTime + 0.1, vivo = true;

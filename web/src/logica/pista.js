@@ -52,17 +52,24 @@ export function clipsFinal({ sonido = 'tres-beeps', voz = false, voces = null, u
 
 // El plan: [clave | null (silencio), tramas][] con el aviso en la trama `cue`. clips y voces: clave → cuántas tramas mide.
 // Si una pieza no cabe donde tocaría (la anterior aún suena), va justo detrás. null si no hay pista (sin tiempo o demasiado).
-export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps', voz = false, ultima = false, clips = {}, voces = null } = {}) {
+// (sonido, tanda 1) total: lo que dura el descanso entero (s); avisoMitad y avisoDiez: los avisos de dentro del descanso, con sus
+// sonidos de la familia de FBE (si están); y la cuenta atrás que sube (c5 a c1), si están sus sonidos
+export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps', voz = false, ultima = false, clips = {}, voces = null, total: totalS = 0, avisoMitad = false, avisoDiez = false } = {}) {
   if (!(restanteMs > 0) || restanteMs > MAX_PISTA_MS) return null;
   const fin = numTramas(restanteMs);
   const frases = voz && conFrases(voces);
   const largo = (k) => (frases && voces[k] > 0 ? voces[k] : clips[k] || 0);
   const piezas = [];
   // La cuenta atrás (como en la página: a los 3, 2 y 1 segundos), solo la que cabe en lo que queda
-  if (frases || (cuentaAtras && clips.pitido > 0)) {
-    for (const s of [3, 2, 1]) {
+  // (sonido, tanda 1) los avisos de la mitad y de los diez segundos, como en la página (logica/sonido.js, avisoDescanso)
+  const mitad = Math.round(totalS / 2);
+  if (avisoMitad && clips.mitad > 0 && totalS >= 40 && mitad > 12) { const en = fin - numTramas(mitad * 1000); if (en >= 0) piezas.push(['mitad', en]); }
+  if (avisoDiez && !frases && clips.diez > 0 && totalS >= 30) { const en = fin - numTramas(10000); if (en >= 0) piezas.push(['diez', en]); }
+  const sube = !frases && clips.c3 > 0;
+  if (frases || (cuentaAtras && (clips.pitido > 0 || sube))) {
+    for (const s of sube && totalS >= 20 ? [5, 4, 3, 2, 1] : [3, 2, 1]) {
       const en = fin - numTramas(s * 1000);
-      if (en >= 0) piezas.push([frases ? ({ 3: 'tres', 2: 'dos', 1: 'uno' })[s] : 'pitido', en]);
+      if (en >= 0) piezas.push([frases ? ({ 3: 'tres', 2: 'dos', 1: 'uno' })[s] : sube ? `c${s}` : 'pitido', en]);
     }
   }
   const final = clipsFinal({ sonido, voz, voces, ultima, clips });

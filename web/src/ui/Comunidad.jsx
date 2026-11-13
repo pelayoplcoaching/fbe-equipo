@@ -22,6 +22,7 @@ import { sinMovimiento } from './transiciones.js';
 import { tenirBarra } from './barra-color.js';
 import { reducirFoto } from './FotoPerfil.jsx';
 import { RetoTravesia } from './coach/RetoTravesia.jsx';
+import { sonarFBE } from './sonido.js';
 import { Ilustracion } from './Ilustraciones.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
@@ -145,7 +146,7 @@ function DentroDelEquipo({ m, alCambiar }) {
     if (celebrar || !logros.datos) return;
     const ya = leerCelebrados(yo);
     const r = logros.datos.find((x) => !ya.includes(x.id));
-    if (r) setCelebrar({ reto: r, celebracion: true });
+    if (r) { setCelebrar({ reto: r, celebracion: true }); sonarFBE('reto'); }   // (sonido, tanda 2) con su sonido
   }, [logros.datos]);
   const cerrarCelebracion = (compartido) => {
     if (celebrar) marcarCelebrado(yo, celebrar.reto.id);
@@ -157,6 +158,14 @@ function DentroDelEquipo({ m, alCambiar }) {
   const bienvenidas = useCarga(() => (nuevo ? api.bienvenidasRecibidas().catch(() => []) : Promise.resolve([])), []);
   const n = racha.datos?.racha || 0;
   const recibidos = animos.datos?.recibidos || [];
+  // (sonido, tanda 2) un ánimo nuevo (que este móvil no ha oído aún) suena al verlo
+  useEffect(() => {
+    if (!recibidos.length) return;
+    const clave = `fbe-animos-oidos:${yo || ''}`, firma = recibidos.map((x) => `${x.nombre}${x.creado_en || ''}`).join('|');
+    let antes = ''; try { antes = localStorage.getItem(clave) || ''; } catch { /* */ }
+    if (firma !== antes && recibidos.length >= (antes ? antes.split('|').length : 0)) sonarFBE('animo');
+    try { localStorage.setItem(clave, firma); } catch { /* */ }
+  }, [recibidos.length]);
   const deBienvenida = bienvenidas.datos || [];
   return (
     <div class="contenido equipo">

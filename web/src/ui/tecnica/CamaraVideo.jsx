@@ -9,7 +9,8 @@
 // propone la cámara lenta del propio móvil y elegir el vídeo de la galería.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
-import { prepararAudio, tono, vibrarCorto } from '../atleta/sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from '../atleta/sesion-comun.jsx';
+import { sonarFBE } from '../sonido.js';   // (sonido, tanda 2) la cuenta y la grabación, con la familia de FBE
 import { encuadreDe, nivelDe, textoNivel, CUENTAS_ATRAS, PARAR_SOLA, MAX_GRABACION_SEG, formatoVideo, errorCamara } from '../../logica/tecnica.js';
 import { mmss } from '../../logica/notasVoz.js';
 import { elegirCamaraLenta, textoSinLenta } from '../../logica/angulos.js';
@@ -161,7 +162,7 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
     };
     try { rec.start(500); } catch (e) { soltarCamara(); setEstado('camara'); setError(errorCamara(e)); return; }
     const inicio = performance.now();
-    setSeg(0); setEstado('grabando'); tono(1320, 0.12, 0.25); vibrarCorto(40);
+    setSeg(0); setEstado('grabando'); sonarFBE('grabar-empieza'); vibrarCorto(40);
     r.current.tic = setInterval(() => {
       const s = (performance.now() - inicio) / 1000;
       setSeg(s);
@@ -174,17 +175,17 @@ function CamaraVideoPantalla({ ejercicio = null, titulo = 'Vídeo de técnica', 
     if (estado === 'contando') { pararTemporizadores(); setCuenta(null); setEstado('camara'); return; }
     prepararAudio();
     let n = espera;
-    setEstado('contando'); setCuenta(n); tono(880, 0.08);
+    setEstado('contando'); setCuenta(n); sonarFBE('grabar-cuenta');
     r.current.cuenta = setInterval(() => {
       n -= 1;
       if (n <= 0) { clearInterval(r.current.cuenta); r.current.cuenta = null; setCuenta(null); empezarGrabacion(); return; }
       setCuenta(n);
-      tono(n <= 3 ? 1100 : 880, n <= 3 ? 0.12 : 0.06, n <= 3 ? 0.25 : 0.15);
+      sonarFBE('grabar-cuenta');
     }, 1000);
   };
   function parar() {
     clearInterval(r.current.tic); r.current.tic = null;
-    tono(660, 0.1, 0.2);
+    sonarFBE('grabar-acaba');
     try { if (r.current.rec?.state === 'recording') r.current.rec.stop(); else soltarCamara(); } catch { soltarCamara(); }
   }
   function cerrar() {

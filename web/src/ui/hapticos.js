@@ -4,6 +4,7 @@
 // Pulido 6: también al cambiar un interruptor, marcar una casilla, sumar o restar con «+» y «−», elegir en un grupo de
 // opciones y cuando algo falla (se reparte desde pulido.js, sin tocar cada pantalla).
 import { leerAjustes } from './ajustes.js';
+import { sonarFBE } from './sonido.js';
 
 // toque (v0.55): el más suave, al deslizar una burbuja hasta responder y al mantener pulsado un mensaje
 // error (pulido 6): dos golpes secos, cuando algo no se ha podido hacer
@@ -58,7 +59,10 @@ function toqueIphone() {
   } catch { return false; }
 }
 
-export function vibrar(que) {
+// (sonido, tanda 1) y, con «Sonidos de la interfaz» puesto, un toque casi imperceptible al marcar algo como hecho (un
+// hábito, el check-in, una tarea, el peso): opts.sonido = false para no sonar (el juego tiene sus sonidos)
+export function vibrar(que, { sonido = true } = {}) {
+  if (sonido && (que === 'hecho' || que === 'checkin')) sonarFBE('ui');
   if (leerAjustes().hapticos === false) return false;
   if (puedeVibrar()) { try { return navigator.vibrate(PATRONES[que] ?? que); } catch { return false; } }
   if (puedeTocarIphone()) return toqueIphone();

@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.156': {
+    atleta: [
+      'La app suena a FBE: series que suben de nota, fanfarria de récord, aviso a mitad del descanso y cuenta atrás que sube.',
+      'Perfil → Sonido y vibración: «Solo lo justo», «Equilibrado» o «Todo», y el volumen de cada apartado.',
+      'Y si tu coach graba sus frases, suenan con su voz en tu sesión.',
+    ],
+    coach: [
+      'Cuenta → «Tus frases, con tu voz»: graba seis frases cortas y suenan con tu voz en la sesión de tus atletas. Migración 068.',
+    ],
+  },
   '0.155': {
     atleta: [
       'La app te habla a ti: tu nombre, cómo quieres que te hablemos, tu meta con cuenta atrás y por qué cada sesión es para ti.',

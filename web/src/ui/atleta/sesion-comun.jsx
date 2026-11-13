@@ -8,11 +8,14 @@ import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, prop
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
+import { contexto, sonarFBE } from '../sonido.js';
+import { avisoDescanso, fraseQueda, volumenDe } from '../../logica/sonido.js';
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { descansoEnCurso } from '../en-curso.js';
 import { lanzarConfeti } from '../confeti.js';
 import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '../pista-descanso.js';
-import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio } from '../../logica/pista.js';
+import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio, esUltima } from '../../logica/pista.js';
+import { sonarVozCoach, vocesListas } from '../voces-coach.js';
 import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
@@ -33,7 +36,8 @@ export const COLOR_DISCO = { alta: 'var(--disco-rojo)', media: 'var(--disco-azul
 // volumen en iPhone. La sesión de audio va en «ambient» (v0.27.5): se mezcla con la música del atleta en vez de
 // cortarla (con «playback», en v0.27.2–0.27.4, iPhone paraba Spotify al entrar a entrenar); a cambio, con el
 // móvil en silencio no suena. «Pitido suave» es el de antes.
-export const SONIDOS_DESCANSO = [['tres-beeps', 'Tres beeps'], ['estadio', 'Beep estadio'], ['boxeo', 'Campana de boxeo'], ['silbato', 'Silbato'], ['motivador', 'Tono motivador'], ['suave', 'Pitido suave']];
+// (sonido, tanda 1) y «FBE»: el motivo de la familia sonora de la app, dos veces
+export const SONIDOS_DESCANSO = [['fbe', 'FBE (el motivo)'], ['tres-beeps', 'Tres beeps'], ['estadio', 'Beep estadio'], ['boxeo', 'Campana de boxeo'], ['silbato', 'Silbato'], ['motivador', 'Tono motivador'], ['suave', 'Pitido suave']];
 let audio = null;
 const buffers = {}; // sonido → Promise<AudioBuffer>
 // (pulido 2.10) Los sonidos (casi 100 kB) ya no van en lo que se carga al arrancar: se traen al entrar en una sesión
@@ -65,7 +69,8 @@ export const contextoAudio = () => audio;
 export function prepararAudio() {
   // (v0.62: no mientras suena la pista de «Avisar aunque bloquees el móvil», que va en «playback»: la cortaría)
   try { if (navigator.audioSession && !pistaActiva()) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }
-  try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch { audio = null; }
+  // (sonido, tanda 1) el mismo contexto para toda la app (la sesión, el chat, el juego): el de ui/sonido.js
+  try { audio ||= contexto(); if (audio?.state === 'suspended') audio.resume(); } catch { audio = null; }
   cargar(leerAjustes().sonidoDescanso);
   // v0.48: el entrenador por voz se «despierta» en el mismo toque (iPhone)
   prepararVoz();
@@ -91,7 +96,9 @@ export function pitar(sonido = null) {
   if (a.vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ }
   if (!a.sonido || !audio) return;
   if (audio.state === 'suspended') audio.resume().catch(() => {});
-  const volumen = Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
+  // (sonido, tanda 1) el aviso propio de FBE, de la familia sonora
+  if ((sonido || a.sonidoDescanso) === 'fbe') { sonarFBE('fin-descanso', {}, { forzar: true }); return; }
+  const volumen = Math.min(1, Math.max(0.1, Number(a.volumen) || 1)) * Math.max(0.05, volumenDe({ volumen: 1, volumenes: a.volumenes }, 'entreno'));
   const carga = cargar(sonido || a.sonidoDescanso);
   if (!carga) { pitidoSuave(volumen); return; }
   carga.then((buffer) => {
@@ -104,9 +111,13 @@ export function pitar(sonido = null) {
   }).catch(() => pitidoSuave(volumen));
 }
 
-// Un tono corto (para el metrónomo de tempo): respeta el ajuste de sonido
-export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18) {
-  if (!audio || !leerAjustes().sonido) return;
+// Un tono corto (para el metrónomo de tempo): respeta el ajuste de sonido. (sonido, tanda 1) apartado: el volumen de cuál
+// (el juego pasa 'juego')
+export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18, apartado = 'entreno') {
+  const a = leerAjustes();
+  if (!audio || !a.sonido) return;
+  volumen *= volumenDe({ volumen: 1, volumenes: a.volumenes }, apartado);
+  if (volumen <= 0.0002) return;
   try {
     const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
     o.frequency.value = frecuencia; o.type = 'sine';
@@ -121,53 +132,23 @@ export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18) {
 // su interruptor (Ajustes → «Sonido al marcar una serie») y por el mismo canal que el aviso del descanso («ambient»:
 // se mezcla con la música, no la corta). Sin audio preparado (prepararAudio, en un toque), no suena y no pasa nada.
 const avisarSonido = (tipo) => { try { globalThis.dispatchEvent?.(new CustomEvent('fbe-sonido', { detail: { tipo } })); } catch { /* */ } };
-export function sonarSerie() {
-  const a = leerAjustes();
-  if (a.sonidoSerie === false) return false;
-  avisarSonido('serie');   // (para las pruebas: que se pidió el sonido, suene o no en este navegador)
-  if (!audio) return false;
-  try {
-    if (audio.state === 'suspended') audio.resume().catch(() => {});
-    const vol = 0.13 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
-    const t = audio.currentTime + 0.005, o = audio.createOscillator(), g = audio.createGain();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(880, t);
-    o.frequency.exponentialRampToValueAtTime(1480, t + 0.05);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
-    o.connect(g).connect(audio.destination);
-    o.start(t); o.stop(t + 0.13);
-    return true;
-  } catch { return false; }
+// (sonido, tanda 1) con la familia sonora: la serie n de un ejercicio de `total` sube un escalón; la última resuelve
+export function sonarSerie(datos = {}) {
+  return sonarFBE('serie', datos);
 }
-export function sonarFinSesion() {
-  const a = leerAjustes();
-  if (a.sonidoSerie === false) return false;
-  avisarSonido('fin-sesion');
-  if (!audio) return false;
-  try {
-    if (audio.state === 'suspended') audio.resume().catch(() => {});
-    const vol = 0.16 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1));
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-      const t = audio.currentTime + 0.01 + i * 0.09, largo = i === 3 ? 0.5 : 0.16;
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + largo);
-      o.connect(g).connect(audio.destination);
-      o.start(t); o.stop(t + largo + 0.03);
-    });
-    return true;
-  } catch { return false; }
+// adorno: con racha o récord, unas notas de más arriba
+export function sonarFinSesion(adorno = false) {
+  return sonarFBE('fin-sesion', { adorno });
 }
+// (sonido, tanda 1) el cambio de ejercicio: su propio sonido (al acabar el descanso, tras el aviso)
+export function sonarEjercicio() { return sonarFBE('ejercicio'); }
 // La vibración del aviso, sola (v0.62: cuando el sonido ya lo pone la pista del descanso)
 export function vibrarAviso() { if (leerAjustes().vibracion) try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ } }
 export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { navigator.vibrate?.(ms); } catch { /* */ } }
 
-// Récord: vibración más larga (la de «vibración al tocar», v0.49) y tres notas que suben
-export function celebrar(momento = 'record') {
+// Récord: vibración más larga (la de «vibración al tocar», v0.49) y (sonido, tanda 1) su fanfarria: una para los récords
+// de peso (y de 1RM estimado) y otra para los de repeticiones; los logros, la suya (datos.sonido = 'logro', con su nivel)
+export function celebrar(momento = 'record', datos = {}) {
   const a = leerAjustes();
   // (personalización 2) qué celebrar y cómo: con todo, solo vibración o nada
   const modo = modoCelebrar(a, momento);
@@ -176,17 +157,7 @@ export function celebrar(momento = 'record') {
   if (modo === 'vibrar') return;
   // v0.52: y confeti (nunca con «reducir movimiento»; la vibración ya va aquí arriba)
   lanzarConfeti({ vibracion: null });
-  if (!audio || !a.sonido) return;
-  [523.25, 659.25, 783.99].forEach((f, i) => {
-    const t = audio.currentTime + i * 0.11;
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = f; o.type = 'triangle';
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + (i === 2 ? 0.45 : 0.16));
-    o.connect(g).connect(audio.destination);
-    o.start(t); o.stop(t + 0.5);
-  });
+  sonarFBE(datos.sonido || (datos.tipo === 'reps' ? 'record-reps' : 'record-peso'), datos);
 }
 
 // Mantiene la pantalla encendida mientras la sesión está abierta
@@ -233,7 +204,7 @@ export function aNumero(t) {
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, cambia = false, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -271,11 +242,16 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       if ((document.visibilityState === 'visible' || pistaSono(fin)) && programado.current) { programado.current = false; api?.cancelarDescanso?.(); }
       if (!tarde) {
         if (manda) vibrarAviso(); else pitar();
+        // (sonido, tanda 3) la frase del coach, con su voz («Última serie» o «¡Vamos!»), si la ha grabado; si no, (tanda 1) si
+        // toca otro ejercicio, su aviso propio, detrás
+        const conCoach = !manda && vocesListas();
+        if (conCoach) setTimeout(() => sonarVozCoach(...(esUltima(voz) ? ['ultima', 'vamos'] : ['vamos', 'fin_descanso'])), 650);
+        else if (cambia && !manda) setTimeout(() => sonarFBE('ejercicio'), 1100);
         // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»); v0.62: si ha avisado
-        // la pista, después de su aviso y sin repetir lo que haya dicho
+        // la pista, después de su aviso y sin repetir lo que haya dicho; (sonido) tras la frase del coach, si ha sonado
         if (leerAjustes().voz) {
-          const frase = manda ? fraseTrasPista(voz, pistaFinal(fin)) : (voz || '¡Vamos!');
-          if (frase) setTimeout(() => hablar(frase), manda ? 1800 : leerAjustes().sonido ? 900 : 0);
+          const frase = manda ? fraseTrasPista(voz, pistaFinal(fin)) : (voz || (conCoach ? '' : '¡Vamos!'));
+          if (frase) setTimeout(() => hablar(frase), manda ? 1800 : conCoach ? 2300 : leerAjustes().sonido ? 900 : 0);
         }
       }
     }
@@ -292,9 +268,14 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
     if (a.voz && contado.current !== segundo && fraseCuenta(segundo) && (segundo === 10 ? total > 20 : true)) {
       hablar(fraseCuenta(segundo));
       if (segundo <= 3) vibrarCorto(80);
-    } else if (segundo >= 1 && segundo <= 3 && contado.current !== segundo && a.cuentaAtras) {
-      tono(660, 0.1, 0.35 * Math.min(1, Math.max(0.1, Number(a.volumen) || 1)));
-      vibrarCorto(80);
+    } else if (segundo >= 1 && segundo <= 5 && contado.current !== segundo && a.cuentaAtras && (segundo <= 3 || total >= 20)) {
+      // (sonido, tanda 1) la cuenta atrás que sube: los cinco últimos segundos, cada uno más agudo (en descansos cortos, tres)
+      sonarFBE('cuenta', { segundo });
+      if (segundo <= 3) vibrarCorto(80);
+    } else if (contado.current !== segundo && contado.current != null) {
+      // (sonido, tanda 1) los avisos de dentro del descanso: a la mitad y a falta de diez segundos (si no lo dice la voz)
+      const av = avisoDescanso(segundo, total);
+      if (av && !(av === 'diez' && a.voz)) sonarFBE(av);
     }
     contado.current = segundo;
   }, [segundo]);
@@ -350,14 +331,29 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const cerrarApunte = (motivo) => { setApunte(false); if (motivo === 'salir') guardarAjustes({ ...leerAjustes(), apunteDescanso: false }); };
   const fase = respira && quedan > 0 && !pausado ? faseRespira((ahora - inicioR) / 1000) : null;
   const quietoRespira = sinMovimiento();
+  // (sonido, tanda 1) con «Respira», un soplo que sube al inspirar y baja al soltar (lo que quede de esa fase)
+  const faseClave = fase ? `${fase.ciclo}-${fase.fase}` : null;
+  useEffect(() => {
+    if (!fase || pistaManda(fin)) return;
+    sonarFBE(fase.fase === 'inspira' ? 'respira-dentro' : 'respira-fuera', { dura: (1 - fase.avance) * (fase.fase === 'inspira' ? 4 : 6) });
+  }, [faseClave]);
+  // (sonido, tanda 1) «¿Cuánto queda?»: dos toques seguidos en el reloj lo dicen en voz alta (aunque la voz esté apagada)
+  const ultimoToque = useRef(0);
+  const tocarReloj = (ev) => {
+    if (ev.target.closest?.('button') || !(quedan > 0)) return;
+    const t = Date.now();
+    if (t - ultimoToque.current < 380) { ultimoToque.current = 0; hablar(fraseQueda(quedan), { forzar: true }); vibrar('elegir'); }
+    else ultimoToque.current = t;
+  };
   // (el retraso de la animación se fija cuando aparece el círculo, con lo que lleva el descanso en ese momento: cambiarlo
   // después la haría saltar; y un círculo nuevo, por cada descanso)
   const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, empuje, ...(pausado ? { pausa, pausadoEn } : {}) });
+  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, empuje, cambia, ...(pausado ? { pausa, pausadoEn } : {}) });
   const ajustar = (s) => {
     alCambiar(ajustarDescanso(este(), s));
+    sonarFBE(s > 0 ? 'mas-15' : 'menos-15');   // (sonido, tanda 1) sube o baja
     // (diseño, tanda 49) la cuenta da un golpe hacia arriba (más tiempo) o hacia abajo (menos)
     if (!sinMovimiento()) { try { caja.current?.querySelector('.cuenta')?.animate?.([{ transform: `translateY(${s > 0 ? -9 : 9}px) scale(1.1)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2, 1.3, .35, 1)' }); } catch { /* */ } }
   };
@@ -387,6 +383,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       g.ultimo = ajustarDescanso(g.ultimo, s);
       alCambiar(g.ultimo);
       vibrar('elegir');
+      sonarFBE(s > 0 ? 'mas-15' : 'menos-15');
     },
     onPointerUp: (e) => { dial.current = null; e.currentTarget.classList.remove('girando'); },
     onPointerCancel: (e) => { dial.current = null; e.currentTarget.classList.remove('girando'); },
@@ -401,7 +398,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
       </div>
-      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''}`} {...gestoDial}>
+      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''}`} {...gestoDial} onClick={tocarReloj}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <DegradadoAro id="aro-descanso" gira />
@@ -453,7 +450,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         <button onClick={() => ajustar(15)} aria-label="Añadir 15 segundos">+15 s</button>
         <button onClick={() => ajustar(60)} aria-label="Añadir 1 minuto">+1 min</button>
       </div>
-      {pausado && <button type="button" class="btn btn-primario seguir-descanso" onClick={() => alCambiar(reanudarDescanso(este()))}><Icono n="play" /> Seguir</button>}
+      {pausado && <button type="button" class="btn btn-primario seguir-descanso" onClick={() => { sonarFBE('sigue'); alCambiar(reanudarDescanso(este())); }}><Icono n="play" /> Seguir</button>}
       <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
       {apunte && atleta?.id && <Apuntes atletaId={atleta.id} ejercicio={ejercicio} fin={fin} pausa={pausado ? pausa : null} alCerrar={cerrarApunte} />}

@@ -2351,7 +2351,7 @@ try {
   await p.waitForFunction(() => window.__sonado.length >= 2, null, { timeout: 5000 }).catch(() => {});
   const sonados = await p.evaluate(() => window.__sonado);
   check(await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).sonidoDescanso) === 'silbato' && sonados.length >= 2 && sonados[0] > 0 && sonados[0] !== sonados[1]
-    && await p.getByRole('switch', { name: /Pitidos en los 3 últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
+    && await p.getByRole('switch', { name: /Cuenta atrás en los últimos segundos/ }).isChecked() && await p.getByLabel('Volumen').count() === 1,
     `en Ajustes elige el sonido del descanso (los de FBE Timer) y oye el que elige, no el de antes (duraciones ${sonados.join(' y ')} cs); tiene volumen y pitidos en los 3 últimos segundos`);
   check(await p.evaluate(() => navigator.audioSession.type) === 'ambient', 'la sesión de audio se mezcla con la música del móvil («ambient»): no corta Spotify al entrar a entrenar');
   // Un navegador que no deja guardar: «Probar» toca el que se ve elegido, no el de serie
@@ -6078,6 +6078,10 @@ try {
   console.log('\nEl jugo de La travesía');
   const { probarTravesiaJugo } = await import('./e2e-travesia-jugo.mjs');
   await probarTravesiaJugo({ navegador, check });
+  // El sonido de la app (claude/sonido-mejoras.md): perfiles, apartados, «Escuchar todos», la sesión y las frases del coach
+  console.log('\nEl sonido de la app');
+  const { probarSonido } = await import('./e2e-sonido.mjs');
+  await probarSonido({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

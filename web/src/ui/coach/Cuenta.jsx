@@ -11,6 +11,7 @@ import { SeccionNegocio } from './Negocio.jsx';
 import { FilaFoto, FilaNombre } from '../FotoPerfil.jsx';
 import { AvisoAlmacenamiento, LimpiarVideos } from '../tecnica/Limpieza.jsx';
 import { RendimientoApp } from './Rendimiento.jsx';
+import { VocesCoach } from './VocesCoach.jsx';
 import { MensajesAutomaticos, AvisosZona, MusicaCoach } from './PersonalCoach.jsx';
 import { AtajosCoach } from './Integraciones.jsx';
 
@@ -35,6 +36,8 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       <MensajesAutomaticos />
       <AvisosZona />
       <MusicaCoach />
+      {/* (sonido, tanda 3) sus frases, con su voz, en la sesión de sus atletas */}
+      <VocesCoach />
       <AtajosCoach />
       <SeccionNotificaciones coach />
       <AjustesDispositivo coach />

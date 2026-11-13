@@ -1,9 +1,11 @@
 /* global __APP_VERSION__ */
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
 import { prepararAudio, pitar, sonarSerie, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar } from './voz.js';
+import { sonarFBE, sonarTanda } from './sonido.js';
+import { APARTADOS, PERFILES, perfilDe, ESCUCHAR } from '../logica/sonido.js';
 import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
 import { puedeVibrar, puedeTocar, vibrar } from './hapticos.js';
@@ -35,6 +37,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   const [a, setA] = useState(leerAjustes);
   const [sonido, setSonido] = useState(false);
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
+  // (sonido, tanda 1) varios a la vez (un perfil de sonido)
+  const cambiarVarios = (o) => { const n = { ...a, ...o }; setA(n); guardarAjustes(n); };
   // (diseño, tanda 21) el tema cambia fundiéndose (transición de vista de todo el documento), no a golpe
   const cambiarTema = (t) => {
     const r = typeof document !== 'undefined' ? document.documentElement : null;
@@ -98,21 +102,42 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
         </>
       )}
     </GrupoIos>
-    {sonido && <HojaSonido a={a} cambiar={cambiar} alCerrar={() => setSonido(false)} />}
+    {sonido && <HojaSonido a={a} cambiar={cambiar} cambiarVarios={cambiarVarios} alCerrar={() => setSonido(false)} />}
     </>
   );
 }
 
 // Sonido, voz y vibración del descanso (v0.50: en su hoja, para que el perfil se lea de un vistazo). v0.52.2: y el
 // descanso que arranca solo si el coach no ha puesto uno
-function HojaSonido({ a, cambiar, alCerrar }) {
+function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
   const { aviso } = useApp();
+  // (sonido, tanda 1) «Escuchar todos»: la familia entera, en orden, con el nombre de lo que suena
+  const [oyendo, setOyendo] = useState(null);
+  const pararTanda = useRef(null);
+  useEffect(() => () => pararTanda.current?.(), []);
+  const escucharTodos = () => {
+    if (pararTanda.current) { pararTanda.current(); pararTanda.current = null; return; }
+    prepararAudio();
+    const lista = ESCUCHAR.flatMap(([k, nombre, datos]) => (datos || [{}]).map((d, i) => [k, d, nombre + (datos && datos.length > 1 ? ` (${i + 1})` : '')]));
+    pararTanda.current = sonarTanda(lista, { cada: 950, alSonar: (n) => { setOyendo(n); if (!n) pararTanda.current = null; } });
+  };
+  const perfil = perfilDe(a);
+  const probarApartado = (k) => { prepararAudio(); sonarFBE({ entreno: 'serie', juego: 'cuenta', chat: 'recibido', avisos: 'animo' }[k], k === 'juego' ? { segundo: 1 } : { n: 2, total: 4 }, { forzar: true }); };
   const nombreSonido = (k) => (SONIDOS_DESCANSO.find(([v]) => v === k) || [])[1] || k;
   // Suena el que se ve elegido (no el guardado: por si este navegador no deja guardar) y lo dice
   const probar = (k = a.sonidoDescanso) => { prepararAudio(); pitar(k); aviso(`Suena: ${nombreSonido(k)}`); };
   const plataforma = plataformaPistaAqui();
   return (
     <Hoja titulo="Sonido y vibración" alCerrar={alCerrar}>
+      {/* (sonido, tanda 1) tres perfiles de un toque */}
+      <div class="panel panel-pad pila-s aj-perfil-sonido">
+        <span id="aj-perfil-t">Cuánto suena la app</span>
+        <Segmentos etiqueta="Cuánto suena la app" valor={perfil} opciones={Object.entries(PERFILES).map(([k, p]) => [k, p.nombre, p.ayuda])}
+          alCambiar={(v) => { if (!v) return; cambiarVarios(PERFILES[v].ajustes); prepararAudio(); sonarFBE('ui', {}, { forzar: true }); aviso(`${PERFILES[v].nombre}: ${PERFILES[v].ayuda.toLowerCase()}`); }} />
+        <span class="peq terciario">{perfil ? PERFILES[perfil].ayuda : 'A tu manera: lo has elegido tú, uno a uno, aquí abajo'}.</span>
+        <button type="button" class="btn btn-peq aj-escuchar" onClick={escucharTodos} aria-pressed={oyendo ? 'true' : 'false'}><Icono n="altavoz" />{oyendo ? 'Parar' : 'Escuchar todos'}</button>
+        {oyendo && <span class="peq secundario" role="status">Suena: {oyendo}</span>}
+      </div>
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
           <li class="panel-pad pila-s">
@@ -138,15 +163,35 @@ function HojaSonido({ a, cambiar, alCerrar }) {
               </div>
               <label for="aj-volumen" class="separa"><span>Volumen</span><span class="peq terciario num">{Math.round((Number(a.volumen) || 1) * 100)} %</span></label>
               <input id="aj-volumen" type="range" min="0.1" max="1" step="0.1" value={a.volumen} onChange={(e) => cambiar('volumen', Number(e.currentTarget.value))} />
-              <span class="peq terciario">Los mismos sonidos que FBE Timer. Si se oye bajo, sube también el volumen del móvil.</span>
+              <span class="peq terciario">«FBE» es el motivo de la app; los demás, los de FBE Timer. Si se oye bajo, sube también el volumen del móvil.</span>
+              {/* (sonido, tanda 1) el volumen de cada apartado (por debajo del general) */}
+              <fieldset class="aj-apartados">
+                <legend class="peq secundario">Cada apartado</legend>
+                {APARTADOS.map(([k, t]) => (
+                  <div key={k} class="aj-apartado">
+                    <label for={`aj-vol-${k}`}><span>{t}</span><span class="peq terciario num">{Math.round((a.volumenes?.[k] ?? 1) * 100)} %</span></label>
+                    <input id={`aj-vol-${k}`} type="range" min="0" max="1" step="0.1" value={a.volumenes?.[k] ?? 1} onChange={(e) => cambiar('volumenes', { ...a.volumenes, [k]: Number(e.currentTarget.value) })} />
+                    <button type="button" class="btn btn-peq btn-icono plano" onClick={() => probarApartado(k)} aria-label={`Probar: ${t}`}><Icono n="altavoz" /></button>
+                  </div>
+                ))}
+              </fieldset>
             </li>
           )}
-          {a.sonido && <Interruptor id="aj-cuenta" icono="reloj" texto="Pitidos en los 3 últimos segundos" ayuda="Para saber que el descanso se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => cambiar('cuentaAtras', v)} />}
+          {a.sonido && <Interruptor id="aj-brillante" icono="altavoz" texto="Modo gimnasio con ruido" ayuda="Sonidos más brillantes y un poco más fuertes, para oírlos por encima de la música de la sala" valor={!!a.sonidoBrillante}
+            alCambiar={(v) => { cambiar('sonidoBrillante', v); prepararAudio(); setTimeout(() => sonarFBE('serie', { n: 4, total: 4 }, { forzar: true, ajustes: { ...leerAjustes(), sonidoBrillante: v } }), 30); }} />}
+          {a.sonido && <Interruptor id="aj-mitad" icono="reloj" texto="Aviso a mitad del descanso" ayuda="Una nota grave y suave, en los descansos de 40 segundos o más" valor={!!a.avisoMitad} alCambiar={(v) => { cambiar('avisoMitad', v); if (v) { prepararAudio(); sonarFBE('mitad', {}, { forzar: true }); } }} />}
+          {a.sonido && <Interruptor id="aj-diez" icono="reloj" texto="Aviso a falta de 10 segundos" ayuda="Dos notas suaves, para ir preparándote (con la voz, lo dice ella)" valor={a.avisoDiez !== false} alCambiar={(v) => { cambiar('avisoDiez', v); if (v) { prepararAudio(); sonarFBE('diez', {}, { forzar: true }); } }} />}
+          {a.sonido && <Interruptor id="aj-respira-sonido" icono="sueno" texto="Sonido de «Respira»" ayuda="Con «Respira» puesto en el descanso, un soplo suave que sube al inspirar y baja al soltar" valor={a.respiraSonido !== false} alCambiar={(v) => { cambiar('respiraSonido', v); if (v) { prepararAudio(); sonarFBE('respira-dentro', { dura: 2 }, { forzar: true }); } }} />}
+          <Interruptor id="aj-avisos" icono="trofeo" texto="Sonidos de logros y comunidad" ayuda="Al conseguir un logro, recibir un ánimo o cumplir un reto del equipo, con la app abierta" valor={a.sonidosAvisos !== false} alCambiar={(v) => { cambiar('sonidosAvisos', v); if (v) { prepararAudio(); sonarFBE('logro', { nivel: 2 }, { forzar: true }); } }} />
+          <Interruptor id="aj-interfaz" icono="hecho" texto="Sonidos de la interfaz" ayuda="Un toque casi imperceptible al marcar un hábito, enviar el check-in, cerrar una tarea o guardar el peso" valor={!!a.sonidosInterfaz} alCambiar={(v) => { cambiar('sonidosInterfaz', v); if (v) { prepararAudio(); sonarFBE('ui', {}, { forzar: true }); } }} />
+          {a.sonido && <Interruptor id="aj-cuenta" icono="reloj" texto="Cuenta atrás en los últimos segundos" ayuda="Notas que suben en los cinco últimos (tres en los descansos cortos), para saber que se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => { cambiar('cuentaAtras', v); if (v) { prepararAudio(); [5, 4, 3, 2, 1].forEach((sg, i) => setTimeout(() => sonarFBE('cuenta', { segundo: sg }, { forzar: true }), i * 260)); } }} />}
           {/* v0.48: el entrenador por voz (Web Speech), apagado de entrada; donde el navegador no habla, desactivado */}
           <Interruptor id="aj-voz" icono="mensaje" texto="Entrenador por voz" desactivado={!hayVoz()}
             ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
             valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
           {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
+          {/* (sonido, tanda 3) las frases que grabe el coach, con su voz */}
+          <Interruptor id="aj-voz-coach" icono="micro" texto="Frases de tu coach, con su voz" ayuda="Si tu coach las ha grabado: «¡Vamos!», «Última serie», «¡Récord!»… en su momento de la sesión" valor={a.vozCoach !== false} alCambiar={(v) => cambiar('vozCoach', v)} />
           {/* v0.62: el aviso con el móvil bloqueado (la pista del descanso). Solo donde puede funcionar: iPhone con Safari 16.4 o
               más (la app de inicio o Safari) y Android; en el ordenador no sale. Apagado de serie: pausa la música de otras apps */}
           {a.sonido && plataforma && (

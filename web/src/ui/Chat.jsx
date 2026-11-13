@@ -273,7 +273,9 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         if (llegados.length) { primerNuevo.current ||= llegados[0].id; setNuevos((n) => n + llegados.length); }
       }
       // (v0.56) un tono suave por lo que acaba de llegar de la otra parte (nunca al abrir ni al cargar lo anterior)
-      if (!ultimoMio && vista.slice(cuantosPrevio.current).some((c) => c.autor !== yo && !c.eliminado_en)) sonarSi('recibido');
+      // (sonido, tanda 1) lo que manda el coach suena con el motivo de FBE (y lo de una difusión, como un mensaje más)
+      { const nuevos = vista.slice(cuantosPrevio.current).filter((c) => c.autor !== yo && !c.eliminado_en);
+        if (!ultimoMio && nuevos.length) sonarSi(yo === 'atleta' && nuevos.some((c) => c.autor === 'coach' && !c.difusion_id && !c.difusion) ? 'coach' : 'recibido'); }
       // Lo que acaba de llegar de la otra parte quita su «escribiendo…»
       if (!ultimoMio) setEscribe(false);
     }

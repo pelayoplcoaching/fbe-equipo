@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { LIMITE_ARCHIVO_MB } from '../../datos/api.js';
-import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { sonarFBE } from '../sonido.js';   // (sonido, tanda 2) la cuenta y la grabación, con la familia de FBE
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 
 export const POSES = [['frente', 'Frente'], ['perfil', 'Perfil'], ['espalda', 'Espalda']];
@@ -148,17 +149,17 @@ function CamaraGuiadaPantalla({ pose, guia, alCerrar, alCapturar }) {
     c.width = Math.round(sw * escala); c.height = Math.round(sh * escala);
     c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
     c.toBlob((blob) => { if (blob) setFoto({ blob, url: URL.createObjectURL(blob) }); }, 'image/jpeg', 0.88);
-    tono(1320, 0.12, 0.25); vibrarCorto(60);
+    sonarFBE('grabar-empieza'); vibrarCorto(60);
   };
   const disparar = () => {
     if (!espera) { capturar(); return; }
     let n = espera;
-    setCuenta(n); tono(880, 0.08);
+    setCuenta(n); sonarFBE('grabar-cuenta');
     temporizador.current = setInterval(() => {
       n -= 1;
       if (n <= 0) { cancelar(); capturar(); return; }
       setCuenta(n);
-      tono(n <= 3 ? 1100 : 880, n <= 3 ? 0.12 : 0.06, n <= 3 ? 0.25 : 0.15);
+      sonarFBE('grabar-cuenta');
     }, 1000);
   };
 

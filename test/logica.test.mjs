@@ -2791,7 +2791,8 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
 
   const { normalizarAjustes } = await import('../web/src/ui/ajustes.js');
   check(normalizarAjustes({}).sonidosChat === true && normalizarAjustes({ sonidosChat: false }).sonidosChat === false && normalizarAjustes({ fotosHd: 'sí' }).fotosHd === false, 'los ajustes nuevos: sonidos del chat (de serie, sí) y fotos en HD (de serie, no)');
-  const sn = readFileSync(new URL('../web/src/ui/sonidos.js', import.meta.url), 'utf8');
+  // (sonido, tanda 1: el chat suena con la familia de FBE, en ui/sonido.js)
+  const sn = readFileSync(new URL('../web/src/ui/sonidos.js', import.meta.url), 'utf8') + readFileSync(new URL('../web/src/ui/sonido.js', import.meta.url), 'utf8');
   check(/createOscillator/.test(sn) && !/\.(mp3|ogg|wav|m4a)\b/.test(sn), 'los sonidos son tonos propios hechos al momento (sin archivos de audio de nadie)');
   const legal = readFileSync(new URL('../web/src/legal.js', import.meta.url), 'utf8');
   check(/EXIF/.test(legal) && /GPS/.test(legal) && /i\.ytimg\.com/.test(legal) && /micro/.test(legal) && /IndexedDB|copia de los últimos mensajes/.test(legal) && /notas de voz/i.test(legal), 'la privacidad cuenta lo nuevo: EXIF/GPS, YouTube, el micro, las notas de voz y la copia del chat en el móvil');
@@ -3656,7 +3657,8 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
   check(Object.keys(SONIDOS).every((k) => k in CLIPS) && 'suave' in CLIPS && 'pitido' in CLIPS && Object.values(datos).every(tramasOk) && Object.keys(VOCES).length === 0,
     `los sonidos de la pista (los ${Object.keys(SONIDOS).length} de FBE Timer, el suave y el pitido de la cuenta): tramas enteras del formato, la primera sin depender de otra; sin frases del coach grabadas`);
   check(datos.pitido.length / B <= 8 && Object.keys(SONIDOS).every((k) => datos[k].length / B * 24 < 2500), 'el pitido de la cuenta dura menos de 0,2 s y ningún aviso pasa de 2,5 s (cabe antes del final de la pista)');
-  const largos = Object.fromEntries(Object.entries(datos).map(([k, d]) => [k, d.length / B]));
+  // (sonido, tanda 1: sin los de la familia nueva, la cuenta de siempre; los nuevos se prueban en test/sonido.test.mjs)
+  const largos = Object.fromEntries(Object.entries(datos).filter(([k]) => !/^(c\d|mitad|diez)$/.test(k)).map(([k, d]) => [k, d.length / B]));
   // ---------- el plan: qué suena y cuándo
   const p10 = PI.planPista({ restanteMs: 10000, clips: largos, sonido: 'boxeo' });
   const inicios = []; let t = 0; for (const [k, n] of p10.partes) { if (k) inicios.push([k, t]); t += n; }

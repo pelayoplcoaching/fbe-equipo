@@ -406,6 +406,8 @@ const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
 // (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos
 const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'apuntes_semanas', 'apuntes_duelos'];
+// (068) las frases del coach, con su voz (los audios van en su bucket; aquí, sus filas)
+const TABLAS_SONIDO = ['voces_coach'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -413,11 +415,11 @@ const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 
   'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'cobros_atletas', 'pagos',
   'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS, ...TABLAS_SONIDO];
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los vídeos, 035; la revisión semanal, 040): sin ellas, la copia sale igual
 const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS, ...TABLAS_SONIDO];
 // Las recetas sin la foto grande (para las listas: la miniatura basta)
 const COLS_RECETA = 'id,nombre,tomas,raciones,kcal,proteina_g,carbos_g,grasa_g,ingredientes,preparacion,minutos,etiquetas,foto_mini,creada_en,actualizada_en';
 // (pulido 2.4) y sin la miniatura (unos 14 kB por receta: el 85 % de lo que pesa un recetario): las miniaturas se piden
@@ -4184,6 +4186,39 @@ export function crearApi(backend) {
         if (/travesia_poner_reto|schema cache|could not find|PGRST20[0-9]|42883/i.test(m)) throw new Error('Para el reto de La travesía falta ejecutar la migración 063 en Supabase (supabase/migraciones/063_travesia_remate.sql).');
         throw e;
       }
+    },
+    // (068, sonido) Las frases del coach, con su voz: [{ clave, ruta, duracion_ms }] (vacío sin la 068), su audio (una
+    // dirección firmada) y, el coach, grabarlas o quitarlas (el audio va a su bucket privado «voces-coach»)
+    async vocesCoach() {
+      if (api._sin068 || !uid()) return [];
+      try { return await b.select('voces_coach', { order: [['clave', 'asc']] }); } catch (e) {
+        if (/voces_coach|schema cache|does not exist|could not find|PGRST20[0-9]|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin068 = true;
+        return [];
+      }
+    },
+    async urlVozCoach(ruta) { return b.storage.url(ruta, 3600, 'voces-coach'); },
+    async guardarVozCoach(clave, audio, duracionMs = 0) {
+      const tipo = String(audio?.type || '').split(';')[0];
+      const ext = { 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/aac': 'aac' }[tipo];
+      if (!ext) throw new Error('Este navegador graba en un formato que no se puede guardar');
+      const ruta = `voces/${clave}-${(globalThis.crypto?.randomUUID?.() || `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`)}.${ext}`;
+      try { await b.storage.subir(ruta, audio, tipo, { bucket: 'voces-coach' }); } catch (e) {
+        if (/bucket|not found|404/i.test(`${e?.message || ''} ${e?.statusCode || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 068 en Supabase (supabase/migraciones/068_voces_coach.sql).');
+        throw e;
+      }
+      let antes = null;
+      try { antes = await b.rpc('voces_coach_guardar', { p_clave: clave, p_ruta: ruta, p_duracion_ms: Math.round(duracionMs) }); } catch (e) {
+        await b.storage.borrar([ruta], 'voces-coach').catch(() => {});
+        if (/voces_coach_guardar|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 068 en Supabase (supabase/migraciones/068_voces_coach.sql).');
+        throw e;
+      }
+      if (antes) await b.storage.borrar([antes], 'voces-coach').catch(() => {});
+      return ruta;
+    },
+    async quitarVozCoach(clave) {
+      const ruta = await b.rpc('voces_coach_quitar', { p_clave: clave });
+      if (ruta) await b.storage.borrar([ruta], 'voces-coach').catch(() => {});
+      return true;
     },
     async aullidosRecibidos() {
       if (api._sin062 || !uid()) return [];
