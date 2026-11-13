@@ -6062,6 +6062,10 @@ try {
   console.log('\nQue sea suyo');
   const { probarPersonalSuyo } = await import('./e2e-personal-t4.mjs');
   await probarPersonalSuyo({ navegador, check });
+  // Personalización 3, tanda 5: con el tiempo que tiene, su calentamiento y sus alternativas (siempre como consejo)
+  console.log('\nQue la sesión de hoy sea suya');
+  const { probarPersonalSesionTuya } = await import('./e2e-personal-t5.mjs');
+  await probarPersonalSesionTuya({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');
