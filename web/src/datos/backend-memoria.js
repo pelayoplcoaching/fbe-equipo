@@ -3705,9 +3705,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (nuevo.genero && !['f', 'm', 'n'].includes(nuevo.genero)) throw new Error('Ese trato no existe');
         if (nuevo.tono && !['cercano', 'directo', 'tope'].includes(nuevo.tono)) throw new Error('Ese tono no existe');
         if ('meta_nombre' in d) {
-          const n = String(d.meta_nombre || '').replace(/\s+/g, ' ').trim();
+          // (como la base tras su revisión: texto, sin controles ni invisibles; fecha de verdad; cifra con dos decimales)
+          for (const k of ['genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_unidad']) if (k in d && d[k] != null && typeof d[k] !== 'string') throw new Error('Esos datos no valen');
+          const n = String(d.meta_nombre || '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, '').replace(/\s+/g, ' ').trim();
           const hoy = fMadrid();
-          let f = n ? d.meta_fecha || null : null, c = n && d.meta_cifra != null && d.meta_cifra !== '' ? Number(d.meta_cifra) : null, u = c != null ? d.meta_unidad || null : null;
+          let f = n ? d.meta_fecha || null : null, c = n && d.meta_cifra != null && d.meta_cifra !== '' ? Math.round(Number(d.meta_cifra) * 100) / 100 : null, u = c != null ? d.meta_unidad || null : null;
+          if (f && (!/^\d{4}-\d{2}-\d{2}$/.test(f) || Number.isNaN(Date.parse(`${f}T12:00:00Z`)) || new Date(`${f}T12:00:00Z`).toISOString().slice(0, 10) !== f)) throw new Error('Fecha o cifra de la meta no válidas');
           if (n.length > 60) throw new Error('Tu meta: como mucho 60 caracteres');
           if (f && (f < hoy || f > sumar(hoy, 730))) throw new Error('La fecha de tu meta tiene que estar entre hoy y dentro de dos años');
           if (c != null && (!(c > 0 && c <= 100000) || !['kg', 'km', 'min', 'reps', 'cm', '%'].includes(u))) throw new Error('La cifra de tu meta necesita un número y su unidad');

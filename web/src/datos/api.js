@@ -880,7 +880,10 @@ export function crearApi(backend) {
       if (!MOMENTO_VALIDO.has(momento)) throw new Error('Momento no válido');
       const t = String(texto ?? '').trim();
       if (t.length > LIMITES.mensaje) throw new Error(`Como mucho ${LIMITES.mensaje} caracteres`);
-      try { await b.rpc('mensaje_coach_guardar', { p_momento: momento, p_texto: t }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
+      try { await b.rpc('mensaje_coach_guardar', { p_momento: momento, p_texto: t }); } catch (e) {
+        // (v0.155) un momento nuevo (066/067) en una base que aún no lo tiene: que lo diga claro
+        if (/Momento no v\u00e1lido|mensajes_coach_momento_check|check constraint/i.test(`${e?.message || ''}`)) throw new Error('Este momento aún no está disponible: falta ejecutar en Supabase las migraciones 066 y 067');
+        if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
       mensajesMemo = null;
     },
     // La música (050): cada vez que abre su música desde una sesión suma una al mes (para «Tu mes» y «Tu año»)

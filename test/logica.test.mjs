@@ -4708,7 +4708,7 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
     'la política 2026-12.29 cuenta el repaso, la liga y los duelos de apuntes (y lo que no sale del móvil)');
   // (v0.155) 2026-12.30: cómo te hablamos y tu meta (066)
   check(legal.VERSION_LEGAL === '2026-12.30' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.30' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.29', '2026-12.30').length === 1
-    && ((t) => /cómo te hablamos/.test(t) && /tu meta/.test(t) && /no guardamos nada nuevo de salud/.test(t) && /tu coach no sabe a quién le sale cada aviso/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'Lo que eliges para tu app')?.[1] || ''),
+    && ((t) => /cómo te hablamos/.test(t) && /tu meta/.test(t) && /no guardamos nada nuevo de salud/.test(t) && /no le cuenta a tu coach cuándo te sale un aviso/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'Lo que eliges para tu app')?.[1] || ''),
     'la política 2026-12.30 cuenta cómo te hablamos y tu meta, lo que se queda en el móvil y lo de salud, solo en el móvil y con consentimiento');
 }
 

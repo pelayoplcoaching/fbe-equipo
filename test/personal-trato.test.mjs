@@ -31,6 +31,12 @@ check(p.meta_nombre === 'Mi primera competición' && p.meta_fecha === mas(60) &&
 [{ p }] = await q(`select personal_guardar('{"apodo": "Ana"}'::jsonb) as p`);
 check(p.genero === 'f' && p.meta_nombre === 'Mi primera competición', 'y guardar lo de la 050 no borra lo nuevo');
 check(await falla(`select personal_ajustes_guardar('{"genero": "x"}'::jsonb)`) && await falla(`select personal_ajustes_guardar('{"tono": "borde"}'::jsonb)`), 'solo los géneros y tonos que hay');
+// (revisión) cada clave, texto; sin caracteres invisibles; la cifra, con dos decimales
+check(await falla(`select personal_ajustes_guardar('{"meta_nombre": {"a": 1}}'::jsonb)`), 'una meta que no es texto, no');
+{
+  const [{ p: pr }] = await q(`select personal_ajustes_guardar($1::jsonb) as p`, [JSON.stringify({ meta_nombre: 'Mi\u202e carrera\u200b', meta_fecha: mas(30), meta_cifra: 10.12345, meta_unidad: 'km' })]);
+  check(pr.meta_nombre === 'Mi carrera' && Number(pr.meta_cifra) === 10.12, `sin caracteres invisibles (${JSON.stringify(pr.meta_nombre)}) y la cifra con dos decimales (${pr.meta_cifra})`);
+}
 check(await falla(`select personal_ajustes_guardar($1::jsonb)`, [JSON.stringify({ meta_nombre: 'x', meta_fecha: mas(-1) })]) && await falla(`select personal_ajustes_guardar($1::jsonb)`, [JSON.stringify({ meta_nombre: 'x', meta_fecha: mas(800) })]),
   'la fecha de la meta, de hoy a dos años');
 check(await falla(`select personal_ajustes_guardar($1::jsonb)`, [JSON.stringify({ meta_nombre: 'x', meta_cifra: 10 })]) && await falla(`select personal_ajustes_guardar($1::jsonb)`, [JSON.stringify({ meta_nombre: 'x', meta_cifra: 10, meta_unidad: 'litros' })])

@@ -23,7 +23,7 @@ begin
   select max(numero) into v from public.fbe_migraciones;
   if v > 66 then  -- (1) número de esta migración
     raise exception 'Esta base ya tiene la migración %: repetir la 066 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
-      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 66;» y, después de ella, todas las siguientes en orden.';
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 66;» (si tu coach ya guardó mensajes de la 067 —viaje, primera vez o molestias—, bórralos antes) y, después de ella, todas las siguientes en orden.';
   end if;
   if not exists (select 1 from public.fbe_migraciones where numero = 65) then  -- (2) la anterior
     raise exception 'Falta la migración 065 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
@@ -73,6 +73,11 @@ begin
     raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
   end if;
   if p_datos is null or jsonb_typeof(p_datos) <> 'object' then raise exception 'Faltan los datos'; end if;
+  -- (revisión) cada clave, texto (o nada); la cifra, número o texto
+  if exists (select 1 from jsonb_each(p_datos) e where e.key in ('genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_unidad') and jsonb_typeof(e.value) not in ('string', 'null'))
+     or (p_datos ? 'meta_cifra' and jsonb_typeof(p_datos -> 'meta_cifra') not in ('string', 'number', 'null')) then
+    raise exception 'Esos datos no valen' using errcode = '22023';
+  end if;
   select * into v from public.personal_atleta where atleta_id = v_atleta;
   v_genero := case when p_datos ? 'genero' then nullif(p_datos ->> 'genero', '') else v.genero end;
   v_tono := case when p_datos ? 'tono' then nullif(p_datos ->> 'tono', '') else v.tono end;
@@ -87,6 +92,11 @@ begin
     v_unidad := nullif(p_datos ->> 'meta_unidad', '');
     if v_nombre is null then v_fecha := null; v_cifra := null; v_unidad := null; end if;
     if char_length(v_nombre) > 60 then raise exception 'Tu meta: como mucho 60 caracteres' using errcode = '22023'; end if;
+    -- (sin caracteres invisibles ni de dirección del texto, que se colarían en «Para hablarle» del coach)
+    v_nombre := nullif(btrim(regexp_replace(coalesce(v_nombre, ''), E'[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]', '', 'g')), '');
+    if v_nombre is not null and not public.texto_visible(v_nombre) then v_nombre := null; end if;
+    if v_nombre is null then v_fecha := null; v_cifra := null; v_unidad := null; end if;
+    v_cifra := round(v_cifra, 2);
     if v_fecha is not null and (v_fecha < v_hoy or v_fecha > v_hoy + 730) then raise exception 'La fecha de tu meta tiene que estar entre hoy y dentro de dos años' using errcode = '22023'; end if;
     if v_cifra is not null and (v_cifra <= 0 or v_cifra > 100000 or v_unidad is null or v_unidad not in ('kg', 'km', 'min', 'reps', 'cm', '%')) then
       raise exception 'La cifra de tu meta necesita un número y su unidad' using errcode = '22023';

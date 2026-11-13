@@ -89,7 +89,7 @@ export function HojaMeta({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tu meta" alCerrar={alCerrar}>
       <div class="pila meta-hoja">
-        <p class="peq secundario">Algo con nombre y, si quieres, con día y con cifra: una boda, una competición, el verano, una carrera… Tu coach la verá.</p>
+        <p class="peq secundario">Algo con nombre y, si quieres, con día y con cifra: una competición, una carrera, tu primera dominada… Tu coach la verá. No pongas aquí datos de salud ni tu peso corporal: para eso está el check-in.</p>
         <div class="campo"><label for="meta-nombre">Tu meta</label>
           <input id="meta-nombre" class="entrada" maxLength={60} value={nombre} placeholder="Mi primera competición" onInput={(e) => setNombre(e.currentTarget.value)} /></div>
         <div class="campo"><label for="meta-fecha">El día <span class="secundario">(opcional)</span></label>
