@@ -19,6 +19,7 @@ import { antesDelTitulo } from '../../logica/trato.js';
 import { hoyISO, diasEntre } from '../../logica/fechas.js';
 import { porQueSesion, nivelLenguaje, explicarEsfuerzo, metaDe } from '../../logica/rumbo.js';
 import { objetivosDe } from '../../logica/cuestionario.js';
+import { HoyComoEstas } from './Conocerte.jsx';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -37,7 +38,7 @@ export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
   );
 }
 
-export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar }) {
+export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar, salud = false, prep = null }) {
   // (personalización 2) «Ana, hoy toca»: con su nombre (o su apodo), encima del nombre de la sesión
   const trato = useTrato();
   const paraTi = antesDelTitulo(trato, { esHoy: !sesion.dia_previsto || sesion.dia_previsto === hoyISO() });
@@ -79,6 +80,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           </ul>
         </div>
       </header>
+      {!sesion.completada && <HoyComoEstas salud={salud} prep={prep || sesion.preparacion || null} />}
       {porQue && <p class="portada-porque"><Icono n="diana" /><span><strong>Por qué es para ti. </strong>{porQue}</span></p>}
       {nivel === 'principiante' && r.ejercicios > 0 && ejercicios.some((e) => /RIR|RPE/.test(pauta(e)?.esfuerzo || '')) && (
         <p class="portada-nivel peq secundario">Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.</p>

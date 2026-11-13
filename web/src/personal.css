@@ -367,3 +367,15 @@
 .panel.historia-linea { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
 .aniversario-hecho { margin: 4px 0 0; }
 .aniversario .aniversario-coach { margin-top: 8px; }
+
+/* ---------- (personalizacion 2, tanda 3) Que la app le conozca ---------- */
+.ultima-vez-frase { margin: 2px 0 0; font-size: .9375rem; line-height: 1.45; }
+.aviso-zona, .hoy-como-estas, .mejor-momento > p, .costumbre > p { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.aviso-zona > svg, .hoy-como-estas > svg, .mejor-momento > p > svg, .costumbre > p > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.aviso-zona { padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); }
+.hoy-como-estas { padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); }
+.hoy-como-estas.nivel-malo, .hoy-como-estas.nivel-regular { background: color-mix(in srgb, #f5a524 12%, var(--hoja)); }
+.hoy-como-estas.nivel-malo > svg, .hoy-como-estas.nivel-regular > svg { color: #c27c0e; }
+.costumbre { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1.5px dashed var(--linea, rgba(0, 0, 0, .12)); }
+.costumbre-botones { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.panel.mejor-momento { display: grid; gap: 10px; justify-items: start; }

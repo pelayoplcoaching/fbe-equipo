@@ -79,6 +79,7 @@ import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
+import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso } from './Conocerte.jsx';
 import { Cadencia, CancionRecord, BotonMusica } from './Musica.jsx';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
@@ -185,6 +186,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [notas, setNotas] = useState({});
   // v0.52.2: el descanso que eligió para cada ejercicio (ejercicio_id → segundos), en este móvil
   const [descansosPropios, setDescansosPropios] = useState(() => leerDescansos(atleta.id));
+  // (personalización 2, tanda 3) sus zonas que molestan (con su consentimiento de salud) y los avisos del coach
+  const conocerte = useConocerte(salud);
   // (revisión L3) el último aviso del cambio que pasa a las siguientes series: { texto, fn, t }
   const cambioReciente = useRef(null);
   usePantallaEncendida();
@@ -361,7 +364,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.51: antes de empezar, la portada (no en las hechas, ni con series, ni de baja)
   if (!sesion.completada && !empezada && todas.length === 0 && atleta.estado !== 'baja') {
     return (
-      <Portada sesion={sesion} semana={semana} ejercicios={ejercicios} etiquetas={etiquetas} alCerrar={alCerrar}
+      <Portada sesion={sesion} semana={semana} ejercicios={ejercicios} etiquetas={etiquetas} alCerrar={alCerrar} salud={salud} prep={prep}
         alEmpezar={() => {
           // (diseño, tanda 45) la escena de empezar: la noche se abre desde el botón pulsado (si se empieza desde él)
           lanzarEscenaInicio(document.activeElement?.closest?.('.portada-empezar .btn') || document.querySelector('.portada-empezar .btn'));
@@ -778,6 +781,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
               recordatorios={tecnica037.datos?.recs?.[actual.id] || []} modelos={tecnica037.datos?.modelos?.[actual.id] || []}
+              avisoZona={conocerte.avisoDe(actual)}
               descanso={infoDescanso(e)} descansoPropio={descansosPropios[actual.id] ?? null} descansoDefecto={descansoDefecto} elegirDescanso={(seg) => elegirDescanso(actual, seg)}
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
@@ -916,7 +920,7 @@ function serieDeAntes(ultimas, numero) {
 }
 
 function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
-  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null,
+  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null, avisoZona = null,
   luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
@@ -1061,6 +1065,7 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
         <div class="ejercicio-cuerpo">
           {siguiente && !ultimas && !Object.keys(hechas).length && <AntesDeEmpezar ej={ej} />}
           <RecuerdaEjercicio recordatorios={recordatorios} />
+          <AvisoZona aviso={avisoZona} />
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
@@ -1077,6 +1082,9 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
               {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? ` @${num(s.rpe)}` : ''}</span>)}
             </p>
           )}
+          {/* (personalización 2, tanda 3) lo de la última vez contado como persona y el descanso que de verdad hizo */}
+          {ultimas && <FraseUltimaVez ultimas={ultimas} />}
+          {ultimas && !completo && elegirDescanso && !etiqueta && <CostumbreDescanso ej={ej} ultimas={ultimas} descanso={descanso} elegir={elegirDescanso} />}
           {/* Se queda hasta acabar el ejercicio: si desapareciera tras la primera serie, las filas subirían bajo el dedo */}
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
           {/* v0.63 (3): la primera vez, en el móvil (con el dedo), cómo marcar sin apuntar y cómo abrir el teclado */}
