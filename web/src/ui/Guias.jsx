@@ -407,7 +407,7 @@ export function MitoDeLaSemana() {
 // (coach, 060) «La novedad de la semana»: un estudio o una idea en tres líneas, que sale a los atletas como un apunte más
 // (en el descanso, la primera; en Hoy, como «Novedad de la semana» hasta que la leen). El coach la escribe, la publica y
 // la puede corregir o borrar. Sin la 060, la lista sale vacía y al guardar se avisa de que falta.
-const NOVEDAD_VACIA = { id: null, titulo: '', texto: '', fuente: '', enlace: '', publicada: true, tipo: 'novedad', ejercicio_id: null, ejercicio: '' };
+const NOVEDAD_VACIA = { id: null, titulo: '', texto: '', fuente: '', enlace: '', publicada: true, tipo: 'novedad', ejercicio_id: null, ejercicio: '', opciones: ['', '', ''], correcta: 0, explicaciones: ['', '', ''] };
 
 // (tanda 4) Mandar un apunte a un atleta: le llega por Mensajes, como cualquier otro mensaje del coach
 function HojaMandarApunte({ apunte, alCerrar }) {
@@ -477,22 +477,32 @@ export function NovedadesCoach() {
   const [mandar, setMandar] = useState(null);
   // (tanda 4) los ejercicios de la biblioteca, para el apunte suelto de un ejercicio (solo se piden al escribir uno)
   const suelto = f?.tipo === 'apunte';
-  const ejercicios = useCarga(() => (suelto ? api.biblioteca().catch(() => []) : Promise.resolve(null)), [suelto]);
+  // (apuntes, tanda A) o una pregunta tuya, de test: también puede ir a un ejercicio
+  const pregunta = f?.tipo === 'pregunta';
+  const conEjercicio = suelto || pregunta;
+  const ejercicios = useCarga(() => (conEjercicio ? api.biblioteca().catch(() => []) : Promise.resolve(null)), [conEjercicio]);
   const nombreDe = (id) => (id ? (ejercicios.datos || []).find((e) => e.id === id)?.nombre || '' : '');
-  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada, tipo: x.tipo === 'apunte' ? 'apunte' : 'novedad', ejercicio_id: x.ejercicio_id || null, ejercicio: null } : { ...NOVEDAD_VACIA }); };
+  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada, tipo: ['apunte', 'pregunta'].includes(x.tipo) ? x.tipo : 'novedad', ejercicio_id: x.ejercicio_id || null, ejercicio: null, opciones: x.opciones?.length ? [...x.opciones] : ['', '', ''], correcta: Number.isInteger(x.correcta) ? x.correcta : 0, explicaciones: x.explicaciones?.length ? [...x.explicaciones] : (x.opciones || ['', '', '']).map(() => '') } : { ...NOVEDAD_VACIA }); };
   const guardar = async (ev) => {
     ev.preventDefault();
     setGuardando(true);
     try {
       // (el ejercicio se escribe por su nombre: tiene que ser uno de la biblioteca)
       let ejercicio_id = null;
-      if (suelto) {
+      if (conEjercicio) {
         const escrito = (f.ejercicio ?? nombreDe(f.ejercicio_id)).trim().toLocaleLowerCase('es');
         ejercicio_id = escrito ? (ejercicios.datos || []).find((e) => e.nombre.trim().toLocaleLowerCase('es') === escrito)?.id || null : null;
         if (escrito && !ejercicio_id) throw new Error('No encuentro ese ejercicio en tu biblioteca: elige uno de la lista o déjalo vacío');
       }
-      await api.guardarNovedad({ id: f.id, titulo: f.titulo, texto: f.texto, fuente: f.fuente, enlace: f.enlace, publicada: f.publicada, tipo: f.tipo, ejercicio_id });
-      aviso(f.publicada ? (suelto ? 'Publicado: tus atletas lo verán en sus apuntes' : 'Publicada: tus atletas la verán en sus apuntes') : 'Guardada sin publicar'); setF(null); setN(n + 1);
+      let extra = {};
+      if (pregunta) {
+        const filas = f.opciones.map((o, i) => ({ o: o.trim(), x: (f.explicaciones[i] || '').trim(), buena: i === f.correcta })).filter((r) => r.o);
+        if (filas.length < 2) throw new Error('Escribe al menos dos opciones');
+        if (!filas.some((r) => r.buena)) throw new Error('Marca cuál es la buena (y que no esté vacía)');
+        extra = { opciones: filas.map((r) => r.o), correcta: filas.findIndex((r) => r.buena), explicaciones: filas.map((r) => (r.buena ? '' : r.x)) };
+      }
+      await api.guardarNovedad({ id: f.id, titulo: f.titulo, texto: f.texto, fuente: f.fuente, enlace: f.enlace, publicada: f.publicada, tipo: f.tipo, ejercicio_id, ...extra });
+      aviso(f.publicada ? (pregunta ? 'Publicada: tus atletas la verán en sus apuntes, como un test' : suelto ? 'Publicado: tus atletas lo verán en sus apuntes' : 'Publicada: tus atletas la verán en sus apuntes') : 'Guardada sin publicar'); setF(null); setN(n + 1);
     }
     catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
   };
@@ -514,28 +524,45 @@ export function NovedadesCoach() {
             <button type="button" class="novedad-fila" key={x.id} onClick={() => abrir(x)}>
               <strong>{x.titulo}</strong>
               {x.publicada ? <span class="chip">Publicada</span> : <span class="chip aviso">Sin publicar</span>}
-              <span class="peq secundario">{x.tipo === 'apunte' ? 'Apunte suelto · ' : ''}{x.publicada_en ? fmtCorta(String(x.publicada_en).slice(0, 10)) : 'Borrador'}{x.fuente ? ` · ${x.fuente}` : ''}</span>
+              <span class="peq secundario">{x.tipo === 'apunte' ? 'Apunte suelto · ' : x.tipo === 'pregunta' ? 'Pregunta · ' : ''}{x.publicada_en ? fmtCorta(String(x.publicada_en).slice(0, 10)) : 'Borrador'}{x.fuente ? ` · ${x.fuente}` : ''}</span>
             </button>
           ))}
         </div>
       )}
       {f && (
-        <Hoja titulo={f.id ? (suelto ? 'Apunte suelto' : 'Novedad') : suelto ? 'Nuevo apunte' : 'Nueva novedad'} alCerrar={() => setF(null)}>
+        <Hoja titulo={f.id ? (pregunta ? 'Pregunta' : suelto ? 'Apunte suelto' : 'Novedad') : pregunta ? 'Nueva pregunta' : suelto ? 'Nuevo apunte' : 'Nueva novedad'} alCerrar={() => setF(null)}>
           <form class="novedad-form" onSubmit={guardar}>
             <div class="segmentos novedad-tipo" role="group" aria-label="Qué es">
-              <button type="button" aria-pressed={!suelto ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'novedad' })}>Novedad de la semana</button>
+              <button type="button" aria-pressed={!conEjercicio ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'novedad' })}>Novedad</button>
               <button type="button" aria-pressed={suelto ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'apunte' })}>Apunte suelto</button>
+              <button type="button" aria-pressed={pregunta ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'pregunta' })}>Pregunta</button>
             </div>
-            <p class="mini secundario">{suelto ? 'Un apunte tuyo que no caduca: sale en los descansos como «De tu coach». Si eliges un ejercicio, solo en los descansos de ese ejercicio.' : 'La ven la primera, en el descanso y en Hoy, durante una semana o hasta que la leen.'}</p>
-            {suelto && (
+            <p class="mini secundario">{pregunta ? 'Una pregunta de test tuya: sale en los apuntes como «Pregunta de tu coach». Al fallarla, ven por qué no era esa. Si eliges un ejercicio, solo en los descansos de ese ejercicio.' : suelto ? 'Un apunte tuyo que no caduca: sale en los descansos como «De tu coach». Si eliges un ejercicio, solo en los descansos de ese ejercicio.' : 'La ven la primera, en el descanso y en Hoy, durante una semana o hasta que la leen.'}</p>
+            {conEjercicio && (
               <div class="campo"><label for="nov-ejercicio">Ejercicio <span class="secundario">(opcional)</span></label>
                 <input id="nov-ejercicio" class="entrada" list="nov-ejercicios" autocomplete="off" value={f.ejercicio ?? nombreDe(f.ejercicio_id)} placeholder="Escribe para buscar en tu biblioteca" onInput={(e) => setF({ ...f, ejercicio: e.currentTarget.value })} />
                 <datalist id="nov-ejercicios">{(ejercicios.datos || []).map((e) => <option key={e.id} value={e.nombre} />)}</datalist></div>
             )}
-            <div class="campo"><label for="nov-titulo">Título</label>
-              <input id="nov-titulo" class="entrada" required maxLength={90} value={f.titulo} placeholder="La idea, en una frase" onInput={(e) => setF({ ...f, titulo: e.currentTarget.value })} /></div>
-            <div class="campo"><label for="nov-texto">Texto</label>
-              <textarea id="nov-texto" class="entrada" required maxLength={500} value={f.texto} placeholder="Qué se hizo, qué salió y qué hacer con ello. Tres líneas." onInput={(e) => setF({ ...f, texto: e.currentTarget.value })} />
+            <div class="campo"><label for="nov-titulo">{pregunta ? 'La pregunta' : 'Título'}</label>
+              <input id="nov-titulo" class="entrada" required maxLength={90} value={f.titulo} placeholder={pregunta ? '¿Qué pasa si…?' : 'La idea, en una frase'} onInput={(e) => setF({ ...f, titulo: e.currentTarget.value })} /></div>
+            {pregunta && (
+              <fieldset class="campo pregunta-opciones">
+                <legend>Opciones <span class="secundario">(marca la buena; el «por qué no» de las malas es opcional)</span></legend>
+                {f.opciones.map((o, i) => (
+                  <div class="pregunta-opcion" key={i}>
+                    <label class="pregunta-buena"><input type="radio" name="nov-correcta" checked={f.correcta === i} onChange={() => setF({ ...f, correcta: i })} aria-label={`La buena es la opción ${i + 1}`} /></label>
+                    <input class="entrada" maxLength={120} value={o} aria-label={`Opción ${i + 1}`} placeholder={`Opción ${i + 1}`} onInput={(e) => { const opciones = [...f.opciones]; opciones[i] = e.currentTarget.value; setF({ ...f, opciones }); }} />
+                    {f.correcta !== i && <input class="entrada entrada-peq" maxLength={200} value={f.explicaciones[i] || ''} aria-label={`Por qué no es la opción ${i + 1}`} placeholder="Por qué no es esta (opcional)" onInput={(e) => { const explicaciones = [...f.explicaciones]; explicaciones[i] = e.currentTarget.value; setF({ ...f, explicaciones }); }} />}
+                  </div>
+                ))}
+                <div class="fila-s">
+                  {f.opciones.length < 4 && <button type="button" class="btn-texto" onClick={() => setF({ ...f, opciones: [...f.opciones, ''], explicaciones: [...f.explicaciones, ''] })}><Icono n="mas" /> Otra opción</button>}
+                  {f.opciones.length > 2 && <button type="button" class="btn-texto" onClick={() => setF({ ...f, opciones: f.opciones.slice(0, -1), explicaciones: f.explicaciones.slice(0, -1), correcta: Math.min(f.correcta, f.opciones.length - 2) })}><Icono n="menos" /> Quitar la última</button>}
+                </div>
+              </fieldset>
+            )}
+            <div class="campo"><label for="nov-texto">{pregunta ? 'La explicación' : 'Texto'}</label>
+              <textarea id="nov-texto" class="entrada" required maxLength={500} value={f.texto} placeholder={pregunta ? 'Lo que leen al responder: por qué es la buena.' : 'Qué se hizo, qué salió y qué hacer con ello. Tres líneas.'} onInput={(e) => setF({ ...f, texto: e.currentTarget.value })} />
               <span class="cuenta-letras num">{[...f.texto].length}/500</span></div>
             <div class="campo"><label for="nov-fuente">De dónde sale <span class="secundario">(opcional)</span></label>
               <input id="nov-fuente" class="entrada" maxLength={200} value={f.fuente} placeholder="Apellido et al., Revista, 2026" onInput={(e) => setF({ ...f, fuente: e.currentTarget.value })} /></div>
@@ -545,7 +572,7 @@ export function NovedadesCoach() {
               <input type="checkbox" role="switch" class="interruptor" checked={f.publicada} onChange={(e) => setF({ ...f, publicada: e.currentTarget.checked })} /></label>
             <button type="submit" class="btn btn-primario" disabled={guardando}>{f.publicada ? 'Guardar y publicar' : 'Guardar borrador'}</button>
             {f.id && <button type="button" class="btn" onClick={() => setMandar({ titulo: f.titulo, texto: f.texto, de: '' })}><Icono n="enviar" /> Mandar a un atleta</button>}
-            {f.id && <button type="button" class="btn-texto peligro" onClick={quitar}>{borrar ? '¿Seguro? Toca otra vez para borrarla' : suelto ? 'Borrar este apunte' : 'Borrar esta novedad'}</button>}
+            {f.id && <button type="button" class="btn-texto peligro" onClick={quitar}>{borrar ? '¿Seguro? Toca otra vez para borrarla' : pregunta ? 'Borrar esta pregunta' : suelto ? 'Borrar este apunte' : 'Borrar esta novedad'}</button>}
           </form>
         </Hoja>
       )}

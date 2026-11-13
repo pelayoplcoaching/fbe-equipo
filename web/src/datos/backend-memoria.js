@@ -78,7 +78,7 @@ const DEFECTOS = {
   recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, destacado: false, directo_en: null, creado_en: ahora() }),
   youtube_canal: () => ({ id: true, titulo: null, activo: true, actualizado_en: ahora() }),
   // (060) la novedad de la semana
-  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora(), tipo: 'novedad', ejercicio_id: null }),
+  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora(), tipo: 'novedad', ejercicio_id: null, opciones: null, correcta: null, explicaciones: null }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
   avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora(), enviar_en: null }),
@@ -770,7 +770,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (f.enlace && !ENLACE_NOVEDAD.test(f.enlace)) throw new Error('new row for relation "novedades" violates check constraint "novedades_validas"');
       // (061) un apunte suelto del coach (tipo 'apunte'), el único que puede llevar ejercicio
       f.tipo = f.tipo ?? 'novedad';
-      if (!['novedad', 'apunte'].includes(f.tipo) || (f.ejercicio_id && f.tipo !== 'apunte')) throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"');
+      // (062) o una pregunta del coach: dos a cuatro opciones, la buena entre ellas y, si las hay, una explicación por opción
+      const malo = () => { throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"'); };
+      if (!['novedad', 'apunte', 'pregunta'].includes(f.tipo) || (f.ejercicio_id && f.tipo === 'novedad')) malo();
+      if (f.tipo === 'pregunta') {
+        const ops = f.opciones;
+        if (!Array.isArray(ops) || ops.length < 2 || ops.length > 4 || !Number.isInteger(f.correcta) || f.correcta < 0 || f.correcta >= ops.length) malo();
+        if (f.explicaciones != null && (!Array.isArray(f.explicaciones) || f.explicaciones.length !== ops.length)) malo();
+      } else if (f.opciones != null || f.correcta != null || f.explicaciones != null) malo();
       f.publicada_en = f.publicada ? (f.publicada_en || ahora()) : null;
     }
     if (t === 'fichas_ejercicio') {
@@ -879,7 +886,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'recetas') { c.actualizada_en = ahora(); delete c.creada_en; }
     if (t === 'guias') { c.actualizada_en = ahora(); delete c.creada_en; }
     // (060) la fecha de publicación la pone la base (al publicar, si no la tenía; al despublicar, fuera)
-    if (t === 'novedades' && (('tipo' in c && !['novedad', 'apunte'].includes(c.tipo)) || (c.ejercicio_id && 'tipo' in c && c.tipo !== 'apunte'))) throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"');
+    if (t === 'novedades') {
+      // (061 y 062) novedad, apunte suelto o pregunta (con dos a cuatro opciones, la buena entre ellas y una explicación por opción)
+      const malo = () => { throw new Error('new row for relation "novedades" violates check constraint "novedades_tipo_valido"'); };
+      if ('tipo' in c && !['novedad', 'apunte', 'pregunta'].includes(c.tipo)) malo();
+      if (c.ejercicio_id && 'tipo' in c && c.tipo === 'novedad') malo();
+      if (c.tipo === 'pregunta') {
+        const ops = c.opciones;
+        if (!Array.isArray(ops) || ops.length < 2 || ops.length > 4 || !Number.isInteger(c.correcta) || c.correcta < 0 || c.correcta >= ops.length) malo();
+        if (c.explicaciones != null && (!Array.isArray(c.explicaciones) || c.explicaciones.length !== ops.length)) malo();
+      } else if ('tipo' in c && (c.opciones != null || c.correcta != null || c.explicaciones != null)) malo();
+    }
     if (t === 'novedades') { delete c.creada_en; delete c.publicada_en; if (c.publicada === false) c.publicada_en = null; else if (c.publicada === true) c.publicada_en = '__al_publicar__'; }
     if (t === 'fichas_ejercicio') c.actualizada_en = ahora();
     if (t === 'comidas_atleta' && !esCoach()) delete c.opcional;
@@ -3549,9 +3566,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!/^[a-z]:[A-Za-z0-9:_-]{1,78}$/.test(String(args.p_apunte || ''))) throw Object.assign(new Error('Ese no es un apunte'), { code: '22023' });   // (061: cualquier letra)
         const hoy = new Date(); const dia = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())).toISOString().slice(0, 10);
         const sabia = typeof args.p_sabia === 'boolean' ? args.p_sabia : null;
+        // (062) la caja y la próxima vez del repaso espaciado (de 0 a 5; entre hoy y dentro de 60 días)
+        const caja = args.p_caja == null ? null : Number(args.p_caja), proxima = args.p_proxima == null ? null : String(args.p_proxima).slice(0, 10);
+        if (caja != null && !(Number.isInteger(caja) && caja >= 0 && caja <= 5)) throw Object.assign(new Error('Esa caja no existe'), { code: '22023' });
+        if (proxima != null && (!/^\d{4}-\d{2}-\d{2}$/.test(proxima) || proxima < dia || proxima > sumar(dia, 60))) throw Object.assign(new Error('Esa fecha de repaso no vale'), { code: '22023' });
         const x = tabla('apuntes_vistos').find((v) => v.atleta_id === a && v.apunte === args.p_apunte);
-        if (!x) tabla('apuntes_vistos').push({ atleta_id: a, apunte: args.p_apunte, veces: 1, ultimo: dia, sabia, primera_vez: ahora() });
-        else { if (x.ultimo < dia) { x.veces += 1; x.ultimo = dia; } if (sabia != null) x.sabia = sabia; }
+        if (!x) tabla('apuntes_vistos').push({ atleta_id: a, apunte: args.p_apunte, veces: 1, ultimo: dia, sabia, primera_vez: ahora(), caja: caja ?? 0, proxima });
+        else { if (x.ultimo < dia) { x.veces += 1; x.ultimo = dia; } if (sabia != null) x.sabia = sabia; if (caja != null) x.caja = caja; if (proxima != null) x.proxima = proxima; }
         persistirYa();
         return null;
       }

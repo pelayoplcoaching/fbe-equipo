@@ -11,7 +11,7 @@
 // email, RESEND_API_KEY y AVISOS_REMITENTE. SUPABASE_URL y la clave de servicio los pone Supabase solo.
 import { enviarPush, comprobarVapid, ENDPOINT_VALIDO } from './webpush.js';
 
-const RECORDATORIOS = new Set(['sesion_hoy', 'checkin', 'habitos', 'nutricion']);
+const RECORDATORIOS = new Set(['sesion_hoy', 'checkin', 'habitos', 'nutricion', 'repaso']);
 // Las que conviene que lleguen ya aunque el móvil esté en ahorro de batería
 const URGENTES = new Set(['respuesta', 'mensaje', 'prueba', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'descanso']);
 // Una sola a la vez en el móvil (la nueva sustituye a la anterior del mismo tipo, y vuelve a sonar)
@@ -185,7 +185,9 @@ export async function enviarPendientes({ env, db, fetch: f = globalThis.fetch, r
   const conEmail = !!(env.RESEND_API_KEY && env.AVISOS_REMITENTE);
   const vapid = { publica: env.VAPID_PUBLICA, privada: env.VAPID_PRIVADA, contacto: env.AVISOS_CONTACTO || direcciones(env.APP_URL)[0] };
   await comprobarVapid(vapid);
-  const creados = recordatorios ? Number(await db.rpc('crear_recordatorios', {})) || 0 : 0;
+  let creados = recordatorios ? Number(await db.rpc('crear_recordatorios', {})) || 0 : 0;
+  // (063) el aviso de los apuntes por repasar; si la base aún no tiene la 063, no pasa nada: se sigue con lo demás
+  if (recordatorios) { try { creados += Number(await db.rpc('crear_recordatorios_apuntes', {})) || 0; } catch { /* sin la 062 */ } }
   const lote = (await db.rpc('notificaciones_por_enviar', { p_limite: limite, p_email: conEmail })) || [];
   const total = nuevoResultado();
   const porUsuario = new Map();
