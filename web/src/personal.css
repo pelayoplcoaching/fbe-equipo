@@ -465,3 +465,15 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .album-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
 .album-ico svg { width: 18px; height: 18px; }
 .album-hitos > .btn { justify-self: start; }
+
+/* ---------- (personalizacion 3, tanda 9) Que el coach le conozca ---------- */
+.alerta-temprana { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, #f5a524 12%, var(--hoja)); line-height: 1.45; }
+.alerta-temprana > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: #c27c0e; }
+.lo-que-funciona p { margin: 0; }
+.panel.lo-que-funciona { display: grid; gap: 6px; }
+.envios-t { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 1rem; }
+.envios-t > svg { width: 20px; height: 20px; color: var(--morado); }
+.envio-fila { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 2px; }
+.envio-fila .envio-quien { justify-self: start; padding: 0; }
+.envio-fila .peq { grid-column: 1; }
+.envio-fila .btn { grid-column: 2; grid-row: 1 / span 2; }

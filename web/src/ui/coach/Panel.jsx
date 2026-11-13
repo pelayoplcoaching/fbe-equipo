@@ -15,6 +15,7 @@ import { horaMadrid } from '../../logica/perfil.js';
 import { CabCoach } from './CabCoach.jsx';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
 import { CumplesHoy } from './PersonalCoach.jsx';
+import { EnviosPendientes } from '../atleta/CoachSabe.jsx';
 import { useContactos } from './Integraciones.jsx';
 import { enlaceWhatsApp } from '../../logica/integraciones.js';
 
@@ -130,6 +131,8 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       {/* (v0.104) quién cumple años hoy */}
       {!cargando && <CumplesHoy lista={lista} abrir={abrir} />}
+      {/* (personalización 3, tanda 9) los hitos que merecen algo de verdad (un año, el día de su meta) */}
+      {!cargando && <EnviosPendientes lista={lista} abrir={abrir} />}
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       {/* (pulido 2.3) el resumen del equipo guarda su sitio mientras llega la lista: los filtros no bajan */}
       <Reserva id="panel-equipo-hoy" cargando={cargando}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>

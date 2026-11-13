@@ -11,6 +11,7 @@ import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
 import { PatronCiclo, BotonInforme } from './Respeto.jsx';
 import { AlbumHitos } from './Compania.jsx';
+import { LoQueLeFunciona } from './CoachSabe.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Segmentos, Pestanas, Vacio } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
@@ -59,6 +60,7 @@ export function PerfilSecciones({ salud, irA }) {
             <MejorMomento entrenos={lista} hoy={hoy} />
             <AdnFbe entrenos={lista} progreso={progreso.datos} hoy={hoy} />
             <AlbumHitos entrenos={lista} progreso={progreso.datos} hoy={hoy} />
+            <LoQueLeFunciona atletaId={atleta.id} entrenos={entrenos.datos} paraAtleta />
             <PatronCiclo entrenos={lista} salud={salud} />
             <div class="perfil-informe"><BotonInforme salud={salud} /></div>
             <CifrasPerfil entrenos={lista} hoy={hoy} cargando={entrenos.cargando && !entrenos.datos} />

@@ -11,6 +11,7 @@ import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../lo
 import { paraHablarle, cartaDelMes, mesDeLaCarta } from '../../logica/retrato.js';
 import { SuVida } from '../atleta/Vida.jsx';
 import { PonerReto } from '../atleta/Compania.jsx';
+import { AlertaTemprana, LoQueLeFunciona, ideaDeAlerta } from '../atleta/CoachSabe.jsx';
 import { GrabarAudio } from '../Guias.jsx';
 import { textoManual, ideaSegunManual } from '../../logica/respeto.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
@@ -89,14 +90,17 @@ export function ParaHablarle({ atleta }) {
   const r0 = paraHablarle({ nombre: atleta.nombre, personal, entrenos, ultimoCoach: ultimo, hoy });
   // (personalización 3) su manual de instrucciones, en las filas y en la idea
   const man = textoManual(personal);
-  const r = { filas: [...r0.filas, ...(man ? [['Su manual', [man.feedback, man.motiva && `le motiva: ${man.motiva.toLocaleLowerCase('es')}`].filter(Boolean).join(' · ') || '—'], ...(man.evitar ? [['No quiere oír', `«${man.evitar}»`]] : [])] : [])], idea: ideaSegunManual(r0.idea, personal) };
+  const alertaIdea = ideaDeAlerta(entrenos);
+  const r = { filas: [...r0.filas, ...(man ? [['Su manual', [man.feedback, man.motiva && `le motiva: ${man.motiva.toLocaleLowerCase('es')}`].filter(Boolean).join(' · ') || '—'], ...(man.evitar ? [['No quiere oír', `«${man.evitar}»`]] : [])] : [])], idea: ideaSegunManual(alertaIdea || r0.idea, personal) };
   const mes = mesDeLaCarta(hoy);
   return (
     <section class="seccion para-hablarle" aria-labelledby="para-hablarle-t">
       <h2 id="para-hablarle-t">Para hablarle</h2>
       <div class="panel panel-pad pila-s">
+        <AlertaTemprana entrenos={entrenos} />
         <dl class="lo-suyo-datos">{r.filas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
         <SuVida atleta={atleta} />
+        <LoQueLeFunciona atletaId={atleta.id} entrenos={entrenos} />
         <PonerReto atleta={atleta} />
         <p class="para-hablarle-idea"><Icono n="mensaje" /><span><strong>Idea: </strong>{r.idea}</span></p>
         <button type="button" class="btn btn-peq" onClick={() => setCarta(true)}><Icono n="editar" /> La carta de {nombreMesCarta(mes)}</button>
