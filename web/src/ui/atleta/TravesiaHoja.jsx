@@ -231,9 +231,9 @@ function Liga({ liga }) {
   return (
     <section class={`tv-liga tv-liga-${liga.nivel}`} aria-labelledby="tv-liga-t">
       <h3 id="tv-liga-t"><span class="tv-liga-medalla" aria-hidden="true" />{LIGAS[liga.nivel]}</h3>
-      <ol class="tv-clasif">
+      <ol class="tv-clasif tv-liga-lista">
         {liga.grupo.map((f, i) => (
-          <li key={f.nombre} class={`tv-fila${f.yo ? ' yo' : ''}`}>
+          <li key={f.nombre} class={`tv-liga-fila${f.yo ? ' yo' : ''}`}>
             <span class="tv-puesto num">{i + 1}</span>
             <span class="tv-nombre">{f.yo ? 'Tú' : f.nombre}{i === 0 && tam >= 2 && liga.nivel < 2 && f.metros > 0 && <small> · sube</small>}{i === tam - 1 && tam >= 3 && liga.nivel > 0 && <small> · baja</small>}</span>
             <b class="num">{textoDistancia(f.metros)}</b>

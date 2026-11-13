@@ -74,8 +74,8 @@ export async function probarTravesiaRemate({ navegador, check, base = 'http://lo
     await reto.waitFor({ timeout: 5000 });
     check(/hasta Covadonga/.test(await reto.textContent()), 'en «Tu travesía», el reto del coach con su barra');
     const liga = hoja.locator('.tv-liga');
-    await liga.waitFor({ timeout: 5000 });
-    check(/Liga de bronce/.test(await liga.textContent()) && await liga.locator('.tv-fila.yo').count() === 1 && await liga.locator('.tv-fila').count() <= 5, `su liga de la semana: bronce, en un grupo de ${await liga.locator('.tv-fila').count()}`);
+    await liga.locator('.tv-liga-fila.yo').waitFor({ timeout: 5000 });
+    check(/Liga de bronce/.test(await liga.textContent()) && await liga.locator('.tv-liga-fila.yo').count() === 1 && await liga.locator('.tv-liga-fila').count() <= 5, `su liga de la semana: bronce, en un grupo de ${await liga.locator('.tv-liga-fila').count()}`);
     await p.keyboard.press('Escape');
 
     // --- La etapa del día con el lobo de un compañero: uno de la comunidad de la demo ya ha corrido hoy (su rastro) ---

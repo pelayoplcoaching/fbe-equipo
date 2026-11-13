@@ -291,3 +291,6 @@
 .tv-reto-coach { display: grid; gap: 10px; }
 .tv-reto-coach h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
 .tv-reto-coach h3 svg { width: 18px; height: 18px; }
+/* (las filas de la liga, como las de la manada pero aparte: «.tv-fila» son las de la manada) */
+.tv-liga-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, transparent); }
+.tv-liga-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
