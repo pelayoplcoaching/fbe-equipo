@@ -5,8 +5,10 @@
 //   · MusicaCoach y CampoMusica: las listas que enlaza (en su cuenta) y la de una sesión o un bloque (en el editor)
 //     (v0.129: con el nombre y la portada de cada lista, y su ficha al pegar el enlace)
 import { useState } from 'preact/hooks';
+import { Fragment } from 'preact';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../logica/conocerte.js';
+import { paraHablarle, cartaDelMes, mesDeLaCarta } from '../../logica/retrato.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
 import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
@@ -68,6 +70,62 @@ export function LoSuyo({ atletaId }) {
   );
 }
 
+// (personalización 2, tanda 4) «Para hablarle»: todo lo que hace falta para escribirle de un vistazo (cómo le llamamos y
+// le hablamos, su porqué, su meta, su último hito, cuándo le escribiste) y una idea; y la carta del mes, en borrador.
+export function ParaHablarle({ atleta }) {
+  const { api } = useApp();
+  const d = useCarga(() => Promise.all([
+    api.personalAtletas().catch(() => []), api.entrenamientos(atleta.id).catch(() => []), api.ultimoDelCoach(atleta.id).catch(() => null),
+  ]), [atleta.id]);
+  const [carta, setCarta] = useState(false);
+  if (!d.datos) return null;
+  const [lista, entrenos, ultimo] = d.datos;
+  const personal = (lista || []).find((x) => x.atleta_id === atleta.id) || null;
+  const hoy = hoyISO();
+  const r = paraHablarle({ nombre: atleta.nombre, personal, entrenos, ultimoCoach: ultimo, hoy });
+  const mes = mesDeLaCarta(hoy);
+  return (
+    <section class="seccion para-hablarle" aria-labelledby="para-hablarle-t">
+      <h2 id="para-hablarle-t">Para hablarle</h2>
+      <div class="panel panel-pad pila-s">
+        <dl class="lo-suyo-datos">{r.filas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
+        <p class="para-hablarle-idea"><Icono n="mensaje" /><span><strong>Idea: </strong>{r.idea}</span></p>
+        <button type="button" class="btn btn-peq" onClick={() => setCarta(true)}><Icono n="editar" /> La carta de {nombreMesCarta(mes)}</button>
+      </div>
+      {carta && <HojaCarta atleta={atleta} personal={personal} entrenos={entrenos} mes={mes} alCerrar={() => setCarta(false)} />}
+    </section>
+  );
+}
+const MESES_CARTA = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const nombreMesCarta = (mes) => MESES_CARTA[Number(String(mes).slice(5, 7)) - 1] || 'este mes';
+
+function HojaCarta({ atleta, personal, entrenos, mes, alCerrar }) {
+  const { api, aviso } = useApp();
+  const [tono, setTono] = useState(personal?.tono || 'cercano');
+  const borrador = (tn) => cartaDelMes({ nombre: atleta.nombre, personal, entrenos, mes, hoy: hoyISO(), tono: tn });
+  const [texto, setTexto] = useState(() => borrador(personal?.tono || 'cercano'));
+  const [tocado, setTocado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const cambiarTono = (tn) => { setTono(tn); if (!tocado) setTexto(borrador(tn)); };
+  const enviar = async () => {
+    setEnviando(true);
+    try { await api.enviarMensaje(atleta.id, { autor: 'coach', texto: texto.trim() }); aviso('Carta enviada'); alCerrar(); } catch (e) { aviso(e.message, 'error'); } finally { setEnviando(false); }
+  };
+  return (
+    <Hoja titulo={`La carta de ${nombreMesCarta(mes)}`} alCerrar={alCerrar}>
+      <div class="pila carta-hoja">
+        <p class="peq secundario">Un borrador con sus datos del mes, su porqué y su meta. Léelo, tócalo y mándalo: le llega como un mensaje tuyo.</p>
+        <div class="segmentos" role="group" aria-label="Tono">
+          {[['cercano', 'Cercano'], ['directo', 'Directo'], ['tope', 'A tope']].map(([k, n]) => <button key={k} type="button" aria-pressed={tono === k ? 'true' : 'false'} onClick={() => cambiarTono(k)}>{n}</button>)}
+        </div>
+        <label class="sr" for="carta-texto">La carta</label>
+        <textarea id="carta-texto" class="entrada" rows={12} value={texto} onInput={(e) => { setTexto(e.currentTarget.value); setTocado(true); }} />
+        <button type="button" class="btn btn-primario btn-grande" disabled={enviando || !texto.trim()} onClick={enviar}><Icono n="enviar" /> Enviar a {personal?.apodo || atleta.nombre.split(' ')[0]}</button>
+      </div>
+    </Hoja>
+  );
+}
+
 export function MensajesAutomaticos() {
   const { api } = useApp();
   const lista = useCarga(() => api.mensajesCoach().catch(() => null), []);
@@ -94,7 +152,7 @@ export function MensajesAutomaticos() {
           })}
         </ul>
       </div>
-      <p class="mini terciario">Salen solos, con tu foto, en ese momento: en el resumen de una sesión con récord, al abrir el informe de un bloque terminado, en el hito de la racha y en la bienvenida del día (si vuelve tras una semana o más, o el día de su cumpleaños). Pon {'{nombre}'} y la app pone el suyo (o cómo quiere que le llamen); en el récord, {'{ejercicio}'}; en la racha, {'{semanas}'}.</p>
+      <p class="mini terciario">Salen solos, con tu foto, en ese momento: en el resumen de una sesión con récord, al abrir el informe de un bloque terminado, en el hito de la racha, en la bienvenida del día (si vuelve tras una semana o más, el día de su cumpleaños o a una semana de su meta), en la tarjeta de su aniversario, en un ejercicio que hace por primera vez y en la primera sesión en el gimnasio tras entrenar de viaje. Pon {'{nombre}'} y la app pone el suyo (o cómo quiere que le llamen); en el récord y la primera vez, {'{ejercicio}'}; en la racha, {'{semanas}'}; en el aniversario, {'{tiempo}'}; en la meta, {'{meta}'}.</p>
       {editar && <HojaMensaje momento={editar} actual={mensajeDe(lista.datos, editar) || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
     </section>
   );
@@ -142,7 +200,7 @@ function HojaMensaje({ momento, actual, alCerrar, alGuardar, titulo: tituloDado 
   const [t, setT] = useState(actual);
   const [guardando, setGuardando] = useState(false);
   // (los avisos por zona van tal cual, detrás de «Tu hombro: »)
-  const muestra = prefijo ? (t.trim() || null) : textoMensajeCoach(t || '', { nombre: 'Ana', ejercicio: 'press banca', semanas: 8 });
+  const muestra = prefijo ? (t.trim() || null) : textoMensajeCoach(t || '', { nombre: 'Ana', ejercicio: 'press banca', semanas: 8, tiempo: '6 meses', meta: 'su competición' });
   const guardar = async (texto) => {
     setGuardando(true);
     try { await api.guardarMensajeCoach(momento, texto); aviso(texto.trim() ? 'Mensaje guardado' : 'Mensaje quitado'); alGuardar(); } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }

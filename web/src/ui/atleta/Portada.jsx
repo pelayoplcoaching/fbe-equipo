@@ -20,6 +20,7 @@ import { hoyISO, diasEntre } from '../../logica/fechas.js';
 import { porQueSesion, nivelLenguaje, explicarEsfuerzo, metaDe } from '../../logica/rumbo.js';
 import { objetivosDe } from '../../logica/cuestionario.js';
 import { HoyComoEstas } from './Conocerte.jsx';
+import { FotoMotivacion } from './Suyo.jsx';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -80,6 +81,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           </ul>
         </div>
       </header>
+      {!sesion.completada && <FotoMotivacion clase="en-portada" />}
       {!sesion.completada && <HoyComoEstas salud={salud} prep={prep || sesion.preparacion || null} />}
       {porQue && <p class="portada-porque"><Icono n="diana" /><span><strong>Por qué es para ti. </strong>{porQue}</span></p>}
       {nivel === 'principiante' && r.ejercicios > 0 && ejercicios.some((e) => /RIR|RPE/.test(pauta(e)?.esfuerzo || '')) && (

@@ -45,17 +45,23 @@ export async function probarPersonalConocerte({ navegador, check, base = 'http:/
     q.on('pageerror', (e) => errores.push(e.message));
     await q.goto(`${base}/?demo`);
     // (la demo recuerda la cuenta: si entra como el coach, se cambia de cuenta)
-    const anaB = q.getByRole('button', { name: /Ana López/ }).first();
+    const anaB = q.locator('button.persona', { hasText: 'Ana López' }).first();
     await Promise.race([anaB.waitFor({ timeout: 8000 }), q.locator('nav.tabs').waitFor({ timeout: 8000 })]).catch(() => {});
-    if (!(await anaB.isVisible().catch(() => false))) {
-      await q.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+    for (let i = 0; i < 4 && !(await anaB.isVisible().catch(() => false)); i++) {
+      for (let j = 0; j < 4; j++) { await q.waitForTimeout(300); if (!(await q.locator('[role=dialog]').last().isVisible().catch(() => false))) break; await q.keyboard.press('Escape'); }
+      await q.getByRole('button', { name: 'Cambiar de cuenta' }).first().click({ timeout: 4000 }).catch(() => {});
+      await q.waitForTimeout(500);
     }
     await anaB.click();
     await q.locator('nav.tabs').waitFor();
     for (let i = 0; i < 4; i++) { await q.waitForTimeout(300); if (!(await q.locator('[role=dialog]').last().isVisible().catch(() => false))) break; await q.keyboard.press('Escape'); }
     const guardado = await q.evaluate(() => globalThis.__fbeDemo.rpc('mensajes_coach', {}).then((l) => l.some((m) => m.momento === 'molestia_hombro')));
     check(guardado, 'el aviso del coach le llega');
-    await q.locator('.hero-dia .btn-hero').click();
+    // (lo que sale encima al entrar, como las medallas nuevas, puede tardar: se cierra y se reintenta)
+    for (let i = 0; i < 4; i++) {
+      if (await q.locator('.hero-dia .btn-hero').click({ timeout: 4000 }).then(() => true).catch(() => false)) break;
+      for (let j = 0; j < 4; j++) { await q.waitForTimeout(300); if (!(await q.locator('[role=dialog]').last().isVisible().catch(() => false))) break; await q.keyboard.press('Escape'); }
+    }
     await q.getByRole('button', { name: 'Empezar', exact: true }).click();
     await q.locator('.sesion-vista .ejercicio').first().waitFor();
     for (const b of await q.locator('.pista').getByRole('button', { name: 'Entendido' }).all()) await b.click().catch(() => {});
@@ -73,7 +79,8 @@ export async function probarPersonalConocerte({ navegador, check, base = 'http:/
     check(!desborda, 'todo cabe a 390 px');
     check(errores.length === 0, `sin errores en la página${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
   } catch (e) {
-    check(false, `Personalización (conocerte): ${e.message.split('\n')[0]}`);
+    check(false, `Personalización (conocerte): ${e.message.split('\n').slice(0, 3).join(' ')}`);
+    await ctx.pages().at(-1)?.screenshot({ path: '/tmp/t3-fallo.png' }).catch(() => {});
   } finally { await ctx.close(); }
 }
 

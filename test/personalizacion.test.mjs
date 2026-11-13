@@ -40,7 +40,7 @@ check(textoMensajeCoach('Bloque terminado, {nombre}.', {}) === 'Bloque terminado
 check(textoMensajeCoach('Venga, ¡a por ello!', {}) === 'Venga, ¡a por ello!' && textoMensajeCoach('{nombre}, qué bien', {}) === 'qué bien', 'no toca la coma antes de un «¡» y no deja una coma al empezar');
 check(textoMensajeCoach('  ', {}) === null && textoMensajeCoach(null, {}) === null && textoMensajeCoach('Hola {otra}', {}) === 'Hola {otra}', 'vacío, nada; lo que no es una variable se queda');
 check(mensajeDe([{ momento: 'record', texto: 'a' }], 'record') === 'a' && mensajeDe([], 'record') === null && mensajeDe(null, 'x') === null, 'el mensaje de un momento');
-check(MOMENTOS_COACH.length === 7 && MOMENTOS_COACH.every(([k, t, d]) => k && t && d.includes('{nombre}')), 'siete momentos (con el aniversario y la meta, 065), cada uno con su texto de ejemplo');
+check(MOMENTOS_COACH.length === 9 && MOMENTOS_COACH.every(([k, t, d]) => k && t && d.includes('{nombre}')), 'nueve momentos (con el aniversario y la meta, 065, y la primera vez y la vuelta de un viaje, 066), cada uno con su texto de ejemplo');
 
 console.log('\nLa cifra de su objetivo');
 const hoy = '2026-11-08';

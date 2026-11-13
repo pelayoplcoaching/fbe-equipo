@@ -6058,6 +6058,10 @@ try {
   console.log('\nQue la app le conozca');
   const { probarPersonalConocerte } = await import('./e2e-personal-t3.mjs');
   await probarPersonalConocerte({ navegador, check });
+  // Personalización 2, tanda 4: su foto de motivación (en el móvil) y, en la ficha del coach, «Para hablarle» y la carta del mes
+  console.log('\nQue sea suyo');
+  const { probarPersonalSuyo } = await import('./e2e-personal-t4.mjs');
+  await probarPersonalSuyo({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');
