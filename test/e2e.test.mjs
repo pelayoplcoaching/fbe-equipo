@@ -6046,6 +6046,10 @@ try {
   console.log('\nApuntes con los demás');
   const { probarApuntesSocial } = await import('./e2e-apuntes-t4.mjs');
   await probarApuntesSocial({ navegador, check });
+  // Personalización 2, tanda 1: cómo te hablamos (género y tono), qué celebrar y su nombre en la portada
+  console.log('\nQue la app le hable a cada uno');
+  const { probarPersonalTrato } = await import('./e2e-personal-t1.mjs');
+  await probarPersonalTrato({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

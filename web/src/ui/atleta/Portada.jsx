@@ -14,6 +14,9 @@ import { familiaPortada, imagenPortada, imagenEjercicio } from '../../logica/ima
 import { Imagen } from '../Imagen.jsx';
 import { RecordAlAlcance } from './Personal.jsx';
 import { MusicaSesion } from './Musica.jsx';
+import { useTrato } from '../trato.js';
+import { antesDelTitulo } from '../../logica/trato.js';
+import { hoyISO } from '../../logica/fechas.js';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -33,6 +36,9 @@ export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
 }
 
 export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar }) {
+  // (personalización 2) «Ana, hoy toca»: con su nombre (o su apodo), encima del nombre de la sesión
+  const trato = useTrato();
+  const paraTi = antesDelTitulo(trato, { esHoy: !sesion.dia_previsto || sesion.dia_previsto === hoyISO() });
   const { api, propio } = useApp();
   const foto = useCarga(() => (propio ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
   const r = resumenPautas(ejercicios.map((e) => ({ ...e, ejercicio: e.ejercicio })));
@@ -57,6 +63,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
         <span />
         <div class="portada-texto">
           <span class="t-sobre">{sobre}</span>
+          {paraTi && <span class="portada-para">{paraTi}</span>}
           <h1 class="t-display">{sesion.nombre}</h1>
           <ul class="portada-meta" aria-label="De qué va">
             {r.minutos > 0 && <li><Icono n="reloj" />unos <span class="num">{r.minutos}</span> min</li>}

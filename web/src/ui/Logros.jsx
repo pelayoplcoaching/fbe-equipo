@@ -182,7 +182,7 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   // (v0.72) y no encima de la bienvenida del día: espera a que se cierre
   const bienvenida = useBienvenidaAbierta();
   const ver = !pausado && !bienvenida && !cerrado && nuevos.length > 0;
-  useEffect(() => { if (ver) celebrar(); }, [ver]);
+  useEffect(() => { if (ver) celebrar('otros'); }, [ver]);
   if (!ver) return null;
   const terminar = (ir) => { setVistos(nivelesVistos(lista)); setCerrado(true); if (ir) { pedirSubProgreso('logros'); irA('progreso'); } };
   const principal = [...nuevos].sort((a, b) => b.nivel - a.nivel)[0];

@@ -93,13 +93,18 @@ export const MOMENTOS_COACH = [
   ['racha', 'En un hito de la racha', '{semanas} semanas seguidas, {nombre}. Esto ya es tuyo.'],
   ['vuelta', 'Al volver tras un parón', 'Qué bien verte de vuelta, {nombre}. Sin prisa: lo importante es haber vuelto.'],
   ['cumple', 'En su cumpleaños', '¡Feliz cumpleaños, {nombre}! Que este año venga cargado de récords.'],
+  // (personalización 2, migración 065) su aniversario en el equipo y su meta, a una semana
+  ['aniversario', 'En su aniversario en el equipo', '{tiempo} entrenando juntos, {nombre}. Gracias por la constancia: lo mejor está por venir.'],
+  ['meta', 'Cuando falta una semana para su meta', 'Una semana para {meta}, {nombre}. Lo has trabajado: ahora, a disfrutarlo.'],
 ];
 export const MOMENTO_VALIDO = new Set(MOMENTOS_COACH.map(([k]) => k));
-export function textoMensajeCoach(plantilla, { nombre = '', ejercicio = '', semanas = '' } = {}) {
+export function textoMensajeCoach(plantilla, { nombre = '', ejercicio = '', semanas = '', tiempo = '', meta = '' } = {}) {
   const t = String(plantilla || '').trim();
   if (!t) return null;
-  const vars = { nombre: String(nombre || '').trim(), ejercicio: String(ejercicio || '').trim(), semanas: semanas === '' || semanas == null ? '' : String(semanas) };
-  return t.replace(/\{(nombre|ejercicio|semanas)\}/g, (_, k) => vars[k])
+  const vars = { nombre: String(nombre || '').trim(), ejercicio: String(ejercicio || '').trim(), semanas: semanas === '' || semanas == null ? '' : String(semanas), tiempo: String(tiempo || '').trim(), meta: String(meta || '').trim() };
+  return t.replace(/\{(nombre|ejercicio|semanas|tiempo|meta)\}/g, (_, k) => vars[k])
+    // (un «{tiempo}» al principio: con mayúscula)
+    .replace(/^([a-z\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1])/, (x) => x.toLocaleUpperCase('es'))
     // sin nombre, «, {nombre}» no deja una coma colgando
     .replace(/,\s*([!.?]|$)/g, '$1').replace(/^\s*,\s*/, '').replace(/\s{2,}/g, ' ').replace(/\s+([!.?,])/g, '$1').trim() || null;
 }

@@ -1,3 +1,4 @@
+import { tratoDe, saludoDeHora, bienvenidaPrimera, rematePorTono } from '../logica/trato.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { hoyISO } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
@@ -128,7 +129,13 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   const hoyM = hoyISO();
   const cumple = esCumple(personal, hoyM);
   const nombreVisible = personal?.apodo || m.nombre;
-  const saludo = cumple ? '¡Feliz cumpleaños,' : m.saludo;
+  // (personalización 2) su género (si lo ha elegido), el saludo de su hora y de su día y su tono
+  const trato = tratoDe(personal, nombre);
+  const ahoraM = new Date();
+  const deHora = rol === 'atleta' ? saludoDeHora({ hora: ahoraM.getHours(), dow: (ahoraM.getDay() + 6) % 7, costumbre: datos?.costumbre || null, primeraDeSemana: !!datos?.primeraDeSemana }, trato) : null;
+  const saludo = cumple ? '¡Feliz cumpleaños,' : rol !== 'atleta' ? m.saludo : m.saludo === 'Hola,' ? bienvenidaPrimera(trato) : deHora.saludo;
+  const mensajeVisible = rol === 'atleta' ? rematePorTono(trato, m.mensaje) : m.mensaje;
+  const detalleVisible = m.detalle || deHora?.detalle || null;
   const porque = listo ? porqueParaHoy({ porque: personal?.porque, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
   const momento = listo ? momentoBienvenida({ cumple, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
   const delCoach = momento ? textoMensajeCoach(mensajeDe(mensajesCoach, momento), { nombre: nombreVisible }) : null;
@@ -164,11 +171,11 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
           <span class="bdia-fecha">{fechaCorta()}</span>
         </div>
         <h1 id="bdia-titulo"><span class="bdia-saludo">{saludo}</span> <span class="bdia-nombre">{nombreVisible}</span></h1>
-        <p id="bdia-mensaje" class="bdia-mensaje" aria-live="polite">{listo ? m.mensaje : 'Preparando tu día…'}</p>
+        <p id="bdia-mensaje" class="bdia-mensaje" aria-live="polite">{listo ? mensajeVisible : 'Preparando tu día…'}</p>
         {delCoach && <p class="bdia-coach"><span class="bdia-sobre">Tu coach</span>{delCoach}</p>}
         {porque && <p class="bdia-porque"><span class="bdia-sobre">Tu porqué</span>«{porque}»</p>}
         {/* (con el panel, la racha y lo que toca ya van en él: el detalle sobraría) */}
-        {listo && !conPanel && m.detalle && <p class="bdia-detalle">{m.detalle}</p>}
+        {listo && !conPanel && detalleVisible && <p class="bdia-detalle">{detalleVisible}</p>}
         {conPanel && <Tablero panel={panel} />}
       </div>
       <button ref={boton} class="bdia-empezar" disabled={!listo} onClick={alCerrar}>{listo ? 'Empezar' : 'Cargando…'}</button>

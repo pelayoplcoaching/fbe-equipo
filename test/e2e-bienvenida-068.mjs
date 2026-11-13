@@ -88,7 +88,7 @@ export async function probarBienvenida068({ navegador, check, base = 'http://loc
     await p.goto(`${base}/?demo`);
     await p.getByRole('button', { name: /Ana López/ }).first().click();
     const cod = p.getByLabel('Código', { exact: true });
-    const bv = p.getByRole('dialog', { name: /Hola/ });
+    const bv = p.getByRole('dialog', { name: /Hola|Buen[oa]s (días|tardes|noches)|bienvenid/i });
     await Promise.race([cod.waitFor({ timeout: 8000 }).catch(() => {}), bv.waitFor({ timeout: 8000 }).catch(() => {}), p.locator('nav.tabs').waitFor()]);
     if (await cod.isVisible().catch(() => false)) { await cod.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
     await bv.waitFor();
@@ -97,7 +97,7 @@ export async function probarBienvenida068({ navegador, check, base = 'http://loc
     await esperar(() => document.activeElement?.classList.contains('bdia-empezar'));
     const titulo = (await bv.locator('h1').textContent()).replace(/\s+/g, ' ').trim();
     const mensaje = (await bv.locator('.bdia-mensaje').textContent()).trim();
-    check(/^Hola( de nuevo)?, Ana$/.test(titulo) && mensaje.length > 5 && !/Preparando/.test(mensaje) && await p.evaluate(() => document.activeElement?.classList.contains('bdia-empezar')),
+    check(/^(Hola( de nuevo)?|Buen[oa]s (días|tardes|noches)(, madrugador[a]?:)?|Te damos la bienvenida|¡Bienvenid[ao]),? Ana$/.test(titulo) && mensaje.length > 5 && !/Preparando/.test(mensaje) && await p.evaluate(() => document.activeElement?.classList.contains('bdia-empezar')),
       `al abrir la app, la bienvenida: «${titulo}» y «${mensaje}», con «Empezar» (y el foco en él)`);
     await revisar('bienvenida');
     check(await estrecho('bienvenida'), 'la bienvenida cabe a 360 px en oscuro');

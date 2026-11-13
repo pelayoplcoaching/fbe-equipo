@@ -5,6 +5,8 @@
 import { CONFETI, cuantasParticulas, escalaLienzo, crearParticulas, moverParticulas, opacidadConfeti } from '../logica/confeti.js';
 import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
+import { leerAjustes } from './ajustes.js';
+import { modoCelebrar } from '../logica/trato.js';
 
 let activo = null;
 
@@ -15,7 +17,12 @@ function colores() {
   return [acento, '#FFC94D', '#FF8A3D', '#3DC27B', '#5B8FF2', '#F07AB8', acento];
 }
 
-export function lanzarConfeti({ vibracion = 'record' } = {}) {
+// momento (personalización 2): 'record', 'racha', 'semana', 'bloque' u 'otros', para respetar lo que el atleta quiere
+// celebrar (con todo, solo vibración o nada); sin momento, como siempre
+export function lanzarConfeti({ vibracion = 'record', momento = null } = {}) {
+  const modo = momento ? modoCelebrar(leerAjustes(), momento) : 'todo';
+  if (modo === 'nada') return false;
+  if (modo === 'vibrar') { vibrar(vibracion || 'record'); return false; }
   if (typeof document === 'undefined' || sinMovimiento() || document.visibilityState === 'hidden') return false;
   if (vibracion) vibrar(vibracion);
   activo?.parar();

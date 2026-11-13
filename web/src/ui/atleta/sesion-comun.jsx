@@ -1,3 +1,4 @@
+import { modoCelebrar } from '../../logica/trato.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { faseRespira, retrasoRespira } from '../../logica/respira.js';
@@ -166,9 +167,13 @@ export function vibrarAviso() { if (leerAjustes().vibracion) try { navigator.vib
 export function vibrarCorto(ms = 30) { if (leerAjustes().vibracion) try { navigator.vibrate?.(ms); } catch { /* */ } }
 
 // Récord: vibración más larga (la de «vibración al tocar», v0.49) y tres notas que suben
-export function celebrar() {
+export function celebrar(momento = 'record') {
   const a = leerAjustes();
+  // (personalización 2) qué celebrar y cómo: con todo, solo vibración o nada
+  const modo = modoCelebrar(a, momento);
+  if (modo === 'nada') return;
   vibrar('record');
+  if (modo === 'vibrar') return;
   // v0.52: y confeti (nunca con «reducir movimiento»; la vibración ya va aquí arriba)
   lanzarConfeti({ vibracion: null });
   if (!audio || !a.sonido) return;
