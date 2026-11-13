@@ -25,7 +25,8 @@ export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = n
   const modo = momento ? modoCelebrar(leerAjustes(), momento) : 'todo';
   if (modo === 'nada') return false;
   if (modo === 'vibrar') { vibrar(vibracion || 'record'); return false; }
-  if (sonido) { try { sonarFBE(...sonido); } catch { /* sin sonido */ } }
+  // (sin momento, el sonido suena siempre; con la app en segundo plano, nada)
+  if (sonido && (typeof document === 'undefined' || document.visibilityState !== 'hidden')) { try { sonarFBE(...sonido); } catch { /* sin sonido */ } }
   if (typeof document === 'undefined' || sinMovimiento() || document.visibilityState === 'hidden') return false;
   if (vibracion) vibrar(vibracion);
   activo?.parar();

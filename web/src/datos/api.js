@@ -132,6 +132,9 @@ const falta031 = (e) => {
 // (personalización 3) sin la 069: la agenda y el manual no están
 const falta069 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const avisarAgenda = () => { try { globalThis.dispatchEvent?.(new Event('fbe-agenda')); } catch { /* */ } };
+// (071) las cuatro frases del coach que necesitan la 071
+const FRASES_071 = ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio'];
+const AVISO_071 = 'Para grabar esta frase falta ejecutar la migración 071 en Supabase (supabase/migraciones/071_voces_coach_2.sql).';
 const AVISO_070 = 'Esto aún no está disponible: hay que poner al día la base (migración 070, supabase/migraciones/070_personal_voz.sql)';
 const AVISO_069 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 069, supabase/migraciones/069_personal_vida.sql)';
 const falta050 = (e) => {
@@ -4279,6 +4282,8 @@ export function crearApi(backend) {
       const ruta = `voces/${clave}-${(globalThis.crypto?.randomUUID?.() || `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`)}.${ext}`;
       try { await b.storage.subir(ruta, audio, tipo, { bucket: 'voces-coach' }); } catch (e) {
         if (/bucket|not found|404/i.test(`${e?.message || ''} ${e?.statusCode || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 068 en Supabase (supabase/migraciones/068_voces_coach.sql).');
+        // (071, revisión) con la 068 sola, Storage no deja subir las cuatro frases nuevas (su nombre no está en la política)
+        if (/row-level security|violates row-level|403|unauthorized/i.test(`${e?.message || ''} ${e?.statusCode || ''}`) && FRASES_071.includes(clave)) throw new Error(AVISO_071);
         throw e;
       }
       let antes = null;
@@ -4290,7 +4295,7 @@ export function crearApi(backend) {
         else if (fila?.ruta === ruta) return ruta;
         if (/voces_coach_guardar|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 068 en Supabase (supabase/migraciones/068_voces_coach.sql).');
         // (071) las cuatro frases nuevas, en una base que solo tiene la 068
-        if (/voces_coach_valida|23514/i.test(`${e?.message || ''} ${e?.code || ''}`) && ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio'].includes(clave)) throw new Error('Para grabar esta frase falta ejecutar la migración 071 en Supabase (supabase/migraciones/071_voces_coach_2.sql).');
+        if (/voces_coach_valida|23514/i.test(`${e?.message || ''} ${e?.code || ''}`) && FRASES_071.includes(clave)) throw new Error(AVISO_071);
         throw e;
       }
       if (antes) await b.storage.borrar([antes], 'voces-coach').catch(() => {});
