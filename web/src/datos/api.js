@@ -5067,6 +5067,9 @@ export function crearApi(backend) {
       for (const t of ['travesia_semanas', 'apuntes_vistos']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (062) el rango, las misiones y los logros de La travesía, y sus etapas del día
       for (const t of ['travesia_perfil', 'travesia_dia']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (062, revisión) los aullidos que ha mandado (a quién, por su ficha, y qué día); los recibidos, con su nombre en el equipo
+      out.travesia_aullidos_mandados = await b.select('travesia_aullidos', { cols: 'para_atleta_id,dia,creado_en', eq: { atleta_id: atletaId } }).catch(() => []);
+      out.travesia_aullidos_recibidos = perfilId && perfilId === uid() ? (await b.rpc('travesia_aullidos_recibidos').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

@@ -2017,13 +2017,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!aid || yo.estado === 'baja') return null;
       const limpio = { rango: Math.min(999, Math.max(0, Math.round(Number(args.p_rango) || 0))), hechas: Math.min(1e6, Math.max(0, Math.round(Number(args.p_hechas) || 0))),
         activas: (Array.isArray(args.p_activas) ? args.p_activas : []).slice(0, 3).filter((x) => /^[a-z0-9]{1,20}$/.test(x?.id || '')).map((x) => ({ id: x.id, valor: Math.min(1e7, Math.max(0, Math.round(Number(x.valor) || 0))) })),
-        logros: Object.fromEntries(Object.entries(args.p_logros && typeof args.p_logros === 'object' ? args.p_logros : {}).filter(([k, d]) => /^[a-z0-9]{1,20}$/.test(k) && /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 60)),
+        logros: Object.fromEntries(Object.entries(args.p_logros && typeof args.p_logros === 'object' ? args.p_logros : {}).filter(([k, d]) => /^[a-z0-9]{1,20}$/.test(k) && /^20[2-9]\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d)).slice(0, 60)),
         potenciadores: [...new Set((args.p_potenciadores || []).filter((p) => ['iman', 'luna', 'aullido'].includes(p)))] };
       const r = tabla('travesia_perfil').find((x) => x.atleta_id === aid);
       if (r) {
         if (r.rango > limpio.rango) { limpio.rango = r.rango; limpio.activas = r.activas; }
         else if (r.rango === limpio.rango) limpio.activas = (limpio.activas.length ? limpio.activas : r.activas).map((a) => ({ id: a.id, valor: Math.max(a.valor, r.activas.find((b2) => b2.id === a.id)?.valor || 0) }));
         for (const [k, d] of Object.entries(r.logros || {})) if (!limpio.logros[k] || limpio.logros[k] > d) limpio.logros[k] = d;
+        if (Object.keys(limpio.logros).length > 100) limpio.logros = { ...(r.logros || {}) };   // (como la base: con tope)
         limpio.hechas = Math.max(limpio.hechas, r.hechas);
         limpio.potenciadores = [...new Set([...limpio.potenciadores, ...(r.potenciadores || [])])];
         Object.assign(r, limpio, { actualizada_en: ahora() });
@@ -2033,9 +2034,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (nombre === 'sumar_etapa_del_dia') {
       const aid = yo?.id;
       if (!aid || yo.estado === 'baja') return null;
-      db.travesia_dia = tabla('travesia_dia').filter((x) => !(x.atleta_id === aid && x.dia < sumar(hoy, -8)));
+      db.travesia_dia = tabla('travesia_dia').filter((x) => x.dia >= sumar(hoy, -7));   // (los últimos ocho días, los de todos)
       let r = tabla('travesia_dia').find((x) => x.atleta_id === aid && x.dia === hoy);
-      const m = Math.min(2000, Math.max(0, Math.round(Number(args.p_metros) || 0))), e = Math.min(1000, Math.max(0, Math.round(Number(args.p_estrellas) || 0)));
+      const m = Math.min(800, Math.max(0, Math.round(Number(args.p_metros) || 0))), e = Math.min(1000, Math.max(0, Math.round(Number(args.p_estrellas) || 0)));
       if (!r) { r = { atleta_id: aid, dia: hoy, metros: m, estrellas: e, intentos: 1, actualizada_en: ahora() }; tabla('travesia_dia').push(r); }
       else if (r.intentos < 3) { if (m > r.metros) { r.metros = m; r.estrellas = e; } r.intentos += 1; r.actualizada_en = ahora(); }
       return { dia: r.dia, metros: r.metros, estrellas: r.estrellas, intentos: r.intentos };
@@ -2049,18 +2050,21 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       return { dia: hoy, filas };
     }
     if (nombre === 'travesia_aullar') {
-      if (!uid || !veComunidad()) throw new Error('Para aullar tienes que estar en la comunidad');
+      // (como la base: solo quien está dentro y no está silenciado; el coach no aúlla)
+      if (!uid || coach || !veComunidad() || !dentro(uid)) throw new Error('Para aullar tienes que estar en la comunidad');
+      if (tabla('comunidad_miembros').some((k) => k.perfil_id === uid && k.silenciado_hasta && k.silenciado_hasta > ahora())) throw new Error('Mientras estás silenciado no puedes aullar');
       if (!args.p_perfil || args.p_perfil === uid) throw new Error('A ti no te puedes aullar');
       const el = dentro(args.p_perfil);
       if (!el || el.sin_ranking) throw new Error('Esa persona no está en la clasificación');
       if (tabla('travesia_aullidos').some((a) => a.de === uid && a.para === args.p_perfil && a.dia === hoy)) throw new Error('Hoy ya le has aullado');
       if (tabla('travesia_aullidos').filter((a) => a.de === uid && a.dia === hoy).length >= 20) throw new Error('Por hoy ya has aullado bastante');
       db.travesia_aullidos = tabla('travesia_aullidos').filter((a) => a.dia >= sumar(hoy, -14));
-      tabla('travesia_aullidos').push({ de: uid, para: args.p_perfil, atleta_id: coach ? null : yo?.id || null, para_atleta_id: el.atleta_id, dia: hoy, creado_en: ahora() });
+      db.travesia_dia = tabla('travesia_dia').filter((x) => x.dia >= sumar(hoy, -7));
+      tabla('travesia_aullidos').push({ de: uid, para: args.p_perfil, atleta_id: yo?.id || null, para_atleta_id: el.atleta_id, dia: hoy, creado_en: ahora() });
       return null;
     }
     if (nombre === 'travesia_aullidos_recibidos') {
-      if (!uid) return [];
+      if (!uid || !veComunidad() || !dentro(uid)) return [];   // (y solo mientras quien los recibe sigue dentro)
       return tabla('travesia_aullidos').filter((a) => a.para === uid && a.dia >= sumar(hoy, -7) && dentro(a.de))
         .sort((x, y) => String(y.creado_en).localeCompare(String(x.creado_en))).map((a) => ({ nombre: dentro(a.de).nombre, dia: a.dia }));
     }
@@ -3388,12 +3392,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // (060) lo de la travesía y los apuntes vistos: el coach cualquiera; el atleta, lo suyo
       if (t === 'travesia_semanas' || t === 'apuntes_vistos' || t === 'travesia_perfil' || t === 'travesia_dia') {
-        db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()))));
+        // (062: lo de hoy de la etapa del día, el atleta no lo borra: le daría intentos de más)
+        const hoyM = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId() && !(t === 'travesia_dia' && x.dia >= hoyM)))));
         persistirYa();
         return [];
       }
       if (t === 'travesia_aullidos') {
-        db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || x.de === sesion?.user.id)));
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && esCoach()));   // (062: quien aúlla no lo borra; se van solos)
         persistirYa();
         return [];
       }

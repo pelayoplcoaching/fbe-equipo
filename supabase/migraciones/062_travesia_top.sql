@@ -86,7 +86,7 @@ begin
   end if;
   if jsonb_typeof(p_logros) = 'object' then
     for k, d in select key, value #>> '{}' from jsonb_each(p_logros) limit 60 loop
-      if k ~ '^[a-z0-9]{1,20}$' and d ~ '^\d{4}-\d{2}-\d{2}$' then v_logros := v_logros || jsonb_build_object(k, d); end if;
+      if k ~ '^[a-z0-9]{1,20}$' and d ~ '^20[2-9][0-9]-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$' then v_logros := v_logros || jsonb_build_object(k, d); end if;
     end loop;
   end if;
   v_pot := array(select distinct u from unnest(coalesce(p_potenciadores, '{}')) u where u in ('iman', 'luna', 'aullido'));
@@ -103,6 +103,8 @@ begin
     for k, d in select key, value #>> '{}' from jsonb_each(r.logros) loop
       if not (v_logros ? k) or (v_logros->>k) > d then v_logros := v_logros || jsonb_build_object(k, d); end if;
     end loop;
+    -- (revisión) los logros no crecen sin tope: más de 100, se queda con los que ya tenía
+    if (select count(*) from jsonb_object_keys(v_logros)) > 100 then v_logros := coalesce(r.logros, '{}'::jsonb); end if;
     v_hechas := greatest(v_hechas, r.hechas);
     v_pot := array(select distinct u from unnest(v_pot || r.potenciadores) u);
   end if;
@@ -130,21 +132,22 @@ alter table public.travesia_dia drop constraint if exists travesia_dia_valida;
 alter table public.travesia_dia add constraint travesia_dia_valida check (metros between 0 and 2000 and estrellas between 0 and 1000 and intentos between 0 and 3);
 create index if not exists travesia_dia_dia_idx on public.travesia_dia (dia);
 
--- Apunta un intento de hoy (un minuto: como mucho 2 km). Tres intentos al día; cuenta el mejor. Devuelve cómo queda.
+-- Apunta un intento de hoy (un minuto: como mucho 800 m, que ya es más de lo que se puede correr). Tres intentos al día;
+-- cuenta el mejor. Devuelve cómo queda.
 create or replace function public.sumar_etapa_del_dia(p_metros integer, p_estrellas integer default 0)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
   v_atleta uuid := public.mi_atleta_id();
   v_hoy date := (now() at time zone 'Europe/Madrid')::date;
-  v_metros integer := least(greatest(coalesce(p_metros, 0), 0), 2000);
+  v_metros integer := least(greatest(coalesce(p_metros, 0), 0), 800);
   v_estrellas integer := least(greatest(coalesce(p_estrellas, 0), 0), 1000);
   r public.travesia_dia;
 begin
   if v_atleta is null then return null; end if;
   if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return null; end if;
   perform pg_advisory_xact_lock(hashtext('travesia_dia:' || v_atleta::text));
-  delete from public.travesia_dia where atleta_id = v_atleta and dia < v_hoy - 8;   -- (solo los últimos ocho días)
+  delete from public.travesia_dia where dia < v_hoy - 7;   -- (solo los últimos ocho días, los de todos)
   select * into r from public.travesia_dia where atleta_id = v_atleta and dia = v_hoy;
   if found and r.intentos >= 3 then
     return jsonb_build_object('dia', r.dia, 'metros', r.metros, 'estrellas', r.estrellas, 'intentos', r.intentos);
@@ -196,9 +199,14 @@ declare
   v_hoy date := (now() at time zone 'Europe/Madrid')::date;
   v_para_atleta uuid;
 begin
-  if v_uid is null or not (public.es_coach() or public.comunidad_soy_miembro()) then
+  -- (revisión) solo quien está en la comunidad y no está silenciado; el coach no aúlla (a nadie le llegaría)
+  if v_uid is null or public.es_coach() or not public.comunidad_soy_miembro() then
     raise exception 'Para aullar tienes que estar en la comunidad' using errcode = '42501';
   end if;
+  if exists (select 1 from public.comunidad_miembros k where k.perfil_id = v_uid and k.silenciado_hasta > now()) then
+    raise exception 'Mientras estás silenciado no puedes aullar' using errcode = '42501';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('travesia_aullar:' || v_uid::text));   -- (dos a la vez no se saltan el tope)
   if p_perfil is null or p_perfil = v_uid then raise exception 'A ti no te puedes aullar' using errcode = '22023'; end if;
   select c.atleta_id into v_para_atleta from fbe_privado.comunidad_dentro c where c.perfil_id = p_perfil and not c.sin_ranking;
   if v_para_atleta is null then raise exception 'Esa persona no está en la clasificación' using errcode = '42501'; end if;
@@ -209,8 +217,9 @@ begin
     raise exception 'Por hoy ya has aullado bastante' using errcode = '22023';
   end if;
   insert into public.travesia_aullidos (de, para, atleta_id, para_atleta_id, dia)
-    values (v_uid, p_perfil, case when public.es_coach() then null else public.mi_atleta_id() end, v_para_atleta, v_hoy);
+    values (v_uid, p_perfil, public.mi_atleta_id(), v_para_atleta, v_hoy);
   delete from public.travesia_aullidos where dia < v_hoy - 14;   -- (solo dos semanas)
+  delete from public.travesia_dia where dia < v_hoy - 7;
 end $$;
 
 -- Los aullidos que me han llegado en los últimos siete días, de quienes siguen en la comunidad: [{ nombre, dia }]
@@ -219,7 +228,30 @@ language sql stable security definer set search_path = '' as $$
   select coalesce(jsonb_agg(jsonb_build_object('nombre', c.nombre, 'dia', a.dia) order by a.creado_en desc), '[]'::jsonb)
   from public.travesia_aullidos a join fbe_privado.comunidad_dentro c on c.perfil_id = a.de
   where auth.uid() is not null and a.para = auth.uid() and a.dia >= (now() at time zone 'Europe/Madrid')::date - 7
+    and public.comunidad_soy_miembro()   -- (revisión) y solo mientras quien los recibe sigue dentro
 $$;
+
+-- (revisión) Lo que caduca se borra aunque nadie juegue: la etapa del día a los ocho días y los aullidos a las dos semanas.
+-- Lo llama una tarea diaria (si está pg_cron); además, cada vez que alguien juega la etapa del día o aúlla.
+create or replace function fbe_privado.travesia_limpiar() returns void
+language sql security definer set search_path = '' as $$
+  delete from public.travesia_dia where dia < (now() at time zone 'Europe/Madrid')::date - 7;
+  delete from public.travesia_aullidos where dia < (now() at time zone 'Europe/Madrid')::date - 14;
+$$;
+revoke all on function fbe_privado.travesia_limpiar() from public, anon, authenticated;
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    begin
+      execute $q$select cron.schedule('fbe-travesia-limpiar', '17 4 * * *', 'select fbe_privado.travesia_limpiar()')$q$;
+      raise notice 'FBE: limpieza diaria de La travesía programada (tarea fbe-travesia-limpiar, a las 4:17).';
+    exception when others then
+      raise warning 'FBE: no se ha podido programar la tarea fbe-travesia-limpiar (%); se limpia igual al jugar.', sqlerrm;
+    end;
+  else
+    raise notice 'FBE: sin pg_cron: lo caducado de La travesía se borra al jugar la etapa del día o al aullar.';
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------
 -- 4. La manada, con el perfil de cada uno (para aullarle)
@@ -274,9 +306,11 @@ create policy coach_borrar on public.travesia_dia for delete to authenticated us
 drop policy if exists atleta_ver on public.travesia_dia;
 create policy atleta_ver on public.travesia_dia for select to authenticated using (atleta_id = public.mi_atleta_id());
 drop policy if exists atleta_borrar on public.travesia_dia;
-create policy atleta_borrar on public.travesia_dia for delete to authenticated using (atleta_id = public.mi_atleta_id());
+-- (revisión) el atleta borra lo suyo de días pasados; lo de hoy no (borrarlo daría intentos de más)
+create policy atleta_borrar on public.travesia_dia for delete to authenticated using (atleta_id = public.mi_atleta_id() and dia < (now() at time zone 'Europe/Madrid')::date);
 
--- (los aullidos: cada uno ve y puede borrar los que ha mandado; los recibidos, solo con travesia_aullidos_recibidos())
+-- (los aullidos: cada uno ve los que ha mandado (no los borra: borrarlos daría aullidos de más; se van solos a las dos
+-- semanas o con la ficha); los recibidos, solo con travesia_aullidos_recibidos())
 drop policy if exists coach_ver on public.travesia_aullidos;
 create policy coach_ver on public.travesia_aullidos for select to authenticated using (public.es_coach());
 drop policy if exists coach_borrar on public.travesia_aullidos;
@@ -284,7 +318,6 @@ create policy coach_borrar on public.travesia_aullidos for delete to authenticat
 drop policy if exists mios_ver on public.travesia_aullidos;
 create policy mios_ver on public.travesia_aullidos for select to authenticated using (de = auth.uid());
 drop policy if exists mios_borrar on public.travesia_aullidos;
-create policy mios_borrar on public.travesia_aullidos for delete to authenticated using (de = auth.uid());
 
 -- Desde la 019, cada tabla nueva lleva sus permisos a mano
 revoke all on public.travesia_perfil, public.travesia_dia, public.travesia_aullidos from public, anon, authenticated;

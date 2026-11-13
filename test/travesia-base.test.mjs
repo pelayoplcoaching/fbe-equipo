@@ -67,6 +67,15 @@ console.log('\nEl rango, las misiones y los logros');
   check(v.lejos === 200 && v.etapas === 4 && v.rio1 === 1 && r2.hechas === 3, 'dos móviles con el mismo rango: cada misión con el valor más alto (y las hechas, el máximo)');
   check(r2.logros.km1 === '2026-11-10' && r2.logros.nocturno === '2026-11-12' && r2.potenciadores.sort().join() === 'iman,luna', 'los logros de los dos (con la fecha más antigua) y todos los potenciadores');
   // Un móvil viejo, con un rango menor, no baja el rango ni pisa las misiones
+  // (revisión) los logros, con tope: muchas llamadas con logros inventados no hacen crecer la fila sin fin; ni fechas imposibles
+  for (let n = 0; n < 4; n++) {
+    const muchos = JSON.stringify(Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`x${n}y${i}`, '2026-11-12'])));
+    await q('select guardar_travesia_perfil(1, 3, $1::jsonb, $2::jsonb, $3)', ['[]', muchos, '{}']);
+  }
+  const [{ n: nLogros }] = await q(`select count(*)::int as n from travesia_perfil, jsonb_object_keys(logros)`);
+  const [{ r: rMal }] = await q(`select guardar_travesia_perfil(1, 3, '[]', '{"raro":"9999-99-99"}', '{}') as r`);
+  check(nLogros <= 100 && !('raro' in rMal.logros), `los logros, con tope (${nLogros}) y sin fechas imposibles`);
+  await su(); await q(`update travesia_perfil set logros = '{"km1":"2026-11-10","nocturno":"2026-11-12"}'::jsonb`); await como(ana);
   const [{ r: r3 }] = await q(`select guardar_travesia_perfil(0, 0, '[{"id":"limpia","valor":1}]', '{}', '{}') as r`);
   check(r3.rango === 1 && r3.activas.some((a) => a.id === 'lejos'), 'un móvil con un rango menor no lo baja ni pisa sus misiones');
   const [{ r: r4 }] = await q(`select guardar_travesia_perfil(2, 6, '[{"id":"combo","valor":0}]', '{}', '{}') as r`);
@@ -116,6 +125,20 @@ for (const [u, nombre] of [[ana, 'Ana L.'], [bea, 'Bea M.'], [cai, 'Cai R.']]) {
   await como(ana); await q('select sumar_etapa_del_dia(10)');
   check((await q('select count(*)::int as n from travesia_dia where dia < current_date - 8'))[0].n === 0, 'solo se guardan los últimos ocho días');
   check(await anon('select sumar_etapa_del_dia(10)') && await anon('select travesia_dia_clasif()'), 'sin sesión, nada');
+  // (revisión) borrar lo de hoy no da intentos de más; y el tope de un minuto
+  await como(ana); await q('delete from travesia_dia');
+  const [{ r: tras }] = await q('select sumar_etapa_del_dia(700) as r');
+  check(tras.intentos === 3 && tras.metros === 450, 'el atleta no borra lo de hoy (no le daría intentos de más)');
+  await como(bea);
+  check((await q('select sumar_etapa_del_dia(5000) as r'))[0].r.metros === 800, 'como mucho 800 m: lo que da de sí un minuto');
+  // (revisión) lo caducado se borra aunque su dueño no vuelva a jugar
+  await su(); await q(`insert into travesia_dia (atleta_id, dia, metros, intentos) values ($1, current_date - 12, 100, 1)`, [atletaB]);
+  await como(ana); await q('select sumar_etapa_del_dia(10)');
+  check((await q('select count(*)::int as n from travesia_dia where dia < current_date - 7'))[0].n === 0, 'lo de hace más de ocho días se borra, de todos');
+  await su(); await q(`insert into travesia_dia (atleta_id, dia, metros, intentos) values ($1, current_date - 12, 100, 1)`, [atletaB]);
+  await q('select fbe_privado.travesia_limpiar()');
+  check((await q('select count(*)::int as n from travesia_dia where dia < current_date - 7'))[0].n === 0, 'y también con la limpieza diaria (aunque nadie juegue)');
+  await como(ana); check(await falla('select fbe_privado.travesia_limpiar()'), 'la limpieza no la lanza un atleta');
 }
 
 console.log('\nAullar a un compañero');
@@ -134,9 +157,21 @@ console.log('\nAullar a un compañero');
   check(await falla('select travesia_aullar($1)', [ana]), 'a uno mismo, no');
   check(await falla('select travesia_aullar($1)', [cai]), 'a quien no sale en el ranking, no');
   check(await falla('select travesia_aullar($1)', [eva]), 'a quien está fuera de la comunidad, no');
+  // (revisión) borrar lo mandado no da aullidos de más
+  await q('delete from travesia_aullidos');
+  check(await falla('select travesia_aullar($1)', [bea]), 'quien aúlla no borra sus aullidos (no le daría otro)');
+  await como(coach, 'aal2');
+  check(await falla('select travesia_aullar($1)', [bea]), 'el coach no aúlla (no le llegaría a nadie)');
+  await su(); await q(`update comunidad_miembros set silenciado_hasta = now() + interval '1 day' where perfil_id = $1`, [bea]);
+  await como(bea);
+  check(await falla('select travesia_aullar($1)', [ana]), 'quien está silenciado no aúlla');
+  await su(); await q('update comunidad_miembros set silenciado_hasta = null where perfil_id = $1', [bea]);
   await como(bea);
   const [{ r }] = await q('select travesia_aullidos_recibidos() as r');
   check(r.length === 1 && r[0].nombre === 'Ana L.', 'a Bea le llega el aullido, con el nombre de la comunidad de quien aúlla');
+  await su(); await q('update comunidad_ajustes set activa = false'); await como(bea);
+  check((await q('select travesia_aullidos_recibidos() as r'))[0].r.length === 0, 'con la comunidad cerrada (o fuera de ella), no le llega');
+  await su(); await q('update comunidad_ajustes set activa = true'); await como(bea);
   check((await q('select * from travesia_aullidos')).length === 0, 'los recibidos no se leen de la tabla, solo con su función');
   await como(eva);
   check(await falla('select travesia_aullar($1)', [bea]), 'quien está fuera de la comunidad no aúlla');
