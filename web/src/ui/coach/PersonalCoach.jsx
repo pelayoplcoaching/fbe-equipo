@@ -10,6 +10,7 @@ import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../logica/conocerte.js';
 import { paraHablarle, cartaDelMes, mesDeLaCarta } from '../../logica/retrato.js';
 import { SuVida } from '../atleta/Vida.jsx';
+import { textoManual, ideaSegunManual } from '../../logica/respeto.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
 import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
@@ -83,7 +84,10 @@ export function ParaHablarle({ atleta }) {
   const [lista, entrenos, ultimo] = d.datos;
   const personal = (lista || []).find((x) => x.atleta_id === atleta.id) || null;
   const hoy = hoyISO();
-  const r = paraHablarle({ nombre: atleta.nombre, personal, entrenos, ultimoCoach: ultimo, hoy });
+  const r0 = paraHablarle({ nombre: atleta.nombre, personal, entrenos, ultimoCoach: ultimo, hoy });
+  // (personalización 3) su manual de instrucciones, en las filas y en la idea
+  const man = textoManual(personal);
+  const r = { filas: [...r0.filas, ...(man ? [['Su manual', [man.feedback, man.motiva && `le motiva: ${man.motiva.toLocaleLowerCase('es')}`].filter(Boolean).join(' · ') || '—'], ...(man.evitar ? [['No quiere oír', `«${man.evitar}»`]] : [])] : [])], idea: ideaSegunManual(r0.idea, personal) };
   const mes = mesDeLaCarta(hoy);
   return (
     <section class="seccion para-hablarle" aria-labelledby="para-hablarle-t">

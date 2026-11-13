@@ -9,6 +9,7 @@
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 // v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
 // v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
+import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
@@ -80,6 +81,8 @@ export function normalizarAjustes(guardado = {}) {
   a.sonidosChat = a.sonidosChat !== false;
   // (personalización 2) qué celebrar y cómo (récords, rachas, semanas, bloques y lo demás: con todo, solo vibración o nada)
   a.celebrar = limpiarCelebrar(a.celebrar);
+  // (personalización 3) lo que no quiere ver: sin báscula, sin calorías, sin rankings
+  a.ocultar = limpiarOcultar(a.ocultar);
   // pulido 7: sin elegirlo, el sonido de la serie sigue al del descanso
   a.sonidoSerie = 'sonidoSerie' in g ? g.sonidoSerie !== false : a.sonido !== false;
   a.fotosHd = a.fotosHd === true;
@@ -130,6 +133,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (a.letra && a.letra !== 'normal' && LETRAS.includes(a.letra)) r.setAttribute('data-letra', a.letra); else r.removeAttribute('data-letra');
   // v0.66: el modo gimnasio (las reglas, en estilos.css, solo tocan la sesión y el descanso)
   if (a.gimnasio) r.setAttribute('data-gimnasio', ''); else r.removeAttribute('data-gimnasio');
+  // (personalización 3) lo que no quiere ver (las reglas, en personal.css)
+  for (const k of ['peso', 'kcal', 'ranking']) { if (a.ocultar?.[k]) r.setAttribute(`data-sin-${k}`, ''); else r.removeAttribute(`data-sin-${k}`); }
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento);

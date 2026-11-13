@@ -107,7 +107,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         </section>
       )}
 
-      <section class="seccion" data-grupo="cuerpo">
+      <section class="seccion seccion-peso" data-grupo="cuerpo">
         <h2>Peso corporal</h2>
         <div class="panel panel-pad pila">
           {!ultPeso ? <p class="secundario">Aún no hay pesos registrados. Se apuntan desde Hoy o en el check-in semanal.</p> : (
