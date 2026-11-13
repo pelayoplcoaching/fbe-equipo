@@ -3,7 +3,7 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas } from '../../logica/travesia.js';
-import { cartelDeHito, nombrePaisaje, suave, mediaCuadro, convieneAligerar } from '../../logica/travesia-efectos.js';
+import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL } from '../../logica/travesia-efectos.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
@@ -54,7 +54,7 @@ function tiempoGuardado() {
   } catch { return {}; }
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
-const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14] };
+const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12] };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
 
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, total = null, despues = '', practica = false, empuje = null, alCerrar }) {
@@ -69,7 +69,10 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const finPractica = useRef(0);
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
-  const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null);
+  const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null), comboTxt = useRef(null);
+  // (top, tanda 1: accesibilidad) lo que el atleta ha elegido en «Tu travesía» → «Cómo juegas»
+  const accesible = useRef(null);
+  if (!accesible.current) { const a = leerAjustes(); accesible.current = { unToque: a.juegoUnToque === true, contraste: a.juegoContraste === true, temblor: a.juegoSinTemblor !== true }; }
   const cerrar = useRef(alCerrar);
   cerrar.current = alCerrar;
   // (tanda 1) el modo calma (sin obstáculos, al paso) y el sonido, que se recuerdan en el móvil
@@ -113,7 +116,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     // (tanda 1) el entreno empuja: tras un récord sale con el ritmo cogido; con la serie cumplida, un escudo. En un descanso
     // corto (45 s o menos) sale ya lanzado: no da tiempo a coger ritmo
     const e = nuevaEtapa(semilla, {
-      calma, movimientos: conMovimientos && !practica, km0: practica ? 0 : antesG.total,
+      calma, movimientos: conMovimientos && !practica, km0: practica ? 0 : antesG.total, unToque: accesible.current.unToque,
       racha0: practica ? 0 : empuje?.ritmo ? 10 : quedanIni <= 45 ? 6 : 0,
       escudos: practica ? 0 : empuje?.escudo ? 1 : 0,
     });
@@ -134,8 +137,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const quieto = sinMovimiento();
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
     // (tanda 5) dónde está el marcador de estrellas (allí vuelan las que coge) y los carteles de hito
-    let metaE = null, hito = { metros: 0, racha: e.racha };
-    let media = null, cuadros = 0, ligero = false;   // (si el móvil va justo, se pinta sin lo más caro)
+    let metaE = null, hito = { metros: 0, racha: e.racha, combo: 1 };
+    // (top, tanda 1) la calidad, a tres niveles: si el móvil va justo, se pinta sin lo más caro y, si aún va justo, sin adornos
+    let cal = CALIDAD_INICIAL(), comboVisto = 1;
     const anunciar = (texto, grande = false) => {
       const el = cartel.current;
       if (!el || typeof el.animate !== 'function') return;
@@ -181,16 +185,25 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
       const dt = Math.min(0.1, (ahora - antes) / 1000);
-      if (document.visibilityState !== 'hidden') { media = mediaCuadro(media, ahora - antes); cuadros += 1; ligero = convieneAligerar(media, cuadros, ligero); }
+      cal = calidad(cal, ahora - antes, document.visibilityState !== 'hidden');
       antes = ahora;
       const q = quedan();
       const parado = acabada || (!practica && Number.isFinite(marca.current.pausa)) || document.visibilityState === 'hidden';
       if (!parado && q <= 0) acabar();
       else if (!parado) avanzar(e, dt);
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
-      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada, ligero });
-      // (tanda 5) los carteles: cada 250 m y cada diez de racha
-      if (!parado) { const ahoraH = { metros: e.x, racha: e.racha }, k = cartelDeHito(hito, ahoraH); hito = ahoraH; if (k) anunciar(k.texto, k.grande); }
+      if (e.sucesos.includes('roce')) vibrar('elegir');
+      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
+        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo });
+      // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
+      if (!parado) { const ahoraH = { metros: e.x, racha: e.racha, combo: e.combo }, k = cartelDeHito(hito, ahoraH); hito = ahoraH; if (k) anunciar(k.texto, k.grande); }
+      // (top, tanda 1) el combo, junto a las estrellas: «×2» mientras dure (con un salto al subir)
+      if (e.combo !== comboVisto && comboTxt.current) {
+        const sube = e.combo > comboVisto; comboVisto = e.combo;
+        comboTxt.current.textContent = e.combo > 1 ? `×${e.combo}` : '';
+        comboTxt.current.hidden = e.combo <= 1;
+        if (sube && !quieto) comboTxt.current.animate?.([{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(.3, 1.6, .5, 1)' });
+      }
       // (los números de arriba, solo cuando cambian)
       const m = Math.round(e.x), s = Math.max(0, Math.ceil(q));
       if (m !== visto.m && metros.current) { visto.m = m; metros.current.textContent = textoDistancia(m); }
@@ -273,7 +286,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       <div class="travesia-arriba">
         <span class="travesia-dato" aria-label="Distancia de esta etapa"><Icono n="pasos" /><b ref={metros} class="num">0 m</b></span>
         <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : cuentaInicial(fin, pausa))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
-        <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b></span>
+        <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b><i ref={comboTxt} class="travesia-combo num" aria-label="Combo: cada estrella vale más" hidden /></span>
         <button type="button" class="travesia-cerrar" onClick={salir} aria-label="Cerrar el juego"><Icono n="cerrar" /></button>
       </div>
       {!final && (
@@ -283,7 +296,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
           {escudos > 0 && <span class="travesia-escudo" role="status" aria-label={`${escudos === 1 ? 'Un escudo' : `${escudos} escudos`}: te perdona un tropiezo`}><Icono n="escudo" />{escudos}</span>}
         </div>
       )}
-      {!final && !tocado && !calma && <p class="travesia-pista" aria-hidden="true">Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</p>}
+      {!final && !tocado && !calma && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</>}</p>}
       {!final && calma && <p class="travesia-pista calma" aria-hidden="true">Respira: el lobo va al paso</p>}
       {!final && reto && <p ref={retoTxt} class="travesia-reto" role="status" />}
       {!final && !tocado && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
@@ -295,6 +308,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
           <span class="travesia-final-det">
             {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}
+            {final.combo > 1 && <span class="oro">Combo ×{final.combo}</span>}
+            {final.roces > 0 && <span>{final.roces === 1 ? 'Una vez por los pelos' : `${final.roces} veces por los pelos`}</span>}
             {final.marca && <span class="oro">Tu mejor {practica ? 'marca' : 'etapa'}</span>}
             {final.reto && <span class="oro">Reto del día, cumplido</span>}
             {final.postal && <span class="oro travesia-final-postal">Has llegado a {final.postal.lugar}</span>}

@@ -41,6 +41,31 @@ function Constelacion({ k }) {
   );
 }
 
+// (top, tanda 1: accesibilidad) «Cómo juegas»: tres ajustes de este móvil, que el juego lee al abrirse
+const COMO_JUEGAS = [
+  { clave: 'juegoUnToque', texto: 'Un solo toque', ayuda: 'Sin doble salto ni agacharse: nada lo pide, y los ríos son más estrechos' },
+  { clave: 'juegoContraste', texto: 'Alto contraste', ayuda: 'Cada obstáculo, con un borde claro' },
+  { clave: 'juegoSinTemblor', texto: 'Sin temblor', ayuda: 'Al tropezar, la pantalla no se sacude' },
+];
+function ComoJuegas() {
+  const [a, setA] = useState(() => leerAjustes());
+  const cambiar = (clave, v) => { const n = { ...leerAjustes(), [clave]: v }; guardarAjustes(n); setA(n); };
+  return (
+    <section aria-labelledby="tv-como-t">
+      <h3 id="tv-como-t">Cómo juegas</h3>
+      <ul class="lista tv-como">
+        {COMO_JUEGAS.map((x) => (
+          <li key={x.clave} class="panel-pad interruptor-fila">
+            <label for={`tv-${x.clave}`} class="pila-xs"><span>{x.texto}</span><span class="peq terciario">{x.ayuda}</span></label>
+            <input id={`tv-${x.clave}`} type="checkbox" role="switch" class="interruptor" checked={a[x.clave] === true} onChange={(ev) => cambiar(x.clave, ev.currentTarget.checked)} />
+          </li>
+        ))}
+      </ul>
+      <p class="mini terciario">Vale desde la próxima etapa. Con «reducir movimiento» en el móvil, el juego ya va sin animaciones de adorno.</p>
+    </section>
+  );
+}
+
 export function HojaTravesia({ alCerrar }) {
   const { atleta, api, aviso } = useApp();
   const hoy = hoyISO(), lunes = lunesDe(hoy);
@@ -137,6 +162,8 @@ export function HojaTravesia({ alCerrar }) {
           <ul class="tv-constelaciones">{cielo.map((k) => <Constelacion key={k.id} k={k} />)}</ul>
           <p class="mini terciario">Cada cinco estrellas que coges, se enciende una del cielo.</p>
         </section>
+
+        <ComoJuegas />
 
         {t.total > 0 && <button type="button" class="btn btn-grande tv-contar" onClick={contar}><Icono n="compartir" /> Contarlo</button>}
       </div>

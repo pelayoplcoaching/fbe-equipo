@@ -155,3 +155,7 @@
 }
 @keyframes tv-final { from { transform: translate(-50%, -44%) scale(.94); } to { transform: translate(-50%, -50%) scale(1); } }
 @keyframes tv-final-det { from { transform: translateY(6px); } to { transform: none; } }
+
+/* (top, tanda 1) el combo, junto a las estrellas: «×2», en una pastilla dorada */
+.travesia-combo { display: inline-grid; place-items: center; min-width: 30px; height: 22px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-style: normal; font-size: .8125rem; font-weight: 800; color: #1E1548; background: var(--tv-oro); }
+.travesia-combo[hidden] { display: none; }

@@ -33,6 +33,16 @@ export const AGACHADO = 0.7;        // s que dura agacharse
 export const ALTO_AGACHADO = 0.45;  // lo que mide agachado (de pie, LOBO.alto)
 export const V_CALMA = 2.2;         // m/s en el modo calma (va al paso)
 export const CADA_RIO = 1000;       // m de travesía entre dos ríos
+// (top, tanda 1) Lo que hace que el salto se sienta justo: un toque que llega un poco antes de poder saltar (aún en el
+// aire tras el doble, o tropezando) se guarda y salta en cuanto puede; y se puede saltar un instante después de dejar
+// el suelo sin haber saltado (al bajar de una cornisa, tanda 2)
+export const GUARDA_TOQUE = 0.13;   // s que se guarda un toque
+export const COYOTE = 0.1;          // s tras dejar el suelo en los que aún vale el primer salto
+// «Por los pelos»: pasar un obstáculo con menos de ROCE m de hueco da un impulso y un instante a cámara lenta
+export const ROCE = 0.22, IMPULSO_ROCE = 0.7, LENTO_ROCE = 0.32, FACTOR_LENTO = 0.45;
+// El combo: cada COMBO_CADA saltados seguidos sin tropezar en la etapa, las estrellas valen una más (hasta ×COMBO_MAX)
+export const COMBO_CADA = 8, COMBO_MAX = 4;
+export const comboDe = (serie) => Math.min(COMBO_MAX, 1 + Math.floor(Math.max(0, serie) / COMBO_CADA));
 
 // Un generador de números con semilla (mulberry32): mismo número de entrada, misma etapa
 export function azar(semilla) {
@@ -52,7 +62,8 @@ export function azar(semilla) {
 //   calma       sin obstáculos y al paso: para respirar tras una serie dura
 //   movimientos salen ramas, que se pasan agachado
 //   km0         los metros de travesía que llevaba (para que el río caiga cada kilómetro de verdad)
-export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0 } = {}) {
+//   unToque     (top, tanda 1: accesibilidad) nada pide doble salto ni agacharse: sin montes ni ramas, y el río más estrecho
+export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0, unToque = false } = {}) {
   const r0 = calma ? 0 : Math.min(18, Math.max(0, Math.round(racha0) || 0));
   const e = {
     semilla, rnd: azar(semilla), t: 0,
@@ -63,6 +74,8 @@ export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false
     calma: !!calma, movimientos: !!movimientos, km0: Math.max(0, Math.round(km0) || 0),
     escudos: calma ? 0 : Math.min(3, Math.max(0, Math.round(escudos) || 0)), escudosUsados: 0,
     agachado: 0, pulsado: false, rios: 0,
+    // (top, tanda 1) el toque guardado, cuándo pisó suelo por última vez, los roces, la cámara lenta y el combo
+    guardado: null, tSuelo: 0, roces: 0, lento: 0, serie: 0, combo: 1, comboMax: 1, unToque: !!unToque && !calma,
     // la dificultad se adapta: `ayuda` sube si tropieza mucho (más hueco, más despacio, sin montes) y `reto` si va sobrado
     ayuda: 0, reto: 0, ultimos: [],
   };
@@ -93,10 +106,10 @@ function generar(e) {
     // ¿toca río? El primero cuyo kilómetro (contando lo que traía) cae en lo que se va a generar
     const km = Math.floor((e.km0 + e.hasta + 12) / CADA_RIO);
     const tocaRio = km > 0 && km > Math.floor((e.km0 + Math.max(0, e.hasta - 40)) / CADA_RIO) && !e.obstaculos.some((o) => o.tipo === 'rio' && o.x > e.hasta - 60) && e.rioHecho !== km;
-    let tipo = e.hasta > OBSTACULOS.monte.desde && r > 0.8 && e.ayuda < 0.6 ? 'monte' : r > 0.42 ? 'pico' : 'roca';
+    let tipo = e.hasta > OBSTACULOS.monte.desde && r > 0.8 && e.ayuda < 0.6 && !e.unToque ? 'monte' : r > 0.42 ? 'pico' : 'roca';
     if (tocaRio) { tipo = 'rio'; e.rioHecho = km; }
-    else if (e.movimientos && e.hasta > OBSTACULOS.rama.desde && r < 0.13) tipo = 'rama';
-    const def = OBSTACULOS[tipo];
+    else if (e.movimientos && !e.unToque && e.hasta > OBSTACULOS.rama.desde && r < 0.13) tipo = 'rama';
+    const def = tipo === 'rio' && e.unToque ? { ...OBSTACULOS.rio, w: 2.2 } : OBSTACULOS[tipo];
     // (la dificultad: con ayuda, hasta un 35 % más de hueco; con reto, hasta un 8 % menos)
     const hueco = (7.5 + e.rnd() * 7 + (tipo === 'monte' ? 2.5 : 0) + (tipo === 'rio' ? 4 : 0)) * (1 + 0.35 * e.ayuda - 0.08 * e.reto);
     const x = e.hasta + hueco + def.w / 2;
@@ -114,13 +127,20 @@ function generar(e) {
 }
 
 // Un toque: salta si está en el suelo; en el aire, un segundo salto (uno solo). Devuelve si ha saltado.
+// (top, tanda 1) Si ahora no puede (tropezando, o en el aire con el doble gastado), el toque se guarda y salta en cuanto
+// pueda, si es pronto (GUARDA_TOQUE). Y sin haber saltado, recién salido del suelo (COYOTE), aún vale el primer salto.
 export function saltar(e) {
-  if (e.tropiezo > 0 || e.calma) return false;
+  if (e.calma) return false;
+  if (e.tropiezo > 0) { e.guardado = e.t; return false; }
   e.agachado = 0;
-  if (e.y <= 0 && e.saltos === 0) { e.vy = V_SALTO; e.saltos = 1; e.y = 0.0001; e.tSalto = e.t; e.sucesos.push('salto'); return true; }
-  if (e.saltos === 1) { e.vy = V_DOBLE; e.saltos = 2; e.sucesos.push('doble'); return true; }
+  const pisa = e.saltos === 0 && (e.y <= sueloBajo(e) || e.t - e.tSuelo <= COYOTE);
+  if (pisa) { e.vy = V_SALTO; e.saltos = 1; e.y = Math.max(e.y, sueloBajo(e)) + 0.0001; e.tSalto = e.t; e.guardado = null; e.sucesos.push('salto'); return true; }
+  if (e.saltos === 1 && !e.unToque) { e.vy = V_DOBLE; e.saltos = 2; e.guardado = null; e.sucesos.push('doble'); return true; }
+  e.guardado = e.t;
   return false;
 }
+// La altura del suelo bajo el lobo (en el llano, 0; la tanda 2 le pone cornisas y cuestas)
+export function sueloBajo(e) { return e.sueloEn ? e.sueloEn(e) : 0; }
 
 // (tanda 1) Deslizar hacia abajo: se agacha un momento (solo en el suelo), para pasar bajo una rama
 export function agachar(e) {
@@ -140,6 +160,9 @@ function tropezar(e, o) {
   // (tanda 1) con un escudo, el tropiezo se perdona: ni frena ni pierde la racha
   if (e.escudos > 0) { e.escudos -= 1; e.escudosUsados += 1; e.inmune = 0.6; e.sucesos.push('escudo'); return; }
   e.racha = 0; e.tropiezos += 1; e.tropiezo = TROPIEZO; e.inmune = INMUNE; e.agachado = 0;
+  // (top, tanda 1) el combo vuelve a ×1
+  if (e.combo > 1) e.sucesos.push('combo-fuera');
+  e.serie = 0; e.combo = 1;
   e.sucesos.push('tropiezo');
   // la dificultad se adapta: tres tropiezos en medio minuto y afloja un punto
   e.ultimos = e.ultimos.filter((t) => t > e.t - 30); e.ultimos.push(e.t);
@@ -156,15 +179,24 @@ function paso(e, dt) {
     e.v += (meta - e.v) * Math.min(1, dt * (e.tropiezo > 0 ? 9 : 1.6));
     e.x += e.v * dt;
   }
-  if (e.tropiezo > 0) e.tropiezo = Math.max(0, e.tropiezo - dt);
+  if (e.tropiezo > 0) {
+    e.tropiezo = Math.max(0, e.tropiezo - dt);
+    // (top, tanda 1) el toque que llegó al final del tropiezo salta en cuanto se rehace
+    if (e.tropiezo === 0 && e.guardado != null && e.t - e.guardado <= GUARDA_TOQUE) saltar(e);
+  }
   if (e.inmune > 0) e.inmune = Math.max(0, e.inmune - dt);
   if (e.agachado > 0) e.agachado = Math.max(0, e.agachado - dt);
   if (e.saltos > 0) {
     // (mantener pulsado mientras sube: pesa menos y el salto llega más lejos)
     e.vy -= GRAVEDAD * (e.pulsado && e.vy > 0 ? 0.62 : 1) * dt;
     e.y += e.vy * dt;
-    if (e.y <= 0) { e.y = 0; e.vy = 0; e.saltos = 0; e.sucesos.push('cae'); }
+    if (e.y <= 0) {
+      e.y = 0; e.vy = 0; e.saltos = 0; e.sucesos.push('cae');
+      // (top, tanda 1) el toque de justo antes de caer: salta al tocar el suelo
+      if (e.guardado != null && e.t - e.guardado <= GUARDA_TOQUE) saltar(e);
+    }
   }
+  if (e.saltos === 0 && e.y <= 0.0001) e.tSuelo = e.t;
   for (const o of e.obstaculos) {
     if (o.pasado) continue;
     if (o.x + o.w / 2 < e.x - LOBO.medio) {
@@ -172,6 +204,13 @@ function paso(e, dt) {
       if (!o.chocado) {
         e.racha += 1; e.saltados += 1; if (e.racha > e.mejorRacha) e.mejorRacha = e.racha;
         if (o.tipo === 'rio') { e.rios += 1; e.sucesos.push('rio'); }
+        // (top, tanda 1) el combo sube cada COMBO_CADA seguidos; y si ha pasado rozando, «¡Por los pelos!»
+        e.serie += 1;
+        const cb = comboDe(e.serie);
+        if (cb > e.combo) { e.combo = cb; e.comboMax = Math.max(e.comboMax, cb); e.sucesos.push('combo'); }
+        if (o.holgura != null && o.holgura >= 0 && o.holgura < ROCE) {
+          e.roces += 1; e.lento = LENTO_ROCE; e.v += IMPULSO_ROCE; e.sucesos.push('roce');
+        }
         // va sobrado: tras 25 seguidos, un punto de reto (y la ayuda se va quitando)
         if (e.racha > 0 && e.racha % 25 === 0) { e.reto = Math.min(1, e.reto + 0.5); e.ayuda = Math.max(0, e.ayuda - 0.34); }
       }
@@ -179,6 +218,11 @@ function paso(e, dt) {
     }
     if (o.x - o.w / 2 > e.x + LOBO.medio) break;
     if (o.chocado || e.inmune > 0) continue;
+    // (top, tanda 1) lo justo que pasa por encima (para «por los pelos»): el hueco más pequeño entre sus patas y la silueta
+    if (o.tipo !== 'rama' && o.tipo !== 'rio') {
+      const hueco = Math.min(...[-LOBO.medio, 0, LOBO.medio].map((d) => e.y - perfil(o, e.x + d)));
+      if (o.holgura == null || hueco < o.holgura) o.holgura = hueco;
+    }
     // La rama cuelga: toca si la cabeza del lobo llega a ella (de pie llega; agachado, no; saltando, también)
     const toca = o.tipo === 'rama'
       ? e.y + (e.agachado > 0 ? ALTO_AGACHADO : LOBO.alto) > o.h
@@ -190,13 +234,16 @@ function paso(e, dt) {
   for (const s of e.estrellas) {
     if (s.cogida) continue;
     if (s.x > cx + 1.2) break;
-    if (Math.abs(s.x - cx) < 0.95 && Math.abs(s.y - cy) < 0.95) { s.cogida = true; e.estrellasCogidas += 1; e.sucesos.push('estrella'); }
+    // (top, tanda 1) con el combo, cada estrella vale más
+    if (Math.abs(s.x - cx) < 0.95 && Math.abs(s.y - cy) < 0.95) { s.cogida = true; s.vale = e.combo; e.estrellasCogidas += e.combo; e.sucesos.push('estrella'); }
   }
 }
 
 // Avanza el juego `dt` segundos (en pasos de 1/120 como mucho, para que no atraviese nada con un cuadro lento)
+// (top, tanda 1) Tras un roce, un instante a cámara lenta: el tiempo del juego va más despacio (el descanso, no)
 export function avanzar(e, dt) {
   let queda = Math.min(0.25, Math.max(0, dt));
+  if (e.lento > 0) { const l = Math.min(e.lento, queda); e.lento -= l; queda = queda - l + l * FACTOR_LENTO; }
   while (queda > 0) {
     const d = Math.min(1 / 120, queda);
     paso(e, d);
@@ -207,7 +254,8 @@ export function avanzar(e, dt) {
 }
 
 // Lo que se guarda de una etapa: metros enteros y estrellas
-export const resultado = (e) => ({ metros: Math.max(0, Math.round(e.x)), estrellas: e.estrellasCogidas, racha: e.mejorRacha, tropiezos: e.tropiezos, rios: e.rios, segundos: Math.round(e.t), calma: e.calma });
+export const resultado = (e) => ({ metros: Math.max(0, Math.round(e.x)), estrellas: e.estrellasCogidas, racha: e.mejorRacha, tropiezos: e.tropiezos, rios: e.rios, segundos: Math.round(e.t), calma: e.calma,
+  roces: e.roces || 0, combo: e.comboMax || 1 });
 
 // «870 m», «2,3 km», «12 km»
 export function textoDistancia(m) {

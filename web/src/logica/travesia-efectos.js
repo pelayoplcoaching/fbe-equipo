@@ -75,8 +75,14 @@ export function rodar(visto, real, dt) {
 // ---------- Los carteles ----------
 // Lo que merece un cartel al pasar de un cuadro a otro: los hitos de distancia (cada 250 m; el kilómetro, más grande) y
 // de racha (10, 20, 30…). Devuelve { texto, grande } o null
+// (top, tanda 1) Con `combo` (el multiplicador de las estrellas), los carteles de racha pasan a ser los del combo: sale
+// «Combo ×2» cuando sube (la racha ya no tiene cartel propio: serían dos carteles para lo mismo)
 export function cartelDeHito(antes, ahora) {
   const m0 = Math.floor(Math.max(0, antes?.metros || 0) / 250), m1 = Math.floor(Math.max(0, ahora?.metros || 0) / 250);
+  if (ahora?.combo != null) {
+    if ((ahora.combo || 1) > (antes?.combo || 1)) return { texto: `Combo ×${ahora.combo}`, grande: ahora.combo >= 3 };
+    if (m1 <= m0) return null;
+  }
   if (m1 > m0) {
     const m = m1 * 250;
     return m % 1000 === 0 ? { texto: `${m / 1000} km`, grande: true } : { texto: `${m} m`, grande: false };
@@ -105,3 +111,32 @@ export const alturaAstro = (fase) => (fase === 'alba' || fase === 'ocaso' ? 0.8 
 // pasados los primeros 90 cuadros, la media pasa de 26 ms (menos de unos 38 cuadros por segundo). Una vez aligerado, se queda.
 export const mediaCuadro = (media, ms) => (media == null ? ms : media * 0.94 + Math.min(120, Math.max(0, ms)) * 0.06);
 export const convieneAligerar = (media, cuadros, ya = false) => ya || (cuadros >= 90 && media > 26);
+
+// ---------- (top, tanda 1) La calidad, a tres niveles ----------
+// 2: todo · 1: ligero (sin lo más caro) · 0: mínimo (además, sin nubes, polvo, huellas, fauna ni brillos). Baja un nivel
+// cuando, pasados 90 cuadros en el nivel, la media de lo que tarda un cuadro pasa de 26 ms; y sube uno (una sola vez por
+// etapa, para que no vaya y venga) si lleva 300 cuadros por debajo de 15 ms. Con la pantalla oculta no cuenta.
+export const CALIDAD_INICIAL = () => ({ media: null, cuadros: 0, nivel: 2, desde: 0, subidas: 0 });
+export function calidad(est, ms, visible = true) {
+  const e = est || CALIDAD_INICIAL();
+  if (!visible) return e;
+  const media = mediaCuadro(e.media, ms), cuadros = e.cuadros + 1;
+  let nivel = e.nivel, desde = e.desde + 1, subidas = e.subidas;
+  if (cuadros >= 90 && desde >= 90 && nivel > 0 && media > 26) { nivel -= 1; desde = 0; }
+  else if (nivel < 2 && desde >= 300 && media < 15 && subidas < 1) { nivel += 1; desde = 0; subidas += 1; }
+  return { media, cuadros, nivel, desde, subidas };
+}
+
+// ---------- (top, tanda 1) Los avisos de lo que viene ----------
+// Lo que pide algo distinto de un salto normal (el monte, doble salto; la rama, agacharse) y aún no se ve: el más cercano
+// entre el borde de la pantalla y `delante` m más allá. Devuelve { tipo, cerca (0 lejos, 1 a punto de entrar) } o null.
+export function avisoDe(obstaculos, bordeDerecho, delante = 9) {
+  for (const o of obstaculos || []) {
+    if (o.pasado || (o.tipo !== 'monte' && o.tipo !== 'rama')) continue;
+    const izq = o.x - o.w / 2;
+    if (izq <= bordeDerecho) continue;
+    if (izq > bordeDerecho + delante) return null;
+    return { tipo: o.tipo, cerca: Math.max(0, Math.min(1, 1 - (izq - bordeDerecho) / delante)) };
+  }
+  return null;
+}

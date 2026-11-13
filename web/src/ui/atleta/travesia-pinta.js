@@ -1,7 +1,7 @@
 // «La travesía»: cómo se pinta el juego en su lienzo (el juego en sí, en logica/travesia.js). Todo a mano, con formas
 // planas en la paleta de la casa: sin imágenes que descargar. Va con el trozo del juego, que solo se pide al abrirlo.
 import { azar, perfil } from '../../logica/travesia.js';
-import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro } from '../../logica/travesia-efectos.js';
+import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe } from '../../logica/travesia-efectos.js';
 
 const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', VIOLETA = '#5438D8', LAVANDA = '#A08CFF', TIZA = '#F1F0F6', ORO = '#F2C230';
 
@@ -47,7 +47,47 @@ export function nuevoPaisaje(semilla = 1) {
     polvo: [], vaho: [], volando: [], trozos: [], aros: [], huellas: [],
     t0: null, tCae: null, tTropiezo: null, tFin: null, tPolvo: 0, tVaho: 0, pisada: 0, rayo: -99,
     zancada: 0,
+    // (top, tanda 1) los textos que suben («¡Por los pelos!», «+2») y las cordilleras ya pintadas (se pintan una vez y se desplazan)
+    textos: [], fondo: null,
   };
+}
+
+// (top, tanda 1) Cada cordillera, pintada una vez en su lienzo (un tramo de `periodo` px que se repite sin costura: lo que
+// sobresale de un tramo se pinta también en el siguiente) y luego solo desplazada. Se vuelve a pintar si cambia la altura
+// de la pantalla, la hora o la calidad.
+function cordilleraPintada(capa, nc, { suelo, dpr, deDia, tinte, bruma, ligero }) {
+  if (typeof document === 'undefined') return null;
+  const alto = Math.ceil(suelo * Math.max(capa.picos.reduce((m, q) => Math.max(m, q.h), 0), ligero ? 0 : 0.24)) + 2;
+  const lienzo = document.createElement('canvas');
+  lienzo.width = Math.ceil(capa.periodo * dpr); lienzo.height = Math.ceil(alto * dpr);
+  const c = lienzo.getContext('2d');
+  if (!c) return null;
+  c.setTransform(dpr, 0, 0, dpr, 0, alto * dpr - suelo * dpr);   // (y en las mismas medidas que la pantalla: el pie, en `suelo`)
+  for (let k = -1; k <= 1; k++) {
+    for (const m of capa.picos) {
+      const cx = k * capa.periodo + m.x, h = m.h * suelo, medio = (m.w * suelo) / 2;
+      if (cx + medio < 0 || cx - medio > capa.periodo) continue;
+      tri(c, cx - medio, suelo, cx, suelo - h, cx + medio * 0.12, suelo, capa.sombra);
+      tri(c, cx, suelo - h, cx + medio, suelo, cx + medio * 0.12, suelo, capa.luz);
+      if (capa.nieve) {
+        c.globalAlpha = capa.nieve;
+        tri(c, cx, suelo - h, cx + medio * 0.3, suelo - h * 0.7, cx + medio * 0.06, suelo - h * 0.76, TIZA);
+        c.globalAlpha = capa.nieve * 0.45;
+        tri(c, cx, suelo - h, cx - medio * 0.26, suelo - h * 0.74, cx + medio * 0.06, suelo - h * 0.76, TIZA);
+        c.globalAlpha = 1;
+      }
+      if (nc < 2 && !deDia) {
+        c.strokeStyle = `rgba(${tinte}, ${nc ? 0.22 : 0.34})`; c.lineWidth = 1.2;
+        c.beginPath(); c.moveTo(cx, suelo - h); c.lineTo(cx + medio * 0.55, suelo - h * 0.45); c.stroke();
+      }
+    }
+  }
+  if (!ligero) {
+    const velo = c.createLinearGradient(0, suelo - suelo * 0.24, 0, suelo);
+    velo.addColorStop(0, `rgba(${bruma}, 0)`); velo.addColorStop(1, `rgba(${bruma}, ${[0.42, 0.3, 0.16][nc]})`);
+    c.fillStyle = velo; c.fillRect(0, suelo - suelo * 0.24, capa.periodo, suelo * 0.24);
+  }
+  return { lienzo, alto };
 }
 
 const tri = (c, x1, y1, x2, y2, x3, y3, color) => { c.fillStyle = color; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.closePath(); c.fill(); };
@@ -174,7 +214,10 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (tanda 5) meta: dónde está el marcador de estrellas ({ x, y } en px del lienzo: allí vuelan las que coge); fin: la etapa
 // ha acabado (el lobo se para y aúlla); ligero: el móvil va justo y se deja lo más caro (aurora, Vía Láctea, rayos,
 // bruma, nubes de lejos, lo de delante). Todo lo de esta tanda es solo pintura: con `quieto`, nada se mueve.
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false }) {
+// (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
+// brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
+// combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1 }) {
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = amb?.clima || null;
   const deDia = fase === 'dia', noche = fase === 'noche', nevado = paisaje === 2, bosque = paisaje === 1, valle = paisaje === 3;
   const u = Math.max(22, Math.min(38, w / 13));          // px por metro
@@ -193,7 +236,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   }
   if (fin && p.tFin == null) p.tFin = t;
   // La sacudida del tropiezo: todo el cuadro tiembla un instante
-  const tiembla = quieto || p.tTropiezo == null ? { dx: 0, dy: 0 } : sacudida(t - p.tTropiezo);
+  const tiembla = quieto || !temblor || p.tTropiezo == null ? { dx: 0, dy: 0 } : sacudida(t - p.tTropiezo);
   c.save();
   if (tiembla.dx || tiembla.dy) c.translate(tiembla.dx, tiembla.dy);
 
@@ -304,7 +347,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   // Las nubes, en dos capas que pasan despacio, teñidas por la hora
   const [tonoNube, alfaNube] = NUBE[fase] || NUBE.noche;
   for (const n of p.nubes) {
-    if (ligero && n.lejos) continue;
+    if ((ligero && n.lejos) || minimo) continue;
     const v = n.lejos ? 4 : 9, ancho = w + n.w * 2;
     const nx = envuelve(n.x * w - (quieto ? 0 : t * v) - e.x * (n.lejos ? 0.5 : 1.1), ancho) - n.w, ny = n.y * suelo;
     c.fillStyle = `rgba(${tonoNube}, ${alfaNube * (n.lejos ? 0.6 : 1) * (0.4 + 0.6 * entra)})`;
@@ -315,33 +358,18 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
 
   // ---------- Las cordilleras: cada pico, con su cara a la luna más clara, su cresta iluminada y, las lejanas, su nieve ----------
   const bruma = BRUMA[fase] || BRUMA.noche;
+  const dpr = Math.max(1, Math.min(2, Math.abs(c.getTransform?.().a || 1)));
+  const claveFondo = `${suelo}|${fase}|${dpr}|${ligero}`;
+  if (!p.fondo || p.fondo.clave !== claveFondo) p.fondo = { clave: claveFondo, capas: p.capas.map((capa, nc) => cordilleraPintada(capa, nc, { suelo, dpr, deDia, tinte, bruma, ligero })) };
   p.capas.forEach((capa, nc) => {
+    const hecha = p.fondo.capas[nc];
     const corre = (e.x * u * capa.v) % capa.periodo;
     for (let k = -1; k * capa.periodo - corre < w; k++) {
-      for (const m of capa.picos) {
-        const cx = k * capa.periodo - corre + m.x, alto = m.h * suelo, medio = (m.w * suelo) / 2;
-        if (cx + medio < 0 || cx - medio > w) continue;
-        tri(c, cx - medio, suelo, cx, suelo - alto, cx + medio * 0.12, suelo, capa.sombra);
-        tri(c, cx, suelo - alto, cx + medio, suelo, cx + medio * 0.12, suelo, capa.luz);
-        if (capa.nieve) {
-          c.globalAlpha = capa.nieve;
-          tri(c, cx, suelo - alto, cx + medio * 0.3, suelo - alto * 0.7, cx + medio * 0.06, suelo - alto * 0.76, TIZA);
-          c.globalAlpha = capa.nieve * 0.45;
-          tri(c, cx, suelo - alto, cx - medio * 0.26, suelo - alto * 0.74, cx + medio * 0.06, suelo - alto * 0.76, TIZA);
-          c.globalAlpha = 1;
-        }
-        // (la cresta: un filo de luz por el lado de la luna)
-        if (nc < 2 && !deDia) {
-          c.strokeStyle = `rgba(${tinte}, ${nc ? 0.22 : 0.34})`; c.lineWidth = 1.2;
-          c.beginPath(); c.moveTo(cx, suelo - alto); c.lineTo(cx + medio * 0.55, suelo - alto * 0.45); c.stroke();
-        }
-      }
+      const x = k * capa.periodo - corre;
+      if (x + capa.periodo < 0) continue;
+      // (a píxel entero: así no se emborrona al desplazarse)
+      if (hecha) c.drawImage(hecha.lienzo, Math.round(x * dpr) / dpr, suelo - hecha.alto, capa.periodo, hecha.alto);
     }
-    // (la bruma: cada cordillera se pierde en la del horizonte por abajo; las de lejos, más)
-    if (ligero) return;
-    const velo = c.createLinearGradient(0, suelo - suelo * 0.24, 0, suelo);
-    velo.addColorStop(0, `rgba(${bruma}, 0)`); velo.addColorStop(1, `rgba(${bruma}, ${[0.42, 0.3, 0.16][nc]})`);
-    c.fillStyle = velo; c.fillRect(-12, suelo - suelo * 0.24, w + 24, suelo * 0.24);
   });
 
   // (tanda 3) la manada, a lo lejos: una silueta por cada compañero que ha corrido hoy, al trote por la loma
@@ -377,7 +405,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     for (let x = -12; x <= w + 12; x += 12) c.lineTo(x, suelo - 20 - 14 * Math.sin((x + corre) * 0.008) - 8 * Math.sin((x + corre) * 0.021));
     c.stroke();
     c.strokeStyle = 'rgba(30, 21, 72, .7)'; c.lineWidth = 1.6; c.lineCap = 'round';
-    for (const b of p.pajaros) {
+    for (const b of minimo ? [] : p.pajaros) {
       const bx = envuelve(b.x * w + (quieto ? 0 : t * 14) - e.x * 0.8, w + 40) - 20, by = b.y * suelo + (quieto ? 0 : Math.sin(t * 0.7 + b.f) * 6), ala = quieto ? 0.4 : 0.25 + 0.3 * Math.sin(t * 6 + b.f);
       c.beginPath(); c.moveTo(bx - b.s, by - b.s * ala); c.lineTo(bx, by); c.lineTo(bx + b.s, by - b.s * ala); c.stroke();
     }
@@ -419,7 +447,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     }
   }
   // (las huellas que va dejando)
-  if (!quieto) {
+  if (!quieto && !minimo) {
     const paso = Math.floor(p.zancada / Math.PI);
     if (paso !== p.pisada && !enAire && e.tropiezo === 0 && !e.calma) { p.pisada = paso; p.huellas.push(e.x - 0.55); if (p.huellas.length > 16) p.huellas.shift(); }
     c.fillStyle = nevado ? 'rgba(110, 100, 190, .5)' : 'rgba(6, 4, 24, .38)';
@@ -435,7 +463,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     for (let n = 0; n < g.n; n++) { const bx = gx + (n - (g.n - 1) / 2) * 3; c.moveTo(bx, suelo + 1); c.quadraticCurveTo(bx + mece * 0.4, suelo - g.h * 0.6, bx + mece + (n - 1) * 1.5, suelo - g.h * (0.75 + n * 0.12)); }
     c.stroke();
   }
-  if (!nevado) for (const fl of p.flores) for (let k = 0; k * 900 - corre + fl.x < w + 10; k++) {
+  if (!nevado && !minimo) for (const fl of p.flores) for (let k = 0; k * 900 - corre + fl.x < w + 10; k++) {
     const gx = k * 900 - corre + fl.x;
     if (gx < -10) continue;
     const mece = quieto ? 0 : Math.sin(t * 1.5 + fl.f) * 1.6;
@@ -444,7 +472,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   }
   c.globalAlpha = 1;
   // (en la nieve, brillos que se encienden y se apagan)
-  if (nevado) {
+  if (nevado && !minimo) {
     c.fillStyle = '#FFFFFF';
     for (const b of p.brillos) for (let k = 0; k * 900 - corre + b.x < w; k++) {
       const gx = k * 900 - corre + b.x, a = quieto ? 0.5 : Math.max(0, Math.sin(t * b.v + b.f));
@@ -527,6 +555,20 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     }
   }
 
+  // (top, tanda 1: accesibilidad) con «alto contraste», cada obstáculo lleva un borde claro y grueso
+  if (contraste) {
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = 3; c.lineJoin = 'round'; c.lineCap = 'round';
+    for (const o of e.obstaculos) {
+      const izq = sx(o.x - o.w / 2), der = sx(o.x + o.w / 2);
+      if (der < -24 || izq > w + 24) continue;
+      c.beginPath();
+      if (o.tipo === 'rio') { c.moveTo(izq, suelo + 1); c.lineTo(izq, suelo + 40); c.moveTo(der, suelo + 1); c.lineTo(der, suelo + 40); c.moveTo(izq, suelo + 1); c.lineTo(der, suelo + 1); }
+      else if (o.tipo === 'rama') { const g = u * 0.34; c.roundRect(izq - u * 0.25, sy(o.h) - g, der - izq + u * 0.45, g, g / 2); }
+      else { const cx = sx(o.x), llano = ((o.w / 2) * o.plano) * u; c.moveTo(izq, suelo); c.lineTo(cx - llano, sy(o.h)); c.lineTo(cx + llano, sy(o.h)); c.lineTo(der, suelo); }
+      c.stroke();
+    }
+  }
+
   // Las estrellas que se cogen: giran, laten y llevan un destello que les da vueltas
   for (const s of e.estrellas) {
     if (s.cogida) continue;
@@ -556,10 +598,16 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     if (s === 'cae' || s === 'tropiezo') for (let i = 0; i < (s === 'cae' ? 5 : 7); i++) p.polvo.push({ x: x0 - u * 0.3 + (i - 2) * 7, y: suelo - 2, vx: (i - 2.5) * 22, vy: -14 - (i % 3) * 9, r: 3 + (i % 3) * 1.5, t: 0.45, t0: 0.45 });
     if (s === 'escudo') for (let i = 0; i < 9; i++) { const a = (i / 9) * 6.28; p.trozos.push({ x: x0 + Math.cos(a) * u * 1.2, y: sy(e.y + 0.75) + Math.sin(a) * u, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150 - 40, a, g: 5 + (i % 3) * 3, t: 0.6 }); }
     if (s === 'doble') p.aros.push({ x: x0, y: sy(e.y) + 4, t: 0.32 });
+    // (top, tanda 1) lo que sube junto al lobo: «¡Por los pelos!» al rozar, y lo que vale la estrella si hay combo
+    if (s === 'roce') {
+      p.textos.push({ x: x0 + u * 0.4, y: sy(e.y + 1.6), txt: '¡Por los pelos!', t: 1.1, t0: 1.1, grande: true });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.28; p.chispas.push({ x: x0 + u * 0.2, y: sy(e.y + 0.4), vx: Math.cos(a) * 120, vy: Math.sin(a) * 90 - 20, t: 0.45, oro: false }); }
+    }
+    if (s === 'estrella' && combo > 1) p.textos.push({ x: x0 + 16, y: sy(e.y + 1.3), txt: `+${combo}`, t: 0.8, t0: 0.8 });
   }
   e.sucesos.length = 0;
   // (el polvo de correr: una nubecilla tras las patas de atrás cuando va lanzado)
-  if (!quieto && dt > 0 && !enAire && e.tropiezo === 0 && e.v > 7) {
+  if (!quieto && !minimo && dt > 0 && !enAire && e.tropiezo === 0 && e.v > 7) {
     p.tPolvo += dt;
     if (p.tPolvo > 0.085) { p.tPolvo = 0; p.polvo.push({ x: x0 - u * 0.75, y: suelo - 2, vx: -26 - (p.pisada % 3) * 12, vy: -12 - (p.pisada % 2) * 10, r: 2.2 + (p.pisada % 3), t: 0.34, t0: 0.34 }); }
   }
@@ -592,7 +640,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   c.globalAlpha = 1;
 
   // (en el bosque, de noche, luciérnagas)
-  if (bosque && !deDia) {
+  if (bosque && !deDia && !minimo) {
     for (const l of p.luciernagas) {
       const a = quieto ? 0.6 : Math.max(0, Math.sin(t * l.v * 1.3 + l.f));
       if (a < 0.08) continue;
@@ -764,6 +812,34 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
         c.stroke();
       }
     }
+    c.globalAlpha = 1;
+  }
+  // (top, tanda 1) los textos que suben y se van
+  if (p.textos.length) {
+    p.textos = p.textos.filter((q) => (q.t -= Math.max(dt, quieto ? 0.05 : 0)) > 0);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    for (const q of p.textos) {
+      const k = 1 - q.t / q.t0;
+      c.globalAlpha = Math.min(1, (q.t / q.t0) * 2.5);
+      c.font = `800 ${q.grande ? 17 : 15}px system-ui, sans-serif`;
+      c.strokeStyle = 'rgba(11, 7, 38, .75)'; c.lineWidth = 4;
+      const ty = q.y - (quieto ? 0 : k * 34);
+      c.strokeText(q.txt, q.x, ty); c.fillStyle = q.grande ? TIZA : ORO; c.fillText(q.txt, q.x, ty);
+    }
+    c.globalAlpha = 1;
+  }
+  // (top, tanda 1) el aviso de lo que viene y aún no se ve: el monte (doble salto) o la rama (agacharse), en el borde derecho
+  const aviso = fin ? null : avisoDe(e.obstaculos, e.x + (w - x0) / u);
+  if (aviso) {
+    const ay = aviso.tipo === 'monte' ? sy(1.7) : sy(0.75), ax = w - 26, late = quieto ? 1 : 0.85 + 0.15 * Math.sin(t * 9);
+    c.globalAlpha = 0.35 + 0.65 * aviso.cerca;
+    c.fillStyle = 'rgba(11, 7, 38, .55)'; c.beginPath(); c.arc(ax, ay, 17 * late, 0, 6.3); c.fill();
+    c.strokeStyle = aviso.tipo === 'monte' ? ORO : TIZA; c.lineWidth = 2.6; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath();
+    // (monte: dos flechas hacia arriba; rama: una hacia abajo bajo una raya)
+    if (aviso.tipo === 'monte') for (const d of [3, -5]) { c.moveTo(ax - 6, ay + d + 4); c.lineTo(ax, ay + d - 2); c.lineTo(ax + 6, ay + d + 4); }
+    else { c.moveTo(ax - 7, ay - 6); c.lineTo(ax + 7, ay - 6); c.moveTo(ax - 5, ay); c.lineTo(ax, ay + 5); c.lineTo(ax + 5, ay); }
+    c.stroke();
     c.globalAlpha = 1;
   }
   c.restore();
