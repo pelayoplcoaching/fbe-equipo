@@ -17,7 +17,8 @@ export function useAgenda(atletaId = null, { activa = true } = {}) {
     globalThis.addEventListener?.('fbe-agenda', otra);
     return () => globalThis.removeEventListener?.('fbe-agenda', otra);
   }, []);
-  return useCarga(() => (activa ? api.agenda(atletaId).catch(() => null) : Promise.resolve(null)), [atletaId, activa, vuelta]);
+  // (recordada: al volver a Hoy enseguida no se pide otra vez; al cambiar algo, «fbe-agenda» la vuelve a leer)
+  return useCarga(() => (activa ? api.agenda(atletaId).catch(() => null) : Promise.resolve(null)), [atletaId, activa, vuelta], { recuerdo: activa ? `agenda:${atletaId || api.uid() || ''}` : null });
 }
 
 // ---------- En Hoy: lo de su vida ----------
