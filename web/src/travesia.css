@@ -1,7 +1,7 @@
 /* (al integrarla, v0.147) Los colores de la noche de La travesía, como tokens. La escena es de noche con el tema claro y con
    el oscuro, así que su versión oscura es la misma (se repite abajo a propósito). El texto no entra con opacity. */
-:root { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); }
-:root[data-theme="dark"] { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); }
+:root { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); }
+:root[data-theme="dark"] { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); }
 /* «La travesía»: el juego del descanso (ui/atleta/Travesia.jsx). Pantalla completa, siempre de noche (no cambia con el
    tema): el lienzo debajo y, encima, los números, la pista y la tarjeta del final. */
 .temporizador .descanso-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
@@ -155,6 +155,38 @@
 }
 @keyframes tv-final { from { transform: translate(-50%, -44%) scale(.94); } to { transform: translate(-50%, -50%) scale(1); } }
 @keyframes tv-final-det { from { transform: translateY(6px); } to { transform: none; } }
+
+/* (travesia-bella) Al cerrarse, la noche se va en un instante (al salir; al entrar, la luna sube). Solo opacidad al irse. */
+@media (prefers-reduced-motion: no-preference) {
+  .travesia.se-va { animation: tv-sale .17s ease-in both; }
+}
+@keyframes tv-sale { to { opacity: 0; } }
+
+/* (travesia-bella) La tarjeta, con el cielo de la hora (como el juego) y su lobo, que la cruza una vez al verse; y en
+   "Tu travesia", la ruta se dibuja y el lobo camina hasta su punto. Solo transform; quieto con "reducir movimiento". */
+.travesia-tarjeta[data-fase="alba"] { background: var(--tv-cielo-alba); }
+.travesia-tarjeta[data-fase="ocaso"] { background: var(--tv-cielo-ocaso); }
+.travesia-tarjeta[data-fase="dia"] { background: var(--tv-cielo-dia); }
+.travesia-tarjeta[data-fase="dia"] .travesia-tarjeta-luna { background: radial-gradient(circle at 40% 38%, var(--tv-sol) 0 55%, var(--tv-oro) 100%); box-shadow: var(--tv-brillo-sol); }
+.travesia-tarjeta { isolation: isolate; }
+.travesia-tarjeta-paso { position: absolute; left: 0; right: 0; bottom: 1px; z-index: -1; height: 24px; pointer-events: none; color: color-mix(in srgb, var(--tv-tiza) 20%, transparent); transform: translateX(62%); }
+.travesia-tarjeta.compacta .travesia-tarjeta-paso { height: 18px; }
+.travesia-tarjeta.compacta .travesia-tarjeta-lobo { width: 34px; height: 18px; }
+.travesia-tarjeta-lobo { display: block; }
+.tv-ruta-carril { position: absolute; inset: 0; transform: translateX(var(--tv-p, 0%)); pointer-events: none; }
+.tv-ruta-carril .tv-ruta-lobo { left: 0; }
+.tv-ruta-hecho { transform-origin: left center; }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-tarjeta.tv-vista .travesia-tarjeta-paso { animation: tv-cruza 5.2s cubic-bezier(.3, .6, .4, 1) both; }
+  .travesia-tarjeta.tv-vista .travesia-tarjeta-lobo { animation: tv-trote .36s ease-in-out 14 alternate; }
+  .tv-ruta-hecho { animation: tv-ruta-crece .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
+  .tv-ruta-carril { animation: tv-ruta-anda .9s cubic-bezier(.3, .7, .2, 1) .15s both; }
+  html[data-oculta] .travesia-tarjeta-paso, html[data-oculta] .travesia-tarjeta-lobo { animation-play-state: paused; }
+}
+@keyframes tv-cruza { from { transform: translateX(-14%); } }
+@keyframes tv-trote { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-2.5px) rotate(2deg); } }
+@keyframes tv-ruta-crece { from { transform: scaleX(0); } }
+@keyframes tv-ruta-anda { from { transform: translateX(0%); } }
 
 /* (top, tanda 1) el combo, junto a las estrellas: «×2», en una pastilla dorada */
 .travesia-combo { display: inline-grid; place-items: center; min-width: 30px; height: 22px; margin-left: 2px; padding: 0 6px; border-radius: 999px; font-style: normal; font-size: .8125rem; font-weight: 800; color: #1E1548; background: var(--tv-oro); }

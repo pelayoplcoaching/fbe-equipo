@@ -47,6 +47,7 @@ export function nuevoPaisaje(semilla = 1) {
     polvo: [], vaho: [], volando: [], trozos: [], aros: [], huellas: [],
     t0: null, tCae: null, tTropiezo: null, tFin: null, tPolvo: 0, tVaho: 0, pisada: 0, rayo: -99,
     zancada: 0,
+    ciervo: 120 + r() * 420,   // (travesia-bella) dónde asoma el ciervo de lejos
     // (top, tanda 1) los textos que suben («¡Por los pelos!», «+2») y las cordilleras ya pintadas (se pintan una vez y se desplazan)
     textos: [], fondo: null, estela: [],
   };
@@ -264,7 +265,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [] }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -441,6 +442,21 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       c.restore();
     }
   }
+  // (travesia-bella) un ciervo, a lo lejos, quieto en la loma (levanta la cabeza cuando el lobo pasa)
+  if (!ligero && !nevado) {
+    const cx = (((p.ciervo - e.x * u * 0.2) % 1900) + 1900) % 1900 - 60;
+    if (cx < w + 40) {
+      const k = u * 0.27, alza = cx < w * 0.55 ? 1 : 0.55, tinta = deDia ? '#3B3290' : '#1C144F';
+      c.save(); c.globalAlpha = 0.7; c.translate(cx, suelo); c.scale(k, -k); c.fillStyle = tinta; c.strokeStyle = tinta; c.lineCap = 'round';
+      c.beginPath(); c.ellipse(0, 0.95, 0.62, 0.3, 0, 0, 6.3); c.fill();
+      c.lineWidth = 0.1; for (const lx of [-0.45, -0.3, 0.3, 0.45]) { c.beginPath(); c.moveTo(lx, 0.9); c.lineTo(lx * 1.05, 0); c.stroke(); }
+      c.lineWidth = 0.2; c.beginPath(); c.moveTo(-0.5, 1.05); c.lineTo(-0.8, 1.2 + 0.5 * alza); c.stroke();
+      c.beginPath(); c.ellipse(-0.92, 1.24 + 0.5 * alza, 0.2, 0.11, 0.3, 0, 6.3); c.fill();
+      c.lineWidth = 0.05;
+      for (const d of [-1, 1]) { c.beginPath(); c.moveTo(-0.82, 1.32 + 0.5 * alza); c.lineTo(-0.82 + d * 0.16, 1.72 + 0.5 * alza); c.lineTo(-0.82 + d * 0.34, 1.86 + 0.5 * alza); c.moveTo(-0.82 + d * 0.16, 1.72 + 0.5 * alza); c.lineTo(-0.82 + d * 0.1, 1.96 + 0.5 * alza); c.stroke(); }
+      c.restore();
+    }
+  }
   // Cada paisaje, con lo suyo, delante de las cordilleras
   if (bosque || nevado) {
     // (dos filas de pinos: la de lejos, más pequeña y más lenta; en la nieve, abetos nevados)
@@ -584,6 +600,12 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
         const oy = suelo + 8 + i * 10, corr = quieto ? 0 : (t * (14 + i * 5)) % 40;
         for (let x = izq - 40 + corr + i * 9; x < der; x += 40) { c.beginPath(); c.moveTo(x, oy); c.quadraticCurveTo(x + 6, oy - 2.5, x + 12, oy); c.stroke(); }
       }
+      // (travesia-bella) y al lobo, cuando pasa por encima
+      if (Math.abs(e.x - o.x) < o.w / 2 + 1.2) {
+        c.save(); c.globalAlpha = 0.2; c.translate(x0, suelo + 3 + e.y * u * 0.45); c.scale(u, u * 0.7);
+        lobo(c, e, p.zancada, skin);
+        c.restore();
+      }
       c.restore();
       c.strokeStyle = bosque ? '#2FA36B' : nevado ? '#FFFFFF' : '#9B8CF0'; c.lineWidth = 1.6; c.globalAlpha = 0.85;
       for (const [bx, lado] of [[izq, -1], [der, 1]]) for (let i = 0; i < 3; i++) {
@@ -606,6 +628,15 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
         c.beginPath(); c.ellipse(izq + (der - izq) * d, yr - g * (i % 2 ? 1.25 : 1.05), u * 0.26, u * 0.14, -0.4 + mece, 0, 6.3); c.fill();
         if (i % 2 === 0) { c.beginPath(); c.ellipse(izq + (der - izq) * d + u * 0.1, yr + g * 0.12, u * 0.16, u * 0.09, 0.5 + mece, 0, 6.3); c.fill(); }
       });
+      // (travesia-bella) un búho en la rama: parpadea
+      {
+        const bx = izq + (der - izq) * 0.42, by = yr - g - u * 0.3, guino = !quieto && (t * 0.37 + o.x) % 3.1 < 0.14;
+        c.fillStyle = '#2A1F4A'; c.beginPath(); c.ellipse(bx, by, u * 0.2, u * 0.3, 0, 0, 6.3); c.fill();
+        tri(c, bx - u * 0.19, by - u * 0.2, bx - u * 0.13, by - u * 0.4, bx - u * 0.04, by - u * 0.24, '#2A1F4A');
+        tri(c, bx + u * 0.19, by - u * 0.2, bx + u * 0.13, by - u * 0.4, bx + u * 0.04, by - u * 0.24, '#2A1F4A');
+        c.fillStyle = ORO;
+        for (const d of [-1, 1]) { if (guino) c.fillRect(bx + d * u * 0.08 - u * 0.045, by - u * 0.1, u * 0.09, 1.2); else { c.beginPath(); c.arc(bx + d * u * 0.08, by - u * 0.1, u * 0.048, 0, 6.3); c.fill(); } }
+      }
       continue;
     }
     const cx = sx(o.x), arriba = sy(o.h), llano = ((o.w / 2) * o.plano) * u;
@@ -625,6 +656,12 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       // (en el bosque, musgo arriba; en la nieve, una capa blanca)
       c.fillStyle = nevado ? TIZA : '#2FA36B'; c.globalAlpha = nevado ? 0.95 : 0.8;
       c.beginPath(); c.moveTo(cx - llano, arriba); c.lineTo(cx + llano, arriba); c.lineTo(cx + llano + 3, arriba + 4); c.quadraticCurveTo(cx, arriba + 8, cx - llano - 3, arriba + 4); c.closePath(); c.fill();
+      c.globalAlpha = 1;
+    }
+    if (o.tipo === 'monte' && !o.pasado) {
+      // (travesia-bella) el monte pide doble salto: un brillo suave en su silueta lo avisa
+      c.strokeStyle = LAVANDA; c.lineWidth = 2.5; c.lineJoin = 'round'; c.globalAlpha = quieto ? 0.55 : 0.4 + 0.3 * Math.sin(t * 3.4);
+      c.beginPath(); c.moveTo(izq, suelo); c.lineTo(cx - llano, arriba); c.lineTo(cx + llano, arriba); c.lineTo(der, suelo); c.stroke();
       c.globalAlpha = 1;
     }
     if (!roca) {
@@ -1022,6 +1059,18 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.globalAlpha = 1;
   }
   c.restore();
+  // (travesia-bella) los diez últimos segundos: alrededor de la cuenta, un marco que se vacía y late con cada segundo
+  if (reloj && Number.isFinite(quedan) && quedan > 0 && quedan <= 10 && !fin) {
+    const late = quieto ? 0 : Math.max(0, 1 - (1 - (quedan % 1)) * 5);
+    const W = reloj.w + 28, H = reloj.h + 12, R = 20, X = reloj.x - W / 2, Y = Math.max(3, reloj.y - H / 2);
+    const largo = 2 * (W + H) - 8 * R + 2 * Math.PI * R;
+    c.lineCap = 'round'; c.lineWidth = 3.5;
+    c.strokeStyle = 'rgba(241, 240, 246, .16)'; c.beginPath(); c.roundRect(X, Y, W, H, R); c.stroke();
+    c.strokeStyle = quedan <= 3 ? ORO : TIZA; c.lineWidth = 3.5 + late * 2;
+    c.setLineDash([largo * (quedan / 10), largo]);
+    c.beginPath(); c.roundRect(X, Y, W, H, R); c.stroke();
+    c.setLineDash([]);
+  }
   return { u, suelo, x0 };
 }
 

@@ -4,6 +4,8 @@ import { perezoso } from '../perezoso.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { resumenApuntes, textoApuntes, apuntesDeNovedades, novedadPendiente, rachaAprendizaje, medallaApuntes, puedeExaminarse, ultimoExamen } from '../../logica/apuntes.js';
 import { leerApuntes, sincronizarApuntes } from '../apuntes.js';
+import { semanaDeAprendizaje } from '../../logica/apuntes-arte.js';
+import { Medalla } from './apuntes-arte.jsx';
 
 // «Apuntes»: su pantalla (y la lectura de las guías que necesita) solo se pide al abrirla
 export const Apuntes = perezoso(() => import('./Apuntes.jsx'), 'Apuntes', { mientras: null });
@@ -37,6 +39,7 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
   return (
     <section class={`apuntes-tarjeta panel${repaso ? ' repaso' : ''}${novedad ? ' con-novedad' : ''}`} aria-label={repaso ? 'Tus apuntes' : 'El apunte de hoy'}>
       <IcoIos n="biblioteca" />
+      {novedad && <span class="apuntes-cinta" aria-hidden="true">Nuevo</span>}
       <div class="apuntes-tarjeta-texto">
         <strong>{repaso ? 'Tus apuntes' : novedad ? 'Novedad de la semana' : 'El apunte de hoy'}</strong>
         <span class="peq secundario">{repaso
@@ -52,8 +55,14 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
           {(racha > 0 || medalla?.nombre) && (
             <span class="apuntes-logros peq">
               {racha > 0 && <span class="apuntes-racha">{racha === 1 ? '1 semana aprendiendo' : `${racha} semanas seguidas aprendiendo`}</span>}
-              {medalla?.nombre && <span class="apuntes-medalla"><IcoMedalla />{medalla.nombre}</span>}
+              {medalla?.nombre && <span class="apuntes-medalla"><Medalla nivel={medalla.nivel} />{medalla.nombre}</span>}
               {medalla?.siguiente && medalla.nombre && <span class="secundario">{medalla.faltan === 1 ? 'falta 1' : `faltan ${medalla.faltan}`} para «{medalla.siguiente.nombre}»</span>}
+            </span>
+          )}
+          {/* (apuntes bellos) los siete días de esta semana, encendidos los que ha aprendido algo */}
+          {estado && r.vistos > 0 && (
+            <span class="apuntes-semana" role="img" aria-label={`Esta semana has aprendido algo ${semanaDeAprendizaje(estado, hoyISO()).filter((d) => d.hecho).length} de 7 días`}>
+              {semanaDeAprendizaje(estado, hoyISO()).map((d) => <span key={d.fecha} class={`${d.hecho ? 'hecho' : ''}${d.hoy ? ' hoy' : ''}${d.futuro ? ' futuro' : ''}`}>{d.letra}</span>)}
             </span>
           )}
           {!medalla?.nombre && medalla?.vistos > 0 && <span class="apuntes-logros peq secundario">{medalla.faltan === 1 ? 'Falta 1 apunte' : `Faltan ${medalla.faltan} apuntes`} para tu primera medalla: «{medalla.siguiente.nombre}»</span>}
@@ -67,9 +76,4 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
       {abierta && <Apuntes atletaId={atleta.id} modo={typeof abierta === 'string' ? abierta : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
     </section>
   );
-}
-
-// La medalla, pequeña (un disco con su cinta)
-function IcoMedalla() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true" class="apuntes-ico-medalla"><path d="M8 3l4 6 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><circle cx="12" cy="15" r="5.5" fill="currentColor" /></svg>;
 }

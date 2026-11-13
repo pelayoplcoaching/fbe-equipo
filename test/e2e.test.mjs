@@ -5990,6 +5990,10 @@ try {
   console.log('\nHoy y la sesión, bonitos');
   const { probarHoyBello } = await import('./e2e-hoy-bello.mjs');
   await probarHoyBello({ navegador, check });
+  // La travesía, más bonita: la tarjeta, la ruta, la entrada y la salida, la estrella al contador, el marco del final y el paisaje que se funde
+  console.log('\nLa travesía, más bonita');
+  const { probarTravesiaBella } = await import('./e2e-travesia-bella.mjs');
+  await probarTravesiaBella({ navegador, check });
   // «La travesía», el juego del descanso: la tarjeta, «Jugar» en el descanso, la etapa que acaba con él y lo que se guarda
   console.log('\nLa travesía, el juego del descanso');
   const { probarTravesia } = await import('./e2e-travesia.mjs');
@@ -6014,6 +6018,10 @@ try {
   console.log('\nApuntes, tanda 4');
   const { probarApuntes4 } = await import('./e2e-apuntes4.mjs');
   await probarApuntes4({ navegador, check });
+  // Apuntes, más bonitos: tono y sello, hoja con mazo, rotulador, vuelta, sellos y puntos, glosario en el texto, deslizar, barra, nota con aro, medalla, semana
+  console.log('\nApuntes, más bonitos');
+  const { probarApuntesBellos } = await import('./e2e-apuntes-bellos.mjs');
+  await probarApuntesBellos({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

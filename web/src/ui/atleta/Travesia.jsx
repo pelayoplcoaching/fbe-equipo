@@ -98,8 +98,17 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   // (top, tanda 1: accesibilidad) lo que el atleta ha elegido en «Tu travesía» → «Cómo juegas»
   const accesible = useRef(null);
   if (!accesible.current) { const a = leerAjustes(); accesible.current = { unToque: a.juegoUnToque === true, contraste: a.juegoContraste === true, temblor: a.juegoSinTemblor !== true }; }
-  const cerrar = useRef(alCerrar);
-  cerrar.current = alCerrar;
+  // (travesia-bella) al cerrarse, la noche se va en un instante (y entonces avisa); con «reducir movimiento», al momento
+  const yendose = useRef(false);
+  const irse = (motivo) => {
+    if (sinMovimiento() || !caja.current) { alCerrar?.(motivo); return; }
+    if (yendose.current) return;
+    yendose.current = true;
+    caja.current.classList.add('se-va');
+    setTimeout(() => alCerrar?.(motivo), 170);
+  };
+  const cerrar = useRef(irse);
+  cerrar.current = irse;
   // (tanda 1) el modo calma (sin obstáculos, al paso) y el sonido, que se recuerdan en el móvil
   const [calma, setCalma] = useState(() => leerAjustes().calmaJuego === true);
   const [sonido, setSonido] = useState(() => leerAjustes().sonidoJuego === true);
@@ -146,7 +155,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const salir = () => {
     const e = etapa.current;
     if (!practica && sesion && e && !apuntada.current && e.x >= 20) { apuntada.current = true; apuntar(e); }
-    alCerrar?.('salir');
+    irse('salir');
   };
 
   useEffect(() => {
@@ -180,7 +189,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const quieto = sinMovimiento();
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
     // (tanda 5) dónde está el marcador de estrellas (allí vuelan las que coge) y los carteles de hito
-    let metaE = null, hito = { metros: 0, racha: e.racha, combo: 1 };
+    let metaE = null, relojE = null, hito = { metros: 0, racha: e.racha, combo: 1 };
     // (top, tanda 1) la calidad, a tres niveles: si el móvil va justo, se pinta sin lo más caro y, si aún va justo, sin adornos
     let cal = CALIDAD_INICIAL(), comboVisto = 1;
     const anunciar = (texto, grande = false) => {
@@ -202,6 +211,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const er = estrellas.current?.parentElement?.getBoundingClientRect();
       metaE = er ? { x: er.left + er.width / 2 - r.left, y: er.top + er.height / 2 - r.top } : null;
+      // (travesia-bella) dónde está la cuenta del descanso: en los diez últimos segundos, un marco a su alrededor
+      const cr = cuenta.current?.parentElement?.getBoundingClientRect();
+      relojE = cr ? { x: cr.left + cr.width / 2 - r.left, y: cr.top + cr.height / 2 - r.top, w: cr.width, h: cr.height } : null;
     };
     medir();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
@@ -249,7 +261,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
       if (e.sucesos.includes('roce')) vibrar('elegir');
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
-        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current });
+        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current, reloj: relojE, quedan: q });
       banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
       // (top, tanda 4) al pasar la marca de un compañero (o la suya), su cartel
       if (!parado) for (const mk of marcasRef.current) if (!pasadas.has(mk.metros + mk.nombre) && e.x >= mk.metros) { pasadas.add(mk.metros + mk.nombre); anunciar(mk.mia ? '¡Más allá de tu mejor etapa!' : `Pasas a ${mk.nombre}`, mk.mia); }
@@ -403,8 +415,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.delDia && <span>{final.quedan ? `Te ${final.quedan === 1 ? 'queda un intento' : `quedan ${final.quedan} intentos`}` : 'Mañana, otra etapa'}</span>}
           </span>
           {practica
-            ? <div class="travesia-final-botones">{(!final.delDia || final.quedan > 0) && <button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button>}<button type="button" class="btn" onClick={() => alCerrar?.('salir')}>Cerrar</button></div>
-            : <button type="button" class="btn btn-primario" onClick={() => alCerrar?.('fin')}>A por la serie</button>}
+            ? <div class="travesia-final-botones">{(!final.delDia || final.quedan > 0) && <button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button>}<button type="button" class="btn" onClick={() => irse('salir')}>Cerrar</button></div>
+            : <button type="button" class="btn btn-primario" onClick={() => irse('fin')}>A por la serie</button>}
           {/* (top, tanda 3) el modo foto: la escena del final, para compartirla o guardarla */}
           <button type="button" class="btn-texto travesia-foto" onClick={hacerFoto}><Icono n="camara" />{foto || 'Guardar la foto'}</button>
         </div>
