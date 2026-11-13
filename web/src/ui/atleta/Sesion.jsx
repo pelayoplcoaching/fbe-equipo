@@ -77,7 +77,8 @@ import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
-import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso } from './Conocerte.jsx';
+import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
+import { FotoMotivacion } from './Suyo.jsx';
 import { Cadencia, CancionRecord, BotonMusica } from './Musica.jsx';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
@@ -337,6 +338,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
+  // (personalización 2, tanda 4) la vuelta de un viaje: la última sesión con series fue de viaje y esta es en el gimnasio
+  const vueltaViaje = vueltaDeViaje(atleta.id, id, { lugar, conSeries: todas.length > 0, completada: !!det.datos?.sesion?.completada });
   // El cronómetro cuenta desde la primera serie de la tanda en curso (pasar la medianoche no lo reinicia;
   // retomar la sesión horas después, sí)
   const inicio = inicioDeTanda(todas);
@@ -755,6 +758,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </button>
       )}
       {cardioValido(sesion.cardio) && <TarjetaCardio pauta={sesion.cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} sesionId={sesion.id} />}
+      {vueltaViaje && <MensajeCoach momento="viaje" clase="viaje-coach" />}
       {!sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
         <DondeEntrenas atletaId={atleta.id} lugar={lugar} alElegir={elegirLugar}
           cambios={Object.fromEntries(Object.entries(porLugar).filter(([k, v]) => sustitutos[k] === v))} sinAlternativa={sinAlternativa} />
@@ -1062,6 +1066,8 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
       {abierto && (
         <div class="ejercicio-cuerpo">
           {siguiente && !ultimas && !Object.keys(hechas).length && <AntesDeEmpezar ej={ej} />}
+          {/* (personalización 2, tanda 4) la primera vez con este ejercicio: el mensaje de su coach, si lo ha escrito */}
+          {!ultimas && !Object.keys(hechas).length && <MensajeCoach momento="primera_vez" ejercicio={ej.nombre} clase="primera-vez-coach" />}
           <RecuerdaEjercicio recordatorios={recordatorios} />
           <AvisoZona aviso={avisoZona} />
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
@@ -1603,6 +1609,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         </div>
         {nRecords > 0 && <span class="resumen-pr num" style={{ '--i': 1 }}><Icono n="trofeo" />{nRecords === 1 ? '1 récord' : `${nRecords} récords`}</span>}
       </section>
+      {/* (personalización 2, tanda 4) su foto de motivación, también al terminar */}
+      <FotoMotivacion clase="en-resumen" />
       <dl class="resumen-num">
         {cifras.filter(Boolean).map((c, i) => (
           <div key={c.k} data-k={c.k} style={{ '--i': i + 2 }}>

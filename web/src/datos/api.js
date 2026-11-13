@@ -2543,6 +2543,11 @@ export function crearApi(backend) {
     // y el archivo si lo hay. Los más antiguos primero.
     // v0.54: cada mensaje, además, con sus reacciones ([{ usuario_id, emoji }]), si lo he destacado yo, qué lleva
     // (medio: 'foto' | 'video' | 'archivo') y si se editó o se eliminó. Sin la migración 032, sin reacciones ni destacados.
+    // (personalización 2, tanda 4) cuándo le escribió el coach por última vez (para «Para hablarle»); null si nunca
+    async ultimoDelCoach(atletaId) {
+      const [c] = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, order: [['creado_en', 'desc']], limit: 5, cols: 'creado_en,eliminado_en' }).catch(() => []);
+      return c?.creado_en || null;
+    },
     async conversacion(atletaId, { limite = 400 } = {}) {
       const todos = await b.select('comentarios', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']], limit: limite });
       const mensajes = todos.reverse();

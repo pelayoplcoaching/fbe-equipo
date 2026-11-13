@@ -82,3 +82,15 @@ export function MejorMomento({ entrenos, hoy }) {
     </section>
   );
 }
+
+// (personalización 2, tanda 4) La vuelta de un viaje: se apunta en el móvil dónde fue la última sesión con series; si
+// fue de viaje y esta (sin series aún) es en el gimnasio, sale el mensaje «viaje» del coach. Escribe solo si cambia.
+export function vueltaDeViaje(atletaId, sesionId, { lugar = 'gimnasio', conSeries = false, completada = false } = {}) {
+  const clave = `fbe-ultimo-lugar:${atletaId}`;
+  const u = leerPreferencia(clave, null);
+  if (conSeries) {
+    if (!u || u.sesion !== sesionId || u.lugar !== lugar) guardarPreferencia(clave, { sesion: sesionId, lugar });
+    return false;
+  }
+  return !completada && lugar === 'gimnasio' && !!u && u.sesion !== sesionId && u.lugar === 'viaje';
+}

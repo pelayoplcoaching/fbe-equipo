@@ -36,7 +36,7 @@ import { CompararCheckins } from './CompararCheckins.jsx';
 import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
 import { ordenReal } from '../../logica/orden-sesion.js';
-import { LoSuyo } from './PersonalCoach.jsx';
+import { LoSuyo, ParaHablarle } from './PersonalCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
 import { CarreraFicha } from './CarreraCoach.jsx';
 import { conCarrera } from '../../logica/carrera.js';
@@ -102,7 +102,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} /></>}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
           {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />{/* (YouTube) los vídeos de YouTube que ha visto en la app */}<VideosVistosAtleta atletaId={a.id} /></>}
-          {pest === 'objetivos' && <><LoSuyo atletaId={a.id} /><Objetivos atleta={a} /></>}
+          {pest === 'objetivos' && <><ParaHablarle atleta={a} /><LoSuyo atletaId={a.id} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}
           {pest === 'datos' && <ContactoAtleta atleta={a} />}
