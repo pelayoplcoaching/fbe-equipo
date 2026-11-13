@@ -8,7 +8,7 @@ import { crearSonido } from './travesia-sonido.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
-import { compartirArchivo, conFranja } from './travesia-compartir.js';
+import { compartirArchivo, conFranja, crearGrabadora, extensionDe } from './travesia-compartir.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos } from '../travesia.js';
 import { adornosPuestos } from '../../logica/travesia-meta.js';
@@ -84,6 +84,10 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   marca.current = { fin, pausa };
   const [ronda, setRonda] = useState(0);            // (práctica) otra carrera; (calma) al cambiar de modo
   const finPractica = useRef(0);
+  // (remate, tanda 7) el clip de la etapa: { blob, motivo } si se ha grabado algo especial
+  const [clip, setClip] = useState(null);
+  const [clipTxt, setClipTxt] = useState('');
+  const grabadora = useRef(null);
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
   const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null), comboTxt = useRef(null);
@@ -173,7 +177,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     setEscudos(e.escudos);
     paisaje.current = nuevoPaisaje(semilla % 1000);
     const pasadas = new Set();   // (top, tanda 4) las marcas del camino que ya ha pasado
-    setFinal(null);
+    setFinal(null); setClip(null); setClipTxt('');
     if (practica) finPractica.current = Date.now() + PRACTICA * 1000;
     const amb = ambiente({ ...tiempoGuardado(), total: antesG.total });
     const ritmo = !calma && antesG.ritmo > 0 ? antesG.ritmo / 100 : 0;   // su fantasma
@@ -185,6 +189,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     const cielo = [completas[completas.length - 1], todas.find((k) => !k.completa && k.cogidas > 0)].filter(Boolean);
     const c = lienzo.current, ctx = c.getContext('2d');
     const quieto = sinMovimiento();
+    grabadora.current = crearGrabadora(c, { alTener: (k) => setClip(k) });
     let w = 0, h = 0, id = 0, antes = performance.now(), acabada = false, visto = { m: -1, s: -1, e: -1, r: '', esc: e.escudos };
     // (tanda 5) dónde está el marcador de estrellas (allí vuelan las que coge) y los carteles de hito
     let metaE = null, relojE = null, hito = { metros: 0, racha: e.racha, combo: 1 };
@@ -201,7 +206,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         : [{ visibility: 'visible', transform: 'translateY(14px) scale(.7)' }, { visibility: 'visible', transform: 'none', offset: 0.14 }, { visibility: 'visible', transform: 'none', offset: 0.78 }, { visibility: 'visible', transform: 'translateY(-10px) scale(.85)' }],
       { duration: 2200, easing: 'ease-out' });
     };
-    const alEmpezar = setTimeout(() => anunciar(dorada ? 'Etapa dorada: tu récord vale doble' : especial ? NOMBRE_FECHA[especial] : nombrePaisaje(amb.paisaje), !!(dorada || especial)), 700);   // (el nombre del paisaje, al entrar; o lo especial de hoy)
+    // (el nombre del paisaje, al entrar; y después, si lo hay, lo especial de hoy: la etapa dorada o la fecha)
+    const loEspecial = dorada ? 'Etapa dorada: tu récord vale doble' : especial ? NOMBRE_FECHA[especial] : '';
+    let alEmpezar = setTimeout(() => { anunciar(nombrePaisaje(amb.paisaje)); if (loEspecial) alEmpezar = setTimeout(() => anunciar(loEspecial, true), 1900); }, 700);
     const medir = () => {
       const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
       w = Math.max(1, r.width); h = Math.max(1, r.height);
@@ -223,6 +230,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     };
     const acabar = () => {
       acabada = true; apuntada.current = true;
+      grabadora.current?.cerrar();
       if (preparaTxt.current) preparaTxt.current.hidden = true;
       if (!practica) vibrar('tv-meta');
       // (top, tanda 4) la etapa del día no cuenta para la travesía ni para la práctica: sus intentos, en el móvil y en la base
@@ -290,7 +298,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       // (remate, tanda 6) la ventisca, la estrella dorada: su cartel
       if (!parado) for (const sc of pasaron) if (CARTEL[sc]) anunciar(CARTEL[sc], sc !== 'alcanzado');
       // (top, tanda 2) el momento raro, cuando asoma
-      if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); }
+      if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); if (!ahorro && cal.nivel > 0) grabadora.current?.grabar(mo.tipo); }
+      // (remate, tanda 7) el combo ×4 también se graba
+      if (!parado && e.combo >= 4 && !ahorro && cal.nivel > 0) grabadora.current?.grabar('combo');
       // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
       if (!parado) { const ahoraH = { metros: e.x, racha: e.racha, combo: e.combo }, k = cartelDeHito(hito, ahoraH); hito = ahoraH; if (k) anunciar(k.texto, k.grande); }
       // (top, tanda 1) el combo, junto a las estrellas: «×2» mientras dure (con un salto al subir)
@@ -319,7 +329,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       }
     };
     id = requestAnimationFrame(cuadro);
-    return () => { cancelAnimationFrame(id); ro?.disconnect(); clearTimeout(alEmpezar); };
+    return () => { cancelAnimationFrame(id); ro?.disconnect(); clearTimeout(alEmpezar); if (!acabada) grabadora.current?.tirar(); };
   }, [ronda, calma]);
 
   // Al acabar el descanso se cierra sola al poco (da tiempo a ver la etapa); en práctica espera a que elija
@@ -346,6 +356,10 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     return () => { banda.current?.parar(); banda.current = null; };
   }, [musica, !!final]);
   const cambiarMusica = () => { const v = !musica; setMusica(v); guardarAjustes({ ...leerAjustes(), musicaJuego: v }); };
+  const compartirClip = async () => {
+    try { const r = await compartirArchivo(clip.blob, `la-travesia.${extensionDe(clip.blob)}`); setClipTxt(r === 'compartida' ? 'Compartido' : 'Guardado en tus descargas'); }
+    catch (err) { if (err?.name !== 'AbortError') setClipTxt('No se ha podido compartir el clip'); }
+  };
   const hacerFoto = async () => {
     try { const r = await fotoDeEtapa(lienzo.current, final?.metros || 0); setFoto(r === 'compartida' ? 'Compartida' : 'Guardada en tus descargas'); }
     catch (err) { if (err?.name !== 'AbortError') setFoto('No se ha podido hacer la foto'); }
@@ -456,6 +470,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             : <button type="button" class="btn btn-primario" onClick={() => irse('fin')}>A por la serie</button>}
           {/* (top, tanda 3) el modo foto: la escena del final, para compartirla o guardarla */}
           <button type="button" class="btn-texto travesia-foto" onClick={hacerFoto}><Icono n="camara" />{foto || 'Guardar la foto'}</button>
+          {/* (remate, tanda 7) el clip de la etapa, si ha pasado algo especial y el navegador ha podido grabarlo */}
+          {clip && <button type="button" class="btn-texto travesia-foto travesia-clip" onClick={compartirClip}><Icono n="video" />{clipTxt || (clip.motivo === 'combo' ? 'Compartir el clip del combo' : 'Compartir el clip')}</button>}
         </div>
       )}
     </div>
