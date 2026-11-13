@@ -405,7 +405,7 @@ const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 
 // (059) lo de YouTube: el canal del coach y lo que ve cada atleta
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
 // (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos
-const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos'];
+const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -4022,6 +4022,49 @@ export function crearApi(backend) {
         return null;
       }
     },
+    // (062) El rango, las misiones y los logros: sube lo del móvil y devuelve cómo queda junto con lo de la base (o null:
+    // sin red, sin ficha o sin la 062; entonces todo sigue en el móvil)
+    async guardarPerfilTravesia(m) {
+      if (api._sin062 || !uid() || !m) return null;
+      try {
+        return (await b.rpc('guardar_travesia_perfil', { p_rango: m.rango, p_hechas: m.hechas, p_activas: m.activas, p_logros: m.logros, p_potenciadores: m.potenciadores || [] })) || null;
+      } catch (e) {
+        if (/guardar_travesia_perfil|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
+        return null;
+      }
+    },
+    // (062) La etapa del día: apunta un intento ({ dia, metros, estrellas, intentos }) y la clasificación de hoy ({ dia,
+    // filas: [{ nombre, metros, yo }] }, o null fuera de la comunidad)
+    async etapaDelDia(metros, estrellas = 0) {
+      if (api._sin062 || !uid()) return null;
+      try { return (await b.rpc('sumar_etapa_del_dia', { p_metros: Math.round(metros), p_estrellas: Math.round(estrellas) })) || null; } catch (e) {
+        if (/sumar_etapa_del_dia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
+        return null;
+      }
+    },
+    async clasifEtapaDelDia() {
+      if (api._sin062 || !uid()) return null;
+      try { return (await b.rpc('travesia_dia_clasif', {})) || null; } catch (e) {
+        if (/travesia_dia_clasif|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
+        return null;
+      }
+    },
+    // (062) Aullar a un compañero de la clasificación (su «perfil», el de la comunidad); y los aullidos que me han llegado
+    async aullar(perfil) {
+      if (!perfil) throw new Error('¿A quién?');
+      try { await b.rpc('travesia_aullar', { p_perfil: perfil }); return true; } catch (e) {
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (/travesia_aullar|schema cache|could not find|PGRST20[0-9]|42883/i.test(m)) throw new Error('Para aullar falta ejecutar la migración 062 en Supabase (supabase/migraciones/062_travesia_top.sql).');
+        throw e;
+      }
+    },
+    async aullidosRecibidos() {
+      if (api._sin062 || !uid()) return [];
+      try { const r = await b.rpc('travesia_aullidos_recibidos', {}); return Array.isArray(r) ? r : []; } catch (e) {
+        if (/travesia_aullidos_recibidos|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
+        return [];
+      }
+    },
     // Lo recorrido por un atleta, por semanas (la última primero)
     async travesiaDe(atletaId) {
       return b.select('travesia_semanas', { eq: { atleta_id: atletaId }, order: [['semana', 'desc']], limit: 520 }).catch(() => []);
@@ -5007,6 +5050,8 @@ export function crearApi(backend) {
       out.videos_vistos = await b.select('videos_vistos', { eq: { atleta_id: atletaId } }).catch(() => []);
       // (060) lo que ha recorrido en La travesía y los apuntes que ha visto
       for (const t of ['travesia_semanas', 'apuntes_vistos']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (062) el rango, las misiones y los logros de La travesía, y sus etapas del día
+      for (const t of ['travesia_perfil', 'travesia_dia']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
-import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta } from '../travesia.js';
+import { leerTravesia, manadaDe, leerDuelo, guardarDuelo, leerMeta, sincronizarMeta, leerDia, aulladosHoy, apuntarAullado } from '../travesia.js';
+import { Travesia } from './TravesiaTarjeta.jsx';
+import { ETAPA_DIA } from '../../logica/travesia.js';
 import { nombreRango, progresoMisiones, adornosDe, adornosPuestos, LOGROS } from '../../logica/travesia-meta.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { textoDistancia, rachaSemanas } from '../../logica/travesia.js';
@@ -97,6 +99,36 @@ function Logros({ meta }) {
   );
 }
 
+// (top, tanda 4) La etapa del día: el mismo terreno para todo el equipo, un minuto y tres intentos; y su clasificación
+function EtapaDelDia({ atletaId, hoy }) {
+  const { api } = useApp();
+  const [dia, setDia] = useState(() => leerDia(atletaId, hoy));
+  const [clasif, setClasif] = useState(null);
+  const [jugando, setJugando] = useState(false);
+  const traer = () => api.clasifEtapaDelDia().then(setClasif).catch(() => setClasif(null));
+  useEffect(() => { traer(); }, []);
+  const quedan = Math.max(0, ETAPA_DIA.intentos - dia.intentos);
+  const cerrar = () => { setJugando(false); setDia(leerDia(atletaId, hoy)); setTimeout(traer, 600); };
+  return (
+    <section class="tv-dia" aria-labelledby="tv-dia-t">
+      <h3 id="tv-dia-t">La etapa del día</h3>
+      <p class="tv-donde">Hoy todo el equipo corre el mismo terreno: un minuto, tres intentos, cuenta el mejor.{dia.mejor > 0 ? <> Tu mejor de hoy: <b class="num">{textoDistancia(dia.mejor)}</b>.</> : ''}</p>
+      <button type="button" class="btn btn-primario tv-dia-correr" disabled={!quedan} onClick={() => setJugando(true)}>
+        <Icono n="play" />{quedan ? `Correrla (${quedan === 1 ? 'te queda un intento' : `quedan ${quedan} intentos`})` : 'Mañana, otra etapa'}
+      </button>
+      {clasif?.filas?.length > 0 && (
+        <ol class="tv-clasif tv-dia-clasif">
+          {clasif.filas.slice(0, 10).map((f, i) => (
+            <li key={`${f.nombre}-${i}`} class={`tv-fila${f.yo ? ' yo' : ''}`}><span class="tv-puesto num">{i + 1}</span><span class="tv-nombre">{f.yo ? 'Tú' : f.nombre}</span><b class="num">{textoDistancia(f.metros)}</b></li>
+          ))}
+        </ol>
+      )}
+      <p class="mini terciario">No suma a tu travesía: es para picarse un rato. {clasif ? '' : 'La clasificación del día sale si estás en la comunidad.'}</p>
+      {jugando && <Travesia atletaId={atletaId} delDia alCerrar={cerrar} />}
+    </section>
+  );
+}
+
 // (top, tanda 1: accesibilidad) «Cómo juegas»: tres ajustes de este móvil, que el juego lee al abrirse
 const COMO_JUEGAS = [
   { clave: 'juegoUnToque', texto: 'Un solo toque', ayuda: 'Sin doble salto ni agacharse: nada lo pide, y los ríos son más estrechos' },
@@ -126,7 +158,14 @@ export function HojaTravesia({ alCerrar }) {
   const { atleta, api, aviso } = useApp();
   const hoy = hoyISO(), lunes = lunesDe(hoy);
   const t = leerTravesia(atleta.id);
-  const meta = leerMeta(atleta.id);
+  // (top, tanda 4) el rango, las misiones y los logros: lo del móvil, y en cuanto llega, junto con lo de la base
+  const [meta, setMeta] = useState(() => leerMeta(atleta.id));
+  useEffect(() => { let vivo = true; sincronizarMeta(api, atleta.id).then((m) => { if (vivo) setMeta(m); }).catch(() => {}); return () => { vivo = false; }; }, []);
+  const [aullados, setAullados] = useState(() => aulladosHoy(atleta.id, hoyISO()));
+  const aullar = async (f) => {
+    try { await api.aullar(f.perfil); apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); aviso?.(`¡Auuu! A ${f.nombre} le saldrá en su próxima etapa`); }
+    catch (e) { if (/ya le has aullado/i.test(e?.message || '')) { apuntarAullado(atleta.id, hoyISO(), f.perfil); setAullados(aulladosHoy(atleta.id, hoyISO())); } aviso?.(e?.message || 'No se ha podido aullar', 'error'); }
+  };
   const pos = posicionEnRuta(t.total), album = postales(t.total);
   const [manada, setManada] = useState(null);
   const [rival, setRival] = useState(() => leerDuelo(atleta.id, lunes));
@@ -165,6 +204,8 @@ export function HojaTravesia({ alCerrar }) {
 
         <RangoYMisiones meta={meta} />
 
+        <EtapaDelDia atletaId={atleta.id} hoy={hoy} />
+
         <section aria-labelledby="tv-postales-t">
           <h3 id="tv-postales-t">Postales <span class="tv-cuenta">{album.length}</span></h3>
           <ul class="tv-postales">
@@ -185,6 +226,7 @@ export function HojaTravesia({ alCerrar }) {
                   <span class="tv-puesto num">{i + 1}</span>
                   <span class="tv-nombre">{f.yo ? 'Tú' : f.nombre}{f.hoy && <small> · hoy</small>}</span>
                   <b class="num">{textoDistancia(f.yo ? Math.max(f.metros, misMetros) : f.metros)}</b>
+                  {!f.yo && f.perfil && <button type="button" class="btn btn-peq tv-aullar" disabled={aullados.includes(f.perfil)} onClick={() => aullar(f)} aria-label={aullados.includes(f.perfil) ? `Ya has aullado hoy a ${f.nombre}` : `Aullar a ${f.nombre}`}>{aullados.includes(f.perfil) ? 'Auuu ✓' : 'Aullar'}</button>}
                   {!f.yo && <button type="button" class="btn btn-peq tv-retar" aria-pressed={rival === f.nombre ? 'true' : 'false'} onClick={() => retar(f.nombre)}>{rival === f.nombre ? 'En duelo' : 'Retar'}</button>}
                 </li>
               ))}

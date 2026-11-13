@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
-import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas } from '../../logica/travesia.js';
+import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas, semillaDelDia, marcasDelCamino, ETAPA_DIA } from '../../logica/travesia.js';
 import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL } from '../../logica/travesia-efectos.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
-import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta } from '../travesia.js';
+import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos } from '../travesia.js';
 import { adornosPuestos } from '../../logica/travesia-meta.js';
 import { crearMusica } from './travesia-musica.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
@@ -80,7 +80,9 @@ async function fotoDeEtapa(lienzo, metros) {
 const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
 
-function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, total = null, despues = '', practica = false, empuje = null, alCerrar }) {
+// (top, tanda 4) delDia: «la etapa del día» (un minuto, el mismo terreno para todos, tres intentos; no cuenta para la travesía)
+function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, total = null, despues = '', practica: practicaProp = false, delDia = false, empuje = null, alCerrar }) {
+  const practica = practicaProp || delDia;
   const { api } = useApp() || {};
   const lienzo = useRef(null);
   const caja = useRef(null);
@@ -120,12 +122,19 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const [manada, setManada] = useState(() => (practica ? null : manadaGuardada(atletaId)));
   const corren = useRef(0);
   corren.current = manada ? correnHoy(manada.filas).length : 0;
+  // (top, tanda 4) los aullidos de los compañeros que aún no ha visto: salen al empezar
+  const [aullidos, setAullidos] = useState([]);
   useEffect(() => {
     if (practica || !sesion) return undefined;
     let vivo = true;
     manadaDe(api, atletaId).then((m) => { if (vivo) setManada(m); });
+    api?.aullidosRecibidos?.().then((l) => { if (vivo) setAullidos([...new Set(aullidosNuevos(atletaId, l).map((x) => x.nombre))]); }).catch(() => {});
     return () => { vivo = false; };
   }, []);
+  useEffect(() => { if (!aullidos.length) return undefined; const t = setTimeout(() => setAullidos([]), 6000); return () => clearTimeout(t); }, [aullidos.length]);
+  const leerDiaHoy = useRef(0);
+  const marcasRef = useRef([]);
+  marcasRef.current = !practica && sesion ? marcasDelCamino(manada?.filas, guardado0.current.mejor) : [];
   // Cerrada a mano en mitad de un descanso: lo corrido hasta ahí cuenta (si ha llegado a algo); la práctica a medias, no
   const apuntada = useRef(false);
   const apuntar = (e) => {
@@ -141,20 +150,22 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   };
 
   useEffect(() => {
-    const semilla = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    const semilla = delDia ? semillaDelDia(hoyISO()) : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    if (delDia) leerDiaHoy.current = empezarDia(atletaId, hoyISO()).mejor;   // (el intento cuenta al empezar)
     const antesG = leerTravesia(atletaId);
     const quedanIni = practica ? PRACTICA : cuentaInicial(marca.current.fin, marca.current.pausa);
     // (tanda 1) el entreno empuja: tras un récord sale con el ritmo cogido; con la serie cumplida, un escudo. En un descanso
     // corto (45 s o menos) sale ya lanzado: no da tiempo a coger ritmo
     const e = nuevaEtapa(semilla, {
       calma, movimientos: conMovimientos && !practica, km0: practica ? 0 : antesG.total, unToque: accesible.current.unToque,
-      variedad: true, tutorial: ensenando && !calma,
+      variedad: true, tutorial: ensenando && !calma, fija: delDia,
       racha0: practica ? 0 : empuje?.ritmo ? 10 : quedanIni <= 45 ? 6 : 0,
       escudos: practica ? 0 : empuje?.escudo ? 1 : 0,
     });
     etapa.current = e; apuntada.current = false;
     setEscudos(e.escudos);
     paisaje.current = nuevoPaisaje(semilla % 1000);
+    const pasadas = new Set();   // (top, tanda 4) las marcas del camino que ya ha pasado
     setFinal(null);
     if (practica) finPractica.current = Date.now() + PRACTICA * 1000;
     const amb = ambiente({ ...tiempoGuardado(), total: antesG.total });
@@ -202,9 +213,18 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     };
     const acabar = () => {
       acabada = true; apuntada.current = true;
+      // (top, tanda 4) la etapa del día no cuenta para la travesía ni para la práctica: sus intentos, en el móvil y en la base
+      if (delDia) {
+        const r = resultado(e), antes = leerDiaHoy.current, d = cerrarDia(atletaId, hoyISO(), r.metros);
+        vibrar('hecho'); if (suena.current) aullar();
+        setFinal({ ...r, delDia: true, mejorDia: d.mejor, quedan: Math.max(0, ETAPA_DIA.intentos - d.intentos), marca: antes > 0 && r.metros > antes });
+        api?.etapaDelDia?.(r.metros, r.estrellas).catch?.(() => {});
+        return;
+      }
       const { r, g } = apuntar(e);
       // (top, tanda 3) las misiones, el rango y los logros (solo las etapas de una sesión)
       const mt = !practica && sesion ? apuntarMeta(atletaId, r, g, { fase: amb.fase, paisaje: amb.paisaje, dia: hoyISO() }) : null;
+      if (mt) sincronizarMeta(api, atletaId).catch?.(() => {});   // (062: a la base; si no se puede, se queda en el móvil)
       vibrar('hecho');
       if (suena.current) aullar();
       setFinal({ ...r, hoy: !practica && sesion ? g.sesiones[sesion]?.metros ?? r.metros : null, etapas: !practica && sesion ? g.sesiones[sesion]?.etapas ?? 1 : null,
@@ -229,8 +249,10 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) tono(...SONIDOS[s]);
       if (e.sucesos.includes('roce')) vibrar('elegir');
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
-        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current });
+        ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current });
       banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
+      // (top, tanda 4) al pasar la marca de un compañero (o la suya), su cartel
+      if (!parado) for (const mk of marcasRef.current) if (!pasadas.has(mk.metros + mk.nombre) && e.x >= mk.metros) { pasadas.add(mk.metros + mk.nombre); anunciar(mk.mia ? '¡Más allá de tu mejor etapa!' : `Pasas a ${mk.nombre}`, mk.mia); }
       // (top, tanda 2) el momento raro, cuando asoma
       if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); }
       // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
@@ -327,7 +349,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   };
   const companeros = manada ? correnHoy(manada.filas) : [];
   return (
-    <div ref={caja} class={`travesia${calma ? ' en-calma' : ''}`} role="dialog" aria-modal="true" aria-label={practica ? 'La travesía: práctica de un minuto' : 'La travesía: el juego del descanso'} tabIndex={-1}
+    <div ref={caja} class={`travesia${calma ? ' en-calma' : ''}`} role="dialog" aria-modal="true" aria-label={delDia ? 'La travesía: la etapa del día' : practica ? 'La travesía: práctica de un minuto' : 'La travesía: el juego del descanso'} tabIndex={-1}
       onPointerDown={toque} onPointerMove={mueve} onPointerUp={suelta} onPointerCancel={suelta} onKeyDown={tecla}>
       <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar; desliza hacia abajo o pulsa la flecha abajo para agacharte." />
       {/* (tanda 5) la viñeta: los bordes, un poco más oscuros; y el cartel de los hitos («500 m», «Racha ×10», el paisaje) */}
@@ -335,7 +357,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       <p ref={cartel} class="travesia-cartel" aria-hidden="true" />
       <div class="travesia-arriba">
         <span class="travesia-dato" aria-label="Distancia de esta etapa"><Icono n="pasos" /><b ref={metros} class="num">0 m</b></span>
-        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : cuentaInicial(fin, pausa))}</b><small>{practica ? 'práctica' : 'descanso'}</small></span>
+        <span class="travesia-cuenta" role="timer" aria-live="off" aria-label={practica ? 'Tiempo de práctica' : 'Descanso'}><b ref={cuenta} class="num">{mmss(practica ? PRACTICA : cuentaInicial(fin, pausa))}</b><small>{delDia ? 'etapa del día' : practica ? 'práctica' : 'descanso'}</small></span>
         <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b><i ref={comboTxt} class="travesia-combo num" aria-label="Combo: cada estrella vale más" hidden /></span>
         <button type="button" class="travesia-cerrar" onClick={salir} aria-label="Cerrar el juego"><Icono n="cerrar" /></button>
       </div>
@@ -350,11 +372,12 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {!final && !tocado && !calma && !ensenando && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</>}</p>}
       {!final && calma && <p class="travesia-pista calma" aria-hidden="true">Respira: el lobo va al paso</p>}
       {!final && reto && <p ref={retoTxt} class="travesia-reto" role="status" />}
-      {!final && !tocado && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
+      {!final && aullidos.length > 0 && <p class="travesia-manada aullido" role="status">{aullidos.slice(0, 3).join(', ')} {aullidos.length === 1 ? 'te aúlla' : 'te aúllan'} desde la manada: ¡auuu!</p>}
+      {!final && !tocado && !aullidos.length && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
       {!final && despues && !practica && <p class="travesia-despues">Después: {despues}</p>}
       {final && (
         <div class="travesia-final" role="status">
-          <span class="travesia-final-etq">{practica ? 'Práctica' : '¡Vamos!'}</span>
+          <span class="travesia-final-etq">{final.delDia ? 'La etapa del día' : practica ? 'Práctica' : '¡Vamos!'}</span>
           <strong class="num"><Rueda valor={final.metros} /></strong>
           <span class="travesia-final-det">
             {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
@@ -375,10 +398,12 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.adorno && <span class="oro">Nuevo adorno: {final.adorno}</span>}
             {final.logros?.map((l) => <span key={l} class="oro"><Icono n="trofeo" />{l}</span>)}
             {final.hoy != null && final.etapas > 1 && <span>Hoy llevas {textoDistancia(final.hoy)}</span>}
-            {practica && !final.marca && final.mejor > final.metros && <span>Tu marca: {textoDistancia(final.mejor)}</span>}
+            {practica && !final.delDia && !final.marca && final.mejor > final.metros && <span>Tu marca: {textoDistancia(final.mejor)}</span>}
+            {final.delDia && <span>Tu mejor de hoy: <b class="num">{textoDistancia(final.mejorDia)}</b></span>}
+            {final.delDia && <span>{final.quedan ? `Te ${final.quedan === 1 ? 'queda un intento' : `quedan ${final.quedan} intentos`}` : 'Mañana, otra etapa'}</span>}
           </span>
           {practica
-            ? <div class="travesia-final-botones"><button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button><button type="button" class="btn" onClick={() => alCerrar?.('salir')}>Cerrar</button></div>
+            ? <div class="travesia-final-botones">{(!final.delDia || final.quedan > 0) && <button type="button" class="btn btn-primario" onClick={() => setRonda((n) => n + 1)}>Otra</button>}<button type="button" class="btn" onClick={() => alCerrar?.('salir')}>Cerrar</button></div>
             : <button type="button" class="btn btn-primario" onClick={() => alCerrar?.('fin')}>A por la serie</button>}
           {/* (top, tanda 3) el modo foto: la escena del final, para compartirla o guardarla */}
           <button type="button" class="btn-texto travesia-foto" onClick={hacerFoto}><Icono n="camara" />{foto || 'Guardar la foto'}</button>

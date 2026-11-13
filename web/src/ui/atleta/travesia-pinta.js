@@ -264,7 +264,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [] }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [] }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -668,6 +668,19 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.fillStyle = VIOLETA; c.beginPath(); c.arc(x, y, 13, 0, 6.3); c.fill();
     c.strokeStyle = TIZA; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 13, 0, 6.3); c.stroke();
     simbolo(c, q.tipo, x, y);
+  }
+  // (top, tanda 4) las marcas del camino: una banderita donde acabó la mejor etapa de la semana de cada compañero (y la suya)
+  for (const m of marcas) {
+    const x = sx(m.metros);
+    if (x < -40 || x > w + 40) continue;
+    const pie = sueloEn(x), alto = u * 1.9, ondea = quieto ? 0 : Math.sin(t * 5 + m.metros) * 2.5;
+    c.strokeStyle = 'rgba(241, 240, 246, .75)'; c.lineWidth = 2; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(x, pie); c.lineTo(x, pie - alto); c.stroke();
+    c.fillStyle = m.mia ? ORO : LAVANDA;
+    c.beginPath(); c.moveTo(x, pie - alto); c.quadraticCurveTo(x + 13, pie - alto + 3 + ondea, x + 24, pie - alto + 7 + ondea); c.lineTo(x, pie - alto + 15); c.closePath(); c.fill();
+    c.font = '700 11px system-ui, sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.strokeStyle = 'rgba(11, 7, 38, .7)'; c.lineWidth = 3; c.lineJoin = 'round';
+    c.strokeText(m.nombre, x + 4, pie - alto - 9); c.fillStyle = TIZA; c.fillText(m.nombre, x + 4, pie - alto - 9);
   }
   // (top, tanda 2) los letreros del primer kilómetro, sobre lo que enseñan
   function pista(o) {

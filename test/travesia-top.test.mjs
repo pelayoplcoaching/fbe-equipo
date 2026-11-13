@@ -1,7 +1,7 @@
 // «La travesía» al nivel de los mejores (las 20 de claude/descansos-mejoras-4.md), sin pantalla. Uso: node test/travesia-top.test.mjs
 import {
   nuevaEtapa, avanzar, saltar, agachar, resultado, perfil, V_SALTO, V_BASE, GUARDA_TOQUE, COYOTE, ROCE, comboDe, COMBO_CADA, COMBO_MAX, TROPIEZO, LOBO,
-  altoTerreno, pendiente, CORNISA, MOMENTO_CADA, POTENCIADORES,
+  altoTerreno, pendiente, CORNISA, MOMENTO_CADA, POTENCIADORES, semillaDelDia, marcasDelCamino,
 } from '../web/src/logica/travesia.js';
 import * as E from '../web/src/logica/travesia-efectos.js';
 import * as M from '../web/src/logica/travesia-meta.js';
@@ -299,6 +299,26 @@ console.log('\nTanda 3 · adornos y logros');
   e.pulsado = true; let saltado = false;
   for (let i = 0; i < 300; i++) { if (!saltado && e.x > e.obstaculos[0].x - 3.1) { saltar(e); saltado = true; } avanzar(e, 1 / 120); }
   check(e.tropiezos === 0 && resultado(e).montesUno === 1, 'un monte saltado manteniendo el dedo (sin el doble) cuenta para su logro');
+}
+
+// ---------- Tanda 4 ----------
+console.log('\nTanda 4 · la etapa del día y las marcas del camino');
+{
+  const s1 = semillaDelDia('2026-11-13'), s2 = semillaDelDia('2026-11-13'), s3 = semillaDelDia('2026-11-14');
+  check(s1 === s2 && s1 !== s3 && s1 > 0, 'la semilla del día sale de la fecha: el mismo día, la misma para todos; otro día, otra');
+  // Dos que juegan distinto el mismo día: el terreno es el mismo (la dificultad no se adapta)
+  const torpe = nuevaEtapa(s1, { variedad: true, fija: true }), fino = nuevaEtapa(s1, { variedad: true, fija: true });
+  const vistos = (e) => { const xs = []; for (let i = 0; i < 60 * 30; i++) { for (const o of e.obstaculos) if (!xs.includes(o.x)) xs.push(o.x); avanzar(e, 1 / 30); } return xs; };
+  fino.inmune = 1e9;   // (el fino no tropieza; el torpe tropieza en todo)
+  const a = vistos(torpe), b = vistos(fino);
+  const comunes = a.filter((x) => b.includes(x)).length;
+  check(torpe.tropiezos > 5 && comunes >= Math.min(a.length, b.length) - 1, `con «fija», tropezar no cambia el terreno: los mismos obstáculos para todos (${comunes} en común)`);
+  const libre = nuevaEtapa(s1, { variedad: true }); for (let i = 0; i < 60 * 30; i++) avanzar(libre, 1 / 30);
+  check(libre.ayuda > 0, 'sin «fija», tropezar mucho afloja la dificultad (como siempre)');
+  const filas = [{ nombre: 'Rubén M.', mejor: 900, yo: false }, { nombre: 'Ana L.', mejor: 400, yo: true }, { nombre: 'Lucía P.', mejor: 15, yo: false }, { nombre: 'Carlos V.', mejor: 350, yo: false }];
+  const m = marcasDelCamino(filas, 600);
+  check(m.map((x) => x.nombre).join() === 'Carlos V.,Tu mejor,Rubén M.' && m.find((x) => x.mia).metros === 600 && marcasDelCamino(null, 0).length === 0,
+    'las marcas: la mejor etapa de la semana de cada compañero (no la mía, no las de nada) y la mía de siempre, de cerca a lejos');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

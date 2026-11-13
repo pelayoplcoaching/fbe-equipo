@@ -164,7 +164,7 @@ console.log('En la demo');
   const m1 = await api.travesiaManada();
   check(m1.filas.length === 4 && m1.filas[0].nombre === 'Rubén M.' && m1.filas[0].metros === 4200 && m1.filas[0].hoy === true && !m1.filas[0].yo && m1.filas.every((f, i) => i === 0 || f.metros <= m1.filas[i - 1].metros), 'dentro, la clasificación de la semana, de más a menos');
   const yo = m1.filas.find((f) => f.yo);
-  check(yo && yo.nombre === 'Ana L.' && yo.metros === 1850 && m1.filas.filter((f) => f.yo).length === 1 && m1.filas.every((f) => Object.keys(f).sort().join() === 'estrellas,hoy,mejor,metros,nombre,yo'), 'con mi fila marcada y solo el nombre del equipo y los metros de cada uno');
+  check(yo && yo.nombre === 'Ana L.' && yo.metros === 1850 && m1.filas.filter((f) => f.yo).length === 1 && m1.filas.every((f) => Object.keys(f).sort().join() === 'estrellas,hoy,mejor,metros,nombre,perfil,yo') && yo.perfil === null, 'con mi fila marcada y solo el nombre del equipo, los metros de cada uno y (062) el perfil de la comunidad de los demás, para aullarles');
   check(m1.equipo.miembros === 4 && m1.equipo.metros >= 4200 + 2600 + 900 + 1850 && /^\d{4}-\d{2}-01$/.test(m1.equipo.mes) && new Date(`${m1.semana}T12:00:00Z`).getUTCDay() === 1, 'y lo que suma el equipo en el mes');
   await api.ajustesComunidad({ sinRanking: true });
   check((await api.travesiaManada()).filas.some((f) => f.yo), 'quien no quiere salir en el ranking se sigue viendo a sí mismo');

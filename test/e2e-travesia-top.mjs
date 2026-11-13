@@ -4,6 +4,8 @@
 //   Suelta:  npm run build && node test/e2e-travesia-top.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarTravesiaTop } = await import('./e2e-travesia-top.mjs'); await probarTravesiaTop({ navegador, check });
 import { pathToFileURL } from 'node:url';
+import { VERSION_COMUNIDAD } from '../web/src/datos/api.js';
+import { VERSION_NORMAS } from '../web/src/datos/normas-comunidad.js';
 
 export async function probarTravesiaTop({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -20,7 +22,7 @@ export async function probarTravesiaTop({ navegador, check, base = 'http://local
     }
   };
   const ajustes = () => p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'));
-  const meta = () => p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-travesia-meta-')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
+  const meta = () => p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-juego-meta-')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
   const seg = (t) => { const [a, b] = t.split(':').map(Number); return a * 60 + b; };
 
   try {
@@ -32,12 +34,14 @@ export async function probarTravesiaTop({ navegador, check, base = 'http://local
     await p.evaluate(async () => {
       const yo = (await globalThis.__fbeDemo.select('atletas', {}))[0];
       localStorage.setItem(`fbe-travesia-${yo.id}`, JSON.stringify({ total: 1200, estrellas: 40, mejor: 400 }));
-      localStorage.setItem(`fbe-travesia-meta-${yo.id}`, JSON.stringify({ rango: 2, activas: [], hechas: 6, logros: { km1: '2026-11-10' } }));
+      localStorage.setItem(`fbe-juego-meta-${yo.id}`, JSON.stringify({ rango: 2, activas: [], hechas: 6, logros: { km1: '2026-11-10' } }));
     });
     await p.reload();
     await p.locator('.hero-dia .btn-hero').waitFor();
     await fueraAvisos();
 
+    // (Ana entra en la comunidad: para la clasificación, el aullido y la etapa del día de la tanda 4)
+    await p.evaluate(([v, n]) => globalThis.__fbeDemo.rpc('comunidad_unirme', { p_nombre: 'Ana L.', p_version: v, p_normas: n }), [VERSION_COMUNIDAD, VERSION_NORMAS]);
     // --- «Tu travesía»: rango y misiones, adornos, logros y «Cómo juegas» ---
     const tarjeta = p.locator('.travesia-tarjeta');
     await tarjeta.scrollIntoViewIfNeeded();
@@ -62,6 +66,31 @@ export async function probarTravesiaTop({ navegador, check, base = 'http://local
     await p.keyboard.press('Escape');
     await hoja.waitFor({ state: 'detached' });
 
+    // --- (tanda 4) Con la comunidad: aullar a un compañero y la etapa del día ---
+    await tarjeta.getByRole('button', { name: /Ver tu travesía/ }).click();
+    await hoja.locator('.tv-clasif').first().waitFor();
+    const aullar = hoja.locator('.tv-aullar').first();
+    const aQuien = (await aullar.getAttribute('aria-label')).replace('Aullar a ', '');
+    await aullar.click();
+    await p.waitForFunction(() => document.querySelector('.tv-aullar')?.disabled === true);
+    check(/Auuu/.test(await hoja.locator('.tv-aullar').first().textContent()), `aúlla a ${aQuien} desde la clasificación (y el botón queda hecho por hoy)`);
+    const dia = hoja.locator('.tv-dia');
+    await dia.scrollIntoViewIfNeeded();
+    check(/quedan 3 intentos/.test(await dia.locator('.tv-dia-correr').textContent()), 'la etapa del día: tres intentos');
+    await dia.locator('.tv-dia-correr').click();
+    const juegoDia = p.locator('.travesia');
+    await juegoDia.waitFor();
+    check(/etapa del día/i.test(await juegoDia.locator('.travesia-cuenta').textContent()), 'se corre con su cuenta de un minuto («etapa del día»)');
+    for (let i = 0; i < 70 && !(await p.locator('.travesia-final').count()); i++) { await p.touchscreen.tap(200, 520); await p.waitForTimeout(900); }
+    const finDia = await p.locator('.travesia-final').textContent();
+    check(/La etapa del día/.test(finDia) && /Tu mejor de hoy/.test(finDia) && /quedan 2 intentos/.test(finDia), `al acabar, su mejor de hoy y los intentos que quedan («${finDia.replace(/\s+/g, ' ').trim().slice(0, 70)}»)`);
+    await p.locator('.travesia-final').getByRole('button', { name: 'Cerrar' }).click();
+    await juegoDia.waitFor({ state: 'detached' });
+    await p.waitForFunction(() => document.querySelector('.tv-dia-clasif .tv-fila.yo'), null, { timeout: 8000 });
+    check(/quedan 2 intentos/.test(await dia.locator('.tv-dia-correr').textContent()), 'y su clasificación del día, con su fila; le quedan dos intentos');
+    await p.keyboard.press('Escape');
+    await hoja.waitFor({ state: 'detached' });
+
     // --- La práctica, en un solo toque: su pista y la música ---
     await tarjeta.getByRole('button', { name: /Practicar/ }).click();
     const juego = p.locator('.travesia');
@@ -78,6 +107,8 @@ export async function probarTravesiaTop({ navegador, check, base = 'http://local
 
     // --- Una etapa de un descanso: suma a las misiones y deja hacer la foto ---
     await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'); a.juegoUnToque = false; a.juegoContraste = false; localStorage.setItem('fbe-ajustes', JSON.stringify(a)); });
+    // (rango 7: una de sus misiones es «juega en N descansos», que una etapa siempre hace avanzar)
+    await p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-juego-meta-')); localStorage.setItem(k, JSON.stringify({ rango: 7, activas: [], hechas: 20, logros: {} })); });
     const antes = await meta();
     await p.evaluate(() => window.scrollTo(0, 0));
     await p.locator('.hero-dia .btn-hero').click();
@@ -102,7 +133,7 @@ export async function probarTravesiaTop({ navegador, check, base = 'http://local
     const fin = p.locator('.travesia-final');
     await fin.waitFor({ timeout: (quedaban + 8) * 1000 });
     const despues = await meta();
-    const sumo = despues && JSON.stringify(despues.activas) !== JSON.stringify(antes?.activas ?? null);
+    const sumo = despues?.rango >= 7 && (despues.activas.find((a) => a.id === 'etapas')?.valor || 0) >= 1;
     check(sumo, 'la etapa del descanso suma a las misiones (se guarda en el móvil)');
     const boton = fin.locator('.travesia-foto');
     check(await boton.count() === 1 && /foto/i.test(await boton.textContent()), 'al acabar, «Guardar la foto»');

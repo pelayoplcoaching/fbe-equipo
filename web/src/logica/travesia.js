@@ -76,7 +76,8 @@ export function azar(semilla) {
 //   unToque     (top, tanda 1: accesibilidad) nada pide doble salto ni agacharse: sin montes ni ramas, y el río más estrecho
 //   variedad    (top, tanda 2) cuestas, cornisas, potenciadores y momentos raros
 //   tutorial    (top, tanda 2) el primer kilómetro de un atleta nuevo: los primeros obstáculos enseñan un movimiento cada uno
-export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0, unToque = false, variedad = false, tutorial = false } = {}) {
+//   fija        (top, tanda 4) la dificultad no se adapta: el mismo terreno para todos (la etapa del día)
+export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false, movimientos = false, km0 = 0, unToque = false, variedad = false, tutorial = false, fija = false } = {}) {
   const r0 = calma ? 0 : Math.min(18, Math.max(0, Math.round(racha0) || 0));
   const e = {
     semilla, rnd: azar(semilla), t: 0,
@@ -92,7 +93,7 @@ export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false
     guardado: null, tSuelo: 0, roces: 0, lento: 0, serie: 0, combo: 1, comboMax: 1, unToque: !!unToque && !calma,
     // (top, tanda 2) el terreno y lo que se coge
     variedad: !!variedad && !calma, cuestas: [], cornisas: [], potenciadores: [], sobre: null, cabezazos: 0, arriba: 0,
-    iman: 0, luna: 0, potCogidos: [], momentos: [], tutorial: !!tutorial && !calma ? [] : null,
+    iman: 0, luna: 0, potCogidos: [], momentos: [], tutorial: !!tutorial && !calma ? [] : null, fija: !!fija,
     // la dificultad se adapta: `ayuda` sube si tropieza mucho (más hueco, más despacio, sin montes) y `reto` si va sobrado
     ayuda: 0, reto: 0, ultimos: [],
   };
@@ -287,7 +288,7 @@ function tropezar(e, o) {
   e.sucesos.push('tropiezo');
   // la dificultad se adapta: tres tropiezos en medio minuto y afloja un punto
   e.ultimos = e.ultimos.filter((t) => t > e.t - 30); e.ultimos.push(e.t);
-  if (e.ultimos.length >= 3) { e.ayuda = Math.min(1, e.ayuda + 0.34); e.reto = 0; e.ultimos = []; }
+  if (e.ultimos.length >= 3 && !e.fija) { e.ayuda = Math.min(1, e.ayuda + 0.34); e.reto = 0; e.ultimos = []; }
 }
 
 function paso(e, dt) {
@@ -354,7 +355,7 @@ function paso(e, dt) {
           e.roces += 1; e.lento = LENTO_ROCE; e.v += IMPULSO_ROCE; e.sucesos.push('roce');
         }
         // va sobrado: tras 25 seguidos, un punto de reto (y la ayuda se va quitando)
-        if (e.racha > 0 && e.racha % 25 === 0) { e.reto = Math.min(1, e.reto + 0.5); e.ayuda = Math.max(0, e.ayuda - 0.34); }
+        if (e.racha > 0 && e.racha % 25 === 0 && !e.fija) { e.reto = Math.min(1, e.reto + 0.5); e.ayuda = Math.max(0, e.ayuda - 0.34); }
       }
       continue;
     }
@@ -595,4 +596,20 @@ export function ambiente({ ms = Date.now(), hora = new Date(ms).getHours(), codi
   if (esDia === false && hora >= 19) fase = 'noche';
   if (PAISAJES[paisaje] === 'amanecer' && fase === 'noche') fase = 'alba';
   return { fase, luna: faseLuna(ms), clima: climaDe(codigo) || (PAISAJES[paisaje] === 'nieve' ? 'nieve' : null), paisaje };
+}
+
+// ---------- (top, tanda 4) La etapa del día ----------
+// Ese día todos corren el mismo terreno: la semilla sale de la fecha (AAAA-MM-DD). Un minuto y tres intentos.
+export const ETAPA_DIA = { segundos: 60, intentos: 3 };
+export function semillaDelDia(dia) {
+  let h = 2166136261;
+  for (const ch of `travesia:${dia}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return (h >>> 0) || 1;
+}
+// Las marcas del camino: dónde acabaron esta semana las mejores etapas de los compañeros (los que salen en la
+// clasificación) y la mejor suya de siempre. [{ metros, nombre, mia }], de cerca a lejos, como mucho seis
+export function marcasDelCamino(filas, miMejor = 0) {
+  const otros = (Array.isArray(filas) ? filas : []).filter((f) => !f.yo && f.mejor > 20).map((f) => ({ metros: Math.round(f.mejor), nombre: f.nombre, mia: false }));
+  const todas = [...otros.sort((a, b) => b.metros - a.metros).slice(0, 5), ...(miMejor > 20 ? [{ metros: Math.round(miMejor), nombre: 'Tu mejor', mia: true }] : [])];
+  return todas.sort((a, b) => a.metros - b.metros);
 }
