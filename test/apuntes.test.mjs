@@ -174,5 +174,99 @@ console.log('(tanda 2) Guardar para luego y el reto de la siguiente serie');
   check(limpiarVistos({ guardados: ['a', 5, 'x'.repeat(90)], reto: { id: 'p:1', texto: 5 } }).guardados.join() === 'a' && !('reto' in limpiarVistos({ reto: { id: 'p:1', texto: 5 } })), 'lo guardado ilegible se sanea');
 }
 
+console.log('(tanda 4) Los apuntes sueltos del coach');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  const nov = [
+    { id: 'n1', titulo: 'Dormir poco resta fuerza', texto: 'Tras dormir 4 horas, menos repeticiones.', publicada: true, publicada_en: '2026-11-10T08:00:00Z' },
+    { id: 'a1', tipo: 'apunte', titulo: 'En press banca, piernas activas', texto: 'Empuja el suelo con los pies.', publicada: true, publicada_en: '2026-11-11T08:00:00Z', ejercicio_id: 'ej-press' },
+    { id: 'a2', tipo: 'apunte', titulo: 'El agua, antes de tener sed', texto: 'Bebe a sorbos durante la sesión.', publicada: true, publicada_en: '2026-11-09T08:00:00Z', ejercicio_id: null },
+    { id: 'a3', tipo: 'apunte', titulo: 'Borrador', texto: 'x', publicada: false, publicada_en: null },
+  ];
+  const todos = A.apuntesDeNovedades(nov);
+  check(todos.length === 3 && todos[0].id === 'n:a1' && todos[0].tipo === 'coach' && todos[0].etiqueta === 'De tu coach' && todos[0].ejercicio === 'ej-press' && todos[1].tipo === 'novedad' && !('ejercicio' in todos[2]), 'con tipo «apunte» sale como «De tu coach» (con su ejercicio, si lo lleva); lo demás, novedad');
+  check(A.apuntesDeNovedades(nov, { ejercicio: 'ej-press' }).length === 3 && A.apuntesDeNovedades(nov, { ejercicio: 'ej-sentadilla' }).map((x) => x.id).join() === 'n:n1,n:a2', 'en el descanso de otro ejercicio, el apunte de press banca no sale');
+  const hoy = '2026-11-20';   // (la novedad ya no es de las últimas dos semanas... sí lo es: se da por vista)
+  const visto = A.apuntarVisto(null, 'n:n1', '2026-11-12');
+  const deSentadilla = [...A.apuntesDeNovedades(nov, { ejercicio: 'ej-press' }), { id: 'p:f:0', tipo: 'clave', texto: 'c' }, { id: 'i:a:0', tipo: 'idea', guia: 'a', titulo: 'A' }];
+  check(A.elegirApunte(deSentadilla, visto, { hoy, salto: 0 }).id === 'n:a1', 'el apunte del coach para ese ejercicio, lo primero de lo suyo');
+  check(A.elegirApunte(deSentadilla, visto, { hoy, salto: 1, excluir: ['n:a1'] }).id === 'n:a2', 'y el suelto general, delante de las ideas');
+  check(A.novedadPendiente(todos, null, '2026-11-12')?.id === 'n:n1' && A.apunteDelDia(todos, '2026-11-12')?.id === 'n:n1', 'la novedad de la semana sigue siendo solo la novedad');
+}
+
+console.log('(tanda 4) La racha de aprendizaje y la medalla');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  let e = A.apuntarVisto(null, 'i:a:0', '2026-10-28');
+  e = A.apuntarVisto(e, 'i:a:1', '2026-11-05');
+  e = A.apuntarVisto(e, 'i:a:0', '2026-11-12');
+  check(e.dias.join() === '2026-10-28,2026-11-05,2026-11-12' && A.rachaAprendizaje(e, '2026-11-13') === 3 && A.rachaAprendizaje(e, '2026-11-17') === 3 && A.rachaAprendizaje(e, '2026-11-24') === 0, 'tres semanas seguidas aprendiendo algo (aunque repase el mismo apunte); aguanta la semana siguiente');
+  check(A.rachaAprendizaje(A.apuntarVisto(null, 'x:1', '2026-10-20'), '2026-11-13') === 0 && A.rachaAprendizaje(null, '2026-11-13') === 0, 'sin nada reciente, no hay racha');
+  const b = A.conServidor(null, [{ apunte: 'm:1', veces: 1, ultimo: '2026-11-03' }, { apunte: 'm:2', veces: 1, ultimo: '2026-11-11' }]);
+  check(A.rachaAprendizaje(b, '2026-11-13') === 2, 'lo de la base también cuenta');
+  let m = null;
+  for (let i = 0; i < 41; i++) m = A.apuntarVisto(m, `i:g:${i}`, '2026-11-12');
+  const med = A.medallaApuntes(m);
+  check(med.vistos === 41 && med.nivel === 2 && med.nombre === 'Aplicado' && med.siguiente.nombre === 'Estudioso' && med.faltan === 59, 'la medalla: con 41 apuntes, «Aplicado»; faltan 59 para «Estudioso»');
+  check(A.medallaApuntes(null).nivel === 0 && A.medallaApuntes(null).nombre === null && A.medallaApuntes(null).faltan === 10, 'sin apuntes, sin medalla: faltan 10 para la primera');
+  check(A.limpiarVistos({ dias: ['2026-11-12', 'mal', '2026-11-12'], curso: { clave: 'Mal Clave', desde: 'x' }, examenes: [{ dia: '2026-11-12', aciertos: 9, total: 8 }, { dia: 'x' }] }).dias.join() === '2026-11-12'
+    && !('curso' in A.limpiarVistos({ curso: { clave: 'Mal Clave', desde: 'x' } })) && A.limpiarVistos({ examenes: [{ dia: '2026-11-12', aciertos: 9, total: 8 }, { dia: 'x' }] }).examenes[0].aciertos === 8, 'lo ilegible se sanea');
+}
+
+console.log('(tanda 4) Los cursos');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  const ideas = (g, n, titulo) => Array.from({ length: n }, (_, i) => ({ id: `i:${g}:${i}`, tipo: 'idea', guia: g, de: titulo, titulo: `${titulo} ${i}`, texto: 't' }));
+  const apuntes = [...ideas('sueno', 4, 'Sueño'), ...ideas('cardio', 9, 'Cardio'), ...ideas('corta', 1, 'Corta'), { id: 'm:1', tipo: 'mito', guia: 'mitos', titulo: '«M»', texto: 't' }];
+  const cursos = A.cursosDe(apuntes);
+  check(cursos.length === 2 && cursos[0].clave === 'sueno' && cursos[0].titulo === 'Sueño' && cursos[0].lecciones.length === 4 && cursos[1].lecciones.length === 7, 'un curso por guía con dos lecciones o más (siete como mucho)');
+  const demo = A.cursosDe(A.apuntesDeGuias(GUIAS_DEMO));
+  check(demo.length >= 2 && demo.some((c) => c.clave === 'mitos' && c.titulo === 'Mitos del gimnasio' && c.lecciones.some((id) => id.startsWith('m:'))), 'en la guía de mitos, los mitos son sus lecciones');
+  let e = A.apuntarVisto(null, 'i:sueno:0', '2026-11-12');
+  const pr = A.progresoCurso(cursos[0], e);
+  check(pr.hechas === 1 && pr.total === 4 && !pr.hecho && pr.siguiente === 'i:sueno:1' && A.leccionesPendientes(cursos[0], apuntes, e).map((a) => a.id).join() === 'i:sueno:1,i:sueno:2,i:sueno:3', 'cómo lo lleva y las lecciones que le quedan, en orden');
+  const semana = A.cursoDeLaSemana(cursos, e, '2026-11-12'), otra = A.cursoDeLaSemana(cursos, e, '2026-11-19');
+  check(semana && otra && semana.clave !== otra.clave && !semana.elegido, 'el curso de la semana cambia cada semana');
+  e = A.elegirCurso(e, 'sueno', '2026-11-12');
+  check(A.cursoDeLaSemana(cursos, e, '2026-11-12').clave === 'sueno' && A.cursoDeLaSemana(cursos, e, '2026-11-19').clave === 'sueno' && A.cursoDeLaSemana(cursos, e, '2026-11-19').elegido, 'si elige uno, es el suyo hasta que lo acaba');
+  check(A.elegirApunte(apuntes, e, { hoy: '2026-11-13', curso: 'sueno' }).id === 'i:sueno:1', 'en el descanso, las lecciones de su curso van delante y en orden');
+  for (const id of cursos[0].lecciones) e = A.apuntarVisto(e, id, '2026-11-13');
+  check(A.progresoCurso(cursos[0], e).hecho && A.cursoDeLaSemana(cursos, e, '2026-11-19').clave === 'cardio', 'acabado, pasa al siguiente');
+  for (const id of cursos[1].lecciones) e = A.apuntarVisto(e, id, '2026-11-13');
+  check(A.cursoDeLaSemana(cursos, e, '2026-11-19') === null && A.cursoDeLaSemana([], null, '2026-11-19') === null && !('curso' in A.elegirCurso(e, null, '2026-11-19')), 'con todos hechos (o sin cursos), ninguno');
+}
+
+console.log('(tanda 4) El examen');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  const todos = [...A.apuntesDeGlosario(), ...A.apuntesDeGuias(GUIAS_DEMO)];
+  let e = null;
+  for (const a of todos.slice(0, 14)) e = A.apuntarVisto(e, a.id, '2026-11-10');
+  const falla = todos.find((a) => a.tipo === 'mito');
+  e = A.apuntarVisto(e, falla.id, '2026-11-10', false);
+  check(!A.puedeExaminarse(A.apuntarVisto(null, 'g:rir', '2026-11-10')) && A.puedeExaminarse(e), 'hay examen cuando ha visto una docena de apuntes');
+  const x = A.examenDe(todos, e, { hoy: '2026-11-13' });
+  check(x.length === 8 && x.every((q) => q.tipo === 'test' && q.opciones.length >= 2 && q.correcta >= 0 && q.correcta < q.opciones.length && q.id.startsWith('x:') && q.origen) && new Set(x.map((q) => q.id)).size === 8, 'ocho preguntas, cada una con su respuesta buena');
+  check(x.some((q) => /^¿Qué es «/.test(q.titulo) && q.opciones.length === 3) && x.some((q) => /^¿Verdad o mito\?/.test(q.titulo) && q.opciones.join() === 'Verdad,Mito'), 'del glosario («¿Qué es…?», tres definiciones) y de «¿Verdad o mito?»');
+  check(x.some((q) => q.origen === falla.id && q.correcta === 1), 'lo que no sabía entra seguro (y un mito es «Mito»)');
+  check(JSON.stringify(A.examenDe(todos, e, { hoy: '2026-11-13' })) === JSON.stringify(x) && JSON.stringify(A.examenDe(todos, e, { hoy: '2026-11-14' })) !== JSON.stringify(x), 'el mismo día, el mismo examen; otro día, otro');
+  check(A.examenDe([], e, { hoy: '2026-11-13' }) === null && A.examenDe(todos.slice(0, 2), e, { hoy: '2026-11-13' }) === null, 'sin material para cuatro preguntas, no hay examen');
+  const tras = A.apuntarExamen(A.apuntarExamen(e, { dia: '2026-11-13', aciertos: 5, total: 8 }), { dia: '2026-11-13', aciertos: 7, total: 8 });
+  check(tras.examenes.length === 1 && A.ultimoExamen(tras).aciertos === 7 && A.ultimoExamen(null) === null && Object.keys(tras.vistos).length === Object.keys(e.vistos).length, 'el examen queda apuntado (uno por día: el último)');
+  check(A.notaExamen(8, 8) === 'Sobresaliente' && A.notaExamen(6, 8) === 'Notable' && A.notaExamen(4, 8) === 'Aprobado' && A.notaExamen(2, 8) === 'Toca repasar', 'la nota, en palabras');
+}
+
+console.log('(tanda 4) Para el coach: lo que más se falla y mandar un apunte');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  const apuntes = [{ id: 'm:1', etiqueta: 'Mito', de: 'Nutrición', titulo: '«Cenar engorda»', texto: 'No.' }, { id: 'g:rir', etiqueta: 'Glosario', titulo: 'RIR', texto: 'Recámara.' }, { id: 'i:a:0', etiqueta: 'Idea clave', titulo: 'A', texto: 'a' }];
+  const filas = [{ apunte: 'm:1', atleta_id: 'a', sabia: false }, { apunte: 'm:1', atleta_id: 'b', sabia: false }, { apunte: 'm:1', atleta_id: 'b', sabia: false }, { apunte: 'g:rir', atleta_id: 'a', sabia: false },
+    { apunte: 'i:a:0', atleta_id: 'a', sabia: true }, { apunte: 'e:desconocido:0', atleta_id: 'c', sabia: false }];
+  const f = A.masFallados(filas, apuntes);
+  check(f.length === 2 && f[0].id === 'm:1' && f[0].atletas === 2 && f[0].titulo === '«Cenar engorda»' && f[1].id === 'g:rir' && f[1].atletas === 1, 'los que más atletas no sabían, de más a menos (los que sí sabían no cuentan; lo que no se sabe nombrar, fuera)');
+  check(Object.keys(f[0]).sort().join() === 'atletas,de,etiqueta,id,texto,titulo' && A.masFallados([], apuntes).length === 0 && A.masFallados(filas, apuntes, 1).length === 1, 'solo cuentas: ningún nombre de atleta');
+  check(A.mensajeDeApunte(apuntes[0]) === 'Un apunte para ti (Nutrición): «Cenar engorda» No.' && A.mensajeDeApunte(apuntes[1]) === 'Un apunte para ti: RIR: Recámara.' && A.mensajeDeApunte(null) === '', 'el mensaje con el que se manda un apunte');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

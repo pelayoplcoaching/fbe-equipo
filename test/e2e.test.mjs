@@ -6010,6 +6010,10 @@ try {
   console.log('\nLa travesía, tanda 3');
   const { probarTravesia3 } = await import('./e2e-travesia3.mjs');
   await probarTravesia3({ navegador, check });
+  // Apuntes, tanda 4: los apuntes sueltos del coach, mandar un apunte, el curso de la semana, el examen y «Lo que más se falla»
+  console.log('\nApuntes, tanda 4');
+  const { probarApuntes4 } = await import('./e2e-apuntes4.mjs');
+  await probarApuntes4({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

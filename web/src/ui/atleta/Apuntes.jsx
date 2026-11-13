@@ -5,7 +5,7 @@ import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
 import { FAQ } from '../../datos/faq.js';
 import { apuntesDeFicha, apuntesDeGuias, apuntesDeNovedades, elegirApunte, apunteDelDia, paraRepasar,
   apuntesDeCorrecciones, apunteDeNumeros, apunteDeClip, apunteDeMusculo, preguntasDeFicha, apuntesDeDudas, apuntesDeGlosario, terminosDe, videoDeGuia,
-  alternarGuardado, llevarReto, retoPendiente } from '../../logica/apuntes.js';
+  alternarGuardado, llevarReto, retoPendiente, cursosDe, cursoDeLaSemana, progresoCurso, elegirCurso, leccionesPendientes, examenDe, apuntarExamen, notaExamen } from '../../logica/apuntes.js';
 import { leerApuntes, guardarVisto, sincronizarApuntes, guardarEstado } from '../apuntes.js';
 import { imagenGrupo } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
@@ -19,6 +19,8 @@ import { leerAjustes } from '../ajustes.js';
 // (error, mito) se destapan y el atleta dice si lo sabía: las que no, vuelven otro día.
 //   · En un descanso (`fin`): arriba va la cuenta y, al acabar, se cierra sola: manda el descanso.
 //   · modo 'dia': empieza por el apunte del día. modo 'repaso': los que no sabía y los de la semana. modo 'guardados'.
+//   · (tanda 4) modo 'curso': las lecciones del curso de la semana (las ideas de una guía), seguidas y en orden; se puede
+//     cambiar de curso. modo 'examen': ocho preguntas con lo visto; al acabar, la nota, y lo fallado vuelve a salir.
 //   · alCerrar(motivo): 'fin' (se acabó el descanso) o 'salir' (la cerró a mano).
 // (tanda 2) Además: lo que le corrigió su coach y sus números en ese ejercicio, el vídeo del gesto, qué debería notar,
 // preguntas de tres opciones, dudas frecuentes y glosario; y en cada apunte, escucharlo, guardarlo, leer la guía, ver su
@@ -47,7 +49,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const todos = useMemo(() => {
     const f = ficha.datos?.ficha || null, nombre = ejercicio?.nombre;
     return [
-      ...apuntesDeNovedades(novedades.datos || []),
+      ...apuntesDeNovedades(novedades.datos || [], { ejercicio: ejercicio?.id || null }),
       ...apuntesDeCorrecciones(recordatorios.datos || [], ejercicio), apunteDeNumeros(ejercicio),
       ...(f ? apuntesDeFicha(f, nombre) : []), f ? apunteDeMusculo(f, nombre, ejercicio?.grupo) : null, apunteDeClip(ejercicio), ...(f ? preguntasDeFicha(f, nombre) : []),
       ...apuntesDeGuias(guias.datos || []), ...apuntesDeGlosario(), ...apuntesDeDudas(FAQ),
@@ -59,17 +61,30 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const [termino, setTermino] = useState(null);      // la palabra del glosario abierta
   const [guiaAbierta, setGuiaAbierta] = useState(null);
   const pasados = useRef([]);        // los de esta tanda, para no repetir
-  const cola = useRef(null);         // (repaso, guardados) los que quedan
+  const cola = useRef(null);         // (repaso, guardados, curso, examen) los que quedan
+  // (tanda 4) el curso que se sigue en esta tanda y la cuenta del examen
+  const enCola = modo === 'repaso' || modo === 'guardados' || modo === 'curso' || modo === 'examen';
+  const cursos = useMemo(() => cursosDe(todos), [todos]);
+  const [curso, setCurso] = useState(null);          // { clave, titulo, lecciones }
+  const [cambiando, setCambiando] = useState(false);
+  const examen = useRef({ total: 0, aciertos: 0, apuntado: false });
+  const idDe = (a) => a.origen || a.id;
 
   const siguiente = (est = estado) => {
     let a = null;
-    if (modo === 'repaso' || modo === 'guardados') {
+    if (modo === 'curso' && !cola.current) {
+      const c = cursoDeLaSemana(cursos, est, hoy);
+      setCurso(c);
+      cola.current = c ? leccionesPendientes(c, todos, est) : [];
+    }
+    if (modo === 'examen' && !cola.current) { cola.current = examenDe(todos, est, { hoy }) || []; examen.current = { total: cola.current.length, aciertos: 0, apuntado: false }; }
+    if (enCola) {
       cola.current ||= modo === 'repaso' ? paraRepasar(todos, est, hoy) : todos.filter((x) => (est.guardados || []).includes(x.id));
       a = cola.current.shift() || null;
     } else if (modo === 'dia' && !pasados.current.length) a = apunteDelDia(todos, hoy, est);
     // (tanda 2) lo primero de un descanso: el reto que se llevó a la serie («¿Lo has hecho?»)
     else if (modo === 'descanso' && !pasados.current.length) a = retoPendiente(est, hoy);
-    a ||= modo === 'repaso' || modo === 'guardados' ? null : elegirApunte(todos, est, { hoy, salto: pasados.current.length, excluir: pasados.current, guias: ejercicio?.guias || [], principiante: ejercicio?.principiante ?? atleta?.nivel === 'principiante' });
+    a ||= enCola ? null : elegirApunte(todos, est, { hoy, salto: pasados.current.length, excluir: pasados.current, guias: ejercicio?.guias || [], principiante: ejercicio?.principiante ?? atleta?.nivel === 'principiante', curso: est.curso?.clave || null });
     if (a) pasados.current.push(a.tipo === 'reto' ? `reto:${a.id}` : a.id);
     callar();
     setActual(a); setVuelta(false); setElegida(null); setTermino(null);
@@ -83,8 +98,8 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   useEffect(() => () => callar(), []);
   const responder = (sabia) => { const e = guardarVisto(atletaId, actual.id, hoy, sabia, api); setEstado(e); siguiente(e); };
   const responderReto = (si) => { let e = guardarVisto(atletaId, actual.id, hoy, si, api); e = guardarEstado(atletaId, llevarReto(e, null)); setEstado(e); siguiente(e); };
-  const elegir = (i) => { if (elegida != null) return; setElegida(i); setEstado(guardarVisto(atletaId, actual.id, hoy, i === actual.correcta, api)); };
-  const otro = () => { let e = estado; if (actual && !actual.efimero && (actual.vuelta || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, actual.id, hoy, null, api); setEstado(e); } siguiente(e); };
+  const elegir = (i) => { if (elegida != null) return; setElegida(i); if (modo === 'examen' && i === actual.correcta) examen.current.aciertos += 1; setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
+  const otro = () => { let e = estado; if (actual && !actual.efimero && (actual.vuelta || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
   const guardado = !!actual && (estado.guardados || []).includes(actual.id);
   const alternar = () => { const e = guardarEstado(atletaId, alternarGuardado(estado, actual.id)); setEstado(e); aviso?.(guardado ? 'Quitado de tus guardados' : 'Guardado: lo tienes en Semana, en «Tus apuntes»'); };
   const alaSerie = () => { const e = guardarEstado(atletaId, llevarReto(estado, actual, hoy)); setEstado(e); aviso?.('Hecho: en el siguiente descanso te pregunto'); alCerrar?.('fin'); };
@@ -94,6 +109,20 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
       aviso?.('Enviado a tu coach: te contestará en Mensajes');
     } catch (e) { aviso?.(e.message || 'No se ha podido enviar', 'error'); }
   };
+  // (tanda 4) cambiar de curso: se queda con el elegido hasta acabarlo
+  const cambiarCurso = (clave) => {
+    const e = guardarEstado(atletaId, elegirCurso(estado, clave, hoy));
+    setEstado(e); setCambiando(false); cola.current = null; pasados.current = [];
+    siguiente(e);
+  };
+  // El examen, acabado: se apunta una vez
+  const finExamen = modo === 'examen' && listo && !actual && examen.current.total > 0;
+  useEffect(() => {
+    if (!finExamen || examen.current.apuntado) return;
+    examen.current.apuntado = true;
+    setEstado(guardarEstado(atletaId, apuntarExamen(leerApuntes(atletaId), { dia: hoy, aciertos: examen.current.aciertos, total: examen.current.total })));
+  }, [finExamen]);
+  const prCurso = curso ? progresoCurso(curso, estado) : null;
   const guiaDe = actual?.guia ? (guias.datos || []).find((g) => g.clave === actual.guia) || null : null;
   const video = guiaDe ? videoDeGuia(guiaDe) : null;
   const terminos = actual && actual.tipo !== 'glosario' && (!actual.vuelta || vuelta) ? terminosDe(`${actual.titulo} ${actual.texto}`) : [];
@@ -112,7 +141,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const caja = useRef(null);
   useEffect(() => { caja.current?.focus({ preventScroll: true }); }, []);
   const tecla = (ev) => { if (ev.key === 'Escape' && !guiaAbierta) { ev.stopPropagation(); alCerrar?.('salir'); } };
-  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : 'Apuntes';
+  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : modo === 'curso' ? 'Curso de la semana' : modo === 'examen' ? 'Examen' : 'Apuntes';
   const imagen = actual?.tipo === 'musculo' && hayImagen(imagenGrupo(actual.grupo)) ? imagenGrupo(actual.grupo) : null;
 
   return (
@@ -124,17 +153,38 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
       </header>
       <div class="apuntes-cuerpo">
         {!listo && <div class="apunte" aria-busy="true"><span class="sil" style="width:38%;height:14px" /><span class="sil" style="width:86%;height:26px" /><span class="sil" style="width:100%;height:64px" /></div>}
-        {listo && !actual && (
+        {listo && modo === 'curso' && curso && (
+          <div class="apuntes-curso">
+            <span class="apuntes-curso-t"><strong>{curso.titulo}</strong><span class="peq secundario">{prCurso.hecho && !actual ? 'Curso terminado' : `Lección ${actual && curso.lecciones.includes(actual.id) ? curso.lecciones.indexOf(actual.id) + 1 : Math.min(prCurso.total, prCurso.hechas + 1)} de ${prCurso.total}`}</span></span>
+            <span class="apuntes-curso-puntos" aria-hidden="true">{curso.lecciones.map((id) => <i key={id} class={estado.vistos[id] ? 'hecha' : ''} />)}</span>
+            {cursos.length > 1 && <button type="button" class="btn-texto" aria-expanded={cambiando ? 'true' : 'false'} onClick={() => setCambiando(!cambiando)}>Cambiar de curso</button>}
+            {cambiando && (
+              <div class="apuntes-cursos" role="group" aria-label="Elige un curso">
+                {cursos.map((c) => { const pr = progresoCurso(c, estado); return <button type="button" key={c.clave} class="chip apuntes-curso-otro" aria-pressed={c.clave === curso.clave ? 'true' : 'false'} onClick={() => cambiarCurso(c.clave)}>{c.titulo} · {pr.hecho ? 'hecho' : `${pr.hechas}/${pr.total}`}</button>; })}
+              </div>
+            )}
+          </div>
+        )}
+        {finExamen && (
+          <div class="apunte examen-nota" role="status">
+            <p class="apunte-etq"><span class="chip">Examen</span></p>
+            <h2><span class="num">{examen.current.aciertos} de {examen.current.total}</span> · {notaExamen(examen.current.aciertos, examen.current.total)}</h2>
+            <p class="apunte-texto">{examen.current.aciertos === examen.current.total ? 'Ni una: lo tienes.' : 'Lo que has fallado vuelve a salir en tus descansos y en «Repasar».'}</p>
+          </div>
+        )}
+        {listo && !actual && !finExamen && (
           <div class="apunte vacio-apuntes">
-            <strong>{modo === 'repaso' ? (pasados.current.length ? 'Repaso hecho' : 'Nada que repasar todavía') : modo === 'guardados' ? (pasados.current.length ? 'No hay más guardados' : 'Aún no has guardado ninguno') : pasados.current.length ? 'Has visto todos por ahora' : 'Aún no hay apuntes'}</strong>
-            <p>{modo === 'repaso' ? (pasados.current.length ? 'Los que no sabías volverán a salir otro día.' : 'Cuando veas apuntes en tus descansos, aquí podrás repasarlos.')
+            <strong>{modo === 'curso' ? (curso ? (pasados.current.length ? 'Lección hecha' : 'Curso al día') : cursos.length ? 'Has terminado todos los cursos' : 'Aún no hay cursos') : modo === 'examen' ? 'Aún no hay examen' : modo === 'repaso' ? (pasados.current.length ? 'Repaso hecho' : 'Nada que repasar todavía') : modo === 'guardados' ? (pasados.current.length ? 'No hay más guardados' : 'Aún no has guardado ninguno') : pasados.current.length ? 'Has visto todos por ahora' : 'Aún no hay apuntes'}</strong>
+            <p>{modo === 'curso' ? (curso ? (prCurso?.hecho ? 'Has acabado este curso. La semana que viene, otro (o cámbialo ahora).' : 'No quedan lecciones por leer hoy.') : cursos.length ? 'Cuando tu coach publique más guías, habrá más.' : 'Cuando tu coach publique sus guías, aquí tendrás un curso cada semana: una guía, lección a lección.')
+              : modo === 'examen' ? 'Cuando hayas visto más apuntes en tus descansos, aquí tendrás tu examen.'
+              : modo === 'repaso' ? (pasados.current.length ? 'Los que no sabías volverán a salir otro día.' : 'Cuando veas apuntes en tus descansos, aquí podrás repasarlos.')
               : modo === 'guardados' ? 'Toca «Guardar» en cualquier apunte para tenerlo aquí.'
               : pasados.current.length ? 'Mañana habrá más: los que no sabías vuelven a salir.' : 'Cuando tu coach publique sus guías y las fichas de técnica, saldrán aquí.'}</p>
           </div>
         )}
         {listo && actual && (
           <article class={`apunte tipo-${actual.tipo}`} key={`${actual.tipo}:${actual.id}`} aria-live="polite">
-            <p class="apunte-etq"><span class="chip">{actual.etiqueta}</span>{actual.de && <span class="apunte-de">{actual.de}</span>}</p>
+            <p class="apunte-etq"><span class="chip">{actual.etiqueta}</span>{modo === 'examen' ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
             {imagen && <Imagen id={imagen} clase="apunte-img" tamanos="(min-width: 600px) 520px, 90vw" />}
             {actual.titulo && <h2>{actual.titulo}</h2>}
             {actual.tipo === 'clip' && <VideoYoutube url={actual.video} titulo={`Vídeo de ${actual.de}`} compacto />}
@@ -185,7 +235,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               <button type="button" class="btn" onClick={() => responder(false)}>No lo sabía</button>
               <button type="button" class="btn btn-primario" onClick={() => responder(true)}>Lo sabía</button>
             </>
-          ) : <button type="button" class="btn btn-primario" onClick={otro}>{modo === 'repaso' || modo === 'guardados' ? 'Siguiente' : 'Otro apunte'}</button>}
+          ) : <button type="button" class="btn btn-primario" onClick={otro}>{modo === 'examen' ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
         </footer>
       )}
       {guiaAbierta && <HojaGuia guia={guiaAbierta} alCerrar={() => setGuiaAbierta(null)} />}

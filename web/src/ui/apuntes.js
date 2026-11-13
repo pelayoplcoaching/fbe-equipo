@@ -12,7 +12,9 @@ export function leerApuntes(atletaId) {
   return limpiarVistos(guardado);
 }
 
-const SUBIBLE = /^[peimn]:[A-Za-z0-9:_-]{1,78}$/;
+// (tanda 4, migración 061) la base admite las claves de cualquier familia (glosario, dudas…); con la 060 sola, las que
+// no admite se quedan en el móvil (su función las rechaza sin romper nada)
+const SUBIBLE = /^[a-z]:[A-Za-z0-9:_-]{1,78}$/;
 const guardar = (atletaId, e) => { enMemoria.set(atletaId, e); try { localStorage.setItem(clave(atletaId), JSON.stringify(e)); } catch { /* queda en memoria */ } return e; };
 
 // Apunta uno como visto (sabia: true o false si le dio la vuelta y contestó) y devuelve lo que queda guardado. Con `api`

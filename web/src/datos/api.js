@@ -3977,7 +3977,19 @@ export function crearApi(backend) {
       const fila = { titulo: limpio(n.titulo, 90), texto: limpio(n.texto, 500), fuente: limpio(n.fuente, 200), enlace: limpio(n.enlace, 300), publicada: !!n.publicada };
       if (!fila.titulo || !fila.texto) throw new Error('La novedad necesita un título y un texto');
       if (fila.enlace && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https://');
-      const [r] = n.id ? await b.update('novedades', fila, { eq: { id: n.id } }).catch(falta060) : await b.insert('novedades', [fila]).catch(falta060);
+      // (tanda 4, migración 061) un apunte suelto del coach (tipo 'apunte'), quizá de un ejercicio; sin la 061 la base no
+      // tiene esas columnas: la novedad se guarda como siempre y el apunte suelto pide la migración
+      const suelto = n.tipo === 'apunte';
+      const con061 = n.tipo ? { ...fila, tipo: suelto ? 'apunte' : 'novedad', ejercicio_id: suelto ? n.ejercicio_id || null : null } : fila;
+      const guardar = (f) => (n.id ? b.update('novedades', f, { eq: { id: n.id } }) : b.insert('novedades', [f]));
+      const [r] = await guardar(con061).catch((e) => {
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (con061 !== fila && /tipo|ejercicio_id/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m)) {
+          if (suelto) throw new Error('Para los apuntes sueltos falta ejecutar en Supabase la migración 061 (supabase/migraciones/061_descansos_2.sql).');
+          return guardar(fila).catch(falta060);
+        }
+        return falta060(e);
+      });
       return r;
     },
     async borrarNovedad(id) { await b.delete('novedades', { eq: { id } }).catch(falta060); },
@@ -4008,13 +4020,20 @@ export function crearApi(backend) {
     },
     // (atleta) apunta un apunte visto (sabia: true, false o null). true si se subió
     async apuntarApunte(id, sabia = null) {
-      if (!id || api._sin060 || !uid()) return false;
+      if (!id || !/^[a-z]:[A-Za-z0-9:_-]{1,78}$/.test(id) || api._sin060 || !uid()) return false;
       try { await b.rpc('apuntar_apunte', { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null }); return true; } catch (e) {
+        // (tanda 4) con la 060 sola, la base no admite el glosario ni las dudas: se dan por hechos (se quedan en el móvil)
+        // para que no atasquen la cola de lo pendiente
+        if (/Ese no es un apunte/i.test(e?.message || '') || e?.code === '22023') return true;
         if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
         return false;
       }
     },
     // Los apuntes que ha visto un atleta
+    // (tanda 4, coach) lo que sus atletas no sabían: [{ apunte, atleta_id, sabia: false }] (para contar; nunca se enseña quién)
+    async apuntesFallados() {
+      return b.select('apuntes_vistos', { eq: { sabia: false }, cols: 'apunte,atleta_id,sabia', limit: 5000 }).catch(() => []);
+    },
     async apuntesVistos(atletaId) {
       return b.select('apuntes_vistos', { eq: { atleta_id: atletaId }, limit: 3000 }).catch(() => []);
     },

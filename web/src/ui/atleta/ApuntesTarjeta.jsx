@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, IcoIos } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { hoyISO } from '../../logica/fechas.js';
-import { resumenApuntes, textoApuntes, apuntesDeNovedades, novedadPendiente } from '../../logica/apuntes.js';
+import { resumenApuntes, textoApuntes, apuntesDeNovedades, novedadPendiente, rachaAprendizaje, medallaApuntes, puedeExaminarse, ultimoExamen } from '../../logica/apuntes.js';
 import { leerApuntes, sincronizarApuntes } from '../apuntes.js';
 
 // «Apuntes»: su pantalla (y la lectura de las guías que necesita) solo se pide al abrirla
@@ -10,9 +10,11 @@ export const Apuntes = perezoso(() => import('./Apuntes.jsx'), 'Apuntes', { mien
 
 // La tarjeta de los apuntes fuera de la sesión. En Hoy, «El apunte de hoy» (una línea); en Semana, lo que lleva vistos
 // y «Repasar» (los que no sabía y los de esta semana). Lo que enseña sale de lo guardado en el móvil.
-export function TarjetaApuntes({ repaso = false }) {
+// (tanda 4) En Semana, además: la racha de aprendizaje y la medalla, el curso de la semana y el examen (con `finBloque`,
+// la última semana del bloque, se lo recuerda).
+export function TarjetaApuntes({ repaso = false, finBloque = false }) {
   const { atleta, api } = useApp() || {};
-  const [abierta, setAbierta] = useState(false);   // false | true | 'guardados'
+  const [abierta, setAbierta] = useState(false);   // false | true | 'guardados' | 'curso' | 'examen'
   const [r, setR] = useState(() => (atleta?.id ? resumenApuntes(leerApuntes(atleta.id), hoyISO()) : null));
   // (060) lo visto en otros móviles y, en Hoy, si hay una novedad de la semana que aún no ha leído
   const [vez, setVez] = useState(0);
@@ -28,6 +30,10 @@ export function TarjetaApuntes({ repaso = false }) {
   const cerrar = () => { setAbierta(false); setR(resumenApuntes(leerApuntes(atleta.id), hoyISO())); setVez((n) => n + 1); };
   const nada = repaso && !r.vistos;
   const guardados = vez >= 0 ? (leerApuntes(atleta.id).guardados || []).length : 0;   // (tanda 2) los que guardó para luego
+  // (tanda 4) la racha (semanas seguidas aprendiendo algo), la medalla y el último examen: de lo guardado en el móvil
+  const estado = repaso && vez >= 0 ? leerApuntes(atleta.id) : null;
+  const racha = estado ? rachaAprendizaje(estado, hoyISO()) : 0, medalla = estado ? medallaApuntes(estado) : null, ultimo = estado ? ultimoExamen(estado) : null;
+  const conExamen = !!estado && puedeExaminarse(estado);
   return (
     <section class={`apuntes-tarjeta panel${repaso ? ' repaso' : ''}${novedad ? ' con-novedad' : ''}`} aria-label={repaso ? 'Tus apuntes' : 'El apunte de hoy'}>
       <IcoIos n="biblioteca" />
@@ -41,7 +47,29 @@ export function TarjetaApuntes({ repaso = false }) {
         {repaso && guardados > 0 && <button type="button" class="btn btn-peq" onClick={() => setAbierta('guardados')}>Guardados ({guardados})</button>}
         <button type="button" class="btn btn-peq" disabled={nada} onClick={() => setAbierta(true)}>{repaso ? 'Repasar' : 'Leer'}</button>
       </span>
-      {abierta && <Apuntes atletaId={atleta.id} modo={abierta === 'guardados' ? 'guardados' : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
+      {repaso && (
+        <div class="apuntes-tarjeta-mas">
+          {(racha > 0 || medalla?.nombre) && (
+            <span class="apuntes-logros peq">
+              {racha > 0 && <span class="apuntes-racha">{racha === 1 ? '1 semana aprendiendo' : `${racha} semanas seguidas aprendiendo`}</span>}
+              {medalla?.nombre && <span class="apuntes-medalla"><IcoMedalla />{medalla.nombre}</span>}
+              {medalla?.siguiente && medalla.nombre && <span class="secundario">{medalla.faltan === 1 ? 'falta 1' : `faltan ${medalla.faltan}`} para «{medalla.siguiente.nombre}»</span>}
+            </span>
+          )}
+          {!medalla?.nombre && medalla?.vistos > 0 && <span class="apuntes-logros peq secundario">{medalla.faltan === 1 ? 'Falta 1 apunte' : `Faltan ${medalla.faltan} apuntes`} para tu primera medalla: «{medalla.siguiente.nombre}»</span>}
+          <span class="apuntes-tarjeta-acciones">
+            <button type="button" class="btn btn-peq" onClick={() => setAbierta('curso')}>Curso de la semana</button>
+            {conExamen && <button type="button" class={`btn btn-peq${finBloque ? ' btn-primario' : ''}`} onClick={() => setAbierta('examen')}>{finBloque ? 'Examen del bloque' : 'Examen'}</button>}
+            {ultimo && <span class="peq secundario apuntes-nota">Último examen: <b class="num">{ultimo.aciertos}/{ultimo.total}</b></span>}
+          </span>
+        </div>
+      )}
+      {abierta && <Apuntes atletaId={atleta.id} modo={typeof abierta === 'string' ? abierta : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
     </section>
   );
+}
+
+// La medalla, pequeña (un disco con su cinta)
+function IcoMedalla() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" class="apuntes-ico-medalla"><path d="M8 3l4 6 4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><circle cx="12" cy="15" r="5.5" fill="currentColor" /></svg>;
 }
