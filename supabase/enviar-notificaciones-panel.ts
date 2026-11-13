@@ -113,7 +113,7 @@ async function enviarPush(sub, mensaje, vapid, { ttl = 86400, urgencia = "normal
 }
 
 // supabase/functions/enviar-notificaciones/envio.js
-var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion"]);
+var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion", "repaso"]);
 var URGENTES = /* @__PURE__ */ new Set(["respuesta", "mensaje", "prueba", "sesion_hoy", "checkin", "habitos", "nutricion", "descanso"]);
 var DE_UNA_EN_UNA = /* @__PURE__ */ new Set([...RECORDATORIOS, "descanso"]);
 var ESPERA_MS = 1e4;
@@ -275,7 +275,13 @@ async function enviarPendientes({ env, db, fetch: f = globalThis.fetch, recordat
   const conEmail = !!(env.RESEND_API_KEY && env.AVISOS_REMITENTE);
   const vapid = { publica: env.VAPID_PUBLICA, privada: env.VAPID_PRIVADA, contacto: env.AVISOS_CONTACTO || direcciones(env.APP_URL)[0] };
   await comprobarVapid(vapid);
-  const creados = recordatorios ? Number(await db.rpc("crear_recordatorios", {})) || 0 : 0;
+  let creados = recordatorios ? Number(await db.rpc("crear_recordatorios", {})) || 0 : 0;
+  if (recordatorios) {
+    try {
+      creados += Number(await db.rpc("crear_recordatorios_apuntes", {})) || 0;
+    } catch {
+    }
+  }
   const lote = await db.rpc("notificaciones_por_enviar", { p_limite: limite, p_email: conEmail }) || [];
   const total = nuevoResultado();
   const porUsuario = /* @__PURE__ */ new Map();

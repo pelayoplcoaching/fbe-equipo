@@ -5,8 +5,8 @@ import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
 import { FAQ } from '../../datos/faq.js';
 import { apuntesDeFicha, apuntesDeGuias, apuntesDeNovedades, elegirApunte, apunteDelDia, paraRepasar,
   apuntesDeCorrecciones, apunteDeNumeros, apunteDeClip, apunteDeMusculo, preguntasDeFicha, apuntesDeDudas, apuntesDeGlosario, terminosDe, videoDeGuia,
-  alternarGuardado, llevarReto, retoPendiente, cursosDe, cursoDeLaSemana, progresoCurso, elegirCurso, leccionesPendientes, examenDe, apuntarExamen, notaExamen } from '../../logica/apuntes.js';
-import { leerApuntes, guardarVisto, sincronizarApuntes, guardarEstado } from '../apuntes.js';
+  alternarGuardado, llevarReto, retoPendiente, preguntaParaRecordar, porQueNo, programar, textoProxima, cursosDe, cursoDeLaSemana, progresoCurso, elegirCurso, leccionesPendientes, examenDe, apuntarExamen, notaExamen } from '../../logica/apuntes.js';
+import { leerApuntes, guardarVisto, sincronizarApuntes, guardarEstado, conRespaldo } from '../apuntes.js';
 import { imagenGrupo } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { VideoYoutube, abrirMini } from '../YouTube.jsx';
@@ -36,12 +36,15 @@ export function Apuntes(props) { return <Capa><ApuntesDentro {...props} /></Capa
 function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, modo = 'descanso', alCerrar }) {
   const { backend, api, aviso, propio, atleta } = useApp();
   const hoy = hoyISO();
-  const guias = useCarga(() => guiasConTexto({ backend }).catch(() => []), [], { recuerdo: 'apuntes-guias' });
-  const ficha = useCarga(() => (ejercicio?.id ? fichaDeEjercicio({ backend }, ejercicio.id).catch(() => null) : Promise.resolve(null)), [ejercicio?.id], { recuerdo: ejercicio?.id ? `ficha-fbe:${ejercicio.id}` : null });
+  // (tanda A) sin conexión, con lo último que se cargó (y un aviso arriba)
+  const [sinRed, setSinRed] = useState(false);
+  const respaldo = (nombre, cargar) => conRespaldo(atletaId, nombre, cargar, () => setSinRed(true));
+  const guias = useCarga(() => respaldo('guias', () => guiasConTexto({ backend }).then((g) => { if (!g?.length && typeof navigator !== 'undefined' && navigator.onLine === false) throw new Error('sin red'); return g; })).catch(() => []), [], { recuerdo: 'apuntes-guias' });
+  const ficha = useCarga(() => (ejercicio?.id ? respaldo(`ficha:${ejercicio.id}`, () => fichaDeEjercicio({ backend }, ejercicio.id)).catch(() => null) : Promise.resolve(null)), [ejercicio?.id], { recuerdo: ejercicio?.id ? `ficha-fbe:${ejercicio.id}` : null });
   // (060) la novedad de la semana (si el coach ha publicado alguna) y lo visto en otros móviles; sin la 060, nada
-  const novedades = useCarga(() => (api.novedades ? api.novedades().catch(() => []) : Promise.resolve([])), [], { recuerdo: 'apuntes-novedades' });
+  const novedades = useCarga(() => (api.novedades ? respaldo('novedades', () => api.novedades()).catch(() => []) : Promise.resolve([])), [], { recuerdo: 'apuntes-novedades' });
   // (tanda 2) lo que le tiene corregido su coach (sus recordatorios de técnica activos), si descansa de un ejercicio
-  const recordatorios = useCarga(() => (ejercicio?.id && api.recordatoriosActivos ? api.recordatoriosActivos(atletaId).catch(() => []) : Promise.resolve([])), [ejercicio?.id], { recuerdo: ejercicio?.id ? `apuntes-recordatorios:${atletaId}` : null });
+  const recordatorios = useCarga(() => (ejercicio?.id && api.recordatoriosActivos ? respaldo(`reco:${ejercicio.id}`, () => api.recordatoriosActivos(atletaId)).catch(() => []) : Promise.resolve([])), [ejercicio?.id], { recuerdo: ejercicio?.id ? `apuntes-recordatorios:${atletaId}` : null });
   const [estado, setEstado] = useState(() => leerApuntes(atletaId));
   const [alDia, setAlDia] = useState(false);
   useEffect(() => {
@@ -63,6 +66,9 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const [actual, setActual] = useState(null);
   const [vuelta, setVuelta] = useState(false);
   const [elegida, setElegida] = useState(null);      // (test) la opción que ha tocado
+  // (tanda A) recordar antes de leer: la pregunta que tapa el apunte (si toca repasarlo) y si ya lo ha destapado
+  const [recordar, setRecordar] = useState(null);
+  const [recordado, setRecordado] = useState(false);
   const [termino, setTermino] = useState(null);      // la palabra del glosario abierta
   const [guiaAbierta, setGuiaAbierta] = useState(null);
   const pasados = useRef([]);        // los de esta tanda, para no repetir
@@ -106,12 +112,13 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     a ||= enCola ? null : elegirApunte(todos, est, { hoy, salto: pasados.current.length, excluir: pasados.current, guias: ejercicio?.guias || [], principiante: ejercicio?.principiante ?? atleta?.nivel === 'principiante', curso: est.curso?.clave || null });
     if (a) pasados.current.push(a.tipo === 'reto' ? `reto:${a.id}` : a.id);
     callar();
-    setActual(a); setVuelta(false); setElegida(null); setTermino(null);
+    const preg = a ? preguntaParaRecordar(a, est, hoy, { repaso: modo === 'repaso' }) : null;
+    setActual(a); setVuelta(false); setElegida(null); setTermino(null); setRecordar(preg); setRecordado(false);
     // (los que no tienen vuelta ni pregunta quedan vistos al salir; los demás, al contestar o al pasar de largo; lo suyo
     // de este momento no se apunta)
-    if (a && !a.efimero && !a.vuelta && a.tipo !== 'test') setEstado(guardarVisto(atletaId, a.id, hoy, null, api));
+    if (a && !a.efimero && !a.vuelta && a.tipo !== 'test' && !preg) setEstado(guardarVisto(atletaId, a.id, hoy, null, api));
     // (con el entrenador por voz puesto, lo lee solo en el descanso)
-    if (a && modo === 'descanso' && leerAjustes().voz && a.tipo !== 'clip' && !a.vuelta && a.tipo !== 'test') hablar([a.titulo, a.texto].filter(Boolean).join('. '));
+    if (a && modo === 'descanso' && leerAjustes().voz && a.tipo !== 'clip' && !a.vuelta && a.tipo !== 'test' && !preg) hablar([a.titulo, a.texto].filter(Boolean).join('. '));
   };
   useEffect(() => { if (listo && !actual) siguiente(); }, [listo]);
   useEffect(() => () => callar(), []);
@@ -121,6 +128,13 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     vibrar(sabia ? 'hecho' : 'elegir');
     const e = guardarVisto(atletaId, actual.id, hoy, sabia, api); setEstado(e); siguiente(e);
   };
+  // (tanda A) tras recordarlo: «Otra vez» (vuelve mañana), «Bien» o «Fácil» (más adelante)
+  const calificar = (nota, dir = null) => {
+    despedir(nota === 'otra' ? 'otra' : nota === 'facil' ? 'facil' : 'bien', dir || (nota === 'otra' ? 'izquierda' : 'derecha'));
+    resultados.current.push(nota === 'otra' ? 'no' : 'sabia');
+    vibrar(nota === 'otra' ? 'elegir' : 'hecho');
+    const e = guardarVisto(atletaId, actual.id, hoy, null, api, nota); setEstado(e); siguiente(e);
+  };
   const responderReto = (si, dir = null) => {
     despedir(si ? 'hecho' : 'pasa', dir || (si ? 'derecha' : 'izquierda'));
     resultados.current.push(si ? 'sabia' : 'no');
@@ -128,7 +142,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     let e = guardarVisto(atletaId, actual.id, hoy, si, api); e = guardarEstado(atletaId, llevarReto(e, null)); setEstado(e); siguiente(e);
   };
   const elegir = (i) => { if (elegida != null) return; setElegida(i); resultados.current.push(i === actual.correcta ? 'sabia' : 'no'); vibrar(i === actual.correcta ? 'hecho' : 'aviso'); if (modo === 'examen' && i === actual.correcta) examen.current.aciertos += 1; setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
-  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null)) resultados.current.push('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
+  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null)) resultados.current.push('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || recordar || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
   const guardado = !!actual && (estado.guardados || []).includes(actual.id);
   const alternar = () => { const e = guardarEstado(atletaId, alternarGuardado(estado, actual.id)); setEstado(e); aviso?.(guardado ? 'Quitado de tus guardados' : 'Guardado: lo tienes en Semana, en «Tus apuntes»'); };
   const alaSerie = () => { const e = guardarEstado(atletaId, llevarReto(estado, actual, hoy)); setEstado(e); aviso?.('Hecho: en el siguiente descanso te pregunto'); alCerrar?.('fin'); };
@@ -161,8 +175,9 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const prCurso = curso ? progresoCurso(curso, estado) : null;
   const guiaDe = actual?.guia ? (guias.datos || []).find((g) => g.clave === actual.guia) || null : null;
   const video = guiaDe ? videoDeGuia(guiaDe) : null;
-  const terminos = actual && actual.tipo !== 'glosario' && (!actual.vuelta || vuelta) ? terminosDe(`${actual.titulo} ${actual.texto}`) : [];
-  const destapado = actual && (!actual.vuelta || vuelta) && !(actual.tipo === 'test' && elegida == null);
+  const tapado = !!recordar && !recordado;
+  const terminos = actual && actual.tipo !== 'glosario' && (!actual.vuelta || vuelta) && !tapado ? terminosDe(`${actual.titulo} ${actual.texto}`) : [];
+  const destapado = actual && (!actual.vuelta || vuelta) && !tapado && !(actual.tipo === 'test' && elegida == null);
 
   // La cuenta del descanso (si lo hay) y el cierre al acabar
   const [ahora, setAhora] = useState(Date.now());
@@ -191,11 +206,12 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   useEffect(() => { setHablando(false); }, [actual?.id]);
   // Deslizar con el dedo: a un lado u otro pasa al siguiente; con la vuelta destapada, a la derecha «Lo sabía» y a la
   // izquierda «No lo sabía» (en el reto, «Sí, lo he hecho» / «Se me pasó»). Antes de destapar o de contestar la pregunta, no.
-  const puedeDeslizar = !!actual && !finExamen && (actual.tipo === 'reto' || (actual.vuelta ? vuelta : actual.tipo !== 'test' || elegida != null));
+  const puedeDeslizar = !!actual && !finExamen && (actual.tipo === 'reto' || (actual.vuelta ? vuelta : recordar ? recordado : actual.tipo !== 'test' || elegida != null));
   const queHara = (dir) => {
     if (!actual) return '';
     if (actual.tipo === 'reto') return dir === 'derecha' ? 'Hecho' : 'Se me pasó';
     if (actual.vuelta) return dir === 'derecha' ? 'Lo sabía' : 'No lo sabía';
+    if (recordar) return dir === 'derecha' ? 'Bien' : 'Otra vez';
     return 'Siguiente';
   };
   const dedoAbajo = (ev) => {
@@ -216,6 +232,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     if (!dir) return;
     if (actual.tipo === 'reto') responderReto(dir === 'derecha', dir);
     else if (actual.vuelta) responder(dir === 'derecha', dir);
+    else if (recordar) calificar(dir === 'derecha' ? 'bien' : 'otra', dir);
     else otro(dir);
   };
   const tecla = (ev) => { if (ev.key === 'Escape' && !guiaAbierta) { ev.stopPropagation(); alCerrar?.('salir'); } };
@@ -226,6 +243,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     <div ref={caja} class={`apuntes${acabado ? ' acabado' : ''} fondo-${actual ? arteDe(actual.tipo).tono : finExamen ? aroDeNota(examen.current.aciertos, examen.current.total).tono : 'morado'}`} role="dialog" aria-modal="true" aria-label={`${titulo}: algo que aprender${conReloj ? ' en el descanso' : ''}`} tabIndex={-1} onKeyDown={tecla}>
       <header class="apuntes-cab">
         <span class="apuntes-titulo"><Icono n="biblioteca" />{titulo}</span>
+        {sinRed && <span class="chip apuntes-sin-red" role="status"><Icono n="sinred" />Sin conexión: con lo guardado</span>}
         {conReloj && <span class="apuntes-cuenta num" role="timer" aria-live="off" aria-label={acabado ? 'Descanso terminado' : `Descanso: quedan ${Math.ceil(quedan)} segundos`}>{acabado ? '¡Vamos!' : mmss(Math.ceil(quedan))}</span>}
         <button type="button" class="btn btn-icono plano" onClick={() => alCerrar?.('salir')} aria-label="Cerrar los apuntes"><Icono n="cerrar" /></button>
         {/* (apuntes bellos) un punto por apunte de este rato (verde si lo sabía) y la cuenta del descanso, como barra que se vacía */}
@@ -274,7 +292,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             <div class={`apunte-saliente tono-${arteDe(saliente.a.tipo).tono} va-${saliente.dir}`} key={`s${saliente.n}`} aria-hidden="true">
               <p class="saliente-etq"><Sello tipo={saliente.a.tipo} /><span>{saliente.a.etiqueta}</span></p>
               {saliente.a.titulo && <strong class="saliente-titulo">{saliente.a.titulo}</strong>}
-              {saliente.marca !== 'otro' && <span class={`apunte-marca marca-${saliente.marca}`}>{{ sabia: '¡Lo sabías!', no: 'Vuelve en unos días', hecho: '¡Bien hecho!', pasa: 'La próxima' }[saliente.marca]}</span>}
+              {saliente.marca !== 'otro' && <span class={`apunte-marca marca-${['bien', 'facil'].includes(saliente.marca) ? 'sabia' : saliente.marca === 'otra' ? 'no' : saliente.marca}`}>{{ sabia: '¡Lo sabías!', no: 'Vuelve en unos días', hecho: '¡Bien hecho!', pasa: 'La próxima', bien: '¡Bien!', facil: '¡Fácil!', otra: 'Mañana otra vez' }[saliente.marca]}</span>}
             </div>
           )}
           <article class={`apunte tipo-${actual.tipo} tono-${arteDe(actual.tipo).tono}${girando ? ' girando' : ''}${dedo?.activo ? ' arrastrando' : ''}${saliente ? ` entra-${saliente.dir}` : ''}`} key={`${actual.tipo}:${actual.id}`} aria-live="polite"
@@ -283,11 +301,13 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             <span class="apunte-esquina" aria-hidden="true" />
             {guardado && <span class="apunte-marcapaginas" aria-hidden="true" />}
             {dedo?.activo && (
-              <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
+              <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' || recordar ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
             )}
             <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{modo === 'examen' ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
             {imagen && <Imagen id={imagen} clase="apunte-img" tamanos="(min-width: 600px) 520px, 90vw" />}
-            {actual.titulo && (() => { const k = palabraClave(actual.titulo); return <h2>{k ? <>{k.antes}<mark class="apunte-rotulador">{k.palabra}</mark>{k.despues}</> : actual.titulo}</h2>; })()}
+            {tapado && <h2 class="apunte-pregunta-recordar">{recordar}</h2>}
+            {tapado && actual.tipo === 'idea' && actual.titulo && <p class="apunte-recordar-de">{actual.titulo}</p>}
+            {!tapado && actual.titulo && (() => { const k = palabraClave(actual.titulo); return <h2>{k ? <>{k.antes}<mark class="apunte-rotulador">{k.palabra}</mark>{k.despues}</> : actual.titulo}</h2>; })()}
             {actual.tipo === 'clip' && <VideoYoutube url={actual.video} titulo={`Vídeo de ${actual.de}`} compacto />}
             {actual.tipo === 'test' && (
               <div class="apunte-opciones" role="group" aria-label="Elige una respuesta">
@@ -299,7 +319,14 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               </div>
             )}
             {actual.tipo === 'test' && elegida != null && <p class="apunte-texto" role="status">{elegida === actual.correcta ? 'Eso es.' : `Era «${actual.opciones[actual.correcta]}».`} {actual.texto}</p>}
-            {actual.tipo !== 'test' && (actual.vuelta && !vuelta
+            {actual.tipo === 'test' && elegida != null && porQueNo(actual, elegida, todos) && <p class="apunte-porque"><strong>Por qué no «{actual.opciones[elegida]}»:</strong> {porQueNo(actual, elegida, todos)}</p>}
+            {tapado && (
+              <button type="button" class="btn apunte-recordar" onClick={() => { setRecordado(true); if (!quieto) { setGirando(true); setTimeout(() => setGirando(false), 520); } }}>
+                <Icono n="enfoque" />Piénsalo y destápalo
+              </button>
+            )}
+            {tapado && <p class="apunte-recordar-ayuda">Intenta recordarlo antes de mirar: así se queda.</p>}
+            {!tapado && actual.tipo !== 'test' && (actual.vuelta && !vuelta
               ? <button type="button" class="btn apunte-destapar" onClick={() => { setVuelta(true); if (!quieto) { setGirando(true); setTimeout(() => setGirando(false), 520); } }}>{actual.tipo === 'mito' ? '¿Por qué es un mito?' : '¿Por qué, y cómo se corrige?'}</button>
               : actual.texto && <p class="apunte-texto">{trozosConTerminos(actual.texto, terminos).map((x, i) => (x.termino
                 ? <span role="button" tabIndex={0} key={i} class="apunte-termino-en" aria-expanded={termino === x.termino ? 'true' : 'false'} aria-label={`${x.texto}: qué significa`}
@@ -344,12 +371,21 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               <button type="button" class="btn" onClick={() => responderReto(false)}>Se me pasó</button>
               <button type="button" class="btn btn-primario" onClick={() => responderReto(true)}>Sí, lo he hecho</button>
             </>
+          ) : recordar && recordado ? (
+            <>
+              {[['otra', 'Otra vez'], ['bien', 'Bien'], ['facil', 'Fácil']].map(([nota, nombre]) => (
+                <button type="button" key={nota} class={`btn apunte-nota nota-${nota}${nota === 'bien' ? ' btn-primario' : ''}`} onClick={() => calificar(nota)}>
+                  <span>{nombre}</span><small>{textoProxima(programar(estado.vistos[actual.id], nota, hoy).c)}</small>
+                </button>
+              ))}
+            </>
           ) : actual.vuelta && vuelta ? (
             <>
               <button type="button" class="btn" onClick={() => responder(false)}>No lo sabía</button>
               <button type="button" class="btn btn-primario" onClick={() => responder(true)}>Lo sabía</button>
             </>
-          ) : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{modo === 'examen' ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
+          ) : tapado ? <button type="button" class="btn" onClick={() => otro('izquierda')}>Saltar por ahora</button>
+          : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{modo === 'examen' ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
         </footer>
       )}
       {guiaAbierta && <HojaGuia guia={guiaAbierta} alCerrar={() => setGuiaAbierta(null)} />}

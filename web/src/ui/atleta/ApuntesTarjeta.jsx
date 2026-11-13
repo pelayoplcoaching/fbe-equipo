@@ -3,7 +3,8 @@ import { useApp, useCarga, IcoIos } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { resumenApuntes, textoApuntes, apuntesDeNovedades, novedadPendiente, rachaAprendizaje, medallaApuntes, puedeExaminarse, ultimoExamen } from '../../logica/apuntes.js';
-import { leerApuntes, sincronizarApuntes } from '../apuntes.js';
+import { leerApuntes, sincronizarApuntes, recordarFuente, fuenteRecordada } from '../apuntes.js';
+import { guiasConTexto } from '../../datos/guias.js';
 import { semanaDeAprendizaje } from '../../logica/apuntes-arte.js';
 import { Medalla } from './apuntes-arte.jsx';
 
@@ -15,7 +16,7 @@ export const Apuntes = perezoso(() => import('./Apuntes.jsx'), 'Apuntes', { mien
 // (tanda 4) En Semana, además: la racha de aprendizaje y la medalla, el curso de la semana y el examen (con `finBloque`,
 // la última semana del bloque, se lo recuerda).
 export function TarjetaApuntes({ repaso = false, finBloque = false }) {
-  const { atleta, api } = useApp() || {};
+  const { atleta, api, backend } = useApp() || {};
   const [abierta, setAbierta] = useState(false);   // false | true | 'guardados' | 'curso' | 'examen'
   const [r, setR] = useState(() => (atleta?.id ? resumenApuntes(leerApuntes(atleta.id), hoyISO()) : null));
   // (060) lo visto en otros móviles y, en Hoy, si hay una novedad de la semana que aún no ha leído
@@ -26,7 +27,18 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
     sincronizarApuntes(api, atleta.id).then((e) => { if (vivo) { setR(resumenApuntes(e, hoyISO())); setVez((n) => n + 1); } });
     return () => { vivo = false; };
   }, [atleta?.id]);
-  const novedades = useCarga(() => (!repaso && atleta?.id && api?.novedades ? api.novedades().catch(() => []) : Promise.resolve([])), [atleta?.id, repaso], { recuerdo: !repaso && atleta?.id ? 'apuntes-novedades' : null });
+  // (apuntes, tanda A) con red, deja guardadas las guías (lo que usan los apuntes) para leerlos sin conexión; una vez al día
+  useEffect(() => {
+    if (!atleta?.id || !backend || (typeof navigator !== 'undefined' && navigator.onLine === false)) return undefined;
+    const marca = `fbe-fuentes-apuntes-dia-${atleta.id}`;
+    let hecho = null; try { hecho = localStorage.getItem(marca); } catch { /* sin almacenamiento */ }
+    if (hecho === hoyISO() && fuenteRecordada(atleta.id, 'guias')) return undefined;
+    const t = setTimeout(() => {
+      guiasConTexto({ backend }).then((g) => { if (g?.length) { recordarFuente(atleta.id, 'guias', g); try { localStorage.setItem(marca, hoyISO()); } catch { /* nada */ } } }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [atleta?.id]);
+  const novedades = useCarga(() => (!repaso && atleta?.id && api?.novedades ? api.novedades().then((n) => { recordarFuente(atleta.id, 'novedades', n); return n; }).catch(() => fuenteRecordada(atleta.id, 'novedades') || []) : Promise.resolve([])), [atleta?.id, repaso], { recuerdo: !repaso && atleta?.id ? 'apuntes-novedades' : null });
   const novedad = !repaso && atleta?.id && vez >= 0 ? novedadPendiente(apuntesDeNovedades(novedades.datos || []), leerApuntes(atleta.id), hoyISO(), 7) : null;
   if (!atleta?.id || !r) return null;
   const cerrar = () => { setAbierta(false); setR(resumenApuntes(leerApuntes(atleta.id), hoyISO())); setVez((n) => n + 1); };
@@ -44,11 +56,12 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
         <strong>{repaso ? 'Tus apuntes' : novedad ? 'Novedad de la semana' : 'El apunte de hoy'}</strong>
         <span class="peq secundario">{repaso
           ? (nada ? 'Lo que aprendes en los descansos, para repasarlo' : `${textoApuntes(r.semana)} esta semana · ${r.vistos} en total${r.repasar ? ` · ${r.repasar} por repasar` : ''}`)
-          : novedad ? novedad.titulo : 'Medio minuto para aprender algo'}</span>
+          : novedad ? novedad.titulo : r.tocan > 0 ? (r.tocan === 1 ? 'Uno por repasar hoy' : `${r.tocan} por repasar hoy`) : 'Medio minuto para aprender algo'}</span>
       </div>
       <span class="apuntes-tarjeta-botones">
         {repaso && guardados > 0 && <button type="button" class="btn btn-peq" onClick={() => setAbierta('guardados')}>Guardados ({guardados})</button>}
-        <button type="button" class="btn btn-peq" disabled={nada} onClick={() => setAbierta(true)}>{repaso ? 'Repasar' : 'Leer'}</button>
+        {!repaso && r.tocan > 0 && !novedad && <button type="button" class="btn btn-peq btn-primario" onClick={() => setAbierta('repaso')}>Repasar ({r.tocan})</button>}
+        <button type="button" class={`btn btn-peq${repaso && r.tocan > 0 ? ' btn-primario' : ''}`} disabled={nada} onClick={() => setAbierta(true)}>{repaso ? (r.tocan > 0 ? `Repasar (${r.tocan})` : 'Repasar') : 'Leer'}</button>
       </span>
       {repaso && (
         <div class="apuntes-tarjeta-mas">

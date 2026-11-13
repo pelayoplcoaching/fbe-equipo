@@ -100,9 +100,10 @@ console.log('La tarjeta y el repaso');
   e = apuntarVisto(e, 'c', '2026-11-12', true);
   const r = resumenApuntes(e, hoy);
   check(r.vistos === 3 && r.semana === 2 && r.repasar === 1, 'cuántos ha visto, cuántos en los últimos 7 días y cuántos tiene por repasar');
-  check(JSON.stringify(resumenApuntes(null, hoy)) === '{"vistos":0,"semana":0,"repasar":0}', 'sin nada, ceros');
+  check(JSON.stringify(resumenApuntes(null, hoy)) === '{"vistos":0,"semana":0,"repasar":0,"tocan":0}', 'sin nada, ceros');
+  check(r.tocan === 2, '(tanda A) y cuántos le tocan hoy según el repaso espaciado (el leído hace días y el que no sabía)');
   const lista = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
-  check(paraRepasar(lista, e, hoy).map((x) => x.id).join() === 'b,c', 'el repaso: primero los que no sabía y, después, los vistos esta semana');
+  check(paraRepasar(lista, e, hoy).map((x) => x.id).join() === 'a,b,c', '(tanda A) el repaso: primero los que tocan hoy (el más atrasado antes) y, después, los vistos esta semana');
   check(textoApuntes(1) === '1 apunte' && textoApuntes(3) === '3 apuntes' && textoApuntes(0) === '0 apuntes', '«1 apunte», «3 apuntes»');
 }
 
@@ -307,6 +308,75 @@ console.log('(apuntes bellos) El arte, en números y en palabras');
   check(B.barraDescanso(60, 120).k === 0.5 && !B.barraDescanso(60, 120).final && B.barraDescanso(8, 120).final && B.barraDescanso(0, 120).k === 0 && !B.barraDescanso(0, 120).final && B.barraDescanso(200, 120).k === 1 && B.barraDescanso(5, 0) === null && B.barraDescanso(NaN, 9) === null,
     'la cuenta del descanso como barra, con los diez últimos segundos aparte');
   check(B.puntosDeTanda(['sabia', 'no', 'visto', 'raro']).join() === 'sabia,no,visto' && B.puntosDeTanda(Array(20).fill('visto')).length === 12 && B.puntosDeTanda().length === 0, 'un punto por apunte del rato (hasta doce)');
+}
+
+console.log('(tanda A) El repaso espaciado, recordar antes de leer y por qué no es esa');
+{
+  const A = await import('../web/src/logica/apuntes.js');
+  check(A.INTERVALOS.join() === '1,3,7,16,35,60', 'las cajas: mañana, a los 3, 7, 16 y 35 días, y a los dos meses');
+  const p0 = A.programar(null, null, '2026-11-12'), p1 = A.programar({ c: 0, p: '2026-11-13' }, 'bien', '2026-11-13'), p2 = A.programar({ c: 1, p: '2026-11-16' }, 'facil', '2026-11-16');
+  check(p0.c === 0 && p0.p === '2026-11-13' && p1.c === 1 && p1.p === '2026-11-16' && p2.c === 3 && p2.p === '2026-12-02', 'lo nuevo entra en la caja 0 (mañana); «Bien» sube una; «Fácil», dos');
+  check(A.programar({ c: 4, p: '2026-11-12' }, 'otra', '2026-11-12').c === 0 && A.programar({ c: 4, p: '2026-11-12' }, 'otra', '2026-11-12').p === '2026-11-13' && A.programar({ c: 5 }, 'facil', '2026-11-12').c === 5,
+    '«Otra vez» vuelve a la 0 (mañana); la caja 5 es la última');
+  check(JSON.stringify(A.programar({ c: 2, p: '2026-11-20' }, null, '2026-11-14')) === '{"c":2,"p":"2026-11-20"}', 'leerlo otra vez sin contestar no lo mueve');
+  let e = A.apuntarVisto(null, 'g:rir', '2026-11-10');
+  check(e.vistos['g:rir'].c === 0 && e.vistos['g:rir'].p === '2026-11-11' && !A.tocaRepasar(e.vistos['g:rir'], '2026-11-10') && A.tocaRepasar(e.vistos['g:rir'], '2026-11-11'), 'visto hoy, toca mañana');
+  e = A.apuntarVisto(e, 'g:rir', '2026-11-11', null, 'bien');
+  check(e.vistos['g:rir'].c === 1 && e.vistos['g:rir'].p === '2026-11-14' && e.vistos['g:rir'].s === true, 'recordado «Bien»: caja 1, en tres días (y cuenta como sabido)');
+  e = A.apuntarVisto(e, 'm:1', '2026-11-11', false);
+  check(e.vistos['m:1'].c === 0 && e.vistos['m:1'].p === '2026-11-12' && A.cuantosTocan(e, '2026-11-14') === 2 && A.cuantosTocan(e, '2026-11-12') === 1, '«No lo sabía» es «Otra vez»; y se cuentan los que tocan cada día');
+  check(A.limpiarVistos({ vistos: { x: { n: 1, t: '2026-11-10', c: 9, p: '2026-11-01' } } }).vistos.x.c === undefined && A.limpiarVistos({ vistos: { x: { n: 1, t: '2026-11-10', c: 9, p: '2026-11-01' } } }).vistos.x.p === undefined, 'lo ilegible del repaso se descarta');
+  check(A.tocaRepasar({ n: 1, t: '2026-11-01', s: false }, '2026-11-12') && !A.tocaRepasar({ n: 1, t: '2026-11-01', s: true }, '2026-11-12'), 'lo de antes de esta tanda (sin fecha): toca si no lo sabía');
+  const b = A.conServidor({ vistos: { 'g:a': { n: 1, t: '2026-11-10' } } }, [{ apunte: 'g:a', veces: 2, ultimo: '2026-11-09', caja: 2, proxima: '2026-11-16' }, { apunte: 'g:b', veces: 1, ultimo: '2026-11-11', caja: 3, proxima: '2026-11-27' }]);
+  check(b.vistos['g:a'].p === '2026-11-16' && b.vistos['g:a'].c === 2 && b.vistos['g:b'].c === 3 && b.vistos['g:b'].p === '2026-11-27', 'el repaso que viene de la base (otro móvil) se junta con lo del móvil');
+  check(['mañana', 'en 3 días', 'en 7 días', 'en 2 semanas', 'en un mes', 'en dos meses'].every((t, i) => A.textoProxima(i) === t), 'cuándo vuelve, en palabras');
+  // elegir: de cada tres, uno de los que tocan
+  const todos = [{ id: 'g:rir', tipo: 'glosario', titulo: 'RIR', texto: 'Recámara.' }, { id: 'i:a:0', tipo: 'idea', guia: 'a', titulo: 'A', texto: 'a' }, { id: 'i:a:1', tipo: 'idea', guia: 'a', titulo: 'B', texto: 'b' }];
+  const est = A.apuntarVisto(null, 'g:rir', '2026-11-01');
+  check(A.elegirApunte(todos, est, { hoy: '2026-11-12', salto: 2 }).id === 'g:rir' && A.elegirApunte(todos, est, { hoy: '2026-11-12', salto: 0 }).id !== 'g:rir', 'en el descanso, de cada tres apuntes, uno de los que tocan repasar');
+  // recordar antes de leer
+  check(A.preguntaParaRecordar(todos[0], est, '2026-11-12') === '¿Qué es «RIR»?' && A.preguntaParaRecordar(todos[0], est, '2026-11-01') === null && A.preguntaParaRecordar(todos[1], est, '2026-11-12') === null,
+    'recordar antes de leer: solo lo que ya vio y le toca (el glosario, con «¿Qué es…?»)');
+  check(A.preguntaParaRecordar({ id: 'p:f:0', tipo: 'clave', de: 'Press banca', texto: 'x' }, A.apuntarVisto(null, 'p:f:0', '2026-11-01'), '2026-11-12') === '¿Qué era lo clave en press banca?'
+    && A.preguntaParaRecordar({ id: 'm:1', tipo: 'mito', vuelta: true, texto: 'x' }, A.apuntarVisto(null, 'm:1', '2026-11-01'), '2026-11-12') === null
+    && A.preguntaParaRecordar(todos[1], A.apuntarVisto(null, 'i:a:0', '2026-11-12'), '2026-11-12', { repaso: true }) === '¿Recuerdas por qué?', 'la clave pregunta por su ejercicio; los mitos van a su manera; en «Repasar», todo lo recordable');
+  // por qué no es esa
+  const glos = A.apuntesDeGlosario();
+  const x = A.examenDe([...glos], (() => { let z = null; for (const g of glos.slice(0, 14)) z = A.apuntarVisto(z, g.id, '2026-11-10'); return z; })(), { hoy: '2026-11-13' }).find((q) => /^¿Qué es «/.test(q.titulo));
+  const mala = x.opciones.findIndex((o, i) => i !== x.correcta);
+  check(/^Esa es la definición de «.+»\.$/.test(A.porQueNo(x, mala, glos)) && A.porQueNo(x, x.correcta, glos) === null, 'por qué no es esa: en el glosario, de qué término es la definición que eligió');
+  check(A.porQueNo({ opciones: ['a', 'b', 'c'], correcta: 1, porQueNo: ['Poco', '', ''] }, 0) === 'Poco' && A.porQueNo({ opciones: ['a', 'b', 'c'], correcta: 1, porQueNo: ['Poco', '', ''] }, 2) === null, 'y la que escribió el coach, si la hay');
+  // las preguntas del coach
+  const nov = [{ id: 'q1', tipo: 'pregunta', titulo: '¿Cuánto descanso?', texto: 'Entre 2 y 3 minutos.', opciones: ['30 s', '2-3 min', '10 min'], correcta: 1, explicaciones: ['Poco', '', 'Demasiado'], publicada: true, publicada_en: '2026-11-10T08:00:00Z' },
+    { id: 'q2', tipo: 'pregunta', titulo: 'Mal', texto: 'x', opciones: ['solo una'], correcta: 0, publicada: true, publicada_en: '2026-11-10T08:00:00Z' },
+    { id: 'q3', tipo: 'pregunta', titulo: 'De press', texto: 'x', opciones: ['a', 'b'], correcta: 0, ejercicio_id: 'ej-press', publicada: true, publicada_en: '2026-11-10T08:00:00Z' }];
+  const qs = A.apuntesDeNovedades(nov);
+  check(qs.length === 2 && qs[0].tipo === 'test' && qs[0].coach && qs[0].etiqueta === 'Pregunta de tu coach' && qs[0].opciones.length === 3 && qs[0].correcta === 1 && qs[0].porQueNo[2] === 'Demasiado' && qs[1].ejercicio === 'ej-press',
+    'las preguntas del coach salen como preguntas («Pregunta de tu coach»), con el porqué de las malas; las mal hechas, no');
+  check(A.apuntesDeNovedades(nov, { ejercicio: 'ej-sentadilla' }).length === 1 && A.elegirApunte([...qs, { id: 'i:a:0', tipo: 'idea', guia: 'a', titulo: 'A', texto: 'a' }], null, { hoy: '2026-11-12', salto: 1 }).id === 'n:q1', 'en otro ejercicio, la del press no sale; la general va delante de las ideas, como los apuntes del coach');
+}
+
+// (tanda A) sin conexión: lo último cargado de cada fuente, en el móvil
+{
+  const mem = new Map();
+  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const U = await import('../web/src/ui/apuntes.js');
+  const guias = [{ id: 'g1', clave: 'sueno', titulo: 'Sueño', publicada: true, contenido: { ideas: [{ titulo: 'Duerme', x: 'Siete horas' }], bloques: Array(50).fill({ t: 'p', x: 'largo '.repeat(40) }) } },
+    { id: 'g2', clave: 'mitos', titulo: 'Mitos', publicada: true, contenido: JSON.stringify({ mitos: [{ mito: 'x' }] }) }];
+  const d1 = await U.conRespaldo('atl-r', 'guias', async () => guias);
+  const guardado = U.fuenteRecordada('atl-r', 'guias');
+  check(d1 === guias && guardado.length === 2 && !guardado[0].contenido.bloques && guardado[0].contenido.ideas.length === 1 && guardado[1].contenido.mitos.length === 1
+    && apuntesDeGuias(guardado).length === apuntesDeGuias(guias).length, 'con red: carga y guarda las guías recortadas a lo que usan los apuntes (los mitos, enteros)');
+  let avisado = false;
+  const d2 = await U.conRespaldo('atl-r', 'guias', async () => { throw new Error('Failed to fetch'); }, () => { avisado = true; });
+  check(avisado && d2.length === 2, 'sin red: lo guardado, y avisa');
+  let error = null;
+  await U.conRespaldo('atl-r', 'novedades', async () => { throw new Error('Failed to fetch'); }).catch((e) => { error = e; });
+  check(error?.message === 'Failed to fetch', 'sin red y sin nada guardado: el error de siempre');
+  for (let i = 0; i < 35; i++) U.recordarFuente('atl-r', `ficha:e${i}`, { ficha: { n: i } });
+  const claves = Object.keys(JSON.parse(mem.get('fbe-fuentes-apuntes-atl-r')));
+  check(claves.filter((k) => k.startsWith('ficha:')).length === 30 && claves.includes('guias'), 'de los ejercicios, solo los 30 últimos; las guías se quedan');
+  delete globalThis.localStorage;
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

@@ -51,7 +51,7 @@ export async function probarApuntes4({ navegador, check, base = 'http://localhos
     const form = p.locator('.novedad-form');
     await form.waitFor();
     const tipos = form.locator('.novedad-tipo button');
-    check(await tipos.count() === 2 && await tipos.nth(0).getAttribute('aria-pressed') === 'true' && await form.getByLabel(/Ejercicio/).count() === 0, 'al escribir, se elige qué es: «Novedad de la semana» (de entrada) o «Apunte suelto»');
+    check(await tipos.count() === 3 && await tipos.nth(0).getAttribute('aria-pressed') === 'true' && await form.getByLabel(/Ejercicio/).count() === 0, 'al escribir, se elige qué es: «Novedad» (de entrada), «Apunte suelto» o «Pregunta»');
     await tipos.nth(1).click();
     await form.getByLabel('Título').fill(TITULO);
     await form.getByLabel('Texto').fill('Aprieta el suelo con los pies durante toda la serie: el cuerpo, un bloque.');

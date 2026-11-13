@@ -130,7 +130,7 @@ const lote = (navs) => [
   const env = { VAPID_PUBLICA: vapid.publica, VAPID_PRIVADA: vapid.privada, AVISOS_CONTACTO: vapid.contacto, RESEND_API_KEY: 're_x', AVISOS_REMITENTE: 'FBE Equipo <avisos@fbe.test>', APP_URL: 'https://atletas.fbe.test' };
   const resumen = await enviarPendientes({ env, db, fetch: f });
   const res = llamadas.find(([n]) => n === 'notificaciones_resultado')[1].p_resultado;
-  check(llamadas[0][0] === 'crear_recordatorios' && llamadas[1][1].p_email === true, 'crea los recordatorios que tocan y toma la cola (con email, porque está configurado)');
+  check(llamadas[0][0] === 'crear_recordatorios' && llamadas[1][0] === 'crear_recordatorios_apuntes' && llamadas.find(([n]) => n === 'notificaciones_por_enviar')[1].p_email === true, 'crea los recordatorios que tocan (también el de los apuntes por repasar, 062) y toma la cola (con email, porque está configurado)');
   const msgs = recibido.map((x) => JSON.parse(x.texto));
   check(msgs.length === 2 && msgs[0].titulo === 'Pelayo te ha respondido' && msgs[0].url === '#hoy' && msgs[0].etiqueta === 'n1' && msgs[1].etiqueta === 'habitos',
     'a Ana le llegan las dos (cada respuesta con su etiqueta; los recordatorios, con la del tipo, para que el de hoy sustituya al de ayer)');
@@ -148,12 +148,16 @@ const lote = (navs) => [
   emails.length = 0;
   await enviarPendientes({ env: { ...env, RESEND_API_KEY: '' }, db, fetch: f, recordatorios: false });
   const res2 = llamadas.find(([n]) => n === 'notificaciones_resultado')[1].p_resultado;
-  check(!llamadas.some(([n]) => n === 'crear_recordatorios') && llamadas[0][1].p_email === false && emails.length === 0 && res2.fallidas.some((x) => x.id === 'n4'),
+  check(!llamadas.some(([n]) => n === 'crear_recordatorios' || n === 'crear_recordatorios_apuntes') && llamadas[0][1].p_email === false && emails.length === 0 && res2.fallidas.some((x) => x.id === 'n4'),
     'sin email configurado, no se envían emails; y si no se piden, no se crean recordatorios');
   const vacio = { rpc: async (n) => (n === 'notificaciones_por_enviar' ? [] : 0) };
   const llamadasVacio = [];
   await enviarPendientes({ env, db: { rpc: async (n, a) => { llamadasVacio.push(n); return vacio.rpc(n, a); } }, fetch: f });
   check(!llamadasVacio.includes('notificaciones_resultado'), 'sin nada en la cola, no hace nada más');
+  // (062) sin la migración, la función de los apuntes no existe: se sigue con lo demás
+  const sin062 = [];
+  const r062 = await enviarPendientes({ env, db: { rpc: async (n) => { sin062.push(n); if (n === 'crear_recordatorios_apuntes') throw new Error('Could not find the function'); return n === 'crear_recordatorios' ? 1 : n === 'notificaciones_por_enviar' ? [] : 0; } }, fetch: f });
+  check(sin062.includes('notificaciones_por_enviar') && r062.recordatorios === 1, 'si la base aún no tiene la 062, el aviso de repaso se salta y lo demás sigue');
   check(componerEmail([{ titulo: 'Aviso de Pelayo', cuerpo: null, url: '#hoy' }]).asunto === 'Aviso de Pelayo', 'con una sola, el asunto es su título');
   check(iguales('abc', 'abc') && !iguales('abc', 'abd') && !iguales('abc', 'abcd') && !iguales('', 'a'), 'el secreto se compara entero');
 }

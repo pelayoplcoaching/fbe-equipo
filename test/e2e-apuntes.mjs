@@ -149,7 +149,7 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
     await hoja.locator('.apunte-destapar').click();
     await hoja.getByRole('button', { name: 'Lo sabía', exact: true }).click();
     await p.waitForTimeout(250);
-    check(Object.values(await vistos()).filter((x) => x.s === false).length === 0 && await hoja.getByRole('button', { name: 'Siguiente' }).count() + await hoja.locator('.apunte-destapar').count() >= 1, 'ahora lo sabía: ya no queda por repasar; y sigue con los de la semana');
+    check(Object.values(await vistos()).filter((x) => x.s === false).length === 0 && await hoja.getByRole('button', { name: 'Siguiente' }).count() + await hoja.locator('.apunte-destapar').count() + await hoja.locator('.apunte-recordar').count() >= 1, 'ahora lo sabía: ya no queda por repasar; y sigue con los de la semana');
     const desborda = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!desborda, 'todo cabe a 390 px');
     await hoja.getByRole('button', { name: 'Cerrar los apuntes' }).click();
