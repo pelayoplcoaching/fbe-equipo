@@ -6050,6 +6050,10 @@ try {
   console.log('\nQue la app le hable a cada uno');
   const { probarPersonalTrato } = await import('./e2e-personal-t1.mjs');
   await probarPersonalTrato({ navegador, check });
+  // Personalización 2, tanda 2: su meta y la cuenta atrás, por qué la sesión es para ella y su historia en una línea
+  console.log('\nQue sepa a qué viene');
+  const { probarPersonalRumbo } = await import('./e2e-personal-t2.mjs');
+  await probarPersonalRumbo({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

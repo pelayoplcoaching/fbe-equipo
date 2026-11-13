@@ -2,7 +2,9 @@
 // bienvenida y las celebraciones), su porqué (se lo recuerda la bienvenida al volver tras unos días sin entrenar), sus
 // tres ejercicios (arriba en Progreso), su música (un botón en la portada de cada sesión) y su cumpleaños (día y mes:
 // la app le felicita y su coach lo sabe). Todo opcional; lo ve su coach. Sin la 050, no sale.
-import { HojaTrato, HojaCelebrar, textoCelebrar } from './Trato.jsx';
+import { HojaTrato, HojaCelebrar, HojaMeta, textoCelebrar } from './Trato.jsx';
+import { cuentaMeta } from '../../logica/rumbo.js';
+import { hoyISO } from '../../logica/fechas.js';
 import { GENEROS, TONOS } from '../../logica/trato.js';
 import { leerAjustes } from '../ajustes.js';
 import { useState } from 'preact/hooks';
@@ -37,10 +39,12 @@ export function LoTuyo() {
       <FilaIos icono="calendario" titulo="Tu cumpleaños" valor={textoCumple(p) || 'Añadir'} alTocar={() => setEditar('cumple')} etiqueta="Poner tu cumpleaños" />
       {/* (personalización 2) cómo te hablamos y qué celebrar */}
       <FilaIos icono="mensaje" titulo="Cómo te hablamos" valor={`${(GENEROS.find(([k]) => k === (p.genero || 'n')) || [])[1]} · ${(TONOS.find(([k]) => k === (p.tono || 'cercano')) || [])[1]}`} alTocar={() => setEditar('trato')} etiqueta="Elegir cómo te hablamos" />
+      <FilaIos icono="bandera" titulo="Tu meta" valor={p.meta_nombre ? (cuentaMeta(p, hoyISO())?.texto || p.meta_nombre) : 'Añadir'} alTocar={() => setEditar('meta')} etiqueta="Poner tu meta" />
       <FilaIos icono="estrella" titulo="Qué celebrar" valor={textoCelebrar(leerAjustes().celebrar)} alTocar={() => setEditar('celebrar')} etiqueta="Elegir qué celebrar" />
       {editar === 'trato' && <HojaTrato actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
       {editar === 'celebrar' && <HojaCelebrar alCerrar={() => setEditar(null)} />}
-      {editar && !['trato', 'celebrar'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar === 'meta' && <HojaMeta actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar && !['trato', 'celebrar', 'meta'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
     </GrupoIos>
   );
 }

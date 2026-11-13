@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { hoyISO } from '../logica/fechas.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Icono, CifraSube, useApp, useCarga } from './comunes.jsx';
+import { cuentaMeta } from '../logica/rumbo.js';
 import { esCumple, porqueParaHoy, momentoBienvenida, textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { tocaBienvenida, mensajeBienvenida } from '../logica/bienvenida.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
@@ -137,8 +138,9 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   const mensajeVisible = rol === 'atleta' ? rematePorTono(trato, m.mensaje) : m.mensaje;
   const detalleVisible = m.detalle || deHora?.detalle || null;
   const porque = listo ? porqueParaHoy({ porque: personal?.porque, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
-  const momento = listo ? momentoBienvenida({ cumple, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho }) : null;
-  const delCoach = momento ? textoMensajeCoach(mensajeDe(mensajesCoach, momento), { nombre: nombreVisible }) : null;
+  const laMeta = rol === 'atleta' ? cuentaMeta(personal, hoyM) : null;
+  const momento = listo ? momentoBienvenida({ cumple, ultimoDia: datos?.ultimoDia, hoy: hoyM, haceMucho: !!datos?.haceMucho, metaDias: laMeta?.dias ?? null }) : null;
+  const delCoach = momento ? textoMensajeCoach(mensajeDe(mensajesCoach, momento), { nombre: nombreVisible, meta: laMeta?.nombre || '' }) : null;
   const conPanel = listo && !!panel && (panel.cifras?.length > 0 || !!panel.sesion);
   // En una pantalla baja el cuerpo se desliza (con «Empezar» siempre a la vista): entonces tiene que poder recibir el
   // foco, para deslizarlo con el teclado

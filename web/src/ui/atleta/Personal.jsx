@@ -17,12 +17,12 @@ export function usePersonal() {
   return useCarga(() => api.personal().then((p) => p || null).catch(() => null), [atleta?.id]);
 }
 
-export function MensajeCoach({ momento, ejercicio = '', semanas = '', clase = '' }) {
+export function MensajeCoach({ momento, ejercicio = '', semanas = '', tiempo = '', meta = '', clase = '' }) {
   const { api, atleta, propio } = useApp();
   const mensajes = useCarga(() => (propio ? Promise.resolve([]) : api.mensajesCoach().catch(() => [])), [momento]);
   const personal = usePersonal();
   const foto = useCarga(() => (propio ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
-  const texto = textoMensajeCoach(mensajeDe(mensajes.datos, momento), { nombre: nombreSaludo(personal.datos, atleta?.nombre), ejercicio, semanas });
+  const texto = textoMensajeCoach(mensajeDe(mensajes.datos, momento), { nombre: nombreSaludo(personal.datos, atleta?.nombre), ejercicio, semanas, tiempo, meta });
   if (!texto) return null;
   return (
     <figure class={`cita-coach mensaje-coach ${clase}`} data-momento={momento}>

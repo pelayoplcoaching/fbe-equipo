@@ -16,7 +16,9 @@ import { RecordAlAlcance } from './Personal.jsx';
 import { MusicaSesion } from './Musica.jsx';
 import { useTrato } from '../trato.js';
 import { antesDelTitulo } from '../../logica/trato.js';
-import { hoyISO } from '../../logica/fechas.js';
+import { hoyISO, diasEntre } from '../../logica/fechas.js';
+import { porQueSesion, nivelLenguaje, explicarEsfuerzo, metaDe } from '../../logica/rumbo.js';
+import { objetivosDe } from '../../logica/cuestionario.js';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -39,13 +41,18 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
   // (personalización 2) «Ana, hoy toca»: con su nombre (o su apodo), encima del nombre de la sesión
   const trato = useTrato();
   const paraTi = antesDelTitulo(trato, { esHoy: !sesion.dia_previsto || sesion.dia_previsto === hoyISO() });
-  const { api, propio } = useApp();
+  const { api, propio, atleta } = useApp();
+  // (personalización 2, tanda 2) por qué esta sesión es para él (su objetivo del cuestionario) y el lenguaje de su nivel
+  const cuest = useCarga(() => (propio || !atleta?.id ? Promise.resolve(null) : api.cuestionario(atleta.id).catch(() => null)), [atleta?.id]);
+  const meses = atleta?.fecha_alta ? Math.max(0, Math.floor(diasEntre(String(atleta.fecha_alta).slice(0, 10), hoyISO()) / 30.44)) : 0;
+  const nivel = nivelLenguaje({ experiencia: cuest.datos?.experiencia || null, meses, nivel: null });
   const foto = useCarga(() => (propio ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
   const r = resumenPautas(ejercicios.map((e) => ({ ...e, ejercicio: e.ejercicio })));
   const tipo = sesion.tipo || 'fuerza';
   const sobre = [tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Sesión de fuerza', semana?.numero ? `Semana ${semana.numero}` : null].filter(Boolean).join(' · ');
   const nota = (sesion.dinamica || semana?.nota_coach || '').trim();
   const cardio = cardioValido(sesion.cardio) ? sesion.cardio : null;
+  const porQue = sesion.completada ? null : porQueSesion({ objetivos: objetivosDe(cuest.datos), tipo, conCardio: !!cardio, meta: metaDe(trato.personal) }, trato);
   const familia = familiaPortada({ tipo, pautas: ejercicios, cardio: !!cardio });
   return (
     <div class="contenido portada-vista">
@@ -72,6 +79,10 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           </ul>
         </div>
       </header>
+      {porQue && <p class="portada-porque"><Icono n="diana" /><span><strong>Por qué es para ti. </strong>{porQue}</span></p>}
+      {nivel === 'principiante' && r.ejercicios > 0 && ejercicios.some((e) => /RIR|RPE/.test(pauta(e)?.esfuerzo || '')) && (
+        <p class="portada-nivel peq secundario">Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.</p>
+      )}
       {nota && (
         <figure class="cita-coach">
           {foto.datos ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}
@@ -96,7 +107,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
                     <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
                     <div>
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>
-                      <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{pa.esfuerzo}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>
+                      <div class="pauta"><span class="num">{pa.series}</span>{pa.esfuerzo && <span>{explicarEsfuerzo(pa.esfuerzo, nivel)}</span>}{pa.carga && <span class="num">{pa.carga}</span>}{e.variante && <span>{e.variante}</span>}</div>
                     </div>
                     <span />
                   </li>

@@ -353,3 +353,17 @@
 .trato-hoja legend { font-weight: 650; margin-bottom: 4px; }
 .celebrar-fila { display: grid; gap: 6px; }
 .celebrar-fila .segmentos button { font-size: .8125rem; }
+
+/* ---------- (personalizacion 2, tanda 2) Que sepa a que viene: su meta, el porque de la sesion, su historia ---------- */
+.meta-hoja .fila-s { display: flex; gap: 8px; align-items: center; }
+.meta-hoja .fila-s .entrada { flex: 1; min-width: 0; }
+.meta-hoja .fila-s .selector { flex: none; width: auto; }
+.panel.cuenta-meta { display: flex; gap: 12px; align-items: center; }
+.cuenta-meta-ico { flex: none; font-size: 1.5rem; line-height: 1; }
+.cuenta-meta.cerca { border-color: var(--morado); background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); }
+.portada-porque { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); line-height: 1.45; }
+.portada-porque > svg, .historia-linea > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.portada-nivel { margin: 0; }
+.panel.historia-linea { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.aniversario-hecho { margin: 4px 0 0; }
+.aniversario .aniversario-coach { margin-top: 8px; }

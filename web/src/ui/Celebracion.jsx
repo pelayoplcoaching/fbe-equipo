@@ -15,6 +15,8 @@ import { reducirFoto } from './FotoPerfil.jsx';
 import { lanzarConfeti } from './confeti.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 import { hoyISO } from '../logica/fechas.js';
+import { resumenDesdeAlta } from '../logica/rumbo.js';
+import { MensajeCoach } from './atleta/Personal.jsx';
 import { nombreMes } from '../logica/mes.js';
 import { REACCIONES } from '../logica/comunidad.js';
 import { IMAGEN_ANIVERSARIO } from '../logica/imagenes.js';
@@ -38,6 +40,9 @@ export function TarjetaAniversario() {
     const t = setTimeout(() => lanzarConfeti({ vibracion: null, momento: 'otros' }), 400);
     return () => clearTimeout(t);
   }, [an?.meses, oculta]);
+  // (personalización 2, tanda 2) lo que ha hecho en este tiempo y, si lo ha escrito, el mensaje de su coach
+  const entrenos = useCarga(() => (an ? api.entrenamientos(atleta.id).catch(() => []) : Promise.resolve([])), [an?.meses, atleta?.id]);
+  const hecho = an ? resumenDesdeAlta({ entrenos: entrenos.datos || [], fechaAlta: atleta?.fecha_alta }) : null;
   if (!an || oculta) return null;
   return (
     <section class={`panel panel-pad aniversario ${hayImagen(IMAGEN_ANIVERSARIO) ? 'con-ilu' : ''}`} aria-labelledby="aniversario-t">
@@ -47,6 +52,8 @@ export function TarjetaAniversario() {
       <div class="pila-xs">
         <h2 id="aniversario-t" class="aniversario-t">{tituloAniversario(an.meses)}</h2>
         <p class="peq secundario">{an.meses >= 12 ? 'Gracias por la constancia: un año más entrenando con cabeza.' : 'Gracias por la constancia: lo difícil es empezar, y ya llevas ' + textoAniversario(an.meses) + '.'}</p>
+        {hecho && <p class="peq aniversario-hecho"><strong>{hecho.texto}</strong></p>}
+        <MensajeCoach momento="aniversario" tiempo={textoAniversario(an.meses)} clase="aniversario-coach" />
       </div>
       <button type="button" class="btn btn-icono plano aniversario-cerrar" aria-label="Ocultar la tarjeta del aniversario" onClick={() => { guardarPreferencia(clave, `${hoy}:oculta`); setOculta(true); }}><Icono n="cerrar" /></button>
     </section>

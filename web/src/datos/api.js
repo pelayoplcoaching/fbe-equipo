@@ -849,6 +849,8 @@ export function crearApi(backend) {
       try {
         const r = await b.rpc('personal_ajustes_guardar', { p_datos: limpio });
         personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        // (personalización 2) que lo vean ya Hoy, la portada y la bienvenida
+        try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
         return r || null;
       } catch (e) {
         if (falta050(e) || /personal_ajustes_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app (migración 065)');

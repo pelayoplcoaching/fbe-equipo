@@ -5,6 +5,9 @@ import { Hoja, useApp } from '../comunes.jsx';
 import { GENEROS, TONOS, MOMENTOS_CELEBRAR, MODOS_CELEBRAR, limpiarCelebrar, tratoDe, titularResumen } from '../../logica/trato.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
+import { useTrato } from '../trato.js';
+import { UNIDADES_META, cuentaMeta } from '../../logica/rumbo.js';
+import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 
 export function HojaTrato({ actual, alCerrar, alGuardar }) {
   const { api, aviso, atleta } = useApp();
@@ -66,3 +69,49 @@ export const textoCelebrar = (c) => {
   const v = Object.values(limpiarCelebrar(c));
   return v.every((x) => x === 'todo') ? 'Todo, con todo' : v.every((x) => x === 'nada') ? 'Nada' : 'A tu manera';
 };
+
+// ---------- (personalización 2, tanda 2) Su meta con fecha ----------
+export function HojaMeta({ actual, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const [nombre, setNombre] = useState(actual?.meta_nombre || '');
+  const [fecha, setFecha] = useState(actual?.meta_fecha || '');
+  const [cifra, setCifra] = useState(actual?.meta_cifra != null ? String(actual.meta_cifra).replace('.', ',') : '');
+  const [unidad, setUnidad] = useState(actual?.meta_unidad || 'kg');
+  const [guardando, setGuardando] = useState(false);
+  const guardar = async (quitar = false) => {
+    setGuardando(true);
+    try {
+      const c = cifra.trim() ? Number(cifra.replace(',', '.')) : null;
+      await api.guardarTrato(quitar ? { meta_nombre: '' } : { meta_nombre: nombre.trim(), meta_fecha: fecha || null, meta_cifra: c, meta_unidad: c ? unidad : null });
+      vibrar('hecho'); aviso(quitar ? 'Meta quitada' : 'Guardada: la verás en Hoy, con su cuenta atrás'); alGuardar?.();
+    } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
+  };
+  return (
+    <Hoja titulo="Tu meta" alCerrar={alCerrar}>
+      <div class="pila meta-hoja">
+        <p class="peq secundario">Algo con nombre y, si quieres, con día y con cifra: una boda, una competición, el verano, una carrera… Tu coach la verá.</p>
+        <div class="campo"><label for="meta-nombre">Tu meta</label>
+          <input id="meta-nombre" class="entrada" maxLength={60} value={nombre} placeholder="Mi primera competición" onInput={(e) => setNombre(e.currentTarget.value)} /></div>
+        <div class="campo"><label for="meta-fecha">El día <span class="secundario">(opcional)</span></label>
+          <input id="meta-fecha" class="entrada" type="date" value={fecha} onInput={(e) => setFecha(e.currentTarget.value)} /></div>
+        <div class="campo"><label for="meta-cifra">La cifra <span class="secundario">(opcional)</span></label>
+          <span class="fila-s"><input id="meta-cifra" class="entrada" inputMode="decimal" value={cifra} placeholder="100" onInput={(e) => setCifra(e.currentTarget.value)} />
+            <select class="selector" aria-label="Unidad" value={unidad} onChange={(e) => setUnidad(e.currentTarget.value)}>{UNIDADES_META.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></span></div>
+        <button type="button" class="btn btn-primario" disabled={guardando || !nombre.trim()} onClick={() => guardar(false)}>Guardar</button>
+        {actual?.meta_nombre && <button type="button" class="btn-texto peligro" onClick={() => guardar(true)}>Quitar mi meta</button>}
+      </div>
+    </Hoja>
+  );
+}
+// En Hoy: la cuenta atrás de su meta (o la invitación a ponerla si ya pasó)
+export function CuentaMeta() {
+  const { personal } = useTrato();
+  const c = cuentaMeta(personal, hoyISO());
+  if (!c) return null;
+  return (
+    <section class={`panel panel-pad cuenta-meta${c.cerca ? ' cerca' : ''}${c.pasada ? ' pasada' : ''}`} aria-label="Tu meta">
+      <span class="cuenta-meta-ico" aria-hidden="true">{c.dias === 0 ? '🎯' : '⏳'}</span>
+      <span class="pila-xs"><strong>{c.texto}</strong>{c.fecha && !c.pasada && <span class="mini secundario">{fmtCorta(c.fecha)}</span>}</span>
+    </section>
+  );
+}
