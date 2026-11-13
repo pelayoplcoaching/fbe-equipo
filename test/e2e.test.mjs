@@ -6014,6 +6014,10 @@ try {
   console.log('\nApuntes, tanda 4');
   const { probarApuntes4 } = await import('./e2e-apuntes4.mjs');
   await probarApuntes4({ navegador, check });
+  // Apuntes, más bonitos: tono y sello, hoja con mazo, rotulador, vuelta, sellos y puntos, glosario en el texto, deslizar, barra, nota con aro, medalla, semana
+  console.log('\nApuntes, más bonitos');
+  const { probarApuntesBellos } = await import('./e2e-apuntes-bellos.mjs');
+  await probarApuntesBellos({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

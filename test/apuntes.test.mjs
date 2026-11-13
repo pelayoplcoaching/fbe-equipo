@@ -268,5 +268,46 @@ console.log('(tanda 4) Para el coach: lo que más se falla y mandar un apunte');
   check(A.mensajeDeApunte(apuntes[0]) === 'Un apunte para ti (Nutrición): «Cenar engorda» No.' && A.mensajeDeApunte(apuntes[1]) === 'Un apunte para ti: RIR: Recámara.' && A.mensajeDeApunte(null) === '', 'el mensaje con el que se manda un apunte');
 }
 
+console.log('(apuntes bellos) El arte, en números y en palabras');
+{
+  const B = await import('../web/src/logica/apuntes-arte.js');
+  const A = await import('../web/src/logica/apuntes.js');
+  const tipos = ['clave', 'error', 'mito', 'idea', 'glosario', 'test', 'duda', 'coach', 'novedad', 'numeros', 'correccion', 'musculo', 'clip', 'reto'];
+  check(tipos.every((t) => B.TONOS.includes(B.arteDe(t).tono) && B.arteDe(t).sello) && B.arteDe('inventado').tono === 'morado' && B.arteDe('mito').tono === 'rosa' && B.arteDe('error').tono === 'ambar',
+    'cada tipo de apunte, con su tono y su sello (y uno desconocido, como una idea)');
+  const k = B.palabraClave('Banco demasiado inclinado');
+  check(k.palabra === 'demasiado' && k.antes + k.palabra + k.despues === 'Banco demasiado inclinado', 'el rotulador subraya la palabra más larga del título');
+  check(B.palabraClave('La prisa sale cara').palabra === 'prisa' && B.palabraClave('«Cenar engorda»') === null && B.palabraClave('¿Qué es el RIR?') === null && B.palabraClave('Un eje') === null && B.palabraClave('') === null && B.palabraClave(null) === null,
+    'si empatan, la primera; las frases entre comillas, las preguntas y los títulos sin palabras largas, sin rotulador');
+  check(B.palabraClave('Sobre todo, el pectoral').palabra === 'pectoral', 'las palabras de relleno no se subrayan');
+  const trozos = B.trozosConTerminos('Deja dos repeticiones en recámara (RIR 2) y controla el tempo.', [['RIR', 'a'], ['Tempo', 'b'], ['1RM', 'c']]);
+  check(trozos.map((x) => x.texto).join('') === 'Deja dos repeticiones en recámara (RIR 2) y controla el tempo.' && trozos.filter((x) => x.termino).map((x) => `${x.termino}=${x.texto}`).join() === 'RIR=RIR,Tempo=tempo',
+    'las palabras del glosario se encuentran dentro del texto (sin mirar mayúsculas), y juntos los trozos dan el texto tal cual');
+  check(B.trozosConTerminos('El tempora y el contratempo', [['tempo', 'x']]).length === 1 && B.trozosConTerminos('Rápido: la técnica', [['tecnica', 'x']]).some((x) => x.termino === 'tecnica' && x.texto === 'técnica') && B.trozosConTerminos('', [['a', 'b']])[0].texto === '' && B.trozosConTerminos('x', [])[0].texto === 'x',
+    'solo como palabra entera, y sin mirar las tildes');
+  check(B.trozosConTerminos('RIR y más RIR', [['RIR', 'a']]).filter((x) => x.termino).length === 1, 'cada término, solo la primera vez');
+  let e = A.apuntarVisto(null, 'g:rir', '2026-11-09');
+  e = A.apuntarVisto(e, 'g:rpe', '2026-11-11');
+  const sem = B.semanaDeAprendizaje(e, '2026-11-12');
+  check(sem.length === 7 && sem.map((d) => d.letra).join('') === 'LMXJVSD' && sem.map((d) => (d.hecho ? 1 : 0)).join('') === '1010000' && sem[3].hoy && sem[4].futuro && !sem[2].futuro && sem[0].fecha === '2026-11-09',
+    'la semana de aprendizaje: de lunes a domingo, encendidos los días que aprendió algo');
+  check(B.semanaDeAprendizaje(null, '2026-11-12').every((d) => !d.hecho) && B.semanaDeAprendizaje(e, 'mal').length === 0, 'sin nada, todos apagados');
+  check(B.metalDe(0) === null && B.metalDe(1) === 'bronce' && B.metalDe(3) === 'oro' && B.metalDe(4) === 'lavanda' && B.metalDe(9) === 'lavanda', 'el metal de cada medalla');
+  let m9 = null; for (let i = 0; i < 9; i++) m9 = A.apuntarVisto(m9, `i:g:${i}`, '2026-11-12');
+  const m10 = A.apuntarVisto(m9, 'i:g:9', '2026-11-12');
+  check(B.medallaNueva(m9, m10) === 1 && B.medallaNueva(m10, m10) === 0 && B.medallaNueva(null, m9) === 0, 'se sabe cuándo se estrena una medalla (con el décimo apunte, la primera)');
+  check(B.deslizar(-120, 10, 390) === 'izquierda' && B.deslizar(130, 30, 390) === 'derecha' && B.deslizar(60, 0, 390) === null && B.deslizar(120, 100, 390) === null && B.deslizar(110, 0, 800) === null && B.deslizar(NaN, 0) === null,
+    'deslizar: hace falta moverla de lado (80 px o un cuarto del ancho) y más de lado que de arriba abajo');
+  const a0 = B.arrastre(0), a1 = B.arrastre(200), a2 = B.arrastre(-50);
+  check(a0.giro === 0 && a0.etiqueta === 0 && Math.abs(a1.giro - 200 / 22) < 1e-9 && a1.etiqueta === 1 && a2.giro < 0 && a2.etiqueta > 0 && a2.etiqueta < 1 && B.arrastre(900).giro === 12,
+    'mientras se arrastra, gira un poco y asoma lo que hará al soltar');
+  const n1 = B.aroDeNota(8, 8), n2 = B.aroDeNota(4, 8), n3 = B.aroDeNota(6, 8);
+  check(n1.pct === 1 && n1.confeti && n1.tono === 'oro' && n2.pct === 0.5 && !n2.confeti && n2.tono === 'morado' && n3.confeti && n3.tono === 'verde' && B.aroDeNota(1, 0).pct === 0 && B.aroDeNota(1, 8).tono === 'ambar',
+    'la nota del examen: el aro se llena con los aciertos y, de notable para arriba, confeti');
+  check(B.barraDescanso(60, 120).k === 0.5 && !B.barraDescanso(60, 120).final && B.barraDescanso(8, 120).final && B.barraDescanso(0, 120).k === 0 && !B.barraDescanso(0, 120).final && B.barraDescanso(200, 120).k === 1 && B.barraDescanso(5, 0) === null && B.barraDescanso(NaN, 9) === null,
+    'la cuenta del descanso como barra, con los diez últimos segundos aparte');
+  check(B.puntosDeTanda(['sabia', 'no', 'visto', 'raro']).join() === 'sabia,no,visto' && B.puntosDeTanda(Array(20).fill('visto')).length === 12 && B.puntosDeTanda().length === 0, 'un punto por apunte del rato (hasta doce)');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

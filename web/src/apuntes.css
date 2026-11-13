@@ -102,3 +102,228 @@
 .apuntes-curso-otro { min-height: 36px; border: 0; cursor: pointer; font: inherit; font-size: .8125rem; }
 .apuntes-curso-otro[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado, #fff); }
 .examen-nota h2 .num { font-size: 2rem; }
+
+/* ======================================================================================================================
+   (apuntes bellos) Veinte mejoras de belleza. Cada tipo de apunte tiene su tono (--tono); lo suave y la tinta de cada
+   tono se mezclan con la hoja y la tinta del tema, así que valen igual en claro y en oscuro. Todo lo que se mueve va dentro
+   de prefers-reduced-motion: no-preference.
+   ====================================================================================================================== */
+.tono-verde { --tono: #1E9A55; } .tono-ambar { --tono: #D99A00; } .tono-rosa { --tono: #D24A8C; } .tono-morado { --tono: #6A4FE6; }
+.tono-azul { --tono: #2D6BDE; } .tono-teal { --tono: #0E9580; } .tono-oro { --tono: #D9A010; }
+.apunte, .apunte-saliente, .apunte-sello, .examen-aro { --tono-suave: color-mix(in srgb, var(--tono, var(--morado)) 13%, var(--hoja)); --tono-tinta: color-mix(in srgb, var(--tono, var(--morado)) 72%, var(--tinta)); }
+
+/* 12 · El fondo: un velo del tono del apunte, arriba y abajo, y dos manchas de luz que flotan despacio */
+.apuntes { isolation: isolate; overflow: hidden; }
+.apuntes::before, .apuntes::after { content: ''; position: absolute; z-index: -1; width: 70vmax; height: 70vmax; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--fondo-tono, var(--morado)) 16%, transparent), transparent); transition: background .6s ease; }
+.apuntes::before { left: -30vmax; top: -34vmax; }
+.apuntes::after { right: -32vmax; bottom: -36vmax; }
+.apuntes.fondo-verde { --fondo-tono: #1E9A55; } .apuntes.fondo-ambar { --fondo-tono: #D99A00; } .apuntes.fondo-rosa { --fondo-tono: #D24A8C; } .apuntes.fondo-morado { --fondo-tono: #6A4FE6; }
+.apuntes.fondo-azul { --fondo-tono: #2D6BDE; } .apuntes.fondo-teal { --fondo-tono: #0E9580; } .apuntes.fondo-oro { --fondo-tono: #D9A010; }
+
+/* (lo que sale volando no abre desplazamiento de lado) */
+.apuntes-cuerpo { overflow-x: hidden; }
+
+/* 10 y 11 · Arriba: un punto por apunte del rato y la cuenta del descanso como barra que se vacía */
+.apuntes-cab { position: relative; }
+.apuntes-puntos { grid-column: 1 / -1; display: flex; gap: 5px; margin: -2px 0 0; }
+.apuntes-puntos i { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--tinta) 22%, transparent); }
+.apuntes-puntos i.sabia { background: var(--disco-verde); }
+.apuntes-puntos i.no { background: var(--disco-amarillo); }
+.apuntes-puntos i.visto { background: color-mix(in srgb, var(--morado) 45%, transparent); }
+.apuntes-barra { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: color-mix(in srgb, var(--tinta) 8%, transparent); }
+.apuntes-barra i { display: block; height: 100%; background: var(--morado); transform-origin: 0 50%; transition: transform .25s linear; }
+.apuntes-barra.final i { background: var(--disco-amarillo); }
+
+/* 2 · La hoja de cuaderno: más grande, con renglones suaves, el margen y la esquina doblada */
+.apunte { position: relative; max-width: 520px; align-content: start; padding: 24px 22px 22px 30px; border-radius: 20px; border: 0;
+  background:
+    linear-gradient(90deg, transparent 17px, color-mix(in srgb, var(--disco-rojo) 26%, transparent) 17px 18.5px, transparent 18.5px),
+    repeating-linear-gradient(180deg, transparent 0 27px, color-mix(in srgb, var(--tono, var(--morado)) 6%, transparent) 27px 28px) 0 64px / 100% calc(100% - 64px) no-repeat,
+    var(--hoja);
+  box-shadow: 0 0 0 1px var(--borde), 0 2px 4px rgb(27 23 48 / .05), 0 22px 44px -22px color-mix(in srgb, var(--tono, var(--morado)) 45%, rgb(27 23 48 / .4)); }
+.apunte::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: 20px 20px 0 0; background: var(--tono, var(--morado)); }
+.apunte-esquina { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-radius: 0 0 20px 0; pointer-events: none;
+  background: linear-gradient(315deg, var(--tiza) 0 50%, color-mix(in srgb, var(--tono, var(--morado)) 18%, var(--hoja-2)) 50% 100%); box-shadow: -2px -2px 5px rgb(27 23 48 / .08); }
+.apunte.vacio-apuntes, .apunte.examen-nota { min-height: 0; }
+.apunte .apunte-etq .chip { background: var(--tono-suave); color: var(--tono-tinta); }
+
+/* 1 · El sello de cada tipo: un redondel con su dibujo */
+.apunte-sello { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--tono, var(--morado)); color: #fff;
+  box-shadow: 0 0 0 4px var(--tono-suave); }
+.apunte-sello svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.apunte-sello svg .lleno { fill: currentColor; stroke: none; }
+
+/* 4 · El rotulador: la palabra clave del título, subrayada con un trazo del tono */
+.apunte-rotulador { color: inherit; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--tono, var(--morado)) 30%, transparent) 58% 92%, transparent 92%) no-repeat 0 0 / 100% 100%;
+  border-radius: 3px; padding: 0 2px; margin: 0 -2px; }
+
+/* 3 · El mazo: detrás asoman las que quedan */
+.apunte-mazo { position: relative; display: grid; width: 100%; max-width: 520px; margin: 0 auto 14px; }
+.apunte-mazo > .apunte { grid-area: 1 / 1; z-index: 2; }
+.apunte-mazo::before, .apunte-mazo::after { content: ''; grid-area: 1 / 1; border-radius: 20px; background: var(--hoja); box-shadow: 0 0 0 1px var(--borde), 0 6px 16px -10px rgb(27 23 48 / .25); }
+.apunte-mazo::before { transform: translateY(8px) scale(.965); opacity: .85; z-index: 1; }
+.apunte-mazo::after { transform: translateY(15px) scale(.93); opacity: .6; z-index: 0; }
+.apunte-mazo[data-mazo="1"]::after, .apunte-mazo[data-mazo="0"]::after, .apunte-mazo[data-mazo="0"]::before { display: none; }
+
+/* 5 · La que se va: sale volando hacia un lado con su sello (8) */
+.apunte-saliente { grid-area: 1 / 1; z-index: 3; align-self: stretch; align-content: start; position: relative; display: grid; gap: 12px; padding: 24px 22px; border-radius: 20px; background: var(--hoja); pointer-events: none;
+  box-shadow: 0 0 0 1px var(--borde), 0 18px 34px -18px rgb(27 23 48 / .4); }
+.apunte-saliente::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: 20px 20px 0 0; background: var(--tono); }
+.saliente-etq { display: flex; align-items: center; gap: 8px; margin: 0; font-size: .875rem; font-weight: 650; color: var(--tono-tinta); }
+.saliente-titulo { font-size: 1.375rem; line-height: 1.2; }
+.apunte-marca { position: absolute; right: 18px; top: 46%; padding: 6px 14px; border: 3px solid currentColor; border-radius: 10px; font-weight: 900; font-size: 1.25rem; letter-spacing: .02em;
+  text-transform: uppercase; transform: rotate(-12deg); background: color-mix(in srgb, var(--hoja) 80%, transparent); }
+.apunte-marca.marca-sabia, .apunte-marca.marca-hecho { color: var(--disco-verde); }
+.apunte-marca.marca-no, .apunte-marca.marca-pasa { color: var(--aviso); font-size: 1rem; text-transform: none; transform: rotate(-6deg); }
+
+/* 6 · Deslizar: mientras se arrastra, gira un poco y asoma lo que hará */
+.apunte { touch-action: pan-y; }
+.apunte.arrastrando { transition: none !important; animation: none !important; cursor: grabbing; }
+.apunte-deslizar { position: absolute; top: 26px; padding: 5px 12px; border: 3px solid currentColor; border-radius: 10px; font-weight: 900; font-size: 1.0625rem; pointer-events: none; z-index: 3;
+  background: color-mix(in srgb, var(--hoja) 85%, transparent); color: var(--tinta-2); }
+.apunte-deslizar.derecha { left: 26px; transform: rotate(-10deg); }
+.apunte-deslizar.izquierda { right: 30px; transform: rotate(10deg); }
+.apunte-deslizar.si { color: var(--disco-verde); }
+.apunte-deslizar.no { color: var(--aviso); }
+
+/* 9 · Las preguntas: la buena con su marca que se dibuja; la mala tiembla */
+.apunte-marca-buena { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--ok); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; }
+.apunte-opcion.buena { box-shadow: inset 0 0 0 2px var(--ok); }
+
+/* 14 · Guardar: un marcapáginas en la esquina de arriba */
+.apunte-marcapaginas { position: absolute; right: 22px; top: 0; width: 18px; height: 34px; background: var(--disco-rojo); z-index: 2; pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%); filter: drop-shadow(0 2px 2px rgb(0 0 0 / .2)); }
+
+/* 13 · Escuchar: cuatro barras que suben y bajan mientras habla */
+.apunte-ondas { display: inline-flex; align-items: center; gap: 2px; width: 18px; height: 16px; }
+.apunte-ondas i { flex: 1; height: 40%; border-radius: 2px; background: currentColor; }
+
+/* 15 · Las palabras del glosario, en el propio texto: subrayado de puntos; al tocarlas, su definición en un bocadillo */
+.apunte-termino-en { cursor: pointer; -webkit-tap-highlight-color: transparent;
+  text-decoration: underline dotted color-mix(in srgb, var(--tono, var(--morado)) 70%, transparent) 2px; text-underline-offset: 4px; border-radius: 3px; }
+.apunte-termino-en[aria-expanded="true"] { background: var(--tono-suave); color: var(--tono-tinta); text-decoration-style: solid; }
+.apunte-termino-en:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.apunte-terminos:has(> .apunte-definicion:only-child) { margin-top: -4px; }
+.apunte-definicion { position: relative; padding: 10px 14px; border-radius: 14px; background: var(--tono-suave, var(--morado-suave)); color: var(--tinta); }
+.apunte-definicion::before { content: ''; position: absolute; left: 22px; top: -7px; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); border-radius: 3px 0 0 0; }
+
+/* 16 · La nota del examen: el aro, el porcentaje y la nota como un sello */
+.apunte.examen-nota { position: relative; justify-items: center; text-align: center; overflow: hidden; }
+.examen-nota .apunte-etq { justify-self: start; }
+.examen-centro { position: relative; display: grid; place-items: center; width: 150px; height: 150px; }
+.examen-aro { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.examen-aro circle { fill: none; stroke-width: 11; }
+.examen-aro .fondo { stroke: var(--tono-suave); }
+.examen-aro .lleno { stroke: var(--tono); stroke-linecap: round; stroke-dashoffset: var(--hasta); }
+.examen-pct { font-size: 2.25rem; font-weight: 800; font-stretch: var(--ancho-marcador, 78%); color: var(--tono-tinta); }
+.examen-nota h2 { display: grid; justify-items: center; gap: 12px; }
+.examen-sello { display: inline-block; padding: 6px 16px; border: 3px solid var(--tono); border-radius: 12px; color: var(--tono-tinta); font-size: 1.125rem; font-weight: 900;
+  text-transform: uppercase; letter-spacing: .04em; transform: rotate(-6deg); }
+
+/* 17 · El curso como camino: las lecciones unidas por una línea, la de ahora brillando; al acabarlo, el diploma */
+.apuntes-curso-puntos { position: relative; gap: 10px; }
+.apuntes-curso-puntos::before { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 2px; margin-top: -1px; background: color-mix(in srgb, var(--morado) 22%, transparent); }
+.apuntes-curso-puntos i { position: relative; width: 11px; height: 11px; }
+.apuntes-curso-puntos i.ahora { background: var(--hoja); box-shadow: 0 0 0 3px var(--morado), 0 0 0 7px color-mix(in srgb, var(--morado) 20%, transparent); }
+.vacio-apuntes { justify-items: center; text-align: center; }
+.apuntes-dibujo { width: 168px; height: auto; }
+.apuntes-dibujo .sombra { fill: color-mix(in srgb, var(--tinta) 8%, transparent); }
+.apuntes-dibujo .hoja { fill: var(--hoja-2); stroke: color-mix(in srgb, var(--morado) 45%, transparent); stroke-width: 2; stroke-linejoin: round; }
+.apuntes-dibujo .lomo { fill: color-mix(in srgb, var(--morado) 18%, var(--hoja)); stroke: color-mix(in srgb, var(--morado) 45%, transparent); stroke-width: 2; }
+.apuntes-dibujo .renglon { fill: none; stroke: color-mix(in srgb, var(--morado) 28%, transparent); stroke-width: 2; stroke-linecap: round; }
+.apuntes-dibujo .lapiz { fill: var(--disco-amarillo); stroke: #8F5E00; stroke-width: 1.5; stroke-linejoin: round; }
+.apuntes-dibujo .punta { fill: #6B4A2B; }
+.apuntes-dibujo .sello { fill: var(--disco-rojo); }
+.apuntes-dibujo .estrella { fill: #FFE9B0; }
+.diploma-curso { font-size: 1.25rem; font-weight: 800; color: var(--morado); }
+
+/* 18 · Las medallas: el metal de su nivel, con un brillo que las cruza; y la nueva, en grande */
+.apuntes-medalla-dibujo { position: relative; display: inline-block; width: 18px; height: 22px; overflow: hidden; vertical-align: -5px; flex: none; }
+.apuntes-medalla-dibujo svg { width: 100%; height: 100%; display: block; }
+.apuntes-medalla-dibujo .cinta-a { fill: var(--disco-azul); } .apuntes-medalla-dibujo .cinta-b { fill: var(--disco-rojo); }
+.apuntes-medalla-dibujo .aro { fill: none; stroke: rgb(255 255 255 / .45); stroke-width: 1.2; }
+.apuntes-medalla-dibujo .centro { fill: rgb(255 255 255 / .9); }
+.metal-bronce .disco { fill: #B87333; } .metal-plata .disco { fill: #A9AEBF; } .metal-oro .disco { fill: #E3AA00; } .metal-lavanda .disco { fill: #8C78FF; }
+.apuntes-medalla-dibujo .brillo { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / .75) 50%, transparent 65%); transform: translateX(-120%); }
+.apuntes-medalla-dibujo.grande { width: 112px; height: 134px; vertical-align: 0; filter: drop-shadow(0 10px 18px rgb(27 23 48 / .3)); }
+.apuntes-medalla-nueva { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; pointer-events: none;
+  background: color-mix(in srgb, var(--tiza) 82%, transparent); backdrop-filter: blur(3px); }
+.apuntes-medalla-nueva strong { margin-top: 10px; font-size: .875rem; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
+.apuntes-medalla-nueva span:last-child { font-size: 1.75rem; font-weight: 800; }
+
+/* El confeti: papelillos de cuatro colores que caen una vez */
+.apuntes-confeti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.apuntes-medalla-nueva .apuntes-confeti { position: fixed; }
+.apuntes-confeti i { position: absolute; top: -12px; width: 7px; height: 12px; border-radius: 2px; opacity: 0; }
+.apuntes-confeti .c0 { background: var(--disco-amarillo); } .apuntes-confeti .c1 { background: var(--morado); } .apuntes-confeti .c2 { background: var(--disco-verde); } .apuntes-confeti .c3 { background: var(--disco-rojo); }
+.examen-nota > :not(.apuntes-confeti) { position: relative; z-index: 1; }
+
+/* 19 · En Semana: los siete días, encendidos los que ha aprendido algo */
+.apuntes-semana { display: flex; gap: 6px; align-items: center; }
+.apuntes-semana span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: .6875rem; font-weight: 750; color: var(--tinta-3);
+  background: color-mix(in srgb, var(--tinta) 6%, transparent); }
+.apuntes-semana span.hecho { background: var(--morado); color: var(--sobre-morado); }
+.apuntes-semana span.hoy:not(.hecho) { box-shadow: inset 0 0 0 2px var(--morado); color: var(--morado); }
+.apuntes-semana span.futuro { opacity: .55; }
+
+/* 20 · En Hoy: la novedad, con su cinta «Nuevo» que brilla */
+.apuntes-tarjeta { position: relative; overflow: hidden; }
+.apuntes-cinta { position: absolute; right: -30px; top: 9px; width: 104px; padding: 2px 0; transform: rotate(35deg); text-align: center; font-size: .625rem; font-weight: 850;
+  letter-spacing: .12em; text-transform: uppercase; color: #fff; background: var(--disco-verde); overflow: hidden; pointer-events: none; }
+.apuntes-cinta::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / .6) 50%, transparent 70%); transform: translateX(-130%); }
+.apuntes-tarjeta.con-novedad .apuntes-tarjeta-botones { margin-right: 22px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .apuntes::before { animation: ap-flota 18s ease-in-out infinite alternate; }
+  .apuntes::after { animation: ap-flota 22s ease-in-out infinite alternate-reverse; }
+  /* (la tarjeta nueva entra desde el mazo; con la anterior yéndose, del lado contrario) */
+  .apunte-mazo > .apunte { animation: ap-entra .38s cubic-bezier(.2, .85, .3, 1) both; }
+  .apunte-mazo > .apunte.girando { animation: ap-gira .5s cubic-bezier(.3, .7, .3, 1) both; }
+  .apunte-saliente.va-izquierda { animation: ap-va-izq .55s cubic-bezier(.5, 0, .7, .4) both; }
+  .apunte-saliente.va-derecha { animation: ap-va-der .55s cubic-bezier(.5, 0, .7, .4) both; }
+  .apunte-marca { animation: ap-sello .3s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .apunte-rotulador { animation: ap-rotulador .7s .25s cubic-bezier(.4, 0, .2, 1) both; }
+  .apunte-sello { animation: ap-sello-entra .45s .08s cubic-bezier(.3, 1.5, .5, 1) both; }
+  .apunte-marca-buena { animation: ap-dibuja .45s ease-out both; }
+  .apunte-opcion.mala { animation: ap-tiembla .4s ease-in-out; }
+  .apunte-marcapaginas { animation: ap-cae .45s cubic-bezier(.3, 1.4, .5, 1) both; }
+  .apunte-ondas i { animation: ap-onda .7s ease-in-out infinite alternate; }
+  .apunte-ondas i:nth-child(2) { animation-delay: .18s; } .apunte-ondas i:nth-child(3) { animation-delay: .36s; } .apunte-ondas i:nth-child(4) { animation-delay: .1s; }
+  .apunte-definicion { animation: ap-bocadillo .22s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: 30px 0; }
+  .apuntes-barra.final i { animation: ap-late 1s ease-in-out infinite; }
+  .apuntes-puntos i:last-child { animation: ap-punto .35s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .examen-aro .lleno { animation: ap-aro 1.1s .15s cubic-bezier(.3, .7, .3, 1) both; }
+  .examen-sello { animation: ap-sello .35s 1.1s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .apuntes-confeti i { animation-name: ap-confeti; animation-timing-function: cubic-bezier(.3, .4, .6, 1); animation-fill-mode: both; }
+  .apuntes-curso-puntos i.ahora { animation: ap-ahora 1.6s ease-in-out infinite; }
+  .apuntes-medalla-dibujo .brillo { animation: ap-brillo 4.5s 1s ease-in-out infinite; }
+  .apuntes-medalla-nueva { animation: ap-aparece 2.8s ease both; }
+  .apuntes-medalla-nueva .apuntes-medalla-dibujo { animation: ap-medalla .6s cubic-bezier(.3, 1.5, .5, 1) both; }
+  .apuntes-cinta::after { animation: ap-brillo-cinta 3.2s 1s ease-in-out infinite; }
+  .vacio-apuntes .apuntes-dibujo .lapiz, .vacio-apuntes .apuntes-dibujo .punta { animation: ap-escribe 2.4s ease-in-out infinite alternate; transform-box: view-box; transform-origin: 130px 30px; }
+  .diploma .apuntes-dibujo { animation: ap-medalla .6s cubic-bezier(.3, 1.5, .5, 1) both; }
+}
+@keyframes ap-flota { from { transform: translate(0, 0); } to { transform: translate(6vmax, 4vmax); } }
+@keyframes ap-entra { from { transform: translateY(14px) scale(.965); } }
+@keyframes ap-gira { 0% { transform: perspective(900px) rotateY(-90deg); } 100% { transform: perspective(900px) rotateY(0); } }
+@keyframes ap-va-izq { to { transform: translate(-115%, 30px) rotate(-14deg); opacity: 0; } }
+@keyframes ap-va-der { to { transform: translate(115%, 30px) rotate(14deg); opacity: 0; } }
+@keyframes ap-sello { from { transform: rotate(-12deg) scale(1.8); opacity: 0; } }
+@keyframes ap-rotulador { from { background-size: 0% 100%; } }
+@keyframes ap-sello-entra { from { transform: scale(.4) rotate(-30deg); opacity: 0; } }
+@keyframes ap-dibuja { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes ap-tiembla { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+@keyframes ap-cae { from { transform: translateY(-40px); } }
+@keyframes ap-onda { from { height: 25%; } to { height: 100%; } }
+@keyframes ap-bocadillo { from { transform: scale(.85); opacity: 0; } }
+@keyframes ap-late { 50% { opacity: .55; } }
+@keyframes ap-punto { from { transform: scale(0); } }
+@keyframes ap-aro { from { stroke-dashoffset: 326.73; } }
+@keyframes ap-confeti { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--deriva), 105vh) rotate(var(--giro)); } }
+@keyframes ap-ahora { 50% { box-shadow: 0 0 0 3px var(--morado), 0 0 0 9px color-mix(in srgb, var(--morado) 8%, transparent); } }
+@keyframes ap-brillo { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@keyframes ap-aparece { 0% { opacity: 0; } 10%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ap-medalla { from { transform: scale(.3) rotate(-25deg); opacity: 0; } }
+@keyframes ap-brillo-cinta { 0%, 75% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+@keyframes ap-escribe { from { transform: translate(0, 0); } to { transform: translate(-6px, 4px); } }
