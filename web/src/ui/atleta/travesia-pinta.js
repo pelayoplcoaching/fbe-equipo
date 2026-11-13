@@ -50,6 +50,9 @@ export function nuevoPaisaje(semilla = 1) {
     ciervo: 120 + r() * 420,   // (travesia-bella) dónde asoma el ciervo de lejos
     // (top, tanda 1) los textos que suben («¡Por los pelos!», «+2») y las cordilleras ya pintadas (se pintan una vez y se desplazan)
     textos: [], fondo: null, estela: [],
+    // (jugo) las ondas de la caída limpia, las copias del doble salto, lo que salta del suelo, los pedazos del aullido, la
+    // cinta del combo, los fuegos del récord y el momento del destello
+    ondas: [], ecos: [], suelto: [], pedazos: [], cinta: [], fuegos: [], tDestello: -9, tDoble: -9, consLinea: null,
   };
 }
 
@@ -217,7 +220,11 @@ function lobo(c, e, fase, tinta = null, vida = null) {
     tri(c, 0.94, 0.84, 1.28, 0.87, 1.02, 0.94, sombra);
     c.fillStyle = MORADO_NOCHE; c.beginPath(); c.arc(1.345, 0.955, 0.04, 0, 6.3); c.fill();
     if (vida?.ojos === 'cerrados' || vida?.aulla) { c.strokeStyle = MORADO_NOCHE; c.lineWidth = 0.022; c.lineCap = 'round'; c.beginPath(); c.moveTo(0.955, 1.07); c.lineTo(1.03, 1.09); c.stroke(); }
+    // (jugo, tanda 9) concentrado: el ojo entornado, con la ceja baja
+    else if (vida?.cara === 'concentrado') { c.beginPath(); c.ellipse(0.995, 1.075, 0.036, 0.016, -0.25, 0, 6.3); c.fill(); c.strokeStyle = MORADO_NOCHE; c.lineWidth = 0.02; c.lineCap = 'round'; c.beginPath(); c.moveTo(0.94, 1.125); c.lineTo(1.05, 1.105); c.stroke(); }
     else { c.beginPath(); c.ellipse(0.99, 1.08, 0.036, 0.028, -0.3, 0, 6.3); c.fill(); }
+    // (jugo, tanda 9) cansado al final: la lengua fuera
+    if (vida?.cara === 'lengua') { c.fillStyle = '#F07A9A'; c.beginPath(); c.ellipse(1.2, 0.8, 0.06, 0.1, 0.35, 0, 6.3); c.fill(); c.fillStyle = '#C9506F'; c.fillRect(1.19, 0.78, 0.012, 0.07); }
   });
   // Las patas de delante
   pata(c, -0.56, 0.52, atras, aire ? 0.55 : -0.4, 0.29, claro, 0.2);
@@ -873,9 +880,59 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       if (que) p.textos.push({ x: x0 + u * 0.5, y: sy(e.y + 1.8), txt: que, t: 1.3, t0: 1.3, grande: true });
       if (s === 'pot-aullido') for (let i = 0; i < 3; i++) p.aros.push({ x: x0 + u * 1.2, y: sy(e.y + 1.1), t: 0.32 + i * 0.12 });
     }
-    if (s === 'estrella' && combo > 1) p.textos.push({ x: x0 + 16, y: sy(e.y + 1.3), txt: `+${combo}`, t: 0.8, t0: 0.8 });
+    // (jugo, tanda 9) lo que vale cada estrella sube desde donde la coges (más grande con el combo); la dorada y la
+    // constelación, a lo grande
+    if (s === 'estrella') { const v = e.valeUltima || 1; p.textos.push({ x: x0 + 16, y: sy(e.y + 1.3), txt: combo > 1 ? `+${v} ×${combo}` : `+${v}`, t: 0.8, t0: 0.8, tam: 13 + Math.min(4, combo) * 2 }); }
+    if (s === 'dorada') p.textos.push({ x: x0 + 16, y: sy(e.y + 1.5), txt: '+10', t: 1.1, t0: 1.1, tam: 26 });
+    if (s === 'constelacion') {
+      p.textos.push({ x: x0 + u * 0.6, y: sy(e.y + 2), txt: `¡Constelación! +${e.valeUltima}`, t: 1.3, t0: 1.3, grande: true, tam: 19 });
+      p.consLinea = { grupo: e.grupoHecho, t: 1.1 };
+      const g = e.estrellas.filter((x) => x.grupo === e.grupoHecho), gx = g.length ? sx(g.reduce((n, x) => n + x.x, 0) / g.length) : x0, gy = g.length ? sy(Math.max(...g.map((x) => x.y))) : sy(2.4);
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * 6.28; p.chispas.push({ x: gx, y: gy, vx: Math.cos(a) * 150, vy: Math.sin(a) * 120 - 30, t: 0.7, oro: i % 2 === 0 }); }
+    }
+    // (jugo, tanda 9) la caída limpia: una onda en el suelo y un aro de polvo
+    if (s === 'limpio') {
+      p.ondas.push({ x: x0, y: sy(gL) + 2, t: 0.5 });
+      p.textos.push({ x: x0 - u * 0.2, y: sy(gL + 1.9), txt: '¡Limpio!', t: 0.7, t0: 0.7, tam: 13, color: TIZA });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.28; p.polvo.push({ x: x0 - u * 0.2 + Math.cos(a) * 6, y: sy(gL) - 2, vx: Math.cos(a) * 70, vy: -8 - Math.abs(Math.sin(a)) * 16, r: 2.6, t: 0.4, t0: 0.4 }); }
+    }
+    // (jugo, tanda 9) al caer salta lo que hay en el suelo: piedrecillas, hojas, nieve en polvo o pétalos, según el paisaje
+    if ((s === 'cae' || s === 'limpio') && !minimo) {
+      const n = s === 'limpio' ? 7 : 4;
+      for (let i = 0; i < n; i++) p.suelto.push({ x: x0 - u * 0.2 + (i - n / 2) * 5, y: sy(gL) - 2, vx: (i - n / 2) * 26 + 10, vy: -60 - (i % 3) * 30, g: paisaje, a: i * 1.3, t: 0.75, t0: 0.75 });
+    }
+    if (s === 'doble') p.tDoble = t;
+    // (jugo, tanda 9) el golpe del momento: un destello corto (la pausa del juego la pone la pantalla)
+    if (s === 'dorada' || s === 'combo' || s === 'roce' || s === 'constelacion') p.tDestello = t;
   }
   e.sucesos.length = 0;
+  // (jugo, tanda 9) la onda de la caída limpia, que se abre por el suelo
+  p.ondas = p.ondas.filter((q) => (q.t -= dt) > 0);
+  c.strokeStyle = TIZA; c.lineWidth = 2;
+  for (const q of p.ondas) { q.x -= e.v * u * dt * 0.8; const k = 1 - q.t / 0.5; c.globalAlpha = (1 - k) * 0.6; c.beginPath(); c.ellipse(q.x, q.y, u * (0.5 + k * 2.3), u * (0.08 + k * 0.22), 0, 0, 6.3); c.stroke(); }
+  c.globalAlpha = 1;
+  // (lo que ha saltado del suelo: cae y se va quedando atrás)
+  p.suelto = p.suelto.filter((q) => (q.t -= dt) > 0);
+  for (const q of p.suelto) {
+    q.x += (q.vx - e.v * u * 0.7) * dt; q.vy += (q.g === 1 || q.g === 3 ? 140 : 300) * dt; q.y = Math.min(q.y + q.vy * dt, suelo - 1); q.a += dt * 7;
+    c.globalAlpha = Math.min(1, (q.t / q.t0) * 2);
+    if (q.g === 1 || q.g === 3) { c.fillStyle = q.g === 1 ? (q.a % 2 < 1 ? '#3FBF80' : '#B08A3E') : '#F2A6C8'; c.beginPath(); c.ellipse(q.x + Math.sin(q.a) * 3, q.y, 3.4, 1.6, q.a, 0, 6.3); c.fill(); }
+    else if (q.g === 2) { c.fillStyle = TIZA; c.beginPath(); c.arc(q.x, q.y, 2.6, 0, 6.3); c.fill(); }
+    else { c.fillStyle = '#A69CDB'; c.save(); c.translate(q.x, q.y); c.rotate(q.a); c.fillRect(-1.8, -1.8, 3.6, 3.6); c.restore(); }
+  }
+  c.globalAlpha = 1;
+  // (jugo, tanda 9) la constelación del camino, completa: líneas entre sus estrellas, que se apagan
+  if (p.consLinea) {
+    const cl = p.consLinea;
+    if ((cl.t -= dt) <= 0 || quieto) p.consLinea = null;
+    else {
+      const pts = e.estrellas.filter((x) => x.grupo === cl.grupo).map((x) => [sx(x.x), sy(x.y)]);
+      c.strokeStyle = ORO; c.lineWidth = 2; c.globalAlpha = Math.min(1, cl.t * 1.6); c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); pts.forEach(([a, b], i) => (i ? c.lineTo(a, b) : c.moveTo(a, b))); c.stroke();
+      c.fillStyle = '#FFF3C4'; for (const [a, b] of pts) { estrella4(c, a, b, 6, t * 2); c.fill(); }
+      c.globalAlpha = 1;
+    }
+  }
   // (el polvo de correr: una nubecilla tras las patas de atrás cuando va lanzado)
   if (!quieto && !minimo && dt > 0 && !enAire && e.tropiezo === 0 && e.v > 7) {
     p.tPolvo += dt;
@@ -1043,11 +1100,13 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   const kAulla = aulla ? (quieto ? 1 : Math.min(1, (t - p.tFin) / 0.5)) : 0;
   const vida = {
     cola: aulla ? 0.5 : quieto ? null : colaAlViento({ fase: p.zancada, vy: e.vy, enAire, racha: e.racha }),
-    orejas: aulla ? 0.8 * kAulla : quieto ? 0 : enAire ? Math.max(-1, Math.min(1, e.vy / 14)) : Math.sin(p.zancada * 2) * 0.12,
+    orejas: aulla ? 0.8 * kAulla : quieto ? 0 : enAire ? Math.max(-1, Math.min(1, e.vy / 14)) : e.combo >= 3 ? -0.65 + Math.sin(p.zancada * 2) * 0.05 : Math.sin(p.zancada * 2) * 0.12,
     cabeza: aulla ? 0.78 * kAulla : quieto ? 0 : enAire ? Math.max(-0.12, Math.min(0.16, e.vy * 0.01)) : Math.sin(p.zancada) * 0.025,
     ojos: !quieto && (e.tropiezo > 0 || parpadea(t - p.t0, e.semilla % 97)) ? 'cerrados' : null,
     luz: deDia ? null : bajo ? '#FFD2B0' : '#FFFFFF',
     aulla,
+    // (jugo, tanda 9) su cara: concentrado con el combo alto; con la lengua fuera en los últimos segundos
+    cara: aulla || quieto ? null : Number.isFinite(quedan) && quedan > 0 && quedan <= 8 ? 'lengua' : e.combo >= 3 ? 'concentrado' : null,
     adornos,
   };
   // (top, tanda 3) el aura plateada, detrás del lobo; y la estela de estrellas, que se queda atrás
@@ -1062,6 +1121,15 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.fillStyle = ORO;
     for (const q of p.estela) { q.x -= e.v * u * dt * 0.8; c.globalAlpha = q.t / 0.6; estrella4(c, q.x, q.y, 2.2 + q.t * 3, t * 3); c.fill(); }
     c.globalAlpha = 1;
+  }
+  // (jugo, tanda 9) el doble salto deja detrás dos o tres copias del lobo que se desvanecen, en abanico
+  if (!quieto && !minimo && !fin && dt > 0 && enAire && t - p.tDoble < 0.36 && (p.tEco = (p.tEco || 0) + dt) > 0.05) { p.tEco = 0; p.ecos.push({ x: x0, y: sy(yL), vy: e.vy, t: 0.3 }); }
+  p.ecos = p.ecos.filter((q) => (q.t -= dt) > 0);
+  for (const q of p.ecos) {
+    q.x -= e.v * u * dt * 0.9;
+    c.save(); c.globalAlpha = (q.t / 0.3) * 0.32; c.translate(q.x, q.y); c.scale(u, -u);
+    lobo(c, { saltos: 1, tropiezo: 0, vy: q.vy, agachado: 0 }, p.zancada, { claro: '#C9BCFF', sombra: '#8C78FF' });
+    c.restore();
   }
   c.save();
   c.translate(x0, sy(yL)); c.scale(u * forma.sx, -u * forma.sy);
@@ -1155,10 +1223,10 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     for (const q of p.textos) {
       const k = 1 - q.t / q.t0;
       c.globalAlpha = Math.min(1, (q.t / q.t0) * 2.5);
-      c.font = `800 ${q.grande ? 17 : 15}px system-ui, sans-serif`;
+      c.font = `800 ${q.tam || (q.grande ? 17 : 15)}px system-ui, sans-serif`;
       c.strokeStyle = 'rgba(11, 7, 38, .75)'; c.lineWidth = 4;
       const ty = q.y - (quieto ? 0 : k * 34);
-      c.strokeText(q.txt, q.x, ty); c.fillStyle = q.grande ? TIZA : ORO; c.fillText(q.txt, q.x, ty);
+      c.strokeText(q.txt, q.x, ty); c.fillStyle = q.color || (q.grande ? TIZA : ORO); c.fillText(q.txt, q.x, ty);
     }
     c.globalAlpha = 1;
   }
@@ -1177,6 +1245,8 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     c.globalAlpha = 1;
   }
   c.restore();
+  // (jugo, tanda 9) el destello del golpe: un instante de luz sobre toda la escena
+  if (!quieto && t - p.tDestello < 0.14) { c.fillStyle = `rgba(255, 246, 214, ${0.24 * (1 - (t - p.tDestello) / 0.14)})`; c.fillRect(0, 0, w, h); }
   // (travesia-bella) los diez últimos segundos: alrededor de la cuenta, un marco que se vacía y late con cada segundo
   if (reloj && Number.isFinite(quedan) && quedan > 0 && quedan <= 10 && !fin) {
     const late = quieto ? 0 : Math.max(0, 1 - (1 - (quedan % 1)) * 5);

@@ -204,3 +204,16 @@ export function enRastro(rastro, t) {
 }
 // Las ligas: 0 bronce, 1 plata, 2 oro
 export const LIGAS = ['Liga de bronce', 'Liga de plata', 'Liga de oro'];
+
+// ---------- (jugo, tanda 9) Las estrellas en escala y el golpe del momento ----------
+// Cada estrella seguida suena una nota más aguda de una escala pentatónica (siempre suena bien), hasta dos octavas;
+// si pasa más de ESCALA_PAUSA s sin coger ninguna, o tropieza, vuelve a empezar
+export const ESCALA_PAUSA = 1.4;
+const PENTA = [0, 2, 4, 7, 9];
+export function notaEscala(n, base = 880) {
+  const k = Math.max(0, Math.min(10, Math.floor(n) || 0));
+  return Math.round(base * 2 ** ((PENTA[k % 5] + 12 * Math.floor(k / 5)) / 12));
+}
+// El golpe: lo que para el juego un instante (en su reloj, nunca en el del descanso)
+export const GOLPE = { dura: 0.06, cosas: ['dorada', 'combo', 'roce', 'constelacion'] };
+export const hayGolpe = (sucesos) => sucesos.some((s) => GOLPE.cosas.includes(s));

@@ -3,7 +3,7 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas, semillaDelDia, marcasDelCamino, ETAPA_DIA } from '../../logica/travesia.js';
-import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO, fechaEspecial, NOMBRE_FECHA, apuntarRastro, enRastro } from '../../logica/travesia-efectos.js';
+import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO, fechaEspecial, NOMBRE_FECHA, apuntarRastro, enRastro, notaEscala, ESCALA_PAUSA, GOLPE, hayGolpe } from '../../logica/travesia-efectos.js';
 import { crearSonido } from './travesia-sonido.js';
 import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
@@ -58,14 +58,14 @@ function tiempoGuardado() {
   } catch { return {}; }
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
-const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], dorada: [1568, 0.25, 0.14], alcanzado: [196, 0.2, 0.16], escapado: [1046, 0.2, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
+const SONIDOS = { limpio: [740, 0.05, 0.09], constelacion: [1760, 0.32, 0.14], salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], dorada: [1568, 0.25, 0.14], alcanzado: [196, 0.2, 0.16], escapado: [1046, 0.2, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
 // (top, tanda 3) El modo foto: la escena del final, con una franja abajo (los metros y el nombre del juego; ningún nombre
 // de persona), como imagen para compartir o guardar
 async function fotoDeEtapa(lienzo, metros) {
   return compartirArchivo(await conFranja(lienzo, `La travesía · ${textoDistancia(metros)}`), 'la-travesia.png');
 }
 // (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
-const VIBRA = { salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
+const VIBRA = { limpio: 'tv-salto', constelacion: 'tv-combo', salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
 const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!' };
 // (remate, tanda 6) lo que dice el cartel con cada cosa nueva
@@ -266,6 +266,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     // (remate, tanda 5) la vuelta suave (al volver de una pausa o a la app, 3, 2, 1 antes de seguir), las pisadas, el
     // «prepárate» de los cinco últimos segundos y el ahorro de batería (con la batería baja, la mitad de cuadros)
     let enPausa = false, vuelta = null, pisada = 0, preparado = false, ahorro = false, saltaCuadro = false;
+    // (jugo, tanda 9) el golpe del momento (el juego se para un instante) y la escala de las estrellas seguidas
+    let congela = 0, escala = 0, tEscala = -9;
     navigator.getBattery?.().then((b) => { const mira = () => { ahorro = !b.charging && b.level <= 0.2; }; mira(); b.addEventListener?.('levelchange', mira); b.addEventListener?.('chargingchange', mira); }).catch(() => {});
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
@@ -282,16 +284,23 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (vueltaTxt.current && vueltaTxt.current.textContent !== (n ? String(n) : '')) { vueltaTxt.current.textContent = n ? String(n) : ''; vueltaTxt.current.hidden = !n; }
       const parado = acabada || pausado || n > 0;
       if (!acabada && !pausado && q <= 0) acabar();
-      else if (!parado) avanzar(e, dt);
+      else if (!parado) { if (congela > 0) congela -= dt; else avanzar(e, dt); }
       // (el sonido de verdad: cada cosa con su sonido, las pisadas según lo que pisa y el viento con la velocidad)
       const sn = sonidoRef.current;
-      if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) { if (sn) sn.efecto(SONIDOS[s]); else tono(...SONIDOS[s]); }
+      if (suena.current) for (const s of e.sucesos) {
+        let son = SONIDOS[s];
+        // (jugo, tanda 9) cada estrella seguida, una nota más aguda
+        if (s === 'estrella') { if (e.t - tEscala > ESCALA_PAUSA) escala = 0; son = [notaEscala(escala), 0.06, 0.12]; escala += 1; tEscala = e.t; }
+        if (s === 'tropiezo') escala = 0;
+        if (son) { if (sn) sn.efecto(son); else tono(...son); }
+      }
       if (sn && !parado) {
         if (e.saltos === 0 && !e.calma && e.x - pisada >= PASO) { pisada = e.x; sn.paso(e.sobre ? 'madera' : amb.paisaje === 2 ? 'nieve' : 'hierba'); }
         sn.viento(e.saltos ? e.v + 1.5 : e.v);
         if (accesible.current.sonar) for (const pt of pitidos(e.obstaculos, e.x, e.v)) sn.aviso(pt.tipo, pt.cerca);
       } else if (sn) sn.viento(0);
       const pasaron = e.sucesos.slice();   // (lo de este cuadro: pintar() lo vacía)
+      if (!quieto && !parado && hayGolpe(pasaron)) congela = GOLPE.dura;
       if (delDia && !acabada) apuntarRastro(rastro, e.t, e.x, e.y);
       const amigoE = amigo ? { ...enRastro(amigo.rastro, e.t), nombre: amigo.nombre } : null;
       if (amigo && !amigo.dicho && e.t > 3.2 && !parado) { amigo.dicho = true; anunciar(`Hoy corres con el lobo de ${amigo.nombre}`); }
