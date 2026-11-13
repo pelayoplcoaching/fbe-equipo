@@ -58,6 +58,13 @@ create index if not exists agenda_vida_atleta_fecha on public.agenda_vida (atlet
 alter table public.agenda_vida enable row level security;
 revoke all on public.agenda_vida from public, anon, authenticated;
 
+-- (revisión) Un texto que verá el otro: sin caracteres invisibles ni de dirección, los espacios juntos y, si no se ve nada, null
+create or replace function fbe_privado.texto_limpio(p text) returns text
+language sql stable set search_path = '' as $$
+  select case when t is null or not public.texto_visible(t) then null else t end
+  from (select nullif(btrim(regexp_replace(regexp_replace(coalesce(p, ''), E'[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]', '', 'g'), '[[:space:][:cntrl:]]+', ' ', 'g')), '') as t) x;
+$$;
+
 -- Quién la mira: el atleta, la suya; el coach, la de cualquiera (p_atleta)
 create or replace function fbe_privado.agenda_atleta(p_atleta uuid) returns uuid
 language plpgsql stable security definer set search_path = '' as $$
@@ -91,9 +98,17 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_atleta uuid := fbe_privado.agenda_atleta(p_atleta);
   v_hoy date := (now() at time zone 'Europe/Madrid')::date;
-  v_tipo text := p_datos ->> 'tipo';
+  v_tipo text;
   v_fecha date; v_titulo text; v_nota text; v public.agenda_vida;
 begin
+  -- (revisión) cada clave, texto (o nada)
+  if p_datos is null or jsonb_typeof(p_datos) <> 'object'
+     or exists (select 1 from jsonb_each(p_datos) e where e.key in ('tipo', 'fecha', 'titulo', 'nota') and jsonb_typeof(e.value) not in ('string', 'null')) then
+    raise exception 'Esos datos no valen' using errcode = '22023';
+  end if;
+  v_tipo := p_datos ->> 'tipo';
+  -- (revisión) una cosa a la vez por atleta (el tope de 300 y lo repetido)
+  perform pg_advisory_xact_lock(hashtext('fbe-agenda:' || v_atleta::text));
   if not public.es_coach() and exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then
     raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
   end if;
@@ -101,8 +116,11 @@ begin
   if v_tipo = 'reto' and not public.es_coach() then raise exception 'El reto lo pone el coach' using errcode = '42501'; end if;
   begin v_fecha := (p_datos ->> 'fecha')::date; exception when others then raise exception 'Fecha no válida' using errcode = '22023'; end;
   if v_fecha is null or v_fecha < v_hoy - 366 or v_fecha > v_hoy + 730 then raise exception 'La fecha tiene que estar entre hace un año y dentro de dos' using errcode = '22023'; end if;
-  v_titulo := nullif(btrim(regexp_replace(coalesce(p_datos ->> 'titulo', ''), '[[:space:][:cntrl:]]+', ' ', 'g')), '');
-  v_nota := nullif(btrim(coalesce(p_datos ->> 'nota', '')), '');
+  -- (revisión) la semana difícil, por su lunes
+  if v_tipo = 'dificil' then v_fecha := v_fecha - (extract(isodow from v_fecha)::int - 1); end if;
+  v_titulo := fbe_privado.texto_limpio(p_datos ->> 'titulo');
+  v_nota := nullif(btrim(regexp_replace(coalesce(p_datos ->> 'nota', ''), E'[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]', '', 'g')), '');
+  if v_nota is not null and not public.texto_visible(v_nota) then v_nota := null; end if;
   if v_titulo is null and v_tipo not in ('dificil', 'guardia') then raise exception 'Ponle un nombre' using errcode = '22023'; end if;
   if char_length(v_titulo) > 80 then raise exception 'El nombre, como mucho 80 caracteres' using errcode = '22023'; end if;
   if char_length(v_nota) > 300 then raise exception 'La nota, como mucho 300 caracteres' using errcode = '22023'; end if;
@@ -128,16 +146,23 @@ begin
   if not public.es_coach() and (v.atleta_id is distinct from public.mi_atleta_id() or v.autor <> 'atleta') then
     raise exception 'Solo puedes borrar lo que apuntaste tú' using errcode = '42501';
   end if;
+  if not public.es_coach() and public.esta_de_baja() then  -- (revisión)
+    raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
+  end if;
   delete from public.agenda_vida where id = p_id;
 end $$;
 
 -- El atleta contesta qué tal fue (bien, regular, mal y una nota): lo ve su coach
 create or replace function public.agenda_responder(p_id uuid, p_respuesta text, p_nota text default null) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare v public.agenda_vida; v_nota text := nullif(btrim(coalesce(p_nota, '')), '');
+declare v public.agenda_vida; v_nota text := nullif(btrim(regexp_replace(coalesce(p_nota, ''), E'[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]', '', 'g')), '');
 begin
+  if v_nota is not null and not public.texto_visible(v_nota) then v_nota := null; end if;
   select * into v from public.agenda_vida where id = p_id;
   if v.id is null or v.atleta_id is distinct from public.mi_atleta_id() then raise exception 'Eso no es tuyo' using errcode = '42501'; end if;
+  -- (revisión) de baja, nada; y solo se contesta a lo que viene en su vida (los eventos)
+  if public.esta_de_baja() then raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada'; end if;
+  if v.tipo <> 'evento' then raise exception 'Eso no se contesta' using errcode = '22023'; end if;
   if p_respuesta is null or p_respuesta not in ('bien', 'regular', 'mal') then raise exception 'Respuesta no válida' using errcode = '22023'; end if;
   if char_length(v_nota) > 300 then raise exception 'Como mucho 300 caracteres' using errcode = '22023'; end if;
   update public.agenda_vida set respuesta = p_respuesta, respuesta_nota = v_nota, respondida_en = now() where id = p_id returning * into v;
@@ -181,13 +206,21 @@ begin
     raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
   end if;
   if p_datos is null or jsonb_typeof(p_datos) <> 'object' then raise exception 'Faltan los datos'; end if;
-  v_feedback := nullif(p_datos ->> 'manual_feedback', '');
+  -- (revisión) cada clave con su tipo; la que no viene se queda como estaba
+  if exists (select 1 from jsonb_each(p_datos) e where e.key in ('manual_feedback', 'manual_evitar') and jsonb_typeof(e.value) not in ('string', 'null'))
+     or (p_datos ? 'manual_motiva' and jsonb_typeof(p_datos -> 'manual_motiva') not in ('array', 'null'))
+     or (jsonb_typeof(p_datos -> 'manual_motiva') = 'array' and exists (select 1 from jsonb_array_elements(p_datos -> 'manual_motiva') x where jsonb_typeof(x) <> 'string')) then
+    raise exception 'Esos datos no valen' using errcode = '22023';
+  end if;
+  select * into v from public.personal_atleta where atleta_id = v_atleta;
+  v_feedback := case when p_datos ? 'manual_feedback' then nullif(p_datos ->> 'manual_feedback', '') else v.manual_feedback end;
   if v_feedback is not null and v_feedback not in ('directo', 'suave') then raise exception 'Feedback no válido' using errcode = '22023'; end if;
+  v_motiva := case when p_datos ? 'manual_motiva' then null else v.manual_motiva end;
   if jsonb_typeof(p_datos -> 'manual_motiva') = 'array' then
     select array_agg(distinct x) into v_motiva from jsonb_array_elements_text(p_datos -> 'manual_motiva') x;
     if v_motiva is not null and not (v_motiva <@ array['datos', 'retos', 'reconocimiento', 'compania', 'progreso']::text[]) then raise exception 'Eso no está en la lista' using errcode = '22023'; end if;
   end if;
-  v_evitar := nullif(btrim(coalesce(p_datos ->> 'manual_evitar', '')), '');
+  v_evitar := case when p_datos ? 'manual_evitar' then fbe_privado.texto_limpio(p_datos ->> 'manual_evitar') else v.manual_evitar end;
   if char_length(v_evitar) > 200 then raise exception 'Como mucho 200 caracteres' using errcode = '22023'; end if;
   insert into public.personal_atleta as t (atleta_id, manual_feedback, manual_motiva, manual_evitar, actualizado_en)
     values (v_atleta, v_feedback, v_motiva, v_evitar, now())
@@ -196,6 +229,24 @@ begin
   returning * into v;
   return fbe_privado.personal_json(v);
 end $$;
+-- (revisión) la copia completa del coach, también con la agenda (las mismas tablas de la 051 y, ahora, agenda_vida)
+create or replace function public.copia_privada() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.es_coach() then raise exception 'Solo el coach'; end if;
+  return jsonb_build_object(
+    'personal_atleta', coalesce((select jsonb_agg(to_jsonb(t)) from public.personal_atleta t), '[]'::jsonb),
+    'mensajes_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.mensajes_coach t), '[]'::jsonb),
+    'musica_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.musica_coach t), '[]'::jsonb),
+    'integraciones', coalesce((select jsonb_agg(to_jsonb(t) - 'salud_huella' - 'calendario_huella') from public.integraciones t), '[]'::jsonb),
+    'salud_diaria', coalesce((select jsonb_agg(to_jsonb(t)) from public.salud_diaria t), '[]'::jsonb),
+    'salud_copias', coalesce((select jsonb_agg(to_jsonb(t)) from public.salud_copias t), '[]'::jsonb),
+    'atajos_coach', coalesce((select jsonb_agg(to_jsonb(t)) from public.atajos_coach t), '[]'::jsonb),
+    'contacto_atleta', coalesce((select jsonb_agg(to_jsonb(t)) from public.contacto_atleta t), '[]'::jsonb),
+    'agenda_vida', coalesce((select jsonb_agg(to_jsonb(t)) from public.agenda_vida t), '[]'::jsonb));
+end $$;
+comment on function public.copia_privada() is 'Para la copia completa del coach: las tablas de la 050 y la 051 (sin las huellas de los enlaces) y la agenda (069). Solo el coach.';
+
 comment on function public.personal_manual_guardar(jsonb) is 'El atleta guarda su manual de instrucciones (cómo le gusta que le entrenen). Lo ve su coach.';
 
 -- ---------------------------------------------------------------------

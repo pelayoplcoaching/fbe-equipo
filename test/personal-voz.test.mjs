@@ -65,6 +65,15 @@ await como(gente.dani.u);
 check((await q('select comunidad_afines() as r'))[0].r === null && await falla('select comunidad_busco_companero(true)'), 'fuera de la comunidad, nada');
 await como(gente.ana.u); await q('select comunidad_busco_companero(false)');
 check((await q('select comunidad_afines() as r'))[0].r.afines.length === 0, 'al dejar de buscar, deja de ver');
+// (revisión) se apaga solo al pasar a «No salir en el ranking», y con la comunidad cerrada no hay nada
+await como(gente.bea.u);
+await q('select comunidad_ajustar(null, true)'); await q('select comunidad_ajustar(null, false)');
+await su();
+check((await q(`select busca_companero from comunidad_miembros where nombre = 'Bea M.'`))[0].busca_companero === false, '(revisión) al pasar a «No salir en el ranking», deja de buscar (y no vuelve solo)');
+await como(coach, 'aal2'); await q('update comunidad_ajustes set activa = false');
+await como(gente.ana.u);
+check((await q('select comunidad_afines() as r'))[0].r === null && await falla('select comunidad_busco_companero(true)'), '(revisión) con la comunidad cerrada, nada');
+await como(coach, 'aal2'); await q('update comunidad_ajustes set activa = true');
 await su();
 check((await q('select count(*)::int as n from fbe_migraciones where numero = 70'))[0].n === 1, 'la 070 queda apuntada');
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

@@ -34,6 +34,13 @@ check(await falla(`select agenda_guardar(null, '{"tipo": "reto", "fecha": "${mas
 check(await falla(`select agenda_guardar(null, '{"tipo": "evento", "fecha": "${mas(1)}"}'::jsonb)`) && await falla(`select agenda_guardar(null, '{"tipo": "evento", "fecha": "${mas(800)}", "titulo": "x"}'::jsonb)`)
   && await falla(`select agenda_guardar(null, '{"tipo": "otro", "fecha": "${mas(1)}", "titulo": "x"}'::jsonb)`), 'sin nombre, fuera de fechas o de otro tipo, no');
 check(await falla('select * from agenda_vida'), 'la tabla no se lee directamente');
+// (revisión) lo que verá el coach, limpio: sin invisibles ni caracteres de dirección, y cada clave, texto
+const limpio = await guardar(null, { tipo: 'evento', fecha: mas(3), titulo: 'Boda\u202e de\u200b Marta', nota: 'nota\u2066 rara' });
+check(limpio.titulo === 'Boda de Marta' && limpio.nota === 'nota rara', '(revisión) el título y la nota, sin invisibles ni caracteres de dirección');
+check(await falla(`select agenda_guardar(null, '{"tipo": "evento", "fecha": "${mas(4)}", "titulo": "\u200b\u200b"}'::jsonb)`) && await falla(`select agenda_guardar(null, '{"tipo": "evento", "fecha": "${mas(4)}", "titulo": {"x": 1}}'::jsonb)`),
+  '(revisión) un título invisible o que no es texto, no');
+check(await falla(`select agenda_responder($1, 'bien')`, [d1.id]), '(revisión) solo se contesta a un evento (no a una semana difícil)');
+await q('select agenda_borrar($1)', [limpio.id]);
 let lista = (await q('select agenda_lista() as l'))[0].l;
 check(lista.length === 3 && lista[0].tipo === 'dificil', 'su agenda, por fecha');
 const r = (await q(`select agenda_responder($1, 'bien', 'Aprobado!') as a`, [ev.id]))[0].a;
@@ -57,6 +64,10 @@ check(!(await q('select agenda_lista() as l'))[0].l.some((x) => x.id === ev.id),
 let [{ p }] = await q(`select personal_manual_guardar('{"manual_feedback": "suave", "manual_motiva": ["retos", "datos", "retos"], "manual_evitar": "Que me compares con otros"}'::jsonb) as p`);
 check(p.manual_feedback === 'suave' && p.manual_motiva.length === 2 && p.manual_evitar === 'Que me compares con otros', 'su manual: feedback, lo que le motiva (sin repetir) y lo que no quiere oír');
 check(await falla(`select personal_manual_guardar('{"manual_feedback": "borde"}'::jsonb)`) && await falla(`select personal_manual_guardar('{"manual_motiva": ["dinero"]}'::jsonb)`), 'solo lo de la lista');
+[{ p }] = await q(`select personal_manual_guardar('{"manual_feedback": "directo"}'::jsonb) as p`);
+check(p.manual_feedback === 'directo' && p.manual_motiva.length === 2 && p.manual_evitar === 'Que me compares con otros', '(revisión) lo que no viene se queda como estaba');
+check(await falla(`select personal_manual_guardar('{"manual_evitar": {"x": 1}}'::jsonb)`) && await falla(`select personal_manual_guardar('{"manual_motiva": [1]}'::jsonb)`), '(revisión) cada clave con su tipo');
+[{ p }] = await q(`select personal_manual_guardar('{"manual_feedback": "suave"}'::jsonb) as p`);
 await como(coach, 'aal2');
 const [{ l }] = await q('select personal_atletas() as l');
 check(l.find((x) => x.atleta_id === atletaA)?.manual_feedback === 'suave', 'el coach ve su manual');

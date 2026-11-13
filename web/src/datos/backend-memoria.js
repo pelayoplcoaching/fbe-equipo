@@ -2356,14 +2356,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (problema) throw new Error(problema);
       const normas = { normas_version: args.p_normas, normas_leidas_en: ahora() };
       // (como la 029: entrado_en, la última vez que entró o volvió; aceptar lo nuevo estando dentro no la cambia)
-      if (m) Object.assign(m, { perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, nombre_cambiado_en: null, ...normas, entrado_en: m.salido_en ? ahora() : (m.entrado_en || m.creado_en) });
+      if (m) Object.assign(m, { busca_companero: false, perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, nombre_cambiado_en: null, ...normas, entrado_en: m.salido_en ? ahora() : (m.entrado_en || m.creado_en) });
       else tabla('comunidad_miembros').push({ atleta_id: yo.id, perfil_id: uid, nombre: v, version: args.p_version, aceptado_en: ahora(), salido_en: null, sin_ranking: false, bloqueado: false, nombre_cambiado_en: null, creado_en: ahora(), entrado_en: ahora(), ver_entrenando: false, cardio_en_retos: false, ...normas });
       return null;
     }
     if (nombre === 'comunidad_salir') {
       if (!uid) throw new Error('Necesitas iniciar sesión');
       // (como la 041, revisión: al salir se apaga «Entrenando ahora»)
-      for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) { m.salido_en = ahora(); m.ver_entrenando = false; }
+      for (const m of tabla('comunidad_miembros')) if (m.perfil_id === uid && !m.salido_en) { m.salido_en = ahora(); m.ver_entrenando = false; m.busca_companero = false; }
       // (053) lo que solo tiene sentido estando dentro se va siempre
       const hoy053 = fechaMadrid();
       db.comunidad_intenciones = tabla('comunidad_intenciones').filter((x) => x.perfil_id !== uid);
@@ -2406,7 +2406,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           Object.assign(m, { nombre: v, nombre_cambiado_en: ahora() });
         }
       }
-      if (args.p_sin_ranking != null) m.sin_ranking = !!args.p_sin_ranking;
+      if (args.p_sin_ranking != null) { if (args.p_sin_ranking && !m.sin_ranking) m.busca_companero = false; m.sin_ranking = !!args.p_sin_ranking; }   // (070, revisión)
       return null;
     }
     if (nombre === 'comunidad_expulsar') {
@@ -3720,6 +3720,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // (050) la personalización: lo de cada atleta, por sus funciones (nadie toca la tabla); los mensajes del coach
       const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, genero: x.genero ?? null, tono: x.tono ?? null, meta_nombre: x.meta_nombre ?? null, meta_fecha: x.meta_fecha ?? null, meta_cifra: x.meta_cifra ?? null, meta_unidad: x.meta_unidad ?? null, manual_feedback: x.manual_feedback ?? null, manual_motiva: x.manual_motiva ? [...x.manual_motiva] : null, manual_evitar: x.manual_evitar ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
       // (069) su agenda de vida y su manual
+      // (revisión) lo que verá el otro: sin invisibles ni caracteres de dirección (y, si se pide, los espacios juntos)
+      const limpioVisible = (t, juntar) => { let v = String(t ?? '').replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, ''); if (juntar) v = v.replace(/[\s\u0000-\u001f\u007f]+/g, ' '); v = v.trim(); return v && textoVisible(v) ? v : null; };
       const agendaDe = (p) => { if (esCoach()) { if (!p || !tabla('atletas').some((x) => x.id === p)) throw new Error('Ese atleta no existe'); return p; } const a = miAtletaId(); if (!a) throw new Error('Solo el atleta o su coach'); return a; };
       const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
       if (nombre === 'agenda_lista') {
@@ -3729,12 +3731,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       if (nombre === 'agenda_guardar') {
         const a = agendaDe(args?.p_atleta), d = args?.p_datos || {}, hoyA = fMadrid();
+        // (069, revisión) cada clave, texto (o nada)
+        if (typeof d !== 'object' || Array.isArray(d) || ['tipo', 'fecha', 'titulo', 'nota'].some((k) => d[k] != null && typeof d[k] !== 'string')) throw new Error('Esos datos no valen');
         if (!esCoach() && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
         if (!['evento', 'dificil', 'guardia', 'hito', 'reto'].includes(d.tipo)) throw new Error('Tipo no válido');
         if (d.tipo === 'reto' && !esCoach()) throw new Error('El reto lo pone el coach');
-        const f = String(d.fecha || '');
+        let f = String(d.fecha || '');
         if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || f < sumar(hoyA, -366) || f > sumar(hoyA, 730)) throw new Error('La fecha tiene que estar entre hace un año y dentro de dos');
-        const titulo = String(d.titulo || '').replace(/\s+/g, ' ').trim() || null, nota = String(d.nota || '').trim() || null;
+        if (d.tipo === 'dificil') f = sumar(f, -(((new Date(`${f}T12:00:00Z`).getUTCDay() + 6) % 7)));   // (revisión) por su lunes
+        const titulo = limpioVisible(d.titulo, true), nota = limpioVisible(d.nota, false);
         if (!titulo && !['dificil', 'guardia'].includes(d.tipo)) throw new Error('Ponle un nombre');
         if (titulo && titulo.length > 80) throw new Error('El nombre, como mucho 80 caracteres');
         if (nota && nota.length > 300) throw new Error('La nota, como mucho 300 caracteres');
@@ -3749,6 +3754,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const x = tabla('agenda_vida').find((r) => r.id === args?.p_id);
         if (!x) return null;
         if (!esCoach() && (x.atleta_id !== miAtletaId() || x.autor !== 'atleta')) throw new Error('Solo puedes borrar lo que apuntaste tú');
+        if (!esCoach() && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
         db.agenda_vida = tabla('agenda_vida').filter((r) => r.id !== x.id);
         persistirYa();
         return null;
@@ -3756,8 +3762,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'agenda_responder') {
         const x = tabla('agenda_vida').find((r) => r.id === args?.p_id);
         if (!x || x.atleta_id !== miAtletaId()) throw new Error('Eso no es tuyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        if (x.tipo !== 'evento') throw new Error('Eso no se contesta');
         if (!['bien', 'regular', 'mal'].includes(args?.p_respuesta)) throw new Error('Respuesta no válida');
-        const n = String(args?.p_nota || '').trim() || null;
+        const n = limpioVisible(args?.p_nota, false);
         if (n && n.length > 300) throw new Error('Como mucho 300 caracteres');
         Object.assign(x, { respuesta: args.p_respuesta, respuesta_nota: n, respondida_en: ahora() });
         persistirYa();
@@ -3767,8 +3775,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const a = miAtletaId();
         if (!a) throw new Error('Solo el atleta guarda lo suyo');
         if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
-        const d = args?.p_datos || {};
-        const fb = d.manual_feedback || null, mot = Array.isArray(d.manual_motiva) ? [...new Set(d.manual_motiva)] : null, ev = String(d.manual_evitar || '').trim() || null;
+        const d = args?.p_datos;
+        if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('Faltan los datos');
+        // (069, revisión) cada clave con su tipo; la que no viene se queda como estaba
+        if (['manual_feedback', 'manual_evitar'].some((k) => d[k] != null && typeof d[k] !== 'string') || (d.manual_motiva != null && (!Array.isArray(d.manual_motiva) || d.manual_motiva.some((m) => typeof m !== 'string')))) throw new Error('Esos datos no valen');
+        const antes = tabla('personal_atleta').find((x) => x.atleta_id === a) || {};
+        const fb = 'manual_feedback' in d ? d.manual_feedback || null : antes.manual_feedback ?? null;
+        const mot = 'manual_motiva' in d ? (Array.isArray(d.manual_motiva) ? [...new Set(d.manual_motiva)] : null) : antes.manual_motiva ?? null;
+        const ev = 'manual_evitar' in d ? limpioVisible(d.manual_evitar, true) : antes.manual_evitar ?? null;
         if (fb && !['directo', 'suave'].includes(fb)) throw new Error('Feedback no válido');
         if (mot && mot.some((m) => !['datos', 'retos', 'reconocimiento', 'compania', 'progreso'].includes(m))) throw new Error('Eso no está en la lista');
         if (ev && ev.length > 200) throw new Error('Como mucho 200 caracteres');

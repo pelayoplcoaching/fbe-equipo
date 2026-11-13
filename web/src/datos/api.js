@@ -5379,6 +5379,8 @@ export function crearApi(backend) {
       // (065, revisión) sus puntos de apuntes por semanas y sus duelos (los suyos, con el rival por su nombre en el equipo)
       out.apuntes_semanas = await b.select('apuntes_semanas', { eq: { atleta_id: atletaId } }).catch(() => []);
       out.apuntes_duelos = perfilId && perfilId === uid() ? (await b.rpc('apuntes_duelos_mios').catch(() => [])) || [] : [];
+      // (v0.157, 069) su agenda de vida, entera (el manual va con «personal»)
+      out.agenda_vida = (await api.agenda(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', hasta: '2100-01-01' }).catch(() => [])) || [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

@@ -88,13 +88,15 @@ language sql stable security definer set search_path = '' as $$
 $$;
 drop policy if exists fbe_coach_voz_ver on storage.objects;
 create policy fbe_coach_voz_ver on storage.objects for select to authenticated
-  using (bucket_id = 'coach-voz' and (public.es_coach() or (public.mi_atleta_id() is not null and public.audio_de_coach(name))));
+  using (bucket_id = 'coach-voz' and (public.es_coach() or (public.mi_atleta_id() is not null and not public.esta_de_baja() and public.audio_de_coach(name))));
 drop policy if exists fbe_coach_voz_subir on storage.objects;
 create policy fbe_coach_voz_subir on storage.objects for insert to authenticated
   with check (bucket_id = 'coach-voz' and public.es_coach() and name ~ '^voz/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$');
 drop policy if exists fbe_coach_voz_borrar on storage.objects;
 create policy fbe_coach_voz_borrar on storage.objects for delete to authenticated
   using (bucket_id = 'coach-voz' and public.es_coach());
+-- (revisión) un audio, de un solo mensaje (al quitarlo de uno no se borra el de otro)
+create unique index if not exists mensajes_coach_audio_unico on public.mensajes_coach (audio_ruta) where audio_ruta is not null;
 alter table fbe_privado.storage_por_borrar drop constraint if exists storage_por_borrar_bucket_check;
 alter table fbe_privado.storage_por_borrar add constraint storage_por_borrar_bucket_check check (bucket in ('archivos', 'voz', 'comunidad', 'apuntes', 'coach-voz'));
 create or replace function public.mensaje_coach_audio_fuera() returns trigger
@@ -118,6 +120,7 @@ create or replace function public.comunidad_busco_companero(p_si boolean) return
 language plpgsql security definer set search_path = '' as $$
 declare v_dentro record;
 begin
+  if not public.comunidad_activa() then raise exception 'La comunidad está cerrada' using errcode = '42501'; end if;  -- (revisión)
   select * into v_dentro from fbe_privado.comunidad_dentro d where d.perfil_id = auth.uid();
   if v_dentro.perfil_id is null then raise exception 'Para buscar compañero tienes que estar en la comunidad' using errcode = '42501'; end if;
   if coalesce(p_si, false) and v_dentro.sin_ranking then raise exception 'Para buscar compañero tienes que salir en el ranking' using errcode = '22023'; end if;
@@ -131,6 +134,7 @@ create or replace function public.comunidad_afines() returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare v_yo record; v_busca boolean;
 begin
+  if not public.comunidad_activa() then return null; end if;  -- (revisión) con la comunidad cerrada, nada
   select * into v_yo from fbe_privado.comunidad_dentro d where d.perfil_id = auth.uid();
   if v_yo.perfil_id is null then return null; end if;
   select busca_companero into v_busca from public.comunidad_miembros where perfil_id = auth.uid();
@@ -150,6 +154,21 @@ begin
              'yo', h.perfil_id = auth.uid()) order by h.nombre)
     from habitos h), '[]'::jsonb) end);
 end $$;
+-- (revisión) «Busco compañero» se apaga solo al salir (o al volver a entrar), si le sacan, al aceptar otro texto de la
+-- comunidad y al pasar a «No salir en el ranking»: para volver a salir, lo tiene que encender él otra vez
+create or replace function fbe_privado.busco_companero_fuera() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.busca_companero and (new.salido_en is distinct from old.salido_en or new.bloqueado or new.version is distinct from old.version
+                              or (new.sin_ranking and not old.sin_ranking)) then
+    new.busca_companero := false;
+  end if;
+  return new;
+end $$;
+drop trigger if exists busco_companero_fuera on public.comunidad_miembros;
+create trigger busco_companero_fuera before update on public.comunidad_miembros
+  for each row execute function fbe_privado.busco_companero_fuera();
+
 comment on function public.comunidad_afines() is 'Quienes buscan compañero (y salen en el ranking), con su franja y días habituales. Solo para quien también busca.';
 
 -- ---------------------------------------------------------------------
