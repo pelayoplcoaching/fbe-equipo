@@ -1,4 +1,5 @@
 import { guiasACuento } from '../../logica/apuntes.js';
+import { AntesDeEmpezar } from './AntesDeEmpezar.jsx';
 import { leerTravesia } from '../travesia.js';
 import { textoDistancia } from '../../logica/travesia.js';
 // (remate, tanda 7) «La vuelta a casa»: se carga aparte (trae el pintor del juego)
@@ -1052,6 +1053,7 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
       </button>
       {abierto && (
         <div class="ejercicio-cuerpo">
+          {siguiente && !ultimas && !Object.keys(hechas).length && <AntesDeEmpezar ej={ej} />}
           <RecuerdaEjercicio recordatorios={recordatorios} />
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}

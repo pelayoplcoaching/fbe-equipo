@@ -2000,7 +2000,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.locator('.fila-notificaciones .resumen-noti').textContent();
-  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 3 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 4 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
@@ -2738,6 +2738,14 @@ try {
         await cerrarDialogos();
       }
       await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+      // (si el toque cayó mientras la página se recolocaba y no ha salido de la cuenta, otra vez desde la banda de Hoy o Atletas)
+      if (!(await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false))) {
+        const hoy = p.locator('.tab', { hasText: 'Hoy' });
+        if (await hoy.count()) await hoy.first().click(); else await p.locator('.tab', { hasText: 'Atletas' }).click();
+        await p.waitForTimeout(800);
+        await cerrarDialogos();
+        await p.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+      }
     }
     await p.getByRole('button', { name: new RegExp(nombre) }).first().click();
     await p.locator('nav.tabs').waitFor();
@@ -6022,6 +6030,22 @@ try {
   console.log('\nApuntes, más bonitos');
   const { probarApuntesBellos } = await import('./e2e-apuntes-bellos.mjs');
   await probarApuntesBellos({ navegador, check });
+  // Apuntes que se quedan (tanda A): repaso espaciado, recordar antes de leer, tres notas, preguntas del coach, sin conexión
+  console.log('\nApuntes que se quedan');
+  const { probarApuntesRepaso } = await import('./e2e-apuntes-t1.mjs');
+  await probarApuntesRepaso({ navegador, check });
+  // Apuntes, practicar (tanda B): emparejar, hueco, verdadero o falso, microlecciones, tres explicaciones, ordenar, grábate y compáralo, antes de empezar
+  console.log('\nApuntes, practicar');
+  const { probarApuntesPractica } = await import('./e2e-apuntes-t2.mjs');
+  await probarApuntesPractica({ navegador, check });
+  // Apuntes, camino y progreso (tanda C): prueba de nivel, objetivo diario, tu progreso (temas, ruta, mes), examen final y certificado
+  console.log('\nApuntes, camino y progreso');
+  const { probarApuntesCamino } = await import('./e2e-apuntes-t3.mjs');
+  await probarApuntesCamino({ navegador, check });
+  // Apuntes con los demás (tanda D): audio del coach, historia, notas y subrayados, liga, duelo y el equipo en apuntes
+  console.log('\nApuntes con los demás');
+  const { probarApuntesSocial } = await import('./e2e-apuntes-t4.mjs');
+  await probarApuntesSocial({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

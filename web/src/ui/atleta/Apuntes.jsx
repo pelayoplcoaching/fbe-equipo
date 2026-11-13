@@ -5,8 +5,8 @@ import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
 import { FAQ } from '../../datos/faq.js';
 import { apuntesDeFicha, apuntesDeGuias, apuntesDeNovedades, elegirApunte, apunteDelDia, paraRepasar,
   apuntesDeCorrecciones, apunteDeNumeros, apunteDeClip, apunteDeMusculo, preguntasDeFicha, apuntesDeDudas, apuntesDeGlosario, terminosDe, videoDeGuia,
-  alternarGuardado, llevarReto, retoPendiente, cursosDe, cursoDeLaSemana, progresoCurso, elegirCurso, leccionesPendientes, examenDe, apuntarExamen, notaExamen } from '../../logica/apuntes.js';
-import { leerApuntes, guardarVisto, sincronizarApuntes, guardarEstado } from '../apuntes.js';
+  alternarGuardado, llevarReto, retoPendiente, preguntaParaRecordar, porQueNo, programar, textoProxima, cursosDe, cursoDeLaSemana, progresoCurso, elegirCurso, leccionesPendientes, examenDe, apuntarExamen, notaExamen } from '../../logica/apuntes.js';
+import { leerApuntes, guardarVisto, sincronizarApuntes, guardarEstado, conRespaldo } from '../apuntes.js';
 import { imagenGrupo } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { VideoYoutube, abrirMini } from '../YouTube.jsx';
@@ -18,6 +18,12 @@ import { sinMovimiento } from '../transiciones.js';
 import { arteDe, palabraClave, trozosConTerminos, medallaNueva, deslizar, arrastre, aroDeNota, barraDescanso, puntosDeTanda } from '../../logica/apuntes-arte.js';
 import { medallaApuntes } from '../../logica/apuntes.js';
 import { Sello, Medalla, AroNota, Confeti, DibujoCuaderno, DibujoDiploma } from './apuntes-arte.jsx';
+import { practicasDe, elegirPractica, nivelesDe } from '../../logica/apuntes-practica.js';
+import { Practica, PRACTICA, MICRO, GrabarYComparar } from './ApuntesPractica.jsx';
+import { sumarDiario, hoyEnApuntes, pruebaDeNivel, aplicarNivel, rutaFundamentos, examenFinal, apuntarFinal, aprobado, nombreTema } from '../../logica/apuntes-camino.js';
+import { AnilloMeta, Certificado } from './ApuntesCamino.jsx';
+import { dueloDe, historiaDeNovedad, historiaDeLecciones, frasesDe, ponerNota, alternarSubrayado } from '../../logica/apuntes-camino.js';
+import { Historia, AudioPildora } from './ApuntesSocial.jsx';
 
 // «Apuntes»: algo que aprender en el descanso (o cuando se quiera). Una tarjeta cada vez, de lo que el coach tiene escrito:
 // una clave o un error típico del ejercicio del que se descansa, una idea de sus guías o un mito. Las que tienen vuelta
@@ -33,15 +39,18 @@ import { Sello, Medalla, AroNota, Confeti, DibujoCuaderno, DibujoDiploma } from 
 const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
 export function Apuntes(props) { return <Capa><ApuntesDentro {...props} /></Capa>; }
-function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, modo = 'descanso', alCerrar }) {
+function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, modo = 'descanso', duelo = null, alCerrar }) {
   const { backend, api, aviso, propio, atleta } = useApp();
   const hoy = hoyISO();
-  const guias = useCarga(() => guiasConTexto({ backend }).catch(() => []), [], { recuerdo: 'apuntes-guias' });
-  const ficha = useCarga(() => (ejercicio?.id ? fichaDeEjercicio({ backend }, ejercicio.id).catch(() => null) : Promise.resolve(null)), [ejercicio?.id], { recuerdo: ejercicio?.id ? `ficha-fbe:${ejercicio.id}` : null });
+  // (tanda A) sin conexión, con lo último que se cargó (y un aviso arriba)
+  const [sinRed, setSinRed] = useState(false);
+  const respaldo = (nombre, cargar) => conRespaldo(atletaId, nombre, cargar, () => setSinRed(true));
+  const guias = useCarga(() => respaldo('guias', () => guiasConTexto({ backend }).then((g) => { if (!g?.length && typeof navigator !== 'undefined' && navigator.onLine === false) throw new Error('sin red'); return g; })).catch(() => []), [], { recuerdo: 'apuntes-guias' });
+  const ficha = useCarga(() => (ejercicio?.id ? respaldo(`ficha:${ejercicio.id}`, () => fichaDeEjercicio({ backend }, ejercicio.id)).catch(() => null) : Promise.resolve(null)), [ejercicio?.id], { recuerdo: ejercicio?.id ? `ficha-fbe:${ejercicio.id}` : null });
   // (060) la novedad de la semana (si el coach ha publicado alguna) y lo visto en otros móviles; sin la 060, nada
-  const novedades = useCarga(() => (api.novedades ? api.novedades().catch(() => []) : Promise.resolve([])), [], { recuerdo: 'apuntes-novedades' });
+  const novedades = useCarga(() => (api.novedades ? respaldo('novedades', () => api.novedades()).catch(() => []) : Promise.resolve([])), [], { recuerdo: 'apuntes-novedades' });
   // (tanda 2) lo que le tiene corregido su coach (sus recordatorios de técnica activos), si descansa de un ejercicio
-  const recordatorios = useCarga(() => (ejercicio?.id && api.recordatoriosActivos ? api.recordatoriosActivos(atletaId).catch(() => []) : Promise.resolve([])), [ejercicio?.id], { recuerdo: ejercicio?.id ? `apuntes-recordatorios:${atletaId}` : null });
+  const recordatorios = useCarga(() => (ejercicio?.id && api.recordatoriosActivos ? respaldo(`reco:${ejercicio.id}`, () => api.recordatoriosActivos(atletaId)).catch(() => []) : Promise.resolve([])), [ejercicio?.id], { recuerdo: ejercicio?.id ? `apuntes-recordatorios:${atletaId}` : null });
   const [estado, setEstado] = useState(() => leerApuntes(atletaId));
   const [alDia, setAlDia] = useState(false);
   useEffect(() => {
@@ -63,16 +72,33 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const [actual, setActual] = useState(null);
   const [vuelta, setVuelta] = useState(false);
   const [elegida, setElegida] = useState(null);      // (test) la opción que ha tocado
+  // (tanda A) recordar antes de leer: la pregunta que tapa el apunte (si toca repasarlo) y si ya lo ha destapado
+  const [recordar, setRecordar] = useState(null);
+  const [recordado, setRecordado] = useState(false);
+  // (tanda B) practicar: uno de cada cuatro, un ejercicio (emparejar, ordenar, hueco, verdadero o falso) o una
+  // microlección; lo que salió al hacerlo; el nivel de la explicación; y «Grábate y compáralo»
+  const semilla = useRef((Date.now() % 99991) + 1);
+  const vecesPractica = useRef(0);
+  const practicas = useMemo(() => practicasDe({ apuntes: todos, estado: leerApuntes(atletaId), ficha: ficha.datos?.ficha || null, ejercicio, semilla: semilla.current }), [todos]);
+  const [practicado, setPracticado] = useState(null);
+  const [nivel, setNivel] = useState('normal');
+  const [comparar, setComparar] = useState(false);
+  // (tanda D) la historia a pantalla completa, tu nota y los subrayados del apunte
+  const [historia, setHistoria] = useState(null);   // { diapositivas, alAcabar }
+  const [editandoNota, setEditandoNota] = useState(false);
+  const [subrayando, setSubrayando] = useState(false);
   const [termino, setTermino] = useState(null);      // la palabra del glosario abierta
   const [guiaAbierta, setGuiaAbierta] = useState(null);
   const pasados = useRef([]);        // los de esta tanda, para no repetir
   const cola = useRef(null);         // (repaso, guardados, curso, examen) los que quedan
   // (tanda 4) el curso que se sigue en esta tanda y la cuenta del examen
-  const enCola = modo === 'repaso' || modo === 'guardados' || modo === 'curso' || modo === 'examen';
+  // (tanda C) la prueba de nivel y el examen final de la ruta van como el examen: en cola y con nota
+  const conNota = modo === 'examen' || modo === 'nivel' || modo === 'final' || (modo === 'duelo' && !!duelo);
+  const enCola = modo === 'repaso' || modo === 'guardados' || modo === 'curso' || conNota;
   const cursos = useMemo(() => cursosDe(todos), [todos]);
   const [curso, setCurso] = useState(null);          // { clave, titulo, lecciones }
   const [cambiando, setCambiando] = useState(false);
-  const examen = useRef({ total: 0, aciertos: 0, apuntado: false });
+  const examen = useRef({ total: 0, aciertos: 0, apuntado: false, preguntas: [], respuestas: [] });
   const idDe = (a) => a.origen || a.id;
   // (apuntes bellos) la tarjeta que se va (con su sello: «¡Lo sabías!», «Vuelve en unos días»…), lo que pasó con cada
   // apunte de este rato (sus puntos de arriba), el giro al destapar, el arrastre con el dedo y la medalla recién ganada
@@ -96,7 +122,10 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
       setCurso(c);
       cola.current = c ? leccionesPendientes(c, todos, est) : [];
     }
-    if (modo === 'examen' && !cola.current) { cola.current = examenDe(todos, est, { hoy }) || []; examen.current = { total: cola.current.length, aciertos: 0, apuntado: false }; }
+    if (conNota && !cola.current) {
+      cola.current = (modo === 'duelo' ? dueloDe(duelo.semilla) : modo === 'nivel' ? pruebaDeNivel(todos, hoy) : modo === 'final' ? examenFinal(rutaFundamentos(todos), todos, est, hoy) : examenDe(todos, est, { hoy })) || [];
+      examen.current = { total: cola.current.length, aciertos: 0, apuntado: false, preguntas: [...cola.current], respuestas: [] };
+    }
     if (enCola) {
       cola.current ||= modo === 'repaso' ? paraRepasar(todos, est, hoy) : todos.filter((x) => (est.guardados || []).includes(x.id));
       a = cola.current.shift() || null;
@@ -104,31 +133,52 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     // (tanda 2) lo primero de un descanso: el reto que se llevó a la serie («¿Lo has hecho?»)
     else if (modo === 'descanso' && !pasados.current.length) a = retoPendiente(est, hoy);
     a ||= enCola ? null : elegirApunte(todos, est, { hoy, salto: pasados.current.length, excluir: pasados.current, guias: ejercicio?.guias || [], principiante: ejercicio?.principiante ?? atleta?.nivel === 'principiante', curso: est.curso?.clave || null });
+    if (a && !enCola && (modo === 'descanso' || modo === 'dia') && pasados.current.length % 4 === 3) a = elegirPractica(practicas, vecesPractica.current++) || a;
     if (a) pasados.current.push(a.tipo === 'reto' ? `reto:${a.id}` : a.id);
     callar();
-    setActual(a); setVuelta(false); setElegida(null); setTermino(null);
+    const preg = a ? preguntaParaRecordar(a, est, hoy, { repaso: modo === 'repaso' }) : null;
+    setActual(a); setVuelta(false); setElegida(null); setTermino(null); setRecordar(preg); setRecordado(false); setPracticado(null); setNivel('normal'); setEditandoNota(false); setSubrayando(false);
     // (los que no tienen vuelta ni pregunta quedan vistos al salir; los demás, al contestar o al pasar de largo; lo suyo
     // de este momento no se apunta)
-    if (a && !a.efimero && !a.vuelta && a.tipo !== 'test') setEstado(guardarVisto(atletaId, a.id, hoy, null, api));
+    if (a && !a.efimero && !a.vuelta && a.tipo !== 'test' && !preg) setEstado(guardarVisto(atletaId, a.id, hoy, null, api));
     // (con el entrenador por voz puesto, lo lee solo en el descanso)
-    if (a && modo === 'descanso' && leerAjustes().voz && a.tipo !== 'clip' && !a.vuelta && a.tipo !== 'test') hablar([a.titulo, a.texto].filter(Boolean).join('. '));
+    if (a && modo === 'descanso' && leerAjustes().voz && a.tipo !== 'clip' && !a.vuelta && a.tipo !== 'test' && !PRACTICA.includes(a.tipo) && !preg) hablar([a.titulo, a.texto].filter(Boolean).join('. '));
   };
   useEffect(() => { if (listo && !actual) siguiente(); }, [listo]);
   useEffect(() => () => callar(), []);
+  // (tanda C) cada apunte del rato cuenta para el objetivo del día, con sus puntos
+  const apuntar = (r) => { resultados.current.push(r); setEstado(guardarEstado(atletaId, sumarDiario(leerApuntes(atletaId), hoy, r))); };
   const responder = (sabia, dir = null) => {
     despedir(sabia ? 'sabia' : 'no', dir || (sabia ? 'derecha' : 'izquierda'));
-    resultados.current.push(sabia ? 'sabia' : 'no');
+    apuntar(sabia ? 'sabia' : 'no');
     vibrar(sabia ? 'hecho' : 'elegir');
     const e = guardarVisto(atletaId, actual.id, hoy, sabia, api); setEstado(e); siguiente(e);
   };
+  // (tanda A) tras recordarlo: «Otra vez» (vuelve mañana), «Bien» o «Fácil» (más adelante)
+  const calificar = (nota, dir = null) => {
+    despedir(nota === 'otra' ? 'otra' : nota === 'facil' ? 'facil' : 'bien', dir || (nota === 'otra' ? 'izquierda' : 'derecha'));
+    apuntar(nota === 'otra' ? 'no' : 'sabia');
+    vibrar(nota === 'otra' ? 'elegir' : 'hecho');
+    const e = guardarVisto(atletaId, actual.id, hoy, null, api, nota); setEstado(e); siguiente(e);
+  };
   const responderReto = (si, dir = null) => {
     despedir(si ? 'hecho' : 'pasa', dir || (si ? 'derecha' : 'izquierda'));
-    resultados.current.push(si ? 'sabia' : 'no');
+    apuntar(si ? 'sabia' : 'no');
     if (si) vibrar('hecho');
     let e = guardarVisto(atletaId, actual.id, hoy, si, api); e = guardarEstado(atletaId, llevarReto(e, null)); setEstado(e); siguiente(e);
   };
-  const elegir = (i) => { if (elegida != null) return; setElegida(i); resultados.current.push(i === actual.correcta ? 'sabia' : 'no'); vibrar(i === actual.correcta ? 'hecho' : 'aviso'); if (modo === 'examen' && i === actual.correcta) examen.current.aciertos += 1; setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
-  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null)) resultados.current.push('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
+  const elegir = (i) => { if (elegida != null) return; setElegida(i); apuntar(i === actual.correcta ? 'sabia' : 'no'); vibrar(i === actual.correcta ? 'hecho' : 'aviso'); if (conNota && i === actual.correcta) examen.current.aciertos += 1; if (conNota) examen.current.respuestas.push(i === actual.correcta); if (!actual.efimero && modo !== 'nivel') setEstado(guardarVisto(atletaId, idDe(actual), hoy, i === actual.correcta, api)); };
+  const acabarPractica = (r) => { setPracticado(r); apuntar(r.bien ? 'sabia' : 'no'); };
+  const otro = (dir = 'izquierda') => { if (actual && !(actual.tipo === 'test' && elegida != null) && practicado == null) apuntar('visto'); despedir('otro', typeof dir === 'string' ? dir : 'izquierda'); let e = estado; if (actual && !actual.efimero && (actual.vuelta || recordar || (actual.tipo === 'test' && elegida == null))) { e = guardarVisto(atletaId, idDe(actual), hoy, modo === 'examen' ? false : null, api); setEstado(e); } siguiente(e); };
+  // (tanda D) las lecciones que quedan del curso, como historia: al acabarla, todas vistas
+  const verCursoEnHistoria = () => {
+    const lecciones = [actual, ...(cola.current || [])].filter(Boolean);
+    setHistoria({ diapositivas: historiaDeLecciones(lecciones, curso?.titulo), tono: 'morado', alAcabar: () => {
+      for (const a of lecciones) guardarVisto(atletaId, a.id, hoy, null, api);
+      for (const a of lecciones) apuntar('visto');
+      cola.current = []; setEstado(leerApuntes(atletaId)); siguiente(leerApuntes(atletaId));
+    } });
+  };
   const guardado = !!actual && (estado.guardados || []).includes(actual.id);
   const alternar = () => { const e = guardarEstado(atletaId, alternarGuardado(estado, actual.id)); setEstado(e); aviso?.(guardado ? 'Quitado de tus guardados' : 'Guardado: lo tienes en Semana, en «Tus apuntes»'); };
   const alaSerie = () => { const e = guardarEstado(atletaId, llevarReto(estado, actual, hoy)); setEstado(e); aviso?.('Hecho: en el siguiente descanso te pregunto'); alCerrar?.('fin'); };
@@ -145,12 +195,23 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     siguiente(e);
   };
   // El examen, acabado: se apunta una vez
-  const finExamen = modo === 'examen' && listo && !actual && examen.current.total > 0;
+  const finExamen = conNota && listo && !actual && examen.current.total > 0;
   useEffect(() => {
     if (!finExamen || examen.current.apuntado) return;
     examen.current.apuntado = true;
-    setEstado(guardarEstado(atletaId, apuntarExamen(leerApuntes(atletaId), { dia: hoy, aciertos: examen.current.aciertos, total: examen.current.total })));
+    const x = examen.current, nota = { dia: hoy, aciertos: x.aciertos, total: x.total };
+    // (tanda D) el duelo: los aciertos, a la base (los del rival, al contestar los dos)
+    if (modo === 'duelo') { api.contestarDueloApuntes?.(duelo.id, x.aciertos).catch((e) => aviso?.(e.message || 'No se ha podido guardar el duelo', 'error')); return; }
+    setEstado(guardarEstado(atletaId, modo === 'nivel' ? aplicarNivel(leerApuntes(atletaId), x.preguntas, x.respuestas, todos, hoy)
+      : modo === 'final' ? apuntarFinal(leerApuntes(atletaId), nota) : apuntarExamen(leerApuntes(atletaId), nota)));
   }, [finExamen]);
+  // (tanda C) al cerrar el anillo del día, se celebra (una vez)
+  const metaAntes = useRef(hoyEnApuntes(estado, hoy).hecho);
+  useEffect(() => {
+    const ya = hoyEnApuntes(estado, hoy).hecho;
+    if (ya && !metaAntes.current) { vibrar('celebrar'); aviso?.('¡Objetivo de hoy cumplido!'); }
+    metaAntes.current = ya;
+  }, [estado]);
   const estadoAntes = useRef(estado);
   useEffect(() => {
     const n = medallaNueva(estadoAntes.current, estado);
@@ -161,8 +222,13 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   const prCurso = curso ? progresoCurso(curso, estado) : null;
   const guiaDe = actual?.guia ? (guias.datos || []).find((g) => g.clave === actual.guia) || null : null;
   const video = guiaDe ? videoDeGuia(guiaDe) : null;
-  const terminos = actual && actual.tipo !== 'glosario' && (!actual.vuelta || vuelta) ? terminosDe(`${actual.titulo} ${actual.texto}`) : [];
-  const destapado = actual && (!actual.vuelta || vuelta) && !(actual.tipo === 'test' && elegida == null);
+  const tapado = !!recordar && !recordado;
+  const terminos = actual && actual.tipo !== 'glosario' && (!actual.vuelta || vuelta) && !tapado ? terminosDe(`${actual.titulo} ${actual.texto}`) : [];
+  const destapado = actual && (!actual.vuelta || vuelta) && !tapado && !(actual.tipo === 'test' && elegida == null) && !(PRACTICA.includes(actual.tipo) && practicado == null);
+  const practicando = !!actual && PRACTICA.includes(actual.tipo) && practicado == null;
+  const niveles = actual && !tapado ? nivelesDe(actual, todos) : null;
+  const textoVisible = niveles && nivel !== 'normal' ? (niveles[nivel] || actual.texto) : actual?.texto;
+  const videoTecnica = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be)\//i.test(String(ejercicio?.video || '')) ? ejercicio.video : null;
 
   // La cuenta del descanso (si lo hay) y el cierre al acabar
   const [ahora, setAhora] = useState(Date.now());
@@ -191,15 +257,16 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
   useEffect(() => { setHablando(false); }, [actual?.id]);
   // Deslizar con el dedo: a un lado u otro pasa al siguiente; con la vuelta destapada, a la derecha «Lo sabía» y a la
   // izquierda «No lo sabía» (en el reto, «Sí, lo he hecho» / «Se me pasó»). Antes de destapar o de contestar la pregunta, no.
-  const puedeDeslizar = !!actual && !finExamen && (actual.tipo === 'reto' || (actual.vuelta ? vuelta : actual.tipo !== 'test' || elegida != null));
+  const puedeDeslizar = !!actual && !finExamen && !practicando && (actual.tipo === 'reto' || (actual.vuelta ? vuelta : recordar ? recordado : actual.tipo !== 'test' || elegida != null));
   const queHara = (dir) => {
     if (!actual) return '';
     if (actual.tipo === 'reto') return dir === 'derecha' ? 'Hecho' : 'Se me pasó';
     if (actual.vuelta) return dir === 'derecha' ? 'Lo sabía' : 'No lo sabía';
+    if (recordar) return dir === 'derecha' ? 'Bien' : 'Otra vez';
     return 'Siguiente';
   };
   const dedoAbajo = (ev) => {
-    if (!puedeDeslizar || quieto || ev.button > 0 || ev.target.closest('button, a, input, iframe, .apunte-terminos, [role="button"]')) return;
+    if (!puedeDeslizar || quieto || ev.button > 0 || ev.target.closest('button, a, input, textarea, audio, iframe, .apunte-terminos, [role="button"]')) return;
     setDedo({ x0: ev.clientX, y0: ev.clientY, dx: 0, dy: 0, activo: false, id: ev.pointerId });
   };
   const dedoMueve = (ev) => {
@@ -216,16 +283,19 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     if (!dir) return;
     if (actual.tipo === 'reto') responderReto(dir === 'derecha', dir);
     else if (actual.vuelta) responder(dir === 'derecha', dir);
+    else if (recordar) calificar(dir === 'derecha' ? 'bien' : 'otra', dir);
     else otro(dir);
   };
   const tecla = (ev) => { if (ev.key === 'Escape' && !guiaAbierta) { ev.stopPropagation(); alCerrar?.('salir'); } };
-  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : modo === 'curso' ? 'Curso de la semana' : modo === 'examen' ? 'Examen' : 'Apuntes';
+  const titulo = modo === 'repaso' ? 'Repaso' : modo === 'guardados' ? 'Guardados' : modo === 'dia' ? 'El apunte de hoy' : modo === 'curso' ? 'Curso de la semana' : modo === 'examen' ? 'Examen' : modo === 'nivel' ? 'Prueba de nivel' : modo === 'final' ? 'Examen final' : modo === 'duelo' ? `Duelo con ${duelo?.rival || 'tu rival'}` : 'Apuntes';
   const imagen = actual?.tipo === 'musculo' && hayImagen(imagenGrupo(actual.grupo)) ? imagenGrupo(actual.grupo) : null;
 
   return (
     <div ref={caja} class={`apuntes${acabado ? ' acabado' : ''} fondo-${actual ? arteDe(actual.tipo).tono : finExamen ? aroDeNota(examen.current.aciertos, examen.current.total).tono : 'morado'}`} role="dialog" aria-modal="true" aria-label={`${titulo}: algo que aprender${conReloj ? ' en el descanso' : ''}`} tabIndex={-1} onKeyDown={tecla}>
       <header class="apuntes-cab">
         <span class="apuntes-titulo"><Icono n="biblioteca" />{titulo}</span>
+        {!conNota && modo !== 'guardados' && <AnilloMeta {...hoyEnApuntes(estado, hoy)} pequeno />}
+        {sinRed && <span class="chip apuntes-sin-red" role="status"><Icono n="sinred" />Sin conexión: con lo guardado</span>}
         {conReloj && <span class="apuntes-cuenta num" role="timer" aria-live="off" aria-label={acabado ? 'Descanso terminado' : `Descanso: quedan ${Math.ceil(quedan)} segundos`}>{acabado ? '¡Vamos!' : mmss(Math.ceil(quedan))}</span>}
         <button type="button" class="btn btn-icono plano" onClick={() => alCerrar?.('salir')} aria-label="Cerrar los apuntes"><Icono n="cerrar" /></button>
         {/* (apuntes bellos) un punto por apunte de este rato (verde si lo sabía) y la cuenta del descanso, como barra que se vacía */}
@@ -241,6 +311,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             <span class="apuntes-curso-t"><strong>{curso.titulo}</strong><span class="peq secundario">{prCurso.hecho && !actual ? 'Curso terminado' : `Lección ${actual && curso.lecciones.includes(actual.id) ? curso.lecciones.indexOf(actual.id) + 1 : Math.min(prCurso.total, prCurso.hechas + 1)} de ${prCurso.total}`}</span></span>
             <span class="apuntes-curso-puntos" aria-hidden="true">{curso.lecciones.map((id) => <i key={id} class={estado.vistos[id] ? 'hecha' : actual?.id === id ? 'ahora' : ''} />)}</span>
             {cursos.length > 1 && <button type="button" class="btn-texto" aria-expanded={cambiando ? 'true' : 'false'} onClick={() => setCambiando(!cambiando)}>Cambiar de curso</button>}
+            {actual && (cola.current?.length || 0) >= 1 && <button type="button" class="btn-texto" onClick={verCursoEnHistoria}><Icono n="play" />Ver como historia</button>}
             {cambiando && (
               <div class="apuntes-cursos" role="group" aria-label="Elige un curso">
                 {cursos.map((c) => { const pr = progresoCurso(c, estado); return <button type="button" key={c.clave} class="chip apuntes-curso-otro" aria-pressed={c.clave === curso.clave ? 'true' : 'false'} onClick={() => cambiarCurso(c.clave)}>{c.titulo} · {pr.hecho ? 'hecho' : `${pr.hechas}/${pr.total}`}</button>; })}
@@ -251,10 +322,15 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
         {finExamen && (
           <div class={`apunte examen-nota tono-${aroDeNota(examen.current.aciertos, examen.current.total).tono}`} role="status">
             {aroDeNota(examen.current.aciertos, examen.current.total).confeti && !quieto && <Confeti n={34} semilla={examen.current.aciertos + 3} />}
-            <p class="apunte-etq"><Sello tipo="test" /><span class="chip">Examen</span></p>
+            <p class="apunte-etq"><Sello tipo="test" /><span class="chip">{modo === 'nivel' ? 'Prueba de nivel' : modo === 'final' ? 'Examen final' : modo === 'duelo' ? 'Duelo' : 'Examen'}</span></p>
             <span class="examen-centro"><AroNota aciertos={examen.current.aciertos} total={examen.current.total} /><b class="num examen-pct" aria-hidden="true">{Math.round((examen.current.aciertos / examen.current.total) * 100)}%</b></span>
             <h2><span class="num">{examen.current.aciertos} de {examen.current.total}</span> <span class="examen-sello">{notaExamen(examen.current.aciertos, examen.current.total)}</span></h2>
-            <p class="apunte-texto">{examen.current.aciertos === examen.current.total ? 'Ni una: lo tienes.' : 'Lo que has fallado vuelve a salir en tus descansos y en «Repasar».'}</p>
+            {modo === 'examen' && <p class="apunte-texto">{examen.current.aciertos === examen.current.total ? 'Ni una: lo tienes.' : 'Lo que has fallado vuelve a salir en tus descansos y en «Repasar».'}</p>}
+            {modo === 'duelo' && <p class="apunte-texto">Cuando conteste {duelo?.rival || 'tu rival'}, verás quién gana en «Tu progreso».</p>}
+            {modo === 'nivel' && (() => { const s = estado.prueba?.saltados || []; return <p class="apunte-texto">{s.length ? `Lo básico de ${s.map(nombreTema).join(' y ')} ya lo sabes: te lo salto (vuelve en una semana, para repasarlo).` : 'Empezamos por lo básico: en tus descansos irá saliendo poco a poco.'}</p>; })()}
+            {modo === 'final' && (aprobado(examen.current.aciertos, examen.current.total)
+              ? <Certificado nombre={atleta?.nombre || ''} certificado={estado.certificado || { dia: hoy, aciertos: examen.current.aciertos, total: examen.current.total }} />
+              : <p class="apunte-texto">Te ha faltado poco: con el 80 % tienes el certificado. Repasa los módulos y vuelve a intentarlo.</p>)}
           </div>
         )}
         {listo && !actual && !finExamen && (
@@ -274,7 +350,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             <div class={`apunte-saliente tono-${arteDe(saliente.a.tipo).tono} va-${saliente.dir}`} key={`s${saliente.n}`} aria-hidden="true">
               <p class="saliente-etq"><Sello tipo={saliente.a.tipo} /><span>{saliente.a.etiqueta}</span></p>
               {saliente.a.titulo && <strong class="saliente-titulo">{saliente.a.titulo}</strong>}
-              {saliente.marca !== 'otro' && <span class={`apunte-marca marca-${saliente.marca}`}>{{ sabia: '¡Lo sabías!', no: 'Vuelve en unos días', hecho: '¡Bien hecho!', pasa: 'La próxima' }[saliente.marca]}</span>}
+              {saliente.marca !== 'otro' && <span class={`apunte-marca marca-${['bien', 'facil'].includes(saliente.marca) ? 'sabia' : saliente.marca === 'otra' ? 'no' : saliente.marca}`}>{{ sabia: '¡Lo sabías!', no: 'Vuelve en unos días', hecho: '¡Bien hecho!', pasa: 'La próxima', bien: '¡Bien!', facil: '¡Fácil!', otra: 'Mañana otra vez' }[saliente.marca]}</span>}
             </div>
           )}
           <article class={`apunte tipo-${actual.tipo} tono-${arteDe(actual.tipo).tono}${girando ? ' girando' : ''}${dedo?.activo ? ' arrastrando' : ''}${saliente ? ` entra-${saliente.dir}` : ''}`} key={`${actual.tipo}:${actual.id}`} aria-live="polite"
@@ -283,12 +359,17 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             <span class="apunte-esquina" aria-hidden="true" />
             {guardado && <span class="apunte-marcapaginas" aria-hidden="true" />}
             {dedo?.activo && (
-              <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
+              <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' || recordar ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
             )}
-            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{modo === 'examen' ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
+            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{conNota ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
             {imagen && <Imagen id={imagen} clase="apunte-img" tamanos="(min-width: 600px) 520px, 90vw" />}
-            {actual.titulo && (() => { const k = palabraClave(actual.titulo); return <h2>{k ? <>{k.antes}<mark class="apunte-rotulador">{k.palabra}</mark>{k.despues}</> : actual.titulo}</h2>; })()}
+            {tapado && <h2 class="apunte-pregunta-recordar">{recordar}</h2>}
+            {tapado && actual.tipo === 'idea' && actual.titulo && <p class="apunte-recordar-de">{actual.titulo}</p>}
+            {!tapado && actual.titulo && (() => { const k = palabraClave(actual.titulo); return <h2>{k ? <>{k.antes}<mark class="apunte-rotulador">{k.palabra}</mark>{k.despues}</> : actual.titulo}</h2>; })()}
             {actual.tipo === 'clip' && <VideoYoutube url={actual.video} titulo={`Vídeo de ${actual.de}`} compacto />}
+            {MICRO.includes(actual.tipo) && actual.texto && <p class="apunte-texto">{actual.texto}</p>}
+            {[...PRACTICA, ...MICRO].includes(actual.tipo) && <Practica key={actual.id} a={actual} quieto={quieto} alAcabar={acabarPractica} />}
+            {practicado && actual.tipo === 'emparejar' && <p class="practica-veredicto" role="status" data-bien={practicado.bien ? 'si' : 'no'}>{practicado.resumen}</p>}
             {actual.tipo === 'test' && (
               <div class="apunte-opciones" role="group" aria-label="Elige una respuesta">
                 {actual.opciones.map((o, i) => (
@@ -299,28 +380,57 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               </div>
             )}
             {actual.tipo === 'test' && elegida != null && <p class="apunte-texto" role="status">{elegida === actual.correcta ? 'Eso es.' : `Era «${actual.opciones[actual.correcta]}».`} {actual.texto}</p>}
-            {actual.tipo !== 'test' && (actual.vuelta && !vuelta
+            {actual.tipo === 'test' && elegida != null && porQueNo(actual, elegida, todos) && <p class="apunte-porque"><strong>Por qué no «{actual.opciones[elegida]}»:</strong> {porQueNo(actual, elegida, todos)}</p>}
+            {tapado && (
+              <button type="button" class="btn apunte-recordar" onClick={() => { setRecordado(true); if (!quieto) { setGirando(true); setTimeout(() => setGirando(false), 520); } }}>
+                <Icono n="enfoque" />Piénsalo y destápalo
+              </button>
+            )}
+            {tapado && <p class="apunte-recordar-ayuda">Intenta recordarlo antes de mirar: así se queda.</p>}
+            {!tapado && actual.tipo !== 'test' && !MICRO.includes(actual.tipo) && (actual.vuelta && !vuelta
               ? <button type="button" class="btn apunte-destapar" onClick={() => { setVuelta(true); if (!quieto) { setGirando(true); setTimeout(() => setGirando(false), 520); } }}>{actual.tipo === 'mito' ? '¿Por qué es un mito?' : '¿Por qué, y cómo se corrige?'}</button>
-              : actual.texto && <p class="apunte-texto">{trozosConTerminos(actual.texto, terminos).map((x, i) => (x.termino
+              : actual.texto && (subrayando || (nivel === 'normal' && estado.subrayados?.[actual.id]?.length))
+                ? <p class={`apunte-texto${subrayando ? ' subrayando' : ''}`}>{frasesDe(actual.texto).map((f, i) => {
+                    const si = (estado.subrayados?.[actual.id] || []).includes(i);
+                    return subrayando
+                      ? <span key={i} role="button" tabIndex={0} class={`apunte-frase${si ? ' subrayada' : ''}`} aria-pressed={si ? 'true' : 'false'} onClick={() => { setEstado(guardarEstado(atletaId, alternarSubrayado(leerApuntes(atletaId), actual.id, i))); vibrar('elegir'); }}
+                          onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setEstado(guardarEstado(atletaId, alternarSubrayado(leerApuntes(atletaId), actual.id, i))); } }}>{f} </span>
+                      : si ? <mark key={i} class="apunte-subrayado">{f} </mark> : <span key={i}>{f} </span>;
+                  })}</p>
+              : actual.texto && <p class="apunte-texto">{trozosConTerminos(textoVisible, terminos).map((x, i) => (x.termino
                 ? <span role="button" tabIndex={0} key={i} class="apunte-termino-en" aria-expanded={termino === x.termino ? 'true' : 'false'} aria-label={`${x.texto}: qué significa`}
                     onClick={() => setTermino(termino === x.termino ? null : x.termino)} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setTermino(termino === x.termino ? null : x.termino); } }}>{x.texto}</span>
                 : x.texto))}</p>)}
+            {destapado && actual.audio && <AudioPildora audio={actual.audio} />}
+            {destapado && !editandoNota && estado.notas?.[actual.id] && <button type="button" class="apunte-tu-nota" onClick={() => setEditandoNota(true)}><strong>Tu nota:</strong> {estado.notas[actual.id]}</button>}
+            {destapado && editandoNota && <NotaPropia inicial={estado.notas?.[actual.id] || ''} alGuardar={(t) => { setEstado(guardarEstado(atletaId, ponerNota(leerApuntes(atletaId), actual.id, t))); setEditandoNota(false); aviso?.(t.trim() ? 'Nota guardada: la tienes en «Guardados»' : 'Nota quitada'); }} alCancelar={() => setEditandoNota(false)} />}
+            {destapado && niveles && actual.tipo !== 'test' && (
+              <div class="segmentos apunte-niveles" role="group" aria-label="Cómo te lo explico">
+                {[['facil', 'Más fácil'], ['normal', 'Normal'], ['fondo', 'A fondo']].map(([k, nombre]) => (
+                  <button type="button" key={k} aria-pressed={nivel === k ? 'true' : 'false'} disabled={k !== 'normal' && !niveles[k]} onClick={() => { setNivel(k); vibrar('elegir'); }}>{nombre}</button>
+                ))}
+              </div>
+            )}
             {actual.tipo === 'novedad' && (actual.fuente || actual.enlace) && (
               <p class="apunte-fuente">{actual.fuente}{actual.fuente && actual.enlace ? ' · ' : ''}{actual.enlace && <a href={actual.enlace} target="_blank" rel="noopener noreferrer">Ver el estudio</a>}</p>
             )}
             {terminos.length > 0 && (
               <div class="apunte-terminos">
-                {terminos.filter(([t]) => !(actual.tipo !== 'test' && trozosConTerminos(actual.texto, terminos).some((x) => x.termino === t))).map(([t]) => <button type="button" key={t} class="chip apunte-termino" aria-expanded={termino === t ? 'true' : 'false'} onClick={() => setTermino(termino === t ? null : t)}>{t}</button>)}
+                {terminos.filter(([t]) => !(actual.tipo !== 'test' && trozosConTerminos(textoVisible, terminos).some((x) => x.termino === t))).map(([t]) => <button type="button" key={t} class="chip apunte-termino" aria-expanded={termino === t ? 'true' : 'false'} onClick={() => setTermino(termino === t ? null : t)}>{t}</button>)}
                 {termino && <p class="apunte-definicion" role="status"><strong>{termino}:</strong> {terminos.find(([t]) => t === termino)?.[1]}</p>}
               </div>
             )}
-            {destapado && actual.tipo !== 'reto' && (
+            {destapado && actual.tipo !== 'reto' && ![...PRACTICA, ...MICRO].includes(actual.tipo) && (
               <div class="apunte-acciones">
                 {hayVoz() && actual.tipo !== 'clip' && <button type="button" class={`btn-texto${hablando ? ' hablando' : ''}`} onClick={escuchar}>{hablando ? <span class="apunte-ondas" aria-hidden="true"><i /><i /><i /><i /></span> : <Icono n="altavoz" />}Escuchar</button>}
                 {!actual.efimero && <button type="button" class="btn-texto" aria-pressed={guardado ? 'true' : 'false'} onClick={alternar}><Icono n="guardar" />{guardado ? 'Guardado' : 'Guardar'}</button>}
                 {actual.guia && <button type="button" class="btn-texto" onClick={() => setGuiaAbierta({ clave: actual.guia, titulo: guiaDe?.titulo || actual.de || 'Guía' })}><Icono n="biblioteca" />Leer la guía</button>}
+                {!actual.efimero && actual.tipo !== 'test' && !editandoNota && <button type="button" class="btn-texto" onClick={() => setEditandoNota(true)}><Icono n="editar" />{estado.notas?.[actual.id] ? 'Cambiar tu nota' : 'Tu nota'}</button>}
+                {!actual.efimero && actual.tipo !== 'test' && frasesDe(actual.texto).length > 0 && <button type="button" class="btn-texto" aria-pressed={subrayando ? 'true' : 'false'} onClick={() => setSubrayando(!subrayando)}><Icono n="letra" />{subrayando ? 'Hecho' : 'Subrayar'}</button>}
+                {actual.tipo === 'novedad' && historiaDeNovedad(actual).length > 2 && <button type="button" class="btn-texto" onClick={() => setHistoria({ diapositivas: historiaDeNovedad(actual), tono: arteDe(actual.tipo).tono })}><Icono n="play" />Verla como historia</button>}
                 {video && <button type="button" class="btn-texto" onClick={() => abrirMini({ url: video.url, titulo: video.titulo })}><Icono n="video" />Ver el vídeo</button>}
                 {actual.tipo === 'clave' && modo === 'descanso' && !acabado && <button type="button" class="btn-texto" onClick={alaSerie}><Icono n="diana" />Lo pruebo en la siguiente serie</button>}
+                {modo === 'descanso' && ejercicio?.id && ['clave', 'clip'].includes(actual.tipo) && <button type="button" class="btn-texto" onClick={() => setComparar(true)}><Icono n="camara" />Grábate y compáralo</button>}
                 {!propio && api.enviarMensaje && <button type="button" class="btn-texto" onClick={noEntiendo}><Icono n="pregunta" />No lo entiendo</button>}
               </div>
             )}
@@ -344,15 +454,41 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
               <button type="button" class="btn" onClick={() => responderReto(false)}>Se me pasó</button>
               <button type="button" class="btn btn-primario" onClick={() => responderReto(true)}>Sí, lo he hecho</button>
             </>
+          ) : recordar && recordado ? (
+            <>
+              {[['otra', 'Otra vez'], ['bien', 'Bien'], ['facil', 'Fácil']].map(([nota, nombre]) => (
+                <button type="button" key={nota} class={`btn apunte-nota nota-${nota}${nota === 'bien' ? ' btn-primario' : ''}`} onClick={() => calificar(nota)}>
+                  <span>{nombre}</span><small>{textoProxima(programar(estado.vistos[actual.id], nota, hoy).c)}</small>
+                </button>
+              ))}
+            </>
           ) : actual.vuelta && vuelta ? (
             <>
               <button type="button" class="btn" onClick={() => responder(false)}>No lo sabía</button>
               <button type="button" class="btn btn-primario" onClick={() => responder(true)}>Lo sabía</button>
             </>
-          ) : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{modo === 'examen' ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
+          ) : tapado ? <button type="button" class="btn" onClick={() => otro('izquierda')}>Saltar por ahora</button>
+          : <button type="button" class="btn btn-primario" onClick={() => otro('izquierda')}>{conNota ? (cola.current?.length ? 'Siguiente' : 'Ver la nota') : modo === 'curso' ? 'Siguiente lección' : enCola ? 'Siguiente' : 'Otro apunte'}</button>}
         </footer>
       )}
       {guiaAbierta && <HojaGuia guia={guiaAbierta} alCerrar={() => setGuiaAbierta(null)} />}
+      {historia && <Historia diapositivas={historia.diapositivas} tono={historia.tono} alCerrar={() => setHistoria(null)} alAcabar={() => { const fin = historia.alAcabar; setHistoria(null); fin?.(); }} />}
+      {comparar && <GrabarYComparar video={videoTecnica} nombre={ejercicio?.nombre || ''} clave={actual?.tipo === 'clave' ? actual.texto : ''} alCerrar={() => setComparar(false)} />}
+    </div>
+  );
+}
+
+// (tanda D) Tu nota en un apunte (hasta 500 letras): se guarda en «Guardados»
+function NotaPropia({ inicial, alGuardar, alCancelar }) {
+  const [t, setT] = useState(inicial);
+  return (
+    <div class="apunte-nota-propia">
+      <label class="peq" for="apunte-nota-t">Tu nota</label>
+      <textarea id="apunte-nota-t" class="entrada" maxLength={500} value={t} placeholder="Lo que quieras recordar de este apunte" onInput={(e) => setT(e.currentTarget.value)} />
+      <span class="fila-s">
+        <button type="button" class="btn btn-peq btn-primario" onClick={() => alGuardar(t)}>Guardar nota</button>
+        <button type="button" class="btn-texto" onClick={alCancelar}>Cancelar</button>
+      </span>
     </div>
   );
 }

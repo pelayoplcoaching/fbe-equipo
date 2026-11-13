@@ -330,3 +330,216 @@
 @keyframes ap-medalla { from { transform: scale(.3) rotate(-25deg); } }
 @keyframes ap-brillo-cinta { 0%, 75% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
 @keyframes ap-escribe { from { transform: translate(0, 0); } to { transform: translate(-6px, 4px); } }
+
+/* (apuntes, tanda A) Recordar antes de leer: la pregunta, el botón para destapar y, al pie, las tres notas con cuándo vuelve */
+.apunte-pregunta-recordar { color: var(--tono-tinta); }
+.apunte-recordar-de { margin: -6px 0 0; font-size: 1.0625rem; font-weight: 650; }
+.apunte-recordar { min-height: 52px; width: 100%; gap: 8px; border: 2px dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); background: var(--tono-suave); color: var(--tono-tinta); font-weight: 700; }
+.apunte-recordar-ayuda { margin: -6px 0 0; font-size: .875rem; color: var(--tinta-2); }
+.apuntes-pie .apunte-nota { display: grid; place-content: center; gap: 1px; padding: 6px 8px; line-height: 1.15; }
+.apuntes-pie .apunte-nota small { font-size: .75rem; font-weight: 500; opacity: .8; }
+.apuntes-pie .apunte-nota.nota-otra { color: var(--aviso); }
+/* Por qué no es esa: debajo de la explicación, en un recuadro suave */
+.apunte-porque { margin: 0; padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--aviso) 10%, var(--hoja)); font-size: .9375rem; line-height: 1.45; }
+/* (apuntes, tanda A) El coach escribe su pregunta: cada opción con su «la buena» y, en las malas, el porqué */
+.pregunta-opciones { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
+.pregunta-opciones legend { font-weight: 600; margin-bottom: 6px; }
+.pregunta-opcion { display: grid; grid-template-columns: 44px 1fr; gap: 6px 4px; align-items: center; }
+.pregunta-opcion .entrada-peq { grid-column: 2; min-height: 40px; font-size: .875rem; }
+.pregunta-buena { display: grid; place-items: center; min-height: 44px; }
+.pregunta-buena input { width: 22px; height: 22px; accent-color: var(--morado); }
+/* (apuntes, tanda A) sin conexión: un aviso discreto bajo el título */
+.apuntes-sin-red { gap: 4px; font-size: .75rem; }
+.apuntes-sin-red svg { width: 14px; height: 14px; }
+
+/* ---------- (apuntes, tanda B) Practicar ---------- */
+.practica { display: grid; gap: 12px; width: 100%; justify-self: stretch; }
+.practica-ayuda { margin: 0; font-size: .875rem; color: var(--tinta-2); }
+.practica-veredicto { margin: 0; font-weight: 700; color: var(--tono-tinta); }
+.practica-veredicto[data-bien="no"] { color: var(--aviso); }
+/* la cuenta atrás: una barra que se vacía */
+.practica-tiempo { position: relative; height: 26px; border-radius: 13px; background: color-mix(in srgb, var(--tono, var(--morado)) 12%, transparent); overflow: hidden; display: grid; align-items: center; }
+.practica-tiempo > span { position: absolute; inset: 0; background: color-mix(in srgb, var(--tono, var(--morado)) 38%, transparent); transform-origin: left; transition: transform .25s linear; }
+.practica-tiempo.fuera > span { background: color-mix(in srgb, var(--aviso) 40%, transparent); }
+.practica-tiempo b { position: relative; justify-self: end; padding: 0 10px; font-size: .8125rem; }
+.practica-tiempo.corto { height: 10px; }
+.practica-tiempo.corto b { position: absolute; right: 0; top: -22px; padding: 0; color: var(--tinta-2); }
+/* emparejar: dos columnas que se tocan */
+.emparejar-columnas { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: 8px; }
+.emparejar-col { display: grid; gap: 8px; align-content: start; }
+.emparejar .btn { min-height: 48px; height: auto; padding: 8px 10px; white-space: normal; text-align: left; line-height: 1.25; font-size: .875rem; justify-content: flex-start; }
+.emparejar-termino { font-weight: 700; }
+.emparejar-termino.elegido { outline: 3px solid var(--tono, var(--morado)); outline-offset: 1px; background: var(--tono-suave); }
+.emparejar .hecho { opacity: .55; background: color-mix(in srgb, var(--exito, #2e9e5b) 14%, var(--hoja)); border-color: transparent; }
+.emparejar-def.mal { animation: ap-agitar .4s ease; border-color: var(--aviso); }
+@keyframes ap-agitar { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+/* ordenar */
+.ordenar-elegidos, .ordenar-resultado { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.ordenar-elegidos li { min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1.5px dashed var(--linea, #ccc); font-size: .9375rem; }
+.ordenar-elegidos li.lleno { border-style: solid; background: var(--tono-suave); }
+.ordenar-opciones { display: grid; gap: 8px; }
+.ordenar-paso { min-height: 46px; height: auto; white-space: normal; text-align: left; justify-content: flex-start; padding: 8px 12px; line-height: 1.3; }
+.ordenar-resultado li { padding: 4px 0; }
+.ordenar-resultado li > span:first-child { margin-right: 6px; }
+.ordenar-resultado li.bien svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--exito, #2e9e5b); }
+.ordenar-resultado li.mal { color: var(--aviso); }
+/* verdadero o falso */
+.vf-frase { margin: 6px 0 0; min-height: 4.2em; font-size: 1.1875rem; font-weight: 650; line-height: 1.35; transition: color .2s; }
+.vf-frase.bien { color: var(--exito, #2e9e5b); }
+.vf-frase.mal { color: var(--aviso); }
+.vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vf-botones .btn { min-height: 54px; font-weight: 700; }
+.vf-nota { margin: 0; font-size: 1.0625rem; }
+.vf-nota b { font-size: 1.5rem; margin-right: 6px; }
+.vf-falladas { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: .9375rem; line-height: 1.4; }
+/* microlecciones */
+.micro-fila { display: grid; gap: 4px; }
+.micro-fila > span { display: flex; justify-content: space-between; font-size: .9375rem; }
+.micro-fila input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--tono, var(--morado)); }
+.micro-resultado { margin: 4px 0 0; font-size: 1.0625rem; }
+.micro-resultado b { font-size: 1.625rem; color: var(--tono-tinta); }
+.micro-tabla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.micro-tabla > span { display: grid; place-items: center; padding: 8px 4px; border-radius: 12px; background: var(--tono-suave); font-size: .8125rem; text-align: center; }
+.micro-tabla b { font-size: 1rem; }
+.micro-escala { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.micro-escala i { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); }
+.micro-escala i.esta { background: var(--tono, var(--morado)); }
+/* tres explicaciones */
+.apunte-niveles { margin-top: -2px; }
+.apunte-niveles button { font-size: .8125rem; min-height: 36px; }
+.apunte-niveles button:disabled { opacity: .4; }
+/* grábate y compáralo */
+.comparar { display: grid; gap: 12px; }
+.comparar-clave { margin: 0; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--tono-suave, color-mix(in srgb, var(--morado) 10%, transparent)); font-weight: 600; }
+.comparar-clave svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.comparar-videos { display: grid; gap: 10px; }
+.comparar-videos.con-mio { grid-template-columns: 1fr 1fr; align-items: start; }
+.comparar-videos figure { margin: 0; display: grid; gap: 6px; }
+.comparar-videos figcaption { display: flex; justify-content: space-between; align-items: center; font-size: .8125rem; color: var(--tinta-2); }
+.comparar-tuyo video { width: 100%; max-height: 60vh; border-radius: 14px; background: #000; }
+.comparar-grabar, .comparar-otro { position: relative; overflow: hidden; gap: 8px; cursor: pointer; }
+.comparar-grabar { min-height: 120px; }
+.comparar-grabar input, .comparar-otro input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .emparejar-def.mal { animation: none; } .practica-tiempo > span { transition: none; } }
+/* (apuntes, tanda B) Antes de la primera serie de un ejercicio nuevo: sus tres claves, con veinte segundos que se llenan */
+.antes-de-empezar { display: grid; gap: 8px; margin: 4px 0 10px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); border: 1px solid color-mix(in srgb, var(--morado) 22%, transparent); }
+.antes-cab { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--morado-tinta, var(--morado)); }
+.antes-cab svg { width: 18px; height: 18px; flex: none; }
+.antes-de-empezar ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: .9375rem; line-height: 1.4; }
+.antes-tiempo { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--morado) 15%, transparent); overflow: hidden; }
+.antes-tiempo i { display: block; height: 100%; background: var(--morado); transform-origin: left; animation: antes-llenar 20s linear forwards; }
+@keyframes antes-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.antes-de-empezar .btn { justify-self: end; }
+@media (prefers-reduced-motion: reduce) { .antes-tiempo i { animation: none; transform: none; } }
+
+/* ---------- (apuntes, tanda C) Camino y progreso ---------- */
+.anillo-meta { position: relative; display: inline-grid; place-items: center; width: 56px; height: 56px; flex: none; }
+.anillo-meta svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.anillo-meta circle { fill: none; stroke-width: 3.4; }
+.anillo-meta .fondo { stroke: color-mix(in srgb, var(--morado) 16%, transparent); }
+.anillo-meta .lleno { stroke: var(--morado); stroke-linecap: round; transition: stroke-dasharray .5s cubic-bezier(.2, .8, .2, 1); }
+.anillo-meta.hecho .lleno { stroke: var(--exito, #2e9e5b); }
+.anillo-meta b { position: relative; font-size: .875rem; }
+.anillo-meta b svg { position: static; transform: none; width: 20px; height: 20px; color: var(--exito, #2e9e5b); }
+.anillo-meta.pequeno { width: 38px; height: 38px; }
+.anillo-meta.pequeno b { font-size: .6875rem; }
+.anillo-meta.pequeno b svg { width: 16px; height: 16px; }
+.apuntes-cab .anillo-meta { margin-left: auto; }
+.apuntes-diaria { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.apuntes-racha-dias { font-weight: 650; }
+/* la hoja «Tu progreso» */
+.progreso-apuntes h3 { margin: 0 0 8px; font-size: 1.0625rem; }
+.prog-prueba { display: grid; gap: 6px; }
+.prog-hoy { display: grid; gap: 10px; }
+.prog-hoy-fila { display: flex; gap: 14px; align-items: center; }
+.prog-temas { display: grid; gap: 12px; }
+.prog-tema { display: grid; gap: 5px; }
+.prog-tema-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.prog-tema.nivel-dominado .chip { background: color-mix(in srgb, var(--exito, #2e9e5b) 16%, transparent); }
+.prog-barra { position: relative; display: block; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--morado) 10%, transparent); overflow: hidden; }
+.prog-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+.prog-barra .v { background: color-mix(in srgb, var(--morado) 30%, transparent); }
+.prog-barra .p { background: color-mix(in srgb, var(--morado) 65%, transparent); }
+.prog-barra .d { background: var(--exito, #2e9e5b); }
+.prog-ruta { display: grid; gap: 10px; }
+.prog-ruta p { margin: 0; }
+.prog-modulos { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.prog-modulos li > span:first-child { margin-right: 8px; }
+.prog-modulos li { padding: 4px 0; }
+.prog-modulos li.hecho { color: var(--tinta-2); }
+.prog-modulos li.ahora { font-weight: 700; }
+.prog-modulos li .mini svg { width: 15px; height: 15px; vertical-align: -2px; color: var(--exito, #2e9e5b); }
+.prog-mes { display: grid; gap: 8px; }
+.prog-mes p { margin: 0; }
+.prog-mes-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.prog-mes-cifras > span { display: grid; place-items: center; padding: 10px 4px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); font-size: .75rem; color: var(--tinta-2); }
+.prog-mes-cifras b { font-size: 1.375rem; color: var(--tinta); }
+/* el certificado */
+.certificado { display: grid; justify-items: center; gap: 4px; padding: 16px; border-radius: 18px; border: 2px solid color-mix(in srgb, var(--oro, #c8961e) 50%, transparent); background: color-mix(in srgb, var(--oro, #c8961e) 7%, var(--hoja)); text-align: center; }
+.certificado .apuntes-dibujo { width: 120px; height: auto; }
+.certificado-de { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
+.certificado-curso { font-size: 1.375rem; }
+.certificado-nombre { font-size: 1.0625rem; font-weight: 650; }
+.certificado-pie { font-size: .8125rem; color: var(--tinta-2); margin-bottom: 6px; }
+@media (prefers-reduced-motion: reduce) { .anillo-meta .lleno { transition: none; } }
+
+/* ---------- (apuntes, tanda D) Con los demás y en otros formatos ---------- */
+/* la liga y los duelos */
+.prog-liga, .prog-duelos { display: grid; gap: 8px; }
+.prog-liga p, .prog-duelos p { margin: 0; }
+.liga-filas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.liga-filas li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); }
+.liga-filas li.yo { background: color-mix(in srgb, var(--morado) 16%, var(--hoja)); font-weight: 650; }
+.liga-puesto { color: var(--tinta-2); text-align: center; }
+.liga-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
+.duelo-ganado { color: var(--exito, #2e9e5b); font-weight: 650; }
+.duelo-perdido, .duelo-caducado { color: var(--tinta-2); }
+.duelo-gente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* la historia a pantalla completa */
+.ap-historia { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, #000), color-mix(in srgb, var(--tono, var(--morado)) 55%, #000)); color: #fff; }
+.ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: #1f8a5a; } .ap-historia.tono-azul { --tono: #2f6fd6; }
+.ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: 4px; }
+.ap-historia-barras span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .3); overflow: hidden; }
+.ap-historia-barras span i { display: block; height: 100%; background: #fff; transform-origin: left; transform: scaleX(0); }
+.ap-historia-barras span.vista i { transform: none; }
+.ap-historia-barras span.ahora i { animation: ap-historia-llenar 6s linear forwards; }
+.ap-historia-barras span.ahora.parada i { animation-play-state: paused; }
+@keyframes ap-historia-llenar { to { transform: scaleX(1); } }
+.ap-historia-cerrar { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 12px)); right: 10px; z-index: 2; color: #fff; }
+.ap-historia-cuerpo { position: relative; z-index: 1; display: grid; gap: 16px; max-width: 34rem; pointer-events: none; }
+.ap-historia-cuerpo a { pointer-events: auto; justify-self: start; }
+.ap-historia-etq { font-size: .8125rem; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.ap-historia h2 { margin: 0; font-size: clamp(1.75rem, 7vw, 2.5rem); line-height: 1.1; }
+.ap-historia p { margin: 0; font-size: clamp(1.1875rem, 5vw, 1.5rem); line-height: 1.4; }
+.ap-historia.clase-portada h2 { font-size: clamp(2.125rem, 9vw, 3rem); }
+.ap-historia-zona { position: absolute; top: 60px; bottom: 0; width: 50%; background: transparent; border: 0; padding: 0; cursor: pointer; }
+.ap-historia-zona.atras { left: 0; width: 34%; } .ap-historia-zona.alante { right: 0; width: 66%; }
+.ap-historia-cuenta { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); right: 20px; font-size: .8125rem; opacity: .75; }
+/* la audio-píldora */
+.audio-pildora { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: var(--tono-suave, color-mix(in srgb, var(--morado) 9%, transparent)); }
+.audio-play { width: 46px; height: 46px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--tono, var(--morado)); color: #fff; border: 0; }
+.audio-info { display: grid; gap: 4px; }
+.audio-barra { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); overflow: hidden; }
+.audio-barra i { display: block; height: 100%; background: var(--tono, var(--morado)); }
+/* tu nota y los subrayados */
+.apunte-tu-nota { text-align: left; border: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #f5c84b 22%, var(--hoja)); font: inherit; font-size: .9375rem; line-height: 1.4; color: var(--tinta); cursor: pointer; }
+.apunte-nota-propia { display: grid; gap: 6px; }
+.apunte-nota-propia textarea { min-height: 84px; }
+.apunte-subrayado, .apunte-frase.subrayada { background: linear-gradient(transparent 45%, color-mix(in srgb, #f5c84b 70%, transparent) 45%); color: inherit; padding: 0 1px; border-radius: 2px; }
+.apunte-texto.subrayando .apunte-frase { cursor: pointer; border-bottom: 1.5px dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); }
+@media (prefers-reduced-motion: reduce) { .ap-historia-barras span.ahora i { animation: none; transform: scaleX(.5); } }
+/* (tanda D, coach) el audio de la novedad y el equipo en apuntes */
+.audio-coach .etiqueta-campo { font-weight: 600; font-size: .9375rem; }
+.audio-coach audio { max-width: 100%; height: 40px; }
+.audio-coach-hay { flex-wrap: wrap; }
+.audio-grabando { color: var(--aviso); font-weight: 700; }
+.audio-subir { position: relative; overflow: hidden; }
+.audio-subir input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.equipo-semanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; height: 140px; align-items: end; }
+.equipo-semana { display: grid; grid-template-rows: 1fr auto auto; height: 100%; justify-items: center; gap: 2px; }
+.equipo-semana i { align-self: end; width: 70%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--morado) 55%, transparent); }
+.equipo-semana b { font-size: .8125rem; }
+.equipo-semana small { font-size: .6875rem; color: var(--tinta-2); }
+.equipo-tema { display: grid; gap: 4px; }

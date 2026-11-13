@@ -1,5 +1,5 @@
 -- =====================================================================
--- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 063)
+-- FBE Atletas: instalación completa en una base nueva (schema.sql y las migraciones 002 a 065)
 -- Generado con «npm run instalador»: no lo edites a mano (los cambios van en schema.sql o en una migración).
 --
 -- Cómo: en Supabase, SQL Editor → New query → pega TODO este archivo → Run. Después, en otra consulta,
@@ -21971,4 +21971,482 @@ end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
 
 insert into public.fbe_migraciones (numero) values (63)  -- (3) número de esta migración
+  on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
+
+-- ============================== migraciones/064_apuntes_repaso.sql ==============================
+-- =====================================================================
+-- FBE Equipo, migración 064: Apuntes que se quedan (repaso espaciado, preguntas del coach y aviso de repaso)
+--
+-- Por qué: las mejoras de Apuntes para llevarlos al nivel de las mejores plataformas de formación (claude/apuntes-mejoras-4.md).
+-- Esta añade lo que necesita la base:
+--
+--   * apuntes_vistos.caja y apuntes_vistos.proxima: el repaso espaciado. Cada apunte va subiendo de caja (0 a 5) cuando se
+--     sabe y vuelve a la 0 cuando no; la caja dice cuándo toca volver a verlo (a los 1, 3, 7, 16 o 35 días). Lo calcula
+--     la app; la base lo guarda para que no se pierda al cambiar de móvil y para poder avisar.
+--   * apuntar_apunte(p_apunte, p_sabia, p_caja, p_proxima): la misma de la 061 con la caja y la próxima vez.
+--   * novedades de tipo 'pregunta': el coach escribe sus propias preguntas (tres o cuatro opciones, cuál es la buena, una
+--     explicación y, si quiere, el porqué de cada opción mala). Sus atletas las ven en los descansos y en los exámenes.
+--   * crear_recordatorios_apuntes(): una vez al día, en un día sin sesión, a quien tiene tres o más apuntes por repasar,
+--     un aviso («Tienes 4 apuntes por repasar»). Tipo de aviso nuevo, 'repaso', que se puede apagar en Ajustes → Avisos.
+--     La llama la función «enviar-notificaciones» justo después de crear_recordatorios() (hay que volver a desplegarla).
+--
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 063 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada.
+-- =====================================================================
+
+do $$
+declare v smallint;
+begin
+  select max(numero) into v from public.fbe_migraciones;
+  if v > 64 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 064 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 64;» y, después de ella, todas las siguientes en orden.';
+  end if;
+  if not exists (select 1 from public.fbe_migraciones where numero = 63) then  -- (2) la anterior
+    raise exception 'Falta la migración 063 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 1. El repaso espaciado: la caja y la próxima vez de cada apunte
+-- ---------------------------------------------------------------------
+alter table public.apuntes_vistos add column if not exists caja smallint not null default 0;
+alter table public.apuntes_vistos add column if not exists proxima date;
+alter table public.apuntes_vistos drop constraint if exists apuntes_vistos_caja_valida;
+alter table public.apuntes_vistos add constraint apuntes_vistos_caja_valida check (caja between 0 and 5 and (proxima is null or proxima between ultimo and ultimo + 400));
+create index if not exists apuntes_vistos_proxima_idx on public.apuntes_vistos (atleta_id, proxima) where proxima is not null;
+
+-- (la de la 061 tenía dos parámetros: se quita para que no haya dos funciones con el mismo nombre)
+drop function if exists public.apuntar_apunte(text, boolean);
+create or replace function public.apuntar_apunte(p_apunte text, p_sabia boolean default null, p_caja smallint default null, p_proxima date default null)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  v_atleta uuid := public.mi_atleta_id();
+  v_hoy date := (now() at time zone 'Europe/Madrid')::date;
+begin
+  if v_atleta is null then return; end if;
+  if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return; end if;
+  if p_apunte is null or p_apunte !~ '^[a-z]:[A-Za-z0-9:_-]{1,78}$' then
+    raise exception 'Ese no es un apunte' using errcode = '22023';
+  end if;
+  if p_caja is not null and (p_caja < 0 or p_caja > 5) then raise exception 'Esa caja no existe' using errcode = '22023'; end if;
+  if p_proxima is not null and (p_proxima < v_hoy or p_proxima > v_hoy + 60) then raise exception 'Esa fecha de repaso no vale' using errcode = '22023'; end if;
+  perform pg_advisory_xact_lock(hashtext('apuntes_vistos:' || v_atleta::text));  -- (dos a la vez no se saltan el tope; como en la 060)
+  if (select count(*) from public.apuntes_vistos where atleta_id = v_atleta) >= 3000
+     and not exists (select 1 from public.apuntes_vistos where atleta_id = v_atleta and apunte = p_apunte) then return; end if;
+  insert into public.apuntes_vistos as x (atleta_id, apunte, ultimo, sabia, caja, proxima)
+    values (v_atleta, p_apunte, v_hoy, p_sabia, coalesce(p_caja, 0), p_proxima)
+  on conflict (atleta_id, apunte) do update set
+    veces = least(x.veces + case when x.ultimo < excluded.ultimo then 1 else 0 end, 100000),
+    ultimo = greatest(x.ultimo, excluded.ultimo),
+    sabia = coalesce(excluded.sabia, x.sabia),
+    caja = case when p_caja is null then x.caja else excluded.caja end,
+    proxima = case when p_proxima is null then x.proxima else excluded.proxima end;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 2. Las preguntas del coach
+-- ---------------------------------------------------------------------
+alter table public.novedades add column if not exists opciones jsonb;
+alter table public.novedades add column if not exists correcta smallint;
+alter table public.novedades add column if not exists explicaciones jsonb;
+alter table public.novedades drop constraint if exists novedades_tipo_valido;
+alter table public.novedades add constraint novedades_tipo_valido check (
+  tipo in ('novedad', 'apunte', 'pregunta') and (ejercicio_id is null or tipo in ('apunte', 'pregunta'))
+  and case when tipo = 'pregunta' then coalesce(
+         jsonb_typeof(opciones) = 'array' and jsonb_array_length(opciones) between 2 and 4
+         and correcta between 0 and jsonb_array_length(opciones) - 1
+         and (explicaciones is null or (jsonb_typeof(explicaciones) = 'array' and jsonb_array_length(explicaciones) = jsonb_array_length(opciones)))
+         and char_length(opciones::text) <= 1200 and char_length(coalesce(explicaciones::text, '')) <= 1600, false)
+       else opciones is null and correcta is null and explicaciones is null end
+);
+
+-- ---------------------------------------------------------------------
+-- 3. El aviso de repaso
+-- ---------------------------------------------------------------------
+alter table public.notificaciones drop constraint if exists notificaciones_validas;
+alter table public.notificaciones add constraint notificaciones_validas check (
+  tipo in ('respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario',
+           'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'prueba', 'descanso', 'comunidad',
+           'tarea', 'tarea_hecha', 'repaso')
+  and char_length(titulo) between 1 and 80
+  and (cuerpo is null or char_length(cuerpo) <= 160)
+  and (url in ('#hoy', '#semana', '#checkin', '#progreso', '#perfil', '#atletas', '#revisar', '#cuenta', '#mensajes', '#equipo')
+       or url ~ '^#mensajes/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+       or url ~ '^#videos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(@[0-9]{1,4}(\.[0-9])?)?$')
+  and char_length(clave) between 1 and 100
+  and estado in ('pendiente', 'enviando', 'enviada', 'caducada', 'fallida')
+  and (canal is null or canal in ('push', 'email'))
+  and intentos between 0 and 100
+  and (error is null or char_length(error) <= 200)
+) not valid;
+alter table public.preferencias_notificaciones drop constraint if exists preferencias_notificaciones_validas;
+alter table public.preferencias_notificaciones add constraint preferencias_notificaciones_validas check (
+  desactivados <@ array['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario',
+                        'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad',
+                        'tarea', 'tarea_hecha', 'repaso']::text[]
+  and hora_manana between time '05:00' and time '12:00' and extract(second from hora_manana) = 0
+  and hora_tarde between time '12:00' and time '23:30' and extract(second from hora_tarde) = 0
+  and dia_checkin between 1 and 7
+  and (silencio_desde is null) = (silencio_hasta is null)
+  and (silencio_desde is null or (silencio_desde <> silencio_hasta
+       and extract(second from silencio_desde) = 0 and extract(second from silencio_hasta) = 0))
+);
+
+-- Una vez al día, en las dos horas antes de su hora de la tarde y solo si hoy no tiene sesión prevista: a quien tiene tres
+-- o más apuntes por repasar. Solo la llama el servidor (la función de los avisos), como crear_recordatorios().
+create or replace function public.crear_recordatorios_apuntes(p_ahora timestamptz default now()) returns integer
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_local timestamp := p_ahora at time zone 'Europe/Madrid';
+  v_hoy date := (p_ahora at time zone 'Europe/Madrid')::date;
+  v_n integer := 0;
+begin
+  perform fbe_privado.solo_servidor();
+  with x as materialized (
+    select d.perfil_id, d.hora_tarde, count(v.apunte) as n
+    from fbe_privado.destinatarios d
+    join public.apuntes_vistos v on v.atleta_id = d.atleta_id and v.proxima is not null and v.proxima <= v_hoy
+    where not ('repaso' = any (d.desactivados))
+      and v_local >= v_hoy + d.hora_tarde - interval '2 hours' and v_local < v_hoy + d.hora_tarde
+      and not exists (select 1 from public.bloques b
+                      join public.semanas w on w.bloque_id = b.id
+                      join public.sesiones s on s.semana_id = w.id and s.dia_previsto = v_hoy
+                      where b.atleta_id = d.atleta_id and not b.es_plantilla and b.estado not in ('cancelado', 'finalizado'))
+    group by d.perfil_id, d.hora_tarde
+    having count(v.apunte) >= 3
+  )
+  select count(*) into v_n from x
+  where fbe_privado.notificar_seguro(x.perfil_id, 'repaso',
+          'Tienes ' || least(x.n, 99) || ' apuntes por repasar',
+          'Un par de minutos y no se te olvidan. Están en Semana, en «Tus apuntes».',
+          '#semana', 'recordatorio_repaso:' || v_hoy, p_ahora,
+          (v_hoy + x.hora_tarde + interval '2 hours') at time zone 'Europe/Madrid');
+  return v_n;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 4. Permisos (como al final de 003 a 061)
+-- ---------------------------------------------------------------------
+revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
+revoke execute on all functions in schema public from public, anon;
+grant execute on all functions in schema public to authenticated, service_role;
+revoke execute on function public.crear_recordatorios(timestamptz), public.notificaciones_por_enviar(integer, boolean),
+  public.notificaciones_resultado(jsonb), public.salud_recibir(text, jsonb), public.calendario_de(text) from public, anon, authenticated;
+revoke execute on function public.sesion_video_proteger(), public.guia_tocar(), public.novedad_tocar() from public, anon, authenticated;
+revoke execute on function public.crear_recordatorios_apuntes(timestamptz) from public, anon, authenticated;
+-- (las del reloj, si están)
+do $$
+declare f text;
+begin
+  for f in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname in ('reloj_estado', 'reloj_serie', 'reloj_saltar', 'reloj_elegir', 'reloj_terminar') loop
+    execute format('revoke execute on function %s from public, anon, authenticated', f);
+  end loop;
+end $$;
+revoke all on all functions in schema fbe_privado from public, anon, authenticated;
+
+insert into public.fbe_migraciones (numero) values (64)  -- (3) número de esta migración
+  on conflict (numero) do update set aplicada_en = excluded.aplicada_en;
+
+-- ============================== migraciones/065_apuntes_social.sql ==============================
+-- =====================================================================
+-- FBE Equipo, migración 065: Apuntes con los demás (liga, duelos, audio del coach y panel del equipo)
+--
+-- Por qué: los apuntes ya enseñan, se repasan y llevan la cuenta en el móvil de cada atleta. Esta añade lo que necesita
+-- la base para la última tanda de mejoras de los apuntes:
+--
+--   * apuntes_semanas: los puntos y los apuntes de cada atleta por semana (los manda la app; se queda el mayor). Con
+--     ellos, apuntes_liga(): la liga semanal de aprendizaje entre quienes están en la comunidad, con las reglas de la
+--     clasificación de la travesía (061): el nombre de la comunidad; quien marcó «No salir en el ranking» no sale (solo
+--     se ve a sí mismo) y lo suyo solo suma al total del equipo si son al menos tres.
+--   * apuntes_duelos: duelos de cinco preguntas del glosario entre dos de la comunidad (los dos en el ranking), cada uno
+--     cuando pueda, durante una semana. La base guarda la semilla (las preguntas salen de ella, iguales para los dos) y
+--     los aciertos; los del rival solo se ven después de contestar.
+--   * novedades.audio_ruta y audio_segundos: el coach graba una audio-píldora (hasta 5 minutos) en una novedad, un
+--     apunte suelto o una pregunta. Va a un bucket privado («apuntes»): lo sube el coach y lo oyen sus atletas mientras
+--     esa novedad está publicada. Al quitarla, el archivo va a la cola de Storage.
+--   * apuntes_dominio_equipo(): para el coach, cuántos atletas han visto cada apunte, su caja media y cuántos lo dominan
+--     (caja 3 o más). Solo cuentas, nunca quién. La app lo junta por temas.
+--
+-- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 064 (o con instalar.sql en una base nueva).
+-- Se puede repetir sin romper nada. (Si otra rama ha usado ya el número 065, renumerar esta.)
+-- =====================================================================
+
+do $$
+declare v smallint;
+begin
+  select max(numero) into v from public.fbe_migraciones;
+  if v > 65 then  -- (1) número de esta migración
+    raise exception 'Esta base ya tiene la migración %: repetir la 065 desharía sus cambios. Ejecuta solo las que te falten.', to_char(v, 'FM000')
+      using hint = 'Si de verdad hace falta repetirla: ejecuta antes «delete from public.fbe_migraciones where numero > 65;» y, después de ella, todas las siguientes en orden.';
+  end if;
+  if not exists (select 1 from public.fbe_migraciones where numero = 64) then  -- (2) la anterior
+    raise exception 'Falta la migración 064 (esta base va por la %). Ejecuta las migraciones en orden.', to_char(coalesce(v, 0), 'FM000');
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 1. Los puntos de cada semana y la liga
+-- ---------------------------------------------------------------------
+create table if not exists public.apuntes_semanas (
+  atleta_id      uuid not null references public.atletas(id) on delete cascade,
+  semana         date not null,                 -- el lunes
+  puntos         integer not null default 0 check (puntos between 0 and 20000),
+  apuntes        integer not null default 0 check (apuntes between 0 and 2000),
+  actualizada_en timestamptz not null default now(),
+  primary key (atleta_id, semana),
+  check (extract(isodow from semana) = 1)
+);
+alter table public.apuntes_semanas enable row level security;
+drop policy if exists coach_ver on public.apuntes_semanas;
+create policy coach_ver on public.apuntes_semanas for select to authenticated using (public.es_coach());
+drop policy if exists propio_ver on public.apuntes_semanas;
+create policy propio_ver on public.apuntes_semanas for select to authenticated using (atleta_id = public.mi_atleta_id());
+drop policy if exists propio_borrar on public.apuntes_semanas;
+create policy propio_borrar on public.apuntes_semanas for delete to authenticated using (atleta_id = public.mi_atleta_id());
+
+-- La app manda lo que lleva esta semana (o la pasada, si se quedó sin subir): se queda el mayor de cada cifra
+create or replace function public.apuntes_semana_sumar(p_semana date, p_puntos integer, p_apuntes integer) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_atleta uuid := public.mi_atleta_id();
+  v_lunes date := (now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid')::date)::integer - 1);
+begin
+  if v_atleta is null then raise exception 'Solo un atleta' using errcode = '42501'; end if;
+  if p_semana is null or p_semana not in (v_lunes, v_lunes - 7) then raise exception 'Esa semana no vale' using errcode = '22023'; end if;
+  if p_puntos is null or p_puntos < 0 or p_puntos > 20000 or p_apuntes is null or p_apuntes < 0 or p_apuntes > 2000 then
+    raise exception 'Esas cifras no valen' using errcode = '22023';
+  end if;
+  insert into public.apuntes_semanas as x (atleta_id, semana, puntos, apuntes) values (v_atleta, p_semana, p_puntos, p_apuntes)
+  on conflict (atleta_id, semana) do update set puntos = greatest(x.puntos, excluded.puntos), apuntes = greatest(x.apuntes, excluded.apuntes), actualizada_en = now();
+  return true;
+end $$;
+
+-- La liga de la semana (para quien está en la comunidad, o el coach): sus filas (nombre de la comunidad, puntos,
+-- apuntes y si soy yo), la gente a la que se puede retar (dentro y en el ranking, sin mí) y el total del equipo
+create or replace function public.apuntes_liga() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  with hoy as (select (now() at time zone 'Europe/Madrid')::date as d),
+  lunes as (select d - (extract(isodow from d)::integer - 1) as l from hoy),
+  semana as (
+    select d.perfil_id, d.nombre, d.sin_ranking, s.puntos, s.apuntes
+    from public.apuntes_semanas s join fbe_privado.comunidad_dentro d on d.atleta_id = s.atleta_id
+    where s.semana = (select l from lunes) and s.puntos > 0
+  ),
+  tot as (
+    select coalesce(sum(puntos) filter (where not sin_ranking), 0) as p_vis, coalesce(sum(puntos) filter (where sin_ranking), 0) as p_oc,
+           count(*) filter (where not sin_ranking) as n_vis, count(*) filter (where sin_ranking) as n_oc from semana
+  )
+  select case when auth.uid() is null or not (public.es_coach() or public.comunidad_soy_miembro()) then null else jsonb_build_object(
+    'semana', (select l from lunes),
+    'filas', coalesce((select jsonb_agg(jsonb_build_object('nombre', s.nombre, 'puntos', s.puntos, 'apuntes', s.apuntes, 'yo', s.perfil_id = auth.uid()) order by s.puntos desc, s.nombre)
+                       from semana s where not s.sin_ranking or s.perfil_id = auth.uid()), '[]'::jsonb),
+    'gente', coalesce((select jsonb_agg(jsonb_build_object('id', d.perfil_id, 'nombre', d.nombre) order by d.nombre)
+                       from fbe_privado.comunidad_dentro d where not d.sin_ranking and d.perfil_id <> auth.uid()
+                         and not public.es_coach() and not exists (select 1 from fbe_privado.comunidad_dentro y where y.perfil_id = auth.uid() and y.sin_ranking)), '[]'::jsonb),
+    'equipo', jsonb_build_object('puntos', (select p_vis + case when n_oc >= 3 then p_oc else 0 end from tot),
+                                'miembros', (select n_vis + case when n_oc >= 3 then n_oc else 0 end from tot))
+  ) end
+$$;
+
+-- ---------------------------------------------------------------------
+-- 2. Los duelos de cinco preguntas
+-- ---------------------------------------------------------------------
+create table if not exists public.apuntes_duelos (
+  id         uuid primary key default gen_random_uuid(),
+  de         uuid not null references public.perfiles(id) on delete cascade,
+  para       uuid not null references public.perfiles(id) on delete cascade,
+  semilla    integer not null check (semilla between 1 and 2000000000),
+  aciertos_de   smallint check (aciertos_de between 0 and 5),
+  aciertos_para smallint check (aciertos_para between 0 and 5),
+  creado_en  timestamptz not null default now(),
+  caduca     date not null,
+  check (de <> para)
+);
+create index if not exists apuntes_duelos_de_idx on public.apuntes_duelos (de, caduca);
+create index if not exists apuntes_duelos_para_idx on public.apuntes_duelos (para, caduca);
+alter table public.apuntes_duelos enable row level security;
+drop policy if exists coach_ver on public.apuntes_duelos;
+create policy coach_ver on public.apuntes_duelos for select to authenticated using (public.es_coach());
+drop policy if exists mios_ver on public.apuntes_duelos;
+create policy mios_ver on public.apuntes_duelos for select to authenticated using (auth.uid() in (de, para) and public.comunidad_soy_miembro());
+
+-- Retar: los dos dentro de la comunidad (abierta) y en el ranking; como mucho tres duelos vivos cada uno y uno vivo
+-- entre los mismos dos. Se le avisa al retado.
+create or replace function public.apuntes_duelo_retar(p_para uuid, p_semilla integer) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+  v_hoy date := (now() at time zone 'Europe/Madrid')::date;
+  v_yo fbe_privado.comunidad_dentro;
+  v_el fbe_privado.comunidad_dentro;
+  v_id uuid;
+begin
+  if v_uid is null or not public.comunidad_activa() or not public.comunidad_soy_miembro() then
+    raise exception 'Para retar tienes que estar en la comunidad (y abierta)' using errcode = '42501';
+  end if;
+  if p_para is null or p_para = v_uid then raise exception 'Contra ti ya juegas cada día' using errcode = '22023'; end if;
+  if p_semilla is null or p_semilla < 1 or p_semilla > 2000000000 then raise exception 'Esa semilla no vale' using errcode = '22023'; end if;
+  select * into v_yo from fbe_privado.comunidad_dentro d where d.perfil_id = v_uid;
+  select * into v_el from fbe_privado.comunidad_dentro d where d.perfil_id = p_para;
+  if v_el.perfil_id is null then raise exception 'Esa persona ya no está en el equipo' using errcode = '42501'; end if;
+  if v_yo.sin_ranking or v_el.sin_ranking then raise exception 'Los duelos enseñan aciertos: los dos tenéis que salir en el ranking' using errcode = '22023'; end if;
+  if (select count(*) from public.apuntes_duelos x where v_uid in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)) >= 3 then
+    raise exception 'Como mucho tres duelos a la vez' using errcode = '54000';
+  end if;
+  if (select count(*) from public.apuntes_duelos x where p_para in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)) >= 3 then
+    raise exception 'Esa persona ya tiene tres duelos: rétale más adelante' using errcode = '54000';
+  end if;
+  if exists (select 1 from public.apuntes_duelos x where least(x.de, x.para) = least(v_uid, p_para) and greatest(x.de, x.para) = greatest(v_uid, p_para)
+             and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)) then
+    raise exception 'Ya tenéis un duelo sin acabar' using errcode = '23505';
+  end if;
+  insert into public.apuntes_duelos (de, para, semilla, caduca) values (v_uid, p_para, p_semilla, v_hoy + 7) returning id into v_id;
+  perform fbe_privado.notificar_seguro(p_para, 'comunidad', left(coalesce(v_yo.nombre, 'Alguien del equipo'), 40) || ' te reta a un duelo de apuntes',
+    'Cinco preguntas, cuando puedas. Está en Semana, en «Tus apuntes».', '#semana', 'apuntes_duelo:' || v_id, null,
+    (v_hoy + 8)::timestamp at time zone 'Europe/Madrid');
+  return v_id;
+end $$;
+
+-- Contestar (una vez, mientras no caduque): los aciertos de cinco
+create or replace function public.apuntes_duelo_contestar(p_id uuid, p_aciertos smallint) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+  x public.apuntes_duelos;
+begin
+  if p_aciertos is null or p_aciertos < 0 or p_aciertos > 5 then raise exception 'De 0 a 5' using errcode = '22023'; end if;
+  select * into x from public.apuntes_duelos d where d.id = p_id and v_uid in (d.de, d.para) for update;
+  if not found or not public.comunidad_soy_miembro() then raise exception 'Ese duelo no es tuyo' using errcode = '42501'; end if;
+  if x.caduca < (now() at time zone 'Europe/Madrid')::date then raise exception 'Ese duelo ya ha caducado' using errcode = '22023'; end if;
+  if (x.de = v_uid and x.aciertos_de is not null) or (x.para = v_uid and x.aciertos_para is not null) then
+    raise exception 'Ya lo has contestado' using errcode = '23505';
+  end if;
+  if x.de = v_uid then update public.apuntes_duelos set aciertos_de = p_aciertos where id = p_id;
+  else update public.apuntes_duelos set aciertos_para = p_aciertos where id = p_id; end if;
+  return true;
+end $$;
+
+-- Los míos (de la última semana y los vivos): el rival por su nombre de la comunidad, la semilla, mis aciertos y los
+-- suyos (solo si ya he contestado y sigue dentro y en el ranking)
+create or replace function public.apuntes_duelos_mios()
+returns table (id uuid, soy_retador boolean, rival_nombre text, semilla integer, mios smallint, suyos smallint, rival_contesto boolean, caduca date, acabado boolean, creado_en timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select d.id, d.de = auth.uid(), coalesce(dr.nombre, 'Alguien del equipo'), d.semilla,
+    case when d.de = auth.uid() then d.aciertos_de else d.aciertos_para end,
+    case when (case when d.de = auth.uid() then d.aciertos_de else d.aciertos_para end) is not null and dr.perfil_id is not null and not dr.sin_ranking
+         then case when d.de = auth.uid() then d.aciertos_para else d.aciertos_de end end,
+    (case when d.de = auth.uid() then d.aciertos_para else d.aciertos_de end) is not null,
+    d.caduca,
+    (d.aciertos_de is not null and d.aciertos_para is not null) or d.caduca < (now() at time zone 'Europe/Madrid')::date,
+    d.creado_en
+  from public.apuntes_duelos d
+  left join fbe_privado.comunidad_dentro dr on dr.perfil_id = case when d.de = auth.uid() then d.para else d.de end
+  where auth.uid() in (d.de, d.para) and public.comunidad_soy_miembro() and d.caduca >= (now() at time zone 'Europe/Madrid')::date - 7
+  order by d.creado_en desc
+  limit 20
+$$;
+
+-- ---------------------------------------------------------------------
+-- 3. Las audio-píldoras del coach
+-- ---------------------------------------------------------------------
+alter table public.novedades add column if not exists audio_ruta text;
+alter table public.novedades add column if not exists audio_segundos smallint;
+alter table public.novedades drop constraint if exists novedades_audio_valido;
+alter table public.novedades add constraint novedades_audio_valido check (
+  (audio_ruta is null and audio_segundos is null)
+  or coalesce(audio_ruta ~ '^audio/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$' and audio_segundos between 1 and 300, false)
+);
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('apuntes', 'apuntes', false, 5242880, array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/wav', 'audio/x-wav'])
+on conflict (id) do update
+  set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+-- ¿Es el audio de una novedad publicada? (para que la oigan sus atletas)
+create or replace function public.audio_de_apunte(p_ruta text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.novedades n where n.audio_ruta = p_ruta and n.publicada)
+$$;
+drop policy if exists fbe_apuntes_ver on storage.objects;
+create policy fbe_apuntes_ver on storage.objects for select to authenticated
+  using (bucket_id = 'apuntes' and (public.es_coach() or (public.mi_atleta_id() is not null and public.audio_de_apunte(name))));
+drop policy if exists fbe_apuntes_subir on storage.objects;
+create policy fbe_apuntes_subir on storage.objects for insert to authenticated
+  with check (bucket_id = 'apuntes' and public.es_coach() and name ~ '^audio/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$');
+drop policy if exists fbe_apuntes_borrar on storage.objects;
+create policy fbe_apuntes_borrar on storage.objects for delete to authenticated
+  using (bucket_id = 'apuntes' and public.es_coach());
+-- La cola de Storage sabe de este bucket; al quitar o cambiar el audio de una novedad, el de antes, a la cola
+alter table fbe_privado.storage_por_borrar drop constraint if exists storage_por_borrar_bucket_check;
+alter table fbe_privado.storage_por_borrar add constraint storage_por_borrar_bucket_check check (bucket in ('archivos', 'voz', 'comunidad', 'apuntes'));
+create or replace function public.novedad_audio_fuera() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if old.audio_ruta is not null and (tg_op = 'DELETE' or new.audio_ruta is distinct from old.audio_ruta) then
+    insert into fbe_privado.storage_por_borrar (ruta, bucket) values (old.audio_ruta, 'apuntes') on conflict do nothing;
+  end if;
+  return null;
+end $$;
+drop trigger if exists novedad_audio_fuera on public.novedades;
+create trigger novedad_audio_fuera after update of audio_ruta or delete on public.novedades
+  for each row execute function public.novedad_audio_fuera();
+
+-- ---------------------------------------------------------------------
+-- 4. El dominio del equipo (para el coach: solo cuentas)
+-- ---------------------------------------------------------------------
+create or replace function public.apuntes_dominio_equipo()
+returns table (apunte text, atletas integer, caja_media numeric, dominan integer)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.es_coach() then raise exception 'Solo el coach' using errcode = '42501'; end if;
+  return query
+    select v.apunte, count(*)::integer, round(avg(v.caja), 2), (count(*) filter (where v.caja >= 3))::integer
+    from public.apuntes_vistos v join public.atletas a on a.id = v.atleta_id and a.estado <> 'baja'
+    group by v.apunte
+    order by count(*) desc, v.apunte
+    limit 2000;
+end $$;
+-- Quién participa cada semana (las seis últimas): cuántos atletas han hecho algo y cuántos puntos suman, sin nombres
+create or replace function public.apuntes_participacion()
+returns table (semana date, atletas integer, puntos integer, activos integer)
+language plpgsql stable security definer set search_path = '' as $$
+declare v_lunes date := (now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid')::date)::integer - 1);
+begin
+  if not public.es_coach() then raise exception 'Solo el coach' using errcode = '42501'; end if;
+  return query
+    select g.l::date, coalesce((select count(*) from public.apuntes_semanas s join public.atletas a on a.id = s.atleta_id and a.estado <> 'baja' where s.semana = g.l::date and (s.puntos > 0 or s.apuntes > 0)), 0)::integer,
+           coalesce((select sum(s.puntos) from public.apuntes_semanas s join public.atletas a on a.id = s.atleta_id and a.estado <> 'baja' where s.semana = g.l::date), 0)::integer,
+           (select count(*) from public.atletas a where a.estado = 'activo')::integer
+    from generate_series(v_lunes - 35, v_lunes, interval '7 days') g(l)
+    order by 1;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 5. Permisos (como al final de 003 a 064)
+-- ---------------------------------------------------------------------
+-- (las tablas nuevas: el atleta lee lo suyo y puede borrar sus semanas; lo demás, solo con las funciones)
+revoke all on public.apuntes_semanas, public.apuntes_duelos from public, anon, authenticated;
+grant select, delete on public.apuntes_semanas to authenticated;
+grant select on public.apuntes_duelos to authenticated;
+revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
+revoke execute on all functions in schema public from public, anon;
+grant execute on all functions in schema public to authenticated, service_role;
+revoke execute on function public.crear_recordatorios(timestamptz), public.notificaciones_por_enviar(integer, boolean),
+  public.notificaciones_resultado(jsonb), public.salud_recibir(text, jsonb), public.calendario_de(text) from public, anon, authenticated;
+revoke execute on function public.sesion_video_proteger(), public.guia_tocar(), public.novedad_tocar() from public, anon, authenticated;
+revoke execute on function public.crear_recordatorios_apuntes(timestamptz) from public, anon, authenticated;
+revoke execute on function public.novedad_audio_fuera() from public, anon, authenticated;
+-- (las del reloj, si están)
+do $$
+declare f text;
+begin
+  for f in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname in ('reloj_estado', 'reloj_serie', 'reloj_saltar', 'reloj_elegir', 'reloj_terminar') loop
+    execute format('revoke execute on function %s from public, anon, authenticated', f);
+  end loop;
+end $$;
+revoke all on all functions in schema fbe_privado from public, anon, authenticated;
+
+insert into public.fbe_migraciones (numero) values (65)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;

@@ -803,7 +803,7 @@ console.log('\nNotificaciones');
   check(!preferenciasValidas({ ...d, hora_manana: '13:00' }) && !preferenciasValidas({ ...d, hora_tarde: '23:45' }) && !preferenciasValidas({ ...d, silencio_hasta: null })
     && !preferenciasValidas({ ...d, silencio_desde: '08:00', silencio_hasta: '08:00' }) && !preferenciasValidas({ ...d, desactivados: ['spam'] }) && !preferenciasValidas({ ...d, dia_checkin: 8 }),
     'como la base: mañana de 5 a 12, tarde de 12 a 23:30, «no molestar» completo y distinto, tipos conocidos');
-  check(TIPOS_ATLETA.length === 11 && TIPOS_COACH.length === 7 && TIPOS_COACH.every(([t]) => t === 'comunidad' || !TIPOS_ATLETA.some(([a]) => a === t)),
+  check(TIPOS_ATLETA.length === 12 && TIPOS_ATLETA.some(([t]) => t === 'repaso') && TIPOS_COACH.length === 7 && TIPOS_COACH.every(([t]) => t === 'comunidad' || !TIPOS_ATLETA.some(([a]) => a === t)),
     'tipos del atleta (con el fin del descanso, v0.39, y las tareas, v0.48) y del coach (con las tareas hechas), sin repetir (salvo «Equipo», v0.43, que tienen los dos)');
   check(preferenciasValidas({ ...d, desactivados: ['tarea', 'tarea_hecha'] }), 'quitar las de las tareas (v0.48) es una preferencia válida');
   check(preferenciasValidas({ ...d, desactivados: ['comunidad'] }), 'quitar las del equipo es una preferencia válida');

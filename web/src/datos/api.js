@@ -446,7 +446,9 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   // (054) las sesiones abiertas y la semana de un vistazo solo se leen
   'sesiones_abiertas', 'atleta_resumen_semana',
   // (058) el modo reloj
-  'reloj_mio']);
+  'reloj_mio',
+  // (065) la liga, los duelos y lo del equipo en apuntes solo se leen
+  'apuntes_liga', 'apuntes_duelos_mios', 'apuntes_dominio_equipo', 'apuntes_participacion']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
 const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
@@ -1362,7 +1364,12 @@ export function crearApi(backend) {
         dia_checkin: v.dia_checkin, silencio_desde: v.silencio_desde || null, silencio_hasta: v.silencio_hasta || null, email: v.email,
       };
       if (!preferenciasValidas(fila)) throw new Error('Revisa las horas: la de la mañana, de 5:00 a 12:00; la de la tarde, de 12:00 a 23:30; y el «no molestar», con principio y final distintos.');
-      return conDefecto((await b.upsert('preferencias_notificaciones', fila, 'usuario_id'))[0]);
+      // (064) sin la migración, la base aún no conoce el aviso «repaso»: se guarda lo demás
+      const filas = await b.upsert('preferencias_notificaciones', fila, 'usuario_id').catch((e) => {
+        if (!/preferencias_notificaciones_validas|23514/.test(`${e?.message || ''} ${e?.code || ''}`) || !(fila.desactivados || []).includes('repaso')) throw e;
+        return b.upsert('preferencias_notificaciones', { ...fila, desactivados: fila.desactivados.filter((t) => t !== 'repaso') }, 'usuario_id');
+      });
+      return conDefecto(filas[0]);
     },
     async suscripcionesPush() {
       return b.select('suscripciones_push', { eq: { usuario_id: uid() }, cols: 'id,endpoint,dispositivo,creada_en,usada_en,fallos,ultimo_error', order: [['creada_en', 'desc']] });
@@ -2623,7 +2630,7 @@ export function crearApi(backend) {
       if (!(await api.esCoachAhora())) return 0;
       let rutas;
       // (v0.56) con su bucket (la 034); sin ella, todo es de «archivos»
-      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad'].includes(x.bucket) ? x.bucket : 'archivos' })); }
+      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad', 'apuntes'].includes(x.bucket) ? x.bucket : 'archivos' })); }
       catch {
         try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
         rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean).map((ruta) => ({ ruta, bucket: 'archivos' }));
@@ -3990,12 +3997,39 @@ export function crearApi(backend) {
       if (fila.enlace && !ENLACE_NOVEDAD.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https:// y no llevar espacios');
       // (tanda 4, migración 061) un apunte suelto del coach (tipo 'apunte'), quizá de un ejercicio; sin la 061 la base no
       // tiene esas columnas: la novedad se guarda como siempre y el apunte suelto pide la migración
-      const suelto = n.tipo === 'apunte';
-      const con061 = n.tipo ? { ...fila, tipo: suelto ? 'apunte' : 'novedad', ejercicio_id: suelto ? n.ejercicio_id || null : null } : fila;
-      const guardar = (f) => (n.id ? b.update('novedades', f, { eq: { id: n.id } }) : b.insert('novedades', [f]));
+      const suelto = n.tipo === 'apunte', pregunta = n.tipo === 'pregunta';
+      // (apuntes, tanda A, 064) una pregunta del coach: opciones, la buena y el porqué de cada mala (vacío si no lo escribe)
+      const extra = pregunta ? { opciones: n.opciones, correcta: n.correcta, explicaciones: (n.explicaciones || []).some((x) => String(x || '').trim()) ? n.explicaciones.map((x) => String(x || '').trim()) : null }
+        : n.tipo ? { opciones: null, correcta: null, explicaciones: null } : {};
+      // (apuntes, tanda D, 065) su audio-píldora: { ruta, segundos } (o null para quitarla); sin decir nada, no se toca
+      const audio = n.audio !== undefined ? { audio_ruta: n.audio?.ruta || null, audio_segundos: n.audio?.ruta ? Math.max(1, Math.min(300, Math.round(n.audio.segundos || 1))) : null } : {};
+      const con061Base = n.tipo ? { ...fila, tipo: pregunta ? 'pregunta' : suelto ? 'apunte' : 'novedad', ejercicio_id: suelto || pregunta ? n.ejercicio_id || null : null, ...extra } : fila;
+      const con061Audio = Object.keys(audio).length ? { ...con061Base, ...audio } : con061Base;
+      const guardarBase = (f) => (n.id ? b.update('novedades', f, { eq: { id: n.id } }) : b.insert('novedades', [f]));
+      const guardar = (f) => guardarBase(f).catch((e) => {
+        // (sin la 065: el audio lo pide; lo demás se guarda sin él)
+        if (!('audio_ruta' in f) || !/audio_ruta|audio_segundos/.test(`${e?.message || ''}`)) throw e;
+        if (f.audio_ruta) throw new Error('Para el audio falta ejecutar en Supabase la migración 065 (supabase/migraciones/065_apuntes_social.sql).');
+        const { audio_ruta, audio_segundos, ...resto } = f;
+        return guardarBase(resto);
+      });
+      const con061 = con061Audio;
+      const falta = (e) => /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
+      const sin064 = (f) => { const { opciones, correcta, explicaciones, ...resto } = f; return resto; };
       const [r] = await guardar(con061).catch((e) => {
         const m = `${e?.message || ''} ${e?.code || ''}`;
-        if (con061 !== fila && /tipo|ejercicio_id/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m)) {
+        if (con061 === fila || !falta(e)) return falta060(e);
+        // (sin la 064: la pregunta la pide; lo demás se guarda sin sus columnas)
+        if (/opciones|correcta|explicaciones/.test(m)) {
+          if (pregunta) throw new Error('Para las preguntas falta ejecutar en Supabase la migración 064 (supabase/migraciones/064_apuntes_repaso.sql).');
+          return guardar(sin064(con061)).catch((e2) => {
+            if (!falta(e2) || !/tipo|ejercicio_id/.test(`${e2?.message || ''}`)) return falta060(e2);
+            if (suelto) throw new Error('Para los apuntes sueltos falta ejecutar en Supabase la migración 061 (supabase/migraciones/061_descansos_2.sql).');
+            return guardar(fila).catch(falta060);
+          });
+        }
+        if (/tipo|ejercicio_id/.test(m)) {
+          if (pregunta) throw new Error('Para las preguntas falta ejecutar en Supabase la migración 064 (supabase/migraciones/064_apuntes_repaso.sql).');
           if (suelto) throw new Error('Para los apuntes sueltos falta ejecutar en Supabase la migración 061 (supabase/migraciones/061_descansos_2.sql).');
           return guardar(fila).catch(falta060);
         }
@@ -4004,6 +4038,30 @@ export function crearApi(backend) {
       return r;
     },
     async borrarNovedad(id) { await b.delete('novedades', { eq: { id } }).catch(falta060); },
+    // (apuntes, tanda D, 065) la audio-píldora del coach: se sube al bucket privado «apuntes» y se oye con un enlace firmado
+    async subirAudioApunte(archivo, tipo = 'audio/webm') {
+      const ext = /wav/.test(tipo) ? 'wav' : /ogg/.test(tipo) ? 'ogg' : /mp4|m4a/.test(tipo) ? 'm4a' : /mpeg|mp3/.test(tipo) ? 'mp3' : /aac/.test(tipo) ? 'aac' : 'webm';
+      const ruta = `audio/${crypto.randomUUID()}.${ext}`;
+      await b.storage.subir(ruta, archivo, tipo.split(';')[0], { bucket: 'apuntes' }).catch((e) => {
+        if (/bucket|not found|no existe/i.test(`${e?.message || ''}`)) throw new Error('Para el audio falta ejecutar en Supabase la migración 065 (supabase/migraciones/065_apuntes_social.sql).');
+        throw e;
+      });
+      return ruta;
+    },
+    async urlAudioApunte(ruta) { return ruta ? b.storage.url(ruta, 3600, 'apuntes') : null; },
+    // (apuntes, tanda D, 065) los puntos de la semana (se queda el mayor), la liga de la comunidad y los duelos
+    async sumarApuntesSemana(semana, puntos, apuntes) {
+      if (api._sin065 || !uid()) return false;
+      try { await b.rpc('apuntes_semana_sumar', { p_semana: semana, p_puntos: Math.max(0, Math.min(20000, Math.round(puntos))), p_apuntes: Math.max(0, Math.min(2000, Math.round(apuntes))) }); return true; }
+      catch (e) { if (/apuntes_semana_sumar|schema cache|does not exist|no existe|PGRST202/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin065 = true; return false; }
+    },
+    async ligaApuntes() { if (api._sin065) return null; try { return (await b.rpc('apuntes_liga', {})) || null; } catch { return null; } },
+    async duelosApuntes() { if (api._sin065) return []; try { return (await b.rpc('apuntes_duelos_mios', {})) || []; } catch { return []; } },
+    async retarDueloApuntes(para, semilla) { return b.rpc('apuntes_duelo_retar', { p_para: para, p_semilla: semilla }); },
+    async contestarDueloApuntes(id, aciertos) { return b.rpc('apuntes_duelo_contestar', { p_id: id, p_aciertos: aciertos }); },
+    // (coach) cómo va el equipo en apuntes: por apunte (cuántos, caja media, cuántos lo dominan) y por semana; solo cuentas
+    async dominioEquipoApuntes() { try { return (await b.rpc('apuntes_dominio_equipo', {})) || []; } catch { return null; } },
+    async participacionApuntes() { try { return (await b.rpc('apuntes_participacion', {})) || []; } catch { return null; } },
     // (atleta) suma lo jugado en La travesía: { metros, estrellas, etapas, mejor }. true si se subió; false si no se pudo
     // (sin red o sin la 060: se queda en el móvil y se reintenta)
     // Con x.id (uuid), un envío repetido no se suma dos veces
@@ -4112,10 +4170,20 @@ export function crearApi(backend) {
     },
     // (atleta) apunta un apunte visto (sabia: true, false o null). true si se subió; 'rechazado' si la base no lo admite
     // (no se reintenta); false si no se pudo (sin red o sin la 060)
-    async apuntarApunte(id, sabia = null) {
+    // (apuntes, tanda A, 064) repaso: { caja, proxima } del repaso espaciado; sin la 064 se sube como antes (sin ellos)
+    async apuntarApunte(id, sabia = null, repaso = null) {
       if (!id || api._sin060 || !uid()) return false;
       if (!ID_APUNTE.test(String(id))) return 'rechazado';
-      try { await b.rpc('apuntar_apunte', { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null }); return true; } catch (e) {
+      const base = { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null };
+      if (repaso && Number.isInteger(repaso.caja) && /^\d{4}-\d{2}-\d{2}$/.test(repaso.proxima || '') && !api._sin064) {
+        try { await b.rpc('apuntar_apunte', { ...base, p_caja: repaso.caja, p_proxima: repaso.proxima }); return true; } catch (e) {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/22023|Ese no es un apunte/.test(m) && !/caja|fecha de repaso/.test(m)) return 'rechazado';
+          if (/p_caja|p_proxima|PGRST202|42883|could not find|schema cache/i.test(m)) api._sin064 = true;
+          else if (/caja|fecha de repaso/.test(m)) { /* (fuera de rango: se sube sin el repaso) */ } else return false;
+        }
+      }
+      try { await b.rpc('apuntar_apunte', base); return true; } catch (e) {
         const m = `${e?.message || ''} ${e?.code || ''}`;
         if (/22023|Ese no es un apunte/.test(m)) return 'rechazado';
         if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(m)) api._sin060 = true;

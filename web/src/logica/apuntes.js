@@ -27,7 +27,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 export function apuntesDeFicha(fila, nombre = '') {
   if (!fila?.id) return [];
   const f = fichaParaLeer(fila), de = String(nombre || fila.nombre || '').trim();
-  const pasos = f.pasos.map((p, i) => ({ id: `p:${fila.id}:${i}`, tipo: 'clave', de, etiqueta: 'La clave', titulo: '', texto: corta(sinMarcas(p)) }));
+  const pasos = f.pasos.map((p, i) => ({ id: `p:${fila.id}:${i}`, tipo: 'clave', de, etiqueta: 'La clave', titulo: '', texto: corta(sinMarcas(p)), ...(sinMarcas(p).trim().length > MAX ? { textoLargo: sinMarcas(p).trim() } : {}) }));
   const errores = erroresDeFicha(fila).map((e, i) => ({
     id: `e:${fila.id}:${i}`, tipo: 'error', de, etiqueta: 'Error típico', titulo: e.titulo,
     // («**Chocar las mancuernas** arriba: …»: el resto sigue la frase del título)
@@ -43,7 +43,7 @@ export function apuntesDeGuias(guias = []) {
     if (!g?.clave || g.publicada === false) continue;
     lista(objeto(g.contenido).ideas).forEach((i, n) => {
       const titulo = sinMarcas(objeto(i).titulo || '').trim(), x = sinMarcas(objeto(i).x || '').trim();
-      if (titulo || x) out.push({ id: `i:${g.clave}:${n}`, tipo: 'idea', de: String(g.titulo || '').trim(), guia: g.clave, etiqueta: 'Idea clave', titulo, texto: corta(x) });
+      if (titulo || x) out.push({ id: `i:${g.clave}:${n}`, tipo: 'idea', de: String(g.titulo || '').trim(), guia: g.clave, etiqueta: 'Idea clave', titulo, texto: corta(x), ...(x.length > MAX ? { textoLargo: x } : {}) });
     });
     if (g.clave === 'mitos') {
       for (const m of mitosDeGuia(g)) {
@@ -65,9 +65,19 @@ export function apuntesDeNovedades(novedades = [], { ejercicio = null } = {}) {
     .map((n) => {
       const enlace = /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(String(n.enlace || '')) && !/\s/.test(n.enlace) ? n.enlace : null;
       const suelto = n.tipo === 'apunte';
+      // (apuntes, tanda D, 065) su audio-píldora, si la tiene
+      const audio = /^audio\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(String(n.audio_ruta || '')) && n.audio_segundos > 0 ? { audio: { ruta: n.audio_ruta, segundos: Math.round(n.audio_segundos) } } : {};
+      // (apuntes, tanda A, migración 064) una pregunta del coach: sus opciones, la buena y el porqué de cada mala
+      if (n.tipo === 'pregunta') {
+        const opciones = lista(n.opciones).map((o) => sinMarcas(String(o || '')).trim()).filter(Boolean);
+        const correcta = Number(n.correcta);
+        if (opciones.length < 2 || opciones.length !== lista(n.opciones).length || !(correcta >= 0 && correcta < opciones.length)) return null;
+        return { id: `n:${n.id}`, tipo: 'test', coach: true, etiqueta: 'Pregunta de tu coach', de: '', titulo: sinMarcas(n.titulo || '').trim(), texto: corta(sinMarcas(n.texto || ''), 520),
+          opciones, correcta, porQueNo: lista(n.explicaciones).map((x) => corta(sinMarcas(String(x || '')), 300)), dia: String(n.publicada_en).slice(0, 10), ...(n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}), ...audio };
+      }
       return { id: `n:${n.id}`, tipo: suelto ? 'coach' : 'novedad', etiqueta: suelto ? 'De tu coach' : 'Novedad de la semana', de: '', titulo: sinMarcas(n.titulo || '').trim(), texto: corta(sinMarcas(n.texto || ''), 520),
-        fuente: String(n.fuente || '').trim() || null, enlace, dia: String(n.publicada_en).slice(0, 10), ...(suelto && n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}) };
-    }).filter((a) => a.titulo && a.texto && (!a.ejercicio || !ejercicio || a.ejercicio === ejercicio));
+        fuente: String(n.fuente || '').trim() || null, enlace, dia: String(n.publicada_en).slice(0, 10), ...(suelto && n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}), ...audio };
+    }).filter((a) => a && a.titulo && a.texto && (!a.ejercicio || !ejercicio || a.ejercicio === ejercicio));
 }
 // La novedad reciente (publicada en los últimos `dias`) que aún no ha visto, o null
 export function novedadPendiente(apuntes = [], estado = null, hoy, dias = 14) {
@@ -187,7 +197,9 @@ export function limpiarVistos(g) {
   const vistos = {};
   const pares = Object.entries(objeto(objeto(g).vistos)).filter(([id, v]) => id.length <= 80 && v && typeof v === 'object' && DIA.test(v.t));
   for (const [id, v] of pares.sort((a, b) => (a[1].t < b[1].t ? -1 : 1)).slice(-600)) {
-    vistos[id] = { n: Math.min(999, Math.max(1, Math.round(Number(v.n) || 1))), t: v.t, ...(typeof v.s === 'boolean' ? { s: v.s } : {}) };
+    vistos[id] = { n: Math.min(999, Math.max(1, Math.round(Number(v.n) || 1))), t: v.t, ...(typeof v.s === 'boolean' ? { s: v.s } : {}),
+      // (apuntes, tanda A) el repaso espaciado: la caja (0 a 5) y cuándo toca volver a verlo
+      ...(Number.isInteger(v.c) && v.c >= 0 && v.c <= 5 ? { c: v.c } : {}), ...(DIA.test(v.p || '') && v.p >= v.t ? { p: v.p } : {}) };
   }
   // (060) lo que no se pudo subir a la base (sin red): { <id>: true | false | null (si lo sabía) }, como mucho 300
   const porSubir = {};
@@ -202,8 +214,30 @@ export function limpiarVistos(g) {
   const curso = typeof c.clave === 'string' && /^[a-z0-9-]{1,40}$/.test(c.clave) && DIA.test(c.desde || '') ? { clave: c.clave, desde: c.desde } : null;
   const examenes = lista(objeto(g).examenes).filter((x) => x && DIA.test(x.dia || '') && Number.isFinite(Number(x.aciertos)) && Number(x.total) > 0)
     .map((x) => ({ dia: x.dia, aciertos: Math.max(0, Math.min(Math.round(Number(x.total)), Math.round(Number(x.aciertos)))), total: Math.min(40, Math.round(Number(x.total))) })).slice(-12);
+  // (apuntes, tanda C) el objetivo diario (1, 3 o 5), lo hecho cada día con sus puntos (los 70 últimos), la prueba de
+  // nivel y el certificado de la ruta (logica/apuntes-camino.js)
+  const meta = [1, 3, 5].includes(objeto(g).meta) ? objeto(g).meta : null;
+  const diario = {};
+  for (const [d, x] of Object.entries(objeto(objeto(g).diario)).filter(([d]) => DIA.test(d)).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-70)) {
+    const n = Math.max(0, Math.min(500, Math.round(Number(objeto(x).n) || 0))), xp = Math.max(0, Math.min(9999, Math.round(Number(objeto(x).xp) || 0)));
+    if (n || xp) diario[d] = { n, xp };
+  }
+  const pr = objeto(objeto(g).prueba);
+  const prueba = DIA.test(pr.dia || '') ? { dia: pr.dia, aciertos: Math.max(0, Math.round(Number(pr.aciertos) || 0)), total: Math.max(0, Math.round(Number(pr.total) || 0)), saltados: lista(pr.saltados).filter((t) => typeof t === 'string' && /^[a-z]{1,20}$/.test(t)).slice(0, 8) } : null;
+  const ce = objeto(objeto(g).certificado);
+  const certificado = DIA.test(ce.dia || '') && Number(ce.total) > 0 ? { dia: ce.dia, aciertos: Math.max(0, Math.min(Math.round(Number(ce.total)), Math.round(Number(ce.aciertos) || 0))), total: Math.min(40, Math.round(Number(ce.total))) } : null;
+  // (apuntes, tanda D) sus notas (una por apunte, hasta 500 letras; 150 notas) y sus subrayados (las frases marcadas)
+  const notas = {};
+  for (const [id, t] of Object.entries(objeto(objeto(g).notas)).slice(-150)) if (id.length <= 80 && typeof t === 'string' && t.trim()) notas[id] = t.slice(0, 500);
+  const subrayados = {};
+  for (const [id, xs] of Object.entries(objeto(objeto(g).subrayados)).slice(-150)) {
+    const f = [...new Set(lista(xs).filter((i) => Number.isInteger(i) && i >= 0 && i < 40))].sort((a, b) => a - b);
+    if (id.length <= 80 && f.length) subrayados[id] = f;
+  }
   return { vistos, ...(Object.keys(porSubir).length ? { porSubir } : {}), ...(guardados.length ? { guardados } : {}), ...(reto ? { reto } : {}),
-    ...(dias.length ? { dias } : {}), ...(curso ? { curso } : {}), ...(examenes.length ? { examenes } : {}) };
+    ...(dias.length ? { dias } : {}), ...(curso ? { curso } : {}), ...(examenes.length ? { examenes } : {}),
+    ...(Object.keys(notas).length ? { notas } : {}), ...(Object.keys(subrayados).length ? { subrayados } : {}),
+    ...(meta ? { meta } : {}), ...(Object.keys(diario).length ? { diario } : {}), ...(prueba ? { prueba } : {}), ...(certificado ? { certificado } : {}) };
 }
 // (tanda 2) Guardar un apunte para luego, o quitarlo
 export function alternarGuardado(g, id) {
@@ -234,20 +268,28 @@ export function conServidor(g, filas = []) {
     const id = String(f?.apunte || ''), t = String(f?.ultimo || '').slice(0, 10);
     if (!id || id.length > 80 || !DIA.test(t)) continue;
     const mio = e.vistos[id];
-    if (mio && mio.t >= t) { if (typeof mio.s !== 'boolean' && typeof f.sabia === 'boolean') mio.s = f.sabia; mio.n = Math.max(mio.n, Number(f.veces) || 1); continue; }
-    e.vistos[id] = { n: Math.max(mio?.n || 0, Number(f.veces) || 1), t, ...(typeof f.sabia === 'boolean' ? { s: f.sabia } : {}) };
+    const px = String(f?.proxima || '').slice(0, 10), cx = Number.isInteger(f?.caja) ? f.caja : null;
+    if (mio && mio.t >= t) {
+      if (typeof mio.s !== 'boolean' && typeof f.sabia === 'boolean') mio.s = f.sabia;
+      mio.n = Math.max(mio.n, Number(f.veces) || 1);
+      if (mio.p == null && DIA.test(px)) { mio.p = px; if (cx != null) mio.c = cx; }   // (064) lo del repaso, si el móvil no lo tenía
+      continue;
+    }
+    e.vistos[id] = { n: Math.max(mio?.n || 0, Number(f.veces) || 1), t, ...(typeof f.sabia === 'boolean' ? { s: f.sabia } : {}), ...(cx != null ? { c: cx } : {}), ...(DIA.test(px) ? { p: px } : {}) };
   }
   // (tanda 4) y los días en que aprendió algo, según la base
   e.dias = [...(e.dias || []), ...lista(filas).map((f) => String(f?.ultimo || '').slice(0, 10)).filter((d) => DIA.test(d))];
   return limpiarVistos(e);
 }
 // Apunta que se ha visto (y, si se dio la vuelta, si lo sabía). Devuelve otro.
-export function apuntarVisto(g, id, hoy, sabia = null) {
+// (apuntes, tanda A) nota: 'otra' | 'bien' | 'facil' (al recordarlo antes de leerlo); sin nota, lo dice `sabia`
+export function apuntarVisto(g, id, hoy, sabia = null, nota = null) {
   const e = limpiarVistos(g);
   if (!id || !DIA.test(hoy)) return e;
   const antes = e.vistos[id];
   delete e.vistos[id];
-  e.vistos[id] = { n: (antes && antes.t === hoy ? antes.n : (antes?.n || 0) + 1), t: hoy, ...(typeof sabia === 'boolean' ? { s: sabia } : antes && typeof antes.s === 'boolean' ? { s: antes.s } : {}) };
+  const prog = programar(antes, nota || (sabia === true ? 'bien' : sabia === false ? 'otra' : null), hoy);
+  e.vistos[id] = { n: (antes && antes.t === hoy ? antes.n : (antes?.n || 0) + 1), t: hoy, ...(typeof sabia === 'boolean' ? { s: sabia } : nota ? { s: nota !== 'otra' } : antes && typeof antes.s === 'boolean' ? { s: antes.s } : {}), ...prog };
   e.dias = [...(e.dias || []), hoy];   // (tanda 4)
   return limpiarVistos(e);
 }
@@ -271,14 +313,18 @@ export function elegirApunte(apuntes = [], estado = null, { hoy, salto = 0, excl
   if (suyoAhora && salto < 2) return suyoAhora;
   const repasar = cand.filter((a) => !a.efimero && v[a.id]?.s === false && v[a.id].t !== hoy);
   if (repasar.length) return repasar.sort((a, b) => (v[a.id].t < v[b.id].t ? -1 : 1))[0];
+  // (apuntes, tanda A) de cada tres, uno de los que tocan hoy según el repaso espaciado (el más atrasado)
+  const tocan = cand.filter((a) => !a.efimero && tocaRepasar(v[a.id], hoy));
+  if (tocan.length && salto % 3 === 2) return tocan.sort((a, b) => (v[a.id].p < v[b.id].p ? -1 : 1))[0];
   const nuevos = cand.filter((a) => !v[a.id] && !(a.efimero && (a.tipo === 'correccion' || a.tipo === 'numeros')));
   if (nuevos.length) {
     // (alterna los del ejercicio con los generales; dentro de cada grupo, en su orden)
     // (las novedades antiguas que no vio no salen solas: se quedan para el repaso de «Tus apuntes» si las abre)
     const DEL_EJERCICIO = ['clave', 'error', 'musculo', 'test', 'clip'];
-    const suyos = [...nuevos.filter((a) => a.tipo === 'coach' && a.ejercicio), ...nuevos.filter((a) => DEL_EJERCICIO.includes(a.tipo))];
-    let resto = nuevos.filter((a) => ['idea', 'mito', 'duda', 'glosario'].includes(a.tipo) || (a.tipo === 'coach' && !a.ejercicio));
-    const delCoach = resto.filter((a) => a.tipo === 'coach');
+    const delCoachYa = (a) => a.tipo === 'coach' || a.coach;
+    const suyos = [...nuevos.filter((a) => delCoachYa(a) && a.ejercicio), ...nuevos.filter((a) => DEL_EJERCICIO.includes(a.tipo) && !(a.coach && a.ejercicio))];
+    let resto = nuevos.filter((a) => (['idea', 'mito', 'duda', 'glosario'].includes(a.tipo) || delCoachYa(a)) && !(delCoachYa(a) && a.ejercicio) && !(a.coach && DEL_EJERCICIO.includes(a.tipo) && a.ejercicio));
+    const delCoach = resto.filter(delCoachYa);
     const delCurso = curso ? resto.filter((a) => (a.tipo === 'idea' || a.tipo === 'mito') && a.guia === curso) : [];
     if (delCoach.length && (salto % 2 === 1 || !suyos.length)) return delCoach[0];
     if (delCurso.length && (salto % 2 === 1 || !suyos.length)) return delCurso[0];
@@ -316,14 +362,19 @@ export function resumenApuntes(estado, hoy) {
     vistos: v.length,
     semana: DIA.test(hoy || '') ? v.filter((x) => { const d = diasEntre(x.t, hoy); return d >= 0 && d < 7; }).length : 0,
     repasar: v.filter((x) => x.s === false).length,
+    // (apuntes, tanda A) los que tocan hoy según el repaso espaciado
+    tocan: DIA.test(hoy || '') ? v.filter((x) => tocaRepasar(x, hoy)).length : 0,
   };
 }
 // Los que tiene por repasar (no los sabía) y, después, los vistos esta semana: para «Repasar» en Semana
 export function paraRepasar(apuntes = [], estado, hoy) {
   const v = limpiarVistos(estado).vistos;
   const reciente = (a) => { const d = diasEntre(v[a.id].t, hoy); return d >= 0 && d < 7; };
-  const vistos = apuntes.filter((a) => v[a.id]);
-  return [...vistos.filter((a) => v[a.id].s === false), ...vistos.filter((a) => v[a.id].s !== false && reciente(a))];
+  const vistos = apuntes.filter((a) => v[a.id] && !a.efimero);
+  // (apuntes, tanda A) primero los que tocan hoy (los más atrasados antes); después, como antes, los que no sabía y los de la semana
+  const tocan = vistos.filter((a) => tocaRepasar(v[a.id], hoy)).sort((a, b) => (v[a.id].p < v[b.id].p ? -1 : v[a.id].p > v[b.id].p ? 1 : (v[a.id].c || 0) - (v[b.id].c || 0)));
+  const ya = new Set(tocan.map((a) => a.id));
+  return [...tocan, ...vistos.filter((a) => !ya.has(a.id) && v[a.id].s === false), ...vistos.filter((a) => !ya.has(a.id) && v[a.id].s !== false && reciente(a))].slice(0, MAX_REPASO);
 }
 
 export const textoApuntes = (n) => (n === 1 ? '1 apunte' : `${n || 0} apuntes`);
@@ -448,4 +499,63 @@ export function masFallados(filas = [], apuntes = [], n = 5) {
 export function mensajeDeApunte(a) {
   const cuerpo = [a?.titulo, a?.texto].filter(Boolean).join(a?.titulo && !'.:?!\u00bb'.includes(a.titulo.slice(-1)) ? ': ' : ' ');
   return cuerpo ? `Un apunte para ti${a.de ? ` (${a.de})` : ''}: ${cuerpo}`.slice(0, 900) : '';
+}
+
+
+// ================= (apuntes, tanda A) Que se quede: repaso espaciado, recordar antes de leer y por qué no es esa =================
+
+// Cada caja, cuántos días hasta volver a verlo: la 0, mañana; la 5, en dos meses
+export const INTERVALOS = [1, 3, 7, 16, 35, 60];
+export const MAX_REPASO = 20;
+const masDias = (dia, n) => { const d = new Date(`${dia}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// La caja y la próxima vez tras verlo: 'otra' (no lo sabía) vuelve a la 0; 'bien' sube una; 'facil' sube dos; sin nota
+// (solo leído), si es nuevo entra en la 0 y, si no, se queda como estaba (leerlo otra vez no cuenta como saberlo)
+export function programar(antes, nota, hoy) {
+  const c0 = Number.isInteger(antes?.c) ? antes.c : 0;
+  if (!nota) {
+    if (antes && (antes.p || Number.isInteger(antes.c))) return { c: c0, ...(antes.p ? { p: antes.p } : {}) };
+    return { c: 0, p: masDias(hoy, INTERVALOS[0]) };
+  }
+  const c = nota === 'otra' ? 0 : Math.min(5, c0 + (nota === 'facil' ? 2 : 1));
+  return { c, p: masDias(hoy, INTERVALOS[c]) };
+}
+// ¿Le toca repasarlo hoy? (los de antes de esta tanda, sin fecha: los que no sabía, si no los vio hoy)
+export function tocaRepasar(v, hoy) {
+  if (!v || !DIA.test(hoy || '')) return false;
+  if (v.p) return v.p <= hoy && v.t !== hoy;
+  return v.s === false && v.t !== hoy;
+}
+export const cuantosTocan = (estado, hoy) => Object.values(limpiarVistos(estado).vistos).filter((v) => tocaRepasar(v, hoy)).length;
+// Cuándo vuelve, en palabras: «mañana», «en 3 días», «en 2 semanas», «en un mes»
+export function textoProxima(c) {
+  const d = INTERVALOS[Math.max(0, Math.min(5, c || 0))];
+  return d === 1 ? 'mañana' : d < 14 ? `en ${d} días` : d < 30 ? `en ${Math.round(d / 7)} semanas` : d < 50 ? 'en un mes' : 'en dos meses';
+}
+
+// Recordar antes de leer: si toca repasarlo (o está en «Repasar») y es de los que se pueden recordar, la pregunta que lo
+// tapa. Devuelve el texto de la pregunta o null (los que tienen vuelta, las preguntas y los vídeos ya van a su manera)
+const RECORDABLES = ['clave', 'idea', 'glosario', 'duda', 'coach', 'musculo'];
+export function preguntaParaRecordar(a, estado, hoy, { repaso = false } = {}) {
+  if (!a || a.efimero || a.vuelta || !RECORDABLES.includes(a.tipo) || !a.texto) return null;
+  const v = limpiarVistos(estado).vistos[a.id];
+  if (!v || (!repaso && !tocaRepasar(v, hoy))) return null;
+  if (a.tipo === 'clave') return a.de ? `¿Qué era lo clave en ${a.de.charAt(0).toLocaleLowerCase('es')}${a.de.slice(1)}?` : '¿Qué era lo clave aquí?';
+  if (a.tipo === 'glosario') return `¿Qué es «${a.titulo}»?`;
+  if (a.tipo === 'musculo') return '¿Qué deberías notar?';
+  if (a.tipo === 'duda') return a.titulo;
+  return '¿Recuerdas por qué?';
+}
+
+// Por qué no es esa: la explicación de una opción mala. La del coach si la escribió; en las preguntas del glosario, de
+// qué es esa definición; si no, null
+export function porQueNo(a, i, todos = []) {
+  if (!a || i == null || i === a.correcta) return null;
+  const escrita = Array.isArray(a.porQueNo) ? String(a.porQueNo[i] || '').trim() : '';
+  if (escrita) return escrita;
+  const op = a.opciones?.[i];
+  if (a.origen && /^g:/.test(a.origen) && op) {
+    const otro = todos.find((x) => x.tipo === 'glosario' && x.texto === op);
+    if (otro) return `Esa es la definición de «${otro.titulo}».`;
+  }
+  return null;
 }
