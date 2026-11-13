@@ -22013,7 +22013,7 @@ end $$;
 alter table public.apuntes_vistos add column if not exists caja smallint not null default 0;
 alter table public.apuntes_vistos add column if not exists proxima date;
 alter table public.apuntes_vistos drop constraint if exists apuntes_vistos_caja_valida;
-alter table public.apuntes_vistos add constraint apuntes_vistos_caja_valida check (caja between 0 and 5 and (proxima is null or proxima between ultimo and ultimo + 400));
+alter table public.apuntes_vistos add constraint apuntes_vistos_caja_valida check (caja between 0 and 5 and (proxima is null or proxima <= ultimo + 400));
 create index if not exists apuntes_vistos_proxima_idx on public.apuntes_vistos (atleta_id, proxima) where proxima is not null;
 
 -- (la de la 061 tenía dos parámetros: se quita para que no haya dos funciones con el mismo nombre)
@@ -22031,7 +22031,9 @@ begin
     raise exception 'Ese no es un apunte' using errcode = '22023';
   end if;
   if p_caja is not null and (p_caja < 0 or p_caja > 5) then raise exception 'Esa caja no existe' using errcode = '22023'; end if;
-  if p_proxima is not null and (p_proxima < v_hoy or p_proxima > v_hoy + 60) then raise exception 'Esa fecha de repaso no vale' using errcode = '22023'; end if;
+  if p_proxima is not null and p_proxima > v_hoy + 60 then raise exception 'Esa fecha de repaso no vale' using errcode = '22023'; end if;
+  -- (revisión) una fecha ya pasada (un apunte que tocaba repasar y se ha visto sin contestar) vale como hoy
+  if p_proxima is not null and p_proxima < v_hoy then p_proxima := v_hoy; end if;
   perform pg_advisory_xact_lock(hashtext('apuntes_vistos:' || v_atleta::text));  -- (dos a la vez no se saltan el tope; como en la 060)
   if (select count(*) from public.apuntes_vistos where atleta_id = v_atleta) >= 3000
      and not exists (select 1 from public.apuntes_vistos where atleta_id = v_atleta and apunte = p_apunte) then return; end if;
@@ -22042,7 +22044,7 @@ begin
     ultimo = greatest(x.ultimo, excluded.ultimo),
     sabia = coalesce(excluded.sabia, x.sabia),
     caja = case when p_caja is null then x.caja else excluded.caja end,
-    proxima = case when p_proxima is null then x.proxima else excluded.proxima end;
+    proxima = case when p_proxima is null then (case when x.proxima is null then null else greatest(x.proxima, excluded.ultimo) end) else excluded.proxima end;
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -22127,7 +22129,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 4. Permisos (como al final de 003 a 061)
+-- 4. Permisos (como al final de 003 a 063)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;
@@ -22171,7 +22173,7 @@ insert into public.fbe_migraciones (numero) values (64)  -- (3) número de esta 
 --     (caja 3 o más). Solo cuentas, nunca quién. La app lo junta por temas.
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 064 (o con instalar.sql en una base nueva).
--- Se puede repetir sin romper nada. (Si otra rama ha usado ya el número 065, renumerar esta.)
+-- Se puede repetir sin romper nada.
 -- =====================================================================
 
 do $$
@@ -22215,12 +22217,14 @@ declare
   v_lunes date := (now() at time zone 'Europe/Madrid')::date - (extract(isodow from (now() at time zone 'Europe/Madrid')::date)::integer - 1);
 begin
   if v_atleta is null then raise exception 'Solo un atleta' using errcode = '42501'; end if;
+  if exists (select 1 from public.atletas where id = v_atleta and estado = 'baja') then return false; end if;   -- (revisión: de baja, nada)
   if p_semana is null or p_semana not in (v_lunes, v_lunes - 7) then raise exception 'Esa semana no vale' using errcode = '22023'; end if;
   if p_puntos is null or p_puntos < 0 or p_puntos > 20000 or p_apuntes is null or p_apuntes < 0 or p_apuntes > 2000 then
     raise exception 'Esas cifras no valen' using errcode = '22023';
   end if;
   insert into public.apuntes_semanas as x (atleta_id, semana, puntos, apuntes) values (v_atleta, p_semana, p_puntos, p_apuntes)
   on conflict (atleta_id, semana) do update set puntos = greatest(x.puntos, excluded.puntos), apuntes = greatest(x.apuntes, excluded.apuntes), actualizada_en = now();
+  delete from public.apuntes_semanas where semana < v_lunes - 84;   -- (revisión: se guardan doce semanas, las de todos)
   return true;
 end $$;
 
@@ -22270,8 +22274,8 @@ create index if not exists apuntes_duelos_para_idx on public.apuntes_duelos (par
 alter table public.apuntes_duelos enable row level security;
 drop policy if exists coach_ver on public.apuntes_duelos;
 create policy coach_ver on public.apuntes_duelos for select to authenticated using (public.es_coach());
+-- (revisión) los duelos solo se leen con apuntes_duelos_mios(): leyendo la tabla se verían los aciertos del rival antes de contestar
 drop policy if exists mios_ver on public.apuntes_duelos;
-create policy mios_ver on public.apuntes_duelos for select to authenticated using (auth.uid() in (de, para) and public.comunidad_soy_miembro());
 
 -- Retar: los dos dentro de la comunidad (abierta) y en el ranking; como mucho tres duelos vivos cada uno y uno vivo
 -- entre los mismos dos. Se le avisa al retado.
@@ -22293,10 +22297,18 @@ begin
   select * into v_el from fbe_privado.comunidad_dentro d where d.perfil_id = p_para;
   if v_el.perfil_id is null then raise exception 'Esa persona ya no está en el equipo' using errcode = '42501'; end if;
   if v_yo.sin_ranking or v_el.sin_ranking then raise exception 'Los duelos enseñan aciertos: los dos tenéis que salir en el ranking' using errcode = '22023'; end if;
-  if (select count(*) from public.apuntes_duelos x where v_uid in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)) >= 3 then
+  -- (revisión) quien está silenciado no reta; dos a la vez no se saltan los topes; y lo viejo se borra (un mes tras caducar)
+  if exists (select 1 from public.comunidad_miembros k where k.perfil_id = v_uid and k.silenciado_hasta > now()) then
+    raise exception 'Mientras estás silenciado no puedes retar' using errcode = '42501';
+  end if;
+  perform pg_advisory_xact_lock(hashtext('apuntes_duelos'));
+  delete from public.apuntes_duelos x where x.caduca < v_hoy - 30;
+  if (select count(*) from public.apuntes_duelos x where v_uid in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)
+      and exists (select 1 from fbe_privado.comunidad_dentro o where o.perfil_id = case when x.de = v_uid then x.para else x.de end)) >= 3 then
     raise exception 'Como mucho tres duelos a la vez' using errcode = '54000';
   end if;
-  if (select count(*) from public.apuntes_duelos x where p_para in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)) >= 3 then
+  if (select count(*) from public.apuntes_duelos x where p_para in (x.de, x.para) and x.caduca >= v_hoy and (x.aciertos_de is null or x.aciertos_para is null)
+      and exists (select 1 from fbe_privado.comunidad_dentro o where o.perfil_id = case when x.de = p_para then x.para else x.de end)) >= 3 then
     raise exception 'Esa persona ya tiene tres duelos: rétale más adelante' using errcode = '54000';
   end if;
   if exists (select 1 from public.apuntes_duelos x where least(x.de, x.para) = least(v_uid, p_para) and greatest(x.de, x.para) = greatest(v_uid, p_para)

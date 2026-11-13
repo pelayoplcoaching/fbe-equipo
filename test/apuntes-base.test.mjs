@@ -39,15 +39,21 @@ await q(`select apuntar_apunte(p_apunte => 'i:sueno:0', p_sabia => false, p_caja
 const s0 = (await q(`select caja, proxima::text as p, sabia from apuntes_vistos where apunte = 'i:sueno:0'`))[0];
 check(s0.caja === 0 && s0.p === mas(1) && s0.sabia === false, 'y si no lo sabe, vuelve a la caja 0 para mañana');
 check(await falla(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => 6::smallint)`) && await falla(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => -1::smallint)`), 'las cajas van de 0 a 5');
-check(await falla(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => 1::smallint, p_proxima => $1::date)`, [mas(-1)]) && await falla(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => 1::smallint, p_proxima => $1::date)`, [mas(61)]),
-  'la próxima vez, entre hoy y dentro de 60 días');
+check(await falla(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => 1::smallint, p_proxima => $1::date)`, [mas(61)]), 'la próxima vez, como mucho dentro de 60 días');
+// (revisión) una fecha ya pasada vale como hoy; y visto sin contestar un apunte que tocaba repasar, no se atasca nada
+await q(`select apuntar_apunte(p_apunte => 'g:rpe', p_caja => 1::smallint, p_proxima => $1::date)`, [mas(-3)]);
+const [pas] = await q(`select proxima::text as p from apuntes_vistos where atleta_id = $1 and apunte = 'g:rpe'`, [atletaA]);
+await su(); await q(`update apuntes_vistos set ultimo = ultimo - 5, proxima = ultimo - 2 where atleta_id = $1 and apunte = 'g:rpe'`, [atletaA]); await como(ana);
+const sinFallo = !(await falla(`select apuntar_apunte(p_apunte => 'g:rpe')`));
+const [tras] = await q(`select proxima::text as p, ultimo::text as u from apuntes_vistos where atleta_id = $1 and apunte = 'g:rpe'`, [atletaA]);
+check(pas.p === mas(0) && sinFallo && tras.p === tras.u, 'una fecha ya pasada vale como hoy; y un apunte vencido, visto sin contestar, se apunta sin error (para hoy)');
 check(await falla(`update apuntes_vistos set caja = 5 where apunte = 'g:rir'`) || (await q(`select caja from apuntes_vistos where apunte = 'g:rir'`))[0].caja === 0, 'el atleta no lo cambia a mano (solo con la función)');
 await como(bea);
 check((await q('select apunte from apuntes_vistos')).length === 0, 'otro atleta no ve lo de Ana');
 await como(coach, 'aal2');
 check((await q(`select caja from apuntes_vistos where atleta_id = $1 and apunte = 'i:sueno:0'`, [atletaA])).length === 1, 'su coach sí');
 await su();
-check(await falla(`update apuntes_vistos set caja = 9 where apunte = 'g:rir'`) && await falla(`update apuntes_vistos set proxima = ultimo - 1 where apunte = 'g:rir'`), 'ni a mano: las reglas de la tabla lo impiden');
+check(await falla(`update apuntes_vistos set caja = 9 where apunte = 'g:rir'`) && await falla(`update apuntes_vistos set proxima = ultimo + 401 where apunte = 'g:rir'`), 'ni a mano: las reglas de la tabla lo impiden');
 
 console.log('Las preguntas del coach');
 await como(coach, 'aal2');

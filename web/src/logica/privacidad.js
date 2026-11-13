@@ -35,6 +35,7 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // eventos, el atleta de la semana, el panel del coach y la moderación) y la 2026-12.12 (v0.73: los aniversarios, el mes en el equipo,
 // los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos) y la 2026-12.14 (v0.104: lo que eliges para tu app) y la 2026-12.15 (v0.107: tu música) y la 2026-12.16 (v0.110: Salud del iPhone, calendario y WhatsApp) y la 2026-12.17 (v0.117: lo social del equipo)
 export const NOVEDADES_PRIVACIDAD = [
+  ['biblioteca', 'Apuntes con los demás', 'Guardamos cuándo te toca repasar y tus puntos de la semana. En la comunidad ven tu liga de apuntes y, en un duelo, tus aciertos.', '2026-12.29'],
   ['equipo', 'Tu lobo y tu liga', 'De tu mejor etapa del día guardamos por dónde fue tu lobo: la comunidad puede correr contra él. Y sales en una liga de la semana.', '2026-12.28'],
   ['equipo', 'La travesía, en la base', 'Si juegas, guardamos tu rango, misiones y logros, y tus intentos de la etapa del día. En la comunidad ven tus metros del día y, si aúllas, tu nombre.', '2026-12.27'],
   ['equipo', 'La clasificación de La travesía', 'Si estás en la comunidad, los de dentro ven tu nombre en el equipo y los metros de tu lobo de la semana. Con «No salir en el ranking», no sales.', '2026-12.26'],

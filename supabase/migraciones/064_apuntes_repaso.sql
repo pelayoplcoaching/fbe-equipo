@@ -37,7 +37,7 @@ end $$;
 alter table public.apuntes_vistos add column if not exists caja smallint not null default 0;
 alter table public.apuntes_vistos add column if not exists proxima date;
 alter table public.apuntes_vistos drop constraint if exists apuntes_vistos_caja_valida;
-alter table public.apuntes_vistos add constraint apuntes_vistos_caja_valida check (caja between 0 and 5 and (proxima is null or proxima between ultimo and ultimo + 400));
+alter table public.apuntes_vistos add constraint apuntes_vistos_caja_valida check (caja between 0 and 5 and (proxima is null or proxima <= ultimo + 400));
 create index if not exists apuntes_vistos_proxima_idx on public.apuntes_vistos (atleta_id, proxima) where proxima is not null;
 
 -- (la de la 061 tenía dos parámetros: se quita para que no haya dos funciones con el mismo nombre)
@@ -55,7 +55,9 @@ begin
     raise exception 'Ese no es un apunte' using errcode = '22023';
   end if;
   if p_caja is not null and (p_caja < 0 or p_caja > 5) then raise exception 'Esa caja no existe' using errcode = '22023'; end if;
-  if p_proxima is not null and (p_proxima < v_hoy or p_proxima > v_hoy + 60) then raise exception 'Esa fecha de repaso no vale' using errcode = '22023'; end if;
+  if p_proxima is not null and p_proxima > v_hoy + 60 then raise exception 'Esa fecha de repaso no vale' using errcode = '22023'; end if;
+  -- (revisión) una fecha ya pasada (un apunte que tocaba repasar y se ha visto sin contestar) vale como hoy
+  if p_proxima is not null and p_proxima < v_hoy then p_proxima := v_hoy; end if;
   perform pg_advisory_xact_lock(hashtext('apuntes_vistos:' || v_atleta::text));  -- (dos a la vez no se saltan el tope; como en la 060)
   if (select count(*) from public.apuntes_vistos where atleta_id = v_atleta) >= 3000
      and not exists (select 1 from public.apuntes_vistos where atleta_id = v_atleta and apunte = p_apunte) then return; end if;
@@ -66,7 +68,7 @@ begin
     ultimo = greatest(x.ultimo, excluded.ultimo),
     sabia = coalesce(excluded.sabia, x.sabia),
     caja = case when p_caja is null then x.caja else excluded.caja end,
-    proxima = case when p_proxima is null then x.proxima else excluded.proxima end;
+    proxima = case when p_proxima is null then (case when x.proxima is null then null else greatest(x.proxima, excluded.ultimo) end) else excluded.proxima end;
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -151,7 +153,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 4. Permisos (como al final de 003 a 061)
+-- 4. Permisos (como al final de 003 a 063)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;

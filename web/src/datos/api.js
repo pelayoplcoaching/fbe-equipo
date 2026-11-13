@@ -40,7 +40,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -405,7 +405,7 @@ const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 
 // (059) lo de YouTube: el canal del coach y lo que ve cada atleta
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
 // (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos
-const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'];
+const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'apuntes_semanas', 'apuntes_duelos'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -1292,7 +1292,9 @@ export function crearApi(backend) {
       // (v0.152) lo de La travesía en la base (062): con la 061 pero sin la 062, la 2026-12.26
       if ((await api.travesia062().catch(() => null)) !== true) return VERSION_LEGAL_SIN_062;
       // (v0.153) el rastro, la liga, el reto y la fiesta (063): con la 062 pero sin la 063, la 2026-12.27
-      return (await api.travesia063().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_063;
+      if ((await api.travesia063().catch(() => null)) !== true) return VERSION_LEGAL_SIN_063;
+      // (v0.154) los apuntes con los demás (064 y 065): con la 063 pero sin la 065, la 2026-12.28
+      return (await api.apuntes065().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_065;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2616,7 +2618,8 @@ export function crearApi(backend) {
       try {
         // (v0.73) y las fotos de los momentos que caducan (bucket «comunidad», 045)
         // (v0.73, 045) la cola va por bucket y ruta: se quita de la de cada bucket (sin la 045, todas las de esas rutas)
-        for (const cubo of ['archivos', 'voz', 'comunidad']) {
+        // (065, revisión) y los audios de los apuntes del coach (bucket «apuntes»)
+        for (const cubo of ['archivos', 'voz', 'comunidad', 'apuntes']) {
           const rs = items.filter((x) => x.bucket === cubo).map((x) => x.ruta);
           if (!rs.length) continue;
           await b.storage.borrar(rs, cubo);
@@ -4176,7 +4179,10 @@ export function crearApi(backend) {
       if (!ID_APUNTE.test(String(id))) return 'rechazado';
       const base = { p_apunte: id, p_sabia: typeof sabia === 'boolean' ? sabia : null };
       if (repaso && Number.isInteger(repaso.caja) && /^\d{4}-\d{2}-\d{2}$/.test(repaso.proxima || '') && !api._sin064) {
-        try { await b.rpc('apuntar_apunte', { ...base, p_caja: repaso.caja, p_proxima: repaso.proxima }); return true; } catch (e) {
+        // (revisión) una fecha ya pasada se manda como hoy (la base la admitiría igual)
+        const hoyM = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+        const proxima = repaso.proxima < hoyM ? hoyM : repaso.proxima;
+        try { await b.rpc('apuntar_apunte', { ...base, p_caja: repaso.caja, p_proxima: proxima }); return true; } catch (e) {
           const m = `${e?.message || ''} ${e?.code || ''}`;
           if (/22023|Ese no es un apunte/.test(m) && !/caja|fecha de repaso/.test(m)) return 'rechazado';
           if (/p_caja|p_proxima|PGRST202|42883|could not find|schema cache/i.test(m)) api._sin064 = true;
@@ -4185,7 +4191,8 @@ export function crearApi(backend) {
       }
       try { await b.rpc('apuntar_apunte', base); return true; } catch (e) {
         const m = `${e?.message || ''} ${e?.code || ''}`;
-        if (/22023|Ese no es un apunte/.test(m)) return 'rechazado';
+        // (revisión) lo que la base no admite (22023, o una fila que no cumple su regla, 23514) sale de la cola: nunca la atasca
+        if (/22023|23514|check constraint|Ese no es un apunte/.test(m)) return 'rechazado';
         if (/apuntar_apunte|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(m)) api._sin060 = true;
         return false;
       }
@@ -4218,6 +4225,19 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v060 === pr) api._v060 = null; });
       }
       return api._v060;
+    },
+    // (v0.154) ¿Está la 065? Sonda: la tabla apuntes_semanas (sin la 065 no existe)
+    async apuntes065() {
+      if (!api._v065) {
+        const pr = b.select('apuntes_semanas', { cols: 'atleta_id', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /apuntes_semanas|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
+        });
+        api._v065 = pr;
+        pr.then((x) => { if (x == null && api._v065 === pr) api._v065 = null; });
+      }
+      return api._v065;
     },
     // (v0.153) ¿Está la 063? Sonda: la tabla travesia_liga (sin la 063 no existe)
     async travesia063() {
@@ -5191,6 +5211,9 @@ export function crearApi(backend) {
       // (062, revisión) los aullidos que ha mandado (a quién, por su ficha, y qué día); los recibidos, con su nombre en el equipo
       out.travesia_aullidos_mandados = await b.select('travesia_aullidos', { cols: 'para_atleta_id,dia,creado_en', eq: { atleta_id: atletaId } }).catch(() => []);
       out.travesia_aullidos_recibidos = perfilId && perfilId === uid() ? (await b.rpc('travesia_aullidos_recibidos').catch(() => [])) || [] : [];
+      // (065, revisión) sus puntos de apuntes por semanas y sus duelos (los suyos, con el rival por su nombre en el equipo)
+      out.apuntes_semanas = await b.select('apuntes_semanas', { eq: { atleta_id: atletaId } }).catch(() => []);
+      out.apuntes_duelos = perfilId && perfilId === uid() ? (await b.rpc('apuntes_duelos_mios').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

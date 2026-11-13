@@ -108,9 +108,9 @@
    tono se mezclan con la hoja y la tinta del tema, así que valen igual en claro y en oscuro. Todo lo que se mueve va dentro
    de prefers-reduced-motion: no-preference.
    ====================================================================================================================== */
-:root { --ap-verde: #1E9A55; --ap-ambar: #D99A00; --ap-rosa: #D24A8C; --ap-morado: #6A4FE6; --ap-azul: #2D6BDE; --ap-teal: #0E9580; --ap-oro: #D9A010; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ap-verde: #3DBA74; --ap-ambar: #F0B429; --ap-rosa: #E8709F; --ap-morado: #9C86FF; --ap-azul: #6E9BF0; --ap-teal: #2CBBA3; --ap-oro: #F0C040; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; } }
-:root[data-theme="dark"] { --ap-verde: #3DBA74; --ap-ambar: #F0B429; --ap-rosa: #E8709F; --ap-morado: #9C86FF; --ap-azul: #6E9BF0; --ap-teal: #2CBBA3; --ap-oro: #F0C040; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; }
+:root { --ap-verde: #1E9A55; --ap-ambar: #D99A00; --ap-rosa: #D24A8C; --ap-morado: #6A4FE6; --ap-azul: #2D6BDE; --ap-teal: #0E9580; --ap-oro: #D9A010; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; --ap-negro: #000000; --ap-rotulador: #F5C84B; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ap-verde: #3DBA74; --ap-ambar: #F0B429; --ap-rosa: #E8709F; --ap-morado: #9C86FF; --ap-azul: #6E9BF0; --ap-teal: #2CBBA3; --ap-oro: #F0C040; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; --ap-negro: #000000; --ap-rotulador: #F5C84B; } }
+:root[data-theme="dark"] { --ap-verde: #3DBA74; --ap-ambar: #F0B429; --ap-rosa: #E8709F; --ap-morado: #9C86FF; --ap-azul: #6E9BF0; --ap-teal: #2CBBA3; --ap-oro: #F0C040; --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: #6B4A2B; --ap-estrella: #FFE9B0; --ap-blanco: #FFFFFF; --ap-negro: #000000; --ap-rotulador: #F5C84B; }
 .tono-verde { --tono: var(--ap-verde); } .tono-ambar { --tono: var(--ap-ambar); } .tono-rosa { --tono: var(--ap-rosa); } .tono-morado { --tono: var(--ap-morado); }
 .tono-azul { --tono: var(--ap-azul); } .tono-teal { --tono: var(--ap-teal); } .tono-oro { --tono: var(--ap-oro); }
 .apunte, .apunte-saliente, .apunte-sello, .examen-aro { --tono-suave: color-mix(in srgb, var(--tono, var(--morado)) 13%, var(--hoja)); --tono-tinta: color-mix(in srgb, var(--tono, var(--morado)) 72%, var(--tinta)); }
@@ -370,22 +370,22 @@
 .emparejar .btn { min-height: 48px; height: auto; padding: 8px 10px; white-space: normal; text-align: left; line-height: 1.25; font-size: .875rem; justify-content: flex-start; }
 .emparejar-termino { font-weight: 700; }
 .emparejar-termino.elegido { outline: 3px solid var(--tono, var(--morado)); outline-offset: 1px; background: var(--tono-suave); }
-.emparejar .hecho { opacity: .55; background: color-mix(in srgb, var(--exito, #2e9e5b) 14%, var(--hoja)); border-color: transparent; }
+.emparejar .hecho { opacity: .55; background: color-mix(in srgb, var(--ok) 14%, var(--hoja)); border-color: transparent; }
 .emparejar-def.mal { animation: ap-agitar .4s ease; border-color: var(--aviso); }
 @keyframes ap-agitar { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 /* ordenar */
 .ordenar-elegidos, .ordenar-resultado { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
-.ordenar-elegidos li { min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1.5px dashed var(--linea, #ccc); font-size: .9375rem; }
+.ordenar-elegidos li { min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1.5px dashed var(--linea); font-size: .9375rem; }
 .ordenar-elegidos li.lleno { border-style: solid; background: var(--tono-suave); }
 .ordenar-opciones { display: grid; gap: 8px; }
 .ordenar-paso { min-height: 46px; height: auto; white-space: normal; text-align: left; justify-content: flex-start; padding: 8px 12px; line-height: 1.3; }
 .ordenar-resultado li { padding: 4px 0; }
 .ordenar-resultado li > span:first-child { margin-right: 6px; }
-.ordenar-resultado li.bien svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--exito, #2e9e5b); }
+.ordenar-resultado li.bien svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--ok); }
 .ordenar-resultado li.mal { color: var(--aviso); }
 /* verdadero o falso */
 .vf-frase { margin: 6px 0 0; min-height: 4.2em; font-size: 1.1875rem; font-weight: 650; line-height: 1.35; transition: color .2s; }
-.vf-frase.bien { color: var(--exito, #2e9e5b); }
+.vf-frase.bien { color: var(--ok); }
 .vf-frase.mal { color: var(--aviso); }
 .vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .vf-botones .btn { min-height: 54px; font-weight: 700; }
@@ -416,7 +416,7 @@
 .comparar-videos.con-mio { grid-template-columns: 1fr 1fr; align-items: start; }
 .comparar-videos figure { margin: 0; display: grid; gap: 6px; }
 .comparar-videos figcaption { display: flex; justify-content: space-between; align-items: center; font-size: .8125rem; color: var(--tinta-2); }
-.comparar-tuyo video { width: 100%; max-height: 60vh; border-radius: 14px; background: #000; }
+.comparar-tuyo video { width: 100%; max-height: 60vh; border-radius: 14px; background: var(--ap-negro); }
 .comparar-grabar, .comparar-otro { position: relative; overflow: hidden; gap: 8px; cursor: pointer; }
 .comparar-grabar { min-height: 120px; }
 .comparar-grabar input, .comparar-otro input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -438,9 +438,9 @@
 .anillo-meta circle { fill: none; stroke-width: 3.4; }
 .anillo-meta .fondo { stroke: color-mix(in srgb, var(--morado) 16%, transparent); }
 .anillo-meta .lleno { stroke: var(--morado); stroke-linecap: round; transition: stroke-dasharray .5s cubic-bezier(.2, .8, .2, 1); }
-.anillo-meta.hecho .lleno { stroke: var(--exito, #2e9e5b); }
+.anillo-meta.hecho .lleno { stroke: var(--ok); }
 .anillo-meta b { position: relative; font-size: .875rem; }
-.anillo-meta b svg { position: static; transform: none; width: 20px; height: 20px; color: var(--exito, #2e9e5b); }
+.anillo-meta b svg { position: static; transform: none; width: 20px; height: 20px; color: var(--ok); }
 .anillo-meta.pequeno { width: 38px; height: 38px; }
 .anillo-meta.pequeno b { font-size: .6875rem; }
 .anillo-meta.pequeno b svg { width: 16px; height: 16px; }
@@ -455,12 +455,12 @@
 .prog-temas { display: grid; gap: 12px; }
 .prog-tema { display: grid; gap: 5px; }
 .prog-tema-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.prog-tema.nivel-dominado .chip { background: color-mix(in srgb, var(--exito, #2e9e5b) 16%, transparent); }
+.prog-tema.nivel-dominado .chip { background: color-mix(in srgb, var(--ok) 16%, transparent); }
 .prog-barra { position: relative; display: block; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--morado) 10%, transparent); overflow: hidden; }
 .prog-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
 .prog-barra .v { background: color-mix(in srgb, var(--morado) 30%, transparent); }
 .prog-barra .p { background: color-mix(in srgb, var(--morado) 65%, transparent); }
-.prog-barra .d { background: var(--exito, #2e9e5b); }
+.prog-barra .d { background: var(--ok); }
 .prog-ruta { display: grid; gap: 10px; }
 .prog-ruta p { margin: 0; }
 .prog-modulos { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
@@ -468,14 +468,14 @@
 .prog-modulos li { padding: 4px 0; }
 .prog-modulos li.hecho { color: var(--tinta-2); }
 .prog-modulos li.ahora { font-weight: 700; }
-.prog-modulos li .mini svg { width: 15px; height: 15px; vertical-align: -2px; color: var(--exito, #2e9e5b); }
+.prog-modulos li .mini svg { width: 15px; height: 15px; vertical-align: -2px; color: var(--ok); }
 .prog-mes { display: grid; gap: 8px; }
 .prog-mes p { margin: 0; }
 .prog-mes-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .prog-mes-cifras > span { display: grid; place-items: center; padding: 10px 4px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); font-size: .75rem; color: var(--tinta-2); }
 .prog-mes-cifras b { font-size: 1.375rem; color: var(--tinta); }
 /* el certificado */
-.certificado { display: grid; justify-items: center; gap: 4px; padding: 16px; border-radius: 18px; border: 2px solid color-mix(in srgb, var(--oro, #c8961e) 50%, transparent); background: color-mix(in srgb, var(--oro, #c8961e) 7%, var(--hoja)); text-align: center; }
+.certificado { display: grid; justify-items: center; gap: 4px; padding: 16px; border-radius: 18px; border: 2px solid color-mix(in srgb, var(--oro) 50%, transparent); background: color-mix(in srgb, var(--oro) 7%, var(--hoja)); text-align: center; }
 .certificado .apuntes-dibujo { width: 120px; height: auto; }
 .certificado-de { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
 .certificado-curso { font-size: 1.375rem; }
@@ -492,22 +492,22 @@
 .liga-filas li.yo { background: color-mix(in srgb, var(--morado) 16%, var(--hoja)); font-weight: 650; }
 .liga-puesto { color: var(--tinta-2); text-align: center; }
 .liga-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
-.duelo-ganado { color: var(--exito, #2e9e5b); font-weight: 650; }
+.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linea); }
+.duelo-ganado { color: var(--ok); font-weight: 650; }
 .duelo-perdido, .duelo-caducado { color: var(--tinta-2); }
 .duelo-gente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 /* la historia a pantalla completa */
 .ap-historia { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
-  background: linear-gradient(160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, #000), color-mix(in srgb, var(--tono, var(--morado)) 55%, #000)); color: #fff; }
-.ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: #1f8a5a; } .ap-historia.tono-azul { --tono: #2f6fd6; }
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, var(--ap-negro)), color-mix(in srgb, var(--tono, var(--morado)) 55%, var(--ap-negro))); color: var(--ap-blanco); }
+.ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: var(--ap-verde); } .ap-historia.tono-azul { --tono: var(--ap-azul); }
 .ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: 4px; }
-.ap-historia-barras span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .3); overflow: hidden; }
-.ap-historia-barras span i { display: block; height: 100%; background: #fff; transform-origin: left; transform: scaleX(0); }
+.ap-historia-barras span { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--ap-blanco) 30%, transparent); overflow: hidden; }
+.ap-historia-barras span i { display: block; height: 100%; background: var(--ap-blanco); transform-origin: left; transform: scaleX(0); }
 .ap-historia-barras span.vista i { transform: none; }
 .ap-historia-barras span.ahora i { animation: ap-historia-llenar 6s linear forwards; }
 .ap-historia-barras span.ahora.parada i { animation-play-state: paused; }
 @keyframes ap-historia-llenar { to { transform: scaleX(1); } }
-.ap-historia-cerrar { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 12px)); right: 10px; z-index: 2; color: #fff; }
+.ap-historia-cerrar { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 12px)); right: 10px; z-index: 2; color: var(--ap-blanco); }
 .ap-historia-cuerpo { position: relative; z-index: 1; display: grid; gap: 16px; max-width: 34rem; pointer-events: none; }
 .ap-historia-cuerpo a { pointer-events: auto; justify-self: start; }
 .ap-historia-etq { font-size: .8125rem; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
@@ -519,15 +519,15 @@
 .ap-historia-cuenta { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); right: 20px; font-size: .8125rem; opacity: .75; }
 /* la audio-píldora */
 .audio-pildora { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: var(--tono-suave, color-mix(in srgb, var(--morado) 9%, transparent)); }
-.audio-play { width: 46px; height: 46px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--tono, var(--morado)); color: #fff; border: 0; }
+.audio-play { width: 46px; height: 46px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--tono, var(--morado)); color: var(--sobre-morado); border: 0; }
 .audio-info { display: grid; gap: 4px; }
 .audio-barra { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); overflow: hidden; }
 .audio-barra i { display: block; height: 100%; background: var(--tono, var(--morado)); }
 /* tu nota y los subrayados */
-.apunte-tu-nota { text-align: left; border: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #f5c84b 22%, var(--hoja)); font: inherit; font-size: .9375rem; line-height: 1.4; color: var(--tinta); cursor: pointer; }
+.apunte-tu-nota { text-align: left; border: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--ap-rotulador) 22%, var(--hoja)); font: inherit; font-size: .9375rem; line-height: 1.4; color: var(--tinta); cursor: pointer; }
 .apunte-nota-propia { display: grid; gap: 6px; }
 .apunte-nota-propia textarea { min-height: 84px; }
-.apunte-subrayado, .apunte-frase.subrayada { background: linear-gradient(transparent 45%, color-mix(in srgb, #f5c84b 70%, transparent) 45%); color: inherit; padding: 0 1px; border-radius: 2px; }
+.apunte-subrayado, .apunte-frase.subrayada { background: linear-gradient(transparent 45%, color-mix(in srgb, var(--ap-rotulador) 70%, transparent) 45%); color: inherit; padding: 0 1px; border-radius: 2px; }
 .apunte-texto.subrayando .apunte-frase { cursor: pointer; border-bottom: 1.5px dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); }
 @media (prefers-reduced-motion: reduce) { .ap-historia-barras span.ahora i { animation: none; transform: scaleX(.5); } }
 /* (tanda D, coach) el audio de la novedad y el equipo en apuntes */

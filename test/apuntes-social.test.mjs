@@ -83,6 +83,7 @@ check(m.soy_retador && m.rival_nombre === 'Bea M.' && m.semilla === 12345 && m.m
 await como(gente.bea.u);
 [m] = await q('select * from apuntes_duelos_mios()');
 check(!m.soy_retador && m.rival_nombre === 'Ana L.' && m.mios === null && m.suyos === null && m.rival_contesto, 'Bea no ve los aciertos de Ana hasta contestar (sí que ya contestó)');
+check((await q('select * from apuntes_duelos')).length === 0, 'ni leyendo la tabla: los duelos solo se ven con su función (revisión)');
 await q('select apuntes_duelo_contestar($1, 3::smallint)', [d1]);
 [m] = await q('select * from apuntes_duelos_mios()');
 check(m.mios === 3 && m.suyos === 4 && m.acabado, 'al contestar, los dos resultados');
@@ -90,6 +91,11 @@ check(await falla('select apuntes_duelo_contestar($1, 9::smallint)', [d1]), 'de 
 await como(gente.dani.u);
 check((await q('select * from apuntes_duelos_mios()')).length === 0 && (await q('select * from apuntes_duelos')).length === 0 && await falla('select apuntes_duelo_contestar($1, 1::smallint)', [d1]), 'los demás ni lo ven ni lo tocan');
 check(await falla(`insert into apuntes_duelos (de, para, semilla, caduca) values ($1, $2, 1, now()::date)`, [gente.dani.u, gente.ana.u]), 'a mano, no');
+// (revisión) quien está silenciado no reta
+await su(); await q(`update comunidad_miembros set silenciado_hasta = now() + interval '1 day' where perfil_id = $1`, [gente.dani.u]);
+await como(gente.dani.u);
+check(await falla('select apuntes_duelo_retar($1, 7)', [gente.bea.u]), 'quien está silenciado no reta');
+await su(); await q('update comunidad_miembros set silenciado_hasta = null where perfil_id = $1', [gente.dani.u]);
 await como(gente.ana.u);
 await q('select apuntes_duelo_retar($1, 2)', [gente.dani.u]);
 await su(); await q(`update apuntes_duelos set caduca = (now() at time zone 'Europe/Madrid')::date - 1 where para = $1`, [gente.dani.u]);

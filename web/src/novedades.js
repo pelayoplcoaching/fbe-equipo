@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.154': {
+    atleta: [
+      'Apuntes que se quedan: repaso espaciado, piénsalo antes de leer, preguntas de tu coach y ejercicios para practicar.',
+      'Y tu progreso: prueba de nivel, temas, ruta Fundamentos FBE con certificado, objetivo diario, liga y duelos.',
+    ],
+    coach: [
+      'Guías → «Nueva»: preguntas y audio-píldoras; y «El equipo en apuntes». Migraciones 064 y 065.',
+    ],
+  },
   '0.153': {
     atleta: [
       'La travesía, rematada: corre contra el lobo de un compañero, ligas de la semana, rutas nuevas, la ventisca, la etapa dorada y fiestas.',

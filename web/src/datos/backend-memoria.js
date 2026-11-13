@@ -392,6 +392,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     travesia_aullidos: (x) => esCoach() || x.de === sesion?.user.id,
     // (063) la liga, cada uno la suya; el reto del equipo y la fiesta, solo el coach (los demás, con travesia_equipo())
     travesia_liga: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (065, revisión) los puntos de apuntes, como la travesía; los duelos, solo el coach (el atleta, con apuntes_duelos_mios)
+    apuntes_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    apuntes_duelos: () => esCoach(),
     travesia_reto_equipo: () => esCoach(),
     travesia_fiesta: () => esCoach(),
   };
@@ -1256,7 +1259,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     preferencias_notificaciones: (f) => {
       const hora = (h) => /^\d\d:\d\d(:00)?$/.test(String(h ?? ''));
       const h5 = (h) => String(h).slice(0, 5);
-      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad', 'tarea', 'tarea_hecha'];
+      const tipos = ['respuesta', 'semana', 'aviso', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'cuestionario', 'mensaje', 'checkin_recibido', 'video_recibido', 'sesion_hecha', 'cuestionario_recibido', 'descanso', 'comunidad', 'tarea', 'tarea_hecha', 'repaso'];
       return Array.isArray(f.desactivados) && f.desactivados.every((t) => tipos.includes(t))
         && hora(f.hora_manana) && h5(f.hora_manana) >= '05:00' && h5(f.hora_manana) <= '12:00'
         && hora(f.hora_tarde) && h5(f.hora_tarde) >= '12:00' && h5(f.hora_tarde) <= '23:30'
@@ -1602,7 +1605,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'apuntes_semanas', 'apuntes_duelos'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -2177,7 +2180,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // (065) Apuntes con los demás: los puntos de la semana, la liga, los duelos y lo del equipo (solo cuentas)
     if (nombre === 'apuntes_semana_sumar') {
       if (!yo || coach) throw Object.assign(new Error('Solo un atleta'), { code: '42501' });
+      if (yo.estado === 'baja') return false;
       const l = lunesHoy();
+      db.apuntes_semanas = tabla('apuntes_semanas').filter((r) => r.semana >= sumar(l, -84));
       if (![l, sumar(l, -7)].includes(args.p_semana)) throw Object.assign(new Error('Esa semana no vale'), { code: '22023' });
       const pts = Math.round(Number(args.p_puntos)), aps = Math.round(Number(args.p_apuntes));
       if (!(pts >= 0 && pts <= 20000 && aps >= 0 && aps <= 2000)) throw Object.assign(new Error('Esas cifras no valen'), { code: '22023' });
@@ -2205,8 +2210,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (!args.p_para || args.p_para === uid) throw Object.assign(new Error('Contra ti ya juegas cada día'), { code: '22023' });
       if (!el) throw Object.assign(new Error('Esa persona ya no está en el equipo'), { code: '42501' });
       if (yoM.sin_ranking || el.sin_ranking) throw Object.assign(new Error('Los duelos enseñan aciertos: los dos tenéis que salir en el ranking'), { code: '22023' });
+      // (como la base tras su revisión: comunidad abierta, sin silenciar, y los topes solo con quien sigue dentro)
+      if (!veComunidad()) throw Object.assign(new Error('Para retar tienes que estar en la comunidad (y abierta)'), { code: '42501' });
+      if (tabla('comunidad_miembros').some((k) => k.perfil_id === uid && k.silenciado_hasta && k.silenciado_hasta > ahora())) throw Object.assign(new Error('Mientras estás silenciado no puedes retar'), { code: '42501' });
       const hoy = fechaMadrid(), vivo = (x) => x.caduca >= hoy && (x.aciertos_de == null || x.aciertos_para == null);
-      if (tabla('apuntes_duelos').filter((x) => [x.de, x.para].includes(uid) && vivo(x)).length >= 3) throw Object.assign(new Error('Como mucho tres duelos a la vez'), { code: '54000' });
+      db.apuntes_duelos = tabla('apuntes_duelos').filter((x) => x.caduca >= sumar(hoy, -30));
+      const vivos = (pid) => tabla('apuntes_duelos').filter((x) => [x.de, x.para].includes(pid) && vivo(x) && dentroTodos().some((m) => m.perfil_id === (x.de === pid ? x.para : x.de))).length;
+      if (vivos(uid) >= 3) throw Object.assign(new Error('Como mucho tres duelos a la vez'), { code: '54000' });
+      if (vivos(args.p_para) >= 3) throw Object.assign(new Error('Esa persona ya tiene tres duelos: rétale más adelante'), { code: '54000' });
       if (tabla('apuntes_duelos').some((x) => [x.de, x.para].includes(uid) && [x.de, x.para].includes(args.p_para) && vivo(x))) throw Object.assign(new Error('Ya tenéis un duelo sin acabar'), { code: '23505' });
       const id = crypto.randomUUID();
       tabla('apuntes_duelos').push({ id, de: uid, para: args.p_para, semilla: Math.round(Number(args.p_semilla)) || 1, aciertos_de: null, aciertos_para: null, creado_en: new Date().toISOString(), caduca: sumar(hoy, 7) });
@@ -3274,7 +3285,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'apuntes_semanas', 'apuntes_duelos'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3481,7 +3492,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'apuntes_semanas', 'apuntes_duelos'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3595,7 +3606,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [];
       }
       // (060) lo de la travesía y los apuntes vistos: el coach cualquiera; el atleta, lo suyo
-      if (t === 'travesia_semanas' || t === 'apuntes_vistos' || t === 'travesia_perfil' || t === 'travesia_dia' || t === 'travesia_liga') {
+      if (t === 'apuntes_duelos') { db[t] = tabla(t).filter((x) => !(cumple(x, f) && esCoach())); persistirYa(); return []; }   // (065: solo el coach)
+      if (t === 'travesia_semanas' || t === 'apuntes_vistos' || t === 'travesia_perfil' || t === 'travesia_dia' || t === 'travesia_liga' || t === 'apuntes_semanas') {
         // (062: lo de hoy de la etapa del día, el atleta no lo borra: le daría intentos de más)
         const hoyM = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
         db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId() && !(t === 'travesia_dia' && x.dia >= hoyM)))));
