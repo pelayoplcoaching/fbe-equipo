@@ -589,7 +589,7 @@ export function NovedadesCoach() {
 }
 
 // (apuntes, tanda D) La audio-píldora de una novedad: grabarla (hasta 5 minutos) o subir un audio; se oye antes de guardar
-function GrabarAudio({ valor, alCambiar }) {
+export function GrabarAudio({ valor, alCambiar, max = 300, maxBytes = 5242880, etiqueta = 'Audio-píldora', ayuda = 'Tus atletas lo escuchan en el apunte, a 1× o 1,5×.' }) {
   const { aviso } = useApp();
   const [grabando, setGrabando] = useState(false);
   const [seg, setSeg] = useState(0);
@@ -606,10 +606,10 @@ function GrabarAudio({ valor, alCambiar }) {
         s.getTracks().forEach((t) => t.stop());
         clearInterval(rec.current?.reloj);
         const blob = new Blob(trozos, { type: r.mimeType || 'audio/webm' });
-        alCambiar({ blob, segundos: Math.max(1, Math.min(300, Math.round((Date.now() - t0) / 1000))) });
+        alCambiar({ blob, segundos: Math.max(1, Math.min(max, Math.round((Date.now() - t0) / 1000))) });
         setGrabando(false);
       };
-      const reloj = setInterval(() => { const n = Math.round((Date.now() - t0) / 1000); setSeg(n); if (n >= 300) r.stop(); }, 500);
+      const reloj = setInterval(() => { const n = Math.round((Date.now() - t0) / 1000); setSeg(n); if (n >= max) r.stop(); }, 500);
       rec.current = { r, s, reloj };
       r.start(); setSeg(0); setGrabando(true);
     } catch { aviso('No se puede usar el micro: revisa el permiso del navegador', 'error'); }
@@ -617,15 +617,15 @@ function GrabarAudio({ valor, alCambiar }) {
   const subir = (ev) => {
     const archivo = ev.currentTarget.files?.[0];
     if (!archivo) return;
-    if (archivo.size > 5242880) { aviso('El audio no puede pasar de 5 MB', 'error'); return; }
+    if (archivo.size > maxBytes) { aviso(`El audio no puede pasar de ${Math.round(maxBytes / 1048576)} MB`, 'error'); return; }
     const a = new Audio(URL.createObjectURL(archivo));
-    a.onloadedmetadata = () => { const d = Math.round(a.duration || 0); if (!(d >= 1 && d <= 300)) { aviso('El audio tiene que durar entre 1 segundo y 5 minutos', 'error'); return; } alCambiar({ blob: archivo, segundos: d }); };
+    a.onloadedmetadata = () => { const d = Math.round(a.duration || 0); if (!(d >= 1 && d <= max)) { aviso(`El audio tiene que durar entre 1 segundo y ${max >= 120 && max % 60 === 0 ? `${max / 60} minutos` : `${max} segundos`}`, 'error'); return; } alCambiar({ blob: archivo, segundos: d }); };
     a.onerror = () => aviso('Ese archivo no parece un audio', 'error');
   };
   const mmss = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
   return (
     <div class="campo audio-coach">
-      <span class="etiqueta-campo">Audio-píldora <span class="secundario">(opcional, hasta 5 minutos)</span></span>
+      <span class="etiqueta-campo">{etiqueta} <span class="secundario">(opcional, hasta {max % 60 === 0 ? `${max / 60} minutos` : `${max} segundos`})</span></span>
       {grabando ? (
         <div class="fila-s"><span class="audio-grabando num" role="status">● Grabando {mmss(seg)}</span><button type="button" class="btn btn-peq" onClick={() => rec.current?.r.stop()}>Parar</button></div>
       ) : valor ? (
@@ -639,7 +639,7 @@ function GrabarAudio({ valor, alCambiar }) {
           <label class="btn btn-peq audio-subir"><Icono n="arriba" />Subir un audio<input type="file" accept="audio/*" onChange={subir} /></label>
         </div>
       )}
-      <span class="mini secundario">Tus atletas lo escuchan en el apunte, a 1× o 1,5×.</span>
+      <span class="mini secundario">{ayuda}</span>
     </div>
   );
 }

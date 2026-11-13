@@ -10,6 +10,7 @@ import { historiaEnUnaLinea } from '../../logica/rumbo.js';
 import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
 import { PatronCiclo, BotonInforme } from './Respeto.jsx';
+import { AlbumHitos } from './Compania.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Segmentos, Pestanas, Vacio } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
@@ -57,6 +58,7 @@ export function PerfilSecciones({ salud, irA }) {
             <HistoriaLinea sesiones={lista.length} progreso={progreso.datos} hoy={hoy} />
             <MejorMomento entrenos={lista} hoy={hoy} />
             <AdnFbe entrenos={lista} progreso={progreso.datos} hoy={hoy} />
+            <AlbumHitos entrenos={lista} progreso={progreso.datos} hoy={hoy} />
             <PatronCiclo entrenos={lista} salud={salud} />
             <div class="perfil-informe"><BotonInforme salud={salud} /></div>
             <CifrasPerfil entrenos={lista} hoy={hoy} cargando={entrenos.cargando && !entrenos.datos} />

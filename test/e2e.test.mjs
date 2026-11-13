@@ -6074,6 +6074,10 @@ try {
   console.log('\nQue respete cómo es');
   const { probarPersonalRespeto } = await import('./e2e-personal-t7.mjs');
   await probarPersonalRespeto({ navegador, check });
+  // Personalización 3, tanda 8: la voz del coach, el reto del mes, el álbum y «Busco compañero»
+  console.log('\nQue le acompañe más allá de la app');
+  const { probarPersonalCompania } = await import('./e2e-personal-t8.mjs');
+  await probarPersonalCompania({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

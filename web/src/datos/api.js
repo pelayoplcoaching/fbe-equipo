@@ -132,6 +132,7 @@ const falta031 = (e) => {
 // (personalización 3) sin la 067: la agenda y el manual no están
 const falta067 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const avisarAgenda = () => { try { globalThis.dispatchEvent?.(new Event('fbe-agenda')); } catch { /* */ } };
+const AVISO_068 = 'Esto aún no está disponible: hay que poner al día la base (migración 068, supabase/migraciones/068_personal_voz.sql)';
 const AVISO_067 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 067, supabase/migraciones/067_personal_vida.sql)';
 const falta050 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
@@ -439,7 +440,7 @@ export const FOTO_MINI_MAX = 16000;
 
 // Funciones de la base que solo consultan (no cambian nada): no invalidan lo que las pantallas recuerdan. Si falta
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
-const RPC_DE_CONSULTA = new Set(['mi_cobro', 'agenda_lista', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -847,6 +848,26 @@ export function crearApi(backend) {
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
     // (personalización 2, migración 065) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    // (personalización 3, tanda 8; migración 068) la voz del coach en sus mensajes y el compañero afín
+    async subirVozCoach(archivo, tipo = 'audio/webm') {
+      const ext = /wav/.test(tipo) ? 'wav' : /ogg/.test(tipo) ? 'ogg' : /mp4|m4a/.test(tipo) ? 'm4a' : /mpeg|mp3/.test(tipo) ? 'mp3' : /aac/.test(tipo) ? 'aac' : 'webm';
+      const ruta = `voz/${crypto.randomUUID()}.${ext}`;
+      await b.storage.subir(ruta, archivo, tipo.split(';')[0], { bucket: 'coach-voz' }).catch((e) => {
+        if (/bucket|not found|no existe/i.test(`${e?.message || ''}`)) throw new Error(AVISO_068);
+        throw e;
+      });
+      return ruta;
+    },
+    async guardarAudioMensaje(momento, ruta, segundos) {
+      try { await b.rpc('mensaje_coach_audio', { p_momento: momento, p_ruta: ruta, p_segundos: ruta ? Math.max(1, Math.min(120, Math.round(segundos || 1))) : null }); mensajesMemo = null; }
+      catch (e) { if (/mensaje_coach_audio|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_068); throw e; }
+    },
+    async urlVozCoach(ruta) { return ruta ? b.storage.url(ruta, 3600, 'coach-voz') : null; },
+    async afinesComunidad() { try { return (await b.rpc('comunidad_afines', {})) ?? null; } catch { return null; } },
+    async buscoCompanero(si) {
+      try { return await b.rpc('comunidad_busco_companero', { p_si: !!si }); }
+      catch (e) { if (/comunidad_busco_companero|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error(AVISO_068); throw e; }
+    },
     // (personalización 3, tanda 7) sus molestias del check-in (las últimas 100 semanas-zona), para su informe
     async molestiasAtleta(atletaId) {
       return b.select('molestias', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 100 });
