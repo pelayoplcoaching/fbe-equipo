@@ -129,6 +129,10 @@ const falta031 = (e) => {
 // (pulido 3) Sin la migración 048 (las listas ligeras), la app lo pide como antes: no es un error
 // (pulido 4, migración 049) ¿El error es que la base aún no tiene las funciones del rendimiento?
 // (050) sin la migración de la personalización, no hay nada de eso (y no se rompe nada)
+// (personalización 3) sin la 067: la agenda y el manual no están
+const falta067 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual_guardar|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
+const avisarAgenda = () => { try { globalThis.dispatchEvent?.(new Event('fbe-agenda')); } catch { /* */ } };
+const AVISO_067 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 067, supabase/migraciones/067_personal_vida.sql)';
 const falta050 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`;
   return /personal_(mio|guardar|atletas|musica_abierta)|mensajes?_coach|musica_(coach|para)/.test(m) && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible/i.test(m);
@@ -437,7 +441,7 @@ export const FOTO_MINI_MAX = 16000;
 
 // Funciones de la base que solo consultan (no cambian nada): no invalidan lo que las pantallas recuerdan. Si falta
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
-const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['mi_cobro', 'agenda_lista', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -848,6 +852,36 @@ export function crearApi(backend) {
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
     // (personalización 2, migración 066) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    // (personalización 3, tanda 6) lo obligatorio (prioridad alta) de unas sesiones: [{ sesion_id, nombre }]
+    async obligatoriosDe(sesionIds = []) {
+      if (!sesionIds.length) return [];
+      const ses = await b.select('sesion_ejercicios', { in: { sesion_id: sesionIds }, order: [['orden', 'asc']] });
+      const altas = ses.filter((x) => x.prioridad === 'alta');
+      if (!altas.length) return [];
+      const ej = porId(await b.select('ejercicios', { in: { id: unicos(altas.map((x) => x.ejercicio_id)) }, cols: 'id,nombre' }));
+      return altas.map((x) => ({ sesion_id: x.sesion_id, nombre: ej[x.ejercicio_id]?.nombre || 'Ejercicio' }));
+    },
+    // (personalización 3; migración 067) su agenda de vida y su manual de instrucciones
+    async agenda(atletaId = null, { desde = null, hasta = null } = {}) {
+      try { return (await b.rpc('agenda_lista', { p_atleta: atletaId, p_desde: desde, p_hasta: hasta })) || []; } catch (e) { if (falta067(e)) return null; throw e; }
+    },
+    async guardarAgenda(atletaId, datos) {
+      try { const r = await b.rpc('agenda_guardar', { p_atleta: atletaId, p_datos: datos }); avisarAgenda(); return r; } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+    },
+    async borrarAgenda(id) {
+      try { await b.rpc('agenda_borrar', { p_id: id }); avisarAgenda(); } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+    },
+    async responderAgenda(id, respuesta, nota = null) {
+      try { const r = await b.rpc('agenda_responder', { p_id: id, p_respuesta: respuesta, p_nota: nota }); avisarAgenda(); return r; } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+    },
+    async guardarManual(datos) {
+      try {
+        const r = await b.rpc('personal_manual_guardar', { p_datos: datos });
+        personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
+        return r;
+      } catch (e) { if (falta067(e)) throw new Error(AVISO_067); throw e; }
+    },
     async guardarTrato(datos) {
       const permitidas = ['genero', 'tono', 'meta_nombre', 'meta_fecha', 'meta_cifra', 'meta_unidad'];
       const limpio = Object.fromEntries(Object.entries(datos || {}).filter(([k]) => permitidas.includes(k)).map(([k, v]) => [k, v === '' || v === undefined ? null : v]));
@@ -1904,7 +1938,7 @@ export function crearApi(backend) {
     // Con lo que le pregunta su coach: los apartados (null = todos) y sus preguntas
     async checkin(atletaId, lunes) {
       const [checkin] = await b.select('checkins', { eq: { atleta_id: atletaId, semana_inicio: lunes } });
-      const [molestias, pesos, medidas, atleta, preguntas, anterior] = await Promise.all([
+      const [molestias, pesos, medidas, atleta, preguntas, anterior, molestiasAnterior] = await Promise.all([
         b.select('molestias', { eq: { atleta_id: atletaId, semana_inicio: lunes } }),
         b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
         b.select('medidas', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc']], limit: 2 }),
@@ -1913,8 +1947,10 @@ export function crearApi(backend) {
         api.preguntasCheckin(atletaId).catch(() => []),
         // (054) el de la semana anterior, para «igual que la semana pasada»
         b.select('checkins', { eq: { atleta_id: atletaId, semana_inicio: sumarDias(lunes, -7) } }).then((x) => x[0] || null).catch(() => null),
+        // (personalización 3) las molestias de la semana anterior, para preguntarle cómo siguen
+        b.select('molestias', { eq: { atleta_id: atletaId, semana_inicio: sumarDias(lunes, -7) } }).catch(() => []),
       ]);
-      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas, anterior };
+      return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas, anterior, molestiasAnterior };
     },
     async guardarCheckin(atletaId, lunes, datos, molestias = {}, pesoKg = null) {
       const campos = ['horas_sueno', 'energia', 'recuperacion', 'motivacion', 'fc_reposo', 'hrv', 'adherencia_desayuno',
