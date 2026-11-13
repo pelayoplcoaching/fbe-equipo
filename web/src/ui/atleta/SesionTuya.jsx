@@ -12,7 +12,7 @@ export function TiempoHoy({ ejercicios }) {
   const r = min ? siVasJusto(ejercicios, min) : null;
   return (
     <section class="panel panel-pad tiempo-hoy" aria-labelledby="tiempo-hoy-t">
-      <h3 id="tiempo-hoy-t" class="tiempo-hoy-t"><Icono n="reloj" /> ¿Cuánto tiempo tienes hoy?</h3>
+      <h2 id="tiempo-hoy-t" class="tiempo-hoy-t"><Icono n="reloj" /> ¿Cuánto tiempo tienes hoy?</h2>
       <div class="segmentos" role="group" aria-label="Tiempo que tienes hoy">
         {TIEMPOS.map((m) => <button key={m} type="button" aria-pressed={min === m ? 'true' : 'false'} onClick={() => setMin(min === m ? null : m)}>{m} min</button>)}
       </div>
