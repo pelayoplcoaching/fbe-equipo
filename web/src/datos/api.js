@@ -847,6 +847,10 @@ export function crearApi(backend) {
       } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: tu coach tiene que poner al día la app'); throw e; }
     },
     // (personalización 2, migración 065) cómo le hablamos (género y tono) y su meta con fecha: solo esas claves
+    // (personalización 3, tanda 7) sus molestias del check-in (las últimas 100 semanas-zona), para su informe
+    async molestiasAtleta(atletaId) {
+      return b.select('molestias', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 100 });
+    },
     // (personalización 3, tanda 6) lo obligatorio (prioridad alta) de unas sesiones: [{ sesion_id, nombre }]
     async obligatoriosDe(sesionIds = []) {
       if (!sesionIds.length) return [];

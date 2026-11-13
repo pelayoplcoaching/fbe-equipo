@@ -6070,6 +6070,10 @@ try {
   console.log('\nQue la app sepa de su vida');
   const { probarPersonalVida } = await import('./e2e-personal-t6.mjs');
   await probarPersonalVida({ navegador, check });
+  // Personalización 3, tanda 7: su manual, lo que no quiere ver, su ciclo (en el móvil) y su informe
+  console.log('\nQue respete cómo es');
+  const { probarPersonalRespeto } = await import('./e2e-personal-t7.mjs');
+  await probarPersonalRespeto({ navegador, check });
   // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
   console.log('\nLa travesía, tanda 5');
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');

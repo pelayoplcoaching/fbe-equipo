@@ -2,6 +2,7 @@
 // semana frente a lo que sueles llevar a estas alturas) y Cómo llegas (lo que contestaste hoy en «¿Cómo llegas hoy?»).
 // Tocar uno abre una hoja con lo que lo alimenta y una explicación corta. Solo los ve el atleta (en su Hoy): «Cómo
 // llegas» es dato de salud y solo sale con su consentimiento.
+import { leerAjustes } from '../ajustes.js';
 import { useEffect, useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
@@ -79,7 +80,7 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
     llegaronYa.add(atleta.id);
     if (reales !== (Array.isArray(vistos) ? vistos.join() : '')) guardarPreferencia(claveVistos, reales ? reales.split(',') : []);
   }, [llegados, reales]);
-  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: !!m || espera.comida, pasos: !!ps || espera.pasos, sueno: !!su || espera.sueno };
+  const ver = { constancia: !ocultos.has('constancia'), carga: !ocultos.has('carga'), llegas: salud && !ocultos.has('llegas'), comida: (!!m || espera.comida) && !leerAjustes().ocultar?.kcal, pasos: !!ps || espera.pasos, sueno: !!su || espera.sueno };
   const n = Object.values(ver).filter(Boolean).length;
   if (!n) return null;
   const pc = ps ? pasosCortos(ps.pasos) : null;

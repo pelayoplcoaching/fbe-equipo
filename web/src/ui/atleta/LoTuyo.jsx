@@ -6,6 +6,8 @@ import { HojaTrato, HojaCelebrar, HojaMeta, textoCelebrar } from './Trato.jsx';
 import { cuentaMeta } from '../../logica/rumbo.js';
 import { HojaFotoMotivacion, leerFotoMotivacion } from './Suyo.jsx';
 import { HojaAgenda, HojaGuardias } from './Vida.jsx';
+import { HojaManual, HojaOcultar, HojaCiclo, leerCiclo } from './Respeto.jsx';
+import { textoManual, textoOcultar } from '../../logica/respeto.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { GENEROS, TONOS } from '../../logica/trato.js';
 import { leerAjustes } from '../ajustes.js';
@@ -19,7 +21,7 @@ import { FichaPrevia, useNombreLista } from './Musica.jsx';
 
 export const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
-export function LoTuyo() {
+export function LoTuyo({ salud = false }) {
   const { api, atleta } = useApp();
   // (api.personal: undefined sin la 050; null sin nada guardado)
   const datos = useCarga(() => api.personal().then((p) => (p === undefined ? { sin: true } : { p: p || {} })).catch(() => ({ sin: true })), [atleta.id]);
@@ -44,15 +46,21 @@ export function LoTuyo() {
       <FilaIos icono="bandera" titulo="Tu meta" valor={p.meta_nombre ? (cuentaMeta(p, hoyISO())?.texto || p.meta_nombre) : 'Añadir'} alTocar={() => setEditar('meta')} etiqueta="Poner tu meta" />
       <FilaIos icono="calendario" titulo="Lo que viene en tu vida" valor="Exámenes, viajes…" alTocar={() => setEditar('agenda')} etiqueta="Apuntar lo que viene en tu vida" />
       <FilaIos icono="reloj" titulo="Tus guardias o turnos" valor="Añadir" alTocar={() => setEditar('guardias')} etiqueta="Apuntar tus guardias o turnos" />
+      <FilaIos icono="documento" titulo="Cómo me gusta que me entrenen" valor={textoManual(p) ? 'Escrito' : 'Añadir'} alTocar={() => setEditar('manual')} etiqueta="Escribir cómo te gusta que te entrenen" />
+      <FilaIos icono="ojo" titulo="Lo que no quieres ver" valor={textoOcultar(leerAjustes().ocultar)} alTocar={() => setEditar('ocultar')} etiqueta="Elegir lo que no quieres ver" />
+      {salud && <FilaIos icono="calendario" titulo="Tu ciclo (opcional)" valor={leerCiclo(atleta.id).length ? 'En este móvil' : 'Añadir'} alTocar={() => setEditar('ciclo')} etiqueta="Apuntar tu ciclo" />}
       <FilaIos icono="camara" titulo="Tu foto de motivación" valor={leerFotoMotivacion(atleta.id) ? 'En este móvil' : 'Añadir'} alTocar={() => setEditar('foto')} etiqueta="Elegir tu foto de motivación" />
       <FilaIos icono="estrella" titulo="Qué celebrar" valor={textoCelebrar(leerAjustes().celebrar)} alTocar={() => setEditar('celebrar')} etiqueta="Elegir qué celebrar" />
       {editar === 'trato' && <HojaTrato actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
       {editar === 'celebrar' && <HojaCelebrar alCerrar={() => setEditar(null)} />}
       {editar === 'foto' && <HojaFotoMotivacion alCerrar={() => setEditar(null)} />}
       {editar === 'agenda' && <HojaAgenda alCerrar={() => setEditar(null)} />}
+      {editar === 'manual' && <HojaManual actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar === 'ocultar' && <HojaOcultar alCerrar={() => setEditar(null)} />}
+      {editar === 'ciclo' && <HojaCiclo alCerrar={() => setEditar(null)} />}
       {editar === 'guardias' && <HojaGuardias alCerrar={() => setEditar(null)} />}
       {editar === 'meta' && <HojaMeta actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
-      {editar && !['trato', 'celebrar', 'meta', 'foto', 'agenda', 'guardias'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar && !['trato', 'celebrar', 'meta', 'foto', 'agenda', 'guardias', 'manual', 'ocultar', 'ciclo'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
     </GrupoIos>
   );
 }

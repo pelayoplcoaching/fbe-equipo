@@ -385,7 +385,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
       {entre}
       {salud && <Reserva id="hoy-nutricion"><NutricionHoy /></Reserva>}
       {salud && <Reserva id="hoy-habitos"><HabitosHoy /></Reserva>}
-      {salud && <Reserva id="hoy-peso"><PesoHoy irA={irA} /></Reserva>}
+      {salud && !ajuste('ocultar')?.peso && <Reserva id="hoy-peso"><PesoHoy irA={irA} /></Reserva>}
       {salud && !checkinHecho && diaDeCheckin() && (
         <button class="nota-coach" style="border:0;text-align:left;cursor:pointer" onClick={() => irA('checkin')}>
           <Icono n="checkin" /><div><strong>Check-in semanal pendiente.</strong> Un minuto: peso, sueño, energía y cómo vas.</div>
@@ -521,7 +521,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       </Plegable>
     ) : null,
     habitos: salud ? <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /><ApunteAlPaso guia="sueno" /></Plegable> : null,
-    peso: salud ? <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /><ApunteAlPaso guia="composicion" /></Plegable> : null,
+    peso: salud && !ajuste('ocultar')?.peso ? <Plegable id="peso" titulo="Tu peso" icono="bascula" detalle="Apúntalo y mira cómo va tu tendencia"><PesoHoy irA={irA} /><ApunteAlPaso guia="composicion" /></Plegable> : null,
   };
   const disponibles = Object.keys(bloquesHoy).filter((id) => bloquesHoy[id]);
   const { visibles, ocultas: ocultasAbajo } = seccionesHoy(panel, disponibles);

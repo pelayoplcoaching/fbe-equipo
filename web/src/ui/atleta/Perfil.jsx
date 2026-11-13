@@ -67,7 +67,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </GrupoIos>
 
       {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
-      <LoTuyo />
+      <LoTuyo salud={salud} />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
       {/* (compartir, tanda 2) lo que has compartido desde este móvil */}

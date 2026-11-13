@@ -425,3 +425,23 @@
 .su-vida-anadir summary { list-style: none; cursor: pointer; }
 .su-vida-anadir summary::-webkit-details-marker { display: none; }
 .su-vida-anadir[open] > .pila-s { margin-top: 8px; }
+
+/* ---------- (personalizacion 3, tanda 7) Que respete como es ---------- */
+html[data-sin-peso] .peso-hoy, html[data-sin-peso] .seccion-peso { display: none !important; }
+html[data-sin-kcal] [class*="kcal-"] { display: none !important; }
+html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[data-sin-ranking] .tv-clasif, html[data-sin-ranking] .liga-filas, html[data-sin-ranking] .prog-liga { display: none !important; }
+.fila-ocultar { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
+.manual-hoja fieldset { border: 0; padding: 0; margin: 0; }
+.manual-hoja legend { font-weight: 650; margin-bottom: 6px; }
+.panel.patron-ciclo { display: grid; gap: 8px; }
+.perfil-informe { display: flex; justify-content: flex-start; }
+.informe-salud { display: grid; gap: 8px; padding: 14px; border-radius: 14px; border: 1px solid var(--linea, rgba(0, 0, 0, .1)); background: var(--hoja); }
+.informe-salud h3 { margin: 0; }
+.informe-salud p { margin: 0; }
+.informe-tabla { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.informe-tabla th, .informe-tabla td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .1)); vertical-align: top; }
+@media print {
+  html[data-imprimir-informe] body * { visibility: hidden !important; }
+  html[data-imprimir-informe] .informe-salud, html[data-imprimir-informe] .informe-salud * { visibility: visible !important; }
+  html[data-imprimir-informe] .informe-salud { position: absolute; left: 0; top: 0; width: 100%; border: 0; background: #fff; color: #000; }
+}
