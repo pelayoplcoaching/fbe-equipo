@@ -37,7 +37,7 @@ export function TarjetaAniversario() {
   useEffect(() => {
     if (!an || oculta || leerPreferencia(clave, null)?.startsWith(hoy)) return undefined;
     guardarPreferencia(clave, `${hoy}:visto`);
-    const t = setTimeout(() => lanzarConfeti({ vibracion: null, momento: 'otros' }), 400);
+    const t = setTimeout(() => lanzarConfeti({ vibracion: null, momento: 'otros', sonido: ['hito', { tipo: 'aniversario' }] }), 400);   // (sonido 2) con su fanfarria
     return () => clearTimeout(t);
   }, [an?.meses, oculta]);
   // (personalización 2, tanda 2) lo que ha hecho en este tiempo y, si lo ha escrito, el mensaje de su coach

@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.158': {
+    atleta: [
+      'Más sonido en tu sesión: metrónomo con las notas de la app, nota del RPE, «¿Seguimos?» y «ding» cuando toca subir.',
+      'Elige la voz del móvil y su velocidad, cuenta las repeticiones en voz alta y marca la serie desde los auriculares.',
+      'Sonido de fondo en el descanso, horario sin sonidos y «¿Se oye bien?» en Perfil → Sonido y vibración.',
+    ],
+    coach: [
+      'Cuatro frases más con tu voz: saludo, mitad de la sesión, «a por el récord» y último ejercicio. Migración 071.',
+    ],
+  },
   '0.157': {
     atleta: [
       'Tu sesión, a tu medida: «¿Cuánto tiempo tienes hoy?», tu calentamiento y tu yo de hace un año. Siempre como consejo.',

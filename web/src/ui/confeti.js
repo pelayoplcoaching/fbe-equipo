@@ -7,6 +7,7 @@ import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
 import { leerAjustes } from './ajustes.js';
 import { modoCelebrar } from '../logica/trato.js';
+import { sonarFBE } from './sonido.js';
 
 let activo = null;
 
@@ -19,10 +20,12 @@ function colores() {
 
 // momento (personalización 2): 'record', 'racha', 'semana', 'bloque' u 'otros', para respetar lo que el atleta quiere
 // celebrar (con todo, solo vibración o nada); sin momento, como siempre
-export function lanzarConfeti({ vibracion = 'record', momento = null } = {}) {
+// (sonido 2) sonido: [clave, datos] de su fanfarria (ui/sonido.js), solo si se celebra con todo (aunque no haya confeti)
+export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = null } = {}) {
   const modo = momento ? modoCelebrar(leerAjustes(), momento) : 'todo';
   if (modo === 'nada') return false;
   if (modo === 'vibrar') { vibrar(vibracion || 'record'); return false; }
+  if (sonido) { try { sonarFBE(...sonido); } catch { /* sin sonido */ } }
   if (typeof document === 'undefined' || sinMovimiento() || document.visibilityState === 'hidden') return false;
   if (vibracion) vibrar(vibracion);
   activo?.parar();

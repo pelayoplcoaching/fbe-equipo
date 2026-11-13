@@ -3125,7 +3125,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         }
         // (068) las frases del coach: solo él sube, 2 MB y solo audio
         if (bucket === 'voces-coach') {
-          if (!esCoach() || !/^voces\/(vamos|ultima|record|fin_sesion|buen_trabajo|fin_descanso)-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test(ruta)) throw sinPermiso();
+          if (!esCoach() || !/^voces\/(vamos|ultima|record|fin_sesion|buen_trabajo|fin_descanso|saludo|mitad_sesion|a_por_record|ultimo_ejercicio)-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test(ruta)) throw sinPermiso();
           if (archivo?.size > 2097152) throw new Error('The object exceeded the maximum allowed size');
           if (!['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(String(tipo || '').split(';')[0])) throw new Error('mime type not supported');
           ficheros.set(`voces-coach:${ruta}`, archivo); alProgreso?.(1); return;
@@ -4506,7 +4506,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!esCoach()) throw new Error(nombre === 'voces_coach_guardar' ? 'Solo el coach graba sus frases' : 'Solo el coach quita sus frases');
         const claveV = String((args || {}).p_clave || ''), antes = tabla('voces_coach').find((x) => x.clave === claveV);
         if (nombre === 'voces_coach_quitar') { db.voces_coach = tabla('voces_coach').filter((x) => x.clave !== claveV); persistirYa(); return antes?.ruta || null; }
-        if (!['vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso'].includes(claveV) || !/^voces\/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test((args || {}).p_ruta || '') || !String((args || {}).p_ruta).startsWith(`voces/${claveV}-`)) throw new Error('new row violates check constraint "voces_coach_valida"');
+        if (!['vamos', 'ultima', 'record', 'fin_sesion', 'buen_trabajo', 'fin_descanso', 'saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio'].includes(claveV) || !/^voces\/[a-z_]{3,20}-[0-9a-f-]{8,40}\.(webm|ogg|m4a|mp4|mp3|aac)$/.test((args || {}).p_ruta || '') || !String((args || {}).p_ruta).startsWith(`voces/${claveV}-`)) throw new Error('new row violates check constraint "voces_coach_valida"');
         const fila = { clave: claveV, ruta: (args || {}).p_ruta, duracion_ms: Math.min(8000, Math.max(0, Math.round(Number((args || {}).p_duracion_ms) || 0))), actualizada_en: ahora() };
         const rutaAntes = antes?.ruta || null;
         if (antes) Object.assign(antes, fila); else tabla('voces_coach').push(fila);

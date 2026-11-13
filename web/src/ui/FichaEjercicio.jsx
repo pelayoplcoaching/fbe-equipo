@@ -3,6 +3,8 @@ import { useState } from 'preact/hooks';
 import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, Vacio } from './comunes.jsx';
 import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
 import { serieSemanal, recortarRango, metricasDe, tablaRecords, RANGOS } from '../logica/ejercicio.js';
+import { sonarMelodia } from './sonido.js';
+import { melodiaDe } from '../logica/sonido.js';
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { pesoNum, pesoTxt, etiquetaPeso, difVista } from '../logica/unidades.js';
 import { BotonModelo } from './tecnica/Modelos.jsx';
@@ -99,6 +101,8 @@ function Graficas({ d, nombre, compartir = false }) {
         <Segmentos opciones={RANGOS.map(([id, t]) => [id, t])} valor={rango} etiqueta="Rango" alCambiar={(v) => v && setRango(v)} clase="seg-compacto" />
         {cambio != null && <span class={`chip num ${cambio > 0 ? 'ok' : ''}`}>{cambio > 0 ? '+' : ''}{num(cambio, 1)} % en el rango</span>}
       </div>
+      {/* (sonido 2, tanda 7) «Escuchar»: la línea hecha melodía (cada semana, una nota más alta o más baja según su valor) */}
+      {puntos.length > 2 && <button type="button" class="btn btn-peq plano escuchar-progreso" style="justify-self:start" onClick={() => sonarMelodia(melodiaDe(puntos.map((p) => p.valor)))} aria-label={`Escuchar la evolución de ${m.nombre.toLowerCase()}: cada semana, una nota más alta cuanto más alto el valor`}><Icono n="altavoz" /> Escuchar</button>}
       {compartir && puntos.length > 1 && m.id !== 'volumen' && cambio > 0 && <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => setComparar(true)}><Icono n="compartir" /> Compartir antes y ahora</button>}
       {comparar && <HojaCompartir logro tipo="comparativa" titulo="Compartir antes y ahora" equipo={{ tema: 'logros' }}
         datos={datosComparativa({ nombre }, puntos.map((p) => ({ semana: p.semana, valor: m.unidad === 'kg' ? difVista(p.valor) : p.valor })), { unidad: m.unidad === 'kg' ? etiquetaPeso() : m.unidad, metrica: m.nombre })}

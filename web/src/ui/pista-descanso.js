@@ -14,11 +14,14 @@
 import { leerAjustes } from './ajustes.js';
 import { cambiarDescansoEnCurso } from './en-curso.js';
 import {
-  planPista, trozosPista, avisoSonando, avisoTrasCambio, enPausa, restanteMs, ajustarDescanso, pausarDescanso, reanudarDescanso,
+  COLA_MS, COLA_AURICULARES_MS, planPista, trozosPista, avisoSonando, avisoTrasCambio, enPausa, restanteMs, ajustarDescanso, pausarDescanso, reanudarDescanso,
   tituloMedia, albumMedia, posicionMedia, esUltima, plataformaPista, conFrases, FORMATO_PISTA,
 } from '../logica/pista.js';
 
 export const EVENTO_PISTA = 'fbe-descanso-pista';
+// (sonido 2, tanda 7) lo que hace la sesión cuando se marca la serie desde los auriculares (o null)
+let accionSerie = null;
+export function ponerAccionSerie(fn) { accionSerie = typeof fn === 'function' ? fn : null; }
 
 export function plataformaPistaAqui() {
   try {
@@ -141,7 +144,9 @@ function ponerMedia() {
     m.playbackState = enPausa(actual.d) ? 'paused' : 'playing';
   } catch { /* */ }
   ponerPosicion();
-  const acciones = { play: () => remoto('reanudar'), pause: () => remoto('pausar'), seekforward: () => remoto(15), seekbackward: () => remoto(-15), nexttrack: () => remoto('saltar'), stop: () => remoto('saltar') };
+  // (sonido 2, tanda 7) pasado el aviso, con «Marcar la serie desde los auriculares», play/pausa marca la serie que toca
+  const desdeAuriculares = () => { if (accionSerie && actual?.sonado && leerAjustes().auricularesSerie) { const f = accionSerie; liberar(); f(); return true; } return false; };
+  const acciones = { play: () => desdeAuriculares() || remoto('reanudar'), pause: () => desdeAuriculares() || remoto('pausar'), seekforward: () => remoto(15), seekbackward: () => remoto(-15), nexttrack: () => remoto('saltar'), stop: () => remoto('saltar') };
   for (const [k, f] of Object.entries(acciones)) { try { m.setActionHandler(k, f); } catch { /* esa acción no la hay aquí */ } }
 }
 // El título, como mucho una vez por segundo y solo si cambia
@@ -191,6 +196,7 @@ function empezar(d, ctx, prueba = false) {
   const plan = planPista({
     restanteMs: d.fin - Date.now(), cuentaAtras: a.cuentaAtras !== false, sonido: a.sonidoDescanso, voz: !!a.voz, ultima: esUltima(d.voz),
     total: d.total || 0, avisoMitad: a.avisoMitad === true, avisoDiez: a.avisoDiez !== false,   // (sonido, tanda 1)
+    colaMs: a.auricularesSerie && accionSerie ? COLA_AURICULARES_MS : COLA_MS,   // (sonido 2, tanda 7)
     clips: largos(s.clips), voces: largos(s.voces),
   });
   if (!plan) { liberar(); return false; }

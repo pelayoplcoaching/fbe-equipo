@@ -111,7 +111,7 @@ export async function probarSonido({ navegador, check, base = 'http://localhost:
     await irASeccion(p, 'Cuenta');
     const voces = p.locator('.voces-coach');
     await voces.waitFor();
-    check(await voces.locator('.voz-frase').count() === 6 && /«¡Vamos!»/.test(await voces.textContent()) && /«Última serie»/.test(await voces.textContent()), 'en su Cuenta, el coach tiene «Tus frases, con tu voz»: seis para grabar');
+    check(await voces.locator('.voz-frase').count() === 10 && /«¡Vamos!»/.test(await voces.textContent()) && /«Última serie»/.test(await voces.textContent()) && /«Último ejercicio»/.test(await voces.textContent()), 'en su Cuenta, el coach tiene «Tus frases, con tu voz»: diez para grabar (con las cuatro de la 071)');
   } catch (e) {
     check(false, `El sonido: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); }

@@ -14,6 +14,7 @@ export const FORMATO_PISTA = { tasa: 48000, kbps: 48, bytes: 144, ms: 24 };
 export const MAX_PISTA_MS = 15 * 60 * 1000;   // más larga, no (una pista de 15 min son 5,4 MB): queda el aviso al móvil
 export const MAX_PAUSA_MS = 30 * 60 * 1000;   // un descanso en pausa más de media hora ya no vuelve (se dejó a medias)
 export const COLA_MS = 600;                   // un poco de silencio tras el aviso (que no se corte el final)
+export const COLA_AURICULARES_MS = 90 * 1000;   // (sonido 2) con «Marcar la serie desde los auriculares», minuto y medio
 const B = FORMATO_PISTA.bytes;
 
 export const esTrama = (b, i) => b[i] === 0xFF && b[i + 1] === 0xFB && b[i + 2] === 0x34 && (b[i + 3] & 0xC0) === 0xC0;
@@ -54,7 +55,7 @@ export function clipsFinal({ sonido = 'tres-beeps', voz = false, voces = null, u
 // Si una pieza no cabe donde tocaría (la anterior aún suena), va justo detrás. null si no hay pista (sin tiempo o demasiado).
 // (sonido, tanda 1) total: lo que dura el descanso entero (s); avisoMitad y avisoDiez: los avisos de dentro del descanso, con sus
 // sonidos de la familia de FBE (si están); y la cuenta atrás que sube (c5 a c1), si están sus sonidos
-export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps', voz = false, ultima = false, clips = {}, voces = null, total: totalS = 0, avisoMitad = false, avisoDiez = false } = {}) {
+export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps', voz = false, ultima = false, clips = {}, voces = null, total: totalS = 0, avisoMitad = false, avisoDiez = false, colaMs = COLA_MS } = {}) {
   if (!(restanteMs > 0) || restanteMs > MAX_PISTA_MS) return null;
   const fin = numTramas(restanteMs);
   const frases = voz && conFrases(voces);
@@ -86,7 +87,9 @@ export function planPista({ restanteMs, cuentaAtras = true, sonido = 'tres-beeps
     cursor = inicio + n;
   }
   if (cue === null) return null;
-  partes.push([null, numTramas(COLA_MS)]);
+  // (sonido 2, tanda 7) con «Marcar la serie desde los auriculares», la cola es larga (silencio): así los botones de los
+  // auriculares siguen llegando un rato después del aviso
+  partes.push([null, numTramas(Math.max(COLA_MS, Math.min(COLA_AURICULARES_MS, colaMs)))]);
   const total = partes.reduce((s, [, n]) => s + n, 0);
   return { partes, cue, total, cueMs: cue * FORMATO_PISTA.ms, duracionMs: total * FORMATO_PISTA.ms, final };
 }

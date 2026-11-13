@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { fases, duracionTotal, enCurso, normalizar, textoIntervalos, MODOS_INTERVALOS, POR_DEFECTO } from '../../logica/intervalos.js';
-import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { sonarFBE } from '../sonido.js';
+import { nota, MOTIVO } from '../../logica/sonido.js';
 import { mmss } from '../../logica/calculos.js';
 import { Imagen } from '../Imagen.jsx';
 import { imagenHerramienta } from '../../logica/imagenes.js';
@@ -114,16 +116,23 @@ function EnMarcha({ config, alParar, alCerrar, alTerminar }) {
   useEffect(() => {
     if (pausa) return;
     if (e.fin) {
-      if (!avisados.current.has('fin')) { avisados.current.add('fin'); [0, 220, 440].forEach((ms) => setTimeout(() => tono(1320, 0.18, 0.28), ms)); try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ } }
+      if (!avisados.current.has('fin')) { avisados.current.add('fin'); [...MOTIVO, nota(7)].forEach((f, i) => setTimeout(() => sonarFBE('nota', { f, v: 0.9, dura: i === 3 ? 0.45 : 0.14 }), i * 140)); try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* */ } }
       return;
     }
     const seg = Math.ceil(e.quedan);
     const clave = `${e.i}-${seg}`;
-    if (seg <= 3 && seg >= 1 && !avisados.current.has(clave)) { avisados.current.add(clave); tono(880, 0.08, 0.2); }
+    // (sonido 2, tanda 5) la cuenta de los tres últimos segundos sube, como la del descanso
+    if (seg <= 3 && seg >= 1 && !avisados.current.has(clave)) { avisados.current.add(clave); sonarFBE('nota', { f: nota(5 - seg), v: 0.75, dura: 0.1 }); }
     const inicioFase = `${e.i}-inicio`;
     if (e.transcurrido < 0.4 && !avisados.current.has(inicioFase)) {
       avisados.current.add(inicioFase);
-      if (e.i > 0 || e.fase.tipo !== 'preparar') { tono(e.fase.tipo === 'trabajo' ? 1320 : 660, 0.35, 0.28); vibrarCorto(e.fase.tipo === 'trabajo' ? 200 : 80); }
+      // (sonido 2, tanda 5) trabajo: el motivo hacia arriba; descanso: una nota grave; el último trabajo, con una nota de más
+      if (e.i > 0 || e.fase.tipo !== 'preparar') {
+        const ultimoTrabajo = e.fase.tipo === 'trabajo' && e.fase.rondas > 1 && e.fase.ronda === e.fase.rondas;
+        if (e.fase.tipo === 'trabajo') [...MOTIVO, ...(ultimoTrabajo ? [nota(7)] : [])].forEach((f, i) => setTimeout(() => sonarFBE('nota', { f, v: 0.85, dura: i === 2 + (ultimoTrabajo ? 1 : 0) ? 0.3 : 0.09 }), i * 90));
+        else sonarFBE('nota', { f: nota(-2), v: 0.7, dura: 0.4 });
+        vibrarCorto(e.fase.tipo === 'trabajo' ? 200 : 80);
+      }
       if (anuncio.current) anuncio.current.textContent = `${NOMBRE_FASE[e.fase.tipo]}${e.fase.rondas > 1 ? `, ronda ${e.fase.ronda} de ${e.fase.rondas}` : ''}`;
     }
   });

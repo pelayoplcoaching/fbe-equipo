@@ -63,6 +63,8 @@ function toqueIphone() {
 // hábito, el check-in, una tarea, el peso): opts.sonido = false para no sonar (el juego tiene sus sonidos)
 export function vibrar(que, { sonido = true } = {}) {
   if (sonido && (que === 'hecho' || que === 'checkin')) sonarFBE('ui');
+  // (sonido 2, tanda 4) y cuando algo no se puede («aviso» o «no»), su sonido suave (con los sonidos de la interfaz)
+  else if (sonido && (que === 'aviso' || que === 'no' || que === 'error')) sonarFBE('no');
   if (leerAjustes().hapticos === false) return false;
   if (puedeVibrar()) { try { return navigator.vibrate(PATRONES[que] ?? que); } catch { return false; } }
   if (puedeTocarIphone()) return toqueIphone();

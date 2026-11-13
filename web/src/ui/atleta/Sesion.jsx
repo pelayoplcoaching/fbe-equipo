@@ -24,6 +24,10 @@ import { leerAutoCompartir } from '../comunidad-local.js';
 import { perezoso } from '../perezoso.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
 import { prepararVocesCoach, sonarVozCoach } from '../voces-coach.js';
+import { sonarFBE } from '../sonido.js';
+import { tocaSeguimos } from '../../logica/sonido.js';
+import { ponerAccionSerie } from '../pista-descanso.js';
+import { AvisoPruebaSonido } from '../PruebaSonido.jsx';
 import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
 import { FilaSerie } from './FilaSerie.jsx';
 import { useTecladoApp } from './Teclado.jsx';
@@ -200,6 +204,33 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   usePantallaEncendida();
   // (sonido, tanda 3) las frases del coach, con su voz: se traen al entrar en la sesión (si las ha grabado)
   useEffect(() => { prepararVocesCoach(api).catch?.(() => {}); }, []);
+  // (sonido 2, tanda 7) «Marcar la serie desde los auriculares»: pasado el aviso del descanso, play/pausa marca la serie que
+  // toca con lo propuesto (si se sabe qué kilos y repeticiones), y la voz lo confirma
+  const accionAuriculares = useRef(null);
+  accionAuriculares.current = () => {
+    try {
+      // (prox y ejerciciosConExtras son de más abajo en este mismo pintado: se leen al tocar, ya calculados)
+      const x = prox && ejerciciosConExtras.find((y) => y.id === prox.id);
+      const pr = x ? propuestaDe(x, prox.numero) : null;
+      if (!x || pr?.reps == null || pr.reps === '') { hablar('No sé qué serie marcar', { forzar: true }); return; }
+      const kg = pr.kg == null ? '' : (enLibras() ? vista(pr.kg) : pr.kg);
+      guardar(x, prox.numero, { kg, reps: pr.reps, rpe: '' });
+      hablar(`Serie hecha: ${kg !== '' ? `${kg} ${enLibras() ? 'libras' : 'kilos'} por ` : ''}${pr.reps}`, { forzar: true });
+    } catch { hablar('No sé qué serie marcar', { forzar: true }); }
+  };
+  useEffect(() => { ponerAccionSerie(() => accionAuriculares.current?.()); return () => ponerAccionSerie(null); }, []);
+  // (sonido 2, tanda 5) «¿Seguimos?»: si el descanso acabó y pasa un minuto sin marcar la serie, un recordatorio (y otro a los
+  // tres minutos); al marcar una serie, se olvida
+  const seguir = useRef({ fin: null, avisados: 0 });
+  useEffect(() => { if (descanso?.fin && !Number.isFinite(descanso.pausa)) seguir.current = { fin: descanso.fin, avisados: 0 }; }, [descanso?.fin, Number.isFinite(descanso?.pausa)]);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const sg = seguir.current;
+      if (!sg.fin || resumen || document.visibilityState !== 'visible') return;
+      if (tocaSeguimos((Date.now() - sg.fin) / 1000, sg.avisados)) { sg.avisados += 1; if (sonarFBE('seguimos') && leerAjustes().voz) setTimeout(() => hablar('¿Seguimos?'), 900); }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [!!resumen]);
   // v0.49: al completar las series pautadas de un ejercicio, su tarjeta se pliega un momento después. El temporizador
   // de cada uno se guarda para cancelarlo (si se desmarca, si falla el guardado o al salir) y, al cumplirse, se
   // vuelve a mirar con lo que hay entonces.
@@ -257,6 +288,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
   // v0.51: la portada antes de empezar; al tocar «Empezar» (o con alguna serie hecha) se pasa a la sesión de siempre
   const [empezada, setEmpezada] = usePreferencia(`fbe-empezada-${id}`, false);
+  // (sonido 2, tanda 6) el saludo del coach, con su voz, al empezar la sesión (si lo ha grabado; las frases se traen al entrar)
+  const saludada = useRef(false);
+  // (ojo: este efecto está antes de las salidas tempranas de la carga; solo usa lo declarado arriba: det y hechas)
+  useEffect(() => {
+    if (!empezada || saludada.current || !det.datos || det.datos.sesion?.completada) return;
+    saludada.current = true;
+    if ((det.datos.ejercicios || []).some((e) => (e.hechas || []).length) || Object.values(hechas).some((m) => Object.keys(m || {}).length)) return;   // (a media sesión, sin saludo)
+    prepararVocesCoach(api).then(() => setTimeout(() => sonarVozCoach('saludo'), 600)).catch?.(() => {});
+  }, [empezada, det.datos]);
   const [recienEmpezada, setRecienEmpezada] = useState(false);
   // v0.51: la altura real de la cabecera pegada (con los tramos y la letra grande), para que lo que se lleva a la vista
   // (scroll-margin-top de cada ejercicio) quede debajo y no tapado
@@ -516,6 +556,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     // (pulido 7: y un tic suave; sonido, tanda 1: que sube de nota con cada serie del ejercicio y resuelve en la última)
     if (!previa) { vibrar('serie'); sonarSerie({ n: Object.keys({ ...hechas[e.id], [numero]: local }).length, total: Number(e.series) || 0 }); }
     if (!previa) quitarPrepAntigua();
+    if (!previa) seguir.current = { fin: null, avisados: 0 };   // (sonido 2) marcada: nada de «¿Seguimos?»
+    // (sonido 2, tanda 6) al llegar a la mitad de las series pautadas, la frase del coach (si la ha grabado)
+    if (!previa) {
+      const totalP = ejercicios.reduce((t, x) => t + (x.series || 0), 0), antesN = Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0);
+      if (totalP >= 6 && antesN < totalP / 2 && antesN + 1 >= totalP / 2) setTimeout(() => sonarVozCoach('mitad_sesion'), 1300);
+    }
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
     // (y con una serie añadida sin hacer, tampoco: se pliega cuando están todas las filas)
@@ -549,8 +595,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       const { sig, texto, voz, aviso: avisoMovil } = textosSiguiente(lista, hechasTras, rP.siguiente, e.id);
       // v0.50: el temporizador sale en la página, debajo de este ejercicio (o de su superserie)
       // (sonido, tanda 1) cambia: tras este descanso toca otro ejercicio (suena su aviso propio)
-      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now(), empuje, cambia: !!sig && sig.id !== e.id });
-      else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); }
+      if (r.descanso) cambiarDescanso({ fin: Date.now() + r.descanso * 1000, total: r.descanso, prioridad: e.prioridad, texto, voz, aviso: avisoMovil, tras: e.id, inicio: Date.now(), empuje, cambia: !!sig && sig.id !== e.id, ultimoEj: !!sig && sig.id !== e.id && lista.at(-1)?.id === sig.id });
+      else if (r.enRonda) { cambiarDescanso(null); avisoConCambio(`Ahora ${nombreCon(sig)}, sin descanso`); hablar(`Sin descanso. ${voz}`); setTimeout(() => sonarFBE('superserie'), 260); }   // (sonido 2) el paso de la superserie
       else hablar(voz);
       if (sig && sig.id !== e.id) {
         setAbiertos((a) => new Set([...a, sig.id]));
@@ -744,6 +790,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {sesion.video_url && <VideoDeSesion sesion={sesion} />}
       {!sesion.completada && ejercicios.length > 0 && <Pista id="sesion" icono="hoy">Cada ejercicio trae lo que te toca (series, repeticiones y esfuerzo). Apunta los kilos y las repeticiones de cada serie y márcala como hecha: el descanso arranca solo. El esfuerzo (RPE) va del 6 al 10: 10 es que no podías hacer ni una más; 8, que te quedaban dos.</Pista>}
       <BandaConexion />
+      {/* (sonido 2, tanda 4) «¿Se oye bien?», una vez */}
+      {!sesion.completada && !propio && ejercicios.length > 0 && todas.length === 0 && <AvisoPruebaSonido />}
 
       {sesion.dinamica && (
         <div class="nota-coach con-lobo">
@@ -950,6 +998,8 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
   const quitable = filas > e.series && !hechas[filas] && !enCola[`${e.id}-${filas}`] ? filas : null;
   const activa = Array.from({ length: filas }, (_, i) => i + 1).find((k) => !hechas[k]);
   const { ej, prescripcion, sugerencia, barra, conAproximacion, kgTrabajo, propuesta, top } = prepararEjercicio(e, actual, ultimas, foco, progresionAuto);
+  // (sonido 2, tanda 5) al abrir un ejercicio en el que la app propone subir carga (y aún sin series), un «ding» que sube
+  useEffect(() => { if (abierto && n === 0 && sugerencia?.tipo === 'subir') { sonarFBE('progresion'); setTimeout(() => sonarVozCoach('a_por_record'), 550); } }, [abierto]);
   // v0.63: lo escrito en cada serie (lo lleva el ejercicio, no cada fila: un cambio puede pasar a las siguientes). Las hechas
   // se rellenan con lo guardado cada vez que cambia la serie guardada (como antes en cada fila)
   const fmtV = (v, d) => (v == null ? '' : num(v, d));

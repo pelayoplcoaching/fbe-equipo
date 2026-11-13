@@ -5,6 +5,7 @@
 import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
 import { leerAjustes } from '../ajustes.js';
 import { volumenDe } from '../../logica/sonido.js';
+import { salidaFondo } from '../sonido.js';
 
 const PULSO = 60 / 96 / 2;   // una corchea, en s
 // Los acordes (en semitonos sobre La 220 Hz) y la escala de la que salen las notas
@@ -16,7 +17,7 @@ export function crearMusica() {
   prepararAudio();
   const ac = contextoAudio();
   if (!ac || !leerAjustes().sonido) return null;
-  const salida = ac.createGain(); salida.gain.value = 0.0001; salida.connect(ac.destination);
+  const salida = ac.createGain(); salida.gain.value = 0.0001; salida.connect(salidaFondo(ac));
   salida.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.5 * volumenDe(leerAjustes(), 'juego')), ac.currentTime + 1.2);   // (sonido, tanda 1) su apartado
   const capa = (v) => { const g = ac.createGain(); g.gain.value = v; g.connect(salida); return g; };
   const capas = { fondo: capa(1), bajo: capa(0), arpegio: capa(0), campanas: capa(0) };

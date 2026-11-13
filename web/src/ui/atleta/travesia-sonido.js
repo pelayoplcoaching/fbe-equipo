@@ -5,6 +5,7 @@
 import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
 import { leerAjustes } from '../ajustes.js';
 import { volumenDe } from '../../logica/sonido.js';
+import { salida as salidaMezcla } from '../sonido.js';
 
 export function crearSonido() {
   prepararAudio();
@@ -12,7 +13,7 @@ export function crearSonido() {
   if (!ac || !leerAjustes().sonido) return null;
   // (sonido, tanda 1) con el volumen del apartado «Juego del descanso»
   const vol = Math.max(0.0001, volumenDe(leerAjustes(), 'juego'));
-  const salida = ac.createGain(); salida.gain.value = 0.9 * vol; salida.connect(ac.destination);
+  const salida = ac.createGain(); salida.gain.value = 0.9 * vol; salida.connect(salidaMezcla(ac));
   // (el eco de la montaña: un retardo con algo de vuelta, que solo se abre en la montaña)
   const eco = ac.createDelay(1); eco.delayTime.value = 0.28;
   const vuelta = ac.createGain(); vuelta.gain.value = 0.32;
