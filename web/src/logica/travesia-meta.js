@@ -108,7 +108,7 @@ export const LOGROS = [
 // { rango, activas: [{ id, valor }], hechas (misiones cumplidas en total), logros: { id: 'AAAA-MM-DD' }, potenciadores: [tipos ya cogidos alguna vez] }
 // (remate, tanda 6) rutas: las rutas nuevas elegidas, por orden; doradas: las estrellas doradas cogidas (cuántas)
 // (remate, tanda 7) numeros: lo que se cuenta para «Tu lobo en números» (saltos, roces, mejor combo, etapas, escapadas)
-export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [], rutas: [], doradas: 0, numeros: { saltos: 0, roces: 0, combo: 1, etapas: 0, escapadas: 0, porPaisaje: [0, 0, 0, 0] } });
+export const META_VACIA = () => ({ rango: 0, activas: misionesDeRango(0), hechas: 0, logros: {}, potenciadores: [], rutas: [], doradas: 0, fiestas: [], numeros: { saltos: 0, roces: 0, combo: 1, etapas: 0, escapadas: 0, porPaisaje: [0, 0, 0, 0] } });
 export function limpiarMeta(m) {
   const v = META_VACIA();
   if (!m || typeof m !== 'object') return v;
@@ -121,6 +121,8 @@ export function limpiarMeta(m) {
   if (Array.isArray(m.potenciadores)) v.potenciadores = [...new Set(m.potenciadores.filter((p) => ['iman', 'luna', 'aullido'].includes(p)))];
   if (Array.isArray(m.rutas)) v.rutas = m.rutas.filter((x) => ['picos', 'pirineos', 'camino'].includes(x)).slice(0, 50);
   v.doradas = Math.min(1e5, Math.max(0, Math.floor(Number(m.doradas) || 0)));
+  // (remate, tanda 8) los meses en que el equipo hizo la fiesta (su postal especial): 'AAAA-MM'
+  v.fiestas = [...new Set((Array.isArray(m.fiestas) ? m.fiestas : []).filter((x) => /^\d{4}-\d{2}$/.test(x)))].sort().slice(-60);
   const n = m.numeros && typeof m.numeros === 'object' ? m.numeros : {};
   const ent = (x, max) => Math.min(max, Math.max(0, Math.floor(Number(x) || 0)));
   v.numeros = { saltos: ent(n.saltos, 1e8), roces: ent(n.roces, 1e7), combo: Math.max(1, ent(n.combo, 4)), etapas: ent(n.etapas, 1e7), escapadas: ent(n.escapadas, 1e6), porPaisaje: [0, 1, 2, 3].map((i) => ent(Array.isArray(n.porPaisaje) ? n.porPaisaje[i] : 0, 1e8)) };
@@ -188,4 +190,11 @@ export function metrosPorMes(semanas) {
     porMes.set(mes, (porMes.get(mes) || 0) + m);
   }
   return [...porMes.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([mes, metros]) => ({ mes, metros }));
+}
+
+// (remate, tanda 8) La fiesta de la manada: apunta el mes (para su postal) y devuelve la meta nueva (o la misma)
+export function apuntarFiesta(meta, mes) {
+  const m = limpiarMeta(meta);
+  if (!/^\d{4}-\d{2}$/.test(mes || '') || m.fiestas.includes(mes)) return m;
+  return limpiarMeta({ ...m, fiestas: [...m.fiestas, mes] });
 }

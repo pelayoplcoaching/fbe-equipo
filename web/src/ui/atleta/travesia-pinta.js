@@ -265,7 +265,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, amigo = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -967,6 +967,23 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       c.save(); c.globalAlpha = 0.28; c.translate(fx, sy(altoT(fantasma))); c.scale(u, -u);
       lobo(c, { saltos: 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + 1.3);
       c.restore();
+    }
+  }
+
+  // (remate, tanda 8) el lobo de un compañero en la etapa del día: su mejor intento, traslúcido y lavanda, con su nombre
+  if (amigo && !fin) {
+    const ax = sx(amigo.x);
+    if (ax > -u * 2 && ax < w + u * 2) {
+      const ay = sy(amigo.y);
+      c.save(); c.globalAlpha = 0.42; c.translate(ax, ay); c.scale(u, -u);
+      lobo(c, { saltos: amigo.y > altoT(amigo.x) + 0.05 ? 1 : 0, tropiezo: 0, vy: 0, agachado: 0 }, p.zancada + 0.7, { claro: '#C9BCFF', sombra: '#8C78FF' });
+      c.restore();
+      if (amigo.nombre) {
+        c.save(); c.globalAlpha = 0.85; c.font = `700 ${Math.round(Math.max(11, u * 0.36))}px system-ui, sans-serif`; c.textAlign = 'center';
+        c.fillStyle = 'rgba(11, 7, 38, 0.55)'; const tw = c.measureText(amigo.nombre).width + 10;
+        c.fillRect(ax - tw / 2, ay - u * 1.55 - 13, tw, 18); c.fillStyle = '#C9BCFF'; c.fillText(amigo.nombre, ax, ay - u * 1.55);
+        c.restore();
+      }
     }
   }
 

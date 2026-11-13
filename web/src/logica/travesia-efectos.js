@@ -102,7 +102,8 @@ export function vidaCartel(desde, dura = 2.2) {
 
 // ---------- El cielo ----------
 // ¿Hay aurora? De noche, en las cumbres nevadas (paisaje 2), o con la luna casi nueva en cualquier otro
-export const hayAurora = (amb) => !!amb && amb.fase === 'noche' && !/lluvia|niebla|tormenta/.test(amb.clima || '') && (amb.paisaje === 2 || (amb.luna?.ilum ?? 1) < 0.12);
+// (remate, tanda 8) el día de la fiesta de la manada, aurora siempre (amb.fiesta)
+export const hayAurora = (amb) => !!amb?.fiesta || !!amb && amb.fase === 'noche' && !/lluvia|niebla|tormenta/.test(amb.clima || '') && (amb.paisaje === 2 || (amb.luna?.ilum ?? 1) < 0.12);
 // A qué altura (de 0 a 1 del cielo) va el sol o la luna: alto de noche y de día; bajo, casi en el horizonte, al alba y al ocaso
 export const alturaAstro = (fase) => (fase === 'alba' || fase === 'ocaso' ? 0.8 : 0.35);
 
@@ -186,3 +187,20 @@ export function fechaEspecial(fecha, luna = null, fase = null) {
   return null;
 }
 export const NOMBRE_FECHA = { navidad: 'Travesía de Navidad', halloween: 'Noche de Halloween', lunallena: 'Luna llena: las estrellas valen doble' };
+
+// ---------- (remate, tanda 8) El rastro de la etapa del día y el lobo del compañero ----------
+// Cada cuarto de segundo, dónde va (decímetros) y a qué altura (centímetros): [x, y, x, y, …]; como mucho 240 parejas
+export const RASTRO_CADA = 0.25;
+export function apuntarRastro(rastro, t, x, y) {
+  const toca = Math.floor(t / RASTRO_CADA + 1e-6);
+  while (rastro.length / 2 <= toca && rastro.length < 480) rastro.push(Math.max(0, Math.min(20000, Math.round(x * 10))), Math.max(-200, Math.min(1000, Math.round(y * 100))));
+  return rastro;
+}
+// Dónde iba en el segundo t (entre dos muestras, a medias): { x, y } en metros, o null sin rastro
+export function enRastro(rastro, t) {
+  if (!Array.isArray(rastro) || rastro.length < 2) return null;
+  const n = rastro.length / 2, k = Math.max(0, t / RASTRO_CADA), i = Math.min(n - 1, Math.floor(k)), j = Math.min(n - 1, i + 1), f = Math.min(1, k - i);
+  return { x: (rastro[2 * i] + (rastro[2 * j] - rastro[2 * i]) * f) / 10, y: (rastro[2 * i + 1] + (rastro[2 * j + 1] - rastro[2 * i + 1]) * f) / 100 };
+}
+// Las ligas: 0 bronce, 1 plata, 2 oro
+export const LIGAS = ['Liga de bronce', 'Liga de plata', 'Liga de oro'];

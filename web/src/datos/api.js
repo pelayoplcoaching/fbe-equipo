@@ -405,7 +405,7 @@ const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 
 // (059) lo de YouTube: el canal del coach y lo que ve cada atleta
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
 // (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos
-const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'];
+const TABLAS_DESCANSOS = ['novedades', 'travesia_semanas', 'apuntes_vistos', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta'];
 // Tablas de una copia completa (todo menos los intentos fallidos de códigos)
 const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',
   'sesion_ejercicios', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
@@ -4027,7 +4027,15 @@ export function crearApi(backend) {
     async guardarPerfilTravesia(m) {
       if (api._sin062 || !uid() || !m) return null;
       try {
-        return (await b.rpc('guardar_travesia_perfil', { p_rango: m.rango, p_hechas: m.hechas, p_activas: m.activas, p_logros: m.logros, p_potenciadores: m.potenciadores || [] })) || null;
+        const datos = { p_rango: m.rango, p_hechas: m.hechas, p_activas: m.activas, p_logros: m.logros, p_potenciadores: m.potenciadores || [] };
+        // (063) con las rutas elegidas y las doradas; si la base aún no tiene la 063, sin ellas
+        if (!api._sin063) {
+          try { return (await b.rpc('guardar_travesia_perfil', { ...datos, p_rutas: m.rutas || [], p_doradas: m.doradas || 0 })) || null; } catch (e) {
+            if (!/guardar_travesia_perfil|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw e;
+            api._sin063 = true;
+          }
+        }
+        return (await b.rpc('guardar_travesia_perfil', datos)) || null;
       } catch (e) {
         if (/guardar_travesia_perfil|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
         return null;
@@ -4035,9 +4043,17 @@ export function crearApi(backend) {
     },
     // (062) La etapa del día: apunta un intento ({ dia, metros, estrellas, intentos }) y la clasificación de hoy ({ dia,
     // filas: [{ nombre, metros, yo }] }, o null fuera de la comunidad)
-    async etapaDelDia(metros, estrellas = 0) {
+    // (063) con el rastro de ese intento (para el fantasma de los compañeros); si la base aún no tiene la 063, sin él
+    async etapaDelDia(metros, estrellas = 0, rastro = null) {
       if (api._sin062 || !uid()) return null;
-      try { return (await b.rpc('sumar_etapa_del_dia', { p_metros: Math.round(metros), p_estrellas: Math.round(estrellas) })) || null; } catch (e) {
+      const datos = { p_metros: Math.round(metros), p_estrellas: Math.round(estrellas) };
+      if (Array.isArray(rastro) && rastro.length && !api._sin063) {
+        try { return (await b.rpc('sumar_etapa_del_dia', { ...datos, p_rastro: rastro })) || null; } catch (e) {
+          if (!/sumar_etapa_del_dia|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) return null;
+          api._sin063 = true;
+        }
+      }
+      try { return (await b.rpc('sumar_etapa_del_dia', datos)) || null; } catch (e) {
         if (/sumar_etapa_del_dia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
         return null;
       }
@@ -4055,6 +4071,27 @@ export function crearApi(backend) {
       try { await b.rpc('travesia_aullar', { p_perfil: perfil }); return true; } catch (e) {
         const m = `${e?.message || ''} ${e?.code || ''}`;
         if (/travesia_aullar|schema cache|could not find|PGRST20[0-9]|42883/i.test(m)) throw new Error('Para aullar falta ejecutar la migración 062 en Supabase (supabase/migraciones/062_travesia_top.sql).');
+        throw e;
+      }
+    },
+    // (063) El fantasma de un compañero en la etapa del día ({ nombre, metros, rastro } o null), mi liga de la semana
+    // ({ semana, nivel, grupo: [{ nombre, metros, yo }] } o { fuera: true }), y el reto del coach con la fiesta del mes
+    // ({ semana, reto: { metros, texto, hecho } | null, fiesta: { mes, dia } | null }). Sin la 063 o fuera, null.
+    async fantasmaDelDia() { return api._rpc063('travesia_dia_fantasma'); },
+    async ligaTravesia() { return api._rpc063('travesia_liga'); },
+    async equipoTravesia() { return api._rpc063('travesia_equipo'); },
+    async _rpc063(nombre) {
+      if (api._sin063 || !uid()) return null;
+      try { return (await b.rpc(nombre, {})) || null; } catch (e) {
+        if (new RegExp(`${nombre}|schema cache|does not exist|could not find|PGRST20[0-9]|42883`, 'i').test(`${e?.message || ''} ${e?.code || ''}`)) api._sin063 = true;
+        return null;
+      }
+    },
+    // (coach, 063) El reto de esta semana para el equipo en La travesía (metros 0: se quita)
+    async ponerRetoTravesia(metros, texto = '') {
+      try { await b.rpc('travesia_poner_reto', { p_metros: Math.round(Number(metros) || 0), p_texto: String(texto || '').slice(0, 80) }); return true; } catch (e) {
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (/travesia_poner_reto|schema cache|could not find|PGRST20[0-9]|42883/i.test(m)) throw new Error('Para el reto de La travesía falta ejecutar la migración 063 en Supabase (supabase/migraciones/063_travesia_remate.sql).');
         throw e;
       }
     },
@@ -5051,7 +5088,8 @@ export function crearApi(backend) {
       // (060) lo que ha recorrido en La travesía y los apuntes que ha visto
       for (const t of ['travesia_semanas', 'apuntes_vistos']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (062) el rango, las misiones y los logros de La travesía, y sus etapas del día
-      for (const t of ['travesia_perfil', 'travesia_dia']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (063) y sus ligas de las últimas semanas
+      for (const t of ['travesia_perfil', 'travesia_dia', 'travesia_liga']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

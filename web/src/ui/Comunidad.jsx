@@ -21,6 +21,7 @@ import { usePestanasDeslizables } from './deslizar.js';
 import { sinMovimiento } from './transiciones.js';
 import { tenirBarra } from './barra-color.js';
 import { reducirFoto } from './FotoPerfil.jsx';
+import { RetoTravesia } from './coach/RetoTravesia.jsx';
 import { Ilustracion } from './Ilustraciones.jsx';
 import {
   MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_PREGUNTA, MAX_OPCION, RETO_MAX, FILTROS_MURO, MEDALLAS, nombreEquipo, nombreValido, estadoReto, textoReto,
@@ -1580,6 +1581,8 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
   return (
     <div class="pila retos">
       {coach && <button class="btn" style="justify-self:start" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo reto</button>}
+      {/* (remate de La travesía, 063) el reto de la semana dentro del juego del descanso */}
+      {coach && <RetoTravesia />}
       <ErrorCaja error={retos.error} reintentar={() => retos.recargar()} />
       {retos.cargando && !retos.datos ? <Siluetas forma="tarjetas" n={2} texto="Cargando los retos" />
         : !ordenados.length ? <Vacio icono="diana" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>

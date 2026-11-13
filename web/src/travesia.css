@@ -272,3 +272,22 @@
 .tv-diario-lista li { padding: 10px 12px; border-left: 3px solid var(--tv-oro); border-radius: 0 12px 12px 0; background: color-mix(in srgb, var(--morado) 7%, transparent); }
 .tv-diario-lista strong { font-size: .875rem; }
 .tv-diario-lista p { margin: 2px 0 0; font-size: .9375rem; line-height: 1.4; }
+
+/* (remate, tanda 8) la liga de la semana, el reto del coach y la fiesta de la manada */
+.tv-liga h3 { display: flex; align-items: center; gap: 8px; }
+.tv-liga-medalla { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #F4D7B8 0%, #B87333 70%); box-shadow: inset 0 0 0 2px rgb(255 255 255 / .35); }
+.tv-liga-1 .tv-liga-medalla { background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #A9B0C4 70%); }
+.tv-liga-2 .tv-liga-medalla { background: radial-gradient(circle at 35% 30%, #FFF2B8 0%, var(--tv-oro) 70%); }
+.tv-reto .tv-barra span { background: var(--tv-oro); }
+.tv-fiesta { padding: 14px 16px; border-radius: 16px; color: var(--tv-tiza); background: linear-gradient(160deg, var(--tv-noche) 0%, var(--tv-noche-2) 55%, #1F5C55 100%); }
+.tv-fiesta h3 { color: var(--tv-tiza); }
+.tv-fiesta p { margin: 4px 0 0; font-size: .9375rem; }
+.tv-postal-img.fiesta { background: linear-gradient(180deg, var(--tv-noche) 0%, #1F5C55 45%, #6FD3A8 70%, var(--tv-noche-2) 100%); }
+@media (prefers-reduced-motion: no-preference) {
+  .tv-fiesta.hoy { position: relative; overflow: hidden; }
+  .tv-fiesta.hoy::after { content: ''; position: absolute; inset: -40% -10% auto; height: 80%; background: linear-gradient(90deg, transparent, rgb(111 211 168 / .28), rgb(160 140 255 / .22), transparent); transform: translateX(-30%); animation: tv-aurora-hoja 9s ease-in-out infinite alternate; pointer-events: none; }
+}
+@keyframes tv-aurora-hoja { to { transform: translateX(30%); } }
+.tv-reto-coach { display: grid; gap: 10px; }
+.tv-reto-coach h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.tv-reto-coach h3 svg { width: 18px; height: 18px; }

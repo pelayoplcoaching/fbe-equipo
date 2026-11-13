@@ -92,5 +92,20 @@ console.log('\nTanda 7 · los números y el diario');
   check(lejos.abiertas.length > 30 && new Set(lejos.abiertas.map((x) => x.id)).size === lejos.abiertas.length && lejos.abiertas.some((x) => x.ruta === R.RUTAS_NUEVAS.find((r) => r.id === 'camino').nombre), 'en las rutas elegidas sigue el diario, sin páginas repetidas');
 }
 
+console.log('\nTanda 8 · el rastro, la fiesta y las ligas');
+{
+  const r = [];
+  for (let t = 0; t <= 2.01; t += 1 / 60) E.apuntarRastro(r, t, t * 8, t < 1 ? 0 : 1.2);
+  check(r.length === 18 && r[0] === 0 && r[2] === 20 && r[r.length - 2] === 160, 'el rastro: una pareja cada cuarto de segundo (x en dm, altura en cm)');
+  const p = E.enRastro(r, 0.375);
+  check(Math.abs(p.x - 3) < 0.01 && E.enRastro(r, 99).x === 16 && E.enRastro([], 1) === null, 'el lobo del compañero va a medias entre dos muestras (y se queda al final)');
+  const largo = []; for (let t = 0; t < 100; t += 0.1) E.apuntarRastro(largo, t, 2000, 9);
+  check(largo.length === 480 && largo.every((v, i) => (i % 2 ? v <= 1000 : v <= 20000)), 'como mucho 240 parejas, dentro de lo que admite la base');
+  const m1 = M.apuntarFiesta(M.META_VACIA(), '2026-11'), m2 = M.apuntarFiesta(m1, '2026-11'), m3 = M.apuntarFiesta(m2, 'mal');
+  check(m1.fiestas.join() === '2026-11' && m2.fiestas.length === 1 && m3.fiestas.length === 1 && M.limpiarMeta({ fiestas: ['x', '2026-10'] }).fiestas.join() === '2026-10', 'la postal de la fiesta, una por mes');
+  check(E.hayAurora({ fase: 'dia', fiesta: true, paisaje: 0 }) && !E.hayAurora({ fase: 'dia', paisaje: 0, luna: { ilum: 1 } }), 'el día de la fiesta hay aurora (también de día)');
+  check(E.LIGAS.length === 3 && /bronce/.test(E.LIGAS[0]) && /oro/.test(E.LIGAS[2]), 'tres ligas: bronce, plata y oro');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
