@@ -59,6 +59,8 @@ function cargar(k) {
   }
   return buffers[k];
 }
+// (top, tanda 3) el contexto de audio ya preparado (o null): para la música del juego, que suena por el mismo
+export const contextoAudio = () => audio;
 export function prepararAudio() {
   // (v0.62: no mientras suena la pista de «Avisar aunque bloquees el móvil», que va en «playback»: la cortaría)
   try { if (navigator.audioSession && !pistaActiva()) navigator.audioSession.type = 'ambient'; } catch { /* solo Safari */ }

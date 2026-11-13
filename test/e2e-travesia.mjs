@@ -68,7 +68,8 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     await p.keyboard.press(' ');
     // (tanda 1) el sonido y el modo calma, que se recuerdan en el móvil
     const modos = juego.locator('.travesia-modo');
-    check(await modos.count() === 2 && await modos.nth(0).getAttribute('aria-pressed') === 'false' && await modos.nth(1).getAttribute('aria-pressed') === 'false', 'en el juego: «Calma» y el sonido, apagados de entrada');
+    // (top, tanda 3: detrás del sonido, la música)
+    check(await modos.count() === 3 && await modos.nth(0).getAttribute('aria-pressed') === 'false' && await modos.nth(1).getAttribute('aria-pressed') === 'false' && await modos.nth(2).getAttribute('aria-pressed') === 'false', 'en el juego: «Calma», el sonido y la música, apagados de entrada');
     await modos.nth(1).click();
     await modos.nth(0).click();
     await p.waitForTimeout(1300);
