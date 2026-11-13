@@ -453,7 +453,10 @@ const RPC_DE_CONSULTA = new Set(['mi_cobro', 'nombre_coach', 'foto_coach', 'reco
   'apuntes_liga', 'apuntes_duelos_mios', 'apuntes_dominio_equipo', 'apuntes_participacion']);
 // ¿Esta llamada al backend cambia algo? Todo lo que no es leer, salvo las funciones de consulta (y el latido de
 // presencia, que se manda cada minuto y no cambia nada que se enseñe; cambiar si se me ve en línea, sí cuenta)
-const esEscritura = (m, a) => m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0);
+// (v0.155) la pregunta de si está la 066 (personal_ajustes_guardar sin datos: contesta «Faltan los datos» sin escribir
+// nada) tampoco cuenta: si contara, lo recordado de Hoy (los diales) se olvidaría al abrir la app y, al volver, se moverían
+const esSondeo = (m, a) => m === 'rpc' && a[0] === 'personal_ajustes_guardar' && a[1]?.p_datos == null;
+const esEscritura = (m, a) => (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0)) && !esSondeo(m, a);
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
