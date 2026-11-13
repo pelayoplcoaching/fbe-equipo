@@ -22,6 +22,12 @@ export const ARTE = {
   musculo: { tono: 'rosa', sello: 'pulso' },
   clip: { tono: 'azul', sello: 'play' },
   reto: { tono: 'oro', sello: 'bandera' },
+  // (tanda B) practicar: emparejar, ordenar, verdadero o falso y las microlecciones
+  emparejar: { tono: 'teal', sello: 'casilla' },
+  ordenar: { tono: 'verde', sello: 'barras' },
+  vf: { tono: 'teal', sello: 'casilla' },
+  calc1rm: { tono: 'oro', sello: 'barras' },
+  rirpe: { tono: 'oro', sello: 'pulso' },
 };
 // Un número fijo entre 0 y 1 para cada (n, sal): el mismo siempre (para el confeti)
 export const dado = (n, sal = 0) => { const x = Math.sin(n * 127.1 + sal * 311.7 + 13.37) * 43758.5453; return x - Math.floor(x); };

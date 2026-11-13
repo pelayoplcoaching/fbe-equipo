@@ -348,3 +348,83 @@
 /* (apuntes, tanda A) sin conexión: un aviso discreto bajo el título */
 .apuntes-sin-red { gap: 4px; font-size: .75rem; }
 .apuntes-sin-red svg { width: 14px; height: 14px; }
+
+/* ---------- (apuntes, tanda B) Practicar ---------- */
+.practica { display: grid; gap: 12px; width: 100%; justify-self: stretch; }
+.practica-ayuda { margin: 0; font-size: .875rem; color: var(--tinta-2); }
+.practica-veredicto { margin: 0; font-weight: 700; color: var(--tono-tinta); }
+.practica-veredicto[data-bien="no"] { color: var(--aviso); }
+/* la cuenta atrás: una barra que se vacía */
+.practica-tiempo { position: relative; height: 26px; border-radius: 13px; background: color-mix(in srgb, var(--tono, var(--morado)) 12%, transparent); overflow: hidden; display: grid; align-items: center; }
+.practica-tiempo > span { position: absolute; inset: 0; background: color-mix(in srgb, var(--tono, var(--morado)) 38%, transparent); transform-origin: left; transition: transform .25s linear; }
+.practica-tiempo.fuera > span { background: color-mix(in srgb, var(--aviso) 40%, transparent); }
+.practica-tiempo b { position: relative; justify-self: end; padding: 0 10px; font-size: .8125rem; }
+.practica-tiempo.corto { height: 10px; }
+.practica-tiempo.corto b { position: absolute; right: 0; top: -22px; padding: 0; color: var(--tinta-2); }
+/* emparejar: dos columnas que se tocan */
+.emparejar-columnas { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: 8px; }
+.emparejar-col { display: grid; gap: 8px; align-content: start; }
+.emparejar .btn { min-height: 48px; height: auto; padding: 8px 10px; white-space: normal; text-align: left; line-height: 1.25; font-size: .875rem; justify-content: flex-start; }
+.emparejar-termino { font-weight: 700; }
+.emparejar-termino.elegido { outline: 3px solid var(--tono, var(--morado)); outline-offset: 1px; background: var(--tono-suave); }
+.emparejar .hecho { opacity: .55; background: color-mix(in srgb, var(--exito, #2e9e5b) 14%, var(--hoja)); border-color: transparent; }
+.emparejar-def.mal { animation: ap-agitar .4s ease; border-color: var(--aviso); }
+@keyframes ap-agitar { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+/* ordenar */
+.ordenar-elegidos, .ordenar-resultado { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.ordenar-elegidos li { min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1.5px dashed var(--linea, #ccc); font-size: .9375rem; }
+.ordenar-elegidos li.lleno { border-style: solid; background: var(--tono-suave); }
+.ordenar-opciones { display: grid; gap: 8px; }
+.ordenar-paso { min-height: 46px; height: auto; white-space: normal; text-align: left; justify-content: flex-start; padding: 8px 12px; line-height: 1.3; }
+.ordenar-resultado li { padding: 4px 0; }
+.ordenar-resultado li > span:first-child { margin-right: 6px; }
+.ordenar-resultado li.bien svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--exito, #2e9e5b); }
+.ordenar-resultado li.mal { color: var(--aviso); }
+/* verdadero o falso */
+.vf-frase { margin: 6px 0 0; min-height: 4.2em; font-size: 1.1875rem; font-weight: 650; line-height: 1.35; transition: color .2s; }
+.vf-frase.bien { color: var(--exito, #2e9e5b); }
+.vf-frase.mal { color: var(--aviso); }
+.vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vf-botones .btn { min-height: 54px; font-weight: 700; }
+.vf-nota { margin: 0; font-size: 1.0625rem; }
+.vf-nota b { font-size: 1.5rem; margin-right: 6px; }
+.vf-falladas { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: .9375rem; line-height: 1.4; }
+/* microlecciones */
+.micro-fila { display: grid; gap: 4px; }
+.micro-fila > span { display: flex; justify-content: space-between; font-size: .9375rem; }
+.micro-fila input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--tono, var(--morado)); }
+.micro-resultado { margin: 4px 0 0; font-size: 1.0625rem; }
+.micro-resultado b { font-size: 1.625rem; color: var(--tono-tinta); }
+.micro-tabla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.micro-tabla > span { display: grid; place-items: center; padding: 8px 4px; border-radius: 12px; background: var(--tono-suave); font-size: .8125rem; text-align: center; }
+.micro-tabla b { font-size: 1rem; }
+.micro-escala { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.micro-escala i { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); }
+.micro-escala i.esta { background: var(--tono, var(--morado)); }
+/* tres explicaciones */
+.apunte-niveles { margin-top: -2px; }
+.apunte-niveles button { font-size: .8125rem; min-height: 36px; }
+.apunte-niveles button:disabled { opacity: .4; }
+/* grábate y compáralo */
+.comparar { display: grid; gap: 12px; }
+.comparar-clave { margin: 0; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--tono-suave, color-mix(in srgb, var(--morado) 10%, transparent)); font-weight: 600; }
+.comparar-clave svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.comparar-videos { display: grid; gap: 10px; }
+.comparar-videos.con-mio { grid-template-columns: 1fr 1fr; align-items: start; }
+.comparar-videos figure { margin: 0; display: grid; gap: 6px; }
+.comparar-videos figcaption { display: flex; justify-content: space-between; align-items: center; font-size: .8125rem; color: var(--tinta-2); }
+.comparar-tuyo video { width: 100%; max-height: 60vh; border-radius: 14px; background: #000; }
+.comparar-grabar, .comparar-otro { position: relative; overflow: hidden; gap: 8px; cursor: pointer; }
+.comparar-grabar { min-height: 120px; }
+.comparar-grabar input, .comparar-otro input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .emparejar-def.mal { animation: none; } .practica-tiempo > span { transition: none; } }
+/* (apuntes, tanda B) Antes de la primera serie de un ejercicio nuevo: sus tres claves, con veinte segundos que se llenan */
+.antes-de-empezar { display: grid; gap: 8px; margin: 4px 0 10px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); border: 1px solid color-mix(in srgb, var(--morado) 22%, transparent); }
+.antes-cab { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--morado-tinta, var(--morado)); }
+.antes-cab svg { width: 18px; height: 18px; flex: none; }
+.antes-de-empezar ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: .9375rem; line-height: 1.4; }
+.antes-tiempo { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--morado) 15%, transparent); overflow: hidden; }
+.antes-tiempo i { display: block; height: 100%; background: var(--morado); transform-origin: left; animation: antes-llenar 20s linear forwards; }
+@keyframes antes-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.antes-de-empezar .btn { justify-self: end; }
+@media (prefers-reduced-motion: reduce) { .antes-tiempo i { animation: none; transform: none; } }

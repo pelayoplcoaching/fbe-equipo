@@ -27,7 +27,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 export function apuntesDeFicha(fila, nombre = '') {
   if (!fila?.id) return [];
   const f = fichaParaLeer(fila), de = String(nombre || fila.nombre || '').trim();
-  const pasos = f.pasos.map((p, i) => ({ id: `p:${fila.id}:${i}`, tipo: 'clave', de, etiqueta: 'La clave', titulo: '', texto: corta(sinMarcas(p)) }));
+  const pasos = f.pasos.map((p, i) => ({ id: `p:${fila.id}:${i}`, tipo: 'clave', de, etiqueta: 'La clave', titulo: '', texto: corta(sinMarcas(p)), ...(sinMarcas(p).trim().length > MAX ? { textoLargo: sinMarcas(p).trim() } : {}) }));
   const errores = erroresDeFicha(fila).map((e, i) => ({
     id: `e:${fila.id}:${i}`, tipo: 'error', de, etiqueta: 'Error típico', titulo: e.titulo,
     // («**Chocar las mancuernas** arriba: …»: el resto sigue la frase del título)
@@ -43,7 +43,7 @@ export function apuntesDeGuias(guias = []) {
     if (!g?.clave || g.publicada === false) continue;
     lista(objeto(g.contenido).ideas).forEach((i, n) => {
       const titulo = sinMarcas(objeto(i).titulo || '').trim(), x = sinMarcas(objeto(i).x || '').trim();
-      if (titulo || x) out.push({ id: `i:${g.clave}:${n}`, tipo: 'idea', de: String(g.titulo || '').trim(), guia: g.clave, etiqueta: 'Idea clave', titulo, texto: corta(x) });
+      if (titulo || x) out.push({ id: `i:${g.clave}:${n}`, tipo: 'idea', de: String(g.titulo || '').trim(), guia: g.clave, etiqueta: 'Idea clave', titulo, texto: corta(x), ...(x.length > MAX ? { textoLargo: x } : {}) });
     });
     if (g.clave === 'mitos') {
       for (const m of mitosDeGuia(g)) {
