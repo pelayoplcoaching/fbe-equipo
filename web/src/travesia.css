@@ -63,3 +63,75 @@
 .travesia-tarjeta-boton { background: var(--tv-tiza); color: var(--tv-noche-2); border-color: transparent; font-weight: 700; }
 .travesia-tarjeta-boton:focus-visible { outline: 2px solid var(--tv-tiza); outline-offset: 2px; }
 .resumen-travesia svg { background: var(--tv-noche-2); color: var(--tv-tiza); }
+
+/* (tanda 1) los modos del juego (calma y sonido), el escudo y el reto del día */
+.travesia-modos { position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(74px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 8px; }
+.travesia-modo { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 12px; border: 0; border-radius: 999px; color: inherit; font-size: .8125rem; font-weight: 650;
+  background: rgb(241 240 246 / .12); }
+.travesia-modo svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.travesia-modo[aria-pressed="true"] { background: #F1F0F6; color: #1E1548; }
+.travesia-modo:focus-visible { outline: 2px solid #F1F0F6; outline-offset: 2px; }
+.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: #1E1548; background: #F2C230; }
+.travesia-escudo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.travesia-reto { position: absolute; left: 16px; right: 16px; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); margin: 0; text-align: center; font-size: .875rem; font-weight: 650; pointer-events: none; }
+.travesia-reto.hecho { color: #F2C230; }
+.travesia-pista.calma { top: 30%; }
+.travesia-tarjeta-reto { font-size: .8125rem; color: rgb(241 240 246 / .82); }
+.travesia-tarjeta-reto.hecho { color: #F2C230; font-weight: 700; }
+
+/* (tanda 3) «Tu travesía»: la tarjeta se abre (un botón que la cubre, con «Practicar» por encima) y su hoja */
+.travesia-tarjeta-abrir { position: absolute; inset: 0; border: 0; padding: 0; background: none; border-radius: inherit; cursor: pointer; }
+.travesia-tarjeta-abrir:focus-visible { outline: 2px solid var(--tv-tiza); outline-offset: -3px; }
+.travesia-tarjeta-boton { position: relative; z-index: 1; }
+.travesia-tarjeta-ruta { font-size: .8125rem; color: var(--tv-tiza-2); }
+.travesia-manada { position: absolute; left: 16px; right: 16px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); margin: 0; text-align: center; font-size: .8125rem; color: var(--tv-tiza-2); pointer-events: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.travesia-final-duelo { flex-basis: 100%; justify-content: center; font-size: .875rem; }
+.tv-hoja h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; font-size: 1.0625rem; }
+.tv-cuenta { font-size: .8125rem; font-weight: 600; color: var(--tinta-3); }
+.tv-donde { margin: 0 0 12px; font-size: .9375rem; }
+.tv-ruta { position: relative; height: 10px; margin: 18px 8px 8px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 16%, transparent); }
+.tv-ruta-hecho { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--morado); }
+.tv-hito { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--hoja); border: 2px solid color-mix(in srgb, var(--morado) 45%, transparent); box-sizing: border-box; }
+.tv-hito.pasado { border-color: var(--morado); background: var(--morado); }
+.tv-ruta-lobo { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--tv-oro); border: 3px solid var(--hoja); box-sizing: border-box; box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.tv-ruta-extremos { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: .8125rem; color: var(--tinta-2); }
+.tv-postales { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 10px; margin: 0 -16px; padding: 2px 16px 8px; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.tv-postales::-webkit-scrollbar { display: none; }
+.tv-postal { display: grid; gap: 2px; font-size: .8125rem; line-height: 1.25; }
+.tv-postal strong { font-size: .875rem; }
+.tv-postal span:last-child { color: var(--tinta-2); }
+.tv-postal-img { display: grid; place-items: center; width: 112px; height: 84px; margin-bottom: 4px; border-radius: 12px; object-fit: cover; background: var(--tv-noche-2); color: var(--tv-tiza-2); }
+.tv-postal-img svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tv-postal.pendiente .tv-postal-img { background: color-mix(in srgb, var(--morado) 12%, transparent); color: var(--tinta-2); }
+.tv-clasif { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.tv-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, transparent); }
+.tv-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
+.tv-fila.rival { box-shadow: inset 0 0 0 2px var(--tv-oro); }
+.tv-puesto { font-weight: 800; color: var(--tinta-2); text-align: center; }
+.tv-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-nombre small { font-weight: 500; color: var(--tinta-2); }
+.tv-retar { min-height: 36px; }
+.tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: #1E1548; border-color: transparent; }
+.tv-equipo { display: grid; gap: 6px; margin-top: 12px; font-size: .875rem; }
+.tv-barra { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 16%, transparent); overflow: hidden; }
+.tv-barra span { display: block; height: 100%; border-radius: 999px; background: var(--morado); }
+.tv-lobos, .tv-constelaciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
+.tv-lobo { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 120px; padding: 10px 8px; border-radius: 16px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; line-height: 1.25; text-align: center;
+  background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
+.tv-lobo strong { font-size: .875rem; }
+.tv-lobo span { color: var(--tv-tiza-2); }
+.tv-lobo[aria-pressed="true"] { border-color: var(--tv-oro); }
+.tv-lobo[aria-pressed="true"] span { color: var(--tv-oro); font-weight: 700; }
+.tv-lobo:disabled { cursor: default; }
+.tv-lobo:disabled strong { color: var(--tv-tiza-2); }
+.tv-lobo:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
+.tv-lobo-lienzo { width: 96px; height: 56px; }
+.tv-constelacion { display: grid; justify-items: center; gap: 2px; padding: 8px; border-radius: 16px; color: var(--tv-tiza); font-size: .8125rem; text-align: center; background: var(--tv-noche); }
+.tv-constelacion svg { width: 100%; max-width: 132px; }
+.tv-constelacion line { stroke: var(--tv-lavanda); stroke-width: .8; opacity: .7; }
+.tv-constelacion circle { fill: var(--tv-tiza-2); opacity: .35; }
+.tv-constelacion circle.mia { opacity: 1; fill: var(--tv-tiza); }
+.tv-constelacion.completa circle { fill: var(--tv-oro); }
+.tv-constelacion span { color: var(--tv-tiza-2); }
+.tv-constelacion.completa span { color: var(--tv-oro); font-weight: 700; }

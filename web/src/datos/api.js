@@ -40,7 +40,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -1284,7 +1284,9 @@ export function crearApi(backend) {
       // (v0.145) los vídeos de YouTube (059): con la 058 pero sin la 059, la 2026-12.23
       if ((await api.youtube059().catch(() => null)) !== true) return VERSION_LEGAL_SIN_059;
       // (v0.148) los descansos (060): con la 059 pero sin la 060, la 2026-12.24
-      return (await api.descansos060().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_060;
+      if ((await api.descansos060().catch(() => null)) !== true) return VERSION_LEGAL_SIN_060;
+      // (v0.149) la clasificación de La travesía y los apuntes del coach (061): con la 060 pero sin la 061, la 2026-12.25
+      return (await api.descansos061().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_061;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -3982,7 +3984,19 @@ export function crearApi(backend) {
       if (!fila.titulo || !fila.texto) throw new Error('La novedad necesita un título y un texto');
       // (como la base, 060: https, un dominio y, si acaso, ruta, ?consulta o #ancla; sin espacios)
       if (fila.enlace && !ENLACE_NOVEDAD.test(fila.enlace)) throw new Error('El enlace tiene que empezar por https:// y no llevar espacios');
-      const [r] = n.id ? await b.update('novedades', fila, { eq: { id: n.id } }).catch(falta060) : await b.insert('novedades', [fila]).catch(falta060);
+      // (tanda 4, migración 061) un apunte suelto del coach (tipo 'apunte'), quizá de un ejercicio; sin la 061 la base no
+      // tiene esas columnas: la novedad se guarda como siempre y el apunte suelto pide la migración
+      const suelto = n.tipo === 'apunte';
+      const con061 = n.tipo ? { ...fila, tipo: suelto ? 'apunte' : 'novedad', ejercicio_id: suelto ? n.ejercicio_id || null : null } : fila;
+      const guardar = (f) => (n.id ? b.update('novedades', f, { eq: { id: n.id } }) : b.insert('novedades', [f]));
+      const [r] = await guardar(con061).catch((e) => {
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (con061 !== fila && /tipo|ejercicio_id/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m)) {
+          if (suelto) throw new Error('Para los apuntes sueltos falta ejecutar en Supabase la migración 061 (supabase/migraciones/061_descansos_2.sql).');
+          return guardar(fila).catch(falta060);
+        }
+        return falta060(e);
+      });
       return r;
     },
     async borrarNovedad(id) { await b.delete('novedades', { eq: { id } }).catch(falta060); },
@@ -3997,6 +4011,15 @@ export function crearApi(backend) {
       } catch (e) {
         if (/sumar_travesia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin060 = true;
         return false;
+      }
+    },
+    // (061) La manada en la travesía: { semana, filas: [{ nombre, metros, estrellas, mejor, yo, hoy }], equipo: { mes, metros,
+    // miembros } }, o null (fuera de la comunidad, sin red o sin la 061)
+    async travesiaManada() {
+      if (api._sin061 || !uid()) return null;
+      try { return (await b.rpc('travesia_manada', {})) || null; } catch (e) {
+        if (/travesia_manada|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin061 = true;
+        return null;
       }
     },
     // Lo recorrido por un atleta, por semanas (la última primero)
@@ -4016,6 +4039,10 @@ export function crearApi(backend) {
       }
     },
     // Los apuntes que ha visto un atleta
+    // (tanda 4, coach) lo que sus atletas no sabían: [{ apunte, atleta_id, sabia: false }] (para contar; nunca se enseña quién)
+    async apuntesFallados() {
+      return b.select('apuntes_vistos', { eq: { sabia: false }, cols: 'apunte,atleta_id,sabia', limit: 5000 }).catch(() => []);
+    },
     async apuntesVistos(atletaId) {
       return b.select('apuntes_vistos', { eq: { atleta_id: atletaId }, limit: 3000 }).catch(() => []);
     },
@@ -4034,6 +4061,19 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v060 === pr) api._v060 = null; });
       }
       return api._v060;
+    },
+    // (v0.149) ¿Está la 061? Sonda: la columna novedades.tipo (sin la 061 no existe)
+    async descansos061() {
+      if (!api._v061) {
+        const pr = b.select('novedades', { cols: 'tipo', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /tipo|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m) ? false : null;
+        });
+        api._v061 = pr;
+        pr.then((x) => { if (x == null && api._v061 === pr) api._v061 = null; });
+      }
+      return api._v061;
     },
     async youtube059() {
       if (!api._v059) {

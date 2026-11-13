@@ -47,3 +47,58 @@
 .novedad-form .cuenta-letras { justify-self: end; font-size: .8125rem; color: var(--tinta-2); }
 .novedades-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .novedades-cab h2 { margin: 0; font-size: 1.125rem; }
+
+/* (tanda 2) la pantalla va por debajo de las hojas (la guía se abre encima) */
+.apuntes { z-index: 38; }
+.apunte-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; }
+.apunte-opciones { display: grid; gap: 8px; width: 100%; }
+.apunte-opcion { justify-content: space-between; min-height: 50px; text-align: left; white-space: normal; }
+.apunte-opcion.buena { background: color-mix(in srgb, var(--ok, #1E8E5A) 16%, var(--hoja)); border-color: var(--ok, #1E8E5A); color: var(--tinta); opacity: 1; }
+.apunte-opcion.mala { background: color-mix(in srgb, var(--alerta, #C2410C) 12%, var(--hoja)); border-color: var(--alerta, #C2410C); color: var(--tinta); opacity: 1; }
+.apunte-opcion svg { width: 18px; height: 18px; flex: none; }
+.apunte-terminos { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.apunte-termino { cursor: pointer; }
+.apunte-termino[aria-expanded="true"] { background: var(--morado); color: #fff; border-color: transparent; }
+.apunte-definicion { flex-basis: 100%; margin: 4px 0 0; font-size: .9375rem; line-height: 1.45; color: var(--tinta-2); }
+.apunte-acciones { display: flex; flex-wrap: wrap; gap: 2px 14px; width: 100%; padding-top: 8px; border-top: 1px solid var(--linea); }
+.apunte-acciones .btn-texto { font-size: .875rem; min-height: 40px; padding: 6px 2px; }
+.apunte-acciones .btn-texto[aria-pressed="true"] { color: var(--ok, #1E8E5A); }
+.apunte.tipo-correccion .apunte-etq .chip, .apunte.tipo-numeros .apunte-etq .chip { background: var(--morado); color: #fff; }
+.apunte.tipo-correccion .apunte-texto { font-size: 1.375rem; font-weight: 650; line-height: 1.3; }
+.apuntes-tarjeta-botones { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.apuntes-cuerpo { align-content: safe center; }
+
+/* (tanda 2) el apunte «al paso», dentro de las filas de Hoy */
+.apunte-al-paso-marca { display: block; height: 1px; }
+.apunte-al-paso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; margin-top: 12px; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); }
+.apunte-al-paso > svg { width: 20px; height: 20px; color: var(--morado); margin-top: 2px; }
+.apunte-al-paso p { margin: 0; font-size: .9375rem; line-height: 1.45; }
+.apunte-al-paso .btn-texto { grid-column: 2; justify-self: start; min-height: 36px; padding: 4px 0; font-size: .875rem; }
+.apunte .apunte-img, .apunte picture.apunte-img, .apunte .apunte-img img { height: 180px; max-height: 180px; aspect-ratio: auto; object-fit: cover; object-position: 50% 30%; }
+
+/* (tanda 4) El coach: apuntes sueltos, mandar un apunte a un atleta y «Lo que más se falla» */
+.novedad-form .novedad-tipo { display: grid; grid-template-columns: 1fr 1fr; }
+.fallado-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--linea); }
+.fallado-fila:first-child { border-top: 0; }
+.mandar-apunte blockquote { margin: 0; color: var(--tinta-2); }
+.mandar-apunte .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 48px; text-align: left; padding: 10px 14px; background: none; border: 0; border-top: 1px solid var(--linea); color: inherit; font: inherit; }
+.mandar-apunte .novedad-fila:first-child { border-top: 0; }
+
+/* (tanda 4) En Semana: la racha y la medalla, el curso de la semana y el examen; y dentro, la barra del curso y la nota */
+.apuntes-tarjeta-mas { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--linea); }
+.apuntes-logros { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.apuntes-racha { font-weight: 650; }
+.apuntes-medalla { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--morado); }
+.apuntes-ico-medalla { width: 16px; height: 16px; }
+.apuntes-tarjeta-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.apuntes-curso { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; width: 100%; max-width: 560px; margin: 0 auto 12px; padding: 12px 14px; border-radius: var(--r, 18px); background: var(--morado-suave); box-sizing: border-box; }
+.apuntes-curso-t { display: grid; gap: 1px; min-width: 0; }
+.apuntes-curso-puntos { display: inline-flex; gap: 5px; }
+.apuntes-curso-puntos i { width: 9px; height: 9px; border-radius: 50%; background: color-mix(in srgb, var(--morado) 22%, transparent); }
+.apuntes-curso-puntos i.hecha { background: var(--morado); }
+.apuntes-curso .btn-texto { grid-column: 1 / -1; justify-self: start; min-height: 36px; }
+.apuntes-cursos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.apuntes-curso-otro { min-height: 36px; border: 0; cursor: pointer; font: inherit; font-size: .8125rem; }
+.apuntes-curso-otro[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado, #fff); }
+.examen-nota h2 .num { font-size: 2rem; }

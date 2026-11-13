@@ -39,6 +39,7 @@ export function apuntarEtapa(atletaId, etapa) {
 // se han traído, las semanas de la base. Nunca falla: sin red o sin la 060, todo sigue en el móvil. Cada envío lleva su
 // identificador y se guarda antes de mandarlo: si la respuesta se pierde, se repite el mismo y la base no lo suma dos veces.
 const subiendo = new Set();
+const manadas = new Map();   // atletaId → { t, datos }
 // (lo de la base se trae como mucho cada 5 minutos, salvo que se acabe de subir algo: volver a Hoy no pide nada)
 const traido = new Map();   // atletaId → { t, semanas }
 const CADA = 5 * 60000;
@@ -54,6 +55,7 @@ export async function sincronizarTravesia(api, atletaId, { traer = false } = {})
         if (!(await api.sumarTravesia?.(envio))) break;
         guardar(atletaId, trasSubir(leerTravesia(atletaId), envio));
         traido.delete(atletaId);
+        manadas.delete(atletaId);   // (tanda 3) y la clasificación, que ya cuenta lo subido
       }
     } catch { /* se reintenta otra vez */ } finally { subiendo.delete(atletaId); }
   }
@@ -70,4 +72,34 @@ export async function sincronizarTravesia(api, atletaId, { traer = false } = {})
     } catch { semanas = null; }
   }
   return { travesia: leerTravesia(atletaId), semanas: Array.isArray(semanas) ? semanas : null };
+}
+
+// (tanda 3, migración 061) La manada: la clasificación de la semana y lo del equipo en el mes. Se pide como mucho cada
+// 5 minutos (o al subir algo); fuera de la comunidad, sin red o sin la 061, null.
+export async function manadaDe(api, atletaId, { fresca = false } = {}) {
+  if (!api?.travesiaManada || !atletaId) return null;
+  const antes = manadas.get(atletaId);
+  if (!fresca && antes && Date.now() - antes.t < CADA) return antes.datos;
+  let datos = null;
+  try { datos = await api.travesiaManada(); } catch { datos = null; }
+  if (datos && !Array.isArray(datos.filas)) datos = null;
+  manadas.set(atletaId, { t: Date.now(), datos });
+  return datos;
+}
+// La que ya se tiene (sin pedir nada): para pintar a quien corre hoy nada más abrir el juego
+export const manadaGuardada = (atletaId) => manadas.get(atletaId)?.datos || null;
+
+// El duelo de la semana: a quién ha retado (se guarda en el móvil, con su lunes: la semana siguiente ya no vale)
+const claveDuelo = (atletaId) => `fbe-travesia-duelo-${atletaId}`;
+const duelos = new Map();
+export function leerDuelo(atletaId, lunes) {
+  let d = duelos.get(atletaId) || null;
+  if (!d) { try { d = JSON.parse(localStorage.getItem(claveDuelo(atletaId)) || 'null'); } catch { d = null; } }
+  return d && d.semana === lunes && typeof d.rival === 'string' && d.rival.length <= 60 ? d.rival : '';
+}
+export function guardarDuelo(atletaId, rival, lunes) {
+  const d = rival ? { rival: String(rival).slice(0, 60), semana: lunes } : null;
+  duelos.set(atletaId, d);
+  try { if (d) localStorage.setItem(claveDuelo(atletaId), JSON.stringify(d)); else localStorage.removeItem(claveDuelo(atletaId)); } catch { /* queda en memoria */ }
+  return d?.rival || '';
 }

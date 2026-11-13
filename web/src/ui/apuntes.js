@@ -1,6 +1,6 @@
 // «Apuntes» (formación en los descansos): lo que el atleta ha visto, en este móvil, en `fbe-apuntes-<atletaId>`
 // (logica/apuntes.js). Si el navegador no deja guardar, se recuerda mientras la app está abierta.
-import { limpiarVistos, apuntarVisto, pendienteDeSubir, conServidor } from '../logica/apuntes.js';
+import { limpiarVistos, apuntarVisto, pendienteDeSubir, conServidor, ID_APUNTE } from '../logica/apuntes.js';
 
 const enMemoria = new Map();
 const soloMemoria = new Set();   // (v0.148) los que no se han podido guardar en el navegador: ahí manda la memoria
@@ -13,6 +13,9 @@ export function leerApuntes(atletaId) {
   return limpiarVistos(enMemoria.get(atletaId) ?? null);
 }
 
+// (tanda 4, migración 061) la base admite las claves de cualquier familia (glosario, dudas…); con la 060 sola, las que
+// no admite las rechaza ('rechazado') y salen de la cola sin atascarla
+const SUBIBLE = ID_APUNTE;
 const guardar = (atletaId, e) => {
   enMemoria.set(atletaId, e);
   try { localStorage.setItem(clave(atletaId), JSON.stringify(e)); soloMemoria.delete(atletaId); } catch { soloMemoria.add(atletaId); /* queda en memoria */ }
@@ -28,7 +31,8 @@ function quitarDeLaCola(atletaId, id, valor) {
 // (060) lo sube también a la base; si no se puede (sin red), queda pendiente y se reintenta al sincronizar.
 export function guardarVisto(atletaId, id, hoy, sabia = null, api = null) {
   let e = apuntarVisto(leerApuntes(atletaId), id, hoy, sabia);
-  if (api?.apuntarApunte) {
+  // (a la base, los que su función admite: con la 061, cualquier familia; con la 060 sola, las que rechace salen de la cola)
+  if (api?.apuntarApunte && SUBIBLE.test(id)) {
     e = pendienteDeSubir(e, id, sabia);
     const valor = e.porSubir?.[id];
     // (se sube lo que queda en cola: si antes contestó y esta vez no, se sube lo que contestó)
@@ -57,3 +61,6 @@ export async function sincronizarApuntes(api, atletaId) {
   } catch { /* otra vez será */ }
   return leerApuntes(atletaId);
 }
+
+// (tanda 2) Guarda lo que ha cambiado sin ver nada (un apunte guardado para luego, el reto de la siguiente serie)
+export const guardarEstado = (atletaId, e) => guardar(atletaId, limpiarVistos(e));

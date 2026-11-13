@@ -27,7 +27,7 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
   const seg = (t) => { const [a, b] = t.split(':').map(Number); return a * 60 + b; };
   const hoja = p.locator('.apuntes');
   const tarjeta = hoja.locator('article.apunte');
-  const idActual = async () => `${await tarjeta.locator('.chip').textContent()}|${(await tarjeta.locator('h2').count()) ? await tarjeta.locator('h2').textContent() : ''}|${(await tarjeta.locator('.apunte-texto').count()) ? await tarjeta.locator('.apunte-texto').textContent() : ''}`;
+  const idActual = async () => `${await tarjeta.locator('.apunte-etq .chip').textContent()}|${(await tarjeta.locator('h2').count()) ? await tarjeta.locator('h2').textContent() : ''}|${(await tarjeta.locator('.apunte-texto').count()) ? await tarjeta.locator('.apunte-texto').textContent() : ''}`;
 
   try {
     await p.goto(`${base}/?demo`);
@@ -41,7 +41,7 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
     check(await enHoy.count() === 1 && /El apunte de hoy/.test(await enHoy.textContent()) && trozos.length === 0, 'en Hoy, «El apunte de hoy», en una línea; su pantalla no se descarga hasta abrirla');
     await enHoy.getByRole('button', { name: 'Leer' }).click();
     await tarjeta.waitFor();
-    const chip0 = await tarjeta.locator('.chip').textContent();
+    const chip0 = await tarjeta.locator('.apunte-etq .chip').textContent();
     check(trozos.length === 1 && await hoja.getAttribute('role') === 'dialog' && /El apunte de hoy/.test(await hoja.locator('.apuntes-titulo').textContent()) && await hoja.locator('.apuntes-cuenta').count() === 0,
       'al abrirla: una pantalla con el apunte, sin cuenta (no hay descanso)');
     check(['Idea clave', 'Mito'].includes(chip0) && (await tarjeta.locator('h2').textContent()).length > 3, `el del día es de las guías (${chip0}: «${(await tarjeta.locator('h2').textContent()).slice(0, 40)}»)`);
@@ -79,16 +79,20 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
     await tarjeta.waitFor();
     const cuentaA = await hoja.locator('.apuntes-cuenta').textContent();
     check(Math.abs(seg(cuentaA) - seg(await reloj.locator('.cuenta').textContent())) <= 1, `arriba, la cuenta del descanso (${cuentaA})`);
-    const chip1 = await tarjeta.locator('.chip').textContent(), de1 = await tarjeta.locator('.apunte-de').textContent();
-    check(chip1 === 'La clave' && nombreEj.includes(de1) && (await tarjeta.locator('.apunte-texto').textContent()).length > 10, `el primero, una clave del ejercicio del que descansa (${de1}: «${(await tarjeta.locator('.apunte-texto').textContent()).slice(0, 50)}…»)`);
+    // (tanda 2) lo primero es lo suyo de ese momento (sus números o lo que le corrigió su coach); después, las claves
+    const chip0b = await tarjeta.locator('.apunte-etq .chip').textContent();
+    check(['Tus números', 'Te lo corrigió tu coach'].includes(chip0b), `lo primero, lo suyo (${chip0b})`);
+    for (let i = 0; i < 6 && await tarjeta.locator('.apunte-etq .chip').textContent() !== 'La clave'; i++) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(220); }
+    const chip1 = await tarjeta.locator('.apunte-etq .chip').textContent(), de1 = await tarjeta.locator('.apunte-de').textContent();
+    check(chip1 === 'La clave' && nombreEj.includes(de1) && (await tarjeta.locator('.apunte-texto').textContent()).length > 10, `y enseguida, una clave del ejercicio del que descansa (${de1}: «${(await tarjeta.locator('.apunte-texto').textContent()).slice(0, 50)}…»)`);
     const aj1 = await ajustes();
     check(aj1.apunte && !aj1.juego, 'queda apuntado que aprende en los descansos');
-    await hoja.getByRole('button', { name: /Otro apunte/ }).click();
-    await p.waitForTimeout(250);
-    check(['Idea clave', 'Mito'].includes(await tarjeta.locator('.chip').textContent()), 'el segundo, uno de las guías (no todo es técnica)');
+    let general = false;
+    for (let i = 0; i < 8 && !general; i++) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(220); general = ['Idea clave', 'Mito', 'Glosario', 'Duda frecuente', 'Novedad de la semana'].includes(await tarjeta.locator('.apunte-etq .chip').textContent()); }
+    check(general, 'entre las del ejercicio van saliendo las generales (no todo es técnica)');
     // hasta dar con uno que tenga vuelta (un error típico o un mito)
     let conVuelta = false;
-    for (let i = 0; i < 14 && !conVuelta; i++) {
+    for (let i = 0; i < 45 && !conVuelta; i++) {
       conVuelta = await hoja.locator('.apunte-destapar').count() === 1;
       if (!conVuelta) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(200); }
     }

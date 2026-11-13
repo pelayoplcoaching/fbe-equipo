@@ -78,7 +78,7 @@ const DEFECTOS = {
   recursos: () => ({ atleta_id: null, categoria: 'general', descripcion: null, url: null, orden: 0, destacado: false, directo_en: null, creado_en: ahora() }),
   youtube_canal: () => ({ id: true, titulo: null, activo: true, actualizado_en: ahora() }),
   // (060) la novedad de la semana
-  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora() }),
+  novedades: () => ({ fuente: null, enlace: null, publicada: false, publicada_en: null, creada_en: ahora(), tipo: 'novedad', ejercicio_id: null }),
   notas_ejercicio: () => ({ actualizado_en: ahora() }),
   respuestas_guardadas: () => ({ orden: 0, creado_en: ahora() }),
   avisos: () => ({ atleta_id: null, desde: hoyISO(), hasta: null, creado_en: ahora(), enviar_en: null }),
@@ -1986,6 +1986,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       else tabla('comunidad_votos_semana').push({ semana, de: uid, para: args.p_para, de_atleta: yo?.id || null, para_atleta: el.atleta_id, creado_en: ahora() });
       return semana;
     }
+    // (061) la manada en la travesía: como travesia_manada() (la clasificación de la semana entre quienes están dentro, sin
+    // los que no quieren salir en el ranking, quién ha corrido hoy y lo que suma el equipo en el mes)
+    if (nombre === 'travesia_manada') {
+      if (!uid || !veComunidad()) return null;
+      const hoy = fechaMadrid(), lunes = lunesHoy(), mes = `${hoy.slice(0, 7)}-01`;
+      const miembros = dentroTodos();
+      const de = (t) => miembros.find((m) => m.atleta_id === t.atleta_id);
+      const filas = tabla('travesia_semanas').filter((t) => t.semana === lunes && t.metros > 0 && de(t) && (!de(t).sin_ranking || de(t).perfil_id === uid))
+        .map((t) => ({ nombre: de(t).nombre, metros: t.metros, estrellas: t.estrellas, mejor: t.mejor, yo: de(t).perfil_id === uid, hoy: fechaMadrid(new Date(t.actualizada_en)) === hoy }))
+        .sort((x, y) => y.metros - x.metros || x.nombre.localeCompare(y.nombre));
+      const delMes = tabla('travesia_semanas').filter((t) => de(t) && t.semana >= sumar(mes, -6) && t.semana.slice(0, 7) <= hoy.slice(0, 7));
+      return { semana: lunes, filas, equipo: { mes, metros: delMes.reduce((n, t) => n + t.metros, 0), miembros: new Set(delMes.map((t) => t.atleta_id)).size } };
+    }
     if (nombre === 'comunidad_companero_semana') {
       if (!uid || !veComunidad()) return null;
       const pasada = sumar(lunesHoy(), -7);
@@ -3449,7 +3462,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'apuntar_apunte') {
         const a = miAtletaId();
         if (!a || deBaja()) return null;
-        if (!/^[peimn]:[A-Za-z0-9:_-]{1,78}$/.test(String(args.p_apunte || ''))) throw Object.assign(new Error('Ese no es un apunte'), { code: '22023' });
+        if (!/^[a-z]:[A-Za-z0-9:_-]{1,78}$/.test(String(args.p_apunte || ''))) throw Object.assign(new Error('Ese no es un apunte'), { code: '22023' });   // (061: cualquier letra)
         const hoy = new Date(); const dia = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())).toISOString().slice(0, 10);
         const sabia = typeof args.p_sabia === 'boolean' ? args.p_sabia : null;
         const x = tabla('apuntes_vistos').find((v) => v.atleta_id === a && v.apunte === args.p_apunte);
@@ -4012,6 +4025,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return tabla('semanas').filter((w) => w.bloque_id === bl.id).sort((a, b2) => a.numero - b2.numero).map((w) => ({ numero: w.numero, fecha_inicio: w.fecha_inicio, publicada: w.programacion === 'programada' }));
       }
       // Migración 027: la comunidad del equipo
+      if (nombre === 'travesia_manada') return copia(rpcComunidad(nombre, args || {}, uid, perfil) ?? null);   // (061) solo lee
       if (nombre.startsWith('comunidad_')) {
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();

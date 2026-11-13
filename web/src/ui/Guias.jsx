@@ -12,6 +12,7 @@ import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia } from '../logica/imagenes.js';
 import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
+import { apuntesDeGuias, apuntesDeGlosario, apuntesDeNovedades, apuntesDeFicha, preguntasDeFicha, masFallados, mensajeDeApunte } from '../logica/apuntes.js';
 import { listaGuias, guiaEntera, todasLasFichas, enlacesFichas, enlazarFicha, publicarGuia, fichaDeEjercicio, guiasConTexto, guiaPorClave, guiasLigeras } from '../datos/guias.js';
 
 // Un texto con su negrita
@@ -406,7 +407,66 @@ export function MitoDeLaSemana() {
 // (coach, 060) «La novedad de la semana»: un estudio o una idea en tres líneas, que sale a los atletas como un apunte más
 // (en el descanso, la primera; en Hoy, como «Novedad de la semana» hasta que la leen). El coach la escribe, la publica y
 // la puede corregir o borrar. Sin la 060, la lista sale vacía y al guardar se avisa de que falta.
-const NOVEDAD_VACIA = { id: null, titulo: '', texto: '', fuente: '', enlace: '', publicada: true };
+const NOVEDAD_VACIA = { id: null, titulo: '', texto: '', fuente: '', enlace: '', publicada: true, tipo: 'novedad', ejercicio_id: null, ejercicio: '' };
+
+// (tanda 4) Mandar un apunte a un atleta: le llega por Mensajes, como cualquier otro mensaje del coach
+function HojaMandarApunte({ apunte, alCerrar }) {
+  const { api, aviso } = useApp();
+  const atletas = useCarga(() => api.atletas().catch(() => []), []);
+  const [enviando, setEnviando] = useState(null);
+  const texto = mensajeDeApunte(apunte);
+  const mandar = async (a) => {
+    setEnviando(a.id);
+    try { await api.enviarMensaje(a.id, { autor: 'coach', texto }); aviso(`Enviado a ${a.nombre.split(' ')[0]}: lo verá en Mensajes`); alCerrar(); }
+    catch (e) { aviso(e.message, 'error'); setEnviando(null); }
+  };
+  const activos = (atletas.datos || []).filter((a) => a.estado !== 'baja');
+  return (
+    <Hoja titulo="Mandar a un atleta" alCerrar={alCerrar}>
+      <div class="pila-s mandar-apunte">
+        <blockquote class="panel panel-pad peq">{texto}</blockquote>
+        {atletas.cargando && <Siluetas forma="lista" n={3} texto="Cargando tus atletas" />}
+        {!atletas.cargando && !activos.length && <p class="peq secundario">Aún no tienes atletas a los que mandárselo.</p>}
+        {activos.length > 0 && (
+          <div class="panel">
+            {activos.map((a) => <button type="button" class="novedad-fila" key={a.id} disabled={!!enviando} onClick={() => mandar(a)}><strong>{a.nombre}</strong><span class="chip">{enviando === a.id ? 'Enviando…' : 'Mandar'}</span></button>)}
+          </div>
+        )}
+      </div>
+    </Hoja>
+  );
+}
+
+// (tanda 4) «Lo que más se falla»: los apuntes que más atletas han dicho que no sabían (o han fallado en una pregunta).
+// Solo cuentas: nunca quién. Desde aquí se le puede mandar ese apunte a un atleta.
+export function FalladosCoach() {
+  const { api, backend } = useApp();
+  const [mandar, setMandar] = useState(null);
+  const datos = useCarga(async () => {
+    const filas = await api.apuntesFallados().catch(() => []);
+    if (!filas.length) return [];
+    const [guias, fichas, novedades] = await Promise.all([guiasConTexto({ backend }).catch(() => []), todasLasFichas({ backend }, { conFicha: true }).catch(() => []), api.novedades().catch(() => [])]);
+    const apuntes = [...apuntesDeGuias(guias), ...apuntesDeGlosario(), ...apuntesDeNovedades(novedades), ...fichas.flatMap((f) => [...apuntesDeFicha(f), ...preguntasDeFicha(f)])];
+    return masFallados(filas, apuntes, 5);
+  }, []);
+  const filas = datos.datos || [];
+  if (!filas.length) return null;
+  return (
+    <section class="fallados-coach pila-s" aria-label="Lo que más se falla">
+      <div class="novedades-cab"><h2>Lo que más se falla</h2></div>
+      <p class="peq secundario">Los apuntes que más atletas no sabían al verlos en sus descansos. Buena pista para tu próxima novedad.</p>
+      <div class="panel">
+        {filas.map((x) => (
+          <div class="fallado-fila" key={x.id}>
+            <span class="pila-xs"><strong>{x.titulo || x.texto}</strong><span class="peq secundario">{x.etiqueta}{x.de ? ` · ${x.de}` : ''} · {x.atletas === 1 ? '1 atleta no lo sabía' : `${x.atletas} atletas no lo sabían`}</span></span>
+            <button type="button" class="btn btn-peq" onClick={() => setMandar(x)}>Mandar a…</button>
+          </div>
+        ))}
+      </div>
+      {mandar && <HojaMandarApunte apunte={mandar} alCerrar={() => setMandar(null)} />}
+    </section>
+  );
+}
 export function NovedadesCoach() {
   const { api, aviso } = useApp();
   const [n, setN] = useState(0);
@@ -414,11 +474,26 @@ export function NovedadesCoach() {
   const [f, setF] = useState(null);          // la que se está escribiendo
   const [guardando, setGuardando] = useState(false);
   const [borrar, setBorrar] = useState(false);
-  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada } : { ...NOVEDAD_VACIA }); };
+  const [mandar, setMandar] = useState(null);
+  // (tanda 4) los ejercicios de la biblioteca, para el apunte suelto de un ejercicio (solo se piden al escribir uno)
+  const suelto = f?.tipo === 'apunte';
+  const ejercicios = useCarga(() => (suelto ? api.biblioteca().catch(() => []) : Promise.resolve(null)), [suelto]);
+  const nombreDe = (id) => (id ? (ejercicios.datos || []).find((e) => e.id === id)?.nombre || '' : '');
+  const abrir = (x) => { setBorrar(false); setF(x ? { id: x.id, titulo: x.titulo || '', texto: x.texto || '', fuente: x.fuente || '', enlace: x.enlace || '', publicada: !!x.publicada, tipo: x.tipo === 'apunte' ? 'apunte' : 'novedad', ejercicio_id: x.ejercicio_id || null, ejercicio: null } : { ...NOVEDAD_VACIA }); };
   const guardar = async (ev) => {
     ev.preventDefault();
     setGuardando(true);
-    try { await api.guardarNovedad(f); aviso(f.publicada ? 'Publicada: tus atletas la verán en sus apuntes' : 'Guardada sin publicar'); setF(null); setN(n + 1); }
+    try {
+      // (el ejercicio se escribe por su nombre: tiene que ser uno de la biblioteca)
+      let ejercicio_id = null;
+      if (suelto) {
+        const escrito = (f.ejercicio ?? nombreDe(f.ejercicio_id)).trim().toLocaleLowerCase('es');
+        ejercicio_id = escrito ? (ejercicios.datos || []).find((e) => e.nombre.trim().toLocaleLowerCase('es') === escrito)?.id || null : null;
+        if (escrito && !ejercicio_id) throw new Error('No encuentro ese ejercicio en tu biblioteca: elige uno de la lista o déjalo vacío');
+      }
+      await api.guardarNovedad({ id: f.id, titulo: f.titulo, texto: f.texto, fuente: f.fuente, enlace: f.enlace, publicada: f.publicada, tipo: f.tipo, ejercicio_id });
+      aviso(f.publicada ? (suelto ? 'Publicado: tus atletas lo verán en sus apuntes' : 'Publicada: tus atletas la verán en sus apuntes') : 'Guardada sin publicar'); setF(null); setN(n + 1);
+    }
     catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
   };
   const quitar = async () => {
@@ -439,14 +514,24 @@ export function NovedadesCoach() {
             <button type="button" class="novedad-fila" key={x.id} onClick={() => abrir(x)}>
               <strong>{x.titulo}</strong>
               {x.publicada ? <span class="chip">Publicada</span> : <span class="chip aviso">Sin publicar</span>}
-              <span class="peq secundario">{x.publicada_en ? fmtCorta(String(x.publicada_en).slice(0, 10)) : 'Borrador'}{x.fuente ? ` · ${x.fuente}` : ''}</span>
+              <span class="peq secundario">{x.tipo === 'apunte' ? 'Apunte suelto · ' : ''}{x.publicada_en ? fmtCorta(String(x.publicada_en).slice(0, 10)) : 'Borrador'}{x.fuente ? ` · ${x.fuente}` : ''}</span>
             </button>
           ))}
         </div>
       )}
       {f && (
-        <Hoja titulo={f.id ? 'Novedad' : 'Nueva novedad'} alCerrar={() => setF(null)}>
+        <Hoja titulo={f.id ? (suelto ? 'Apunte suelto' : 'Novedad') : suelto ? 'Nuevo apunte' : 'Nueva novedad'} alCerrar={() => setF(null)}>
           <form class="novedad-form" onSubmit={guardar}>
+            <div class="segmentos novedad-tipo" role="group" aria-label="Qué es">
+              <button type="button" aria-pressed={!suelto ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'novedad' })}>Novedad de la semana</button>
+              <button type="button" aria-pressed={suelto ? 'true' : 'false'} onClick={() => setF({ ...f, tipo: 'apunte' })}>Apunte suelto</button>
+            </div>
+            <p class="mini secundario">{suelto ? 'Un apunte tuyo que no caduca: sale en los descansos como «De tu coach». Si eliges un ejercicio, solo en los descansos de ese ejercicio.' : 'La ven la primera, en el descanso y en Hoy, durante una semana o hasta que la leen.'}</p>
+            {suelto && (
+              <div class="campo"><label for="nov-ejercicio">Ejercicio <span class="secundario">(opcional)</span></label>
+                <input id="nov-ejercicio" class="entrada" list="nov-ejercicios" autocomplete="off" value={f.ejercicio ?? nombreDe(f.ejercicio_id)} placeholder="Escribe para buscar en tu biblioteca" onInput={(e) => setF({ ...f, ejercicio: e.currentTarget.value })} />
+                <datalist id="nov-ejercicios">{(ejercicios.datos || []).map((e) => <option key={e.id} value={e.nombre} />)}</datalist></div>
+            )}
             <div class="campo"><label for="nov-titulo">Título</label>
               <input id="nov-titulo" class="entrada" required maxLength={90} value={f.titulo} placeholder="La idea, en una frase" onInput={(e) => setF({ ...f, titulo: e.currentTarget.value })} /></div>
             <div class="campo"><label for="nov-texto">Texto</label>
@@ -459,10 +544,12 @@ export function NovedadesCoach() {
             <label class="interruptor-fila panel panel-pad"><span class="pila-xs"><strong>Publicada</strong><span class="mini secundario">Sin publicar se queda como borrador: tus atletas no la ven.</span></span>
               <input type="checkbox" role="switch" class="interruptor" checked={f.publicada} onChange={(e) => setF({ ...f, publicada: e.currentTarget.checked })} /></label>
             <button type="submit" class="btn btn-primario" disabled={guardando}>{f.publicada ? 'Guardar y publicar' : 'Guardar borrador'}</button>
-            {f.id && <button type="button" class="btn-texto peligro" onClick={quitar}>{borrar ? '¿Seguro? Toca otra vez para borrarla' : 'Borrar esta novedad'}</button>}
+            {f.id && <button type="button" class="btn" onClick={() => setMandar({ titulo: f.titulo, texto: f.texto, de: '' })}><Icono n="enviar" /> Mandar a un atleta</button>}
+            {f.id && <button type="button" class="btn-texto peligro" onClick={quitar}>{borrar ? '¿Seguro? Toca otra vez para borrarla' : suelto ? 'Borrar este apunte' : 'Borrar esta novedad'}</button>}
           </form>
         </Hoja>
       )}
+      {mandar && <HojaMandarApunte apunte={mandar} alCerrar={() => setMandar(null)} />}
     </section>
   );
 }
@@ -478,6 +565,7 @@ export function GuiasCoach() {
   return (
     <div class="pila">
       <NovedadesCoach />
+      <FalladosCoach />
       <p class="peq secundario">Tus guías. Tus atletas las leen en «Aprende», y cada ejercicio de la biblioteca enlazado a una ficha la enseña en su pestaña «Técnica»{enlaces.datos ? ` (ahora, ${cuantos === 1 ? '1 ejercicio enlazado' : `${cuantos} ejercicios enlazados`}; se enlazan al editar cada ejercicio)` : ''}.</p>
       <ListaGuias key={n} alAbrir={(g, seccion = null) => setAbierta({ ...g, seccion })} esCoach />
       {abierta && (

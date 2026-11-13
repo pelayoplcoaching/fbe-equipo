@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.149': {
+    atleta: [
+      'La travesía crece: un mapa de verdad, postales, lobos y constelaciones, y la clasificación de la semana con tu equipo.',
+      'Apuntes con lo tuyo: preguntas, glosario, guardados, el curso de la semana, un examen y tu racha de aprendizaje.',
+    ],
+    coach: [
+      'Guías → «Nueva» → «Apunte suelto», mandar un apunte por Mensajes y «Lo que más se falla» (migración 061, después de la 060).',
+    ],
+  },
   '0.148': {
     atleta: [
       'La novedad de la semana de tu coach, y tu travesía y tus apuntes ya no se pierden al cambiar de móvil.',

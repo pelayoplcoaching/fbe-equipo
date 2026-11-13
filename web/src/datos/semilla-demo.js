@@ -911,6 +911,13 @@ function sembrarComunidad(db, { lunesHoy, hace, coachId, ruben, carlos }) {
   const mCarlos = db.comunidad_miembros.find((m) => m.atleta_id === carlos.id);
   if (mCarlos) mCarlos.cardio_en_retos = true;
   for (const m of db.comunidad_miembros) m.cardio_en_retos ??= false;
+  // (061) la travesía de los del equipo esta semana y la pasada (la de Ana empieza vacía: la juega quien prueba la demo)
+  db.travesia_semanas ||= [];
+  [[ruben, 4200, 31, 9, 820, 1], [carlos, 2600, 18, 6, 640, 2], [lucia, 900, 6, 3, 400, 60 * 24 * 2]].forEach(([a, metros, estrellas, etapas, mejor, min]) => {
+    if (!a) return;
+    db.travesia_semanas.push({ atleta_id: a.id, semana: lunesHoy, metros, estrellas, etapas, mejor, actualizada_en: hace(min) });
+    if (a !== lucia) db.travesia_semanas.push({ atleta_id: a.id, semana: sumarDias(lunesHoy, -7), metros: metros * 2, estrellas: estrellas * 2, etapas: etapas * 2, mejor, actualizada_en: hace(60 * 24 * 8) });
+  });
   const rCardio = reto('Mes de cardio: 400 minutos entre todos', 'Suman los minutos de cardio de quien los cuenta en los retos (se enciende en el propio reto o en los ajustes del equipo).', sumarDias(lunesHoy, -28), sumarDias(lunesHoy, 13), 400, 'equipo', 28);
   rCardio.medida = 'cardio';
   const rEquipos = reto('Rojos contra azules: 15 sesiones', 'Dos equipos: el primero en llegar a 15 sesiones gana.', sumarDias(lunesHoy, -7), sumarDias(lunesHoy, 13), 15, 'equipos', 7);

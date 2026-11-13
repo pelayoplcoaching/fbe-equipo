@@ -1,7 +1,7 @@
 // «La travesía», el juego del descanso: el juego sin pantalla (logica/travesia.js). Uso: node test/travesia.test.mjs
 import {
-  nuevaEtapa, avanzar, saltar, resultado, perfil, azar, textoDistancia, limpiarTravesia, sumarEtapa, TRAVESIA_VACIA,
-  OBSTACULOS, LOBO, V_BASE, V_MAX, V_SALTO, GRAVEDAD,
+  nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, perfil, azar, textoDistancia, limpiarTravesia, sumarEtapa, TRAVESIA_VACIA,
+  OBSTACULOS, LOBO, V_BASE, V_MAX, V_SALTO, GRAVEDAD, V_CALMA, CADA_RIO, retoDelDia, progresoReto, hoyDe, RETOS, faseLuna, climaDe, ambiente,
 } from '../web/src/logica/travesia.js';
 
 let ok = 0, fallos = 0;
@@ -31,7 +31,8 @@ function jugarSolo(e, segundos) {
     if (e.saltos === 0 && e.tropiezo === 0) {
       plan = null;
       const o = e.obstaculos.find((q) => !q.pasado && !q.chocado);
-      if (o && o.x - e.x < 9) {
+      if (o && o.tipo === 'rama') { if (e.agachado < 0.3 && o.x - o.w / 2 - (e.x + LOBO.medio) < 0.5) agachar(e); }
+      else if (o && o.x - e.x < 9) {
         const dobles = [null, 0.12, 0.2, 0.28, 0.36, 0.44];
         const d = dobles.find((q) => pasaCon(e, o, q));
         if (d !== undefined) { saltar(e); plan = d == null ? null : { en: e.t + d }; }
@@ -59,10 +60,11 @@ console.log('El terreno');
   check(e.obstaculos[0].x - e.obstaculos[0].w / 2 >= 14 + 7.5, `los primeros metros, despejados (el primer obstáculo, a ${e.obstaculos[0].x.toFixed(1)} m)`);
   // 3 km de terreno sin jugar: huecos y tipos
   while (e.x < 3000) avanzar(e, 0.1);
+  // (para medir el terreno tal cual: sin tropezar, que afloja la dificultad, y sin racha, que la aprieta)
   const g = nuevaEtapa(5); const todos = []; let ultimo = -1;
-  while (g.x < 3000) { for (const o of g.obstaculos) if (o.x > ultimo) { todos.push({ ...o }); ultimo = o.x; } avanzar(g, 0.1); }
+  while (g.x < 3000) { g.inmune = 9; g.racha = 0; g.reto = 0; for (const o of g.obstaculos) if (o.x > ultimo) { todos.push({ ...o }); ultimo = o.x; } avanzar(g, 0.1); }
   const huecos = todos.slice(1).map((o, i) => (o.x - o.w / 2) - (todos[i].x + todos[i].w / 2));
-  check(Math.min(...huecos) >= 7.49 && Math.max(...huecos) <= 17.01, `entre dos obstáculos, de ${Math.min(...huecos).toFixed(1)} a ${Math.max(...huecos).toFixed(1)} m: da para caer y volver a saltar`);
+  check(Math.min(...huecos) >= 7.49 && Math.max(...huecos) <= 18.51, `entre dos obstáculos, de ${Math.min(...huecos).toFixed(1)} a ${Math.max(...huecos).toFixed(1)} m: da para caer y volver a saltar`);
   const tipos = todos.reduce((m, o) => ({ ...m, [o.tipo]: (m[o.tipo] || 0) + 1 }), {});
   check(tipos.roca > 60 && tipos.pico > 60 && tipos.monte > 15 && tipos.monte < tipos.pico, `rocas, picos y algún monte (${tipos.roca}, ${tipos.pico}, ${tipos.monte})`);
   check(todos.filter((o) => o.tipo === 'monte').every((o) => o.x > OBSTACULOS.monte.desde), `los montes (piden doble salto) no salen en los primeros ${OBSTACULOS.monte.desde} m`);
@@ -109,13 +111,182 @@ console.log('Todo lo que sale se puede saltar');
   }
   check(tropiezos === 0, `un jugador perfecto no tropieza nunca en 40 etapas de 3 minutos (${tropiezos} tropiezos; la peor, ${peor})`);
   const media = metros.reduce((a, b) => a + b, 0) / metros.length;
-  check(media > 1700 && media < 180 * V_MAX, `y en 3 minutos recorre unos ${Math.round(media)} m (va cogiendo ritmo hasta ${V_MAX} m/s)`);
+  check(media > 1700 && media < 180 * (V_MAX + 1), `y en 3 minutos recorre unos ${Math.round(media)} m (va cogiendo ritmo hasta ${V_MAX} m/s, y uno más si va sobrado)`);
   check(estrellas / 40 > 15, `cogiendo estrellas por el camino (${Math.round(estrellas / 40)} de media)`);
   check(rachaMax > 100, `con rachas largas (${rachaMax} seguidos)`);
   const e = jugarSolo(nuevaEtapa(11), 30);
-  check(e.v > V_BASE + 1.5 && e.v <= V_MAX, `saltando seguido corre más (${e.v.toFixed(1)} m/s a los 30 s)`);
+  check(e.v > V_BASE + 1.5 && e.v <= V_MAX + 1, `saltando seguido corre más (${e.v.toFixed(1)} m/s a los 30 s)`);
   const r = resultado(e);
   check(Number.isInteger(r.metros) && r.metros === Math.round(e.x) && r.estrellas === e.estrellasCogidas && r.racha === e.mejorRacha, 'el resultado: metros enteros, estrellas y la mejor racha');
+}
+
+console.log('(tanda 1) El río, cada kilómetro de travesía');
+{
+  const g = nuevaEtapa(8, { km0: 600 }); const rios = []; let ultimo = -1;
+  while (g.x < 2600) { g.inmune = 9; g.racha = 0; for (const o of g.obstaculos) if (o.x > ultimo) { if (o.tipo === 'rio') rios.push(o.x); ultimo = o.x; } avanzar(g, 0.1); }
+  check(rios.length === 3 && rios.every((x, i) => Math.abs(600 + x - (i + 1) * CADA_RIO) < 60), `con 600 m ya hechos, el primer río llega a los ${Math.round(rios[0])} m de la etapa (el km 1 de su travesía) y después uno por kilómetro`);
+  const e = jugarSolo(nuevaEtapa(21, { km0: 900 }), 60);
+  check(e.rios >= 1 && e.tropiezos === 0 && resultado(e).rios === e.rios, `el jugador perfecto lo cruza (${e.rios}) y cuenta en el resultado`);
+  const sin = nuevaEtapa(8); let hay = false; while (sin.x < 800) { sin.inmune = 9; if (sin.obstaculos.some((o) => o.tipo === 'rio')) hay = true; avanzar(sin, 0.1); }
+  check(!hay, 'en los primeros 800 m de una travesía nueva no hay río');
+}
+
+console.log('(tanda 1) Las ramas: agacharse');
+{
+  let ramas = 0, trop = 0, sinMov = 0;
+  for (let s = 1; s <= 12; s++) {
+    const e = jugarSolo(nuevaEtapa(s * 131, { movimientos: true }), 150); trop += e.tropiezos;
+    const g = nuevaEtapa(s * 131, { movimientos: true }); while (g.x < 1500) { g.inmune = 9; g.racha = 0; avanzar(g, 0.1); ramas += g.obstaculos.filter((o) => o.tipo === 'rama' && !o.contada && (o.contada = true)).length; }
+    const n = nuevaEtapa(s * 131); while (n.x < 1500) { n.inmune = 9; avanzar(n, 0.1); sinMov += n.obstaculos.filter((o) => o.tipo === 'rama').length; }
+  }
+  check(ramas > 20 && sinMov === 0, `con «movimientos» salen ramas (${ramas} en 12 etapas); sin ellos, ninguna`);
+  check(trop === 0, `agachándose a tiempo, el jugador perfecto no tropieza (${trop})`);
+  const e = nuevaEtapa(3, { movimientos: true });
+  e.obstaculos = [{ x: 20, tipo: 'rama', ...OBSTACULOS.rama, pasado: false }]; e.estrellas = []; e.hasta = 1e9;
+  while (e.x < 26) avanzar(e, 1 / 60);
+  check(e.tropiezos === 1, 'de pie, la rama da en la cabeza');
+  const a = nuevaEtapa(3, { movimientos: true });
+  a.obstaculos = [{ x: 20, tipo: 'rama', ...OBSTACULOS.rama, pasado: false }]; a.estrellas = []; a.hasta = 1e9;
+  while (a.x < 26) { if (a.x > 18.2 && a.agachado === 0 && a.x < 19) agachar(a); avanzar(a, 1 / 60); }
+  check(a.tropiezos === 0 && a.saltados === 1, 'agachado, pasa por debajo');
+  const j = nuevaEtapa(3); saltar(j); for (let i = 0; i < 20; i++) avanzar(j, 1 / 60);
+  check(!agachar(j) && j.agachado === 0 && j.saltos === 1, 'en pleno salto no se agacha');
+  const k2 = nuevaEtapa(3); saltar(k2); avanzar(k2, 1 / 60);
+  check(agachar(k2) && k2.saltos === 0 && k2.y === 0 && k2.agachado > 0, 'si el dedo toca y baja enseguida, el salto recién empezado se deshace y se agacha');
+  agachar(k2); saltar(k2);
+  check(k2.agachado === 0 && k2.saltos === 1, 'y al saltar se levanta');
+}
+
+console.log('(tanda 1) El entreno empuja: ritmo de salida y escudos');
+{
+  const n = nuevaEtapa(4), r = nuevaEtapa(4, { racha0: 10 });
+  check(n.v === V_BASE && r.v > V_BASE + 1.5 && r.racha === 10 && nuevaEtapa(4, { racha0: 999 }).racha === 18, `tras un récord sale con el ritmo cogido (${r.v.toFixed(1)} m/s en vez de ${n.v})`);
+  const e = nuevaEtapa(3, { escudos: 1 });
+  while (e.escudosUsados === 0 && e.t < 30) avanzar(e, 1 / 60);
+  const v1 = e.v;
+  check(e.escudos === 0 && e.escudosUsados === 1 && e.tropiezos === 0 && e.tropiezo === 0 && e.sucesos.includes('escudo') && v1 >= V_BASE - 0.01, 'con un escudo, el primer tropiezo se perdona: ni frena ni cuenta');
+  while (e.tropiezos === 0 && e.t < 60) avanzar(e, 1 / 60);
+  check(e.tropiezos === 1, 'el segundo ya no');
+  check(nuevaEtapa(1, { escudos: 9 }).escudos === 3 && nuevaEtapa(1, { escudos: -2 }).escudos === 0, 'como mucho tres escudos');
+}
+
+console.log('(tanda 1) La dificultad se adapta');
+{
+  const e = nuevaEtapa(3);
+  while (e.t < 45) avanzar(e, 1 / 60);
+  check(e.ayuda >= 0.34 && e.tropiezos >= 3, `tres tropiezos en medio minuto y afloja (ayuda ${e.ayuda.toFixed(2)})`);
+  const lejos = e.obstaculos.filter((o) => o.x > e.x + 20);
+  const s = jugarSolo(nuevaEtapa(5), 120);
+  check(s.reto > 0 && s.tropiezos === 0, `si va sobrado (25 seguidos), aprieta un punto (reto ${s.reto}) y sigue siendo saltable`);
+  const f = nuevaEtapa(9); f.ayuda = 1; f.hasta = 200; f.obstaculos = []; avanzar(f, 0.01);
+  while (f.x < 900) { f.inmune = 9; f.racha = 0; f.ayuda = 1; avanzar(f, 0.1); }
+  check(!f.obstaculos.some((o) => o.tipo === 'monte') && lejos.length >= 0, 'con la ayuda a tope no salen montes');
+}
+
+console.log('(tanda 1) Mantener pulsado y el modo calma');
+{
+  const largo = (pulsa) => { const e = nuevaEtapa(1); e.obstaculos = []; e.hasta = 1e9; pulsar(e, pulsa); saltar(e); const x0 = e.x; let alto = 0; while (e.saltos) { avanzar(e, 1 / 120); alto = Math.max(alto, e.y); } return [e.x - x0, alto]; };
+  const [c, ac] = largo(false), [l, al] = largo(true);
+  check(l > c * 1.2 && al > ac * 1.3, `mantener pulsado alarga el salto (de ${c.toFixed(1)} a ${l.toFixed(1)} m; sube ${al.toFixed(1)} m)`);
+  const k = nuevaEtapa(6, { calma: true, escudos: 2, racha0: 9 });
+  while (k.t < 60) avanzar(k, 1 / 60);
+  check(k.obstaculos.length === 0 && k.tropiezos === 0 && Math.abs(k.x - 60 * V_CALMA) < 1 && k.estrellasCogidas > 5 && !saltar(k) && !agachar(k) && resultado(k).calma === true, `en calma no hay obstáculos: va al paso (${Math.round(k.x)} m en un minuto) y coge estrellas (${k.estrellasCogidas})`);
+  const r = resultado(jugarSolo(nuevaEtapa(2), 20));
+  check(r.segundos === 20 && r.tropiezos === 0 && r.rios === 0 && r.calma === false, 'el resultado trae también los segundos, los tropiezos y los ríos');
+}
+
+console.log('(tanda 1) El reto del día, el ritmo y lo de hoy');
+{
+  const d = '2026-11-12';
+  check(retoDelDia(d).id === retoDelDia(d).id && new Set(['2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16'].map((x) => retoDelDia(x).id)).size === RETOS.length && retoDelDia('mal').id === RETOS[0].id, 'un reto distinto cada día, el mismo para todos; en cinco días salen los cinco');
+  let t = sumarEtapa(null, { sesion: 's', metros: 500, estrellas: 5, segundos: 60, tropiezos: 0, dia: d });
+  t = sumarEtapa(t, { sesion: 's', metros: 700, estrellas: 8, segundos: 90, tropiezos: 2, rios: 1, dia: d });
+  const h = hoyDe(t, d);
+  check(h.metros === 1200 && h.estrellas === 13 && h.etapas === 2 && h.limpias === 1 && h.mejor === 700 && h.rios === 1 && t.rios === 1, 'lo de hoy: metros, estrellas, etapas, las limpias, la mejor y los ríos');
+  check(t.ritmo === 833, `su mejor ritmo (${t.ritmo / 100} m/s), de las etapas de medio minuto o más`);
+  check(sumarEtapa(t, { sesion: 's', metros: 300, segundos: 10, dia: d }).ritmo === 833 && sumarEtapa(t, { sesion: 's', metros: 900, segundos: 60, calma: true, dia: d }).ritmo === 833, 'una etapa muy corta o en calma no lo cambia');
+  const lejos = RETOS.find((r) => r.id === 'lejos'), est = RETOS.find((r) => r.id === 'estrellas');
+  check(progresoReto(lejos, h).hecho && progresoReto(lejos, h).valor === 600 && progresoReto(est, h).hecho && !progresoReto(RETOS.find((r) => r.id === 'etapas'), h).hecho, 'el progreso de cada reto con lo de hoy (sin pasarse de la meta)');
+  // el día cuyo reto es «lejos»
+  const dl = ['2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16'].find((x) => retoDelDia(x).id === 'lejos');
+  let r = sumarEtapa(null, { sesion: 's', metros: 400, segundos: 60, tropiezos: 1, dia: dl });
+  check(!r.hoy.retoHecho && r.retos === 0, 'sin llegar, el reto sigue abierto');
+  r = sumarEtapa(r, { sesion: 's', metros: 650, segundos: 70, tropiezos: 0, dia: dl });
+  const r2 = sumarEtapa(r, { sesion: 's', metros: 800, segundos: 80, tropiezos: 0, dia: dl });
+  check(r.hoy.retoHecho && r.retos === 1 && r2.retos === 1, 'al llegar queda hecho y cuenta una vez');
+  const otro = sumarEtapa(r2, { sesion: 's', metros: 100, segundos: 30, dia: '2026-12-01' });
+  check(otro.hoy.dia === '2026-12-01' && otro.hoy.metros === 100 && !otro.hoy.retoHecho && otro.retos === 1 && hoyDe(r2, '2026-12-01').metros === 0, 'al día siguiente, la cuenta de hoy empieza de cero');
+  check(sumarEtapa(null, { metros: 900, segundos: 60, dia: d }).hoy.dia === '' , 'la práctica no cuenta para el reto');
+  check(limpiarTravesia({ hoy: { dia: 'x', metros: 5 }, ritmo: 99999, retos: 'a' }).hoy.dia === '' && limpiarTravesia({ ritmo: 99999 }).ritmo === 1500, 'lo guardado ilegible se sanea');
+}
+
+console.log('(tanda 1) El cielo de verdad');
+{
+  const llena = faseLuna(Date.UTC(2026, 10, 24, 14, 53)), nueva = faseLuna(Date.UTC(2026, 10, 9, 7, 2));
+  check(llena.ilum > 0.97 && nueva.ilum < 0.03, `la luna: llena el 24 de noviembre de 2026 (${llena.ilum.toFixed(2)}) y nueva el 9 (${nueva.ilum.toFixed(2)})`);
+  check(faseLuna(Date.UTC(2026, 10, 16)).creciente && !faseLuna(Date.UTC(2026, 10, 30)).creciente, 'creciente entre la nueva y la llena; menguante después');
+  check(climaDe(63) === 'lluvia' && climaDe(81) === 'lluvia' && climaDe(73) === 'nieve' && climaDe(86) === 'nieve' && climaDe(45) === 'niebla' && climaDe(96) === 'tormenta' && climaDe(2) === null && climaDe(null) === null && climaDe('x') === null, 'lo que cae, del código del tiempo');
+  check(ambiente({ hora: 23 }).fase === 'noche' && ambiente({ hora: 7 }).fase === 'alba' && ambiente({ hora: 13 }).fase === 'dia' && ambiente({ hora: 20 }).fase === 'ocaso', 'el cielo, según la hora');
+  check(ambiente({ hora: 17, esDia: false }).fase === 'ocaso' && ambiente({ hora: 19, esDia: false }).fase === 'noche', 'y si la previsión dice que ya no es de día (invierno), se adelanta');
+  check(ambiente({ total: 0 }).paisaje === 0 && ambiente({ total: 5200 }).paisaje === 1 && ambiente({ total: 12000 }).paisaje === 2 && ambiente({ total: 16000 }).paisaje === 3 && ambiente({ total: 21000 }).paisaje === 0, 'el paisaje cambia cada 5 km: montaña, bosque, nieve, amanecer y vuelta');
+  check(ambiente({ total: 12000, hora: 13 }).clima === 'nieve' && ambiente({ total: 16000, hora: 23 }).fase === 'alba' && ambiente({ codigo: 63, hora: 13 }).clima === 'lluvia', 'en la nieve, nieva; en el amanecer, amanece; y si fuera llueve, llueve');
+}
+
+console.log('(tanda 3) El mapa y las postales');
+{
+  const R = await import('../web/src/logica/travesia-ruta.js');
+  const p0 = R.posicionEnRuta(0);
+  check(p0.ruta.id === 'mieres-madrid' && p0.km === 0 && p0.anterior[0] === 'Mieres' && p0.siguiente[0] === 'Pola de Lena' && p0.faltan === 12 && p0.pasados === 1, 'la travesía sale de Mieres; lo siguiente, Pola de Lena, a 12 km');
+  const p1 = R.posicionEnRuta(40500);
+  check(p1.km === 40.5 && p1.anterior[0] === 'Puerto de Pajares' && p1.siguiente[0] === 'La Robla' && p1.faltan === 44.5 && Math.abs(p1.pct - 0.09) < 0.001, 'con 40,5 km: pasado Pajares, camino de La Robla');
+  const p2 = R.posicionEnRuta(450000), p3 = R.posicionEnRuta(460000);
+  check(p2.ruta.id === 'madrid-valencia' && p2.km === 0 && p3.km === 10 && p3.n === 1 && p3.siguiente[0] === 'Arganda', 'al llegar a Madrid empieza la ruta a Valencia');
+  const fin = R.posicionEnRuta((450 + 355 + 350) * 1000 + 5000);
+  check(fin.ruta.id === 'mieres-madrid' && fin.n === 3 && fin.km === 5, 'y tras Barcelona, vuelta a empezar');
+  check(R.RUTAS.every((r) => r.hitos[0][1] === 0 && r.hitos.every(([, k], i) => i === 0 || k > r.hitos[i - 1][1])), 'los hitos de cada ruta van en orden');
+  const post = R.postales(40500);
+  check(post.length === 3 && post[0].lugar === 'Puerto de Pajares' && post[2].lugar === 'Mieres' && post.every((x) => /^mes-(0[1-9]|1[0-2])$/.test(x.imagen)), 'una postal por hito alcanzado, la última primero, con su ilustración');
+  check(R.postales(460000).length === 10 && R.postales(460000)[0].lugar === 'Madrid' && R.postales(480000)[0].lugar === 'Arganda' && R.postales(480000).length === 11 && new Set(R.postales(480000).map((x) => x.id)).size === 11, 'la llegada de una ruta es la salida de la siguiente (una sola postal)');
+  check(R.textoRuta(p0) === 'Tu lobo sale de Mieres. Lo primero, Pola de Lena, a 12 km.' && R.textoRuta(p1) === 'Va por el km 40,5 de 450: pasado Puerto de Pajares, a 44,5 km de La Robla.', 'dónde va, en una frase');
+  check(R.textoParaCompartir({ total: 40500, estrellas: 47 }) === 'Mi lobo lleva 40,5 km en La travesía (de Mieres a Madrid): ha pasado Puerto de Pajares y va camino de La Robla. 47 estrellas por el camino. Avanza solo cuando entreno.' && R.textoParaCompartir(null) === '', 'y para contarlo fuera');
+  const nuevas = R.postalesNuevas(11000, 39000);
+  check(nuevas.map((x) => x.lugar).join() === 'Puerto de Pajares,Pola de Lena' && R.postalesNuevas(39000, 39500).length === 0, 'las postales nuevas de una etapa');
+}
+
+console.log('(tanda 3) Los lobos, las constelaciones y la manada');
+{
+  const R = await import('../web/src/logica/travesia-ruta.js');
+  const l0 = R.lobosDe(null), l1 = R.lobosDe({ total: 26000, estrellas: 120, retos: 5, rios: 2 });
+  check(l0.filter((x) => x.tiene).map((x) => x.id).join() === 'tiza' && l1.filter((x) => x.tiene).map((x) => x.id).join() === 'tiza,lavanda,oro,nieve', 'los lobos se van ganando: con 26 km y 5 retos, el lavanda, el dorado y el de nieve');
+  check(R.loboElegido(l1 && { total: 26000, retos: 5 }, 'oro').id === 'oro' && R.loboElegido({ total: 100 }, 'oro').id === 'tiza' && R.loboElegido(null, 'no-existe').id === 'tiza', 'el elegido, si lo tiene; si no, el de tiza');
+  check(R.LOBOS.every((l) => /^#[0-9A-F]{6}$/i.test(l.claro) && /^#[0-9A-F]{6}$/i.test(l.sombra)) && new Set(R.LOBOS.map((l) => l.id)).size === R.LOBOS.length, 'cada lobo, con sus dos colores');
+  const c0 = R.constelaciones(0), c1 = R.constelaciones(47);
+  check(c0.every((c) => !c.completa && c.cogidas === 0) && c1[0].completa && c1[0].total === 40 && c1[1].estrellas === 7 && c1[1].cogidas === 1 && !c1[1].completa && R.constelacionesCompletas(47) === 1, 'las estrellas completan constelaciones en orden: la primera con 40; con 47, una estrella de la segunda');
+  check(R.constelaciones(1e6).every((c) => c.completa) && R.CONSTELACIONES.every((c) => c.lineas.every(([a, b]) => a < c.puntos.length && b < c.puntos.length) && c.puntos.every(([x, y]) => x >= 0 && x <= 1 && y >= 0 && y <= 1)), 'todas se pueden completar y sus líneas unen puntos que existen');
+  check(R.manadaPropia(0) === 0 && R.manadaPropia(3) === 3 && R.manadaPropia(9) === 4 && R.manadaPropia(null) === 0, 'tu manada: un lobo por semana completa seguida, hasta cuatro');
+  const filas = [{ nombre: 'Fer M.', metros: 3000, hoy: true }, { nombre: 'Ana L.', metros: 1200, yo: true, hoy: true }, { nombre: 'Gus R.', metros: 800, hoy: false }];
+  check(R.miPuesto(filas) === 2 && R.miPuesto([]) === null && R.correnHoy(filas).join() === 'Fer M.', 'mi puesto en la semana y quién más ha corrido hoy');
+  check(R.duelo(filas, 'Gus R.', 2000).yo === 2000 && R.duelo(filas, 'Gus R.', 100).yo === 1200, 'en el duelo, lo mío es lo que más lleve: el móvil o la base');
+  const d = R.duelo(filas, 'Fer M.');
+  check(d.yo === 1200 && d.el === 3000 && d.diferencia === -1800 && !d.gano && R.duelo(filas, 'Gus R.').gano && R.duelo(filas, 'Nadie') === null && R.duelo(filas, 'Ana L.') === null, 'el duelo de la semana con un compañero');
+  const eq = R.equipoDelMes({ metros: 30000, miembros: 5 });
+  check(eq.meta === 75000 && Math.abs(eq.pct - 0.4) < 1e-9 && !eq.hecho && R.equipoDelMes({ metros: 60000, miembros: 2 }).hecho && R.equipoDelMes(null).meta === 50000, 'la travesía en equipo: 15 km por cabeza al mes (50 como poco)');
+}
+
+console.log('(tanda 3) Las semanas seguidas');
+{
+  const T = await import('../web/src/logica/travesia.js');
+  let g = T.sumarEtapa(null, { sesion: 's1', metros: 300, dia: '2026-11-04' });
+  g = T.sumarEtapa(g, { sesion: 's2', metros: 200, dia: '2026-11-06' });
+  check(g.semanas['2026-11-02'] === 500 && T.rachaSemanas(g, '2026-11-08') === 1 && T.rachaSemanas(g, '2026-11-10') === 1 && T.rachaSemanas(g, '2026-11-17') === 0, 'los metros de la semana se guardan por su lunes; la racha aguanta la semana siguiente mientras no pase entera');
+  g = T.sumarEtapa(g, { sesion: 's3', metros: 100, dia: '2026-11-11' });
+  check(T.rachaSemanas(g, '2026-11-13') === 2, 'dos semanas seguidas');
+  const b = T.conBase(g, [{ semana: '2026-10-26', metros: 900 }, { semana: '2026-10-12', metros: 400 }, { semana: '2026-11-02', metros: 100 }]);
+  check(b.semanas['2026-10-26'] === 900 && b.semanas['2026-11-02'] === 500 && T.rachaSemanas(b, '2026-11-13') === 3, 'con las semanas de la base (la que más tenga), tres seguidas: la del 12 de octubre no enlaza');
+  check(T.rachaSemanas(T.sumarEtapa(null, { metros: 300, dia: '2026-11-04' }), '2026-11-04') === 0 && T.rachaSemanas(null, '2026-11-04') === 0 && T.rachaSemanas(g, 'ayer') === 0, 'la práctica no cuenta, y sin nada no hay racha');
+  let muchas = null;
+  for (let i = 0; i < 14; i++) muchas = T.sumarEtapa(muchas, { sesion: `s${i}`, metros: 50, dia: T.limpiarTravesia && `2026-0${1 + Math.floor(i / 4)}-${String(5 + (i % 4) * 7).padStart(2, '0')}` });
+  check(Object.keys(muchas.semanas).length === 10 && Object.keys(T.limpiarTravesia({ semanas: { mal: 5, '2026-11-02': -3, '2026-11-09': 7 } }).semanas).join() === '2026-11-09', 'solo se guardan las diez últimas, y lo ilegible se descarta');
 }
 
 console.log('La distancia, en palabras');

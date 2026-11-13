@@ -226,7 +226,7 @@ export function aNumero(t) {
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -348,7 +348,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, ...(pausado ? { pausa, pausadoEn } : {}) });
+  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, empuje, ...(pausado ? { pausa, pausadoEn } : {}) });
   const ajustar = (s) => {
     alCambiar(ajustarDescanso(este(), s));
     // (diseño, tanda 49) la cuenta da un golpe hacia arriba (más tiempo) o hacia abajo (menos)
@@ -450,7 +450,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       <button class="saltar" onClick={() => alCambiar(null)}>{quedan > 0 ? 'Saltar' : 'Cerrar'}</button>
     </div>
       {apunte && atleta?.id && <Apuntes atletaId={atleta.id} ejercicio={ejercicio} fin={fin} pausa={pausado ? pausa : null} alCerrar={cerrarApunte} />}
-      {juego && atleta?.id && <Travesia atletaId={atleta.id} sesion={sesionId} fin={fin} pausa={pausado ? pausa : null} despues={texto} alCerrar={cerrarJuego} />}
+      {juego && atleta?.id && <Travesia atletaId={atleta.id} sesion={sesionId} fin={fin} pausa={pausado ? pausa : null} total={total} despues={texto} empuje={empuje} alCerrar={cerrarJuego} />}
       {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}
       {conPildora && fuera && (
         <button type="button" class={`pildora-descanso ${quedan <= 0 ? 'fin' : ''}`} onClick={volver} aria-live="off"

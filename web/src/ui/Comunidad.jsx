@@ -217,7 +217,7 @@ function QueSeComparte() {
         <ul class="puntos secundario">
           <li>Tu nombre en el equipo y tu foto de perfil.</li>
           <li>Lo que publiques, comentes o compartas, tus reacciones, tus votos en las encuestas del coach, los ánimos que mandas y a quién mencionas.</li>
-          <li>Cuántas sesiones llevas en los retos y en el ranking de la semana, y tu racha de semanas completas (puedes no salir).</li>
+          <li>Cuántas sesiones llevas en los retos y en el ranking de la semana, tu racha de semanas completas y, si juegas a La travesía, los metros de tu lobo en la semana (puedes no salir).</li>
           <li>Tu perfil del equipo: desde cuándo estás, tu racha, cuántos retos has conseguido (y cuáles) y cuántos entrenos has compartido.</li>
         </ul>
       </div>
@@ -2168,11 +2168,11 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
 }
 
 // ---------------------------------------------------------------- compartir un entreno (Resumen de la sesión)
-// datos: { sesionId, nombre, fecha, minutos, series, mejores: [{ ejercicio_id, nombre, kg, reps }] }. Los récords
+// datos: { sesionId, nombre, fecha, minutos, series, mejores: [{ ejercicio_id, nombre, kg, reps }], textoInicial }. Los récords
 // de la vista previa, con la misma regla que la base (recordsParaEquipo): así la tarjeta sale igual.
 export function HojaCompartirEquipo({ datos, alCerrar, alCompartir }) {
   const { api, aviso, atleta } = useApp();
-  const [texto, setTexto] = useState('');
+  const [texto, setTexto] = useState(() => String(datos.textoInicial || '').slice(0, MAX_POST));   // (descansos, tanda 3) la etapa de La travesía, ya escrita
   const [kilos, setKilos] = useState(false);
   const [ocupado, una] = useUnaVez();
   const records = useCarga(() => api.recordsParaEquipo(atleta.id, datos.sesionId).catch(() => new Set()), [datos.sesionId]);
