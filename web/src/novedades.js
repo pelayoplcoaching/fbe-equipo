@@ -9,9 +9,10 @@ export const NOVEDADES = {
   '0.151': {
     atleta: [
       'La tarjeta del juego, con el cielo de la hora y tu lobo; y en el juego, un ciervo, un búho y un marco en los diez últimos segundos.',
+      'Apuntes, más bonitos: tarjetas de cuaderno que se deslizan con el dedo, sellos, medallas dibujadas y la nota del examen con confeti.',
     ],
     coach: [
-      'Lo nuevo de la rama travesia-bella que no estaba en la v0.150; sin migración.',
+      'Lo nuevo de travesia-bella que no estaba en la v0.150 y Apuntes más bonitos (apuntes-bellos); sin migración.',
     ],
   },
   '0.150': {
