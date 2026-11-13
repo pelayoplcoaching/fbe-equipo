@@ -52,7 +52,11 @@ export const COMBO_CADA = 8, COMBO_MAX = 4;
 export const CUESTA = { desde: 220, prob: 0.11, largo: [16, 24], alto: [1.1, 2], hondo: [0.8, 1.3], empuje: 7 };
 export const CORNISA = { desde: 320, prob: 0.09, ancho: [5, 8], alto: 1.55, grosor: 0.35 };
 export const POTENCIADORES = { iman: { dura: 6, radio: 5 }, luna: { dura: 4, factor: 0.62 }, aullido: { alcance: 30 } };
-export const MOMENTO_CADA = 1500, MOMENTOS = ['estampida', 'tormenta', 'puente', 'ventisca'];
+export const MOMENTO_CADA = 1500, MOMENTOS = ['estampida', 'tormenta', 'puente', 'ventisca', 'lluvia'];
+// (jugo, tanda 9) las constelaciones del camino: cinco estrellas en arco que, cogidas todas, dan un premio; la lluvia de
+// estrellas (un momento raro): un tramo sin nada que saltar en el que caen estrellas del cielo
+export const CONSTELACION = { desde: 150, prob: 0.07, premio: 5, alturas: [1.0, 1.85, 2.35, 1.85, 1.0], paso: 1.9 };
+export const LLUVIA = { largo: 46, estrellas: 16 };
 // (remate, tanda 6) la ventisca: una pared de nieve que persigue al lobo; empieza a VENTISCA.ventaja m y cada tropiezo la
 // acerca; si le alcanza, se lleva unas estrellas (nunca la etapa). Dura VENTISCA.largo m
 export const VENTISCA = { largo: 170, ventaja: 9, porTropiezo: 3.2, recupera: 0.5, pierde: 3 };
@@ -101,7 +105,7 @@ export function nuevaEtapa(semilla = 1, { racha0 = 0, escudos = 0, calma = false
     // (top, tanda 2) el terreno y lo que se coge
     variedad: !!variedad && !calma, cuestas: [], cornisas: [], potenciadores: [], sobre: null, cabezazos: 0, arriba: 0,
     iman: 0, luna: 0, potCogidos: [], momentos: [], tutorial: !!tutorial && !calma ? [] : null, fija: !!fija,
-    estrellasPor: Math.min(3, Math.max(1, Math.round(estrellasPor) || 1)), ventisca: null, alcanzado: 0, escapadas: 0, doradas: 0,
+    estrellasPor: Math.min(3, Math.max(1, Math.round(estrellasPor) || 1)), ventisca: null, alcanzado: 0, escapadas: 0, doradas: 0, limpios: 0, constelaciones: 0, grupos: 0, lluvia: null,
     // la dificultad se adapta: `ayuda` sube si tropieza mucho (más hueco, más despacio, sin montes) y `reto` si va sobrado
     ayuda: 0, reto: 0, ultimos: [],
   };
@@ -211,6 +215,14 @@ function generarVariedad(e) {
       e.cornisas.push({ x, w: 3.2, h: 0.75, grosor: 0.2, puente: true });
       for (const d of [-0.8, 0, 0.8]) e.estrellas.push({ x: x + d, y: 1.55, cogida: false });
       e.hasta = x + 4;
+    } else if (tipo === 'lluvia') {
+      // (jugo, tanda 9) la lluvia de estrellas: un tramo despejado con estrellas a varias alturas (caen del cielo al pintarlas)
+      e.lluvia = { desde: x0, hasta: x0 + LLUVIA.largo };
+      for (let i = 0; i < LLUVIA.estrellas; i++) {
+        const x = x0 + 3 + (i * (LLUVIA.largo - 6)) / (LLUVIA.estrellas - 1);
+        e.estrellas.push({ x, y: 0.8 + ((i * 7) % 5) * 0.38, cogida: false, cae: true });
+      }
+      e.hasta = x0 + LLUVIA.largo;
     } else if (tipo === 'ventisca') {
       // la ventisca: empieza a perseguir al llegar; el terreno, el de siempre
       e.ventisca = { desde: x0, hasta: x0 + VENTISCA.largo, distancia: VENTISCA.ventaja, empezada: false };
@@ -241,6 +253,13 @@ function generarVariedad(e) {
     return true;
   }
   const r = e.rnd();
+  // (jugo, tanda 9) una constelación en el camino: cinco estrellas en arco, sobre un tramo despejado (de un salto largo)
+  if (e.hasta > CONSTELACION.desde && !e.calma && e.rnd() < CONSTELACION.prob) {
+    const x0 = e.hasta + 7, g = (e.grupos = (e.grupos || 0) + 1);
+    CONSTELACION.alturas.forEach((y, i) => e.estrellas.push({ x: x0 + i * CONSTELACION.paso, y, cogida: false, grupo: g }));
+    e.hasta = x0 + (CONSTELACION.alturas.length - 1) * CONSTELACION.paso + 5;
+    return true;
+  }
   if (e.hasta > CUESTA.desde && r < CUESTA.prob) {
     // Una cuesta: loma (dos de cada tres) u hondonada; con sus estrellas por encima, siguiendo el terreno
     const L = CUESTA.largo[0] + e.rnd() * (CUESTA.largo[1] - CUESTA.largo[0]);
@@ -306,7 +325,7 @@ function tropezar(e, o) {
   e.racha = 0; e.tropiezos += 1; e.tropiezo = TROPIEZO; e.inmune = INMUNE; e.agachado = 0;
   // (top, tanda 1) el combo vuelve a ×1
   if (e.combo > 1) e.sucesos.push('combo-fuera');
-  e.serie = 0; e.combo = 1;
+  e.serie = 0; e.combo = 1; e.limpioPend = false;
   // (remate, tanda 6) con la ventisca detrás, tropezar la acerca
   if (e.ventisca?.empezada && e.x < e.ventisca.hasta) e.ventisca.distancia -= VENTISCA.porTropiezo;
   e.sucesos.push('tropiezo');
@@ -363,6 +382,9 @@ function paso(e, dt) {
     const suelo = sobreCornisa ? corn.h : terreno;
     if (e.y <= suelo) {
       e.y = suelo; e.vy = 0; e.saltos = 0; e.cae = false; e.sobre = sobreCornisa ? corn : null; e.sucesos.push('cae');
+      // (jugo, tanda 9) la caída limpia: cae justo después de haber pasado algo en el aire, sin tropezar
+      if (e.limpioPend && e.tropiezo === 0) { e.limpios += 1; e.sucesos.push('limpio'); }
+      e.limpioPend = false;
       // (top, tanda 1) el toque de justo antes de caer: salta al tocar el suelo
       if (e.guardado != null && e.t - e.guardado <= GUARDA_TOQUE) saltar(e);
     }
@@ -378,6 +400,7 @@ function paso(e, dt) {
       o.pasado = true;
       if (!o.chocado) {
         e.racha += 1; e.saltados += 1; if (e.racha > e.mejorRacha) e.mejorRacha = e.racha;
+        if (e.saltos > 0 && o.tipo !== 'rama' && !o.apartado) e.limpioPend = true;
         if (o.tipo === 'rio') { e.rios += 1; e.sucesos.push('rio'); }
         // (top, tanda 3) un monte saltado sin el doble salto (manteniendo el dedo): para su logro
         if (o.tipo === 'monte' && !o.apartado && !e.usoDoble) e.montesUno = (e.montesUno || 0) + 1;
@@ -423,7 +446,7 @@ function paso(e, dt) {
   for (const s of e.estrellas) {
     if (s.cogida) continue;
     // (con el imán, las de delante vienen solas)
-    if (e.iman > 0 && !s.dorada && s.x > cx - 0.5 && s.x < cx + POTENCIADORES.iman.radio * 0.35) { s.cogida = true; s.vale = e.combo * e.estrellasPor; s.iman = true; e.estrellasCogidas += s.vale; e.sucesos.push('estrella'); continue; }
+    if (e.iman > 0 && !s.dorada && s.x > cx - 0.5 && s.x < cx + POTENCIADORES.iman.radio * 0.35) { s.cogida = true; s.vale = e.combo * e.estrellasPor; s.iman = true; e.estrellasCogidas += s.vale; e.valeUltima = s.vale; e.sucesos.push('estrella'); continue; }
     if (s.x > cx + 1.2) break;
     // (top, tanda 1) con el combo, cada estrella vale más
     if (Math.abs(s.x - cx) < 0.95 && Math.abs(s.y - cy) < 0.95) {
@@ -431,6 +454,12 @@ function paso(e, dt) {
       // (remate, tanda 6) la dorada del secreto vale diez y se cuenta aparte; las demás, con el combo y la etapa dorada
       if (s.dorada) { s.vale = 10; e.doradas += 1; e.estrellasCogidas += 10; e.sucesos.push('dorada'); }
       else { s.vale = e.combo * e.estrellasPor; e.estrellasCogidas += s.vale; e.sucesos.push('estrella'); }
+      e.valeUltima = s.vale;
+      // (jugo, tanda 9) la constelación del camino, completa: su premio
+      if (s.grupo != null && e.estrellas.every((x) => x.grupo !== s.grupo || x.cogida)) {
+        const premio = CONSTELACION.premio * e.estrellasPor;
+        e.estrellasCogidas += premio; e.constelaciones += 1; e.valeUltima = premio; e.grupoHecho = s.grupo; e.sucesos.push('constelacion');
+      }
     }
   }
 }
@@ -455,7 +484,7 @@ export function avanzar(e, dt) {
 export const resultado = (e) => ({ metros: Math.max(0, Math.round(e.x)), estrellas: e.estrellasCogidas, racha: e.mejorRacha, tropiezos: e.tropiezos, rios: e.rios, segundos: Math.round(e.t), calma: e.calma,
   roces: e.roces || 0, combo: e.comboMax || 1,
   // (top, tanda 2) lo de la variedad: metros corridos por arriba, potenciadores cogidos y momentos raros vividos
-  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, doradas: e.doradas || 0, saltos: e.nSaltos || 0, alcanzado: e.alcanzado || 0, escapadas: e.escapadas || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
+  arriba: Math.round(e.arriba || 0), montesUno: e.montesUno || 0, doradas: e.doradas || 0, saltos: e.nSaltos || 0, limpios: e.limpios || 0, constelaciones: e.constelaciones || 0, alcanzado: e.alcanzado || 0, escapadas: e.escapadas || 0, potenciadores: (e.potCogidos || []).slice(), momentos: (e.momentos || []).filter((m) => m.x < e.x).map((m) => m.tipo) });
 
 // «870 m», «2,3 km», «12 km»
 export function textoDistancia(m) {

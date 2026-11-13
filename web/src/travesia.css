@@ -1,7 +1,7 @@
 /* (al integrarla, v0.147) Los colores de la noche de La travesía, como tokens. La escena es de noche con el tema claro y con
    el oscuro, así que su versión oscura es la misma (se repite abajo a propósito). El texto no entra con opacity. */
-:root { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; }
-:root[data-theme="dark"] { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; }
+:root { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; --tv-plata-texto: #DCE0EE; --tv-bronce-texto: #E0A070; }
+:root[data-theme="dark"] { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; --tv-plata-texto: #DCE0EE; --tv-bronce-texto: #E0A070; }
 /* «La travesía»: el juego del descanso (ui/atleta/Travesia.jsx). Pantalla completa, siempre de noche (no cambia con el
    tema): el lienzo debajo y, encima, los números, la pista y la tarjeta del final. */
 .temporizador .descanso-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
@@ -297,3 +297,27 @@
 /* (las filas de la liga, como las de la manada pero aparte: «.tv-fila» son las de la manada) */
 .tv-liga-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, transparent); }
 .tv-liga-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
+
+/* (jugo, tanda 11) hacia el siguiente sitio de la ruta, el sello de la etapa y la cuenta del final */
+.travesia-ruta { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(78px + env(safe-area-inset-top, 0px)); width: min(42%, 180px); display: grid; gap: 5px; justify-items: end; pointer-events: none; }
+.travesia-ruta-txt { font-size: .75rem; font-weight: 700; color: var(--tv-tiza); text-shadow: var(--tv-sombra-cartel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.travesia-ruta-pista { position: relative; width: 100%; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--tv-tiza) 20%, transparent); overflow: hidden; }
+.travesia-ruta-lleno { position: absolute; inset: 0; border-radius: 999px; background: var(--tv-oro); transform-origin: left center; }
+.travesia-sello { position: absolute; top: -14px; right: -6px; display: grid; place-items: center; align-content: center; width: 66px; height: 66px; border-radius: 50%; border: 3px double currentColor; transform: rotate(-12deg); line-height: 1; text-transform: uppercase; }
+.travesia-sello b { font-size: .875rem; font-weight: 800; letter-spacing: .06em; }
+.travesia-sello small { margin-top: 3px; font-size: .5625rem; letter-spacing: .08em; opacity: .85; }
+.travesia-sello.sello-oro { color: var(--tv-oro); background: color-mix(in srgb, var(--tv-oro) 14%, transparent); }
+.travesia-sello.sello-plata { color: var(--tv-plata-texto); background: color-mix(in srgb, var(--tv-plata-texto) 12%, transparent); }
+.travesia-sello.sello-bronce { color: var(--tv-bronce-texto); background: color-mix(in srgb, var(--tv-bronce-texto) 12%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-sello { animation: tv-sello .5s cubic-bezier(.2, 1.6, .4, 1) .45s both; }
+  .travesia-final-det .tv-cuenta-hecha { animation: tv-cuenta-latido .35s ease-out; display: inline-block; }
+  .travesia-final-mision { position: relative; overflow: hidden; }
+  .travesia-final-mision::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--tv-oro) 45%, transparent) 50%, transparent 70%); transform: translateX(-110%); animation: tv-mision-brillo 1s ease-out .6s both; pointer-events: none; }
+  .travesia-final-rango { position: relative; }
+  .travesia-final-rango::before { content: ''; position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--tv-oro); opacity: 0; animation: tv-rango-estallido .8s ease-out .7s both; pointer-events: none; }
+}
+@keyframes tv-sello { from { transform: rotate(-12deg) scale(1.8); } to { transform: rotate(-12deg) scale(1); } }
+@keyframes tv-cuenta-latido { 40% { transform: scale(1.35); } }
+@keyframes tv-mision-brillo { to { transform: translateX(110%); } }
+@keyframes tv-rango-estallido { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(4); } }

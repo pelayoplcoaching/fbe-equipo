@@ -10,6 +10,7 @@ export const NOVEDADES = {
     atleta: [
       'Apuntes que se quedan: repaso espaciado, piénsalo antes de leer, preguntas de tu coach y ejercicios para practicar.',
       'Y tu progreso: prueba de nivel, temas, ruta Fundamentos FBE con certificado, objetivo diario, liga y duelos.',
+      'Y La travesía con más jugo: saltos y caídas con respuesta, el combo que se ve, grandes momentos y un sello de oro, plata o bronce.',
     ],
     coach: [
       'Guías → «Nueva»: preguntas y audio-píldoras; y «El equipo en apuntes». Migraciones 064 y 065.',

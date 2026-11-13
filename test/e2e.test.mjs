@@ -6058,6 +6058,10 @@ try {
   console.log('\nEl remate de La travesía');
   const { probarTravesiaRemate } = await import('./e2e-travesia-remate.mjs');
   await probarTravesiaRemate({ navegador, check });
+  // El jugo de La travesía (claude/descansos-mejoras-6.md): la barra hacia el siguiente sitio, el sello y la cuenta del final
+  console.log('\nEl jugo de La travesía');
+  const { probarTravesiaJugo } = await import('./e2e-travesia-jugo.mjs');
+  await probarTravesiaJugo({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

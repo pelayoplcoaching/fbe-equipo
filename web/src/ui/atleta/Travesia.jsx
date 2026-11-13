@@ -3,15 +3,15 @@ import { Icono, Capa, useApp } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { nuevaEtapa, avanzar, saltar, agachar, pulsar, resultado, textoDistancia, ambiente, retoDelDia, progresoReto, hoyDe, rachaSemanas, semillaDelDia, marcasDelCamino, ETAPA_DIA } from '../../logica/travesia.js';
-import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO, fechaEspecial, NOMBRE_FECHA, apuntarRastro, enRastro } from '../../logica/travesia-efectos.js';
+import { cartelDeHito, nombrePaisaje, suave, calidad, CALIDAD_INICIAL, cuentaVuelta, VUELTA, pitidos, PASO, fechaEspecial, NOMBRE_FECHA, apuntarRastro, enRastro, notaEscala, ESCALA_PAUSA, GOLPE, hayGolpe } from '../../logica/travesia-efectos.js';
 import { crearSonido } from './travesia-sonido.js';
-import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo } from '../../logica/travesia-ruta.js';
+import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, correnHoy, duelo, proximoSitio } from '../../logica/travesia-ruta.js';
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { compartirArchivo, conFranja, crearGrabadora, extensionDe } from './travesia-compartir.js';
 import { tono, prepararAudio } from './sesion-comun.jsx';
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos, equipoDe } from '../travesia.js';
-import { adornosPuestos } from '../../logica/travesia-meta.js';
+import { adornosPuestos, mediaEtapa, selloDe } from '../../logica/travesia-meta.js';
 import { crearMusica } from './travesia-musica.js';
 import { nuevoPaisaje, pintar } from './travesia-pinta.js';
 
@@ -41,6 +41,22 @@ function Rueda({ valor }) {
   }, [valor]);
   return textoDistancia(v);
 }
+// (jugo, tanda 11) La cuenta del final: las estrellas de la etapa pasan una a una (con su nota, si hay sonido)
+function CuentaEstrellas({ valor, suena }) {
+  const [v, setV] = useState(() => (sinMovimiento() ? valor : 0));
+  useEffect(() => {
+    if (sinMovimiento() || valor <= 0) { setV(valor); return undefined; }
+    const pasos = Math.min(valor, 24), cada = Math.max(35, Math.min(90, 1100 / pasos));
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1; setV(Math.round((valor * i) / pasos));
+      if (suena) tono(notaEscala(Math.min(10, Math.floor((i * 11) / pasos))), 0.04, 0.08);
+      if (i >= pasos) clearInterval(id);
+    }, cada);
+    return () => clearInterval(id);
+  }, [valor]);
+  return <span class={`num${v === valor ? ' tv-cuenta-hecha' : ''}`}>{v}</span>;
+}
 
 export function Travesia(props) { return <Capa><TravesiaDentro {...props} /></Capa>; }
 // (al integrarla) lo que queda de descanso ya en el primer pintado (antes, 0:00 hasta el primer cuadro de la animación)
@@ -58,16 +74,16 @@ function tiempoGuardado() {
   } catch { return {}; }
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
-const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], dorada: [1568, 0.25, 0.14], alcanzado: [196, 0.2, 0.16], escapado: [1046, 0.2, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
+const SONIDOS = { limpio: [740, 0.05, 0.09], constelacion: [1760, 0.32, 0.14], salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], dorada: [1568, 0.25, 0.14], alcanzado: [196, 0.2, 0.16], escapado: [1046, 0.2, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
 // (top, tanda 3) El modo foto: la escena del final, con una franja abajo (los metros y el nombre del juego; ningún nombre
 // de persona), como imagen para compartir o guardar
 async function fotoDeEtapa(lienzo, metros) {
   return compartirArchivo(await conFranja(lienzo, `La travesía · ${textoDistancia(metros)}`), 'la-travesia.png');
 }
 // (remate, tanda 5) la vibración de cada cosa del juego (ui/hapticos.js)
-const VIBRA = { salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
+const VIBRA = { limpio: 'tv-salto', constelacion: 'tv-combo', salto: 'tv-salto', doble: 'tv-doble', roce: 'tv-roce', estrella: 'tv-estrella', combo: 'tv-combo', tropiezo: 'tv-tropiezo' };
 // (top, tanda 2) el cartel de cada momento raro, cuando asoma
-const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!' };
+const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante', ventisca: '¡Viene la ventisca!', lluvia: '¡Lluvia de estrellas!' };
 // (remate, tanda 6) lo que dice el cartel con cada cosa nueva
 const CARTEL = { ventisca: '¡La ventisca te persigue!', alcanzado: 'Te ha alcanzado: −3 estrellas', escapado: '¡Escapaste de la ventisca!', dorada: '¡Estrella dorada! +10' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
@@ -91,6 +107,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const [final, setFinal] = useState(null);         // { metros, estrellas, hoy, mejor, marca, reto } al acabar la etapa
   const [tocado, setTocado] = useState(false);      // ya ha saltado una vez: fuera la pista
   const metros = useRef(null), cuenta = useRef(null), estrellas = useRef(null), retoTxt = useRef(null), cartel = useRef(null), comboTxt = useRef(null);
+  // (jugo, tanda 11) la barra hacia el siguiente sitio de la ruta
+  const rutaBarra = useRef(null), rutaTxt = useRef(null);
+  const [sitio, setSitio] = useState(null);
   // (remate, tanda 5) la cuenta de la vuelta, el «prepárate» y el sonido del juego
   const vueltaTxt = useRef(null), preparaTxt = useRef(null), sonidoRef = useRef(null);
   // (top, tanda 1: accesibilidad) lo que el atleta ha elegido en «Tu travesía» → «Cómo juegas»
@@ -184,6 +203,11 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     setFinal(null); setClip(null); setClipTxt('');
     if (practica) finPractica.current = Date.now() + PRACTICA * 1000;
     const amb = ambiente({ ...tiempoGuardado(), total: antesG.total });
+    // (jugo, tanda 11) el próximo sitio de la ruta (su silueta, su cartel y la barra de arriba) y su media (para el sello)
+    const prox = !practica && sesion ? proximoSitio(antesG.total, leerMeta(atletaId).rutas) : null;
+    setSitio(prox);
+    const media = !practica && sesion ? mediaEtapa(antesG, sesion) : null;
+    let puebloDicho = false, rutaVisto = -1;
     // (remate, tanda 8) el día de la fiesta de la manada, aurora para todos (si llega a tiempo)
     equipoDe(api, atletaId).then((q2) => { if (q2?.fiesta?.dia === hoyISO()) amb.fiesta = true; }).catch(() => {});
     const ritmo = !calma && antesG.ritmo > 0 ? antesG.ritmo / 100 : 0;   // su fantasma
@@ -261,11 +285,15 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         lobo: !practica && sesion ? lobosDe(g).find((l) => l.tiene && !lobosDe(antesG).find((x) => x.id === l.id)?.tiene) || null : null,
         constelacion: !practica && sesion ? constelaciones(g.estrellas).find((k, i) => k.completa && !todas[i].completa) || null : null,
         semana: g.semanas?.[lunesDe(hoyISO())] || 0,
+        // (jugo, tanda 11) el sello de la etapa, frente a su propia media
+        sello: media ? selloDe(r.metros, media) : null,
         cumplidas: mt?.cumplidas || [], rango: mt?.subeRango || null, adorno: mt?.adorno || null, logros: mt?.logros || [] });
     };
     // (remate, tanda 5) la vuelta suave (al volver de una pausa o a la app, 3, 2, 1 antes de seguir), las pisadas, el
     // «prepárate» de los cinco últimos segundos y el ahorro de batería (con la batería baja, la mitad de cuadros)
     let enPausa = false, vuelta = null, pisada = 0, preparado = false, ahorro = false, saltaCuadro = false;
+    // (jugo, tanda 9) el golpe del momento (el juego se para un instante) y la escala de las estrellas seguidas
+    let congela = 0, escala = 0, tEscala = -9;
     navigator.getBattery?.().then((b) => { const mira = () => { ahorro = !b.charging && b.level <= 0.2; }; mira(); b.addEventListener?.('levelchange', mira); b.addEventListener?.('chargingchange', mira); }).catch(() => {});
     const cuadro = (ahora) => {
       id = requestAnimationFrame(cuadro);
@@ -282,16 +310,23 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (vueltaTxt.current && vueltaTxt.current.textContent !== (n ? String(n) : '')) { vueltaTxt.current.textContent = n ? String(n) : ''; vueltaTxt.current.hidden = !n; }
       const parado = acabada || pausado || n > 0;
       if (!acabada && !pausado && q <= 0) acabar();
-      else if (!parado) avanzar(e, dt);
+      else if (!parado) { if (congela > 0) congela -= dt; else avanzar(e, dt); }
       // (el sonido de verdad: cada cosa con su sonido, las pisadas según lo que pisa y el viento con la velocidad)
       const sn = sonidoRef.current;
-      if (suena.current) for (const s of e.sucesos) if (SONIDOS[s]) { if (sn) sn.efecto(SONIDOS[s]); else tono(...SONIDOS[s]); }
+      if (suena.current) for (const s of e.sucesos) {
+        let son = SONIDOS[s];
+        // (jugo, tanda 9) cada estrella seguida, una nota más aguda
+        if (s === 'estrella') { if (e.t - tEscala > ESCALA_PAUSA) escala = 0; son = [notaEscala(escala), 0.06, 0.12]; escala += 1; tEscala = e.t; }
+        if (s === 'tropiezo') escala = 0;
+        if (son) { if (sn) sn.efecto(son); else tono(...son); }
+      }
       if (sn && !parado) {
         if (e.saltos === 0 && !e.calma && e.x - pisada >= PASO) { pisada = e.x; sn.paso(e.sobre ? 'madera' : amb.paisaje === 2 ? 'nieve' : 'hierba'); }
         sn.viento(e.saltos ? e.v + 1.5 : e.v);
         if (accesible.current.sonar) for (const pt of pitidos(e.obstaculos, e.x, e.v)) sn.aviso(pt.tipo, pt.cerca);
       } else if (sn) sn.viento(0);
       const pasaron = e.sucesos.slice();   // (lo de este cuadro: pintar() lo vacía)
+      if (!quieto && !parado && hayGolpe(pasaron)) congela = GOLPE.dura;
       if (delDia && !acabada) apuntarRastro(rastro, e.t, e.x, e.y);
       const amigoE = amigo ? { ...enRastro(amigo.rastro, e.t), nombre: amigo.nombre } : null;
       if (amigo && !amigo.dicho && e.t > 3.2 && !parado) { amigo.dicho = true; anunciar(`Hoy corres con el lobo de ${amigo.nombre}`); }
@@ -299,11 +334,26 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       for (const s of e.sucesos) { const v = VIBRA[s]; if (v) vibrar(v); }
       // (los cinco últimos segundos: «prepárate» con lo que toca después, y su vibración)
       if (!practica && !preparado && q <= 5 && q > 0 && !parado) { preparado = true; vibrar('tv-prepara'); if (preparaTxt.current) preparaTxt.current.hidden = false; }
-      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, amigo: amigoE, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
+      pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, amigo: amigoE, pueblo: prox ? { x: prox.metros, nombre: prox.nombre, tipo: prox.tipo } : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
         ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo, adornos: adornos.current, marcas: marcasRef.current, reloj: relojE, quedan: q, especial, dorada });
       banda.current?.actualizar({ serie: acabada ? 0 : e.serie, combo: acabada ? 1 : e.combo });
       // (top, tanda 4) al pasar la marca de un compañero (o la suya), su cartel
-      if (!parado) for (const mk of marcasRef.current) if (!pasadas.has(mk.metros + mk.nombre) && e.x >= mk.metros) { pasadas.add(mk.metros + mk.nombre); anunciar(mk.mia ? '¡Más allá de tu mejor etapa!' : `Pasas a ${mk.nombre}`, mk.mia); }
+      // (jugo, tanda 11) al pasar el sitio de la ruta, su cartel y unos fuegos; y la barra de arriba, cada 10 m
+      if (prox && !parado) {
+        if (!puebloDicho && e.x >= prox.metros) { puebloDicho = true; paisaje.current.tPueblo = ahora / 1000; anunciar(`¡${prox.nombre}!`, true); vibrar('tv-combo'); }
+        const km = prox.km + e.x / 1000, dm = Math.floor(e.x / 10);
+        if (dm !== rutaVisto && rutaBarra.current) {
+          rutaVisto = dm;
+          const k = Math.max(0, Math.min(1, (km - prox.desde) / Math.max(0.1, prox.hasta - prox.desde))), falta = prox.hasta - km;
+          rutaBarra.current.style.transform = `scaleX(${k})`;
+          if (rutaTxt.current) rutaTxt.current.textContent = falta > 0 ? `${String(Math.max(0.1, Math.round(falta * 10) / 10)).replace('.', ',')} km a ${prox.nombre}` : `En ${prox.nombre}`;
+        }
+      }
+      if (!parado) for (const mk of marcasRef.current) if (!pasadas.has(mk.metros + mk.nombre) && e.x >= mk.metros) {
+        pasadas.add(mk.metros + mk.nombre);
+        // (jugo, tanda 11) récord en vivo: fuegos, un segundo a cámara lenta y un acorde
+        if (mk.mia) { paisaje.current.tRecord = ahora / 1000; if (!quieto) e.lento = Math.max(e.lento || 0, 0.9); if (suena.current) [[523, 0], [659, 90], [784, 180], [1046, 300]].forEach(([fr, ms]) => setTimeout(() => tono(fr, 0.35, 0.12), ms)); vibrar('tv-meta'); }
+        anunciar(mk.mia ? '¡Más allá de tu mejor etapa!' : `Pasas a ${mk.nombre}`, mk.mia); }
       // (remate, tanda 6) la ventisca, la estrella dorada: su cartel
       if (!parado) for (const sc of pasaron) if (CARTEL[sc]) anunciar(CARTEL[sc], sc !== 'alcanzado');
       // (top, tanda 2) el momento raro, cuando asoma
@@ -428,6 +478,13 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
         <span class="travesia-dato oro" aria-label="Estrellas"><Icono n="estrella" /><b ref={estrellas} class="num">0</b><i ref={comboTxt} class="travesia-combo num" aria-label="Combo: cada estrella vale más" hidden /></span>
         <button type="button" class="travesia-cerrar" onClick={salir} aria-label="Cerrar el juego"><Icono n="cerrar" /></button>
       </div>
+      {/* (jugo, tanda 11) hacia el siguiente sitio de la ruta: la barra se llena mientras corre */}
+      {!final && sitio && (
+        <div class="travesia-ruta" aria-hidden="true">
+          <span class="travesia-ruta-txt" ref={rutaTxt}>{String(Math.max(0.1, Math.round((sitio.hasta - sitio.km) * 10) / 10)).replace('.', ',')} km a {sitio.nombre}</span>
+          <span class="travesia-ruta-pista"><span class="travesia-ruta-lleno" ref={rutaBarra} style={{ transform: `scaleX(${Math.max(0, Math.min(1, (sitio.km - sitio.desde) / Math.max(0.1, sitio.hasta - sitio.desde)))})` }} /></span>
+        </div>
+      )}
       {!final && (
         <div class="travesia-modos">
           <button type="button" class="travesia-modo" aria-pressed={calma ? 'true' : 'false'} onClick={cambiarCalma} title="Sin obstáculos y al paso, para respirar tras una serie dura"><Icono n="sueno" />Calma</button>
@@ -448,9 +505,12 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       {final && (
         <div class="travesia-final" role="status">
           <span class="travesia-final-etq">{final.delDia ? 'La etapa del día' : practica ? 'Práctica' : '¡Vamos!'}</span>
+          {final.sello && <span class={`travesia-sello sello-${final.sello}`} role="img" aria-label={`Sello de ${final.sello}: frente a tu media`}><b>{final.sello === 'oro' ? 'Oro' : final.sello === 'plata' ? 'Plata' : 'Bronce'}</b><small>tu media</small></span>}
           <strong class="num"><Rueda valor={final.metros} /></strong>
           <span class="travesia-final-det">
-            {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
+            {final.estrellas > 0 && <span class="oro"><Icono n="estrella" /><CuentaEstrellas valor={final.estrellas} suena={suena.current} /></span>}
+            {final.constelaciones > 0 && <span class="oro">{final.constelaciones === 1 ? 'Una constelación en el camino' : `${final.constelaciones} constelaciones en el camino`}</span>}
+            {final.limpios >= 3 && <span>{final.limpios} caídas limpias</span>}
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}
             {final.combo > 1 && <span class="oro">Combo ×{final.combo}</span>}
             {final.momentos?.includes('estampida') && <span class="oro">Estampida superada</span>}

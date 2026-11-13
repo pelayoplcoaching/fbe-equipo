@@ -198,3 +198,16 @@ export function apuntarFiesta(meta, mes) {
   if (!/^\d{4}-\d{2}$/.test(mes || '') || m.fiestas.includes(mes)) return m;
   return limpiarMeta({ ...m, fiestas: [...m.fiestas, mes] });
 }
+
+// ---------- (jugo, tanda 11) El sello de la etapa ----------
+// Frente a su propia media (de las sesiones que guarda el móvil, sin la de ahora): oro si pasa de 1,2 veces su media,
+// plata si llega a 0,9 veces, bronce si no. Con menos de tres etapas de antes, sin sello. Nunca frente a otros.
+export function mediaEtapa(guardado, sesionActual = null) {
+  let metros = 0, etapas = 0;
+  for (const [id, s] of Object.entries(guardado?.sesiones || {})) { if (id === sesionActual) continue; metros += s.metros || 0; etapas += s.etapas || 0; }
+  return { media: etapas ? metros / etapas : 0, etapas };
+}
+export function selloDe(metros, { media, etapas }) {
+  if (!(etapas >= 3) || !(media > 0) || !(metros > 0)) return null;
+  return metros >= media * 1.2 ? 'oro' : metros >= media * 0.9 ? 'plata' : 'bronce';
+}

@@ -35,7 +35,7 @@ export function posicionEnRuta(metros, elegidas = []) {
   const ruta = rutaN(i, elegidas);
   const pasados = ruta.hitos.filter(([, k]) => k <= km).length;
   const siguiente = ruta.hitos[pasados] || null;
-  return { ruta, n: i, km: Math.round(km * 10) / 10, largo: largo(ruta), pct: Math.min(1, km / largo(ruta)), anterior: ruta.hitos[pasados - 1], siguiente,
+  return { ruta, n: i, km: Math.round(km * 10) / 10, kmExacto: km, largo: largo(ruta), pct: Math.min(1, km / largo(ruta)), anterior: ruta.hitos[pasados - 1], siguiente,
     faltan: siguiente ? Math.max(0.1, Math.round((siguiente[1] - km) * 10) / 10) : 0, pasados };
 }
 // ¿Toca elegir la ruta siguiente? Desde la última de siempre en adelante: { n (la que se elige), elegida (su id o null) }
@@ -142,4 +142,26 @@ export function equipoDelMes(equipo) {
   const metros = Math.max(0, Number(equipo?.metros) || 0), miembros = Math.max(0, Number(equipo?.miembros) || 0);
   const meta = Math.max(50000, miembros * 15000);
   return { metros, miembros, meta, pct: Math.min(1, metros / meta), hecho: metros >= meta };
+}
+
+// (jugo, tanda 11) La silueta de cada sitio en el horizonte, cuando el lobo pasa por él en plena etapa:
+// 'castillo' | 'catedral' | 'puente' | 'ciudad' | 'montana' | 'pueblo' (casas con su campanario, el resto)
+const SILUETAS = {
+  ciudad: ['Madrid', 'Valencia', 'Barcelona', 'León', 'Tarragona', 'Castellón'],
+  catedral: ['Santiago de Compostela', 'Astorga', 'Covadonga'],
+  castillo: ['Peñíscola', 'Sagunto', 'Ponferrada', 'Arévalo', 'Tortosa', 'Requena', 'Jaca'],
+  puente: ['Tordesillas', 'Benavente', 'Cangas de Onís', 'Portomarín', 'Puente la Reina'],
+  montana: ['Puerto de Pajares', 'Lagos de Covadonga', 'Fuente Dé', 'Somport', 'Ordesa', 'O Cebreiro', 'Bulnes', 'Guadarrama'],
+};
+export function siluetaDe(nombre) {
+  for (const [tipo, sitios] of Object.entries(SILUETAS)) if (sitios.includes(nombre)) return tipo;
+  return 'pueblo';
+}
+// Lo que necesita la etapa para el próximo sitio de la ruta: { nombre, tipo, metros (desde donde empieza la etapa),
+// desde (km del sitio anterior), hasta (km del siguiente), km (por dónde va) } o null si no hay siguiente
+export function proximoSitio(metrosAntes, elegidas = []) {
+  const p = posicionEnRuta(metrosAntes, elegidas);
+  if (!p.siguiente) return null;
+  const exacto = p.kmExacto;
+  return { nombre: p.siguiente[0], tipo: siluetaDe(p.siguiente[0]), metros: Math.max(1, Math.round((p.siguiente[1] - exacto) * 1000)), desde: p.anterior?.[1] ?? 0, hasta: p.siguiente[1], km: exacto };
 }
