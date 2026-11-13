@@ -203,3 +203,101 @@ export function tuMesApuntes(estado, apuntes = [], mes = '') {
   };
 }
 export const glosarioTotal = () => GLOSARIO.length;
+
+// ---------- (tanda D) La liga y los duelos ----------
+// Lo de una semana (de lunes a domingo) para la liga: { puntos (con el premio de cada día cumplido), apuntes }
+export function puntosDeSemana(estado, lunes) {
+  const e = limpiarVistos(estado), meta = metaDe(e);
+  let puntos = 0, apuntes = 0;
+  if (!DIA.test(lunes || '')) return { puntos, apuntes };
+  for (let i = 0; i < 7; i++) {
+    const d = e.diario?.[sumarDias(lunes, i)];
+    if (d) { puntos += d.xp + (d.n >= meta ? PREMIO_META : 0); apuntes += d.n; }
+  }
+  return { puntos: Math.min(20000, puntos), apuntes: Math.min(2000, apuntes) };
+}
+// Las cinco preguntas de un duelo: del glosario, iguales para los dos (salen de la semilla)
+function azar(semilla) { let s = (Math.abs(Math.floor(Number(semilla) || 1)) % 2147483646) + 1; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
+function barajarCon(xs, r) { const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+export function dueloDe(semilla) {
+  const r = azar(semilla);
+  const elegidos = barajarCon(GLOSARIO, r).slice(0, 5);
+  return elegidos.map(([t, x], i) => {
+    const otras = barajarCon(GLOSARIO.filter(([u]) => u !== t), r).slice(0, 2).map(([, y]) => y);
+    const opciones = barajarCon([x, ...otras], r);
+    return { id: `d:${semilla}:${i}`, tipo: 'test', efimero: true, etiqueta: 'Duelo', de: 'Glosario', titulo: `¿Qué es «${t}»?`, opciones, correcta: opciones.indexOf(x), texto: '' };
+  });
+}
+// Cómo va un duelo, en palabras: { estado: 'jugar' | 'esperando' | 'ganado' | 'perdido' | 'empate' | 'caducado', texto }
+export function estadoDuelo(d) {
+  if (!d) return null;
+  const rival = d.rival_nombre || 'tu rival';
+  if (d.mios == null) return d.acabado ? { estado: 'caducado', texto: `Con ${rival}: se acabó el plazo` } : { estado: 'jugar', texto: d.soy_retador ? `Tu duelo con ${rival}: te toca` : `${rival} te reta` };
+  if (d.suyos == null) return d.acabado ? { estado: 'caducado', texto: `Con ${rival}: no llegó a contestar (tú, ${d.mios} de 5)` } : { estado: 'esperando', texto: `Esperando a ${rival} (tú, ${d.mios} de 5)` };
+  const est = d.mios > d.suyos ? 'ganado' : d.mios < d.suyos ? 'perdido' : 'empate';
+  return { estado: est, texto: `${est === 'ganado' ? 'Ganaste' : est === 'perdido' ? 'Perdiste' : 'Empate'} con ${rival}: ${d.mios}–${d.suyos}` };
+}
+
+// ---------- (tanda D) Historias: la novedad o las lecciones, en diapositivas ----------
+const trocear = (texto, max = 110) => {   // (frases cortas: en pantalla completa se leen grandes)
+  const frases = String(texto || '').replace(/\s+/g, ' ').trim().match(/[^.!?]+[.!?]*/g) || [];
+  const out = [];
+  for (const f of frases.map((x) => x.trim()).filter(Boolean)) {
+    if (out.length && (out[out.length - 1] + ' ' + f).length <= max) out[out.length - 1] += ` ${f}`;
+    else out.push(f);
+  }
+  return out;
+};
+// Una novedad: portada, su texto en dos a cuatro diapositivas y, si la hay, de dónde sale
+export function historiaDeNovedad(a) {
+  if (!a?.titulo) return [];
+  const trozos = trocear(a.texto).slice(0, 4);
+  return [
+    { clase: 'portada', etiqueta: a.etiqueta || 'Novedad de la semana', titulo: a.titulo, texto: '' },
+    ...trozos.map((t, i) => ({ clase: 'texto', etiqueta: `${i + 1} de ${trozos.length}`, titulo: '', texto: t })),
+    ...(a.fuente ? [{ clase: 'fuente', etiqueta: 'De dónde sale', titulo: '', texto: a.fuente, enlace: a.enlace || null }] : []),
+  ];
+}
+// Unas lecciones (un curso): una diapositiva por lección, con su título y su texto (hasta seis)
+export function historiaDeLecciones(lecciones = [], tituloCurso = '') {
+  const ls = lista(lecciones).filter((a) => a && (a.titulo || a.texto)).slice(0, 6);
+  if (!ls.length) return [];
+  return [
+    { clase: 'portada', etiqueta: 'Curso', titulo: tituloCurso || 'Tu curso', texto: ls.length === 1 ? 'Una lección' : `${ls.length} lecciones` },
+    ...ls.map((a, i) => ({ clase: 'texto', etiqueta: `Lección ${i + 1}`, titulo: a.tipo === 'mito' ? a.titulo : a.titulo || '', texto: trocear(a.texto).slice(0, 2).join(' '), id: a.id })),
+  ];
+}
+
+// ---------- (tanda D) Tus notas y subrayados ----------
+export const frasesDe = (texto) => (String(texto || '').replace(/\s+/g, ' ').trim().match(/[^.!?]+[.!?]*\s*/g) || []).map((x) => x.trim()).filter(Boolean);
+export function ponerNota(estado, id, texto) {
+  const e = limpiarVistos(estado), t = String(texto || '').trim().slice(0, 500);
+  const notas = { ...(e.notas || {}) };
+  if (t) notas[id] = t; else delete notas[id];
+  const guardados = t && !(e.guardados || []).includes(id) ? [...(e.guardados || []), id] : e.guardados || [];
+  return limpiarVistos({ ...e, notas, guardados });
+}
+export function alternarSubrayado(estado, id, i) {
+  const e = limpiarVistos(estado), ya = e.subrayados?.[id] || [];
+  const nuevo = ya.includes(i) ? ya.filter((x) => x !== i) : [...ya, i];
+  const subrayados = { ...(e.subrayados || {}) };
+  if (nuevo.length) subrayados[id] = nuevo; else delete subrayados[id];
+  const guardados = nuevo.length && !(e.guardados || []).includes(id) ? [...(e.guardados || []), id] : e.guardados || [];
+  return limpiarVistos({ ...e, subrayados, guardados });
+}
+
+// ---------- (tanda D, coach) El dominio del equipo por temas (solo cuentas) ----------
+// filas: lo de apuntes_dominio_equipo() ([{ apunte, atletas, caja_media, dominan }]); apuntes: los que se saben nombrar
+export function dominioEquipo(filas = [], apuntes = []) {
+  const porId = new Map(lista(apuntes).filter((a) => a?.id).map((a) => [a.id, a]));
+  const temas = new Map(TEMAS.map(([t, nombre]) => [t, { tema: t, nombre, apuntes: 0, vistas: 0, suma: 0, dominan: 0 }]));
+  for (const f of lista(filas)) {
+    const t = temaDe(porId.get(f?.apunte));
+    if (!t) continue;
+    const x = temas.get(t), n = Math.max(0, Math.round(Number(f.atletas) || 0));
+    x.apuntes += 1; x.vistas += n; x.suma += (Number(f.caja_media) || 0) * n; x.dominan += Math.max(0, Math.round(Number(f.dominan) || 0));
+  }
+  const out = [...temas.values()].filter((x) => x.apuntes > 0).map((x) => ({ ...x, cajaMedia: x.vistas ? Math.round((x.suma / x.vistas) * 10) / 10 : 0, pctDominio: x.vistas ? Math.round((x.dominan / x.vistas) * 100) : 0 }));
+  const flojo = out.filter((x) => x.apuntes >= 2).sort((a, b) => a.cajaMedia - b.cajaMedia || b.vistas - a.vistas)[0] || null;
+  return { temas: out, flojo };
+}

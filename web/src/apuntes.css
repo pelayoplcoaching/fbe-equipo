@@ -482,3 +482,64 @@
 .certificado-nombre { font-size: 1.0625rem; font-weight: 650; }
 .certificado-pie { font-size: .8125rem; color: var(--tinta-2); margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) { .anillo-meta .lleno { transition: none; } }
+
+/* ---------- (apuntes, tanda D) Con los demás y en otros formatos ---------- */
+/* la liga y los duelos */
+.prog-liga, .prog-duelos { display: grid; gap: 8px; }
+.prog-liga p, .prog-duelos p { margin: 0; }
+.liga-filas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.liga-filas li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); }
+.liga-filas li.yo { background: color-mix(in srgb, var(--morado) 16%, var(--hoja)); font-weight: 650; }
+.liga-puesto { color: var(--tinta-2); text-align: center; }
+.liga-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
+.duelo-ganado { color: var(--exito, #2e9e5b); font-weight: 650; }
+.duelo-perdido, .duelo-caducado { color: var(--tinta-2); }
+.duelo-gente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* la historia a pantalla completa */
+.ap-historia { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, #000), color-mix(in srgb, var(--tono, var(--morado)) 55%, #000)); color: #fff; }
+.ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: #1f8a5a; } .ap-historia.tono-azul { --tono: #2f6fd6; }
+.ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: 4px; }
+.ap-historia-barras span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .3); overflow: hidden; }
+.ap-historia-barras span i { display: block; height: 100%; background: #fff; transform-origin: left; transform: scaleX(0); }
+.ap-historia-barras span.vista i { transform: none; }
+.ap-historia-barras span.ahora i { animation: ap-historia-llenar 6s linear forwards; }
+.ap-historia-barras span.ahora.parada i { animation-play-state: paused; }
+@keyframes ap-historia-llenar { to { transform: scaleX(1); } }
+.ap-historia-cerrar { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 12px)); right: 10px; z-index: 2; color: #fff; }
+.ap-historia-cuerpo { position: relative; z-index: 1; display: grid; gap: 16px; max-width: 34rem; pointer-events: none; }
+.ap-historia-cuerpo a { pointer-events: auto; justify-self: start; }
+.ap-historia-etq { font-size: .8125rem; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.ap-historia h2 { margin: 0; font-size: clamp(1.75rem, 7vw, 2.5rem); line-height: 1.1; }
+.ap-historia p { margin: 0; font-size: clamp(1.1875rem, 5vw, 1.5rem); line-height: 1.4; }
+.ap-historia.clase-portada h2 { font-size: clamp(2.125rem, 9vw, 3rem); }
+.ap-historia-zona { position: absolute; top: 60px; bottom: 0; width: 50%; background: transparent; border: 0; padding: 0; cursor: pointer; }
+.ap-historia-zona.atras { left: 0; width: 34%; } .ap-historia-zona.alante { right: 0; width: 66%; }
+.ap-historia-cuenta { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); right: 20px; font-size: .8125rem; opacity: .75; }
+/* la audio-píldora */
+.audio-pildora { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: var(--tono-suave, color-mix(in srgb, var(--morado) 9%, transparent)); }
+.audio-play { width: 46px; height: 46px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--tono, var(--morado)); color: #fff; border: 0; }
+.audio-info { display: grid; gap: 4px; }
+.audio-barra { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); overflow: hidden; }
+.audio-barra i { display: block; height: 100%; background: var(--tono, var(--morado)); }
+/* tu nota y los subrayados */
+.apunte-tu-nota { text-align: left; border: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #f5c84b 22%, var(--hoja)); font: inherit; font-size: .9375rem; line-height: 1.4; color: var(--tinta); cursor: pointer; }
+.apunte-nota-propia { display: grid; gap: 6px; }
+.apunte-nota-propia textarea { min-height: 84px; }
+.apunte-subrayado, .apunte-frase.subrayada { background: linear-gradient(transparent 45%, color-mix(in srgb, #f5c84b 70%, transparent) 45%); color: inherit; padding: 0 1px; border-radius: 2px; }
+.apunte-texto.subrayando .apunte-frase { cursor: pointer; border-bottom: 1.5px dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); }
+@media (prefers-reduced-motion: reduce) { .ap-historia-barras span.ahora i { animation: none; transform: scaleX(.5); } }
+/* (tanda D, coach) el audio de la novedad y el equipo en apuntes */
+.audio-coach .etiqueta-campo { font-weight: 600; font-size: .9375rem; }
+.audio-coach audio { max-width: 100%; height: 40px; }
+.audio-coach-hay { flex-wrap: wrap; }
+.audio-grabando { color: var(--aviso); font-weight: 700; }
+.audio-subir { position: relative; overflow: hidden; }
+.audio-subir input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.equipo-semanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; height: 140px; align-items: end; }
+.equipo-semana { display: grid; grid-template-rows: 1fr auto auto; height: 100%; justify-items: center; gap: 2px; }
+.equipo-semana i { align-self: end; width: 70%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--morado) 55%, transparent); }
+.equipo-semana b { font-size: .8125rem; }
+.equipo-semana small { font-size: .6875rem; color: var(--tinta-2); }
+.equipo-tema { display: grid; gap: 4px; }

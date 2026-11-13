@@ -65,16 +65,18 @@ export function apuntesDeNovedades(novedades = [], { ejercicio = null } = {}) {
     .map((n) => {
       const enlace = /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(String(n.enlace || '')) && !/\s/.test(n.enlace) ? n.enlace : null;
       const suelto = n.tipo === 'apunte';
+      // (apuntes, tanda D, 064) su audio-píldora, si la tiene
+      const audio = /^audio\/[0-9a-f-]{36}\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(String(n.audio_ruta || '')) && n.audio_segundos > 0 ? { audio: { ruta: n.audio_ruta, segundos: Math.round(n.audio_segundos) } } : {};
       // (apuntes, tanda A, migración 063) una pregunta del coach: sus opciones, la buena y el porqué de cada mala
       if (n.tipo === 'pregunta') {
         const opciones = lista(n.opciones).map((o) => sinMarcas(String(o || '')).trim()).filter(Boolean);
         const correcta = Number(n.correcta);
         if (opciones.length < 2 || opciones.length !== lista(n.opciones).length || !(correcta >= 0 && correcta < opciones.length)) return null;
         return { id: `n:${n.id}`, tipo: 'test', coach: true, etiqueta: 'Pregunta de tu coach', de: '', titulo: sinMarcas(n.titulo || '').trim(), texto: corta(sinMarcas(n.texto || ''), 520),
-          opciones, correcta, porQueNo: lista(n.explicaciones).map((x) => corta(sinMarcas(String(x || '')), 300)), dia: String(n.publicada_en).slice(0, 10), ...(n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}) };
+          opciones, correcta, porQueNo: lista(n.explicaciones).map((x) => corta(sinMarcas(String(x || '')), 300)), dia: String(n.publicada_en).slice(0, 10), ...(n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}), ...audio };
       }
       return { id: `n:${n.id}`, tipo: suelto ? 'coach' : 'novedad', etiqueta: suelto ? 'De tu coach' : 'Novedad de la semana', de: '', titulo: sinMarcas(n.titulo || '').trim(), texto: corta(sinMarcas(n.texto || ''), 520),
-        fuente: String(n.fuente || '').trim() || null, enlace, dia: String(n.publicada_en).slice(0, 10), ...(suelto && n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}) };
+        fuente: String(n.fuente || '').trim() || null, enlace, dia: String(n.publicada_en).slice(0, 10), ...(suelto && n.ejercicio_id ? { ejercicio: n.ejercicio_id } : {}), ...audio };
     }).filter((a) => a && a.titulo && a.texto && (!a.ejercicio || !ejercicio || a.ejercicio === ejercicio));
 }
 // La novedad reciente (publicada en los últimos `dias`) que aún no ha visto, o null
@@ -224,8 +226,17 @@ export function limpiarVistos(g) {
   const prueba = DIA.test(pr.dia || '') ? { dia: pr.dia, aciertos: Math.max(0, Math.round(Number(pr.aciertos) || 0)), total: Math.max(0, Math.round(Number(pr.total) || 0)), saltados: lista(pr.saltados).filter((t) => typeof t === 'string' && /^[a-z]{1,20}$/.test(t)).slice(0, 8) } : null;
   const ce = objeto(objeto(g).certificado);
   const certificado = DIA.test(ce.dia || '') && Number(ce.total) > 0 ? { dia: ce.dia, aciertos: Math.max(0, Math.min(Math.round(Number(ce.total)), Math.round(Number(ce.aciertos) || 0))), total: Math.min(40, Math.round(Number(ce.total))) } : null;
+  // (apuntes, tanda D) sus notas (una por apunte, hasta 500 letras; 150 notas) y sus subrayados (las frases marcadas)
+  const notas = {};
+  for (const [id, t] of Object.entries(objeto(objeto(g).notas)).slice(-150)) if (id.length <= 80 && typeof t === 'string' && t.trim()) notas[id] = t.slice(0, 500);
+  const subrayados = {};
+  for (const [id, xs] of Object.entries(objeto(objeto(g).subrayados)).slice(-150)) {
+    const f = [...new Set(lista(xs).filter((i) => Number.isInteger(i) && i >= 0 && i < 40))].sort((a, b) => a - b);
+    if (id.length <= 80 && f.length) subrayados[id] = f;
+  }
   return { vistos, ...(Object.keys(porSubir).length ? { porSubir } : {}), ...(guardados.length ? { guardados } : {}), ...(reto ? { reto } : {}),
     ...(dias.length ? { dias } : {}), ...(curso ? { curso } : {}), ...(examenes.length ? { examenes } : {}),
+    ...(Object.keys(notas).length ? { notas } : {}), ...(Object.keys(subrayados).length ? { subrayados } : {}),
     ...(meta ? { meta } : {}), ...(Object.keys(diario).length ? { diario } : {}), ...(prueba ? { prueba } : {}), ...(certificado ? { certificado } : {}) };
 }
 // (tanda 2) Guardar un apunte para luego, o quitarlo

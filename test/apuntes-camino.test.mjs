@@ -79,5 +79,35 @@ check(mesTema.temaFuerte?.tema === 'programacion' && C.tuMesApuntes(r, todos, '2
 check(limpiarVistos({ meta: 7, diario: { x: { n: 1 }, '2026-11-01': { n: 2, xp: 10 } }, prueba: { dia: 'mal' }, certificado: { dia: '2026-11-01', aciertos: 50, total: 10 } }).certificado.aciertos === 10
   && !limpiarVistos({ meta: 7 }).meta && Object.keys(limpiarVistos({ diario: { x: { n: 1 }, '2026-11-01': { n: 2, xp: 10 } } }).diario).join() === '2026-11-01', 'lo guardado se limpia (objetivo, días, prueba y certificado)');
 
+// (tanda D) la liga y los duelos
+let w = null;
+for (const dia of ['2026-11-09', '2026-11-10']) for (let i = 0; i < 3; i++) w = C.sumarDiario(w, dia, 'sabia');
+w = C.sumarDiario(w, '2026-11-08', 'visto');
+check(JSON.stringify(C.puntosDeSemana(w, '2026-11-09')) === JSON.stringify({ puntos: 2 * (30 + C.PREMIO_META), apuntes: 6 }) && C.puntosDeSemana(w, '2026-11-02').apuntes === 1, 'los puntos de una semana (de lunes a domingo, con el premio de cada día cumplido)');
+const d1 = C.dueloDe(42), d2 = C.dueloDe(42);
+check(d1.length === 5 && JSON.stringify(d1) === JSON.stringify(d2) && JSON.stringify(C.dueloDe(43)) !== JSON.stringify(d1) && d1.every((q) => q.efimero && q.opciones.length === 3 && q.opciones[q.correcta] && /^¿Qué es «/.test(q.titulo)) && new Set(d1.map((q) => q.titulo)).size === 5,
+  'un duelo: cinco preguntas del glosario, las mismas para los dos (de la semilla)');
+check(C.estadoDuelo({ mios: null, acabado: false, soy_retador: false, rival_nombre: 'Bea' }).estado === 'jugar' && C.estadoDuelo({ mios: 3, suyos: null, acabado: false, rival_nombre: 'Bea' }).texto === 'Esperando a Bea (tú, 3 de 5)'
+  && C.estadoDuelo({ mios: 4, suyos: 2, acabado: true, rival_nombre: 'Bea' }).texto === 'Ganaste con Bea: 4–2' && C.estadoDuelo({ mios: 2, suyos: 2, acabado: true, rival_nombre: 'Bea' }).estado === 'empate'
+  && C.estadoDuelo({ mios: null, acabado: true, rival_nombre: 'Bea' }).estado === 'caducado', 'cómo va un duelo, en palabras');
+// historias
+const h = C.historiaDeNovedad({ titulo: 'Descansa más', etiqueta: 'Novedad de la semana', texto: 'Uno. Dos dos. '.repeat(20), fuente: 'Autor, 2026', enlace: 'https://x.org' });
+check(h[0].clase === 'portada' && h[0].titulo === 'Descansa más' && h.filter((d) => d.clase === 'texto').length <= 4 && h.at(-1).clase === 'fuente' && h.at(-1).enlace === 'https://x.org', 'una novedad como historia: portada, su texto en diapositivas y de dónde sale');
+const hl = C.historiaDeLecciones(todos.filter((a) => a.tipo === 'mito').slice(0, 3), 'Mitos');
+check(hl.length === 4 && hl[0].texto === '3 lecciones' && hl.slice(1).every((d) => d.id && d.titulo), 'unas lecciones como historia: una diapositiva por lección');
+// notas y subrayados
+let n = C.ponerNota(null, 'g:rir', '  Parar con dos en recámara  ');
+check(n.notas['g:rir'] === 'Parar con dos en recámara' && n.guardados.includes('g:rir'), 'tu nota se guarda (y el apunte pasa a «Guardados»)');
+n = C.ponerNota(n, 'g:rir', '');
+check(!n.notas && n.guardados.includes('g:rir'), 'vacía, la nota se quita');
+n = C.alternarSubrayado(C.alternarSubrayado(null, 'g:rpe', 1), 'g:rpe', 0);
+check(JSON.stringify(n.subrayados['g:rpe']) === '[0,1]' && n.guardados.includes('g:rpe') && !C.alternarSubrayado(n, 'g:rpe', 0).subrayados['g:rpe'].includes(0), 'subrayar una frase y quitarla');
+check(C.frasesDe('Uno dos. ¿Tres? Cuatro!').length === 3, 'las frases de un texto');
+// el dominio del equipo
+const de = C.dominioEquipo([{ apunte: 'g:rir', atletas: 4, caja_media: 3, dominan: 3 }, { apunte: 'g:rpe', atletas: 2, caja_media: 1, dominan: 0 }, { apunte: 'i:pectoral:0', atletas: 3, caja_media: 0.5, dominan: 0 }, { apunte: 'i:pectoral:1', atletas: 1, caja_media: 1, dominan: 0 }, { apunte: 'z:raro', atletas: 9, caja_media: 5, dominan: 9 }], todos);
+const pg = de.temas.find((t) => t.tema === 'programacion'), tc = de.temas.find((t) => t.tema === 'tecnica');
+check(pg.apuntes === 2 && pg.vistas === 6 && pg.cajaMedia === 2.3 && pg.pctDominio === 50 && tc.cajaMedia === 0.6 && de.flojo.tema === 'tecnica' && !de.temas.some((t) => t.vistas >= 9),
+  'el equipo por temas: vistas, caja media y dominio; lo más flojo, para publicar después (lo que no se sabe nombrar, fuera)');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

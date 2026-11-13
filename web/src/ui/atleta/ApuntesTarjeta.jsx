@@ -3,7 +3,7 @@ import { useApp, useCarga, IcoIos } from '../comunes.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { elegirCurso, resumenApuntes, textoApuntes, apuntesDeNovedades, novedadPendiente, rachaAprendizaje, medallaApuntes, puedeExaminarse, ultimoExamen } from '../../logica/apuntes.js';
-import { leerApuntes, sincronizarApuntes, recordarFuente, fuenteRecordada, guardarEstado } from '../apuntes.js';
+import { leerApuntes, sincronizarApuntes, recordarFuente, fuenteRecordada, guardarEstado, subirSemana } from '../apuntes.js';
 import { hoyEnApuntes, rachaDiaria, puntosTotales, puedeHacerPrueba } from '../../logica/apuntes-camino.js';
 import { guiasConTexto } from '../../datos/guias.js';
 import { semanaDeAprendizaje } from '../../logica/apuntes-arte.js';
@@ -23,6 +23,7 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
   const { atleta, api, backend } = useApp() || {};
   const [abierta, setAbierta] = useState(false);   // false | true | 'guardados' | 'curso' | 'examen' | 'nivel' | 'final'
   const [progreso, setProgreso] = useState(false);
+  const [duelo, setDuelo] = useState(null);   // (tanda D) el duelo que se juega
   const [r, setR] = useState(() => (atleta?.id ? resumenApuntes(leerApuntes(atleta.id), hoyISO()) : null));
   // (060) lo visto en otros móviles y, en Hoy, si hay una novedad de la semana que aún no ha leído
   const [vez, setVez] = useState(0);
@@ -46,7 +47,7 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
   const novedades = useCarga(() => (!repaso && atleta?.id && api?.novedades ? api.novedades().then((n) => { recordarFuente(atleta.id, 'novedades', n); return n; }).catch(() => fuenteRecordada(atleta.id, 'novedades') || []) : Promise.resolve([])), [atleta?.id, repaso], { recuerdo: !repaso && atleta?.id ? 'apuntes-novedades' : null });
   const novedad = !repaso && atleta?.id && vez >= 0 ? novedadPendiente(apuntesDeNovedades(novedades.datos || []), leerApuntes(atleta.id), hoyISO(), 7) : null;
   if (!atleta?.id || !r) return null;
-  const cerrar = () => { setAbierta(false); setR(resumenApuntes(leerApuntes(atleta.id), hoyISO())); setVez((n) => n + 1); };
+  const cerrar = () => { setAbierta(false); setDuelo(null); subirSemana(api, atleta.id).catch(() => {}); setR(resumenApuntes(leerApuntes(atleta.id), hoyISO())); setVez((n) => n + 1); };
   const nada = repaso && !r.vistos;
   const guardados = vez >= 0 ? (leerApuntes(atleta.id).guardados || []).length : 0;   // (tanda 2) los que guardó para luego
   // (tanda 4) la racha (semanas seguidas aprendiendo algo), la medalla y el último examen: de lo guardado en el móvil
@@ -100,8 +101,8 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
           </span>
         </div>
       )}
-      {progreso && <HojaProgreso alCerrar={() => setProgreso(false)} alAbrir={(modo, curso = null) => { if (curso) guardarEstado(atleta.id, elegirCurso(leerApuntes(atleta.id), curso, hoyISO())); setProgreso(false); setAbierta(modo); }} />}
-      {abierta && <Apuntes atletaId={atleta.id} modo={typeof abierta === 'string' ? abierta : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
+      {progreso && <HojaProgreso alCerrar={() => setProgreso(false)} alAbrir={(modo, curso = null, d = null) => { if (curso) guardarEstado(atleta.id, elegirCurso(leerApuntes(atleta.id), curso, hoyISO())); setDuelo(d); setProgreso(false); setAbierta(modo); }} />}
+      {abierta && <Apuntes atletaId={atleta.id} duelo={duelo} modo={typeof abierta === 'string' ? abierta : repaso ? 'repaso' : 'dia'} alCerrar={cerrar} />}
     </section>
   );
 }

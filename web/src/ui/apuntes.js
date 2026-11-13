@@ -1,6 +1,8 @@
 // «Apuntes» (formación en los descansos): lo que el atleta ha visto, en este móvil, en `fbe-apuntes-<atletaId>`
 // (logica/apuntes.js). Si el navegador no deja guardar, se recuerda mientras la app está abierta.
 import { limpiarVistos, apuntarVisto, pendienteDeSubir, conServidor, ID_APUNTE } from '../logica/apuntes.js';
+import { puntosDeSemana } from '../logica/apuntes-camino.js';
+import { lunesDe, sumarDias, hoyISO } from '../logica/fechas.js';
 
 const enMemoria = new Map();
 const soloMemoria = new Set();   // (v0.148) los que no se han podido guardar en el navegador: ahí manda la memoria
@@ -55,6 +57,7 @@ export async function sincronizarApuntes(api, atletaId) {
       if (!r) break;
       quitarDeLaCola(atletaId, id, sabia);
     }
+    await subirSemana(api, atletaId);
     // (lo de la base se trae como mucho cada 5 minutos: volver a Hoy no pide nada)
     if (Date.now() - (traido.get(atletaId) || 0) < CADA) return leerApuntes(atletaId);
     const filas = await api.apuntesVistos?.(atletaId);
@@ -62,6 +65,22 @@ export async function sincronizarApuntes(api, atletaId) {
     if (Array.isArray(filas) && filas.length) { const antes = leerApuntes(atletaId), junto = conServidor(antes, filas); if (JSON.stringify(junto) !== JSON.stringify(antes)) guardar(atletaId, junto); }
   } catch { /* otra vez será */ }
   return leerApuntes(atletaId);
+}
+
+// (apuntes, tanda D, 064) Los puntos de esta semana (y la pasada, si no se llegó a subir lo último) a la liga: solo si
+// han cambiado desde lo último subido (`fbe-liga-apuntes-<atletaId>`)
+export async function subirSemana(api, atletaId) {
+  if (!api?.sumarApuntesSemana || !atletaId) return;
+  const claveLiga = `fbe-liga-apuntes-${atletaId}`;
+  let subido = {};
+  try { subido = JSON.parse(localStorage.getItem(claveLiga) || '{}') || {}; } catch { /* nada */ }
+  const e = leerApuntes(atletaId), lunes = lunesDe(hoyISO());
+  for (const l of [sumarDias(lunes, -7), lunes]) {
+    const x = puntosDeSemana(e, l);
+    if (!x.puntos || subido[l] === x.puntos) continue;
+    if (await api.sumarApuntesSemana(l, x.puntos, x.apuntes)) subido[l] = x.puntos; else break;
+  }
+  try { localStorage.setItem(claveLiga, JSON.stringify(Object.fromEntries(Object.entries(subido).filter(([k]) => k >= sumarDias(lunes, -7))))); } catch { /* nada */ }
 }
 
 // (tanda 2) Guarda lo que ha cambiado sin ver nada (un apunte guardado para luego, el reto de la siguiente serie)
