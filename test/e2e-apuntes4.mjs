@@ -77,6 +77,7 @@ export async function probarApuntes4({ navegador, check, base = 'http://localhos
     await form.getByRole('button', { name: /Mandar a un atleta/ }).click();
     const mandar = p.locator('.mandar-apunte');
     await mandar.waitFor();
+    await mandar.getByRole('button', { name: /Ana López/ }).waitFor({ timeout: 8000 }).catch(() => {});   // (la lista de atletas llega después)
     check((await mandar.locator('blockquote').textContent()).startsWith(`Un apunte para ti: ${TITULO}`) && await mandar.getByRole('button', { name: /Ana López/ }).count() === 1, '«Mandar a un atleta»: el mensaje ya escrito y la lista de atletas');
     await mandar.getByRole('button', { name: /Ana López/ }).click();
     await p.locator('.toast', { hasText: 'Enviado a Ana' }).waitFor();

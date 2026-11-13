@@ -116,6 +116,8 @@ export async function probarTravesia({ navegador, check, base = 'http://localhos
     const seg = (t) => { const [a, b] = t.split(':').map(Number); return a * 60 + b; };
     check(Math.abs(seg(cuentaJ) - seg(cuentaR)) <= 1 && /descanso/i.test(await p.locator('.travesia-cuenta').textContent()), `el juego lleva la cuenta del descanso (${cuentaJ}, como el reloj)`);
     check(/^Después: /.test(await p.locator('.travesia-despues').textContent()) && await ajuste(), 'abajo, lo que toca después; y queda apuntado que juega en los descansos');
+    // (el reto lo escribe el primer cuadro del juego: se espera a que salga)
+    await p.waitForFunction(() => /^Reto de hoy/.test(document.querySelector('.travesia-reto')?.textContent || ''), null, { timeout: 5000 }).catch(() => {});
     check(/^Reto de hoy/.test(await p.locator('.travesia-reto').textContent()), `y el reto del día («${(await p.locator('.travesia-reto').textContent()).slice(0, 60)}»)`);
     await juego.getByRole('button', { name: 'Cerrar el juego' }).click();
     await juego.waitFor({ state: 'detached' });
