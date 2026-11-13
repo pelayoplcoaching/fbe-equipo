@@ -2,7 +2,7 @@
 // en la sesión del atleta se traen una vez (al entrar en la sesión), se decodifican y suenan en su momento por el mismo
 // contexto de audio que el resto (ui/sonido.js), con el volumen del entreno. Si no hay frases, no hay red o falta la 064,
 // suena lo de siempre (la voz del móvil o nada). Nada sale del móvil: solo se descargan los audios del coach.
-import { contexto } from './sonido.js';
+import { contexto, salida, apartarFondo, ocupar } from './sonido.js';
 import { leerAjustes } from './ajustes.js';
 import { volumenDe } from '../logica/sonido.js';
 
@@ -14,6 +14,11 @@ export const FRASES_VOZ = [
   ['record', '¡Récord!', 'Al batir un récord'],
   ['buen_trabajo', 'Buen trabajo', 'Al terminar la sesión'],
   ['fin_sesion', 'Sesión terminada', 'Al terminar la sesión, si no hay «Buen trabajo»'],
+  // (sonido 2, tanda 6; migración 065)
+  ['saludo', '¡Hola! A por ello', 'Al empezar la sesión'],
+  ['mitad_sesion', 'Mitad de la sesión', 'Al llegar a la mitad de las series'],
+  ['a_por_record', 'A por el récord', 'Al abrir un ejercicio en el que la app propone subir'],
+  ['ultimo_ejercicio', 'Último ejercicio', 'Al acabar el descanso, antes del último ejercicio'],
 ];
 export const MAX_VOZ_MS = 6000;
 
@@ -49,8 +54,10 @@ export function sonarVozCoach(...claves) {
   try {
     const s = c.createBufferSource(), g = c.createGain();
     s.buffer = buffers[k]; g.gain.value = Math.max(0.05, volumenDe(a, 'entreno'));
-    s.connect(g).connect(c.destination);
+    s.connect(g).connect(salida(c));
     s.start();
+    // (sonido 2) lo de fondo se aparta mientras habla, y nada más suena encima
+    apartarFondo((buffers[k].duration || 1.5) + 0.3); ocupar(c, 'voz-coach', buffers[k].duration || 1.5);
     try { globalThis.dispatchEvent?.(new CustomEvent('fbe-sonido', { detail: { tipo: `voz:${k}` } })); } catch { /* */ }
     return true;
   } catch { return false; }

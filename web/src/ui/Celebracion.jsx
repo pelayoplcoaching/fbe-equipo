@@ -8,6 +8,7 @@
 //   · ReaccionesPost (las seis reacciones: las tres de siempre a la vista y «Más reacciones»), Pegatina y ElegirPegatina.
 //   · TiraMomentos: los momentos de 24 horas en círculos, arriba de Equipo, con «Tu momento» y su hoja.
 // Sin la 045, lo que la necesita no sale (las tres reacciones de siempre, sin pegatinas, momentos ni hitos).
+import { sonarFBE } from './sonido.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, cuando } from './comunes.jsx';
 import { HojaCompartir } from './Compartir.jsx';
@@ -35,7 +36,7 @@ export function TarjetaAniversario() {
   useEffect(() => {
     if (!an || oculta || leerPreferencia(clave, null)?.startsWith(hoy)) return undefined;
     guardarPreferencia(clave, `${hoy}:visto`);
-    const t = setTimeout(() => lanzarConfeti({ vibracion: null }), 400);
+    const t = setTimeout(() => { lanzarConfeti({ vibracion: null }); sonarFBE('hito', { tipo: 'aniversario' }); }, 400);   // (sonido 2) con su fanfarria
     return () => clearTimeout(t);
   }, [an?.meses, oculta]);
   if (!an || oculta) return null;

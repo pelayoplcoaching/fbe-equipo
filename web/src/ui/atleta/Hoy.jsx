@@ -1,3 +1,4 @@
+import { sonarFBE } from '../sonido.js';
 import { ApunteAlPaso } from './ApunteAlPaso.jsx';
 import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
@@ -704,7 +705,7 @@ function BloqueTerminado({ salud }) {
   if (!r || (visto === r.bloque.id && !abierto)) return null;
   return (
     <>
-      <TarjetaBloque informe={r} alAbrir={() => { setAbierto(true); if (visto !== r.bloque.id) lanzarConfeti({ vibracion: 'anillo' }); }} alQuitar={() => setVisto(r.bloque.id)} />
+      <TarjetaBloque informe={r} alAbrir={() => { setAbierto(true); if (visto !== r.bloque.id) { lanzarConfeti({ vibracion: 'anillo' }); sonarFBE('hito', { tipo: 'bloque' }); } }} alQuitar={() => setVisto(r.bloque.id)} />
       {abierto && <InformeBloque informe={r} salud={salud} alCerrar={() => { setAbierto(false); setVisto(r.bloque.id); }} />}
     </>
   );

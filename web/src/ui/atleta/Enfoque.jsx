@@ -1,3 +1,5 @@
+import { sonarFBE } from '../sonido.js';
+import { notaRpe } from '../../logica/sonido.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Disco, useApp, Capa } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
@@ -236,7 +238,7 @@ function EnfoquePantalla({
             <div class="rpe-fila" role="group" aria-label="RPE de la serie">
               <span class="etq">RPE</span>
               {RPE_ENFOQUE.map((x) => (
-                <button key={x} type="button" data-v={x} aria-pressed={Number(rpe) === x ? 'true' : 'false'} onClick={() => setRpe(Number(rpe) === x ? '' : x)}>{num(x)}</button>
+                <button key={x} type="button" data-v={x} aria-pressed={Number(rpe) === x ? 'true' : 'false'} onClick={() => { const n = Number(rpe) === x ? '' : x; setRpe(n); if (n !== '') sonarFBE('rpe', { f: notaRpe(n) }); }}>{num(x)}</button>
               ))}
             </div>
             <button class="btn btn-primario btn-hecha" onClick={hecha} aria-label={previa ? `Guardar los cambios de la serie ${numero}` : `Marcar la serie ${numero} como hecha`}>

@@ -12,7 +12,7 @@
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
-import { limpiarVolumenes } from '../logica/sonido.js';
+import { limpiarVolumenes, horaValida } from '../logica/sonido.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
@@ -40,7 +40,12 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // y a falta de diez segundos (sí) y el soplo de «Respira» (sí, si «Respira» está puesto)
   volumenes: { entreno: 1, juego: 1, chat: 1, avisos: 1 }, sonidoBrillante: false, sonidosAvisos: true, sonidosInterfaz: false, avisoMitad: false, avisoDiez: true, respiraSonido: true,
   // (sonido, tanda 3) las frases grabadas por el coach, con su voz (si las hay)
-  vozCoach: true };
+  vozCoach: true,
+  // (sonido 2) el horario sin sonidos (apagado; de 23:00 a 8:00), el clic del teclado de la app (no), «¿Seguimos?» (sí), la
+  // prueba de sonido (aún no hecha), la voz del móvil elegida y su velocidad, contar las repeticiones con el metrónomo (no),
+  // el paisaje sonoro del descanso (ninguno) y marcar la serie desde los auriculares (no)
+  silencioActivo: false, silencioDesde: '23:00', silencioHasta: '08:00', sonidoTeclado: false, avisoSeguimos: true, pruebaSonido: false,
+  vozNombre: null, vozVelocidad: 1, contarReps: false, paisajeDescanso: null, auricularesSerie: false };
 const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
@@ -88,6 +93,14 @@ export function normalizarAjustes(guardado = {}) {
   a.volumenes = limpiarVolumenes(a.volumenes);
   a.sonidoBrillante = a.sonidoBrillante === true; a.sonidosAvisos = a.sonidosAvisos !== false; a.sonidosInterfaz = a.sonidosInterfaz === true;
   a.avisoMitad = a.avisoMitad === true; a.avisoDiez = a.avisoDiez !== false; a.respiraSonido = a.respiraSonido !== false; a.vozCoach = a.vozCoach !== false;
+  a.silencioActivo = a.silencioActivo === true;
+  if (!horaValida(a.silencioDesde)) a.silencioDesde = '23:00';
+  if (!horaValida(a.silencioHasta)) a.silencioHasta = '08:00';
+  a.sonidoTeclado = a.sonidoTeclado === true; a.avisoSeguimos = a.avisoSeguimos !== false; a.pruebaSonido = a.pruebaSonido === true;
+  a.vozNombre = typeof a.vozNombre === 'string' && a.vozNombre.length <= 120 ? a.vozNombre : null;
+  a.vozVelocidad = [0.85, 1, 1.15].includes(Number(a.vozVelocidad)) ? Number(a.vozVelocidad) : 1;
+  a.contarReps = a.contarReps === true; a.auricularesSerie = a.auricularesSerie === true;
+  a.paisajeDescanso = ['marron', 'lluvia', 'bosque'].includes(a.paisajeDescanso) ? a.paisajeDescanso : null;
   return a;
 }
 export function leerAjustes() {

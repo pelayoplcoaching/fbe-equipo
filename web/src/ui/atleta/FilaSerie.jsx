@@ -12,6 +12,8 @@
 //    arranca el descanso). Hasta los 10 px no se sabe si es la página: luego se fija el eje (en vertical, la página baja
 //    como siempre). Pasado el umbral, un toque de vibración y el fondo ✓ entero; volviendo atrás antes de soltar, nada.
 //    Mantenerla pulsada (medio segundo quieta) abre el teclado en los kilos. Sin gestos, lo mismo con ✓ y tocando los campos.
+import { sonarFBE } from '../sonido.js';
+import { notaRpe } from '../../logica/sonido.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, useApp } from '../comunes.jsx';
 import { sinMovimiento } from '../transiciones.js';
@@ -258,6 +260,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
             <select ref={refs.rpe} data-rpe={rpe === '' || rpe == null ? undefined : Math.floor(Number(rpe))} class={`rpe ${propuesta.rpe != null && rpe === '' ? 'rpe-objetivo' : ''}`} aria-label={etiquetaRpe} value={rpe} onChange={(e) => {
               const v = e.currentTarget.value === '' ? '' : Number(e.currentTarget.value);
               elegirRpe(v);
+              if (v !== '') sonarFBE('rpe', { f: notaRpe(v) });   // (sonido 2) el esfuerzo suena
             }}>
               {RPES.map((r) => <option key={r} value={r}>{r === '' ? pista : num(r)}</option>)}
             </select>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, useApp } from '../comunes.jsx';
+import { sonarFBE } from '../sonido.js';
 import {
   LIMITE_VOZ_SEG, textoContador, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, mmss, duracionGuardada, MIN_VOZ_SEG,
@@ -61,11 +62,13 @@ export function useGrabadora({ alError }) {
       const blob = new Blob(x.trozos, { type: f.tipo });
       setGrabado({ blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s), onda: ondaDe(x.niveles, 40), limite: !!x.limite });
       setEstado('revisar');
+      sonarFBE('nota-acaba');   // (sonido 2, tanda 7) como en WhatsApp
     };
     // (si el navegador no deja empezar, el micro se suelta y se dice)
     try { rec.start(250); } catch (e) { soltarMicro(); setEstado('nada'); alError(errorMicro(e)); return; }
     x.inicio = reloj();
     setEstado('grabando');
+    sonarFBE('nota-empieza');   // (sonido 2, tanda 7)
     x.tic = setInterval(() => {
       const s = (reloj() - x.inicio) / 1000;
       x.seg = s;

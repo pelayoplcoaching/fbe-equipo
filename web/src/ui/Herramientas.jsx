@@ -1,3 +1,4 @@
+import { sonarFBE } from './sonido.js';   // (sonido 2) las aproximaciones, más suaves que las efectivas
 import { useState } from 'preact/hooks';
 import { Hoja, Paso, Segmentos } from './comunes.jsx';
 import { e1rm, tablaRpe, RPE_TABLA, discosPorLado, aproximaciones, num } from '../logica/calculos.js';
@@ -88,7 +89,7 @@ export function Aproximacion({ nombre, kg, reps, conBarra = true, alCerrar }) {
           {lista.map((a, i) => (
             <li key={i}>
               <label class="casilla">
-                <input type="checkbox" checked={hechas.has(i)} onChange={() => setHechas((h) => { const n = new Set(h); n.has(i) ? n.delete(i) : n.add(i); return n; })} />
+                <input type="checkbox" checked={hechas.has(i)} onChange={() => setHechas((h) => { const n = new Set(h); if (n.has(i)) n.delete(i); else { n.add(i); sonarFBE('aproximacion', { n: i + 1 }); } return n; })} />
                 <span><strong class="num">{num(a.kg, 2)} {etiquetaPeso()} × {a.reps}</strong>{conBarra && <Placas kg={a.kg} etiqueta="" />}</span>
               </label>
             </li>

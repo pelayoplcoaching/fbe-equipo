@@ -356,6 +356,8 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
     if (coach || !d || filtro !== 'todo' || buscar) return;
     const ultima = d.posts.filter((x) => !x.mio).map((x) => x.creado_en).sort().at(-1);
     const previo = leerVistoEquipo(yo);
+    // (sonido 2, tanda 7) un aviso, una encuesta o un evento del coach que llega nuevo (de después de lo ya visto): su sonido
+    if (previo && d.posts.some((x) => !x.mio && x.autor?.coach && ['aviso', 'encuesta', 'evento'].includes(x.tipo) && x.creado_en > previo)) sonarFBE('aviso-coach');
     guardarVistoEquipo(yo, [previo, ultima].filter(Boolean).sort().at(-1) || new Date().toISOString());
   }, [d]);
   // (v0.72: y lo programado, que sale en su lista)

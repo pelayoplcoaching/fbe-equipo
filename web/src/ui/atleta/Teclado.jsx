@@ -14,6 +14,8 @@ import { Capa, Icono } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
 import { leerAjustes, guardarAjustes, EVENTO_AJUSTES } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
+import { sonarFBE } from '../sonido.js';
+import { notaRpe } from '../../logica/sonido.js';
 import { num } from '../../logica/calculos.js';
 import { RPE_TECLADO, DISCOS_MINIMOS, pulsarTecla, sumarPaso, anuncioValor, discosCon } from '../../logica/teclado.js';
 import { enLibras, nombrePeso, barraVista, etiquetaPeso } from '../../logica/unidades.js';
@@ -113,7 +115,8 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
     return () => { document.removeEventListener('pointerdown', baja, true); document.removeEventListener('pointerup', sube, true); document.removeEventListener('keydown', tecla); };
   });
   const decir = (c, t) => setAnuncio(anuncioValor(c, t));
-  const tocar = () => vibrar('toque');
+  // (sonido 2, tanda 5) y, con «Clic del teclado», un clic casi imperceptible
+  const tocar = () => { vibrar('toque'); sonarFBE('tecla'); };
   const pulsar = (k) => {
     const t = pulsarTecla(texto, k, { campo, nuevo });
     tocar();
@@ -126,7 +129,8 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
     setNuevo(true);
     if (t !== texto) { alTexto(t); decir(campo, t); }
   };
-  const elegirRpe = (v) => { tocar(); const n = Number(rpe) === v ? '' : v; alRpe(n); decir('rpe', n); };
+  // (sonido 2, tanda 5) el RPE suena: más agudo cuanto más duro
+  const elegirRpe = (v) => { vibrar('toque'); const n = Number(rpe) === v ? '' : v; alRpe(n); decir('rpe', n); if (n !== '') sonarFBE('rpe', { f: notaRpe(n) }); };
   // Las teclas no se llevan el foco: el campo sigue enfocado (en el iPhone, sin esto el campo se suelta)
   const sinFoco = (e) => e.preventDefault();
   const delta = campo === 'kg' ? paso : 1;

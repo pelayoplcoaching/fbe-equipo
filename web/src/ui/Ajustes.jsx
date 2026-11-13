@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
 import { prepararAudio, pitar, sonarSerie, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
-import { hayVoz, hablar } from './voz.js';
-import { sonarFBE, sonarTanda } from './sonido.js';
+import { hayVoz, hablar, vocesEspanol } from './voz.js';
+import { PruebaSonido } from './PruebaSonido.jsx';
+import { sonarFBE, sonarTanda, empezarPaisaje } from './sonido.js';
 import { APARTADOS, PERFILES, perfilDe, ESCUCHAR } from '../logica/sonido.js';
 import { plataformaPistaAqui, prepararPista, probarPista, frasesDelCoach, pararPista, descansoSonando } from './pista-descanso.js';
 import { ACENTOS } from '../logica/acentos.js';
@@ -122,6 +123,16 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
     pararTanda.current = sonarTanda(lista, { cada: 950, alSonar: (n) => { setOyendo(n); if (!n) pararTanda.current = null; } });
   };
   const perfil = perfilDe(a);
+  const [prueba, setPrueba] = useState(false);
+  // (las voces del móvil a veces llegan tarde: «voiceschanged»)
+  const [voces, setVoces] = useState(vocesEspanol);
+  useEffect(() => {
+    const ss = typeof window !== 'undefined' ? window.speechSynthesis : null;
+    if (!ss?.addEventListener) return undefined;
+    const al = () => setVoces(vocesEspanol());
+    ss.addEventListener('voiceschanged', al);
+    return () => ss.removeEventListener?.('voiceschanged', al);
+  }, []);
   const probarApartado = (k) => { prepararAudio(); sonarFBE({ entreno: 'serie', juego: 'cuenta', chat: 'recibido', avisos: 'animo' }[k], k === 'juego' ? { segundo: 1 } : { n: 2, total: 4 }, { forzar: true }); };
   const nombreSonido = (k) => (SONIDOS_DESCANSO.find(([v]) => v === k) || [])[1] || k;
   // Suena el que se ve elegido (no el guardado: por si este navegador no deja guardar) y lo dice
@@ -137,7 +148,9 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
         <span class="peq terciario">{perfil ? PERFILES[perfil].ayuda : 'A tu manera: lo has elegido tú, uno a uno, aquí abajo'}.</span>
         <button type="button" class="btn btn-peq aj-escuchar" onClick={escucharTodos} aria-pressed={oyendo ? 'true' : 'false'}><Icono n="altavoz" />{oyendo ? 'Parar' : 'Escuchar todos'}</button>
         {oyendo && <span class="peq secundario" role="status">Suena: {oyendo}</span>}
+        <button type="button" class="btn btn-peq plano" style="justify-self:start" onClick={() => setPrueba(true)}><Icono n="altavoz" /> Prueba de sonido</button>
       </div>
+      {prueba && <PruebaSonido alCerrar={() => { setPrueba(false); cambiarVarios(leerAjustes()); }} />}
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
           <li class="panel-pad pila-s">
@@ -184,12 +197,46 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
           {a.sonido && <Interruptor id="aj-respira-sonido" icono="sueno" texto="Sonido de «Respira»" ayuda="Con «Respira» puesto en el descanso, un soplo suave que sube al inspirar y baja al soltar" valor={a.respiraSonido !== false} alCambiar={(v) => { cambiar('respiraSonido', v); if (v) { prepararAudio(); sonarFBE('respira-dentro', { dura: 2 }, { forzar: true }); } }} />}
           <Interruptor id="aj-avisos" icono="trofeo" texto="Sonidos de logros y comunidad" ayuda="Al conseguir un logro, recibir un ánimo o cumplir un reto del equipo, con la app abierta" valor={a.sonidosAvisos !== false} alCambiar={(v) => { cambiar('sonidosAvisos', v); if (v) { prepararAudio(); sonarFBE('logro', { nivel: 2 }, { forzar: true }); } }} />
           <Interruptor id="aj-interfaz" icono="hecho" texto="Sonidos de la interfaz" ayuda="Un toque casi imperceptible al marcar un hábito, enviar el check-in, cerrar una tarea o guardar el peso" valor={!!a.sonidosInterfaz} alCambiar={(v) => { cambiar('sonidosInterfaz', v); if (v) { prepararAudio(); sonarFBE('ui', {}, { forzar: true }); } }} />
+          {/* (sonido 2) el clic del teclado, «¿Seguimos?», el paisaje sonoro del descanso y el horario sin sonidos */}
+          <Interruptor id="aj-teclado-clic" icono="teclado" texto="Clic del teclado" ayuda="Un clic casi imperceptible en cada tecla del teclado de la app" valor={!!a.sonidoTeclado} alCambiar={(v) => { cambiar('sonidoTeclado', v); if (v) { prepararAudio(); sonarFBE('tecla', {}, { forzar: true }); } }} />
+          {a.sonido && <Interruptor id="aj-seguimos" icono="reloj" texto="«¿Seguimos?»" ayuda="Si acaba el descanso y pasa un minuto sin marcar la serie, un recordatorio suave (y otro a los tres minutos)" valor={a.avisoSeguimos !== false} alCambiar={(v) => { cambiar('avisoSeguimos', v); if (v) { prepararAudio(); sonarFBE('seguimos', {}, { forzar: true }); } }} />}
+          {a.sonido && (
+            <li class="panel-pad pila-s">
+              <label for="aj-paisaje">Sonido de fondo en el descanso</label>
+              <div class="fila-envolver">
+                <select id="aj-paisaje" class="selector" style="flex:1;min-width:11rem" value={a.paisajeDescanso || ''} onChange={(e) => { const v = e.currentTarget.value || null; cambiar('paisajeDescanso', v); if (v) { prepararAudio(); const parar = empezarPaisaje(v); setTimeout(parar, 3500); } }}>
+                  <option value="">Ninguno</option><option value="marron">Ruido marrón</option><option value="lluvia">Lluvia</option><option value="bosque">Bosque</option>
+                </select>
+              </div>
+              <span class="peq terciario">Muy suave, mientras dura el descanso, y se apaga al acabar. Para quien entrena en casa o en silencio. Gasta algo más de batería.</span>
+            </li>
+          )}
+          <Interruptor id="aj-silencio" icono="sueno" texto="Horario sin sonidos" ayuda="En esas horas no suenan el chat, los logros, la comunidad ni la interfaz; lo del entreno, sí" valor={!!a.silencioActivo} alCambiar={(v) => cambiar('silencioActivo', v)} />
+          {a.silencioActivo && (
+            <li class="panel-pad aj-horario">
+              <label for="aj-silencio-desde">De</label><input id="aj-silencio-desde" type="time" class="entrada" value={a.silencioDesde} onChange={(e) => cambiar('silencioDesde', e.currentTarget.value || '23:00')} />
+              <label for="aj-silencio-hasta">a</label><input id="aj-silencio-hasta" type="time" class="entrada" value={a.silencioHasta} onChange={(e) => cambiar('silencioHasta', e.currentTarget.value || '08:00')} />
+            </li>
+          )}
           {a.sonido && <Interruptor id="aj-cuenta" icono="reloj" texto="Cuenta atrás en los últimos segundos" ayuda="Notas que suben en los cinco últimos (tres en los descansos cortos), para saber que se acaba sin mirar el móvil" valor={a.cuentaAtras} alCambiar={(v) => { cambiar('cuentaAtras', v); if (v) { prepararAudio(); [5, 4, 3, 2, 1].forEach((sg, i) => setTimeout(() => sonarFBE('cuenta', { segundo: sg }, { forzar: true }), i * 260)); } }} />}
           {/* v0.48: el entrenador por voz (Web Speech), apagado de entrada; donde el navegador no habla, desactivado */}
           <Interruptor id="aj-voz" icono="mensaje" texto="Entrenador por voz" desactivado={!hayVoz()}
             ayuda={hayVoz() ? 'Te dice la siguiente serie («Serie 3 de press banca: 80 kilos por 6»), los últimos segundos del descanso y la última serie. La música sigue sonando (baja un momento mientras habla).' : 'Este navegador no puede hablar: los avisos del descanso siguen con su sonido.'}
             valor={!!a.voz && hayVoz()} alCambiar={(v) => { cambiar('voz', v); if (v) hablar('Serie 1 de press banca: 60 kilos por 8.', { forzar: true }); }} />
           {a.voz && hayVoz() && <li class="panel-pad separa"><span class="peq secundario">¿Se oye bien?</span><button class="btn btn-peq" onClick={() => hablar('Serie 3 de sentadilla: 80 kilos por 6. Última serie.', { forzar: true })}><Icono n="altavoz" /> Probar la voz</button></li>}
+          {/* (sonido 2, tanda 6) la voz del móvil: cuál (de las que tenga en español) y a qué velocidad; y contar las repeticiones */}
+          {a.voz && hayVoz() && (
+            <li class="panel-pad pila-s">
+              {voces.length > 1 && <><label for="aj-voz-nombre">Qué voz</label>
+                <select id="aj-voz-nombre" class="selector" value={a.vozNombre || ''} onChange={(e) => { cambiar('vozNombre', e.currentTarget.value || null); setTimeout(() => hablar('Serie 2 de remo: 50 kilos por 10.', { forzar: true }), 50); }}>
+                  <option value="">La del móvil</option>
+                  {voces.map((v) => <option key={v.nombre} value={v.nombre}>{v.nombre} ({v.idioma})</option>)}
+                </select></>}
+              <span id="aj-voz-vel-t">Velocidad</span>
+              <Segmentos etiqueta="Velocidad de la voz" valor={Number(a.vozVelocidad) || 1} opciones={[[0.85, 'Más despacio'], [1, 'Normal'], [1.15, 'Más rápido']]} alCambiar={(v) => { if (v == null) return; cambiar('vozVelocidad', v); setTimeout(() => hablar('Serie 2 de remo: 50 kilos por 10.', { forzar: true }), 50); }} />
+            </li>
+          )}
+          {hayVoz() && <Interruptor id="aj-contar" icono="mensaje" texto="Contar las repeticiones con el metrónomo" ayuda="Con el metrónomo de tempo, la voz dice cada repetición al empezarla" valor={!!a.contarReps} alCambiar={(v) => cambiar('contarReps', v)} />}
           {/* (sonido, tanda 3) las frases que grabe el coach, con su voz */}
           <Interruptor id="aj-voz-coach" icono="micro" texto="Frases de tu coach, con su voz" ayuda="Si tu coach las ha grabado: «¡Vamos!», «Última serie», «¡Récord!»… en su momento de la sesión" valor={a.vozCoach !== false} alCambiar={(v) => cambiar('vozCoach', v)} />
           {/* v0.62: el aviso con el móvil bloqueado (la pista del descanso). Solo donde puede funcionar: iPhone con Safari 16.4 o
@@ -198,6 +245,12 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
             <Interruptor id="aj-bloqueo" icono="candado" texto="Avisar aunque bloquees el móvil" valor={!!a.vozBloqueo}
               ayuda={`Suena el aviso al acabar el descanso aunque el móvil esté bloqueado${plataforma === 'ios' ? ' o en silencio' : ''}, y la pantalla de bloqueo enseña lo que queda. A cambio, tu música (${plataforma === 'ios' ? 'Spotify, Apple Music' : 'Spotify, YouTube Music'}…) se pausa en cada descanso y tienes que volver a darle a play.${a.voz && frasesDelCoach() ? ' Con el móvil bloqueado, la cuenta y el final los dice la voz grabada de tu coach.' : ' Con el móvil bloqueado suena el aviso (un sonido), no la voz: la voz del móvil solo habla con la app delante.'}`}
               alCambiar={(v) => { cambiar('vozBloqueo', v); if (v) setTimeout(() => prepararPista(), 0); else pararPista(); }} />
+          )}
+          {/* (sonido 2, tanda 7) con la pista, marcar la serie desde el botón de los auriculares */}
+          {a.sonido && plataforma && a.vozBloqueo && (
+            <Interruptor id="aj-auriculares" icono="play" texto="Marcar la serie desde los auriculares" valor={!!a.auricularesSerie}
+              ayuda="Pasado el aviso del descanso, el botón de pausa de los auriculares (o de la pantalla de bloqueo) marca la serie que toca con lo propuesto, y la voz lo confirma. La pista sigue minuto y medio más en silencio para que llegue el botón (tu música sigue en pausa ese rato). Depende del móvil y de los auriculares."
+              alCambiar={(v) => cambiar('auricularesSerie', v)} />
           )}
           {a.sonido && plataforma && a.vozBloqueo && (() => {
             // (con un descanso de verdad sonando, no: la prueba lo cambiaría por la suya)

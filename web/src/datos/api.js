@@ -4120,6 +4120,8 @@ export function crearApi(backend) {
       try { antes = await b.rpc('voces_coach_guardar', { p_clave: clave, p_ruta: ruta, p_duracion_ms: Math.round(duracionMs) }); } catch (e) {
         await b.storage.borrar([ruta], 'voces-coach').catch(() => {});
         if (/voces_coach_guardar|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Para grabar tus frases falta ejecutar la migración 064 en Supabase (supabase/migraciones/064_voces_coach.sql).');
+        // (065) las cuatro frases nuevas, en una base que solo tiene la 064
+        if (/voces_coach_valida|23514/i.test(`${e?.message || ''} ${e?.code || ''}`) && ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio'].includes(clave)) throw new Error('Para grabar esta frase falta ejecutar la migración 065 en Supabase (supabase/migraciones/065_voces_coach_2.sql).');
         throw e;
       }
       if (antes) await b.storage.borrar([antes], 'voces-coach').catch(() => {});

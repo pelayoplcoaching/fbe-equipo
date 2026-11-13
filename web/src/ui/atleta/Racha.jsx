@@ -2,6 +2,7 @@
 // titila (solo transform; quieta con «reducir movimiento»), la cifra en grande y condensada, las últimas 12 semanas
 // (completas, sin completar, sin nada programado y la de ahora) y la próxima meta con su barra. Y al llegar a 4, 8, 12,
 // 26 y 52 semanas, un momento a pantalla completa con confeti, una vez por hito en este móvil.
+import { sonarFBE } from '../sonido.js';
 import { useEffect, useId, useRef, useState } from 'preact/hooks';
 import { Capa, Icono, useAtraparFoco, usePreferencia } from '../comunes.jsx';
 import { calendarioRacha, proximoHito, hitoPorCelebrar, marcarHitos, NOMBRE_ESTADO_SEMANA, textoSemanas } from '../../logica/racha.js';
@@ -120,7 +121,8 @@ export function HitoRacha(props) { return <Capa><HitoRachaDentro {...props} /></
 function HitoRachaDentro({ hito, alCerrar }) {
   const ref = usePantalla(alCerrar);
   const [compartir, setCompartir] = useState(false);
-  useEffect(() => { const t = setTimeout(() => lanzarConfeti({ vibracion: 'record' }), 250); return () => clearTimeout(t); }, []);
+  // (sonido 2, tanda 7) y su fanfarria
+  useEffect(() => { const t = setTimeout(() => { lanzarConfeti({ vibracion: 'record' }); sonarFBE('hito', { tipo: 'racha' }); }, 250); return () => clearTimeout(t); }, []);
   return (
     <div class="hito-pantalla" role="dialog" aria-modal="true" aria-labelledby="hito-titulo" aria-describedby="hito-texto" ref={ref} tabIndex={-1}>
       {/* (imágenes) la hoguera, abajo, fundida con el fondo */}

@@ -18,3 +18,12 @@
   .voz-frase .grabando { animation: voz-grabando 1s ease-in-out infinite alternate; }
 }
 @keyframes voz-grabando { to { opacity: .7; } }
+
+/* (sonido 2) «¿Se oye bien?» en la sesión y su hoja; el horario sin sonidos; «Escuchar» la evolución */
+.aviso-prueba-sonido { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 8%, transparent); }
+.aviso-prueba-sonido svg { width: 16px; height: 16px; }
+.aviso-prueba-sonido span { flex: 1; min-width: 10rem; }
+.prueba-sonido .fila-envolver { gap: 8px; }
+.aj-horario { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aj-horario input { width: auto; }
+.escuchar-progreso { display: inline-flex; align-items: center; gap: 6px; }

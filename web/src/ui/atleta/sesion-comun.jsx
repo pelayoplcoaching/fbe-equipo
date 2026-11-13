@@ -7,7 +7,7 @@ import { propuestaSerie, sugerenciaProgresion, esBarra, mmss, esTopBackoff, prop
 import { hablar, prepararVoz } from '../voz.js';
 import { fraseCuenta } from '../../logica/voz.js';
 import { vibrar } from '../hapticos.js';
-import { contexto, sonarFBE } from '../sonido.js';
+import { contexto, sonarFBE, salida, ocupar, empezarPaisaje } from '../sonido.js';
 import { avisoDescanso, fraseQueda, volumenDe } from '../../logica/sonido.js';
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { descansoEnCurso } from '../en-curso.js';
@@ -84,7 +84,7 @@ function pitidoSuave(volumen = 1) {
     g.gain.setValueAtTime(0.0001, audio.currentTime + t);
     g.gain.exponentialRampToValueAtTime(Math.max(0.01, 0.5 * volumen), audio.currentTime + t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.22);
-    o.connect(g).connect(audio.destination);
+    o.connect(g).connect(salida(audio));
     o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.25);
   });
 }
@@ -104,7 +104,8 @@ export function pitar(sonido = null) {
     try { sonando?.stop(); } catch { /* ya había acabado */ }
     const fuente = audio.createBufferSource(), g = audio.createGain();
     fuente.buffer = buffer; g.gain.value = volumen;
-    fuente.connect(g).connect(audio.destination);
+    fuente.connect(g).connect(salida(audio));
+    ocupar(audio, 'fin-descanso', buffer.duration || 1);
     fuente.start();
     sonando = fuente;
   }).catch(() => pitidoSuave(volumen));
@@ -123,7 +124,7 @@ export function tono(frecuencia = 880, duracion = 0.08, volumen = 0.18, apartado
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(volumen, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
-    o.connect(g).connect(audio.destination);
+    o.connect(g).connect(salida(audio));
     o.start(t); o.stop(t + duracion + 0.02);
   } catch { /* sin audio */ }
 }
@@ -198,7 +199,7 @@ export function aNumero(t) {
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
-export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, cambia = false, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
+export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, cambia = false, ultimoEj = false, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
@@ -239,7 +240,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         // (sonido, tanda 3) la frase del coach, con su voz («Última serie» o «¡Vamos!»), si la ha grabado; si no, (tanda 1) si
         // toca otro ejercicio, su aviso propio, detrás
         const conCoach = !manda && vocesListas();
-        if (conCoach) setTimeout(() => sonarVozCoach(...(esUltima(voz) ? ['ultima', 'vamos'] : ['vamos', 'fin_descanso'])), 650);
+        if (conCoach) setTimeout(() => sonarVozCoach(...(esUltima(voz) ? ['ultima', 'vamos'] : ultimoEj ? ['ultimo_ejercicio', 'vamos'] : ['vamos', 'fin_descanso'])), 650);
         else if (cambia && !manda) setTimeout(() => sonarFBE('ejercicio'), 1100);
         // v0.48: con el entrenador por voz, lo que toca ahora («Serie 3 de press banca: 80 kilos por 6»); v0.62: si ha avisado
         // la pista, después de su aviso y sin repetir lo que haya dicho; (sonido) tras la frase del coach, si ha sonado
@@ -325,6 +326,14 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const cerrarApunte = (motivo) => { setApunte(false); if (motivo === 'salir') guardarAjustes({ ...leerAjustes(), apunteDescanso: false }); };
   const fase = respira && quedan > 0 && !pausado ? faseRespira((ahora - inicioR) / 1000) : null;
   const quietoRespira = sinMovimiento();
+  // (sonido 2, tanda 7) el paisaje sonoro del descanso (si se ha elegido): suena mientras queden más de 4 s y no esté en pausa
+  // ni lo lleve la pista del móvil bloqueado
+  const conPaisaje = quedan > 4 && !pausado && !!leerAjustes().paisajeDescanso && !pistaManda(fin);
+  useEffect(() => {
+    if (!conPaisaje) return undefined;
+    contexto();
+    return empezarPaisaje(leerAjustes().paisajeDescanso);
+  }, [conPaisaje, inicioR]);
   // (sonido, tanda 1) con «Respira», un soplo que sube al inspirar y baja al soltar (lo que quede de esa fase)
   const faseClave = fase ? `${fase.ciclo}-${fase.fase}` : null;
   useEffect(() => {
@@ -344,7 +353,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const ponerRetraso = (el) => { if (el && !el.dataset.retraso) { el.dataset.retraso = '1'; el.style.animationDelay = `${retrasoRespira((Date.now() - inicioR) / 1000)}s`; } };
   const R = 88, C = 2 * Math.PI * R;
   const frac = total ? Math.min(1, quedan / total) : 0;
-  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, empuje, cambia, ...(pausado ? { pausa, pausadoEn } : {}) });
+  const este = () => ({ fin, total, prioridad, texto, voz, aviso, tras, inicio: inicioR, empuje, cambia, ultimoEj, ...(pausado ? { pausa, pausadoEn } : {}) });
   const ajustar = (s) => {
     alCambiar(ajustarDescanso(este(), s));
     sonarFBE(s > 0 ? 'mas-15' : 'menos-15');   // (sonido, tanda 1) sube o baja

@@ -33,6 +33,9 @@ console.log('En la demo');
   await b.auth.entrar('pelayo@fbe.demo', 'demo');
   await api.quitarVozCoach('record');
   check((await api.vocesCoach()).length === 1, 'el coach quita una frase');
+  // (065) las cuatro frases nuevas
+  for (const k of ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio']) await api.guardarVozCoach(k, audio(), 800);
+  check((await api.vocesCoach()).length === 5, '(065) el coach graba también el saludo, la mitad, «a por el récord» y el último ejercicio');
   await b.auth.salir();
 }
 
@@ -40,7 +43,7 @@ const { PGlite } = await import('@electric-sql/pglite');
 const { aplicarEsquema } = await import('./esquema.mjs');
 const db = new PGlite();
 await aplicarEsquema(db, { repetirMigraciones: true });
-check(true, 'esquema y migraciones (con la 064) aplicados, también al repetirlas');
+check(true, 'esquema y migraciones (con la 064 y la 065) aplicados, también al repetirlas');
 const claims = (uid, aal) => `select set_config('request.jwt.claim.sub', '${uid}', false); select set_config('request.jwt.claims', '${uid ? JSON.stringify({ sub: uid, aal }) : ''}', false);`;
 const su = async () => db.exec(`reset role; ${claims('', '')}`);
 const como = async (uid, aal = 'aal1') => db.exec(`reset role; ${claims(uid, aal)} set role authenticated;`);
@@ -86,6 +89,17 @@ console.log('\nEl bucket «voces-coach»');
   check((await q(`select name from storage.objects where bucket_id = 'voces-coach'`)).length === 0, 'sin ficha de atleta, no lo ve');
   await su();
   check((await q(`select count(*)::int as n from fbe_migraciones where numero = 64`))[0].n === 1, 'la 064 queda apuntada');
+}
+
+console.log('\nLas cuatro frases nuevas (065)');
+{
+  await como(coach, 'aal2');
+  let todas = true;
+  for (const k of ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio']) todas = todas && (await q('select voces_coach_guardar($1, $2, 700) as r', [k, `voces/${k}-0123abcd-cccc.webm`]))[0].r === null;
+  check(todas && (await q('select count(*)::int as n from voces_coach'))[0].n === 4, 'el coach guarda el saludo, la mitad, «a por el récord» y el último ejercicio');
+  check(await falla(`select voces_coach_guardar('otra_mas', 'voces/otra_mas-0123abcd.webm')`), 'y sigue sin admitir frases que no hay');
+  await su();
+  check((await q(`select count(*)::int as n from fbe_migraciones where numero = 65`))[0].n === 1, 'la 065 queda apuntada');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

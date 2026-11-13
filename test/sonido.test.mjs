@@ -65,5 +65,76 @@ console.log('\nLa pista del móvil bloqueado');
   check(corto.partes.filter(([k]) => k).map(([k]) => k).join() === 'c3,c2,c1,fbe', 'en un descanso corto, solo los tres últimos');
 }
 
+console.log('\nSonido 2: los sonidos nuevos');
+{
+  const a = normalizarAjustes({});
+  check(['nota', 'no', 'tecla', 'rpe', 'aproximacion', 'superserie', 'seguimos', 'progresion', 'hito', 'nota-empieza', 'nota-acaba', 'aviso-coach'].every((k) => S.SONIDOS[k]), 'los doce sonidos nuevos están en la familia');
+  const rpes = [6, 7, 8, 9, 10].map(S.notaRpe);
+  check(rpes.every((f, i) => f > 0 && (i === 0 || f > rpes[i - 1])) && S.notaRpe(5) === null && S.notaRpe('') === null, 'la nota del RPE sube del 6 al 10 (y por debajo de 6 o vacío, nada)');
+  const ap = [1, 2, 3].map((n) => S.SONIDOS.aproximacion.notas({ n }));
+  check(ap.every((x) => x.every(([, , , v]) => v <= 0.5)), 'las series de aproximación suenan más flojas');
+  const hitos = ['racha', 'aniversario', 'bloque'].map((tipo) => JSON.stringify(S.SONIDOS.hito.notas({ tipo })));
+  check(new Set(hitos).size === 3, 'tres fanfarrias distintas: racha, aniversario y bloque');
+  check(S.puedeSonar(a, 'tecla') === false && S.puedeSonar({ ...a, sonidoTeclado: true }, 'tecla') === true, 'el clic del teclado, solo si se activa');
+  check(S.puedeSonar(a, 'seguimos') && !S.puedeSonar({ ...a, avisoSeguimos: false }, 'seguimos'), '«¿Seguimos?» viene puesto y se puede quitar');
+  check(S.puedeSonar(a, 'rpe') && !S.puedeSonar({ ...a, sonidoSerie: false }, 'rpe'), 'el RPE y las aproximaciones van con el sonido de las series');
+}
+
+console.log('\nSonido 2: prioridades y turnos');
+{
+  check(S.prioridadDe('fin-descanso') === 3 && S.prioridadDe('cuenta') === 3 && S.prioridadDe('serie') === 2 && S.prioridadDe('ui') === 0 && S.prioridadDe('tecla') === 0, 'el fin del descanso y la cuenta mandan; la interfaz, la última');
+  check(S.turno(null, 'ui', 1).accion === 'ya', 'sin nada sonando, suena ya');
+  const est = { hasta: 2, prioridad: 3 };
+  check(S.turno(est, 'ui', 1).accion === 'omite', 'un clic de la interfaz no pisa el final del descanso: se omite');
+  const t = S.turno(est, 'serie', 1);
+  check(t.accion === 'espera' && t.retraso > 0 && t.retraso <= 1.5, 'una serie espera (como mucho segundo y medio) a que acabe');
+  check(S.turno({ hasta: 2, prioridad: 1 }, 'fin-descanso', 1).accion === 'ya', 'el final del descanso suena siempre');
+  check(S.duracionDe('fin-descanso') > 0 && S.duracionDe('inventado') === 0, 'cada sonido sabe lo que dura');
+}
+
+console.log('\nSonido 2: el horario sin sonidos');
+{
+  const a = { ...normalizarAjustes({}), silencioActivo: true, silencioDesde: '23:00', silencioHasta: '08:00' };
+  const h = (hh, mm = 0) => { const d = new Date(2026, 0, 5, hh, mm); return d; };
+  check(S.enSilencio(a, h(23, 30)) && S.enSilencio(a, h(3)) && !S.enSilencio(a, h(8)) && !S.enSilencio(a, h(15)), 'de once a ocho, cruzando la medianoche');
+  check(!S.enSilencio({ ...a, silencioActivo: false }, h(3)), 'apagado, nunca');
+  check(S.enSilencio({ ...a, silencioDesde: '14:00', silencioHasta: '16:00' }, h(15)) && !S.enSilencio({ ...a, silencioDesde: '14:00', silencioHasta: '16:00' }, h(17)), 'y un tramo de día');
+  const ahora = new Date(); const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const ya = { ...a, silencioDesde: hhmm(new Date(ahora - 3600e3)), silencioHasta: hhmm(new Date(+ahora + 3600e3)) };
+  check(!S.puedeSonar(ya, 'nota-empieza') && !S.puedeSonar(ya, 'aviso-coach') && S.puedeSonar(ya, 'fin-descanso'), 'en esas horas no suenan el chat ni los avisos; el entreno, sí');
+  check(S.horaValida('07:30') && !S.horaValida('25:00') && !S.horaValida('hola'), 'las horas, bien escritas');
+}
+
+console.log('\nSonido 2: «¿Seguimos?», el tempo y escuchar el progreso');
+{
+  check(!S.tocaSeguimos(30, 0) && S.tocaSeguimos(61, 0) && !S.tocaSeguimos(100, 1) && S.tocaSeguimos(181, 1) && !S.tocaSeguimos(500, 2), 'un aviso al minuto, otro a los tres y no más');
+  const fases = [0, 1, 2, 3].map((f) => S.notaTempo(f, true));
+  check(new Set(fases.map((x) => x.f)).size === 4 && S.notaTempo(2, true).v > S.notaTempo(2, false).v, 'cada fase del tempo, su nota; el primer segundo, con acento');
+  const m = S.melodiaDe([100, 105, 110, 108, 120]);
+  check(m.length === 5 && m[4].f > m[0].f && m[3].f < m[2].f && m.every((x, i) => i === 0 || x.d > m[i - 1].d), 'la evolución hecha melodía: sube cuando sube y baja cuando baja');
+  check(S.melodiaDe([100]).length === 0 && S.melodiaDe(Array.from({ length: 30 }, (_, i) => i)).length === 16, 'con un solo punto, nada; con muchos, las 16 últimas semanas');
+  check(S.ESCUCHAR.every(([k]) => S.SONIDOS[k]), '«Escuchar todos» sigue tocando solo sonidos de la familia');
+}
+
+console.log('\nSonido 2: los ajustes nuevos');
+{
+  const a = normalizarAjustes({});
+  check(a.silencioActivo === false && a.silencioDesde === '23:00' && a.silencioHasta === '08:00' && a.sonidoTeclado === false && a.avisoSeguimos === true && a.contarReps === false && a.paisajeDescanso === null && a.auricularesSerie === false && a.vozVelocidad === 1 && a.pruebaSonido === false, 'los valores de partida');
+  const r = normalizarAjustes({ vozVelocidad: 3, paisajeDescanso: 'discoteca', silencioDesde: '99:99' });
+  check(r.vozVelocidad === 1 && r.paisajeDescanso === null && r.silencioDesde === '23:00', 'lo raro vuelve a lo de partida');
+  check(normalizarAjustes({ vozVelocidad: 1.15, paisajeDescanso: 'lluvia' }).paisajeDescanso === 'lluvia', 'lo válido se queda');
+}
+
+console.log('\nSonido 2: la cola de la pista para los auriculares');
+{
+  const B = PI.FORMATO_PISTA.bytes;
+  const largos = Object.fromEntries(Object.entries(CLIPS).map(([k, v]) => [k, Buffer.from(v, 'base64').length / B]));
+  const base = { restanteMs: 30000, total: 60, clips: largos, sonido: 'fbe' };
+  const normal = PI.planPista(base), larga = PI.planPista({ ...base, colaMs: PI.COLA_AURICULARES_MS }), enorme = PI.planPista({ ...base, colaMs: 10 * 60e3 });
+  const tramas = (p) => p.partes.reduce((n, [, t]) => n + (t || 0), 0);
+  check(PI.COLA_AURICULARES_MS === 90000 && tramas(larga) > tramas(normal), 'con los auriculares, la pista sigue minuto y medio en silencio tras el aviso');
+  check(tramas(enorme) === tramas(larga), 'y nunca más de eso');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

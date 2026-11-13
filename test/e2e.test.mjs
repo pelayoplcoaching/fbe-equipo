@@ -6042,6 +6042,10 @@ try {
   console.log('\nEl sonido de la app');
   const { probarSonido } = await import('./e2e-sonido.mjs');
   await probarSonido({ navegador, check });
+  // Sonido 2 (claude/sonido-mejoras-2.md): el clic, «¿Seguimos?», el fondo del descanso, el horario, la voz y «¿Se oye bien?»
+  console.log('\nSonido 2');
+  const { probarSonido2 } = await import('./e2e-sonido-2.mjs');
+  await probarSonido2({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

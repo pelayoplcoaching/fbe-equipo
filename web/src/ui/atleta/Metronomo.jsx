@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, Paso } from '../comunes.jsx';
-import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { sonarFBE } from '../sonido.js';
+import { nota, MOTIVO, notaTempo } from '../../logica/sonido.js';
+import { hablar } from '../voz.js';
+import { leerAjustes } from '../ajustes.js';
 import { Imagen } from '../Imagen.jsx';
 import { imagenHerramienta } from '../../logica/imagenes.js';
 import { explicarTempo, posicionTempo } from '../../logica/tempo.js';
@@ -8,7 +12,6 @@ import { explicarTempo, posicionTempo } from '../../logica/tempo.js';
 // Metrónomo de tempo: cuenta atrás de 3 s y, en cada repetición, un pitido grave por segundo al bajar,
 // un clic suave en las pausas y un pitido agudo al empezar a subir. Para solo al llegar a las repeticiones.
 const CUENTA = 3;
-const SONIDO = { 0: [523, 0.07, 0.16], 1: [330, 0.04, 0.08], 2: [988, 0.12, 0.22], 3: [330, 0.04, 0.08] };
 
 export function Metronomo({ tempo, nombre, reps = 8, alCerrar }) {
   const [objetivo, setObjetivo] = useState(reps || 8);
@@ -32,11 +35,11 @@ export function Metronomo({ tempo, nombre, reps = 8, alCerrar }) {
     if (t == null) return;
     if (t < 0) {
       const s = Math.ceil(-t);
-      if (ultimo.current !== `c${s}`) { ultimo.current = `c${s}`; tono(660, 0.06, 0.14); }
+      if (ultimo.current !== `c${s}`) { ultimo.current = `c${s}`; sonarFBE('nota', { f: nota(Math.max(0, 3 - s)), v: 0.6, dura: 0.08 }); }
       return;
     }
     if (terminado) {
-      if (ultimo.current !== 'fin') { ultimo.current = 'fin'; tono(784, 0.12, 0.2); setTimeout(() => tono(1047, 0.25, 0.2), 140); vibrarCorto(120); }
+      if (ultimo.current !== 'fin') { ultimo.current = 'fin'; MOTIVO.forEach((f, i) => setTimeout(() => sonarFBE('nota', { f, v: 0.8, dura: i === 2 ? 0.3 : 0.1 }), i * 120)); vibrarCorto(120); }
       return;
     }
     const clave = `${pos.rep}-${pos.fase}-${Math.floor(pos.enFase)}`;
@@ -44,8 +47,11 @@ export function Metronomo({ tempo, nombre, reps = 8, alCerrar }) {
     ultimo.current = clave;
     const f = tempo.fases[pos.fase];
     if (pos.fase === 2 && Math.floor(pos.enFase) > 0) return; // la subida suena solo al empezar
-    const [hz, d, v] = SONIDO[pos.fase];
-    tono(hz, d, v);
+    // (sonido 2, tanda 5) con la familia: cada fase, su nota, con acento al empezarla; (tanda 6) y, con «Contar las
+    // repeticiones», la voz dice cuál empieza
+    const primero = Math.floor(pos.enFase) === 0, nt = notaTempo(pos.fase, primero);
+    sonarFBE('nota', { f: nt.f, v: nt.v, dura: nt.dura });
+    if (pos.fase === 0 && primero && leerAjustes().contarReps) hablar(String(pos.rep + 1), { forzar: true });
     if (Math.floor(pos.enFase) === 0) vibrarCorto(f.explosiva ? 60 : 25);
   }, [t != null ? Math.floor((t + 10) * 10) : null]);
 

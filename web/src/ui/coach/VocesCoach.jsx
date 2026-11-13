@@ -60,6 +60,7 @@ export function VocesCoach() {
       <h2 id="voces-coach-t">Tus frases, con tu voz</h2>
       <p class="secundario">Graba frases cortas y tus atletas las oirán en su sesión, en su momento, en lugar de la voz del móvil. Cada una, de 6 segundos como mucho.</p>
       {lista.datos === null && <p class="peq terciario">Para grabarlas falta ejecutar la migración 064 en Supabase.</p>}
+      <p class="peq terciario">Las cuatro últimas («¡Hola! A por ello», «Mitad de la sesión», «A por el récord» y «Último ejercicio») necesitan además la migración 065.</p>
       {!puedeGrabarVoz() && <p class="peq terciario">Este navegador no puede grabar audio: prueba desde el móvil.</p>}
       <div class="panel">
         <ul class="lista">
