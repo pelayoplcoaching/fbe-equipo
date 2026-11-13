@@ -132,7 +132,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['apuntes_semanas', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['apuntes_semanas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -1598,7 +1598,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'agenda_vida'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -3189,7 +3189,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'agenda_vida'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3396,7 +3396,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'agenda_vida'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3567,7 +3567,66 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // (049) cómo va la app en cada dispositivo: cada uno apunta lo suyo (una fila por dispositivo y día, que se
       // sustituye entera); el coach lo lee sin nombres (un código por dispositivo) y lo puede borrar
       // (050) la personalización: lo de cada atleta, por sus funciones (nadie toca la tabla); los mensajes del coach
-      const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, genero: x.genero ?? null, tono: x.tono ?? null, meta_nombre: x.meta_nombre ?? null, meta_fecha: x.meta_fecha ?? null, meta_cifra: x.meta_cifra ?? null, meta_unidad: x.meta_unidad ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
+      const personalJson = (x) => (x ? { apodo: x.apodo ?? null, porque: x.porque ?? null, favoritos: [...(x.favoritos || [])], musica_url: x.musica_url ?? null, cancion_url: x.cancion_url ?? null, genero: x.genero ?? null, tono: x.tono ?? null, meta_nombre: x.meta_nombre ?? null, meta_fecha: x.meta_fecha ?? null, meta_cifra: x.meta_cifra ?? null, meta_unidad: x.meta_unidad ?? null, manual_feedback: x.manual_feedback ?? null, manual_motiva: x.manual_motiva ? [...x.manual_motiva] : null, manual_evitar: x.manual_evitar ?? null, musica_aperturas: { ...(x.musica_aperturas || {}) }, cumple_mes: x.cumple_mes ?? null, cumple_dia: x.cumple_dia ?? null, actualizado_en: x.actualizado_en } : null);
+      // (067) su agenda de vida y su manual
+      const agendaDe = (p) => { if (esCoach()) { if (!p || !tabla('atletas').some((x) => x.id === p)) throw new Error('Ese atleta no existe'); return p; } const a = miAtletaId(); if (!a) throw new Error('Solo el atleta o su coach'); return a; };
+      const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
+      if (nombre === 'agenda_lista') {
+        const a = agendaDe(args?.p_atleta), hoyA = fMadrid();
+        const desde = args?.p_desde || sumar(hoyA, -60), hasta = args?.p_hasta || sumar(hoyA, 365);
+        return tabla('agenda_vida').filter((x) => x.atleta_id === a && x.fecha >= desde && x.fecha <= hasta).sort((x, y) => x.fecha.localeCompare(y.fecha) || String(x.creado_en).localeCompare(String(y.creado_en))).map(agendaJson);
+      }
+      if (nombre === 'agenda_guardar') {
+        const a = agendaDe(args?.p_atleta), d = args?.p_datos || {}, hoyA = fMadrid();
+        if (!esCoach() && deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        if (!['evento', 'dificil', 'guardia', 'hito', 'reto'].includes(d.tipo)) throw new Error('Tipo no válido');
+        if (d.tipo === 'reto' && !esCoach()) throw new Error('El reto lo pone el coach');
+        const f = String(d.fecha || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || f < sumar(hoyA, -366) || f > sumar(hoyA, 730)) throw new Error('La fecha tiene que estar entre hace un año y dentro de dos');
+        const titulo = String(d.titulo || '').replace(/\s+/g, ' ').trim() || null, nota = String(d.nota || '').trim() || null;
+        if (!titulo && !['dificil', 'guardia'].includes(d.tipo)) throw new Error('Ponle un nombre');
+        if (titulo && titulo.length > 80) throw new Error('El nombre, como mucho 80 caracteres');
+        if (nota && nota.length > 300) throw new Error('La nota, como mucho 300 caracteres');
+        const ya = ['dificil', 'guardia'].includes(d.tipo) && tabla('agenda_vida').find((x) => x.atleta_id === a && x.tipo === d.tipo && x.fecha === f);
+        if (ya) return agendaJson(ya);
+        const fila = { id: uuid(), atleta_id: a, tipo: d.tipo, fecha: f, titulo, nota, respuesta: null, respuesta_nota: null, respondida_en: null, autor: esCoach() ? 'coach' : 'atleta', creado_en: ahora() };
+        tabla('agenda_vida').push(fila);
+        persistirYa();
+        return agendaJson(fila);
+      }
+      if (nombre === 'agenda_borrar') {
+        const x = tabla('agenda_vida').find((r) => r.id === args?.p_id);
+        if (!x) return null;
+        if (!esCoach() && (x.atleta_id !== miAtletaId() || x.autor !== 'atleta')) throw new Error('Solo puedes borrar lo que apuntaste tú');
+        db.agenda_vida = tabla('agenda_vida').filter((r) => r.id !== x.id);
+        persistirYa();
+        return null;
+      }
+      if (nombre === 'agenda_responder') {
+        const x = tabla('agenda_vida').find((r) => r.id === args?.p_id);
+        if (!x || x.atleta_id !== miAtletaId()) throw new Error('Eso no es tuyo');
+        if (!['bien', 'regular', 'mal'].includes(args?.p_respuesta)) throw new Error('Respuesta no válida');
+        const n = String(args?.p_nota || '').trim() || null;
+        if (n && n.length > 300) throw new Error('Como mucho 300 caracteres');
+        Object.assign(x, { respuesta: args.p_respuesta, respuesta_nota: n, respondida_en: ahora() });
+        persistirYa();
+        return agendaJson(x);
+      }
+      if (nombre === 'personal_manual_guardar') {
+        const a = miAtletaId();
+        if (!a) throw new Error('Solo el atleta guarda lo suyo');
+        if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
+        const d = args?.p_datos || {};
+        const fb = d.manual_feedback || null, mot = Array.isArray(d.manual_motiva) ? [...new Set(d.manual_motiva)] : null, ev = String(d.manual_evitar || '').trim() || null;
+        if (fb && !['directo', 'suave'].includes(fb)) throw new Error('Feedback no válido');
+        if (mot && mot.some((m) => !['datos', 'retos', 'reconocimiento', 'compania', 'progreso'].includes(m))) throw new Error('Eso no está en la lista');
+        if (ev && ev.length > 200) throw new Error('Como mucho 200 caracteres');
+        let fila = tabla('personal_atleta').find((x) => x.atleta_id === a);
+        if (!fila) { fila = { atleta_id: a, apodo: null, porque: null, favoritos: [], musica_url: null, cancion_url: null, cumple_mes: null, cumple_dia: null, musica_aperturas: {} }; tabla('personal_atleta').push(fila); }
+        Object.assign(fila, { manual_feedback: fb, manual_motiva: mot && mot.length ? mot : null, manual_evitar: ev, actualizado_en: ahora() });
+        persistirYa();
+        return personalJson(fila);
+      }
       if (nombre === 'personal_mio') {
         const a = miAtletaId();
         return a ? personalJson(tabla('personal_atleta').find((x) => x.atleta_id === a)) : null;

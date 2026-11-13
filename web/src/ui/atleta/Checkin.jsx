@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { SeguimientoCheckin } from './Vida.jsx';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
@@ -478,6 +479,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           {hayImagen(imagenPasoCheckin(actual.id)) && <FranjaPaso id={imagenPasoCheckin(actual.id)} sentido={sentido} />}
           {actual.deCoach && <span class="mini terciario ck-de-coach"><Icono n="mensaje" /> Pregunta de tu coach</span>}
           <h2 id="ck-titulo" tabIndex={-1} ref={tituloRef}>{actual.titulo}</h2>
+          {/* (personalización 3, tanda 6) lo que contestó la semana pasada, para preguntarle cómo sigue */}
+          <SeguimientoCheckin id={actual.id} anterior={datos.datos?.anterior} molestias={datos.datos?.molestiasAnterior || []} />
           {actual.cuerpo(avanzarSolo)}
         </section>
       ) : (

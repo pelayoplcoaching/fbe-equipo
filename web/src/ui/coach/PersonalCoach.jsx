@@ -9,6 +9,7 @@ import { Fragment } from 'preact';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { ZONAS_AVISO, NOMBRE_ZONA_TU, EJEMPLO_ZONA, momentoZona } from '../../logica/conocerte.js';
 import { paraHablarle, cartaDelMes, mesDeLaCarta } from '../../logica/retrato.js';
+import { SuVida } from '../atleta/Vida.jsx';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
 import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
@@ -89,6 +90,7 @@ export function ParaHablarle({ atleta }) {
       <h2 id="para-hablarle-t">Para hablarle</h2>
       <div class="panel panel-pad pila-s">
         <dl class="lo-suyo-datos">{r.filas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
+        <SuVida atleta={atleta} />
         <p class="para-hablarle-idea"><Icono n="mensaje" /><span><strong>Idea: </strong>{r.idea}</span></p>
         <button type="button" class="btn btn-peq" onClick={() => setCarta(true)}><Icono n="editar" /> La carta de {nombreMesCarta(mes)}</button>
       </div>

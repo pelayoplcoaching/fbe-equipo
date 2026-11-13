@@ -409,3 +409,19 @@
 .calentamiento[open] .calentamiento-lista { margin-top: 10px; }
 .calentamiento p { margin: 8px 0 0; }
 .hace-un-ano { display: flex; gap: 10px; align-items: flex-start; margin: 2px 0 0; font-size: .9375rem; line-height: 1.45; }
+
+/* ---------- (personalizacion 3, tanda 6) Su vida ---------- */
+.vida-fila { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.vida-fila > svg, .ck-seguimiento > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.vida-guardia > svg { color: #c27c0e; }
+.vida-minimo { margin: 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.4; }
+.vida-pregunta .entrada { width: 100%; }
+.ck-seguimiento { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 6px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); line-height: 1.45; }
+.agenda-fila { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 4px; }
+.guardias-dias { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-guardia { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); font-weight: 600; font-size: .875rem; }
+.chip-guardia .btn-icono { width: 28px; height: 28px; }
+.su-vida { padding-top: 6px; border-top: 1px solid var(--linea, rgba(0, 0, 0, .08)); }
+.su-vida-anadir summary { list-style: none; cursor: pointer; }
+.su-vida-anadir summary::-webkit-details-marker { display: none; }
+.su-vida-anadir[open] > .pila-s { margin-top: 8px; }
