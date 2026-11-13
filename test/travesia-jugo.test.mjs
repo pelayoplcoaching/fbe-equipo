@@ -1,5 +1,7 @@
 // «La travesía», el jugo (las 20 de claude/descansos-mejoras-6.md), sin pantalla. Uso: node test/travesia-jugo.test.mjs
 import * as E from '../web/src/logica/travesia-efectos.js';
+import * as R from '../web/src/logica/travesia-ruta.js';
+import * as M from '../web/src/logica/travesia-meta.js';
 import { nuevaEtapa, avanzar, saltar, resultado, MOMENTOS, MOMENTO_CADA, CONSTELACION, LLUVIA } from '../web/src/logica/travesia.js';
 
 let ok = 0, fallos = 0;
@@ -42,6 +44,19 @@ console.log('\nTanda 9 · la lluvia de estrellas');
   const enLluvia = e.lluvia ? e.estrellas.filter((s) => s.cae && s.x >= e.lluvia.desde && s.x <= e.lluvia.hasta) : [];
   const nada = e.lluvia ? e.obstaculos.filter((o) => o.x > e.lluvia.desde && o.x < e.lluvia.hasta) : [1];
   check(!!e.lluvia && enLluvia.length === LLUVIA.estrellas && nada.length === 0, `un tramo despejado con ${enLluvia.length} estrellas que caen`);
+}
+
+console.log('\nTanda 11 · los sitios de la ruta y el sello');
+{
+  check(R.siluetaDe('Peñíscola') === 'castillo' && R.siluetaDe('Santiago de Compostela') === 'catedral' && R.siluetaDe('Madrid') === 'ciudad' && R.siluetaDe('Pola de Lena') === 'pueblo', 'cada sitio con su silueta (castillo, catedral, ciudad… y el pueblo de siempre)');
+  const p = R.proximoSitio(40537);
+  check(p.nombre === 'La Robla' && p.metros === 44463 && p.desde === 38 && p.hasta === 85 && Math.abs(p.km - 40.537) < 1e-9, 'el próximo sitio, a cuántos metros de donde empieza la etapa (exacto, no redondeado)');
+  const ultimo = R.proximoSitio(0, []);
+  check(ultimo.nombre === 'Pola de Lena' && ultimo.desde === 0, 'al empezar, el primero');
+  const g = { sesiones: { a: { metros: 1000, etapas: 2 }, b: { metros: 500, etapas: 1 }, hoy: { metros: 9999, etapas: 5 } } };
+  const md = M.mediaEtapa(g, 'hoy');
+  check(md.media === 500 && md.etapas === 3, 'la media de sus etapas, sin la sesión de ahora');
+  check(M.selloDe(600, md) === 'oro' && M.selloDe(450, md) === 'plata' && M.selloDe(300, md) === 'bronce' && M.selloDe(600, { media: 500, etapas: 2 }) === null && M.selloDe(0, md) === null, 'el sello: oro, plata o bronce frente a su propia media (con tres etapas de antes, como poco)');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

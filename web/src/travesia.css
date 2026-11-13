@@ -294,3 +294,27 @@
 /* (las filas de la liga, como las de la manada pero aparte: «.tv-fila» son las de la manada) */
 .tv-liga-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, transparent); }
 .tv-liga-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
+
+/* (jugo, tanda 11) hacia el siguiente sitio de la ruta, el sello de la etapa y la cuenta del final */
+.travesia-ruta { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(78px + env(safe-area-inset-top, 0px)); width: min(42%, 180px); display: grid; gap: 5px; justify-items: end; pointer-events: none; }
+.travesia-ruta-txt { font-size: .75rem; font-weight: 700; color: var(--tv-tiza); text-shadow: var(--tv-sombra-cartel); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.travesia-ruta-pista { position: relative; width: 100%; height: 5px; border-radius: 999px; background: rgb(241 240 246 / .2); overflow: hidden; }
+.travesia-ruta-lleno { position: absolute; inset: 0; border-radius: 999px; background: var(--tv-oro); transform-origin: left center; }
+.travesia-sello { position: absolute; top: -14px; right: -6px; display: grid; place-items: center; align-content: center; width: 66px; height: 66px; border-radius: 50%; border: 3px double currentColor; transform: rotate(-12deg); line-height: 1; text-transform: uppercase; }
+.travesia-sello b { font-size: .875rem; font-weight: 800; letter-spacing: .06em; }
+.travesia-sello small { margin-top: 3px; font-size: .5625rem; letter-spacing: .08em; opacity: .85; }
+.travesia-sello.sello-oro { color: var(--tv-oro); background: rgb(242 194 48 / .14); }
+.travesia-sello.sello-plata { color: #DCE0EE; background: rgb(220 224 238 / .12); }
+.travesia-sello.sello-bronce { color: #E0A070; background: rgb(224 160 112 / .12); }
+@media (prefers-reduced-motion: no-preference) {
+  .travesia-sello { animation: tv-sello .5s cubic-bezier(.2, 1.6, .4, 1) .45s both; }
+  .travesia-final-det .tv-cuenta-hecha { animation: tv-cuenta-latido .35s ease-out; display: inline-block; }
+  .travesia-final-mision { position: relative; overflow: hidden; }
+  .travesia-final-mision::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgb(242 194 48 / .45) 50%, transparent 70%); transform: translateX(-110%); animation: tv-mision-brillo 1s ease-out .6s both; pointer-events: none; }
+  .travesia-final-rango { position: relative; }
+  .travesia-final-rango::before { content: ''; position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--tv-oro); opacity: 0; animation: tv-rango-estallido .8s ease-out .7s both; pointer-events: none; }
+}
+@keyframes tv-sello { from { opacity: 0; transform: rotate(-12deg) scale(1.8); } to { opacity: 1; transform: rotate(-12deg) scale(1); } }
+@keyframes tv-cuenta-latido { 40% { transform: scale(1.35); } }
+@keyframes tv-mision-brillo { to { transform: translateX(110%); } }
+@keyframes tv-rango-estallido { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(4); } }

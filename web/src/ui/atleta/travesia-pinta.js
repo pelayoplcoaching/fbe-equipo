@@ -236,6 +236,52 @@ function lobo(c, e, fase, tinta = null, vida = null) {
   c.restore();
 }
 
+// (jugo, tanda 11) La guarida del lobo: un montículo con su cueva iluminada por dentro (de ahí sale al empezar la etapa)
+function guarida(c, gx, base, gr, loma) {
+  c.fillStyle = loma; c.beginPath(); c.moveTo(gx - gr * 2.4, base); c.quadraticCurveTo(gx - gr * 0.4, base - gr * 2.2, gx + gr * 1.6, base); c.closePath(); c.fill();
+  const luz = c.createRadialGradient(gx, base, gr * 0.15, gx, base, gr * 1.7);
+  luz.addColorStop(0, 'rgba(242, 194, 48, .42)'); luz.addColorStop(1, 'rgba(242, 194, 48, 0)');
+  c.fillStyle = luz; c.fillRect(gx - gr * 1.8, base - gr * 1.8, gr * 3.6, gr * 1.9);
+  c.fillStyle = '#2A1606'; c.beginPath(); c.ellipse(gx - gr * 0.25, base, gr * 0.55, gr * 0.7, 0, Math.PI, 0); c.fill();
+  const dentro = c.createRadialGradient(gx - gr * 0.25, base, 1, gx - gr * 0.25, base, gr * 0.62);
+  dentro.addColorStop(0, 'rgba(255, 214, 120, .95)'); dentro.addColorStop(1, 'rgba(242, 150, 48, .15)');
+  c.fillStyle = dentro; c.beginPath(); c.ellipse(gx - gr * 0.25, base, gr * 0.44, gr * 0.57, 0, Math.PI, 0); c.fill();
+}
+// (jugo, tanda 11) La silueta de un sitio de la ruta en el horizonte (s: px por unidad), con ventanas encendidas de noche
+function silueta(c, tipo, cx, base, s, color, ventanas) {
+  c.fillStyle = color;
+  const casa = (x, an, al) => { c.fillRect(x, base - al, an, al); c.beginPath(); c.moveTo(x - an * 0.1, base - al); c.lineTo(x + an / 2, base - al - an * 0.5); c.lineTo(x + an * 1.1, base - al); c.closePath(); c.fill(); };
+  const torre = (x, an, al, punta) => { c.fillRect(x, base - al, an, al); c.beginPath(); c.moveTo(x - an * 0.08, base - al); c.lineTo(x + an / 2, base - al - punta); c.lineTo(x + an * 1.08, base - al); c.closePath(); c.fill(); };
+  const luces = [];
+  if (tipo === 'castillo') {
+    c.fillRect(cx - s * 2.2, base - s * 1.4, s * 4.4, s * 1.4);
+    for (let i = 0; i < 9; i++) c.fillRect(cx - s * 2.2 + i * s * 0.5, base - s * 1.65, s * 0.28, s * 0.3);
+    for (const d of [-2.6, 1.8]) { c.fillRect(cx + d * s, base - s * 2.4, s * 0.8, s * 2.4); for (let i = 0; i < 3; i++) c.fillRect(cx + d * s + i * s * 0.3, base - s * 2.65, s * 0.2, s * 0.3); luces.push([cx + d * s + s * 0.3, base - s * 1.8]); }
+  } else if (tipo === 'catedral') {
+    c.fillRect(cx - s * 1.6, base - s * 1.8, s * 3.2, s * 1.8);
+    c.beginPath(); c.moveTo(cx - s * 1.6, base - s * 1.8); c.lineTo(cx, base - s * 2.6); c.lineTo(cx + s * 1.6, base - s * 1.8); c.closePath(); c.fill();
+    torre(cx - s * 2.3, s * 0.8, s * 3.1, s * 1.5); torre(cx + s * 1.5, s * 0.8, s * 3.1, s * 1.5);
+    luces.push([cx, base - s * 1.1], [cx - s * 1.9, base - s * 2.2], [cx + s * 1.9, base - s * 2.2]);
+  } else if (tipo === 'puente') {
+    c.fillRect(cx - s * 3, base - s * 1.3, s * 6, s * 0.35);
+    for (let i = 0; i < 5; i++) { const x = cx - s * 3 + i * s * 1.2; c.fillRect(x, base - s * 1.0, s * 0.3, s * 1.0); }
+    casa(cx + s * 3.3, s * 0.8, s * 0.9); torre(cx - s * 4, s * 0.55, s * 1.9, s * 0.6);
+    luces.push([cx + s * 3.7, base - s * 0.5]);
+  } else if (tipo === 'ciudad') {
+    [[-3, 0.7, 1.6], [-2.2, 0.8, 2.6], [-1.3, 0.6, 1.9], [-0.6, 0.9, 3.4], [0.4, 0.7, 2.2], [1.2, 0.8, 2.9], [2.1, 0.6, 1.5], [2.8, 0.7, 2.0]].forEach(([d, an, al]) => { c.fillRect(cx + d * s, base - al * s, an * s, al * s); luces.push([cx + (d + an / 2) * s, base - al * s * 0.6], [cx + (d + an / 3) * s, base - al * s * 0.3]); });
+  } else if (tipo === 'montana') {
+    c.beginPath(); c.moveTo(cx - s * 3.4, base); c.lineTo(cx - s * 0.4, base - s * 3.6); c.lineTo(cx + s * 0.4, base - s * 3.2); c.lineTo(cx + s * 3.2, base); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(241, 240, 246, .85)'; c.beginPath(); c.moveTo(cx - s * 1.1, base - s * 2.7); c.lineTo(cx - s * 0.4, base - s * 3.6); c.lineTo(cx + s * 0.4, base - s * 3.2); c.lineTo(cx + s * 0.7, base - s * 2.8); c.lineTo(cx, base - s * 3.0); c.closePath(); c.fill();
+    c.fillStyle = ORO; c.fillRect(cx - s * 0.42, base - s * 4.3, s * 0.06, s * 0.7); c.beginPath(); c.moveTo(cx - s * 0.36, base - s * 4.3); c.lineTo(cx + s * 0.2, base - s * 4.1); c.lineTo(cx - s * 0.36, base - s * 3.9); c.closePath(); c.fill();
+  } else {
+    casa(cx - s * 2.4, s * 0.9, s * 0.9); casa(cx - s * 1.3, s * 1.0, s * 1.2); torre(cx - s * 0.1, s * 0.6, s * 2.4, s * 0.7); casa(cx + s * 0.7, s * 1.1, s * 1.0); casa(cx + s * 2.0, s * 0.8, s * 0.8);
+    luces.push([cx - s * 1.95, base - s * 0.45], [cx - s * 0.8, base - s * 0.6], [cx + s * 1.25, base - s * 0.5], [cx + s * 0.2, base - s * 1.7]);
+  }
+  if (ventanas) { c.fillStyle = 'rgba(255, 214, 120, .9)'; for (const [x, y] of luces) c.fillRect(x - s * 0.08, y - s * 0.1, s * 0.16, s * 0.2); }
+}
+// Los fuegos artificiales: una palmera de chispas en (x, y), después de `d` s
+function fuego(p, x, y, d, color) { for (let i = 0; i < 26; i++) { const a = (i / 26) * 6.28, v = 70 + (i % 3) * 30; p.fuegos.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, d, t: 1.1, c: color }); } }
+
 // Pinta un cuadro. c: contexto 2D ya escalado a px de CSS; e: la etapa; p: el paisaje; { w, h, t, dt, quieto }
 // (tanda 1) Los cielos, según la hora: de arriba al horizonte
 const CIELOS = {
@@ -276,7 +322,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // (top, tanda 1) minimo: el móvil sigue yendo justo aun ligero, y se deja también lo de adorno (nubes, polvo, huellas, fauna,
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
-export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, amigo = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
+export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, amigo = null, pueblo = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -639,6 +685,32 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
       c.beginPath(); c.ellipse(cx, suelo + (h - suelo) * (0.18 + i * 0.12), 150 + i * 40, 10 + i * 5, 0, 0, 6.3); c.fill();
     }
   }
+  // (jugo, tanda 11) al empezar la etapa, el lobo sale corriendo de su guarida (que se queda atrás)
+  if (p.xGuarida == null) p.xGuarida = e.x < 3 && !fin ? e.x - 0.8 : NaN;
+  if (Number.isFinite(p.xGuarida)) {
+    const gx = sx(p.xGuarida);
+    if (gx > -u * 3) guarida(c, gx, sueloEn(gx) + 1, u * 1.05, DELANTE[paisaje] || DELANTE[0]);
+    else p.xGuarida = NaN;
+  }
+  // (jugo, tanda 11) un sitio de la ruta que llega en esta etapa: su silueta asoma en el horizonte y pasa despacio
+  if (pueblo && Number.isFinite(pueblo.x)) {
+    const px = x0 + (pueblo.x - e.x) * u * 0.35;
+    if (px > -u * 5 && px < w + u * 5) silueta(c, pueblo.tipo, px, suelo + 1, u * 0.8, noche ? 'rgba(30, 22, 80, .92)' : deDia ? 'rgba(70, 82, 170, .75)' : 'rgba(40, 28, 96, .88)', !deDia);
+  }
+  // (jugo, tanda 11) los fuegos del récord (y del sitio de la ruta): se lanzan cuando la pantalla lo dice
+  if (!quieto && p.tRecord != null && p.tRecordVisto !== p.tRecord) { p.tRecordVisto = p.tRecord; fuego(p, w * 0.35, suelo * 0.32, 0, ORO); fuego(p, w * 0.66, suelo * 0.22, 0.35, LAVANDA); fuego(p, w * 0.5, suelo * 0.42, 0.7, '#6FD3A8'); }
+  if (!quieto && p.tPueblo != null && p.tPuebloVisto !== p.tPueblo) { p.tPuebloVisto = p.tPueblo; fuego(p, w * 0.55, suelo * 0.3, 0, ORO); fuego(p, w * 0.75, suelo * 0.38, 0.3, TIZA); }
+  if (p.fuegos.length) {
+    p.fuegos = p.fuegos.filter((q) => (q.d > 0 ? ((q.d -= dt), true) : (q.t -= dt) > 0));
+    for (const q of p.fuegos) {
+      if (q.d > 0) continue;
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 60 * dt; q.vx *= 1 - dt * 1.2; q.vy *= 1 - dt * 0.8;
+      c.globalAlpha = Math.min(1, q.t * 1.4); c.fillStyle = q.c;
+      c.beginPath(); c.arc(q.x, q.y, 2.2, 0, 6.3); c.fill();
+      c.globalAlpha *= 0.4; c.beginPath(); c.arc(q.x - q.vx * 0.04, q.y - q.vy * 0.04, 1.6, 0, 6.3); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
   // (jugo, tanda 10) la lluvia de estrellas: mientras dura, el cielo se llena de estrellas fugaces doradas
   const enLluvia = !!e.lluvia && e.x > e.lluvia.desde - 25 && e.x < e.lluvia.hasta + 5;
   if (enLluvia && !quieto) {
@@ -840,6 +912,8 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
     const x = sx(m.metros);
     if (x < -40 || x > w + 40) continue;
     const pie = sueloEn(x), alto = u * 1.9, ondea = quieto ? 0 : Math.sin(t * 5 + m.metros) * 2.5;
+    // (jugo, tanda 11) donde acabó su mejor etapa, una raya dorada en el suelo que brilla
+    if (m.mia) { const g = c.createLinearGradient(x, pie - u * 1.2, x, pie); g.addColorStop(0, 'rgba(242, 194, 48, 0)'); g.addColorStop(1, `rgba(242, 194, 48, ${quieto ? 0.45 : 0.35 + 0.15 * Math.sin(t * 6)})`); c.fillStyle = g; c.fillRect(x - u * 0.35, pie - u * 1.2, u * 0.7, u * 1.2); c.fillStyle = ORO; c.fillRect(x - u * 0.5, pie - 1.5, u, 3); }
     c.strokeStyle = 'rgba(241, 240, 246, .75)'; c.lineWidth = 2; c.lineCap = 'round';
     c.beginPath(); c.moveTo(x, pie); c.lineTo(x, pie - alto); c.stroke();
     c.fillStyle = m.mia ? ORO : LAVANDA;
@@ -976,7 +1050,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   // (jugo, tanda 9) la onda de la caída limpia, que se abre por el suelo
   p.ondas = p.ondas.filter((q) => (q.t -= dt) > 0);
   c.strokeStyle = TIZA; c.lineWidth = 2;
-  for (const q of p.ondas) { q.x -= e.v * u * dt * 0.8; const k = 1 - q.t / 0.5; c.globalAlpha = (1 - k) * 0.6; c.beginPath(); c.ellipse(q.x, q.y, u * (0.5 + k * 2.3), u * (0.08 + k * 0.22), 0, 0, 6.3); c.stroke(); }
+  for (const q of p.ondas) { q.x -= e.v * u * dt * 0.8; const k = Math.max(0, 1 - q.t / 0.5); c.globalAlpha = (1 - k) * 0.6; c.beginPath(); c.ellipse(q.x, q.y, u * (0.5 + k * 2.3), u * (0.08 + k * 0.22), 0, 0, 6.3); c.stroke(); }
   c.globalAlpha = 1;
   // (lo que ha saltado del suelo: cae y se va quedando atrás)
   p.suelto = p.suelto.filter((q) => (q.t -= dt) > 0);
@@ -1030,7 +1104,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
   // (el aro del doble salto, que se abre bajo las patas)
   p.aros = p.aros.filter((q) => (q.t -= dt) > 0);
   c.strokeStyle = TIZA; c.lineWidth = 2;
-  for (const q of p.aros) { q.x -= e.v * u * dt * 0.7; const k = 1 - q.t / 0.32; c.globalAlpha = (1 - k) * 0.7; c.beginPath(); c.ellipse(q.x, q.y, u * (0.4 + k * 0.9), u * (0.12 + k * 0.2), 0, 0, 6.3); c.stroke(); }
+  for (const q of p.aros) { q.x -= e.v * u * dt * 0.7; const k = Math.max(0, 1 - q.t / 0.32); if (q.t > 0.32) continue; c.globalAlpha = (1 - k) * 0.7; c.beginPath(); c.ellipse(q.x, q.y, u * (0.4 + k * 0.9), u * (0.12 + k * 0.2), 0, 0, 6.3); c.stroke(); }
   c.globalAlpha = 1;
 
   // (en el bosque, de noche, luciérnagas)
