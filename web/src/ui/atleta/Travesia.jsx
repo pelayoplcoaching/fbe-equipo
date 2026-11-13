@@ -54,7 +54,9 @@ function tiempoGuardado() {
   } catch { return {}; }
 }
 // (tanda 1) los sonidos del juego (apagados de entrada): un toque al saltar, uno agudo en cada estrella y el aullido al acabar
-const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12] };
+const SONIDOS = { salto: [520, 0.05, 0.1], doble: [660, 0.05, 0.1], estrella: [1180, 0.06, 0.12], tropiezo: [150, 0.14, 0.16], escudo: [880, 0.1, 0.14], rio: [784, 0.12, 0.14], roce: [988, 0.09, 0.13], combo: [1320, 0.1, 0.12], cabeza: [220, 0.08, 0.14], 'pot-iman': [1046, 0.14, 0.14], 'pot-luna': [698, 0.2, 0.14], 'pot-aullido': [440, 0.3, 0.16] };
+// (top, tanda 2) el cartel de cada momento raro, cuando asoma
+const MOMENTO = { estampida: '¡Estampida!', tormenta: 'Se acerca la tormenta', puente: 'El puente colgante' };
 const aullar = () => { [[392, 0], [523, 260], [494, 620]].forEach(([f, ms]) => setTimeout(() => tono(f, ms ? 0.5 : 0.28, 0.16), ms)); };
 
 function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, total = null, despues = '', practica = false, empuje = null, alCerrar }) {
@@ -84,6 +86,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   const guardado0 = useRef(null);
   if (!guardado0.current) guardado0.current = leerTravesia(atletaId);
   const conMovimientos = guardado0.current.total >= 1000;   // las ramas, cuando ya lleva un kilómetro (primero se aprende a saltar)
+  // (top, tanda 2) el primer kilómetro que enseña: en las primeras etapas de quien empieza, los primeros obstáculos llevan su letrero
+  const ensenando = !practica && !!sesion && guardado0.current.total < 300;
   const reto = !practica && sesion ? retoDelDia(hoyISO()) : null;
   // (tanda 3) la manada: quién más ha corrido hoy (sus siluetas van a lo lejos) y, si hay duelo esta semana, cómo va
   const [manada, setManada] = useState(() => (practica ? null : manadaGuardada(atletaId)));
@@ -117,6 +121,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     // corto (45 s o menos) sale ya lanzado: no da tiempo a coger ritmo
     const e = nuevaEtapa(semilla, {
       calma, movimientos: conMovimientos && !practica, km0: practica ? 0 : antesG.total, unToque: accesible.current.unToque,
+      variedad: true, tutorial: ensenando && !calma,
       racha0: practica ? 0 : empuje?.ritmo ? 10 : quedanIni <= 45 ? 6 : 0,
       escudos: practica ? 0 : empuje?.escudo ? 1 : 0,
     });
@@ -195,6 +200,8 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
       if (e.sucesos.includes('roce')) vibrar('elegir');
       pintar(ctx, e, paisaje.current, { w, h, t: ahora / 1000, dt: parado ? 0 : dt, quieto, amb, fantasma: ritmo ? ritmo * e.t : null, skin, seguidores, corren: corren.current, cielo, meta: metaE, fin: acabada,
         ligero: cal.nivel < 2, minimo: cal.nivel === 0, contraste: accesible.current.contraste, temblor: accesible.current.temblor, combo: e.combo });
+      // (top, tanda 2) el momento raro, cuando asoma
+      if (!parado) for (const mo of e.momentos) if (!mo.dicho && mo.x - e.x < 16) { mo.dicho = true; anunciar(MOMENTO[mo.tipo], true); }
       // (tanda 5) los carteles: cada 250 m y (top, tanda 1) cada vez que sube el combo
       if (!parado) { const ahoraH = { metros: e.x, racha: e.racha, combo: e.combo }, k = cartelDeHito(hito, ahoraH); hito = ahoraH; if (k) anunciar(k.texto, k.grande); }
       // (top, tanda 1) el combo, junto a las estrellas: «×2» mientras dure (con un salto al subir)
@@ -296,7 +303,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
           {escudos > 0 && <span class="travesia-escudo" role="status" aria-label={`${escudos === 1 ? 'Un escudo' : `${escudos} escudos`}: te perdona un tropiezo`}><Icono n="escudo" />{escudos}</span>}
         </div>
       )}
-      {!final && !tocado && !calma && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</>}</p>}
+      {!final && !tocado && !calma && !ensenando && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</>}</p>}
       {!final && calma && <p class="travesia-pista calma" aria-hidden="true">Respira: el lobo va al paso</p>}
       {!final && reto && <p ref={retoTxt} class="travesia-reto" role="status" />}
       {!final && !tocado && companeros.length > 0 && <p class="travesia-manada" role="status">Hoy también {companeros.length === 1 ? 'ha corrido' : 'han corrido'}: {companeros.join(', ')}</p>}
@@ -309,6 +316,9 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
             {final.estrellas > 0 && <span class="oro"><Icono n="estrella" />{final.estrellas}</span>}
             {final.rios > 0 && <span>{final.rios === 1 ? 'Un río cruzado' : `${final.rios} ríos cruzados`}</span>}
             {final.combo > 1 && <span class="oro">Combo ×{final.combo}</span>}
+            {final.momentos?.includes('estampida') && <span class="oro">Estampida superada</span>}
+            {final.momentos?.includes('puente') && <span class="oro">Puente cruzado</span>}
+            {final.arriba >= 10 && <span>{textoDistancia(final.arriba)} por arriba</span>}
             {final.roces > 0 && <span>{final.roces === 1 ? 'Una vez por los pelos' : `${final.roces} veces por los pelos`}</span>}
             {final.marca && <span class="oro">Tu mejor {practica ? 'marca' : 'etapa'}</span>}
             {final.reto && <span class="oro">Reto del día, cumplido</span>}
