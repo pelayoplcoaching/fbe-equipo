@@ -399,3 +399,16 @@
 .para-hablarle-idea { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
 .para-hablarle-idea > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
 .carta-hoja textarea { font-size: .9375rem; line-height: 1.5; }
+
+/* ---------- (personalizacion 3, tanda 5) La sesion de hoy, suya ---------- */
+.panel.tiempo-hoy { display: grid; gap: 10px; }
+.tiempo-hoy-t { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 1rem; }
+.tiempo-hoy-t > svg, .calentamiento summary > svg:first-child, .hace-un-ano > svg { width: 20px; height: 20px; flex: none; color: var(--morado); }
+.tiempo-hoy-r p { margin: 0; }
+.tiempo-hoy-lista, .calentamiento-lista { margin: 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.4; }
+.calentamiento summary { display: flex; gap: 8px; align-items: center; font-weight: 650; cursor: pointer; list-style: none; }
+.calentamiento summary::-webkit-details-marker { display: none; }
+.calentamiento summary .plegable-flecha { margin-left: auto; }
+.calentamiento[open] .calentamiento-lista { margin-top: 10px; }
+.calentamiento p { margin: 8px 0 0; }
+.hace-un-ano { display: flex; gap: 10px; align-items: flex-start; margin: 2px 0 0; font-size: .9375rem; line-height: 1.45; }

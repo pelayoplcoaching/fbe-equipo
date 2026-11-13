@@ -82,6 +82,8 @@ import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
 import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
+import { useAlternativaElegida, apuntarAlternativa, HaceUnAno } from './SesionTuya.jsx';
+import { ordenarAlternativas, hastaHaceUnAno } from '../../logica/sesion-tuya.js';
 import { Cadencia, CancionRecord, BotonMusica } from './Musica.jsx';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
@@ -190,6 +192,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [descansosPropios, setDescansosPropios] = useState(() => leerDescansos(atleta.id));
   // (personalización 2, tanda 3) sus zonas que molestan (con su consentimiento de salud) y los avisos del coach
   const conocerte = useConocerte(salud);
+  // (personalización 3, tanda 5) lo que hizo hace un año en cada ejercicio (lo último antes de hace 330 días)
+  const idsAno = [...new Set((det.datos?.ejercicios || []).map((x) => x.ejercicio?.id || x.ejercicio_id).filter(Boolean))].join();
+  const haceAno = useCarga(() => (idsAno ? api.ultimasPorEjercicio(atleta.id, idsAno.split(','), id, hastaHaceUnAno(hoyISO())).catch(() => ({})) : Promise.resolve({})), [idsAno]);
   // (revisión L3) el último aviso del cambio que pasa a las siguientes series: { texto, fn, t }
   const cambioReciente = useRef(null);
   usePantallaEncendida();
@@ -791,7 +796,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
               recordatorios={tecnica037.datos?.recs?.[actual.id] || []} modelos={tecnica037.datos?.modelos?.[actual.id] || []}
-              avisoZona={conocerte.avisoDe(actual)}
+              avisoZona={conocerte.avisoDe(actual)} haceAno={haceAno.datos?.[actual.id] || null}
               descanso={infoDescanso(e)} descansoPropio={descansosPropios[actual.id] ?? null} descansoDefecto={descansoDefecto} elegirDescanso={(seg) => elegirDescanso(actual, seg)}
               lugar={porLugar[e.id] && sustitutos[e.id] === porLugar[e.id] ? lugar : null} deshacerLugar={() => deshacerLugar(e.id)}
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
@@ -931,7 +936,7 @@ function serieDeAntes(ultimas, numero) {
 }
 
 function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
-  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null, avisoZona = null,
+  descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null, avisoZona = null, haceAno = null,
   luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
@@ -1097,6 +1102,7 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
           )}
           {/* (personalización 2, tanda 3) lo de la última vez contado como persona y el descanso que de verdad hizo */}
           {ultimas && <FraseUltimaVez ultimas={ultimas} />}
+          {haceAno && <HaceUnAno ultimas={haceAno} />}
           {ultimas && !completo && elegirDescanso && !etiqueta && <CostumbreDescanso ej={ej} ultimas={ultimas} descanso={descanso} elegir={elegirDescanso} />}
           {/* Se queda hasta acabar el ejercicio: si desapareciera tras la primera serie, las filas subirían bajo el dedo */}
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
@@ -1275,8 +1281,10 @@ function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
   );
 }
 
-function Cambiar({ e, actual, alCerrar, alElegir }) {
-  const { api } = useApp();
+function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
+  const { api, atleta } = useApp();
+  const elegidaAntes = useAlternativaElegida(e.ejercicio.id);
+  const alElegir = (x) => { apuntarAlternativa(atleta?.id, e.ejercicio.id, x?.id); elegir(x); };
   const [otros, setOtros] = useState(false);
   const biblioteca = useCarga(() => (otros ? api.biblioteca() : Promise.resolve([])), [otros]);
   const principal = e.ejercicio.grupos_musculares?.[0];
@@ -1297,7 +1305,8 @@ function Cambiar({ e, actual, alCerrar, alElegir }) {
       <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas y tu coach verá el cambio.</p>
       <div class="lista-elegir">
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
-        {e.alternativas.map((x) => <Opcion x={x} key={x.id} />)}
+        {/* (personalización 3, tanda 5) la que eligió la última vez, delante */}
+        {ordenarAlternativas(e.alternativas, elegidaAntes).map((x) => <Opcion x={x} key={x.id} nota={x.id === elegidaAntes ? 'La que elegiste la última vez' : null} />)}
         {!e.alternativas.length && <div class="panel-pad peq secundario">Tu coach no ha marcado alternativas para este ejercicio.</div>}
       </div>
       {!otros ? (

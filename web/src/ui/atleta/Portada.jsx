@@ -21,6 +21,7 @@ import { porQueSesion, nivelLenguaje, explicarEsfuerzo, metaDe } from '../../log
 import { objetivosDe } from '../../logica/cuestionario.js';
 import { HoyComoEstas } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
+import { TiempoHoy, Calentamiento } from './SesionTuya.jsx';
 
 // El dibujo: solo geometría (logica/arte.js); los colores, del tema (el acento, claro y tenue sobre la tarjeta oscura)
 export function ArteSesion({ nombre, tipo, patron, clase = 'portada-arte' }) {
@@ -87,6 +88,9 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       {nivel === 'principiante' && r.ejercicios > 0 && ejercicios.some((e) => /RIR|RPE/.test(pauta(e)?.esfuerzo || '')) && (
         <p class="portada-nivel peq secundario">Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.</p>
       )}
+      {/* (personalización 3, tanda 5) con el tiempo que tiene y su calentamiento: consejo, la sesión no cambia */}
+      {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} />}
+      {!sesion.completada && r.ejercicios > 0 && <Calentamiento ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
       {nota && (
         <figure class="cita-coach">
           {foto.datos ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}
