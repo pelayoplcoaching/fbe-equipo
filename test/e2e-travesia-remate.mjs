@@ -58,6 +58,8 @@ export async function probarTravesiaRemate({ navegador, check, base = 'http://lo
     await p.locator('.hero-dia .btn-hero').waitFor();
     await fueraAvisos();
     await p.evaluate(([v, n]) => globalThis.__fbeDemo.rpc('comunidad_unirme', { p_nombre: 'Ana L.', p_version: v, p_normas: n }), [VERSION_COMUNIDAD, VERSION_NORMAS]);
+    // (en la liga solo entra quien ha jugado en las semanas: una etapa suya, ya en la base)
+    await p.evaluate(() => globalThis.__fbeDemo.rpc('sumar_travesia', { p_metros: 1800, p_estrellas: 3, p_etapas: 1 }));
     const tarjeta = p.locator('.travesia-tarjeta');
     await tarjeta.scrollIntoViewIfNeeded();
     await tarjeta.getByRole('button', { name: /Ver tu travesía/ }).click();
