@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.159': {
+    atleta: [
+      'Ilustraciones nuevas en Apuntes, tu meta y tu historia, tu sesión, tu vida y «Busco compañero».',
+    ],
+    coach: [
+      'Ilustraciones también en «Para hablarle»; y «Le escribiste» ya no dice «Hace -1 días».',
+    ],
+  },
   '0.158': {
     atleta: [
       'Más sonido en tu sesión: metrónomo con las notas de la app, nota del RPE, «¿Seguimos?» y «ding» cuando toca subir.',

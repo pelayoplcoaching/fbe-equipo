@@ -1360,7 +1360,10 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
   );
   return (
     <Hoja titulo="Cambiar ejercicio" alCerrar={alCerrar}>
-      <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas y tu coach verá el cambio.</p>
+      <div class="intro-ilu">
+        <Imagen id="alternativas" clase="intro-ilu-img" tamanos="64px" />
+        <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas y tu coach verá el cambio.</p>
+      </div>
       <div class="lista-elegir">
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
         {/* (personalización 3, tanda 5) la que eligió la última vez, delante */}

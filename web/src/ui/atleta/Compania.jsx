@@ -7,6 +7,8 @@ import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { useAgenda } from './Vida.jsx';
 import { useNombreLista } from './Musica.jsx';
 import { vibrar } from '../hapticos.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenHitoAlbum } from '../../logica/imagenes.js';
 
 // ---------- 13. La voz de su coach ----------
 export function VozCoach({ ruta, segundos }) {
@@ -23,6 +25,7 @@ export function VozCoach({ ruta, segundos }) {
   };
   return (
     <span class="voz-coach">
+      <Imagen id="voz-coach" clase="voz-coach-img" tamanos="40px" />
       {url ? <audio ref={ref} src={url} controls preload="auto" aria-label="La voz de tu coach" data-pausa-musica />
         : <button type="button" class="btn btn-peq voz-coach-oir" onClick={oir}><Icono n="play" /> Escuchar a tu coach{segundos ? ` (${segundos} s)` : ''}</button>}
       {error && <span class="mini secundario">No se ha podido cargar el audio.</span>}
@@ -41,9 +44,14 @@ export function RetoDelMes() {
   if (!r) return null;
   const pct = r.objetivo ? Math.min(1, r.hechos / r.objetivo) : null;
   return (
-    <section class="panel panel-pad reto-mes" aria-label={`Tu reto de ${r.mes}`}>
-      <span class="t-sobre">Tu reto de {r.mes}{r.tipo === 'coach' ? ' · de tu coach' : ''}</span>
-      <strong class="reto-mes-t">{r.titulo}</strong>
+    <section class={`panel panel-pad reto-mes${hayImagen('reto-mes') ? ' con-ilu' : ''}`} aria-label={`Tu reto de ${r.mes}`}>
+      <div class="reto-mes-cab">
+        <Imagen id="reto-mes" clase="reto-mes-img" tamanos="64px" />
+        <span class="pila-xs">
+          <span class="t-sobre">Tu reto de {r.mes}{r.tipo === 'coach' ? ' · de tu coach' : ''}</span>
+          <strong class="reto-mes-t">{r.titulo}</strong>
+        </span>
+      </div>
       {r.objetivo ? (
         <>
           <span class="reto-barra" role="progressbar" aria-valuemin={0} aria-valuemax={r.objetivo} aria-valuenow={r.hechos} aria-label={`${r.hechos} de ${r.objetivo}`}><span style={{ width: `${Math.round(pct * 100)}%` }} /></span>
@@ -68,6 +76,7 @@ export function AfinesCompanero({ ya = [], invitar, ocupado = false }) {
   };
   return (
     <section class="afines pila-s" aria-labelledby="afines-t">
+      <Imagen id="companero" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
       <label class="fila-ocultar"><span class="pila-xs"><strong id="afines-t">Busco compañero</strong><span class="peq secundario">Te emparejamos con quien entrena como tú: los que también buscan ven tu franja, tus días habituales y cuántos días entrenas a la semana (y tú los suyos).</span></span>
         <input type="checkbox" switch role="switch" aria-label="Busco compañero" checked={!!r.datos.busca} disabled={r.datos.sin_ranking} onChange={(e) => cambiar(e.currentTarget.checked)} /></label>
       {r.datos.sin_ranking && <p class="mini secundario">Como no sales en el ranking, no te emparejamos.</p>}
@@ -102,11 +111,14 @@ export function AlbumHitos({ entrenos, progreso, hoy }) {
   };
   return (
     <section class="panel panel-pad album-hitos" aria-labelledby="album-t">
+      <Imagen id="album" clase="franja-ilu franja-pegada franja-album" tamanos="(min-width: 640px) 560px, 100vw" />
       <div class="separa"><h2 id="album-t" class="album-t">Tu álbum</h2><button type="button" class="btn-texto" onClick={compartir}><Icono n="compartir" /> Compartir</button></div>
       <ol class="album-lista">
         {hitos.slice(0, 12).map((x) => (
           <li key={x.clave} class={x.suyo ? 'suyo' : ''}>
-            <span class="album-ico" aria-hidden="true"><Icono n={x.icono} /></span>
+            {imagenHitoAlbum(x.clave) && hayImagen(imagenHitoAlbum(x.clave))
+              ? <Imagen id={imagenHitoAlbum(x.clave)} clase="album-img" tamanos="40px" alternativa={<span class="album-ico" aria-hidden="true"><Icono n={x.icono} /></span>} />
+              : <span class="album-ico" aria-hidden="true"><Icono n={x.icono} /></span>}
             <span class="pila-xs"><strong>{x.titulo}</strong><span class="mini secundario">{fmtCorta(x.fecha)}{x.suyo && x.autor === 'coach' ? ' · lo añadió tu coach' : ''}</span>
               {x.sesion_id && musicaRec.datos?.[x.sesion_id] && <ConMusica url={musicaRec.datos[x.sesion_id]} />}</span>
             {x.suyo && x.autor === 'atleta' && <button type="button" class="btn btn-icono plano" aria-label={`Quitar ${x.titulo}`} onClick={() => api.borrarAgenda(x.id).catch((e) => aviso(e.message, 'error'))}><Icono n="basura" /></button>}

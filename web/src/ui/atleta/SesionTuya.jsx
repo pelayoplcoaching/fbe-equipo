@@ -6,13 +6,14 @@ import { TIEMPOS, siVasJusto, textoVasJusto, calentamiento, haceUnAno } from '..
 import { textoSerie } from '../../logica/calculos.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
+import { Imagen } from '../Imagen.jsx';
 
 export function TiempoHoy({ ejercicios }) {
   const [min, setMin] = useState(null);
   const r = min ? siVasJusto(ejercicios, min) : null;
   return (
     <section class="panel panel-pad tiempo-hoy" aria-labelledby="tiempo-hoy-t">
-      <h2 id="tiempo-hoy-t" class="tiempo-hoy-t"><Icono n="reloj" /> ¿Cuánto tiempo tienes hoy?</h2>
+      <h2 id="tiempo-hoy-t" class="tiempo-hoy-t"><Imagen id="tiempo-hoy" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="reloj" />} /> ¿Cuánto tiempo tienes hoy?</h2>
       <div class="segmentos" role="group" aria-label="Tiempo que tienes hoy">
         {TIEMPOS.map((m) => <button key={m} type="button" aria-pressed={min === m ? 'true' : 'false'} onClick={() => setMin(min === m ? null : m)}>{m} min</button>)}
       </div>
@@ -33,6 +34,7 @@ export function Calentamiento({ ejercicios, zonas = [] }) {
   return (
     <details class="panel panel-pad calentamiento">
       <summary><Icono n="movilidad" /> Tu calentamiento (unos 5 min)<Icono n="abajo" class="plegable-flecha" /></summary>
+      <Imagen id="calentamiento" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
       <ol class="calentamiento-lista">{pasos.map((p) => <li key={p}>{p}</li>)}</ol>
       <p class="mini secundario">Un consejo para llegar listo; si tu coach te ha puesto el suyo, manda el suyo.</p>
     </details>
@@ -41,7 +43,7 @@ export function Calentamiento({ ejercicios, zonas = [] }) {
 
 export function HaceUnAno({ ultimas }) {
   const h = haceUnAno(ultimas, hoyISO(), (s) => textoSerie({ ...s, rpe: null }));
-  return h ? <p class="hace-un-ano"><Icono n="historial" /><span>{h.texto}</span></p> : null;
+  return h ? <p class="hace-un-ano"><Imagen id="hace-un-ano" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="historial" />} /><span>{h.texto}</span></p> : null;
 }
 
 // Sus alternativas: lo que eligió la última vez en lugar del pautado

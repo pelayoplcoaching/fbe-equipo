@@ -226,3 +226,20 @@ export const ICONOS_IMG = [
   'privacidad', 'tema', 'paleta', 'sol', 'nube', 'lluvia', 'nieve', 'niebla', 'tormenta',
 ];
 export const imagenIcono = (n) => (ICONOS_IMG.includes(n) ? `ico-${n}` : null);
+
+// ---------- (imágenes de las 48 h, bloque AA) Los apuntes ----------
+// Una por tema («Tus temas»), y las de la prueba de nivel, la ruta, el certificado, la liga, el repaso, el objetivo del día,
+// las historias y el audio del coach
+export const TEMAS_APUNTES_IMG = ['tecnica', 'programacion', 'nutricion', 'recuperacion', 'mentalidad'];
+export const imagenTemaApuntes = (tema) => (TEMAS_APUNTES_IMG.includes(tema) ? `apuntes-tema-${tema}` : null);
+
+// ---------- (imágenes de las 48 h) Bloque AB: su meta y su historia ----------
+// El aniversario: la vela con la luna (1 y 3 meses), las seis lunas (6 meses) y el laurel (el año y los siguientes)
+export const imagenAniversarioMeses = (m) => (!Number.isInteger(m) || m < 1 ? null : m >= 12 ? 'aniversario-ano' : m >= 6 ? 'aniversario-medio' : 'aniversario-mes');
+// La cuenta atrás de su meta (rumbo.cuentaMeta): el reloj de arena con el camino; el día, la bandera dorada; pasada, la siguiente
+export const imagenMeta = (c) => (!c ? null : c.pasada ? 'meta-siguiente' : c.dias === 0 ? 'meta-dia' : 'meta-cuenta');
+
+// ---------- (imágenes de las 48 h) Bloques AC, AD y AE: la sesión de hoy, su vida y que le acompañe ----------
+// Su álbum: la huella en el escalón (primera sesión), la barra cargada (los 100 kg) y la barra de dominadas
+const HITOS_ALBUM_IMG = { primera: 'hito-primera', cien: 'hito-cien', dominada: 'hito-dominada' };
+export const imagenHitoAlbum = (clave) => HITOS_ALBUM_IMG[clave] || null;

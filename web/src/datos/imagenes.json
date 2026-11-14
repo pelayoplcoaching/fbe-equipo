@@ -151,6 +151,16 @@
       "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
     }
   },
+  "adn-fbe": {
+    "proporcion": [
+      9,
+      16
+    ],
+    "archivos": {
+      "360": "imagenes/meta/adn-fbe-360.6f0b2926.webp",
+      "540": "imagenes/meta/adn-fbe-540.7d7adc69.webp"
+    }
+  },
   "adu-copenhague": {
     "proporcion": [
       1,
@@ -181,6 +191,36 @@
       "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
     }
   },
+  "album": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/compania/album-720.383db8ac.webp",
+      "1080": "imagenes/compania/album-1080.4f675ac3.webp"
+    }
+  },
+  "alerta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/alerta-160.bfd027c0.webp",
+      "320": "imagenes/coach/alerta-320.86709110.webp"
+    }
+  },
+  "alternativas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/alternativas-160.9c6fd160.webp",
+      "320": "imagenes/sesion/alternativas-320.cc6e9a1b.webp"
+    }
+  },
   "aniversario": {
     "proporcion": [
       3,
@@ -190,6 +230,36 @@
       "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
       "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
       "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
+  "aniversario-ano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-ano-160.cb4f68a0.webp",
+      "320": "imagenes/meta/aniversario-ano-320.d25c8e72.webp"
+    }
+  },
+  "aniversario-medio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-medio-160.c5f486c8.webp",
+      "320": "imagenes/meta/aniversario-medio-320.984addb7.webp"
+    }
+  },
+  "aniversario-mes": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-mes-160.b6bb0275.webp",
+      "320": "imagenes/meta/aniversario-mes-320.40d2c880.webp"
     }
   },
   "ant-curl-muneca-banco": {
@@ -240,6 +310,145 @@
     "archivos": {
       "192": "imagenes/ejercicio/ant-kettlebell-wrist-turns-192.cc116610.webp",
       "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
+    }
+  },
+  "apuntes-audio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-audio-160.6560733c.webp",
+      "320": "imagenes/apuntes/apuntes-audio-320.98d3c00f.webp"
+    }
+  },
+  "apuntes-certificado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-certificado-720.8e85d8c1.webp",
+      "1080": "imagenes/apuntes/apuntes-certificado-1080.3055ece6.webp"
+    }
+  },
+  "apuntes-duelo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-duelo-720.22c1597c.webp",
+      "1080": "imagenes/apuntes/apuntes-duelo-1080.a1b6a39c.webp"
+    }
+  },
+  "apuntes-historia": {
+    "proporcion": [
+      9,
+      16
+    ],
+    "archivos": {
+      "540": "imagenes/apuntes/apuntes-historia-540.29e6d3db.webp"
+    }
+  },
+  "apuntes-liga": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-liga-720.6d3d9b8f.webp",
+      "1080": "imagenes/apuntes/apuntes-liga-1080.88f99f35.webp"
+    }
+  },
+  "apuntes-objetivo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-objetivo-160.65d32302.webp",
+      "320": "imagenes/apuntes/apuntes-objetivo-320.ee77570b.webp"
+    }
+  },
+  "apuntes-prueba-nivel": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-prueba-nivel-720.63ce1be5.webp",
+      "1080": "imagenes/apuntes/apuntes-prueba-nivel-1080.dadadcba.webp"
+    }
+  },
+  "apuntes-repaso": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-repaso-720.2bea69c4.webp",
+      "1080": "imagenes/apuntes/apuntes-repaso-1080.3b57ca54.webp"
+    }
+  },
+  "apuntes-ruta": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-ruta-720.02e09501.webp",
+      "1080": "imagenes/apuntes/apuntes-ruta-1080.7ed902de.webp"
+    }
+  },
+  "apuntes-tema-mentalidad": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-mentalidad-160.02c65f5a.webp",
+      "320": "imagenes/apuntes/apuntes-tema-mentalidad-320.157f87fa.webp"
+    }
+  },
+  "apuntes-tema-nutricion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-nutricion-160.26243f04.webp",
+      "320": "imagenes/apuntes/apuntes-tema-nutricion-320.f584bae0.webp"
+    }
+  },
+  "apuntes-tema-programacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-programacion-160.6ac96789.webp",
+      "320": "imagenes/apuntes/apuntes-tema-programacion-320.a96eee3c.webp"
+    }
+  },
+  "apuntes-tema-recuperacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-recuperacion-160.99697870.webp",
+      "320": "imagenes/apuntes/apuntes-tema-recuperacion-320.1be3937c.webp"
+    }
+  },
+  "apuntes-tema-tecnica": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-tecnica-160.79c2bcf1.webp",
+      "320": "imagenes/apuntes/apuntes-tema-tecnica-320.681a8bd6.webp"
     }
   },
   "bic-curl-arana": {
@@ -375,6 +584,16 @@
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
     }
   },
+  "calentamiento": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/calentamiento-720.4a1773bd.webp",
+      "1080": "imagenes/sesion/calentamiento-1080.c6659ab5.webp"
+    }
+  },
   "cardio-andar": {
     "proporcion": [
       16,
@@ -461,6 +680,16 @@
       "480": "imagenes/carne/carne-fondo-480.79f3d151.webp",
       "720": "imagenes/carne/carne-fondo-720.d739ed1e.webp",
       "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
+    }
+  },
+  "carta-mes": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/meta/carta-mes-720.99ff1b8a.webp",
+      "1080": "imagenes/meta/carta-mes-1080.14def747.webp"
     }
   },
   "celebra-bloque": {
@@ -595,6 +824,16 @@
       "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
     }
   },
+  "ciclo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/ciclo-160.17e0694f.webp",
+      "320": "imagenes/vida/ciclo-320.2f15d3b6.webp"
+    }
+  },
   "coach-negocio": {
     "proporcion": [
       16,
@@ -709,6 +948,26 @@
     "archivos": {
       "320": "imagenes/comida/comida-merienda-320.c15bd71b.webp",
       "640": "imagenes/comida/comida-merienda-640.8398f339.webp"
+    }
+  },
+  "como-estas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/como-estas-160.d6e652ec.webp",
+      "320": "imagenes/sesion/como-estas-320.00b61acc.webp"
+    }
+  },
+  "companero": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/compania/companero-720.c81a4abf.webp",
+      "1080": "imagenes/compania/companero-1080.c143a0e1.webp"
     }
   },
   "compartir-bloque": {
@@ -1624,6 +1883,16 @@
       "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
     }
   },
+  "foto-motivacion-vacia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/meta/foto-motivacion-vacia-240.e50782e7.webp",
+      "480": "imagenes/meta/foto-motivacion-vacia-480.b8b637c8.webp"
+    }
+  },
   "gem-maquina-de-pie": {
     "proporcion": [
       1,
@@ -1944,6 +2213,16 @@
       "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
     }
   },
+  "guardias": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/guardias-720.0c0849cf.webp",
+      "1080": "imagenes/vida/guardias-1080.337646e9.webp"
+    }
+  },
   "guia-cabeza": {
     "proporcion": [
       1,
@@ -2074,6 +2353,16 @@
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
     }
   },
+  "hace-un-ano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/hace-un-ano-160.ad7e0ed4.webp",
+      "320": "imagenes/sesion/hace-un-ano-320.698c6d4b.webp"
+    }
+  },
   "herr-camara": {
     "proporcion": [
       16,
@@ -2116,6 +2405,16 @@
       "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
       "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
       "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
+    }
+  },
+  "historia-linea": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/meta/historia-linea-720.ddd753df.webp",
+      "1080": "imagenes/meta/historia-linea-1080.55700d6d.webp"
     }
   },
   "hito-12": {
@@ -2166,6 +2465,36 @@
     "archivos": {
       "512": "imagenes/hito/hito-8-512.7eadc0cf.webp",
       "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
+    }
+  },
+  "hito-cien": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-cien-160.90116af7.webp",
+      "320": "imagenes/compania/hito-cien-320.66d19299.webp"
+    }
+  },
+  "hito-dominada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-dominada-160.1fc2238d.webp",
+      "320": "imagenes/compania/hito-dominada-320.2f40d7f1.webp"
+    }
+  },
+  "hito-primera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-primera-160.6db1e51f.webp",
+      "320": "imagenes/compania/hito-primera-320.d446bb2d.webp"
     }
   },
   "ico-agua": {
@@ -2618,6 +2947,16 @@
       "192": "imagenes/icono/ico-video-192.1ea169ab.webp"
     }
   },
+  "informe": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/vida/informe-720.ffb2d3e5.webp",
+      "1080": "imagenes/vida/informe-1080.34921296.webp"
+    }
+  },
   "isq-buenos-dias": {
     "proporcion": [
       1,
@@ -2706,6 +3045,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/isq-rumano-mancuernas-192.12283104.webp",
       "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
+    }
+  },
+  "manual": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/manual-720.f5e430bf.webp",
+      "1080": "imagenes/vida/manual-1080.8d3cbd9e.webp"
     }
   },
   "medalla-bascula-bronce": {
@@ -2988,6 +3337,16 @@
       "512": "imagenes/medalla/medalla-toneladas-plata-512.78c2a9ef.webp"
     }
   },
+  "mejor-momento": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/mejor-momento-160.884b5318.webp",
+      "320": "imagenes/meta/mejor-momento-320.f407e255.webp"
+    }
+  },
   "mes-01": {
     "proporcion": [
       16,
@@ -3132,6 +3491,36 @@
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
     }
   },
+  "meta-cuenta": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/meta/meta-cuenta-720.de1f1a33.webp",
+      "1080": "imagenes/meta/meta-cuenta-1080.a67b0ddf.webp"
+    }
+  },
+  "meta-dia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/meta-dia-160.9160176a.webp",
+      "320": "imagenes/meta/meta-dia-320.46ce2434.webp"
+    }
+  },
+  "meta-siguiente": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/meta-siguiente-160.fa5ecaa2.webp",
+      "320": "imagenes/meta/meta-siguiente-320.adc7f8db.webp"
+    }
+  },
   "mito-semana": {
     "proporcion": [
       3,
@@ -3141,6 +3530,16 @@
       "480": "imagenes/aprende/mito-semana-480.e9182444.webp",
       "720": "imagenes/aprende/mito-semana-720.f4a0275f.webp",
       "1080": "imagenes/aprende/mito-semana-1080.4d98144a.webp"
+    }
+  },
+  "para-hablarle": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/meta/para-hablarle-720.56df73e3.webp",
+      "1080": "imagenes/meta/para-hablarle-1080.031dba9f.webp"
     }
   },
   "pec-aperturas-planas": {
@@ -3643,6 +4042,16 @@
       "320": "imagenes/guias/portada-volver-cuadrada-320.0b407c96.webp"
     }
   },
+  "primer-mes": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/coach/primer-mes-720.ae87977b.webp",
+      "1080": "imagenes/coach/primer-mes-1080.0378cca6.webp"
+    }
+  },
   "primeros-checkin": {
     "proporcion": [
       16,
@@ -3674,6 +4083,36 @@
       "480": "imagenes/primeros/primeros-sesion-480.408a167e.webp",
       "720": "imagenes/primeros/primeros-sesion-720.42f7688e.webp",
       "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
+    }
+  },
+  "regalo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/regalo-160.803e2094.webp",
+      "320": "imagenes/coach/regalo-320.377acbc3.webp"
+    }
+  },
+  "reto-mes": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/reto-mes-160.76b87ea6.webp",
+      "320": "imagenes/compania/reto-mes-320.6c2cba3c.webp"
+    }
+  },
+  "semana-dificil": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/vida/semana-dificil-720.21df1fcd.webp",
+      "1080": "imagenes/vida/semana-dificil-1080.bbd3c8d5.webp"
     }
   },
   "sesion-cardio": {
@@ -3753,6 +4192,16 @@
       "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
     }
   },
+  "sin-bascula": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/sin-bascula-160.7922e00e.webp",
+      "320": "imagenes/vida/sin-bascula-320.ec5385b3.webp"
+    }
+  },
   "sin-conexion": {
     "proporcion": [
       16,
@@ -3762,6 +4211,16 @@
       "480": "imagenes/acceso/sin-conexion-480.82cdc6d5.webp",
       "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
       "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
+    }
+  },
+  "tiempo-hoy": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/tiempo-hoy-160.a2d61f99.webp",
+      "320": "imagenes/sesion/tiempo-hoy-320.bb322230.webp"
     }
   },
   "tri-extensiones-polea-barra": {
@@ -3862,6 +4321,46 @@
     "archivos": {
       "192": "imagenes/ejercicio/tri-trasnuca-polea-baja-192.641e838b.webp",
       "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
+    }
+  },
+  "vida-agenda": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/vida-agenda-720.31e7483e.webp",
+      "1080": "imagenes/vida/vida-agenda-1080.b06770ba.webp"
+    }
+  },
+  "vida-que-tal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/vida-que-tal-160.73ea67d1.webp",
+      "320": "imagenes/vida/vida-que-tal-320.f8fb1c44.webp"
+    }
+  },
+  "voz-coach": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/voz-coach-160.8052520c.webp",
+      "320": "imagenes/compania/voz-coach-320.beb8c5f5.webp"
+    }
+  },
+  "vuelve": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/vuelve-160.bc66252c.webp",
+      "320": "imagenes/coach/vuelve-320.39c7f13f.webp"
     }
   }
 }

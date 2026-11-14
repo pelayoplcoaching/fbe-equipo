@@ -61,7 +61,9 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
   try {
     await p.locator('nav.tabs').waitFor();
     await cerrarDialogos(p);
-    const deSesion = () => imagenes.filter((x) => x.startsWith('sesion/'));
+    // (v0.159) solo las portadas (sesion/sesion-…): las ilustraciones pequeñas de la portada («¿Cuánto tiempo tienes hoy?»,
+    // el calentamiento) van aparte
+    const deSesion = () => imagenes.filter((x) => x.startsWith('sesion/sesion-'));
     const antesPortada = deSesion().length;
     await p.locator('.btn-hero').first().click();
     const foto = p.locator('img.portada-foto');

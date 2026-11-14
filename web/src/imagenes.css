@@ -262,3 +262,86 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @keyframes hito-parpadea { 0% { opacity: .52; transform: scale(1); } 40% { opacity: .66; transform: scale(1.012); } 70% { opacity: .56; transform: scale(1.004); } 100% { opacity: .72; transform: scale(1.022); } }
 @keyframes hito-chispa { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(1); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--lado, 0), -34vh, 0) scale(.3); } }
 
+
+/* ── (imágenes de las 48 h) Bloque AA · los apuntes ──────────────────────────────────────────────────────────────────
+   La prueba de nivel, pegada arriba de su panel (3:1); la ruta y la liga, franjas sueltas redondeadas (3:1, con lo
+   importante a la derecha); cada tema, su cuadrado de 44 px a la izquierda; el certificado, su marco dorado de fondo;
+   la tarjeta de los apuntes, la franja del repaso arriba (si hay por repasar) y el objetivo del día en vez del icono;
+   las historias moradas, el fondo de cortinas de luz; el audio del coach, su micrófono. */
+.panel-pad > .franja-prueba { object-position: 80% 50%; }
+.franja-ruta, .franja-liga, .franja-duelo { aspect-ratio: 3 / 1; border-radius: var(--r); object-position: 80% 50%; }
+.prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.prog-tema.con-ilu > :not(.prog-tema-ilu) { grid-column: 2; }
+.certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: 28px 24px 22px; border-color: transparent; background: #1E1548; color: #F1F0F6; }
+.certificado.con-ilu > .certificado-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
+.certificado.con-ilu .certificado-de, .certificado.con-ilu .certificado-pie { color: color-mix(in srgb, #F1F0F6 72%, transparent); }
+.certificado.con-ilu .certificado-pie { margin-bottom: 26px; }
+.apuntes-tarjeta > .apuntes-tarjeta-franja { grid-column: 1 / -1; aspect-ratio: 3.4 / 1; margin: -10px -12px 0 -14px; width: calc(100% + 26px); object-position: 80% 50%;
+  border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.apuntes-tarjeta-ilu { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.ap-historia { isolation: isolate; }
+.ap-historia > .ap-historia-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; opacity: .85; pointer-events: none; }
+.audio-pildora.con-ilu { grid-template-columns: auto auto 1fr auto; }
+.audio-pildora.con-ilu > .audio-ilu { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex: none; }
+@media (forced-colors: active) { .prog-tema-ilu, .certificado-fondo, .apuntes-tarjeta-ilu, .ap-historia-fondo, .audio-ilu { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AB: su meta y su historia */
+/* La cuenta atrás: contando, el reloj de arena y la bandera en una franja algo más alta (5:2, caben los dos); el día y
+   pasada, un cuadrito en lugar del emoji */
+.panel.cuenta-meta.con-franja { display: block; overflow: hidden; }
+.panel-pad > .franja-pegada.franja-meta { aspect-ratio: 5 / 2; object-position: 50% 50%; margin-bottom: 10px; }
+.cuenta-meta-fila { display: flex; gap: 12px; align-items: center; }
+.cuenta-meta-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+/* Tu historia en una línea: el camino de la nieve a la primavera, arriba */
+.panel.historia-linea.con-ilu { display: block; overflow: hidden; }
+.historia-linea-texto { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.panel.historia-linea:not(.con-ilu) > .historia-linea-texto > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.panel-pad > .franja-pegada.franja-historia { margin-bottom: 10px; object-position: 50% 50%; }
+/* Su aniversario: la medalla del hito junto al título (la tarta sigue en la franja) */
+.aniversario.con-medalla { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.aniversario.con-medalla > .aniversario-ilu { grid-column: 1 / -1; }
+.aniversario-medalla { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+/* Tu ADN FBE: la doble hélice de fondo a la derecha, fundida hacia el texto */
+.panel.adn-fbe.con-ilu { position: relative; overflow: hidden; isolation: isolate; }
+.adn-fbe-fondo { position: absolute; z-index: -1; right: 0; top: 0; height: 100%; width: 46%; object-fit: cover; object-position: 55% 88%; opacity: .55;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 55%); mask-image: linear-gradient(to right, transparent, #000 55%); pointer-events: none; }
+/* Tu foto de motivación, sin elegir aún: el marco vacío colgado */
+.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: 18px; object-fit: cover; }
+/* Para hablarle y la carta del mes (la ficha del coach) */
+.panel-pad > .franja-pegada.franja-hablarle { margin-bottom: 4px; object-position: 50% 50%; }
+.franja-carta { aspect-ratio: 5 / 2; border-radius: var(--r); object-position: 50% 50%; }
+/* Tu mejor momento: el arco del sol en lugar del rayo */
+.mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+@media (forced-colors: active) { .cuenta-meta-img, .aniversario-medalla, .adn-fbe-fondo, .foto-motivacion-vacia, .mejor-momento-img { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloques AC, AD y AE */
+/* Un cuadrito en lugar del icono de una fila (tiempo, hace un año, cómo estás, qué tal fue) */
+.ico-ilu { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.tiempo-hoy-t:has(> .ico-ilu), .hace-un-ano:has(> .ico-ilu), .hoy-como-estas:has(> .ico-ilu), .vida-fila:has(> .ico-ilu) { align-items: center; gap: 12px; }
+/* Una franja arriba de una hoja (o dentro del calentamiento): la proporción la da la imagen */
+.franja-hoja { border-radius: var(--r); object-position: 50% 50%; }
+.calentamiento > .franja-hoja { margin: 10px 0 4px; }
+/* La explicación de una hoja con su dibujo al lado (cambiar ejercicio, lo que no quieres ver, tu ciclo) */
+.intro-ilu { display: flex; gap: 12px; align-items: center; }
+.intro-ilu > p { margin: 0; flex: 1; min-width: 0; }
+.intro-ilu-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+/* La voz de tu coach: las ondas junto al botón */
+.voz-coach:has(> .voz-coach-img) { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.voz-coach-img { flex: none; width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+.voz-coach:has(> .voz-coach-img) > audio { flex: 1; min-width: 180px; }
+/* El reto del mes: la diana con sus días junto al título; el álbum, en franja, y sus hitos con su dibujo */
+.reto-mes-cab { display: flex; gap: 12px; align-items: center; }
+.reto-mes-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.panel-pad > .franja-pegada.franja-album { object-position: 50% 50%; }
+.album-img { flex: none; width: 34px; height: 34px; border-radius: 10px; object-fit: cover; }
+@media print { .informe-salud-ilu { display: none !important; } }
+@media (forced-colors: active) { .ico-ilu, .intro-ilu-img, .voz-coach-img, .reto-mes-img, .album-img { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AF: para el coach, y su primer mes */
+.lo-que-funciona.con-ilu { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+.lo-que-funciona.con-ilu > :not(.lo-que-funciona-img) { grid-column: 1; }
+.lo-que-funciona.con-ilu > .lo-que-funciona-img { grid-column: 2; grid-row: 1 / span 4; align-self: start; }
+.alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
+.panel.primeros-pasos.con-ilu { overflow: hidden; }
+.primeros-pasos-ilu { object-position: 50% 50%; }

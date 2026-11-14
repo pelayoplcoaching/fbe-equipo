@@ -9,6 +9,7 @@ import { guiasConTexto } from '../../datos/guias.js';
 import { semanaDeAprendizaje } from '../../logica/apuntes-arte.js';
 import { Medalla } from './apuntes-arte.jsx';
 import { AnilloMeta } from './AnilloMeta.jsx';
+import { Imagen } from '../Imagen.jsx';
 
 // «Apuntes»: su pantalla (y la lectura de las guías que necesita) solo se pide al abrirla
 export const Apuntes = perezoso(() => import('./Apuntes.jsx'), 'Apuntes', { mientras: null });
@@ -56,7 +57,9 @@ export function TarjetaApuntes({ repaso = false, finBloque = false }) {
   const conExamen = !!estado && puedeExaminarse(estado);
   return (
     <section class={`apuntes-tarjeta panel${repaso ? ' repaso' : ''}${novedad ? ' con-novedad' : ''}`} aria-label={repaso ? 'Tus apuntes' : 'El apunte de hoy'}>
-      {(() => { const d = hoyEnApuntes(leerApuntes(atleta.id), hoyISO()); return vez >= 0 && (d.n > 0 || repaso) ? <AnilloMeta {...d} pequeno /> : <IcoIos n="biblioteca" />; })()}
+      {/* (imágenes 48 h) con apuntes por repasar, la franja del repaso; sin anillo, la del objetivo del día en vez del icono */}
+      {!repaso && !novedad && r.tocan > 0 && <Imagen id="apuntes-repaso" clase="franja-ilu apuntes-tarjeta-franja" tamanos="(min-width: 640px) 560px, 92vw" />}
+      {(() => { const d = hoyEnApuntes(leerApuntes(atleta.id), hoyISO()); return vez >= 0 && (d.n > 0 || repaso) ? <AnilloMeta {...d} pequeno /> : <Imagen id="apuntes-objetivo" clase="apuntes-tarjeta-ilu" tamanos="44px" alternativa={<IcoIos n="biblioteca" />} />; })()}
       {novedad && <span class="apuntes-cinta" aria-hidden="true">Nuevo</span>}
       <div class="apuntes-tarjeta-texto">
         <strong>{repaso ? 'Tus apuntes' : novedad ? 'Novedad de la semana' : 'El apunte de hoy'}</strong>

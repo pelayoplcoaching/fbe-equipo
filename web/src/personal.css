@@ -552,3 +552,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .reproductor-otro { border-radius: 12px; background: #000; }
 .reto-musical-coach .fila-envolver { gap: 8px; }
 .reto-musical-coach input { flex: 1; min-width: 160px; }
+
+/* (personalizacion 3) al pie de Hoy, "Ordenar Hoy" y "Esta semana va a ser dificil" en una linea cada uno si no caben */
+.ordenar-hoy-pie { flex-wrap: wrap; gap: 2px 18px; }
+.ordenar-hoy-pie .btn-texto { white-space: nowrap; }

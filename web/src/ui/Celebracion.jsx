@@ -19,7 +19,7 @@ import { resumenDesdeAlta } from '../logica/rumbo.js';
 import { MensajeCoach } from './atleta/Personal.jsx';
 import { nombreMes } from '../logica/mes.js';
 import { REACCIONES } from '../logica/comunidad.js';
-import { IMAGEN_ANIVERSARIO } from '../logica/imagenes.js';
+import { IMAGEN_ANIVERSARIO, imagenAniversarioMeses } from '../logica/imagenes.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import {
   aniversarioDe, tituloAniversario, textoAniversario, textoAniversarioMuro, mesEquipoDe, tituloMesEquipo, cifrasMesEquipo, cifrasMiMes, datosImagenMes,
@@ -44,11 +44,14 @@ export function TarjetaAniversario() {
   const entrenos = useCarga(() => (an ? api.entrenamientos(atleta.id).catch(() => []) : Promise.resolve([])), [an?.meses, atleta?.id]);
   const hecho = an ? resumenDesdeAlta({ entrenos: entrenos.datos || [], fechaAlta: atleta?.fecha_alta }) : null;
   if (!an || oculta) return null;
+  const medalla = hayImagen(imagenAniversarioMeses(an.meses)) ? imagenAniversarioMeses(an.meses) : null;
   return (
-    <section class={`panel panel-pad aniversario ${hayImagen(IMAGEN_ANIVERSARIO) ? 'con-ilu' : ''}`} aria-labelledby="aniversario-t">
+    <section class={`panel panel-pad aniversario ${hayImagen(IMAGEN_ANIVERSARIO) ? 'con-ilu' : ''}${medalla ? ' con-medalla' : ''}`} aria-labelledby="aniversario-t">
       {/* (imágenes, bloque R) la tarta con su vela, en una franja arriba; con ella, sin el 🎉 */}
       <Imagen id={IMAGEN_ANIVERSARIO} clase="franja-ilu franja-pegada aniversario-ilu" tamanos="(min-width: 720px) 640px, 100vw" />
-      {!hayImagen(IMAGEN_ANIVERSARIO) && <span class="aniversario-ico" aria-hidden="true">🎉</span>}
+      {!hayImagen(IMAGEN_ANIVERSARIO) && !medalla && <span class="aniversario-ico" aria-hidden="true">🎉</span>}
+      {/* (imágenes de las 48 h) el hito que cumple: la vela con la luna, las seis lunas o el laurel */}
+      {medalla && <Imagen id={medalla} clase="aniversario-medalla" tamanos="64px" />}
       <div class="pila-xs">
         <h2 id="aniversario-t" class="aniversario-t">{tituloAniversario(an.meses)}</h2>
         <p class="peq secundario">{an.meses >= 12 ? 'Gracias por la constancia: un año más entrenando con cabeza.' : 'Gracias por la constancia: lo difícil es empezar, y ya llevas ' + textoAniversario(an.meses) + '.'}</p>

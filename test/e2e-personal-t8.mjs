@@ -38,7 +38,8 @@ export async function probarPersonalCompania({ navegador, check, base = 'http://
     await fueraAvisos();
     await irASeccion(p, 'Cuenta');
     const sec = p.locator('section.mensajes-automaticos');
-    await sec.waitFor({ timeout: 8000 });
+    // (en la pasada completa, más lenta: si algo tapa o aún carga, se cierra y se vuelve a Cuenta)
+    if (!(await sec.waitFor({ timeout: 8000 }).then(() => true, () => false))) { await fueraAvisos(); await irASeccion(p, 'Cuenta'); await sec.waitFor({ timeout: 15000 }); }
     await sec.scrollIntoViewIfNeeded();
     await sec.locator('button[data-m="record"]').click();
     const hoja = p.getByRole('dialog').last();

@@ -6,6 +6,7 @@ import { Icono, Capa, useApp, useCarga } from '../comunes.jsx';
 import { estadoDuelo } from '../../logica/apuntes-camino.js';
 import { sinMovimiento } from '../transiciones.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 // --- La liga de la semana y tus duelos (dentro de «Tu progreso») ---
 export function LigaYDuelos({ alJugar }) {
@@ -33,6 +34,7 @@ export function LigaYDuelos({ alJugar }) {
     <>
       <section class="prog-liga" aria-labelledby="prog-liga-t">
         <h3 id="prog-liga-t">Liga de la semana</h3>
+        <Imagen id="apuntes-liga" clase="franja-ilu franja-liga" tamanos="(min-width: 640px) 560px, 92vw" />
         {filas.length ? (
           <ol class="liga-filas">
             {top.map((f, i) => <li key={`${f.nombre}-${i}`} class={f.yo ? 'yo' : ''}><span class="num liga-puesto">{i + 1}</span><span class="liga-nombre">{f.yo ? `${f.nombre} (tú)` : f.nombre}</span><b class="num">{f.puntos}</b></li>)}
@@ -43,6 +45,7 @@ export function LigaYDuelos({ alJugar }) {
       </section>
       <section class="prog-duelos" aria-labelledby="prog-duelos-t">
         <h3 id="prog-duelos-t">Duelos</h3>
+        <Imagen id="apuntes-duelo" clase="franja-ilu franja-duelo" tamanos="(min-width: 640px) 560px, 92vw" />
         {(duelos.datos || []).map((d) => {
           const e = estadoDuelo(d);
           return (
@@ -89,6 +92,7 @@ export function Historia({ diapositivas = [], alAcabar, alCerrar, tono = 'morado
   return (
     <Capa>
       <div class={`ap-historia tono-${tono} clase-${d.clase}`} role="dialog" aria-modal="true" aria-label="Historia" aria-roledescription="historia">
+        {tono === 'morado' && <Imagen id="apuntes-historia" clase="ap-historia-fondo" tamanos="100vw" prioridad />}
         <div class="ap-historia-barras" aria-hidden="true">
           {diapositivas.map((_, k) => <span key={k} class={k < i ? 'vista' : k === i ? `ahora${pausa || quieto ? ' parada' : ''}` : ''}><i key={`${k}-${i}`} /></span>)}
         </div>
@@ -124,7 +128,8 @@ export function AudioPildora({ audio }) {
     } catch (e) { aviso?.(e.message || 'No se ha podido cargar el audio', 'error'); }
   };
   return (
-    <div class="audio-pildora">
+    <div class={`audio-pildora${hayImagen('apuntes-audio') ? ' con-ilu' : ''}`}>
+      <Imagen id="apuntes-audio" clase="audio-ilu" tamanos="44px" />
       <button type="button" class="btn audio-play" aria-label={sonando ? 'Pausar el audio de tu coach' : 'Escuchar el audio de tu coach'} onClick={tocar}><Icono n={sonando ? 'pausa' : 'play'} /></button>
       <span class="audio-info">
         <strong>Audio de tu coach</strong>

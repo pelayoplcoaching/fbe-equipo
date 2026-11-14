@@ -5,6 +5,7 @@ import { useApp, useCarga, Icono } from '../comunes.jsx';
 import { loQueLeFunciona, alertaTemprana, enviosPendientes, IDEAS_REGALO } from '../../logica/coach-sabe.js';
 import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 // Lo que le hace volver: para el coach (en «Para hablarle») y para él (en Perfil, «lo que ve tu coach»)
 export function useLoQueFunciona(atletaId, entrenos) {
@@ -16,7 +17,8 @@ export function LoQueLeFunciona({ atletaId, entrenos, paraAtleta = false }) {
   const r = useLoQueFunciona(atletaId, entrenos);
   if (!r) return null;
   return (
-    <div class={`lo-que-funciona pila-xs${paraAtleta ? ' panel panel-pad' : ''}`}>
+    <div class={`lo-que-funciona pila-xs${paraAtleta ? ' panel panel-pad' : ''}${hayImagen('vuelve') ? ' con-ilu' : ''}`}>
+      <Imagen id="vuelve" clase="ico-ilu lo-que-funciona-img" tamanos="44px" />
       <span class="t-sobre">{paraAtleta ? 'Lo que te hace volver (lo ve tu coach)' : 'Lo que le hace volver'}</span>
       {!paraAtleta && <p class="peq"><strong>{r.resumen}</strong></p>}
       {r.lineas.map((l) => <p key={l.clave} class="peq">{paraAtleta ? l.texto.replace('vuelve a entrenar', 'vuelves a entrenar').replace('vuelve en', 'vuelves en') : l.texto}</p>)}
@@ -29,7 +31,7 @@ export function LoQueLeFunciona({ atletaId, entrenos, paraAtleta = false }) {
 export function AlertaTemprana({ entrenos }) {
   const r = entrenos ? alertaTemprana({ entrenos, hoy: hoyISO() }) : null;
   if (!r) return null;
-  return <p class={`alerta-temprana nivel-${r.nivel}`}><Icono n="alerta" /><span><strong>{r.texto}</strong> {r.idea}</span></p>;
+  return <p class={`alerta-temprana nivel-${r.nivel}`}><Imagen id="alerta" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="alerta" />} /><span><strong>{r.texto}</strong> {r.idea}</span></p>;
 }
 export const ideaDeAlerta = (entrenos) => (entrenos ? alertaTemprana({ entrenos, hoy: hoyISO() })?.idea || null : null);
 
@@ -44,7 +46,7 @@ export function EnviosPendientes({ lista = [], abrir }) {
   const marcar = (k) => { const n = { ...hechos, [k]: true }; setHechos(n); guardarPreferencia(CLAVE_ENVIOS, n); };
   return (
     <section class="panel panel-pad envios-pendientes pila-s" aria-labelledby="envios-t">
-      <h2 id="envios-t" class="envios-t"><Icono n="trofeo" /> Hitos que merecen algo de verdad</h2>
+      <h2 id="envios-t" class="envios-t"><Imagen id="regalo" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="trofeo" />} /> Hitos que merecen algo de verdad</h2>
       <p class="mini secundario">{IDEAS_REGALO}</p>
       <ul class="lista">
         {pend.map((x) => (

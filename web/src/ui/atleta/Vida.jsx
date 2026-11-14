@@ -7,6 +7,7 @@ import { useTrato } from '../trato.js';
 import { eventoDeHoy, preguntaPendiente, proximos, RESPUESTAS, semanaDificil, minimoDeSemana, mensajeSemanaDificil, choquesGuardia, guardiasProximas, seguimientoCheckin } from '../../logica/vida.js';
 import { hoyISO, lunesDe, fmtCorta } from '../../logica/fechas.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen } from '../Imagen.jsx';
 
 // La agenda (la suya, o la de un atleta si es el coach); se vuelve a leer al cambiar (api avisa con «fbe-agenda»)
 export function useAgenda(atletaId = null, { activa = true } = {}) {
@@ -46,7 +47,7 @@ export function TarjetaVida({ sesiones = [] }) {
       {evHoy && <p class="vida-fila"><Icono n="calendario" /><strong>{evHoy.texto}</strong></p>}
       {preg && (
         <div class="vida-pregunta pila-xs" role="group" aria-label={preg.pregunta}>
-          <p class="vida-fila"><Icono n="mensaje" /><strong>{preg.pregunta}</strong></p>
+          <p class="vida-fila"><Imagen id="vida-que-tal" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="mensaje" />} /><strong>{preg.pregunta}</strong></p>
           <div class="segmentos" role="group" aria-label="Qué tal fue">
             {RESPUESTAS.map(([k, n]) => <button key={k} type="button" aria-pressed={eligiendo === k ? 'true' : 'false'} onClick={() => setEligiendo(k)}>{n}</button>)}
           </div>
@@ -99,6 +100,7 @@ function HojaSemanaDificil({ alCerrar }) {
   return (
     <Hoja titulo="Una semana difícil" alCerrar={alCerrar}>
       <div class="pila">
+        <Imagen id="semana-dificil" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Pasa. Esta semana, si solo te da para lo obligatorio de cada sesión, con eso vale: te lo dejamos a mano en Hoy. Tu programación no cambia.</p>
         <div class="campo"><label for="dificil-motivo">¿Por qué? <span class="secundario">(opcional)</span></label>
           <input id="dificil-motivo" class="entrada" maxLength={120} placeholder="Exámenes, guardias, un viaje…" value={motivo} onInput={(e) => setMotivo(e.currentTarget.value)} /></div>
@@ -125,6 +127,7 @@ export function HojaAgenda({ alCerrar }) {
   return (
     <Hoja titulo="Lo que viene en tu vida" alCerrar={alCerrar}>
       <div class="pila agenda-hoja">
+        <Imagen id="vida-agenda" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Exámenes, una boda, una mudanza, un viaje… La app lo tiene en cuenta (te anima ese día y luego te pregunta qué tal) y tu coach lo verá. Tu programación no cambia.</p>
         {lista.length > 0 ? (
           <ul class="lista agenda-lista">
@@ -160,6 +163,7 @@ export function HojaGuardias({ alCerrar }) {
   return (
     <Hoja titulo="Tus guardias o turnos" alCerrar={alCerrar}>
       <div class="pila">
+        <Imagen id="guardias" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Apunta tus guardias (o turnos de noche). Si te toca entrenar ese día o al salir de una, en Hoy te lo decimos para que, si quieres, cambies la sesión de día. Nunca la movemos solos.</p>
         {dias.length > 0 ? <div class="guardias-dias">{dias.map((d) => (
           <span key={d} class="chip-guardia">{fmtCorta(d)}<button type="button" class="btn btn-icono plano" aria-label={`Quitar la guardia del ${fmtCorta(d)}`} onClick={() => api.borrarAgenda(porFecha[d]?.id).catch((e) => aviso(e.message, 'error'))}><Icono n="cerrar" /></button></span>

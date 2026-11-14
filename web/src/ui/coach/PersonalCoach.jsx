@@ -22,6 +22,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
 import { RetoMusicalCoach } from '../atleta/MusicaEquipo.jsx';
 import { BibliotecaMusica, UsoMusica, DeTuBiblioteca } from './MusicaCoach3.jsx';
+import { Imagen } from '../Imagen.jsx';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -103,6 +104,7 @@ export function ParaHablarle({ atleta }) {
     <section class="seccion para-hablarle" aria-labelledby="para-hablarle-t">
       <h2 id="para-hablarle-t">Para hablarle</h2>
       <div class="panel panel-pad pila-s">
+        <Imagen id="para-hablarle" clase="franja-ilu franja-pegada franja-hablarle" tamanos="(min-width: 640px) 560px, 100vw" />
         <AlertaTemprana entrenos={entrenos} />
         <dl class="lo-suyo-datos">{r.filas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
         <SuVida atleta={atleta} />
@@ -133,6 +135,7 @@ function HojaCarta({ atleta, personal, entrenos, mes, alCerrar }) {
   return (
     <Hoja titulo={`La carta de ${nombreMesCarta(mes)}`} alCerrar={alCerrar}>
       <div class="pila carta-hoja">
+        <Imagen id="carta-mes" clase="franja-ilu franja-carta" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Un borrador con sus datos del mes, su porqué y su meta. Léelo, tócalo y mándalo: le llega como un mensaje tuyo.</p>
         <div class="segmentos" role="group" aria-label="Tono">
           {[['cercano', 'Cercano'], ['directo', 'Directo'], ['tope', 'A tope']].map(([k, n]) => <button key={k} type="button" aria-pressed={tono === k ? 'true' : 'false'} onClick={() => cambiarTono(k)}>{n}</button>)}
