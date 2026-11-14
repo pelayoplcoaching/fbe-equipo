@@ -489,3 +489,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .fila-ios[data-m="primera_vez"] { --fm: var(--pc-primera); --ico-m: var(--ico-gimnasio); }
 .fila-ios[data-m="viaje"] { --fm: var(--pc-viaje); --ico-m: var(--ico-viaje); }
 .fila-ios[data-m="bienvenida"] { --fm: var(--pc-bienvenida); --ico-m: var(--ico-personas); }
+
+/* (personalizacion 3) al pie de Hoy, "Ordenar Hoy" y "Esta semana va a ser dificil" en una linea cada uno si no caben */
+.ordenar-hoy-pie { flex-wrap: wrap; gap: 2px 18px; }
+.ordenar-hoy-pie .btn-texto { white-space: nowrap; }
