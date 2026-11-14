@@ -59,9 +59,10 @@
 
 /* (12) Las ilustraciones no aparecen en blanco: mientras cargan se ve su color (calculado al construir) */
 img[data-imagen] { background-color: var(--color-imagen, transparent); }
-/* (13) En oscuro, un punto atenuadas para que no deslumbren (las de las escenas de marca, no: ya van en la noche) */
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) img[data-imagen]:not(.escena-foto, .bdia-foto) { filter: brightness(.92) saturate(.96); } }
-:root[data-theme="dark"] img[data-imagen]:not(.escena-foto, .bdia-foto) { filter: brightness(.92) saturate(.96); }
+/* (13) En oscuro, un punto atenuadas para que no deslumbren (las de las escenas de marca y las de fondo, no: ya van en la
+   noche, con su propia opacidad; ni los iconos) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) img[data-imagen]:not(.hero-foto, .portada-foto, .historia-fondo, .historia-halo, .hito-fondo, .bienvenida-foto, .escena-lobo, .escena-cachorro, .ico-img) { filter: brightness(.92) saturate(.96); } }
+:root[data-theme="dark"] img[data-imagen]:not(.hero-foto, .portada-foto, .historia-fondo, .historia-halo, .hito-fondo, .bienvenida-foto, .escena-lobo, .escena-cachorro, .ico-img) { filter: brightness(.92) saturate(.96); }
 
 /* (15) Estados vacíos con el mismo estilo: con icono o con ilustración, el mismo aire, la misma medida de texto y la
    acción separada igual */

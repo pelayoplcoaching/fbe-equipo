@@ -2361,6 +2361,7 @@ try {
   // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a un atleta se le oía muy bajo)
   // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
   await p.evaluate(() => { if (!navigator.audioSession) Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) veníamos de «Tú» (tus pagos)
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const queSuena = p.getByRole('dialog', { name: 'Sonido y vibración' }).getByLabel('Qué suena');
   await queSuena.scrollIntoViewIfNeeded();
