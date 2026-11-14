@@ -2021,6 +2021,8 @@ try {
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
+  // (visual 3) el cuestionario está en «Tú» (en tu asesoría); veníamos de «Ajustes»
+  await p.getByRole('tab', { name: 'Tú', exact: true }).click();
   await p.getByRole('button', { name: 'Revisar' }).first().click();
   const hojaCu = p.getByRole('dialog', { name: 'Tu cuestionario inicial' });
   await hojaCu.getByText('Paso 1 de 5').waitFor();

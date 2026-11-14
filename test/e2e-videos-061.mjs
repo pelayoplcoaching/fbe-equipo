@@ -350,7 +350,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await revisar('mi-tecnica-perfil');
 
     // ---------------------------------------------------------------- 20. Solo con wifi
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     await p.locator('#grupo-este-movil').waitFor({ timeout: 10000 }).catch(() => {});
     const tipo = await p.evaluate(() => navigator.connection?.type ?? null);
     check(tipo === null && await p.getByRole('switch', { name: 'Subir los vídeos solo con wifi' }).count() === 0, '(20) donde el navegador no dice el tipo de conexión (este Chromium, como el iPhone o el ordenador), la opción no sale');
@@ -375,7 +375,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await q.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
     await q.waitForFunction(() => !document.getElementById('portada'));
     await entrarComo('Ana López', q);
-    await q.evaluate(() => { location.hash = '#perfil'; });
+    await q.evaluate(() => { location.hash = '#ajustes'; });
     const sw = q.getByRole('switch', { name: 'Subir los vídeos solo con wifi' });
     await sw.waitFor({ timeout: 10000 });
     check(!(await sw.isChecked()), '(20) con datos móviles (Chrome de Android), «Subir los vídeos solo con wifi» sale, apagada');

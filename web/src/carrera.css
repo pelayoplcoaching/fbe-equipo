@@ -37,7 +37,7 @@
 .zona-chip { color: var(--zt); background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--zc) 35%, transparent); }
 
 /* ---------- el macrociclo ---------- */
-.macrociclo { display: grid; gap: var(--esp-4); }
+.macrociclo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-4); } /* (visual) la barra encoge con su hueco: con muchas fases, cada una se recorta */
 .macro-barra { position: relative; display: flex; gap: var(--esp-4); min-height: 46px; }
 .macro-fase { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;
   padding: var(--esp-6) var(--esp-8); border-radius: var(--r-10); overflow: hidden;
