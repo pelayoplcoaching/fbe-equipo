@@ -65,7 +65,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
       <div class="pestana-panel" role="tabpanel" id="fej-panel" aria-labelledby={`fej-${vista}`} key={vista}>
         {vista === 'tecnica' ? <Tecnica ejercicio={ejercicio} modelos={modelos.datos || []} fbe={conFicha ? fbe.datos : null} />
           : h.cargando && !d ? <Siluetas forma="grafica" texto="Cargando el ejercicio" />
-            : !d?.sesiones.length ? <Vacio icono="historial" titulo="Aún no hay series de este ejercicio" />
+            : !d?.sesiones.length ? <Vacio icono="historial" imagen="vacio-historial" titulo="Aún no hay series de este ejercicio" />
               : vista === 'graficas' ? <Graficas d={d} nombre={ejercicio.nombre} compartir={compartir} />
                 : vista === 'records' ? <Records d={d} />
                   : <Historial d={d} />}

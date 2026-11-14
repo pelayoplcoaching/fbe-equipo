@@ -90,7 +90,7 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
         <p class="mini terciario" role="status">{vistas.length === recetas.length ? resumenRecetario(recetas) : vistas.length === 1 ? '1 receta' : `${vistas.length} recetas`}</p>
       </div>
       {!vistas.length ? (
-        <div class="panel"><Vacio icono={elFiltro === 'favoritas' && !texto ? 'estrella' : 'buscar'} titulo={elFiltro === 'favoritas' && !texto && !capitulo ? 'Aún no has guardado ninguna' : 'Nada con eso'}>
+        <div class="panel"><Vacio icono={elFiltro === 'favoritas' && !texto ? 'estrella' : 'buscar'} imagen={elFiltro === 'favoritas' && !texto ? 'vacio-favoritas' : 'vacio-buscar'} titulo={elFiltro === 'favoritas' && !texto && !capitulo ? 'Aún no has guardado ninguna' : 'Nada con eso'}>
           {elFiltro === 'favoritas' && !texto && !capitulo ? 'Abre una receta y toca «Guardar» para tenerla aquí a mano.' : 'Prueba con otra palabra o quita algún filtro.'}
         </Vacio></div>
       ) : grupos.map((c) => (

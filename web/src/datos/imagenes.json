@@ -4543,6 +4543,126 @@
       "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
     }
   },
+  "vacio-buscar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-buscar-240.14597882.webp",
+      "360": "imagenes/vacio/vacio-buscar-360.52a2212c.webp"
+    }
+  },
+  "vacio-comunidad": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/vacio/vacio-comunidad-480.8a6ecd4a.webp",
+      "840": "imagenes/vacio/vacio-comunidad-840.5bfb2c9b.webp"
+    }
+  },
+  "vacio-destacados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-destacados-240.6af8a27a.webp",
+      "360": "imagenes/vacio/vacio-destacados-360.25af41b7.webp"
+    }
+  },
+  "vacio-documentos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-documentos-240.ef754a08.webp",
+      "360": "imagenes/vacio/vacio-documentos-360.5b732a9f.webp"
+    }
+  },
+  "vacio-enlaces": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-enlaces-240.242f106b.webp",
+      "360": "imagenes/vacio/vacio-enlaces-360.81830f05.webp"
+    }
+  },
+  "vacio-favoritas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-favoritas-240.9e8bd171.webp",
+      "360": "imagenes/vacio/vacio-favoritas-360.e9ead4f2.webp"
+    }
+  },
+  "vacio-fotos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-fotos-240.3c9826f8.webp",
+      "360": "imagenes/vacio/vacio-fotos-360.655391f1.webp"
+    }
+  },
+  "vacio-guardado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-guardado-240.e464bb75.webp",
+      "360": "imagenes/vacio/vacio-guardado-360.e0cca76c.webp"
+    }
+  },
+  "vacio-historial": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-historial-240.48880b2f.webp",
+      "360": "imagenes/vacio/vacio-historial-360.39932b4d.webp"
+    }
+  },
+  "vacio-notas-voz": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-notas-voz-240.aeebf09f.webp",
+      "360": "imagenes/vacio/vacio-notas-voz-360.03626e8f.webp"
+    }
+  },
+  "vacio-ranking": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-ranking-240.a05686ab.webp",
+      "360": "imagenes/vacio/vacio-ranking-360.a0ffc398.webp"
+    }
+  },
+  "vacio-retos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-retos-240.b289db5b.webp",
+      "360": "imagenes/vacio/vacio-retos-360.ec10047f.webp"
+    }
+  },
   "viaje": {
     "proporcion": [
       3,

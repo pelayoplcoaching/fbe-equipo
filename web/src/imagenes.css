@@ -374,3 +374,12 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .fila-con-ilu { display: flex; align-items: center; gap: 12px; }
 .fila-con-ilu > p { flex: 1; min-width: 0; margin: 0; }
 .hoja-tu-carrera .franja-carrera { margin-bottom: 0; object-position: 70% 50%; }
+
+/* ---------- (imágenes, bloque AI) Los estados vacíos con su escena ----------
+   Una escena cuadrada (112 px, con los dos aros de los iconos) o apaisada (la comunidad, hasta 280 px de ancho) en lugar
+   del icono: chat (destacados, fotos, enlaces, documentos, notas de voz), guardado, búsquedas, retos, ranking, historial
+   del ejercicio y recetas favoritas. */
+.vacio-escena { width: 112px; height: 112px; object-fit: cover; border-radius: var(--r-16); margin: 14px 0 12px;
+  box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
+.vacio-escena-ancha { width: min(280px, 80%); height: auto; aspect-ratio: 4 / 3; box-shadow: none; margin: 4px 0 8px; }
+@media (forced-colors: active) { .vacio-escena { display: none; } }
