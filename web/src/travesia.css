@@ -321,3 +321,13 @@
 @keyframes tv-cuenta-latido { 40% { transform: scale(1.35); } }
 @keyframes tv-mision-brillo { to { transform: translateX(110%); } }
 @keyframes tv-rango-estallido { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(4); } }
+
+/* (v0.162) El boton de agacharse: grande, abajo a la izquierda (a mano del pulgar), sobre el suelo y por encima de los avisos de abajo */
+.travesia-agachar { position: absolute; left: calc(14px + env(safe-area-inset-left, 0px)); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); z-index: 2;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 84px; height: 84px; padding: 0;
+  border: 1.5px solid color-mix(in srgb, var(--tv-tiza) 40%, transparent); border-radius: 50%; color: var(--tv-tiza);
+  background: color-mix(in srgb, var(--tv-noche-2) 55%, transparent); font-size: .75rem; font-weight: 700; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.travesia-agachar svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.travesia-agachar:active { background: var(--tv-tiza); color: var(--tv-noche-2); }
+.travesia-agachar:focus-visible { outline: 3px solid var(--tv-oro); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) { .travesia-agachar { transition: background-color .12s ease, color .12s ease; } }
