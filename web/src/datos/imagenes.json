@@ -262,6 +262,16 @@
       "1080": "imagenes/apuntes/apuntes-certificado-1080.3055ece6.webp"
     }
   },
+  "apuntes-duelo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-duelo-720.22c1597c.webp",
+      "1080": "imagenes/apuntes/apuntes-duelo-1080.a1b6a39c.webp"
+    }
+  },
   "apuntes-historia": {
     "proporcion": [
       9,

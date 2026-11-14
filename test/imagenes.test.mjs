@@ -240,8 +240,10 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
   const { imagenTemaApuntes, TEMAS_APUNTES_IMG } = await import('../web/src/logica/imagenes.js');
   const { TEMAS } = await import('../web/src/logica/apuntes-camino.js');
   check(TEMAS.every(([k]) => imagenTemaApuntes(k) === `apuntes-tema-${k}` && fuenteImagen(imagenTemaApuntes(k))) && imagenTemaApuntes('otro') === null && TEMAS_APUNTES_IMG.length === TEMAS.length, 'apuntes: una imagen por tema («Tus temas»)');
-  const ids = ['apuntes-ruta', 'apuntes-certificado', 'apuntes-prueba-nivel', 'apuntes-liga', 'apuntes-objetivo', 'apuntes-repaso', 'apuntes-historia', 'apuntes-audio'];
-  check(ids.every((id) => fuenteImagen(id)), 'apuntes: la prueba de nivel, la ruta, el certificado, la liga, el objetivo, el repaso, las historias y el audio, en la lista');
+  const ids = ['apuntes-ruta', 'apuntes-certificado', 'apuntes-prueba-nivel', 'apuntes-liga', 'apuntes-duelo', 'apuntes-objetivo', 'apuntes-repaso', 'apuntes-historia', 'apuntes-audio'];
+  check(ids.every((id) => fuenteImagen(id)), 'apuntes: la prueba de nivel, la ruta, el certificado, la liga, los duelos, el objetivo, el repaso, las historias y el audio, en la lista');
+  const social = readFileSync(new URL('../web/src/ui/atleta/ApuntesSocial.jsx', import.meta.url), 'utf8');
+  check(/prog-duelos-t">Duelos<\/h3>\s*<Imagen id="apuntes-duelo"/.test(social), 'apuntes: las dos kettlebells encabezan los duelos');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

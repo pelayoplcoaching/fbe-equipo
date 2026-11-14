@@ -45,6 +45,7 @@ export function LigaYDuelos({ alJugar }) {
       </section>
       <section class="prog-duelos" aria-labelledby="prog-duelos-t">
         <h3 id="prog-duelos-t">Duelos</h3>
+        <Imagen id="apuntes-duelo" clase="franja-ilu franja-duelo" tamanos="(min-width: 640px) 560px, 92vw" />
         {(duelos.datos || []).map((d) => {
           const e = estadoDuelo(d);
           return (
