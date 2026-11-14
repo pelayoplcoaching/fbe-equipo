@@ -275,7 +275,7 @@ const lee0 = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'u
   const sitios = { 'ui/atleta/SesionTuya.jsx': ['tiempo-hoy', 'calentamiento', 'hace-un-ano'], 'ui/atleta/Conocerte.jsx': ['como-estas'], 'ui/atleta/Sesion.jsx': ['alternativas'],
     'ui/atleta/Vida.jsx': ['vida-agenda', 'vida-que-tal', 'semana-dificil', 'guardias'], 'ui/atleta/Respeto.jsx': ['manual', 'sin-bascula', 'ciclo', 'informe'], 'ui/atleta/Compania.jsx': ['voz-coach', 'reto-mes', 'album'] };
   check(Object.entries(sitios).every(([f, l]) => l.every((id) => lee(f).includes(`id="${id}"`))), 'AC, AD y AE: cada una en su sitio');
-  check(/@media print \{ \.informe-ilu \{ display: none/.test(readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8')), 'el informe impreso, sin la ilustración');
+  check(/@media print \{ \.informe-salud-ilu \{ display: none/.test(readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8')), 'el informe impreso, sin la ilustración (con su propia clase: .informe-ilu es la cabecera del informe del bloque)');
 }
 
 // (imágenes de las 48 h) Bloque AF: para el coach, y su primer mes
