@@ -191,6 +191,26 @@
       "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
     }
   },
+  "album": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/compania/album-720.383db8ac.webp",
+      "1080": "imagenes/compania/album-1080.4f675ac3.webp"
+    }
+  },
+  "alternativas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/alternativas-160.9c6fd160.webp",
+      "320": "imagenes/sesion/alternativas-320.cc6e9a1b.webp"
+    }
+  },
   "aniversario": {
     "proporcion": [
       3,
@@ -554,6 +574,16 @@
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
     }
   },
+  "calentamiento": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/calentamiento-720.4a1773bd.webp",
+      "1080": "imagenes/sesion/calentamiento-1080.c6659ab5.webp"
+    }
+  },
   "cardio-andar": {
     "proporcion": [
       16,
@@ -784,6 +814,16 @@
       "1080": "imagenes/checkin/checkin-molestias-1080.3922d01c.webp"
     }
   },
+  "ciclo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/ciclo-160.17e0694f.webp",
+      "320": "imagenes/vida/ciclo-320.2f15d3b6.webp"
+    }
+  },
   "coach-negocio": {
     "proporcion": [
       16,
@@ -898,6 +938,16 @@
     "archivos": {
       "320": "imagenes/comida/comida-merienda-320.c15bd71b.webp",
       "640": "imagenes/comida/comida-merienda-640.8398f339.webp"
+    }
+  },
+  "como-estas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/como-estas-160.d6e652ec.webp",
+      "320": "imagenes/sesion/como-estas-320.00b61acc.webp"
     }
   },
   "compartir-bloque": {
@@ -2143,6 +2193,16 @@
       "640": "imagenes/grupo/grupo-triceps-640.41a3fa8f.webp"
     }
   },
+  "guardias": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/guardias-720.0c0849cf.webp",
+      "1080": "imagenes/vida/guardias-1080.337646e9.webp"
+    }
+  },
   "guia-cabeza": {
     "proporcion": [
       1,
@@ -2273,6 +2333,16 @@
       "512": "imagenes/habito/habito-verdura-512.ef42f857.webp"
     }
   },
+  "hace-un-ano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/hace-un-ano-160.ad7e0ed4.webp",
+      "320": "imagenes/sesion/hace-un-ano-320.698c6d4b.webp"
+    }
+  },
   "herr-camara": {
     "proporcion": [
       16,
@@ -2375,6 +2445,36 @@
     "archivos": {
       "512": "imagenes/hito/hito-8-512.7eadc0cf.webp",
       "1080": "imagenes/hito/hito-8-1080.a0106953.webp"
+    }
+  },
+  "hito-cien": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-cien-160.90116af7.webp",
+      "320": "imagenes/compania/hito-cien-320.66d19299.webp"
+    }
+  },
+  "hito-dominada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-dominada-160.1fc2238d.webp",
+      "320": "imagenes/compania/hito-dominada-320.2f40d7f1.webp"
+    }
+  },
+  "hito-primera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/hito-primera-160.6db1e51f.webp",
+      "320": "imagenes/compania/hito-primera-320.d446bb2d.webp"
     }
   },
   "ico-agua": {
@@ -2827,6 +2927,16 @@
       "192": "imagenes/icono/ico-video-192.1ea169ab.webp"
     }
   },
+  "informe": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/vida/informe-720.ffb2d3e5.webp",
+      "1080": "imagenes/vida/informe-1080.34921296.webp"
+    }
+  },
   "isq-buenos-dias": {
     "proporcion": [
       1,
@@ -2915,6 +3025,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/isq-rumano-mancuernas-192.12283104.webp",
       "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
+    }
+  },
+  "manual": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/manual-720.f5e430bf.webp",
+      "1080": "imagenes/vida/manual-1080.8d3cbd9e.webp"
     }
   },
   "medalla-bascula-bronce": {
@@ -3935,6 +4055,26 @@
       "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
     }
   },
+  "reto-mes": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/reto-mes-160.76b87ea6.webp",
+      "320": "imagenes/compania/reto-mes-320.6c2cba3c.webp"
+    }
+  },
+  "semana-dificil": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/vida/semana-dificil-720.21df1fcd.webp",
+      "1080": "imagenes/vida/semana-dificil-1080.bbd3c8d5.webp"
+    }
+  },
   "sesion-cardio": {
     "proporcion": [
       16,
@@ -4012,6 +4152,16 @@
       "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
     }
   },
+  "sin-bascula": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/sin-bascula-160.7922e00e.webp",
+      "320": "imagenes/vida/sin-bascula-320.ec5385b3.webp"
+    }
+  },
   "sin-conexion": {
     "proporcion": [
       16,
@@ -4021,6 +4171,16 @@
       "480": "imagenes/acceso/sin-conexion-480.82cdc6d5.webp",
       "720": "imagenes/acceso/sin-conexion-720.70ca581f.webp",
       "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
+    }
+  },
+  "tiempo-hoy": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion/tiempo-hoy-160.a2d61f99.webp",
+      "320": "imagenes/sesion/tiempo-hoy-320.bb322230.webp"
     }
   },
   "tri-extensiones-polea-barra": {
@@ -4121,6 +4281,36 @@
     "archivos": {
       "192": "imagenes/ejercicio/tri-trasnuca-polea-baja-192.641e838b.webp",
       "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
+    }
+  },
+  "vida-agenda": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/vida/vida-agenda-720.31e7483e.webp",
+      "1080": "imagenes/vida/vida-agenda-1080.b06770ba.webp"
+    }
+  },
+  "vida-que-tal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/vida/vida-que-tal-160.73ea67d1.webp",
+      "320": "imagenes/vida/vida-que-tal-320.f8fb1c44.webp"
+    }
+  },
+  "voz-coach": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/compania/voz-coach-160.8052520c.webp",
+      "320": "imagenes/compania/voz-coach-320.beb8c5f5.webp"
     }
   }
 }

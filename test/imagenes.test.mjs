@@ -260,5 +260,22 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
     && /id="para-hablarle"/.test(lee('ui/coach/PersonalCoach.jsx')) && /id="carta-mes"/.test(lee('ui/coach/PersonalCoach.jsx')) && /id="mejor-momento"/.test(lee('ui/atleta/Conocerte.jsx')) && /imagenAniversarioMeses/.test(lee('ui/Celebracion.jsx')), 'bloque AB: cada una en su sitio (meta, historia, ADN, foto, para hablarle, carta, mejor momento, aniversario)');
 }
 
+// (imágenes de las 48 h) Bloques AC, AD y AE: la sesión de hoy, su vida y que le acompañe
+{
+  const { imagenHitoAlbum } = await import('../web/src/logica/imagenes.js');
+  const { albumHitos } = await import('../web/src/logica/compania.js');
+  check(imagenHitoAlbum('primera') === 'hito-primera' && imagenHitoAlbum('cien') === 'hito-cien' && imagenHitoAlbum('dominada') === 'hito-dominada' && imagenHitoAlbum('ses-10') === null && imagenHitoAlbum('suyo-1') === null, 'álbum: la huella, la barra cargada y la de dominadas; el resto, con su icono');
+  const hs = albumHitos({ entrenos: [{ fecha: '2026-01-10' }], progreso: { ejercicios: [{ nombre: 'Dominadas', puntos: [{ semana: '2026-02-02', valor: 20 }] }, { nombre: 'Sentadilla', puntos: [{ semana: '2026-05-04', valor: 101 }] }] }, hoy: '2026-11-14' });
+  check(['primera', 'cien', 'dominada'].every((k) => hs.some((h) => h.clave === k && fuenteImagen(imagenHitoAlbum(h.clave)))), 'álbum: las claves de sus hitos son las de las imágenes');
+  const ids = ['tiempo-hoy', 'calentamiento', 'hace-un-ano', 'alternativas', 'como-estas', 'vida-agenda', 'vida-que-tal', 'semana-dificil', 'guardias', 'manual', 'sin-bascula', 'ciclo', 'informe', 'voz-coach', 'reto-mes', 'album', 'hito-primera', 'hito-cien', 'hito-dominada'];
+  check(ids.every((id) => fuenteImagen(id)), 'AC, AD y AE: las diecinueve, en la lista');
+  check(!fuenteImagen('companero'), '«Busco compañero», sin imagen todavía (la recibida llevaba un logotipo de marca)');
+  const lee = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'utf8');
+  const sitios = { 'ui/atleta/SesionTuya.jsx': ['tiempo-hoy', 'calentamiento', 'hace-un-ano'], 'ui/atleta/Conocerte.jsx': ['como-estas'], 'ui/atleta/Sesion.jsx': ['alternativas'],
+    'ui/atleta/Vida.jsx': ['vida-agenda', 'vida-que-tal', 'semana-dificil', 'guardias'], 'ui/atleta/Respeto.jsx': ['manual', 'sin-bascula', 'ciclo', 'informe'], 'ui/atleta/Compania.jsx': ['voz-coach', 'reto-mes', 'album'] };
+  check(Object.entries(sitios).every(([f, l]) => l.every((id) => lee(f).includes(`id="${id}"`))), 'AC, AD y AE: cada una en su sitio');
+  check(/@media print \{ \.informe-ilu \{ display: none/.test(readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8')), 'el informe impreso, sin la ilustración');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
