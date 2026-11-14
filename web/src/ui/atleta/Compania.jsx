@@ -75,6 +75,7 @@ export function AfinesCompanero({ ya = [], invitar, ocupado = false }) {
   };
   return (
     <section class="afines pila-s" aria-labelledby="afines-t">
+      <Imagen id="companero" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
       <label class="fila-ocultar"><span class="pila-xs"><strong id="afines-t">Busco compañero</strong><span class="peq secundario">Te emparejamos con quien entrena como tú: los que también buscan ven tu franja y tus días habituales (y tú los suyos).</span></span>
         <input type="checkbox" switch role="switch" aria-label="Busco compañero" checked={!!r.datos.busca} disabled={r.datos.sin_ranking} onChange={(e) => cambiar(e.currentTarget.checked)} /></label>
       {r.datos.sin_ranking && <p class="mini secundario">Como no sales en el ranking, no te emparejamos.</p>}

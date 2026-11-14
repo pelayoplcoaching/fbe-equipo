@@ -104,7 +104,9 @@ export function PrimerosPasos({ pasos, alOcultar }) {
   const hechos = pasos.filter((x) => x.hecho).length;
   const [abierto, setAbierto] = useState(null);
   return (
-    <section class="panel primeros-pasos" aria-label="Primeros pasos">
+    <section class={`panel primeros-pasos${hayImagen('primer-mes') ? ' con-ilu' : ''}`} aria-label="Primeros pasos">
+      {/* (imágenes de las 48 h) el camino con sus faroles hasta la puerta abierta */}
+      <Imagen id="primer-mes" clase="franja-ilu primeros-pasos-ilu" tamanos="(min-width: 640px) 560px, 100vw" />
       <div class="panel-pad pila-s">
         <div class="separa">
           <strong>Primeros pasos</strong>

@@ -201,6 +201,16 @@
       "1080": "imagenes/compania/album-1080.4f675ac3.webp"
     }
   },
+  "alerta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/alerta-160.bfd027c0.webp",
+      "320": "imagenes/coach/alerta-320.86709110.webp"
+    }
+  },
   "alternativas": {
     "proporcion": [
       1,
@@ -948,6 +958,16 @@
     "archivos": {
       "160": "imagenes/sesion/como-estas-160.d6e652ec.webp",
       "320": "imagenes/sesion/como-estas-320.00b61acc.webp"
+    }
+  },
+  "companero": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/compania/companero-720.c81a4abf.webp",
+      "1080": "imagenes/compania/companero-1080.c143a0e1.webp"
     }
   },
   "compartir-bloque": {
@@ -4022,6 +4042,16 @@
       "320": "imagenes/guias/portada-volver-cuadrada-320.0b407c96.webp"
     }
   },
+  "primer-mes": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/coach/primer-mes-720.ae87977b.webp",
+      "1080": "imagenes/coach/primer-mes-1080.0378cca6.webp"
+    }
+  },
   "primeros-checkin": {
     "proporcion": [
       16,
@@ -4053,6 +4083,16 @@
       "480": "imagenes/primeros/primeros-sesion-480.408a167e.webp",
       "720": "imagenes/primeros/primeros-sesion-720.42f7688e.webp",
       "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
+    }
+  },
+  "regalo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/regalo-160.803e2094.webp",
+      "320": "imagenes/coach/regalo-320.377acbc3.webp"
     }
   },
   "reto-mes": {
@@ -4311,6 +4351,16 @@
     "archivos": {
       "160": "imagenes/compania/voz-coach-160.8052520c.webp",
       "320": "imagenes/compania/voz-coach-320.beb8c5f5.webp"
+    }
+  },
+  "vuelve": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/vuelve-160.bc66252c.webp",
+      "320": "imagenes/coach/vuelve-320.39c7f13f.webp"
     }
   }
 }
