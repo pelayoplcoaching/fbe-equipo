@@ -145,7 +145,7 @@ function HojaInforme({ salud, alCerrar }) {
   return (
     <Hoja titulo="Tu informe" alCerrar={alCerrar}>
       <div class="pila">
-        <Imagen id="informe" clase="franja-ilu franja-hoja informe-ilu" tamanos="(min-width: 640px) 560px, 92vw" />
+        <Imagen id="informe" clase="franja-ilu franja-hoja informe-salud-ilu" tamanos="(min-width: 640px) 560px, 92vw" />
         <article class="informe-salud" aria-label="Informe de entrenamiento">
           <h3>Informe de entrenamiento</h3>
           <p class="peq">{r.nombre} · del {fmtCorta(r.desde)} al {fmtCorta(r.hasta)} · FBE Equipo</p>
