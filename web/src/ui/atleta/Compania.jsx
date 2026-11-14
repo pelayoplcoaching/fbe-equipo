@@ -22,7 +22,7 @@ export function VozCoach({ ruta, segundos }) {
   };
   return (
     <span class="voz-coach">
-      {url ? <audio ref={ref} src={url} controls preload="auto" aria-label="La voz de tu coach" />
+      {url ? <audio ref={ref} src={url} controls preload="auto" aria-label="La voz de tu coach" data-pausa-musica />
         : <button type="button" class="btn btn-peq voz-coach-oir" onClick={oir}><Icono n="play" /> Escuchar a tu coach{segundos ? ` (${segundos} s)` : ''}</button>}
       {error && <span class="mini secundario">No se ha podido cargar el audio.</span>}
     </span>

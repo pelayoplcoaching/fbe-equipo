@@ -489,3 +489,23 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .fila-ios[data-m="primera_vez"] { --fm: var(--pc-primera); --ico-m: var(--ico-gimnasio); }
 .fila-ios[data-m="viaje"] { --fm: var(--pc-viaje); --ico-m: var(--ico-viaje); }
 .fila-ios[data-m="bienvenida"] { --fm: var(--pc-bienvenida); --ico-m: var(--ico-personas); }
+
+/* ---------- (música 3, tanda 1) La cadencia por tramos, tocar al ritmo, «Pon tu canción» y abrir en la app ---------- */
+.cadencia-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cadencia .segmentos-peq button { min-height: 32px; padding: 4px 12px; font-size: .8125rem; }
+.cadencia-tramos-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px 10px; }
+.cadencia-tramo-campo { display: grid; gap: 2px; }
+.cadencia-tramo-campo .fila { gap: 2px; align-items: center; flex-wrap: nowrap; }
+.cadencia-tramo-campo .btn-icono { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
+.cadencia-tramo-campo b { min-width: 2.8rem; text-align: center; font-weight: 800; }
+.cadencia-tramo-ahora { padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 10%, var(--hoja)); line-height: 1.4; }
+.tocar-ritmo-abrir { display: inline-flex; align-items: center; gap: 6px; justify-self: start; text-align: left; }
+.tocar-ritmo-abrir svg { width: 16px; height: 16px; }
+.tocar-ritmo { padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); }
+.tocar-ritmo-boton { min-height: 64px; font-weight: 750; touch-action: manipulation; }
+.tocar-ritmo-boton:active { transform: scale(.98); }
+.tocar-ritmo-r { line-height: 1.4; }
+.tocar-ritmo-r b { font-size: 1.25rem; font-weight: 800; }
+.pon-tu-cancion { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; margin: 2px 0 8px; text-decoration: none; }
+.pon-tu-cancion { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.abrir-en-app { align-items: center; gap: 8px; }

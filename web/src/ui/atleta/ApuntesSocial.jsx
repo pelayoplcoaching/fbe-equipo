@@ -132,7 +132,7 @@ export function AudioPildora({ audio }) {
         <span class="mini secundario num">{mmss(t)} / {mmss(audio.segundos)}</span>
       </span>
       <button type="button" class="chip audio-velocidad" aria-pressed={rapido ? 'true' : 'false'} onClick={() => setRapido(!rapido)}>{rapido ? '1,5×' : '1×'}</button>
-      {url && <audio ref={ref} src={url} preload="auto" onPlay={() => setSonando(true)} onPause={() => setSonando(false)} onEnded={() => { setSonando(false); setT(0); }} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} />}
+      {url && <audio ref={ref} src={url} preload="auto" data-pausa-musica onPlay={() => setSonando(true)} onPause={() => setSonando(false)} onEnded={() => { setSonando(false); setT(0); }} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} />}
     </div>
   );
 }

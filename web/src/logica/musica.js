@@ -98,3 +98,70 @@ export function fichaVigente(guardada, ahora = Date.now()) {
   if (!guardada || typeof guardada !== 'object' || !Number.isFinite(guardada.t)) return { usar: null, pedir: true };
   return { usar: guardada, pedir: ahora - guardada.t >= FICHA_DIAS * 864e5 };
 }
+
+// ---------- (música 3) ¿A cuántos bpm va lo que suena? (tocar al ritmo) ----------
+// tiempos: los instantes de cada toque (ms, de menor a mayor). Con 4 toques o más, la mediana de los intervalos (entre
+// 30 y 240 bpm: los toques sueltos o dobles se descartan). Si pasa más de TOQUE_REINICIO_MS sin tocar, se empieza otra vez
+export const TOQUE_REINICIO_MS = 2500;
+export function bpmDeToques(tiempos = []) {
+  const t = (Array.isArray(tiempos) ? tiempos : []).filter(Number.isFinite).slice(-9);
+  if (t.length < 4) return null;
+  const d = [];
+  for (let i = 1; i < t.length; i++) d.push(t[i] - t[i - 1]);
+  const v = d.filter((x) => x >= 250 && x <= 2000).sort((a, b) => a - b);
+  if (v.length < 3) return null;
+  const med = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+  return Math.round(60000 / med);
+}
+// ¿Encaja con su cadencia? En bici, la música va al doble (un golpe por pedalada de cada pierna). Vale también a doble o
+// a mitad de tiempo (una canción a 85 bpm marca bien 170 pasos). En remo, la música no marca la palada: no se compara
+export function encajaRitmo(bpm, modalidad, valor) {
+  const c = CADENCIAS[modalidad];
+  if (!c || modalidad === 'remo' || !Number.isFinite(bpm) || bpm <= 0 || !Number.isFinite(valor)) return null;
+  const objetivo = modalidad === 'bici' ? valor * 2 : valor;
+  const mejor = [bpm, bpm * 2, bpm / 2].reduce((a, b) => (Math.abs(b - objetivo) < Math.abs(a - objetivo) ? b : a));
+  const dif = mejor - objetivo;
+  const encaja = Math.abs(dif) <= Math.max(3, objetivo * 0.04);
+  const tuyo = `tus ${valor} ${c.unidad}/min`;
+  const texto = encaja ? `Encaja con ${tuyo}${mejor !== bpm ? ' (a doble o a mitad de tiempo)' : ''}.`
+    : `No encaja con ${tuyo}: busca música a unos ${objetivo} bpm (o ${Math.round(objetivo / 2)}).`;
+  return { objetivo, encaja, dif: Math.round(dif), doble: mejor !== bpm, texto };
+}
+
+// ---------- (música 3) La cadencia por tramos (cardio por intervalos) ----------
+// t = { trabajo, descanso (segundos), rondas, alta, baja (la cadencia de cada fase) }; seg: los segundos desde que empezó.
+// Avisa 5 s antes de cada cambio (en el último tramo de trabajo, no: después ya no hay descanso)
+export const AVISO_TRAMO_S = 5;
+export function normalizarTramos(t = {}, modalidad = 'carrera') {
+  const c = CADENCIAS[modalidad] || CADENCIAS.carrera;
+  const ent = (v, a, b, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(a, Math.min(b, n)) : d; };
+  return {
+    trabajo: ent(t.trabajo, 10, 1800, 60), descanso: ent(t.descanso, 0, 1800, 120), rondas: ent(t.rondas, 1, 30, 6),
+    alta: ajustarCadencia(modalidad, t.alta ?? c.max - 2 * c.paso), baja: ajustarCadencia(modalidad, t.baja ?? c.min + 2 * c.paso),
+  };
+}
+export const duracionTramos = (t) => t.rondas * t.trabajo + Math.max(0, t.rondas - 1) * t.descanso;
+export function tramoCadencia(t, seg) {
+  const total = duracionTramos(t);
+  if (!Number.isFinite(seg) || seg < 0) seg = 0;
+  if (seg >= total) return { fin: true, total };
+  const ciclo = t.trabajo + t.descanso;
+  const r = Math.floor(seg / ciclo);
+  const dentro = seg - r * ciclo;
+  const trabajo = dentro < t.trabajo;
+  const quedan = trabajo ? t.trabajo - dentro : ciclo - dentro;
+  const ultimo = trabajo && r === t.rondas - 1;
+  return { fin: false, total, ronda: r + 1, rondas: t.rondas, fase: trabajo ? 'trabajo' : 'descanso', cadencia: trabajo ? t.alta : t.baja, quedan: Math.ceil(quedan), avisar: !ultimo && quedan <= AVISO_TRAMO_S };
+}
+// De las partes de una carrera del coach: la primera con repeticiones, tiempo y recuperación (p. ej. 6 × 1 min, rec. 2 min)
+export function tramosDeCarrera(pauta) {
+  const p = (Array.isArray(pauta?.partes) ? pauta.partes : []).find((x) => Number(x?.reps) > 1 && Number(x?.seg) > 0 && Number(x?.rec_seg) > 0);
+  return p ? { trabajo: Number(p.seg), descanso: Number(p.rec_seg), rondas: Number(p.reps) } : null;
+}
+
+// ---------- (música 3) Abrir en la app de Spotify ----------
+// spotify:playlist:ID abre la app sin pasar por el navegador (si no está instalada, se vuelve a la web)
+export function uriSpotify(url) {
+  const s = spotify(url);
+  return s ? `spotify:${s.tipo}:${s.id}` : null;
+}

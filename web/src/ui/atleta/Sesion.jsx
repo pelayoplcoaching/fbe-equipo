@@ -83,12 +83,13 @@ import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
-import { MensajeCoach, RecuerdoProgreso } from './Personal.jsx';
+import { MensajeCoach, RecuerdoProgreso, usePersonal } from './Personal.jsx';
 import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
 import { useAlternativaElegida, apuntarAlternativa, HaceUnAno } from './SesionTuya.jsx';
 import { ordenarAlternativas, hastaHaceUnAno } from '../../logica/sesion-tuya.js';
-import { Cadencia, CancionRecord, BotonMusica } from './Musica.jsx';
+import { Cadencia, CancionRecord, BotonMusica, PonTuCancion, useFicha } from './Musica.jsx';
+import { tramosDeCarrera } from '../../logica/musica.js';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
@@ -1134,6 +1135,8 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
           {!ultimas && !Object.keys(hechas).length && <MensajeCoach momento="primera_vez" ejercicio={ej.nombre} clase="primera-vez-coach" />}
           <RecuerdaEjercicio recordatorios={recordatorios} />
           <AvisoZona aviso={avisoZona} />
+          {/* (música 3) antes de la serie grande: su canción de récord, a un toque */}
+          {siguiente && e.prioridad === 'alta' && !Object.keys(hechas).length && <PonTuCancion />}
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
@@ -1402,7 +1405,7 @@ export function TarjetaCardio({ pauta, hecho, completada, sesionId = null }) {
         {h ? <span class="chip ok"><Icono n="hecho" />Hecho: {NOMBRE_MODALIDAD[h.modalidad].toLowerCase()}, {textoCardioHecho(h)}{textoSaludCardio(h) ? ` · ${textoSaludCardio(h)}` : ''}</span>
           : !completada && <p class="mini terciario">Al terminar, apunta los minutos, los kilómetros y cuánto te ha costado.</p>}
         {/* (v0.104) el metrónomo de cadencia: pasos, pedaladas, zancadas, paladas o saltos por minuto */}
-        {!h && !completada && <Cadencia modalidad={pauta.modalidad} />}
+        {!h && !completada && <Cadencia modalidad={pauta.modalidad} tramos={tramosDeCarrera(pauta)} />}
       </div>
     </div>
   );
@@ -1603,6 +1606,9 @@ function MiniTarjeta({ datos }) {
 }
 
 function Resumen({ resumen, sesion, familia, alCerrar }) {
+  // (música 3) la imagen del récord lleva su canción (el nombre de su ficha), si la tiene
+  const personalR = usePersonal();
+  const cancionRecord = useFicha(personalR.datos?.cancion_url || null).datos?.titulo || null;
   const trato = useTrato();
   const { api, atleta, propio, aviso } = useApp();
   const travesia = leerTravesia(atleta.id).sesiones[sesion.id] || null;
@@ -1740,7 +1746,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
         <button class="btn btn-primario btn-grande" onClick={() => { try { sessionStorage.setItem('fbe-recien-hecha', '1'); } catch { /* */ } alCerrar(); }}>Volver a hoy</button>
       </div>
       {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => { setCompartir(false); marcarCompartida(); }} />}
-      {compartirRecord && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecordDeSesion(compartirRecord, resumen.tarjeta?.fecha || hoyISO())} equipo={estadoEquipo.datos === true || compartida ? { tema: 'logros' } : null} alCerrar={() => { setCompartirRecord(null); marcarCompartida(); }} />}
+      {compartirRecord && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecordDeSesion(compartirRecord, resumen.tarjeta?.fecha || hoyISO(), { cancion: cancionRecord })} equipo={estadoEquipo.datos === true || compartida ? { tema: 'logros' } : null} alCerrar={() => { setCompartirRecord(null); marcarCompartida(); }} />}
       {equipo && (
         <HojaCompartirEquipo alCerrar={() => setEquipo(false)} alCompartir={() => { setEquipo(false); setCompartida(true); }}
           datos={{ sesionId: sesion.id, nombre: resumen.tarjeta.nombre, fecha: resumen.tarjeta.fecha, minutos: resumen.minutos ?? resumen.tarjeta.minutos, series: resumen.series,

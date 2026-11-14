@@ -11,7 +11,8 @@
 //     BotonMusica (la música a mano durante la sesión) y la invitación a poner la tuya
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
-import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia } from '../../logica/musica.js';
+import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia, bpmDeToques, encajaRitmo, TOQUE_REINICIO_MS, normalizarTramos, tramoCadencia, duracionTramos, uriSpotify } from '../../logica/musica.js';
+import { apuntarReproductor } from './musica-control.js';
 import { nombreMusica, urlMusica } from '../../logica/personal.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
@@ -50,16 +51,50 @@ const appOscura = () => {
   const r = document.documentElement.getAttribute('data-theme');
   return r === 'dark' || (r !== 'light' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 };
+// (música 3) Abrir en la app de Spotify: con «Abrir en la app de Spotify» puesto (se recuerda en el móvil), los enlaces de
+// Spotify van a spotify:… (abre la app sin pasar por el navegador). Si en un momento la app no se ha abierto (no está
+// instalada), se abre la web. Los demás servicios, como siempre
+const CLAVE_APP = 'fbe-musica-app';
+export const leerAbrirEnApp = () => { try { return localStorage.getItem(CLAVE_APP) === '1'; } catch { return false; } };
+export const guardarAbrirEnApp = (si) => { try { if (si) localStorage.setItem(CLAVE_APP, '1'); else localStorage.removeItem(CLAVE_APP); } catch { /* */ } };
+export function abrirMusica(url, e = null) {
+  const uri = leerAbrirEnApp() ? uriSpotify(url) : null;
+  if (!uri) { if (!e) try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { /* bloqueado */ } return; }
+  e?.preventDefault?.();
+  let fuera = false;
+  const irse = () => { fuera = true; };
+  window.addEventListener('blur', irse, { once: true });
+  document.addEventListener('visibilitychange', irse, { once: true });
+  try { window.location.href = uri; } catch { fuera = false; }
+  setTimeout(() => {
+    window.removeEventListener('blur', irse); document.removeEventListener('visibilitychange', irse);
+    if (!fuera && document.visibilityState === 'visible') try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { /* */ }
+  }, 1500);
+}
+export function AbrirEnApp({ opciones = [] }) {
+  const [si, setSi] = useState(leerAbrirEnApp);
+  if (!opciones.some((x) => spotify(x.url))) return null;
+  return (
+    <label class="fila-s mini secundario abrir-en-app">
+      <input type="checkbox" checked={si} onChange={(e) => { guardarAbrirEnApp(e.currentTarget.checked); setSi(e.currentTarget.checked); }} />
+      Abrir en la app de Spotify (si la tienes)
+    </label>
+  );
+}
+
 export function Reproductor({ url, titulo = 'Spotify' }) {
   const [abierto, setAbierto] = useState(false);
   const [entero, setEntero] = useState(false);
   const [oscuro] = useState(appOscura);
   const src = urlIncrustar(url, { oscuro });
+  // (música 3) se apunta para que la voz del coach lo pause y lo reanude (musica-control.js)
+  const marco = useRef(null);
+  useEffect(() => (abierto ? apuntarReproductor(marco.current) : undefined), [abierto, src]);
   if (!src) return null;
   if (!abierto) return <button type="button" class="btn btn-peq" onClick={() => setAbierto(true)}><Icono n="play" /> Escuchar aquí</button>;
   return (
     <div class="reproductor-caja">
-      <iframe class="reproductor-spotify" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url, entero)} loading="lazy"
+      <iframe ref={marco} class="reproductor-spotify" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url, entero)} loading="lazy"
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" />
       <span class="fila-envolver reproductor-acciones">
         {tieneLista(url) && <button type="button" class="btn-texto" aria-expanded={entero ? 'true' : 'false'} onClick={() => setEntero(!entero)}>{entero ? 'Ver solo el reproductor' : `Ver ${tipoMusica(url) === 'Álbum' ? 'el álbum' : tipoMusica(url) === 'Podcast' ? 'los episodios' : 'la lista'} entera`}</button>}
@@ -118,7 +153,7 @@ export function TarjetaMusica({ url, etiqueta, alAbrir = null, extra = null }) {
         </span>
       </div>
       <div class="fila-envolver tarjeta-musica-botones">
-        <a class="btn btn-peq" href={url} target="_blank" rel="noopener noreferrer" onClick={() => alAbrir?.()}><Icono n="enlace" /> Abrir en {nombreMusica(url)}</a>
+        <a class="btn btn-peq" href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => { alAbrir?.(); abrirMusica(url, e); }}><Icono n="enlace" /> Abrir en {nombreMusica(url)}</a>
         <Reproductor url={url} titulo={titulo} />
         {extra}
       </div>
@@ -149,7 +184,7 @@ export function MusicaSesion({ sesion, semana = null, familia = null, cardio = n
   const abrir = () => { if (!propio) api.musicaAbierta(); };
   const empezarConMusica = () => {
     abrir();
-    try { window.open(primera.url, '_blank', 'noopener,noreferrer'); } catch { /* bloqueado: queda el enlace */ }
+    abrirMusica(primera.url);
     alEmpezar?.();
   };
   return (
@@ -161,6 +196,7 @@ export function MusicaSesion({ sesion, semana = null, familia = null, cardio = n
           ? otras.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={abrir} />)
           : <button type="button" class="btn-texto" style="justify-self:start" onClick={() => setMas(true)}>{otras.length === 1 ? 'Otra opción' : `${otras.length} opciones más`}</button>)}
         {!sesion.completada && <button type="button" class="btn btn-ancho empezar-musica" onClick={empezarConMusica}><Icono n="play" /> Empezar con esta música</button>}
+        <AbrirEnApp opciones={opciones} />
         {aviso && (
           <div class="nota peq musica-aviso">
             <span>Tienes puesto «Avisar aunque bloquees el móvil»: en cada descanso tu música se pausa. ¿Prefieres que te avise solo vibrando?</span>
@@ -176,37 +212,150 @@ export function MusicaSesion({ sesion, semana = null, familia = null, cardio = n
 }
 
 // ---------- El metrónomo de cadencia del cardio ----------
-export function Cadencia({ modalidad }) {
+// (música 3) Dos modos: fijo (el de siempre) o por tramos (cardio por intervalos: cambia solo de cadencia con cada tramo
+// y avisa 5 s antes). Debajo, «¿A cuántos bpm va lo que suena?»: toca al ritmo y te dice si encaja con tu cadencia.
+const leerNum = (k, d) => { try { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; } catch { return d; } };
+const guardarNum = (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* */ } };
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+export function Cadencia({ modalidad, tramos: delCoach = null }) {
   const c = cadenciaDe(modalidad);
-  const [valor, setValor] = useState(() => { try { return ajustarCadencia(modalidad, Number(localStorage.getItem(`fbe-cadencia-${modalidad}`)) || c?.defecto); } catch { return c?.defecto; } });
+  const [valor, setValor] = useState(() => ajustarCadencia(modalidad, leerNum(`fbe-cadencia-${modalidad}`, c?.defecto)) ?? c?.defecto);
+  const [modo, setModo] = useState('fijo');
+  const [t, setT] = useState(() => {
+    let g = null; try { g = JSON.parse(localStorage.getItem(`fbe-cadencia-tramos-${modalidad}`) || 'null'); } catch { /* */ }
+    return normalizarTramos({ ...(g || {}), ...(delCoach || {}) }, modalidad);
+  });
   const [en, setEn] = useState(false);
+  const [estado, setEstado] = useState(null); // por tramos: el tramo de ahora
   const golpe = useRef(0);
+  // fijo: un golpe cada 60000/valor ms
   useEffect(() => {
-    if (!en || !c) return undefined;
-    const ms = 60000 / valor;
-    const id = setInterval(() => { golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14); if (golpe.current % 4 === 1) vibrarCorto?.(15); }, ms);
+    if (!en || !c || modo !== 'fijo') return undefined;
+    const id = setInterval(() => { golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14); if (golpe.current % 4 === 1) vibrarCorto?.(15); }, 60000 / valor);
     return () => clearInterval(id);
-  }, [en, valor]);
+  }, [en, valor, modo]);
+  // por tramos: cada golpe mira en qué tramo va (se programa el siguiente con la cadencia de ese momento)
+  useEffect(() => {
+    if (!en || !c || modo !== 'tramos') return undefined;
+    const inicio = Date.now();
+    let avisado = -1, fase = null, id = 0, vivo = true;
+    const paso = () => {
+      if (!vivo) return;
+      const seg = (Date.now() - inicio) / 1000;
+      const e = tramoCadencia(t, seg);
+      setEstado(e);
+      if (e.fin) { tono(1320, 0.12, 0.18); setTimeout(() => tono(1760, 0.18, 0.18), 180); vibrarCorto?.(60); setEn(false); return; }
+      const clave = `${e.ronda}-${e.fase}`;
+      if (fase && fase !== clave) { tono(660, 0.1, 0.2); setTimeout(() => tono(990, 0.12, 0.2), 140); vibrarCorto?.(40); }
+      fase = clave;
+      if (e.avisar && avisado !== clave) { avisado = clave; tono(880, 0.06, 0.16); setTimeout(() => tono(880, 0.06, 0.16), 160); }
+      golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14);
+      id = setTimeout(paso, 60000 / e.cadencia);
+    };
+    paso();
+    return () => { vivo = false; clearTimeout(id); setEstado(null); };
+  }, [en, modo, t]);
   if (!c) return null;
-  const cambiar = (d) => { const v = ajustarCadencia(modalidad, valor + d * c.paso); setValor(v); try { localStorage.setItem(`fbe-cadencia-${modalidad}`, String(v)); } catch { /* */ } };
+  const cambiar = (d) => { const v = ajustarCadencia(modalidad, valor + d * c.paso); setValor(v); guardarNum(`fbe-cadencia-${modalidad}`, v); };
+  const cambiarT = (k, d) => {
+    const pasos = { trabajo: 10, descanso: 10, rondas: 1, alta: c.paso, baja: c.paso };
+    const n = normalizarTramos({ ...t, [k]: t[k] + d * pasos[k] }, modalidad);
+    setT(n); try { localStorage.setItem(`fbe-cadencia-tramos-${modalidad}`, JSON.stringify(n)); } catch { /* */ }
+  };
+  const ahora = modo === 'tramos' && estado && !estado.fin ? estado.cadencia : valor;
+  const Paso = ({ k, nombre, txt }) => (
+    <span class="cadencia-tramo-campo">
+      <span class="mini terciario">{nombre}</span>
+      <span class="fila">
+        <button type="button" class="btn btn-icono plano" onClick={() => cambiarT(k, -1)} aria-label={`${nombre}: menos`} disabled={en}><Icono n="menos" /></button>
+        <b class="num">{txt}</b>
+        <button type="button" class="btn btn-icono plano" onClick={() => cambiarT(k, 1)} aria-label={`${nombre}: más`} disabled={en}><Icono n="mas" /></button>
+      </span>
+    </span>
+  );
   return (
-    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / valor)}ms` }}>
-      <span class="mini terciario">Cadencia</span>
-      <div class="cadencia-fila">
-        <button type="button" class="btn btn-icono" onClick={() => cambiar(-1)} aria-label="Menos" disabled={valor <= c.min}><Icono n="menos" /></button>
-        <span class="cadencia-v" aria-live="polite"><b class="num">{valor}</b> <small>{c.unidad}/min</small></span>
-        <button type="button" class="btn btn-icono" onClick={() => cambiar(1)} aria-label="Más" disabled={valor >= c.max}><Icono n="mas" /></button>
-        <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
-          <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Marcar el ritmo'}
-        </button>
-      </div>
+    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / ahora)}ms` }}>
+      <span class="cadencia-cab">
+        <span class="mini terciario">Cadencia</span>
+        <span class="segmentos segmentos-peq" role="group" aria-label="Modo de la cadencia">
+          <button type="button" aria-pressed={modo === 'fijo' ? 'true' : 'false'} disabled={en} onClick={() => setModo('fijo')}>Fija</button>
+          <button type="button" aria-pressed={modo === 'tramos' ? 'true' : 'false'} disabled={en} onClick={() => setModo('tramos')}>Por tramos</button>
+        </span>
+      </span>
+      {modo === 'fijo' ? (
+        <div class="cadencia-fila">
+          <button type="button" class="btn btn-icono" onClick={() => cambiar(-1)} aria-label="Menos" disabled={valor <= c.min}><Icono n="menos" /></button>
+          <span class="cadencia-v" aria-live="polite"><b class="num">{valor}</b> <small>{c.unidad}/min</small></span>
+          <button type="button" class="btn btn-icono" onClick={() => cambiar(1)} aria-label="Más" disabled={valor >= c.max}><Icono n="mas" /></button>
+          <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
+            <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Marcar el ritmo'}
+          </button>
+        </div>
+      ) : (
+        <div class="pila-xs cadencia-tramos">
+          {delCoach && <span class="mini secundario">Con los tramos de tu coach: {delCoach.rondas} × {mmss(delCoach.trabajo)}, recuperación {mmss(delCoach.descanso)}.</span>}
+          <div class="cadencia-tramos-rejilla">
+            <Paso k="trabajo" nombre="Trabajo" txt={mmss(t.trabajo)} />
+            <Paso k="alta" nombre={`${c.unidad}/min`} txt={t.alta} />
+            <Paso k="descanso" nombre="Recuperación" txt={mmss(t.descanso)} />
+            <Paso k="baja" nombre={`${c.unidad}/min`} txt={t.baja} />
+            <Paso k="rondas" nombre="Rondas" txt={t.rondas} />
+          </div>
+          {en && estado && !estado.fin
+            ? <span class="cadencia-tramo-ahora" aria-live="polite"><b>{estado.fase === 'trabajo' ? 'Trabajo' : 'Recuperación'}</b> · ronda {estado.ronda} de {estado.rondas} · <span class="num">{estado.cadencia}</span> {c.unidad}/min · quedan <span class="num">{mmss(estado.quedan)}</span></span>
+            : <span class="mini terciario">En total, {mmss(duracionTramos(t))}. Cambia sola de cadencia y te avisa 5 s antes de cada cambio.</span>}
+          <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} style="justify-self:start" aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
+            <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Empezar los tramos'}
+          </button>
+        </div>
+      )}
       <span class="mini terciario">{c.ayuda} Suena encima de tu música.</span>
       {busquedaRitmo(modalidad, valor) && (
         <a class="btn-texto cadencia-buscar" href={busquedaRitmo(modalidad, valor).url} target="_blank" rel="noopener noreferrer">
           <Icono n="buscar" /> Buscar música a {busquedaRitmo(modalidad, valor).bpm} bpm en Spotify
         </a>
       )}
+      <TocarRitmo modalidad={modalidad} valor={ahora} />
     </div>
+  );
+}
+
+// (música 3) «¿A cuántos bpm va lo que suena?»: toca al ritmo de la canción (4 toques o más)
+export function TocarRitmo({ modalidad, valor }) {
+  const [abierto, setAbierto] = useState(false);
+  const [toques, setToques] = useState([]);
+  if (!abierto) return <button type="button" class="btn-texto tocar-ritmo-abrir" onClick={() => setAbierto(true)}><Icono n="altavoz" /> ¿A cuántos bpm va lo que suena?</button>;
+  const bpm = bpmDeToques(toques);
+  const r = bpm ? encajaRitmo(bpm, modalidad, valor) : null;
+  const tocar = () => {
+    const ahora = Date.now();
+    setToques((l) => (l.length && ahora - l[l.length - 1] > TOQUE_REINICIO_MS ? [ahora] : [...l, ahora].slice(-9)));
+    vibrarCorto?.(10);
+  };
+  return (
+    <div class="tocar-ritmo pila-xs">
+      <button type="button" class="btn btn-ancho tocar-ritmo-boton" onClick={tocar}>{toques.length ? 'Toca al ritmo' : 'Toca al ritmo de lo que suena'}</button>
+      <span class="tocar-ritmo-r" aria-live="polite">
+        {bpm ? <><b class="num">{bpm}</b> bpm{r ? ` · ${r.texto}` : ''}</> : <span class="mini terciario">{toques.length ? `Sigue tocando (${toques.length} de 4)` : 'Con 4 toques ya lo sabes. Si paras un momento, empieza de nuevo.'}</span>}
+      </span>
+      <button type="button" class="btn-texto" style="justify-self:start" onClick={() => { setAbierto(false); setToques([]); }}>Cerrar</button>
+    </div>
+  );
+}
+
+// (música 3) «Pon tu canción» antes de la serie grande: en el ejercicio que toca, si es de prioridad alta y aún no ha
+// hecho ninguna serie, un botón para poner su canción de récord justo antes (abre su app: los navegadores no dejan que
+// suene sola)
+export function PonTuCancion() {
+  const { api, propio } = useApp();
+  const personal = usePersonal();
+  const url = personal.datos?.cancion_url;
+  const nombre = useNombreLista(url);
+  if (propio || !url) return null;
+  return (
+    <a class="btn btn-peq pon-tu-cancion" href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => { api.musicaAbierta?.(); abrirMusica(url, e); }}>
+      <Icono n="altavoz" /> Pon tu canción{nombre ? `: ${nombre}` : ''}
+    </a>
   );
 }
 

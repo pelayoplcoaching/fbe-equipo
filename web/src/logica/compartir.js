@@ -241,7 +241,8 @@ export function datosReto(r = {}, hoy = hoyISO()) {
     cifra: { v: String(r.objetivo || 0), u: '', t: u(r.objetivo) }, lineas, subtitulo: null };
 }
 // Un récord del resumen de la sesión: x = { nombre, s (la serie), r: { tipo, valor, antes, reps, kg, texto } }
-export function datosRecordDeSesion(x = {}, fecha = hoyISO()) {
+// (música 3) cancion: el nombre de su canción de récord (sale en la imagen: «Con «…»»)
+export function datosRecordDeSesion(x = {}, fecha = hoyISO(), { cancion = null } = {}) {
   const r = x.r || {};
   const cifra = r.tipo === 'e1rm' ? { v: pesoNum(r.valor, 1), u: etiquetaPeso(), t: '1RM estimado' }
     : r.tipo === 'kg' ? { v: pesoNum(r.kg, 2), u: etiquetaPeso(), t: `a ${r.reps} ${r.reps === 1 ? 'repetición' : 'repeticiones'}` }
@@ -252,6 +253,8 @@ export function datosRecordDeSesion(x = {}, fecha = hoyISO()) {
     const dif = (r.tipo === 'e1rm' ? Number(r.valor) : r.tipo === 'kg' ? Number(r.kg) : Number(r.reps)) - Number(r.antes);
     lineas.push(r.tipo === 'reps' ? `+${Math.round(dif)} desde el anterior` : `+${pesoNum(dif, r.tipo === 'e1rm' ? 1 : 2)} ${etiquetaPeso()} desde el anterior`);
   }
+  const c = String(cancion || '').trim();
+  if (c) lineas.push(`Con «${c.length > 34 ? `${c.slice(0, 33).trim()}…` : c}»`);
   return { tipo: 'record', etiqueta: 'Nuevo récord', nombre: x.nombre || 'Ejercicio', fecha, cifra, lineas, subtitulo: null };
 }
 // La racha: n semanas seguidas con todo hecho; semanas: las últimas (para contar los entrenos de la racha, si vienen)
