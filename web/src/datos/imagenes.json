@@ -2443,6 +2443,46 @@
       "320": "imagenes/sesion/hace-un-ano-320.698c6d4b.webp"
     }
   },
+  "hecha-1": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-1-480.a7efd22f.webp",
+      "960": "imagenes/hoy/hecha-1-960.f889dc96.webp"
+    }
+  },
+  "hecha-2": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-2-480.ad30654c.webp",
+      "960": "imagenes/hoy/hecha-2-960.8c9ada64.webp"
+    }
+  },
+  "hecha-3": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-3-480.59d1a40a.webp",
+      "960": "imagenes/hoy/hecha-3-960.66b96209.webp"
+    }
+  },
+  "hecha-4": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-4-480.78c15906.webp",
+      "960": "imagenes/hoy/hecha-4-960.df95a46b.webp"
+    }
+  },
   "herr-camara": {
     "proporcion": [
       16,
@@ -4183,6 +4223,36 @@
     "archivos": {
       "160": "imagenes/compania/reto-mes-160.76b87ea6.webp",
       "320": "imagenes/compania/reto-mes-320.6c2cba3c.webp"
+    }
+  },
+  "semana-1": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-1-480.e2dced1b.webp",
+      "960": "imagenes/hoy/semana-1-960.88e5b8e7.webp"
+    }
+  },
+  "semana-2": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-2-480.095a0a33.webp",
+      "960": "imagenes/hoy/semana-2-960.df283ff8.webp"
+    }
+  },
+  "semana-3": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-3-480.4a49ca62.webp",
+      "960": "imagenes/hoy/semana-3-960.907118e6.webp"
     }
   },
   "semana-dificil": {

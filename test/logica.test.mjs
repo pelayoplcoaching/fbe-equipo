@@ -1658,6 +1658,9 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   const ideas = new Set(Array.from({ length: 8 }, (_, i) => D.sugerenciaDescanso(`2026-11-0${i + 1}`).id));
   check(ideas.size === D.SUGERENCIAS_DESCANSO.length && D.sugerenciaDescanso('2026-11-03').id === D.sugerenciaDescanso('2026-11-03').id && D.sugerenciaDescanso('2025-01-01').titulo, 'una idea para el descanso, distinta cada día y la misma todo el día (también antes de 2026)');
 
+  check(D.escenaHoy('descanso', '2026-11-03') === `descanso-${D.sugerenciaDescanso('2026-11-03').id}` && D.SUGERENCIAS_DESCANSO.length === 8, '(imágenes, tanda 8) el descanso lleva la escena de su idea; las ideas son 8');
+  check(new Set(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'].map((h) => D.escenaHoy('hecha', h))).size === 4 && D.escenaHoy('hecha', '2026-11-02') === D.escenaHoy('hecha', '2026-11-06'), '«¡Sesión hecha!»: cuatro escenas, una distinta cada día');
+  check(D.escenaHoy('semana', '2026-11-09') === D.escenaHoy('semana', '2026-11-15') && new Set(['2026-11-09', '2026-11-16', '2026-11-23'].map((h) => D.escenaHoy('semana', h))).size === 3 && D.escenaHoy('entreno', '2026-11-09') === null, 'la semana completa: tres escenas, una cada semana (de lunes a domingo); el día de entreno, ninguna (lleva su dibujo)');
   console.log('\nv0.50: pictogramas por patrón de movimiento');
   const casos = [
     ['Press banca', 'empuje_h'], ['Press inclinado con mancuernas', 'empuje_h'], ['Fondos en paralelas', 'empuje_h'], ['Flexiones', 'empuje_h'], ['Pec-fly/Pec-deck', 'empuje_h'],

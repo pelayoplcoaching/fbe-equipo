@@ -55,6 +55,17 @@ export function sugerenciaDescanso(hoy = hoyISO()) {
   const d = diasEntre('2026-01-05', hoy);
   return SUGERENCIAS_DESCANSO[((d % n) + n) % n];
 }
+// (imágenes, tanda 8) La escena de fondo de la tarjeta de Hoy cuando no es día de entreno (el de entreno lleva el dibujo
+// de su sesión): el descanso, la de la idea del día; «¡Sesión hecha!», una de cuatro (cambia cada día); la semana
+// completa, una de tres (cambia cada semana). Siempre la misma en todo el día.
+export function escenaHoy(tipo, hoy = hoyISO()) {
+  const d = diasEntre('2026-01-05', hoy);
+  const vuelta = (x, n) => ((x % n) + n) % n;
+  if (tipo === 'descanso') return `descanso-${sugerenciaDescanso(hoy).id}`;
+  if (tipo === 'hecha') return `hecha-${vuelta(d, 4) + 1}`;
+  if (tipo === 'semana') return `semana-${vuelta(Math.floor(d / 7), 3) + 1}`;
+  return null;
+}
 
 // ---------- pictogramas: el patrón de movimiento de un ejercicio ----------
 export const PATRONES = [
