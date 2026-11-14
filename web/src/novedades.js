@@ -9,7 +9,7 @@ export const NOVEDADES = {
   '0.161': {
     atleta: [
       'Colores nuevos, más limpios: grises neutros, modo oscuro con luz y la tarjeta del día con el color de tu sesión.',
-      'Perfil → Ajustes: tres acentos más (Océano, Lima y Orquídea), «Alto contraste» y «Ayuda para daltonismo».',
+      'Perfil → «Este móvil»: tres acentos más (Océano, Lima y Orquídea), «Alto contraste» y «Ayuda para daltonismo».',
     ],
     coach: [
       'Los mismos colores en tu panel; sin migración.',
