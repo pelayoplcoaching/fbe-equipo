@@ -31,6 +31,9 @@ export async function probarPersonalConocerte({ navegador, check, base = 'http:/
     await sec.waitFor({ timeout: 8000 });
     await sec.scrollIntoViewIfNeeded();
     check(await sec.locator('li').count() === 9 && /Sin aviso: no sale nada/.test(await sec.textContent()), 'en su cuenta, «Avisos por zona»: nueve zonas, sin aviso de entrada');
+    // (v0.158.1) el lápiz de cada zona, pequeño (salía a todo el ancho), y cada momento de los mensajes con su cuadrado de color
+    check(await sec.evaluate((el) => [...el.querySelectorAll('.fila-boton > svg')].every((x) => x.getBoundingClientRect().width <= 24)), 'el lápiz de cada zona, de su tamaño');
+    check(await p.locator('section.mensajes-automaticos .fila-ios[data-m]').evaluateAll((xs) => xs.length >= 10 && xs.every((x) => getComputedStyle(x).getPropertyValue('--fm').trim() !== '')), 'cada mensaje automático, con su icono de color (también los nuevos)');
     await sec.getByRole('button', { name: 'Tu hombro: escribir el aviso' }).click();
     const hoja = p.getByRole('dialog', { name: /Aviso: hombro/ });
     await hoja.waitFor();

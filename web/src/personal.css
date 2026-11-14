@@ -76,9 +76,9 @@
 .lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: .9375rem; }
 .lo-suyo-datos dt { color: var(--tinta-2); }
 .lo-suyo-datos dd { margin: 0; font-weight: 650; }
-.mensajes-automaticos .fila-boton, .musica-coach .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
-.mensajes-automaticos .fila-boton > svg, .musica-coach .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
-.mensajes-automaticos .fila-ios-texto, .musica-coach .fila-ios-texto { display: grid; gap: 2px; }
+.mensajes-automaticos .fila-boton, .musica-coach .fila-boton, .avisos-zona .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; }
+.mensajes-automaticos .fila-boton > svg, .musica-coach .fila-boton > svg, .avisos-zona .fila-boton > svg { width: 18px; height: 18px; flex: none; color: var(--tinta-3); }
+.mensajes-automaticos .fila-ios-texto, .musica-coach .fila-ios-texto, .avisos-zona .fila-ios-texto { display: grid; gap: 2px; min-width: 0; }
 .musica-coach .panel + .panel { margin-top: 10px; }
 .mensajes-automaticos .fila-ios-texto .peq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
@@ -477,3 +477,15 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .envio-fila .envio-quien { justify-self: start; padding: 0; }
 .envio-fila .peq { grid-column: 1; }
 .envio-fila .btn { grid-column: 2; grid-row: 1 / span 2; }
+
+/* (v0.158.1) Los momentos nuevos de los mensajes automaticos, con su icono en su cuadrado de color (como los cinco de
+   siempre en diseno.css): aniversario, meta, primera vez, viaje y bienvenida. El cuadrado lleva el icono en blanco en
+   los dos temas, asi que el color es el mismo en claro y en oscuro. */
+:root { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; } }
+:root[data-theme="dark"] { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; }
+.fila-ios[data-m="aniversario"] { --fm: var(--pc-aniversario); --ico-m: var(--ico-corazon); }
+.fila-ios[data-m="meta"] { --fm: var(--pc-meta); --ico-m: var(--ico-diana); }
+.fila-ios[data-m="primera_vez"] { --fm: var(--pc-primera); --ico-m: var(--ico-gimnasio); }
+.fila-ios[data-m="viaje"] { --fm: var(--pc-viaje); --ico-m: var(--ico-viaje); }
+.fila-ios[data-m="bienvenida"] { --fm: var(--pc-bienvenida); --ico-m: var(--ico-personas); }
