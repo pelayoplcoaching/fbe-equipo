@@ -525,3 +525,17 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .lista-musica-fila select { max-width: 100%; }
 .listas-musica-nueva { padding-top: 10px; border-top: 1px solid var(--linea); }
 .pon-tu-cancion.himno-ultima { border-color: var(--morado); }
+
+/* ---------- (música 3, tanda 3) Lo que suena en el equipo, el reto musical y la lista de la pareja ---------- */
+.canciones-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.cancion-fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cancion-fila .cancion-texto { flex: 1; min-width: 0; }
+.cancion-fila .cancion-texto strong { overflow-wrap: anywhere; }
+.cancion-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
+.cancion-ico svg { width: 18px; height: 18px; }
+.cancion-fila.destacada .cancion-ico { background: var(--morado); color: #fff; }
+.cancion-top { white-space: nowrap; }
+.reto-musical-t { margin: 0; font-size: 1.125rem; }
+.cp-lista-musica { display: block; }
+.cp-lista-musica svg { width: 14px; height: 14px; vertical-align: -2px; }
+.cp-lista-musica a { overflow-wrap: anywhere; }

@@ -4710,7 +4710,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(r ?? null);
       }
-      if (nombre.startsWith('comunidad_')) {
+      if (nombre.startsWith('comunidad_') || nombre === 'musica_reto_guardar') {   // (072) el tema del reto musical, con la comunidad
         const r = rpcComunidad(nombre, args || {}, uid, perfil);
         persistirYa();
         return copia(r ?? null);

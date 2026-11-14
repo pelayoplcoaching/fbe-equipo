@@ -20,6 +20,7 @@ import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
+import { RetoMusicalCoach } from '../atleta/MusicaEquipo.jsx';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -269,6 +270,8 @@ function VozMensaje({ momento, audio, alCambiar }) {
 const GRUPOS_MUSICA = [
   ['Por tipo de sesión', FAMILIAS_MUSICA.map(([k, t]) => [`familia:${k}`, t])],
   ['Otras', [['descarga', 'Semanas de descarga'], ['equipo', 'La lista del equipo (colaborativa)']]],
+  // (música 3) por fases, el día de test y el pódcast
+  ['Por momento', [['fase:calentamiento', 'Para calentar'], ['fase:vuelta_calma', 'Para la vuelta a la calma'], ['test', 'Días de test («Test…», «1RM», «Evaluación»)'], ['podcast', 'Tu pódcast o canal (cardio de 30 min o más)']]],
   ['Al ritmo de cada cardio', [['ritmo:carrera', 'Carrera'], ['ritmo:andar', 'Andar'], ['ritmo:bici', 'Bici'], ['ritmo:eliptica', 'Elíptica'], ['ritmo:remo', 'Remo'], ['ritmo:cuerda', 'Comba']]],
 ];
 export function MusicaCoach() {
@@ -296,6 +299,8 @@ export function MusicaCoach() {
           </ul>
         </div>
       ))}
+      {/* (música 3) el reto musical del mes, tu biblioteca y qué música funciona */}
+      <RetoMusicalCoach />
       <p class="mini terciario">Crea las listas en tu Spotify (o Apple Music, YouTube Music…) y pega aquí su enlace. Cada atleta ve en la portada de su sesión la que le toca, después de la suya; la del equipo sale en Equipo. Para una sesión o un bloque concretos, en el editor del programa. Nadie tiene que iniciar sesión con Spotify en la app.</p>
       {editar && <HojaEnlaceMusica clave={editar[0]} titulo={editar[1]} actual={m[editar[0]] || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
     </section>

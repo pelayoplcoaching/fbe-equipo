@@ -47,6 +47,7 @@ import { NORMAS_COMUNIDAD } from '../datos/normas-comunidad.js';
 import { PlegableEquipo } from './PlegableEquipo.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { ListaEquipo } from './atleta/Musica.jsx';
+import { LoQueSuena, RetoMusical, ListaPareja } from './atleta/MusicaEquipo.jsx';
 import { pesoTxt } from '../logica/unidades.js';
 import { PortadaPerfil, FotoConAnillo } from './PerfilVisual.jsx';
 import { LOBO } from './marca-lobo.js';
@@ -197,6 +198,9 @@ function DentroDelEquipo({ m, alCambiar }) {
       <NecesitanAnimo cambios={cambios} />
       {/* (v0.104) la lista colaborativa del equipo, si el coach la ha enlazado */}
       <ListaEquipo />
+      {/* (música 3) lo que suena en el equipo y el reto musical del mes */}
+      <RetoMusical cambios={cambios} />
+      <LoQueSuena cambios={cambios} />
       {/* (diseño) plegados en pastillas, para que el muro empiece por las publicaciones */}
       <div class="equipo-filas">
         <PlegableEquipo id="proximos" titulo="Próximos" icono="calendario" cuenta=".pr-item"><Proximos cambios={eventos} alCambiar={() => setEventos((v) => v + 1)} proponer /></PlegableEquipo>
@@ -522,9 +526,12 @@ export function EntrenandoAhora() {
 // llegan (Aceptar / Ahora no) y las que has mandado. Sin la 042, nada.
 const estadoSemana = (v) => (v === true ? '✓ completa' : v === false ? 'aún no' : 'sin sesiones');
 function CompanerosRacha({ cambios = 0 }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, perfil } = useApp();
   const [vuelta, setVuelta] = useState(0);
   const lista = useCarga(() => api.companerosComunidad(), [vuelta, cambios]);
+  // (música 3) la lista de cada pareja (el coach no tiene parejas: no se pide)
+  const esCoach = perfil?.rol === 'coach';
+  const listasPar = useCarga(() => (esCoach || !api.listasCompaneros ? Promise.resolve(null) : api.listasCompaneros().catch(() => null)), [vuelta, cambios, esCoach]);
   const [invitar, setInvitar] = useState(false);
   const [terminar, setTerminar] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -573,6 +580,8 @@ function CompanerosRacha({ cambios = 0 }) {
                     ? <span class="cp-llamas" aria-hidden="true"><i>🔥</i><i>🔥</i></span>
                     : <span aria-hidden="true">🔥</span>} {x.racha} {x.racha === 1 ? 'semana' : 'semanas'}<span class="sr"> seguidas los dos</span></>}</span>
                 <span class="mini terciario">Esta semana: tú {estadoSemana(x.mi_semana)} · {x.nombre} {estadoSemana(x.su_semana)}</span>
+                {/* (música 3) vuestra lista: la ven los dos y les sale en la portada */}
+                {(esCoach || !listasPar.datos) ? null : <ListaPareja id={x.id} nombre={x.nombre} listas={listasPar.datos} alCambiar={() => listasPar.recargar(true)} />}
                 {confirmar(x, `¿Dejar de ser compañeros con ${x.nombre}?`, () => hacer(() => api.dejarCompanero(x.id), 'Ya no sois compañeros de racha'))}
               </span>
               {terminar !== x.id && <button type="button" class="btn btn-icono plano" aria-label={`Dejar de ser compañeros de racha con ${x.nombre}`} onClick={() => setTerminar(x.id)}><Icono n="cerrar" /></button>}

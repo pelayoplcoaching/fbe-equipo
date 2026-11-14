@@ -73,5 +73,14 @@ check(/<LoQueMasTeAcompana desde=\{mes\} hasta=\{mes\} \/>/.test(lee('src/ui/atl
 check(/musica_abierta = \(await api\.musicaMasAbierta\('2000-01', '2100-12', .*2000\)/.test(lee('src/datos/api.js')), 'su descarga de datos lleva todo lo que abrió');
 check(/paresMusica\.push\(\[s\.id, copiaSesion\.id\]\)/.test(lee('src/datos/api.js')) && /await api\.copiarMusica\(\[\], origenId, nuevo\.id\)/.test(lee('src/datos/api.js')), 'la música de las sesiones y del bloque viaja al copiar una semana o un bloque');
 
+console.log('\nTanda 3: con el equipo');
+check(JSON.stringify(M.masRepetida([L('A'), L('B'), L('A'), null])) === JSON.stringify({ url: L('A'), n: 2 }) && M.masRepetida([L('A'), L('B')]) === null && M.masRepetida([]) === null, '«La que más suena»: la que se repite (con 2 o más)');
+const eq = lee('src/ui/atleta/MusicaEquipo.jsx'), com = lee('src/ui/Comunidad.jsx');
+check(/<RetoMusical cambios=\{cambios\} \/>/.test(com) && /<LoQueSuena cambios=\{cambios\} \/>/.test(com) && /<ListaPareja id=\{x\.id\}/.test(com), 'en Equipo: el reto, lo que suena y la lista de cada pareja de racha');
+check(/!x\.yo && !coach \?/.test(eq) && /Una propuesta y un voto por persona \(no a la tuya\)/.test(eq), 'no se vota la propia (ni el coach vota)');
+check(/Se quita cuando quieras \(y al salir de la comunidad\)/.test(eq) && /Solo la ve el equipo/.test(eq), 'se dice quién la ve y que se quita');
+check(/<RetoMusicalCoach \/>/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /\['fase:calentamiento', 'Para calentar'\]/.test(lee('src/ui/coach/PersonalCoach.jsx')), 'el coach: el tema del reto y las listas por momento en Cuenta › Música');
+check(/nombre === 'musica_reto_guardar'/.test(lee('src/datos/backend-memoria.js')) && /MUSICA_FUERA/.test(lee('src/datos/backend-memoria.js')), 'la demo: el reto va con la comunidad y al salir se borra lo suyo');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

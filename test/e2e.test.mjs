@@ -6113,6 +6113,9 @@ try {
   console.log('\nMúsica 3, tanda 2: su música');
   const { probarMusica3Suya } = await import('./e2e-musica3-t2.mjs');
   await probarMusica3Suya({ navegador, check });
+  console.log('\nMúsica 3, tanda 3: con el equipo');
+  const { probarMusica3Equipo } = await import('./e2e-musica3-t3.mjs');
+  await probarMusica3Equipo({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

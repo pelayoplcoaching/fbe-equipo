@@ -229,3 +229,12 @@ export function uriSpotify(url) {
   const s = spotify(url);
   return s ? `spotify:${s.tipo}:${s.id}` : null;
 }
+
+// ---------- (música 3, tanda 3) La que más suena en el equipo ----------
+// El enlace que más se repite (con 2 o más; si no, null): { url, n }
+export function masRepetida(urls = []) {
+  const n = {};
+  for (const u of urls || []) if (u) n[u] = (n[u] || 0) + 1;
+  const [url, veces] = Object.entries(n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || [];
+  return url && veces > 1 ? { url, n: veces } : null;
+}
