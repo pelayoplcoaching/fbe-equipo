@@ -269,7 +269,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    la tarjeta de los apuntes, la franja del repaso arriba (si hay por repasar) y el objetivo del día en vez del icono;
    las historias moradas, el fondo de cortinas de luz; el audio del coach, su micrófono. */
 .panel-pad > .franja-prueba { object-position: 80% 50%; }
-.franja-ruta, .franja-liga { aspect-ratio: 3 / 1; border-radius: var(--r); object-position: 80% 50%; }
+.franja-ruta, .franja-liga, .franja-duelo { aspect-ratio: 3 / 1; border-radius: var(--r); object-position: 80% 50%; }
 .prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; }
 .prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
 .prog-tema.con-ilu > :not(.prog-tema-ilu) { grid-column: 2; }
