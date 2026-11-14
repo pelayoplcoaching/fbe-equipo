@@ -238,7 +238,7 @@
 .completa-aro { width: 52px; height: 52px; flex: none; }
 .completa-carril { fill: none; stroke: var(--linea); stroke-width: 5; }
 .completa-arco { fill: none; stroke: var(--morado); stroke-width: 5; stroke-linecap: round; }
-.completa-pct { font-size: 12px; font-weight: 800; fill: var(--tinta); }
+.completa-pct { font-size: var(--letra-12); font-weight: 800; fill: var(--tinta); }
 .completa-lista { list-style: none; margin: 0; padding: 0; display: grid; }
 .completa-hueco { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 0; background: none; border: 0; color: inherit; cursor: pointer; border-top: var(--filo-fino) solid var(--linea); }
 .completa-hueco .pila-xs { flex: 1; min-width: 0; }
