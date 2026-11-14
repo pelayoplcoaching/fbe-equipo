@@ -6140,6 +6140,10 @@ try {
   console.log('\nColor');
   const { probarColor } = await import('./e2e-color.mjs');
   await probarColor({ navegador, check });
+  // Visual (claude/visual-mejoras.md): Perfil en dos vistas, dos columnas en el escritorio, cifras, gráficas, miniaturas, imágenes, hojas y saltos
+  console.log('\nVisual');
+  const { probarVisual } = await import('./e2e-visual.mjs');
+  await probarVisual({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

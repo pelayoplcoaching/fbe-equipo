@@ -59,7 +59,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </CabeceraGrande>
       <BandaDemo />
       <Pestanas clase="perfil-vistas" etiqueta="Tu perfil" idBase="perfil-vista" opciones={[['tu', 'Tú'], ['ajustes', 'Ajustes']]} valor={vista} alCambiar={cambiarVista} />
-      <div class="perfil-panel" id="perfil-vista-panel" role="tabpanel" aria-labelledby={`perfil-vista-${vista}`}>
+      <div class="perfil-cuerpo" id="perfil-vista-panel" role="tabpanel" aria-labelledby={`perfil-vista-${vista}`}>
       {vista === 'tu' ? <>
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
@@ -264,7 +264,7 @@ function IndiceAjustes() {
   const ref = useRef(null);
   const [grupos, setGrupos] = useState([]);
   useEffect(() => {
-    const panel = ref.current?.closest('.perfil-panel');
+    const panel = ref.current?.closest('.perfil-cuerpo');
     if (!panel) return undefined;
     const leer = () => setGrupos([...panel.querySelectorAll(':scope > .grupo-ios > h2[id]')].map((h) => [h.id, h.textContent.trim()]));
     leer();
