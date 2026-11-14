@@ -1,4 +1,4 @@
-import { trozosCerrados } from '../logica/paleta.js';
+import { trozosCerrados, avatarDe } from '../logica/paleta.js';
 import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -211,9 +211,7 @@ export function Avatar({ nombre, clase = '', lleno = false, foto = null, ampliab
     return () => { vivo = false; };
   }, [grande, perfilId, deCoach]);
   useEffect(() => { setEntera(null); }, [foto]);
-  let h = 0;
-  for (const ch of String(nombre || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const n = (h % 6) + 1;
+  const n = avatarDe(nombre);
   const conFoto = typeof foto === 'string' && foto.startsWith('data:image/');
   const circulo = (
     <span class={`avatar ${clase} ${lleno && !conFoto ? 'lleno' : ''} ${conFoto ? 'con-foto' : ''}`} style={{ '--av': `var(--av-${n})` }} aria-hidden="true">

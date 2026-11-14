@@ -155,6 +155,7 @@
   --noche-2: #211F32;
   --noche-3: #2A283D;
   --noche-4: #343249;
+  --noche-5: #3E3C55;
   --blanco: #FFFFFF;
   --negro: #000000;
 }
@@ -205,9 +206,12 @@
   --av-1: var(--marca-600);
   --av-2: var(--azul-600);
   --av-3: var(--turquesa-700);
-  --av-4: var(--rosa-700);
-  --av-5: var(--naranja-700);
+  --av-4: var(--purpura-700);
+  --av-5: var(--neutro-700);
   --av-6: var(--azul-800);
+  --av-7: var(--marca-900);
+  --av-8: var(--cielo-600);
+  --av-9: var(--cielo-900);
   --morado: #593EDE;
   --morado-hover: #462ABF;
   --morado-suave: #EEECFF;
@@ -222,19 +226,44 @@
   --fuego: #FE5A1D;
   --grad-noche: linear-gradient(160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
   --grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
-  --grad-record: linear-gradient(135deg, #FADA99, #D3A329, #7E5D00);
-  --grad-fuego: linear-gradient(160deg, #FFB663, #FE5A1D, #B7162D);
+  --grad-record: linear-gradient(135deg, #FADA99, #EBC166, #D3A329);
+  --grad-fuego: linear-gradient(160deg, #FFB663, #FE5A1D);
+  --medalla: radial-gradient(circle at 32% 26%, #FEEDC9, #EBC166 55%, #A97F00);
+  --aro-amanecer: conic-gradient(from 200deg, var(--morado), var(--rosa-400), var(--oro-300), var(--rosa-400), var(--morado));
+  --acento-50: var(--marca-50);
+  --acento-100: var(--marca-100);
+  --acento-200: var(--marca-200);
+  --acento-300: var(--marca-300);
+  --acento-400: var(--marca-400);
+  --acento-500: var(--marca-500);
+  --acento-600: var(--marca-600);
+  --acento-700: var(--marca-700);
+  --acento-800: var(--marca-800);
+  --acento-900: var(--marca-900);
+  --acento-950: var(--marca-950);
+  --cat-rojo: var(--rojo-500);
+  --cat-naranja: var(--naranja-500);
+  --cat-ambar: var(--ambar-500);
+  --cat-verde: var(--verde-500);
+  --cat-turquesa: var(--turquesa-500);
+  --cat-cielo: var(--cielo-500);
+  --cat-azul: var(--azul-500);
+  --cat-indigo: var(--indigo-500);
+  --cat-violeta: var(--marca-500);
+  --cat-purpura: var(--purpura-500);
+  --cat-rosa: var(--rosa-500);
+  --cat-gris: var(--neutro-500);
   --confeti-1: #7C6AFD;
   --confeti-2: #D3A329;
   --confeti-3: #FF74B0;
   --confeti-4: #37C2BB;
   --confeti-5: #73ACFF;
   --confeti-6: #FC8642;
-  --seq-1: #EEECFF;
-  --seq-2: #C4BFFF;
-  --seq-3: #7C6AFD;
-  --seq-4: #462ABF;
-  --seq-5: #241665;
+  --seq-1: color-mix(in srgb, var(--morado) 14%, var(--hoja));
+  --seq-2: color-mix(in srgb, var(--morado) 34%, var(--hoja));
+  --seq-3: color-mix(in srgb, var(--morado) 56%, var(--hoja));
+  --seq-4: color-mix(in srgb, var(--morado) 78%, var(--hoja));
+  --seq-5: var(--morado);
   --div-1: #9F4500;
   --div-2: #FFB38C;
   --div-3: #DDDDE3;
@@ -305,11 +334,14 @@
     --disco-amarillo: var(--oro-300);
     --disco-verde: var(--verde-400);
     --av-1: var(--marca-400);
-    --av-2: var(--azul-300);
-    --av-3: var(--turquesa-300);
-    --av-4: var(--rosa-300);
-    --av-5: var(--naranja-300);
-    --av-6: var(--azul-200);
+    --av-2: var(--azul-400);
+    --av-3: var(--turquesa-200);
+    --av-4: var(--purpura-300);
+    --av-5: var(--neutro-300);
+    --av-6: var(--azul-300);
+    --av-7: var(--marca-200);
+    --av-8: var(--cielo-400);
+    --av-9: var(--cielo-100);
     --morado: #A49CFF;
     --morado-hover: #C4BFFF;
     --morado-suave: #232242;
@@ -379,11 +411,14 @@
   --disco-amarillo: var(--oro-300);
   --disco-verde: var(--verde-400);
   --av-1: var(--marca-400);
-  --av-2: var(--azul-300);
-  --av-3: var(--turquesa-300);
-  --av-4: var(--rosa-300);
-  --av-5: var(--naranja-300);
-  --av-6: var(--azul-200);
+  --av-2: var(--azul-400);
+  --av-3: var(--turquesa-200);
+  --av-4: var(--purpura-300);
+  --av-5: var(--neutro-300);
+  --av-6: var(--azul-300);
+  --av-7: var(--marca-200);
+  --av-8: var(--cielo-400);
+  --av-9: var(--cielo-100);
   --morado: #A49CFF;
   --morado-hover: #C4BFFF;
   --morado-suave: #232242;
@@ -434,13 +469,36 @@
   --borde: rgba(255, 255, 255, .08);
 }
 
+/* (tanda 3) La elevación en oscuro: las hojas, un nivel más claras, y lo de dentro con ellas (en negro puro y con alto
+   contraste, no). Los tokens que salen de la tarjeta o de la línea se vuelven a declarar aquí y en sistema.css. */
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]):not([data-oled]):not([data-contraste="alto"]) .hoja-dialogo {
+  --tiza: var(--noche-1);
+  --hoja: var(--noche-2);
+  --hoja-2: var(--noche-3);
+  --hoja-3: var(--noche-4);
+  --linea: var(--noche-5);
+  --superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3); --borde-suave: var(--linea);
+  --vidrio-hoja: color-mix(in srgb, var(--hoja) 92%, transparent);
+}
+}
+:root[data-theme="dark"]:not([data-oled]):not([data-contraste="alto"]) .hoja-dialogo {
+  --tiza: var(--noche-1);
+  --hoja: var(--noche-2);
+  --hoja-2: var(--noche-3);
+  --hoja-3: var(--noche-4);
+  --linea: var(--noche-5);
+  --superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3); --borde-suave: var(--linea);
+  --vidrio-hoja: color-mix(in srgb, var(--hoja) 92%, transparent);
+}
+
 /* (8) Los degradados, interpolados en OKLCH donde se puede (no se ensucian en el medio) */
 @supports (background: linear-gradient(in oklch, red, blue)) {
   :root {
     --grad-noche: linear-gradient(in oklch 160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
     --grad-amanecer: linear-gradient(in oklch 135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
-    --grad-record: linear-gradient(in oklch 135deg, #FADA99, #D3A329, #7E5D00);
-    --grad-fuego: linear-gradient(in oklch 160deg, #FFB663, #FE5A1D, #B7162D);
+    --grad-record: linear-gradient(in oklch 135deg, #FADA99, #EBC166, #D3A329);
+    --grad-fuego: linear-gradient(in oklch 160deg, #FFB663, #FE5A1D);
   }
 }
 
@@ -546,8 +604,9 @@
       --confeti-4: oklch(74.1% 0.147 189.9);
       --confeti-5: oklch(74.0% 0.173 257.7);
       --confeti-6: oklch(74.0% 0.211 48.0);
-      --grad-record: linear-gradient(in oklch 135deg, oklch(90.0% 0.115 84.5), oklch(74.1% 0.180 85.3), oklch(49.9% 0.131 84.4));
-      --grad-fuego: linear-gradient(in oklch 160deg, oklch(82.9% 0.167 67.8), oklch(68.1% 0.269 38.0), oklch(50.0% 0.244 21.9));
+      --grad-record: linear-gradient(in oklch 135deg, oklch(90.0% 0.115 84.5), oklch(83.0% 0.153 84.9), oklch(74.1% 0.180 85.3));
+      --grad-fuego: linear-gradient(in oklch 160deg, oklch(82.9% 0.167 67.8), oklch(68.1% 0.269 38.0));
+      --medalla: radial-gradient(circle at 32% 26%, oklch(95.1% 0.064 85.7), oklch(83.0% 0.153 84.9) 55%, oklch(62.1% 0.163 85.2));
       --serie-2: oklch(62.1% 0.192 55.0);
       --serie-3: oklch(50.1% 0.111 189.5);
       --serie-4: oklch(50.0% 0.231 258.1);

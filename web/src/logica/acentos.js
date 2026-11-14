@@ -5,7 +5,7 @@
 
 // (color) Las superficies, los textos, los acentos y el contraste salen de la paleta (logica/paleta.js), la única
 // fuente del color: ocho acentos (con Océano y Lima, de la tanda de color), cada uno con sus valores para el claro y el oscuro.
-import { SUPERFICIES, ACENTOS, luminancia, contraste, neutrosDe, superficiesDe, textosDe, acentoAlto } from './paleta.js';
+import { SUPERFICIES, ACENTOS, luminancia, contraste, neutrosDe, superficiesDe, textosDe, acentoAlto, escalaAcento } from './paleta.js';
 export { SUPERFICIES, ACENTOS, luminancia, contraste };
 // El texto claro de la tarjeta del día (--sobre-hero), que va sobre el brillo del acento (--hero-2)
 export const SOBRE_HERO = '#F3F1FB';
@@ -63,7 +63,8 @@ export function parejasVidrio(acento, tema, tipo = 'barra') {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
   const textos = textosDe(acento, tema);
   const peor = tema === 'claro' ? '#000000' : '#FFFFFF';
-  const fondo = mezclar(superficiesDe(acento, tema)[tipo === 'cabecera' ? 'tiza' : 'hoja'], peor, VIDRIO[tipo][tema]);
+  // (color 3) en oscuro las hojas van un nivel más claras (la elevación): su vidrio sale del nivel 2
+  const fondo = mezclar(superficiesDe(acento, tema)[tipo === 'cabecera' ? 'tiza' : tipo === 'hoja' && tema === 'oscuro' ? 'hoja-2' : 'hoja'], peor, VIDRIO[tipo][tema]);
   const lista = [['tinta', textos.tinta], ['tinta-2', textos['tinta-2']], ...(tipo === 'hoja' ? [['tinta-3', textos['tinta-3']]] : []), ['acento', v.morado]];
   return lista.map(([que, texto]) => ({ que: `${que} sobre el vidrio (${tipo})`, texto, fondo, ratio: contraste(texto, fondo) }));
 }
@@ -76,12 +77,16 @@ const neutros = (n) => (n ? `${Object.entries(n.neutro).map(([p, h]) => `--neutr
 // El CSS de un acento, con los mismos selectores que color.css para el tema oscuro (así manda el del sistema cuando el
 // tema es «Sistema»). El morado no necesita nada: es el de serie. Con alto contraste (color 2), el acento a 7:1 (también
 // el morado), y gana a las reglas del tema por ir con el atributo.
+// (tanda 3) la escala del acento (--acento-N) y, en oscuro, los textos con su tono (con alto contraste no: mandan los suyos)
+const escala = (a) => Object.entries(escalaAcento(a)).map(([p, h]) => `--acento-${p}:${h};`).join('');
+const textos = (a, alto) => (alto || a.id === ACENTO_DEFECTO ? '' : Object.entries(textosDe(a, 'oscuro')).map(([k, h]) => `--${k}:${h};`).join(''));
 export function cssAcento(id, { alto = false } = {}) {
   const a = acentoDe(id);
   if (a.id === ACENTO_DEFECTO && !alto) return '';
   const v = alto ? acentoAlto(a) : a;
   const c = alto ? '[data-contraste="alto"]' : '';
-  return `:root${c}{${neutros(neutrosDe(a))}${variables(v.claro)}}`
-    + `@media (prefers-color-scheme: dark){:root${c}:not([data-theme="light"]){${variables(v.oscuro)}}}`
-    + `:root${c}[data-theme="dark"]{${variables(v.oscuro)}}`;
+  const propio = a.id === ACENTO_DEFECTO ? '' : `${neutros(neutrosDe(a))}${escala(a)}`;
+  return `:root${c}{${propio}${variables(v.claro)}}`
+    + `@media (prefers-color-scheme: dark){:root${c}:not([data-theme="light"]){${variables(v.oscuro)}${textos(a, alto)}}}`
+    + `:root${c}[data-theme="dark"]{${variables(v.oscuro)}${textos(a, alto)}}`;
 }

@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.163': {
+    atleta: [
+      'Diseño más fino: en modo oscuro las hojas se ven más claras y los tonos siguen a tu acento; nueve avatares nuevos.',
+    ],
+  },
   '0.162': {
     atleta: [
       'La travesía: botón «Agáchate» abajo a la izquierda para pasar las ramas, sin que el lobo salte antes.',

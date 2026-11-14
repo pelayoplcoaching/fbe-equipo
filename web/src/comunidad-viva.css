@@ -7,7 +7,7 @@
 
 /* 1 · Animar: al mandar el ánimo, la mano sale hacia arriba */
 .btn-animar, .btn-animar-grande { position: relative; }
-.btn-animar.recien::after, .btn-animar-grande.recien::after { content: "\1F64C"; position: absolute; left: 50%; top: 0; margin-left: -.6em; font-size: 1.25rem; line-height: 1; pointer-events: none; opacity: 0; }
+.btn-animar.recien::after, .btn-animar-grande.recien::after { content: "\1F64C"; position: absolute; left: 50%; top: 0; margin-left: -.6em; font-size: var(--letra-20); line-height: 1; pointer-events: none; opacity: 0; }
 /* 6 · Encuestas: la barra se mide con transform (el ancho no se mueve) */
 .encuesta-opcion .eo-barra { width: 100%; transform: scaleX(var(--pct, 0)); transform-origin: 0 50%; transition: none; }
 /* 7 · Compañeros de racha: los dos habéis completado la semana y las dos llamas son una */
@@ -18,10 +18,10 @@
 .franja-viva { position: relative; overflow: hidden; }
 .franja-viva > .fv-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; }
 .fv-luna, .fv-cumbre { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); }
-.fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, color-mix(in srgb, var(--marca-200) 50%, transparent) 0%, color-mix(in srgb, var(--marca-400) 16%, transparent) 45%, transparent 100%); }
-.fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, color-mix(in srgb, var(--marca-300) 20%, transparent) 45%, transparent 100%); }
+.fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, color-mix(in srgb, var(--acento-200) 50%, transparent) 0%, color-mix(in srgb, var(--acento-400) 16%, transparent) 45%, transparent 100%); }
+.fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, color-mix(in srgb, var(--acento-300) 20%, transparent) 45%, transparent 100%); }
 .franja-reto.cumbre .fv-cumbre { opacity: .8; background: radial-gradient(closest-side, color-mix(in srgb, var(--oro-100) 75%, transparent) 0%, color-mix(in srgb, var(--oro-300) 28%, transparent) 45%, transparent 100%); }
-.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--blanco); opacity: .55; box-shadow: 0 0 5px 1px color-mix(in srgb, var(--marca-200) 50%, transparent); }
+.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--blanco); opacity: .55; box-shadow: 0 0 5px 1px color-mix(in srgb, var(--acento-200) 50%, transparent); }
 /* 10 · La celebración de un reto: un destello cruza el disco */
 .cm-disco { overflow: hidden; }
 .cm-disco::after { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0; background: linear-gradient(var(--oklab,) 100deg, transparent 0%, rgba(255, 255, 255, .75) 50%, transparent 100%); }
@@ -54,9 +54,9 @@
   /* 5 · El muro: la publicación que llega entra con un gesto; la tuya, además, con un destello */
   .post.post-llega { animation: cv-post-llega .5s cubic-bezier(.2, .8, .2, 1) both; }
   .post.post-llega.mia { position: relative; }
-  .post.post-llega.mia::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: color-mix(in srgb, var(--morado) 16%, transparent); animation: cv-destello 1.2s ease-out .15s both; }
+  .post.post-llega.mia::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: var(--acento-a16); animation: cv-destello 1.2s ease-out .15s both; }
   /* 6 · Encuestas: al votar, las barras se llenan y tu opción da un golpe; si cambia el reparto, se recolocan */
-  .encuesta-opcion .eo-barra { transition: transform .45s cubic-bezier(.2, .8, .2, 1); animation: cv-barra-crece .6s cubic-bezier(.2, .8, .2, 1) both; }
+  .encuesta-opcion .eo-barra { transition: transform var(--mov-lento) cubic-bezier(.2, .8, .2, 1); animation: cv-barra-crece .6s cubic-bezier(.2, .8, .2, 1) both; }
   .encuesta-opcion.mia .eo-texto > svg { animation: cv-golpe .45s cubic-bezier(.3, 1.6, .5, 1) .25s both; }
   .encuesta-opcion .eo-pct { animation: cv-pct-entra .4s ease-out .3s both; }
   /* 7 · Compañeros de racha: las dos llamas se acercan y prenden en una */
@@ -96,7 +96,7 @@
 @keyframes cv-llama-der { 0% { opacity: .7; transform: translateX(9px) scale(.8); } 100% { opacity: 0; transform: translateX(0) scale(1); } }
 @keyframes cv-prende { 0% { scale: 1; } 50% { scale: 1.4; } 100% { scale: 1; } }
 @keyframes cv-franja { from { scale: 1; } to { scale: 1.06; } }
-@keyframes cv-respira { from { opacity: .3; transform: translate(-50%, -50%) scale(.94); } to { opacity: .62; transform: translate(-50%, -50%) scale(1.06); } }
+@keyframes cv-respira { from { opacity: .3; transform: translate(-50%, -50%) scale(.94); } to { opacity: .6; transform: translate(-50%, -50%) scale(1.06); } }
 @keyframes cv-respira-cumbre { from { opacity: .55; transform: translate(-50%, -50%) scale(.92); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } }
 @keyframes cv-titila { from { opacity: .15; transform: scale(.7); } to { opacity: .9; transform: scale(1.15); } }
 @keyframes cv-insignia-llega { from { transform: translateY(8px) scale(.7); } }

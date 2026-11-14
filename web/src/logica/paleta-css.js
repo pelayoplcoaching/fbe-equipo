@@ -1,5 +1,5 @@
 // El texto de web/src/color.css, desde la paleta (lo escribe scripts/paleta.mjs; las pruebas lo comparan con el archivo).
-import { ESCALAS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA, OLED, ZONAS, ZONAS_DALTONISMO, FUEGO, valor, vivo } from './paleta.js';
+import { ESCALAS, PASOS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA, OLED, ELEVADOS, ELEVACION, TINTES, CATEGORIAS, PASO_CATEGORIA, ZONAS, ZONAS_DALTONISMO, FUEGO, valor, vivo } from './paleta.js';
 
 const ref = (v) => {
   if (typeof v === 'string') return v;
@@ -33,12 +33,21 @@ export function cssPaleta() {
     '--grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);',
     `--grad-record: linear-gradient(135deg, ${CELEBRACION.record.join(', ')});`,
     `--grad-fuego: linear-gradient(160deg, ${CELEBRACION.fuego.join(', ')});`,
+    `--medalla: radial-gradient(circle at 32% 26%, ${CELEBRACION.medalla[0]}, ${CELEBRACION.medalla[1]} 55%, ${CELEBRACION.medalla[2]});`,
+    // el Amanecer, en aro: el de las historias sin ver
+    '--aro-amanecer: conic-gradient(from 200deg, var(--morado), var(--rosa-400), var(--oro-300), var(--rosa-400), var(--morado));',
+    ...PASOS.map((p) => `--acento-${p}: var(--marca-${p});`),
+    ...Object.entries(CATEGORIAS).map(([k, fam]) => `--cat-${k}: var(--${fam}-${PASO_CATEGORIA});`),
     ...CELEBRACION.confeti.map((c, i) => `--confeti-${i + 1}: ${c};`),
-    ...SECUENCIAL.map((c, i) => `--seq-${i + 1}: ${c};`),
+    // (tanda 3) la secuencial, del acento: de casi nada a todo (sobre la tarjeta)
+    ...SECUENCIAL.map((p, i) => `--seq-${i + 1}: ${p === 100 ? 'var(--morado)' : `color-mix(in srgb, var(--morado) ${p}%, var(--hoja))`};`),
     ...DIVERGENTE.map((c, i) => `--div-${i + 1}: ${c};`),
   ];
   // (color 2, 4) las zonas de carrera (relleno y texto), y con la ayuda para daltonismo
   const zonas = (z) => [...z.relleno.map((v, i) => `--zona-${i + 1}: ${ref(v)};`), ...z.texto.map((v, i) => `--zona-${i + 1}-t: ${ref(v)};`)];
+  const subida = [...Object.entries(ELEVACION).map(([k, n]) => `--${k}: var(--noche-${n});`), '--superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3); --borde-suave: var(--linea);', '--vidrio-hoja: color-mix(in srgb, var(--hoja) 92%, transparent);'];
+  const noAplica = ':not([data-oled]):not([data-contraste="alto"])';
+  const elevado = `@media (prefers-color-scheme: dark) {\n${bloque(ELEVADOS.map((x) => `:root:not([data-theme="light"])${noAplica} ${x}`).join(', '), subida)}}\n${bloque(ELEVADOS.map((x) => `:root[data-theme="dark"]${noAplica} ${x}`).join(', '), subida)}`;
   // (color 2, 6) el negro puro (OLED): solo cuando se ve el tema oscuro
   const oled = [...Object.entries(OLED).map(([k, v]) => `--${k}: ${v};`), '--borde: rgba(255, 255, 255, .08);'];
   // (color 2, 7) lo decorativo, más vivo en las pantallas de gama ancha
@@ -50,6 +59,7 @@ export function cssPaleta() {
     ...CELEBRACION.confeti.map((c, i) => `--confeti-${i + 1}: ${vivo(c)};`),
     `--grad-record: linear-gradient(in oklch 135deg, ${CELEBRACION.record.map((c) => vivo(c)).join(', ')});`,
     `--grad-fuego: linear-gradient(in oklch 160deg, ${CELEBRACION.fuego.map((c) => vivo(c)).join(', ')});`,
+    `--medalla: radial-gradient(circle at 32% 26%, ${vivo(CELEBRACION.medalla[0])}, ${vivo(CELEBRACION.medalla[1])} 55%, ${vivo(CELEBRACION.medalla[2])});`,
   ];
   const sangrar = (txt) => txt.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n');
   const serie = (t) => SERIES[t].map((c, i) => `--serie-${i + 1}: ${i === 0 ? 'var(--morado)' : c};`);
@@ -72,6 +82,9 @@ ${bloque(':root', [...tema('claro'), ...acentoDecl(ACENTOS[0].claro), ...comunes
 ${dosOscuros('', [...tema('oscuro'), ...acentoDecl(ACENTOS[0].oscuro), ...serie('oscuro'), ...zonas(ZONAS.oscuro)])}
 /* Negro puro (OLED) */
 ${dosOscuros('[data-oled]', oled)}
+/* (tanda 3) La elevación en oscuro: las hojas, un nivel más claras, y lo de dentro con ellas (en negro puro y con alto
+   contraste, no). Los tokens que salen de la tarjeta o de la línea se vuelven a declarar aquí y en sistema.css. */
+${elevado}
 /* (8) Los degradados, interpolados en OKLCH donde se puede (no se ensucian en el medio) */
 @supports (background: linear-gradient(in oklch, red, blue)) {
   :root {
@@ -96,3 +109,29 @@ ${sangrar(sangrar(bloque(':root', [...p3Comun, ...p3('claro')])))}${sangrar(sang
 }
 `;
 }
+
+// ---------- sistema.css: las escalas de lo que no es color (color y diseño, tanda 3) ----------
+import { RADIOS, PILDORA, LETRAS, nombreLetra, OP_DESHABILITADO, CAPAS, TIEMPOS, TIEMPOS_NUEVOS, FILOS, SOMBRAS, AMBITOS, FILAS } from './sistema.js';
+
+export function cssSistema() {
+  const num = (v) => String(v).replace(/^0\./, '.');
+  const raiz = [
+    `${RADIOS.map((v) => `--r-${v}: ${v}px;`).join(' ')} --r-pildora: ${PILDORA}px;`,
+    LETRAS.map((v) => `--${nombreLetra(v)}: ${v / 16}rem;`).join(' '),
+    `--op-deshabilitado: ${num(OP_DESHABILITADO)};`,
+    Object.entries(CAPAS).map(([k, v]) => `--capa-${k}: ${v};`).join(' '),
+    TIEMPOS_NUEVOS.map((k) => `--mov-${k}: ${num(TIEMPOS[k])}s;`).join(' '),
+    Object.entries(FILOS).map(([k, v]) => `--filo-${k}: ${v}px;`).join(' '),
+  ];
+  return `/* ==========================================================================================================
+   SISTEMA de FBE Equipo: las escalas de lo que no es color (radios, letra, capas, tiempos, filos y las sombras que
+   se repiten). Archivo GENERADO por scripts/paleta.mjs desde web/src/logica/sistema.js: no se edita a mano
+   (npm run paleta; las pruebas comprueban que está al día). Se carga después de color.css.
+   ========================================================================================================== */
+
+${bloqueS(':root', raiz)}
+/* Anillos, halos, brillo, la sombra de color de los botones y los tintes del acento. Se declaran también donde cambian --linea, --hoja o
+   --morado para sí mismos, para que tomen el valor de ese sitio. */
+${bloqueS(AMBITOS.join(',\n'), [...Object.entries(SOMBRAS).map(([k, v]) => `--${k}: ${v};`), '/* los tintes del acento: el acento a medias, en diez niveles */', TINTES.map((p) => `--acento-a${p}: color-mix(in srgb, var(--morado) ${p}%, transparent);`).join(' '), '/* las filas de listas y tablas */', Object.entries(FILAS).map(([k, v]) => `--${k}: ${v};`).join(' '), '/* la escala secuencial (de casi nada a todo el acento), sobre la tarjeta de cada ámbito */', SECUENCIAL.map((p, i) => `--seq-${i + 1}: ${p === 100 ? 'var(--morado)' : `color-mix(in srgb, var(--morado) ${p}%, var(--hoja))`};`).join(' ')])}`;
+}
+function bloqueS(sel, decl) { return `${sel} {\n${decl.map((d) => `  ${d}`).join('\n')}\n}\n`; }

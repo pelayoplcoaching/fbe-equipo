@@ -2,7 +2,8 @@
 // (?demo&paleta); las muestras son inventadas. Se puede cambiar el tema, el acento, el alto contraste y la ayuda para
 // daltonismo aquí mismo (no se guarda nada): la tabla de contraste se recalcula con lo elegido.
 import { useState, useEffect } from 'preact/hooks';
-import { ESCALAS, PASOS, NOCHE, ACENTOS, SERIES, sobre, parejasPaleta } from '../logica/paleta.js';
+import { ESCALAS, PASOS, NOCHE, ACENTOS, SERIES, TINTES, SECUENCIAL, CATEGORIAS, AVATARES, sobre, parejasPaleta } from '../logica/paleta.js';
+import { RADIOS, RADIOS_CON_NOMBRE, LETRAS, nombreLetra, PESOS, CAPAS, TIEMPOS, FILOS } from '../logica/sistema.js';
 import { cssAcento } from '../logica/acentos.js';
 
 const ESTADOS = [['ok', 'Hecho'], ['aviso', 'Aviso'], ['alerta', 'Alerta'], ['info', 'Info']];
@@ -28,7 +29,7 @@ export function PaletaDemo() {
   const parejas = parejasPaleta({ tema, acento: a, alto, daltonismo: dalt });
   return (
     <main class="pal-pagina" aria-labelledby="pal-titulo">
-      <h1 id="pal-titulo">Paleta de FBE Equipo</h1>
+      <h1 id="pal-titulo">Paleta de FBE Equipo</h1>{/* (y, desde la tanda 3, el sistema: radios, sombras, letras, capas y tiempos, al final) */}
       <p class="secundario">Las escalas (de 50 a 950), los estados, los degradados, la paleta de las gráficas y los acentos. Generado desde <code>logica/paleta.js</code>.</p>
 
       <div class="pal-controles" role="group" aria-label="Ver la paleta con">
@@ -115,6 +116,48 @@ export function PaletaDemo() {
           </button>
         ))}
       </div>
+
+      {/* (tanda 3) lo que sale del acento, las categorías y el sistema de diseño (logica/sistema.js) */}
+      <h2>El acento, por dentro</h2>
+      <section class="pal-escala pal-sis" aria-label="Escala del acento">
+        <h3>Su escala</h3>
+        <div class="pal-fila">{PASOS.map((p) => <div key={p} class="pal-muestra" style={{ background: `var(--acento-${p})` }} title={`--acento-${p}`}><span style={{ color: p < 500 ? 'var(--negro)' : 'var(--blanco)' }}>{p}</span></div>)}</div>
+      </section>
+      <section class="pal-escala pal-sis" aria-label="Tintes del acento">
+        <h3>Sus tintes (sobre transparente)</h3>
+        <div class="pal-fila">{TINTES.map((p) => <div key={p} class="pal-muestra pal-tinte" style={{ background: `var(--acento-a${p})` }} title={`--acento-a${p}`}><span>{p}</span></div>)}</div>
+      </section>
+      <section class="pal-escala pal-sis" aria-label="Escala secuencial">
+        <h3>De menos a más</h3>
+        <div class="pal-fila">{SECUENCIAL.map((p, i) => <div key={p} class="pal-muestra pal-tinte" style={{ background: `var(--seq-${i + 1})` }} title={`--seq-${i + 1}`}><span>{i + 1}</span></div>)}</div>
+      </section>
+
+      <h2>Categorías y avatares</h2>
+      <div class="pal-fila">{Object.keys(CATEGORIAS).map((k) => <div key={k} class="pal-muestra pal-cat" style={{ background: `var(--cat-${k})` }} title={`--cat-${k}`}><span>{k}</span></div>)}</div>
+      <div class="pal-avatares">{Array.from({ length: AVATARES }, (_, i) => <span key={i} class="avatar lleno" style={{ '--av': `var(--av-${i + 1})` }}>{i + 1}</span>)}{Array.from({ length: AVATARES }, (_, i) => <span key={`s${i}`} class="avatar" style={{ '--av': `var(--av-${i + 1})` }}>{i + 1}</span>)}</div>
+
+      <h2>Sistema</h2>
+      <section class="pal-escala pal-sis" aria-label="Radios">
+        <h3>Radios</h3>
+        <div class="pal-sistema">{[...RADIOS.map((r) => [`--r-${r}`, r]), ...Object.entries(RADIOS_CON_NOMBRE).map(([px, n]) => [`--${n}`, Number(px)])].sort((x, y) => x[1] - y[1]).map(([v, px]) => <div key={v} class="pal-radio" style={{ borderRadius: `var(${v})` }}><b>{px}</b><span>{v}</span></div>)}</div>
+      </section>
+      <section class="pal-escala pal-sis" aria-label="Sombras">
+        <h3>Sombras</h3>
+        <div class="pal-sistema">{[['--sombra-tarjeta', 'Tarjeta'], ['--sombra-flotante', 'Flotante'], ['--sombra-hoja', 'Hoja'], ['--anillo', 'Anillo'], ['--anillo-acento', 'Anillo del acento'], ['--sombra-accion', 'Acción']].map(([v, n]) => <div key={v} class="pal-sombra" style={{ boxShadow: `var(${v})` }}><b>{n}</b><span>{v}</span></div>)}</div>
+      </section>
+      <section class="pal-escala pal-sis" aria-label="Letras">
+        <h3>Letras ({LETRAS.length} tamaños, de medio en medio píxel) y pesos</h3>
+        <div class="pal-letras">{LETRAS.filter((v) => Number.isInteger(v)).map((v) => <span key={v} style={{ fontSize: `var(--${nombreLetra(v)})` }}>{v}</span>)}</div>
+        <div class="pal-letras">{PESOS.map((w) => <span key={w} style={{ fontWeight: w }}>{w}</span>)}</div>
+      </section>
+      <section class="pal-escala pal-sis" aria-label="Capas, tiempos y filos">
+        <h3>Capas, tiempos y filos</h3>
+        <dl class="pal-lista">
+          {Object.entries(CAPAS).map(([k, v]) => <div key={k}><dt>--capa-{k}</dt><dd>{v}</dd></div>)}
+          {Object.entries(TIEMPOS).map(([k, v]) => <div key={k}><dt>--mov-{k}</dt><dd>{String(v).replace('.', ',')} s</dd></div>)}
+          {Object.entries(FILOS).map(([k, v]) => <div key={k}><dt>--filo-{k}</dt><dd>{String(v).replace('.', ',')} px</dd></div>)}
+        </dl>
+      </section>
     </main>
   );
 }

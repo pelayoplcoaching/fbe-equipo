@@ -1,5 +1,5 @@
 /* (v0.143) De viaje por zona horaria: el aviso de Hoy y el atajo al material de viaje. Solo tokens de color. */
-.aviso-viaje { border: 1px solid var(--linea); }
+.aviso-viaje { border: var(--filo-fino) solid var(--linea); }
 .aviso-viaje-cab { display: flex; gap: 12px; align-items: flex-start; }
 .aviso-viaje-cab h2 { font-size: var(--tipo-titulo-s); margin: 0; text-wrap: balance; }
 .aviso-viaje-cab .pila-xs { min-width: 0; }

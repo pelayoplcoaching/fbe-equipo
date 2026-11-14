@@ -16,14 +16,14 @@
 .tiempo-mejor svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--ok); }
 
 .tiempo-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.tiempo-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-s); background: var(--aviso-suave); border: 1px solid var(--linea); }
+.tiempo-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-s); background: var(--aviso-suave); border: var(--filo-fino) solid var(--linea); }
 .tiempo-aviso svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--aviso); }
 .tiempo-aviso[data-nivel="alto"] { background: var(--alerta-suave); }
 .tiempo-aviso[data-nivel="alto"] svg { color: var(--alerta); }
 
 .tiempo-horas { list-style: none; margin: 0; padding: 2px 2px 8px; display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; border-radius: var(--r-s); }
 .tiempo-horas:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
-.tiempo-horas li { flex: none; min-width: 54px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--r-s); border: 1px solid var(--linea); }
+.tiempo-horas li { flex: none; min-width: 54px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea); }
 .tiempo-horas li svg { width: 20px; height: 20px; color: var(--tinta-2); }
 .tiempo-horas li.mejor { border-color: var(--ok); background: var(--ok-suave); }
 .tiempo-horas li.mejor svg { color: var(--ok); }
@@ -40,7 +40,7 @@
 .zona-opcion:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
 .elegir-zona .aviso-texto:empty { display: none; }
 
-.tiempo-sesion { padding-top: 10px; border-top: 1px solid var(--linea); }
+.tiempo-sesion { padding-top: 10px; border-top: var(--filo-fino) solid var(--linea); }
 .tiempo-sesion-linea { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
 .tiempo-sesion-linea svg { width: 20px; height: 20px; flex: none; color: var(--morado); }
 

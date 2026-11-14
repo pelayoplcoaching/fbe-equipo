@@ -1,0 +1,38 @@
+/* ==========================================================================================================
+   SISTEMA de FBE Equipo: las escalas de lo que no es color (radios, letra, capas, tiempos, filos y las sombras que
+   se repiten). Archivo GENERADO por scripts/paleta.mjs desde web/src/logica/sistema.js: no se edita a mano
+   (npm run paleta; las pruebas comprueban que está al día). Se carga después de color.css.
+   ========================================================================================================== */
+
+:root {
+  --r-2: 2px; --r-4: 4px; --r-6: 6px; --r-10: 10px; --r-14: 14px; --r-16: 16px; --r-24: 24px; --r-pildora: 999px;
+  --letra-10: 0.625rem; --letra-10-5: 0.65625rem; --letra-11: 0.6875rem; --letra-11-5: 0.71875rem; --letra-12: 0.75rem; --letra-12-5: 0.78125rem; --letra-13: 0.8125rem; --letra-13-5: 0.84375rem; --letra-14: 0.875rem; --letra-14-5: 0.90625rem; --letra-15: 0.9375rem; --letra-15-5: 0.96875rem; --letra-16: 1rem; --letra-16-5: 1.03125rem; --letra-17: 1.0625rem; --letra-17-5: 1.09375rem; --letra-18: 1.125rem; --letra-19: 1.1875rem; --letra-20: 1.25rem; --letra-21: 1.3125rem; --letra-22: 1.375rem; --letra-24: 1.5rem;
+  --op-deshabilitado: .45;
+  --capa-fondo: 10; --capa-pegado: 15; --capa-barra: 20; --capa-flotante: 30; --capa-hoja: 40; --capa-aviso: 50; --capa-pantalla: 60; --capa-inmersiva: 70; --capa-escena: 90; --capa-historia: 400; --capa-encima: 1000;
+  --mov-instante: .09s; --mov-breve: .2s; --mov-pausado: .6s;
+  --filo-fino: 1px; --filo-medio: 1.5px; --filo-fuerte: 2px; --filo-marca: 3px;
+}
+
+/* Anillos, halos, brillo, la sombra de color de los botones y los tintes del acento. Se declaran también donde cambian --linea, --hoja o
+   --morado para sí mismos, para que tomen el valor de ese sitio. */
+:root,
+.historia,
+:root[data-gimnasio] .sesion-vista,
+:root[data-gimnasio] .temporizador,
+.hoja-dialogo {
+  --anillo: inset 0 0 0 1px var(--linea);
+  --anillo-suave: inset 0 0 0 1px var(--borde);
+  --anillo-acento: inset 0 0 0 2px var(--morado);
+  --anillo-acento-fino: inset 0 0 0 1px var(--morado);
+  --halo: 0 0 0 2px var(--hoja);
+  --halo-ancho: 0 0 0 3px var(--hoja);
+  --raya: 0 1px 0 var(--linea);
+  --brillo: inset 0 1px 0 rgba(255, 255, 255, .25);
+  --sombra-accion: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent);
+  /* los tintes del acento: el acento a medias, en diez niveles */
+  --acento-a4: color-mix(in srgb, var(--morado) 4%, transparent); --acento-a8: color-mix(in srgb, var(--morado) 8%, transparent); --acento-a12: color-mix(in srgb, var(--morado) 12%, transparent); --acento-a16: color-mix(in srgb, var(--morado) 16%, transparent); --acento-a22: color-mix(in srgb, var(--morado) 22%, transparent); --acento-a30: color-mix(in srgb, var(--morado) 30%, transparent); --acento-a45: color-mix(in srgb, var(--morado) 45%, transparent); --acento-a55: color-mix(in srgb, var(--morado) 55%, transparent); --acento-a70: color-mix(in srgb, var(--morado) 70%, transparent); --acento-a85: color-mix(in srgb, var(--morado) 85%, transparent);
+  /* las filas de listas y tablas */
+  --fila-hover: color-mix(in srgb, var(--morado) 4%, var(--hoja)); --fila-elegida: color-mix(in srgb, var(--morado) 9%, var(--hoja)); --fila-cebra: color-mix(in srgb, var(--tinta) 3%, transparent);
+  /* la escala secuencial (de casi nada a todo el acento), sobre la tarjeta de cada ámbito */
+  --seq-1: color-mix(in srgb, var(--morado) 14%, var(--hoja)); --seq-2: color-mix(in srgb, var(--morado) 34%, var(--hoja)); --seq-3: color-mix(in srgb, var(--morado) 56%, var(--hoja)); --seq-4: color-mix(in srgb, var(--morado) 78%, var(--hoja)); --seq-5: var(--morado);
+}

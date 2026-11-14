@@ -39,7 +39,7 @@ console.log('\ncolor.css, generado y única fuente');
   const raiz = est.slice(est.indexOf(':root {'), est.indexOf('\n}', est.indexOf(':root {')));
   check(!/--(tiza|hoja|tinta|morado|ok|alerta|aviso|hero):/.test(raiz) && !/:root\[data-oled\]\[data-theme="dark"\] \{\n  --tiza/.test(est) && !/:root \{ --oro:/.test(src('diseno.css')),
     'estilos.css y diseno.css ya no definen los colores de los temas, ni el negro puro, ni el dorado: vienen de color.css');
-  check(/import '\.\/color\.css';\nimport '\.\/estilos\.css';/.test(src('main.jsx')) && /import '\.\/color-capa\.css';/.test(src('main.jsx')), 'color.css se carga antes que todo y la capa de color, la última');
+  check(/import '\.\/color\.css';\nimport '\.\/sistema\.css';\nimport '\.\/estilos\.css';/.test(src('main.jsx')) && /import '\.\/color-capa\.css';/.test(src('main.jsx')), 'color.css se carga antes que todo y la capa de color, la última');
   const css = src('color.css');
   check(['--superficie-1', '--texto-2', '--accion', '--accion-pulsado', '--info-solido', '--ok-borde', '--grad-noche', '--grad-record', '--serie-8', '--seq-5', '--div-5', '--confeti-6', '--zona-5-t', '--oro-claro', '--fuego'].every((t) => css.includes(`${t}:`)),
     'los tokens con significado (superficies, textos, acción, estados, degradados, gráficas, zonas, celebraciones y dorado)');
@@ -62,7 +62,7 @@ console.log('\nContraste de todas las parejas');
     if (P.contraste(P.valor(tema, 'sobre-hero-2'), P.valor(tema, 'hero')) < 4.5) malas.push(`${tema} texto 2 de la tarjeta`);
     for (const k of ['int-trabajo', 'int-descanso', 'int-preparar', 'int-fin']) if (P.contraste('#FFFFFF', P.valor(tema, k)) < 4.5) malas.push(`${tema} blanco sobre ${k}`);
   }
-  for (const k of ['disco-rojo', 'disco-azul', 'disco-verde', 'av-1', 'av-2', 'av-3', 'av-4', 'av-5', 'av-6']) if (P.contraste('#FFFFFF', P.valor('claro', k)) < 4.5) malas.push(`blanco sobre ${k}`);
+  for (const k of ['disco-rojo', 'disco-azul', 'disco-verde', ...Array.from({ length: P.AVATARES }, (_, i) => `av-${i + 1}`)]) if (P.contraste('#FFFFFF', P.valor('claro', k)) < 4.5) malas.push(`blanco sobre ${k}`);
   check(malas.length === 0, `textos, estados, dorado, tarjeta del día (con cada tono y acento) e intervalos pasan AA en claro, oscuro y negro puro${malas.length ? `: ${malas.slice(0, 4).join('; ')}` : ''}`);
   const dalt = [];
   for (const tema of ['claro', 'oscuro']) for (const k of ['ok', 'alerta']) for (const f of Object.values(P.SUPERFICIES[tema])) if (P.contraste(P.DALTONISMO[tema][k], f) < 4.5) dalt.push(`${tema} ${k}`);
@@ -140,7 +140,7 @@ console.log('\nLa tarjeta del día, los iconos y la interacción');
   check(/\.btn-primario:not\(:disabled\):active \{ background: var\(--accion-pulsado\)/.test(capa) && /color-mix\(in oklch, var\(--morado\) 82%, var\(--tinta\)\)/.test(src('color.css')), 'al pulsar, el acento mezclado con la tinta (igual con cualquier acento)');
   check(/@media \(forced-colors: active\)/.test(capa) && !/@keyframes|transition/.test(capa), 'colores forzados del sistema atendidos, y la capa de color no anima nada');
   // (tanda 2)
-  check(/:root \{ accent-color: var\(--morado\); caret-color: var\(--morado\); \}/.test(capa) && /::selection \{ background: color-mix\(in srgb, var\(--morado\) 26%, transparent\)/.test(capa), '(tanda 2) los controles nativos, el cursor y el texto seleccionado, con el acento');
+  check(/:root \{ accent-color: var\(--morado\); caret-color: var\(--morado\); \}/.test(capa) && /::selection \{ background: var\(--acento-a22\)/.test(capa), '(tanda 2) los controles nativos, el cursor y el texto seleccionado, con el acento');
   check(/\.chip\.ok \{ border-color: var\(--ok-borde\); \}/.test(capa) && /\.chip\.alerta \{ border-color: var\(--alerta-borde\); \}/.test(capa), '(tanda 2) los estados llevan su filo');
   check(/:is\(\.hero-dia, \.carnet,[^)]*\) :focus-visible \{ outline-color: var\(--sobre-hero\); \}/.test(capa), '(tanda 2) el foco va en claro sobre las superficies oscuras');
   check(/:root\[data-contraste="alto"\]\[data-contraste\]\[data-contraste\] \{ --vidrio: var\(--hoja\);/.test(capa), '(tanda 2) con «Alto contraste», el vidrio se vuelve opaco (como con el del sistema)');
@@ -186,7 +186,7 @@ console.log('\nSin colores sueltos');
   const tenidos = [];
   for (const f of hojas) for (const m of sinComentarios(src(f)).replace(/url\((?:"[^"]*"|'[^']*'|[^)]*)\)/g, '').matchAll(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/g)) if (!(m[1] === m[2] && m[2] === m[3])) tenidos.push(`${f} ${m[0]}`);
   check(tenidos.length === 0, `ningún rgba teñido suelto: las transparencias de color salen de las escalas${tenidos.length ? `: ${tenidos.slice(0, 4)}` : ''}`);
-  const usos = hojas.reduce((t, f) => t + (src(f).match(/var\(--(marca|neutro|verde|ambar|rojo|azul|oro|rosa|turquesa|naranja|indigo|purpura|cielo|noche)-\d+\)/g) || []).length, 0);
+  const usos = hojas.reduce((t, f) => t + (src(f).match(/var\(--(marca|acento|neutro|verde|ambar|rojo|azul|oro|rosa|turquesa|naranja|indigo|purpura|cielo|noche)-\d+\)|var\(--cat-[a-z]+\)/g) || []).length, 0);
   check(usos > 850, `los estilos usan las escalas (${usos} referencias a sus pasos)`);
   // En el JS, todo de la paleta salvo la ilustración del juego del descanso y los colores del dibujo sobre vídeo (se guardan)
   const ILUSTRACION = ['ui/atleta/travesia-pinta.js', 'ui/atleta/TravesiaHoja.jsx', 'ui/atleta/EscenaFinal.jsx', 'ui/atleta/travesia-compartir.js', 'ui/atleta/Travesia.jsx', 'logica/travesia-ruta.js', 'logica/dibujo.js'];

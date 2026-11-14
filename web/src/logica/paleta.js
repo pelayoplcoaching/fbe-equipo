@@ -86,7 +86,8 @@ const DEF = {
 };
 export const ESCALAS = Object.fromEntries(Object.entries(DEF).map(([k, { h, c }]) => [k, Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], c[i], Array.isArray(h) ? h[i] : h)]))]));
 // La noche: las superficies del tema oscuro, cada nivel un poco más claro (la profundidad, con luz y no con sombras)
-const NOCHE_L = [0.165, 0.21, 0.25, 0.29, 0.33], NOCHE_C = [0.017, 0.032, 0.036, 0.038, 0.04];
+// (tanda 3) un sexto nivel: las líneas de lo que va elevado (las hojas)
+const NOCHE_L = [0.165, 0.21, 0.25, 0.29, 0.33, 0.37], NOCHE_C = [0.017, 0.032, 0.036, 0.038, 0.04, 0.042];
 export const NOCHE = Object.fromEntries(NOCHE_L.map((L, i) => [i, oklch(L, NOCHE_C[i], 288)]));
 export const BLANCO = '#FFFFFF', NEGRO = '#000000';
 // La tinta noche de la portada, del icono y de la barra del sistema al abrir (la de siempre: no se toca)
@@ -111,7 +112,9 @@ export const TEMAS = {
     flota: ['neutro', 950], 'sobre-flota': ['neutro', 100],
     'int-trabajo': ['verde', 700], 'int-descanso': ['azul', 700], 'int-preparar': ['ambar', 700], 'int-fin': ['marca', 700],
     'disco-rojo': ['rojo', 600], 'disco-azul': ['azul', 600], 'disco-amarillo': ['oro', 400], 'disco-verde': ['verde', 600],
-    'av-1': ['marca', 600], 'av-2': ['azul', 600], 'av-3': ['turquesa', 700], 'av-4': ['rosa', 700], 'av-5': ['naranja', 700], 'av-6': ['azul', 800],
+    // (tanda 3) nueve tonos fríos, de la familia de la marca (ni marrones ni frambuesas: junto a los avisos se leían como estados)
+    'av-1': ['marca', 600], 'av-2': ['azul', 600], 'av-3': ['turquesa', 700], 'av-4': ['purpura', 700], 'av-5': ['neutro', 700], 'av-6': ['azul', 800],
+    'av-7': ['marca', 900], 'av-8': ['cielo', 600], 'av-9': ['cielo', 900],
   },
   oscuro: {
     tiza: ['noche', 0], hoja: ['noche', 1], 'hoja-2': ['noche', 2], 'hoja-3': ['noche', 3],
@@ -125,7 +128,9 @@ export const TEMAS = {
     flota: ['noche', 4], 'sobre-flota': '#EDEBF7',
     'int-trabajo': ['verde', 800], 'int-descanso': ['azul', 800], 'int-preparar': ['ambar', 800], 'int-fin': ['marca', 800],
     'disco-rojo': ['rojo', 400], 'disco-azul': ['azul', 400], 'disco-amarillo': ['oro', 300], 'disco-verde': ['verde', 400],
-    'av-1': ['marca', 400], 'av-2': ['azul', 300], 'av-3': ['turquesa', 300], 'av-4': ['rosa', 300], 'av-5': ['naranja', 300], 'av-6': ['azul', 200],
+    // (los pasos, los que más se distinguen entre sí: antes dos de los seis eran casi el mismo azul)
+    'av-1': ['marca', 400], 'av-2': ['azul', 400], 'av-3': ['turquesa', 200], 'av-4': ['purpura', 300], 'av-5': ['neutro', 300], 'av-6': ['azul', 300],
+    'av-7': ['marca', 200], 'av-8': ['cielo', 400], 'av-9': ['cielo', 100],
   },
 };
 // El negro puro (OLED): solo cambian las superficies (en estilos.css)
@@ -174,7 +179,8 @@ export const SERIES = {
   oscuro: [e('marca', 400), oklch(0.78, 0.13, 55), e('turquesa', 300), e('azul', 300), e('rosa', 300), oklch(0.85, 0.13, 90), e('verde', 300), e('neutro', 300)],
 };
 // Secuencial (una sola tinta, de poco a mucho) y divergente (por debajo ↔ por encima del objetivo, gris en medio)
-export const SECUENCIAL = [100, 300, 500, 700, 900].map((p) => e('marca', p));
+// (tanda 3) la secuencial sigue al acento: cinco niveles, en tanto por ciento de acento sobre la tarjeta
+export const SECUENCIAL = [14, 34, 56, 78, 100];
 export const DIVERGENTE = [e('naranja', 600), e('naranja', 300), e('neutro', 200), e('azul', 300), e('azul', 600)];
 
 // ---------- las secciones (15): todas salen de las escalas ----------
@@ -194,8 +200,11 @@ export const ZONAS_DALTONISMO = {
 };
 // Las celebraciones (12): oro de verdad, fuego y la marca
 export const CELEBRACION = {
-  record: [e('oro', 200), e('oro', 400), e('oro', 600)],
-  fuego: [e('ambar', 300), FUEGO, e('rojo', 600)],
+  // (tanda 3) los dos, para llevar texto oscuro encima (oro-900 y naranja-950 pasan AA de punta a punta): así se usan de verdad
+  record: [e('oro', 200), e('oro', 300), e('oro', 400)],
+  fuego: [e('ambar', 300), FUEGO],
+  // la medalla: el oro con volumen de los récords, los trofeos y los destacados (antes, escrito igual en cinco sitios)
+  medalla: [e('oro', 100), e('oro', 300), e('oro', 500)],
   confeti: [e('marca', 500), e('oro', 400), e('rosa', 400), e('turquesa', 400), e('azul', 400), e('naranja', 400)],
 };
 
@@ -252,8 +261,12 @@ export function superficiesDe(acento, tema) {
 }
 export function textosDe(acento, tema) {
   const n = neutrosDe(acento);
-  if (!n || tema !== 'claro') return TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
-  return { tinta: n.neutro[950], 'tinta-2': n.neutro[700], 'tinta-3': n.neutro[600] };
+  if (!n) return TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
+  if (tema === 'claro') return { tinta: n.neutro[950], 'tinta-2': n.neutro[700], 'tinta-3': n.neutro[600] };
+  // (tanda 3) en oscuro y en negro puro, los textos toman también el tono del acento: misma luminosidad y viveza que
+  // los de siempre (con Grafito, gris puro)
+  const h = aOklch(acento.claro.morado)[2], gris = acento.id === 'grafito';
+  return Object.fromEntries(Object.entries(TEXTOS.oscuro).map(([k, hex]) => { const [L, C] = aOklch(hex); return [k, oklch(L, gris ? 0 : C, h)]; }));
 }
 
 // ---------- el acento con alto contraste (8) ----------
@@ -292,3 +305,49 @@ export function parejasPaleta({ tema = 'claro', acento = ACENTOS[0], alto = fals
   const filas = [['Texto', txt.tinta], ['Texto secundario', txt['tinta-2']], ['Texto terciario', txt['tinta-3']], ['Acento', ac.morado], ['Hecho', est('ok')], ['Aviso', valor(t, 'aviso')], ['Alerta', est('alerta')], ['Info', valor(t, 'info')], ['Oro', valor(t, 'oro')]];
   return filas.map(([nombre, color]) => ({ nombre, color, tarjeta: contraste(color, sup.hoja), fondo: contraste(color, sup.tiza) }));
 }
+
+// =====================================================================================================================
+// Color y diseño, tanda 3
+// =====================================================================================================================
+
+// ---------- la escala del acento (5) ----------
+// Cada acento tiene su escala de 50 a 950 (--acento-N): lo que antes era violeta fijo sin ser marca (brillos, halos y
+// detalles de la tarjeta del día, del perfil, de la racha…) la usa, y con otro acento ya no desentona. Con el morado,
+// es la escala de la marca: nada cambia.
+const FAMILIA = { morado: 'marca', azul: 'azul', pino: 'turquesa', frambuesa: 'rosa', cobre: 'naranja', orquidea: 'purpura', oceano: 'cielo' };
+export function escalaAcento(acento) {
+  const fam = FAMILIA[acento?.id];
+  if (fam) return ESCALAS[fam];
+  if (acento?.id === 'grafito') return Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], 0, 0)]));
+  // (Lima y cualquier otro sin familia: la viveza del verde, en su tono)
+  const h = aOklch(acento.claro.morado)[2];
+  return Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], DEF.verde.c[i], h)]));
+}
+
+// ---------- los tintes del acento (4) ----------
+// El acento a medias (sobre transparente), en diez niveles con nombre: --acento-a4 … --acento-a85. Antes, 42
+// porcentajes distintos repartidos por los estilos.
+export const TINTES = [4, 8, 12, 16, 22, 30, 45, 55, 70, 85];
+// El nivel de un porcentaje: el más cercano, solo si no se nota (2 puntos por debajo del 20 %; 5, por encima)
+export function nivelTinte(pct) {
+  let mejor = null;
+  for (const v of TINTES) { const d = Math.abs(v - pct); if (d <= (Math.max(v, pct) < 20 ? 2 : 5) && (!mejor || d < mejor[1])) mejor = [v, d]; }
+  return mejor ? mejor[0] : null;
+}
+
+// ---------- los avatares (16) ----------
+export const AVATARES = 9;
+// El color de un nombre: siempre el mismo (del 1 al 9)
+export function avatarDe(nombre) { let h = 0; for (const ch of String(nombre || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (h % AVATARES) + 1; }
+
+// ---------- los colores de categoría (17) ----------
+// Grupos musculares, hábitos, tipos de publicación, iconos de las listas…: todos del mismo paso (500), para que
+// ninguno pese más que otro, y con nombre. Con icono blanco encima pasan 3:1.
+export const CATEGORIAS = { rojo: 'rojo', naranja: 'naranja', ambar: 'ambar', verde: 'verde', turquesa: 'turquesa', cielo: 'cielo', azul: 'azul', indigo: 'indigo', violeta: 'marca', purpura: 'purpura', rosa: 'rosa', gris: 'neutro' };
+export const PASO_CATEGORIA = 500;
+
+// ---------- la elevación en oscuro (14) ----------
+// En oscuro la profundidad se da con luz: lo que flota por encima de la página (las hojas) va un nivel más claro, y
+// todo lo de dentro, con ella (sus tarjetas, uno más; sus líneas, otro). En negro puro y con alto contraste, no.
+export const ELEVADOS = ['.hoja-dialogo'];
+export const ELEVACION = { tiza: 1, hoja: 2, 'hoja-2': 3, 'hoja-3': 4, linea: 5 };
