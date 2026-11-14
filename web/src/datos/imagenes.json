@@ -682,6 +682,16 @@
       "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
     }
   },
+  "carrera": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/carrera-720.d62d8291.webp",
+      "1080": "imagenes/ah/carrera-1080.529cddb4.webp"
+    }
+  },
   "carrera-dorsal": {
     "proporcion": [
       1,

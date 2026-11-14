@@ -373,3 +373,4 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .h-panel:has(> .ico-ilu) { display: flex; align-items: center; gap: 12px; }
 .fila-con-ilu { display: flex; align-items: center; gap: 12px; }
 .fila-con-ilu > p { flex: 1; min-width: 0; margin: 0; }
+.hoja-tu-carrera .franja-carrera { margin-bottom: 0; object-position: 70% 50%; }

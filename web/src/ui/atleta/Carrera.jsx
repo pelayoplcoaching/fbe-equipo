@@ -108,6 +108,7 @@ export function TuCarrera({ alCerrar }) {
   const d = carrera.datos;
   return (
     <Hoja titulo="Tu carrera" alCerrar={alCerrar} clase="hoja-tu-carrera">
+      <Imagen id="carrera" clase="franja-ilu franja-hoja franja-carrera" tamanos="(min-width: 640px) 560px, 92vw" />
       {carrera.error ? <ErrorCaja error={carrera.error} reintentar={carrera.recargar} /> : !d ? <Siluetas forma="tarjetas" n={3} texto="Cargando tu carrera" /> : <ContenidoCarrera d={d} />}
     </Hoja>
   );
