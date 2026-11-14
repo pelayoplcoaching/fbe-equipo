@@ -8,6 +8,7 @@ import { imagenMes } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { usePersonal } from './Personal.jsx';
 import { aperturasDe } from '../../logica/musica.js';
+import { LoQueMasTeAcompana } from './Musica.jsx';
 
 const capital = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
@@ -127,6 +128,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
         <span class="historia-etq">Tu música</span>
         <p class="historia-cifra num">{veces}<small>{veces === 1 ? 'sesión con tu música' : 'sesiones con tu música'}</small></p>
         <p class="historia-texto">Las veces que la abriste al empezar a entrenar.</p>
+        <LoQueMasTeAcompana desde={mes} hasta={mes} />
       </>
     ) }] : []),
     ...(salud && r.habitos ? [{ id: 'habitos', render: () => (

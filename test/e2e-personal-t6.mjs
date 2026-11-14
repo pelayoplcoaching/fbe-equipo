@@ -31,8 +31,10 @@ export async function probarPersonalVida({ navegador, check, base = 'http://loca
     // --- «Lo tuyo»: lo que viene en su vida ---
     await irASeccion(p, 'Perfil');
     const grupo = p.locator('section[aria-labelledby="grupo-lo-tuyo"]');
-    await grupo.waitFor({ timeout: 8000 });
-    await grupo.scrollIntoViewIfNeeded();
+    // (en la pasada completa, más lenta: si algo tapa o aún carga, se cierra y se vuelve a Perfil)
+    if (!(await grupo.waitFor({ timeout: 8000 }).then(() => grupo.scrollIntoViewIfNeeded({ timeout: 8000 })).then(() => true, () => false))) {
+      await fueraAvisos(); await irASeccion(p, 'Perfil'); await grupo.waitFor({ timeout: 15000 }); await grupo.scrollIntoViewIfNeeded({ timeout: 15000 });
+    }
     await grupo.getByRole('button', { name: 'Apuntar lo que viene en tu vida' }).click();
     const hoja = p.getByRole('dialog', { name: 'Lo que viene en tu vida' });
     await hoja.waitFor();

@@ -6106,6 +6106,19 @@ try {
   console.log('\nSonido 2');
   const { probarSonido2 } = await import('./e2e-sonido-2.mjs');
   await probarSonido2({ navegador, check });
+  // Música 3 (claude/musica-mejoras-3.md): durante la sesión, su música, con el equipo y para el coach
+  console.log('\nMúsica 3, tanda 1: durante la sesión');
+  const { probarMusica3Sesion } = await import('./e2e-musica3-t1.mjs');
+  await probarMusica3Sesion({ navegador, check });
+  console.log('\nMúsica 3, tanda 2: su música');
+  const { probarMusica3Suya } = await import('./e2e-musica3-t2.mjs');
+  await probarMusica3Suya({ navegador, check });
+  console.log('\nMúsica 3, tanda 3: con el equipo');
+  const { probarMusica3Equipo } = await import('./e2e-musica3-t3.mjs');
+  await probarMusica3Equipo({ navegador, check });
+  console.log('\nMúsica 3, tanda 4: para el coach y fuera de Spotify');
+  const { probarMusica3Coach } = await import('./e2e-musica3-t4.mjs');
+  await probarMusica3Coach({ navegador, check });
   // Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
   console.log('\nColor');
   const { probarColor } = await import('./e2e-color.mjs');

@@ -15,11 +15,13 @@ import { AlertaTemprana, LoQueLeFunciona, ideaDeAlerta } from '../atleta/CoachSa
 import { GrabarAudio } from '../Guias.jsx';
 import { textoManual, ideaSegunManual } from '../../logica/respeto.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
-import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
+import { FAMILIAS_MUSICA, tipoMusica, nombreEtiqueta } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
+import { RetoMusicalCoach } from '../atleta/MusicaEquipo.jsx';
+import { BibliotecaMusica, UsoMusica, DeTuBiblioteca } from './MusicaCoach3.jsx';
 import { Imagen } from '../Imagen.jsx';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
@@ -58,7 +60,7 @@ export function LoSuyo({ atletaId }) {
   const { api } = useApp();
   const personal = useCarga(() => api.personalAtletas().catch(() => []), [atletaId]);
   const p = (personal.datos || []).find((x) => x.atleta_id === atletaId);
-  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url)) return null;
+  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url && !p.musica_listas?.length && !p.himno_ultima_url && !p.himno_vuelta_url)) return null;
   return (
     <section class="seccion lo-suyo">
       <h2>Lo suyo</h2>
@@ -70,6 +72,10 @@ export function LoSuyo({ atletaId }) {
           {/* (v0.129) el nombre de su lista (y su canción de récord), y se abre con un toque */}
           {p.musica_url && <><dt>Entrena con</dt><dd><a href={p.musica_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.musica_url} /></a></dd></>}
           {p.cancion_url && <><dt>Su canción de récord</dt><dd><a href={p.cancion_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.cancion_url} /></a></dd></>}
+          {/* (música 3) sus listas por momento y sus himnos */}
+          {p.musica_listas?.length > 0 && <><dt>Sus listas</dt><dd>{p.musica_listas.map((l, i) => <span key={`${l.url}-${i}`}>{i ? ' · ' : ''}{nombreEtiqueta(l.etiqueta)}: <a href={l.url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={l.url} /></a></span>)}</dd></>}
+          {p.himno_ultima_url && <><dt>Su himno de la última serie</dt><dd><a href={p.himno_ultima_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_ultima_url} /></a></dd></>}
+          {p.himno_vuelta_url && <><dt>Su himno de vuelta</dt><dd><a href={p.himno_vuelta_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_vuelta_url} /></a></dd></>}
         </dl>
       </div>
     </section>
@@ -268,6 +274,8 @@ function VozMensaje({ momento, audio, alCambiar }) {
 const GRUPOS_MUSICA = [
   ['Por tipo de sesión', FAMILIAS_MUSICA.map(([k, t]) => [`familia:${k}`, t])],
   ['Otras', [['descarga', 'Semanas de descarga'], ['equipo', 'La lista del equipo (colaborativa)']]],
+  // (música 3) por fases, el día de test y el pódcast
+  ['Por momento', [['fase:calentamiento', 'Para calentar'], ['fase:vuelta_calma', 'Para la vuelta a la calma'], ['test', 'Días de test («Test…», «1RM», «Evaluación»)'], ['podcast', 'Tu pódcast o canal (cardio de 30 min o más)']]],
   ['Al ritmo de cada cardio', [['ritmo:carrera', 'Carrera'], ['ritmo:andar', 'Andar'], ['ritmo:bici', 'Bici'], ['ritmo:eliptica', 'Elíptica'], ['ritmo:remo', 'Remo'], ['ritmo:cuerda', 'Comba']]],
 ];
 export function MusicaCoach() {
@@ -295,6 +303,10 @@ export function MusicaCoach() {
           </ul>
         </div>
       ))}
+      {/* (música 3) el reto musical del mes, tu biblioteca y qué música funciona */}
+      <RetoMusicalCoach />
+      <BibliotecaMusica />
+      <UsoMusica />
       <p class="mini terciario">Crea las listas en tu Spotify (o Apple Music, YouTube Music…) y pega aquí su enlace. Cada atleta ve en la portada de su sesión la que le toca, después de la suya; la del equipo sale en Equipo. Para una sesión o un bloque concretos, en el editor del programa. Nadie tiene que iniciar sesión con Spotify en la app.</p>
       {editar && <HojaEnlaceMusica clave={editar[0]} titulo={editar[1]} actual={m[editar[0]] || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
     </section>
@@ -320,6 +332,8 @@ export function HojaEnlaceMusica({ clave, titulo, actual, alCerrar, alGuardar })
           {!mal && <FichaPrevia url={u} />}
         </div>
         <button class="btn btn-primario btn-grande" disabled={guardando || mal}><Icono n="hecho" /> Guardar</button>
+        {/* (música 3) o, en dos toques, una de tu biblioteca */}
+        <DeTuBiblioteca ocupado={guardando} alElegir={(url) => guardar(url)} />
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar la lista</button>}
       </form>
     </Hoja>

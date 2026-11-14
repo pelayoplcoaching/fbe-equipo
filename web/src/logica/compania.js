@@ -77,7 +77,7 @@ export function albumHitos({ entrenos = [], progreso = null, fechaAlta = null, a
   if (ses[0]) h.push({ clave: 'primera', fecha: ses[0].fecha, titulo: 'Tu primera sesión', icono: 'hecho' });
   for (const n of [10, 50, 100, 200, 300, 500]) if (ses[n - 1]) h.push({ clave: `ses-${n}`, fecha: ses[n - 1].fecha, titulo: `Sesión ${n}`, icono: 'llama' });
   const rec = ses.find((x) => Number(x.records) > 0);
-  if (rec) h.push({ clave: 'record', fecha: rec.fecha, titulo: 'Tu primer récord', icono: 'trofeo' });
+  if (rec) h.push({ clave: 'record', fecha: rec.fecha, titulo: 'Tu primer récord', icono: 'trofeo', sesion_id: rec.id || null });  // (música 3) para «lo batiste con…»
   let cien = null, dom = null;
   for (const e of progreso?.ejercicios || []) {
     for (const p of e.puntos || []) {

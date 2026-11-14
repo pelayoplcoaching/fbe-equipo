@@ -58,7 +58,7 @@ export function sonarVozCoach(...claves) {
     s.start();
     // (sonido 2) lo de fondo se aparta mientras habla, y nada más suena encima
     apartarFondo((buffers[k].duration || 1.5) + 0.3); ocupar(c, 'voz-coach', buffers[k].duration || 1.5);
-    try { globalThis.dispatchEvent?.(new CustomEvent('fbe-sonido', { detail: { tipo: `voz:${k}` } })); } catch { /* */ }
+    try { globalThis.dispatchEvent?.(new CustomEvent('fbe-sonido', { detail: { tipo: `voz:${k}`, segundos: buffers[k].duration || 1.5 } })); } catch { /* */ }
     return true;
   } catch { return false; }
 }

@@ -163,7 +163,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             <Segmentos valor={bloque.objetivo_logrado == null ? '' : bloque.objetivo_logrado ? 'si' : 'no'} opciones={[['si', 'Sí'], ['no', 'No'], ['', 'Sin decidir']]} alCambiar={(v) => guardar('bloques', bloque.id, { objetivo_logrado: v == null || v === '' ? null : v === 'si' })} etiqueta="¿Se logró el objetivo del bloque?" /></div>
         )}
         {/* (v0.104) la música de todo el bloque (en las plantillas, no: se enlaza al bloque de cada atleta) */}
-        {!bloque.es_plantilla && <CampoMusica clave={`bloque:${bloque.id}`} etiqueta="Música del bloque" />}
+        {/* (música 3) también en las plantillas: al copiarlas, su música va con ellas */}
+        <CampoMusica clave={`bloque:${bloque.id}`} etiqueta="Música del bloque" />
         <div class="fila-envolver">
           {!bloque.es_plantilla && <button class="btn btn-peq" onClick={async () => { const p = await estructura(() => api.copiarBloque(bloque.id, { nombre: bloque.nombre }), 'Guardado como plantilla'); if (p) alCrearPlantilla?.(p); }}><Icono n="plantillas" /> Guardar como plantilla</button>}
           <button class="btn btn-peq btn-peligro" onClick={() => setConfirmarBorrado({ tipo: 'bloque' })}><Icono n="basura" /> Borrar {bloque.es_plantilla ? 'plantilla' : 'bloque'}</button>
