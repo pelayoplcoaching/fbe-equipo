@@ -222,19 +222,32 @@
   --fuego: #FE5A1D;
   --grad-noche: linear-gradient(160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
   --grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
-  --grad-record: linear-gradient(135deg, #FADA99, #D3A329, #7E5D00);
-  --grad-fuego: linear-gradient(160deg, #FFB663, #FE5A1D, #B7162D);
+  --grad-record: linear-gradient(135deg, #FADA99, #EBC166, #D3A329);
+  --grad-fuego: linear-gradient(160deg, #FFB663, #FE5A1D);
+  --medalla: radial-gradient(circle at 32% 26%, #FEEDC9, #EBC166 55%, #A97F00);
+  --aro-amanecer: conic-gradient(from 200deg, var(--morado), var(--rosa-400), var(--oro-300), var(--rosa-400), var(--morado));
+  --acento-50: var(--marca-50);
+  --acento-100: var(--marca-100);
+  --acento-200: var(--marca-200);
+  --acento-300: var(--marca-300);
+  --acento-400: var(--marca-400);
+  --acento-500: var(--marca-500);
+  --acento-600: var(--marca-600);
+  --acento-700: var(--marca-700);
+  --acento-800: var(--marca-800);
+  --acento-900: var(--marca-900);
+  --acento-950: var(--marca-950);
   --confeti-1: #7C6AFD;
   --confeti-2: #D3A329;
   --confeti-3: #FF74B0;
   --confeti-4: #37C2BB;
   --confeti-5: #73ACFF;
   --confeti-6: #FC8642;
-  --seq-1: #EEECFF;
-  --seq-2: #C4BFFF;
-  --seq-3: #7C6AFD;
-  --seq-4: #462ABF;
-  --seq-5: #241665;
+  --seq-1: color-mix(in srgb, var(--morado) 14%, var(--hoja));
+  --seq-2: color-mix(in srgb, var(--morado) 34%, var(--hoja));
+  --seq-3: color-mix(in srgb, var(--morado) 56%, var(--hoja));
+  --seq-4: color-mix(in srgb, var(--morado) 78%, var(--hoja));
+  --seq-5: var(--morado);
   --div-1: #9F4500;
   --div-2: #FFB38C;
   --div-3: #DDDDE3;
@@ -439,8 +452,8 @@
   :root {
     --grad-noche: linear-gradient(in oklch 160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
     --grad-amanecer: linear-gradient(in oklch 135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
-    --grad-record: linear-gradient(in oklch 135deg, #FADA99, #D3A329, #7E5D00);
-    --grad-fuego: linear-gradient(in oklch 160deg, #FFB663, #FE5A1D, #B7162D);
+    --grad-record: linear-gradient(in oklch 135deg, #FADA99, #EBC166, #D3A329);
+    --grad-fuego: linear-gradient(in oklch 160deg, #FFB663, #FE5A1D);
   }
 }
 
@@ -546,8 +559,9 @@
       --confeti-4: oklch(74.1% 0.147 189.9);
       --confeti-5: oklch(74.0% 0.173 257.7);
       --confeti-6: oklch(74.0% 0.211 48.0);
-      --grad-record: linear-gradient(in oklch 135deg, oklch(90.0% 0.115 84.5), oklch(74.1% 0.180 85.3), oklch(49.9% 0.131 84.4));
-      --grad-fuego: linear-gradient(in oklch 160deg, oklch(82.9% 0.167 67.8), oklch(68.1% 0.269 38.0), oklch(50.0% 0.244 21.9));
+      --grad-record: linear-gradient(in oklch 135deg, oklch(90.0% 0.115 84.5), oklch(83.0% 0.153 84.9), oklch(74.1% 0.180 85.3));
+      --grad-fuego: linear-gradient(in oklch 160deg, oklch(82.9% 0.167 67.8), oklch(68.1% 0.269 38.0));
+      --medalla: radial-gradient(circle at 32% 26%, oklch(95.1% 0.064 85.7), oklch(83.0% 0.153 84.9) 55%, oklch(62.1% 0.163 85.2));
       --serie-2: oklch(62.1% 0.192 55.0);
       --serie-3: oklch(50.1% 0.111 189.5);
       --serie-4: oklch(50.0% 0.231 258.1);

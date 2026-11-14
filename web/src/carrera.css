@@ -56,7 +56,7 @@
 
 /* ---------- la ficha del coach ---------- */
 .carrera-resumen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
-  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--hoja) 70%); }
 .carrera-resumen-nombre { font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
 .carrera-fase-fila { display: grid; grid-template-columns: minmax(0, 1.2fr) 64px minmax(0, 2fr) auto; gap: 6px; align-items: center; }
 .carrera-fases { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -121,7 +121,7 @@
 .sesion-plan-vol, .parte-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
 .sesion-plan-vol .campo, .parte-campos .campo { margin: 0; min-width: 0; }
 .parte-campos .campo:last-child { grid-column: span 2; }
-.partes-editor { padding: 8px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 5%, var(--hoja)); }
+.partes-editor { padding: 8px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
 .parte-fila { display: grid; gap: 6px; padding: 8px; border-radius: var(--r-10); background: var(--hoja); box-shadow: inset 3px 0 0 var(--fase-c, var(--linea)), 0 0 0 1px var(--borde); }
 .parte-fila-cab { display: flex; align-items: center; gap: 6px; }
 .parte-fila-cab .selector { flex: none; width: auto; }
@@ -133,7 +133,7 @@
 [data-fase="libre"] { --fase-c: var(--tinta-3); }
 .partes-cerradas { align-items: baseline; gap: 6px; }
 .campos-carrera { padding-top: 6px; border-top: var(--filo-fino) dashed var(--linea); }
-.plan-carrera-semana { background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); box-shadow: var(--sombra-tarjeta), inset 3px 0 0 var(--morado); }
+.plan-carrera-semana { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); box-shadow: var(--sombra-tarjeta), inset 3px 0 0 var(--morado); }
 .plan-carrera-semana .chip { margin-left: 6px; }
 .plan-carrera-items { gap: 2px; }
 
@@ -185,7 +185,7 @@
 
 .km-semana { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .km-pista { position: relative; height: 12px; border-radius: var(--r-6); background: var(--hoja-2); overflow: hidden; }
-.km-previsto { position: absolute; top: 0; bottom: 0; border-radius: var(--r-6); background: color-mix(in srgb, var(--morado) 22%, transparent); }
+.km-previsto { position: absolute; top: 0; bottom: 0; border-radius: var(--r-6); background: var(--acento-a22); }
 .km-hecho { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: var(--r-4); background: var(--z2); }
 .km-sem-valor { white-space: nowrap; color: var(--tinta-2); }
 

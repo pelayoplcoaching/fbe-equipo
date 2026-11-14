@@ -90,7 +90,7 @@
 /* (9) Los controles del sistema, con el acento: casillas, deslizadores y barras nativas, el cursor al escribir y el
    texto seleccionado (sobre las tarjetas oscuras, en claro) */
 :root { accent-color: var(--morado); caret-color: var(--morado); }
-::selection { background: color-mix(in srgb, var(--morado) 26%, transparent); color: inherit; }
+::selection { background: var(--acento-a22); color: inherit; }
 :is(.hero-dia, .portada-sesion, .carnet, .temporizador, .resumen-hero, .tarjeta-intervalos, .bienvenida, .escena-final) ::selection { background: color-mix(in srgb, var(--blanco) 32%, transparent); }
 
 /* (10) El foco se ve sobre cualquier fondo: en las superficies oscuras o de color, el anillo va en claro */

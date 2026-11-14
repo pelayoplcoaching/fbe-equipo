@@ -164,7 +164,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
 /* Los estados vacíos: la ilustración grande en su escenario de dos aros */
 .vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px;
-  box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent); }
+  box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
 @media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
 
 /* ── Bloque V · las ilustraciones vivas ─────────────────────────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   background: radial-gradient(closest-side, color-mix(in srgb, var(--c, var(--morado)) 55%, transparent), transparent); }
 .habito-cab.hecho::after { opacity: .5; }
 /* 7 · La comida que toca por la hora: su cabecera, con un filo */
-.toma-ilu.ahora { box-shadow: var(--sombra-tarjeta, var(--sombra)), inset 0 0 0 2px color-mix(in srgb, var(--morado) 60%, var(--blanco)); }
+.toma-ilu.ahora { box-shadow: var(--sombra-tarjeta, var(--sombra)), inset 0 0 0 2px color-mix(in srgb, var(--morado) 55%, var(--blanco)); }
 /* 8 · La franja de cada paso del check-in: un marco que recorta la imagen que entra */
 .ck-paso .ck-ilu-marco { position: relative; overflow: hidden; }
 .ck-ilu-marco > .ck-ilu-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 70% 55%; }

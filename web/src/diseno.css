@@ -79,13 +79,13 @@
 .opciones button[aria-pressed="true"],
 .chip-serie.actual {
   background: var(--morado-suave); color: var(--tinta);
-  border-color: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent);
+  border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--acento-a55);
 }
 .chip-serie.actual { border-width: 1px; }
-.tira-dia.hoy { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
+.tira-dia.hoy { box-shadow: inset 0 0 0 1.5px var(--acento-a55); }
 /* «La que toca» (la sesión siguiente, la semana en curso del bloque): el mismo filo fino, no un marco de 2 px */
-.dia.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
-.bloque-semana.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 55%, transparent); }
+.dia.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px var(--acento-a55); }
+.bloque-semana.actual { box-shadow: var(--sombra), inset 0 0 0 1.5px var(--acento-a55); }
 
 /* d) Pestañas de vista: el subrayado es de las pestañas y solo de ellas; más grueso y redondeado para que no
       parezca una línea de tabla. */
@@ -426,11 +426,11 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .acceso h1.peq { font-size: var(--letra-22); }
 .app:has(> .acceso > .acceso-caja) { --aire: clamp(0.75rem, 12vh - 3rem, 8rem); --noche: calc(var(--aire) + env(safe-area-inset-top, 0px) + 10.75rem);
   background: radial-gradient(42rem 16rem at 80% 100%, color-mix(in srgb, var(--morado) 62%, var(--tinta-noche)) 0%, transparent 64%) top / 100% var(--noche) no-repeat,
-    radial-gradient(30rem 13rem at 6% 100%, var(--marca-800) 0%, transparent 62%) top / 100% var(--noche) no-repeat,
+    radial-gradient(30rem 13rem at 6% 100%, var(--acento-800) 0%, transparent 62%) top / 100% var(--noche) no-repeat,
     linear-gradient(var(--tinta-noche), var(--tinta-noche)) top / 100% var(--noche) no-repeat; }
 .app > .acceso:has(> .acceso-caja) { align-content: start; padding-top: calc(var(--aire) + env(safe-area-inset-top, 0px)); }
 .app > .acceso > .acceso-caja { position: relative; margin-top: 4.25rem; }
-.app > .acceso > .acceso-caja > .marca:first-child { position: absolute; left: 4px; bottom: calc(100% + 18px); color: var(--marca-50); font-size: var(--letra-18); gap: 10px; }
+.app > .acceso > .acceso-caja > .marca:first-child { position: absolute; left: 4px; bottom: calc(100% + 18px); color: var(--acento-50); font-size: var(--letra-18); gap: 10px; }
 .app > .acceso > .acceso-caja > .marca:first-child img, .app > .acceso > .acceso-caja > .marca:first-child svg { width: 36px; height: 36px; border-radius: var(--r-10); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); }
 @media (min-width: 700px) {
   .acceso-caja { width: min(27.5rem, 100%); padding: 32px 30px 26px; }
@@ -742,7 +742,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
   -webkit-mask-image: linear-gradient(var(--oklab,) to left, var(--negro) 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(var(--oklab,) to bottom, var(--negro) 38%, transparent 92%); -webkit-mask-composite: source-in;
   mask-image: linear-gradient(var(--oklab,) to left, var(--negro) 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(var(--oklab,) to bottom, var(--negro) 38%, transparent 92%); mask-composite: intersect; }
 .hero-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, var(--blanco)); }
-.hero-arte .claro { stroke: var(--marca-100); }
+.hero-arte .claro { stroke: var(--acento-100); }
 .hero-arte .tenue { stroke: var(--neutro-500); }
 .hero-arte .relleno-punto.tenue { fill: var(--neutro-500); stroke: none; }
 @media (prefers-reduced-motion: no-preference) { .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both; } }
@@ -956,7 +956,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    logros), las cifras suben (Sesion.jsx: CifraSube) y en el botón de compartir asoma la tarjeta en pequeño. */
 .resumen-hero .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 70%; height: 100%; pointer-events: none; opacity: .5;
   -webkit-mask-image: linear-gradient(var(--oklab,) to left, var(--negro) 10%, transparent 92%); mask-image: linear-gradient(var(--oklab,) to left, var(--negro) 10%, transparent 92%); }
-.resumen-hero.con-record .resumen-medalla { background: var(--oro-200); color: var(--marca-900); box-shadow: 0 0 0 6px color-mix(in srgb, var(--oro-200) 22%, transparent); }
+.resumen-hero.con-record .resumen-medalla { background: var(--oro-200); color: var(--acento-900); box-shadow: 0 0 0 6px color-mix(in srgb, var(--oro-200) 22%, transparent); }
 .resumen-hero.con-record .resumen-pr { background: color-mix(in srgb, var(--oro-200) 18%, transparent); }
 .resumen-hero.con-record .resumen-pr svg { color: var(--oro-200); }
 .resumen-medalla { position: relative; }
@@ -1017,7 +1017,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    escenario: un disco del color de la marca con dos aros que se apagan. */
 .vacio:not(.con-ilustracion) > svg:first-child {
   width: 60px; height: 60px; padding: 15px; border-radius: 50%; color: var(--morado); background: var(--morado-suave);
-  box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent);
+  box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4);
   margin: 14px 0 12px;
 }
 @media (prefers-reduced-motion: no-preference) { .vacio:not(.con-ilustracion) > svg:first-child { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
@@ -1158,8 +1158,8 @@ img.img-llega { opacity: 0; }
    Al arrastrar por una gráfica (comunes.jsx: useRaspado) ya salía el globo con el valor. Ahora, además: una guía
    vertical cruza la gráfica por el punto, el punto elegido lleva un halo, el globo se mueve sin saltos y, con el dedo, hay un
    toque al pasar de un punto a otro. */
-.grafica-guia { position: absolute; top: 4px; bottom: 22px; width: 0; border-left: var(--filo-medio) dashed color-mix(in srgb, var(--morado) 55%, transparent); pointer-events: none; transform: translateX(-0.75px); }
-.grafica .punto.elegido { stroke: color-mix(in srgb, var(--morado) 28%, transparent); stroke-width: 13; paint-order: stroke; }
+.grafica-guia { position: absolute; top: 4px; bottom: 22px; width: 0; border-left: var(--filo-medio) dashed var(--acento-a55); pointer-events: none; transform: translateX(-0.75px); }
+.grafica .punto.elegido { stroke: var(--acento-a30); stroke-width: 13; paint-order: stroke; }
 @media (prefers-reduced-motion: no-preference) {
   .grafica-globo { transition: left var(--mov-instante) linear, top var(--mov-instante) linear; }
   .grafica-guia { transition: left var(--mov-instante) linear; }
@@ -1270,7 +1270,7 @@ img.img-llega { opacity: 0; }
    Las siluetas de carga ya tenían una forma por pantalla (comunes.jsx: Siluetas). Ahora brillan en morado tenue en vez
    de en gris, y la de Hoy lleva la tarjeta grande con sus líneas y su botón, en la noche de la marca, para que lo que
    llega caiga exactamente encima. */
-.sil { background: linear-gradient(var(--oklab,) 90deg, var(--hoja-2) 0%, color-mix(in srgb, var(--morado) 9%, var(--hoja-2)) 45%, var(--hoja-2) 90%); background-size: 220% 100%; }
+.sil { background: linear-gradient(var(--oklab,) 90deg, var(--hoja-2) 0%, color-mix(in srgb, var(--morado) 8%, var(--hoja-2)) 45%, var(--hoja-2) 90%); background-size: 220% 100%; }
 .sil-hero { display: grid; align-content: end; gap: 10px; height: 214px; padding: 22px 20px; border-radius: 22px;
   background: linear-gradient(var(--oklab,) 90deg, var(--hero) 0%, color-mix(in srgb, var(--hero) 80%, var(--blanco)) 45%, var(--hero) 90%); background-size: 220% 100%; }
 .sil-hero .sil-hero-linea { background: rgba(255, 255, 255, .14); border-radius: var(--r-6); animation: none; }
@@ -1282,8 +1282,8 @@ img.img-llega { opacity: 0; }
    mismo sitio y con el mismo tamaño: el texto se vuelve transparente, no desaparece, así nada se mueve. Sin
    «reducir movimiento», la marca llega con un rebote corto. Va en ::before (libre en cuanto se quita data-guardando);
    el ::after de los botones es la zona de toque de pulido.css y no se toca. (Sobre estilos.css 232 .btn-primario) */
-.btn-primario:not(:disabled) { box-shadow: var(--brillo), 0 6px 16px -8px color-mix(in srgb, var(--morado) 70%, transparent); }
-.btn-primario:not(:disabled):active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 8px -6px color-mix(in srgb, var(--morado) 70%, transparent); }
+.btn-primario:not(:disabled) { box-shadow: var(--brillo), 0 6px 16px -8px var(--acento-a70); }
+.btn-primario:not(:disabled):active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 8px -6px var(--acento-a70); }
 button[data-hecho] { position: relative; -webkit-text-fill-color: transparent; }
 button[data-hecho] > * { visibility: hidden; }
 button[data-hecho]::before {
@@ -1302,9 +1302,9 @@ button[data-hecho]::before {
    (aria-invalid) tiembla una vez, de lado y poco (ui/tacto.js pone data-tiembla), y su texto de error entra deslizándose
    desde arriba, sin cambiar de opacidad. (Sobre estilos.css 253) */
 .entrada, .selector, .area { transition: border-color var(--mov-rapido) var(--curva-casa), box-shadow var(--mov-medio) var(--curva-casa); }
-.entrada:focus, .selector:focus, .area:focus { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); }
+.entrada:focus, .selector:focus, .area:focus { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px var(--acento-a16); }
 .entrada:focus-visible, .selector:focus-visible, .area:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; box-shadow: none; }
-@media (hover: none) { .entrada:focus-visible, .selector:focus-visible, .area:focus-visible { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); } }
+@media (hover: none) { .entrada:focus-visible, .selector:focus-visible, .area:focus-visible { outline: none; border-color: var(--morado); box-shadow: 0 0 0 4px var(--acento-a16); } }
 [aria-invalid="true"]:is(.entrada, .selector, .area) { border-color: var(--alerta); }
 [aria-invalid="true"]:is(.entrada, .selector, .area):focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--alerta) 18%, transparent); }
 [data-tiembla] { animation: campo-tiembla .4s cubic-bezier(.36, .07, .19, .97) both; }
@@ -1351,13 +1351,13 @@ input[type="range"]:not(.voz-barra)::-moz-range-track { height: 4px; border-radi
 input[type="range"]:not(.voz-barra)::-moz-range-progress { height: 4px; border-radius: var(--r-2); background: var(--morado); }
 input[type="range"]:not(.voz-barra)::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%;
-  background: var(--blanco); border: var(--filo-medio) solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+  background: var(--blanco); border: var(--filo-medio) solid color-mix(in srgb, var(--morado) 45%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
   transition: transform var(--mov-rapido) var(--curva-rebote), box-shadow var(--mov-rapido) var(--curva-casa);
 }
 input[type="range"]:not(.voz-barra)::-moz-range-thumb {
-  width: 22px; height: 22px; border-radius: 50%; background: var(--blanco); border: var(--filo-medio) solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+  width: 22px; height: 22px; border-radius: 50%; background: var(--blanco); border: var(--filo-medio) solid color-mix(in srgb, var(--morado) 45%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
 }
-input[type="range"]:not(.voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px color-mix(in srgb, var(--morado) 14%, transparent); }
+input[type="range"]:not(.voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px var(--acento-a12); }
 input[type="range"]:not(.voz-barra):focus-visible { outline: none; }
 input[type="range"]:not(.voz-barra):focus-visible::-webkit-slider-thumb { box-shadow: var(--halo-ancho), 0 0 0 5px var(--foco); }
 input[type="range"]:is(.voz-barra)::-webkit-slider-thumb { transition: transform var(--mov-rapido) var(--curva-rebote); }
@@ -1449,7 +1449,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    en grande. Las elipses de esas escenas se pintan como el resto de trazos (estilos.css 2728 solo cubre path, rect y
    circle). */
 .ilustracion ellipse { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.receta-foto.vacia { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2)); box-shadow: none; overflow: hidden; }
+.receta-foto.vacia { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 8%, var(--hoja-2)), var(--hoja-2)); box-shadow: none; overflow: hidden; }
 .receta-foto.vacia .receta-escena { width: 86%; height: auto; aspect-ratio: 160 / 112; }
 .receta-foto.vacia.grande .receta-escena { width: min(52%, 220px); height: auto; }
 .receta-foto.vacia.grande { aspect-ratio: 16 / 9; }
@@ -1547,7 +1547,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .paso button { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .paso-odo { transition: transform var(--mov-rapido) var(--curva-rebote); }
 .paso-arrastre .paso-odo { transform: scale(1.12); }
-.paso-arrastre { outline: 2px solid color-mix(in srgb, var(--morado) 40%, transparent); outline-offset: -1px; }
+.paso-arrastre { outline: 2px solid var(--acento-a45); outline-offset: -1px; }
 @media (prefers-reduced-motion: no-preference) {
   .paso[data-tope] .paso-odo, .paso[data-tope] input { animation: paso-topa .34s var(--curva-casa); }
 }
@@ -1625,7 +1625,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 }
 @keyframes cab-despega {
   from { box-shadow: 0 1px 0 transparent, 0 10px 22px -20px transparent; }
-  to { box-shadow: var(--raya), 0 10px 22px -18px color-mix(in srgb, var(--marca-950) 32%, transparent); }
+  to { box-shadow: var(--raya), 0 10px 22px -18px color-mix(in srgb, var(--acento-950) 32%, transparent); }
 }
 
 /* ── 79 · Cabeceras que se empujan en la sesión (tanda 23) ────────────────────────────────────────────────────────────
@@ -1761,7 +1761,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    se apoya en su borde, con un aro del color de la tarjeta. Detrás del avatar, sin texto encima. */
 .perfil-cabeza { position: relative; isolation: isolate; overflow: hidden; padding-top: 44px; }
 .perfil-cabeza::before { content: ""; position: absolute; inset: 0 0 auto; height: 92px; z-index: -1;
-  background: var(--grano), radial-gradient(260px 150px at 88% 0%, color-mix(in srgb, var(--marca-400) 55%, transparent), transparent 70%), radial-gradient(220px 120px at 4% 110%, color-mix(in srgb, var(--marca-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--tinta-noche)); }
+  background: var(--grano), radial-gradient(260px 150px at 88% 0%, color-mix(in srgb, var(--acento-400) 55%, transparent), transparent 70%), radial-gradient(220px 120px at 4% 110%, color-mix(in srgb, var(--acento-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--acento-900), var(--tinta-noche)); }
 .perfil-cabeza .avatar.enorme, .perfil-cabeza .avatar.enorme.con-foto { box-shadow: 0 0 0 4px var(--hoja), 0 10px 24px -10px color-mix(in srgb, var(--tinta-noche) 55%, transparent); }
 
 /* ── 90 · Avatares de iniciales con volumen (tanda 24) ────────────────────────────────────────────────────────────────
@@ -1788,9 +1788,9 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 /* ── 93 · Fondo con luz (tanda 24) ────────────────────────────────────────────────────────────────────────────────────
    Un resplandor muy tenue del acento arriba de cada pantalla (como Apple Fitness o Gentler Streak), que se va con la
    página al bajar. El fondo de la raíz sigue siendo el de siempre (bloque 61). */
-body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 9%, transparent), transparent 72%) no-repeat, var(--tiza); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 15%, transparent), transparent 72%) no-repeat, var(--tiza); } }
-:root[data-theme="dark"] body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, var(--morado) 15%, transparent), transparent 72%) no-repeat, var(--tiza); }
+body { background: radial-gradient(150% 380px at 50% -70px, var(--acento-a8), transparent 72%) no-repeat, var(--tiza); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { background: radial-gradient(150% 380px at 50% -70px, var(--acento-a16), transparent 72%) no-repeat, var(--tiza); } }
+:root[data-theme="dark"] body { background: radial-gradient(150% 380px at 50% -70px, var(--acento-a16), transparent 72%) no-repeat, var(--tiza); }
 @media (prefers-contrast: more), (forced-colors: active) { body, :root body { background: var(--tiza); } }
 
 /* ── 94 · Casillas de la serie más ligeras (tanda 24) ─────────────────────────────────────────────────────────────────
@@ -1806,9 +1806,9 @@ body { background: radial-gradient(150% 380px at 50% -70px, color-mix(in srgb, v
 /* ── 95 · «Terminar sesión» se ilumina (tanda 24) ─────────────────────────────────────────────────────────────────────
    Con todas las series de la sesión hechas (clase lista, Sesion.jsx), el botón de terminar lleva un halo del acento y
    late dos veces: es lo siguiente. */
-.btn-terminar.lista { box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent), 0 12px 28px -12px color-mix(in srgb, var(--morado) 75%, transparent); }
+.btn-terminar.lista { box-shadow: 0 0 0 4px var(--acento-a22), 0 12px 28px -12px var(--acento-a70); }
 @media (prefers-reduced-motion: no-preference) { .btn-terminar.lista { animation: terminar-llama 1.6s var(--curva-casa) 2; } }
-@keyframes terminar-llama { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 10%, transparent), 0 12px 28px -12px color-mix(in srgb, var(--morado) 75%, transparent); } }
+@keyframes terminar-llama { 50% { box-shadow: 0 0 0 9px var(--acento-a8), 0 12px 28px -12px var(--acento-a70); } }
 
 /* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
    TANDA 25 · Comodidad y suavidad (7/11, noche)
@@ -1846,8 +1846,8 @@ html:has(.sesion-vista) { scroll-padding-top: calc(var(--alto-cab, 64px) + env(s
    El cursor de escritura va en el acento, y los campos que rellena el navegador (correo y contraseña guardados) ya no
    se pintan de su azul o amarillo: quedan con un tinte del acento y el texto de siempre. */
 input, textarea { caret-color: var(--morado); }
-.entrada:-webkit-autofill, .entrada:-webkit-autofill:hover { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 7%, var(--hoja)); transition: background-color 600000s 0s, color 600000s 0s; }
-.entrada:-webkit-autofill:focus { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 7%, var(--hoja)), 0 0 0 4px color-mix(in srgb, var(--morado) 16%, transparent); }
+.entrada:-webkit-autofill, .entrada:-webkit-autofill:hover { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 8%, var(--hoja)); transition: background-color 600000s 0s, color 600000s 0s; }
+.entrada:-webkit-autofill:focus { -webkit-text-fill-color: var(--tinta); box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--morado) 8%, var(--hoja)), 0 0 0 4px var(--acento-a16); }
 
 /* ── 101 · Fotos con su filo (tanda 25) ───────────────────────────────────────────────────────────────────────────────
    Un filo finísimo por dentro (como las fotos en iOS) para que una foto clara no se funda con la tarjeta blanca. */
@@ -1886,7 +1886,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .entreno-nombre .chip.morado, :root:not([data-theme="light"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: var(--oro); } }
 .trofeo-tarjeta.reciente::before { background: linear-gradient(var(--oklab,) 180deg, var(--oro-claro), var(--oro)); }
 .reciente .trofeo-ico, .record-cab.reciente .trofeo-ico { background: var(--oro-suave); color: var(--oro); }
-.trofeo-nuevo { background: linear-gradient(var(--oklab,) 135deg, var(--oro-200), var(--oro-300)); color: var(--oro-900); }
+.trofeo-nuevo { background: var(--grad-record); color: var(--oro-900); }
 
 /* ── 105 · «Tus entrenamientos» como hojas de calendario (tanda 26) ───────────────────────────────────────────────────
    Como en Calendario: arriba, pequeño y en el acento, el día de la semana (Semana.jsx); debajo, el número grande, en
@@ -1915,8 +1915,8 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 /* ── 108 · Miniaturas del diario con su fondo (tanda 26) ──────────────────────────────────────────────────────────────
    Mientras una foto o un vídeo del diario carga (o si no tiene miniatura), su hueco era un recuadro gris claro. Ahora
    lleva la noche de la marca con su grano y, en medio, el icono de lo que es: cuando llega la imagen, la tapa. */
-.diario-medio { background: var(--grano), radial-gradient(120% 80% at 80% 0%, color-mix(in srgb, var(--marca-400) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--marca-950)); }
-.diario-medio::before { content: ""; position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; background: color-mix(in srgb, var(--marca-50) 50%, transparent); -webkit-mask: var(--ico-diario) center / contain no-repeat; mask: var(--ico-diario) center / contain no-repeat; }
+.diario-medio { background: var(--grano), radial-gradient(120% 80% at 80% 0%, color-mix(in srgb, var(--acento-400) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--acento-900), var(--acento-950)); }
+.diario-medio::before { content: ""; position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; background: color-mix(in srgb, var(--acento-50) 50%, transparent); -webkit-mask: var(--ico-diario) center / contain no-repeat; mask: var(--ico-diario) center / contain no-repeat; }
 .diario-medio > img, .diario-medio > video { position: relative; }
 :root { --ico-diario: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='3'/%3E%3Cpath d='M10 9.5v5l4.5-2.5z'/%3E%3C/svg%3E"); }
 
@@ -1928,7 +1928,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 
 /* ── 110 · La marca de arriba como icono de app (tanda 26) ────────────────────────────────────────────────────────────
    El lobo de la cabecera de Hoy se apoya con una sombra de su color, como un icono en la pantalla de inicio. */
-.cabecera .marca img, .cabecera .marca svg { border-radius: var(--r-xs); box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--morado) 70%, transparent), 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
+.cabecera .marca img, .cabecera .marca svg { border-radius: var(--r-xs); box-shadow: 0 4px 10px -4px var(--acento-a70), 0 0 0 1px var(--acento-a16); }
 
 /* ── 111 · Pictogramas de ejercicio con volumen (tanda 26) ────────────────────────────────────────────────────────────
    Las casillas de los pictogramas (la sesión, la semana, la ficha) eran planas: ahora un degradado suave hacia abajo y
@@ -2010,7 +2010,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    curso lleva un brillo en la punta de lo hecho. */
 .tramo-lleno { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 45%, var(--hoja)), color-mix(in srgb, var(--morado) 70%, var(--hoja))); }
 .tramos a.completo .tramo-lleno, .tramos a[aria-current="step"] .tramo-lleno { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 62%, var(--blanco)), var(--morado)); }
-.tramos a[aria-current="step"] .tramo-lleno { box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 60%, transparent); }
+.tramos a[aria-current="step"] .tramo-lleno { box-shadow: 2px 0 8px var(--acento-a55); }
 
 /* ── 121 · El check-in con barra por pasos (tanda 27) ─────────────────────────────────────────────────────────────────
    Como las historias: la barra del check-in se parte en tantos tramos como preguntas (Checkin.jsx: --pasos), con un
@@ -2061,7 +2061,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 126 · El aviso del coach como un mensaje (tanda 28) ──────────────────────────────────────────────────────────────
    El aviso de Hoy («De tu coach…») lleva el lobo del coach (Avisos.jsx) y su texto en una burbuja blanca con colita,
    como sus respuestas (bloque 91). */
-.aviso-coach { grid-template-columns: 36px minmax(0, 1fr) auto; background: color-mix(in srgb, var(--morado) 8%, var(--tiza)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 14%, transparent); }
+.aviso-coach { grid-template-columns: 36px minmax(0, 1fr) auto; background: color-mix(in srgb, var(--morado) 8%, var(--tiza)); box-shadow: inset 0 0 0 1px var(--acento-a12); }
 .aviso-coach > .aviso-lobo { width: 36px; height: 36px; border-radius: 50%; }
 .aviso-coach > .pila-xs { padding: 9px 12px; border-radius: var(--r-4) var(--r-16) var(--r-16) var(--r-16); background: var(--hoja); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
 
@@ -2079,17 +2079,17 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    (rojo para la proteína: parecía una alerta). Como los anillos desde la tanda 1: lo cumplido en verde y lo apuntado
    sin llegar, en morado tenue. */
 .mes-habito i.si { background: var(--ok); }
-.mes-habito i.casi { background: color-mix(in srgb, var(--morado) 32%, transparent); }
+.mes-habito i.casi { background: var(--acento-a30); }
 
 /* ── 129 · El nombre de la sesión con brillo (tanda 28) ───────────────────────────────────────────────────────────────
    El nombre grande de la sesión, en la tarjeta de Hoy y en la portada de la sesión, lleva un degradado de luz de
    arriba abajo (blanco a lavanda), como un rótulo iluminado. Claro sobre la noche: el contraste no baja de 9:1. */
-.hero-dia .titular h2, .portada-sesion h1 { background: linear-gradient(var(--oklab,) 180deg, var(--blanco) 35%, var(--marca-200)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-dia .titular h2, .portada-sesion h1 { background: linear-gradient(var(--oklab,) 180deg, var(--blanco) 35%, var(--acento-200)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active) { .hero-dia .titular h2, .portada-sesion h1 { background: none; -webkit-text-fill-color: currentColor; } }
 
 /* ── 130 · Títulos de pantalla con tinta de degradado (tanda 28) ──────────────────────────────────────────────────────
    El título grande de cada pantalla va de la tinta a un toque del acento, muy sutil. Sigue muy por encima de 4,5:1. */
-.cabecera-grande .titulo h1 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 50%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.cabecera-grande .titulo h1 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 45%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active), (prefers-contrast: more) { .cabecera-grande .titulo h1 { background: none; -webkit-text-fill-color: currentColor; } }
 
 /* ── 131 · La racha con su llama (tanda 28) ───────────────────────────────────────────────────────────────────────────
@@ -2098,7 +2098,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 132 · El avatar de arriba con su aro (tanda 28) ──────────────────────────────────────────────────────────────────
    El avatar de la cabecera de Hoy (el botón del perfil) lleva un aro de degradado de la marca, separado por un filo. */
-.cabecera .btn-avatar { padding: 2.5px; background: conic-gradient(from 210deg, var(--morado), var(--marca-500), var(--oro-300), var(--marca-500), var(--morado)); }
+.cabecera .btn-avatar { padding: 2.5px; background: conic-gradient(from 210deg, var(--morado), var(--acento-500), var(--oro-300), var(--acento-500), var(--morado)); }
 .cabecera .btn-avatar > .avatar { box-shadow: 0 0 0 1.5px var(--tiza); }
 
 /* ── 133 · «Cómo llegas» sin contestar invita (tanda 28) ──────────────────────────────────────────────────────────────
@@ -2137,7 +2137,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 138 · Las gráficas con sombra de color (tanda 28) ────────────────────────────────────────────────────────────────
    La línea de las gráficas de fuerza y de peso deja un resplandor suave del acento debajo, como en las apps de salud. */
-.grafica path.linea { filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--morado) 35%, transparent)); }
+.grafica path.linea { filter: drop-shadow(0 5px 5px var(--acento-a30)); }
 @media (forced-colors: active) { .grafica path.linea { filter: none; } }
 
 /* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -2163,14 +2163,14 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    de la caja, en vez de signos grises sueltos. */
 .paso { padding-inline: 6px; grid-template-columns: 38px minmax(0, 1fr) 38px; }
 .paso > button { width: 38px; height: 38px; align-self: center; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 650; transition: background-color var(--mov-rapido) var(--curva-casa), transform var(--mov-rapido) var(--curva-casa); }
-.paso > button:active { background: color-mix(in srgb, var(--morado) 24%, var(--hoja)); }
+.paso > button:active { background: color-mix(in srgb, var(--morado) 22%, var(--hoja)); }
 .paso > button:disabled { opacity: var(--op-deshabilitado); }
 
 /* ── 142 · Barras de progreso con degradado y brillo (tanda 29) ───────────────────────────────────────────────────────
    Las barras de los objetivos y de los primeros pasos se llenan con un degradado del acento (claro a la izquierda) y un
    brillo en la punta; las conseguidas, en verde. */
 .progreso-barra { height: 9px; border-radius: var(--r-pildora); }
-.progreso-barra span { border-radius: inherit; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.progreso-barra span { border-radius: inherit; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 2px 0 8px var(--acento-a45); }
 .progreso-barra.hecho span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 55%, var(--blanco)), var(--ok)); box-shadow: none; }
 
 /* ── 143 · «Tus cifras» con su icono en un disco de color (tanda 29) ──────────────────────────────────────────────────
@@ -2190,9 +2190,9 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 145 · Los músculos más trabajados brillan (tanda 29) ─────────────────────────────────────────────────────────────
    En el mapa de series por músculo, los músculos con 5 series o más dejan un resplandor de su color, más fuerte cuantas
    más series. */
-.mapa-muscular .musculo.m2 { filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--morado) 35%, transparent)); }
-.mapa-muscular .musculo.m3 { filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--morado) 45%, transparent)); }
-.mapa-muscular .musculo.m4 { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--morado) 65%, transparent)); }
+.mapa-muscular .musculo.m2 { filter: drop-shadow(0 0 1.5px var(--acento-a30)); }
+.mapa-muscular .musculo.m3 { filter: drop-shadow(0 0 2.5px var(--acento-a45)); }
+.mapa-muscular .musculo.m4 { filter: drop-shadow(0 0 4px var(--acento-a70)); }
 
 /* ── 146 · La lista de la compra con las cantidades en píldora (tanda 29) ─────────────────────────────────────────────
    En la lista de la compra, la cantidad de cada cosa (150 g, 2 uds…) va en una píldora suave del acento. */
@@ -2207,7 +2207,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 148 · La cabecera pegada con un filo de luz (tanda 29) ───────────────────────────────────────────────────────────
    Al pegarse arriba en compacto, la cabecera de cada pantalla lleva en su borde de abajo un filo fino del acento que
    se funde hacia los lados. */
-.cabecera-grande.compacta::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(var(--oklab,) 90deg, transparent, color-mix(in srgb, var(--morado) 55%, transparent) 50%, transparent); pointer-events: none; }
+.cabecera-grande.compacta::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(var(--oklab,) 90deg, transparent, var(--acento-a55) 50%, transparent); pointer-events: none; }
 
 /* ── 149 · La fecha de Hoy en una pastilla (tanda 29) ─────────────────────────────────────────────────────────────────
    En la cabecera de Hoy, la fecha («dom 8 nov») va en una pastilla suave junto al avatar. */
@@ -2267,7 +2267,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 155 · El ejercicio en curso brilla (tanda 30) ────────────────────────────────────────────────────────────────────
    El abierto lleva, además del filo del acento, un resplandor suave de su color debajo: se ve de un vistazo dónde
    estás al bajar por la sesión. Pisa estilos.css (2538). */
-.ejercicio.en-curso:not(.plegado) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--morado) 62%, transparent), 0 18px 36px -20px color-mix(in srgb, var(--morado) 60%, transparent); }
+.ejercicio.en-curso:not(.plegado) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--morado) 62%, transparent), 0 18px 36px -20px var(--acento-a55); }
 
 /* ── 156 · El progreso de cada ejercicio en un aro (tanda 30) ─────────────────────────────────────────────────────────
    El «1/3» de la cabecera de cada ejercicio va dentro de un aro que se llena con las series (Sesion.jsx: --f, de 0 a
@@ -2358,7 +2358,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 164 · La sesión que toca, destacada en la semana (tanda 30) ──────────────────────────────────────────────────────
    En Semana (y en «Esta semana» de Hoy), la siguiente sesión lleva un filo de degradado del acento y un resplandor
    de su color debajo; su número, en un cuadrado con brillo. Pisa estilos.css (310–312) y el bloque 4. */
-.dia.actual { border: var(--filo-medio) solid transparent; padding: 10.5px 12.5px; background: linear-gradient(var(--hoja), var(--hoja)) padding-box, linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 35%, var(--rojo-500))) border-box; box-shadow: var(--sombra), 0 16px 32px -20px color-mix(in srgb, var(--morado) 70%, transparent); }
+.dia.actual { border: var(--filo-medio) solid transparent; padding: 10.5px 12.5px; background: linear-gradient(var(--hoja), var(--hoja)) padding-box, linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 30%, var(--rojo-500))) border-box; box-shadow: var(--sombra), 0 16px 32px -20px var(--acento-a70); }
 .dia.actual .marca-dia { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: var(--sombra-accion), var(--brillo); }
 @media (forced-colors: active) { .dia.actual { border-color: Highlight; background: Canvas; } }
 
@@ -2443,7 +2443,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
   .serie.siguiente:not(.hecha) .hecho-btn { animation: te-llama 1s var(--curva-casa) .3s backwards; }
 }
 @keyframes te-llama {
-  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--morado) 50%, transparent), var(--sombra-accion); }
+  from { box-shadow: 0 0 0 0 var(--acento-a45), var(--sombra-accion); }
   to { box-shadow: 0 0 0 14px color-mix(in srgb, var(--morado) 0%, transparent), var(--sombra-accion); }
 }
 
@@ -2540,7 +2540,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .teclado-serie { background: color-mix(in srgb, var(--hoja-2) 84%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); border-top-color: color-mix(in srgb, var(--tinta) 8%, transparent); }
 .teclado-serie .tecla { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 24%, transparent), 0 0 0 .5px color-mix(in srgb, var(--tinta) 5%, transparent); }
 .teclado-serie .tecla-paso, .teclado-serie .tecla-siguiente { box-shadow: none; }
-.teclado-serie .tecla-siguiente { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 84%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--morado) 80%, transparent), var(--brillo); }
+.teclado-serie .tecla-siguiente { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 85%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -10px var(--acento-a85), var(--brillo); }
 .teclado-serie .tecla-siguiente.es-hecha { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--ok) 86%, var(--blanco)), var(--ok)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ok) 80%, transparent), var(--brillo); }
 .teclado-serie .teclado-icono { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 20%, transparent); }
 @media (prefers-contrast: more), (forced-colors: active) {
@@ -2556,7 +2556,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .paso-grande button:disabled { background: color-mix(in srgb, var(--tinta) 6%, var(--hoja)); color: var(--tinta-3); }
 .paso-grande input { border-color: transparent; box-shadow: var(--sombra-tarjeta); }
 .chip-serie { border-color: transparent; background: color-mix(in srgb, var(--tinta) 6%, var(--hoja)); }
-.chip-serie.actual { border: var(--filo-fino) solid transparent; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 75%, transparent); }
+.chip-serie.actual { border: var(--filo-fino) solid transparent; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px var(--acento-a70); }
 .chip-serie.hecha:not(.actual) { background: var(--ok-suave); color: var(--ok); }
 .enfoque-cuerpo .sugerencia { grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-14); background: var(--morado-suave); line-height: 1.35; }
 .enfoque-cuerpo .sugerencia svg { width: 30px; height: 30px; margin: 0; padding: 6px; border-radius: 50%; background: var(--hoja); color: var(--morado); stroke-width: 2.2; }
@@ -2570,8 +2570,8 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 183 · El enfoque con luz (tanda 31) ──────────────────────────────────────────────────────────────────────────────
    Un resplandor del acento arriba del fondo (como el de las pantallas, bloque 93), el nombre del ejercicio con la
    tinta de degradado de los títulos (bloque 130) y el pie de vidrio. */
-.enfoque { background: radial-gradient(130% 55% at 50% -12%, color-mix(in srgb, var(--morado) 15%, transparent), transparent 62%), var(--tiza); }
-.enfoque-titulo h2 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 50%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.enfoque { background: radial-gradient(130% 55% at 50% -12%, var(--acento-a16), transparent 62%), var(--tiza); }
+.enfoque-titulo h2 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 45%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .enfoque-pie { background: color-mix(in srgb, var(--hoja) 82%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-top-color: color-mix(in srgb, var(--tinta) 8%, transparent); }
 @media (forced-colors: active), (prefers-contrast: more) {
   .enfoque { background: var(--tiza); }
@@ -2582,7 +2582,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 184 · El hilo de la superserie (tanda 31) ────────────────────────────────────────────────────────────────────────
    La raya que une los ejercicios de una superserie va del acento a transparente, y su letra va en un cuadrado con el
    brillo del número de la sesión que toca (bloque 164). */
-.superserie::before { opacity: 1; width: 3px; left: 11.5px; background: linear-gradient(var(--oklab,) 180deg, var(--morado), color-mix(in srgb, var(--morado) 12%, transparent)); }
+.superserie::before { opacity: 1; width: 3px; left: 11.5px; background: linear-gradient(var(--oklab,) 180deg, var(--morado), var(--acento-a12)); }
 .ss-letra { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: var(--sombra-accion), var(--brillo); }
 @media (forced-colors: active) { .superserie::before { background: CanvasText; } }
 
@@ -2606,11 +2606,11 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 185 · La tarjeta de intervalos, de noche y con su pulso (tanda 32) ───────────────────────────────────────────────
    «Intervalos de hoy» va en la noche de la marca (como el descanso), con su icono en un cuadro de vidrio que brilla, la
    línea del pulso en grande y muy tenue al fondo, y «Abrir» de vidrio. */
-.tarjeta-intervalos { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 42px minmax(0, 1fr) auto; background: radial-gradient(130% 160% at 0% 0%, var(--marca-800), var(--marca-950) 62%); color: var(--blanco); box-shadow: var(--sombra-tarjeta), 0 18px 32px -20px color-mix(in srgb, var(--morado) 75%, transparent); }
+.tarjeta-intervalos { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 42px minmax(0, 1fr) auto; background: radial-gradient(130% 160% at 0% 0%, var(--acento-800), var(--acento-950) 62%); color: var(--blanco); box-shadow: var(--sombra-tarjeta), 0 18px 32px -20px var(--acento-a70); }
 .tarjeta-intervalos::after { content: ""; position: absolute; z-index: -1; right: -6%; top: 50%; width: 62%; height: 120%; translate: 0 -50%; background: var(--blanco); opacity: .08; pointer-events: none; -webkit-mask: var(--ico-intervalos) center / contain no-repeat; mask: var(--ico-intervalos) center / contain no-repeat; }
-.tarjeta-intervalos > svg { width: 42px; height: 42px; padding: 9px; border-radius: var(--r-14); background: rgba(255, 255, 255, .1); color: var(--marca-300); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--marca-400) 60%, transparent)); }
+.tarjeta-intervalos > svg { width: 42px; height: 42px; padding: 9px; border-radius: var(--r-14); background: rgba(255, 255, 255, .1); color: var(--acento-300); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acento-400) 60%, transparent)); }
 .tarjeta-intervalos strong { color: var(--blanco); }
-.tarjeta-intervalos .num { color: var(--marca-200); }
+.tarjeta-intervalos .num { color: var(--acento-200); }
 .tarjeta-intervalos .btn-primario { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .24); color: var(--blanco); box-shadow: var(--brillo); }
 @media (forced-colors: active) { .tarjeta-intervalos { background: Canvas; color: CanvasText; } .tarjeta-intervalos::after { content: none; } }
 
@@ -2634,15 +2634,15 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .calc-cifra { padding: 12px 16px; border-radius: var(--r-16); background: linear-gradient(var(--oklab,) 135deg, var(--morado-suave), color-mix(in srgb, var(--morado-suave) 40%, var(--hoja))); }
 .calc-cifra .v { font-size: clamp(2.75rem, 13vw, 3.75rem); background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 25%, var(--morado)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active), (prefers-contrast: more) { .calc-cifra .v { background: none; -webkit-text-fill-color: currentColor; } }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(2) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(2) { background: var(--acento-a8); color: var(--tinta); }
 .hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(2) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(3) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(3) { background: var(--acento-a8); color: var(--tinta); }
 .hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(3) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(4) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(4) { background: var(--acento-a8); color: var(--tinta); }
 .hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(4) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(5) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(5) { background: var(--acento-a8); color: var(--tinta); }
 .hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(5) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(6) { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(6) { background: var(--acento-a8); color: var(--tinta); }
 .hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(6) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
 
 /* ── 189 · «Cambiar el orden» más claro (tanda 32) ────────────────────────────────────────────────────────────────────
@@ -2706,7 +2706,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 198 · La vitrina de récords en oro de verdad (tanda 32) ──────────────────────────────────────────────────────────
    En los récords recientes, el trofeo va en un disco dorado con relieve y la tarjeta tiene un resplandor dorado; la
    cifra de cada trofeo, algo más grande. */
-.trofeo-tarjeta.reciente .trofeo-ico { background: radial-gradient(circle at 32% 26%, var(--oro-100), var(--oro-300) 55%, var(--oro-500)); color: var(--oro-800); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--oro-500) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.trofeo-tarjeta.reciente .trofeo-ico { background: var(--medalla); color: var(--oro-800); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--oro-500) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); }
 .trofeo-tarjeta.reciente { box-shadow: var(--sombra), 0 16px 30px -22px color-mix(in srgb, var(--oro-500) 70%, transparent); }
 .trofeo-valor { font-size: calc(var(--cifra-m) * 1.12); }
 @media (forced-colors: active) { .trofeo-tarjeta.reciente .trofeo-ico { background: Canvas; color: CanvasText; } }
@@ -2731,7 +2731,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 200 · El nombre de la sesión con tinta de degradado (tanda 33) ───────────────────────────────────────────────────
    Como los títulos de las pantallas (bloque 130): de la tinta a un toque del acento. El ✓ de la sesión hecha (bloque
    194) es su ::after y lleva su propio fondo. */
-.sesion-vista > .cabecera .titulo h1 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 50%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.sesion-vista > .cabecera .titulo h1 { background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 40%, color-mix(in srgb, var(--morado) 45%, var(--tinta))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active), (prefers-contrast: more) { .sesion-vista > .cabecera .titulo h1 { background: none; -webkit-text-fill-color: currentColor; } }
 
 /* ── 201 · Los botones de la cabecera de la sesión en discos (tanda 33) ───────────────────────────────────────────────
@@ -2797,7 +2797,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    baño dorado que se funde y el trofeo en el disco dorado con relieve (bloque 198). */
 .resumen-records .panel { box-shadow: var(--sombra), inset 0 3px 0 0 var(--oro-claro); overflow: hidden; }
 .resumen-records .record { background: linear-gradient(var(--oklab,) 100deg, var(--oro-suave), transparent 80%); }
-.resumen-records .record .ico { background: radial-gradient(circle at 32% 26%, var(--oro-100), var(--oro-300) 55%, var(--oro-500)); color: var(--oro-800); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--oro-500) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.resumen-records .record .ico { background: var(--medalla); color: var(--oro-800); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--oro-500) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); }
 
 /* ── 209 · Tu mejor marca en la ficha del ejercicio, en dorado (tanda 33) ─────────────────────────────────────────────
    En «Gráficas» de la ficha, la serie de tu mejor 1RM («16 × 10 @8,5, 23 oct») iba en morado: ahora es la pastilla
@@ -2895,7 +2895,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    «S4/6» en la tabla y en las tarjetas del móvil (Panel.jsx: semana-pill, --f = semana / total) va en una pastilla
    lavanda con una barrita de lo que va del bloque. */
 .semana-pill { display: inline-flex; flex-direction: column; gap: 3px; padding: 2px 8px 4px; border-radius: var(--r-xs); background: var(--morado-suave); color: var(--tinta); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.25; }
-.semana-pill::after { content: ""; height: 3px; border-radius: var(--r-2); background: linear-gradient(var(--oklab,) 90deg, var(--morado) calc(var(--f, 0) * 100%), color-mix(in srgb, var(--morado) 18%, transparent) 0); }
+.semana-pill::after { content: ""; height: 3px; border-radius: var(--r-2); background: linear-gradient(var(--oklab,) 90deg, var(--morado) calc(var(--f, 0) * 100%), var(--acento-a16) 0); }
 @media (forced-colors: active) { .semana-pill { border: var(--filo-fino) solid CanvasText; } .semana-pill::after { background: CanvasText; } }
 
 /* ── 219 · La cabecera de la ficha con el halo de su estado (tanda 34) ────────────────────────────────────────────────
@@ -2953,7 +2953,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 224 · Los grupos de Revisar con el contador en un disco del acento (tanda 34) ────────────────────────────────────
    El número de pendientes de cada atleta, con el brillo del acento de la sesión que toca (bloque 164). */
-.grupo-revisar-n { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent), var(--brillo); }
+.grupo-revisar-n { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 5px 12px -6px var(--acento-a85), var(--brillo); }
 
 /* ── 225 · El avance de la Revisión semanal con brillo (tanda 35) ─────────────────────────────────────────────────────
    La barra de «N de M revisados», más gruesa, con degradado verde y brillo. */
@@ -2984,7 +2984,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 230 · «A quién escribir»: los días de contacto en pastillas con brillo (tanda 35) ────────────────────────────────
    Cada día de contacto es una pastilla: los hechos con el brillo del acento y, con el objetivo cumplido, en verde. */
 .mini-grafica.pips i { width: 16px; height: 10px; border-radius: var(--r-pildora); }
-.mini-grafica.pips .pip-lleno { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
+.mini-grafica.pips .pip-lleno { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 2px 6px -2px var(--acento-a70); }
 .mini-grafica.pips:not(:has(.pip-vacio)) .pip-lleno { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--ok) 80%, var(--blanco)), var(--ok)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--ok) 70%, transparent); }
 
 /* ── 231 · Las plantillas como tarjetas (tanda 35) ────────────────────────────────────────────────────────────────────
@@ -2998,7 +2998,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    Editor.jsx: data-est. Publicadas con un baño verde abajo; borradores con borde punteado del acento; sin empezar, en
    gris. La elegida sigue rellena de lavanda. */
 .semanas-tabs button[data-est="programada"] { background: linear-gradient(var(--oklab,) 180deg, var(--hoja) 40%, var(--ok-suave)); }
-.semanas-tabs button[data-est="en_programacion"] { border-style: dashed; border-color: color-mix(in srgb, var(--morado) 50%, var(--linea)); }
+.semanas-tabs button[data-est="en_programacion"] { border-style: dashed; border-color: color-mix(in srgb, var(--morado) 45%, var(--linea)); }
 .semanas-tabs button[data-est="no_iniciada"] { background: var(--hoja-2); }
 
 /* ── 233 · El buscador como Spotlight (tanda 35) ──────────────────────────────────────────────────────────────────────
@@ -3076,7 +3076,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .registro-sesion[data-rpe="8"] { --esf: var(--esf-8); }
 .registro-sesion[data-rpe="9"] { --esf: var(--esf-9); }
 .registro-sesion[data-rpe="10"] { --esf: var(--esf-10); }
-.registro-sesion.por-revisar { box-shadow: var(--sombra), inset 3px 0 0 var(--esf, var(--morado)), 0 0 0 1.5px color-mix(in srgb, var(--morado) 40%, transparent); }
+.registro-sesion.por-revisar { box-shadow: var(--sombra), inset 3px 0 0 var(--esf, var(--morado)), 0 0 0 1.5px var(--acento-a45); }
 @media (forced-colors: active) { .registro-sesion { border-left: var(--filo-marca) solid CanvasText; } }
 
 /* ── 238 · La tabla del registro más fácil de leer (tanda 36) ─────────────────────────────────────────────────────────
@@ -3147,7 +3147,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Como el perfil del atleta (bloque 89): la tarjeta de tu nombre y tu foto lleva arriba una franja con la noche de la
    marca. Sin texto encima. */
 .panel:has(> .lista > .fila-foto) { position: relative; isolation: isolate; overflow: hidden; padding-top: 30px; }
-.panel:has(> .lista > .fila-foto)::before { content: ""; position: absolute; inset: 0 0 auto; height: 30px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, color-mix(in srgb, var(--marca-400) 55%, transparent), transparent 70%), radial-gradient(220px 80px at 4% 110%, color-mix(in srgb, var(--marca-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--tinta-noche)); }
+.panel:has(> .lista > .fila-foto)::before { content: ""; position: absolute; inset: 0 0 auto; height: 30px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, color-mix(in srgb, var(--acento-400) 55%, transparent), transparent 70%), radial-gradient(220px 80px at 4% 110%, color-mix(in srgb, var(--acento-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--acento-900), var(--tinta-noche)); }
 @media (forced-colors: active) { .panel:has(> .lista > .fila-foto)::before { content: none; } }
 
 /* ── 245 · Los mensajes automáticos con su icono (tanda 36) ───────────────────────────────────────────────────────────
@@ -3215,8 +3215,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 250 · Los momentos como historias (tanda 37) ─────────────────────────────────────────────────────────────────────
    El aro de los momentos por ver, en el degradado de la marca (acento, rosa y naranja, como las historias) en vez del
    arcoíris; «Tu momento», con el + blanco en un disco del acento con brillo. */
-.tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: conic-gradient(from 200deg, var(--marca-500), var(--rojo-500), var(--ambar-400), var(--rojo-500), var(--marca-500)); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--rosa-500) 60%, transparent); }
-.tm-nuevo .tm-circulo { border: 0; padding: 3px; background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 72%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -9px color-mix(in srgb, var(--morado) 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: var(--aro-amanecer); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--rosa-500) 60%, transparent); }
+.tm-nuevo .tm-circulo { border: 0; padding: 3px; background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -9px var(--acento-a85), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .tm-nuevo .tm-circulo > svg { color: var(--sobre-morado); width: 26px; height: 26px; }
 @media (forced-colors: active) { .tm-circulo { background: CanvasText !important; } .tm-nuevo .tm-circulo > svg { color: Canvas; } }
 
@@ -3240,7 +3240,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Plegado, el lápiz va blanco en un disco del acento; abierto, el cuadro de publicar se ilumina con un filo y una luz
    del acento. */
 .compositor.compositor-plegado .area { padding-left: 52px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12%2020h9M16.5%203.5a2.1%202.1%200%200%201%203%203L7%2019l-4%201%201-4z'/%3E%3C/svg%3E") no-repeat 17px center / 15px 15px, radial-gradient(circle at 24px 50%, var(--morado) 0 14px, transparent 14.5px), var(--hoja); }
-.compositor:not(.compositor-plegado) { box-shadow: var(--sombra), 0 0 0 1.5px color-mix(in srgb, var(--morado) 35%, transparent), 0 14px 30px -18px color-mix(in srgb, var(--morado) 70%, transparent); }
+.compositor:not(.compositor-plegado) { box-shadow: var(--sombra), 0 0 0 1.5px var(--acento-a30), 0 14px 30px -18px var(--acento-a70); }
 @media (forced-colors: active) { .compositor.compositor-plegado .area { background: Canvas; padding-left: 14px; } }
 
 /* ── 254 · Cada publicación con el color de su tipo (tanda 37) ────────────────────────────────────────────────────────
@@ -3263,14 +3263,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 255 · Reacciones que se llenan de luz (tanda 37) ─────────────────────────────────────────────────────────────────
    La tuya, con degradado del acento suave, filo del acento y un brillo debajo (el salto del emoji ya estaba, bloque
    59); al pasar el ratón o el dedo, la pastilla se levanta un poco. */
-.reaccion[aria-pressed="true"] { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 70%, transparent); box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent); }
+.reaccion[aria-pressed="true"] { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--morado-suave)); border-color: var(--acento-a70); box-shadow: 0 4px 12px -6px var(--acento-a85); }
 .reaccion[aria-pressed="true"] .num { color: var(--tinta); }
 @media (hover: hover) { .reaccion:not(:disabled):hover { border-color: color-mix(in srgb, var(--morado) 45%, var(--linea)); } }
 
 /* ── 256 · El entreno compartido como tarjeta de la sesión (tanda 37) ─────────────────────────────────────────────────
    Una franja con la luz de la marca arriba del nombre de la sesión, las cifras en baldosas blancas y «Récord en…» en
    el dorado de los récords (antes, lavanda). */
-.entreno-equipo { position: relative; overflow: hidden; background: radial-gradient(260px 90px at 100% 0%, color-mix(in srgb, var(--morado) 16%, transparent), transparent 70%), var(--hoja-2); }
+.entreno-equipo { position: relative; overflow: hidden; background: radial-gradient(260px 90px at 100% 0%, var(--acento-a16), transparent 70%), var(--hoja-2); }
 .entreno-equipo .ee-num > div { padding: 8px 10px; border-left: 0; border-radius: var(--r-10); background: var(--hoja); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 6%, transparent); }
 .entreno-equipo .ee-record { background: linear-gradient(var(--oklab,) 110deg, var(--oro-suave), color-mix(in srgb, var(--oro-suave) 55%, var(--hoja))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 28%, transparent); color: var(--oro-texto); }
 .entreno-equipo .ee-record svg { color: var(--oro); }
@@ -3278,11 +3278,11 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 257 · Encuestas con barras de degradado (tanda 37) ───────────────────────────────────────────────────────────────
    La barra de cada opción, en degradado del acento suave; la que va ganando (Comunidad.jsx: gana), algo más intensa
    y con su porcentaje en negrita; tu voto, con el ✓ blanco en un disco del acento. */
-.encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--morado-suave)); }
-.encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), color-mix(in srgb, var(--morado) 26%, var(--hoja))); }
+.encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--morado-suave)); }
+.encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), color-mix(in srgb, var(--morado) 22%, var(--hoja))); }
 .encuesta-opcion.gana .eo-pct { font-weight: 750; }
 .encuesta-opcion.mia .eo-texto svg { width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); }
-.encuesta-opcion.mia { box-shadow: var(--anillo-acento-fino), 0 6px 14px -10px color-mix(in srgb, var(--morado) 80%, transparent); }
+.encuesta-opcion.mia { box-shadow: var(--anillo-acento-fino), 0 6px 14px -10px var(--acento-a85); }
 
 /* ── 258 · Los eventos con su hoja de calendario (tanda 37) ───────────────────────────────────────────────────────────
    La fecha como la del calendario del iPhone: el mes en una franja roja y el día grande en la hoja blanca. Al
@@ -3307,7 +3307,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Cada comentario en su burbuja (como un mensaje), los del coach con un baño del acento y la mejor respuesta con filo
    y baño verdes. */
 .comentario-equipo > .pila-xs { padding: 8px 12px 6px; border-radius: var(--r-4) var(--r-16) var(--r-16) var(--r-16); background: var(--hoja-2); }
-.comentario-equipo:has(.chip.morado) > .pila-xs { background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); }
+.comentario-equipo:has(.chip.morado) > .pila-xs { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .comentario-equipo.mejor > .pila-xs { background: color-mix(in srgb, var(--ok) 9%, var(--hoja)); box-shadow: inset 0 0 0 1.5px var(--ok); }
 @media (forced-colors: active) { .comentario-equipo > .pila-xs { border: var(--filo-fino) solid CanvasText; } }
 
@@ -3315,14 +3315,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Como el perfil del atleta (bloque 89): una franja con la noche de la marca arriba y el avatar apoyado en su borde. */
 .perfil-equipo-cab { position: relative; isolation: isolate; padding: 72px 14px 12px; margin-inline: -4px; border-radius: var(--r); background: var(--hoja-2); overflow: hidden; align-items: center; }
 .perfil-equipo-cab > .avatar { align-self: flex-start; margin-top: -30px; }
-.perfil-equipo-cab::before { content: ""; position: absolute; inset: 0 0 auto; height: 64px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, color-mix(in srgb, var(--marca-400) 55%, transparent), transparent 70%), radial-gradient(220px 80px at 4% 110%, color-mix(in srgb, var(--marca-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--tinta-noche)); }
+.perfil-equipo-cab::before { content: ""; position: absolute; inset: 0 0 auto; height: 64px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, color-mix(in srgb, var(--acento-400) 55%, transparent), transparent 70%), radial-gradient(220px 80px at 4% 110%, color-mix(in srgb, var(--acento-600) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--acento-900), var(--tinta-noche)); }
 .perfil-equipo-cab > .avatar { box-shadow: 0 0 0 3px var(--hoja-2), 0 6px 14px -6px color-mix(in srgb, var(--tinta-noche) 50%, transparent); }
 @media (forced-colors: active) { .perfil-equipo-cab::before { content: none; } }
 
 /* ── 262 · Los retos con más vida (tanda 37) ──────────────────────────────────────────────────────────────────────────
    Las barras, con degradado y brillo (las completas, en verde); tu fila, con un baño del acento, y quien ya ha llegado,
    con su cifra en verde. */
-.barra-equipo span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 60%, var(--blanco)), var(--morado)); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.barra-equipo span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 8px var(--acento-a45); }
 .barra-equipo span.lleno { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 45%, transparent); }
 .fila-progreso.yo { margin-inline: -10px; padding-inline: 10px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .fila-progreso:has(.barra-equipo span.lleno) > .num { color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); font-weight: 750; }
@@ -3399,7 +3399,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .ranking:has(.podio-1) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(var(--oklab,) 180deg, var(--neutro-100), var(--neutro-400)); color: var(--noche-2); }
 .ranking:has(.podio-1) .ranking-lista > li:nth-child(2) .pos, .ranking:has(.podio-2) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(var(--oklab,) 180deg, var(--ambar-300), var(--ambar-500)); color: var(--noche-2); }
 .fila-ranking.yo { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
-.btn-animar:not(.hecho) { background: linear-gradient(var(--oklab,) 180deg, var(--hoja), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 30%, var(--linea)); box-shadow: 0 3px 8px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
+.btn-animar:not(.hecho) { background: linear-gradient(var(--oklab,) 180deg, var(--hoja), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 30%, var(--linea)); box-shadow: 0 3px 8px -5px var(--acento-a85); }
 .btn-animar.hecho { background: var(--ok-suave); border-color: transparent; }
 @media (forced-colors: active) { .fila-ranking .pos { border: var(--filo-fino) solid CanvasText; } }
 
@@ -3417,7 +3417,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 272 · Las pastillas de arriba del Equipo (tanda 38) ──────────────────────────────────────────────────────────────
    El contador de «Próximos» y «Compañeros de racha», relleno del acento; al abrir una, lo de dentro baja desplegándose
    (solo transform: el texto no entra por opacidad). */
-.plegable-eq-n { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 3px 8px -4px color-mix(in srgb, var(--morado) 80%, transparent); }
+.plegable-eq-n { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 3px 8px -4px var(--acento-a85); }
 @media (prefers-reduced-motion: no-preference) { .plegable-eq[open] > .plegable-eq-cuerpo { animation: plegable-baja var(--mov-medio) var(--curva-llega) both; } }
 @keyframes plegable-baja { from { transform: translateY(-8px); } }
 
@@ -3452,7 +3452,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    la galería, en el acento con brillo. */
 .post .post-foto-boton { overflow: hidden; box-shadow: 0 10px 22px -16px color-mix(in srgb, var(--tinta-noche) 55%, transparent); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .post .post-foto-boton .post-foto { transition: transform var(--mov-lento) var(--curva-casa); } .post .post-foto-boton:hover .post-foto { transform: scale(1.025); } }
-.galeria-puntos span.activo { box-shadow: 0 0 6px color-mix(in srgb, var(--morado) 60%, transparent); }
+.galeria-puntos span.activo { box-shadow: 0 0 6px var(--acento-a55); }
 
 /* ── 277 · El cuadro de publicar abierto (tanda 38) ───────────────────────────────────────────────────────────────────
    Comunidad.jsx: data-tema en el cuadro. El tema elegido, como pastilla de su color (los de la tanda 37); «Fotos» con su
@@ -3464,7 +3464,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .compositor[data-tema="pregunta"] { --ct: var(--t-cuestionario); }
 .compositor-tema select { border-color: color-mix(in srgb, var(--ct) 45%, var(--linea)); background-color: color-mix(in srgb, var(--ct) 8%, var(--hoja)); color: var(--tinta); font-weight: 650; }
 .compositor-pie > .fila-envolver .btn.plano svg { color: var(--verde-500); }
-.compositor-enviar .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 90%, transparent), var(--brillo); }
+.compositor-enviar .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px var(--acento-a85), var(--brillo); }
 
 /* ── 278 · Las pegatinas con un saltito (tanda 38) ────────────────────────────────────────────────────────────────────
    En los comentarios, algo más grandes (96 px) y entran con un salto y un giro pequeño. */
@@ -3504,16 +3504,16 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .normas-entrada .separa > span.terciario { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: var(--r-pildora); background: color-mix(in srgb, var(--aviso) 14%, var(--hoja)); color: color-mix(in srgb, var(--aviso) 70%, var(--tinta)); font-weight: 650; }
 .normas-entrada .separa > span.terciario::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ico-reloj) center / contain no-repeat; mask: var(--ico-reloj) center / contain no-repeat; }
 .normas-leidas { padding: 3px 10px; border-radius: var(--r-pildora); background: var(--ok-suave); color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); }
-.entrar-equipo form .btn-primario.btn-grande:not(:disabled) { box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--morado) 90%, transparent), var(--brillo); }
+.entrar-equipo form .btn-primario.btn-grande:not(:disabled) { box-shadow: 0 12px 26px -12px var(--acento-a85), var(--brillo); }
 @media (prefers-reduced-motion: no-preference) { .entrar-equipo form .btn-primario.btn-grande:not(:disabled) { animation: entrar-listo .6s var(--curva-rebote) 1; } }
 @keyframes entrar-listo { 50% { transform: scale(1.02); } }
 
 /* ── 282 · «Tu momento»: elegir la foto en un recuadro (tanda 39) ─────────────────────────────────────────────────────
    «Elegir una foto» pasa a un recuadro grande y punteado del acento, con la cámara blanca en un disco, como al subir una
    foto en las apps de fotos. */
-.nuevo-momento > .btn.btn-grande:not(.btn-primario) { flex-direction: column; gap: 10px; min-height: 150px; border: var(--filo-fuerte) dashed color-mix(in srgb, var(--morado) 40%, var(--linea)); border-radius: var(--r); background: color-mix(in srgb, var(--morado) 5%, var(--hoja)); color: var(--tinta); }
-.nuevo-momento > .btn.btn-grande:not(.btn-primario) > svg { width: 48px; height: 48px; padding: 12px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 90%, transparent); }
-@media (hover: hover) { .nuevo-momento > .btn.btn-grande:not(.btn-primario):hover { background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); } }
+.nuevo-momento > .btn.btn-grande:not(.btn-primario) { flex-direction: column; gap: 10px; min-height: 150px; border: var(--filo-fuerte) dashed color-mix(in srgb, var(--morado) 45%, var(--linea)); border-radius: var(--r); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); color: var(--tinta); }
+.nuevo-momento > .btn.btn-grande:not(.btn-primario) > svg { width: 48px; height: 48px; padding: 12px; border-radius: 50%; background: var(--morado); color: var(--sobre-morado); box-shadow: 0 8px 18px -8px var(--acento-a85); }
+@media (hover: hover) { .nuevo-momento > .btn.btn-grande:not(.btn-primario):hover { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); } }
 @media (forced-colors: active) { .nuevo-momento > .btn.btn-grande:not(.btn-primario) > svg { background: Canvas; color: CanvasText; border: var(--filo-fino) solid CanvasText; } }
 
 /* ── 283 · El buscador del muro como el del iPhone (tanda 39) ─────────────────────────────────────────────────────────
@@ -3534,8 +3534,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 
 /* ── 285 · Las menciones como tarjeta flotante (tanda 39) ─────────────────────────────────────────────────────────────
    La lista de «@» con una sombra flotante, un filo del acento y la persona elegida rellena del acento con su nombre en negrita. */
-.menciones-sugeridas { background: var(--hoja); box-shadow: var(--sombra-flotante, var(--sombra-alta)), inset 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
-.menciones-sugeridas button.activa { background: color-mix(in srgb, var(--morado) 14%, var(--hoja)); font-weight: 700; }
+.menciones-sugeridas { background: var(--hoja); box-shadow: var(--sombra-flotante, var(--sombra-alta)), inset 0 0 0 1px var(--acento-a16); }
+.menciones-sugeridas button.activa { background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); font-weight: 700; }
 .menciones-sugeridas button.activa .avatar { box-shadow: 0 0 0 2px var(--morado); }
 
 /* ── 286 · Ajustes de la comunidad con iconos de colores (tanda 39) ───────────────────────────────────────────────────
@@ -3574,7 +3574,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .compositor .pila-s:has(> .encuesta-campo) { counter-reset: opcion-encuesta; }
 .compositor .encuesta-campo-fila::before { content: counter(opcion-encuesta); flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--morado-suave); color: var(--tinta); font-size: var(--letra-13); font-weight: 750; }
 .compositor-pie .casilla.casilla-peq { padding: 4px 12px 4px 8px; border-radius: var(--r-pildora); background: var(--hoja-2); box-shadow: var(--anillo-suave); }
-.compositor-pie .casilla.casilla-peq:has(input:checked) { background: var(--morado-suave); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 40%, transparent); }
+.compositor-pie .casilla.casilla-peq:has(input:checked) { background: var(--morado-suave); box-shadow: inset 0 0 0 1px var(--acento-a45); }
 
 /* ── 290 · Las cifras del Panel del coach (tanda 39) ──────────────────────────────────────────────────────────────────
    «Dentro», «Avisos sin resolver» y «Pendiente de revisión» en tarjetas con su icono y su color (dentro en el acento,
@@ -3584,7 +3584,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .pc-cifras > div:nth-child(1) { --pcc: var(--morado); --pci: var(--ico-personas); }
 .pc-cifras > div:nth-child(2) { --pcc: var(--alerta); --pci: var(--ico-bandera); }
 .pc-cifras > div:nth-child(3) { --pcc: var(--aviso); --pci: var(--ico-reloj); }
-.pc-tabla :is(th, td):last-child { background: color-mix(in srgb, var(--morado) 8%, transparent); color: var(--tinta); font-weight: 750; }
+.pc-tabla :is(th, td):last-child { background: var(--acento-a8); color: var(--tinta); font-weight: 750; }
 .pc-tabla thead th:last-child { border-radius: var(--r-xs) var(--r-xs) 0 0; }
 @media (forced-colors: active) { .pc-cifras > div { background: Canvas; border: var(--filo-fino) solid CanvasText; } .pc-cifras > div::after { background: CanvasText; } }
 
@@ -3611,7 +3611,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    En el muro (destacado-semana): un resplandor dorado, la medalla en un disco de oro con relieve y el nombre más
    grande; en el Panel del coach, el título con su medalla y «Nadie esta semana» como invitación en dorado suave. */
 .destacado-semana { position: relative; display: flex; align-items: center; gap: 14px; overflow: hidden; background: radial-gradient(300px 120px at 0% 0%, color-mix(in srgb, var(--oro) 22%, transparent), transparent 70%), linear-gradient(var(--oklab,) 135deg, var(--oro-suave), var(--hoja) 75%); box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, var(--oro) 30%, transparent); }
-.ds-ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--oro-100), var(--oro-300) 55%, var(--ambar-500)); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--ambar-500) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: 1.625rem; }
+.ds-ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--medalla); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--ambar-500) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: 1.625rem; }
 .destacado-semana .ds-nombre { font-size: var(--letra-18); font-weight: 800; }
 .destacado-semana .le-k { color: var(--oro-texto); }
 .panel-comunidad > section:first-child:not(.panel) > p { padding: 10px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); color: var(--tinta-2); }
@@ -3622,7 +3622,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    racha todavía. Se quitan llama y baño en esa hoja, y su «Invitar» lleva brillo. */
 .cp-invitar .cp-fila { background: none; margin-inline: 0; padding-inline: 0; }
 .cp-invitar .cp-fila::before, .cp-invitar .cp-fila::after { content: none; }
-.cp-invitar .cp-fila .btn-primario { box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 90%, transparent); }
+.cp-invitar .cp-fila .btn-primario { box-shadow: 0 6px 14px -8px var(--acento-a85); }
 
 
 /* ══ Tanda 40 (9/11): la técnica en vídeo ═════════════════════════════════════════════════════════════════════════════
@@ -3642,23 +3642,23 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 295 · El reproductor en «modo cine» (tanda 40) ───────────────────────────────────────────────────────────────────
    El cuadro del vídeo sobre la noche de la marca (se ve en las franjas de los lados), con una sombra honda; la serie en
    una pastilla de vidrio con su punto; los botones de debajo (velocidad aparte) en discos. Sobre el bloque 70. */
-.rep-marco { background: radial-gradient(120% 80% at 85% 0%, color-mix(in srgb, var(--marca-600) 35%, transparent), transparent 60%), linear-gradient(var(--oklab,) 170deg, var(--tinta-noche), var(--noche-0)); box-shadow: 0 18px 34px -22px color-mix(in srgb, var(--tinta-noche) 75%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .07); }
+.rep-marco { background: radial-gradient(120% 80% at 85% 0%, color-mix(in srgb, var(--acento-600) 35%, transparent), transparent 60%), linear-gradient(var(--oklab,) 170deg, var(--tinta-noche), var(--noche-0)); box-shadow: 0 18px 34px -22px color-mix(in srgb, var(--tinta-noche) 75%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .07); }
 .rep-zoom video.medio, .reproductor video.medio { background: transparent; }
 .rep-serie { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px; background: color-mix(in srgb, var(--noche-0) 74%, transparent); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
-.rep-serie::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--marca-400); box-shadow: 0 0 8px var(--marca-500); }
+.rep-serie::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--acento-400); box-shadow: 0 0 8px var(--acento-500); }
 .rep-zoom-nivel { background: color-mix(in srgb, var(--noche-0) 74%, transparent); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
 .rep-controles > .btn-icono, .rep-zoom-botones > .btn-icono { width: 42px; height: 42px; border-radius: 50%; border-color: transparent; background: var(--hoja-2); }
-.rep-controles > .btn-icono[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 45%, transparent); }
+.rep-controles > .btn-icono[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); box-shadow: inset 0 0 0 1.5px var(--acento-a45); }
 @media (forced-colors: active) { .rep-serie::before { content: none; } }
 
 /* ── 296 · La rueda de fotogramas (tanda 40) ──────────────────────────────────────────────────────────────────────────
    Era una regla gris: ahora es una rueda hundida, con las rayas que se desvanecen hacia los bordes (como si girara) y la
    marca del centro en el acento con su halo. El texto, en una pastilla. */
-.rep-jog { height: 40px; border: 0; border-radius: var(--r-s); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--tinta) 7%, var(--hoja-2)), var(--hoja-2) 45%, color-mix(in srgb, var(--tinta) 5%, var(--hoja-2))); box-shadow: inset 0 1px 3px color-mix(in srgb, var(--marca-950) 14%, transparent), var(--anillo); }
+.rep-jog { height: 40px; border: 0; border-radius: var(--r-s); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--tinta) 7%, var(--hoja-2)), var(--hoja-2) 45%, color-mix(in srgb, var(--tinta) 5%, var(--hoja-2))); box-shadow: inset 0 1px 3px color-mix(in srgb, var(--acento-950) 14%, transparent), var(--anillo); }
 .rep-jog-rayas { inset: 8px 0; background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--tinta) 26%, transparent) 0 1.5px, transparent 1.5px 7px); opacity: 1;
   -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--negro) 24%, var(--negro) 76%, transparent); mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--negro) 24%, var(--negro) 76%, transparent); }
-.rep-jog-centro { width: 4px; margin-left: -2px; top: 3px; bottom: 3px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--morado) 16%, transparent), 0 0 12px color-mix(in srgb, var(--morado) 55%, transparent); }
-.rep-jog-texto { padding: 2px 10px; border-radius: var(--r-pildora); background: var(--hoja); color: var(--tinta-2); box-shadow: 0 1px 3px color-mix(in srgb, var(--marca-950) 12%, transparent); }
+.rep-jog-centro { width: 4px; margin-left: -2px; top: 3px; bottom: 3px; box-shadow: 0 0 0 3px var(--acento-a16), 0 0 12px var(--acento-a55); }
+.rep-jog-texto { padding: 2px 10px; border-radius: var(--r-pildora); background: var(--hoja); color: var(--tinta-2); box-shadow: 0 1px 3px color-mix(in srgb, var(--acento-950) 12%, transparent); }
 @media (forced-colors: active) { .rep-jog-rayas { -webkit-mask-image: none; mask-image: none; } }
 
 /* ── 297 · La tira de fotogramas (tanda 40) ───────────────────────────────────────────────────────────────────────────
@@ -3666,20 +3666,20 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    brillo y un tirador arriba. */
 .rep-tira { height: 52px; padding: 4px; gap: 2px; border: 0; border-radius: var(--r-s); background: var(--neutro-950); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 18px -14px color-mix(in srgb, var(--tinta-noche) 80%, transparent); }
 .tira-celda { border-right: 0; border-radius: var(--r-6); overflow: hidden; }
-.tira-cursor { width: 3px; margin-left: -1.5px; border-radius: var(--r-2); background: var(--marca-400); box-shadow: 0 0 10px var(--marca-500), 0 0 0 1px color-mix(in srgb, var(--noche-0) 60%, transparent); }
-.tira-cursor::before { content: ""; position: absolute; left: 50%; top: -1px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: var(--blanco); box-shadow: 0 0 0 2.5px var(--marca-500), 0 2px 6px rgba(0, 0, 0, .5); }
+.tira-cursor { width: 3px; margin-left: -1.5px; border-radius: var(--r-2); background: var(--acento-400); box-shadow: 0 0 10px var(--acento-500), 0 0 0 1px color-mix(in srgb, var(--noche-0) 60%, transparent); }
+.tira-cursor::before { content: ""; position: absolute; left: 50%; top: -1px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: var(--blanco); box-shadow: 0 0 0 2.5px var(--acento-500), 0 2px 6px rgba(0, 0, 0, .5); }
 @media (forced-colors: active) { .rep-tira { background: Canvas; border: var(--filo-fino) solid CanvasText; } .tira-cursor { background: Highlight; } .tira-cursor::before { content: none; } }
 
 /* ── 298 · Las marcas sobre la barra (tanda 40) ───────────────────────────────────────────────────────────────────────
    Las correcciones del coach (dibujo, voz, punto clave) en puntos más grandes con aro y brillo de su color; las
    repeticiones, en fichas redondas (la actual, en el acento con luz; la peor, con su aro rojo). «Marcar rep», con su
    chincheta en un disco. */
-.rep-marca span { width: 10px; height: 10px; box-shadow: var(--halo), 0 0 8px color-mix(in srgb, var(--morado) 60%, transparent); }
+.rep-marca span { width: 10px; height: 10px; box-shadow: var(--halo), 0 0 8px var(--acento-a55); }
 .rep-marca-dibujo span { box-shadow: var(--halo), 0 0 8px color-mix(in srgb, var(--oro-500) 60%, transparent); }
 .rep-marca-voz span { box-shadow: var(--halo), 0 0 8px color-mix(in srgb, var(--ok) 60%, transparent); }
 .rep-marca-punto span { box-shadow: var(--halo), 0 0 8px color-mix(in srgb, var(--alerta) 60%, transparent); }
 .rep-rep span { border-radius: var(--r-pildora); font-weight: 800; }
-.rep-rep.actual span { box-shadow: 0 3px 8px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
+.rep-rep.actual span { box-shadow: 0 3px 8px -2px var(--acento-a70); }
 .rep-reps-mando > .btn.plano:first-child { padding-left: 6px; }
 .rep-reps-mando > .btn.plano:first-child svg { width: 28px; height: 28px; padding: 6px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
 .rep-reps-cual { padding: 2px 9px; border-radius: var(--r-pildora); background: var(--morado-suave); color: var(--tinta); }
@@ -3733,7 +3733,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 301 · Frases rápidas y lo que se puede añadir al comentario (tanda 40) ───────────────────────────────────────────
    Las frases del coach, como chips lavanda con su «+»; debajo del cuadro de comentar, cada opción (dibujar, comentar
    el momento, respuestas guardadas, responder con vídeo) con su icono en un disco. */
-.chip-frase { background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); border-color: color-mix(in srgb, var(--morado) 22%, transparent); transition: transform var(--mov-rapido) var(--curva-rebote), border-color var(--mov-rapido) var(--curva-casa); }
+.chip-frase { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); border-color: var(--acento-a22); transition: transform var(--mov-rapido) var(--curva-rebote), border-color var(--mov-rapido) var(--curva-casa); }
 .chip-frase::before { content: "+"; flex: none; font-weight: 800; color: var(--morado); }
 .chip-frase:active { transform: scale(.96); }
 .hilo-extras { gap: 6px 10px; }
@@ -3759,7 +3759,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 
 /* ── 303 · El análisis automático como tarjeta propia (tanda 40) ──────────────────────────────────────────────────────
    Luz lavanda en la esquina, filo del acento y la diana en un disco con el degradado de la marca junto al título. */
-.analisis { border-color: color-mix(in srgb, var(--morado) 22%, var(--linea)); background: radial-gradient(260px 140px at 100% 0%, color-mix(in srgb, var(--morado) 12%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.analisis { border-color: color-mix(in srgb, var(--morado) 22%, var(--linea)); background: radial-gradient(260px 140px at 100% 0%, var(--acento-a12), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .analisis-cab h3 { position: relative; padding-left: 40px; min-height: 30px; display: flex; align-items: center; }
 .analisis-cab h3::before { content: ""; position: absolute; left: 0; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; background: linear-gradient(var(--oklab,) 150deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); box-shadow: var(--sombra-accion); }
 .analisis-cab h3::after { content: ""; position: absolute; left: 7px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--sobre-morado); -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
@@ -3768,8 +3768,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 304 · Lo que nota el atleta, como una cita (tanda 40) ────────────────────────────────────────────────────────────
    En la corrección del coach: baño lavanda con filo del acento a la izquierda, unas comillas grandes de fondo, y su RPE
    en un chip con el color de la escala de esfuerzo (data-rpe, --esf-*). */
-.autoevaluacion-coach { position: relative; overflow: hidden; border: 0; border-radius: var(--r-4) var(--r-14) var(--r-14) var(--r-4); background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--morado) 55%, transparent); }
-.autoevaluacion-coach::after { content: "”" / ""; position: absolute; right: 10px; top: -14px; font-size: 5.5rem; line-height: 1; font-weight: 800; color: color-mix(in srgb, var(--morado) 12%, transparent); pointer-events: none; }
+.autoevaluacion-coach { position: relative; overflow: hidden; border: 0; border-radius: var(--r-4) var(--r-14) var(--r-14) var(--r-4); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); box-shadow: inset 3px 0 0 var(--acento-a55); }
+.autoevaluacion-coach::after { content: "”" / ""; position: absolute; right: 10px; top: -14px; font-size: 5.5rem; line-height: 1; font-weight: 800; color: var(--acento-a12); pointer-events: none; }
 .autoevaluacion-coach .cita { font-size: var(--letra-16); color: var(--tinta); }
 .chip.auto-rpe[data-rpe="5"] { --esf: var(--esf-5); } .chip.auto-rpe[data-rpe="6"] { --esf: var(--esf-6); } .chip.auto-rpe[data-rpe="7"] { --esf: var(--esf-7); }
 .chip.auto-rpe[data-rpe="8"] { --esf: var(--esf-8); } .chip.auto-rpe[data-rpe="9"] { --esf: var(--esf-9); } .chip.auto-rpe[data-rpe="10"] { --esf: var(--esf-10); }
@@ -3780,9 +3780,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Una barra del acento al rasante de la cabecera que se llena con cada vídeo (--f), el contador en una pastilla y el pie
    que flota con «Revisado y siguiente» con luz. */
 .seguida-cab { position: relative; }
-.seguida-cab::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 3px; width: calc(var(--f, 0) * 100%); border-radius: 0 var(--r-4) var(--r-4) 0; background: linear-gradient(var(--oklab,) 90deg, var(--morado), color-mix(in srgb, var(--morado) 55%, var(--rosa-400))); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 55%, transparent); transition: width var(--mov-lento) var(--curva-casa); }
+.seguida-cab::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 3px; width: calc(var(--f, 0) * 100%); border-radius: 0 var(--r-4) var(--r-4) 0; background: linear-gradient(var(--oklab,) 90deg, var(--morado), color-mix(in srgb, var(--morado) 55%, var(--rosa-400))); box-shadow: 0 0 8px var(--acento-a55); transition: width var(--mov-lento) var(--curva-casa); }
 .seguida-contador { justify-self: center; padding: 4px 12px; border-radius: var(--r-pildora); background: var(--hoja-2); }
-.seguida-pie { box-shadow: 0 -10px 24px -18px color-mix(in srgb, var(--marca-950) 45%, transparent); }
+.seguida-pie { box-shadow: 0 -10px 24px -18px color-mix(in srgb, var(--acento-950) 45%, transparent); }
 .seguida-pie .btn-primario:not(:disabled) { box-shadow: var(--sombra-accion); }
 @media (prefers-reduced-motion: reduce) { .seguida-cab::after { transition: none; } }
 @media (forced-colors: active) { .seguida-cab::after { background: Highlight; } }
@@ -3795,7 +3795,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .tecnica-item { position: relative; --c: var(--aviso); }
 .tecnica-item[data-estado="visto"] { --c: var(--azul-500); } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
 .tecnica-item::before { content: ""; position: absolute; left: -22px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--c); box-shadow: var(--halo-ancho), 0 0 0 4.5px color-mix(in srgb, var(--c) 35%, transparent); }
-.tecnica-item.destacado::before { background: radial-gradient(circle at 35% 30%, var(--oro-100), var(--oro-300) 55%, var(--ambar-500)); box-shadow: var(--halo-ancho), 0 0 10px color-mix(in srgb, var(--ambar-500) 60%, transparent); }
+.tecnica-item.destacado::before { background: var(--medalla); box-shadow: var(--halo-ancho), 0 0 10px color-mix(in srgb, var(--ambar-500) 60%, transparent); }
 .tecnica-ver { border-color: transparent; background: var(--hoja-2); border-radius: var(--r-s); padding: 10px 12px; transition: transform var(--mov-rapido) var(--curva-rebote); }
 .tecnica-ver:active { transform: scale(.985); }
 .tecnica-item.destacado .tecnica-ver { border-color: color-mix(in srgb, var(--oro) 45%, transparent); background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); }
@@ -3805,7 +3805,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 307 · Elegir dos para comparar (tanda 40) ────────────────────────────────────────────────────────────────────────
    El botón de elegir, un disco; elegido, lleno del acento. «Comparar los dos», con luz cuando ya hay dos. */
 .tecnica-elegir { width: 42px; height: 42px; min-width: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; }
-.tecnica-elegir[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 85%, transparent); }
+.tecnica-elegir[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado); box-shadow: 0 5px 12px -5px var(--acento-a85); }
 .mi-tecnica .btn-primario:not(:disabled) { box-shadow: var(--sombra-accion); }
 
 /* ── 308 · El informe del mes (tanda 40) ──────────────────────────────────────────────────────────────────────────────
@@ -3828,8 +3828,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .estado-video { gap: 4px 0; }
 .estado-video li:not(:last-child)::after { content: ""; width: 22px; height: 2px; margin: 0 8px 0 2px; border-radius: var(--r-2); background: var(--linea); }
 .estado-video li.hecho:not(:last-child)::after { background: var(--morado); }
-.estado-video li.actual .estado-video-punto { box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent); }
-.correccion:has(> .lista-puntos.ver), .correccion:has(> .correccion-nota-ver) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 7%, var(--hoja)), var(--hoja) 120px); border-color: color-mix(in srgb, var(--morado) 18%, var(--linea)); }
+.estado-video li.actual .estado-video-punto { box-shadow: 0 0 0 4px var(--acento-a22); }
+.correccion:has(> .lista-puntos.ver), .correccion:has(> .correccion-nota-ver) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--hoja) 120px); border-color: color-mix(in srgb, var(--morado) 16%, var(--linea)); }
 .correccion:has(> .lista-puntos.ver) .btn-primario, .correccion:has(> .correccion-nota-ver) .btn-primario { box-shadow: var(--sombra-accion); }
 @media (forced-colors: active) { .estado-video li:not(:last-child)::after { background: CanvasText; } }
 
@@ -3868,13 +3868,13 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    lavanda con su calendario. */
 .tarjeta-plan .nota { border-radius: var(--r-4) var(--r-14) var(--r-14) var(--r-14); background: var(--morado-suave); color: var(--tinta); }
 .tarjeta-plan .nota svg { color: var(--morado); }
-.tarjeta-plan .aviso-plan { padding: 9px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
+.tarjeta-plan .aviso-plan { padding: 9px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); box-shadow: inset 0 0 0 1px var(--acento-a22); }
 .tarjeta-plan .aviso-plan svg { color: var(--morado); }
 
 /* ── 313 · El ajuste que propone la app (tanda 41) ────────────────────────────────────────────────────────────────────
    Sin el filo grueso de la izquierda: una tarjeta con luz de su color (acento si baja, verde si va bien) y un borde
    fino, y «Revisar y aplicar» con luz. */
-.ajuste-nutricion { border-left: 0; border: var(--filo-fino) solid color-mix(in srgb, var(--morado) 28%, var(--linea)); background: radial-gradient(300px 140px at 0% 0%, color-mix(in srgb, var(--morado) 10%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.ajuste-nutricion { border-left: 0; border: var(--filo-fino) solid color-mix(in srgb, var(--morado) 30%, var(--linea)); background: radial-gradient(300px 140px at 0% 0%, var(--acento-a8), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .ajuste-nutricion.ok { border-color: color-mix(in srgb, var(--ok) 30%, var(--linea)); background: radial-gradient(300px 140px at 0% 0%, color-mix(in srgb, var(--ok) 10%, transparent), transparent 70%), var(--hoja); }
 .ajuste-nutricion > .separa strong, .ajuste-nutricion > .separa b { font-size: var(--letra-17); }
 .ajuste-nutricion .btn-primario:not(:disabled) { box-shadow: var(--sombra-accion); }
@@ -3907,9 +3907,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .version-plan:first-child::before { top: 20px; } .version-plan:last-child::before { bottom: calc(100% - 20px); }
 .version-plan:only-child::before { content: none; }
 .version-plan::after { content: ""; position: absolute; left: 13px; top: 14px; width: 12px; height: 12px; border-radius: 50%; background: var(--hoja); box-shadow: inset 0 0 0 2px var(--tinta-3); }
-.version-plan.vigente::after { background: var(--morado); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 20%, transparent); }
+.version-plan.vigente::after { background: var(--morado); box-shadow: 0 0 0 4px var(--acento-a22); }
 .version-plan.proximo::after { background: var(--hoja); box-shadow: none; outline: 2px dashed var(--morado); outline-offset: -2px; }
-.version-plan.vigente { background: color-mix(in srgb, var(--morado) 5%, transparent); }
+.version-plan.vigente { background: var(--acento-a4); }
 @media (forced-colors: active) { .version-plan::before, .version-plan::after { content: none; } .version-plan { padding-left: 14px; } }
 
 /* ── 317 · «Desde su iPhone» en baldosas con su icono (tanda 41) ──────────────────────────────────────────────────────
@@ -3991,7 +3991,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .conexiones .conexion-paso.hecho:not(:last-child)::before { background: linear-gradient(var(--ok), color-mix(in srgb, var(--ok) 30%, var(--linea))); }
 .conexiones .conexion-num { position: relative; z-index: 1; box-shadow: var(--halo-ancho); }
 .conexiones .conexion-paso.hecho .conexion-num { background: var(--ok); color: var(--hoja); }
-.conexion-pasos:not(:has(.hecho)) .conexion-paso:first-child .conexion-num, .conexiones .conexion-paso.hecho + .conexion-paso:not(.hecho) .conexion-num { background: var(--morado); color: var(--sobre-morado); box-shadow: var(--halo-ancho), 0 0 0 6px color-mix(in srgb, var(--morado) 20%, transparent); }
+.conexion-pasos:not(:has(.hecho)) .conexion-paso:first-child .conexion-num, .conexiones .conexion-paso.hecho + .conexion-paso:not(.hecho) .conexion-num { background: var(--morado); color: var(--sobre-morado); box-shadow: var(--halo-ancho), 0 0 0 6px var(--acento-a22); }
 .conexiones .conexion-paso > .pila-s > strong { font-size: var(--letra-16); }
 .conexiones > .nota.peq:not(.pila-s) { position: relative; padding-left: 38px; }
 .conexiones > .nota.peq:not(.pila-s)::before { content: "i"; position: absolute; left: 12px; top: 12px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 800 .75rem/1 var(--letra, system-ui); background: var(--tinta-2); color: var(--hoja); }
@@ -4000,7 +4000,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 323 · La clave, como una llave (tanda 42) ────────────────────────────────────────────────────────────────────────
    La clave recién creada (y la dirección del calendario) en una caja punteada con letra de ordenador y una llave en
    un disco; «Copiar la clave» con luz. */
-.conexiones .conexion-enlace { position: relative; padding: 12px 12px 12px 48px; border: var(--filo-medio) dashed color-mix(in srgb, var(--morado) 45%, var(--linea)); background: color-mix(in srgb, var(--morado) 5%, var(--hoja)); font-family: ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .02em; }
+.conexiones .conexion-enlace { position: relative; padding: 12px 12px 12px 48px; border: var(--filo-medio) dashed color-mix(in srgb, var(--morado) 45%, var(--linea)); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); font-family: ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .02em; }
 .conexiones .conexion-enlace::before { content: ""; position: absolute; left: 10px; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--morado); -webkit-mask: none; }
 .conexiones .conexion-enlace::after { content: ""; position: absolute; left: 16px; top: 16px; width: 16px; height: 16px; background: var(--sobre-morado); -webkit-mask: var(--ico-llave) center / contain no-repeat; mask: var(--ico-llave) center / contain no-repeat; }
 .conexiones .btn-primario:not(:disabled) { box-shadow: var(--sombra-accion); }
@@ -4015,7 +4015,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .tabla-salud-caja .tabla-salud thead th:nth-child(6) { --c: var(--ok); }
 .tabla-salud-caja .tabla-salud thead th { color: var(--tinta-2); }
 .tabla-salud-caja .tabla-salud tbody tr:nth-child(even) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
-.tabla-salud-caja .tabla-salud tbody tr:first-child { background: color-mix(in srgb, var(--morado) 7%, transparent); }
+.tabla-salud-caja .tabla-salud tbody tr:first-child { background: var(--acento-a8); }
 .tabla-salud-caja .tabla-salud tbody tr:first-child > * { color: var(--tinta); }
 .tabla-salud-caja { border-radius: var(--r-s); }
 /* En el móvil el punto de color hacía que la tabla tuviera que deslizarse (a 360 y, según los datos del día, a 390 px):
@@ -4025,9 +4025,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 325 · Tus entrenos en Salud, con sus anillos (tanda 42) ──────────────────────────────────────────────────────────
    La sección del atajo «FBE a Salud» como una tarjeta con tres anillos de colores en la esquina (moverse, ejercicio,
    de pie: el entreno cuenta para ellos). Dibujo, solo con fondos. */
-.conexiones .conexion-otra { position: relative; padding: 16px 16px 14px; padding-right: 84px; border-top: 0; border-radius: var(--r-16); background: linear-gradient(var(--oklab,) 160deg, var(--tinta-noche), var(--noche-0)); color: var(--marca-50); }
+.conexiones .conexion-otra { position: relative; padding: 16px 16px 14px; padding-right: 84px; border-top: 0; border-radius: var(--r-16); background: linear-gradient(var(--oklab,) 160deg, var(--tinta-noche), var(--noche-0)); color: var(--acento-50); }
 .conexiones .conexion-otra h3 { color: var(--blanco); }
-.conexiones .conexion-otra .secundario, .conexiones .conexion-otra .peq { color: var(--marca-200); }
+.conexiones .conexion-otra .secundario, .conexiones .conexion-otra .peq { color: var(--acento-200); }
 .conexiones .conexion-otra::after { content: ""; position: absolute; right: 14px; top: 14px; width: 58px; height: 58px; border-radius: 50%;
   background: radial-gradient(circle, transparent 0 9px, var(--turquesa-400) 9px 13px, transparent 13px 15px, #A6F04A 15px 20px, transparent 20px 22px, #FF2D6A 22px 27px, transparent 27px);
   -webkit-mask: conic-gradient(var(--negro) 0 82%, rgba(0, 0, 0, .28) 82%); mask: conic-gradient(var(--negro) 0 82%, rgba(0, 0, 0, .28) 82%); }
@@ -4072,7 +4072,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    La portada más grande (64 px) con sombra honda y un vinilo que asoma por detrás; sin portada, el disco en el acento.
    El origen («Tu música», «De tu coach»…) en una pastilla. */
 .tarjeta-musica .tarjeta-musica-cab { grid-template-columns: 88px minmax(0, 1fr); gap: 14px; }
-.tarjeta-musica .tarjeta-musica-cab::before { content: ""; grid-area: 1 / 1; justify-self: end; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, var(--marca-100) 0 4px, var(--neutro-950) 4px 9px, var(--neutro-900) 9px 10px, var(--neutro-950) 10px 16px, var(--neutro-900) 16px 17px, var(--neutro-950) 17px 23px, var(--noche-3) 23px 24px, var(--neutro-950) 24px); box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .5); }
+.tarjeta-musica .tarjeta-musica-cab::before { content: ""; grid-area: 1 / 1; justify-self: end; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, var(--acento-100) 0 4px, var(--neutro-950) 4px 9px, var(--neutro-900) 9px 10px, var(--neutro-950) 10px 16px, var(--neutro-900) 16px 17px, var(--neutro-950) 17px 23px, var(--noche-3) 23px 24px, var(--neutro-950) 24px); box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .5); }
 .tarjeta-musica .tarjeta-musica-portada { grid-area: 1 / 1; width: 64px; height: 64px; border-radius: var(--r-s); box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--neutro-950) 70%, transparent), 0 0 0 1px rgba(255, 255, 255, .08) inset; z-index: 1; }
 .tarjeta-musica .tarjeta-musica-portada.sin { background: linear-gradient(var(--oklab,) 150deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); color: var(--sobre-morado); }
 .tarjeta-musica .tarjeta-musica-cab > .pila-xs { grid-column: 2; grid-row: 1; }
@@ -4094,7 +4094,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 
 /* ── 332 · «Empezar con esta música» (tanda 42) ───────────────────────────────────────────────────────────────────────
    Botón con luz y un pequeño ecualizador de tres barras que baila (quieto con «reducir movimiento»). */
-.musica-sesion .empezar-musica { position: relative; min-height: 50px; font-weight: 750; border-color: color-mix(in srgb, var(--morado) 35%, var(--linea)); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 7%, var(--hoja)), var(--hoja)); box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--morado) 80%, transparent); }
+.musica-sesion .empezar-musica { position: relative; min-height: 50px; font-weight: 750; border-color: color-mix(in srgb, var(--morado) 30%, var(--linea)); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--hoja)); box-shadow: 0 10px 22px -14px var(--acento-a85); }
 .musica-sesion .empezar-musica::before { content: ""; flex: none; width: 16px; height: 14px; order: 3; margin-left: 4px;
   background: linear-gradient(var(--morado), var(--morado)) 0 100% / 4px 60% no-repeat, linear-gradient(var(--morado), var(--morado)) 6px 100% / 4px 100% no-repeat, linear-gradient(var(--morado), var(--morado)) 12px 100% / 4px 40% no-repeat; }
 @media (prefers-reduced-motion: no-preference) {
@@ -4119,14 +4119,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .panel.cancion-record { box-shadow: var(--sombra-tarjeta), inset 0 0 0 1px color-mix(in srgb, var(--oro) 35%, transparent); }
 .panel.cancion-record .t-sobre { color: var(--oro-texto); }
 .panel.cancion-record .tarjeta-musica-cab::before { background: radial-gradient(circle, var(--oro-100) 0 4px, var(--oro-600) 4px 9px, var(--oro-400) 9px 10px, var(--oro-600) 10px 16px, var(--oro-400) 16px 17px, var(--oro-600) 17px 23px, var(--oro-300) 23px 24px, var(--oro-600) 24px); }
-.panel.lista-equipo { background: radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--morado) 10%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.panel.lista-equipo { background: radial-gradient(260px 120px at 100% 0%, var(--acento-a8), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .cadencia .cadencia-v { position: relative; }
 .cadencia .cadencia-v::after { content: ""; position: absolute; left: 50%; top: -6px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--tinta-3); }
 .cadencia[data-en] .cadencia-v::after { background: var(--morado); }
 @media (prefers-reduced-motion: no-preference) {
   .cadencia[data-en] .cadencia-v::after { animation: cadencia-pulso var(--pulso, 600ms) ease-out infinite; }
 }
-@keyframes cadencia-pulso { 0% { transform: scale(1.6); box-shadow: 0 0 0 0 color-mix(in srgb, var(--morado) 45%, transparent); } 100% { transform: scale(1); box-shadow: 0 0 0 8px transparent; } }
+@keyframes cadencia-pulso { 0% { transform: scale(1.6); box-shadow: 0 0 0 0 var(--acento-a45); } 100% { transform: scale(1); box-shadow: 0 0 0 8px transparent; } }
 
 /* ===== Tanda 43 (10/11): la escena del final de la sesión ===== */
 /* 335. Al guardar y terminar, la noche de la portada llena la pantalla, sale la luna y el lobo de la marca se dibuja
@@ -4136,10 +4136,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .escena-final { position: fixed; inset: 0; z-index: var(--capa-escena); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(env(safe-area-inset-bottom, 0px) + 56px); overflow: hidden; cursor: pointer;
   -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; color: var(--blanco);
-  background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, var(--tinta-noche)) 0%, transparent 66%),
+  background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 55%, var(--tinta-noche)) 0%, transparent 66%),
     radial-gradient(26rem 22rem at 50% 30%, var(--marca-800) 0%, transparent 70%), var(--tinta-noche);
   animation: escena-abre .5s var(--curva-casa) both; transition: transform var(--mov-lento) var(--curva-casa); will-change: transform; }
-.escena-final.con-record { background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, var(--tinta-noche)) 0%, transparent 66%),
+.escena-final.con-record { background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 55%, var(--tinta-noche)) 0%, transparent 66%),
     radial-gradient(26rem 22rem at 50% 30%, var(--neutro-800) 0%, transparent 70%), var(--tinta-noche); }
 .escena-final.fuera { transform: translateY(-102%); pointer-events: none; }
 @keyframes escena-abre { from { clip-path: circle(0 at 50% 100%); } to { clip-path: circle(150% at 50% 100%); } }
@@ -4184,7 +4184,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .escena-chips { padding: 6px 0 2px; }
 .escena-chips > span { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; animation-delay: 1.75s; transform: translateY(190%); }
 .escena-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: var(--r-pildora); font-size: var(--letra-14); font-weight: 700; color: var(--blanco); background: var(--marca-700); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
-.escena-chip.oro { color: var(--oro-900); background: linear-gradient(var(--oklab,) 180deg, var(--oro-200), var(--oro-300)); box-shadow: 0 4px 16px color-mix(in srgb, var(--oro-300) 35%, transparent); }
+.escena-chip.oro { color: var(--oro-900); background: var(--grad-record); box-shadow: 0 4px 16px color-mix(in srgb, var(--oro-300) 35%, transparent); }
 .escena-saltar { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); text-align: center; font-size: var(--letra-13); color: var(--marca-300); }
 .escena-saltar > span { animation-delay: 2.1s; }
 @media (max-height: 560px) { .escena-cielo { max-height: 50vh; } .escena-titulo { font-size: var(--letra-24); } }
@@ -4194,8 +4194,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* 336. El indicador de carga (LoboCarga, en toda la app): en vez del aro que gira, una luna que se llena y se vacía
    detrás del lobo (la luz cruza el disco de lado a lado). La portada de arranque, con sus estrellas y su luna, va en
    scripts/portada.mjs. Con «reducir movimiento», la luna llena y quieta. */
-.lobo-carga { border-radius: 50%; overflow: hidden; isolation: isolate; background: color-mix(in srgb, var(--morado) 9%, var(--hoja)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 22%, transparent); }
-.lobo-carga::before { inset: 0; border: 0; border-radius: 50%; animation: none; background: radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--morado) 30%, var(--hoja)), color-mix(in srgb, var(--morado) 46%, var(--hoja))); z-index: -1; }
+.lobo-carga { border-radius: 50%; overflow: hidden; isolation: isolate; background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); box-shadow: inset 0 0 0 1.5px var(--acento-a22); }
+.lobo-carga::before { inset: 0; border: 0; border-radius: 50%; animation: none; background: radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--morado) 30%, var(--hoja)), color-mix(in srgb, var(--morado) 45%, var(--hoja))); z-index: -1; }
 .lobo-carga svg { position: relative; }
 @media (prefers-reduced-motion: no-preference) {
   .lobo-carga::before { animation: luna-fase 1.9s cubic-bezier(.45, 0, .55, 1) infinite; }
@@ -4257,8 +4257,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    umbral está llena y se enciende, y mientras recarga, se llena y se vacía como el indicador de carga. */
 body > .tirar { background: var(--tinta-noche); box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
 body > .tirar .tirar-rueda { position: relative; width: 22px; height: 22px; border: 0; border-radius: 50%; overflow: hidden; transform: none; background: rgba(255, 255, 255, .17); }
-body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, var(--blanco), var(--marca-200)); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
-body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px color-mix(in srgb, var(--marca-400) 75%, transparent); }
+body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, var(--blanco), var(--acento-200)); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
+body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px color-mix(in srgb, var(--acento-400) 75%, transparent); }
 body > .tirar.girando .tirar-rueda { animation: none; }
 @media (prefers-reduced-motion: no-preference) {
   body > .tirar.lista:not(.girando) .tirar-rueda { animation: tirar-llena .32s var(--curva-rebote); }
@@ -4271,7 +4271,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 /* 340. El check-in enviado (Checkin.jsx): el check-in sale volando hasta el lobo de tu coach, que asoma a la derecha
    y lo recibe con una onda. Con «reducir movimiento», el lobo quieto y sin vuelo. */
 .ck-enviado { grid-template-columns: 48px minmax(0, 1fr) 40px; position: relative; }
-.ck-enviado-lobo { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--morado); box-shadow: 0 4px 12px color-mix(in srgb, var(--morado) 35%, transparent); }
+.ck-enviado-lobo { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--morado); box-shadow: 0 4px 12px var(--acento-a30); }
 .ck-enviado-lobo svg { width: 21px; height: 24px; fill: var(--sobre-morado); }
 .ck-enviado-lobo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: var(--filo-fuerte) solid var(--morado); opacity: 0; pointer-events: none; }
 .ck-enviado-vuelo { display: none; position: absolute; top: 50%; left: 30px; width: 20px; height: 20px; margin-top: -10px; pointer-events: none; }
@@ -4353,7 +4353,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
   .bdia-semanas i:nth-child(2) { --n: 1; } .bdia-semanas i:nth-child(3) { --n: 2; } .bdia-semanas i:nth-child(4) { --n: 3; } .bdia-semanas i:nth-child(5) { --n: 4; } .bdia-semanas i:nth-child(6) { --n: 5; }
   .bdia-semanas i:nth-child(7) { --n: 6; } .bdia-semanas i:nth-child(8) { --n: 7; } .bdia-semanas i:nth-child(9) { --n: 8; } .bdia-semanas i:nth-child(10) { --n: 9; } .bdia-semanas i:nth-child(11) { --n: 10; } .bdia-semanas i:nth-child(12) { --n: 11; }
 }
-@keyframes bdia-lobo { 0% { filter: drop-shadow(0 0 0 transparent); transform: scale(.7); } 35% { filter: drop-shadow(0 0 7px var(--blanco)) drop-shadow(0 0 14px var(--marca-400)); transform: scale(1.18); } 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); } }
+@keyframes bdia-lobo { 0% { filter: drop-shadow(0 0 0 transparent); transform: scale(.7); } 35% { filter: drop-shadow(0 0 7px var(--blanco)) drop-shadow(0 0 14px var(--acento-400)); transform: scale(1.18); } 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); } }
 @keyframes bdia-pieza { from { transform: translateY(16px); } }
 @keyframes bdia-punto { from { background: rgba(255, 255, 255, .18); transform: scaleY(.4); } }
 @keyframes bdia-barra { from { transform: scaleX(0); } }
@@ -4386,7 +4386,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 @keyframes ej-hecho { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 35% { transform: scale(1.012); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 22%, transparent), 0 10px 30px -10px color-mix(in srgb, var(--ok) 55%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 @keyframes ej-sello { 0% { transform: scale(1.9) rotate(-18deg); } 55% { transform: scale(.9) rotate(4deg); } }
 @keyframes ej-onda { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); } to { box-shadow: 0 0 0 18px transparent; } }
-@keyframes ej-toca { from { transform: translateY(14px); box-shadow: 0 0 0 4px color-mix(in srgb, var(--morado) 30%, transparent); } }
+@keyframes ej-toca { from { transform: translateY(14px); box-shadow: 0 0 0 4px var(--acento-a30); } }
 
 /* 347. La barra de progreso de la sesión (los tramos de la cabecera): el tramo del ejercicio recién terminado da un
    salto con luz verde (a.recien) y, al llegar al último ejercicio, su tramo late dos veces para avisar. */
@@ -4397,7 +4397,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 }
 @keyframes tramo-hecho { 0% { transform: scaleY(1); } 35% { transform: scaleY(2.6); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 70%, transparent); } }
 @keyframes tramo-verde { 0%, 55% { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); } }
-@keyframes tramo-ultimo { 50% { transform: scaleY(2.2); box-shadow: 0 0 10px color-mix(in srgb, var(--morado) 70%, transparent); } }
+@keyframes tramo-ultimo { 50% { transform: scaleY(2.2); box-shadow: 0 0 10px var(--acento-a70); } }
 
 /* 348. Volver a Hoy después de entrenar (Hoy.jsx: .hero-dia.recien-hecha, solo al venir de «Volver a hoy»): el lobo
    con su medalla llega con un salto, «Hecha hoy» cae como un sello, la tarjeta late con luz y los ✓ de las sesiones
@@ -4459,7 +4459,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
   /* (el color solo se apaga despacio en las teclas de números: en las del RPE, la elegida cambia de fondo y de letra a la vez, y a medio fundido no cumplía el contraste) */
   .teclado-teclas .tecla { transition: transform var(--mov-medio) var(--curva-rebote), background-color var(--mov-lento) ease-out; }
   .teclado-serie .tecla:active { transition-duration: 0s; transform: scale(.9); }
-  .teclado-serie .tecla:not(.tecla-siguiente, .tecla-paso, [aria-pressed="true"]):active { background: color-mix(in srgb, var(--morado) 26%, var(--hoja)); }
+  .teclado-serie .tecla:not(.tecla-siguiente, .tecla-paso, [aria-pressed="true"]):active { background: color-mix(in srgb, var(--morado) 22%, var(--hoja)); }
 }
 /* 353. La cifra que se escribe salta con cada tecla: en FilaSerie.jsx (animate(), 190 ms), no aquí. */
 

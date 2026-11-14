@@ -90,9 +90,9 @@
 .tv-hoja h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; font-size: var(--letra-17); }
 .tv-cuenta { font-size: var(--letra-13); font-weight: 600; color: var(--tinta-3); }
 .tv-donde { margin: 0 0 12px; font-size: var(--letra-15); }
-.tv-ruta { position: relative; height: 10px; margin: 18px 8px 8px; border-radius: var(--r-pildora); background: color-mix(in srgb, var(--morado) 16%, transparent); }
+.tv-ruta { position: relative; height: 10px; margin: 18px 8px 8px; border-radius: var(--r-pildora); background: var(--acento-a16); }
 .tv-ruta-hecho { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pildora); background: var(--morado); }
-.tv-hito { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--hoja); border: var(--filo-fuerte) solid color-mix(in srgb, var(--morado) 45%, transparent); box-sizing: border-box; }
+.tv-hito { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--hoja); border: var(--filo-fuerte) solid var(--acento-a45); box-sizing: border-box; }
 .tv-hito.pasado { border-color: var(--morado); background: var(--morado); }
 .tv-ruta-lobo { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--tv-oro); border: var(--filo-marca) solid var(--hoja); box-sizing: border-box; box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
 .tv-ruta-extremos { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: var(--letra-13); color: var(--tinta-2); }
@@ -103,10 +103,10 @@
 .tv-postal span:last-child { color: var(--tinta-2); }
 .tv-postal-img { display: grid; place-items: center; width: 112px; height: 84px; margin-bottom: 4px; border-radius: var(--r-s); object-fit: cover; background: var(--tv-noche-2); color: var(--tv-tiza-2); }
 .tv-postal-img svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tv-postal.pendiente .tv-postal-img { background: color-mix(in srgb, var(--morado) 12%, transparent); color: var(--tinta-2); }
+.tv-postal.pendiente .tv-postal-img { background: var(--acento-a12); color: var(--tinta-2); }
 .tv-clasif { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 6px; }
-.tv-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 7%, transparent); }
-.tv-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
+.tv-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: var(--r-14); background: var(--acento-a8); }
+.tv-fila.yo { background: var(--acento-a16); font-weight: 700; }
 .tv-fila.rival { box-shadow: inset 0 0 0 2px var(--tv-oro); }
 .tv-puesto { font-weight: 800; color: var(--tinta-2); text-align: center; }
 .tv-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -114,7 +114,7 @@
 .tv-retar { min-height: 36px; }
 .tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: var(--tinta-noche); border-color: transparent; }
 .tv-equipo { display: grid; gap: 6px; margin-top: 12px; font-size: var(--letra-14); }
-.tv-barra { height: 10px; border-radius: var(--r-pildora); background: color-mix(in srgb, var(--morado) 16%, transparent); overflow: hidden; }
+.tv-barra { height: 10px; border-radius: var(--r-pildora); background: var(--acento-a16); overflow: hidden; }
 .tv-barra span { display: block; height: 100%; border-radius: var(--r-pildora); background: var(--morado); }
 .tv-lobos, .tv-constelaciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
 .tv-lobo { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 120px; padding: 10px 8px; border-radius: var(--r-16); border: var(--filo-fuerte) solid transparent; color: var(--tv-tiza); font: inherit; font-size: var(--letra-13); line-height: 1.25; text-align: center;
@@ -173,8 +173,8 @@
 
 /* (top, tanda 3) en «Tu travesía»: las misiones con su barra, los adornos y los logros */
 .tv-misiones { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 8px; }
-.tv-mision { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 7%, transparent); font-size: var(--letra-14); }
-.tv-mision-marca { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: var(--filo-fuerte) solid color-mix(in srgb, var(--morado) 40%, transparent); box-sizing: border-box; }
+.tv-mision { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: var(--r-14); background: var(--acento-a8); font-size: var(--letra-14); }
+.tv-mision-marca { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: var(--filo-fuerte) solid var(--acento-a45); box-sizing: border-box; }
 .tv-mision.hecha .tv-mision-marca { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); }
 .tv-mision-marca svg { width: 14px; height: 14px; }
 .tv-mision-texto { display: grid; gap: 6px; min-width: 0; }
@@ -188,7 +188,7 @@
 .tv-adorno:disabled { cursor: default; opacity: var(--op-deshabilitado); }
 .tv-adorno:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; }
 .tv-logros { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0 0 8px; padding: 0; list-style: none; }
-.tv-logro { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--r-14); font-size: var(--letra-12); line-height: 1.3; color: var(--tinta-2); background: color-mix(in srgb, var(--morado) 6%, transparent); }
+.tv-logro { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--r-14); font-size: var(--letra-12); line-height: 1.3; color: var(--tinta-2); background: var(--acento-a4); }
 .tv-logro strong { font-size: var(--letra-13); color: var(--tinta); }
 .tv-logro.hecho { background: color-mix(in srgb, var(--tv-oro) 18%, transparent); }
 .tv-logro-ico svg { width: 18px; height: 18px; }
@@ -262,7 +262,7 @@
 
 /* (remate, tanda 7) «Tu lobo en números» y «El diario del lobo» */
 .tv-numeros-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.tv-numeros-lista > div { padding: 10px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 9%, transparent); }
+.tv-numeros-lista > div { padding: 10px 12px; border-radius: var(--r-s); background: var(--acento-a8); }
 .tv-numeros-lista dt { font-size: var(--letra-13); color: var(--tinta-2); }
 .tv-numeros-lista dd { margin: 2px 0 0; font-size: var(--letra-20); font-weight: 800; }
 .tv-numeros-sub { margin: 14px 0 6px; font-size: var(--letra-14); }
@@ -272,7 +272,7 @@
 .tv-semana { flex: 1; height: var(--h); border-radius: var(--r-6) var(--r-6) var(--r-2) var(--r-2); background: var(--morado); opacity: .85; }
 .tv-semana:last-child { background: var(--tv-oro); opacity: 1; }
 .tv-diario-lista { display: grid; gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
-.tv-diario-lista li { padding: 10px 12px; border-left: var(--filo-marca) solid var(--tv-oro); border-radius: 0 var(--r-s) var(--r-s) 0; background: color-mix(in srgb, var(--morado) 7%, transparent); }
+.tv-diario-lista li { padding: 10px 12px; border-left: var(--filo-marca) solid var(--tv-oro); border-radius: 0 var(--r-s) var(--r-s) 0; background: var(--acento-a8); }
 .tv-diario-lista strong { font-size: var(--letra-14); }
 .tv-diario-lista p { margin: 2px 0 0; font-size: var(--letra-15); line-height: 1.4; }
 
@@ -295,8 +295,8 @@
 .tv-reto-coach h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
 .tv-reto-coach h3 svg { width: 18px; height: 18px; }
 /* (las filas de la liga, como las de la manada pero aparte: «.tv-fila» son las de la manada) */
-.tv-liga-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 7%, transparent); }
-.tv-liga-fila.yo { background: color-mix(in srgb, var(--morado) 18%, transparent); font-weight: 700; }
+.tv-liga-fila { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 10px 4px 12px; border-radius: var(--r-14); background: var(--acento-a8); }
+.tv-liga-fila.yo { background: var(--acento-a16); font-weight: 700; }
 
 /* (jugo, tanda 11) hacia el siguiente sitio de la ruta, el sello de la etapa y la cuenta del final */
 .travesia-ruta { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(78px + env(safe-area-inset-top, 0px)); width: min(42%, 180px); display: grid; gap: 5px; justify-items: end; pointer-events: none; }

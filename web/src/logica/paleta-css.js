@@ -1,5 +1,5 @@
 // El texto de web/src/color.css, desde la paleta (lo escribe scripts/paleta.mjs; las pruebas lo comparan con el archivo).
-import { ESCALAS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA, OLED, ZONAS, ZONAS_DALTONISMO, FUEGO, valor, vivo } from './paleta.js';
+import { ESCALAS, PASOS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA, OLED, TINTES, ZONAS, ZONAS_DALTONISMO, FUEGO, valor, vivo } from './paleta.js';
 
 const ref = (v) => {
   if (typeof v === 'string') return v;
@@ -33,8 +33,13 @@ export function cssPaleta() {
     '--grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);',
     `--grad-record: linear-gradient(135deg, ${CELEBRACION.record.join(', ')});`,
     `--grad-fuego: linear-gradient(160deg, ${CELEBRACION.fuego.join(', ')});`,
+    `--medalla: radial-gradient(circle at 32% 26%, ${CELEBRACION.medalla[0]}, ${CELEBRACION.medalla[1]} 55%, ${CELEBRACION.medalla[2]});`,
+    // el Amanecer, en aro: el de las historias sin ver
+    '--aro-amanecer: conic-gradient(from 200deg, var(--morado), var(--rosa-400), var(--oro-300), var(--rosa-400), var(--morado));',
+    ...PASOS.map((p) => `--acento-${p}: var(--marca-${p});`),
     ...CELEBRACION.confeti.map((c, i) => `--confeti-${i + 1}: ${c};`),
-    ...SECUENCIAL.map((c, i) => `--seq-${i + 1}: ${c};`),
+    // (tanda 3) la secuencial, del acento: de casi nada a todo (sobre la tarjeta)
+    ...SECUENCIAL.map((p, i) => `--seq-${i + 1}: ${p === 100 ? 'var(--morado)' : `color-mix(in srgb, var(--morado) ${p}%, var(--hoja))`};`),
     ...DIVERGENTE.map((c, i) => `--div-${i + 1}: ${c};`),
   ];
   // (color 2, 4) las zonas de carrera (relleno y texto), y con la ayuda para daltonismo
@@ -50,6 +55,7 @@ export function cssPaleta() {
     ...CELEBRACION.confeti.map((c, i) => `--confeti-${i + 1}: ${vivo(c)};`),
     `--grad-record: linear-gradient(in oklch 135deg, ${CELEBRACION.record.map((c) => vivo(c)).join(', ')});`,
     `--grad-fuego: linear-gradient(in oklch 160deg, ${CELEBRACION.fuego.map((c) => vivo(c)).join(', ')});`,
+    `--medalla: radial-gradient(circle at 32% 26%, ${vivo(CELEBRACION.medalla[0])}, ${vivo(CELEBRACION.medalla[1])} 55%, ${vivo(CELEBRACION.medalla[2])});`,
   ];
   const sangrar = (txt) => txt.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n');
   const serie = (t) => SERIES[t].map((c, i) => `--serie-${i + 1}: ${i === 0 ? 'var(--morado)' : c};`);
@@ -117,8 +123,8 @@ export function cssSistema() {
    ========================================================================================================== */
 
 ${bloqueS(':root', raiz)}
-/* Anillos, halos, brillo y la sombra de color de los botones. Se declaran también donde cambian --linea, --hoja o
+/* Anillos, halos, brillo, la sombra de color de los botones y los tintes del acento. Se declaran también donde cambian --linea, --hoja o
    --morado para sí mismos, para que tomen el valor de ese sitio. */
-${bloqueS(AMBITOS.join(',\n'), Object.entries(SOMBRAS).map(([k, v]) => `--${k}: ${v};`))}`;
+${bloqueS(AMBITOS.join(',\n'), [...Object.entries(SOMBRAS).map(([k, v]) => `--${k}: ${v};`), '/* los tintes del acento: el acento a medias, en diez niveles */', TINTES.map((p) => `--acento-a${p}: color-mix(in srgb, var(--morado) ${p}%, transparent);`).join(' ')])}`;
 }
 function bloqueS(sel, decl) { return `${sel} {\n${decl.map((d) => `  ${d}`).join('\n')}\n}\n`; }

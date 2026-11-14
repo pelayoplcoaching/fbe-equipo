@@ -23,7 +23,7 @@
 .yt-marcas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .yt-marca { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 8px 10px; border-radius: var(--r-xs, 8px); border: var(--filo-fino) solid var(--borde, rgba(127, 127, 127, .25)); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .yt-marca .num { font-weight: 750; color: var(--morado); min-width: 3.2em; }
-.yt-marca[aria-current="true"] { background: color-mix(in srgb, var(--morado) 12%, transparent); border-color: var(--morado); }
+.yt-marca[aria-current="true"] { background: var(--acento-a12); border-color: var(--morado); }
 /* el mini-reproductor, encima de la barra de abajo (y del descanso) */
 .yt-mini { position: fixed; z-index: var(--capa-pantalla); right: 10px; bottom: calc(var(--alto-barra, 64px) + 12px + env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 20px));
   background: var(--hoja, var(--blanco)); color: inherit; border-radius: var(--r, 12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: 6px 8px 8px; display: grid; gap: 6px; }

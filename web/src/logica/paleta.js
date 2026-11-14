@@ -174,7 +174,8 @@ export const SERIES = {
   oscuro: [e('marca', 400), oklch(0.78, 0.13, 55), e('turquesa', 300), e('azul', 300), e('rosa', 300), oklch(0.85, 0.13, 90), e('verde', 300), e('neutro', 300)],
 };
 // Secuencial (una sola tinta, de poco a mucho) y divergente (por debajo ↔ por encima del objetivo, gris en medio)
-export const SECUENCIAL = [100, 300, 500, 700, 900].map((p) => e('marca', p));
+// (tanda 3) la secuencial sigue al acento: cinco niveles, en tanto por ciento de acento sobre la tarjeta
+export const SECUENCIAL = [14, 34, 56, 78, 100];
 export const DIVERGENTE = [e('naranja', 600), e('naranja', 300), e('neutro', 200), e('azul', 300), e('azul', 600)];
 
 // ---------- las secciones (15): todas salen de las escalas ----------
@@ -194,8 +195,11 @@ export const ZONAS_DALTONISMO = {
 };
 // Las celebraciones (12): oro de verdad, fuego y la marca
 export const CELEBRACION = {
-  record: [e('oro', 200), e('oro', 400), e('oro', 600)],
-  fuego: [e('ambar', 300), FUEGO, e('rojo', 600)],
+  // (tanda 3) los dos, para llevar texto oscuro encima (oro-900 y naranja-950 pasan AA de punta a punta): así se usan de verdad
+  record: [e('oro', 200), e('oro', 300), e('oro', 400)],
+  fuego: [e('ambar', 300), FUEGO],
+  // la medalla: el oro con volumen de los récords, los trofeos y los destacados (antes, escrito igual en cinco sitios)
+  medalla: [e('oro', 100), e('oro', 300), e('oro', 500)],
   confeti: [e('marca', 500), e('oro', 400), e('rosa', 400), e('turquesa', 400), e('azul', 400), e('naranja', 400)],
 };
 
@@ -252,8 +256,12 @@ export function superficiesDe(acento, tema) {
 }
 export function textosDe(acento, tema) {
   const n = neutrosDe(acento);
-  if (!n || tema !== 'claro') return TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
-  return { tinta: n.neutro[950], 'tinta-2': n.neutro[700], 'tinta-3': n.neutro[600] };
+  if (!n) return TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
+  if (tema === 'claro') return { tinta: n.neutro[950], 'tinta-2': n.neutro[700], 'tinta-3': n.neutro[600] };
+  // (tanda 3) en oscuro y en negro puro, los textos toman también el tono del acento: misma luminosidad y viveza que
+  // los de siempre (con Grafito, gris puro)
+  const h = aOklch(acento.claro.morado)[2], gris = acento.id === 'grafito';
+  return Object.fromEntries(Object.entries(TEXTOS.oscuro).map(([k, hex]) => { const [L, C] = aOklch(hex); return [k, oklch(L, gris ? 0 : C, h)]; }));
 }
 
 // ---------- el acento con alto contraste (8) ----------
@@ -291,4 +299,33 @@ export function parejasPaleta({ tema = 'claro', acento = ACENTOS[0], alto = fals
   const est = (k) => (daltonismo && DALTONISMO[t][k]) || valor(t, k);
   const filas = [['Texto', txt.tinta], ['Texto secundario', txt['tinta-2']], ['Texto terciario', txt['tinta-3']], ['Acento', ac.morado], ['Hecho', est('ok')], ['Aviso', valor(t, 'aviso')], ['Alerta', est('alerta')], ['Info', valor(t, 'info')], ['Oro', valor(t, 'oro')]];
   return filas.map(([nombre, color]) => ({ nombre, color, tarjeta: contraste(color, sup.hoja), fondo: contraste(color, sup.tiza) }));
+}
+
+// =====================================================================================================================
+// Color y diseño, tanda 3
+// =====================================================================================================================
+
+// ---------- la escala del acento (5) ----------
+// Cada acento tiene su escala de 50 a 950 (--acento-N): lo que antes era violeta fijo sin ser marca (brillos, halos y
+// detalles de la tarjeta del día, del perfil, de la racha…) la usa, y con otro acento ya no desentona. Con el morado,
+// es la escala de la marca: nada cambia.
+const FAMILIA = { morado: 'marca', azul: 'azul', pino: 'turquesa', frambuesa: 'rosa', cobre: 'naranja', orquidea: 'purpura', oceano: 'cielo' };
+export function escalaAcento(acento) {
+  const fam = FAMILIA[acento?.id];
+  if (fam) return ESCALAS[fam];
+  if (acento?.id === 'grafito') return Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], 0, 0)]));
+  // (Lima y cualquier otro sin familia: la viveza del verde, en su tono)
+  const h = aOklch(acento.claro.morado)[2];
+  return Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], DEF.verde.c[i], h)]));
+}
+
+// ---------- los tintes del acento (4) ----------
+// El acento a medias (sobre transparente), en diez niveles con nombre: --acento-a4 … --acento-a85. Antes, 42
+// porcentajes distintos repartidos por los estilos.
+export const TINTES = [4, 8, 12, 16, 22, 30, 45, 55, 70, 85];
+// El nivel de un porcentaje: el más cercano, solo si no se nota (2 puntos por debajo del 20 %; 5, por encima)
+export function nivelTinte(pct) {
+  let mejor = null;
+  for (const v of TINTES) { const d = Math.abs(v - pct); if (d <= (Math.max(v, pct) < 20 ? 2 : 5) && (!mejor || d < mejor[1])) mejor = [v, d]; }
+  return mejor ? mejor[0] : null;
 }

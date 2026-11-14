@@ -35,14 +35,14 @@
 .contenido.equipo::before {
   content: ""; position: absolute; z-index: -1; pointer-events: none; left: -16px; right: -16px; top: -24px; height: 300px;
   background:
-    radial-gradient(55% 75% at 12% 0%, color-mix(in srgb, var(--morado) 15%, transparent), transparent 72%),
+    radial-gradient(55% 75% at 12% 0%, var(--acento-a16), transparent 72%),
     radial-gradient(45% 60% at 95% 6%, color-mix(in srgb, var(--eq-rosa) 9%, transparent), transparent 70%);
 }
 
 /* 2 - "Estas como ..." y la racha, como dos pastillas: tu nombre en el equipo se toca (abre tu perfil) y la racha brilla */
 .cab-equipo { gap: 6px 8px; align-items: center; }
 .cab-equipo .btn-yo { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: var(--r-pildora); background: var(--morado-suave);
-  color: var(--morado); font-weight: 700; text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
+  color: var(--morado); font-weight: 700; text-decoration: none; box-shadow: inset 0 0 0 1px var(--acento-a22); }
 .cab-equipo .racha-cab { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px 1px 7px; border-radius: var(--r-pildora); font-weight: 700;
   color: var(--tinta); background: color-mix(in srgb, var(--ambar-400) 15%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ambar-400) 38%, transparent),
   0 4px 12px -8px color-mix(in srgb, var(--ambar-400) 80%, transparent); }
@@ -71,7 +71,7 @@
 .plegable-eq[open] > summary .plegable-eq-ico { background: color-mix(in srgb, var(--pc) 22%, transparent); box-shadow: 0 4px 10px -6px var(--pc); }
 
 /* 6 - Las pestanas del Equipo (Muro, Retos, Ranking, Preguntas): la elegida con un fondo de luz bajo su raya */
-.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(var(--oklab,) 180deg, transparent 40%, color-mix(in srgb, var(--morado) 9%, transparent)); border-radius: var(--r-10) var(--r-10) 0 0; }
+.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(var(--oklab,) 180deg, transparent 40%, var(--acento-a8)); border-radius: var(--r-10) var(--r-10) 0 0; }
 
 /* =========================================================== LO SOCIAL (7 a 17) ====================================== */
 
@@ -125,7 +125,7 @@
 .duelo-resultado.ganado { color: var(--eq-oro-t); background: var(--oro-suave); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 45%, transparent); }
 .duelo-resultado.empate { color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 13%, var(--hoja)); }
 .duelo-resultado.perdido { color: var(--tinta-2); background: var(--hoja-2); }
-.duelo-fila.pendiente { background: var(--hoja); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 45%, transparent); }
+.duelo-fila.pendiente { background: var(--hoja); box-shadow: inset 0 0 0 1.5px var(--acento-a45); }
 
 /* 14 - "Retar a alguien" como invitacion: borde de trazos y las espadas en su disco */
 .duelos .duelo-retar { border-style: dashed; border-color: color-mix(in srgb, var(--ambar-500) 55%, var(--linea)); }
@@ -134,11 +134,11 @@
 /* 15 - El companero de la semana con su corona de luz: aro dorado y violeta, y un polvo de estrellas detras */
 .cs-elegido { position: relative; isolation: isolate; }
 .cs-elegido::before { content: ""; position: absolute; z-index: -1; left: 50%; top: -6px; width: 180px; height: 110px; margin-left: -90px; pointer-events: none;
-  background-image: radial-gradient(circle, var(--oro-claro) 1.6px, transparent 2.2px), radial-gradient(circle, color-mix(in srgb, var(--morado) 60%, transparent) 1.4px, transparent 2px);
+  background-image: radial-gradient(circle, var(--oro-claro) 1.6px, transparent 2.2px), radial-gradient(circle, var(--acento-a55) 1.4px, transparent 2px);
   background-size: 28px 24px, 36px 30px; background-position: 4px 6px, 18px 14px;
   -webkit-mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); }
-.companero-semana .cs-elegido .avatar { box-shadow: var(--halo-ancho), 0 0 0 6px var(--oro-claro), 0 0 0 9px color-mix(in srgb, var(--morado) 40%, transparent),
-  0 10px 26px -8px color-mix(in srgb, var(--morado) 60%, transparent); }
+.companero-semana .cs-elegido .avatar { box-shadow: var(--halo-ancho), 0 0 0 6px var(--oro-claro), 0 0 0 9px var(--acento-a45),
+  0 10px 26px -8px var(--acento-a55); }
 
 /* 16 - "Lo mejor de la semana pasada" con una etiqueta de color por fila (la mas aplaudida en oro, entrenos en verde, han entrado en azul) */
 .lm-lista .lm-etq { padding: 1px 8px; border-radius: var(--r-pildora); color: var(--morado); background: var(--morado-suave); }
@@ -160,11 +160,11 @@
 
 /* 18 - El cuadro de publicar: al tocarlo, un borde de luz en el degradado de la marca */
 .compositor { transition: box-shadow var(--mov-medio, var(--mov-medio)) var(--curva-casa, ease); }
-.compositor:focus-within { box-shadow: var(--sombra-tarjeta), 0 0 0 2px color-mix(in srgb, var(--morado) 55%, transparent), 0 10px 28px -14px color-mix(in srgb, var(--eq-rosa) 70%, transparent); }
+.compositor:focus-within { box-shadow: var(--sombra-tarjeta), 0 0 0 2px var(--acento-a55), 0 10px 28px -14px color-mix(in srgb, var(--eq-rosa) 70%, transparent); }
 
 /* 19 - Los filtros del muro: el elegido en el degradado de la marca, no en negro */
 .filtros-muro .chip-filtro[aria-pressed="true"] { color: var(--sobre-morado); border-color: transparent;
-  background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa)));
+  background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 70%, var(--eq-rosa)));
   box-shadow: var(--sombra-accion); }
 
 /* 20 - Cada autor con un aro fino del color de lo que publica (entreno, logro, encuesta, pregunta...) */
@@ -190,7 +190,7 @@
 .post .post-guardar.guardado svg { fill: currentColor; }
 
 /* 25 - Lo fijado: la chincheta un poco inclinada y la pastilla con brillo */
-.post.fijada .post-fijado { background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); color: var(--sobre-morado);
+.post.fijada .post-fijado { background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 70%, var(--eq-rosa))); color: var(--sobre-morado);
   box-shadow: var(--sombra-accion); }
 .post.fijada .post-fijado svg { transform: rotate(-22deg); }
 
@@ -211,7 +211,7 @@
   background: linear-gradient(var(--oklab,) 100deg, transparent 30%, var(--eq-brillo) 50%, transparent 70%); animation: eq-destello 1.1s .2s var(--curva-casa, ease) 1 both; }
 
 /* 29 - Las encuestas: barras con degradado, la que gana en oro y su porcentaje en negrita */
-.encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 14%, transparent), color-mix(in srgb, var(--morado) 26%, transparent)); }
+.encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, var(--acento-a12), var(--acento-a22)); }
 .encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--oro-300) 28%, transparent), color-mix(in srgb, var(--oro-400) 38%, transparent)); }
 .encuesta-opcion.gana .eo-pct { color: var(--eq-oro-t); font-weight: 800; }
 .encuesta-opcion .eo-pct { font-weight: 700; }
@@ -241,8 +241,8 @@
 
 /* 35 - "Compartir la semana del equipo": a todo lo ancho y con el velo de la marca */
 .resumen-equipo-compartir { width: 100%; justify-self: stretch; justify-content: center;
-  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)));
-  border-color: color-mix(in srgb, var(--morado) 30%, transparent); }
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)));
+  border-color: var(--acento-a30); }
 .resumen-equipo-compartir svg { color: var(--morado); }
 
 /* 36 - "El mes en el equipo": cada cifra con su color, como el resumen de la semana */
@@ -269,13 +269,13 @@
 /* 39 - La barra grande del reto: mas gruesa, con degradado, una luz en la punta y oro al llegar */
 .barra-equipo.barra-grande { height: 12px; border-radius: var(--r-pildora); background: var(--hoja-2); box-shadow: inset 0 1px 2px color-mix(in srgb, var(--neutro-950) 10%, transparent); overflow: visible; }
 .barra-equipo.barra-grande > span { position: relative; border-radius: var(--r-pildora);
-  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
+  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px var(--acento-a70); }
 .barra-equipo.barra-grande > span::after { content: ""; position: absolute; right: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
-  background: var(--blanco); box-shadow: 0 0 0 2px color-mix(in srgb, var(--morado) 40%, transparent), 0 0 10px 2px rgba(255, 255, 255, .7); }
+  background: var(--blanco); box-shadow: 0 0 0 2px var(--acento-a45), 0 0 10px 2px rgba(255, 255, 255, .7); }
 .barra-equipo.barra-grande > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--ambar-500) 80%, transparent); }
 
 /* 40 - Lo de cada uno en el reto: tu fila con el velo del acento y las barras completas en oro */
-.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: var(--r-s); background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
+.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: var(--r-s); background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), transparent 80%); }
 .progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 41 - El reto ya terminado: un punto mas apagado (el fondo, no el texto) y "Terminado" con su marca */
@@ -290,24 +290,24 @@
 
 /* 43 - Tu fila en el ranking: con el velo del acento y una raya a la izquierda, para encontrarte enseguida */
 .ranking-lista > .fila-ranking.yo { border-radius: var(--r-s); box-shadow: inset 3px 0 0 var(--morado);
-  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), transparent 75%); }
+  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), transparent 75%); }
 
 /* 44 - Los hitos del equipo con su barra debajo: cuanto falta se ve, no solo se lee */
 .hitos-lista > li::after { content: ""; grid-column: 2 / -1; height: 4px; border-radius: var(--r-pildora); margin-top: -2px;
-  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 75%, transparent) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
+  background: linear-gradient(var(--oklab,) 90deg, var(--acento-a70) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
 .hitos-lista > li.hecho::after { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 45 - La respuesta del coach a una pregunta como un bocadillo: con su color y una punta hacia la pregunta */
-.pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 7%, var(--hoja));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
+.pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja));
+  box-shadow: inset 0 0 0 1px var(--acento-a16); }
 .pregunta-equipo .pe-respuesta::before { content: ""; position: absolute; top: -6px; left: 18px; width: 12px; height: 12px; transform: rotate(45deg);
-  background: inherit; box-shadow: -1px -1px 0 0 color-mix(in srgb, var(--morado) 18%, transparent); }
+  background: inherit; box-shadow: -1px -1px 0 0 var(--acento-a16); }
 .pregunta-equipo .pe-respuesta .le-k { color: var(--morado); font-weight: 700; }
 
 /* =========================================================== EL PERFIL DEL EQUIPO (46 y 47) ========================== */
 
 /* 46 - Las cifras del perfil: la cifra arriba en grande y su nombre debajo, igual en todas (la racha ya no ocupa tres lineas) */
-.perfil-equipo-num > div { justify-content: flex-start; box-shadow: inset 0 3px 0 color-mix(in srgb, var(--morado) 55%, transparent); }
+.perfil-equipo-num > div { justify-content: flex-start; box-shadow: inset 0 3px 0 var(--acento-a55); }
 .perfil-equipo-num > div:has(dd.pe-racha) { box-shadow: inset 0 3px 0 color-mix(in srgb, var(--ambar-400) 80%, transparent); }
 .perfil-equipo-num dd { line-height: 1.15; }
 .perfil-equipo-num dd.num, .perfil-equipo-num dd.pe-racha .num { font-size: var(--letra-24); font-weight: 800; }
@@ -316,7 +316,7 @@
 /* 47 - Las insignias del perfil con brillo de medalla y "Siguiente" con su barra en degradado */
 .pe-insignias .insignia { box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--ambar-500) 90%, transparent); }
 .insignia-siguiente [role="progressbar"] > span, .insignia-siguiente .barra-equipo > span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
-.insignia-siguiente { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2) 60%); }
+.insignia-siguiente { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 8%, var(--hoja-2)), var(--hoja-2) 60%); }
 
 /* ================================================================== COMPARTIR (48 a 50) ============================== */
 
@@ -324,14 +324,14 @@
 .paletas .paleta-op { padding: 5px 12px 5px 5px; }
 .paletas .paleta-muestra { width: 26px; height: 26px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, .25), 0 3px 8px -4px rgba(0, 0, 0, .5); }
 .paletas .paleta-op.activo { box-shadow: 0 0 0 2px var(--morado), var(--sombra-accion); }
-.compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); }
+.compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 70%, var(--eq-rosa))); }
 
 /* 49 - Los destinos (WhatsApp, Instagram, Facebook) con su color de verdad en un disco, y la vista previa como una foto sobre la mesa */
 .compartir-destinos .btn > svg:first-child { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: 50%; color: var(--blanco); }
 .compartir-destinos .destino-whatsapp > svg:first-child { background: var(--verde-500); }
 .compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(var(--oklab,) 135deg, var(--naranja-400), var(--rosa-500) 55%, var(--purpura-600)); }
 .compartir-destinos .destino-facebook > svg:first-child { background: var(--azul-500); }
-.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px color-mix(in srgb, var(--marca-950) 75%, transparent); border-radius: var(--r-14); }
+.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px color-mix(in srgb, var(--acento-950) 75%, transparent); border-radius: var(--r-14); }
 
 /* 50 - Las opciones de una publicacion y los ajustes de la comunidad: cada fila con su icono en un disco de color */
 .opciones-post .fila-boton > svg:first-child, .opciones-post .btn > svg:first-child { box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border-radius: var(--r-10);

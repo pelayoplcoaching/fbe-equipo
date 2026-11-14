@@ -13,7 +13,7 @@
   --filo-fino: 1px; --filo-medio: 1.5px; --filo-fuerte: 2px; --filo-marca: 3px;
 }
 
-/* Anillos, halos, brillo y la sombra de color de los botones. Se declaran también donde cambian --linea, --hoja o
+/* Anillos, halos, brillo, la sombra de color de los botones y los tintes del acento. Se declaran también donde cambian --linea, --hoja o
    --morado para sí mismos, para que tomen el valor de ese sitio. */
 :root,
 .historia,
@@ -28,4 +28,6 @@
   --raya: 0 1px 0 var(--linea);
   --brillo: inset 0 1px 0 rgba(255, 255, 255, .25);
   --sombra-accion: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent);
+  /* los tintes del acento: el acento a medias, en diez niveles */
+  --acento-a4: color-mix(in srgb, var(--morado) 4%, transparent); --acento-a8: color-mix(in srgb, var(--morado) 8%, transparent); --acento-a12: color-mix(in srgb, var(--morado) 12%, transparent); --acento-a16: color-mix(in srgb, var(--morado) 16%, transparent); --acento-a22: color-mix(in srgb, var(--morado) 22%, transparent); --acento-a30: color-mix(in srgb, var(--morado) 30%, transparent); --acento-a45: color-mix(in srgb, var(--morado) 45%, transparent); --acento-a55: color-mix(in srgb, var(--morado) 55%, transparent); --acento-a70: color-mix(in srgb, var(--morado) 70%, transparent); --acento-a85: color-mix(in srgb, var(--morado) 85%, transparent);
 }
