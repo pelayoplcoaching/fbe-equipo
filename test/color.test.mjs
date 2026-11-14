@@ -39,7 +39,7 @@ console.log('\ncolor.css, generado y única fuente');
   const raiz = est.slice(est.indexOf(':root {'), est.indexOf('\n}', est.indexOf(':root {')));
   check(!/--(tiza|hoja|tinta|morado|ok|alerta|aviso|hero):/.test(raiz) && !/:root\[data-oled\]\[data-theme="dark"\] \{\n  --tiza/.test(est) && !/:root \{ --oro:/.test(src('diseno.css')),
     'estilos.css y diseno.css ya no definen los colores de los temas, ni el negro puro, ni el dorado: vienen de color.css');
-  check(/import '\.\/color\.css';\nimport '\.\/estilos\.css';/.test(src('main.jsx')) && /import '\.\/color-capa\.css';/.test(src('main.jsx')), 'color.css se carga antes que todo y la capa de color, la última');
+  check(/import '\.\/color\.css';\nimport '\.\/sistema\.css';\nimport '\.\/estilos\.css';/.test(src('main.jsx')) && /import '\.\/color-capa\.css';/.test(src('main.jsx')), 'color.css se carga antes que todo y la capa de color, la última');
   const css = src('color.css');
   check(['--superficie-1', '--texto-2', '--accion', '--accion-pulsado', '--info-solido', '--ok-borde', '--grad-noche', '--grad-record', '--serie-8', '--seq-5', '--div-5', '--confeti-6', '--zona-5-t', '--oro-claro', '--fuego'].every((t) => css.includes(`${t}:`)),
     'los tokens con significado (superficies, textos, acción, estados, degradados, gráficas, zonas, celebraciones y dorado)');

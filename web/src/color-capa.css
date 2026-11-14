@@ -50,8 +50,8 @@
 
 /* (17) Los colores forzados del sistema (Windows «Contraste alto» y similares): que se vean los controles y el foco */
 @media (forced-colors: active) {
-  .btn, .entrada, .selector, .interruptor, .chip { border: 1px solid ButtonText; }
-  .hero-dia, .tarjeta, .panel { border: 1px solid CanvasText; }
+  .btn, .entrada, .selector, .interruptor, .chip { border: var(--filo-fino) solid ButtonText; }
+  .hero-dia, .tarjeta, .panel { border: var(--filo-fino) solid CanvasText; }
   .hero-dia::before, .hero-dia::after, .ios-ico .icono-duo { display: none; }
   :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
 }
@@ -63,25 +63,25 @@
 .pal-controles label { display: inline-flex; align-items: center; gap: 8px; font-size: var(--tipo-nota); }
 .pal-controles .selector { width: auto; min-width: 8rem; }
 .pal-tabla { width: 100%; border-collapse: collapse; background: var(--hoja); border-radius: var(--r-s); box-shadow: var(--sombra-tarjeta); overflow: hidden; font-size: var(--tipo-nota); }
-.pal-tabla th, .pal-tabla td { padding: 8px 12px; text-align: left; border-top: 1px solid var(--linea); }
+.pal-tabla th, .pal-tabla td { padding: 8px 12px; text-align: left; border-top: var(--filo-fino) solid var(--linea); }
 .pal-tabla thead th { border-top: 0; color: var(--tinta-2); font-weight: 650; }
 .pal-tabla tbody th { font-weight: 560; display: flex; align-items: center; gap: 8px; }
-.pal-nivel { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; border: 1px solid; }
+.pal-nivel { display: inline-block; padding: 1px 7px; border-radius: var(--r-pildora); font-size: var(--letra-11); font-weight: 700; border: var(--filo-fino) solid; }
 .pal-nivel-si { color: var(--ok); background: var(--ok-suave); border-color: var(--ok-borde); }
 .pal-nivel-no { color: var(--alerta); background: var(--alerta-suave); border-color: var(--alerta-borde); }
 .pal-componentes { display: grid; gap: 14px; }
 .pal-componentes .fila-envolver { align-items: center; gap: 8px; }
 .pal-escala h3 { font-size: var(--tipo-nota); text-transform: capitalize; margin: 0 0 4px; color: var(--tinta-2); }
 .pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: 3px; }
-.pal-muestra { height: 2.75rem; border-radius: 8px; display: grid; place-items: end start; padding: 4px 6px; font-size: 0.6875rem; font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 1px var(--borde); }
+.pal-muestra { height: 2.75rem; border-radius: var(--r-xs); display: grid; place-items: end start; padding: 4px 6px; font-size: var(--letra-11); font-variant-numeric: tabular-nums; box-shadow: var(--anillo-suave); }
 .pal-estados, .pal-grads, .pal-acentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px; }
-.pal-estado { border: 1px solid; border-radius: var(--r-s); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.pal-estado { border: var(--filo-fino) solid; border-radius: var(--r-s); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
 .pal-solido { width: 1.25rem; height: 1.25rem; border-radius: 50%; }
 .pal-grad { height: 4.5rem; border-radius: var(--r-s); display: grid; place-items: end start; padding: 8px 10px; color: var(--blanco); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
 .pal-tono { background-color: var(--hero); background-image: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--hero-tinte, var(--morado)) 55%, var(--hero)) 0%, transparent 62%), var(--grad-noche); }
 .pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
-.pal-acento.activo { box-shadow: inset 0 0 0 2px var(--morado); }
-.pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--borde); flex: none; }
+.pal-acento.activo { box-shadow: var(--anillo-acento); }
+.pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: var(--anillo-suave); flex: none; }
 
 /* ==========================================================================================================
    Color, tanda 2 (claude/color-mejoras-2.md)

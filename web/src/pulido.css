@@ -9,7 +9,7 @@
 /* ---------- 1. Respuesta al pulsar ---------- */
 /* De base, para cualquier cosa pulsable que no tenga la suya: se atenúa al momento (como en iOS). Con :where() no pesa
    nada: cualquier regla propia de un componente manda sobre esta. */
-:where(button, [role="button"], [role="tab"], summary, a[href], label.interruptor-fila):where(:not(:disabled, [aria-disabled="true"])):active { opacity: .55; }
+:where(button, [role="button"], [role="tab"], summary, a[href], label.interruptor-fila):where(:not(:disabled, [aria-disabled="true"])):active { opacity: var(--op-deshabilitado); }
 /* Los que ya tenían su respuesta (se encogen o cambian de fondo) no se atenúan además */
 .btn:active, .tab:active, .dia:active, .tarjeta-atleta:active, .fila-dia:active, .respuesta:active, .entreno:active, .vitrina-fila:active, .fila-semana:active,
 .paso button:active, .paso-grande button:active, .btn-avatar:active, .accion-fila:active, .opciones-grandes button:active, .trofeo-tarjeta:active, .dial:active,
@@ -21,12 +21,12 @@
 .btn-icono:active { transform: scale(.88); filter: none; }
 .btn-icono.plano:active { background: var(--hoja-2); }
 .btn-texto:active { transform: none; opacity: .5; }
-.btn, .btn-texto { transition: transform .09s ease, background-color .15s ease, border-color .15s ease, filter .09s ease, opacity .09s ease; }
+.btn, .btn-texto { transition: transform var(--mov-instante) ease, background-color var(--mov-rapido) ease, border-color var(--mov-rapido) ease, filter var(--mov-instante) ease, opacity var(--mov-instante) ease; }
 
 /* Pestañas, segmentos, chips y días: se hunden un poco bajo el dedo */
 .pestanas button:active, .segmentos button:active, .selector-chips button:active, .semanas-tabs button:active, .tira-chip:active { opacity: 1; transform: scale(.94); }
 .tira-chip:active { opacity: .65; transform: scale(.88); }
-.pestanas button, .segmentos button, .selector-chips button, .semanas-tabs button, .tira-chip { transition: transform .09s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.pestanas button, .segmentos button, .selector-chips button, .semanas-tabs button, .tira-chip { transition: transform var(--mov-instante) ease, background-color var(--mov-rapido) ease, color var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease, border-color var(--mov-rapido) ease; }
 .pestanas button:active { color: var(--tinta); }
 .segmentos button:active:not([aria-pressed="true"]), .selector-chips button:active:not([aria-pressed="true"]), .semanas-tabs button:active:not([aria-pressed="true"]) { background: var(--hoja-2); }
 /* Los botones pequeños del chat y de las pistas: crecen un poco (ya van atenuados de serie) */
@@ -57,11 +57,11 @@ li > a[href]:active { opacity: .5; }
    El navegador no recarga la app entera al tirar (en Android lo haría): lo hace la app, solo lo que se ve. */
 html { overscroll-behavior-y: contain; }
 .tirar {
-  position: fixed; top: calc(env(safe-area-inset-top, 0px) - 44px); left: 50%; z-index: 30; width: 36px; height: 36px; margin-left: -18px;
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) - 44px); left: 50%; z-index: var(--capa-flotante); width: 36px; height: 36px; margin-left: -18px;
   border-radius: 50%; background: var(--hoja); box-shadow: var(--sombra-alta); display: grid; place-items: center; pointer-events: none;
   transform: translateY(var(--tirar, 0px)); opacity: min(1, calc(var(--tirar, 0px) / 40px));
 }
-.tirar.soltando { transition: transform .22s cubic-bezier(.2, .8, .2, 1), opacity .22s linear; }
+.tirar.soltando { transition: transform var(--mov-breve) cubic-bezier(.2, .8, .2, 1), opacity var(--mov-breve) linear; }
 .tirar-rueda {
   width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--linea); border-top-color: var(--morado);
   transform: rotate(var(--giro, 0deg));
@@ -70,7 +70,7 @@ html { overscroll-behavior-y: contain; }
 .tirar.girando .tirar-rueda { animation: tirar-gira .7s linear infinite; border-color: var(--linea); border-top-color: var(--morado); }
 @keyframes tirar-gira { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .tirar.soltando { transition: opacity .15s linear; }
+  .tirar.soltando { transition: opacity var(--mov-rapido) linear; }
   .tirar.girando .tirar-rueda { animation-duration: 1.4s; }
 }
 
@@ -110,7 +110,7 @@ html { overscroll-behavior-y: contain; }
    Mientras se guarda, el botón que se pulsó (ya desactivado) cambia su texto por una rueda, sin cambiar de tamaño.
    Solo si tarda: en el primer cuarto de segundo no cambia nada (un guardado rápido no parpadea). */
 button[data-guardando] { position: relative; cursor: progress; -webkit-text-fill-color: transparent; transition: -webkit-text-fill-color 0s .25s, opacity 0s .25s; }
-button[data-guardando]:disabled { opacity: .8; }
+button[data-guardando]:disabled { opacity: var(--op-deshabilitado); }
 button[data-guardando] > * { visibility: hidden; transition: visibility 0s .25s; }
 button[data-guardando]::before {
   content: ""; position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; box-sizing: border-box;
@@ -141,7 +141,7 @@ button[data-guardando]::before {
 
 /* (pulido 3.6) Listas largas por tramos: el botón del final («Ver 40 recetas más»), que se pulsa solo al acercarse */
 .ver-mas-tramo { display: flex; width: 100%; justify-content: center; margin-top: 12px; min-height: 44px; color: var(--tinta-2); }
-.panel > .ver-mas-tramo { margin-top: 0; border-top: 1px solid var(--linea); border-radius: 0; }
+.panel > .ver-mas-tramo { margin-top: 0; border-top: var(--filo-fino) solid var(--linea); border-radius: 0; }
 
 /* (pulido 3.10) Lo que se va, se va con suavidad: el aviso flotante, al acabar su tiempo, baja y sale por abajo
    (solo se mueve, no se desvanece: el texto no pierde contraste mientras sale) */

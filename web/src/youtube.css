@@ -2,7 +2,7 @@
 .yt { display: grid; gap: 8px; width: 100%; min-width: 0; }
 .yt-marco { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r, 12px); overflow: hidden; background: var(--negro); color: var(--blanco); border: 0; padding: 0; }
 .yt-vertical .yt-marco { aspect-ratio: 9 / 16; max-height: min(78vh, 640px); width: auto; justify-self: center; max-width: 100%; }
-.yt-compacto .yt-marco { max-width: 320px; border-radius: 10px; }
+.yt-compacto .yt-marco { max-width: 320px; border-radius: var(--r-10); }
 .yt-compacto.yt-vertical .yt-marco { max-height: 420px; }
 .yt-marco iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .yt-fachada { cursor: pointer; text-align: left; }
@@ -11,7 +11,7 @@
 .yt-play { position: absolute; inset: 0; display: grid; place-items: center; }
 .yt-play svg { width: 52px; height: 52px; padding: 12px; border-radius: 50%; background: rgba(0, 0, 0, .58); color: var(--blanco); }
 .yt-compacto .yt-play svg { width: 44px; height: 44px; padding: 10px; }
-.yt-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .65); color: var(--blanco); font-weight: 700; }
+.yt-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pildora); background: rgba(0, 0, 0, .65); color: var(--blanco); font-weight: 700; }
 .yt-pie svg { width: 13px; height: 13px; }
 .yt-ahorro { position: absolute; inset: auto 0 40% 0; text-align: center; color: var(--blanco); opacity: .85; }
 .yt-sin { display: grid; place-items: center; align-content: center; gap: 6px; padding: 12px; text-align: center; background: var(--hoja-2, var(--noche-2)); color: inherit; }
@@ -21,11 +21,11 @@
 .yt-fuera { margin-left: auto; }
 .yt-seguir { justify-self: start; }
 .yt-marcas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.yt-marca { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 8px 10px; border-radius: var(--r-xs, 8px); border: 1px solid var(--borde, rgba(127, 127, 127, .25)); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
-.yt-marca .num { font-weight: 760; color: var(--morado); min-width: 3.2em; }
+.yt-marca { display: flex; gap: 10px; align-items: baseline; width: 100%; padding: 8px 10px; border-radius: var(--r-xs, 8px); border: var(--filo-fino) solid var(--borde, rgba(127, 127, 127, .25)); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.yt-marca .num { font-weight: 750; color: var(--morado); min-width: 3.2em; }
 .yt-marca[aria-current="true"] { background: color-mix(in srgb, var(--morado) 12%, transparent); border-color: var(--morado); }
 /* el mini-reproductor, encima de la barra de abajo (y del descanso) */
-.yt-mini { position: fixed; z-index: 60; right: 10px; bottom: calc(var(--alto-barra, 64px) + 12px + env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 20px));
+.yt-mini { position: fixed; z-index: var(--capa-pantalla); right: 10px; bottom: calc(var(--alto-barra, 64px) + 12px + env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 20px));
   background: var(--hoja, var(--blanco)); color: inherit; border-radius: var(--r, 12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: 6px 8px 8px; display: grid; gap: 6px; }
 .yt-mini-cab { display: flex; align-items: center; gap: 4px; }
 .yt-mini-titulo { flex: 1; min-width: 0; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
@@ -38,7 +38,7 @@
 .fila-videos { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 46%); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
 @media (min-width: 720px) { .fila-videos { grid-auto-columns: minmax(200px, 31%); } }
 .tarjeta-video { scroll-snap-align: start; display: grid; gap: 6px; align-content: start; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
-.tarjeta-video-img { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--hoja-2, var(--noche-2)); }
+.tarjeta-video-img { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: var(--r-10); overflow: hidden; background: var(--hoja-2, var(--noche-2)); }
 .tarjeta-video-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tarjeta-video-img .yt-play svg { width: 36px; height: 36px; padding: 8px; }
 .tarjeta-video-titulo { font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -59,11 +59,11 @@
 button.recurso-enlace { width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
 .video-sesion-cab { width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; gap: 10px; }
 .video-sesion-cab > svg { width: 22px; height: 22px; color: var(--morado); flex: none; }
-.video-sesion.hecho { border-left: 3px solid var(--ok, var(--verde-500)); }
+.video-sesion.hecho { border-left: var(--filo-marca) solid var(--ok, var(--verde-500)); }
 .comparar-referencia-video { width: 100%; max-height: 42vh; border-radius: var(--r, 12px); background: var(--negro); }
 /* (Sesion → Cambiar) cada opción con el botón de su vídeo al lado */
 .opcion-con-video { display: flex; align-items: stretch; }
-.opcion-con-video + .opcion-con-video { border-top: 1px solid var(--linea); }
+.opcion-con-video + .opcion-con-video { border-top: var(--filo-fino) solid var(--linea); }
 .opcion-con-video > button:first-child { flex: 1; min-width: 0; }
 .lista-elegir .opcion-con-video > .btn-icono { width: 48px; flex: none; display: grid; place-items: center; padding: 0; color: var(--morado); }
 .yt-mini .yt-marcas { max-height: 76px; overflow: auto; }

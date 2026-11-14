@@ -96,3 +96,29 @@ ${sangrar(sangrar(bloque(':root', [...p3Comun, ...p3('claro')])))}${sangrar(sang
 }
 `;
 }
+
+// ---------- sistema.css: las escalas de lo que no es color (color y diseño, tanda 3) ----------
+import { RADIOS, PILDORA, LETRAS, nombreLetra, OP_DESHABILITADO, CAPAS, TIEMPOS, TIEMPOS_NUEVOS, FILOS, SOMBRAS, AMBITOS } from './sistema.js';
+
+export function cssSistema() {
+  const num = (v) => String(v).replace(/^0\./, '.');
+  const raiz = [
+    `${RADIOS.map((v) => `--r-${v}: ${v}px;`).join(' ')} --r-pildora: ${PILDORA}px;`,
+    LETRAS.map((v) => `--${nombreLetra(v)}: ${v / 16}rem;`).join(' '),
+    `--op-deshabilitado: ${num(OP_DESHABILITADO)};`,
+    Object.entries(CAPAS).map(([k, v]) => `--capa-${k}: ${v};`).join(' '),
+    TIEMPOS_NUEVOS.map((k) => `--mov-${k}: ${num(TIEMPOS[k])}s;`).join(' '),
+    Object.entries(FILOS).map(([k, v]) => `--filo-${k}: ${v}px;`).join(' '),
+  ];
+  return `/* ==========================================================================================================
+   SISTEMA de FBE Equipo: las escalas de lo que no es color (radios, letra, capas, tiempos, filos y las sombras que
+   se repiten). Archivo GENERADO por scripts/paleta.mjs desde web/src/logica/sistema.js: no se edita a mano
+   (npm run paleta; las pruebas comprueban que está al día). Se carga después de color.css.
+   ========================================================================================================== */
+
+${bloqueS(':root', raiz)}
+/* Anillos, halos, brillo y la sombra de color de los botones. Se declaran también donde cambian --linea, --hoja o
+   --morado para sí mismos, para que tomen el valor de ese sitio. */
+${bloqueS(AMBITOS.join(',\n'), Object.entries(SOMBRAS).map(([k, v]) => `--${k}: ${v};`))}`;
+}
+function bloqueS(sel, decl) { return `${sel} {\n${decl.map((d) => `  ${d}`).join('\n')}\n}\n`; }

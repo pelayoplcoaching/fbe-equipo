@@ -9,7 +9,7 @@
    guardando la parte derecha, donde está el material. El velo de .portada-sesion::before oscurece arriba (el botón de
    volver) y abajo (el título), así que el texto se lee igual que con el dibujo. */
 img.portada-foto { object-fit: cover; object-position: 78% 50%; }
-.resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .62; }
+.resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .6; }
 @media (forced-colors: active) { img.portada-foto, .resumen-hero img.hero-foto { opacity: .35; } }
 
 /* ── 2 · La cabecera ilustrada (pieza común) ──────────────────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    (FichaEjercicio.jsx) y la biblioteca del coach con un grupo elegido (Biblioteca.jsx). */
 .cab-ilu { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 8.25rem; padding: 14px 16px; border-radius: var(--r);
   background: var(--hero); color: var(--sobre-hero); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
-.cab-ilu > p, .cab-ilu > .cab-ilu-texto { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: 1.0625rem; line-height: 1.35; font-weight: 650; text-wrap: pretty; }
+.cab-ilu > p, .cab-ilu > .cab-ilu-texto { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: var(--letra-17); line-height: 1.35; font-weight: 650; text-wrap: pretty; }
 .cab-ilu .cab-ilu-img { position: absolute; z-index: 0; top: 0; right: 0; height: 100%; width: auto; aspect-ratio: var(--proporcion, 1); object-fit: cover; pointer-events: none;
   -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 38%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 38%); }
 .cab-ilu .cab-ilu-icono { display: grid; place-items: center; color: var(--c); -webkit-mask-image: none; mask-image: none; width: 8.25rem; }
@@ -30,14 +30,14 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .foco-cab .cab-ilu-img { -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); }
 .foco-cab .cab-ilu-texto { max-width: 60%; font-size: inherit; font-weight: inherit; }
 .foco-cab-k { text-transform: uppercase; letter-spacing: .06em; opacity: .75; font-weight: 700; }
-.foco-cab-t { font-size: 1.375rem; line-height: 1.15; font-weight: 800; }
+.foco-cab-t { font-size: var(--letra-22); line-height: 1.15; font-weight: 800; }
 .foco-cab-f { opacity: .85; line-height: 1.35; }
 
 /* Las cabeceras del lado del coach (bloque S): apaisadas y algo más bajas */
 .cab-coach { --proporcion: 16 / 9; min-height: 7rem; }
 .cab-coach .cab-ilu-img { -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); }
 .cab-coach .cab-ilu-texto { max-width: 62%; font-size: inherit; font-weight: inherit; }
-.cab-coach-t { font-size: 1.125rem; line-height: 1.2; font-weight: 800; }
+.cab-coach-t { font-size: var(--letra-18); line-height: 1.2; font-weight: 800; }
 .cab-coach .peq { opacity: .85; line-height: 1.35; margin: 0; }
 .cab-coach .btn { justify-self: start; margin-top: 4px; }
 .contenido.coach > .cab-coach { margin-bottom: 4px; }
@@ -55,15 +55,15 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ficha-ej-foto-btn .cab-ilu-img { position: absolute; inset: 0; height: 100%; width: 100%; }
 .ficha-ej-foto-btn:focus-visible { outline: 3px solid var(--sobre-hero, var(--blanco)); outline-offset: -3px; border-radius: var(--r); }
 .ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: var(--tinta-noche); }
-.ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: 11px; }
-.miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; background: var(--tinta-noche); }
+.ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: var(--r-s); }
+.miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--r-10); object-fit: cover; background: var(--tinta-noche); }
 .ficha-ej-ilu > p { display: flex; align-items: center; gap: 10px; font-size: var(--tipo-pie, .875rem); }
 .ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }
 .biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: 2px; }
 .toma-ilu { --proporcion: 4 / 3; min-height: 6.5rem; }
-.toma-ilu h2 { margin: 0; color: var(--sobre-hero); font-size: 1.375rem; font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
+.toma-ilu h2 { margin: 0; color: var(--sobre-hero); font-size: var(--letra-22); font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
 .toma-ilu .cab-ilu-texto > span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
-.biblioteca-grupo-ilu > p strong { font-size: 1.375rem; font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
+.biblioteca-grupo-ilu > p strong { font-size: var(--letra-22); font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
 .biblioteca-grupo-ilu > p span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
 
 /* ── 3 · Los meses ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -76,9 +76,9 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .historia-mes.con-fondo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--neutro-950) 78%, transparent) 0%, color-mix(in srgb, var(--neutro-950) 58%, transparent) 38%, color-mix(in srgb, var(--neutro-950) 62%, transparent) 70%, color-mix(in srgb, var(--neutro-950) 86%, transparent) 100%); }
 .fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr) 22px; }
-.fila-semana .mes-mini { width: 3.5rem; height: 3.5rem; border-radius: 12px; object-fit: cover; object-position: 75% 50%; }
+.fila-semana .mes-mini { width: 3.5rem; height: 3.5rem; border-radius: var(--r-s); object-fit: cover; object-position: 75% 50%; }
 .informe-ilu { --proporcion: 16 / 9; min-height: 7rem; margin-bottom: 4px; }
-.informe-ilu > p { font-size: 1rem; }
+.informe-ilu > p { font-size: var(--letra-16); }
 @media (forced-colors: active) { .historia-mes .historia-fondo { opacity: .3; } }
 
 /* ── 4 · El check-in y las celebraciones ──────────────────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .resumen-medalla .resumen-medalla-img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); }
 .historia-anillo.con-halo { position: relative; isolation: isolate; }
 .historia-anillo .historia-halo { position: absolute; z-index: -1; left: 50%; top: 50%; width: 320px; height: 320px; max-width: none; transform: translate(-50%, -50%);
-  mix-blend-mode: screen; opacity: .34; filter: blur(5px); pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); }
+  mix-blend-mode: screen; opacity: .35; filter: blur(5px); pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); }
 .hito-pantalla .hito-fondo { position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 62%; max-width: none; object-fit: cover; object-position: 50% 80%;
   opacity: .6; pointer-events: none; -webkit-mask-image: linear-gradient(var(--oklab,) to top, var(--negro) 25%, transparent 95%); mask-image: linear-gradient(var(--oklab,) to top, var(--negro) 25%, transparent 95%); }
 .hito-pantalla .hito-cuerpo { position: relative; z-index: 1; }
@@ -130,7 +130,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .carnet-fondo .carnet-foto { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
 /* Tu diario con una sola foto de progreso (o un solo vídeo): los dos marcos vacíos, en la cabecera ilustrada común */
 .diario-comparar { --proporcion: 4 / 3; min-height: 7rem; }
-.diario-comparar > p { font-size: .9375rem; font-weight: 600; }
+.diario-comparar > p { font-size: var(--letra-15); font-weight: 600; }
 @media (forced-colors: active) { .franja-ilu, .bdia-fondo, .carnet-foto { display: none; } }
 
 /* ── Bloque T · la entrada a la app ─────────────────────────────────────────────────────────────────────────────────────
@@ -158,12 +158,12 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ico-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
   outline: 1px solid rgb(255 255 255 / .09); outline-offset: -1px; pointer-events: none; }
 /* Elegido (la sección actual, la pestaña del «Más»): un aro del color de la marca alrededor */
-.hoja-mas .mas-actual .ios-ico.con-img, .rejilla-secciones button.actual .ios-ico.con-img { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px var(--morado); overflow: visible; }
+.hoja-mas .mas-actual .ios-ico.con-img, .rejilla-secciones button.actual .ios-ico.con-img { box-shadow: var(--halo), 0 0 0 4px var(--morado); overflow: visible; }
 .hoja-mas .mas-actual .ios-ico.con-img .ico-img, .rejilla-secciones button.actual .ios-ico.con-img .ico-img { clip-path: inset(0 round 9px); }
 /* Salud del iPhone y el calendario conservan su color de marca */
 .conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
 /* Los estados vacíos: la ilustración grande en su escenario de dos aros */
-.vacio-ico-img { width: 60px; height: 60px; border-radius: 16px; margin: 14px 0 12px;
+.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px;
   box-shadow: 0 0 0 9px color-mix(in srgb, var(--morado) 7%, transparent), 0 0 0 19px color-mix(in srgb, var(--morado) 3.5%, transparent); }
 @media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
 
@@ -176,8 +176,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .bdia-rayo { position: absolute; top: -12%; right: 6%; width: 22vmin; height: 135%; transform-origin: 50% 0; transform: rotate(26deg); opacity: .5;
   background: linear-gradient(var(--oklab,) 90deg, transparent, color-mix(in srgb, var(--oro-100) 30%, transparent) 40%, color-mix(in srgb, var(--oro-100) 30%, transparent) 60%, transparent);
   -webkit-mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0%, transparent 78%); mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0%, transparent 78%); }
-.bdia-rayo:nth-child(2) { right: 26%; width: 13vmin; transform: rotate(31deg); opacity: .34; }
-.bdia-rayo:nth-child(3) { right: -8%; width: 30vmin; transform: rotate(21deg); opacity: .28; }
+.bdia-rayo:nth-child(2) { right: 26%; width: 13vmin; transform: rotate(31deg); opacity: .35; }
+.bdia-rayo:nth-child(3) { right: -8%; width: 30vmin; transform: rotate(21deg); opacity: .3; }
 .bdia-estrella { position: absolute; border-radius: 50%; background: var(--blanco); opacity: .5; box-shadow: 0 0 6px 1px color-mix(in srgb, var(--marca-200) 55%, transparent); }
 .franja-cruce { position: relative; overflow: hidden; }
 .franja-cruce > .cruce-capa { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; opacity: 0; }
@@ -215,7 +215,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   .bdia-luz-tarde { animation: bdia-calida 8s ease-in-out infinite alternate; transform-origin: 88% 18%; }
   .bdia-estrella { animation: bdia-titila var(--dura, 3s) ease-in-out var(--espera, 0s) infinite alternate; }
   /* 3 · Dónde entrenas: la imagen nueva se funde sobre la anterior (la primera llega como siempre) */
-  .franja-cruce > .cruce-capa:not(.primera) { transition: opacity .42s ease-out; }
+  .franja-cruce > .cruce-capa:not(.primera) { transition: opacity var(--mov-lento) ease-out; }
   /* 4 · El resumen: al levantarse el telón, la ilustración aparece acercándose y la cruza una luz */
   .resumen-hero img.hero-foto { animation: hero-amanece 1.5s cubic-bezier(.2, .7, .2, 1) .3s both; transform-origin: 85% 50%; }
   .resumen-hero .hero-brillo { animation: hero-brillo 1.3s cubic-bezier(.3, 0, .2, 1) .75s both; }
@@ -223,8 +223,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   .resumen-medalla.con-ilu { animation: sello-golpe .62s cubic-bezier(.2, .9, .3, 1) .5s both; }
   .resumen-medalla.con-ilu::before { animation: sello-destello .8s ease-out 1.15s both; }
   /* 6 · El hábito: al cumplirlo se enciende con un pequeño rebote (y al quitarlo, se apaga) */
-  .habito-cab .cab-ilu-img { transition: opacity .45s ease-out, transform .6s cubic-bezier(.2, 1.6, .4, 1); }
-  .habito-cab::after { transition: opacity .6s ease-out; }
+  .habito-cab .cab-ilu-img { transition: opacity var(--mov-lento) ease-out, transform var(--mov-pausado) cubic-bezier(.2, 1.6, .4, 1); }
+  .habito-cab::after { transition: opacity var(--mov-pausado) ease-out; }
   /* 7 · La comida de ahora: su ilustración se acerca despacio, una vez */
   .toma-ilu.ahora .cab-ilu-img { animation: toma-ahora 9s cubic-bezier(.25, .4, .45, 1) .3s both; transform-origin: 70% 50%; }
   /* 8 · El check-in: la imagen del paso entra desde el lado hacia el que se va */
@@ -244,7 +244,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 }
 @keyframes portada-viva { from { scale: 1; } to { scale: 1.06; } }
 @keyframes bdia-deriva { from { transform: scale(1.1) translate3d(-1.6%, 1.2%, 0); } to { transform: scale(1.02); } }
-@keyframes bdia-rayo { from { opacity: .22; } to { opacity: .6; translate: -3% 0; } }
+@keyframes bdia-rayo { from { opacity: .2; } to { opacity: .6; translate: -3% 0; } }
 @keyframes bdia-calida { from { opacity: .65; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
 @keyframes bdia-titila { from { opacity: .12; transform: scale(.7); } to { opacity: .95; transform: scale(1.15); } }
 @keyframes hero-amanece { from { opacity: 0; transform: scale(1.16); } }
@@ -259,7 +259,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @keyframes foco-golpe { 0% { scale: 1; } 35% { scale: 1.075; } 100% { scale: 1; } }
 @keyframes foco-avanza { from { translate: 0 0; } to { translate: -3.5% 0; } }
 @keyframes foco-vaiven { 0%, 100% { translate: 0 0; } 30% { translate: -1.6% 0; } 70% { translate: 1.6% 0; } }
-@keyframes hito-parpadea { 0% { opacity: .52; transform: scale(1); } 40% { opacity: .66; transform: scale(1.012); } 70% { opacity: .56; transform: scale(1.004); } 100% { opacity: .72; transform: scale(1.022); } }
+@keyframes hito-parpadea { 0% { opacity: .5; transform: scale(1); } 40% { opacity: .65; transform: scale(1.012); } 70% { opacity: .55; transform: scale(1.004); } 100% { opacity: .7; transform: scale(1.022); } }
 @keyframes hito-chispa { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(1); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--lado, 0), -34vh, 0) scale(.3); } }
 
 
@@ -271,7 +271,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .panel-pad > .franja-prueba { object-position: 80% 50%; }
 .franja-ruta, .franja-liga, .franja-duelo { aspect-ratio: 3 / 1; border-radius: var(--r); object-position: 80% 50%; }
 .prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; }
-.prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; }
 .prog-tema.con-ilu > :not(.prog-tema-ilu) { grid-column: 2; }
 .certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: 28px 24px 22px; border-color: transparent; background: var(--tinta-noche); color: var(--neutro-100); }
 .certificado.con-ilu > .certificado-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
@@ -279,11 +279,11 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .certificado.con-ilu .certificado-pie { margin-bottom: 26px; }
 .apuntes-tarjeta > .apuntes-tarjeta-franja { grid-column: 1 / -1; aspect-ratio: 3.4 / 1; margin: -10px -12px 0 -14px; width: calc(100% + 26px); object-position: 80% 50%;
   border-top-left-radius: inherit; border-top-right-radius: inherit; }
-.apuntes-tarjeta-ilu { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.apuntes-tarjeta-ilu { width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; }
 .ap-historia { isolation: isolate; }
 .ap-historia > .ap-historia-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; opacity: .85; pointer-events: none; }
 .audio-pildora.con-ilu { grid-template-columns: auto auto 1fr auto; }
-.audio-pildora.con-ilu > .audio-ilu { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex: none; }
+.audio-pildora.con-ilu > .audio-ilu { width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; flex: none; }
 @media (forced-colors: active) { .prog-tema-ilu, .certificado-fondo, .apuntes-tarjeta-ilu, .ap-historia-fondo, .audio-ilu { display: none; } }
 
 /* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AB: su meta y su historia */
@@ -292,7 +292,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .panel.cuenta-meta.con-franja { display: block; overflow: hidden; }
 .panel-pad > .franja-pegada.franja-meta { aspect-ratio: 5 / 2; object-position: 50% 50%; margin-bottom: 10px; }
 .cuenta-meta-fila { display: flex; gap: 12px; align-items: center; }
-.cuenta-meta-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+.cuenta-meta-img { flex: none; width: 56px; height: 56px; border-radius: var(--r-14); object-fit: cover; }
 /* Tu historia en una línea: el camino de la nieve a la primavera, arriba */
 .panel.historia-linea.con-ilu { display: block; overflow: hidden; }
 .historia-linea-texto { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
@@ -301,23 +301,23 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Su aniversario: la medalla del hito junto al título (la tarta sigue en la franja) */
 .aniversario.con-medalla { grid-template-columns: 64px minmax(0, 1fr) auto; }
 .aniversario.con-medalla > .aniversario-ilu { grid-column: 1 / -1; }
-.aniversario-medalla { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.aniversario-medalla { width: 64px; height: 64px; border-radius: var(--r-16); object-fit: cover; }
 /* Tu ADN FBE: la doble hélice de fondo a la derecha, fundida hacia el texto */
 .panel.adn-fbe.con-ilu { position: relative; overflow: hidden; isolation: isolate; }
 .adn-fbe-fondo { position: absolute; z-index: -1; right: 0; top: 0; height: 100%; width: 46%; object-fit: cover; object-position: 55% 88%; opacity: .55;
   -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); pointer-events: none; }
 /* Tu foto de motivación, sin elegir aún: el marco vacío colgado */
-.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: 18px; object-fit: cover; }
+.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: var(--r); object-fit: cover; }
 /* Para hablarle y la carta del mes (la ficha del coach) */
 .panel-pad > .franja-pegada.franja-hablarle { margin-bottom: 4px; object-position: 50% 50%; }
 .franja-carta { aspect-ratio: 5 / 2; border-radius: var(--r); object-position: 50% 50%; }
 /* Tu mejor momento: el arco del sol en lugar del rayo */
-.mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+.mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: var(--r-14); object-fit: cover; }
 @media (forced-colors: active) { .cuenta-meta-img, .aniversario-medalla, .adn-fbe-fondo, .foto-motivacion-vacia, .mejor-momento-img { display: none; } }
 
 /* ---------------------------------------------------------------- (imágenes de las 48 h) Bloques AC, AD y AE */
 /* Un cuadrito en lugar del icono de una fila (tiempo, hace un año, cómo estás, qué tal fue) */
-.ico-ilu { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.ico-ilu { flex: none; width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; }
 .tiempo-hoy-t:has(> .ico-ilu), .hace-un-ano:has(> .ico-ilu), .hoy-como-estas:has(> .ico-ilu), .vida-fila:has(> .ico-ilu) { align-items: center; gap: 12px; }
 /* Una franja arriba de una hoja (o dentro del calentamiento): la proporción la da la imagen */
 .franja-hoja { border-radius: var(--r); object-position: 50% 50%; }
@@ -325,16 +325,16 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* La explicación de una hoja con su dibujo al lado (cambiar ejercicio, lo que no quieres ver, tu ciclo) */
 .intro-ilu { display: flex; gap: 12px; align-items: center; }
 .intro-ilu > p { margin: 0; flex: 1; min-width: 0; }
-.intro-ilu-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.intro-ilu-img { flex: none; width: 64px; height: 64px; border-radius: var(--r-16); object-fit: cover; }
 /* La voz de tu coach: las ondas junto al botón */
 .voz-coach:has(> .voz-coach-img) { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.voz-coach-img { flex: none; width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+.voz-coach-img { flex: none; width: 40px; height: 40px; border-radius: var(--r-s); object-fit: cover; }
 .voz-coach:has(> .voz-coach-img) > audio { flex: 1; min-width: 180px; }
 /* El reto del mes: la diana con sus días junto al título; el álbum, en franja, y sus hitos con su dibujo */
 .reto-mes-cab { display: flex; gap: 12px; align-items: center; }
-.reto-mes-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.reto-mes-img { flex: none; width: 64px; height: 64px; border-radius: var(--r-16); object-fit: cover; }
 .panel-pad > .franja-pegada.franja-album { object-position: 50% 50%; }
-.album-img { flex: none; width: 34px; height: 34px; border-radius: 10px; object-fit: cover; }
+.album-img { flex: none; width: 34px; height: 34px; border-radius: var(--r-10); object-fit: cover; }
 @media print { .informe-salud-ilu { display: none !important; } }
 @media (forced-colors: active) { .ico-ilu, .intro-ilu-img, .voz-coach-img, .reto-mes-img, .album-img { display: none; } }
 

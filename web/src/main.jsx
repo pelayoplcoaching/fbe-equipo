@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import './color.css';
+import './sistema.css';
 import './estilos.css';
 import './diseno.css';
 import './pulido.css';

@@ -26,7 +26,7 @@
 .foto-anillo.tono-caliente .aro-lleno { stroke: var(--naranja-500); }
 .foto-anillo.tono-fuego .aro-lleno { stroke: var(--naranja-500); }
 .foto-anillo-llama { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); font-size: 0.8125rem; font-weight: 750; color: var(--tinta); white-space: nowrap; }
+  padding: 2px 9px 2px 7px; border-radius: var(--r-pildora); background: var(--hoja); box-shadow: var(--sombra); font-size: var(--letra-13); font-weight: 750; color: var(--tinta); white-space: nowrap; }
 .foto-anillo-llama svg { width: 15px; height: 15px; color: var(--naranja-600); }
 .foto-anillo.tono-templado .foto-anillo-llama svg { color: var(--morado); }
 @media (prefers-reduced-motion: no-preference) {
@@ -35,7 +35,7 @@
 }
 
 /* -- Tu porque, bajo el nombre -- */
-.perfil-frase { margin-top: 6px; font-size: 0.9375rem; font-style: italic; color: var(--tinta-2); text-wrap: balance; max-width: 34ch; justify-self: center; }
+.perfil-frase { margin-top: 6px; font-size: var(--letra-15); font-style: italic; color: var(--tinta-2); text-wrap: balance; max-width: 34ch; justify-self: center; }
 .perfil-apodo { margin-top: -1px; }
 
 /* -- Las pestanas del perfil -- */
@@ -51,17 +51,17 @@
 @media (min-width: 520px) { .perfil-tiles:not(.perfil-tiles-3) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .perfil-tile { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0; padding: 12px 12px 11px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
 .perfil-tiles-3 .perfil-tile { background: var(--hoja-2); box-shadow: none; }
-.perfil-tile dt { font-size: 0.75rem; font-weight: 600; color: var(--tinta-2); }
+.perfil-tile dt { font-size: var(--letra-12); font-weight: 600; color: var(--tinta-2); }
 .perfil-tile dd { margin: 0; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); line-height: 1.1; display: inline-flex; align-items: baseline; gap: 2px; flex-wrap: wrap; overflow-wrap: anywhere; }
-.perfil-tile dd small { font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); }
+.perfil-tile dd small { font-size: var(--letra-12); font-weight: 650; color: var(--tinta-2); }
 .perfil-tile dd svg { width: 16px; height: 16px; color: var(--naranja-600); align-self: center; }
 
 /* -- Las barras de las 12 semanas -- */
 .perfil-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; height: 132px; align-items: end; }
 .pb-col { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 4px; min-width: 0; }
-.pb-barra { align-self: end; height: var(--h); min-height: 0; border-radius: 6px 6px 3px 3px; background: color-mix(in srgb, var(--morado) 34%, var(--hoja-2)); }
+.pb-barra { align-self: end; height: var(--h); min-height: 0; border-radius: var(--r-6) var(--r-6) var(--r-4) var(--r-4); background: color-mix(in srgb, var(--morado) 34%, var(--hoja-2)); }
 .pb-col.actual .pb-barra { background: var(--morado); }
-.pb-mes { font-size: 0.6875rem; color: var(--tinta-3); text-align: left; white-space: nowrap; overflow: visible; height: 1em; }
+.pb-mes { font-size: var(--letra-11); color: var(--tinta-3); text-align: left; white-space: nowrap; overflow: visible; height: 1em; }
 @media (prefers-reduced-motion: no-preference) {
   .pb-barra { animation: pb-sube 600ms cubic-bezier(.2, .8, .2, 1) both; transform-origin: bottom; }
   @keyframes pb-sube { from { transform: scaleY(0); } }
@@ -78,7 +78,7 @@
 .perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, var(--ambar-500) 22%, var(--hoja-2)); color: var(--naranja-700); }
 .pt-nombre { grid-area: nombre; font-weight: 700; overflow-wrap: anywhere; }
 .pt-valor { grid-area: valor; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); }
-.pt-valor small { font-size: 0.75rem; color: var(--tinta-2); }
+.pt-valor small { font-size: var(--letra-12); color: var(--tinta-2); }
 .perfil-trofeo > .mini { grid-area: detalle; }
 
 /* -- Los hitos, como una linea del tiempo -- */
@@ -93,15 +93,15 @@
 .perfil-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .perfil-entreno { padding: 14px; display: grid; gap: 10px; }
 .pe-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
-.pe-ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--morado-suave); color: var(--morado); }
+.pe-ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: var(--r-s); background: var(--morado-suave); color: var(--morado); }
 .pe-ico svg { width: 20px; height: 20px; }
 .pe-titulo { overflow-wrap: anywhere; }
 .pe-records { white-space: nowrap; }
 .pe-records svg { width: 14px; height: 14px; }
 .pe-cifras { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
 .pe-cifras > div { display: flex; flex-direction: column-reverse; gap: 1px; }
-.pe-cifras dt { font-size: 0.75rem; color: var(--tinta-2); }
-.pe-cifras dd { margin: 0; font-weight: 750; font-size: 1.0625rem; }
+.pe-cifras dt { font-size: var(--letra-12); color: var(--tinta-2); }
+.pe-cifras dd { margin: 0; font-weight: 750; font-size: var(--letra-17); }
 .pe-musculos { margin: 0; }
 
 /* -- En el equipo -- */
@@ -109,11 +109,11 @@
 
 /* -- La galeria del perfil del equipo (3 x 3, como Instagram) -- */
 .pe-galeria { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-.pe-galeria li { aspect-ratio: 1; max-width: 100%; overflow: hidden; border-radius: 8px; background: var(--hoja-2); }
+.pe-galeria li { aspect-ratio: 1; max-width: 100%; overflow: hidden; border-radius: var(--r-xs); background: var(--hoja-2); }
 .pe-galeria .post-foto-boton { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; }
 .pe-galeria .post-foto, .pe-galeria img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 0; max-height: none; }
 .pe-galeria .post-foto-cargando { width: 100%; height: 100%; }
-.pe-galeria p { margin: 0; padding: 6px; font-size: 0.6875rem; }
+.pe-galeria p { margin: 0; padding: 6px; font-size: var(--letra-11); }
 
 
 
@@ -123,20 +123,20 @@
 .perfil-tile { flex-direction: column; justify-content: flex-start; }
 .perfil-tile dd { order: 0; }
 .perfil-tile dt { order: 1; }
-.perfil-tile .perfil-dif { order: 2; font-size: 0.75rem; font-weight: 700; color: var(--tinta-2); font-stretch: normal; }
+.perfil-tile .perfil-dif { order: 2; font-size: var(--letra-12); font-weight: 700; color: var(--tinta-2); font-stretch: normal; }
 
 /* -- Las 12 semanas: la semana elegida -- */
-.perfil-barras-sel { margin: 0; font-size: 0.9375rem; }
-.perfil-barras { cursor: pointer; border-radius: 8px; }
+.perfil-barras-sel { margin: 0; font-size: var(--letra-15); }
+.perfil-barras { cursor: pointer; border-radius: var(--r-xs); }
 .perfil-barras:focus-visible { outline: 2px solid var(--morado); outline-offset: 4px; }
-.pb-col.sel .pb-barra { background: color-mix(in srgb, var(--morado) 70%, var(--hoja-2)); box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px var(--morado); }
+.pb-col.sel .pb-barra { background: color-mix(in srgb, var(--morado) 70%, var(--hoja-2)); box-shadow: var(--halo), 0 0 0 4px var(--morado); }
 .pb-col.actual.sel .pb-barra { background: var(--morado); }
 
 /* -- Tu ano: 53 semanas x 7 dias -- */
 .perfil-anio-marco { overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
 .perfil-anio { display: grid; grid-auto-flow: column; grid-auto-columns: 11px; gap: 3px; width: max-content; }
 .pa-semana { display: grid; grid-template-rows: repeat(7, 11px); gap: 3px; }
-.pa-dia { display: inline-block; width: 11px; height: 11px; border-radius: 3px; background: var(--hoja-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta-3) 18%, transparent); }
+.pa-dia { display: inline-block; width: 11px; height: 11px; border-radius: var(--r-4); background: var(--hoja-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta-3) 18%, transparent); }
 .pa-dia.n-1 { visibility: hidden; }
 .pa-dia.n2 { background: color-mix(in srgb, var(--morado) 55%, var(--hoja-2)); box-shadow: none; }
 .pa-dia.n3 { background: var(--morado); box-shadow: none; }
@@ -147,10 +147,10 @@
 /* -- Tus costumbres: los dias de la semana -- */
 .perfil-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; height: 112px; align-items: end; }
 .pd-col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; gap: 3px; text-align: center; min-width: 0; }
-.pd-n { font-size: 0.75rem; color: var(--tinta-2); min-height: 1em; }
-.pd-barra { align-self: end; justify-self: center; width: min(100%, 28px); height: var(--h); border-radius: 7px 7px 3px 3px; background: color-mix(in srgb, var(--morado) 30%, var(--hoja-2)); }
+.pd-n { font-size: var(--letra-12); color: var(--tinta-2); min-height: 1em; }
+.pd-barra { align-self: end; justify-self: center; width: min(100%, 28px); height: var(--h); border-radius: var(--r-xs) var(--r-xs) var(--r-4) var(--r-4); background: color-mix(in srgb, var(--morado) 30%, var(--hoja-2)); }
 .pd-col.fav .pd-barra { background: var(--morado); }
-.pd-dia { font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); }
+.pd-dia { font-size: var(--letra-12); font-weight: 650; color: var(--tinta-2); }
 
 /* -- Lo que mas entrenas: con el color de cada grupo (los del editor y la biblioteca) -- */
 .perfil-grupos { list-style: none; margin: 0; display: grid; gap: 10px; }
@@ -160,33 +160,33 @@
 .perfil-grupos [data-g="gluteo"] { --g: var(--rojo-500); } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--turquesa-500); }
 .perfil-grupos [data-g="biceps"] { --g: var(--marca-500); } .perfil-grupos [data-g="triceps"] { --g: var(--marca-600); }
 .perfil-grupos [data-g="abdominales"] { --g: var(--ambar-500); } .perfil-grupos [data-g="gemelo"] { --g: var(--ambar-600); }
-.pg-nombre { font-weight: 650; font-size: 0.875rem; overflow-wrap: anywhere; }
-.pg-barra { height: 10px; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
+.pg-nombre { font-weight: 650; font-size: var(--letra-14); overflow-wrap: anywhere; }
+.pg-barra { height: 10px; border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
 .pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }
-.pg-n { font-weight: 750; font-size: 0.875rem; white-space: nowrap; }
-.pg-n small { font-weight: 600; color: var(--tinta-2); font-size: 0.75rem; }
+.pg-n { font-weight: 750; font-size: var(--letra-14); white-space: nowrap; }
+.pg-n small { font-weight: 600; color: var(--tinta-2); font-size: var(--letra-12); }
 @media (forced-colors: active) { .pg-barra span { background: CanvasText; } }
 
 /* -- Tus ejercicios de siempre -- */
 .perfil-mashechos { list-style: none; margin: 0; padding: 4px 14px; display: grid; }
 .perfil-mashechos li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; }
-.perfil-mashechos li + li { border-top: 1px solid var(--linea); }
-.pm-puesto { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 800; font-size: 0.875rem; }
+.perfil-mashechos li + li { border-top: var(--filo-fino) solid var(--linea); }
+.pm-puesto { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); font-weight: 800; font-size: var(--letra-14); }
 .pm-nombre { font-weight: 650; overflow-wrap: anywhere; }
 .pm-n { font-weight: 800; white-space: nowrap; }
-.pm-n small { font-weight: 600; color: var(--tinta-2); font-size: 0.75rem; }
+.pm-n small { font-weight: 600; color: var(--tinta-2); font-size: var(--letra-12); }
 
 /* -- Tus proximos hitos -- */
 .perfil-proximos { list-style: none; margin: 0; display: grid; gap: 14px; }
 .perfil-proximos li { display: grid; gap: 6px; }
-.perfil-proximos progress { width: 100%; height: 10px; appearance: none; border: 0; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
-.perfil-proximos progress::-webkit-progress-bar { background: var(--hoja-2); border-radius: 999px; }
-.perfil-proximos progress::-webkit-progress-value { background: var(--morado); border-radius: 999px; }
-.perfil-proximos progress::-moz-progress-bar { background: var(--morado); border-radius: 999px; }
+.perfil-proximos progress { width: 100%; height: 10px; appearance: none; border: 0; border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
+.perfil-proximos progress::-webkit-progress-bar { background: var(--hoja-2); border-radius: var(--r-pildora); }
+.perfil-proximos progress::-webkit-progress-value { background: var(--morado); border-radius: var(--r-pildora); }
+.perfil-proximos progress::-moz-progress-bar { background: var(--morado); border-radius: var(--r-pildora); }
 
 /* -- La actividad por meses -- */
 .perfil-mes { display: grid; gap: 8px; }
-.perfil-mes-t { margin: 6px 0 0; font-size: 0.9375rem; font-weight: 750; text-transform: none; }
+.perfil-mes-t { margin: 6px 0 0; font-size: var(--letra-15); font-weight: 750; text-transform: none; }
 .perfil-mes-t::first-letter { text-transform: uppercase; }
 
 /* -- La vitrina: compartir un record -- */
@@ -197,10 +197,10 @@
 .perfil-compartir { justify-self: start; }
 
 /* -- Elegir la portada (en este movil) -- */
-.perfil-portada-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: var(--blanco); border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(6px); }
+.perfil-portada-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: var(--blanco); border: var(--filo-fino) solid rgba(255, 255, 255, .25); backdrop-filter: blur(6px); }
 .perfil-portada-btn:hover { background: rgba(255, 255, 255, .26); }
-.perfil-portadas { position: absolute; top: 56px; right: 10px; z-index: 3; display: flex; gap: 6px; padding: 8px; border-radius: 16px; background: var(--hoja); box-shadow: var(--sombra-alta, var(--sombra)); flex-wrap: wrap; max-width: calc(100% - 20px); }
-.pp-muestra { display: grid; justify-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: 10px; background: none; color: var(--tinta); font-size: 0.6875rem; font-weight: 650; cursor: pointer; }
+.perfil-portadas { position: absolute; top: 56px; right: 10px; z-index: 3; display: flex; gap: 6px; padding: 8px; border-radius: var(--r-16); background: var(--hoja); box-shadow: var(--sombra-alta, var(--sombra)); flex-wrap: wrap; max-width: calc(100% - 20px); }
+.pp-muestra { display: grid; justify-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: var(--r-10); background: none; color: var(--tinta); font-size: var(--letra-11); font-weight: 650; cursor: pointer; }
 .pp-muestra[aria-checked="true"] { background: var(--morado-suave); }
 .pp-color { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
 [data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--tinta-noche)); }
@@ -214,4 +214,4 @@
 .perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, color-mix(in srgb, var(--azul-300) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--indigo-600), var(--azul-900)); }
 @media (forced-colors: active) { .perfil-portada-btn { border-color: ButtonText; } }
 .pt-compartir svg { width: 20px; height: 20px; }
-.perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: 6px; }
+.perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: var(--r-6); }

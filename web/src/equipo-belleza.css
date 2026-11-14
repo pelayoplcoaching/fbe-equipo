@@ -41,9 +41,9 @@
 
 /* 2 - "Estas como ..." y la racha, como dos pastillas: tu nombre en el equipo se toca (abre tu perfil) y la racha brilla */
 .cab-equipo { gap: 6px 8px; align-items: center; }
-.cab-equipo .btn-yo { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: 999px; background: var(--morado-suave);
-  color: var(--morado); font-weight: 720; text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
-.cab-equipo .racha-cab { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px 1px 7px; border-radius: 999px; font-weight: 720;
+.cab-equipo .btn-yo { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: var(--r-pildora); background: var(--morado-suave);
+  color: var(--morado); font-weight: 700; text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
+.cab-equipo .racha-cab { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px 1px 7px; border-radius: var(--r-pildora); font-weight: 700;
   color: var(--tinta); background: color-mix(in srgb, var(--ambar-400) 15%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ambar-400) 38%, transparent),
   0 4px 12px -8px color-mix(in srgb, var(--ambar-400) 80%, transparent); }
 
@@ -51,7 +51,7 @@
 .tira-momentos:has(.tm-vacio) { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px;
   padding: 10px 16px 10px 10px; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .tira-momentos:has(.tm-vacio) .tm-lista { padding: 0; overflow: visible; }
-.tira-momentos .tm-vacio { margin: 0; font-size: .875rem; line-height: 1.4; color: var(--tinta-2); text-wrap: pretty; }
+.tira-momentos .tm-vacio { margin: 0; font-size: var(--letra-14); line-height: 1.4; color: var(--tinta-2); text-wrap: pretty; }
 
 /* 4 - Las pastillas plegadas (Proximos, Companeros, Duelos, Album, Esta semana, El mes) con su color: icono en un disco y la cuenta */
 .plegable-eq { --pc: var(--morado); }
@@ -60,18 +60,18 @@
 .plegable-eq[data-plegable-eq="album"] { --pc: var(--eq-rosa); }
 .plegable-eq[data-plegable-eq="semana"] { --pc: var(--eq-azul); }
 .plegable-eq[data-plegable-eq="mes"] { --pc: var(--eq-naranja); }
-.plegable-eq > summary .plegable-eq-ico { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: 8px; flex: none;
+.plegable-eq > summary .plegable-eq-ico { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: var(--r-xs); flex: none;
   color: var(--pc); background: color-mix(in srgb, var(--pc) 15%, transparent); }
 .plegable-eq > summary .plegable-eq-n { color: var(--tinta); background: color-mix(in srgb, var(--pc) 18%, var(--hoja));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 42%, transparent); }
 
 /* 5 - Al abrir una pastilla, su titulo se queda con el color y la flecha gira con suavidad */
-.plegable-eq > summary .plegable-eq-flecha { transition: transform var(--mov-medio, .26s) var(--curva-casa, ease); }
+.plegable-eq > summary .plegable-eq-flecha { transition: transform var(--mov-medio, var(--mov-medio)) var(--curva-casa, ease); }
 .plegable-eq[open] > summary .plegable-eq-t { color: var(--tinta); }
 .plegable-eq[open] > summary .plegable-eq-ico { background: color-mix(in srgb, var(--pc) 22%, transparent); box-shadow: 0 4px 10px -6px var(--pc); }
 
 /* 6 - Las pestanas del Equipo (Muro, Retos, Ranking, Preguntas): la elegida con un fondo de luz bajo su raya */
-.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(var(--oklab,) 180deg, transparent 40%, color-mix(in srgb, var(--morado) 9%, transparent)); border-radius: 10px 10px 0 0; }
+.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(var(--oklab,) 180deg, transparent 40%, color-mix(in srgb, var(--morado) 9%, transparent)); border-radius: var(--r-10) var(--r-10) 0 0; }
 
 /* =========================================================== LO SOCIAL (7 a 17) ====================================== */
 
@@ -90,8 +90,8 @@
 
 /* 9 - "Hoy entrenan": la hora de cada uno en una pastilla, para leerla de un vistazo y coincidir */
 .hoy-entrenan { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-azul) 7%, var(--hoja)), var(--hoja) 65%); }
-.hoy-entrenan .he-t svg { box-sizing: border-box; width: 26px; height: 26px; padding: 4px; border-radius: 8px; color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 14%, transparent); }
-.he-hora { display: inline-block; padding: 0 7px; border-radius: 999px; font-weight: 760; font-variant-numeric: tabular-nums;
+.hoy-entrenan .he-t svg { box-sizing: border-box; width: 26px; height: 26px; padding: 4px; border-radius: var(--r-xs); color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 14%, transparent); }
+.he-hora { display: inline-block; padding: 0 7px; border-radius: var(--r-pildora); font-weight: 750; font-variant-numeric: tabular-nums;
   color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 14%, var(--hoja)); }
 
 /* 10 - Los titulos de las tarjetas sociales con su emoji en un disco de su color (acompanar, empujon, companero, lo mejor) */
@@ -100,23 +100,23 @@
 .companero-semana { --hc: var(--morado); }
 .lo-mejor { --hc: var(--ambar-500); }
 :is(.padrinos .pd-t, .necesitan-animo .na-t, .companero-semana .cs-t, .lo-mejor .lm-t) > span[aria-hidden="true"]:first-child {
-  display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; font-size: 1rem;
+  display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: var(--r-10); font-size: var(--letra-16);
   background: color-mix(in srgb, var(--hc) 16%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 28%, transparent); }
 
 /* 11 - "Acompanar a quien entra" en verde: el que te acompana con su aro, y los dias de "Un empujon" en una pastilla calida */
 .padrinos { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-verde) 7%, var(--hoja)), var(--hoja) 60%); }
-.padrinos .pd-mio .avatar { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px color-mix(in srgb, var(--eq-verde) 70%, transparent); }
+.padrinos .pd-mio .avatar { box-shadow: var(--halo), 0 0 0 4px color-mix(in srgb, var(--eq-verde) 70%, transparent); }
 .necesitan-animo { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-naranja) 7%, var(--hoja)), var(--hoja) 60%); }
-.na-dias { display: inline-block; margin-left: 2px; padding: 0 7px; border-radius: 999px; font-weight: 650; white-space: nowrap;
+.na-dias { display: inline-block; margin-left: 2px; padding: 0 7px; border-radius: var(--r-pildora); font-weight: 650; white-space: nowrap;
   color: var(--eq-naranja-t); background: color-mix(in srgb, var(--eq-naranja) 13%, var(--hoja)); }
 
 /* 12 - Los duelos como un marcador: tu cifra y la suya, en grande y con nombre, y una barra que dice quien va delante */
 .duelo-marcador { display: grid; grid-template-columns: auto auto auto; align-items: end; gap: 0 4px; color: var(--tinta); }
 .duelo-marcador i { font-style: normal; opacity: 1; color: var(--tinta-3); align-self: center; }
-.duelo-marcador b { display: grid; justify-items: center; font-size: 1.375rem; font-weight: 820; line-height: 1; font-variant-numeric: tabular-nums; }
-.duelo-marcador b small { font-size: .625rem; font-weight: 700; letter-spacing: .04em; color: var(--tinta-2); text-transform: uppercase; margin-top: 3px; }
+.duelo-marcador b { display: grid; justify-items: center; font-size: var(--letra-22); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.duelo-marcador b small { font-size: var(--letra-10); font-weight: 700; letter-spacing: .04em; color: var(--tinta-2); text-transform: uppercase; margin-top: 3px; }
 .duelo-marcador .dm-yo { color: var(--morado); }
-.duelo-barra { grid-column: 1 / -1; display: flex; height: 5px; border-radius: 999px; overflow: hidden; background: var(--hoja-2); }
+.duelo-barra { grid-column: 1 / -1; display: flex; height: 5px; border-radius: var(--r-pildora); overflow: hidden; background: var(--hoja-2); }
 .duelo-barra > span:first-child { flex: var(--a, 1) 1 0; background: var(--morado); }
 .duelo-barra > span:last-child { flex: var(--b, 1) 1 0; background: color-mix(in srgb, var(--eq-rosa) 70%, var(--hoja)); }
 .duelo-marcador b small { max-width: 5.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -129,7 +129,7 @@
 
 /* 14 - "Retar a alguien" como invitacion: borde de trazos y las espadas en su disco */
 .duelos .duelo-retar { border-style: dashed; border-color: color-mix(in srgb, var(--ambar-500) 55%, var(--linea)); }
-.duelos .duelo-retar > span[aria-hidden="true"] { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: var(--oro-suave); }
+.duelos .duelo-retar > span[aria-hidden="true"] { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-xs); background: var(--oro-suave); }
 
 /* 15 - El companero de la semana con su corona de luz: aro dorado y violeta, y un polvo de estrellas detras */
 .cs-elegido { position: relative; isolation: isolate; }
@@ -137,44 +137,44 @@
   background-image: radial-gradient(circle, var(--oro-claro) 1.6px, transparent 2.2px), radial-gradient(circle, color-mix(in srgb, var(--morado) 60%, transparent) 1.4px, transparent 2px);
   background-size: 28px 24px, 36px 30px; background-position: 4px 6px, 18px 14px;
   -webkit-mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); }
-.companero-semana .cs-elegido .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 6px var(--oro-claro), 0 0 0 9px color-mix(in srgb, var(--morado) 40%, transparent),
+.companero-semana .cs-elegido .avatar { box-shadow: var(--halo-ancho), 0 0 0 6px var(--oro-claro), 0 0 0 9px color-mix(in srgb, var(--morado) 40%, transparent),
   0 10px 26px -8px color-mix(in srgb, var(--morado) 60%, transparent); }
 
 /* 16 - "Lo mejor de la semana pasada" con una etiqueta de color por fila (la mas aplaudida en oro, entrenos en verde, han entrado en azul) */
-.lm-lista .lm-etq { padding: 1px 8px; border-radius: 999px; color: var(--morado); background: var(--morado-suave); }
+.lm-lista .lm-etq { padding: 1px 8px; border-radius: var(--r-pildora); color: var(--morado); background: var(--morado-suave); }
 .lm-lista .lm-fila:nth-child(1) .lm-etq { color: var(--eq-oro-t); background: var(--oro-suave); }
 .lm-lista .lm-fila:nth-child(2) .lm-etq { color: var(--eq-verde-t); background: color-mix(in srgb, var(--eq-verde) 13%, var(--hoja)); }
 .lm-lista .lm-fila:nth-child(3) .lm-etq { color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 13%, var(--hoja)); }
-.lm-lista .lm-fila + .lm-fila { padding-top: 6px; border-top: 1px solid var(--linea); }
+.lm-lista .lm-fila + .lm-fila { padding-top: 6px; border-top: var(--filo-fino) solid var(--linea); }
 
 /* 17 - El album: vacio, con su dibujo y su invitacion; con fotos, mosaico con esquinas y la foto que se acerca al pasar */
-.album-vacio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 14px;
+.album-vacio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: var(--r-14);
   background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eq-rosa) 22%, transparent); }
-.album-vacio > svg { box-sizing: border-box; width: 44px; height: 44px; padding: 10px; border-radius: 14px; color: var(--eq-rosa-t); background: color-mix(in srgb, var(--eq-rosa) 15%, var(--hoja)); }
+.album-vacio > svg { box-sizing: border-box; width: 44px; height: 44px; padding: 10px; border-radius: var(--r-14); color: var(--eq-rosa-t); background: color-mix(in srgb, var(--eq-rosa) 15%, var(--hoja)); }
 .album-vacio p { margin: 0; }
 .album-rejilla { gap: 6px; }
-.album-foto { border-radius: 12px; box-shadow: 0 6px 16px -12px color-mix(in srgb, var(--tinta-noche) 60%, transparent); }
+.album-foto { border-radius: var(--r-s); box-shadow: 0 6px 16px -12px color-mix(in srgb, var(--tinta-noche) 60%, transparent); }
 .album-t { display: flex; align-items: baseline; gap: 6px; }
 
 /* =========================================================== EL MURO (18 a 33) ======================================= */
 
 /* 18 - El cuadro de publicar: al tocarlo, un borde de luz en el degradado de la marca */
-.compositor { transition: box-shadow var(--mov-medio, .26s) var(--curva-casa, ease); }
+.compositor { transition: box-shadow var(--mov-medio, var(--mov-medio)) var(--curva-casa, ease); }
 .compositor:focus-within { box-shadow: var(--sombra-tarjeta), 0 0 0 2px color-mix(in srgb, var(--morado) 55%, transparent), 0 10px 28px -14px color-mix(in srgb, var(--eq-rosa) 70%, transparent); }
 
 /* 19 - Los filtros del muro: el elegido en el degradado de la marca, no en negro */
 .filtros-muro .chip-filtro[aria-pressed="true"] { color: var(--sobre-morado); border-color: transparent;
   background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa)));
-  box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+  box-shadow: var(--sombra-accion); }
 
 /* 20 - Cada autor con un aro fino del color de lo que publica (entreno, logro, encuesta, pregunta...) */
-.post .post-cab .avatar, .post .post-cab .avatar.con-foto { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 3.5px color-mix(in srgb, var(--pt, var(--morado)) 60%, transparent); }
+.post .post-cab .avatar, .post .post-cab .avatar.con-foto { box-shadow: var(--halo), 0 0 0 3.5px color-mix(in srgb, var(--pt, var(--morado)) 60%, transparent); }
 
 /* 21 - La cabecera de cada publicacion con un velo de su color, que se apaga hacia el texto */
 .post { background-image: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--pt, var(--morado)) 5%, transparent), transparent 96px); }
 
 /* 22 - Las reacciones: la que es tuya, con su color, y un pequeno salto al darle (solo transform) */
-.reacciones .reaccion { transition: transform var(--mov-rapido, .14s) var(--curva-casa, ease), background var(--mov-medio, .26s); }
+.reacciones .reaccion { transition: transform var(--mov-rapido, var(--mov-rapido)) var(--curva-casa, ease), background var(--mov-medio, var(--mov-medio)); }
 .reacciones .reaccion:active:not(:disabled) { transform: scale(.9); }
 .reacciones .reaccion[aria-pressed="true"] { animation: eq-pop .42s var(--curva-rebote, ease-out) 1; }
 .reacciones .reaccion-mas { border-style: dashed; }
@@ -185,13 +185,13 @@
   background: radial-gradient(circle at 7px 7px, var(--ambar-400) 5px, transparent 5.6px), radial-gradient(circle at 14px 7px, var(--eq-rosa) 5px, transparent 5.6px), radial-gradient(circle at 21px 7px, var(--morado) 5px, transparent 5.6px); }
 
 /* 24 - El pie de la publicacion separado por un hilo, y "Comentar" con su icono en el acento */
-.post .post-pie { padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--linea) 80%, transparent); }
+.post .post-pie { padding-top: 8px; border-top: var(--filo-fino) solid color-mix(in srgb, var(--linea) 80%, transparent); }
 .post .post-comentar svg, .post .post-guardar svg { color: var(--morado); }
 .post .post-guardar.guardado svg { fill: currentColor; }
 
 /* 25 - Lo fijado: la chincheta un poco inclinada y la pastilla con brillo */
 .post.fijada .post-fijado { background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); color: var(--sobre-morado);
-  box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+  box-shadow: var(--sombra-accion); }
 .post.fijada .post-fijado svg { transform: rotate(-22deg); }
 
 /* 26 - El entreno compartido: cada cifra con su raya de color arriba (minutos en azul, series en violeta, ejercicios en verde, record en oro) */
@@ -202,8 +202,8 @@
 .entreno-equipo .ee-num > div:nth-child(4) { --tc: var(--ambar-500); }
 
 /* 27 - Los ejercicios del entreno: cada pictograma en su disco y un hilo entre filas */
-.entreno-equipo .ee-ejercicios > li > svg:first-child { box-sizing: border-box; width: 26px; height: 26px; padding: 3px; border-radius: 8px; color: var(--morado); background: var(--morado-suave); }
-.entreno-equipo .ee-ejercicios > li + li { border-top: 1px solid color-mix(in srgb, var(--linea) 70%, transparent); }
+.entreno-equipo .ee-ejercicios > li > svg:first-child { box-sizing: border-box; width: 26px; height: 26px; padding: 3px; border-radius: var(--r-xs); color: var(--morado); background: var(--morado-suave); }
+.entreno-equipo .ee-ejercicios > li + li { border-top: var(--filo-fino) solid color-mix(in srgb, var(--linea) 70%, transparent); }
 
 /* 28 - El record del entreno con un destello de oro que lo cruza una vez */
 .entreno-equipo .ee-record { position: relative; overflow: hidden; isolation: isolate; }
@@ -213,11 +213,11 @@
 /* 29 - Las encuestas: barras con degradado, la que gana en oro y su porcentaje en negrita */
 .encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 14%, transparent), color-mix(in srgb, var(--morado) 26%, transparent)); }
 .encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--oro-300) 28%, transparent), color-mix(in srgb, var(--oro-400) 38%, transparent)); }
-.encuesta-opcion.gana .eo-pct { color: var(--eq-oro-t); font-weight: 820; }
-.encuesta-opcion .eo-pct { font-weight: 720; }
+.encuesta-opcion.gana .eo-pct { color: var(--eq-oro-t); font-weight: 800; }
+.encuesta-opcion .eo-pct { font-weight: 700; }
 
 /* 30 - El evento: el lugar en una pastilla y "Vas" con su luz verde */
-.post .ev-donde, .evento-equipo .ev-donde { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--hoja-2); width: fit-content; max-width: 100%; }
+.post .ev-donde, .evento-equipo .ev-donde { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-pildora); background: var(--hoja-2); width: fit-content; max-width: 100%; }
 .ev-acciones .btn[aria-pressed="true"], .ev-acciones .btn.ok { box-shadow: 0 8px 18px -10px var(--ok); }
 
 /* 31 - El reto conseguido en el muro: borde de oro y el trofeo que se ilumina una vez */
@@ -226,7 +226,7 @@
 
 /* 32 - Las preguntas al coach: la pregunta con su raya a la izquierda, para que se vea que es una pregunta */
 .post[data-tema="pregunta"] .post-cuerpo > .post-texto, .post[data-tema="pregunta"] .post-cuerpo > p:first-child {
-  padding-left: 12px; border-left: 3px solid color-mix(in srgb, var(--pt, var(--morado)) 60%, transparent); font-weight: 560; }
+  padding-left: 12px; border-left: var(--filo-marca) solid color-mix(in srgb, var(--pt, var(--morado)) 60%, transparent); font-weight: 560; }
 .post-pregunta .chip.ok { box-shadow: 0 4px 12px -8px var(--ok); }
 
 /* 33 - "Se ha unido al equipo": la mano saluda una vez */
@@ -267,20 +267,20 @@
 .reto > .reto-pie .fila .btn { white-space: nowrap; }
 
 /* 39 - La barra grande del reto: mas gruesa, con degradado, una luz en la punta y oro al llegar */
-.barra-equipo.barra-grande { height: 12px; border-radius: 999px; background: var(--hoja-2); box-shadow: inset 0 1px 2px color-mix(in srgb, var(--neutro-950) 10%, transparent); overflow: visible; }
-.barra-equipo.barra-grande > span { position: relative; border-radius: 999px;
+.barra-equipo.barra-grande { height: 12px; border-radius: var(--r-pildora); background: var(--hoja-2); box-shadow: inset 0 1px 2px color-mix(in srgb, var(--neutro-950) 10%, transparent); overflow: visible; }
+.barra-equipo.barra-grande > span { position: relative; border-radius: var(--r-pildora);
   background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
 .barra-equipo.barra-grande > span::after { content: ""; position: absolute; right: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
   background: var(--blanco); box-shadow: 0 0 0 2px color-mix(in srgb, var(--morado) 40%, transparent), 0 0 10px 2px rgba(255, 255, 255, .7); }
 .barra-equipo.barra-grande > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--ambar-500) 80%, transparent); }
 
 /* 40 - Lo de cada uno en el reto: tu fila con el velo del acento y las barras completas en oro */
-.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: 12px; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
+.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: var(--r-s); background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
 .progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 41 - El reto ya terminado: un punto mas apagado (el fondo, no el texto) y "Terminado" con su marca */
 .reto[data-estado="terminado"] { background: color-mix(in srgb, var(--hoja-2) 55%, var(--hoja)); }
-.reto[data-estado="terminado"] > .separa:has(> .pila-xs > .reto-titulo) > .chip { color: var(--tinta-2); background: var(--hoja); box-shadow: inset 0 0 0 1px var(--linea); }
+.reto[data-estado="terminado"] > .separa:has(> .pila-xs > .reto-titulo) > .chip { color: var(--tinta-2); background: var(--hoja); box-shadow: var(--anillo); }
 
 /* 42 - "Compartir el logro": en oro, que es lo que es */
 .btn.btn-logro { color: var(--eq-oro-t); background: var(--oro-suave); border-color: color-mix(in srgb, var(--oro) 45%, transparent); font-weight: 700; }
@@ -289,16 +289,16 @@
 /* =================================================== EL RANKING Y LAS PREGUNTAS (43 a 45) ============================ */
 
 /* 43 - Tu fila en el ranking: con el velo del acento y una raya a la izquierda, para encontrarte enseguida */
-.ranking-lista > .fila-ranking.yo { border-radius: 12px; box-shadow: inset 3px 0 0 var(--morado);
+.ranking-lista > .fila-ranking.yo { border-radius: var(--r-s); box-shadow: inset 3px 0 0 var(--morado);
   background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), transparent 75%); }
 
 /* 44 - Los hitos del equipo con su barra debajo: cuanto falta se ve, no solo se lee */
-.hitos-lista > li::after { content: ""; grid-column: 2 / -1; height: 4px; border-radius: 999px; margin-top: -2px;
+.hitos-lista > li::after { content: ""; grid-column: 2 / -1; height: 4px; border-radius: var(--r-pildora); margin-top: -2px;
   background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 75%, transparent) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
 .hitos-lista > li.hecho::after { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 45 - La respuesta del coach a una pregunta como un bocadillo: con su color y una punta hacia la pregunta */
-.pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja));
+.pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 7%, var(--hoja));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 18%, transparent); }
 .pregunta-equipo .pe-respuesta::before { content: ""; position: absolute; top: -6px; left: 18px; width: 12px; height: 12px; transform: rotate(45deg);
   background: inherit; box-shadow: -1px -1px 0 0 color-mix(in srgb, var(--morado) 18%, transparent); }
@@ -310,8 +310,8 @@
 .perfil-equipo-num > div { justify-content: flex-start; box-shadow: inset 0 3px 0 color-mix(in srgb, var(--morado) 55%, transparent); }
 .perfil-equipo-num > div:has(dd.pe-racha) { box-shadow: inset 0 3px 0 color-mix(in srgb, var(--ambar-400) 80%, transparent); }
 .perfil-equipo-num dd { line-height: 1.15; }
-.perfil-equipo-num dd.num, .perfil-equipo-num dd.pe-racha .num { font-size: 1.5rem; font-weight: 820; }
-.perfil-equipo-num dd.pe-racha small { display: block; font-size: .75rem; font-weight: 650; color: var(--tinta-2); }
+.perfil-equipo-num dd.num, .perfil-equipo-num dd.pe-racha .num { font-size: var(--letra-24); font-weight: 800; }
+.perfil-equipo-num dd.pe-racha small { display: block; font-size: var(--letra-12); font-weight: 650; color: var(--tinta-2); }
 
 /* 47 - Las insignias del perfil con brillo de medalla y "Siguiente" con su barra en degradado */
 .pe-insignias .insignia { box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--ambar-500) 90%, transparent); }
@@ -323,7 +323,7 @@
 /* 48 - Los colores de la tarjeta: muestras mas grandes y la elegida con su marca; la pegatina elegida en el degradado de la marca */
 .paletas .paleta-op { padding: 5px 12px 5px 5px; }
 .paletas .paleta-muestra { width: 26px; height: 26px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, .25), 0 3px 8px -4px rgba(0, 0, 0, .5); }
-.paletas .paleta-op.activo { box-shadow: 0 0 0 2px var(--morado), 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
+.paletas .paleta-op.activo { box-shadow: 0 0 0 2px var(--morado), var(--sombra-accion); }
 .compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); }
 
 /* 49 - Los destinos (WhatsApp, Instagram, Facebook) con su color de verdad en un disco, y la vista previa como una foto sobre la mesa */
@@ -331,10 +331,10 @@
 .compartir-destinos .destino-whatsapp > svg:first-child { background: var(--verde-500); }
 .compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(var(--oklab,) 135deg, var(--naranja-400), var(--rosa-500) 55%, var(--purpura-600)); }
 .compartir-destinos .destino-facebook > svg:first-child { background: var(--azul-500); }
-.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px color-mix(in srgb, var(--marca-950) 75%, transparent); border-radius: 14px; }
+.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px color-mix(in srgb, var(--marca-950) 75%, transparent); border-radius: var(--r-14); }
 
 /* 50 - Las opciones de una publicacion y los ajustes de la comunidad: cada fila con su icono en un disco de color */
-.opciones-post .fila-boton > svg:first-child, .opciones-post .btn > svg:first-child { box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border-radius: 10px;
+.opciones-post .fila-boton > svg:first-child, .opciones-post .btn > svg:first-child { box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border-radius: var(--r-10);
   color: var(--morado); background: var(--morado-suave); flex: none; }
 .opciones-post .fila-boton.peligro > svg:first-child, .opciones-post .btn-peligro > svg:first-child { color: var(--alerta); background: var(--alerta-suave); }
 
