@@ -474,3 +474,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .envio-fila .envio-quien { justify-self: start; padding: 0; }
 .envio-fila .peq { grid-column: 1; }
 .envio-fila .btn { grid-column: 2; grid-row: 1 / span 2; }
+
+/* (personalizacion 3) al pie de Hoy, «Ordenar Hoy» y «Esta semana va a ser difícil» en una linea cada uno si no caben */
+.ordenar-hoy-pie { flex-wrap: wrap; gap: 2px 18px; }
+.ordenar-hoy-pie .btn-texto { white-space: nowrap; }
