@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.164': {
+    atleta: [
+      'Más ilustraciones: tu música, la carrera y el viaje, el recetario, la sesión y las pantallas vacías.',
+    ],
+    coach: [
+      'Ilustraciones también en cobros, difusión, integraciones, negocio y tus frases y música.',
+    ],
+  },
   '0.163': {
     atleta: [
       'Diseño más fino: en modo oscuro las hojas se ven más claras, los textos siguen a tu acento y los avatares tienen más colores.',

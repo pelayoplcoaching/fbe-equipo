@@ -9,6 +9,7 @@ import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
 import { urlMusica, nombreMusica } from '../../logica/personal.js';
 import { masRepetida } from '../../logica/musica.js';
 import { FichaPrevia, useNombreLista, abrirMusica } from './Musica.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 // Una fila de canción: su nombre (la ficha de Spotify) y de quién es, con «Abrir»
 function FilaCancion({ url, quien, extra = null, destacada = false }) {
@@ -59,8 +60,9 @@ export function LoQueSuena({ cambios = 0 }) {
   const coach = perfil?.rol === 'coach';
   return (
     <section class="panel panel-pad pila-s lo-que-suena" aria-labelledby="lo-que-suena-t">
+      <Imagen id="musica-equipo" clase="franja-ilu franja-pegada franja-musica" tamanos="(min-width: 640px) 560px, 100vw" />
       <div class="separa">
-        <h2 id="lo-que-suena-t" class="cp-t"><span aria-hidden="true">🎧 </span>Lo que suena en el equipo</h2>
+        <h2 id="lo-que-suena-t" class="cp-t">{!hayImagen('musica-equipo') && <span aria-hidden="true">🎧 </span>}Lo que suena en el equipo</h2>
         {!coach && <button type="button" class="btn btn-peq" onClick={() => setEditar(true)}>{mia ? 'Cambiar la mía' : <><Icono n="mas" /> Compartir la mía</>}</button>}
       </div>
       {l.datos.length ? (
@@ -95,6 +97,7 @@ export function RetoMusical({ cambios = 0 }) {
   });
   return (
     <section class="panel panel-pad pila-s reto-musical" aria-labelledby="reto-musical-t">
+      <Imagen id="musica-reto" clase="franja-ilu franja-pegada franja-musica" tamanos="(min-width: 640px) 560px, 100vw" />
       <span class="t-sobre">El reto musical del mes</span>
       <h2 id="reto-musical-t" class="reto-musical-t">{r.datos.tema}</h2>
       {r.datos.canciones.length ? (
@@ -125,6 +128,7 @@ export function ListaPareja({ id, nombre, listas = [], alCambiar }) {
   const titulo = useNombreLista(url);
   return (
     <span class="cp-lista-musica">
+      {url && <Imagen id="musica-pareja" clase="ico-ilu musica-ilu-peq" tamanos="32px" />}
       {url ? (
         <span class="mini">
           <Icono n="altavoz" /> Vuestra lista: <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => abrirMusica(url, e)}>{titulo}</a>

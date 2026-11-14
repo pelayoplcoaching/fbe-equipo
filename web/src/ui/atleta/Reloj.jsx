@@ -3,6 +3,7 @@
 // kilos o libras; crear otra clave y quitarlo. Sin la 058 (o sin entrenamiento), no sale nada.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos, Segmentos, copiar } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { ATAJO_RELOJ, OPCION } from '../../logica/reloj.js';
 import { haceDias } from '../../logica/integraciones.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
@@ -59,7 +60,7 @@ export function HojaReloj({ estado, alCerrar }) {
   return (
     <Hoja titulo="Entrenar desde el Apple Watch" alCerrar={alCerrar}>
       <div class="pila conexiones">
-        <p class="peq secundario">El Apple Watch no puede tener la app (Apple solo deja instalar apps de la App Store), pero sí atajos. Con «{ATAJO_RELOJ}», desde la muñeca ves la serie que toca, la marcas y empieza solo el descanso. Lo que apuntas se guarda en la app como si lo marcaras en el móvil.</p>
+        <div class="fila-con-ilu"><Imagen id="reloj" clase="ico-ilu" tamanos="44px" /><p class="peq secundario">El Apple Watch no puede tener la app (Apple solo deja instalar apps de la App Store), pero sí atajos. Con «{ATAJO_RELOJ}», desde la muñeca ves la serie que toca, la marcas y empieza solo el descanso. Lo que apuntas se guarda en la app como si lo marcaras en el móvil.</p></div>
         <ol class="conexion-pasos">
           <Paso n={1} titulo={`Instala el atajo «${ATAJO_RELOJ}» en el iPhone`}>
             {estado.atajo ? <a class="btn" href={estado.atajo} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar el atajo</a>

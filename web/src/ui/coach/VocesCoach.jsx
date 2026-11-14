@@ -2,6 +2,7 @@
 // atletas en su momento (al acabar el descanso, en la última serie, al batir un récord y al terminar), en lugar de la voz
 // del móvil. Se graba aquí mismo (MediaRecorder, solo audio, 6 s como mucho), se escucha antes de guardarla y se puede
 // cambiar o quitar cuando quiera.
+import { Imagen } from '../Imagen.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono } from '../comunes.jsx';
 import { FRASES_VOZ, MAX_VOZ_MS, olvidarVocesCoach } from '../voces-coach.js';
@@ -61,6 +62,7 @@ export function VocesCoach() {
   return (
     <section class="seccion voces-coach" aria-labelledby="voces-coach-t">
       <h2 id="voces-coach-t">Tus frases, con tu voz</h2>
+      <Imagen id="voces-frases" clase="franja-ilu franja-hoja franja-voces" tamanos="(min-width: 640px) 560px, 92vw" />
       <p class="secundario">Graba frases cortas y tus atletas las oirán en su sesión, en su momento, en lugar de la voz del móvil. Cada una, de 6 segundos como mucho.</p>
       {!lista.cargando && lista.datos === null && <p class="peq terciario">Para grabarlas falta ejecutar la migración 068 en Supabase.</p>}
       <p class="peq terciario">Las cuatro últimas («¡Hola! A por ello», «Mitad de la sesión», «A por el récord» y «Último ejercicio») necesitan además la migración 071.</p>

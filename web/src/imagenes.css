@@ -163,7 +163,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Salud del iPhone y el calendario conservan su color de marca */
 .conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
 /* Los estados vacíos: la ilustración grande en su escenario de dos aros */
-.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px;
+.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px; }
+.vacio-ico-img, .vacio-escena {
   box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
 @media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
 
@@ -345,3 +346,57 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
 .panel.primeros-pasos.con-ilu { overflow: hidden; }
 .primeros-pasos-ilu { object-position: 50% 50%; }
+
+/* ---------- (imágenes, bloque AG) La música ----------
+   «Tu música de hoy», lo que suena en el equipo y el reto musical: franja pegada arriba de su panel (3:1); el día de test,
+   el tambor junto al título en lugar de la franja. La biblioteca del coach, franja arriba de su panel (sin relleno).
+   Tus listas por momento, franja suelta en la hoja. Cuadrito en la invitación, tocar al ritmo, tus himnos, lo que más te
+   acompaña y la tarjeta de la fase (calentar y vuelta a la calma); más pequeño en la cadencia y en la lista de la pareja. */
+.panel-pad > .franja-pegada.franja-musica { object-position: 70% 50%; }
+.biblioteca-musica > .franja-musica-coach { aspect-ratio: 3 / 1; object-position: 75% 50%; border-radius: var(--r) var(--r) 0 0; }
+.musica-sesion-t.con-ilu { display: flex; align-items: center; gap: 12px; }
+.musica-ilu-peq { width: 32px; height: 32px; }
+.cadencia-nombre { display: inline-flex; align-items: center; gap: 8px; }
+.tocar-ritmo-fila, .fila-musica-ilu { display: flex; align-items: center; gap: 12px; }
+.tocar-ritmo-fila > .tocar-ritmo-r, .fila-musica-ilu > p { flex: 1; min-width: 0; margin: 0; }
+.musica-invitacion-cab:has(> .ico-ilu) { display: flex; align-items: center; gap: 12px; }
+.cp-lista-musica:has(> .ico-ilu) { display: flex; align-items: center; gap: 8px; }
+@media (forced-colors: active) { .franja-musica-coach { display: none; } }
+
+/* ---------- (imágenes, bloque AH) Fuera del gimnasio ----------
+   «De viaje», franja pegada arriba del aviso; «De vuelta», cuadrito en lugar del icono. En Carrera, franja en «Tus zonas»
+   y cuadrito junto al título de «Tus carreras», «El semáforo» y «Carrera y fuerza». Franja arriba de la hoja de Salud y
+   del escáner de productos; cuadrito junto a la explicación del Apple Watch. */
+.panel-pad > .franja-pegada.franja-viaje { object-position: 72% 50%; margin-bottom: 8px; }
+.panel-pad > .franja-pegada.franja-zonas { object-position: 70% 50%; }
+.franja-salud, .franja-escaner { aspect-ratio: 3 / 1; }
+.aviso-viaje-cab:has(> .ico-ilu) { align-items: center; }
+.h-panel:has(> .ico-ilu) { display: flex; align-items: center; gap: 12px; }
+.fila-con-ilu { display: flex; align-items: center; gap: 12px; }
+.fila-con-ilu > p { flex: 1; min-width: 0; margin: 0; }
+.hoja-tu-carrera .franja-carrera { margin-bottom: 0; object-position: 70% 50%; }
+
+/* ---------- (imágenes, bloque AI) Los estados vacíos con su escena ----------
+   Una escena cuadrada (112 px, con los dos aros de los iconos) o apaisada (la comunidad, hasta 280 px de ancho) en lugar
+   del icono: chat (destacados, fotos, enlaces, documentos, notas de voz), guardado, búsquedas, retos, ranking, historial
+   del ejercicio y recetas favoritas. */
+.vacio-escena { width: 112px; height: 112px; object-fit: cover; border-radius: var(--r-16); margin: 14px 0 12px; }
+.vacio-escena-ancha { width: min(280px, 80%); height: auto; aspect-ratio: 4 / 3; box-shadow: none; margin: 4px 0 8px; }
+@media (forced-colors: active) { .vacio-escena { display: none; } }
+
+/* ---------- (imágenes, bloques AJ y AK) El recetario y la comida; para el coach ----------
+   Franja arriba de «Rellenar la semana», de las pautas del plan de nutrición y de «Tus frases, con tu voz»; pegada arriba
+   del panel «Desde su iPhone». Cuadrito junto a «Cómo encaja en tu día», «Atajos del iPhone» y «Renuevan en 30 días».
+   Escena en los vacíos del menú (dato de salud), de las listas de difusión (apaisada) y de los cobros. */
+.franja-rellenar, .franja-pautas, .franja-voces { aspect-ratio: 3 / 1; }
+.franja-rellenar { object-position: 75% 50%; }
+.franja-voces { margin: 4px 0 8px; }
+.panel-pad > .franja-pegada.franja-integraciones { object-position: 70% 50%; margin-bottom: 6px; }
+.etq-con-ilu, .h-con-ilu { display: flex; align-items: center; gap: 12px; }
+
+/* ---------- (imágenes, bloque AL) Durante la sesión ----------
+   Franja arriba de la hoja «Descanso» (el que elige cuando su coach no le puso uno) y de «Antes de empezar» (las tres
+   claves de un ejercicio nuevo); cuadrito junto a «¿Cómo llegas hoy?»; escena en el vacío de los vídeos vistos. */
+.franja-descanso { aspect-ratio: 3 / 1; object-position: 75% 50%; margin-bottom: 8px; }
+.antes-de-empezar > .franja-antes { aspect-ratio: 3 / 1; border-radius: var(--r-s); object-position: 70% 50%; }
+.prep-cab-ilu { display: flex; align-items: center; gap: 12px; min-width: 0; }
