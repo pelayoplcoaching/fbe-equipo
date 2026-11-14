@@ -96,8 +96,12 @@ export async function probarDescansosBase({ navegador, check, base = 'http://loc
     const local = await p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-travesia-')); return JSON.parse(localStorage.getItem(k)); });
     check(ts.length === 1 && ts[0].metros === local.total && ts[0].metros > 20 && ts[0].etapas === 1 && new Date(`${ts[0].semana}T12:00:00Z`).getUTCDay() === 1, `la etapa jugada sube a la base, en su semana (${ts[0]?.metros} m)`);
     check(local.pend.metros === 0, 'y en el móvil ya no queda nada pendiente de subir');
-    if (await reloj.count()) await p.locator('.temporizador .saltar').click();
-    await p.getByRole('button', { name: 'Volver' }).first().click();
+    if (await reloj.count()) await p.locator('.temporizador .saltar').click({ timeout: 8000 }).catch(() => {});
+    // (CI) si algo se ha puesto encima (un aviso, «¿Seguimos?»), se cierra y se vuelve a intentar
+    if (!(await p.getByRole('button', { name: 'Volver' }).first().click({ timeout: 8000 }).then(() => true, () => false))) {
+      for (let i = 0; i < 3; i++) await p.keyboard.press('Escape');
+      await p.getByRole('button', { name: 'Volver' }).first().click({ timeout: 15000 });
+    }
     await p.locator('nav.tabs').waitFor();
 
     // --- Un móvil nuevo: lo suyo vuelve de la base ---
