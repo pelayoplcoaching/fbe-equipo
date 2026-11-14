@@ -562,6 +562,50 @@
       "1440": "imagenes/bienvenida/bienvenida-manana-1440.e8934cb1.webp"
     }
   },
+  "bienvenida-manana-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-invierno-720.0a7f6fc2.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-invierno-1080.cc89af98.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-invierno-1440.8db5ab53.webp"
+    }
+  },
+  "bienvenida-manana-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-otono-720.fb1aa49f.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-otono-1080.d470d272.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-otono-1440.d8d475b7.webp"
+    }
+  },
+  "bienvenida-manana-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-primavera-720.dd8dc9bf.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-primavera-1080.662f39a1.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-primavera-1440.16dcfc91.webp"
+    }
+  },
+  "bienvenida-manana-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-verano-720.3748f97a.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-verano-1080.f3596b1b.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-verano-1440.b43fb096.webp"
+    }
+  },
   "bienvenida-noche": {
     "proporcion": [
       16,
@@ -573,6 +617,50 @@
       "1440": "imagenes/bienvenida/bienvenida-noche-1440.0a552591.webp"
     }
   },
+  "bienvenida-noche-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-invierno-720.601d0d89.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-invierno-1080.7f78b6a4.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-invierno-1440.1bb083fc.webp"
+    }
+  },
+  "bienvenida-noche-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-otono-720.7c8fd12b.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-otono-1080.6f051b72.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-otono-1440.431d419e.webp"
+    }
+  },
+  "bienvenida-noche-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-primavera-720.adb7b3c2.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-primavera-1080.b93f225c.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-primavera-1440.da918454.webp"
+    }
+  },
+  "bienvenida-noche-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-verano-720.d33e4e0f.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-verano-1080.05b2acd6.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-verano-1440.6cd9fac5.webp"
+    }
+  },
   "bienvenida-tarde": {
     "proporcion": [
       16,
@@ -582,6 +670,50 @@
       "720": "imagenes/bienvenida/bienvenida-tarde-720.e90c4efc.webp",
       "1080": "imagenes/bienvenida/bienvenida-tarde-1080.38dcc8e1.webp",
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
+    }
+  },
+  "bienvenida-tarde-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-invierno-720.945931e4.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-invierno-1080.3d5c889c.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-invierno-1440.a00d14a0.webp"
+    }
+  },
+  "bienvenida-tarde-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-otono-720.ae759d88.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-otono-1080.d58eef1b.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-otono-1440.9c495193.webp"
+    }
+  },
+  "bienvenida-tarde-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-primavera-720.5ce2a6db.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-primavera-1080.9e546aec.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-primavera-1440.e37ee5bb.webp"
+    }
+  },
+  "bienvenida-tarde-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-verano-720.942395c4.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-verano-1080.29a08613.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-verano-1440.4e8dde9d.webp"
     }
   },
   "calentamiento": {

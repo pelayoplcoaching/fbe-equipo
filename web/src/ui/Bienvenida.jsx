@@ -164,9 +164,9 @@ export function Bienvenida({ rol = 'atleta', nombre, atletaId = null, datos = nu
   }, [listo]);
   return (
     <div class={`bdia${conPanel ? ' bdia-con-panel' : ''}`} role="dialog" aria-modal="true" aria-labelledby="bdia-titulo" aria-describedby="bdia-mensaje">
-      {/* (imágenes) de fondo, muy tenue, la mañana, la tarde o la noche según la hora */}
-      <Imagen id={imagenBienvenida(horaDelMovil())} clase="bdia-fondo" tamanos="100vw" />
-      {hayImagen(imagenBienvenida(horaDelMovil())) && <LuzDelDia momento={imagenBienvenida(horaDelMovil()).replace('bienvenida-', '')} />}
+      {/* (imágenes) de fondo, muy tenue, la mañana, la tarde o la noche según la hora (y, tanda 8, la estación) */}
+      <Imagen id={imagenBienvenida(horaDelMovil(), hoyISO())} clase="bdia-fondo" tamanos="100vw" />
+      {hayImagen(imagenBienvenida(horaDelMovil(), hoyISO())) && <LuzDelDia momento={imagenBienvenida(horaDelMovil()).replace('bienvenida-', '')} />}
       <div class="bdia-cuerpo" ref={cuerpo} {...(desliza ? { tabIndex: 0, role: 'group', 'aria-label': 'Tu resumen de hoy' } : {})}>
         <div class="bdia-arriba">
           <span class="bdia-marca"><svg viewBox={LOBO_CAJA} aria-hidden="true" focusable="false"><path fill-rule="evenodd" d={LOBO_D} /></svg>FBE Equipo</span>
