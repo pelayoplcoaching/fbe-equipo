@@ -83,13 +83,13 @@ export function postalesNuevas(antes, ahora, elegidas = []) {
 // ---------- Los lobos ----------
 // Cada lobo, con sus dos colores (claro y sombra) y lo que hay que haber hecho para tenerlo
 export const LOBOS = [
-  { id: 'tiza', nombre: 'Lobo de tiza', claro: '#EEEEF2', sombra: '#A49CFF', como: 'El de siempre', si: () => true },
-  { id: 'lavanda', nombre: 'Lobo lavanda', claro: '#C4BFFF', sombra: '#7C6AFD', como: 'Recorre 5 km', si: (t) => t.total >= 5000 },
-  { id: 'rio', nombre: 'Lobo de río', claro: '#CAE0FF', sombra: '#3A83ED', como: 'Cruza 5 ríos', si: (t) => t.rios >= 5 },
-  { id: 'oro', nombre: 'Lobo dorado', claro: '#FADA99', sombra: '#D3A329', como: 'Cumple 5 retos del día', si: (t) => t.retos >= 5 },
-  { id: 'nieve', nombre: 'Lobo de nieve', claro: '#FFFFFF', sombra: '#C4BFFF', como: 'Recorre 25 km', si: (t) => t.total >= 25000 },
-  { id: 'noche', nombre: 'Lobo de la noche', claro: '#462ABF', sombra: '#241665', como: 'Coge 300 estrellas', si: (t) => t.estrellas >= 300 },
-  { id: 'brasa', nombre: 'Lobo de brasa', claro: '#FFB38C', sombra: '#D45E00', como: 'Llega a Madrid (450 km)', si: (t) => t.total >= 450000 },
+  { id: 'tiza', nombre: 'Lobo de tiza', claro: '#F1F0F6', sombra: '#B4A8EA', como: 'El de siempre', si: () => true },
+  { id: 'lavanda', nombre: 'Lobo lavanda', claro: '#C9BCFF', sombra: '#8C78FF', como: 'Recorre 5 km', si: (t) => t.total >= 5000 },
+  { id: 'rio', nombre: 'Lobo de río', claro: '#BFD4FF', sombra: '#6E86E0', como: 'Cruza 5 ríos', si: (t) => t.rios >= 5 },
+  { id: 'oro', nombre: 'Lobo dorado', claro: '#F7D766', sombra: '#D9A520', como: 'Cumple 5 retos del día', si: (t) => t.retos >= 5 },
+  { id: 'nieve', nombre: 'Lobo de nieve', claro: '#FFFFFF', sombra: '#CFCAF2', como: 'Recorre 25 km', si: (t) => t.total >= 25000 },
+  { id: 'noche', nombre: 'Lobo de la noche', claro: '#4B3FA0', sombra: '#2B2470', como: 'Coge 300 estrellas', si: (t) => t.estrellas >= 300 },
+  { id: 'brasa', nombre: 'Lobo de brasa', claro: '#F5A06B', sombra: '#C96A3C', como: 'Llega a Madrid (450 km)', si: (t) => t.total >= 450000 },
 ];
 export const lobosDe = (guardado) => { const t = cuenta(guardado); return LOBOS.map((l) => ({ id: l.id, nombre: l.nombre, claro: l.claro, sombra: l.sombra, como: l.como, tiene: !!l.si(t) })); };
 // El lobo elegido (si no lo tiene o no existe, el de tiza)

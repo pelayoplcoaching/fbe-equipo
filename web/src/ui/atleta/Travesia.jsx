@@ -201,7 +201,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     });
     etapa.current = e; apuntada.current = false;
     setEscudos(e.escudos);
-    { const ac = acentoDe(leerAjustes().acento); acentoTravesia(ac.claro.morado, ac.oscuro.morado); }   // (color) el acento llega al juego
+    { const ac = acentoDe(leerAjustes().acento); if (ac.id === 'morado') acentoTravesia('#5438D8', '#A08CFF'); else acentoTravesia(ac.claro.morado, ac.oscuro.morado); }   // (color) el acento llega al juego
     paisaje.current = nuevoPaisaje(semilla % 1000);
     const pasadas = new Set();   // (top, tanda 4) las marcas del camino que ya ha pasado
     setFinal(null); setClip(null); setClipTxt('');

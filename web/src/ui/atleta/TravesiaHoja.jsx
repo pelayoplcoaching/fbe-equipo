@@ -404,7 +404,7 @@ export function HojaTravesia({ alCerrar }) {
             {lobosDe(t).map((l) => (
               <li key={l.id}>
                 <button type="button" class="tv-lobo" disabled={!l.tiene} aria-pressed={lobo === l.id ? 'true' : 'false'} onClick={() => elegir(l.id)}>
-                  <LoboMuestra skin={l.tiene ? l : { claro: '#4F4E5E', sombra: '#343249' }} />
+                  <LoboMuestra skin={l.tiene ? l : { claro: '#4B4580', sombra: '#3A3568' }} />
                   <strong>{l.nombre}</strong>
                   <span>{l.tiene ? (lobo === l.id ? 'Elegido' : 'Elegir') : l.como}</span>
                 </button>

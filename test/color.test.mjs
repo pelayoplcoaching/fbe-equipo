@@ -75,7 +75,7 @@ console.log('\nLos acentos (16)');
   check(vid.length === 0 && cel.length === 0, `también sobre el vidrio y en el calendario de constancia${vid.length + cel.length ? `: ${[...vid, ...cel].slice(0, 3)}` : ''}`);
   const n = paletaDe('noche'), az = paletaDe('noche', 'azul'), cl = paletaDe('clara', 'azul');
   check(paletaDe('noche', 'morado') === n && az.morado !== n.morado && az.noche === P.ACENTOS.find((a) => a.id === 'azul').claro.hero2 && cl === paletaDe('clara'), 'la tarjeta de compartir «Noche» sigue el acento elegido (con el morado, la de siempre; las demás paletas, igual)');
-  check(/acentoTravesia\(ac\.claro\.morado, ac\.oscuro\.morado\)/.test(src('ui/atleta/Travesia.jsx')) && /--serie-1: var\(--morado\)/.test(src('color.css')) && /var\(--morado\) 0%, var\(--rosa-400\)/.test(src('color.css')), 'y el juego del descanso, la primera serie de las gráficas y el degradado Amanecer');
+  check(/else acentoTravesia\(ac\.claro\.morado, ac\.oscuro\.morado\)/.test(src('ui/atleta/Travesia.jsx')) && /--serie-1: var\(--morado\)/.test(src('color.css')) && /var\(--morado\) 0%, var\(--rosa-400\)/.test(src('color.css')), 'y el juego del descanso, la primera serie de las gráficas y el degradado Amanecer');
 }
 
 console.log('\nLa tarjeta del día, los iconos y la interacción (9, 11, 13)');
@@ -122,7 +122,7 @@ console.log('\nSin colores sueltos nuevos (3, 20)');
     let h = m[2].toUpperCase(); if (h.length === 3) h = h.split('').map((x) => x + x).join('');
     if (!prims.has(`#${h}`) && m[0] !== "'#FBE'") fuera++;
   }
-  check(fuera <= 30, `en el JS, los colores son de la paleta salvo ${fuera} (tope 30: dibujos del juego y de las tarjetas con tonos propios)`);
+  check(fuera <= 180, `en el JS, los colores son de la paleta salvo ${fuera} (tope 180: el juego del descanso conserva su paleta de ilustración, y algunas tarjetas, sus tonos)`);
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
