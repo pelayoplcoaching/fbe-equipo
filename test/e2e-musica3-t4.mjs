@@ -85,8 +85,10 @@ export async function probarMusica3Coach({ navegador, check, base = 'http://loca
     const a = await entrar('Ana López');
     await irASeccion(a, 'Perfil');
     const grupo = a.locator('section[aria-labelledby="grupo-lo-tuyo"]');
-    await grupo.waitFor({ timeout: 8000 });
-    await grupo.scrollIntoViewIfNeeded();
+    // (en la pasada completa, más lenta: si algo tapa o aún carga, se cierra y se vuelve a Perfil)
+    if (!(await grupo.waitFor({ timeout: 8000 }).then(() => grupo.scrollIntoViewIfNeeded({ timeout: 8000 })).then(() => true, () => false))) {
+      await fuera(a); await irASeccion(a, 'Perfil'); await grupo.waitFor({ timeout: 15000 }); await grupo.scrollIntoViewIfNeeded({ timeout: 15000 });
+    }
     await grupo.getByRole('button', { name: 'Poner el enlace a tu música' }).click();
     const hl = a.getByRole('dialog').last();
     await hl.getByLabel(/Enlace/).first().fill(YT);
@@ -99,7 +101,7 @@ export async function probarMusica3Coach({ navegador, check, base = 'http://loca
       await fuera(a);
     }
     const musica = a.locator('section.musica-sesion');
-    await musica.waitFor({ timeout: 8000 });
+    await musica.waitFor({ timeout: 15000 });   // (en la pasada completa, la portada tarda más)
     const mas = musica.getByRole('button', { name: /Otra opción|opciones más/ });
     if (await mas.count()) await mas.click();
     const yt = musica.locator('.tarjeta-musica', { hasText: 'YouTube' }).first();
