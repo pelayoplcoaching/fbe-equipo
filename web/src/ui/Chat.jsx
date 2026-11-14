@@ -1510,7 +1510,7 @@ function HojaDestacados({ atletaId, nombreDe, alCerrar, alIr }) {
   return (
     <Hoja titulo="Mensajes destacados" alCerrar={alCerrar}>
       {lista.cargando && !lista.datos ? <Cargando /> : !lista.datos?.length ? (
-        <Vacio icono="estrella" titulo="Sin mensajes destacados">Mantén pulsado un mensaje (o abre su menú) y toca «Destacar» para encontrarlo aquí. Solo los ves tú.</Vacio>
+        <Vacio icono="estrella" imagen="vacio-destacados" titulo="Sin mensajes destacados">Mantén pulsado un mensaje (o abre su menú) y toca «Destacar» para encontrarlo aquí. Solo los ves tú.</Vacio>
       ) : (
         <ul class="lista chat-destacados">
           {lista.datos.map((c) => (
@@ -1539,12 +1539,12 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerr
     <Hoja titulo="Archivos, enlaces y documentos" alCerrar={alCerrar} ancho={720}>
       <Pestanas opciones={[['multimedia', `Multimedia (${medios.length})`], ['enlaces', `Enlaces (${enlaces.length})`], ['documentos', `Documentos (${docs.length})`], ['voz', `Notas de voz (${voces.length})`]]} valor={pest} alCambiar={setPest} etiqueta="Qué ver" idBase="chat-arch" />
       <div role="tabpanel" id="chat-arch-panel" aria-labelledby={`chat-arch-${pest}`} class="chat-arch-panel">
-        {pest === 'multimedia' && (!medios.length ? <Vacio icono="imagen" titulo="Sin fotos ni vídeos">Las fotos y los vídeos que os enviéis por aquí salen en esta pestaña.</Vacio> : (
+        {pest === 'multimedia' && (!medios.length ? <Vacio icono="imagen" imagen="vacio-fotos" titulo="Sin fotos ni vídeos">Las fotos y los vídeos que os enviéis por aquí salen en esta pestaña.</Vacio> : (
           <ul class="chat-rejilla">
             {medios.map((m) => <li key={m.archivo.id}><MedioChat archivo={m.archivo} mini alAbrir={() => alAbrir(porId[m.mensajeId])} /></li>)}
           </ul>
         ))}
-        {pest === 'enlaces' && (!enlaces.length ? <Vacio icono="enlace" titulo="Sin enlaces">Los enlaces que os mandéis (vídeos de YouTube, artículos…) salen aquí.</Vacio> : (
+        {pest === 'enlaces' && (!enlaces.length ? <Vacio icono="enlace" imagen="vacio-enlaces" titulo="Sin enlaces">Los enlaces que os mandéis (vídeos de YouTube, artículos…) salen aquí.</Vacio> : (
           <ul class="lista chat-enlaces">
             {enlaces.map((x) => (
               <li key={x.url} class="panel-pad chat-enlace">
@@ -1555,7 +1555,7 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerr
             ))}
           </ul>
         ))}
-        {pest === 'documentos' && (!docs.length ? <Vacio icono="bandeja" titulo="Sin documentos">Los PDF que os mandéis por el chat (un plan, una analítica, una guía) salen aquí.</Vacio> : (
+        {pest === 'documentos' && (!docs.length ? <Vacio icono="bandeja" imagen="vacio-documentos" titulo="Sin documentos">Los PDF que os mandéis por el chat (un plan, una analítica, una guía) salen aquí.</Vacio> : (
           <ul class="lista chat-docs">
             {docs.map((m) => (
               <li key={m.archivo.id} class="panel-pad chat-doc">
@@ -1566,7 +1566,7 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerr
             ))}
           </ul>
         ))}
-        {pest === 'voz' && (!voces.length ? <Vacio icono="micro" titulo="Sin notas de voz">Las notas de voz que os mandéis (de hasta un minuto) salen aquí.</Vacio> : (
+        {pest === 'voz' && (!voces.length ? <Vacio icono="micro" imagen="vacio-notas-voz" titulo="Sin notas de voz">Las notas de voz que os mandéis (de hasta un minuto) salen aquí.</Vacio> : (
           <ul class="lista chat-docs">
             {voces.map((m) => (
               <li key={m.archivo.id} class="panel-pad chat-doc">

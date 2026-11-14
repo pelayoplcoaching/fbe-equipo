@@ -32,8 +32,10 @@ export async function probarPersonalSuyo({ navegador, check, base = 'http://loca
     // --- «Lo tuyo»: su foto de motivación ---
     await irASeccion(p, 'Perfil');
     const grupo = p.locator('section[aria-labelledby="grupo-lo-tuyo"]');
-    await grupo.waitFor({ timeout: 8000 });
-    await grupo.scrollIntoViewIfNeeded();
+    // (en la pasada completa, más lenta: si algo tapa o aún carga, se cierra y se vuelve a Perfil)
+    if (!(await grupo.waitFor({ timeout: 8000 }).then(() => grupo.scrollIntoViewIfNeeded({ timeout: 8000 })).then(() => true, () => false))) {
+      await fueraAvisos(); await irASeccion(p, 'Perfil'); await grupo.waitFor({ timeout: 15000 }); await grupo.scrollIntoViewIfNeeded({ timeout: 15000 });
+    }
     await grupo.getByRole('button', { name: 'Elegir tu foto de motivación' }).click();
     const hoja = p.getByRole('dialog', { name: 'Tu foto de motivación' });
     await hoja.waitFor();

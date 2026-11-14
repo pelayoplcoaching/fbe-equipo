@@ -9,6 +9,7 @@
 // su propia ficha de atleta (mi_atleta_id), con sus consentimientos; sirve para usarlo y para probar sus atajos.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos, Segmentos, copiar, usePreferencia } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { urlSalud, urlsCalendario, urlAtajoEntreno, tipoSalud, ATAJO_SALUD, ATAJO_ENTRENO, haceDias, textoSueno } from '../../logica/integraciones.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { esIOS } from '../pulido.js';
@@ -92,6 +93,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
   return (
     <Hoja titulo="Salud del iPhone" alCerrar={alCerrar}>
       <div class="pila conexiones">
+        <Imagen id="salud-conexion" clase="franja-ilu franja-hoja franja-salud" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong> y tu <strong>variabilidad (HRV)</strong>. {propio ? 'Así tus pasos y tu sueño se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
         {!ios && <p class="nota peq">Esto es para iPhone: Apple lo deja hacer con Atajos. En Android, una web no puede leer los datos de salud del móvil.</p>}
         {!salud ? (

@@ -327,7 +327,7 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
                 </li>
               ))}</ul></div></section>
           )}
-          {!halladas.length && !enTexto.length && (textos.datos ? <div class="panel"><Vacio icono="buscar" titulo="Nada con eso">Prueba con otra palabra.</Vacio></div> : <Siluetas forma="tarjetas" n={2} texto="Buscando en las guías" />)}
+          {!halladas.length && !enTexto.length && (textos.datos ? <div class="panel"><Vacio icono="buscar" imagen="vacio-buscar" titulo="Nada con eso">Prueba con otra palabra.</Vacio></div> : <Siluetas forma="tarjetas" n={2} texto="Buscando en las guías" />)}
         </div>
       ) : estantes.length > 1 ? (
         estantes.map((e) => (

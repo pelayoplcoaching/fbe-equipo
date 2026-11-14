@@ -8,6 +8,7 @@ import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
 import { urlMusica, nombreMusica } from '../../logica/personal.js';
 import { filtrarBiblioteca, ENERGIAS, textoFicha, mesesAtras } from '../../logica/musica.js';
 import { FichaPrevia, NombreLista, useFicha } from '../atleta/Musica.jsx';
+import { Imagen } from '../Imagen.jsx';
 
 function Portadita({ url }) {
   const f = useFicha(url);
@@ -26,6 +27,7 @@ export function BibliotecaMusica() {
   const vistas = filtrarBiblioteca(lista.datos, q);
   return (
     <div class="panel biblioteca-musica">
+      <Imagen id="musica-biblioteca" clase="franja-ilu franja-musica-coach" tamanos="(min-width: 640px) 560px, 100vw" />
       <div class="panel-pad pila-s">
         <div class="separa"><span class="peq secundario">Tu biblioteca</span>
           <button type="button" class="btn btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Añadir</button></div>

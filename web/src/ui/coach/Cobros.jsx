@@ -47,7 +47,7 @@ export function CobrosAtleta({ atleta }) {
       <section class="seccion">
         <h2>Cobros</h2>
         {!pagos.length ? (
-          <div class="panel"><Vacio icono="calendario" titulo="Sin cobros apuntados">Apunta el último que te pagó (y los pendientes) para saber hasta cuándo tiene pagado. Toca un cobro para corregirlo o borrarlo.</Vacio></div>
+          <div class="panel"><Vacio icono="calendario" imagen="cobros" titulo="Sin cobros apuntados">Apunta el último que te pagó (y los pendientes) para saber hasta cuándo tiene pagado. Toca un cobro para corregirlo o borrarlo.</Vacio></div>
         ) : (
           <ul class="panel lista cobros-lista">
             {pagos.map((p) => (

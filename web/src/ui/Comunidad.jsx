@@ -249,7 +249,7 @@ function FueraDeLaComunidad() {
   return (
     <div class="contenido">
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1></div></CabeceraGrande>
-      <Vacio icono="equipo" titulo="No estás en la comunidad">Tu coach te ha sacado de la comunidad del equipo. Si quieres volver, habla con él.</Vacio>
+      <Vacio icono="equipo" imagen="vacio-comunidad" ancha titulo="No estás en la comunidad">Tu coach te ha sacado de la comunidad del equipo. Si quieres volver, habla con él.</Vacio>
     </div>
   );
 }
@@ -431,12 +431,12 @@ export function Muro({ coach = false, cambios = 0, miembro = null, eventos = 0, 
       <ErrorCaja error={muro.error} reintentar={() => muro.recargar()} />
       {!d ? <Siluetas forma="tarjetas" n={3} texto="Cargando el muro" />
         : !posts.length ? (buscar
-          ? <Vacio icono="buscar" titulo="Nada por aquí">No hay publicaciones con «{buscar}»{filtro !== 'todo' ? ' en este filtro' : ''}. Prueba con otras palabras.</Vacio>
+          ? <Vacio icono="buscar" imagen="vacio-buscar" titulo="Nada por aquí">No hay publicaciones con «{buscar}»{filtro !== 'todo' ? ' en este filtro' : ''}. Prueba con otras palabras.</Vacio>
           : filtro === 'guardados'
-            ? <Vacio icono="guardar" titulo="Aún no has guardado nada">Toca «Guardar» en una publicación para tenerla aquí (solo la ves tú, en todos tus móviles).</Vacio>
+            ? <Vacio icono="guardar" imagen="vacio-guardado" titulo="Aún no has guardado nada">Toca «Guardar» en una publicación para tenerla aquí (solo la ves tú, en todos tus móviles).</Vacio>
             : filtro === 'todo'
               ? <Vacio ilustracion="equipo" titulo="Aún no hay nada en el muro">{coach ? 'Publica un aviso para darles la bienvenida.' : 'Sé el primero: cuenta qué tal tu semana o comparte tu próximo entreno.'}</Vacio>
-              : <Vacio icono="equipo" titulo="Nada por aquí">No hay publicaciones con este filtro. Prueba con «Todo».</Vacio>
+              : <Vacio icono="equipo" imagen="vacio-buscar" titulo="Nada por aquí">No hay publicaciones con este filtro. Prueba con «Todo».</Vacio>
         ) : posts.map((p, i) => (
           <Fragment key={p.id}>
             {i === primera && <div class="muro-separa nuevo"><span>Nuevo<span class="sr"> desde tu última visita</span></span></div>}
@@ -1608,7 +1608,7 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
       {coach && <RetoTravesia />}
       <ErrorCaja error={retos.error} reintentar={() => retos.recargar()} />
       {retos.cargando && !retos.datos ? <Siluetas forma="tarjetas" n={2} texto="Cargando los retos" />
-        : !ordenados.length ? <Vacio icono="diana" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
+        : !ordenados.length ? <Vacio icono="diana" imagen="vacio-retos" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
           : ordenados.map((r, i) => <TarjetaReto key={r.id} ilu={i === 0} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} cardioYa={cardioYa} alContarCardio={() => { setCardioYa(true); setVuelta((v) => v + 1); }} />)}
       {editar && <HojaReto reto={editar.id ? editar : null} con042={con042.datos === true} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); retos.recargar(true); }} />}
     </div>
@@ -1907,7 +1907,7 @@ export function Ranking({ miembro = null }) {
       <ErrorCaja error={ranking.error} reintentar={() => ranking.recargar()} />
       {fuera && <p class="nota peq">No sales en el ranking (lo cambias en los ajustes del equipo).{yo ? ` Tu semana: ${yo.hechas} de ${yo.previstas}.` : ''}{yo?.racha ? ` Tu racha: ${textoRacha(yo.racha)}.` : ''}</p>}
       {ranking.cargando && !ranking.datos ? <Siluetas forma="lista" n={4} texto="Cargando el ranking" />
-        : !lista.length ? <Vacio icono="progreso" titulo="Aún no hay nadie en el ranking">Salen los del equipo con sesiones publicadas esta semana.</Vacio> : (
+        : !lista.length ? <Vacio icono="progreso" imagen="vacio-ranking" titulo="Aún no hay nadie en el ranking">Salen los del equipo con sesiones publicadas esta semana.</Vacio> : (
           <>
             {podio.length > 0 && (
               <ol class={`podio podio-${podio.length}`} aria-label="Podio de la semana">

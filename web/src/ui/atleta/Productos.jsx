@@ -7,6 +7,7 @@
 //     lo hay (Safari), con lector-codigos.js, que se carga aparte solo al abrirla. Sin cámara o sin permiso, se teclea.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Paso } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { productoPorCodigo, buscarProductos } from '../../datos/productos.js';
 import { codigoValido, limpiarCodigo, macrosDeCantidad, cantidadInicial, textoPor100, textoSumado, conReciente, recientesValidos, MAX_GRAMOS } from '../../logica/alimentos.js';
@@ -117,6 +118,7 @@ export function SumarProducto({ alSumar, alVolver }) {
   return (
     <div class="pila-s">
       <button type="button" class="btn-texto" style="justify-self:start" onClick={alVolver}><Icono n="atras" /> Volver a los totales</button>
+      <Imagen id="escaner" clase="franja-ilu franja-hoja franja-escaner" tamanos="(min-width: 640px) 560px, 92vw" />
       <div class="fila-envolver">
         <button type="button" class="btn btn-primario" disabled={ocupado} onClick={() => { setError(null); setVista('escanear'); }}><Icono n="camara" /> Escanear el código</button>
         <button type="button" class="btn" disabled={ocupado} onClick={() => { setError(null); setVista('buscar'); }}><Icono n="buscar" /> Buscar por nombre</button>
