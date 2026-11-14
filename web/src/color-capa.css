@@ -71,7 +71,8 @@
 .pal-nivel-no { color: var(--alerta); background: var(--alerta-suave); border-color: var(--alerta-borde); }
 .pal-componentes { display: grid; gap: 14px; }
 .pal-componentes .fila-envolver { align-items: center; gap: 8px; }
-.pal-escala h3 { font-size: var(--tipo-nota); text-transform: capitalize; margin: 0 0 4px; color: var(--tinta-2); }
+.pal-escala h3 { font-size: var(--tipo-nota); margin: 0 0 4px; color: var(--tinta-2); }
+.pal-escala h3::first-letter { text-transform: uppercase; }
 .pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: 3px; }
 .pal-muestra { height: 2.75rem; border-radius: var(--r-xs); display: grid; place-items: end start; padding: 4px 6px; font-size: var(--letra-11); font-variant-numeric: tabular-nums; box-shadow: var(--anillo-suave); }
 .pal-estados, .pal-grads, .pal-acentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px; }
@@ -82,6 +83,19 @@
 .pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
 .pal-acento.activo { box-shadow: var(--anillo-acento); }
 .pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: var(--anillo-suave); flex: none; }
+/* (color 3) «Sistema»: lo que sale del acento, las categorías, los avatares, los radios, las sombras, las letras y las capas */
+.pal-tinte { box-shadow: var(--anillo); color: var(--tinta); }
+.pal-cat { color: var(--blanco); font-weight: 650; font-size: var(--letra-10); padding-inline: 4px; overflow: hidden; }
+.pal-avatares { display: flex; flex-wrap: wrap; gap: 8px; }
+.pal-sistema { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 12px; }
+.pal-radio, .pal-sombra { min-height: 4.25rem; padding: 8px 10px; display: grid; align-content: end; gap: 2px; background: var(--hoja); font-size: var(--letra-11); color: var(--tinta-2); }
+.pal-radio { box-shadow: var(--anillo); }
+.pal-sombra { border-radius: var(--r-s); margin: 6px; }
+.pal-radio b, .pal-sombra b { font-size: var(--letra-14); color: var(--tinta); }
+.pal-letras { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.pal-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: 2px 16px; margin: 0; padding: 10px 12px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); font-size: var(--letra-12-5); }
+.pal-lista > div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: var(--filo-fino) solid var(--linea); }
+.pal-lista dt { color: var(--tinta-2); } .pal-lista dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 650; }
 
 /* ==========================================================================================================
    Color, tanda 2 (claude/color-mejoras-2.md)
