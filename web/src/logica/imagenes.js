@@ -226,3 +226,9 @@ export const ICONOS_IMG = [
   'privacidad', 'tema', 'paleta', 'sol', 'nube', 'lluvia', 'nieve', 'niebla', 'tormenta',
 ];
 export const imagenIcono = (n) => (ICONOS_IMG.includes(n) ? `ico-${n}` : null);
+
+// ---------- (imágenes de las 48 h, bloque AA) Los apuntes ----------
+// Una por tema («Tus temas»), y las de la prueba de nivel, la ruta, el certificado, la liga, el repaso, el objetivo del día,
+// las historias y el audio del coach
+export const TEMAS_APUNTES_IMG = ['tecnica', 'programacion', 'nutricion', 'recuperacion', 'mentalidad'];
+export const imagenTemaApuntes = (tema) => (TEMAS_APUNTES_IMG.includes(tema) ? `apuntes-tema-${tema}` : null);

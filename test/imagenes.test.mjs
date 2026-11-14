@@ -235,5 +235,14 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
   check(/\.ico-img \{ position: absolute; inset: 0; width: 100%; height: 100%;/.test(css) && /\.conexion-salud \.ico-img, \.conexion-calendario \.ico-img \{ display: none; \}/.test(css), 'la imagen cubre el cuadradito entero (sin saltos), y Salud y el calendario conservan su color');
 }
 
+// (imágenes de las 48 h) Bloque AA: los apuntes
+{
+  const { imagenTemaApuntes, TEMAS_APUNTES_IMG } = await import('../web/src/logica/imagenes.js');
+  const { TEMAS } = await import('../web/src/logica/apuntes-camino.js');
+  check(TEMAS.every(([k]) => imagenTemaApuntes(k) === `apuntes-tema-${k}` && fuenteImagen(imagenTemaApuntes(k))) && imagenTemaApuntes('otro') === null && TEMAS_APUNTES_IMG.length === TEMAS.length, 'apuntes: una imagen por tema («Tus temas»)');
+  const ids = ['apuntes-ruta', 'apuntes-certificado', 'apuntes-prueba-nivel', 'apuntes-liga', 'apuntes-objetivo', 'apuntes-repaso', 'apuntes-historia', 'apuntes-audio'];
+  check(ids.every((id) => fuenteImagen(id)), 'apuntes: la prueba de nivel, la ruta, el certificado, la liga, el objetivo, el repaso, las historias y el audio, en la lista');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

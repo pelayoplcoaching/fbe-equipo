@@ -9,6 +9,8 @@ import { apuntesDeGuias, apuntesDeGlosario } from '../../logica/apuntes.js';
 import { leerApuntes, guardarEstado } from '../apuntes.js';
 import { hoyEnApuntes, rachaDiaria, puntosTotales, elegirMeta, dominio, rutaFundamentos, progresoRuta, tuMesApuntes, puedeHacerPrueba, pruebaDeNivel, nombreTema } from '../../logica/apuntes-camino.js';
 import { DibujoDiploma } from './apuntes-arte.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenTemaApuntes } from '../../logica/imagenes.js';
 import { AnilloMeta } from './AnilloMeta.jsx';
 export { AnilloMeta };
 import { vibrar } from '../hapticos.js';
@@ -32,8 +34,8 @@ export function Certificado({ nombre = '', certificado }) {
   const pct = Math.round((certificado.aciertos / certificado.total) * 100);
   const texto = `He terminado «Fundamentos FBE» en FBE Equipo (examen final: ${pct} %).`;
   return (
-    <div class="certificado" role="group" aria-label="Certificado de Fundamentos FBE">
-      <DibujoDiploma />
+    <div class={`certificado${hayImagen('apuntes-certificado') ? ' con-ilu' : ''}`} role="group" aria-label="Certificado de Fundamentos FBE">
+      <Imagen id="apuntes-certificado" clase="certificado-fondo" tamanos="(min-width: 640px) 560px, 92vw" alternativa={<DibujoDiploma />} />
       <span class="certificado-de">Certificado</span>
       <strong class="certificado-curso">Fundamentos FBE</strong>
       {nombre && <span class="certificado-nombre">{nombre}</span>}
@@ -62,6 +64,7 @@ export function HojaProgreso({ alCerrar, alAbrir }) {
       <div class="pila progreso-apuntes">
         {conPrueba && (
           <section class="prog-prueba panel panel-pad">
+            <Imagen id="apuntes-prueba-nivel" clase="franja-ilu franja-pegada franja-prueba" tamanos="(min-width: 640px) 560px, 92vw" />
             <strong>¿Ya sabes de esto?</strong>
             <p class="peq secundario">Ocho preguntas: lo que aciertes, te lo salto y empiezas por lo que te falta.</p>
             <button type="button" class="btn btn-primario" onClick={() => alAbrir('nivel')}>Hacer la prueba de nivel</button>
@@ -86,7 +89,8 @@ export function HojaProgreso({ alCerrar, alAbrir }) {
           <section class="prog-temas" aria-labelledby="prog-temas-t">
             <h3 id="prog-temas-t">Tus temas</h3>
             {temas.map((t) => (
-              <div class={`prog-tema nivel-${t.nivel}`} key={t.tema}>
+              <div class={`prog-tema nivel-${t.nivel}${hayImagen(imagenTemaApuntes(t.tema)) ? ' con-ilu' : ''}`} key={t.tema}>
+                <Imagen id={imagenTemaApuntes(t.tema)} clase="prog-tema-ilu" tamanos="48px" />
                 <span class="prog-tema-cab"><strong>{t.nombre}</strong><span class="chip">{t.etiqueta}</span></span>
                 <span class="prog-barra" role="img" aria-label={`${t.nombre}: ${t.vistos} vistos, ${t.practicados} practicados y ${t.dominados} dominados de ${t.total}`}>
                   <i class="v" style={{ width: `${(t.vistos / t.total) * 100}%` }} /><i class="p" style={{ width: `${(t.practicados / t.total) * 100}%` }} /><i class="d" style={{ width: `${(t.dominados / t.total) * 100}%` }} />
@@ -101,6 +105,7 @@ export function HojaProgreso({ alCerrar, alAbrir }) {
         {ruta.total > 0 && (
           <section class="prog-ruta" aria-labelledby="prog-ruta-t">
             <h3 id="prog-ruta-t">Fundamentos FBE</h3>
+            <Imagen id="apuntes-ruta" clase="franja-ilu franja-ruta" tamanos="(min-width: 640px) 560px, 92vw" />
             <p class="peq secundario">{ruta.certificado ? 'Ruta terminada: aquí tienes tu certificado.' : ruta.todo ? 'Has hecho todos los módulos: te queda el examen final (con el 80 %, el certificado).' : `${ruta.hechos} de ${ruta.total} módulos. Con todos y el examen final, tu certificado.`}</p>
             <ol class="prog-modulos">
               {ruta.modulos.map((m) => (
