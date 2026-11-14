@@ -489,7 +489,7 @@ try {
       meta: document.querySelector('.portada-meta').textContent, pictos: document.querySelectorAll('.portada-lista .picto, .portada-lista img.miniatura-ej').length, filas: document.querySelectorAll('.portada-lista .ej-fila').length,
       empezar: !!document.querySelector('.portada-empezar .btn-primario'), sinSeries: !document.querySelector('.ejercicio') };
   });
-  check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && (/^sesion-[a-z]+$/.test(datosPortada.foto || '') || datosPortada.arte > 10) && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
+  check(datosPortada.nombre === 'Torso A' && parseFloat(datosPortada.ancho) >= 115 && (/^sesion-[a-z]+(-\d+)?$/.test(datosPortada.foto || '') || datosPortada.arte > 10) && datosPortada.deBordeABorde && /unos \d+ min/.test(datosPortada.meta) && datosPortada.pictos === datosPortada.filas && datosPortada.filas > 0 && datosPortada.empezar && datosPortada.sinSeries,
     `antes de empezar, la portada de la sesión: su ilustración (o el dibujo) de borde a borde, el nombre en ancho (${datosPortada.ancho}), minutos y músculos, los ejercicios con su imagen o su pictograma y «Empezar» ${JSON.stringify(datosPortada)}`);
   check(await p.locator('.portada-arte').getAttribute('aria-hidden') === 'true', 'el dibujo es decorativo');
   await revisar('portada');
@@ -894,7 +894,7 @@ try {
   await heroHecha.locator('.hero-cifras').waitFor();
   check((await heroHecha.locator('.titular h2').textContent()) === '¡Sesión hecha!' && (await heroHecha.locator('.hero-hecha-nombre').textContent()).includes('Torso A')
     && (await heroHecha.locator('.hero-siguiente').textContent()).includes('Pierna A') && await heroHecha.getByRole('button', { name: 'Ver resumen' }).count() === 1
-    && await heroHecha.locator('.hero-cifras > div').count() >= 2 && await heroHecha.locator('svg.ilustracion').getAttribute('aria-hidden') === 'true',
+    && await heroHecha.locator('.hero-cifras > div').count() >= 2 && await heroHecha.locator('img.hero-escena-img, svg.ilustracion').first().getAttribute('aria-hidden') === 'true',   // (v0.165) su escena; sin ella, el dibujo
   'con la sesión de hoy hecha, Hoy lo celebra: sus cifras, «Ver resumen» y lo siguiente (Pierna A)');
   check((await p.locator('.diales .dial').first().getAttribute('aria-label')).startsWith('Constancia: 1 de 3 sesiones de esta semana') && (await p.locator('.semana-resumen').textContent()).includes('Te quedan 2 sesiones'), 'el dial de constancia marca 1 de 3 (y la tarjeta dice lo que queda)');
 
