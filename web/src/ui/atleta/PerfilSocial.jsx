@@ -27,6 +27,7 @@ import { datosRecord } from '../../logica/compartir.js';
 import { HojaCompartir } from '../Compartir.jsx';
 import { mejorRacha } from '../../logica/bienvenida.js';
 import { pesoNum, pesoTxt, etiquetaPeso } from '../../logica/unidades.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 const HojaPerfilEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaPerfilEquipo', { mientras: null });
 const toneladas = (kg) => num(Math.round((Number(kg) || 0) / 100) / 10, 1);
@@ -38,7 +39,14 @@ function HistoriaLinea({ sesiones, progreso, hoy }) {
   const coach = useCarga(() => (propio ? Promise.resolve(null) : api.nombreCoach().catch(() => null)), []);
   const h = historiaEnUnaLinea({ fechaAlta: atleta.fecha_alta, sesiones, progreso, coach: coach.datos || '', hoy });
   if (!h) return null;
-  return <p class="panel panel-pad historia-linea" aria-label="Tu historia en una línea"><Icono n="historial" /><span>{h.texto}</span></p>;
+  // (imágenes de las 48 h) el camino de la nieve a la primavera, en franja arriba
+  const ilu = hayImagen('historia-linea');
+  return (
+    <section class={`panel panel-pad historia-linea${ilu ? ' con-ilu' : ''}`} aria-label="Tu historia en una línea">
+      <Imagen id="historia-linea" clase="franja-ilu franja-pegada franja-historia" tamanos="(min-width: 640px) 560px, 100vw" />
+      <p class="historia-linea-texto">{!ilu && <Icono n="historial" />}<span>{h.texto}</span></p>
+    </section>
+  );
 }
 
 export function PerfilSecciones({ salud, irA }) {

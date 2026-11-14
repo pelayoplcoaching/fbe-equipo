@@ -6,6 +6,7 @@ import { reducirFoto } from '../FotoPerfil.jsx';
 import { useTrato } from '../trato.js';
 import { adnFbe } from '../../logica/retrato.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 // ---------- La foto de motivación ----------
 const claveFoto = (atletaId) => `fbe-foto-motivacion:${atletaId}`;
@@ -40,7 +41,8 @@ export function HojaFotoMotivacion({ alCerrar }) {
     <Hoja titulo="Tu foto de motivación" alCerrar={alCerrar}>
       <div class="pila foto-motivacion-hoja">
         <p class="peq secundario">Tu meta, tu gente, tu perro… La verás en la portada de cada sesión y al terminarla. <strong>Se queda en este móvil: no se sube</strong> (ni la ve tu coach).</p>
-        {foto && <img class="foto-motivacion-vista" src={foto} alt="Tu foto de motivación" />}
+        {foto ? <img class="foto-motivacion-vista" src={foto} alt="Tu foto de motivación" />
+          : <Imagen id="foto-motivacion-vacia" clase="foto-motivacion-vacia" tamanos="200px" />}
         <label class="btn btn-primario foto-motivacion-elegir">
           <Icono n="camara" /> {cargando ? 'Guardando…' : foto ? 'Cambiar la foto' : 'Elegir una foto'}
           <input type="file" accept="image/*" class="sr" aria-label="Elegir tu foto de motivación" onChange={elegir} disabled={cargando} />
@@ -79,7 +81,9 @@ export function AdnFbe({ entrenos, progreso, hoy }) {
     } catch { /* cancelado */ }
   };
   return (
-    <section class="panel panel-pad adn-fbe" aria-labelledby="adn-fbe-t">
+    <section class={`panel panel-pad adn-fbe${hayImagen('adn-fbe') ? ' con-ilu' : ''}`} aria-labelledby="adn-fbe-t">
+      {/* (imágenes de las 48 h) la doble hélice de discos y mancuernas, de fondo a la derecha */}
+      <Imagen id="adn-fbe" clase="adn-fbe-fondo" tamanos="180px" />
       <span class="t-sobre">Tu retrato de atleta</span>
       <h2 id="adn-fbe-t" class="adn-fbe-t">{r.titulo}</h2>
       <p class="adn-fbe-frase">{r.frase}</p>

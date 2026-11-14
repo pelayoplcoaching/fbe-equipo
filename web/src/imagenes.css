@@ -285,3 +285,32 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .audio-pildora.con-ilu { grid-template-columns: auto auto 1fr auto; }
 .audio-pildora.con-ilu > .audio-ilu { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex: none; }
 @media (forced-colors: active) { .prog-tema-ilu, .certificado-fondo, .apuntes-tarjeta-ilu, .ap-historia-fondo, .audio-ilu { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AB: su meta y su historia */
+/* La cuenta atrás: contando, el reloj de arena y la bandera en una franja algo más alta (5:2, caben los dos); el día y
+   pasada, un cuadrito en lugar del emoji */
+.panel.cuenta-meta.con-franja { display: block; overflow: hidden; }
+.panel-pad > .franja-pegada.franja-meta { aspect-ratio: 5 / 2; object-position: 50% 50%; margin-bottom: 10px; }
+.cuenta-meta-fila { display: flex; gap: 12px; align-items: center; }
+.cuenta-meta-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+/* Tu historia en una línea: el camino de la nieve a la primavera, arriba */
+.panel.historia-linea.con-ilu { display: block; overflow: hidden; }
+.historia-linea-texto { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.panel.historia-linea:not(.con-ilu) > .historia-linea-texto > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.panel-pad > .franja-pegada.franja-historia { margin-bottom: 10px; object-position: 50% 50%; }
+/* Su aniversario: la medalla del hito junto al título (la tarta sigue en la franja) */
+.aniversario.con-medalla { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.aniversario.con-medalla > .aniversario-ilu { grid-column: 1 / -1; }
+.aniversario-medalla { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+/* Tu ADN FBE: la doble hélice de fondo a la derecha, fundida hacia el texto */
+.panel.adn-fbe.con-ilu { position: relative; overflow: hidden; isolation: isolate; }
+.adn-fbe-fondo { position: absolute; z-index: -1; right: 0; top: 0; height: 100%; width: 46%; object-fit: cover; object-position: 55% 88%; opacity: .55;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 55%); mask-image: linear-gradient(to right, transparent, #000 55%); pointer-events: none; }
+/* Tu foto de motivación, sin elegir aún: el marco vacío colgado */
+.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: 18px; object-fit: cover; }
+/* Para hablarle y la carta del mes (la ficha del coach) */
+.panel-pad > .franja-pegada.franja-hablarle { margin-bottom: 4px; object-position: 50% 50%; }
+.franja-carta { aspect-ratio: 5 / 2; border-radius: var(--r); object-position: 50% 50%; }
+/* Tu mejor momento: el arco del sol en lugar del rayo */
+.mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+@media (forced-colors: active) { .cuenta-meta-img, .aniversario-medalla, .adn-fbe-fondo, .foto-motivacion-vacia, .mejor-momento-img { display: none; } }

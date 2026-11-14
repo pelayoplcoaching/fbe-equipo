@@ -1,7 +1,7 @@
 // (personalización 2, tanda 4) Que sea suyo y que al coach le llegue personal: su retrato de atleta («Tu ADN FBE», solo
 // de su entrenamiento), la carta del mes (un borrador para el coach), «Para hablarle» en la ficha y la foto de
 // motivación (en el móvil). Lógica pura.
-import { diasEntre, sumarDias } from './fechas.js';
+import { diasEntre, sumarDias, fechaMadrid } from './fechas.js';
 import { g, segunTono } from './trato.js';
 import { costumbres, FRANJAS } from './perfil.js';
 import { NOMBRE_GRUPO } from './calculos.js';
@@ -104,8 +104,10 @@ export function paraHablarle({ nombre = '', personal = null, entrenos = [], ulti
   const hechos = (entrenos || []).filter((x) => x?.fecha && x.fecha <= hoy).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const conRecord = hechos.find((x) => Number(x.records) > 0);
   if (conRecord) filas.push(['Su último hito', `${conRecord.records === 1 ? 'Un récord' : `${conRecord.records} récords`} el ${conRecord.fecha.slice(8, 10)}/${conRecord.fecha.slice(5, 7)}${conRecord.nombre ? ` (${conRecord.nombre})` : ''}`]);
-  const diasCoach = ultimoCoach ? diasEntre(String(ultimoCoach).slice(0, 10), hoy) : null;
-  filas.push(['Le escribiste', diasCoach == null ? 'Nunca' : diasCoach === 0 ? 'Hoy' : diasCoach === 1 ? 'Ayer' : `Hace ${diasCoach} días`]);
+  // (el último mensaje es un instante: su día, el de Madrid; y si el reloj del móvil va por detrás, «Hoy», nunca «Hace -1 días»)
+  const diaCoach = !ultimoCoach ? null : /^\d{4}-\d{2}-\d{2}$/.test(String(ultimoCoach)) ? String(ultimoCoach) : (Number.isNaN(new Date(ultimoCoach).getTime()) ? String(ultimoCoach).slice(0, 10) : fechaMadrid(new Date(ultimoCoach)));
+  const diasCoach = diaCoach ? diasEntre(diaCoach, hoy) : null;
+  filas.push(['Le escribiste', diasCoach == null || Number.isNaN(diasCoach) ? 'Nunca' : diasCoach <= 0 ? 'Hoy' : diasCoach === 1 ? 'Ayer' : `Hace ${diasCoach} días`]);
   // la idea: lo más oportuno primero
   const ultimo = hechos[0]?.fecha || null;
   const sinEntrenar = ultimo ? diasEntre(ultimo, hoy) : null;

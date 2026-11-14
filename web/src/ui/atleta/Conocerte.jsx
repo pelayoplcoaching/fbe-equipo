@@ -9,6 +9,7 @@ import { mensajeDe } from '../../logica/personal.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen } from '../Imagen.jsx';
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -76,7 +77,7 @@ export function MejorMomento({ entrenos, hoy }) {
   };
   return (
     <section class="panel panel-pad mejor-momento" aria-label="Tu mejor momento">
-      <p><Icono n="rayo" /><span>{m.texto}</span></p>
+      <p><Imagen id="mejor-momento" clase="mejor-momento-img" tamanos="56px" alternativa={<Icono n="rayo" />} /><span>{m.texto}</span></p>
       {!propio && (enviado ? <span class="mini secundario">Se lo has propuesto a tu coach.</span>
         : <button type="button" class="btn btn-peq" onClick={proponer}>Proponer a mi coach poner ahí la sesión más dura</button>)}
     </section>

@@ -8,6 +8,8 @@ import { vibrar } from '../hapticos.js';
 import { useTrato } from '../trato.js';
 import { UNIDADES_META, cuentaMeta } from '../../logica/rumbo.js';
 import { hoyISO, fmtCorta } from '../../logica/fechas.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenMeta } from '../../logica/imagenes.js';
 
 export function HojaTrato({ actual, alCerrar, alGuardar }) {
   const { api, aviso, atleta } = useApp();
@@ -108,10 +110,16 @@ export function CuentaMeta() {
   const { personal } = useTrato();
   const c = cuentaMeta(personal, hoyISO());
   if (!c) return null;
+  const ilu = imagenMeta(c);
+  const franja = ilu === 'meta-cuenta' && hayImagen(ilu);
   return (
-    <section class={`panel panel-pad cuenta-meta${c.cerca ? ' cerca' : ''}${c.pasada ? ' pasada' : ''}`} aria-label="Tu meta">
-      <span class="cuenta-meta-ico" aria-hidden="true">{c.dias === 0 ? '🎯' : '⏳'}</span>
-      <span class="pila-xs"><strong>{c.texto}</strong>{c.fecha && !c.pasada && <span class="mini secundario">{fmtCorta(c.fecha)}</span>}</span>
+    <section class={`panel panel-pad cuenta-meta${c.cerca ? ' cerca' : ''}${c.pasada ? ' pasada' : ''}${franja ? ' con-franja' : ''}`} aria-label="Tu meta">
+      {/* (imágenes de las 48 h) contando: el reloj de arena con el camino, en franja; el día y pasada, un cuadrito */}
+      {franja && <Imagen id={ilu} clase="franja-ilu franja-pegada franja-meta" tamanos="(min-width: 640px) 560px, 100vw" />}
+      <div class="cuenta-meta-fila">
+        {!franja && <Imagen id={ilu} clase="cuenta-meta-img" tamanos="56px" alternativa={<span class="cuenta-meta-ico" aria-hidden="true">{c.dias === 0 ? '🎯' : '⏳'}</span>} />}
+        <span class="pila-xs"><strong>{c.texto}</strong>{c.fecha && !c.pasada && <span class="mini secundario">{fmtCorta(c.fecha)}</span>}</span>
+      </div>
     </section>
   );
 }

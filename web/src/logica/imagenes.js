@@ -232,3 +232,9 @@ export const imagenIcono = (n) => (ICONOS_IMG.includes(n) ? `ico-${n}` : null);
 // las historias y el audio del coach
 export const TEMAS_APUNTES_IMG = ['tecnica', 'programacion', 'nutricion', 'recuperacion', 'mentalidad'];
 export const imagenTemaApuntes = (tema) => (TEMAS_APUNTES_IMG.includes(tema) ? `apuntes-tema-${tema}` : null);
+
+// ---------- (imágenes de las 48 h) Bloque AB: su meta y su historia ----------
+// El aniversario: la vela con la luna (1 y 3 meses), las seis lunas (6 meses) y el laurel (el año y los siguientes)
+export const imagenAniversarioMeses = (m) => (!Number.isInteger(m) || m < 1 ? null : m >= 12 ? 'aniversario-ano' : m >= 6 ? 'aniversario-medio' : 'aniversario-mes');
+// La cuenta atrás de su meta (rumbo.cuentaMeta): el reloj de arena con el camino; el día, la bandera dorada; pasada, la siguiente
+export const imagenMeta = (c) => (!c ? null : c.pasada ? 'meta-siguiente' : c.dias === 0 ? 'meta-dia' : 'meta-cuenta');

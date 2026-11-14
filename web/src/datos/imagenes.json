@@ -151,6 +151,16 @@
       "1024": "imagenes/acceso/activar-fondo-1024.d515bec2.webp"
     }
   },
+  "adn-fbe": {
+    "proporcion": [
+      9,
+      16
+    ],
+    "archivos": {
+      "360": "imagenes/meta/adn-fbe-360.6f0b2926.webp",
+      "540": "imagenes/meta/adn-fbe-540.7d7adc69.webp"
+    }
+  },
   "adu-copenhague": {
     "proporcion": [
       1,
@@ -190,6 +200,36 @@
       "720": "imagenes/celebra/aniversario-720.59b3dfaa.webp",
       "1080": "imagenes/celebra/aniversario-1080.5bf71668.webp",
       "1440": "imagenes/celebra/aniversario-1440.b5a66247.webp"
+    }
+  },
+  "aniversario-ano": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-ano-160.cb4f68a0.webp",
+      "320": "imagenes/meta/aniversario-ano-320.d25c8e72.webp"
+    }
+  },
+  "aniversario-medio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-medio-160.c5f486c8.webp",
+      "320": "imagenes/meta/aniversario-medio-320.984addb7.webp"
+    }
+  },
+  "aniversario-mes": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/aniversario-mes-160.b6bb0275.webp",
+      "320": "imagenes/meta/aniversario-mes-320.40d2c880.webp"
     }
   },
   "ant-curl-muneca-banco": {
@@ -600,6 +640,16 @@
       "480": "imagenes/carne/carne-fondo-480.79f3d151.webp",
       "720": "imagenes/carne/carne-fondo-720.d739ed1e.webp",
       "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
+    }
+  },
+  "carta-mes": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/meta/carta-mes-720.99ff1b8a.webp",
+      "1080": "imagenes/meta/carta-mes-1080.14def747.webp"
     }
   },
   "celebra-bloque": {
@@ -1763,6 +1813,16 @@
       "1080": "imagenes/foco/foco-volumen-1080.c1a79f9f.webp"
     }
   },
+  "foto-motivacion-vacia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/meta/foto-motivacion-vacia-240.e50782e7.webp",
+      "480": "imagenes/meta/foto-motivacion-vacia-480.b8b637c8.webp"
+    }
+  },
   "gem-maquina-de-pie": {
     "proporcion": [
       1,
@@ -2255,6 +2315,16 @@
       "480": "imagenes/herr/herr-metronomo-480.5080d5a6.webp",
       "720": "imagenes/herr/herr-metronomo-720.11149cba.webp",
       "1080": "imagenes/herr/herr-metronomo-1080.78181f85.webp"
+    }
+  },
+  "historia-linea": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/meta/historia-linea-720.ddd753df.webp",
+      "1080": "imagenes/meta/historia-linea-1080.55700d6d.webp"
     }
   },
   "hito-12": {
@@ -3127,6 +3197,16 @@
       "512": "imagenes/medalla/medalla-toneladas-plata-512.78c2a9ef.webp"
     }
   },
+  "mejor-momento": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/mejor-momento-160.884b5318.webp",
+      "320": "imagenes/meta/mejor-momento-320.f407e255.webp"
+    }
+  },
   "mes-01": {
     "proporcion": [
       16,
@@ -3271,6 +3351,26 @@
       "1440": "imagenes/mes/mes-12-1440.fe0b454b.webp"
     }
   },
+  "meta-cuenta": {
+    "proporcion": [
+      5,
+      2
+    ],
+    "archivos": {
+      "720": "imagenes/meta/meta-cuenta-720.de1f1a33.webp",
+      "1080": "imagenes/meta/meta-cuenta-1080.a67b0ddf.webp"
+    }
+  },
+  "meta-dia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/meta-dia-160.9160176a.webp",
+      "320": "imagenes/meta/meta-dia-320.46ce2434.webp"
+    }
+  },
   "mito-semana": {
     "proporcion": [
       3,
@@ -3280,6 +3380,16 @@
       "480": "imagenes/aprende/mito-semana-480.e9182444.webp",
       "720": "imagenes/aprende/mito-semana-720.f4a0275f.webp",
       "1080": "imagenes/aprende/mito-semana-1080.4d98144a.webp"
+    }
+  },
+  "para-hablarle": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/meta/para-hablarle-720.56df73e3.webp",
+      "1080": "imagenes/meta/para-hablarle-1080.031dba9f.webp"
     }
   },
   "pec-aperturas-planas": {
