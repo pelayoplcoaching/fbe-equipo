@@ -1223,7 +1223,7 @@ function FotoGrandeDentro({ src, alt, alCerrar }) {
   const ref = useRef(null);
   useAtraparFoco(ref);
   // (diseño, tanda 23) la barra del sistema, de la noche de la foto
-  useEffect(() => tenirBarra('#0E0B1E'), []);
+  useEffect(() => tenirBarra('#0E0D15'), []);
   useLayoutEffect(() => {
     const previo = document.activeElement;
     ref.current?.querySelector('.foto-grande-cerrar')?.focus({ preventScroll: true });

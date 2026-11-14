@@ -15,10 +15,10 @@ import { useBienvenidaAbierta } from './Bienvenida.jsx';
 // cruza (quieto con «reducir movimiento»). Sin nivel, una medalla fantasma. El aro exterior marca lo que falta.
 const abreviar = (n) => (n >= 1000 ? `${num(n / 1000, n % 1000 ? 1 : 0)}k` : String(n));
 const METAL = {
-  bronce: { luz: '#F6CFA6', medio: '#C9864F', sombra: '#8A4F25', cantoLuz: '#F0B98A', cantoSombra: '#6E3B17', tinta: '#3A1F0B', relieve: 'rgba(255, 236, 214, .65)' },
-  plata: { luz: '#FBFCFE', medio: '#C7CCD6', sombra: '#8C93A1', cantoLuz: '#FFFFFF', cantoSombra: '#6B7280', tinta: '#2B303B', relieve: 'rgba(255, 255, 255, .8)' },
-  oro: { luz: '#FFF4C4', medio: '#E9B949', sombra: '#A8781A', cantoLuz: '#FFF1B8', cantoSombra: '#8A6212', tinta: '#3F2A04', relieve: 'rgba(255, 248, 214, .75)' },
-  platino: { luz: '#F7FCFF', medio: '#C6D8E4', sombra: '#8AA5B8', cantoLuz: '#F4FBFF', cantoSombra: '#4E6577', tinta: '#1E2C38', relieve: 'rgba(255, 255, 255, .8)' },
+  bronce: { luz: '#FFD6AA', medio: '#BB7400', sombra: '#8C5500', cantoLuz: '#FFB38C', cantoSombra: '#714400', tinta: '#3D2200', relieve: 'rgba(255, 236, 214, .65)' },
+  plata: { luz: '#F6F6F9', medio: '#C7C6CF', sombra: '#858492', cantoLuz: '#FFFFFF', cantoSombra: '#6B7280', tinta: '#2A283D', relieve: 'rgba(255, 255, 255, .8)' },
+  oro: { luz: '#FEEDC9', medio: '#EBC166', sombra: '#A97F00', cantoLuz: '#FEEDC9', cantoSombra: '#8A6212', tinta: '#362600', relieve: 'rgba(255, 248, 214, .75)' },
+  platino: { luz: '#F2F7FF', medio: '#DDDDE3', sombra: '#AAA9B5', cantoLuz: '#F2F7FF', cantoSombra: '#626171', tinta: '#282638', relieve: 'rgba(255, 255, 255, .8)' },
 };
 let contador = 0;
 // (imágenes) con `logro`, la medalla conseguida es la ilustración de ese logro en su metal (bronce, plata, oro, diamante),

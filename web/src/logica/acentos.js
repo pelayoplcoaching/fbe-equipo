@@ -3,64 +3,14 @@
 // botones pasen el contraste AA (4,5:1) sobre todas las superficies de la app, también sobre el negro puro.
 // Es un ajuste del móvil (como el tema): no va a la base.
 
-// Superficies de la app (las de estilos.css) sobre las que va el acento como texto
-export const SUPERFICIES = {
-  claro: { tiza: '#F1F0F6', hoja: '#FFFFFF', 'hoja-2': '#F5F4FA' },
-  oscuro: { tiza: '#0F0E17', hoja: '#19172A', 'hoja-2': '#232036' },
-  oled: { tiza: '#000000', hoja: '#0C0B12', 'hoja-2': '#17151F' },
-};
+// (color) Las superficies, los textos, los acentos y el contraste salen de la paleta (logica/paleta.js), la única
+// fuente del color: ocho acentos (con Océano y Lima, de la tanda de color), cada uno con sus valores para el claro y el oscuro.
+import { SUPERFICIES, TEXTOS as TEXTOS_PALETA, ACENTOS, luminancia, contraste } from './paleta.js';
+export { SUPERFICIES, ACENTOS, luminancia, contraste };
 // El texto claro de la tarjeta del día (--sobre-hero), que va sobre el brillo del acento (--hero-2)
 export const SOBRE_HERO = '#F3F1FB';
-
-// Cada tema: morado (el acento), su hover, el fondo suave (chips, lo elegido), el texto sobre el acento y el brillo
-// de la tarjeta del día. Los nombres de las variables siguen siendo «morado» (así se llamaba el único que había).
-export const ACENTOS = [
-  {
-    id: 'morado', nombre: 'Morado FBE',
-    claro: { morado: '#5438D8', hover: '#4429C2', suave: '#E9E4FD', sobre: '#FFFFFF', hero2: '#2A2154' },
-    oscuro: { morado: '#A596FF', hover: '#B9ADFF', suave: '#2B2452', sobre: '#0F0E17', hero2: '#3A2E7A' },
-  },
-  {
-    id: 'azul', nombre: 'Azul',
-    claro: { morado: '#1D55C4', hover: '#1746A6', suave: '#E1EBFC', sobre: '#FFFFFF', hero2: '#1C2F5E' },
-    oscuro: { morado: '#7EA6FF', hover: '#9DBBFF', suave: '#1C2B4F', sobre: '#0F0E17', hero2: '#24408A' },
-  },
-  {
-    id: 'pino', nombre: 'Verde pino',
-    claro: { morado: '#0B6B5D', hover: '#08594D', suave: '#DDF2EE', sobre: '#FFFFFF', hero2: '#10393A' },
-    oscuro: { morado: '#4FCDB3', hover: '#74DCC6', suave: '#14352F', sobre: '#0F0E17', hero2: '#155A50' },
-  },
-  {
-    id: 'frambuesa', nombre: 'Frambuesa',
-    claro: { morado: '#B0215C', hover: '#951A4D', suave: '#FBE3EC', sobre: '#FFFFFF', hero2: '#4A1632' },
-    oscuro: { morado: '#FF8AB6', hover: '#FFA8C9', suave: '#45192F', sobre: '#0F0E17', hero2: '#6B1E46' },
-  },
-  {
-    id: 'cobre', nombre: 'Cobre',
-    claro: { morado: '#9C4310', hover: '#82380C', suave: '#FBE8DA', sobre: '#FFFFFF', hero2: '#46240F' },
-    oscuro: { morado: '#FFA46E', hover: '#FFBB91', suave: '#3E2617', sobre: '#0F0E17', hero2: '#6E3712' },
-  },
-  {
-    id: 'grafito', nombre: 'Grafito',
-    claro: { morado: '#3A3D52', hover: '#2A2C3D', suave: '#E6E6EE', sobre: '#FFFFFF', hero2: '#2B2C3A' },
-    oscuro: { morado: '#C7CAE0', hover: '#DADCEC', suave: '#2C2C3C', sobre: '#0F0E17', hero2: '#3D3F52' },
-  },
-];
 export const ACENTO_DEFECTO = 'morado';
 export const acentoDe = (id) => ACENTOS.find((a) => a.id === id) || ACENTOS[0];
-
-// ---------- contraste (WCAG 2.x) ----------
-function canal(c) { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }
-export function luminancia(hex) {
-  const h = String(hex).replace('#', '');
-  const n = h.length === 3 ? h.split('').map((x) => x + x).join('') : h;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16));
-  return 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
-}
-export function contraste(a, b) {
-  const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
-  return Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100;
-}
 
 // Todas las parejas que tienen que pasar AA con un acento en un tema (claro, oscuro u oled; el oled usa los valores
 // del oscuro): el acento como texto sobre cada superficie y sobre su fondo suave, el texto de los botones sobre el
@@ -107,7 +57,7 @@ export const VIDRIO = {
   cabecera: { claro: 90, oscuro: 85, oled: 80 },  // las cabeceras pegadas (sobre --tiza, el fondo de la página)
   hoja: { claro: 92, oscuro: 92, oled: 92 },      // las hojas (sobre --hoja; llevan también tinta-3)
 };
-const TEXTOS = { claro: { tinta: '#1B1730', 'tinta-2': '#524E6B', 'tinta-3': '#66627C' }, oscuro: { tinta: '#F0EEF9', 'tinta-2': '#B1ACC9', 'tinta-3': '#9A95B5' } };
+const TEXTOS = TEXTOS_PALETA;
 export function parejasVidrio(acento, tema, tipo = 'barra') {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
   const textos = TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];

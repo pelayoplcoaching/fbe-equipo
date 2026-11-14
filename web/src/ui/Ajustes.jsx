@@ -79,6 +79,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           <span class="peq terciario">El color de los botones, los enlaces y lo que eliges. Todos se leen bien en claro y en oscuro.</span>
         </fieldset>
       </li>
+      {/* (color, mejoras 17 y 18) más contraste y ayuda para daltonismo */}
+      <Interruptor id="aj-contraste" icono="sol" texto="Alto contraste" ayuda="Textos y líneas al máximo, para ver mejor o entrenar con mucha luz" valor={!!a.altoContraste} alCambiar={(v) => cambiar('altoContraste', v)} />
+      <Interruptor id="aj-daltonismo" icono="ojo-abierto" texto="Ayuda para daltonismo" ayuda="Lo hecho, en azul, y lo que falta o va mal, en naranja, en vez de verde y rojo" valor={!!a.daltonismo} alCambiar={(v) => cambiar('daltonismo', v)} />
       {/* v0.50: el tamaño de la letra de toda la app (se guarda en este móvil, como el tema) */}
       <FilaIos icono="letra" titulo="Tamaño de la letra" detalle="Para toda la app. Las cifras y los botones crecen con ella."
         bloque={<Segmentos clase="segmentos-letra" opciones={TAMANOS_LETRA.map(([k, t]) => [k, t])} valor={a.letra || 'normal'} etiqueta="Tamaño de la letra" alCambiar={(v) => cambiar('letra', v || 'normal')} />} />

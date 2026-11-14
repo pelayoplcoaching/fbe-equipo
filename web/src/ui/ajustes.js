@@ -12,6 +12,7 @@
 import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
 import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
+import { valor as valorPaleta } from '../logica/paleta.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
 import { limpiarVolumenes, horaValida } from '../logica/sonido.js';
@@ -27,6 +28,8 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   soloWifi: false,
   // v0.66: «Modo gimnasio» (en la sesión, cifras y botones más grandes y más contraste)
   gimnasio: false,
+  // (color, mejoras 17 y 18) alto contraste (AAA) y la ayuda para daltonismo (verde/rojo → azul/naranja)
+  altoContraste: false, daltonismo: false,
   // v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso, ui/pista-descanso.js): apagado de serie, porque en el
   // iPhone (y en Android) pausa la música de otras apps mientras dura el descanso. Solo sale donde puede funcionar
   vozBloqueo: false,
@@ -48,7 +51,8 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // el paisaje sonoro del descanso (ninguno) y marcar la serie desde los auriculares (no)
   silencioActivo: false, silencioDesde: '23:00', silencioHasta: '08:00', sonidoTeclado: false, avisoSeguimos: true, pruebaSonido: false,
   vozNombre: null, vozVelocidad: 1, contarReps: false, paisajeDescanso: null, auricularesSerie: false };
-const COLOR = { claro: '#EEEEF3', oscuro: '#13111C', oled: '#000000' };
+// (color, mejora 19) la barra del sistema, del color exacto del fondo de cada tema (de la paleta)
+const COLOR = { claro: valorPaleta('claro', 'tiza'), oscuro: valorPaleta('oscuro', 'tiza'), oled: '#000000' };
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
 // igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
@@ -148,6 +152,9 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (a.gimnasio) r.setAttribute('data-gimnasio', ''); else r.removeAttribute('data-gimnasio');
   // (personalización 3) lo que no quiere ver (las reglas, en personal.css)
   for (const k of ['peso', 'kcal', 'ranking']) { if (a.ocultar?.[k]) r.setAttribute(`data-sin-${k}`, ''); else r.removeAttribute(`data-sin-${k}`); }
+  // (color) alto contraste y daltonismo: sus tokens, en color.css (generado desde logica/paleta.js)
+  if (a.altoContraste) r.setAttribute('data-contraste', 'alto'); else r.removeAttribute('data-contraste');
+  if (a.daltonismo) r.setAttribute('data-daltonismo', ''); else r.removeAttribute('data-daltonismo');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento);

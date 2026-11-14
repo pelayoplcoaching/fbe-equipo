@@ -3,7 +3,11 @@
 import { azar, perfil, altoTerreno, VENTISCA } from '../../logica/travesia.js';
 import { fugaz, estirar, parpadea, colaAlViento, impetu, sacudida, entrada, hayAurora, alturaAstro, avisoDe, zoomDe, metaFinal } from '../../logica/travesia-efectos.js';
 
-const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', VIOLETA = '#5438D8', LAVANDA = '#A08CFF', TIZA = '#F1F0F6', ORO = '#F2C230';
+const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', TIZA = '#F1F0F6', ORO = '#F2C230';
+// (color, mejora 16) el violeta y la lavanda del juego son el acento elegido (claro y oscuro); con el morado FBE, los de siempre.
+// (El resto del juego conserva su paleta de ilustración: pieles del lobo, paisajes y cielos.)
+let VIOLETA = '#5438D8', LAVANDA = '#A08CFF';
+export function acentoTravesia(claro, oscuro) { if (/^#[0-9A-F]{6}$/i.test(claro || '')) VIOLETA = claro; if (/^#[0-9A-F]{6}$/i.test(oscuro || '')) LAVANDA = oscuro; }
 
 // Tres cordilleras al fondo, de lejos a cerca: cada una, una fila de picos que se repite cada `periodo` px
 function cordillera(semilla, { periodo, alto, ancho, n }) {

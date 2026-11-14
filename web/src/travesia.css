@@ -1,7 +1,7 @@
 /* (al integrarla, v0.147) Los colores de la noche de La travesía, como tokens. La escena es de noche con el tema claro y con
    el oscuro, así que su versión oscura es la misma (se repite abajo a propósito). El texto no entra con opacity. */
-:root { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; --tv-plata-texto: #DCE0EE; --tv-bronce-texto: #E0A070; }
-:root[data-theme="dark"] { --tv-noche: #0B0726; --tv-noche-2: #1E1548; --tv-noche-3: #3B2A8F; --tv-tiza: #F1F0F6; --tv-tiza-2: #D9D3F7; --tv-oro: #F2C230; --tv-lavanda: #A08CFF; --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, #1E1548 0%, #6B46A8 60%, #F0A27A 135%); --tv-cielo-ocaso: linear-gradient(180deg, #1A1245 0%, #5A3A9E 60%, #E0806B 140%); --tv-cielo-dia: linear-gradient(180deg, #2A3A9A 0%, #4A5FC4 70%, #6E86E0 130%); --tv-sol: #FFE27A; --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: #B87333; --tv-bronce-luz: #F4D7B8; --tv-plata: #A9B0C4; --tv-plata-luz: #FFFFFF; --tv-oro-luz: #FFF2B8; --tv-aurora-1: #1F5C55; --tv-aurora-2: #6FD3A8; --tv-plata-texto: #DCE0EE; --tv-bronce-texto: #E0A070; }
+:root { --tv-noche: var(--noche-0); --tv-noche-2: var(--marca-950); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, var(--marca-950) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(180deg, var(--marca-950) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(180deg, var(--azul-700) 0%, #4A5FC4 70%, var(--azul-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
+:root[data-theme="dark"] { --tv-noche: var(--noche-0); --tv-noche-2: var(--marca-950); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, var(--marca-950) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(180deg, var(--marca-950) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(180deg, var(--azul-700) 0%, #4A5FC4 70%, var(--azul-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
 /* «La travesía»: el juego del descanso (ui/atleta/Travesia.jsx). Pantalla completa, siempre de noche (no cambia con el
    tema): el lienzo debajo y, encima, los números, la pista y la tarjeta del final. */
 .temporizador .descanso-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
@@ -69,15 +69,15 @@
 .travesia-modo { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 12px; border: 0; border-radius: 999px; color: inherit; font-size: .8125rem; font-weight: 650;
   background: rgb(241 240 246 / .12); }
 .travesia-modo svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.travesia-modo[aria-pressed="true"] { background: #F1F0F6; color: #1E1548; }
-.travesia-modo:focus-visible { outline: 2px solid #F1F0F6; outline-offset: 2px; }
-.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: #1E1548; background: #F2C230; }
+.travesia-modo[aria-pressed="true"] { background: var(--neutro-100); color: var(--marca-950); }
+.travesia-modo:focus-visible { outline: 2px solid var(--neutro-100); outline-offset: 2px; }
+.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: var(--marca-950); background: var(--oro-300); }
 .travesia-escudo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
 .travesia-reto { position: absolute; left: 16px; right: 16px; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); margin: 0; text-align: center; font-size: .875rem; font-weight: 650; pointer-events: none; }
-.travesia-reto.hecho { color: #F2C230; }
+.travesia-reto.hecho { color: var(--oro-300); }
 .travesia-pista.calma { top: 30%; }
 .travesia-tarjeta-reto { font-size: .8125rem; color: rgb(241 240 246 / .82); }
-.travesia-tarjeta-reto.hecho { color: #F2C230; font-weight: 700; }
+.travesia-tarjeta-reto.hecho { color: var(--oro-300); font-weight: 700; }
 
 /* (tanda 3) «Tu travesía»: la tarjeta se abre (un botón que la cubre, con «Practicar» por encima) y su hoja */
 .travesia-tarjeta-abrir { position: absolute; inset: 0; border: 0; padding: 0; background: none; border-radius: inherit; cursor: pointer; }
@@ -112,7 +112,7 @@
 .tv-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tv-nombre small { font-weight: 500; color: var(--tinta-2); }
 .tv-retar { min-height: 36px; }
-.tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: #1E1548; border-color: transparent; }
+.tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: var(--marca-950); border-color: transparent; }
 .tv-equipo { display: grid; gap: 6px; margin-top: 12px; font-size: .875rem; }
 .tv-barra { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 16%, transparent); overflow: hidden; }
 .tv-barra span { display: block; height: 100%; border-radius: 999px; background: var(--morado); }
@@ -195,8 +195,8 @@
 .tv-logro.hecho .tv-logro-ico { color: var(--tv-oro-tinta); }
 /* (al integrar) el oro sobre la hoja: oscuro en claro, el oro tal cual en oscuro */
 :root { --tv-oro-tinta: #8A6400; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tv-oro-tinta: #F2C230; } }
-:root[data-theme="dark"] { --tv-oro-tinta: #F2C230; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tv-oro-tinta: var(--oro-300); } }
+:root[data-theme="dark"] { --tv-oro-tinta: var(--oro-300); }
 
 /* (top, tanda 4) la etapa del día, el botón de aullar y el aviso del aullido en el juego */
 .tv-dia-correr { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-bottom: 10px; }

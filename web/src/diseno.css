@@ -17,7 +17,7 @@
    ========================================================================================================== */
 
 :root {
-  --seg-activo: #FFFFFF;                 /* la pastilla del segmento elegido */
+  --seg-activo: var(--blanco);                 /* la pastilla del segmento elegido */
   --seg-sombra: 0 0 0 1px rgba(27, 23, 48, .06), 0 1px 2px rgba(27, 23, 48, .1), 0 3px 8px -3px rgba(27, 23, 48, .16);
   --elegido: var(--tinta);               /* chips de filtro elegidos: tinta sobre tiza */
   --sobre-elegido: var(--tiza);
@@ -29,14 +29,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --seg-activo: #3D3859;
+    --seg-activo: var(--neutro-800);
     --seg-sombra: 0 0 0 1px rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .45);
     --casilla-marca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F0E17' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.3 4.3L18.5 8'/%3E%3C/svg%3E");
     --selector-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B1ACC9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
   }
 }
 :root[data-theme="dark"] {
-  --seg-activo: #3D3859;
+  --seg-activo: var(--neutro-800);
   --seg-sombra: 0 0 0 1px rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .45);
   --casilla-marca: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F0E17' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.3 4.3L18.5 8'/%3E%3C/svg%3E");
   --selector-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B1ACC9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
@@ -170,9 +170,9 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 
 /* Avatares: seis tonos fríos de la familia de la marca (antes incluía un marrón y un frambuesa que, junto a los
    avisos, se leían como estados). Texto >= 4,5:1 sobre su fondo en los dos temas. */
-:root { --av-4: #7A2E8E; --av-5: #46527A; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --av-4: #D69AEC; --av-5: #AEB9DA; } }
-:root[data-theme="dark"] { --av-4: #D69AEC; --av-5: #AEB9DA; }
+:root { --av-4: #7A2E8E; --av-5: var(--neutro-700); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --av-4: var(--marca-400); --av-5: var(--neutro-300); } }
+:root[data-theme="dark"] { --av-4: var(--marca-400); --av-5: var(--neutro-300); }
 
 /* ---------- 6. Sesión más limpia ----------------------------------------------------------------------------
    La serie que toca: una sola señal (fila tintada y el botón de hecho relleno), no un marco en la fila y otro en el
@@ -425,12 +425,12 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .acceso h1 { font-size: clamp(1.625rem, 7.4vw, 2rem); line-height: 1.08; text-wrap: balance; }
 .acceso h1.peq { font-size: 1.375rem; }
 .app:has(> .acceso > .acceso-caja) { --aire: clamp(0.75rem, 12vh - 3rem, 8rem); --noche: calc(var(--aire) + env(safe-area-inset-top, 0px) + 10.75rem);
-  background: radial-gradient(42rem 16rem at 80% 100%, color-mix(in srgb, var(--morado) 62%, #1E1548) 0%, transparent 64%) top / 100% var(--noche) no-repeat,
-    radial-gradient(30rem 13rem at 6% 100%, #3A2E7A 0%, transparent 62%) top / 100% var(--noche) no-repeat,
-    linear-gradient(#1E1548, #1E1548) top / 100% var(--noche) no-repeat; }
+  background: radial-gradient(42rem 16rem at 80% 100%, color-mix(in srgb, var(--morado) 62%, var(--noche-2)) 0%, transparent 64%) top / 100% var(--noche) no-repeat,
+    radial-gradient(30rem 13rem at 6% 100%, var(--marca-800) 0%, transparent 62%) top / 100% var(--noche) no-repeat,
+    linear-gradient(var(--noche-2), var(--noche-2)) top / 100% var(--noche) no-repeat; }
 .app > .acceso:has(> .acceso-caja) { align-content: start; padding-top: calc(var(--aire) + env(safe-area-inset-top, 0px)); }
 .app > .acceso > .acceso-caja { position: relative; margin-top: 4.25rem; }
-.app > .acceso > .acceso-caja > .marca:first-child { position: absolute; left: 4px; bottom: calc(100% + 18px); color: #F3F1FB; font-size: 1.125rem; gap: 10px; }
+.app > .acceso > .acceso-caja > .marca:first-child { position: absolute; left: 4px; bottom: calc(100% + 18px); color: var(--marca-50); font-size: 1.125rem; gap: 10px; }
 .app > .acceso > .acceso-caja > .marca:first-child img, .app > .acceso > .acceso-caja > .marca:first-child svg { width: 36px; height: 36px; border-radius: 9px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); }
 @media (min-width: 700px) {
   .acceso-caja { width: min(27.5rem, 100%); padding: 32px 30px 26px; }
@@ -549,7 +549,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    Pisa de estilos.css: `.bdia` (el hueco de arriba), `.bdia-cuerpo` (ya no va centrado: empieza arriba y, si no cabe,
    se desliza con «Empezar» siempre a la vista), `.bdia-saludo` y `.bdia-mensaje` (un paso más pequeños).
    El dorado (--bv-oro) es el de la portada: solo en la frase de ánimo, la llama y la semana de hoy. */
-.bdia { --bv-oro: #E9D49A; --bv-tinta-3: #BDB4F2; --bv-tarjeta: rgba(255, 255, 255, .07); --bv-filo: rgba(255, 255, 255, .1); gap: 16px; padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
+.bdia { --bv-oro: var(--oro-200); --bv-tinta-3: var(--azul-300); --bv-tarjeta: rgba(255, 255, 255, .07); --bv-filo: rgba(255, 255, 255, .1); gap: 16px; padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
 .bdia-cuerpo { align-self: stretch; align-content: start; gap: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .bdia-cuerpo::-webkit-scrollbar { display: none; }
 .bdia-cuerpo:focus-visible { outline: 2px solid var(--bv-tinta-2); outline-offset: 4px; border-radius: 8px; }
@@ -578,7 +578,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-cifra-d { font-size: 0.75rem; line-height: 1.3; color: var(--bv-tinta-2); }
 .bdia-puntos { display: flex; gap: 4px; }
 .bdia-puntos i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .18); }
-.bdia-puntos i.on, .bdia-barra i { background: #fff; }
+.bdia-puntos i.on, .bdia-barra i { background: var(--blanco); }
 .bdia-barra { display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .18); overflow: hidden; }
 .bdia-barra i { display: block; height: 100%; border-radius: 3px; }
 .bdia-doce { display: grid; gap: 10px; padding: 13px 16px 15px; }
@@ -586,7 +586,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-doce-n { font-size: 0.8125rem; color: var(--bv-tinta-2); }
 .bdia-semanas { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
 .bdia-semanas i { height: 22px; border-radius: 6px; background: rgba(255, 255, 255, .1); }
-.bdia-semanas i.completa { background: #fff; }
+.bdia-semanas i.completa { background: var(--blanco); }
 .bdia-semanas i.parcial { background: rgba(255, 255, 255, .42); }
 .bdia-semanas i.sin { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 .bdia-semanas i.actual { outline: 1.5px solid var(--bv-oro); outline-offset: 2px; }
@@ -712,17 +712,17 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    aspecto que la portada y la bienvenida del día que las rodean. Ahora comparten su noche morada: el texto en claro,
    el dibujo en su tarjeta, los puntos en claro (el de la pantalla actual, en dorado) y el botón blanco, como
    «Empezar» de la bienvenida del día. Pisa .bienvenida (estilos.css 948–959). */
-.bienvenida { background: radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), #1E1548; color: #fff; }
-.bienvenida h2 { color: #fff; }
-.bienvenida p { color: #CFC8F5; }
-.bienvenida .bienvenida-saltar { color: #CFC8F5; }
+.bienvenida { background: radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), var(--noche-2); color: var(--blanco); }
+.bienvenida h2 { color: var(--blanco); }
+.bienvenida p { color: var(--marca-300); }
+.bienvenida .bienvenida-saltar { color: var(--marca-300); }
 .bienvenida-dibujo { box-shadow: 0 24px 60px -30px rgba(8, 4, 34, .8), inset 0 0 0 1px rgba(255, 255, 255, .08); }
 .bienvenida-puntos span { background: rgba(255, 255, 255, .28); }
-.bienvenida-puntos span.actual { background: #E9D49A; }
-.bienvenida-pie .btn { border-color: rgba(255, 255, 255, .3); background: none; color: #fff; box-shadow: none; }
-.bienvenida-pie .btn-primario { background: #fff; border-color: #fff; color: #2A1E6E; font-weight: 750; }
-.bienvenida-pie .btn-primario:hover { background: #F1EEFF; border-color: #F1EEFF; }
-.bienvenida :focus-visible { outline-color: #CFC8F5; }
+.bienvenida-puntos span.actual { background: var(--oro-200); }
+.bienvenida-pie .btn { border-color: rgba(255, 255, 255, .3); background: none; color: var(--blanco); box-shadow: none; }
+.bienvenida-pie .btn-primario { background: var(--blanco); border-color: var(--blanco); color: var(--marca-900); font-weight: 750; }
+.bienvenida-pie .btn-primario:hover { background: var(--marca-100); border-color: var(--marca-100); }
+.bienvenida :focus-visible { outline-color: var(--marca-300); }
 
 /* ---------- 25. Cuando una pantalla no carga: el mismo aviso en toda la app ----------------------------------------
    (ErrorCaja, en ui/comunes.jsx) El aviso de «no se ha podido cargar» llevaba «Reintentar» como un enlace suelto dentro
@@ -739,12 +739,12 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    desvanece hacia el texto, para que el nombre y el botón se lean igual. Aparece con un fundido cuando se sabe qué
    ejercicios lleva. Los colores, los de .portada-arte (estilos.css 3172–3176). */
 .hero-dia .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 78%; height: 100%; pointer-events: none; opacity: .62;
-  -webkit-mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to left, #000 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, #000 38%, transparent 92%); mask-composite: intersect; }
-.hero-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, #fff); }
-.hero-arte .claro { stroke: #E7E3FF; }
-.hero-arte .tenue { stroke: #8F88C0; }
-.hero-arte .relleno-punto.tenue { fill: #8F88C0; stroke: none; }
+  -webkit-mask-image: linear-gradient(to left, var(--negro) 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, var(--negro) 38%, transparent 92%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to left, var(--negro) 18%, rgba(0, 0, 0, .55) 52%, transparent 96%), linear-gradient(to bottom, var(--negro) 38%, transparent 92%); mask-composite: intersect; }
+.hero-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, var(--blanco)); }
+.hero-arte .claro { stroke: var(--marca-100); }
+.hero-arte .tenue { stroke: var(--neutro-500); }
+.hero-arte .relleno-punto.tenue { fill: var(--neutro-500); stroke: none; }
 @media (prefers-reduced-motion: no-preference) { .hero-dia .hero-arte { animation: hero-arte-entra .7s ease-out both; } }
 @keyframes hero-arte-entra { from { opacity: 0; } }
 
@@ -785,10 +785,10 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 /* ── 29 · Anillos y diales con degradado (tanda 15) ───────────────────────────────────────────────────────────────────
    El aro lleno ya no es un color plano: va de un tono más claro a su color (comunes.jsx: DegradadoAro, que cada SVG
    lleva dentro y hereda su --c / --dial), y al completarse deja un brillo leve de su mismo color. Las pistas, igual. */
-.aro-ini { stop-color: color-mix(in srgb, var(--c, var(--dial, var(--morado))) 62%, #fff); }
+.aro-ini { stop-color: color-mix(in srgb, var(--c, var(--dial, var(--morado))) 62%, var(--blanco)); }
 .aro-fin { stop-color: var(--c, var(--dial, var(--morado))); }
 .anillo { --c: var(--morado); }
-.hero-dia .anillo { --c: #C9BEFF; }
+.hero-dia .anillo { --c: var(--marca-300); }
 .anillo.completo, .dial-esfera.completo svg, .anillo-macro.cumple .anillo-macro-dibujo svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c, var(--dial, var(--morado))) 45%, transparent)); }
 
 /* ── 30 · Un solo lenguaje de movimiento (tanda 16) ───────────────────────────────────────────────────────────────────
@@ -933,12 +933,12 @@ select.seguida-orden { max-width: min(100%, 17rem); }
     radial-gradient(2px 2px at calc(100% - 20px) 96px, rgba(214, 226, 255, .75) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 58px) 8px, rgba(255, 255, 255, .6) 45%, transparent 55%),
     radial-gradient(1.8px 1.8px at calc(100% - 132px) 62px, rgba(255, 255, 255, .5) 45%, transparent 55%), radial-gradient(1.6px 1.6px at calc(100% - 8px) 56px, rgba(255, 255, 255, .55) 45%, transparent 55%),
     radial-gradient(1.6px 1.6px at calc(100% - 92px) 118px, rgba(255, 255, 255, .4) 45%, transparent 55%), radial-gradient(1.4px 1.4px at calc(100% - 44px) 122px, rgba(255, 255, 255, .35) 45%, transparent 55%),
-    linear-gradient(165deg, #101F45 0%, var(--hero) 74%);
+    linear-gradient(165deg, var(--azul-900) 0%, var(--hero) 74%);
 }
 .hero-hecha {
   background:
     radial-gradient(125% 62% at 50% 114%, rgba(79, 203, 137, .5) 0%, rgba(79, 203, 137, .17) 45%, transparent 70%),
-    linear-gradient(165deg, #0E3A30 0%, var(--hero) 74%);
+    linear-gradient(165deg, var(--turquesa-900) 0%, var(--hero) 74%);
 }
 .hero-semana {
   background:
@@ -948,17 +948,17 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 }
 .hero-semana::before { background: radial-gradient(circle, rgba(233, 212, 154, .3) 0%, rgba(233, 212, 154, .09) 42%, transparent 70%); }
 .hero-semana .toca-hoy.hecha { background: rgba(233, 212, 154, .2); }
-.hero-semana .toca-hoy.hecha svg { color: #E9D49A; }
+.hero-semana .toca-hoy.hecha svg { color: var(--oro-200); }
 
 /* ── 37 · El final de la sesión (tanda 17) ────────────────────────────────────────────────────────────────────────────
    El resumen ya entraba pieza a pieza (estilos.css 2591). Ahora, además: la cabecera lleva de fondo el dibujo de la
    sesión, la medalla deja un aro que se abre, con récord la medalla y su etiqueta van en dorado (el color de los
    logros), las cifras suben (Sesion.jsx: CifraSube) y en el botón de compartir asoma la tarjeta en pequeño. */
 .resumen-hero .hero-arte { position: absolute; z-index: -1; top: 0; right: 0; width: 70%; height: 100%; pointer-events: none; opacity: .5;
-  -webkit-mask-image: linear-gradient(to left, #000 10%, transparent 92%); mask-image: linear-gradient(to left, #000 10%, transparent 92%); }
-.resumen-hero.con-record .resumen-medalla { background: #E9D49A; color: #2A2154; box-shadow: 0 0 0 6px rgba(233, 212, 154, .22); }
+  -webkit-mask-image: linear-gradient(to left, var(--negro) 10%, transparent 92%); mask-image: linear-gradient(to left, var(--negro) 10%, transparent 92%); }
+.resumen-hero.con-record .resumen-medalla { background: var(--oro-200); color: var(--marca-900); box-shadow: 0 0 0 6px rgba(233, 212, 154, .22); }
 .resumen-hero.con-record .resumen-pr { background: rgba(233, 212, 154, .18); }
-.resumen-hero.con-record .resumen-pr svg { color: #E9D49A; }
+.resumen-hero.con-record .resumen-pr svg { color: var(--oro-200); }
 .resumen-medalla { position: relative; }
 .btn-compartir-sesion { position: relative; }
 .resumen-mini { position: absolute; left: 14px; top: 50%; width: 36px; height: 45px; margin-top: -22px; border-radius: 5px; object-fit: cover; transform: rotate(-7deg); box-shadow: var(--sombra-flotante); }
@@ -1091,13 +1091,13 @@ img.img-llega { opacity: 0; }
    logros, el mismo de las medallas, la bienvenida y las tarjetas para compartir: un destello dorado recorre la fila de
    la serie, el trofeo se dibuja, el aviso va en noche y oro y, en el resumen, los récords llevan su icono dorado.
    --oro es el dorado para trazos sobre claro (pasa de 3:1 sobre blanco); en oscuro, el dorado claro de la marca. */
-:root { --oro: #9A6C12; --oro-claro: #E9D49A; --oro-suave: #FBF2D9; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro: #E9D49A; --oro-suave: #3A2F14; } }
-:root[data-theme="dark"] { --oro: #E9D49A; --oro-suave: #3A2F14; }
+:root { --oro: #9A6C12; --oro-claro: var(--oro-200); --oro-suave: var(--oro-50); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro: var(--oro-200); --oro-suave: var(--ambar-900); } }
+:root[data-theme="dark"] { --oro: var(--oro-200); --oro-suave: var(--ambar-900); }
 .record-serie { background: var(--oro-suave); position: relative; overflow: hidden; }
 .record-serie svg, .record-serie strong { color: var(--oro); }
 .resumen-records .record .ico { background: var(--oro-suave); color: var(--oro); }
-.toast.record { background: #1E1548; color: #fff; box-shadow: inset 0 0 0 1px rgba(233, 212, 154, .35), var(--sombra-flotante); }
+.toast.record { background: var(--noche-2); color: var(--blanco); box-shadow: inset 0 0 0 1px rgba(233, 212, 154, .35), var(--sombra-flotante); }
 .toast.record svg { color: var(--oro-claro); }
 @media (prefers-reduced-motion: no-preference) {
   .serie.con-record { animation: record-oro .9s ease-out; }
@@ -1107,7 +1107,7 @@ img.img-llega { opacity: 0; }
   .record-serie::after { content: ""; position: absolute; inset: 0; pointer-events: none;
     background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%) no-repeat; background-size: 260% 100%; animation: record-destello .9s var(--curva-casa) .3s both; }
 }
-@keyframes record-oro { 0% { box-shadow: inset 0 0 0 2px #C9A227, 0 0 0 0 rgba(201, 162, 39, .45); } 60% { box-shadow: inset 0 0 0 2px #C9A227, 0 0 0 9px rgba(201, 162, 39, 0); } }
+@keyframes record-oro { 0% { box-shadow: inset 0 0 0 2px var(--oro-400), 0 0 0 0 rgba(201, 162, 39, .45); } 60% { box-shadow: inset 0 0 0 2px var(--oro-400), 0 0 0 9px rgba(201, 162, 39, 0); } }
 @keyframes record-destello { from { background-position: 130% 0; } to { background-position: -30% 0; } }
 @keyframes record-trofeo { from { stroke-dashoffset: 90; } to { stroke-dashoffset: 0; } }
 
@@ -1130,7 +1130,7 @@ img.img-llega { opacity: 0; }
    degradado, y avanza con la curva de la casa; las opciones de cada pregunta entran una detrás de otra; al elegir una,
    su ✓ se dibuja; y al enviarlo, el ✓ final también. */
 .ck-barra { height: 8px; border-radius: 4px; }
-.ck-barra span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, #fff), var(--morado)); transition: width var(--mov-lento) var(--curva-casa); }
+.ck-barra span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, var(--blanco)), var(--morado)); transition: width var(--mov-lento) var(--curva-casa); }
 @media (prefers-reduced-motion: no-preference) {
   .ck-paso { animation-duration: var(--mov-medio); animation-timing-function: var(--curva-casa); }
   .ck-paso .opciones-grandes button { animation: ck-opcion var(--mov-medio) var(--curva-casa) backwards; }
@@ -1190,9 +1190,9 @@ img.img-llega { opacity: 0; }
 .acceso-paso .paso-ilu { width: min(10rem, 56%); height: auto; }
 .acceso-paso .nota, .acceso-paso .error { justify-self: stretch; text-align: left; }
 .acceso-paso .btn { justify-self: stretch; }
-.aviso-version { border-radius: 999px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, #1E1548 86%, transparent); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
+.aviso-version { border-radius: 999px; padding: 8px 8px 8px 14px; background: color-mix(in srgb, var(--noche-2) 86%, transparent); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
   box-shadow: var(--vidrio-luz), var(--sombra-flotante); }
-.aviso-version-lobo { width: 22px; height: 26px; flex: none; fill: #fff; }
+.aviso-version-lobo { width: 22px; height: 26px; flex: none; fill: var(--blanco); }
 .aviso-version .btn { border-radius: 999px; }
 .banda-conexion.sin-red svg { animation: none; }
 @media (prefers-reduced-motion: no-preference) {
@@ -1200,8 +1200,8 @@ img.img-llega { opacity: 0; }
   .banda-conexion.sin-red svg { animation: sin-red-late 2.4s ease-in-out infinite; }
 }
 @keyframes sin-red-late { 50% { opacity: .45; } }
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) { .aviso-version { background: #1E1548 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .aviso-version { background: #1E1548; } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) { .aviso-version { background: var(--noche-2) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .aviso-version { background: var(--noche-2); } }
 
 /* ══ TANDA 19 · pasar de un sitio a otro ══════════════════════════════════════════════════════════════════════════════ */
 
@@ -1261,9 +1261,9 @@ img.img-llega { opacity: 0; }
   }
 }
 @keyframes tira-bordes {
-  0% { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
-  8%, 92% { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
-  100% { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+  0% { -webkit-mask-image: linear-gradient(to right, var(--negro) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--negro) calc(100% - 28px), transparent); }
+  8%, 92% { -webkit-mask-image: linear-gradient(to right, transparent, var(--negro) 28px, var(--negro) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, var(--negro) 28px, var(--negro) calc(100% - 28px), transparent); }
+  100% { -webkit-mask-image: linear-gradient(to right, transparent, var(--negro) 28px); mask-image: linear-gradient(to right, transparent, var(--negro) 28px); }
 }
 .tira-fotos, .tm-lista { scroll-snap-type: x proximity; scroll-padding-inline: 2px; }
 .tira-fotos > *, .tm-lista > * { scroll-snap-align: start; }
@@ -1274,7 +1274,7 @@ img.img-llega { opacity: 0; }
    llega caiga exactamente encima. */
 .sil { background: linear-gradient(90deg, var(--hoja-2) 0%, color-mix(in srgb, var(--morado) 9%, var(--hoja-2)) 45%, var(--hoja-2) 90%); background-size: 220% 100%; }
 .sil-hero { display: grid; align-content: end; gap: 10px; height: 214px; padding: 22px 20px; border-radius: 22px;
-  background: linear-gradient(90deg, var(--hero) 0%, color-mix(in srgb, var(--hero) 80%, #fff) 45%, var(--hero) 90%); background-size: 220% 100%; }
+  background: linear-gradient(90deg, var(--hero) 0%, color-mix(in srgb, var(--hero) 80%, var(--blanco)) 45%, var(--hero) 90%); background-size: 220% 100%; }
 .sil-hero .sil-hero-linea { background: rgba(255, 255, 255, .14); border-radius: 6px; animation: none; }
 .sil-hero .sil-hero-boton { display: block; width: 100%; height: 48px; margin-top: 8px; border-radius: 14px; background: rgba(255, 255, 255, .2); animation: none; }
 
@@ -1353,11 +1353,11 @@ input[type="range"]:not(.voz-barra)::-moz-range-track { height: 4px; border-radi
 input[type="range"]:not(.voz-barra)::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--morado); }
 input[type="range"]:not(.voz-barra)::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%;
-  background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+  background: var(--blanco); border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
   transition: transform var(--mov-rapido) var(--curva-rebote), box-shadow var(--mov-rapido) var(--curva-casa);
 }
 input[type="range"]:not(.voz-barra)::-moz-range-thumb {
-  width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+  width: 22px; height: 22px; border-radius: 50%; background: var(--blanco); border: 1.5px solid color-mix(in srgb, var(--morado) 40%, var(--linea)); box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
 }
 input[type="range"]:not(.voz-barra):active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0, 0, 0, .28), 0 0 0 6px color-mix(in srgb, var(--morado) 14%, transparent); }
 input[type="range"]:not(.voz-barra):focus-visible { outline: none; }
@@ -1372,7 +1372,7 @@ input[type="range"]:is(.voz-barra):active::-webkit-slider-thumb { transform: sca
    del borde (el rebote de iOS) no asome blanco; y las esquinas de abajo de las hojas y la barra, limpias sobre el
    borde del móvil. */
 html { background: var(--tiza); }
-html:has(#portada) { background: #1E1548; }
+html:has(#portada) { background: var(--noche-2); }
 @media (display-mode: standalone) {
   html { overscroll-behavior-y: none; }
   body { min-height: 100dvh; }
@@ -1467,9 +1467,9 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .post-foto-boton { display: block; width: 100%; padding: 0; border: 0; background: none; border-radius: 12px; cursor: zoom-in; -webkit-tap-highlight-color: transparent; }
 .post-foto-boton:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .galeria-foto .post-foto-boton { border-radius: 0; }
-.foto-grande { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: #0E0B1E; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); cursor: zoom-out; }
+.foto-grande { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: var(--noche-0); padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); cursor: zoom-out; }
 .foto-grande img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; cursor: default; }
-.foto-grande .foto-grande-cerrar { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); color: #fff; background: rgba(255, 255, 255, .14); border-color: transparent; cursor: pointer; z-index: 1; }
+.foto-grande .foto-grande-cerrar { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); color: var(--blanco); background: rgba(255, 255, 255, .14); border-color: transparent; cursor: pointer; z-index: 1; }
 .foto-grande .foto-grande-cerrar:hover { background: rgba(255, 255, 255, .24); }
 :root[data-vt="foto"]::view-transition-old(root), :root[data-vt="foto"]::view-transition-new(root) { animation-duration: var(--mov-medio); animation-timing-function: ease-in-out; }
 :root[data-vt="foto"]::view-transition-group(vt-foto) { animation-duration: var(--mov-lento); animation-timing-function: var(--curva-llega); z-index: 1; }
@@ -1513,13 +1513,13 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .carnet {
   background: radial-gradient(620px 620px at 90% 5%, rgba(104, 78, 236, .5), rgba(104, 78, 236, 0) 70%),
     radial-gradient(560px 560px at 5% 105%, rgba(104, 78, 236, .4), rgba(104, 78, 236, 0) 70%),
-    linear-gradient(180deg, #221957, #150F36);
+    linear-gradient(180deg, var(--marca-900), var(--marca-950));
 }
 .carnet-lobo { flex: none; }
-.carnet-lobo path { fill: #fff; }
+.carnet-lobo path { fill: var(--blanco); }
 .carnet-lobo-fondo { position: absolute; right: -6%; bottom: -14%; width: 46%; height: auto; }
 .carnet-lobo-fondo path { fill: rgba(255, 255, 255, .06); }
-.carnet-numero { color: var(--oro-claro, #E9D49A); }
+.carnet-numero { color: var(--oro-claro, var(--oro-200)); }
 
 /* ══ TANDA 22 · lo que se siente al tocar ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -1683,7 +1683,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .bdia { background: var(--grano), radial-gradient(120% 60% at 50% 110%, rgba(84, 56, 216, .55), transparent 70%), var(--bv-fondo); }
 .carnet {
   background: var(--grano), radial-gradient(620px 620px at 90% 5%, rgba(104, 78, 236, .5), rgba(104, 78, 236, 0) 70%),
-    radial-gradient(560px 560px at 5% 105%, rgba(104, 78, 236, .4), rgba(104, 78, 236, 0) 70%), linear-gradient(180deg, #221957, #150F36);
+    radial-gradient(560px 560px at 5% 105%, rgba(104, 78, 236, .4), rgba(104, 78, 236, 0) 70%), linear-gradient(180deg, var(--marca-900), var(--marca-950));
 }
 
 /* ── 83 · El cielo según la hora (tanda 23) ───────────────────────────────────────────────────────────────────────────
@@ -1692,7 +1692,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    tarde, el rosa del atardecer con un poco de oro abajo; de noche, el morado de siempre. Solo el día de entreno (los
    otros días ya tienen su escena: bloque 36). Detrás del texto y tenue: el contraste no cambia. */
 :root[data-franja="manana"] .hero-entreno::before { background: radial-gradient(circle, rgba(255, 168, 122, .42) 0%, rgba(240, 120, 110, .16) 40%, transparent 68%); }
-:root[data-franja="dia"] .hero-entreno::before { background: radial-gradient(circle, color-mix(in srgb, #7FB2FF 52%, var(--hero)) 0%, color-mix(in srgb, #7FB2FF 20%, var(--hero)) 38%, transparent 68%); }
+:root[data-franja="dia"] .hero-entreno::before { background: radial-gradient(circle, color-mix(in srgb, var(--azul-400) 52%, var(--hero)) 0%, color-mix(in srgb, var(--azul-400) 20%, var(--hero)) 38%, transparent 68%); }
 :root[data-franja="tarde"] .hero-entreno::before { background: radial-gradient(circle, rgba(255, 112, 150, .4) 0%, rgba(190, 80, 170, .16) 40%, transparent 68%); }
 :root[data-franja="tarde"] .hero-entreno::after { background: radial-gradient(circle, rgba(233, 180, 100, .38) 0%, transparent 65%); }
 :root[data-franja="manana"] .hero-entreno::after { background: radial-gradient(circle, rgba(255, 200, 150, .22) 0%, transparent 65%); }
@@ -1728,9 +1728,9 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    que son, como los anillos y las categorías de Apple Fitness: el entreno en el acento, las tareas del coach en azul,
    los hábitos en naranja, la nutrición en verde, el menú en ámbar, el peso en verde azulado y el check-in en rosa.
    Lo hecho sigue en el verde de «hecho». Los tonos pasan de 3:1 sobre su fondo, en claro y en oscuro. */
-:root { --t-tarea: #1E5BCF; --t-habitos: #C2410C; --t-nutricion: #15803D; --t-menu: #A16207; --t-peso: #0B6A5B; --t-checkin: #9E2468; --t-cuestionario: #3B4FA8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --t-tarea: #6FA0FF; --t-habitos: #FB923C; --t-nutricion: #4ADE80; --t-menu: #FACC15; --t-peso: #3FC8B0; --t-checkin: #F07AB8; --t-cuestionario: #8C9EFF; } }
-:root[data-theme="dark"] { --t-tarea: #6FA0FF; --t-habitos: #FB923C; --t-nutricion: #4ADE80; --t-menu: #FACC15; --t-peso: #3FC8B0; --t-checkin: #F07AB8; --t-cuestionario: #8C9EFF; }
+:root { --t-tarea: var(--azul-600); --t-habitos: #C2410C; --t-nutricion: var(--verde-600); --t-menu: #A16207; --t-peso: var(--verde-600); --t-checkin: var(--rosa-600); --t-cuestionario: var(--azul-700); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --t-tarea: var(--azul-400); --t-habitos: var(--naranja-400); --t-nutricion: var(--verde-300); --t-menu: var(--oro-300); --t-peso: var(--turquesa-400); --t-checkin: var(--rosa-400); --t-cuestionario: var(--marca-400); } }
+:root[data-theme="dark"] { --t-tarea: var(--azul-400); --t-habitos: var(--naranja-400); --t-nutricion: var(--verde-300); --t-menu: var(--oro-300); --t-peso: var(--turquesa-400); --t-checkin: var(--rosa-400); --t-cuestionario: var(--marca-400); }
 .fila-dia[data-tipo], .plegable-hoy[data-plegable] { --t: var(--morado); }
 .fila-dia[data-tipo="tarea"] { --t: var(--t-tarea); }
 .fila-dia[data-tipo="habitos"], .plegable-hoy[data-plegable="habitos"] { --t: var(--t-habitos); }
@@ -1748,14 +1748,14 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    es la portada de esa historia en pequeño (PortadaHistoria, comunes.jsx): la noche de la marca con su grano, las tres
    barras de arriba de una historia y el lobo. El mes, con resplandor dorado; el bloque, con el rojo de su informe. */
 .portada-historia { position: relative; justify-self: center; display: grid; place-items: center; width: 44px; height: 60px; border-radius: 10px; overflow: hidden;
-  background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(160, 140, 255, .62), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, #2A2068, #150F36);
+  background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(160, 140, 255, .62), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, var(--marca-900), var(--marca-950));
   box-shadow: 0 8px 16px -8px rgba(30, 21, 72, .6), inset 0 0 0 1px rgba(255, 255, 255, .1); transition: transform var(--mov-medio) var(--curva-rebote); }
-.portada-historia.mes { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(233, 212, 154, .6), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, #2A2068, #150F36); }
-.portada-historia.bloque { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(255, 120, 120, .5), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(201, 204, 216, .3), transparent 70%), linear-gradient(170deg, #2A2068, #150F36); }
-.portada-historia svg { width: 24px; height: auto; margin-top: 7px; fill: #F6F2FF; }
+.portada-historia.mes { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(233, 212, 154, .6), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(104, 78, 236, .45), transparent 70%), linear-gradient(170deg, var(--marca-900), var(--marca-950)); }
+.portada-historia.bloque { background: var(--grano), radial-gradient(64px 64px at 88% 4%, rgba(255, 120, 120, .5), transparent 72%), radial-gradient(56px 56px at 0% 100%, rgba(201, 204, 216, .3), transparent 70%), linear-gradient(170deg, var(--marca-900), var(--marca-950)); }
+.portada-historia svg { width: 24px; height: auto; margin-top: 7px; fill: var(--marca-50); }
 .ph-barras { position: absolute; top: 5px; left: 5px; right: 5px; display: flex; gap: 2px; }
 .ph-barras i { flex: 1; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .34); }
-.ph-barras i:first-child { background: #fff; }
+.ph-barras i:first-child { background: var(--blanco); }
 @media (hover: hover) { .tarjeta-semana-abrir:hover .portada-historia { transform: rotate(-4deg) scale(1.04); } }
 
 /* ── 89 · Perfil con portada (tanda 24) ───────────────────────────────────────────────────────────────────────────────
@@ -1763,14 +1763,14 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    se apoya en su borde, con un aro del color de la tarjeta. Detrás del avatar, sin texto encima. */
 .perfil-cabeza { position: relative; isolation: isolate; overflow: hidden; padding-top: 44px; }
 .perfil-cabeza::before { content: ""; position: absolute; inset: 0 0 auto; height: 92px; z-index: -1;
-  background: var(--grano), radial-gradient(260px 150px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 120px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+  background: var(--grano), radial-gradient(260px 150px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 120px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, var(--marca-900), var(--noche-2)); }
 .perfil-cabeza .avatar.enorme, .perfil-cabeza .avatar.enorme.con-foto { box-shadow: 0 0 0 4px var(--hoja), 0 10px 24px -10px rgba(30, 21, 72, .55); }
 
 /* ── 90 · Avatares de iniciales con volumen (tanda 24) ────────────────────────────────────────────────────────────────
    Las iniciales iban sobre un círculo plano. Ahora, un degradado suave de su color (más claro arriba a la izquierda),
    y los llenos, un filo de luz arriba: parecen una pieza, no un recorte. El texto, igual (y con el mismo contraste). */
 .avatar:not(.con-foto) { background-image: linear-gradient(155deg, color-mix(in srgb, var(--av) 7%, var(--hoja)), color-mix(in srgb, var(--av) 21%, var(--hoja))); }
-.avatar.lleno:not(.con-foto) { background-image: linear-gradient(155deg, color-mix(in srgb, var(--av) 80%, #fff), var(--av) 72%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .12); }
+.avatar.lleno:not(.con-foto) { background-image: linear-gradient(155deg, color-mix(in srgb, var(--av) 80%, var(--blanco)), var(--av) 72%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .12); }
 
 /* ── 91 · «Tu coach te ha respondido» como un mensaje (tanda 24) ──────────────────────────────────────────────────────
    Cada respuesta lleva el lobo del coach y su texto en una burbuja, como un aviso de mensaje: se lee como lo que es. */
@@ -1884,11 +1884,11 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
    más. Ahora también: el trofeo de cada entrenamiento en «Tus entrenamientos» y en la ficha del ejercicio, la cuenta
    de récords del mes y, en la vitrina, el trofeo de los recientes y su «Nuevo». --oro pasa de 3:1 sobre claro. */
 .entreno-nombre .chip.morado, .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { background: var(--oro-suave); color: var(--oro); }
-:root:not([data-theme="dark"]) .entreno-nombre .chip.morado, :root:not([data-theme="dark"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: #7A5410; }
+:root:not([data-theme="dark"]) .entreno-nombre .chip.morado, :root:not([data-theme="dark"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: var(--oro-600); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .entreno-nombre .chip.morado, :root:not([data-theme="light"]) .seccion[data-grupo="fuerza"] > .seccion-cab .chip.morado { color: var(--oro); } }
 .trofeo-tarjeta.reciente::before { background: linear-gradient(180deg, var(--oro-claro), var(--oro)); }
 .reciente .trofeo-ico, .record-cab.reciente .trofeo-ico { background: var(--oro-suave); color: var(--oro); }
-.trofeo-nuevo { background: linear-gradient(135deg, #F3E2AE, #D9B65E); color: #3A2A06; }
+.trofeo-nuevo { background: linear-gradient(135deg, var(--oro-200), var(--oro-300)); color: var(--oro-900); }
 
 /* ── 105 · «Tus entrenamientos» como hojas de calendario (tanda 26) ───────────────────────────────────────────────────
    Como en Calendario: arriba, pequeño y en el acento, el día de la semana (Semana.jsx); debajo, el número grande, en
@@ -1917,7 +1917,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 /* ── 108 · Miniaturas del diario con su fondo (tanda 26) ──────────────────────────────────────────────────────────────
    Mientras una foto o un vídeo del diario carga (o si no tiene miniatura), su hueco era un recuadro gris claro. Ahora
    lleva la noche de la marca con su grano y, en medio, el icono de lo que es: cuando llega la imagen, la tapa. */
-.diario-medio { background: var(--grano), radial-gradient(120% 80% at 80% 0%, rgba(160, 140, 255, .45), transparent 70%), linear-gradient(165deg, #2A2068, #150F36); }
+.diario-medio { background: var(--grano), radial-gradient(120% 80% at 80% 0%, rgba(160, 140, 255, .45), transparent 70%), linear-gradient(165deg, var(--marca-900), var(--marca-950)); }
 .diario-medio::before { content: ""; position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; background: rgba(246, 242, 255, .5); -webkit-mask: var(--ico-diario) center / contain no-repeat; mask: var(--ico-diario) center / contain no-repeat; }
 .diario-medio > img, .diario-medio > video { position: relative; }
 :root { --ico-diario: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='3'/%3E%3Cpath d='M10 9.5v5l4.5-2.5z'/%3E%3C/svg%3E"); }
@@ -1935,7 +1935,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 /* ── 111 · Pictogramas de ejercicio con volumen (tanda 26) ────────────────────────────────────────────────────────────
    Las casillas de los pictogramas (la sesión, la semana, la ficha) eran planas: ahora un degradado suave hacia abajo y
    un filo de luz arriba; la del ejercicio en curso, en el acento. */
-.picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 55%, transparent), transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 5%, transparent); }
+.picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 55%, transparent), transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--blanco) 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 5%, transparent); }
 .ejercicio.en-curso .ejercicio-cab .picto { background-image: linear-gradient(180deg, color-mix(in srgb, var(--hoja) 40%, transparent), transparent); }
 .cab-ilu .picto { background-image: none; box-shadow: none; }   /* (sobre la cabecera ilustrada, oscura, de imagenes.css: como estaba) */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .picto { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .04); } }
@@ -2011,13 +2011,13 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    Los tramos de arriba de la sesión se llenan con un degradado del acento (claro a la izquierda) y el del ejercicio en
    curso lleva un brillo en la punta de lo hecho. */
 .tramo-lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 45%, var(--hoja)), color-mix(in srgb, var(--morado) 70%, var(--hoja))); }
-.tramos a.completo .tramo-lleno, .tramos a[aria-current="step"] .tramo-lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, #fff), var(--morado)); }
+.tramos a.completo .tramo-lleno, .tramos a[aria-current="step"] .tramo-lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 62%, var(--blanco)), var(--morado)); }
 .tramos a[aria-current="step"] .tramo-lleno { box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 60%, transparent); }
 
 /* ── 121 · El check-in con barra por pasos (tanda 27) ─────────────────────────────────────────────────────────────────
    Como las historias: la barra del check-in se parte en tantos tramos como preguntas (Checkin.jsx: --pasos), con un
    hueco de 3 px entre ellos. */
-.ck-barra[style*="--pasos"] { box-shadow: none; background: color-mix(in srgb, var(--tinta) 9%, var(--hoja)); -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); width: calc(100% + 3px); }
+.ck-barra[style*="--pasos"] { box-shadow: none; background: color-mix(in srgb, var(--tinta) 9%, var(--hoja)); -webkit-mask: repeating-linear-gradient(90deg, var(--negro) 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); mask: repeating-linear-gradient(90deg, var(--negro) 0 calc(100% / var(--pasos) - 3px), transparent calc(100% / var(--pasos) - 3px) calc(100% / var(--pasos))); width: calc(100% + 3px); }
 
 /* ── 122 · Las semanas del bloque con su barrita (tanda 27) ───────────────────────────────────────────────────────────
    Cada botón S1, S2… de la Semana lleva debajo una barrita con lo hecho de esa semana (Semana.jsx: --f): verde si está
@@ -2042,16 +2042,16 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    lo que es (rojo para objetivos, calendario y avisos; añil para el tema y el sueño; azul para lo de ver y leer; verde
    para mensajes y privacidad; rosa para sonidos y color…). Los de estado (al día, pendiente, alerta) siguen como estaban.
    Solo en la página del perfil (no en las hojas). El color lo da la clase ico-<nombre> que IcoIos pone a su icono. */
-.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(180deg, color-mix(in srgb, var(--io, #8E8E93) 82%, #fff), var(--io, #8E8E93)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(180deg, color-mix(in srgb, var(--io, var(--neutro-500)) 82%, var(--blanco)), var(--io, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
 .contenido > .grupo-ios .ios-ico svg { stroke-width: 2.1; }
-.ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: #E5484D; }
-.ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: #E8730C; }
-.ios-ico:has(> .ico-bascula) { --io: #0E9384; }
-.ios-ico:has(> .ico-mensaje, > .ico-imagen, > .ico-escudo) { --io: #22A04B; }
-.ios-ico:has(> .ico-pregunta, > .ico-letra, > .ico-ojo, > .ico-movil, > .ico-privacidad, > .ico-descargar) { --io: #2E7CF6; }
+.ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: var(--naranja-500); }
+.ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: var(--ambar-500); }
+.ios-ico:has(> .ico-bascula) { --io: var(--turquesa-500); }
+.ios-ico:has(> .ico-mensaje, > .ico-imagen, > .ico-escudo) { --io: var(--verde-500); }
+.ios-ico:has(> .ico-pregunta, > .ico-letra, > .ico-ojo, > .ico-movil, > .ico-privacidad, > .ico-descargar) { --io: var(--azul-500); }
 .ios-ico:has(> .ico-tema, > .ico-sueno) { --io: #5856D6; }
 .ios-ico:has(> .ico-paleta, > .ico-altavoz) { --io: #E5407F; }
-.ios-ico:has(> .ico-teclado, > .ico-salir) { --io: #7C7C86; }
+.ios-ico:has(> .ico-teclado, > .ico-salir) { --io: var(--neutro-500); }
 @media (forced-colors: active) { .contenido > .grupo-ios .ios-ico { background: Canvas; color: CanvasText; } }
 
 /* ── 125 · La píldora de la barra de abajo, que no se veía (tanda 28) ─────────────────────────────────────────────────
@@ -2086,7 +2086,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 129 · El nombre de la sesión con brillo (tanda 28) ───────────────────────────────────────────────────────────────
    El nombre grande de la sesión, en la tarjeta de Hoy y en la portada de la sesión, lleva un degradado de luz de
    arriba abajo (blanco a lavanda), como un rótulo iluminado. Claro sobre la noche: el contraste no baja de 9:1. */
-.hero-dia .titular h2, .portada-sesion h1 { background: linear-gradient(180deg, #FFFFFF 35%, #D7CCFF); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-dia .titular h2, .portada-sesion h1 { background: linear-gradient(180deg, var(--blanco) 35%, var(--marca-200)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active) { .hero-dia .titular h2, .portada-sesion h1 { background: none; -webkit-text-fill-color: currentColor; } }
 
 /* ── 130 · Títulos de pantalla con tinta de degradado (tanda 28) ──────────────────────────────────────────────────────
@@ -2096,11 +2096,11 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 131 · La racha con su llama (tanda 28) ───────────────────────────────────────────────────────────────────────────
    En la tarjeta de Hoy, la llama de «N semanas completas seguidas» va en naranja con un resplandor, encendida. */
-.hero-dia .racha-boton:not(.racha-cero) > svg:first-child { color: #FFB46B; filter: drop-shadow(0 0 5px rgba(255, 140, 60, .65)); }
+.hero-dia .racha-boton:not(.racha-cero) > svg:first-child { color: var(--ambar-300); filter: drop-shadow(0 0 5px rgba(255, 140, 60, .65)); }
 
 /* ── 132 · El avatar de arriba con su aro (tanda 28) ──────────────────────────────────────────────────────────────────
    El avatar de la cabecera de Hoy (el botón del perfil) lleva un aro de degradado de la marca, separado por un filo. */
-.cabecera .btn-avatar { padding: 2.5px; background: conic-gradient(from 210deg, var(--morado), #8F7BFF, #E9C77A, #8F7BFF, var(--morado)); }
+.cabecera .btn-avatar { padding: 2.5px; background: conic-gradient(from 210deg, var(--morado), var(--marca-500), var(--oro-300), var(--marca-500), var(--morado)); }
 .cabecera .btn-avatar > .avatar { box-shadow: 0 0 0 1.5px var(--tiza); }
 
 /* ── 133 · «Cómo llegas» sin contestar invita (tanda 28) ──────────────────────────────────────────────────────────────
@@ -2112,23 +2112,23 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 134 · «Todo hecho por hoy» como celebración (tanda 28) ───────────────────────────────────────────────────────────
    Con todo lo de «Tu día» hecho, su línea es una banda verde con el ✓ lleno, que salta al aparecer. */
 .tu-dia-hecho { background: linear-gradient(100deg, color-mix(in srgb, var(--ok) 15%, var(--hoja)), color-mix(in srgb, var(--ok) 4%, var(--hoja))); }
-.tu-dia-hecho .dia-marca { background: var(--ok); color: #fff; box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--ok) 70%, transparent); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tu-dia-hecho .dia-marca { color: #0F2A1B; } }
-:root[data-theme="dark"] .tu-dia-hecho .dia-marca { color: #0F2A1B; }
+.tu-dia-hecho .dia-marca { background: var(--ok); color: var(--blanco); box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--ok) 70%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tu-dia-hecho .dia-marca { color: var(--turquesa-900); } }
+:root[data-theme="dark"] .tu-dia-hecho .dia-marca { color: var(--turquesa-900); }
 @media (prefers-reduced-motion: no-preference) { .tu-dia-hecho .dia-marca { animation: dia-hecho .6s var(--curva-rebote) .1s both; } }
 
 /* ── 135 · La barra de calorías con degradado (tanda 28) ──────────────────────────────────────────────────────────────
    Lo comido se llena con un degradado (claro a la izquierda) en el acento, o en verde si se cumple; la marca del
    objetivo es una píldora con filo, que se lee sobre la barra llena. */
-.kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); }
-.kcal-dia.cumple .kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, #fff), var(--ok)); }
+.kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
+.kcal-dia.cumple .kcal-comido { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, var(--blanco)), var(--ok)); }
 .kcal-objetivo { width: 5px; margin-left: -2.5px; border-radius: 3px; box-shadow: 0 0 0 2px var(--hoja); }
 
 /* ── 136 · La tira de días de Comidas (tanda 28) ──────────────────────────────────────────────────────────────────────
    El día elegido va en una píldora llena del acento (era un borde) y los números de los días son más grandes. */
 .dias-menu .punto-dia { font-size: 0.8125rem; width: 26px; height: 26px; }
 .dias-menu button[aria-pressed="true"] { background: var(--morado); border-color: var(--morado); color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
-.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, #fff 14%, transparent); border-color: transparent; color: var(--sobre-morado); }
+.dias-menu button[aria-pressed="true"] .punto-dia:not(.cumple .punto-dia) { background: color-mix(in srgb, var(--blanco) 14%, transparent); border-color: transparent; color: var(--sobre-morado); }
 
 /* ── 137 · Cada comida con su dibujo (tanda 28) ───────────────────────────────────────────────────────────────────────
    En el menú del día, «Desayuno», «Comida», «Merienda»… llevan su escena pequeña delante (Ilustraciones.jsx: las de
@@ -2150,7 +2150,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    La nota del coach en la tarjeta de Hoy y «Cómo es la sesión» llevan el lobo del coach en lugar del icono de mensaje
    (Hoy.jsx, Sesion.jsx: clase con-lobo), como sus respuestas y sus avisos (bloques 91 y 126). */
 .nota-coach.con-lobo { grid-template-columns: 26px 1fr; }
-.nota-coach.con-lobo > .nota-lobo { width: 26px; height: 26px; border-radius: 50%; margin-top: -2px; box-shadow: 0 0 0 1.5px color-mix(in srgb, #fff 30%, transparent); }
+.nota-coach.con-lobo > .nota-lobo { width: 26px; height: 26px; border-radius: 50%; margin-top: -2px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--blanco) 30%, transparent); }
 
 /* ── 140 · «¿Cómo llegas hoy?» con el color de cada respuesta (tanda 29) ───────────────────────────────────────────────
    En la preparación de la sesión, la pastilla de la opción elegida se tiñe según la respuesta: la primera (Mal, Baja,
@@ -2172,8 +2172,8 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    Las barras de los objetivos y de los primeros pasos se llenan con un degradado del acento (claro a la izquierda) y un
    brillo en la punta; las conseguidas, en verde. */
 .progreso-barra { height: 9px; border-radius: 999px; }
-.progreso-barra span { border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
-.progreso-barra.hecho span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, #fff), var(--ok)); box-shadow: none; }
+.progreso-barra span { border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 2px 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.progreso-barra.hecho span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 55%, var(--blanco)), var(--ok)); box-shadow: none; }
 
 /* ── 143 · «Tus cifras» con su icono en un disco de color (tanda 29) ──────────────────────────────────────────────────
    En Progreso, cada cifra lleva su icono en un disco suave de su color (Progreso.jsx: data-ico): la racha en naranja,
@@ -2279,7 +2279,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .ejercicio-cab .progreso-series { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; font-size: 0.75rem; font-weight: 760; letter-spacing: -.02em; color: var(--tinta-2); }
 .ejercicio-cab .progreso-series::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; --aro-f: var(--f, 0);
   background: conic-gradient(var(--morado) calc(var(--aro-f) * 1turn), color-mix(in srgb, var(--tinta) 11%, transparent) 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); }
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); }
 .ejercicio-cab .progreso-series.hecho { background: var(--ok); color: var(--hoja); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 80%, transparent); }
 .ejercicio-cab .progreso-series.hecho::before { content: none; }
 .ejercicio-cab .progreso-series.hecho svg { width: 20px; height: 20px; stroke-width: 2.6; }
@@ -2339,17 +2339,17 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 162 · Las herramientas del ejercicio con iconos de colores (tanda 30) ────────────────────────────────────────────
    En la hoja «Más» de cada ejercicio, como Ajustes del iPhone (y el perfil, bloque 124): icono blanco sobre un
    cuadrado de color según lo que es (Sesion.jsx: data-h con el id de la herramienta). */
-.hoja-acciones > li[data-h] .accion-fila .ico { background: linear-gradient(180deg, color-mix(in srgb, var(--h, #7C7C86) 82%, #fff), var(--h, #7C7C86)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.hoja-acciones > li[data-h] .accion-fila .ico { background: linear-gradient(180deg, color-mix(in srgb, var(--h, var(--neutro-500)) 82%, var(--blanco)), var(--h, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
 .hoja-acciones > li[data-h] .accion-fila .ico svg { stroke-width: 2.1; }
-.hoja-acciones > li[data-h="luego"] { --h: #E8730C; }
-.hoja-acciones > li[data-h="orden"] { --h: #2E7CF6; }
-.hoja-acciones > li[data-h="cambiar"] { --h: #0E9384; }
+.hoja-acciones > li[data-h="luego"] { --h: var(--ambar-500); }
+.hoja-acciones > li[data-h="orden"] { --h: var(--azul-500); }
+.hoja-acciones > li[data-h="cambiar"] { --h: var(--turquesa-500); }
 .hoja-acciones > li[data-h="historial"] { --h: #5856D6; }
-.hoja-acciones > li[data-h="descanso"] { --h: #22A04B; }
+.hoja-acciones > li[data-h="descanso"] { --h: var(--verde-500); }
 .hoja-acciones > li[data-h="tempo"] { --h: #E5407F; }
-.hoja-acciones > li[data-h="nota"] { --h: #C98A00; }
-.hoja-acciones > li[data-h="aproximacion"] { --h: #E5484D; }
-.hoja-acciones > li[data-h="tecnica"], .hoja-acciones > li[data-h="tutorial"] { --h: #2E7CF6; }
+.hoja-acciones > li[data-h="nota"] { --h: var(--ambar-500); }
+.hoja-acciones > li[data-h="aproximacion"] { --h: var(--naranja-500); }
+.hoja-acciones > li[data-h="tecnica"], .hoja-acciones > li[data-h="tutorial"] { --h: var(--azul-500); }
 @media (forced-colors: active) { .hoja-acciones > li[data-h] .accion-fila .ico { background: Canvas; color: CanvasText; } }
 
 /* ── 163 · «Empezar» sobre un velo (tanda 30) ─────────────────────────────────────────────────────────────────────────
@@ -2361,7 +2361,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    En Semana (y en «Esta semana» de Hoy), la siguiente sesión lleva un filo de degradado del acento y un resplandor
    de su color debajo; su número, en un cuadrado con brillo. Pisa estilos.css (310–312) y el bloque 4. */
 .dia.actual { border: 1.5px solid transparent; padding: 10.5px 12.5px; background: linear-gradient(var(--hoja), var(--hoja)) padding-box, linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 35%, #E5407F)) border-box; box-shadow: var(--sombra), 0 16px 32px -20px color-mix(in srgb, var(--morado) 70%, transparent); }
-.dia.actual .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.dia.actual .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 @media (forced-colors: active) { .dia.actual { border-color: Highlight; background: Canvas; } }
 
 /* ── 165 · El esfuerzo de «Tus entrenamientos» con color (tanda 30) ───────────────────────────────────────────────────
@@ -2542,8 +2542,8 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .teclado-serie { background: color-mix(in srgb, var(--hoja-2) 84%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); border-top-color: color-mix(in srgb, var(--tinta) 8%, transparent); }
 .teclado-serie .tecla { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 24%, transparent), 0 0 0 .5px color-mix(in srgb, var(--tinta) 5%, transparent); }
 .teclado-serie .tecla-paso, .teclado-serie .tecla-siguiente { box-shadow: none; }
-.teclado-serie .tecla-siguiente { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 84%, #fff), var(--morado)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
-.teclado-serie .tecla-siguiente.es-hecha { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 86%, #fff), var(--ok)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ok) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.teclado-serie .tecla-siguiente { background: linear-gradient(180deg, color-mix(in srgb, var(--morado) 84%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.teclado-serie .tecla-siguiente.es-hecha { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 86%, var(--blanco)), var(--ok)); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--ok) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
 .teclado-serie .teclado-icono { border-color: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--tinta) 20%, transparent); }
 @media (prefers-contrast: more), (forced-colors: active) {
   .teclado-serie { background: var(--hoja-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -2585,7 +2585,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    La raya que une los ejercicios de una superserie va del acento a transparente, y su letra va en un cuadrado con el
    brillo del número de la sesión que toca (bloque 164). */
 .superserie::before { opacity: 1; width: 3px; left: 11.5px; background: linear-gradient(180deg, var(--morado), color-mix(in srgb, var(--morado) 12%, transparent)); }
-.ss-letra { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.ss-letra { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 @media (forced-colors: active) { .superserie::before { background: CanvasText; } }
 
 /* ══ Tanda 32 (8/11): más del entrenamiento ══════════════════════════════════════════════════════════════════════════
@@ -2594,7 +2594,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 :root {
   /* Texto dorado pequeño sobre --oro-suave: --oro (#9A6C12) se queda en 4,15:1 en claro (lo cazó axe en el historial
      del ejercicio, bloque 169 de la tanda 30, y en la mejor semana); este pasa de 5,5:1. En oscuro, el dorado claro. */
-  --oro-texto: #7A540E;
+  --oro-texto: var(--oro-600);
   --ico-gimnasio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5%207v10M3.5%209.5v5M17.5%207v10M20.5%209.5v5M6.5%2012h11'/%3E%3C/svg%3E");
   --ico-casa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5%2011.5%2012%204.5l8.5%207M6%209.5V19.5h12V9.5M10%2019.5v-5h4v5'/%3E%3C/svg%3E");
   --ico-viaje: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21%2015.5v-2l-8-5V4a1.5%201.5%200%200%200-3%200v4.5l-8%205v2l8-2.5V18l-2%201.5V21l3.5-1%203.5%201v-1.5L13%2018v-5z'/%3E%3C/svg%3E");
@@ -2608,12 +2608,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 185 · La tarjeta de intervalos, de noche y con su pulso (tanda 32) ───────────────────────────────────────────────
    «Intervalos de hoy» va en la noche de la marca (como el descanso), con su icono en un cuadro de vidrio que brilla, la
    línea del pulso en grande y muy tenue al fondo, y «Abrir» de vidrio. */
-.tarjeta-intervalos { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 42px minmax(0, 1fr) auto; background: radial-gradient(130% 160% at 0% 0%, #3B2C86, #17123A 62%); color: #fff; box-shadow: var(--sombra-tarjeta), 0 18px 32px -20px color-mix(in srgb, var(--morado) 75%, transparent); }
-.tarjeta-intervalos::after { content: ""; position: absolute; z-index: -1; right: -6%; top: 50%; width: 62%; height: 120%; translate: 0 -50%; background: #fff; opacity: .08; pointer-events: none; -webkit-mask: var(--ico-intervalos) center / contain no-repeat; mask: var(--ico-intervalos) center / contain no-repeat; }
-.tarjeta-intervalos > svg { width: 42px; height: 42px; padding: 9px; border-radius: 13px; background: rgba(255, 255, 255, .1); color: #CBB9FF; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); filter: drop-shadow(0 0 6px rgba(170, 140, 255, .6)); }
-.tarjeta-intervalos strong { color: #fff; }
-.tarjeta-intervalos .num { color: #DCD5F7; }
-.tarjeta-intervalos .btn-primario { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .24); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+.tarjeta-intervalos { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: 42px minmax(0, 1fr) auto; background: radial-gradient(130% 160% at 0% 0%, var(--marca-800), var(--marca-950) 62%); color: var(--blanco); box-shadow: var(--sombra-tarjeta), 0 18px 32px -20px color-mix(in srgb, var(--morado) 75%, transparent); }
+.tarjeta-intervalos::after { content: ""; position: absolute; z-index: -1; right: -6%; top: 50%; width: 62%; height: 120%; translate: 0 -50%; background: var(--blanco); opacity: .08; pointer-events: none; -webkit-mask: var(--ico-intervalos) center / contain no-repeat; mask: var(--ico-intervalos) center / contain no-repeat; }
+.tarjeta-intervalos > svg { width: 42px; height: 42px; padding: 9px; border-radius: 13px; background: rgba(255, 255, 255, .1); color: var(--marca-300); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14); filter: drop-shadow(0 0 6px rgba(170, 140, 255, .6)); }
+.tarjeta-intervalos strong { color: var(--blanco); }
+.tarjeta-intervalos .num { color: var(--marca-200); }
+.tarjeta-intervalos .btn-primario { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .24); color: var(--blanco); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
 @media (forced-colors: active) { .tarjeta-intervalos { background: Canvas; color: CanvasText; } .tarjeta-intervalos::after { content: none; } }
 
 /* ── 186 · «¿Dónde entrenas hoy?» con su icono (tanda 32) ─────────────────────────────────────────────────────────────
@@ -2667,12 +2667,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 191 · Los discos de la barra con brillo metálico (tanda 32) ──────────────────────────────────────────────────────
    Cada disco de «Discos para una carga» (teclado, calculadora, enfoque) con un degradado de luz arriba y sombra abajo,
    como un disco de verdad. La letra blanca, con una sombra fina para que se siga leyendo igual. */
-.discos-ayuda .placa { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 82%, #fff) 0%, var(--c) 40%, color-mix(in srgb, var(--c) 84%, #000) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(0, 0, 0, .22), 0 1px 2px rgba(0, 0, 0, .2); text-shadow: 0 1px 0 color-mix(in srgb, var(--c) 60%, #000); }
+.discos-ayuda .placa { background: linear-gradient(180deg, color-mix(in srgb, var(--c) 82%, var(--blanco)) 0%, var(--c) 40%, color-mix(in srgb, var(--c) 84%, var(--negro)) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(0, 0, 0, .22), 0 1px 2px rgba(0, 0, 0, .2); text-shadow: 0 1px 0 color-mix(in srgb, var(--c) 60%, var(--negro)); }
 @media (forced-colors: active) { .discos-ayuda .placa { border: 1px solid CanvasText; } }
 
 /* ── 192 · La nota fijada como un pósit (tanda 32) ────────────────────────────────────────────────────────────────────
    Tu nota de cada ejercicio (en la tarjeta y en el enfoque) con la esquina de arriba doblada y la sombra de un papel. */
-.nota-fijada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 13px, color-mix(in srgb, var(--disco-amarillo) 20%, var(--hoja)) 13px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 10px 18px -14px color-mix(in srgb, var(--disco-amarillo) 70%, #000); }
+.nota-fijada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 13px, color-mix(in srgb, var(--disco-amarillo) 20%, var(--hoja)) 13px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 10px 18px -14px color-mix(in srgb, var(--disco-amarillo) 70%, var(--negro)); }
 .nota-fijada::before { content: ""; position: absolute; top: 0; right: 0; width: 18px; height: 18px; border-bottom-left-radius: 4px; pointer-events: none; background: linear-gradient(45deg, color-mix(in srgb, var(--disco-amarillo) 42%, var(--hoja)) 50%, transparent 50%); box-shadow: -1px 1px 2px color-mix(in srgb, var(--tinta) 14%, transparent); }
 @media (forced-colors: active) { .nota-fijada { background: Canvas; border: 1px solid CanvasText; } .nota-fijada::before { content: none; } }
 
@@ -2684,7 +2684,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 194 · La sesión ya hecha con su sello (tanda 32) ─────────────────────────────────────────────────────────────────
    Al abrir un entrenamiento terminado (Sesion.jsx: sesion-hecha), la barra de arriba (tramos o la de series) va en verde, el nombre lleva
    un ✓ en un disco verde y la duración va en su píldora verde. */
-.sesion-hecha .tramos .tramo-lleno, .sesion-hecha .barra-sesion span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: none; }
+.sesion-hecha .tramos .tramo-lleno, .sesion-hecha .barra-sesion span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); box-shadow: none; }
 .sesion-hecha .cabecera .titulo h1::after { content: ""; display: inline-block; width: 22px; height: 22px; margin-left: 8px; vertical-align: -3px; border-radius: 50%; background: var(--ok) var(--marca-blanca) center / 14px no-repeat; }
 .sesion-hecha .crono-reloj { background: var(--ok-suave); color: var(--tinta); }
 @media (forced-colors: active) { .sesion-hecha .cabecera .titulo h1::after { content: none; } }
@@ -2708,7 +2708,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 198 · La vitrina de récords en oro de verdad (tanda 32) ──────────────────────────────────────────────────────────
    En los récords recientes, el trofeo va en un disco dorado con relieve y la tarjeta tiene un resplandor dorado; la
    cifra de cada trofeo, algo más grande. */
-.trofeo-tarjeta.reciente .trofeo-ico { background: radial-gradient(circle at 32% 26%, #FFF3C9, #E9C46A 55%, #B8892A); color: #4A3303; box-shadow: 0 6px 14px -6px rgba(184, 137, 42, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.trofeo-tarjeta.reciente .trofeo-ico { background: radial-gradient(circle at 32% 26%, var(--oro-100), var(--oro-300) 55%, var(--oro-500)); color: var(--oro-800); box-shadow: 0 6px 14px -6px rgba(184, 137, 42, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
 .trofeo-tarjeta.reciente { box-shadow: var(--sombra), 0 16px 30px -22px rgba(184, 137, 42, .7); }
 .trofeo-valor { font-size: calc(var(--cifra-m) * 1.12); }
 @media (forced-colors: active) { .trofeo-tarjeta.reciente .trofeo-ico { background: Canvas; color: CanvasText; } }
@@ -2723,8 +2723,8 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 }
 @keyframes asienta-al-bajar { from { translate: 0 20px; scale: .97; } }
 .record-serie strong { color: var(--oro-texto); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro-texto: #E9D49A; } }
-:root[data-theme="dark"] { --oro-texto: #E9D49A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --oro-texto: var(--oro-200); } }
+:root[data-theme="dark"] { --oro-texto: var(--oro-200); }
 
 /* ══ Tanda 33 (8/11): los detalles del entrenamiento ═════════════════════════════════════════════════════════════════
    Quince mejoras más en la misma línea: la cabecera de la sesión, el consejo del día, los comentarios, terminar, los
@@ -2799,7 +2799,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    baño dorado que se funde y el trofeo en el disco dorado con relieve (bloque 198). */
 .resumen-records .panel { box-shadow: var(--sombra), inset 0 3px 0 0 var(--oro-claro); overflow: hidden; }
 .resumen-records .record { background: linear-gradient(100deg, var(--oro-suave), transparent 80%); }
-.resumen-records .record .ico { background: radial-gradient(circle at 32% 26%, #FFF3C9, #E9C46A 55%, #B8892A); color: #4A3303; box-shadow: 0 6px 14px -6px rgba(184, 137, 42, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.resumen-records .record .ico { background: radial-gradient(circle at 32% 26%, var(--oro-100), var(--oro-300) 55%, var(--oro-500)); color: var(--oro-800); box-shadow: 0 6px 14px -6px rgba(184, 137, 42, .75), inset 0 1px 0 rgba(255, 255, 255, .6); }
 
 /* ── 209 · Tu mejor marca en la ficha del ejercicio, en dorado (tanda 33) ─────────────────────────────────────────────
    En «Gráficas» de la ficha, la serie de tu mejor 1RM («16 × 10 @8,5, 23 oct») iba en morado: ahora es la pastilla
@@ -2810,7 +2810,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    en el disco verde. */
 .ej-fila .estado-series { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-size: 0.6875rem; font-weight: 760; letter-spacing: -.02em; color: var(--tinta-2); }
 .ej-fila .estado-series::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(var(--morado) calc(var(--f, 0) * 1turn), color-mix(in srgb, var(--tinta) 11%, transparent) 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); }
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); }
 .ej-fila .estado-series.hecho { background: var(--ok); color: var(--hoja); }
 .ej-fila .estado-series.hecho::before { content: none; }
 @media (forced-colors: active) { .ej-fila .estado-series::before { background: CanvasText; } }
@@ -2822,14 +2822,14 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 212 · La tira L–D con brillo (tanda 33) ──────────────────────────────────────────────────────────────────────────
    En la tira de la semana: hoy en un disco con el brillo de la sesión que toca, las sesiones por hacer con ese brillo y
    las hechas con su ✓ blanco en verde lleno. */
-.tira-dia.hoy .tira-num, .tira-chip:not(.hecha) { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
-.tira-chip.hecha { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, #fff), var(--ok)); color: var(--hoja); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--ok) 75%, transparent); }
+.tira-dia.hoy .tira-num, .tira-chip:not(.hecha) { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.tira-chip.hecha { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, var(--blanco)), var(--ok)); color: var(--hoja); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--ok) 75%, transparent); }
 .tira-chip.hecha svg { stroke-width: 2.8; }
 
 /* ── 213 · Las sesiones hechas de la semana con su sello verde (tanda 33) ─────────────────────────────────────────────
    El ✓ de las sesiones hechas (Semana y «Esta semana» de Hoy) va en un cuadrado verde con degradado, como el número de
    la que toca (bloque 164). */
-.dia.hecha .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, #fff), var(--ok)); color: var(--hoja); box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--ok) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.dia.hecha .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, var(--blanco)), var(--ok)); color: var(--hoja); box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--ok) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .dia.hecha .marca-dia svg { stroke-width: 2.6; }
 
 /* ── 214 · (retirado) Las tarjetas de la semana se asentaban al bajar (tanda 33) ───────────────────────────────────────
@@ -2859,17 +2859,17 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    del atleta, bloque 124), según el icono (CoachApp.jsx ya pone ico-<icono>). La marcada sigue con su fondo lavanda. */
 @media (min-width: 900px) {
   .app.coach .tab { grid-template-columns: 30px 1fr; }
-  .app.coach .tab .tab-ico > svg { width: 30px; height: 30px; padding: 6px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ti, #7C7C86) 80%, #fff), var(--ti, #7C7C86)); color: #fff; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+  .app.coach .tab .tab-ico > svg { width: 30px; height: 30px; padding: 6px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ti, var(--neutro-500)) 80%, var(--blanco)), var(--ti, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
   .app.coach .tab .tab-ico:has(> .ico-atletas) { --ti: #5856D6; }
-  .app.coach .tab .tab-ico:has(> .ico-bandeja) { --ti: #E8730C; }
-  .app.coach .tab .tab-ico:has(> .ico-hecho) { --ti: #22A04B; }
-  .app.coach .tab .tab-ico:has(> .ico-mensaje) { --ti: #2E7CF6; }
+  .app.coach .tab .tab-ico:has(> .ico-bandeja) { --ti: var(--ambar-500); }
+  .app.coach .tab .tab-ico:has(> .ico-hecho) { --ti: var(--verde-500); }
+  .app.coach .tab .tab-ico:has(> .ico-mensaje) { --ti: var(--azul-500); }
   .app.coach .tab .tab-ico:has(> .ico-equipo) { --ti: #E5407F; }
-  .app.coach .tab .tab-ico:has(> .ico-plantillas) { --ti: #0E9384; }
-  .app.coach .tab .tab-ico:has(> .ico-biblioteca) { --ti: #C98A00; }
+  .app.coach .tab .tab-ico:has(> .ico-plantillas) { --ti: var(--turquesa-500); }
+  .app.coach .tab .tab-ico:has(> .ico-biblioteca) { --ti: var(--ambar-500); }
   .app.coach .tab .tab-ico:has(> .ico-hoy) { --ti: #7A5AF8; }
-  .app.coach .tab .tab-ico:has(> .ico-perfil) { --ti: #7C7C86; }
-  .app.coach .tab[data-tab="radar"] .tab-ico.tab-ico { --ti: #0A94B0; } /* A quién escribir, en cian, para no confundirse con Mensajes */
+  .app.coach .tab .tab-ico:has(> .ico-perfil) { --ti: var(--neutro-500); }
+  .app.coach .tab[data-tab="radar"] .tab-ico.tab-ico { --ti: var(--turquesa-500); } /* A quién escribir, en cian, para no confundirse con Mensajes */
 }
 @media (min-width: 900px) and (forced-colors: active) { .app.coach .tab .tab-ico > svg { background: none; color: CanvasText; } }
 
@@ -2955,12 +2955,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 224 · Los grupos de Revisar con el contador en un disco del acento (tanda 34) ────────────────────────────────────
    El número de pendientes de cada atleta, con el brillo del acento de la sesión que toca (bloque 164). */
-.grupo-revisar-n { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.grupo-revisar-n { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--morado) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 
 /* ── 225 · El avance de la Revisión semanal con brillo (tanda 35) ─────────────────────────────────────────────────────
    La barra de «N de M revisados», más gruesa, con degradado verde y brillo. */
 .barra-revision { height: 10px; }
-.barra-revision span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent); }
+.barra-revision span { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent); }
 
 /* ── 226 · La casilla «Revisado» redonda y verde (tanda 35) ───────────────────────────────────────────────────────────
    Como las de Recordatorios (bloque 150): un círculo con filo que se llena de verde con su ✓. */
@@ -2980,19 +2980,19 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 
 /* ── 229 · La barra de sesiones de cada atleta con degradado (tanda 35) ───────────────────────────────────────────────
    Del acento claro al acento; con la semana completa, en verde. */
-.barra-sesiones span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); }
-.barra-sesiones span[style*="width: 100%"] { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); }
+.barra-sesiones span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
+.barra-sesiones span[style*="width: 100%"] { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); }
 
 /* ── 230 · «A quién escribir»: los días de contacto en pastillas con brillo (tanda 35) ────────────────────────────────
    Cada día de contacto es una pastilla: los hechos con el brillo del acento y, con el objetivo cumplido, en verde. */
 .mini-grafica.pips i { width: 16px; height: 10px; border-radius: 999px; }
-.mini-grafica.pips .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, #fff), var(--morado)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
-.mini-grafica.pips:not(:has(.pip-vacio)) .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, #fff), var(--ok)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--ok) 70%, transparent); }
+.mini-grafica.pips .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 78%, var(--blanco)), var(--morado)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--morado) 70%, transparent); }
+.mini-grafica.pips:not(:has(.pip-vacio)) .pip-lleno { background: linear-gradient(160deg, color-mix(in srgb, var(--ok) 80%, var(--blanco)), var(--ok)); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--ok) 70%, transparent); }
 
 /* ── 231 · Las plantillas como tarjetas (tanda 35) ────────────────────────────────────────────────────────────────────
    El icono de capas de cada plantilla en un cuadrado verde azulado con brillo, la fila que se ilumina al pasar y
    «Asignar» en el lavanda del acento. */
-.fila-plantilla .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--t-peso) 78%, #fff), var(--t-peso)); color: #fff; box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--t-peso) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.fila-plantilla .marca-dia { background: linear-gradient(160deg, color-mix(in srgb, var(--t-peso) 78%, var(--blanco)), var(--t-peso)); color: var(--blanco); box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--t-peso) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .fila-plantilla:hover { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
 .fila-plantilla > .btn { background: var(--morado-suave); border-color: transparent; color: var(--tinta); }
 
@@ -3006,12 +3006,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 233 · El buscador como Spotlight (tanda 35) ──────────────────────────────────────────────────────────────────────
    Ctrl K aparece con un pequeño zoom desde arriba y cada resultado lleva su icono blanco en un cuadrado de su color
    (Buscador.jsx: data-tipo, el prefijo del resultado): atletas en añil, secciones en azul, acciones en verde. */
-.paleta-op[data-tipo] .paleta-ico { background: linear-gradient(180deg, color-mix(in srgb, var(--pt, #7C7C86) 80%, #fff), var(--pt, #7C7C86)); color: #fff; }
+.paleta-op[data-tipo] .paleta-ico { background: linear-gradient(180deg, color-mix(in srgb, var(--pt, var(--neutro-500)) 80%, var(--blanco)), var(--pt, var(--neutro-500))); color: var(--blanco); }
 .paleta-op[data-tipo="a"] { --pt: #5856D6; }
-.paleta-op[data-tipo="s"] { --pt: #2E7CF6; }
-.paleta-op[data-tipo="x"] { --pt: #22A04B; }
-.paleta-op[data-tipo="e"] { --pt: #C98A00; }
-.paleta-op[data-tipo="p"] { --pt: #0E9384; }
+.paleta-op[data-tipo="s"] { --pt: var(--azul-500); }
+.paleta-op[data-tipo="x"] { --pt: var(--verde-500); }
+.paleta-op[data-tipo="e"] { --pt: var(--ambar-500); }
+.paleta-op[data-tipo="p"] { --pt: var(--turquesa-500); }
 @media (prefers-reduced-motion: no-preference) { .paleta { animation: paleta-zoom .2s var(--curva-llega); } }
 @keyframes paleta-zoom { from { transform: translateY(-8px) scale(.97); } }
 @media (forced-colors: active) { .paleta-op[data-tipo] .paleta-ico { background: Canvas; color: CanvasText; } }
@@ -3019,15 +3019,15 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 234 · La biblioteca con el color de cada grupo muscular (tanda 35) ───────────────────────────────────────────────
    Cada ejercicio lleva un punto del color de su primer grupo muscular (Biblioteca.jsx: data-g) y su pictograma teñido
    de ese color. */
-.fila-biblioteca:has(.detalle[data-g="pectoral"]) { --g: #E5484D; }
-.fila-biblioteca:has(.detalle[data-g="espalda"]) { --g: #2E7CF6; }
-.fila-biblioteca:has(.detalle[data-g="deltoides"]) { --g: #E8730C; }
-.fila-biblioteca:has(.detalle[data-g="cuadriceps"]) { --g: #22A04B; }
+.fila-biblioteca:has(.detalle[data-g="pectoral"]) { --g: var(--naranja-500); }
+.fila-biblioteca:has(.detalle[data-g="espalda"]) { --g: var(--azul-500); }
+.fila-biblioteca:has(.detalle[data-g="deltoides"]) { --g: var(--ambar-500); }
+.fila-biblioteca:has(.detalle[data-g="cuadriceps"]) { --g: var(--verde-500); }
 .fila-biblioteca:has(.detalle[data-g="gluteo"]) { --g: #E5407F; }
-.fila-biblioteca:has(.detalle[data-g="isquiotibiales"]) { --g: #0E9384; }
+.fila-biblioteca:has(.detalle[data-g="isquiotibiales"]) { --g: var(--turquesa-500); }
 .fila-biblioteca:has(.detalle[data-g="biceps"]) { --g: #7A5AF8; }
 .fila-biblioteca:has(.detalle[data-g="triceps"]) { --g: #5856D6; }
-.fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: #C98A00; }
+.fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: var(--ambar-500); }
 .fila-biblioteca:has(.detalle[data-g="gemelo"]) { --g: #8E6E53; }
 .fila-biblioteca .detalle[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--g); }
 .fila-biblioteca:has(.detalle[data-g]) .picto { background: color-mix(in srgb, var(--g) 13%, var(--hoja)); color: color-mix(in srgb, var(--g) 68%, var(--tinta)); }
@@ -3051,13 +3051,13 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    Cada evento de la pestaña Actividad (Actividad.jsx: act-<tipo>) lleva su icono blanco en un cuadrado de su color,
    como Revisar (bloque 222): sesiones en verde, récords en dorado, check-ins en rosa, pesos en verde azulado, mensajes
    en azul, vídeos en rojo y fotos en ámbar. */
-.actividad-item .actividad-ico { --ac: var(--morado); background: linear-gradient(160deg, color-mix(in srgb, var(--ac) 78%, #fff), var(--ac)); color: #fff; box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--ac) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
-.act-sesion .actividad-ico { --ac: #22A04B; }
-.act-record .actividad-ico { --ac: #C98A00; }
+.actividad-item .actividad-ico { --ac: var(--morado); background: linear-gradient(160deg, color-mix(in srgb, var(--ac) 78%, var(--blanco)), var(--ac)); color: var(--blanco); box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--ac) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22); }
+.act-sesion .actividad-ico { --ac: var(--verde-500); }
+.act-record .actividad-ico { --ac: var(--ambar-500); }
 .act-checkin .actividad-ico { --ac: var(--t-checkin); }
 .act-peso .actividad-ico { --ac: var(--t-peso); }
 .act-mensaje .actividad-ico { --ac: var(--t-tarea); }
-.act-video .actividad-ico { --ac: #E5484D; }
+.act-video .actividad-ico { --ac: var(--naranja-500); }
 .act-foto .actividad-ico { --ac: var(--t-menu); }
 @media (forced-colors: active) { .actividad-item .actividad-ico { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
 
@@ -3091,9 +3091,9 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 239 · El cumplimiento con barras de luz (tanda 36) ───────────────────────────────────────────────────────────────
    Las barras de las cuatro últimas semanas, con degradado y brillo de su color; la raya del 90 % en el acento, y las
    semanas completas (100 %) con un ✓ blanco arriba de su barra. */
-.cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 70%, #fff), var(--ok)); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 40%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
-.cumple-semanas li.medio .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--disco-amarillo) 70%, #fff), var(--disco-amarillo)); box-shadow: none; }
-.cumple-semanas li.bajo .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--alerta) 70%, #fff), var(--alerta)); box-shadow: none; }
+.cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 70%, var(--blanco)), var(--ok)); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 40%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.cumple-semanas li.medio .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--disco-amarillo) 70%, var(--blanco)), var(--disco-amarillo)); box-shadow: none; }
+.cumple-semanas li.bajo .cumple-barra i { background: linear-gradient(180deg, color-mix(in srgb, var(--alerta) 70%, var(--blanco)), var(--alerta)); box-shadow: none; }
 .cumple-barra::after { border-top-color: var(--morado); opacity: .8; }
 .cumple-barra i[style*="height: 100%"]::before { content: ""; position: absolute; top: 5px; left: 50%; width: 14px; height: 14px; margin-left: -7px; background: var(--marca-blanca) center / contain no-repeat; }
 @media (forced-colors: active) { .cumple-barra i { background: CanvasText; } }
@@ -3103,16 +3103,16 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    barra de avance bajo el texto; conseguido, todo en verde. */
 .objetivo-fila { grid-template-columns: 36px minmax(0, 1fr) auto; --oc: var(--morado); }
 .objetivo-fila[data-hecho] { --oc: var(--ok); }
-.objetivo-fila::before { content: ""; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(160deg, color-mix(in srgb, var(--oc) 78%, #fff), var(--oc)); -webkit-mask: none; box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--oc) 80%, transparent); }
+.objetivo-fila::before { content: ""; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(160deg, color-mix(in srgb, var(--oc) 78%, var(--blanco)), var(--oc)); -webkit-mask: none; box-shadow: 0 5px 12px -6px color-mix(in srgb, var(--oc) 80%, transparent); }
 .objetivo-fila > span:first-of-type { position: relative; padding-bottom: 12px; background: linear-gradient(90deg, var(--oc) calc(var(--f, 0) * 100%), color-mix(in srgb, var(--oc) 16%, transparent) 0) left bottom / 100% 5px no-repeat; }
-.objetivo-fila > span:first-of-type::before { content: ""; position: absolute; left: -40px; top: 50%; width: 20px; height: 20px; margin-top: -16px; background: #fff; -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
+.objetivo-fila > span:first-of-type::before { content: ""; position: absolute; left: -40px; top: 50%; width: 20px; height: 20px; margin-top: -16px; background: var(--blanco); -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
 .objetivo-fila[data-hecho] > span:first-of-type::before { -webkit-mask-image: var(--ico-trofeo); mask-image: var(--ico-trofeo); }
 @media (forced-colors: active) { .objetivo-fila::before { background: Canvas; border: 1px solid CanvasText; } .objetivo-fila > span:first-of-type { background: none; } .objetivo-fila > span:first-of-type::before { background: CanvasText; } }
 
 /* ── 241 · Las notas privadas como pósits (tanda 36) ──────────────────────────────────────────────────────────────────
    Cada nota, en el papel amarillo con la esquina doblada de la nota fijada (bloque 192), y el campo de escribir con un
    candado que recuerda que solo la ves tú. */
-.nota-privada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 14px, color-mix(in srgb, var(--disco-amarillo) 18%, var(--hoja)) 14px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 12px 20px -16px color-mix(in srgb, var(--disco-amarillo) 70%, #000); }
+.nota-privada { position: relative; border-top-right-radius: 0; background: linear-gradient(225deg, transparent 14px, color-mix(in srgb, var(--disco-amarillo) 18%, var(--hoja)) 14px); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 8%, transparent), 0 12px 20px -16px color-mix(in srgb, var(--disco-amarillo) 70%, var(--negro)); }
 .nota-privada::before { content: ""; position: absolute; top: 0; right: 0; width: 20px; height: 20px; border-bottom-left-radius: 4px; pointer-events: none; background: linear-gradient(45deg, color-mix(in srgb, var(--disco-amarillo) 40%, var(--hoja)) 50%, transparent 50%); box-shadow: -1px 1px 2px color-mix(in srgb, var(--tinta) 14%, transparent); }
 .nota-nueva-form label[for="nota-nueva"] { display: inline-flex; align-items: center; gap: 6px; }
 .nota-nueva-form label[for="nota-nueva"]::before { content: ""; width: 14px; height: 14px; background: var(--morado); -webkit-mask: var(--ico-candado) center / contain no-repeat; mask: var(--ico-candado) center / contain no-repeat; }
@@ -3149,28 +3149,28 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Como el perfil del atleta (bloque 89): la tarjeta de tu nombre y tu foto lleva arriba una franja con la noche de la
    marca. Sin texto encima. */
 .panel:has(> .lista > .fila-foto) { position: relative; isolation: isolate; overflow: hidden; padding-top: 30px; }
-.panel:has(> .lista > .fila-foto)::before { content: ""; position: absolute; inset: 0 0 auto; height: 30px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+.panel:has(> .lista > .fila-foto)::before { content: ""; position: absolute; inset: 0 0 auto; height: 30px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, var(--marca-900), var(--noche-2)); }
 @media (forced-colors: active) { .panel:has(> .lista > .fila-foto)::before { content: none; } }
 
 /* ── 245 · Los mensajes automáticos con su icono (tanda 36) ───────────────────────────────────────────────────────────
    PersonalCoach.jsx: data-m. Al batir un récord, trofeo dorado; al terminar un bloque, bandera del acento; en la
    racha, llama naranja; al volver tras un parón, la flecha de vuelta en azul; en su cumpleaños, estrella rosa. */
-.mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { content: ""; position: absolute; left: 16px; top: 50%; margin-top: -15px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--fm) 80%, #fff), var(--fm)); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
-.mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { content: ""; position: absolute; left: 23px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #fff; -webkit-mask: var(--ico-m) center / contain no-repeat; mask: var(--ico-m) center / contain no-repeat; pointer-events: none; }
+.mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { content: ""; position: absolute; left: 16px; top: 50%; margin-top: -15px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--fm) 80%, var(--blanco)), var(--fm)); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { content: ""; position: absolute; left: 23px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--blanco); -webkit-mask: var(--ico-m) center / contain no-repeat; mask: var(--ico-m) center / contain no-repeat; pointer-events: none; }
 .mensajes-automaticos .fila-ios[data-m], .musica-coach .fila-ios[data-m] { position: relative; padding-left: 58px; }
-.fila-ios[data-m="record"] { --fm: #C98A00; --ico-m: var(--ico-trofeo); }
+.fila-ios[data-m="record"] { --fm: var(--ambar-500); --ico-m: var(--ico-trofeo); }
 .fila-ios[data-m="bloque"] { --fm: #5856D6; --ico-m: var(--ico-bandera); }
-.fila-ios[data-m="racha"] { --fm: #E8730C; --ico-m: var(--ico-llama); }
-.fila-ios[data-m="vuelta"] { --fm: #2E7CF6; --ico-m: var(--ico-volver); }
+.fila-ios[data-m="racha"] { --fm: var(--ambar-500); --ico-m: var(--ico-llama); }
+.fila-ios[data-m="vuelta"] { --fm: var(--azul-500); --ico-m: var(--ico-volver); }
 .fila-ios[data-m="cumple"] { --fm: #E5407F; --ico-m: var(--ico-estrella); }
 
 /* ── 246 · La música con su nota de color (tanda 36) ──────────────────────────────────────────────────────────────────
    Cada lista con una nota musical blanca en un cuadrado del color de su grupo: por tipo de sesión en el acento, la de
    las descargas en verde azulado, la del equipo en rosa y las del cardio en naranja. */
 .musica-coach .fila-ios[data-m] { --fm: #7A5AF8; --ico-m: var(--ico-nota-musica); }
-.musica-coach .fila-ios[data-m="descarga"] { --fm: #0E9384; }
+.musica-coach .fila-ios[data-m="descarga"] { --fm: var(--turquesa-500); }
 .musica-coach .fila-ios[data-m="equipo"] { --fm: #E5407F; }
-.musica-coach .fila-ios[data-m="ritmo"] { --fm: #E8730C; }
+.musica-coach .fila-ios[data-m="ritmo"] { --fm: var(--ambar-500); }
 @media (forced-colors: active) { .mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { background: Canvas; border: 1px solid CanvasText; } .mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { background: CanvasText; } }
 
 /* ── 247 · Las cargas sugeridas, con la nueva en una pastilla (tanda 36) ──────────────────────────────────────────────
@@ -3195,15 +3195,15 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Con los colores de la biblioteca (bloque 234), un punto de su color en las series por músculo de la semana y de
    «Programar según FBE» (data-g en vol-chip), en «Elegir ejercicio» (el primer grupo) y en los grupos al editar un
    ejercicio (el principal sigue en el acento). */
-[data-g="pectoral"] { --g: #E5484D; }
-[data-g="espalda"] { --g: #2E7CF6; }
-[data-g="deltoides"] { --g: #E8730C; }
-[data-g="cuadriceps"] { --g: #22A04B; }
+[data-g="pectoral"] { --g: var(--naranja-500); }
+[data-g="espalda"] { --g: var(--azul-500); }
+[data-g="deltoides"] { --g: var(--ambar-500); }
+[data-g="cuadriceps"] { --g: var(--verde-500); }
 [data-g="gluteo"] { --g: #E5407F; }
-[data-g="isquiotibiales"] { --g: #0E9384; }
+[data-g="isquiotibiales"] { --g: var(--turquesa-500); }
 [data-g="biceps"] { --g: #7A5AF8; }
 [data-g="triceps"] { --g: #5856D6; }
-[data-g="abdominales"] { --g: #C98A00; }
+[data-g="abdominales"] { --g: var(--ambar-500); }
 [data-g="gemelo"] { --g: #8E6E53; }
 .vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--g); align-self: center; }
 .lista-elegir > button[data-g] > span:first-child::before { margin-right: 7px; vertical-align: 1px; }
@@ -3217,8 +3217,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 250 · Los momentos como historias (tanda 37) ─────────────────────────────────────────────────────────────────────
    El aro de los momentos por ver, en el degradado de la marca (acento, rosa y naranja, como las historias) en vez del
    arcoíris; «Tu momento», con el + blanco en un disco del acento con brillo. */
-.tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: conic-gradient(from 200deg, #7A5AF8, #E5407F, #F59E0B, #E5407F, #7A5AF8); box-shadow: 0 6px 14px -8px rgba(229, 64, 127, .6); }
-.tm-nuevo .tm-circulo { border: 0; padding: 3px; background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 72%, #fff), var(--morado)); box-shadow: 0 8px 18px -9px color-mix(in srgb, var(--morado) 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: conic-gradient(from 200deg, #7A5AF8, #E5407F, var(--ambar-400), #E5407F, #7A5AF8); box-shadow: 0 6px 14px -8px rgba(229, 64, 127, .6); }
+.tm-nuevo .tm-circulo { border: 0; padding: 3px; background: linear-gradient(160deg, color-mix(in srgb, var(--morado) 72%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -9px color-mix(in srgb, var(--morado) 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .tm-nuevo .tm-circulo > svg { color: var(--sobre-morado); width: 26px; height: 26px; }
 @media (forced-colors: active) { .tm-circulo { background: CanvasText !important; } .tm-nuevo .tm-circulo > svg { color: Canvas; } }
 
@@ -3250,10 +3250,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    azulado, logros en dorado, encuestas en violeta, preguntas en añil, avisos del coach en el acento y aniversarios en
    rosa. Un baño muy suave de su color arriba de la tarjeta y un punto de su color antes de «Charla · hoy…». */
 .post { --pt: var(--morado); }
-.post-entreno { --pt: #22A04B; }
+.post-entreno { --pt: var(--verde-500); }
 .post[data-tema="tecnica"] { --pt: var(--t-tarea); }
 .post[data-tema="charla"] { --pt: var(--t-peso); }
-.post-logro, .post[data-tema="logros"] { --pt: #C98A00; }
+.post-logro, .post[data-tema="logros"] { --pt: var(--ambar-500); }
 .post-encuesta { --pt: #7A5AF8; }
 .post[data-tema="pregunta"] { --pt: var(--t-cuestionario); }
 .post-aniversario { --pt: #E5407F; }
@@ -3290,7 +3290,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    La fecha como la del calendario del iPhone: el mes en una franja roja y el día grande en la hoja blanca. Al
    apuntarte, «Me apunto» se rellena de verde. */
 .ev-dia { padding: 0 0 4px; min-width: 48px; overflow: hidden; gap: 2px; background: var(--hoja); color: var(--tinta); box-shadow: 0 1px 2px color-mix(in srgb, var(--tinta) 10%, transparent), 0 6px 14px -10px color-mix(in srgb, var(--tinta) 40%, transparent), inset 0 0 0 1px var(--borde); }
-.ev-dia-mes { width: 100%; padding: 2px 0 1px; background: #D92D20; color: #fff; text-align: center; }
+.ev-dia-mes { width: 100%; padding: 2px 0 1px; background: #D92D20; color: var(--blanco); text-align: center; }
 .ev-acciones .btn:first-child[aria-pressed="true"] { background: var(--ok); border-color: transparent; color: var(--sobre-morado); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 85%, transparent); }
 @media (forced-colors: active) { .ev-dia-mes { background: CanvasText; color: Canvas; } }
 
@@ -3298,7 +3298,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    «Reto conseguido» con un degradado dorado, el trofeo en un disco de oro con relieve y un brillo que lo cruza una vez
    al llegar. */
 .logro-equipo { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--oro-suave), color-mix(in srgb, var(--oro-suave) 50%, var(--hoja))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 30%, transparent); }
-.le-ico { background: radial-gradient(circle at 35% 30%, #F7D774, #C98A00 62%, #8F6100); color: #fff; box-shadow: 0 6px 14px -6px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .45); }
+.le-ico { background: radial-gradient(circle at 35% 30%, var(--oro-200), var(--ambar-500) 62%, #8F6100); color: var(--blanco); box-shadow: 0 6px 14px -6px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .45); }
 .logro-equipo .le-k { color: var(--oro-texto); }
 .logro-equipo::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%); transform: translateX(-120%); }
 @media (prefers-reduced-motion: no-preference) { .logro-equipo::after { animation: logro-brilla 1.4s ease-out .5s 1 both; } }
@@ -3317,15 +3317,15 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Como el perfil del atleta (bloque 89): una franja con la noche de la marca arriba y el avatar apoyado en su borde. */
 .perfil-equipo-cab { position: relative; isolation: isolate; padding: 72px 14px 12px; margin-inline: -4px; border-radius: var(--r); background: var(--hoja-2); overflow: hidden; align-items: center; }
 .perfil-equipo-cab > .avatar { align-self: flex-start; margin-top: -30px; }
-.perfil-equipo-cab::before { content: ""; position: absolute; inset: 0 0 auto; height: 64px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, #2A2068, #1E1548); }
+.perfil-equipo-cab::before { content: ""; position: absolute; inset: 0 0 auto; height: 64px; z-index: -1; background: var(--grano), radial-gradient(260px 90px at 88% 0%, rgba(160, 140, 255, .55), transparent 70%), radial-gradient(220px 80px at 4% 110%, rgba(104, 78, 236, .5), transparent 70%), linear-gradient(165deg, var(--marca-900), var(--noche-2)); }
 .perfil-equipo-cab > .avatar { box-shadow: 0 0 0 3px var(--hoja-2), 0 6px 14px -6px rgba(30, 21, 72, .5); }
 @media (forced-colors: active) { .perfil-equipo-cab::before { content: none; } }
 
 /* ── 262 · Los retos con más vida (tanda 37) ──────────────────────────────────────────────────────────────────────────
    Las barras, con degradado y brillo (las completas, en verde); tu fila, con un baño del acento, y quien ya ha llegado,
    con su cifra en verde. */
-.barra-equipo span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 60%, #fff), var(--morado)); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
-.barra-equipo span.lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 45%, transparent); }
+.barra-equipo span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 60%, var(--blanco)), var(--morado)); box-shadow: 0 0 8px color-mix(in srgb, var(--morado) 45%, transparent); }
+.barra-equipo span.lleno { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 45%, transparent); }
 .fila-progreso.yo { margin-inline: -10px; padding-inline: 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .fila-progreso:has(.barra-equipo span.lleno) > .num { color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); font-weight: 750; }
 @media (forced-colors: active) { .barra-equipo span, .barra-equipo span.lleno { background: CanvasText; } .fila-progreso.yo { border: 1px solid CanvasText; } }
@@ -3333,10 +3333,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 263 · El podio de oro, plata y bronce (tanda 37) ─────────────────────────────────────────────────────────────────
    Las peanas, metálicas (oro, plata y bronce) con su número blanco en relieve; las medallas con sombra y el primero
    con un resplandor dorado alrededor del avatar. */
-.podio-sitio .podio-peana { color: #fff; text-shadow: 0 1px 1px rgba(0, 0, 0, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 16px -10px rgba(0, 0, 0, .45); }
-.podio-sitio.p1 .podio-peana { background: linear-gradient(180deg, #F2CF63, #C98A00 70%, #A87200); }
-.podio-sitio.p2 .podio-peana { background: linear-gradient(180deg, #D5D9E0, #9AA1AD 70%, #808894); }
-.podio-sitio.p3 .podio-peana { background: linear-gradient(180deg, #E3A774, #B26A33 70%, #93552A); }
+.podio-sitio .podio-peana { color: var(--blanco); text-shadow: 0 1px 1px rgba(0, 0, 0, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 16px -10px rgba(0, 0, 0, .45); }
+.podio-sitio.p1 .podio-peana { background: linear-gradient(180deg, var(--oro-300), var(--ambar-500) 70%, var(--oro-500)); }
+.podio-sitio.p2 .podio-peana { background: linear-gradient(180deg, var(--neutro-200), var(--neutro-400) 70%, var(--neutro-500)); }
+.podio-sitio.p3 .podio-peana { background: linear-gradient(180deg, var(--naranja-300), var(--ambar-500) 70%, #93552A); }
 .podio-medalla { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .25)); }
 .podio-sitio.m1 .podio-persona .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--disco-amarillo), 0 0 22px 4px rgba(242, 207, 99, .55); }
 @media (forced-colors: active) { .podio-sitio .podio-peana { background: CanvasText; color: Canvas; } }
@@ -3358,10 +3358,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 265 · Rojos contra azules en sus colores (tanda 38) ──────────────────────────────────────────────────────────────
    El marcador de los retos por equipos pintaba el segundo equipo en ámbar (estilos.css 4697): ahora el primero va en
    rojo y el segundo en azul, con degradado y brillo; tu equipo, con el filo de su color, y un «VS» entre los dos. */
-.marcador-equipos .me-0 { --me: #E5484D; }
-.marcador-equipos .me-1 { --me: #2E7CF6; }
+.marcador-equipos .me-0 { --me: var(--naranja-500); }
+.marcador-equipos .me-1 { --me: var(--azul-500); }
 .marcador-equipos .me-equipo { position: relative; background: linear-gradient(135deg, color-mix(in srgb, var(--me) 10%, var(--hoja-2)), var(--hoja-2) 60%); }
-.marcador-equipos .me-equipo .barra-equipo span, .marcador-equipos .me-1 .barra-equipo span:not(.lleno) { background: linear-gradient(90deg, color-mix(in srgb, var(--me) 62%, #fff), var(--me)); box-shadow: 0 0 10px color-mix(in srgb, var(--me) 50%, transparent); }
+.marcador-equipos .me-equipo .barra-equipo span, .marcador-equipos .me-1 .barra-equipo span:not(.lleno) { background: linear-gradient(90deg, color-mix(in srgb, var(--me) 62%, var(--blanco)), var(--me)); box-shadow: 0 0 10px color-mix(in srgb, var(--me) 50%, transparent); }
 .marcador-equipos .me-equipo.mio { box-shadow: inset 0 0 0 2px var(--me); }
 .marcador-equipos .me-equipo + .me-equipo::before { content: "VS"; position: absolute; top: -17px; left: 50%; z-index: 1; width: 30px; height: 30px; margin-left: -15px; display: grid; place-items: center; border-radius: 50%; background: var(--tinta); color: var(--hoja); font-size: 0.6875rem; font-weight: 850; letter-spacing: .02em; box-shadow: 0 0 0 3px var(--hoja); }
 @media (forced-colors: active) { .marcador-equipos .me-equipo { background: Canvas; } .marcador-equipos .me-equipo .barra-equipo span { background: CanvasText; } .marcador-equipos .me-equipo + .me-equipo::before { border: 1px solid CanvasText; } }
@@ -3390,7 +3390,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 269 · Los hitos del equipo con aro de avance (tanda 38) ──────────────────────────────────────────────────────────
    Celebracion.jsx: --f en cada hito (lo que lleva sobre la meta). El círculo vacío se convierte en un aro del acento que
    se llena hasta donde va; los conseguidos, con su medalla y el texto en verde. */
-.hitos-lista li:not(.hecho) .he-ico { width: 18px; height: 18px; flex: none; color: transparent; overflow: hidden; border-radius: 50%; background: conic-gradient(var(--morado) calc(var(--f, 0) * 1turn), color-mix(in srgb, var(--morado) 16%, var(--linea)) 0); -webkit-mask: radial-gradient(circle, transparent 5.5px, #000 6px); mask: radial-gradient(circle, transparent 5.5px, #000 6px); }
+.hitos-lista li:not(.hecho) .he-ico { width: 18px; height: 18px; flex: none; color: transparent; overflow: hidden; border-radius: 50%; background: conic-gradient(var(--morado) calc(var(--f, 0) * 1turn), color-mix(in srgb, var(--morado) 16%, var(--linea)) 0); -webkit-mask: radial-gradient(circle, transparent 5.5px, var(--negro) 6px); mask: radial-gradient(circle, transparent 5.5px, var(--negro) 6px); }
 .hitos-lista li.hecho .he-texto { color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); font-weight: 650; }
 @media (forced-colors: active) { .hitos-lista li:not(.hecho) .he-ico { background: CanvasText; } }
 
@@ -3398,8 +3398,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    El puesto en un disco (plata y bronce para el segundo y el tercero cuando no están en el podio, según cuántos haya en
    él), tu fila con un baño del acento y «animar 🙌» como un botón con relieve que se queda en verde cuando ya animaste. */
 .fila-ranking .pos { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--hoja-2); color: var(--tinta-2); font-size: 0.8125rem; justify-self: end; }
-.ranking:has(.podio-1) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, #E4E7EC, #A3AAB6); color: #1D1933; }
-.ranking:has(.podio-1) .ranking-lista > li:nth-child(2) .pos, .ranking:has(.podio-2) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, #EBB98C, #B26A33); color: #1D1933; }
+.ranking:has(.podio-1) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, var(--neutro-100), var(--neutro-400)); color: var(--noche-2); }
+.ranking:has(.podio-1) .ranking-lista > li:nth-child(2) .pos, .ranking:has(.podio-2) .ranking-lista > li:nth-child(1) .pos { background: linear-gradient(180deg, var(--naranja-300), var(--ambar-500)); color: var(--noche-2); }
 .fila-ranking.yo { background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .btn-animar:not(.hecho) { background: linear-gradient(180deg, var(--hoja), var(--morado-suave)); border-color: color-mix(in srgb, var(--morado) 30%, var(--linea)); box-shadow: 0 3px 8px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
 .btn-animar.hecho { background: var(--ok-suave); border-color: transparent; }
@@ -3410,10 +3410,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    en dorado y los retos en naranja (en el orden de «Esta semana en el equipo»). */
 .resumen-equipo-num > div { position: relative; }
 .resumen-equipo-num > div::after { content: ""; position: absolute; top: 8px; right: 8px; width: 14px; height: 14px; background: var(--rc); -webkit-mask: var(--ri) center / contain no-repeat; mask: var(--ri) center / contain no-repeat; }
-.resumen-equipo-num > div:nth-child(1) { --rc: #22A04B; --ri: var(--ico-hecho); }
+.resumen-equipo-num > div:nth-child(1) { --rc: var(--verde-500); --ri: var(--ico-hecho); }
 .resumen-equipo-num > div:nth-child(2) { --rc: var(--morado); --ri: var(--ico-semana); }
-.resumen-equipo-num > div:nth-child(3) { --rc: #C98A00; --ri: var(--ico-trofeo); }
-.resumen-equipo-num > div:nth-child(4) { --rc: #E8730C; --ri: var(--ico-diana); }
+.resumen-equipo-num > div:nth-child(3) { --rc: var(--ambar-500); --ri: var(--ico-trofeo); }
+.resumen-equipo-num > div:nth-child(4) { --rc: var(--ambar-500); --ri: var(--ico-diana); }
 @media (forced-colors: active) { .resumen-equipo-num > div::after { background: CanvasText; } }
 
 /* ── 272 · Las pastillas de arriba del Equipo (tanda 38) ──────────────────────────────────────────────────────────────
@@ -3425,10 +3425,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 
 /* ── 273 · Los compañeros de racha con su llama (tanda 38) ────────────────────────────────────────────────────────────
    El avatar del compañero lleva una llama en un disco naranja en su esquina de abajo, y la fila, un baño cálido. */
-.cp-fila { position: relative; margin-inline: -8px; padding-inline: 8px; border-radius: 12px; background: linear-gradient(110deg, color-mix(in srgb, #E8730C 9%, var(--hoja)), var(--hoja) 70%); }
+.cp-fila { position: relative; margin-inline: -8px; padding-inline: 8px; border-radius: 12px; background: linear-gradient(110deg, color-mix(in srgb, var(--ambar-500) 9%, var(--hoja)), var(--hoja) 70%); }
 .cp-fila > .avatar { position: relative; }
-.cp-fila::after { content: ""; position: absolute; left: 21px; top: calc(50% + 1px); width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(160deg, #F59E0B, #E8730C); box-shadow: 0 0 0 2px var(--hoja); pointer-events: none; }
-.cp-fila::before { content: ""; position: absolute; left: 24px; top: calc(50% + 4px); z-index: 1; width: 10px; height: 10px; background: #fff; -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; pointer-events: none; }
+.cp-fila::after { content: ""; position: absolute; left: 21px; top: calc(50% + 1px); width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(160deg, var(--ambar-400), var(--ambar-500)); box-shadow: 0 0 0 2px var(--hoja); pointer-events: none; }
+.cp-fila::before { content: ""; position: absolute; left: 24px; top: calc(50% + 4px); z-index: 1; width: 10px; height: 10px; background: var(--blanco); -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; pointer-events: none; }
 @media (forced-colors: active) { .cp-fila { background: Canvas; } .cp-fila::after, .cp-fila::before { content: none; } }
 
 /* ── 274 · Las insignias del perfil del equipo como medallas (tanda 38) ───────────────────────────────────────────────
@@ -3437,14 +3437,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    600 y 2516) y salía flotando arriba a la derecha de la hoja, fuera de su lista; ahora va en su sitio. */
 .chip.insignia { display: inline-flex; flex-direction: row; align-items: center; place-items: center; position: static; top: auto; right: auto; height: auto; min-width: 0; min-height: 30px; padding: 0 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 650; }
 .chip.insignia, .pe-retos .chip.aviso { background: linear-gradient(180deg, color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)), var(--oro-suave)); border-color: color-mix(in srgb, var(--oro) 30%, transparent); color: var(--oro-texto); box-shadow: 0 3px 8px -5px rgba(201, 138, 0, .6); }
-.chip.insignia > span:first-child { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--oro-suave) 80%, var(--oro)) 75%); box-shadow: inset 0 -1px 2px rgba(143, 97, 0, .35); font-size: 0.8125rem; }
+.chip.insignia > span:first-child { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--blanco), color-mix(in srgb, var(--oro-suave) 80%, var(--oro)) 75%); box-shadow: inset 0 -1px 2px rgba(143, 97, 0, .35); font-size: 0.8125rem; }
 .pe-retos .chip.aviso svg { color: var(--oro); }
 
 /* ── 275 · Las preguntas del equipo como tarjetas (tanda 38) ──────────────────────────────────────────────────────────
    Cada pregunta con un «?» blanco en un disco añil delante, y «Respuesta del coach» en verde con su ✓. */
 .pregunta-equipo .pe-pregunta { position: relative; display: inline-flex; align-items: flex-start; gap: 10px; }
 .pregunta-equipo .pe-pregunta::before { content: ""; flex: none; width: 26px; height: 26px; margin-top: -2px; border-radius: 50%; background: var(--t-cuestionario); box-shadow: 0 4px 10px -5px var(--t-cuestionario); }
-.pregunta-equipo .pe-pregunta::after { content: ""; position: absolute; left: 5px; top: 3px; width: 16px; height: 16px; background: #fff; -webkit-mask: var(--ico-pregunta) center / contain no-repeat; mask: var(--ico-pregunta) center / contain no-repeat; }
+.pregunta-equipo .pe-pregunta::after { content: ""; position: absolute; left: 5px; top: 3px; width: 16px; height: 16px; background: var(--blanco); -webkit-mask: var(--ico-pregunta) center / contain no-repeat; mask: var(--ico-pregunta) center / contain no-repeat; }
 .pe-respuesta .le-k { display: inline-flex; align-items: center; gap: 4px; color: color-mix(in srgb, var(--ok) 72%, var(--tinta)); }
 .pe-respuesta .le-k::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ico-hecho) center / contain no-repeat; mask: var(--ico-hecho) center / contain no-repeat; }
 @media (forced-colors: active) { .pregunta-equipo .pe-pregunta::before { background: Canvas; border: 1px solid CanvasText; } .pregunta-equipo .pe-pregunta::after { background: CanvasText; } }
@@ -3462,10 +3462,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .compositor { --ct: var(--morado); }
 .compositor[data-tema="charla"] { --ct: var(--t-peso); }
 .compositor[data-tema="tecnica"] { --ct: var(--t-tarea); }
-.compositor[data-tema="logros"] { --ct: #C98A00; }
+.compositor[data-tema="logros"] { --ct: var(--ambar-500); }
 .compositor[data-tema="pregunta"] { --ct: var(--t-cuestionario); }
 .compositor-tema select { border-color: color-mix(in srgb, var(--ct) 45%, var(--linea)); background-color: color-mix(in srgb, var(--ct) 8%, var(--hoja)); color: var(--tinta); font-weight: 650; }
-.compositor-pie > .fila-envolver .btn.plano svg { color: #22A04B; }
+.compositor-pie > .fila-envolver .btn.plano svg { color: var(--verde-500); }
 .compositor-enviar .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 90%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 
 /* ── 278 · Las pegatinas con un saltito (tanda 38) ────────────────────────────────────────────────────────────────────
@@ -3477,7 +3477,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 279 · «Ha entrenado hoy» en verde (tanda 38) ─────────────────────────────────────────────────────────────────────
    El aro del avatar de quien ha entrenado hoy (estilos.css 3255, del acento al verde) pasa a un degradado verde con
    brillo, para que se lea de un vistazo como «hoy ha entrenado». */
-.aro-hoy::before { background: conic-gradient(from 200deg, #22A04B, #7BD88F, #22A04B, #0E9384, #22A04B); box-shadow: 0 0 8px rgba(34, 160, 75, .45); }
+.aro-hoy::before { background: conic-gradient(from 200deg, var(--verde-500), var(--verde-300), var(--verde-500), var(--turquesa-500), var(--verde-500)); box-shadow: 0 0 8px rgba(34, 160, 75, .45); }
 @media (forced-colors: active) { .aro-hoy::before { background: CanvasText; box-shadow: none; } }
 
 /* ══ Tanda 39 (9/11, mañana): Comunidad, para rematar ════════════════════════════════════════════════════════════════
@@ -3544,12 +3544,12 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Como los Ajustes del iPhone (y el perfil, bloque 124): cada interruptor con su icono blanco en un cuadrado de color,
    por el id de su casilla: el ranking en dorado, «entrenando ahora» en verde, compartir en azul y el cardio en rojo. */
 .interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos)) { position: relative; padding-left: 58px; }
-.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::before { content: ""; position: absolute; left: 16px; top: 16px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ai) 80%, #fff), var(--ai)); }
-.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::after { content: ""; position: absolute; left: 23px; top: 23px; width: 16px; height: 16px; background: #fff; -webkit-mask: var(--aj) center / contain no-repeat; mask: var(--aj) center / contain no-repeat; pointer-events: none; }
-.interruptor-fila:has(#eq-sin-ranking) { --ai: #C98A00; --aj: var(--ico-trofeo); }
-.interruptor-fila:has(#eq-entrenando) { --ai: #22A04B; --aj: var(--ico-rayo); }
-.interruptor-fila:has(#eq-autocompartir) { --ai: #2E7CF6; --aj: var(--ico-compartir); }
-.interruptor-fila:has(#eq-cardio-retos) { --ai: #E5484D; --aj: var(--ico-corazon); }
+.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::before { content: ""; position: absolute; left: 16px; top: 16px; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(180deg, color-mix(in srgb, var(--ai) 80%, var(--blanco)), var(--ai)); }
+.interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::after { content: ""; position: absolute; left: 23px; top: 23px; width: 16px; height: 16px; background: var(--blanco); -webkit-mask: var(--aj) center / contain no-repeat; mask: var(--aj) center / contain no-repeat; pointer-events: none; }
+.interruptor-fila:has(#eq-sin-ranking) { --ai: var(--ambar-500); --aj: var(--ico-trofeo); }
+.interruptor-fila:has(#eq-entrenando) { --ai: var(--verde-500); --aj: var(--ico-rayo); }
+.interruptor-fila:has(#eq-autocompartir) { --ai: var(--azul-500); --aj: var(--ico-compartir); }
+.interruptor-fila:has(#eq-cardio-retos) { --ai: var(--naranja-500); --aj: var(--ico-corazon); }
 @media (forced-colors: active) { .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::before { background: Canvas; border: 1px solid CanvasText; } .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::after { background: CanvasText; } }
 
 /* ── 287 · Las opciones de una publicación como lista (tanda 39) ──────────────────────────────────────────────────────
@@ -3595,9 +3595,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .pc-activos { counter-reset: activo; }
 .pc-activos > li { counter-increment: activo; position: relative; padding-left: 36px; }
 .pc-activos > li::before { content: counter(activo); position: absolute; left: 0; top: 50%; width: 26px; height: 26px; margin-top: -13px; display: grid; place-items: center; border-radius: 50%; background: var(--hoja-2); color: var(--tinta-2); font-size: 0.75rem; font-weight: 800; }
-.pc-activos > li:nth-child(1)::before { background: linear-gradient(180deg, #F2CF63, #C98A00); color: #1D1933; }
-.pc-activos > li:nth-child(2)::before { background: linear-gradient(180deg, #E4E7EC, #A3AAB6); color: #1D1933; }
-.pc-activos > li:nth-child(3)::before { background: linear-gradient(180deg, #EBB98C, #B26A33); color: #1D1933; }
+.pc-activos > li:nth-child(1)::before { background: linear-gradient(180deg, var(--oro-300), var(--ambar-500)); color: var(--noche-2); }
+.pc-activos > li:nth-child(2)::before { background: linear-gradient(180deg, var(--neutro-100), var(--neutro-400)); color: var(--noche-2); }
+.pc-activos > li:nth-child(3)::before { background: linear-gradient(180deg, var(--naranja-300), var(--ambar-500)); color: var(--noche-2); }
 .panel-comunidad > section.panel:last-child { box-shadow: var(--sombra), inset 3px 0 0 var(--aviso); }
 
 /* ── 292 · Moderar con calma (tanda 39) ───────────────────────────────────────────────────────────────────────────────
@@ -3613,7 +3613,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    En el muro (destacado-semana): un resplandor dorado, la medalla en un disco de oro con relieve y el nombre más
    grande; en el Panel del coach, el título con su medalla y «Nadie esta semana» como invitación en dorado suave. */
 .destacado-semana { position: relative; display: flex; align-items: center; gap: 14px; overflow: hidden; background: radial-gradient(300px 120px at 0% 0%, color-mix(in srgb, var(--oro) 22%, transparent), transparent 70%), linear-gradient(135deg, var(--oro-suave), var(--hoja) 75%); box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, var(--oro) 30%, transparent); }
-.ds-ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFF4C8, #F2CF63 55%, #C98A00); box-shadow: 0 8px 18px -8px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: 1.625rem; }
+.ds-ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--oro-100), var(--oro-300) 55%, var(--ambar-500)); box-shadow: 0 8px 18px -8px rgba(201, 138, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .6); font-size: 1.625rem; }
 .destacado-semana .ds-nombre { font-size: 1.125rem; font-weight: 800; }
 .destacado-semana .le-k { color: var(--oro-texto); }
 .panel-comunidad > section:first-child:not(.panel) > p { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); color: var(--tinta-2); }
@@ -3644,10 +3644,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 295 · El reproductor en «modo cine» (tanda 40) ───────────────────────────────────────────────────────────────────
    El cuadro del vídeo sobre la noche de la marca (se ve en las franjas de los lados), con una sombra honda; la serie en
    una pastilla de vidrio con su punto; los botones de debajo (velocidad aparte) en discos. Sobre el bloque 70. */
-.rep-marco { background: radial-gradient(120% 80% at 85% 0%, rgba(104, 78, 236, .35), transparent 60%), linear-gradient(170deg, #1B1640, #0C0A18); box-shadow: 0 18px 34px -22px rgba(24, 14, 70, .75), inset 0 0 0 1px rgba(255, 255, 255, .07); }
+.rep-marco { background: radial-gradient(120% 80% at 85% 0%, rgba(104, 78, 236, .35), transparent 60%), linear-gradient(170deg, var(--noche-2), var(--noche-0)); box-shadow: 0 18px 34px -22px rgba(24, 14, 70, .75), inset 0 0 0 1px rgba(255, 255, 255, .07); }
 .rep-zoom video.medio, .reproductor video.medio { background: transparent; }
 .rep-serie { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px; background: rgba(14, 11, 30, .74); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
-.rep-serie::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #B9A8FF; box-shadow: 0 0 8px #8F78FF; }
+.rep-serie::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--marca-400); box-shadow: 0 0 8px var(--marca-500); }
 .rep-zoom-nivel { background: rgba(14, 11, 30, .74); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
 .rep-controles > .btn-icono, .rep-zoom-botones > .btn-icono { width: 42px; height: 42px; border-radius: 50%; border-color: transparent; background: var(--hoja-2); }
 .rep-controles > .btn-icono[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 45%, transparent); }
@@ -3658,7 +3658,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    marca del centro en el acento con su halo. El texto, en una pastilla. */
 .rep-jog { height: 40px; border: 0; border-radius: 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--tinta) 7%, var(--hoja-2)), var(--hoja-2) 45%, color-mix(in srgb, var(--tinta) 5%, var(--hoja-2))); box-shadow: inset 0 1px 3px rgba(20, 12, 60, .14), inset 0 0 0 1px var(--linea); }
 .rep-jog-rayas { inset: 8px 0; background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--tinta) 26%, transparent) 0 1.5px, transparent 1.5px 7px); opacity: 1;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent); mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent); }
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--negro) 24%, var(--negro) 76%, transparent); mask-image: linear-gradient(90deg, transparent, var(--negro) 24%, var(--negro) 76%, transparent); }
 .rep-jog-centro { width: 4px; margin-left: -2px; top: 3px; bottom: 3px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--morado) 16%, transparent), 0 0 12px color-mix(in srgb, var(--morado) 55%, transparent); }
 .rep-jog-texto { padding: 2px 10px; border-radius: 999px; background: var(--hoja); color: var(--tinta-2); box-shadow: 0 1px 3px rgba(20, 12, 60, .12); }
 @media (forced-colors: active) { .rep-jog-rayas { -webkit-mask-image: none; mask-image: none; } }
@@ -3666,10 +3666,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 297 · La tira de fotogramas (tanda 40) ───────────────────────────────────────────────────────────────────────────
    Un carrete: fondo de noche, fotogramas con esquinas suaves y separados, y el cursor como una barra del acento con su
    brillo y un tirador arriba. */
-.rep-tira { height: 52px; padding: 4px; gap: 2px; border: 0; border-radius: 12px; background: #120E24; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 18px -14px rgba(24, 14, 70, .8); }
+.rep-tira { height: 52px; padding: 4px; gap: 2px; border: 0; border-radius: 12px; background: var(--neutro-950); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 18px -14px rgba(24, 14, 70, .8); }
 .tira-celda { border-right: 0; border-radius: 5px; overflow: hidden; }
-.tira-cursor { width: 3px; margin-left: -1.5px; border-radius: 2px; background: #B9A8FF; box-shadow: 0 0 10px #8F78FF, 0 0 0 1px rgba(14, 11, 30, .6); }
-.tira-cursor::before { content: ""; position: absolute; left: 50%; top: -1px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 2.5px #8F78FF, 0 2px 6px rgba(0, 0, 0, .5); }
+.tira-cursor { width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--marca-400); box-shadow: 0 0 10px var(--marca-500), 0 0 0 1px rgba(14, 11, 30, .6); }
+.tira-cursor::before { content: ""; position: absolute; left: 50%; top: -1px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: var(--blanco); box-shadow: 0 0 0 2.5px var(--marca-500), 0 2px 6px rgba(0, 0, 0, .5); }
 @media (forced-colors: active) { .rep-tira { background: Canvas; border: 1px solid CanvasText; } .tira-cursor { background: Highlight; } .tira-cursor::before { content: none; } }
 
 /* ── 298 · Las marcas sobre la barra (tanda 40) ───────────────────────────────────────────────────────────────────────
@@ -3749,11 +3749,11 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) { padding: 12px; border-radius: 14px; background: var(--hoja-2); }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq { position: relative; display: flex; align-items: center; min-height: 28px; padding-left: 38px; font-weight: 750; }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::before { content: ""; position: absolute; left: 0; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: var(--c); box-shadow: 0 4px 10px -4px var(--c); }
-.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::after { content: ""; position: absolute; left: 6px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #FFFFFF; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
-.correccion > .tempo-marcar { --c: #0E8FA8; --i: var(--ico-reloj); }
+.correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::after { content: ""; position: absolute; left: 6px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--blanco); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.correccion > .tempo-marcar { --c: var(--turquesa-500); --i: var(--ico-reloj); }
 .correccion > .grabar-la-revision { --c: #D93A4A; --i: var(--ico-video); }
 .correccion > .voz-video { --c: #1E8A52; --i: var(--ico-micro); }
-.correccion > .recordatorios-coach { --c: #C27A00; --i: var(--ico-chincheta); }
+.correccion > .recordatorios-coach { --c: var(--ambar-500); --i: var(--ico-chincheta); }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) .btn:not(.btn-primario):not(.plano) { background: var(--hoja); }
 .correccion .btn-primario:not(:disabled) { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--morado) 85%, transparent); }
 .correccion > .comparar-con { padding-top: 10px; border-top: 1px solid var(--linea); }
@@ -3763,7 +3763,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Luz lavanda en la esquina, filo del acento y la diana en un disco con el degradado de la marca junto al título. */
 .analisis { border-color: color-mix(in srgb, var(--morado) 22%, var(--linea)); background: radial-gradient(260px 140px at 100% 0%, color-mix(in srgb, var(--morado) 12%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .analisis-cab h3 { position: relative; padding-left: 40px; min-height: 30px; display: flex; align-items: center; }
-.analisis-cab h3::before { content: ""; position: absolute; left: 0; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--morado) 70%, #fff), var(--morado)); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
+.analisis-cab h3::before { content: ""; position: absolute; left: 0; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--morado) 80%, transparent); }
 .analisis-cab h3::after { content: ""; position: absolute; left: 7px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--sobre-morado); -webkit-mask: var(--ico-diana) center / contain no-repeat; mask: var(--ico-diana) center / contain no-repeat; }
 @media (forced-colors: active) { .analisis-cab h3::before, .analisis-cab h3::after { content: none; } .analisis-cab h3 { padding-left: 0; } }
 
@@ -3795,9 +3795,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .tecnica-linea { position: relative; padding-left: 24px; gap: 8px; }
 .tecnica-linea::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 18px; width: 2px; border-radius: 2px; background: linear-gradient(var(--linea), color-mix(in srgb, var(--morado) 30%, var(--linea))); }
 .tecnica-item { position: relative; --c: var(--aviso); }
-.tecnica-item[data-estado="visto"] { --c: #2E7CF6; } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
+.tecnica-item[data-estado="visto"] { --c: var(--azul-500); } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
 .tecnica-item::before { content: ""; position: absolute; left: -22px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px var(--hoja), 0 0 0 4.5px color-mix(in srgb, var(--c) 35%, transparent); }
-.tecnica-item.destacado::before { background: radial-gradient(circle at 35% 30%, #FFF4C8, #F2CF63 55%, #C98A00); box-shadow: 0 0 0 3px var(--hoja), 0 0 10px rgba(201, 138, 0, .6); }
+.tecnica-item.destacado::before { background: radial-gradient(circle at 35% 30%, var(--oro-100), var(--oro-300) 55%, var(--ambar-500)); box-shadow: 0 0 0 3px var(--hoja), 0 0 10px rgba(201, 138, 0, .6); }
 .tecnica-ver { border-color: transparent; background: var(--hoja-2); border-radius: 12px; padding: 10px 12px; transition: transform var(--mov-rapido) var(--curva-rebote); }
 .tecnica-ver:active { transform: scale(.985); }
 .tecnica-item.destacado .tecnica-ver { border-color: color-mix(in srgb, var(--oro) 45%, transparent); background: color-mix(in srgb, var(--oro-suave) 60%, var(--hoja)); }
@@ -3816,7 +3816,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .informes-mes .selector-chips button { display: inline-flex; align-items: center; gap: 7px; }
 .informes-mes .selector-chips button::before { content: ""; flex: none; width: 15px; height: 15px; background: currentColor; -webkit-mask: var(--ico-semana) center / contain no-repeat; mask: var(--ico-semana) center / contain no-repeat; }
 .informe-tecnica .informe-cifras > div { position: relative; overflow: hidden; padding: 12px 12px 10px; border-radius: 12px; background: color-mix(in srgb, var(--c, var(--morado)) 7%, var(--hoja)); box-shadow: inset 0 3px 0 var(--c, var(--morado)); }
-.informe-tecnica .informe-cifras > div:nth-child(2) { --c: var(--ok); } .informe-tecnica .informe-cifras > div:nth-child(3) { --c: #2E7CF6; } .informe-tecnica .informe-cifras > div:nth-child(4) { --c: #C27A00; }
+.informe-tecnica .informe-cifras > div:nth-child(2) { --c: var(--ok); } .informe-tecnica .informe-cifras > div:nth-child(3) { --c: var(--azul-500); } .informe-tecnica .informe-cifras > div:nth-child(4) { --c: var(--ambar-500); }
 .informe-tecnica .informe-cifras dt { color: var(--tinta-2); }
 .informe-lista-num { list-style: none; padding-left: 0; counter-reset: inf; gap: 6px; }
 .informe-lista-num > li { position: relative; padding-left: 32px; min-height: 24px; counter-increment: inf; }
@@ -3842,9 +3842,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    «Comparar check-ins». La tarjeta del plan es la misma que ve el atleta en «Tu plan». Atributos nuevos: data-fase y
    data-m (NutricionComun.jsx), vigente y proximo en las versiones (NutricionCoach.jsx), data-k y data-tend en las cifras
    de Salud (Integraciones.jsx). Iconos nuevos: --ico-pasos, --ico-luna, --ico-onda, --ico-bascula. */
-:root { --ico-pasos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 3.5c1.7 0 2.5 1.9 2.5 4.2S9.9 12 8.5 12 6 10 6 7.7 6.8 3.5 8.5 3.5zM6.3 15h4.4v2.2a2.2 2.2 0 0 1-4.4 0zM15.5 7.5c1.7 0 2.5 1.9 2.5 4.2S16.9 16 15.5 16 13 14 13 11.7s.8-4.2 2.5-4.2zM13.3 19h4.4v.3a2.2 2.2 0 0 1-4.4 0z'/%3E%3C/svg%3E"); --ico-luna: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/%3E%3C/svg%3E"); --ico-onda: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h3.5l2-5 3.5 10 2.5-7 1.5 2H21'/%3E%3C/svg%3E"); --ico-bascula: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='4' width='17' height='16' rx='4'/%3E%3Cpath d='M8.5 9.5a5 5 0 0 1 7 0M12 9.5l1.5-1.5'/%3E%3C/svg%3E"); --kcal: #D4602A; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kcal: #FF9A66; } }
-:root[data-theme="dark"] { --kcal: #FF9A66; }
+:root { --ico-pasos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 3.5c1.7 0 2.5 1.9 2.5 4.2S9.9 12 8.5 12 6 10 6 7.7 6.8 3.5 8.5 3.5zM6.3 15h4.4v2.2a2.2 2.2 0 0 1-4.4 0zM15.5 7.5c1.7 0 2.5 1.9 2.5 4.2S16.9 16 15.5 16 13 14 13 11.7s.8-4.2 2.5-4.2zM13.3 19h4.4v.3a2.2 2.2 0 0 1-4.4 0z'/%3E%3C/svg%3E"); --ico-luna: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/%3E%3C/svg%3E"); --ico-onda: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h3.5l2-5 3.5 10 2.5-7 1.5 2H21'/%3E%3C/svg%3E"); --ico-bascula: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='4' width='17' height='16' rx='4'/%3E%3Cpath d='M8.5 9.5a5 5 0 0 1 7 0M12 9.5l1.5-1.5'/%3E%3C/svg%3E"); --kcal: var(--naranja-500); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kcal: var(--naranja-400); } }
+:root[data-theme="dark"] { --kcal: var(--naranja-400); }
 
 /* ── 310 · La tarjeta del plan con el color de su fase (tanda 41) ─────────────────────────────────────────────────────
    Una raya arriba y una luz en la esquina del color de la fase: perder grasa en naranja, mantener en el acento, ganar
@@ -3884,8 +3884,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 314 · El gasto energético (tanda 41) ─────────────────────────────────────────────────────────────────────────────
    La cifra grande en el naranja de las kcal, con su llama en un disco; el margen (±) en una pastilla. */
 .gasto-cifra { position: relative; padding-left: 48px; min-height: 40px; align-items: center; }
-.gasto-cifra::before { content: ""; position: absolute; left: 0; top: 50%; width: 38px; height: 38px; margin-top: -19px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--kcal) 70%, #fff), var(--kcal)); box-shadow: 0 6px 14px -6px var(--kcal); }
-.gasto-cifra::after { content: ""; position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: #FFFFFF; -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; }
+.gasto-cifra::before { content: ""; position: absolute; left: 0; top: 50%; width: 38px; height: 38px; margin-top: -19px; border-radius: 50%; background: linear-gradient(150deg, color-mix(in srgb, var(--kcal) 70%, var(--blanco)), var(--kcal)); box-shadow: 0 6px 14px -6px var(--kcal); }
+.gasto-cifra::after { content: ""; position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: var(--blanco); -webkit-mask: var(--ico-llama) center / contain no-repeat; mask: var(--ico-llama) center / contain no-repeat; }
 .gasto-cifra b { color: var(--tinta); }
 .gasto-cifra .terciario { padding: 2px 9px; border-radius: 999px; background: var(--hoja-2); color: var(--tinta-2); font-size: .8125rem; }
 @media (forced-colors: active) { .gasto-cifra::before, .gasto-cifra::after { content: none; } .gasto-cifra { padding-left: 0; } }
@@ -3918,11 +3918,11 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Pasos, sueño, pulso, HRV y peso, cada uno en una baldosa con su icono en un disco de su color (data-k). */
 .salud-movil .salud-cifras { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
 .salud-movil .salud-cifra[data-k] { position: relative; padding: 10px 10px 10px 50px; border-radius: 12px; background: color-mix(in srgb, var(--c) 7%, var(--hoja)); min-height: 58px; --c: var(--morado); --i: var(--ico-pasos); }
-.salud-movil .salud-cifra[data-k="sueno_min"] { --c: #5B5BD6; --i: var(--ico-luna); } .salud-movil .salud-cifra[data-k="fc_reposo"] { --c: #D93A63; --i: var(--ico-corazon); }
-.salud-movil .salud-cifra[data-k="hrv"] { --c: #0E8FA8; --i: var(--ico-onda); } .salud-movil .salud-cifra[data-k="peso_kg"] { --c: var(--ok); --i: var(--ico-bascula); }
-.salud-movil .salud-cifra[data-k="pasos"] { --c: #E07B1F; }
+.salud-movil .salud-cifra[data-k="sueno_min"] { --c: #5B5BD6; --i: var(--ico-luna); } .salud-movil .salud-cifra[data-k="fc_reposo"] { --c: var(--rojo-500); --i: var(--ico-corazon); }
+.salud-movil .salud-cifra[data-k="hrv"] { --c: var(--turquesa-500); --i: var(--ico-onda); } .salud-movil .salud-cifra[data-k="peso_kg"] { --c: var(--ok); --i: var(--ico-bascula); }
+.salud-movil .salud-cifra[data-k="pasos"] { --c: var(--naranja-400); }
 .salud-movil .salud-cifra[data-k]::before { content: ""; position: absolute; left: 10px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--c); box-shadow: 0 5px 12px -6px var(--c); }
-.salud-movil .salud-cifra[data-k]::after { content: ""; position: absolute; left: 17px; top: 19px; width: 16px; height: 16px; background: #FFFFFF; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.salud-movil .salud-cifra[data-k]::after { content: ""; position: absolute; left: 17px; top: 19px; width: 16px; height: 16px; background: var(--blanco); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
 .salud-movil .salud-cifra dt { color: var(--tinta-2); }
 @media (forced-colors: active) { .salud-movil .salud-cifra[data-k]::before, .salud-movil .salud-cifra[data-k]::after { content: none; } .salud-movil .salud-cifra[data-k] { padding-left: 10px; } }
 
@@ -3957,15 +3957,15 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    filas de Conexiones (Conexiones.jsx; `salud-intro` en el texto de la hoja), `data-k` y `data-puesto` en los atajos
    (Integraciones.jsx), `data-servicio` en la tarjeta de música y `data-en` y `--pulso` en la cadencia (Musica.jsx).
    Iconos nuevos --ico-llave, --ico-atajo, --ico-corazon-lleno, --ico-play-lleno. Sin logotipos de Apple ni de Spotify. */
-:root { --ico-llave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15' r='4'/%3E%3Cpath d='M10.8 12.2 20 3M16 7l3 3M18 5l2 2'/%3E%3C/svg%3E"); --ico-atajo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='12' height='12' rx='3.5'/%3E%3Cpath d='M9 21h8.5a3.5 3.5 0 0 0 3.5-3.5V9'/%3E%3C/svg%3E"); --ico-corazon-lleno: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z'/%3E%3C/svg%3E"); --ico-play-lleno: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5.5v13l10-6.5z'/%3E%3C/svg%3E"); --salud: #F0386B; --salud-2: #FF7A59; --verde-musica: #1DB954; }
+:root { --ico-llave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15' r='4'/%3E%3Cpath d='M10.8 12.2 20 3M16 7l3 3M18 5l2 2'/%3E%3C/svg%3E"); --ico-atajo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='12' height='12' rx='3.5'/%3E%3Cpath d='M9 21h8.5a3.5 3.5 0 0 0 3.5-3.5V9'/%3E%3C/svg%3E"); --ico-corazon-lleno: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z'/%3E%3C/svg%3E"); --ico-play-lleno: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5.5v13l10-6.5z'/%3E%3C/svg%3E"); --salud: #F0386B; --salud-2: var(--naranja-400); --verde-musica: var(--verde-400); }
 
 /* ── 320 · Salud del iPhone en Conexiones (tanda 42) ──────────────────────────────────────────────────────────────────
    Un corazón blanco sobre un degradado rosa en vez de las huellas; conectada, «Conectada» con un punto verde que late.
    El calendario, en su rojo de hoja de calendario. */
 .grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-salud .ios-ico { background: linear-gradient(150deg, var(--salud-2), var(--salud)); box-shadow: 0 4px 10px -5px var(--salud); position: relative; }
 .grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-salud .ios-ico svg { opacity: 0; }
-.grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-salud .ios-ico::after { content: ""; position: absolute; inset: 0; margin: auto; width: 17px; height: 17px; background: #FFFFFF; -webkit-mask: var(--ico-corazon-lleno) center / contain no-repeat; mask: var(--ico-corazon-lleno) center / contain no-repeat; }
-.grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-calendario .ios-ico { background: linear-gradient(150deg, #FF6B5E, #E5322D); color: #FFFFFF; box-shadow: 0 4px 10px -5px #E5322D; }
+.grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-salud .ios-ico::after { content: ""; position: absolute; inset: 0; margin: auto; width: 17px; height: 17px; background: var(--blanco); -webkit-mask: var(--ico-corazon-lleno) center / contain no-repeat; mask: var(--ico-corazon-lleno) center / contain no-repeat; }
+.grupo-ios[aria-labelledby="grupo-conexiones"] .conexion-calendario .ios-ico { background: linear-gradient(150deg, var(--rojo-400), var(--rojo-500)); color: var(--blanco); box-shadow: 0 4px 10px -5px var(--rojo-500); }
 .grupo-ios[aria-labelledby="grupo-conexiones"] .conectada .fila-ios-texto .peq { display: inline-flex; align-items: center; gap: 6px; }
 .grupo-ios[aria-labelledby="grupo-conexiones"] .conectada .fila-ios-texto .peq::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
 @media (prefers-reduced-motion: no-preference) {
@@ -3980,8 +3980,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .conexiones .salud-intro { line-height: 1.75; }
 .conexiones .salud-intro strong { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--c) 12%, var(--hoja)); color: var(--tinta); white-space: nowrap; line-height: 1.6; }
 .conexiones .salud-intro strong::before { content: ""; flex: none; width: 13px; height: 13px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
-.conexiones .salud-intro strong:nth-of-type(1) { --c: #E07B1F; --i: var(--ico-pasos); } .conexiones .salud-intro strong:nth-of-type(2) { --c: #5B5BD6; --i: var(--ico-luna); }
-.conexiones .salud-intro strong:nth-of-type(3) { --c: #D93A63; --i: var(--ico-corazon); } .conexiones .salud-intro strong:nth-of-type(4) { --c: #0E8FA8; --i: var(--ico-onda); }
+.conexiones .salud-intro strong:nth-of-type(1) { --c: var(--naranja-400); --i: var(--ico-pasos); } .conexiones .salud-intro strong:nth-of-type(2) { --c: #5B5BD6; --i: var(--ico-luna); }
+.conexiones .salud-intro strong:nth-of-type(3) { --c: var(--rojo-500); --i: var(--ico-corazon); } .conexiones .salud-intro strong:nth-of-type(4) { --c: var(--turquesa-500); --i: var(--ico-onda); }
 .conexiones .salud-intro strong:nth-of-type(5) { --c: var(--ok); --i: var(--ico-bascula); }
 @media (forced-colors: active) { .conexiones .salud-intro strong::before { content: none; } }
 
@@ -4012,8 +4012,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    La tabla con un punto de color en cada columna (los mismos colores de cada dato), a franjas y con la primera fila
    (el día más reciente) resaltada. La usan la hoja del atleta y la ficha del coach. */
 .tabla-salud-caja .tabla-salud thead th:not(:first-child)::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--c, var(--tinta-3)); vertical-align: 1px; }
-.tabla-salud-caja .tabla-salud thead th:nth-child(2) { --c: #E07B1F; } .tabla-salud-caja .tabla-salud thead th:nth-child(3) { --c: #5B5BD6; }
-.tabla-salud-caja .tabla-salud thead th:nth-child(4) { --c: #D93A63; } .tabla-salud-caja .tabla-salud thead th:nth-child(5) { --c: #0E8FA8; }
+.tabla-salud-caja .tabla-salud thead th:nth-child(2) { --c: var(--naranja-400); } .tabla-salud-caja .tabla-salud thead th:nth-child(3) { --c: #5B5BD6; }
+.tabla-salud-caja .tabla-salud thead th:nth-child(4) { --c: var(--rojo-500); } .tabla-salud-caja .tabla-salud thead th:nth-child(5) { --c: var(--turquesa-500); }
 .tabla-salud-caja .tabla-salud thead th:nth-child(6) { --c: var(--ok); }
 .tabla-salud-caja .tabla-salud thead th { color: var(--tinta-2); }
 .tabla-salud-caja .tabla-salud tbody tr:nth-child(even) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
@@ -4027,13 +4027,13 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 325 · Tus entrenos en Salud, con sus anillos (tanda 42) ──────────────────────────────────────────────────────────
    La sección del atajo «FBE a Salud» como una tarjeta con tres anillos de colores en la esquina (moverse, ejercicio,
    de pie: el entreno cuenta para ellos). Dibujo, solo con fondos. */
-.conexiones .conexion-otra { position: relative; padding: 16px 16px 14px; padding-right: 84px; border-top: 0; border-radius: 16px; background: linear-gradient(160deg, #1B1640, #0C0A18); color: #F4F2FF; }
-.conexiones .conexion-otra h3 { color: #FFFFFF; }
-.conexiones .conexion-otra .secundario, .conexiones .conexion-otra .peq { color: #DCD8F2; }
+.conexiones .conexion-otra { position: relative; padding: 16px 16px 14px; padding-right: 84px; border-top: 0; border-radius: 16px; background: linear-gradient(160deg, var(--noche-2), var(--noche-0)); color: var(--marca-50); }
+.conexiones .conexion-otra h3 { color: var(--blanco); }
+.conexiones .conexion-otra .secundario, .conexiones .conexion-otra .peq { color: var(--marca-200); }
 .conexiones .conexion-otra::after { content: ""; position: absolute; right: 14px; top: 14px; width: 58px; height: 58px; border-radius: 50%;
-  background: radial-gradient(circle, transparent 0 9px, #12D6C6 9px 13px, transparent 13px 15px, #A6F04A 15px 20px, transparent 20px 22px, #FF2D6A 22px 27px, transparent 27px);
-  -webkit-mask: conic-gradient(#000 0 82%, rgba(0, 0, 0, .28) 82%); mask: conic-gradient(#000 0 82%, rgba(0, 0, 0, .28) 82%); }
-.conexiones .conexion-otra .btn:not(.btn-primario) { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .2); color: #FFFFFF; }
+  background: radial-gradient(circle, transparent 0 9px, var(--turquesa-400) 9px 13px, transparent 13px 15px, #A6F04A 15px 20px, transparent 20px 22px, #FF2D6A 22px 27px, transparent 27px);
+  -webkit-mask: conic-gradient(var(--negro) 0 82%, rgba(0, 0, 0, .28) 82%); mask: conic-gradient(var(--negro) 0 82%, rgba(0, 0, 0, .28) 82%); }
+.conexiones .conexion-otra .btn:not(.btn-primario) { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .2); color: var(--blanco); }
 .conexiones .conexion-otra .conexion-check input { accent-color: #A6F04A; }
 @media (forced-colors: active) { .conexiones .conexion-otra::after { content: none; } .conexiones .conexion-otra { padding-right: 16px; } }
 
@@ -4042,7 +4042,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .resumen-salud .btn { position: relative; padding-left: 50px; min-height: 48px; border-color: color-mix(in srgb, var(--salud) 35%, var(--linea)); box-shadow: 0 10px 22px -12px var(--salud); }
 .resumen-salud .btn > svg { opacity: 0; position: absolute; }
 .resumen-salud .btn::before { content: ""; position: absolute; left: 10px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; background: linear-gradient(150deg, var(--salud-2), var(--salud)); }
-.resumen-salud .btn::after { content: ""; position: absolute; left: 17px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #FFFFFF; -webkit-mask: var(--ico-corazon-lleno) center / contain no-repeat; mask: var(--ico-corazon-lleno) center / contain no-repeat; }
+.resumen-salud .btn::after { content: ""; position: absolute; left: 17px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--blanco); -webkit-mask: var(--ico-corazon-lleno) center / contain no-repeat; mask: var(--ico-corazon-lleno) center / contain no-repeat; }
 @media (forced-colors: active) { .resumen-salud .btn > svg { opacity: 1; position: static; } .resumen-salud .btn::before, .resumen-salud .btn::after { content: none; } .resumen-salud .btn { padding-left: 14px; } }
 
 /* ── 327 · El check-in que llega relleno (tanda 42) ───────────────────────────────────────────────────────────────────
@@ -4063,8 +4063,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    un disco verde; sin él, el «+» en un disco del acento. */
 .atajos-coach .atajo-fila .fila-boton { position: relative; grid-template-columns: minmax(0, 1fr) auto; padding-left: 62px; }
 .atajos-coach .atajo-fila .fila-boton::before { content: ""; position: absolute; left: 14px; top: 50%; width: 36px; height: 36px; margin-top: -18px; border-radius: 10px; background: linear-gradient(150deg, var(--salud-2), var(--salud)); box-shadow: 0 5px 12px -6px var(--salud); }
-.atajos-coach .atajo-fila[data-k="entreno"] .fila-boton::before { background: linear-gradient(150deg, #7BE36E, #1E9E58); box-shadow: 0 5px 12px -6px #1E9E58; }
-.atajos-coach .atajo-fila .fila-boton::after { content: ""; position: absolute; left: 23px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: #FFFFFF; -webkit-mask: var(--ico-atajo) center / contain no-repeat; mask: var(--ico-atajo) center / contain no-repeat; }
+.atajos-coach .atajo-fila[data-k="entreno"] .fila-boton::before { background: linear-gradient(150deg, var(--verde-300), var(--verde-500)); box-shadow: 0 5px 12px -6px var(--verde-500); }
+.atajos-coach .atajo-fila .fila-boton::after { content: ""; position: absolute; left: 23px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: var(--blanco); -webkit-mask: var(--ico-atajo) center / contain no-repeat; mask: var(--ico-atajo) center / contain no-repeat; }
 .atajos-coach .atajo-fila .fila-boton > svg { width: 30px; height: 30px; min-width: 30px; box-sizing: border-box; padding: 7px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
 .atajos-coach .atajo-fila[data-puesto] .fila-boton > svg { background: var(--ok-suave); color: var(--ok); }
 .atajos-coach .atajo-fila[data-puesto] .fila-ios-texto .peq { color: var(--ok); font-weight: 700; }
@@ -4074,9 +4074,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    La portada más grande (64 px) con sombra honda y un vinilo que asoma por detrás; sin portada, el disco en el acento.
    El origen («Tu música», «De tu coach»…) en una pastilla. */
 .tarjeta-musica .tarjeta-musica-cab { grid-template-columns: 88px minmax(0, 1fr); gap: 14px; }
-.tarjeta-musica .tarjeta-musica-cab::before { content: ""; grid-area: 1 / 1; justify-self: end; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, #E9E6F5 0 4px, #15121F 4px 9px, #2A2638 9px 10px, #15121F 10px 16px, #2A2638 16px 17px, #15121F 17px 23px, #2E2A3E 23px 24px, #15121F 24px); box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .5); }
+.tarjeta-musica .tarjeta-musica-cab::before { content: ""; grid-area: 1 / 1; justify-self: end; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle, var(--marca-100) 0 4px, var(--neutro-950) 4px 9px, var(--neutro-900) 9px 10px, var(--neutro-950) 10px 16px, var(--neutro-900) 16px 17px, var(--neutro-950) 17px 23px, var(--noche-3) 23px 24px, var(--neutro-950) 24px); box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .5); }
 .tarjeta-musica .tarjeta-musica-portada { grid-area: 1 / 1; width: 64px; height: 64px; border-radius: 12px; box-shadow: 0 10px 22px -10px rgba(20, 15, 36, .7), 0 0 0 1px rgba(255, 255, 255, .08) inset; z-index: 1; }
-.tarjeta-musica .tarjeta-musica-portada.sin { background: linear-gradient(150deg, color-mix(in srgb, var(--morado) 70%, #fff), var(--morado)); color: var(--sobre-morado); }
+.tarjeta-musica .tarjeta-musica-portada.sin { background: linear-gradient(150deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); color: var(--sobre-morado); }
 .tarjeta-musica .tarjeta-musica-cab > .pila-xs { grid-column: 2; grid-row: 1; }
 .tarjeta-musica .tarjeta-musica-cab .mini.terciario { justify-self: start; width: fit-content; padding: 1px 8px; border-radius: 999px; background: var(--hoja-2); color: var(--tinta-2); font-weight: 650; }
 .tarjeta-musica .tarjeta-musica-titulo { font-size: 1.0625rem; }
@@ -4091,7 +4091,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    «Escuchar aquí», con el play. */
 .tarjeta-musica .tarjeta-musica-botones .btn { gap: 8px; padding-left: 6px; }
 .tarjeta-musica .tarjeta-musica-botones .btn > svg { width: 26px; height: 26px; padding: 6px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
-.tarjeta-musica[data-servicio="spotify"] .tarjeta-musica-botones a.btn > svg { background: var(--verde-musica); color: #FFFFFF; }
+.tarjeta-musica[data-servicio="spotify"] .tarjeta-musica-botones a.btn > svg { background: var(--verde-musica); color: var(--blanco); }
 .tarjeta-musica .tarjeta-musica-botones button.btn > svg { background: var(--tinta); color: var(--hoja); }
 
 /* ── 332 · «Empezar con esta música» (tanda 42) ───────────────────────────────────────────────────────────────────────
@@ -4120,7 +4120,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    la cadencia con un punto que late al ritmo que marca (--pulso) mientras suena. */
 .panel.cancion-record { box-shadow: var(--sombra-tarjeta), inset 0 0 0 1px color-mix(in srgb, var(--oro) 35%, transparent); }
 .panel.cancion-record .t-sobre { color: var(--oro-texto); }
-.panel.cancion-record .tarjeta-musica-cab::before { background: radial-gradient(circle, #FFF4C8 0 4px, #8A6410 4px 9px, #C9A13A 9px 10px, #8A6410 10px 16px, #D9B44E 16px 17px, #8A6410 17px 23px, #E6C566 23px 24px, #8A6410 24px); }
+.panel.cancion-record .tarjeta-musica-cab::before { background: radial-gradient(circle, var(--oro-100) 0 4px, #8A6410 4px 9px, var(--oro-400) 9px 10px, #8A6410 10px 16px, var(--oro-400) 16px 17px, #8A6410 17px 23px, var(--oro-300) 23px 24px, #8A6410 24px); }
 .panel.lista-equipo { background: radial-gradient(260px 120px at 100% 0%, color-mix(in srgb, var(--morado) 10%, transparent), transparent 70%), var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .cadencia .cadencia-v { position: relative; }
 .cadencia .cadencia-v::after { content: ""; position: absolute; left: 50%; top: -6px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--tinta-3); }
@@ -4137,17 +4137,17 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    desde detrás de su línea (nunca por opacidad); la opacidad, solo para los dibujos. */
 .escena-final { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(env(safe-area-inset-bottom, 0px) + 56px); overflow: hidden; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; color: #fff;
-  background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, #1E1548) 0%, transparent 66%),
-    radial-gradient(26rem 22rem at 50% 30%, #33277A 0%, transparent 70%), #1E1548;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; color: var(--blanco);
+  background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, var(--noche-2)) 0%, transparent 66%),
+    radial-gradient(26rem 22rem at 50% 30%, var(--marca-800) 0%, transparent 70%), var(--noche-2);
   animation: escena-abre .5s var(--curva-casa) both; transition: transform .5s var(--curva-casa); will-change: transform; }
-.escena-final.con-record { background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, #1E1548) 0%, transparent 66%),
-    radial-gradient(26rem 22rem at 50% 30%, #4A3A5E 0%, transparent 70%), #1E1548; }
+.escena-final.con-record { background: radial-gradient(34rem 20rem at 50% 108%, color-mix(in srgb, var(--morado) 58%, var(--noche-2)) 0%, transparent 66%),
+    radial-gradient(26rem 22rem at 50% 30%, var(--neutro-800) 0%, transparent 70%), var(--noche-2); }
 .escena-final.fuera { transform: translateY(-102%); pointer-events: none; }
 @keyframes escena-abre { from { clip-path: circle(0 at 50% 100%); } to { clip-path: circle(150% at 50% 100%); } }
 .escena-cielo { width: min(100%, 430px); height: auto; max-height: 58vh; flex: 0 1 auto; overflow: visible; }
 /* Las estrellas: llegan una a una y titilan */
-.escena-estrellas circle { fill: #fff; opacity: 0; animation: escena-estrella 1.6s ease-in-out calc(.15s + var(--i) * 70ms) infinite alternate; }
+.escena-estrellas circle { fill: var(--blanco); opacity: 0; animation: escena-estrella 1.6s ease-in-out calc(.15s + var(--i) * 70ms) infinite alternate; }
 @keyframes escena-estrella { from { opacity: .15; } to { opacity: .95; } }
 /* La luna sube con su halo */
 .escena-sube { animation: escena-sube .9s var(--curva-llega) .15s both; }
@@ -4157,21 +4157,21 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .escena-halo { animation: escena-late 2.4s ease-in-out 1s infinite alternate; }
 @keyframes escena-late { to { opacity: .6; } }
 /* El lobo: primero su trazo, de un tirón; luego se llena */
-.escena-lobo .escena-lobo-trazo { stroke: #1E1548; stroke-width: 9; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: escena-traza 1.15s cubic-bezier(.5, 0, .3, 1) .7s both; }
-.escena-lobo .escena-lobo-lleno { fill: #1E1548; opacity: 0; animation: escena-llena .4s ease-out 1.55s both; }
-.con-record .escena-lobo .escena-lobo-trazo { stroke: #2A1B0A; } .con-record .escena-lobo .escena-lobo-lleno { fill: #2A1B0A; }
+.escena-lobo .escena-lobo-trazo { stroke: var(--noche-2); stroke-width: 9; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: escena-traza 1.15s cubic-bezier(.5, 0, .3, 1) .7s both; }
+.escena-lobo .escena-lobo-lleno { fill: var(--noche-2); opacity: 0; animation: escena-llena .4s ease-out 1.55s both; }
+.con-record .escena-lobo .escena-lobo-trazo { stroke: var(--noche-1); } .con-record .escena-lobo .escena-lobo-lleno { fill: var(--noche-1); }
 @keyframes escena-traza { to { stroke-dashoffset: 0; } }
 @keyframes escena-llena { to { opacity: 1; } }
 /* El aullido: tres ondas que salen de la luna */
-.escena-onda { fill: none; stroke: #CFC4FF; stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: escena-onda 1.3s ease-out calc(1.8s + var(--i) * .22s) both; }
-.con-record .escena-onda { stroke: #F3CC63; }
+.escena-onda { fill: none; stroke: var(--marca-300); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: escena-onda 1.3s ease-out calc(1.8s + var(--i) * .22s) both; }
+.con-record .escena-onda { stroke: var(--oro-300); }
 @keyframes escena-onda { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.75); } }
 /* La manada (semana completa): un lobo por sesión hecha, que asoman de uno en uno */
-.escena-cachorro .escena-lobo-trazo { display: none; } .escena-cachorro .escena-lobo-lleno { fill: #EDE9FF; }
+.escena-cachorro .escena-lobo-trazo { display: none; } .escena-cachorro .escena-lobo-lleno { fill: var(--marca-100); }
 .escena-manada > g { transform-box: fill-box; transform-origin: 50% 100%; animation: escena-asoma .5s var(--curva-rebote) calc(2s + var(--i) * 90ms) both; }
 @keyframes escena-asoma { from { transform: translateY(14px) scale(0); opacity: 0; } }
 /* Las chispas de oro (récord) */
-.escena-chispas path { fill: #F6D77A; opacity: 0; animation: escena-chispa calc(1.5s / var(--t)) linear calc(1.2s + var(--espera)) infinite; }
+.escena-chispas path { fill: var(--oro-200); opacity: 0; animation: escena-chispa calc(1.5s / var(--t)) linear calc(1.2s + var(--espera)) infinite; }
 @keyframes escena-chispa { 0% { opacity: 0; transform: translate(0, -20px) rotate(0) scale(calc(var(--t) * 1.5)); } 12% { opacity: 1; } 80% { opacity: .9; }
   100% { opacity: 0; transform: translate(var(--lado), 430px) rotate(200deg) scale(calc(var(--t) * 1.5)); } }
 /* El texto: cada línea sube desde detrás de su caja */
@@ -4181,13 +4181,13 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 @keyframes escena-linea { to { transform: none; } }
 .escena-titulo { font-size: 1.875rem; line-height: 1.15; font-weight: 800; letter-spacing: -.02em; padding-bottom: 2px; }
 .escena-titulo > span { animation-delay: 1.3s; }
-.escena-sub { font-size: 1rem; color: #DCD5FF; }
+.escena-sub { font-size: 1rem; color: var(--marca-200); }
 .escena-sub > span { animation-delay: 1.42s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .escena-chips { padding: 6px 0 2px; }
 .escena-chips > span { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; animation-delay: 1.75s; transform: translateY(190%); }
-.escena-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: .875rem; font-weight: 700; color: #fff; background: #4A3F8F; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
-.escena-chip.oro { color: #33240A; background: linear-gradient(180deg, #FBE39A, #EDBE4E); box-shadow: 0 4px 16px rgba(237, 190, 78, .35); }
-.escena-saltar { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); text-align: center; font-size: .8125rem; color: #C9C1F2; }
+.escena-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: .875rem; font-weight: 700; color: var(--blanco); background: var(--azul-700); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.escena-chip.oro { color: var(--oro-900); background: linear-gradient(180deg, var(--oro-200), var(--oro-300)); box-shadow: 0 4px 16px rgba(237, 190, 78, .35); }
+.escena-saltar { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); text-align: center; font-size: .8125rem; color: var(--marca-300); }
 .escena-saltar > span { animation-delay: 2.1s; }
 @media (max-height: 560px) { .escena-cielo { max-height: 50vh; } .escena-titulo { font-size: 1.5rem; } }
 @media (forced-colors: active) { .escena-final { background: Canvas; color: CanvasText; } .escena-chip, .escena-chip.oro { background: Canvas; color: CanvasText; border: 1px solid CanvasText; } }
@@ -4210,14 +4210,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    el centro se enciende como una luna, salen doce rayos y dos ondas, y el lobo asoma sobre «¡Vamos!». */
 .reloj-descanso svg { overflow: visible; }
 .arco-punta { transform-box: view-box; transform-origin: center; transition: transform .25s linear; }
-.arco-punta circle { fill: #fff; filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px #fff); }
+.arco-punta circle { fill: var(--blanco); filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px var(--blanco)); }
 .onda-segundo, .cierre-onda { fill: none; stroke: var(--c); transform-box: fill-box; transform-origin: center; opacity: 0; pointer-events: none; }
 .onda-segundo { stroke-width: 3; }
 .cierre-arco { fill: none; stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .cierre-luna { fill: var(--c); opacity: .17; transform-box: fill-box; transform-origin: center; }
 .cierre-onda { stroke-width: 2.5; }
 .cierre-rayos { transform-box: view-box; transform-origin: center; opacity: 0; }
-.cierre-rayos line { stroke: color-mix(in srgb, var(--c) 55%, #fff); stroke-width: 3.5; stroke-linecap: round; }
+.cierre-rayos line { stroke: color-mix(in srgb, var(--c) 55%, var(--blanco)); stroke-width: 3.5; stroke-linecap: round; }
 /* (estilos.css 377 estira todo svg del reloj a su tamaño: este no) */
 .reloj-descanso .reloj-centro .vamos-lobo { position: static; inset: auto; width: 30px; height: 34px; fill: currentColor; margin-bottom: 2px; }
 .temporizador.en-enfoque .reloj-centro .vamos-lobo { width: 22px; height: 25px; }
@@ -4241,14 +4241,14 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ===== Tanda 45 (10/11): empezar la sesión, tirar para recargar y el check-in enviado ===== */
 /* 338. Empezar la sesión (ui/atleta/EscenaInicio.js): la noche se abre desde el botón, el lobo aparece con los ojos
    encendidos, «A por ello» sube y, al segundo, todo se levanta como un telón. No tapa los toques. */
-.escena-inicio { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 18px; overflow: hidden; color: #fff;
-  background: radial-gradient(30rem 24rem at 50% 44%, #3A2C8C 0%, transparent 70%), #1E1548;
+.escena-inicio { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 18px; overflow: hidden; color: var(--blanco);
+  background: radial-gradient(30rem 24rem at 50% 44%, var(--marca-800) 0%, transparent 70%), var(--noche-2);
   animation: escena-inicio-abre .42s var(--curva-casa) both; transition: transform .45s var(--curva-casa); will-change: transform; }
 .escena-inicio.fuera { transform: translateY(-102%); }
 @keyframes escena-inicio-abre { from { clip-path: circle(0 at var(--ox) var(--oy)); } to { clip-path: circle(150% at var(--ox) var(--oy)); } }
-.escena-inicio-lobo { width: min(184px, 46vw); height: auto; fill: #fff; overflow: visible; filter: drop-shadow(0 14px 34px rgba(10, 6, 40, .6)); animation: escena-inicio-lobo .5s var(--curva-rebote) .1s both; }
+.escena-inicio-lobo { width: min(184px, 46vw); height: auto; fill: var(--blanco); overflow: visible; filter: drop-shadow(0 14px 34px rgba(10, 6, 40, .6)); animation: escena-inicio-lobo .5s var(--curva-rebote) .1s both; }
 @keyframes escena-inicio-lobo { from { opacity: 0; transform: scale(.6); } }
-.escena-inicio-ojo { fill: #F6D77A; opacity: 0; filter: drop-shadow(0 0 22px #F6D77A) drop-shadow(0 0 60px #EDBE4E); animation: escena-inicio-ojo .6s ease-out .38s both; }
+.escena-inicio-ojo { fill: var(--oro-200); opacity: 0; filter: drop-shadow(0 0 22px var(--oro-200)) drop-shadow(0 0 60px var(--oro-300)); animation: escena-inicio-ojo .6s ease-out .38s both; }
 @keyframes escena-inicio-ojo { 0% { opacity: 0; } 35% { opacity: 1; } 55% { opacity: .45; } 100% { opacity: 1; } }
 .escena-inicio-texto { margin: 0; overflow: hidden; font-size: 1.75rem; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; padding-bottom: 2px; }
 .escena-inicio-texto > span { display: block; transform: translateY(110%); animation: escena-linea .5s var(--curva-llega) .3s both; }
@@ -4257,9 +4257,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* 339. Tirar para recargar (ui/tirar.js, de la línea de fluidez; sus estilos, en pulido.css, que carga después: aquí
    con «body >» delante). La rueda es una luna en su noche: se llena con el dedo (--lleno, de 0 a 1), al pasar el
    umbral está llena y se enciende, y mientras recarga, se llena y se vacía como el indicador de carga. */
-body > .tirar { background: #1E1548; box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
+body > .tirar { background: var(--noche-2); box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
 body > .tirar .tirar-rueda { position: relative; width: 22px; height: 22px; border: 0; border-radius: 50%; overflow: hidden; transform: none; background: rgba(255, 255, 255, .17); }
-body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #fff, #D6CCFF); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
+body > .tirar .tirar-rueda::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 36% 30%, var(--blanco), var(--neutro-200)); transform: translateX(calc((var(--lleno, 0) - 1) * 102%)); }
 body > .tirar.lista { box-shadow: var(--sombra-flotante), 0 0 0 1px rgba(255, 255, 255, .2), 0 0 18px rgba(185, 168, 255, .75); }
 body > .tirar.girando .tirar-rueda { animation: none; }
 @media (prefers-reduced-motion: no-preference) {
@@ -4302,7 +4302,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
       radial-gradient(circle at 50% 96%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 17.5% 82.5%, var(--ch) 0 2px, transparent 2.6px),
       radial-gradient(circle at 4% 50%, var(--ch) 0 2.6px, transparent 3.2px), radial-gradient(circle at 17.5% 17.5%, var(--ch) 0 2px, transparent 2.6px);
     animation: serie-chispas .6s cubic-bezier(.2, .7, .3, 1) .06s both; }
-  .ejercicio:not(:has(.serie:not(.hecha))) .serie.recien.hecha .hecho-btn::before { --ch: var(--oro, #E0A92E); inset: -95%; animation-duration: .8s; }
+  .ejercicio:not(:has(.serie:not(.hecha))) .serie.recien.hecha .hecho-btn::before { --ch: var(--oro, var(--oro-400)); inset: -95%; animation-duration: .8s; }
 }
 @keyframes serie-salto { 0% { transform: scale(.8); } 55% { transform: scale(1.16); } }
 @keyframes serie-chispas { 0% { opacity: 0; transform: scale(.35) rotate(-18deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1) rotate(8deg); } }
@@ -4355,7 +4355,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
   .bdia-semanas i:nth-child(2) { --n: 1; } .bdia-semanas i:nth-child(3) { --n: 2; } .bdia-semanas i:nth-child(4) { --n: 3; } .bdia-semanas i:nth-child(5) { --n: 4; } .bdia-semanas i:nth-child(6) { --n: 5; }
   .bdia-semanas i:nth-child(7) { --n: 6; } .bdia-semanas i:nth-child(8) { --n: 7; } .bdia-semanas i:nth-child(9) { --n: 8; } .bdia-semanas i:nth-child(10) { --n: 9; } .bdia-semanas i:nth-child(11) { --n: 10; } .bdia-semanas i:nth-child(12) { --n: 11; }
 }
-@keyframes bdia-lobo { 0% { filter: drop-shadow(0 0 0 transparent); transform: scale(.7); } 35% { filter: drop-shadow(0 0 7px #fff) drop-shadow(0 0 14px #B9A8FF); transform: scale(1.18); } 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); } }
+@keyframes bdia-lobo { 0% { filter: drop-shadow(0 0 0 transparent); transform: scale(.7); } 35% { filter: drop-shadow(0 0 7px var(--blanco)) drop-shadow(0 0 14px var(--marca-400)); transform: scale(1.18); } 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); } }
 @keyframes bdia-pieza { from { transform: translateY(16px); } }
 @keyframes bdia-punto { from { background: rgba(255, 255, 255, .18); transform: scaleY(.4); } }
 @keyframes bdia-barra { from { transform: scaleX(0); } }
@@ -4366,7 +4366,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
    repeticiones) que esa misma serie la última vez, una pastilla verde sube desde la fila con la diferencia y se va a
    los dos segundos. Va sobre el borde de abajo de su fila (absoluta dentro de .serie-desliza): no empuja lo de debajo. */
 .serie-mejora { position: absolute; z-index: 3; left: 44px; bottom: -14px; display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 11px 0 7px; border-radius: 999px; pointer-events: none;
-  font-size: .8125rem; font-weight: 600; line-height: 1; white-space: nowrap; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 88%, #fff), var(--ok)); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--ok) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
+  font-size: .8125rem; font-weight: 600; line-height: 1; white-space: nowrap; color: var(--blanco); background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 88%, var(--blanco)), var(--ok)); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--ok) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .serie-mejora .num { font-weight: 800; }
 .serie-mejora svg { width: 16px; height: 16px; flex: none; padding: 2px; border-radius: 50%; background: rgba(255, 255, 255, .22); stroke-width: 3; }
 @media (prefers-reduced-motion: no-preference) {
@@ -4398,7 +4398,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
   .tramos li:last-child:not(:first-child) a[aria-current="step"]:not(.completo) .tramo-barra { animation: tramo-ultimo .7s var(--curva-casa) .5s 2; }
 }
 @keyframes tramo-hecho { 0% { transform: scaleY(1); } 35% { transform: scaleY(2.6); box-shadow: 0 0 12px color-mix(in srgb, var(--ok) 70%, transparent); } }
-@keyframes tramo-verde { 0%, 55% { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, #fff), var(--ok)); } }
+@keyframes tramo-verde { 0%, 55% { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); } }
 @keyframes tramo-ultimo { 50% { transform: scaleY(2.2); box-shadow: 0 0 10px color-mix(in srgb, var(--morado) 70%, transparent); } }
 
 /* 348. Volver a Hoy después de entrenar (Hoy.jsx: .hero-dia.recien-hecha, solo al venir de «Volver a hoy»): el lobo

@@ -21,7 +21,7 @@
 .fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, rgba(226, 214, 255, .5) 0%, rgba(190, 170, 255, .16) 45%, transparent 100%); }
 .fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, rgba(205, 190, 255, .2) 45%, transparent 100%); }
 .franja-reto.cumbre .fv-cumbre { opacity: .8; background: radial-gradient(closest-side, rgba(255, 236, 170, .75) 0%, rgba(242, 207, 99, .28) 45%, transparent 100%); }
-.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .55; box-shadow: 0 0 5px 1px rgba(214, 205, 255, .5); }
+.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--blanco); opacity: .55; box-shadow: 0 0 5px 1px rgba(214, 205, 255, .5); }
 /* 10 · La celebración de un reto: un destello cruza el disco */
 .cm-disco { overflow: hidden; }
 .cm-disco::after { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0; background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .75) 50%, transparent 100%); }

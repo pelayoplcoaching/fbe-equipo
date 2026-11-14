@@ -4,12 +4,12 @@
 /* -- La portada: el dibujo de lineas sobre la banda de la cabecera (la banda la pone diseno.css, bloque 1764) -- */
 .perfil-portada { position: absolute; inset: 0 0 auto; height: 92px; z-index: -1; overflow: hidden; pointer-events: none; }
 .perfil-portada svg { width: 100%; height: 100%; display: block; }
-.perfil-portada .acento { stroke: color-mix(in srgb, var(--morado) 45%, #fff); }
-.perfil-portada .claro { stroke: #E7E3FF; }
-.perfil-portada .tenue { stroke: #9D96CF; }
-.perfil-portada .relleno-punto.tenue { fill: #9D96CF; stroke: none; }
-.perfil-portada .relleno-punto.claro { fill: #E7E3FF; stroke: none; }
-.perfil-portada .relleno-punto.acento { fill: color-mix(in srgb, var(--morado) 45%, #fff); stroke: none; }
+.perfil-portada .acento { stroke: color-mix(in srgb, var(--morado) 45%, var(--blanco)); }
+.perfil-portada .claro { stroke: var(--marca-100); }
+.perfil-portada .tenue { stroke: var(--marca-400); }
+.perfil-portada .relleno-punto.tenue { fill: var(--marca-400); stroke: none; }
+.perfil-portada .relleno-punto.claro { fill: var(--marca-100); stroke: none; }
+.perfil-portada .relleno-punto.acento { fill: color-mix(in srgb, var(--morado) 45%, var(--blanco)); stroke: none; }
 
 /* En el perfil del equipo (una hoja): el dibujo, sobre la franja de la noche que pone diseno.css (bloque 261, 64 px) */
 .perfil-equipo-portada { height: 64px; }
@@ -23,8 +23,8 @@
 .foto-anillo-aro circle { fill: none; stroke-width: 4; }
 .foto-anillo-aro .aro-fondo { stroke: color-mix(in srgb, var(--tinta-3) 28%, transparent); }
 .foto-anillo-aro .aro-lleno { stroke-linecap: round; stroke: var(--morado); }
-.foto-anillo.tono-caliente .aro-lleno { stroke: #E8590C; }
-.foto-anillo.tono-fuego .aro-lleno { stroke: #D9480F; }
+.foto-anillo.tono-caliente .aro-lleno { stroke: var(--naranja-500); }
+.foto-anillo.tono-fuego .aro-lleno { stroke: var(--naranja-500); }
 .foto-anillo-llama { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px;
   padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); font-size: 0.8125rem; font-weight: 750; color: var(--tinta); white-space: nowrap; }
 .foto-anillo-llama svg { width: 15px; height: 15px; color: #C2410C; }
@@ -71,11 +71,11 @@
 .perfil-vitrina { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .perfil-trofeo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "ico nombre valor" "ico detalle detalle"; column-gap: 12px; row-gap: 2px; align-items: center;
   padding: 12px 14px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
-.perfil-trofeo[data-puesto="1"] { background: linear-gradient(135deg, color-mix(in srgb, #E3AA00 18%, var(--hoja)), var(--hoja) 70%); }
-.pt-puesto { grid-area: ico; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, #E3AA00 22%, var(--hoja-2)); color: #8A5A00; }
+.perfil-trofeo[data-puesto="1"] { background: linear-gradient(135deg, color-mix(in srgb, var(--oro-400) 18%, var(--hoja)), var(--hoja) 70%); }
+.pt-puesto { grid-area: ico; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, var(--oro-400) 22%, var(--hoja-2)); color: #8A5A00; }
 .pt-puesto svg { width: 20px; height: 20px; }
-.perfil-trofeo[data-puesto="2"] .pt-puesto { background: color-mix(in srgb, #8E9AAF 26%, var(--hoja-2)); color: #4B5466; }
-.perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, #B5651D 22%, var(--hoja-2)); color: #7A4210; }
+.perfil-trofeo[data-puesto="2"] .pt-puesto { background: color-mix(in srgb, var(--neutro-400) 26%, var(--hoja-2)); color: var(--neutro-700); }
+.perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, var(--ambar-500) 22%, var(--hoja-2)); color: var(--ambar-700); }
 .pt-nombre { grid-area: nombre; font-weight: 700; overflow-wrap: anywhere; }
 .pt-valor { grid-area: valor; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); }
 .pt-valor small { font-size: 0.75rem; color: var(--tinta-2); }
@@ -155,11 +155,11 @@
 /* -- Lo que mas entrenas: con el color de cada grupo (los del editor y la biblioteca) -- */
 .perfil-grupos { list-style: none; margin: 0; display: grid; gap: 10px; }
 .perfil-grupos li { display: grid; grid-template-columns: minmax(5.5em, 7.5em) minmax(0, 1fr) auto; gap: 10px; align-items: center; --g: var(--morado); }
-.perfil-grupos [data-g="pectoral"] { --g: #E5484D; } .perfil-grupos [data-g="espalda"] { --g: #2E7CF6; }
-.perfil-grupos [data-g="deltoides"] { --g: #E8730C; } .perfil-grupos [data-g="cuadriceps"] { --g: #22A04B; }
-.perfil-grupos [data-g="gluteo"] { --g: #E5407F; } .perfil-grupos [data-g="isquiotibiales"] { --g: #0E9384; }
+.perfil-grupos [data-g="pectoral"] { --g: var(--naranja-500); } .perfil-grupos [data-g="espalda"] { --g: var(--azul-500); }
+.perfil-grupos [data-g="deltoides"] { --g: var(--ambar-500); } .perfil-grupos [data-g="cuadriceps"] { --g: var(--verde-500); }
+.perfil-grupos [data-g="gluteo"] { --g: #E5407F; } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--turquesa-500); }
 .perfil-grupos [data-g="biceps"] { --g: #7A5AF8; } .perfil-grupos [data-g="triceps"] { --g: #5856D6; }
-.perfil-grupos [data-g="abdominales"] { --g: #C98A00; } .perfil-grupos [data-g="gemelo"] { --g: #8E6E53; }
+.perfil-grupos [data-g="abdominales"] { --g: var(--ambar-500); } .perfil-grupos [data-g="gemelo"] { --g: #8E6E53; }
 .pg-nombre { font-weight: 650; font-size: 0.875rem; overflow-wrap: anywhere; }
 .pg-barra { height: 10px; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
 .pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }
@@ -197,21 +197,21 @@
 .perfil-compartir { justify-self: start; }
 
 /* -- Elegir la portada (en este movil) -- */
-.perfil-portada-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(6px); }
+.perfil-portada-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: var(--blanco); border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(6px); }
 .perfil-portada-btn:hover { background: rgba(255, 255, 255, .26); }
 .perfil-portadas { position: absolute; top: 56px; right: 10px; z-index: 3; display: flex; gap: 6px; padding: 8px; border-radius: 16px; background: var(--hoja); box-shadow: var(--sombra-alta, var(--sombra)); flex-wrap: wrap; max-width: calc(100% - 20px); }
 .pp-muestra { display: grid; justify-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: 10px; background: none; color: var(--tinta); font-size: 0.6875rem; font-weight: 650; cursor: pointer; }
 .pp-muestra[aria-checked="true"] { background: var(--morado-suave); }
 .pp-color { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-[data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(165deg, #2A2068, #1E1548); }
-.pp-muestra[data-portada="aurora"] .pp-color { background: linear-gradient(165deg, #0F766E, #1E1548); }
-.pp-muestra[data-portada="atardecer"] .pp-color { background: linear-gradient(165deg, #C2410C, #6D1A4F); }
-.pp-muestra[data-portada="bosque"] .pp-color { background: linear-gradient(165deg, #2F6B3A, #14352A); }
-.pp-muestra[data-portada="oceano"] .pp-color { background: linear-gradient(165deg, #1D4ED8, #0B2147); }
-.perfil-cabeza[data-portada="aurora"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(94, 234, 212, .45), transparent 70%), linear-gradient(165deg, #0F766E, #1E1548); }
-.perfil-cabeza[data-portada="atardecer"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(253, 186, 116, .5), transparent 70%), linear-gradient(165deg, #C2410C, #6D1A4F); }
-.perfil-cabeza[data-portada="bosque"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(187, 247, 208, .35), transparent 70%), linear-gradient(165deg, #2F6B3A, #14352A); }
-.perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(147, 197, 253, .45), transparent 70%), linear-gradient(165deg, #1D4ED8, #0B2147); }
+[data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(165deg, var(--marca-900), var(--noche-2)); }
+.pp-muestra[data-portada="aurora"] .pp-color { background: linear-gradient(165deg, var(--turquesa-600), var(--noche-2)); }
+.pp-muestra[data-portada="atardecer"] .pp-color { background: linear-gradient(165deg, #C2410C, var(--rosa-800)); }
+.pp-muestra[data-portada="bosque"] .pp-color { background: linear-gradient(165deg, var(--verde-600), var(--turquesa-900)); }
+.pp-muestra[data-portada="oceano"] .pp-color { background: linear-gradient(165deg, var(--azul-600), var(--azul-900)); }
+.perfil-cabeza[data-portada="aurora"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(94, 234, 212, .45), transparent 70%), linear-gradient(165deg, var(--turquesa-600), var(--noche-2)); }
+.perfil-cabeza[data-portada="atardecer"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(253, 186, 116, .5), transparent 70%), linear-gradient(165deg, #C2410C, var(--rosa-800)); }
+.perfil-cabeza[data-portada="bosque"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(187, 247, 208, .35), transparent 70%), linear-gradient(165deg, var(--verde-600), var(--turquesa-900)); }
+.perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(147, 197, 253, .45), transparent 70%), linear-gradient(165deg, var(--azul-600), var(--azul-900)); }
 @media (forced-colors: active) { .perfil-portada-btn { border-color: ButtonText; } }
 .pt-compartir svg { width: 20px; height: 20px; }
 .perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: 6px; }

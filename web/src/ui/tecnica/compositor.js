@@ -101,7 +101,7 @@ export function pintarDibujo(ctx, formas, r, proporcion) {
   ctx.restore();
 }
 // (v0.61, 8) La estela del movimiento en la imagen (con el mismo zoom ya puesto), en el momento t: { puntos, ventana, estatica }
-export const COLOR_ESTELA_LIENZO = '#3EE0FF';
+export const COLOR_ESTELA_LIENZO = '#71DCD6';
 export function pintarEstela(ctx, estela, t, r) {
   if (!estela?.puntos?.length || !r?.w) return 0;
   const segs = segmentosEstela(estela.puntos, t, { ventana: estela.ventana, estatica: !!estela.estatica });
@@ -135,7 +135,7 @@ export function pintarTextos(ctx, textos, W, H) {
   let y = H - 14 * k;
   for (const t of [...(textos || [])].reverse()) {
     y -= 28 * k;
-    pintarPildora(ctx, t.texto, 14 * k, y, { k, color: t.estado === 'bien' ? '#7CE0A3' : t.estado === 'mal' ? '#FF9A9A' : '#fff' });
+    pintarPildora(ctx, t.texto, 14 * k, y, { k, color: t.estado === 'bien' ? '#7EE0A0' : t.estado === 'mal' ? '#FFAFAC' : '#fff' });
     y -= 6 * k;
   }
 }
@@ -170,7 +170,7 @@ export function taparZona(ctx, fuente, cajaDada, r, { cuadros = 9 } = {}) {
   if (!caja) return;
   const x = r.x + caja.x * r.w, y = r.y + caja.y * r.h, w = Math.max(2, caja.w * r.w), h = Math.max(2, caja.h * r.h);
   const forma = () => { ctx.beginPath(); if (ctx.ellipse) ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); else ctx.rect(x, y, w, h); };
-  const opaca = () => { ctx.save(); forma(); ctx.fillStyle = '#5B5670'; ctx.fill(); ctx.restore(); };
+  const opaca = () => { ctx.save(); forma(); ctx.fillStyle = '#626171'; ctx.fill(); ctx.restore(); };
   if (!tesela) { opaca(); return; }
   try {
     const n = Math.max(4, Math.min(16, cuadros));

@@ -1,0 +1,413 @@
+/* ==========================================================================================================
+   COLOR de FBE Equipo. Archivo GENERADO por scripts/paleta.mjs desde web/src/logica/paleta.js: no se edita a mano
+   (npm run paleta; las pruebas comprueban que está al día). Se carga antes que estilos.css.
+   Tres capas: primitivas (--marca-600) → con significado (--texto, --accion, --ok-borde…) → las de siempre
+   (--tiza, --hoja, --tinta, --morado…), que ahora apuntan a las primitivas.
+   ========================================================================================================== */
+
+/* Primitivas: diez escalas de 50 a 950 (diseñadas en OKLCH) y la noche (las superficies del tema oscuro) */
+:root {
+  --marca-50: #F7F5FF;
+  --marca-100: #EEECFF;
+  --marca-200: #DDD9FF;
+  --marca-300: #C4BFFF;
+  --marca-400: #A49CFF;
+  --marca-500: #7C6AFD;
+  --marca-600: #593EDE;
+  --marca-700: #462ABF;
+  --marca-800: #351F96;
+  --marca-900: #241665;
+  --marca-950: #140B3A;
+  --neutro-50: #F6F6F9;
+  --neutro-100: #EEEEF2;
+  --neutro-200: #DDDDE3;
+  --neutro-300: #C7C6CF;
+  --neutro-400: #AAA9B5;
+  --neutro-500: #858492;
+  --neutro-600: #626171;
+  --neutro-700: #4F4E5E;
+  --neutro-800: #3C3B4C;
+  --neutro-900: #282638;
+  --neutro-950: #151423;
+  --verde-50: #E8FDEE;
+  --verde-100: #D6F9E0;
+  --verde-200: #AFF0C3;
+  --verde-300: #7EE0A0;
+  --verde-400: #48C77C;
+  --verde-500: #06A059;
+  --verde-600: #007740;
+  --verde-700: #006032;
+  --verde-800: #004A25;
+  --verde-900: #003317;
+  --verde-950: #001D0A;
+  --ambar-50: #FFF5EB;
+  --ambar-100: #FFEBD6;
+  --ambar-200: #FFD6AA;
+  --ambar-300: #FFB663;
+  --ambar-400: #EC940D;
+  --ambar-500: #BB7400;
+  --ambar-600: #8C5500;
+  --ambar-700: #714400;
+  --ambar-800: #583400;
+  --ambar-900: #3D2200;
+  --ambar-950: #241100;
+  --rojo-50: #FFF4F3;
+  --rojo-100: #FFE8E7;
+  --rojo-200: #FFD1CF;
+  --rojo-300: #FFAFAC;
+  --rojo-400: #FF7D7D;
+  --rojo-500: #E6424C;
+  --rojo-600: #B7162D;
+  --rojo-700: #970620;
+  --rojo-800: #760618;
+  --rojo-900: #4F0910;
+  --rojo-950: #2F0407;
+  --azul-50: #F2F7FF;
+  --azul-100: #E5EFFF;
+  --azul-200: #CAE0FF;
+  --azul-300: #A5C9FF;
+  --azul-400: #73ACFF;
+  --azul-500: #3A83ED;
+  --azul-600: #085DC7;
+  --azul-700: #004AA5;
+  --azul-800: #03397F;
+  --azul-900: #042756;
+  --azul-950: #021533;
+  --oro-50: #FFF6E3;
+  --oro-100: #FEEDC9;
+  --oro-200: #FADA99;
+  --oro-300: #EBC166;
+  --oro-400: #D3A329;
+  --oro-500: #A97F00;
+  --oro-600: #7E5D00;
+  --oro-700: #664B00;
+  --oro-800: #4F3900;
+  --oro-900: #362600;
+  --oro-950: #1F1400;
+  --rosa-50: #FFF3F7;
+  --rosa-100: #FFE7EF;
+  --rosa-200: #FFCFE0;
+  --rosa-300: #FFAACB;
+  --rosa-400: #FF74B0;
+  --rosa-500: #DB428C;
+  --rosa-600: #AE1A69;
+  --rosa-700: #900B54;
+  --rosa-800: #6F0941;
+  --rosa-900: #4B0A2B;
+  --rosa-950: #2C0418;
+  --turquesa-50: #E5FDFA;
+  --turquesa-100: #CDF9F5;
+  --turquesa-200: #A3EFE9;
+  --turquesa-300: #71DCD6;
+  --turquesa-400: #37C2BB;
+  --turquesa-500: #009A94;
+  --turquesa-600: #00736E;
+  --turquesa-700: #005D59;
+  --turquesa-800: #004744;
+  --turquesa-900: #00302E;
+  --turquesa-950: #001B1A;
+  --naranja-50: #FFF4EF;
+  --naranja-100: #FFEADF;
+  --naranja-200: #FFD3BE;
+  --naranja-300: #FFB38C;
+  --naranja-400: #FC8642;
+  --naranja-500: #D45E00;
+  --naranja-600: #9F4500;
+  --naranja-700: #813600;
+  --naranja-800: #652800;
+  --naranja-900: #461900;
+  --naranja-950: #290C00;
+  --noche-0: #0E0D15;
+  --noche-1: #181626;
+  --noche-2: #211F32;
+  --noche-3: #2A283D;
+  --noche-4: #343249;
+  --blanco: #FFFFFF;
+  --negro: #000000;
+}
+
+/* Tema claro (y lo común a los dos temas) */
+:root {
+  --tiza: var(--neutro-100);
+  --hoja: #FFFFFF;
+  --hoja-2: var(--neutro-50);
+  --hoja-3: var(--neutro-100);
+  --tinta: var(--neutro-950);
+  --tinta-2: var(--neutro-700);
+  --tinta-3: var(--neutro-600);
+  --linea: var(--neutro-200);
+  --hero: var(--marca-950);
+  --sobre-hero: #F3F1FB;
+  --sobre-hero-2: #BDB8DA;
+  --ok: var(--verde-700);
+  --ok-suave: var(--verde-100);
+  --ok-borde: var(--verde-300);
+  --ok-solido: var(--verde-600);
+  --aviso: var(--ambar-700);
+  --aviso-suave: var(--ambar-100);
+  --aviso-borde: var(--ambar-300);
+  --aviso-solido: var(--ambar-600);
+  --alerta: var(--rojo-600);
+  --alerta-suave: var(--rojo-100);
+  --alerta-borde: var(--rojo-300);
+  --alerta-solido: var(--rojo-600);
+  --info: var(--azul-700);
+  --info-suave: var(--azul-100);
+  --info-borde: var(--azul-300);
+  --info-solido: var(--azul-600);
+  --dato: var(--marca-500);
+  --oro: var(--oro-400);
+  --oro-texto: var(--oro-700);
+  --oro-suave: var(--oro-100);
+  --flota: var(--neutro-950);
+  --sobre-flota: var(--neutro-100);
+  --int-trabajo: var(--verde-700);
+  --int-descanso: var(--azul-700);
+  --int-preparar: var(--ambar-700);
+  --int-fin: var(--marca-700);
+  --disco-rojo: var(--rojo-600);
+  --disco-azul: var(--azul-600);
+  --disco-amarillo: var(--oro-400);
+  --disco-verde: var(--verde-600);
+  --av-1: var(--marca-600);
+  --av-2: var(--azul-600);
+  --av-3: var(--turquesa-700);
+  --av-4: var(--rosa-700);
+  --av-5: var(--naranja-700);
+  --av-6: var(--azul-800);
+  --morado: #593EDE;
+  --morado-hover: #462ABF;
+  --morado-suave: #EEECFF;
+  --sobre-morado: #FFFFFF;
+  --foco: #593EDE;
+  --hero-2: #241665;
+  --superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3);
+  --texto: var(--tinta); --texto-2: var(--tinta-2); --texto-3: var(--tinta-3); --borde-suave: var(--linea);
+  --accion: var(--morado); --accion-hover: var(--morado-hover); --accion-suave: var(--morado-suave); --sobre-accion: var(--sobre-morado);
+  --accion-pulsado: color-mix(in oklch, var(--morado) 82%, var(--tinta));
+  --tinta-noche: #1E1548;
+  --grad-noche: linear-gradient(160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
+  --grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
+  --grad-record: linear-gradient(135deg, #FADA99, #D3A329, #7E5D00);
+  --grad-fuego: linear-gradient(160deg, #FFB663, #D45E00, #B7162D);
+  --confeti-1: #7C6AFD;
+  --confeti-2: #D3A329;
+  --confeti-3: #FF74B0;
+  --confeti-4: #37C2BB;
+  --confeti-5: #73ACFF;
+  --confeti-6: #FC8642;
+  --seq-1: #EEECFF;
+  --seq-2: #C4BFFF;
+  --seq-3: #7C6AFD;
+  --seq-4: #462ABF;
+  --seq-5: #241665;
+  --div-1: #9F4500;
+  --div-2: #FFB38C;
+  --div-3: #DDDDE3;
+  --div-4: #A5C9FF;
+  --div-5: #085DC7;
+  --serie-1: var(--morado);
+  --serie-2: #C9690C;
+  --serie-3: #00736E;
+  --serie-4: #085DC7;
+  --serie-5: #AE1A69;
+  --serie-6: #C89F00;
+  --serie-7: #006032;
+  --serie-8: #626171;
+}
+
+/* Tema oscuro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tiza: var(--noche-0);
+    --hoja: var(--noche-1);
+    --hoja-2: var(--noche-2);
+    --hoja-3: var(--noche-3);
+    --tinta: #ECEBF5;
+    --tinta-2: #B5B2C9;
+    --tinta-3: #9E9BB4;
+    --linea: var(--noche-4);
+    --hero: #211B42;
+    --sobre-hero: #F3F1FB;
+    --sobre-hero-2: #BDB8DA;
+    --ok: var(--verde-300);
+    --ok-suave: #15301F;
+    --ok-borde: var(--verde-700);
+    --ok-solido: var(--verde-400);
+    --aviso: var(--ambar-300);
+    --aviso-suave: #332410;
+    --aviso-borde: var(--ambar-700);
+    --aviso-solido: var(--ambar-400);
+    --alerta: var(--rojo-300);
+    --alerta-suave: #3A1620;
+    --alerta-borde: var(--rojo-700);
+    --alerta-solido: var(--rojo-400);
+    --info: var(--azul-300);
+    --info-suave: #142640;
+    --info-borde: var(--azul-700);
+    --info-solido: var(--azul-400);
+    --dato: var(--marca-400);
+    --oro: var(--oro-300);
+    --oro-texto: var(--oro-200);
+    --oro-suave: #2E2510;
+    --flota: var(--noche-4);
+    --sobre-flota: #EDEBF7;
+    --int-trabajo: var(--verde-800);
+    --int-descanso: var(--azul-800);
+    --int-preparar: var(--ambar-800);
+    --int-fin: var(--marca-800);
+    --disco-rojo: var(--rojo-400);
+    --disco-azul: var(--azul-400);
+    --disco-amarillo: var(--oro-300);
+    --disco-verde: var(--verde-400);
+    --av-1: var(--marca-400);
+    --av-2: var(--azul-300);
+    --av-3: var(--turquesa-300);
+    --av-4: var(--rosa-300);
+    --av-5: var(--naranja-300);
+    --av-6: var(--azul-200);
+    --morado: #A49CFF;
+    --morado-hover: #C4BFFF;
+    --morado-suave: #232242;
+    --sobre-morado: #0E0D15;
+    --foco: #A49CFF;
+    --hero-2: #351F96;
+    --serie-1: var(--morado);
+    --serie-2: #F7A062;
+    --serie-3: #71DCD6;
+    --serie-4: #A5C9FF;
+    --serie-5: #FFAACB;
+    --serie-6: #EFCA61;
+    --serie-7: #7EE0A0;
+    --serie-8: #C7C6CF;
+  }
+}
+:root[data-theme="dark"] {
+  --tiza: var(--noche-0);
+  --hoja: var(--noche-1);
+  --hoja-2: var(--noche-2);
+  --hoja-3: var(--noche-3);
+  --tinta: #ECEBF5;
+  --tinta-2: #B5B2C9;
+  --tinta-3: #9E9BB4;
+  --linea: var(--noche-4);
+  --hero: #211B42;
+  --sobre-hero: #F3F1FB;
+  --sobre-hero-2: #BDB8DA;
+  --ok: var(--verde-300);
+  --ok-suave: #15301F;
+  --ok-borde: var(--verde-700);
+  --ok-solido: var(--verde-400);
+  --aviso: var(--ambar-300);
+  --aviso-suave: #332410;
+  --aviso-borde: var(--ambar-700);
+  --aviso-solido: var(--ambar-400);
+  --alerta: var(--rojo-300);
+  --alerta-suave: #3A1620;
+  --alerta-borde: var(--rojo-700);
+  --alerta-solido: var(--rojo-400);
+  --info: var(--azul-300);
+  --info-suave: #142640;
+  --info-borde: var(--azul-700);
+  --info-solido: var(--azul-400);
+  --dato: var(--marca-400);
+  --oro: var(--oro-300);
+  --oro-texto: var(--oro-200);
+  --oro-suave: #2E2510;
+  --flota: var(--noche-4);
+  --sobre-flota: #EDEBF7;
+  --int-trabajo: var(--verde-800);
+  --int-descanso: var(--azul-800);
+  --int-preparar: var(--ambar-800);
+  --int-fin: var(--marca-800);
+  --disco-rojo: var(--rojo-400);
+  --disco-azul: var(--azul-400);
+  --disco-amarillo: var(--oro-300);
+  --disco-verde: var(--verde-400);
+  --av-1: var(--marca-400);
+  --av-2: var(--azul-300);
+  --av-3: var(--turquesa-300);
+  --av-4: var(--rosa-300);
+  --av-5: var(--naranja-300);
+  --av-6: var(--azul-200);
+  --morado: #A49CFF;
+  --morado-hover: #C4BFFF;
+  --morado-suave: #232242;
+  --sobre-morado: #0E0D15;
+  --foco: #A49CFF;
+  --hero-2: #351F96;
+  --serie-1: var(--morado);
+  --serie-2: #F7A062;
+  --serie-3: #71DCD6;
+  --serie-4: #A5C9FF;
+  --serie-5: #FFAACB;
+  --serie-6: #EFCA61;
+  --serie-7: #7EE0A0;
+  --serie-8: #C7C6CF;
+}
+
+/* (8) Los degradados, interpolados en OKLCH donde se puede (no se ensucian en el medio) */
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  :root {
+    --grad-noche: linear-gradient(in oklch 160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);
+    --grad-amanecer: linear-gradient(in oklch 135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);
+    --grad-record: linear-gradient(in oklch 135deg, #FADA99, #D3A329, #7E5D00);
+    --grad-fuego: linear-gradient(in oklch 160deg, #FFB663, #D45E00, #B7162D);
+  }
+}
+
+/* (18) Ayuda para daltonismo: lo hecho, en azul; lo que falta o va mal, en naranja */
+:root[data-daltonismo] {
+  --ok: #004AA5;
+  --ok-suave: #E5EFFF;
+  --ok-borde: #A5C9FF;
+  --ok-solido: #085DC7;
+  --alerta: #813600;
+  --alerta-suave: #FFEADF;
+  --alerta-borde: #FFB38C;
+  --alerta-solido: #813600;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-daltonismo] {
+    --ok: #A5C9FF;
+    --ok-suave: #142640;
+    --ok-borde: #004AA5;
+    --ok-solido: #73ACFF;
+    --alerta: #FFB38C;
+    --alerta-suave: #3A2010;
+    --alerta-borde: #813600;
+    --alerta-solido: #FC8642;
+  }
+}
+:root[data-theme="dark"][data-daltonismo] {
+  --ok: #A5C9FF;
+  --ok-suave: #142640;
+  --ok-borde: #004AA5;
+  --ok-solido: #73ACFF;
+  --alerta: #FFB38C;
+  --alerta-suave: #3A2010;
+  --alerta-borde: #813600;
+  --alerta-solido: #FC8642;
+}
+
+/* (17) Alto contraste: textos y líneas al máximo (AAA) */
+:root[data-contraste="alto"] {
+  --tinta: #000000;
+  --tinta-2: #282638;
+  --tinta-3: #3C3B4C;
+  --linea: #858492;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-contraste="alto"] {
+    --tinta: #FFFFFF;
+    --tinta-2: #EEEEF2;
+    --tinta-3: #DDDDE3;
+    --linea: #AAA9B5;
+  }
+}
+:root[data-theme="dark"][data-contraste="alto"] {
+  --tinta: #FFFFFF;
+  --tinta-2: #EEEEF2;
+  --tinta-3: #DDDDE3;
+  --linea: #AAA9B5;
+}

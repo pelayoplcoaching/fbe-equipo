@@ -14,16 +14,16 @@
 /* 1 · El mensaje del coach */
 .mensaje-coach { margin-top: 12px; }
 .resumen-records .mensaje-coach { margin-top: 14px; }
-.mensaje-coach.mensaje-oscuro { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); color: #F6F2FF; text-align: left; width: 100%; }
-.mensaje-coach.mensaje-oscuro figcaption { color: #CFC8F5; }
-.mensaje-coach.mensaje-oscuro .avatar, .mensaje-coach.mensaje-oscuro .avatar-coach { box-shadow: 0 0 0 2px #140F24, 0 0 0 4px #FFB057; }
-.mensaje-coach.mensaje-oscuro::before { color: #FFB057; }
+.mensaje-coach.mensaje-oscuro { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); color: var(--marca-50); text-align: left; width: 100%; }
+.mensaje-coach.mensaje-oscuro figcaption { color: var(--marca-300); }
+.mensaje-coach.mensaje-oscuro .avatar, .mensaje-coach.mensaje-oscuro .avatar-coach { box-shadow: 0 0 0 2px var(--neutro-950), 0 0 0 4px var(--ambar-300); }
+.mensaje-coach.mensaje-oscuro::before { color: var(--ambar-300); }
 .mensaje-coach.muestra { grid-template-columns: minmax(0, 1fr); }
 
 /* 2 · La portada: récord al alcance y su música */
 .record-alcance { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 12px; align-items: start;
-  background: linear-gradient(135deg, color-mix(in srgb, #E9D49A 22%, var(--hoja)) 0%, var(--hoja) 70%); }
-.record-alcance-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: #E9D49A; color: #2A2154; }
+  background: linear-gradient(135deg, color-mix(in srgb, var(--oro-200) 22%, var(--hoja)) 0%, var(--hoja) 70%); }
+.record-alcance-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--oro-200); color: var(--marca-900); }
 .record-alcance-ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
 .record-alcance strong { font-size: 1rem; }
 .record-alcance-lista { list-style: none; margin: 2px 0 4px; padding: 0; display: grid; gap: 4px; }
@@ -55,8 +55,8 @@
 .ok-texto { color: var(--ok); font-weight: 650; }
 
 /* 5 · La bienvenida del día */
-.bdia-coach, .bdia-porque { margin: 14px 0 0; display: grid; gap: 4px; max-width: 30ch; font-size: 1rem; line-height: 1.45; color: var(--bv-tinta-2, #CFC8F5); text-wrap: pretty; }
-.bdia-coach { padding: 10px 12px; border-radius: 14px; background: var(--bv-tarjeta, rgba(255, 255, 255, .07)); box-shadow: inset 0 0 0 1px var(--bv-filo, rgba(255, 255, 255, .1)); color: var(--bv-tinta, #fff); }
+.bdia-coach, .bdia-porque { margin: 14px 0 0; display: grid; gap: 4px; max-width: 30ch; font-size: 1rem; line-height: 1.45; color: var(--bv-tinta-2, var(--marca-300)); text-wrap: pretty; }
+.bdia-coach { padding: 10px 12px; border-radius: 14px; background: var(--bv-tarjeta, rgba(255, 255, 255, .07)); box-shadow: inset 0 0 0 1px var(--bv-filo, rgba(255, 255, 255, .1)); color: var(--bv-tinta, var(--blanco)); }
 .bdia-porque { font-style: italic; }
 .bdia-porque .bdia-sobre { font-style: normal; }
 
@@ -64,13 +64,13 @@
 .anio-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; align-items: end; height: 9rem; width: 100%; max-width: 26rem; margin-top: 8px; }
 .anio-barras span { display: grid; grid-template-rows: minmax(0, 1fr) auto; height: 100%; gap: 4px; }
 .anio-barras i { align-self: end; height: max(4px, var(--h)); border-radius: 6px 6px 3px 3px; background: rgba(255, 255, 255, .18); }
-.anio-barras span.si i { background: linear-gradient(180deg, #B9A9FF, #7C64F0); }
+.anio-barras span.si i { background: linear-gradient(180deg, var(--marca-400), var(--marca-500)); }
 .anio-barras b { font-size: .6875rem; font-weight: 700; text-align: center; color: rgba(255, 255, 255, .6); }
 .fila-anio { grid-template-columns: minmax(0, 1fr) auto; }
 
 /* 7 · El coach */
 .cumples-hoy { display: flex; gap: 10px; align-items: flex-start; }
-.cumples-hoy > svg { flex: none; width: 20px; height: 20px; color: #C9A13B; margin-top: 1px; }
+.cumples-hoy > svg { flex: none; width: 20px; height: 20px; color: var(--oro-400); margin-top: 1px; }
 .lo-suyo-porque { margin: 0; display: grid; gap: 4px; font-size: 1.0625rem; line-height: 1.4; font-style: italic; }
 .lo-suyo-porque .t-sobre { font-style: normal; }
 .lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: .9375rem; }
@@ -105,7 +105,7 @@
 .cadencia-v { min-width: 7.5rem; text-align: center; }
 .cadencia-v b { font-size: 1.5rem; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); }
 .cadencia-v small { color: var(--tinta-2); font-weight: 650; }
-.cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(135deg, color-mix(in srgb, #E9D49A 18%, var(--hoja)) 0%, var(--hoja) 70%); }
+.cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--oro-200) 18%, var(--hoja)) 0%, var(--hoja) 70%); }
 .lista-equipo { margin-bottom: 4px; }
 .campo-musica svg { width: 16px; height: 16px; }
 
@@ -152,7 +152,7 @@
 .compartir-opciones { display: grid; gap: 12px; margin-bottom: 4px; }
 .chips-fila { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip-boton { cursor: pointer; border: 1px solid var(--linea); background: var(--fondo-2, transparent); color: var(--tinta-2); font: inherit; font-size: .8125rem; padding: 5px 11px; border-radius: 999px; }
-.chip-boton.activo { background: var(--morado); color: #fff; border-color: var(--morado); }
+.chip-boton.activo { background: var(--morado); color: var(--blanco); border-color: var(--morado); }
 .compartir-handle .fila { gap: 8px; flex-wrap: wrap; }
 .compartir-handle .entrada { flex: 1 1 160px; }
 .tarjeta-previa.historia .tarjeta-img { aspect-ratio: 9 / 16; max-width: 300px; }
@@ -162,15 +162,15 @@
 .destino-instagram { border-color: rgba(225, 48, 108, .6); }
 .destino-facebook { border-color: rgba(24, 119, 242, .6); }
 .compartir-texto { white-space: pre-wrap; word-break: break-word; font: inherit; font-size: .8125rem; line-height: 1.45; background: var(--fondo-2, rgba(127, 127, 127, .08)); border-radius: 12px; padding: 12px 14px; margin: 0; user-select: all; }
-.plantilla-mini.clara { background: #F4F1FF; color: #150F36; box-shadow: inset 0 0 0 1px rgba(21, 15, 54, .14); }
+.plantilla-mini.clara { background: var(--marca-50); color: var(--marca-950); box-shadow: inset 0 0 0 1px rgba(21, 15, 54, .14); }
 .recordatorio-compartir { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
 .recordatorio-compartir .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--ok-suave); color: var(--ok); display: grid; place-items: center; }
 .recordatorio-compartir .ico svg { width: 20px; height: 20px; }
 .resumen-record-compartir { margin-left: auto; }
 .lista .record { align-items: center; }
-.racha-compartir, .hito-compartir { width: 100%; margin-top: 12px; min-height: 54px; background: rgba(255, 255, 255, .12); color: #F6F2FF; border-color: rgba(255, 255, 255, .25); font-weight: 700; }
+.racha-compartir, .hito-compartir { width: 100%; margin-top: 12px; min-height: 54px; background: rgba(255, 255, 255, .12); color: var(--marca-50); border-color: rgba(255, 255, 255, .25); font-weight: 700; }
 .racha-compartir:hover, .hito-compartir:hover { background: rgba(255, 255, 255, .2); }
-.historia-pantalla .historia-compartir { pointer-events: auto; align-self: stretch; margin-top: 10px; background: rgba(255, 255, 255, .12); color: #F6F2FF; border-color: rgba(255, 255, 255, .25); }
+.historia-pantalla .historia-compartir { pointer-events: auto; align-self: stretch; margin-top: 10px; background: rgba(255, 255, 255, .12); color: var(--marca-50); border-color: rgba(255, 255, 255, .25); }
 .recordatorio-texto { text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
 .resumen-equipo-compartir { margin-top: 10px; justify-self: start; }
 
@@ -188,20 +188,20 @@
 .previa-puntos i { width: 6px; height: 6px; border-radius: 50%; background: var(--linea); display: block; }
 .previa-puntos i.activo { background: var(--morado); width: 16px; border-radius: 3px; }
 .previa-herramientas { justify-content: space-between; align-items: center; margin-top: -6px; }
-.tarjeta-previa.marco-ig { background: #fff; color: #111; border-radius: 14px; padding: 0 0 8px; box-shadow: 0 2px 14px rgba(0, 0, 0, .12); }
+.tarjeta-previa.marco-ig { background: var(--blanco); color: var(--noche-0); border-radius: 14px; padding: 0 0 8px; box-shadow: 0 2px 14px rgba(0, 0, 0, .12); }
 .tarjeta-previa.marco-ig .tarjeta-img { border-radius: 0; max-width: 100%; }
-.marco-ig-cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: .8125rem; font-weight: 600; color: #111; }
-.marco-ig-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #F58529, #DD2A7B 55%, #8134AF); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
+.marco-ig-cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: .8125rem; font-weight: 600; color: var(--noche-0); }
+.marco-ig-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--naranja-400), var(--rosa-500) 55%, #8134AF); color: var(--blanco); display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
 .marco-ig-nombre { flex: 1; }
-.marco-ig-puntos { letter-spacing: 2px; color: #333; }
-.marco-ig-pie { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px 2px; font-size: 1.05rem; color: #111; }
+.marco-ig-puntos { letter-spacing: 2px; color: var(--noche-4); }
+.marco-ig-pie { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px 2px; font-size: 1.05rem; color: var(--noche-0); }
 .marco-ig-pie .marco-ig-guardar { margin-left: auto; }
-.marco-ig-pie .marco-ig-texto { flex: 0 0 100%; margin: 4px 0 0; font-size: .8125rem; color: #222; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.tarjeta-previa.marco-ig.historia { background: #000; padding: 0; }
-.tarjeta-previa.marco-ig.historia .marco-ig-cab { position: absolute; top: 0; left: 0; right: 0; color: #fff; z-index: 1; }
-.tarjeta-previa.marco-ig.historia .marco-ig-cab .marco-ig-puntos { color: #fff; }
+.marco-ig-pie .marco-ig-texto { flex: 0 0 100%; margin: 4px 0 0; font-size: .8125rem; color: var(--noche-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tarjeta-previa.marco-ig.historia { background: var(--negro); padding: 0; }
+.tarjeta-previa.marco-ig.historia .marco-ig-cab { position: absolute; top: 0; left: 0; right: 0; color: var(--blanco); z-index: 1; }
+.tarjeta-previa.marco-ig.historia .marco-ig-cab .marco-ig-puntos { color: var(--blanco); }
 .compartir-texto-caja .seg-compacto { align-self: start; }
-.compartir-video .video-previa { width: 110px; border-radius: 10px; aspect-ratio: 4 / 5; object-fit: cover; background: #000; }
+.compartir-video .video-previa { width: 110px; border-radius: 10px; aspect-ratio: 4 / 5; object-fit: cover; background: var(--negro); }
 .compartir-video .fila-envolver { align-items: center; }
 .lo-compartido .fila-boton { grid-template-columns: auto minmax(0, 1fr) auto; }
 .lo-compartido .ico-fila { width: 34px; height: 34px; border-radius: 10px; background: var(--morado-suave); color: var(--morado); display: grid; place-items: center; }
@@ -213,7 +213,7 @@
 .sc-lista { display: grid; gap: 4px; }
 .sc-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; }
 .sc-texto { min-width: 0; font-size: .9375rem; }
-.cumples-equipo { background: linear-gradient(120deg, color-mix(in srgb, #F59E0B 14%, var(--hoja)), var(--hoja) 65%); border: 1px solid color-mix(in srgb, #F59E0B 30%, transparent); }
+.cumples-equipo { background: linear-gradient(120deg, color-mix(in srgb, var(--ambar-400) 14%, var(--hoja)), var(--hoja) 65%); border: 1px solid color-mix(in srgb, var(--ambar-400) 30%, transparent); }
 .cumple-tarta { font-size: 1.35rem; vertical-align: -3px; }
 .cumple-texto, .cumple-mio { margin: 0; }
 .cumple-otros { display: grid; gap: 8px; }
@@ -224,14 +224,14 @@
 .duelos-lista { display: grid; gap: 6px; }
 .duelo-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--fondo-suave, rgba(0, 0, 0, .03)); }
 .duelo-fila.aceptado { background: linear-gradient(110deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
-.duelo-fila.ganado { background: linear-gradient(110deg, color-mix(in srgb, #F59E0B 16%, var(--hoja)), var(--hoja) 70%); }
+.duelo-fila.ganado { background: linear-gradient(110deg, color-mix(in srgb, var(--ambar-400) 16%, var(--hoja)), var(--hoja) 70%); }
 .duelo-texto { min-width: 0; }
 .duelo-linea { font-size: .9375rem; font-weight: 600; }
 .duelo-acciones { gap: 6px; }
 .duelo-marcador { font-size: 1.25rem; font-weight: 800; letter-spacing: .5px; color: var(--morado); }
 .duelo-marcador i { font-style: normal; opacity: .5; margin: 0 2px; }
 .duelo-resultado { font-weight: 700; }
-.duelo-resultado.ganado { background: color-mix(in srgb, #F59E0B 22%, var(--hoja)); }
+.duelo-resultado.ganado { background: color-mix(in srgb, var(--ambar-400) 22%, var(--hoja)); }
 .companero-semana { background: linear-gradient(140deg, color-mix(in srgb, var(--morado) 12%, var(--hoja)), var(--hoja) 70%); }
 .cs-elegidos { display: grid; gap: 10px; }
 .cs-elegido { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 6px 0; }
@@ -258,7 +258,7 @@
 .post-cita-borrada { margin: 4px 0 0; padding: 6px 10px; border-left: 3px solid var(--borde); }
 .huella-t { margin: 0; font-size: .9375rem; }
 .huella-lista { margin: 0; padding: 0 0 0 18px; display: grid; gap: 2px; font-size: .875rem; }
-.evento-equipo.quedada-atleta .le-k { color: #0E8A5F; }
+.evento-equipo.quedada-atleta .le-k { color: var(--turquesa-500); }
 
 /* ---------- (054) Cierre: lo que el coach necesita de cada entreno, sin pedirlo dos veces ---------- */
 /* La sesión que la app cerró sola (atleta): tarjeta para decir cómo fue */
@@ -342,8 +342,8 @@
 
 /* ---------- (personalización 2, tanda 1) Que la app le hable a cada uno ---------- */
 /* (al integrar) el pie de la foto de motivación: texto claro sobre un velo oscuro, en claro y en oscuro */
-:root { --foto-texto: #FFFFFF; --foto-velo: rgb(0 0 0 / .62); }
-:root[data-theme="dark"] { --foto-texto: #FFFFFF; --foto-velo: rgb(0 0 0 / .62); }
+:root { --foto-texto: var(--blanco); --foto-velo: rgb(0 0 0 / .62); }
+:root[data-theme="dark"] { --foto-texto: var(--blanco); --foto-velo: rgb(0 0 0 / .62); }
 .portada-para { display: block; font-size: 1.0625rem; font-weight: 650; opacity: .92; margin-bottom: 2px; }
 .resumen-para { margin: 2px 0 0; font-size: 1.0625rem; font-weight: 700; }
 .resumen-para span { font-weight: 500; opacity: .85; }
@@ -416,7 +416,7 @@
 /* ---------- (personalizacion 3, tanda 6) Su vida ---------- */
 .vida-fila { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
 .vida-fila > svg, .ck-seguimiento > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
-.vida-guardia > svg { color: #c27c0e; }
+.vida-guardia > svg { color: var(--ambar-500); }
 .vida-minimo { margin: 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.4; }
 .vida-pregunta .entrada { width: 100%; }
 .ck-seguimiento { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 6px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja)); line-height: 1.45; }
@@ -446,7 +446,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 @media print {
   html[data-imprimir-informe] body * { visibility: hidden !important; }
   html[data-imprimir-informe] .informe-salud, html[data-imprimir-informe] .informe-salud * { visibility: visible !important; }
-  html[data-imprimir-informe] .informe-salud { position: absolute; left: 0; top: 0; width: 100%; border: 0; background: #fff; color: #000; }
+  html[data-imprimir-informe] .informe-salud { position: absolute; left: 0; top: 0; width: 100%; border: 0; background: var(--blanco); color: var(--negro); }
 }
 
 /* ---------- (personalizacion 3, tanda 8) Que le acompane ---------- */
@@ -467,8 +467,8 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .album-hitos > .btn { justify-self: start; }
 
 /* ---------- (personalizacion 3, tanda 9) Que el coach le conozca ---------- */
-.alerta-temprana { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, #f5a524 12%, var(--hoja)); line-height: 1.45; }
-.alerta-temprana > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: #c27c0e; }
+.alerta-temprana { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--ambar-400) 12%, var(--hoja)); line-height: 1.45; }
+.alerta-temprana > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--ambar-500); }
 .lo-que-funciona p { margin: 0; }
 .panel.lo-que-funciona { display: grid; gap: 6px; }
 .envios-t { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 1rem; }
@@ -481,9 +481,9 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 /* (v0.158.1) Los momentos nuevos de los mensajes automaticos, con su icono en su cuadrado de color (como los cinco de
    siempre en diseno.css): aniversario, meta, primera vez, viaje y bienvenida. El cuadrado lleva el icono en blanco en
    los dos temas, asi que el color es el mismo en claro y en oscuro. */
-:root { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; } }
-:root[data-theme="dark"] { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: #0E9384; --pc-viaje: #0086C9; --pc-bienvenida: #7A5AF8; }
+:root { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; } }
+:root[data-theme="dark"] { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; }
 .fila-ios[data-m="aniversario"] { --fm: var(--pc-aniversario); --ico-m: var(--ico-corazon); }
 .fila-ios[data-m="meta"] { --fm: var(--pc-meta); --ico-m: var(--ico-diana); }
 .fila-ios[data-m="primera_vez"] { --fm: var(--pc-primera); --ico-m: var(--ico-gimnasio); }
