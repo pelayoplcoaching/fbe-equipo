@@ -9,7 +9,7 @@
    guardando la parte derecha, donde está el material. El velo de .portada-sesion::before oscurece arriba (el botón de
    volver) y abajo (el título), así que el texto se lee igual que con el dibujo. */
 img.portada-foto { object-fit: cover; object-position: 78% 50%; }
-.resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .6; }
+.resumen-hero img.hero-foto { object-fit: cover; object-position: 85% 50%; opacity: .62; } /* (afinada para la ilustración: fuera de la escala de opacidades a propósito) */
 @media (forced-colors: active) { img.portada-foto, .resumen-hero img.hero-foto { opacity: .35; } }
 
 /* ── 2 · La cabecera ilustrada (pieza común) ──────────────────────────────────────────────────────────────────────────
