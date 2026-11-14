@@ -57,44 +57,44 @@
 }
 
 /* (20; color 2, 18) «Paleta», solo en la demo (?demo&paleta) */
-.pal-pagina { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 12px; }
-.pal-pagina h2 { margin-top: 16px; }
-.pal-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
-.pal-controles label { display: inline-flex; align-items: center; gap: 8px; font-size: var(--tipo-nota); }
+.pal-pagina { max-width: 760px; margin: 0 auto; padding: var(--esp-24) var(--esp-16) 64px; display: grid; gap: var(--esp-12); }
+.pal-pagina h2 { margin-top: var(--esp-16); }
+.pal-controles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-10) var(--esp-16); padding: var(--esp-12); border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.pal-controles label { display: inline-flex; align-items: center; gap: var(--esp-8); font-size: var(--tipo-nota); }
 .pal-controles .selector { width: auto; min-width: 8rem; }
 .pal-tabla { width: 100%; border-collapse: collapse; background: var(--hoja); border-radius: var(--r-s); box-shadow: var(--sombra-tarjeta); overflow: hidden; font-size: var(--tipo-nota); }
-.pal-tabla th, .pal-tabla td { padding: 8px 12px; text-align: left; border-top: var(--filo-fino) solid var(--linea); }
+.pal-tabla th, .pal-tabla td { padding: var(--esp-8) var(--esp-12); text-align: left; border-top: var(--filo-fino) solid var(--linea); }
 .pal-tabla thead th { border-top: 0; color: var(--tinta-2); font-weight: 650; }
-.pal-tabla tbody th { font-weight: 560; display: flex; align-items: center; gap: 8px; }
-.pal-nivel { display: inline-block; padding: 1px 7px; border-radius: var(--r-pildora); font-size: var(--letra-11); font-weight: 700; border: var(--filo-fino) solid; }
+.pal-tabla tbody th { font-weight: 560; display: flex; align-items: center; gap: var(--esp-8); }
+.pal-nivel { display: inline-block; padding: 1px var(--esp-8); border-radius: var(--r-pildora); font-size: var(--letra-11); font-weight: 700; border: var(--filo-fino) solid; }
 .pal-nivel-si { color: var(--ok); background: var(--ok-suave); border-color: var(--ok-borde); }
 .pal-nivel-no { color: var(--alerta); background: var(--alerta-suave); border-color: var(--alerta-borde); }
-.pal-componentes { display: grid; gap: 14px; }
-.pal-componentes .fila-envolver { align-items: center; gap: 8px; }
-.pal-escala h3 { font-size: var(--tipo-nota); margin: 0 0 4px; color: var(--tinta-2); }
+.pal-componentes { display: grid; gap: var(--esp-14); }
+.pal-componentes .fila-envolver { align-items: center; gap: var(--esp-8); }
+.pal-escala h3 { font-size: var(--tipo-nota); margin: 0 0 var(--esp-4); color: var(--tinta-2); }
 .pal-escala h3::first-letter { text-transform: uppercase; }
-.pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: 3px; }
-.pal-muestra { height: 2.75rem; border-radius: var(--r-xs); display: grid; place-items: end start; padding: 4px 6px; font-size: var(--letra-11); font-variant-numeric: tabular-nums; box-shadow: var(--anillo-suave); }
-.pal-estados, .pal-grads, .pal-acentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px; }
-.pal-estado { border: var(--filo-fino) solid; border-radius: var(--r-s); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: var(--esp-4); }
+.pal-muestra { height: 2.75rem; border-radius: var(--r-xs); display: grid; place-items: end start; padding: var(--esp-4) var(--esp-6); font-size: var(--letra-11); font-variant-numeric: tabular-nums; box-shadow: var(--anillo-suave); }
+.pal-estados, .pal-grads, .pal-acentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--esp-8); }
+.pal-estado { border: var(--filo-fino) solid; border-radius: var(--r-s); padding: var(--esp-10) var(--esp-12); display: flex; align-items: center; justify-content: space-between; }
 .pal-solido { width: 1.25rem; height: 1.25rem; border-radius: 50%; }
-.pal-grad { height: 4.5rem; border-radius: var(--r-s); display: grid; place-items: end start; padding: 8px 10px; color: var(--blanco); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+.pal-grad { height: 4.5rem; border-radius: var(--r-s); display: grid; place-items: end start; padding: var(--esp-8) var(--esp-10); color: var(--blanco); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
 .pal-tono { background-color: var(--hero); background-image: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--hero-tinte, var(--morado)) 55%, var(--hero)) 0%, transparent 62%), var(--grad-noche); }
-.pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
+.pal-acento { display: flex; align-items: center; gap: var(--esp-6); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
 .pal-acento.activo { box-shadow: var(--anillo-acento); }
 .pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: var(--anillo-suave); flex: none; }
 /* (color 3) «Sistema»: lo que sale del acento, las categorías, los avatares, los radios, las sombras, las letras y las capas */
 .pal-tinte { box-shadow: var(--anillo); color: var(--tinta); }
-.pal-cat { color: var(--blanco); font-weight: 650; font-size: var(--letra-10); padding-inline: 4px; overflow: hidden; }
-.pal-avatares { display: flex; flex-wrap: wrap; gap: 8px; }
-.pal-sistema { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 12px; }
-.pal-radio, .pal-sombra { min-height: 4.25rem; padding: 8px 10px; display: grid; align-content: end; gap: 2px; background: var(--hoja); font-size: var(--letra-11); color: var(--tinta-2); }
+.pal-cat { color: var(--blanco); font-weight: 650; font-size: var(--letra-10); padding-inline: var(--esp-4); overflow: hidden; }
+.pal-avatares { display: flex; flex-wrap: wrap; gap: var(--esp-8); }
+.pal-sistema { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--esp-12); }
+.pal-radio, .pal-sombra { min-height: 4.25rem; padding: var(--esp-8) var(--esp-10); display: grid; align-content: end; gap: var(--esp-2); background: var(--hoja); font-size: var(--letra-11); color: var(--tinta-2); }
 .pal-radio { box-shadow: var(--anillo); }
-.pal-sombra { border-radius: var(--r-s); margin: 6px; }
+.pal-sombra { border-radius: var(--r-s); margin: var(--esp-6); }
 .pal-radio b, .pal-sombra b { font-size: var(--letra-14); color: var(--tinta); }
-.pal-letras { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 10px 12px; margin-bottom: 8px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
-.pal-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: 2px 16px; margin: 0; padding: 10px 12px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); font-size: var(--letra-12-5); }
-.pal-lista > div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: var(--filo-fino) solid var(--linea); }
+.pal-letras { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-6) var(--esp-14); padding: var(--esp-10) var(--esp-12); margin-bottom: var(--esp-8); border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.pal-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: var(--esp-2) var(--esp-16); margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); font-size: var(--letra-12-5); }
+.pal-lista > div { display: flex; justify-content: space-between; gap: var(--esp-8); padding: var(--esp-4) 0; border-bottom: var(--filo-fino) solid var(--linea); }
 .pal-lista dt { color: var(--tinta-2); } .pal-lista dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 650; }
 
 /* ==========================================================================================================

@@ -16,7 +16,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    Una franja oscura como la tarjeta de Hoy: el texto a la izquierda y la ilustración a la derecha, fundida hacia el
    texto. Altura fija (nada se mueve al cargar). La usan la hoja de cada hábito (Habitos.jsx), la ficha de un ejercicio
    (FichaEjercicio.jsx) y la biblioteca del coach con un grupo elegido (Biblioteca.jsx). */
-.cab-ilu { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 8.25rem; padding: 14px 16px; border-radius: var(--r);
+.cab-ilu { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 8.25rem; padding: var(--esp-14) var(--esp-16); border-radius: var(--r);
   background: var(--hero); color: var(--sobre-hero); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
 .cab-ilu > p, .cab-ilu > .cab-ilu-texto { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: var(--letra-17); line-height: 1.35; font-weight: 650; text-wrap: pretty; }
 .cab-ilu .cab-ilu-img { position: absolute; z-index: 0; top: 0; right: 0; height: 100%; width: auto; aspect-ratio: var(--proporcion, 1); object-fit: cover; pointer-events: none;
@@ -39,8 +39,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .cab-coach .cab-ilu-texto { max-width: 62%; font-size: inherit; font-weight: inherit; }
 .cab-coach-t { font-size: var(--letra-18); line-height: 1.2; font-weight: 800; }
 .cab-coach .peq { opacity: .85; line-height: 1.35; margin: 0; }
-.cab-coach .btn { justify-self: start; margin-top: 4px; }
-.contenido.coach > .cab-coach { margin-bottom: 4px; }
+.cab-coach .btn { justify-self: start; margin-top: var(--esp-4); }
+.contenido.coach > .cab-coach { margin-bottom: var(--esp-4); }
 
 /* La hoja de cada hábito: ilustraciones cuadradas */
 .habito-cab { --proporcion: 1; }
@@ -57,9 +57,9 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: var(--tinta-noche); }
 .ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: var(--r-s); }
 .miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--r-10); object-fit: cover; background: var(--tinta-noche); }
-.ficha-ej-ilu > p { display: flex; align-items: center; gap: 10px; font-size: var(--tipo-pie, .875rem); }
+.ficha-ej-ilu > p { display: flex; align-items: center; gap: var(--esp-10); font-size: var(--tipo-pie, .875rem); }
 .ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }
-.biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: 2px; }
+.biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: var(--esp-2); }
 .toma-ilu { --proporcion: 4 / 3; min-height: 6.5rem; }
 .toma-ilu h2 { margin: 0; color: var(--sobre-hero); font-size: var(--letra-22); font-stretch: var(--ancho-titulo, 112%); font-weight: 800; line-height: 1.15; }
 .toma-ilu .cab-ilu-texto > span { color: var(--sobre-hero-2); font-size: var(--tipo-pie, .875rem); font-weight: 600; }
@@ -77,7 +77,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--neutro-950) 78%, transparent) 0%, color-mix(in srgb, var(--neutro-950) 58%, transparent) 38%, color-mix(in srgb, var(--neutro-950) 62%, transparent) 70%, color-mix(in srgb, var(--neutro-950) 86%, transparent) 100%); }
 .fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr) 22px; }
 .fila-semana .mes-mini { width: 3.5rem; height: 3.5rem; border-radius: var(--r-s); object-fit: cover; object-position: 75% 50%; }
-.informe-ilu { --proporcion: 16 / 9; min-height: 7rem; margin-bottom: 4px; }
+.informe-ilu { --proporcion: 16 / 9; min-height: 7rem; margin-bottom: var(--esp-4); }
 .informe-ilu > p { font-size: var(--letra-16); }
 @media (forced-colors: active) { .historia-mes .historia-fondo { opacity: .3; } }
 
@@ -88,7 +88,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    lleva la copa si hay récord o el farol la primera vez que se hace esa sesión. «Tu semana» completa (TuSemana.jsx): el
    anillo verde, de halo tenue y desenfocado detrás del suyo (fundido con la noche de la historia; nítido tapaba la fecha). Hito de racha (Racha.jsx):
    la hoguera abajo, fundiéndose hacia arriba. Informe de un bloque terminado: la cumbre, cuadrada. */
-.ck-paso .ck-ilu { display: block; width: calc(100% + 32px); max-width: none; height: auto; aspect-ratio: 3 / 1; margin: -16px -16px 2px; object-fit: cover; object-position: 70% 55%;
+.ck-paso .ck-ilu { display: block; width: calc(100% + 32px); max-width: none; height: auto; aspect-ratio: 3 / 1; margin: -16px -16px var(--esp-2); object-fit: cover; object-position: 70% 55%;
   border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--noche-2); }
 .ck-paso .ck-ilu.ck-ilu-suelta { width: 100%; margin: 0; border-radius: var(--r); }
 .resumen-medalla.con-ilu { overflow: hidden; padding: 0; }
@@ -110,7 +110,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    pantallas de la primera vez, la ilustración en la tarjeta del dibujo (sin su tercio de abajo, que viene vacío). El
    carné, el metal cepillado debajo de sus anillos y el lobo (la imagen para compartir, dibujada en el móvil, no cambia). */
 .franja-ilu { display: block; width: 100%; max-width: none; height: auto; object-fit: cover; background: var(--noche-2); pointer-events: none; }
-.panel-pad > .franja-pegada { width: calc(100% + 32px); margin: -16px -16px 2px; aspect-ratio: 3 / 1; object-position: 50% 62%;
+.panel-pad > .franja-pegada { width: calc(100% + 32px); margin: -16px -16px var(--esp-2); aspect-ratio: 3 / 1; object-position: 50% 62%;
   border-top-left-radius: inherit; border-top-right-radius: inherit; }
 .aniversario.con-ilu { grid-template-columns: minmax(0, 1fr) auto; overflow: hidden; }
 .aniversario.con-ilu > .aniversario-ilu { grid-column: 1 / -1; object-position: 50% 50%; }
@@ -146,8 +146,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   mask-composite: intersect; }
 .app > .acceso-fondo ~ .acceso { position: relative; z-index: 1; }
 .acceso-paso .paso-foto { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% 50%;
-  margin: -26px -20px 4px; border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--tinta-noche); }
-@media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px 4px; } }
+  margin: -26px -20px var(--esp-4); border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--tinta-noche); }
+@media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px var(--esp-4); } }
 @media (forced-colors: active) { .acceso-fondo, .paso-foto { display: none; } }
 
 /* ── Bloque X · los iconos ilustrados ──────────────────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Salud del iPhone y el calendario conservan su color de marca */
 .conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
 /* Los estados vacíos: la ilustración grande en su escenario de dos aros */
-.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px;
+.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: var(--esp-14) 0 var(--esp-12);
   box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
 @media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
 
@@ -270,10 +270,10 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    las historias moradas, el fondo de cortinas de luz; el audio del coach, su micrófono. */
 .panel-pad > .franja-prueba { object-position: 80% 50%; }
 .franja-ruta, .franja-liga, .franja-duelo { aspect-ratio: 3 / 1; border-radius: var(--r); object-position: 80% 50%; }
-.prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--esp-12); align-items: center; }
 .prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; }
 .prog-tema.con-ilu > :not(.prog-tema-ilu) { grid-column: 2; }
-.certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: 28px 24px 22px; border-color: transparent; background: var(--tinta-noche); color: var(--neutro-100); }
+.certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: var(--esp-28) var(--esp-24) var(--esp-22); border-color: transparent; background: var(--tinta-noche); color: var(--neutro-100); }
 .certificado.con-ilu > .certificado-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
 .certificado.con-ilu .certificado-de, .certificado.con-ilu .certificado-pie { color: color-mix(in srgb, var(--neutro-100) 72%, transparent); }
 .certificado.con-ilu .certificado-pie { margin-bottom: 26px; }
@@ -290,14 +290,14 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* La cuenta atrás: contando, el reloj de arena y la bandera en una franja algo más alta (5:2, caben los dos); el día y
    pasada, un cuadrito en lugar del emoji */
 .panel.cuenta-meta.con-franja { display: block; overflow: hidden; }
-.panel-pad > .franja-pegada.franja-meta { aspect-ratio: 5 / 2; object-position: 50% 50%; margin-bottom: 10px; }
-.cuenta-meta-fila { display: flex; gap: 12px; align-items: center; }
+.panel-pad > .franja-pegada.franja-meta { aspect-ratio: 5 / 2; object-position: 50% 50%; margin-bottom: var(--esp-10); }
+.cuenta-meta-fila { display: flex; gap: var(--esp-12); align-items: center; }
 .cuenta-meta-img { flex: none; width: 56px; height: 56px; border-radius: var(--r-14); object-fit: cover; }
 /* Tu historia en una línea: el camino de la nieve a la primavera, arriba */
 .panel.historia-linea.con-ilu { display: block; overflow: hidden; }
-.historia-linea-texto { display: flex; gap: 10px; align-items: flex-start; margin: 0; line-height: 1.45; }
+.historia-linea-texto { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
 .panel.historia-linea:not(.con-ilu) > .historia-linea-texto > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
-.panel-pad > .franja-pegada.franja-historia { margin-bottom: 10px; object-position: 50% 50%; }
+.panel-pad > .franja-pegada.franja-historia { margin-bottom: var(--esp-10); object-position: 50% 50%; }
 /* Su aniversario: la medalla del hito junto al título (la tarta sigue en la franja) */
 .aniversario.con-medalla { grid-template-columns: 64px minmax(0, 1fr) auto; }
 .aniversario.con-medalla > .aniversario-ilu { grid-column: 1 / -1; }
@@ -307,9 +307,9 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .adn-fbe-fondo { position: absolute; z-index: -1; right: 0; top: 0; height: 100%; width: 46%; object-fit: cover; object-position: 55% 88%; opacity: .55;
   -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); pointer-events: none; }
 /* Tu foto de motivación, sin elegir aún: el marco vacío colgado */
-.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: var(--r); object-fit: cover; }
+.foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: var(--esp-4) auto; border-radius: var(--r); object-fit: cover; }
 /* Para hablarle y la carta del mes (la ficha del coach) */
-.panel-pad > .franja-pegada.franja-hablarle { margin-bottom: 4px; object-position: 50% 50%; }
+.panel-pad > .franja-pegada.franja-hablarle { margin-bottom: var(--esp-4); object-position: 50% 50%; }
 .franja-carta { aspect-ratio: 5 / 2; border-radius: var(--r); object-position: 50% 50%; }
 /* Tu mejor momento: el arco del sol en lugar del rayo */
 .mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: var(--r-14); object-fit: cover; }
@@ -318,20 +318,20 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* ---------------------------------------------------------------- (imágenes de las 48 h) Bloques AC, AD y AE */
 /* Un cuadrito en lugar del icono de una fila (tiempo, hace un año, cómo estás, qué tal fue) */
 .ico-ilu { flex: none; width: 44px; height: 44px; border-radius: var(--r-s); object-fit: cover; }
-.tiempo-hoy-t:has(> .ico-ilu), .hace-un-ano:has(> .ico-ilu), .hoy-como-estas:has(> .ico-ilu), .vida-fila:has(> .ico-ilu) { align-items: center; gap: 12px; }
+.tiempo-hoy-t:has(> .ico-ilu), .hace-un-ano:has(> .ico-ilu), .hoy-como-estas:has(> .ico-ilu), .vida-fila:has(> .ico-ilu) { align-items: center; gap: var(--esp-12); }
 /* Una franja arriba de una hoja (o dentro del calentamiento): la proporción la da la imagen */
 .franja-hoja { border-radius: var(--r); object-position: 50% 50%; }
-.calentamiento > .franja-hoja { margin: 10px 0 4px; }
+.calentamiento > .franja-hoja { margin: var(--esp-10) 0 var(--esp-4); }
 /* La explicación de una hoja con su dibujo al lado (cambiar ejercicio, lo que no quieres ver, tu ciclo) */
-.intro-ilu { display: flex; gap: 12px; align-items: center; }
+.intro-ilu { display: flex; gap: var(--esp-12); align-items: center; }
 .intro-ilu > p { margin: 0; flex: 1; min-width: 0; }
 .intro-ilu-img { flex: none; width: 64px; height: 64px; border-radius: var(--r-16); object-fit: cover; }
 /* La voz de tu coach: las ondas junto al botón */
-.voz-coach:has(> .voz-coach-img) { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.voz-coach:has(> .voz-coach-img) { display: flex; gap: var(--esp-10); align-items: center; flex-wrap: wrap; }
 .voz-coach-img { flex: none; width: 40px; height: 40px; border-radius: var(--r-s); object-fit: cover; }
 .voz-coach:has(> .voz-coach-img) > audio { flex: 1; min-width: 180px; }
 /* El reto del mes: la diana con sus días junto al título; el álbum, en franja, y sus hitos con su dibujo */
-.reto-mes-cab { display: flex; gap: 12px; align-items: center; }
+.reto-mes-cab { display: flex; gap: var(--esp-12); align-items: center; }
 .reto-mes-img { flex: none; width: 64px; height: 64px; border-radius: var(--r-16); object-fit: cover; }
 .panel-pad > .franja-pegada.franja-album { object-position: 50% 50%; }
 .album-img { flex: none; width: 34px; height: 34px; border-radius: var(--r-10); object-fit: cover; }
@@ -339,9 +339,9 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 @media (forced-colors: active) { .ico-ilu, .intro-ilu-img, .voz-coach-img, .reto-mes-img, .album-img { display: none; } }
 
 /* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AF: para el coach, y su primer mes */
-.lo-que-funciona.con-ilu { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+.lo-que-funciona.con-ilu { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--esp-12); }
 .lo-que-funciona.con-ilu > :not(.lo-que-funciona-img) { grid-column: 1; }
 .lo-que-funciona.con-ilu > .lo-que-funciona-img { grid-column: 2; grid-row: 1 / span 4; align-self: start; }
-.alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
+.alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: var(--esp-12); }
 .panel.primeros-pasos.con-ilu { overflow: hidden; }
 .primeros-pasos-ilu { object-position: 50% 50%; }

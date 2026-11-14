@@ -1,18 +1,18 @@
 /* (sonido, tanda 1) La hoja "Sonido y vibracion": los perfiles, "Escuchar todos" y el volumen de cada apartado */
-.aj-perfil-sonido { margin-bottom: 12px; }
+.aj-perfil-sonido { margin-bottom: var(--esp-12); }
 .aj-perfil-sonido .segmentos { width: 100%; }
-.aj-escuchar { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
-.aj-apartados { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; border: 0; min-width: 0; }
-.aj-apartados legend { padding: 0; margin-bottom: 2px; }
-.aj-apartado { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'etq probar' 'barra probar'; align-items: center; column-gap: 8px; }
-.aj-apartado label { grid-area: etq; display: flex; justify-content: space-between; gap: 8px; font-size: var(--letra-14); }
+.aj-escuchar { justify-self: start; display: inline-flex; align-items: center; gap: var(--esp-6); }
+.aj-apartados { display: grid; gap: var(--esp-6); margin: var(--esp-10) 0 0; padding: 0; border: 0; min-width: 0; }
+.aj-apartados legend { padding: 0; margin-bottom: var(--esp-2); }
+.aj-apartado { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'etq probar' 'barra probar'; align-items: center; column-gap: var(--esp-8); }
+.aj-apartado label { grid-area: etq; display: flex; justify-content: space-between; gap: var(--esp-8); font-size: var(--letra-14); }
 .aj-apartado input { grid-area: barra; width: 100%; }
 .aj-apartado .btn { grid-area: probar; }
 
 /* (sonido, tanda 3) Las frases del coach, con su voz */
-.voz-frase-cab { justify-content: space-between; align-items: center; gap: 8px; }
-.voz-frase-botones { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.voz-frase-nueva { gap: 8px; }
+.voz-frase-cab { justify-content: space-between; align-items: center; gap: var(--esp-8); }
+.voz-frase-botones { gap: var(--esp-6); flex-wrap: wrap; justify-content: flex-end; }
+.voz-frase-nueva { gap: var(--esp-8); }
 .voz-frase .grabando svg { color: inherit; }
 @media (prefers-reduced-motion: no-preference) {
   .voz-frase .grabando { animation: voz-grabando 1s ease-in-out infinite alternate; }
@@ -20,10 +20,10 @@
 @keyframes voz-grabando { to { opacity: .7; } }
 
 /* (sonido 2) "Se oye bien?" en la sesion y su hoja; el horario sin sonidos; "Escuchar" la evolucion */
-.aviso-prueba-sonido { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 10px; padding: 8px 12px; border-radius: var(--r-s); background: var(--acento-a8); }
+.aviso-prueba-sonido { display: flex; align-items: center; flex-wrap: wrap; gap: var(--esp-4) var(--esp-10); margin: 0 0 var(--esp-10); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-s); background: var(--acento-a8); }
 .aviso-prueba-sonido svg { width: 16px; height: 16px; }
 .aviso-prueba-sonido span { flex: 1; min-width: 10rem; }
-.prueba-sonido .fila-envolver { gap: 8px; }
-.aj-horario { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prueba-sonido .fila-envolver { gap: var(--esp-8); }
+.aj-horario { display: flex; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }
 .aj-horario input { width: auto; }
-.escuchar-progreso { display: inline-flex; align-items: center; gap: 6px; }
+.escuchar-progreso { display: inline-flex; align-items: center; gap: var(--esp-6); }
