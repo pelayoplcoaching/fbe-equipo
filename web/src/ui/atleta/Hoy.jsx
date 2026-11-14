@@ -34,6 +34,7 @@ import { TarjetaNotificaciones } from '../Notificaciones.jsx';
 import { NutricionHoy } from './Nutricion.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { conCarrera } from '../../logica/carrera.js';
+import { tonoDia } from '../../logica/paleta.js';
 import { CarreraHoy, TuCarrera } from './Carrera.jsx';
 import { MenuHoy } from './Comidas.jsx';
 import { planVigente } from '../../logica/nutricion.js';
@@ -539,7 +540,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
-      <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
+      <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}

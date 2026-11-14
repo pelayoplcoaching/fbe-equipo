@@ -586,7 +586,7 @@ export function pintarFormas(ctx, formas, W, H, proporcion = 1) {
       }
       if (f.tipo === 'angulo') {
         const gr = grados(f.p, proporcion);
-        if (gr != null) { ctx.save(); ctx.font = `700 ${Math.round(15 * k)}px system-ui, sans-serif`; ctx.lineWidth = 3 * k; ctx.strokeStyle = '#1D1933'; ctx.fillStyle = '#fff'; ctx.strokeText(`${gr}°`, ps[0][0] + 10 * k, ps[0][1] - 10 * k); ctx.fillText(`${gr}°`, ps[0][0] + 10 * k, ps[0][1] - 10 * k); ctx.restore(); }
+        if (gr != null) { ctx.save(); ctx.font = `700 ${Math.round(15 * k)}px system-ui, sans-serif`; ctx.lineWidth = 3 * k; ctx.strokeStyle = '#211F32'; ctx.fillStyle = '#fff'; ctx.strokeText(`${gr}°`, ps[0][0] + 10 * k, ps[0][1] - 10 * k); ctx.fillText(`${gr}°`, ps[0][0] + 10 * k, ps[0][1] - 10 * k); ctx.restore(); }
       }
     } else if (f.tipo === 'circulo') {
       const [c, b] = ps; const rr = Math.max(4, Math.hypot(b[0] - c[0], b[1] - c[1]));
@@ -594,7 +594,7 @@ export function pintarFormas(ctx, formas, W, H, proporcion = 1) {
     } else if (f.tipo === 'lapiz') {
       trazo(() => { ps.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); });
     } else if (f.tipo === 'texto') {
-      ctx.save(); ctx.font = `800 ${Math.round(16 * k)}px system-ui, sans-serif`; ctx.lineWidth = 4 * k; ctx.strokeStyle = '#1D1933'; ctx.fillStyle = color;
+      ctx.save(); ctx.font = `800 ${Math.round(16 * k)}px system-ui, sans-serif`; ctx.lineWidth = 4 * k; ctx.strokeStyle = '#211F32'; ctx.fillStyle = color;
       ctx.strokeText(f.x, ps[0][0], ps[0][1]); ctx.fillText(f.x, ps[0][0], ps[0][1]); ctx.restore();
     }
   }

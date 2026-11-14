@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.161': {
+    atleta: [
+      'Colores nuevos, más limpios: grises neutros, modo oscuro con luz y la tarjeta del día con el color de tu sesión.',
+      'Perfil → Ajustes: tres acentos más (Océano, Lima y Orquídea), «Alto contraste» y «Ayuda para daltonismo».',
+    ],
+    coach: [
+      'Los mismos colores en tu panel; sin migración.',
+    ],
+  },
   '0.160': {
     atleta: [
       'Tu música, más tuya: listas por momento, tus himnos, la cadencia por tramos y «Lo batiste con…» en tus récords.',

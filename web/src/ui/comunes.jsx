@@ -1,3 +1,4 @@
+import { trozosCerrados } from '../logica/paleta.js';
 import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -1474,11 +1475,22 @@ export function GrupoIos({ titulo, pie = null, children, clase = '', id }) {
 }
 // tono: '' (el acento), 'ok', 'aviso' o 'alerta'. Con alTocar o href, la fila entera es el botón (o el enlace) y
 // lleva el chevrón; si no, children va a la derecha. bloque: el control debajo, a todo el ancho (unos segmentos).
+// (color, mejora 13) El icono a dos tintas: las formas cerradas, rellenas de su color muy suave, y el trazo encima.
+// Solo se rellenan los trozos que empiezan con «M» y se cierran con «z» (los relativos dependen del trozo anterior).
+function IconoDuo({ n, ...resto }) {
+  const relleno = trozosCerrados(P[n]);
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {...resto}>
+      {relleno && <path class="icono-duo" d={relleno} />}
+      <path d={P[n]} />
+    </svg>
+  );
+}
 export function IcoIos({ n, tono = '', clase = '' }) {
   const img = !tono && hayImagen(imagenIcono(n)) ? imagenIcono(n) : null;
   return (
     <span class={`ios-ico${tono ? ` ${tono}` : ''}${img ? ' con-img' : ''}${clase ? ` ${clase}` : ''}`} aria-hidden="true">
-      <Icono n={n} class={`ico-${n}`} />{img && <Imagen id={img} clase="ico-img" tamanos="2rem" />}
+      {img ? <Icono n={n} class={`ico-${n}`} /> : <IconoDuo n={n} class={`ico-${n}`} />}{img && <Imagen id={img} clase="ico-img" tamanos="2rem" />}
     </span>
   );
 }

@@ -122,7 +122,7 @@ export async function dibujarCarnet(d) {
   x.beginPath(); x.roundRect ? x.roundRect(0, 0, W, H, R) : x.rect(0, 0, W, H); x.clip();
   // (diseño, tanda 21) la noche de la portada con sus dos resplandores (como las tarjetas para compartir)
   let g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#221957'); g.addColorStop(1, '#150F36');
+  g.addColorStop(0, '#241665'); g.addColorStop(1, '#140B3A');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   for (const [cx, cy, r, a] of [[W * 0.9, H * 0.05, 620, 0.5], [W * 0.05, H * 1.05, 560, 0.4]]) {
     g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
@@ -138,9 +138,9 @@ export async function dibujarCarnet(d) {
   for (const [o, c] of [[0, 'rgba(255,255,255,0)'], [0.42, 'rgba(120,220,255,.16)'], [0.5, 'rgba(255,170,240,.22)'], [0.58, 'rgba(255,230,140,.16)'], [1, 'rgba(255,255,255,0)']]) h.addColorStop(o, c);
   x.fillStyle = h; x.fillRect(0, 0, W, H);
   const wLobo = dibujarLobo(x, 72, 60, 92);
-  x.fillStyle = '#F3F1FB'; letra(800, 46, 'expanded'); x.fillText('FBE Coaching', 72 + wLobo + 24, 126);
-  x.fillStyle = '#E9D49A'; letra(650, 30, 'condensed'); x.textAlign = 'right'; x.fillText(d.numero, W - 72, 122); x.textAlign = 'left';
-  x.fillStyle = '#D7D2EE'; letra(700, 26); x.fillText('ATLETA', 72, 392);
+  x.fillStyle = '#F7F5FF'; letra(800, 46, 'expanded'); x.fillText('FBE Coaching', 72 + wLobo + 24, 126);
+  x.fillStyle = '#FADA99'; letra(650, 30, 'condensed'); x.textAlign = 'right'; x.fillText(d.numero, W - 72, 122); x.textAlign = 'left';
+  x.fillStyle = '#DDD9FF'; letra(700, 26); x.fillText('ATLETA', 72, 392);
   x.fillStyle = '#FFFFFF'; letra(820, 84, 'expanded');
   let nombre = d.nombre;
   while (x.measureText(nombre).width > W - 144 && nombre.length > 3) nombre = `${nombre.slice(0, -2)}…`;
@@ -148,8 +148,8 @@ export async function dibujarCarnet(d) {
   const campos = [['NIVEL', d.nivel], ['DESDE', d.desde]].filter(([, v]) => v);
   let cx = 72;
   for (const [k, v] of campos) {
-    x.fillStyle = '#D7D2EE'; letra(700, 24); x.fillText(k, cx, 610);
-    x.fillStyle = '#F3F1FB'; letra(650, 34);
+    x.fillStyle = '#DDD9FF'; letra(700, 24); x.fillText(k, cx, 610);
+    x.fillStyle = '#F7F5FF'; letra(650, 34);
     let t = v; const max = 420;
     while (x.measureText(t).width > max && t.length > 3) t = `${t.slice(0, -2)}…`;
     x.fillText(t, cx, 656);

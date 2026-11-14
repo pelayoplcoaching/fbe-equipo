@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import './color.css';
 import './estilos.css';
 import './diseno.css';
 import './pulido.css';
@@ -19,6 +20,7 @@ import './viaje.css';
 import './travesia.css';
 import './sonido.css';
 import './apuntes.css';
+import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
 import { instalarPulido } from './ui/pulido.js';
@@ -66,6 +68,13 @@ async function arrancar() {
   const cola = crearCola(api);
   // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
   api.usarCola(() => cola.operaciones());
+  // (color, mejora 20) «Paleta»: solo en la demo (?demo&paleta), para revisar el color de un vistazo
+  if (!conSupabase && new URLSearchParams(location.search).has('paleta')) {
+    const { PaletaDemo } = await import('./ui/PaletaDemo.jsx');
+    render(<PaletaDemo />, document.getElementById('app'));
+    import('./ui/portada.js').then((m) => m.quitarPortada()).catch(() => {});
+    return;
+  }
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
   // (sonido, tanda 2) el audio de la app, listo con el primer toque (sin sonar nada)
   import('./ui/sonido.js').then((m) => m.prepararAlTocar()).catch(() => {});

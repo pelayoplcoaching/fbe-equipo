@@ -230,7 +230,7 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
   check(pesos.reduce((a, b) => a + b, 0) < 200 * 1024, `todos juntos, ${(pesos.reduce((a, b) => a + b, 0) / 1024).toFixed(0)} KB (menos de 200)`);
   check(ICONOS_IMG.every((n) => LISTA_IMG[imagenIcono(n)].proporcion.join(':') === '1:1'), 'todos cuadrados');
   check(archivoPara(imagenIcono('bascula'), 32) === LISTA_IMG['ico-bascula'].archivos['96'] && archivoPara(imagenIcono('bascula'), 60) === LISTA_IMG['ico-bascula'].archivos['192'], 'el cuadradito (32 px) usa el de 96 y el vacío (60 px) el de 192');
-  check(/export function IcoIos\(\{ n, tono = '', clase = '' \}\) \{\n  const img = !tono && hayImagen\(imagenIcono\(n\)\)/.test(com) && /<Icono n=\{n\} class=\{`ico-\$\{n\}`\} \/>\{img && <Imagen id=\{img\} clase="ico-img"/.test(com), 'el cuadradito pinta la imagen encima del dibujo de líneas, y nunca con tono de estado');
+  check(/export function IcoIos\(\{ n, tono = '', clase = '' \}\) \{\n  const img = !tono && hayImagen\(imagenIcono\(n\)\)/.test(com) && /\{img \? <Icono n=\{n\} class=\{`ico-\$\{n\}`\} \/> : <IconoDuo n=\{n\} class=\{`ico-\$\{n\}`\} \/>\}\{img && <Imagen id=\{img\} clase="ico-img"/.test(com), 'el cuadradito pinta la imagen encima del dibujo de líneas, y nunca con tono de estado');
   const css = readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8');
   check(/\.ico-img \{ position: absolute; inset: 0; width: 100%; height: 100%;/.test(css) && /\.conexion-salud \.ico-img, \.conexion-calendario \.ico-img \{ display: none; \}/.test(css), 'la imagen cubre el cuadradito entero (sin saltos), y Salud y el calendario conservan su color');
 }

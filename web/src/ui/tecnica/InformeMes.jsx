@@ -117,7 +117,7 @@ function VistaInforme({ inf }) {
 }
 
 // ---------------------------------------------------------------- la imagen (1080 × 1350, en el propio móvil)
-const C = { fondo: '#13111C', tinta: '#EDEBF7', tinta2: '#ADA8C4', morado: '#A08CFF', linea: '#2F2B43', verde: '#3DC27B', ambar: '#F2C230' };
+const C = { fondo: '#151423', tinta: '#EEECFF', tinta2: '#AAA9B5', morado: '#A49CFF', linea: '#2A283D', verde: '#48C77C', ambar: '#EBC166' };
 export async function dibujarInforme(inf) {
   if (!inf) throw new Error('No hay informe');
   try { await Promise.all([document.fonts.load(`800 80px ${FUENTE}`), document.fonts.load(`500 30px ${FUENTE}`)]); } catch { /* la del sistema */ }

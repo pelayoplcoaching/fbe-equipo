@@ -114,7 +114,8 @@ ${marcadoPortada}
 
   writeFileSync(join(salida, 'manifest.webmanifest'), JSON.stringify({
     name: 'FBE Equipo', short_name: 'FBE Equipo', lang: 'es', start_url: './', scope: './', display: 'standalone',
-    background_color: FONDO_PORTADA, theme_color: '#5438D8', description: 'Tu programa de FBE Coaching y el registro de cada serie.',
+    background_color: FONDO_PORTADA, theme_color: FONDO_PORTADA,  // (color, mejora 19) la barra, en la tinta noche de la portada (la misma del arranque)
+    description: 'Tu programa de FBE Coaching y el registro de cada serie.',
     icons: [
       { src: 'icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
       { src: 'icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },

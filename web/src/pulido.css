@@ -80,7 +80,7 @@ html { overscroll-behavior-y: contain; }
 .reserva-hueco { display: none; }
 /* Mientras carga, el sitio que ocupó la última vez: una silueta si aún no hay nada... */
 .reserva-hueco[data-hueco] { display: block; min-width: 0; pointer-events: none; }
-.reserva-hueco[data-hueco="entero"] { border-radius: var(--r); background: linear-gradient(90deg, var(--hoja-2) 0%, var(--linea) 45%, var(--hoja-2) 90%); background-size: 220% 100%;
+.reserva-hueco[data-hueco="entero"] { border-radius: var(--r); background: linear-gradient(var(--oklab,) 90deg, var(--hoja-2) 0%, var(--linea) 45%, var(--hoja-2) 90%); background-size: 220% 100%;
   opacity: .55; animation: sil-brillo 1.4s ease-in-out infinite, sil-aparece .25s ease-out .12s both; }
 /* ...y, si ya hay algo y va a crecer, solo el espacio que falta (sin pintar nada) */
 @media (prefers-reduced-motion: reduce) { .reserva-hueco[data-hueco="entero"] { animation: none; } }
