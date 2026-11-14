@@ -2,6 +2,7 @@
 // entrenar; en Hoy, su carrera con la cuenta atrás; y «Tu carrera»: zonas, carreras, plan por semanas y revisiones.
 import { useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, IcoIos } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { TablaZonas, Macrociclo, ListaPartes } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
@@ -107,6 +108,7 @@ export function TuCarrera({ alCerrar }) {
   const d = carrera.datos;
   return (
     <Hoja titulo="Tu carrera" alCerrar={alCerrar} clase="hoja-tu-carrera">
+      <Imagen id="carrera" clase="franja-ilu franja-hoja franja-carrera" tamanos="(min-width: 640px) 560px, 92vw" />
       {carrera.error ? <ErrorCaja error={carrera.error} reintentar={carrera.recargar} /> : !d ? <Siluetas forma="tarjetas" n={3} texto="Cargando tu carrera" /> : <ContenidoCarrera d={d} />}
     </Hoja>
   );
@@ -143,6 +145,7 @@ function ContenidoCarrera({ d }) {
 
       {zonas && (
         <section class="panel panel-pad pila-s" aria-labelledby="tc-zonas">
+          <Imagen id="carrera-zonas" clase="franja-ilu franja-pegada franja-zonas" tamanos="(min-width: 640px) 560px, 100vw" />
           <h3 id="tc-zonas" class="h-panel">Tus zonas</h3>
           <TablaZonas zonas={zonas} umbral={p.umbral} />
           <p class="mini terciario">{[p.test_fecha && `Del test del ${fmtConDia(p.test_fecha)}${p.test_tipo ? ` (${NOMBRE_TEST[p.test_tipo].toLowerCase()})` : ''}`, p.fc_max && `FC máxima ${p.fc_max}`, p.lthr && `FC umbral ${p.lthr}`].filter(Boolean).join(' · ')}</p>
@@ -151,7 +154,7 @@ function ContenidoCarrera({ d }) {
 
       {d.eventos.length > 0 && (
         <section class="panel panel-pad pila-s" aria-labelledby="tc-carreras">
-          <h3 id="tc-carreras" class="h-panel">Tus carreras</h3>
+          <h3 id="tc-carreras" class="h-panel"><Imagen id="carrera-dorsal" clase="ico-ilu" tamanos="44px" />Tus carreras</h3>
           <ul class="lista-eventos">
             {d.eventos.map((e) => (
               <li key={e.id} class={`evento-carrera${e.fecha < hoy ? ' pasada' : ''}`} data-decision={e.decision}>
@@ -202,12 +205,12 @@ function ContenidoCarrera({ d }) {
       )}
 
       <section class="panel panel-pad pila-s" aria-labelledby="tc-semaforo">
-        <h3 id="tc-semaforo" class="h-panel">El semáforo</h3>
+        <h3 id="tc-semaforo" class="h-panel"><Imagen id="carrera-semaforo" clase="ico-ilu" tamanos="44px" />El semáforo</h3>
         <ul class="lista-semaforo">{['verde', 'ambar', 'rojo'].map((k) => <li key={k}><span class="semaforo-punto" data-estado={k} aria-hidden="true" /><span class="peq"><strong>{SEMAFORO[k].titulo}:</strong> {SEMAFORO[k].texto}</span></li>)}</ul>
         <p class="mini aviso-texto">{ALARMA}</p>
       </section>
 
-      {p.nota && <section class="panel panel-pad pila-s" aria-labelledby="tc-nota"><h3 id="tc-nota" class="h-panel">Carrera y fuerza</h3><p class="peq" style="white-space:pre-line">{p.nota}</p></section>}
+      {p.nota && <section class="panel panel-pad pila-s" aria-labelledby="tc-nota"><h3 id="tc-nota" class="h-panel"><Imagen id="carrera-fuerza" clase="ico-ilu" tamanos="44px" />Carrera y fuerza</h3><p class="peq" style="white-space:pre-line">{p.nota}</p></section>}
       {!obj && !zonas && !semanas.length && <p class="peq secundario">Tu coach está preparando tu plan de carrera: aquí verás tus zonas, tus carreras y cada semana.</p>}
     </div>
   );

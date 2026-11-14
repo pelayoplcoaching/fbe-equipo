@@ -2,6 +2,7 @@
 // capítulos, con buscador, filtros de un toque y las que cada uno se guarda. Quien solo entrena las consulta; quien
 // lleva la nutrición puede además apuntarlas en su menú (alAnadir) y, si su plan tiene kcal, las ve ajustadas a él
 // (ajuste: receta → { factor, toma, kcalToma } | null). El coach lo ve igual, sin guardar ni apuntar.
+import { Imagen } from './Imagen.jsx';
 import { useState, useMemo } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, usePorTramos } from './comunes.jsx';
 import { FotoReceta } from './ComidasComun.jsx';
@@ -90,7 +91,7 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
         <p class="mini terciario" role="status">{vistas.length === recetas.length ? resumenRecetario(recetas) : vistas.length === 1 ? '1 receta' : `${vistas.length} recetas`}</p>
       </div>
       {!vistas.length ? (
-        <div class="panel"><Vacio icono={elFiltro === 'favoritas' && !texto ? 'estrella' : 'buscar'} titulo={elFiltro === 'favoritas' && !texto && !capitulo ? 'Aún no has guardado ninguna' : 'Nada con eso'}>
+        <div class="panel"><Vacio icono={elFiltro === 'favoritas' && !texto ? 'estrella' : 'buscar'} imagen={elFiltro === 'favoritas' && !texto ? 'vacio-favoritas' : 'vacio-buscar'} titulo={elFiltro === 'favoritas' && !texto && !capitulo ? 'Aún no has guardado ninguna' : 'Nada con eso'}>
           {elFiltro === 'favoritas' && !texto && !capitulo ? 'Abre una receta y toca «Guardar» para tenerla aquí a mano.' : 'Prueba con otra palabra o quita algún filtro.'}
         </Vacio></div>
       ) : grupos.map((c) => (
@@ -172,7 +173,7 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
             <ol class="pasos-receta">{pasos.map((p, k) => <li key={k}>{p}</li>)}</ol>
           </section>
         )}
-        {l.encaje && <section class="pila-s"><h3 class="etq">Cómo encaja en tu día</h3><p class="peq">{l.encaje}</p></section>}
+        {l.encaje && <section class="pila-s"><h3 class="etq etq-con-ilu"><Imagen id="receta-encaja" clase="ico-ilu" tamanos="44px" />Cómo encaja en tu día</h3><p class="peq">{l.encaje}</p></section>}
         {l.nota && <div class="nota-coach"><Icono n="mensaje" /><div><strong>{esCoach ? 'Tu nota: ' : 'Nota de tu coach: '}</strong>{l.nota}</div></div>}
         {!esCoach && (alAnadir || alMarcar) && (
           <div class="pila-s">

@@ -343,6 +343,17 @@
     },
     "color": "#443276"
   },
+  "antes-de-empezar": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion-extra/antes-de-empezar-720.8d46a166.webp",
+      "1080": "imagenes/sesion-extra/antes-de-empezar-1080.6c26370b.webp"
+    },
+    "color": "#4e3670"
+  },
   "apuntes-audio": {
     "proporcion": [
       1,
@@ -495,6 +506,17 @@
       "320": "imagenes/apuntes/apuntes-tema-tecnica-320.681a8bd6.webp"
     },
     "color": "#382960"
+  },
+  "atajos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/atajos-160.6e481702.webp",
+      "320": "imagenes/coach/atajos-320.5f2c01f0.webp"
+    },
+    "color": "#4e3875"
   },
   "bic-curl-arana": {
     "proporcion": [
@@ -749,6 +771,61 @@
     },
     "color": "#332666"
   },
+  "carrera": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/carrera-720.d62d8291.webp",
+      "1080": "imagenes/ah/carrera-1080.529cddb4.webp"
+    },
+    "color": "#513c87"
+  },
+  "carrera-dorsal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-dorsal-160.ca169168.webp",
+      "320": "imagenes/ah/carrera-dorsal-320.830aa8c2.webp"
+    },
+    "color": "#5b4a82"
+  },
+  "carrera-fuerza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-fuerza-160.66a78ff2.webp",
+      "320": "imagenes/ah/carrera-fuerza-320.18276812.webp"
+    },
+    "color": "#50396f"
+  },
+  "carrera-semaforo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-semaforo-160.832ca862.webp",
+      "320": "imagenes/ah/carrera-semaforo-320.a4020092.webp"
+    },
+    "color": "#3e3464"
+  },
+  "carrera-zonas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/carrera-zonas-720.65f03160.webp",
+      "1080": "imagenes/ah/carrera-zonas-1080.f6e2933a.webp"
+    },
+    "color": "#633f74"
+  },
   "carta-mes": {
     "proporcion": [
       5,
@@ -986,6 +1063,17 @@
       "1080": "imagenes/coach/coach-revision-semanal-1080.820cc102.webp"
     },
     "color": "#4c3e7d"
+  },
+  "cobros": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/cobros-160.84600207.webp",
+      "320": "imagenes/coach/cobros-320.f58d97c5.webp"
+    },
+    "color": "#624a7d"
   },
   "comida-cena": {
     "proporcion": [
@@ -1625,6 +1713,28 @@
     },
     "color": "#4f367d"
   },
+  "descanso": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion-extra/descanso-720.48db1c3a.webp",
+      "1080": "imagenes/sesion-extra/descanso-1080.6695d5a9.webp"
+    },
+    "color": "#47377c"
+  },
+  "difusion": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/coach/difusion-480.9ada4ea8.webp",
+      "840": "imagenes/coach/difusion-840.8a795228.webp"
+    },
+    "color": "#503c7b"
+  },
   "donde-casa": {
     "proporcion": [
       16,
@@ -1684,6 +1794,17 @@
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
     },
     "color": "#41317c"
+  },
+  "escaner": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/escaner-720.f25b1c30.webp",
+      "1080": "imagenes/ah/escaner-1080.f797384d.webp"
+    },
+    "color": "#715087"
   },
   "esp-dominadas-neutras": {
     "proporcion": [
@@ -3248,6 +3369,17 @@
     },
     "color": "#694f8f"
   },
+  "integraciones": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/integraciones-720.5bdd4101.webp",
+      "1080": "imagenes/coach/integraciones-1080.5fdb1933.webp"
+    },
+    "color": "#51397a"
+  },
   "isq-buenos-dias": {
     "proporcion": [
       1,
@@ -3677,6 +3809,17 @@
     },
     "color": "#4a2e77"
   },
+  "menu-privado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/menu-privado-160.6123bca1.webp",
+      "320": "imagenes/coach/menu-privado-320.7fb2198f.webp"
+    },
+    "color": "#4d3d7c"
+  },
   "mes-01": {
     "proporcion": [
       16,
@@ -3877,6 +4020,171 @@
       "1080": "imagenes/aprende/mito-semana-1080.4d98144a.webp"
     },
     "color": "#49346d"
+  },
+  "musica-acompana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-acompana-160.5e4381a4.webp",
+      "320": "imagenes/musica/musica-acompana-320.2cc29cdc.webp"
+    },
+    "color": "#4a3271"
+  },
+  "musica-biblioteca": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-biblioteca-720.7f7fbb8c.webp",
+      "1080": "imagenes/musica/musica-biblioteca-1080.672cef27.webp"
+    },
+    "color": "#573a72"
+  },
+  "musica-cadencia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-cadencia-160.9c8740bb.webp",
+      "320": "imagenes/musica/musica-cadencia-320.f6abcbb6.webp"
+    },
+    "color": "#3b3068"
+  },
+  "musica-calentar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-calentar-160.55c99a7a.webp",
+      "320": "imagenes/musica/musica-calentar-320.135fc81b.webp"
+    },
+    "color": "#563b6e"
+  },
+  "musica-calma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-calma-160.6ced23e8.webp",
+      "320": "imagenes/musica/musica-calma-320.c3874a15.webp"
+    },
+    "color": "#523d72"
+  },
+  "musica-equipo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-equipo-720.0413b960.webp",
+      "1080": "imagenes/musica/musica-equipo-1080.a1aac68c.webp"
+    },
+    "color": "#503573"
+  },
+  "musica-himnos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-himnos-160.afa72531.webp",
+      "320": "imagenes/musica/musica-himnos-320.76bd814f.webp"
+    },
+    "color": "#483464"
+  },
+  "musica-hoy": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-hoy-720.ae16ebb0.webp",
+      "1080": "imagenes/musica/musica-hoy-1080.0bb5b13b.webp"
+    },
+    "color": "#41336e"
+  },
+  "musica-invitacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-invitacion-160.b8e947db.webp",
+      "320": "imagenes/musica/musica-invitacion-320.b246271a.webp"
+    },
+    "color": "#4a397b"
+  },
+  "musica-listas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-listas-720.321b4816.webp",
+      "1080": "imagenes/musica/musica-listas-1080.c829e19f.webp"
+    },
+    "color": "#594386"
+  },
+  "musica-pareja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-pareja-160.90828093.webp",
+      "320": "imagenes/musica/musica-pareja-320.5fc024cc.webp"
+    },
+    "color": "#533772"
+  },
+  "musica-reto": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-reto-720.1642d5d1.webp",
+      "1080": "imagenes/musica/musica-reto-1080.140afa84.webp"
+    },
+    "color": "#523674"
+  },
+  "musica-ritmo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-ritmo-160.661640e2.webp",
+      "320": "imagenes/musica/musica-ritmo-320.8ce39446.webp"
+    },
+    "color": "#3a2c69"
+  },
+  "musica-test": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-test-160.46a57928.webp",
+      "320": "imagenes/musica/musica-test-320.e2ee065b.webp"
+    },
+    "color": "#563966"
+  },
+  "nutricion-pautas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/nutricion-pautas-720.ca163484.webp",
+      "1080": "imagenes/coach/nutricion-pautas-1080.80976a79.webp"
+    },
+    "color": "#695680"
   },
   "para-hablarle": {
     "proporcion": [
@@ -4439,6 +4747,17 @@
     },
     "color": "#5f497d"
   },
+  "preparacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion-extra/preparacion-160.cd8dd6fa.webp",
+      "320": "imagenes/sesion-extra/preparacion-320.25ee7932.webp"
+    },
+    "color": "#453574"
+  },
   "primer-mes": {
     "proporcion": [
       5,
@@ -4486,6 +4805,17 @@
     },
     "color": "#442e61"
   },
+  "receta-encaja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/receta-encaja-160.4c6e4999.webp",
+      "320": "imagenes/coach/receta-encaja-320.570357f9.webp"
+    },
+    "color": "#6b618e"
+  },
   "regalo": {
     "proporcion": [
       1,
@@ -4497,6 +4827,39 @@
     },
     "color": "#4a376e"
   },
+  "rellenar-semana": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/rellenar-semana-720.50ada6ea.webp",
+      "1080": "imagenes/coach/rellenar-semana-1080.a2543141.webp"
+    },
+    "color": "#493566"
+  },
+  "reloj": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/reloj-160.017380a2.webp",
+      "320": "imagenes/ah/reloj-320.118aee60.webp"
+    },
+    "color": "#543e78"
+  },
+  "renuevan": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/renuevan-160.3a7e8687.webp",
+      "320": "imagenes/coach/renuevan-320.dfe74b33.webp"
+    },
+    "color": "#614686"
+  },
   "reto-mes": {
     "proporcion": [
       1,
@@ -4507,6 +4870,17 @@
       "320": "imagenes/compania/reto-mes-320.6c2cba3c.webp"
     },
     "color": "#4c397d"
+  },
+  "salud-conexion": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/salud-conexion-720.3a066ea2.webp",
+      "1080": "imagenes/ah/salud-conexion-1080.c88e84d1.webp"
+    },
+    "color": "#473263"
   },
   "semana-dificil": {
     "proporcion": [
@@ -4747,6 +5121,160 @@
     },
     "color": "#49366f"
   },
+  "vacio-buscar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-buscar-240.14597882.webp",
+      "360": "imagenes/vacio/vacio-buscar-360.52a2212c.webp"
+    },
+    "color": "#58416a"
+  },
+  "vacio-comunidad": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/vacio/vacio-comunidad-480.8a6ecd4a.webp",
+      "840": "imagenes/vacio/vacio-comunidad-840.5bfb2c9b.webp"
+    },
+    "color": "#432e69"
+  },
+  "vacio-destacados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-destacados-240.6af8a27a.webp",
+      "360": "imagenes/vacio/vacio-destacados-360.25af41b7.webp"
+    },
+    "color": "#583d58"
+  },
+  "vacio-documentos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-documentos-240.ef754a08.webp",
+      "360": "imagenes/vacio/vacio-documentos-360.5b732a9f.webp"
+    },
+    "color": "#4f396b"
+  },
+  "vacio-enlaces": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-enlaces-240.242f106b.webp",
+      "360": "imagenes/vacio/vacio-enlaces-360.81830f05.webp"
+    },
+    "color": "#41315a"
+  },
+  "vacio-favoritas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-favoritas-240.9e8bd171.webp",
+      "360": "imagenes/vacio/vacio-favoritas-360.e9ead4f2.webp"
+    },
+    "color": "#563f6d"
+  },
+  "vacio-fotos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-fotos-240.3c9826f8.webp",
+      "360": "imagenes/vacio/vacio-fotos-360.655391f1.webp"
+    },
+    "color": "#553d69"
+  },
+  "vacio-guardado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-guardado-240.e464bb75.webp",
+      "360": "imagenes/vacio/vacio-guardado-360.e0cca76c.webp"
+    },
+    "color": "#503969"
+  },
+  "vacio-historial": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-historial-240.48880b2f.webp",
+      "360": "imagenes/vacio/vacio-historial-360.39932b4d.webp"
+    },
+    "color": "#43335c"
+  },
+  "vacio-notas-voz": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-notas-voz-240.aeebf09f.webp",
+      "360": "imagenes/vacio/vacio-notas-voz-360.03626e8f.webp"
+    },
+    "color": "#483463"
+  },
+  "vacio-ranking": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-ranking-240.a05686ab.webp",
+      "360": "imagenes/vacio/vacio-ranking-360.a0ffc398.webp"
+    },
+    "color": "#4d386c"
+  },
+  "vacio-retos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-retos-240.b289db5b.webp",
+      "360": "imagenes/vacio/vacio-retos-360.ec10047f.webp"
+    },
+    "color": "#543d70"
+  },
+  "viaje": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/viaje-720.ee90e44e.webp",
+      "1080": "imagenes/ah/viaje-1080.698db58d.webp"
+    },
+    "color": "#4d3977"
+  },
+  "viaje-vuelta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/viaje-vuelta-160.e848e7f3.webp",
+      "320": "imagenes/ah/viaje-vuelta-320.fea18256.webp"
+    },
+    "color": "#654678"
+  },
   "vida-agenda": {
     "proporcion": [
       3,
@@ -4768,6 +5296,28 @@
       "320": "imagenes/vida/vida-que-tal-320.f8fb1c44.webp"
     },
     "color": "#574686"
+  },
+  "video-tecnica": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/sesion-extra/video-tecnica-480.a68bfa48.webp",
+      "840": "imagenes/sesion-extra/video-tecnica-840.f0f30f56.webp"
+    },
+    "color": "#533975"
+  },
+  "voces-frases": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/voces-frases-720.16889655.webp",
+      "1080": "imagenes/coach/voces-frases-1080.075ba19f.webp"
+    },
+    "color": "#503e78"
   },
   "voz-coach": {
     "proporcion": [

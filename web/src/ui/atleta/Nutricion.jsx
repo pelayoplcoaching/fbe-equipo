@@ -1,6 +1,7 @@
 // Nutrición del atleta (como MacroFactor o Carbon, pero con su coach detrás): en Hoy, lo que lleva del día
 // frente a lo que toca; apuntar en segundos (los totales de la app con la que cuente, o «¿has seguido el
 // plan?» si va sin contar); su plan con las pautas, y en Progreso, sus semanas y su gasto estimado.
+import { Imagen } from '../Imagen.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Paso, Segmentos, usePreferencia } from '../comunes.jsx';
 import { TarjetaPlan, GraficaIngesta, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
@@ -213,6 +214,7 @@ function HojaTuPlan({ r, alCerrar }) {
       <TarjetaPlan plan={r.plan} siguiente={r.siguiente} diasEntreno={r.diasEntreno} />
       {plan?.pautas && (
         <section class="pila-s">
+          <Imagen id="nutricion-pautas" clase="franja-ilu franja-hoja franja-pautas" tamanos="(min-width: 640px) 560px, 92vw" />
           <h3 class="etq">Pautas de tu coach</h3>
           <div class="pautas">{plan.pautas.split('\n').filter((l) => l.trim()).map((l, i) => <p key={i}>{l}</p>)}</div>
         </section>

@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { CabCoach } from './CabCoach.jsx';
-import { hayImagen } from '../Imagen.jsx';
+import { hayImagen, Imagen } from '../Imagen.jsx';
 import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, useAncho, usePreferencia } from '../comunes.jsx';
 import { Interruptor } from '../Ajustes.jsx';
 import { euros, OCULTO } from '../../logica/negocio.js';
@@ -80,7 +80,7 @@ function PanelNegocio({ datos: x, alCerrar, abrirAtleta }) {
             <p class="mini terciario">{x.porTipo.map((t) => `${t.nombre}: ${t.n}`).join(' · ')}</p>
           </section>
           <section class="pila-s">
-            <h3 class="sub-seccion">Renuevan en 30 días</h3>
+            <h3 class="sub-seccion h-con-ilu"><Imagen id="renuevan" clase="ico-ilu" tamanos="44px" />Renuevan en 30 días</h3>
             {!x.renovaciones.length ? <p class="peq secundario">Nadie acaba su periodo en los próximos 30 días.</p> : (
               <ul class="lista panel">
                 {x.renovaciones.map((r) => (

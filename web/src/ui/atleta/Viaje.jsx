@@ -5,6 +5,7 @@
 // sus preferencias de siempre.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, usePreferencia, Icono } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { leerPreferencia } from '../preferencias.js';
 import { estadoViaje, textoDesfase, horaAqui, horaBonita, ajusteDeViaje, ajusteAplicado, previoDeViaje, deshacerViaje, prefsDeCasa } from '../../logica/viaje.js';
 
@@ -49,7 +50,7 @@ export function AvisoViaje() {
     return (
       <section class="panel panel-pad aviso-viaje pila-s" aria-labelledby="viaje-vuelta">
         <div class="aviso-viaje-cab">
-          <span class="ios-ico" aria-hidden="true"><Icono n="ubicacion" /></span>
+          <Imagen id="viaje-vuelta" clase="ico-ilu" tamanos="44px" alternativa={<span class="ios-ico" aria-hidden="true"><Icono n="ubicacion" /></span>} />
           <span class="pila-xs"><h2 id="viaje-vuelta">De vuelta en hora de España</h2>
             <span class="peq secundario">De viaje ajustaste tus notificaciones a la hora de allí. ¿Las dejas como las tenías antes?</span></span>
         </div>
@@ -78,6 +79,7 @@ export function AvisoViaje() {
   const lineas = hecho || (aplicado && prefs ? ajusteDeViaje(prefsDeCasa(prefs, guardado.previo), est.desfase).lineas : null);
   return (
     <section class="panel panel-pad aviso-viaje pila-s" aria-labelledby="viaje-tit">
+      <Imagen id="viaje" clase="franja-ilu franja-pegada franja-viaje" tamanos="(min-width: 640px) 560px, 100vw" />
       <div class="aviso-viaje-cab">
         <span class="ios-ico" aria-hidden="true"><Icono n="ubicacion" /></span>
         <span class="pila-xs">

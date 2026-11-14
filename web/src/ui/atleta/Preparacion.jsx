@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Icono, Segmentos } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { PREGUNTAS, completa, consejoPreparacion, textoPreparacion } from '../../logica/preparacion.js';
 
 // «¿Cómo llegas hoy?» antes de la primera serie: tres toques; al contestar la tercera se guarda sola.
@@ -29,10 +30,10 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
   return (
     <section class={`panel panel-pad preparacion${enteras ? '' : ' por-pasos'}`} aria-labelledby="prep-titulo">
       <div class="separa">
-        <div class="pila-xs">
+        <div class="prep-cab-ilu"><Imagen id="preparacion" clase="ico-ilu" tamanos="44px" /><div class="pila-xs">
           <strong id="prep-titulo">¿Cómo llegas hoy?</strong>
           <span class="mini secundario">Tres toques. Tu coach lo verá con la sesión.</span>
-        </div>
+        </div></div>
         {alSaltar && <button class="btn-texto" onClick={alSaltar}>Ahora no</button>}
       </div>
       {hechas.length > 0 && (

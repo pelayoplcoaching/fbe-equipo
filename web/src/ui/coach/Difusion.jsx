@@ -29,7 +29,7 @@ export function HojaDifusion({ alCerrar, alEnviado }) {
       {listas.cargando && !listas.datos ? <Cargando /> : !listas.error && (
         <>
           {!(listas.datos || []).length ? (
-            <Vacio icono="equipo" titulo="Sin listas de difusión">Crea una con los atletas a los que sueles escribir lo mismo (los que compiten, los de nutrición…).</Vacio>
+            <Vacio icono="equipo" imagen="difusion" ancha titulo="Sin listas de difusión">Crea una con los atletas a los que sueles escribir lo mismo (los que compiten, los de nutrición…).</Vacio>
           ) : (
             <ul class="lista hoja-acciones difusion-listas">
               {listas.datos.map((l) => {

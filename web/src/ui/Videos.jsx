@@ -226,7 +226,7 @@ export function VideosVistosAtleta({ atletaId }) {
   return (
     <section class="panel panel-pad pila-s vistos-atleta" aria-labelledby="vistos-atleta-t">
       <h3 id="vistos-atleta-t" class="peq"><Icono n="video" /> Vídeos que ha visto</h3>
-      {!xs.length ? <Vacio icono="video" titulo="Aún ninguno">Cuando vea un vídeo de YouTube dentro de la app (la técnica de un ejercicio, uno que le mandes), saldrá aquí.</Vacio> : (
+      {!xs.length ? <Vacio icono="video" imagen="video-tecnica" ancha titulo="Aún ninguno">Cuando vea un vídeo de YouTube dentro de la app (la técnica de un ejercicio, uno que le mandes), saldrá aquí.</Vacio> : (
         <ul class="lista">
           {xs.slice(0, 30).map((x) => (
             <li key={x.video} class="separa vistos-fila">

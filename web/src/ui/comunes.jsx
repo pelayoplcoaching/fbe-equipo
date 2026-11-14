@@ -320,10 +320,14 @@ export function Siluetas({ forma = 'lista', n = 5, texto = 'Cargando' }) {
 }
 
 // v0.50: con ilustracion (una de Ilustraciones.jsx), el dibujo de línea en lugar del icono; una frase y lo siguiente
-export function Vacio({ icono = 'semana', ilustracion = null, titulo, children, accion }) {
+// (imágenes, bloque AI) `imagen`: una escena propia del estado vacío (cuadrada, o apaisada si `ancha`), por delante de
+// la ilustración y del icono; si no carga o ahorra datos, lo de siempre
+export function Vacio({ icono = 'semana', ilustracion = null, imagen = null, ancha = false, titulo, children, accion }) {
+  const conImagen = imagen && hayImagen(imagen);
   return (
-    <div class={`vacio${ilustracion ? ' con-ilustracion' : ''}`}>
-      {ilustracion ? <Ilustracion n={ilustracion} /> : hayImagen(imagenIcono(icono))
+    <div class={`vacio${ilustracion || conImagen ? ' con-ilustracion' : ''}${conImagen ? ' con-escena' : ''}`}>
+      {conImagen ? <Imagen id={imagen} clase={ancha ? 'vacio-escena vacio-escena-ancha' : 'vacio-escena'} tamanos={ancha ? '(min-width: 640px) 420px, 80vw' : '112px'} />
+        : ilustracion ? <Ilustracion n={ilustracion} /> : hayImagen(imagenIcono(icono))
         ? <Imagen id={imagenIcono(icono)} clase="vacio-ico-img" tamanos="60px" alternativa={<Icono n={icono} />} />
         : <Icono n={icono} />}
       <p class="vacio-titulo">{titulo}</p>
