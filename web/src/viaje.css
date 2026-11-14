@@ -3,7 +3,7 @@
 .aviso-viaje-cab { display: flex; gap: var(--esp-12); align-items: flex-start; }
 .aviso-viaje-cab h2 { font-size: var(--tipo-titulo-s); margin: 0; text-wrap: balance; }
 .aviso-viaje-cab .pila-xs { min-width: 0; }
-.aviso-viaje .btn svg { width: 18px; height: 18px; }
+.aviso-viaje .btn svg { width: var(--ico-18); height: var(--ico-18); }
 .aviso-viaje-ok { display: flex; gap: var(--esp-8); align-items: flex-start; margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--ok-suave); }
-.aviso-viaje-ok svg { width: 18px; height: 18px; flex: none; margin-top: var(--esp-2); color: var(--ok); }
+.aviso-viaje-ok svg { width: var(--ico-18); height: var(--ico-18); flex: none; margin-top: var(--esp-2); color: var(--ok); }
 .viaje-material { align-self: flex-start; }

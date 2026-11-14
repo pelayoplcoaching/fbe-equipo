@@ -21,7 +21,7 @@
 
 /* (sonido 2) "Se oye bien?" en la sesion y su hoja; el horario sin sonidos; "Escuchar" la evolucion */
 .aviso-prueba-sonido { display: flex; align-items: center; flex-wrap: wrap; gap: var(--esp-4) var(--esp-10); margin: 0 0 var(--esp-10); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-s); background: var(--acento-a8); }
-.aviso-prueba-sonido svg { width: 16px; height: 16px; }
+.aviso-prueba-sonido svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .aviso-prueba-sonido span { flex: 1; min-width: 10rem; }
 .prueba-sonido .fila-envolver { gap: var(--esp-8); }
 .aj-horario { display: flex; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }

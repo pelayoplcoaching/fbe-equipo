@@ -13,4 +13,4 @@
 @media (forced-colors: active) { .pasos-receta li::before { border: var(--filo-fino) solid CanvasText; } }
 /* (recetas ajustadas) la línea que dice a qué medida va la receta */
 .ajuste-receta { display: flex; margin: 0; gap: var(--esp-6); align-items: flex-start; }
-.ajuste-receta svg { flex: none; width: 16px; height: 16px; color: var(--morado); margin-top: 1px; }
+.ajuste-receta svg { flex: none; width: var(--ico-16); height: var(--ico-16); color: var(--morado); margin-top: 1px; stroke-width: 2; }

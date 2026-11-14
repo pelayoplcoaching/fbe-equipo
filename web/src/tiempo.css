@@ -3,7 +3,7 @@
 .tiempo-hoy { min-width: 0; }
 .tiempo-ahora { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-4) var(--esp-14); align-items: center; }
 .tiempo-ico { width: 48px; height: 48px; border-radius: var(--r-s); display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); }
-.tiempo-ico svg { width: 28px; height: 28px; }
+.tiempo-ico svg { width: var(--ico-28); height: var(--ico-28); }
 .tiempo-ahora-txt { min-width: 0; }
 .tiempo-grados { font-size: var(--cifra-xl, 2.25rem); font-weight: 750; line-height: 1; letter-spacing: -0.02em; }
 .tiempo-grados small { font-size: 0.45em; font-weight: 650; color: var(--tinta-2); letter-spacing: 0; }
@@ -13,25 +13,25 @@
 .tiempo-datos dd { margin: 0; font-weight: 650; }
 
 .tiempo-mejor { display: flex; gap: var(--esp-8); align-items: flex-start; margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--ok-suave); }
-.tiempo-mejor svg { width: 18px; height: 18px; flex: none; margin-top: var(--esp-2); color: var(--ok); }
+.tiempo-mejor svg { width: var(--ico-18); height: var(--ico-18); flex: none; margin-top: var(--esp-2); color: var(--ok); }
 
 .tiempo-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
 .tiempo-aviso { display: flex; gap: var(--esp-10); align-items: flex-start; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--aviso-suave); border: var(--filo-fino) solid var(--linea); }
-.tiempo-aviso svg { width: 18px; height: 18px; flex: none; margin-top: var(--esp-2); color: var(--aviso); }
+.tiempo-aviso svg { width: var(--ico-18); height: var(--ico-18); flex: none; margin-top: var(--esp-2); color: var(--aviso); }
 .tiempo-aviso[data-nivel="alto"] { background: var(--alerta-suave); }
 .tiempo-aviso[data-nivel="alto"] svg { color: var(--alerta); }
 
 .tiempo-horas { list-style: none; margin: 0; padding: var(--esp-2) var(--esp-2) var(--esp-8); display: flex; gap: var(--esp-6); overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; border-radius: var(--r-s); }
 .tiempo-horas:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .tiempo-horas li { flex: none; min-width: 54px; scroll-snap-align: start; display: grid; justify-items: center; gap: var(--esp-4); padding: var(--esp-8) var(--esp-6); border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea); }
-.tiempo-horas li svg { width: 20px; height: 20px; color: var(--tinta-2); }
+.tiempo-horas li svg { width: var(--ico-20); height: var(--ico-20); color: var(--tinta-2); }
 .tiempo-horas li.mejor { border-color: var(--ok); background: var(--ok-suave); }
 .tiempo-horas li.mejor svg { color: var(--ok); }
 
 .tiempo-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 var(--esp-10); margin: 0; }
 .tiempo-pie .btn-texto { font-size: var(--tipo-pie); }
 
-.elegir-zona .btn svg { width: 18px; height: 18px; }
+.elegir-zona .btn svg { width: var(--ico-18); height: var(--ico-18); }
 .buscar-zona { display: flex; gap: var(--esp-8); align-items: stretch; }
 .buscar-zona .entrada { flex: 1; min-width: 0; }
 .zonas-encontradas { margin: 0; }
@@ -42,7 +42,7 @@
 
 .tiempo-sesion { padding-top: var(--esp-10); border-top: var(--filo-fino) solid var(--linea); }
 .tiempo-sesion-linea { display: flex; gap: var(--esp-8); align-items: flex-start; margin: 0; }
-.tiempo-sesion-linea svg { width: 20px; height: 20px; flex: none; color: var(--morado); }
+.tiempo-sesion-linea svg { width: var(--ico-20); height: var(--ico-20); flex: none; color: var(--morado); }
 
 @media (prefers-reduced-motion: reduce) {
   .tiempo-horas { scroll-behavior: auto; scroll-snap-type: none; }

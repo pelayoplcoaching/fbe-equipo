@@ -268,7 +268,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .celda-avisos { width: 30%; min-width: 11.5rem; }
 .celda-avisos .alertas { width: 0; min-width: 100%; margin: 0; gap: var(--esp-4) var(--esp-6); align-items: center; }
 .celda-avisos .chip { min-width: 0; max-width: 100%; min-height: 24px; padding: 1px var(--esp-8); gap: var(--esp-4); font-size: var(--letra-12); white-space: nowrap; }
-.celda-avisos .chip svg { width: 13px; height: 13px; flex: none; }
+.celda-avisos .chip svg { width: var(--ico-14); height: var(--ico-14); flex: none; stroke-width: 2; }
 .celda-avisos .chip-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .celda-avisos .alertas[data-max] > .chip:nth-child(n+3):not(.mas) { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
 .celda-avisos .alertas:has(> .mas) > .chip:nth-child(2) { max-width: calc(100% - 44px); }
@@ -287,13 +287,13 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    líneas como mucho («Leer más» abre el resto) y una equis para quitarla (para los lectores de pantalla sigue
    llamándose «Entendido»). Pisa .pista y sus variantes (1655–1659 de estilos.css). */
 .pista, .seccion > .pista, .contenido > .pista { grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; gap: var(--esp-8); padding: var(--esp-4) 0 var(--esp-4) var(--esp-4); border: 0; border-radius: 0; background: none; font-size: var(--letra-13); line-height: 1.45; color: var(--tinta-2); }
-.pista > svg { width: 16px; height: 16px; margin-top: var(--esp-2); color: var(--morado); }
+.pista > svg { width: var(--ico-16); height: var(--ico-16); margin-top: var(--esp-2); color: var(--morado); stroke-width: 2; }
 /* Al pie de una tarjeta («Tu día»): con el margen de la tarjeta y su raya */
 .panel > .pista { padding: var(--esp-10) var(--esp-12) var(--esp-10) var(--esp-16); border-top: var(--filo-fino) solid var(--linea); }
 .pista p.corta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .pista-mas { display: block; min-height: 28px; padding: var(--esp-2) var(--esp-8) var(--esp-2) 0; border: 0; background: none; font: inherit; font-weight: 650; color: var(--morado); cursor: pointer; }
 .pista-cerrar { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: -10px -8px -10px -4px; border: 0; border-radius: var(--r-s); background: none; color: var(--tinta-3); cursor: pointer; }
-.pista-cerrar svg { width: 16px; height: 16px; color: inherit; }
+.pista-cerrar svg { width: var(--ico-16); height: var(--ico-16); color: inherit; stroke-width: 2; }
 .pista-cerrar:hover { color: var(--tinta); background: var(--hoja-2); }
 
 /* ---------- 12. Las secciones de la ficha del atleta --------------------------------------------------------
@@ -303,7 +303,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .ficha-secciones { display: flex; align-items: stretch; min-width: 0; }
 .ficha-secciones > .pestanas { flex: 1 1 auto; min-width: 0; }
 .ficha-todas { flex: none; display: grid; place-items: center; width: 44px; padding: 0; border: 0; border-bottom: var(--filo-fino) solid var(--linea); border-radius: var(--r-10) var(--r-10) 0 0; background: none; color: var(--tinta-2); cursor: pointer; }
-.ficha-todas svg { width: 20px; height: 20px; }
+.ficha-todas svg { width: var(--ico-20); height: var(--ico-20); }
 .ficha-todas:hover, .ficha-todas[aria-expanded="true"] { color: var(--morado); }
 @media (min-width: 900px) { .pestanas-atleta button { padding-inline: var(--esp-8); } }
 .rejilla-secciones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-8); }
@@ -551,7 +551,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-cuerpo:focus-visible { outline: 2px solid var(--bv-tinta-2); outline-offset: 4px; border-radius: var(--r-xs); }
 .bdia-arriba { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-12); min-height: 24px; font-size: var(--letra-13); color: var(--bv-tinta-2); }
 .bdia-marca { display: inline-flex; align-items: center; gap: var(--esp-8); font-weight: 800; font-stretch: 120%; letter-spacing: .01em; color: var(--bv-tinta); }
-.bdia-marca svg { width: 20px; height: auto; fill: currentColor; flex: none; }
+.bdia-marca svg { width: var(--ico-20); height: auto; fill: currentColor; flex: none; }
 .bdia-fecha { white-space: nowrap; }
 .bdia h1 { margin-top: clamp(var(--esp-20), 5.4vh, 46px); gap: var(--esp-2); }
 .bdia-saludo { font-size: var(--letra-17); }
@@ -570,7 +570,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .bdia-cifra dd { margin: 0; display: grid; gap: var(--esp-6); min-width: 0; }
 .bdia-cifra-v { display: flex; align-items: baseline; gap: var(--esp-4); font-size: 1.875rem; font-weight: 800; font-stretch: var(--ancho-marcador, 78%); line-height: 1; }
 .bdia-cifra-v small { font-size: var(--letra-13); font-weight: 600; font-stretch: 100%; color: var(--bv-tinta-2); white-space: nowrap; }
-.bdia-cifra-v svg { width: 22px; height: 22px; align-self: center; color: var(--bv-oro); flex: none; }
+.bdia-cifra-v svg { width: var(--ico-22); height: var(--ico-22); align-self: center; color: var(--bv-oro); flex: none; }
 .bdia-cifra-d { font-size: var(--letra-12); line-height: 1.3; color: var(--bv-tinta-2); }
 .bdia-puntos { display: flex; gap: var(--esp-4); }
 .bdia-puntos i { flex: 1; height: 5px; border-radius: var(--r-4); background: rgba(255, 255, 255, .18); }
@@ -908,7 +908,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
    El aviso flotante (estilos.css 445) pasa a ser una píldora, el de error lleva su icono (App.jsx) y entra con un
    pequeño muelle desde abajo (desde arriba si hay una hoja abierta). La salida es de la línea de fluidez (pulido.css). */
 .toast { border-radius: var(--r-16); padding: var(--esp-12) var(--esp-18); display: flex; align-items: center; gap: var(--esp-10); text-align: left; }
-.toast > svg { width: 20px; height: 20px; flex: none; }
+.toast > svg { width: var(--ico-20); height: var(--ico-20); flex: none; }
 .toast .toast-accion { margin-left: var(--esp-4); flex: none; }
 @media (prefers-reduced-motion: no-preference) {
   .toast:not(.saliendo) { animation: toast-entra var(--mov-lento) var(--curva-rebote); }
@@ -1498,7 +1498,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
 .rep-barra > .btn-icono.plano:first-child:hover { background: var(--morado-hover); }
 .rep-barra > .btn-icono.plano:first-child:active { transform: scale(.92); }
 .rep-barra > .btn-icono.plano:first-child:disabled { background: var(--linea); color: var(--tinta-3); }
-.rep-barra > .btn-icono.plano:first-child svg { width: 20px; height: 20px; }
+.rep-barra > .btn-icono.plano:first-child svg { width: var(--ico-20); height: var(--ico-20); }
 .rep-reloj { padding: var(--esp-4) var(--esp-8); border-radius: var(--r-pildora); background: var(--hoja-2); min-width: 0; }
 .reproductor video.medio { border-radius: var(--r-s); }
 .rep-marco { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta) 8%, transparent); }
@@ -1750,7 +1750,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
   box-shadow: 0 8px 16px -8px color-mix(in srgb, var(--tinta-noche) 60%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .1); transition: transform var(--mov-medio) var(--curva-rebote); }
 .portada-historia.mes { background: var(--grano), radial-gradient(64px 64px at 88% 4%, color-mix(in srgb, var(--oro-200) 60%, transparent), transparent 72%), radial-gradient(56px 56px at 0% 100%, color-mix(in srgb, var(--marca-600) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 170deg, var(--marca-900), var(--marca-950)); }
 .portada-historia.bloque { background: var(--grano), radial-gradient(64px 64px at 88% 4%, color-mix(in srgb, var(--rojo-400) 50%, transparent), transparent 72%), radial-gradient(56px 56px at 0% 100%, color-mix(in srgb, var(--neutro-300) 30%, transparent), transparent 70%), linear-gradient(var(--oklab,) 170deg, var(--marca-900), var(--marca-950)); }
-.portada-historia svg { width: 24px; height: auto; margin-top: var(--esp-8); fill: var(--marca-50); }
+.portada-historia svg { width: var(--ico-24); height: auto; margin-top: var(--esp-8); fill: var(--marca-50); }
 .ph-barras { position: absolute; top: 5px; left: 5px; right: 5px; display: flex; gap: var(--esp-2); }
 .ph-barras i { flex: 1; height: 2px; border-radius: var(--r-2); background: rgba(255, 255, 255, .34); }
 .ph-barras i:first-child { background: var(--blanco); }
@@ -1868,7 +1868,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
 .entrar-equipo > .entrar-equipo-ilu { justify-self: center; width: min(220px, 72%); height: auto; margin: -6px 0 0; }
 .qsc > strong { display: flex; align-items: center; gap: var(--esp-10); }
 .qsc-ico { width: 28px; height: 28px; border-radius: var(--r-xs); display: inline-grid; place-items: center; flex: none; background: var(--morado-suave); color: var(--morado); }
-.qsc-ico svg { width: 16px; height: 16px; }
+.qsc-ico svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .qsc-nunca .qsc-ico { background: var(--ok-suave); color: var(--ok); }
 .qsc > p { margin-left: 38px; }
 .qsc > .puntos { margin-left: var(--esp-18); }
@@ -2070,7 +2070,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    bloque 88) en lugar del ▷ o la flecha. */
 .fila-semana { grid-template-columns: minmax(0, 1fr) 30px; }
 .portada-historia.peq { width: 30px; height: 40px; border-radius: var(--r-xs); box-shadow: 0 5px 10px -5px color-mix(in srgb, var(--tinta-noche) 55%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .1); }
-.fila-semana .portada-historia.peq svg { width: 16px; height: auto; margin-top: var(--esp-4); color: inherit; }
+.fila-semana .portada-historia.peq svg { width: var(--ico-16); height: auto; margin-top: var(--esp-4); color: inherit; stroke-width: 2; }
 .portada-historia.peq .ph-barras { top: 3px; left: 3px; right: 3px; gap: 1.5px; }
 .portada-historia.peq .ph-barras i { height: 1.5px; }
 
@@ -2180,7 +2180,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .cifras > div[data-ico="llama"] { --t: var(--t-habitos); }
 .cifras > div[data-ico="hoy"] { --t: var(--t-tarea); }
 .cifras > div[data-ico="trofeo"] { --t: var(--oro); }
-.cifras > div[data-ico] dt svg { width: 24px; height: 24px; padding: var(--esp-4); box-sizing: border-box; border-radius: 50%; background: color-mix(in srgb, var(--t) 15%, var(--hoja)); color: var(--t); }
+.cifras > div[data-ico] dt svg { width: var(--ico-24); height: var(--ico-24); padding: var(--esp-4); box-sizing: border-box; border-radius: 50%; background: color-mix(in srgb, var(--t) 15%, var(--hoja)); color: var(--t); }
 
 /* ── 144 · El ejercicio terminado con su borde verde (tanda 29) ───────────────────────────────────────────────────────
    En la sesión, un ejercicio con todas sus series hechas (su ✓ arriba a la derecha) lleva un filo verde y un velo muy
@@ -2230,12 +2230,12 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 151 · El botón de cerrar de las hojas en un disco (tanda 29) ─────────────────────────────────────────────────────
    Como en las hojas de iOS: la ✕ de arriba a la derecha va en un disco gris suave, más pequeño y más claro. */
 .hoja-cab .cerrar-hoja { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--tinta) 7%, transparent); color: var(--tinta-2); }
-.hoja-cab .cerrar-hoja svg { width: 17px; height: 17px; stroke-width: 2.4; }
+.hoja-cab .cerrar-hoja svg { width: var(--ico-18); height: var(--ico-18); stroke-width: 2.4; }
 
 /* ── 152 · Los consejos con su icono en un disco (tanda 29) ───────────────────────────────────────────────────────────
    Los consejos de primera vez (Pista) llevan su icono en un disco suave del acento, en vez de suelto. */
 .pista, .seccion > .pista, .contenido > .pista { grid-template-columns: 26px minmax(0, 1fr) auto; }
-.pista > svg:first-child { width: 26px; height: 26px; padding: var(--esp-4); box-sizing: border-box; margin-top: -2px; border-radius: 50%; background: var(--morado-suave); }
+.pista > svg:first-child { width: var(--ico-26); height: var(--ico-26); padding: var(--esp-4); box-sizing: border-box; margin-top: -2px; border-radius: 50%; background: var(--morado-suave); }
 
 /* ── 153 · (tanda 29) Lo de esta ronda, sin movimiento con «reducir movimiento» ───────────────────────────────────────
    (solo el punto del «Pendiente» se mueve: va en su @media; lo demás es estático.) */
@@ -2280,7 +2280,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), var(--negro) calc(100% - 3px)); }
 .ejercicio-cab .progreso-series.hecho { background: var(--ok); color: var(--hoja); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ok) 80%, transparent); }
 .ejercicio-cab .progreso-series.hecho::before { content: none; }
-.ejercicio-cab .progreso-series.hecho svg { width: 20px; height: 20px; stroke-width: 2.6; }
+.ejercicio-cab .progreso-series.hecho svg { width: var(--ico-20); height: var(--ico-20); stroke-width: 2.6; }
 @media (prefers-reduced-motion: no-preference) { .ejercicio-cab .progreso-series::before { transition: --aro-f var(--mov-lento) var(--curva-casa); } }
 @media (forced-colors: active) { .ejercicio-cab .progreso-series::before { background: CanvasText; } .ejercicio-cab .progreso-series.hecho { background: Highlight; color: HighlightText; } }
 
@@ -2401,7 +2401,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 168 · La comparación con la vez anterior, con su flecha en un disco (tanda 30) ───────────────────────────────────
    Debajo de las cifras: si mueves más que la última vez, flecha blanca en un disco verde; si menos, en uno azul
    (no rojo: un día más corto no es un fallo); la primera vez, la estrella en un disco suave del acento. */
-.resumen-compara svg { width: 32px; height: 32px; padding: var(--esp-8); border-radius: 50%; background: color-mix(in srgb, var(--tinta) 8%, var(--hoja)); color: var(--tinta-2); stroke-width: 2.4; }
+.resumen-compara svg { width: var(--ico-32); height: var(--ico-32); padding: var(--esp-8); border-radius: 50%; background: color-mix(in srgb, var(--tinta) 8%, var(--hoja)); color: var(--tinta-2); stroke-width: 2.4; }
 .resumen-compara.sube svg { background: var(--ok); color: var(--hoja); }
 .resumen-compara.baja { background: color-mix(in srgb, var(--t-tarea) 9%, var(--hoja)); box-shadow: none; }
 .resumen-compara.baja svg { background: var(--t-tarea); color: var(--hoja); }
@@ -3217,7 +3217,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    arcoíris; «Tu momento», con el + blanco en un disco del acento con brillo. */
 .tm-item:not(.tm-nuevo):not(.retenido) .tm-circulo { background: var(--aro-amanecer); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--rosa-500) 60%, transparent); }
 .tm-nuevo .tm-circulo { border: 0; padding: var(--esp-4); background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--morado) 70%, var(--blanco)), var(--morado)); box-shadow: 0 8px 18px -9px var(--acento-a85), inset 0 1px 0 rgba(255, 255, 255, .3); }
-.tm-nuevo .tm-circulo > svg { color: var(--sobre-morado); width: 26px; height: 26px; }
+.tm-nuevo .tm-circulo > svg { color: var(--sobre-morado); width: var(--ico-26); height: var(--ico-26); }
 @media (forced-colors: active) { .tm-circulo { background: CanvasText !important; } .tm-nuevo .tm-circulo > svg { color: Canvas; } }
 
 /* ── 251 · «Te han animado esta semana» como una tarjeta cálida (tanda 37) ────────────────────────────────────────────
@@ -3281,7 +3281,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--morado-suave)); }
 .encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), color-mix(in srgb, var(--morado) 22%, var(--hoja))); }
 .encuesta-opcion.gana .eo-pct { font-weight: 750; }
-.encuesta-opcion.mia .eo-texto svg { width: 18px; height: 18px; padding: var(--esp-4); border-radius: 50%; background: var(--morado); color: var(--sobre-morado); }
+.encuesta-opcion.mia .eo-texto svg { width: var(--ico-18); height: var(--ico-18); padding: var(--esp-4); border-radius: 50%; background: var(--morado); color: var(--sobre-morado); }
 .encuesta-opcion.mia { box-shadow: var(--anillo-acento-fino), 0 6px 14px -10px var(--acento-a85); }
 
 /* ── 258 · Los eventos con su hoja de calendario (tanda 37) ───────────────────────────────────────────────────────────
@@ -3554,7 +3554,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Cada opción (fijar, ocultar, silenciar, avisar al coach, borrar) con su icono en un disco del acento suave; «Borrar»,
    con el disco y el texto en rojo. */
 .opciones-post .btn { min-height: 52px; gap: var(--esp-12); }
-.opciones-post .btn > svg { width: 32px; height: 32px; padding: var(--esp-8); flex: none; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.opciones-post .btn > svg { width: var(--ico-32); height: var(--ico-32); padding: var(--esp-8); flex: none; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
 .opciones-post .btn.btn-peligro > svg { background: color-mix(in srgb, var(--alerta) 13%, var(--hoja)); color: var(--alerta); }
 
 /* ── 288 · «Quién ha votado» y «Reacciones» en tarjetas (tanda 39) ────────────────────────────────────────────────────
@@ -3681,7 +3681,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .rep-rep span { border-radius: var(--r-pildora); font-weight: 800; }
 .rep-rep.actual span { box-shadow: 0 3px 8px -2px var(--acento-a70); }
 .rep-reps-mando > .btn.plano:first-child { padding-left: var(--esp-6); }
-.rep-reps-mando > .btn.plano:first-child svg { width: 28px; height: 28px; padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.rep-reps-mando > .btn.plano:first-child svg { width: var(--ico-28); height: var(--ico-28); padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
 .rep-reps-cual { padding: var(--esp-2) var(--esp-8); border-radius: var(--r-pildora); background: var(--morado-suave); color: var(--tinta); }
 
 /* ── 299 · La nota de técnica con su escala (tanda 40) ────────────────────────────────────────────────────────────────
@@ -3738,7 +3738,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .chip-frase:active { transform: scale(.96); }
 .hilo-extras { gap: var(--esp-6) var(--esp-10); }
 .hilo-extras .btn-texto { gap: var(--esp-8); }
-.hilo-extras .btn-texto svg { flex: none; width: 28px; height: 28px; padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); }
+.hilo-extras .btn-texto svg { flex: none; width: var(--ico-28); height: var(--ico-28); padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); }
 
 /* ── 302 · Las herramientas de la corrección con su color (tanda 40) ──────────────────────────────────────────────────
    Tempo, grabar la revisión, tu voz y los recordatorios eran cuatro botones blancos iguales: cada uno va en su recuadro
@@ -3820,7 +3820,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .informe-lista-num > li { position: relative; padding-left: var(--esp-32); min-height: 24px; counter-increment: inf; }
 .informe-lista-num > li::before { content: counter(inf); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: var(--letra-12); font-weight: 800; background: var(--alerta-suave); color: var(--alerta); }
 .informe-mejor { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: color-mix(in srgb, var(--oro-suave) 65%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 35%, transparent); }
-.informe-mejor svg { width: 18px; height: 18px; vertical-align: -3px; color: var(--oro-texto); }
+.informe-mejor svg { width: var(--ico-18); height: var(--ico-18); vertical-align: -3px; color: var(--oro-texto); }
 
 /* ── 309 · La corrección que ve el atleta (tanda 40) ──────────────────────────────────────────────────────────────────
    Enviado → Visto → Corregido como pasos unidos por una raya que se pinta del acento; el paso actual, con su halo. La
@@ -4048,7 +4048,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .ayuda.checkin-salud { display: inline-flex; width: fit-content; max-width: 100%; padding: var(--esp-4) var(--esp-12) var(--esp-4) var(--esp-8); border-radius: var(--r-pildora); background: color-mix(in srgb, var(--salud) 10%, var(--hoja)); color: var(--tinta); }
 .ayuda.checkin-salud svg { opacity: 0; width: 0; margin: 0; }
 .ayuda.checkin-salud::before { content: ""; flex: none; width: 15px; height: 15px; background: var(--salud); -webkit-mask: var(--ico-corazon-lleno) center / contain no-repeat; mask: var(--ico-corazon-lleno) center / contain no-repeat; }
-@media (forced-colors: active) { .ayuda.checkin-salud svg { opacity: 1; width: 15px; } .ayuda.checkin-salud::before { content: none; } }
+@media (forced-colors: active) { .ayuda.checkin-salud svg { opacity: 1; width: var(--ico-16); stroke-width: 2; } .ayuda.checkin-salud::before { content: none; } }
 
 /* ── 328 · Desconectar, en su zona (tanda 42) ─────────────────────────────────────────────────────────────────────────
    «Desconectar Salud» y «Quitar la suscripción» como botón rojo suave a lo ancho; la confirmación, en una caja roja
@@ -4088,7 +4088,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    «Abrir en…» y «Escuchar aquí» con su icono en un disco: verde para Spotify (data-servicio), el acento para el resto;
    «Escuchar aquí», con el play. */
 .tarjeta-musica .tarjeta-musica-botones .btn { gap: var(--esp-8); padding-left: var(--esp-6); }
-.tarjeta-musica .tarjeta-musica-botones .btn > svg { width: 26px; height: 26px; padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.tarjeta-musica .tarjeta-musica-botones .btn > svg { width: var(--ico-26); height: var(--ico-26); padding: var(--esp-6); border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
 .tarjeta-musica[data-servicio="spotify"] .tarjeta-musica-botones a.btn > svg { background: var(--verde-musica); color: var(--blanco); }
 .tarjeta-musica .tarjeta-musica-botones button.btn > svg { background: var(--tinta); color: var(--hoja); }
 
@@ -4275,7 +4275,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 .ck-enviado-lobo svg { width: 21px; height: 24px; fill: var(--sobre-morado); }
 .ck-enviado-lobo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: var(--filo-fuerte) solid var(--morado); opacity: 0; pointer-events: none; }
 .ck-enviado-vuelo { display: none; position: absolute; top: 50%; left: 30px; width: 20px; height: 20px; margin-top: -10px; pointer-events: none; }
-.ck-enviado-vuelo svg { display: block; width: 20px; height: 20px; fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ck-enviado-vuelo svg { display: block; width: var(--ico-20); height: var(--ico-20); fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @media (prefers-reduced-motion: no-preference) {
   .ck-enviado-vuelo { display: block; animation: ck-vuelo .75s cubic-bezier(.5, 0, .3, 1) .2s both; }
   .ck-enviado-vuelo svg { animation: ck-vuelo-arco .75s ease-in-out .2s both; }
@@ -4366,7 +4366,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 .serie-mejora { position: absolute; z-index: 3; left: 44px; bottom: -14px; display: inline-flex; align-items: center; gap: var(--esp-4); min-height: 26px; padding: 0 var(--esp-12) 0 var(--esp-8); border-radius: var(--r-pildora); pointer-events: none;
   font-size: var(--letra-13); font-weight: 600; line-height: 1; white-space: nowrap; color: var(--blanco); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--ok) 88%, var(--blanco)), var(--ok)); box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--ok) 70%, transparent), var(--brillo); }
 .serie-mejora .num { font-weight: 800; }
-.serie-mejora svg { width: 16px; height: 16px; flex: none; padding: var(--esp-2); border-radius: 50%; background: rgba(255, 255, 255, .22); stroke-width: 3; }
+.serie-mejora svg { width: var(--ico-16); height: var(--ico-16); flex: none; padding: var(--esp-2); border-radius: 50%; background: rgba(255, 255, 255, .22); stroke-width: 3; }
 @media (prefers-reduced-motion: no-preference) {
   .serie-mejora { animation: mejora-sube .5s var(--curva-rebote) .12s backwards, mejora-se-va .3s var(--curva-casa) 1.9s forwards; }
   .serie-mejora svg { animation: mejora-flecha .9s var(--curva-casa) .4s 2; }
@@ -4505,7 +4505,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
    (al integrarla, v0.146: sin opacity al entrar, que el texto nunca entra fundido; la barra de empezar sube desde abajo) */
 .prep-hechas { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
 .prep-hecha { display: inline-flex; align-items: center; gap: var(--esp-4); min-height: 32px; border: 0; cursor: pointer; font: inherit; font-size: var(--letra-13); font-weight: 650; }
-.prep-hecha svg { width: 14px; height: 14px; color: var(--ok); }
+.prep-hecha svg { width: var(--ico-14); height: var(--ico-14); color: var(--ok); stroke-width: 2; }
 .prep-paso { font-weight: 500; }
 .prep-de { font-weight: 500; opacity: .7; }
 @media (prefers-reduced-motion: no-preference) {
@@ -4528,7 +4528,7 @@ body > .tirar.girando .tirar-rueda { animation: none; }
 .hoy-a-mano-texto .mini { opacity: .7; }
 .hoy-a-mano-texto strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hoy-a-mano-ir { flex: none; display: inline-flex; align-items: center; gap: var(--esp-6); min-height: 40px; padding: 0 var(--esp-16); border-radius: var(--r-pildora); background: var(--morado); color: var(--sobre-morado); font-weight: 700; font-size: var(--letra-15); }
-.hoy-a-mano-ir svg { width: 16px; height: 16px; }
+.hoy-a-mano-ir svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .hoy-a-mano:active .hoy-a-mano-ir { scale: .96; }
 @media (min-width: 900px) { .hoy-a-mano { bottom: 20px; } }
 @media (prefers-reduced-motion: no-preference) {

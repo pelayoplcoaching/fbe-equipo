@@ -111,7 +111,7 @@ ${sangrar(sangrar(bloque(':root', [...p3Comun, ...p3('claro')])))}${sangrar(sang
 }
 
 // ---------- sistema.css: las escalas de lo que no es color (color y diseño, tanda 3) ----------
-import { RADIOS, PILDORA, LETRAS, nombreLetra, OP_DESHABILITADO, CAPAS, TIEMPOS, TIEMPOS_NUEVOS, FILOS, SOMBRAS, AMBITOS, FILAS, ESPACIOS } from './sistema.js';
+import { RADIOS, PILDORA, LETRAS, nombreLetra, OP_DESHABILITADO, CAPAS, TIEMPOS, TIEMPOS_NUEVOS, FILOS, SOMBRAS, AMBITOS, FILAS, ESPACIOS, ICONOS_TAM } from './sistema.js';
 
 export function cssSistema() {
   const num = (v) => String(v).replace(/^0\./, '.');
@@ -123,6 +123,7 @@ export function cssSistema() {
     TIEMPOS_NUEVOS.map((k) => `--mov-${k}: ${num(TIEMPOS[k])}s;`).join(' '),
     Object.entries(FILOS).map(([k, v]) => `--filo-${k}: ${v}px;`).join(' '),
     ESPACIOS.map((v) => `--esp-${v}: ${v}px;`).join(' '),
+    ICONOS_TAM.map((v) => `--ico-${v}: ${v}px;`).join(' '),
   ];
   return `/* ==========================================================================================================
    SISTEMA de FBE Equipo: las escalas de lo que no es color (radios, letra, capas, tiempos, filos, espaciado y las

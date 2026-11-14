@@ -5,7 +5,7 @@ import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
-import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas, PortadaHistoria } from '../comunes.jsx';
+import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { Conexiones } from './Conexiones.jsx';
 import { GrupoReloj } from './Reloj.jsx';
@@ -533,7 +533,7 @@ function TusSemanas({ salud, lista }) {
                   <strong>Semana {rangoLargo(r.lunes, r.domingo)}</strong>
                   <span class="peq secundario">{r.sesiones.hechas} de {r.sesiones.total} sesiones, {r.series} series{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</span>
                 </span>
-                <PortadaHistoria tono="peq" />
+                <SelloSemana hechas={r.sesiones.hechas} total={r.sesiones.total} records={r.records.length} />
               </button>
             </li>
           ))}
@@ -541,6 +541,18 @@ function TusSemanas({ salud, lista }) {
       </div>
       {abierta && <HistoriaSemana resumen={abierta} salud={salud} alCerrar={() => setAbierta(null)} />}
     </section>
+  );
+}
+
+// (visual 9) La miniatura de cada semana: su aro de sesiones (entero y con los colores del Amanecer si la completaste)
+// y, si hubo récords, su medalla con cuántos. Antes, el mismo lobo en todas.
+function SelloSemana({ hechas, total, records }) {
+  const p = total ? Math.min(1, hechas / total) : 0;
+  return (
+    <span class={`sello-semana ${p >= 1 ? 'completa' : ''}`} style={{ '--p': p.toFixed(3) }} aria-hidden="true">
+      <span class="ss-n num">{hechas}<small>/{total}</small></span>
+      {records > 0 && <span class="ss-record num"><Icono n="trofeo" />{records}</span>}
+    </span>
   );
 }
 

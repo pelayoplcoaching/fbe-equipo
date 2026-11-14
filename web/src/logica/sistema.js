@@ -143,3 +143,14 @@ export function pasoEspacio(px) {
   if (px > 24) { const c = ESPACIOS.find((v) => Math.abs(v - px) <= 1); return c ?? null; }
   return null;
 }
+
+// ---------- los iconos (visual, 14) ----------
+// Diez tamaños con nombre (--ico-N, en px); los impares van al par de arriba (un píxel). Y el trazo, más grueso en
+// los pequeños para que pesen lo mismo que los grandes (16 px o menos: 2; si no, el de siempre, 1,8).
+export const ICONOS_TAM = [12, 14, 16, 18, 20, 22, 24, 26, 28, 32];
+export function pasoIcono(px) {
+  if (ICONOS_TAM.includes(px)) return px;
+  if (Number.isInteger(px) && px % 2 === 1 && px > 11 && px < 32) return px + 1;
+  return null;
+}
+export const TRAZO_PEQUENO = 2;

@@ -296,7 +296,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Tu historia en una línea: el camino de la nieve a la primavera, arriba */
 .panel.historia-linea.con-ilu { display: block; overflow: hidden; }
 .historia-linea-texto { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
-.panel.historia-linea:not(.con-ilu) > .historia-linea-texto > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.panel.historia-linea:not(.con-ilu) > .historia-linea-texto > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--morado); }
 .panel-pad > .franja-pegada.franja-historia { margin-bottom: var(--esp-10); object-position: 50% 50%; }
 /* Su aniversario: la medalla del hito junto al título (la tarta sigue en la franja) */
 .aniversario.con-medalla { grid-template-columns: 64px minmax(0, 1fr) auto; }

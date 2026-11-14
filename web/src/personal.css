@@ -24,19 +24,19 @@
 .record-alcance { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: var(--esp-12); align-items: start;
   background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--oro-200) 22%, var(--hoja)) 0%, var(--hoja) 70%); }
 .record-alcance-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--oro-200); color: var(--acento-900); }
-.record-alcance-ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.record-alcance-ico svg { width: var(--ico-20); height: var(--ico-20); stroke-width: 2.2; }
 .record-alcance strong { font-size: var(--letra-16); }
 .record-alcance-lista { list-style: none; margin: var(--esp-2) 0 var(--esp-4); padding: 0; display: grid; gap: var(--esp-4); }
 .record-alcance-lista b { font-weight: 800; }
 .boton-musica { justify-content: center; gap: var(--esp-8); margin-bottom: var(--esp-4); }
-.boton-musica svg { width: 18px; height: 18px; }
+.boton-musica svg { width: var(--ico-18); height: var(--ico-18); }
 
 /* 3 · «Hace seis meses…» */
 .resumen-recuerdo { display: grid; }
 .recuerdo-progreso { display: grid; gap: var(--esp-6); }
 .recuerdo-linea { margin: 0; font-size: var(--letra-17); }
 .recuerdo-cifras { display: flex; align-items: center; gap: var(--esp-12); flex-wrap: wrap; }
-.recuerdo-cifras > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.recuerdo-cifras > svg { width: var(--ico-18); height: var(--ico-18); color: var(--tinta-3); }
 .recuerdo-antes, .recuerdo-hoy { display: grid; gap: 1px; }
 .recuerdo-antes .num { font-size: var(--letra-18); color: var(--tinta-2); font-weight: 650; }
 .recuerdo-hoy .num { font-size: var(--letra-22); font-weight: 800; color: var(--morado); font-stretch: var(--ancho-titulo, 112%); }
@@ -46,7 +46,7 @@
 .cifra-objetivo { display: grid; gap: var(--esp-4); justify-items: start; }
 .cifra-objetivo-v { margin: var(--esp-2) 0; font-size: 2.25rem; line-height: 1.05; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); }
 .cifra-objetivo-v small { font-size: var(--letra-16); font-weight: 650; color: var(--tinta-2); }
-.cifra-objetivo-cambio svg { width: 14px; height: 14px; }
+.cifra-objetivo-cambio svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 .tus-ejercicios-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--esp-10); }
 .tu-ejercicio { display: grid; gap: var(--esp-2); align-content: start; }
 .tu-ejercicio-nombre { font-weight: 650; color: var(--tinta); line-height: 1.25; }
@@ -70,14 +70,14 @@
 
 /* 7 · El coach */
 .cumples-hoy { display: flex; gap: var(--esp-10); align-items: flex-start; }
-.cumples-hoy > svg { flex: none; width: 20px; height: 20px; color: var(--oro-400); margin-top: 1px; }
+.cumples-hoy > svg { flex: none; width: var(--ico-20); height: var(--ico-20); color: var(--oro-400); margin-top: 1px; }
 .lo-suyo-porque { margin: 0; display: grid; gap: var(--esp-4); font-size: var(--letra-17); line-height: 1.4; font-style: italic; }
 .lo-suyo-porque .t-sobre { font-style: normal; }
 .lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-4) var(--esp-14); font-size: var(--letra-15); }
 .lo-suyo-datos dt { color: var(--tinta-2); }
 .lo-suyo-datos dd { margin: 0; font-weight: 650; }
 .mensajes-automaticos .fila-boton, .musica-coach .fila-boton, .avisos-zona .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: var(--esp-12) var(--esp-14); }
-.mensajes-automaticos .fila-boton > svg, .musica-coach .fila-boton > svg, .avisos-zona .fila-boton > svg { width: 18px; height: 18px; flex: none; color: var(--tinta-3); }
+.mensajes-automaticos .fila-boton > svg, .musica-coach .fila-boton > svg, .avisos-zona .fila-boton > svg { width: var(--ico-18); height: var(--ico-18); flex: none; color: var(--tinta-3); }
 .mensajes-automaticos .fila-ios-texto, .musica-coach .fila-ios-texto, .avisos-zona .fila-ios-texto { display: grid; gap: var(--esp-2); min-width: 0; }
 .musica-coach .panel + .panel { margin-top: var(--esp-10); }
 .mensajes-automaticos .fila-ios-texto .peq { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -94,7 +94,7 @@
 .tarjeta-musica-cab { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--esp-12); align-items: center; }
 .tarjeta-musica-portada { width: 56px; height: 56px; border-radius: var(--r-10); object-fit: cover; background: var(--hoja-2); box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--neutro-950) 60%, transparent); }
 .tarjeta-musica-portada.sin { display: grid; place-items: center; color: var(--morado); }
-.tarjeta-musica-portada.sin svg { width: 24px; height: 24px; }
+.tarjeta-musica-portada.sin svg { width: var(--ico-24); height: var(--ico-24); }
 .tarjeta-musica-titulo { font-size: var(--letra-16); line-height: 1.3; overflow-wrap: anywhere; }
 .tarjeta-musica-botones { gap: var(--esp-8); }
 .reproductor-spotify { display: block; width: 100%; border: 0; border-radius: var(--r-s); background: var(--hoja-2); }
@@ -107,7 +107,7 @@
 .cadencia-v small { color: var(--tinta-2); font-weight: 650; }
 .cancion-record { display: grid; gap: var(--esp-8); margin-top: var(--esp-12); background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--oro-200) 18%, var(--hoja)) 0%, var(--hoja) 70%); }
 .lista-equipo { margin-bottom: var(--esp-4); }
-.campo-musica svg { width: 16px; height: 16px; }
+.campo-musica svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 
 /* ---------- (v0.105, migración 051) Conexiones: Salud del iPhone, el calendario y WhatsApp ---------- */
 .conexion-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-14); }
@@ -116,7 +116,7 @@
 .conexion-paso .btn { justify-self: start; }
 .conexion-num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); font-weight: 750; font-size: var(--letra-14); }
 .conexion-paso.hecho .conexion-num { background: var(--ok-suave); color: var(--ok); }
-.conexion-num svg { width: 16px; height: 16px; }
+.conexion-num svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .conexion-enlace { font-size: var(--letra-12); word-break: break-all; line-height: 1.35; }
 .conexion-check { align-items: flex-start; gap: var(--esp-10); }
 .conexion-check input { margin-top: var(--esp-2); width: 18px; height: 18px; flex: none; accent-color: var(--morado); }
@@ -135,7 +135,7 @@
 .plan-suscripcion { margin-bottom: var(--esp-4); }
 .plan-suscripcion .btn { justify-self: start; }
 .checkin-salud { display: flex; gap: var(--esp-6); align-items: center; margin: var(--esp-10) 0 0; }
-.checkin-salud svg { width: 15px; height: 15px; color: var(--ok); flex: none; }
+.checkin-salud svg { width: var(--ico-16); height: var(--ico-16); color: var(--ok); flex: none; stroke-width: 2; }
 .salud-cifras { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: var(--esp-12); }
 .salud-cifra dt { font-size: var(--letra-12); color: var(--tinta-3); }
 .salud-cifra dd { margin: var(--esp-2) 0 0; font-weight: 700; font-size: var(--letra-18); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-2) var(--esp-6); }
@@ -144,7 +144,7 @@
 .salud-movil .btn-texto { justify-self: start; }
 .cumples-wa { margin-top: var(--esp-8); display: flex; }
 .atajos-coach .fila-boton { grid-template-columns: minmax(0, 1fr) auto; padding: var(--esp-12) var(--esp-14); }
-.atajos-coach .fila-boton > svg { width: 18px; height: 18px; color: var(--tinta-3); }
+.atajos-coach .fila-boton > svg { width: var(--ico-18); height: var(--ico-18); color: var(--tinta-3); }
 .atajos-coach .fila-ios-texto { display: grid; gap: var(--esp-2); }
 .contacto-atleta .fila-entre { gap: var(--esp-12); flex-wrap: wrap; }
 
@@ -165,7 +165,7 @@
 .plantilla-mini.clara { background: var(--acento-50); color: var(--acento-950); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acento-950) 14%, transparent); }
 .recordatorio-compartir { display: grid; grid-template-columns: auto 1fr auto; gap: var(--esp-12); align-items: center; }
 .recordatorio-compartir .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--ok-suave); color: var(--ok); display: grid; place-items: center; }
-.recordatorio-compartir .ico svg { width: 20px; height: 20px; }
+.recordatorio-compartir .ico svg { width: var(--ico-20); height: var(--ico-20); }
 .resumen-record-compartir { margin-left: auto; }
 .lista .record { align-items: center; }
 .racha-compartir, .hito-compartir { width: 100%; margin-top: var(--esp-12); min-height: 54px; background: rgba(255, 255, 255, .12); color: var(--acento-50); border-color: rgba(255, 255, 255, .25); font-weight: 700; }
@@ -205,7 +205,7 @@
 .compartir-video .fila-envolver { align-items: center; }
 .lo-compartido .fila-boton { grid-template-columns: auto minmax(0, 1fr) auto; }
 .lo-compartido .ico-fila { width: 34px; height: 34px; border-radius: var(--r-10); background: var(--morado-suave); color: var(--morado); display: grid; place-items: center; }
-.lo-compartido .ico-fila svg { width: 18px; height: 18px; }
+.lo-compartido .ico-fila svg { width: var(--ico-18); height: var(--ico-18); }
 .lo-compartido .fila-ios-texto { display: grid; gap: var(--esp-2); min-width: 0; }
 
 /* ---- (social, 053) la parte social del equipo: cumpleaños, hoy entrenan, duelos, padrinos, compañero de la semana, un empujón,
@@ -218,7 +218,7 @@
 .cumple-texto, .cumple-mio { margin: 0; }
 .cumple-otros { display: grid; gap: var(--esp-8); }
 .hoy-entrenan .he-t, .padrinos .pd-t, .companero-semana .cs-t, .necesitan-animo .na-t, .lo-mejor .lm-t { display: flex; align-items: center; gap: var(--esp-6); font-size: var(--letra-16); margin: 0; }
-.hoy-entrenan .he-t svg { width: 18px; height: 18px; color: var(--morado); }
+.hoy-entrenan .he-t svg { width: var(--ico-18); height: var(--ico-18); color: var(--morado); }
 .he-linea { margin: 0; }
 .padrinos .pd-mio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-10); align-items: start; margin: 0; }
 .duelos-lista { display: grid; gap: var(--esp-6); }
@@ -275,7 +275,7 @@
 @keyframes dictando { 50% { opacity: .55; } }
 /* El objetivo del bloque, en el héroe de Hoy */
 .hero-objetivo { margin: var(--esp-4) 0 0; display: flex; align-items: center; gap: var(--esp-6); font-size: var(--letra-14); opacity: .9; }
-.hero-objetivo svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.hero-objetivo svg { width: var(--ico-16); height: var(--ico-16); flex: 0 0 auto; stroke-width: 2; }
 /* Check-in: la semana de un vistazo, el borrador recuperado */
 .ck-vistazo { display: grid; gap: var(--esp-4); }
 .ck-vistazo-lista { margin: 0; padding: 0 0 0 var(--esp-18); display: grid; gap: var(--esp-2); }
@@ -301,8 +301,8 @@
 .revisar-esperan { display: flex; align-items: center; gap: var(--esp-8); width: 100%; text-align: left; padding: var(--esp-10) var(--esp-14); border-radius: var(--r-s); border: var(--filo-fino) solid var(--aviso); background: var(--aviso-suave); color: var(--tinta); font: inherit; cursor: pointer; }
 .revisar-esperan svg { color: var(--aviso); flex: 0 0 auto; }
 .pedir-aviso { display: flex; align-items: center; gap: var(--esp-6); margin: 0; }
-.pedir-aviso svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--aviso); }
-.convertir-opcion svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.pedir-aviso svg { width: var(--ico-16); height: var(--ico-16); flex: 0 0 auto; color: var(--aviso); stroke-width: 2; }
+.convertir-opcion svg { width: var(--ico-20); height: var(--ico-20); flex: 0 0 auto; }
 /* (v0.119) los botones a todo lo ancho, con su relleno dentro (y el texto que se parte: si no, Revisar se salia 30 px por la derecha) */
 .revisar-esperan, .convertir-opcion, .fila-boton { box-sizing: border-box; max-width: 100%; }
 .revisar-esperan, .convertir-opcion, .pedir-fila { white-space: normal; }
@@ -318,21 +318,21 @@
 .ficha-previa { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--esp-10); align-items: center; margin-top: var(--esp-6); padding: var(--esp-8); border-radius: var(--r-s); background: var(--hoja-2); }
 .ficha-previa-portada { width: 48px; height: 48px; border-radius: var(--r-xs); object-fit: cover; background: var(--hoja); }
 .ficha-previa-portada.sin { display: grid; place-items: center; color: var(--morado); }
-.ficha-previa-portada.sin svg { width: 22px; height: 22px; }
+.ficha-previa-portada.sin svg { width: var(--ico-22); height: var(--ico-22); }
 .ficha-previa-titulo { font-size: var(--letra-15); line-height: 1.3; overflow-wrap: anywhere; }
 .ficha-previa-aviso { margin-top: var(--esp-6); }
 .ficha-previa-otro { display: block; margin-top: var(--esp-4); }
 .musica-invitacion-cab { display: flex; align-items: center; gap: var(--esp-10); }
 .musica-invitacion-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; flex: none; background: var(--morado-suave); color: var(--morado); }
-.musica-invitacion-ico svg { width: 20px; height: 20px; }
+.musica-invitacion-ico svg { width: var(--ico-20); height: var(--ico-20); }
 .boton-musica { justify-self: start; }
 .cadencia-buscar { display: inline-flex; align-items: center; gap: var(--esp-6); justify-self: start; text-decoration: none; }
-.cadencia-buscar svg { width: 16px; height: 16px; }
+.cadencia-buscar svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .lista-equipo-anadir { text-decoration: none; justify-content: center; }
 .musica-coach .fila-ios { gap: var(--esp-12); }
 .musica-coach-portada { width: 36px; height: 36px; border-radius: var(--r-xs); flex: none; object-fit: cover; background: var(--hoja-2); }
 .musica-coach-portada.sin { display: grid; place-items: center; color: var(--morado); }
-.musica-coach-portada.sin svg { width: 18px; height: 18px; }
+.musica-coach-portada.sin svg { width: var(--ico-18); height: var(--ico-18); }
 .musica-coach-nombre { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .musica-coach .fila-ios-texto { min-width: 0; }
 .lo-suyo-musica { overflow-wrap: anywhere; }
@@ -365,7 +365,7 @@
 .cuenta-meta-ico { flex: none; font-size: var(--letra-24); line-height: 1; }
 .cuenta-meta.cerca { border-color: var(--morado); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .portada-porque { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); line-height: 1.45; }
-.portada-porque > svg, .historia-linea > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.portada-porque > svg, .historia-linea > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--morado); }
 .portada-nivel { margin: 0; }
 .panel.historia-linea { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
 .aniversario-hecho { margin: var(--esp-4) 0 0; }
@@ -374,7 +374,7 @@
 /* ---------- (personalizacion 2, tanda 3) Que la app le conozca ---------- */
 .ultima-vez-frase { margin: var(--esp-2) 0 0; font-size: var(--letra-15); line-height: 1.45; }
 .aviso-zona, .hoy-como-estas, .mejor-momento > p, .costumbre > p { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
-.aviso-zona > svg, .hoy-como-estas > svg, .mejor-momento > p > svg, .costumbre > p > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.aviso-zona > svg, .hoy-como-estas > svg, .mejor-momento > p > svg, .costumbre > p > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--morado); }
 .aviso-zona { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .hoy-como-estas { padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
 .hoy-como-estas.nivel-malo, .hoy-como-estas.nivel-regular { background: color-mix(in srgb, var(--aviso) 12%, var(--hoja)); }
@@ -397,13 +397,13 @@
 .adn-fbe-rasgos dt { font-size: var(--letra-12); text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
 .adn-fbe-rasgos dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
 .para-hablarle-idea { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
-.para-hablarle-idea > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.para-hablarle-idea > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--morado); }
 .carta-hoja textarea { font-size: var(--letra-15); line-height: 1.5; }
 
 /* ---------- (personalizacion 3, tanda 5) La sesion de hoy, suya ---------- */
 .panel.tiempo-hoy { display: grid; gap: var(--esp-10); }
 .tiempo-hoy-t { display: flex; gap: var(--esp-8); align-items: center; margin: 0; font-size: var(--letra-16); }
-.tiempo-hoy-t > svg, .calentamiento summary > svg:first-child, .hace-un-ano > svg { width: 20px; height: 20px; flex: none; color: var(--morado); }
+.tiempo-hoy-t > svg, .calentamiento summary > svg:first-child, .hace-un-ano > svg { width: var(--ico-20); height: var(--ico-20); flex: none; color: var(--morado); }
 .tiempo-hoy-r p { margin: 0; }
 .tiempo-hoy-lista, .calentamiento-lista { margin: 0; padding-left: var(--esp-20); display: grid; gap: var(--esp-4); line-height: 1.4; }
 .calentamiento summary { display: flex; gap: var(--esp-8); align-items: center; font-weight: 650; cursor: pointer; list-style: none; }
@@ -415,7 +415,7 @@
 
 /* ---------- (personalizacion 3, tanda 6) Su vida ---------- */
 .vida-fila { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; line-height: 1.45; }
-.vida-fila > svg, .ck-seguimiento > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--morado); }
+.vida-fila > svg, .ck-seguimiento > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--morado); }
 .vida-guardia > svg { color: var(--ambar-500); }
 .vida-minimo { margin: 0; padding-left: var(--esp-20); display: grid; gap: var(--esp-4); line-height: 1.4; }
 .vida-pregunta .entrada { width: 100%; }
@@ -463,16 +463,16 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .album-lista li { display: flex; gap: var(--esp-10); align-items: center; }
 .album-lista li .pila-xs { flex: 1; min-width: 0; }
 .album-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
-.album-ico svg { width: 18px; height: 18px; }
+.album-ico svg { width: var(--ico-18); height: var(--ico-18); }
 .album-hitos > .btn { justify-self: start; }
 
 /* ---------- (personalizacion 3, tanda 9) Que el coach le conozca ---------- */
 .alerta-temprana { display: flex; gap: var(--esp-10); align-items: flex-start; margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-14); background: color-mix(in srgb, var(--ambar-400) 12%, var(--hoja)); line-height: 1.45; }
-.alerta-temprana > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--ambar-500); }
+.alerta-temprana > svg { flex: none; width: var(--ico-20); height: var(--ico-20); margin-top: 1px; color: var(--ambar-500); }
 .lo-que-funciona p { margin: 0; }
 .panel.lo-que-funciona { display: grid; gap: var(--esp-6); }
 .envios-t { display: flex; gap: var(--esp-8); align-items: center; margin: 0; font-size: var(--letra-16); }
-.envios-t > svg { width: 20px; height: 20px; color: var(--morado); }
+.envios-t > svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); }
 .envio-fila { display: grid; grid-template-columns: 1fr auto; gap: var(--esp-2) var(--esp-10); align-items: center; padding: var(--esp-8) var(--esp-2); }
 .envio-fila .envio-quien { justify-self: start; padding: 0; }
 .envio-fila .peq { grid-column: 1; }
@@ -500,7 +500,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .cadencia-tramo-campo b { min-width: 2.8rem; text-align: center; font-weight: 800; }
 .cadencia-tramo-ahora { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); line-height: 1.4; }
 .tocar-ritmo-abrir { display: inline-flex; align-items: center; gap: var(--esp-6); justify-self: start; text-align: left; }
-.tocar-ritmo-abrir svg { width: 16px; height: 16px; }
+.tocar-ritmo-abrir svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .tocar-ritmo { padding: var(--esp-10); border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
 .tocar-ritmo-boton { min-height: 64px; font-weight: 750; touch-action: manipulation; }
 .tocar-ritmo-boton:active { transform: scale(.98); }
@@ -513,11 +513,11 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 /* ---------- (música 3, tanda 2) Fases, «Lo batiste con…», sus listas por momento y lo que más te acompaña ---------- */
 .musica-fase { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: var(--esp-10); align-items: center; margin: 0 0 var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-14);
   background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); border: var(--filo-fino) solid var(--acento-a30); }
-.musica-fase > svg { width: 20px; height: 20px; color: var(--morado); }
+.musica-fase > svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); }
 .musica-fase .pila-xs { min-width: 0; }
 .musica-fase .mini { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lo-batiste-con { display: flex; gap: var(--esp-8); align-items: center; margin: var(--esp-8) 0 0; }
-.lo-batiste-con svg { width: 18px; height: 18px; flex: none; color: var(--morado); }
+.lo-batiste-con svg { width: var(--ico-18); height: var(--ico-18); flex: none; color: var(--morado); }
 .album-con-musica { display: block; }
 .listas-musica { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--esp-8); }
 .lista-musica-fila { display: flex; gap: var(--esp-10); align-items: center; }
@@ -532,12 +532,12 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .cancion-fila .cancion-texto { flex: 1; min-width: 0; }
 .cancion-fila .cancion-texto strong { overflow-wrap: anywhere; }
 .cancion-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
-.cancion-ico svg { width: 18px; height: 18px; }
+.cancion-ico svg { width: var(--ico-18); height: var(--ico-18); }
 .cancion-fila.destacada .cancion-ico { background: var(--morado); color: var(--sobre-morado); }
 .cancion-top { white-space: nowrap; }
 .reto-musical-t { margin: 0; font-size: var(--letra-18); }
 .cp-lista-musica { display: block; }
-.cp-lista-musica svg { width: 14px; height: 14px; vertical-align: -2px; }
+.cp-lista-musica svg { width: var(--ico-14); height: var(--ico-14); vertical-align: -2px; stroke-width: 2; }
 .cp-lista-musica a { overflow-wrap: anywhere; }
 
 /* ---------- (música 3, tanda 4) La biblioteca del coach, qué música funciona y los reproductores de YouTube y Apple Music ---------- */

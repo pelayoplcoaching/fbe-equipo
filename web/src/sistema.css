@@ -12,6 +12,7 @@
   --mov-instante: .09s; --mov-breve: .2s; --mov-pausado: .6s;
   --filo-fino: 1px; --filo-medio: 1.5px; --filo-fuerte: 2px; --filo-marca: 3px;
   --esp-2: 2px; --esp-4: 4px; --esp-6: 6px; --esp-8: 8px; --esp-10: 10px; --esp-12: 12px; --esp-14: 14px; --esp-16: 16px; --esp-18: 18px; --esp-20: 20px; --esp-22: 22px; --esp-24: 24px; --esp-28: 28px; --esp-32: 32px; --esp-40: 40px; --esp-48: 48px;
+  --ico-12: 12px; --ico-14: 14px; --ico-16: 16px; --ico-18: 18px; --ico-20: 20px; --ico-22: 22px; --ico-24: 24px; --ico-26: 26px; --ico-28: 28px; --ico-32: 32px;
 }
 
 /* Anillos, halos, brillo, la sombra de color de los botones y los tintes del acento. Se declaran también donde cambian --linea, --hoja o

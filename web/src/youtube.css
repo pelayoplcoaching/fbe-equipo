@@ -12,10 +12,10 @@
 .yt-play svg { width: 52px; height: 52px; padding: var(--esp-12); border-radius: 50%; background: rgba(0, 0, 0, .58); color: var(--blanco); }
 .yt-compacto .yt-play svg { width: 44px; height: 44px; padding: var(--esp-10); }
 .yt-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: var(--esp-4); padding: var(--esp-2) var(--esp-8); border-radius: var(--r-pildora); background: rgba(0, 0, 0, .65); color: var(--blanco); font-weight: 700; }
-.yt-pie svg { width: 13px; height: 13px; }
+.yt-pie svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 .yt-ahorro { position: absolute; inset: auto 0 40% 0; text-align: center; color: var(--blanco); opacity: .85; }
 .yt-sin { display: grid; place-items: center; align-content: center; gap: var(--esp-6); padding: var(--esp-12); text-align: center; background: var(--hoja-2, var(--noche-2)); color: inherit; }
-.yt-sin svg { width: 28px; height: 28px; opacity: .6; }
+.yt-sin svg { width: var(--ico-28); height: var(--ico-28); opacity: .6; }
 .yt-herramientas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-8); }
 .yt-vel button { min-width: 44px; }
 .yt-fuera { margin-left: auto; }
@@ -29,7 +29,7 @@
   background: var(--hoja, var(--blanco)); color: inherit; border-radius: var(--r, 12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: var(--esp-6) var(--esp-8) var(--esp-8); display: grid; gap: var(--esp-6); }
 .yt-mini-cab { display: flex; align-items: center; gap: var(--esp-4); }
 .yt-mini-titulo { flex: 1; min-width: 0; display: inline-flex; gap: var(--esp-6); align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
-.yt-mini-titulo svg { width: 14px; height: 14px; flex: none; }
+.yt-mini-titulo svg { width: var(--ico-14); height: var(--ico-14); flex: none; stroke-width: 2; }
 .yt-mini .yt-herramientas .yt-fuera { display: none; }
 .yt-mini.encogido { width: auto; max-width: min(360px, calc(100vw - 20px)); }
 @media (prefers-reduced-motion: no-preference) { .yt-mini { animation: yt-sube .22s ease-out; } }
@@ -44,21 +44,21 @@
 .tarjeta-video-titulo { font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tarjeta-video:focus-visible .tarjeta-video-img { outline: 3px solid var(--morado); outline-offset: 2px; }
 .video-semana-k, .directo-k { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--morado); }
-.video-semana-k svg { width: 14px; height: 14px; }
+.video-semana-k svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 .directo-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--rojo-500); }
 .directo-hoy.ahora .directo-k { color: var(--rojo-500); }
 @media (prefers-reduced-motion: no-preference) { .directo-hoy.ahora .directo-punto { animation: yt-latido 1.4s ease-in-out infinite; } }
 @keyframes yt-latido { 50% { opacity: .35; } }
 .guia-video { margin: 0; display: grid; gap: var(--esp-6); }
 .canal-coach h3, .mas-vistos h3, .vistos-atleta h3 { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; }
-.canal-coach h3 svg, .mas-vistos h3 svg, .vistos-atleta h3 svg { width: 16px; height: 16px; }
+.canal-coach h3 svg, .mas-vistos h3 svg, .vistos-atleta h3 svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .canal-lista li { gap: var(--esp-8); padding: var(--esp-8) 0; }
 .canal-video { text-align: left; }
 .fila-video { display: grid; gap: var(--esp-2); width: 100%; padding: var(--esp-8) 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .vistos-fila { gap: var(--esp-8); padding: var(--esp-8) 0; }
 button.recurso-enlace { width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
 .video-sesion-cab { width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; gap: var(--esp-10); }
-.video-sesion-cab > svg { width: 22px; height: 22px; color: var(--morado); flex: none; }
+.video-sesion-cab > svg { width: var(--ico-22); height: var(--ico-22); color: var(--morado); flex: none; }
 .video-sesion.hecho { border-left: var(--filo-marca) solid var(--ok, var(--verde-500)); }
 .comparar-referencia-video { width: 100%; max-height: 42vh; border-radius: var(--r, 12px); background: var(--negro); }
 /* (Sesion → Cambiar) cada opción con el botón de su vídeo al lado */

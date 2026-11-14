@@ -31,3 +31,34 @@
 .ajustes-indice .chip { flex: none; min-height: 34px; padding-inline: var(--esp-12); font-weight: 650; color: var(--tinta); background: var(--hoja); }
 .perfil-panel > .grupo-ios { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + var(--esp-8)); }
 .pestanas.perfil-vistas[data-raya]::after { content: none; }
+
+/* (7) Cifras iguales en toda la app: números tabulares, la unidad pequeña y la variación en su chip */
+:is(.num, .marcador, [class*="cifra"] .v) { font-variant-numeric: tabular-nums; }
+:is(.perfil-tile dd.num small, .pt-valor small, .perfil-cifras dd small, .cifra .u, .resumen-num .u, .salud-cifra .u) { font-size: max(var(--letra-12), .5em); font-weight: 650; letter-spacing: 0; font-stretch: 100%; }
+.perfil-dif { align-self: flex-start; display: inline-flex; align-items: center; margin: var(--esp-2) 0 0; padding: 1px var(--esp-6); border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2); font-size: var(--letra-12); font-weight: 650; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.perfil-dif.sube { background: var(--ok-suave); color: var(--ok); }
+
+/* (8) Tus 12 semanas: las semanas sin nada, con su marca en el suelo (antes, un hueco) */
+.pb-col.vacia .pb-barra { height: 3px; background: var(--linea); border-radius: var(--r-2); }
+/* (10) …y la media, de fondo: una raya discontinua a su altura */
+.perfil-barras { position: relative; --pie: calc(var(--letra-11) + var(--esp-4)); }
+.perfil-barras::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(var(--pie) + (100% - var(--pie)) * var(--m, 0)); border-top: var(--filo-medio) dashed var(--tinta-3); opacity: .55; pointer-events: none; z-index: 1; }
+
+/* (9) La miniatura de cada semana: su aro de sesiones y, si hubo récords, su medalla */
+.fila-semana .sello-semana { flex: none; }
+.sello-semana { position: relative; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: conic-gradient(var(--morado) calc(var(--p) * 1turn), var(--hoja-3) 0); }
+.sello-semana.completa { background: var(--aro-amanecer); }
+.sello-semana::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--hoja); }
+.ss-n { position: relative; font-size: var(--letra-14); font-weight: 800; color: var(--tinta); letter-spacing: -0.01em; }
+.ss-n small { font-size: var(--letra-11); font-weight: 650; color: var(--tinta-2); }
+.ss-record { position: absolute; right: -6px; bottom: -4px; display: inline-flex; align-items: center; gap: 1px; padding: 1px var(--esp-4) 1px var(--esp-2); border-radius: var(--r-pildora); background: var(--medalla); color: var(--oro-900); font-size: var(--letra-10); font-weight: 800; box-shadow: 0 0 0 2px var(--hoja); }
+.ss-record svg { width: 11px; height: 11px; }
+
+/* (11) Tocar para leer, también en las barras de lo comido: la barra elegida se marca */
+.grafica-ingesta .barra-dia.elegida { stroke: var(--tinta); stroke-width: 1.5px; }
+
+/* (12) Las ilustraciones no aparecen en blanco: mientras cargan se ve su color (calculado al construir) */
+img[data-imagen] { background-color: var(--color-imagen, transparent); }
+/* (13) En oscuro, un punto atenuadas para que no deslumbren (las de las escenas de marca, no: ya van en la noche) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) img[data-imagen]:not(.escena-foto, .bdia-foto) { filter: brightness(.92) saturate(.96); } }
+:root[data-theme="dark"] img[data-imagen]:not(.escena-foto, .bdia-foto) { filter: brightness(.92) saturate(.96); }
