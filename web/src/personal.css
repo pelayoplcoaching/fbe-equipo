@@ -539,3 +539,16 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .cp-lista-musica { display: block; }
 .cp-lista-musica svg { width: 14px; height: 14px; vertical-align: -2px; }
 .cp-lista-musica a { overflow-wrap: anywhere; }
+
+/* ---------- (música 3, tanda 4) La biblioteca del coach, qué música funciona y los reproductores de YouTube y Apple Music ---------- */
+.biblioteca-musica .separa { align-items: center; }
+.biblioteca-cifras { gap: 10px; }
+.biblioteca-cifras .campo { flex: 1; min-width: 120px; }
+.de-tu-biblioteca { padding-top: 10px; border-top: 1px solid var(--linea); }
+.de-tu-biblioteca .lista { margin: 0; }
+.uso-musica-lista { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.uso-musica-lista li { line-height: 1.35; }
+.uso-musica-nombre { display: block; font-weight: 650; overflow-wrap: anywhere; }
+.reproductor-otro { border-radius: 12px; background: #000; }
+.reto-musical-coach .fila-envolver { gap: 8px; }
+.reto-musical-coach input { flex: 1; min-width: 160px; }

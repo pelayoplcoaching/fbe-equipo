@@ -11,7 +11,7 @@
 //     BotonMusica (la música a mano durante la sesión) y la invitación a poner la tuya
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
-import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia, bpmDeToques, encajaRitmo, TOQUE_REINICIO_MS, normalizarTramos, tramoCadencia, duracionTramos, uriSpotify, esSesionTest, vuelveDeParon, musicaDeFase, ETIQUETAS_LISTA } from '../../logica/musica.js';
+import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia, bpmDeToques, encajaRitmo, TOQUE_REINICIO_MS, normalizarTramos, tramoCadencia, duracionTramos, uriSpotify, esSesionTest, vuelveDeParon, musicaDeFase, ETIQUETAS_LISTA, urlIncrustarOtro, altoIncrustadoOtro, portadaYoutube } from '../../logica/musica.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { apuntarReproductor } from './musica-control.js';
 import { nombreMusica, urlMusica } from '../../logica/personal.js';
@@ -43,7 +43,8 @@ async function fichaSpotify(url) {
   return f;
 }
 export function useFicha(url) {
-  return useCarga(() => (spotify(url) ? fichaSpotify(url).catch(() => null) : Promise.resolve(null)), [url]);
+  // (música 3) de un vídeo de YouTube, su portada (sin pedir nada: i.ytimg.com); el nombre, el del servicio
+  return useCarga(() => (spotify(url) ? fichaSpotify(url).catch(() => null) : Promise.resolve(portadaYoutube(url) ? { titulo: null, thumb: portadaYoutube(url), t: Date.now() } : null)), [url]);
 }
 
 // El reproductor de Spotify, al tocar. (v0.129) Compacto de entrada (el play y la canción), «Ver la lista entera» en las
@@ -87,18 +88,20 @@ export function Reproductor({ url, titulo = 'Spotify' }) {
   const [abierto, setAbierto] = useState(false);
   const [entero, setEntero] = useState(false);
   const [oscuro] = useState(appOscura);
-  const src = urlIncrustar(url, { oscuro });
+  // (música 3) también YouTube (youtube-nocookie) y Apple Music; la voz del coach solo pausa el de Spotify
+  const deSpotify = urlIncrustar(url, { oscuro });
+  const src = deSpotify || urlIncrustarOtro(url);
   // (música 3) se apunta para que la voz del coach lo pause y lo reanude (musica-control.js)
   const marco = useRef(null);
-  useEffect(() => (abierto ? apuntarReproductor(marco.current) : undefined), [abierto, src]);
+  useEffect(() => (abierto && deSpotify ? apuntarReproductor(marco.current) : undefined), [abierto, src]);
   if (!src) return null;
   if (!abierto) return <button type="button" class="btn btn-peq" onClick={() => setAbierto(true)}><Icono n="play" /> Escuchar aquí</button>;
   return (
     <div class="reproductor-caja">
-      <iframe ref={marco} class="reproductor-spotify" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url, entero)} loading="lazy"
+      <iframe ref={marco} class={deSpotify ? 'reproductor-spotify' : 'reproductor-spotify reproductor-otro'} title={`Reproductor de ${deSpotify ? 'Spotify' : nombreMusica(url)}: ${titulo}`} src={src} width="100%" height={deSpotify ? altoIncrustado(url, entero) : altoIncrustadoOtro(url)} loading="lazy"
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" />
       <span class="fila-envolver reproductor-acciones">
-        {tieneLista(url) && <button type="button" class="btn-texto" aria-expanded={entero ? 'true' : 'false'} onClick={() => setEntero(!entero)}>{entero ? 'Ver solo el reproductor' : `Ver ${tipoMusica(url) === 'Álbum' ? 'el álbum' : tipoMusica(url) === 'Podcast' ? 'los episodios' : 'la lista'} entera`}</button>}
+        {deSpotify && tieneLista(url) && <button type="button" class="btn-texto" aria-expanded={entero ? 'true' : 'false'} onClick={() => setEntero(!entero)}>{entero ? 'Ver solo el reproductor' : `Ver ${tipoMusica(url) === 'Álbum' ? 'el álbum' : tipoMusica(url) === 'Podcast' ? 'los episodios' : 'la lista'} entera`}</button>}
         <button type="button" class="btn-texto" onClick={() => { setAbierto(false); setEntero(false); }}>Quitar el reproductor</button>
       </span>
     </div>

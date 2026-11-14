@@ -82,5 +82,22 @@ check(/Se quita cuando quieras \(y al salir de la comunidad\)/.test(eq) && /Solo
 check(/<RetoMusicalCoach \/>/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /\['fase:calentamiento', 'Para calentar'\]/.test(lee('src/ui/coach/PersonalCoach.jsx')), 'el coach: el tema del reto y las listas por momento en Cuenta › Música');
 check(/nombre === 'musica_reto_guardar'/.test(lee('src/datos/backend-memoria.js')) && /MUSICA_FUERA/.test(lee('src/datos/backend-memoria.js')), 'la demo: el reto va con la comunidad y al salir se borra lo suyo');
 
+console.log('\nTanda 4: para el coach y fuera de Spotify');
+const B = [{ etiquetas: ['pierna', 'calentar'], bpm: 128, energia: 3, genero: 'Rock' }, { etiquetas: ['calma'], bpm: 90, energia: 1, nota: 'Para estirar' }];
+check(M.filtrarBiblioteca(B, 'pierna').length === 1 && M.filtrarBiblioteca(B, '125').length === 1 && M.filtrarBiblioteca(B, 'tranquila').length === 1 && M.filtrarBiblioteca(B, 'estirar').length === 1 && M.filtrarBiblioteca(B, '').length === 2 && M.filtrarBiblioteca(B, 'pierna 90').length === 0, 'buscar en la biblioteca: etiquetas, género, nota, energía y bpm parecidos (±6)');
+check(M.filtrarBiblioteca([{ etiquetas: ['energía'] }], 'ENERGIA').length === 1, 'sin distinguir tildes ni mayúsculas');
+check(M.textoFicha(B[0]) === 'A tope · 128 bpm · Rock · pierna, calentar' && M.textoFicha({}) === '', 'su ficha en una línea');
+check(M.mesesAtras(new Date('2026-02-10T12:00:00Z'), 2) === '2025-12' && M.mesesAtras(new Date('2026-11-14T12:00:00Z'), 0) === '2026-11', 'el mes de hace n meses');
+check(JSON.stringify(M.youtube('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890')) === '{"video":"dQw4w9WgXcQ","lista":"PL1234567890"}' && M.youtube('https://youtu.be/dQw4w9WgXcQ').video === 'dQw4w9WgXcQ'
+  && M.youtube('https://music.youtube.com/playlist?list=PLsoloDeAna123').lista === 'PLsoloDeAna123' && M.youtube('https://youtube.com/@canal') === null && M.youtube('http://youtu.be/dQw4w9WgXcQ') === null, 'YouTube: un vídeo o una lista (solo https)');
+check(M.urlIncrustarOtro('https://youtu.be/dQw4w9WgXcQ') === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1' && M.urlIncrustarOtro('https://music.youtube.com/playlist?list=PLsoloDeAna123') === 'https://www.youtube-nocookie.com/embed/videoseries?list=PLsoloDeAna123&playsinline=1', 'su reproductor, por youtube-nocookie (como los vídeos de técnica)');
+check(M.urlIncrustarOtro('https://music.apple.com/es/playlist/entreno/pl.u-abc123') === 'https://embed.music.apple.com/es/playlist/entreno/pl.u-abc123' && M.urlIncrustarOtro('https://www.deezer.com/es/playlist/1') === null && M.appleMusic('https://music.apple.com/es/artist/x/1') === null, 'Apple Music, por embed.music.apple.com (Deezer, Amazon y Tidal se abren en su app)');
+check(M.portadaYoutube('https://youtu.be/dQw4w9WgXcQ') === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' && M.portadaYoutube('https://music.youtube.com/playlist?list=PLsoloDeAna123') === null, 'la portada de un vídeo, sin pedir nada (i.ytimg.com)');
+const html2 = lee('index.html');
+check(/frame-src https:\/\/open\.spotify\.com https:\/\/www\.youtube-nocookie\.com https:\/\/embed\.music\.apple\.com[;"]/.test(html2) && !/script-src[^;]*https?:/.test(html2), 'la CSP: solo se añade el marco de Apple Music (ningún script de fuera)');
+check(/<CampoMusica clave=\{`bloque:\$\{bloque\.id\}`\} etiqueta="Música del bloque" \/>/.test(lee('src/ui/coach/Editor.jsx')) && !/!bloque\.es_plantilla && <CampoMusica/.test(lee('src/ui/coach/Editor.jsx')), 'la música del bloque, también en las plantillas (y viaja al copiarlas)');
+check(/<BibliotecaMusica \/>/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /<UsoMusica \/>/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /<DeTuBiblioteca ocupado=\{guardando\}/.test(lee('src/ui/coach/PersonalCoach.jsx')), 'en Cuenta › Música: su biblioteca y qué funciona; al enlazar, «De tu biblioteca»');
+check(/abierto && deSpotify \? apuntarReproductor/.test(lee('src/ui/atleta/Musica.jsx')), 'la voz del coach solo maneja el reproductor de Spotify');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

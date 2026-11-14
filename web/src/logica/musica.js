@@ -238,3 +238,64 @@ export function masRepetida(urls = []) {
   const [url, veces] = Object.entries(n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || [];
   return url && veces > 1 ? { url, n: veces } : null;
 }
+
+// ---------- (música 3, tanda 4) La biblioteca del coach ----------
+export const ENERGIAS = [[1, 'Tranquila'], [2, 'Media'], [3, 'A tope']];
+// «A tope · 128 bpm · 60 min · Rock · pierna, calentar»
+export function textoFicha(x = {}) {
+  return [x.energia ? ENERGIAS.find(([v]) => v === x.energia)?.[1] : null, x.bpm ? `${x.bpm} bpm` : null, x.minutos ? `${x.minutos} min` : null, x.genero || null,
+    (x.etiquetas || []).length ? x.etiquetas.join(', ') : null].filter(Boolean).join(' · ');
+}
+// Buscar en la biblioteca: cada palabra tiene que estar en sus etiquetas, su género, su nota, su energía o su bpm
+// (un número busca bpm parecidos, ±6)
+const sinTildes = (t) => String(t || '').toLocaleLowerCase('es').normalize('NFD').replace(/\p{M}/gu, '');
+export function filtrarBiblioteca(lista = [], q = '') {
+  const palabras = sinTildes(q).split(/\s+/).filter(Boolean);
+  if (!palabras.length) return lista || [];
+  return (lista || []).filter((x) => {
+    const texto = sinTildes([...(x.etiquetas || []), x.genero, x.nota, x.energia ? ENERGIAS.find(([v]) => v === x.energia)?.[1] : ''].join(' '));
+    return palabras.every((p) => (/^\d{2,3}$/.test(p) ? x.bpm && Math.abs(x.bpm - Number(p)) <= 6 : texto.includes(p)));
+  });
+}
+// El mes de hace n meses («AAAA-MM», de Madrid)
+export function mesesAtras(fecha = new Date(), n = 0) {
+  const m = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit' }).format(fecha).slice(0, 7);
+  let [a, mm] = m.split('-').map(Number);
+  mm -= n;
+  while (mm < 1) { mm += 12; a -= 1; }
+  return `${a}-${String(mm).padStart(2, '0')}`;
+}
+
+// ---------- (música 3, tanda 4) YouTube y Apple Music, de primera ----------
+// YouTube: un vídeo (watch?v=, youtu.be/, music.youtube.com/watch) o una lista (list=)
+export function youtube(url) {
+  let u;
+  try { u = new URL(String(url || '').trim()); } catch { return null; }
+  if (u.protocol !== 'https:') return null;
+  const host = u.hostname.replace(/^(www|m)\./, '');
+  const okV = (v) => (/^[A-Za-z0-9_-]{11}$/.test(v || '') ? v : null);
+  const okL = (l) => (/^[A-Za-z0-9_-]{10,64}$/.test(l || '') ? l : null);
+  if (host === 'youtu.be') { const video = okV(u.pathname.slice(1)); return video ? { video, lista: okL(u.searchParams.get('list')) } : null; }
+  if (host !== 'youtube.com' && host !== 'music.youtube.com') return null;
+  const video = u.pathname === '/watch' ? okV(u.searchParams.get('v')) : null;
+  const lista = okL(u.searchParams.get('list'));
+  return video || lista ? { video, lista } : null;
+}
+// Apple Music: music.apple.com/{país}/{album|playlist|song|station}/{nombre}/{id}
+export function appleMusic(url) {
+  const m = /^https:\/\/music\.apple\.com\/([a-z]{2})\/(album|playlist|song|station)\/([^/?#]+)\/([A-Za-z0-9.-]+)(\?i=\d+)?$/i.exec(String(url || '').trim());
+  return m ? { pais: m[1], tipo: m[2], ruta: `${m[1]}/${m[2]}/${m[3]}/${m[4]}${m[5] || ''}` } : null;
+}
+// El reproductor incrustado de los demás servicios (de Spotify, urlIncrustar): YouTube por youtube-nocookie (como sus
+// vídeos de técnica) y Apple Music por embed.music.apple.com. Amazon, Deezer y Tidal, no: se abren en su app
+export function urlIncrustarOtro(url) {
+  const y = youtube(url);
+  if (y?.video) return `https://www.youtube-nocookie.com/embed/${y.video}?playsinline=1${y.lista ? `&list=${y.lista}` : ''}`;
+  if (y?.lista) return `https://www.youtube-nocookie.com/embed/videoseries?list=${y.lista}&playsinline=1`;
+  const a = appleMusic(url);
+  if (a) return `https://embed.music.apple.com/${a.ruta}`;
+  return null;
+}
+export const altoIncrustadoOtro = (url) => (youtube(url) ? 200 : appleMusic(url)?.tipo === 'song' ? 175 : 450);
+// La portada de un vídeo de YouTube (sin pedir nada: i.ytimg.com, como las de los vídeos de técnica)
+export const portadaYoutube = (url) => { const v = youtube(url)?.video; return v ? `https://i.ytimg.com/vi/${v}/hqdefault.jpg` : null; };

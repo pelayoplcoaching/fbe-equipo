@@ -21,6 +21,7 @@ import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
 import { RetoMusicalCoach } from '../atleta/MusicaEquipo.jsx';
+import { BibliotecaMusica, UsoMusica, DeTuBiblioteca } from './MusicaCoach3.jsx';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -301,6 +302,8 @@ export function MusicaCoach() {
       ))}
       {/* (música 3) el reto musical del mes, tu biblioteca y qué música funciona */}
       <RetoMusicalCoach />
+      <BibliotecaMusica />
+      <UsoMusica />
       <p class="mini terciario">Crea las listas en tu Spotify (o Apple Music, YouTube Music…) y pega aquí su enlace. Cada atleta ve en la portada de su sesión la que le toca, después de la suya; la del equipo sale en Equipo. Para una sesión o un bloque concretos, en el editor del programa. Nadie tiene que iniciar sesión con Spotify en la app.</p>
       {editar && <HojaEnlaceMusica clave={editar[0]} titulo={editar[1]} actual={m[editar[0]] || ''} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); lista.recargar(true); }} />}
     </section>
@@ -326,6 +329,8 @@ export function HojaEnlaceMusica({ clave, titulo, actual, alCerrar, alGuardar })
           {!mal && <FichaPrevia url={u} />}
         </div>
         <button class="btn btn-primario btn-grande" disabled={guardando || mal}><Icono n="hecho" /> Guardar</button>
+        {/* (música 3) o, en dos toques, una de tu biblioteca */}
+        <DeTuBiblioteca ocupado={guardando} alElegir={(url) => guardar(url)} />
         {actual && <button type="button" class="btn plano" disabled={guardando} onClick={() => guardar('')}>Quitar la lista</button>}
       </form>
     </Hoja>

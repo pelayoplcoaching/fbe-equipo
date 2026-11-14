@@ -6116,6 +6116,9 @@ try {
   console.log('\nMúsica 3, tanda 3: con el equipo');
   const { probarMusica3Equipo } = await import('./e2e-musica3-t3.mjs');
   await probarMusica3Equipo({ navegador, check });
+  console.log('\nMúsica 3, tanda 4: para el coach y fuera de Spotify');
+  const { probarMusica3Coach } = await import('./e2e-musica3-t4.mjs');
+  await probarMusica3Coach({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
