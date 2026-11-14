@@ -23386,7 +23386,9 @@ end $$;
 create or replace function fbe_privado.musica_url_valida(p text) returns boolean
 language sql immutable set search_path = '' as $$
   select p is not null and char_length(p) <= 300
-    and p ~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']*$';
+    and p ~* '^https://(open\.spotify\.com|spotify\.link|music\.apple\.com|music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|music\.amazon\.(es|com)|(www\.)?deezer\.com|link\.deezer\.com|(www\.)?tidal\.com|listen\.tidal\.com)/[^[:space:]<>"'']+$'
+    -- (revisión) sin las redirecciones de YouTube (se enseñan a otros miembros)
+    and p !~* '^https://[^/]+/(redirect|attribution_link)([?/#]|$)';
 $$;
 -- El mes de Madrid de hoy («AAAA-MM»)
 create or replace function fbe_privado.musica_mes() returns text
@@ -23512,6 +23514,19 @@ language sql stable security definer set search_path = '' as $$
   where m.sesion_id = any(coalesce(p_ids, '{}')) and cardinality(coalesce(p_ids, '{}')) <= 400
     and (public.es_coach() or m.atleta_id = public.mi_atleta_id());
 $$;
+-- (revisión) Para «Descargar mis datos»: la música de cada sesión y las aperturas por lista y mes (el atleta, las suyas;
+-- el coach, las de cualquiera con p_atleta)
+create or replace function public.musica_mia(p_atleta uuid default null) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare v_atleta uuid := case when public.es_coach() then p_atleta else public.mi_atleta_id() end;
+begin
+  if v_atleta is null then return null; end if;
+  return jsonb_build_object(
+    'sesiones', coalesce((select jsonb_agg(jsonb_build_object('sesion_id', m.sesion_id, 'url', m.url, 'abierta_en', m.abierta_en) order by m.abierta_en) from public.musica_sesion m where m.atleta_id = v_atleta), '[]'::jsonb),
+    'aperturas', coalesce((select jsonb_agg(jsonb_build_object('mes', a.mes, 'url', a.url, 'n', a.n) order by a.mes, a.url) from public.musica_aperturas_lista a where a.atleta_id = v_atleta), '[]'::jsonb));
+end $$;
+comment on function public.musica_mia(uuid) is 'La música de cada sesión y las aperturas por lista y mes, para su descarga (el coach, con p_atleta).';
+
 comment on function public.musica_de_sesiones(uuid[]) is 'La última música que abrió en cada una de esas sesiones (las suyas; el coach, cualquiera).';
 
 -- Lo que más abre (del mes p_desde al p_hasta, «AAAA-MM»): [{ url, n }], las p_limite primeras (5; para su descarga, todas)
@@ -23690,24 +23705,27 @@ alter table public.comunidad_miembros add constraint comunidad_miembros_musica3 
 create or replace function fbe_privado.comunidad_musica_al_salir() returns trigger
 language plpgsql set search_path = '' as $$
 begin
-  if new.salido_en is not null and old.salido_en is null then
+  if (new.salido_en is not null and old.salido_en is null) or (new.bloqueado and not old.bloqueado) then
     new.cancion_url := null; new.cancion_en := null; new.reto_cancion_url := null; new.reto_mes := null; new.reto_voto := null; new.reto_voto_mes := null;
+    -- (revisión) y los votos que le habían dado se van con ella
+    update public.comunidad_miembros set reto_voto = null, reto_voto_mes = null where reto_voto = new.perfil_id and perfil_id <> new.perfil_id;
   end if;
   return new;
 end $$;
 drop trigger if exists comunidad_musica_al_salir on public.comunidad_miembros;
-create trigger comunidad_musica_al_salir before update of salido_en on public.comunidad_miembros
+create trigger comunidad_musica_al_salir before update of salido_en, bloqueado on public.comunidad_miembros
   for each row execute function fbe_privado.comunidad_musica_al_salir();
 
 -- ¿Puede publicar? (dentro, sin bloquear y sin silenciar)
 create or replace function fbe_privado.comunidad_puede_musica(p_perfil uuid) returns boolean
 language sql stable set search_path = '' as $$
-  select exists (select 1 from public.comunidad_miembros m where m.perfil_id = p_perfil and m.salido_en is null and not m.bloqueado
-                 and (m.silenciado_hasta is null or m.silenciado_hasta <= now()));
+  -- (revisión) como el resto de la comunidad: abierta, dentro (texto y normas vigentes, sin baja) y sin silenciar
+  select public.comunidad_activa() and exists (select 1 from fbe_privado.comunidad_dentro d join public.comunidad_miembros m on m.perfil_id = d.perfil_id
+                 where d.perfil_id = p_perfil and (m.silenciado_hasta is null or m.silenciado_hasta <= now()));
 $$;
 create or replace function fbe_privado.comunidad_ve_musica(p_perfil uuid) returns boolean
 language sql stable set search_path = '' as $$
-  select public.es_coach() or exists (select 1 from public.comunidad_miembros m where m.perfil_id = p_perfil and m.salido_en is null and not m.bloqueado);
+  select public.comunidad_activa() and (public.es_coach() or exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = p_perfil));
 $$;
 
 -- Su canción en «Lo que suena en el equipo» (vacío: la quita)
@@ -23730,7 +23748,7 @@ declare v_uid uuid := auth.uid();
 begin
   if v_uid is null or not fbe_privado.comunidad_ve_musica(v_uid) then return '[]'::jsonb; end if;
   return coalesce((select jsonb_agg(jsonb_build_object('perfil_id', x.perfil_id, 'nombre', x.nombre, 'url', x.cancion_url, 'en', x.cancion_en, 'yo', x.perfil_id = v_uid) order by x.cancion_en desc)
-    from (select m.* from public.comunidad_miembros m where m.salido_en is null and not m.bloqueado and m.cancion_url is not null
+    from (select m.* from public.comunidad_miembros m join fbe_privado.comunidad_dentro d on d.perfil_id = m.perfil_id where m.cancion_url is not null
           order by m.cancion_en desc limit 60) x), '[]'::jsonb);
 end $$;
 comment on function public.comunidad_canciones() is 'La canción que ha compartido cada uno de los que están dentro de la comunidad.';
@@ -23769,8 +23787,9 @@ begin
     'canciones', coalesce((select jsonb_agg(jsonb_build_object('perfil_id', x.perfil_id, 'nombre', x.nombre, 'url', x.reto_cancion_url, 'votos', x.votos, 'yo', x.perfil_id = v_uid)
                                             order by x.votos desc, x.nombre)
       from (select m.perfil_id, m.nombre, m.reto_cancion_url,
-                   (select count(*) from public.comunidad_miembros o where o.reto_voto = m.perfil_id and o.reto_voto_mes = v_mes and o.salido_en is null)::integer as votos
-            from public.comunidad_miembros m where m.salido_en is null and not m.bloqueado and m.reto_mes = v_mes) x), '[]'::jsonb));
+                   (select count(*) from public.comunidad_miembros o join fbe_privado.comunidad_dentro od on od.perfil_id = o.perfil_id
+                     where o.reto_voto = m.perfil_id and o.reto_voto_mes = v_mes)::integer as votos
+            from public.comunidad_miembros m join fbe_privado.comunidad_dentro d on d.perfil_id = m.perfil_id where m.reto_mes = v_mes) x), '[]'::jsonb));
 end $$;
 comment on function public.comunidad_reto_musical() is 'El reto musical de este mes con las canciones propuestas y sus votos.';
 
@@ -23782,10 +23801,12 @@ begin
   if v is not null and not fbe_privado.comunidad_puede_musica(v_uid) then raise exception 'Ahora no puedes compartir en el equipo' using errcode = '42501'; end if;
   if v is not null and not exists (select 1 from public.musica_retos where mes = v_mes) then raise exception 'Este mes no hay reto musical'; end if;
   if v is not null and not fbe_privado.musica_url_valida(v) then raise exception 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal' using errcode = '22023'; end if;
+  -- (si quita la suya o la cambia por otra, los votos que tenía se van: se votó a una canción, no a una persona)
+  if v is distinct from (select reto_cancion_url from public.comunidad_miembros where perfil_id = v_uid and reto_mes = v_mes) then
+    update public.comunidad_miembros set reto_voto = null, reto_voto_mes = null where reto_voto = v_uid and reto_voto_mes = v_mes;
+  end if;
   update public.comunidad_miembros set reto_cancion_url = v, reto_mes = case when v is null then null else v_mes end
     where perfil_id = v_uid and salido_en is null;
-  -- (si quita la suya, los votos que tenía se van)
-  if v is null then update public.comunidad_miembros set reto_voto = null, reto_voto_mes = null where reto_voto = v_uid and reto_voto_mes = v_mes; end if;
 end $$;
 comment on function public.comunidad_reto_cancion(text) is 'Su canción para el reto musical de este mes (o, vacío, la quita).';
 
@@ -23794,14 +23815,14 @@ language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid(); v_mes text := fbe_privado.musica_mes();
 begin
   if v_uid is null then raise exception 'Necesitas iniciar sesión' using errcode = '42501'; end if;
-  if not fbe_privado.comunidad_ve_musica(v_uid) or not exists (select 1 from public.comunidad_miembros where perfil_id = v_uid and salido_en is null) then
+  if not public.comunidad_soy_miembro() then  -- (revisión)
     raise exception 'Solo estando dentro de la comunidad' using errcode = '42501';
   end if;
   if p_perfil is null then
     update public.comunidad_miembros set reto_voto = null, reto_voto_mes = null where perfil_id = v_uid; return;
   end if;
   if p_perfil = v_uid then raise exception 'A la tuya no te puedes votar'; end if;
-  if not exists (select 1 from public.comunidad_miembros where perfil_id = p_perfil and salido_en is null and not bloqueado and reto_mes = v_mes) then
+  if not exists (select 1 from public.comunidad_miembros m join fbe_privado.comunidad_dentro d on d.perfil_id = m.perfil_id where m.perfil_id = p_perfil and m.reto_mes = v_mes) then
     raise exception 'Esa canción ya no está en el reto';
   end if;
   update public.comunidad_miembros set reto_voto = p_perfil, reto_voto_mes = v_mes where perfil_id = v_uid and salido_en is null;
@@ -23817,16 +23838,17 @@ create or replace function public.comunidad_listas_companeros() returns jsonb
 language sql stable security definer set search_path = '' as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'otro', coalesce(m.nombre, 'Tu compañero'), 'url', c.lista_url) order by c.aceptado_en), '[]'::jsonb)
   from public.comunidad_companeros c
-  left join public.comunidad_miembros m on m.perfil_id = case when c.de = auth.uid() then c.para else c.de end and m.salido_en is null
-  where auth.uid() in (c.de, c.para) and c.estado = 'aceptada';
+  join fbe_privado.comunidad_dentro m on m.perfil_id = case when c.de = auth.uid() then c.para else c.de end
+  where auth.uid() in (c.de, c.para) and c.estado = 'aceptada' and public.comunidad_soy_miembro();  -- (revisión) los dos, dentro
 $$;
-comment on function public.comunidad_listas_companeros() is 'La lista compartida de cada pareja de compañeros de racha (solo los dos la ven).';
+comment on function public.comunidad_listas_companeros() is 'La lista compartida de cada pareja de compañeros de racha (la ven los dos y el coach).';
 
 create or replace function public.comunidad_companero_lista(p_id uuid, p_url text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare v text := nullif(btrim(coalesce(p_url, '')), '');
 begin
   if auth.uid() is null then raise exception 'Necesitas iniciar sesión' using errcode = '42501'; end if;
+  if not public.comunidad_soy_miembro() then raise exception 'Solo estando dentro de la comunidad' using errcode = '42501'; end if;  -- (revisión)
   if v is not null and not fbe_privado.musica_url_valida(v) then raise exception 'Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal' using errcode = '22023'; end if;
   update public.comunidad_companeros set lista_url = v where id = p_id and auth.uid() in (de, para) and estado = 'aceptada';
   if not found then raise exception 'Esa pareja no es tuya'; end if;
@@ -23886,6 +23908,8 @@ begin
   end loop;
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
+-- (revisión) la comprobación de las columnas de música la usa una restricción: el servidor (service_role) también tiene que poder llamarla
+grant execute on function fbe_privado.musica_url_valida(text) to service_role;
 
 insert into public.fbe_migraciones (numero) values (72)  -- (3) número de esta migración
   on conflict (numero) do update set aplicada_en = excluded.aplicada_en;

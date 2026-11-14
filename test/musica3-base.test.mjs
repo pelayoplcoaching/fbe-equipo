@@ -112,7 +112,9 @@ check(await falla('select musica_coach_uso($1)', [mes]), 'eso lo ve solo el coac
 
 console.log('\n4. Con el equipo');
 await su();
-const miembro = async (perfil, atleta, nombre) => q(`insert into public.comunidad_miembros (atleta_id, perfil_id, nombre, version) values ($1, $2, $3, 'x')`, [atleta, perfil, nombre]);
+// (revisión) dentro de verdad: la comunidad abierta y con el texto y las normas vigentes
+await q('update public.comunidad_ajustes set activa = true');
+const miembro = async (perfil, atleta, nombre) => q(`insert into public.comunidad_miembros (atleta_id, perfil_id, nombre, version, normas_version, normas_leidas_en) values ($1, $2, $3, public.comunidad_version(), public.comunidad_normas_version(), now())`, [atleta, perfil, nombre]);
 await q(`update public.atletas set estado = 'activo' where id = $1`, [atletaL]);
 await miembro(ana, atletaA, 'Ana L.');
 await miembro(luis, atletaL, 'Luis M.');
@@ -121,6 +123,11 @@ const atletaI = (await q(`insert into public.atletas (nombre, perfil_id, estado)
 await como(ana);
 await q('select comunidad_cancion_guardar($1)', [TR]);
 check((await uno('select comunidad_canciones()'))[0].url === TR, 'comparte su canción en «Lo que suena»');
+await su(); await q('update public.comunidad_ajustes set activa = false'); await como(ana);
+check((await uno('select comunidad_canciones()')).length === 0 && await falla('select comunidad_cancion_guardar($1)', [TR]), '(revisión) con la comunidad cerrada, ni se ve ni se comparte');
+await su(); await q('update public.comunidad_ajustes set activa = true'); await q(`update public.atletas set estado = 'baja' where id = $1`, [atletaA]); await como(luis);
+check((await uno('select comunidad_canciones()')).length === 0, '(revisión) la de quien está de baja no sale');
+await su(); await q(`update public.atletas set estado = 'activo' where id = $1`, [atletaA]); await como(ana);
 await como(luis);
 const vistas = await uno('select comunidad_canciones()');
 check(vistas.length === 1 && vistas[0].nombre === 'Ana L.' && vistas[0].yo === false, 'los demás de dentro la ven, con su nombre de la comunidad');

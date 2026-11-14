@@ -454,7 +454,7 @@ export const FOTO_MINI_MAX = 16000;
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
 // (v0.160) las de la 072 que solo leen: musica_de_sesiones, musica_mas_abierta, musica_biblioteca, musica_coach_uso, comunidad_canciones,
 // comunidad_reto_musical y comunidad_listas_companeros (si contaran como escritura, lo recordado de Hoy se olvidaría)
-const RPC_DE_CONSULTA = new Set(['musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -5497,6 +5497,9 @@ export function crearApi(backend) {
       out.agenda_vida = (await api.agenda(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', hasta: '2100-01-01' }).catch(() => [])) || [];
       // (072) la música que abrió en cada sesión y lo que más abre (desde siempre)
       out.musica_abierta = (await api.musicaMasAbierta('2000-01', '2100-12', perfilId && perfilId === uid() ? null : atletaId, 2000).catch(() => [])) || [];
+      // (v0.160, 072) la música de cada sesión y las aperturas por mes; y, si es suya, la lista que comparte con sus parejas de racha
+      out.musica_de_sesiones_y_meses = (await b.rpc('musica_mia', { p_atleta: perfilId && perfilId === uid() ? null : atletaId }).catch(() => null)) || null;
+      out.listas_companeros = perfilId && perfilId === uid() ? (await b.rpc('comunidad_listas_companeros').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)

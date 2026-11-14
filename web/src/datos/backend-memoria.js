@@ -3978,6 +3978,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const coach = esCoach(), a = miAtletaId();
         return Object.fromEntries(tabla('musica_sesion').filter((x) => ids.includes(x.sesion_id) && (coach || x.atleta_id === a)).map((x) => [x.sesion_id, x.url]));
       }
+      if (nombre === 'musica_mia') {   // (072, revisión) para su descarga
+        const a = esCoach() ? args?.p_atleta : miAtletaId();
+        if (!a) return null;
+        return { sesiones: tabla('musica_sesion').filter((x) => x.atleta_id === a).map(({ sesion_id, url, abierta_en }) => ({ sesion_id, url, abierta_en })),
+          aperturas: tabla('musica_aperturas_lista').filter((x) => x.atleta_id === a).map(({ mes, url, n }) => ({ mes, url, n })) };
+      }
       if (nombre === 'musica_mas_abierta') {
         const a = args?.p_atleta || miAtletaId();
         if (!a || (args?.p_atleta && !esCoach() && args.p_atleta !== miAtletaId())) return [];

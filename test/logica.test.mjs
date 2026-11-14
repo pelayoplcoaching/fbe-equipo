@@ -4718,8 +4718,8 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
     'la política 2026-12.31 cuenta la agenda y el manual (los ve el coach), la voz del coach, «Busco compañero» (solo saliendo en el ranking) y lo que se queda en el móvil');
   // (v0.160) 2026-12.32: la música 3 (072)
   check(legal.VERSION_LEGAL === '2026-12.32' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.32' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.31', '2026-12.32').length === 1
-    && ((t) => /listas para cada momento/.test(t) && /himnos/.test(t) && /Lo batiste con/.test(t) && /totales del equipo, sin saber quién/.test(t) && /reto musical/.test(t) && /pareja de racha/.test(t) && /Apple Music/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'Tu música')?.[1] || ''),
-    'la política 2026-12.32 cuenta las listas y los himnos, la música de cada sesión, lo que ve el coach (solo totales), la comunidad, la pareja y los reproductores');
+    && ((t) => /listas para cada momento/.test(t) && /himnos/.test(t) && /Lo batiste con/.test(t) && /por cuántos atletas/.test(t) && /la veis los dos y tu coach/.test(t) && /reto musical/.test(t) && /pareja de racha/.test(t) && /Apple Music/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'Tu música')?.[1] || ''),
+    'la política 2026-12.32 cuenta las listas y los himnos, la música de cada sesión, lo que ve el coach, la comunidad, la pareja y los reproductores');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
