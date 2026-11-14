@@ -134,6 +134,13 @@ const falta069 = (e) => /agenda_(lista|guardar|borrar|responder)|personal_manual
 const avisarAgenda = () => { try { globalThis.dispatchEvent?.(new Event('fbe-agenda')); } catch { /* */ } };
 // (071) las cuatro frases del coach que necesitan la 071
 const FRASES_071 = ['saludo', 'mitad_sesion', 'a_por_record', 'ultimo_ejercicio'];
+// (072) la música 3: sin ella, lo nuevo no sale (las lecturas devuelven vacío; lo que guarda avisa)
+const AVISO_072 = 'Esto aún no está disponible: hay que poner al día la base (migración «música 3», supabase/migraciones/072_musica_3.sql)';
+const falta072 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
+  return /personal_musica_guardar|musica_(abierta_lista|de_sesiones|mas_abierta|copiar|biblioteca|coach_uso|reto_guardar)|comunidad_(cancion_guardar|canciones|reto_musical|reto_cancion|reto_votar|listas_companeros|companero_lista)|PGRST202|42883/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
+};
 const AVISO_071 = 'Para grabar esta frase falta ejecutar la migración 071 en Supabase (supabase/migraciones/071_voces_coach_2.sql).';
 const AVISO_070 = 'Esto aún no está disponible: hay que poner al día la base (migración 070, supabase/migraciones/070_personal_voz.sql)';
 const AVISO_069 = 'Esto aún no está disponible: tu coach tiene que poner al día la base (migración 069, supabase/migraciones/069_personal_vida.sql)';
@@ -988,8 +995,92 @@ export function crearApi(backend) {
       if (!claveValida(clave)) throw new Error('No se puede enlazar ahí');
       const u = String(url ?? '').trim();
       if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
-      try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u ? urlMusica(u) : '' }); } catch (e) { if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e; }
+      try { await b.rpc('musica_coach_guardar', { p_clave: clave, p_url: u ? urlMusica(u) : '' }); } catch (e) {
+        // (072) las claves nuevas (fases, test, pódcast) necesitan la 072
+        if (/^(fase:|test$|podcast$)/.test(clave) && /musica_coach_valida|Clave no v/i.test(`${e?.message || ''}`)) throw new Error(AVISO_072);
+        if (falta050(e)) throw new Error('Esto aún no está disponible: falta poner al día la base (migración 050)'); throw e;
+      }
       musicaMemo = new Map();
+    },
+    // ------------------------------------------------------------ (música 3, migración 072)
+    // Sus listas con etiqueta y sus himnos (solo esas claves; lo demás de lo suyo no se toca)
+    async guardarMusicaPersonal(datos) {
+      const limpio = {};
+      if ('musica_listas' in datos) limpio.musica_listas = (datos.musica_listas || []).map((l) => ({ url: urlMusica(l.url) || '', etiqueta: l.etiqueta }));
+      for (const k of ['himno_ultima_url', 'himno_vuelta_url']) if (k in datos) limpio[k] = String(datos[k] ?? '').trim() ? urlMusica(datos[k]) || String(datos[k]).trim() : null;
+      try {
+        const r = await b.rpc('personal_musica_guardar', { p_datos: limpio });
+        personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
+        return r || null;
+      } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    // Abre una música desde la app (en una sesión, si se sabe): para «Lo batiste con…» y «Lo que más te acompaña»
+    async musicaAbiertaLista(url, sesionId = null) {
+      const u = urlMusica(url);
+      if (!u) return;
+      try { await b.rpc('musica_abierta_lista', { p_url: u, p_sesion: sesionId || null }); } catch { /* sin la 072 o sin conexión: no se apunta */ }
+    },
+    // La música de unas sesiones ({ sesion_id: url }); sin la 072, {}
+    async musicaDeSesiones(ids) {
+      const l = unicos((ids || []).filter(Boolean)).slice(0, 400);
+      if (!l.length) return {};
+      try { const r = await b.rpc('musica_de_sesiones', { p_ids: l }); return r && typeof r === 'object' ? r : {}; } catch (e) { if (falta072(e)) return {}; throw e; }
+    },
+    // Lo que más abre en esos meses ([{ url, n }]); sin la 072, []
+    async musicaMasAbierta(desde, hasta, atletaId = null, limite = 5) {
+      try { const r = await b.rpc('musica_mas_abierta', { p_desde: desde, p_hasta: hasta, p_atleta: atletaId || null, p_limite: limite }); return Array.isArray(r) ? r : []; } catch (e) { if (falta072(e)) return []; throw e; }
+    },
+    // (coach) la música de las sesiones y del bloque viaja al copiarlos; sin la 072, nada (no corta la copia)
+    async copiarMusica(pares = [], bloqueDe = null, bloqueA = null) {
+      if (!pares.length && !(bloqueDe && bloqueA)) return 0;
+      try { const n = await b.rpc('musica_copiar', { p_pares: pares, p_bloque_de: bloqueDe, p_bloque_a: bloqueA }); musicaMemo = new Map(); return n || 0; } catch { return 0; }
+    },
+    async bibliotecaMusica() {
+      try { const r = await b.rpc('musica_biblioteca', {}); return Array.isArray(r) ? r : []; } catch (e) { if (falta072(e)) return null; throw e; }
+    },
+    async guardarBibliotecaMusica(d) {
+      try { return await b.rpc('musica_biblioteca_guardar', { p_datos: { ...d, url: urlMusica(d.url) || String(d.url || '').trim() } }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    async borrarBibliotecaMusica(id) {
+      try { await b.rpc('musica_biblioteca_borrar', { p_id: id }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    // (coach) qué música funciona desde un mes («AAAA-MM»): { listas: [{ url, n, atletas }], sesiones, con_musica }; sin la 072, null
+    async usoMusicaCoach(desde) {
+      try { return await b.rpc('musica_coach_uso', { p_desde: desde }); } catch (e) { if (falta072(e)) return null; throw e; }
+    },
+    // Lo que suena en el equipo; sin la 072, null (no sale)
+    async cancionesEquipo() {
+      try { const r = await b.rpc('comunidad_canciones', {}); return Array.isArray(r) ? r : []; } catch (e) { if (falta072(e)) return null; throw e; }
+    },
+    async guardarCancionEquipo(url) {
+      const u = String(url ?? '').trim();
+      if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
+      try { await b.rpc('comunidad_cancion_guardar', { p_url: u ? urlMusica(u) : null }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    // El reto musical de este mes (o null: sin reto, o sin la 072)
+    async retoMusical() {
+      try { return (await b.rpc('comunidad_reto_musical', {})) || null; } catch (e) { if (falta072(e)) return null; throw e; }
+    },
+    async guardarRetoMusical(mes, tema) {
+      try { await b.rpc('musica_reto_guardar', { p_mes: mes, p_tema: tema ?? '' }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    async cancionRetoMusical(url) {
+      const u = String(url ?? '').trim();
+      if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
+      try { await b.rpc('comunidad_reto_cancion', { p_url: u ? urlMusica(u) : null }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    async votarRetoMusical(perfilId) {
+      try { await b.rpc('comunidad_reto_votar', { p_perfil: perfilId || null }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
+    },
+    // Las listas de sus parejas de racha ([{ id, otro, url }]); sin la 072, []
+    async listasCompaneros() {
+      try { const r = await b.rpc('comunidad_listas_companeros', {}); return Array.isArray(r) ? r : []; } catch (e) { if (falta072(e)) return []; throw e; }
+    },
+    async guardarListaCompanero(id, url) {
+      const u = String(url ?? '').trim();
+      if (u && !urlMusica(u)) throw new Error('Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal');
+      try { await b.rpc('comunidad_companero_lista', { p_id: id, p_url: u ? urlMusica(u) : null }); } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
     },
     // ------------------------------------------------------------ la parte social del equipo (tanda «social», migración 053)
     // ¿Está la 053? true / false / null (no se sabe: un corte). Como comunidad041
@@ -5388,6 +5479,8 @@ export function crearApi(backend) {
       out.apuntes_duelos = perfilId && perfilId === uid() ? (await b.rpc('apuntes_duelos_mios').catch(() => [])) || [] : [];
       // (v0.157, 069) su agenda de vida, entera (el manual va con «personal»)
       out.agenda_vida = (await api.agenda(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', hasta: '2100-01-01' }).catch(() => [])) || [];
+      // (072) la música que abrió en cada sesión y lo que más abre (desde siempre)
+      out.musica_abierta = (await api.musicaMasAbierta('2000-01', '2100-12', perfilId && perfilId === uid() ? null : atletaId, 2000).catch(() => [])) || [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
       for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
@@ -6046,8 +6139,10 @@ export function crearApi(backend) {
       const todas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, cols: 'ejercicio_id' }) : [];
       const ids = unicos(todas.map((x) => x.ejercicio_id));
       const nombres = ids.length ? Object.fromEntries((await b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre' })).map((e) => [e.id, e.nombre])) : {};
+      const paresMusica = [];  // (072) la música de cada sesión, con ella
       for (const s of sesiones) {
         const [copiaSesion] = await b.insert('sesiones', [{ semana_id: nueva.id, orden: s.orden, nombre: s.nombre, tipo: s.tipo, intencion: s.intencion, dinamica: s.dinamica, cardio: s.cardio ?? null, ...(s.video_url ? { video_url: s.video_url, video_titulo: s.video_titulo ?? null } : {}) }]);  // (059) y su vídeo
+        paresMusica.push([s.id, copiaSesion.id]);
         const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] });
         if (!pautas.length) continue;
         await b.insert('sesion_ejercicios', pautas.map((p) => {
@@ -6057,6 +6152,7 @@ export function crearApi(backend) {
           return f;
         }));
       }
+      await api.copiarMusica(paresMusica);
       return nueva;
     },
     // Duplica una semana con progresión: en la siguiente si está vacía (los bloques nacen con sus semanas creadas),
@@ -6115,6 +6211,7 @@ export function crearApi(backend) {
           conNota: true,
         });
       }
+      await api.copiarMusica([], origenId, nuevo.id);  // (072) y la del bloque
       return nuevo;
     },
     // Una plantilla a varios atletas a la vez: un bloque (en borrador) para cada uno, uno detrás de otro

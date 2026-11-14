@@ -44,7 +44,34 @@ check(/script-src 'self' 'wasm-unsafe-eval';/.test(html) && !/script-src[^;]*htt
 check(/e\.origin !== ORIGEN/.test(ctl) && /contentWindow !== e\.source/.test(ctl) && /postMessage\(\{ command \}, ORIGEN\)/.test(ctl), 'solo escucha al reproductor de Spotify de la app y solo le habla a él');
 check(/est\.sonando === true/.test(ctl) && /if \(est\.pausadoAqui\)/.test(ctl), 'solo pausa uno que suena y solo reanuda el que pausó');
 check(['src/ui/atleta/Compania.jsx', 'src/ui/atleta/ApuntesSocial.jsx', 'src/ui/chat/NotaVoz.jsx'].every((f) => /data-pausa-musica/.test(lee(f))) && /segundos: buffers\[k\]\.duration/.test(lee('src/ui/voces-coach.js')), 'la voz del coach: sus frases en la sesión, su mensaje de voz, sus audio-píldoras y las notas de voz');
-check(/siguiente && e\.prioridad === 'alta' && !Object\.keys\(hechas\)\.length && <PonTuCancion \/>/.test(lee('src/ui/atleta/Sesion.jsx')), '«Pon tu canción» en el ejercicio que toca, de prioridad alta y sin series');
+check(/siguiente && e\.prioridad === 'alta' && !Object\.keys\(hechas\)\.length && <PonTuCancion sesionId=\{sesionId\} \/>/.test(lee('src/ui/atleta/Sesion.jsx')), '«Pon tu canción» en el ejercicio que toca, de prioridad alta y sin series');
+
+console.log('\nTanda 2: su música');
+const L = (id) => `https://open.spotify.com/playlist/${id.repeat(22).slice(0, 22)}`;
+const P = { musica_url: L('P'), musica_listas: [{ url: L('A'), etiqueta: 'pierna' }, { url: L('B'), etiqueta: 'tranquila' }, { url: L('C'), etiqueta: 'energia' }, { url: L('D'), etiqueta: 'calentamiento' }], himno_vuelta_url: 'https://open.spotify.com/track/2HHtWyy5CgaQbC7XSoOb0e' };
+const orden = (o) => M.musicaDeLaSesion({ personal: P, familia: 'pierna', ...o }).map((x) => x.origen).join();
+check(orden({}) === 'etiqueta,propia', 'su lista de ese tipo de sesión, delante de su lista de siempre');
+check(orden({ prep: { sueno: 2, energia: 1, molestias: 3 } }) === 'animo,etiqueta,propia' && M.musicaDeLaSesion({ personal: P, prep: { sueno: 2, energia: 1, molestias: 3 } })[0].url === L('B'), 'llegando flojo, primero su lista tranquila');
+check(M.musicaDeLaSesion({ personal: P, prep: { sueno: 3, energia: 3, molestias: 3 } })[0].url === L('C'), 'con todo, su lista de energía');
+check(orden({ vuelta: true }) === 'vuelta,etiqueta,propia', 'tras un parón, su himno de vuelta el primero');
+check(orden({ coach: { test: L('T') }, esTest: true }) === 'test,etiqueta,propia' && orden({ coach: { test: L('T') } }) === 'etiqueta,propia', 'en un día de test, la lista de test del coach (si no, no)');
+check(orden({ companeros: [{ url: L('E'), otro: 'Luis' }] }) === 'etiqueta,propia,companero', 'la lista de su compañero de racha, tras la suya');
+check(orden({ coach: { podcast: L('Q') }, modalidad: 'carrera', minutos: 45 }).endsWith('podcast') && !orden({ coach: { podcast: L('Q') }, modalidad: 'carrera', minutos: 20 }).includes('podcast'), 'el pódcast, en el cardio largo (30 min o más)');
+check(M.musicaDeLaSesion({ personal: { musica_url: L('P'), musica_listas: [{ url: L('P'), etiqueta: 'pierna' }] }, familia: 'pierna' }).length === 1, 'sin repetir enlaces');
+check(M.listaAnimo(null) === null && M.listaAnimo({ sueno: 2, energia: 2, molestias: 2 }) === null && M.listaAnimo({ sueno: 1, energia: 2, molestias: 1 }) === 'tranquila', 'cómo llega: solo cuando hay algo claro');
+check(M.faseDeSesion({ hechas: 0, total: 12 }) === 'calentamiento' && M.faseDeSesion({ hechas: 3, total: 12 }) === 'trabajo' && M.faseDeSesion({ hechas: 12, total: 12 }) === 'vuelta_calma' && M.faseDeSesion({ total: 0 }) === null, 'las fases de la sesión');
+check(M.musicaDeFase({ personal: P, fase: 'calentamiento' }).url === L('D') && M.musicaDeFase({ coach: { 'fase:calentamiento': L('K') }, personal: P, fase: 'calentamiento' }).url === L('K') && M.musicaDeFase({ personal: P, fase: 'vuelta_calma' }) === null && M.musicaDeFase({ personal: P, fase: 'trabajo' }) === null, 'la música de la fase: la del coach o la suya con esa etiqueta');
+check(M.esSesionTest({ nombre: 'Test de 1RM' }) && M.esSesionTest({ nombre: 'Día RM' }) && M.esSesionTest({ nombre: 'Evaluación inicial' }) && M.esSesionTest({ cardio: { tipo: 'test' } }) && !M.esSesionTest({ nombre: 'Torso A' }) && !M.esSesionTest({ nombre: 'Atestado' }) && !M.esSesionTest(null), 'el día de test, por su nombre o por la carrera de tipo test');
+check(M.vuelveDeParon([{ fecha: '2026-11-01' }, { fecha: '2026-10-20' }], '2026-11-14') && !M.vuelveDeParon([{ fecha: '2026-11-10' }], '2026-11-14') && !M.vuelveDeParon([], '2026-11-14') && M.vuelveDeParon([{ fecha: '2026-11-14' }, { fecha: '2026-10-01' }], '2026-11-15') === false, 'vuelve tras 7 días o más sin entrenar');
+check(M.ETIQUETAS_LISTA.length === 11 && M.nombreEtiqueta('tranquila') === 'Para días flojos' && M.claveValida('fase:calentamiento') && M.claveValida('test') && M.claveValida('podcast') && !M.claveValida('fase:otra'), 'las etiquetas de sus listas y las claves nuevas del coach');
+check(M.etiquetaOrigen({ origen: 'etiqueta', etiqueta: 'pierna' }) === 'Tu lista · Pierna' && M.etiquetaOrigen({ origen: 'companero', otro: 'Luis' }) === 'Con Luis, tu compañero de racha' && M.etiquetaOrigen({ origen: 'podcast' }) === 'El pódcast de FBE', 'cada tarjeta dice de dónde sale');
+const ses = lee('src/ui/atleta/Sesion.jsx'), mus2 = lee('src/ui/atleta/Musica.jsx');
+check(/Lo batiste con <strong>/.test(ses) && /musicaDeSesiones\(\[sesion\.id\]\)/.test(ses) && /cancionRecord = tituloHoy \|\| tituloCancion/.test(ses), '«Lo batiste con…» en el resumen (y en la imagen del récord, antes que su canción)');
+check(/himno="ultima"/.test(ses) && /esUltimo && Object\.keys\(hechas\)\.length > 0 && Object\.keys\(hechas\)\.length === e\.series - 1/.test(ses), 'su himno de la última serie, en el último ejercicio a una serie del final');
+check(/api\.musicaAbiertaLista\?\.\(url, sesion\.id\)/.test(mus2) && /reto-entrenos:\$\{atleta\.id\}/.test(mus2), 'abrir una música se apunta a esa sesión; los entrenos, los mismos que lee el reto del mes');
+check(/<LoQueMasTeAcompana desde=\{mes\} hasta=\{mes\} \/>/.test(lee('src/ui/atleta/TuMes.jsx')) && /<LoQueMasTeAcompana desde=\{`\$\{r\.anio\}-01`\}/.test(lee('src/ui/atleta/TuAnio.jsx')), 'lo que más te acompaña, en «Tu mes» y «Tu año»');
+check(/musica_abierta = \(await api\.musicaMasAbierta\('2000-01', '2100-12', .*2000\)/.test(lee('src/datos/api.js')), 'su descarga de datos lleva todo lo que abrió');
+check(/paresMusica\.push\(\[s\.id, copiaSesion\.id\]\)/.test(lee('src/datos/api.js')) && /await api\.copiarMusica\(\[\], origenId, nuevo\.id\)/.test(lee('src/datos/api.js')), 'la música de las sesiones y del bloque viaja al copiar una semana o un bloque');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

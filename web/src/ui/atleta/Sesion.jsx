@@ -89,7 +89,7 @@ import { FotoMotivacion } from './Suyo.jsx';
 import { useAlternativaElegida, apuntarAlternativa, HaceUnAno } from './SesionTuya.jsx';
 import { ordenarAlternativas, hastaHaceUnAno } from '../../logica/sesion-tuya.js';
 import { Cadencia, CancionRecord, BotonMusica, PonTuCancion, useFicha } from './Musica.jsx';
-import { tramosDeCarrera } from '../../logica/musica.js';
+import { tramosDeCarrera, faseDeSesion } from '../../logica/musica.js';
 import { AnadirASalud } from './Conexiones.jsx';
 import { prepMarcadas, marcarPrepHoy, desmarcarPrepHoy } from './prep-hoy.js';
 import { apuntarRecord } from '../Bienvenida.jsx';
@@ -428,6 +428,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.51: un tramo por ejercicio (o superserie) arriba; tocarlo lleva a ese ejercicio
   const tramos = !sesion.completada && ejercicios.length > 0 ? tramosSesion(ejercicios, hechas, prox?.id || null) : [];
   tramosRef.current = tramos;
+  // (música 3) la fase de la sesión, para su música (calentar, trabajo, vuelta a la calma)
+  const faseMusica = faseDeSesion({ hechas: Object.values(hechas).reduce((t, h) => t + Object.keys(h || {}).length, 0), total: ejercicios.reduce((t, e) => t + (Number(e.series) || 0), 0) });
+  const ultimoEj = ejercicios.length ? ejercicios[ejercicios.length - 1].id : null;
   function irAEjercicio(seId) {
     const art = document.querySelector(`[data-se="${seId}"]`);
     if (!art) return;
@@ -809,7 +812,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
 
       {/* (v0.129) la música de la portada, a mano durante la sesión */}
       {!sesion.completada && (
-        <BotonMusica sesion={sesion} semana={semana} cardio={cardioValido(sesion.cardio) ? sesion.cardio : null}
+        <BotonMusica sesion={sesion} semana={semana} cardio={cardioValido(sesion.cardio) ? sesion.cardio : null} prep={prep} fase={faseMusica}
           familia={familiaPortada({ tipo: sesion.tipo || 'fuerza', pautas: ejercicios, cardio: cardioValido(sesion.cardio) })} />
       )}
       {delCoach && !sesion.completada && (
@@ -840,7 +843,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
           const actual = actualDe(e);
           const cambiado = actual.id !== e.ejercicio.id;
           return (
-            <Ejercicio key={e.id} recienHecho={!!recienTramo && tramos.some((t) => t.id === recienTramo && t.ids.includes(e.id))} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
+            <Ejercicio key={e.id} sesionId={sesion.id} esUltimo={e.id === ultimoEj} recienHecho={!!recienTramo && tramos.some((t) => t.id === recienTramo && t.ids.includes(e.id))} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
               coach={det.datos.coach?.[actual.id] || null}
@@ -984,7 +987,7 @@ function serieDeAntes(ultimas, numero) {
   return { kg: kg && enLibras() ? vista(kg) : kg, reps: Number(x.reps) };
 }
 
-function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
+function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
   descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null, avisoZona = null, haceAno = null,
   luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
   const { atleta, propio, aviso } = useApp();
@@ -1136,7 +1139,9 @@ function Ejercicio({ recienHecho = false, e, actual, ultimas, foco, progresionAu
           <RecuerdaEjercicio recordatorios={recordatorios} />
           <AvisoZona aviso={avisoZona} />
           {/* (música 3) antes de la serie grande: su canción de récord, a un toque */}
-          {siguiente && e.prioridad === 'alta' && !Object.keys(hechas).length && <PonTuCancion />}
+          {siguiente && e.prioridad === 'alta' && !Object.keys(hechas).length && <PonTuCancion sesionId={sesionId} />}
+          {/* (música 3, tanda 2) en el último ejercicio, a una serie del final: su himno de la última serie */}
+          {esUltimo && Object.keys(hechas).length > 0 && Object.keys(hechas).length === e.series - 1 && <PonTuCancion sesionId={sesionId} himno="ultima" />}
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
@@ -1608,7 +1613,13 @@ function MiniTarjeta({ datos }) {
 function Resumen({ resumen, sesion, familia, alCerrar }) {
   // (música 3) la imagen del récord lleva su canción (el nombre de su ficha), si la tiene
   const personalR = usePersonal();
-  const cancionRecord = useFicha(personalR.datos?.cancion_url || null).datos?.titulo || null;
+  // (música 3, tanda 2) «Lo batiste con…»: la última música que abrió en esta sesión; si no abrió ninguna, su canción
+  const { api: apiR } = useApp();
+  const conRecord = (resumen.records || []).length > 0;
+  const musicaHoy = useCarga(() => (conRecord ? apiR.musicaDeSesiones([sesion.id]).then((m) => m?.[sesion.id] || null).catch(() => null) : Promise.resolve(null)), [sesion.id, conRecord]);
+  const tituloHoy = useFicha(musicaHoy.datos || null).datos?.titulo || null;
+  const tituloCancion = useFicha(personalR.datos?.cancion_url || null).datos?.titulo || null;
+  const cancionRecord = tituloHoy || tituloCancion;
   const trato = useTrato();
   const { api, atleta, propio, aviso } = useApp();
   const travesia = leerTravesia(atleta.id).sesiones[sesion.id] || null;
@@ -1721,6 +1732,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
               ))}
             </ul>
           </div>
+          {tituloHoy && <p class="peq lo-batiste-con"><Icono n="altavoz" /> Lo batiste con <strong>«{tituloHoy}»</strong></p>}
           <p class="peq secundario">1RM estimado con la fórmula de Epley, contando las repeticiones que te quedaban en recámara.</p>
           {/* (v0.104) lo que tu coach dejó escrito para un récord */}
           <MensajeCoach momento="record" ejercicio={resumen.records[0]?.nombre || ''} />

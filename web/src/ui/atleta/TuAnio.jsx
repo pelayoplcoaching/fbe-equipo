@@ -11,7 +11,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
 import { usePersonal } from './Personal.jsx';
-import { useFicha } from './Musica.jsx';
+import { useFicha, LoQueMasTeAcompana } from './Musica.jsx';
 import { aperturasDe } from '../../logica/musica.js';
 import { pesoTxt, pesoNum } from '../../logica/unidades.js';
 
@@ -134,6 +134,7 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
         <span class="historia-etq">Tu música</span>
         {veces > 0 ? <p class="historia-cifra num">{veces}<small>{veces === 1 ? 'sesión con tu música' : 'sesiones con tu música'}</small></p> : <h2>Con banda sonora</h2>}
         {cancion.datos?.titulo && <p class="historia-texto">Y la canción de tus récords: <strong>{cancion.datos.titulo}</strong>.</p>}
+        <LoQueMasTeAcompana desde={`${r.anio}-01`} hasta={`${r.anio}-12`} />
       </>
     ) }] : []),
     ...(r.cardio?.sesiones ? [{ id: 'cardio', render: () => (

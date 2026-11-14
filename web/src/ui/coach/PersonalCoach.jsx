@@ -15,7 +15,7 @@ import { AlertaTemprana, LoQueLeFunciona, ideaDeAlerta } from '../atleta/CoachSa
 import { GrabarAudio } from '../Guias.jsx';
 import { textoManual, ideaSegunManual } from '../../logica/respeto.js';
 import { esCumple, MOMENTOS_COACH, LIMITES, mensajeDe, textoMensajeCoach, nombreMusica, urlMusica } from '../../logica/personal.js';
-import { FAMILIAS_MUSICA, tipoMusica } from '../../logica/musica.js';
+import { FAMILIAS_MUSICA, tipoMusica, nombreEtiqueta } from '../../logica/musica.js';
 import { NombreLista, FichaPrevia, useFicha } from '../atleta/Musica.jsx';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { hoyISO } from '../../logica/fechas.js';
@@ -57,7 +57,7 @@ export function LoSuyo({ atletaId }) {
   const { api } = useApp();
   const personal = useCarga(() => api.personalAtletas().catch(() => []), [atletaId]);
   const p = (personal.datos || []).find((x) => x.atleta_id === atletaId);
-  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url)) return null;
+  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url && !p.musica_listas?.length && !p.himno_ultima_url && !p.himno_vuelta_url)) return null;
   return (
     <section class="seccion lo-suyo">
       <h2>Lo suyo</h2>
@@ -69,6 +69,10 @@ export function LoSuyo({ atletaId }) {
           {/* (v0.129) el nombre de su lista (y su canción de récord), y se abre con un toque */}
           {p.musica_url && <><dt>Entrena con</dt><dd><a href={p.musica_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.musica_url} /></a></dd></>}
           {p.cancion_url && <><dt>Su canción de récord</dt><dd><a href={p.cancion_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.cancion_url} /></a></dd></>}
+          {/* (música 3) sus listas por momento y sus himnos */}
+          {p.musica_listas?.length > 0 && <><dt>Sus listas</dt><dd>{p.musica_listas.map((l, i) => <span key={`${l.url}-${i}`}>{i ? ' · ' : ''}{nombreEtiqueta(l.etiqueta)}: <a href={l.url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={l.url} /></a></span>)}</dd></>}
+          {p.himno_ultima_url && <><dt>Su himno de la última serie</dt><dd><a href={p.himno_ultima_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_ultima_url} /></a></dd></>}
+          {p.himno_vuelta_url && <><dt>Su himno de vuelta</dt><dd><a href={p.himno_vuelta_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_vuelta_url} /></a></dd></>}
         </dl>
       </div>
     </section>

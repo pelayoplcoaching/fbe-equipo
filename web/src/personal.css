@@ -509,3 +509,19 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .pon-tu-cancion { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; margin: 2px 0 8px; text-decoration: none; }
 .pon-tu-cancion { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .abrir-en-app { align-items: center; gap: 8px; }
+
+/* ---------- (música 3, tanda 2) Fases, «Lo batiste con…», sus listas por momento y lo que más te acompaña ---------- */
+.musica-fase { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; margin: 0 0 8px; padding: 10px 12px; border-radius: 14px;
+  background: color-mix(in srgb, var(--morado) 10%, var(--hoja)); border: 1px solid color-mix(in srgb, var(--morado) 30%, transparent); }
+.musica-fase > svg { width: 20px; height: 20px; color: var(--morado); }
+.musica-fase .pila-xs { min-width: 0; }
+.musica-fase .mini { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lo-batiste-con { display: flex; gap: 8px; align-items: center; margin: 8px 0 0; }
+.lo-batiste-con svg { width: 18px; height: 18px; flex: none; color: var(--morado); }
+.album-con-musica { display: block; }
+.listas-musica { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.lista-musica-fila { display: flex; gap: 10px; align-items: center; }
+.lista-musica-fila .pila-xs { flex: 1; min-width: 0; }
+.lista-musica-fila select { max-width: 100%; }
+.listas-musica-nueva { padding-top: 10px; border-top: 1px solid var(--linea); }
+.pon-tu-cancion.himno-ultima { border-color: var(--morado); }

@@ -45,28 +45,92 @@ export const esCancion = (url) => !!urlMusica(url) && (spotify(url) ? spotify(ur
 export const FAMILIAS_MUSICA = [['empuje', 'Empuje'], ['tiron', 'Tirón'], ['pierna', 'Pierna'], ['core', 'Core'], ['fullbody', 'Full body'], ['cardio', 'Cardio'], ['movilidad', 'Movilidad']];
 export const RITMOS = ['carrera', 'andar', 'bici', 'eliptica', 'remo', 'nadar', 'cuerda'];
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const CLAVE = new RegExp(`^(familia:(${FAMILIAS_MUSICA.map(([k]) => k).join('|')})|descarga|equipo|ritmo:(${RITMOS.join('|')})|sesion:${UUID}|bloque:${UUID})$`);
+// (música 3) también las fases (calentamiento y vuelta a la calma), la lista de los días de test y el pódcast
+const CLAVE = new RegExp(`^(familia:(${FAMILIAS_MUSICA.map(([k]) => k).join('|')})|descarga|equipo|ritmo:(${RITMOS.join('|')})|fase:(calentamiento|vuelta_calma)|test|podcast|sesion:${UUID}|bloque:${UUID})$`);
 export const claveValida = (k) => CLAVE.test(String(k || ''));
-export const NOMBRE_ORIGEN = { sesion: 'Tu coach, para hoy', bloque: 'Tu coach, para este bloque', propia: 'Tu música', descarga: 'Lista FBE de descarga', familia: 'Lista FBE', ritmo: 'Al ritmo de tu cardio' };
+export const NOMBRE_ORIGEN = { sesion: 'Tu coach, para hoy', bloque: 'Tu coach, para este bloque', propia: 'Tu música', descarga: 'Lista FBE de descarga', familia: 'Lista FBE', ritmo: 'Al ritmo de tu cardio',
+  // (música 3)
+  etiqueta: 'Tu lista', animo: 'Para cómo llegas hoy', companero: 'Con tu compañero de racha', test: 'Para tu día de test', podcast: 'El pódcast de FBE' };
+// (música 3) Las etiquetas de sus listas: los tipos de sesión, cómo llega y las fases
+export const ETIQUETAS_LISTA = [...FAMILIAS_MUSICA, ['energia', 'Para días con energía'], ['tranquila', 'Para días flojos'], ['calentamiento', 'Para calentar'], ['vuelta_calma', 'Para la vuelta a la calma']];
+export const nombreEtiqueta = (k) => (ETIQUETAS_LISTA.find(([x]) => x === k) || [, ''])[1];
 
 // Lo que se ofrece en la portada, en orden: lo que el coach puso a esta sesión, a su bloque, la del atleta, la de
 // descarga (semana de descarga), la de la familia de la sesión y, en cardio, la de su ritmo. Sin repetir enlaces.
 // coach: { clave: url } (lo que devuelve musica_para); personal: lo del atleta; foco: el de la semana
-export function musicaDeLaSesion({ coach = {}, personal = null, familia = null, foco = null, sesionId = null, bloqueId = null, modalidad = null } = {}) {
+// (música 3) Y además: la lista del día de test (si la sesión lo es), su himno de vuelta (tras un parón), su lista según
+// cómo llega (energía o tranquila), su lista con la etiqueta de ese tipo de sesión, la de su compañero de racha y, en el
+// cardio largo (30 min o más), el pódcast de FBE. Orden: lo del coach para hoy, el test, el bloque, su vuelta, cómo llega,
+// su lista de ese tipo, su lista, la de su compañero, descarga, la lista FBE del tipo, el ritmo y el pódcast
+export function musicaDeLaSesion({ coach = {}, personal = null, familia = null, foco = null, sesionId = null, bloqueId = null, modalidad = null,
+  prep = null, esTest = false, vuelta = false, companeros = [], minutos = null } = {}) {
+  const listas = Array.isArray(personal?.musica_listas) ? personal.musica_listas : [];
+  const deEtiqueta = (k) => listas.find((l) => l?.etiqueta === k)?.url;
+  const animo = listaAnimo(prep);
   const lista = [
     sesionId && coach[`sesion:${sesionId}`] && { url: coach[`sesion:${sesionId}`], origen: 'sesion' },
+    esTest && coach.test && { url: coach.test, origen: 'test' },
     bloqueId && coach[`bloque:${bloqueId}`] && { url: coach[`bloque:${bloqueId}`], origen: 'bloque' },
+    vuelta && personal?.himno_vuelta_url && { url: personal.himno_vuelta_url, origen: 'vuelta' },
+    animo && deEtiqueta(animo) && { url: deEtiqueta(animo), origen: 'animo', etiqueta: animo },
+    familia && deEtiqueta(familia) && { url: deEtiqueta(familia), origen: 'etiqueta', etiqueta: familia },
     personal?.musica_url && { url: personal.musica_url, origen: 'propia' },
+    ...(companeros || []).filter((c) => c?.url).map((c) => ({ url: c.url, origen: 'companero', otro: c.otro })),
     foco === 'descarga' && coach.descarga && { url: coach.descarga, origen: 'descarga' },
     familia && coach[`familia:${familia}`] && { url: coach[`familia:${familia}`], origen: 'familia', familia },
     modalidad && coach[`ritmo:${modalidad}`] && { url: coach[`ritmo:${modalidad}`], origen: 'ritmo', modalidad },
+    modalidad && Number(minutos) >= 30 && coach.podcast && { url: coach.podcast, origen: 'podcast' },
   ].filter((x) => x && urlMusica(x.url));
   const vistos = new Set();
   return lista.filter((x) => (vistos.has(x.url) ? false : vistos.add(x.url)));
 }
 export function etiquetaOrigen(x) {
   if (x.origen === 'familia') return `${NOMBRE_ORIGEN.familia} · ${(FAMILIAS_MUSICA.find(([k]) => k === x.familia) || [, ''])[1]}`;
+  // (música 3)
+  if (x.origen === 'etiqueta') return `${NOMBRE_ORIGEN.etiqueta} · ${nombreEtiqueta(x.etiqueta)}`;
+  if (x.origen === 'animo') return `${NOMBRE_ORIGEN.animo} · ${nombreEtiqueta(x.etiqueta)}`;
+  if (x.origen === 'companero') return x.otro ? `Con ${x.otro}, tu compañero de racha` : NOMBRE_ORIGEN.companero;
+  if (x.origen === 'vuelta') return 'Tu himno de vuelta: bienvenido otra vez';
+  if (x.origen === 'fase') return x.fase === 'calentamiento' ? 'Para calentar' : 'Para la vuelta a la calma';
   return NOMBRE_ORIGEN[x.origen] || 'Música';
+}
+
+// ---------- (música 3) Según cómo llega, las fases y el día de test ----------
+// prep: lo que contestó en «¿Cómo llegas hoy?» ({ sueno, energia, molestias }, de 1 a 3). Tocado o con poca energía, su
+// lista tranquila; con todo (energía 3), la de energía. Es una propuesta: lo demás sigue ahí
+export function listaAnimo(prep) {
+  if (!prep || typeof prep !== 'object') return null;
+  const e = Number(prep.energia), s = Number(prep.sueno), m = Number(prep.molestias);
+  if (e === 1 || m === 1 || (e + s + m) <= 4) return 'tranquila';
+  if (e === 3) return 'energia';
+  return null;
+}
+// La fase de la sesión: antes de la primera serie, calentar; hecho todo, la vuelta a la calma; si no, el trabajo
+export function faseDeSesion({ hechas = 0, total = 0 } = {}) {
+  if (!total) return null;
+  if (hechas <= 0) return 'calentamiento';
+  if (hechas >= total) return 'vuelta_calma';
+  return 'trabajo';
+}
+// La música de esa fase: la del coach (fase:…) o su lista con esa etiqueta
+export function musicaDeFase({ coach = {}, personal = null, fase = null } = {}) {
+  if (fase !== 'calentamiento' && fase !== 'vuelta_calma') return null;
+  const suya = (Array.isArray(personal?.musica_listas) ? personal.musica_listas : []).find((l) => l?.etiqueta === fase)?.url;
+  const url = coach[`fase:${fase}`] || suya || null;
+  return url && urlMusica(url) ? { url, origen: 'fase', fase } : null;
+}
+// ¿Es un día de test? Una carrera de tipo «test» o una sesión que el coach llama «Test…», «1RM», «RM» o «Evaluación»
+export function esSesionTest(sesion) {
+  if (!sesion) return false;
+  if (sesion.cardio?.tipo === 'test') return true;
+  return /(^|[^a-z\u00e1-\u00fa])(test|1\s?rm|rm|evaluaci\u00f3n|evaluacion)([^a-z\u00e1-\u00fa]|$)/i.test(`${sesion.nombre || ''} ${sesion.intencion || ''}`);
+}
+// ¿Vuelve tras un parón? 7 días o más desde su último entreno hecho (sin contar hoy)
+export function vuelveDeParon(entrenos = [], hoy) {
+  const f = (entrenos || []).map((x) => x?.fecha).filter((x) => x && x < hoy).sort().pop();
+  if (!f) return false;
+  const d = Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${f}T12:00:00Z`)) / 864e5);
+  return d >= 7;
 }
 
 // ---------- El ritmo de cada cardio ----------

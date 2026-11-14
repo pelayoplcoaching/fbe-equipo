@@ -128,7 +128,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       )}
       {/* (v0.104) la música de hoy: la del coach, la suya, la de descarga, la de su tipo de sesión o la del ritmo del cardio
           (en el modo atleta del coach, sus propias listas de Cuenta › Música) */}
-      {!sesion.completada && <MusicaSesion sesion={sesion} semana={semana} familia={familia} cardio={cardio} alEmpezar={alEmpezar} />}
+      {!sesion.completada && <MusicaSesion sesion={sesion} semana={semana} familia={familia} cardio={cardio} alEmpezar={alEmpezar} prep={prep} />}
       <div class="portada-empezar">
         <button class="btn btn-primario btn-grande btn-ancho" onClick={alEmpezar}><Icono n="play" /> Empezar</button>
       </div>
