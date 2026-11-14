@@ -1480,6 +1480,86 @@
       "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
     }
   },
+  "descanso-agua": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-agua-480.9b8179d9.webp",
+      "960": "imagenes/hoy/descanso-agua-960.cab71e1d.webp"
+    }
+  },
+  "descanso-luz": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-luz-480.33901ecd.webp",
+      "960": "imagenes/hoy/descanso-luz-960.09685338.webp"
+    }
+  },
+  "descanso-movilidad": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-movilidad-480.9155e13d.webp",
+      "960": "imagenes/hoy/descanso-movilidad-960.231059b3.webp"
+    }
+  },
+  "descanso-pasos": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-pasos-480.a7b324c0.webp",
+      "960": "imagenes/hoy/descanso-pasos-960.aed20bb6.webp"
+    }
+  },
+  "descanso-preparar": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-preparar-480.71fe8b64.webp",
+      "960": "imagenes/hoy/descanso-preparar-960.c9369a8a.webp"
+    }
+  },
+  "descanso-proteina": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-proteina-480.a8b97050.webp",
+      "960": "imagenes/hoy/descanso-proteina-960.aa178780.webp"
+    }
+  },
+  "descanso-respira": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-respira-480.2a2a36c7.webp",
+      "960": "imagenes/hoy/descanso-respira-960.02069cd8.webp"
+    }
+  },
+  "descanso-sueno": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-sueno-480.164c6f44.webp",
+      "960": "imagenes/hoy/descanso-sueno-960.3997b346.webp"
+    }
+  },
   "donde-casa": {
     "proporcion": [
       16,

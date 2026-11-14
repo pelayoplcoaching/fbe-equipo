@@ -541,9 +541,11 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
-        {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
+        {e.tipo !== 'entreno' && !(e.tipo === 'descanso' && hayImagen(`descanso-${sugerenciaDescanso(hoy).id}`)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}
+        {/* (imágenes, tanda 8) los días de descanso, la escena de la idea del día, al fondo y a la derecha, como el dibujo */}
+        {e.tipo === 'descanso' && <Imagen id={`descanso-${sugerenciaDescanso(hoy).id}`} clase="hero-arte hero-escena-img" tamanos="(min-width: 640px) 480px, 80vw" />}
         {e.tipo === 'entreno' && siguiente && det.datos && <ArteSesion nombre={siguiente.nombre} tipo={siguiente.tipo || 'fuerza'} patron={resumenSigue?.patrones?.[0] || null} clase="hero-arte" />}
         <div class="titular">
           <div class="contexto">

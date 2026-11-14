@@ -345,3 +345,10 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
 .panel.primeros-pasos.con-ilu { overflow: hidden; }
 .primeros-pasos-ilu { object-position: 50% 50%; }
+
+/* ---------- (imágenes, tanda 8, bloque AM) La tarjeta de Hoy los días de descanso ----------
+   La escena de la idea del día (camina, movilidad, duerme, proteína, agua, luz, respira, deja lista la de mañana), al
+   fondo, arriba a la derecha (hasta 330 px de alto): hereda de .hero-arte (diseno.css, 26) el sitio y el fundido hacia
+   el texto. Con ella, el dibujo del lobo y la luna de ese día no sale. */
+.hero-dia .hero-escena-img { object-fit: cover; object-position: 85% 50%; opacity: .9; width: 84%; height: min(100%, 330px); }
+@media (forced-colors: active) { .hero-dia .hero-escena-img { display: none; } }

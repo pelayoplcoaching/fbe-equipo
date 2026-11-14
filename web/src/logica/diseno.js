@@ -44,6 +44,11 @@ export const SUGERENCIAS_DESCANSO = [
   { id: 'movilidad', icono: 'movilidad', titulo: '10 minutos de movilidad', texto: 'Cadera, tobillos y espalda alta, suave y sin llegar a molestia.' },
   { id: 'sueno', icono: 'sueno', titulo: 'Duerme bien esta noche', texto: 'Entre 7 y 9 horas: mientras duermes se asienta lo que entrenaste.' },
   { id: 'proteina', icono: 'proteina', titulo: 'La proteína, también hoy', texto: 'Reparte la de tu plan en 3 o 4 comidas, aunque no entrenes.' },
+  // (imágenes, tanda 8) cuatro más, para que no se repitan cada cuatro días
+  { id: 'agua', icono: 'agua', titulo: 'Bebe agua a lo largo del día', texto: 'Ten la botella a la vista: si la orina es clarita, vas bien.' },
+  { id: 'luz', icono: 'sol', titulo: 'Sal a que te dé la luz', texto: 'Un rato al aire libre por la mañana ayuda a dormir mejor por la noche.' },
+  { id: 'respira', icono: 'viento', titulo: 'Cinco minutos para respirar', texto: 'Inspira 4 segundos, suelta 6. Baja pulsaciones y ayuda a recuperar.' },
+  { id: 'preparar', icono: 'receta', titulo: 'Deja lista la de mañana', texto: 'La bolsa preparada o la comida hecha: mañana te costará menos.' },
 ];
 export function sugerenciaDescanso(hoy = hoyISO()) {
   const n = SUGERENCIAS_DESCANSO.length;
