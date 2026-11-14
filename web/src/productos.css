@@ -8,7 +8,7 @@
 
 .lista-productos { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .fila-producto { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; padding: 10px 12px; border: 0; border-radius: var(--r-s); background: var(--hoja-2); color: var(--tinta); font: inherit; cursor: pointer; }
-.fila-producto:hover { background: var(--morado-suave); }
+.fila-producto:hover { background: var(--fila-hover); }
 .fila-producto:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .fila-producto > svg { width: 18px; height: 18px; flex: none; color: var(--tinta-3); }
 

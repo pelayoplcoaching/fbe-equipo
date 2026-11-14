@@ -18,7 +18,8 @@
 :root,
 .historia,
 :root[data-gimnasio] .sesion-vista,
-:root[data-gimnasio] .temporizador {
+:root[data-gimnasio] .temporizador,
+.hoja-dialogo {
   --anillo: inset 0 0 0 1px var(--linea);
   --anillo-suave: inset 0 0 0 1px var(--borde);
   --anillo-acento: inset 0 0 0 2px var(--morado);
@@ -30,4 +31,8 @@
   --sombra-accion: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent);
   /* los tintes del acento: el acento a medias, en diez niveles */
   --acento-a4: color-mix(in srgb, var(--morado) 4%, transparent); --acento-a8: color-mix(in srgb, var(--morado) 8%, transparent); --acento-a12: color-mix(in srgb, var(--morado) 12%, transparent); --acento-a16: color-mix(in srgb, var(--morado) 16%, transparent); --acento-a22: color-mix(in srgb, var(--morado) 22%, transparent); --acento-a30: color-mix(in srgb, var(--morado) 30%, transparent); --acento-a45: color-mix(in srgb, var(--morado) 45%, transparent); --acento-a55: color-mix(in srgb, var(--morado) 55%, transparent); --acento-a70: color-mix(in srgb, var(--morado) 70%, transparent); --acento-a85: color-mix(in srgb, var(--morado) 85%, transparent);
+  /* las filas de listas y tablas */
+  --fila-hover: color-mix(in srgb, var(--morado) 4%, var(--hoja)); --fila-elegida: color-mix(in srgb, var(--morado) 9%, var(--hoja)); --fila-cebra: color-mix(in srgb, var(--tinta) 3%, transparent);
+  /* la escala secuencial (de casi nada a todo el acento), sobre la tarjeta de cada ámbito */
+  --seq-1: color-mix(in srgb, var(--morado) 14%, var(--hoja)); --seq-2: color-mix(in srgb, var(--morado) 34%, var(--hoja)); --seq-3: color-mix(in srgb, var(--morado) 56%, var(--hoja)); --seq-4: color-mix(in srgb, var(--morado) 78%, var(--hoja)); --seq-5: var(--morado);
 }

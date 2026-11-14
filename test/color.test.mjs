@@ -62,7 +62,7 @@ console.log('\nContraste de todas las parejas');
     if (P.contraste(P.valor(tema, 'sobre-hero-2'), P.valor(tema, 'hero')) < 4.5) malas.push(`${tema} texto 2 de la tarjeta`);
     for (const k of ['int-trabajo', 'int-descanso', 'int-preparar', 'int-fin']) if (P.contraste('#FFFFFF', P.valor(tema, k)) < 4.5) malas.push(`${tema} blanco sobre ${k}`);
   }
-  for (const k of ['disco-rojo', 'disco-azul', 'disco-verde', 'av-1', 'av-2', 'av-3', 'av-4', 'av-5', 'av-6']) if (P.contraste('#FFFFFF', P.valor('claro', k)) < 4.5) malas.push(`blanco sobre ${k}`);
+  for (const k of ['disco-rojo', 'disco-azul', 'disco-verde', ...Array.from({ length: P.AVATARES }, (_, i) => `av-${i + 1}`)]) if (P.contraste('#FFFFFF', P.valor('claro', k)) < 4.5) malas.push(`blanco sobre ${k}`);
   check(malas.length === 0, `textos, estados, dorado, tarjeta del día (con cada tono y acento) e intervalos pasan AA en claro, oscuro y negro puro${malas.length ? `: ${malas.slice(0, 4).join('; ')}` : ''}`);
   const dalt = [];
   for (const tema of ['claro', 'oscuro']) for (const k of ['ok', 'alerta']) for (const f of Object.values(P.SUPERFICIES[tema])) if (P.contraste(P.DALTONISMO[tema][k], f) < 4.5) dalt.push(`${tema} ${k}`);
@@ -186,7 +186,7 @@ console.log('\nSin colores sueltos');
   const tenidos = [];
   for (const f of hojas) for (const m of sinComentarios(src(f)).replace(/url\((?:"[^"]*"|'[^']*'|[^)]*)\)/g, '').matchAll(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/g)) if (!(m[1] === m[2] && m[2] === m[3])) tenidos.push(`${f} ${m[0]}`);
   check(tenidos.length === 0, `ningún rgba teñido suelto: las transparencias de color salen de las escalas${tenidos.length ? `: ${tenidos.slice(0, 4)}` : ''}`);
-  const usos = hojas.reduce((t, f) => t + (src(f).match(/var\(--(marca|acento|neutro|verde|ambar|rojo|azul|oro|rosa|turquesa|naranja|indigo|purpura|cielo|noche)-\d+\)/g) || []).length, 0);
+  const usos = hojas.reduce((t, f) => t + (src(f).match(/var\(--(marca|acento|neutro|verde|ambar|rojo|azul|oro|rosa|turquesa|naranja|indigo|purpura|cielo|noche)-\d+\)|var\(--cat-[a-z]+\)/g) || []).length, 0);
   check(usos > 850, `los estilos usan las escalas (${usos} referencias a sus pasos)`);
   // En el JS, todo de la paleta salvo la ilustración del juego del descanso y los colores del dibujo sobre vídeo (se guardan)
   const ILUSTRACION = ['ui/atleta/travesia-pinta.js', 'ui/atleta/TravesiaHoja.jsx', 'ui/atleta/EscenaFinal.jsx', 'ui/atleta/travesia-compartir.js', 'ui/atleta/Travesia.jsx', 'logica/travesia-ruta.js', 'logica/dibujo.js'];

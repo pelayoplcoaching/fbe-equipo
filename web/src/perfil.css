@@ -155,11 +155,11 @@
 /* -- Lo que mas entrenas: con el color de cada grupo (los del editor y la biblioteca) -- */
 .perfil-grupos { list-style: none; margin: 0; display: grid; gap: 10px; }
 .perfil-grupos li { display: grid; grid-template-columns: minmax(5.5em, 7.5em) minmax(0, 1fr) auto; gap: 10px; align-items: center; --g: var(--morado); }
-.perfil-grupos [data-g="pectoral"] { --g: var(--rojo-500); } .perfil-grupos [data-g="espalda"] { --g: var(--azul-500); }
-.perfil-grupos [data-g="deltoides"] { --g: var(--naranja-500); } .perfil-grupos [data-g="cuadriceps"] { --g: var(--verde-500); }
-.perfil-grupos [data-g="gluteo"] { --g: var(--rojo-500); } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--turquesa-500); }
-.perfil-grupos [data-g="biceps"] { --g: var(--marca-500); } .perfil-grupos [data-g="triceps"] { --g: var(--marca-600); }
-.perfil-grupos [data-g="abdominales"] { --g: var(--ambar-500); } .perfil-grupos [data-g="gemelo"] { --g: var(--ambar-600); }
+.perfil-grupos [data-g="pectoral"] { --g: var(--cat-rojo); } .perfil-grupos [data-g="espalda"] { --g: var(--cat-azul); }
+.perfil-grupos [data-g="deltoides"] { --g: var(--cat-naranja); } .perfil-grupos [data-g="cuadriceps"] { --g: var(--cat-verde); }
+.perfil-grupos [data-g="gluteo"] { --g: var(--cat-rojo); } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--cat-turquesa); }
+.perfil-grupos [data-g="biceps"] { --g: var(--cat-violeta); } .perfil-grupos [data-g="triceps"] { --g: var(--marca-600); }
+.perfil-grupos [data-g="abdominales"] { --g: var(--cat-ambar); } .perfil-grupos [data-g="gemelo"] { --g: var(--ambar-600); }
 .pg-nombre { font-weight: 650; font-size: var(--letra-14); overflow-wrap: anywhere; }
 .pg-barra { height: 10px; border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
 .pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }

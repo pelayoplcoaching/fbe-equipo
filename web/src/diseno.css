@@ -164,15 +164,11 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .semana-habito .cumple .punto-dia { background: var(--ok); border-color: var(--ok); }
 
 /* Cardio y días de nutrición: barras en la paleta de datos y de estados (antes, azul y amarillo de los discos). */
-.grafica-cardio .barra { fill: color-mix(in srgb, var(--morado) 55%, var(--hoja)); }
+.grafica-cardio .barra { fill: var(--seq-3); }
 .grafica-cardio .barra.ultima { fill: var(--morado); }
 .grafica-ingesta .barra-dia.casi { fill: var(--aviso); fill-opacity: .8; }
 
-/* Avatares: seis tonos fríos de la familia de la marca (antes incluía un marrón y un frambuesa que, junto a los
-   avisos, se leían como estados). Texto >= 4,5:1 sobre su fondo en los dos temas. */
-:root { --av-4: var(--purpura-700); --av-5: var(--neutro-700); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --av-4: var(--purpura-400); --av-5: var(--indigo-300); } }
-:root[data-theme="dark"] { --av-4: var(--purpura-400); --av-5: var(--indigo-300); }
+/* Avatares: (color 3) sus nueve tonos fríos salen de la paleta (logica/paleta.js) */
 
 /* ---------- 6. Sesión más limpia ----------------------------------------------------------------------------
    La serie que toca: una sola señal (fila tintada y el botón de hecho relleno), no un marco en la fila y otro en el
@@ -332,7 +328,7 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .mensajes-cab .sub { margin-top: 2px; font-size: var(--letra-14); color: var(--tinta-2); }
 .mensajes-dos .conversacion { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; padding: 10px 4px 10px 12px; }
 .mensajes-dos .conversacion .avatar { width: 44px; height: 44px; font-size: var(--letra-15); }
-.mensajes-dos .conversacion.actual, .mensajes-dos .conv-fila:has(> .conversacion.actual) { background: var(--morado-suave); }
+.mensajes-dos .conversacion.actual, .mensajes-dos .conv-fila:has(> .conversacion.actual) { background: var(--fila-elegida); box-shadow: inset var(--filo-marca) 0 0 var(--morado); }
 .mensajes-dos .conv-fila > .conv-opciones { margin-right: 2px; width: 36px; }
 .mensajes-dos .conversaciones > li:first-child:has(> .actual) { border-radius: var(--r) var(--r) 0 0; }
 .mensajes-dos .conversaciones > li:last-child:has(> .actual) { border-radius: 0 0 var(--r) var(--r); }
@@ -1159,6 +1155,8 @@ img.img-llega { opacity: 0; }
    vertical cruza la gráfica por el punto, el punto elegido lleva un halo, el globo se mueve sin saltos y, con el dedo, hay un
    toque al pasar de un punto a otro. */
 .grafica-guia { position: absolute; top: 4px; bottom: 22px; width: 0; border-left: var(--filo-medio) dashed var(--acento-a55); pointer-events: none; transform: translateX(-0.75px); }
+/* (color 3) el último punto, con su halo: se ve dónde estás sin tocar la gráfica */
+.grafica .punto.ultimo:not(.record) { stroke: var(--acento-a22); stroke-width: 9; paint-order: stroke; }
 .grafica .punto.elegido { stroke: var(--acento-a30); stroke-width: 13; paint-order: stroke; }
 @media (prefers-reduced-motion: no-preference) {
   .grafica-globo { transition: left var(--mov-instante) linear, top var(--mov-instante) linear; }
@@ -1174,7 +1172,9 @@ img.img-llega { opacity: 0; }
 .tarjeta-atleta[data-estado] .avatar, .atletas-tabla tr[data-estado] .avatar { box-shadow: var(--halo), 0 0 0 4px color-mix(in srgb, var(--estado) 78%, transparent); }
 @media (hover: hover) {
   .atletas-tabla tbody tr { transition: background-color var(--mov-rapido) var(--curva-casa); }
-  .atletas-tabla tbody tr:hover { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+  .atletas-tabla tbody tr:hover { background: var(--fila-hover); }
+  /* (color 3) y las demás tablas del escritorio, igual */
+  :is(.tabla-registro, .tabla-nutricion, .tabla-comparar, .tabla-salud) tbody tr:hover:hover > td { background: var(--fila-hover); }
   .tarjeta-atleta { transition: transform var(--mov-rapido) var(--curva-casa), box-shadow var(--mov-rapido) var(--curva-casa); }
   .tarjeta-atleta:hover { transform: translateY(-1px); box-shadow: var(--sombra-flotante), 0 0 0 1px var(--borde); }
 }
@@ -2040,16 +2040,16 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    lo que es (rojo para objetivos, calendario y avisos; añil para el tema y el sueño; azul para lo de ver y leer; verde
    para mensajes y privacidad; rosa para sonidos y color…). Los de estado (al día, pendiente, alerta) siguen como estaban.
    Solo en la página del perfil (no en las hojas). El color lo da la clase ico-<nombre> que IcoIos pone a su icono. */
-.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--io, var(--neutro-500)) 82%, var(--blanco)), var(--io, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--io, var(--cat-gris)) 82%, var(--blanco)), var(--io, var(--cat-gris))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
 .contenido > .grupo-ios .ios-ico svg { stroke-width: 2.1; }
-.ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: var(--rojo-500); }
-.ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: var(--naranja-500); }
-.ios-ico:has(> .ico-bascula) { --io: var(--turquesa-500); }
-.ios-ico:has(> .ico-mensaje, > .ico-imagen, > .ico-escudo) { --io: var(--verde-500); }
-.ios-ico:has(> .ico-pregunta, > .ico-letra, > .ico-ojo, > .ico-movil, > .ico-privacidad, > .ico-descargar) { --io: var(--azul-500); }
+.ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: var(--cat-rojo); }
+.ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: var(--cat-naranja); }
+.ios-ico:has(> .ico-bascula) { --io: var(--cat-turquesa); }
+.ios-ico:has(> .ico-mensaje, > .ico-imagen, > .ico-escudo) { --io: var(--cat-verde); }
+.ios-ico:has(> .ico-pregunta, > .ico-letra, > .ico-ojo, > .ico-movil, > .ico-privacidad, > .ico-descargar) { --io: var(--cat-azul); }
 .ios-ico:has(> .ico-tema, > .ico-sueno) { --io: var(--marca-600); }
-.ios-ico:has(> .ico-paleta, > .ico-altavoz) { --io: var(--rojo-500); }
-.ios-ico:has(> .ico-teclado, > .ico-salir) { --io: var(--neutro-500); }
+.ios-ico:has(> .ico-paleta, > .ico-altavoz) { --io: var(--cat-rojo); }
+.ios-ico:has(> .ico-teclado, > .ico-salir) { --io: var(--cat-gris); }
 @media (forced-colors: active) { .contenido > .grupo-ios .ios-ico { background: Canvas; color: CanvasText; } }
 
 /* ── 125 · La píldora de la barra de abajo, que no se veía (tanda 28) ─────────────────────────────────────────────────
@@ -2337,17 +2337,17 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 162 · Las herramientas del ejercicio con iconos de colores (tanda 30) ────────────────────────────────────────────
    En la hoja «Más» de cada ejercicio, como Ajustes del iPhone (y el perfil, bloque 124): icono blanco sobre un
    cuadrado de color según lo que es (Sesion.jsx: data-h con el id de la herramienta). */
-.hoja-acciones > li[data-h] .accion-fila .ico { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--h, var(--neutro-500)) 82%, var(--blanco)), var(--h, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+.hoja-acciones > li[data-h] .accion-fila .ico { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--h, var(--cat-gris)) 82%, var(--blanco)), var(--h, var(--cat-gris))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
 .hoja-acciones > li[data-h] .accion-fila .ico svg { stroke-width: 2.1; }
-.hoja-acciones > li[data-h="luego"] { --h: var(--naranja-500); }
-.hoja-acciones > li[data-h="orden"] { --h: var(--azul-500); }
-.hoja-acciones > li[data-h="cambiar"] { --h: var(--turquesa-500); }
+.hoja-acciones > li[data-h="luego"] { --h: var(--cat-naranja); }
+.hoja-acciones > li[data-h="orden"] { --h: var(--cat-azul); }
+.hoja-acciones > li[data-h="cambiar"] { --h: var(--cat-turquesa); }
 .hoja-acciones > li[data-h="historial"] { --h: var(--marca-600); }
-.hoja-acciones > li[data-h="descanso"] { --h: var(--verde-500); }
-.hoja-acciones > li[data-h="tempo"] { --h: var(--rojo-500); }
-.hoja-acciones > li[data-h="nota"] { --h: var(--ambar-500); }
-.hoja-acciones > li[data-h="aproximacion"] { --h: var(--rojo-500); }
-.hoja-acciones > li[data-h="tecnica"], .hoja-acciones > li[data-h="tutorial"] { --h: var(--azul-500); }
+.hoja-acciones > li[data-h="descanso"] { --h: var(--cat-verde); }
+.hoja-acciones > li[data-h="tempo"] { --h: var(--cat-rojo); }
+.hoja-acciones > li[data-h="nota"] { --h: var(--cat-ambar); }
+.hoja-acciones > li[data-h="aproximacion"] { --h: var(--cat-rojo); }
+.hoja-acciones > li[data-h="tecnica"], .hoja-acciones > li[data-h="tutorial"] { --h: var(--cat-azul); }
 @media (forced-colors: active) { .hoja-acciones > li[data-h] .accion-fila .ico { background: Canvas; color: CanvasText; } }
 
 /* ── 163 · «Empezar» sobre un velo (tanda 30) ─────────────────────────────────────────────────────────────────────────
@@ -2857,17 +2857,17 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    del atleta, bloque 124), según el icono (CoachApp.jsx ya pone ico-<icono>). La marcada sigue con su fondo lavanda. */
 @media (min-width: 900px) {
   .app.coach .tab { grid-template-columns: 30px 1fr; }
-  .app.coach .tab .tab-ico > svg { width: 30px; height: 30px; padding: 6px; border-radius: var(--r-10); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--ti, var(--neutro-500)) 80%, var(--blanco)), var(--ti, var(--neutro-500))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+  .app.coach .tab .tab-ico > svg { width: 30px; height: 30px; padding: 6px; border-radius: var(--r-10); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--ti, var(--cat-gris)) 80%, var(--blanco)), var(--ti, var(--cat-gris))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
   .app.coach .tab .tab-ico:has(> .ico-atletas) { --ti: var(--marca-600); }
-  .app.coach .tab .tab-ico:has(> .ico-bandeja) { --ti: var(--naranja-500); }
-  .app.coach .tab .tab-ico:has(> .ico-hecho) { --ti: var(--verde-500); }
-  .app.coach .tab .tab-ico:has(> .ico-mensaje) { --ti: var(--azul-500); }
-  .app.coach .tab .tab-ico:has(> .ico-equipo) { --ti: var(--rojo-500); }
-  .app.coach .tab .tab-ico:has(> .ico-plantillas) { --ti: var(--turquesa-500); }
-  .app.coach .tab .tab-ico:has(> .ico-biblioteca) { --ti: var(--ambar-500); }
-  .app.coach .tab .tab-ico:has(> .ico-hoy) { --ti: var(--marca-500); }
-  .app.coach .tab .tab-ico:has(> .ico-perfil) { --ti: var(--neutro-500); }
-  .app.coach .tab[data-tab="radar"] .tab-ico.tab-ico { --ti: var(--cielo-500); } /* A quién escribir, en cian, para no confundirse con Mensajes */
+  .app.coach .tab .tab-ico:has(> .ico-bandeja) { --ti: var(--cat-naranja); }
+  .app.coach .tab .tab-ico:has(> .ico-hecho) { --ti: var(--cat-verde); }
+  .app.coach .tab .tab-ico:has(> .ico-mensaje) { --ti: var(--cat-azul); }
+  .app.coach .tab .tab-ico:has(> .ico-equipo) { --ti: var(--cat-rojo); }
+  .app.coach .tab .tab-ico:has(> .ico-plantillas) { --ti: var(--cat-turquesa); }
+  .app.coach .tab .tab-ico:has(> .ico-biblioteca) { --ti: var(--cat-ambar); }
+  .app.coach .tab .tab-ico:has(> .ico-hoy) { --ti: var(--cat-violeta); }
+  .app.coach .tab .tab-ico:has(> .ico-perfil) { --ti: var(--cat-gris); }
+  .app.coach .tab[data-tab="radar"] .tab-ico.tab-ico { --ti: var(--cat-cielo); } /* A quién escribir, en cian, para no confundirse con Mensajes */
 }
 @media (min-width: 900px) and (forced-colors: active) { .app.coach .tab .tab-ico > svg { background: none; color: CanvasText; } }
 
@@ -2991,7 +2991,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    El icono de capas de cada plantilla en un cuadrado verde azulado con brillo, la fila que se ilumina al pasar y
    «Asignar» en el lavanda del acento. */
 .fila-plantilla .marca-dia { background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--t-peso) 78%, var(--blanco)), var(--t-peso)); color: var(--blanco); box-shadow: 0 6px 14px -7px color-mix(in srgb, var(--t-peso) 75%, transparent), var(--brillo); }
-.fila-plantilla:hover { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+.fila-plantilla:hover { background: var(--fila-hover); }
 .fila-plantilla > .btn { background: var(--morado-suave); border-color: transparent; color: var(--tinta); }
 
 /* ── 232 · Las semanas del editor con su estado a la vista (tanda 35) ─────────────────────────────────────────────────
@@ -3006,10 +3006,10 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    (Buscador.jsx: data-tipo, el prefijo del resultado): atletas en añil, secciones en azul, acciones en verde. */
 .paleta-op[data-tipo] .paleta-ico { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--pt, var(--neutro-500)) 80%, var(--blanco)), var(--pt, var(--neutro-500))); color: var(--blanco); }
 .paleta-op[data-tipo="a"] { --pt: var(--marca-600); }
-.paleta-op[data-tipo="s"] { --pt: var(--azul-500); }
-.paleta-op[data-tipo="x"] { --pt: var(--verde-500); }
-.paleta-op[data-tipo="e"] { --pt: var(--ambar-500); }
-.paleta-op[data-tipo="p"] { --pt: var(--turquesa-500); }
+.paleta-op[data-tipo="s"] { --pt: var(--cat-azul); }
+.paleta-op[data-tipo="x"] { --pt: var(--cat-verde); }
+.paleta-op[data-tipo="e"] { --pt: var(--cat-ambar); }
+.paleta-op[data-tipo="p"] { --pt: var(--cat-turquesa); }
 @media (prefers-reduced-motion: no-preference) { .paleta { animation: paleta-zoom .2s var(--curva-llega); } }
 @keyframes paleta-zoom { from { transform: translateY(-8px) scale(.97); } }
 @media (forced-colors: active) { .paleta-op[data-tipo] .paleta-ico { background: Canvas; color: CanvasText; } }
@@ -3017,15 +3017,15 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 /* ── 234 · La biblioteca con el color de cada grupo muscular (tanda 35) ───────────────────────────────────────────────
    Cada ejercicio lleva un punto del color de su primer grupo muscular (Biblioteca.jsx: data-g) y su pictograma teñido
    de ese color. */
-.fila-biblioteca:has(.detalle[data-g="pectoral"]) { --g: var(--rojo-500); }
-.fila-biblioteca:has(.detalle[data-g="espalda"]) { --g: var(--azul-500); }
-.fila-biblioteca:has(.detalle[data-g="deltoides"]) { --g: var(--naranja-500); }
-.fila-biblioteca:has(.detalle[data-g="cuadriceps"]) { --g: var(--verde-500); }
-.fila-biblioteca:has(.detalle[data-g="gluteo"]) { --g: var(--rojo-500); }
-.fila-biblioteca:has(.detalle[data-g="isquiotibiales"]) { --g: var(--turquesa-500); }
-.fila-biblioteca:has(.detalle[data-g="biceps"]) { --g: var(--marca-500); }
+.fila-biblioteca:has(.detalle[data-g="pectoral"]) { --g: var(--cat-rojo); }
+.fila-biblioteca:has(.detalle[data-g="espalda"]) { --g: var(--cat-azul); }
+.fila-biblioteca:has(.detalle[data-g="deltoides"]) { --g: var(--cat-naranja); }
+.fila-biblioteca:has(.detalle[data-g="cuadriceps"]) { --g: var(--cat-verde); }
+.fila-biblioteca:has(.detalle[data-g="gluteo"]) { --g: var(--cat-rojo); }
+.fila-biblioteca:has(.detalle[data-g="isquiotibiales"]) { --g: var(--cat-turquesa); }
+.fila-biblioteca:has(.detalle[data-g="biceps"]) { --g: var(--cat-violeta); }
 .fila-biblioteca:has(.detalle[data-g="triceps"]) { --g: var(--marca-600); }
-.fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: var(--ambar-500); }
+.fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: var(--cat-ambar); }
 .fila-biblioteca:has(.detalle[data-g="gemelo"]) { --g: var(--ambar-600); }
 .fila-biblioteca .detalle[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--g); }
 .fila-biblioteca:has(.detalle[data-g]) .picto { background: color-mix(in srgb, var(--g) 13%, var(--hoja)); color: color-mix(in srgb, var(--g) 68%, var(--tinta)); }
@@ -3156,19 +3156,19 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { content: ""; position: absolute; left: 16px; top: 50%; margin-top: -15px; width: 30px; height: 30px; border-radius: var(--r-10); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--fm) 80%, var(--blanco)), var(--fm)); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
 .mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { content: ""; position: absolute; left: 23px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--blanco); -webkit-mask: var(--ico-m) center / contain no-repeat; mask: var(--ico-m) center / contain no-repeat; pointer-events: none; }
 .mensajes-automaticos .fila-ios[data-m], .musica-coach .fila-ios[data-m] { position: relative; padding-left: 58px; }
-.fila-ios[data-m="record"] { --fm: var(--ambar-500); --ico-m: var(--ico-trofeo); }
+.fila-ios[data-m="record"] { --fm: var(--cat-ambar); --ico-m: var(--ico-trofeo); }
 .fila-ios[data-m="bloque"] { --fm: var(--marca-600); --ico-m: var(--ico-bandera); }
-.fila-ios[data-m="racha"] { --fm: var(--naranja-500); --ico-m: var(--ico-llama); }
-.fila-ios[data-m="vuelta"] { --fm: var(--azul-500); --ico-m: var(--ico-volver); }
-.fila-ios[data-m="cumple"] { --fm: var(--rojo-500); --ico-m: var(--ico-estrella); }
+.fila-ios[data-m="racha"] { --fm: var(--cat-naranja); --ico-m: var(--ico-llama); }
+.fila-ios[data-m="vuelta"] { --fm: var(--cat-azul); --ico-m: var(--ico-volver); }
+.fila-ios[data-m="cumple"] { --fm: var(--cat-rojo); --ico-m: var(--ico-estrella); }
 
 /* ── 246 · La música con su nota de color (tanda 36) ──────────────────────────────────────────────────────────────────
    Cada lista con una nota musical blanca en un cuadrado del color de su grupo: por tipo de sesión en el acento, la de
    las descargas en verde azulado, la del equipo en rosa y las del cardio en naranja. */
-.musica-coach .fila-ios[data-m] { --fm: var(--marca-500); --ico-m: var(--ico-nota-musica); }
-.musica-coach .fila-ios[data-m="descarga"] { --fm: var(--turquesa-500); }
-.musica-coach .fila-ios[data-m="equipo"] { --fm: var(--rojo-500); }
-.musica-coach .fila-ios[data-m="ritmo"] { --fm: var(--naranja-500); }
+.musica-coach .fila-ios[data-m] { --fm: var(--cat-violeta); --ico-m: var(--ico-nota-musica); }
+.musica-coach .fila-ios[data-m="descarga"] { --fm: var(--cat-turquesa); }
+.musica-coach .fila-ios[data-m="equipo"] { --fm: var(--cat-rojo); }
+.musica-coach .fila-ios[data-m="ritmo"] { --fm: var(--cat-naranja); }
 @media (forced-colors: active) { .mensajes-automaticos .fila-ios[data-m]::before, .musica-coach .fila-ios[data-m]::before { background: Canvas; border: var(--filo-fino) solid CanvasText; } .mensajes-automaticos .fila-ios[data-m]::after, .musica-coach .fila-ios[data-m]::after { background: CanvasText; } }
 
 /* ── 247 · Las cargas sugeridas, con la nueva en una pastilla (tanda 36) ──────────────────────────────────────────────
@@ -3193,15 +3193,15 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Con los colores de la biblioteca (bloque 234), un punto de su color en las series por músculo de la semana y de
    «Programar según FBE» (data-g en vol-chip), en «Elegir ejercicio» (el primer grupo) y en los grupos al editar un
    ejercicio (el principal sigue en el acento). */
-[data-g="pectoral"] { --g: var(--rojo-500); }
-[data-g="espalda"] { --g: var(--azul-500); }
-[data-g="deltoides"] { --g: var(--naranja-500); }
-[data-g="cuadriceps"] { --g: var(--verde-500); }
-[data-g="gluteo"] { --g: var(--rojo-500); }
-[data-g="isquiotibiales"] { --g: var(--turquesa-500); }
-[data-g="biceps"] { --g: var(--marca-500); }
+[data-g="pectoral"] { --g: var(--cat-rojo); }
+[data-g="espalda"] { --g: var(--cat-azul); }
+[data-g="deltoides"] { --g: var(--cat-naranja); }
+[data-g="cuadriceps"] { --g: var(--cat-verde); }
+[data-g="gluteo"] { --g: var(--cat-rojo); }
+[data-g="isquiotibiales"] { --g: var(--cat-turquesa); }
+[data-g="biceps"] { --g: var(--cat-violeta); }
 [data-g="triceps"] { --g: var(--marca-600); }
-[data-g="abdominales"] { --g: var(--ambar-500); }
+[data-g="abdominales"] { --g: var(--cat-ambar); }
 [data-g="gemelo"] { --g: var(--ambar-600); }
 .vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--g); align-self: center; }
 .lista-elegir > button[data-g] > span:first-child::before { margin-right: 7px; vertical-align: 1px; }
@@ -3248,13 +3248,13 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    azulado, logros en dorado, encuestas en violeta, preguntas en añil, avisos del coach en el acento y aniversarios en
    rosa. Un baño muy suave de su color arriba de la tarjeta y un punto de su color antes de «Charla · hoy…». */
 .post { --pt: var(--morado); }
-.post-entreno { --pt: var(--verde-500); }
+.post-entreno { --pt: var(--cat-verde); }
 .post[data-tema="tecnica"] { --pt: var(--t-tarea); }
 .post[data-tema="charla"] { --pt: var(--t-peso); }
-.post-logro, .post[data-tema="logros"] { --pt: var(--ambar-500); }
-.post-encuesta { --pt: var(--marca-500); }
+.post-logro, .post[data-tema="logros"] { --pt: var(--cat-ambar); }
+.post-encuesta { --pt: var(--cat-violeta); }
 .post[data-tema="pregunta"] { --pt: var(--t-cuestionario); }
-.post-aniversario { --pt: var(--rojo-500); }
+.post-aniversario { --pt: var(--cat-rojo); }
 .muro .post:not(.oculta) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--pt) 7%, var(--hoja)), var(--hoja) 96px); }
 .post-quien > .mini.terciario::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--pt); }
 .post.fijada { box-shadow: var(--sombra), inset 3px 0 0 var(--pt); }
@@ -3544,10 +3544,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos)) { position: relative; padding-left: 58px; }
 .interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::before { content: ""; position: absolute; left: 16px; top: 16px; width: 30px; height: 30px; border-radius: var(--r-10); background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--ai) 80%, var(--blanco)), var(--ai)); }
 .interruptor-fila:is(:has(#eq-sin-ranking), :has(#eq-entrenando), :has(#eq-autocompartir), :has(#eq-cardio-retos))::after { content: ""; position: absolute; left: 23px; top: 23px; width: 16px; height: 16px; background: var(--blanco); -webkit-mask: var(--aj) center / contain no-repeat; mask: var(--aj) center / contain no-repeat; pointer-events: none; }
-.interruptor-fila:has(#eq-sin-ranking) { --ai: var(--ambar-500); --aj: var(--ico-trofeo); }
-.interruptor-fila:has(#eq-entrenando) { --ai: var(--verde-500); --aj: var(--ico-rayo); }
-.interruptor-fila:has(#eq-autocompartir) { --ai: var(--azul-500); --aj: var(--ico-compartir); }
-.interruptor-fila:has(#eq-cardio-retos) { --ai: var(--rojo-500); --aj: var(--ico-corazon); }
+.interruptor-fila:has(#eq-sin-ranking) { --ai: var(--cat-ambar); --aj: var(--ico-trofeo); }
+.interruptor-fila:has(#eq-entrenando) { --ai: var(--cat-verde); --aj: var(--ico-rayo); }
+.interruptor-fila:has(#eq-autocompartir) { --ai: var(--cat-azul); --aj: var(--ico-compartir); }
+.interruptor-fila:has(#eq-cardio-retos) { --ai: var(--cat-rojo); --aj: var(--ico-corazon); }
 @media (forced-colors: active) { .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::before { background: Canvas; border: var(--filo-fino) solid CanvasText; } .interruptor-fila:has(#eq-sin-ranking, #eq-entrenando, #eq-autocompartir, #eq-cardio-retos)::after { background: CanvasText; } }
 
 /* ── 287 · Las opciones de una publicación como lista (tanda 39) ──────────────────────────────────────────────────────
@@ -3748,10 +3748,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq { position: relative; display: flex; align-items: center; min-height: 28px; padding-left: 38px; font-weight: 750; }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::before { content: ""; position: absolute; left: 0; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: var(--c); box-shadow: 0 4px 10px -4px var(--c); }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) > .etq::after { content: ""; position: absolute; left: 6px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--blanco); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
-.correccion > .tempo-marcar { --c: var(--cielo-500); --i: var(--ico-reloj); }
+.correccion > .tempo-marcar { --c: var(--cat-cielo); --i: var(--ico-reloj); }
 .correccion > .grabar-la-revision { --c: var(--rojo-600); --i: var(--ico-video); }
 .correccion > .voz-video { --c: var(--verde-600); --i: var(--ico-micro); }
-.correccion > .recordatorios-coach { --c: var(--ambar-500); --i: var(--ico-chincheta); }
+.correccion > .recordatorios-coach { --c: var(--cat-ambar); --i: var(--ico-chincheta); }
 .correccion > :is(.tempo-marcar, .grabar-la-revision, .voz-video, .recordatorios-coach) .btn:not(.btn-primario):not(.plano) { background: var(--hoja); }
 .correccion .btn-primario:not(:disabled) { box-shadow: var(--sombra-accion); }
 .correccion > .comparar-con { padding-top: 10px; border-top: var(--filo-fino) solid var(--linea); }
@@ -3793,7 +3793,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .tecnica-linea { position: relative; padding-left: 24px; gap: 8px; }
 .tecnica-linea::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 18px; width: 2px; border-radius: var(--r-2); background: linear-gradient(var(--linea), color-mix(in srgb, var(--morado) 30%, var(--linea))); }
 .tecnica-item { position: relative; --c: var(--aviso); }
-.tecnica-item[data-estado="visto"] { --c: var(--azul-500); } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
+.tecnica-item[data-estado="visto"] { --c: var(--cat-azul); } .tecnica-item[data-estado="corregido"] { --c: var(--ok); }
 .tecnica-item::before { content: ""; position: absolute; left: -22px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--c); box-shadow: var(--halo-ancho), 0 0 0 4.5px color-mix(in srgb, var(--c) 35%, transparent); }
 .tecnica-item.destacado::before { background: var(--medalla); box-shadow: var(--halo-ancho), 0 0 10px color-mix(in srgb, var(--ambar-500) 60%, transparent); }
 .tecnica-ver { border-color: transparent; background: var(--hoja-2); border-radius: var(--r-s); padding: 10px 12px; transition: transform var(--mov-rapido) var(--curva-rebote); }
@@ -3814,7 +3814,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .informes-mes .selector-chips button { display: inline-flex; align-items: center; gap: 7px; }
 .informes-mes .selector-chips button::before { content: ""; flex: none; width: 15px; height: 15px; background: currentColor; -webkit-mask: var(--ico-semana) center / contain no-repeat; mask: var(--ico-semana) center / contain no-repeat; }
 .informe-tecnica .informe-cifras > div { position: relative; overflow: hidden; padding: 12px 12px 10px; border-radius: var(--r-s); background: color-mix(in srgb, var(--c, var(--morado)) 7%, var(--hoja)); box-shadow: inset 0 3px 0 var(--c, var(--morado)); }
-.informe-tecnica .informe-cifras > div:nth-child(2) { --c: var(--ok); } .informe-tecnica .informe-cifras > div:nth-child(3) { --c: var(--azul-500); } .informe-tecnica .informe-cifras > div:nth-child(4) { --c: var(--ambar-500); }
+.informe-tecnica .informe-cifras > div:nth-child(2) { --c: var(--ok); } .informe-tecnica .informe-cifras > div:nth-child(3) { --c: var(--cat-azul); } .informe-tecnica .informe-cifras > div:nth-child(4) { --c: var(--cat-ambar); }
 .informe-tecnica .informe-cifras dt { color: var(--tinta-2); }
 .informe-lista-num { list-style: none; padding-left: 0; counter-reset: inf; gap: 6px; }
 .informe-lista-num > li { position: relative; padding-left: 32px; min-height: 24px; counter-increment: inf; }
@@ -3891,7 +3891,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 /* ── 315 · Sus semanas: la tabla y la tira de días (tanda 41) ─────────────────────────────────────────────────────────
    La tabla a franjas, con la semana en negrita y lo que tocaba más pequeño; la columna «Bien» en una pastilla verde. La
    tira de días (planes sin contar) con esquinas suaves y luz en los cumplidos. */
-.tabla-nutricion tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+.tabla-nutricion tbody tr:nth-child(odd) { background: var(--fila-cebra); }
 .tabla-nutricion th, .tabla-nutricion td { padding: 9px 5px; }
 .tabla-nutricion tbody tr > :first-child { border-radius: var(--r-xs) 0 0 var(--r-xs); } .tabla-nutricion tbody tr > :last-child { border-radius: 0 var(--r-xs) var(--r-xs) 0; }
 .tabla-nutricion td .terciario { font-size: var(--letra-12); }
@@ -3916,8 +3916,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    Pasos, sueño, pulso, HRV y peso, cada uno en una baldosa con su icono en un disco de su color (data-k). */
 .salud-movil .salud-cifras { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
 .salud-movil .salud-cifra[data-k] { position: relative; padding: 10px 10px 10px 50px; border-radius: var(--r-s); background: color-mix(in srgb, var(--c) 7%, var(--hoja)); min-height: 58px; --c: var(--morado); --i: var(--ico-pasos); }
-.salud-movil .salud-cifra[data-k="sueno_min"] { --c: var(--indigo-600); --i: var(--ico-luna); } .salud-movil .salud-cifra[data-k="fc_reposo"] { --c: var(--rojo-500); --i: var(--ico-corazon); }
-.salud-movil .salud-cifra[data-k="hrv"] { --c: var(--cielo-500); --i: var(--ico-onda); } .salud-movil .salud-cifra[data-k="peso_kg"] { --c: var(--ok); --i: var(--ico-bascula); }
+.salud-movil .salud-cifra[data-k="sueno_min"] { --c: var(--indigo-600); --i: var(--ico-luna); } .salud-movil .salud-cifra[data-k="fc_reposo"] { --c: var(--cat-rojo); --i: var(--ico-corazon); }
+.salud-movil .salud-cifra[data-k="hrv"] { --c: var(--cat-cielo); --i: var(--ico-onda); } .salud-movil .salud-cifra[data-k="peso_kg"] { --c: var(--ok); --i: var(--ico-bascula); }
 .salud-movil .salud-cifra[data-k="pasos"] { --c: var(--naranja-400); }
 .salud-movil .salud-cifra[data-k]::before { content: ""; position: absolute; left: 10px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--c); box-shadow: 0 5px 12px -6px var(--c); }
 .salud-movil .salud-cifra[data-k]::after { content: ""; position: absolute; left: 17px; top: 19px; width: 16px; height: 16px; background: var(--blanco); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
@@ -3936,7 +3936,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    cabecera en pastilla (la de antes en gris, la de después en el acento); el cambio, en una pastilla. */
 .tabla-comparar td { font-weight: 700; }
 .tabla-comparar td.num { white-space: nowrap; }
-.tabla-comparar tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+.tabla-comparar tbody tr:nth-child(odd) { background: var(--fila-cebra); }
 .tabla-comparar thead th { padding-block: 10px; }
 .tabla-comparar thead th:nth-child(2), .tabla-comparar thead th:nth-child(3) { color: var(--tinta-2); }
 .tabla-comparar thead th:nth-child(3) { color: var(--morado); }
@@ -3979,7 +3979,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 .conexiones .salud-intro strong { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border-radius: var(--r-pildora); background: color-mix(in srgb, var(--c) 12%, var(--hoja)); color: var(--tinta); white-space: nowrap; line-height: 1.6; }
 .conexiones .salud-intro strong::before { content: ""; flex: none; width: 13px; height: 13px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
 .conexiones .salud-intro strong:nth-of-type(1) { --c: var(--naranja-400); --i: var(--ico-pasos); } .conexiones .salud-intro strong:nth-of-type(2) { --c: var(--indigo-600); --i: var(--ico-luna); }
-.conexiones .salud-intro strong:nth-of-type(3) { --c: var(--rojo-500); --i: var(--ico-corazon); } .conexiones .salud-intro strong:nth-of-type(4) { --c: var(--cielo-500); --i: var(--ico-onda); }
+.conexiones .salud-intro strong:nth-of-type(3) { --c: var(--cat-rojo); --i: var(--ico-corazon); } .conexiones .salud-intro strong:nth-of-type(4) { --c: var(--cat-cielo); --i: var(--ico-onda); }
 .conexiones .salud-intro strong:nth-of-type(5) { --c: var(--ok); --i: var(--ico-bascula); }
 @media (forced-colors: active) { .conexiones .salud-intro strong::before { content: none; } }
 
@@ -4011,10 +4011,10 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    (el día más reciente) resaltada. La usan la hoja del atleta y la ficha del coach. */
 .tabla-salud-caja .tabla-salud thead th:not(:first-child)::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--c, var(--tinta-3)); vertical-align: 1px; }
 .tabla-salud-caja .tabla-salud thead th:nth-child(2) { --c: var(--naranja-400); } .tabla-salud-caja .tabla-salud thead th:nth-child(3) { --c: var(--indigo-600); }
-.tabla-salud-caja .tabla-salud thead th:nth-child(4) { --c: var(--rojo-500); } .tabla-salud-caja .tabla-salud thead th:nth-child(5) { --c: var(--cielo-500); }
+.tabla-salud-caja .tabla-salud thead th:nth-child(4) { --c: var(--cat-rojo); } .tabla-salud-caja .tabla-salud thead th:nth-child(5) { --c: var(--cat-cielo); }
 .tabla-salud-caja .tabla-salud thead th:nth-child(6) { --c: var(--ok); }
 .tabla-salud-caja .tabla-salud thead th { color: var(--tinta-2); }
-.tabla-salud-caja .tabla-salud tbody tr:nth-child(even) { background: color-mix(in srgb, var(--tinta) 3%, transparent); }
+.tabla-salud-caja .tabla-salud tbody tr:nth-child(even) { background: var(--fila-cebra); }
 .tabla-salud-caja .tabla-salud tbody tr:first-child { background: var(--acento-a8); }
 .tabla-salud-caja .tabla-salud tbody tr:first-child > * { color: var(--tinta); }
 .tabla-salud-caja { border-radius: var(--r-s); }

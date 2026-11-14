@@ -63,7 +63,8 @@ export function parejasVidrio(acento, tema, tipo = 'barra') {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
   const textos = textosDe(acento, tema);
   const peor = tema === 'claro' ? '#000000' : '#FFFFFF';
-  const fondo = mezclar(superficiesDe(acento, tema)[tipo === 'cabecera' ? 'tiza' : 'hoja'], peor, VIDRIO[tipo][tema]);
+  // (color 3) en oscuro las hojas van un nivel más claras (la elevación): su vidrio sale del nivel 2
+  const fondo = mezclar(superficiesDe(acento, tema)[tipo === 'cabecera' ? 'tiza' : tipo === 'hoja' && tema === 'oscuro' ? 'hoja-2' : 'hoja'], peor, VIDRIO[tipo][tema]);
   const lista = [['tinta', textos.tinta], ['tinta-2', textos['tinta-2']], ...(tipo === 'hoja' ? [['tinta-3', textos['tinta-3']]] : []), ['acento', v.morado]];
   return lista.map(([que, texto]) => ({ que: `${que} sobre el vidrio (${tipo})`, texto, fondo, ratio: contraste(texto, fondo) }));
 }

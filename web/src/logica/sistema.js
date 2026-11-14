@@ -122,4 +122,12 @@ export const SOMBRAS_IGUALES = {
 };
 // Los sitios que cambian --linea, --hoja o --morado para sí mismos: los tokens que dependen de ellos se vuelven a
 // declarar ahí, para que tomen el valor de ese sitio (una variable se resuelve donde se declara)
-export const AMBITOS = [':root', '.historia', ':root[data-gimnasio] .sesion-vista', ':root[data-gimnasio] .temporizador'];
+// (y las hojas, que en oscuro van un nivel más claras: paleta.js, ELEVADOS)
+export const AMBITOS = [':root', '.historia', ':root[data-gimnasio] .sesion-vista', ':root[data-gimnasio] .temporizador', '.hoja-dialogo'];
+
+// ---------- las filas (color 3, 18): pasar por encima, elegida y cebra, iguales en todas las listas y tablas ----------
+export const FILAS = {
+  'fila-hover': 'color-mix(in srgb, var(--morado) 4%, var(--hoja))',
+  'fila-elegida': 'color-mix(in srgb, var(--morado) 9%, var(--hoja))',
+  'fila-cebra': 'color-mix(in srgb, var(--tinta) 3%, transparent)',
+};

@@ -155,6 +155,7 @@
   --noche-2: #211F32;
   --noche-3: #2A283D;
   --noche-4: #343249;
+  --noche-5: #3E3C55;
   --blanco: #FFFFFF;
   --negro: #000000;
 }
@@ -205,9 +206,12 @@
   --av-1: var(--marca-600);
   --av-2: var(--azul-600);
   --av-3: var(--turquesa-700);
-  --av-4: var(--rosa-700);
-  --av-5: var(--naranja-700);
+  --av-4: var(--purpura-700);
+  --av-5: var(--neutro-700);
   --av-6: var(--azul-800);
+  --av-7: var(--marca-900);
+  --av-8: var(--cielo-600);
+  --av-9: var(--cielo-900);
   --morado: #593EDE;
   --morado-hover: #462ABF;
   --morado-suave: #EEECFF;
@@ -237,6 +241,18 @@
   --acento-800: var(--marca-800);
   --acento-900: var(--marca-900);
   --acento-950: var(--marca-950);
+  --cat-rojo: var(--rojo-500);
+  --cat-naranja: var(--naranja-500);
+  --cat-ambar: var(--ambar-500);
+  --cat-verde: var(--verde-500);
+  --cat-turquesa: var(--turquesa-500);
+  --cat-cielo: var(--cielo-500);
+  --cat-azul: var(--azul-500);
+  --cat-indigo: var(--indigo-500);
+  --cat-violeta: var(--marca-500);
+  --cat-purpura: var(--purpura-500);
+  --cat-rosa: var(--rosa-500);
+  --cat-gris: var(--neutro-500);
   --confeti-1: #7C6AFD;
   --confeti-2: #D3A329;
   --confeti-3: #FF74B0;
@@ -318,11 +334,14 @@
     --disco-amarillo: var(--oro-300);
     --disco-verde: var(--verde-400);
     --av-1: var(--marca-400);
-    --av-2: var(--azul-300);
-    --av-3: var(--turquesa-300);
-    --av-4: var(--rosa-300);
-    --av-5: var(--naranja-300);
-    --av-6: var(--azul-200);
+    --av-2: var(--azul-400);
+    --av-3: var(--turquesa-200);
+    --av-4: var(--purpura-300);
+    --av-5: var(--neutro-300);
+    --av-6: var(--azul-300);
+    --av-7: var(--marca-200);
+    --av-8: var(--cielo-400);
+    --av-9: var(--cielo-100);
     --morado: #A49CFF;
     --morado-hover: #C4BFFF;
     --morado-suave: #232242;
@@ -392,11 +411,14 @@
   --disco-amarillo: var(--oro-300);
   --disco-verde: var(--verde-400);
   --av-1: var(--marca-400);
-  --av-2: var(--azul-300);
-  --av-3: var(--turquesa-300);
-  --av-4: var(--rosa-300);
-  --av-5: var(--naranja-300);
-  --av-6: var(--azul-200);
+  --av-2: var(--azul-400);
+  --av-3: var(--turquesa-200);
+  --av-4: var(--purpura-300);
+  --av-5: var(--neutro-300);
+  --av-6: var(--azul-300);
+  --av-7: var(--marca-200);
+  --av-8: var(--cielo-400);
+  --av-9: var(--cielo-100);
   --morado: #A49CFF;
   --morado-hover: #C4BFFF;
   --morado-suave: #232242;
@@ -445,6 +467,29 @@
   --flota: #1B1929;
   --borde-flota: #34304E;
   --borde: rgba(255, 255, 255, .08);
+}
+
+/* (tanda 3) La elevación en oscuro: las hojas, un nivel más claras, y lo de dentro con ellas (en negro puro y con alto
+   contraste, no). Los tokens que salen de la tarjeta o de la línea se vuelven a declarar aquí y en sistema.css. */
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]):not([data-oled]):not([data-contraste="alto"]) .hoja-dialogo {
+  --tiza: var(--noche-1);
+  --hoja: var(--noche-2);
+  --hoja-2: var(--noche-3);
+  --hoja-3: var(--noche-4);
+  --linea: var(--noche-5);
+  --superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3); --borde-suave: var(--linea);
+  --vidrio-hoja: color-mix(in srgb, var(--hoja) 92%, transparent);
+}
+}
+:root[data-theme="dark"]:not([data-oled]):not([data-contraste="alto"]) .hoja-dialogo {
+  --tiza: var(--noche-1);
+  --hoja: var(--noche-2);
+  --hoja-2: var(--noche-3);
+  --hoja-3: var(--noche-4);
+  --linea: var(--noche-5);
+  --superficie-1: var(--tiza); --superficie-2: var(--hoja); --superficie-3: var(--hoja-2); --superficie-4: var(--hoja-3); --borde-suave: var(--linea);
+  --vidrio-hoja: color-mix(in srgb, var(--hoja) 92%, transparent);
 }
 
 /* (8) Los degradados, interpolados en OKLCH donde se puede (no se ensucian en el medio) */
