@@ -25,10 +25,10 @@ export const tamanoFormato = (f) => { const x = FORMATOS.find(([k]) => k === f) 
 // resplandor (el rgb del acento para los brillos).
 export const PALETAS = [
   ['noche', 'Noche', { fondo: '#140B3A', noche: '#241665', tinta: '#FFFFFF', tinta2: '#C4BFFF', tinta3: '#A49CFF', morado: '#C4BFFF', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '104, 78, 236' }],
-  ['clara', 'Clara', { fondo: '#F7F5FF', noche: '#FFFFFF', tinta: '#140B3A', tinta2: '#4F4E5E', tinta3: '#858492', morado: '#684EEC', linea: 'rgba(21, 15, 54, .12)', oro: '#A97F00', clara: true, resplandor: '104, 78, 236' }],
-  ['bosque', 'Bosque', { fondo: '#001B1A', noche: '#00302E', tinta: '#FFFFFF', tinta2: '#DDDDE3', tinta3: '#37C2BB', morado: '#7EE0A0', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '46, 160, 110' }],
-  ['brasa', 'Brasa', { fondo: '#2F0407', noche: '#4F0910', tinta: '#FFFFFF', tinta2: '#FFD1CF', tinta3: '#AAA9B5', morado: '#FFB38C', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '236, 96, 60' }],
-  ['hielo', 'Hielo', { fondo: '#181626', noche: '#042756', tinta: '#FFFFFF', tinta2: '#CAE0FF', tinta3: '#AAA9B5', morado: '#A5C9FF', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '60, 150, 236' }],
+  ['clara', 'Clara', { fondo: '#F7F5FF', noche: '#FFFFFF', tinta: '#140B3A', tinta2: '#4F4E5E', tinta3: '#858492', morado: '#593EDE', linea: 'rgba(21, 15, 54, .12)', oro: '#A97F00', clara: true, resplandor: '104, 78, 236' }],
+  ['bosque', 'Bosque', { fondo: '#001B1A', noche: '#00302E', tinta: '#FFFFFF', tinta2: oklch(0.9, 0.04, 162), tinta3: oklch(0.76, 0.06, 162), morado: '#7EE0A0', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '46, 160, 110' }],
+  ['brasa', 'Brasa', { fondo: '#2F0407', noche: '#4F0910', tinta: '#FFFFFF', tinta2: '#FFD1CF', tinta3: oklch(0.75, 0.07, 30), morado: '#FFB38C', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '236, 96, 60' }],
+  ['hielo', 'Hielo', { fondo: '#021533', noche: '#042756', tinta: '#FFFFFF', tinta2: '#CAE0FF', tinta3: oklch(0.76, 0.06, 240), morado: '#A5C9FF', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '60, 150, 236' }],
   ['grafito', 'Grafito', { fondo: '#0E0D15', noche: '#211F32', tinta: '#FFFFFF', tinta2: '#DDDDE3', tinta3: '#AAA9B5', morado: '#EEEEF2', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '120, 120, 140' }],
 ];
 export const paletaValida = (k) => PALETAS.some(([c]) => c === k);

@@ -1143,7 +1143,7 @@ try {
   check((await raiz())[0] === '16px' && (await raiz())[1] === '', 'y vuelve a «Normal» (Hoy y la sesión, a 125 %, más abajo con Ana)');
   // v0.49: color de acento (seis) y negro puro, en el móvil
   const acentos = p.locator('.acento-op');
-  check(await acentos.count() === 8 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), '(color) ocho colores de acento, el morado FBE de serie');
+  check(await acentos.count() === 9 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), '(color) nueve colores de acento, el morado FBE de serie');
   await p.locator('.acento-op', { hasText: 'Verde pino' }).click();
   const tokens = () => p.evaluate(() => { const c = getComputedStyle(document.documentElement); return { morado: c.getPropertyValue('--morado').trim().toUpperCase(), fondo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"][media*="dark"]')?.content }; });
   const t1 = await tokens();

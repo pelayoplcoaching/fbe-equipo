@@ -1,4 +1,4 @@
-// La tanda de color (claude/color-mejoras.md), en la demo y en un móvil simulado: la tarjeta del día con su tono y su
+// Las dos tandas de color (claude/color-mejoras.md y claude/color-mejoras-2.md), en la demo y en un móvil simulado: la tarjeta del día con su tono y su
 // degradado, los iconos a dos tintas, los ocho acentos (Océano), el alto contraste, la ayuda para daltonismo, la barra
 // del sistema y la página «Paleta» (?demo&paleta). La paleta y el contraste, en test/color.test.mjs.
 //   Suelta:  npm run build && node test/e2e-color.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
@@ -27,8 +27,19 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     // --- La paleta, de un vistazo (solo en la demo) ---
     await p.goto(`${base}/?demo&paleta`);
     await p.getByRole('heading', { name: 'Paleta de FBE Equipo' }).waitFor();
-    check(await p.locator('.pal-escala').count() === 11 && await p.locator('.pal-escala').first().locator('.pal-muestra').count() === 11, '«Paleta» (?demo&paleta): las diez escalas de 50 a 950 y la noche');
-    check(await p.locator('.pal-estado').count() === 4 && await p.locator('.pal-grad').count() === 4 && await p.locator('.pal-acento').count() === 8, 'los cuatro estados, los cuatro degradados y los ocho acentos');
+    check(await p.locator('.pal-escala').count() === 14 && await p.locator('.pal-escala').first().locator('.pal-muestra').count() === 11, '«Paleta» (?demo&paleta): las trece escalas de 50 a 950 y la noche');
+    check(await p.locator('.pal-estado').count() === 4 && await p.locator('.pal-grad:not(.pal-tono)').count() === 4 && await p.locator('.pal-tono').count() === 6 && await p.locator('.pal-acento').count() === 9, 'los cuatro estados, los cuatro degradados, los seis tonos de la tarjeta del día y los nueve acentos');
+    // (tanda 2) la tabla de contraste y los controles: se recalcula con el tema, el acento y el alto contraste
+    const filas = () => p.locator('.pal-tabla tbody tr').evaluateAll((trs) => trs.map((tr) => [tr.querySelector('th').textContent.trim(), ...[...tr.querySelectorAll('td')].map((td) => td.textContent.trim())]));
+    const f1 = await filas();
+    check(f1.length === 9 && f1.every((x) => / (AA|AAA)$/.test(x[1]) && / (AA|AAA)$/.test(x[2])), `la tabla de contraste: nueve colores de texto, todos AA o AAA sobre la tarjeta y sobre el fondo (${f1.map((x) => x[1].split(' ')[0]).join(', ')})`);
+    await p.locator('.pal-controles select').nth(0).selectOption('oscuro');
+    await p.locator('.pal-controles select').nth(1).selectOption('oceano');
+    await p.locator('.pal-controles input[type=checkbox]').nth(0).check();
+    const f2 = await filas(), acAlto = P.acentoAlto(P.ACENTOS.find((a) => a.id === 'oceano')).oscuro.morado;
+    check(await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark' && await varRaiz('--morado') === acAlto && f2.find((x) => x[0] === 'Acento')[1].endsWith('AAA') && f2.every((x) => / (AA|AAA)$/.test(x[1])),
+      `en oscuro, con Océano y alto contraste: el acento pasa a ${acAlto} (AAA) y todo sigue pasando`);
+    check(await varRaiz('--oklab') === 'IN OKLAB' && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.pal-tono')).backgroundImage)), 'los degradados, interpolados en OKLab (y los tonos de la tarjeta se dibujan)');
     check(await varRaiz('--marca-600') === P.ESCALAS.marca[600] && await varRaiz('--tiza') !== '' && (await colorDe('body', 'backgroundColor')) !== null, 'las primitivas y los tokens de color.css están en la página');
 
     // --- La app ---
@@ -46,21 +57,26 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     // --- En Perfil (ajustes de este móvil): Océano, alto contraste y daltonismo ---
     await irASeccion(p, 'Perfil');
     await p.locator('.acento-op').first().waitFor();
-    check(await p.locator('.acento-op').count() === 8, 'ocho acentos para elegir');
+    check(await p.locator('.acento-op').count() === 9 && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.acento-muestra')).backgroundImage)), 'nueve acentos para elegir (con Orquídea), en muestras con volumen');
     await p.locator('.acento-op', { hasText: 'Océano' }).click();
     const oceano = P.ACENTOS.find((a) => a.id === 'oceano').claro.morado;
     check(await varRaiz('--morado') === oceano, `Océano: el acento pasa a ${oceano}`);
+    // (tanda 2) los neutros siguen al acento, y la barra del sistema, el fondo exacto
+    const ocea = P.ACENTOS.find((a) => a.id === 'oceano'), tizaO = P.superficiesDe(ocea, 'claro').tiza;
+    check(await varRaiz('--tiza') === tizaO && tizaO !== P.valor('claro', 'tiza') && await p.evaluate(() => document.querySelector('meta[name="theme-color"][media*="light"]')?.content) === tizaO,
+      `con Océano, el fondo y las líneas toman su tono (${tizaO}) y la barra del sistema, ese mismo color`);
     const contraste = p.getByRole('switch', { name: /Alto contraste/ });
     await contraste.click();
     check(await p.evaluate(() => document.documentElement.getAttribute('data-contraste')) === 'alto' && await varRaiz('--tinta-2') === P.ALTO_CONTRASTE.claro['tinta-2'], 'alto contraste: los textos, al máximo');
+    check(await varRaiz('--morado') === P.acentoAlto(ocea).claro.morado && (await varRaiz('--vidrio')).length > 0 && !/COLOR-MIX/.test(await varRaiz('--vidrio')), `(tanda 2) y el acento, a 7:1 (${P.acentoAlto(ocea).claro.morado}); el vidrio, opaco`);
     await contraste.click();
-    check(await p.evaluate(() => !document.documentElement.hasAttribute('data-contraste')) && await varRaiz('--tinta-2') === P.valor('claro', 'tinta-2'), 'y al quitarlo, vuelven');
+    check(await p.evaluate(() => !document.documentElement.hasAttribute('data-contraste')) && await varRaiz('--tinta-2') === P.textosDe(ocea, 'claro')['tinta-2'] && await varRaiz('--morado') === oceano, 'y al quitarlo, vuelven');
     const dalt = p.getByRole('switch', { name: /Ayuda para daltonismo/ });
     await dalt.click();
     check(await varRaiz('--ok') === P.DALTONISMO.claro.ok && await varRaiz('--alerta') === P.DALTONISMO.claro.alerta, 'daltonismo: lo hecho en azul y lo que falla en naranja');
     await dalt.click();
     await p.locator('.acento-op', { hasText: 'Morado FBE' }).click();
-    check(await varRaiz('--morado') === P.ACENTOS[0].claro.morado && await varRaiz('--ok') === P.valor('claro', 'ok'), 'y todo vuelve a lo de serie');
+    check(await varRaiz('--morado') === P.ACENTOS[0].claro.morado && await varRaiz('--ok') === P.valor('claro', 'ok') && await varRaiz('--tiza') === P.valor('claro', 'tiza'), 'y todo vuelve a lo de serie (también los neutros)');
     await p.keyboard.press('Escape');
     // los iconos a dos tintas
     const duo = await p.locator('.ios-ico .icono-duo').count();

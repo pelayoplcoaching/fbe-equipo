@@ -27,7 +27,7 @@
 .foto-anillo.tono-fuego .aro-lleno { stroke: var(--naranja-500); }
 .foto-anillo-llama { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 3px;
   padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--hoja); box-shadow: var(--sombra); font-size: 0.8125rem; font-weight: 750; color: var(--tinta); white-space: nowrap; }
-.foto-anillo-llama svg { width: 15px; height: 15px; color: #C2410C; }
+.foto-anillo-llama svg { width: 15px; height: 15px; color: var(--naranja-600); }
 .foto-anillo.tono-templado .foto-anillo-llama svg { color: var(--morado); }
 @media (prefers-reduced-motion: no-preference) {
   .foto-anillo-aro .aro-lleno { animation: aro-racha 900ms cubic-bezier(.2, .8, .2, 1) both; }
@@ -54,7 +54,7 @@
 .perfil-tile dt { font-size: 0.75rem; font-weight: 600; color: var(--tinta-2); }
 .perfil-tile dd { margin: 0; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); line-height: 1.1; display: inline-flex; align-items: baseline; gap: 2px; flex-wrap: wrap; overflow-wrap: anywhere; }
 .perfil-tile dd small { font-size: 0.75rem; font-weight: 650; color: var(--tinta-2); }
-.perfil-tile dd svg { width: 16px; height: 16px; color: #C2410C; align-self: center; }
+.perfil-tile dd svg { width: 16px; height: 16px; color: var(--naranja-600); align-self: center; }
 
 /* -- Las barras de las 12 semanas -- */
 .perfil-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; height: 132px; align-items: end; }
@@ -71,11 +71,11 @@
 .perfil-vitrina { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .perfil-trofeo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "ico nombre valor" "ico detalle detalle"; column-gap: 12px; row-gap: 2px; align-items: center;
   padding: 12px 14px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra); }
-.perfil-trofeo[data-puesto="1"] { background: linear-gradient(135deg, color-mix(in srgb, var(--oro-400) 18%, var(--hoja)), var(--hoja) 70%); }
-.pt-puesto { grid-area: ico; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, var(--oro-400) 22%, var(--hoja-2)); color: #8A5A00; }
+.perfil-trofeo[data-puesto="1"] { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--oro-400) 18%, var(--hoja)), var(--hoja) 70%); }
+.pt-puesto { grid-area: ico; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, var(--oro-400) 22%, var(--hoja-2)); color: var(--ambar-600); }
 .pt-puesto svg { width: 20px; height: 20px; }
 .perfil-trofeo[data-puesto="2"] .pt-puesto { background: color-mix(in srgb, var(--neutro-400) 26%, var(--hoja-2)); color: var(--neutro-700); }
-.perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, var(--ambar-500) 22%, var(--hoja-2)); color: var(--ambar-700); }
+.perfil-trofeo[data-puesto="3"] .pt-puesto { background: color-mix(in srgb, var(--ambar-500) 22%, var(--hoja-2)); color: var(--naranja-700); }
 .pt-nombre { grid-area: nombre; font-weight: 700; overflow-wrap: anywhere; }
 .pt-valor { grid-area: valor; font-size: var(--cifra-s); font-weight: 800; font-stretch: var(--ancho-marcador); }
 .pt-valor small { font-size: 0.75rem; color: var(--tinta-2); }
@@ -155,11 +155,11 @@
 /* -- Lo que mas entrenas: con el color de cada grupo (los del editor y la biblioteca) -- */
 .perfil-grupos { list-style: none; margin: 0; display: grid; gap: 10px; }
 .perfil-grupos li { display: grid; grid-template-columns: minmax(5.5em, 7.5em) minmax(0, 1fr) auto; gap: 10px; align-items: center; --g: var(--morado); }
-.perfil-grupos [data-g="pectoral"] { --g: var(--naranja-500); } .perfil-grupos [data-g="espalda"] { --g: var(--azul-500); }
-.perfil-grupos [data-g="deltoides"] { --g: var(--ambar-500); } .perfil-grupos [data-g="cuadriceps"] { --g: var(--verde-500); }
-.perfil-grupos [data-g="gluteo"] { --g: #E5407F; } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--turquesa-500); }
-.perfil-grupos [data-g="biceps"] { --g: #7A5AF8; } .perfil-grupos [data-g="triceps"] { --g: #5856D6; }
-.perfil-grupos [data-g="abdominales"] { --g: var(--ambar-500); } .perfil-grupos [data-g="gemelo"] { --g: #8E6E53; }
+.perfil-grupos [data-g="pectoral"] { --g: var(--rojo-500); } .perfil-grupos [data-g="espalda"] { --g: var(--azul-500); }
+.perfil-grupos [data-g="deltoides"] { --g: var(--naranja-500); } .perfil-grupos [data-g="cuadriceps"] { --g: var(--verde-500); }
+.perfil-grupos [data-g="gluteo"] { --g: var(--rojo-500); } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--turquesa-500); }
+.perfil-grupos [data-g="biceps"] { --g: var(--marca-500); } .perfil-grupos [data-g="triceps"] { --g: var(--marca-600); }
+.perfil-grupos [data-g="abdominales"] { --g: var(--ambar-500); } .perfil-grupos [data-g="gemelo"] { --g: var(--ambar-600); }
 .pg-nombre { font-weight: 650; font-size: 0.875rem; overflow-wrap: anywhere; }
 .pg-barra { height: 10px; border-radius: 999px; background: var(--hoja-2); overflow: hidden; }
 .pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }
@@ -203,15 +203,15 @@
 .pp-muestra { display: grid; justify-items: center; gap: 4px; padding: 4px 6px; border: 0; border-radius: 10px; background: none; color: var(--tinta); font-size: 0.6875rem; font-weight: 650; cursor: pointer; }
 .pp-muestra[aria-checked="true"] { background: var(--morado-suave); }
 .pp-color { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-[data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(165deg, var(--marca-900), var(--noche-2)); }
-.pp-muestra[data-portada="aurora"] .pp-color { background: linear-gradient(165deg, var(--turquesa-600), var(--noche-2)); }
-.pp-muestra[data-portada="atardecer"] .pp-color { background: linear-gradient(165deg, #C2410C, var(--rosa-800)); }
-.pp-muestra[data-portada="bosque"] .pp-color { background: linear-gradient(165deg, var(--verde-600), var(--turquesa-900)); }
-.pp-muestra[data-portada="oceano"] .pp-color { background: linear-gradient(165deg, var(--azul-600), var(--azul-900)); }
-.perfil-cabeza[data-portada="aurora"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(94, 234, 212, .45), transparent 70%), linear-gradient(165deg, var(--turquesa-600), var(--noche-2)); }
-.perfil-cabeza[data-portada="atardecer"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(253, 186, 116, .5), transparent 70%), linear-gradient(165deg, #C2410C, var(--rosa-800)); }
-.perfil-cabeza[data-portada="bosque"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(187, 247, 208, .35), transparent 70%), linear-gradient(165deg, var(--verde-600), var(--turquesa-900)); }
-.perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, rgba(147, 197, 253, .45), transparent 70%), linear-gradient(165deg, var(--azul-600), var(--azul-900)); }
+[data-portada="noche"] .pp-color, .pp-muestra[data-portada="noche"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--marca-900), var(--tinta-noche)); }
+.pp-muestra[data-portada="aurora"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--turquesa-600), var(--tinta-noche)); }
+.pp-muestra[data-portada="atardecer"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--naranja-600), var(--rosa-800)); }
+.pp-muestra[data-portada="bosque"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--verde-600), var(--turquesa-900)); }
+.pp-muestra[data-portada="oceano"] .pp-color { background: linear-gradient(var(--oklab,) 165deg, var(--indigo-600), var(--azul-900)); }
+.perfil-cabeza[data-portada="aurora"]::before { background: radial-gradient(260px 120px at 85% 0%, color-mix(in srgb, var(--turquesa-300) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--turquesa-600), var(--tinta-noche)); }
+.perfil-cabeza[data-portada="atardecer"]::before { background: radial-gradient(260px 120px at 85% 0%, color-mix(in srgb, var(--ambar-300) 50%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--naranja-600), var(--rosa-800)); }
+.perfil-cabeza[data-portada="bosque"]::before { background: radial-gradient(260px 120px at 85% 0%, color-mix(in srgb, var(--verde-200) 35%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--verde-600), var(--turquesa-900)); }
+.perfil-cabeza[data-portada="oceano"]::before { background: radial-gradient(260px 120px at 85% 0%, color-mix(in srgb, var(--azul-300) 45%, transparent), transparent 70%), linear-gradient(var(--oklab,) 165deg, var(--indigo-600), var(--azul-900)); }
 @media (forced-colors: active) { .perfil-portada-btn { border-color: ButtonText; } }
 .pt-compartir svg { width: 20px; height: 20px; }
 .perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: 6px; }

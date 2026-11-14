@@ -18,13 +18,13 @@
 .franja-viva { position: relative; overflow: hidden; }
 .franja-viva > .fv-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; }
 .fv-luna, .fv-cumbre { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); }
-.fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, rgba(226, 214, 255, .5) 0%, rgba(190, 170, 255, .16) 45%, transparent 100%); }
-.fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, rgba(205, 190, 255, .2) 45%, transparent 100%); }
-.franja-reto.cumbre .fv-cumbre { opacity: .8; background: radial-gradient(closest-side, rgba(255, 236, 170, .75) 0%, rgba(242, 207, 99, .28) 45%, transparent 100%); }
-.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--blanco); opacity: .55; box-shadow: 0 0 5px 1px rgba(214, 205, 255, .5); }
+.fv-luna { left: 82%; top: 19%; width: 46%; aspect-ratio: 1; opacity: .5; background: radial-gradient(closest-side, color-mix(in srgb, var(--marca-200) 50%, transparent) 0%, color-mix(in srgb, var(--marca-400) 16%, transparent) 45%, transparent 100%); }
+.fv-cumbre { left: 77%; top: 13%; width: 34%; aspect-ratio: 1; opacity: .35; background: radial-gradient(closest-side, rgba(255, 255, 255, .6) 0%, color-mix(in srgb, var(--marca-300) 20%, transparent) 45%, transparent 100%); }
+.franja-reto.cumbre .fv-cumbre { opacity: .8; background: radial-gradient(closest-side, color-mix(in srgb, var(--oro-100) 75%, transparent) 0%, color-mix(in srgb, var(--oro-300) 28%, transparent) 45%, transparent 100%); }
+.fv-estrella { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--blanco); opacity: .55; box-shadow: 0 0 5px 1px color-mix(in srgb, var(--marca-200) 50%, transparent); }
 /* 10 · La celebración de un reto: un destello cruza el disco */
 .cm-disco { overflow: hidden; }
-.cm-disco::after { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0; background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .75) 50%, transparent 100%); }
+.cm-disco::after { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0; background: linear-gradient(var(--oklab,) 100deg, transparent 0%, rgba(255, 255, 255, .75) 50%, transparent 100%); }
 @media (forced-colors: active) { .fv-luna, .fv-cumbre, .fv-estrella, .cm-disco::after, .btn-animar.recien::after, .btn-animar-grande.recien::after, .post.post-llega.mia::after { display: none; } }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -42,7 +42,7 @@
   .progreso-equipo > li:nth-child(n + 8), .ranking-lista > li:nth-child(n + 8) { --cv-i: 7; }
   .fila-progreso.yo .barra-equipo, .fila-ranking.yo .barra-equipo { position: relative; }
   .fila-progreso.yo .barra-equipo::after, .fila-ranking.yo .barra-equipo::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none; opacity: 0;
-    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .8), transparent); animation: cv-brillo 1s ease-out calc(var(--cv-i, 0) * 70ms + .8s) both; }
+    background: linear-gradient(var(--oklab,) 100deg, transparent, rgba(255, 255, 255, .8), transparent); animation: cv-brillo 1s ease-out calc(var(--cv-i, 0) * 70ms + .8s) both; }
   /* 3 · El marcador por equipos: las cifras suben a su sitio y el equipo que va por delante da un empujón */
   .marcador-equipos .me-equipo .separa > span > .num, .reto-equipo .re-total { display: inline-block; animation: cv-cifra-sube .55s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 120ms + .15s) both; }
   .marcador-equipos .me-equipo.delante .separa > span > .num { animation: cv-cifra-sube .55s cubic-bezier(.2, .8, .2, 1) calc(var(--cv-i, 0) * 120ms + .15s) both, cv-empujon .5s cubic-bezier(.3, 1.6, .5, 1) 1s; }

@@ -5,7 +5,7 @@
 
 // (color) Las superficies, los textos, los acentos y el contraste salen de la paleta (logica/paleta.js), la única
 // fuente del color: ocho acentos (con Océano y Lima, de la tanda de color), cada uno con sus valores para el claro y el oscuro.
-import { SUPERFICIES, TEXTOS as TEXTOS_PALETA, ACENTOS, luminancia, contraste } from './paleta.js';
+import { SUPERFICIES, ACENTOS, luminancia, contraste, neutrosDe, superficiesDe, textosDe, acentoAlto } from './paleta.js';
 export { SUPERFICIES, ACENTOS, luminancia, contraste };
 // El texto claro de la tarjeta del día (--sobre-hero), que va sobre el brillo del acento (--hero-2)
 export const SOBRE_HERO = '#F3F1FB';
@@ -17,13 +17,15 @@ export const acentoDe = (id) => ACENTOS.find((a) => a.id === id) || ACENTOS[0];
 // acento y sobre su hover, y el texto de la tarjeta del día sobre su brillo.
 export function parejasAcento(acento, tema) {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
-  const sup = SUPERFICIES[tema];
+  const sup = superficiesDe(acento, tema);   // (color 2) con los neutros de ese acento
   return [
     ...Object.entries(sup).map(([k, fondo]) => ({ que: `acento sobre ${k}`, texto: v.morado, fondo })),
     { que: 'acento sobre su fondo suave', texto: v.morado, fondo: v.suave },
     { que: 'texto del botón', texto: v.sobre, fondo: v.morado },
     { que: 'texto del botón (hover)', texto: v.sobre, fondo: v.hover },
     { que: 'tarjeta del día', texto: SOBRE_HERO, fondo: v.hero2 },
+    { que: 'tarjeta del día (su noche)', texto: SOBRE_HERO, fondo: v.hero },
+    { que: 'tarjeta del día (texto 2)', texto: '#BDB8DA', fondo: v.hero },
   ].map((p) => ({ ...p, ratio: contraste(p.texto, p.fondo) }));
 }
 export function acentoValido(acento, minimo = 4.5) {
@@ -42,7 +44,7 @@ export function mezclar(a, b, pct) {
 }
 export function contrasteCeldas(acento, tema) {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
-  const sup = SUPERFICIES[tema];
+  const sup = superficiesDe(acento, tema);
   const una = mezclar(v.morado, sup.hoja, tema === 'claro' ? CELDA_UNA.claro : CELDA_UNA.oscuro);
   return { una, vacia: sup['hoja-2'], ratio: contraste(una, sup['hoja-2']) };
 }
@@ -57,24 +59,29 @@ export const VIDRIO = {
   cabecera: { claro: 90, oscuro: 85, oled: 80 },  // las cabeceras pegadas (sobre --tiza, el fondo de la página)
   hoja: { claro: 92, oscuro: 92, oled: 92 },      // las hojas (sobre --hoja; llevan también tinta-3)
 };
-const TEXTOS = TEXTOS_PALETA;
 export function parejasVidrio(acento, tema, tipo = 'barra') {
   const v = tema === 'claro' ? acento.claro : acento.oscuro;
-  const textos = TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
+  const textos = textosDe(acento, tema);
   const peor = tema === 'claro' ? '#000000' : '#FFFFFF';
-  const fondo = mezclar(SUPERFICIES[tema][tipo === 'cabecera' ? 'tiza' : 'hoja'], peor, VIDRIO[tipo][tema]);
+  const fondo = mezclar(superficiesDe(acento, tema)[tipo === 'cabecera' ? 'tiza' : 'hoja'], peor, VIDRIO[tipo][tema]);
   const lista = [['tinta', textos.tinta], ['tinta-2', textos['tinta-2']], ...(tipo === 'hoja' ? [['tinta-3', textos['tinta-3']]] : []), ['acento', v.morado]];
   return lista.map(([que, texto]) => ({ que: `${que} sobre el vidrio (${tipo})`, texto, fondo, ratio: contraste(texto, fondo) }));
 }
 
 // ---------- CSS ----------
-const variables = (v) => `--morado:${v.morado};--morado-hover:${v.hover};--morado-suave:${v.suave};--sobre-morado:${v.sobre};--foco:${v.morado};--hero-2:${v.hero2};`;
-// El CSS de un acento, con los mismos selectores que estilos.css para el tema oscuro (así manda el del sistema
-// cuando el tema es «Sistema»). El morado no necesita nada: es el de serie.
-export function cssAcento(id) {
+// (color 2) y la noche de la tarjeta del día (--hero), del tono del acento: con otro acento ya no arranca en violeta
+const variables = (v) => `--morado:${v.morado};--morado-hover:${v.hover};--morado-suave:${v.suave};--sobre-morado:${v.sobre};--foco:${v.morado};--hero-2:${v.hero2};--hero:${v.hero};`;
+// (color 2) los neutros del acento: los grises y la noche, con su tono (las primitivas de color.css, pisadas)
+const neutros = (n) => (n ? `${Object.entries(n.neutro).map(([p, h]) => `--neutro-${p}:${h};`).join('')}${Object.entries(n.noche).map(([i, h]) => `--noche-${i}:${h};`).join('')}` : '');
+// El CSS de un acento, con los mismos selectores que color.css para el tema oscuro (así manda el del sistema cuando el
+// tema es «Sistema»). El morado no necesita nada: es el de serie. Con alto contraste (color 2), el acento a 7:1 (también
+// el morado), y gana a las reglas del tema por ir con el atributo.
+export function cssAcento(id, { alto = false } = {}) {
   const a = acentoDe(id);
-  if (a.id === ACENTO_DEFECTO) return '';
-  return `:root{${variables(a.claro)}}`
-    + `@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${variables(a.oscuro)}}}`
-    + `:root[data-theme="dark"]{${variables(a.oscuro)}}`;
+  if (a.id === ACENTO_DEFECTO && !alto) return '';
+  const v = alto ? acentoAlto(a) : a;
+  const c = alto ? '[data-contraste="alto"]' : '';
+  return `:root${c}{${neutros(neutrosDe(a))}${variables(v.claro)}}`
+    + `@media (prefers-color-scheme: dark){:root${c}:not([data-theme="light"]){${variables(v.oscuro)}}}`
+    + `:root${c}[data-theme="dark"]{${variables(v.oscuro)}}`;
 }

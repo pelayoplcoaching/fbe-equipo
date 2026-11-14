@@ -79,15 +79,22 @@ const DEF = {
   rosa: { h: 355, c: [0.02, 0.04, 0.08, 0.13, 0.18, 0.2, 0.19, 0.17, 0.14, 0.1, 0.07] },
   turquesa: { h: 190, c: [0.025, 0.045, 0.075, 0.1, 0.115, 0.11, 0.095, 0.085, 0.07, 0.055, 0.04] },
   naranja: { h: 48, c: [0.025, 0.05, 0.09, 0.13, 0.165, 0.17, 0.15, 0.13, 0.105, 0.08, 0.055] },
+  // (color 2) índigo, púrpura y cielo: los tonos que faltaban (iconos de colores, avatares, el agua, el acento Orquídea)
+  indigo: { h: 268, c: [0.018, 0.035, 0.07, 0.11, 0.155, 0.195, 0.205, 0.19, 0.16, 0.12, 0.08] },
+  purpura: { h: 318, c: [0.02, 0.04, 0.08, 0.13, 0.175, 0.2, 0.19, 0.17, 0.14, 0.1, 0.07] },
+  cielo: { h: 225, c: [0.02, 0.04, 0.07, 0.1, 0.125, 0.13, 0.115, 0.1, 0.085, 0.065, 0.045] },
 };
 export const ESCALAS = Object.fromEntries(Object.entries(DEF).map(([k, { h, c }]) => [k, Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], c[i], Array.isArray(h) ? h[i] : h)]))]));
 // La noche: las superficies del tema oscuro, cada nivel un poco más claro (la profundidad, con luz y no con sombras)
-const NOCHE_L = [0.165, 0.21, 0.25, 0.29, 0.33];
-export const NOCHE = Object.fromEntries(NOCHE_L.map((L, i) => [i, oklch(L, [0.017, 0.032, 0.036, 0.038, 0.04][i], 288)]));
+const NOCHE_L = [0.165, 0.21, 0.25, 0.29, 0.33], NOCHE_C = [0.017, 0.032, 0.036, 0.038, 0.04];
+export const NOCHE = Object.fromEntries(NOCHE_L.map((L, i) => [i, oklch(L, NOCHE_C[i], 288)]));
 export const BLANCO = '#FFFFFF', NEGRO = '#000000';
 // La tinta noche de la portada, del icono y de la barra del sistema al abrir (la de siempre: no se toca)
 export const PORTADA = '#1E1548';
 const e = (k, p) => ESCALAS[k][p];
+// El dorado de los récords como tinta sobre claro (AA sobre blanco, sobre su fondo suave y sobre el fondo de la página)
+// y el naranja vivo del fuego de la racha
+export const ORO_TINTA = oklch(0.535, 0.115, 83), FUEGO = oklch(0.68, 0.21, 38);
 
 // ---------- los temas (2, 4–7): cada token con significado, en su paso ----------
 // Los nombres de la izquierda son los de estilos.css (los de siempre); se escriben en color.css como var(--escala-paso).
@@ -100,7 +107,7 @@ export const TEMAS = {
     aviso: ['ambar', 700], 'aviso-suave': ['ambar', 100], 'aviso-borde': ['ambar', 300], 'aviso-solido': ['ambar', 600],
     alerta: ['rojo', 600], 'alerta-suave': ['rojo', 100], 'alerta-borde': ['rojo', 300], 'alerta-solido': ['rojo', 600],
     info: ['azul', 700], 'info-suave': ['azul', 100], 'info-borde': ['azul', 300], 'info-solido': ['azul', 600],
-    dato: ['marca', 500], oro: ['oro', 400], 'oro-texto': ['oro', 700], 'oro-suave': ['oro', 100],
+    dato: ['marca', 500], oro: ORO_TINTA, 'oro-claro': ['oro', 200], 'oro-suave': ['oro', 50],
     flota: ['neutro', 950], 'sobre-flota': ['neutro', 100],
     'int-trabajo': ['verde', 700], 'int-descanso': ['azul', 700], 'int-preparar': ['ambar', 700], 'int-fin': ['marca', 700],
     'disco-rojo': ['rojo', 600], 'disco-azul': ['azul', 600], 'disco-amarillo': ['oro', 400], 'disco-verde': ['verde', 600],
@@ -114,7 +121,7 @@ export const TEMAS = {
     aviso: ['ambar', 300], 'aviso-suave': '#332410', 'aviso-borde': ['ambar', 700], 'aviso-solido': ['ambar', 400],
     alerta: ['rojo', 300], 'alerta-suave': '#3A1620', 'alerta-borde': ['rojo', 700], 'alerta-solido': ['rojo', 400],
     info: ['azul', 300], 'info-suave': '#142640', 'info-borde': ['azul', 700], 'info-solido': ['azul', 400],
-    dato: ['marca', 400], oro: ['oro', 300], 'oro-texto': ['oro', 200], 'oro-suave': '#2E2510',
+    dato: ['marca', 400], oro: ['oro', 200], 'oro-claro': ['oro', 200], 'oro-suave': ['ambar', 900],
     flota: ['noche', 4], 'sobre-flota': '#EDEBF7',
     'int-trabajo': ['verde', 800], 'int-descanso': ['azul', 800], 'int-preparar': ['ambar', 800], 'int-fin': ['marca', 800],
     'disco-rojo': ['rojo', 400], 'disco-azul': ['azul', 400], 'disco-amarillo': ['oro', 300], 'disco-verde': ['verde', 400],
@@ -122,7 +129,7 @@ export const TEMAS = {
   },
 };
 // El negro puro (OLED): solo cambian las superficies (en estilos.css)
-export const OLED = { tiza: NEGRO, hoja: '#0C0B12', 'hoja-2': '#17151F' };
+export const OLED = { tiza: NEGRO, hoja: '#0C0B12', 'hoja-2': '#17151F', 'hoja-3': '#1F1D2A', linea: '#25233A', flota: '#1B1929', 'borde-flota': '#34304E' };
 
 // El valor hex de un token en un tema
 export function valor(tema, token) {
@@ -144,8 +151,8 @@ const acento = (k, L = null, oscuroP = 400) => {
   const [, c, h] = aOklch(e(k, 600));
   const claro = L == null ? { morado: e(k, 600), hover: e(k, 700) } : { morado: oklch(L, c, h), hover: oklch(L - 0.07, c, h) };
   return {
-  claro: { ...claro, suave: e(k, 100), sobre: BLANCO, hero2: e(k, 900) },
-  oscuro: { morado: e(k, oscuroP), hover: e(k, oscuroP - 100), suave: oklch(0.27, 0.06, aOklch(e(k, 500))[2]), sobre: NOCHE[0], hero2: e(k, 800) },
+  claro: { ...claro, suave: e(k, 100), sobre: BLANCO, hero2: e(k, 900), hero: e(k, 950) },
+  oscuro: { morado: e(k, oscuroP), hover: e(k, oscuroP - 100), suave: oklch(0.27, 0.06, aOklch(e(k, 500))[2]), sobre: NOCHE[0], hero2: e(k, 800), hero: k === 'marca' ? '#211B42' : oklch(0.245, 0.055, h) },
   };
 };
 export const ACENTOS = [
@@ -154,15 +161,16 @@ export const ACENTOS = [
   { id: 'pino', nombre: 'Verde pino', ...acento('turquesa', 0.45) },
   { id: 'frambuesa', nombre: 'Frambuesa', ...acento('rosa') },
   { id: 'cobre', nombre: 'Cobre', ...acento('naranja', 0.47) },
-  { id: 'oceano', nombre: 'Océano', claro: { morado: oklch(0.47, 0.11, 225), hover: oklch(0.41, 0.1, 225), suave: oklch(0.95, 0.03, 225), sobre: BLANCO, hero2: oklch(0.28, 0.07, 225) }, oscuro: { morado: oklch(0.8, 0.11, 220), hover: oklch(0.86, 0.09, 220), suave: oklch(0.27, 0.05, 225), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 225) } },
-  { id: 'lima', nombre: 'Lima', claro: { morado: oklch(0.47, 0.12, 128), hover: oklch(0.41, 0.11, 128), suave: oklch(0.95, 0.05, 125), sobre: BLANCO, hero2: oklch(0.28, 0.07, 130) }, oscuro: { morado: oklch(0.85, 0.17, 125), hover: oklch(0.9, 0.14, 125), suave: oklch(0.27, 0.05, 128), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 130) } },
-  { id: 'grafito', nombre: 'Grafito', claro: { morado: e('neutro', 800), hover: e('neutro', 900), suave: e('neutro', 100), sobre: BLANCO, hero2: e('neutro', 900) }, oscuro: { morado: e('neutro', 200), hover: e('neutro', 100), suave: e('neutro', 900), sobre: NOCHE[0], hero2: e('neutro', 800) } },
+  { id: 'orquidea', nombre: 'Orquídea', ...acento('purpura') },
+  { id: 'oceano', nombre: 'Océano', claro: { morado: oklch(0.47, 0.11, 225), hover: oklch(0.41, 0.1, 225), suave: oklch(0.95, 0.03, 225), sobre: BLANCO, hero2: oklch(0.28, 0.07, 225), hero: oklch(0.2, 0.045, 225) }, oscuro: { morado: oklch(0.8, 0.11, 220), hover: oklch(0.86, 0.09, 220), suave: oklch(0.27, 0.05, 225), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 225), hero: oklch(0.245, 0.05, 225) } },
+  { id: 'lima', nombre: 'Lima', claro: { morado: oklch(0.47, 0.12, 128), hover: oklch(0.41, 0.11, 128), suave: oklch(0.95, 0.05, 125), sobre: BLANCO, hero2: oklch(0.28, 0.07, 130), hero: oklch(0.2, 0.04, 130) }, oscuro: { morado: oklch(0.85, 0.17, 125), hover: oklch(0.9, 0.14, 125), suave: oklch(0.27, 0.05, 128), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 130), hero: oklch(0.245, 0.045, 130) } },
+  { id: 'grafito', nombre: 'Grafito', claro: { morado: e('neutro', 800), hover: e('neutro', 900), suave: e('neutro', 100), sobre: BLANCO, hero2: oklch(0.3, 0, 0), hero: oklch(0.2, 0, 0) }, oscuro: { morado: e('neutro', 200), hover: e('neutro', 100), suave: e('neutro', 900), sobre: NOCHE[0], hero2: oklch(0.37, 0, 0), hero: oklch(0.245, 0, 0) } },
 ];
 
 // ---------- los datos (14): gráficas ----------
 // Ocho colores categóricos que se distinguen también con daltonismo (orden Okabe-Ito adaptado a la marca), en orden fijo.
 export const SERIES = {
-  claro: [e('marca', 600), oklch(0.62, 0.15, 55), e('turquesa', 600), e('azul', 600), e('rosa', 600), oklch(0.72, 0.15, 90), e('verde', 700), e('neutro', 600)],
+  claro: [e('marca', 600), oklch(0.62, 0.15, 55), e('turquesa', 600), e('azul', 600), e('rosa', 600), e('oro', 500), e('verde', 700), e('neutro', 600)],   // (todas, ≥ 3:1 sobre las superficies claras)
   oscuro: [e('marca', 400), oklch(0.78, 0.13, 55), e('turquesa', 300), e('azul', 300), e('rosa', 300), oklch(0.85, 0.13, 90), e('verde', 300), e('neutro', 300)],
 };
 // Secuencial (una sola tinta, de poco a mucho) y divergente (por debajo ↔ por encima del objetivo, gris en medio)
@@ -171,19 +179,23 @@ export const DIVERGENTE = [e('naranja', 600), e('naranja', 300), e('neutro', 200
 
 // ---------- las secciones (15): todas salen de las escalas ----------
 export const MACROS = {
-  claro: { proteina: e('marca', 600), carbos: e('oro', 600), grasa: e('azul', 600) },
+  claro: { proteina: e('marca', 600), carbos: e('ambar', 500), grasa: e('azul', 600) },   // (color 2) los hidratos, en ámbar vivo (antes, un dorado pardo)
   oscuro: { proteina: e('marca', 400), carbos: e('oro', 300), grasa: e('azul', 400) },
 };
+// Las zonas de carrera, de frío (suave) a caliente (muy duro): el relleno y el texto (≥ 4,5:1 sobre su fondo suave)
 export const ZONAS = {
-  claro: [['azul', 500], ['verde', 600], ['oro', 600], ['naranja', 600], ['rojo', 600]],
-  claroTexto: [['azul', 700], ['verde', 700], ['oro', 700], ['naranja', 700], ['rojo', 700]],
-  oscuro: [['azul', 300], ['verde', 300], ['oro', 300], ['naranja', 300], ['rojo', 300]],
-  oscuroTexto: [['azul', 200], ['verde', 200], ['oro', 200], ['naranja', 200], ['rojo', 200]],
+  claro: { relleno: [['azul', 500], ['verde', 600], ['oro', 500], ['naranja', 500], ['rojo', 600]], texto: [['azul', 700], ['verde', 700], ['oro', 700], ['naranja', 700], ['rojo', 700]] },
+  oscuro: { relleno: [['azul', 300], ['verde', 400], ['oro', 300], ['naranja', 400], ['rojo', 400]], texto: [['azul', 200], ['verde', 300], ['oro', 200], ['naranja', 300], ['rojo', 300]] },
+};
+// …y con la ayuda para daltonismo, una rampa que no depende del verde ni del rojo: del azul al naranja, cada vez más intensa
+export const ZONAS_DALTONISMO = {
+  claro: { relleno: [['azul', 300], ['azul', 600], ['neutro', 500], ['naranja', 400], ['naranja', 700]], texto: [['azul', 700], ['azul', 800], ['neutro', 700], ['naranja', 700], ['naranja', 800]] },
+  oscuro: { relleno: [['azul', 200], ['azul', 400], ['neutro', 400], ['naranja', 400], ['naranja', 300]], texto: [['azul', 200], ['azul', 300], ['neutro', 200], ['naranja', 300], ['naranja', 200]] },
 };
 // Las celebraciones (12): oro de verdad, fuego y la marca
 export const CELEBRACION = {
   record: [e('oro', 200), e('oro', 400), e('oro', 600)],
-  fuego: [e('ambar', 300), e('naranja', 500), e('rojo', 600)],
+  fuego: [e('ambar', 300), FUEGO, e('rojo', 600)],
   confeti: [e('marca', 500), e('oro', 400), e('rosa', 400), e('turquesa', 400), e('azul', 400), e('naranja', 400)],
 };
 
@@ -214,4 +226,69 @@ export function tonoDia({ hero = 'entreno', sesion = 'fuerza', foco = null } = {
 // con «m» dependen del trozo anterior y no se pueden sacar sueltos).
 export function trozosCerrados(d = '') {
   return String(d).split(/(?=[Mm])/).filter((t) => /^M/.test(t) && /[zZ]\s*$/.test(t.trim())).join(' ');
+}
+
+// =====================================================================================================================
+// Color, tanda 2
+// =====================================================================================================================
+
+// ---------- los neutros siguen al acento (13) ----------
+// Con un acento que no es el morado, los grises y la noche del tema oscuro toman su tono (misma luminosidad, misma
+// viveza mínima): el fondo, las líneas y las superficies casan con el color elegido. Con Grafito, gris puro.
+export function neutrosDe(acento) {
+  if (!acento || acento.id === 'morado') return null;
+  const gris = acento.id === 'grafito';
+  const h = aOklch(acento.claro.morado)[2];
+  return {
+    neutro: Object.fromEntries(PASOS.map((p, i) => [p, oklch(LUZ[i], gris ? 0 : DEF.neutro.c[i], h)])),
+    noche: Object.fromEntries(NOCHE_L.map((L, i) => [i, oklch(L, gris ? 0 : NOCHE_C[i] * 0.8, h)])),
+  };
+}
+// Las superficies y los textos de un tema con un acento (para el contraste y para la barra del sistema)
+export function superficiesDe(acento, tema) {
+  const n = neutrosDe(acento);
+  if (!n || tema === 'oled') return SUPERFICIES[tema];
+  return tema === 'claro' ? { tiza: n.neutro[100], hoja: BLANCO, 'hoja-2': n.neutro[50] } : { tiza: n.noche[0], hoja: n.noche[1], 'hoja-2': n.noche[2] };
+}
+export function textosDe(acento, tema) {
+  const n = neutrosDe(acento);
+  if (!n || tema !== 'claro') return TEXTOS[tema === 'claro' ? 'claro' : 'oscuro'];
+  return { tinta: n.neutro[950], 'tinta-2': n.neutro[700], 'tinta-3': n.neutro[600] };
+}
+
+// ---------- el acento con alto contraste (8) ----------
+// Con «Alto contraste» (o si lo pide el sistema), el acento se oscurece (claro) o se aclara (oscuro) hasta 7:1 (AAA)
+// sobre todas las superficies de su tema; el texto de los botones sigue pasando sobre él.
+function hasta(hex, fondos, paso, minimo = 7) {
+  let [L, C, h] = aOklch(hex), x = hex;
+  for (let i = 0; i < 70 && Math.min(...fondos.map((f) => contraste(x, f))) < minimo; i++) { L += paso; x = oklch(L, C, h); }
+  return x;
+}
+export function acentoAlto(acento) {
+  const claro = hasta(acento.claro.morado, [...Object.values(superficiesDe(acento, 'claro')), acento.claro.suave], -0.01);
+  const oscuro = hasta(acento.oscuro.morado, [...Object.values(superficiesDe(acento, 'oscuro')), ...Object.values(SUPERFICIES.oled), acento.oscuro.suave], 0.01);
+  const mover = (hex, d) => { const [L, C, h] = aOklch(hex); return oklch(L + d, C, h); };
+  return { ...acento, claro: { ...acento.claro, morado: claro, hover: mover(claro, -0.06) }, oscuro: { ...acento.oscuro, morado: oscuro, hover: mover(oscuro, 0.05) } };
+}
+
+// ---------- pantallas de gama ancha (7) ----------
+// En las pantallas P3 (casi todos los móviles de hoy), lo decorativo gana viveza: misma luminosidad y tono, más croma.
+// Solo lo que no es texto (degradados, confeti, discos, datos): el contraste del texto no cambia.
+export function vivo(hex, k = 1.28) {
+  const [L, C, h] = aOklch(hex);
+  return `oklch(${(L * 100).toFixed(1)}% ${(C * k).toFixed(3)} ${h.toFixed(1)})`;
+}
+
+// ---------- el texto que va sobre un color (para las muestras) ----------
+export const sobre = (hex) => (contraste(hex, BLANCO) >= 4.5 ? BLANCO : ESCALAS.neutro[950]);
+
+// ---------- la tabla de contraste de «Paleta» (y de las pruebas) ----------
+// Las parejas texto/fondo de un tema con un acento (y con alto contraste o daltonismo), con su contraste
+export function parejasPaleta({ tema = 'claro', acento = ACENTOS[0], alto = false, daltonismo = false } = {}) {
+  const t = tema === 'oscuro' ? 'oscuro' : 'claro';
+  const sup = superficiesDe(acento, t), txt = { ...textosDe(acento, t), ...(alto ? Object.fromEntries(Object.entries(ALTO_CONTRASTE[t]).filter(([k]) => k !== 'linea')) : {}) };
+  const ac = (alto ? acentoAlto(acento) : acento)[t];
+  const est = (k) => (daltonismo && DALTONISMO[t][k]) || valor(t, k);
+  const filas = [['Texto', txt.tinta], ['Texto secundario', txt['tinta-2']], ['Texto terciario', txt['tinta-3']], ['Acento', ac.morado], ['Hecho', est('ok')], ['Aviso', valor(t, 'aviso')], ['Alerta', est('alerta')], ['Info', valor(t, 'info')], ['Oro', valor(t, 'oro')]];
+  return filas.map(([nombre, color]) => ({ nombre, color, tarjeta: contraste(color, sup.hoja), fondo: contraste(color, sup.tiza) }));
 }

@@ -230,7 +230,7 @@ export function ReaccionesPost({ post, con045 = false, ocupado = false, alReacci
 // (tam: el tamaño de la letra; ancho: lo que ocupa como mucho, para que no se salga de su forma)
 const DIBUJOS = {
   pr: { fondo: '#EBC166', tinta: '#181626', forma: 'estrella', linea: 'PR', tam: 26, sub: 'récord', tamSub: 11 },
-  a_tope: { fondo: '#F0495C', tinta: '#FFFFFF', forma: 'rayo', linea: 'A TOPE', tam: 17, ancho: 72 },
+  a_tope: { fondo: '#E6424C', tinta: '#FFFFFF', forma: 'rayo', linea: 'A TOPE', tam: 17, ancho: 72 },
   semana_completa: { fondo: '#48C77C', tinta: '#00302E', forma: 'semana', linea: 'SEMANA', tam: 16, ancho: 70, sub: 'completa', tamSub: 12 },
   constancia: { fondo: '#593EDE', tinta: '#FFFFFF', forma: 'llama', linea: 'CONSTANCIA', tam: 13, ancho: 76 },
   vamos: { fondo: '#3A83ED', tinta: '#FFFFFF', forma: 'explosion', linea: '¡VAMOS!', tam: 14, ancho: 54 },

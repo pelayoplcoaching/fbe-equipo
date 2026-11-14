@@ -16,8 +16,8 @@ import { useBienvenidaAbierta } from './Bienvenida.jsx';
 const abreviar = (n) => (n >= 1000 ? `${num(n / 1000, n % 1000 ? 1 : 0)}k` : String(n));
 const METAL = {
   bronce: { luz: '#FFD6AA', medio: '#BB7400', sombra: '#8C5500', cantoLuz: '#FFB38C', cantoSombra: '#714400', tinta: '#3D2200', relieve: 'rgba(255, 236, 214, .65)' },
-  plata: { luz: '#F6F6F9', medio: '#C7C6CF', sombra: '#858492', cantoLuz: '#FFFFFF', cantoSombra: '#6B7280', tinta: '#2A283D', relieve: 'rgba(255, 255, 255, .8)' },
-  oro: { luz: '#FEEDC9', medio: '#EBC166', sombra: '#A97F00', cantoLuz: '#FEEDC9', cantoSombra: '#8A6212', tinta: '#362600', relieve: 'rgba(255, 248, 214, .75)' },
+  plata: { luz: '#F6F6F9', medio: '#C7C6CF', sombra: '#858492', cantoLuz: '#FFFFFF', cantoSombra: '#626171', tinta: '#2A283D', relieve: 'rgba(255, 255, 255, .8)' },
+  oro: { luz: '#FEEDC9', medio: '#EBC166', sombra: '#A97F00', cantoLuz: '#FEEDC9', cantoSombra: '#8C6600', tinta: '#362600', relieve: 'rgba(255, 248, 214, .75)' },
   platino: { luz: '#F2F7FF', medio: '#DDDDE3', sombra: '#AAA9B5', cantoLuz: '#F2F7FF', cantoSombra: '#626171', tinta: '#282638', relieve: 'rgba(255, 255, 255, .8)' },
 };
 let contador = 0;

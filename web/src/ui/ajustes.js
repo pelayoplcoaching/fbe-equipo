@@ -11,8 +11,8 @@
 // v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
 import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
-import { cssAcento, ACENTO_DEFECTO } from '../logica/acentos.js';
-import { valor as valorPaleta } from '../logica/paleta.js';
+import { cssAcento, acentoDe, ACENTO_DEFECTO } from '../logica/acentos.js';
+import { superficiesDe } from '../logica/paleta.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
 import { limpiarVolumenes, horaValida } from '../logica/sonido.js';
@@ -51,8 +51,12 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // el paisaje sonoro del descanso (ninguno) y marcar la serie desde los auriculares (no)
   silencioActivo: false, silencioDesde: '23:00', silencioHasta: '08:00', sonidoTeclado: false, avisoSeguimos: true, pruebaSonido: false,
   vozNombre: null, vozVelocidad: 1, contarReps: false, paisajeDescanso: null, auricularesSerie: false };
-// (color, mejora 19) la barra del sistema, del color exacto del fondo de cada tema (de la paleta)
-const COLOR = { claro: valorPaleta('claro', 'tiza'), oscuro: valorPaleta('oscuro', 'tiza'), oled: '#000000' };
+// (color, mejora 19; color 2, 14) la barra del sistema, del color exacto del fondo de cada tema con el acento elegido
+// (los neutros siguen al acento: logica/paleta.js)
+const coloresBarra = (acento) => ({ claro: superficiesDe(acento, 'claro').tiza, oscuro: superficiesDe(acento, 'oscuro').tiza, oled: '#000000' });
+// (color 2, 8) «Alto contraste» también si lo pide el sistema (Aumentar contraste); si cambia con la app abierta, se aplica
+const pideContraste = () => { try { return typeof matchMedia === 'function' && matchMedia('(prefers-contrast: more)').matches; } catch { return false; } };
+let escuchaContraste = false;
 
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
 // igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
@@ -153,17 +157,21 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   // (personalización 3) lo que no quiere ver (las reglas, en personal.css)
   for (const k of ['peso', 'kcal', 'ranking']) { if (a.ocultar?.[k]) r.setAttribute(`data-sin-${k}`, ''); else r.removeAttribute(`data-sin-${k}`); }
   // (color) alto contraste y daltonismo: sus tokens, en color.css (generado desde logica/paleta.js)
-  if (a.altoContraste) r.setAttribute('data-contraste', 'alto'); else r.removeAttribute('data-contraste');
+  const alto = !!a.altoContraste || pideContraste();
+  if (alto) r.setAttribute('data-contraste', 'alto'); else r.removeAttribute('data-contraste');
+  if (!escuchaContraste) { escuchaContraste = true; try { matchMedia('(prefers-contrast: more)').addEventListener?.('change', () => aplicarTema()); } catch { /* */ } }
   if (a.daltonismo) r.setAttribute('data-daltonismo', ''); else r.removeAttribute('data-daltonismo');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
-  const css = cssAcento(a.acento);
+  const css = cssAcento(a.acento, { alto });
   if (css && !hoja) { hoja = document.createElement('style'); hoja.id = 'fbe-acento'; document.head.appendChild(hoja); }
   if (hoja) hoja.textContent = css;
+  const COLOR = coloresBarra(acentoDe(a.acento));
   // Color de la barra del sistema en la app instalada (la de la portada de arranque se queda en morado hasta que se va)
   for (const m of document.querySelectorAll('meta[name="theme-color"]:not(#tc-portada)')) {
     m.dataset.original ||= m.getAttribute('content');
     const oscura = /dark/.test(m.getAttribute('media') || '');
-    m.setAttribute('content', tema === 'sistema' ? (oled && oscura ? COLOR.oled : m.dataset.original) : tema === 'oscuro' && oled ? COLOR.oled : COLOR[tema]);
+    const noche = oled ? COLOR.oled : COLOR.oscuro;
+    m.setAttribute('content', tema === 'sistema' ? (oscura ? noche : COLOR.claro) : tema === 'oscuro' ? noche : COLOR.claro);
   }
 }

@@ -85,4 +85,4 @@ export function moverBorde(r, lado, paso) {
   if (lado === 'aba') return recorteValido({ ...c, h: c.h + paso });
   return c;
 }
-export const COLORES_EDITOR = [['#FFFFFF', 'blanco'], ['#0E0D15', 'negro'], ['#D45E00', 'rojo'], ['#EC940D', 'amarillo'], ['#06A059', 'verde'], ['#3E63DD', 'azul']];
+export const COLORES_EDITOR = [['#FFFFFF', 'blanco'], ['#0E0D15', 'negro'], ['#E6424C', 'rojo'], ['#EC940D', 'amarillo'], ['#06A059', 'verde'], ['#3351D6', 'azul']];

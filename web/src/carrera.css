@@ -5,23 +5,15 @@
    ===================================================================================================================== */
 
 :root {
-  /* Las cinco zonas: de frio (suave) a caliente (muy duro). Fondo suave y texto que pasa de 4,5:1 sobre el */
-  --z1: var(--neutro-500); --z2: #1F8A55; --z3: var(--oro-500); --z4: var(--naranja-500); --z5: #C02536;
-  --z1-t: var(--neutro-700); --z2-t: var(--verde-600); --z3-t: var(--oro-600); --z4-t: var(--naranja-600); --z5-t: var(--rojo-600);
+  /* Las cinco zonas: de frio (suave) a caliente (muy duro). Fondo suave y texto que pasa de 4,5:1 sobre el.
+     (color 2) Sus colores salen de la paleta (logica/paleta.js: ZONAS; --zona-N en color.css), también en oscuro y con
+     la ayuda para daltonismo. */
+  --z1: var(--zona-1); --z2: var(--zona-2); --z3: var(--zona-3); --z4: var(--zona-4); --z5: var(--zona-5);
+  --z1-t: var(--zona-1-t); --z2-t: var(--zona-2-t); --z3-t: var(--zona-3-t); --z4-t: var(--zona-4-t); --z5-t: var(--zona-5-t);
   --z-suave: 14%;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --z1: var(--neutro-400); --z2: var(--verde-400); --z3: var(--oro-300); --z4: var(--ambar-300); --z5: #F35D6E;
-    --z1-t: var(--azul-300); --z2-t: var(--verde-300); --z3-t: var(--oro-200); --z4-t: var(--naranja-300); --z5-t: var(--rojo-300);
-    --z-suave: 22%;
-  }
-}
-:root[data-theme="dark"] {
-  --z1: var(--neutro-400); --z2: var(--verde-400); --z3: var(--oro-300); --z4: var(--ambar-300); --z5: #F35D6E;
-  --z1-t: var(--azul-300); --z2-t: var(--verde-300); --z3-t: var(--oro-200); --z4-t: var(--naranja-300); --z5-t: var(--rojo-300);
-  --z-suave: 22%;
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --z-suave: 22%; } }
+:root[data-theme="dark"] { --z-suave: 22%; }
 
 [data-zona="1"] { --zc: var(--z1); --zt: var(--z1-t); }
 [data-zona="2"] { --zc: var(--z2); --zt: var(--z2-t); }
@@ -64,7 +56,7 @@
 
 /* ---------- la ficha del coach ---------- */
 .carrera-resumen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
 .carrera-resumen-nombre { font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
 .carrera-fase-fila { display: grid; grid-template-columns: minmax(0, 1.2fr) 64px minmax(0, 2fr) auto; gap: 6px; align-items: center; }
 .carrera-fases { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -172,7 +164,7 @@
 
 /* ---------- en Hoy y en "Tu carrera" ---------- */
 .tarjeta-carrera-hoy { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--z2) 12%, var(--hoja)), var(--hoja) 65%); box-shadow: var(--sombra-tarjeta); }
+  background: linear-gradient(var(--oklab,) 120deg, color-mix(in srgb, var(--z2) 12%, var(--hoja)), var(--hoja) 65%); box-shadow: var(--sombra-tarjeta); }
 .tarjeta-carrera-hoy .ios-ico { background: var(--z2); color: var(--hoja); }
 .tarjeta-carrera-hoy strong { text-wrap: balance; }
 .carrera-objetivo { display: grid; gap: 2px; padding: 18px 16px; border-radius: 18px; color: var(--sobre-morado);

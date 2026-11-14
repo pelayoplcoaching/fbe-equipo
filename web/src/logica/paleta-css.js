@@ -1,5 +1,5 @@
 // El texto de web/src/color.css, desde la paleta (lo escribe scripts/paleta.mjs; las pruebas lo comparan con el archivo).
-import { ESCALAS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA } from './paleta.js';
+import { ESCALAS, NOCHE, BLANCO, NEGRO, TEMAS, ACENTOS, SERIES, SECUENCIAL, DIVERGENTE, CELEBRACION, DALTONISMO, ALTO_CONTRASTE, PORTADA, OLED, ZONAS, ZONAS_DALTONISMO, FUEGO, valor, vivo } from './paleta.js';
 
 const ref = (v) => {
   if (typeof v === 'string') return v;
@@ -28,7 +28,7 @@ export function cssPaleta() {
     '--texto: var(--tinta); --texto-2: var(--tinta-2); --texto-3: var(--tinta-3); --borde-suave: var(--linea);',
     '--accion: var(--morado); --accion-hover: var(--morado-hover); --accion-suave: var(--morado-suave); --sobre-accion: var(--sobre-morado);',
     '--accion-pulsado: color-mix(in oklch, var(--morado) 82%, var(--tinta));',
-    `--tinta-noche: ${PORTADA};`,
+    `--tinta-noche: ${PORTADA};`, `--fuego: ${FUEGO};`,
     '--grad-noche: linear-gradient(160deg, var(--hero) 0%, var(--hero) 35%, var(--hero-2) 100%);',
     '--grad-amanecer: linear-gradient(135deg, var(--morado) 0%, var(--rosa-400) 55%, var(--oro-300) 100%);',
     `--grad-record: linear-gradient(135deg, ${CELEBRACION.record.join(', ')});`,
@@ -37,6 +37,21 @@ export function cssPaleta() {
     ...SECUENCIAL.map((c, i) => `--seq-${i + 1}: ${c};`),
     ...DIVERGENTE.map((c, i) => `--div-${i + 1}: ${c};`),
   ];
+  // (color 2, 4) las zonas de carrera (relleno y texto), y con la ayuda para daltonismo
+  const zonas = (z) => [...z.relleno.map((v, i) => `--zona-${i + 1}: ${ref(v)};`), ...z.texto.map((v, i) => `--zona-${i + 1}-t: ${ref(v)};`)];
+  // (color 2, 6) el negro puro (OLED): solo cuando se ve el tema oscuro
+  const oled = [...Object.entries(OLED).map(([k, v]) => `--${k}: ${v};`), '--borde: rgba(255, 255, 255, .08);'];
+  // (color 2, 7) lo decorativo, más vivo en las pantallas de gama ancha
+  const p3 = (t) => [
+    ...SERIES[t].slice(1).map((c, i) => `--serie-${i + 2}: ${vivo(c)};`),
+    ...['disco-rojo', 'disco-azul', 'disco-amarillo', 'disco-verde', 'dato'].map((k) => `--${k}: ${vivo(valor(t, k))};`),
+  ];
+  const p3Comun = [
+    ...CELEBRACION.confeti.map((c, i) => `--confeti-${i + 1}: ${vivo(c)};`),
+    `--grad-record: linear-gradient(in oklch 135deg, ${CELEBRACION.record.map((c) => vivo(c)).join(', ')});`,
+    `--grad-fuego: linear-gradient(in oklch 160deg, ${CELEBRACION.fuego.map((c) => vivo(c)).join(', ')});`,
+  ];
+  const sangrar = (txt) => txt.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n');
   const serie = (t) => SERIES[t].map((c, i) => `--serie-${i + 1}: ${i === 0 ? 'var(--morado)' : c};`);
   const dalt = (t) => Object.entries(DALTONISMO[t]).map(([k, v]) => `--${k}: ${v};`);
   const alto = (t) => Object.entries(ALTO_CONTRASTE[t]).map(([k, v]) => `--${k}: ${v};`);
@@ -52,9 +67,11 @@ export function cssPaleta() {
 /* Primitivas: diez escalas de 50 a 950 (diseñadas en OKLCH) y la noche (las superficies del tema oscuro) */
 ${bloque(':root', prim)}
 /* Tema claro (y lo común a los dos temas) */
-${bloque(':root', [...tema('claro'), ...acentoDecl(ACENTOS[0].claro), ...comunes, ...serie('claro')])}
+${bloque(':root', [...tema('claro'), ...acentoDecl(ACENTOS[0].claro), ...comunes, ...serie('claro'), ...zonas(ZONAS.claro)])}
 /* Tema oscuro */
-${dosOscuros('', [...tema('oscuro'), ...acentoDecl(ACENTOS[0].oscuro), ...serie('oscuro')])}
+${dosOscuros('', [...tema('oscuro'), ...acentoDecl(ACENTOS[0].oscuro), ...serie('oscuro'), ...zonas(ZONAS.oscuro)])}
+/* Negro puro (OLED) */
+${dosOscuros('[data-oled]', oled)}
 /* (8) Los degradados, interpolados en OKLCH donde se puede (no se ensucian en el medio) */
 @supports (background: linear-gradient(in oklch, red, blue)) {
   :root {
@@ -63,7 +80,19 @@ ${['--grad-noche: linear-gradient(160deg, var(--hero) 0%, var(--hero) 35%, var(-
 }
 
 /* (18) Ayuda para daltonismo: lo hecho, en azul; lo que falta o va mal, en naranja */
-${bloque(':root[data-daltonismo]', dalt('claro'))}${dosOscuros('[data-daltonismo]', dalt('oscuro'))}
+${bloque(':root[data-daltonismo]', [...dalt('claro'), ...zonas(ZONAS_DALTONISMO.claro)])}${dosOscuros('[data-daltonismo]', [...dalt('oscuro'), ...zonas(ZONAS_DALTONISMO.oscuro)])}
 /* (17) Alto contraste: textos y líneas al máximo (AAA) */
-${bloque(':root[data-contraste="alto"]', alto('claro'))}${dosOscuros('[data-contraste="alto"]', alto('oscuro'))}`;
+${bloque(':root[data-contraste="alto"]', alto('claro'))}${dosOscuros('[data-contraste="alto"]', alto('oscuro'))}
+/* (color 2, 5) Degradados sin zona gris: los lineales con dirección de toda la app llevan «var(--oklab,)» y, donde el
+   navegador puede, se interpolan en OKLab (donde no, como siempre: la variable no existe y no añade nada) */
+@supports (background: linear-gradient(in oklab, red, blue)) {
+  :root { --oklab: in oklab; }
+}
+
+/* (color 2, 7) Pantallas de gama ancha (P3): lo decorativo, con más viveza (el texto no cambia) */
+@supports (color: oklch(0% 0 0)) and (background: linear-gradient(in oklch, red, blue)) {
+  @media (color-gamut: p3) {
+${sangrar(sangrar(bloque(':root', [...p3Comun, ...p3('claro')])))}${sangrar(sangrar(dosOscuros('', p3('oscuro'))))}  }
+}
+`;
 }

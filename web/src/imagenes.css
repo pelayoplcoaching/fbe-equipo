@@ -20,14 +20,14 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
   background: var(--hero); color: var(--sobre-hero); box-shadow: var(--sombra-tarjeta, var(--sombra)); }
 .cab-ilu > p, .cab-ilu > .cab-ilu-texto { position: relative; z-index: 1; margin: 0; max-width: 58%; font-size: 1.0625rem; line-height: 1.35; font-weight: 650; text-wrap: pretty; }
 .cab-ilu .cab-ilu-img { position: absolute; z-index: 0; top: 0; right: 0; height: 100%; width: auto; aspect-ratio: var(--proporcion, 1); object-fit: cover; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, var(--negro) 38%); mask-image: linear-gradient(to right, transparent 0%, var(--negro) 38%); }
+  -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 38%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 38%); }
 .cab-ilu .cab-ilu-icono { display: grid; place-items: center; color: var(--c); -webkit-mask-image: none; mask-image: none; width: 8.25rem; }
 .cab-ilu .cab-ilu-icono svg { width: 44px; height: 44px; }
 @media (forced-colors: active) { .cab-ilu .cab-ilu-img { opacity: .35; } }
 
 /* El foco de la semana (bloque P): apaisadas, el motivo a la derecha y el texto encima de la parte tranquila */
 .foco-cab { --proporcion: 16 / 9; min-height: 9rem; }
-.foco-cab .cab-ilu-img { -webkit-mask-image: linear-gradient(to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(to right, transparent 0%, var(--negro) 30%); }
+.foco-cab .cab-ilu-img { -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); }
 .foco-cab .cab-ilu-texto { max-width: 60%; font-size: inherit; font-weight: inherit; }
 .foco-cab-k { text-transform: uppercase; letter-spacing: .06em; opacity: .75; font-weight: 700; }
 .foco-cab-t { font-size: 1.375rem; line-height: 1.15; font-weight: 800; }
@@ -35,7 +35,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 
 /* Las cabeceras del lado del coach (bloque S): apaisadas y algo más bajas */
 .cab-coach { --proporcion: 16 / 9; min-height: 7rem; }
-.cab-coach .cab-ilu-img { -webkit-mask-image: linear-gradient(to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(to right, transparent 0%, var(--negro) 30%); }
+.cab-coach .cab-ilu-img { -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 30%); }
 .cab-coach .cab-ilu-texto { max-width: 62%; font-size: inherit; font-weight: inherit; }
 .cab-coach-t { font-size: 1.125rem; line-height: 1.2; font-weight: 800; }
 .cab-coach .peq { opacity: .85; line-height: 1.35; margin: 0; }
@@ -50,13 +50,13 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ficha-ej-ilu { margin-top: 0; }
 /* (ejercicios) la figura del ejercicio: cuadrada y algo más alta que la estatua; es un botón que la abre en grande */
 .ficha-ej-foto { --proporcion: 1 / 1; min-height: 10rem; }
-.ficha-ej-foto .cab-ilu-img { -webkit-mask-image: linear-gradient(to right, transparent 0%, var(--negro) 24%); mask-image: linear-gradient(to right, transparent 0%, var(--negro) 24%); }
+.ficha-ej-foto .cab-ilu-img { -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 24%); mask-image: linear-gradient(var(--oklab,) to right, transparent 0%, var(--negro) 24%); }
 .ficha-ej-foto-btn { position: absolute; inset: 0 0 0 auto; height: 100%; aspect-ratio: 1; padding: 0; border: 0; background: none; cursor: zoom-in; z-index: 1; }
 .ficha-ej-foto-btn .cab-ilu-img { position: absolute; inset: 0; height: 100%; width: 100%; }
 .ficha-ej-foto-btn:focus-visible { outline: 3px solid var(--sobre-hero, var(--blanco)); outline-offset: -3px; border-radius: var(--r); }
-.ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: var(--noche-2); }
+.ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: var(--tinta-noche); }
 .ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: 11px; }
-.miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; background: var(--noche-2); }
+.miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; background: var(--tinta-noche); }
 .ficha-ej-ilu > p { display: flex; align-items: center; gap: 10px; font-size: var(--tipo-pie, .875rem); }
 .ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }
 .biblioteca-grupo-ilu > p, .toma-ilu > .cab-ilu-texto { display: grid; gap: 2px; }
@@ -74,7 +74,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .historia-mes .historia-fondo { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 72% 50%; pointer-events: none; }
 .historia-mes.con-fondo::before { display: none; }
 .historia-mes.con-fondo::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(180deg, rgba(19, 17, 28, .78) 0%, rgba(19, 17, 28, .58) 38%, rgba(19, 17, 28, .62) 70%, rgba(19, 17, 28, .86) 100%); }
+  background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--neutro-950) 78%, transparent) 0%, color-mix(in srgb, var(--neutro-950) 58%, transparent) 38%, color-mix(in srgb, var(--neutro-950) 62%, transparent) 70%, color-mix(in srgb, var(--neutro-950) 86%, transparent) 100%); }
 .fila-semana.con-mini { grid-template-columns: 3.5rem minmax(0, 1fr) 22px; }
 .fila-semana .mes-mini { width: 3.5rem; height: 3.5rem; border-radius: 12px; object-fit: cover; object-position: 75% 50%; }
 .informe-ilu { --proporcion: 16 / 9; min-height: 7rem; margin-bottom: 4px; }
@@ -97,7 +97,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .historia-anillo .historia-halo { position: absolute; z-index: -1; left: 50%; top: 50%; width: 320px; height: 320px; max-width: none; transform: translate(-50%, -50%);
   mix-blend-mode: screen; opacity: .34; filter: blur(5px); pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 72%, transparent); }
 .hito-pantalla .hito-fondo { position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 62%; max-width: none; object-fit: cover; object-position: 50% 80%;
-  opacity: .6; pointer-events: none; -webkit-mask-image: linear-gradient(to top, var(--negro) 25%, transparent 95%); mask-image: linear-gradient(to top, var(--negro) 25%, transparent 95%); }
+  opacity: .6; pointer-events: none; -webkit-mask-image: linear-gradient(var(--oklab,) to top, var(--negro) 25%, transparent 95%); mask-image: linear-gradient(var(--oklab,) to top, var(--negro) 25%, transparent 95%); }
 .hito-pantalla .hito-cuerpo { position: relative; z-index: 1; }
 .informe-ilu .informe-cumbre { aspect-ratio: 1; }
 @media (forced-colors: active) { .ck-ilu, .historia-halo, .hito-fondo { display: none; } }
@@ -124,7 +124,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .franja-herr { aspect-ratio: 2 / 1; object-position: 50% 50%; border-radius: var(--r); }
 .bdia { isolation: isolate; }
 .bdia > .bdia-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 75% 50%; opacity: .5; pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, var(--negro) 30%, var(--negro) 75%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, var(--negro) 30%, var(--negro) 75%, transparent 100%); }
+  -webkit-mask-image: linear-gradient(var(--oklab,) 180deg, transparent 0%, var(--negro) 30%, var(--negro) 75%, transparent 100%); mask-image: linear-gradient(var(--oklab,) 180deg, transparent 0%, var(--negro) 30%, var(--negro) 75%, transparent 100%); }
 .bienvenida-dibujo.con-foto { padding: 0; overflow: hidden; }
 .bienvenida-dibujo .bienvenida-foto { display: block; width: 100%; height: auto; aspect-ratio: 16 / 7.5; max-height: 34vh; object-fit: cover; object-position: 50% 0%; }
 .carnet-fondo .carnet-foto { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
@@ -141,12 +141,12 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* (algo a la derecha del centro: la marca va arriba a la izquierda de la tarjeta y no se pisan) */
 .app > .acceso-fondo { position: absolute; z-index: 0; top: 0; left: 50%; transform: translateX(-35%); width: auto; max-width: none;
   height: calc(var(--noche, 12rem) * 1.9); aspect-ratio: 2 / 3; object-fit: cover; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, var(--negro) 0, var(--negro) calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(to right, transparent, var(--negro) 20%, var(--negro) 80%, transparent);
-  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, var(--negro) 0, var(--negro) calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(to right, transparent, var(--negro) 20%, var(--negro) 80%, transparent);
+  -webkit-mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0, var(--negro) calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(var(--oklab,) to right, transparent, var(--negro) 20%, var(--negro) 80%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0, var(--negro) calc(var(--noche, 12rem) * .62), transparent calc(var(--noche, 12rem) * .98)), linear-gradient(var(--oklab,) to right, transparent, var(--negro) 20%, var(--negro) 80%, transparent);
   mask-composite: intersect; }
 .app > .acceso-fondo ~ .acceso { position: relative; z-index: 1; }
 .acceso-paso .paso-foto { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% 50%;
-  margin: -26px -20px 4px; border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--marca-950); }
+  margin: -26px -20px 4px; border-top-left-radius: inherit; border-top-right-radius: inherit; background: var(--tinta-noche); }
 @media (min-width: 700px) { .acceso-paso .paso-foto { width: calc(100% + 60px); margin: -32px -30px 4px; } }
 @media (forced-colors: active) { .acceso-fondo, .paso-foto { display: none; } }
 
@@ -172,20 +172,20 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    en la gráfica sin repintar; nada con «reducir movimiento»; paradas con la app en segundo plano (html[data-oculta],
    ui/vivas.js); las mismas imágenes y los mismos huecos (nada se descarga de más ni se mueve de sitio); todo es adorno. */
 .bdia-luz { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.bdia-luz-tarde { background: radial-gradient(90vmax 70vmax at 88% 18%, rgba(255, 176, 92, .3) 0%, rgba(255, 140, 80, .12) 38%, transparent 66%); }
+.bdia-luz-tarde { background: radial-gradient(90vmax 70vmax at 88% 18%, color-mix(in srgb, var(--ambar-300) 30%, transparent) 0%, color-mix(in srgb, var(--naranja-400) 12%, transparent) 38%, transparent 66%); }
 .bdia-rayo { position: absolute; top: -12%; right: 6%; width: 22vmin; height: 135%; transform-origin: 50% 0; transform: rotate(26deg); opacity: .5;
-  background: linear-gradient(90deg, transparent, rgba(255, 238, 200, .3) 40%, rgba(255, 238, 200, .3) 60%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, var(--negro) 0%, transparent 78%); mask-image: linear-gradient(to bottom, var(--negro) 0%, transparent 78%); }
+  background: linear-gradient(var(--oklab,) 90deg, transparent, color-mix(in srgb, var(--oro-100) 30%, transparent) 40%, color-mix(in srgb, var(--oro-100) 30%, transparent) 60%, transparent);
+  -webkit-mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0%, transparent 78%); mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 0%, transparent 78%); }
 .bdia-rayo:nth-child(2) { right: 26%; width: 13vmin; transform: rotate(31deg); opacity: .34; }
 .bdia-rayo:nth-child(3) { right: -8%; width: 30vmin; transform: rotate(21deg); opacity: .28; }
-.bdia-estrella { position: absolute; border-radius: 50%; background: var(--blanco); opacity: .5; box-shadow: 0 0 6px 1px rgba(214, 205, 255, .55); }
+.bdia-estrella { position: absolute; border-radius: 50%; background: var(--blanco); opacity: .5; box-shadow: 0 0 6px 1px color-mix(in srgb, var(--marca-200) 55%, transparent); }
 .franja-cruce { position: relative; overflow: hidden; }
 .franja-cruce > .cruce-capa { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: inherit; opacity: 0; }
 .franja-cruce > .cruce-capa.lista { opacity: 1; }
 .resumen-hero .hero-brillo { position: absolute; z-index: -1; top: -20%; bottom: -20%; left: 0; width: 46%; pointer-events: none; opacity: 0;
-  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .16) 45%, rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, .16) 55%, transparent 100%); }
+  background: linear-gradient(var(--oklab,) 100deg, transparent 0%, rgba(255, 255, 255, .16) 45%, rgba(255, 255, 255, .26) 50%, rgba(255, 255, 255, .16) 55%, transparent 100%); }
 .resumen-medalla.con-ilu::before { content: ""; position: absolute; z-index: 1; top: -10%; bottom: -10%; left: 0; width: 60%; pointer-events: none; opacity: 0;
-  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, .7) 50%, transparent 100%); }
+  background: linear-gradient(var(--oklab,) 100deg, transparent 0%, rgba(255, 255, 255, .7) 50%, transparent 100%); }
 /* 6 · La hoja de un hábito: apagada hasta que el día elegido está cumplido; cumplido, encendida y con su color detrás */
 .habito-cab:not(.hecho) .cab-ilu-img { opacity: .5; transform: scale(.96); }
 .habito-cab::after { content: ""; position: absolute; z-index: 0; top: -30%; right: -12%; width: 62%; height: 160%; pointer-events: none; opacity: 0;
@@ -198,7 +198,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ck-ilu-marco > .ck-ilu-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 70% 55%; }
 /* 10 · El hito de la racha: las chispas que suben del fuego */
 .hito-chispas { position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; height: 62%; overflow: hidden; pointer-events: none; }
-.hito-chispas i { position: absolute; bottom: 14%; border-radius: 50%; background: var(--oro-200); box-shadow: 0 0 6px 1px rgba(255, 150, 60, .7); opacity: 0; }
+.hito-chispas i { position: absolute; bottom: 14%; border-radius: 50%; background: var(--oro-200); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--naranja-400) 70%, transparent); opacity: 0; }
 @media (forced-colors: active) { .bdia-luz, .hero-brillo, .resumen-medalla.con-ilu::before, .habito-cab::after, .hito-chispas { display: none; } }
 @media (prefers-reduced-motion: no-preference) {
   /* 1 · La portada de la sesión: en vez del gesto corto de entrada, un acercamiento muy lento, una vez (con la propiedad
@@ -273,7 +273,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .prog-tema.con-ilu { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; }
 .prog-tema.con-ilu > .prog-tema-ilu { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
 .prog-tema.con-ilu > :not(.prog-tema-ilu) { grid-column: 2; }
-.certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: 28px 24px 22px; border-color: transparent; background: var(--marca-950); color: var(--neutro-100); }
+.certificado.con-ilu { position: relative; overflow: hidden; isolation: isolate; padding: 28px 24px 22px; border-color: transparent; background: var(--tinta-noche); color: var(--neutro-100); }
 .certificado.con-ilu > .certificado-fondo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
 .certificado.con-ilu .certificado-de, .certificado.con-ilu .certificado-pie { color: color-mix(in srgb, var(--neutro-100) 72%, transparent); }
 .certificado.con-ilu .certificado-pie { margin-bottom: 26px; }
@@ -305,7 +305,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Tu ADN FBE: la doble hélice de fondo a la derecha, fundida hacia el texto */
 .panel.adn-fbe.con-ilu { position: relative; overflow: hidden; isolation: isolate; }
 .adn-fbe-fondo { position: absolute; z-index: -1; right: 0; top: 0; height: 100%; width: 46%; object-fit: cover; object-position: 55% 88%; opacity: .55;
-  -webkit-mask-image: linear-gradient(to right, transparent, var(--negro) 55%); mask-image: linear-gradient(to right, transparent, var(--negro) 55%); pointer-events: none; }
+  -webkit-mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); mask-image: linear-gradient(var(--oklab,) to right, transparent, var(--negro) 55%); pointer-events: none; }
 /* Tu foto de motivación, sin elegir aún: el marco vacío colgado */
 .foto-motivacion-vacia { display: block; width: 180px; height: 180px; margin: 4px auto; border-radius: 18px; object-fit: cover; }
 /* Para hablarle y la carta del mes (la ficha del coach) */

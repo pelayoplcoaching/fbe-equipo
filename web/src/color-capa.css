@@ -10,13 +10,13 @@
 
 /* (9) …y con el color de lo que toca: fuerza en la marca, cardio en azul, movilidad y descanso en turquesa, semana de
    descarga en ámbar y la sesión hecha en verde. Cambia el brillo y el halo, no el texto (siempre claro sobre noche). */
-.hero-dia[data-tono="cardio"] { --hero-tinte: var(--azul-500); --hero-2: var(--azul-900); }
-.hero-dia[data-tono="movilidad"] { --hero-tinte: var(--turquesa-500); --hero-2: var(--turquesa-900); }
-.hero-dia[data-tono="descanso"] { --hero-tinte: var(--turquesa-400); --hero-2: var(--turquesa-900); }
-.hero-dia[data-tono="descarga"] { --hero-tinte: var(--ambar-500); --hero-2: var(--ambar-900); }
-.hero-dia[data-tono="hecha"] { --hero-tinte: var(--verde-500); --hero-2: var(--verde-900); }
+:is(.hero-dia, .pal-tono)[data-tono="cardio"] { --hero-tinte: var(--azul-500); --hero-2: var(--azul-900); }
+:is(.hero-dia, .pal-tono)[data-tono="movilidad"] { --hero-tinte: var(--turquesa-500); --hero-2: var(--turquesa-900); }
+:is(.hero-dia, .pal-tono)[data-tono="descanso"] { --hero-tinte: var(--turquesa-400); --hero-2: var(--turquesa-900); }
+:is(.hero-dia, .pal-tono)[data-tono="descarga"] { --hero-tinte: var(--ambar-500); --hero-2: var(--ambar-900); }
+:is(.hero-dia, .pal-tono)[data-tono="hecha"] { --hero-tinte: var(--verde-500); --hero-2: var(--verde-900); }
 .hero-dia::before { background: radial-gradient(circle, color-mix(in srgb, var(--hero-tinte, var(--morado)) 55%, var(--hero)) 0%, color-mix(in srgb, var(--hero-tinte, var(--morado)) 22%, var(--hero)) 38%, transparent 68%); }
-.hero-dia { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 26px 48px -24px color-mix(in srgb, var(--hero-tinte, var(--morado)) 62%, rgba(20, 11, 58, .7)), 0 10px 20px -14px rgba(20, 11, 58, .35); }
+.hero-dia { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 26px 48px -24px color-mix(in srgb, var(--hero-tinte, var(--morado)) 62%, color-mix(in srgb, var(--marca-950) 70%, transparent)), 0 10px 20px -14px color-mix(in srgb, var(--marca-950) 35%, transparent); }
 
 /* (7, 10) Las sombras: los cuatro niveles teñidos de la marca (diseno.css, bloque 31); en oscuro, donde una sombra no se
    ve, la profundidad la da un filo de luz de 1 px arriba */
@@ -56,9 +56,21 @@
   :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
 }
 
-/* (20) «Paleta», solo en la demo (?demo&paleta) */
+/* (20; color 2, 18) «Paleta», solo en la demo (?demo&paleta) */
 .pal-pagina { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 12px; }
 .pal-pagina h2 { margin-top: 16px; }
+.pal-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.pal-controles label { display: inline-flex; align-items: center; gap: 8px; font-size: var(--tipo-nota); }
+.pal-controles .selector { width: auto; min-width: 8rem; }
+.pal-tabla { width: 100%; border-collapse: collapse; background: var(--hoja); border-radius: var(--r-s); box-shadow: var(--sombra-tarjeta); overflow: hidden; font-size: var(--tipo-nota); }
+.pal-tabla th, .pal-tabla td { padding: 8px 12px; text-align: left; border-top: 1px solid var(--linea); }
+.pal-tabla thead th { border-top: 0; color: var(--tinta-2); font-weight: 650; }
+.pal-tabla tbody th { font-weight: 560; display: flex; align-items: center; gap: 8px; }
+.pal-nivel { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; border: 1px solid; }
+.pal-nivel-si { color: var(--ok); background: var(--ok-suave); border-color: var(--ok-borde); }
+.pal-nivel-no { color: var(--alerta); background: var(--alerta-suave); border-color: var(--alerta-borde); }
+.pal-componentes { display: grid; gap: 14px; }
+.pal-componentes .fila-envolver { align-items: center; gap: 8px; }
 .pal-escala h3 { font-size: var(--tipo-nota); text-transform: capitalize; margin: 0 0 4px; color: var(--tinta-2); }
 .pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: 3px; }
 .pal-muestra { height: 2.75rem; border-radius: 8px; display: grid; place-items: end start; padding: 4px 6px; font-size: 0.6875rem; font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 1px var(--borde); }
@@ -66,5 +78,41 @@
 .pal-estado { border: 1px solid; border-radius: var(--r-s); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
 .pal-solido { width: 1.25rem; height: 1.25rem; border-radius: 50%; }
 .pal-grad { height: 4.5rem; border-radius: var(--r-s); display: grid; place-items: end start; padding: 8px 10px; color: var(--blanco); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
-.pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
-.pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--borde); }
+.pal-tono { background-color: var(--hero); background-image: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--hero-tinte, var(--morado)) 55%, var(--hero)) 0%, transparent 62%), var(--grad-noche); }
+.pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); border: 0; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
+.pal-acento.activo { box-shadow: inset 0 0 0 2px var(--morado); }
+.pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--borde); flex: none; }
+
+/* ==========================================================================================================
+   Color, tanda 2 (claude/color-mejoras-2.md)
+   ========================================================================================================== */
+
+/* (9) Los controles del sistema, con el acento: casillas, deslizadores y barras nativas, el cursor al escribir y el
+   texto seleccionado (sobre las tarjetas oscuras, en claro) */
+:root { accent-color: var(--morado); caret-color: var(--morado); }
+::selection { background: color-mix(in srgb, var(--morado) 26%, transparent); color: inherit; }
+:is(.hero-dia, .portada-sesion, .carnet, .temporizador, .resumen-hero, .tarjeta-intervalos, .bienvenida, .escena-final) ::selection { background: color-mix(in srgb, var(--blanco) 32%, transparent); }
+
+/* (10) El foco se ve sobre cualquier fondo: en las superficies oscuras o de color, el anillo va en claro */
+:is(.hero-dia, .carnet, .resumen-hero, .tarjeta-intervalos, .bienvenida, .escena-final, .toast, .grafica-globo, .racha-pantalla, .hito-pantalla) :focus-visible { outline-color: var(--sobre-hero); }
+
+/* (11) Los estados, con su filo: hecho, aviso y alerta llevan texto, fondo suave y un borde fino de su color (antes, sin
+   borde: sobre una tarjeta de color casi no se separaban). «info» en los chips sigue siendo lo que no pide atención. */
+.chip.ok { border-color: var(--ok-borde); }
+.chip.aviso { border-color: var(--aviso-borde); }
+.chip.alerta { border-color: var(--alerta-borde); }
+
+/* (8) «Alto contraste» de la app, igual que el del sistema: el vidrio se vuelve opaco y los estados, con borde entero */
+:root[data-contraste="alto"][data-contraste][data-contraste] { --vidrio: var(--hoja); --vidrio-cab: var(--tiza); --vidrio-hoja: var(--hoja); --vidrio-filtro: none; }
+:root[data-contraste="alto"] :is(.chip.ok, .chip.aviso, .chip.alerta, .chip.info) { border-color: currentColor; }
+
+/* (15) Las muestras de acento, con volumen: una esfera con su luz y su sombra de color */
+.acento-muestra { --m: var(--m-claro); background-image: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, .42), transparent 48%), linear-gradient(var(--oklab,) 155deg, var(--m), color-mix(in srgb, var(--m) 74%, var(--negro)));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1), 0 4px 9px -4px color-mix(in srgb, var(--m) 70%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acento-muestra { --m: var(--m-oscuro); } }
+:root[data-theme="dark"] .acento-muestra { --m: var(--m-oscuro); }
+.acento-op:has(input:checked) { background: var(--morado-suave); }
+
+/* (16) Los datos, con la paleta de las gráficas: los aros de «Tu semana» dejan el dorado pardo (sesiones en el acento,
+   hábitos en naranja y check-in en azul; todos, ≥ 3:1 sobre su tarjeta) */
+:root { --anillo-habitos: var(--serie-2); --anillo-checkin: var(--serie-4); }

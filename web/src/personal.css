@@ -22,7 +22,7 @@
 
 /* 2 · La portada: récord al alcance y su música */
 .record-alcance { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 12px; align-items: start;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--oro-200) 22%, var(--hoja)) 0%, var(--hoja) 70%); }
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--oro-200) 22%, var(--hoja)) 0%, var(--hoja) 70%); }
 .record-alcance-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--oro-200); color: var(--marca-900); }
 .record-alcance-ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
 .record-alcance strong { font-size: 1rem; }
@@ -64,7 +64,7 @@
 .anio-barras { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; align-items: end; height: 9rem; width: 100%; max-width: 26rem; margin-top: 8px; }
 .anio-barras span { display: grid; grid-template-rows: minmax(0, 1fr) auto; height: 100%; gap: 4px; }
 .anio-barras i { align-self: end; height: max(4px, var(--h)); border-radius: 6px 6px 3px 3px; background: rgba(255, 255, 255, .18); }
-.anio-barras span.si i { background: linear-gradient(180deg, var(--marca-400), var(--marca-500)); }
+.anio-barras span.si i { background: linear-gradient(var(--oklab,) 180deg, var(--marca-400), var(--marca-500)); }
 .anio-barras b { font-size: .6875rem; font-weight: 700; text-align: center; color: rgba(255, 255, 255, .6); }
 .fila-anio { grid-template-columns: minmax(0, 1fr) auto; }
 
@@ -92,7 +92,7 @@
 .tarjeta-musica { display: grid; gap: 10px; }
 .tarjeta-musica + .tarjeta-musica { padding-top: 12px; border-top: 1px solid var(--linea); }
 .tarjeta-musica-cab { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; }
-.tarjeta-musica-portada { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--hoja-2); box-shadow: 0 6px 16px -10px rgba(20, 15, 36, .6); }
+.tarjeta-musica-portada { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--hoja-2); box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--neutro-950) 60%, transparent); }
 .tarjeta-musica-portada.sin { display: grid; place-items: center; color: var(--morado); }
 .tarjeta-musica-portada.sin svg { width: 24px; height: 24px; }
 .tarjeta-musica-titulo { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
@@ -105,7 +105,7 @@
 .cadencia-v { min-width: 7.5rem; text-align: center; }
 .cadencia-v b { font-size: 1.5rem; font-weight: 800; font-stretch: var(--ancho-titulo, 112%); }
 .cadencia-v small { color: var(--tinta-2); font-weight: 650; }
-.cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--oro-200) 18%, var(--hoja)) 0%, var(--hoja) 70%); }
+.cancion-record { display: grid; gap: 8px; margin-top: 12px; background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--oro-200) 18%, var(--hoja)) 0%, var(--hoja) 70%); }
 .lista-equipo { margin-bottom: 4px; }
 .campo-musica svg { width: 16px; height: 16px; }
 
@@ -158,11 +158,11 @@
 .tarjeta-previa.historia .tarjeta-img { aspect-ratio: 9 / 16; max-width: 300px; }
 .compartir-botones { margin-top: 2px; }
 .compartir-destinos { gap: 8px; align-items: center; }
-.destino-whatsapp { border-color: rgba(37, 211, 102, .6); }
-.destino-instagram { border-color: rgba(225, 48, 108, .6); }
-.destino-facebook { border-color: rgba(24, 119, 242, .6); }
+.destino-whatsapp { border-color: color-mix(in srgb, var(--verde-400) 60%, transparent); }
+.destino-instagram { border-color: color-mix(in srgb, var(--rosa-500) 60%, transparent); }
+.destino-facebook { border-color: color-mix(in srgb, var(--azul-500) 60%, transparent); }
 .compartir-texto { white-space: pre-wrap; word-break: break-word; font: inherit; font-size: .8125rem; line-height: 1.45; background: var(--fondo-2, rgba(127, 127, 127, .08)); border-radius: 12px; padding: 12px 14px; margin: 0; user-select: all; }
-.plantilla-mini.clara { background: var(--marca-50); color: var(--marca-950); box-shadow: inset 0 0 0 1px rgba(21, 15, 54, .14); }
+.plantilla-mini.clara { background: var(--marca-50); color: var(--marca-950); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-950) 14%, transparent); }
 .recordatorio-compartir { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
 .recordatorio-compartir .ico { width: 38px; height: 38px; border-radius: 50%; background: var(--ok-suave); color: var(--ok); display: grid; place-items: center; }
 .recordatorio-compartir .ico svg { width: 20px; height: 20px; }
@@ -191,7 +191,7 @@
 .tarjeta-previa.marco-ig { background: var(--blanco); color: var(--noche-0); border-radius: 14px; padding: 0 0 8px; box-shadow: 0 2px 14px rgba(0, 0, 0, .12); }
 .tarjeta-previa.marco-ig .tarjeta-img { border-radius: 0; max-width: 100%; }
 .marco-ig-cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: .8125rem; font-weight: 600; color: var(--noche-0); }
-.marco-ig-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--naranja-400), var(--rosa-500) 55%, #8134AF); color: var(--blanco); display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
+.marco-ig-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(var(--oklab,) 135deg, var(--naranja-400), var(--rosa-500) 55%, var(--purpura-600)); color: var(--blanco); display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
 .marco-ig-nombre { flex: 1; }
 .marco-ig-puntos { letter-spacing: 2px; color: var(--noche-4); }
 .marco-ig-pie { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px 2px; font-size: 1.05rem; color: var(--noche-0); }
@@ -213,7 +213,7 @@
 .sc-lista { display: grid; gap: 4px; }
 .sc-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; }
 .sc-texto { min-width: 0; font-size: .9375rem; }
-.cumples-equipo { background: linear-gradient(120deg, color-mix(in srgb, var(--ambar-400) 14%, var(--hoja)), var(--hoja) 65%); border: 1px solid color-mix(in srgb, var(--ambar-400) 30%, transparent); }
+.cumples-equipo { background: linear-gradient(var(--oklab,) 120deg, color-mix(in srgb, var(--ambar-400) 14%, var(--hoja)), var(--hoja) 65%); border: 1px solid color-mix(in srgb, var(--ambar-400) 30%, transparent); }
 .cumple-tarta { font-size: 1.35rem; vertical-align: -3px; }
 .cumple-texto, .cumple-mio { margin: 0; }
 .cumple-otros { display: grid; gap: 8px; }
@@ -223,8 +223,8 @@
 .padrinos .pd-mio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: 0; }
 .duelos-lista { display: grid; gap: 6px; }
 .duelo-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--fondo-suave, rgba(0, 0, 0, .03)); }
-.duelo-fila.aceptado { background: linear-gradient(110deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
-.duelo-fila.ganado { background: linear-gradient(110deg, color-mix(in srgb, var(--ambar-400) 16%, var(--hoja)), var(--hoja) 70%); }
+.duelo-fila.aceptado { background: linear-gradient(var(--oklab,) 110deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), var(--hoja) 70%); }
+.duelo-fila.ganado { background: linear-gradient(var(--oklab,) 110deg, color-mix(in srgb, var(--ambar-400) 16%, var(--hoja)), var(--hoja) 70%); }
 .duelo-texto { min-width: 0; }
 .duelo-linea { font-size: .9375rem; font-weight: 600; }
 .duelo-acciones { gap: 6px; }
@@ -232,7 +232,7 @@
 .duelo-marcador i { font-style: normal; opacity: .5; margin: 0 2px; }
 .duelo-resultado { font-weight: 700; }
 .duelo-resultado.ganado { background: color-mix(in srgb, var(--ambar-400) 22%, var(--hoja)); }
-.companero-semana { background: linear-gradient(140deg, color-mix(in srgb, var(--morado) 12%, var(--hoja)), var(--hoja) 70%); }
+.companero-semana { background: linear-gradient(var(--oklab,) 140deg, color-mix(in srgb, var(--morado) 12%, var(--hoja)), var(--hoja) 70%); }
 .cs-elegidos { display: grid; gap: 10px; }
 .cs-elegido { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 6px 0; }
 .cs-elegido .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 6px var(--morado); margin-bottom: 6px; }
@@ -258,7 +258,7 @@
 .post-cita-borrada { margin: 4px 0 0; padding: 6px 10px; border-left: 3px solid var(--borde); }
 .huella-t { margin: 0; font-size: .9375rem; }
 .huella-lista { margin: 0; padding: 0 0 0 18px; display: grid; gap: 2px; font-size: .875rem; }
-.evento-equipo.quedada-atleta .le-k { color: var(--turquesa-500); }
+.evento-equipo.quedada-atleta .le-k { color: var(--verde-600); }
 
 /* ---------- (054) Cierre: lo que el coach necesita de cada entreno, sin pedirlo dos veces ---------- */
 /* La sesión que la app cerró sola (atleta): tarjeta para decir cómo fue */
@@ -271,7 +271,7 @@
 .rpe-rapido-frase { margin: 0; min-height: 1.2em; }
 /* Dictar la nota */
 .dictar { display: inline-flex; align-items: center; gap: 6px; }
-.dictar[aria-pressed="true"] { color: var(--rojo, #c0392b); animation: dictando 1.1s ease-in-out infinite; }
+.dictar[aria-pressed="true"] { color: var(--alerta); animation: dictando 1.1s ease-in-out infinite; }
 @keyframes dictando { 50% { opacity: .55; } }
 /* El objetivo del bloque, en el héroe de Hoy */
 .hero-objetivo { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: .875rem; opacity: .92; }
@@ -390,7 +390,7 @@
 .foto-motivacion.en-resumen img { max-height: 200px; }
 .foto-motivacion-vista { width: 100%; max-height: 320px; object-fit: cover; border-radius: 14px; }
 .foto-motivacion-elegir { position: relative; justify-content: center; }
-.panel.adn-fbe { display: grid; gap: 8px; justify-items: start; background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), var(--hoja)); }
+.panel.adn-fbe { display: grid; gap: 8px; justify-items: start; background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 16%, var(--hoja)), var(--hoja)); }
 .adn-fbe-t { margin: 0; font-size: 1.375rem; }
 .adn-fbe-frase { margin: 0; font-size: 1.0625rem; font-weight: 650; line-height: 1.4; }
 .adn-fbe-rasgos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 4px 0; width: 100%; }
@@ -481,9 +481,9 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 /* (v0.158.1) Los momentos nuevos de los mensajes automaticos, con su icono en su cuadrado de color (como los cinco de
    siempre en diseno.css): aniversario, meta, primera vez, viaje y bienvenida. El cuadrado lleva el icono en blanco en
    los dos temas, asi que el color es el mismo en claro y en oscuro. */
-:root { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; } }
-:root[data-theme="dark"] { --pc-aniversario: #AF52DE; --pc-meta: #D92D20; --pc-primera: var(--turquesa-500); --pc-viaje: var(--azul-500); --pc-bienvenida: #7A5AF8; }
+:root { --pc-aniversario: var(--purpura-500); --pc-meta: var(--rojo-600); --pc-primera: var(--turquesa-500); --pc-viaje: var(--cielo-500); --pc-bienvenida: var(--marca-500); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pc-aniversario: var(--purpura-500); --pc-meta: var(--rojo-600); --pc-primera: var(--turquesa-500); --pc-viaje: var(--cielo-500); --pc-bienvenida: var(--marca-500); } }
+:root[data-theme="dark"] { --pc-aniversario: var(--purpura-500); --pc-meta: var(--rojo-600); --pc-primera: var(--turquesa-500); --pc-viaje: var(--cielo-500); --pc-bienvenida: var(--marca-500); }
 .fila-ios[data-m="aniversario"] { --fm: var(--pc-aniversario); --ico-m: var(--ico-corazon); }
 .fila-ios[data-m="meta"] { --fm: var(--pc-meta); --ico-m: var(--ico-diana); }
 .fila-ios[data-m="primera_vez"] { --fm: var(--pc-primera); --ico-m: var(--ico-gimnasio); }

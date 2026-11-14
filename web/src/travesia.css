@@ -1,7 +1,7 @@
 /* (al integrarla, v0.147) Los colores de la noche de La travesía, como tokens. La escena es de noche con el tema claro y con
    el oscuro, así que su versión oscura es la misma (se repite abajo a propósito). El texto no entra con opacity. */
-:root { --tv-noche: var(--noche-0); --tv-noche-2: var(--marca-950); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, var(--marca-950) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(180deg, var(--marca-950) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(180deg, var(--azul-700) 0%, #4A5FC4 70%, var(--azul-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
-:root[data-theme="dark"] { --tv-noche: var(--noche-0); --tv-noche-2: var(--marca-950); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(180deg, var(--marca-950) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(180deg, var(--marca-950) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(180deg, var(--azul-700) 0%, #4A5FC4 70%, var(--azul-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
+:root { --tv-noche: var(--noche-0); --tv-noche-2: var(--tinta-noche); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(var(--oklab,) 180deg, var(--tinta-noche) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(var(--oklab,) 180deg, var(--tinta-noche) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(var(--oklab,) 180deg, var(--indigo-800) 0%, #4A5FC4 70%, var(--indigo-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
+:root[data-theme="dark"] { --tv-noche: var(--noche-0); --tv-noche-2: var(--tinta-noche); --tv-noche-3: var(--marca-800); --tv-tiza: var(--neutro-100); --tv-tiza-2: var(--marca-200); --tv-oro: var(--oro-300); --tv-lavanda: var(--marca-400); --tv-sombra-cartel: 0 2px 12px rgb(11 7 38 / .7); --tv-cielo-alba: linear-gradient(var(--oklab,) 180deg, var(--tinta-noche) 0%, #6B46A8 60%, var(--naranja-300) 135%); --tv-cielo-ocaso: linear-gradient(var(--oklab,) 180deg, var(--tinta-noche) 0%, var(--marca-700) 60%, var(--rojo-400) 140%); --tv-cielo-dia: linear-gradient(var(--oklab,) 180deg, var(--indigo-800) 0%, #4A5FC4 70%, var(--indigo-500) 130%); --tv-sol: var(--oro-200); --tv-brillo-sol: 0 0 0 6px rgb(242 194 48 / .16), 0 0 22px 6px rgb(242 194 48 / .3); --tv-bronce: var(--ambar-500); --tv-bronce-luz: var(--ambar-200); --tv-plata: var(--neutro-400); --tv-plata-luz: var(--blanco); --tv-oro-luz: var(--oro-100); --tv-aurora-1: var(--turquesa-700); --tv-aurora-2: var(--verde-300); --tv-plata-texto: var(--neutro-200); --tv-bronce-texto: var(--ambar-400); }
 /* «La travesía»: el juego del descanso (ui/atleta/Travesia.jsx). Pantalla completa, siempre de noche (no cambia con el
    tema): el lienzo debajo y, encima, los números, la pista y la tarjeta del final. */
 .temporizador .descanso-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
@@ -50,7 +50,7 @@
 /* La tarjeta del juego fuera de la sesión (Hoy, en una línea; Semana, con sus marcas): siempre de noche, con su luna */
 .travesia-tarjeta { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
   padding: 14px 14px 14px 16px; border-radius: var(--r, 18px); color: var(--tv-tiza);
-  background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-noche-2) 62%, var(--tv-noche-3) 100%); }
+  background: linear-gradient(var(--oklab,) 180deg, var(--tv-noche) 0%, var(--tv-noche-2) 62%, var(--tv-noche-3) 100%); }
 .travesia-tarjeta.compacta { padding: 10px 12px 10px 14px; }
 .travesia-tarjeta-luna { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 36% 34%, var(--tv-tiza) 0 58%, var(--tv-tiza-2) 100%);
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--tv-lavanda) 14%, transparent), 0 0 22px 6px color-mix(in srgb, var(--tv-lavanda) 30%, transparent); }
@@ -69,9 +69,9 @@
 .travesia-modo { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 12px; border: 0; border-radius: 999px; color: inherit; font-size: .8125rem; font-weight: 650;
   background: rgb(241 240 246 / .12); }
 .travesia-modo svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.travesia-modo[aria-pressed="true"] { background: var(--neutro-100); color: var(--marca-950); }
+.travesia-modo[aria-pressed="true"] { background: var(--neutro-100); color: var(--tinta-noche); }
 .travesia-modo:focus-visible { outline: 2px solid var(--neutro-100); outline-offset: 2px; }
-.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: var(--marca-950); background: var(--oro-300); }
+.travesia-escudo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; font-weight: 800; font-size: .875rem; color: var(--tinta-noche); background: var(--oro-300); }
 .travesia-escudo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
 .travesia-reto { position: absolute; left: 16px; right: 16px; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); margin: 0; text-align: center; font-size: .875rem; font-weight: 650; pointer-events: none; }
 .travesia-reto.hecho { color: var(--oro-300); }
@@ -112,13 +112,13 @@
 .tv-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tv-nombre small { font-weight: 500; color: var(--tinta-2); }
 .tv-retar { min-height: 36px; }
-.tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: var(--marca-950); border-color: transparent; }
+.tv-retar[aria-pressed="true"] { background: var(--tv-oro); color: var(--tinta-noche); border-color: transparent; }
 .tv-equipo { display: grid; gap: 6px; margin-top: 12px; font-size: .875rem; }
 .tv-barra { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--morado) 16%, transparent); overflow: hidden; }
 .tv-barra span { display: block; height: 100%; border-radius: 999px; background: var(--morado); }
 .tv-lobos, .tv-constelaciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
 .tv-lobo { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 120px; padding: 10px 8px; border-radius: 16px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; line-height: 1.25; text-align: center;
-  background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
+  background: linear-gradient(var(--oklab,) 180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
 .tv-lobo strong { font-size: .875rem; }
 .tv-lobo span { color: var(--tv-tiza-2); }
 .tv-lobo[aria-pressed="true"] { border-color: var(--tv-oro); }
@@ -139,8 +139,8 @@
 /* (tanda 5) Lo visual: la viñeta (los bordes, un poco más oscuros: recoge la mirada en el lobo), el cartel de los hitos
    y la tarjeta final, que entra con suavidad */
 .travesia-vineta { position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(120% 90% at 50% 46%, transparent 52%, color-mix(in srgb, var(--tv-noche) 34%, transparent) 100%), linear-gradient(180deg, color-mix(in srgb, var(--tv-noche) 42%, transparent) 0, transparent 18%),
-    linear-gradient(0deg, color-mix(in srgb, var(--tv-noche) 62%, transparent) 0, color-mix(in srgb, var(--tv-noche) 30%, transparent) 12%, transparent 24%); }   /* (arriba y abajo, más: los números y los textos se leen también de día y sobre la nieve) */
+  background: radial-gradient(120% 90% at 50% 46%, transparent 52%, color-mix(in srgb, var(--tv-noche) 34%, transparent) 100%), linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--tv-noche) 42%, transparent) 0, transparent 18%),
+    linear-gradient(var(--oklab,) 0deg, color-mix(in srgb, var(--tv-noche) 62%, transparent) 0, color-mix(in srgb, var(--tv-noche) 30%, transparent) 12%, transparent 24%); }   /* (arriba y abajo, más: los números y los textos se leen también de día y sobre la nieve) */
 .travesia-cartel { position: absolute; left: 16px; right: 16px; top: 24%; margin: 0; text-align: center; pointer-events: none; visibility: hidden;   /* (sale con su animación: el texto no entra por opacidad) */
   font-size: 1.125rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--tv-tiza); text-shadow: var(--tv-sombra-cartel);
   font-stretch: var(--ancho-marcador, 78%); }
@@ -181,7 +181,7 @@
 .tv-mision-texto .tv-barra { height: 6px; }
 .tv-mision b { font-size: .8125rem; color: var(--tinta-2); }
 .tv-adornos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0 0 8px; padding: 0; list-style: none; }
-.tv-adorno { display: grid; gap: 2px; width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 14px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; text-align: left; background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
+.tv-adorno { display: grid; gap: 2px; width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 14px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; text-align: left; background: linear-gradient(var(--oklab,) 180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
 .tv-adorno span { color: var(--tv-tiza-2); }
 .tv-adorno[aria-pressed="true"] { border-color: var(--tv-oro); }
 .tv-adorno[aria-pressed="true"] span { color: var(--tv-oro); font-weight: 700; }
@@ -194,7 +194,7 @@
 .tv-logro-ico svg { width: 18px; height: 18px; }
 .tv-logro.hecho .tv-logro-ico { color: var(--tv-oro-tinta); }
 /* (al integrar) el oro sobre la hoja: oscuro en claro, el oro tal cual en oscuro */
-:root { --tv-oro-tinta: #8A6400; }
+:root { --tv-oro-tinta: var(--oro-600); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tv-oro-tinta: var(--oro-300); } }
 :root[data-theme="dark"] { --tv-oro-tinta: var(--oro-300); }
 
@@ -249,7 +249,7 @@
 
 /* (remate, tanda 6) elegir la siguiente ruta */
 .tv-rutas-lista { display: grid; gap: 8px; margin-bottom: 8px; }
-.tv-ruta-op { display: grid; gap: 2px; width: 100%; min-height: 56px; padding: 10px 14px; border-radius: 14px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; text-align: left; background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
+.tv-ruta-op { display: grid; gap: 2px; width: 100%; min-height: 56px; padding: 10px 14px; border-radius: 14px; border: 2px solid transparent; color: var(--tv-tiza); font: inherit; font-size: .8125rem; text-align: left; background: linear-gradient(var(--oklab,) 180deg, var(--tv-noche) 0%, var(--tv-noche-2) 100%); cursor: pointer; }
 .tv-ruta-op strong { font-size: .9375rem; }
 .tv-ruta-op span { color: var(--tv-tiza-2); }
 .tv-ruta-op[aria-pressed="true"] { border-color: var(--tv-oro); }
@@ -282,13 +282,13 @@
 .tv-liga-1 .tv-liga-medalla { background: radial-gradient(circle at 35% 30%, var(--tv-plata-luz) 0%, var(--tv-plata) 70%); }
 .tv-liga-2 .tv-liga-medalla { background: radial-gradient(circle at 35% 30%, var(--tv-oro-luz) 0%, var(--tv-oro) 70%); }
 .tv-reto .tv-barra span { background: var(--tv-oro); }
-.tv-fiesta { padding: 14px 16px; border-radius: 16px; color: var(--tv-tiza); background: linear-gradient(160deg, var(--tv-noche) 0%, var(--tv-noche-2) 55%, var(--tv-aurora-1) 100%); }
+.tv-fiesta { padding: 14px 16px; border-radius: 16px; color: var(--tv-tiza); background: linear-gradient(var(--oklab,) 160deg, var(--tv-noche) 0%, var(--tv-noche-2) 55%, var(--tv-aurora-1) 100%); }
 .tv-fiesta h3 { color: var(--tv-tiza); }
 .tv-fiesta p { margin: 4px 0 0; font-size: .9375rem; }
-.tv-postal-img.fiesta { background: linear-gradient(180deg, var(--tv-noche) 0%, var(--tv-aurora-1) 45%, var(--tv-aurora-2) 70%, var(--tv-noche-2) 100%); }
+.tv-postal-img.fiesta { background: linear-gradient(var(--oklab,) 180deg, var(--tv-noche) 0%, var(--tv-aurora-1) 45%, var(--tv-aurora-2) 70%, var(--tv-noche-2) 100%); }
 @media (prefers-reduced-motion: no-preference) {
   .tv-fiesta.hoy { position: relative; overflow: hidden; }
-  .tv-fiesta.hoy::after { content: ''; position: absolute; inset: -40% -10% auto; height: 80%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tv-aurora-2) 28%, transparent), color-mix(in srgb, var(--tv-lavanda) 22%, transparent), transparent); transform: translateX(-30%); animation: tv-aurora-hoja 9s ease-in-out infinite alternate; pointer-events: none; }
+  .tv-fiesta.hoy::after { content: ''; position: absolute; inset: -40% -10% auto; height: 80%; background: linear-gradient(var(--oklab,) 90deg, transparent, color-mix(in srgb, var(--tv-aurora-2) 28%, transparent), color-mix(in srgb, var(--tv-lavanda) 22%, transparent), transparent); transform: translateX(-30%); animation: tv-aurora-hoja 9s ease-in-out infinite alternate; pointer-events: none; }
 }
 @keyframes tv-aurora-hoja { to { transform: translateX(30%); } }
 .tv-reto-coach { display: grid; gap: 10px; }
@@ -313,7 +313,7 @@
   .travesia-sello { animation: tv-sello .5s cubic-bezier(.2, 1.6, .4, 1) .45s both; }
   .travesia-final-det .tv-cuenta-hecha { animation: tv-cuenta-latido .35s ease-out; display: inline-block; }
   .travesia-final-mision { position: relative; overflow: hidden; }
-  .travesia-final-mision::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--tv-oro) 45%, transparent) 50%, transparent 70%); transform: translateX(-110%); animation: tv-mision-brillo 1s ease-out .6s both; pointer-events: none; }
+  .travesia-final-mision::after { content: ''; position: absolute; inset: 0; background: linear-gradient(var(--oklab,) 100deg, transparent 30%, color-mix(in srgb, var(--tv-oro) 45%, transparent) 50%, transparent 70%); transform: translateX(-110%); animation: tv-mision-brillo 1s ease-out .6s both; pointer-events: none; }
   .travesia-final-rango { position: relative; }
   .travesia-final-rango::before { content: ''; position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--tv-oro); opacity: 0; animation: tv-rango-estallido .8s ease-out .7s both; pointer-events: none; }
 }

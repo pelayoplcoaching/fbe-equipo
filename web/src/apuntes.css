@@ -53,8 +53,8 @@
 .apunte-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; }
 .apunte-opciones { display: grid; gap: 8px; width: 100%; }
 .apunte-opcion { justify-content: space-between; min-height: 50px; text-align: left; white-space: normal; }
-.apunte-opcion.buena { background: color-mix(in srgb, var(--ok, var(--turquesa-500)) 16%, var(--hoja)); border-color: var(--ok, var(--turquesa-500)); color: var(--tinta); opacity: 1; }
-.apunte-opcion.mala { background: color-mix(in srgb, var(--alerta, #C2410C) 12%, var(--hoja)); border-color: var(--alerta, #C2410C); color: var(--tinta); opacity: 1; }
+.apunte-opcion.buena { background: color-mix(in srgb, var(--ok, var(--verde-600)) 16%, var(--hoja)); border-color: var(--ok, var(--verde-600)); color: var(--tinta); opacity: 1; }
+.apunte-opcion.mala { background: color-mix(in srgb, var(--alerta) 12%, var(--hoja)); border-color: var(--alerta); color: var(--tinta); opacity: 1; }
 .apunte-opcion svg { width: 18px; height: 18px; flex: none; }
 .apunte-terminos { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .apunte-termino { cursor: pointer; }
@@ -62,7 +62,7 @@
 .apunte-definicion { flex-basis: 100%; margin: 4px 0 0; font-size: .9375rem; line-height: 1.45; color: var(--tinta-2); }
 .apunte-acciones { display: flex; flex-wrap: wrap; gap: 2px 14px; width: 100%; padding-top: 8px; border-top: 1px solid var(--linea); }
 .apunte-acciones .btn-texto { font-size: .875rem; min-height: 40px; padding: 6px 2px; }
-.apunte-acciones .btn-texto[aria-pressed="true"] { color: var(--ok, var(--turquesa-500)); }
+.apunte-acciones .btn-texto[aria-pressed="true"] { color: var(--ok, var(--verde-600)); }
 .apunte.tipo-correccion .apunte-etq .chip, .apunte.tipo-numeros .apunte-etq .chip { background: var(--morado); color: var(--blanco); }
 .apunte.tipo-correccion .apunte-texto { font-size: 1.375rem; font-weight: 650; line-height: 1.3; }
 .apuntes-tarjeta-botones { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -108,9 +108,9 @@
    tono se mezclan con la hoja y la tinta del tema, así que valen igual en claro y en oscuro. Todo lo que se mueve va dentro
    de prefers-reduced-motion: no-preference.
    ====================================================================================================================== */
-:root { --ap-verde: #1E9A55; --ap-ambar: var(--oro-400); --ap-rosa: var(--rosa-500); --ap-morado: #6A4FE6; --ap-azul: #2D6BDE; --ap-teal: var(--turquesa-500); --ap-oro: var(--oro-400); --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ap-verde: var(--verde-400); --ap-ambar: var(--oro-300); --ap-rosa: var(--rosa-400); --ap-morado: var(--marca-400); --ap-azul: var(--azul-400); --ap-teal: var(--turquesa-400); --ap-oro: var(--oro-300); --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); } }
-:root[data-theme="dark"] { --ap-verde: var(--verde-400); --ap-ambar: var(--oro-300); --ap-rosa: var(--rosa-400); --ap-morado: var(--marca-400); --ap-azul: var(--azul-400); --ap-teal: var(--turquesa-400); --ap-oro: var(--oro-300); --ap-lapiz-filo: #8F5E00; --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); }
+:root { --ap-verde: var(--verde-500); --ap-ambar: var(--oro-400); --ap-rosa: var(--rosa-500); --ap-morado: var(--marca-600); --ap-azul: var(--azul-600); --ap-teal: var(--turquesa-500); --ap-oro: var(--oro-400); --ap-lapiz-filo: var(--ambar-600); --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ap-verde: var(--verde-400); --ap-ambar: var(--oro-300); --ap-rosa: var(--rosa-400); --ap-morado: var(--marca-400); --ap-azul: var(--azul-400); --ap-teal: var(--turquesa-400); --ap-oro: var(--oro-300); --ap-lapiz-filo: var(--ambar-600); --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); } }
+:root[data-theme="dark"] { --ap-verde: var(--verde-400); --ap-ambar: var(--oro-300); --ap-rosa: var(--rosa-400); --ap-morado: var(--marca-400); --ap-azul: var(--azul-400); --ap-teal: var(--turquesa-400); --ap-oro: var(--oro-300); --ap-lapiz-filo: var(--ambar-600); --ap-lapiz-punta: var(--ambar-700); --ap-estrella: var(--oro-100); --ap-blanco: var(--blanco); --ap-negro: var(--negro); --ap-rotulador: var(--oro-300); }
 .tono-verde { --tono: var(--ap-verde); } .tono-ambar { --tono: var(--ap-ambar); } .tono-rosa { --tono: var(--ap-rosa); } .tono-morado { --tono: var(--ap-morado); }
 .tono-azul { --tono: var(--ap-azul); } .tono-teal { --tono: var(--ap-teal); } .tono-oro { --tono: var(--ap-oro); }
 .apunte, .apunte-saliente, .apunte-sello, .examen-aro { --tono-suave: color-mix(in srgb, var(--tono, var(--morado)) 13%, var(--hoja)); --tono-tinta: color-mix(in srgb, var(--tono, var(--morado)) 72%, var(--tinta)); }
@@ -141,13 +141,13 @@
 /* 2 · La hoja de cuaderno: más grande, con renglones suaves, el margen y la esquina doblada */
 .apunte { position: relative; max-width: 520px; align-content: start; padding: 24px 22px 22px 30px; border-radius: 20px; border: 0;
   background:
-    linear-gradient(90deg, transparent 17px, color-mix(in srgb, var(--disco-rojo) 26%, transparent) 17px 18.5px, transparent 18.5px),
+    linear-gradient(var(--oklab,) 90deg, transparent 17px, color-mix(in srgb, var(--disco-rojo) 26%, transparent) 17px 18.5px, transparent 18.5px),
     repeating-linear-gradient(180deg, transparent 0 27px, color-mix(in srgb, var(--tono, var(--morado)) 6%, transparent) 27px 28px) 0 64px / 100% calc(100% - 64px) no-repeat,
     var(--hoja);
   box-shadow: var(--sombra-tarjeta), 0 22px 44px -22px color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); }
 .apunte::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: 20px 20px 0 0; background: var(--tono, var(--morado)); }
 .apunte-esquina { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-radius: 0 0 20px 0; pointer-events: none;
-  background: linear-gradient(315deg, var(--tiza) 0 50%, color-mix(in srgb, var(--tono, var(--morado)) 18%, var(--hoja-2)) 50% 100%); box-shadow: -2px -2px 5px color-mix(in srgb, var(--tinta) 8%, transparent); }
+  background: linear-gradient(var(--oklab,) 315deg, var(--tiza) 0 50%, color-mix(in srgb, var(--tono, var(--morado)) 18%, var(--hoja-2)) 50% 100%); box-shadow: -2px -2px 5px color-mix(in srgb, var(--tinta) 8%, transparent); }
 .apunte.vacio-apuntes, .apunte.examen-nota { min-height: 0; }
 .apunte .apunte-etq .chip { background: var(--tono-suave); color: var(--tono-tinta); }
 
@@ -248,7 +248,7 @@
 .apuntes-medalla-dibujo .aro { fill: none; stroke: color-mix(in srgb, var(--ap-blanco) 45%, transparent); stroke-width: 1.2; }
 .apuntes-medalla-dibujo .centro { fill: color-mix(in srgb, var(--ap-blanco) 90%, transparent); }
 .metal-bronce .disco { fill: var(--ambar-500); } .metal-plata .disco { fill: var(--neutro-400); } .metal-oro .disco { fill: var(--oro-400); } .metal-lavanda .disco { fill: var(--marca-500); }
-.apuntes-medalla-dibujo .brillo { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / .75) 50%, transparent 65%); transform: translateX(-120%); }
+.apuntes-medalla-dibujo .brillo { position: absolute; inset: 0; background: linear-gradient(var(--oklab,) 115deg, transparent 35%, rgb(255 255 255 / .75) 50%, transparent 65%); transform: translateX(-120%); }
 .apuntes-medalla-dibujo.grande { width: 112px; height: 134px; vertical-align: 0; filter: drop-shadow(0 10px 18px rgb(27 23 48 / .3)); }
 .apuntes-medalla-nueva { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; pointer-events: none;
   background: color-mix(in srgb, var(--tiza) 82%, transparent); backdrop-filter: blur(3px); }
@@ -274,7 +274,7 @@
 .apuntes-tarjeta { position: relative; overflow: hidden; }
 .apuntes-cinta { position: absolute; right: -30px; top: 9px; width: 104px; padding: 2px 0; transform: rotate(35deg); text-align: center; font-size: .625rem; font-weight: 850;
   letter-spacing: .12em; text-transform: uppercase; color: var(--blanco); background: var(--disco-verde); overflow: hidden; pointer-events: none; }
-.apuntes-cinta::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / .6) 50%, transparent 70%); transform: translateX(-130%); }
+.apuntes-cinta::after { content: ''; position: absolute; inset: 0; background: linear-gradient(var(--oklab,) 100deg, transparent 30%, rgb(255 255 255 / .6) 50%, transparent 70%); transform: translateX(-130%); }
 .apuntes-tarjeta.con-novedad .apuntes-tarjeta-botones { margin-right: 22px; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -498,7 +498,7 @@
 .duelo-gente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 /* la historia a pantalla completa */
 .ap-historia { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
-  background: linear-gradient(160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, var(--ap-negro)), color-mix(in srgb, var(--tono, var(--morado)) 55%, var(--ap-negro))); color: var(--ap-blanco); }
+  background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, var(--ap-negro)), color-mix(in srgb, var(--tono, var(--morado)) 55%, var(--ap-negro))); color: var(--ap-blanco); }
 .ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: var(--ap-verde); } .ap-historia.tono-azul { --tono: var(--ap-azul); }
 .ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: 4px; }
 .ap-historia-barras span { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--ap-blanco) 30%, transparent); overflow: hidden; }

@@ -45,8 +45,8 @@
 .tarjeta-video:focus-visible .tarjeta-video-img { outline: 3px solid var(--morado); outline-offset: 2px; }
 .video-semana-k, .directo-k { display: inline-flex; align-items: center; gap: 6px; margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--morado); }
 .video-semana-k svg { width: 14px; height: 14px; }
-.directo-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--naranja-500); }
-.directo-hoy.ahora .directo-k { color: var(--naranja-500); }
+.directo-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--rojo-500); }
+.directo-hoy.ahora .directo-k { color: var(--rojo-500); }
 @media (prefers-reduced-motion: no-preference) { .directo-hoy.ahora .directo-punto { animation: yt-latido 1.4s ease-in-out infinite; } }
 @keyframes yt-latido { 50% { opacity: .35; } }
 .guia-video { margin: 0; display: grid; gap: 6px; }

@@ -10,20 +10,20 @@
    ===================================================================================================================== */
 
 :root {
-  --eq-rosa: var(--rosa-500); --eq-verde: var(--turquesa-500); --eq-azul: #2167D1; --eq-naranja: var(--naranja-500); --eq-cian: var(--turquesa-500);
+  --eq-rosa: var(--rosa-500); --eq-verde: var(--verde-600); --eq-azul: var(--azul-600); --eq-naranja: var(--naranja-500); --eq-cian: var(--cielo-500);
   /* textos de color que pasan de 4,5:1 sobre su fondo suave */
   --eq-oro-t: var(--oro-600); --eq-verde-t: var(--verde-600); --eq-azul-t: var(--azul-600); --eq-naranja-t: var(--naranja-600); --eq-rosa-t: var(--rosa-600);
   --eq-brillo: rgba(255, 255, 255, .55);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--turquesa-300);
+    --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--cielo-300);
     --eq-oro-t: var(--oro-200); --eq-verde-t: var(--verde-300); --eq-azul-t: var(--azul-300); --eq-naranja-t: var(--naranja-300); --eq-rosa-t: var(--rosa-300);
     --eq-brillo: rgba(255, 255, 255, .16);
   }
 }
 :root[data-theme="dark"] {
-  --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--turquesa-300);
+  --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--cielo-300);
   --eq-oro-t: var(--oro-200); --eq-verde-t: var(--verde-300); --eq-azul-t: var(--azul-300); --eq-naranja-t: var(--naranja-300); --eq-rosa-t: var(--rosa-300);
   --eq-brillo: rgba(255, 255, 255, .16);
 }
@@ -45,7 +45,7 @@
   color: var(--morado); font-weight: 720; text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
 .cab-equipo .racha-cab { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px 1px 7px; border-radius: 999px; font-weight: 720;
   color: var(--tinta); background: color-mix(in srgb, var(--ambar-400) 15%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ambar-400) 38%, transparent),
-  0 4px 12px -8px rgba(245, 158, 11, .8); }
+  0 4px 12px -8px color-mix(in srgb, var(--ambar-400) 80%, transparent); }
 
 /* 3 - "Tu momento" cuando aun no hay ninguno: el circulo y su frase juntos, en una tarjeta (antes, un circulo solo y la frase suelta) */
 .tira-momentos:has(.tm-vacio) { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px;
@@ -71,7 +71,7 @@
 .plegable-eq[open] > summary .plegable-eq-ico { background: color-mix(in srgb, var(--pc) 22%, transparent); box-shadow: 0 4px 10px -6px var(--pc); }
 
 /* 6 - Las pestanas del Equipo (Muro, Retos, Ranking, Preguntas): la elegida con un fondo de luz bajo su raya */
-.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--morado) 9%, transparent)); border-radius: 10px 10px 0 0; }
+.equipo .pestanas button[aria-selected="true"] { background: linear-gradient(var(--oklab,) 180deg, transparent 40%, color-mix(in srgb, var(--morado) 9%, transparent)); border-radius: 10px 10px 0 0; }
 
 /* =========================================================== LO SOCIAL (7 a 17) ====================================== */
 
@@ -80,16 +80,16 @@
 .cumples-equipo::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image: radial-gradient(circle, var(--ambar-400) 2.2px, transparent 2.8px), radial-gradient(circle, var(--eq-rosa) 2px, transparent 2.6px), radial-gradient(circle, var(--morado) 1.6px, transparent 2.2px);
   background-size: 46px 38px, 58px 50px, 34px 42px; background-position: 0 0, 21px 15px, 9px 24px;
-  -webkit-mask-image: linear-gradient(100deg, transparent 35%, var(--negro) 85%); mask-image: linear-gradient(100deg, transparent 35%, var(--negro) 85%); opacity: .45; }
+  -webkit-mask-image: linear-gradient(var(--oklab,) 100deg, transparent 35%, var(--negro) 85%); mask-image: linear-gradient(var(--oklab,) 100deg, transparent 35%, var(--negro) 85%); opacity: .45; }
 .cumples-equipo .cumple-tarta { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 6px; border-radius: 50%; vertical-align: middle;
-  font-size: 1.15rem; background: color-mix(in srgb, var(--ambar-400) 22%, var(--hoja)); box-shadow: 0 6px 14px -8px rgba(245, 158, 11, .9); }
+  font-size: 1.15rem; background: color-mix(in srgb, var(--ambar-400) 22%, var(--hoja)); box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--ambar-400) 90%, transparent); }
 
 /* 8 - "Te han animado" y "Te han dado la bienvenida": los nombres en el color del acento y las manos que saludan una vez al entrar */
 .animos-recibidos strong { color: var(--morado); }
 .animos-recibidos .animos-ico { display: inline-block; transform-origin: 60% 80%; }
 
 /* 9 - "Hoy entrenan": la hora de cada uno en una pastilla, para leerla de un vistazo y coincidir */
-.hoy-entrenan { background: linear-gradient(135deg, color-mix(in srgb, var(--eq-azul) 7%, var(--hoja)), var(--hoja) 65%); }
+.hoy-entrenan { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-azul) 7%, var(--hoja)), var(--hoja) 65%); }
 .hoy-entrenan .he-t svg { box-sizing: border-box; width: 26px; height: 26px; padding: 4px; border-radius: 8px; color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 14%, transparent); }
 .he-hora { display: inline-block; padding: 0 7px; border-radius: 999px; font-weight: 760; font-variant-numeric: tabular-nums;
   color: var(--eq-azul-t); background: color-mix(in srgb, var(--eq-azul) 14%, var(--hoja)); }
@@ -104,9 +104,9 @@
   background: color-mix(in srgb, var(--hc) 16%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 28%, transparent); }
 
 /* 11 - "Acompanar a quien entra" en verde: el que te acompana con su aro, y los dias de "Un empujon" en una pastilla calida */
-.padrinos { background: linear-gradient(135deg, color-mix(in srgb, var(--eq-verde) 7%, var(--hoja)), var(--hoja) 60%); }
+.padrinos { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-verde) 7%, var(--hoja)), var(--hoja) 60%); }
 .padrinos .pd-mio .avatar { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 4px color-mix(in srgb, var(--eq-verde) 70%, transparent); }
-.necesitan-animo { background: linear-gradient(135deg, color-mix(in srgb, var(--eq-naranja) 7%, var(--hoja)), var(--hoja) 60%); }
+.necesitan-animo { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-naranja) 7%, var(--hoja)), var(--hoja) 60%); }
 .na-dias { display: inline-block; margin-left: 2px; padding: 0 7px; border-radius: 999px; font-weight: 650; white-space: nowrap;
   color: var(--eq-naranja-t); background: color-mix(in srgb, var(--eq-naranja) 13%, var(--hoja)); }
 
@@ -149,11 +149,11 @@
 
 /* 17 - El album: vacio, con su dibujo y su invitacion; con fotos, mosaico con esquinas y la foto que se acerca al pasar */
 .album-vacio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 14px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eq-rosa) 22%, transparent); }
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eq-rosa) 22%, transparent); }
 .album-vacio > svg { box-sizing: border-box; width: 44px; height: 44px; padding: 10px; border-radius: 14px; color: var(--eq-rosa-t); background: color-mix(in srgb, var(--eq-rosa) 15%, var(--hoja)); }
 .album-vacio p { margin: 0; }
 .album-rejilla { gap: 6px; }
-.album-foto { border-radius: 12px; box-shadow: 0 6px 16px -12px rgba(30, 21, 72, .6); }
+.album-foto { border-radius: 12px; box-shadow: 0 6px 16px -12px color-mix(in srgb, var(--tinta-noche) 60%, transparent); }
 .album-t { display: flex; align-items: baseline; gap: 6px; }
 
 /* =========================================================== EL MURO (18 a 33) ======================================= */
@@ -164,14 +164,14 @@
 
 /* 19 - Los filtros del muro: el elegido en el degradado de la marca, no en negro */
 .filtros-muro .chip-filtro[aria-pressed="true"] { color: var(--sobre-morado); border-color: transparent;
-  background: linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa)));
+  background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa)));
   box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
 
 /* 20 - Cada autor con un aro fino del color de lo que publica (entreno, logro, encuesta, pregunta...) */
 .post .post-cab .avatar, .post .post-cab .avatar.con-foto { box-shadow: 0 0 0 2px var(--hoja), 0 0 0 3.5px color-mix(in srgb, var(--pt, var(--morado)) 60%, transparent); }
 
 /* 21 - La cabecera de cada publicacion con un velo de su color, que se apaga hacia el texto */
-.post { background-image: linear-gradient(180deg, color-mix(in srgb, var(--pt, var(--morado)) 5%, transparent), transparent 96px); }
+.post { background-image: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--pt, var(--morado)) 5%, transparent), transparent 96px); }
 
 /* 22 - Las reacciones: la que es tuya, con su color, y un pequeno salto al darle (solo transform) */
 .reacciones .reaccion { transition: transform var(--mov-rapido, .14s) var(--curva-casa, ease), background var(--mov-medio, .26s); }
@@ -190,7 +190,7 @@
 .post .post-guardar.guardado svg { fill: currentColor; }
 
 /* 25 - Lo fijado: la chincheta un poco inclinada y la pastilla con brillo */
-.post.fijada .post-fijado { background: linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); color: var(--sobre-morado);
+.post.fijada .post-fijado { background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); color: var(--sobre-morado);
   box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
 .post.fijada .post-fijado svg { transform: rotate(-22deg); }
 
@@ -208,11 +208,11 @@
 /* 28 - El record del entreno con un destello de oro que lo cruza una vez */
 .entreno-equipo .ee-record { position: relative; overflow: hidden; isolation: isolate; }
 .entreno-equipo .ee-record::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; transform: translateX(-110%);
-  background: linear-gradient(100deg, transparent 30%, var(--eq-brillo) 50%, transparent 70%); animation: eq-destello 1.1s .2s var(--curva-casa, ease) 1 both; }
+  background: linear-gradient(var(--oklab,) 100deg, transparent 30%, var(--eq-brillo) 50%, transparent 70%); animation: eq-destello 1.1s .2s var(--curva-casa, ease) 1 both; }
 
 /* 29 - Las encuestas: barras con degradado, la que gana en oro y su porcentaje en negrita */
-.encuesta-opcion .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 14%, transparent), color-mix(in srgb, var(--morado) 26%, transparent)); }
-.encuesta-opcion.gana .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--oro-300) 28%, transparent), color-mix(in srgb, var(--oro-400) 38%, transparent)); }
+.encuesta-opcion .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 14%, transparent), color-mix(in srgb, var(--morado) 26%, transparent)); }
+.encuesta-opcion.gana .eo-barra { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--oro-300) 28%, transparent), color-mix(in srgb, var(--oro-400) 38%, transparent)); }
 .encuesta-opcion.gana .eo-pct { color: var(--eq-oro-t); font-weight: 820; }
 .encuesta-opcion .eo-pct { font-weight: 720; }
 
@@ -221,7 +221,7 @@
 .ev-acciones .btn[aria-pressed="true"], .ev-acciones .btn.ok { box-shadow: 0 8px 18px -10px var(--ok); }
 
 /* 31 - El reto conseguido en el muro: borde de oro y el trofeo que se ilumina una vez */
-.post-logro .logro-equipo { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 45%, transparent), 0 10px 24px -16px rgba(201, 138, 0, .7); }
+.post-logro .logro-equipo { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oro) 45%, transparent), 0 10px 24px -16px color-mix(in srgb, var(--ambar-500) 70%, transparent); }
 .post-logro .logro-equipo .le-ico { animation: eq-trofeo 1.2s .25s var(--curva-casa, ease) 1 both; }
 
 /* 32 - Las preguntas al coach: la pregunta con su raya a la izquierda, para que se vea que es una pregunta */
@@ -241,7 +241,7 @@
 
 /* 35 - "Compartir la semana del equipo": a todo lo ancho y con el velo de la marca */
 .resumen-equipo-compartir { width: 100%; justify-self: stretch; justify-content: center;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)));
+  background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), color-mix(in srgb, var(--eq-rosa) 8%, var(--hoja)));
   border-color: color-mix(in srgb, var(--morado) 30%, transparent); }
 .resumen-equipo-compartir svg { color: var(--morado); }
 
@@ -250,7 +250,7 @@
 .mes-cifras > *:nth-child(4n + 1) { --mc: var(--verde-500); }
 .mes-cifras > *:nth-child(4n + 2) { --mc: var(--morado); }
 .mes-cifras > *:nth-child(4n + 3) { --mc: var(--ambar-500); }
-.mes-cifras > *:nth-child(4n + 4) { --mc: var(--ambar-500); }
+.mes-cifras > *:nth-child(4n + 4) { --mc: var(--naranja-500); }
 
 /* ============================================================= LOS RETOS (37 a 42) =================================== */
 
@@ -267,16 +267,16 @@
 .reto > .reto-pie .fila .btn { white-space: nowrap; }
 
 /* 39 - La barra grande del reto: mas gruesa, con degradado, una luz en la punta y oro al llegar */
-.barra-equipo.barra-grande { height: 12px; border-radius: 999px; background: var(--hoja-2); box-shadow: inset 0 1px 2px rgba(20, 15, 36, .1); overflow: visible; }
+.barra-equipo.barra-grande { height: 12px; border-radius: 999px; background: var(--hoja-2); box-shadow: inset 0 1px 2px color-mix(in srgb, var(--neutro-950) 10%, transparent); overflow: visible; }
 .barra-equipo.barra-grande > span { position: relative; border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
+  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
 .barra-equipo.barra-grande > span::after { content: ""; position: absolute; right: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
   background: var(--blanco); box-shadow: 0 0 0 2px color-mix(in srgb, var(--morado) 40%, transparent), 0 0 10px 2px rgba(255, 255, 255, .7); }
-.barra-equipo.barra-grande > span.lleno { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); box-shadow: 0 0 14px -3px rgba(201, 138, 0, .8); }
+.barra-equipo.barra-grande > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--ambar-500) 80%, transparent); }
 
 /* 40 - Lo de cada uno en el reto: tu fila con el velo del acento y las barras completas en oro */
-.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
-.progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); }
+.progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: 12px; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
+.progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 41 - El reto ya terminado: un punto mas apagado (el fondo, no el texto) y "Terminado" con su marca */
 .reto[data-estado="terminado"] { background: color-mix(in srgb, var(--hoja-2) 55%, var(--hoja)); }
@@ -290,12 +290,12 @@
 
 /* 43 - Tu fila en el ranking: con el velo del acento y una raya a la izquierda, para encontrarte enseguida */
 .ranking-lista > .fila-ranking.yo { border-radius: 12px; box-shadow: inset 3px 0 0 var(--morado);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), transparent 75%); }
+  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 10%, var(--hoja)), transparent 75%); }
 
 /* 44 - Los hitos del equipo con su barra debajo: cuanto falta se ve, no solo se lee */
 .hitos-lista > li::after { content: ""; grid-column: 2 / -1; height: 4px; border-radius: 999px; margin-top: -2px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 75%, transparent) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
-.hitos-lista > li.hecho::after { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); }
+  background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 75%, transparent) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
+.hitos-lista > li.hecho::after { background: linear-gradient(var(--oklab,) 90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 45 - La respuesta del coach a una pregunta como un bocadillo: con su color y una punta hacia la pregunta */
 .pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja));
@@ -308,15 +308,15 @@
 
 /* 46 - Las cifras del perfil: la cifra arriba en grande y su nombre debajo, igual en todas (la racha ya no ocupa tres lineas) */
 .perfil-equipo-num > div { justify-content: flex-start; box-shadow: inset 0 3px 0 color-mix(in srgb, var(--morado) 55%, transparent); }
-.perfil-equipo-num > div:has(dd.pe-racha) { box-shadow: inset 0 3px 0 rgba(245, 158, 11, .8); }
+.perfil-equipo-num > div:has(dd.pe-racha) { box-shadow: inset 0 3px 0 color-mix(in srgb, var(--ambar-400) 80%, transparent); }
 .perfil-equipo-num dd { line-height: 1.15; }
 .perfil-equipo-num dd.num, .perfil-equipo-num dd.pe-racha .num { font-size: 1.5rem; font-weight: 820; }
 .perfil-equipo-num dd.pe-racha small { display: block; font-size: .75rem; font-weight: 650; color: var(--tinta-2); }
 
 /* 47 - Las insignias del perfil con brillo de medalla y "Siguiente" con su barra en degradado */
-.pe-insignias .insignia { box-shadow: 0 6px 14px -10px rgba(201, 138, 0, .9); }
-.insignia-siguiente [role="progressbar"] > span, .insignia-siguiente .barra-equipo > span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
-.insignia-siguiente { background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2) 60%); }
+.pe-insignias .insignia { box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--ambar-500) 90%, transparent); }
+.insignia-siguiente [role="progressbar"] > span, .insignia-siguiente .barra-equipo > span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
+.insignia-siguiente { background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2) 60%); }
 
 /* ================================================================== COMPARTIR (48 a 50) ============================== */
 
@@ -324,14 +324,14 @@
 .paletas .paleta-op { padding: 5px 12px 5px 5px; }
 .paletas .paleta-muestra { width: 26px; height: 26px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, .25), 0 3px 8px -4px rgba(0, 0, 0, .5); }
 .paletas .paleta-op.activo { box-shadow: 0 0 0 2px var(--morado), 0 6px 14px -8px color-mix(in srgb, var(--morado) 80%, transparent); }
-.compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); }
+.compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(var(--oklab,) 135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); }
 
 /* 49 - Los destinos (WhatsApp, Instagram, Facebook) con su color de verdad en un disco, y la vista previa como una foto sobre la mesa */
 .compartir-destinos .btn > svg:first-child { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: 50%; color: var(--blanco); }
 .compartir-destinos .destino-whatsapp > svg:first-child { background: var(--verde-500); }
-.compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(135deg, var(--naranja-400), var(--rosa-500) 55%, #8134AF); }
+.compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(var(--oklab,) 135deg, var(--naranja-400), var(--rosa-500) 55%, var(--purpura-600)); }
 .compartir-destinos .destino-facebook > svg:first-child { background: var(--azul-500); }
-.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px rgba(20, 15, 50, .75); border-radius: 14px; }
+.tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px color-mix(in srgb, var(--marca-950) 75%, transparent); border-radius: 14px; }
 
 /* 50 - Las opciones de una publicacion y los ajustes de la comunidad: cada fila con su icono en un disco de color */
 .opciones-post .fila-boton > svg:first-child, .opciones-post .btn > svg:first-child { box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border-radius: 10px;
@@ -341,7 +341,7 @@
 /* ======================================================= LO QUE SE MUEVE ============================================= */
 @keyframes eq-pop { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 70% { transform: scale(.96); } 100% { transform: scale(1); } }
 @keyframes eq-destello { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
-@keyframes eq-trofeo { 0% { transform: scale(.85) rotate(-8deg); box-shadow: 0 0 0 0 rgba(242, 207, 99, .0); } 55% { transform: scale(1.08) rotate(4deg); box-shadow: 0 0 0 8px rgba(242, 207, 99, .25); } 100% { transform: none; box-shadow: 0 0 0 0 rgba(242, 207, 99, 0); } }
+@keyframes eq-trofeo { 0% { transform: scale(.85) rotate(-8deg); box-shadow: 0 0 0 0 color-mix(in srgb, var(--oro-300) 0%, transparent); } 55% { transform: scale(1.08) rotate(4deg); box-shadow: 0 0 0 8px color-mix(in srgb, var(--oro-300) 25%, transparent); } 100% { transform: none; box-shadow: 0 0 0 0 color-mix(in srgb, var(--oro-300) 0%, transparent); } }
 @keyframes eq-saludo { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-10deg); } 45% { transform: rotate(14deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(8deg); } }
 @media (prefers-reduced-motion: no-preference) {
   .animos-recibidos .animos-ico { animation: eq-saludo 1.4s .4s ease-in-out 1 both; }

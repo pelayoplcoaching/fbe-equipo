@@ -152,7 +152,7 @@ function pegatina(x, letra, texto) {
   const w = x.measureText(t).width + 56, h = 72;
   x.save();
   x.translate(W - M - w / 2, 190); x.rotate(-0.07);
-  x.fillStyle = C.clara ? '#684EEC' : C.oro;
+  x.fillStyle = C.clara ? '#593EDE' : C.oro;
   x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, 16); x.fill();
   x.fillStyle = C.clara ? '#FFFFFF' : '#140B3A'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillText(t, 0, 2);
