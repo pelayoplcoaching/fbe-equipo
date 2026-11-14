@@ -78,7 +78,8 @@ export async function probarPersonalCompania({ navegador, check, base = 'http://
     check(await reto.count() === 1 && /Tu reto de/.test(await reto.textContent()), `en Hoy, su reto del mes («${(await reto.locator('.reto-mes-t').textContent().catch(() => '')).trim()}»)`);
     await irASeccion(q, 'Perfil');
     const album = q.locator('.album-hitos');
-    await album.waitFor({ timeout: 8000 });
+    // (con la prueba completa, más lenta: si algo se ha puesto encima o aún carga, se cierra y se vuelve a Perfil)
+    if (!(await album.waitFor({ timeout: 8000 }).then(() => true, () => false))) { await fueraAvisos(q); await irASeccion(q, 'Perfil'); await album.waitFor({ timeout: 12000 }); }
     check(/Tu primera sesión/.test(await album.textContent()), 'en Perfil, su álbum con sus primeras veces');
     await album.getByRole('button', { name: 'Añadir un hito tuyo' }).click();
     const hh = q.getByRole('dialog', { name: 'Un hito tuyo' });
