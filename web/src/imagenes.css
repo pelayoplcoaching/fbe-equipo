@@ -337,3 +337,11 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .album-img { flex: none; width: 34px; height: 34px; border-radius: 10px; object-fit: cover; }
 @media print { .informe-ilu { display: none !important; } }
 @media (forced-colors: active) { .ico-ilu, .intro-ilu-img, .voz-coach-img, .reto-mes-img, .album-img { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloque AF: para el coach, y su primer mes */
+.lo-que-funciona.con-ilu { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+.lo-que-funciona.con-ilu > :not(.lo-que-funciona-img) { grid-column: 1; }
+.lo-que-funciona.con-ilu > .lo-que-funciona-img { grid-column: 2; grid-row: 1 / span 4; align-self: start; }
+.alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
+.panel.primeros-pasos.con-ilu { overflow: hidden; }
+.primeros-pasos-ilu { object-position: 50% 50%; }

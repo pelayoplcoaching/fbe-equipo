@@ -261,6 +261,7 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
 }
 
 // (imágenes de las 48 h) Bloques AC, AD y AE: la sesión de hoy, su vida y que le acompañe
+const lee0 = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'utf8');
 {
   const { imagenHitoAlbum } = await import('../web/src/logica/imagenes.js');
   const { albumHitos } = await import('../web/src/logica/compania.js');
@@ -269,12 +270,21 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
   check(['primera', 'cien', 'dominada'].every((k) => hs.some((h) => h.clave === k && fuenteImagen(imagenHitoAlbum(h.clave)))), 'álbum: las claves de sus hitos son las de las imágenes');
   const ids = ['tiempo-hoy', 'calentamiento', 'hace-un-ano', 'alternativas', 'como-estas', 'vida-agenda', 'vida-que-tal', 'semana-dificil', 'guardias', 'manual', 'sin-bascula', 'ciclo', 'informe', 'voz-coach', 'reto-mes', 'album', 'hito-primera', 'hito-cien', 'hito-dominada'];
   check(ids.every((id) => fuenteImagen(id)), 'AC, AD y AE: las diecinueve, en la lista');
-  check(!fuenteImagen('companero'), '«Busco compañero», sin imagen todavía (la recibida llevaba un logotipo de marca)');
+  check(!!fuenteImagen('companero') && lee0('ui/atleta/Compania.jsx').includes('id="companero"'), '«Busco compañero», con las zapatillas sin marca');
   const lee = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'utf8');
   const sitios = { 'ui/atleta/SesionTuya.jsx': ['tiempo-hoy', 'calentamiento', 'hace-un-ano'], 'ui/atleta/Conocerte.jsx': ['como-estas'], 'ui/atleta/Sesion.jsx': ['alternativas'],
     'ui/atleta/Vida.jsx': ['vida-agenda', 'vida-que-tal', 'semana-dificil', 'guardias'], 'ui/atleta/Respeto.jsx': ['manual', 'sin-bascula', 'ciclo', 'informe'], 'ui/atleta/Compania.jsx': ['voz-coach', 'reto-mes', 'album'] };
   check(Object.entries(sitios).every(([f, l]) => l.every((id) => lee(f).includes(`id="${id}"`))), 'AC, AD y AE: cada una en su sitio');
   check(/@media print \{ \.informe-ilu \{ display: none/.test(readFileSync(new URL('../web/src/imagenes.css', import.meta.url), 'utf8')), 'el informe impreso, sin la ilustración');
+}
+
+// (imágenes de las 48 h) Bloque AF: para el coach, y su primer mes
+{
+  check(['vuelve', 'alerta', 'regalo', 'primer-mes'].every((id) => fuenteImagen(id)), 'AF: las cuatro, en la lista');
+  const cs = lee0('ui/atleta/CoachSabe.jsx');
+  check(cs.includes('id="vuelve"') && cs.includes('id="alerta"') && cs.includes('id="regalo"') && lee0('ui/atleta/Bienvenida.jsx').includes('id="primer-mes"'), 'AF: lo que le hace volver, su alerta, los hitos con regalo y los primeros pasos');
+  const l = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes.json', import.meta.url), 'utf8'));
+  check(l['primer-mes'].proporcion.join(':') === '5:2' && l['companero'].proporcion.join(':') === '3:1', 'los faroles y la puerta caben (5:2); las zapatillas, en franja');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
