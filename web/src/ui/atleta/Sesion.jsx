@@ -1330,6 +1330,7 @@ function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
   };
   return (
     <Hoja titulo="Descanso" alCerrar={alCerrar}>
+      <Imagen id="descanso" clase="franja-ilu franja-hoja franja-descanso" tamanos="(min-width: 640px) 560px, 92vw" />
       <p class="peq secundario">Tu coach no te ha puesto descanso en {nombre}. El que elijas arranca solo al marcar cada serie, en todas tus sesiones, y se guarda en este móvil.</p>
       <div class="lista-elegir lista-descansos" role="group" aria-label={`Descanso de ${nombre}`}>
         <Opcion valor={null} texto="Usar el de por defecto" nota={`Ahora, ${textoDescanso(defecto)}. Se cambia en Perfil, en «Sonido y vibración».`} />

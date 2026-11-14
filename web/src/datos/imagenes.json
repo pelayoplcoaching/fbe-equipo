@@ -312,6 +312,16 @@
       "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
     }
   },
+  "antes-de-empezar": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion-extra/antes-de-empezar-720.8d46a166.webp",
+      "1080": "imagenes/sesion-extra/antes-de-empezar-1080.6c26370b.webp"
+    }
+  },
   "apuntes-audio": {
     "proporcion": [
       1,
@@ -1548,6 +1558,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/del-remo-menton-192.5c8dc2af.webp",
       "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
+    }
+  },
+  "descanso": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/sesion-extra/descanso-720.48db1c3a.webp",
+      "1080": "imagenes/sesion-extra/descanso-1080.6695d5a9.webp"
     }
   },
   "difusion": {
@@ -4302,6 +4322,16 @@
       "320": "imagenes/guias/portada-volver-cuadrada-320.0b407c96.webp"
     }
   },
+  "preparacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/sesion-extra/preparacion-160.cd8dd6fa.webp",
+      "320": "imagenes/sesion-extra/preparacion-320.25ee7932.webp"
+    }
+  },
   "primer-mes": {
     "proporcion": [
       5,
@@ -4791,6 +4821,16 @@
     "archivos": {
       "160": "imagenes/vida/vida-que-tal-160.73ea67d1.webp",
       "320": "imagenes/vida/vida-que-tal-320.f8fb1c44.webp"
+    }
+  },
+  "video-tecnica": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/sesion-extra/video-tecnica-480.a68bfa48.webp",
+      "840": "imagenes/sesion-extra/video-tecnica-840.f0f30f56.webp"
     }
   },
   "voces-frases": {

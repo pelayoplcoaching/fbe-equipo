@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Icono, useApp, useCarga } from '../comunes.jsx';
+import { Imagen } from '../Imagen.jsx';
 import { fichaDeEjercicio } from '../../datos/guias.js';
 import { tresClaves, clavesDeFicha } from '../../logica/apuntes-practica.js';
 
@@ -22,6 +23,7 @@ export function AntesDeEmpezar({ ej }) {
   };
   return (
     <section class="antes-de-empezar" aria-label="Antes de la primera serie">
+      <Imagen id="antes-de-empezar" clase="franja-ilu franja-antes" tamanos="(min-width: 640px) 520px, 88vw" />
       <p class="antes-cab"><Icono n="diana" /><strong>Es nuevo para ti: tres claves antes de empezar</strong></p>
       <ol>{claves.map((c, i) => <li key={i}>{c}</li>)}</ol>
       <span class="antes-tiempo" aria-hidden="true"><i /></span>

@@ -163,7 +163,8 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Salud del iPhone y el calendario conservan su color de marca */
 .conexion-salud .ico-img, .conexion-calendario .ico-img { display: none; }
 /* Los estados vacíos: la ilustración grande en su escenario de dos aros */
-.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px;
+.vacio-ico-img { width: 60px; height: 60px; border-radius: var(--r-16); margin: 14px 0 12px; }
+.vacio-ico-img, .vacio-escena {
   box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
 @media (prefers-reduced-motion: no-preference) { .vacio-ico-img { animation: ilu-entra var(--mov-lento) var(--curva-casa) both; } }
 
@@ -379,8 +380,7 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
    Una escena cuadrada (112 px, con los dos aros de los iconos) o apaisada (la comunidad, hasta 280 px de ancho) en lugar
    del icono: chat (destacados, fotos, enlaces, documentos, notas de voz), guardado, búsquedas, retos, ranking, historial
    del ejercicio y recetas favoritas. */
-.vacio-escena { width: 112px; height: 112px; object-fit: cover; border-radius: var(--r-16); margin: 14px 0 12px;
-  box-shadow: 0 0 0 9px var(--acento-a8), 0 0 0 19px var(--acento-a4); }
+.vacio-escena { width: 112px; height: 112px; object-fit: cover; border-radius: var(--r-16); margin: 14px 0 12px; }
 .vacio-escena-ancha { width: min(280px, 80%); height: auto; aspect-ratio: 4 / 3; box-shadow: none; margin: 4px 0 8px; }
 @media (forced-colors: active) { .vacio-escena { display: none; } }
 
@@ -393,3 +393,10 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .franja-voces { margin: 4px 0 8px; }
 .panel-pad > .franja-pegada.franja-integraciones { object-position: 70% 50%; margin-bottom: 6px; }
 .etq-con-ilu, .h-con-ilu { display: flex; align-items: center; gap: 12px; }
+
+/* ---------- (imágenes, bloque AL) Durante la sesión ----------
+   Franja arriba de la hoja «Descanso» (el que elige cuando su coach no le puso uno) y de «Antes de empezar» (las tres
+   claves de un ejercicio nuevo); cuadrito junto a «¿Cómo llegas hoy?»; escena en el vacío de los vídeos vistos. */
+.franja-descanso { aspect-ratio: 3 / 1; object-position: 75% 50%; margin-bottom: 8px; }
+.antes-de-empezar > .franja-antes { aspect-ratio: 3 / 1; border-radius: var(--r-s); object-position: 70% 50%; }
+.prep-cab-ilu { display: flex; align-items: center; gap: 12px; min-width: 0; }
