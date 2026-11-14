@@ -682,6 +682,46 @@
       "1080": "imagenes/carne/carne-fondo-1080.c2adc0ae.webp"
     }
   },
+  "carrera-dorsal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-dorsal-160.ca169168.webp",
+      "320": "imagenes/ah/carrera-dorsal-320.830aa8c2.webp"
+    }
+  },
+  "carrera-fuerza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-fuerza-160.66a78ff2.webp",
+      "320": "imagenes/ah/carrera-fuerza-320.18276812.webp"
+    }
+  },
+  "carrera-semaforo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/carrera-semaforo-160.832ca862.webp",
+      "320": "imagenes/ah/carrera-semaforo-320.a4020092.webp"
+    }
+  },
+  "carrera-zonas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/carrera-zonas-720.65f03160.webp",
+      "1080": "imagenes/ah/carrera-zonas-1080.f6e2933a.webp"
+    }
+  },
   "carta-mes": {
     "proporcion": [
       5,
@@ -1533,6 +1573,16 @@
       "480": "imagenes/equipo/equipo-reto-480.39ae977a.webp",
       "720": "imagenes/equipo/equipo-reto-720.b7cbb71c.webp",
       "1080": "imagenes/equipo/equipo-reto-1080.41c9369e.webp"
+    }
+  },
+  "escaner": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/escaner-720.f25b1c30.webp",
+      "1080": "imagenes/ah/escaner-1080.f797384d.webp"
     }
   },
   "esp-dominadas-neutras": {
@@ -3572,6 +3622,16 @@
       "320": "imagenes/musica/musica-calentar-320.135fc81b.webp"
     }
   },
+  "musica-calma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-calma-160.6ced23e8.webp",
+      "320": "imagenes/musica/musica-calma-320.c3874a15.webp"
+    }
+  },
   "musica-equipo": {
     "proporcion": [
       3,
@@ -4225,6 +4285,16 @@
       "320": "imagenes/coach/regalo-320.377acbc3.webp"
     }
   },
+  "reloj": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/reloj-160.017380a2.webp",
+      "320": "imagenes/ah/reloj-320.118aee60.webp"
+    }
+  },
   "reto-mes": {
     "proporcion": [
       1,
@@ -4233,6 +4303,16 @@
     "archivos": {
       "160": "imagenes/compania/reto-mes-160.76b87ea6.webp",
       "320": "imagenes/compania/reto-mes-320.6c2cba3c.webp"
+    }
+  },
+  "salud-conexion": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/salud-conexion-720.3a066ea2.webp",
+      "1080": "imagenes/ah/salud-conexion-1080.c88e84d1.webp"
     }
   },
   "semana-dificil": {
@@ -4451,6 +4531,26 @@
     "archivos": {
       "192": "imagenes/ejercicio/tri-trasnuca-polea-baja-192.641e838b.webp",
       "512": "imagenes/ejercicio/tri-trasnuca-polea-baja-512.4c5b8597.webp"
+    }
+  },
+  "viaje": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/ah/viaje-720.ee90e44e.webp",
+      "1080": "imagenes/ah/viaje-1080.698db58d.webp"
+    }
+  },
+  "viaje-vuelta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/ah/viaje-vuelta-160.e848e7f3.webp",
+      "320": "imagenes/ah/viaje-vuelta-320.fea18256.webp"
     }
   },
   "vida-agenda": {
