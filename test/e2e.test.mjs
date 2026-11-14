@@ -4357,6 +4357,7 @@ try {
   await p.locator('.hero-dia').waitFor();
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) los de los mensajes, en «Ajustes»
   await p.getByRole('heading', { name: 'Mensajes', exact: true }).waitFor();
   check(await p.getByRole('switch', { name: /Mostrar cuándo estoy en línea/ }).isChecked(), '«Mostrar cuándo estoy en línea», encendido de serie');
   await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Liso' }).click();
@@ -4369,6 +4370,7 @@ try {
   await p.locator('.hero-dia').waitFor();
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) los de los mensajes, en «Ajustes»
   await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Con dibujos' }).click();
   await p.getByRole('button', { name: 'Volver a Hoy' }).click();
 
