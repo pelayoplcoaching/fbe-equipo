@@ -490,6 +490,74 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .fila-ios[data-m="viaje"] { --fm: var(--pc-viaje); --ico-m: var(--ico-viaje); }
 .fila-ios[data-m="bienvenida"] { --fm: var(--pc-bienvenida); --ico-m: var(--ico-personas); }
 
+/* ---------- (música 3, tanda 1) La cadencia por tramos, tocar al ritmo, «Pon tu canción» y abrir en la app ---------- */
+.cadencia-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cadencia .segmentos-peq button { min-height: 32px; padding: 4px 12px; font-size: .8125rem; }
+.cadencia-tramos-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px 10px; }
+.cadencia-tramo-campo { display: grid; gap: 2px; }
+.cadencia-tramo-campo .fila { gap: 2px; align-items: center; flex-wrap: nowrap; }
+.cadencia-tramo-campo .btn-icono { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
+.cadencia-tramo-campo b { min-width: 2.8rem; text-align: center; font-weight: 800; }
+.cadencia-tramo-ahora { padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--morado) 10%, var(--hoja)); line-height: 1.4; }
+.tocar-ritmo-abrir { display: inline-flex; align-items: center; gap: 6px; justify-self: start; text-align: left; }
+.tocar-ritmo-abrir svg { width: 16px; height: 16px; }
+.tocar-ritmo { padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 6%, var(--hoja)); }
+.tocar-ritmo-boton { min-height: 64px; font-weight: 750; touch-action: manipulation; }
+.tocar-ritmo-boton:active { transform: scale(.98); }
+.tocar-ritmo-r { line-height: 1.4; }
+.tocar-ritmo-r b { font-size: 1.25rem; font-weight: 800; }
+.pon-tu-cancion { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; margin: 2px 0 8px; text-decoration: none; }
+.pon-tu-cancion { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.abrir-en-app { align-items: center; gap: 8px; }
+
+/* ---------- (música 3, tanda 2) Fases, «Lo batiste con…», sus listas por momento y lo que más te acompaña ---------- */
+.musica-fase { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; margin: 0 0 8px; padding: 10px 12px; border-radius: 14px;
+  background: color-mix(in srgb, var(--morado) 10%, var(--hoja)); border: 1px solid color-mix(in srgb, var(--morado) 30%, transparent); }
+.musica-fase > svg { width: 20px; height: 20px; color: var(--morado); }
+.musica-fase .pila-xs { min-width: 0; }
+.musica-fase .mini { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lo-batiste-con { display: flex; gap: 8px; align-items: center; margin: 8px 0 0; }
+.lo-batiste-con svg { width: 18px; height: 18px; flex: none; color: var(--morado); }
+.album-con-musica { display: block; }
+.listas-musica { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.lista-musica-fila { display: flex; gap: 10px; align-items: center; }
+.lista-musica-fila .pila-xs { flex: 1; min-width: 0; }
+.lista-musica-fila select { max-width: 100%; }
+.listas-musica-nueva { padding-top: 10px; border-top: 1px solid var(--linea); }
+.pon-tu-cancion.himno-ultima { border-color: var(--morado); }
+
+/* ---------- (música 3, tanda 3) Lo que suena en el equipo, el reto musical y la lista de la pareja ---------- */
+.canciones-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.cancion-fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cancion-fila .cancion-texto { flex: 1; min-width: 0; }
+.cancion-fila .cancion-texto strong { overflow-wrap: anywhere; }
+.cancion-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); color: var(--morado); }
+.cancion-ico svg { width: 18px; height: 18px; }
+.cancion-fila.destacada .cancion-ico { background: var(--morado); color: var(--sobre-morado); }
+.cancion-top { white-space: nowrap; }
+.reto-musical-t { margin: 0; font-size: 1.125rem; }
+.cp-lista-musica { display: block; }
+.cp-lista-musica svg { width: 14px; height: 14px; vertical-align: -2px; }
+.cp-lista-musica a { overflow-wrap: anywhere; }
+
+/* ---------- (música 3, tanda 4) La biblioteca del coach, qué música funciona y los reproductores de YouTube y Apple Music ---------- */
+.biblioteca-musica .separa { align-items: center; }
+.biblioteca-cifras { gap: 10px; }
+.biblioteca-cifras .campo { flex: 1; min-width: 120px; }
+.de-tu-biblioteca { padding-top: 10px; border-top: 1px solid var(--linea); }
+.de-tu-biblioteca .lista { margin: 0; }
+.uso-musica-lista { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.uso-musica-lista li { line-height: 1.35; }
+.uso-musica-nombre { display: block; font-weight: 650; overflow-wrap: anywhere; }
+.reproductor-otro { border-radius: 12px; background: var(--reproductor-fondo); }
+.reto-musical-coach .fila-envolver { gap: 8px; }
+.reto-musical-coach input { flex: 1; min-width: 160px; }
+
 /* (personalizacion 3) al pie de Hoy, "Ordenar Hoy" y "Esta semana va a ser dificil" en una linea cada uno si no caben */
 .ordenar-hoy-pie { flex-wrap: wrap; gap: 2px 18px; }
 .ordenar-hoy-pie .btn-texto { white-space: nowrap; }
+
+/* (v0.160) el fondo de los reproductores de YouTube y Apple Music: negro en los dos temas (detras del video) */
+:root { --reproductor-fondo: #000000; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --reproductor-fondo: #000000; } }
+:root[data-theme="dark"] { --reproductor-fondo: #000000; }

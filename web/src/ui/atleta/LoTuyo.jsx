@@ -17,7 +17,7 @@ import { LIMITES, limpiarPersonal, urlMusica, cumpleValido } from '../../logica/
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { esCancion } from '../../logica/musica.js';
-import { FichaPrevia, useNombreLista } from './Musica.jsx';
+import { FichaPrevia, useNombreLista, HojaListasMusica, HojaHimnos } from './Musica.jsx';
 
 export const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -40,6 +40,9 @@ export function LoTuyo({ salud = false }) {
       {entrena && <FilaIos icono="estrella" titulo="Tus tres ejercicios" valor={nFav ? `${nFav} de 3` : 'Elegir'} alTocar={() => setEditar('favoritos')} etiqueta="Elegir tus tres ejercicios" />}
       {entrena && <FilaIos icono="altavoz" titulo="Tu música" valor={p.musica_url ? nombreLista : 'Añadir'} alTocar={() => setEditar('musica')} etiqueta="Poner el enlace a tu música" />}
       {entrena && <FilaIos icono="trofeo" titulo="Tu canción de récord" valor={p.cancion_url ? nombreCancion : 'Elegir'} alTocar={() => setEditar('cancion')} etiqueta="Elegir tu canción de récord" />}
+      {/* (música 3) sus listas por momento y sus himnos */}
+      {entrena && <FilaIos icono="altavoz" titulo="Tus listas por momento" valor={p.musica_listas?.length ? `${p.musica_listas.length} ${p.musica_listas.length === 1 ? 'lista' : 'listas'}` : 'Añadir'} alTocar={() => setEditar('listas')} etiqueta="Poner tus listas por momento" />}
+      {entrena && <FilaIos icono="estrella" titulo="Tus himnos" valor={[p.himno_ultima_url, p.himno_vuelta_url].filter(Boolean).length ? `${[p.himno_ultima_url, p.himno_vuelta_url].filter(Boolean).length} de 2` : 'Elegir'} alTocar={() => setEditar('himnos')} etiqueta="Elegir tus himnos" />}
       <FilaIos icono="calendario" titulo="Tu cumpleaños" valor={textoCumple(p) || 'Añadir'} alTocar={() => setEditar('cumple')} etiqueta="Poner tu cumpleaños" />
       {/* (personalización 2) cómo te hablamos y qué celebrar */}
       <FilaIos icono="mensaje" titulo="Cómo te hablamos" valor={`${(GENEROS.find(([k]) => k === (p.genero || 'n')) || [])[1]} · ${(TONOS.find(([k]) => k === (p.tono || 'cercano')) || [])[1]}`} alTocar={() => setEditar('trato')} etiqueta="Elegir cómo te hablamos" />
@@ -59,8 +62,10 @@ export function LoTuyo({ salud = false }) {
       {editar === 'ocultar' && <HojaOcultar alCerrar={() => setEditar(null)} />}
       {editar === 'ciclo' && <HojaCiclo alCerrar={() => setEditar(null)} />}
       {editar === 'guardias' && <HojaGuardias alCerrar={() => setEditar(null)} />}
+      {editar === 'listas' && <HojaListasMusica actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar === 'himnos' && <HojaHimnos actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
       {editar === 'meta' && <HojaMeta actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
-      {editar && !['trato', 'celebrar', 'meta', 'foto', 'agenda', 'guardias', 'manual', 'ocultar', 'ciclo'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
+      {editar && !['trato', 'celebrar', 'meta', 'foto', 'agenda', 'guardias', 'manual', 'ocultar', 'ciclo', 'listas', 'himnos'].includes(editar) && <HojaLoTuyo campo={editar} actual={p} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); datos.recargar(true); }} />}
     </GrupoIos>
   );
 }

@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.160': {
+    atleta: [
+      'Tu música, más tuya: listas por momento, tus himnos, la cadencia por tramos y «Lo batiste con…» en tus récords.',
+      'En el equipo: la canción de cada uno, el reto musical del mes y una lista con tu pareja de racha.',
+      'Y la música baja sola cuando habla tu coach, y suenan también YouTube y Apple Music.',
+    ],
+    coach: [
+      'Cuenta → tu biblioteca de música y «Qué música funciona»; el reto musical del mes. Migración 072.',
+    ],
+  },
   '0.159': {
     atleta: [
       'Ilustraciones nuevas en Apuntes, tu meta y tu historia, tu sesión, tu vida y «Busco compañero».',

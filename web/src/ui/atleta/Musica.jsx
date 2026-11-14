@@ -11,7 +11,9 @@
 //     BotonMusica (la música a mano durante la sesión) y la invitación a poner la tuya
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
-import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia } from '../../logica/musica.js';
+import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia, bpmDeToques, encajaRitmo, TOQUE_REINICIO_MS, normalizarTramos, tramoCadencia, duracionTramos, uriSpotify, esSesionTest, vuelveDeParon, musicaDeFase, ETIQUETAS_LISTA, urlIncrustarOtro, altoIncrustadoOtro, portadaYoutube } from '../../logica/musica.js';
+import { hoyISO } from '../../logica/fechas.js';
+import { apuntarReproductor } from './musica-control.js';
 import { nombreMusica, urlMusica } from '../../logica/personal.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
@@ -41,7 +43,8 @@ async function fichaSpotify(url) {
   return f;
 }
 export function useFicha(url) {
-  return useCarga(() => (spotify(url) ? fichaSpotify(url).catch(() => null) : Promise.resolve(null)), [url]);
+  // (música 3) de un vídeo de YouTube, su portada (sin pedir nada: i.ytimg.com); el nombre, el del servicio
+  return useCarga(() => (spotify(url) ? fichaSpotify(url).catch(() => null) : Promise.resolve(portadaYoutube(url) ? { titulo: null, thumb: portadaYoutube(url), t: Date.now() } : null)), [url]);
 }
 
 // El reproductor de Spotify, al tocar. (v0.129) Compacto de entrada (el play y la canción), «Ver la lista entera» en las
@@ -50,19 +53,55 @@ const appOscura = () => {
   const r = document.documentElement.getAttribute('data-theme');
   return r === 'dark' || (r !== 'light' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 };
+// (música 3) Abrir en la app de Spotify: con «Abrir en la app de Spotify» puesto (se recuerda en el móvil), los enlaces de
+// Spotify van a spotify:… (abre la app sin pasar por el navegador). Si en un momento la app no se ha abierto (no está
+// instalada), se abre la web. Los demás servicios, como siempre
+const CLAVE_APP = 'fbe-musica-app';
+export const leerAbrirEnApp = () => { try { return localStorage.getItem(CLAVE_APP) === '1'; } catch { return false; } };
+export const guardarAbrirEnApp = (si) => { try { if (si) localStorage.setItem(CLAVE_APP, '1'); else localStorage.removeItem(CLAVE_APP); } catch { /* */ } };
+export function abrirMusica(url, e = null) {
+  const uri = leerAbrirEnApp() ? uriSpotify(url) : null;
+  if (!uri) { if (!e) try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { /* bloqueado */ } return; }
+  e?.preventDefault?.();
+  let fuera = false;
+  const irse = () => { fuera = true; };
+  window.addEventListener('blur', irse, { once: true });
+  document.addEventListener('visibilitychange', irse, { once: true });
+  try { window.location.href = uri; } catch { fuera = false; }
+  setTimeout(() => {
+    window.removeEventListener('blur', irse); document.removeEventListener('visibilitychange', irse);
+    if (!fuera && document.visibilityState === 'visible') try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { /* */ }
+  }, 1500);
+}
+export function AbrirEnApp({ opciones = [] }) {
+  const [si, setSi] = useState(leerAbrirEnApp);
+  if (!opciones.some((x) => spotify(x.url))) return null;
+  return (
+    <label class="fila-s mini secundario abrir-en-app">
+      <input type="checkbox" checked={si} onChange={(e) => { guardarAbrirEnApp(e.currentTarget.checked); setSi(e.currentTarget.checked); }} />
+      Abrir en la app de Spotify (si la tienes)
+    </label>
+  );
+}
+
 export function Reproductor({ url, titulo = 'Spotify' }) {
   const [abierto, setAbierto] = useState(false);
   const [entero, setEntero] = useState(false);
   const [oscuro] = useState(appOscura);
-  const src = urlIncrustar(url, { oscuro });
+  // (música 3) también YouTube (youtube-nocookie) y Apple Music; la voz del coach solo pausa el de Spotify
+  const deSpotify = urlIncrustar(url, { oscuro });
+  const src = deSpotify || urlIncrustarOtro(url);
+  // (música 3) se apunta para que la voz del coach lo pause y lo reanude (musica-control.js)
+  const marco = useRef(null);
+  useEffect(() => (abierto && deSpotify ? apuntarReproductor(marco.current) : undefined), [abierto, src]);
   if (!src) return null;
   if (!abierto) return <button type="button" class="btn btn-peq" onClick={() => setAbierto(true)}><Icono n="play" /> Escuchar aquí</button>;
   return (
     <div class="reproductor-caja">
-      <iframe class="reproductor-spotify" title={`Reproductor de Spotify: ${titulo}`} src={src} width="100%" height={altoIncrustado(url, entero)} loading="lazy"
+      <iframe ref={marco} class={deSpotify ? 'reproductor-spotify' : 'reproductor-spotify reproductor-otro'} title={`Reproductor de ${deSpotify ? 'Spotify' : nombreMusica(url)}: ${titulo}`} src={src} width="100%" height={deSpotify ? altoIncrustado(url, entero) : altoIncrustadoOtro(url)} loading="lazy"
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" />
       <span class="fila-envolver reproductor-acciones">
-        {tieneLista(url) && <button type="button" class="btn-texto" aria-expanded={entero ? 'true' : 'false'} onClick={() => setEntero(!entero)}>{entero ? 'Ver solo el reproductor' : `Ver ${tipoMusica(url) === 'Álbum' ? 'el álbum' : tipoMusica(url) === 'Podcast' ? 'los episodios' : 'la lista'} entera`}</button>}
+        {deSpotify && tieneLista(url) && <button type="button" class="btn-texto" aria-expanded={entero ? 'true' : 'false'} onClick={() => setEntero(!entero)}>{entero ? 'Ver solo el reproductor' : `Ver ${tipoMusica(url) === 'Álbum' ? 'el álbum' : tipoMusica(url) === 'Podcast' ? 'los episodios' : 'la lista'} entera`}</button>}
         <button type="button" class="btn-texto" onClick={() => { setAbierto(false); setEntero(false); }}>Quitar el reproductor</button>
       </span>
     </div>
@@ -118,7 +157,7 @@ export function TarjetaMusica({ url, etiqueta, alAbrir = null, extra = null }) {
         </span>
       </div>
       <div class="fila-envolver tarjeta-musica-botones">
-        <a class="btn btn-peq" href={url} target="_blank" rel="noopener noreferrer" onClick={() => alAbrir?.()}><Icono n="enlace" /> Abrir en {nombreMusica(url)}</a>
+        <a class="btn btn-peq" href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => { alAbrir?.(); abrirMusica(url, e); }}><Icono n="enlace" /> Abrir en {nombreMusica(url)}</a>
         <Reproductor url={url} titulo={titulo} />
         {extra}
       </div>
@@ -135,32 +174,46 @@ function musicaDeTuCoach(api, propio, sesionId, bloqueId) {
   return p.catch(() => ({}));
 }
 
-export function MusicaSesion({ sesion, semana = null, familia = null, cardio = null, alEmpezar }) {
-  const { api, propio } = useApp();
+// (música 3) Lo que hace falta para elegir la música de una sesión: la del coach, lo suyo, la lista de sus compañeros de
+// racha y si vuelve tras un parón (sus entrenos, los mismos que lee el reto del mes). Y abrir una: se cuenta en su mes y se
+// apunta a esa sesión («Lo batiste con…»)
+export function useMusicaDeSesion({ sesion, semana = null, familia = null, cardio = null, prep = null }) {
+  const { api, atleta, propio } = useApp();
   const personal = usePersonal();
   const coach = useCarga(() => musicaDeTuCoach(api, propio, sesion.id, semana?.bloque_id || null), [sesion.id, semana?.bloque_id, propio]);
+  const comp = useCarga(() => (propio ? Promise.resolve([]) : (api.listasCompaneros?.() || Promise.resolve([])).catch(() => [])), [propio]);
+  const conHimno = !propio && !!personal.datos?.himno_vuelta_url && !!atleta?.id;
+  const entrenos = useCarga(() => (conHimno ? api.entrenamientos(atleta.id).catch(() => []) : Promise.resolve([])), [atleta?.id, conHimno], { recuerdo: conHimno ? `reto-entrenos:${atleta.id}` : null });
+  const opciones = musicaDeLaSesion({ coach: coach.datos || {}, personal: personal.datos, familia, foco: semana?.foco || null, sesionId: sesion.id, bloqueId: semana?.bloque_id || null,
+    modalidad: cardio?.modalidad || null, minutos: cardio?.minutos || null, prep, esTest: esSesionTest(sesion), vuelta: conHimno && vuelveDeParon(entrenos.datos || [], hoyISO()), companeros: comp.datos || [] });
+  const abrir = (url) => { if (propio) return; api.musicaAbierta(); api.musicaAbiertaLista?.(url, sesion.id); };
+  return { opciones, abrir, coach, personal, cargando: coach.cargando || personal.cargando };
+}
+
+export function MusicaSesion({ sesion, semana = null, familia = null, cardio = null, alEmpezar, prep = null }) {
+  const { api, propio } = useApp();
+  const { opciones, abrir, cargando, personal } = useMusicaDeSesion({ sesion, semana, familia, cardio, prep });
   const [mas, setMas] = useState(false);
   const [aviso, setAviso] = useState(() => !!leerAjustes().vozBloqueo && !!leerAjustes().sonido);
-  const opciones = musicaDeLaSesion({ coach: coach.datos || {}, personal: personal.datos, familia, foco: semana?.foco || null, sesionId: sesion.id, bloqueId: semana?.bloque_id || null, modalidad: cardio?.modalidad || null });
   // (v0.129) sin ninguna música (ni la del coach ni la suya), una invitación a poner la suya, que se puede cerrar
   // (en el modo atleta del coach no: «Lo tuyo» es de los atletas; sin listas suyas en Cuenta › Música, nada)
-  if (!opciones.length) return coach.cargando || personal.cargando || propio ? null : <InvitacionMusica alGuardar={() => personal.recargar(true)} />;
+  if (!opciones.length) return cargando || propio ? null : <InvitacionMusica alGuardar={() => personal.recargar(true)} />;
   const [primera, ...otras] = opciones;
-  const abrir = () => { if (!propio) api.musicaAbierta(); };
   const empezarConMusica = () => {
-    abrir();
-    try { window.open(primera.url, '_blank', 'noopener,noreferrer'); } catch { /* bloqueado: queda el enlace */ }
+    abrir(primera.url);
+    abrirMusica(primera.url);
     alEmpezar?.();
   };
   return (
     <section class="seccion musica-sesion" aria-labelledby="musica-sesion-t">
       <h2 id="musica-sesion-t">Tu música de hoy</h2>
       <div class="panel panel-pad pila-s">
-        <TarjetaMusica url={primera.url} etiqueta={etiquetaOrigen(primera)} alAbrir={abrir} />
+        <TarjetaMusica url={primera.url} etiqueta={etiquetaOrigen(primera)} alAbrir={() => abrir(primera.url)} />
         {otras.length > 0 && (mas
-          ? otras.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={abrir} />)
+          ? otras.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={() => abrir(x.url)} />)
           : <button type="button" class="btn-texto" style="justify-self:start" onClick={() => setMas(true)}>{otras.length === 1 ? 'Otra opción' : `${otras.length} opciones más`}</button>)}
         {!sesion.completada && <button type="button" class="btn btn-ancho empezar-musica" onClick={empezarConMusica}><Icono n="play" /> Empezar con esta música</button>}
+        <AbrirEnApp opciones={opciones} />
         {aviso && (
           <div class="nota peq musica-aviso">
             <span>Tienes puesto «Avisar aunque bloquees el móvil»: en cada descanso tu música se pausa. ¿Prefieres que te avise solo vibrando?</span>
@@ -176,37 +229,152 @@ export function MusicaSesion({ sesion, semana = null, familia = null, cardio = n
 }
 
 // ---------- El metrónomo de cadencia del cardio ----------
-export function Cadencia({ modalidad }) {
+// (música 3) Dos modos: fijo (el de siempre) o por tramos (cardio por intervalos: cambia solo de cadencia con cada tramo
+// y avisa 5 s antes). Debajo, «¿A cuántos bpm va lo que suena?»: toca al ritmo y te dice si encaja con tu cadencia.
+const leerNum = (k, d) => { try { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; } catch { return d; } };
+const guardarNum = (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* */ } };
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+export function Cadencia({ modalidad, tramos: delCoach = null }) {
   const c = cadenciaDe(modalidad);
-  const [valor, setValor] = useState(() => { try { return ajustarCadencia(modalidad, Number(localStorage.getItem(`fbe-cadencia-${modalidad}`)) || c?.defecto); } catch { return c?.defecto; } });
+  const [valor, setValor] = useState(() => ajustarCadencia(modalidad, leerNum(`fbe-cadencia-${modalidad}`, c?.defecto)) ?? c?.defecto);
+  const [modo, setModo] = useState('fijo');
+  const [t, setT] = useState(() => {
+    let g = null; try { g = JSON.parse(localStorage.getItem(`fbe-cadencia-tramos-${modalidad}`) || 'null'); } catch { /* */ }
+    return normalizarTramos({ ...(g || {}), ...(delCoach || {}) }, modalidad);
+  });
   const [en, setEn] = useState(false);
+  const [estado, setEstado] = useState(null); // por tramos: el tramo de ahora
   const golpe = useRef(0);
+  // fijo: un golpe cada 60000/valor ms
   useEffect(() => {
-    if (!en || !c) return undefined;
-    const ms = 60000 / valor;
-    const id = setInterval(() => { golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14); if (golpe.current % 4 === 1) vibrarCorto?.(15); }, ms);
+    if (!en || !c || modo !== 'fijo') return undefined;
+    const id = setInterval(() => { golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14); if (golpe.current % 4 === 1) vibrarCorto?.(15); }, 60000 / valor);
     return () => clearInterval(id);
-  }, [en, valor]);
+  }, [en, valor, modo]);
+  // por tramos: cada golpe mira en qué tramo va (se programa el siguiente con la cadencia de ese momento)
+  useEffect(() => {
+    if (!en || !c || modo !== 'tramos') return undefined;
+    const inicio = Date.now();
+    let avisado = -1, fase = null, id = 0, vivo = true;
+    const paso = () => {
+      if (!vivo) return;
+      const seg = (Date.now() - inicio) / 1000;
+      const e = tramoCadencia(t, seg);
+      setEstado(e);
+      if (e.fin) { tono(1320, 0.12, 0.18); setTimeout(() => tono(1760, 0.18, 0.18), 180); vibrarCorto?.(60); setEn(false); return; }
+      const clave = `${e.ronda}-${e.fase}`;
+      if (fase && fase !== clave) { tono(660, 0.1, 0.2); setTimeout(() => tono(990, 0.12, 0.2), 140); vibrarCorto?.(40); }
+      fase = clave;
+      if (e.avisar && avisado !== clave) { avisado = clave; tono(880, 0.06, 0.16); setTimeout(() => tono(880, 0.06, 0.16), 160); }
+      golpe.current++; tono(golpe.current % 4 === 1 ? 1320 : 990, 0.04, 0.14);
+      id = setTimeout(paso, 60000 / e.cadencia);
+    };
+    paso();
+    return () => { vivo = false; clearTimeout(id); setEstado(null); };
+  }, [en, modo, t]);
   if (!c) return null;
-  const cambiar = (d) => { const v = ajustarCadencia(modalidad, valor + d * c.paso); setValor(v); try { localStorage.setItem(`fbe-cadencia-${modalidad}`, String(v)); } catch { /* */ } };
+  const cambiar = (d) => { const v = ajustarCadencia(modalidad, valor + d * c.paso); setValor(v); guardarNum(`fbe-cadencia-${modalidad}`, v); };
+  const cambiarT = (k, d) => {
+    const pasos = { trabajo: 10, descanso: 10, rondas: 1, alta: c.paso, baja: c.paso };
+    const n = normalizarTramos({ ...t, [k]: t[k] + d * pasos[k] }, modalidad);
+    setT(n); try { localStorage.setItem(`fbe-cadencia-tramos-${modalidad}`, JSON.stringify(n)); } catch { /* */ }
+  };
+  const ahora = modo === 'tramos' && estado && !estado.fin ? estado.cadencia : valor;
+  const Paso = ({ k, nombre, txt }) => (
+    <span class="cadencia-tramo-campo">
+      <span class="mini terciario">{nombre}</span>
+      <span class="fila">
+        <button type="button" class="btn btn-icono plano" onClick={() => cambiarT(k, -1)} aria-label={`${nombre}: menos`} disabled={en}><Icono n="menos" /></button>
+        <b class="num">{txt}</b>
+        <button type="button" class="btn btn-icono plano" onClick={() => cambiarT(k, 1)} aria-label={`${nombre}: más`} disabled={en}><Icono n="mas" /></button>
+      </span>
+    </span>
+  );
   return (
-    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / valor)}ms` }}>
-      <span class="mini terciario">Cadencia</span>
-      <div class="cadencia-fila">
-        <button type="button" class="btn btn-icono" onClick={() => cambiar(-1)} aria-label="Menos" disabled={valor <= c.min}><Icono n="menos" /></button>
-        <span class="cadencia-v" aria-live="polite"><b class="num">{valor}</b> <small>{c.unidad}/min</small></span>
-        <button type="button" class="btn btn-icono" onClick={() => cambiar(1)} aria-label="Más" disabled={valor >= c.max}><Icono n="mas" /></button>
-        <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
-          <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Marcar el ritmo'}
-        </button>
-      </div>
+    <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / ahora)}ms` }}>
+      <span class="cadencia-cab">
+        <span class="mini terciario">Cadencia</span>
+        <span class="segmentos segmentos-peq" role="group" aria-label="Modo de la cadencia">
+          <button type="button" aria-pressed={modo === 'fijo' ? 'true' : 'false'} disabled={en} onClick={() => setModo('fijo')}>Fija</button>
+          <button type="button" aria-pressed={modo === 'tramos' ? 'true' : 'false'} disabled={en} onClick={() => setModo('tramos')}>Por tramos</button>
+        </span>
+      </span>
+      {modo === 'fijo' ? (
+        <div class="cadencia-fila">
+          <button type="button" class="btn btn-icono" onClick={() => cambiar(-1)} aria-label="Menos" disabled={valor <= c.min}><Icono n="menos" /></button>
+          <span class="cadencia-v" aria-live="polite"><b class="num">{valor}</b> <small>{c.unidad}/min</small></span>
+          <button type="button" class="btn btn-icono" onClick={() => cambiar(1)} aria-label="Más" disabled={valor >= c.max}><Icono n="mas" /></button>
+          <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
+            <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Marcar el ritmo'}
+          </button>
+        </div>
+      ) : (
+        <div class="pila-xs cadencia-tramos">
+          {delCoach && <span class="mini secundario">Con los tramos de tu coach: {delCoach.rondas} × {mmss(delCoach.trabajo)}, recuperación {mmss(delCoach.descanso)}.</span>}
+          <div class="cadencia-tramos-rejilla">
+            <Paso k="trabajo" nombre="Trabajo" txt={mmss(t.trabajo)} />
+            <Paso k="alta" nombre={`${c.unidad}/min`} txt={t.alta} />
+            <Paso k="descanso" nombre="Recuperación" txt={mmss(t.descanso)} />
+            <Paso k="baja" nombre={`${c.unidad}/min`} txt={t.baja} />
+            <Paso k="rondas" nombre="Rondas" txt={t.rondas} />
+          </div>
+          {en && estado && !estado.fin
+            ? <span class="cadencia-tramo-ahora" aria-live="polite"><b>{estado.fase === 'trabajo' ? 'Trabajo' : 'Recuperación'}</b> · ronda {estado.ronda} de {estado.rondas} · <span class="num">{estado.cadencia}</span> {c.unidad}/min · quedan <span class="num">{mmss(estado.quedan)}</span></span>
+            : <span class="mini terciario">En total, {mmss(duracionTramos(t))}. Cambia sola de cadencia y te avisa 5 s antes de cada cambio.</span>}
+          <button type="button" class={`btn btn-peq ${en ? 'btn-primario' : ''}`} style="justify-self:start" aria-pressed={en ? 'true' : 'false'} onClick={() => { if (!en) prepararAudio(); setEn(!en); }}>
+            <Icono n={en ? 'pausa' : 'play'} /> {en ? 'Parar' : 'Empezar los tramos'}
+          </button>
+        </div>
+      )}
       <span class="mini terciario">{c.ayuda} Suena encima de tu música.</span>
       {busquedaRitmo(modalidad, valor) && (
         <a class="btn-texto cadencia-buscar" href={busquedaRitmo(modalidad, valor).url} target="_blank" rel="noopener noreferrer">
           <Icono n="buscar" /> Buscar música a {busquedaRitmo(modalidad, valor).bpm} bpm en Spotify
         </a>
       )}
+      <TocarRitmo modalidad={modalidad} valor={ahora} />
     </div>
+  );
+}
+
+// (música 3) «¿A cuántos bpm va lo que suena?»: toca al ritmo de la canción (4 toques o más)
+export function TocarRitmo({ modalidad, valor }) {
+  const [abierto, setAbierto] = useState(false);
+  const [toques, setToques] = useState([]);
+  if (!abierto) return <button type="button" class="btn-texto tocar-ritmo-abrir" onClick={() => setAbierto(true)}><Icono n="altavoz" /> ¿A cuántos bpm va lo que suena?</button>;
+  const bpm = bpmDeToques(toques);
+  const r = bpm ? encajaRitmo(bpm, modalidad, valor) : null;
+  const tocar = () => {
+    const ahora = Date.now();
+    setToques((l) => (l.length && ahora - l[l.length - 1] > TOQUE_REINICIO_MS ? [ahora] : [...l, ahora].slice(-9)));
+    vibrarCorto?.(10);
+  };
+  return (
+    <div class="tocar-ritmo pila-xs">
+      <button type="button" class="btn btn-ancho tocar-ritmo-boton" onClick={tocar}>{toques.length ? 'Toca al ritmo' : 'Toca al ritmo de lo que suena'}</button>
+      <span class="tocar-ritmo-r" aria-live="polite">
+        {bpm ? <><b class="num">{bpm}</b> bpm{r ? ` · ${r.texto}` : ''}</> : <span class="mini terciario">{toques.length ? `Sigue tocando (${toques.length} de 4)` : 'Con 4 toques ya lo sabes. Si paras un momento, empieza de nuevo.'}</span>}
+      </span>
+      <button type="button" class="btn-texto" style="justify-self:start" onClick={() => { setAbierto(false); setToques([]); }}>Cerrar</button>
+    </div>
+  );
+}
+
+// (música 3) «Pon tu canción» antes de la serie grande: en el ejercicio que toca, si es de prioridad alta y aún no ha
+// hecho ninguna serie, un botón para poner su canción de récord justo antes (abre su app: los navegadores no dejan que
+// suene sola)
+// (música 3, tanda 2) y su himno de la última serie: en el último ejercicio, cuando le queda una serie
+export function PonTuCancion({ sesionId = null, himno = 'record' }) {
+  const { api, propio } = useApp();
+  const personal = usePersonal();
+  const url = himno === 'ultima' ? personal.datos?.himno_ultima_url : personal.datos?.cancion_url;
+  const nombre = useNombreLista(url);
+  if (propio || !url) return null;
+  return (
+    <a class={`btn btn-peq pon-tu-cancion${himno === 'ultima' ? ' himno-ultima' : ''}`} href={url} target="_blank" rel="noopener noreferrer"
+      onClick={(e) => { api.musicaAbierta?.(); api.musicaAbiertaLista?.(url, sesionId); abrirMusica(url, e); }}>
+      <Icono n="altavoz" /> {himno === 'ultima' ? 'La última: tu himno' : 'Pon tu canción'}{nombre ? `: ${nombre}` : ''}
+    </a>
   );
 }
 
@@ -290,25 +458,144 @@ function HojaMiLista({ api, alCerrar, alGuardar }) {
   );
 }
 
+// ---------- (música 3) En «Lo tuyo»: sus listas con etiqueta y sus himnos ----------
+// Hasta 12 listas, cada una con su momento (un tipo de sesión, cómo llega o una fase). La portada elige la que encaja
+export function HojaListasMusica({ actual, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const [listas, setListas] = useState(() => (Array.isArray(actual?.musica_listas) ? actual.musica_listas : []).map((l) => ({ ...l })));
+  const [u, setU] = useState('');
+  const [etq, setEtq] = useState('pierna');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+  const mal = u.trim() && urlMusica(u) === false;
+  const anadir = () => { if (!u.trim() || mal || listas.length >= 12) return; setListas([...listas, { url: urlMusica(u), etiqueta: etq }]); setU(''); };
+  const guardar = async () => {
+    setGuardando(true); setError(null);
+    try { await api.guardarMusicaPersonal({ musica_listas: listas }); aviso('Guardadas: la portada elige la que encaja'); alGuardar?.(); } catch (e) { setError(e.message); } finally { setGuardando(false); }
+  };
+  return (
+    <Hoja titulo="Tus listas por momento" alCerrar={alCerrar}>
+      <div class="pila listas-musica-hoja">
+        <p class="peq secundario">Una lista para pierna, otra para los días flojos, otra para calentar… En la portada de cada sesión sale la que encaja (por el tipo de sesión, por cómo llegas o por la fase). Lo ve tu coach.</p>
+        {listas.length > 0 ? (
+          <ul class="lista listas-musica">
+            {listas.map((l, i) => (
+              <li key={`${l.url}-${i}`} class="lista-musica-fila">
+                <span class="pila-xs"><strong><NombreLista url={l.url} /></strong>
+                  <select class="entrada entrada-peq" aria-label="Para qué momento" value={l.etiqueta} onChange={(e) => setListas(listas.map((x, j) => (j === i ? { ...x, etiqueta: e.currentTarget.value } : x)))}>
+                    {ETIQUETAS_LISTA.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+                  </select></span>
+                <button type="button" class="btn btn-icono plano" aria-label="Quitar esta lista" onClick={() => setListas(listas.filter((_, j) => j !== i))}><Icono n="basura" /></button>
+              </li>
+            ))}
+          </ul>
+        ) : <p class="peq terciario">Aún no tienes ninguna.</p>}
+        {listas.length < 12 && (
+          <div class="pila-s listas-musica-nueva">
+            <div class="campo">
+              <label for="lm-url">Enlace a la lista</label>
+              <input id="lm-url" class="entrada" type="url" inputMode="url" value={u} onInput={(e) => setU(e.currentTarget.value)} placeholder="https://open.spotify.com/playlist/…" aria-invalid={mal ? 'true' : undefined} />
+              {mal ? <span class="error-campo">Tiene que ser un enlace de Spotify, Apple Music, YouTube Music, Amazon Music, Deezer o Tidal.</span> : <FichaPrevia url={u} />}
+            </div>
+            <div class="campo">
+              <label for="lm-etq">Para</label>
+              <select id="lm-etq" class="entrada" value={etq} onChange={(e) => setEtq(e.currentTarget.value)}>{ETIQUETAS_LISTA.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>
+            </div>
+            <button type="button" class="btn" disabled={!u.trim() || mal} onClick={anadir}><Icono n="mas" /> Añadir a la lista</button>
+          </div>
+        )}
+        {error && <p class="error" role="alert">{error}</p>}
+        <button type="button" class="btn btn-primario btn-grande" disabled={guardando} onClick={guardar}><Icono n="hecho" /> {guardando ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+    </Hoja>
+  );
+}
+// Sus himnos: el de la última serie (en el último ejercicio, a una serie del final) y el de vuelta (tras 7 días o más
+// sin entrenar, el primero en la portada). El del récord es su canción de récord, de siempre
+export function HojaHimnos({ actual, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const [ultima, setUltima] = useState(actual?.himno_ultima_url || '');
+  const [vuelta, setVuelta] = useState(actual?.himno_vuelta_url || '');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+  const malU = ultima.trim() && urlMusica(ultima) === false, malV = vuelta.trim() && urlMusica(vuelta) === false;
+  const guardar = async () => {
+    setGuardando(true); setError(null);
+    try { await api.guardarMusicaPersonal({ himno_ultima_url: ultima.trim() || null, himno_vuelta_url: vuelta.trim() || null }); aviso('Guardados'); alGuardar?.(); } catch (e) { setError(e.message); } finally { setGuardando(false); }
+  };
+  return (
+    <Hoja titulo="Tus himnos" alCerrar={alCerrar}>
+      <div class="pila">
+        <p class="peq secundario">Una canción para cada momento grande. La del récord es tu canción de récord (en «Lo tuyo»). Lo ve tu coach.</p>
+        <div class="campo">
+          <label for="hm-ultima">Para la última serie</label>
+          <input id="hm-ultima" class="entrada" type="url" inputMode="url" value={ultima} onInput={(e) => setUltima(e.currentTarget.value)} placeholder="https://open.spotify.com/track/…" aria-invalid={malU ? 'true' : undefined} />
+          {malU ? <span class="error-campo">Tiene que ser un enlace de música.</span> : <><span class="ayuda">Sale en el último ejercicio, cuando te queda una serie.</span><FichaPrevia url={ultima} /></>}
+        </div>
+        <div class="campo">
+          <label for="hm-vuelta">Para volver tras un parón</label>
+          <input id="hm-vuelta" class="entrada" type="url" inputMode="url" value={vuelta} onInput={(e) => setVuelta(e.currentTarget.value)} placeholder="https://open.spotify.com/track/…" aria-invalid={malV ? 'true' : undefined} />
+          {malV ? <span class="error-campo">Tiene que ser un enlace de música.</span> : <><span class="ayuda">La primera en la portada si llevas 7 días o más sin entrenar.</span><FichaPrevia url={vuelta} /></>}
+        </div>
+        {error && <p class="error" role="alert">{error}</p>}
+        <button type="button" class="btn btn-primario btn-grande" disabled={guardando || malU || malV} onClick={guardar}><Icono n="hecho" /> {guardando ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// ---------- (música 3) Lo que más te acompaña (en «Tu mes» y «Tu año») ----------
+// Las listas que más abrió desde la app en esos meses («AAAA-MM»), con su nombre: solo lo abierto desde la app
+export function LoQueMasTeAcompana({ desde, hasta }) {
+  const { api, propio } = useApp();
+  const l = useCarga(() => (propio ? Promise.resolve([]) : (api.musicaMasAbierta?.(desde, hasta) || Promise.resolve([])).catch(() => [])), [desde, hasta, propio]);
+  const top = (l.datos || []).slice(0, 3);
+  if (!top.length) return null;
+  return <p class="historia-texto lo-que-mas">Lo que más te ha acompañado: {top.map((x, i) => <span key={x.url}>{i ? (i === top.length - 1 ? ' y ' : ', ') : ''}<NombreMasAbierta url={x.url} n={x.n} /></span>)}.</p>;
+}
+function NombreMasAbierta({ url, n }) {
+  const nombre = useNombreLista(url);
+  return <strong>«{nombre}»{n > 1 ? <span class="num"> ({n})</span> : null}</strong>;
+}
+
 // ---------- (v0.129) La música a mano durante la sesión ----------
 // Un botón en la sesión ya empezada que abre lo mismo que la portada (para volver a la lista si Spotify se ha parado
 // o para cambiar de música a mitad)
-export function BotonMusica({ sesion, semana = null, familia = null, cardio = null }) {
-  const { api, propio } = useApp();
-  const personal = usePersonal();
-  const coach = useCarga(() => musicaDeTuCoach(api, propio, sesion.id, semana?.bloque_id || null), [sesion.id, semana?.bloque_id, propio]);
+// (música 3) y, en la sesión, la música de la fase en la que va: para calentar (antes de la primera serie) y para la
+// vuelta a la calma (hecho todo), si el coach o él la tienen; al pasar al trabajo, un aviso para volver a la de siempre
+export function BotonMusica({ sesion, semana = null, familia = null, cardio = null, prep = null, fase = null }) {
+  const { opciones, abrir, coach, personal } = useMusicaDeSesion({ sesion, semana, familia, cardio, prep });
   const [abierta, setAbierta] = useState(false);
-  const opciones = musicaDeLaSesion({ coach: coach.datos || {}, personal: personal.datos, familia, foco: semana?.foco || null, sesionId: sesion.id, bloqueId: semana?.bloque_id || null, modalidad: cardio?.modalidad || null });
-  if (!opciones.length) return null;
-  const abrir = () => { if (!propio) api.musicaAbierta(); };
+  const deFase = musicaDeFase({ coach: coach.datos || {}, personal: personal.datos, fase });
+  const huboCalentar = !!musicaDeFase({ coach: coach.datos || {}, personal: personal.datos, fase: 'calentamiento' });
+  const lista = deFase ? [deFase, ...opciones.filter((x) => x.url !== deFase.url)] : opciones;
+  if (!lista.length) return null;
   return (
     <>
+      {deFase && <MusicaDeFase x={deFase} alAbrir={() => abrir(deFase.url)} />}
+      {!deFase && fase === 'trabajo' && huboCalentar && opciones[0] && <MusicaDeFase x={{ ...opciones[0], trabajo: true }} alAbrir={() => abrir(opciones[0].url)} />}
       <button type="button" class="btn btn-peq boton-musica" onClick={() => setAbierta(true)}><Icono n="altavoz" /> Tu música</button>
       {abierta && (
         <Hoja titulo="Tu música" alCerrar={() => setAbierta(false)}>
-          <div class="pila-s">{opciones.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={abrir} />)}</div>
+          <div class="pila-s">{lista.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={() => abrir(x.url)} />)}</div>
         </Hoja>
       )}
     </>
+  );
+}
+// La tarjeta pequeña de la fase (se puede cerrar: cerrada, no vuelve en esa fase de esta sesión)
+function MusicaDeFase({ x, alAbrir }) {
+  const nombre = useNombreLista(x.url);
+  const clave = x.trabajo ? 'trabajo' : x.fase;
+  const [cerrada, setCerrada] = useState(null);
+  if (cerrada === clave) return null;
+  const titulo = x.trabajo ? 'Calentado: ahora, tu música de trabajo' : x.fase === 'calentamiento' ? 'Para calentar' : 'Para la vuelta a la calma';
+  return (
+    <div class="musica-fase" data-fase={clave} role="status">
+      <Icono n="altavoz" />
+      <span class="pila-xs"><strong>{titulo}</strong><span class="mini secundario">{nombre}</span></span>
+      <a class="btn btn-peq" href={x.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { alAbrir?.(); abrirMusica(x.url, e); }}>Ponerla</a>
+      <button type="button" class="btn btn-icono plano" aria-label="Cerrar" onClick={() => setCerrada(clave)}><Icono n="cerrar" /></button>
+    </div>
   );
 }

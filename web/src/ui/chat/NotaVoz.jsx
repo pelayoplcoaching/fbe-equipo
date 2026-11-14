@@ -230,7 +230,7 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
       <button type="button" class="btn btn-peq voz-vel num" aria-label={`Velocidad: ${textoVelocidad(vel)}. Cambiar`} onClick={cambiarVel}>{textoVelocidad(vel)}</button>
       {!compacto && <span class={`voz-micro ${escuchada ? 'escuchada' : ''}`} title={escuchada ? 'Escuchada' : 'Sin escuchar'}><Icono n="micro" /><span class="sr">{escuchada ? 'Escuchada' : 'Sin escuchar'}</span></span>}
       {url && (
-        <audio ref={audio} src={url} preload="metadata" onPlay={() => { setSonando(true); alReproducir?.(); }} onPause={() => setSonando(false)}
+        <audio ref={audio} src={url} preload="metadata" data-pausa-musica onPlay={() => { setSonando(true); alReproducir?.(); }} onPause={() => setSonando(false)}
           onEnded={() => { setSonando(false); setT(0); if (audio.current) audio.current.currentTime = 0; }} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onError={() => setFallo(true)} />
       )}
     </div>

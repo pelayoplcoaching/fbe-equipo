@@ -5,6 +5,7 @@ import { useApp, useCarga, Hoja, Icono, Avatar } from '../comunes.jsx';
 import { retoDelMes, ordenarAfines, textoAfin, albumHitos, textoAlbum } from '../../logica/compania.js';
 import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { useAgenda } from './Vida.jsx';
+import { useNombreLista } from './Musica.jsx';
 import { vibrar } from '../hapticos.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenHitoAlbum } from '../../logica/imagenes.js';
@@ -25,7 +26,7 @@ export function VozCoach({ ruta, segundos }) {
   return (
     <span class="voz-coach">
       <Imagen id="voz-coach" clase="voz-coach-img" tamanos="40px" />
-      {url ? <audio ref={ref} src={url} controls preload="auto" aria-label="La voz de tu coach" />
+      {url ? <audio ref={ref} src={url} controls preload="auto" aria-label="La voz de tu coach" data-pausa-musica />
         : <button type="button" class="btn btn-peq voz-coach-oir" onClick={oir}><Icono n="play" /> Escuchar a tu coach{segundos ? ` (${segundos} s)` : ''}</button>}
       {error && <span class="mini secundario">No se ha podido cargar el audio.</span>}
     </span>
@@ -99,9 +100,11 @@ export function AlbumHitos({ entrenos, progreso, hoy }) {
   const { api, atleta, aviso, propio } = useApp();
   const agenda = useAgenda(null, { activa: !propio });
   const [anadir, setAnadir] = useState(false);
-  if (propio || !atleta?.id) return null;
-  const hitos = albumHitos({ entrenos, progreso, fechaAlta: atleta.fecha_alta, agenda: agenda.datos || [], hoy });
-  if (!hitos.length) return null;
+  const hitos = propio || !atleta?.id ? [] : albumHitos({ entrenos, progreso, fechaAlta: atleta.fecha_alta, agenda: agenda.datos || [], hoy });
+  // (música 3) la música con la que batió su primer récord, si la abrió desde la app
+  const idsRec = hitos.filter((x) => x.sesion_id).map((x) => x.sesion_id).join();
+  const musicaRec = useCarga(() => (idsRec ? api.musicaDeSesiones(idsRec.split(',')).catch(() => ({})) : Promise.resolve({})), [idsRec]);
+  if (propio || !atleta?.id || !hitos.length) return null;
   const compartir = async () => {
     const t = textoAlbum(hitos);
     try { if (navigator.share) await navigator.share({ title: 'Mi álbum en FBE', text: t }); else { await navigator.clipboard.writeText(t); aviso('Copiado: pégalo donde quieras'); } } catch { /* cancelado */ }
@@ -116,7 +119,8 @@ export function AlbumHitos({ entrenos, progreso, hoy }) {
             {imagenHitoAlbum(x.clave) && hayImagen(imagenHitoAlbum(x.clave))
               ? <Imagen id={imagenHitoAlbum(x.clave)} clase="album-img" tamanos="40px" alternativa={<span class="album-ico" aria-hidden="true"><Icono n={x.icono} /></span>} />
               : <span class="album-ico" aria-hidden="true"><Icono n={x.icono} /></span>}
-            <span class="pila-xs"><strong>{x.titulo}</strong><span class="mini secundario">{fmtCorta(x.fecha)}{x.suyo && x.autor === 'coach' ? ' · lo añadió tu coach' : ''}</span></span>
+            <span class="pila-xs"><strong>{x.titulo}</strong><span class="mini secundario">{fmtCorta(x.fecha)}{x.suyo && x.autor === 'coach' ? ' · lo añadió tu coach' : ''}</span>
+              {x.sesion_id && musicaRec.datos?.[x.sesion_id] && <ConMusica url={musicaRec.datos[x.sesion_id]} />}</span>
             {x.suyo && x.autor === 'atleta' && <button type="button" class="btn btn-icono plano" aria-label={`Quitar ${x.titulo}`} onClick={() => api.borrarAgenda(x.id).catch((e) => aviso(e.message, 'error'))}><Icono n="basura" /></button>}
           </li>
         ))}
@@ -125,6 +129,10 @@ export function AlbumHitos({ entrenos, progreso, hoy }) {
       {anadir && <HojaHito alCerrar={() => setAnadir(false)} />}
     </section>
   );
+}
+function ConMusica({ url }) {
+  const nombre = useNombreLista(url);
+  return nombre ? <span class="mini secundario album-con-musica">Con «{nombre}»</span> : null;
 }
 function HojaHito({ alCerrar }) {
   const { api, aviso } = useApp();
