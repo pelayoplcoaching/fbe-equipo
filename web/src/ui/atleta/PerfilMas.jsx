@@ -4,13 +4,16 @@
 //   · FilaCorrecciones: «Lo que te ha corregido tu coach», por ejercicio (Tu asesoría)
 //   · CompletaPerfil: «Tu perfil al 70 %» y lo que falta, que abre su fila (arriba)
 //   · IndicePerfil: Tú · Lo tuyo · Ajustes, y el buscador del perfil (arriba)
+//   · (T2) PalmaresYBloques: tu palmarés y tu historia de bloques; LogrosSecretos (Logros); Equivalencia (Resumen);
+//     Trimestre (Datos)
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, FilaIos } from '../comunes.jsx';
 import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { pesoNum, etiquetaPeso } from '../../logica/unidades.js';
 import { textoManual } from '../../logica/respeto.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
-import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil } from '../../logica/perfil-mas.js';
+import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre } from '../../logica/perfil-mas.js';
+import { InformeBloque, tituloBloque } from '../InformeBloque.jsx';
 import { usePersonal } from './Personal.jsx';
 
 const kgTxt = (kg) => `${pesoNum(kg, 1)} ${etiquetaPeso()}`;
@@ -227,5 +230,115 @@ export function IndicePerfil() {
         </ul>
       )}
     </nav>
+  );
+}
+
+// ---------- (T2) 4. Tu palmarés y 2. tu historia de bloques ----------
+export function PalmaresYBloques({ entrenos = [], semanasCompletas = 0, salud = false }) {
+  const { api, atleta } = useApp();
+  const d = useCarga(async () => {
+    const [informes, carrera] = await Promise.all([api.informes(atleta.id, { salud }).catch(() => []), api.carrera ? api.carrera(atleta.id).catch(() => null) : null]);
+    return { informes, eventos: carrera?.eventos || [] };
+  }, [atleta.id, salud]);
+  const [abierto, setAbierto] = useState(null);
+  const records = entrenos.reduce((t, x) => t + (Number(x.records) || 0), 0);
+  const estante = palmares({ informes: d.datos?.informes || [], semanasCompletas, records, eventos: d.datos?.eventos || [], hoy: hoyISO() });
+  const bloques = historiaBloques(d.datos?.informes || []);
+  return (
+    <>
+      {estante.length > 0 && (
+        <section class="seccion perfil-sec palmares" aria-labelledby="palmares-t">
+          <h2 id="palmares-t">Tu palmarés</h2>
+          <ul class="palmares-estante">
+            {estante.map((x) => (
+              <li key={x.clave} class="palmares-pieza" data-clave={x.clave}>
+                <span class="palmares-ico" aria-hidden="true"><Icono n={x.icono} /></span>
+                <span class="num palmares-n">{x.n}</span>
+                <span class="mini palmares-t">{x.titulo}</span>
+                {x.detalle && <span class="mini terciario palmares-d">La última: {x.detalle}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {bloques.length > 0 && (
+        <section class="seccion perfil-sec historia-bloques" aria-labelledby="historia-bloques-t">
+          <h2 id="historia-bloques-t">Tu historia de bloques</h2>
+          <ol class="historia-bloques-lista">
+            {bloques.map((b) => (
+              <li key={b.id} class="historia-bloque">
+                <button type="button" class="historia-bloque-btn" onClick={() => setAbierto(b.informe)} aria-label={`Ver el informe de ${tituloBloque(b)}`}>
+                  <span class="historia-bloque-punto" aria-hidden="true" />
+                  <span class="pila-xs">
+                    <strong>{tituloBloque(b)}</strong>
+                    <span class="mini terciario">{fmtCorta(b.inicio)} – {fmtCorta(b.fin)} · {b.hechas} de {b.total} sesiones{b.records ? ` · ${b.records} ${b.records === 1 ? 'récord' : 'récords'}` : ''}</span>
+                    {b.objetivo && <span class="mini">{b.logrado === true ? '✓ ' : ''}{b.objetivo}</span>}
+                    {b.mejor && <span class="mini ok-texto">{b.mejor.nombre}: +{num1(b.mejor.cambio)} %</span>}
+                  </span>
+                  <Icono n="derecha" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {abierto && <InformeBloque informe={abierto} salud={salud} alCerrar={() => setAbierto(null)} />}
+    </>
+  );
+}
+const num1 = (v) => String(Math.round(v * 10) / 10).replace('.', ',');
+
+// ---------- (T2) 5. Logros secretos ----------
+export function LogrosSecretos({ entrenos = [] }) {
+  const r = useMemo(() => logrosSecretos(entrenos), [entrenos]);
+  if (!entrenos.length) return null;
+  return (
+    <section class="seccion perfil-sec logros-secretos" aria-labelledby="logros-secretos-t">
+      <div class="seccion-cab"><h2 id="logros-secretos-t">Logros secretos</h2><span class="peq secundario">{r.conseguidos.length} de {r.total}</span></div>
+      <ul class="panel secretos-lista">
+        {r.conseguidos.map((x) => (
+          <li key={x.clave} class="secreto conseguido">
+            <span class="secreto-ico" aria-hidden="true"><Icono n="estrella" /></span>
+            <span class="pila-xs"><strong>{x.titulo}</strong><span class="mini terciario">{x.texto} · {fmtCorta(x.fecha)}</span></span>
+          </li>
+        ))}
+        {r.quedan > 0 && (
+          <li class="secreto oculto">
+            <span class="secreto-ico" aria-hidden="true"><Icono n="candado" /></span>
+            <span class="pila-xs"><strong>{r.quedan === 1 ? 'Queda 1 por descubrir' : `Quedan ${r.quedan} por descubrir`}</strong><span class="mini terciario">No se ven hasta que los consigues. Entrena y aparecerán.</span></span>
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
+// ---------- (T2) 6. Equivalencias ----------
+export function Equivalencia({ entrenos = [] }) {
+  const hoy = hoyISO();
+  const frase = useMemo(() => equivalenciaDelDia(delAnio(entrenos, hoy), hoy), [entrenos, hoy]);
+  if (!frase) return null;
+  return <p class="peq equivalencia"><Icono n="estrella" />{frase}.</p>;
+}
+
+// ---------- (T2) 20. Tu resumen trimestral ----------
+export function Trimestre({ entrenos = [], historial = [] }) {
+  const r = useMemo(() => resumenTrimestre(entrenos, historial, hoyISO()), [entrenos, historial]);
+  if (!r) return null;
+  const dif = r.sesiones - r.antes;
+  return (
+    <section class="seccion perfil-sec trimestre" aria-labelledby="trimestre-t">
+      <div class="seccion-cab"><h2 id="trimestre-t">Tu trimestre</h2><span class="peq secundario">{r.titulo}{r.completo ? '' : ', hasta hoy'}</span></div>
+      <div class="panel panel-pad pila-s">
+        <div class="trimestre-cifras">
+          <span><b class="num">{r.sesiones}</b><span class="mini terciario">sesiones</span></span>
+          <span><b class="num">{r.records}</b><span class="mini terciario">récords</span></span>
+          <span><b class="num">{Math.round(r.minutos / 60)}</b><span class="mini terciario">horas</span></span>
+          <span><b class="num">{String(r.toneladas).replace('.', ',')}</b><span class="mini terciario">toneladas</span></span>
+        </div>
+        {r.antes > 0 && <p class="peq">{dif > 0 ? `${dif} ${dif === 1 ? 'sesión más' : 'sesiones más'} que el trimestre anterior.` : dif === 0 ? 'Las mismas sesiones que el trimestre anterior.' : `${-dif} ${dif === -1 ? 'sesión menos' : 'sesiones menos'} que el trimestre anterior${r.completo ? '' : ' (aún queda trimestre)'}.`}</p>}
+        {r.mejora && <p class="peq">Lo que más ha subido: <strong>{r.mejora.nombre}</strong>, <span class="ok-texto num">+{num1(r.mejora.pct)} %</span> de 1RM estimado.</p>}
+      </div>
+    </section>
   );
 }

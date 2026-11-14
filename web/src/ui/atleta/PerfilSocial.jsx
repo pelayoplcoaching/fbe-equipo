@@ -6,7 +6,7 @@
 //   · «En el equipo» (si estás en la comunidad): tu racha, retos, compañeros y los ánimos de esta semana, y «Ver cómo te
 //     ven tus compañeros» (tu perfil en el equipo). Solo lo que ya ven ellos: aquí no se comparte nada nuevo.
 // Todo sale de lo que ya hay (sus entrenos, su progreso, la comunidad).
-import { DiaUnoYHoy, MarcasPorReps, useHistorial } from './PerfilMas.jsx';
+import { DiaUnoYHoy, MarcasPorReps, useHistorial, PalmaresYBloques, LogrosSecretos, Equivalencia, Trimestre } from './PerfilMas.jsx';
 import { historiaEnUnaLinea } from '../../logica/rumbo.js';
 import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
@@ -75,6 +75,7 @@ export function PerfilSecciones({ salud, irA }) {
             <PatronCiclo entrenos={lista} salud={salud} />
             <div class="perfil-informe"><BotonInforme salud={salud} /></div>
             <CifrasPerfil entrenos={lista} hoy={hoy} cargando={entrenos.cargando && !entrenos.datos} />
+            <Equivalencia entrenos={lista} />
             <SemanasPerfil entrenos={lista} hoy={hoy} />
             <section class="seccion perfil-sec" aria-labelledby="perfil-constancia-t">
               <h2 id="perfil-constancia-t">Constancia</h2>
@@ -84,6 +85,7 @@ export function PerfilSecciones({ salud, irA }) {
         )}
         {pest === 'estadisticas' && (
           <>
+            <Trimestre entrenos={lista} historial={historial.datos || []} />
             <AnioPerfil entrenos={lista} hoy={hoy} />
             <CostumbresPerfil entrenos={lista} hoy={hoy} />
             <MarcasConstancia entrenos={lista} hoy={hoy} semanas={constancia.datos?.semanas} />
@@ -93,7 +95,9 @@ export function PerfilSecciones({ salud, irA }) {
         )}
         {pest === 'logros' && (
           <>
+            <PalmaresYBloques entrenos={lista} semanasCompletas={constancia.datos?.semanasCompletas || 0} salud={salud} />
             <VitrinaPerfil progreso={progreso.datos} irA={irA} />
+            <LogrosSecretos entrenos={lista} />
             <ProximosHitos entrenos={lista} hoy={hoy} />
             <TusEjercicios progreso={progreso.datos} />
             <MarcasPorReps historial={historial.datos} />

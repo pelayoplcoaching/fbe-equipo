@@ -256,3 +256,28 @@
 .indice-resultado + .indice-resultado, .indice-resultados li + li { border-top: var(--filo-fino) solid var(--linea); }
 .indice-nada { padding: 10px 14px; }
 .destello-busqueda { outline: 2px solid var(--morado); outline-offset: -2px; border-radius: var(--r-s); }
+
+/* ---------- (perfil, tanda 4) T2: palmares, historia de bloques, logros secretos, equivalencias y trimestre ---------- */
+.palmares-estante { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.palmares-pieza { display: grid; justify-items: center; gap: 2px; text-align: center; padding: 12px 8px; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); }
+.palmares-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.palmares-ico svg { width: 18px; height: 18px; }
+.palmares-n { font-size: var(--letra-19); font-weight: 800; }
+.palmares-t { color: var(--tinta-2); line-height: 1.25; }
+.palmares-d { line-height: 1.25; overflow-wrap: anywhere; }
+.historia-bloques-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.historia-bloque-btn { width: 100%; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 12px; align-items: start; text-align: left; padding: 10px 4px; background: none; border: 0; color: inherit; cursor: pointer; position: relative; }
+.historia-bloque-btn > svg { width: 16px; height: 16px; color: var(--tinta-3); align-self: center; }
+.historia-bloque-punto { width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; background: var(--morado); outline: var(--filo-marca) solid var(--morado-suave); }
+.historia-bloque + .historia-bloque .historia-bloque-btn::before { content: ""; position: absolute; left: 9px; top: -6px; height: 18px; border-left: var(--filo-fuerte) solid var(--linea); }
+.secretos-lista { list-style: none; margin: 0; padding: 4px 14px; display: grid; }
+.secreto { display: flex; gap: 12px; align-items: center; padding: 10px 0; }
+.secreto + .secreto { border-top: var(--filo-fino) solid var(--linea); }
+.secreto-ico { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.secreto-ico svg { width: 18px; height: 18px; }
+.secreto.oculto .secreto-ico { background: var(--hoja-2); color: var(--tinta-3); }
+.equivalencia { display: flex; gap: 8px; align-items: center; margin: -4px 0 4px; color: var(--tinta-2); }
+.equivalencia svg { width: 16px; height: 16px; flex: none; color: var(--morado); }
+.trimestre-cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.trimestre-cifras > span { display: grid; justify-items: center; text-align: center; }
+.trimestre-cifras b { font-size: var(--letra-19); font-weight: 800; }
