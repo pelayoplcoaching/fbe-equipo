@@ -3,6 +3,7 @@
 //   node test/retrato.test.mjs
 import * as R from '../web/src/logica/retrato.js';
 import { MOMENTOS_COACH, textoMensajeCoach } from '../web/src/logica/personal.js';
+import { sumarDias } from '../web/src/logica/fechas.js';
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
 const dia = (d) => new Date(Date.UTC(2026, 7, 3 + d)).toISOString().slice(0, 10); // 3 ago 2026, lunes
@@ -37,6 +38,10 @@ const fila = (k) => ph.filas.find(([x]) => x === k)?.[1];
 check(fila('Cómo le llamamos') === 'Anita' && fila('Cómo le hablamos') === 'En femenino · A tope' && fila('Su porqué') === '«Por mi espalda»' && fila('Su meta') === 'Faltan 7 días para Mi boda', 'cómo le llamamos y le hablamos, su porqué y su meta');
 check(/^Un récord el /.test(fila('Su último hito')) && fila('Le escribiste') === 'Hace 12 días', 'su último hito y cuándo le escribió');
 check(/meta está cerca/.test(ph.idea), 'la idea: lo más oportuno (su meta cerca)');
+{
+  const escribio = (u) => R.paraHablarle({ nombre: 'Ana', entrenos: [], ultimoCoach: u, hoy }).filas.find(([k]) => k === 'Le escribiste')[1];
+  check(escribio(`${sumarDias(hoy, 1)}T08:00:00Z`) === 'Hoy' && escribio(`${hoy}T23:30:00Z`) === 'Hoy' && escribio(sumarDias(hoy, -1)) === 'Ayer', '«Le escribiste»: el día de Madrid, y nunca «Hace -1 días» si el móvil va por detrás');
+}
 check(/Lleva \d+ días sin entrenar/.test(R.paraHablarle({ nombre: 'Luis', entrenos: [sesion(0)], hoy }).idea) && R.paraHablarle({ nombre: 'Luis', entrenos: [], hoy }).filas.find(([k]) => k === 'Le escribiste')[1] === 'Nunca', 'sin entrenar hace tiempo, preguntarle cómo está; sin mensajes, «Nunca»');
 
 // los momentos nuevos

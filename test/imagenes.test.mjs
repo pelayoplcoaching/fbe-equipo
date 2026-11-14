@@ -246,5 +246,19 @@ const LISTA_IMG = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.jso
   check(/prog-duelos-t">Duelos<\/h3>\s*<Imagen id="apuntes-duelo"/.test(social), 'apuntes: las dos kettlebells encabezan los duelos');
 }
 
+// (imágenes de las 48 h) Bloque AB: su meta y su historia
+{
+  const { imagenAniversarioMeses, imagenMeta } = await import('../web/src/logica/imagenes.js');
+  check(imagenAniversarioMeses(1) === 'aniversario-mes' && imagenAniversarioMeses(3) === 'aniversario-mes' && imagenAniversarioMeses(6) === 'aniversario-medio' && imagenAniversarioMeses(12) === 'aniversario-ano' && imagenAniversarioMeses(36) === 'aniversario-ano' && imagenAniversarioMeses(0) === null && imagenAniversarioMeses(null) === null, 'aniversario: la vela (1 y 3 meses), las seis lunas (6) y el laurel (el año y los siguientes)');
+  check(imagenMeta({ dias: 30, pasada: false }) === 'meta-cuenta' && imagenMeta({ dias: null, pasada: false }) === 'meta-cuenta' && imagenMeta({ dias: 0, pasada: false }) === 'meta-dia' && imagenMeta({ dias: -3, pasada: true }) === 'meta-siguiente' && imagenMeta(null) === null, 'meta: contando, el reloj; el día, la bandera dorada; pasada, la siguiente');
+  const ids = ['meta-cuenta', 'meta-dia', 'aniversario-mes', 'aniversario-medio', 'aniversario-ano', 'historia-linea', 'adn-fbe', 'carta-mes', 'para-hablarle', 'foto-motivacion-vacia', 'mejor-momento'];
+  check(ids.every((id) => fuenteImagen(id)), 'bloque AB: las once recibidas, en la lista');
+  const l = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes.json', import.meta.url), 'utf8'));
+  check(l['meta-cuenta'].proporcion.join(':') === '5:2' && l['carta-mes'].proporcion.join(':') === '5:2' && l['adn-fbe'].proporcion.join(':') === '9:16' && ['historia-linea', 'para-hablarle'].every((id) => l[id].proporcion.join(':') === '3:1') && ['meta-dia', 'mejor-momento', 'foto-motivacion-vacia', 'aniversario-ano'].every((id) => l[id].proporcion.join(':') === '1:1'), 'bloque AB: cada una con su recorte (el reloj y la bandera caben en 5:2)');
+  const lee = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'utf8');
+  check(/imagenMeta\(c\)/.test(lee('ui/atleta/Trato.jsx')) && /id="historia-linea"/.test(lee('ui/atleta/PerfilSocial.jsx')) && /id="adn-fbe"/.test(lee('ui/atleta/Suyo.jsx')) && /id="foto-motivacion-vacia"/.test(lee('ui/atleta/Suyo.jsx'))
+    && /id="para-hablarle"/.test(lee('ui/coach/PersonalCoach.jsx')) && /id="carta-mes"/.test(lee('ui/coach/PersonalCoach.jsx')) && /id="mejor-momento"/.test(lee('ui/atleta/Conocerte.jsx')) && /imagenAniversarioMeses/.test(lee('ui/Celebracion.jsx')), 'bloque AB: cada una en su sitio (meta, historia, ADN, foto, para hablarle, carta, mejor momento, aniversario)');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
