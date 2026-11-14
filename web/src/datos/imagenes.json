@@ -3371,6 +3371,16 @@
       "320": "imagenes/meta/meta-dia-320.46ce2434.webp"
     }
   },
+  "meta-siguiente": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/meta/meta-siguiente-160.fa5ecaa2.webp",
+      "320": "imagenes/meta/meta-siguiente-320.adc7f8db.webp"
+    }
+  },
   "mito-semana": {
     "proporcion": [
       3,
