@@ -41,10 +41,19 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
 // bici, la elíptica, el remo, la piscina o la comba); «Otro» o sin modalidad, la de cardio de siempre
 const CARDIO_IMG = { carrera: 'carrera', andar: 'andar', bici: 'bici', eliptica: 'eliptica', remo: 'remo', nadar: 'nadar', cuerda: 'comba' };
 export const MODALIDADES_IMG = Object.keys(CARDIO_IMG);
-export function imagenPortada(familia, modalidad = null) {
+// (imágenes, tanda 8) Cada familia tiene tres portadas (la de siempre, -2 y -3). Con `semilla` (el id de la sesión), una
+// de las tres, siempre la misma para esa sesión: como cada semana sus sesiones son otras, la portada va cambiando sin
+// saltar a mitad de semana. Si la variante no está, la de siempre.
+export function imagenPortada(familia, modalidad = null, semilla = null) {
   if (!familia) return null;
   if (familia === 'cardio' && CARDIO_IMG[modalidad]) return `cardio-${CARDIO_IMG[modalidad]}`;
-  return `sesion-${familia}`;
+  const base = `sesion-${familia}`;
+  if (semilla == null || semilla === '') return base;
+  let h = 0;
+  for (const c of String(semilla)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const v = h % 3;
+  const id = v ? `${base}-${v + 1}` : base;
+  return LISTA[id] ? id : base;
 }
 
 // ---------- Los hábitos ----------
@@ -156,10 +165,17 @@ export function selloSesion({ records = 0, primera = false } = {}) {
 const LUGARES = ['gimnasio', 'casa', 'viaje'];
 export function imagenLugar(lugar) { return LUGARES.includes(lugar) ? `donde-${lugar}` : 'donde-gimnasio'; }
 // La bienvenida del día: de 6 a 13:59, la mañana; de 14 a 20:59, la tarde; si no, la noche (hora de Madrid)
-export function imagenBienvenida(hora) {
+// (imágenes, tanda 8) Con `fecha` («AAAA-MM-DD»), la de su estación: primavera (marzo a mayo), verano (junio a agosto),
+// otoño (septiembre a noviembre) e invierno (diciembre a febrero); si no está, la de siempre
+export const ESTACIONES = ['invierno', 'invierno', 'primavera', 'primavera', 'primavera', 'verano', 'verano', 'verano', 'otono', 'otono', 'otono', 'invierno'];
+export function imagenBienvenida(hora, fecha = null) {
   const h = Number(hora);
   if (!Number.isFinite(h)) return null;
-  return h >= 6 && h < 14 ? 'bienvenida-manana' : h >= 14 && h < 21 ? 'bienvenida-tarde' : 'bienvenida-noche';
+  const base = h >= 6 && h < 14 ? 'bienvenida-manana' : h >= 14 && h < 21 ? 'bienvenida-tarde' : 'bienvenida-noche';
+  const mes = Number(String(fecha || '').slice(5, 7));
+  if (!(mes >= 1 && mes <= 12)) return base;
+  const id = `${base}-${ESTACIONES[mes - 1]}`;
+  return LISTA[id] ? id : base;
 }
 // Las pantallas de la primera vez (atleta/Bienvenida.jsx): la de instalar sigue con su dibujo
 const PRIMEROS = { programa: 'programa', serie: 'sesion', coach: 'checkin' };

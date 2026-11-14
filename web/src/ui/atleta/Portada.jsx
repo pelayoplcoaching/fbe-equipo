@@ -68,7 +68,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       <header class="portada-sesion">
         {/* (imágenes) la ilustración de su familia (empuje, tirón, pierna, core, full body, cardio o movilidad); si no
             se puede cargar, el dibujo de líneas de siempre */}
-        <Imagen key={imagenPortada(familia, cardio?.modalidad)} id={imagenPortada(familia, cardio?.modalidad)} clase="portada-arte portada-foto" tamanos="(min-width: 600px) 600px, 150vw" prioridad
+        <Imagen key={imagenPortada(familia, cardio?.modalidad, sesion.id)} id={imagenPortada(familia, cardio?.modalidad, sesion.id)} clase="portada-arte portada-foto" tamanos="(min-width: 600px) 600px, 150vw" prioridad
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={tipo} patron={r.patrones[0] || null} />} />
         <span />
         <div class="portada-texto">

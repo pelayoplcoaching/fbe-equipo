@@ -44,11 +44,27 @@ export const SUGERENCIAS_DESCANSO = [
   { id: 'movilidad', icono: 'movilidad', titulo: '10 minutos de movilidad', texto: 'Cadera, tobillos y espalda alta, suave y sin llegar a molestia.' },
   { id: 'sueno', icono: 'sueno', titulo: 'Duerme bien esta noche', texto: 'Entre 7 y 9 horas: mientras duermes se asienta lo que entrenaste.' },
   { id: 'proteina', icono: 'proteina', titulo: 'La proteína, también hoy', texto: 'Reparte la de tu plan en 3 o 4 comidas, aunque no entrenes.' },
+  // (imágenes, tanda 8) cuatro más, para que no se repitan cada cuatro días
+  { id: 'agua', icono: 'agua', titulo: 'Bebe agua a lo largo del día', texto: 'Ten la botella a la vista: si la orina es clarita, vas bien.' },
+  { id: 'luz', icono: 'sol', titulo: 'Sal a que te dé la luz', texto: 'Un rato al aire libre por la mañana ayuda a dormir mejor por la noche.' },
+  { id: 'respira', icono: 'viento', titulo: 'Cinco minutos para respirar', texto: 'Inspira 4 segundos, suelta 6. Baja pulsaciones y ayuda a recuperar.' },
+  { id: 'preparar', icono: 'receta', titulo: 'Deja lista la de mañana', texto: 'La bolsa preparada o la comida hecha: mañana te costará menos.' },
 ];
 export function sugerenciaDescanso(hoy = hoyISO()) {
   const n = SUGERENCIAS_DESCANSO.length;
   const d = diasEntre('2026-01-05', hoy);
   return SUGERENCIAS_DESCANSO[((d % n) + n) % n];
+}
+// (imágenes, tanda 8) La escena de fondo de la tarjeta de Hoy cuando no es día de entreno (el de entreno lleva el dibujo
+// de su sesión): el descanso, la de la idea del día; «¡Sesión hecha!», una de cuatro (cambia cada día); la semana
+// completa, una de tres (cambia cada semana). Siempre la misma en todo el día.
+export function escenaHoy(tipo, hoy = hoyISO()) {
+  const d = diasEntre('2026-01-05', hoy);
+  const vuelta = (x, n) => ((x % n) + n) % n;
+  if (tipo === 'descanso') return `descanso-${sugerenciaDescanso(hoy).id}`;
+  if (tipo === 'hecha') return `hecha-${vuelta(d, 4) + 1}`;
+  if (tipo === 'semana') return `semana-${vuelta(Math.floor(d / 7), 3) + 1}`;
+  return null;
 }
 
 // ---------- pictogramas: el patrón de movimiento de un ejercicio ----------

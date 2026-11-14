@@ -582,6 +582,50 @@
       "1440": "imagenes/bienvenida/bienvenida-manana-1440.e8934cb1.webp"
     }
   },
+  "bienvenida-manana-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-invierno-720.0a7f6fc2.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-invierno-1080.cc89af98.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-invierno-1440.8db5ab53.webp"
+    }
+  },
+  "bienvenida-manana-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-otono-720.fb1aa49f.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-otono-1080.d470d272.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-otono-1440.d8d475b7.webp"
+    }
+  },
+  "bienvenida-manana-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-primavera-720.dd8dc9bf.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-primavera-1080.662f39a1.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-primavera-1440.16dcfc91.webp"
+    }
+  },
+  "bienvenida-manana-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-manana-verano-720.3748f97a.webp",
+      "1080": "imagenes/bienvenida/bienvenida-manana-verano-1080.f3596b1b.webp",
+      "1440": "imagenes/bienvenida/bienvenida-manana-verano-1440.b43fb096.webp"
+    }
+  },
   "bienvenida-noche": {
     "proporcion": [
       16,
@@ -593,6 +637,50 @@
       "1440": "imagenes/bienvenida/bienvenida-noche-1440.0a552591.webp"
     }
   },
+  "bienvenida-noche-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-invierno-720.601d0d89.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-invierno-1080.7f78b6a4.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-invierno-1440.1bb083fc.webp"
+    }
+  },
+  "bienvenida-noche-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-otono-720.7c8fd12b.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-otono-1080.6f051b72.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-otono-1440.431d419e.webp"
+    }
+  },
+  "bienvenida-noche-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-primavera-720.adb7b3c2.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-primavera-1080.b93f225c.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-primavera-1440.da918454.webp"
+    }
+  },
+  "bienvenida-noche-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-noche-verano-720.d33e4e0f.webp",
+      "1080": "imagenes/bienvenida/bienvenida-noche-verano-1080.05b2acd6.webp",
+      "1440": "imagenes/bienvenida/bienvenida-noche-verano-1440.6cd9fac5.webp"
+    }
+  },
   "bienvenida-tarde": {
     "proporcion": [
       16,
@@ -602,6 +690,50 @@
       "720": "imagenes/bienvenida/bienvenida-tarde-720.e90c4efc.webp",
       "1080": "imagenes/bienvenida/bienvenida-tarde-1080.38dcc8e1.webp",
       "1440": "imagenes/bienvenida/bienvenida-tarde-1440.82d3ea82.webp"
+    }
+  },
+  "bienvenida-tarde-invierno": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-invierno-720.945931e4.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-invierno-1080.3d5c889c.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-invierno-1440.a00d14a0.webp"
+    }
+  },
+  "bienvenida-tarde-otono": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-otono-720.ae759d88.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-otono-1080.d58eef1b.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-otono-1440.9c495193.webp"
+    }
+  },
+  "bienvenida-tarde-primavera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-primavera-720.5ce2a6db.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-primavera-1080.9e546aec.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-primavera-1440.e37ee5bb.webp"
+    }
+  },
+  "bienvenida-tarde-verano": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/bienvenida/bienvenida-tarde-verano-720.942395c4.webp",
+      "1080": "imagenes/bienvenida/bienvenida-tarde-verano-1080.29a08613.webp",
+      "1440": "imagenes/bienvenida/bienvenida-tarde-verano-1440.4e8dde9d.webp"
     }
   },
   "calentamiento": {
@@ -1570,6 +1702,86 @@
       "1080": "imagenes/sesion-extra/descanso-1080.6695d5a9.webp"
     }
   },
+  "descanso-agua": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-agua-480.9b8179d9.webp",
+      "960": "imagenes/hoy/descanso-agua-960.cab71e1d.webp"
+    }
+  },
+  "descanso-luz": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-luz-480.33901ecd.webp",
+      "960": "imagenes/hoy/descanso-luz-960.09685338.webp"
+    }
+  },
+  "descanso-movilidad": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-movilidad-480.9155e13d.webp",
+      "960": "imagenes/hoy/descanso-movilidad-960.231059b3.webp"
+    }
+  },
+  "descanso-pasos": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-pasos-480.a7b324c0.webp",
+      "960": "imagenes/hoy/descanso-pasos-960.aed20bb6.webp"
+    }
+  },
+  "descanso-preparar": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-preparar-480.71fe8b64.webp",
+      "960": "imagenes/hoy/descanso-preparar-960.c9369a8a.webp"
+    }
+  },
+  "descanso-proteina": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-proteina-480.a8b97050.webp",
+      "960": "imagenes/hoy/descanso-proteina-960.aa178780.webp"
+    }
+  },
+  "descanso-respira": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-respira-480.2a2a36c7.webp",
+      "960": "imagenes/hoy/descanso-respira-960.02069cd8.webp"
+    }
+  },
+  "descanso-sueno": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/descanso-sueno-480.164c6f44.webp",
+      "960": "imagenes/hoy/descanso-sueno-960.3997b346.webp"
+    }
+  },
   "difusion": {
     "proporcion": [
       4,
@@ -2471,6 +2683,46 @@
     "archivos": {
       "160": "imagenes/sesion/hace-un-ano-160.ad7e0ed4.webp",
       "320": "imagenes/sesion/hace-un-ano-320.698c6d4b.webp"
+    }
+  },
+  "hecha-1": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-1-480.a7efd22f.webp",
+      "960": "imagenes/hoy/hecha-1-960.f889dc96.webp"
+    }
+  },
+  "hecha-2": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-2-480.ad30654c.webp",
+      "960": "imagenes/hoy/hecha-2-960.8c9ada64.webp"
+    }
+  },
+  "hecha-3": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-3-480.59d1a40a.webp",
+      "960": "imagenes/hoy/hecha-3-960.66b96209.webp"
+    }
+  },
+  "hecha-4": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/hecha-4-480.78c15906.webp",
+      "960": "imagenes/hoy/hecha-4-960.df95a46b.webp"
     }
   },
   "herr-camara": {
@@ -4445,6 +4697,36 @@
       "1080": "imagenes/ah/salud-conexion-1080.c88e84d1.webp"
     }
   },
+  "semana-1": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-1-480.e2dced1b.webp",
+      "960": "imagenes/hoy/semana-1-960.88e5b8e7.webp"
+    }
+  },
+  "semana-2": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-2-480.095a0a33.webp",
+      "960": "imagenes/hoy/semana-2-960.df283ff8.webp"
+    }
+  },
+  "semana-3": {
+    "proporcion": [
+      3,
+      2
+    ],
+    "archivos": {
+      "480": "imagenes/hoy/semana-3-480.4a49ca62.webp",
+      "960": "imagenes/hoy/semana-3-960.907118e6.webp"
+    }
+  },
   "semana-dificil": {
     "proporcion": [
       5,
@@ -4466,6 +4748,28 @@
       "1440": "imagenes/sesion/sesion-cardio-1440.40ba0aff.webp"
     }
   },
+  "sesion-cardio-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-cardio-2-720.17ce0fa5.webp",
+      "1080": "imagenes/sesion/sesion-cardio-2-1080.4f115610.webp",
+      "1440": "imagenes/sesion/sesion-cardio-2-1440.5f3b2060.webp"
+    }
+  },
+  "sesion-cardio-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-cardio-3-720.a55d71e1.webp",
+      "1080": "imagenes/sesion/sesion-cardio-3-1080.9ac83737.webp",
+      "1440": "imagenes/sesion/sesion-cardio-3-1440.488ea067.webp"
+    }
+  },
   "sesion-core": {
     "proporcion": [
       16,
@@ -4475,6 +4779,28 @@
       "720": "imagenes/sesion/sesion-core-720.4d3d0390.webp",
       "1080": "imagenes/sesion/sesion-core-1080.03673680.webp",
       "1440": "imagenes/sesion/sesion-core-1440.9e217dfd.webp"
+    }
+  },
+  "sesion-core-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-core-2-720.0443942d.webp",
+      "1080": "imagenes/sesion/sesion-core-2-1080.eeb14f72.webp",
+      "1440": "imagenes/sesion/sesion-core-2-1440.7a637192.webp"
+    }
+  },
+  "sesion-core-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-core-3-720.48f2691f.webp",
+      "1080": "imagenes/sesion/sesion-core-3-1080.d896e0fc.webp",
+      "1440": "imagenes/sesion/sesion-core-3-1440.1cc55390.webp"
     }
   },
   "sesion-empuje": {
@@ -4488,6 +4814,28 @@
       "1440": "imagenes/sesion/sesion-empuje-1440.d0f1c080.webp"
     }
   },
+  "sesion-empuje-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-empuje-2-720.3fb4df68.webp",
+      "1080": "imagenes/sesion/sesion-empuje-2-1080.546d70d3.webp",
+      "1440": "imagenes/sesion/sesion-empuje-2-1440.906cc735.webp"
+    }
+  },
+  "sesion-empuje-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-empuje-3-720.9a622188.webp",
+      "1080": "imagenes/sesion/sesion-empuje-3-1080.606a410a.webp",
+      "1440": "imagenes/sesion/sesion-empuje-3-1440.0e58d8b1.webp"
+    }
+  },
   "sesion-fullbody": {
     "proporcion": [
       16,
@@ -4497,6 +4845,28 @@
       "720": "imagenes/sesion/sesion-fullbody-720.73205e39.webp",
       "1080": "imagenes/sesion/sesion-fullbody-1080.70d9c4eb.webp",
       "1440": "imagenes/sesion/sesion-fullbody-1440.df9e8623.webp"
+    }
+  },
+  "sesion-fullbody-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-fullbody-2-720.bb22486a.webp",
+      "1080": "imagenes/sesion/sesion-fullbody-2-1080.9d463755.webp",
+      "1440": "imagenes/sesion/sesion-fullbody-2-1440.8abf6feb.webp"
+    }
+  },
+  "sesion-fullbody-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-fullbody-3-720.8e86f828.webp",
+      "1080": "imagenes/sesion/sesion-fullbody-3-1080.11781042.webp",
+      "1440": "imagenes/sesion/sesion-fullbody-3-1440.fba754fa.webp"
     }
   },
   "sesion-movilidad": {
@@ -4510,6 +4880,28 @@
       "1440": "imagenes/sesion/sesion-movilidad-1440.9a811100.webp"
     }
   },
+  "sesion-movilidad-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-movilidad-2-720.8ca16732.webp",
+      "1080": "imagenes/sesion/sesion-movilidad-2-1080.08e81e71.webp",
+      "1440": "imagenes/sesion/sesion-movilidad-2-1440.7eb515ec.webp"
+    }
+  },
+  "sesion-movilidad-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-movilidad-3-720.5bc57943.webp",
+      "1080": "imagenes/sesion/sesion-movilidad-3-1080.33325e98.webp",
+      "1440": "imagenes/sesion/sesion-movilidad-3-1440.526cf92b.webp"
+    }
+  },
   "sesion-pierna": {
     "proporcion": [
       16,
@@ -4521,6 +4913,28 @@
       "1440": "imagenes/sesion/sesion-pierna-1440.f94697b0.webp"
     }
   },
+  "sesion-pierna-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-pierna-2-720.01b76966.webp",
+      "1080": "imagenes/sesion/sesion-pierna-2-1080.ad4d098e.webp",
+      "1440": "imagenes/sesion/sesion-pierna-2-1440.9134565b.webp"
+    }
+  },
+  "sesion-pierna-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-pierna-3-720.ee9803ed.webp",
+      "1080": "imagenes/sesion/sesion-pierna-3-1080.48f14f43.webp",
+      "1440": "imagenes/sesion/sesion-pierna-3-1440.4001efb2.webp"
+    }
+  },
   "sesion-tiron": {
     "proporcion": [
       16,
@@ -4530,6 +4944,28 @@
       "720": "imagenes/sesion/sesion-tiron-720.c06eff48.webp",
       "1080": "imagenes/sesion/sesion-tiron-1080.b54824e9.webp",
       "1440": "imagenes/sesion/sesion-tiron-1440.692c0ab7.webp"
+    }
+  },
+  "sesion-tiron-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-tiron-2-720.6a18a0a0.webp",
+      "1080": "imagenes/sesion/sesion-tiron-2-1080.08fe0ff0.webp",
+      "1440": "imagenes/sesion/sesion-tiron-2-1440.e1b4660e.webp"
+    }
+  },
+  "sesion-tiron-3": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/sesion/sesion-tiron-3-720.b9b3cac8.webp",
+      "1080": "imagenes/sesion/sesion-tiron-3-1080.090d8203.webp",
+      "1440": "imagenes/sesion/sesion-tiron-3-1440.9907de6b.webp"
     }
   },
   "sin-bascula": {

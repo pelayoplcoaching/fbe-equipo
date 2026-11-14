@@ -400,3 +400,11 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .franja-descanso { aspect-ratio: 3 / 1; object-position: 75% 50%; margin-bottom: 8px; }
 .antes-de-empezar > .franja-antes { aspect-ratio: 3 / 1; border-radius: var(--r-s); object-position: 70% 50%; }
 .prep-cab-ilu { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+/* ---------- (imágenes, tanda 8, bloque AM) La tarjeta de Hoy los días de descanso ----------
+   (y bloque AN) La escena del día (logica/diseno.js, escenaHoy): la de la idea del descanso; «¡Sesión hecha!», una de
+   cuatro; la semana completa, una de tres. Al
+   fondo, arriba a la derecha (hasta 330 px de alto): hereda de .hero-arte (diseno.css, 26) el sitio y el fundido hacia
+   el texto. Con ella, el dibujo de ese día (lobo y luna, amanecer o anillos) no sale. */
+.hero-dia .hero-escena-img { object-fit: cover; object-position: 85% 50%; opacity: .9; width: 84%; height: min(100%, 330px); }
+@media (forced-colors: active) { .hero-dia .hero-escena-img { display: none; } }

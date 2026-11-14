@@ -58,7 +58,7 @@ import { Ilustracion } from '../Ilustraciones.jsx';
 import { imagenEjercicio, imagenIcono } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { Pictograma, PictoEjercicio } from '../Pictograma.jsx';
-import { estadoHoy, sugerenciaDescanso, urlSegura, resumenPautas } from '../../logica/diseno.js';
+import { estadoHoy, sugerenciaDescanso, escenaHoy, urlSegura, resumenPautas } from '../../logica/diseno.js';
 import { panelBienvenida, panelNutricion } from '../../logica/bienvenida.js';
 import { Diales } from './Diales.jsx';
 import { OrdenarHoy } from './OrdenarHoy.jsx';
@@ -541,9 +541,11 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
-        {e.tipo !== 'entreno' && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
+        {e.tipo !== 'entreno' && !hayImagen(escenaHoy(e.tipo, hoy)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}
+        {/* (imágenes, tanda 8) descanso, hecha y semana completa: su escena, al fondo y a la derecha, como el dibujo */}
+        {e.tipo !== 'entreno' && escenaHoy(e.tipo, hoy) && <Imagen key={escenaHoy(e.tipo, hoy)} id={escenaHoy(e.tipo, hoy)} clase="hero-arte hero-escena-img" tamanos="(min-width: 640px) 480px, 80vw" />}
         {e.tipo === 'entreno' && siguiente && det.datos && <ArteSesion nombre={siguiente.nombre} tipo={siguiente.tipo || 'fuerza'} patron={resumenSigue?.patrones?.[0] || null} clase="hero-arte" />}
         <div class="titular">
           <div class="contexto">

@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.165': {
+    atleta: [
+      'Hoy, con su escena: el descanso, la sesión hecha y la semana completa; más portadas y una bienvenida para cada estación.',
+    ],
+  },
   '0.164': {
     atleta: [
       'Más ilustraciones: tu música, la carrera y el viaje, el recetario, la sesión y las pantallas vacías.',
