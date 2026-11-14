@@ -1,10 +1,11 @@
 import { hoyISO } from '../../logica/fechas.js';
 import { HojaVideo } from '../Videos.jsx';
 import { esYoutube } from '../../logica/youtube.js';
-import { useState } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { AjustesDispositivo, AjustesMensajes, VERSION_APP } from '../Ajustes.jsx';
 import { SeccionNotificaciones } from '../Notificaciones.jsx';
-import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar, GrupoIos, FilaIos, IcoIos, usePreferencia } from '../comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, Icono, Hoja, HojaExportar, Avatar, GrupoIos, FilaIos, IcoIos, usePreferencia, Pestanas } from '../comunes.jsx';
+import { vistaPedida } from './perfil-vista.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { urlSegura } from '../../logica/diseno.js';
 import { BandaDemo } from '../App.jsx';
@@ -31,6 +32,14 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const [exportado, setExportado] = useState(null);
   const [cambiarPass, setCambiarPass] = useState(false);
   const [confirmarRetirada, setConfirmarRetirada] = useState(false);
+  // (visual 3) dos vistas: «Tú» y «Ajustes» (antes, todo seguido: unos 9.700 px)
+  const [vista, setVista] = useState(() => vistaPedida() || 'tu');
+  const cambiarVista = (v) => { setVista(v); window.scrollTo(0, 0); };
+  useEffect(() => {
+    const pide = () => { const v = vistaPedida(); if (v) cambiarVista(v); };
+    window.addEventListener('fbe-perfil-vista', pide);
+    return () => window.removeEventListener('fbe-perfil-vista', pide);
+  }, []);
   const p = programa.datos;
   const consSalud = (consentimientos.datos || []).find((c) => c.tipo === 'datos_salud' && !c.revocado_en);
   const recursos = useCarga(() => api.recursos().catch(() => []), []);
@@ -49,6 +58,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <div class="titulo"><h1>Tu perfil</h1></div>
       </CabeceraGrande>
       <BandaDemo />
+      <Pestanas clase="perfil-vistas" etiqueta="Tu perfil" idBase="perfil-vista" opciones={[['tu', 'Tú'], ['ajustes', 'Ajustes']]} valor={vista} alCambiar={cambiarVista} />
+      <div class="perfil-panel" id="perfil-vista-panel" role="tabpanel" aria-labelledby={`perfil-vista-${vista}`}>
+      {vista === 'tu' ? <>
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
       <Carnet bloque={p?.bloque || null} />
@@ -68,6 +80,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
       {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
       <LoTuyo salud={salud} />
+      <button type="button" class="btn ancho perfil-a-ajustes" onClick={() => cambiarVista('ajustes')}><Icono n="ajustes" /> Ajustes, guías y cuenta</button>
+      </> : <>
+      <IndiceAjustes />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
       {/* (compartir, tanda 2) lo que has compartido desde este móvil */}
@@ -109,6 +124,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
           <button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button>
         </FilaIos>
       </GrupoIos>
+      </>}
+      </div>
 
       {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)} medio><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}
       {exportado && <HojaExportar titulo="Tus datos" nombre={`mis-datos-fbe-${hoyISO()}.json`} contenido={exportado} tipo="application/json" alCerrar={() => setExportado(null)} />}
@@ -238,5 +255,30 @@ function Recursos({ titulo, id, lista }) {
       ))}
       {video && <HojaVideo titulo={video.titulo} url={video.url} descripcion={video.descripcion || ''} alCerrar={() => setVideo(null)} />}
     </section>
+  );
+}
+
+// (visual 4) El índice de los ajustes: una fila de accesos, pegada arriba, que salta a cada grupo. Sale de los grupos
+// que hay (según la cuenta, unos están y otros no).
+function IndiceAjustes() {
+  const ref = useRef(null);
+  const [grupos, setGrupos] = useState([]);
+  useEffect(() => {
+    const panel = ref.current?.closest('.perfil-panel');
+    if (!panel) return undefined;
+    const leer = () => setGrupos([...panel.querySelectorAll(':scope > .grupo-ios > h2[id]')].map((h) => [h.id, h.textContent.trim()]));
+    leer();
+    const obs = new MutationObserver(leer);
+    obs.observe(panel, { childList: true });
+    return () => obs.disconnect();
+  }, []);
+  const ir = (id) => {
+    const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById(id)?.closest('.grupo-ios')?.scrollIntoView({ block: 'start', behavior: quieto ? 'auto' : 'smooth' });
+  };
+  return (
+    <nav ref={ref} class="ajustes-indice" aria-label="Ir a un grupo de ajustes">
+      {grupos.map(([id, t]) => <button key={id} type="button" class="chip" onClick={() => ir(id)}>{t}</button>)}
+    </nav>
   );
 }

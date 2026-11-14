@@ -1,0 +1,33 @@
+/* ==========================================================================================================
+   VISUAL (claude/visual-mejoras.md): cómo se ordena y se lee la pantalla. Se carga después de los estilos de cada
+   parte y antes de color-capa.css. Cada bloque lleva su número de la propuesta.
+   ========================================================================================================== */
+
+/* (2) Cabeceras de sección: el mismo hueco a la derecha para una acción o una cuenta, y un solo estilo de subtítulo */
+.seccion-cab { min-height: 1.75rem; align-items: center; }
+.seccion-cab > :is(h2, h3):first-child { flex: 1 1 auto; min-width: 0; }
+.seccion-cab > :is(.mini, .chip, .btn-texto):last-child:not(:first-child) { margin-left: auto; }
+.seccion-cab > .mini:last-child { color: var(--tinta-3); font-variant-numeric: tabular-nums; }
+.seccion-cab > .btn-texto { font-size: var(--letra-14); font-weight: 650; }
+:is(.sub-seccion, .mes-etq, .perfil-mes-t) { font-size: var(--letra-15); font-weight: 750; line-height: 1.3; letter-spacing: -0.003em; color: var(--tinta); padding-left: var(--esp-2); }
+
+/* (3) Perfil en dos vistas: «Tú» y «Ajustes», con un selector de dos (como el de Sistema, Claro y Oscuro) */
+.perfil-panel { display: contents; }
+.pestanas.perfil-vistas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); padding: var(--esp-4); border: 0; border-radius: var(--r-pildora); background: var(--hoja-2); box-shadow: var(--anillo-suave); overflow: visible; }
+.pestanas.perfil-vistas button { min-height: 40px; padding: 0 var(--esp-12); margin: 0; border: 0; border-radius: var(--r-pildora); font-weight: 650; color: var(--tinta-2); }
+.pestanas.perfil-vistas button[aria-selected="true"] { background: var(--seg-activo); color: var(--tinta); font-weight: 700; box-shadow: var(--seg-sombra); }
+.pestanas.perfil-vistas button[aria-selected="true"]::after { content: none; }
+.perfil-a-ajustes { justify-content: center; gap: var(--esp-8); }
+@media (prefers-reduced-motion: no-preference) {
+  .pestanas.perfil-vistas button { transition: background-color var(--mov-rapido) ease, color var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease; }
+}
+
+/* (4) Ajustes sobrios: los iconos en una tinta sobre gris; el color queda para lo que avisa (ok, aviso, alerta).
+   Y un índice de accesos arriba que salta a cada grupo. */
+.perfil-panel > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: var(--hoja-3); color: var(--tinta-2); box-shadow: var(--anillo-suave); }
+.perfil-panel > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) svg { stroke-width: 1.9; }
+.ajustes-indice { display: flex; gap: var(--esp-6); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; margin-inline: calc(-1 * var(--esp-4)); padding: var(--esp-2) var(--esp-4); }
+.ajustes-indice::-webkit-scrollbar { display: none; }
+.ajustes-indice .chip { flex: none; min-height: 34px; padding-inline: var(--esp-12); font-weight: 650; color: var(--tinta); background: var(--hoja); }
+.perfil-panel > .grupo-ios { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + var(--esp-8)); }
+.pestanas.perfil-vistas[data-raya]::after { content: none; }

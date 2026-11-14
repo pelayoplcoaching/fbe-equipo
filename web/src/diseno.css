@@ -1831,7 +1831,7 @@ html:has(.sesion-vista) { scroll-padding-top: calc(var(--alto-cab, 64px) + env(s
    En el perfil, que es largo, el título de cada grupo («Tu asesoría», «Este móvil», «Mensajes»…) se queda bajo la
    cabecera mientras se recorre su grupo, y el siguiente lo releva, como en Ajustes del iPhone. Sin cambiar de alto.
    Solo en la página (en una hoja, la cuenta sería otra). */
-.contenido > .grupo-ios > h2 { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem)); z-index: 2; margin-inline: -4px; padding: var(--esp-8) var(--esp-4) var(--esp-6) var(--esp-20); background: var(--tiza); }
+:is(.contenido, .perfil-panel) > .grupo-ios > h2 { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem)); z-index: 2; margin-inline: -4px; padding: var(--esp-8) var(--esp-4) var(--esp-6) var(--esp-20); background: var(--tiza); }
 
 /* ── 99 · «Tu día» avanza con suavidad (tanda 25) ─────────────────────────────────────────────────────────────────────
    Lo que acaba de pasar a hecho (clase recien, Hoy.jsx: no lo que ya lo estaba al llegar) da un salto con su ✓ y su
@@ -2040,8 +2040,8 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
    lo que es (rojo para objetivos, calendario y avisos; añil para el tema y el sueño; azul para lo de ver y leer; verde
    para mensajes y privacidad; rosa para sonidos y color…). Los de estado (al día, pendiente, alerta) siguen como estaban.
    Solo en la página del perfil (no en las hojas). El color lo da la clase ico-<nombre> que IcoIos pone a su icono. */
-.contenido > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--io, var(--cat-gris)) 82%, var(--blanco)), var(--io, var(--cat-gris))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
-.contenido > .grupo-ios .ios-ico svg { stroke-width: 2.1; }
+:is(.contenido, .perfil-panel) > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--io, var(--cat-gris)) 82%, var(--blanco)), var(--io, var(--cat-gris))); color: var(--blanco); box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .08); }
+:is(.contenido, .perfil-panel) > .grupo-ios .ios-ico svg { stroke-width: 2.1; }
 .ios-ico:has(> .ico-diana, > .ico-semana, > .ico-calendario, > .ico-campana) { --io: var(--cat-rojo); }
 .ios-ico:has(> .ico-hoy, > .ico-biblioteca) { --io: var(--cat-naranja); }
 .ios-ico:has(> .ico-bascula) { --io: var(--cat-turquesa); }
@@ -2050,7 +2050,7 @@ nav.tabs .insignia { box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--insigni
 .ios-ico:has(> .ico-tema, > .ico-sueno) { --io: var(--marca-600); }
 .ios-ico:has(> .ico-paleta, > .ico-altavoz) { --io: var(--cat-rojo); }
 .ios-ico:has(> .ico-teclado, > .ico-salir) { --io: var(--cat-gris); }
-@media (forced-colors: active) { .contenido > .grupo-ios .ios-ico { background: Canvas; color: CanvasText; } }
+@media (forced-colors: active) { :is(.contenido, .perfil-panel) > .grupo-ios .ios-ico { background: Canvas; color: CanvasText; } }
 
 /* ── 125 · La píldora de la barra de abajo, que no se veía (tanda 28) ─────────────────────────────────────────────────
    La barra tiene desde la v0.49 una píldora que se desliza bajo el icono de la sección elegida (usePildora, comunes.jsx),

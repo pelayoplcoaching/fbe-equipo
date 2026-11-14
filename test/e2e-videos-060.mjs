@@ -328,7 +328,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     check(await estrecho('hilo-atleta-v060'), 'a 360 px en oscuro, su vídeo con las respuestas cabe');
     // «Este móvil»: difuminar la cara de serie
     await cerrarDialogos();
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     const aj = p.getByRole('switch', { name: 'Difuminar la cara al enviar un vídeo' });
     await aj.waitFor({ timeout: 8000 }).catch(() => {});
     if (await aj.count()) {

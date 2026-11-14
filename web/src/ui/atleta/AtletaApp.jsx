@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { pedirVistaPerfil } from './perfil-vista.js';
 import { useCambioDeDia, Siluetas, useApp, useCarga, Icono, Marca, Insignia, usePildora, medirPantalla } from '../comunes.jsx';
 import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
@@ -64,6 +65,8 @@ function tabInicial(tabs) {
   const h = (typeof location !== 'undefined' ? location.hash : '').slice(1);
   // (v0.57) el vídeo de un aviso (#videos/<id>@<s>) se abre sobre Progreso
   if (leerEnlaceVideo(`#${h}`) && tabs.some(([t]) => t === 'progreso')) return 'progreso';
+  // (visual 3) #ajustes: Perfil, en su vista de ajustes
+  if (h === 'ajustes' && tabs.some(([t]) => t === 'perfil')) { pedirVistaPerfil('ajustes'); return 'perfil'; }
   return tabs.some(([t]) => t === h) ? h : 'hoy';
 }
 
@@ -193,6 +196,7 @@ export function AtletaApp() {
       const h = location.hash.slice(1);
       const v = leerEnlaceVideo(location.hash);
       if (v && !propio) { if (tabsRef.current.some(([t]) => t === 'progreso')) setTab('progreso'); setVideoEnlace(v); noLeidos.recargar(true); return; }
+      if (h === 'ajustes' && tabsRef.current.some(([t]) => t === 'perfil')) { pedirVistaPerfil('ajustes'); setTab('perfil'); return; }
       if (tabsRef.current.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); }
     };
     const llega = () => { noLeidos.recargar(true); programa.recargar(true); };

@@ -91,7 +91,7 @@ export async function probarV066({ navegador, check, base = 'http://localhost:41
     await cerrarDialogos();
 
     // ---------------------------------------------------------------- modo gimnasio
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     const sw = p.getByRole('switch', { name: /Modo gimnasio/ });
     await sw.scrollIntoViewIfNeeded();
     check(!(await sw.isChecked()) && !(await p.evaluate(() => document.documentElement.hasAttribute('data-gimnasio'))), '«Modo gimnasio» sale en Este móvil, apagado de serie');

@@ -5,7 +5,7 @@
 //   Suelta:  npm run build && node test/e2e-sonido.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarSonido } = await import('./e2e-sonido.mjs'); await probarSonido({ navegador, check });
 import { pathToFileURL } from 'node:url';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, irAAjustes } from './secciones.mjs';
 
 export async function probarSonido({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -40,7 +40,7 @@ export async function probarSonido({ navegador, check, base = 'http://localhost:
     await p.locator('.hero-dia .btn-hero').waitFor();
     await fueraAvisos();
     // --- Sonido y vibración: los perfiles, «Escuchar todos» y cada apartado ---
-    await irASeccion(p, 'Perfil');
+    await irAAjustes(p);
     await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
     const hoja = p.getByRole('dialog', { name: 'Sonido y vibración' });
     const perfiles = hoja.getByRole('group', { name: 'Cuánto suena la app' });

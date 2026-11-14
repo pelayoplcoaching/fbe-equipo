@@ -93,7 +93,7 @@ export async function probarLibras112({ navegador, check, base = 'http://localho
     await cerrarDialogos();
 
     // ---------------------------------------------------------------- el ajuste
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     const grupo = p.getByRole('group', { name: 'Unidad de las cargas' });
     await grupo.scrollIntoViewIfNeeded();
     check(await grupo.getByRole('button', { name: 'Kilos (kg)' }).getAttribute('aria-pressed') === 'true', '«Unidad de las cargas» sale en Este móvil, en kilos de serie');
@@ -134,7 +134,7 @@ export async function probarLibras112({ navegador, check, base = 'http://localho
     await p.locator('nav.tabs').waitFor();
 
     // ---------------------------------------------------------------- de vuelta a kilos
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     await p.getByRole('group', { name: 'Unidad de las cargas' }).getByRole('button', { name: 'Kilos (kg)' }).click();
     await entrarSesion();
     const ejK = p.locator('.sesion-vista .ejercicio').first();
