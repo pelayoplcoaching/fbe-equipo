@@ -41,10 +41,19 @@ export function familiaPortada({ tipo = 'fuerza', pautas = [], cardio = false } 
 // bici, la elíptica, el remo, la piscina o la comba); «Otro» o sin modalidad, la de cardio de siempre
 const CARDIO_IMG = { carrera: 'carrera', andar: 'andar', bici: 'bici', eliptica: 'eliptica', remo: 'remo', nadar: 'nadar', cuerda: 'comba' };
 export const MODALIDADES_IMG = Object.keys(CARDIO_IMG);
-export function imagenPortada(familia, modalidad = null) {
+// (imágenes, tanda 8) Cada familia tiene tres portadas (la de siempre, -2 y -3). Con `semilla` (el id de la sesión), una
+// de las tres, siempre la misma para esa sesión: como cada semana sus sesiones son otras, la portada va cambiando sin
+// saltar a mitad de semana. Si la variante no está, la de siempre.
+export function imagenPortada(familia, modalidad = null, semilla = null) {
   if (!familia) return null;
   if (familia === 'cardio' && CARDIO_IMG[modalidad]) return `cardio-${CARDIO_IMG[modalidad]}`;
-  return `sesion-${familia}`;
+  const base = `sesion-${familia}`;
+  if (semilla == null || semilla === '') return base;
+  let h = 0;
+  for (const c of String(semilla)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const v = h % 3;
+  const id = v ? `${base}-${v + 1}` : base;
+  return LISTA[id] ? id : base;
 }
 
 // ---------- Los hábitos ----------
