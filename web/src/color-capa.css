@@ -1,0 +1,70 @@
+/* ==========================================================================================================
+   Capa de color (tanda de color, claude/color-mejoras.md). Se carga la última. Los colores salen de los tokens de
+   color.css (generado desde logica/paleta.js); aquí, dónde se usan: la tarjeta del día, la interacción, los iconos a
+   dos tintas, el alto contraste y los colores forzados del sistema. Solo color: nada se anima.
+   ========================================================================================================== */
+
+/* (8) La tarjeta del día, con el degradado Noche FBE (interpolado en OKLCH: no se ensucia en el medio) */
+.hero-dia { background-color: var(--hero); background-image: var(--grad-noche); }
+.hero-dia.hero-entreno { background-image: var(--grano), var(--grad-noche); }   /* con el grano de diseno.css encima */
+
+/* (9) …y con el color de lo que toca: fuerza en la marca, cardio en azul, movilidad y descanso en turquesa, semana de
+   descarga en ámbar y la sesión hecha en verde. Cambia el brillo y el halo, no el texto (siempre claro sobre noche). */
+.hero-dia[data-tono="cardio"] { --hero-tinte: var(--azul-500); --hero-2: var(--azul-900); }
+.hero-dia[data-tono="movilidad"] { --hero-tinte: var(--turquesa-500); --hero-2: var(--turquesa-900); }
+.hero-dia[data-tono="descanso"] { --hero-tinte: var(--turquesa-400); --hero-2: var(--turquesa-900); }
+.hero-dia[data-tono="descarga"] { --hero-tinte: var(--ambar-500); --hero-2: var(--ambar-900); }
+.hero-dia[data-tono="hecha"] { --hero-tinte: var(--verde-500); --hero-2: var(--verde-900); }
+.hero-dia::before { background: radial-gradient(circle, color-mix(in srgb, var(--hero-tinte, var(--morado)) 55%, var(--hero)) 0%, color-mix(in srgb, var(--hero-tinte, var(--morado)) 22%, var(--hero)) 38%, transparent 68%); }
+.hero-dia { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 26px 48px -24px color-mix(in srgb, var(--hero-tinte, var(--morado)) 62%, rgba(20, 11, 58, .7)), 0 10px 20px -14px rgba(20, 11, 58, .35); }
+
+/* (7, 10) Las sombras: los cuatro niveles teñidos de la marca (diseno.css, bloque 31); en oscuro, donde una sombra no se
+   ve, la profundidad la da un filo de luz de 1 px arriba */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sombra-tarjeta: 0 0 0 1px var(--borde), inset 0 1px 0 rgba(255, 255, 255, .05), 0 10px 24px -14px rgba(0, 0, 0, .55);
+    --sombra-hoja: 0 0 0 1px var(--borde), inset 0 1px 0 rgba(255, 255, 255, .06), 0 28px 60px -22px rgba(0, 0, 0, .8);
+  }
+}
+:root[data-theme="dark"] {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), inset 0 1px 0 rgba(255, 255, 255, .05), 0 10px 24px -14px rgba(0, 0, 0, .55);
+  --sombra-hoja: 0 0 0 1px var(--borde), inset 0 1px 0 rgba(255, 255, 255, .06), 0 28px 60px -22px rgba(0, 0, 0, .8);
+}
+
+/* (11) La interacción, calculada desde el acento (igual con los ocho y en los tres temas): al pulsar, el acento
+   mezclado con la tinta; deshabilitado, siempre la misma opacidad */
+.btn-primario:not(:disabled):active { background: var(--accion-pulsado); border-color: var(--accion-pulsado); }
+.btn-texto:not(:disabled):active { color: var(--accion-pulsado); }
+
+/* (13) Los iconos a dos tintas: las formas cerradas, rellenas de su propio color muy suave (sigue al acento o al
+   color de cada sección), con el trazo encima */
+.ios-ico .icono-duo { fill: currentColor; stroke: none; opacity: .2; }
+
+/* (17) Alto contraste: además de los tokens (color.css), filos más marcados y el foco más grueso */
+:root[data-contraste="alto"] { --borde: rgba(0, 0, 0, .4); }
+@media (prefers-color-scheme: dark) { :root[data-contraste="alto"]:not([data-theme="light"]) { --borde: rgba(255, 255, 255, .45); } }
+:root[data-contraste="alto"][data-theme="dark"] { --borde: rgba(255, 255, 255, .45); }
+:root[data-contraste="alto"] .btn, :root[data-contraste="alto"] .entrada, :root[data-contraste="alto"] .selector { border-width: 2px; }
+:root[data-contraste="alto"] :focus-visible { outline-width: 3px; outline-offset: 2px; }
+:root[data-contraste="alto"] .ios-ico .icono-duo { opacity: 0; }
+
+/* (17) Los colores forzados del sistema (Windows «Contraste alto» y similares): que se vean los controles y el foco */
+@media (forced-colors: active) {
+  .btn, .entrada, .selector, .interruptor, .chip { border: 1px solid ButtonText; }
+  .hero-dia, .tarjeta, .panel { border: 1px solid CanvasText; }
+  .hero-dia::before, .hero-dia::after, .ios-ico .icono-duo { display: none; }
+  :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+}
+
+/* (20) «Paleta», solo en la demo (?demo&paleta) */
+.pal-pagina { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 12px; }
+.pal-pagina h2 { margin-top: 16px; }
+.pal-escala h3 { font-size: var(--tipo-nota); text-transform: capitalize; margin: 0 0 4px; color: var(--tinta-2); }
+.pal-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.6rem, 1fr)); gap: 3px; }
+.pal-muestra { height: 2.75rem; border-radius: 8px; display: grid; place-items: end start; padding: 4px 6px; font-size: 0.6875rem; font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 1px var(--borde); }
+.pal-estados, .pal-grads, .pal-acentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px; }
+.pal-estado { border: 1px solid; border-radius: var(--r-s); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+.pal-solido { width: 1.25rem; height: 1.25rem; border-radius: 50%; }
+.pal-grad { height: 4.5rem; border-radius: var(--r-s); display: grid; place-items: end start; padding: 8px 10px; color: var(--blanco); font-weight: 650; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+.pal-acento { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
+.pal-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--borde); }

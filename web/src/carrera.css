@@ -6,20 +6,20 @@
 
 :root {
   /* Las cinco zonas: de frio (suave) a caliente (muy duro). Fondo suave y texto que pasa de 4,5:1 sobre el */
-  --z1: #5B7CA6; --z2: #1F8A55; --z3: #B07A00; --z4: #D2620F; --z5: #C02536;
-  --z1-t: #3D5A80; --z2-t: #146B40; --z3-t: #7A5400; --z4-t: #9A4508; --z5-t: #A51F2F;
+  --z1: var(--neutro-500); --z2: #1F8A55; --z3: var(--oro-500); --z4: var(--naranja-500); --z5: #C02536;
+  --z1-t: var(--neutro-700); --z2-t: var(--verde-600); --z3-t: var(--oro-600); --z4-t: var(--naranja-600); --z5-t: var(--rojo-600);
   --z-suave: 14%;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --z1: #8FB0DC; --z2: #4FCB89; --z3: #E8C25A; --z4: #FFA45C; --z5: #F35D6E;
-    --z1-t: #B4CCEC; --z2-t: #7FE0AC; --z3-t: #F2D88E; --z4-t: #FFC08F; --z5-t: #FF9AA6;
+    --z1: var(--neutro-400); --z2: var(--verde-400); --z3: var(--oro-300); --z4: var(--ambar-300); --z5: #F35D6E;
+    --z1-t: var(--azul-300); --z2-t: var(--verde-300); --z3-t: var(--oro-200); --z4-t: var(--naranja-300); --z5-t: var(--rojo-300);
     --z-suave: 22%;
   }
 }
 :root[data-theme="dark"] {
-  --z1: #8FB0DC; --z2: #4FCB89; --z3: #E8C25A; --z4: #FFA45C; --z5: #F35D6E;
-  --z1-t: #B4CCEC; --z2-t: #7FE0AC; --z3-t: #F2D88E; --z4-t: #FFC08F; --z5-t: #FF9AA6;
+  --z1: var(--neutro-400); --z2: var(--verde-400); --z3: var(--oro-300); --z4: var(--ambar-300); --z5: #F35D6E;
+  --z1-t: var(--azul-300); --z2-t: var(--verde-300); --z3-t: var(--oro-200); --z4-t: var(--naranja-300); --z5-t: var(--rojo-300);
   --z-suave: 22%;
 }
 

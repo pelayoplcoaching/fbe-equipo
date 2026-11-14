@@ -8,6 +8,7 @@ import { fmtCorta } from '../logica/fechas.js';
 import { hayImagen } from './Imagen.jsx';
 import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHandle, conArroba, handleEquipo, PREF_HANDLE, pieDeFoto, resumenTexto, nombreArchivo as nombreArchivoDe, cifrasCardio, PREF_RECORDATORIO, recordatorioCompartir,
   PALETAS, paletaDe, PREF_PALETA, limpiarFrase, PREF_FRASE, TONOS, PREF_TONO, textoAlternativo, PREF_COMPARTIDOS, anotarCompartido, textoCompartido } from '../logica/compartir.js';
+import { leerAjustes } from './ajustes.js';
 import { textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { lanzarConfeti } from './confeti.js';
 
@@ -30,7 +31,7 @@ let C = paletaDe('noche');
 // Prepara el lienzo de una tarjeta: su formato, su paleta y el desplazamiento del contenido
 function empezar({ formato = 'publicacion', paleta = 'noche' } = {}) {
   const t = tamanoFormato(formato);
-  H = t.H; oy = Math.round((H - HC) / 2); C = paletaDe(paleta);
+  H = t.H; oy = Math.round((H - HC) / 2); C = paletaDe(paleta, leerAjustes().acento);
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   return cv;
@@ -153,7 +154,7 @@ function pegatina(x, letra, texto) {
   x.translate(W - M - w / 2, 190); x.rotate(-0.07);
   x.fillStyle = C.clara ? '#684EEC' : C.oro;
   x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, 16); x.fill();
-  x.fillStyle = C.clara ? '#FFFFFF' : '#150F36'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = C.clara ? '#FFFFFF' : '#140B3A'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillText(t, 0, 2);
   x.restore();
   x.textAlign = 'left'; x.textBaseline = 'alphabetic';
@@ -231,7 +232,7 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
 
   // Fondo: la ilustración o, sin ella, la noche de la marca y, abajo a la derecha, el lobo en grande y muy tenue
   if (ilu) fondoIlustrado(x, ilu);
-  else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#150F36' : '#FFFFFF', C.clara ? 0.04 : 0.055); }
+  else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055); }
   x.translate(0, oy);
 
   // Marca y fecha
@@ -308,7 +309,7 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
     }));
   }
   // Pie: un filo y la firma, con el lobo (sobre la ilustración, en claro)
-  pie(x, letra, ilu ? '#EDEAFB' : C.tinta3);
+  pie(x, letra, ilu ? '#EEECFF' : C.tinta3);
   pegatina(x, letra, pegatinaTarjeta(peg));
   x.translate(0, -oy);
   return aBlob(cv);
@@ -318,7 +319,7 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
 // El dibujo de la portada de la sesión (logica/arte.js), escalado a la tarjeta y con los colores de la tarjeta
 function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) {
   const a = arteSesion({ nombre: d.nombre, tipo: d.tipo || 'fuerza', patron: d.patron || null }, 400, 300);
-  const tono = C.clara ? { acento: C.morado, claro: '#4A4180', tenue: '#B3ACDB' } : { acento: C.morado, claro: '#FFFFFF', tenue: '#8F88C0' };
+  const tono = C.clara ? { acento: C.morado, claro: '#4F4E5E', tenue: '#AAA9B5' } : { acento: C.morado, claro: '#FFFFFF', tenue: '#858492' };
   x.save();
   x.translate(dx, dy); x.scale(escala, escala);
   x.lineCap = 'round';
@@ -363,7 +364,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
   x.translate(0, oy);
   // La marca: el lobo y «FBE Equipo»; la fecha a la derecha
   marca(x, letra);
-  letra(500, 30); x.fillStyle = r ? '#E4E1F2' : C.tinta2; x.textAlign = 'right';
+  letra(500, 30); x.fillStyle = r ? '#DDDDE3' : C.tinta2; x.textAlign = 'right';
   x.fillText(fechaLarga(d.fecha), W - M, M + 40);
   x.textAlign = 'left';
   const cifras = d.cardio ? cifrasCardio(d.cardio) : cifrasTarjeta(d);
@@ -417,22 +418,22 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     const h = d.cardio ? cifras[1] || cifras[0] : cifraHeroe(d);
     let y = plantilla === 'minima' ? HC - 600 : HC - 470;
     if (d.frase) y -= 70;
-    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#D9D1FF' : C.morado; x.fillText(d.subtitulo, M, y - 112); }
+    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#DDD9FF' : C.morado; x.fillText(d.subtitulo, M, y - 112); }
     letra(800, 100, 'expanded'); x.fillStyle = C.tinta;
     const ls = lineas(d.nombre, W - 2 * M, 2);
     y -= (ls.length - 1) * 100;
     for (const l of ls) { x.fillText(l, M - 4, y); y += 104; }
-    if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y - 30, r ? '#D9D1FF' : C.morado, 36) - 10;
+    if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y - 30, r ? '#DDD9FF' : C.morado, 36) - 10;
     if (plantilla === 'minima' && h) {
       etiqueta(h.t, M, y + 30);
       cifra(h, M - 8, y + 300, 300);
     } else {
       const fila = cifras.slice(0, 3), ancho = (W - 2 * M) / Math.max(1, fila.length);
-      fila.forEach((c, i) => { etiqueta(c.t, M + i * ancho, y + 20, '#D2CEE6'); cifra(c, M + i * ancho - 4, y + 168, 150); });
+      fila.forEach((c, i) => { etiqueta(c.t, M + i * ancho, y + 20, '#C7C6CF'); cifra(c, M + i * ancho - 4, y + 168, 150); });
     }
   }
   // Pie: un filo y la firma, con el lobo
-  pie(x, letra, r ? '#E4E1F2' : ilu ? '#EDEAFB' : C.tinta3);
+  pie(x, letra, r ? '#DDDDE3' : ilu ? '#EEECFF' : C.tinta3);
   x.textAlign = 'left';
   x.translate(0, -oy);
 }
@@ -450,7 +451,7 @@ export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg =
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
   fondoNoche(x);
   // El lobo en grande y muy tenue abajo a la derecha, y un resplandor dorado arriba (los récords) o del acento
-  dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#150F36' : '#FFFFFF', C.clara ? 0.04 : 0.055);
+  dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055);
   const dorado = d.tipo === 'record' || d.tipo === 'logro';
   let g = x.createRadialGradient(W * 0.8, oy + 420, 0, W * 0.8, oy + 420, 620);
   g.addColorStop(0, dorado ? (C.clara ? 'rgba(233, 212, 154, .35)' : 'rgba(233, 212, 154, .22)') : `rgba(${C.resplandor}, ${C.clara ? 0.16 : 0.28})`); g.addColorStop(1, 'rgba(0, 0, 0, 0)');
@@ -506,7 +507,7 @@ export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg =
       const cx = M + 30, cy = y + alto / 2 - 10;
       x.beginPath(); x.arc(cx, cy, 30, 0, Math.PI * 2);
       x.fillStyle = f.hecha ? C.morado : f.texto === 'Descanso' ? C.linea : `rgba(${C.resplandor}, .35)`; x.fill();
-      letra(800, 30); x.fillStyle = f.hecha ? (C.clara ? '#FFFFFF' : '#150F36') : C.tinta; x.textAlign = 'center'; x.textBaseline = 'middle';
+      letra(800, 30); x.fillStyle = f.hecha ? (C.clara ? '#FFFFFF' : '#140B3A') : C.tinta; x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillText(f.dia, cx, cy + 1); x.textAlign = 'left'; x.textBaseline = 'alphabetic';
       letra(f.texto === 'Descanso' ? 500 : 700, 40); x.fillStyle = f.texto === 'Descanso' ? C.tinta3 : C.tinta;
       x.fillText(cortar(f.texto, W - 2 * M - 120), M + 90, cy + 14);
@@ -938,7 +939,7 @@ async function aJpeg(blob) {
     const cv = document.createElement('canvas');
     cv.width = img.naturalWidth; cv.height = img.naturalHeight;
     const x = cv.getContext('2d');
-    x.fillStyle = '#150F36'; x.fillRect(0, 0, cv.width, cv.height);
+    x.fillStyle = '#140B3A'; x.fillRect(0, 0, cv.width, cv.height);
     x.drawImage(img, 0, 0);
     return await new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido preparar la imagen.'))), 'image/jpeg', 0.9));
   } finally { URL.revokeObjectURL(url); }

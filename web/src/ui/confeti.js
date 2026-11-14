@@ -8,11 +8,12 @@ import { vibrar } from './hapticos.js';
 
 let activo = null;
 
-// Los colores: el acento del tema y unos cálidos fijos (son papel de colores, no texto)
+// Los colores: el acento del tema y la paleta de las celebraciones (--confeti-1…6 de color.css; son papel de colores, no texto)
 function colores() {
   const cs = getComputedStyle(document.documentElement);
-  const acento = cs.getPropertyValue('--morado').trim() || '#5438D8';
-  return [acento, '#FFC94D', '#FF8A3D', '#3DC27B', '#5B8FF2', '#F07AB8', acento];
+  const acento = cs.getPropertyValue('--morado').trim() || '#593EDE';
+  const pal = [2, 3, 4, 5, 6].map((i) => cs.getPropertyValue(`--confeti-${i}`).trim()).filter(Boolean);
+  return [acento, ...(pal.length ? pal : ['#D3A329', '#FF74B0', '#37C2BB', '#73ACFF', '#FC8642']), acento];
 }
 
 export function lanzarConfeti({ vibracion = 'record' } = {}) {

@@ -3,6 +3,7 @@
 // sesión de la semana, la evolución de los récords de un ejercicio, la bandeja del coach por atletas y las cifras
 // de un día de nutrición.
 import { queToca, diaPrevistoValido } from './plan.js';
+import { MACROS } from './paleta.js';
 import { sumarDias, diasEntre, hoyISO } from './fechas.js';
 import { duracionEstimada, eventosRecord, e1rm } from './calculos.js';
 import { normal as sinTildes } from './busqueda.js';
@@ -208,10 +209,8 @@ export function macrosDia(reg, obj) {
 // Los colores de los macros, para cada tema (los mismos que --macro-* en estilos.css; las pruebas los comparan): cada
 // uno, al menos 3:1 sobre todas las superficies del tema (contraste de lo que no es texto), también sobre el negro
 // puro. Entre sí se distinguen por el tono (rojo frambuesa, ámbar y azul), y siempre van con su nombre y su cifra.
-export const COLORES_MACRO = {
-  claro: { proteina: '#5438D8', carbos: '#8F5E00', grasa: '#1F5BC6' },
-  oscuro: { proteina: '#A596FF', carbos: '#F0BE3C', grasa: '#7AA8FF' },
-};
+// (color, mejora 15) salen de las escalas de la paleta: marca, oro y azul
+export const COLORES_MACRO = MACROS;
 
 // ---------- Perfil: las cifras de la cabecera ----------
 // Semanas completas en total (no solo la racha actual): las de lunes ya pasados con todas sus sesiones hechas, y la de

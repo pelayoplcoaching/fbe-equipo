@@ -20,9 +20,9 @@ export function Llama({ clase = '' }) {
   return (
     <svg class={`llama ${clase}`} viewBox="0 0 120 150" aria-hidden="true" focusable="false">
       <defs>
-        <linearGradient id={`llama-g1-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF5A1F" /><stop offset="1" stop-color="#FF9F43" /></linearGradient>
-        <linearGradient id={`llama-g2-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF8A1F" /><stop offset="1" stop-color="#FFC94D" /></linearGradient>
-        <radialGradient id={`llama-g3-${id}`} cx="0.5" cy="0.75" r="0.6"><stop offset="0" stop-color="#FFF6D6" /><stop offset="1" stop-color="#FFD66B" /></radialGradient>
+        <linearGradient id={`llama-g1-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF5A1F" /><stop offset="1" stop-color="#EC940D" /></linearGradient>
+        <linearGradient id={`llama-g2-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FC8642" /><stop offset="1" stop-color="#EBC166" /></linearGradient>
+        <radialGradient id={`llama-g3-${id}`} cx="0.5" cy="0.75" r="0.6"><stop offset="0" stop-color="#FFF6E3" /><stop offset="1" stop-color="#FADA99" /></radialGradient>
       </defs>
       <ellipse class="llama-brasa" cx="60" cy="140" rx="34" ry="6" />
       <path class="llama-capa llama-exterior" fill={`url(#llama-g1-${id})`} d="M60 6c6 22 34 38 34 76 0 30-16 54-34 54S26 112 26 84c0-18 9-30 18-40 1 14 7 24 15 26-4-26 2-44 1-64z" />

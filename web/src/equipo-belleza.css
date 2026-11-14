@@ -10,21 +10,21 @@
    ===================================================================================================================== */
 
 :root {
-  --eq-rosa: #D9367A; --eq-verde: #178A57; --eq-azul: #2167D1; --eq-naranja: #D9690E; --eq-cian: #0E8AA8;
+  --eq-rosa: var(--rosa-500); --eq-verde: var(--turquesa-500); --eq-azul: #2167D1; --eq-naranja: var(--naranja-500); --eq-cian: var(--turquesa-500);
   /* textos de color que pasan de 4,5:1 sobre su fondo suave */
-  --eq-oro-t: #7A5408; --eq-verde-t: #116B43; --eq-azul-t: #1B56B0; --eq-naranja-t: #9A4508; --eq-rosa-t: #A51F57;
+  --eq-oro-t: var(--oro-600); --eq-verde-t: var(--verde-600); --eq-azul-t: var(--azul-600); --eq-naranja-t: var(--naranja-600); --eq-rosa-t: var(--rosa-600);
   --eq-brillo: rgba(255, 255, 255, .55);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --eq-rosa: #FF7DB4; --eq-verde: #4FCB89; --eq-azul: #7FB0FF; --eq-naranja: #FFA45C; --eq-cian: #5FD3EE;
-    --eq-oro-t: #E9D49A; --eq-verde-t: #7FE0AC; --eq-azul-t: #A9C9FF; --eq-naranja-t: #FFC08F; --eq-rosa-t: #FFA9CD;
+    --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--turquesa-300);
+    --eq-oro-t: var(--oro-200); --eq-verde-t: var(--verde-300); --eq-azul-t: var(--azul-300); --eq-naranja-t: var(--naranja-300); --eq-rosa-t: var(--rosa-300);
     --eq-brillo: rgba(255, 255, 255, .16);
   }
 }
 :root[data-theme="dark"] {
-  --eq-rosa: #FF7DB4; --eq-verde: #4FCB89; --eq-azul: #7FB0FF; --eq-naranja: #FFA45C; --eq-cian: #5FD3EE;
-  --eq-oro-t: #E9D49A; --eq-verde-t: #7FE0AC; --eq-azul-t: #A9C9FF; --eq-naranja-t: #FFC08F; --eq-rosa-t: #FFA9CD;
+  --eq-rosa: var(--rosa-400); --eq-verde: var(--verde-400); --eq-azul: var(--azul-400); --eq-naranja: var(--ambar-300); --eq-cian: var(--turquesa-300);
+  --eq-oro-t: var(--oro-200); --eq-verde-t: var(--verde-300); --eq-azul-t: var(--azul-300); --eq-naranja-t: var(--naranja-300); --eq-rosa-t: var(--rosa-300);
   --eq-brillo: rgba(255, 255, 255, .16);
 }
 
@@ -44,7 +44,7 @@
 .cab-equipo .btn-yo { display: inline-flex; align-items: center; padding: 1px 10px; border-radius: 999px; background: var(--morado-suave);
   color: var(--morado); font-weight: 720; text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 22%, transparent); }
 .cab-equipo .racha-cab { display: inline-flex; align-items: center; gap: 4px; padding: 1px 10px 1px 7px; border-radius: 999px; font-weight: 720;
-  color: var(--tinta); background: color-mix(in srgb, #F59E0B 15%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #F59E0B 38%, transparent),
+  color: var(--tinta); background: color-mix(in srgb, var(--ambar-400) 15%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ambar-400) 38%, transparent),
   0 4px 12px -8px rgba(245, 158, 11, .8); }
 
 /* 3 - "Tu momento" cuando aun no hay ninguno: el circulo y su frase juntos, en una tarjeta (antes, un circulo solo y la frase suelta) */
@@ -56,7 +56,7 @@
 /* 4 - Las pastillas plegadas (Proximos, Companeros, Duelos, Album, Esta semana, El mes) con su color: icono en un disco y la cuenta */
 .plegable-eq { --pc: var(--morado); }
 .plegable-eq[data-plegable-eq="companeros"] { --pc: var(--eq-verde); }
-.plegable-eq[data-plegable-eq="duelos"] { --pc: #C98A00; }
+.plegable-eq[data-plegable-eq="duelos"] { --pc: var(--ambar-500); }
 .plegable-eq[data-plegable-eq="album"] { --pc: var(--eq-rosa); }
 .plegable-eq[data-plegable-eq="semana"] { --pc: var(--eq-azul); }
 .plegable-eq[data-plegable-eq="mes"] { --pc: var(--eq-naranja); }
@@ -78,11 +78,11 @@
 /* 7 - El cumpleanos con confeti de fondo y la tarta en su disco */
 .cumples-equipo { position: relative; overflow: hidden; isolation: isolate; }
 .cumples-equipo::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background-image: radial-gradient(circle, #F59E0B 2.2px, transparent 2.8px), radial-gradient(circle, var(--eq-rosa) 2px, transparent 2.6px), radial-gradient(circle, var(--morado) 1.6px, transparent 2.2px);
+  background-image: radial-gradient(circle, var(--ambar-400) 2.2px, transparent 2.8px), radial-gradient(circle, var(--eq-rosa) 2px, transparent 2.6px), radial-gradient(circle, var(--morado) 1.6px, transparent 2.2px);
   background-size: 46px 38px, 58px 50px, 34px 42px; background-position: 0 0, 21px 15px, 9px 24px;
-  -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 85%); mask-image: linear-gradient(100deg, transparent 35%, #000 85%); opacity: .45; }
+  -webkit-mask-image: linear-gradient(100deg, transparent 35%, var(--negro) 85%); mask-image: linear-gradient(100deg, transparent 35%, var(--negro) 85%); opacity: .45; }
 .cumples-equipo .cumple-tarta { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 6px; border-radius: 50%; vertical-align: middle;
-  font-size: 1.15rem; background: color-mix(in srgb, #F59E0B 22%, var(--hoja)); box-shadow: 0 6px 14px -8px rgba(245, 158, 11, .9); }
+  font-size: 1.15rem; background: color-mix(in srgb, var(--ambar-400) 22%, var(--hoja)); box-shadow: 0 6px 14px -8px rgba(245, 158, 11, .9); }
 
 /* 8 - "Te han animado" y "Te han dado la bienvenida": los nombres en el color del acento y las manos que saludan una vez al entrar */
 .animos-recibidos strong { color: var(--morado); }
@@ -98,7 +98,7 @@
 .padrinos { --hc: var(--eq-verde); }
 .necesitan-animo { --hc: var(--eq-naranja); }
 .companero-semana { --hc: var(--morado); }
-.lo-mejor { --hc: #C98A00; }
+.lo-mejor { --hc: var(--ambar-500); }
 :is(.padrinos .pd-t, .necesitan-animo .na-t, .companero-semana .cs-t, .lo-mejor .lm-t) > span[aria-hidden="true"]:first-child {
   display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; font-size: 1rem;
   background: color-mix(in srgb, var(--hc) 16%, var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 28%, transparent); }
@@ -128,7 +128,7 @@
 .duelo-fila.pendiente { background: var(--hoja); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--morado) 45%, transparent); }
 
 /* 14 - "Retar a alguien" como invitacion: borde de trazos y las espadas en su disco */
-.duelos .duelo-retar { border-style: dashed; border-color: color-mix(in srgb, #C98A00 55%, var(--linea)); }
+.duelos .duelo-retar { border-style: dashed; border-color: color-mix(in srgb, var(--ambar-500) 55%, var(--linea)); }
 .duelos .duelo-retar > span[aria-hidden="true"] { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: var(--oro-suave); }
 
 /* 15 - El companero de la semana con su corona de luz: aro dorado y violeta, y un polvo de estrellas detras */
@@ -136,7 +136,7 @@
 .cs-elegido::before { content: ""; position: absolute; z-index: -1; left: 50%; top: -6px; width: 180px; height: 110px; margin-left: -90px; pointer-events: none;
   background-image: radial-gradient(circle, var(--oro-claro) 1.6px, transparent 2.2px), radial-gradient(circle, color-mix(in srgb, var(--morado) 60%, transparent) 1.4px, transparent 2px);
   background-size: 28px 24px, 36px 30px; background-position: 4px 6px, 18px 14px;
-  -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent); mask-image: radial-gradient(closest-side, #000 30%, transparent); }
+  -webkit-mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); mask-image: radial-gradient(closest-side, var(--negro) 30%, transparent); }
 .companero-semana .cs-elegido .avatar { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 6px var(--oro-claro), 0 0 0 9px color-mix(in srgb, var(--morado) 40%, transparent),
   0 10px 26px -8px color-mix(in srgb, var(--morado) 60%, transparent); }
 
@@ -182,7 +182,7 @@
 /* 23 - "Ruben M. y Carlos V.": delante, tres puntos de color, como un monton de reacciones */
 .quien-reacciona { display: inline-flex; align-items: center; gap: 6px; }
 .quien-reacciona::before { content: ""; flex: none; width: 27px; height: 14px;
-  background: radial-gradient(circle at 7px 7px, #F59E0B 5px, transparent 5.6px), radial-gradient(circle at 14px 7px, var(--eq-rosa) 5px, transparent 5.6px), radial-gradient(circle at 21px 7px, var(--morado) 5px, transparent 5.6px); }
+  background: radial-gradient(circle at 7px 7px, var(--ambar-400) 5px, transparent 5.6px), radial-gradient(circle at 14px 7px, var(--eq-rosa) 5px, transparent 5.6px), radial-gradient(circle at 21px 7px, var(--morado) 5px, transparent 5.6px); }
 
 /* 24 - El pie de la publicacion separado por un hilo, y "Comentar" con su icono en el acento */
 .post .post-pie { padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--linea) 80%, transparent); }
@@ -199,7 +199,7 @@
 .entreno-equipo .ee-num > div:nth-child(1) { --tc: var(--eq-azul); }
 .entreno-equipo .ee-num > div:nth-child(2) { --tc: var(--morado); }
 .entreno-equipo .ee-num > div:nth-child(3) { --tc: var(--eq-verde); }
-.entreno-equipo .ee-num > div:nth-child(4) { --tc: #C98A00; }
+.entreno-equipo .ee-num > div:nth-child(4) { --tc: var(--ambar-500); }
 
 /* 27 - Los ejercicios del entreno: cada pictograma en su disco y un hilo entre filas */
 .entreno-equipo .ee-ejercicios > li > svg:first-child { box-sizing: border-box; width: 26px; height: 26px; padding: 3px; border-radius: 8px; color: var(--morado); background: var(--morado-suave); }
@@ -212,7 +212,7 @@
 
 /* 29 - Las encuestas: barras con degradado, la que gana en oro y su porcentaje en negrita */
 .encuesta-opcion .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 14%, transparent), color-mix(in srgb, var(--morado) 26%, transparent)); }
-.encuesta-opcion.gana .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, #F2CF63 28%, transparent), color-mix(in srgb, #E5A50A 38%, transparent)); }
+.encuesta-opcion.gana .eo-barra { background: linear-gradient(90deg, color-mix(in srgb, var(--oro-300) 28%, transparent), color-mix(in srgb, var(--oro-400) 38%, transparent)); }
 .encuesta-opcion.gana .eo-pct { color: var(--eq-oro-t); font-weight: 820; }
 .encuesta-opcion .eo-pct { font-weight: 720; }
 
@@ -247,10 +247,10 @@
 
 /* 36 - "El mes en el equipo": cada cifra con su color, como el resumen de la semana */
 .mes-cifras > * { box-shadow: inset 0 3px 0 color-mix(in srgb, var(--mc, var(--morado)) 70%, transparent); }
-.mes-cifras > *:nth-child(4n + 1) { --mc: #22A04B; }
+.mes-cifras > *:nth-child(4n + 1) { --mc: var(--verde-500); }
 .mes-cifras > *:nth-child(4n + 2) { --mc: var(--morado); }
-.mes-cifras > *:nth-child(4n + 3) { --mc: #C98A00; }
-.mes-cifras > *:nth-child(4n + 4) { --mc: #E8730C; }
+.mes-cifras > *:nth-child(4n + 3) { --mc: var(--ambar-500); }
+.mes-cifras > *:nth-child(4n + 4) { --mc: var(--ambar-500); }
 
 /* ============================================================= LOS RETOS (37 a 42) =================================== */
 
@@ -269,14 +269,14 @@
 /* 39 - La barra grande del reto: mas gruesa, con degradado, una luz en la punta y oro al llegar */
 .barra-equipo.barra-grande { height: 12px; border-radius: 999px; background: var(--hoja-2); box-shadow: inset 0 1px 2px rgba(20, 15, 36, .1); overflow: visible; }
 .barra-equipo.barra-grande > span { position: relative; border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
+  background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); box-shadow: 0 0 14px -3px color-mix(in srgb, var(--morado) 65%, transparent); }
 .barra-equipo.barra-grande > span::after { content: ""; position: absolute; right: 1px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
-  background: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--morado) 40%, transparent), 0 0 10px 2px rgba(255, 255, 255, .7); }
-.barra-equipo.barra-grande > span.lleno { background: linear-gradient(90deg, #F2CF63, #C98A00); box-shadow: 0 0 14px -3px rgba(201, 138, 0, .8); }
+  background: var(--blanco); box-shadow: 0 0 0 2px color-mix(in srgb, var(--morado) 40%, transparent), 0 0 10px 2px rgba(255, 255, 255, .7); }
+.barra-equipo.barra-grande > span.lleno { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); box-shadow: 0 0 14px -3px rgba(201, 138, 0, .8); }
 
 /* 40 - Lo de cada uno en el reto: tu fila con el velo del acento y las barras completas en oro */
 .progreso-equipo > li.yo, .progreso-equipo > li:has(.yo) { border-radius: 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 9%, var(--hoja)), transparent 80%); }
-.progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(90deg, #F2CF63, #C98A00); }
+.progreso-equipo .barra-equipo > span.lleno { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 41 - El reto ya terminado: un punto mas apagado (el fondo, no el texto) y "Terminado" con su marca */
 .reto[data-estado="terminado"] { background: color-mix(in srgb, var(--hoja-2) 55%, var(--hoja)); }
@@ -295,7 +295,7 @@
 /* 44 - Los hitos del equipo con su barra debajo: cuanto falta se ve, no solo se lee */
 .hitos-lista > li::after { content: ""; grid-column: 2 / -1; height: 4px; border-radius: 999px; margin-top: -2px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 75%, transparent) calc(var(--f, 0) * 100%), var(--hoja-2) 0); }
-.hitos-lista > li.hecho::after { background: linear-gradient(90deg, #F2CF63, #C98A00); }
+.hitos-lista > li.hecho::after { background: linear-gradient(90deg, var(--oro-300), var(--ambar-500)); }
 
 /* 45 - La respuesta del coach a una pregunta como un bocadillo: con su color y una punta hacia la pregunta */
 .pregunta-equipo .pe-respuesta { position: relative; margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--morado) 7%, var(--hoja));
@@ -315,7 +315,7 @@
 
 /* 47 - Las insignias del perfil con brillo de medalla y "Siguiente" con su barra en degradado */
 .pe-insignias .insignia { box-shadow: 0 6px 14px -10px rgba(201, 138, 0, .9); }
-.insignia-siguiente [role="progressbar"] > span, .insignia-siguiente .barra-equipo > span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, #fff), var(--morado)); }
+.insignia-siguiente [role="progressbar"] > span, .insignia-siguiente .barra-equipo > span { background: linear-gradient(90deg, color-mix(in srgb, var(--morado) 55%, var(--blanco)), var(--morado)); }
 .insignia-siguiente { background: linear-gradient(135deg, color-mix(in srgb, var(--morado) 7%, var(--hoja-2)), var(--hoja-2) 60%); }
 
 /* ================================================================== COMPARTIR (48 a 50) ============================== */
@@ -327,10 +327,10 @@
 .compartir-opciones .chip-boton.activo { color: var(--sobre-morado); border-color: transparent; background: linear-gradient(135deg, var(--morado), color-mix(in srgb, var(--morado) 72%, var(--eq-rosa))); }
 
 /* 49 - Los destinos (WhatsApp, Instagram, Facebook) con su color de verdad en un disco, y la vista previa como una foto sobre la mesa */
-.compartir-destinos .btn > svg:first-child { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: 50%; color: #fff; }
-.compartir-destinos .destino-whatsapp > svg:first-child { background: #1FA855; }
-.compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(135deg, #F58529, #DD2A7B 55%, #8134AF); }
-.compartir-destinos .destino-facebook > svg:first-child { background: #1877F2; }
+.compartir-destinos .btn > svg:first-child { box-sizing: border-box; width: 24px; height: 24px; padding: 4px; border-radius: 50%; color: var(--blanco); }
+.compartir-destinos .destino-whatsapp > svg:first-child { background: var(--verde-500); }
+.compartir-destinos .destino-instagram > svg:first-child { background: linear-gradient(135deg, var(--naranja-400), var(--rosa-500) 55%, #8134AF); }
+.compartir-destinos .destino-facebook > svg:first-child { background: var(--azul-500); }
 .tarjeta-previa:not(.marco-ig) .tarjeta-img { box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 22px 40px -22px rgba(20, 15, 50, .75); border-radius: 14px; }
 
 /* 50 - Las opciones de una publicacion y los ajustes de la comunidad: cada fila con su icono en un disco de color */

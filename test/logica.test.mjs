@@ -1592,7 +1592,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   check(g2[0].ultimo && g2[1].primero, 'el cambio de día corta el grupo');
 
   console.log('\nv0.49: colores de acento (contraste AA en claro, oscuro y negro puro)');
-  check(ACENTOS.length === 6 && ACENTOS[0].id === ACENTO_DEFECTO && ACENTO_DEFECTO === 'morado' && new Set(ACENTOS.map((a) => a.id)).size === 6, 'seis acentos, el morado FBE el primero y de serie');
+  check(ACENTOS.length === 8 && ACENTOS[0].id === ACENTO_DEFECTO && ACENTO_DEFECTO === 'morado' && new Set(ACENTOS.map((a) => a.id)).size === 8 && ['oceano', 'lima'].every((id) => ACENTOS.some((a) => a.id === id)), '(color) ocho acentos (con Océano y Lima), el morado FBE el primero y de serie');
   check(contraste('#000000', '#FFFFFF') === 21 && contraste('#FFFFFF', '#FFFFFF') === 1 && contraste('#5438D8', '#FFFFFF') === contraste('#FFFFFF', '#5438D8'), 'el contraste WCAG (21:1 negro sobre blanco, simétrico)');
   for (const a of ACENTOS) {
     for (const tema of ['claro', 'oscuro', 'oled']) {
@@ -1602,7 +1602,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
     }
     check(acentoValido(a), `${a.nombre}: válido como texto, en botones y en la tarjeta del día`);
   }
-  check(cssAcento('morado') === '' && cssAcento('azul').includes('--morado:#1D55C4') && cssAcento('azul').includes(':root[data-theme="dark"]{--morado:#7EA6FF') && cssAcento('azul').includes('prefers-color-scheme: dark'),
+  check(cssAcento('morado') === '' && cssAcento('azul').includes(`--morado:${ACENTOS.find((a) => a.id === 'azul').claro.morado}`) && cssAcento('azul').includes(`:root[data-theme="dark"]{--morado:${ACENTOS.find((a) => a.id === 'azul').oscuro.morado}`) && cssAcento('azul').includes('prefers-color-scheme: dark'),
     'el CSS de un acento: claro, oscuro del sistema y oscuro elegido (el morado no necesita nada)');
   check(cssAcento('no-existe') === '', 'un acento que no existe se queda en el morado');
   console.log('\nv0.49 (revisión): ajustes guardados, series pautadas y el calendario');
@@ -1741,7 +1741,10 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
     check(peor >= 3, `los macros en ${tema}: cada color, al menos 3:1 sobre todas sus superficies (el peor, ${peor.toFixed(2)}:1); entre sí, distinto tono y con su nombre`);
   }
   const cssM = fs.readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
-  const decl = [...cssM.matchAll(/--macro-proteina: (#[0-9A-F]{6}); --macro-carbos: (#[0-9A-F]{6}); --macro-grasa: (#[0-9A-F]{6})/g)].map((x) => x.slice(1).join());
+  // (color) ahora apuntan a las escalas de la paleta: var(--oro-600) → su hex
+  const PAL = await import('../web/src/logica/paleta.js');
+  const aHex = (v) => { const m = /^var\(--([a-z]+)-(\d+)\)$/.exec(v); return m ? PAL.ESCALAS[m[1]][m[2]] : v; };
+  const decl = [...cssM.matchAll(/--macro-proteina: ([^;]+); --macro-carbos: ([^;]+); --macro-grasa: ([^;]+);/g)].map((x) => x.slice(1).map(aHex).join());
   check(decl.length === 3 && decl[0] === Object.values(D.COLORES_MACRO.claro).join() && decl[1] === Object.values(D.COLORES_MACRO.oscuro).join() && decl[2] === decl[1], 'estilos.css usa esos mismos colores (claro y los dos oscuros)');
 
   console.log('\nv0.50: perfil, tamaño de la letra y lo que se queda en el móvil');
@@ -1776,7 +1779,7 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
     'los títulos de pantalla y la tarjeta del día usan la escala (expandidos) y las cifras grandes, el marcador (condensadas)');
   let malas = [];
   for (const a of AC.ACENTOS) for (const t of ['claro', 'oscuro', 'oled']) for (const tipo of ['barra', 'cabecera', 'hoja']) malas.push(...AC.parejasVidrio(a, t, tipo).filter((x) => x.ratio < 4.5).map((x) => `${a.id}/${t}/${x.que}: ${x.ratio}`));
-  check(malas.length === 0, `sobre el vidrio, el texto pasa AA en el peor caso (negro detrás en claro, blanco en oscuro) con los seis acentos ${malas.slice(0, 3).join('; ')}`);
+  check(malas.length === 0, `sobre el vidrio, el texto pasa AA en el peor caso (negro detrás en claro, blanco en oscuro) con los ocho acentos ${malas.slice(0, 3).join('; ')}`);
   check(AC.parejasVidrio(AC.ACENTOS[0], 'claro', 'hoja').some((x) => x.que.startsWith('tinta-3')) && !AC.parejasVidrio(AC.ACENTOS[0], 'claro', 'barra').some((x) => x.que.startsWith('tinta-3')), 'en las hojas también tinta-3 (por eso tapan más); en las barras, no');
   const mezclas = (v, base) => [...css.matchAll(new RegExp(`${v}: color-mix\\(in srgb, var\\(--${base}\\) (\\d+)%`, 'g'))].map((m) => Number(m[1]));
   const V = AC.VIDRIO;

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { segmentosEstela, cabezaEstela, trayectoriaEstela, fuentesEstela, segundosEstela, largoValido, LARGO_ESTELA, ARTICULACIONES_ESTELA } from '../../logica/estela.js';
 
-export const COLOR_ESTELA = '#3EE0FF';
+export const COLOR_ESTELA = '#71DCD6';
 const CLAVE = 'fbe-estela';
 const DEFECTO = { activa: false, fuente: 'barra', largo: LARGO_ESTELA };
 const fuentesValidas = ARTICULACIONES_ESTELA.map(([k]) => k);

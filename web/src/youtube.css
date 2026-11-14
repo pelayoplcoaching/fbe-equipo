@@ -1,6 +1,6 @@
 /* YouTube dentro de la app (ui/YouTube.jsx): la miniatura delante, el reproductor, sus herramientas y el mini-reproductor */
 .yt { display: grid; gap: 8px; width: 100%; min-width: 0; }
-.yt-marco { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r, 12px); overflow: hidden; background: #000; color: #fff; border: 0; padding: 0; }
+.yt-marco { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r, 12px); overflow: hidden; background: var(--negro); color: var(--blanco); border: 0; padding: 0; }
 .yt-vertical .yt-marco { aspect-ratio: 9 / 16; max-height: min(78vh, 640px); width: auto; justify-self: center; max-width: 100%; }
 .yt-compacto .yt-marco { max-width: 320px; border-radius: 10px; }
 .yt-compacto.yt-vertical .yt-marco { max-height: 420px; }
@@ -9,12 +9,12 @@
 .yt-fachada img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .yt-fachada:focus-visible { outline: 3px solid var(--morado); outline-offset: 2px; }
 .yt-play { position: absolute; inset: 0; display: grid; place-items: center; }
-.yt-play svg { width: 52px; height: 52px; padding: 12px; border-radius: 50%; background: rgba(0, 0, 0, .58); color: #fff; }
+.yt-play svg { width: 52px; height: 52px; padding: 12px; border-radius: 50%; background: rgba(0, 0, 0, .58); color: var(--blanco); }
 .yt-compacto .yt-play svg { width: 44px; height: 44px; padding: 10px; }
-.yt-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .65); color: #fff; font-weight: 700; }
+.yt-pie { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .65); color: var(--blanco); font-weight: 700; }
 .yt-pie svg { width: 13px; height: 13px; }
-.yt-ahorro { position: absolute; inset: auto 0 40% 0; text-align: center; color: #fff; opacity: .85; }
-.yt-sin { display: grid; place-items: center; align-content: center; gap: 6px; padding: 12px; text-align: center; background: var(--hoja-2, #222); color: inherit; }
+.yt-ahorro { position: absolute; inset: auto 0 40% 0; text-align: center; color: var(--blanco); opacity: .85; }
+.yt-sin { display: grid; place-items: center; align-content: center; gap: 6px; padding: 12px; text-align: center; background: var(--hoja-2, var(--noche-2)); color: inherit; }
 .yt-sin svg { width: 28px; height: 28px; opacity: .6; }
 .yt-herramientas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .yt-vel button { min-width: 44px; }
@@ -26,7 +26,7 @@
 .yt-marca[aria-current="true"] { background: color-mix(in srgb, var(--morado) 12%, transparent); border-color: var(--morado); }
 /* el mini-reproductor, encima de la barra de abajo (y del descanso) */
 .yt-mini { position: fixed; z-index: 60; right: 10px; bottom: calc(var(--alto-barra, 64px) + 12px + env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 20px));
-  background: var(--hoja, #fff); color: inherit; border-radius: var(--r, 12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: 6px 8px 8px; display: grid; gap: 6px; }
+  background: var(--hoja, var(--blanco)); color: inherit; border-radius: var(--r, 12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: 6px 8px 8px; display: grid; gap: 6px; }
 .yt-mini-cab { display: flex; align-items: center; gap: 4px; }
 .yt-mini-titulo { flex: 1; min-width: 0; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
 .yt-mini-titulo svg { width: 14px; height: 14px; flex: none; }
@@ -38,15 +38,15 @@
 .fila-videos { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 46%); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
 @media (min-width: 720px) { .fila-videos { grid-auto-columns: minmax(200px, 31%); } }
 .tarjeta-video { scroll-snap-align: start; display: grid; gap: 6px; align-content: start; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
-.tarjeta-video-img { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--hoja-2, #222); }
+.tarjeta-video-img { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--hoja-2, var(--noche-2)); }
 .tarjeta-video-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tarjeta-video-img .yt-play svg { width: 36px; height: 36px; padding: 8px; }
 .tarjeta-video-titulo { font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tarjeta-video:focus-visible .tarjeta-video-img { outline: 3px solid var(--morado); outline-offset: 2px; }
 .video-semana-k, .directo-k { display: inline-flex; align-items: center; gap: 6px; margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--morado); }
 .video-semana-k svg { width: 14px; height: 14px; }
-.directo-punto { width: 9px; height: 9px; border-radius: 50%; background: #e5484d; }
-.directo-hoy.ahora .directo-k { color: #e5484d; }
+.directo-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--naranja-500); }
+.directo-hoy.ahora .directo-k { color: var(--naranja-500); }
 @media (prefers-reduced-motion: no-preference) { .directo-hoy.ahora .directo-punto { animation: yt-latido 1.4s ease-in-out infinite; } }
 @keyframes yt-latido { 50% { opacity: .35; } }
 .guia-video { margin: 0; display: grid; gap: 6px; }
@@ -59,8 +59,8 @@
 button.recurso-enlace { width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
 .video-sesion-cab { width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; gap: 10px; }
 .video-sesion-cab > svg { width: 22px; height: 22px; color: var(--morado); flex: none; }
-.video-sesion.hecho { border-left: 3px solid var(--ok, #2f9e44); }
-.comparar-referencia-video { width: 100%; max-height: 42vh; border-radius: var(--r, 12px); background: #000; }
+.video-sesion.hecho { border-left: 3px solid var(--ok, var(--verde-500)); }
+.comparar-referencia-video { width: 100%; max-height: 42vh; border-radius: var(--r, 12px); background: var(--negro); }
 /* (Sesion → Cambiar) cada opción con el botón de su vídeo al lado */
 .opcion-con-video { display: flex; align-items: stretch; }
 .opcion-con-video + .opcion-con-video { border-top: 1px solid var(--linea); }

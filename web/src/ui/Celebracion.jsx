@@ -220,12 +220,12 @@ export function ReaccionesPost({ post, con045 = false, ocupado = false, alReacci
 // (iguales en claro y oscuro) y el texto, blanco sobre color o tinta oscura sobre amarillo
 // (tam: el tamaño de la letra; ancho: lo que ocupa como mucho, para que no se salga de su forma)
 const DIBUJOS = {
-  pr: { fondo: '#F2C230', tinta: '#1B1730', forma: 'estrella', linea: 'PR', tam: 26, sub: 'récord', tamSub: 11 },
+  pr: { fondo: '#EBC166', tinta: '#181626', forma: 'estrella', linea: 'PR', tam: 26, sub: 'récord', tamSub: 11 },
   a_tope: { fondo: '#F0495C', tinta: '#FFFFFF', forma: 'rayo', linea: 'A TOPE', tam: 17, ancho: 72 },
-  semana_completa: { fondo: '#3DC27B', tinta: '#0F2A1C', forma: 'semana', linea: 'SEMANA', tam: 16, ancho: 70, sub: 'completa', tamSub: 12 },
-  constancia: { fondo: '#5438D8', tinta: '#FFFFFF', forma: 'llama', linea: 'CONSTANCIA', tam: 13, ancho: 76 },
-  vamos: { fondo: '#5B8FF2', tinta: '#FFFFFF', forma: 'explosion', linea: '¡VAMOS!', tam: 14, ancho: 54 },
-  dia_pierna: { fondo: '#1B1730', tinta: '#FFFFFF', forma: 'barra', linea: 'DÍA DE', tam: 15, ancho: 62, sub: 'PIERNA', tamSub: 15, anchoSub: 62 },
+  semana_completa: { fondo: '#48C77C', tinta: '#00302E', forma: 'semana', linea: 'SEMANA', tam: 16, ancho: 70, sub: 'completa', tamSub: 12 },
+  constancia: { fondo: '#593EDE', tinta: '#FFFFFF', forma: 'llama', linea: 'CONSTANCIA', tam: 13, ancho: 76 },
+  vamos: { fondo: '#3A83ED', tinta: '#FFFFFF', forma: 'explosion', linea: '¡VAMOS!', tam: 14, ancho: 54 },
+  dia_pierna: { fondo: '#181626', tinta: '#FFFFFF', forma: 'barra', linea: 'DÍA DE', tam: 15, ancho: 62, sub: 'PIERNA', tamSub: 15, anchoSub: 62 },
 };
 const LETRA_PEGATINA = "'Archivo Variable', Archivo, system-ui, sans-serif";
 function FormaPegatina({ forma, d }) {
@@ -241,10 +241,10 @@ function FormaPegatina({ forma, d }) {
 }
 function AdornoPegatina({ forma, d }) {
   const c = d.tinta;
-  if (forma === 'rayo') return <path d="M54 22 L38 50 H50 L44 72 L64 42 H52 Z" fill="#FFC94D" opacity=".95" transform="translate(28 -6) scale(.55)" />;
-  if (forma === 'llama') return <path d="M50 20 C58 32 66 38 62 52 C60 60 54 64 50 64 C44 64 38 58 38 50 C38 42 46 38 46 30 C48 34 50 36 52 38 C54 32 52 26 50 20 Z" fill="#FF8A3D" transform="translate(30 -4) scale(.6)" />;
+  if (forma === 'rayo') return <path d="M54 22 L38 50 H50 L44 72 L64 42 H52 Z" fill="#EBC166" opacity=".95" transform="translate(28 -6) scale(.55)" />;
+  if (forma === 'llama') return <path d="M50 20 C58 32 66 38 62 52 C60 60 54 64 50 64 C44 64 38 58 38 50 C38 42 46 38 46 30 C48 34 50 36 52 38 C54 32 52 26 50 20 Z" fill="#FC8642" transform="translate(30 -4) scale(.6)" />;
   if (forma === 'semana') return <g>{Array.from({ length: 7 }, (_, i) => <circle key={i} cx={23 + i * 9} cy="27" r="3.2" fill={c} opacity=".85" />)}</g>;
-  if (forma === 'barra') return <g fill="#F2C230"><rect x="22" y="25" width="56" height="3" rx="1.5" /><rect x="26" y="19" width="6" height="15" rx="2" /><rect x="68" y="19" width="6" height="15" rx="2" /></g>;
+  if (forma === 'barra') return <g fill="#EBC166"><rect x="22" y="25" width="56" height="3" rx="1.5" /><rect x="26" y="19" width="6" height="15" rx="2" /><rect x="68" y="19" width="6" height="15" rx="2" /></g>;
   return null;
 }
 export function Pegatina({ k, clase = '' }) {

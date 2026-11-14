@@ -1,6 +1,7 @@
 // Compartir (rama compartir): lo que no depende de la pantalla. Los formatos de la imagen, la pegatina, el @ de cada
 // uno, el pie de foto, el resumen en texto y los datos de las tarjetas de logro (récord, racha, semana completa, la
 // semana del equipo y las publicaciones del muro). Ninguna lleva peso corporal, salud ni nutrición.
+import { ACENTOS, aOklch, oklch } from './paleta.js';
 import { num } from './calculos.js';
 import { pesoTxt, pesoNum, etiquetaPeso } from './unidades.js';
 import { fmtCorta, diasEntre, hoyISO, sumarDias, desdeISO } from './fechas.js';
@@ -23,15 +24,25 @@ export const tamanoFormato = (f) => { const x = FORMATOS.find(([k]) => k === f) 
 // Cada una: fondo (abajo), noche (arriba), tinta, tinta2, tinta3, morado (el acento), linea, oro (los récords), clara (sí/no),
 // resplandor (el rgb del acento para los brillos).
 export const PALETAS = [
-  ['noche', 'Noche', { fondo: '#150F36', noche: '#221957', tinta: '#FFFFFF', tinta2: '#CFC8F4', tinta3: '#A79FD8', morado: '#B9ADFF', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '104, 78, 236' }],
-  ['clara', 'Clara', { fondo: '#F4F1FF', noche: '#FFFFFF', tinta: '#150F36', tinta2: '#4A4180', tinta3: '#7A72AE', morado: '#684EEC', linea: 'rgba(21, 15, 54, .12)', oro: '#9A7A1C', clara: true, resplandor: '104, 78, 236' }],
-  ['bosque', 'Bosque', { fondo: '#0C1F18', noche: '#16342A', tinta: '#FFFFFF', tinta2: '#C9E6D6', tinta3: '#8FBFA6', morado: '#7FE0B0', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '46, 160, 110' }],
-  ['brasa', 'Brasa', { fondo: '#2A0F12', noche: '#4A1A1E', tinta: '#FFFFFF', tinta2: '#F5D0C8', tinta3: '#D99C8F', morado: '#FF9D6E', linea: 'rgba(255, 255, 255, .14)', oro: '#FFD98A', clara: false, resplandor: '236, 96, 60' }],
-  ['hielo', 'Hielo', { fondo: '#0B1A2B', noche: '#13314F', tinta: '#FFFFFF', tinta2: '#CFE4F7', tinta3: '#8FB8DA', morado: '#7FD0FF', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '60, 150, 236' }],
-  ['grafito', 'Grafito', { fondo: '#0E0E12', noche: '#1E1E26', tinta: '#FFFFFF', tinta2: '#D6D6E0', tinta3: '#9A9AAB', morado: '#E6E6F0', linea: 'rgba(255, 255, 255, .14)', oro: '#E9D49A', clara: false, resplandor: '120, 120, 140' }],
+  ['noche', 'Noche', { fondo: '#140B3A', noche: '#241665', tinta: '#FFFFFF', tinta2: '#C4BFFF', tinta3: '#A49CFF', morado: '#C4BFFF', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '104, 78, 236' }],
+  ['clara', 'Clara', { fondo: '#F7F5FF', noche: '#FFFFFF', tinta: '#140B3A', tinta2: '#4F4E5E', tinta3: '#858492', morado: '#684EEC', linea: 'rgba(21, 15, 54, .12)', oro: '#A97F00', clara: true, resplandor: '104, 78, 236' }],
+  ['bosque', 'Bosque', { fondo: '#001B1A', noche: '#00302E', tinta: '#FFFFFF', tinta2: '#DDDDE3', tinta3: '#37C2BB', morado: '#7EE0A0', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '46, 160, 110' }],
+  ['brasa', 'Brasa', { fondo: '#2F0407', noche: '#4F0910', tinta: '#FFFFFF', tinta2: '#FFD1CF', tinta3: '#AAA9B5', morado: '#FFB38C', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '236, 96, 60' }],
+  ['hielo', 'Hielo', { fondo: '#181626', noche: '#042756', tinta: '#FFFFFF', tinta2: '#CAE0FF', tinta3: '#AAA9B5', morado: '#A5C9FF', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '60, 150, 236' }],
+  ['grafito', 'Grafito', { fondo: '#0E0D15', noche: '#211F32', tinta: '#FFFFFF', tinta2: '#DDDDE3', tinta3: '#AAA9B5', morado: '#EEEEF2', linea: 'rgba(255, 255, 255, .14)', oro: '#FADA99', clara: false, resplandor: '120, 120, 140' }],
 ];
 export const paletaValida = (k) => PALETAS.some(([c]) => c === k);
-export const paletaDe = (k) => (PALETAS.find(([c]) => c === k) || PALETAS[0])[2];
+// (color, mejora 16) «Noche» sigue el color de acento elegido en el móvil: el brillo, el acento y el resplandor salen de él
+// (con el morado FBE, la de siempre)
+export function paletaDe(k, acentoId = 'morado') {
+  const base = (PALETAS.find(([c]) => c === k) || PALETAS[0])[2];
+  if ((k !== 'noche' && paletaValida(k)) || !acentoId || acentoId === 'morado') return base;
+  const a = ACENTOS.find((x) => x.id === acentoId);
+  if (!a) return base;
+  const [L, C, h] = aOklch(a.claro.hero2);
+  const rgb = [1, 3, 5].map((i) => parseInt(a.claro.morado.slice(i, i + 2), 16)).join(', ');
+  return { ...base, fondo: oklch(Math.max(0.14, L - 0.08), C * 0.8, h), noche: a.claro.hero2, tinta2: a.oscuro.hover, tinta3: a.oscuro.morado, morado: a.oscuro.hover, resplandor: rgb };
+}
 export const PREF_PALETA = 'fbe-compartir-paleta';
 
 // La frase propia del atleta en la tarjeta (tanda 2): hasta 70 caracteres, una línea

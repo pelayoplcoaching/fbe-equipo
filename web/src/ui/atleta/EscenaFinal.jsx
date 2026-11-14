@@ -61,13 +61,13 @@ export function EscenaFinal({ nombre = '', records = 0, semana = null, alSalir, 
         <svg class="escena-cielo" viewBox="0 0 390 420" aria-hidden="true" focusable="false">
           <defs>
             <radialGradient id="escena-luna" cx="38%" cy="32%" r="78%">
-              <stop offset="0" stop-color={records ? '#FFF1BF' : '#FFFFFF'} />
-              <stop offset=".6" stop-color={records ? '#F3CC63' : '#E9E4FF'} />
-              <stop offset="1" stop-color={records ? '#D99B2B' : '#C3B8F5'} />
+              <stop offset="0" stop-color={records ? '#FEEDC9' : '#FFFFFF'} />
+              <stop offset=".6" stop-color={records ? '#EBC166' : '#EEECFF'} />
+              <stop offset="1" stop-color={records ? '#D3A329' : '#C4BFFF'} />
             </radialGradient>
             <radialGradient id="escena-halo">
-              <stop offset=".55" stop-color={records ? '#F3CC63' : '#B9A8FF'} stop-opacity=".42" />
-              <stop offset="1" stop-color={records ? '#F3CC63' : '#B9A8FF'} stop-opacity="0" />
+              <stop offset=".55" stop-color={records ? '#EBC166' : '#A49CFF'} stop-opacity=".42" />
+              <stop offset="1" stop-color={records ? '#EBC166' : '#A49CFF'} stop-opacity="0" />
             </radialGradient>
           </defs>
           <g class="escena-estrellas">

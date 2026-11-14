@@ -51,7 +51,7 @@ export function EditorFoto({ archivo, hd = false, alListo, alCerrar }) {
     for (const t of textos) {
       x.font = `700 ${Math.round(lado * t.tam)}px system-ui, sans-serif`;
       x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.lineWidth = Math.max(2, lado * t.tam * 0.12); x.strokeStyle = t.color === '#111111' ? '#FFFFFF' : '#000000';
+      x.lineWidth = Math.max(2, lado * t.tam * 0.12); x.strokeStyle = t.color === '#0E0D15' ? '#FFFFFF' : '#000000';
       x.strokeText(t.t, t.x * ancho, t.y * alto);
       x.fillStyle = t.color;
       x.fillText(t.t, t.x * ancho, t.y * alto);

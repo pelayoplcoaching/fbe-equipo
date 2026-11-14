@@ -1,7 +1,7 @@
 /* Sumar un producto envasado en «Apuntar la nutrición» (escáner de códigos de barras, Open Food Facts) */
 .sumar-producto-btn { justify-self: start; }
 .producto-vista .producto-cab { display: flex; gap: 12px; align-items: flex-start; }
-.producto-foto { width: 56px; height: 56px; flex: none; border-radius: var(--r-s); object-fit: contain; background: #fff; box-shadow: inset 0 0 0 1px var(--linea); }
+.producto-foto { width: 56px; height: 56px; flex: none; border-radius: var(--r-s); object-fit: contain; background: var(--blanco); box-shadow: inset 0 0 0 1px var(--linea); }
 .producto-foto-vacia { display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-3); }
 .producto-foto-vacia svg { width: 24px; height: 24px; }
 .producto-cantidades { margin-top: 8px; }
@@ -13,7 +13,7 @@
 .fila-producto > svg { width: 18px; height: 18px; flex: none; color: var(--tinta-3); }
 
 /* La cámara: vídeo a lo ancho y un recuadro horizontal en el centro, que es la franja que se lee */
-.escaner-visor { position: relative; overflow: hidden; border-radius: var(--r); background: #000; aspect-ratio: 4 / 3; }
+.escaner-visor { position: relative; overflow: hidden; border-radius: var(--r); background: var(--negro); aspect-ratio: 4 / 3; }
 .escaner-visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .escaner-recuadro { position: absolute; left: 7%; right: 7%; top: 30%; bottom: 30%; border: 3px solid rgba(255, 255, 255, .92); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .38); }
 .escaner-recuadro::after { content: ''; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: var(--alerta); opacity: .85; animation: escaner-linea 1.6s ease-in-out infinite alternate; }

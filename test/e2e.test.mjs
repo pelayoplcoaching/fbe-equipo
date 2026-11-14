@@ -1143,17 +1143,17 @@ try {
   check((await raiz())[0] === '16px' && (await raiz())[1] === '', 'y vuelve a «Normal» (Hoy y la sesión, a 125 %, más abajo con Ana)');
   // v0.49: color de acento (seis) y negro puro, en el móvil
   const acentos = p.locator('.acento-op');
-  check(await acentos.count() === 6 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), 'seis colores de acento, el morado FBE de serie');
+  check(await acentos.count() === 8 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), '(color) ocho colores de acento, el morado FBE de serie');
   await p.locator('.acento-op', { hasText: 'Verde pino' }).click();
   const tokens = () => p.evaluate(() => { const c = getComputedStyle(document.documentElement); return { morado: c.getPropertyValue('--morado').trim().toUpperCase(), fondo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"][media*="dark"]')?.content }; });
   const t1 = await tokens();
-  check(t1.morado === '#0B6B5D' && await p.getByRole('radio', { name: 'Verde pino' }).isChecked() && await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).acento === 'pino'),
+  check(t1.morado === '#00635E' && await p.getByRole('radio', { name: 'Verde pino' }).isChecked() && await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).acento === 'pino'),
     `elige el verde pino: cambia el acento de toda la app (${t1.morado}) y se recuerda en el móvil`);
   await revisar('ajustes-acento');
   await p.emulateMedia({ colorScheme: 'dark' });
   await p.getByRole('switch', { name: 'Negro puro (OLED)' }).check();
   const t2 = await tokens();
-  check(t2.morado === '#4FCDB3' && t2.fondo === 'rgb(0, 0, 0)' && t2.barra === '#000000', `en oscuro, el acento pasa a su versión oscura y con «Negro puro» el fondo y la barra del sistema son negros (${JSON.stringify(t2)})`);
+  check(t2.morado === '#37C2BB' && t2.fondo === 'rgb(0, 0, 0)' && t2.barra === '#000000', `en oscuro, el acento pasa a su versión oscura y con «Negro puro» el fondo y la barra del sistema son negros (${JSON.stringify(t2)})`);
   await p.setViewportSize({ width: 360, height: 780 });
   await revisar('ajustes-oled-360-oscuro');
   await p.setViewportSize({ width: 390, height: 844 });
@@ -1161,7 +1161,7 @@ try {
   await p.locator('.acento-op', { hasText: 'Morado FBE' }).click();
   await p.emulateMedia({ colorScheme: null });
   const t3 = await tokens();
-  check(t3.morado === '#5438D8' && t3.fondo !== 'rgb(0, 0, 0)' && await p.evaluate(() => !document.getElementById('fbe-acento')?.textContent), 'y vuelve al morado FBE sin negro puro');
+  check(t3.morado === '#593EDE' && t3.fondo !== 'rgb(0, 0, 0)' && await p.evaluate(() => !document.getElementById('fbe-acento')?.textContent), 'y vuelve al morado FBE sin negro puro');
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
 
   console.log('\nCoach: lo ve en su panel');
@@ -6046,6 +6046,10 @@ try {
   console.log('\nSonido 2');
   const { probarSonido2 } = await import('./e2e-sonido-2.mjs');
   await probarSonido2({ navegador, check });
+  // Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
+  console.log('\nColor');
+  const { probarColor } = await import('./e2e-color.mjs');
+  await probarColor({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

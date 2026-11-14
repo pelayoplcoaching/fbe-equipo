@@ -15,7 +15,8 @@ const tono = (f, d, v) => tonoApp(f, d, v, 'juego');
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos, equipoDe } from '../travesia.js';
 import { adornosPuestos, mediaEtapa, selloDe } from '../../logica/travesia-meta.js';
 import { crearMusica } from './travesia-musica.js';
-import { nuevoPaisaje, pintar } from './travesia-pinta.js';
+import { nuevoPaisaje, pintar, acentoTravesia } from './travesia-pinta.js';
+import { acentoDe } from '../../logica/acentos.js';
 
 // «La travesía»: el juego del descanso, a pantalla completa. Un toque en cualquier sitio, salta; otro en el aire, doble
 // salto. La etapa dura lo que queda de descanso (`fin`, el mismo final que lleva el temporizador: si se le suma o se le
@@ -200,6 +201,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
     });
     etapa.current = e; apuntada.current = false;
     setEscudos(e.escudos);
+    { const ac = acentoDe(leerAjustes().acento); acentoTravesia(ac.claro.morado, ac.oscuro.morado); }   // (color) el acento llega al juego
     paisaje.current = nuevoPaisaje(semilla % 1000);
     const pasadas = new Set();   // (top, tanda 4) las marcas del camino que ya ha pasado
     setFinal(null); setClip(null); setClipTxt('');
