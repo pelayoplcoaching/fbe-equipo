@@ -451,6 +451,16 @@
       "320": "imagenes/apuntes/apuntes-tema-tecnica-320.681a8bd6.webp"
     }
   },
+  "atajos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/atajos-160.6e481702.webp",
+      "320": "imagenes/coach/atajos-320.5f2c01f0.webp"
+    }
+  },
   "bic-curl-arana": {
     "proporcion": [
       1,
@@ -948,6 +958,16 @@
       "480": "imagenes/coach/coach-revision-semanal-480.964afc83.webp",
       "720": "imagenes/coach/coach-revision-semanal-720.b3507465.webp",
       "1080": "imagenes/coach/coach-revision-semanal-1080.820cc102.webp"
+    }
+  },
+  "cobros": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/cobros-160.84600207.webp",
+      "320": "imagenes/coach/cobros-320.f58d97c5.webp"
     }
   },
   "comida-cena": {
@@ -1528,6 +1548,16 @@
     "archivos": {
       "192": "imagenes/ejercicio/del-remo-menton-192.5c8dc2af.webp",
       "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
+    }
+  },
+  "difusion": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "480": "imagenes/coach/difusion-480.9ada4ea8.webp",
+      "840": "imagenes/coach/difusion-840.8a795228.webp"
     }
   },
   "donde-casa": {
@@ -3017,6 +3047,16 @@
       "1080": "imagenes/vida/informe-1080.34921296.webp"
     }
   },
+  "integraciones": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/integraciones-720.5bdd4101.webp",
+      "1080": "imagenes/coach/integraciones-1080.5fdb1933.webp"
+    }
+  },
   "isq-buenos-dias": {
     "proporcion": [
       1,
@@ -3407,6 +3447,16 @@
       "320": "imagenes/meta/mejor-momento-320.f407e255.webp"
     }
   },
+  "menu-privado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/menu-privado-160.6123bca1.webp",
+      "320": "imagenes/coach/menu-privado-320.7fb2198f.webp"
+    }
+  },
   "mes-01": {
     "proporcion": [
       16,
@@ -3730,6 +3780,16 @@
     "archivos": {
       "160": "imagenes/musica/musica-test-160.46a57928.webp",
       "320": "imagenes/musica/musica-test-320.e2ee065b.webp"
+    }
+  },
+  "nutricion-pautas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/nutricion-pautas-720.ca163484.webp",
+      "1080": "imagenes/coach/nutricion-pautas-1080.80976a79.webp"
     }
   },
   "para-hablarle": {
@@ -4285,6 +4345,16 @@
       "1080": "imagenes/primeros/primeros-sesion-1080.00cb17cc.webp"
     }
   },
+  "receta-encaja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/receta-encaja-160.4c6e4999.webp",
+      "320": "imagenes/coach/receta-encaja-320.570357f9.webp"
+    }
+  },
   "regalo": {
     "proporcion": [
       1,
@@ -4295,6 +4365,16 @@
       "320": "imagenes/coach/regalo-320.377acbc3.webp"
     }
   },
+  "rellenar-semana": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/rellenar-semana-720.50ada6ea.webp",
+      "1080": "imagenes/coach/rellenar-semana-1080.a2543141.webp"
+    }
+  },
   "reloj": {
     "proporcion": [
       1,
@@ -4303,6 +4383,16 @@
     "archivos": {
       "160": "imagenes/ah/reloj-160.017380a2.webp",
       "320": "imagenes/ah/reloj-320.118aee60.webp"
+    }
+  },
+  "renuevan": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/coach/renuevan-160.3a7e8687.webp",
+      "320": "imagenes/coach/renuevan-320.dfe74b33.webp"
     }
   },
   "reto-mes": {
@@ -4701,6 +4791,16 @@
     "archivos": {
       "160": "imagenes/vida/vida-que-tal-160.73ea67d1.webp",
       "320": "imagenes/vida/vida-que-tal-320.f8fb1c44.webp"
+    }
+  },
+  "voces-frases": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/coach/voces-frases-720.16889655.webp",
+      "1080": "imagenes/coach/voces-frases-1080.075ba19f.webp"
     }
   },
   "voz-coach": {

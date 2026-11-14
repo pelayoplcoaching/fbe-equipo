@@ -4,6 +4,7 @@
 //   · ContactoAtleta: en la ficha (Datos), su teléfono, para escribirle por WhatsApp con un toque
 //   · BotonWhatsApp / useContactos: el botón (con su número si lo tiene; si no, WhatsApp pregunta a quién)
 // Sin la 051, no sale nada.
+import { Imagen } from '../Imagen.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { URL_ATAJO, ATAJO_SALUD, ATAJO_ENTRENO, enlaceWhatsApp, resumenSalud, textoSueno, haceDias, telefonoWa } from '../../logica/integraciones.js';
@@ -95,6 +96,7 @@ export function SaludDelMovil({ atleta }) {
     <section class="seccion salud-movil">
       <h2>Desde su iPhone</h2>
       <div class="panel panel-pad pila-s">
+        <Imagen id="integraciones" clase="franja-ilu franja-pegada franja-integraciones" tamanos="(min-width: 640px) 560px, 100vw" />
         <p class="peq secundario">{d.conectada ? `Salud del iPhone conectada · último envío ${haceDias(d.ultimo) || 'aún ninguno'}` : 'Ya no está conectada (se ve lo que llegó)'}. Media de los 7 últimos días; al lado, el cambio frente a los 7 anteriores.</p>
         {u.dias ? (
           <dl class="salud-cifras">
@@ -129,7 +131,7 @@ export function AtajosCoach() {
   const atajos = ATAJOS.filter(([k]) => k !== 'reloj' || con058.datos === true);
   return (
     <section class="seccion atajos-coach">
-      <h2>Atajos del iPhone</h2>
+      <h2 class="h-con-ilu"><Imagen id="atajos" clase="ico-ilu" tamanos="44px" />Atajos del iPhone</h2>
       <div class="panel">
         <ul class="lista">
           {atajos.map(([k, titulo, detalle]) => (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
+import { Imagen } from './Imagen.jsx';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Segmentos, Siluetas } from './comunes.jsx';
 import { NOMBRE_TOMA } from '../logica/comidas.js';
 import { fmtKcal } from '../logica/nutricion.js';
@@ -48,6 +49,7 @@ export function HojaRellenar({ atletaId, lunes, entradas = [], recetario, diasSi
 
   return (
     <Hoja titulo="Rellenar la semana" alCerrar={alCerrar}>
+      <Imagen id="rellenar-semana" clase="franja-ilu franja-hoja franja-rellenar" tamanos="(min-width: 640px) 560px, 92vw" />
       <p class="peq secundario" style={{ margin: 0 }}>Semana del {rangoSemana(lunes)}. Te propongo lo que falta con las recetas {esCoach ? 'de su recetario' : 'de tu recetario'}; lo que ya está apuntado se queda como está.</p>
       <Segmentos etiqueta="Cómo repartir comidas y cenas" valor={modo} alCambiar={(v) => v && setModo(v)} opciones={MODOS_RELLENO.map((m) => [m, NOMBRE_MODO_RELLENO[m]])} />
       {!r ? <Siluetas forma="lista" n={4} texto="Preparando la propuesta" /> : !lista.length ? (

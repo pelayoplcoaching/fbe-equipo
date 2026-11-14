@@ -80,7 +80,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
 function SinConsentimiento({ darConsentimiento }) {
   const [ocupado, una] = useUnaVez();
   return (
-    <div class="panel"><Vacio icono="candado" titulo="Tu menú es un dato de salud" accion={<button class="btn btn-primario" disabled={ocupado} onClick={() => una(darConsentimiento)}>Dar el consentimiento</button>}>
+    <div class="panel"><Vacio icono="candado" imagen="menu-privado" titulo="Tu menú es un dato de salud" accion={<button class="btn btn-primario" disabled={ocupado} onClick={() => una(darConsentimiento)}>Dar el consentimiento</button>}>
       Para organizar lo que comes cada día hace falta tu consentimiento de datos de salud (lo puedes retirar cuando quieras en Perfil). Tus recetas las puedes ver igual.
     </Vacio></div>
   );
