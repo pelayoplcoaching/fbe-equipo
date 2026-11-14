@@ -8,7 +8,7 @@
 export const NOVEDADES = {
   '0.163': {
     atleta: [
-      'Diseño más fino: en modo oscuro las hojas se ven más claras y los tonos siguen a tu acento; nueve avatares nuevos.',
+      'Diseño más fino: en modo oscuro las hojas se ven más claras, los textos siguen a tu acento y los avatares tienen más colores.',
     ],
   },
   '0.162': {
