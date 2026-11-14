@@ -6,6 +6,7 @@
 //   · «En el equipo» (si estás en la comunidad): tu racha, retos, compañeros y los ánimos de esta semana, y «Ver cómo te
 //     ven tus compañeros» (tu perfil en el equipo). Solo lo que ya ven ellos: aquí no se comparte nada nuevo.
 // Todo sale de lo que ya hay (sus entrenos, su progreso, la comunidad).
+import { DiaUnoYHoy, MarcasPorReps, useHistorial } from './PerfilMas.jsx';
 import { historiaEnUnaLinea } from '../../logica/rumbo.js';
 import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
@@ -57,6 +58,7 @@ export function PerfilSecciones({ salud, irA }) {
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id]);
   const [pest, setPest] = useState('resumen');
   const lista = entrenos.datos || [];
+  const historial = useHistorial();
   return (
     <section class="perfil-social" aria-label="Tu actividad en FBE">
       <CompartirPerfil entrenos={lista} hoy={hoy} racha={constancia.datos?.racha || 0} progreso={progreso.datos} cargando={entrenos.cargando && !entrenos.datos} />
@@ -65,6 +67,7 @@ export function PerfilSecciones({ salud, irA }) {
         {pest === 'resumen' && (
           <>
             <HistoriaLinea sesiones={lista.length} progreso={progreso.datos} hoy={hoy} />
+            <DiaUnoYHoy historial={historial.datos} />
             <MejorMomento entrenos={lista} hoy={hoy} />
             <AdnFbe entrenos={lista} progreso={progreso.datos} hoy={hoy} />
             <AlbumHitos entrenos={lista} progreso={progreso.datos} hoy={hoy} />
@@ -93,6 +96,7 @@ export function PerfilSecciones({ salud, irA }) {
             <VitrinaPerfil progreso={progreso.datos} irA={irA} />
             <ProximosHitos entrenos={lista} hoy={hoy} />
             <TusEjercicios progreso={progreso.datos} />
+            <MarcasPorReps historial={historial.datos} />
             <Logros salud={salud} />
             <HitosPerfil entrenos={lista} fechaAlta={atleta.fecha_alta} hoy={hoy} />
           </>

@@ -215,3 +215,44 @@
 @media (forced-colors: active) { .perfil-portada-btn { border-color: ButtonText; } }
 .pt-compartir svg { width: 20px; height: 20px; }
 .perfil-anio-marco:focus-visible { outline: 2px solid var(--morado); outline-offset: 2px; border-radius: var(--r-6); }
+
+/* ---------- (perfil, tanda 4) T1: el dia 1 y hoy, marcas por repeticiones, correcciones, completa tu perfil e indice ---------- */
+.dia-uno-lista { list-style: none; margin: 0; padding: 4px 14px; display: grid; }
+.dia-uno-fila { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.dia-uno-fila + .dia-uno-fila { border-top: var(--filo-fino) solid var(--linea); }
+.dia-uno-texto { flex: 1; min-width: 0; }
+.dia-uno-hoy { display: grid; justify-items: end; gap: 2px; font-weight: 750; }
+.marcas-reps-tabla { width: 100%; border-collapse: collapse; }
+.marcas-reps-tabla th, .marcas-reps-tabla td { text-align: left; padding: 8px 4px; border-bottom: var(--filo-fino) solid var(--linea); }
+.marcas-reps-tabla thead th { font-size: var(--letra-12); color: var(--tinta-3); font-weight: 600; }
+.marcas-reps-tabla tbody th { font-weight: 700; }
+.marcas-reps-tabla tr.sin td { color: var(--tinta-3); }
+.correcciones-lista { margin: 0; display: grid; gap: 12px; }
+.correccion-ej { padding: 10px 0; }
+.correccion-ej + .correccion-ej { border-top: var(--filo-fino) solid var(--linea); }
+.correccion-item { display: flex; gap: 8px; align-items: flex-start; line-height: 1.35; }
+.correccion-item svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--naranja-600); }
+.correccion-item.fijado svg { color: var(--morado); }
+.completa-perfil { display: grid; gap: 10px; margin-bottom: 12px; }
+.completa-cab { display: flex; gap: 12px; align-items: center; }
+.completa-aro { width: 52px; height: 52px; flex: none; }
+.completa-carril { fill: none; stroke: var(--linea); stroke-width: 5; }
+.completa-arco { fill: none; stroke: var(--morado); stroke-width: 5; stroke-linecap: round; }
+.completa-pct { font-size: 12px; font-weight: 800; fill: var(--tinta); }
+.completa-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.completa-hueco { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 0; background: none; border: 0; color: inherit; cursor: pointer; border-top: var(--filo-fino) solid var(--linea); }
+.completa-hueco .pila-xs { flex: 1; min-width: 0; }
+.completa-titulo { font-weight: 650; }
+.completa-hueco svg { width: 16px; height: 16px; color: var(--tinta-3); }
+.completa-pie { gap: 4px 18px; }
+.indice-perfil { display: grid; gap: 8px; margin: 4px 0 14px; position: relative; }
+.indice-perfil-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.indice-chip { cursor: pointer; }
+.indice-buscar { position: relative; display: block; }
+.indice-buscar svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--tinta-3); pointer-events: none; }
+.indice-buscar .entrada { padding-left: 38px; }
+.indice-resultados { list-style: none; margin: 0; padding: 4px 0; display: grid; }
+.indice-resultado { width: 100%; display: grid; gap: 1px; text-align: left; padding: 10px 14px; background: none; border: 0; color: inherit; cursor: pointer; }
+.indice-resultado + .indice-resultado, .indice-resultados li + li { border-top: var(--filo-fino) solid var(--linea); }
+.indice-nada { padding: 10px 14px; }
+.destello-busqueda { outline: 2px solid var(--morado); outline-offset: -2px; border-radius: var(--r-s); }

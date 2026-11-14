@@ -23,6 +23,7 @@ import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
+import { CompletaPerfil, IndicePerfil, FilaCorrecciones } from './PerfilMas.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -50,6 +51,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </CabeceraGrande>
       <BandaDemo />
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
+      {/* (perfil, tanda 4) lo que le falta por rellenar y el índice con buscador */}
+      <CompletaPerfil />
+      <IndicePerfil />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
       <Carnet bloque={p?.bloque || null} />
       {/* v0.114: tu actividad (cifras, 12 semanas, constancia, vitrina, medallas, hitos y entrenos) y tu sitio en el equipo */}
@@ -62,6 +66,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${p.bloque.nombre}`} />}
         <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
         <FilaCobro />
+        {conEntrenamiento(atleta) && <FilaCorrecciones />}
         <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
       </GrupoIos>
