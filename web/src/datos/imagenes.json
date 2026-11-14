@@ -3532,6 +3532,136 @@
       "1080": "imagenes/aprende/mito-semana-1080.4d98144a.webp"
     }
   },
+  "musica-acompana": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-acompana-160.5e4381a4.webp",
+      "320": "imagenes/musica/musica-acompana-320.2cc29cdc.webp"
+    }
+  },
+  "musica-biblioteca": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-biblioteca-720.7f7fbb8c.webp",
+      "1080": "imagenes/musica/musica-biblioteca-1080.672cef27.webp"
+    }
+  },
+  "musica-cadencia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-cadencia-160.9c8740bb.webp",
+      "320": "imagenes/musica/musica-cadencia-320.f6abcbb6.webp"
+    }
+  },
+  "musica-calentar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-calentar-160.55c99a7a.webp",
+      "320": "imagenes/musica/musica-calentar-320.135fc81b.webp"
+    }
+  },
+  "musica-equipo": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-equipo-720.0413b960.webp",
+      "1080": "imagenes/musica/musica-equipo-1080.a1aac68c.webp"
+    }
+  },
+  "musica-himnos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-himnos-160.afa72531.webp",
+      "320": "imagenes/musica/musica-himnos-320.76bd814f.webp"
+    }
+  },
+  "musica-hoy": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-hoy-720.ae16ebb0.webp",
+      "1080": "imagenes/musica/musica-hoy-1080.0bb5b13b.webp"
+    }
+  },
+  "musica-invitacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-invitacion-160.b8e947db.webp",
+      "320": "imagenes/musica/musica-invitacion-320.b246271a.webp"
+    }
+  },
+  "musica-listas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-listas-720.321b4816.webp",
+      "1080": "imagenes/musica/musica-listas-1080.c829e19f.webp"
+    }
+  },
+  "musica-pareja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-pareja-160.90828093.webp",
+      "320": "imagenes/musica/musica-pareja-320.5fc024cc.webp"
+    }
+  },
+  "musica-reto": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/musica/musica-reto-720.1642d5d1.webp",
+      "1080": "imagenes/musica/musica-reto-1080.140afa84.webp"
+    }
+  },
+  "musica-ritmo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-ritmo-160.661640e2.webp",
+      "320": "imagenes/musica/musica-ritmo-320.8ce39446.webp"
+    }
+  },
+  "musica-test": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/musica/musica-test-160.46a57928.webp",
+      "320": "imagenes/musica/musica-test-320.e2ee065b.webp"
+    }
+  },
   "para-hablarle": {
     "proporcion": [
       3,

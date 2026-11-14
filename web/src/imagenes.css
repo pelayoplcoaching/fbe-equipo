@@ -345,3 +345,19 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .alerta-temprana:has(> .ico-ilu), .envios-t:has(> .ico-ilu) { align-items: center; gap: 12px; }
 .panel.primeros-pasos.con-ilu { overflow: hidden; }
 .primeros-pasos-ilu { object-position: 50% 50%; }
+
+/* ---------- (imágenes, bloque AG) La música ----------
+   «Tu música de hoy», lo que suena en el equipo y el reto musical: franja pegada arriba de su panel (3:1); el día de test,
+   el tambor junto al título en lugar de la franja. La biblioteca del coach, franja arriba de su panel (sin relleno).
+   Tus listas por momento, franja suelta en la hoja. Cuadrito en la invitación, tocar al ritmo, tus himnos, lo que más te
+   acompaña y la tarjeta de la fase (calentar y vuelta a la calma); más pequeño en la cadencia y en la lista de la pareja. */
+.panel-pad > .franja-pegada.franja-musica { object-position: 70% 50%; }
+.biblioteca-musica > .franja-musica-coach { aspect-ratio: 3 / 1; object-position: 75% 50%; border-radius: var(--r) var(--r) 0 0; }
+.musica-sesion-t.con-ilu { display: flex; align-items: center; gap: 12px; }
+.musica-ilu-peq { width: 32px; height: 32px; }
+.cadencia-nombre { display: inline-flex; align-items: center; gap: 8px; }
+.tocar-ritmo-fila, .fila-musica-ilu { display: flex; align-items: center; gap: 12px; }
+.tocar-ritmo-fila > .tocar-ritmo-r, .fila-musica-ilu > p { flex: 1; min-width: 0; margin: 0; }
+.musica-invitacion-cab:has(> .ico-ilu) { display: flex; align-items: center; gap: 12px; }
+.cp-lista-musica:has(> .ico-ilu) { display: flex; align-items: center; gap: 8px; }
+@media (forced-colors: active) { .franja-musica-coach { display: none; } }

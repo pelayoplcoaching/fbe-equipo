@@ -18,6 +18,7 @@ import { nombreMusica, urlMusica } from '../../logica/personal.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
 import { usePersonal } from './Personal.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 
 // ---------- La ficha pública de un enlace de Spotify (nombre y portada), recordada una semana en el dispositivo ----------
 const CLAVE_FICHAS = 'fbe-fichas-musica';
@@ -206,8 +207,9 @@ export function MusicaSesion({ sesion, semana = null, familia = null, cardio = n
   };
   return (
     <section class="seccion musica-sesion" aria-labelledby="musica-sesion-t">
-      <h2 id="musica-sesion-t">Tu música de hoy</h2>
+      <h2 id="musica-sesion-t" class={primera.origen === 'test' && hayImagen('musica-test') ? 'musica-sesion-t con-ilu' : 'musica-sesion-t'}>{primera.origen === 'test' && <Imagen id="musica-test" clase="ico-ilu" tamanos="44px" />}Tu música de hoy</h2>
       <div class="panel panel-pad pila-s">
+        {primera.origen !== 'test' && <Imagen id="musica-hoy" clase="franja-ilu franja-pegada franja-musica" tamanos="(min-width: 640px) 560px, 100vw" />}
         <TarjetaMusica url={primera.url} etiqueta={etiquetaOrigen(primera)} alAbrir={() => abrir(primera.url)} />
         {otras.length > 0 && (mas
           ? otras.map((x) => <TarjetaMusica key={x.url} url={x.url} etiqueta={etiquetaOrigen(x)} alAbrir={() => abrir(x.url)} />)
@@ -293,7 +295,7 @@ export function Cadencia({ modalidad, tramos: delCoach = null }) {
   return (
     <div class="cadencia" role="group" aria-label="Metrónomo de cadencia" data-en={en ? '1' : undefined} style={{ '--pulso': `${Math.round(60000 / ahora)}ms` }}>
       <span class="cadencia-cab">
-        <span class="mini terciario">Cadencia</span>
+        <span class="cadencia-nombre"><Imagen id="musica-cadencia" clase="ico-ilu musica-ilu-peq" tamanos="32px" /><span class="mini terciario">Cadencia</span></span>
         <span class="segmentos segmentos-peq" role="group" aria-label="Modo de la cadencia">
           <button type="button" aria-pressed={modo === 'fijo' ? 'true' : 'false'} disabled={en} onClick={() => setModo('fijo')}>Fija</button>
           <button type="button" aria-pressed={modo === 'tramos' ? 'true' : 'false'} disabled={en} onClick={() => setModo('tramos')}>Por tramos</button>
@@ -352,9 +354,10 @@ export function TocarRitmo({ modalidad, valor }) {
   return (
     <div class="tocar-ritmo pila-xs">
       <button type="button" class="btn btn-ancho tocar-ritmo-boton" onClick={tocar}>{toques.length ? 'Toca al ritmo' : 'Toca al ritmo de lo que suena'}</button>
+      <span class="tocar-ritmo-fila"><Imagen id="musica-ritmo" clase="ico-ilu" tamanos="44px" />
       <span class="tocar-ritmo-r" aria-live="polite">
         {bpm ? <><b class="num">{bpm}</b> bpm{r ? ` · ${r.texto}` : ''}</> : <span class="mini terciario">{toques.length ? `Sigue tocando (${toques.length} de 4)` : 'Con 4 toques ya lo sabes. Si paras un momento, empieza de nuevo.'}</span>}
-      </span>
+      </span></span>
       <button type="button" class="btn-texto" style="justify-self:start" onClick={() => { setAbierto(false); setToques([]); }}>Cerrar</button>
     </div>
   );
@@ -418,7 +421,7 @@ function InvitacionMusica({ alGuardar }) {
   return (
     <section class="seccion musica-invitacion" aria-labelledby="musica-invitacion-t">
       <div class="panel panel-pad pila-s">
-        <span class="musica-invitacion-cab"><span class="musica-invitacion-ico" aria-hidden="true"><Icono n="altavoz" /></span><strong id="musica-invitacion-t">¿Entrenas con música?</strong></span>
+        <span class="musica-invitacion-cab"><Imagen id="musica-invitacion" clase="ico-ilu" tamanos="44px" alternativa={<span class="musica-invitacion-ico" aria-hidden="true"><Icono n="altavoz" /></span>} /><strong id="musica-invitacion-t">¿Entrenas con música?</strong></span>
         <p class="peq secundario">Pon el enlace a tu lista y la tendrás aquí, a un toque, en cada sesión.</p>
         <span class="fila-envolver">
           <button type="button" class="btn btn-peq btn-primario" onClick={() => setEditar(true)}><Icono n="enlace" /> Poner mi lista</button>
@@ -476,6 +479,7 @@ export function HojaListasMusica({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tus listas por momento" alCerrar={alCerrar}>
       <div class="pila listas-musica-hoja">
+        <Imagen id="musica-listas" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Una lista para pierna, otra para los días flojos, otra para calentar… En la portada de cada sesión sale la que encaja (por el tipo de sesión, por cómo llegas o por la fase). Lo ve tu coach.</p>
         {listas.length > 0 ? (
           <ul class="lista listas-musica">
@@ -526,7 +530,7 @@ export function HojaHimnos({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tus himnos" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">Una canción para cada momento grande. La del récord es tu canción de récord (en «Lo tuyo»). Lo ve tu coach.</p>
+        <div class="fila-musica-ilu"><Imagen id="musica-himnos" clase="ico-ilu" tamanos="44px" /><p class="peq secundario">Una canción para cada momento grande. La del récord es tu canción de récord (en «Lo tuyo»). Lo ve tu coach.</p></div>
         <div class="campo">
           <label for="hm-ultima">Para la última serie</label>
           <input id="hm-ultima" class="entrada" type="url" inputMode="url" value={ultima} onInput={(e) => setUltima(e.currentTarget.value)} placeholder="https://open.spotify.com/track/…" aria-invalid={malU ? 'true' : undefined} />
@@ -551,7 +555,7 @@ export function LoQueMasTeAcompana({ desde, hasta }) {
   const l = useCarga(() => (propio ? Promise.resolve([]) : (api.musicaMasAbierta?.(desde, hasta) || Promise.resolve([])).catch(() => [])), [desde, hasta, propio]);
   const top = (l.datos || []).slice(0, 3);
   if (!top.length) return null;
-  return <p class="historia-texto lo-que-mas">Lo que más te ha acompañado: {top.map((x, i) => <span key={x.url}>{i ? (i === top.length - 1 ? ' y ' : ', ') : ''}<NombreMasAbierta url={x.url} n={x.n} /></span>)}.</p>;
+  return <div class="fila-musica-ilu lo-que-mas-fila"><Imagen id="musica-acompana" clase="ico-ilu" tamanos="44px" /><p class="historia-texto lo-que-mas">Lo que más te ha acompañado: {top.map((x, i) => <span key={x.url}>{i ? (i === top.length - 1 ? ' y ' : ', ') : ''}<NombreMasAbierta url={x.url} n={x.n} /></span>)}.</p></div>;
 }
 function NombreMasAbierta({ url, n }) {
   const nombre = useNombreLista(url);
@@ -584,6 +588,7 @@ export function BotonMusica({ sesion, semana = null, familia = null, cardio = nu
   );
 }
 // La tarjeta pequeña de la fase (se puede cerrar: cerrada, no vuelve en esa fase de esta sesión)
+const ILU_FASE = { calentamiento: 'musica-calentar', vuelta_calma: 'musica-calma' };
 function MusicaDeFase({ x, alAbrir }) {
   const nombre = useNombreLista(x.url);
   const clave = x.trabajo ? 'trabajo' : x.fase;
@@ -592,7 +597,7 @@ function MusicaDeFase({ x, alAbrir }) {
   const titulo = x.trabajo ? 'Calentado: ahora, tu música de trabajo' : x.fase === 'calentamiento' ? 'Para calentar' : 'Para la vuelta a la calma';
   return (
     <div class="musica-fase" data-fase={clave} role="status">
-      <Icono n="altavoz" />
+      {ILU_FASE[clave] ? <Imagen id={ILU_FASE[clave]} clase="ico-ilu" tamanos="44px" alternativa={<Icono n="altavoz" />} /> : <Icono n="altavoz" />}
       <span class="pila-xs"><strong>{titulo}</strong><span class="mini secundario">{nombre}</span></span>
       <a class="btn btn-peq" href={x.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { alAbrir?.(); abrirMusica(x.url, e); }}>Ponerla</a>
       <button type="button" class="btn btn-icono plano" aria-label="Cerrar" onClick={() => setCerrada(clave)}><Icono n="cerrar" /></button>
