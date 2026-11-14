@@ -242,6 +242,135 @@
       "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
     }
   },
+  "apuntes-audio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-audio-160.6560733c.webp",
+      "320": "imagenes/apuntes/apuntes-audio-320.98d3c00f.webp"
+    }
+  },
+  "apuntes-certificado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-certificado-720.8e85d8c1.webp",
+      "1080": "imagenes/apuntes/apuntes-certificado-1080.3055ece6.webp"
+    }
+  },
+  "apuntes-historia": {
+    "proporcion": [
+      9,
+      16
+    ],
+    "archivos": {
+      "540": "imagenes/apuntes/apuntes-historia-540.29e6d3db.webp"
+    }
+  },
+  "apuntes-liga": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-liga-720.6d3d9b8f.webp",
+      "1080": "imagenes/apuntes/apuntes-liga-1080.88f99f35.webp"
+    }
+  },
+  "apuntes-objetivo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-objetivo-160.65d32302.webp",
+      "320": "imagenes/apuntes/apuntes-objetivo-320.ee77570b.webp"
+    }
+  },
+  "apuntes-prueba-nivel": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-prueba-nivel-720.63ce1be5.webp",
+      "1080": "imagenes/apuntes/apuntes-prueba-nivel-1080.dadadcba.webp"
+    }
+  },
+  "apuntes-repaso": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-repaso-720.2bea69c4.webp",
+      "1080": "imagenes/apuntes/apuntes-repaso-1080.3b57ca54.webp"
+    }
+  },
+  "apuntes-ruta": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "720": "imagenes/apuntes/apuntes-ruta-720.02e09501.webp",
+      "1080": "imagenes/apuntes/apuntes-ruta-1080.7ed902de.webp"
+    }
+  },
+  "apuntes-tema-mentalidad": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-mentalidad-160.02c65f5a.webp",
+      "320": "imagenes/apuntes/apuntes-tema-mentalidad-320.157f87fa.webp"
+    }
+  },
+  "apuntes-tema-nutricion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-nutricion-160.26243f04.webp",
+      "320": "imagenes/apuntes/apuntes-tema-nutricion-320.f584bae0.webp"
+    }
+  },
+  "apuntes-tema-programacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-programacion-160.6ac96789.webp",
+      "320": "imagenes/apuntes/apuntes-tema-programacion-320.a96eee3c.webp"
+    }
+  },
+  "apuntes-tema-recuperacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-recuperacion-160.99697870.webp",
+      "320": "imagenes/apuntes/apuntes-tema-recuperacion-320.1be3937c.webp"
+    }
+  },
+  "apuntes-tema-tecnica": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/apuntes/apuntes-tema-tecnica-160.79c2bcf1.webp",
+      "320": "imagenes/apuntes/apuntes-tema-tecnica-320.681a8bd6.webp"
+    }
+  },
   "bic-curl-arana": {
     "proporcion": [
       1,
