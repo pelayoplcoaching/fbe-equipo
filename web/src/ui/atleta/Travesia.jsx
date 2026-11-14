@@ -441,12 +441,18 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   };
   const mueve = (ev) => {
     const d = dedo.current;
-    if (!d || d.id !== ev.pointerId || d.bajo || !etapa.current || ev.clientY - d.y < 26) return;
+    if (!d || d.id !== ev.pointerId || d.bajo || !etapa.current || ev.clientY - d.y < 18) return;
     d.bajo = true;
     pulsar(etapa.current, false);
     if (agachar(etapa.current)) vibrar('elegir');
   };
   const suelta = () => { dedo.current = null; if (etapa.current) pulsar(etapa.current, false); };
+  // (v0.162) El botón de agacharse: al tocarlo se agacha al momento, sin saltar antes (deslizar seguía empezando por un salto)
+  const agacharYa = (ev) => {
+    ev.preventDefault(); ev.stopPropagation();
+    if (final || !etapa.current) return;
+    if (agachar(etapa.current)) { vibrar('elegir'); if (!tocado) setTocado(true); }
+  };
   const tecla = (ev) => {
     if (ev.key === 'Escape') { ev.stopPropagation(); salir(); return; }
     if (ev.target.closest?.('button')) return;
@@ -472,7 +478,7 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
   return (
     <div ref={caja} class={`travesia${calma ? ' en-calma' : ''}`} role="dialog" aria-modal="true" aria-label={delDia ? 'La travesía: la etapa del día' : practica ? 'La travesía: práctica de un minuto' : 'La travesía: el juego del descanso'} tabIndex={-1}
       onPointerDown={toque} onPointerMove={mueve} onPointerUp={suelta} onPointerCancel={suelta} onKeyDown={tecla}>
-      <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar; desliza hacia abajo o pulsa la flecha abajo para agacharte." />
+      <canvas ref={lienzo} class="travesia-lienzo" role="img" aria-label="Un lobo corre por la montaña. Toca la pantalla o pulsa la barra espaciadora para saltar; para agacharte, toca «Agáchate», desliza hacia abajo o pulsa la flecha abajo." />
       {/* (tanda 5) la viñeta: los bordes, un poco más oscuros; y el cartel de los hitos («500 m», «Racha ×10», el paisaje) */}
       <span class="travesia-vineta" aria-hidden="true" />
       <p ref={cartel} class="travesia-cartel" aria-hidden="true" />
@@ -497,7 +503,13 @@ function TravesiaDentro({ atletaId, sesion = null, fin = null, pausa = null, tot
           {escudos > 0 && <span class="travesia-escudo" role="status" aria-label={`${escudos === 1 ? 'Un escudo' : `${escudos} escudos`}: te perdona un tropiezo`}><Icono n="escudo" />{escudos}</span>}
         </div>
       )}
-      {!final && !tocado && !calma && !ensenando && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · desliza abajo para agacharte' : ''}</>}</p>}
+      {!final && !tocado && !calma && !ensenando && <p class="travesia-pista" aria-hidden="true">{accesible.current.unToque ? 'Toca para saltar · mantén para llegar más lejos' : <>Toca para saltar · otra vez en el aire, doble salto{conMovimientos && !practica ? ' · las ramas, con el botón de agacharte' : ''}</>}</p>}
+      {/* (v0.162) agacharse con un botón (abajo a la izquierda, a mano del pulgar): solo cuando hay ramas */}
+      {!final && !calma && conMovimientos && !practica && !accesible.current.unToque && (
+        <button type="button" class="travesia-agachar" onPointerDown={agacharYa} onClick={agacharYa} aria-label="Agacharse (pasar por debajo de una rama)">
+          <Icono n="abajo" /><span>Agáchate</span>
+        </button>
+      )}
       {!final && calma && <p class="travesia-pista calma" aria-hidden="true">Respira: el lobo va al paso</p>}
       {!final && reto && <p ref={retoTxt} class="travesia-reto" role="status" />}
       {!final && aullidos.length > 0 && <p class="travesia-manada aullido" role="status">{aullidos.slice(0, 3).join(', ')} {aullidos.length === 1 ? 'te aúlla' : 'te aúllan'} desde la manada: ¡auuu!</p>}

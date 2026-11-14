@@ -116,6 +116,11 @@ export async function probarTravesia3({ navegador, check, base = 'http://localho
     await reloj.getByRole('button', { name: 'Jugar' }).click();
     const juego = p.locator('.travesia');
     await juego.waitFor();
+    // (v0.162) con ramas (lleva más de un kilómetro), el botón de agacharse, grande y abajo a la izquierda
+    const agacha = juego.getByRole('button', { name: /Agacharse/ });
+    const caja = await agacha.boundingBox().catch(() => null);
+    check(caja && caja.width >= 64 && caja.height >= 64 && caja.x < 120 && caja.y > 844 / 2, `el botón «Agáchate», a mano del pulgar (${caja ? `${Math.round(caja.width)} px, abajo a la izquierda` : 'no está'})`);
+    await p.screenshot({ path: process.env.CAPTURA_AGACHA || '/dev/null' }).catch(() => {});
     // (nada más abrir: antes del primer obstáculo, con el lobo en el suelo)
     let oro = 0, tiza = 0, detras = 0;
     for (let i = 0; i < 6 && oro < 150; i++) { await p.waitForTimeout(160); oro = await pixeles([247, 215, 102], 0.08, 0.36); tiza = await pixeles([241, 240, 246], 0.12, 0.3); detras = await pixeles([217, 211, 247], 0, 0.2); }
