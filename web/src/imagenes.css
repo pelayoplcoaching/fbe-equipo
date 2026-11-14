@@ -314,3 +314,26 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 /* Tu mejor momento: el arco del sol en lugar del rayo */
 .mejor-momento > p > .mejor-momento-img { flex: none; width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
 @media (forced-colors: active) { .cuenta-meta-img, .aniversario-medalla, .adn-fbe-fondo, .foto-motivacion-vacia, .mejor-momento-img { display: none; } }
+
+/* ---------------------------------------------------------------- (imágenes de las 48 h) Bloques AC, AD y AE */
+/* Un cuadrito en lugar del icono de una fila (tiempo, hace un año, cómo estás, qué tal fue) */
+.ico-ilu { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+.tiempo-hoy-t:has(> .ico-ilu), .hace-un-ano:has(> .ico-ilu), .hoy-como-estas:has(> .ico-ilu), .vida-fila:has(> .ico-ilu) { align-items: center; gap: 12px; }
+/* Una franja arriba de una hoja (o dentro del calentamiento): la proporción la da la imagen */
+.franja-hoja { border-radius: var(--r); object-position: 50% 50%; }
+.calentamiento > .franja-hoja { margin: 10px 0 4px; }
+/* La explicación de una hoja con su dibujo al lado (cambiar ejercicio, lo que no quieres ver, tu ciclo) */
+.intro-ilu { display: flex; gap: 12px; align-items: center; }
+.intro-ilu > p { margin: 0; flex: 1; min-width: 0; }
+.intro-ilu-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+/* La voz de tu coach: las ondas junto al botón */
+.voz-coach:has(> .voz-coach-img) { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.voz-coach-img { flex: none; width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+.voz-coach:has(> .voz-coach-img) > audio { flex: 1; min-width: 180px; }
+/* El reto del mes: la diana con sus días junto al título; el álbum, en franja, y sus hitos con su dibujo */
+.reto-mes-cab { display: flex; gap: 12px; align-items: center; }
+.reto-mes-img { flex: none; width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.panel-pad > .franja-pegada.franja-album { object-position: 50% 50%; }
+.album-img { flex: none; width: 34px; height: 34px; border-radius: 10px; object-fit: cover; }
+@media print { .informe-ilu { display: none !important; } }
+@media (forced-colors: active) { .ico-ilu, .intro-ilu-img, .voz-coach-img, .reto-mes-img, .album-img { display: none; } }

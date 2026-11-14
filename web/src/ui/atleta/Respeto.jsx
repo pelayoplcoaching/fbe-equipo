@@ -8,6 +8,7 @@ import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { hoyISO, sumarDias, fmtCorta, lunesDe } from '../../logica/fechas.js';
 import { ZONAS } from '../../logica/calculos.js';
 import { vibrar } from '../hapticos.js';
+import { Imagen } from '../Imagen.jsx';
 
 // ---------- Su manual ----------
 export function HojaManual({ actual, alCerrar, alGuardar }) {
@@ -23,6 +24,7 @@ export function HojaManual({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Cómo me gusta que me entrenen" alCerrar={alCerrar}>
       <div class="pila manual-hoja">
+        <Imagen id="manual" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
         <p class="peq secundario">Tu manual de instrucciones: lo lee tu coach para hablarte a tu manera.</p>
         <fieldset class="pila-xs"><legend>Cuando hay algo que mejorar, prefiero</legend>
           {FEEDBACK.map(([k, n, d]) => (
@@ -49,7 +51,10 @@ export function HojaOcultar({ alCerrar }) {
   return (
     <Hoja titulo="Lo que no quieres ver" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">Si una cifra te hace más mal que bien, la escondemos en este móvil. Tu coach sigue viendo lo que apuntes.</p>
+        <div class="intro-ilu">
+          <Imagen id="sin-bascula" clase="intro-ilu-img" tamanos="64px" />
+          <p class="peq secundario">Si una cifra te hace más mal que bien, la escondemos en este móvil. Tu coach sigue viendo lo que apuntes.</p>
+        </div>
         {OCULTABLES.map(([k, n, d]) => (
           <label key={k} class="fila-ocultar"><span class="pila-xs"><strong>{n}</strong><span class="peq secundario">{d}</span></span>
             <input type="checkbox" switch role="switch" aria-label={n} checked={o[k]} onChange={(e) => cambiar(k, e.currentTarget.checked)} /></label>
@@ -73,7 +78,10 @@ export function HojaCiclo({ alCerrar }) {
   return (
     <Hoja titulo="Tu ciclo" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">Opcional. Apunta el día en que empieza cada regla y, con unos meses, verás <strong>tu propio</strong> patrón de rendimiento por fase (sin generalidades: solo lo que dicen tus datos). <strong>Se queda en este móvil</strong>: no se sube ni lo ve tu coach.</p>
+        <div class="intro-ilu">
+          <Imagen id="ciclo" clase="intro-ilu-img" tamanos="64px" />
+          <p class="peq secundario">Opcional. Apunta el día en que empieza cada regla y, con unos meses, verás <strong>tu propio</strong> patrón de rendimiento por fase (sin generalidades: solo lo que dicen tus datos). <strong>Se queda en este móvil</strong>: no se sube ni lo ve tu coach.</p>
+        </div>
         {lista.length > 0 ? <div class="guardias-dias">{[...lista].reverse().map((d) => (
           <span key={d} class="chip-guardia">{fmtCorta(d)}<button type="button" class="btn btn-icono plano" aria-label={`Quitar el ${fmtCorta(d)}`} onClick={() => poner(lista.filter((x) => x !== d))}><Icono n="cerrar" /></button></span>
         ))}</div> : <p class="peq terciario">Nada apuntado.</p>}
@@ -137,6 +145,7 @@ function HojaInforme({ salud, alCerrar }) {
   return (
     <Hoja titulo="Tu informe" alCerrar={alCerrar}>
       <div class="pila">
+        <Imagen id="informe" clase="franja-ilu franja-hoja informe-ilu" tamanos="(min-width: 640px) 560px, 92vw" />
         <article class="informe-salud" aria-label="Informe de entrenamiento">
           <h3>Informe de entrenamiento</h3>
           <p class="peq">{r.nombre} · del {fmtCorta(r.desde)} al {fmtCorta(r.hasta)} · FBE Equipo</p>
