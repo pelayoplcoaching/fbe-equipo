@@ -177,6 +177,17 @@
     },
     "color": "#44307a"
   },
+  "adu-aduccion-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-aduccion-goma-192.9213e91c.webp",
+      "512": "imagenes/ejercicio/adu-aduccion-goma-512.bdb38838.webp"
+    },
+    "color": "#41316c"
+  },
   "adu-copenhague": {
     "proporcion": [
       1,
@@ -187,6 +198,17 @@
       "512": "imagenes/ejercicio/adu-copenhague-512.c22b2c40.webp"
     },
     "color": "#42346a"
+  },
+  "adu-copenhague-rodilla": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-copenhague-rodilla-192.69842a3a.webp",
+      "512": "imagenes/ejercicio/adu-copenhague-rodilla-512.80f02bed.webp"
+    },
+    "color": "#43346d"
   },
   "adu-maquina-sentado": {
     "proporcion": [
@@ -209,6 +231,17 @@
       "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
     },
     "color": "#463672"
+  },
+  "adu-sentadilla-cosaca": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-sentadilla-cosaca-192.dc0a5bee.webp",
+      "512": "imagenes/ejercicio/adu-sentadilla-cosaca-512.1f7d5161.webp"
+    },
+    "color": "#433172"
   },
   "album": {
     "proporcion": [
@@ -288,6 +321,17 @@
     },
     "color": "#473375"
   },
+  "ant-colgarse-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-colgarse-barra-192.fc7ddf53.webp",
+      "512": "imagenes/ejercicio/ant-colgarse-barra-512.207e776d.webp"
+    },
+    "color": "#3a2e62"
+  },
   "ant-curl-inverso-barra-z": {
     "proporcion": [
       1,
@@ -364,6 +408,28 @@
       "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
     },
     "color": "#443276"
+  },
+  "ant-paseo-granjero-kettlebells": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-paseo-granjero-kettlebells-192.c8693686.webp",
+      "512": "imagenes/ejercicio/ant-paseo-granjero-kettlebells-512.b552b6c7.webp"
+    },
+    "color": "#42326e"
+  },
+  "ant-paseo-granjero-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-paseo-granjero-mancuernas-192.82a26f5d.webp",
+      "512": "imagenes/ejercicio/ant-paseo-granjero-mancuernas-512.a8c11ae9.webp"
+    },
+    "color": "#41316c"
   },
   "antes-de-empezar": {
     "proporcion": [
