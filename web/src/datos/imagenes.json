@@ -4473,6 +4473,17 @@
     },
     "color": "#56396b"
   },
+  "pec-aperturas-inclinadas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-inclinadas-192.c2f1158c.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-inclinadas-512.a405f6c2.webp"
+    },
+    "color": "#483272"
+  },
   "pec-aperturas-planas": {
     "proporcion": [
       1,
@@ -4484,6 +4495,17 @@
     },
     "color": "#46376c"
   },
+  "pec-aperturas-polea-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-polea-tumbado-192.2dcacdbe.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-polea-tumbado-512.b5fb9813.webp"
+    },
+    "color": "#4a3272"
+  },
   "pec-cruce-inclinado-polea-baja": {
     "proporcion": [
       1,
@@ -4494,6 +4516,17 @@
       "512": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-512.1f3d8184.webp"
     },
     "color": "#4a3771"
+  },
+  "pec-cruce-media-altura": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruce-media-altura-192.7d29255c.webp",
+      "512": "imagenes/ejercicio/pec-cruce-media-altura-512.bd825493.webp"
+    },
+    "color": "#4a3472"
   },
   "pec-cruces-polea-alta": {
     "proporcion": [
@@ -4517,6 +4550,72 @@
     },
     "color": "#443869"
   },
+  "pec-flexiones": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-192.942c7494.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-512.3239eb65.webp"
+    },
+    "color": "#3c2b64"
+  },
+  "pec-flexiones-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-deficit-192.bd078d2a.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-deficit-512.8d0a7561.webp"
+    },
+    "color": "#3e2b66"
+  },
+  "pec-flexiones-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-goma-192.864b0a7f.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-goma-512.23b1197b.webp"
+    },
+    "color": "#3e2a68"
+  },
+  "pec-flexiones-pies-elevados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-pies-elevados-192.23a43930.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-pies-elevados-512.ccf3d967.webp"
+    },
+    "color": "#3e2b65"
+  },
+  "pec-flexiones-rodillas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-rodillas-192.edb51671.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-rodillas-512.e7e7cdc4.webp"
+    },
+    "color": "#3e2a66"
+  },
+  "pec-floor-press-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-floor-press-mancuernas-192.1a27def9.webp",
+      "512": "imagenes/ejercicio/pec-floor-press-mancuernas-512.60a41c14.webp"
+    },
+    "color": "#43316b"
+  },
   "pec-fondos-ancho": {
     "proporcion": [
       1,
@@ -4527,6 +4626,17 @@
       "512": "imagenes/ejercicio/pec-fondos-ancho-512.3d3c83c0.webp"
     },
     "color": "#3b2a67"
+  },
+  "pec-fondos-asistidos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-fondos-asistidos-192.1b8c278b.webp",
+      "512": "imagenes/ejercicio/pec-fondos-asistidos-512.212e63bf.webp"
+    },
+    "color": "#493172"
   },
   "pec-hex-press": {
     "proporcion": [
@@ -4550,6 +4660,28 @@
     },
     "color": "#3e3361"
   },
+  "pec-press-banca-larsen": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-larsen-192.8ed65521.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-larsen-512.ecac6c51.webp"
+    },
+    "color": "#443469"
+  },
+  "pec-press-banca-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-pausa-192.56f96a03.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-pausa-512.c28ded50.webp"
+    },
+    "color": "#443567"
+  },
   "pec-press-declinado-barra": {
     "proporcion": [
       1,
@@ -4571,6 +4703,17 @@
       "512": "imagenes/ejercicio/pec-press-declinado-mancuernas-512.f7220b74.webp"
     },
     "color": "#423367"
+  },
+  "pec-press-goma-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-goma-de-pie-192.dd954807.webp",
+      "512": "imagenes/ejercicio/pec-press-goma-de-pie-512.5900e1d6.webp"
+    },
+    "color": "#442d6c"
   },
   "pec-press-inclinado-barra": {
     "proporcion": [
@@ -4648,6 +4791,17 @@
       "512": "imagenes/ejercicio/pec-press-plano-multipower-512.8f0f8fd6.webp"
     },
     "color": "#4f3b78"
+  },
+  "pec-press-polea-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-polea-de-pie-192.f28f0f5c.webp",
+      "512": "imagenes/ejercicio/pec-press-polea-de-pie-512.3b94e7a0.webp"
+    },
+    "color": "#432f69"
   },
   "portada-bienvenida": {
     "proporcion": [
