@@ -74,5 +74,9 @@ const g = Object.fromEntries((await q(`select nombre, grupos_musculares from pub
 check(g['Aducciones Copenhague'] === 'aductores' && g['Kettlebell wrist turns'] === 'antebrazo' && g['Aductor en máquina sentado'] === 'gluteo', 'los de siempre sin grupo reciben el suyo; lo que el coach ya puso no se pisa');
 check(/if v > 74 then/.test(mig) && /numero = 73\) then/.test(mig) && /values \(74\)/.test(mig) && !/create (or replace )?function/.test(mig) && !/create table/.test(mig), 'pide la 073; no crea tablas ni funciones (nada que revocar)');
 
+console.log('\nAprende');
+const Gs = await import('../web/src/logica/guias.js');
+check(Gs.estanteDe({ clave: 'proteina' }) === 'comer' && Gs.estanteDe({ clave: 'suplementacion' }) === 'comer' && Gs.estanteDe({ clave: 'otra' }) === 'mas', 'la guía de proteína, en la estantería «Comer»');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
