@@ -253,7 +253,11 @@ var GRUPOS = [
   ["biceps", "Bíceps"],
   ["triceps", "Tríceps"],
   ["abdominales", "Abdominales"],
-  ["gemelo", "Gemelo"]
+  ["gemelo", "Gemelo"],
+  // (biblioteca 2, migración «biblioteca 2») tres grupos más, al final para no mover los de siempre
+  ["antebrazo", "Antebrazo"],
+  ["aductores", "Aductores"],
+  ["lumbares", "Lumbares"]
 ];
 var NOMBRE_GRUPO = Object.fromEntries(GRUPOS);
 var PRIORIDADES = [

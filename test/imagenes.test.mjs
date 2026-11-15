@@ -47,7 +47,9 @@ check(ICONOS_HABITO.every(([i]) => IMAGENES.includes(imagenHabito(i))), `hay ima
 console.log('\nLos grupos musculares');
 check(imagenGrupo(['pectoral', 'triceps']) === 'grupo-pectoral' && imagenGrupo('gemelo') === 'grupo-gemelo', 'la estatua del grupo principal (el primero), con lista o con uno solo');
 check(imagenGrupo([]) === null && imagenGrupo(null) === null && imagenGrupo(['antebrazo']) === null, 'sin grupo o con uno desconocido, ninguna (la ficha queda como antes)');
-check(GRUPOS.every(([g]) => IMAGENES.includes(imagenGrupo(g))), `hay estatua para los ${GRUPOS.length} grupos de la app`);
+// (biblioteca 2) antebrazo, aductores y lumbares aún no tienen estatua: su ficha queda sin ella hasta que se generen
+const SIN_ESTATUA = ['antebrazo', 'aductores', 'lumbares'];
+check(GRUPOS.filter(([g]) => !SIN_ESTATUA.includes(g)).every(([g]) => IMAGENES.includes(imagenGrupo(g))) && SIN_ESTATUA.every((g) => imagenGrupo(g) === null) && GRUPOS.length === 13, 'hay estatua para los 10 grupos de siempre; los 3 nuevos, sin ella por ahora');
 
 console.log('\nLas comidas');
 check(imagenComida('desayuno') === 'comida-desayuno' && imagenComida('media_manana') === 'comida-media-manana', 'cada toma, su ilustración (media mañana con guion en el archivo)');

@@ -9,13 +9,14 @@ export const nivelSeries = (n) => (!(n > 0) ? 0 : n < 5 ? 1 : n < 10 ? 2 : n < 1
 // Mitad izquierda de cada figura (la derecha es su reflejo)
 const NEUTRO_COMUN = [
   'M45 24 L55 24 L56 31 L44 31 Z',                                   // cuello
-  'M20 72 Q16 84 17 94 L22.5 94 Q26 84 27 73 Z',                       // antebrazo
   'M15.5 98 a3.6 4.6 0 1 0 7.2 0 a3.6 4.6 0 1 0 -7.2 0',               // mano
   'M37 154 a5 4 0 1 0 10 0 a5 4 0 1 0 -10 0',                          // rodilla
   'M36 192 a5.2 3 0 1 0 10.4 0 a5.2 3 0 1 0 -10.4 0',                  // pie
 ];
 const TRONCO = 'M36 32 L64 32 Q72 40 68 60 Q64 78 62 92 Q64 100 62 106 L38 106 Q36 100 38 92 Q36 78 32 60 Q28 40 36 32 Z';
 const DELTOIDES = 'M21 39 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0';
+// (biblioteca 2) el antebrazo ya no es neutro: cuenta sus series
+const ANTEBRAZO = 'M20 72 Q16 84 17 94 L22.5 94 Q26 84 27 73 Z';
 const BRAZO = 'M24 50 Q19 60 20 70 Q23 73.5 27 71.5 Q30 61 30.5 51 Q27 48 24 50 Z';
 
 const DELANTE = {
@@ -24,7 +25,9 @@ const DELANTE = {
     ['deltoides', DELTOIDES],
     ['pectoral', 'M49.2 34 L37 34 Q32 37 32 45 Q36 53 49.2 52 Z'],
     ['biceps', BRAZO],
+    ['antebrazo', ANTEBRAZO],
     ['cuadriceps', 'M38 107 Q34 126 37 149 Q42 152 47.5 149 Q50 128 49.2 107 Z'],
+    ['aductores', 'M49.4 108 L49.4 134 Q46.6 124 45.4 108 Z'],
   ],
   centro: [['abdominales', 'M41.5 54 h17 v34 a5 5 0 0 1 -5 5 h-7 a5 5 0 0 1 -5 -5 Z']],
 };
@@ -33,11 +36,13 @@ const DETRAS = {
   musculos: [
     ['deltoides', DELTOIDES],
     ['triceps', BRAZO],
+    ['antebrazo', ANTEBRAZO],
     ['gluteo', 'M38.5 94 Q36 104 40 110.5 Q46 113.5 49.6 108.5 L49.6 94 Z'],
     ['isquiotibiales', 'M38 113 Q35 131 38 149 Q42 152 47.5 149 Q49.5 131 49.2 113.5 Z'],
     ['gemelo', 'M37.5 158 Q35 168 38 177.5 Q42 180.5 46 177 Q48 167 46.5 158 Z'],
   ],
-  centro: [['espalda', 'M50 31 L38 33 Q31 38 33 52 Q36 70 44 82 L50 87 L56 82 Q64 70 67 52 Q69 38 62 33 Z']],
+  centro: [['espalda', 'M50 31 L38 33 Q31 38 33 52 Q36 70 44 82 L50 87 L56 82 Q64 70 67 52 Q69 38 62 33 Z'],
+    ['lumbares', 'M44.5 84 L50 88.5 L55.5 84 L57 93 L43 93 Z']],
 };
 
 function Figura({ partes, series }) {

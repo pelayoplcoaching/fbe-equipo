@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.168': {
+    atleta: [
+      'Tu mapa muscular cuenta tres grupos más: antebrazo, aductores y lumbares.',
+    ],
+    coach: [
+      'Biblioteca: antebrazo, aductores y lumbares (sin mínimo de series) y 161 ejercicios nuevos con su SQL. Migración 074.',
+    ],
+  },
   '0.167': {
     atleta: [
       'Tu perfil, más tuyo: el día 1 y hoy, tu palmarés, logros secretos, tu historia de bloques y tu trimestre.',

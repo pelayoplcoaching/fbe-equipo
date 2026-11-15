@@ -96,9 +96,13 @@ export function e1rmPorSemana(series) {
 // ganar masa muscular (relación dosis-respuesta: Schoenfeld, Ogborn y Krieger, 2017); el máximo útil
 // depende de cada persona. El coach lo ajusta por atleta (atletas.volumen_objetivo).
 export const VOLUMEN_DEFECTO = [10, 20];
+// (biblioteca 2) Antebrazo, aductores y lumbares trabajan de sobra de forma indirecta (agarre, sentadillas, bisagras):
+// sin rango propio no tienen mínimo, para que nunca salgan como «bajo» por no llevar series directas
+export const GRUPOS_SIN_MINIMO = ['antebrazo', 'aductores', 'lumbares'];
+export const volumenDefecto = (grupo) => (GRUPOS_SIN_MINIMO.includes(grupo) ? [0, VOLUMEN_DEFECTO[1]] : VOLUMEN_DEFECTO);
 export function rangoVolumen(objetivo, grupo) {
   const r = objetivo?.[grupo];
-  return Array.isArray(r) && r.length === 2 && Number.isFinite(r[0]) && Number.isFinite(r[1]) ? r : VOLUMEN_DEFECTO;
+  return Array.isArray(r) && r.length === 2 && Number.isFinite(r[0]) && Number.isFinite(r[1]) ? r : volumenDefecto(grupo);
 }
 export function estadoVolumen(n, [min, max]) {
   return n < min ? 'bajo' : n > max ? 'alto' : 'dentro';
@@ -111,7 +115,7 @@ export function limpiarObjetivo(obj) {
     if (!Array.isArray(r)) continue;
     const [a, b] = r.map(Number);
     if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < a || b > 60) continue;
-    if (a === VOLUMEN_DEFECTO[0] && b === VOLUMEN_DEFECTO[1]) continue;
+    if (a === volumenDefecto(g)[0] && b === volumenDefecto(g)[1]) continue;
     out[g] = [a, b];
   }
   return Object.keys(out).length ? out : null;
@@ -774,6 +778,8 @@ export const GRUPOS = [
   ['pectoral', 'Pectoral'], ['espalda', 'Espalda'], ['deltoides', 'Deltoides'], ['cuadriceps', 'Cuádriceps'],
   ['gluteo', 'Glúteo'], ['isquiotibiales', 'Isquiotibiales'], ['biceps', 'Bíceps'], ['triceps', 'Tríceps'],
   ['abdominales', 'Abdominales'], ['gemelo', 'Gemelo'],
+  // (biblioteca 2, migración «biblioteca 2») tres grupos más, al final para no mover los de siempre
+  ['antebrazo', 'Antebrazo'], ['aductores', 'Aductores'], ['lumbares', 'Lumbares'],
 ];
 export const NOMBRE_GRUPO = Object.fromEntries(GRUPOS);
 

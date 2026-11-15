@@ -166,4 +166,13 @@ export const GRUPOS_REVISADOS = {
   'Sóleo sentado con mancuernas/en multipower': ['gemelo'],
   'Gemelo en máquina de pie': ['gemelo'],
   'Sóleo sentado en máquina': ['gemelo'],
+  // (biblioteca 2) Los que no tenían grupo en Notion, con los grupos nuevos
+  'Extensiones de muñeca en banco con barra/mancuernas': ['antebrazo'],
+  'Curl de muñeca en banco con barra/mancuernas': ['antebrazo'],
+  'Extensiones de muñeca desde polea baja sentado': ['antebrazo'],
+  'Curl de muñeca desde polea baja sentado/de pie': ['antebrazo'],
+  'Kettlebell wrist turns': ['antebrazo'],
+  'Aductor en máquina sentado': ['aductores'],
+  'Aducción en polea de pie': ['aductores'],
+  'Aducciones Copenhague': ['aductores'],
 };

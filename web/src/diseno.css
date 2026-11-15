@@ -3027,6 +3027,9 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
 .fila-biblioteca:has(.detalle[data-g="triceps"]) { --g: var(--marca-600); }
 .fila-biblioteca:has(.detalle[data-g="abdominales"]) { --g: var(--cat-ambar); }
 .fila-biblioteca:has(.detalle[data-g="gemelo"]) { --g: var(--ambar-600); }
+.fila-biblioteca:has(.detalle[data-g="antebrazo"]) { --g: var(--cat-indigo); }
+.fila-biblioteca:has(.detalle[data-g="aductores"]) { --g: var(--cat-rosa); }
+.fila-biblioteca:has(.detalle[data-g="lumbares"]) { --g: var(--cat-cielo); }
 .fila-biblioteca .detalle[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: var(--esp-6); vertical-align: 1px; border-radius: 50%; background: var(--g); }
 .fila-biblioteca:has(.detalle[data-g]) .picto { background: color-mix(in srgb, var(--g) 13%, var(--hoja)); color: color-mix(in srgb, var(--g) 68%, var(--tinta)); }
 @media (forced-colors: active) { .fila-biblioteca .detalle[data-g]::before { background: CanvasText; } }
@@ -3202,6 +3205,9 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
 [data-g="biceps"] { --g: var(--cat-violeta); }
 [data-g="triceps"] { --g: var(--marca-600); }
 [data-g="abdominales"] { --g: var(--cat-ambar); }
+[data-g="antebrazo"] { --g: var(--cat-indigo); }
+[data-g="aductores"] { --g: var(--cat-rosa); }
+[data-g="lumbares"] { --g: var(--cat-cielo); }
 [data-g="gemelo"] { --g: var(--ambar-600); }
 .vol-chip[data-g]::before, .lista-elegir > button[data-g] > span:first-child::before, .chip[data-g]::before { content: ""; display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--g); align-self: center; }
 .lista-elegir > button[data-g] > span:first-child::before { margin-right: var(--esp-8); vertical-align: 1px; }

@@ -160,6 +160,7 @@
 .perfil-grupos [data-g="gluteo"] { --g: var(--cat-rojo); } .perfil-grupos [data-g="isquiotibiales"] { --g: var(--cat-turquesa); }
 .perfil-grupos [data-g="biceps"] { --g: var(--cat-violeta); } .perfil-grupos [data-g="triceps"] { --g: var(--marca-600); }
 .perfil-grupos [data-g="abdominales"] { --g: var(--cat-ambar); } .perfil-grupos [data-g="gemelo"] { --g: var(--ambar-600); }
+.perfil-grupos [data-g="antebrazo"] { --g: var(--cat-indigo); } .perfil-grupos [data-g="aductores"] { --g: var(--cat-rosa); } .perfil-grupos [data-g="lumbares"] { --g: var(--cat-cielo); }
 .pg-nombre { font-weight: 650; font-size: var(--letra-14); overflow-wrap: anywhere; }
 .pg-barra { height: 10px; border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
 .pg-barra span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--g); }
