@@ -3267,6 +3267,39 @@
     },
     "color": "#423266"
   },
+  "glu-abduccion-goma-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-goma-sentado-192.cbe9bcb3.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-goma-sentado-512.93d681d5.webp"
+    },
+    "color": "#3e2768"
+  },
+  "glu-abduccion-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-polea-192.8b55a27a.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-polea-512.12e44c92.webp"
+    },
+    "color": "#3c2668"
+  },
+  "glu-abduccion-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-tumbado-192.168e8d7e.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-tumbado-512.9f8cad97.webp"
+    },
+    "color": "#3c2663"
+  },
   "glu-abducciones-maquina": {
     "proporcion": [
       1,
@@ -3277,6 +3310,17 @@
       "512": "imagenes/ejercicio/glu-abducciones-maquina-512.c77857c8.webp"
     },
     "color": "#4a3d6e"
+  },
+  "glu-almeja-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-almeja-goma-192.d7c10a0a.webp",
+      "512": "imagenes/ejercicio/glu-almeja-goma-512.0bb65a70.webp"
+    },
+    "color": "#41276d"
   },
   "glu-bulgara-gluteo": {
     "proporcion": [
@@ -3322,6 +3366,28 @@
     },
     "color": "#443469"
   },
+  "glu-hip-thrust-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-goma-192.8ca3a64b.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-goma-512.a7612057.webp"
+    },
+    "color": "#44306f"
+  },
+  "glu-hip-thrust-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-mancuerna-192.52036508.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-mancuerna-512.8c323d92.webp"
+    },
+    "color": "#402f6b"
+  },
   "glu-hip-thrust-maquina": {
     "proporcion": [
       1,
@@ -3343,6 +3409,17 @@
       "512": "imagenes/ejercicio/glu-hip-thrust-multipower-512.20e64c77.webp"
     },
     "color": "#47376c"
+  },
+  "glu-hip-thrust-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-192.72490ed9.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-512.8dd6ea6b.webp"
+    },
+    "color": "#442f72"
   },
   "glu-hip-thrust-unilateral-barra": {
     "proporcion": [
@@ -3377,6 +3454,17 @@
     },
     "color": "#412e6b"
   },
+  "glu-paso-lateral-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-paso-lateral-goma-192.4305fa68.webp",
+      "512": "imagenes/ejercicio/glu-paso-lateral-goma-512.a2231cc5.webp"
+    },
+    "color": "#452974"
+  },
   "glu-patada-cuadrupedia": {
     "proporcion": [
       1,
@@ -3388,6 +3476,28 @@
     },
     "color": "#473471"
   },
+  "glu-patada-goma-cuadrupedia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-goma-cuadrupedia-192.28a726f6.webp",
+      "512": "imagenes/ejercicio/glu-patada-goma-cuadrupedia-512.fb4c0774.webp"
+    },
+    "color": "#3f286c"
+  },
+  "glu-patada-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-maquina-192.9459be22.webp",
+      "512": "imagenes/ejercicio/glu-patada-maquina-512.2371337b.webp"
+    },
+    "color": "#3f2965"
+  },
   "glu-patada-polea-baja": {
     "proporcion": [
       1,
@@ -3398,6 +3508,28 @@
       "512": "imagenes/ejercicio/glu-patada-polea-baja-512.2deb40fd.webp"
     },
     "color": "#422e6c"
+  },
+  "glu-peso-muerto-sumo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-peso-muerto-sumo-192.bbaa218e.webp",
+      "512": "imagenes/ejercicio/glu-peso-muerto-sumo-512.f2fe6431.webp"
+    },
+    "color": "#43346b"
+  },
+  "glu-peso-muerto-trap-bar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-peso-muerto-trap-bar-192.4a3780b7.webp",
+      "512": "imagenes/ejercicio/glu-peso-muerto-trap-bar-512.a7701984.webp"
+    },
+    "color": "#433767"
   },
   "glu-prensa-gluteo": {
     "proporcion": [
@@ -3421,6 +3553,50 @@
     },
     "color": "#3b2965"
   },
+  "glu-puente-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-barra-192.4f2cff26.webp",
+      "512": "imagenes/ejercicio/glu-puente-barra-512.f8873952.webp"
+    },
+    "color": "#3f2e67"
+  },
+  "glu-puente-una-pierna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-una-pierna-192.a374e126.webp",
+      "512": "imagenes/ejercicio/glu-puente-una-pierna-512.fd7cc9da.webp"
+    },
+    "color": "#3c2b66"
+  },
+  "glu-reverse-hyper-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-banco-192.7c7ca93e.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-banco-512.206075ab.webp"
+    },
+    "color": "#3b2865"
+  },
+  "glu-reverse-hyper-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-maquina-192.590f27c5.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-maquina-512.1e5c4e51.webp"
+    },
+    "color": "#3c2e62"
+  },
   "glu-reverse-hyper-multipower": {
     "proporcion": [
       1,
@@ -3431,6 +3607,28 @@
       "512": "imagenes/ejercicio/glu-reverse-hyper-multipower-512.b167a8d6.webp"
     },
     "color": "#432f6a"
+  },
+  "glu-swing-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-swing-kettlebell-192.5ddcbdd7.webp",
+      "512": "imagenes/ejercicio/glu-swing-kettlebell-512.0197e243.webp"
+    },
+    "color": "#3a2a64"
+  },
+  "glu-zancadas-atras-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-zancadas-atras-deficit-192.48f0e8f9.webp",
+      "512": "imagenes/ejercicio/glu-zancadas-atras-deficit-512.e6b6d7f1.webp"
+    },
+    "color": "#432e72"
   },
   "grupo-abdominales": {
     "proporcion": [
