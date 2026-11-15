@@ -1978,6 +1978,17 @@
     },
     "color": "#4f367d"
   },
+  "del-rotacion-externa-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-goma-192.a7bfcc53.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-goma-512.537287b1.webp"
+    },
+    "color": "#44316f"
+  },
   "del-rotacion-externa-mancuerna": {
     "proporcion": [
       1,
@@ -1988,6 +1999,17 @@
       "512": "imagenes/ejercicio/del-rotacion-externa-mancuerna-512.266e9f1c.webp"
     },
     "color": "#402a74"
+  },
+  "del-rotacion-externa-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-polea-192.cc191b32.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-polea-512.527dd3ae.webp"
+    },
+    "color": "#473473"
   },
   "descanso": {
     "proporcion": [
@@ -5961,6 +5983,39 @@
     },
     "color": "#443470"
   },
+  "tri-extension-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-maquina-192.f6751ec5.webp",
+      "512": "imagenes/ejercicio/tri-extension-maquina-512.84d6be9b.webp"
+    },
+    "color": "#493772"
+  },
+  "tri-extension-unilateral-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-unilateral-polea-192.af7aa9ae.webp",
+      "512": "imagenes/ejercicio/tri-extension-unilateral-polea-512.500e9582.webp"
+    },
+    "color": "#402d6c"
+  },
+  "tri-extensiones-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-goma-192.178003e8.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-goma-512.23685c69.webp"
+    },
+    "color": "#3e2c6b"
+  },
   "tri-extensiones-polea-barra": {
     "proporcion": [
       1,
@@ -5983,6 +6038,17 @@
     },
     "color": "#45346a"
   },
+  "tri-flexiones-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-flexiones-diamante-192.80b77413.webp",
+      "512": "imagenes/ejercicio/tri-flexiones-diamante-512.4f9299ae.webp"
+    },
+    "color": "#3c2d64"
+  },
   "tri-fondos-estrecho": {
     "proporcion": [
       1,
@@ -5993,6 +6059,17 @@
       "512": "imagenes/ejercicio/tri-fondos-estrecho-512.0b56034a.webp"
     },
     "color": "#3c2e61"
+  },
+  "tri-fondos-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-fondos-maquina-192.1634db49.webp",
+      "512": "imagenes/ejercicio/tri-fondos-maquina-512.4bf78f54.webp"
+    },
+    "color": "#44346b"
   },
   "tri-katana": {
     "proporcion": [
@@ -6015,6 +6092,17 @@
       "512": "imagenes/ejercicio/tri-kaz-press-512.af01b260.webp"
     },
     "color": "#462e6c"
+  },
+  "tri-press-banca-cerrado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-banca-cerrado-192.5e8e791b.webp",
+      "512": "imagenes/ejercicio/tri-press-banca-cerrado-512.b6828c39.webp"
+    },
+    "color": "#443669"
   },
   "tri-press-frances-barra": {
     "proporcion": [
