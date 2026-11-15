@@ -281,3 +281,29 @@
 .trimestre-cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .trimestre-cifras > span { display: grid; justify-items: center; text-align: center; }
 .trimestre-cifras b { font-size: var(--letra-19); font-weight: 800; }
+
+/* ---------- (perfil, tanda 4) T3: lo que evitas, tu material, tus guardados, tu rincon de animo y tu portada ---------- */
+.evitados-lista, .guardados-lista { display: grid; }
+.evitado, .guardado { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; }
+.evitado + .evitado, .guardado + .guardado { border-top: var(--filo-fino) solid var(--linea); }
+.evitado-motivo.m-molestia { background: var(--aviso-suave); color: var(--aviso); }
+.guardado { justify-content: flex-start; }
+.guardado > .pila-xs { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.guardado-ico { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.guardado-ico svg { width: 18px; height: 18px; }
+.guardados-apuntes { display: flex; gap: 8px; align-items: center; color: var(--tinta-2); }
+.guardados-apuntes svg { width: 16px; height: 16px; flex: none; }
+.material-hoja .material-perfil { border: 0; padding: 0; margin: 0; }
+.rincon-animo .seccion-cab .peq { display: inline-flex; gap: 4px; align-items: center; }
+.rincon-animo .seccion-cab svg { width: 14px; height: 14px; }
+.rincon-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rincon-nota { padding: 12px 14px; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); border-left: var(--filo-marca) solid var(--morado); }
+.rincon-nota blockquote { margin: 0 0 6px; white-space: pre-line; overflow-wrap: anywhere; }
+.alternativas-evitadas { margin-top: -4px; }
+.aviso-evitado { display: flex; gap: 6px; align-items: center; color: var(--aviso); }
+.aviso-evitado svg { width: 14px; height: 14px; flex: none; }
+.portada-propia { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.perfil-portada-foto { position: absolute; top: 10px; right: 58px; z-index: 3; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 76px); }
+.perfil-portada-foto .btn { background: var(--hoja); }
+.perfil-portada-foto .btn.ocupado { opacity: .7; }
+.perfil-portada.con-foto svg { display: none; }

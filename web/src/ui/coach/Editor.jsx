@@ -17,6 +17,7 @@ import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
 import { zonasFC } from '../../logica/carrera.js';
+import { mapaEvitados, textoMotivo } from '../../logica/perfil-mas.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
 const ESTADOS_BLOQUE = [['planificado', 'Planificado'], ['activo', 'Activo'], ['ajustado', 'Ajustado'], ['finalizado', 'Finalizado'], ['cancelado', 'Cancelado']];
@@ -74,6 +75,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   }, [atletaId]);
   // v0.48: las notas fijadas del atleta en cada ejercicio («asiento en el 4»), para verlas junto a su pauta
   const notasAtleta = useCarga(() => (atletaId ? api.notasEjercicio(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
+  // (perfil, tanda 4) lo que el atleta prefiere evitar: un aviso junto a la pauta y al elegir (no cambia nada)
+  const evitadosAtleta = useCarga(() => (atletaId && api.personalAtletas ? api.personalAtletas().then((l) => mapaEvitados((l || []).find((x) => x.atleta_id === atletaId))).catch(() => ({})) : Promise.resolve({})), [atletaId]);
 
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
@@ -252,7 +255,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}} fbe={fichasFbe.datos || null}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}} evitados={evitadosAtleta.datos || {}} fbe={fichasFbe.datos || null}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -299,9 +302,11 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
           aviso(nuevas.length === 1 ? `Semana ${nuevas[0].numero} preparada, en borrador` : `Semanas ${nuevas.map((w) => w.numero).join(', ')} preparadas, en borrador: revísalas y publícalas`);
         }
       }} />}
-      {elegir && <ElegirEjercicio biblioteca={biblioteca} alCerrar={() => setElegir(null)} alElegir={async (ej) => {
+      {elegir && <ElegirEjercicio biblioteca={biblioteca} evitados={evitadosAtleta.datos || {}} alCerrar={() => setElegir(null)} alElegir={async (ej) => {
         const { sesionId, pautaId } = elegir;
         setElegir(null);
+        const ev = (evitadosAtleta.datos || {})[ej.id];
+        if (ev) aviso(`Ojo: prefiere evitar ${ej.nombre} (${textoMotivo(ev).toLowerCase()}). Se pone igual; coméntaselo si hace falta.`);
         if (pautaId) await guardar('sesion_ejercicios', pautaId, { ejercicio_id: ej.id });
         else await estructura(() => api.nuevaPauta(sesionId, ej.id));
       }} />}
@@ -550,7 +555,7 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
 const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
   const { api } = useApp();
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
@@ -632,6 +637,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
+                    {evitados[p.ejercicio_id] && <div class="mini aviso-evitado" role="note"><Icono n="alerta" /><span>Prefiere evitarlo: {textoMotivo(evitados[p.ejercicio_id]).toLowerCase()}. Es solo un aviso.</span></div>}
                     {notasAtleta[p.ejercicio_id] && <div class="mini nota-atleta-coach" title="Su nota fijada en este ejercicio (la escribe el atleta en su sesión)"><Icono n="chincheta" /><span><span class="terciario">Su nota: </span>{notasAtleta[p.ejercicio_id].texto}</span></div>}
                     {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
                       <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
@@ -768,7 +774,7 @@ function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
   );
 }
 
-export function ElegirEjercicio({ biblioteca, alCerrar, alElegir }) {
+export function ElegirEjercicio({ biblioteca, alCerrar, alElegir, evitados = {} }) {
   const { api, aviso } = useApp();
   const [q, setQ] = useState('');
   const [grupo, setGrupo] = useState(null);
@@ -789,6 +795,7 @@ export function ElegirEjercicio({ biblioteca, alCerrar, alElegir }) {
             <button key={e.id} data-g={(e.grupos_musculares || [])[0] || undefined} onClick={() => alElegir(e)}>
               <span style="font-weight:600">{e.nombre}</span>
               <span class="mini terciario">{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.tipo || []).includes('basico') ? '; básico' : ''}{e.rango_reps ? `; ${e.rango_reps.toLowerCase()}` : ''}{e.video_url ? '; con vídeo' : ''}</span>
+              {evitados[e.id] && <span class="mini aviso-evitado"><Icono n="alerta" />Lo prefiere evitar ({textoMotivo(evitados[e.id]).toLowerCase()})</span>}
             </button>
           ))}
           {!lista.length && <div class="panel-pad secundario">Ningún ejercicio coincide.</div>}

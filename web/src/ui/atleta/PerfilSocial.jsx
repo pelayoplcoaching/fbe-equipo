@@ -6,7 +6,7 @@
 //   · «En el equipo» (si estás en la comunidad): tu racha, retos, compañeros y los ánimos de esta semana, y «Ver cómo te
 //     ven tus compañeros» (tu perfil en el equipo). Solo lo que ya ven ellos: aquí no se comparte nada nuevo.
 // Todo sale de lo que ya hay (sus entrenos, su progreso, la comunidad).
-import { DiaUnoYHoy, MarcasPorReps, useHistorial, PalmaresYBloques, LogrosSecretos, Equivalencia, Trimestre } from './PerfilMas.jsx';
+import { DiaUnoYHoy, MarcasPorReps, useHistorial, PalmaresYBloques, LogrosSecretos, Equivalencia, Trimestre, RinconAnimo } from './PerfilMas.jsx';
 import { historiaEnUnaLinea } from '../../logica/rumbo.js';
 import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
@@ -68,6 +68,7 @@ export function PerfilSecciones({ salud, irA }) {
           <>
             <HistoriaLinea sesiones={lista.length} progreso={progreso.datos} hoy={hoy} />
             <DiaUnoYHoy historial={historial.datos} />
+            <RinconAnimo />
             <MejorMomento entrenos={lista} hoy={hoy} />
             <AdnFbe entrenos={lista} progreso={progreso.datos} hoy={hoy} />
             <AlbumHitos entrenos={lista} progreso={progreso.datos} hoy={hoy} />

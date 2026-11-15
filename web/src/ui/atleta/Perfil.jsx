@@ -23,7 +23,7 @@ import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
-import { CompletaPerfil, IndicePerfil, FilaCorrecciones } from './PerfilMas.jsx';
+import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada } from './PerfilMas.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -69,6 +69,13 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         {conEntrenamiento(atleta) && <FilaCorrecciones />}
         <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
+      </GrupoIos>
+
+      {/* (perfil, tanda 4) lo que evita, su material (los ve su coach) y sus guardados, juntos */}
+      <GrupoIos titulo="Tu forma de entrenar" id="grupo-tu-forma">
+        {conEntrenamiento(atleta) && <FilaEvitados />}
+        {conEntrenamiento(atleta) && <FilaMaterial />}
+        <FilaGuardados irA={irA} />
       </GrupoIos>
 
       {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
@@ -144,9 +151,22 @@ function CabezaPerfil({ p, correo }) {
   // v0.116: la portada que eliges (cinco colores; solo en este móvil)
   const [portada, setPortada] = usePreferencia('fbe-portada-perfil', 'noche');
   const [elegir, setElegir] = useState(false);
+  // (perfil, tanda 4, migración 073) su foto de portada (la ven su coach y, si estáis en la comunidad, el equipo)
+  const { aviso, propio } = useApp();
+  const portadaFoto = useCarga(() => (propio || !api.portadaFoto ? Promise.resolve(undefined) : api.portadaFoto().catch(() => null)), [atleta.id]);
+  const [subiendo, setSubiendo] = useState(false);
+  const ponerFoto = async (archivo) => {
+    if (!archivo) return;
+    setSubiendo(true);
+    try { const b = await recortarPortada(archivo); await api.ponerPortadaFoto(b); setElegir(false); aviso('Portada puesta'); portadaFoto.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+    setSubiendo(false);
+  };
+  const quitarFoto = async () => {
+    try { await api.quitarPortadaFoto(); setElegir(false); aviso('Portada quitada'); portadaFoto.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+  };
   return (
     <section class="perfil-cabeza con-portada" data-portada={portadaValida(portada)} aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <PortadaPerfil texto={atleta.nombre} />
+      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || null} />
       <button type="button" class="btn-icono perfil-portada-btn" aria-label="Cambiar el color de la portada" aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
       {elegir && (
         <div class="perfil-portadas" role="radiogroup" aria-label="Color de la portada">
@@ -155,6 +175,13 @@ function CabezaPerfil({ p, correo }) {
               <span class="pp-color" aria-hidden="true" /><span class="pp-nombre">{t}</span>
             </button>
           ))}
+        </div>
+      )}
+      {elegir && portadaFoto.datos !== undefined && (
+        <div class="perfil-portada-foto">
+          <label class={`btn btn-peq${subiendo ? ' ocupado' : ''}`}><Icono n="camara" />{subiendo ? 'Subiendo…' : portadaFoto.datos ? 'Cambiar tu foto' : 'Poner tu foto'}
+            <input type="file" accept="image/*" class="sr" disabled={subiendo} onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; ponerFoto(f); }} aria-label="Elegir una foto de portada" /></label>
+          {portadaFoto.datos && <button type="button" class="btn btn-peq" onClick={quitarFoto}><Icono n="basura" />Quitar</button>}
         </div>
       )}
       <FotoConAnillo nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} racha={constancia.datos?.racha || 0} clase="enorme" lleno ampliable />

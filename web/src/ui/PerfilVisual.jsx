@@ -9,11 +9,13 @@ import { arteSesion, semilla } from '../logica/arte.js';
 import { anilloRacha } from '../logica/perfil.js';
 
 const TIPOS = ['fuerza', 'movilidad', 'cardio'];
-export function PortadaPerfil({ texto = '', clase = '' }) {
+// (perfil, tanda 4) con `foto` (su foto de portada), la foto encima del dibujo
+export function PortadaPerfil({ texto = '', clase = '', foto = null }) {
   const tipo = TIPOS[semilla(`perfil|${texto}`) % TIPOS.length];
   const a = arteSesion({ nombre: `perfil|${texto}`, tipo, patron: 'pierna' }, 400, 140);
   return (
-    <div class={`perfil-portada ${clase}`} aria-hidden="true">
+    <div class={`perfil-portada ${foto ? 'con-foto' : ''} ${clase}`} aria-hidden="true">
+      {foto && <img class="portada-propia" src={foto} alt="" decoding="async" />}
       <svg viewBox={`0 0 ${a.ancho} ${a.alto}`} preserveAspectRatio="xMidYMid slice" focusable="false" fill="none" stroke-linecap="round">
         {a.formas.map((f, i) => {
           const comun = { key: i, class: f.tono, 'stroke-width': f.grosor, opacity: f.opacidad };

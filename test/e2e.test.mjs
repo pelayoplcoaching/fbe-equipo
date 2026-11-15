@@ -6125,6 +6125,9 @@ try {
   console.log('\nEl perfil, tanda 4, T2: palmarés, historia de bloques, logros secretos, equivalencias y trimestre');
   const { probarPerfil4T2 } = await import('./e2e-perfil4-t2.mjs');
   await probarPerfil4T2({ navegador, check });
+  console.log('\nEl perfil, tanda 4, T3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada');
+  const { probarPerfil4T3 } = await import('./e2e-perfil4-t3.mjs');
+  await probarPerfil4T3({ navegador, check });
   // Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
   console.log('\nColor');
   const { probarColor } = await import('./e2e-color.mjs');

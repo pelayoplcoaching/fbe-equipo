@@ -82,5 +82,22 @@ check(t2.titulo === 'jul–sep 2026' && t2.completo && t2.sesiones === 2, 'en su
 check(P.resumenTrimestre([], [], '2026-11-15') === null && P.resumenTrimestre(ent2, ser2, null) === null, 'sin entrenos, nada');
 check(/<PalmaresYBloques /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<LogrosSecretos /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<Equivalencia /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<Trimestre /.test(lee('src/ui/atleta/PerfilSocial.jsx')), 'palmarés, bloques y secretos en Logros; equivalencias en Resumen; el trimestre en Datos');
 
+console.log('\nTanda 3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada');
+const ev = P.mapaEvitados({ evitados: [{ ejercicio_id: 'a', motivo: 'molestia' }, { ejercicio_id: 'b', motivo: 'raro' }, null] });
+check(JSON.stringify(ev) === '{"a":"molestia"}' && JSON.stringify(P.mapaEvitados(null)) === '{}', 'lo que evita: solo con motivos válidos');
+const ap = P.apartarEvitados([{ id: 'a', nombre: 'Fondos' }, { id: 'c', nombre: 'Press' }], ev);
+check(ap.quedan.map((x) => x.id).join() === 'c' && ap.apartados[0].motivo === 'molestia' && P.textoMotivo('material') === 'No tengo el material', '«Cambiar ejercicio» aparta los que evita (y dice por qué)');
+check(P.alternarEvitado([{ ejercicio_id: 'a', motivo: 'gusto' }], 'a', 'molestia').length === 1 && P.alternarEvitado([{ ejercicio_id: 'a', motivo: 'gusto' }], 'a').length === 0 && P.alternarEvitado([], 'x', 'otro').length === 0, 'añadir sin repetir, quitar, y motivos raros no');
+const mb = P.materialDe({ material: { casa: ['gomas'], mancuernas_kg: 20 } }, { casa: ['barra'], viaje: ['poleas'] });
+check(mb.deLaBase && mb.casa.join() === 'gomas' && mb.viaje.join() === 'poleas' && mb.mancuernas_kg === 20, 'el material: lo de su perfil manda; lo que falta, de este móvil');
+check(!P.materialDe(null, { casa: ['barra'] }).deLaBase && P.mismoMaterial({ casa: ['a', 'b'], viaje: [] }, { casa: ['b', 'a'] }) && !P.mismoMaterial({ casa: ['a'] }, { casa: ['b'] }), 'sin nada en su perfil, el de este móvil; y se comparan sin importar el orden');
+const gj = P.guardadosJuntos({ favoritos: ['e1', 'e9'], nombres: { e1: 'Sentadilla' }, recetas: [{ id: 'r1', nombre: 'Tortilla', toma: 'cena' }], publicaciones: [{ id: 'p1', texto: 'x'.repeat(120), autor: 'Luis' }, { id: 'p2', texto: '' }] });
+check(gj.map((x) => x.tipo).join() === 'ejercicio,receta,publicacion' && gj[2].titulo.length <= 90 && gj[2].detalle === 'De Luis' && P.TIPOS_GUARDADO.length === 5, 'tus guardados, juntos: ejercicios, recetas y publicaciones (largas, recortadas)');
+const mig = lee('../supabase/migraciones/073_perfil_4.sql');
+check(/if v > 73 then/.test(mig) && /numero = 72\) then/.test(mig) && /values \(73\)/.test(mig) && /revoke execute on function public\.portada_fuera\(\)/.test(mig) && /'coach-voz', 'portadas'\)\)/.test(mig), 'la migración del perfil 4: pide la 072, la trigger revocada y el bucket en la cola de borrado');
+const apiTxt = lee('src/datos/api.js');
+check(/'coach-voz', 'portadas'\]\) \{/.test(apiTxt) && /\['voz', 'comunidad', 'apuntes', 'coach-voz', 'portadas'\]\.includes/.test(apiTxt) && /async guardarPerfil4\(/.test(apiTxt) && /async ponerPortadaFoto\(/.test(apiTxt), 'el bucket «portadas» en borrarDeStorage y limpiarAlmacenamiento');
+check(/<FilaEvitados \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<RinconAnimo \/>/.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /apartarEvitados/.test(lee('src/ui/atleta/Sesion.jsx')) && /aviso-evitado/.test(lee('src/ui/coach/Editor.jsx')) && /Prefiere evitar/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /alRincon/.test(lee('src/ui/Chat.jsx')), 'en su sitio: perfil, sesión, editor y ficha del coach, y el chat');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

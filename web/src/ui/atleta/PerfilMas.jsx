@@ -4,6 +4,7 @@
 //   · FilaCorrecciones: «Lo que te ha corregido tu coach», por ejercicio (Tu asesoría)
 //   · CompletaPerfil: «Tu perfil al 70 %» y lo que falta, que abre su fila (arriba)
 //   · IndicePerfil: Tú · Lo tuyo · Ajustes, y el buscador del perfil (arriba)
+//   · (T3) FilaEvitados, FilaMaterial y FilaGuardados (Perfil); RinconAnimo (Resumen); recortarPortada (la foto de portada)
 //   · (T2) PalmaresYBloques: tu palmarés y tu historia de bloques; LogrosSecretos (Logros); Equivalencia (Resumen);
 //     Trimestre (Datos)
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -12,7 +13,10 @@ import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { pesoNum, etiquetaPeso } from '../../logica/unidades.js';
 import { textoManual } from '../../logica/respeto.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
-import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre } from '../../logica/perfil-mas.js';
+import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre, MOTIVOS_EVITAR, textoMotivo, alternarEvitado, materialDe, TIPOS_GUARDADO, guardadosJuntos } from '../../logica/perfil-mas.js';
+import { MATERIAL_PERFIL, PERFILES_DEFECTO } from '../../logica/material.js';
+import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
+import { leerApuntes } from '../apuntes.js';
 import { InformeBloque, tituloBloque } from '../InformeBloque.jsx';
 import { usePersonal } from './Personal.jsx';
 
@@ -341,4 +345,239 @@ export function Trimestre({ entrenos = [], historial = [] }) {
       </div>
     </section>
   );
+}
+
+// =====================================================================
+// (T3) 7. Lo que prefieres evitar
+// =====================================================================
+const normalT = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export function FilaEvitados() {
+  const personal = usePersonal();
+  const [abierta, setAbierta] = useState(false);
+  const n = (personal.datos?.evitados || []).length;
+  return (
+    <>
+      <FilaIos icono="alerta" titulo="Lo que prefieres evitar" detalle={n ? `${n} ${n === 1 ? 'ejercicio' : 'ejercicios'}: tu coach lo ve` : 'Ejercicios que no te gustan o te molestan'} alTocar={() => setAbierta(true)} etiqueta="Lo que prefieres evitar" />
+      {abierta && <HojaEvitados inicial={personal.datos?.evitados || []} alCerrar={() => setAbierta(false)} alGuardar={() => personal.recargar?.(true)} />}
+    </>
+  );
+}
+function HojaEvitados({ inicial, alCerrar, alGuardar }) {
+  const { api, aviso } = useApp();
+  const biblioteca = useCarga(() => api.biblioteca().catch(() => []), []);
+  const [lista, setLista] = useState(inicial);
+  const [q, setQ] = useState('');
+  const [elegido, setElegido] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+  const nombre = useMemo(() => Object.fromEntries((biblioteca.datos || []).map((e) => [e.id, e.nombre])), [biblioteca.datos]);
+  const ya = new Set(lista.map((x) => x.ejercicio_id));
+  const resultados = q.trim().length < 2 ? [] : (biblioteca.datos || []).filter((e) => e.activo !== false && !ya.has(e.id) && normalT(e.nombre).includes(normalT(q.trim()))).slice(0, 8);
+  const guardar = async () => {
+    setOcupado(true);
+    try { await api.guardarPerfil4({ evitados: lista }); aviso('Guardado: tu coach lo verá'); alGuardar?.(); alCerrar(); } catch (e) { aviso(e.message, 'error'); }
+    setOcupado(false);
+  };
+  return (
+    <Hoja titulo="Lo que prefieres evitar" alCerrar={alCerrar}>
+      <div class="pila evitados-hoja">
+        <p class="peq secundario">Tu coach lo verá en tu ficha y con un aviso si te lo pone. Tu programación no cambia; al cambiar un ejercicio en la sesión, estos no saldrán entre las alternativas.</p>
+        {lista.length > 0 ? (
+          <ul class="lista evitados-lista">
+            {lista.map((x) => (
+              <li key={x.ejercicio_id} class="evitado">
+                <span class="pila-xs"><strong>{nombre[x.ejercicio_id] || 'Ejercicio'}</strong><span class={`chip chip-mini evitado-motivo m-${x.motivo}`}>{textoMotivo(x.motivo)}</span></span>
+                <button type="button" class="btn-texto mini peligro" onClick={() => setLista(alternarEvitado(lista, x.ejercicio_id))} aria-label={`Quitar ${nombre[x.ejercicio_id] || 'este ejercicio'}`}>Quitar</button>
+              </li>
+            ))}
+          </ul>
+        ) : <p class="peq terciario">Aún no hay ninguno.</p>}
+        {!elegido ? (
+          <div class="pila-s">
+            <div class="buscador"><Icono n="buscar" /><input class="entrada" type="search" aria-label="Buscar un ejercicio que evitar" placeholder="Busca un ejercicio" value={q} onInput={(e) => setQ(e.currentTarget.value)} /></div>
+            {resultados.length > 0 && (
+              <div class="lista-elegir">
+                {resultados.map((e) => <button key={e.id} type="button" onClick={() => { setElegido(e); setQ(''); }}><span style="font-weight:600">{e.nombre}</span></button>)}
+              </div>
+            )}
+            {q.trim().length >= 2 && !resultados.length && !biblioteca.cargando && <p class="mini terciario">Ninguno coincide.</p>}
+          </div>
+        ) : (
+          <div class="panel panel-pad pila-s evitar-motivo">
+            <strong>¿Por qué prefieres evitar {elegido.nombre}?</strong>
+            <div class="fila-envolver" role="group" aria-label={`Motivo para evitar ${elegido.nombre}`}>
+              {MOTIVOS_EVITAR.map(([k, t]) => <button key={k} type="button" class="btn btn-peq" onClick={() => { setLista(alternarEvitado(lista, elegido.id, k)); setElegido(null); }}>{t}</button>)}
+            </div>
+            <button type="button" class="btn-texto mini" onClick={() => setElegido(null)}>Cancelar</button>
+          </div>
+        )}
+        <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={guardar}>Guardar</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// =====================================================================
+// (T3) 8. Tu material (casa y viaje; lo ve tu coach)
+// =====================================================================
+export function FilaMaterial() {
+  const { atleta } = useApp();
+  const personal = usePersonal();
+  const [abierta, setAbierta] = useState(false);
+  const m = materialDe(personal.datos, leerPreferencia(`fbe-material-${atleta.id}`, PERFILES_DEFECTO));
+  const n = new Set([...m.casa, ...m.viaje]).size;
+  return (
+    <>
+      <FilaIos icono="disco" titulo="Tu material" detalle={m.deLaBase ? `${n} ${n === 1 ? 'cosa' : 'cosas'} en casa o de viaje${m.mancuernas_kg ? `; mancuernas hasta ${pesoNum(m.mancuernas_kg, 1)} ${etiquetaPeso()}` : ''}` : 'Lo que tienes en casa y de viaje'} alTocar={() => setAbierta(true)} etiqueta="Tu material" />
+      {abierta && <HojaMaterial inicial={m} alCerrar={() => setAbierta(false)} alGuardar={() => personal.recargar?.(true)} />}
+    </>
+  );
+}
+function HojaMaterial({ inicial, alCerrar, alGuardar }) {
+  const { api, atleta, aviso } = useApp();
+  const [m, setM] = useState({ casa: [...inicial.casa], viaje: [...inicial.viaje] });
+  const [kg, setKg] = useState(inicial.mancuernas_kg == null ? '' : String(inicial.mancuernas_kg).replace('.', ','));
+  const [ocupado, setOcupado] = useState(false);
+  const marcar = (l, k, si) => setM((x) => ({ ...x, [l]: si ? [...new Set([...x[l], k])] : x[l].filter((y) => y !== k) }));
+  const guardar = async () => {
+    const n = kg.trim() === '' ? null : Number(kg.replace(',', '.'));
+    if (n != null && !(n >= 1 && n <= 100)) { aviso('Las mancuernas, entre 1 y 100 kg', 'error'); return; }
+    setOcupado(true);
+    try {
+      await api.guardarPerfil4({ material: { ...m, mancuernas_kg: n } });
+      // (lo de este móvil, igual: «¿Dónde entrenas hoy?» lo usa al momento)
+      guardarPreferencia(`fbe-material-${atleta.id}`, { casa: m.casa, viaje: m.viaje });
+      aviso('Guardado: tu coach lo verá'); alGuardar?.(); alCerrar();
+    } catch (e) { aviso(e.message, 'error'); }
+    setOcupado(false);
+  };
+  return (
+    <Hoja titulo="Tu material" alCerrar={alCerrar}>
+      <div class="pila material-hoja">
+        <p class="peq secundario">Con esto, «¿Dónde entrenas hoy?» cambia lo que no puedas hacer por las alternativas de tu coach. Tu coach lo ve, para tenerlo en cuenta.</p>
+        {[['casa', 'En casa'], ['viaje', 'De viaje']].map(([l, t]) => (
+          <fieldset key={l} class="pila-s material-perfil">
+            <legend class="peq"><strong>{t}</strong></legend>
+            {MATERIAL_PERFIL.map(([k, nombre]) => (
+              <label class="casilla" key={k}><input type="checkbox" checked={m[l].includes(k)} onChange={(e) => marcar(l, k, e.currentTarget.checked)} /><span>{nombre}</span></label>
+            ))}
+          </fieldset>
+        ))}
+        <label class="campo"><span class="peq">Tus mancuernas llegan hasta (kg)</span><input class="entrada" inputmode="decimal" value={kg} onInput={(e) => setKg(e.currentTarget.value)} placeholder="Por ejemplo, 20" aria-describedby="mancuernas-ayuda" /></label>
+        <span id="mancuernas-ayuda" class="mini terciario">Opcional. Si no tienes, déjalo en blanco.</span>
+        <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={guardar}>Guardar</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// =====================================================================
+// (T3) 10. Tus guardados, en un sitio
+// =====================================================================
+export function FilaGuardados({ irA }) {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <>
+      <FilaIos icono="estrella" titulo="Tus guardados" detalle="Ejercicios, recetas, publicaciones y apuntes" alTocar={() => setAbierta(true)} etiqueta="Tus guardados" />
+      {abierta && <HojaGuardados irA={irA} alCerrar={() => setAbierta(false)} />}
+    </>
+  );
+}
+const IR_GUARDADO = { ejercicio: 'progreso', receta: 'comidas', publicacion: 'equipo' };
+function HojaGuardados({ irA, alCerrar }) {
+  const { api, atleta } = useApp();
+  const [filtro, setFiltro] = useState('todo');
+  const d = useCarga(async () => {
+    const [personal, biblio, recetario, muro] = await Promise.all([
+      api.personal().catch(() => null), api.biblioteca().catch(() => []),
+      api.recetario ? api.recetario(atleta.id).catch(() => null) : null,
+      api.muro ? api.muro({ filtro: 'guardados', limite: 30 }).catch(() => null) : null,
+    ]);
+    const nombres = Object.fromEntries((biblio || []).map((e) => [e.id, e.nombre]));
+    const R = Object.fromEntries((recetario?.recetas || []).map((r) => [r.id, r]));
+    const recetas = (recetario?.asignaciones || []).filter((a) => a.favorita && R[a.receta_id]).map((a) => ({ id: a.id, nombre: R[a.receta_id].nombre, toma: a.toma || null }));
+    const publicaciones = muro?.con043 ? (muro.posts || []).map((x) => ({ ...x, autor: x.autor?.nombre || null })) : [];
+    const ids = new Set(leerApuntes(atleta.id)?.guardados || []);
+    return { items: guardadosJuntos({ favoritos: personal?.favoritos || [], nombres, recetas, publicaciones }), apuntes: ids.size };
+  }, [atleta.id]);
+  const items = (d.datos?.items || []).filter((x) => filtro === 'todo' || x.tipo === filtro);
+  const verApuntes = (filtro === 'todo' || filtro === 'apunte') && d.datos?.apuntes > 0;
+  return (
+    <Hoja titulo="Tus guardados" alCerrar={alCerrar}>
+      <div class="pila guardados-hoja">
+        <div class="selector-chips" role="group" aria-label="Qué guardados ver">
+          {TIPOS_GUARDADO.map(([k, t]) => <button key={k} type="button" aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}</button>)}
+        </div>
+        {d.cargando && !d.datos ? <p class="peq terciario" role="status">Cargando…</p> : (
+          <>
+            {items.length > 0 && (
+              <ul class="lista guardados-lista">
+                {items.map((x) => (
+                  <li key={x.id} class="guardado" data-tipo={x.tipo}>
+                    <span class="guardado-ico" aria-hidden="true"><Icono n={x.tipo === 'receta' ? 'receta' : x.tipo === 'publicacion' ? 'equipo' : x.tipo === 'apunte' ? 'documento' : 'biblioteca'} /></span>
+                    <span class="pila-xs"><strong>{x.titulo}</strong><span class="mini terciario">{x.detalle}</span></span>
+                    {IR_GUARDADO[x.tipo] && irA && <button type="button" class="btn-texto mini" onClick={() => { alCerrar(); irA(IR_GUARDADO[x.tipo]); }} aria-label={`Ir a ${x.titulo}`}>Ir</button>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {verApuntes && <p class="peq guardados-apuntes"><Icono n="documento" />{d.datos.apuntes === 1 ? '1 apunte guardado' : `${d.datos.apuntes} apuntes guardados`}: están en Apuntes, en Hoy («Guardados»).</p>}
+            {!items.length && !verApuntes && <p class="peq terciario">Nada guardado aquí todavía. Lo que guardes (tus tres ejercicios, recetas favoritas, publicaciones o apuntes) saldrá en esta lista.</p>}
+          </>
+        )}
+      </div>
+    </Hoja>
+  );
+}
+
+// =====================================================================
+// (T3) 11. Tu rincón de ánimo (solo lo ves tú)
+// =====================================================================
+export function RinconAnimo() {
+  const { api, aviso, propio } = useApp();
+  const d = useCarga(() => (propio ? Promise.resolve(null) : api.animoMios ? api.animoMios().catch(() => null) : Promise.resolve(null)), []);
+  const [todos, setTodos] = useState(false);
+  if (!Array.isArray(d.datos)) return null;
+  const lista = todos ? d.datos : d.datos.slice(0, 3);
+  const soltar = async (x) => {
+    try { await api.fijarAnimo(x.tipo, x.ref_id, false); aviso('Quitado de tu rincón'); d.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+  };
+  return (
+    <section class="seccion perfil-sec rincon-animo" aria-labelledby="rincon-animo-t">
+      <div class="seccion-cab"><h2 id="rincon-animo-t">Tu rincón de ánimo</h2><span class="peq secundario"><Icono n="candado" />Solo lo ves tú</span></div>
+      {!d.datos.length ? (
+        <p class="panel panel-pad peq terciario rincon-vacio">Para los días malos: guarda aquí mensajes de tu coach (en el chat, mantén pulsado uno y «A tu rincón de ánimo») o comentarios de tus compañeros en tus publicaciones.</p>
+      ) : (
+        <ul class="rincon-lista">
+          {lista.map((x) => (
+            <li key={x.id} class="rincon-nota">
+              <blockquote class="peq">{x.texto}</blockquote>
+              <span class="separa"><span class="mini terciario">{x.autor} · {fmtCorta(String(x.creado_en).slice(0, 10))}</span>
+                <button type="button" class="btn-texto mini" onClick={() => soltar(x)} aria-label={`Quitar de tu rincón el mensaje de ${x.autor}`}>Quitar</button></span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {d.datos.length > 3 && <button type="button" class="btn-texto" aria-expanded={todos ? 'true' : 'false'} onClick={() => setTodos(!todos)}>{todos ? 'Ver menos' : `Ver los ${d.datos.length}`}</button>}
+    </section>
+  );
+}
+
+// =====================================================================
+// (T3) 13. La foto de portada: se recorta a 4:1 (1200 × 300) y se comprime en JPEG
+// =====================================================================
+export async function recortarPortada(archivo, { ancho = 1200, alto = 300, calidad = 0.82 } = {}) {
+  if (!archivo || !/^image\//.test(archivo.type || '')) throw new Error('Elige una foto (JPEG o PNG).');
+  const url = URL.createObjectURL(archivo);
+  try {
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => mal(new Error('No se ha podido abrir esa foto.')); i.src = url; });
+    const r = ancho / alto, w = img.naturalWidth, h = img.naturalHeight;
+    const sw = w / h > r ? h * r : w, sh = w / h > r ? h : w / r;
+    const c = document.createElement('canvas'); c.width = ancho; c.height = alto;
+    c.getContext('2d').drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, ancho, alto);
+    for (const q of [calidad, 0.7, 0.55]) {
+      const b = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', q));
+      if (b && b.size <= 600000) return b;
+    }
+    throw new Error('La foto pesa demasiado. Prueba con otra.');
+  } finally { URL.revokeObjectURL(url); }
 }

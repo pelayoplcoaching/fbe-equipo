@@ -238,3 +238,59 @@ export function resumenTrimestre(entrenos = [], series = [], hoy) {
     antes: antes.length, mejora,
   };
 }
+
+// =====================================================================
+// (T3) Lo que evita, su material y sus guardados
+// =====================================================================
+// 7. Los motivos para evitar un ejercicio (los mismos que admite la base, 073)
+export const MOTIVOS_EVITAR = [['gusto', 'No me gusta'], ['molestia', 'Me molesta'], ['material', 'No tengo el material']];
+const NOMBRE_MOTIVO = Object.fromEntries(MOTIVOS_EVITAR);
+export const textoMotivo = (m) => NOMBRE_MOTIVO[m] || '';
+// { ejercicio_id → motivo } de lo suyo (o de lo de un atleta, para el coach)
+export function mapaEvitados(personal) {
+  const out = {};
+  for (const x of Array.isArray(personal?.evitados) ? personal.evitados : []) if (x?.ejercicio_id && NOMBRE_MOTIVO[x.motivo]) out[x.ejercicio_id] = x.motivo;
+  return out;
+}
+// Las alternativas sin las que evita: { quedan, apartados } (las apartadas, con su motivo)
+export function apartarEvitados(lista = [], evitados = {}) {
+  const quedan = [], apartados = [];
+  for (const x of lista || []) (evitados[x?.id] ? apartados : quedan).push(evitados[x?.id] ? { ...x, motivo: evitados[x.id] } : x);
+  return { quedan, apartados };
+}
+// Añade o quita uno (sin repetir; como mucho 60, como la base)
+export function alternarEvitado(evitados = [], ejercicioId, motivo = null) {
+  const sin = (evitados || []).filter((x) => x.ejercicio_id !== ejercicioId);
+  return motivo && NOMBRE_MOTIVO[motivo] ? [...sin, { ejercicio_id: ejercicioId, motivo }].slice(-60) : sin;
+}
+
+// 8. Su material: lo de la base si lo hay; si no, lo de este móvil (como antes)
+export function materialDe(personal, local = null) {
+  const m = personal?.material && typeof personal.material === 'object' ? personal.material : {};
+  const base = Array.isArray(m.casa) || Array.isArray(m.viaje);
+  const l = local && typeof local === 'object' ? local : {};
+  return {
+    casa: Array.isArray(m.casa) ? m.casa : Array.isArray(l.casa) ? l.casa : [],
+    viaje: Array.isArray(m.viaje) ? m.viaje : Array.isArray(l.viaje) ? l.viaje : [],
+    mancuernas_kg: Number.isFinite(Number(m.mancuernas_kg)) && m.mancuernas_kg != null ? Number(m.mancuernas_kg) : null,
+    deLaBase: base,
+  };
+}
+export function mismoMaterial(a = {}, b = {}) {
+  const k = (x) => [...(x || [])].sort().join(',');
+  return k(a.casa) === k(b.casa) && k(a.viaje) === k(b.viaje);
+}
+
+// 10. Sus guardados, juntos: [{ tipo, id, titulo, detalle }] (tipo: ejercicio, receta, publicacion, apunte), con filtro
+export const TIPOS_GUARDADO = [['todo', 'Todo'], ['ejercicio', 'Ejercicios'], ['receta', 'Recetas'], ['publicacion', 'Publicaciones'], ['apunte', 'Apuntes']];
+export function guardadosJuntos({ favoritos = [], nombres = {}, recetas = [], publicaciones = [], apuntes = [] } = {}) {
+  const out = [];
+  for (const id of favoritos || []) if (nombres[id]) out.push({ tipo: 'ejercicio', id: `e:${id}`, titulo: nombres[id], detalle: 'Uno de tus tres ejercicios' });
+  for (const r of recetas || []) if (r?.nombre) out.push({ tipo: 'receta', id: `r:${r.id}`, titulo: r.nombre, detalle: r.toma ? `Receta favorita · ${r.toma}` : 'Receta favorita' });
+  for (const p of publicaciones || []) {
+    const t = String(p?.texto || p?.resumen?.nombre || p?.resumen?.titulo || (p?.foto_ruta ? 'Una foto' : '')).replace(/\s+/g, ' ').trim();
+    if (t) out.push({ tipo: 'publicacion', id: `p:${p.id}`, titulo: t.length > 90 ? `${t.slice(0, 88)}…` : t, detalle: p.autor ? `De ${p.autor}` : 'Publicación del equipo' });
+  }
+  for (const a of apuntes || []) if (a?.titulo || a?.texto) out.push({ tipo: 'apunte', id: `a:${a.id}`, titulo: a.titulo || String(a.texto).slice(0, 80), detalle: a.de ? `Apunte · ${a.de}` : 'Apunte' });
+  return out;
+}
