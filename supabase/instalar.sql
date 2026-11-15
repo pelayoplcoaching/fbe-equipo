@@ -25144,16 +25144,17 @@ insert into public.fbe_migraciones (numero) values (77)  -- (3) número de esta 
 --
 -- Por qué: vacaciones, una temporada de mucho trabajo o un parón por lo que sea. El coach pone una pausa en la ficha (con su motivo,
 -- desde cuándo y, si la sabe, la fecha de vuelta) y, mientras dura, el atleta no recibe recordatorios, no sale en las
--- alertas del panel ni en «A quién escribir» y su racha no se rompe. A la vuelta, todo sigue donde estaba. No es una
+-- alertas del panel ni en «A quién escribir» y su racha no se rompe (los mensajes de su coach sí le llegan). A la vuelta, todo sigue donde estaba. No es una
 -- baja: el atleta puede seguir entrando y apuntando lo que quiera. Los cobros no cambian.
 --
 --   * pausas: cada pausa de un atleta (desde, hasta o sin fecha de vuelta, motivo y una nota). Solo la pone, la cambia
 --     y la quita el coach; el atleta ve las suyas (los días, el motivo y la nota, que es un mensaje del coach para él).
 --     El motivo es una de cuatro palabras (vacaciones, trabajo, personal, otro): nada de salud; eso va en las notas
 --     privadas del coach o en las molestias, con su consentimiento.
---   * atletas.estado pasa solo a 'pausado' el día que empieza una pausa y vuelve a 'activo' al día siguiente de su fecha
---     de vuelta (al guardar la pausa y, después, cada día, en la pasada de los recordatorios). Quien ya estaba en
---     'pausado' sin ninguna pausa apuntada se queda como está, hasta que el coach lo cambie.
+--   * El estado del atleta no cambia (sigue 'activo'): así le siguen llegando los mensajes, los avisos y las respuestas
+--     de su coach. Lo único que cambia en la base es la vista de a quién se mandan los recordatorios
+--     (fbe_privado.destinatarios): quien hoy está en pausa no recibe los de la sesión, el check-in, los hábitos, la
+--     nutrición, los apuntes ni los suplementos. Las alertas del panel, «A quién escribir» y la racha las resuelve la app.
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 077 (o con instalar.sql en una base nueva).
 -- Se puede repetir sin romper nada.
@@ -25204,86 +25205,32 @@ drop policy if exists atleta_ver on public.pausas;
 create policy atleta_ver on public.pausas for select to authenticated
   using (atleta_id = public.mi_atleta_id());
 
--- ---------------------------------------------------------------------
--- 2. El estado del atleta sigue a sus pausas
--- ---------------------------------------------------------------------
--- De un atleta (o de todos, con null): en pausa si hoy cae dentro de alguna de sus pausas; de vuelta si tiene pausas
--- apuntadas y hoy no cae en ninguna. Ni los invitados ni los de baja cambian
-create or replace function fbe_privado.aplicar_pausas(p_atleta uuid default null) returns void
-language plpgsql security definer set search_path = '' as $$
-declare v_hoy date := (now() at time zone 'Europe/Madrid')::date;
-begin
-  update public.atletas a set estado = 'pausado'
-    where a.estado = 'activo' and (p_atleta is null or a.id = p_atleta)
-      and exists (select 1 from public.pausas p where p.atleta_id = a.id and p.desde <= v_hoy and (p.hasta is null or p.hasta >= v_hoy));
-  update public.atletas a set estado = 'activo'
-    where a.estado = 'pausado' and (p_atleta is null or a.id = p_atleta)
-      and exists (select 1 from public.pausas p where p.atleta_id = a.id)
-      and not exists (select 1 from public.pausas p where p.atleta_id = a.id and p.desde <= v_hoy and (p.hasta is null or p.hasta >= v_hoy));
-end $$;
-
-create or replace function public.pausa_aplicar() returns trigger
-language plpgsql security definer set search_path = '' as $$
-begin
-  if tg_op = 'DELETE' then
-    -- al quitar su última pausa, si estaba en pausa por ella, vuelve
-    if not exists (select 1 from public.pausas p where p.atleta_id = old.atleta_id) then
-      update public.atletas set estado = 'activo' where id = old.atleta_id and estado = 'pausado';
-    else
-      perform fbe_privado.aplicar_pausas(old.atleta_id);
-    end if;
-    return old;
-  end if;
-  perform fbe_privado.aplicar_pausas(new.atleta_id);
-  if tg_op = 'UPDATE' and old.atleta_id is distinct from new.atleta_id then perform fbe_privado.aplicar_pausas(old.atleta_id); end if;
-  return new;
-end $$;
 drop trigger if exists pausas_zz_aplicar on public.pausas;
-create trigger pausas_zz_aplicar after insert or update or delete on public.pausas
-  for each row execute function public.pausa_aplicar();
+drop function if exists public.pausa_aplicar();
+drop function if exists fbe_privado.aplicar_pausas(uuid);
 
-create or replace function public.crear_recordatorios_apuntes(p_ahora timestamptz default now()) returns integer
-language plpgsql security definer set search_path = '' as $$
-declare
-  v_local timestamp := p_ahora at time zone 'Europe/Madrid';
-  v_hoy date := (p_ahora at time zone 'Europe/Madrid')::date;
-  v_n integer := 0;
-begin
-  perform fbe_privado.solo_servidor();
-  with x as materialized (
-    select d.perfil_id, d.hora_tarde, count(v.apunte) as n
-    from fbe_privado.destinatarios d
-    join public.apuntes_vistos v on v.atleta_id = d.atleta_id and v.proxima is not null and v.proxima <= v_hoy
-    where not ('repaso' = any (d.desactivados))
-      and v_local >= v_hoy + d.hora_tarde - interval '2 hours' and v_local < v_hoy + d.hora_tarde
-      and not exists (select 1 from public.bloques b
-                      join public.semanas w on w.bloque_id = b.id
-                      join public.sesiones s on s.semana_id = w.id and s.dia_previsto = v_hoy
-                      where b.atleta_id = d.atleta_id and not b.es_plantilla and b.estado not in ('cancelado', 'finalizado'))
-    group by d.perfil_id, d.hora_tarde
-    having count(v.apunte) >= 3
-  )
-  select count(*) into v_n from x
-  where fbe_privado.notificar_seguro(x.perfil_id, 'repaso',
-          'Tienes ' || least(x.n, 99) || ' apuntes por repasar',
-          'Un par de minutos y no se te olvidan. Están en Semana, en «Tus apuntes».',
-          '#semana', 'recordatorio_repaso:' || v_hoy, p_ahora,
-          (v_hoy + x.hora_tarde + interval '2 hours') at time zone 'Europe/Madrid');
-  -- (077) y, en la misma pasada, los avisos de los suplementos (así no hace falta volver a desplegar la función del servidor).
-  -- (revisión) Si esa parte fallara, los de los apuntes salen igual
-  begin
-    v_n := v_n + fbe_privado.recordatorios_suplementos(p_ahora);
-  exception when others then
-    raise warning 'FBE: avisos de suplementos no creados: %', sqlerrm;
-  end;
-  -- (078) y, de paso, las pausas que empiezan o acaban hoy (si fallara, lo demás sale igual)
-  begin
-    perform fbe_privado.aplicar_pausas(null);
-  exception when others then
-    raise warning 'FBE: pausas no aplicadas: %', sqlerrm;
-  end;
-  return v_n;
-end $$;
+-- ---------------------------------------------------------------------
+-- 2. En pausa no hay recordatorios
+-- ---------------------------------------------------------------------
+-- La vista de la 010, igual, sin quien hoy está en pausa (hora de España). Los avisos de lo que hace su coach (mensajes,
+-- semana publicada, tareas…) no pasan por esta vista: le siguen llegando
+create or replace view fbe_privado.destinatarios with (security_barrier) as
+select a.id as atleta_id, a.perfil_id,
+       coalesce(p.desactivados, '{sesion_hecha}'::text[]) as desactivados,
+       coalesce(p.hora_manana, time '08:30') as hora_manana,
+       coalesce(p.hora_tarde, time '21:00') as hora_tarde,
+       coalesce(p.dia_checkin, 7) as dia_checkin,
+       exists (select 1 from public.consentimientos c
+               where c.perfil_id = a.perfil_id and c.tipo = 'datos_salud' and c.revocado_en is null) as salud
+from public.atletas a
+left join public.preferencias_notificaciones p on p.usuario_id = a.perfil_id
+where a.estado = 'activo' and a.perfil_id is not null
+  and (coalesce(p.email, false) or exists (select 1 from public.suscripciones_push s where s.usuario_id = a.perfil_id))
+  -- (078) quien hoy tiene su asesoría en pausa no recibe recordatorios
+  and not exists (select 1 from public.pausas z where z.atleta_id = a.id
+                  and z.desde <= (now() at time zone 'Europe/Madrid')::date
+                  and (z.hasta is null or z.hasta >= (now() at time zone 'Europe/Madrid')::date));
+revoke all on fbe_privado.destinatarios from public, anon, authenticated;
 
 -- La copia completa del coach, también con las pausas
 create or replace function public.copia_privada() returns jsonb
@@ -25327,8 +25274,6 @@ revoke execute on function public.novedad_audio_fuera() from public, anon, authe
 revoke execute on function public.mensaje_coach_audio_fuera() from public, anon, authenticated;
 -- (073) la de la cola de las portadas es de un trigger: nadie la llama
 revoke execute on function public.portada_fuera() from public, anon, authenticated;
--- (078) la que sigue a las pausas es de un trigger: nadie la llama
-revoke execute on function public.pausa_aplicar() from public, anon, authenticated;
 -- (las del reloj, si están)
 do $$
 declare f text;

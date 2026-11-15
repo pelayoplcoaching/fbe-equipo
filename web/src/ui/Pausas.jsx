@@ -28,7 +28,7 @@ export function PausaCoach({ atleta, alCambiar }) {
   const [f, setF] = useState(null);
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
-  if (con078.datos !== true || atleta.estado === 'baja' || atleta.estado === 'invitado') return null;
+  if (con078.datos !== true || atleta.estado !== 'activo') return null;
   const hoy = fechaMadrid();
   const pausas = lista.datos || [];
   const ahora = pausaVigente(pausas, hoy), proxima = pausaProxima(pausas, hoy);
@@ -52,7 +52,7 @@ export function PausaCoach({ atleta, alCambiar }) {
           <p class="peq">Empieza el {fmtCorta(proxima.desde)}, {textoHasta(proxima)} ({NOMBRE_MOTIVO[proxima.motivo].toLowerCase()}).</p>
           <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => editar(proxima)}><Icono n="editar" /> Cambiar</button>
         </div>
-      ) : <p class="peq secundario">Vacaciones, una temporada complicada, un parón… En pausa no recibe recordatorios, no sale en tus alertas ni en «A quién escribir» y su racha no se rompe. Puede seguir entrando. Los cobros no cambian.</p>}
+      ) : <p class="peq secundario">Vacaciones, una temporada complicada, un parón… En pausa no recibe recordatorios (tus mensajes sí le llegan), no sale en tus alertas ni en «A quién escribir» y su racha no se rompe. Puede seguir entrando. Los cobros no cambian.</p>}
       {pasadas.length > 0 && <p class="mini terciario">Anteriores: {pasadas.map((p) => `${fmtCorta(p.desde)} a ${fmtCorta(p.hasta)} (${NOMBRE_MOTIVO[p.motivo].toLowerCase()})`).join('; ')}.</p>}
       {error && !f && <div class="error" role="alert">{error}</div>}
       {f && (

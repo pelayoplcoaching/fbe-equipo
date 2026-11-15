@@ -1318,22 +1318,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (CHECKS[t] && !CHECKS[t](fila)) throw new Error('Algún valor está fuera de rango.');
   }
 
-  // Como la 078: una pausa con sentido, y el estado del atleta sigue a sus pausas (en pausa si hoy cae en alguna; de
-  // vuelta si tiene pausas apuntadas y hoy no cae en ninguna, o al quitarle la última)
+  // Como la 078: una pausa con sentido (el estado del atleta no cambia)
   function comprobarPausa(f) {
     const dia = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
     if (!dia(f.desde) || (f.hasta != null && (!dia(f.hasta) || f.hasta < f.desde)) || f.desde < '2020-01-01' || f.desde > '2100-01-01' || (f.hasta != null && f.hasta > '2100-01-01')
       || !['vacaciones', 'trabajo', 'personal', 'otro'].includes(f.motivo) || (f.nota != null && (typeof f.nota !== 'string' || f.nota.length < 1 || f.nota.length > 200 || !textoVisible(f.nota)))) {
       throw new Error('new row for relation "pausas" violates check constraint "pausas_validas"');
     }
-  }
-  function aplicarPausas(atletaId, quitada = false) {
-    const a = tabla('atletas').find((x) => x.id === atletaId);
-    if (!a) return;
-    const hoyP = fMadrid(), suyas = tabla('pausas').filter((x) => x.atleta_id === atletaId);
-    const vigente = suyas.some((x) => x.desde <= hoyP && (x.hasta == null || x.hasta >= hoyP));
-    if (a.estado === 'activo' && vigente) a.estado = 'pausado';
-    else if (a.estado === 'pausado' && !vigente && (suyas.length || quitada)) a.estado = 'activo';
   }
 
   // Como la migración 007: sin ejercicio no hay marca; con ejercicio, una marca razonable (hasta 12 repeticiones)
@@ -1671,7 +1662,6 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'pausas') comprobarPausa(nueva);
     comprobarChecks(t, nueva);
     tabla(t).push(nueva);
-    if (t === 'pausas') aplicarPausas(nueva.atleta_id);
     despuesDeInsertar(t, nueva);
     return nueva;
   }
@@ -3618,7 +3608,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (t === 'comidas_atleta') normalizarOpcional(fila);
         if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
       }
-      if (t === 'pausas') for (const x of res) { comprobarPausa(x); aplicarPausas(x.atleta_id); }
+      if (t === 'pausas') for (const x of res) comprobarPausa(x);
       persistirYa();
       return copia(res);
     },
@@ -3749,12 +3739,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
-      // (078) las pausas las quita el coach; el atleta vuelve si era la última o hoy ya no cae en ninguna
+      // (078) las pausas las quita el coach
       if (t === 'pausas') {
         if (!esCoach()) return [];
-        const fuera = tabla(t).filter((x) => cumple(x, f));
-        db[t] = tabla(t).filter((x) => !fuera.includes(x));
-        for (const x of fuera) aplicarPausas(x.atleta_id, !tabla('pausas').some((y) => y.atleta_id === x.atleta_id));
+        db[t] = tabla(t).filter((x) => !cumple(x, f));
         persistirYa();
         return [];
       }

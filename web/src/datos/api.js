@@ -8,7 +8,7 @@ import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
-import { limpiarPausa, semanaEnPausa } from '../logica/pausas.js';
+import { limpiarPausa, semanaEnPausa, pausaVigente } from '../logica/pausas.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
 import { claveValida } from '../logica/musica.js';
 import { ID_APUNTE, ENLACE_NOVEDAD } from '../logica/apuntes.js';
@@ -2394,7 +2394,10 @@ export function crearApi(backend) {
       const desde = sumarDias(lunesDe(hoy), -7 * 11);
       const series = await b.select('series', { eq: { atleta_id: atletaId }, gte: { registrada_en: desde }, cols: 'registrada_en', limit: 10000 });
       const objetivo = semanasObjetivo({ diasSemana, sesiones, semanas, hoy });
-      const lista = paraRacha(objetivo);
+      // (v0.175, 078) una semana de pausa sin completar cuenta como una sin nada programado: ni suma ni rompe la racha,
+      // tampoco en el calendario de la racha ni en la racha más larga (que salen de esta lista)
+      const pausas = await api.pausas(atletaId).catch(() => []);
+      const lista = paraRacha(objetivo).map((w) => (pausas.length && w.hechas < w.total && semanaEnPausa(pausas, w.fecha_inicio) ? { ...w, total: 0, hechas: 0, pausa: true } : w));
       const dias = {};
       for (const x of series) { const d = aISO(new Date(x.registrada_en)); dias[d] = (dias[d] || 0) + 1; }
       for (const x of sesiones) if (x.completada && x.fecha_realizada >= desde && !dias[x.fecha_realizada]) dias[x.fecha_realizada] = 1;
@@ -2405,9 +2408,7 @@ export function crearApi(backend) {
       // v0.68 (la bienvenida): el último día que entrenó (de las últimas 11 semanas) y si ha entrenado alguna vez
       const ultimoDia = Object.keys(dias).filter((d) => d <= hoy).sort().at(-1) || null;
       const algunaVez = !!ultimoDia || sesiones.some((x) => x.completada);
-      // (v0.175, 078) las semanas de pausa no rompen la racha
-      const pausas = await api.pausas(atletaId).catch(() => []);
-      return { racha: racha(lista, hoy, (lunes) => semanaEnPausa(pausas, lunes)), pausas, diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
+      return { racha: racha(lista, hoy), pausas, diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
         diasSemana, actual: semanaEnCurso(objetivo, hoy), ultimoDia, algunaVez };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
@@ -5829,6 +5830,9 @@ export function crearApi(backend) {
       // unas veinte esperas seguidas; ahora, las cinco de la cadena más larga). Los cálculos son los mismos.
       const desde = sumarDias(lunesDe(hoy), -63);
       const lunesHoy = lunesDe(hoy);
+      // (v0.175, 078) las pausas de todos (son pocas); sin la 078, ninguna
+      const pausasDe = {};
+      for (const x of await b.select('pausas', { in: { atleta_id: ids } }).catch(() => [])) (pausasDe[x.atleta_id] ||= []).push(x);
       // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
       const delPrograma = (async () => {
         const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
@@ -5933,8 +5937,11 @@ export function crearApi(backend) {
           peso: chispaPeso(P[a.id] || [], hoy, 8),
           sesiones: nat ? nat.chispa : chispaSesiones(misSemanas, ses6.filter((x) => idsMias.has(x.semana_id)), hoy, 6),
         };
-        return { ...resumenAtleta({
-          atleta: a, bloque, semana,
+        // (v0.175, 078) en pausa: para el panel, las alertas, el tablero y «A quién escribir» cuenta como pausado
+        // (en la base sigue activo, para que le lleguen los mensajes de su coach)
+        const pausa = pausaVigente(pausasDe[a.id] || [], hoy);
+        return { pausa: pausa || null, ...resumenAtleta({
+          atleta: pausa && a.estado === 'activo' ? { ...a, estado: 'pausado' } : a, bloque, semana,
           semanas: bloque ? semanasPorBloque[bloque.id] || [] : [],
           sesiones: semana ? sesiones[semana.id] || [] : [],
           pesos: P[a.id] || [], checkins: cs,

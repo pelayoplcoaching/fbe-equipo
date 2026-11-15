@@ -35,16 +35,17 @@ export const diaDeVuelta = (p) => (p?.hasta ? sumarDias(p.hasta, 1) : null);
 // Para el atleta, en Hoy
 export function textoPausaAtleta(p) {
   if (!p) return null;
-  return { titulo: 'Tu asesoría está en pausa', detalle: p.hasta ? `Vuelves el ${fmtCorta(diaDeVuelta(p))}. Mientras tanto no te mandamos recordatorios y tu racha te espera donde la dejaste.` : 'Sin fecha de vuelta por ahora. No te mandamos recordatorios y tu racha te espera donde la dejaste.' };
+  return { titulo: 'Tu asesoría está en pausa', detalle: p.hasta ? `Vuelves el ${fmtCorta(diaDeVuelta(p))}. Mientras tanto no te mandamos recordatorios (los mensajes de tu coach sí te llegan) y tu racha te espera donde la dejaste.` : 'Sin fecha de vuelta por ahora. No te mandamos recordatorios y tu racha te espera donde la dejaste.' };
 }
 // Para el coach: «En pausa hasta el 30 nov (vacaciones)»
 export const textoPausaCoach = (p) => (p ? `En pausa ${textoHasta(p)} (${NOMBRE_MOTIVO[p.motivo].toLowerCase()})` : '');
 export const diasDePausa = (p, hoy = fechaMadrid()) => (p ? diasEntre(p.desde, p.hasta && p.hasta < hoy ? p.hasta : hoy) + 1 : 0);
 
-// ¿Esa semana (por su lunes) fue de pausa? Si la pausa cubre cuatro días o más de los siete: esa semana no rompe la racha
+// ¿Esa semana (por su lunes) fue de pausa? Si la pausa cubre tres días o más de los siete: esa semana no rompe la racha
+// (con tres, cualquier pausa de una semana entera protege las dos semanas que pisa)
 export function semanaEnPausa(pausas = [], lunes) {
   const l = lunesDe(lunes);
   let dias = 0;
   for (let i = 0; i < 7; i++) { const d = sumarDias(l, i); if ((pausas || []).some((p) => cubre(p, d))) dias++; }
-  return dias >= 4;
+  return dias >= 3;
 }
