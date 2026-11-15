@@ -90,8 +90,8 @@ const REGLAS = [
   ['empuje_v', /\b(press militar|militar|press de hombros?|press hombros?|press arnold|arnold|overhead|ohp|push press|press por encima|landmine press|shoulder press|press vertical|pike)\b/],
   ['empuje_h', /\b(press (de )?banca|banca|press plano|press inclinado|press declinado|inclinado|declinado|flexiones|push-?ups?|fondos|dips?|aperturas?|cruces? de poleas|cruce|pec-?(fly|deck)|contractor|chest press|press de pecho|press en maquina|press plano)\b/],
 ];
-const PIERNA = ['cuadriceps', 'isquiotibiales', 'gluteo', 'gemelo'];
-const BRAZO = ['biceps', 'triceps', 'deltoides'];
+const PIERNA = ['cuadriceps', 'isquiotibiales', 'gluteo', 'gemelo', 'aductores'];
+const BRAZO = ['biceps', 'triceps', 'deltoides', 'antebrazo'];
 
 // nombre: el del ejercicio; grupos: sus grupos musculares (el primero, el principal); tipo: básico, multiarticular,
 // aislamiento (de la biblioteca), si los hay
@@ -109,6 +109,7 @@ export function patronEjercicio(nombre = '', grupos = [], tipo = []) {
   return {
     pectoral: 'empuje_h', deltoides: 'empuje_v', espalda: 'tiron_h', cuadriceps: 'sentadilla', gluteo: 'bisagra', isquiotibiales: 'bisagra',
     biceps: 'brazo', triceps: 'brazo', abdominales: 'core', gemelo: 'pierna',
+    antebrazo: 'brazo', aductores: 'pierna', lumbares: 'core',
   }[principal] || 'otro';
 }
 

@@ -129,7 +129,7 @@ const ZONAS_POR_PATRON = {
   cuello: ['empuje_v'], espalda_alta: ['tiron_h', 'tiron_v'], zona_lumbar: ['bisagra', 'sentadilla', 'tiron_h'],
   cadera: ['bisagra', 'sentadilla', 'unilateral'], rodilla: ['sentadilla', 'unilateral', 'pierna'], tobillo_pie: ['unilateral', 'sentadilla'],
 };
-const ZONAS_POR_GRUPO = { deltoides: ['hombro'], biceps: ['codo'], triceps: ['codo'], gemelo: ['tobillo_pie'], cuadriceps: ['rodilla'], isquiotibiales: ['rodilla', 'cadera'] };
+const ZONAS_POR_GRUPO = { deltoides: ['hombro'], biceps: ['codo'], triceps: ['codo'], gemelo: ['tobillo_pie'], cuadriceps: ['rodilla'], isquiotibiales: ['rodilla', 'cadera'], antebrazo: ['codo', 'muneca_mano'], aductores: ['cadera'], lumbares: ['zona_lumbar'] };
 export const NOMBRE_ZONA_TU = { cuello: 'Tu cuello', hombro: 'Tu hombro', codo: 'Tu codo', muneca_mano: 'Tu muñeca', espalda_alta: 'Tu espalda alta', zona_lumbar: 'Tu zona lumbar', cadera: 'Tu cadera', rodilla: 'Tu rodilla', tobillo_pie: 'Tu tobillo' };
 export const ZONAS_AVISO = Object.keys(NOMBRE_ZONA_TU);
 // Lo que propone la app al coach (él lo escribe o lo aprueba: hasta entonces no sale nada)

@@ -23,13 +23,16 @@ const UMBRAL_MOLESTIA = { leve: 1, moderada: 2, grave: 3 };
 const ZONA_GRUPOS = {
   hombros: ['deltoides'], pectoral: ['pectoral'], triceps: ['triceps'], espalda_alta: ['espalda'],
   femoral_gluteo: ['isquiotibiales', 'gluteo'], cuadriceps: ['cuadriceps'],
+  // (biblioteca 2) con el grupo de aductores, esa zona ya se puede asignar a sus ejercicios
+  aductor: ['aductores'],
 };
 // ¿Carga este ejercicio esa zona? Cuenta el músculo como principal o secundario. La zona lumbar no tiene músculo
-// equivalente: de partida, bisagras y sentadillas con barra. Aductor y «otra» no se pueden asignar a ejercicios.
+// equivalente: de partida, bisagras y sentadillas con barra (y, desde biblioteca 2, lo que lleve el grupo de lumbares).
+// «Otra» no se puede asignar a ejercicios.
 export function cargaZona(zona, ejercicio) {
   const grupos = ejercicio?.grupos_musculares || [];
   if (ZONA_GRUPOS[zona]) return ZONA_GRUPOS[zona].some((g) => grupos.includes(g));
-  if (zona === 'zona_lumbar') return esBarra(ejercicio?.nombre || '') && ['isquiotibiales', 'gluteo', 'cuadriceps'].includes(grupos[0]);
+  if (zona === 'zona_lumbar') return grupos.includes('lumbares') || (esBarra(ejercicio?.nombre || '') && ['isquiotibiales', 'gluteo', 'cuadriceps'].includes(grupos[0]));
   return false;
 }
 
@@ -218,7 +221,9 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
 
   // ---- la semana de un vistazo ----
   const cuenta = (fs, tipos) => fs.filter((f) => tipos.includes(f.tipo)).length;
-  const zonasSueltas = molestias.filter((m) => !ZONA_GRUPOS[m.zona] && m.zona !== 'zona_lumbar');
+  // (biblioteca 2) el aductor ya se puede asignar a sus ejercicios; si la semana no lleva ninguno, se sigue avisando aquí
+  const sinEjercicio = (zona) => !pautas.some((p) => cargaZona(zona, ejercicios[p.ejercicio_id]));
+  const zonasSueltas = molestias.filter((m) => m.zona !== 'zona_lumbar' && (!ZONA_GRUPOS[m.zona] || (m.zona === 'aductor' && sinEjercicio('aductor'))));
   return {
     filas: finales,
     semana: {

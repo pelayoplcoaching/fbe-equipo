@@ -28,14 +28,25 @@ const RECONOCE = [
   ['barra', /\bbarras?\b(?! v)|\btrap bar\b|\blandmine\b|\bsafety\b|\bpendlay\b|\bmeadows\b|\bremo en (punta|t)\b|\bpress banca\b|\bpeso muerto (convencional|sumo|rumano con barra)\b|\brompecraneos\b|\bsentadilla (barra|frontal)\b|\bhatfield\b|\bbuenos dias\b/],
 ];
 // Lo que no necesita nada (el peso del cuerpo o un trozo de suelo)
-const SIN_MATERIAL = /\bcrunch tumbado\b|\bv-?ups\b|\bpuente de gluteo\b|\bzancadas\b|\bab wheel\b|\bcopenhague\b|\bstep up\b|\bflexiones\b|\bplancha\b|\bburpees?\b|\bsentadilla (sin peso|al aire|libre)\b|\bpeso corporal\b/;
+const SIN_MATERIAL = /\bsin peso\b|\bsentadilla (cosaca|pistol|sissy|isometrica)\b|\bsuperman\b|\bbird dog\b|\bnordico\b|\bstep down\b|\bdead bug\b|\bhollow\b|\bcrunch (inverso|bicicleta)\b|\belevacion de (piernas tumbado|puntas)\b|\babduccion de cadera tumbado\b|\bdeslizante\b|\bcrunch tumbado\b|\bv-?ups\b|\bpuente de gluteo\b|\bzancadas\b|\bab wheel\b|\bcopenhague\b|\bstep up\b|\bflexiones\b|\bplancha\b|\bburpees?\b|\bsentadilla (sin peso|al aire|libre)\b|\bpeso corporal\b/;
 
 // El material que pide un ejercicio, por su nombre: una lista de opciones (cada una, lo que hace falta a la vez);
 // [] si no hace falta nada; null si no se sabe (entonces no se toca)
+// (biblioteca 2) Lo que solo pide un banco (o una silla firme)
+const SOLO_BANCO = /\bfondos entre bancos\b|\breverse hyper en banco\b|\btalones en banco\b|\bdragon flag\b|\bal banco\b|\bhip thrust unilateral sin peso\b/;
 export function materialNecesario(nombre) {
-  const n = normal(nombre || '');
-  if (!n) return null;
-  const hay = RECONOCE.filter(([, re]) => re.test(n)).map(([k]) => k);
+  const n0 = normal(nombre || '');
+  if (!n0) return null;
+  if (SOLO_BANCO.test(n0)) return [['banco']];
+  // (biblioteca 2) «la barra de dominadas» no es una barra con discos
+  const n = n0.replace(/\bbarra de dominadas\b/g, 'dominadas');
+  let hay = RECONOCE.filter(([, re]) => re.test(n)).map(([k]) => k);
+  // (biblioteca 2) Sin «/» (no da a elegir): «con goma» es solo la goma (un jalón, un face pull o unos buenos días con
+  // goma no piden polea ni barra), y «en máquina» manda sobre la polea o las paralelas («dominadas asistidas en máquina»)
+  if (!/\//.test(n)) {
+    if (hay.includes('gomas') && /\bcon gomas?\b/.test(n)) hay = hay.filter((k) => k === 'gomas' || k === 'dominadas');
+    else if (hay.includes('maquinas') && /\ben maquina\b/.test(n)) hay = hay.filter((k) => k !== 'poleas' && k !== 'dominadas');
+  }
   // La barra de una polea (barra en V, recta) o de un multipower no es la barra libre
   const sinBarra = hay.includes('poleas') || hay.includes('multipower') || hay.includes('maquinas');
   const lista = hay.filter((k) => !(k === 'barra' && sinBarra && !/\/|\bo\b/.test(n)));
