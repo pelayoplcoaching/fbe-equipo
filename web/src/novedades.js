@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.170': {
+    atleta: [
+      'Aprende crece: 14 guías nuevas en Entrenar, Comer y Salud, de la rodilla y la creatina a la analítica y el alcohol.',
+    ],
+    coach: [
+      'Aprende: 14 guías de vídeo repartidas en Entrenar (3), Comer (4) y Salud (7). Su texto va en tu SQL privado.',
+    ],
+  },
   '0.169': {
     atleta: [
       'En Aprende, la estantería «Comer» estrena una guía de proteína.',
