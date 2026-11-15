@@ -1,0 +1,117 @@
+// El perfil del atleta, tanda 4 (rama perfil-4): lo puro de las 20 mejoras (logica/perfil-mas.js) y comprobaciones
+// del código.
+//   node test/perfil4.test.mjs
+import { readFileSync } from 'node:fs';
+const P = await import('../web/src/logica/perfil-mas.js');
+let ok = 0, fallos = 0;
+const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
+const lee = (f) => readFileSync(new URL(`../web/${f}`, import.meta.url), 'utf8');
+const s = (ejercicio_id, fecha, kg, reps, extra = {}) => ({ ejercicio_id, ejercicio: { a: 'Sentadilla', b: 'Press banca', c: 'Remo', d: 'Curl' }[ejercicio_id], fecha, kg, reps, ...extra });
+
+console.log('\nTanda 1: el día 1 y hoy, marcas por repeticiones, correcciones y completa tu perfil');
+const H = [
+  s('a', '2026-06-01', 60, 8), s('a', '2026-06-01', 70, 5), s('a', '2026-11-02', 100, 5), s('a', '2026-11-09', 105, 3),
+  s('b', '2026-06-03', 40, 10), s('b', '2026-11-10', 60, 8),
+  s('c', '2026-11-01', 50, 10),
+  s('d', '2026-05-01', 12, 12), s('d', '2026-05-01', 0, 10), s('d', '2026-07-01', 14, 10),
+];
+const d1 = P.diaUnoYHoy(H, { favoritos: ['b'], hoy: '2026-11-15' });
+check(d1.map((x) => x.id).join() === 'b,a,d' && d1.length === 3, 'el día 1 y hoy: primero los suyos, luego los de más series; fuera los de menos de 4 semanas (remo)');
+const a = d1.find((x) => x.id === 'a');
+check(a.fecha === '2026-06-01' && a.kg === 70 && a.reps === 5 && a.antes === 81.7 && a.ahora === 116.7 && a.pct === 43, 'la mejor serie del primer día (70 × 5 → 81,7) frente al mejor de las 6 semanas (116,7): +43 %');
+const d = d1.find((x) => x.id === 'd');
+check(d.ahora === 18.7 && d.antes === 16.8, 'sin series recientes, el mejor de siempre');
+check(P.diaUnoYHoy([], { hoy: '2026-11-15' }).length === 0 && P.diaUnoYHoy(H, {}).length === 0, 'sin series o sin hoy, nada');
+const m = P.marcasPorReps(H, 'a');
+check(m.map((x) => x.reps).join() === '1,3,5,8,10,12' && m[0].kg === 105 && m[1].kg === 105 && m[2].kg === 100 && m[2].fecha === '2026-11-02' && m[3].kg === 60 && m[4].kg === null, 'marcas por repeticiones: el mejor peso con al menos 1, 3, 5, 8… (sin ninguna, vacío)');
+check(P.ejerciciosConMarcas(H).map((x) => x.id).join() === 'a,d,b,c', 'los ejercicios con marcas, los de más series primero (a igualdad, por nombre)');
+const videos = [
+  { id: 'v1', tipo: 'video_tecnica', ejercicio: { id: 'a', nombre: 'Sentadilla' }, revision: { corregido_el: '2026-10-01', checklist: { puntos: [{ t: 'Rodillas fuera', e: 'mal' }] } } },
+  { id: 'v2', tipo: 'video_tecnica', ejercicio: { id: 'a', nombre: 'Sentadilla' }, revision: { corregido_el: '2026-11-01', checklist: { puntos: [{ t: 'Pecho  arriba', e: 'mal' }, { t: 'Profundidad', e: 'mal' }, { t: 'Pies', e: 'bien' }] } } },
+  { id: 'v3', tipo: 'video_tecnica', ejercicio: { id: 'b', nombre: 'Press banca' }, revision: null },
+  { id: 'v4', tipo: 'foto', ejercicio: { id: 'c' }, revision: { corregido_el: '2026-11-05', checklist: { puntos: [{ t: 'x', e: 'mal' }] } } },
+];
+const corr = P.correccionesPorEjercicio({ videos, recordatorios: [{ ejercicio_id: 'a', texto: 'profundidad', actualizado_el: '2026-10-20' }, { ejercicio_id: 'b', texto: 'Escápulas atrás' }], nombres: { b: 'Press banca' } });
+check(corr.length === 2 && corr[0].id === 'a' && corr[0].fecha === '2026-11-01' && corr[0].videoId === 'v2' && corr[0].recordatorios.join() === 'profundidad' && corr[0].fallos.join() === 'Pecho arriba', 'correcciones: los ✗ de su último vídeo corregido, sin repetir los recordatorios (sin distinguir mayúsculas)');
+check(corr[1].id === 'b' && corr[1].nombre === 'Press banca' && corr[1].fallos.length === 0 && corr[1].recordatorios[0] === 'Escápulas atrás', 'un ejercicio solo con recordatorios, con su nombre');
+check(P.correccionesPorEjercicio({}).length === 0, 'sin nada, nada');
+const c0 = P.completarPerfil({}, { entrena: true });
+check(c0.pct === 0 && c0.faltan.length === 7 && c0.faltan[0].clave === 'foto', 'completa tu perfil: sin nada, 0 % y las 7 cosas');
+const c1 = P.completarPerfil({ porque: 'Por mí', meta_nombre: 'Boda', favoritos: ['a'], musica_url: 'https://open.spotify.com/x', cumple_mes: 3, cumple_dia: 4 }, { foto: 'f.jpg', entrena: true, manualEscrito: true });
+check(c1.pct === 100 && c1.faltan.length === 0, 'con todo, 100 % (y la tarjeta no sale)');
+const c2 = P.completarPerfil({ porque: ' ' }, { entrena: false, manualEscrito: false });
+check(c2.total === 5 && c2.faltan.length === 5 && !c2.faltan.some((h) => h.entreno), 'sin entrenamiento, sin lo de entrenar; un porqué en blanco no cuenta');
+check(P.HUECOS_PERFIL.filter((h) => h.fila !== 'foto').every((h) => lee('src/ui/atleta/LoTuyo.jsx').includes(`etiqueta="${h.fila}"`)), 'cada hueco abre su fila de «Lo tuyo» (por su etiqueta, que existe)');
+check(/<CompletaPerfil \/>\s*\n\s*<IndicePerfil vista={vista} cambiarVista={cambiarVista} \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<FilaCorrecciones \/>/.test(lee('src/ui/atleta/Perfil.jsx')), 'en el perfil: lo que falta, el índice con buscador y las correcciones en Tu asesoría');
+check(/<DiaUnoYHoy historial=/.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<MarcasPorReps historial=/.test(lee('src/ui/atleta/PerfilSocial.jsx')), 'el día 1 en Resumen y las marcas por repeticiones en Logros');
+
+console.log('\nTanda 2: historia de bloques, palmarés, logros secretos, equivalencias y trimestre');
+const inf = (id, numero, inicio, fin, extra = {}) => ({ bloque: { id, numero, nombre: `B${numero}`, objetivo: extra.objetivo || null, objetivo_logrado: extra.logrado ?? null }, inicio, fin, terminado: extra.terminado ?? true, sesiones: { hechas: 10, total: 12 }, records: extra.records || [], principales: extra.principales || [], vacio: !!extra.vacio });
+const informes = [
+  inf('1', 1, '2026-06-01', '2026-07-26', { objetivo: 'Técnica', logrado: true, records: [1, 2], principales: [{ nombre: 'Sentadilla', cambio: 8.5 }, { nombre: 'Press', cambio: 12 }] }),
+  inf('2', 2, '2026-07-27', '2026-09-20', { records: [] }),
+  inf('3', 3, '2026-09-21', '2026-12-13', { terminado: false }),
+  inf('4', 4, '2026-01-01', '2026-02-01', { vacio: true }),
+];
+const hb = P.historiaBloques(informes);
+check(hb.map((b) => b.id).join() === '2,1' && hb[1].records === 2 && hb[1].logrado === true && hb[1].mejor.nombre === 'Press' && hb[1].mejor.cambio === 12 && hb[0].mejor === null, 'historia de bloques: los terminados con algo hecho, del último al primero, con récords, objetivo y la mejor subida');
+const pal = P.palmares({ informes, semanasCompletas: 9, records: 1, eventos: [{ nombre: '10K', fecha: '2026-05-01', resultado_seg: 3000 }, { nombre: 'Media', fecha: '2026-10-01', resultado_seg: 6000 }, { nombre: 'Futura', fecha: '2027-01-01', resultado_seg: null }], hoy: '2026-11-15' });
+check(pal.map((x) => `${x.clave}:${x.n}`).join() === 'bloques:2,objetivos:1,semanas:9,records:1,carreras:2' && pal.find((x) => x.clave === 'carreras').detalle === 'Media' && pal.find((x) => x.clave === 'records').titulo === 'Récord', 'palmarés: bloques, objetivos logrados, semanas completas, récords y carreras (la última, con su nombre)');
+check(P.palmares({}).length === 0, 'sin nada, la estantería no sale');
+check(P.horaMadrid('2026-11-14T05:30:00Z') === 6 && P.horaMadrid('2026-07-14T05:30:00Z') === 7 && P.horaMadrid(null) === null, 'la hora, la de Madrid (en invierno +1, en verano +2)');
+const ent = [];
+for (let i = 0; i < 5; i++) ent.push({ fecha: `2026-03-0${i + 2}`, inicio: `2026-03-0${i + 2}T05:00:00Z`, records: 0 });
+ent.push({ fecha: '2026-04-01', inicio: '2026-04-01T16:00:00Z', records: 5, duracion_min: 95 });
+for (let d = 1; d <= 12; d++) ent.push({ fecha: `2026-05-${String(d).padStart(2, '0')}`, inicio: `2026-05-${String(d).padStart(2, '0')}T17:00:00Z` });
+const ls = P.logrosSecretos(ent);
+const c = Object.fromEntries(ls.conseguidos.map((x) => [x.clave, x.fecha]));
+check(c.madrugador === '2026-03-06' && c.lluvia === '2026-04-01' && c.larga === '2026-04-01' && c.mes === '2026-05-12' && c.vuelta === '2026-04-01', 'logros secretos: madrugador (el quinto día), lluvia de récords, sin prisa, mes de doce y de vuelta (tras 3 semanas)');
+check(!c.nocturno && c.cuatro === undefined && ls.quedan === ls.total - ls.conseguidos.length && ls.total === 8 && ls.conseguidos[0].fecha >= ls.conseguidos.at(-1).fecha, 'los que no, siguen ocultos (y cuántos quedan); los conseguidos, del último al primero');
+const semanas = [];
+for (const l of ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22']) for (let k = 0; k < 3; k++) { const d = new Date(`${l}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + k); semanas.push({ fecha: d.toISOString().slice(0, 10) }); }
+check(P.logrosSecretos(semanas).conseguidos.find((x) => x.clave === 'cuatro')?.fecha === '2026-06-24', 'cuatro semanas seguidas con 3 sesiones: el día de la tercera de la cuarta semana');
+check(P.equivalencias({ kg: 160000 }).some((t) => t === 'Este año has levantado lo que pesa 1,1 ballenas azules') === false && P.equivalencias({ kg: 150000 })[0] === 'Este año has levantado lo que pesa 1 ballena azul' && P.equivalencias({ kg: 100 }).length === 0, 'equivalencias: en singular con 1, nada si no llega a 1 de lo más pequeño');
+check(P.equivalencias({ km: 84.39 }).includes('Este año has recorrido 2 maratones') && P.equivalenciaDelDia({ kg: 30000 }, '2026-11-15') === P.equivalenciaDelDia({ kg: 30000 }, '2026-11-15') && P.equivalenciaDelDia({}, '2026-11-15') === null, 'con km, la de los maratones; la del día es siempre la misma ese día');
+check(JSON.stringify(P.delAnio([{ fecha: '2026-02-01', tonelaje: 1000, cardio_hecho: { km: 5.25 } }, { fecha: '2025-12-31', tonelaje: 9999 }, { fecha: '2026-03-01', tonelaje: 500 }], '2026-11-15')) === '{"kg":1500,"km":5.3}', 'lo de este año: kilos y km');
+const ent2 = [{ fecha: '2026-07-05', tonelaje: 1000 }, { fecha: '2026-08-05', tonelaje: 1000 }, { fecha: '2026-10-02', tonelaje: 4000, records: 2, duracion_min: 120 }, { fecha: '2026-11-03', tonelaje: 2600 }];
+const ser2 = [s('a', '2026-08-01', 100, 5), s('a', '2026-10-02', 110, 5), s('b', '2026-10-02', 50, 5)];
+const t1 = P.resumenTrimestre(ent2, ser2, '2026-11-15');
+check(t1.titulo === 'oct–dic 2026' && !t1.completo && t1.sesiones === 2 && t1.records === 2 && t1.minutos === 120 && t1.toneladas === 6.6 && t1.antes === 2 && t1.mejora.nombre === 'Sentadilla' && t1.mejora.pct === 9.9, 'el trimestre en curso: sesiones, récords, horas, toneladas, frente al anterior, y lo que más ha subido (+9,9 %)');
+const t2 = P.resumenTrimestre(ent2, ser2, '2026-10-10');
+check(t2.titulo === 'jul–sep 2026' && t2.completo && t2.sesiones === 2, 'en sus 3 primeras semanas, el trimestre anterior entero');
+check(P.resumenTrimestre([], [], '2026-11-15') === null && P.resumenTrimestre(ent2, ser2, null) === null, 'sin entrenos, nada');
+check(/<PalmaresYBloques /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<LogrosSecretos /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<Equivalencia /.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /<Trimestre /.test(lee('src/ui/atleta/PerfilSocial.jsx')), 'palmarés, bloques y secretos en Logros; equivalencias en Resumen; el trimestre en Datos');
+
+console.log('\nTanda 3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada');
+const ev = P.mapaEvitados({ evitados: [{ ejercicio_id: 'a', motivo: 'molestia' }, { ejercicio_id: 'b', motivo: 'raro' }, null] });
+check(JSON.stringify(ev) === '{"a":"molestia"}' && JSON.stringify(P.mapaEvitados(null)) === '{}', 'lo que evita: solo con motivos válidos');
+const ap = P.apartarEvitados([{ id: 'a', nombre: 'Fondos' }, { id: 'c', nombre: 'Press' }], ev);
+check(ap.quedan.map((x) => x.id).join() === 'c' && ap.apartados[0].motivo === 'molestia' && P.textoMotivo('material') === 'No tengo el material', '«Cambiar ejercicio» aparta los que evita (y dice por qué)');
+check(P.alternarEvitado([{ ejercicio_id: 'a', motivo: 'gusto' }], 'a', 'molestia').length === 1 && P.alternarEvitado([{ ejercicio_id: 'a', motivo: 'gusto' }], 'a').length === 0 && P.alternarEvitado([], 'x', 'otro').length === 0, 'añadir sin repetir, quitar, y motivos raros no');
+const mb = P.materialDe({ material: { casa: ['gomas'], mancuernas_kg: 20 } }, { casa: ['barra'], viaje: ['poleas'] });
+check(mb.deLaBase && mb.casa.join() === 'gomas' && mb.viaje.join() === 'poleas' && mb.mancuernas_kg === 20, 'el material: lo de su perfil manda; lo que falta, de este móvil');
+check(!P.materialDe(null, { casa: ['barra'] }).deLaBase && P.mismoMaterial({ casa: ['a', 'b'], viaje: [] }, { casa: ['b', 'a'] }) && !P.mismoMaterial({ casa: ['a'] }, { casa: ['b'] }), 'sin nada en su perfil, el de este móvil; y se comparan sin importar el orden');
+const gj = P.guardadosJuntos({ favoritos: ['e1', 'e9'], nombres: { e1: 'Sentadilla' }, recetas: [{ id: 'r1', nombre: 'Tortilla', toma: 'cena' }], publicaciones: [{ id: 'p1', texto: 'x'.repeat(120), autor: 'Luis' }, { id: 'p2', texto: '' }] });
+check(gj.map((x) => x.tipo).join() === 'ejercicio,receta,publicacion' && gj[2].titulo.length <= 90 && gj[2].detalle === 'De Luis' && P.TIPOS_GUARDADO.length === 5, 'tus guardados, juntos: ejercicios, recetas y publicaciones (largas, recortadas)');
+const mig = lee('../supabase/migraciones/073_perfil_4.sql');
+check(/if v > 73 then/.test(mig) && /numero = 72\) then/.test(mig) && /values \(73\)/.test(mig) && /revoke execute on function public\.portada_fuera\(\)/.test(mig) && /'coach-voz', 'portadas'\)\)/.test(mig), 'la migración del perfil 4: pide la 072, la trigger revocada y el bucket en la cola de borrado');
+const apiTxt = lee('src/datos/api.js');
+check(/'coach-voz', 'portadas'\]\) \{/.test(apiTxt) && /\['voz', 'comunidad', 'apuntes', 'coach-voz', 'portadas'\]\.includes/.test(apiTxt) && /async guardarPerfil4\(/.test(apiTxt) && /async ponerPortadaFoto\(/.test(apiTxt), 'el bucket «portadas» en borrarDeStorage y limpiarAlmacenamiento');
+check(/<FilaEvitados \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<RinconAnimo \/>/.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /apartarEvitados/.test(lee('src/ui/atleta/Sesion.jsx')) && /aviso-evitado/.test(lee('src/ui/coach/Editor.jsx')) && /Prefiere evitar/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /alRincon/.test(lee('src/ui/Chat.jsx')), 'en su sitio: perfil, sesión, editor y ficha del coach, y el chat');
+
+console.log('\nTanda 4: descanso y pasos, atajos, privacidad, cuenta y hoja de cálculo');
+const dias = [];
+for (let i = 0; i < 56; i++) { const t = new Date(Date.UTC(2026, 10, 15 - i, 12)); dias.push({ fecha: t.toISOString().slice(0, 10), pasos: i < 28 ? 9000 : 7000, sueno_min: i < 28 ? 420 : 430 }); }
+const dp = P.descansoYPasos(dias, '2026-11-15');
+check(dp.pasos.media === 9000 && dp.pasos.tendencia === 'sube' && dp.sueno.tendencia === 'igual' && dp.sueno.semanas.length === 4 && P.textoHoras(425) === '7 h 05 min', 'descanso y pasos: la media de 4 semanas, por semana, y su tendencia frente a las 4 de antes');
+check(P.descansoYPasos([{ fecha: '2026-11-14', pasos: 5000 }], '2026-11-15') === null && P.descansoYPasos(dias.slice(0, 5), '2026-11-15').pasos.tendencia === null, 'con menos de 3 días, nada; sin las 4 de antes, sin tendencia');
+check(P.atajosValidos(null).join() === 'checkin,progreso,mensajes' && P.atajosValidos(['carne', 'otro', 'carne', 'datos', 'equipo', 'semana']).join() === 'carne,datos,equipo', 'atajos: tres como mucho, sin repetir ni raros; por defecto, check-in, progreso y mensajes');
+check(P.alternarAtajo(['carne'], 'carne').join() === 'carne' && P.alternarAtajo(['checkin', 'progreso', 'mensajes'], 'equipo').length === 3 && P.alternarAtajo(['checkin'], 'equipo').join() === 'checkin,equipo', 'quitar uno (no el último) y añadir hasta tres');
+const pv = P.privacidadDeUnVistazo({ salud: true, saludConectada: true, comunidad: false, portada: true, evitados: 2 });
+check(pv.coach.some((t) => /peso/.test(t)) && pv.coach.some((t) => /Salud del iPhone/.test(t)) && pv.coach.some((t) => /evitar/.test(t)) && pv.equipo.length === 0 && pv.movil.some((t) => /rincón/.test(t)), 'privacidad de un vistazo: lo del coach según lo que de verdad comparte; fuera de la comunidad, el equipo no ve nada');
+const csv = P.aCSV([{ fecha: '2026-01-02', ejercicio: 'Press; "banca"', kg: 82.5, reps: 5, rpe: null }, { fecha: '2026-01-03', ejercicio: '=1+1', kg: 60, reps: 8, rpe: 8 }], P.CSV_SERIES);
+check(csv.startsWith('﻿Fecha;Ejercicio;Kg;Repeticiones;RPE\r\n') && csv.includes('"Press; ""banca"""') && csv.includes(';82,5;5;\r\n') && csv.includes(`"'=1+1"`), 'CSV: con «;», coma decimal, comillas cuando hacen falta y sin fórmulas');
+check(/salirEnTodos\(\)/.test(lee('src/datos/backend-supabase.js')) && /scope: 'global'/.test(lee('src/datos/backend-supabase.js')) && /cambiarCorreo/.test(lee('src/datos/backend-memoria.js')) && /<FilasCuentaSegura /.test(lee('src/ui/atleta/Perfil.jsx')) && /<FilaHojaCalculo \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<AtajosPerfil /.test(lee('src/ui/atleta/Perfil.jsx')) && /<DescansoPasos /.test(lee('src/ui/atleta/PerfilSocial.jsx')), 'en su sitio: atajos arriba, descanso y pasos en Datos; privacidad, correo, cerrar en todos y CSV en Cuenta');
+
+console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
+process.exit(fallos ? 1 : 0);

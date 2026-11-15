@@ -40,7 +40,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -140,6 +140,13 @@ const falta072 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
   return /personal_musica_guardar|musica_(abierta_lista|de_sesiones|mas_abierta|copiar|biblioteca|coach_uso|reto_guardar)|comunidad_(cancion_guardar|canciones|reto_musical|reto_cancion|reto_votar|listas_companeros|companero_lista)|PGRST202|42883/.test(m)
     && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
+};
+// (073) el perfil 4: lo que evita, su material, el rincón de ánimo y la foto de portada
+const AVISO_073 = 'Esto aún no está disponible: hay que poner al día la base (migración «perfil 4», supabase/migraciones/073_perfil_4.sql)';
+const falta073 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
+  return /personal_perfil4_guardar|animo_(mios|fijar)|portada_(de|poner|quitar)|portadas|PGRST202|42883/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|bucket not found|PGRST202|42883/i.test(m);
 };
 const AVISO_071 = 'Para grabar esta frase falta ejecutar la migración 071 en Supabase (supabase/migraciones/071_voces_coach_2.sql).';
 const AVISO_070 = 'Esto aún no está disponible: hay que poner al día la base (migración 070, supabase/migraciones/070_personal_voz.sql)';
@@ -454,7 +461,8 @@ export const FOTO_MINI_MAX = 16000;
 // alguna, solo pasa que esa pantalla vuelve a cargar en vez de salir al momento
 // (v0.160) las de la 072 que solo leen: musica_de_sesiones, musica_mas_abierta, musica_biblioteca, musica_coach_uso, comunidad_canciones,
 // comunidad_reto_musical y comunidad_listas_companeros (si contaran como escritura, lo recordado de Hoy se olvidaría)
-const RPC_DE_CONSULTA = new Set(['musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+// (073) animo_mios y portada_de solo leen
+const RPC_DE_CONSULTA = new Set(['animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -1017,6 +1025,55 @@ export function crearApi(backend) {
         return r || null;
       } catch (e) { if (falta072(e)) throw new Error(AVISO_072); throw e; }
     },
+    // ------------------------------------------------------------ (perfil 4, migración 073)
+    // Lo que evita (con su motivo) y su material de casa y de viaje: solo esas claves; lo demás de lo suyo no se toca
+    async guardarPerfil4(datos) {
+      const limpio = {};
+      if ('evitados' in datos) limpio.evitados = (datos.evitados || []).map((x) => ({ ejercicio_id: x.ejercicio_id, motivo: x.motivo }));
+      if ('material' in datos) {
+        const m = datos.material || {};
+        limpio.material = {};
+        for (const l of ['casa', 'viaje']) if (Array.isArray(m[l])) limpio.material[l] = [...new Set(m[l])];
+        if (m.mancuernas_kg != null && m.mancuernas_kg !== '') limpio.material.mancuernas_kg = Number(m.mancuernas_kg);
+      }
+      try {
+        const r = await b.rpc('personal_perfil4_guardar', { p_datos: limpio });
+        personalMemo = { k: uid(), t: Date.now(), p: Promise.resolve(r || null) };
+        personalAtletasMemo = null;
+        try { globalThis.dispatchEvent?.(new Event('fbe-personal')); } catch { /* */ }
+        return r || null;
+      } catch (e) { if (falta073(e)) throw new Error(AVISO_073); throw e; }
+    },
+    // Su rincón de ánimo (solo él): [{ id, tipo, ref_id, texto, autor, creado_en, fijado_en }]; sin la 073, null
+    async animoMios() {
+      try { const r = await b.rpc('animo_mios', {}); return Array.isArray(r) ? r : []; } catch (e) { if (falta073(e)) return null; throw e; }
+    },
+    // Fijar (o soltar) un mensaje: 'chat' (de su coach) o 'comunidad' (un comentario de un compañero en una publicación suya)
+    async fijarAnimo(tipo, id, fijar = true) {
+      try { return await b.rpc('animo_fijar', { p_tipo: tipo, p_id: id, p_fijar: !!fijar }); } catch (e) { if (falta073(e)) throw new Error(AVISO_073); throw e; }
+    },
+    // La foto de portada de un perfil (sin perfil, la propia): su dirección, o null; sin la 073, undefined
+    async portadaFoto(perfilId = null) {
+      let ruta;
+      try { ruta = await b.rpc('portada_de', perfilId ? { p_perfil: perfilId } : {}); } catch (e) { if (falta073(e)) return undefined; throw e; }
+      if (Array.isArray(ruta)) ruta = ruta[0]?.portada_de ?? ruta[0] ?? null;
+      if (!ruta || typeof ruta !== 'string') return null;
+      return b.storage.url(ruta, 3600, 'portadas').catch(() => null);
+    },
+    // Pone su portada: la sube a su carpeta del bucket «portadas» (JPEG ya recortado) y la apunta; la anterior se encola
+    async ponerPortadaFoto(blob) {
+      if (!blob || blob.size > 614400 || !/^image\/(jpeg|webp)$/.test(blob.type || '')) throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
+      const ruta = `${uid()}/${crypto.randomUUID()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
+      try { await b.storage.subir(ruta, blob, blob.type, { bucket: 'portadas' }); } catch (e) { if (falta073(e)) throw new Error(AVISO_073); throw e; }
+      try { await b.rpc('portada_poner', { p_ruta: ruta }); } catch (e) {
+        await b.storage.borrar([ruta], 'portadas').catch(() => {});
+        if (falta073(e)) throw new Error(AVISO_073); throw e;
+      }
+      return b.storage.url(ruta, 3600, 'portadas').catch(() => null);
+    },
+    async quitarPortadaFoto() {
+      try { await b.rpc('portada_quitar', {}); } catch (e) { if (falta073(e)) throw new Error(AVISO_073); throw e; }
+    },
     // Abre una música desde la app (en una sesión, si se sabe): para «Lo batiste con…» y «Lo que más te acompaña»
     async musicaAbiertaLista(url, sesionId = null) {
       const u = urlMusica(url);
@@ -1485,7 +1542,9 @@ export function crearApi(backend) {
       // (v0.157) la agenda, el manual, la voz del coach y «Busco compañero» (069 y 070): con la 066 pero sin la 070, la 2026-12.30
       if ((await api.personal070().catch(() => null)) !== true) return VERSION_LEGAL_SIN_070;
       // (v0.160) la música 3 (072): con la 070 pero sin la 072, la 2026-12.31
-      return (await api.musica072().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_072;
+      if ((await api.musica072().catch(() => null)) !== true) return VERSION_LEGAL_SIN_072;
+      // (v0.167) el perfil 4 (073): con la 072 pero sin la 073, la 2026-12.32
+      return (await api.perfil073().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_073;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2817,7 +2876,7 @@ export function crearApi(backend) {
         // (v0.73) y las fotos de los momentos que caducan (bucket «comunidad», 045)
         // (v0.73, 045) la cola va por bucket y ruta: se quita de la de cada bucket (sin la 045, todas las de esas rutas)
         // (065, revisión) y los audios de los apuntes del coach (bucket «apuntes»)
-        for (const cubo of ['archivos', 'voz', 'comunidad', 'apuntes', 'coach-voz']) {
+        for (const cubo of ['archivos', 'voz', 'comunidad', 'apuntes', 'coach-voz', 'portadas']) {
           const rs = items.filter((x) => x.bucket === cubo).map((x) => x.ruta);
           if (!rs.length) continue;
           await b.storage.borrar(rs, cubo);
@@ -2831,7 +2890,7 @@ export function crearApi(backend) {
       if (!(await api.esCoachAhora())) return 0;
       let rutas;
       // (v0.56) con su bucket (la 034); sin ella, todo es de «archivos»
-      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad', 'apuntes', 'coach-voz'].includes(x.bucket) ? x.bucket : 'archivos' })); }
+      try { rutas = (await b.rpc('storage_pendiente_cubos', { p_limite: 200 }) || []).filter((x) => x?.ruta).map((x) => ({ ruta: x.ruta, bucket: ['voz', 'comunidad', 'apuntes', 'coach-voz', 'portadas'].includes(x.bucket) ? x.bucket : 'archivos' })); }
       catch {
         try { rutas = await b.rpc('storage_pendiente', { p_limite: 200 }); } catch { return 0; }
         rutas = (rutas || []).map((x) => (typeof x === 'string' ? x : x?.storage_pendiente || x?.r || null)).filter(Boolean).map((ruta) => ({ ruta, bucket: 'archivos' }));
@@ -4466,6 +4525,18 @@ export function crearApi(backend) {
         pr.then((x) => { if (x == null && api._v060 === pr) api._v060 = null; });
       }
       return api._v060;
+    },
+    // (v0.167) ¿Está la 073? Sonda de consulta: portada_de() (sin la 073, la función no existe)
+    async perfil073() {
+      if (!api._v073) {
+        const pr = b.rpc('portada_de', {}).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          return /PGRST202|42883|could not find|schema cache|does not exist/i.test(m) ? false : null;
+        });
+        api._v073 = pr;
+        pr.then((x) => { if (x == null && api._v073 === pr) api._v073 = null; });
+      }
+      return api._v073;
     },
     // (v0.160) ¿Está la 072? Sonda de consulta: musica_de_sesiones('{}') (sin la 072, la función no existe)
     async musica072() {

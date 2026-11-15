@@ -6141,6 +6141,18 @@ try {
   console.log('\nMúsica 3, tanda 4: para el coach y fuera de Spotify');
   const { probarMusica3Coach } = await import('./e2e-musica3-t4.mjs');
   await probarMusica3Coach({ navegador, check });
+  console.log('\nEl perfil, tanda 4, T1: el día 1, marcas por repeticiones, correcciones, completa tu perfil e índice');
+  const { probarPerfil4T1 } = await import('./e2e-perfil4-t1.mjs');
+  await probarPerfil4T1({ navegador, check });
+  console.log('\nEl perfil, tanda 4, T2: palmarés, historia de bloques, logros secretos, equivalencias y trimestre');
+  const { probarPerfil4T2 } = await import('./e2e-perfil4-t2.mjs');
+  await probarPerfil4T2({ navegador, check });
+  console.log('\nEl perfil, tanda 4, T3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada');
+  const { probarPerfil4T3 } = await import('./e2e-perfil4-t3.mjs');
+  await probarPerfil4T3({ navegador, check });
+  console.log('\nEl perfil, tanda 4, T4: atajos, descanso y pasos, privacidad, cuenta y hoja de cálculo');
+  const { probarPerfil4T4 } = await import('./e2e-perfil4-t4.mjs');
+  await probarPerfil4T4({ navegador, check });
   // Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
   console.log('\nColor');
   const { probarColor } = await import('./e2e-color.mjs');
