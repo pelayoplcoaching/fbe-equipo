@@ -27,6 +27,7 @@ import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, 
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
 import { SuplementosCoach } from './SuplementosCoach.jsx';
+import { PausaCoach } from '../Pausas.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
@@ -742,6 +743,8 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   return (
     <div class="pila">
       <ServicioYNivel atleta={atleta} recargar={recargar} />
+      {/* (v0.175, 078) pausar la asesoría: sin recordatorios ni alertas, y la racha no se rompe */}
+      <PausaCoach atleta={atleta} alCambiar={() => { recargar(); alCambiar?.(); }} />
       <CuestionarioCoach atleta={atleta} alCambiar={alCambiar} />
       <LoQueUsa atleta={atleta} />
       <form class="panel panel-pad pila" onSubmit={async (e) => {
