@@ -1643,6 +1643,17 @@
     },
     "color": "#452b79"
   },
+  "cua-pistol": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-pistol-192.03c5d9a8.webp",
+      "512": "imagenes/ejercicio/cua-pistol-512.835d53d5.webp"
+    },
+    "color": "#443370"
+  },
   "cua-platz-squat": {
     "proporcion": [
       1,
