@@ -77,11 +77,11 @@ check(/if v > 74 then/.test(mig) && /numero = 73\) then/.test(mig) && /values \(
 console.log('\nAprende');
 const Gs = await import('../web/src/logica/guias.js');
 check(Gs.estanteDe({ clave: 'proteina' }) === 'comer' && Gs.estanteDe({ clave: 'suplementacion' }) === 'comer' && Gs.estanteDe({ clave: 'otra' }) === 'mas', 'la guía de proteína, en la estantería «Comer»');
-// Las 14 guías de vídeo del coach (se cargan con un SQL aparte): cada una en su estantería, y su clave vale para la tabla
+// Las 16 guías nuevas del coach (14 de vídeo, la tabla de bebidas y la de definición) (se cargan con un SQL aparte): cada una en su estantería, y su clave vale para la tabla
 {
-  const donde = { entrenar: ['rodilla', 'baremos', 'volver-40'], comer: ['creatina', 'numero-proteina', 'suplementos-12', 'cuatro-formulas'], salud: ['tension-pesas', 'analitica', 'grasa-visceral', 'despues-de-comer', 'alcohol', 'sarcopenia', 'hospital'] };
+  const donde = { entrenar: ['rodilla', 'baremos', 'volver-40'], comer: ['creatina', 'numero-proteina', 'suplementos-12', 'cuatro-formulas', 'bebidas-alcohol', 'definicion'], salud: ['tension-pesas', 'analitica', 'grasa-visceral', 'despues-de-comer', 'alcohol', 'sarcopenia', 'hospital'] };
   const todas = Object.values(donde).flat();
-  check(todas.length === 14 && Object.entries(donde).every(([e, cs]) => cs.every((c) => Gs.estanteDe({ clave: c }) === e)), 'las 14 guías de vídeo, cada una en su estantería (3 en Entrenar, 4 en Comer, 7 en Salud)');
+  check(todas.length === 16 && Object.entries(donde).every(([e, cs]) => cs.every((c) => Gs.estanteDe({ clave: c }) === e)), 'las 16 guías nuevas, cada una en su estantería (3 en Entrenar, 6 en Comer, 7 en Salud)');
   check(todas.every((c) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(c)) && new Set(Gs.ESTANTES.flatMap((e) => e.claves)).size === Gs.ESTANTES.flatMap((e) => e.claves).length, 'claves válidas, y ninguna repetida entre estanterías');
   const orden = Gs.porEstantes([{ clave: 'mitos', orden: 40 }, { clave: 'analitica', orden: 142 }, { clave: 'tension-pesas', orden: 141 }]).find((e) => e.id === 'salud').guias.map((g) => g.clave).join();
   check(orden === 'mitos,tension-pesas,analitica', 'dentro de la estantería, por su orden: las del coach de siempre delante');
