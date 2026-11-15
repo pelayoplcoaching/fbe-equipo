@@ -1599,6 +1599,17 @@
     },
     "color": "#442d78"
   },
+  "cua-leg-extension-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-leg-extension-unilateral-192.cae1f2a5.webp",
+      "512": "imagenes/ejercicio/cua-leg-extension-unilateral-512.bf0bf752.webp"
+    },
+    "color": "#442679"
+  },
   "cua-leg-extensions": {
     "proporcion": [
       1,
@@ -1609,6 +1620,17 @@
       "512": "imagenes/ejercicio/cua-leg-extensions-512.b1b15bed.webp"
     },
     "color": "#47366e"
+  },
+  "cua-multipower-pies-adelantados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-multipower-pies-adelantados-192.e017984d.webp",
+      "512": "imagenes/ejercicio/cua-multipower-pies-adelantados-512.238f1801.webp"
+    },
+    "color": "#513483"
   },
   "cua-nordico-inverso": {
     "proporcion": [
@@ -1642,6 +1664,17 @@
       "512": "imagenes/ejercicio/cua-prensa-512.fce3f4ed.webp"
     },
     "color": "#4b3973"
+  },
+  "cua-prensa-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-prensa-unilateral-192.2a199b2e.webp",
+      "512": "imagenes/ejercicio/cua-prensa-unilateral-512.bc3d45c2.webp"
+    },
+    "color": "#4a2d7d"
   },
   "cua-sentadilla-barra-alta": {
     "proporcion": [
@@ -1829,6 +1862,28 @@
       "512": "imagenes/ejercicio/cua-split-squat-pie-elevado-512.00418097.webp"
     },
     "color": "#45297d"
+  },
+  "cua-step-down-lateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-step-down-lateral-192.9a8b4b6f.webp",
+      "512": "imagenes/ejercicio/cua-step-down-lateral-512.8c25553c.webp"
+    },
+    "color": "#44257e"
+  },
+  "cua-step-up-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-step-up-mancuernas-192.064ba158.webp",
+      "512": "imagenes/ejercicio/cua-step-up-mancuernas-512.63ae17ff.webp"
+    },
+    "color": "#44257d"
   },
   "cua-zancadas": {
     "proporcion": [
@@ -4447,6 +4502,50 @@
       "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
     },
     "color": "#442f6c"
+  },
+  "lum-bird-dog": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-bird-dog-192.417bfedb.webp",
+      "512": "imagenes/ejercicio/lum-bird-dog-512.6d86877e.webp"
+    },
+    "color": "#3a1e70"
+  },
+  "lum-extension-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-extension-maquina-192.1e2a1cee.webp",
+      "512": "imagenes/ejercicio/lum-extension-maquina-512.443c5948.webp"
+    },
+    "color": "#432578"
+  },
+  "lum-hiperextensiones-horizontal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-hiperextensiones-horizontal-192.45b7c689.webp",
+      "512": "imagenes/ejercicio/lum-hiperextensiones-horizontal-512.8ef76e41.webp"
+    },
+    "color": "#40207a"
+  },
+  "lum-superman": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-superman-192.a09922ba.webp",
+      "512": "imagenes/ejercicio/lum-superman-512.9570a0ce.webp"
+    },
+    "color": "#381d6d"
   },
   "manual": {
     "proporcion": [
