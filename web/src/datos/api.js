@@ -2765,7 +2765,14 @@ export function crearApi(backend) {
       if (fila.tipo === 'peso') fila.peso_inicio = await api.tendenciaPesoActual(p.atleta_id, hoy).catch(() => null);
       const creado = await api.crear('objetivos', fila);
       try { await b.rpc('objetivo_propuesta_resolver', { p_id: p.id, p_aceptar: true, p_objetivo: creado.id, p_nota: nota || null }); }
-      catch (e) { await api.borrar('objetivos', creado.id).catch(() => {}); if (falta076(e)) throw new Error(AVISO_076); throw e; }
+      catch (e) {
+        // (revisión) si la respuesta se perdió pero la base sí la aceptó, el objetivo se queda; solo se deshace si sigue esperando
+        const sigue = await api.propuestasPendientes(p.atleta_id).then((l) => l.some((x) => x.id === p.id)).catch(() => null);
+        if (sigue === false) return creado;
+        if (sigue === true) await api.borrar('objetivos', creado.id).catch(() => {});
+        if (falta076(e)) throw new Error(AVISO_076);
+        throw e;
+      }
       return creado;
     },
     async descartarPropuesta(id, nota = null) {

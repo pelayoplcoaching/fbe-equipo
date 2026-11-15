@@ -8,7 +8,7 @@ import { mejorReciente, REPS_MAX_OBJETIVO } from '../../logica/objetivos.js';
 import { e1rm, num } from '../../logica/calculos.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
 import { conCarrera, leerTiempo, fmtTiempo } from '../../logica/carrera.js';
-import { hoyISO, sumarDias, fmtCorta } from '../../logica/fechas.js';
+import { hoyISO, sumarDias, fmtCorta, fechaMadrid } from '../../logica/fechas.js';
 import { deVista, vista, enLibras, etiquetaPeso, nombrePeso, pesoTxt } from '../../logica/unidades.js';
 
 const DISTANCIAS = [[5, '5 km'], [10, '10 km'], [21.1, 'Media'], [42.2, 'Maratón']];
@@ -29,7 +29,7 @@ export function TarjetaObjetivos({ estado, programa, salud }) {
   const [abierta, setAbierta] = useState(false);
   const d = estado.datos;
   if (!d || atleta.estado === 'baja') return null;
-  const hoy = hoyISO();
+  const hoy = fechaMadrid();   // (revisión) el mismo reloj que la base, para comparar con cuándo contestó
   const pendientes = (d.propuestas || []).filter((x) => x.estado === 'pendiente').length;
   const toca = tocaCuestionario({ contestadoEn: d.contestado_en, inicioBloque: inicioDelBloque(programa), pospuestoHasta: pospuesto, pendientes, hoy });
   if (!toca && !abierta) return null;
@@ -242,7 +242,7 @@ export function PropuestasTuyas({ salud }) {
   const [ocupado, una] = useUnaVez();
   const d = estado.datos;
   if (!d || atleta.estado === 'baja') return null;
-  const { pendientes, recientes } = propuestasVisibles(d.propuestas || [], hoyISO());
+  const { pendientes, recientes } = propuestasVisibles(d.propuestas || [], fechaMadrid());
   const retirar = (p) => una(async () => { try { await api.retirarPropuesta(p.id); aviso('Propuesta retirada'); estado.recargar(true); } catch (e) { aviso(e.message, 'error'); } });
   return (
     <div class="propuestas-tuyas pila-s">

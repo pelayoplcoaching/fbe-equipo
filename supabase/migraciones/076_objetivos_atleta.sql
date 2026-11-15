@@ -160,6 +160,8 @@ begin
     v_motivo := fbe_privado.texto_limpio(x ->> 'motivo');
     if char_length(v_titulo) > 80 then raise exception 'El objetivo, como mucho 80 caracteres' using errcode = '22023'; end if;
     if char_length(v_motivo) > 200 then raise exception 'El porqué, como mucho 200 caracteres' using errcode = '22023'; end if;
+    -- (revisión) la fecha, solo como AAAA-MM-DD (ni «today» ni otros formatos)
+    if x ->> 'fecha' is not null and x ->> 'fecha' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then raise exception 'Fecha no válida' using errcode = '22023'; end if;
     begin v_fecha := (x ->> 'fecha')::date; exception when others then raise exception 'Fecha no válida' using errcode = '22023'; end;
     if v_fecha is not null and (v_fecha < v_hoy or v_fecha > v_hoy + 730) then raise exception 'La fecha tiene que estar entre hoy y dentro de dos años' using errcode = '22023'; end if;
     if v_tipo = 'fuerza' then
@@ -199,12 +201,13 @@ create or replace function public.objetivo_propuesta_retirar(p_id uuid) returns 
 language plpgsql security definer set search_path = '' as $$
 declare v public.objetivos_propuestos;
 begin
-  select * into v from public.objetivos_propuestos where id = p_id;
+  -- (revisión) con cerrojo: si el coach la contesta a la vez, no se borra una ya contestada
+  select * into v from public.objetivos_propuestos where id = p_id for update;
   if v.id is null then return; end if;
   if v.atleta_id is distinct from public.mi_atleta_id() then raise exception 'Eso no es tuyo' using errcode = '42501'; end if;
   if public.esta_de_baja() then raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada'; end if;
   if v.estado <> 'pendiente' then raise exception 'Tu coach ya la ha contestado' using errcode = '22023'; end if;
-  delete from public.objetivos_propuestos where id = p_id;
+  delete from public.objetivos_propuestos where id = p_id and estado = 'pendiente';
 end $$;
 
 -- El coach: las que esperan (de todos o de un atleta)
@@ -229,6 +232,10 @@ begin
   if v.estado <> 'pendiente' then raise exception 'Esa propuesta ya estaba contestada' using errcode = '22023'; end if;
   if p_aceptar and (p_objetivo is null or not exists (select 1 from public.objetivos o where o.id = p_objetivo and o.atleta_id = v.atleta_id)) then
     raise exception 'Falta el objetivo de ese atleta' using errcode = '22023';
+  end if;
+  -- (revisión) un objetivo de peso solo se acepta si el atleta mantiene su consentimiento de datos de salud
+  if p_aceptar and v.tipo = 'peso' and not public.consentimiento_salud_de_atleta(v.atleta_id) then
+    raise exception 'Ha retirado su consentimiento de datos de salud: un objetivo de peso no se puede aceptar' using errcode = '42501';
   end if;
   update public.objetivos_propuestos set estado = case when p_aceptar then 'aceptada' else 'descartada' end,
     objetivo_id = case when p_aceptar then p_objetivo else null end, nota_coach = v_nota, resuelto_en = now()

@@ -1551,6 +1551,7 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .tarjeta-cuestionario strong { font-size: var(--letra-15-5); }
 /* (v0.173) los objetivos que propone el atleta: la tarjeta de Hoy, el cuestionario y sus propuestas en Progreso */
 .tarjeta-objetivos .fila-envolver { gap: var(--esp-8); }
+.seccion-objetivos:has(> h2:only-child) { display: none; }
 .objetivos-actuales ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
 .objetivos-actuales li { display: flex; gap: var(--esp-8); align-items: center; }
 .objetivos-actuales li svg { flex: none; width: var(--ico-16); height: var(--ico-16); color: var(--morado); }

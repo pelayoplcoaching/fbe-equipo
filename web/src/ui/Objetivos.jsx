@@ -12,7 +12,7 @@ export function TarjetaObjetivo({ o, esCoach = false }) {
   const tipo = tipoDeObjetivo(o);
   const hoy = hoyISO();
   const quedan = o.fecha_limite ? diasEntre(hoy, o.fecha_limite) : null;
-  const pct = a ? a.pct : w && o.estado !== 'completado' ? w.pct : o.progreso_pct;
+  const pct = a ? a.pct : w ? (o.estado === 'completado' ? 100 : w.pct) : o.progreso_pct;
   const conseguido = a?.conseguido || o.estado === 'completado';
   const plazo = o.fecha_limite ? `para el ${fmtCorta(o.fecha_limite)}${quedan >= 0 ? ` (quedan ${quedan} días)` : ''}` : '';
   return (

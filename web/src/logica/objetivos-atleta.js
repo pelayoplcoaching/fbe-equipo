@@ -76,8 +76,10 @@ export const tipoDeObjetivo = (o) => o?.tipo || (o?.ejercicio_id ? 'fuerza' : 'l
 
 // La fila del objetivo que crea el coach al aceptar una propuesta tal cual (después la puede ajustar en su hoja)
 export function objetivoDePropuesta(p) {
-  const fila = { titulo: textoPropuesta(p), descripcion: p.motivo || null, fecha_limite: p.fecha || null, estado: 'en_curso', tipo: p.tipo, propuesto_por_atleta: true };
-  if (p.tipo === 'fuerza') Object.assign(fila, { ejercicio_id: p.ejercicio_id, kg_objetivo: Number(p.kg), reps_objetivo: Number(p.reps) });
+  // (revisión) una marca cuyo ejercicio ya no está en la biblioteca sale como objetivo libre (lo marca el coach)
+  const tipo = p.tipo === 'fuerza' && !p.ejercicio_id ? 'libre' : p.tipo;
+  const fila = { titulo: textoPropuesta(p), descripcion: p.motivo || null, fecha_limite: p.fecha || null, estado: 'en_curso', tipo, propuesto_por_atleta: true };
+  if (tipo === 'fuerza') Object.assign(fila, { ejercicio_id: p.ejercicio_id, kg_objetivo: Number(p.kg), reps_objetivo: Number(p.reps) });
   if (p.tipo === 'peso') fila.peso_objetivo = Number(p.peso_kg);
   if (p.tipo === 'carrera') Object.assign(fila, { distancia_km: Number(p.distancia_km), tiempo_seg: Number(p.tiempo_seg) });
   return fila;

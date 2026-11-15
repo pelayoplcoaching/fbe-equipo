@@ -3923,6 +3923,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!x) throw new Error('Esa propuesta no existe');
           if (x.estado !== 'pendiente') throw new Error('Esa propuesta ya estaba contestada');
           if (args.p_aceptar && !tabla('objetivos').some((o) => o.id === args?.p_objetivo && o.atleta_id === x.atleta_id)) throw new Error('Falta el objetivo de ese atleta');
+          if (args.p_aceptar && x.tipo === 'peso' && !saludDe(x.atleta_id)) throw Object.assign(new Error('Ha retirado su consentimiento de datos de salud: un objetivo de peso no se puede aceptar'), { code: '42501' });
           Object.assign(x, { estado: args.p_aceptar ? 'aceptada' : 'descartada', objetivo_id: args.p_aceptar ? args.p_objetivo : null, nota_coach: nota, resuelto_en: ahora() });
           persistirYa();
           return propJson(x);

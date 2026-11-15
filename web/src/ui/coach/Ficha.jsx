@@ -508,8 +508,8 @@ function Objetivos({ atleta }) {
         <div class="panel"><ul class="lista">
           {lista.datos.map((o) => (
             <li key={o.id}>
-              <button class="respuesta objetivo-fila" data-hecho={o.auto?.conseguido || o.estado === 'completado' ? '' : undefined} style={{ '--f': Math.min(1, Math.max(0, (o.auto ? o.auto.pct : o.autoPeso && o.estado !== 'completado' ? o.autoPeso.pct : o.progreso_pct || 0) / 100)) }} onClick={() => setEditar(o)}>
-                <span><span class="nombre">{o.titulo}</span><br /><span class="detalle">{o.auto?.conseguido ? `Conseguido el ${fmtCorta(o.auto.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}, {o.auto ? o.auto.pct : o.autoPeso && o.estado !== 'completado' ? o.autoPeso.pct : o.progreso_pct} %{o.auto || o.autoPeso ? ' (automático)' : ''}{o.propuesto_por_atleta ? ', lo propuso el atleta' : ''}{o.fecha_limite ? `, para el ${fmtCorta(o.fecha_limite)}` : ''}</span></span>
+              <button class="respuesta objetivo-fila" data-hecho={o.auto?.conseguido || o.estado === 'completado' ? '' : undefined} style={{ '--f': Math.min(1, Math.max(0, (o.auto ? o.auto.pct : o.autoPeso ? (o.estado === 'completado' ? 100 : o.autoPeso.pct) : o.progreso_pct || 0) / 100)) }} onClick={() => setEditar(o)}>
+                <span><span class="nombre">{o.titulo}</span><br /><span class="detalle">{o.auto?.conseguido ? `Conseguido el ${fmtCorta(o.auto.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}, {o.auto ? o.auto.pct : o.autoPeso ? (o.estado === 'completado' ? 100 : o.autoPeso.pct) : o.progreso_pct} %{o.auto || o.autoPeso ? ' (automático)' : ''}{o.propuesto_por_atleta ? ', lo propuso el atleta' : ''}{o.fecha_limite ? `, para el ${fmtCorta(o.fecha_limite)}` : ''}</span></span>
                 <Icono n="editar" />
               </button>
             </li>
@@ -565,7 +565,11 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
       Object.assign(fila, { ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, progreso_pct: Math.round(f.progreso_pct || 0) });
       if (deCarrera) Object.assign(fila, { distancia_km: f.km, tiempo_seg: segCarrera });
       else if (!nuevo && tipoDeObjetivo(objetivo) === 'peso') Object.assign(fila, { tipo: 'libre', peso_objetivo: null, peso_inicio: null });
+      // (revisión) una marca que pasa a «Otro» deja de ser de fuerza
+      else if (!nuevo && objetivo.tipo === 'fuerza') fila.tipo = 'libre';
     }
+    // (revisión) uno de carrera que pasa a marca o a peso suelta su distancia y su tiempo
+    if (!nuevo && objetivo.tipo === 'carrera' && (marca || dePeso)) Object.assign(fila, { distancia_km: null, tiempo_seg: null });
     // (sin la 076 no hay columna «tipo»: solo se toca si el objetivo ya tenía uno distinto)
     if (marca && objetivo.tipo && objetivo.tipo !== 'fuerza') fila.tipo = 'fuerza';
     if (marca && !nuevo && tipoDeObjetivo(objetivo) === 'peso') Object.assign(fila, { peso_objetivo: null, peso_inicio: null });

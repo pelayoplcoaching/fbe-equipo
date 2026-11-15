@@ -67,6 +67,9 @@ check(O.tocaCuestionario({ pospuestoHasta: O.posponerHasta(HOY), hoy: HOY }) ===
   check(gana.prevision && gana.prevision.ritmo > 0 && gana.pct > 0, 'también para quien quiere subir de peso');
   const ya = progresoPeso({ peso_objetivo: 79.5, peso_inicio: 80 }, pesos('2026-10-19', 28, 80, -0.07), HOY);
   check(ya.llegado && ya.pct === 100 && ya.prevision === null, 'cuando la tendencia llega a la meta, 100 %');
+  // (revisión) sin punto de partida guardado: cuenta desde la primera tendencia tras ponerlo, y llegar (o pasarse) es llegar
+  const sinInicio = progresoPeso({ peso_objetivo: 75, creado_en: '2026-10-01T10:00:00Z' }, pesos('2026-10-01', 46, 78, -0.1), HOY);
+  check(sinInicio.llegado && sinInicio.pct === 100 && !sinInicio.alejandose && sinInicio.inicio > 77, '(revisión) sin peso de partida guardado, usa la primera tendencia desde que se puso: si pasa de la meta, ha llegado');
   const viejo = progresoPeso({ peso_objetivo: 75, peso_inicio: 80 }, pesos('2026-08-01', 28, 80, -0.07), HOY);
   check(viejo.actual === null && viejo.sinRecientes && viejo.prevision === null && progresoPeso({ peso_objetivo: 75 }, [], HOY).sinPesos && progresoPeso({}, [], HOY) === null, 'sin pesos de los últimos 14 días, ni progreso ni previsión');
 }
@@ -193,7 +196,7 @@ check(await noProponer([{ tipo: 'fuerza', kg: 100, reps: 3 }]) && await noPropon
   && await noProponer([{ tipo: 'fuerza', ejercicio_id: '00000000-0000-0000-0000-000000000000', kg: 100, reps: 3 }]) && await noProponer([{ tipo: 'fuerza', ejercicio_id: 'x', kg: 100, reps: 3 }])
   && await noProponer([{ tipo: 'carrera', distancia_km: 10 }]) && await noProponer([{ tipo: 'peso', peso_kg: 20 }]) && await noProponer([{ tipo: 'libre' }]) && await noProponer([{ tipo: 'libre', titulo: '\u200b' }])
   && await noProponer([{ tipo: 'otro', titulo: 'x' }]) && await noProponer([{ tipo: 'libre', titulo: 5 }]) && await noProponer([{ tipo: 'fuerza', ejercicio_id: ej, kg: '100', reps: 3 }]) && await noProponer({ tipo: 'libre', titulo: 'x' })
-  && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: mas(-1) }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: mas(800) }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: 'mañana' }])
+  && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: mas(-1) }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: mas(800) }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: 'mañana' }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: 'today' }]) && await noProponer([{ tipo: 'libre', titulo: 'x', fecha: 'tomorrow' }])
   && await noProponer([{ tipo: 'libre', titulo: 'x'.repeat(81) }]) && await noProponer([{ tipo: 'libre', titulo: 'x', motivo: 'm'.repeat(201) }]),
 'lo incompleto, lo raro y lo que no es del tipo que toca, no');
 check(await falla('select * from objetivos_propuestos') && await falla('select * from objetivos_rondas') && await falla(`insert into objetivos_propuestos (atleta_id, tipo, titulo) values ($1, 'libre', 'x')`, [atletaA])
@@ -222,22 +225,33 @@ check(await falla(`insert into objetivos (atleta_id, titulo, tipo) values ($1, '
   && await falla(`insert into objetivos (atleta_id, titulo, tipo) values ($1, 'x', 'otra')`, [atletaA]) && await falla(`insert into objetivos (atleta_id, titulo, tipo, peso_objetivo) values ($1, 'x', 'peso', 500)`, [atletaA])
   && !(await falla(`insert into objetivos (atleta_id, titulo, tipo, peso_objetivo, peso_inicio) values ($1, 'Pesar 70', 'peso', 70, 74.2)`, [atletaA]))
   && !(await falla(`insert into objetivos (atleta_id, titulo, tipo, distancia_km, tiempo_seg) values ($1, '10 km', 'carrera', 10, 3000)`, [atletaA])), 'un objetivo de peso lleva su peso; uno de carrera, distancia y tiempo');
+// (revisión) un objetivo de peso no se acepta si el atleta ha retirado su consentimiento de salud
+{
+  await como(ana);
+  const pp = (await proponer([{ tipo: 'peso', peso_kg: 68 }])).propuestas.find((x) => x.tipo === 'peso' && x.estado === 'pendiente');
+  await su();
+  await q(`update public.consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud'`, [ana]);
+  await como(coach, 'aal2');
+  const objP = (await q(`insert into objetivos (atleta_id, titulo, tipo, peso_objetivo) values ($1, 'Pesar 68', 'peso', 68) returning id`, [atletaA]))[0].id;
+  check(await falla('select objetivo_propuesta_resolver($1, true, $2)', [pp.id, objP]) && !(await falla('select objetivo_propuesta_resolver($1, false)', [pp.id])), '(revisión) sin consentimiento de salud vigente, una de peso no se acepta (sí se descarta)');
+  await q('delete from objetivos where id = $1', [objP]);
+}
 const copiaB = (await q('select copia_privada() as c'))[0].c;
-check(copiaB.objetivos_propuestos.length === 4 && copiaB.objetivos_rondas.length === 1, 'las propuestas van en la copia completa del coach');
+check(copiaB.objetivos_propuestos.length === 5 && copiaB.objetivos_rondas.length === 1, 'las propuestas van en la copia completa del coach');
 
 await como(ana);
 r = (await q('select objetivos_propuestas_mias() as r'))[0].r;
-check(r.propuestas.length === 4 && r.propuestas.find((p) => p.id === pf.id).estado === 'aceptada' && r.propuestas.find((p) => p.id === pf.id).nota_coach === 'Mejor 95' && r.propuestas.find((p) => p.id === pl.id).estado === 'descartada',
+check(r.propuestas.length === 5 && r.propuestas.find((p) => p.id === pf.id).estado === 'aceptada' && r.propuestas.find((p) => p.id === pf.id).nota_coach === 'Mejor 95' && r.propuestas.find((p) => p.id === pl.id).estado === 'descartada',
   'el atleta ve la respuesta de su coach');
 check(await falla('select objetivo_propuesta_retirar($1)', [pf.id]) && (await q('select titulo, tipo, propuesto_por_atleta from objetivos where id = $1', [objA]))[0]?.propuesto_por_atleta === true, 'lo ya contestado no se retira; el objetivo aceptado lo lee en su Progreso');
 const t1 = r.contestado_en;
 await new Promise((x) => setTimeout(x, 15));
 r = await proponer([]);
-check(r.contestado_en > t1 && r.propuestas.length === 4, '«Sigo con los mismos»: apunta que contestó, sin propuestas nuevas');
+check(r.contestado_en > t1 && r.propuestas.length === 5, '«Sigo con los mismos»: apunta que contestó, sin propuestas nuevas');
 await su();
 await q(`update objetivos_propuestos set resuelto_en = now() - interval '40 days' where id = $1`, [pl.id]);
 await como(ana);
-check((await q('select objetivos_propuestas_mias() as r'))[0].r.propuestas.length === 3 && (await q('select objetivos_propuestas_mias(true) as r'))[0].r.propuestas.length === 4, 'las contestadas hace más de 30 días ya no salen (salvo al descargar sus datos)');
+check((await q('select objetivos_propuestas_mias() as r'))[0].r.propuestas.length === 4 && (await q('select objetivos_propuestas_mias(true) as r'))[0].r.propuestas.length === 5, 'las contestadas hace más de 30 días ya no salen (salvo al descargar sus datos)');
 await su();
 await q('delete from objetivos where id = $1', [objA]);
 check((await q('select objetivo_id, estado from objetivos_propuestos where id = $1', [pf.id]))[0].objetivo_id === null, 'si se borra el objetivo, la propuesta se queda sin él');

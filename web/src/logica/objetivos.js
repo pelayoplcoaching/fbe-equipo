@@ -97,7 +97,10 @@ export function progresoPeso(obj, pesos = [], hoy) {
   const ult = serie[serie.length - 1] || null;
   const reciente = !!ult && diasEntre(ult.fecha, hoy) <= DIAS_PESO_RECIENTE;
   const actual = reciente ? Math.round(ult.tendencia * 10) / 10 : null;
-  const inicio = obj.peso_inicio != null ? Number(obj.peso_inicio) : null;
+  // (revisión) sin punto de partida guardado (no se había pesado al ponerlo): la primera tendencia desde ese día
+  const desde = obj.creado_en ? diaDe(obj.creado_en) : '';
+  const primera = obj.peso_inicio == null && desde ? serie.find((p) => p.fecha >= desde) : null;
+  const inicio = obj.peso_inicio != null ? Number(obj.peso_inicio) : primera && primera !== ult ? Math.round(primera.tendencia * 10) / 10 : null;
   const baja = inicio != null ? meta < inicio : actual != null ? meta < actual : null;   // ¿busca bajar?
   const llegado = actual != null && baja != null && (baja ? actual <= meta : actual >= meta);
   let pct = 0;
