@@ -24871,7 +24871,11 @@ begin
   if p_datos ->> 'id' is not null then
     begin v_id := (p_datos ->> 'id')::uuid; exception when others then raise exception 'Ese suplemento no existe' using errcode = '22023'; end;
     select * into v from public.suplementos where id = v_id and atleta_id = v_atleta for update;
-    if v.id is null then raise exception 'Ese suplemento no existe' using errcode = '22023'; end if;
+    -- (revisión) uno archivado no se cambia, y el nombre nuevo tampoco puede repetir el de otro activo
+    if v.id is null or not v.activo then raise exception 'Ese suplemento no existe' using errcode = '22023'; end if;
+    if exists (select 1 from public.suplementos where atleta_id = v_atleta and activo and id <> v_id and lower(nombre) = lower(v_nombre)) then
+      raise exception 'Ese ya está en la lista' using errcode = '22023';
+    end if;
     if not v_coach and v.origen <> 'atleta' then raise exception 'Este te lo ha pautado tu coach: pídele a él que lo cambie' using errcode = '42501'; end if;
     update public.suplementos set clave = v_clave, nombre = v_nombre, dosis = v_dosis, momento = v_momento where id = v_id returning * into v;
     return fbe_privado.suplemento_json(v);
@@ -24881,6 +24885,10 @@ begin
   end if;
   if exists (select 1 from public.suplementos where atleta_id = v_atleta and activo and lower(nombre) = lower(v_nombre)) then
     raise exception 'Ese ya está en la lista' using errcode = '22023';
+  end if;
+  -- (revisión) y, contando los archivados, 100 por atleta
+  if (select count(*) from public.suplementos where atleta_id = v_atleta) >= 100 then
+    raise exception 'Has añadido y quitado demasiados: escribe a tu coach' using errcode = '22023';
   end if;
   insert into public.suplementos (atleta_id, clave, nombre, dosis, momento, origen)
     values (v_atleta, v_clave, v_nombre, v_dosis, v_momento, case when v_coach then 'coach' else 'atleta' end) returning * into v;
@@ -24975,6 +24983,40 @@ alter table public.preferencias_notificaciones add constraint preferencias_notif
 );
 
 
+-- (revisión) El aviso de un suplemento es un recordatorio con su hora: el «no molestar» no lo retrasa (como los de la
+-- sesión, el check-in, los hábitos y la nutrición). La función, la de la 011, con el tipo nuevo en esa lista
+create or replace function fbe_privado.notificar(
+  p_usuario uuid, p_tipo text, p_titulo text, p_cuerpo text, p_url text, p_clave text,
+  p_desde timestamptz default null, p_caduca timestamptz default null)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare
+  pr public.preferencias_notificaciones;
+  v_desde timestamptz := coalesce(p_desde, now());
+  v_caduca timestamptz;
+begin
+  if p_usuario is null then return false; end if;
+  select * into pr from public.preferencias_notificaciones where usuario_id = p_usuario;
+  if p_tipo <> 'prueba' and p_tipo = any (coalesce(pr.desactivados, '{sesion_hecha}'::text[])) then return false; end if;
+  if not coalesce(pr.email, false)
+     and not exists (select 1 from public.suscripciones_push s where s.usuario_id = p_usuario) then
+    return false;
+  end if;
+  if p_tipo not in ('sesion_hoy', 'checkin', 'habitos', 'nutricion', 'prueba', 'suplementos') then
+    if pr.usuario_id is null then
+      v_desde := fbe_privado.fuera_de_silencio(v_desde, time '22:30', time '08:00');
+    else
+      v_desde := fbe_privado.fuera_de_silencio(v_desde, pr.silencio_desde, pr.silencio_hasta);
+    end if;
+  end if;
+  v_caduca := coalesce(p_caduca, v_desde + interval '1 day');
+  if v_caduca <= v_desde then return false; end if;
+  insert into public.notificaciones (usuario_id, tipo, titulo, cuerpo, url, clave, enviar_desde, caduca_en)
+  values (p_usuario, p_tipo, coalesce(fbe_privado.linea(p_titulo, 80), 'FBE Atletas'), fbe_privado.linea(p_cuerpo, 160),
+          p_url, left(p_clave, 100), v_desde, v_caduca)
+  on conflict (usuario_id, clave) do nothing;
+  return found;
+end $$;
+
 -- A la hora que eligió (hora de España) y durante la hora siguiente, si aún no lo ha marcado hoy: un aviso por atleta
 -- y hora («Te toca: Creatina» o «Te tocan 2 suplementos»). Caduca a las 3 horas
 create or replace function fbe_privado.recordatorios_suplementos(p_ahora timestamptz default now()) returns integer
@@ -25029,8 +25071,14 @@ begin
           'Un par de minutos y no se te olvidan. Están en Semana, en «Tus apuntes».',
           '#semana', 'recordatorio_repaso:' || v_hoy, p_ahora,
           (v_hoy + x.hora_tarde + interval '2 hours') at time zone 'Europe/Madrid');
-  -- (077) y, en la misma pasada, los avisos de los suplementos (así no hace falta volver a desplegar la función del servidor)
-  return v_n + fbe_privado.recordatorios_suplementos(p_ahora);
+  -- (077) y, en la misma pasada, los avisos de los suplementos (así no hace falta volver a desplegar la función del servidor).
+  -- (revisión) Si esa parte fallara, los de los apuntes salen igual
+  begin
+    v_n := v_n + fbe_privado.recordatorios_suplementos(p_ahora);
+  exception when others then
+    raise warning 'FBE: avisos de suplementos no creados: %', sqlerrm;
+  end;
+  return v_n;
 end $$;
 
 -- La copia completa del coach, también con los suplementos

@@ -22,7 +22,7 @@ export function TarjetaSuplementos({ estado }) {
   const { lista, quedan, total } = suplementosDeHoy(d, hoy);
   if (!total && !abierta) return null;
   // Se ve al momento y se guarda por detrás (si no se puede guardar, vuelve a como estaba y se avisa)
-  const marcar = (s) => estado.alMomento((x) => ({ ...x, tomas: s.tomado ? x.tomas.filter((t) => !(t.suplemento_id === s.id && t.fecha === hoy)) : [...x.tomas, { suplemento_id: s.id, fecha: hoy }] }),
+  const marcar = (s) => estado.alMomento((x) => ({ ...x, tomas: s.tomado ? x.tomas.filter((t) => !(t.suplemento_id === s.id && t.fecha === hoy)) : [...x.tomas.filter((t) => !(t.suplemento_id === s.id && t.fecha === hoy)), { suplemento_id: s.id, fecha: hoy }] }),
     () => api.tomarSuplemento(s.id, hoy, !s.tomado)).catch((e) => aviso(e.message, 'error'));
   return (
     <>

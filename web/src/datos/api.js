@@ -1639,7 +1639,12 @@ export function crearApi(backend) {
       // (064) sin la migración, la base aún no conoce el aviso «repaso»: se guarda lo demás
       const filas = await b.upsert('preferencias_notificaciones', fila, 'usuario_id').catch((e) => {
         if (!/preferencias_notificaciones_validas|23514/.test(`${e?.message || ''} ${e?.code || ''}`) || !(fila.desactivados || []).some((t) => t === 'repaso' || t === 'suplementos')) throw e;
-        return b.upsert('preferencias_notificaciones', { ...fila, desactivados: fila.desactivados.filter((t) => t !== 'repaso' && t !== 'suplementos') }, 'usuario_id');
+        // (revisión) primero sin «suplementos» (base sin la 077); solo si sigue sin valer, también sin «repaso» (sin la 064)
+        const sin = (ts) => ({ ...fila, desactivados: fila.desactivados.filter((t) => !ts.includes(t)) });
+        return b.upsert('preferencias_notificaciones', sin(['suplementos']), 'usuario_id').catch((e2) => {
+          if (!/preferencias_notificaciones_validas|23514/.test(`${e2?.message || ''} ${e2?.code || ''}`)) throw e2;
+          return b.upsert('preferencias_notificaciones', sin(['suplementos', 'repaso']), 'usuario_id');
+        });
       });
       return conDefecto(filas[0]);
     },

@@ -3863,7 +3863,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!MOM.includes(momento)) throw new Error('Ese momento no vale');
           if (d.id) {
             const x = tabla('suplementos').find((r) => r.id === d.id && r.atleta_id === a);
-            if (!x) throw new Error('Ese suplemento no existe');
+            if (!x || !x.activo) throw new Error('Ese suplemento no existe');
+            if (tabla('suplementos').some((r) => r.atleta_id === a && r.activo && r.id !== x.id && r.nombre.toLowerCase() === nom.toLowerCase())) throw new Error('Ese ya está en la lista');
             if (!coach && x.origen !== 'atleta') throw Object.assign(new Error('Este te lo ha pautado tu coach: pídele a él que lo cambie'), { code: '42501' });
             Object.assign(x, { clave, nombre: nom, dosis, momento });
             persistirYa();
@@ -3872,6 +3873,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           const activos = tabla('suplementos').filter((x) => x.atleta_id === a && x.activo);
           if (activos.length >= 8) throw new Error('Como mucho, 8 suplementos a la vez: quita alguno antes');
           if (activos.some((x) => x.nombre.toLowerCase() === nom.toLowerCase())) throw new Error('Ese ya está en la lista');
+          if (tabla('suplementos').filter((x) => x.atleta_id === a).length >= 100) throw new Error('Has añadido y quitado demasiados: escribe a tu coach');
           const fila = { id: uuid(), atleta_id: a, clave, nombre: nom, dosis, momento, aviso_hora: null, origen: coach ? 'coach' : 'atleta', activo: true, creado_en: ahora() };
           tabla('suplementos').push(fila);
           persistirYa();

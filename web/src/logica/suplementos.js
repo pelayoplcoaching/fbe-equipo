@@ -7,11 +7,11 @@ import { sumarDias, fechaMadrid } from './fechas.js';
 export const SUPLEMENTOS_FBE = [
   { clave: 'creatina', nombre: 'Creatina monohidrato', dosis: '3-5 g al día', momento: 'cuando', guia: 'creatina' },
   { clave: 'proteina', nombre: 'Proteína en polvo', dosis: '1 cazo (20-30 g)', momento: 'despues', guia: 'numero-proteina' },
-  { clave: 'cafeina', nombre: 'Cafeína', dosis: '3 mg por kg, 30-60 min antes', momento: 'antes', guia: null },
+  { clave: 'cafeina', nombre: 'Cafeína', dosis: 'Hasta 3 mg por kg (máx. 400 mg al día)', momento: 'antes', guia: null },
   { clave: 'vitamina-d', nombre: 'Vitamina D', dosis: 'La que marque tu analítica', momento: 'manana', guia: null },
   { clave: 'omega-3', nombre: 'Omega-3', dosis: '1-2 g de EPA y DHA', momento: 'comida', guia: null },
-  { clave: 'magnesio', nombre: 'Magnesio', dosis: '200-400 mg', momento: 'noche', guia: null },
-  { clave: 'citrulina', nombre: 'Citrulina', dosis: '6-8 g, una hora antes', momento: 'antes', guia: null },
+  { clave: 'magnesio', nombre: 'Magnesio', dosis: '200-350 mg', momento: 'noche', guia: null },
+  { clave: 'citrulina', nombre: 'Citrulina malato', dosis: '6-8 g, una hora antes', momento: 'antes', guia: null },
   { clave: 'beta-alanina', nombre: 'Beta-alanina', dosis: '3-6 g al día, repartidos', momento: 'cuando', guia: null },
 ];
 export const MOMENTOS = [['manana', 'Por la mañana'], ['antes', 'Antes de entrenar'], ['despues', 'Después de entrenar'], ['comida', 'Con la comida'], ['noche', 'Por la noche'], ['cuando', 'Cuando quieras']];

@@ -161,6 +161,18 @@ await q(`update public.suplementos set aviso_hora = '08:30' where id = $1`, [a1.
 await q(`select fbe_privado.recordatorios_suplementos($1::timestamptz)`, [a830]);
 check((await q(`select titulo from public.notificaciones where tipo = 'suplementos'`)).map((x) => x.titulo).join() === 'Te tocan 2 suplementos', 'dos a la misma hora, un solo aviso: «Te tocan 2 suplementos»');
 
+// (revisión) el «no molestar» no lo retrasa ni se lo come: a las 06:30 y a las 23:00 sale a su hora
+await q(`delete from public.notificaciones where tipo = 'suplementos'`);
+await q(`update public.suplementos set aviso_hora = '06:30' where id = $1`, [c1.id]);
+await q(`update public.suplementos set aviso_hora = '23:00' where id = $1`, [a1.id]);
+await q(`select fbe_privado.recordatorios_suplementos($1::timestamptz)`, [`${hoy} 06:35:00 Europe/Madrid`]);
+await q(`select fbe_privado.recordatorios_suplementos($1::timestamptz)`, [`${hoy} 23:05:00 Europe/Madrid`]);
+const fuera = await q(`select to_char(enviar_desde at time zone 'Europe/Madrid', 'HH24:MI') h from public.notificaciones where tipo = 'suplementos' order by enviar_desde`);
+check(fuera.map((x) => x.h).join() === '06:35,23:05', '(revisión) el «no molestar» no retrasa ni descarta el aviso: a las 06:30 y a las 23:00 sale a su hora');
+// (revisión) al cambiar el nombre tampoco se repite, y uno archivado no se cambia
+await como(ana);
+check(await noGuardar(null, { id: a1.id, nombre: 'ZINC' }), '(revisión) cambiarle el nombre al de otro que ya tiene, no');
+
 await como(coach, 'aal2');
 r = await de(atletaA);
 check(r.suplementos.length === 8 && r.tomas.length === 1 && await falla('select suplementos_de()'), 'el coach ve lo que toma y lo que marca (y dice de quién)');
@@ -169,6 +181,7 @@ check((await de(atletaA)).suplementos.length === 7 && (await de(atletaA, true)).
   && !(await noGuardar(atletaA, { id: a1.id, nombre: 'Magnesio bisglicinato', dosis: '300 mg', momento: 'noche' })), 'se lo quita (archivado, sin aviso) y puede cambiar el que añadió el atleta');
 const copia = (await q('select copia_privada() as c'))[0].c;
 check(copia.suplementos.length === 8 && copia.suplementos_tomas.length === 1 && copia.objetivos_propuestos, 'va en la copia completa del coach (con lo de la 076)');
+check(await noGuardar(atletaA, { id: c1.id, nombre: 'Creatina otra vez' }), '(revisión) uno archivado no se cambia');
 await como(ana);
 check(await falla('select suplemento_tomar($1)', [c1.id]) && await falla(`select suplemento_aviso($1, '09:00')`, [c1.id]), 'uno archivado ya no se marca ni avisa');
 await su();
@@ -178,7 +191,7 @@ const mig = lee('supabase/migraciones/077_suplementos.sql'), p76 = lee('supabase
 const permisos = (s) => s.slice(s.indexOf('revoke truncate, references, trigger'), s.indexOf('insert into public.fbe_migraciones'));
 const cuerpo = (s) => { const i = s.indexOf('create or replace function public.crear_recordatorios_apuntes'); return s.slice(i, s.indexOf('end $$;', i)); };
 check(/if v > 77 then/.test(mig) && /numero = 76\) then/.test(mig) && /values \(77\)/.test(mig) && permisos(mig) === permisos(p76), 'pide la 076; el bloque de permisos, el mismo que el de la 076');
-check(cuerpo(mig).replace(/  -- \(077\)[^\n]*\n  return v_n \+ fbe_privado\.recordatorios_suplementos\(p_ahora\);\n/, '  return v_n;\n') === cuerpo(m64) && /'tarea', 'tarea_hecha', 'repaso', 'suplementos'\)/.test(mig),
+check(cuerpo(mig).replace(/  -- \(077\)[^\n]*\n  -- \(revisión\)[^\n]*\n  begin\n    v_n := v_n \+ fbe_privado\.recordatorios_suplementos\(p_ahora\);\n  exception when others then\n[^\n]*\n  end;\n/, '') === cuerpo(m64) && /'tarea', 'tarea_hecha', 'repaso', 'suplementos'\)/.test(mig),
   'el aviso de los apuntes por repasar sigue igual que en la 064, y en la misma pasada salen los de los suplementos');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
