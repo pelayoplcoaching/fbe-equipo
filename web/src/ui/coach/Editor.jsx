@@ -426,7 +426,7 @@ function VolumenSemana({ pautas, ejercicios, objetivo }) {
   if (!grupos.length) return null;
   return (
     <div class="panel panel-pad pila-s">
-      <span class="peq secundario">Series semanales pautadas por músculo{objetivo ? ' (frente al rango de este atleta)' : ' (frente al rango general, 10–20)'}</span>
+      <span class="peq secundario">Series semanales pautadas por músculo{objetivo ? ' (frente al rango de este atleta)' : ' (frente al rango general, 10–20; antebrazo, aductores y lumbares, 0–20)'}</span>
       <div class="vol-chips">
         {grupos.map(([g, n]) => {
           const r = rangoVolumen(objetivo, g);

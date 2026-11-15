@@ -386,8 +386,8 @@ function VolumenObjetivo({ atleta, alGuardar }) {
       </div>
       {!abierto ? (
         <p class="peq secundario">{propios.length
-          ? `Rangos propios en ${propios.map((g) => GRUPOS.find(([x]) => x === g)?.[1].toLowerCase()).filter(Boolean).join(', ')}; el resto, ${VOLUMEN_DEFECTO[0]} a ${VOLUMEN_DEFECTO[1]} series semanales.`
-          : `Rango general: de ${VOLUMEN_DEFECTO[0]} a ${VOLUMEN_DEFECTO[1]} series semanales por músculo.`}</p>
+          ? `Rangos propios en ${propios.map((g) => GRUPOS.find(([x]) => x === g)?.[1].toLowerCase()).filter(Boolean).join(', ')}; el resto, ${VOLUMEN_DEFECTO[0]} a ${VOLUMEN_DEFECTO[1]} series semanales (antebrazo, aductores y lumbares, sin mínimo).`
+          : `Rango general: de ${VOLUMEN_DEFECTO[0]} a ${VOLUMEN_DEFECTO[1]} series semanales por músculo (antebrazo, aductores y lumbares, sin mínimo: hasta ${VOLUMEN_DEFECTO[1]}).`}</p>
       ) : (
         <div class="panel panel-pad pila">
           <span class="peq secundario">Mínimo y máximo de series semanales por músculo</span>

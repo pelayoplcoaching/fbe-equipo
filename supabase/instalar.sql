@@ -24303,7 +24303,8 @@ do $$
 declare c text;
 begin
   for c in select conname from pg_constraint
-           where conrelid = 'public.ejercicios'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%isquiotibiales%' loop
+           where conrelid = 'public.ejercicios'::regclass and contype = 'c'
+             and pg_get_constraintdef(oid) like '%grupos_musculares%' and pg_get_constraintdef(oid) like '%isquiotibiales%' loop
     execute format('alter table public.ejercicios drop constraint %I', c);
   end loop;
 end $$;
@@ -24345,6 +24346,7 @@ begin
   end loop;
 end $$;
 revoke all on all functions in schema fbe_privado from public, anon, authenticated;
+-- (revisión de la 072) la comprobación de las columnas de música la usa una restricción: el servidor (service_role) también tiene que poder llamarla
 grant execute on function fbe_privado.musica_url_valida(text) to service_role;
 
 insert into public.fbe_migraciones (numero) values (74)  -- (3) número de esta migración

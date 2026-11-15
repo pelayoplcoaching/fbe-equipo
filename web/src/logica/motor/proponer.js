@@ -238,7 +238,7 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
         seriesPorGrupo: { antes, despues: seriesPautadasPorGrupo(finales.map((f) => ({ ejercicio_id: f.ejercicio_id, series: f.propuesta.series })), ejercicios) },
       },
       volumen: volumenDe(finales, esDescarga ? 'descarga' : modo),
-      avisos: zonasSueltas.map((m) => ({ tipo: 'molestia', zona: m.zona, intensidad: Number(m.intensidad), texto: `Molestia ${NIVEL_MOLESTIA[Number(m.intensidad)] || ''} en ${(NOMBRE_ZONA[m.zona] || m.zona).toLowerCase()}: no se puede asignar a ejercicios concretos` })),
+      avisos: zonasSueltas.map((m) => ({ tipo: 'molestia', zona: m.zona, intensidad: Number(m.intensidad), texto: `Molestia ${NIVEL_MOLESTIA[Number(m.intensidad)] || ''} en ${(NOMBRE_ZONA[m.zona] || m.zona).toLowerCase()}: ${m.zona === 'aductor' ? 'esta semana no lleva ejercicios de aductores' : 'no se puede asignar a ejercicios concretos'}` })),
     },
     descarga: {
       senales, propuesta: !esDescarga && senales.length >= 1, recomendada: !esDescarga && senales.length >= 2,
