@@ -2684,6 +2684,28 @@
     },
     "color": "#503a72"
   },
+  "grupo-aductores": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-aductores-320.9429ed96.webp",
+      "640": "imagenes/grupo/grupo-aductores-640.73a23b0f.webp"
+    },
+    "color": "#5e4f80"
+  },
+  "grupo-antebrazo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-antebrazo-320.bedd730b.webp",
+      "640": "imagenes/grupo/grupo-antebrazo-640.e2fd52a1.webp"
+    },
+    "color": "#473a70"
+  },
   "grupo-biceps": {
     "proporcion": [
       4,
@@ -2760,6 +2782,17 @@
       "640": "imagenes/grupo/grupo-isquiotibiales-640.6652a432.webp"
     },
     "color": "#48346b"
+  },
+  "grupo-lumbares": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "320": "imagenes/grupo/grupo-lumbares-320.841d68c1.webp",
+      "640": "imagenes/grupo/grupo-lumbares-640.0410f3fa.webp"
+    },
+    "color": "#50456c"
   },
   "grupo-pectoral": {
     "proporcion": [
@@ -4912,6 +4945,28 @@
       "320": "imagenes/guias/portada-mujer-cuadrada-320.ce758ba6.webp"
     },
     "color": "#4a3466"
+  },
+  "portada-proteina": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-proteina-720.7d5c9071.webp",
+      "1080": "imagenes/guias/portada-proteina-1080.3d1d81ab.webp"
+    },
+    "color": "#4f3b5e"
+  },
+  "portada-proteina-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-proteina-cuadrada-160.7a1c40b1.webp",
+      "320": "imagenes/guias/portada-proteina-cuadrada-320.6d6d4ba4.webp"
+    },
+    "color": "#574260"
   },
   "portada-rutinas": {
     "proporcion": [

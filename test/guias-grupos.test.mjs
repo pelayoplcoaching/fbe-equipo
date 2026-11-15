@@ -14,8 +14,10 @@ const nuevos = ['antebrazo', 'aductores', 'lumbares'];
 check(nuevos.every((g) => C.GRUPOS.some(([k]) => k === g)), 'los tres grupos están en GRUPOS (el mapa muscular y «Series por músculo» los listan)');
 const guias = [{ clave: 'antebrazo', grupo: 'antebrazo', orden: 11, publicada: true, fichas: 4 }, { clave: 'pectoral', grupo: 'pectoral', orden: 1, publicada: true }];
 check(guiaDeGrupo(guias, 'antebrazo')?.clave === 'antebrazo' && guiaDeGrupo(guias, 'lumbares') === null, 'con grupo, la guía de antebrazo se encuentra por su grupo');
-check(nuevos.every((g) => imagenGrupo(g) === null) && imagenGuia({ clave: 'antebrazo', grupo: 'antebrazo', fichas: 4 }, estanteDe({ clave: 'antebrazo', grupo: 'antebrazo' })) === 'guia-entrenar',
-  'sin estatua para los tres: la tarjeta cae en la imagen de su estantería («Músculo a músculo», el rack), no queda vacía');
+// (imágenes, tanda 9) los tres ya tienen estatua: con su grupo, la tarjeta de la guía la lleva; sin grupo, cae en el rack
+check(nuevos.every((g) => imagenGrupo(g) === `grupo-${g}`) && imagenGuia({ clave: 'antebrazo', grupo: 'antebrazo', fichas: 4 }, estanteDe({ clave: 'antebrazo', grupo: 'antebrazo' })) === 'grupo-antebrazo'
+  && imagenGuia({ clave: 'antebrazo', grupo: null, fichas: 4 }, estanteDe({ clave: 'antebrazo', fichas: 4 })) === 'guia-entrenar',
+  'con estatua para los tres: la tarjeta de la guía lleva la de su grupo; sin grupo, la de su estantería (el rack), no queda vacía');
 check(estanteDe({ clave: 'lumbares', grupo: 'lumbares' }) === 'musculos', 'y sigue en «Músculo a músculo»');
 const demo = lee('web/src/datos/backend-memoria.js');
 check(/'gemelo', 'antebrazo', 'aductores', 'lumbares'\]\.includes\(f\.grupo\)/.test(demo), 'la demo admite los tres en guias.grupo, como la base');

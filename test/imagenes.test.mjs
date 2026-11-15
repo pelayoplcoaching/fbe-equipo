@@ -46,10 +46,9 @@ check(ICONOS_HABITO.every(([i]) => IMAGENES.includes(imagenHabito(i))), `hay ima
 
 console.log('\nLos grupos musculares');
 check(imagenGrupo(['pectoral', 'triceps']) === 'grupo-pectoral' && imagenGrupo('gemelo') === 'grupo-gemelo', 'la estatua del grupo principal (el primero), con lista o con uno solo');
-check(imagenGrupo([]) === null && imagenGrupo(null) === null && imagenGrupo(['antebrazo']) === null, 'sin grupo o con uno desconocido, ninguna (la ficha queda como antes)');
-// (biblioteca 2) antebrazo, aductores y lumbares aún no tienen estatua: su ficha queda sin ella hasta que se generen
-const SIN_ESTATUA = ['antebrazo', 'aductores', 'lumbares'];
-check(GRUPOS.filter(([g]) => !SIN_ESTATUA.includes(g)).every(([g]) => IMAGENES.includes(imagenGrupo(g))) && SIN_ESTATUA.every((g) => imagenGrupo(g) === null) && GRUPOS.length === 13, 'hay estatua para los 10 grupos de siempre; los 3 nuevos, sin ella por ahora');
+check(imagenGrupo([]) === null && imagenGrupo(null) === null && imagenGrupo(['cuello']) === null, 'sin grupo o con uno desconocido, ninguna (la ficha queda como antes)');
+// (imágenes, tanda 9) antebrazo, aductores y lumbares ya tienen su estatua
+check(GRUPOS.every(([g]) => IMAGENES.includes(imagenGrupo(g))) && GRUPOS.length === 13 && imagenGrupo(['antebrazo']) === 'grupo-antebrazo' && imagenGrupo('lumbares') === 'grupo-lumbares' && imagenGrupo(['aductores', 'gluteo']) === 'grupo-aductores', 'hay estatua para los 13 grupos, también los 3 nuevos');
 
 console.log('\nLas comidas');
 check(imagenComida('desayuno') === 'comida-desayuno' && imagenComida('media_manana') === 'comida-media-manana', 'cada toma, su ilustración (media mañana con guion en el archivo)');
@@ -201,10 +200,11 @@ console.log('Portadas de las guías');
   const L = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'));
   const { ESTANTES } = await import('../web/src/logica/guias.js');
   const conEstante = ESTANTES.flatMap((e) => e.claves);
-  // La guía de proteína y las 16 guías nuevas del coach (rama contenido-1) aún no tienen portada propia: llevan la imagen de su estantería
+  // (imágenes, tanda 9) La guía de proteína ya tiene portada. Las 16 guías nuevas del coach (rama contenido-1) aún no: llevan la imagen de su estantería
   const sinPortada = conEstante.filter((c) => !PORTADAS_GUIA.includes(c));
-  check(PORTADAS_GUIA.length === 17 && PORTADAS_GUIA.every((c) => conEstante.includes(c)) && sinPortada.length === 17 && sinPortada[0] === 'rodilla' && sinPortada.includes('proteina'), 'hay portada para 17 guías de las estanterías; la de proteína y las 16 nuevas van sin la suya');
-  check(imagenGuia({ clave: 'proteina' }, 'comer') === 'guia-comer' && imagenPortadaGuia('proteina') === null && imagenGuia({ clave: 'analitica' }, 'salud') === 'guia-salud' && imagenGuia({ clave: 'baremos' }, 'entrenar') === 'guia-entrenar', 'y esas llevan la imagen de su estantería, sin cabecera');
+  check(PORTADAS_GUIA.length === 18 && PORTADAS_GUIA.every((c) => conEstante.includes(c)) && sinPortada.length === 16 && sinPortada[0] === 'rodilla' && !sinPortada.includes('proteina'), 'hay portada para 18 guías de las estanterías; las 16 nuevas van sin la suya');
+  check(imagenGuia({ clave: 'proteina' }, 'comer') === 'portada-proteina-cuadrada' && imagenPortadaGuia('proteina') === 'portada-proteina' && imagenGuia({ clave: 'analitica' }, 'salud') === 'guia-salud' && imagenGuia({ clave: 'baremos' }, 'entrenar') === 'guia-entrenar', 'la de proteína, con su cabecera y su tarjeta; las otras llevan la imagen de su estantería');
+  check(imagenGuia({ clave: 'antebrazo', grupo: 'antebrazo' }, 'musculos') === 'grupo-antebrazo' && imagenGuia({ clave: 'aductores', grupo: null }, 'musculos') === 'guia-entrenar', 'una guía de músculo con grupo nuevo lleva su estatua; sin grupo, el rack');
   check(PORTADAS_GUIA.every((c) => L[imagenPortadaGuia(c)]?.proporcion?.join(':') === '12:5' && L[`${imagenPortadaGuia(c)}-cuadrada`]?.proporcion?.join(':') === '1:1'), 'cada una, su cabecera 12:5 y su recorte cuadrado');
   check(imagenGuia({ clave: 'sueno' }, 'cabeza') === 'portada-sueno-cuadrada' && imagenGuia({ clave: 'x', grupo: 'pectoral' }, 'musculos') === 'grupo-pectoral', 'la tarjeta lleva su portada; las de músculo, su estatua');
   check(imagenPortadaGuia('inventada') === null, 'una guía sin portada, sin cabecera');

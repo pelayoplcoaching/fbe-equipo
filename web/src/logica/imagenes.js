@@ -63,7 +63,7 @@ export function imagenHabito(icono) { return `habito-${HABITOS.includes(icono) ?
 
 // ---------- Los grupos musculares ----------
 // La estatua de su grupo principal (el primero de grupos_musculares, el que cuenta 1 serie); sin grupo conocido, nada
-const GRUPOS_IMG = ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo'];
+const GRUPOS_IMG = ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo', 'antebrazo', 'aductores', 'lumbares'];
 export function imagenGrupo(grupo) {
   const g = Array.isArray(grupo) ? grupo[0] : grupo;
   return GRUPOS_IMG.includes(g) ? `grupo-${g}` : null;
@@ -75,7 +75,7 @@ export function imagenGrupo(grupo) {
 const ESTANTES_IMG = { empieza: 'guia-empieza', entrenar: 'guia-entrenar', musculos: 'guia-entrenar', comer: 'guia-comer', cabeza: 'guia-cabeza', salud: 'guia-salud', mas: 'guia-mas' };
 export const imagenEstante = (estante) => ESTANTES_IMG[estante] || 'guia-mas';
 // La portada de cada guía (la cabecera del lector, 12:5) y su recorte cuadrado (la tarjeta); sin portada, la de su estantería
-export const PORTADAS_GUIA = ['bienvenida', 'manual', 'introduccion', 'rutinas', 'deload', 'estancamiento', 'volver', 'cardio', 'dieta-flexible', 'composicion', 'suplementacion', 'sueno', 'motivacion', 'salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos'];
+export const PORTADAS_GUIA = ['bienvenida', 'manual', 'introduccion', 'rutinas', 'deload', 'estancamiento', 'volver', 'cardio', 'dieta-flexible', 'composicion', 'suplementacion', 'sueno', 'motivacion', 'salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos', 'proteina'];
 export const imagenPortadaGuia = (clave) => (PORTADAS_GUIA.includes(clave) ? `portada-${clave}` : null);
 export const imagenGuia = (g, estante) => imagenGrupo(g?.grupo) || (imagenPortadaGuia(g?.clave) ? `${imagenPortadaGuia(g.clave)}-cuadrada` : null) || imagenEstante(estante);
 // El mito de la semana (la tarjeta de Hoy) y los cinco pasos del cuestionario inicial
