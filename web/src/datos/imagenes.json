@@ -1626,6 +1626,17 @@
     },
     "color": "#43376a"
   },
+  "del-elevaciones-y-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-elevaciones-y-polea-192.9f930cd9.webp",
+      "512": "imagenes/ejercicio/del-elevaciones-y-polea-512.7cb4141b.webp"
+    },
+    "color": "#4a3478"
+  },
   "del-empuje-vertical-maquina": {
     "proporcion": [
       1,
@@ -1647,6 +1658,28 @@
       "512": "imagenes/ejercicio/del-face-pull-512.3e5b9145.webp"
     },
     "color": "#3f2e6c"
+  },
+  "del-face-pull-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-face-pull-goma-192.66514222.webp",
+      "512": "imagenes/ejercicio/del-face-pull-goma-512.db97d7c3.webp"
+    },
+    "color": "#412776"
+  },
+  "del-flexiones-pica": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-flexiones-pica-192.9f8cad69.webp",
+      "512": "imagenes/ejercicio/del-flexiones-pica-512.63364afe.webp"
+    },
+    "color": "#412d6e"
   },
   "del-frontales-inclinado-polea": {
     "proporcion": [
@@ -1691,6 +1724,17 @@
       "512": "imagenes/ejercicio/del-laterales-butterfly-512.96e2f429.webp"
     },
     "color": "#433070"
+  },
+  "del-laterales-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-goma-192.f659392f.webp",
+      "512": "imagenes/ejercicio/del-laterales-goma-512.50160be3.webp"
+    },
+    "color": "#422d72"
   },
   "del-laterales-inclinado": {
     "proporcion": [
@@ -1780,6 +1824,17 @@
     },
     "color": "#3d2f64"
   },
+  "del-pajaros-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-goma-192.4bb7b86c.webp",
+      "512": "imagenes/ejercicio/del-pajaros-goma-512.681db73b.webp"
+    },
+    "color": "#442d7a"
+  },
   "del-pajaros-inclinado": {
     "proporcion": [
       1,
@@ -1802,6 +1857,28 @@
     },
     "color": "#463073"
   },
+  "del-press-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-goma-192.35a1ae3a.webp",
+      "512": "imagenes/ejercicio/del-press-goma-512.d0f998cd.webp"
+    },
+    "color": "#422c71"
+  },
+  "del-press-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-kettlebell-192.a7fe05d6.webp",
+      "512": "imagenes/ejercicio/del-press-kettlebell-512.030fee41.webp"
+    },
+    "color": "#3f2c6c"
+  },
   "del-press-militar-barra": {
     "proporcion": [
       1,
@@ -1813,6 +1890,17 @@
     },
     "color": "#3f296a"
   },
+  "del-press-militar-barra-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-barra-sentado-192.a9dbd8c5.webp",
+      "512": "imagenes/ejercicio/del-press-militar-barra-sentado-512.d7fd6251.webp"
+    },
+    "color": "#413168"
+  },
   "del-press-militar-mancuernas": {
     "proporcion": [
       1,
@@ -1823,6 +1911,17 @@
       "512": "imagenes/ejercicio/del-press-militar-mancuernas-512.7c47b38b.webp"
     },
     "color": "#4e3980"
+  },
+  "del-press-militar-mancuernas-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-mancuernas-de-pie-192.4ea57e3f.webp",
+      "512": "imagenes/ejercicio/del-press-militar-mancuernas-de-pie-512.1e2d22bf.webp"
+    },
+    "color": "#3f2d6c"
   },
   "del-press-militar-maquina": {
     "proporcion": [
@@ -1846,6 +1945,28 @@
     },
     "color": "#4c3679"
   },
+  "del-pull-apart-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pull-apart-goma-192.c1fa92cd.webp",
+      "512": "imagenes/ejercicio/del-pull-apart-goma-512.a3a037e7.webp"
+    },
+    "color": "#412b75"
+  },
+  "del-push-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-push-press-192.ab8c2e1d.webp",
+      "512": "imagenes/ejercicio/del-push-press-512.50785fd5.webp"
+    },
+    "color": "#432f70"
+  },
   "del-remo-menton": {
     "proporcion": [
       1,
@@ -1856,6 +1977,17 @@
       "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
     },
     "color": "#4f367d"
+  },
+  "del-rotacion-externa-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-mancuerna-192.eb104d27.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-mancuerna-512.266e9f1c.webp"
+    },
+    "color": "#402a74"
   },
   "descanso": {
     "proporcion": [
