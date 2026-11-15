@@ -63,7 +63,7 @@ export async function probarPersonalRespeto({ navegador, check, base = 'http://l
     await p.keyboard.press('Escape');
     await hc.waitFor({ state: 'detached' });
     const pc = p.locator('.patron-ciclo');
-    await pc.waitFor({ timeout: 5000 });
+    await pc.waitFor({ timeout: 15000 });   // (en la pasada completa, Perfil tarda más en volver a pintarse)
     check(/tres inicios/.test(await pc.textContent()), 'en Perfil, que aún hacen falta más datos (sin conclusiones)');
     // --- su informe ---
     await p.getByRole('button', { name: 'Informe para tu médico o fisio' }).click();

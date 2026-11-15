@@ -203,7 +203,8 @@ export async function probarSinRed065({ navegador, check, base = 'http://localho
 
     // ---------------------------------------------------------------- «Novedades» tras actualizar
     await p.evaluate((u) => localStorage.setItem(`fbe-version-vista-${u}`, '0.64.0'), uid);
-    await p.reload();
+    // (en la pasada completa, al volver la conexión la app puede estar navegando: si la recarga se corta, otra vez)
+    await p.reload().catch(async () => { await p.waitForTimeout(1000); await p.reload(); });
     await novedades.waitFor({ timeout: 10000 });
     const texto = await novedades.textContent();
     // (las de la versión más nueva primero, 5 como mucho: desde la 0.69, las de la 0.65 ya no caben)
