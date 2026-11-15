@@ -288,6 +288,28 @@
     },
     "color": "#473375"
   },
+  "ant-curl-inverso-barra-z": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-inverso-barra-z-192.ed0e6bd8.webp",
+      "512": "imagenes/ejercicio/ant-curl-inverso-barra-z-512.61b3b67a.webp"
+    },
+    "color": "#3c2e64"
+  },
+  "ant-curl-inverso-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-inverso-polea-192.33f1e98e.webp",
+      "512": "imagenes/ejercicio/ant-curl-inverso-polea-512.6ba96193.webp"
+    },
+    "color": "#42326d"
+  },
   "ant-curl-muneca-banco": {
     "proporcion": [
       1,
@@ -529,6 +551,17 @@
     },
     "color": "#413465"
   },
+  "bic-curl-arrastre": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-arrastre-192.907bf312.webp",
+      "512": "imagenes/ejercicio/bic-curl-arrastre-512.2652beda.webp"
+    },
+    "color": "#3e2d69"
+  },
   "bic-curl-barra-recta": {
     "proporcion": [
       1,
@@ -562,6 +595,17 @@
     },
     "color": "#45346d"
   },
+  "bic-curl-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-goma-192.59af0048.webp",
+      "512": "imagenes/ejercicio/bic-curl-goma-512.88d04a86.webp"
+    },
+    "color": "#412e72"
+  },
   "bic-curl-inclinado": {
     "proporcion": [
       1,
@@ -583,6 +627,17 @@
       "512": "imagenes/ejercicio/bic-curl-mancuernas-512.6466a730.webp"
     },
     "color": "#3f2c6a"
+  },
+  "bic-curl-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-maquina-192.e165a305.webp",
+      "512": "imagenes/ejercicio/bic-curl-maquina-512.406171c0.webp"
+    },
+    "color": "#483675"
   },
   "bic-curl-martillo": {
     "proporcion": [
@@ -617,6 +672,17 @@
     },
     "color": "#45326e"
   },
+  "bic-curl-zottman": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-zottman-192.fd70bae1.webp",
+      "512": "imagenes/ejercicio/bic-curl-zottman-512.c2a52190.webp"
+    },
+    "color": "#412e71"
+  },
   "bic-doble-biceps-polea": {
     "proporcion": [
       1,
@@ -627,6 +693,28 @@
       "512": "imagenes/ejercicio/bic-doble-biceps-polea-512.43af3f70.webp"
     },
     "color": "#3f2a67"
+  },
+  "bic-martillo-cruzado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-martillo-cruzado-192.8bb16626.webp",
+      "512": "imagenes/ejercicio/bic-martillo-cruzado-512.b8aebdb3.webp"
+    },
+    "color": "#3f2e6b"
+  },
+  "bic-martillo-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-martillo-polea-cuerda-192.e0fee715.webp",
+      "512": "imagenes/ejercicio/bic-martillo-polea-cuerda-512.3699baec.webp"
+    },
+    "color": "#3f3267"
   },
   "bienvenida-manana": {
     "proporcion": [
@@ -5993,6 +6081,28 @@
       "512": "imagenes/ejercicio/tri-extension-maquina-512.84d6be9b.webp"
     },
     "color": "#493772"
+  },
+  "tri-extension-trasnuca-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-trasnuca-mancuerna-192.77111b26.webp",
+      "512": "imagenes/ejercicio/tri-extension-trasnuca-mancuerna-512.6c23f405.webp"
+    },
+    "color": "#422e72"
+  },
+  "tri-extension-trasnuca-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-trasnuca-polea-cuerda-192.66e240ef.webp",
+      "512": "imagenes/ejercicio/tri-extension-trasnuca-polea-cuerda-512.b16ff8d9.webp"
+    },
+    "color": "#463276"
   },
   "tri-extension-unilateral-polea": {
     "proporcion": [
