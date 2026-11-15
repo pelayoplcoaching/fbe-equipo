@@ -5561,6 +5561,9 @@ try {
   await tarj.locator('.tabla-velocidad').waitFor({ timeout: 90000 });
   check(pedidas.some((u) => /chunks\/analisis-[0-9A-Z]+\.js/.test(u)) && !pedidas.some((u) => !u.startsWith('http://localhost:4174/') && !/^(data|blob):/.test(u) && !/i\.ytimg\.com/.test(u)),
     'la barra se sigue en un Web Worker de la propia app; nada sale a otro servidor');
+  // La capa se dibuja un poco después de la tabla (en CI, a veces tarda): se espera a que esté entera
+  await tarj.locator('.capa-analisis .capa-vertical').waitFor({ timeout: 10000 }).catch(() => {});
+  await p.waitForFunction(() => document.querySelectorAll('.capa-analisis .capa-tramo.fase-sube').length >= 3 && document.querySelectorAll('.capa-analisis .capa-tramo.fase-baja').length >= 3, null, { timeout: 10000 }).catch(() => {});
   check(await tarj.locator('.capa-analisis .capa-tramo.fase-sube').count() >= 3 && await tarj.locator('.capa-analisis .capa-tramo.fase-baja').count() >= 3 && await tarj.locator('.capa-analisis .capa-vertical').count() === 1,
     'la trayectoria encima del vídeo: de un color al bajar y de otro al subir, con la vertical desde donde empieza');
   check(await tarj.locator('.tabla-velocidad tbody tr').count() === 3 && !(await tarj.locator('.tabla-velocidad thead').textContent()).includes('Media') && (await tarj.locator('.analisis-calibrar').textContent()).includes('Sin calibrar'),
