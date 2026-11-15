@@ -294,3 +294,73 @@ export function guardadosJuntos({ favoritos = [], nombres = {}, recetas = [], pu
   for (const a of apuntes || []) if (a?.titulo || a?.texto) out.push({ tipo: 'apunte', id: `a:${a.id}`, titulo: a.titulo || String(a.texto).slice(0, 80), detalle: a.de ? `Apunte · ${a.de}` : 'Apunte' });
   return out;
 }
+
+// =====================================================================
+// (T4) Descanso y pasos, atajos, privacidad, cuenta y la hoja de cálculo
+// =====================================================================
+// 12. La media de sueño y de pasos de las últimas 4 semanas (y de las 4 de antes, para la tendencia), y por semana.
+//     `dias`: [{ fecha, pasos, sueno_min }] de Salud. Sin datos de algo, ese algo sale null.
+export function descansoYPasos(dias = [], hoy) {
+  if (!hoy) return null;
+  const desde = sumar(hoy, -27), antesDesde = sumar(hoy, -55);
+  const media = (l, k) => { const v = l.map((x) => Number(x[k])).filter((n) => Number.isFinite(n) && n > 0); return v.length >= 3 ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const ahora = (dias || []).filter((x) => x?.fecha >= desde && x.fecha <= hoy);
+  const antes = (dias || []).filter((x) => x?.fecha >= antesDesde && x.fecha < desde);
+  const una = (k, umbral) => {
+    const m = media(ahora, k), a = media(antes, k);
+    if (m == null) return null;
+    const dif = a == null ? null : (m - a) / a;
+    return { media: m, antes: a, tendencia: dif == null ? null : dif > umbral ? 'sube' : dif < -umbral ? 'baja' : 'igual',
+      semanas: [3, 2, 1, 0].map((i) => media(ahora.filter((x) => x.fecha > sumar(hoy, -7 * (i + 1)) && x.fecha <= sumar(hoy, -7 * i)), k)) };
+  };
+  const sueno = una('sueno_min', 0.05), pasos = una('pasos', 0.08);
+  return sueno || pasos ? { sueno, pasos } : null;
+}
+function sumar(iso, d) { const t = new Date(`${iso}T12:00:00Z`); t.setUTCDate(t.getUTCDate() + d); return t.toISOString().slice(0, 10); }
+export const textoHoras = (min) => { const m = Math.round(min); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`; };
+
+// 16. Los atajos que puede elegir (tres): [clave, texto, icono, a dónde lleva]
+export const ATAJOS_PERFIL = [
+  ['checkin', 'Check-in', 'checkin', 'checkin'], ['progreso', 'Progreso', 'progreso', 'progreso'], ['mensajes', 'Mensajes', 'mensaje', 'mensajes'],
+  ['semana', 'Tu semana', 'semana', 'semana'], ['comidas', 'Comidas', 'receta', 'comidas'], ['aprende', 'Aprende', 'biblioteca', 'aprende'],
+  ['equipo', 'Equipo', 'equipo', 'equipo'], ['carne', 'Tu carné', 'escudo', '#carne'], ['datos', 'Tus datos', 'descargar', '#datos'],
+];
+export const ATAJOS_DEFECTO = ['checkin', 'progreso', 'mensajes'];
+export function atajosValidos(lista) {
+  const ok = new Set(ATAJOS_PERFIL.map(([k]) => k));
+  const l = [...new Set((Array.isArray(lista) ? lista : []).filter((k) => ok.has(k)))].slice(0, 3);
+  return l.length ? l : [...ATAJOS_DEFECTO];
+}
+export function alternarAtajo(lista, clave) {
+  const l = atajosValidos(lista);
+  if (l.includes(clave)) return l.length > 1 ? l.filter((k) => k !== clave) : l;
+  return l.length >= 3 ? l : [...l, clave];
+}
+
+// 17. Qué ve cada uno, de un vistazo (solo lo que de verdad pasa con lo suyo)
+export function privacidadDeUnVistazo({ salud = false, saludConectada = false, comunidad = false, portada = false, evitados = 0, material = false } = {}) {
+  const coach = ['Tus sesiones, series y notas', 'Tus mensajes y los vídeos y fotos que le envías', 'Lo tuyo: tu porqué, tu meta, tu manual y tu música'];
+  if (salud) coach.push('Tu peso, tus medidas, tus check-ins y cómo llegas a cada sesión');
+  if (saludConectada) coach.push('Lo que llega de Salud del iPhone (pasos, sueño, pulso)');
+  if (evitados || material) coach.push('Lo que prefieres evitar y tu material');
+  if (portada) coach.push('Tu foto de portada');
+  const equipo = comunidad
+    ? ['Tu nombre en el equipo, tu foto y tu racha', 'Lo que publicas y comentas', ...(portada ? ['Tu foto de portada'] : [])]
+    : [];
+  const movil = ['Los colores de tu portada y tus atajos', 'Tus ajustes de sonido, vibración y pantalla', 'Lo que has compartido desde este móvil', 'Tu rincón de ánimo solo lo ves tú (está en tu cuenta, pero ni tu coach lo ve)'];
+  return { coach, equipo, movil };
+}
+
+// 19. Una hoja de cálculo (CSV con «;» y coma decimal, como la abre Excel en español; con BOM para las tildes)
+const celda = (v) => {
+  if (v == null) return '';
+  const t = typeof v === 'number' ? String(Math.round(v * 100) / 100).replace('.', ',') : String(v);
+  return /[";\n\r]/.test(t) || /^[=+\-@]/.test(t) ? `"${(/^[=+\-@]/.test(t) && typeof v !== 'number' ? `'${t}` : t).replace(/"/g, '""')}"` : t;
+};
+export function aCSV(filas = [], columnas = []) {
+  return `﻿${[columnas.map(([, t]) => celda(t)).join(';'), ...filas.map((f) => columnas.map(([k]) => celda(typeof k === 'function' ? k(f) : f[k])).join(';'))].join('\r\n')}\r\n`;
+}
+export const CSV_SESIONES = [['fecha', 'Fecha'], [(x) => x.nombre || x.sesion || '', 'Sesión'], ['duracion_min', 'Minutos'], ['tonelaje', 'Kilos totales'], ['records', 'Récords'], [(x) => x.rpe_sesion ?? x.rpe ?? null, 'Esfuerzo (RPE)'], [(x) => x.cardio_hecho?.km ?? null, 'Km de cardio'], [(x) => x.cardio_hecho?.minutos ?? null, 'Minutos de cardio']];
+export const CSV_SERIES = [['fecha', 'Fecha'], ['ejercicio', 'Ejercicio'], ['kg', 'Kg'], ['reps', 'Repeticiones'], ['rpe', 'RPE']];
+export const CSV_PESOS = [['fecha', 'Fecha'], ['kg', 'Peso (kg)']];
+export const CSV_MEDIDAS = [['fecha', 'Fecha'], ['cintura_cm', 'Cintura (cm)'], ['cadera_cm', 'Cadera (cm)'], ['pecho_cm', 'Pecho (cm)'], ['brazo_cm', 'Brazo (cm)'], ['muslo_cm', 'Muslo (cm)'], ['pantorrilla_cm', 'Pantorrilla (cm)'], ['notas', 'Notas']];

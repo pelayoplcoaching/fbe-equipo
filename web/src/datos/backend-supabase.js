@@ -406,6 +406,26 @@ export function crearBackendSupabase({ url, anonKey }) {
         try { const ls = globalThis.localStorage; if (ls) { ls.removeItem(sb.auth.storageKey); ls.removeItem(`${sb.auth.storageKey}-code-verifier`); } } catch { /* */ }
         sesion = null;
       },
+      // (perfil, tanda 4) cerrar la sesión en todos sus dispositivos (Supabase revoca todas sus sesiones) y, aquí, como salir
+      async salirEnTodos() {
+        const { error } = await sb.auth.signOut({ scope: 'global' });
+        if (error && !/session|sesi/i.test(error.message || '')) throw traducir(error);
+        provisional = false;
+        try { await sb.auth.signOut({ scope: 'local' }); } catch { /* */ }
+        try { const ls = globalThis.localStorage; if (ls) { ls.removeItem(sb.auth.storageKey); ls.removeItem(`${sb.auth.storageKey}-code-verifier`); } } catch { /* */ }
+        sesion = null;
+      },
+      // Su último inicio de sesión (lo guarda Supabase)
+      async ultimoAcceso() {
+        const { data } = await sb.auth.getUser();
+        return data?.user?.last_sign_in_at || null;
+      },
+      // Cambiar el correo: Supabase manda un enlace para confirmarlo (según el proyecto, a los dos correos); hasta entonces sigue el de antes
+      async cambiarCorreo(email) {
+        const { error } = await sb.auth.updateUser({ email: String(email || '').trim() }, { emailRedirectTo: location.origin + location.pathname });
+        if (error) throw traducir(error);
+        return { confirmar: true };
+      },
       async recuperar(email) {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
         if (error) throw traducir(error);

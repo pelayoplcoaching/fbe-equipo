@@ -23,7 +23,7 @@ import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
-import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada } from './PerfilMas.jsx';
+import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada, AtajosPerfil, FilaPrivacidad, FilasCuentaSegura, FilaHojaCalculo } from './PerfilMas.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -52,6 +52,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <BandaDemo />
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
       {/* (perfil, tanda 4) lo que le falta por rellenar y el índice con buscador */}
+      <AtajosPerfil irA={irA} />
       <CompletaPerfil />
       <IndicePerfil />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
@@ -95,6 +96,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
       <GrupoIos titulo="Cuenta" id="grupo-cuenta" pie={`FBE Equipo, versión ${VERSION_APP}. Hola, ${perfil?.nombre || atleta.nombre}.`}>
         <FilaIos icono="privacidad" titulo="Política de privacidad" detalle="Aceptada" alTocar={() => setVerPrivacidad(true)} etiqueta="Política de privacidad: leerla" />
+        {/* (perfil, tanda 4) qué ve cada uno, de un vistazo */}
+        <FilaPrivacidad salud={!!consSalud} />
         <li class="fila-ios fila-ios-bloque">
           <IcoIos n="escudo" tono={consSalud ? 'ok' : 'aviso'} />
           <span class="fila-ios-texto"><span class="fila-ios-titulo">Datos de salud</span><span class="peq terciario">{consSalud ? 'Consentimiento dado' : 'Sin consentimiento: no puedes registrar peso, check-in ni cómo llegas a cada sesión'}</span></span>
@@ -116,7 +119,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <FilaIos icono="descargar" titulo="Descargar mis datos" detalle="Todo lo que has registrado, en un archivo JSON">
           <button class="btn btn-peq" onClick={descargar}><Icono n="descargar" /> Descargar</button>
         </FilaIos>
+        <FilaHojaCalculo />
         {modo !== 'demo' && <FilaIos icono="candado" titulo="Contraseña" alTocar={() => setCambiarPass(true)} valor="Cambiar" etiqueta="Cambiar la contraseña" />}
+        <FilasCuentaSegura correo={backend.auth.sesion()?.user.email} />
         <FilaIos icono="salir" tono="alerta" titulo="Cerrar sesión en este dispositivo">
           <button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button>
         </FilaIos>

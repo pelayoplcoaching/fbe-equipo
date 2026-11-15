@@ -99,5 +99,19 @@ const apiTxt = lee('src/datos/api.js');
 check(/'coach-voz', 'portadas'\]\) \{/.test(apiTxt) && /\['voz', 'comunidad', 'apuntes', 'coach-voz', 'portadas'\]\.includes/.test(apiTxt) && /async guardarPerfil4\(/.test(apiTxt) && /async ponerPortadaFoto\(/.test(apiTxt), 'el bucket «portadas» en borrarDeStorage y limpiarAlmacenamiento');
 check(/<FilaEvitados \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<RinconAnimo \/>/.test(lee('src/ui/atleta/PerfilSocial.jsx')) && /apartarEvitados/.test(lee('src/ui/atleta/Sesion.jsx')) && /aviso-evitado/.test(lee('src/ui/coach/Editor.jsx')) && /Prefiere evitar/.test(lee('src/ui/coach/PersonalCoach.jsx')) && /alRincon/.test(lee('src/ui/Chat.jsx')), 'en su sitio: perfil, sesión, editor y ficha del coach, y el chat');
 
+console.log('\nTanda 4: descanso y pasos, atajos, privacidad, cuenta y hoja de cálculo');
+const dias = [];
+for (let i = 0; i < 56; i++) { const t = new Date(Date.UTC(2026, 10, 15 - i, 12)); dias.push({ fecha: t.toISOString().slice(0, 10), pasos: i < 28 ? 9000 : 7000, sueno_min: i < 28 ? 420 : 430 }); }
+const dp = P.descansoYPasos(dias, '2026-11-15');
+check(dp.pasos.media === 9000 && dp.pasos.tendencia === 'sube' && dp.sueno.tendencia === 'igual' && dp.sueno.semanas.length === 4 && P.textoHoras(425) === '7 h 05 min', 'descanso y pasos: la media de 4 semanas, por semana, y su tendencia frente a las 4 de antes');
+check(P.descansoYPasos([{ fecha: '2026-11-14', pasos: 5000 }], '2026-11-15') === null && P.descansoYPasos(dias.slice(0, 5), '2026-11-15').pasos.tendencia === null, 'con menos de 3 días, nada; sin las 4 de antes, sin tendencia');
+check(P.atajosValidos(null).join() === 'checkin,progreso,mensajes' && P.atajosValidos(['carne', 'otro', 'carne', 'datos', 'equipo', 'semana']).join() === 'carne,datos,equipo', 'atajos: tres como mucho, sin repetir ni raros; por defecto, check-in, progreso y mensajes');
+check(P.alternarAtajo(['carne'], 'carne').join() === 'carne' && P.alternarAtajo(['checkin', 'progreso', 'mensajes'], 'equipo').length === 3 && P.alternarAtajo(['checkin'], 'equipo').join() === 'checkin,equipo', 'quitar uno (no el último) y añadir hasta tres');
+const pv = P.privacidadDeUnVistazo({ salud: true, saludConectada: true, comunidad: false, portada: true, evitados: 2 });
+check(pv.coach.some((t) => /peso/.test(t)) && pv.coach.some((t) => /Salud del iPhone/.test(t)) && pv.coach.some((t) => /evitar/.test(t)) && pv.equipo.length === 0 && pv.movil.some((t) => /rincón/.test(t)), 'privacidad de un vistazo: lo del coach según lo que de verdad comparte; fuera de la comunidad, el equipo no ve nada');
+const csv = P.aCSV([{ fecha: '2026-01-02', ejercicio: 'Press; "banca"', kg: 82.5, reps: 5, rpe: null }, { fecha: '2026-01-03', ejercicio: '=1+1', kg: 60, reps: 8, rpe: 8 }], P.CSV_SERIES);
+check(csv.startsWith('﻿Fecha;Ejercicio;Kg;Repeticiones;RPE\r\n') && csv.includes('"Press; ""banca"""') && csv.includes(';82,5;5;\r\n') && csv.includes(`"'=1+1"`), 'CSV: con «;», coma decimal, comillas cuando hacen falta y sin fórmulas');
+check(/salirEnTodos\(\)/.test(lee('src/datos/backend-supabase.js')) && /scope: 'global'/.test(lee('src/datos/backend-supabase.js')) && /cambiarCorreo/.test(lee('src/datos/backend-memoria.js')) && /<FilasCuentaSegura /.test(lee('src/ui/atleta/Perfil.jsx')) && /<FilaHojaCalculo \/>/.test(lee('src/ui/atleta/Perfil.jsx')) && /<AtajosPerfil /.test(lee('src/ui/atleta/Perfil.jsx')) && /<DescansoPasos /.test(lee('src/ui/atleta/PerfilSocial.jsx')), 'en su sitio: atajos arriba, descanso y pasos en Datos; privacidad, correo, cerrar en todos y CSV en Cuenta');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

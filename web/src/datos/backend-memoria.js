@@ -3134,6 +3134,18 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return { confirmarEmail: false };
       },
       async salir() { sesion = null; avisar(); },
+      // (perfil, tanda 4) cerrar en todos los dispositivos (en la demo, como salir), el último acceso y cambiar el correo
+      // (en la demo no se manda nada: se cambia y ya)
+      async salirEnTodos() { sesion = null; avisar(); },
+      async ultimoAcceso() { const u = usuario(); return u?.ultimo_acceso || (u ? (u.ultimo_acceso = new Date(Date.now() - 3600000).toISOString()) : null); },
+      async cambiarCorreo(email) {
+        const e = String(email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new Error('Ese correo no parece válido.');
+        if (tabla('auth_users').some((x) => x.email === e)) throw new Error('Ya hay una cuenta con ese correo.');
+        const u = usuario();
+        if (u) { u.email = e; sesion = { ...sesion, user: { ...sesion.user, email: e } }; persistirYa(); }
+        return { confirmar: false };
+      },
       async recuperar() {},
       async cambiarPassword(password) {
         const u = usuario();

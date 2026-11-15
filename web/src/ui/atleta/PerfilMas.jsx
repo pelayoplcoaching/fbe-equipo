@@ -4,6 +4,7 @@
 //   · FilaCorrecciones: «Lo que te ha corregido tu coach», por ejercicio (Tu asesoría)
 //   · CompletaPerfil: «Tu perfil al 70 %» y lo que falta, que abre su fila (arriba)
 //   · IndicePerfil: Tú · Lo tuyo · Ajustes, y el buscador del perfil (arriba)
+//   · (T4) DescansoPasos (Datos); AtajosPerfil (arriba); FilaPrivacidad, FilasCuentaSegura y FilaHojaCalculo (Cuenta)
 //   · (T3) FilaEvitados, FilaMaterial y FilaGuardados (Perfil); RinconAnimo (Resumen); recortarPortada (la foto de portada)
 //   · (T2) PalmaresYBloques: tu palmarés y tu historia de bloques; LogrosSecretos (Logros); Equivalencia (Resumen);
 //     Trimestre (Datos)
@@ -13,7 +14,10 @@ import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { pesoNum, etiquetaPeso } from '../../logica/unidades.js';
 import { textoManual } from '../../logica/respeto.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
-import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre, MOTIVOS_EVITAR, textoMotivo, alternarEvitado, materialDe, TIPOS_GUARDADO, guardadosJuntos } from '../../logica/perfil-mas.js';
+import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre, MOTIVOS_EVITAR, textoMotivo, alternarEvitado, materialDe, TIPOS_GUARDADO, guardadosJuntos, descansoYPasos, textoHoras, ATAJOS_PERFIL, atajosValidos, alternarAtajo, privacidadDeUnVistazo, aCSV, CSV_SESIONES, CSV_SERIES, CSV_PESOS, CSV_MEDIDAS } from '../../logica/perfil-mas.js';
+import { descargar } from '../comunes.jsx';
+import { sumarDias } from '../../logica/fechas.js';
+import { NOMBRE_MATERIAL } from '../../logica/material.js';
 import { MATERIAL_PERFIL, PERFILES_DEFECTO } from '../../logica/material.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { leerApuntes } from '../apuntes.js';
@@ -580,4 +584,247 @@ export async function recortarPortada(archivo, { ancho = 1200, alto = 300, calid
     }
     throw new Error('La foto pesa demasiado. Prueba con otra.');
   } finally { URL.revokeObjectURL(url); }
+}
+
+// =====================================================================
+// (T4) 12. Tu descanso y tus pasos, de un vistazo (si tiene Salud conectada)
+// =====================================================================
+export function DescansoPasos({ salud = false }) {
+  const { api, atleta } = useApp();
+  const hoy = hoyISO();
+  const d = useCarga(() => (salud && api.saludDiaria ? api.saludDiaria(atleta.id, sumarDias(hoy, -55), hoy).catch(() => null) : Promise.resolve(null)), [atleta.id, salud, hoy]);
+  const r = useMemo(() => (d.datos?.conectada ? descansoYPasos(d.datos.dias || [], hoy) : null), [d.datos, hoy]);
+  if (!r) return null;
+  const flecha = (t) => (t === 'sube' ? 'Más que las 4 semanas anteriores' : t === 'baja' ? 'Menos que las 4 semanas anteriores' : t === 'igual' ? 'Como las 4 semanas anteriores' : null);
+  const Barras = ({ v, max }) => (
+    <span class="dp-barras" aria-hidden="true">{v.map((x, i) => <span key={i} class="dp-barra" style={`--h:${x && max ? Math.max(8, Math.round((x / max) * 100)) : 4}%`} />)}</span>
+  );
+  return (
+    <section class="seccion perfil-sec descanso-pasos" aria-labelledby="descanso-pasos-t">
+      <div class="seccion-cab"><h2 id="descanso-pasos-t">Tu descanso y tus pasos</h2><span class="peq secundario">Últimas 4 semanas</span></div>
+      <div class="panel panel-pad dp-rejilla">
+        {r.sueno && (
+          <div class="dp-dato">
+            <span class="mini terciario"><Icono n="sueno" />Sueño, de media</span>
+            <b class="num">{textoHoras(r.sueno.media)}</b>
+            <Barras v={r.sueno.semanas} max={Math.max(...r.sueno.semanas.filter(Boolean))} />
+            {flecha(r.sueno.tendencia) && <span class="mini terciario">{flecha(r.sueno.tendencia)}</span>}
+          </div>
+        )}
+        {r.pasos && (
+          <div class="dp-dato">
+            <span class="mini terciario"><Icono n="pasos" />Pasos al día</span>
+            <b class="num">{Math.round(r.pasos.media).toLocaleString('es-ES')}</b>
+            <Barras v={r.pasos.semanas} max={Math.max(...r.pasos.semanas.filter(Boolean))} />
+            {flecha(r.pasos.tendencia) && <span class="mini terciario">{flecha(r.pasos.tendencia)}</span>}
+          </div>
+        )}
+      </div>
+      <p class="mini terciario">De Salud del iPhone. Lo ves tú y tu coach, como siempre.</p>
+    </section>
+  );
+}
+
+// =====================================================================
+// (T4) 16. Tus atajos: tres, arriba (en este móvil)
+// =====================================================================
+export function AtajosPerfil({ irA }) {
+  const { atleta } = useApp();
+  const [guardados, setGuardados] = useState(() => leerPreferencia(`fbe-atajos-perfil-${atleta.id}`, null));
+  const [editar, setEditar] = useState(false);
+  const lista = atajosValidos(guardados);
+  const fijar = (l) => { setGuardados(l); guardarPreferencia(`fbe-atajos-perfil-${atleta.id}`, l); };
+  const ir = (destino) => {
+    if (destino === '#carne') { const c = document.querySelector('.carnet'); c?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    if (destino === '#datos') { const c = document.querySelector('[aria-labelledby="grupo-cuenta"]') || document.getElementById('grupo-cuenta'); c?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    irA?.(destino);
+  };
+  const D = Object.fromEntries(ATAJOS_PERFIL.map((x) => [x[0], x]));
+  return (
+    <nav class="atajos-perfil" aria-label="Tus atajos">
+      {lista.map((k) => (
+        <button key={k} type="button" class="atajo-perfil" onClick={() => ir(D[k][3])}><span class="atajo-ico" aria-hidden="true"><Icono n={D[k][2]} /></span><span class="mini">{D[k][1]}</span></button>
+      ))}
+      <button type="button" class="atajo-perfil atajo-editar" onClick={() => setEditar(true)} aria-label="Elegir tus atajos"><span class="atajo-ico" aria-hidden="true"><Icono n="editar" /></span><span class="mini">Cambiar</span></button>
+      {editar && (
+        <Hoja titulo="Tus atajos" alCerrar={() => setEditar(false)}>
+          <div class="pila">
+            <p class="peq secundario">Elige hasta tres. Se guardan en este móvil.</p>
+            <div class="lista-elegir" role="group" aria-label="Tus atajos">
+              {ATAJOS_PERFIL.map(([k, t, ico]) => {
+                const si = lista.includes(k), lleno = !si && lista.length >= 3;
+                return (
+                  <button key={k} type="button" aria-pressed={si ? 'true' : 'false'} disabled={lleno} onClick={() => fijar(alternarAtajo(lista, k))} class={si ? 'elegida' : ''}>
+                    <span class="separa"><span><Icono n={ico} /> {t}</span>{si && <Icono n="hecho" />}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" class="btn btn-primario btn-grande" onClick={() => setEditar(false)}>Listo</button>
+          </div>
+        </Hoja>
+      )}
+    </nav>
+  );
+}
+
+// =====================================================================
+// (T4) 17. Tu privacidad, de un vistazo (y «Así te ve tu coach»)
+// =====================================================================
+export function FilaPrivacidad({ salud = false }) {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <>
+      <FilaIos icono="ojo" titulo="Tu privacidad, de un vistazo" detalle="Qué ve tu coach, qué ve el equipo y qué se queda en tu móvil" alTocar={() => setAbierta(true)} etiqueta="Tu privacidad, de un vistazo" />
+      {abierta && <HojaPrivacidad salud={salud} alCerrar={() => setAbierta(false)} />}
+    </>
+  );
+}
+const irAGrupo = (id, alCerrar) => { alCerrar(); setTimeout(() => { const g = document.querySelector(`[aria-labelledby="${id}"]`) || document.getElementById(id); g?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); };
+function HojaPrivacidad({ salud, alCerrar }) {
+  const { api, atleta, perfil } = useApp();
+  const [comoCoach, setComoCoach] = useState(false);
+  const d = useCarga(async () => {
+    const [personal, integ, miembro, portada] = await Promise.all([
+      api.personal().catch(() => null),
+      api.integraciones ? api.integraciones().catch(() => null) : null,
+      api.miembroComunidad ? api.miembroComunidad().catch(() => null) : null,
+      api.portadaFoto ? api.portadaFoto().catch(() => null) : null,
+    ]);
+    return { personal, conectada: !!integ?.salud, comunidad: !!(miembro && !miembro.salido_en), portada: !!portada };
+  }, [atleta.id]);
+  const p = d.datos?.personal;
+  const v = privacidadDeUnVistazo({ salud, saludConectada: d.datos?.conectada, comunidad: d.datos?.comunidad, portada: d.datos?.portada, evitados: (p?.evitados || []).length, material: materialDe(p).deLaBase });
+  const Lista = ({ l }) => <ul class="lista privacidad-lista">{l.map((t) => <li key={t} class="peq"><Icono n="hecho" />{t}</li>)}</ul>;
+  return (
+    <Hoja titulo="Tu privacidad" alCerrar={alCerrar}>
+      <div class="pila privacidad-hoja">
+        {d.cargando && !d.datos ? <p class="peq terciario" role="status">Cargando…</p> : (
+          <>
+            <section class="pila-s" aria-labelledby="priv-coach"><h3 id="priv-coach" class="peq"><Icono n="perfil" /> Lo que ve tu coach</h3><Lista l={v.coach} />
+              <button type="button" class="btn btn-peq" onClick={() => setComoCoach(true)}><Icono n="ojo" /> Así te ve tu coach</button></section>
+            <section class="pila-s" aria-labelledby="priv-equipo"><h3 id="priv-equipo" class="peq"><Icono n="equipo" /> Lo que ve el equipo</h3>
+              {v.equipo.length ? <Lista l={v.equipo} /> : <p class="peq terciario">Nada: no estás en la comunidad del equipo.</p>}</section>
+            <section class="pila-s" aria-labelledby="priv-movil"><h3 id="priv-movil" class="peq"><Icono n="movil" /> Lo que se queda en tu móvil</h3><Lista l={v.movil} /></section>
+            <section class="pila-s" aria-labelledby="priv-ajustes"><h3 id="priv-ajustes" class="peq"><Icono n="ajustes" /> Dónde se cambia</h3>
+              <div class="fila-envolver">
+                <button type="button" class="btn btn-peq" onClick={() => irAGrupo('grupo-cuenta', alCerrar)}>Datos de salud</button>
+                <button type="button" class="btn btn-peq" onClick={() => irAGrupo('grupo-conexiones', alCerrar)}>Salud del iPhone</button>
+                <button type="button" class="btn btn-peq" onClick={() => irAGrupo('grupo-lo-tuyo', alCerrar)}>Lo tuyo</button>
+                <button type="button" class="btn btn-peq" onClick={() => irAGrupo('grupo-este-movil', alCerrar)}>Este móvil</button>
+              </div></section>
+          </>
+        )}
+      </div>
+      {comoCoach && (
+        <Hoja titulo="Así te ve tu coach" alCerrar={() => setComoCoach(false)}>
+          <div class="pila asi-coach">
+            <p class="peq secundario">Lo suyo de ti, en su ficha (lo demás, tus sesiones y registros, lo ve en sus pantallas de siempre).</p>
+            <div class="panel panel-pad pila-s">
+              <strong>{atleta.nombre}</strong>
+              {perfil?.foto ? <span class="mini terciario">Con tu foto de perfil</span> : <span class="mini terciario">Sin foto de perfil</span>}
+              {p?.porque && <p class="peq">«{p.porque}»</p>}
+              <dl class="lo-suyo-datos">
+                {p?.apodo && <><dt>Quiere que le llamen</dt><dd>{p.apodo}</dd></>}
+                {p?.meta_nombre && <><dt>Su meta</dt><dd>{p.meta_nombre}{p.meta_fecha ? ` (${fmtCorta(p.meta_fecha)})` : ''}</dd></>}
+                {textoManual(p) && <><dt>Su manual</dt><dd>{textoManual(p)}</dd></>}
+                {(p?.evitados || []).length > 0 && <><dt>Prefiere evitar</dt><dd>{p.evitados.length} {p.evitados.length === 1 ? 'ejercicio' : 'ejercicios'}, con su motivo</dd></>}
+                {materialDe(p).deLaBase && <><dt>Su material</dt><dd>{[...new Set([...materialDe(p).casa, ...materialDe(p).viaje])].map((k) => NOMBRE_MATERIAL[k] || k).join(', ') || 'Nada marcado'}</dd></>}
+              </dl>
+              {!p?.porque && !p?.apodo && !p?.meta_nombre && <p class="mini terciario">Aún no has rellenado «Lo tuyo»: tu coach solo ve tu nombre y tus registros.</p>}
+            </div>
+            <p class="mini terciario">Tu rincón de ánimo no lo ve.</p>
+          </div>
+        </Hoja>
+      )}
+    </Hoja>
+  );
+}
+
+// =====================================================================
+// (T4) 18. Una cuenta más segura: tu correo, cerrar en todos y tu último acceso
+// =====================================================================
+export function FilasCuentaSegura({ correo = null }) {
+  const { backend, aviso } = useApp();
+  const ultimo = useCarga(() => (backend?.auth?.ultimoAcceso ? backend.auth.ultimoAcceso().catch(() => null) : Promise.resolve(null)), []);
+  const [cambiar, setCambiar] = useState(false);
+  const [todos, setTodos] = useState(false);
+  const [nuevo, setNuevo] = useState('');
+  const [error, setError] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+  const fecha = ultimo.datos ? new Date(ultimo.datos) : null;
+  const textoUltimo = fecha && !Number.isNaN(fecha.getTime()) ? fecha.toLocaleString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : null;
+  const enviar = async (e) => {
+    e.preventDefault();
+    setError(null); setOcupado(true);
+    try {
+      const r = await backend.auth.cambiarCorreo(nuevo);
+      aviso(r?.confirmar ? 'Te hemos mandado un enlace para confirmarlo. Hasta entonces sigue el de antes.' : 'Correo cambiado');
+      setCambiar(false); setNuevo('');
+    } catch (err) { setError(err.message); }
+    setOcupado(false);
+  };
+  return (
+    <>
+      {backend?.auth?.cambiarCorreo && <FilaIos icono="mensaje" titulo="Correo" detalle={correo || null} alTocar={() => setCambiar(true)} valor="Cambiar" etiqueta="Cambiar el correo" />}
+      {backend?.auth?.salirEnTodos && <FilaIos icono="escudo" titulo="Cerrar sesión en todos tus dispositivos" detalle={textoUltimo ? `Tu último inicio de sesión: ${textoUltimo}` : 'Si has entrado en un móvil que no es tuyo'} alTocar={() => setTodos(true)} etiqueta="Cerrar sesión en todos tus dispositivos" />}
+      {cambiar && (
+        <Hoja titulo="Cambiar el correo" alCerrar={() => setCambiar(false)}>
+          <form class="pila" onSubmit={enviar}>
+            <p class="peq secundario">Te mandaremos un enlace para confirmarlo. Hasta que lo confirmes, sigues entrando con el de ahora{correo ? ` (${correo})` : ''}.</p>
+            <label class="campo"><span class="peq">Correo nuevo</span><input class="entrada" type="email" autocomplete="email" required value={nuevo} onInput={(e) => setNuevo(e.currentTarget.value)} aria-describedby={error ? 'correo-error' : undefined} /></label>
+            {error && <p id="correo-error" class="peq peligro-texto" role="alert">{error}</p>}
+            <button class="btn btn-primario btn-grande" disabled={ocupado || !nuevo.trim()}>Cambiar el correo</button>
+          </form>
+        </Hoja>
+      )}
+      {todos && (
+        <Hoja titulo="Cerrar sesión en todos" alCerrar={() => setTodos(false)}>
+          <div class="pila">
+            <p class="peq secundario">Se cerrará tu sesión en todos los móviles y ordenadores, también en este. Tendrás que volver a entrar con tu correo y tu contraseña. Lo que no se haya enviado sin cobertura se quedará en este móvil.</p>
+            <button type="button" class="btn btn-peligro btn-grande" disabled={ocupado} onClick={async () => { setOcupado(true); try { await backend.auth.salirEnTodos(); } catch (err) { aviso(err.message, 'error'); setOcupado(false); } }}>Cerrar sesión en todos</button>
+            <button type="button" class="btn btn-grande" onClick={() => setTodos(false)}>Cancelar</button>
+          </div>
+        </Hoja>
+      )}
+    </>
+  );
+}
+
+// =====================================================================
+// (T4) 19. Tus datos en una hoja de cálculo (CSV que se abre en Excel o Numbers)
+// =====================================================================
+export function FilaHojaCalculo() {
+  const { api, atleta, aviso } = useApp();
+  const [abierta, setAbierta] = useState(false);
+  const [ocupado, setOcupado] = useState(null);
+  const bajar = async (que) => {
+    setOcupado(que);
+    try {
+      let filas, cols;
+      if (que === 'sesiones') { filas = await api.entrenamientos(atleta.id); cols = CSV_SESIONES; }
+      else if (que === 'series') { filas = await api.historial(atleta.id); cols = CSV_SERIES; }
+      else if (que === 'peso') { filas = await api.pesos(atleta.id, 3650); cols = CSV_PESOS; }
+      else { filas = await api.medidas(atleta.id); cols = CSV_MEDIDAS; }
+      const l = [...(filas || [])].sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
+      await descargar(`fbe-${que}-${hoyISO()}.csv`, aCSV(l, cols), 'text/csv;charset=utf-8');
+      aviso(l.length ? `Descargado: ${l.length} ${l.length === 1 ? 'fila' : 'filas'}` : 'Descargado (aún sin datos)');
+    } catch (e) { aviso(e.message || 'No se ha podido descargar', 'error'); }
+    setOcupado(null);
+  };
+  return (
+    <>
+      <FilaIos icono="documento" titulo="Tus datos en una hoja de cálculo" detalle="Sesiones, series, peso y medidas, para Excel o Numbers" alTocar={() => setAbierta(true)} etiqueta="Tus datos en una hoja de cálculo" />
+      {abierta && (
+        <Hoja titulo="Tus datos en una hoja de cálculo" alCerrar={() => setAbierta(false)}>
+          <div class="pila hoja-calculo">
+            <p class="peq secundario">Cada cosa en su archivo (CSV). Se abren con Excel, Numbers o Google Sheets.</p>
+            {[['sesiones', 'Tus sesiones'], ['series', 'Tus series'], ['peso', 'Tu peso'], ['medidas', 'Tus medidas']].map(([k, t]) => (
+              <button key={k} type="button" class="btn btn-ancho" disabled={!!ocupado} onClick={() => bajar(k)}><Icono n="descargar" /> {ocupado === k ? 'Preparando…' : t}</button>
+            ))}
+          </div>
+        </Hoja>
+      )}
+    </>
+  );
 }

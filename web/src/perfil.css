@@ -307,3 +307,23 @@
 .perfil-portada-foto .btn { background: var(--hoja); }
 .perfil-portada-foto .btn.ocupado { opacity: .7; }
 .perfil-portada.con-foto svg { display: none; }
+
+/* ---------- (perfil, tanda 4) T4: atajos, descanso y pasos, privacidad y hoja de calculo ---------- */
+.atajos-perfil { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.atajo-perfil { display: grid; justify-items: center; gap: 4px; padding: 10px 4px; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); border: 0; color: var(--tinta); cursor: pointer; text-align: center; }
+.atajo-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.atajo-ico svg { width: 18px; height: 18px; }
+.atajo-editar .atajo-ico { background: var(--hoja-2); color: var(--tinta-2); }
+.dp-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.dp-dato { display: grid; gap: 4px; }
+.dp-dato > .mini { display: inline-flex; gap: 6px; align-items: center; }
+.dp-dato > .mini svg { width: 14px; height: 14px; }
+.dp-dato b { font-size: var(--letra-19); font-weight: 800; }
+.dp-barras { display: flex; align-items: flex-end; gap: 4px; height: 28px; }
+.dp-barra { flex: 1; height: var(--h); min-height: 2px; border-radius: var(--r-4); background: var(--morado); opacity: .75; }
+.dp-barra:last-child { opacity: 1; }
+.privacidad-lista { display: grid; gap: 6px; }
+.privacidad-lista li { display: flex; gap: 8px; align-items: flex-start; }
+.privacidad-lista svg { width: 14px; height: 14px; flex: none; margin-top: 3px; color: var(--ok); }
+.privacidad-hoja h3 { display: flex; gap: 6px; align-items: center; margin: 0; }
+.privacidad-hoja h3 svg { width: 16px; height: 16px; }
