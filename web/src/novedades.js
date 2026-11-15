@@ -8,10 +8,10 @@
 export const NOVEDADES = {
   '0.170': {
     atleta: [
-      'Aprende crece: 14 guías nuevas en Entrenar, Comer y Salud, de la rodilla y la creatina a la analítica y el alcohol.',
+      'Aprende crece: 16 guías nuevas en Entrenar, Comer y Salud, de la rodilla y la creatina a la analítica y el alcohol.',
     ],
     coach: [
-      'Aprende: 14 guías de vídeo repartidas en Entrenar (3), Comer (4) y Salud (7). Su texto va en tu SQL privado.',
+      'Aprende: 16 guías tuyas repartidas en Entrenar (3), Comer (6) y Salud (7). Su texto va en guias-video.sql.',
     ],
   },
   '0.169': {
