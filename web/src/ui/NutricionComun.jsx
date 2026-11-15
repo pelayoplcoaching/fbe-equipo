@@ -1,7 +1,7 @@
 // Piezas de nutrición que comparten el atleta y el coach: el plan en una tarjeta, las barras de macros y la
 // gráfica de lo comido cada día frente a lo que tocaba.
 import { useId } from 'preact/hooks';
-import { useAncho, Icono, DegradadoAro } from './comunes.jsx';
+import { useAncho, Icono, DegradadoAro, useRaspado, CajaGrafica } from './comunes.jsx';
 import { fmtCorta, fmtConDia, diasEntre } from '../logica/fechas.js';
 import { NOMBRE_FASE, fmtKcal, kcalMediaPlan } from '../logica/nutricion.js';
 import { macrosDia } from '../logica/diseno.js';
@@ -125,34 +125,39 @@ export function TarjetaPlan({ plan, siguiente = null, diasEntreno = 4, acciones 
 // Lo comido cada día (barras, con el color de cómo fue) frente a lo que tocaba (raya). dias: [{ iso, kcal, objetivo, estado }]
 export function GraficaIngesta({ dias, alto = 150, etiqueta }) {
   const [W, ref] = useAncho();
-  if (!dias?.length) return null;
+  const n = dias?.length || 0;
   const H = alto, izq = 34, der = 8, arr = 10, abj = 22;
-  const valores = dias.flatMap((d) => [d.kcal, d.objetivo]).filter((v) => v != null);
-  if (!valores.length) return null;
-  const hi = Math.max(...valores) * 1.08, lo = 0;
-  const ancho = (W - izq - der) / dias.length;
+  const valores = (dias || []).flatMap((d) => [d.kcal, d.objetivo]).filter((v) => v != null);
+  const hi = Math.max(1, ...valores) * 1.08, lo = 0;
+  const ancho = (W - izq - der) / Math.max(1, n);
   const X = (i) => izq + i * ancho;
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
+  // (visual 11) tocar o arrastrar para leer cada día, como en las gráficas de línea
+  const xs = (dias || []).map((_, i) => X(i) + ancho / 2);
+  const raspado = useRaspado(n, xs);
+  if (!n || !valores.length) return null;
   const ticks = [Math.round(hi * 0.5 / 500) * 500, Math.round(hi * 0.9 / 500) * 500].filter((t, i, a) => t > 0 && a.indexOf(t) === i);
   // La media, de los días acabados y completos (como la de la tabla)
   const conDato = dias.filter((d) => d.kcal != null && d.estado !== 'en_curso' && d.estado !== 'incompleto');
   const media = conDato.length ? Math.round(conDato.reduce((t, d) => t + d.kcal, 0) / conDato.length) : null;
-  const etiquetasX = [0, Math.floor((dias.length - 1) / 2), dias.length - 1];
+  const etiquetasX = [0, Math.floor((n - 1) / 2), n - 1];
+  const textoDia = (i) => { const d = dias[i]; return d.kcal == null ? `${fmtConDia(d.iso)}: sin apuntar` : `${fmtConDia(d.iso)}: ${fmtKcal(d.kcal)} kcal${d.objetivo ? ` de ${fmtKcal(d.objetivo)}` : ''}${NOMBRE_ESTADO_DIA[d.estado] ? ` (${NOMBRE_ESTADO_DIA[d.estado]})` : ''}`; };
+  const resumen = etiqueta || `Kcal de cada día, ${diasEntre(dias[0].iso, dias[n - 1].iso) + 1} días: ${dias.filter((d) => d.kcal != null).length} apuntados${media != null ? `, media de los completos ${fmtKcal(media)} kcal` : ''}`;
+  const sel = raspado.sel;
   return (
-    <svg class="grafica grafica-ingesta" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img"
-      aria-label={etiqueta || `Kcal de cada día, ${diasEntre(dias[0].iso, dias[dias.length - 1].iso) + 1} días: ${dias.filter((d) => d.kcal != null).length} apuntados${media != null ? `, media de los completos ${fmtKcal(media)} kcal` : ''}`}>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={dias.map((d) => Y(d.kcal ?? d.objetivo ?? lo))} etiqueta="Kcal de cada día" textoPunto={textoDia} resumen={resumen}>
+    <svg class="grafica grafica-ingesta" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-hidden="true" aria-label={resumen}>
       {ticks.map((t) => (
         <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t / 1000, 1)}k</text></g>
       ))}
       {dias.map((d, i) => d.kcal != null && (
-        <rect key={d.iso} class={`barra-dia ${d.estado}`} x={X(i) + ancho * 0.18} width={Math.max(2, ancho * 0.64)} y={Y(d.kcal)} height={Math.max(1, Y(lo) - Y(d.kcal))} rx="2">
-          <title>{`${fmtConDia(d.iso)}: ${fmtKcal(d.kcal)} kcal${d.objetivo ? ` de ${fmtKcal(d.objetivo)}` : ''} (${NOMBRE_ESTADO_DIA[d.estado] || ''})`}</title>
-        </rect>
+        <rect key={d.iso} class={`barra-dia ${d.estado} ${i === sel ? 'elegida' : ''}`} x={X(i) + ancho * 0.18} width={Math.max(2, ancho * 0.64)} y={Y(d.kcal)} height={Math.max(1, Y(lo) - Y(d.kcal))} rx="2" />
       ))}
       {dias.map((d, i) => d.objetivo != null && <line key={`o${d.iso}`} class="objetivo-dia" x1={X(i) + 1} x2={X(i) + ancho - 1} y1={Y(d.objetivo)} y2={Y(d.objetivo)} />)}
       {etiquetasX.map((i, k) => (
         <text key={k} x={X(i) + ancho / 2} y={H - 4} text-anchor={k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}>{fmtCorta(dias[i].iso)}</text>
       ))}
     </svg>
+    </CajaGrafica>
   );
 }

@@ -12,6 +12,15 @@ export async function irASeccion(p, nombre) {
   return undefined;
 }
 
+// (visual 3) Perfil tiene dos vistas, «Tú» y «Ajustes»: va a Perfil y pasa a «Ajustes» (conexiones, el reloj, este
+// móvil, los mensajes, guías, preguntas y la cuenta)
+export async function irAAjustes(p) {
+  await irASeccion(p, 'Perfil');
+  const t = p.getByRole('tab', { name: 'Ajustes', exact: true });
+  await t.waitFor({ timeout: 10000 });
+  if ((await t.getAttribute('aria-selected')) !== 'true') await t.click();
+}
+
 // ¿Tiene esa sección (en la barra o en «Más»)? Deja «Más» cerrada
 export async function haySeccion(p, nombre) {
   if (await p.locator('nav.tabs .tab', { hasText: nombre }).count()) return true;

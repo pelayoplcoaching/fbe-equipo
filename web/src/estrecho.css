@@ -6,7 +6,7 @@
    ancho, y el valor de la derecha puede partirse. En un movil normal con la letra normal no cambia nada.
    ===================================================================================================================== */
 @media (max-width: 359px) {
-  .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  .fila-ios { gap: var(--esp-10); padding-left: var(--esp-12); padding-right: var(--esp-12); }
   :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
   :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
   :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }
@@ -14,7 +14,7 @@
   :is(.duelos .duelo-retar, .resumen-equipo-compartir, .perfil-ver-como) { white-space: normal; text-wrap: balance; }
 }
 @media (max-width: 400px) {
-  :root[data-letra="grande"] .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  :root[data-letra="grande"] .fila-ios { gap: var(--esp-10); padding-left: var(--esp-12); padding-right: var(--esp-12); }
   :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
   :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
   :root[data-letra="grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }
@@ -22,7 +22,7 @@
   :root[data-letra="grande"] :is(.duelos .duelo-retar, .resumen-equipo-compartir, .perfil-ver-como) { white-space: normal; text-wrap: balance; }
 }
 @media (max-width: 440px) {
-  :root[data-letra="muy-grande"] .fila-ios { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  :root[data-letra="muy-grande"] .fila-ios { gap: var(--esp-10); padding-left: var(--esp-12); padding-right: var(--esp-12); }
   :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto, .fila-ios.interruptor-fila > label) { display: contents; }
   :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .fila-ios-titulo, .fila-ios.interruptor-fila > label > span:first-child) { min-width: 0; overflow-wrap: break-word; }
   :root[data-letra="muy-grande"] :is(.fila-ios:not(.fila-ios-bloque) > .fila-ios-texto > .peq, .fila-ios.interruptor-fila > label > .peq) { order: 9; grid-column: 1 / -1; }

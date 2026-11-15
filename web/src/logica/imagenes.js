@@ -222,6 +222,8 @@ export function fuenteImagen(id, lista = LISTA) {
   const base = anchos[Math.min(1, anchos.length - 1)];
   return {
     src: x.archivos[base],
+    // (visual 12) su color, para pintarlo mientras carga (scripts/colores-imagenes.py)
+    color: /^#[0-9a-f]{6}$/i.test(x.color || '') ? x.color : null,
     srcset: anchos.map((a) => `${x.archivos[a]} ${a}w`).join(', '),
     ancho: base,
     alto: Math.round((base * pb) / pa),

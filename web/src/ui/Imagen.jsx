@@ -21,6 +21,6 @@ export function Imagen({ id, clase = '', tamanos = '100vw', prioridad = false, a
   return (
     <img class={clase} src={f.src} srcset={f.srcset} sizes={tamanos} width={f.ancho} height={f.alto} alt="" aria-hidden="true"
       decoding="async" loading={prioridad ? 'eager' : 'lazy'} fetchpriority={prioridad ? 'high' : undefined} draggable={false}
-      data-imagen={id} onLoad={alCargar || undefined} onError={() => { setFalla(id); alFallar?.(id); }} />
+      data-imagen={id} style={f.color ? { '--color-imagen': f.color } : undefined} onLoad={alCargar || undefined} onError={() => { setFalla(id); alFallar?.(id); }} />
   );
 }

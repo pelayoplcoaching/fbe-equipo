@@ -2,15 +2,15 @@
    del descanso. Con el tema de la app. */
 .apuntes { position: fixed; inset: 0; z-index: var(--capa-inmersiva); background: var(--tiza); color: var(--tinta); outline: none; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
-.apuntes-cab { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 10px 10px 18px; }
-.apuntes-titulo { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--letra-17); }
-.apuntes-titulo svg { width: 20px; height: 20px; color: var(--morado); }
-.apuntes-cuenta { padding: 4px 12px; border-radius: var(--r-pildora); background: var(--flota); color: var(--sobre-flota); font-size: var(--letra-20); font-weight: 800; font-stretch: var(--ancho-marcador, 78%); line-height: 1.3; }
+.apuntes-cab { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--esp-10); padding: var(--esp-10) var(--esp-10) var(--esp-10) var(--esp-18); }
+.apuntes-titulo { display: inline-flex; align-items: center; gap: var(--esp-8); font-weight: 700; font-size: var(--letra-17); }
+.apuntes-titulo svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); }
+.apuntes-cuenta { padding: var(--esp-4) var(--esp-12); border-radius: var(--r-pildora); background: var(--flota); color: var(--sobre-flota); font-size: var(--letra-20); font-weight: 800; font-stretch: var(--ancho-marcador, 78%); line-height: 1.3; }
 .apuntes.acabado .apuntes-cuenta { background: var(--morado); color: var(--sobre-morado); }
-.apuntes-cuerpo { overflow-y: auto; overscroll-behavior: contain; padding: 8px 18px 18px; display: grid; align-content: center; }
-.apunte { display: grid; gap: 14px; justify-items: start; width: 100%; max-width: 560px; margin: 0 auto; padding: 22px 20px; border-radius: 22px; background: var(--hoja); border: var(--filo-fino) solid var(--linea);
+.apuntes-cuerpo { overflow-y: auto; overscroll-behavior: contain; padding: var(--esp-8) var(--esp-18) var(--esp-18); display: grid; align-content: center; }
+.apunte { display: grid; gap: var(--esp-14); justify-items: start; width: 100%; max-width: 560px; margin: 0 auto; padding: var(--esp-22) var(--esp-20); border-radius: 22px; background: var(--hoja); border: var(--filo-fino) solid var(--linea);
   box-shadow: var(--sombra); }
-.apunte-etq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.apunte-etq { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); margin: 0; }
 .apunte-etq .chip { background: color-mix(in srgb, var(--morado) 12%, var(--hoja)); border-color: transparent; color: var(--morado); font-weight: 700; }
 .apunte.tipo-mito .apunte-etq .chip, .apunte.tipo-error .apunte-etq .chip { background: color-mix(in srgb, var(--aviso) 12%, var(--hoja)); color: var(--aviso); }
 .apunte-de { font-size: var(--letra-14); color: var(--tinta-2); }
@@ -18,87 +18,87 @@
 .apunte-texto { margin: 0; font-size: var(--letra-18); line-height: 1.5; text-wrap: pretty; }
 .apunte-destapar { min-height: 48px; }
 .vacio-apuntes p { margin: 0; color: var(--tinta-2); }
-.apuntes-pie { display: flex; gap: 10px; padding: 10px 18px 16px; max-width: 596px; width: 100%; margin: 0 auto; }
+.apuntes-pie { display: flex; gap: var(--esp-10); padding: var(--esp-10) var(--esp-18) var(--esp-16); max-width: 596px; width: 100%; margin: 0 auto; }
 .apuntes-pie .btn { flex: 1; min-height: 52px; }
 @media (prefers-reduced-motion: no-preference) { .apunte { animation: apunte-entra .28s cubic-bezier(.2, .9, .3, 1) both; } }
 @keyframes apunte-entra { from { transform: translateY(10px); } }  /* (al integrarla: sin opacity, que el texto no entra fundido) */
 
 /* La tarjeta fuera de la sesión (Hoy y Semana) */
-.apuntes-tarjeta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; }
+.apuntes-tarjeta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-12); padding: var(--esp-10) var(--esp-12) var(--esp-10) var(--esp-14); }
 .apuntes-tarjeta-texto { display: grid; gap: 1px; min-width: 0; }
 /* Tres botones en el descanso (Respira, Jugar, Aprender): algo más prietos para que quepan en una fila en el móvil */
-.temporizador .descanso-extras { gap: 6px; flex-wrap: nowrap; max-width: 100%; }
-.temporizador .descanso-extras .respira-boton { padding: 0 11px; gap: 5px; min-width: 0; white-space: nowrap; }
+.temporizador .descanso-extras { gap: var(--esp-6); flex-wrap: nowrap; max-width: 100%; }
+.temporizador .descanso-extras .respira-boton { padding: 0 var(--esp-12); gap: var(--esp-4); min-width: 0; white-space: nowrap; }
 @media (max-width: 359px) { .temporizador .descanso-extras { flex-wrap: wrap; } }
 
 /* (060) la novedad de la semana: su fuente y el enlace al estudio; en la tarjeta de Hoy, un punto que avisa */
 .apunte.tipo-novedad .apunte-etq .chip { background: color-mix(in srgb, var(--ok) 14%, var(--hoja)); color: var(--ok); }
 .apunte-fuente { margin: 0; font-size: var(--letra-14); color: var(--tinta-2); overflow-wrap: anywhere; }
 .apunte-fuente a { color: var(--morado); font-weight: 650; }
-.apuntes-tarjeta.con-novedad .apuntes-tarjeta-texto strong::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: var(--morado); vertical-align: middle; }
+.apuntes-tarjeta.con-novedad .apuntes-tarjeta-texto strong::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: var(--esp-8); border-radius: 50%; background: var(--morado); vertical-align: middle; }
 .apuntes-tarjeta-texto .peq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* (coach) el editor de la novedad de la semana */
-.novedades-coach .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; padding: 12px 14px; background: none; border: 0; border-top: var(--filo-fino) solid var(--linea); color: inherit; }
+.novedades-coach .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-4) var(--esp-10); align-items: center; width: 100%; text-align: left; padding: var(--esp-12) var(--esp-14); background: none; border: 0; border-top: var(--filo-fino) solid var(--linea); color: inherit; }
 .novedades-coach .novedad-fila:first-of-type { border-top: 0; }
 .novedades-coach .novedad-fila span.peq { grid-column: 1 / -1; }
-.novedad-form { display: grid; gap: 12px; }
+.novedad-form { display: grid; gap: var(--esp-12); }
 .novedad-form textarea { min-height: 8.5em; resize: vertical; }
 .novedad-form .cuenta-letras { justify-self: end; font-size: var(--letra-13); color: var(--tinta-2); }
-.novedades-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.novedades-cab { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-10); }
 .novedades-cab h2 { margin: 0; font-size: var(--letra-18); }
 
 /* (tanda 2) la pantalla va por debajo de las hojas (la guía se abre encima) */
 .apuntes { z-index: calc(var(--capa-hoja) - 2); }
 .apunte-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-14); }
-.apunte-opciones { display: grid; gap: 8px; width: 100%; }
+.apunte-opciones { display: grid; gap: var(--esp-8); width: 100%; }
 .apunte-opcion { justify-content: space-between; min-height: 50px; text-align: left; white-space: normal; }
 .apunte-opcion.buena { background: color-mix(in srgb, var(--ok, var(--verde-600)) 16%, var(--hoja)); border-color: var(--ok, var(--verde-600)); color: var(--tinta); opacity: 1; }
 .apunte-opcion.mala { background: color-mix(in srgb, var(--alerta) 12%, var(--hoja)); border-color: var(--alerta); color: var(--tinta); opacity: 1; }
-.apunte-opcion svg { width: 18px; height: 18px; flex: none; }
-.apunte-terminos { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.apunte-opcion svg { width: var(--ico-18); height: var(--ico-18); flex: none; }
+.apunte-terminos { display: flex; flex-wrap: wrap; gap: var(--esp-6); width: 100%; }
 .apunte-termino { cursor: pointer; }
 .apunte-termino[aria-expanded="true"] { background: var(--morado); color: var(--blanco); border-color: transparent; }
-.apunte-definicion { flex-basis: 100%; margin: 4px 0 0; font-size: var(--letra-15); line-height: 1.45; color: var(--tinta-2); }
-.apunte-acciones { display: flex; flex-wrap: wrap; gap: 2px 14px; width: 100%; padding-top: 8px; border-top: var(--filo-fino) solid var(--linea); }
-.apunte-acciones .btn-texto { font-size: var(--letra-14); min-height: 40px; padding: 6px 2px; }
+.apunte-definicion { flex-basis: 100%; margin: var(--esp-4) 0 0; font-size: var(--letra-15); line-height: 1.45; color: var(--tinta-2); }
+.apunte-acciones { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-14); width: 100%; padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.apunte-acciones .btn-texto { font-size: var(--letra-14); min-height: 40px; padding: var(--esp-6) var(--esp-2); }
 .apunte-acciones .btn-texto[aria-pressed="true"] { color: var(--ok, var(--verde-600)); }
 .apunte.tipo-correccion .apunte-etq .chip, .apunte.tipo-numeros .apunte-etq .chip { background: var(--morado); color: var(--blanco); }
 .apunte.tipo-correccion .apunte-texto { font-size: var(--letra-22); font-weight: 650; line-height: 1.3; }
-.apuntes-tarjeta-botones { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.apuntes-tarjeta-botones { display: inline-flex; gap: var(--esp-6); flex-wrap: wrap; justify-content: flex-end; }
 .apuntes-cuerpo { align-content: safe center; }
 
 /* (tanda 2) el apunte «al paso», dentro de las filas de Hoy */
 .apunte-al-paso-marca { display: block; height: 1px; }
-.apunte-al-paso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; margin-top: 12px; padding: 12px 14px; border-radius: var(--r-14);
+.apunte-al-paso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-4) var(--esp-10); align-items: start; margin-top: var(--esp-12); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14);
   background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); }
-.apunte-al-paso > svg { width: 20px; height: 20px; color: var(--morado); margin-top: 2px; }
+.apunte-al-paso > svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); margin-top: var(--esp-2); }
 .apunte-al-paso p { margin: 0; font-size: var(--letra-15); line-height: 1.45; }
-.apunte-al-paso .btn-texto { grid-column: 2; justify-self: start; min-height: 36px; padding: 4px 0; font-size: var(--letra-14); }
+.apunte-al-paso .btn-texto { grid-column: 2; justify-self: start; min-height: 36px; padding: var(--esp-4) 0; font-size: var(--letra-14); }
 .apunte .apunte-img, .apunte picture.apunte-img, .apunte .apunte-img img { height: 180px; max-height: 180px; aspect-ratio: auto; object-fit: cover; object-position: 50% 30%; }
 
 /* (tanda 4) El coach: apuntes sueltos, mandar un apunte a un atleta y «Lo que más se falla» */
 .novedad-form .novedad-tipo { display: grid; grid-template-columns: 1fr 1fr; }
-.fallado-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; border-top: var(--filo-fino) solid var(--linea); }
+.fallado-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-10); align-items: center; padding: var(--esp-12) var(--esp-14); border-top: var(--filo-fino) solid var(--linea); }
 .fallado-fila:first-child { border-top: 0; }
 .mandar-apunte blockquote { margin: 0; color: var(--tinta-2); }
-.mandar-apunte .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 48px; text-align: left; padding: 10px 14px; background: none; border: 0; border-top: var(--filo-fino) solid var(--linea); color: inherit; font: inherit; }
+.mandar-apunte .novedad-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-10); align-items: center; width: 100%; min-height: 48px; text-align: left; padding: var(--esp-10) var(--esp-14); background: none; border: 0; border-top: var(--filo-fino) solid var(--linea); color: inherit; font: inherit; }
 .mandar-apunte .novedad-fila:first-child { border-top: 0; }
 
 /* (tanda 4) En Semana: la racha y la medalla, el curso de la semana y el examen; y dentro, la barra del curso y la nota */
-.apuntes-tarjeta-mas { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 8px; border-top: var(--filo-fino) solid var(--linea); }
-.apuntes-logros { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.apuntes-tarjeta-mas { grid-column: 1 / -1; display: grid; gap: var(--esp-8); padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.apuntes-logros { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4) var(--esp-12); }
 .apuntes-racha { font-weight: 650; }
-.apuntes-medalla { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--morado); }
+.apuntes-medalla { display: inline-flex; align-items: center; gap: var(--esp-4); font-weight: 700; color: var(--morado); }
 .apuntes-ico-medalla { width: 16px; height: 16px; }
-.apuntes-tarjeta-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.apuntes-curso { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; width: 100%; max-width: 560px; margin: 0 auto 12px; padding: 12px 14px; border-radius: var(--r, 18px); background: var(--morado-suave); box-sizing: border-box; }
+.apuntes-tarjeta-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); }
+.apuntes-curso { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-6) var(--esp-12); width: 100%; max-width: 560px; margin: 0 auto var(--esp-12); padding: var(--esp-12) var(--esp-14); border-radius: var(--r, 18px); background: var(--morado-suave); box-sizing: border-box; }
 .apuntes-curso-t { display: grid; gap: 1px; min-width: 0; }
-.apuntes-curso-puntos { display: inline-flex; gap: 5px; }
+.apuntes-curso-puntos { display: inline-flex; gap: var(--esp-4); }
 .apuntes-curso-puntos i { width: 9px; height: 9px; border-radius: 50%; background: var(--acento-a22); }
 .apuntes-curso-puntos i.hecha { background: var(--morado); }
 .apuntes-curso .btn-texto { grid-column: 1 / -1; justify-self: start; min-height: 36px; }
-.apuntes-cursos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.apuntes-cursos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--esp-8); }
 .apuntes-curso-otro { min-height: 36px; border: 0; cursor: pointer; font: inherit; font-size: var(--letra-13); }
 .apuntes-curso-otro[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado, var(--blanco)); }
 .examen-nota h2 .num { font-size: 2rem; }
@@ -129,7 +129,7 @@
 
 /* 10 y 11 · Arriba: un punto por apunte del rato y la cuenta del descanso como barra que se vacía */
 .apuntes-cab { position: relative; }
-.apuntes-puntos { grid-column: 1 / -1; display: flex; gap: 5px; margin: -2px 0 0; }
+.apuntes-puntos { grid-column: 1 / -1; display: flex; gap: var(--esp-4); margin: -2px 0 0; }
 .apuntes-puntos i { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--tinta) 22%, transparent); }
 .apuntes-puntos i.sabia { background: var(--disco-verde); }
 .apuntes-puntos i.no { background: var(--disco-amarillo); }
@@ -139,7 +139,7 @@
 .apuntes-barra.final i { background: var(--disco-amarillo); }
 
 /* 2 · La hoja de cuaderno: más grande, con renglones suaves, el margen y la esquina doblada */
-.apunte { position: relative; max-width: 520px; align-content: start; padding: 24px 22px 22px 30px; border-radius: 20px; border: 0;
+.apunte { position: relative; max-width: 520px; align-content: start; padding: var(--esp-24) var(--esp-22) var(--esp-22) 30px; border-radius: 20px; border: 0;
   background:
     linear-gradient(var(--oklab,) 90deg, transparent 17px, color-mix(in srgb, var(--disco-rojo) 26%, transparent) 17px 18.5px, transparent 18.5px),
     repeating-linear-gradient(180deg, transparent 0 27px, color-mix(in srgb, var(--tono, var(--morado)) 6%, transparent) 27px 28px) 0 64px / 100% calc(100% - 64px) no-repeat,
@@ -154,15 +154,15 @@
 /* 1 · El sello de cada tipo: un redondel con su dibujo */
 .apunte-sello { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--tono, var(--morado)); color: var(--sobre-morado);
   box-shadow: 0 0 0 4px var(--tono-suave); }
-.apunte-sello svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.apunte-sello svg { width: var(--ico-20); height: var(--ico-20); fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .apunte-sello svg .lleno { fill: currentColor; stroke: none; }
 
 /* 4 · El rotulador: la palabra clave del título, subrayada con un trazo del tono */
 .apunte-rotulador { color: inherit; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--tono, var(--morado)) 30%, transparent) 58% 92%, transparent 92%) no-repeat 0 0 / 100% 100%;
-  border-radius: var(--r-4); padding: 0 2px; margin: 0 -2px; }
+  border-radius: var(--r-4); padding: 0 var(--esp-2); margin: 0 -2px; }
 
 /* 3 · El mazo: detrás asoman las que quedan */
-.apunte-mazo { position: relative; display: grid; width: 100%; max-width: 520px; margin: 0 auto 14px; }
+.apunte-mazo { position: relative; display: grid; width: 100%; max-width: 520px; margin: 0 auto var(--esp-14); }
 .apunte-mazo > .apunte { grid-area: 1 / 1; z-index: 2; }
 .apunte-mazo::before, .apunte-mazo::after { content: ''; grid-area: 1 / 1; border-radius: 20px; background: var(--hoja); box-shadow: var(--sombra-tarjeta); }
 .apunte-mazo::before { transform: translateY(8px) scale(.965); opacity: .85; z-index: 1; }
@@ -170,12 +170,12 @@
 .apunte-mazo[data-mazo="1"]::after, .apunte-mazo[data-mazo="0"]::after, .apunte-mazo[data-mazo="0"]::before { display: none; }
 
 /* 5 · La que se va: sale volando hacia un lado con su sello (8) */
-.apunte-saliente { grid-area: 1 / 1; z-index: 3; align-self: stretch; align-content: start; position: relative; display: grid; gap: 12px; padding: 24px 22px; border-radius: 20px; background: var(--hoja); pointer-events: none;
+.apunte-saliente { grid-area: 1 / 1; z-index: 3; align-self: stretch; align-content: start; position: relative; display: grid; gap: var(--esp-12); padding: var(--esp-24) var(--esp-22); border-radius: 20px; background: var(--hoja); pointer-events: none;
   box-shadow: 0 0 0 1px var(--borde), var(--sombra-flotante); }
 .apunte-saliente::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: 20px 20px 0 0; background: var(--tono); }
-.saliente-etq { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--letra-14); font-weight: 650; color: var(--tono-tinta); }
+.saliente-etq { display: flex; align-items: center; gap: var(--esp-8); margin: 0; font-size: var(--letra-14); font-weight: 650; color: var(--tono-tinta); }
 .saliente-titulo { font-size: var(--letra-22); line-height: 1.2; }
-.apunte-marca { position: absolute; right: 18px; top: 46%; padding: 6px 14px; border: var(--filo-marca) solid currentColor; border-radius: var(--r-10); font-weight: 900; font-size: var(--letra-20); letter-spacing: .02em;
+.apunte-marca { position: absolute; right: 18px; top: 46%; padding: var(--esp-6) var(--esp-14); border: var(--filo-marca) solid currentColor; border-radius: var(--r-10); font-weight: 900; font-size: var(--letra-20); letter-spacing: .02em;
   text-transform: uppercase; transform: rotate(-12deg); background: color-mix(in srgb, var(--hoja) 80%, transparent); }
 .apunte-marca.marca-sabia, .apunte-marca.marca-hecho { color: var(--disco-verde); }
 .apunte-marca.marca-no, .apunte-marca.marca-pasa { color: var(--aviso); font-size: var(--letra-16); text-transform: none; transform: rotate(-6deg); }
@@ -183,7 +183,7 @@
 /* 6 · Deslizar: mientras se arrastra, gira un poco y asoma lo que hará */
 .apunte { touch-action: pan-y; }
 .apunte.arrastrando { transition: none !important; animation: none !important; cursor: grabbing; }
-.apunte-deslizar { position: absolute; top: 26px; padding: 5px 12px; border: var(--filo-marca) solid currentColor; border-radius: var(--r-10); font-weight: 900; font-size: var(--letra-17); pointer-events: none; z-index: 3;
+.apunte-deslizar { position: absolute; top: 26px; padding: var(--esp-4) var(--esp-12); border: var(--filo-marca) solid currentColor; border-radius: var(--r-10); font-weight: 900; font-size: var(--letra-17); pointer-events: none; z-index: 3;
   background: color-mix(in srgb, var(--hoja) 85%, transparent); color: var(--tinta-2); }
 .apunte-deslizar.derecha { left: 26px; transform: rotate(-10deg); }
 .apunte-deslizar.izquierda { right: 30px; transform: rotate(10deg); }
@@ -199,7 +199,7 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%); filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--tinta) 20%, transparent)); }
 
 /* 13 · Escuchar: cuatro barras que suben y bajan mientras habla */
-.apunte-ondas { display: inline-flex; align-items: center; gap: 2px; width: 18px; height: 16px; }
+.apunte-ondas { display: inline-flex; align-items: center; gap: var(--esp-2); width: 18px; height: 16px; }
 .apunte-ondas i { flex: 1; height: 40%; border-radius: var(--r-2); background: currentColor; }
 
 /* 15 · Las palabras del glosario, en el propio texto: subrayado de puntos; al tocarlas, su definición en un bocadillo */
@@ -208,7 +208,7 @@
 .apunte-termino-en[aria-expanded="true"] { background: var(--tono-suave); color: var(--tono-tinta); text-decoration-style: solid; }
 .apunte-termino-en:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .apunte-terminos:has(> .apunte-definicion:only-child) { margin-top: -4px; }
-.apunte-definicion { position: relative; padding: 10px 14px; border-radius: var(--r-14); background: var(--tono-suave, var(--morado-suave)); color: var(--tinta); }
+.apunte-definicion { position: relative; padding: var(--esp-10) var(--esp-14); border-radius: var(--r-14); background: var(--tono-suave, var(--morado-suave)); color: var(--tinta); }
 .apunte-definicion::before { content: ''; position: absolute; left: 22px; top: -7px; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); border-radius: var(--r-4) 0 0 0; }
 
 /* 16 · La nota del examen: el aro, el porcentaje y la nota como un sello */
@@ -220,12 +220,12 @@
 .examen-aro .fondo { stroke: var(--tono-suave); }
 .examen-aro .lleno { stroke: var(--tono); stroke-linecap: round; stroke-dashoffset: var(--hasta); }
 .examen-pct { font-size: 2.25rem; font-weight: 800; font-stretch: var(--ancho-marcador, 78%); color: var(--tono-tinta); }
-.examen-nota h2 { display: grid; justify-items: center; gap: 12px; }
-.examen-sello { display: inline-block; padding: 6px 16px; border: var(--filo-marca) solid var(--tono); border-radius: var(--r-s); color: var(--tono-tinta); font-size: var(--letra-18); font-weight: 900;
+.examen-nota h2 { display: grid; justify-items: center; gap: var(--esp-12); }
+.examen-sello { display: inline-block; padding: var(--esp-6) var(--esp-16); border: var(--filo-marca) solid var(--tono); border-radius: var(--r-s); color: var(--tono-tinta); font-size: var(--letra-18); font-weight: 900;
   text-transform: uppercase; letter-spacing: .04em; transform: rotate(-6deg); }
 
 /* 17 · El curso como camino: las lecciones unidas por una línea, la de ahora brillando; al acabarlo, el diploma */
-.apuntes-curso-puntos { position: relative; gap: 10px; }
+.apuntes-curso-puntos { position: relative; gap: var(--esp-10); }
 .apuntes-curso-puntos::before { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 2px; margin-top: -1px; background: var(--acento-a22); }
 .apuntes-curso-puntos i { position: relative; width: 11px; height: 11px; }
 .apuntes-curso-puntos i.ahora { background: var(--hoja); box-shadow: 0 0 0 3px var(--morado), 0 0 0 7px var(--acento-a22); }
@@ -250,9 +250,9 @@
 .metal-bronce .disco { fill: var(--ambar-500); } .metal-plata .disco { fill: var(--neutro-400); } .metal-oro .disco { fill: var(--oro-400); } .metal-lavanda .disco { fill: var(--marca-500); }
 .apuntes-medalla-dibujo .brillo { position: absolute; inset: 0; background: linear-gradient(var(--oklab,) 115deg, transparent 35%, rgb(255 255 255 / .75) 50%, transparent 65%); transform: translateX(-120%); }
 .apuntes-medalla-dibujo.grande { width: 112px; height: 134px; vertical-align: 0; filter: drop-shadow(0 10px 18px rgb(27 23 48 / .3)); }
-.apuntes-medalla-nueva { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; pointer-events: none;
+.apuntes-medalla-nueva { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: var(--esp-6); text-align: center; pointer-events: none;
   background: color-mix(in srgb, var(--tiza) 82%, transparent); backdrop-filter: blur(3px); }
-.apuntes-medalla-nueva strong { margin-top: 10px; font-size: var(--letra-14); letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
+.apuntes-medalla-nueva strong { margin-top: var(--esp-10); font-size: var(--letra-14); letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
 .apuntes-medalla-nueva span:last-child { font-size: 1.75rem; font-weight: 800; }
 
 /* El confeti: papelillos de cuatro colores que caen una vez */
@@ -263,7 +263,7 @@
 .examen-nota > :not(.apuntes-confeti) { position: relative; z-index: 1; }
 
 /* 19 · En Semana: los siete días, encendidos los que ha aprendido algo */
-.apuntes-semana { display: flex; gap: 6px; align-items: center; }
+.apuntes-semana { display: flex; gap: var(--esp-6); align-items: center; }
 .apuntes-semana span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: var(--letra-11); font-weight: 750; color: var(--tinta-3);
   background: color-mix(in srgb, var(--tinta) 6%, transparent); }
 .apuntes-semana span.hecho { background: var(--morado); color: var(--sobre-morado); }
@@ -272,10 +272,10 @@
 
 /* 20 · En Hoy: la novedad, con su cinta «Nuevo» que brilla */
 .apuntes-tarjeta { position: relative; overflow: hidden; }
-.apuntes-cinta { position: absolute; right: -30px; top: 9px; width: 104px; padding: 2px 0; transform: rotate(35deg); text-align: center; font-size: var(--letra-10); font-weight: 850;
+.apuntes-cinta { position: absolute; right: -30px; top: 9px; width: 104px; padding: var(--esp-2) 0; transform: rotate(35deg); text-align: center; font-size: var(--letra-10); font-weight: 850;
   letter-spacing: .12em; text-transform: uppercase; color: var(--blanco); background: var(--disco-verde); overflow: hidden; pointer-events: none; }
 .apuntes-cinta::after { content: ''; position: absolute; inset: 0; background: linear-gradient(var(--oklab,) 100deg, transparent 30%, rgb(255 255 255 / .6) 50%, transparent 70%); transform: translateX(-130%); }
-.apuntes-tarjeta.con-novedad .apuntes-tarjeta-botones { margin-right: 22px; }
+.apuntes-tarjeta.con-novedad .apuntes-tarjeta-botones { margin-right: var(--esp-22); }
 
 @media (prefers-reduced-motion: no-preference) {
   .apuntes::before { animation: ap-flota 18s ease-in-out infinite alternate; }
@@ -334,26 +334,26 @@
 /* (apuntes, tanda A) Recordar antes de leer: la pregunta, el botón para destapar y, al pie, las tres notas con cuándo vuelve */
 .apunte-pregunta-recordar { color: var(--tono-tinta); }
 .apunte-recordar-de { margin: -6px 0 0; font-size: var(--letra-17); font-weight: 650; }
-.apunte-recordar { min-height: 52px; width: 100%; gap: 8px; border: var(--filo-fuerte) dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); background: var(--tono-suave); color: var(--tono-tinta); font-weight: 700; }
+.apunte-recordar { min-height: 52px; width: 100%; gap: var(--esp-8); border: var(--filo-fuerte) dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); background: var(--tono-suave); color: var(--tono-tinta); font-weight: 700; }
 .apunte-recordar-ayuda { margin: -6px 0 0; font-size: var(--letra-14); color: var(--tinta-2); }
-.apuntes-pie .apunte-nota { display: grid; place-content: center; gap: 1px; padding: 6px 8px; line-height: 1.15; }
+.apuntes-pie .apunte-nota { display: grid; place-content: center; gap: 1px; padding: var(--esp-6) var(--esp-8); line-height: 1.15; }
 .apuntes-pie .apunte-nota small { font-size: var(--letra-12); font-weight: 500; opacity: .8; }
 .apuntes-pie .apunte-nota.nota-otra { color: var(--aviso); }
 /* Por qué no es esa: debajo de la explicación, en un recuadro suave */
-.apunte-porque { margin: 0; padding: 10px 14px; border-radius: var(--r-14); background: color-mix(in srgb, var(--aviso) 10%, var(--hoja)); font-size: var(--letra-15); line-height: 1.45; }
+.apunte-porque { margin: 0; padding: var(--esp-10) var(--esp-14); border-radius: var(--r-14); background: color-mix(in srgb, var(--aviso) 10%, var(--hoja)); font-size: var(--letra-15); line-height: 1.45; }
 /* (apuntes, tanda A) El coach escribe su pregunta: cada opción con su «la buena» y, en las malas, el porqué */
-.pregunta-opciones { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
-.pregunta-opciones legend { font-weight: 600; margin-bottom: 6px; }
-.pregunta-opcion { display: grid; grid-template-columns: 44px 1fr; gap: 6px 4px; align-items: center; }
+.pregunta-opciones { border: 0; padding: 0; margin: 0; display: grid; gap: var(--esp-10); }
+.pregunta-opciones legend { font-weight: 600; margin-bottom: var(--esp-6); }
+.pregunta-opcion { display: grid; grid-template-columns: 44px 1fr; gap: var(--esp-6) var(--esp-4); align-items: center; }
 .pregunta-opcion .entrada-peq { grid-column: 2; min-height: 40px; font-size: var(--letra-14); }
 .pregunta-buena { display: grid; place-items: center; min-height: 44px; }
 .pregunta-buena input { width: 22px; height: 22px; accent-color: var(--morado); }
 /* (apuntes, tanda A) sin conexión: un aviso discreto bajo el título */
-.apuntes-sin-red { gap: 4px; font-size: var(--letra-12); }
-.apuntes-sin-red svg { width: 14px; height: 14px; }
+.apuntes-sin-red { gap: var(--esp-4); font-size: var(--letra-12); }
+.apuntes-sin-red svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 
 /* ---------- (apuntes, tanda B) Practicar ---------- */
-.practica { display: grid; gap: 12px; width: 100%; justify-self: stretch; }
+.practica { display: grid; gap: var(--esp-12); width: 100%; justify-self: stretch; }
 .practica-ayuda { margin: 0; font-size: var(--letra-14); color: var(--tinta-2); }
 .practica-veredicto { margin: 0; font-weight: 700; color: var(--tono-tinta); }
 .practica-veredicto[data-bien="no"] { color: var(--aviso); }
@@ -361,47 +361,47 @@
 .practica-tiempo { position: relative; height: 26px; border-radius: var(--r-14); background: color-mix(in srgb, var(--tono, var(--morado)) 12%, transparent); overflow: hidden; display: grid; align-items: center; }
 .practica-tiempo > span { position: absolute; inset: 0; background: color-mix(in srgb, var(--tono, var(--morado)) 38%, transparent); transform-origin: left; transition: transform var(--mov-medio) linear; }
 .practica-tiempo.fuera > span { background: color-mix(in srgb, var(--aviso) 40%, transparent); }
-.practica-tiempo b { position: relative; justify-self: end; padding: 0 10px; font-size: var(--letra-13); }
+.practica-tiempo b { position: relative; justify-self: end; padding: 0 var(--esp-10); font-size: var(--letra-13); }
 .practica-tiempo.corto { height: 10px; }
 .practica-tiempo.corto b { position: absolute; right: 0; top: -22px; padding: 0; color: var(--tinta-2); }
 /* emparejar: dos columnas que se tocan */
-.emparejar-columnas { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: 8px; }
-.emparejar-col { display: grid; gap: 8px; align-content: start; }
-.emparejar .btn { min-height: 48px; height: auto; padding: 8px 10px; white-space: normal; text-align: left; line-height: 1.25; font-size: var(--letra-14); justify-content: flex-start; }
+.emparejar-columnas { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr); gap: var(--esp-8); }
+.emparejar-col { display: grid; gap: var(--esp-8); align-content: start; }
+.emparejar .btn { min-height: 48px; height: auto; padding: var(--esp-8) var(--esp-10); white-space: normal; text-align: left; line-height: 1.25; font-size: var(--letra-14); justify-content: flex-start; }
 .emparejar-termino { font-weight: 700; }
 .emparejar-termino.elegido { outline: 3px solid var(--tono, var(--morado)); outline-offset: 1px; background: var(--tono-suave); }
 .emparejar .hecho { opacity: .55; background: color-mix(in srgb, var(--ok) 14%, var(--hoja)); border-color: transparent; }
 .emparejar-def.mal { animation: ap-agitar .4s ease; border-color: var(--aviso); }
 @keyframes ap-agitar { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 /* ordenar */
-.ordenar-elegidos, .ordenar-resultado { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
-.ordenar-elegidos li { min-height: 36px; padding: 6px 10px; border-radius: var(--r-10); border: var(--filo-medio) dashed var(--linea); font-size: var(--letra-15); }
+.ordenar-elegidos, .ordenar-resultado { margin: 0; padding-left: 1.4em; display: grid; gap: var(--esp-6); }
+.ordenar-elegidos li { min-height: 36px; padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); border: var(--filo-medio) dashed var(--linea); font-size: var(--letra-15); }
 .ordenar-elegidos li.lleno { border-style: solid; background: var(--tono-suave); }
-.ordenar-opciones { display: grid; gap: 8px; }
-.ordenar-paso { min-height: 46px; height: auto; white-space: normal; text-align: left; justify-content: flex-start; padding: 8px 12px; line-height: 1.3; }
-.ordenar-resultado li { padding: 4px 0; }
-.ordenar-resultado li > span:first-child { margin-right: 6px; }
-.ordenar-resultado li.bien svg { width: 16px; height: 16px; vertical-align: -3px; color: var(--ok); }
+.ordenar-opciones { display: grid; gap: var(--esp-8); }
+.ordenar-paso { min-height: 46px; height: auto; white-space: normal; text-align: left; justify-content: flex-start; padding: var(--esp-8) var(--esp-12); line-height: 1.3; }
+.ordenar-resultado li { padding: var(--esp-4) 0; }
+.ordenar-resultado li > span:first-child { margin-right: var(--esp-6); }
+.ordenar-resultado li.bien svg { width: var(--ico-16); height: var(--ico-16); vertical-align: -3px; color: var(--ok); stroke-width: 2; }
 .ordenar-resultado li.mal { color: var(--aviso); }
 /* verdadero o falso */
-.vf-frase { margin: 6px 0 0; min-height: 4.2em; font-size: var(--letra-19); font-weight: 650; line-height: 1.35; transition: color var(--mov-breve); }
+.vf-frase { margin: var(--esp-6) 0 0; min-height: 4.2em; font-size: var(--letra-19); font-weight: 650; line-height: 1.35; transition: color var(--mov-breve); }
 .vf-frase.bien { color: var(--ok); }
 .vf-frase.mal { color: var(--aviso); }
-.vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vf-botones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-10); }
 .vf-botones .btn { min-height: 54px; font-weight: 700; }
 .vf-nota { margin: 0; font-size: var(--letra-17); }
-.vf-nota b { font-size: var(--letra-24); margin-right: 6px; }
-.vf-falladas { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: var(--letra-15); line-height: 1.4; }
+.vf-nota b { font-size: var(--letra-24); margin-right: var(--esp-6); }
+.vf-falladas { margin: 0; padding-left: 1.1em; display: grid; gap: var(--esp-8); font-size: var(--letra-15); line-height: 1.4; }
 /* microlecciones */
-.micro-fila { display: grid; gap: 4px; }
+.micro-fila { display: grid; gap: var(--esp-4); }
 .micro-fila > span { display: flex; justify-content: space-between; font-size: var(--letra-15); }
 .micro-fila input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--tono, var(--morado)); }
-.micro-resultado { margin: 4px 0 0; font-size: var(--letra-17); }
+.micro-resultado { margin: var(--esp-4) 0 0; font-size: var(--letra-17); }
 .micro-resultado b { font-size: 1.625rem; color: var(--tono-tinta); }
-.micro-tabla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.micro-tabla > span { display: grid; place-items: center; padding: 8px 4px; border-radius: var(--r-s); background: var(--tono-suave); font-size: var(--letra-13); text-align: center; }
+.micro-tabla { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--esp-6); }
+.micro-tabla > span { display: grid; place-items: center; padding: var(--esp-8) var(--esp-4); border-radius: var(--r-s); background: var(--tono-suave); font-size: var(--letra-13); text-align: center; }
 .micro-tabla b { font-size: var(--letra-16); }
-.micro-escala { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.micro-escala { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--esp-6); }
 .micro-escala i { height: 8px; border-radius: var(--r-4); background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); }
 .micro-escala i.esta { background: var(--tono, var(--morado)); }
 /* tres explicaciones */
@@ -409,23 +409,23 @@
 .apunte-niveles button { font-size: var(--letra-13); min-height: 36px; }
 .apunte-niveles button:disabled { opacity: var(--op-deshabilitado); }
 /* grábate y compáralo */
-.comparar { display: grid; gap: 12px; }
-.comparar-clave { margin: 0; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-s); background: var(--tono-suave, var(--acento-a8)); font-weight: 600; }
-.comparar-clave svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
-.comparar-videos { display: grid; gap: 10px; }
+.comparar { display: grid; gap: var(--esp-12); }
+.comparar-clave { margin: 0; display: flex; gap: var(--esp-8); align-items: flex-start; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--tono-suave, var(--acento-a8)); font-weight: 600; }
+.comparar-clave svg { flex: none; width: var(--ico-18); height: var(--ico-18); margin-top: var(--esp-2); }
+.comparar-videos { display: grid; gap: var(--esp-10); }
 .comparar-videos.con-mio { grid-template-columns: 1fr 1fr; align-items: start; }
-.comparar-videos figure { margin: 0; display: grid; gap: 6px; }
+.comparar-videos figure { margin: 0; display: grid; gap: var(--esp-6); }
 .comparar-videos figcaption { display: flex; justify-content: space-between; align-items: center; font-size: var(--letra-13); color: var(--tinta-2); }
 .comparar-tuyo video { width: 100%; max-height: 60vh; border-radius: var(--r-14); background: var(--ap-negro); }
-.comparar-grabar, .comparar-otro { position: relative; overflow: hidden; gap: 8px; cursor: pointer; }
+.comparar-grabar, .comparar-otro { position: relative; overflow: hidden; gap: var(--esp-8); cursor: pointer; }
 .comparar-grabar { min-height: 120px; }
 .comparar-grabar input, .comparar-otro input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .emparejar-def.mal { animation: none; } .practica-tiempo > span { transition: none; } }
 /* (apuntes, tanda B) Antes de la primera serie de un ejercicio nuevo: sus tres claves, con veinte segundos que se llenan */
-.antes-de-empezar { display: grid; gap: 8px; margin: 4px 0 10px; padding: 12px 14px; border-radius: var(--r-16); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); border: var(--filo-fino) solid var(--acento-a22); }
-.antes-cab { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--morado-tinta, var(--morado)); }
-.antes-cab svg { width: 18px; height: 18px; flex: none; }
-.antes-de-empezar ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: var(--letra-15); line-height: 1.4; }
+.antes-de-empezar { display: grid; gap: var(--esp-8); margin: var(--esp-4) 0 var(--esp-10); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-16); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); border: var(--filo-fino) solid var(--acento-a22); }
+.antes-cab { margin: 0; display: flex; gap: var(--esp-8); align-items: center; color: var(--morado-tinta, var(--morado)); }
+.antes-cab svg { width: var(--ico-18); height: var(--ico-18); flex: none; }
+.antes-de-empezar ol { margin: 0; padding-left: 1.3em; display: grid; gap: var(--esp-4); font-size: var(--letra-15); line-height: 1.4; }
 .antes-tiempo { height: 4px; border-radius: var(--r-2); background: var(--acento-a16); overflow: hidden; }
 .antes-tiempo i { display: block; height: 100%; background: var(--morado); transform-origin: left; animation: antes-llenar 20s linear forwards; }
 @keyframes antes-llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -445,62 +445,62 @@
 .anillo-meta.pequeno b { font-size: var(--letra-11); }
 .anillo-meta.pequeno b svg { width: 16px; height: 16px; }
 .apuntes-cab .anillo-meta { margin-left: auto; }
-.apuntes-diaria { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.apuntes-diaria { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-10); }
 .apuntes-racha-dias { font-weight: 650; }
 /* la hoja «Tu progreso» */
-.progreso-apuntes h3 { margin: 0 0 8px; font-size: var(--letra-17); }
-.prog-prueba { display: grid; gap: 6px; }
-.prog-hoy { display: grid; gap: 10px; }
-.prog-hoy-fila { display: flex; gap: 14px; align-items: center; }
-.prog-temas { display: grid; gap: 12px; }
-.prog-tema { display: grid; gap: 5px; }
-.prog-tema-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.progreso-apuntes h3 { margin: 0 0 var(--esp-8); font-size: var(--letra-17); }
+.prog-prueba { display: grid; gap: var(--esp-6); }
+.prog-hoy { display: grid; gap: var(--esp-10); }
+.prog-hoy-fila { display: flex; gap: var(--esp-14); align-items: center; }
+.prog-temas { display: grid; gap: var(--esp-12); }
+.prog-tema { display: grid; gap: var(--esp-4); }
+.prog-tema-cab { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-8); }
 .prog-tema.nivel-dominado .chip { background: color-mix(in srgb, var(--ok) 16%, transparent); }
 .prog-barra { position: relative; display: block; height: 10px; border-radius: var(--r-6); background: var(--acento-a8); overflow: hidden; }
 .prog-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-6); }
 .prog-barra .v { background: var(--acento-a30); }
 .prog-barra .p { background: var(--acento-a70); }
 .prog-barra .d { background: var(--ok); }
-.prog-ruta { display: grid; gap: 10px; }
+.prog-ruta { display: grid; gap: var(--esp-10); }
 .prog-ruta p { margin: 0; }
-.prog-modulos { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
-.prog-modulos li > span:first-child { margin-right: 8px; }
-.prog-modulos li { padding: 4px 0; }
+.prog-modulos { margin: 0; padding-left: 1.4em; display: grid; gap: var(--esp-6); }
+.prog-modulos li > span:first-child { margin-right: var(--esp-8); }
+.prog-modulos li { padding: var(--esp-4) 0; }
 .prog-modulos li.hecho { color: var(--tinta-2); }
 .prog-modulos li.ahora { font-weight: 700; }
-.prog-modulos li .mini svg { width: 15px; height: 15px; vertical-align: -2px; color: var(--ok); }
-.prog-mes { display: grid; gap: 8px; }
+.prog-modulos li .mini svg { width: var(--ico-16); height: var(--ico-16); vertical-align: -2px; color: var(--ok); stroke-width: 2; }
+.prog-mes { display: grid; gap: var(--esp-8); }
 .prog-mes p { margin: 0; }
-.prog-mes-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.prog-mes-cifras > span { display: grid; place-items: center; padding: 10px 4px; border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); font-size: var(--letra-12); color: var(--tinta-2); }
+.prog-mes-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--esp-6); }
+.prog-mes-cifras > span { display: grid; place-items: center; padding: var(--esp-10) var(--esp-4); border-radius: var(--r-14); background: color-mix(in srgb, var(--morado) 8%, var(--hoja)); font-size: var(--letra-12); color: var(--tinta-2); }
 .prog-mes-cifras b { font-size: var(--letra-22); color: var(--tinta); }
 /* el certificado */
-.certificado { display: grid; justify-items: center; gap: 4px; padding: 16px; border-radius: var(--r); border: var(--filo-fuerte) solid color-mix(in srgb, var(--oro) 50%, transparent); background: color-mix(in srgb, var(--oro) 7%, var(--hoja)); text-align: center; }
+.certificado { display: grid; justify-items: center; gap: var(--esp-4); padding: var(--esp-16); border-radius: var(--r); border: var(--filo-fuerte) solid color-mix(in srgb, var(--oro) 50%, transparent); background: color-mix(in srgb, var(--oro) 7%, var(--hoja)); text-align: center; }
 .certificado .apuntes-dibujo { width: 120px; height: auto; }
 .certificado-de { font-size: var(--letra-12); letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
 .certificado-curso { font-size: var(--letra-22); }
 .certificado-nombre { font-size: var(--letra-17); font-weight: 650; }
-.certificado-pie { font-size: var(--letra-13); color: var(--tinta-2); margin-bottom: 6px; }
+.certificado-pie { font-size: var(--letra-13); color: var(--tinta-2); margin-bottom: var(--esp-6); }
 @media (prefers-reduced-motion: reduce) { .anillo-meta .lleno { transition: none; } }
 
 /* ---------- (apuntes, tanda D) Con los demás y en otros formatos ---------- */
 /* la liga y los duelos */
-.prog-liga, .prog-duelos { display: grid; gap: 8px; }
+.prog-liga, .prog-duelos { display: grid; gap: var(--esp-8); }
 .prog-liga p, .prog-duelos p { margin: 0; }
-.liga-filas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.liga-filas li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+.liga-filas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.liga-filas li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--esp-8); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
 .liga-filas li.yo { background: color-mix(in srgb, var(--morado) 16%, var(--hoja)); font-weight: 650; }
 .liga-puesto { color: var(--tinta-2); text-align: center; }
 .liga-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: var(--filo-fino) solid var(--linea); }
+.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-10); padding: var(--esp-8) 0; border-bottom: var(--filo-fino) solid var(--linea); }
 .duelo-ganado { color: var(--ok); font-weight: 650; }
 .duelo-perdido, .duelo-caducado { color: var(--tinta-2); }
-.duelo-gente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.duelo-gente { display: flex; flex-wrap: wrap; gap: var(--esp-6); align-items: center; }
 /* la historia a pantalla completa */
-.ap-historia { position: fixed; inset: 0; z-index: var(--capa-historia); display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
+.ap-historia { position: fixed; inset: 0; z-index: var(--capa-historia); display: grid; place-items: center; padding: max(56px, env(safe-area-inset-top)) var(--esp-24) max(var(--esp-40), env(safe-area-inset-bottom));
   background: linear-gradient(var(--oklab,) 160deg, color-mix(in srgb, var(--tono, var(--morado)) 88%, var(--ap-negro)), color-mix(in srgb, var(--tono, var(--morado)) 55%, var(--ap-negro))); color: var(--ap-blanco); }
 .ap-historia.tono-morado { --tono: var(--morado); } .ap-historia.tono-verde { --tono: var(--ap-verde); } .ap-historia.tono-azul { --tono: var(--ap-azul); }
-.ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: 4px; }
+.ap-historia-barras { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; right: 14px; display: flex; gap: var(--esp-4); }
 .ap-historia-barras span { flex: 1; height: 3px; border-radius: var(--r-2); background: color-mix(in srgb, var(--ap-blanco) 30%, transparent); overflow: hidden; }
 .ap-historia-barras span i { display: block; height: 100%; background: var(--ap-blanco); transform-origin: left; transform: scaleX(0); }
 .ap-historia-barras span.vista i { transform: none; }
@@ -508,7 +508,7 @@
 .ap-historia-barras span.ahora.parada i { animation-play-state: paused; }
 @keyframes ap-historia-llenar { to { transform: scaleX(1); } }
 .ap-historia-cerrar { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 12px)); right: 10px; z-index: 2; color: var(--ap-blanco); }
-.ap-historia-cuerpo { position: relative; z-index: 1; display: grid; gap: 16px; max-width: 34rem; pointer-events: none; }
+.ap-historia-cuerpo { position: relative; z-index: 1; display: grid; gap: var(--esp-16); max-width: 34rem; pointer-events: none; }
 .ap-historia-cuerpo a { pointer-events: auto; justify-self: start; }
 .ap-historia-etq { font-size: var(--letra-13); letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
 .ap-historia h2 { margin: 0; font-size: clamp(1.75rem, 7vw, 2.5rem); line-height: 1.1; }
@@ -518,14 +518,14 @@
 .ap-historia-zona.atras { left: 0; width: 34%; } .ap-historia-zona.alante { right: 0; width: 66%; }
 .ap-historia-cuenta { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); right: 20px; font-size: var(--letra-13); opacity: .75; }
 /* la audio-píldora */
-.audio-pildora { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--r-16); background: var(--tono-suave, var(--acento-a8)); }
+.audio-pildora { display: grid; grid-template-columns: auto 1fr auto; gap: var(--esp-10); align-items: center; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-16); background: var(--tono-suave, var(--acento-a8)); }
 .audio-play { width: 46px; height: 46px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--tono, var(--morado)); color: var(--sobre-morado); border: 0; }
-.audio-info { display: grid; gap: 4px; }
+.audio-info { display: grid; gap: var(--esp-4); }
 .audio-barra { height: 5px; border-radius: var(--r-4); background: color-mix(in srgb, var(--tono, var(--morado)) 18%, transparent); overflow: hidden; }
 .audio-barra i { display: block; height: 100%; background: var(--tono, var(--morado)); }
 /* tu nota y los subrayados */
-.apunte-tu-nota { text-align: left; border: 0; padding: 10px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--ap-rotulador) 22%, var(--hoja)); font: inherit; font-size: var(--letra-15); line-height: 1.4; color: var(--tinta); cursor: pointer; }
-.apunte-nota-propia { display: grid; gap: 6px; }
+.apunte-tu-nota { text-align: left; border: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: color-mix(in srgb, var(--ap-rotulador) 22%, var(--hoja)); font: inherit; font-size: var(--letra-15); line-height: 1.4; color: var(--tinta); cursor: pointer; }
+.apunte-nota-propia { display: grid; gap: var(--esp-6); }
 .apunte-nota-propia textarea { min-height: 84px; }
 .apunte-subrayado, .apunte-frase.subrayada { background: linear-gradient(transparent 45%, color-mix(in srgb, var(--ap-rotulador) 70%, transparent) 45%); color: inherit; padding: 0 1px; border-radius: var(--r-2); }
 .apunte-texto.subrayando .apunte-frase { cursor: pointer; border-bottom: var(--filo-medio) dashed color-mix(in srgb, var(--tono, var(--morado)) 45%, transparent); }
@@ -537,9 +537,9 @@
 .audio-grabando { color: var(--aviso); font-weight: 700; }
 .audio-subir { position: relative; overflow: hidden; }
 .audio-subir input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.equipo-semanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; height: 140px; align-items: end; }
-.equipo-semana { display: grid; grid-template-rows: 1fr auto auto; height: 100%; justify-items: center; gap: 2px; }
+.equipo-semanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--esp-6); height: 140px; align-items: end; }
+.equipo-semana { display: grid; grid-template-rows: 1fr auto auto; height: 100%; justify-items: center; gap: var(--esp-2); }
 .equipo-semana i { align-self: end; width: 70%; border-radius: var(--r-6) var(--r-6) var(--r-2) var(--r-2); background: var(--acento-a55); }
 .equipo-semana b { font-size: var(--letra-13); }
 .equipo-semana small { font-size: var(--letra-11); color: var(--tinta-2); }
-.equipo-tema { display: grid; gap: 4px; }
+.equipo-tema { display: grid; gap: var(--esp-4); }

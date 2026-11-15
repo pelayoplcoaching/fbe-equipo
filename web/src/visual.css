@@ -1,0 +1,128 @@
+/* ==========================================================================================================
+   VISUAL (claude/visual-mejoras.md): cómo se ordena y se lee la pantalla. Se carga después de los estilos de cada
+   parte y antes de color-capa.css. Cada bloque lleva su número de la propuesta.
+   ========================================================================================================== */
+
+/* (2) Cabeceras de sección: el mismo hueco a la derecha para una acción o una cuenta, y un solo estilo de subtítulo */
+.seccion-cab { min-height: 1.75rem; align-items: center; }
+.seccion-cab > :is(h2, h3):first-child { flex: 1 1 auto; min-width: 0; }
+.seccion-cab > :is(.mini, .chip, .btn-texto):last-child:not(:first-child) { margin-left: auto; }
+.seccion-cab > .mini:last-child { color: var(--tinta-3); font-variant-numeric: tabular-nums; }
+.seccion-cab > .btn-texto { font-size: var(--letra-14); font-weight: 650; }
+:is(.sub-seccion, .mes-etq, .perfil-mes-t) { font-size: var(--letra-15); font-weight: 750; line-height: 1.3; letter-spacing: -0.003em; color: var(--tinta); padding-left: var(--esp-2); }
+
+/* (3) Perfil en dos vistas: «Tú» y «Ajustes», con un selector de dos (como el de Sistema, Claro y Oscuro) */
+.perfil-cuerpo { display: contents; }
+.pestanas.perfil-vistas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-2); padding: var(--esp-4); border: 0; border-radius: var(--r-pildora); background: var(--hoja-2); box-shadow: var(--anillo-suave); overflow: visible; }
+.pestanas.perfil-vistas button { min-height: 40px; padding: 0 var(--esp-12); margin: 0; border: 0; border-radius: var(--r-pildora); font-weight: 650; color: var(--tinta-2); }
+.pestanas.perfil-vistas button[aria-selected="true"] { background: var(--seg-activo); color: var(--tinta); font-weight: 700; box-shadow: var(--seg-sombra); }
+.pestanas.perfil-vistas button[aria-selected="true"]::after { content: none; }
+.perfil-a-ajustes { justify-content: center; gap: var(--esp-8); }
+@media (prefers-reduced-motion: no-preference) {
+  .pestanas.perfil-vistas button { transition: background-color var(--mov-rapido) ease, color var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease; }
+}
+
+/* (4) Ajustes sobrios: los iconos en una tinta sobre gris; el color queda para lo que avisa (ok, aviso, alerta).
+   Y un índice de accesos arriba que salta a cada grupo. */
+.perfil-cuerpo > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) { background: var(--hoja-3); color: var(--tinta-2); box-shadow: var(--anillo-suave); }
+.perfil-cuerpo > .grupo-ios .ios-ico:not(.ok):not(.aviso):not(.alerta) svg { stroke-width: 1.9; }
+.ajustes-indice { display: flex; gap: var(--esp-6); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; margin-inline: calc(-1 * var(--esp-4)); padding: var(--esp-2) var(--esp-4); }
+.ajustes-indice::-webkit-scrollbar { display: none; }
+.ajustes-indice .chip { flex: none; min-height: 34px; padding-inline: var(--esp-12); font-weight: 650; color: var(--tinta); background: var(--hoja); }
+.perfil-cuerpo > .grupo-ios { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + var(--esp-8)); }
+.pestanas.perfil-vistas[data-raya]::after { content: none; }
+
+/* (7) Cifras iguales en toda la app: números tabulares, la unidad pequeña y la variación en su chip */
+:is(.num, .marcador, [class*="cifra"] .v) { font-variant-numeric: tabular-nums; }
+:is(.perfil-tile dd.num small, .pt-valor small, .perfil-cifras dd small, .cifra .u, .resumen-num .u, .salud-cifra .u) { font-size: max(var(--letra-12), .5em); font-weight: 650; letter-spacing: 0; font-stretch: 100%; }
+.perfil-dif { align-self: flex-start; display: inline-flex; align-items: center; margin: var(--esp-2) 0 0; padding: 1px var(--esp-6); border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2); font-size: var(--letra-12); font-weight: 650; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.perfil-dif.sube { background: var(--ok-suave); color: var(--ok); }
+
+/* (8) Tus 12 semanas: las semanas sin nada, con su marca en el suelo (antes, un hueco) */
+.pb-col.vacia .pb-barra { height: 3px; background: var(--linea); border-radius: var(--r-2); }
+/* (10) …y la media, de fondo: una raya discontinua a su altura */
+.perfil-barras { position: relative; --pie: calc(var(--letra-11) + var(--esp-4)); }
+.perfil-barras::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(var(--pie) + (100% - var(--pie)) * var(--m, 0)); border-top: var(--filo-medio) dashed var(--tinta-3); opacity: .55; pointer-events: none; z-index: 1; }
+
+/* (9) La miniatura de cada semana: su aro de sesiones y, si hubo récords, su medalla */
+.fila-semana .sello-semana { flex: none; }
+.sello-semana { position: relative; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: conic-gradient(var(--morado) calc(var(--p) * 1turn), var(--hoja-3) 0); }
+.sello-semana.completa { background: var(--aro-amanecer); }
+.sello-semana::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--hoja); }
+.ss-n { position: relative; font-size: var(--letra-14); font-weight: 800; color: var(--tinta); letter-spacing: -0.01em; }
+.ss-n small { font-size: var(--letra-11); font-weight: 650; color: var(--tinta-2); }
+.ss-record { position: absolute; right: -6px; bottom: -4px; display: inline-flex; align-items: center; gap: 1px; padding: 1px var(--esp-4) 1px var(--esp-2); border-radius: var(--r-pildora); background: var(--medalla); color: var(--oro-900); font-size: var(--letra-10); font-weight: 800; box-shadow: var(--halo); }
+.ss-record svg { width: 11px; height: 11px; }
+
+/* (11) Tocar para leer, también en las barras de lo comido: la barra elegida se marca */
+.grafica-ingesta .barra-dia.elegida { stroke: var(--tinta); stroke-width: 1.5px; }
+
+/* (12) Las ilustraciones no aparecen en blanco: mientras cargan se ve su color (calculado al construir) */
+img[data-imagen] { background-color: var(--color-imagen, transparent); }
+/* (13) En oscuro, un punto atenuadas para que no deslumbren (las de las escenas de marca y las de fondo, no: ya van en la
+   noche, con su propia opacidad; ni los iconos) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) img[data-imagen]:not(.hero-foto, .portada-foto, .historia-fondo, .historia-halo, .hito-fondo, .bienvenida-foto, .escena-lobo, .escena-cachorro, .ico-img) { filter: brightness(.92) saturate(.96); } }
+:root[data-theme="dark"] img[data-imagen]:not(.hero-foto, .portada-foto, .historia-fondo, .historia-halo, .hito-fondo, .bienvenida-foto, .escena-lobo, .escena-cachorro, .ico-img) { filter: brightness(.92) saturate(.96); }
+
+/* (15) Estados vacíos con el mismo estilo: con icono o con ilustración, el mismo aire, la misma medida de texto y la
+   acción separada igual */
+.vacio > p:not(.vacio-titulo) { max-width: 38ch; margin: 0; text-wrap: pretty; }
+.vacio > :is(.btn, .fila, a.btn):last-child { margin-top: var(--esp-6); }
+.vacio:not(.con-ilustracion) { gap: var(--esp-8); padding: var(--esp-24) var(--esp-16); }
+
+/* (16) Tipografía para leer: titulares equilibrados, párrafos sin palabras huérfanas y guiones en los textos largos */
+:is(h1, h2, h3, .vacio-titulo, .fila-ios-titulo, .pista strong) { text-wrap: balance; }
+:is(p, li, dd, .peq, .mini, .ayuda) { text-wrap: pretty; }
+:is(.fila-ios-texto > .peq, .recurso p, .recurso li, .guia-cuerpo p, .apunte-texto, .grupo-ios-pie, .pista p) { hyphens: auto; -webkit-hyphens: auto; hyphenate-limit-chars: 7 3 3; }
+@media (min-width: 900px) { .contenido :is(p, .peq):not(.mini) { max-width: 72ch; } }
+
+/* (17) En las hojas, la cabecera (título y cerrar) se queda arriba al bajar, y su filo aparece con el desplazamiento */
+.hoja-dialogo { scroll-padding-top: 4.5rem; }
+.hoja-cab { position: sticky; top: calc(-1 * var(--esp-10)); z-index: 3; padding-bottom: var(--esp-8); margin-bottom: calc(-1 * var(--esp-8)); background: var(--hoja); }
+.hoja-cab::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--linea); opacity: 0; pointer-events: none; }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) { .hoja-cab::after { animation: hoja-cab-filo linear both; animation-timeline: scroll(nearest); animation-range: 0 24px; } }
+}
+@keyframes hoja-cab-filo { to { opacity: 1; } }
+
+/* (18) Barra inferior: los avisos (punto y número) con un borde del color de la barra, para no pegarse al icono (el del número, en diseno.css) */
+.tab .punto::after { border-color: var(--tiza); }
+
+/* (20) Formularios con un solo estilo: la ayuda, el texto de muestra y lo deshabilitado, iguales en todos los campos */
+.ayuda { font-size: var(--letra-13); line-height: 1.4; color: var(--tinta-3); }
+.ayuda[aria-live] { font-variant-numeric: tabular-nums; }
+:is(.entrada, .selector, .area)::placeholder { color: var(--tinta-3); opacity: 1; }
+:is(.entrada, .selector, .area):disabled { opacity: var(--op-deshabilitado); cursor: not-allowed; }
+.error-campo { display: flex; align-items: flex-start; gap: var(--esp-6); }
+.error-campo::before { content: "!"; flex: none; display: grid; place-items: center; width: 1.25em; height: 1.25em; margin-top: .05em; border-radius: 50%; background: var(--alerta); color: var(--blanco); font-size: .82em; font-weight: 800; }
+
+/* (5) Tarjetas que se adaptan a su hueco: cada sección es un contenedor, y lo que se reparte en columnas mira su
+   ancho (no el de la pantalla): en una columna estrecha del escritorio, como en el móvil */
+:is(.contenido, .perfil-cuerpo) > .seccion, .hoja-dialogo { container-type: inline-size; }
+@container (max-width: 479px) {
+  .perfil-tiles:not(.perfil-tiles-3), .segmentos.segmentos-envolver { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .destacados-lista, .dos-angulos-panes, .negocio-dos { grid-template-columns: minmax(0, 1fr); }
+  .tiempos-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cifras > div:nth-child(2n + 1) { border-left: 0; }
+  .cifras > div:nth-child(n + 3) { border-top: var(--filo-fino) solid var(--linea); }
+}
+
+/* (6) Tablet y escritorio para el atleta: Progreso y Perfil (sus dos vistas), a dos columnas desde 1000 px, en una
+   página más ancha. Hoy se queda en una: es la lista del día, por orden, y en dos columnas se leería desordenada. */
+@media (min-width: 1000px) {
+  .app:not(.coach) .contenido:has(> .perfil-cuerpo, > .progreso-panel) { max-width: 1080px; }
+  .app:not(.coach) :is(.perfil-cuerpo, .progreso-panel) { display: block; columns: 2; column-gap: var(--esp-24); }
+  .app:not(.coach) :is(.perfil-cuerpo, .progreso-panel > .prog-grupo) > *,
+  .app:not(.coach) .progreso-panel > :not(.prog-grupo) { break-inside: avoid; margin-bottom: var(--esp-20); }
+  .app:not(.coach) :is(.perfil-cuerpo, .progreso-panel) :is(section, .seccion, .panel, .grupo-ios) { break-inside: avoid; }
+  .app:not(.coach) .perfil-cuerpo > .perfil-social { column-span: all; }
+  .app:not(.coach) .perfil-social .perfil-panel { display: block; columns: 2; column-gap: var(--esp-24); }
+  .app:not(.coach) .perfil-social .perfil-panel > * { break-inside: avoid; margin-bottom: var(--esp-18); }
+  .app:not(.coach) .progreso-panel .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app:not(.coach) .progreso-panel .cifras > div:nth-child(2n + 1) { border-left: 0; }
+  .app:not(.coach) .progreso-panel .cifras > div:nth-child(n + 3) { border-top: var(--filo-fino) solid var(--linea); }
+  .app:not(.coach) .perfil-cuerpo > :is(.ajustes-indice, .perfil-a-ajustes) { column-span: all; }
+  .app:not(.coach) .perfil-cuerpo > .grupo-ios > h2 { position: static; }
+  .app:not(.coach) .contenido:has(> .perfil-cuerpo) > .perfil-vistas { max-width: 520px; justify-self: center; width: 100%; }
+}

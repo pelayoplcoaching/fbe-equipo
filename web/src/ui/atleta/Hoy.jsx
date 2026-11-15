@@ -1,4 +1,5 @@
 import { ApunteAlPaso } from './ApunteAlPaso.jsx';
+import { pedirVistaPerfil } from './perfil-vista.js';
 import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { CuentaMeta } from './Trato.jsx';
@@ -104,7 +105,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     { id: 'porque', texto: 'Escribe tu porqué', hecho: !!persHoy?.porque, etiqueta: 'Escribir', accion: () => irA('perfil') },
     { id: 'trato', texto: 'Elige cómo te hablamos', hecho: !!(persHoy?.genero || persHoy?.tono), etiqueta: 'Elegir', accion: () => irA('perfil') },
     { id: 'meta', texto: 'Ponte una meta (si quieres)', hecho: !!persHoy?.meta_nombre, etiqueta: 'Ponerla', accion: () => irA('perfil') },
-    { id: 'faq', texto: 'Echa un vistazo a las preguntas frecuentes', hecho: faqVista, etiqueta: 'Ver', accion: () => { setFaqVista(true); irA('perfil'); } },
+    { id: 'faq', texto: 'Echa un vistazo a las preguntas frecuentes', hecho: faqVista, etiqueta: 'Ver', accion: () => { setFaqVista(true); pedirVistaPerfil('ajustes'); irA('perfil'); } },
   ] : null;
   // Solo para quien acaba de llegar (su primer mes): a quien ya lleva tiempo no se le enseña
   const nuevo = !atleta.fecha_alta || diasEntre(atleta.fecha_alta, hoyISO()) <= 30;

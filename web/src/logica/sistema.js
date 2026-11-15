@@ -131,3 +131,26 @@ export const FILAS = {
   'fila-elegida': 'color-mix(in srgb, var(--morado) 9%, var(--hoja))',
   'fila-cebra': 'color-mix(in srgb, var(--tinta) 3%, transparent)',
 };
+
+// ---------- el espaciado (visual, 1) ----------
+// Márgenes, rellenos y huecos: dieciséis pasos con nombre (--esp-N, en px). Antes, 66 valores distintos. Los impares
+// pequeños (3, 5, 7…) van al múltiplo de 4 más cercano (un píxel, no se nota); los de 1 px y los negativos se quedan como están.
+export const ESPACIOS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 40, 48];
+export function pasoEspacio(px) {
+  if (ESPACIOS.includes(px)) return px;
+  // (al múltiplo de 4 más cercano: 3 y 5 → 4, 7 y 9 → 8…; unos suben y otros bajan, y las páginas miden lo mismo)
+  if (px > 1 && px < 24 && Number.isInteger(px) && px % 2 === 1) return Math.round(px / 4) * 4;
+  if (px > 24) { const c = ESPACIOS.find((v) => Math.abs(v - px) <= 1); return c ?? null; }
+  return null;
+}
+
+// ---------- los iconos (visual, 14) ----------
+// Diez tamaños con nombre (--ico-N, en px); los impares van al par de arriba (un píxel). Y el trazo, más grueso en
+// los pequeños para que pesen lo mismo que los grandes (16 px o menos: 2; si no, el de siempre, 1,8).
+export const ICONOS_TAM = [12, 14, 16, 18, 20, 22, 24, 26, 28, 32];
+export function pasoIcono(px) {
+  if (ICONOS_TAM.includes(px)) return px;
+  if (Number.isInteger(px) && px % 2 === 1 && px > 11 && px < 32) return px + 1;
+  return null;
+}
+export const TRAZO_PEQUENO = 2;

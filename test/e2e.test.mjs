@@ -50,6 +50,13 @@ p.on('console', (m) => { if (m.type() === 'error') { const u = m.location()?.url
 if (process.env.DEPURAR) p.on('requestfailed', (r) => console.log('      · falla', r.url().slice(0, 70), r.failure()?.errorText));
 
 // Perfil (atleta) y Cuenta (coach) no están en la barra del móvil: se abren desde el avatar de arriba (v0.18)
+// (visual 3) Perfil en su vista de ajustes
+async function abrirAjustes(p) {
+  await abrirPestana(p, 'Perfil');
+  const t = p.getByRole('tab', { name: 'Ajustes', exact: true });
+  await t.waitFor({ timeout: 10000 });
+  if ((await t.getAttribute('aria-selected')) !== 'true') await t.click();
+}
 async function abrirPestana(p, t) {
   const b = p.locator('.tab', { hasText: t }).first();
   if (await b.isVisible().catch(() => false)) return b.click();
@@ -779,7 +786,7 @@ try {
   // «Sin descanso automático» en Perfil → Sonido y vibración: sin temporizador donde el coach no puso descanso
   await p.getByRole('button', { name: 'Volver' }).first().click();
   await p.locator('.hero-dia').waitFor();
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const hojaSonD = p.getByRole('dialog', { name: 'Sonido y vibración' });
   await hojaSonD.waitFor();
@@ -1082,20 +1089,30 @@ try {
   check(await p.evaluate(() => document.querySelector('.anillos-svg').getAnimations({ subtree: true }).length) === 0, 'con «reducir movimiento», los anillos se quedan quietos (sin animación)');
   await p.emulateMedia({ reducedMotion: null });
   await abrirPestana(p, 'Perfil');
-  await p.getByRole('heading', { name: 'Guías y recursos' }).waitFor();
-  check(await p.locator('.recurso details').count() >= 10, 've las guías y preguntas frecuentes');
   // v0.50: el perfil, con su cabecera (foto, nombre, bloque y tres cifras) y la lista agrupada como en iOS
-  check(await p.getByRole('heading', { name: 'Preguntas frecuentes' }).count() === 1 && await p.locator('#grupo-faq ~ .panel .recurso details, section:has(#grupo-faq) .recurso details').count() >= 10
-    && await p.locator('section:has(#grupo-guias) .recurso').count() >= 1, 'las preguntas frecuentes, en su propio grupo, aparte de las guías');
-  const grupos = await p.locator('.grupo-ios > h2').allTextContents();
-  check(['Tu asesoría', 'Este móvil', 'Guías y recursos', 'Preguntas frecuentes', 'Cuenta'].every((g) => grupos.includes(g)), `los grupos del perfil: ${grupos.join(', ')}`);
+  // (visual 3: en dos vistas; en «Tú», lo tuyo y tu asesoría)
   await p.locator('.perfil-cifras dd.num:not(:has(.sil))').nth(2).waitFor();
+  const gruposTu = await p.locator('.grupo-ios > h2').allTextContents();
+  check(gruposTu.includes('Tu asesoría') && gruposTu.includes('Lo tuyo') && !gruposTu.includes('Este móvil') && !gruposTu.includes('Cuenta'), `en «Tú», tu asesoría y lo tuyo; los ajustes, aparte (${gruposTu.join(', ')})`);
   const cifrasPerfil = await p.locator('.perfil-cifras > div').evaluateAll((xs) => xs.map((x) => [x.querySelector('dt').textContent, x.querySelector('dd').textContent]));
   check(cifrasPerfil.map(([t]) => t).join() === 'Semanas completas,Sesiones,Récords' && cifrasPerfil.every(([, v]) => /^\d+$/.test(v)) && Number(cifrasPerfil[1][1]) >= 1
     && (await p.locator('.perfil-cabeza').textContent()).includes('Lucía Prueba') && (await p.locator('.perfil-bloque').textContent()).includes('Semana'),
   `la cabecera: su nombre, su bloque y su semana, y tres cifras (${cifrasPerfil.map((x) => x.join(' ')).join(', ')})`);
-  check(await p.locator('.grupo-ios .ios-ico').count() >= 10 && await p.locator('.grupo-ios .fila-ios-chevron').count() >= 3, 'cada fila con su icono; las que llevan a otra parte, con su chevrón');
   await revisar('perfil');
+  // (visual 3 y 4) los ajustes, en su vista: con su índice de accesos, las guías, las preguntas y la cuenta
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();
+  await p.getByRole('heading', { name: 'Guías y recursos' }).waitFor();
+  check(await p.locator('.recurso details').count() >= 10, 've las guías y preguntas frecuentes');
+  check(await p.getByRole('heading', { name: 'Preguntas frecuentes' }).count() === 1 && await p.locator('#grupo-faq ~ .panel .recurso details, section:has(#grupo-faq) .recurso details').count() >= 10
+    && await p.locator('section:has(#grupo-guias) .recurso').count() >= 1, 'las preguntas frecuentes, en su propio grupo, aparte de las guías');
+  const grupos = await p.locator('.grupo-ios > h2').allTextContents();
+  check(['Este móvil', 'Guías y recursos', 'Preguntas frecuentes', 'Cuenta'].every((g) => grupos.includes(g)) && !grupos.includes('Tu asesoría'), `los grupos de los ajustes: ${grupos.join(', ')}`);
+  const indice = await p.locator('.ajustes-indice .chip').allTextContents();
+  check(indice.join() === grupos.join(), `y su índice, un acceso por grupo (${indice.length})`);
+  await p.locator('.ajustes-indice .chip', { hasText: 'Cuenta' }).click();
+  check(await p.waitForFunction(() => { const r = document.querySelector('#grupo-cuenta').getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight / 2; }, null, { timeout: 3000 }).then(() => true, () => false), 'tocar «Cuenta» en el índice lleva a ese grupo');
+  check(await p.locator('.grupo-ios .ios-ico').count() >= 10 && await p.locator('.grupo-ios .fila-ios-chevron').count() >= 3, 'cada fila con su icono; las que llevan a otra parte, con su chevrón');
+  await revisar('perfil-ajustes');
   // (diseño, tanda 21: el tema cambia dentro de una transición de vista, un fotograma después del toque: se espera)
   await p.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Oscuro' }).click();
   check(await p.waitForFunction(() => document.documentElement.dataset.theme === 'dark', null, { timeout: 3000 }).then(() => true, () => false), 'elige el tema oscuro en este móvil');
@@ -1779,7 +1796,7 @@ try {
     await hojaPlanA.waitFor({ state: 'detached' });
   } else check(true, 'hoy es domingo: no hay un día después en la semana para probar el descanso');
   // v0.50: Hoy y una sesión con la letra más grande (125 %): nada se sale, tampoco a 360 px
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Muy grande' }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.locator('.hero-dia').waitFor();
@@ -1836,7 +1853,7 @@ try {
   check(await p.evaluate(() => document.documentElement.scrollWidth) <= 360, 'a 125 % y 360 px, los anillos y las medallas caben');
   await p.setViewportSize({ width: 390, height: 844 });
   await p.locator('.tab', { hasText: 'Hoy' }).click();
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.locator('.toca-hoy').waitFor();
@@ -1981,7 +1998,7 @@ try {
   await hojaNotiC.waitFor({ state: 'detached' });
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByRole('button', { name: /Ana/ }).click();
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   // v0.50: en el perfil, las notificaciones son una fila de «Este móvil»
   await p.locator('.fila-notificaciones').waitFor();
   await p.locator('.fila-notificaciones').getByRole('button', { name: /^Notificaciones/ }).click();
@@ -2004,6 +2021,8 @@ try {
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
+  // (visual 3) el cuestionario está en «Tú» (en tu asesoría); veníamos de «Ajustes»
+  await p.getByRole('tab', { name: 'Tú', exact: true }).click();
   await p.getByRole('button', { name: 'Revisar' }).first().click();
   const hojaCu = p.getByRole('dialog', { name: 'Tu cuestionario inicial' });
   await hojaCu.getByText('Paso 1 de 5').waitFor();
@@ -2342,6 +2361,7 @@ try {
   // v0.27.1: el aviso del descanso con los sonidos de FBE Timer (a un atleta se le oía muy bajo)
   // (lo que suena: la duración de cada sonido que arranca; cada uno dura distinto)
   await p.evaluate(() => { if (!navigator.audioSession) Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); window.__sonado = []; const ini = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...x) { window.__sonado.push(Math.round((this.buffer?.duration || 0) * 100)); return ini.apply(this, x); }; });
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) veníamos de «Tú» (tus pagos)
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const queSuena = p.getByRole('dialog', { name: 'Sonido y vibración' }).getByLabel('Qué suena');
   await queSuena.scrollIntoViewIfNeeded();
@@ -2374,14 +2394,14 @@ try {
   await pesoAna.locator('.peso-estado').waitFor();
   const textoPesoAna = await pesoAna.textContent();
   check(await pesoAna.locator('.peso-estado').count() === 1 && !/\d/.test(textoPesoAna), `en Hoy, Ana ve cómo va su peso sin números («${textoPesoAna.trim()}»)`);
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   const kilos = p.getByRole('switch', { name: /Ver los kilos en Hoy/ });
   await kilos.scrollIntoViewIfNeeded();
   await kilos.click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await pesoAna.locator('.cifra').waitFor();
   check((await pesoAna.textContent()).includes('kg de tendencia'), 'y con «Ver los kilos en Hoy», vuelve la cifra de su tendencia');
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await kilos.click();
   await p.locator('.tab', { hasText: 'Hoy' }).click().catch(async () => { await p.evaluate(() => { location.hash = '#hoy'; }); });
   await p.locator('.tab', { hasText: 'Hoy' }).click();
@@ -3325,7 +3345,7 @@ try {
     s.cancel = () => {};
     s.getVoices = () => [];
   });
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
   const intVoz = p.getByRole('dialog', { name: 'Sonido y vibración' }).getByRole('switch', { name: /Entrenador por voz/ });
   await intVoz.waitFor();
@@ -3517,7 +3537,7 @@ try {
   await pantallaR.waitFor({ state: 'detached' });
   check(await p.evaluate(() => document.activeElement?.classList.contains('racha-boton')), 'Escape la cierra y el foco vuelve a la racha');
   // (revisión) A 360 px y con «Muy grande», las semanas no se pisan (4 por fila)
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Muy grande' }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
   await p.setViewportSize({ width: 360, height: 780 });
@@ -3536,7 +3556,7 @@ try {
   await p.keyboard.press('Escape');
   await pantallaR.waitFor({ state: 'detached' });
   await p.setViewportSize({ width: 390, height: 844 });
-  await abrirPestana(p, 'Perfil');
+  await abrirAjustes(p);
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
 
   // (5) y (6) Progreso: destacados arriba; las gráficas con su rango, la línea que se transforma y la cifra que rueda
@@ -4337,6 +4357,7 @@ try {
   await p.locator('.hero-dia').waitFor();
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) los de los mensajes, en «Ajustes»
   await p.getByRole('heading', { name: 'Mensajes', exact: true }).waitFor();
   check(await p.getByRole('switch', { name: /Mostrar cuándo estoy en línea/ }).isChecked(), '«Mostrar cuándo estoy en línea», encendido de serie');
   await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Liso' }).click();
@@ -4349,6 +4370,7 @@ try {
   await p.locator('.hero-dia').waitFor();
   await cerrarDialogos();
   await p.getByRole('button', { name: 'Tu perfil' }).click();
+  await p.getByRole('tab', { name: 'Ajustes', exact: true }).click();   // (visual 3) los de los mensajes, en «Ajustes»
   await p.getByRole('group', { name: 'Fondo del chat' }).getByRole('button', { name: 'Con dibujos' }).click();
   await p.getByRole('button', { name: 'Volver a Hoy' }).click();
 
@@ -6123,6 +6145,10 @@ try {
   console.log('\nColor');
   const { probarColor } = await import('./e2e-color.mjs');
   await probarColor({ navegador, check });
+  // Visual (claude/visual-mejoras.md): Perfil en dos vistas, dos columnas en el escritorio, cifras, gráficas, miniaturas, imágenes, hojas y saltos
+  console.log('\nVisual');
+  const { probarVisual } = await import('./e2e-visual.mjs');
+  await probarVisual({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

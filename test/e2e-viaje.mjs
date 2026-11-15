@@ -58,7 +58,7 @@ export async function probarViaje({ navegador, check, base = 'http://localhost:4
   };
   const hojaNotificaciones = async () => {
     await p.waitForTimeout(400);
-    await p.evaluate(() => { location.hash = '#perfil'; });
+    await p.evaluate(() => { location.hash = '#ajustes'; });
     await p.locator('.fila-notificaciones').waitFor();
     await p.locator('.fila-notificaciones').getByRole('button', { name: /^Notificaciones/ }).click();
     const h = p.getByRole('dialog', { name: 'Notificaciones' });

@@ -5,7 +5,7 @@
 //   Dentro de e2e.test.mjs:  const { probarColor } = await import('./e2e-color.mjs'); await probarColor({ navegador, check });
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, irAAjustes } from './secciones.mjs';
 import * as P from '../web/src/logica/paleta.js';
 import * as S from '../web/src/logica/sistema.js';
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -64,7 +64,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     check(await p.evaluate(() => document.querySelector('meta[name="theme-color"][media*="light"]')?.content) === P.valor('claro', 'tiza'), 'la barra del sistema, del color exacto del fondo');
 
     // --- En Perfil (ajustes de este móvil): Océano, alto contraste y daltonismo ---
-    await irASeccion(p, 'Perfil');
+    await irAAjustes(p);
     await p.locator('.acento-op').first().waitFor();
     check(await p.locator('.acento-op').count() === 9 && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.acento-muestra')).backgroundImage)), 'nueve acentos para elegir (con Orquídea), en muestras con volumen');
     await p.locator('.acento-op', { hasText: 'Océano' }).click();
@@ -97,7 +97,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
       if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
       return p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas') ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, { runOnly: ['color-contrast'] })).violations.flatMap((v) => v.nodes.slice(0, 4).map((n) => n.target.join(' '))));
     };
-    await irASeccion(p, 'Perfil');
+    await irAAjustes(p);
     await p.locator('.acento-op', { hasText: 'Lima' }).click();
     const lima = P.ACENTOS.find((a) => a.id === 'lima');
     check(await varRaiz('--acento-600') === P.escalaAcento(lima)[600] && await varRaiz('--acento-600') !== P.ESCALAS.marca[600], `(tanda 3) con Lima, la escala del acento es la suya (--acento-600: ${P.escalaAcento(lima)[600]})`);
@@ -113,7 +113,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     const malOscuro = await contrasteAxe();
     check(malOscuro.length === 0, `Hoy con Lima, en oscuro: todo el texto pasa AA (axe)${malOscuro.length ? `: ${malOscuro.join(' | ')}` : ''}`);
     // la elevación: una hoja, un nivel más clara que la página (y sus tokens, con ella)
-    await irASeccion(p, 'Perfil');
+    await irAAjustes(p);
     await p.getByRole('button', { name: /^Sonido y vibración/ }).click();
     await p.locator('.hoja-dialogo').waitFor();
     const enHoja = (n) => p.evaluate((x) => getComputedStyle(document.querySelector('.hoja-dialogo')).getPropertyValue(x).trim().toUpperCase(), n);

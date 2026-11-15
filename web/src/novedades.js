@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.166': {
+    atleta: [
+      'Perfil, en dos: «Tú» (lo tuyo) y «Ajustes» (con su índice). En ordenador, Progreso y Perfil a dos columnas.',
+      'Más pulido: las imágenes cargan con su color, cifras más claras y toca las barras de lo comido para leerlas.',
+    ],
+  },
   '0.165': {
     atleta: [
       'Hoy, con su escena: el descanso, la sesión hecha y la semana completa; más portadas y una bienvenida para cada estación.',

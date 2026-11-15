@@ -24,23 +24,23 @@
 /* ---------- la tabla de zonas ---------- */
 .tabla-zonas-env { margin: 0 -2px; }
 .tabla-zonas { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: var(--letra-14-5); }
-.tabla-zonas th, .tabla-zonas td { text-align: left; padding: 6px 8px; vertical-align: middle; }
-.tabla-zonas thead th { font-size: var(--letra-12-5); font-weight: 650; color: var(--tinta-3); padding-block: 0 2px; }
+.tabla-zonas th, .tabla-zonas td { text-align: left; padding: var(--esp-6) var(--esp-8); vertical-align: middle; }
+.tabla-zonas thead th { font-size: var(--letra-12-5); font-weight: 650; color: var(--tinta-3); padding-block: 0 var(--esp-2); }
 .tabla-zonas tbody tr { background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); }
 .tabla-zonas tbody th { border-radius: var(--r-10) 0 0 var(--r-10); font-weight: 650; color: var(--tinta); }
 .tabla-zonas td.num { white-space: nowrap; text-align: right; }
-.zona-siente, .zona-umbral { display: block; font-weight: 450; margin-top: 2px; }
+.zona-siente, .zona-umbral { display: block; font-weight: 450; margin-top: var(--esp-2); }
 .tabla-zonas thead th:last-child { text-align: right; }
 .tabla-zonas tbody td:last-child { border-radius: 0 var(--r-10) var(--r-10) 0; }
-.zona-pastilla { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: var(--r-pildora);
-  background: var(--zt); color: var(--hoja); font-size: var(--letra-12-5); font-weight: 800; letter-spacing: .02em; margin-right: 4px; }
+.zona-pastilla { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 var(--esp-6); border-radius: var(--r-pildora);
+  background: var(--zt); color: var(--hoja); font-size: var(--letra-12-5); font-weight: 800; letter-spacing: .02em; margin-right: var(--esp-4); }
 .zona-chip { color: var(--zt); background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--zc) 35%, transparent); }
 
 /* ---------- el macrociclo ---------- */
-.macrociclo { display: grid; gap: 4px; }
-.macro-barra { position: relative; display: flex; gap: 3px; min-height: 46px; }
+.macrociclo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-4); } /* (visual) la barra encoge con su hueco: con muchas fases, cada una se recorta */
+.macro-barra { position: relative; display: flex; gap: var(--esp-4); min-height: 46px; }
 .macro-fase { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;
-  padding: 6px 7px; border-radius: var(--r-10); overflow: hidden;
+  padding: var(--esp-6) var(--esp-8); border-radius: var(--r-10); overflow: hidden;
   background: color-mix(in srgb, var(--morado) calc(10% + var(--paso, 0%)), var(--hoja)); color: var(--tinta); }
 .macro-fase[data-i="1"] { --paso: 6%; }
 .macro-fase[data-i="2"] { --paso: 12%; }
@@ -55,23 +55,23 @@
 .macro-fechas { display: flex; justify-content: space-between; }
 
 /* ---------- la ficha del coach ---------- */
-.carrera-resumen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+.carrera-resumen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-10);
   background: linear-gradient(var(--oklab,) 135deg, color-mix(in srgb, var(--morado) 8%, var(--hoja)), var(--hoja) 70%); }
 .carrera-resumen-nombre { font-size: 1.15rem; line-height: 1.2; text-wrap: balance; }
-.carrera-fase-fila { display: grid; grid-template-columns: minmax(0, 1.2fr) 64px minmax(0, 2fr) auto; gap: 6px; align-items: center; }
+.carrera-fase-fila { display: grid; grid-template-columns: minmax(0, 1.2fr) 64px minmax(0, 2fr) auto; gap: var(--esp-6); align-items: center; }
 .carrera-fases { border: 0; padding: 0; margin: 0; min-width: 0; }
-.carrera-fases > legend { padding: 0; margin-bottom: 6px; }
-.rejilla-carrera { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.carrera-fases > legend { padding: 0; margin-bottom: var(--esp-6); }
+.rejilla-carrera { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--esp-10); }
 .rejilla-carrera .campo { margin: 0; min-width: 0; }
 .carrera-zonas-mano summary { cursor: pointer; }
-.interruptor-linea { align-items: center; gap: 12px; cursor: pointer; }
-.campo-check-largo { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
-.campo-check { display: flex; align-items: center; gap: 6px; align-self: end; min-height: 40px; }
+.interruptor-linea { align-items: center; gap: var(--esp-12); cursor: pointer; }
+.campo-check-largo { display: flex; align-items: flex-start; gap: var(--esp-12); cursor: pointer; }
+.campo-check { display: flex; align-items: center; gap: var(--esp-6); align-self: end; min-height: 40px; }
 .campo-en-linea { display: inline-flex; margin: 0; }
 
 .lista-semanas-carrera, .lista-eventos, .lista-revisiones, .lista-hecho-carrera, .lista-recetas-carrera, .plan-carrera-items, .sesiones-plan-at,
-.lista-semaforo, .km-semanas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.semana-carrera-btn, .evento-btn, .revision-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px;
+.lista-semaforo, .km-semanas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.semana-carrera-btn, .evento-btn, .revision-btn { width: 100%; display: flex; align-items: center; gap: var(--esp-10); text-align: left; padding: var(--esp-8) var(--esp-10);
   border: 0; border-radius: var(--r-s); background: var(--hoja-2); color: inherit; font: inherit; cursor: pointer; }
 .semana-carrera-btn:hover, .evento-btn:hover, .revision-btn:hover { background: color-mix(in srgb, var(--morado) 8%, var(--hoja-2)); }
 .semana-carrera-btn > .pila-xs, .evento-btn > .pila-xs, .revision-btn > .pila-xs { flex: 1; }
@@ -79,7 +79,7 @@
   background: var(--hoja); color: var(--tinta-2); box-shadow: var(--anillo); }
 .semana-carrera.actual .semana-carrera-n { background: var(--morado); color: var(--sobre-morado); box-shadow: none; }
 .semana-carrera.pasada .semana-carrera-btn { background: transparent; box-shadow: var(--anillo); }
-.etiqueta-carrera { margin-left: 6px; font-size: var(--letra-11); font-weight: 750; letter-spacing: .03em; background: var(--morado-suave); color: var(--morado); }
+.etiqueta-carrera { margin-left: var(--esp-6); font-size: var(--letra-11); font-weight: 750; letter-spacing: .03em; background: var(--morado-suave); color: var(--morado); }
 .semana-carrera-btn .chip, .evento-btn .chip, .revision-btn .chip { flex: none; }
 .km-bien { background: var(--ok-suave); color: var(--ok); }
 .km-corta, .km-larga { background: var(--aviso-suave); color: var(--aviso); }
@@ -94,7 +94,7 @@
 .decision-entreno { background: var(--morado-suave); color: var(--morado); }
 .decision-pendiente { background: var(--aviso-suave); color: var(--aviso); }
 .decision-no { background: var(--hoja-2); color: var(--tinta-2); }
-.tu-carrera .lista-eventos > li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja-2); }
+.tu-carrera .lista-eventos > li { display: flex; align-items: center; gap: var(--esp-10); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }
 .tu-carrera .lista-eventos > li > .pila-xs { flex: 1; min-width: 0; }
 
 .semaforo-punto { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--tinta-3); box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 0%, transparent); }
@@ -106,24 +106,24 @@
 .semaforo-ambar { background: var(--aviso-suave); color: var(--aviso); }
 .semaforo-rojo { background: var(--alerta-suave); color: var(--alerta); }
 .aviso-texto { color: var(--alerta); }
-.lista-semaforo li, .revision-carrera { display: flex; align-items: flex-start; gap: 10px; }
-.lista-semaforo .semaforo-punto, .revision-carrera .semaforo-punto { margin-top: 4px; }
-.lista-hecho-carrera li { padding: 8px 10px; border-radius: var(--r-s); background: var(--hoja-2); }
-.lista-hecho-carrera .chip { margin-left: 6px; }
-.lista-recetas-carrera > li { padding: 10px; border-radius: var(--r-s); background: var(--hoja-2); }
-.partes-lista { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; color: var(--tinta-2); }
+.lista-semaforo li, .revision-carrera { display: flex; align-items: flex-start; gap: var(--esp-10); }
+.lista-semaforo .semaforo-punto, .revision-carrera .semaforo-punto { margin-top: var(--esp-4); }
+.lista-hecho-carrera li { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }
+.lista-hecho-carrera .chip { margin-left: var(--esp-6); }
+.lista-recetas-carrera > li { padding: var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }
+.partes-lista { margin: var(--esp-4) 0 0; padding-left: var(--esp-18); display: grid; gap: var(--esp-2); color: var(--tinta-2); }
 .fase-nombre { font-weight: 700; color: var(--tinta); }
 
 /* ---------- editor: las partes y las sesiones del plan ---------- */
-.sesion-plan { padding: 10px; border-radius: var(--r-s); background: var(--hoja-2); box-shadow: var(--anillo); }
+.sesion-plan { padding: var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); box-shadow: var(--anillo); }
 .sesion-plan[data-tipo="descanso"] { background: transparent; }
-.sesion-plan-cab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
-.sesion-plan-vol, .parte-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.sesion-plan-cab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr) auto; gap: var(--esp-6); align-items: center; }
+.sesion-plan-vol, .parte-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: var(--esp-6); }
 .sesion-plan-vol .campo, .parte-campos .campo { margin: 0; min-width: 0; }
 .parte-campos .campo:last-child { grid-column: span 2; }
-.partes-editor { padding: 8px; border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
-.parte-fila { display: grid; gap: 6px; padding: 8px; border-radius: var(--r-10); background: var(--hoja); box-shadow: inset 3px 0 0 var(--fase-c, var(--linea)), 0 0 0 1px var(--borde); }
-.parte-fila-cab { display: flex; align-items: center; gap: 6px; }
+.partes-editor { padding: var(--esp-8); border-radius: var(--r-s); background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); }
+.parte-fila { display: grid; gap: var(--esp-6); padding: var(--esp-8); border-radius: var(--r-10); background: var(--hoja); box-shadow: inset 3px 0 0 var(--fase-c, var(--linea)), 0 0 0 1px var(--borde); }
+.parte-fila-cab { display: flex; align-items: center; gap: var(--esp-6); }
 .parte-fila-cab .selector { flex: none; width: auto; }
 .parte-resumen { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-fase="calentar"] { --fase-c: var(--z1); }
@@ -131,17 +131,17 @@
 [data-fase="strides"] { --fase-c: var(--z5); }
 [data-fase="enfriar"] { --fase-c: var(--z2); }
 [data-fase="libre"] { --fase-c: var(--tinta-3); }
-.partes-cerradas { align-items: baseline; gap: 6px; }
-.campos-carrera { padding-top: 6px; border-top: var(--filo-fino) dashed var(--linea); }
+.partes-cerradas { align-items: baseline; gap: var(--esp-6); }
+.campos-carrera { padding-top: var(--esp-6); border-top: var(--filo-fino) dashed var(--linea); }
 .plan-carrera-semana { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); box-shadow: var(--sombra-tarjeta), inset 3px 0 0 var(--morado); }
-.plan-carrera-semana .chip { margin-left: 6px; }
-.plan-carrera-items { gap: 2px; }
+.plan-carrera-semana .chip { margin-left: var(--esp-6); }
+.plan-carrera-items { gap: var(--esp-2); }
 
 /* ---------- la sesion de carrera del atleta ---------- */
-.detalle-carrera { margin-top: 2px; }
+.detalle-carrera { margin-top: var(--esp-2); }
 .tipo-carrera { background: var(--morado-suave); color: var(--morado); font-weight: 700; }
 .lista-partes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: parte; }
-.lista-partes .parte { position: relative; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0 8px 14px; }
+.lista-partes .parte { position: relative; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--esp-10); align-items: start; padding: var(--esp-8) 0 var(--esp-8) var(--esp-14); }
 .lista-partes .parte::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: var(--r-4); background: var(--fase-c); }
 .lista-partes .parte + .parte { border-top: var(--filo-fino) solid var(--linea); }
 .parte-fase { font-size: var(--letra-12-5); font-weight: 750; letter-spacing: .02em; color: var(--tinta-2); padding-top: 1px; }
@@ -149,9 +149,9 @@
 .lista-partes.en-ambar .parte[data-fase="bloque"], .lista-partes.en-ambar .parte[data-fase="strides"] { background: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--aviso) 7%, transparent) 8px 16px); }
 .lista-partes.en-ambar .parte[data-fase="bloque"] .parte-que, .lista-partes.en-ambar .parte[data-fase="strides"] .parte-que { text-decoration: line-through; text-decoration-color: var(--aviso); }
 
-.semaforo-carrera { padding: 10px; border-radius: var(--r-14); background: var(--hoja-2); }
-.semaforo-botones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.semaforo-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 6px 4px; font-size: var(--letra-15); border: 0; border-radius: var(--r-s);
+.semaforo-carrera { padding: var(--esp-10); border-radius: var(--r-14); background: var(--hoja-2); }
+.semaforo-botones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-6); }
+.semaforo-btn { display: flex; align-items: center; justify-content: center; gap: var(--esp-6); min-width: 0; min-height: 44px; padding: var(--esp-6) var(--esp-4); font-size: var(--letra-15); border: 0; border-radius: var(--r-s);
   background: var(--hoja); color: var(--tinta); font: inherit; font-weight: 650; cursor: pointer; box-shadow: var(--anillo);
   transition: background-color var(--mov-rapido, var(--mov-rapido)) ease, box-shadow var(--mov-rapido, var(--mov-rapido)) ease, transform var(--mov-rapido, var(--mov-rapido)) ease; }
 .semaforo-btn:active { transform: scale(.97); }
@@ -159,31 +159,31 @@
 .semaforo-btn.elegido[data-estado="ambar"] { background: var(--aviso-suave); box-shadow: inset 0 0 0 2px var(--aviso); }
 .semaforo-btn.elegido[data-estado="rojo"] { background: var(--alerta-suave); box-shadow: inset 0 0 0 2px var(--alerta); }
 .semaforo-texto { margin: 0; }
-.mas-carrera summary { cursor: pointer; padding: 4px 0; }
-.campos-carrera-hecho { gap: 8px; }
+.mas-carrera summary { cursor: pointer; padding: var(--esp-4) 0; }
+.campos-carrera-hecho { gap: var(--esp-8); }
 
 /* ---------- en Hoy y en "Tu carrera" ---------- */
-.tarjeta-carrera-hoy { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer;
+.tarjeta-carrera-hoy { width: 100%; display: flex; align-items: center; gap: var(--esp-12); padding: var(--esp-12) var(--esp-14); text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer;
   background: linear-gradient(var(--oklab,) 120deg, color-mix(in srgb, var(--z2) 12%, var(--hoja)), var(--hoja) 65%); box-shadow: var(--sombra-tarjeta); }
 .tarjeta-carrera-hoy .ios-ico { background: var(--z2); color: var(--hoja); }
 .tarjeta-carrera-hoy strong { text-wrap: balance; }
-.carrera-objetivo { display: grid; gap: 2px; padding: 18px 16px; border-radius: var(--r); color: var(--sobre-morado);
+.carrera-objetivo { display: grid; gap: var(--esp-2); padding: var(--esp-18) var(--esp-16); border-radius: var(--r); color: var(--sobre-morado);
   background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--z4) 55%, var(--morado)), var(--morado) 60%); box-shadow: var(--sombra-flotante); }
 .carrera-objetivo .peq { color: inherit; opacity: 1; }
 .carrera-objetivo-nombre { font-size: var(--letra-21); line-height: 1.15; text-wrap: balance; }
-.carrera-cuenta { font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: 4px 0 2px; }
-.semana-carrera-at { padding: 10px; border-radius: var(--r-s); background: var(--hoja-2); }
-.semana-carrera-at + .semana-carrera-at { margin-top: 6px; }
-.semana-carrera-at .chip { margin-left: 6px; }
-.sesiones-plan-at { margin-top: 6px; gap: 8px; }
-.sesiones-plan-at > li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: start; }
+.carrera-cuenta { font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: var(--esp-4) 0 var(--esp-2); }
+.semana-carrera-at { padding: var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }
+.semana-carrera-at + .semana-carrera-at { margin-top: var(--esp-6); }
+.semana-carrera-at .chip { margin-left: var(--esp-6); }
+.sesiones-plan-at { margin-top: var(--esp-6); gap: var(--esp-8); }
+.sesiones-plan-at > li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: var(--esp-8); align-items: start; }
 .dia-plan { width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--r-xs); background: var(--hoja); font-size: var(--letra-12); font-weight: 800; color: var(--tinta-2);
   box-shadow: var(--anillo); }
 .sesiones-plan-at > li[data-tipo="calidad"] .dia-plan, .sesiones-plan-at > li[data-tipo="carrera"] .dia-plan { background: var(--z4-t); color: var(--hoja); box-shadow: none; }
 .sesiones-plan-at > li[data-tipo="larga"] .dia-plan { background: var(--z2-t); color: var(--hoja); box-shadow: none; }
 .sesiones-plan-at > li[data-tipo="descanso"] .dia-plan { color: var(--tinta-3); }
 
-.km-semana { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.km-semana { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: var(--esp-8); align-items: center; }
 .km-pista { position: relative; height: 12px; border-radius: var(--r-6); background: var(--hoja-2); overflow: hidden; }
 .km-previsto { position: absolute; top: 0; bottom: 0; border-radius: var(--r-6); background: var(--acento-a22); }
 .km-hecho { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: var(--r-4); background: var(--z2); }
@@ -194,7 +194,7 @@
   .carrera-fase-fila input:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
   .sesion-plan-cab { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .sesion-plan-cab input { grid-column: 1 / -1; grid-row: 2; }
-  .lista-partes .parte { grid-template-columns: 1fr; gap: 2px; }
+  .lista-partes .parte { grid-template-columns: 1fr; gap: var(--esp-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

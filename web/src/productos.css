@@ -1,16 +1,16 @@
 /* Sumar un producto envasado en «Apuntar la nutrición» (escáner de códigos de barras, Open Food Facts) */
 .sumar-producto-btn { justify-self: start; }
-.producto-vista .producto-cab { display: flex; gap: 12px; align-items: flex-start; }
+.producto-vista .producto-cab { display: flex; gap: var(--esp-12); align-items: flex-start; }
 .producto-foto { width: 56px; height: 56px; flex: none; border-radius: var(--r-s); object-fit: contain; background: var(--blanco); box-shadow: var(--anillo); }
 .producto-foto-vacia { display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-3); }
-.producto-foto-vacia svg { width: 24px; height: 24px; }
-.producto-cantidades { margin-top: 8px; }
+.producto-foto-vacia svg { width: var(--ico-24); height: var(--ico-24); }
+.producto-cantidades { margin-top: var(--esp-8); }
 
-.lista-productos { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.fila-producto { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; padding: 10px 12px; border: 0; border-radius: var(--r-s); background: var(--hoja-2); color: var(--tinta); font: inherit; cursor: pointer; }
+.lista-productos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.fila-producto { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--esp-10); text-align: left; padding: var(--esp-10) var(--esp-12); border: 0; border-radius: var(--r-s); background: var(--hoja-2); color: var(--tinta); font: inherit; cursor: pointer; }
 .fila-producto:hover { background: var(--fila-hover); }
 .fila-producto:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
-.fila-producto > svg { width: 18px; height: 18px; flex: none; color: var(--tinta-3); }
+.fila-producto > svg { width: var(--ico-18); height: var(--ico-18); flex: none; color: var(--tinta-3); }
 
 /* La cámara: vídeo a lo ancho y un recuadro horizontal en el centro, que es la franja que se lee */
 .escaner-visor { position: relative; overflow: hidden; border-radius: var(--r); background: var(--negro); aspect-ratio: 4 / 3; }
@@ -20,6 +20,6 @@
 @keyframes escaner-linea { from { transform: translateY(-18px); } to { transform: translateY(18px); } }
 @media (prefers-reduced-motion: reduce) { .escaner-recuadro::after { animation: none; } }
 
-.sumados { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.sumados li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sumados { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.sumados li { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-8); }
 .sumados .btn-icono { flex: none; }

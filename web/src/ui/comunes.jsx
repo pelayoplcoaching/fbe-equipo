@@ -1139,7 +1139,7 @@ export function useAncho(inicial = 340) {
 // Arrastrando el dedo (o el ratón) por la gráfica sale una guía vertical con la fecha y el valor de ese punto; con el
 // teclado, la gráfica es un deslizador (flechas, Inicio y Fin). Debajo de la línea, un degradado suave; los récords
 // (donde se pide) van marcados. Para los lectores de pantalla, un resumen en texto.
-function useRaspado(n, xs) {
+export function useRaspado(n, xs) {
   const [sel, setSel] = useState(null);
   const tocando = useRef(false);
   const ultimo = useRef(null);
@@ -1179,7 +1179,7 @@ function useRaspado(n, xs) {
 }
 
 // La caja de una gráfica: el deslizador accesible, la etiqueta flotante del punto elegido y el resumen en texto
-function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children }) {
+export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children }) {
   const { sel, eventos, caja } = raspado;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
@@ -1377,6 +1377,8 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
         <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
+        {/* (visual 8) la cifra de la última tendencia, junto a su punto (como en las demás gráficas) */}
+        {sel == null && <text class="valor" x={Math.min(X(ult.fecha), W - der)} y={Y(ult.tendencia) - 10} text-anchor="end">{num(ult.tendencia)} kg</text>}
         {[...new Set(fechasX)].map((f, i, arr2) => (
           <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr2.length - 1 ? 'end' : 'middle'}>{fmtCorta(f)}</text>
         ))}

@@ -81,7 +81,7 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
   }
   async function hojaSonido(pg) {
     await cerrarDialogos(pg);
-    await pg.evaluate(() => { location.hash = '#perfil'; });
+    await pg.evaluate(() => { location.hash = '#ajustes'; });
     await pg.getByRole('button', { name: /^Sonido y vibración/ }).click();
     const h = pg.getByRole('dialog', { name: 'Sonido y vibración' });
     await h.waitFor();

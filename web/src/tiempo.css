@@ -1,48 +1,48 @@
 /* (v0.142) El tiempo para salir (Open-Meteo): en Hoy y en la sesion de cardio de fuera. Solo tokens de color. */
 
 .tiempo-hoy { min-width: 0; }
-.tiempo-ahora { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center; }
+.tiempo-ahora { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-4) var(--esp-14); align-items: center; }
 .tiempo-ico { width: 48px; height: 48px; border-radius: var(--r-s); display: grid; place-items: center; background: var(--morado-suave); color: var(--morado); }
-.tiempo-ico svg { width: 28px; height: 28px; }
+.tiempo-ico svg { width: var(--ico-28); height: var(--ico-28); }
 .tiempo-ahora-txt { min-width: 0; }
 .tiempo-grados { font-size: var(--cifra-xl, 2.25rem); font-weight: 750; line-height: 1; letter-spacing: -0.02em; }
 .tiempo-grados small { font-size: 0.45em; font-weight: 650; color: var(--tinta-2); letter-spacing: 0; }
-.tiempo-datos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 0; }
-.tiempo-datos div { display: flex; gap: 6px; align-items: baseline; }
+.tiempo-datos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--esp-6) var(--esp-18); margin: var(--esp-4) 0 0; }
+.tiempo-datos div { display: flex; gap: var(--esp-6); align-items: baseline; }
 .tiempo-datos dt { font-size: var(--tipo-pie); color: var(--tinta-2); }
 .tiempo-datos dd { margin: 0; font-weight: 650; }
 
-.tiempo-mejor { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: var(--r-s); background: var(--ok-suave); }
-.tiempo-mejor svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--ok); }
+.tiempo-mejor { display: flex; gap: var(--esp-8); align-items: flex-start; margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--ok-suave); }
+.tiempo-mejor svg { width: var(--ico-18); height: var(--ico-18); flex: none; margin-top: var(--esp-2); color: var(--ok); }
 
-.tiempo-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.tiempo-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-s); background: var(--aviso-suave); border: var(--filo-fino) solid var(--linea); }
-.tiempo-aviso svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--aviso); }
+.tiempo-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.tiempo-aviso { display: flex; gap: var(--esp-10); align-items: flex-start; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--aviso-suave); border: var(--filo-fino) solid var(--linea); }
+.tiempo-aviso svg { width: var(--ico-18); height: var(--ico-18); flex: none; margin-top: var(--esp-2); color: var(--aviso); }
 .tiempo-aviso[data-nivel="alto"] { background: var(--alerta-suave); }
 .tiempo-aviso[data-nivel="alto"] svg { color: var(--alerta); }
 
-.tiempo-horas { list-style: none; margin: 0; padding: 2px 2px 8px; display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; border-radius: var(--r-s); }
+.tiempo-horas { list-style: none; margin: 0; padding: var(--esp-2) var(--esp-2) var(--esp-8); display: flex; gap: var(--esp-6); overflow-x: auto; scroll-snap-type: x proximity; overscroll-behavior-x: contain; border-radius: var(--r-s); }
 .tiempo-horas:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
-.tiempo-horas li { flex: none; min-width: 54px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea); }
-.tiempo-horas li svg { width: 20px; height: 20px; color: var(--tinta-2); }
+.tiempo-horas li { flex: none; min-width: 54px; scroll-snap-align: start; display: grid; justify-items: center; gap: var(--esp-4); padding: var(--esp-8) var(--esp-6); border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea); }
+.tiempo-horas li svg { width: var(--ico-20); height: var(--ico-20); color: var(--tinta-2); }
 .tiempo-horas li.mejor { border-color: var(--ok); background: var(--ok-suave); }
 .tiempo-horas li.mejor svg { color: var(--ok); }
 
-.tiempo-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 10px; margin: 0; }
+.tiempo-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 var(--esp-10); margin: 0; }
 .tiempo-pie .btn-texto { font-size: var(--tipo-pie); }
 
-.elegir-zona .btn svg { width: 18px; height: 18px; }
-.buscar-zona { display: flex; gap: 8px; align-items: stretch; }
+.elegir-zona .btn svg { width: var(--ico-18); height: var(--ico-18); }
+.buscar-zona { display: flex; gap: var(--esp-8); align-items: stretch; }
 .buscar-zona .entrada { flex: 1; min-width: 0; }
 .zonas-encontradas { margin: 0; }
-.zona-opcion { width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 12px 14px; min-height: 48px; display: flex; flex-direction: column; gap: 2px; border-radius: var(--r-s); }
+.zona-opcion { width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: var(--esp-12) var(--esp-14); min-height: 48px; display: flex; flex-direction: column; gap: var(--esp-2); border-radius: var(--r-s); }
 .zona-opcion:hover { background: var(--morado-suave); }
 .zona-opcion:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
 .elegir-zona .aviso-texto:empty { display: none; }
 
-.tiempo-sesion { padding-top: 10px; border-top: var(--filo-fino) solid var(--linea); }
-.tiempo-sesion-linea { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
-.tiempo-sesion-linea svg { width: 20px; height: 20px; flex: none; color: var(--morado); }
+.tiempo-sesion { padding-top: var(--esp-10); border-top: var(--filo-fino) solid var(--linea); }
+.tiempo-sesion-linea { display: flex; gap: var(--esp-8); align-items: flex-start; margin: 0; }
+.tiempo-sesion-linea svg { width: var(--ico-20); height: var(--ico-20); flex: none; color: var(--morado); }
 
 @media (prefers-reduced-motion: reduce) {
   .tiempo-horas { scroll-behavior: auto; scroll-snap-type: none; }

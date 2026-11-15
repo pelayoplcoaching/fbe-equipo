@@ -155,13 +155,13 @@ function SemanasPerfil({ entrenos, hoy }) {
       <Segmentos clase="seg-compacto" etiqueta="Qué ver en la gráfica" opciones={MEDIDAS} valor={medida} alCambiar={(v) => v && setMedida(v)} />
       <div class="panel panel-pad pila-s">
         <p class="perfil-barras-sel" aria-live="polite"><strong class="num">{fmt(semanas[sel])}</strong> <span class="secundario">{sel === 11 ? 'esta semana' : `la semana del ${fmtCorta(semanas[sel].lunes)}`}</span></p>
-        <div class="perfil-barras" role="img" aria-label={etiqueta}
+        <div class="perfil-barras" role="img" aria-label={etiqueta} style={{ '--m': (media / max).toFixed(3) }}
           onKeyDown={(e) => { if (e.key === 'ArrowLeft') { e.preventDefault(); setSel((x) => Math.max(0, x - 1)); } if (e.key === 'ArrowRight') { e.preventDefault(); setSel((x) => Math.min(11, x + 1)); } }} tabIndex={0}>
           {semanas.map((w, i) => {
             const v = valor(w);
             const mes = i === 0 || w.lunes.slice(5, 7) !== semanas[i - 1].lunes.slice(5, 7) ? MESES[Number(w.lunes.slice(5, 7)) - 1] : '';
             return (
-              <span key={w.lunes} class={`pb-col ${i === semanas.length - 1 ? 'actual' : ''} ${i === sel ? 'sel' : ''}`} aria-hidden="true" onClick={() => setSel(i)}>
+              <span key={w.lunes} class={`pb-col ${i === semanas.length - 1 ? 'actual' : ''} ${i === sel ? 'sel' : ''} ${v > 0 ? '' : 'vacia'}`} aria-hidden="true" onClick={() => setSel(i)}>
                 <span class="pb-barra" style={{ '--h': `${v > 0 ? Math.max(6, Math.round((v / max) * 100)) : 0}%` }} title={fmt(w)} />
                 <span class="pb-mes">{mes}</span>
               </span>

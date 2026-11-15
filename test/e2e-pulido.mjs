@@ -3,7 +3,7 @@
 //   Suelta:  npm run build && node test/e2e-pulido.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarPulido } = await import('./e2e-pulido.mjs'); await probarPulido({ navegador, check });
 import { pathToFileURL } from 'node:url';
-import { irASeccion } from './secciones.mjs';
+import { irASeccion, irAAjustes } from './secciones.mjs';
 
 export async function probarPulido({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -494,7 +494,7 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         });
         await p.reload();
         await p.locator('nav.tabs').waitFor();
-        await irASeccion(p, 'Perfil');
+        await irAAjustes(p);
         await p.getByRole('button', { name: /Sonido y vibración/ }).first().tap();
         const interruptor = p.locator('#aj-sonido-serie');
         await interruptor.waitFor({ state: 'attached' });

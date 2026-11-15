@@ -32,16 +32,21 @@ const tope = (n, max, que) => check(n <= max, `${que}: ${n} fuera de escala (top
 //   pesos: 450 y 850;  tiempos: tres transiciones de 0,25 s
 //   sombras: solo las capas que se repetían pasaron a token; las demás son propias de cada componente
 //   tintes: tres porcentajes que no caen en ningún nivel sin notarse
-const TOPES = { radios: 26, letras: 90, pesos: 4, capas: 0, tiempos: 3, sombras: 412, filos: 0, tintes: 3, deshabilitado: 0 };
+//   (visual) espacios: los de más de 24 px que no caen en un paso sin notarse (26, 30, 34, 36, 38…) y los medios píxeles
+//   iconos: los de La travesía (su propio dibujo) y los de las gráficas, aros y diales (no son iconos)
+const TOPES = { radios: 26, letras: 90, pesos: 4, capas: 0, tiempos: 3, sombras: 412, filos: 0, tintes: 3, deshabilitado: 0, espacios: 68, iconos: 66 };
 
 console.log('\nsistema.css, generado');
 {
   check(src('sistema.css') === cssSistema(), 'sistema.css está al día con logica/sistema.js (npm run paleta)');
   const main = src('main.jsx');
+  check(main.indexOf("'./visual.css'") > main.indexOf("'./apuntes.css'") && main.indexOf("'./visual.css'") < main.indexOf("'./color-capa.css'"), '(visual) visual.css se carga después de los estilos de cada parte y antes de color-capa.css');
+  check(S.pasoEspacio(3) === 4 && S.pasoEspacio(5) === 4 && S.pasoEspacio(7) === 8 && S.pasoEspacio(1) === null && S.pasoEspacio(30) === null && S.pasoIcono(15) === 16 && S.pasoIcono(40) === null, '(visual) el espaciado va al múltiplo de 4 más cercano (unos suben y otros bajan) y los iconos impares, al par de arriba');
   check(main.indexOf("'./color.css'") < main.indexOf("'./sistema.css'") && main.indexOf("'./sistema.css'") < main.indexOf("'./estilos.css'"), 'se carga después de la paleta y antes de los estilos');
   const css = src('sistema.css');
   const pide = [...S.RADIOS.map((r) => `--r-${r}:`), '--r-pildora:', ...S.LETRAS.map((v) => `--${S.nombreLetra(v)}:`), ...Object.keys(S.CAPAS).map((k) => `--capa-${k}:`), ...S.TIEMPOS_NUEVOS.map((k) => `--mov-${k}:`),
     ...Object.keys(S.FILOS).map((k) => `--filo-${k}:`), ...Object.keys(S.SOMBRAS).map((k) => `--${k}:`), ...Object.keys(S.FILAS).map((k) => `--${k}:`), ...P.TINTES.map((p) => `--acento-a${p}:`), '--seq-5:', '--op-deshabilitado:'];
+  pide.push(...S.ESPACIOS.map((v) => `--esp-${v}:`), ...S.ICONOS_TAM.map((v) => `--ico-${v}:`));
   const faltan = pide.filter((t) => !css.includes(t));
   check(faltan.length === 0, `están todos los pasos: radios, letras, capas, tiempos, filos, sombras, filas y tintes (${pide.length})${faltan.length ? `: faltan ${faltan.slice(0, 6)}` : ''}`);
   const capas = Object.values(S.CAPAS);
@@ -82,6 +87,9 @@ console.log('\nNi un valor suelto más');
   tope(de('box-shadow').filter((d) => !/^(?:none|var\(--[\w-]+\)(?:\s*,\s*var\(--[\w-]+\))*|inherit|unset)$/.test(d[3])).length, TOPES.sombras, 'sombras con algún trozo a mano');
   tope(cuenta(de('border', 'border-top', 'border-bottom', 'border-left', 'border-right', 'border-width'), /(?<![\w.-])(?:1|1\.5|2|3)px(?= (?:solid|dashed|dotted))/g), TOPES.filos, 'filos de borde a mano (los anillos de foco van aparte)');
   tope(cuenta(decls, /color-mix\(in srgb, var\(--morado\) [\d.]+%, transparent\)/g), TOPES.tintes, 'tintes del acento a mano');
+  const ESP = /^(?:padding|margin|gap|row-gap|column-gap|scroll-padding|scroll-margin)(?:-[a-z-]+)?$/;
+  tope(decls.filter((d) => ESP.test(d[2])).reduce((t, d) => t + (d[3].match(/(?<![\w.-])(?!1px)\d+(?:\.\d+)?px\b/g) || []).filter((x) => x !== '0px').length, 0), TOPES.espacios, '(visual 1) márgenes, rellenos y huecos a mano');
+  tope(decls.filter((d) => /\bsvg(?::[a-z-]+(\([^)]*\))?)*\s*$/.test(d[1]) && (d[2] === 'width' || d[2] === 'height') && /^\d+px$/.test(d[3]) && Number.parseInt(d[3], 10) <= 32).length, TOPES.iconos, '(visual 14) tamaños de icono a mano');
   const desh = decls.filter((d) => /:disabled|\[disabled\]|aria-disabled/.test(d[1]) && d[2] === 'opacity' && d[3] !== 'var(--op-deshabilitado)' && d[3] !== '1');
   tope(desh.length, TOPES.deshabilitado, 'deshabilitados con otra opacidad');
 }
@@ -140,6 +148,22 @@ console.log('\nAvatares, categorías, elevación y filas');
   check(usos('--medalla') >= 4 && usos('--grad-record') >= 2 && usos('--grad-fuego') >= 1 && usos('--aro-amanecer') >= 1, `los degradados de marca, en uso (medalla ${usos('--medalla')}, récord ${usos('--grad-record')}, fuego ${usos('--grad-fuego')}, aro Amanecer ${usos('--aro-amanecer')})`);
   const oro = P.ESCALAS.oro[900], malGrad = [...P.CELEBRACION.record.filter((c) => P.contraste(oro, c) < 4.5), ...P.CELEBRACION.fuego.filter((c) => P.contraste(P.ESCALAS.naranja[950], c) < 4.5)];
   check(malGrad.length === 0, 'y Récord y Fuego aguantan su texto oscuro de punta a punta');
+}
+
+console.log('\nVisual (claude/visual-mejoras.md)');
+{
+  const lista = JSON.parse(readFileSync(new URL('datos/imagenes.json', dir), 'utf8'));
+  const sin = Object.entries(lista).filter(([, x]) => !/^#[0-9a-f]{6}$/.test(x.color || '')).map(([k]) => k);
+  check(sin.length === 0, `(12) cada ilustración lleva su color para mientras carga (${Object.keys(lista).length}; si añades imágenes: python3 scripts/colores-imagenes.py)${sin.length ? `: faltan ${sin.slice(0, 5)}` : ''}`);
+  const perfil = src('ui/atleta/Perfil.jsx'), vis = src('visual.css');
+  check(/opciones=\{\[\['tu', 'Tú'\], \['ajustes', 'Ajustes'\]\]\}/.test(perfil) && /class="perfil-cuerpo"/.test(perfil) && /function IndiceAjustes/.test(perfil), '(3 y 4) Perfil en dos vistas, «Tú» y «Ajustes», con el índice de los ajustes');
+  check(!/\.perfil-panel\s*\{\s*display:\s*contents/.test(vis) && /\.perfil-cuerpo \{ display: contents/.test(vis), '(3) el cuerpo de Perfil es .perfil-cuerpo (.perfil-panel es el de «Tu actividad»)');
+  check(/\(h === 'ajustes'/.test(src('ui/atleta/AtletaApp.jsx')) && /pedirVistaPerfil\('ajustes'\)/.test(src('ui/atleta/Hoy.jsx')), '(3) #ajustes y las preguntas frecuentes de Hoy llevan a «Ajustes»');
+  check(/@container \(max-width: 479px\)/.test(vis) && /container-type: inline-size/.test(vis), '(5) lo que se reparte en columnas mira el ancho de su sección');
+  check(/@media \(min-width: 1000px\)[\s\S]*columns: 2/.test(vis), '(6) Progreso y Perfil, a dos columnas en pantallas anchas');
+  check(/useRaspado\(n, xs\)/.test(src('ui/NutricionComun.jsx')) && /<CajaGrafica/.test(src('ui/NutricionComun.jsx')), '(11) las barras de lo comido se leen tocando, como las gráficas de línea');
+  check(/function SelloSemana/.test(src('ui/atleta/Progreso.jsx')) && !/PortadaHistoria/.test(src('ui/atleta/Progreso.jsx')), '(9) cada semana, su miniatura (y no el mismo lobo)');
+  check(/\.hoja-cab \{ position: sticky/.test(vis) && /animation-timeline: scroll\(nearest\)/.test(vis), '(17) la cabecera de las hojas se queda arriba y su filo sale con el desplazamiento');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
