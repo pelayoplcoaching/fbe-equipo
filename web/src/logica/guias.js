@@ -166,7 +166,7 @@ export const ESTANTES = [
   { id: 'empieza', icono: 'bandera', nombre: 'Empieza aquí', detalle: 'Cómo funciona tu asesoría', claves: ['bienvenida', 'manual', 'introduccion'] },
   { id: 'entrenar', icono: 'disco', nombre: 'Entrenar', detalle: 'Cómo se monta, se descarga y se retoma', claves: ['rutinas', 'deload', 'estancamiento', 'volver', 'cardio'] },
   { id: 'musculos', icono: 'biblioteca', nombre: 'Músculo a músculo', detalle: 'Cada grupo, ejercicio a ejercicio', claves: [] },
-  { id: 'comer', icono: 'nutricion', nombre: 'Comer', detalle: 'Fases, flexibilidad y suplementos', claves: ['dieta-flexible', 'composicion', 'suplementacion'] },
+  { id: 'comer', icono: 'nutricion', nombre: 'Comer', detalle: 'Fases, flexibilidad, proteína y suplementos', claves: ['dieta-flexible', 'composicion', 'proteina', 'suplementacion'] },
   { id: 'cabeza', icono: 'sueno', nombre: 'Descanso y cabeza', detalle: 'Dormir, recuperar y los días sin ganas', claves: ['sueno', 'motivacion'] },
   { id: 'salud', icono: 'escudo', nombre: 'Salud', detalle: 'Lo que dice la evidencia', claves: ['salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos'] },
   { id: 'mas', icono: 'biblioteca', nombre: 'Más guías', detalle: '', claves: [] },
