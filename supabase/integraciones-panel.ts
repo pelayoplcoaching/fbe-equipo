@@ -9,7 +9,7 @@ var UNO = new Uint8Array([1]);
 var MAX_MENSAJE = 4096 - 86 - 16 - 1;
 
 // supabase/functions/enviar-notificaciones/envio.js
-var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion", "repaso"]);
+var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion", "repaso", "suplementos"]);
 var DE_UNA_EN_UNA = /* @__PURE__ */ new Set([...RECORDATORIOS, "descanso"]);
 var ESPERA_MS = 1e4;
 function claveServicio(env) {

@@ -13,6 +13,7 @@ import { TextoPrivacidad } from '../Acceso.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { CATEGORIAS_RECURSO } from '../../logica/calculos.js';
 import { FilaCuestionario } from './Cuestionario.jsx';
+import { FilaSuplementos } from './Suplementos.jsx';
 import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
@@ -78,6 +79,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         {atleta.objetivo && <FilaIos icono="diana" titulo="Objetivo" detalle={atleta.objetivo} />}
         {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${p.bloque.nombre}`} />}
         <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
+        {/* (v0.174, 077) sus suplementos: verlos, añadir el primero y poner su aviso */}
+        <FilaSuplementos />
         <FilaCobro />
         {conEntrenamiento(atleta) && <FilaCorrecciones />}
         <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
