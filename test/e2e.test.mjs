@@ -6173,6 +6173,9 @@ try {
   console.log('\nLos suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso');
   const { probarSuplementos } = await import('./e2e-suplementos.mjs');
   await probarSuplementos({ navegador, check });
+  console.log('\nPausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve');
+  const { probarPausas } = await import('./e2e-pausas.mjs');
+  await probarPausas({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

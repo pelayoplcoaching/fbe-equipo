@@ -57,6 +57,7 @@ const DEFECTOS = {
   notas_coach: () => ({ creado_en: ahora() }),
   medidas: () => ({ fecha: hoyISO(), cintura_cm: null, cadera_cm: null, pecho_cm: null, brazo_cm: null, muslo_cm: null, pantorrilla_cm: null, notas: null }),
   marcas: () => ({ fecha: hoyISO(), reps: 1, tipo: 'test', notas: null }),
+  pausas: () => ({ hasta: null, motivo: 'otro', nota: null, creado_en: ahora() }),
   objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, tipo: null, peso_objetivo: null, peso_inicio: null, distancia_km: null, tiempo_seg: null, propuesto_por_atleta: false, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false, nombre: null, paginas: null, serie_numero: null, repite_de: null, angulo_de: null, fps_captura: null }),
   // v0.57 (035): la corrección de cada vídeo y las listas de puntos clave del coach
@@ -135,7 +136,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['pausas', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -1317,6 +1318,24 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (CHECKS[t] && !CHECKS[t](fila)) throw new Error('Algún valor está fuera de rango.');
   }
 
+  // Como la 078: una pausa con sentido, y el estado del atleta sigue a sus pausas (en pausa si hoy cae en alguna; de
+  // vuelta si tiene pausas apuntadas y hoy no cae en ninguna, o al quitarle la última)
+  function comprobarPausa(f) {
+    const dia = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+    if (!dia(f.desde) || (f.hasta != null && (!dia(f.hasta) || f.hasta < f.desde)) || f.desde < '2020-01-01' || f.desde > '2100-01-01' || (f.hasta != null && f.hasta > '2100-01-01')
+      || !['vacaciones', 'trabajo', 'personal', 'otro'].includes(f.motivo) || (f.nota != null && (typeof f.nota !== 'string' || f.nota.length < 1 || f.nota.length > 200 || !textoVisible(f.nota)))) {
+      throw new Error('new row for relation "pausas" violates check constraint "pausas_validas"');
+    }
+  }
+  function aplicarPausas(atletaId, quitada = false) {
+    const a = tabla('atletas').find((x) => x.id === atletaId);
+    if (!a) return;
+    const hoyP = fMadrid(), suyas = tabla('pausas').filter((x) => x.atleta_id === atletaId);
+    const vigente = suyas.some((x) => x.desde <= hoyP && (x.hasta == null || x.hasta >= hoyP));
+    if (a.estado === 'activo' && vigente) a.estado = 'pausado';
+    else if (a.estado === 'pausado' && !vigente && (suyas.length || quitada)) a.estado = 'activo';
+  }
+
   // Como la migración 007: sin ejercicio no hay marca; con ejercicio, una marca razonable (hasta 12 repeticiones)
   function comprobarMarca(f) {
     // (076) como objetivos_tipo_valido
@@ -1337,7 +1356,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -1649,8 +1668,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'listas_difusion' || t === 'listas_difusion_miembros') prepararLista(t, nueva, null);
     antesDeInsertar(t, nueva, opciones);
     if (t === 'objetivos') comprobarMarca(nueva);
+    if (t === 'pausas') comprobarPausa(nueva);
     comprobarChecks(t, nueva);
     tabla(t).push(nueva);
+    if (t === 'pausas') aplicarPausas(nueva.atleta_id);
     despuesDeInsertar(t, nueva);
     return nueva;
   }
@@ -3354,6 +3375,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async select(t, f = {}) {
       // (076) las propuestas de objetivo y las rondas, solo por sus funciones (ni leerlas)
       if (['objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas'].includes(t)) throw sinPermisoTabla(t);
+      // (078) las pausas: el coach, todas; el atleta, las suyas
+      if (t === 'pausas' && !esCoach()) return copia(tabla('pausas').filter((x) => x.atleta_id === miAtletaId() && cumple(x, f)));
       sinRedDemo();
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
       const retraso = (() => { try { return Math.min(5000, Number(localStorage.getItem('fbe-demo-retraso')) || 0); } catch { return 0; } })();
@@ -3397,6 +3420,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       sinRedDemo();
+      if (t === 'pausas' && !esCoach()) return [];   // (078) las pausas, solo el coach
       if (t === 'recetas_favoritas') throw sinPermisoTabla(t);   // (055) se pone o se quita, no se cambia
       // (051, como su trigger) al retirar el consentimiento de datos de salud, Salud del iPhone se desconecta y lo que
       // llegó de ahí se borra (lo que escribió él se queda)
@@ -3594,6 +3618,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (t === 'comidas_atleta') normalizarOpcional(fila);
         if (t === 'objetivos') comprobarMarca(fila); res.push(fila);
       }
+      if (t === 'pausas') for (const x of res) { comprobarPausa(x); aplicarPausas(x.atleta_id); }
       persistirYa();
       return copia(res);
     },
@@ -3724,6 +3749,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
+      // (078) las pausas las quita el coach; el atleta vuelve si era la última o hoy ya no cae en ninguna
+      if (t === 'pausas') {
+        if (!esCoach()) return [];
+        const fuera = tabla(t).filter((x) => cumple(x, f));
+        db[t] = tabla(t).filter((x) => !fuera.includes(x));
+        for (const x of fuera) aplicarPausas(x.atleta_id, !tabla('pausas').some((y) => y.atleta_id === x.atleta_id));
+        persistirYa();
+        return [];
+      }
       if (['novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'recetas_atleta', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'].includes(t) && !esCoach()) return [];
       // Como la 055: la receta guardada la quita su atleta (el coach solo las ve)
       if (t === 'recetas_favoritas') {
@@ -4517,7 +4551,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'contacto_mio') return tabla('contacto_atleta').find((x) => x.atleta_id === miAtletaId())?.telefono || null;
       if (nombre === 'copia_privada') {
         if (!esCoach()) throw new Error('Solo el coach');
-        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas'].map((t) => [t, copia(tabla(t))]));
+        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'pausas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas'].map((t) => [t, copia(tabla(t))]));
       }
       if (nombre === 'contactos') {
         if (!esCoach()) throw new Error('Solo el coach');

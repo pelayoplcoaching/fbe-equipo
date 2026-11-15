@@ -44,6 +44,7 @@ import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
 import { TarjetaObjetivos, useObjetivosPropuestos } from './ObjetivosTuyos.jsx';
 import { TarjetaSuplementos, useSuplementos } from './Suplementos.jsx';
+import { AvisoPausa } from '../Pausas.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
 import { ArteSesion } from './Portada.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
@@ -134,6 +135,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       {/* v0.73: el día de su aniversario en FBE (1 mes, 6 meses, 1 año…), con su confeti */}
       {!verBienvenida && <TarjetaAniversario />}
       {atleta.estado !== 'baja' && !propio && <AvisoCobro irA={irA} />}
+      {/* (v0.175, 078) su asesoría está en pausa: hasta cuándo y el mensaje de su coach */}
+      {!propio && !verBienvenida && <AvisoPausa />}
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
