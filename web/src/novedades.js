@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.167': {
+    atleta: [
+      'Tu perfil, más tuyo: el día 1 y hoy, tu palmarés, logros secretos, tu historia de bloques y tu trimestre.',
+      'Apunta lo que prefieres evitar y tu material de casa y de viaje; guarda mensajes en tu rincón de ánimo; pon tu portada.',
+      'Y un buscador en tu perfil, tus atajos, tu privacidad de un vistazo y tus datos en hoja de cálculo.',
+    ],
+    coach: [
+      'En la ficha, lo que el atleta prefiere evitar y su material, con aviso al elegir ejercicio. Migración 073.',
+    ],
+  },
   '0.166': {
     atleta: [
       'Perfil, en dos: «Tú» (lo tuyo) y «Ajustes» (con su índice). En ordenador, Progreso y Perfil a dos columnas.',

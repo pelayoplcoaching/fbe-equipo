@@ -49,6 +49,7 @@ const m = (n) => JSON.stringify(materialNecesario(n));
 check(m('Jalón con goma arrodillado') === '[["gomas"]]' && m('Face pull con goma') === '[["gomas"]]' && m('Buenos días con goma') === '[["gomas"]]' && m('Press pallof con goma') === '[["gomas"]]', '«con goma» es solo la goma (ni polea ni barra)');
 check(m('Dominadas asistidas con goma') === '[["gomas","dominadas"]]' && m('Dominadas asistidas en máquina') === '[["maquinas"]]' && m('Jalón al pecho en máquina') === '[["maquinas"]]' && m('Colgarse de la barra de dominadas') === '[["dominadas"]]', '«en máquina» manda, y la barra de dominadas no es una barra con discos');
 check(['Curl nórdico', 'Sentadilla pistol', 'Dead bug', 'Superman', 'Sentadilla búlgara sin peso', 'Elevación de talones a una pierna sin peso', 'Flexiones diamante', 'Plancha lateral'].every((n) => m(n) === '[]'), 'los de peso corporal no piden nada');
+check(m('Sentadilla goblet') === '[["mancuernas"],["kettlebells"]]', 'una sentadilla goblet a secas: mancuerna o kettlebell');
 check(m('Fondos entre bancos') === '[["banco"]]' && m('Hip thrust unilateral sin peso') === '[["banco"]]' && m('Sentadilla a una pierna al banco') === '[["banco"]]', 'y los que solo piden un banco');
 check(m('Leg curl de pie en máquina/polea baja') === '[["maquinas"],["poleas"]]' && m('Hip thrust') === '[["barra","banco"]]' && m('Remo al mentón en MP/con barra/en polea baja') === '[["multipower"],["poleas"],["barra"]]', 'los de siempre, como antes');
 const casa = AMP.filter((e) => materialNecesario(e.nombre) && sePuedeCon(e.nombre, ['mancuernas', 'gomas', 'banco'])).length;
@@ -66,12 +67,12 @@ check(!(await falla(`insert into public.ejercicios (nombre, grupos_musculares) v
 check(await falla(`insert into public.ejercicios (nombre, grupos_musculares) values ('Prueba rara', '{cuello}')`), 'y sigue sin admitir grupos que no existen');
 check((await q(`select count(*)::int n from pg_constraint where conrelid = 'public.ejercicios'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%isquiotibiales%'`))[0].n === 1, 'una sola restricción de grupos, también al repetir la migración');
 await q(`insert into public.ejercicios (nombre, grupos_musculares) values ('Aducciones Copenhague', '{}'), ('Kettlebell wrist turns', '{}'), ('Aductor en máquina sentado', '{gluteo}')`);
-const mig = lee('supabase/migraciones/073_biblioteca_2.sql');
+const mig = lee('supabase/migraciones/074_biblioteca_2.sql');
 const parte2 = mig.slice(mig.indexOf('-- 2. Los de siempre'), mig.indexOf('-- 3. Permisos'));
 await db.exec(parte2);
 const g = Object.fromEntries((await q(`select nombre, grupos_musculares from public.ejercicios where nombre in ('Aducciones Copenhague', 'Kettlebell wrist turns', 'Aductor en máquina sentado')`)).map((r) => [r.nombre, r.grupos_musculares.join()]));
 check(g['Aducciones Copenhague'] === 'aductores' && g['Kettlebell wrist turns'] === 'antebrazo' && g['Aductor en máquina sentado'] === 'gluteo', 'los de siempre sin grupo reciben el suyo; lo que el coach ya puso no se pisa');
-check(/if v > 73 then/.test(mig) && /numero = 72\) then/.test(mig) && /values \(73\)/.test(mig) && !/create (or replace )?function/.test(mig) && !/create table/.test(mig), 'pide la 072; no crea tablas ni funciones (nada que revocar)');
+check(/if v > 74 then/.test(mig) && /numero = 73\) then/.test(mig) && /values \(74\)/.test(mig) && !/create (or replace )?function/.test(mig) && !/create table/.test(mig), 'pide la 073; no crea tablas ni funciones (nada que revocar)');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

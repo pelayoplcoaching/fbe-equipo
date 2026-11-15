@@ -1,7 +1,7 @@
 // Backend de producción: Supabase (Auth + PostgREST). Los permisos los impone la base de datos (RLS).
 
 // Tablas cuya clave no es «id» (para ordenar al paginar)
-export const CLAVE_TABLA = { musica_sesion: 'sesion_id', musica_aperturas_lista: 'atleta_id,mes,url', musica_retos: 'mes', reloj: 'atleta_id', videos_vistos: 'atleta_id,video', travesia_semanas: 'atleta_id,semana', apuntes_vistos: 'atleta_id,apunte', travesia_envios: 'atleta_id,envio', travesia_perfil: 'atleta_id', travesia_dia: 'atleta_id,dia', travesia_aullidos: 'de,para,dia', travesia_liga: 'atleta_id,semana', travesia_reto_equipo: 'semana', travesia_fiesta: 'mes', voces_coach: 'clave', comunidad_intenciones: 'perfil_id', comunidad_padrinos: 'nuevo', comunidad_votos_semana: 'semana,de', personal_atleta: 'atleta_id', mensajes_coach: 'momento', musica_coach: 'clave', integraciones: 'atleta_id', salud_diaria: 'atleta_id,fecha', salud_copias: 'atleta_id,tipo,fecha', atajos_coach: 'clave', contacto_atleta: 'atleta_id', cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha', recetas_favoritas: 'atleta_id,receta_id', ejercicios_fichas: 'ejercicio_id', apuntes_semanas: 'atleta_id,semana',
+export const CLAVE_TABLA = { portadas: 'perfil_id', musica_sesion: 'sesion_id', musica_aperturas_lista: 'atleta_id,mes,url', musica_retos: 'mes', reloj: 'atleta_id', videos_vistos: 'atleta_id,video', travesia_semanas: 'atleta_id,semana', apuntes_vistos: 'atleta_id,apunte', travesia_envios: 'atleta_id,envio', travesia_perfil: 'atleta_id', travesia_dia: 'atleta_id,dia', travesia_aullidos: 'de,para,dia', travesia_liga: 'atleta_id,semana', travesia_reto_equipo: 'semana', travesia_fiesta: 'mes', voces_coach: 'clave', comunidad_intenciones: 'perfil_id', comunidad_padrinos: 'nuevo', comunidad_votos_semana: 'semana,de', personal_atleta: 'atleta_id', mensajes_coach: 'momento', musica_coach: 'clave', integraciones: 'atleta_id', salud_diaria: 'atleta_id,fecha', salud_copias: 'atleta_id,tipo,fecha', atajos_coach: 'clave', contacto_atleta: 'atleta_id', cobros_atletas: 'atleta_id', comidas_atleta: 'atleta_id', preferencias_notificaciones: 'usuario_id', menu_dias: 'atleta_id,fecha', recetas_favoritas: 'atleta_id,receta_id', ejercicios_fichas: 'ejercicio_id', apuntes_semanas: 'atleta_id,semana',
   comunidad_miembros: 'atleta_id', comunidad_reacciones: 'post_id,autor_id', comunidad_votos: 'post_id,autor_id', comunidad_animos: 'de,para,semana',
   // v0.54 (migración 032): el chat como WhatsApp
   comentario_reacciones: 'comentario_id,usuario_id', comentario_destacados: 'usuario_id,comentario_id', conversacion_estado: 'atleta_id', presencia: 'usuario_id',
@@ -405,6 +405,28 @@ export function crearBackendSupabase({ url, anonKey }) {
         try { await sb.auth.signOut({ scope: 'local' }); } catch { /* */ }
         try { const ls = globalThis.localStorage; if (ls) { ls.removeItem(sb.auth.storageKey); ls.removeItem(`${sb.auth.storageKey}-code-verifier`); } } catch { /* */ }
         sesion = null;
+      },
+      // (perfil, tanda 4) cerrar la sesión en todos sus dispositivos (Supabase revoca todas sus sesiones) y, aquí, como salir
+      async salirEnTodos() {
+        // (revisión) y que los otros móviles dejen de recibir avisos: fuera sus suscripciones (se vuelven a pedir al entrar)
+        try { const u = sesion?.user?.id; if (u) await sb.from('suscripciones_push').delete().eq('usuario_id', u); } catch { /* sin red: al menos la sesión */ }
+        const { error } = await sb.auth.signOut({ scope: 'global' });
+        if (error && !/session|sesi/i.test(error.message || '')) throw traducir(error);
+        provisional = false;
+        try { await sb.auth.signOut({ scope: 'local' }); } catch { /* */ }
+        try { const ls = globalThis.localStorage; if (ls) { ls.removeItem(sb.auth.storageKey); ls.removeItem(`${sb.auth.storageKey}-code-verifier`); } } catch { /* */ }
+        sesion = null;
+      },
+      // Su último inicio de sesión (lo guarda Supabase)
+      async ultimoAcceso() {
+        const { data } = await sb.auth.getUser();
+        return data?.user?.last_sign_in_at || null;
+      },
+      // Cambiar el correo: Supabase manda un enlace para confirmarlo (según el proyecto, a los dos correos); hasta entonces sigue el de antes
+      async cambiarCorreo(email) {
+        const { error } = await sb.auth.updateUser({ email: String(email || '').trim() }, { emailRedirectTo: location.origin + location.pathname });
+        if (error) throw traducir(error);
+        return { confirmar: true };
       },
       async recuperar(email) {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });

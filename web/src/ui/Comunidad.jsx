@@ -1456,6 +1456,11 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
           {coach && c.retenido && <button class="btn-texto mini" disabled={ocupado} onClick={() => accion(() => api.aprobarComunidad({ comentarioId: c.id }), 'Aprobado: ya se ve')} aria-label={`Aprobar el comentario de ${c.autor.nombre}`}>Aprobar</button>}
           {coach && post.con044 && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setSilenciar({ perfilId: c.autor_id, nombre: c.autor.nombre })} aria-label={`Silenciar a ${c.autor.nombre}`}>Silenciar</button>}
           {!coach && !c.mio && !c.autor.coach && <button class="btn-texto mini" onClick={() => setAvisar(c.id)}>Avisar al coach</button>}
+          {/* (perfil, tanda 4) un comentario de un compañero en tu publicación, a tu rincón de ánimo (solo lo ves tú) */}
+          {!coach && !c.mio && !c.oculto && post.autor_id === yo && api.fijarAnimo && (
+            <button type="button" class="btn-texto mini" disabled={ocupado} onClick={() => una(async () => { try { await api.fijarAnimo('comunidad', c.id, true); aviso('Guardado en tu rincón de ánimo, en tu perfil'); } catch (err) { aviso(err.message, 'error'); } })}
+              aria-label={`Guardar el comentario de ${c.autor.nombre} en tu rincón de ánimo`}>A tu rincón</button>
+          )}
         </span>
         {c.respuestas?.length > 0 && <ul class="lista respuestas-equipo" aria-label={`Respuestas a ${c.autor.nombre}`}>{c.respuestas.map((r) => item(r, true))}</ul>}
       </div>
@@ -1991,6 +1996,8 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
   const mias = useCarga(() => (perfil?.rol === 'coach' ? Promise.resolve(null) : api.companerosComunidad().catch(() => null)), [vuelta]);
   const insignias = useCarga(() => api.insigniasComunidad(perfilId).catch(() => ({})), [perfilId]);
   const [animadoAhora, setAnimadoAhora] = useState(false);
+  // (perfil, tanda 4) su foto de portada, si la ha puesto (y los dos estáis en la comunidad)
+  const portadaEq = useCarga(() => (api.portadaFoto ? api.portadaFoto(perfilId).catch(() => null) : Promise.resolve(null)), [perfilId]);
   const [hojaCoach, setHojaCoach] = useState(null); // v0.72: 'destacar' | 'silenciar'
   const [ocupado, una] = useUnaVez();
   const x = p.datos;
@@ -2011,7 +2018,7 @@ export function HojaPerfilEquipo({ perfilId, alCerrar }) {
         <div class="pila perfil-equipo">
           {/* v0.114: en la franja de arriba (diseño, tanda 37), un dibujo que sale de su nombre; y el aro de su racha alrededor de la foto */}
           <div class="perfil-equipo-cab">
-            <PortadaPerfil texto={x.nombre} clase="perfil-equipo-portada" />
+            <PortadaPerfil texto={x.nombre} clase="perfil-equipo-portada" foto={portadaEq.datos || null} />
             <FotoConAnillo nombre={x.nombre} foto={x.foto} racha={x.coach ? 0 : x.racha} clase="grande" ampliable perfilId={perfilId} />
             <div class="pila-xs">
               <span class="fila-envolver"><strong class="pe-nombre">{x.nombre}{x.yo ? ' (tú)' : ''}</strong>{x.coach && <span class="chip morado">Coach</span>}</span>

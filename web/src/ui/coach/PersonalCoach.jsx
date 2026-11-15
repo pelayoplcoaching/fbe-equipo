@@ -23,6 +23,8 @@ import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
 import { RetoMusicalCoach } from '../atleta/MusicaEquipo.jsx';
 import { BibliotecaMusica, UsoMusica, DeTuBiblioteca } from './MusicaCoach3.jsx';
 import { Imagen } from '../Imagen.jsx';
+import { textoMotivo, materialDe } from '../../logica/perfil-mas.js';
+import { NOMBRE_MATERIAL } from '../../logica/material.js';
 
 const textoCumple = (p) => (p?.cumple_mes && p?.cumple_dia ? `${p.cumple_dia} de ${MESES_LARGOS[p.cumple_mes - 1]}` : null);
 
@@ -60,7 +62,13 @@ export function LoSuyo({ atletaId }) {
   const { api } = useApp();
   const personal = useCarga(() => api.personalAtletas().catch(() => []), [atletaId]);
   const p = (personal.datos || []).find((x) => x.atleta_id === atletaId);
-  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url && !p.musica_listas?.length && !p.himno_ultima_url && !p.himno_vuelta_url)) return null;
+  // (perfil, tanda 4) lo que prefiere evitar (con los nombres de tu biblioteca) y su material
+  const conEvitados = (p?.evitados || []).length > 0;
+  const biblio = useCarga(() => (conEvitados ? api.biblioteca().catch(() => []) : Promise.resolve([])), [conEvitados]);
+  const nombreEj = Object.fromEntries((biblio.datos || []).map((e) => [e.id, e.nombre]));
+  const mat = materialDe(p);
+  const conMaterial = mat.deLaBase && (mat.casa.length || mat.viaje.length || mat.mancuernas_kg);
+  if (!p || (!p.apodo && !p.porque && !p.cumple_mes && !p.musica_url && !p.cancion_url && !p.musica_listas?.length && !p.himno_ultima_url && !p.himno_vuelta_url && !conEvitados && !conMaterial)) return null;
   return (
     <section class="seccion lo-suyo">
       <h2>Lo suyo</h2>
@@ -76,7 +84,12 @@ export function LoSuyo({ atletaId }) {
           {p.musica_listas?.length > 0 && <><dt>Sus listas</dt><dd>{p.musica_listas.map((l, i) => <span key={`${l.url}-${i}`}>{i ? ' · ' : ''}{nombreEtiqueta(l.etiqueta)}: <a href={l.url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={l.url} /></a></span>)}</dd></>}
           {p.himno_ultima_url && <><dt>Su himno de la última serie</dt><dd><a href={p.himno_ultima_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_ultima_url} /></a></dd></>}
           {p.himno_vuelta_url && <><dt>Su himno de vuelta</dt><dd><a href={p.himno_vuelta_url} target="_blank" rel="noopener noreferrer" class="lo-suyo-musica"><NombreLista url={p.himno_vuelta_url} /></a></dd></>}
+          {conEvitados && <><dt>Prefiere evitar</dt><dd class="lo-suyo-evitados">{p.evitados.map((x, i) => <span key={x.ejercicio_id}>{i ? ' · ' : ''}{nombreEj[x.ejercicio_id] || 'Un ejercicio'} <span class="mini terciario">({textoMotivo(x.motivo).toLowerCase()})</span></span>)}</dd></>}
+          {mat.deLaBase && mat.casa.length > 0 && <><dt>Su material en casa</dt><dd>{mat.casa.map((k) => NOMBRE_MATERIAL[k] || k).join(', ')}</dd></>}
+          {mat.deLaBase && mat.viaje.length > 0 && <><dt>De viaje</dt><dd>{mat.viaje.map((k) => NOMBRE_MATERIAL[k] || k).join(', ')}</dd></>}
+          {mat.mancuernas_kg && <><dt>Sus mancuernas</dt><dd>Hasta {String(mat.mancuernas_kg).replace('.', ',')} kg</dd></>}
         </dl>
+        {conEvitados && <p class="mini terciario">Es solo un aviso: su programación no cambia. En la app, «Cambiar ejercicio» no se los ofrece como alternativa.</p>}
       </div>
     </section>
   );

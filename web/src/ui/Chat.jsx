@@ -1164,7 +1164,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         <HojaMensaje c={menu} yo={yo} miId={miId} fijado={vigente?.comentario_id === menu.id} rapidas={rapidasEmoji} alElegirReacciones={() => { setMenu(null); setHoja('reacciones'); }} alCerrar={() => setMenu(null)} alResponder={() => responder(menu)} alReaccionar={(e) => reaccionar(menu, e)}
           alCopiar={() => copiarMensaje(menu)} alEditar={() => editar(menu)} alEliminar={() => { setMenu(null); setEliminar([menu]); }} alDestacar={() => destacar(menu)}
           alInfo={() => { setMenu(null); setInfo(menu); }} alCambiar={() => { setMenu(null); setProgramar(menu); }} alSeleccionar={() => seleccionar(menu)}
-          alFijar={() => { setMenu(null); setFijar(menu); }} alDesfijar={desfijar} alReenviar={() => { setMenu(null); setReenviar([menu]); }} />
+          alFijar={() => { setMenu(null); setFijar(menu); }} alDesfijar={desfijar} alReenviar={() => { setMenu(null); setReenviar([menu]); }}
+          alRincon={yo === 'atleta' && api.fijarAnimo ? () => { const m = menu; setMenu(null); api.fijarAnimo('chat', m.id, true).then(() => aviso('Guardado en tu rincón de ánimo, en tu perfil')).catch((e) => aviso(e.message, 'error')); } : null} />
       )}
       {fijar && (
         <Hoja titulo="Fijar el mensaje" alCerrar={() => setFijar(null)}>
@@ -1457,7 +1458,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
 }
 
 // El menú de un mensaje (una hoja: en el móvil, abajo): las reacciones arriba y, debajo, lo que se puede hacer
-function HojaMensaje({ c, yo, miId, fijado, rapidas = REACCIONES_CHAT, alElegirReacciones, alCerrar, alResponder, alReaccionar, alCopiar, alEditar, alEliminar, alDestacar, alInfo, alCambiar, alSeleccionar, alFijar, alDesfijar, alReenviar }) {
+function HojaMensaje({ c, yo, miId, fijado, rapidas = REACCIONES_CHAT, alElegirReacciones, alCerrar, alResponder, alReaccionar, alCopiar, alEditar, alEliminar, alDestacar, alInfo, alCambiar, alSeleccionar, alFijar, alDesfijar, alReenviar, alRincon = null }) {
   const mio = c.autor === yo;
   const eliminado = !!c.eliminado_en;
   const mia = (c.reacciones || []).find((r) => r.usuario_id === miId)?.emoji || null;
@@ -1470,6 +1471,8 @@ function HojaMensaje({ c, yo, miId, fijado, rapidas = REACCIONES_CHAT, alElegirR
     c.programado && mio && ['cambiar', 'reloj', 'Cambiar el texto o la hora', alCambiar],
     puedeEditar(c, yo) && !c.encuesta && ['editar', 'editar', 'Editar', alEditar],
     puedeReaccionar(c) && ['destacar', 'estrella', c.destacado ? 'Quitar destacado' : 'Destacar', alDestacar],
+    // (perfil, tanda 4) un mensaje de su coach, a su rincón de ánimo (en su perfil; solo lo ve él)
+    alRincon && yo === 'atleta' && c.autor === 'coach' && !eliminado && !c.programado && !esMarcador(c) && c.texto && ['rincon', 'sol', 'A tu rincón de ánimo', alRincon],
     ['seleccionar', 'seleccionar', 'Seleccionar', alSeleccionar],
     mio && !c.programado && ['info', 'pregunta', 'Info', alInfo],
     puedeEliminar(c, yo) && ['eliminar', 'basura', c.programado ? 'Cancelar el envío' : 'Eliminar para todos', alEliminar],

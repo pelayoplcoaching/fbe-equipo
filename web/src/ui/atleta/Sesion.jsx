@@ -84,6 +84,7 @@ import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso, usePersonal } from './Personal.jsx';
+import { mapaEvitados, apartarEvitados, textoMotivo } from '../../logica/perfil-mas.js';
 import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
 import { useAlternativaElegida, apuntarAlternativa, HaceUnAno } from './SesionTuya.jsx';
@@ -1347,7 +1348,10 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
   const [otros, setOtros] = useState(false);
   const biblioteca = useCarga(() => (otros ? api.biblioteca() : Promise.resolve([])), [otros]);
   const principal = e.ejercicio.grupos_musculares?.[0];
-  const delGrupo = (biblioteca.datos || []).filter((x) => x.activo !== false && x.grupos_musculares?.[0] === principal && x.id !== e.ejercicio.id && !e.alternativas.some((a) => a.id === x.id));
+  // (perfil, tanda 4) los que prefiere evitar no salen entre las alternativas (se dice cuántos y cuáles)
+  const evitados = mapaEvitados(usePersonal().datos);
+  const alternativas = apartarEvitados(ordenarAlternativas(e.alternativas, elegidaAntes), evitados);
+  const delGrupo = apartarEvitados((biblioteca.datos || []).filter((x) => x.activo !== false && x.grupos_musculares?.[0] === principal && x.id !== e.ejercicio.id && !e.alternativas.some((a) => a.id === x.id)), evitados).quedan;
   // (YouTube) cada variante lleva su propio vídeo: se dice cuál lo tiene y se puede ver antes de elegirla
   const [verVideo, setVerVideo] = useState(null);
   const Opcion = ({ x, nota }) => (
@@ -1368,9 +1372,10 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
       <div class="lista-elegir">
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
         {/* (personalización 3, tanda 5) la que eligió la última vez, delante */}
-        {ordenarAlternativas(e.alternativas, elegidaAntes).map((x) => <Opcion x={x} key={x.id} nota={x.id === elegidaAntes ? 'La que elegiste la última vez' : null} />)}
+        {alternativas.quedan.map((x) => <Opcion x={x} key={x.id} nota={x.id === elegidaAntes ? 'La que elegiste la última vez' : null} />)}
         {!e.alternativas.length && <div class="panel-pad peq secundario">Tu coach no ha marcado alternativas para este ejercicio.</div>}
       </div>
+      {alternativas.apartados.length > 0 && <p class="mini terciario alternativas-evitadas">Sin {alternativas.apartados.map((x) => `${x.nombre} (${textoMotivo(x.motivo).toLowerCase()})`).join(', ')}: lo prefieres evitar. Se cambia en tu perfil.</p>}
       {!otros ? (
         principal && <button class="btn-texto" onClick={() => setOtros(true)}><Icono n="buscar" /> Ver otros de {NOMBRE_GRUPO[principal]?.toLowerCase()}</button>
       ) : biblioteca.cargando ? <Cargando /> : delGrupo.length > 0 && (

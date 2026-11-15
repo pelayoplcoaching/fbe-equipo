@@ -24,6 +24,7 @@ import { usePersonal } from './Personal.jsx';
 import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
+import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada, AtajosPerfil, FilaPrivacidad, FilasCuentaSegura, FilaHojaCalculo } from './PerfilMas.jsx';
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -62,6 +63,10 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <div class="perfil-cuerpo" id="perfil-vista-panel" role="tabpanel" aria-labelledby={`perfil-vista-${vista}`}>
       {vista === 'tu' ? <>
       <CabezaPerfil p={p} correo={backend.auth.sesion()?.user.email} />
+      {/* (perfil, tanda 4) lo que le falta por rellenar y el índice con buscador */}
+      <AtajosPerfil irA={irA} />
+      <CompletaPerfil />
+      <IndicePerfil vista={vista} cambiarVista={cambiarVista} />
       {/* v0.52: el carné de atleta (como una tarjeta de Apple Wallet) */}
       <Carnet bloque={p?.bloque || null} />
       {/* v0.114: tu actividad (cifras, 12 semanas, constancia, vitrina, medallas, hitos y entrenos) y tu sitio en el equipo */}
@@ -74,14 +79,23 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${p.bloque.nombre}`} />}
         <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
         <FilaCobro />
+        {conEntrenamiento(atleta) && <FilaCorrecciones />}
         <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
+      </GrupoIos>
+
+      {/* (perfil, tanda 4) lo que evita, su material (los ve su coach) y sus guardados, juntos */}
+      <GrupoIos titulo="Tu forma de entrenar" id="grupo-tu-forma">
+        {conEntrenamiento(atleta) && <FilaEvitados />}
+        {conEntrenamiento(atleta) && <FilaMaterial />}
+        <FilaGuardados irA={irA} />
       </GrupoIos>
 
       {/* v0.104: lo que elige para su app (cómo le llamamos, su porqué, sus ejercicios, su música y su cumpleaños) */}
       <LoTuyo salud={salud} />
       <button type="button" class="btn ancho perfil-a-ajustes" onClick={() => cambiarVista('ajustes')}><Icono n="ajustes" /> Ajustes, guías y cuenta</button>
       </> : <>
+      <IndicePerfil vista={vista} cambiarVista={cambiarVista} />
       <IndiceAjustes />
       {/* v0.105: Salud del iPhone y el calendario que se actualiza solo */}
       <Conexiones salud={salud} />
@@ -98,6 +112,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
       <GrupoIos titulo="Cuenta" id="grupo-cuenta" pie={`FBE Equipo, versión ${VERSION_APP}. Hola, ${perfil?.nombre || atleta.nombre}.`}>
         <FilaIos icono="privacidad" titulo="Política de privacidad" detalle="Aceptada" alTocar={() => setVerPrivacidad(true)} etiqueta="Política de privacidad: leerla" />
+        {/* (perfil, tanda 4) qué ve cada uno, de un vistazo */}
+        <FilaPrivacidad salud={!!consSalud} />
         <li class="fila-ios fila-ios-bloque">
           <IcoIos n="escudo" tono={consSalud ? 'ok' : 'aviso'} />
           <span class="fila-ios-texto"><span class="fila-ios-titulo">Datos de salud</span><span class="peq terciario">{consSalud ? 'Consentimiento dado' : 'Sin consentimiento: no puedes registrar peso, check-in ni cómo llegas a cada sesión'}</span></span>
@@ -119,7 +135,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <FilaIos icono="descargar" titulo="Descargar mis datos" detalle="Todo lo que has registrado, en un archivo JSON">
           <button class="btn btn-peq" onClick={descargar}><Icono n="descargar" /> Descargar</button>
         </FilaIos>
+        <FilaHojaCalculo />
         {modo !== 'demo' && <FilaIos icono="candado" titulo="Contraseña" alTocar={() => setCambiarPass(true)} valor="Cambiar" etiqueta="Cambiar la contraseña" />}
+        <FilasCuentaSegura correo={backend.auth.sesion()?.user.email} />
         <FilaIos icono="salir" tono="alerta" titulo="Cerrar sesión en este dispositivo">
           <button class="btn btn-peq" onClick={salir}><Icono n="salir" /> Salir</button>
         </FilaIos>
@@ -156,9 +174,22 @@ function CabezaPerfil({ p, correo }) {
   // v0.116: la portada que eliges (cinco colores; solo en este móvil)
   const [portada, setPortada] = usePreferencia('fbe-portada-perfil', 'noche');
   const [elegir, setElegir] = useState(false);
+  // (perfil, tanda 4, migración 073) su foto de portada (la ven su coach y, si estáis en la comunidad, el equipo)
+  const { aviso, propio } = useApp();
+  const portadaFoto = useCarga(() => (propio || !api.portadaFoto ? Promise.resolve(undefined) : api.portadaFoto().catch(() => null)), [atleta.id]);
+  const [subiendo, setSubiendo] = useState(false);
+  const ponerFoto = async (archivo) => {
+    if (!archivo) return;
+    setSubiendo(true);
+    try { const b = await recortarPortada(archivo); await api.ponerPortadaFoto(b); setElegir(false); aviso('Portada puesta'); portadaFoto.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+    setSubiendo(false);
+  };
+  const quitarFoto = async () => {
+    try { await api.quitarPortadaFoto(); setElegir(false); aviso('Portada quitada'); portadaFoto.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+  };
   return (
     <section class="perfil-cabeza con-portada" data-portada={portadaValida(portada)} aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <PortadaPerfil texto={atleta.nombre} />
+      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || null} />
       <button type="button" class="btn-icono perfil-portada-btn" aria-label="Cambiar el color de la portada" aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
       {elegir && (
         <div class="perfil-portadas" role="radiogroup" aria-label="Color de la portada">
@@ -167,6 +198,13 @@ function CabezaPerfil({ p, correo }) {
               <span class="pp-color" aria-hidden="true" /><span class="pp-nombre">{t}</span>
             </button>
           ))}
+        </div>
+      )}
+      {elegir && portadaFoto.datos !== undefined && (
+        <div class="perfil-portada-foto">
+          <label class={`btn btn-peq${subiendo ? ' ocupado' : ''}`}><Icono n="camara" />{subiendo ? 'Subiendo…' : portadaFoto.datos ? 'Cambiar tu foto' : 'Poner tu foto'}
+            <input type="file" accept="image/*" class="sr" disabled={subiendo} onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; ponerFoto(f); }} aria-label="Elegir una foto de portada" /></label>
+          {portadaFoto.datos && <button type="button" class="btn btn-peq" onClick={quitarFoto}><Icono n="basura" />Quitar</button>}
         </div>
       )}
       <FotoConAnillo nombre={atleta.nombre} foto={perfil?.foto_grande || perfil?.foto} racha={constancia.datos?.racha || 0} clase="enorme" lleno ampliable />
