@@ -1136,7 +1136,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && ((f.modo === 'equipos') === (f.equipos != null)) && (f.equipos == null || equiposValidos(f.equipos)),
     // Migración 057: guías y fichas
     guias: (f) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(String(f.clave || '')) && textoCorto(f.titulo, 80) && f.titulo != null && textoCorto(f.subtitulo, 160)
-      && (f.grupo == null || ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo'].includes(f.grupo))
+      && (f.grupo == null || ['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo', 'antebrazo', 'aductores', 'lumbares'].includes(f.grupo))
       && entre(n(f.orden), 0, 999) && f.contenido && typeof f.contenido === 'object' && !Array.isArray(f.contenido) && JSON.stringify(f.contenido).length <= 200000 && typeof f.publicada === 'boolean',
     fichas_ejercicio: (f) => textoCorto(f.nombre, 120) && f.nombre != null && entre(n(f.orden), 0, 999) && f.ficha && typeof f.ficha === 'object' && !Array.isArray(f.ficha) && JSON.stringify(f.ficha).length <= 40000,
     // Migración 022: recetas, recetario, comidas del día y menú

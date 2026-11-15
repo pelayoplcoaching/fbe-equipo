@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.171': {
+    atleta: [
+      'Si entrenas antebrazo, aductores o lumbares, debajo de tu mapa muscular ya tienes el botón a su guía.',
+    ],
+    coach: [
+      'Las guías de antebrazo, aductores y lumbares ya llevan su grupo y salen debajo del mapa muscular. Migración 075.',
+    ],
+  },
   '0.170': {
     atleta: [
       'Aprende crece: 16 guías nuevas en Entrenar, Comer y Salud, de la rodilla y la creatina a la analítica y el alcohol.',
