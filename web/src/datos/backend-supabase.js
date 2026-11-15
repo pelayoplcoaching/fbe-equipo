@@ -408,6 +408,8 @@ export function crearBackendSupabase({ url, anonKey }) {
       },
       // (perfil, tanda 4) cerrar la sesión en todos sus dispositivos (Supabase revoca todas sus sesiones) y, aquí, como salir
       async salirEnTodos() {
+        // (revisión) y que los otros móviles dejen de recibir avisos: fuera sus suscripciones (se vuelven a pedir al entrar)
+        try { const u = sesion?.user?.id; if (u) await sb.from('suscripciones_push').delete().eq('usuario_id', u); } catch { /* sin red: al menos la sesión */ }
         const { error } = await sb.auth.signOut({ scope: 'global' });
         if (error && !/session|sesi/i.test(error.message || '')) throw traducir(error);
         provisional = false;

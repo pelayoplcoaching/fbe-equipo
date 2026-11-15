@@ -790,7 +790,7 @@ export function FilasCuentaSegura({ correo = null }) {
       {todos && (
         <Hoja titulo="Cerrar sesión en todos" alCerrar={() => setTodos(false)}>
           <div class="pila">
-            <p class="peq secundario">Se cerrará tu sesión en todos los móviles y ordenadores, también en este. Tendrás que volver a entrar con tu correo y tu contraseña. Lo que no se haya enviado sin cobertura se quedará en este móvil.</p>
+            <p class="peq secundario">Se cerrará tu sesión en todos los móviles y ordenadores, también en este. Tendrás que volver a entrar con tu correo y tu contraseña. Lo que aún no se haya enviado (sin cobertura) se perderá: mejor hazlo con conexión. En los otros, la sesión puede tardar hasta una hora en cerrarse, y dejarán de recibir avisos.</p>
             <button type="button" class="btn btn-peligro btn-grande" disabled={ocupado} onClick={async () => { setOcupado(true); try { await backend.auth.salirEnTodos(); } catch (err) { aviso(err.message, 'error'); setOcupado(false); } }}>Cerrar sesión en todos</button>
             <button type="button" class="btn btn-grande" onClick={() => setTodos(false)}>Cancelar</button>
           </div>

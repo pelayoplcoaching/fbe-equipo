@@ -1062,7 +1062,7 @@ export function crearApi(backend) {
     },
     // Pone su portada: la sube a su carpeta del bucket «portadas» (JPEG ya recortado) y la apunta; la anterior se encola
     async ponerPortadaFoto(blob) {
-      if (!blob || blob.size > 614400 || !/^image\/(jpeg|webp)$/.test(blob.type || '')) throw new Error('La foto no es válida. Prueba con otra (JPEG o PNG).');
+      if (!blob || blob.size > 614400 || !/^image\/(jpeg|webp)$/.test(blob.type || '')) throw new Error('La foto no es válida. Prueba con otra.');
       const ruta = `${uid()}/${crypto.randomUUID()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
       try { await b.storage.subir(ruta, blob, blob.type, { bucket: 'portadas' }); } catch (e) { if (falta073(e)) throw new Error(AVISO_073); throw e; }
       try { await b.rpc('portada_poner', { p_ruta: ruta }); } catch (e) {
@@ -5569,6 +5569,8 @@ export function crearApi(backend) {
       // (072) la música que abrió en cada sesión y lo que más abre (desde siempre)
       out.musica_abierta = (await api.musicaMasAbierta('2000-01', '2100-12', perfilId && perfilId === uid() ? null : atletaId, 2000).catch(() => [])) || [];
       // (v0.160, 072) la música de cada sesión y las aperturas por mes; y, si es suya, la lista que comparte con sus parejas de racha
+      // (v0.167, 073) su rincón de ánimo (solo suyo) y su foto de portada (dónde está)
+      if (perfilId && perfilId === uid()) { out.animo_fijados = (await api.animoMios?.().catch(() => null)) || []; out.portada = (await b.rpc('portada_de', {}).catch(() => null)) || null; }
       out.musica_de_sesiones_y_meses = (await b.rpc('musica_mia', { p_atleta: perfilId && perfilId === uid() ? null : atletaId }).catch(() => null)) || null;
       out.listas_companeros = perfilId && perfilId === uid() ? (await b.rpc('comunidad_listas_companeros').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones

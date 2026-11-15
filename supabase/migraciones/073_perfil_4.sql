@@ -106,7 +106,9 @@ begin
   end if;
   insert into public.personal_atleta as t (atleta_id, evitados, material, actualizado_en)
     values (v_atleta, v_evitados, v_material, now())
-  on conflict (atleta_id) do update set evitados = excluded.evitados, material = excluded.material, actualizado_en = now()
+  -- (revisión) solo lo que viene: guardar lo que evita no pisa el material (ni al revés) si llegan a la vez
+  on conflict (atleta_id) do update set evitados = case when p_datos ? 'evitados' then excluded.evitados else t.evitados end,
+    material = case when p_datos ? 'material' then excluded.material else t.material end, actualizado_en = now()
   returning * into v;
   return fbe_privado.personal_json(v);
 end $$;
@@ -140,12 +142,15 @@ begin
     return false;
   end if;
   if public.esta_de_baja() then raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada'; end if;
-  if p_tipo = 'chat' and not exists (select 1 from public.comentarios c where c.id = p_id and c.atleta_id = v_atleta and c.autor = 'coach' and c.eliminado_en is null) then
+  perform pg_advisory_xact_lock(hashtext('fbe-animo:' || v_atleta::text));  -- (revisión) el tope de 20, de uno en uno
+  -- (revisión) del chat, solo los ya enviados (no los programados para más tarde)
+  if p_tipo = 'chat' and not exists (select 1 from public.comentarios c where c.id = p_id and c.atleta_id = v_atleta and c.autor = 'coach' and c.eliminado_en is null
+                                     and (c.enviar_en is null or c.enviar_en <= now())) then
     raise exception 'Solo se fijan mensajes de tu coach en tu chat' using errcode = '22023';
   end if;
   if p_tipo = 'comunidad' and not exists (
        select 1 from public.comunidad_comentarios c join public.comunidad_posts p on p.id = c.post_id
-       where c.id = p_id and p.autor_id = auth.uid() and c.autor_id <> auth.uid() and not c.oculto) then
+       where c.id = p_id and p.autor_id = auth.uid() and c.autor_id <> auth.uid() and public.comunidad_comentario_visible(c.id)) then  -- (revisión) con las reglas de la comunidad
     raise exception 'Solo se fijan comentarios de compañeros en tus publicaciones' using errcode = '22023';
   end if;
   if (select count(*) from public.animo_fijados where atleta_id = v_atleta) >= 20 then
@@ -169,14 +174,14 @@ begin
   return coalesce((select jsonb_agg(x order by x ->> 'fijado_en' desc) from (
     select jsonb_build_object('id', f.id, 'tipo', 'chat', 'ref_id', c.id, 'texto', c.texto, 'autor', 'Tu coach', 'creado_en', c.creado_en, 'fijado_en', f.fijado_en) x
       from public.animo_fijados f join public.comentarios c on c.id = f.comentario_id
-     where f.atleta_id = v_atleta and c.atleta_id = v_atleta and c.eliminado_en is null
+     where f.atleta_id = v_atleta and c.atleta_id = v_atleta and c.eliminado_en is null and (c.enviar_en is null or c.enviar_en <= now())
     union all
     select jsonb_build_object('id', f.id, 'tipo', 'comunidad', 'ref_id', c.id, 'texto', c.texto,
              'autor', coalesce((select m.nombre from public.comunidad_miembros m where m.perfil_id = c.autor_id), case when pf.rol = 'coach' then 'Tu coach' else 'Un compañero' end),
              'creado_en', c.creado_en, 'fijado_en', f.fijado_en)
       from public.animo_fijados f join public.comunidad_comentarios c on c.id = f.comunidad_comentario_id
       join public.comunidad_posts p on p.id = c.post_id left join public.perfiles pf on pf.id = c.autor_id
-     where f.atleta_id = v_atleta and p.autor_id = auth.uid() and not c.oculto
+     where f.atleta_id = v_atleta and p.autor_id = auth.uid() and public.comunidad_comentario_visible(c.id)  -- (revisión) si deja de verse en la comunidad, deja de verse aquí
   ) s), '[]'::jsonb);
 end $$;
 comment on function public.animo_mios() is 'Los mensajes del rincón de ánimo del atleta (solo él), con su texto de ahora.';
@@ -204,13 +209,20 @@ language sql stable security definer set search_path = '' as $$
         and exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = p.perfil_id)
         and exists (select 1 from fbe_privado.comunidad_dentro d where d.perfil_id = auth.uid()))))
 $$;
+-- (revisión) ¿Le cabe otra foto en su carpeta? Como mucho tres (las que no llegan a ponerse no se acumulan)
+create or replace function public.portada_hueco() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select (select count(*) from storage.objects o where o.bucket_id = 'portadas' and split_part(o.name, '/', 1) = auth.uid()::text
+            and not exists (select 1 from fbe_privado.storage_por_borrar s where s.ruta = o.name)) < 3
+$$;
 drop policy if exists fbe_portadas_ver on storage.objects;
 create policy fbe_portadas_ver on storage.objects for select to authenticated
-  using (bucket_id = 'portadas' and (split_part(name, '/', 1) = auth.uid()::text or public.portada_visible(name)));
+  using (bucket_id = 'portadas' and (public.es_coach() or split_part(name, '/', 1) = auth.uid()::text or public.portada_visible(name)));  -- (revisión) el coach, todo (para limpiar)
 drop policy if exists fbe_portadas_subir on storage.objects;
 create policy fbe_portadas_subir on storage.objects for insert to authenticated
   with check (bucket_id = 'portadas' and public.mi_atleta_id() is not null and not public.esta_de_baja()
-              and split_part(name, '/', 1) = auth.uid()::text and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(jpg|webp)$');
+              and split_part(name, '/', 1) = auth.uid()::text and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(jpg|webp)$'
+              and public.portada_hueco());  -- (revisión) como mucho tres fotos en su carpeta (la puesta y dos de paso)
 drop policy if exists fbe_portadas_borrar on storage.objects;
 create policy fbe_portadas_borrar on storage.objects for delete to authenticated
   using (bucket_id = 'portadas' and (public.es_coach() or split_part(name, '/', 1) = auth.uid()::text));
@@ -230,6 +242,17 @@ end $$;
 drop trigger if exists portada_fuera on public.portadas;
 create trigger portada_fuera after update of ruta or delete on public.portadas
   for each row execute function public.portada_fuera();
+
+-- (revisión) al borrar la ficha de un atleta (el perfil se queda), su portada se va también (y su foto, a la cola)
+create or replace function fbe_privado.portada_al_borrar_atleta() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if old.perfil_id is not null then delete from public.portadas where perfil_id = old.perfil_id; end if;
+  return null;
+end $$;
+drop trigger if exists portada_al_borrar_atleta on public.atletas;
+create trigger portada_al_borrar_atleta after delete on public.atletas
+  for each row execute function fbe_privado.portada_al_borrar_atleta();
 
 -- Poner (la ya subida a su carpeta) o quitar la suya
 create or replace function public.portada_poner(p_ruta text) returns text

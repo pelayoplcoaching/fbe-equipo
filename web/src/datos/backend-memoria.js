@@ -4019,10 +4019,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const lista = tabla('animo_fijados');
         if (!args?.p_fijar) { for (let i = lista.length - 1; i >= 0; i--) if (lista[i].atleta_id === a && lista[i][campo] === id) lista.splice(i, 1); persistirYa(); return false; }
         if (deBaja()) throw new Error('Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada');
-        if (tipo === 'chat' && !tabla('comentarios').some((c) => c.id === id && c.atleta_id === a && c.autor === 'coach' && !c.eliminado_en)) throw new Error('Solo se fijan mensajes de tu coach en tu chat');
+        if (tipo === 'chat' && !tabla('comentarios').some((c) => c.id === id && c.atleta_id === a && c.autor === 'coach' && !c.eliminado_en && (!c.enviar_en || c.enviar_en <= ahora()))) throw new Error('Solo se fijan mensajes de tu coach en tu chat');
         if (tipo === 'comunidad') {
           const c = buscar('comunidad_comentarios', id), post = c && buscar('comunidad_posts', c.post_id);
-          if (!c || !post || post.autor_id !== sesion?.user.id || c.autor_id === sesion?.user.id || c.oculto) throw new Error('Solo se fijan comentarios de compañeros en tus publicaciones');
+          if (!c || !post || post.autor_id !== sesion?.user.id || c.autor_id === sesion?.user.id || !VISIBLE.comunidad_comentarios(c)) throw new Error('Solo se fijan comentarios de compañeros en tus publicaciones');
         }
         if (lista.some((x) => x.atleta_id === a && x[campo] === id)) return true;
         if (lista.filter((x) => x.atleta_id === a).length >= 20) throw new Error('Como mucho 20 mensajes en tu rincón de ánimo');
@@ -4036,10 +4036,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return tabla('animo_fijados').filter((f) => f.atleta_id === a).map((f) => {
           if (f.comentario_id) {
             const c = buscar('comentarios', f.comentario_id);
-            return c && c.atleta_id === a && !c.eliminado_en ? { id: f.id, tipo: 'chat', ref_id: c.id, texto: c.texto, autor: 'Tu coach', creado_en: c.creado_en, fijado_en: f.fijado_en } : null;
+            return c && c.atleta_id === a && !c.eliminado_en && (!c.enviar_en || c.enviar_en <= ahora()) ? { id: f.id, tipo: 'chat', ref_id: c.id, texto: c.texto, autor: 'Tu coach', creado_en: c.creado_en, fijado_en: f.fijado_en } : null;
           }
           const c = buscar('comunidad_comentarios', f.comunidad_comentario_id), post = c && buscar('comunidad_posts', c.post_id);
-          if (!c || !post || post.autor_id !== sesion?.user.id || c.oculto) return null;
+          if (!c || !post || post.autor_id !== sesion?.user.id || !VISIBLE.comunidad_comentarios(c)) return null;
           const m = tabla('comunidad_miembros').find((x) => x.perfil_id === c.autor_id);
           const rol = tabla('perfiles').find((x) => x.id === c.autor_id)?.rol;
           return { id: f.id, tipo: 'comunidad', ref_id: c.id, texto: c.texto, autor: m?.nombre || (rol === 'coach' ? 'Tu coach' : 'Un compañero'), creado_en: c.creado_en, fijado_en: f.fijado_en };

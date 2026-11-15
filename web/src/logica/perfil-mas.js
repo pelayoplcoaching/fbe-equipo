@@ -355,7 +355,8 @@ export function privacidadDeUnVistazo({ salud = false, saludConectada = false, c
 const celda = (v) => {
   if (v == null) return '';
   const t = typeof v === 'number' ? String(Math.round(v * 100) / 100).replace('.', ',') : String(v);
-  return /[";\n\r]/.test(t) || /^[=+\-@]/.test(t) ? `"${(/^[=+\-@]/.test(t) && typeof v !== 'number' ? `'${t}` : t).replace(/"/g, '""')}"` : t;
+  // (revisión) también lo que empieza por tabulador o retorno (OWASP: inyección de fórmulas)
+  return /[";\n\r]/.test(t) || /^[=+\-@\t\r]/.test(t) ? `"${(/^[=+\-@\t\r]/.test(t) && typeof v !== 'number' ? `'${t}` : t).replace(/"/g, '""')}"` : t;
 };
 export function aCSV(filas = [], columnas = []) {
   return `﻿${[columnas.map(([, t]) => celda(t)).join(';'), ...filas.map((f) => columnas.map(([k]) => celda(typeof k === 'function' ? k(f) : f[k])).join(';'))].join('\r\n')}\r\n`;

@@ -51,6 +51,7 @@ check(await falla('select personal_atletas()') && (await uno('select personal_mi
 console.log('\n2. El rincón de ánimo');
 await su();
 const msgCoach = (await q(`insert into public.comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Eres más fuerte de lo que crees') returning id`, [atletaA]))[0].id;
+const msgProgramado = (await q(`insert into public.comentarios (atleta_id, autor, texto, enviar_en) values ($1, 'coach', 'Para el lunes', now() + interval '2 days') returning id`, [atletaA]))[0].id;
 const msgSuyo = (await q(`insert into public.comentarios (atleta_id, autor, texto) values ($1, 'atleta', 'Gracias') returning id`, [atletaA]))[0].id;
 const msgOtro = (await q(`insert into public.comentarios (atleta_id, autor, texto) values ($1, 'coach', 'Para Luis') returning id`, [atletaL]))[0].id;
 await q('update public.comunidad_ajustes set activa = true');
@@ -66,6 +67,7 @@ const rincon = await uno('select animo_mios()');
 check(rincon.length === 2 && rincon.some((x) => x.autor === 'Tu coach' && /más fuerte/.test(x.texto)) && rincon.some((x) => x.autor === 'Luis P.'), 'su rincón, con el texto y quién lo dijo');
 check(await falla('select animo_fijar($1, $2, true)', ['chat', msgSuyo]) && await falla('select animo_fijar($1, $2, true)', ['chat', msgOtro])
   && await falla('select animo_fijar($1, $2, true)', ['comunidad', cEnOtro]) && await falla('select animo_fijar($1, $2, true)', ['otro', msgCoach]), 'sus propios mensajes, los del chat de otro o comentarios en publicaciones ajenas, no');
+check(await falla('select animo_fijar($1, $2, true)', ['chat', msgProgramado]), '(revisión) un mensaje programado para más tarde, todavía no');
 await uno('select animo_fijar($1, $2, true)', ['chat', msgCoach]);
 check((await uno('select animo_mios()')).length === 2, 'fijar dos veces el mismo no lo repite');
 await como(coach);
