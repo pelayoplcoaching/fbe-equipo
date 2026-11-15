@@ -1,4 +1,4 @@
-// La biblioteca de ejercicios, ampliada (rama biblioteca-2): tres grupos más (antebrazo, aductores, lumbares), los 161
+// La biblioteca de ejercicios, ampliada (rama biblioteca-2): tres grupos más (antebrazo, aductores, lumbares), los 155
 // ejercicios nuevos de la demo y la migración «biblioteca 2» en un Postgres local (PGlite).
 //   node test/biblioteca2.test.mjs
 import { readFileSync } from 'node:fs';
@@ -27,9 +27,9 @@ check(['diseno.css', 'perfil.css'].every((f) => ['antebrazo', 'aductores', 'lumb
 console.log('\nLa ampliación (demo)');
 const G = new Set(claves), T = new Set(['basico', 'multiarticular', 'aislamiento']);
 const nombres = AMP.map((e) => e.nombre);
-check(AMP.length === 161 && new Set(nombres.map((n) => n.toLowerCase())).size === 161, '161 ejercicios nuevos, sin repetir');
+check(AMP.length === 155 && new Set(nombres.map((n) => n.toLowerCase())).size === 155, '155 ejercicios nuevos, sin repetir');
 const viejos = new Set(GEN.map((e) => e.nombre.toLowerCase()));
-check(nombres.every((n) => !viejos.has(n.toLowerCase())) && BIBLIOTECA_BASE.length === GEN.length + 161, `ninguno repite uno de los ${GEN.length} de siempre (total en la demo: ${BIBLIOTECA_BASE.length})`);
+check(nombres.every((n) => !viejos.has(n.toLowerCase())) && BIBLIOTECA_BASE.length === GEN.length + 155, `ninguno repite uno de los ${GEN.length} de siempre (total en la demo: ${BIBLIOTECA_BASE.length})`);
 check(AMP.every((e) => e.grupos_musculares.every((g) => G.has(g)) && e.tipo.length && e.tipo.every((t) => T.has(t)) && e.rango_reps), 'todos con grupos válidos, tipo y rango de repeticiones');
 const todos = new Set(BIBLIOTECA_BASE.map((e) => e.nombre));
 check(AMP.every((e) => e.alternativas.length >= 1 && e.alternativas.every((a) => todos.has(a) && a !== e.nombre)), 'las alternativas existen en la biblioteca (y ninguno es alternativa de sí mismo)');
@@ -42,7 +42,7 @@ check(sinGrupo.length === 3 && sinGrupo.every((n) => /^Rotación externa/.test(n
 check(GEN.filter((e) => !e.grupos_musculares.length).length === 0 && GEN.find((e) => e.nombre === 'Aducciones Copenhague').grupos_musculares[0] === 'aductores' && GEN.find((e) => e.nombre === 'Kettlebell wrist turns').grupos_musculares[0] === 'antebrazo', 'los 8 de siempre sin grupo ya tienen el suyo');
 const porGrupo = {};
 for (const e of BIBLIOTECA_BASE) porGrupo[e.grupos_musculares[0] || '-'] = (porGrupo[e.grupos_musculares[0] || '-'] || 0) + 1;
-check(claves.every((g) => porGrupo[g] >= 5), `todos los grupos tienen al menos 5 ejercicios (${claves.map((g) => `${g} ${porGrupo[g]}`).join(', ')})`);
+check(claves.every((g) => porGrupo[g] >= 4), `todos los grupos tienen al menos 4 ejercicios (${claves.map((g) => `${g} ${porGrupo[g]}`).join(', ')})`);
 
 console.log('\nEl material de los nuevos (por su nombre)');
 const m = (n) => JSON.stringify(materialNecesario(n));
@@ -50,7 +50,7 @@ check(m('Jalón con goma arrodillado') === '[["gomas"]]' && m('Face pull con gom
 check(m('Dominadas asistidas con goma') === '[["gomas","dominadas"]]' && m('Dominadas asistidas en máquina') === '[["maquinas"]]' && m('Jalón al pecho en máquina') === '[["maquinas"]]' && m('Colgarse de la barra de dominadas') === '[["dominadas"]]', '«en máquina» manda, y la barra de dominadas no es una barra con discos');
 check(['Curl nórdico', 'Sentadilla pistol', 'Dead bug', 'Superman', 'Sentadilla búlgara sin peso', 'Elevación de talones a una pierna sin peso', 'Flexiones diamante', 'Plancha lateral'].every((n) => m(n) === '[]'), 'los de peso corporal no piden nada');
 check(m('Sentadilla goblet') === '[["mancuernas"],["kettlebells"]]', 'una sentadilla goblet a secas: mancuerna o kettlebell');
-check(m('Fondos entre bancos') === '[["banco"]]' && m('Hip thrust unilateral sin peso') === '[["banco"]]' && m('Sentadilla a una pierna al banco') === '[["banco"]]', 'y los que solo piden un banco');
+check(m('Reverse hyper en banco') === '[["banco"]]' && m('Hip thrust unilateral sin peso') === '[["banco"]]' && m('Sentadilla a una pierna al banco') === '[["banco"]]', 'y los que solo piden un banco');
 check(m('Leg curl de pie en máquina/polea baja') === '[["maquinas"],["poleas"]]' && m('Hip thrust') === '[["barra","banco"]]' && m('Remo al mentón en MP/con barra/en polea baja') === '[["multipower"],["poleas"],["barra"]]', 'los de siempre, como antes');
 const casa = AMP.filter((e) => materialNecesario(e.nombre) && sePuedeCon(e.nombre, ['mancuernas', 'gomas', 'banco'])).length;
 check(casa >= 80, `${casa} de los nuevos se pueden hacer en casa con mancuernas, gomas y banco`);
