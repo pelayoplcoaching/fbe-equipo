@@ -4682,6 +4682,50 @@
     },
     "color": "#4f3b78"
   },
+  "portada-alcohol": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-alcohol-720.53e2ecd6.webp",
+      "1080": "imagenes/guias/portada-alcohol-1080.be91b4b3.webp"
+    },
+    "color": "#50286c"
+  },
+  "portada-alcohol-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-alcohol-cuadrada-160.3a71a1b0.webp",
+      "320": "imagenes/guias/portada-alcohol-cuadrada-320.3f79d627.webp"
+    },
+    "color": "#582e6b"
+  },
+  "portada-analitica": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-analitica-720.1bf64cdb.webp",
+      "1080": "imagenes/guias/portada-analitica-1080.d0d5542e.webp"
+    },
+    "color": "#613c7a"
+  },
+  "portada-analitica-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-analitica-cuadrada-160.f040505a.webp",
+      "320": "imagenes/guias/portada-analitica-cuadrada-320.a70fd78a.webp"
+    },
+    "color": "#6f487d"
+  },
   "portada-baremos": {
     "proporcion": [
       12,
@@ -4703,6 +4747,28 @@
       "320": "imagenes/guias/portada-baremos-cuadrada-320.9c32504b.webp"
     },
     "color": "#423067"
+  },
+  "portada-bebidas-alcohol": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-bebidas-alcohol-720.e511308f.webp",
+      "1080": "imagenes/guias/portada-bebidas-alcohol-1080.41d95cf4.webp"
+    },
+    "color": "#58386c"
+  },
+  "portada-bebidas-alcohol-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-bebidas-alcohol-cuadrada-160.0c1256aa.webp",
+      "320": "imagenes/guias/portada-bebidas-alcohol-cuadrada-320.444857f1.webp"
+    },
+    "color": "#4e3169"
   },
   "portada-bienvenida": {
     "proporcion": [
@@ -4770,6 +4836,28 @@
     },
     "color": "#442e63"
   },
+  "portada-comer-fuera": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-comer-fuera-720.c50dcb56.webp",
+      "1080": "imagenes/guias/portada-comer-fuera-1080.1ff1ee39.webp"
+    },
+    "color": "#624170"
+  },
+  "portada-comer-fuera-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-comer-fuera-cuadrada-160.50b77433.webp",
+      "320": "imagenes/guias/portada-comer-fuera-cuadrada-320.1a799ab1.webp"
+    },
+    "color": "#55376c"
+  },
   "portada-composicion": {
     "proporcion": [
       12,
@@ -4792,6 +4880,72 @@
     },
     "color": "#4a3366"
   },
+  "portada-creatina": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-creatina-720.24c0e530.webp",
+      "1080": "imagenes/guias/portada-creatina-1080.89588583.webp"
+    },
+    "color": "#50357d"
+  },
+  "portada-creatina-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-creatina-cuadrada-160.260fd290.webp",
+      "320": "imagenes/guias/portada-creatina-cuadrada-320.75bd51d0.webp"
+    },
+    "color": "#51377d"
+  },
+  "portada-cuatro-formulas": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-cuatro-formulas-720.54f55517.webp",
+      "1080": "imagenes/guias/portada-cuatro-formulas-1080.a599566f.webp"
+    },
+    "color": "#54376d"
+  },
+  "portada-cuatro-formulas-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-cuatro-formulas-cuadrada-160.ed71bc69.webp",
+      "320": "imagenes/guias/portada-cuatro-formulas-cuadrada-320.43c96220.webp"
+    },
+    "color": "#442c67"
+  },
+  "portada-definicion": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-definicion-720.4b8189cf.webp",
+      "1080": "imagenes/guias/portada-definicion-1080.7f4fe841.webp"
+    },
+    "color": "#50336d"
+  },
+  "portada-definicion-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-definicion-cuadrada-160.88f5f761.webp",
+      "320": "imagenes/guias/portada-definicion-cuadrada-320.333fc2d6.webp"
+    },
+    "color": "#4a2e6c"
+  },
   "portada-deload": {
     "proporcion": [
       12,
@@ -4813,6 +4967,28 @@
       "320": "imagenes/guias/portada-deload-cuadrada-320.9c5f68d8.webp"
     },
     "color": "#3d2c61"
+  },
+  "portada-despues-de-comer": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-despues-de-comer-720.783e8347.webp",
+      "1080": "imagenes/guias/portada-despues-de-comer-1080.28c7a359.webp"
+    },
+    "color": "#5e3777"
+  },
+  "portada-despues-de-comer-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-despues-de-comer-cuadrada-160.8aab3439.webp",
+      "320": "imagenes/guias/portada-despues-de-comer-cuadrada-320.48ace8c7.webp"
+    },
+    "color": "#542f75"
   },
   "portada-diccionario": {
     "proporcion": [
@@ -4923,6 +5099,116 @@
       "320": "imagenes/guias/portada-estancamiento-cuadrada-320.c062f2a1.webp"
     },
     "color": "#4e3b80"
+  },
+  "portada-estres": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-estres-720.72f5cce9.webp",
+      "1080": "imagenes/guias/portada-estres-1080.fcab46d4.webp"
+    },
+    "color": "#4f2c68"
+  },
+  "portada-estres-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-estres-cuadrada-160.2356c3aa.webp",
+      "320": "imagenes/guias/portada-estres-cuadrada-320.556863c6.webp"
+    },
+    "color": "#522e66"
+  },
+  "portada-grasa-visceral": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-grasa-visceral-720.335bba3d.webp",
+      "1080": "imagenes/guias/portada-grasa-visceral-1080.c411c6d5.webp"
+    },
+    "color": "#502d72"
+  },
+  "portada-grasa-visceral-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-grasa-visceral-cuadrada-160.66aaf71c.webp",
+      "320": "imagenes/guias/portada-grasa-visceral-cuadrada-320.964240fb.webp"
+    },
+    "color": "#613974"
+  },
+  "portada-guardias": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-guardias-720.5f0bce2d.webp",
+      "1080": "imagenes/guias/portada-guardias-1080.c745a0f4.webp"
+    },
+    "color": "#4a2a6a"
+  },
+  "portada-guardias-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-guardias-cuadrada-160.f49acf42.webp",
+      "320": "imagenes/guias/portada-guardias-cuadrada-320.eb1e8377.webp"
+    },
+    "color": "#4c2d6a"
+  },
+  "portada-hambre": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-hambre-720.75495044.webp",
+      "1080": "imagenes/guias/portada-hambre-1080.9ce9e4e4.webp"
+    },
+    "color": "#5b385f"
+  },
+  "portada-hambre-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-hambre-cuadrada-160.fb480f52.webp",
+      "320": "imagenes/guias/portada-hambre-cuadrada-320.274fdd10.webp"
+    },
+    "color": "#4d2f61"
+  },
+  "portada-hospital": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-hospital-720.9a5971a1.webp",
+      "1080": "imagenes/guias/portada-hospital-1080.0d3af069.webp"
+    },
+    "color": "#512c73"
+  },
+  "portada-hospital-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-hospital-cuadrada-160.023f22df.webp",
+      "320": "imagenes/guias/portada-hospital-cuadrada-320.35e865cf.webp"
+    },
+    "color": "#593374"
   },
   "portada-introduccion": {
     "proporcion": [
@@ -5078,6 +5364,28 @@
     },
     "color": "#4a3466"
   },
+  "portada-numero-proteina": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-numero-proteina-720.b70855fa.webp",
+      "1080": "imagenes/guias/portada-numero-proteina-1080.9845e9c3.webp"
+    },
+    "color": "#463772"
+  },
+  "portada-numero-proteina-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-numero-proteina-cuadrada-160.2c68c8ad.webp",
+      "320": "imagenes/guias/portada-numero-proteina-cuadrada-320.301f32c2.webp"
+    },
+    "color": "#4e3e7a"
+  },
   "portada-primeros-dias": {
     "proporcion": [
       12,
@@ -5188,6 +5496,28 @@
     },
     "color": "#523a6c"
   },
+  "portada-sarcopenia": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-sarcopenia-720.cce9194f.webp",
+      "1080": "imagenes/guias/portada-sarcopenia-1080.54e9c9b1.webp"
+    },
+    "color": "#562f72"
+  },
+  "portada-sarcopenia-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-sarcopenia-cuadrada-160.7451d958.webp",
+      "320": "imagenes/guias/portada-sarcopenia-cuadrada-320.f2cb1ad4.webp"
+    },
+    "color": "#673f6f"
+  },
   "portada-seguridad": {
     "proporcion": [
       12,
@@ -5253,6 +5583,50 @@
       "320": "imagenes/guias/portada-suplementacion-cuadrada-320.1d62b86c.webp"
     },
     "color": "#583f6f"
+  },
+  "portada-suplementos-12": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-suplementos-12-720.ee215de3.webp",
+      "1080": "imagenes/guias/portada-suplementos-12-1080.1fa15716.webp"
+    },
+    "color": "#3e3169"
+  },
+  "portada-suplementos-12-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-suplementos-12-cuadrada-160.19635f14.webp",
+      "320": "imagenes/guias/portada-suplementos-12-cuadrada-320.91209b14.webp"
+    },
+    "color": "#43346e"
+  },
+  "portada-tension-pesas": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-tension-pesas-720.0b1b7321.webp",
+      "1080": "imagenes/guias/portada-tension-pesas-1080.f5c27f81.webp"
+    },
+    "color": "#4e2c6a"
+  },
+  "portada-tension-pesas-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-tension-pesas-cuadrada-160.3ddd84af.webp",
+      "320": "imagenes/guias/portada-tension-pesas-cuadrada-320.e2f28a33.webp"
+    },
+    "color": "#522f69"
   },
   "portada-viaje": {
     "proporcion": [
