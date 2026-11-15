@@ -8,12 +8,14 @@
 export const NOVEDADES = {
   '0.173': {
     atleta: [
-      'En Hoy, dile a tu coach qué quieres conseguir: una marca, tu peso, una carrera o lo que tú quieras. Te lo preguntará en cada bloque.',
-      'En Progreso → Logros ves lo que has propuesto y su respuesta. Tu objetivo de peso ya dice cuándo llegas a este ritmo.',
+      'En Hoy, dile a tu coach qué quieres conseguir: una marca, tu peso, una carrera o lo que quieras. Te lo preguntará en cada bloque.',
+      'Tus suplementos, en Hoy: márcalos con un toque y ponte un aviso al móvil a tu hora. Añade los tuyos desde Perfil.',
+      'Si paras unos días (vacaciones, trabajo), tu coach pone tu asesoría en pausa: sin recordatorios, y tu racha te espera.',
     ],
     coach: [
-      'Tus atletas te proponen objetivos: llegan a Revisar y los aceptas (ajustando cifra o fecha) o los descartas. Migración 076.',
-      'En la ficha, objetivo nuevo de «Peso corporal»: progreso y previsión automáticos con su tendencia de peso.',
+      'Tus atletas te proponen objetivos: llegan a Revisar y los aceptas (ajustando cifra o fecha) o los descartas.',
+      'Suplementos: páutalos en la ficha (Seguimiento) y mira qué días los marcan. Objetivo nuevo de «Peso corporal», con previsión.',
+      'Pausa de la asesoría, en la ficha (Datos): sin recordatorios ni alertas, y la racha no se rompe. Migraciones 076, 077 y 078.',
     ],
   },
   '0.172': {
