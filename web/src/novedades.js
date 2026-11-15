@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.172': {
+    atleta: [
+      'Todas las guías de Aprende estrenan portada, y antebrazo, aductores y lumbares ya tienen su estatua.',
+    ],
+    coach: [
+      '29 portadas de guía y tres estatuas nuevas. Tus 12 guías de texto ya tienen estantería: salen al publicarlas.',
+    ],
+  },
   '0.171': {
     atleta: [
       'Si entrenas antebrazo, aductores o lumbares, debajo de tu mapa muscular ya tienes el botón a su guía.',
