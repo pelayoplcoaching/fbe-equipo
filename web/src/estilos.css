@@ -1549,6 +1549,22 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .resultado-cribado.alerta { background: var(--alerta-suave); } .resultado-cribado.alerta svg { color: var(--alerta); }
 .entrada.entrada-num { max-width: 12em; font-variant-numeric: tabular-nums; }
 .tarjeta-cuestionario strong { font-size: var(--letra-15-5); }
+/* (v0.174) los suplementos: la tarjeta de Hoy, su hoja y la fila de la ficha del coach */
+.suplementos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.suplemento-fila { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-12); align-items: center; width: 100%; min-height: 48px; padding: var(--esp-8) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); color: var(--tinta); text-align: left; }
+.suplemento-marca { display: grid; place-items: center; width: var(--esp-24); height: var(--esp-24); border-radius: 50%; border: var(--filo-fino) solid var(--tinta-3); }
+.suplemento-marca svg { width: var(--ico-16); height: var(--ico-16); }
+.suplemento-fila[aria-pressed="true"] { border-color: var(--morado); background: var(--morado-suave); }
+.suplemento-fila[aria-pressed="true"] .suplemento-marca { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.suplemento-nombre { font-weight: 600; }
+.suplemento-aviso { display: flex; flex-wrap: wrap; gap: var(--esp-8); align-items: center; }
+.suplemento-aviso label { display: inline-flex; gap: var(--esp-4); align-items: center; }
+.suplemento-aviso label svg { width: var(--ico-16); height: var(--ico-16); }
+.opciones-suplemento { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.suplemento-coach-fila { grid-template-columns: minmax(0, 1fr) auto; }
+.suplemento-semana { display: inline-flex; gap: var(--esp-4); align-items: center; }
+.punto-dia { width: var(--esp-8); height: var(--esp-8); border-radius: 50%; background: var(--linea); }
+.punto-dia[data-hecho] { background: var(--morado); }
 /* (v0.173) los objetivos que propone el atleta: la tarjeta de Hoy, el cuestionario y sus propuestas en Progreso */
 .tarjeta-objetivos .fila-envolver { gap: var(--esp-8); }
 .seccion-objetivos:has(> h2:only-child) { display: none; }

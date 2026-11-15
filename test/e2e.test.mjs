@@ -6170,6 +6170,9 @@ try {
   console.log('\nLos objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach');
   const { probarObjetivos } = await import('./e2e-objetivos.mjs');
   await probarObjetivos({ navegador, check });
+  console.log('\nLos suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso');
+  const { probarSuplementos } = await import('./e2e-suplementos.mjs');
+  await probarSuplementos({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

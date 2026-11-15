@@ -113,7 +113,7 @@ async function enviarPush(sub, mensaje, vapid, { ttl = 86400, urgencia = "normal
 }
 
 // supabase/functions/enviar-notificaciones/envio.js
-var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion", "repaso"]);
+var RECORDATORIOS = /* @__PURE__ */ new Set(["sesion_hoy", "checkin", "habitos", "nutricion", "repaso", "suplementos"]);
 var URGENTES = /* @__PURE__ */ new Set(["respuesta", "mensaje", "prueba", "sesion_hoy", "checkin", "habitos", "nutricion", "descanso"]);
 var DE_UNA_EN_UNA = /* @__PURE__ */ new Set([...RECORDATORIOS, "descanso"]);
 var ESPERA_MS = 1e4;

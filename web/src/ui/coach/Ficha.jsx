@@ -26,6 +26,7 @@ import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
+import { SuplementosCoach } from './SuplementosCoach.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
@@ -433,6 +434,8 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
       <Reserva id="seg-tareas"><TareasCoach atleta={atleta} alCambiar={alCambiar} /></Reserva>
       {conEntrenamiento(atleta) && <Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva>}
       <Reserva id="seg-habitos"><HabitosCoach atleta={atleta} /></Reserva>
+      {/* (v0.174, 077) lo que toma: lo pauta el coach o lo añade el atleta */}
+      <SuplementosCoach atleta={atleta} />
       <Reserva id="seg-progreso"><VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} /></Reserva>
       {conEntrenamiento(atleta) && <Reserva id="seg-carga"><CargaEntreno atletaId={atleta.id} /></Reserva>}
       {conEntrenamiento(atleta) && <Reserva id="seg-volumen"><VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} /></Reserva>}
