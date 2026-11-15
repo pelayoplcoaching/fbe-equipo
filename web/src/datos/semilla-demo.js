@@ -666,6 +666,10 @@ export function semillaDemo(hoy = hoyISO()) {
   // (carrera, 056) Carlos prepara una media maratón: zonas, plan de 19 semanas, sus carreras, revisiones y una sesión de
   // calidad por partes esta semana (al final: no cambia lo aleatorio de lo anterior)
   sembrarCarrera(db, { hoy, lunesHoy, carlos, ahoraISO });
+  // (v0.173, 076) el cuestionario de objetivos: en la demo todos lo han contestado ya en este bloque, menos Iván (a él
+  // le sale la tarjeta en Hoy). Nadie tiene propuestas esperando
+  db.objetivos_rondas = db.atletas.filter((a) => a.email !== 'ivan@fbe.demo').map((a) => ({ atleta_id: a.id, contestado_en: ahoraISO }));
+  db.objetivos_propuestos = [];
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)

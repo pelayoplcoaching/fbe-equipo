@@ -5,7 +5,8 @@ import { tonelajePorDia } from '../logica/destacados.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
-import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
+import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
+import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
 import { claveValida } from '../logica/musica.js';
 import { ID_APUNTE, ENLACE_NOVEDAD } from '../logica/apuntes.js';
@@ -40,7 +41,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -142,6 +143,13 @@ const falta072 = (e) => {
     && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
 };
 // (073) el perfil 4: lo que evita, su material, el rincón de ánimo y la foto de portada
+// (076) sin la migración de los objetivos del atleta, la app no ofrece el cuestionario ni las propuestas
+const AVISO_076 = 'Esto aún no está disponible: hay que poner al día la base (migración 076, supabase/migraciones/076_objetivos_atleta.sql)';
+const falta076 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
+  return /objetivos_propuestas_(mias|pendientes)|objetivos_proponer|objetivo_propuesta_(retirar|resolver)|PGRST202|42883/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
+};
 const AVISO_073 = 'Esto aún no está disponible: hay que poner al día la base (migración «perfil 4», supabase/migraciones/073_perfil_4.sql)';
 const falta073 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
@@ -462,7 +470,7 @@ export const FOTO_MINI_MAX = 16000;
 // (v0.160) las de la 072 que solo leen: musica_de_sesiones, musica_mas_abierta, musica_biblioteca, musica_coach_uso, comunidad_canciones,
 // comunidad_reto_musical y comunidad_listas_companeros (si contaran como escritura, lo recordado de Hoy se olvidaría)
 // (073) animo_mios y portada_de solo leen
-const RPC_DE_CONSULTA = new Set(['animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['objetivos_propuestas_mias', 'objetivos_propuestas_pendientes', 'animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -1544,7 +1552,9 @@ export function crearApi(backend) {
       // (v0.160) la música 3 (072): con la 070 pero sin la 072, la 2026-12.31
       if ((await api.musica072().catch(() => null)) !== true) return VERSION_LEGAL_SIN_072;
       // (v0.167) el perfil 4 (073): con la 072 pero sin la 073, la 2026-12.32
-      return (await api.perfil073().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_073;
+      if ((await api.perfil073().catch(() => null)) !== true) return VERSION_LEGAL_SIN_073;
+      // (v0.173) los objetivos que propone el atleta (076): con la 073 pero sin la 076, la 2026-12.33
+      return (await api.objetivos076().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_076;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2709,12 +2719,63 @@ export function crearApi(backend) {
     async objetivos(atletaId, hoy = hoyISO()) {
       const lista = await b.select('objetivos', { eq: { atleta_id: atletaId }, order: [['fecha_limite', 'asc']] });
       const enlazados = lista.filter((o) => o.ejercicio_id);
-      if (!enlazados.length) return lista;
-      const [series, ejercicios] = await Promise.all([
-        api.historial(atletaId),
-        b.select('ejercicios', { in: { id: unicos(enlazados.map((o) => o.ejercicio_id)) }, cols: 'id,nombre' }).then(porId),
+      // (076) los de peso corporal: su progreso y su previsión salen de su tendencia de peso
+      const dePeso = lista.filter((o) => !o.ejercicio_id && tipoDeObjetivo(o) === 'peso' && o.peso_objetivo != null);
+      if (!enlazados.length && !dePeso.length) return lista;
+      const [series, ejercicios, pesos] = await Promise.all([
+        enlazados.length ? api.historial(atletaId) : [],
+        enlazados.length ? b.select('ejercicios', { in: { id: unicos(enlazados.map((o) => o.ejercicio_id)) }, cols: 'id,nombre' }).then(porId) : {},
+        dePeso.length ? b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(hoy, -400) }, order: [['fecha', 'asc']] }).catch(() => []) : [],
       ]);
-      return lista.map((o) => (o.ejercicio_id ? { ...o, ejercicio: ejercicios[o.ejercicio_id]?.nombre || null, auto: progresoObjetivo(o, series, hoy) } : o));
+      return lista.map((o) => (o.ejercicio_id ? { ...o, ejercicio: ejercicios[o.ejercicio_id]?.nombre || null, auto: progresoObjetivo(o, series, hoy) }
+        : dePeso.includes(o) ? { ...o, autoPeso: progresoPeso(o, pesos, hoy) } : o));
+    },
+    // ------------------------------------------------------------ los objetivos que propone el atleta (migración 076)
+    // ¿Está la 076? true / false / null (no se sabe: un corte). Si la función está, contesta o dice que no es para él
+    async objetivos076() {
+      if (!api._v076) {
+        const pr = b.rpc('objetivos_propuestas_mias', { p_todo: false }).then(() => true).catch((e) => (falta076(e) ? false : /42501|Solo el atleta/i.test(`${e?.message || ''} ${e?.code || ''}`) ? true : null));
+        api._v076 = pr;
+        pr.then((x) => { if (x == null && api._v076 === pr) api._v076 = null; });
+      }
+      return api._v076;
+    },
+    // El atleta: { contestado_en, propuestas } (null sin la 076). Con todo: true, también las contestadas hace tiempo
+    async objetivosPropuestos({ todo = false } = {}) {
+      try { return (await b.rpc('objetivos_propuestas_mias', { p_todo: todo })) || { contestado_en: null, propuestas: [] }; } catch (e) { if (falta076(e)) return null; throw e; }
+    },
+    // Contesta el cuestionario: de 0 a 5 propuestas del formulario (ninguna: sigue con los mismos)
+    async proponerObjetivos(lista = []) {
+      const limpias = [];
+      for (const x of lista) { const r = limpiarPropuesta(x); if (r.error) throw new Error(r.error); limpias.push(r.datos); }
+      try { return await b.rpc('objetivos_proponer', { p_propuestas: limpias }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    async retirarPropuesta(id) {
+      try { await b.rpc('objetivo_propuesta_retirar', { p_id: id }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    // El coach: las que esperan (de todos o de un atleta); sin la 076, ninguna
+    async propuestasPendientes(atletaId = null) {
+      try { return (await b.rpc('objetivos_propuestas_pendientes', { p_atleta: atletaId })) || []; } catch (e) { if (falta076(e)) return []; throw e; }
+    },
+    // El coach acepta una propuesta: crea el objetivo (con lo que haya ajustado en `cambios`) y la da por aceptada.
+    // En los de fuerza y de peso, el punto de partida es el de hoy (su 1RM estimado o su tendencia de peso)
+    async aceptarPropuesta(p, cambios = {}, nota = null, hoy = hoyISO()) {
+      const fila = { ...objetivoDePropuesta(p), ...cambios, atleta_id: p.atleta_id };
+      if (fila.tipo === 'fuerza' && fila.ejercicio_id) fila.e1rm_inicio = await api.e1rmActual(p.atleta_id, fila.ejercicio_id, hoy).catch(() => null);
+      if (fila.tipo === 'peso') fila.peso_inicio = await api.tendenciaPesoActual(p.atleta_id, hoy).catch(() => null);
+      const creado = await api.crear('objetivos', fila);
+      try { await b.rpc('objetivo_propuesta_resolver', { p_id: p.id, p_aceptar: true, p_objetivo: creado.id, p_nota: nota || null }); }
+      catch (e) { await api.borrar('objetivos', creado.id).catch(() => {}); if (falta076(e)) throw new Error(AVISO_076); throw e; }
+      return creado;
+    },
+    async descartarPropuesta(id, nota = null) {
+      try { return await b.rpc('objetivo_propuesta_resolver', { p_id: id, p_aceptar: false, p_objetivo: null, p_nota: nota || null }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    // Su tendencia de peso de ahora (si se ha pesado en los últimos 14 días), para medir desde ahí un objetivo de peso
+    async tendenciaPesoActual(atletaId, hoy = hoyISO()) {
+      const pesos = await b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(hoy, -120) }, order: [['fecha', 'asc']] });
+      const a = progresoPeso({ peso_objetivo: 1 }, pesos, hoy)?.actual;
+      return a != null ? a : null;
     },
     // Al enlazar un objetivo: su mejor 1RM estimado de ahora, para medir el progreso desde ahí
     async e1rmActual(atletaId, ejercicioId, hoy = hoyISO()) {
@@ -5566,6 +5627,8 @@ export function crearApi(backend) {
       out.apuntes_duelos = perfilId && perfilId === uid() ? (await b.rpc('apuntes_duelos_mios').catch(() => [])) || [] : [];
       // (v0.157, 069) su agenda de vida, entera (el manual va con «personal»)
       out.agenda_vida = (await api.agenda(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', hasta: '2100-01-01' }).catch(() => [])) || [];
+      // (v0.173, 076) lo que ha propuesto como objetivo (y cuándo contestó el cuestionario); solo el propio atleta
+      if (perfilId && perfilId === uid()) out.objetivos_propuestos = (await api.objetivosPropuestos({ todo: true }).catch(() => null)) || null;
       // (072) la música que abrió en cada sesión y lo que más abre (desde siempre)
       out.musica_abierta = (await api.musicaMasAbierta('2000-01', '2100-12', perfilId && perfilId === uid() ? null : atletaId, 2000).catch(() => [])) || [];
       // (v0.160, 072) la música de cada sesión y las aperturas por mes; y, si es suya, la lista que comparte con sus parejas de racha
@@ -6054,6 +6117,8 @@ export function crearApi(backend) {
         if (cambios.length) items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
       }
       items.comunidad = comunidad;
+      // (076) los objetivos que proponen los atletas y esperan respuesta
+      items.objetivos = (await api.propuestasPendientes().catch(() => [])).map((x) => ({ ...x, atleta: A[x.atleta_id] || null })).filter((x) => x.atleta);
       {
         const { tareas, EJ, AR } = deTareas;
         items.tareas = tareas.map((t) => ({ ...t, atleta: A[t.atleta_id] || null, ejercicio: EJ[t.ejercicio_id] || null, archivo: AR[t.archivo_id] || null })).filter((t) => t.atleta);
@@ -6062,8 +6127,8 @@ export function crearApi(backend) {
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
       const porAtleta = {};
-      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas, items.tareas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
-      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length + items.tareas.length, porAtleta };
+      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas, items.tareas, items.objetivos]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
+      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length + items.tareas.length + items.objetivos.length, porAtleta };
     },
     async marcarRevisado(tipo, id, revisado = true) {
       const [tabla, col] = REVISION[tipo];

@@ -18,6 +18,9 @@ import { ESCALAS, NOMBRE_ZONA, num } from '../../logica/calculos.js';
 import { fmtConDia, rangoSemana } from '../../logica/fechas.js';
 import { NOMBRE_TOMA } from '../../logica/comidas.js';
 import { TarjetaTarea } from '../Tareas.jsx';
+import { HojaPropuesta } from './PropuestasObjetivo.jsx';
+import { textoPropuesta, NOMBRE_TIPO_PROPUESTA } from '../../logica/objetivos-atleta.js';
+import { fmtCorta } from '../../logica/fechas.js';
 import { horasEsperando, textoEspera, nivelEspera, NOMBRE_NIVEL_ESPERA, ordenarGruposPorEspera, OBJETIVOS_REVISION, OBJETIVO_REVISION, textoHoras, textoAutoevaluacion } from '../../logica/correccion.js';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
@@ -64,7 +67,7 @@ function useAtajos(caja, n, clave = '') {
   return i;
 }
 
-const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['tareas', 'Tareas'], ['recetas', 'Recetas'], ['comunidad', 'Equipo']];
+const FILTROS = [['todo', 'Todo'], ['mensajes', 'Mensajes'], ['sesiones', 'Sesiones'], ['checkins', 'Check-ins'], ['videos', 'Vídeos'], ['tareas', 'Tareas'], ['recetas', 'Recetas'], ['objetivos', 'Objetivos'], ['comunidad', 'Equipo']];
 
 // Bandeja del coach: todo lo que espera tu respuesta, de todos los atletas, en un sitio.
 // v0.50: agrupado por atleta (cada uno con su cabecera, que se pliega, y cuántas cosas tiene); deslizar una tarjeta a
@@ -113,7 +116,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (!h) { h = { clave, ultimo: c, n: 0 }; hilos.push(h); }
     h.n++;
   }
-  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0, tareas: d?.tareas?.length || 0 };
+  const cuentas = { mensajes: hilos.length, sesiones: d?.sesiones.length || 0, checkins: d?.checkins.length || 0, videos: d?.archivos.length || 0, recetas: d?.recetas?.length || 0, comunidad: d?.comunidad?.length || 0, tareas: d?.tareas?.length || 0, objetivos: d?.objetivos?.length || 0 };
   const ver = (k) => filtro === 'todo' || filtro === k;
   const items = d ? [
     ...hilos.map((h) => ({ tipo: 'mensajes', clave: `m-${h.clave}`, atleta: h.ultimo.atleta ? { ...h.ultimo.atleta, id: h.ultimo.atleta.id || h.ultimo.atleta_id } : null, h })),
@@ -122,6 +125,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     ...itemsVideos(d.archivos, separadas),
     ...(d.tareas || []).map((t) => ({ tipo: 'tareas', clave: `t-${t.id}`, atleta: t.atleta, t })),
     ...(d.recetas || []).map((r) => ({ tipo: 'recetas', clave: `r-${r.id}`, atleta: r.atleta, r })),
+    ...(d.objetivos || []).map((o) => ({ tipo: 'objetivos', clave: `o-${o.id}`, atleta: o.atleta, o })),
     ...(d.comunidad || []).map((r) => ({ tipo: 'comunidad', clave: `e-${r.id}`, atleta: null, r })),
   ].filter((x) => ver(x.tipo)) : [];
   const conVideos = (d?.archivos || []).some((a) => a.tipo === 'video_tecnica');
@@ -137,6 +141,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (x.tipo === 'videos') return <TarjetaVideo a={x.a} recargar={recargar} quitar={quitar} abrirAtleta={abrirAtleta} objetivo={objetivo} />;
     if (x.tipo === 'tareas') return <TarjetaTarea t={x.t} recargar={recargar} abrirAtleta={abrirAtleta} />;
     if (x.tipo === 'recetas') return <TarjetaCambioReceta r={x.r} recargar={recargar} abrirAtleta={abrirAtleta} />;
+    if (x.tipo === 'objetivos') return <TarjetaPropuesta o={x.o} recargar={recargar} abrirAtleta={abrirAtleta} />;
     return <TarjetaReporte r={x.r} recargar={recargar} />;
   };
 
@@ -558,6 +563,23 @@ function TarjetaCambioReceta({ r, recargar, abrirAtleta }) {
         <button class="btn btn-peq" onClick={() => abrirAtleta(r.atleta.id, 'nutricion')}><Icono n="receta" /> Ir a su recetario</button>
         <button class="btn btn-peq revisar-hecho" onClick={resolver}><Icono n="hecho" /> Resuelto</button>
       </div>
+    </article>
+  );
+}
+
+// (v0.173, 076) Un objetivo que propone el atleta: se contesta en su hoja (aceptar, ajustando si hace falta, o descartar)
+function TarjetaPropuesta({ o, recargar, abrirAtleta }) {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
+      <Cabecera atleta={o.atleta} tipo={`Propone un objetivo (${NOMBRE_TIPO_PROPUESTA[o.tipo].toLowerCase()})`} cuando={cuando(o.creado_en)} abrirAtleta={abrirAtleta} pestana="objetivos" />
+      <p class="peq"><strong>{textoPropuesta(o)}</strong>{o.fecha ? `, para el ${fmtCorta(o.fecha)}` : ''}</p>
+      {o.motivo && <p class="cita">«{o.motivo}»</p>}
+      <div class="fila-envolver">
+        <button class="btn btn-peq btn-primario" onClick={() => setAbierta(true)}><Icono n="diana" /> Contestar</button>
+        <button class="btn btn-peq" onClick={() => abrirAtleta(o.atleta.id, 'objetivos')}>Ver sus objetivos</button>
+      </div>
+      {abierta && <HojaPropuesta p={o} alCerrar={(cambio) => { setAbierta(false); if (cambio) recargar(); }} />}
     </article>
   );
 }

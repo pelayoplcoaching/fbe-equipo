@@ -1,4 +1,4 @@
-import { e1rm, e1rmPorSemana, num } from './calculos.js';
+import { e1rm, e1rmPorSemana, num, tendenciaPeso, ritmoPeso } from './calculos.js';
 import { pesoTxt } from './unidades.js';
 import { sumarDias, diasEntre, lunesDe, aISO } from './fechas.js';
 
@@ -81,4 +81,39 @@ export function progresoObjetivo(obj, series, hoy) {
     sinRecientes: actual == null && semanal.length > 0, // tiene series, pero ninguna en las últimas 6 semanas
     prevision,
   };
+}
+
+// ---------- Objetivos de peso corporal (migración 076) ----------
+// Meta = el peso al que quiere llegar. Actual = su tendencia de peso (la media que suaviza el día a día), si se ha
+// pesado en los últimos 14 días. Inicio = la tendencia que tenía al ponerse el objetivo (peso_inicio).
+// Progreso = lo recorrido desde el inicio respecto a lo que había que recorrer. Llegado = la tendencia ya está en la
+// meta (o más allá, en el sentido que buscaba). Previsión = con el ritmo de las últimas 3 semanas (ritmoPeso), solo
+// si va hacia la meta: «a este ritmo, hacia el…». Si va en sentido contrario, alejandose.
+export const DIAS_PESO_RECIENTE = 14;
+export function progresoPeso(obj, pesos = [], hoy) {
+  const meta = Number(obj?.peso_objetivo);
+  if (!(meta > 0)) return null;
+  const serie = tendenciaPeso((pesos || []).filter((p) => p.fecha && p.fecha <= hoy));
+  const ult = serie[serie.length - 1] || null;
+  const reciente = !!ult && diasEntre(ult.fecha, hoy) <= DIAS_PESO_RECIENTE;
+  const actual = reciente ? Math.round(ult.tendencia * 10) / 10 : null;
+  const inicio = obj.peso_inicio != null ? Number(obj.peso_inicio) : null;
+  const baja = inicio != null ? meta < inicio : actual != null ? meta < actual : null;   // ¿busca bajar?
+  const llegado = actual != null && baja != null && (baja ? actual <= meta : actual >= meta);
+  let pct = 0;
+  if (llegado) pct = 100;
+  else if (actual != null && inicio != null && meta !== inicio) pct = Math.round(Math.max(0, Math.min(99, ((actual - inicio) / (meta - inicio)) * 100)));
+  let prevision = null, alejandose = false;
+  const ritmo = reciente ? ritmoPeso(serie) : null;
+  if (ritmo && actual != null && !llegado && Math.abs(ritmo.kgSemana) >= 0.05) {
+    const falta = meta - actual;   // con su signo
+    if (Math.sign(falta) === Math.sign(ritmo.kgSemana)) {
+      const semanas = Math.ceil(falta / ritmo.kgSemana);
+      if (semanas <= 104) {
+        const fecha = sumarDias(hoy, semanas * 7);
+        prevision = { semanas, fecha, ritmo: ritmo.kgSemana, aTiempo: obj.fecha_limite ? fecha <= obj.fecha_limite : null };
+      }
+    } else alejandose = true;
+  }
+  return { tipo: 'peso', meta, actual, inicio, pct, llegado, prevision, alejandose, sinRecientes: !reciente && serie.length > 0, sinPesos: !serie.length };
 }
