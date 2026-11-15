@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.173': {
+    atleta: [
+      'En Hoy, dile a tu coach qué quieres conseguir: una marca, tu peso, una carrera o lo que tú quieras. Te lo preguntará en cada bloque.',
+      'En Progreso → Logros ves lo que has propuesto y su respuesta. Tu objetivo de peso ya dice cuándo llegas a este ritmo.',
+    ],
+    coach: [
+      'Tus atletas te proponen objetivos: llegan a Revisar y los aceptas (ajustando cifra o fecha) o los descartas. Migración 076.',
+      'En la ficha, objetivo nuevo de «Peso corporal»: progreso y previsión automáticos con su tendencia de peso.',
+    ],
+  },
   '0.172': {
     atleta: [
       'Todas las guías de Aprende estrenan portada, y antebrazo, aductores y lumbares ya tienen su estatua.',
