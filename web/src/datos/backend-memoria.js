@@ -57,7 +57,7 @@ const DEFECTOS = {
   notas_coach: () => ({ creado_en: ahora() }),
   medidas: () => ({ fecha: hoyISO(), cintura_cm: null, cadera_cm: null, pecho_cm: null, brazo_cm: null, muslo_cm: null, pantorrilla_cm: null, notas: null }),
   marcas: () => ({ fecha: hoyISO(), reps: 1, tipo: 'test', notas: null }),
-  objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, creado_en: ahora() }),
+  objetivos: () => ({ progreso_pct: 0, estado: 'no_iniciado', descripcion: null, fecha_limite: null, ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, tipo: null, peso_objetivo: null, peso_inicio: null, distancia_km: null, tiempo_seg: null, propuesto_por_atleta: false, creado_en: ahora() }),
   archivos: () => ({ fecha: hoyISO(), sesion_ejercicio_id: null, ejercicio_id: null, comentario_coach: null, nota_atleta: null, mime: null, bytes: null, revisado_en: null, creado_en: ahora(), pose: null, poster_ruta: null, duracion_seg: null, destacado: false, nombre: null, paginas: null, serie_numero: null, repite_de: null, angulo_de: null, fps_captura: null }),
   // v0.57 (035): la corrección de cada vídeo y las listas de puntos clave del coach
   video_revisiones: () => ({ puntuacion: null, checklist: null, tempo: null, voz_archivo_id: null, voz_inicio: null, visto_el: null, corregido_en: null, actualizado_en: ahora(), analisis: null, reps_manual: null, dos_angulos: null }),
@@ -135,7 +135,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -169,7 +169,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id'], ['novedades', 'ejercicio_id']] };
+const ANULAR = { objetivos: [['objetivos_propuestos', 'objetivo_id']], comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['objetivos_propuestos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id'], ['novedades', 'ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -1319,6 +1319,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
 
   // Como la migración 007: sin ejercicio no hay marca; con ejercicio, una marca razonable (hasta 12 repeticiones)
   function comprobarMarca(f) {
+    // (076) como objetivos_tipo_valido
+    const entre = (v, a, z) => v == null || (Number(v) >= a && Number(v) <= z);
+    if (!(f.tipo == null || ['fuerza', 'peso', 'carrera', 'libre'].includes(f.tipo)) || !entre(f.peso_objetivo, 30, 300) || !entre(f.peso_inicio, 30, 300) || !entre(f.distancia_km, 0.1, 500) || !entre(f.tiempo_seg, 30, 360000)
+      || (f.tipo === 'peso' && f.peso_objetivo == null) || (f.tipo === 'carrera' && (f.distancia_km == null || f.tiempo_seg == null))) {
+      throw new Error('new row for relation "objetivos" violates check constraint "objetivos_tipo_valido"');
+    }
     if (f.ejercicio_id == null) { f.kg_objetivo = null; f.reps_objetivo = null; f.e1rm_inicio = null; return; }
     const kg = Number(f.kg_objetivo), reps = Number(f.reps_objetivo);
     if (f.kg_objetivo == null || f.reps_objetivo == null || !(kg >= 0.5 && kg <= 1000) || !(reps >= 1 && reps <= 12)) {
@@ -1613,7 +1619,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
-    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
+    if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
     if (['comunidad_ajustes', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_reportes', 'comunidad_cupos', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_companeros', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_preguntas',
       'comunidad_evento_asistentes', 'comunidad_destacados', 'comunidad_moderacion'].includes(t)) throw sinPermiso();
@@ -3346,6 +3352,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       },
     },
     async select(t, f = {}) {
+      // (076) las propuestas de objetivo y las rondas, solo por sus funciones (ni leerlas)
+      if (['objetivos_propuestos', 'objetivos_rondas'].includes(t)) throw sinPermisoTabla(t);
       sinRedDemo();
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
       const retraso = (() => { try { return Math.min(5000, Number(localStorage.getItem('fbe-demo-retraso')) || 0); } catch { return 0; } })();
@@ -3441,7 +3449,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // Como la 032: de una reacción, solo el emoji de la propia (en un mensaje en que aún se puede reaccionar); el estado
       // de las conversaciones, el coach; la presencia (solo con su función), los destacados y los cupos no se cambian
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
       if (t === 'comentario_reacciones') {
         if (Object.keys(cambios).some((k) => k !== 'emoji')) throw new Error('De una reacción solo se cambia el emoji');
         if (!emojiValido(cambios.emoji)) throw new Error('Algún valor está fuera de rango.');
@@ -3648,7 +3656,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
+      if (['presencia', 'chat_cupos', 'comentario_destacados', 'encuestas_chat', 'encuesta_votos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
       // Como la 034: la versión vista (con el usuario que sea, la base la pone a tu nombre: es la tuya la que cambia)
       if (t === 'privacidad_vista') {
         const res = (Array.isArray(filas) ? filas : [filas]).map((f) => {
@@ -3832,6 +3840,94 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const limpioVisible = (t, juntar) => { let v = String(t ?? '').replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, ''); if (juntar) v = v.replace(/[\s\u0000-\u001f\u007f]+/g, ' '); v = v.trim(); return v && textoVisible(v) ? v : null; };
       const agendaDe = (p) => { if (esCoach()) { if (!p || !tabla('atletas').some((x) => x.id === p)) throw new Error('Ese atleta no existe'); return p; } const a = miAtletaId(); if (!a) throw new Error('Solo el atleta o su coach'); return a; };
       const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
+      // (076) los objetivos que propone el atleta: todo por funciones (como la base)
+      if (/^objetivos?_propuestas?_|^objetivos_proponer$/.test(nombre)) {
+        const saludDe = (a) => { const at = tabla('atletas').find((x) => x.id === a); return tabla('consentimientos').some((x) => at && x.perfil_id === at.perfil_id && x.tipo === 'datos_salud' && !x.revocado_en); };
+        const propJson = (x) => ({ id: x.id, atleta_id: x.atleta_id, tipo: x.tipo, ejercicio_id: x.ejercicio_id ?? null, ejercicio: tabla('ejercicios').find((e) => e.id === x.ejercicio_id)?.nombre ?? null,
+          kg: x.kg ?? null, reps: x.reps ?? null, peso_kg: x.peso_kg ?? null, distancia_km: x.distancia_km ?? null, tiempo_seg: x.tiempo_seg ?? null, titulo: x.titulo ?? null, motivo: x.motivo ?? null,
+          fecha: x.fecha ?? null, estado: x.estado, nota_coach: x.nota_coach ?? null, objetivo_id: x.objetivo_id ?? null, creado_en: x.creado_en, resuelto_en: x.resuelto_en ?? null });
+        const propuestasDe = (a, todo) => ({ contestado_en: tabla('objetivos_rondas').find((r) => r.atleta_id === a)?.contestado_en ?? null,
+          propuestas: tabla('objetivos_propuestos').filter((x) => x.atleta_id === a && (todo || x.estado === 'pendiente' || (x.resuelto_en && Date.now() - new Date(x.resuelto_en).getTime() < 30 * 86400000)))
+            .sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)) || String(x.id).localeCompare(String(y.id))).map(propJson) });
+        const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
+        if (nombre === 'objetivos_propuestas_mias') {
+          const a = miAtletaId();
+          if (!a) throw Object.assign(new Error('Solo el atleta ve sus propuestas'), { code: '42501' });
+          return propuestasDe(a, args?.p_todo === true);
+        }
+        if (nombre === 'objetivos_proponer') {
+          const a = miAtletaId(), l = args?.p_propuestas, hoyO = fMadrid();
+          if (!a || esCoach()) throw Object.assign(new Error('Solo el atleta propone sus objetivos'), { code: '42501' });
+          if (deBaja()) throw new Error(BAJA);
+          if (!Array.isArray(l) || l.length > 5) throw new Error('Como mucho, 5 objetivos a la vez');
+          if (tabla('objetivos_propuestos').filter((x) => x.atleta_id === a && x.estado === 'pendiente').length + l.length > 5) throw new Error('Ya tienes 5 objetivos esperando a tu coach: retira alguno o espera a que conteste');
+          const filas = [];
+          for (const x of l) {
+            if (!x || typeof x !== 'object' || Array.isArray(x) || ['tipo', 'ejercicio_id', 'titulo', 'motivo', 'fecha'].some((k) => x[k] != null && typeof x[k] !== 'string')
+              || ['kg', 'reps', 'peso_kg', 'distancia_km', 'tiempo_seg'].some((k) => x[k] != null && typeof x[k] !== 'number')) throw new Error('Esos datos no valen');
+            if (!['fuerza', 'peso', 'carrera', 'libre'].includes(x.tipo)) throw new Error('Tipo de objetivo no válido');
+            let titulo = limpioVisible(x.titulo, true); const motivo = limpioVisible(x.motivo, true);
+            if (titulo && titulo.length > 80) throw new Error('El objetivo, como mucho 80 caracteres');
+            if (motivo && motivo.length > 200) throw new Error('El porqué, como mucho 200 caracteres');
+            const f = x.fecha ?? null;
+            if (f != null && (!/^\d{4}-\d{2}-\d{2}$/.test(f) || Number.isNaN(new Date(`${f}T12:00:00Z`).getTime()))) throw new Error('Fecha no válida');
+            if (f != null && (f < hoyO || f > sumar(hoyO, 730))) throw new Error('La fecha tiene que estar entre hoy y dentro de dos años');
+            const fila = { id: uuid(), atleta_id: a, tipo: x.tipo, ejercicio_id: null, kg: null, reps: null, peso_kg: null, distancia_km: null, tiempo_seg: null, titulo: null, motivo, fecha: f, estado: 'pendiente', nota_coach: null, objetivo_id: null, creado_en: new Date(Date.now() + filas.length).toISOString(), resuelto_en: null };
+            const r2 = (v) => Math.round(v * 100) / 100;
+            if (x.tipo === 'fuerza') {
+              if (!x.ejercicio_id || !tabla('ejercicios').some((e) => e.id === x.ejercicio_id)) throw new Error('Elige el ejercicio');
+              if (x.kg == null || x.kg < 0.5 || x.kg > 1000) throw new Error('Los kilos, entre 0,5 y 1000');
+              if (x.reps == null || !Number.isInteger(x.reps) || x.reps < 1 || x.reps > 12) throw new Error('Las repeticiones, de 1 a 12');
+              Object.assign(fila, { ejercicio_id: x.ejercicio_id, kg: r2(x.kg), reps: x.reps });
+            } else if (x.tipo === 'peso') {
+              if (!saludDe(a)) throw Object.assign(new Error('Para proponer un peso hace falta tu consentimiento de datos de salud (Perfil)'), { code: '42501' });
+              if (x.peso_kg == null || x.peso_kg < 30 || x.peso_kg > 300) throw new Error('El peso, entre 30 y 300 kg');
+              fila.peso_kg = r2(x.peso_kg);
+            } else if (x.tipo === 'carrera') {
+              if (x.distancia_km == null || x.distancia_km < 0.1 || x.distancia_km > 500) throw new Error('La distancia, entre 0,1 y 500 km');
+              if (x.tiempo_seg == null || !Number.isInteger(x.tiempo_seg) || x.tiempo_seg < 30 || x.tiempo_seg > 360000) throw new Error('El tiempo no vale');
+              Object.assign(fila, { distancia_km: r2(x.distancia_km), tiempo_seg: x.tiempo_seg });
+            } else {
+              if (!titulo) throw new Error('Escribe tu objetivo');
+              fila.titulo = titulo;
+            }
+            filas.push(fila);
+          }
+          tabla('objetivos_propuestos').push(...filas);
+          const ronda = tabla('objetivos_rondas').find((r) => r.atleta_id === a);
+          if (ronda) ronda.contestado_en = ahora(); else tabla('objetivos_rondas').push({ atleta_id: a, contestado_en: ahora() });
+          persistirYa();
+          return propuestasDe(a, false);
+        }
+        if (nombre === 'objetivo_propuesta_retirar') {
+          const x = tabla('objetivos_propuestos').find((r) => r.id === args?.p_id);
+          if (!x) return null;
+          if (x.atleta_id !== miAtletaId()) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
+          if (deBaja()) throw new Error(BAJA);
+          if (x.estado !== 'pendiente') throw new Error('Tu coach ya la ha contestado');
+          db.objetivos_propuestos = tabla('objetivos_propuestos').filter((r) => r.id !== x.id);
+          persistirYa();
+          return null;
+        }
+        if (nombre === 'objetivos_propuestas_pendientes') {
+          if (!esCoach()) throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+          return tabla('objetivos_propuestos').filter((x) => x.estado === 'pendiente' && (!args?.p_atleta || x.atleta_id === args.p_atleta))
+            .sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)) || String(x.id).localeCompare(String(y.id))).map(propJson);
+        }
+        if (nombre === 'objetivo_propuesta_resolver') {
+          if (!esCoach()) throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+          if (typeof args?.p_aceptar !== 'boolean') throw new Error('Di si la aceptas o no');
+          const nota = limpioVisible(args?.p_nota, true);
+          if (nota && nota.length > 200) throw new Error('La nota, como mucho 200 caracteres');
+          const x = tabla('objetivos_propuestos').find((r) => r.id === args?.p_id);
+          if (!x) throw new Error('Esa propuesta no existe');
+          if (x.estado !== 'pendiente') throw new Error('Esa propuesta ya estaba contestada');
+          if (args.p_aceptar && !tabla('objetivos').some((o) => o.id === args?.p_objetivo && o.atleta_id === x.atleta_id)) throw new Error('Falta el objetivo de ese atleta');
+          Object.assign(x, { estado: args.p_aceptar ? 'aceptada' : 'descartada', objetivo_id: args.p_aceptar ? args.p_objetivo : null, nota_coach: nota, resuelto_en: ahora() });
+          persistirYa();
+          return propJson(x);
+        }
+      }
       if (nombre === 'agenda_lista') {
         const a = agendaDe(args?.p_atleta), hoyA = fMadrid();
         const desde = args?.p_desde || sumar(hoyA, -60), hasta = args?.p_hasta || sumar(hoyA, 365);
@@ -4352,7 +4448,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'contacto_mio') return tabla('contacto_atleta').find((x) => x.atleta_id === miAtletaId())?.telefono || null;
       if (nombre === 'copia_privada') {
         if (!esCoach()) throw new Error('Solo el coach');
-        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas'].map((t) => [t, copia(tabla(t))]));
+        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas'].map((t) => [t, copia(tabla(t))]));
       }
       if (nombre === 'contactos') {
         if (!esCoach()) throw new Error('Solo el coach');

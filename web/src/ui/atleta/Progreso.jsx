@@ -3,6 +3,7 @@ import { mapaConstancia } from '../../logica/visual.js';
 import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
+import { PropuestasTuyas } from './ObjetivosTuyos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
@@ -51,8 +52,8 @@ function SelectorRango({ valor, alCambiar, etiqueta }) {
 const nombreRango = (k) => RANGOS_GRAFICA.find(([x]) => x === k)?.[3] || '';
 const conSigno = (v, dec = 1) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${num(Math.abs(v), dec)}`;
 
-export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null }) {
-  const { api } = useApp();
+export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null, salud = false }) {
+  const { api, propio: modoAtletaCoach } = useApp();
   const propio = useCarga(() => (progresoDado ? Promise.resolve(null) : api.progreso(atletaId)), [atletaId, !!progresoDado]);
   const { datos, cargando, error, recargar } = progresoDado || propio;
   const objetivos = useCarga(() => api.objetivos(atletaId).catch(() => []), [atletaId]);
@@ -98,12 +99,14 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
 
   return (
     <>
-      {objActivos.length > 0 && (
-        <section class="seccion" data-grupo="logros">
+      {(objActivos.length > 0 || (!esCoach && !modoAtletaCoach)) && (
+        <section class="seccion seccion-objetivos" data-grupo="logros">
           <h2>{esCoach ? 'Objetivos' : 'Tus objetivos'}</h2>
-          <div class="panel"><ul class="lista">
+          {objActivos.length > 0 && <div class="panel"><ul class="lista">
             {objActivos.map((o) => <TarjetaObjetivo key={o.id} o={o} esCoach={esCoach} />)}
-          </ul></div>
+          </ul></div>}
+          {/* (v0.173) lo que propone él: lo que espera a su coach, lo que le ha contestado y «Proponer un objetivo» */}
+          {!esCoach && !modoAtletaCoach && <PropuestasTuyas salud={salud} />}
         </section>
       )}
 
@@ -639,7 +642,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           {entrena && <Reserva id="prog-bloques"><TusBloques salud={salud} /></Reserva>}
         </Grupo>
         <Grupo g="logros">{entrena && <Logros salud={salud} />}</Grupo>
-        <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} />
+        <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} salud={salud} />
         <Grupo g="cuerpo">
           {salud && <HabitosMes />}
           {salud && conNutricion(atleta) && <NutricionProgreso />}

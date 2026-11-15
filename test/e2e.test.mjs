@@ -6167,6 +6167,9 @@ try {
   console.log('\nLa biblioteca ampliada: 160 ejercicios más y tres grupos nuevos');
   const { probarBiblioteca2 } = await import('./e2e-biblioteca2.mjs');
   await probarBiblioteca2({ navegador, check });
+  console.log('\nLos objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach');
+  const { probarObjetivos } = await import('./e2e-objetivos.mjs');
+  await probarObjetivos({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

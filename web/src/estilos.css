@@ -1549,6 +1549,19 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .resultado-cribado.alerta { background: var(--alerta-suave); } .resultado-cribado.alerta svg { color: var(--alerta); }
 .entrada.entrada-num { max-width: 12em; font-variant-numeric: tabular-nums; }
 .tarjeta-cuestionario strong { font-size: var(--letra-15-5); }
+/* (v0.173) los objetivos que propone el atleta: la tarjeta de Hoy, el cuestionario y sus propuestas en Progreso */
+.tarjeta-objetivos .fila-envolver { gap: var(--esp-8); }
+.objetivos-actuales ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.objetivos-actuales li { display: flex; gap: var(--esp-8); align-items: center; }
+.objetivos-actuales li svg { flex: none; width: var(--ico-16); height: var(--ico-16); color: var(--morado); }
+.opciones-objetivo { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.opciones-objetivo button:disabled { color: var(--tinta-3); }
+.cuestionario-objetivos .selector-chips { margin-bottom: var(--esp-8); }
+.propuestas-tuyas { padding: var(--esp-4) 0 0; }
+.propuestas-lista { border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); }
+.propuesta-fila { display: flex; gap: var(--esp-12); align-items: center; justify-content: space-between; padding: var(--esp-12) var(--esp-14); }
+.propuesta-fila > .pila-xs { min-width: 0; }
+.propuesta-coach .propuesta-campos { display: grid; gap: var(--esp-8); }
 /* Coach: lo que ha contestado, como una ficha */
 .separa-envolver { flex-wrap: wrap; }
 .datos-cuest { border-top: var(--filo-fino) solid var(--linea); padding: var(--esp-14) var(--esp-16) var(--esp-16); display: grid; gap: var(--esp-10); }
