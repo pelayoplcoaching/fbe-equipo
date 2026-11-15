@@ -1,4 +1,4 @@
-// La biblioteca de ejercicios, ampliada (rama biblioteca-2): tres grupos más (antebrazo, aductores, lumbares), los 160
+// La biblioteca de ejercicios, ampliada (rama biblioteca-2): tres grupos más (antebrazo, aductores, lumbares), los 161
 // ejercicios nuevos de la demo y la migración «biblioteca 2» en un Postgres local (PGlite).
 //   node test/biblioteca2.test.mjs
 import { readFileSync } from 'node:fs';
@@ -27,19 +27,22 @@ check(['diseno.css', 'perfil.css'].every((f) => ['antebrazo', 'aductores', 'lumb
 console.log('\nLa ampliación (demo)');
 const G = new Set(claves), T = new Set(['basico', 'multiarticular', 'aislamiento']);
 const nombres = AMP.map((e) => e.nombre);
-check(AMP.length === 160 && new Set(nombres.map((n) => n.toLowerCase())).size === 160, '160 ejercicios nuevos, sin repetir');
+check(AMP.length === 161 && new Set(nombres.map((n) => n.toLowerCase())).size === 161, '161 ejercicios nuevos, sin repetir');
 const viejos = new Set(GEN.map((e) => e.nombre.toLowerCase()));
-check(nombres.every((n) => !viejos.has(n.toLowerCase())) && BIBLIOTECA_BASE.length === GEN.length + 160, `ninguno repite uno de los ${GEN.length} de siempre (total en la demo: ${BIBLIOTECA_BASE.length})`);
+check(nombres.every((n) => !viejos.has(n.toLowerCase())) && BIBLIOTECA_BASE.length === GEN.length + 161, `ninguno repite uno de los ${GEN.length} de siempre (total en la demo: ${BIBLIOTECA_BASE.length})`);
 check(AMP.every((e) => e.grupos_musculares.every((g) => G.has(g)) && e.tipo.length && e.tipo.every((t) => T.has(t)) && e.rango_reps), 'todos con grupos válidos, tipo y rango de repeticiones');
 const todos = new Set(BIBLIOTECA_BASE.map((e) => e.nombre));
 check(AMP.every((e) => e.alternativas.length >= 1 && e.alternativas.every((a) => todos.has(a) && a !== e.nombre)), 'las alternativas existen en la biblioteca (y ninguno es alternativa de sí mismo)');
 check(AMP.every((e) => !('instrucciones' in e) && !('errores' in e) && !('video_url' in e)), 'la técnica no va en el repositorio');
 const sinGrupo = AMP.filter((e) => !e.grupos_musculares.length).map((e) => e.nombre);
+// Los secundarios siguen el criterio de scripts/grupos-revisados.mjs: lo que solo estabiliza no cuenta
+const gr = (n) => AMP.find((e) => e.nombre === n).grupos_musculares.join();
+check(gr('Peso muerto sumo con barra') === 'gluteo,aductores,isquiotibiales' && gr('Buenos días con barra') === 'isquiotibiales,gluteo' && gr('Remo con goma sentado') === 'espalda,biceps,deltoides' && gr('Paseo de maleta con mancuerna') === 'abdominales' && AMP.filter((e) => e.grupos_musculares.includes('lumbares')).every((e) => e.grupos_musculares[0] === 'lumbares'), 'los secundarios, con el criterio de siempre: la espalda de una bisagra o el tronco de un paseo no cuentan; lumbares, solo donde la columna se mueve');
 check(sinGrupo.length === 3 && sinGrupo.every((n) => /^Rotación externa/.test(n)), 'sin grupo, solo las rotaciones externas de hombro (no cuentan como series de deltoides)');
 check(GEN.filter((e) => !e.grupos_musculares.length).length === 0 && GEN.find((e) => e.nombre === 'Aducciones Copenhague').grupos_musculares[0] === 'aductores' && GEN.find((e) => e.nombre === 'Kettlebell wrist turns').grupos_musculares[0] === 'antebrazo', 'los 8 de siempre sin grupo ya tienen el suyo');
 const porGrupo = {};
 for (const e of BIBLIOTECA_BASE) porGrupo[e.grupos_musculares[0] || '-'] = (porGrupo[e.grupos_musculares[0] || '-'] || 0) + 1;
-check(claves.every((g) => porGrupo[g] >= 6), `todos los grupos tienen al menos 6 ejercicios (${claves.map((g) => `${g} ${porGrupo[g]}`).join(', ')})`);
+check(claves.every((g) => porGrupo[g] >= 5), `todos los grupos tienen al menos 5 ejercicios (${claves.map((g) => `${g} ${porGrupo[g]}`).join(', ')})`);
 
 console.log('\nEl material de los nuevos (por su nombre)');
 const m = (n) => JSON.stringify(materialNecesario(n));

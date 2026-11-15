@@ -19,11 +19,13 @@ export async function probarBiblioteca2({ navegador, check, base = 'http://local
     await irASeccion(p, 'Biblioteca');
     const buscar = p.getByRole('searchbox', { name: 'Buscar ejercicio' });
     await buscar.waitFor({ timeout: 10000 });
-    const total = Number(((await buscar.getAttribute('placeholder')) || '').match(/\d+/)?.[0] || 0);
+    const leerTotal = async () => Number(((await buscar.getAttribute('placeholder')) || '').match(/\d+/)?.[0] || 0);
+    for (let i = 0; i < 40 && !(await leerTotal()); i++) await p.waitForTimeout(250);   // (mientras carga dice «0 ejercicios»)
+    const total = await leerTotal();
     check(total >= 300, `la biblioteca tiene ${total} ejercicios`);
     const filtro = p.getByRole('group', { name: 'Grupo muscular principal' });
     check(await filtro.getByRole('button').count() === 14, 'el filtro: «Todos» y trece grupos');
-    for (const [g, minimo, uno] of [['Lumbares', 6, 'Superman'], ['Antebrazo', 10, 'Curl inverso con barra Z'], ['Aductores', 8, 'Sentadilla cosaca']]) {
+    for (const [g, minimo, uno] of [['Lumbares', 5, 'Superman'], ['Antebrazo', 10, 'Curl inverso con barra Z'], ['Aductores', 7, 'Sentadilla cosaca']]) {
       await filtro.getByRole('button', { name: g, exact: true }).click();
       await p.waitForTimeout(250);
       const n = await p.locator('.fila-biblioteca').count();

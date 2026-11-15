@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { GRUPOS_REVISADOS } from './grupos-revisados.mjs';
 
 const origen = JSON.parse(readFileSync(new URL('../data/ejercicios_notion.json', import.meta.url), 'utf8'));
-const GRUPOS = new Set(['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo']);
+const GRUPOS = new Set(['pectoral', 'espalda', 'deltoides', 'cuadriceps', 'gluteo', 'isquiotibiales', 'biceps', 'triceps', 'abdominales', 'gemelo', 'antebrazo', 'aductores', 'lumbares']);
 const TIPOS = new Set(['basico', 'multiarticular', 'aislamiento']);
 
 const limpia = (s) => (s == null ? null : String(s).replace(/\s+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim() || null);
