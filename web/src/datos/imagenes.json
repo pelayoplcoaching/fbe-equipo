@@ -1533,6 +1533,28 @@
     },
     "color": "#4b3c71"
   },
+  "cua-bulgara-sin-peso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-sin-peso-192.c43e2dbf.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-sin-peso-512.a60c61eb.webp"
+    },
+    "color": "#452e76"
+  },
+  "cua-goblet-talones-elevados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-goblet-talones-elevados-192.be49a9ca.webp",
+      "512": "imagenes/ejercicio/cua-goblet-talones-elevados-512.5b9b9cec.webp"
+    },
+    "color": "#442e75"
+  },
   "cua-hack-squat": {
     "proporcion": [
       1,
@@ -1566,6 +1588,17 @@
     },
     "color": "#443268"
   },
+  "cua-isometrica-pared": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-isometrica-pared-192.c6c0d19d.webp",
+      "512": "imagenes/ejercicio/cua-isometrica-pared-512.42ee7d7c.webp"
+    },
+    "color": "#442d78"
+  },
   "cua-leg-extensions": {
     "proporcion": [
       1,
@@ -1576,6 +1609,17 @@
       "512": "imagenes/ejercicio/cua-leg-extensions-512.b1b15bed.webp"
     },
     "color": "#47366e"
+  },
+  "cua-nordico-inverso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-nordico-inverso-192.ab69b086.webp",
+      "512": "imagenes/ejercicio/cua-nordico-inverso-512.cdece778.webp"
+    },
+    "color": "#452b79"
   },
   "cua-platz-squat": {
     "proporcion": [
@@ -1621,6 +1665,28 @@
     },
     "color": "#433666"
   },
+  "cua-sentadilla-cajon": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-cajon-192.32d0b041.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-cajon-512.5c358728.webp"
+    },
+    "color": "#4f3b7d"
+  },
+  "cua-sentadilla-espanola": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-espanola-192.1d303ea5.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-espanola-512.0fe9d403.webp"
+    },
+    "color": "#473177"
+  },
   "cua-sentadilla-frontal": {
     "proporcion": [
       1,
@@ -1643,6 +1709,17 @@
     },
     "color": "#442f78"
   },
+  "cua-sentadilla-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-goma-192.d829503a.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-goma-512.a14941aa.webp"
+    },
+    "color": "#443276"
+  },
   "cua-sentadilla-multipower": {
     "proporcion": [
       1,
@@ -1653,6 +1730,17 @@
       "512": "imagenes/ejercicio/cua-sentadilla-multipower-512.2af1eea9.webp"
     },
     "color": "#503c7e"
+  },
+  "cua-sentadilla-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-pausa-192.237f37c4.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-pausa-512.f186c9a8.webp"
+    },
+    "color": "#4b3979"
   },
   "cua-sentadilla-safety-bar": {
     "proporcion": [
@@ -1665,6 +1753,50 @@
     },
     "color": "#463575"
   },
+  "cua-sentadilla-sin-peso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-sin-peso-192.abd2b55c.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-sin-peso-512.01f3763e.webp"
+    },
+    "color": "#443173"
+  },
+  "cua-sentadilla-sumo-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-sumo-mancuerna-192.f1898c86.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-sumo-mancuerna-512.c5dd5eb1.webp"
+    },
+    "color": "#463576"
+  },
+  "cua-sentadilla-una-pierna-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-una-pierna-banco-192.33742e72.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-una-pierna-banco-512.1ff1ec15.webp"
+    },
+    "color": "#452e78"
+  },
+  "cua-sissy": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sissy-192.0a1867a0.webp",
+      "512": "imagenes/ejercicio/cua-sissy-512.d75cab5e.webp"
+    },
+    "color": "#48327a"
+  },
   "cua-split-squat": {
     "proporcion": [
       1,
@@ -1676,6 +1808,28 @@
     },
     "color": "#4a3579"
   },
+  "cua-split-squat-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-mancuernas-192.dbb7aae9.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-mancuernas-512.742311e8.webp"
+    },
+    "color": "#452a7a"
+  },
+  "cua-split-squat-pie-elevado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-pie-elevado-192.905b573e.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-pie-elevado-512.00418097.webp"
+    },
+    "color": "#45297d"
+  },
   "cua-zancadas": {
     "proporcion": [
       1,
@@ -1686,6 +1840,50 @@
       "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
     },
     "color": "#412c72"
+  },
+  "cua-zancadas-atras-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-barra-192.7e31c866.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-barra-512.f54851b8.webp"
+    },
+    "color": "#4a2c7c"
+  },
+  "cua-zancadas-atras-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-mancuernas-192.35246f7e.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-mancuernas-512.e89d69e3.webp"
+    },
+    "color": "#45297d"
+  },
+  "cua-zancadas-atras-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-multipower-192.9123f9b1.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-multipower-512.2df00965.webp"
+    },
+    "color": "#533882"
+  },
+  "cua-zancadas-caminando": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-caminando-192.2e4c62fe.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-caminando-512.3f2f0d33.webp"
+    },
+    "color": "#442483"
   },
   "cuestionario-lesiones": {
     "proporcion": [
