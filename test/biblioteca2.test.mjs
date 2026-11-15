@@ -83,6 +83,9 @@ check(Gs.estanteDe({ clave: 'proteina' }) === 'comer' && Gs.estanteDe({ clave: '
   const todas = Object.values(donde).flat();
   check(todas.length === 16 && Object.entries(donde).every(([e, cs]) => cs.every((c) => Gs.estanteDe({ clave: c }) === e)), 'las 16 guías nuevas, cada una en su estantería (3 en Entrenar, 6 en Comer, 7 en Salud)');
   check(todas.every((c) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(c)) && new Set(Gs.ESTANTES.flatMap((e) => e.claves)).size === Gs.ESTANTES.flatMap((e) => e.claves).length, 'claves válidas, y ninguna repetida entre estanterías');
+  // Las 12 guías de texto que se cargan sin publicar (guias-nuevas.sql): también en su estantería
+  const texto = { empieza: ['medidas', 'primeros-dias'], entrenar: ['calentamiento', 'material', 'viaje', 'diccionario', 'dolor', 'seguridad'], comer: ['comer-fuera', 'hambre'], cabeza: ['guardias', 'estres'] };
+  check(Object.values(texto).flat().length === 12 && Object.entries(texto).every(([e, cs]) => cs.every((c) => Gs.estanteDe({ clave: c }) === e && /^[a-z0-9][a-z0-9-]{0,39}$/.test(c))), 'las 12 guías de texto, cada una en su estantería (2 en Empieza aquí, 6 en Entrenar, 2 en Comer, 2 en Descanso y cabeza)');
   const orden = Gs.porEstantes([{ clave: 'mitos', orden: 40 }, { clave: 'analitica', orden: 142 }, { clave: 'tension-pesas', orden: 141 }]).find((e) => e.id === 'salud').guias.map((g) => g.clave).join();
   check(orden === 'mitos,tension-pesas,analitica', 'dentro de la estantería, por su orden: las del coach de siempre delante');
 }

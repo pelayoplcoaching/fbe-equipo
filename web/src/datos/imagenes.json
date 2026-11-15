@@ -4682,6 +4682,28 @@
     },
     "color": "#4f3b78"
   },
+  "portada-baremos": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-baremos-720.35c2a99f.webp",
+      "1080": "imagenes/guias/portada-baremos-1080.52a40729.webp"
+    },
+    "color": "#46336b"
+  },
+  "portada-baremos-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-baremos-cuadrada-160.812b91ca.webp",
+      "320": "imagenes/guias/portada-baremos-cuadrada-320.9c32504b.webp"
+    },
+    "color": "#423067"
+  },
   "portada-bienvenida": {
     "proporcion": [
       12,
@@ -4703,6 +4725,28 @@
       "320": "imagenes/guias/portada-bienvenida-cuadrada-320.543733ac.webp"
     },
     "color": "#614476"
+  },
+  "portada-calentamiento": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-calentamiento-720.6d97fae3.webp",
+      "1080": "imagenes/guias/portada-calentamiento-1080.48ae9090.webp"
+    },
+    "color": "#3f2c69"
+  },
+  "portada-calentamiento-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-calentamiento-cuadrada-160.1b7cb2b7.webp",
+      "320": "imagenes/guias/portada-calentamiento-cuadrada-320.2e679db9.webp"
+    },
+    "color": "#3e2b67"
   },
   "portada-cardio": {
     "proporcion": [
@@ -4770,6 +4814,28 @@
     },
     "color": "#3d2c61"
   },
+  "portada-diccionario": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-diccionario-720.df265c97.webp",
+      "1080": "imagenes/guias/portada-diccionario-1080.fcfe02ef.webp"
+    },
+    "color": "#412e6c"
+  },
+  "portada-diccionario-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-diccionario-cuadrada-160.d05a5ec0.webp",
+      "320": "imagenes/guias/portada-diccionario-cuadrada-320.fe96dfea.webp"
+    },
+    "color": "#4a3475"
+  },
   "portada-dieta-flexible": {
     "proporcion": [
       12,
@@ -4813,6 +4879,28 @@
       "320": "imagenes/guias/portada-dislipidemia-cuadrada-320.daeb1229.webp"
     },
     "color": "#6f3a5c"
+  },
+  "portada-dolor": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-dolor-720.210ca35f.webp",
+      "1080": "imagenes/guias/portada-dolor-1080.93631763.webp"
+    },
+    "color": "#46326c"
+  },
+  "portada-dolor-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-dolor-cuadrada-160.8df0620a.webp",
+      "320": "imagenes/guias/portada-dolor-cuadrada-320.eed18aaf.webp"
+    },
+    "color": "#584076"
   },
   "portada-estancamiento": {
     "proporcion": [
@@ -4880,6 +4968,50 @@
     },
     "color": "#7b6b98"
   },
+  "portada-material": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-material-720.e443a9f1.webp",
+      "1080": "imagenes/guias/portada-material-1080.bbcdda89.webp"
+    },
+    "color": "#442f72"
+  },
+  "portada-material-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-material-cuadrada-160.6f1589de.webp",
+      "320": "imagenes/guias/portada-material-cuadrada-320.ae667f38.webp"
+    },
+    "color": "#3f2c6c"
+  },
+  "portada-medidas": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-medidas-720.f6455670.webp",
+      "1080": "imagenes/guias/portada-medidas-1080.e51d7859.webp"
+    },
+    "color": "#40326c"
+  },
+  "portada-medidas-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-medidas-cuadrada-160.b073f4b7.webp",
+      "320": "imagenes/guias/portada-medidas-cuadrada-320.70629a01.webp"
+    },
+    "color": "#443672"
+  },
   "portada-mitos": {
     "proporcion": [
       12,
@@ -4946,6 +5078,28 @@
     },
     "color": "#4a3466"
   },
+  "portada-primeros-dias": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-primeros-dias-720.e71f26fa.webp",
+      "1080": "imagenes/guias/portada-primeros-dias-1080.c4a182f0.webp"
+    },
+    "color": "#3f2f69"
+  },
+  "portada-primeros-dias-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-primeros-dias-cuadrada-160.c61d1456.webp",
+      "320": "imagenes/guias/portada-primeros-dias-cuadrada-320.800ac0e9.webp"
+    },
+    "color": "#3f2f69"
+  },
   "portada-proteina": {
     "proporcion": [
       12,
@@ -4967,6 +5121,28 @@
       "320": "imagenes/guias/portada-proteina-cuadrada-320.6d6d4ba4.webp"
     },
     "color": "#574260"
+  },
+  "portada-rodilla": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-rodilla-720.4d2ba3c8.webp",
+      "1080": "imagenes/guias/portada-rodilla-1080.440deedf.webp"
+    },
+    "color": "#3f2e66"
+  },
+  "portada-rodilla-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-rodilla-cuadrada-160.26fd0516.webp",
+      "320": "imagenes/guias/portada-rodilla-cuadrada-320.ea130f9b.webp"
+    },
+    "color": "#47356d"
   },
   "portada-rutinas": {
     "proporcion": [
@@ -5012,6 +5188,28 @@
     },
     "color": "#523a6c"
   },
+  "portada-seguridad": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-seguridad-720.91363647.webp",
+      "1080": "imagenes/guias/portada-seguridad-1080.8a1046a5.webp"
+    },
+    "color": "#3f296b"
+  },
+  "portada-seguridad-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-seguridad-cuadrada-160.5627edf4.webp",
+      "320": "imagenes/guias/portada-seguridad-cuadrada-320.f5e0eb02.webp"
+    },
+    "color": "#4a3275"
+  },
   "portada-sueno": {
     "proporcion": [
       12,
@@ -5056,6 +5254,28 @@
     },
     "color": "#583f6f"
   },
+  "portada-viaje": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-viaje-720.dc9408cf.webp",
+      "1080": "imagenes/guias/portada-viaje-1080.9ca4d77c.webp"
+    },
+    "color": "#412e6e"
+  },
+  "portada-viaje-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-viaje-cuadrada-160.358f0a26.webp",
+      "320": "imagenes/guias/portada-viaje-cuadrada-320.48061eff.webp"
+    },
+    "color": "#473274"
+  },
   "portada-volver": {
     "proporcion": [
       12,
@@ -5066,6 +5286,28 @@
       "1080": "imagenes/guias/portada-volver-1080.b7118993.webp"
     },
     "color": "#3d2f5f"
+  },
+  "portada-volver-40": {
+    "proporcion": [
+      12,
+      5
+    ],
+    "archivos": {
+      "720": "imagenes/guias/portada-volver-40-720.0f203704.webp",
+      "1080": "imagenes/guias/portada-volver-40-1080.8a936f5c.webp"
+    },
+    "color": "#422f6a"
+  },
+  "portada-volver-40-cuadrada": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "160": "imagenes/guias/portada-volver-40-cuadrada-160.542471af.webp",
+      "320": "imagenes/guias/portada-volver-40-cuadrada-320.64f2522f.webp"
+    },
+    "color": "#45336d"
   },
   "portada-volver-cuadrada": {
     "proporcion": [
