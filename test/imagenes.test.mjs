@@ -201,7 +201,10 @@ console.log('Portadas de las guías');
   const L = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'));
   const { ESTANTES } = await import('../web/src/logica/guias.js');
   const conEstante = ESTANTES.flatMap((e) => e.claves);
-  check(PORTADAS_GUIA.length === 17 && conEstante.every((c) => PORTADAS_GUIA.includes(c)), 'hay portada para las 17 guías de las estanterías');
+  // La guía de proteína (rama biblioteca-2) aún no tiene portada propia: lleva la imagen de su estantería
+  const sinPortada = conEstante.filter((c) => !PORTADAS_GUIA.includes(c));
+  check(PORTADAS_GUIA.length === 17 && PORTADAS_GUIA.every((c) => conEstante.includes(c)) && sinPortada.join() === 'proteina', 'hay portada para 17 guías de las estanterías; solo la de proteína va sin la suya');
+  check(imagenGuia({ clave: 'proteina' }, 'comer') === 'guia-comer' && imagenPortadaGuia('proteina') === null, 'y esa lleva la imagen de «Comer», sin cabecera');
   check(PORTADAS_GUIA.every((c) => L[imagenPortadaGuia(c)]?.proporcion?.join(':') === '12:5' && L[`${imagenPortadaGuia(c)}-cuadrada`]?.proporcion?.join(':') === '1:1'), 'cada una, su cabecera 12:5 y su recorte cuadrado');
   check(imagenGuia({ clave: 'sueno' }, 'cabeza') === 'portada-sueno-cuadrada' && imagenGuia({ clave: 'x', grupo: 'pectoral' }, 'musculos') === 'grupo-pectoral', 'la tarjeta lleva su portada; las de músculo, su estatua');
   check(imagenPortadaGuia('inventada') === null, 'una guía sin portada, sin cabecera');
