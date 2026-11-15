@@ -2038,6 +2038,39 @@
     },
     "color": "#715087"
   },
+  "esp-dominadas-asistidas-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-asistidas-goma-192.91658965.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-asistidas-goma-512.cd71b57d.webp"
+    },
+    "color": "#3c2c61"
+  },
+  "esp-dominadas-asistidas-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-asistidas-maquina-192.4b9b6bd3.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-asistidas-maquina-512.fdc0405a.webp"
+    },
+    "color": "#3f3262"
+  },
+  "esp-dominadas-excentricas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-excentricas-192.aa74bca6.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-excentricas-512.40a61949.webp"
+    },
+    "color": "#392a5c"
+  },
   "esp-dominadas-neutras": {
     "proporcion": [
       1,
@@ -2126,6 +2159,28 @@
     },
     "color": "#483772"
   },
+  "esp-jalon-goma-arrodillado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-goma-arrodillado-192.58b100b0.webp",
+      "512": "imagenes/ejercicio/esp-jalon-goma-arrodillado-512.fcabd9d0.webp"
+    },
+    "color": "#422e6e"
+  },
+  "esp-jalon-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-maquina-192.842050a4.webp",
+      "512": "imagenes/ejercicio/esp-jalon-maquina-512.53ef284a.webp"
+    },
+    "color": "#443469"
+  },
   "esp-jalon-neutro": {
     "proporcion": [
       1,
@@ -2158,6 +2213,17 @@
       "512": "imagenes/ejercicio/esp-jalon-supino-512.11095e2b.webp"
     },
     "color": "#463470"
+  },
+  "esp-jalon-unilateral-arrodillado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-unilateral-arrodillado-192.223f6f6f.webp",
+      "512": "imagenes/ejercicio/esp-jalon-unilateral-arrodillado-512.db180bcb.webp"
+    },
+    "color": "#44326c"
   },
   "esp-jalon-unilateral-inclinado": {
     "proporcion": [
@@ -2192,6 +2258,28 @@
     },
     "color": "#422e70"
   },
+  "esp-pullover-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-maquina-192.293b122e.webp",
+      "512": "imagenes/ejercicio/esp-pullover-maquina-512.58d200d1.webp"
+    },
+    "color": "#4b3775"
+  },
+  "esp-pullover-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-polea-cuerda-192.fe08a337.webp",
+      "512": "imagenes/ejercicio/esp-pullover-polea-cuerda-512.6cef9353.webp"
+    },
+    "color": "#44346b"
+  },
   "esp-pullover-unilateral": {
     "proporcion": [
       1,
@@ -2203,6 +2291,28 @@
     },
     "color": "#452e76"
   },
+  "esp-rack-pull": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-rack-pull-192.b7fabf85.webp",
+      "512": "imagenes/ejercicio/esp-rack-pull-512.60a2ef1d.webp"
+    },
+    "color": "#50377d"
+  },
+  "esp-remo-apoyo-pecho-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-apoyo-pecho-maquina-192.469634b5.webp",
+      "512": "imagenes/ejercicio/esp-remo-apoyo-pecho-maquina-512.3cbb2b5a.webp"
+    },
+    "color": "#4b3679"
+  },
   "esp-remo-barra": {
     "proporcion": [
       1,
@@ -2213,6 +2323,17 @@
       "512": "imagenes/ejercicio/esp-remo-barra-512.98dcf968.webp"
     },
     "color": "#442f73"
+  },
+  "esp-remo-barra-supino": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-barra-supino-192.d9a520eb.webp",
+      "512": "imagenes/ejercicio/esp-remo-barra-supino-512.1c5a1bdc.webp"
+    },
+    "color": "#442e72"
   },
   "esp-remo-gironda": {
     "proporcion": [
@@ -2236,6 +2357,39 @@
     },
     "color": "#503582"
   },
+  "esp-remo-goma-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-goma-sentado-192.826ff07a.webp",
+      "512": "imagenes/ejercicio/esp-remo-goma-sentado-512.ea45515a.webp"
+    },
+    "color": "#49307a"
+  },
+  "esp-remo-invertido-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-invertido-multipower-192.f6140788.webp",
+      "512": "imagenes/ejercicio/esp-remo-invertido-multipower-512.bf5321a8.webp"
+    },
+    "color": "#3b2c60"
+  },
+  "esp-remo-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-kettlebell-192.b7cce5ef.webp",
+      "512": "imagenes/ejercicio/esp-remo-kettlebell-512.2b34efc8.webp"
+    },
+    "color": "#4d347c"
+  },
   "esp-remo-mancuerna": {
     "proporcion": [
       1,
@@ -2246,6 +2400,17 @@
       "512": "imagenes/ejercicio/esp-remo-mancuerna-512.ef312881.webp"
     },
     "color": "#4a3477"
+  },
+  "esp-remo-mancuernas-banco-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-mancuernas-banco-inclinado-192.6632c467.webp",
+      "512": "imagenes/ejercicio/esp-remo-mancuernas-banco-inclinado-512.9df1d1c6.webp"
+    },
+    "color": "#443170"
   },
   "esp-remo-maquina": {
     "proporcion": [
@@ -2280,6 +2445,17 @@
     },
     "color": "#4a3280"
   },
+  "esp-remo-polea-agarre-ancho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-polea-agarre-ancho-192.c43b3741.webp",
+      "512": "imagenes/ejercicio/esp-remo-polea-agarre-ancho-512.0039ded2.webp"
+    },
+    "color": "#493276"
+  },
   "esp-remo-polea-unilateral": {
     "proporcion": [
       1,
@@ -2312,6 +2488,17 @@
       "512": "imagenes/ejercicio/esp-remo-t-512.a804cf00.webp"
     },
     "color": "#442e75"
+  },
+  "esp-remo-unilateral-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-unilateral-maquina-192.e2ec521b.webp",
+      "512": "imagenes/ejercicio/esp-remo-unilateral-maquina-512.93882c96.webp"
+    },
+    "color": "#50397b"
   },
   "esp-seal-row": {
     "proporcion": [
