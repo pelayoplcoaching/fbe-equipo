@@ -52,6 +52,8 @@ export function materialNecesario(nombre) {
   const lista = hay.filter((k) => !(k === 'barra' && sinBarra && !/\/|\bo\b/.test(n)));
   if (!lista.length) {
     if (SIN_MATERIAL.test(n)) return [];
+    // (biblioteca 2) Una sentadilla goblet a secas: con una mancuerna o con una kettlebell
+    if (/\bgoblet\b/.test(n)) return [['mancuernas'], ['kettlebells']];
     // Hip thrust a secas: barra y banco
     if (/\bhip thrust\b/.test(n)) return [['barra', 'banco']];
     return null;
