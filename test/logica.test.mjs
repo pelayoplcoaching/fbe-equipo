@@ -2245,6 +2245,23 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
     check(N.sesionesDeLaSemana(semanas, porSemana, 3, '2026-10-19').map((x) => x.nombre).join() === 'Torso B,Pierna B,Torso A', 'y el lunes siguiente, las 3 que le tocan en su orden (cruzando al microciclo siguiente)');
     const todoHecho = Object.fromEntries(semanas.map((w) => [w.id, porSemana[w.id].map((x) => ({ ...x, completada: true }))]));
     check(N.semanaDelMicrociclo(semanas, todoHecho, semanas[5]) === semanas[5], 'con todo hecho, la de siempre');
+    // v0.175: con microciclos, el cardio va por calendario (queda fuerza de la semana pasada y ya es la siguiente)
+    {
+      const ws = [{ id: 'w1', numero: 1, fecha_inicio: '2026-11-09', programacion: 'programada' }, { id: 'w2', numero: 2, fecha_inicio: '2026-11-16', programacion: 'programada' }];
+      const ss = {
+        w1: [{ id: 'a', tipo: 'fuerza', completada: true }, { id: 'b', tipo: 'fuerza', completada: false }, { id: 'c', tipo: 'cardio', completada: true }],
+        w2: [{ id: 'd', tipo: 'fuerza', completada: false }, { id: 'e', tipo: 'cardio', completada: false }, { id: 'f', tipo: 'cardio', completada: false }],
+      };
+      const base = { semanas: ws, sesiones: ss, actual: ws[0], diasSemana: 3 };
+      const cc = N.cardioDelCalendario(base, '2026-11-16');
+      check(cc && cc.semana.id === 'w2' && cc.sesiones.map((x) => x.id).join() === 'e,f', 'el cardio de la semana del calendario sale aunque quede fuerza de la anterior (solo el cardio)');
+      check(N.cardioDelCalendario(base, '2026-11-15') === null, 'si hoy cae en la misma semana del microciclo, nada (lo de siempre)');
+      check(N.cardioDelCalendario({ ...base, diasSemana: null }, '2026-11-16') === null, 'sin objetivo de días por semana, nada');
+      check(N.cardioDelCalendario({ ...base, actual: ws[1] }, '2026-11-16') === null, 'cuando el microciclo ya es la semana de hoy, nada');
+      check(N.cardioDelCalendario({ ...base, actual: ws[1] }, '2026-11-10') === null, 'nunca hacia atrás: la semana de hoy es anterior a la del microciclo');
+      check(N.cardioDelCalendario(base, '2026-11-30') === null, 'si hoy no cae en ninguna semana publicada, nada');
+      check(N.cardioDelCalendario({ ...base, sesiones: { ...ss, w2: [ss.w2[0]] } }, '2026-11-16') === null, 'si la semana de hoy no trae cardio, nada');
+    }
   }
   {
     // Lunes y domingo: el domingo cuenta en su semana; el lunes siguiente, en la siguiente

@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.175': {
+    atleta: [
+      'Los ejercicios nuevos de la biblioteca ya tienen su figura: la ves en la ficha, en la Biblioteca y durante la sesión.',
+      'Si haces cardio y vas a tu ritmo con la fuerza: el cardio de esta semana te sale en Hoy aunque te quede fuerza de la anterior.',
+    ],
+    coach: [
+      'Atletas por microciclos: el cardio va por calendario. Ven el de la semana en curso aunque les quede fuerza de la anterior.',
+    ],
+  },
   '0.174': {
     atleta: [
       'Si tu coach te lleva la nutrición: hazle una foto a tu plato y la comida queda hecha. En Comidas o en «Tu menú de hoy».',

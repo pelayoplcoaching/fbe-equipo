@@ -4844,3 +4844,6 @@ html[data-teclado] .pildora-descanso { display: none; }
 .plato-celda { display: grid; gap: var(--esp-4); justify-items: center; width: 100%; padding: 0; border: 0; background: none; color: var(--tinta); }
 .plato-celda .mini { color: var(--tinta); }
 .plato-celda img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-s); background: var(--hoja-2); }
+
+/* v0.175: el cardio de la semana del calendario, bajo las sesiones del microciclo */
+.cardio-cal { margin: var(--esp-12) 0 var(--esp-8); }

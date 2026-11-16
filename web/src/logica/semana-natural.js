@@ -95,6 +95,18 @@ export function semanaDelMicrociclo(semanas = [], sesionesPorSemana = {}, actual
   return orden.find((w) => (sesionesPorSemana?.[w.id] || []).some((s) => !s.completada)) || actual;
 }
 
+// v0.175: con microciclos la fuerza va por el orden del programa, pero el cardio va por calendario. Si la semana del
+// microciclo se ha quedado atras (queda fuerza por hacer) y la semana del programa que cae hoy es posterior, sus sesiones
+// de cardio se ensenan tambien: { semana, sesiones } o null. Sin objetivo de dias, o si van a la par, null (lo de siempre).
+export function cardioDelCalendario({ semanas = [], sesiones = {}, actual = null, diasSemana = null } = {}, hoy = hoyISO()) {
+  if (!diasSemanaValido(diasSemana) || !actual) return null;
+  const deHoy = (semanas || []).find((w) => w?.fecha_inicio && w.fecha_inicio <= hoy && hoy <= sumarDias(w.fecha_inicio, 6));
+  if (!deHoy || deHoy.id === actual.id || !((deHoy.numero ?? 0) > (actual.numero ?? 0))) return null;
+  if (deHoy.programacion && deHoy.programacion !== 'programada') return null;
+  const lista = (sesiones?.[deHoy.id] || []).filter((s) => s.tipo === 'cardio');
+  return lista.length ? { semana: deHoy, sesiones: lista } : null;
+}
+
 // Las sesiones de la semana de hoy (de lunes a domingo) para la hoja de la constancia: las hechas en ella (de cualquier
 // semana del programa) y, detrás, las siguientes pendientes por orden hasta llegar al objetivo.
 export function sesionesDeLaSemana(semanas = [], sesionesPorSemana = {}, objetivo = 0, hoy = hoyISO()) {

@@ -70,7 +70,7 @@ import { leerPanel, seccionesHoy, alternarSeccion } from '../../logica/hoy-panel
 import { deFuera } from '../../logica/tiempo.js';
 import { useTiempo, TiempoHoy, resumenParaHoy } from './Tiempo.jsx';
 import { AvisoViaje } from './Viaje.jsx';
-import { semanasObjetivo, semanaEnCurso } from '../../logica/semana-natural.js';
+import { semanasObjetivo, semanaEnCurso, cardioDelCalendario } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 
 // Minutos aproximados: cada serie ~40 s de trabajo más su descanso
@@ -486,6 +486,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const descanso = e.tipo === 'descanso';
   const previsto = siguiente && diaPrevistoValido(siguiente, semana);
   const hechas = sesiones.filter((s) => s.completada).length;
+  const cardioCal = cardioDelCalendario(p, hoy);
   const checkinHecho = !!checkinSemana.datos?.checkin;
   const conMensajes = new Set(noLeidos.map((c) => c.sesion_id).filter(Boolean));
 
@@ -531,6 +532,15 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         <div class="semana-dias">
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
+        {/* v0.175: con microciclos, el cardio de la semana del calendario aunque quede fuerza de la anterior */}
+        {cardioCal && (
+          <>
+            <p class="peq secundario cardio-cal">Tu cardio de esta semana (semana {cardioCal.semana.numero})</p>
+            <div class="semana-dias">
+              {cardioCal.sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={cardioCal.semana} actual={false} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+            </div>
+          </>
+        )}
       </section>
       </Plegable>
     ),
