@@ -29,6 +29,7 @@ import { limpiarPerfil as limpiarPerfilCarrera, limpiarEvento as limpiarEventoCa
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
+import { fotoValida, MAX_FOTO, MAX_MINI, TEXTO_FOTO, TEXTO_FUERA } from '../logica/platos.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { limpiarTarea, limpiarRespuesta } from '../logica/tareas.js';
 import { compararCheckins } from '../logica/comparar.js';
@@ -43,7 +44,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -146,6 +147,13 @@ const falta072 = (e) => {
 };
 // (073) el perfil 4: lo que evita, su material, el rincón de ánimo y la foto de portada
 // (078) sin la migración de las pausas, la app no las ofrece
+// (079) sin la migración de la foto del plato y comer fuera, la app no las ofrece
+const AVISO_079 = 'Esto aún no está disponible: hay que poner al día la base (migración 079, supabase/migraciones/079_platos.sql)';
+const falta079 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''} ${e?.codigo || ''}`;
+  return /menu_fotos|plato_foto_(guardar|quitar)|platos_limpiar|'fuera' column|column[^.]*\bfuera\b|con_foto|PGRST202|PGRST204|PGRST205|42883|42703|42P01/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|column|columna|PGRST20[245]|42883|42703|42P01/i.test(m);
+};
 const AVISO_078 = 'Esto aún no está disponible: hay que poner al día la base (migración 078, supabase/migraciones/078_pausas.sql)';
 const falta078 = (e) => /pausas/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST205|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (077) sin la migración de los suplementos, la app no los ofrece
@@ -1570,7 +1578,9 @@ export function crearApi(backend) {
       // (v0.174) los suplementos (077): con la 076 pero sin la 077, la 2026-12.34
       if ((await api.suplementos077().catch(() => null)) !== true) return VERSION_LEGAL_SIN_077;
       // (v0.175) la pausa de la asesoría (078): con la 077 pero sin la 078, la 2026-12.35
-      return (await api.pausas078().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_078;
+      if ((await api.pausas078().catch(() => null)) !== true) return VERSION_LEGAL_SIN_078;
+      // (v0.174) la foto del plato y comer fuera (079): con la 078 pero sin la 079, la 2026-12.36
+      return (await api.platosDisponibles().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_079;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2122,6 +2132,59 @@ export function crearApi(backend) {
     },
     async borrarMenu(id) {
       return b.delete('menu_comidas', { eq: { id } });
+    },
+    // ------------------------------------------------------------ la foto del plato y comer fuera (v0.174, migración 079)
+    // ¿Está la migración? (para no ofrecer lo que la base aún no tiene). null: no se ha podido saber
+    async platosDisponibles() {
+      if (!api._v079) {
+        const pr = b.select('menu_fotos', { limit: 1, cols: 'entrada_id' }).then(() => true).catch((e) => (falta079(e) ? false : null));
+        api._v079 = pr;
+        // Una vez por sesión, la limpieza de las fotos de más de 30 días (no depende de que la base tenga pg_cron)
+        pr.then((x) => { if (x === true) b.rpc('platos_limpiar', {}).catch(() => {}); });
+        pr.then((x) => { if (x == null && api._v079 === pr) api._v079 = null; });
+      }
+      return api._v079;
+    },
+    // La foto de una comida: de una que ya está en el menú (entrada) o de una nueva ({ fecha, toma, texto }). Queda hecha.
+    async guardarFotoPlato(atletaId, { entrada = null, fecha = null, toma = null, texto = null, foto, mini }) {
+      if (!fotoValida(foto, MAX_FOTO) || !fotoValida(mini, MAX_MINI)) throw new Error('No se ha podido preparar la foto. Prueba con otra.');
+      // Sin entrada, la comida se apunta en la misma llamada que la foto: o las dos cosas o ninguna
+      const fila = entrada ? null : entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FOTO });
+      if (!entrada && !fila) throw new Error('Ese texto no vale.');
+      let id;
+      try {
+        id = await b.rpc('plato_foto_guardar', entrada ? { p_entrada: entrada.id, p_foto: foto, p_mini: mini }
+          : { p_entrada: null, p_foto: foto, p_mini: mini, p_fecha: fila.fecha, p_toma: fila.toma, p_texto: fila.texto });
+      } catch (err) { if (falta079(err)) throw new Error(AVISO_079); throw err; }
+      return { ...(entrada || { ...fila, atleta_id: atletaId }), id: entrada?.id || id, hecho: true, con_foto: true };
+    },
+    async quitarFotoPlato(entradaId) {
+      try { await b.rpc('plato_foto_quitar', { p_entrada: entradaId }); } catch (e) { if (falta079(e)) throw new Error(AVISO_079); throw e; }
+    },
+    // Las miniaturas de las fotos de unos días (la semana del menú): [{ entrada_id, fecha, mini }]
+    async fotosPlatos(atletaId, desde, hasta) {
+      try { return await b.select('menu_fotos', { eq: { atleta_id: atletaId }, gte: { fecha: desde }, lte: { fecha: hasta }, cols: 'entrada_id,fecha,mini,creado_en', order: [['fecha', 'asc'], ['creado_en', 'asc']] }); }
+      catch (e) { if (falta079(e)) return []; throw e; }
+    },
+    // La foto entera de una comida (null si ya no se guarda)
+    // (coach) cuántas fotos de platos ha subido cada atleta en una semana: { atleta_id: n }
+    async platosDeLaSemana(lunes) {
+      try {
+        const out = {};
+        for (const f of await b.select('menu_fotos', { gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) }, cols: 'atleta_id' })) out[f.atleta_id] = (out[f.atleta_id] || 0) + 1;
+        return out;
+      } catch (e) { if (falta079(e)) return {}; throw e; }
+    },
+    async fotoPlato(entradaId) {
+      try { return (await b.select('menu_fotos', { eq: { entrada_id: entradaId }, cols: 'entrada_id,foto,creado_en', limit: 1 }))[0] || null; }
+      catch (e) { if (falta079(e)) return null; throw e; }
+    },
+    // Comer fuera: esa comida la hace fuera de casa y cuenta como hecha
+    async apuntarFuera(atletaId, { fecha, toma, texto = null, hecho = true }) {
+      const fila = entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FUERA });
+      if (!fila) throw new Error('Ese texto no vale.');
+      try { return (await b.insert('menu_comidas', [{ ...fila, atleta_id: atletaId, fuera: true, hecho: hecho !== false }]))[0]; }
+      catch (e) { if (falta079(e)) throw new Error(AVISO_079); return falta022(e); }
     },
     // Copiar el menú de una semana a otra (lo que ya hubiera en la de destino se queda)
     async copiarMenuSemana(atletaId, lunesOrigen, lunesDestino) {
@@ -5763,6 +5826,8 @@ export function crearApi(backend) {
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
       for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (079) las fotos de sus platos que aún se guardan (30 días)
+      out.menu_fotos = await b.select('menu_fotos', { eq: { atleta_id: atletaId }, pagina: 5 }).catch((e) => { if (falta079(e)) return []; throw e; });
       // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);

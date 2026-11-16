@@ -539,7 +539,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       ? <SeccionTiempo modalidad={e.tipo === 'entreno' && deFuera(siguiente?.cardio) ? siguiente.cardio.modalidad : 'carrera'} ocultar={() => fijarPanel(alternarSeccion(panel, 'tiempo'))} />
       : null,
     carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
-    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
+    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Márcalo o hazle una foto a tu plato"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
       <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
         <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />

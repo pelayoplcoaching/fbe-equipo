@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.174': {
+    atleta: [
+      'Si tu coach te lleva la nutrición: hazle una foto a tu plato y la comida queda hecha. En Comidas o en «Tu menú de hoy».',
+      '¿Comes fuera? Márcalo: te sale una pauta corta para elegir bien y esa comida cuenta como hecha.',
+    ],
+    coach: [
+      'Fotos de platos: las ves en las comidas de cada atleta y, juntas, en la revisión semanal. Se guardan 30 días.',
+      'Las comidas fuera de casa salen marcadas en su menú y cuentan como hechas. Migración 079.',
+    ],
+  },
   '0.173': {
     atleta: [
       'En Hoy, dile a tu coach qué quieres conseguir: una marca, tu peso, una carrera o lo que quieras. Te lo preguntará en cada bloque.',
