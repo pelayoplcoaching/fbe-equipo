@@ -84,6 +84,8 @@ import { LOBO } from '../marca-lobo.js';
 import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso, usePersonal } from './Personal.jsx';
+import { FraseAMedida, useGamberrada } from './AMedida.jsx';
+import { semanaAdelantada } from '../../logica/a-medida.js';
 import { mapaEvitados, apartarEvitados, textoMotivo } from '../../logica/perfil-mas.js';
 import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
@@ -116,6 +118,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   useEffect(() => cola.alCambiar((n) => { if (!n) setEnCola({}); }), []);
   const [abiertos, setAbiertos] = useState(null);
   const [descanso, setDescanso] = useState(null);  // { fin, total, prioridad, texto }
+  // (a medida, 080) la frase de su coach para cuando se pasa de lo pautado (una vez por sesión)
+  const fraseGamberrada = useGamberrada(id);
   // v0.52: el descanso también queda en «Sesión en curso» (al momento: si se quita, el aviso al móvil se anula; si se
   // sale de la sesión con él en marcha, lo lleva la píldora de arriba)
   // v0.62: y la pista de «Avisar aunque bloquees el móvil», en el mismo toque (en el iPhone, el audio solo arranca ahí)
@@ -577,11 +581,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     // (juego) el entreno empuja al lobo en el descanso que viene: tras un récord sale con ritmo; con la serie cumplida
     // como estaba pautada (las repeticiones mínimas), lleva un escudo
     const empuje = { ritmo: false, escudo: Number(valores.reps) >= Number(e.reps_min ?? e.reps_max ?? 1) && Number(valores.reps) > 0 };
+    let recordAhora = false;
     if (!previa && previas.datos) {
       const r = recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`];
       // (sonido) la frase del coach con su voz, si la ha grabado; si no, la del móvil (a su manera, personalización 2)
-      if (r) { empuje.ritmo = true; celebrar('record', { tipo: r.tipo }); setTimeout(() => { if (!sonarVozCoach('record')) hablar(vozRecord(trato)); }, 900); avisoConCambio(avisoRecord(trato, actualDe(e).nombre), 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
+      if (r) { recordAhora = true; empuje.ritmo = true; celebrar('record', { tipo: r.tipo }); setTimeout(() => { if (!sonarVozCoach('record')) hablar(vozRecord(trato)); }, 900); avisoConCambio(avisoRecord(trato, actualDe(e).nombre), 'record'); if (!propio) apuntarRecord(atleta.id, actualDe(e).nombre); }
     }
+    // (a medida, 080) muy por encima del RPE pautado, o una serie de más: lo que su coach le dejó escrito para eso (si
+    // la serie es récord, manda el récord). También al corregir el RPE de una serie ya hecha.
+    if (!recordAhora) { const g = fraseGamberrada({ pauta: e, numero, rpe: valores.rpe }); if (g) setTimeout(() => aviso(g, 'ok'), 350); }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
       const cuenta = Object.fromEntries(ejercicios.map((x) => [x.id, Object.keys(hechas[x.id] || {}).length]));
@@ -825,6 +833,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       )}
       {cardioValido(sesion.cardio) && <TarjetaCardio pauta={sesion.cardio} hecho={sesion.cardio_hecho} completada={sesion.completada} sesionId={sesion.id} />}
       {vueltaViaje && <MensajeCoach momento="viaje" clase="viaje-coach" />}
+      {/* (a medida, 080) empieza la semana antes de tiempo: lo que su coach le dejó escrito (y su imagen) */}
+      {!sesion.completada && atleta.estado !== 'baja' && <FraseAMedida momento="antes" clave={`semana:${semana?.id || ''}`} hueco="antes" clase="a-medida-antes" activa={semanaAdelantada(semana, hoyISO())} />}
       {!sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
         <DondeEntrenas atletaId={atleta.id} lugar={lugar} alElegir={elegirLugar}
           cambios={Object.fromEntries(Object.entries(porLugar).filter(([k, v]) => sustitutos[k] === v))} sinAlternativa={sinAlternativa} />
@@ -1137,6 +1147,8 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {siguiente && !ultimas && !Object.keys(hechas).length && <AntesDeEmpezar ej={ej} />}
           {/* (personalización 2, tanda 4) la primera vez con este ejercicio: el mensaje de su coach, si lo ha escrito */}
           {!ultimas && !Object.keys(hechas).length && <MensajeCoach momento="primera_vez" ejercicio={ej.nombre} clase="primera-vez-coach" />}
+          {/* (a medida, 080) lo que su coach le dejó escrito para este ejercicio (antes de empezarlo) */}
+          {sesionId && !Object.keys(hechas).length && <FraseAMedida momento="ejercicio" ejercicio={ej.nombre} clave={`sesion:${sesionId}`} clase="a-medida-ejercicio" />}
           <RecuerdaEjercicio recordatorios={recordatorios} />
           <AvisoZona aviso={avisoZona} />
           {/* (música 3) antes de la serie grande: su canción de récord, a un toque */}
@@ -1745,6 +1757,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
           <p class="peq secundario">1RM estimado con la fórmula de Epley, contando las repeticiones que te quedaban en recámara.</p>
           {/* (v0.104) lo que tu coach dejó escrito para un récord */}
           <MensajeCoach momento="record" ejercicio={resumen.records[0]?.nombre || ''} />
+          {/* (a medida, 080) y lo que le dejó a él para sus récords, con su imagen */}
+          <FraseAMedida momento="record" clave={`sesion:${sesion.id}`} hueco="record" clase="a-medida-record" imagenSola />
           {/* (v0.104) y su canción de récord, si la eligió */}
           <CancionRecord />
         </section>

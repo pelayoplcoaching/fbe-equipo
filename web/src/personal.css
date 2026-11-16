@@ -561,3 +561,44 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 :root { --reproductor-fondo: var(--negro); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --reproductor-fondo: var(--negro); } }
 :root[data-theme="dark"] { --reproductor-fondo: var(--negro); }
+
+/* =====================================================================================================================
+   «A su medida» (migración 080): lo que el coach le escribe a cada atleta. La frase es la cita del coach de siempre;
+   aquí, su imagen, el aviso de ritmo de peso, la imagen en el carné y la hoja del coach.
+   ===================================================================================================================== */
+.a-medida.a-medida-hoy { margin-top: 0; margin-bottom: var(--esp-12); }
+.a-medida .a-medida-img { grid-column: 1 / -1; justify-self: center; width: 100%; max-width: 320px; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-s); }
+.a-medida-sola { display: block; width: 100%; max-width: 320px; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-s); margin: var(--esp-14) auto 0; }
+.a-medida-antes { margin-bottom: var(--esp-12); }
+.a-medida-antes .a-medida-img { max-width: 220px; }
+.a-medida-ejercicio { margin-top: 0; margin-bottom: var(--esp-10); }
+.a-medida-peso { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: var(--esp-12); align-items: start; margin-bottom: var(--esp-12); }
+.a-medida-peso-ico { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--aviso-suave, var(--hoja-2)); color: var(--aviso, var(--tinta)); }
+.a-medida-peso-ico svg { width: var(--ico-20); height: var(--ico-20); }
+.a-medida-peso strong { font-size: var(--letra-16); }
+.a-medida-peso-frase { margin: 0; font-size: var(--letra-17); line-height: 1.4; }
+/* En su carné: su imagen a la derecha, fundida hacia la izquierda para que el nombre se lea */
+.carnet-fondo .carnet-suya { object-position: 70% 50%; opacity: .6; -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, transparent 8%, var(--negro) 62%); mask-image: linear-gradient(var(--oklab,) 90deg, transparent 8%, var(--negro) 62%); }
+@media (forced-colors: active) { .a-medida-img, .a-medida-sola { display: none; } }
+
+/* El coach */
+.a-medida-resumen { margin: 0; display: flex; gap: var(--esp-8); align-items: center; font-size: var(--letra-16); }
+.a-medida-resumen svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); flex: none; }
+.a-medida-grupo { border: 0; margin: 0; padding: var(--esp-14) 0 0; display: grid; gap: var(--esp-12); border-top: var(--filo-fino) solid var(--linea); min-width: 0; }
+.a-medida-grupo legend { padding: 0; font-weight: 750; font-size: var(--letra-16); }
+.a-medida-grupo p { margin: 0; }
+.a-medida-ejercicio-fila { display: grid; gap: var(--esp-8); padding: var(--esp-12); border-radius: var(--r-s); background: var(--hoja-2); }
+.a-medida-margenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--esp-14); }
+.a-medida-unidad { display: flex; align-items: center; gap: var(--esp-8); }
+.a-medida-unidad .entrada { width: 5.5rem; }
+.a-medida-pegas { margin: 0; padding-left: var(--esp-16); color: var(--aviso, var(--tinta)); }
+.a-medida-imagenes { margin-top: var(--esp-24); padding-top: var(--esp-14); border-top: var(--filo-fino) solid var(--linea); display: grid; gap: var(--esp-10); }
+.a-medida-imagenes h3 { margin: 0; font-size: var(--letra-16); }
+.a-medida-imagenes p { margin: 0; }
+.a-medida-huecos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--esp-14); }
+.a-medida-hueco { display: grid; gap: var(--esp-6); align-content: start; }
+.a-medida-hueco-vista { aspect-ratio: 1; border-radius: var(--r-s); background: var(--hoja-2); display: grid; place-items: center; overflow: hidden; color: var(--tinta-2); }
+.a-medida-hueco[data-forma="apaisada"] .a-medida-hueco-vista { aspect-ratio: 3 / 2; }
+.a-medida-hueco-vista img { width: 100%; height: 100%; object-fit: cover; }
+.a-medida-hueco-vista svg { width: var(--ico-28); height: var(--ico-28); }
+.a-medida-hueco .btn.ocupado { opacity: .7; }

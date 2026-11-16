@@ -54,6 +54,7 @@ import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, M
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
+import { paraGuardarPropio, imagenValida, CLAVES_HUECO } from '../logica/a-medida.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
 import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpiarChecklist, tempoValido, plantillaValida, limpiarPlantilla, estadoVideo, tecnicaPorEjercicio } from '../logica/tecnica.js';
 import { analisisValido } from '../logica/analisis.js';
@@ -147,6 +148,13 @@ const falta072 = (e) => {
 };
 // (073) el perfil 4: lo que evita, su material, el rincón de ánimo y la foto de portada
 // (078) sin la migración de las pausas, la app no las ofrece
+// (080) «A su medida»: sin la migración, la app no lo ofrece
+const AVISO_080 = 'Esto aún no está disponible: hay que poner al día la base (migración 080, supabase/migraciones/080_a_medida.sql)';
+const falta080 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''} ${e?.codigo || ''}`;
+  return /atletas_imagenes|a_medida_imagen_(poner|quitar)|'propio' column|column[^.]*\bpropio\b|PGRST202|PGRST204|PGRST205|42883|42703|42P01/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|column|columna|PGRST20[245]|42883|42703|42P01/i.test(m);
+};
 // (079) sin la migración de la foto del plato y comer fuera, la app no las ofrece
 const AVISO_079 = 'Esto aún no está disponible: hay que poner al día la base (migración 079, supabase/migraciones/079_platos.sql)';
 const falta079 = (e) => {
@@ -516,6 +524,7 @@ export function crearApi(backend) {
   let generacion = 0;
   let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
   let contactosMemo = null;  // (051) los teléfonos de los atletas, un minuto
+  const huecosMemo = new Map(), imagenesMemo = new Map();  // (080) «A su medida»: qué imágenes tiene cada atleta (diez minutos) y las imágenes
   let musicaMemo = new Map();  // (050) lo de musica_para y musica_coach_lista, un minuto
   let olvidarFotos = () => {};   // (se define más abajo, con el recuerdo de las fotos de perfil)
   const b = Object.create(backend);
@@ -2178,6 +2187,50 @@ export function crearApi(backend) {
     async fotoPlato(entradaId) {
       try { return (await b.select('menu_fotos', { eq: { entrada_id: entradaId }, cols: 'entrada_id,foto,creado_en', limit: 1 }))[0] || null; }
       catch (e) { if (falta079(e)) return null; throw e; }
+    },
+    // ------------------------------------------------------------ «A su medida» (migración 080)
+    // Lo que el coach le escribe a ese atleta (frases por momento, las de sus ejercicios y sus márgenes de peso): va en
+    // su ficha (atletas.propio). Vacío, se queda en null y el atleta ve lo de siempre. Devuelve lo guardado.
+    async guardarPropio(atletaId, propio) {
+      const valor = paraGuardarPropio(propio);
+      // (la base admite 40 kB; con todas las frases al tope y llenas de tildes se podría pasar)
+      if (valor && new TextEncoder().encode(JSON.stringify(valor)).length > 38000) throw new Error('Son demasiadas frases (o demasiado largas) para guardarlas todas: quita alguna.');
+      try { await b.update('atletas', { propio: valor }, { eq: { id: atletaId } }); } catch (e) { if (falta080(e)) throw new Error(AVISO_080); throw e; }
+      return valor;
+    },
+    // Qué huecos de imagen tiene puestos un atleta: { perfil: 'cuándo', … }. Sin la 080, null (y no se ofrece).
+    // Se recuerda mientras la app está abierta (el coach, al cambiarlas, lo vacía).
+    async huecosPropios(atletaId) {
+      if (!atletaId) return {};
+      const ya = huecosMemo.get(atletaId);
+      if (ya && Date.now() - ya.t < 600000) return ya.pr;
+      const pr = b.select('atletas_imagenes', { eq: { atleta_id: atletaId }, cols: 'hueco,actualizada_en' })
+        .then((l) => Object.fromEntries((l || []).filter((x) => CLAVES_HUECO.includes(x.hueco)).map((x) => [x.hueco, x.actualizada_en])))
+        .catch((e) => { huecosMemo.delete(atletaId); if (falta080(e)) return null; throw e; });
+      huecosMemo.set(atletaId, { t: Date.now(), pr });
+      return pr;
+    },
+    // La imagen de un hueco (data URL), o null. Solo se pide si ese hueco está puesto; se recuerda mientras la app está abierta.
+    async imagenPropia(atletaId, hueco) {
+      const huecos = await api.huecosPropios(atletaId).catch(() => null);
+      if (!huecos?.[hueco]) return null;
+      const k = `${atletaId}:${hueco}:${huecos[hueco]}`;
+      if (imagenesMemo.has(k)) return imagenesMemo.get(k);
+      const pr = b.select('atletas_imagenes', { eq: { atleta_id: atletaId, hueco }, cols: 'imagen' })
+        .then((l) => (imagenValida(l?.[0]?.imagen) ? l[0].imagen : null)).catch(() => { imagenesMemo.delete(k); return null; });
+      imagenesMemo.set(k, pr);
+      return pr;
+    },
+    // (coach) pone o cambia la imagen de un hueco (ya reducida, como data URL) y la quita
+    async ponerImagenPropia(atletaId, hueco, imagen) {
+      if (!CLAVES_HUECO.includes(hueco)) throw new Error('Ese hueco no vale.');
+      if (!imagenValida(imagen)) throw new Error('Esa imagen no vale: tiene que ser una foto o un dibujo (JPEG o WebP) y no pesar demasiado.');
+      try { await b.rpc('a_medida_imagen_poner', { p_atleta: atletaId, p_hueco: hueco, p_imagen: imagen }); } catch (e) { if (falta080(e)) throw new Error(AVISO_080); throw e; }
+      huecosMemo.delete(atletaId);
+    },
+    async quitarImagenPropia(atletaId, hueco) {
+      try { await b.rpc('a_medida_imagen_quitar', { p_atleta: atletaId, p_hueco: hueco }); } catch (e) { if (falta080(e)) throw new Error(AVISO_080); throw e; }
+      huecosMemo.delete(atletaId);
     },
     // Comer fuera: esa comida la hace fuera de casa y cuenta como hecha
     async apuntarFuera(atletaId, { fecha, toma, texto = null, hecho = true }) {
@@ -5826,6 +5879,8 @@ export function crearApi(backend) {
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
       for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (080) «A su medida»: las imágenes que su coach le ha puesto (sus frases van en su ficha, con lo demás)
+      out.atletas_imagenes = await b.select('atletas_imagenes', { eq: { atleta_id: atletaId } }).catch((e) => { if (falta080(e)) return []; throw e; });
       // (079) las fotos de sus platos que aún se guardan (30 días)
       out.menu_fotos = await b.select('menu_fotos', { eq: { atleta_id: atletaId }, pagina: 5 }).catch((e) => { if (falta079(e)) return []; throw e; });
       // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El

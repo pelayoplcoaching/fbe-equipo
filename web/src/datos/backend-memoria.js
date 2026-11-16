@@ -42,7 +42,7 @@ export const CODIGO_MFA_DEMO = '123456';
 
 const DEFECTOS = {
   perfiles: () => ({ rol: 'atleta', creado_en: ahora(), exige_2fa: false, foto: null }),
-  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null, dias_semana: null, reglas_motor: null }),
+  atletas: () => ({ estado: 'invitado', fecha_alta: hoyISO(), creado_en: ahora(), perfil_id: null, email: null, objetivo: null, notion_url: null, progresion_auto: true, volumen_objetivo: null, checkin_apartados: null, nutricion: true, entrenamiento: true, nivel: null, peso_frecuencia: 'diario', baja_en: null, dias_semana: null, reglas_motor: null, propio: null }),
   invitaciones: () => ({ creada_en: ahora(), usada_en: null }),
   consentimientos: () => ({ aceptado_en: ahora(), revocado_en: null }),
   ejercicios: () => ({ grupos_musculares: [], activo: true, variante: null, video_url: null, instrucciones: null, errores: null, alternativas: [], tipo: [], rango_reps: null, creado_en: ahora() }),
@@ -114,6 +114,7 @@ const DEFECTOS = {
   menu_dias: () => ({ creado_en: ahora() }),
   menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, fuera: false, con_foto: false, creado_en: ahora() }),
   menu_fotos: () => ({ creado_en: ahora() }),
+  atletas_imagenes: () => ({ actualizada_en: ahora() }),   // (080) «A su medida»: las imágenes propias de un atleta
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
   // Migración 027: la comunidad del equipo
   comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null, publicar_en: null, retenida: false }),
@@ -137,7 +138,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['pausas', 'atleta_id'], ['menu_fotos', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['pausas', 'atleta_id'], ['menu_fotos', 'atleta_id'], ['atletas_imagenes', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -187,7 +188,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['menu_fotos', 'videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
+const SIN_ID = ['menu_fotos', 'atletas_imagenes', 'videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas', 'portadas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -3378,6 +3379,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const cols = f.cols ? String(f.cols).split(',') : null;
         return copia((f.limit ? vivas.slice(0, f.limit) : vivas).map((x) => (cols ? Object.fromEntries(cols.map((k) => [k, x[k]])) : x)));
       }
+      // (080) «A su medida»: las imágenes propias; el coach, todas; el atleta, las suyas
+      if (t === 'atletas_imagenes') {
+        const cols = f.cols ? String(f.cols).split(',') : null;
+        return copia(tabla(t).filter((x) => (esCoach() || x.atleta_id === miAtletaId()) && cumple(x, f)).map((x) => (cols ? Object.fromEntries(cols.map((k) => [k.trim(), x[k.trim()]])) : x)));
+      }
       sinRedDemo();
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
       const retraso = (() => { try { return Math.min(5000, Number(localStorage.getItem('fbe-demo-retraso')) || 0); } catch { return 0; } })();
@@ -3413,6 +3419,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // salida (⏱) y cómo se envían solos al volver la cobertura
       if (t === 'comentarios' && typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_guardar
+      if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_poner
       // (para probar «!» con «Reintentar» y «Eliminar» en la demo: localStorage «fbe-demo-rechazar» = 1 rechaza el siguiente)
       if (t === 'comentarios') { let r = null; try { r = localStorage.getItem('fbe-demo-rechazar'); if (r) localStorage.removeItem('fbe-demo-rechazar'); } catch { /* */ } if (r) throw new Error('La demo ha rechazado este mensaje (prueba)'); }
       const lista = Array.isArray(filas) ? filas : [filas];
@@ -3423,7 +3430,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async update(t, cambios, f) {
       sinRedDemo();
       if (t === 'pausas' && !esCoach()) return [];   // (078) las pausas, solo el coach
-      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079)
+      if (t === 'menu_fotos' || t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (079, 080)
       if (t === 'recetas_favoritas') throw sinPermisoTabla(t);   // (055) se pone o se quita, no se cambia
       // (051, como su trigger) al retirar el consentimiento de datos de salud, Salud del iPhone se desconecta y lo que
       // llegó de ahí se borra (lo que escribió él se queda)
@@ -3630,7 +3637,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async upsert(t, filas, onConflict) {
       sinRedDemo();
-      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079)
+      if (t === 'menu_fotos' || t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (079, 080)
       soloCoach(t);
       // Como la 037: la valoración del atleta (una por vídeo)
       if (t === 'video_autoevaluacion') {
@@ -3757,6 +3764,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async delete(t, f) {
       sinRedDemo();
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
+      if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_quitar
       // (078) las pausas las quita el coach
       if (t === 'pausas') {
         if (!esCoach()) return [];
@@ -3926,6 +3934,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         purgar();
         persistirYa();
         return e.id;
+      }
+      // (080) «A su medida»: el coach pone y quita las imágenes propias de un atleta
+      if (nombre === 'a_medida_imagen_poner' || nombre === 'a_medida_imagen_quitar') {
+        if (!esCoach()) throw Object.assign(new Error(nombre.endsWith('poner') ? 'Solo el coach pone las imágenes de un atleta' : 'Solo el coach quita las imágenes de un atleta'), { code: '42501' });
+        const l = tabla('atletas_imagenes'), i = l.findIndex((x) => x.atleta_id === args?.p_atleta && x.hueco === args?.p_hueco);
+        if (nombre.endsWith('quitar')) { if (i >= 0) { l.splice(i, 1); persistirYa(); } return null; }
+        if (!args?.p_atleta || !tabla('atletas').some((x) => x.id === args.p_atleta)) throw Object.assign(new Error('No encuentro a ese atleta'), { code: '22023' });
+        if (!['perfil', 'antes', 'record'].includes(args?.p_hueco)) throw Object.assign(new Error('Ese hueco no vale'), { code: '22023' });
+        const img = args?.p_imagen;
+        if (typeof img !== 'string' || img.length < 200 || img.length > 600000 || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(img)) throw Object.assign(new Error('Esa imagen no vale'), { code: '22023' });
+        if (i >= 0) Object.assign(l[i], { imagen: img, actualizada_en: ahora() });
+        else l.push({ atleta_id: args.p_atleta, hueco: args.p_hueco, imagen: img, actualizada_en: ahora() });
+        persistirYa();
+        return null;
       }
       if (/^suplementos?_(de|guardar|quitar|aviso|tomar)$/.test(nombre)) {
         const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';

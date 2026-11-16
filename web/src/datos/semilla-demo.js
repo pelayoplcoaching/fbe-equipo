@@ -1,6 +1,7 @@
 // Datos de la demo, relativos a la fecha de hoy para que siempre parezcan actuales.
 // Atletas y cifras ficticios. Contraseña de todas las cuentas demo: "demo".
 import { hoyISO, lunesDe, sumarDias, diasEntre, instanteMadrid, partesMadrid } from '../logica/fechas.js';
+import { IMAGENES_A_MEDIDA } from './a-medida-demo.js';
 import { BIBLIOTECA_BASE } from './biblioteca-base.js';
 import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
@@ -240,6 +241,22 @@ export function semillaDemo(hoy = hoyISO()) {
     dias: DIAS_TORSO_PIERNA, hechasEstaSemana: 2, molestias: [['hombros', 1]], numeroBloque: 2, nombreBloque: 'Fuerza base', foco: 'intensidad',
   });
   ana.volumen_objetivo = { espalda: [12, 22], gluteo: [6, 14] };
+  // (080) «A su medida»: lo que su coach le ha escrito a Ana (inventado para la demo) y sus tres imágenes
+  ana.propio = { v: 1,
+    frases: {
+      saludo: ['Buenos días, Ana. Hoy, sin prisa y con la barra recta.', 'Ana, el café ya está; falta la barra.', 'Hoy toca, y lo sabes. A por ello.'],
+      pierna: ['Hoy es pierna, Ana. No vale mirar el reloj cada cinco minutos.', 'Día de pierna: las escaleras de mañana ya las lloraremos mañana.'],
+      antes: ['¿Empezando la semana antes de tiempo? Luego no digas que no te da la vida.'],
+      semana: ['Semana completa, Ana. Como quien no quiere la cosa.', 'Todas hechas. El lunes, más.'],
+      record: ['Marca nueva. Y luego dices que no estás fuerte.', 'Récord, Ana. Apúntalo en la nevera.'],
+      gamberrada: ['Eso no estaba pautado. Te he visto.', 'Un poco más de lo pautado, ¿no? Guarda algo para el jueves.'],
+      peso_baja: ['Esto es bajar, no desaparecer. Vamos más despacio.'],
+      varias: ['¿Paseo largo este finde? Cuenta como pasos, no como pierna.'],
+    },
+    ejercicios: [{ texto: 'sentadilla', frases: ['Sentadilla: rodillas hacia fuera y el pecho arriba, como te sale cuando no lo piensas.', 'Baja con calma. La barra no tiene prisa.'] },
+      { texto: 'press inclinado', frases: ['Press inclinado: los codos, un poco por debajo de los hombros. Sí, te lo vuelvo a decir.'] }],
+    peso: { baja_semana: 1, sube_mes: null } };
+  (db.atletas_imagenes ||= []).push(...Object.entries(IMAGENES_A_MEDIDA).map(([hueco, imagen]) => ({ atleta_id: ana.id, hueco, imagen, actualizada_en: new Date().toISOString() })));
   // Ana se pesa casi a diario las últimas semanas (para la tendencia)
   {
     const inicio = sumarDias(lunesHoy, -56);

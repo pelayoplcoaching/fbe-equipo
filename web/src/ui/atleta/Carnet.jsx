@@ -10,6 +10,7 @@ import { datosCarnet, datosImagenCarnet, inclinacion, inclinacionMovil } from '.
 import { sinMovimiento } from '../transiciones.js';
 import { Imagen } from '../Imagen.jsx';
 import { hoyISO } from '../../logica/fechas.js';
+import { useImagenPropia } from './AMedida.jsx';
 
 const sinPermisoOrientacion = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
   && typeof window.DeviceOrientationEvent.requestPermission !== 'function' && !!window.matchMedia?.('(pointer: coarse)').matches;
@@ -21,6 +22,8 @@ export function Carnet({ bloque }) {
   const imagen = datosImagenCarnet(d);
   const ref = useRef(null);
   const [compartir, setCompartir] = useState(false);
+  // (a medida, 080) la imagen que le ha puesto su coach, al fondo de su carné (la tarjeta para compartir no la lleva)
+  const imagenSuya = useImagenPropia('perfil');
   // La inclinación: se escribe en variables CSS en el siguiente cuadro (sin volver a pintar el componente)
   useEffect(() => {
     const el = ref.current;
@@ -77,6 +80,7 @@ export function Carnet({ bloque }) {
           <div class="carnet-fondo" aria-hidden="true">
             {/* (imágenes) el metal cepillado morado, debajo de los anillos y el lobo */}
             <Imagen id="carne-fondo" clase="carnet-foto" tamanos="340px" prioridad />
+            {imagenSuya && <img class="carnet-foto carnet-suya" src={imagenSuya} alt="" decoding="async" />}
             <svg class="carnet-lineas" viewBox="0 0 340 214" preserveAspectRatio="xMidYMid slice" focusable="false">
               {[0, 1, 2, 3].map((i) => <circle key={i} cx="300" cy="-10" r={70 + i * 40} />)}
             </svg>
