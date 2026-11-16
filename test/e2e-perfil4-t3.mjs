@@ -74,11 +74,14 @@ export async function probarPerfil4T3({ navegador, check, base = 'http://localho
     await ctrl.locator('input[type=file]').setInputFiles({ name: 'portada.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(bytes) });
     const img = p.locator('.perfil-cabeza .portada-propia');
     await img.waitFor({ timeout: 8000 });
+    // (080) puede que ya hubiera una imagen de su coach en la portada: se espera a que sea la suya
+    await p.waitForFunction(() => { const x = document.querySelector('.perfil-cabeza .portada-propia'); return !!x && x.complete && x.naturalWidth === 1200; }, null, { timeout: 8000 }).catch(() => {});
     check(await img.evaluate((x) => x.complete && x.naturalWidth === 1200 && x.naturalHeight === 300), 'pone su foto de portada (recortada a 1200 × 300)');
     if (process.env.FOTOS) await p.screenshot({ path: `${process.env.FOTOS}/portada-t3.png` });
     await p.locator('.perfil-portada-btn').click();
     await ctrl.getByRole('button', { name: 'Quitar' }).click();
-    await img.waitFor({ state: 'detached', timeout: 5000 });
+    // (080) sin su foto, la portada vuelve a ser la de siempre o, si su coach le ha puesto una imagen «a su medida», esa
+    await p.waitForFunction(() => { const x = document.querySelector('.perfil-cabeza .portada-propia'); return !x || (x.complete && x.naturalWidth > 0 && !(x.naturalWidth === 1200 && x.naturalHeight === 300)); }, null, { timeout: 5000 });
     check(await p.evaluate(async () => (await globalThis.__fbeDemo.select('storage_por_borrar', {}).catch(() => [])).some((x) => x.bucket === 'portadas')) || true, 'y la quita (la anterior, a la cola de borrado)');
     // 11. El rincón de ánimo: un mensaje del coach, desde el chat
     await p.locator('.tab', { hasText: 'Mensajes' }).first().click().catch(async () => { const { irASeccion } = await import('./secciones.mjs'); await irASeccion(p, 'Mensajes'); });
