@@ -37,6 +37,9 @@ export const REGLAS_FBE = Object.freeze({
     rpeSube: 9,
     variasAlTope: 'faciles', // 'todas' | 'primera' | 'faciles' (todas las de RPE ≤ topeFacilRpe; del resto, solo la primera)
     topeFacilRpe: 8,
+    // (reglas propias de atleta, 16/11/2026) al subir de kilos en el tope: null = vuelve al suelo del rango;
+    // un número = baja solo esas repeticiones (sin pasar del suelo)
+    bajaAlSubir: null,
     sinKilos: 'solo_reps',  // donde por el nivel la carga la elige el atleta: 'no_tocar' | 'solo_reps' | 'como_los_demas'
   },
   // Serie top + back-off y peaking en los básicos (decisiones de Pelayo del 5/11/2026, con sus datos delante; ver
@@ -45,6 +48,10 @@ export const REGLAS_FBE = Object.freeze({
     detectar: true,       // un básico cuya primera serie es la más pesada se trata como top + back-off sin pedirlo
     backoff: 'faciles',   // 'faciles' (igual, salvo RPE ≤ backoffFacilRpe: suben kilos) | 'solas' (como cualquier serie) | 'igual' (nunca se tocan)
     backoffFacilRpe: 7,
+    // (reglas propias de atleta, 16/11/2026) la serie top (la primera, la más pesada) puede llevar su rango y su
+    // «suma una repetición hasta» propios; null = los del ejercicio
+    rango: null,
+    rpeSube: null,
     peaking: {
       cuando: 'foco',      // 'foco' (las semanas con foco «peaking») | 'nunca'
       reps: 1,             // repeticiones que baja la top cada semana
@@ -150,8 +157,9 @@ const ESQUEMA = {
   modelos: { basico: UNO_DE(IDS_MODELO), resto: UNO_DE(IDS_MODELO) },
   modelo: UNO_DE(IDS_MODELO),
   salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20) },
-  porSerie: { rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
-  topSet: { detectar: (v) => typeof v === 'boolean', backoff: UNO_DE(['faciles', 'solas', 'igual']), backoffFacilRpe: NUM(5, 8.5) },
+  porSerie: { rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), bajaAlSubir: UNO_DE([1, 2, 3, 4]), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
+  topSet: { detectar: (v) => typeof v === 'boolean', backoff: UNO_DE(['faciles', 'solas', 'igual']), backoffFacilRpe: NUM(5, 8.5), rpeSube: NUM(6, 10),
+    rango: (r) => Array.isArray(r) && r.length === 2 && r.every((x) => Number.isInteger(x) && x >= 1 && x <= 50) && r[0] <= r[1] },
   doble: { criterio: UNO_DE(CRITERIOS_SUBIDA), margen: NUM(0, 1), sobrado: UNO_DE([1, 2]), porDebajo: UNO_DE(['mantener', 'bajar_segunda', 'bajar_pct']), bajarPct: NUM(2.5, 20) },
   triple: { seriesMin: NUM(1, 10), seriesMax: NUM(1, 12), seriesExtra: NUM(1, 4) },
   lineal: { fallosAntesDeBajar: NUM(1, 3), bajadaPct: NUM(5, 15), bajadasParaSalir: NUM(1, 5) },
@@ -211,7 +219,7 @@ export function limpiarReglas(capa) {
           if (esObjeto(v2)) for (const [k3, v3] of Object.entries(v2)) { if (v3 == null) continue; if (PEAKING[k3] && PEAKING[k3](v3)) pk[k3] = v3; else descartado.push(`topSet.peaking.${k3}`); }
           else descartado.push('topSet.peaking');
           if (Object.keys(pk).length) dentro.peaking = pk;
-        } else if (regla[k2] && regla[k2](v2)) dentro[k2] = v2; else descartado.push(`${k}.${k2}`);
+        } else if (regla[k2] && regla[k2](v2)) dentro[k2] = k2 === 'rango' ? [...v2] : v2; else descartado.push(`${k}.${k2}`);
       }
       if (Object.keys(dentro).length) reglas[k] = dentro;
       continue;

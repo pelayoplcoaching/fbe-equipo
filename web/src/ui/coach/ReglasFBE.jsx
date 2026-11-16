@@ -3,7 +3,7 @@
 // (cómo progresa, rango, salto de carga y RPE). Solo recogen y validan: guardar es cosa de la hoja.
 // Usan clases que ya existen; no añaden estilos.
 import { useState } from 'preact/hooks';
-import { PERFILES, PERFILES_ELEGIBLES, perfilDeNivel, VALORES_RPE_SUBE, TIPOS_RANGO, DE_PARTIDA, MODELOS_DISPONIBLES, NOMBRE_MODELO,
+import { PERFILES, PERFILES_ELEGIBLES, perfilDeNivel, VALORES_RPE_SUBE, VALORES_BAJA, TIPOS_RANGO, DE_PARTIDA, MODELOS_DISPONIBLES, NOMBRE_MODELO,
   reglasDeAtleta, conReglasDeAtleta, reglaDeEjercicio, conReglaDeEjercicio, resumenGuardadas, hayGuardadas, tieneRegla } from '../../logica/motor/index.js';
 import { num } from '../../logica/calculos.js';
 
@@ -29,7 +29,8 @@ function SelectorRpe({ id, valor, alCambiar }) {
 export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
   const inicial = () => {
     const a = reglasDeAtleta(guardadas);
-    return { perfil: a.perfil || '', rpeSube: a.rpeSube == null ? '' : String(a.rpeSube), rangos: Object.fromEntries(TIPOS_RANGO.map(([t]) => [t, (a.rangos[t] || ['', '']).map(String)])) };
+    return { perfil: a.perfil || '', rpeSube: a.rpeSube == null ? '' : String(a.rpeSube), rangos: Object.fromEntries(TIPOS_RANGO.map(([t]) => [t, (a.rangos[t] || ['', '']).map(String)])),
+      bajaAlSubir: a.bajaAlSubir == null ? '' : String(a.bajaAlSubir), rangoTop: (a.rangoTop || ['', '']).map(String), rpeSubeTop: a.rpeSubeTop == null ? '' : String(a.rpeSubeTop), sinDescarga: !!a.sinDescarga };
   };
   const [abierto, setAbierto] = useState(false);
   const [f, setF] = useState(inicial);
@@ -78,6 +79,30 @@ export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
             </div>
             <span class="ayuda">{ayudaRango} Si la pauta de un ejercicio ya trae su rango (por ejemplo 8–12), manda el de la pauta.</span>
           </div>
+          {/* (16/11/2026) reglas propias de cada atleta: al subir de kilos, la serie top y la descarga */}
+          <div class="campo">
+            <label for="fbe-baja">Al llegar al tope y subir de kilos</label>
+            <select id="fbe-baja" class="selector" value={f.bajaAlSubir} onChange={(e) => setF({ ...f, bajaAlSubir: e.currentTarget.value })}>
+              <option value="">Vuelve al mínimo del rango (de partida)</option>
+              {VALORES_BAJA.map((v) => <option key={v} value={String(v)}>Baja {v} {v === 1 ? 'repetición' : 'repeticiones'}</option>)}
+            </select>
+            <span class="ayuda">Por ejemplo, con 8 repeticiones al tope y «baja 2»: sube de kilos y pasa a 6.</span>
+          </div>
+          <div class="campo">
+            <span class="etq">Serie top (la primera, la más pesada)</span>
+            <div class="rejilla-volumen">
+              <div class="fila-vol">
+                <span>Rango</span>
+                <input inputMode="numeric" aria-label="Serie top: mínimo de repeticiones" placeholder="–" value={f.rangoTop[0]} onInput={(e) => setF({ ...f, rangoTop: [soloCifras(e.currentTarget.value), f.rangoTop[1]] })} />
+                <span class="terciario" aria-hidden="true">–</span>
+                <input inputMode="numeric" aria-label="Serie top: máximo de repeticiones" placeholder="–" value={f.rangoTop[1]} onInput={(e) => setF({ ...f, rangoTop: [f.rangoTop[0], soloCifras(e.currentTarget.value)] })} />
+              </div>
+            </div>
+            <label for="fbe-rpe-top" class="mini">La top suma una repetición hasta</label>
+            <SelectorRpe id="fbe-rpe-top" valor={f.rpeSubeTop} alCambiar={(v) => setF({ ...f, rpeSubeTop: v })} />
+            <span class="ayuda">Vacío: como el resto de sus series. Vale para los básicos con la primera serie más pesada (top y series de apoyo); las de apoyo siguen igual salvo que vayan fáciles.</span>
+          </div>
+          <label class="casilla"><input type="checkbox" checked={f.sinDescarga} onChange={(e) => setF({ ...f, sinDescarga: e.currentTarget.checked })} /> <span>Sin descarga por señales (solo cuando yo ponga una semana de descarga)</span></label>
           {errores.length > 0 && <p class="error" role="alert">{errores.join('. ')}.</p>}
           <div class="fila-envolver">
             <button type="button" class="btn btn-primario" disabled={ocupado} onClick={() => enviar(f)}>Guardar reglas</button>
