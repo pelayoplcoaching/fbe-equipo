@@ -177,6 +177,17 @@
     },
     "color": "#44307a"
   },
+  "adu-aduccion-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-aduccion-goma-192.9213e91c.webp",
+      "512": "imagenes/ejercicio/adu-aduccion-goma-512.bdb38838.webp"
+    },
+    "color": "#41316c"
+  },
   "adu-copenhague": {
     "proporcion": [
       1,
@@ -187,6 +198,17 @@
       "512": "imagenes/ejercicio/adu-copenhague-512.c22b2c40.webp"
     },
     "color": "#42346a"
+  },
+  "adu-copenhague-rodilla": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-copenhague-rodilla-192.69842a3a.webp",
+      "512": "imagenes/ejercicio/adu-copenhague-rodilla-512.80f02bed.webp"
+    },
+    "color": "#43346d"
   },
   "adu-maquina-sentado": {
     "proporcion": [
@@ -209,6 +231,17 @@
       "512": "imagenes/ejercicio/adu-polea-de-pie-512.cb9e00f6.webp"
     },
     "color": "#463672"
+  },
+  "adu-sentadilla-cosaca": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-sentadilla-cosaca-192.dc0a5bee.webp",
+      "512": "imagenes/ejercicio/adu-sentadilla-cosaca-512.1f7d5161.webp"
+    },
+    "color": "#433172"
   },
   "album": {
     "proporcion": [
@@ -288,6 +321,39 @@
     },
     "color": "#473375"
   },
+  "ant-colgarse-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-colgarse-barra-192.fc7ddf53.webp",
+      "512": "imagenes/ejercicio/ant-colgarse-barra-512.207e776d.webp"
+    },
+    "color": "#3a2e62"
+  },
+  "ant-curl-inverso-barra-z": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-inverso-barra-z-192.ed0e6bd8.webp",
+      "512": "imagenes/ejercicio/ant-curl-inverso-barra-z-512.61b3b67a.webp"
+    },
+    "color": "#3c2e64"
+  },
+  "ant-curl-inverso-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-curl-inverso-polea-192.33f1e98e.webp",
+      "512": "imagenes/ejercicio/ant-curl-inverso-polea-512.6ba96193.webp"
+    },
+    "color": "#42326d"
+  },
   "ant-curl-muneca-banco": {
     "proporcion": [
       1,
@@ -342,6 +408,28 @@
       "512": "imagenes/ejercicio/ant-kettlebell-wrist-turns-512.42fc2796.webp"
     },
     "color": "#443276"
+  },
+  "ant-paseo-granjero-kettlebells": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-paseo-granjero-kettlebells-192.c8693686.webp",
+      "512": "imagenes/ejercicio/ant-paseo-granjero-kettlebells-512.b552b6c7.webp"
+    },
+    "color": "#42326e"
+  },
+  "ant-paseo-granjero-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/ant-paseo-granjero-mancuernas-192.82a26f5d.webp",
+      "512": "imagenes/ejercicio/ant-paseo-granjero-mancuernas-512.a8c11ae9.webp"
+    },
+    "color": "#41316c"
   },
   "antes-de-empezar": {
     "proporcion": [
@@ -529,6 +617,17 @@
     },
     "color": "#413465"
   },
+  "bic-curl-arrastre": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-arrastre-192.907bf312.webp",
+      "512": "imagenes/ejercicio/bic-curl-arrastre-512.2652beda.webp"
+    },
+    "color": "#3e2d69"
+  },
   "bic-curl-barra-recta": {
     "proporcion": [
       1,
@@ -562,6 +661,17 @@
     },
     "color": "#45346d"
   },
+  "bic-curl-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-goma-192.59af0048.webp",
+      "512": "imagenes/ejercicio/bic-curl-goma-512.88d04a86.webp"
+    },
+    "color": "#412e72"
+  },
   "bic-curl-inclinado": {
     "proporcion": [
       1,
@@ -583,6 +693,17 @@
       "512": "imagenes/ejercicio/bic-curl-mancuernas-512.6466a730.webp"
     },
     "color": "#3f2c6a"
+  },
+  "bic-curl-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-maquina-192.e165a305.webp",
+      "512": "imagenes/ejercicio/bic-curl-maquina-512.406171c0.webp"
+    },
+    "color": "#483675"
   },
   "bic-curl-martillo": {
     "proporcion": [
@@ -617,6 +738,17 @@
     },
     "color": "#45326e"
   },
+  "bic-curl-zottman": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-curl-zottman-192.fd70bae1.webp",
+      "512": "imagenes/ejercicio/bic-curl-zottman-512.c2a52190.webp"
+    },
+    "color": "#412e71"
+  },
   "bic-doble-biceps-polea": {
     "proporcion": [
       1,
@@ -627,6 +759,28 @@
       "512": "imagenes/ejercicio/bic-doble-biceps-polea-512.43af3f70.webp"
     },
     "color": "#3f2a67"
+  },
+  "bic-martillo-cruzado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-martillo-cruzado-192.8bb16626.webp",
+      "512": "imagenes/ejercicio/bic-martillo-cruzado-512.b8aebdb3.webp"
+    },
+    "color": "#3f2e6b"
+  },
+  "bic-martillo-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/bic-martillo-polea-cuerda-192.e0fee715.webp",
+      "512": "imagenes/ejercicio/bic-martillo-polea-cuerda-512.3699baec.webp"
+    },
+    "color": "#3f3267"
   },
   "bienvenida-manana": {
     "proporcion": [
@@ -1379,6 +1533,28 @@
     },
     "color": "#4b3c71"
   },
+  "cua-bulgara-sin-peso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-bulgara-sin-peso-192.c43e2dbf.webp",
+      "512": "imagenes/ejercicio/cua-bulgara-sin-peso-512.a60c61eb.webp"
+    },
+    "color": "#452e76"
+  },
+  "cua-goblet-talones-elevados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-goblet-talones-elevados-192.be49a9ca.webp",
+      "512": "imagenes/ejercicio/cua-goblet-talones-elevados-512.5b9b9cec.webp"
+    },
+    "color": "#442e75"
+  },
   "cua-hack-squat": {
     "proporcion": [
       1,
@@ -1412,6 +1588,28 @@
     },
     "color": "#443268"
   },
+  "cua-isometrica-pared": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-isometrica-pared-192.c6c0d19d.webp",
+      "512": "imagenes/ejercicio/cua-isometrica-pared-512.42ee7d7c.webp"
+    },
+    "color": "#442d78"
+  },
+  "cua-leg-extension-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-leg-extension-unilateral-192.cae1f2a5.webp",
+      "512": "imagenes/ejercicio/cua-leg-extension-unilateral-512.bf0bf752.webp"
+    },
+    "color": "#442679"
+  },
   "cua-leg-extensions": {
     "proporcion": [
       1,
@@ -1422,6 +1620,39 @@
       "512": "imagenes/ejercicio/cua-leg-extensions-512.b1b15bed.webp"
     },
     "color": "#47366e"
+  },
+  "cua-multipower-pies-adelantados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-multipower-pies-adelantados-192.e017984d.webp",
+      "512": "imagenes/ejercicio/cua-multipower-pies-adelantados-512.238f1801.webp"
+    },
+    "color": "#513483"
+  },
+  "cua-nordico-inverso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-nordico-inverso-192.ab69b086.webp",
+      "512": "imagenes/ejercicio/cua-nordico-inverso-512.cdece778.webp"
+    },
+    "color": "#452b79"
+  },
+  "cua-pistol": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-pistol-192.03c5d9a8.webp",
+      "512": "imagenes/ejercicio/cua-pistol-512.835d53d5.webp"
+    },
+    "color": "#443370"
   },
   "cua-platz-squat": {
     "proporcion": [
@@ -1445,6 +1676,17 @@
     },
     "color": "#4b3973"
   },
+  "cua-prensa-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-prensa-unilateral-192.2a199b2e.webp",
+      "512": "imagenes/ejercicio/cua-prensa-unilateral-512.bc3d45c2.webp"
+    },
+    "color": "#4a2d7d"
+  },
   "cua-sentadilla-barra-alta": {
     "proporcion": [
       1,
@@ -1466,6 +1708,28 @@
       "512": "imagenes/ejercicio/cua-sentadilla-barra-baja-512.f048a305.webp"
     },
     "color": "#433666"
+  },
+  "cua-sentadilla-cajon": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-cajon-192.32d0b041.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-cajon-512.5c358728.webp"
+    },
+    "color": "#4f3b7d"
+  },
+  "cua-sentadilla-espanola": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-espanola-192.1d303ea5.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-espanola-512.0fe9d403.webp"
+    },
+    "color": "#473177"
   },
   "cua-sentadilla-frontal": {
     "proporcion": [
@@ -1489,6 +1753,17 @@
     },
     "color": "#442f78"
   },
+  "cua-sentadilla-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-goma-192.d829503a.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-goma-512.a14941aa.webp"
+    },
+    "color": "#443276"
+  },
   "cua-sentadilla-multipower": {
     "proporcion": [
       1,
@@ -1499,6 +1774,17 @@
       "512": "imagenes/ejercicio/cua-sentadilla-multipower-512.2af1eea9.webp"
     },
     "color": "#503c7e"
+  },
+  "cua-sentadilla-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-pausa-192.237f37c4.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-pausa-512.f186c9a8.webp"
+    },
+    "color": "#4b3979"
   },
   "cua-sentadilla-safety-bar": {
     "proporcion": [
@@ -1511,6 +1797,50 @@
     },
     "color": "#463575"
   },
+  "cua-sentadilla-sin-peso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-sin-peso-192.abd2b55c.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-sin-peso-512.01f3763e.webp"
+    },
+    "color": "#443173"
+  },
+  "cua-sentadilla-sumo-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-sumo-mancuerna-192.f1898c86.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-sumo-mancuerna-512.c5dd5eb1.webp"
+    },
+    "color": "#463576"
+  },
+  "cua-sentadilla-una-pierna-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-una-pierna-banco-192.33742e72.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-una-pierna-banco-512.1ff1ec15.webp"
+    },
+    "color": "#452e78"
+  },
+  "cua-sissy": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sissy-192.0a1867a0.webp",
+      "512": "imagenes/ejercicio/cua-sissy-512.d75cab5e.webp"
+    },
+    "color": "#48327a"
+  },
   "cua-split-squat": {
     "proporcion": [
       1,
@@ -1522,6 +1852,50 @@
     },
     "color": "#4a3579"
   },
+  "cua-split-squat-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-mancuernas-192.dbb7aae9.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-mancuernas-512.742311e8.webp"
+    },
+    "color": "#452a7a"
+  },
+  "cua-split-squat-pie-elevado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-split-squat-pie-elevado-192.905b573e.webp",
+      "512": "imagenes/ejercicio/cua-split-squat-pie-elevado-512.00418097.webp"
+    },
+    "color": "#45297d"
+  },
+  "cua-step-down-lateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-step-down-lateral-192.9a8b4b6f.webp",
+      "512": "imagenes/ejercicio/cua-step-down-lateral-512.8c25553c.webp"
+    },
+    "color": "#44257e"
+  },
+  "cua-step-up-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-step-up-mancuernas-192.064ba158.webp",
+      "512": "imagenes/ejercicio/cua-step-up-mancuernas-512.63ae17ff.webp"
+    },
+    "color": "#44257d"
+  },
   "cua-zancadas": {
     "proporcion": [
       1,
@@ -1532,6 +1906,50 @@
       "512": "imagenes/ejercicio/cua-zancadas-512.db022790.webp"
     },
     "color": "#412c72"
+  },
+  "cua-zancadas-atras-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-barra-192.7e31c866.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-barra-512.f54851b8.webp"
+    },
+    "color": "#4a2c7c"
+  },
+  "cua-zancadas-atras-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-mancuernas-192.35246f7e.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-mancuernas-512.e89d69e3.webp"
+    },
+    "color": "#45297d"
+  },
+  "cua-zancadas-atras-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-atras-multipower-192.9123f9b1.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-atras-multipower-512.2df00965.webp"
+    },
+    "color": "#533882"
+  },
+  "cua-zancadas-caminando": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-zancadas-caminando-192.2e4c62fe.webp",
+      "512": "imagenes/ejercicio/cua-zancadas-caminando-512.3f2f0d33.webp"
+    },
+    "color": "#442483"
   },
   "cuestionario-lesiones": {
     "proporcion": [
@@ -1626,6 +2044,17 @@
     },
     "color": "#43376a"
   },
+  "del-elevaciones-y-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-elevaciones-y-polea-192.9f930cd9.webp",
+      "512": "imagenes/ejercicio/del-elevaciones-y-polea-512.7cb4141b.webp"
+    },
+    "color": "#4a3478"
+  },
   "del-empuje-vertical-maquina": {
     "proporcion": [
       1,
@@ -1647,6 +2076,28 @@
       "512": "imagenes/ejercicio/del-face-pull-512.3e5b9145.webp"
     },
     "color": "#3f2e6c"
+  },
+  "del-face-pull-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-face-pull-goma-192.66514222.webp",
+      "512": "imagenes/ejercicio/del-face-pull-goma-512.db97d7c3.webp"
+    },
+    "color": "#412776"
+  },
+  "del-flexiones-pica": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-flexiones-pica-192.9f8cad69.webp",
+      "512": "imagenes/ejercicio/del-flexiones-pica-512.63364afe.webp"
+    },
+    "color": "#412d6e"
   },
   "del-frontales-inclinado-polea": {
     "proporcion": [
@@ -1691,6 +2142,17 @@
       "512": "imagenes/ejercicio/del-laterales-butterfly-512.96e2f429.webp"
     },
     "color": "#433070"
+  },
+  "del-laterales-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-laterales-goma-192.f659392f.webp",
+      "512": "imagenes/ejercicio/del-laterales-goma-512.50160be3.webp"
+    },
+    "color": "#422d72"
   },
   "del-laterales-inclinado": {
     "proporcion": [
@@ -1780,6 +2242,17 @@
     },
     "color": "#3d2f64"
   },
+  "del-pajaros-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pajaros-goma-192.4bb7b86c.webp",
+      "512": "imagenes/ejercicio/del-pajaros-goma-512.681db73b.webp"
+    },
+    "color": "#442d7a"
+  },
   "del-pajaros-inclinado": {
     "proporcion": [
       1,
@@ -1802,6 +2275,28 @@
     },
     "color": "#463073"
   },
+  "del-press-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-goma-192.35a1ae3a.webp",
+      "512": "imagenes/ejercicio/del-press-goma-512.d0f998cd.webp"
+    },
+    "color": "#422c71"
+  },
+  "del-press-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-kettlebell-192.a7fe05d6.webp",
+      "512": "imagenes/ejercicio/del-press-kettlebell-512.030fee41.webp"
+    },
+    "color": "#3f2c6c"
+  },
   "del-press-militar-barra": {
     "proporcion": [
       1,
@@ -1813,6 +2308,17 @@
     },
     "color": "#3f296a"
   },
+  "del-press-militar-barra-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-barra-sentado-192.a9dbd8c5.webp",
+      "512": "imagenes/ejercicio/del-press-militar-barra-sentado-512.d7fd6251.webp"
+    },
+    "color": "#413168"
+  },
   "del-press-militar-mancuernas": {
     "proporcion": [
       1,
@@ -1823,6 +2329,17 @@
       "512": "imagenes/ejercicio/del-press-militar-mancuernas-512.7c47b38b.webp"
     },
     "color": "#4e3980"
+  },
+  "del-press-militar-mancuernas-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-press-militar-mancuernas-de-pie-192.4ea57e3f.webp",
+      "512": "imagenes/ejercicio/del-press-militar-mancuernas-de-pie-512.1e2d22bf.webp"
+    },
+    "color": "#3f2d6c"
   },
   "del-press-militar-maquina": {
     "proporcion": [
@@ -1846,6 +2363,28 @@
     },
     "color": "#4c3679"
   },
+  "del-pull-apart-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-pull-apart-goma-192.c1fa92cd.webp",
+      "512": "imagenes/ejercicio/del-pull-apart-goma-512.a3a037e7.webp"
+    },
+    "color": "#412b75"
+  },
+  "del-push-press": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-push-press-192.ab8c2e1d.webp",
+      "512": "imagenes/ejercicio/del-push-press-512.50785fd5.webp"
+    },
+    "color": "#432f70"
+  },
   "del-remo-menton": {
     "proporcion": [
       1,
@@ -1856,6 +2395,39 @@
       "512": "imagenes/ejercicio/del-remo-menton-512.76a9de75.webp"
     },
     "color": "#4f367d"
+  },
+  "del-rotacion-externa-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-goma-192.a7bfcc53.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-goma-512.537287b1.webp"
+    },
+    "color": "#44316f"
+  },
+  "del-rotacion-externa-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-mancuerna-192.eb104d27.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-mancuerna-512.266e9f1c.webp"
+    },
+    "color": "#402a74"
+  },
+  "del-rotacion-externa-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/del-rotacion-externa-polea-192.cc191b32.webp",
+      "512": "imagenes/ejercicio/del-rotacion-externa-polea-512.527dd3ae.webp"
+    },
+    "color": "#473473"
   },
   "descanso": {
     "proporcion": [
@@ -2038,6 +2610,39 @@
     },
     "color": "#715087"
   },
+  "esp-dominadas-asistidas-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-asistidas-goma-192.91658965.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-asistidas-goma-512.cd71b57d.webp"
+    },
+    "color": "#3c2c61"
+  },
+  "esp-dominadas-asistidas-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-asistidas-maquina-192.4b9b6bd3.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-asistidas-maquina-512.fdc0405a.webp"
+    },
+    "color": "#3f3262"
+  },
+  "esp-dominadas-excentricas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-dominadas-excentricas-192.aa74bca6.webp",
+      "512": "imagenes/ejercicio/esp-dominadas-excentricas-512.40a61949.webp"
+    },
+    "color": "#392a5c"
+  },
   "esp-dominadas-neutras": {
     "proporcion": [
       1,
@@ -2126,6 +2731,28 @@
     },
     "color": "#483772"
   },
+  "esp-jalon-goma-arrodillado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-goma-arrodillado-192.58b100b0.webp",
+      "512": "imagenes/ejercicio/esp-jalon-goma-arrodillado-512.fcabd9d0.webp"
+    },
+    "color": "#422e6e"
+  },
+  "esp-jalon-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-maquina-192.842050a4.webp",
+      "512": "imagenes/ejercicio/esp-jalon-maquina-512.53ef284a.webp"
+    },
+    "color": "#443469"
+  },
   "esp-jalon-neutro": {
     "proporcion": [
       1,
@@ -2158,6 +2785,17 @@
       "512": "imagenes/ejercicio/esp-jalon-supino-512.11095e2b.webp"
     },
     "color": "#463470"
+  },
+  "esp-jalon-unilateral-arrodillado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-unilateral-arrodillado-192.223f6f6f.webp",
+      "512": "imagenes/ejercicio/esp-jalon-unilateral-arrodillado-512.db180bcb.webp"
+    },
+    "color": "#44326c"
   },
   "esp-jalon-unilateral-inclinado": {
     "proporcion": [
@@ -2192,6 +2830,28 @@
     },
     "color": "#422e70"
   },
+  "esp-pullover-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-maquina-192.293b122e.webp",
+      "512": "imagenes/ejercicio/esp-pullover-maquina-512.58d200d1.webp"
+    },
+    "color": "#4b3775"
+  },
+  "esp-pullover-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-polea-cuerda-192.fe08a337.webp",
+      "512": "imagenes/ejercicio/esp-pullover-polea-cuerda-512.6cef9353.webp"
+    },
+    "color": "#44346b"
+  },
   "esp-pullover-unilateral": {
     "proporcion": [
       1,
@@ -2203,6 +2863,28 @@
     },
     "color": "#452e76"
   },
+  "esp-rack-pull": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-rack-pull-192.b7fabf85.webp",
+      "512": "imagenes/ejercicio/esp-rack-pull-512.60a2ef1d.webp"
+    },
+    "color": "#50377d"
+  },
+  "esp-remo-apoyo-pecho-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-apoyo-pecho-maquina-192.469634b5.webp",
+      "512": "imagenes/ejercicio/esp-remo-apoyo-pecho-maquina-512.3cbb2b5a.webp"
+    },
+    "color": "#4b3679"
+  },
   "esp-remo-barra": {
     "proporcion": [
       1,
@@ -2213,6 +2895,17 @@
       "512": "imagenes/ejercicio/esp-remo-barra-512.98dcf968.webp"
     },
     "color": "#442f73"
+  },
+  "esp-remo-barra-supino": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-barra-supino-192.d9a520eb.webp",
+      "512": "imagenes/ejercicio/esp-remo-barra-supino-512.1c5a1bdc.webp"
+    },
+    "color": "#442e72"
   },
   "esp-remo-gironda": {
     "proporcion": [
@@ -2236,6 +2929,39 @@
     },
     "color": "#503582"
   },
+  "esp-remo-goma-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-goma-sentado-192.826ff07a.webp",
+      "512": "imagenes/ejercicio/esp-remo-goma-sentado-512.ea45515a.webp"
+    },
+    "color": "#49307a"
+  },
+  "esp-remo-invertido-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-invertido-multipower-192.f6140788.webp",
+      "512": "imagenes/ejercicio/esp-remo-invertido-multipower-512.bf5321a8.webp"
+    },
+    "color": "#3b2c60"
+  },
+  "esp-remo-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-kettlebell-192.b7cce5ef.webp",
+      "512": "imagenes/ejercicio/esp-remo-kettlebell-512.2b34efc8.webp"
+    },
+    "color": "#4d347c"
+  },
   "esp-remo-mancuerna": {
     "proporcion": [
       1,
@@ -2246,6 +2972,17 @@
       "512": "imagenes/ejercicio/esp-remo-mancuerna-512.ef312881.webp"
     },
     "color": "#4a3477"
+  },
+  "esp-remo-mancuernas-banco-inclinado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-mancuernas-banco-inclinado-192.6632c467.webp",
+      "512": "imagenes/ejercicio/esp-remo-mancuernas-banco-inclinado-512.9df1d1c6.webp"
+    },
+    "color": "#443170"
   },
   "esp-remo-maquina": {
     "proporcion": [
@@ -2280,6 +3017,17 @@
     },
     "color": "#4a3280"
   },
+  "esp-remo-polea-agarre-ancho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-polea-agarre-ancho-192.c43b3741.webp",
+      "512": "imagenes/ejercicio/esp-remo-polea-agarre-ancho-512.0039ded2.webp"
+    },
+    "color": "#493276"
+  },
   "esp-remo-polea-unilateral": {
     "proporcion": [
       1,
@@ -2312,6 +3060,17 @@
       "512": "imagenes/ejercicio/esp-remo-t-512.a804cf00.webp"
     },
     "color": "#442e75"
+  },
+  "esp-remo-unilateral-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-remo-unilateral-maquina-192.e2ec521b.webp",
+      "512": "imagenes/ejercicio/esp-remo-unilateral-maquina-512.93882c96.webp"
+    },
+    "color": "#50397b"
   },
   "esp-seal-row": {
     "proporcion": [
@@ -2431,6 +3190,17 @@
     },
     "color": "#5b4377"
   },
+  "gem-burro-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-burro-maquina-192.82be78ab.webp",
+      "512": "imagenes/ejercicio/gem-burro-maquina-512.8f12c6ed.webp"
+    },
+    "color": "#43306d"
+  },
   "gem-maquina-de-pie": {
     "proporcion": [
       1,
@@ -2452,6 +3222,17 @@
       "512": "imagenes/ejercicio/gem-prensa-512.6db352f2.webp"
     },
     "color": "#46366c"
+  },
+  "gem-prensa-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-prensa-unilateral-192.e99c4e17.webp",
+      "512": "imagenes/ejercicio/gem-prensa-unilateral-512.502865c7.webp"
+    },
+    "color": "#47366c"
   },
   "gem-sentado-maquina": {
     "proporcion": [
@@ -2486,6 +3267,17 @@
     },
     "color": "#473470"
   },
+  "gem-talones-de-pie-sin-peso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-talones-de-pie-sin-peso-192.21d89692.webp",
+      "512": "imagenes/ejercicio/gem-talones-de-pie-sin-peso-512.f4e5ee0e.webp"
+    },
+    "color": "#3e3064"
+  },
   "gem-talones-step-multipower": {
     "proporcion": [
       1,
@@ -2496,6 +3288,39 @@
       "512": "imagenes/ejercicio/gem-talones-step-multipower-512.5b2a8508.webp"
     },
     "color": "#3f3263"
+  },
+  "gem-talones-una-pierna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-talones-una-pierna-192.53d6b6bc.webp",
+      "512": "imagenes/ejercicio/gem-talones-una-pierna-512.0fd25680.webp"
+    },
+    "color": "#413369"
+  },
+  "gem-talones-una-pierna-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-talones-una-pierna-mancuerna-192.6cfb08e4.webp",
+      "512": "imagenes/ejercicio/gem-talones-una-pierna-mancuerna-512.93619453.webp"
+    },
+    "color": "#42326c"
+  },
+  "gem-tibial-pared": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/gem-tibial-pared-192.d0b85c12.webp",
+      "512": "imagenes/ejercicio/gem-tibial-pared-512.ab81d03c.webp"
+    },
+    "color": "#3d3161"
   },
   "gem-unilateral-multipower": {
     "proporcion": [
@@ -2508,6 +3333,39 @@
     },
     "color": "#423266"
   },
+  "glu-abduccion-goma-sentado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-goma-sentado-192.cbe9bcb3.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-goma-sentado-512.93d681d5.webp"
+    },
+    "color": "#3e2768"
+  },
+  "glu-abduccion-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-polea-192.8b55a27a.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-polea-512.12e44c92.webp"
+    },
+    "color": "#3c2668"
+  },
+  "glu-abduccion-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-abduccion-tumbado-192.168e8d7e.webp",
+      "512": "imagenes/ejercicio/glu-abduccion-tumbado-512.9f8cad97.webp"
+    },
+    "color": "#3c2663"
+  },
   "glu-abducciones-maquina": {
     "proporcion": [
       1,
@@ -2518,6 +3376,17 @@
       "512": "imagenes/ejercicio/glu-abducciones-maquina-512.c77857c8.webp"
     },
     "color": "#4a3d6e"
+  },
+  "glu-almeja-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-almeja-goma-192.d7c10a0a.webp",
+      "512": "imagenes/ejercicio/glu-almeja-goma-512.0bb65a70.webp"
+    },
+    "color": "#41276d"
   },
   "glu-bulgara-gluteo": {
     "proporcion": [
@@ -2563,6 +3432,28 @@
     },
     "color": "#443469"
   },
+  "glu-hip-thrust-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-goma-192.8ca3a64b.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-goma-512.a7612057.webp"
+    },
+    "color": "#44306f"
+  },
+  "glu-hip-thrust-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-mancuerna-192.52036508.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-mancuerna-512.8c323d92.webp"
+    },
+    "color": "#402f6b"
+  },
   "glu-hip-thrust-maquina": {
     "proporcion": [
       1,
@@ -2584,6 +3475,17 @@
       "512": "imagenes/ejercicio/glu-hip-thrust-multipower-512.20e64c77.webp"
     },
     "color": "#47376c"
+  },
+  "glu-hip-thrust-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-hip-thrust-unilateral-192.72490ed9.webp",
+      "512": "imagenes/ejercicio/glu-hip-thrust-unilateral-512.8dd6ea6b.webp"
+    },
+    "color": "#442f72"
   },
   "glu-hip-thrust-unilateral-barra": {
     "proporcion": [
@@ -2618,6 +3520,17 @@
     },
     "color": "#412e6b"
   },
+  "glu-paso-lateral-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-paso-lateral-goma-192.4305fa68.webp",
+      "512": "imagenes/ejercicio/glu-paso-lateral-goma-512.a2231cc5.webp"
+    },
+    "color": "#452974"
+  },
   "glu-patada-cuadrupedia": {
     "proporcion": [
       1,
@@ -2629,6 +3542,28 @@
     },
     "color": "#473471"
   },
+  "glu-patada-goma-cuadrupedia": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-goma-cuadrupedia-192.28a726f6.webp",
+      "512": "imagenes/ejercicio/glu-patada-goma-cuadrupedia-512.fb4c0774.webp"
+    },
+    "color": "#3f286c"
+  },
+  "glu-patada-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-patada-maquina-192.9459be22.webp",
+      "512": "imagenes/ejercicio/glu-patada-maquina-512.2371337b.webp"
+    },
+    "color": "#3f2965"
+  },
   "glu-patada-polea-baja": {
     "proporcion": [
       1,
@@ -2639,6 +3574,28 @@
       "512": "imagenes/ejercicio/glu-patada-polea-baja-512.2deb40fd.webp"
     },
     "color": "#422e6c"
+  },
+  "glu-peso-muerto-sumo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-peso-muerto-sumo-192.bbaa218e.webp",
+      "512": "imagenes/ejercicio/glu-peso-muerto-sumo-512.f2fe6431.webp"
+    },
+    "color": "#43346b"
+  },
+  "glu-peso-muerto-trap-bar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-peso-muerto-trap-bar-192.4a3780b7.webp",
+      "512": "imagenes/ejercicio/glu-peso-muerto-trap-bar-512.a7701984.webp"
+    },
+    "color": "#433767"
   },
   "glu-prensa-gluteo": {
     "proporcion": [
@@ -2662,6 +3619,50 @@
     },
     "color": "#3b2965"
   },
+  "glu-puente-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-barra-192.4f2cff26.webp",
+      "512": "imagenes/ejercicio/glu-puente-barra-512.f8873952.webp"
+    },
+    "color": "#3f2e67"
+  },
+  "glu-puente-una-pierna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-puente-una-pierna-192.a374e126.webp",
+      "512": "imagenes/ejercicio/glu-puente-una-pierna-512.fd7cc9da.webp"
+    },
+    "color": "#3c2b66"
+  },
+  "glu-reverse-hyper-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-banco-192.7c7ca93e.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-banco-512.206075ab.webp"
+    },
+    "color": "#3b2865"
+  },
+  "glu-reverse-hyper-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-reverse-hyper-maquina-192.590f27c5.webp",
+      "512": "imagenes/ejercicio/glu-reverse-hyper-maquina-512.1e5c4e51.webp"
+    },
+    "color": "#3c2e62"
+  },
   "glu-reverse-hyper-multipower": {
     "proporcion": [
       1,
@@ -2672,6 +3673,28 @@
       "512": "imagenes/ejercicio/glu-reverse-hyper-multipower-512.b167a8d6.webp"
     },
     "color": "#432f6a"
+  },
+  "glu-swing-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-swing-kettlebell-192.5ddcbdd7.webp",
+      "512": "imagenes/ejercicio/glu-swing-kettlebell-512.0197e243.webp"
+    },
+    "color": "#3a2a64"
+  },
+  "glu-zancadas-atras-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/glu-zancadas-atras-deficit-192.48f0e8f9.webp",
+      "512": "imagenes/ejercicio/glu-zancadas-atras-deficit-512.e6b6d7f1.webp"
+    },
+    "color": "#432e72"
   },
   "grupo-abdominales": {
     "proporcion": [
@@ -3700,6 +4723,72 @@
     },
     "color": "#453667"
   },
+  "isq-buenos-dias-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-barra-192.0f7ff576.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-barra-512.9fb1f122.webp"
+    },
+    "color": "#3f3168"
+  },
+  "isq-buenos-dias-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-goma-192.9ddd68c8.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-goma-512.23c1521c.webp"
+    },
+    "color": "#3c2e67"
+  },
+  "isq-curl-deslizante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-deslizante-192.040c5761.webp",
+      "512": "imagenes/ejercicio/isq-curl-deslizante-512.d827e36f.webp"
+    },
+    "color": "#3e286f"
+  },
+  "isq-curl-goma-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-goma-tumbado-192.cac239d0.webp",
+      "512": "imagenes/ejercicio/isq-curl-goma-tumbado-512.f2362faa.webp"
+    },
+    "color": "#3e286d"
+  },
+  "isq-curl-nordico": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-nordico-192.6ddd9fe5.webp",
+      "512": "imagenes/ejercicio/isq-curl-nordico-512.36d2ce76.webp"
+    },
+    "color": "#3e2b6d"
+  },
+  "isq-curl-nordico-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-nordico-goma-192.ee8461d2.webp",
+      "512": "imagenes/ejercicio/isq-curl-nordico-goma-512.fdfd70ce.webp"
+    },
+    "color": "#412d70"
+  },
   "isq-extensiones-45-isquio": {
     "proporcion": [
       1,
@@ -3710,6 +4799,17 @@
       "512": "imagenes/ejercicio/isq-extensiones-45-isquio-512.76d9f65c.webp"
     },
     "color": "#3f2d63"
+  },
+  "isq-ghr": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-ghr-192.1f998ce7.webp",
+      "512": "imagenes/ejercicio/isq-ghr-512.f8c3db69.webp"
+    },
+    "color": "#3b266a"
   },
   "isq-leg-curl-de-pie": {
     "proporcion": [
@@ -3744,6 +4844,17 @@
     },
     "color": "#48346c"
   },
+  "isq-leg-curl-tumbado-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-tumbado-unilateral-192.edd927e0.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-tumbado-unilateral-512.bd9d7d6f.webp"
+    },
+    "color": "#402873"
+  },
   "isq-peso-muerto-convencional": {
     "proporcion": [
       1,
@@ -3754,6 +4865,39 @@
       "512": "imagenes/ejercicio/isq-peso-muerto-convencional-512.e3f4bf79.webp"
     },
     "color": "#4b3a72"
+  },
+  "isq-peso-muerto-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-deficit-192.5f11eea7.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-deficit-512.82233428.webp"
+    },
+    "color": "#443470"
+  },
+  "isq-peso-muerto-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-pausa-192.69a825c5.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-pausa-512.d24faf92.webp"
+    },
+    "color": "#44346f"
+  },
+  "isq-peso-muerto-piernas-rigidas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-piernas-rigidas-192.38923eff.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-piernas-rigidas-512.81ce2c67.webp"
+    },
+    "color": "#443471"
   },
   "isq-peso-muerto-rumano": {
     "proporcion": [
@@ -3777,6 +4921,50 @@
     },
     "color": "#412c6b"
   },
+  "isq-puente-talones-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-puente-talones-banco-192.fe5d7ddf.webp",
+      "512": "imagenes/ejercicio/isq-puente-talones-banco-512.a1fa4cec.webp"
+    },
+    "color": "#3a286a"
+  },
+  "isq-rdl-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-goma-192.4d149975.webp",
+      "512": "imagenes/ejercicio/isq-rdl-goma-512.f38c72d8.webp"
+    },
+    "color": "#3e2d6e"
+  },
+  "isq-rdl-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-kettlebell-192.c7a28834.webp",
+      "512": "imagenes/ejercicio/isq-rdl-kettlebell-512.005eb405.webp"
+    },
+    "color": "#3e2e68"
+  },
+  "isq-rdl-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-polea-192.b23a789c.webp",
+      "512": "imagenes/ejercicio/isq-rdl-polea-512.6664940e.webp"
+    },
+    "color": "#433270"
+  },
   "isq-rumano-mancuernas": {
     "proporcion": [
       1,
@@ -3787,6 +4975,50 @@
       "512": "imagenes/ejercicio/isq-rumano-mancuernas-512.c5ae1b1f.webp"
     },
     "color": "#442f6c"
+  },
+  "lum-bird-dog": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-bird-dog-192.417bfedb.webp",
+      "512": "imagenes/ejercicio/lum-bird-dog-512.6d86877e.webp"
+    },
+    "color": "#3a1e70"
+  },
+  "lum-extension-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-extension-maquina-192.1e2a1cee.webp",
+      "512": "imagenes/ejercicio/lum-extension-maquina-512.443c5948.webp"
+    },
+    "color": "#432578"
+  },
+  "lum-hiperextensiones-horizontal": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-hiperextensiones-horizontal-192.45b7c689.webp",
+      "512": "imagenes/ejercicio/lum-hiperextensiones-horizontal-512.8ef76e41.webp"
+    },
+    "color": "#40207a"
+  },
+  "lum-superman": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/lum-superman-192.a09922ba.webp",
+      "512": "imagenes/ejercicio/lum-superman-512.9570a0ce.webp"
+    },
+    "color": "#381d6d"
   },
   "manual": {
     "proporcion": [
@@ -4506,6 +5738,17 @@
     },
     "color": "#56396b"
   },
+  "pec-aperturas-inclinadas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-inclinadas-192.c2f1158c.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-inclinadas-512.a405f6c2.webp"
+    },
+    "color": "#483272"
+  },
   "pec-aperturas-planas": {
     "proporcion": [
       1,
@@ -4517,6 +5760,17 @@
     },
     "color": "#46376c"
   },
+  "pec-aperturas-polea-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-aperturas-polea-tumbado-192.2dcacdbe.webp",
+      "512": "imagenes/ejercicio/pec-aperturas-polea-tumbado-512.b5fb9813.webp"
+    },
+    "color": "#4a3272"
+  },
   "pec-cruce-inclinado-polea-baja": {
     "proporcion": [
       1,
@@ -4527,6 +5781,17 @@
       "512": "imagenes/ejercicio/pec-cruce-inclinado-polea-baja-512.1f3d8184.webp"
     },
     "color": "#4a3771"
+  },
+  "pec-cruce-media-altura": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-cruce-media-altura-192.7d29255c.webp",
+      "512": "imagenes/ejercicio/pec-cruce-media-altura-512.bd825493.webp"
+    },
+    "color": "#4a3472"
   },
   "pec-cruces-polea-alta": {
     "proporcion": [
@@ -4550,6 +5815,72 @@
     },
     "color": "#443869"
   },
+  "pec-flexiones": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-192.942c7494.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-512.3239eb65.webp"
+    },
+    "color": "#3c2b64"
+  },
+  "pec-flexiones-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-deficit-192.bd078d2a.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-deficit-512.8d0a7561.webp"
+    },
+    "color": "#3e2b66"
+  },
+  "pec-flexiones-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-goma-192.864b0a7f.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-goma-512.23b1197b.webp"
+    },
+    "color": "#3e2a68"
+  },
+  "pec-flexiones-pies-elevados": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-pies-elevados-192.23a43930.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-pies-elevados-512.ccf3d967.webp"
+    },
+    "color": "#3e2b65"
+  },
+  "pec-flexiones-rodillas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-flexiones-rodillas-192.edb51671.webp",
+      "512": "imagenes/ejercicio/pec-flexiones-rodillas-512.e7e7cdc4.webp"
+    },
+    "color": "#3e2a66"
+  },
+  "pec-floor-press-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-floor-press-mancuernas-192.1a27def9.webp",
+      "512": "imagenes/ejercicio/pec-floor-press-mancuernas-512.60a41c14.webp"
+    },
+    "color": "#43316b"
+  },
   "pec-fondos-ancho": {
     "proporcion": [
       1,
@@ -4560,6 +5891,17 @@
       "512": "imagenes/ejercicio/pec-fondos-ancho-512.3d3c83c0.webp"
     },
     "color": "#3b2a67"
+  },
+  "pec-fondos-asistidos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-fondos-asistidos-192.1b8c278b.webp",
+      "512": "imagenes/ejercicio/pec-fondos-asistidos-512.212e63bf.webp"
+    },
+    "color": "#493172"
   },
   "pec-hex-press": {
     "proporcion": [
@@ -4583,6 +5925,28 @@
     },
     "color": "#3e3361"
   },
+  "pec-press-banca-larsen": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-larsen-192.8ed65521.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-larsen-512.ecac6c51.webp"
+    },
+    "color": "#443469"
+  },
+  "pec-press-banca-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-banca-pausa-192.56f96a03.webp",
+      "512": "imagenes/ejercicio/pec-press-banca-pausa-512.c28ded50.webp"
+    },
+    "color": "#443567"
+  },
   "pec-press-declinado-barra": {
     "proporcion": [
       1,
@@ -4604,6 +5968,17 @@
       "512": "imagenes/ejercicio/pec-press-declinado-mancuernas-512.f7220b74.webp"
     },
     "color": "#423367"
+  },
+  "pec-press-goma-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-goma-de-pie-192.dd954807.webp",
+      "512": "imagenes/ejercicio/pec-press-goma-de-pie-512.5900e1d6.webp"
+    },
+    "color": "#442d6c"
   },
   "pec-press-inclinado-barra": {
     "proporcion": [
@@ -4681,6 +6056,17 @@
       "512": "imagenes/ejercicio/pec-press-plano-multipower-512.8f0f8fd6.webp"
     },
     "color": "#4f3b78"
+  },
+  "pec-press-polea-de-pie": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/pec-press-polea-de-pie-192.f28f0f5c.webp",
+      "512": "imagenes/ejercicio/pec-press-polea-de-pie-512.3b94e7a0.webp"
+    },
+    "color": "#432f69"
   },
   "portada-alcohol": {
     "proporcion": [
@@ -6159,6 +7545,61 @@
     },
     "color": "#443470"
   },
+  "tri-extension-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-maquina-192.f6751ec5.webp",
+      "512": "imagenes/ejercicio/tri-extension-maquina-512.84d6be9b.webp"
+    },
+    "color": "#493772"
+  },
+  "tri-extension-trasnuca-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-trasnuca-mancuerna-192.77111b26.webp",
+      "512": "imagenes/ejercicio/tri-extension-trasnuca-mancuerna-512.6c23f405.webp"
+    },
+    "color": "#422e72"
+  },
+  "tri-extension-trasnuca-polea-cuerda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-trasnuca-polea-cuerda-192.66e240ef.webp",
+      "512": "imagenes/ejercicio/tri-extension-trasnuca-polea-cuerda-512.b16ff8d9.webp"
+    },
+    "color": "#463276"
+  },
+  "tri-extension-unilateral-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extension-unilateral-polea-192.af7aa9ae.webp",
+      "512": "imagenes/ejercicio/tri-extension-unilateral-polea-512.500e9582.webp"
+    },
+    "color": "#402d6c"
+  },
+  "tri-extensiones-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-extensiones-goma-192.178003e8.webp",
+      "512": "imagenes/ejercicio/tri-extensiones-goma-512.23685c69.webp"
+    },
+    "color": "#3e2c6b"
+  },
   "tri-extensiones-polea-barra": {
     "proporcion": [
       1,
@@ -6181,6 +7622,17 @@
     },
     "color": "#45346a"
   },
+  "tri-flexiones-diamante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-flexiones-diamante-192.80b77413.webp",
+      "512": "imagenes/ejercicio/tri-flexiones-diamante-512.4f9299ae.webp"
+    },
+    "color": "#3c2d64"
+  },
   "tri-fondos-estrecho": {
     "proporcion": [
       1,
@@ -6191,6 +7643,17 @@
       "512": "imagenes/ejercicio/tri-fondos-estrecho-512.0b56034a.webp"
     },
     "color": "#3c2e61"
+  },
+  "tri-fondos-maquina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-fondos-maquina-192.1634db49.webp",
+      "512": "imagenes/ejercicio/tri-fondos-maquina-512.4bf78f54.webp"
+    },
+    "color": "#44346b"
   },
   "tri-katana": {
     "proporcion": [
@@ -6213,6 +7676,17 @@
       "512": "imagenes/ejercicio/tri-kaz-press-512.af01b260.webp"
     },
     "color": "#462e6c"
+  },
+  "tri-press-banca-cerrado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/tri-press-banca-cerrado-192.5e8e791b.webp",
+      "512": "imagenes/ejercicio/tri-press-banca-cerrado-512.b6828c39.webp"
+    },
+    "color": "#443669"
   },
   "tri-press-frances-barra": {
     "proporcion": [
