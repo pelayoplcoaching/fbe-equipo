@@ -23,6 +23,7 @@ export async function probarPausas({ navegador, check, base = 'http://localhost:
     }
   };
   const entrarComo = async (quien) => {
+    await p.waitForTimeout(600); // la demo guarda en el navegador con 150 ms de margen: cambiar de cuenta antes lo perderia
     for (let intento = 0; intento < 3; intento++) {
       await cerrarDialogos();
       const cambiar = p.getByRole('button', { name: 'Cambiar de cuenta' });

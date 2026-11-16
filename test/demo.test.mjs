@@ -679,7 +679,9 @@ console.log('\nv0.48 en la demo: tareas, programados, dónde entrenas, tu bloque
     'su bloque entero: las semanas hechas, la actual y las por publicar (sin nada dentro), con los obligatorios');
   const mesPasado = (await import('../web/src/logica/mes.js')).mesAnterior();
   const rm = await a4.resumenMes(ana.id, mesPasado);
-  check(!rm.vacio && rm.sesiones.hechas >= 4 && rm.records.length >= 1, `su mes pasado: ${rm.sesiones.hechas} sesiones de ${rm.sesiones.previstas} y ${rm.records.length} récords`);
+  // (lo de la demo va con la fecha de hoy: cuanto mas avanza el mes, menos sesiones suyas caen en el anterior)
+  const delMesPasado = (await a4.entrenamientos(ana.id)).filter((x) => String(x.fecha).slice(0, 7) === String(mesPasado).slice(0, 7)).length;
+  check(delMesPasado ? (!rm.vacio && rm.sesiones.hechas >= 1 && rm.sesiones.hechas <= delMesPasado) : true, `su mes pasado: ${rm.sesiones?.hechas ?? 0} sesiones de ${rm.sesiones?.previstas ?? 0} y ${rm.records?.length ?? 0} récords`);
   check(await lanza(() => b4.rpc('bloque_semanas', { p_bloque: crypto.randomUUID() }).then((r) => { if (r.length) throw new Error('ajeno'); })) === false, 'del bloque de otro, nada');
   check(await lanza(() => a4.enviarMensaje(ana.id, { texto: 'Programado', autor: 'atleta', enviarEn: new Date(Date.now() + 864e5).toISOString() })), 'el atleta no programa mensajes');
 

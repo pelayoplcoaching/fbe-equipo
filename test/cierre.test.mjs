@@ -118,7 +118,9 @@ check((await q(`select count(*)::int as n from public.notificaciones where usuar
 await q(`insert into public.pesos (atleta_id, fecha, kg) values ($1, $2, 72.5), ($1, $2::date - 30, 74)`, [atletaA, hoyM]);
 await como(ana);
 const res = (await q(`select public.atleta_resumen_semana($1) as r`, [atletaA]))[0].r;
-check(res && res.lunes === lunesM && res.sesiones.hechas === 1 && res.sesiones.previstas === 1 && Number(res.sesiones.rpe_sesion) === 8 && res.sesiones.series === 4 && Number(res.sesiones.toneladas) === 1.6 && Number(res.peso.kg) === 72.5 && Number(res.peso.cambio_4s) === -1.5 && res.checkin === null && res.sesiones_abiertas === 0 && res.sin_leer === null, 'Ana: su semana (sesión cerrada, 4 series, 1,6 t, peso y su cambio en 4 semanas)');
+// (las series son de hace 4 horas: un lunes de madrugada caen en la semana anterior y esta semana aun no tiene nada hecho)
+const serieEstaSemana = (await q(`select (((now() - interval '4 hours 40 minutes') at time zone 'Europe/Madrid')::date >= $1::date) as ok`, [lunesM]))[0].ok;
+check(res && res.lunes === lunesM && (!serieEstaSemana || (res.sesiones.hechas === 1 && res.sesiones.previstas === 1 && Number(res.sesiones.rpe_sesion) === 8 && res.sesiones.series === 4 && Number(res.sesiones.toneladas) === 1.6)) && Number(res.peso.kg) === 72.5 && Number(res.peso.cambio_4s) === -1.5 && res.checkin === null && res.sesiones_abiertas === 0 && res.sin_leer === null, 'Ana: su semana (sesión cerrada, 4 series, 1,6 t, peso y su cambio en 4 semanas)');
 check((await q(`select public.atleta_resumen_semana($1) as r`, [atletaB]))[0].r === null, 'la de Bea, para Ana, nada');
 // (revisión de la 054) sin ficha, o el coach con la verificación en dos pasos sin hacer, tampoco (antes el NULL lo dejaba pasar)
 const suelto = await usuario('suelto@x.test');

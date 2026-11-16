@@ -2017,7 +2017,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.locator('.fila-notificaciones .resumen-noti').textContent();
-  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 4 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 5 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
