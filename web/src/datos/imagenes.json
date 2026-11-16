@@ -175,6 +175,17 @@
     },
     "color": "#39275c"
   },
+  "abd-inclinaciones-laterales": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-inclinaciones-laterales-192.307c68ea.webp",
+      "512": "imagenes/ejercicio/abd-inclinaciones-laterales-512.d8e4ab87.webp"
+    },
+    "color": "#3f3068"
+  },
   "abd-l-sit": {
     "proporcion": [
       1,
@@ -429,6 +440,17 @@
       "512": "imagenes/ejercicio/adu-sentadilla-cosaca-512.1f7d5161.webp"
     },
     "color": "#433172"
+  },
+  "adu-zancada-lateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/adu-zancada-lateral-192.6ff26e62.webp",
+      "512": "imagenes/ejercicio/adu-zancada-lateral-512.9c2c1350.webp"
+    },
+    "color": "#422474"
   },
   "album": {
     "proporcion": [
@@ -3017,6 +3039,17 @@
     },
     "color": "#422e70"
   },
+  "esp-pullover-mancuerna": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-pullover-mancuerna-192.289cee47.webp",
+      "512": "imagenes/ejercicio/esp-pullover-mancuerna-512.3ecca6b1.webp"
+    },
+    "color": "#3e226e"
+  },
   "esp-pullover-maquina": {
     "proporcion": [
       1,
@@ -5140,6 +5173,17 @@
       "512": "imagenes/ejercicio/isq-rdl-kettlebell-512.005eb405.webp"
     },
     "color": "#3e2e68"
+  },
+  "isq-rdl-multipower": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-multipower-192.246ddfa8.webp",
+      "512": "imagenes/ejercicio/isq-rdl-multipower-512.daadcb4b.webp"
+    },
+    "color": "#50347b"
   },
   "isq-rdl-polea": {
     "proporcion": [
