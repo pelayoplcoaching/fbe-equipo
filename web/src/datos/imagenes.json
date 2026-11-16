@@ -1,4 +1,15 @@
 {
+  "abd-ab-rollout-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-ab-rollout-barra-192.ecab0fcc.webp",
+      "512": "imagenes/ejercicio/abd-ab-rollout-barra-512.a1c64488.webp"
+    },
+    "color": "#392460"
+  },
   "abd-ab-wheel": {
     "proporcion": [
       1,
@@ -20,6 +31,39 @@
       "512": "imagenes/ejercicio/abd-crunch-banco-inclinado-512.4d0dfb66.webp"
     },
     "color": "#3f3464"
+  },
+  "abd-crunch-bicicleta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-bicicleta-192.67b78348.webp",
+      "512": "imagenes/ejercicio/abd-crunch-bicicleta-512.6a943ec8.webp"
+    },
+    "color": "#3d2a65"
+  },
+  "abd-crunch-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-goma-192.6a752756.webp",
+      "512": "imagenes/ejercicio/abd-crunch-goma-512.36e1a049.webp"
+    },
+    "color": "#3b2266"
+  },
+  "abd-crunch-inverso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-crunch-inverso-192.152d0b61.webp",
+      "512": "imagenes/ejercicio/abd-crunch-inverso-512.4ad3b109.webp"
+    },
+    "color": "#412e6a"
   },
   "abd-crunch-maquina": {
     "proporcion": [
@@ -54,6 +98,61 @@
     },
     "color": "#3f2c6c"
   },
+  "abd-dead-bug": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-dead-bug-192.07a227c8.webp",
+      "512": "imagenes/ejercicio/abd-dead-bug-512.c8e08037.webp"
+    },
+    "color": "#372960"
+  },
+  "abd-dragon-flag": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-dragon-flag-192.ebbdc5a9.webp",
+      "512": "imagenes/ejercicio/abd-dragon-flag-512.c5c249fc.webp"
+    },
+    "color": "#3b2466"
+  },
+  "abd-elevacion-piernas-paralelas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-elevacion-piernas-paralelas-192.df4bd9b2.webp",
+      "512": "imagenes/ejercicio/abd-elevacion-piernas-paralelas-512.50dacc6c.webp"
+    },
+    "color": "#3a2762"
+  },
+  "abd-elevacion-piernas-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-elevacion-piernas-tumbado-192.16a2be22.webp",
+      "512": "imagenes/ejercicio/abd-elevacion-piernas-tumbado-512.b1d6643a.webp"
+    },
+    "color": "#3b2863"
+  },
+  "abd-hanging-knee-raises": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-hanging-knee-raises-192.f5116749.webp",
+      "512": "imagenes/ejercicio/abd-hanging-knee-raises-512.c1c9ba01.webp"
+    },
+    "color": "#3a2864"
+  },
   "abd-hanging-leg-raises": {
     "proporcion": [
       1,
@@ -64,6 +163,28 @@
       "512": "imagenes/ejercicio/abd-hanging-leg-raises-512.94d1b4c1.webp"
     },
     "color": "#3d2866"
+  },
+  "abd-hollow-body": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-hollow-body-192.53653018.webp",
+      "512": "imagenes/ejercicio/abd-hollow-body-512.ea21662b.webp"
+    },
+    "color": "#39275c"
+  },
+  "abd-l-sit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-l-sit-192.1c8d10a8.webp",
+      "512": "imagenes/ejercicio/abd-l-sit-512.9fabe63d.webp"
+    },
+    "color": "#3f286b"
   },
   "abd-leg-raises-declinado": {
     "proporcion": [
@@ -76,6 +197,50 @@
     },
     "color": "#403365"
   },
+  "abd-lenador-polea-alta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-lenador-polea-alta-192.701d6b60.webp",
+      "512": "imagenes/ejercicio/abd-lenador-polea-alta-512.e94d9508.webp"
+    },
+    "color": "#432c6d"
+  },
+  "abd-lenador-polea-baja": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-lenador-polea-baja-192.5c583389.webp",
+      "512": "imagenes/ejercicio/abd-lenador-polea-baja-512.3488c74f.webp"
+    },
+    "color": "#432972"
+  },
+  "abd-pallof-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-pallof-goma-192.61ea04a4.webp",
+      "512": "imagenes/ejercicio/abd-pallof-goma-512.67f9e0bc.webp"
+    },
+    "color": "#40276f"
+  },
+  "abd-paseo-maleta": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-paseo-maleta-192.eea15221.webp",
+      "512": "imagenes/ejercicio/abd-paseo-maleta-512.1e3d2343.webp"
+    },
+    "color": "#412672"
+  },
   "abd-plancha": {
     "proporcion": [
       1,
@@ -86,6 +251,28 @@
       "512": "imagenes/ejercicio/abd-plancha-512.08985428.webp"
     },
     "color": "#392561"
+  },
+  "abd-plancha-lateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-plancha-lateral-192.1456f07f.webp",
+      "512": "imagenes/ejercicio/abd-plancha-lateral-512.8891e051.webp"
+    },
+    "color": "#3a2c66"
+  },
+  "abd-plancha-toque-hombros": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/abd-plancha-toque-hombros-192.330b9176.webp",
+      "512": "imagenes/ejercicio/abd-plancha-toque-hombros-512.b67c2b47.webp"
+    },
+    "color": "#443468"
   },
   "abd-press-pallof": {
     "proporcion": [
