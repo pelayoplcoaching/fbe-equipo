@@ -11,8 +11,9 @@
 --     los datos de la cámara. Es dato de salud, como el menú: hace falta el consentimiento del atleta. La sube solo el
 --     atleta (plato_foto_guardar) y al subirla la comida queda marcada como hecha. La ven él y su coach. La quitan él o
 --     su coach (plato_foto_quitar).
---   * Se guardan 30 días: pasado ese tiempo dejan de verse y se borran solas (al subir cualquier foto nueva y, si la
---     base tiene pg_cron, cada noche). La comida sigue en el menú como hecha; solo se va la foto.
+--   * Se guardan 30 días: pasado ese tiempo dejan de verse y se borran solas (al abrir la app cualquiera con sesión, al
+--     subir una foto nueva y, si la base tiene pg_cron, cada noche). La comida sigue en el menú como hecha; solo se va
+--     la foto. Al retirar el consentimiento de datos de salud, se borran todas las suyas.
 --   * Se borran con la comida y con el atleta. Van en la descarga de datos del atleta mientras existan. No van en la
 --     copia completa del coach: son temporales.
 --
@@ -48,6 +49,10 @@ language plpgsql set search_path = '' as $$
 begin
   if current_user in ('authenticated', 'anon') then
     if tg_op = 'INSERT' then new.con_foto := false; else new.con_foto := old.con_foto; end if;
+  end if;
+  -- Una comida con foto no cambia de día (la foto es de ese día)
+  if tg_op = 'UPDATE' and old.con_foto and new.fecha is distinct from old.fecha then
+    raise exception 'Una comida con foto no se cambia de día' using errcode = '22023';
   end if;
   return new;
 end $$;
@@ -102,53 +107,95 @@ begin
   return n;
 end $$;
 
--- El atleta sube (o cambia) la foto de una comida suya: la comida queda hecha
-create or replace function public.plato_foto_guardar(p_entrada uuid, p_foto text, p_mini text) returns void
+-- La misma limpieza, para que la app la pida al abrirse (una vez por sesión): así no depende de pg_cron. Solo borra lo caducado.
+create or replace function public.platos_limpiar() returns void
 language plpgsql security definer set search_path = '' as $$
-declare v public.menu_comidas; v_hoy date := (now() at time zone 'Europe/Madrid')::date;
 begin
-  select * into v from public.menu_comidas where id = p_entrada;
-  if v.id is null or public.mi_atleta_id() is null or v.atleta_id is distinct from public.mi_atleta_id() then
-    raise exception 'Eso no es tuyo' using errcode = '42501';
-  end if;
+  if auth.uid() is null then raise exception 'Sin sesión' using errcode = '42501'; end if;
+  perform fbe_privado.platos_purgar();
+end $$;
+
+-- El atleta sube (o cambia) la foto de una comida suya: la comida queda hecha. Sin p_entrada, la comida se apunta aquí
+-- mismo (p_fecha, p_toma y, si quiere, p_texto): o se guardan las dos cosas o ninguna. Devuelve el id de la comida.
+drop function if exists public.plato_foto_guardar(uuid, text, text);
+create or replace function public.plato_foto_guardar(p_entrada uuid, p_foto text, p_mini text,
+  p_fecha date default null, p_toma text default null, p_texto text default null) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare v public.menu_comidas; v_hoy date := (now() at time zone 'Europe/Madrid')::date; v_yo uuid := public.mi_atleta_id(); v_texto text;
+begin
+  if v_yo is null then raise exception 'Eso no es tuyo' using errcode = '42501'; end if;
   if public.esta_de_baja() then raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501'; end if;
-  if not public.consentimiento_salud_de_atleta(v.atleta_id) then
+  if not public.consentimiento_salud_de_atleta(v_yo) then
     raise exception 'Para guardar la foto del plato hace falta tu consentimiento de datos de salud' using errcode = '42501';
   end if;
-  -- (un día de margen por delante: quien está de viaje en otra zona horaria)
-  if v.fecha < v_hoy - 7 or v.fecha > v_hoy + 1 then raise exception 'La foto, de una comida de esta semana' using errcode = '22023'; end if;
   if p_foto is null or p_mini is null
      or char_length(p_foto) not between 200 and 400000 or p_foto !~ '^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$'
      or char_length(p_mini) not between 200 and 24000 or p_mini !~ '^data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}$' then
     raise exception 'Esa foto no vale' using errcode = '22023';
   end if;
-  -- Como mucho 12 fotos por día (sin contar la que se cambia)
+  if p_entrada is null then
+    v_texto := nullif(btrim(coalesce(p_texto, '')), '');
+    if p_fecha is null or p_toma is null then raise exception 'Falta el día o la comida' using errcode = '22023'; end if;
+    -- (un día de margen por delante: quien está de viaje en otra zona horaria)
+    if p_fecha < v_hoy - 7 or p_fecha > v_hoy + 1 then raise exception 'La foto, de una comida de esta semana' using errcode = '22023'; end if;
+    insert into public.menu_comidas (atleta_id, fecha, toma, texto, hecho) values (v_yo, p_fecha, p_toma, left(coalesce(v_texto, 'Foto del plato'), 120), true)
+      returning * into v;
+  else
+    -- (for update: quitar y cambiar a la vez no dejan «tiene foto» descuadrado)
+    select * into v from public.menu_comidas where id = p_entrada for update;
+    if v.id is null or v.atleta_id is distinct from v_yo then raise exception 'Eso no es tuyo' using errcode = '42501'; end if;
+    if v.fecha < v_hoy - 7 or v.fecha > v_hoy + 1 then raise exception 'La foto, de una comida de esta semana' using errcode = '22023'; end if;
+  end if;
+  -- Como mucho 12 fotos por día y 150 guardadas a la vez (sin contar la que se cambia)
   if (select count(*) from public.menu_fotos f where f.atleta_id = v.atleta_id and f.fecha = v.fecha and f.entrada_id <> v.id) >= 12 then
     raise exception 'Como mucho, 12 fotos por día' using errcode = '22023';
+  end if;
+  if (select count(*) from public.menu_fotos f where f.atleta_id = v.atleta_id and f.entrada_id <> v.id) >= 150 then
+    raise exception 'Tienes demasiadas fotos guardadas: quita alguna antes' using errcode = '22023';
   end if;
   insert into public.menu_fotos (entrada_id, atleta_id, fecha, foto, mini) values (v.id, v.atleta_id, v.fecha, p_foto, p_mini)
     on conflict (entrada_id) do update set foto = excluded.foto, mini = excluded.mini, fecha = excluded.fecha, creado_en = now();
   update public.menu_comidas set con_foto = true, hecho = true where id = v.id;
   perform fbe_privado.platos_purgar();
+  return v.id;
 end $$;
 
--- Quitar la foto (la comida se queda como esté): el atleta, las suyas; el coach, cualquiera
+-- Quitar la foto (la comida se queda como esté): el atleta, las suyas (también de baja: quitar no añade nada); el coach, cualquiera
 create or replace function public.plato_foto_quitar(p_entrada uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare v public.menu_comidas;
 begin
-  select * into v from public.menu_comidas where id = p_entrada;
+  select * into v from public.menu_comidas where id = p_entrada for update;
   if v.id is null then return; end if;
-  if not public.es_coach() then
-    if public.mi_atleta_id() is null or v.atleta_id is distinct from public.mi_atleta_id() then raise exception 'Eso no es tuyo' using errcode = '42501'; end if;
-    if public.esta_de_baja() then raise exception 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada' using errcode = '42501'; end if;
+  if not public.es_coach() and (public.mi_atleta_id() is null or v.atleta_id is distinct from public.mi_atleta_id()) then
+    raise exception 'Eso no es tuyo' using errcode = '42501';
   end if;
   delete from public.menu_fotos where entrada_id = v.id;
   update public.menu_comidas set con_foto = false where id = v.id;
 end $$;
 
+-- Al retirar el consentimiento de datos de salud, sus fotos se borran (el menú escrito se queda, como siempre). «before»,
+-- como el de la 051. Y al quedarse la ficha sin cuenta, también.
+create or replace function fbe_privado.platos_al_retirar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_atleta uuid;
+begin
+  if old.tipo = 'datos_salud' and old.revocado_en is null and (tg_op = 'DELETE' or new.revocado_en is not null)
+     and not exists (select 1 from public.consentimientos c where c.perfil_id = old.perfil_id and c.tipo = 'datos_salud' and c.revocado_en is null and c.id <> old.id) then
+    for v_atleta in select a.id from public.atletas a where a.perfil_id = old.perfil_id loop
+      delete from public.menu_fotos where atleta_id = v_atleta;
+      update public.menu_comidas set con_foto = false where atleta_id = v_atleta and con_foto;
+    end loop;
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+drop trigger if exists consentimientos_platos_al_retirar on public.consentimientos;
+create trigger consentimientos_platos_al_retirar before update or delete on public.consentimientos
+  for each row execute function fbe_privado.platos_al_retirar();
+
 comment on table public.menu_fotos is 'La foto del plato de una comida del menú (dato de salud). Se guarda 30 días.';
-comment on function public.plato_foto_guardar(uuid, text, text) is 'El atleta sube o cambia la foto de una comida suya: queda hecha. Con su consentimiento de salud.';
+comment on function public.plato_foto_guardar(uuid, text, text, date, text, text) is 'El atleta sube o cambia la foto de una comida suya (o la apunta con su foto): queda hecha. Con su consentimiento de salud.';
+comment on function public.platos_limpiar() is 'Borra las fotos de platos de más de 30 días. La pide la app al abrirse.';
 comment on function public.plato_foto_quitar(uuid) is 'Quita la foto de una comida. El atleta, las suyas; el coach, cualquiera.';
 
 -- Cada noche, si la base tiene pg_cron (si no, la limpieza corre igual al subir cualquier foto)
@@ -159,10 +206,10 @@ begin
       execute $q$select cron.schedule('fbe-platos', '17 3 * * *', 'select fbe_privado.platos_purgar()')$q$;
       raise notice 'FBE: limpieza de las fotos de platos programada (tarea fbe-platos, cada noche).';
     exception when others then
-      raise warning 'FBE: no se ha podido programar la tarea fbe-platos (%). Las fotos se limpian igual al subir una nueva.', sqlerrm;
+      raise warning 'FBE: no se ha podido programar la tarea fbe-platos (%). Las fotos las limpia igual la app al abrirse.', sqlerrm;
     end;
   else
-    raise notice 'FBE: sin pg_cron: las fotos de platos de más de 30 días se limpian al subir una nueva.';
+    raise notice 'FBE: sin pg_cron: las fotos de platos de más de 30 días las limpia la app al abrirse (platos_limpiar).';
   end if;
 end $$;
 

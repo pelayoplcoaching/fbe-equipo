@@ -4,7 +4,7 @@
 //  - FotoDeEntrada y PautaFuera: lo que se ve al abrir esa comida del menú.
 //  - HojaPlatosSemana: las fotos de la semana de un atleta, para la revisión semanal del coach.
 import { useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Hoja, Icono, Segmentos } from './comunes.jsx';
+import { useApp, useCarga, useUnaVez, Hoja, Icono, Segmentos, ErrorCaja } from './comunes.jsx';
 import { NOMBRE_TOMA, ordenarTomas } from '../logica/comidas.js';
 import { pautaFuera, proteinaPorComida, fotosPorDia, DIAS_FOTO, TEXTO_FOTO } from '../logica/platos.js';
 import { objetivoDelDia } from '../logica/nutricion.js';
@@ -130,6 +130,7 @@ export function FotoDeEntrada({ e }) {
   const { api } = useApp();
   const foto = useCarga(() => api.fotoPlato(e.id), [e.id]);
   if (foto.cargando && foto.datos === undefined) return <div class="plato-hueco cargando" role="status" aria-label="Cargando la foto" />;
+  if (foto.error) return <ErrorCaja error={foto.error} reintentar={() => foto.recargar(true)} />;
   if (!foto.datos?.foto) return <p class="peq secundario">La foto ya no se guarda: pasados {DIAS_FOTO} días se borran solas.</p>;
   return <img class="plato-vista" src={foto.datos.foto} alt={`Foto de ${e.texto === TEXTO_FOTO ? 'el plato' : e.texto}`} />;
 }

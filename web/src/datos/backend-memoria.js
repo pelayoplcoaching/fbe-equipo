@@ -235,7 +235,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const persistirYa = () => {
     if (!persistir) return;
     clearTimeout(temporizador);
-    temporizador = setTimeout(() => guardarLocal(clave, db), 150);
+    // (079) las fotos enteras de los platos no caben en el almacenamiento del navegador: en la demo se guarda la miniatura
+    temporizador = setTimeout(() => guardarLocal(clave, db.menu_fotos?.length ? { ...db, menu_fotos: db.menu_fotos.map((f) => ({ ...f, foto: f.mini })) } : db), 150);
   };
   // (051) Como fbe_privado.salud_borrar: lo que llegó de Salud y sus copias (lo que siga igual que lo dejó el atajo)
   const saludBorrarDemo = (a) => {
@@ -3431,6 +3432,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           for (const a of tabla('atletas').filter((x) => x.perfil_id === c.perfil_id)) {
             const i = tabla('integraciones').find((x) => x.atleta_id === a.id);
             if (i) Object.assign(i, { salud: false, salud_desde: null, salud_ultimo: null });
+            // (079) y las fotos de sus platos se borran
+            db.menu_fotos = tabla('menu_fotos').filter((x) => x.atleta_id !== a.id);
+            for (const m of tabla('menu_comidas')) if (m.atleta_id === a.id) m.con_foto = false;
             saludBorrarDemo(a.id);
           }
         }
@@ -3567,7 +3571,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         }
       }
       if (t === 'habitos') for (const fila of filas) protegerHabito(fila, c);
-      if (t === 'menu_comidas') { delete c.con_foto; for (const fila of filas) comprobarMenu({ ...fila, ...c }, fila); }   // (079) con_foto no se cambia desde la app
+      if (t === 'menu_comidas') { delete c.con_foto; for (const fila of filas) { comprobarMenu({ ...fila, ...c }, fila); if (fila.con_foto && 'fecha' in c && c.fecha !== fila.fecha) throw new Error('Una comida con foto no se cambia de día'); } }   // (079) con_foto no se cambia desde la app
       // Como la 023: tampoco al cambiarla, la misma receta dos veces en una comida para el mismo tipo de día
       if (t === 'recetas_atleta' && ('toma' in c || 'variante' in c)) for (const fila of filas) {
         const m = { ...fila, ...c };
@@ -3878,9 +3882,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
       // (077) los suplementos: todo por funciones (como la base)
       // (079) la foto del plato
+      if (nombre === 'platos_limpiar') { if (!sesion?.user) throw Object.assign(new Error('Sin sesión'), { code: '42501' }); for (const v of tabla('menu_fotos').filter((x) => Date.now() - Date.parse(x.creado_en) >= 30 * 864e5)) { const m = tabla('menu_comidas').find((x) => x.id === v.entrada_id); if (m) m.con_foto = false; tabla('menu_fotos').splice(tabla('menu_fotos').indexOf(v), 1); } persistirYa(); return null; }
       if (nombre === 'plato_foto_guardar' || nombre === 'plato_foto_quitar') {
         const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
-        const e = tabla('menu_comidas').find((x) => x.id === args?.p_entrada);
+        let e = tabla('menu_comidas').find((x) => x.id === args?.p_entrada);
         const purgar = () => {
           const viejas = tabla('menu_fotos').filter((x) => Date.now() - Date.parse(x.creado_en) >= 30 * 864e5);
           for (const v of viejas) { const m = tabla('menu_comidas').find((x) => x.id === v.entrada_id); if (m) m.con_foto = false; tabla('menu_fotos').splice(tabla('menu_fotos').indexOf(v), 1); }
@@ -3889,7 +3894,6 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!e) return null;
           if (!esCoach()) {
             if (!miAtletaId() || e.atleta_id !== miAtletaId()) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
-            if (deBaja()) throw Object.assign(new Error(BAJA), { code: '42501' });
           }
           const i = tabla('menu_fotos').findIndex((x) => x.entrada_id === e.id);
           if (i >= 0) tabla('menu_fotos').splice(i, 1);
@@ -3897,21 +3901,31 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           persistirYa();
           return null;
         }
-        if (!e || !miAtletaId() || e.atleta_id !== miAtletaId()) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
+        const yo = miAtletaId();
+        if (!yo || (args?.p_entrada && (!e || e.atleta_id !== yo))) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
         if (deBaja()) throw Object.assign(new Error(BAJA), { code: '42501' });
-        if (!consentimientoDe(e.atleta_id)) throw Object.assign(new Error('Para guardar la foto del plato hace falta tu consentimiento de datos de salud'), { code: '42501' });
+        if (!consentimientoDe(yo)) throw Object.assign(new Error('Para guardar la foto del plato hace falta tu consentimiento de datos de salud'), { code: '42501' });
         const hoyM = fMadrid();
-        if (e.fecha < sumar(hoyM, -7) || e.fecha > sumar(hoyM, 1)) throw Object.assign(new Error('La foto, de una comida de esta semana'), { code: '22023' });
         const vale = (v, max) => typeof v === 'string' && v.length >= 200 && v.length <= max && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(v);
         if (!vale(args?.p_foto, 400000) || !vale(args?.p_mini, 24000)) throw Object.assign(new Error('Esa foto no vale'), { code: '22023' });
-        if (tabla('menu_fotos').filter((x) => x.atleta_id === e.atleta_id && x.fecha === e.fecha && x.entrada_id !== e.id).length >= 12) throw Object.assign(new Error('Como mucho, 12 fotos por día'), { code: '22023' });
+        const fechaE = e ? e.fecha : args?.p_fecha;
+        if (!e && (!args?.p_fecha || !args?.p_toma)) throw Object.assign(new Error('Falta el día o la comida'), { code: '22023' });
+        if (fechaE < sumar(hoyM, -7) || fechaE > sumar(hoyM, 1)) throw Object.assign(new Error('La foto, de una comida de esta semana'), { code: '22023' });
+        if (tabla('menu_fotos').filter((x) => x.atleta_id === yo && x.fecha === fechaE && x.entrada_id !== e?.id).length >= 12) throw Object.assign(new Error('Como mucho, 12 fotos por día'), { code: '22023' });
+        if (tabla('menu_fotos').filter((x) => x.atleta_id === yo && x.entrada_id !== e?.id).length >= 150) throw Object.assign(new Error('Tienes demasiadas fotos guardadas: quita alguna antes'), { code: '22023' });
+        if (!e) {
+          const texto = String(args?.p_texto || '').trim().slice(0, 120) || 'Foto del plato';
+          if (!TOMAS.includes(args.p_toma) || !textoCorto(texto, 120)) throw Object.assign(new Error('Esa comida no vale'), { code: '23514' });
+          e = { id: uuid(), atleta_id: yo, fecha: args.p_fecha, toma: args.p_toma, receta_id: null, texto, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: true, orden: 0, fuera: false, con_foto: false, creado_en: ahora() };
+          tabla('menu_comidas').push(e);
+        }
         const ya = tabla('menu_fotos').find((x) => x.entrada_id === e.id);
         if (ya) Object.assign(ya, { foto: args.p_foto, mini: args.p_mini, fecha: e.fecha, creado_en: ahora() });
         else tabla('menu_fotos').push({ entrada_id: e.id, atleta_id: e.atleta_id, fecha: e.fecha, foto: args.p_foto, mini: args.p_mini, creado_en: ahora() });
         e.con_foto = true; e.hecho = true;
         purgar();
         persistirYa();
-        return null;
+        return e.id;
       }
       if (/^suplementos?_(de|guardar|quitar|aviso|tomar)$/.test(nombre)) {
         const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';

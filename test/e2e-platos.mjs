@@ -70,6 +70,7 @@ export async function probarPlatos({ navegador, check, base = 'http://localhost:
     const lado = await d.locator('img.plato-vista').evaluate((i) => new Promise((ok) => { const x = new Image(); x.onload = () => ok([x.naturalWidth, x.naturalHeight, i.src.length]); x.src = i.src; }));
     check(lado[0] === 1024 && lado[1] === 768 && lado[2] < 380000, `la foto se reduce en el móvil (1024 de lado largo, ${Math.round(lado[2] / 1024)} KB en texto)`);
     check(/tu coach y tú/.test(await d.textContent()) && /30 días/.test(await d.textContent()) && /sin la ubicación/.test(await d.textContent()), 'y dice quién la ve, cuánto se guarda y que va sin ubicación');
+    await p.waitForTimeout(700); // la hoja aun esta entrando
     await axeEn(p, '[role=dialog]', errores, 'foto del plato');
     await foto('platos-1-foto');
     await d.getByRole('button', { name: 'Guardar y marcar como hecha' }).click();
@@ -86,6 +87,7 @@ export async function probarPlatos({ navegador, check, base = 'http://localhost:
     d = p.getByRole('dialog', { name: 'Foto del plato' });
     await d.locator('img.plato-vista').waitFor({ timeout: 8000 });
     check(await d.getByRole('button', { name: 'Cambiar la foto' }).count() === 1 && await d.getByRole('button', { name: 'Quitar la foto' }).count() === 1 && await d.getByText('Raciones').count() === 0, 'al abrirla: la foto entera, cambiarla o quitarla (sin raciones)');
+    await p.waitForTimeout(700); // la hoja aun esta entrando
     await axeEn(p, '[role=dialog]', errores, 'comida con foto');
     await p.keyboard.press('Escape');
     await d.waitFor({ state: 'hidden' });
@@ -97,6 +99,7 @@ export async function probarPlatos({ navegador, check, base = 'http://localhost:
     await d.locator('.pauta-fuera').waitFor();
     const pauta = await d.locator('.pauta-fuera').textContent();
     check(await d.locator('.pauta-fuera-lista li').count() === 5 && /Elige primero la proteína/.test(pauta) && /Busca unos \d+ g\./.test(pauta), 'comer fuera: la pauta corta, con la proteína de su plan');
+    await p.waitForTimeout(700); // la hoja aun esta entrando
     await axeEn(p, '[role=dialog]', errores, 'como fuera');
     await foto('platos-3-fuera');
     await d.locator('input.entrada').fill('Cena con amigos');
@@ -134,6 +137,7 @@ export async function probarPlatos({ navegador, check, base = 'http://localhost:
     d = p.getByRole('dialog', { name: 'Platos de Ana' });
     await d.locator('.plato-celda').first().waitFor({ timeout: 8000 });
     check(await d.locator('.plato-celda').count() === 1 && /Comida/.test(await d.locator('.plato-celda').first().textContent()), 'el coach ve en la revisión semanal las fotos de la semana, por días');
+    await p.waitForTimeout(700); // la hoja aun esta entrando
     await axeEn(p, '[role=dialog]', errores, 'platos de la semana');
     await foto('platos-6-coach');
     await d.locator('.plato-celda').first().click();

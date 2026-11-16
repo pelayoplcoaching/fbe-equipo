@@ -426,7 +426,7 @@ function HojaEntrada({ e, recetario, esCoach, plan = null, alCerrar, alCambiar, 
       {e.fuera && esCoach && <p class="peq"><span class="chip chip-fuera"><Icono n="ubicacion" /> Fuera</span> Esta comida la hizo fuera de casa.</p>}
       {alFoto && <button class="btn" disabled={ocupado} onClick={alFoto}><Icono n="camara" /> {e.con_foto ? 'Cambiar la foto' : 'Hacerle la foto al plato'}</button>}
       {e.con_foto && <button class="btn plano" disabled={ocupado} onClick={() => hacer(() => api.quitarFotoPlato(e.id), 'Foto quitada')}><Icono n="basura" /> Quitar la foto</button>}
-      {!e.fuera && !e.con_foto && <div class="separa"><span class="peq">Raciones</span><div style="max-width:150px"><Paso valor={raciones} paso={0.5} min={0.25} max={10} dec={2} etiqueta="raciones" alCambiar={(v) => v && setRaciones(v)} /></div></div>}
+      {!e.fuera && !(e.con_foto && !e.receta_id && e.kcal == null) && <div class="separa"><span class="peq">Raciones</span><div style="max-width:150px"><Paso valor={raciones} paso={0.5} min={0.25} max={10} dec={2} etiqueta="raciones" alCambiar={(v) => v && setRaciones(v)} /></div></div>}
       {raciones !== Number(e.raciones) && <button class="btn btn-primario" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { raciones }), 'Raciones cambiadas')}>Guardar las raciones</button>}
       <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { hecho: !e.hecho }), e.hecho ? 'Marcada sin comer' : '¡Bien!')}><Icono n="hecho" /> {e.hecho ? 'Marcar como no comida' : 'Ya me la he comido'}</button>
       {(a?.receta || delEquipo) && <button class="btn plano" onClick={() => setVer(true)}><Icono n="receta" /> Ver la receta</button>}

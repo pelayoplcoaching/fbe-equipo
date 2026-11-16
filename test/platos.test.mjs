@@ -25,8 +25,11 @@ check(P.proteinaPorComida(150, ['desayuno', 'comida', 'cena']) === 50 && P.prote
     && [...c.puntos, ...d.puntos, ...s.puntos].every((x) => x.length <= 170), 'la pauta de comer fuera: corta, con su proteína si tiene plan, distinta para el desayuno y la merienda');
 }
 check(Object.keys(P.fotosPorDia([{ fecha: '2026-11-16', entrada_id: 'a' }, { fecha: '2026-11-16', entrada_id: 'b' }, { fecha: '2026-11-17', entrada_id: 'c' }])).length === 2, 'las fotos de la semana, por días');
-check(copiarMenu([{ fecha: '2026-11-16', toma: 'comida', texto: 'Arroz', raciones: 1 }, { fecha: '2026-11-16', toma: 'cena', texto: 'Foto del plato', raciones: 1, con_foto: true }, { fecha: '2026-11-17', toma: 'cena', texto: 'Comida fuera', raciones: 1, fuera: true }], '2026-11-16', '2026-11-23').length === 1,
-  'al copiar la semana, ni las fotos ni las comidas fuera (son de aquel día)');
+{
+  const copia = copiarMenu([{ fecha: '2026-11-16', toma: 'comida', texto: 'Arroz', raciones: 1 }, { fecha: '2026-11-16', toma: 'cena', texto: 'Foto del plato', raciones: 1, con_foto: true }, { fecha: '2026-11-17', toma: 'cena', texto: 'Comida fuera', raciones: 1, fuera: true },
+    { fecha: '2026-11-17', toma: 'comida', texto: 'Pollo al curry', receta_id: 'r1', raciones: 1, con_foto: true, hecho: true }], '2026-11-16', '2026-11-23');
+  check(copia.length === 2 && copia[1].receta_id === 'r1' && copia[1].hecho === false && copia[1].con_foto === undefined, 'al copiar la semana, ni las comidas fuera ni las que nacieron de una foto (una receta con foto sí, ya sin foto)');
+}
 
 console.log('\nEn la demo');
 const { crearBackendMemoria } = await import('../web/src/datos/backend-memoria.js');
@@ -65,6 +68,7 @@ const unaReceta = (await api.recetario(ana.id)).recetas[0]?.id || 'r';
 check(await lanza(() => api.crear('menu_comidas', { atleta_id: ana.id, fecha: hoy, toma: 'cena', texto: 'x', fuera: true, receta_id: unaReceta })), 'comer fuera no es una receta');
 const datos = await api.exportarAtleta?.(ana.id).catch(() => null);
 check(!datos || (datos.menu_fotos || []).length === 2, 'las fotos van en la descarga de sus datos');
+check(await lanza(() => api.cambiarMenu(menu.find((e) => e.id === f1.id), { fecha: sumarDias(hoy, -1) })), 'una comida con foto no se cambia de día');
 await b.auth.salir();
 await b.auth.entrar('ruben@fbe.demo', 'demo');
 check((await api.fotosPlatos(ana.id, lunes, sumarDias(lunes, 6))).length === 0 && (await api.fotoPlato(f1.id)) === null && await lanza(() => api.quitarFotoPlato(f1.id)) && await lanza(() => b.rpc('plato_foto_guardar', { p_entrada: f1.id, p_foto: jpeg(900), p_mini: jpeg(300) })),
@@ -77,6 +81,13 @@ menu = await api.menuSemana(ana.id, lunes);
 check((await api.platosDeLaSemana(lunes))[ana.id] === 1 && menu.find((e) => e.id === f1.id).con_foto === false && menu.find((e) => e.id === f1.id).hecho, 'y puede quitar una (la comida sigue hecha)');
 await api.borrarMenu(delCoach.id);
 check((await api.platosDeLaSemana(lunes))[ana.id] === undefined, 'al quitar la comida del menú, su foto se va con ella');
+await b.auth.salir();
+await b.auth.entrar('ana@fbe.demo', 'demo');
+await api.guardarFotoPlato(ana.id, { fecha: hoy, toma: 'merienda', texto: 'Yogur', foto: jpeg(900), mini: jpeg(300) });
+{ const mio = (await b.select('consentimientos', {})).find((c) => c.tipo === 'datos_salud' && !c.revocado_en); await api.revocarConsentimiento(mio.id); }
+await b.auth.salir();
+await b.auth.entrar('pelayo@fbe.demo', 'demo');
+check((await api.platosDeLaSemana(lunes))[ana.id] === undefined && (await api.menuSemana(ana.id, lunes)).every((e) => !e.con_foto), 'al retirar el consentimiento de salud, sus fotos se borran');
 
 console.log('\nLa migración 079 (PGlite)');
 const { PGlite } = await import('@electric-sql/pglite');
@@ -114,6 +125,14 @@ check(await falla('select plato_foto_guardar($1, $2, $3)', [e1.id, 'data:image/p
 const [vieja] = await q(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, $2, 'cena', 'Cena') returning *`, [A, sumarDias(hoyB, -8)]);
 const [futura] = await q(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, $2, 'cena', 'Cena') returning *`, [A, sumarDias(hoyB, 2)]);
 check(await falla('select plato_foto_guardar($1, $2, $3)', [vieja.id, F, M]) && await falla('select plato_foto_guardar($1, $2, $3)', [futura.id, F, M]), 'solo de una comida de los últimos 7 días (o de mañana)');
+const [{ id: nuevaId }] = await q(`select plato_foto_guardar(null, $1, $2, $3, 'merienda', '  Yogur con fruta ') as id`, [F, M, sumarDias(hoyB, -1)]);
+const [nueva] = await q('select * from menu_comidas where id = $1', [nuevaId]);
+check(nueva.texto === 'Yogur con fruta' && nueva.hecho && nueva.con_foto && nueva.atleta_id === A && (await q(`select plato_foto_guardar(null, $1, $2, $3, 'cena') as id`, [F, M, hoyB]))[0].id
+  && await falla(`select plato_foto_guardar(null, $1, $2, $3, 'cena')`, [F, M, sumarDias(hoyB, -8)]) && await falla(`select plato_foto_guardar(null, $1, $2, $3, 'brunch')`, [F, M, hoyB]) && await falla(`select plato_foto_guardar(null, $1, $2)`, [F, M])
+  && await falla(`select plato_foto_guardar(null, 'x', $1, $2, 'cena')`, [M, hoyB]) && (await q(`select count(*)::int n from menu_comidas where atleta_id = $1 and fecha = $2`, [A, sumarDias(hoyB, -8)]))[0].n === 1,
+  'la foto de una comida nueva: se apuntan las dos cosas a la vez, o ninguna');
+check(await falla(`update menu_comidas set fecha = $2 where id = $1`, [nuevaId, sumarDias(hoyB, -3)]) && (await q(`update menu_comidas set texto = 'Yogur' where id = $1 returning texto`, [nuevaId]))[0].texto === 'Yogur', 'una comida con foto no se cambia de día (lo demás sí)');
+await q('delete from menu_comidas where id = $1 or (fecha = $2 and toma = $3 and con_foto)', [nuevaId, hoyB, 'cena']);
 const [fuB] = await q(`insert into menu_comidas (atleta_id, fecha, toma, texto, fuera, hecho) values ($1, $2, 'cena', 'Comida fuera', true, true) returning *`, [A, hoyB]);
 check(fuB.fuera && fuB.hecho && await falla(`insert into menu_comidas (atleta_id, fecha, toma, texto, fuera, receta_id) values ($1, $2, 'cena', 'x', true, gen_random_uuid())`, [A, hoyB]), 'comer fuera: cuenta como hecha y no es una receta');
 for (let i = 0; i < 11; i++) { const [x] = await q(`insert into menu_comidas (atleta_id, fecha, toma, texto) values ($1, $2, 'merienda', $3) returning id`, [A, hoyB, `n${i}`]); await q('select plato_foto_guardar($1, $2, $3)', [x.id, F, M]); }
@@ -131,7 +150,7 @@ await su();
 await db.exec('reset role; set role anon;');
 check(await falla('select * from menu_fotos') && await falla('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]), 'sin sesión, nada');
 await como(coach, 'aal2');
-check((await q('select * from menu_fotos')).length === 12 && await falla('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]), 'el coach las ve todas; subir, solo el atleta');
+check((await q('select * from menu_fotos')).length === 12 && await falla('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]) && await falla(`select plato_foto_guardar(null, $1, $2, $3, 'cena')`, [F, M, hoyB]), 'el coach las ve todas; subir, solo el atleta');
 await q('select plato_foto_quitar($1)', [e1.id]);
 [m1] = await q('select * from menu_comidas where id = $1', [e1.id]);
 check((await q('select * from menu_fotos')).length === 11 && !m1.con_foto && m1.hecho, 'el coach quita una: la comida sigue hecha, ya sin foto');
@@ -151,6 +170,37 @@ await q(`update menu_fotos set creado_en = now() - interval '40 days'`);
 check((await q('select fbe_privado.platos_purgar() as n'))[0].n === 11 && (await q('select count(*)::int n from menu_fotos'))[0].n === 0 && (await q('select count(*)::int n from menu_comidas where con_foto'))[0].n === 0, 'la limpieza de cada noche las borra todas');
 await como(uA);
 check(await falla('select fbe_privado.platos_purgar()'), 'la limpieza no la llama nadie desde la app');
+await q('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]);
+await su();
+await q(`update menu_fotos set creado_en = now() - interval '31 days'`);
+await como(uL);
+await q('select platos_limpiar()');
+await su();
+check((await q('select count(*)::int n from menu_fotos'))[0].n === 0 && (await q('select con_foto from menu_comidas where id = $1', [e1.id]))[0].con_foto === false, 'al abrirse la app (cualquiera con sesión) se borran las caducadas, sin depender de pg_cron');
+await db.exec('reset role; set role anon;');
+check(await falla('select platos_limpiar()'), 'sin sesión, tampoco la limpieza');
+await su();
+await q(`update atletas set estado = 'baja' where id = $1`, [A]);
+await como(uA);
+check(await falla('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]), 'de baja no sube fotos');
+await su();
+await q(`update atletas set estado = 'activo' where id = $1`, [A]);
+await como(uA);
+await q('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]);
+await su();
+await q(`update atletas set estado = 'baja' where id = $1`, [A]);
+await como(uA);
+await q('select plato_foto_quitar($1)', [e1.id]);
+await su();
+check((await q('select count(*)::int n from menu_fotos'))[0].n === 0, 'pero sí puede quitar las suyas');
+await q(`update atletas set estado = 'activo' where id = $1`, [A]);
+await como(uA);
+await q('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]);
+await q(`update consentimientos set revocado_en = now() where perfil_id = $1 and tipo = 'datos_salud'`, [uA]);
+await su();
+check((await q('select count(*)::int n from menu_fotos'))[0].n === 0 && (await q('select count(*)::int n from menu_comidas where con_foto'))[0].n === 0 && (await q('select hecho from menu_comidas where id = $1', [e1.id]))[0].hecho, 'al retirar el consentimiento de salud se borran sus fotos (el menú se queda)');
+await q(`insert into public.consentimientos (perfil_id, tipo, version) values ($1, 'datos_salud', 'y')`, [uA]);
+await como(uA);
 await q('select plato_foto_guardar($1, $2, $3)', [e1.id, F, M]);
 await q('delete from menu_comidas where id = $1', [e1.id]);
 await su();

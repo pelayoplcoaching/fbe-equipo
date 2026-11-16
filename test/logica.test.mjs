@@ -4745,7 +4745,7 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
     'la política 2026-12.36 cuenta la pausa: los días, el motivo (nada de salud) y el mensaje del coach');
   // (v0.174) 2026-12.37: la foto del plato y comer fuera (079)
   check(legal.VERSION_LEGAL === '2026-12.37' && PV.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.37' && PV.NOVEDADES_PRIVACIDAD[0][2].length <= 260 && PV.novedadesDesde('2026-12.36', '2026-12.37').length === 1
-    && ((t) => /dato de salud/.test(t) && /con tu consentimiento/.test(t) && /sin la ubicación/.test(t) && /30 días/.test(t) && /se borra sola/.test(t) && /fuera de casa/.test(t) && /Descargar mis datos/.test(t) && /se borra con tu ficha/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'La foto de tu plato y comer fuera')?.[1] || ''),
+    && ((t) => /dato de salud/.test(t) && /con tu consentimiento/.test(t) && /sin la ubicación/.test(t) && /30 días/.test(t) && /se borra sola/.test(t) && /si retiras el consentimiento, se borran todas/.test(t) && /fuera de casa/.test(t) && /Descargar mis datos/.test(t) && /se borra con tu ficha/.test(t))(legal.PRIVACIDAD.find((x) => x[0] === 'La foto de tu plato y comer fuera')?.[1] || ''),
     'la política 2026-12.37 cuenta la foto del plato (30 días, sin ubicación, la veis tú y tu coach) y comer fuera');
 }
 

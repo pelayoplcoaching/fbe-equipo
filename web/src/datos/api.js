@@ -150,8 +150,8 @@ const falta072 = (e) => {
 // (079) sin la migración de la foto del plato y comer fuera, la app no las ofrece
 const AVISO_079 = 'Esto aún no está disponible: hay que poner al día la base (migración 079, supabase/migraciones/079_platos.sql)';
 const falta079 = (e) => {
-  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
-  return /menu_fotos|plato_foto_(guardar|quitar)|fuera|con_foto|PGRST202|PGRST204|PGRST205|42883|42703|42P01/.test(m)
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''} ${e?.codigo || ''}`;
+  return /menu_fotos|plato_foto_(guardar|quitar)|platos_limpiar|'fuera' column|column[^.]*\bfuera\b|con_foto|PGRST202|PGRST204|PGRST205|42883|42703|42P01/.test(m)
     && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|column|columna|PGRST20[245]|42883|42703|42P01/i.test(m);
 };
 const AVISO_078 = 'Esto aún no está disponible: hay que poner al día la base (migración 078, supabase/migraciones/078_pausas.sql)';
@@ -2139,6 +2139,8 @@ export function crearApi(backend) {
       if (!api._v079) {
         const pr = b.select('menu_fotos', { limit: 1, cols: 'entrada_id' }).then(() => true).catch((e) => (falta079(e) ? false : null));
         api._v079 = pr;
+        // Una vez por sesión, la limpieza de las fotos de más de 30 días (no depende de que la base tenga pg_cron)
+        pr.then((x) => { if (x === true) b.rpc('platos_limpiar', {}).catch(() => {}); });
         pr.then((x) => { if (x == null && api._v079 === pr) api._v079 = null; });
       }
       return api._v079;
@@ -2146,19 +2148,15 @@ export function crearApi(backend) {
     // La foto de una comida: de una que ya está en el menú (entrada) o de una nueva ({ fecha, toma, texto }). Queda hecha.
     async guardarFotoPlato(atletaId, { entrada = null, fecha = null, toma = null, texto = null, foto, mini }) {
       if (!fotoValida(foto, MAX_FOTO) || !fotoValida(mini, MAX_MINI)) throw new Error('No se ha podido preparar la foto. Prueba con otra.');
-      let e = entrada, nueva = false;
-      if (!e) {
-        const fila = entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FOTO });
-        if (!fila) throw new Error('Ese texto no vale.');
-        e = (await b.insert('menu_comidas', [{ ...fila, atleta_id: atletaId }]).catch(falta022))[0];
-        nueva = true;
-      }
-      try { await b.rpc('plato_foto_guardar', { p_entrada: e.id, p_foto: foto, p_mini: mini }); } catch (err) {
-        if (nueva) await b.delete('menu_comidas', { eq: { id: e.id } }).catch(() => {});
-        if (falta079(err)) throw new Error(AVISO_079);
-        throw err;
-      }
-      return { ...e, hecho: true, con_foto: true };
+      // Sin entrada, la comida se apunta en la misma llamada que la foto: o las dos cosas o ninguna
+      const fila = entrada ? null : entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FOTO });
+      if (!entrada && !fila) throw new Error('Ese texto no vale.');
+      let id;
+      try {
+        id = await b.rpc('plato_foto_guardar', entrada ? { p_entrada: entrada.id, p_foto: foto, p_mini: mini }
+          : { p_entrada: null, p_foto: foto, p_mini: mini, p_fecha: fila.fecha, p_toma: fila.toma, p_texto: fila.texto });
+      } catch (err) { if (falta079(err)) throw new Error(AVISO_079); throw err; }
+      return { ...(entrada || { ...fila, atleta_id: atletaId }), id: entrada?.id || id, hecho: true, con_foto: true };
     },
     async quitarFotoPlato(entradaId) {
       try { await b.rpc('plato_foto_quitar', { p_entrada: entradaId }); } catch (e) { if (falta079(e)) throw new Error(AVISO_079); throw e; }
@@ -5829,7 +5827,7 @@ export function crearApi(backend) {
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
       for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (079) las fotos de sus platos que aún se guardan (30 días)
-      out.menu_fotos = await b.select('menu_fotos', { eq: { atleta_id: atletaId } }).catch(() => []);
+      out.menu_fotos = await b.select('menu_fotos', { eq: { atleta_id: atletaId }, pagina: 5 }).catch((e) => { if (falta079(e)) return []; throw e; });
       // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
