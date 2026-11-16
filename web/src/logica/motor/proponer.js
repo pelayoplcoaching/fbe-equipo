@@ -202,7 +202,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
   const normales = filas.map((f) => cerrar(f, f._r));
 
   // ---- descarga ----
-  const senales = modo === 'normal' && !retoma ? senalesDescarga({ filas: filas.map((f) => ({ prioridad: f.prioridad, tendencia: f.tendencia, lectura: f._l })), checkins: contexto.checkins || [], carga: contexto.carga || null, sesiones, reglas: generales }) : [];
+  // (con descarga.cuando = 'manual' no se miran las señales: solo hay descarga si el coach pone ese foco)
+  const senales = modo === 'normal' && !retoma && generales.descarga.cuando !== 'manual' ? senalesDescarga({ filas: filas.map((f) => ({ prioridad: f.prioridad, tendencia: f.tendencia, lectura: f._l })), checkins: contexto.checkins || [], carga: contexto.carga || null, sesiones, reglas: generales }) : [];
   const d = generales.descarga;
   const programada = modo === 'normal' && !retoma && (d.cuando === 'programada' || d.cuando === 'mixta') && contexto.semanasDesdeDescarga != null && contexto.semanasDesdeDescarga >= d.cadaSemanas - 1;
   const pedida = modo === 'normal' && contexto.focoSiguiente === 'descarga';

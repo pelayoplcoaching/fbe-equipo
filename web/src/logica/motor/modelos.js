@@ -295,13 +295,17 @@ export function porSerie(l, pauta, ctx) {
   });
   // Top y back-off: la top es la serie (o series) a la carga más alta; se mira lo que movió y, si falta, lo pautado
   const est = pico || ctx.topSet ? estructuraTop(objetivos.map((o, i) => (datos[i]?.kg > 0 ? datos[i].kg : o.kg ?? null))) : null;
+  // La serie top fuera del peaking (la primera, la más pesada): puede llevar su rango y su RPE propios (topSet.rango, topSet.rpeSube)
+  const esTop = (i) => !!est && !pico && est.forma === 'top_primero' && i === est.tops[0];
+  const rangoEn = (i) => (esTop(i) && Array.isArray(T.rango) ? T.rango : [suelo, tope]);
+  const rpeSubeEn = (i) => (esTop(i) && T.rpeSube != null ? T.rpeSube : R.rpeSube);
   const rol = objetivos.map((_, i) => (!est ? 'normal' : pico ? (est.tops.includes(i) ? 'top' : 'backoff') : est.forma === 'top_primero' && i !== est.tops[0] ? 'backoff' : 'normal'));
   const objetivoPauta = objetivoReserva(pauta);
   const pk = pico && est ? topPeaking(est.tops.filter((i) => datos[i]).map((i) => ({ kg: datos[i].kg, reps: datos[i].reps, rpe: datos[i].rpe,
     pautadas: detalle && objetivos[i].reps != null ? Number(objetivos[i].reps) : null,
     objetivo: objetivos[i].rpe != null ? Number(objetivos[i].rpe) : objetivoPauta != null ? 10 - objetivoPauta : null })), { nombre, reglas }) : null;
   // Varias series al tope la misma semana: suben todas las que fueron fáciles; de las demás, solo la primera
-  const alTope = datos.map((x, i) => (x && x.mueveKg && x.reps >= tope && rol[i] !== 'backoff' ? i : -1)).filter((i) => i >= 0);
+  const alTope = datos.map((x, i) => (x && x.mueveKg && x.reps >= rangoEn(i)[1] && rol[i] !== 'backoff' ? i : -1)).filter((i) => i >= 0);
   const sube = (i) => R.variasAlTope === 'todas' || i === alTope[0] || (R.variasAlTope === 'faciles' && datos[i].rpe != null && datos[i].rpe <= R.topeFacilRpe);
   const acciones = [];
   let salto = 0;
@@ -309,6 +313,7 @@ export function porSerie(l, pauta, ctx) {
     const x = datos[i];
     if (!x) { acciones.push('falta'); return { ...o }; }
     const { kg, reps, rpe, mueveKg } = x;
+    const [suelo, tope] = rangoEn(i);   // (el de la serie: la top puede llevar el suyo)
     // Los kilos de la serie: los que movió (si la pauta lleva kilos); subirlos solo se puede donde los pauta el coach
     const kgBase = o.kg != null && kg > 0 ? kg : o.kg;
     const con = (cambio) => { const f = { ...o, ...cambio }; if (f.kg == null) delete f.kg; return f; };
@@ -327,7 +332,7 @@ export function porSerie(l, pauta, ctx) {
       acciones.push('bo_igual'); return igual();
     }
     if (reps >= tope) {
-      if (mueveKg && sube(i)) { acciones.push('tope_kg'); return con({ kg: subir(), reps: suelo }); }
+      if (mueveKg && sube(i)) { acciones.push('tope_kg'); return con({ kg: subir(), reps: R.bajaAlSubir ? Math.max(suelo, Math.min(reps, tope) - R.bajaAlSubir) : suelo }); }
       if (mueveKg) { acciones.push('espera'); return con({ kg: kgBase, reps }); }
       acciones.push('tope'); return con({ kg: kgBase, reps: Math.max(tope, Number(o.reps ?? tope)) });
     }
@@ -335,12 +340,13 @@ export function porSerie(l, pauta, ctx) {
     // Por debajo del suelo con kilos (básicos en intensificación o peaking) no se empujan las repeticiones; sin kilos
     // (dominadas, peso corporal) sí: ahí sumar repeticiones es la única forma de progresar
     if (reps < suelo && (kg > 0 || o.kg != null)) { acciones.push('bajo'); return con({ kg: kgBase, reps: Math.max(reps, Number(o.reps ?? reps)) }); }
-    if (rpe == null || rpe <= R.rpeSube) { acciones.push('rep'); return con({ kg: kgBase, reps: Math.min(tope, reps + 1) }); }
+    if (rpe == null || rpe <= rpeSubeEn(i)) { acciones.push('rep'); return con({ kg: kgBase, reps: Math.min(tope, reps + 1) }); }
     acciones.push('igual'); return igual();
   });
-  const TEXTO = {
-    tope_kg: `al tope (${tope}), sube ${kilos(salto)} y vuelve a ${suelo}`, sobrada: `sobrada (RPE ${num(R.sobradoRpe)} o menos), sube ${kilos(salto)} con las mismas repeticiones`,
-    rep: 'una repetición más', igual: `igual (RPE por encima de ${num(R.rpeSube)})`, espera: `al tope (${tope}) pero justa, espera a que suba la primera`,
+  // Los textos, con el rango y el RPE de la primera serie de cada grupo (la top no se agrupa con las demás)
+  const textoDe = (a, i) => { const [suelo, tope] = rangoEn(i); const TEXTO = {
+    tope_kg: `al tope (${tope}), sube ${kilos(salto)} y ${R.bajaAlSubir && d[i].reps > suelo ? `baja a ${d[i].reps}` : `vuelve a ${suelo}`}`, sobrada: `sobrada (RPE ${num(R.sobradoRpe)} o menos), sube ${kilos(salto)} con las mismas repeticiones`,
+    rep: 'una repetición más', igual: `igual (RPE por encima de ${num(rpeSubeEn(i))})`, espera: `al tope (${tope}) pero justa, espera a que suba la primera`,
     tope: `al tope (${tope}): le toca subir de carga, que elige ${laEligeEl ? 'el atleta' : 'tú'}`, bajo: `por debajo del rango (${suelo}–${tope}), igual`, falta: 'sin hacer, igual',
     bo_sube: `back-off fácil (RPE ${num(T.backoffFacilRpe)} o menos), sube ${kilos(salto)}`, bo_igual: 'back-off, igual',
     ...(pk && pk.accion !== 'dura' ? (() => {
@@ -350,10 +356,11 @@ export function porSerie(l, pauta, ctx) {
         pk_elige: `${menos}; la carga la elige el atleta`, pk_suelo_sube: `${ya}: sube ${kilos(pk.delta)}`, pk_suelo: `${ya} y exigente: igual` };
     })() : {}),
     pk_dura: `peaking, pero salió muy dura (RPE por encima de ${num(T.peaking.duraRpe)}): repite tal cual`,
-  };
+  }; return TEXTO[a]; };
+  const propia = (i) => esTop(i) && (Array.isArray(T.rango) || T.rpeSube != null);
   const grupos = [];
-  acciones.forEach((a, i) => { const g = grupos.find((x) => x.a === a); if (g) g.ns.push(i + 1); else grupos.push({ a, ns: [i + 1] }); });
-  const frase = (g) => `${grupos.length === 1 && g.ns.length > 1 ? `las ${g.ns.length} series` : listaSeries(g.ns)}: ${TEXTO[g.a]}`;
+  acciones.forEach((a, i) => { const g = grupos.find((x) => x.a === a && x.propia === propia(i)); if (g) g.ns.push(i + 1); else grupos.push({ a, propia: propia(i), ns: [i + 1] }); });
+  const frase = (g) => `${grupos.length === 1 && g.ns.length > 1 ? `las ${g.ns.length} series` : listaSeries(g.ns)}: ${textoDe(g.a, g.ns[0] - 1)}`;
   const texto = grupos.map(frase).join(' · ');
   const motivo = texto.charAt(0).toUpperCase() + texto.slice(1);
   const tipo = acciones.some((a) => ['tope_kg', 'sobrada', 'bo_sube', 'pk', 'pk_suelo_sube'].includes(a)) ? 'subir'

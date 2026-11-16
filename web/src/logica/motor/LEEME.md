@@ -42,6 +42,17 @@ const { filas, semana, descarga } = proponerSemana({
 Cada fila trae `antes`, `propuesta`, `cambios`, `tipo`, `motivo`, `confianza` (alta, media o baja), `frenos`, `avisos` y
 hasta dos `alternativas`. `descarga` trae las señales y, si hay alguna, la versión de descarga de toda la semana.
 
+## Reglas propias de cada atleta (16/11/2026)
+
+Cada atleta puede llevar, además del perfil, los rangos y el RPE, tres reglas más (se editan en «Reglas de este atleta» y
+se guardan en su ficha, `atletas.reglas_motor`; nunca en el código):
+
+- `porSerie.bajaAlSubir` (1–4): al llegar al tope y subir de kilos, baja solo esas repeticiones en vez de volver al
+  mínimo del rango.
+- `topSet.rango` y `topSet.rpeSube`: la serie top (la primera, la más pesada) con su rango de repeticiones y su «suma una
+  repetición hasta» propios. Las series de apoyo siguen como siempre.
+- `descarga.cuando = 'manual'`: no se le propone descarga por señales; solo si el coach pone ese foco.
+
 ## Decisiones de Pelayo (5/11/2026) que ya están en las reglas
 
 - **Modelo de partida para todos los niveles: progresión serie a serie.** Cada serie progresa por su cuenta desde lo que
