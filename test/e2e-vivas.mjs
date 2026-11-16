@@ -7,6 +7,26 @@
 import { pathToFileURL } from 'node:url';
 import { irASeccion, abrirEnHoy } from './secciones.mjs';
 
+// (un lunes, el check-in que toca es el de la semana pasada y en la demo ya esta enviado: se abre en el repaso. Para
+// ver los pasos, se quita ese ultimo check-in de la demo y se vuelve a entrar)
+const aLosPasosDelCheckin = async (p, cerrar, ir) => {
+  await p.locator('.ck-paso').waitFor();
+  if (await p.locator('.ck-paso .ck-ilu-marco').count()) return;
+  await p.waitForTimeout(400);
+  await p.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('fbe-demo-v2'));
+    const ultima = db.checkins.map((c) => c.semana_inicio).sort().pop();
+    db.checkins = db.checkins.filter((c) => c.semana_inicio !== ultima);
+    localStorage.setItem('fbe-demo-v2', JSON.stringify(db));
+  });
+  await p.reload();
+  await p.locator('nav.tabs').waitFor();
+  await cerrar(p);
+  await ir(p, 'Check-in');
+  await p.locator('.ck-paso .ck-ilu-marco').waitFor();
+  await p.waitForTimeout(900); // (que acabe de entrar la pantalla antes de medir el marco)
+};
+
 export async function probarVivas({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   async function abrir({ quieto = false, bienvenida = false } = {}) {
@@ -151,7 +171,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     check(cuantas <= 1 && (cuantas === 0 || (/^Ahora · /.test(await ahora.locator('.cab-ilu-texto span').textContent()) && (await animadas(p, '.toma-ilu.ahora .cab-ilu-img')).some((x) => x.startsWith('toma-ahora')) && !(await animadas(p, '.toma-ilu:not(.ahora) .cab-ilu-img')).some((x) => x.startsWith('toma-ahora')))),
       cuantas ? `en «Tus recetas», la comida que toca a las ${hora} h lo dice («Ahora») y solo su ilustración se acerca` : `a las ${hora} h no toca ninguna de sus comidas: ninguna cabecera se mueve`);
     await irASeccion(p, 'Check-in');
-    await p.locator('.ck-paso').waitFor();
+    await aLosPasosDelCheckin(p, cerrarDialogos, irASeccion);
     await cerrarDialogos(p);
     const marco = p.locator('.ck-paso .ck-ilu-marco');
     await marco.waitFor();
@@ -193,6 +213,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     await cerrarDialogos(p);
     const quietoFoco = (await animadas(p, VIVAS)).length;
     await irASeccion(p, 'Check-in');
+    await aLosPasosDelCheckin(p, cerrarDialogos, irASeccion);
     await p.locator('.ck-paso .ck-ilu-marco img').waitFor();
     await cerrarDialogos(p);
     await p.getByRole('button', { name: 'Siguiente' }).click();

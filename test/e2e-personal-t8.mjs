@@ -16,6 +16,7 @@ function wav(seg = 1, hz = 8000) {
   return b;
 }
 
+const fechaHoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date());
 export async function probarPersonalCompania({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-ES', hasTouch: true, isMobile: true, timezoneId: 'Europe/Madrid' });
@@ -76,7 +77,10 @@ export async function probarPersonalCompania({ navegador, check, base = 'http://
     await fueraAvisos(q);
     const reto = q.locator('.reto-mes');
     await reto.waitFor({ timeout: 8000 }).catch(() => {});
-    check(await reto.count() === 1 && /Tu reto de/.test(await reto.textContent()), `en Hoy, su reto del mes («${(await reto.locator('.reto-mes-t').textContent().catch(() => '')).trim()}»)`);
+    // (el reto sale de sus sesiones de las ocho semanas anteriores a este mes, y las de la demo van con la fecha de hoy:
+    // a partir de mediados de mes ya no le quedan seis antes del dia 1 y no hay reto. La regla, en compania.test.mjs)
+    if (await reto.count()) check(await reto.count() === 1 && /Tu reto de/.test(await reto.textContent()), `en Hoy, su reto del mes («${(await reto.locator('.reto-mes-t').textContent().catch(() => '')).trim()}»)`);
+    else check(Number(fechaHoy.slice(8, 10)) > 14, `a ${Number(fechaHoy.slice(8, 10))} de mes, la demo ya no da para un reto del mes (no sale la tarjeta)`);
     await irASeccion(q, 'Perfil');
     const album = q.locator('.album-hitos');
     // (con la prueba completa, más lenta: si algo se ha puesto encima o aún carga, se cierra y se vuelve a Perfil)
