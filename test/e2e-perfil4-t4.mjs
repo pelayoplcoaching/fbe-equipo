@@ -51,6 +51,8 @@ export async function probarPerfil4T4({ navegador, check, base = 'http://localho
     await h.locator('.privacidad-lista').first().waitFor();
     check(await h.getByRole('heading', { name: /Lo que ve tu coach/ }).count() === 1 && await h.getByRole('heading', { name: /Lo que ve el equipo/ }).count() === 1 && await h.getByRole('heading', { name: /Lo que se queda en tu móvil/ }).count() === 1, 'tu privacidad: lo que ve tu coach, el equipo y lo que se queda en tu móvil');
     check(/Salud del iPhone/.test(await h.textContent()), 'con Salud conectada, lo dice');
+    // La hoja entra con su animación: el contraste se mide cuando ha terminado (en CI, a veces se medía a mitad)
+    await p.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter((a) => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1500))]));
     await axeEn(p, '[role=dialog]', errores, 'privacidad');
     await h.getByRole('button', { name: 'Así te ve tu coach' }).click();
     const asi = p.getByRole('dialog', { name: 'Así te ve tu coach' });

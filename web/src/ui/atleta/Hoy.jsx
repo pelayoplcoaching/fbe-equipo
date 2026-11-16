@@ -42,6 +42,9 @@ import { planVigente } from '../../logica/nutricion.js';
 import { ajuste } from '../ajustes.js';
 import { AvisoCobro } from './Cobro.jsx';
 import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario.jsx';
+import { TarjetaObjetivos, useObjetivosPropuestos } from './ObjetivosTuyos.jsx';
+import { TarjetaSuplementos, useSuplementos } from './Suplementos.jsx';
+import { AvisoPausa } from '../Pausas.jsx';
 import { TarjetaCardio } from './Sesion.jsx';
 import { ArteSesion } from './Portada.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
@@ -83,6 +86,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   // Cuestionario inicial: un paso de los primeros pasos y, si el coach lo pide, una tarjeta
   const cuestionario = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id], { recuerdo: `cuestionario:${atleta.id}` });
   const [verCuestionario, setVerCuestionario] = useState(false);
+  // (v0.173) el cuestionario de objetivos: la primera vez y al empezar cada bloque (lo que propone le llega a su coach)
+  const objetivosTuyos = useObjetivosPropuestos();
+  // (v0.174) sus suplementos, para marcarlos con un toque
+  const suplementos = useSuplementos();
   const [bienvenidaVista, setBienvenidaVista] = usePreferencia('fbe-bienvenida-vista', false);
   const [pasosOcultos, setPasosOcultos] = usePreferencia('fbe-primeros-pasos-oculto', false);
   const [instalada, setInstalada] = usePreferencia('fbe-instalada', false);
@@ -128,6 +135,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       {/* v0.73: el día de su aniversario en FBE (1 mes, 6 meses, 1 año…), con su confeti */}
       {!verBienvenida && <TarjetaAniversario />}
       {atleta.estado !== 'baja' && !propio && <AvisoCobro irA={irA} />}
+      {/* (v0.175, 078) su asesoría está en pausa: hasta cuándo y el mensaje de su coach */}
+      {!propio && !verBienvenida && <AvisoPausa />}
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
@@ -142,6 +151,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={null} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
               {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
+              {!verPasos && !propio && !verBienvenida && <TarjetaSuplementos estado={suplementos} />}
+              {!verPasos && !propio && !verBienvenida && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && <TarjetaNotificaciones />}
             </>
@@ -157,6 +168,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {!verPasos && !propio && <TarjetaVida sesiones={p.actual ? (p.sesiones[p.actual.id] || []) : []} />}
               {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
+              {!verPasos && !propio && !verBienvenida && <TarjetaSuplementos estado={suplementos} />}
+              {!verPasos && !propio && !verBienvenida && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
             </>
@@ -526,7 +539,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       ? <SeccionTiempo modalidad={e.tipo === 'entreno' && deFuera(siguiente?.cardio) ? siguiente.cardio.modalidad : 'carrera'} ocultar={() => fijarPanel(alternarSeccion(panel, 'tiempo'))} />
       : null,
     carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
-    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Lo que tienes para comer hoy"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
+    menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Márcalo o hazle una foto a tu plato"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
       <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
         <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />

@@ -2017,7 +2017,7 @@ try {
   await p.keyboard.press('Escape');
   await hojaNoti.waitFor({ state: 'detached' });
   const resumenNoti = await p.locator('.fila-notificaciones .resumen-noti').textContent();
-  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 4 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
+  check(/Respuestas, semana, avisos, peticiones, tareas, descansos, equipo y 5 recordatorios/.test(resumenNoti), `y en Perfil se ve lo que tiene activado («${resumenNoti}»)`);
 
   // v0.13: cuestionario inicial y check-in a medida
   console.log('\nCuestionario y check-in a medida');
@@ -6167,6 +6167,19 @@ try {
   console.log('\nLa biblioteca ampliada: 160 ejercicios más y tres grupos nuevos');
   const { probarBiblioteca2 } = await import('./e2e-biblioteca2.mjs');
   await probarBiblioteca2({ navegador, check });
+  console.log('\nLos objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach');
+  const { probarObjetivos } = await import('./e2e-objetivos.mjs');
+  await probarObjetivos({ navegador, check });
+  console.log('\nLos suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso');
+  const { probarSuplementos } = await import('./e2e-suplementos.mjs');
+  await probarSuplementos({ navegador, check });
+  console.log('\nPausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve');
+  const { probarPausas } = await import('./e2e-pausas.mjs');
+  await probarPausas({ navegador, check });
+
+  console.log('\nLa foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal');
+  const { probarPlatos } = await import('./e2e-platos.mjs');
+  await probarPlatos({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

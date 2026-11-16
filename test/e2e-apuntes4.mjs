@@ -5,7 +5,7 @@
 //   Dentro de e2e.test.mjs:  const { probarApuntes4 } = await import('./e2e-apuntes4.mjs'); await probarApuntes4({ navegador, check });
 import { pathToFileURL } from 'node:url';
 import { irASeccion } from './secciones.mjs';
-import { GLOSARIO } from '../web/src/logica/apuntes.js';
+import { GLOSARIO, apuntesDeGlosario } from '../web/src/logica/apuntes.js';
 import { lunesDe, sumarDias, fechaMadrid } from '../web/src/logica/fechas.js';
 
 export async function probarApuntes4({ navegador, check, base = 'http://localhost:4174' }) {
@@ -126,7 +126,7 @@ export async function probarApuntes4({ navegador, check, base = 'http://localhos
       for (const id of ids) e.vistos[id] ||= { n: 1, t: d1 };
       e.dias = [...(e.dias || []), d1, d2];
       localStorage.setItem(k, JSON.stringify(e));
-    }, [sumarDias(lunes, -3), sumarDias(lunes, -10), ['g:rir', 'g:rpe', 'g:tempo', 'g:1rm', 'g:backoff', 'g:descarga', 'g:superserie', 'g:hipertrofia', 'g:volumen']]);
+    }, [sumarDias(lunes, -3), sumarDias(lunes, -10), [...new Set(['g:rir', 'g:rpe', 'g:tempo', 'g:1rm', 'g:backoff', 'g:descarga', 'g:superserie', 'g:hipertrofia', 'g:volumen', ...apuntesDeGlosario().slice(0, 13).map((x) => x.id)])]]); // (un lunes la semana empieza de cero: que lleguen siempre a los doce vistos que pide el examen)
     await p.reload();
     await p.locator('nav.tabs').waitFor();
     await fueraAvisos();

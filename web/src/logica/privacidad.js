@@ -35,6 +35,10 @@ export const debeAvisarPrivacidad = (vista, actual) => formatoVersion(actual) &&
 // eventos, el atleta de la semana, el panel del coach y la moderación) y la 2026-12.12 (v0.73: los aniversarios, el mes en el equipo,
 // los hitos, las reacciones y pegatinas y los momentos de 24 horas) y la 2026-12.13 (v0.95: cómo va la app, los fallos y los tiempos) y la 2026-12.14 (v0.104: lo que eliges para tu app) y la 2026-12.15 (v0.107: tu música) y la 2026-12.16 (v0.110: Salud del iPhone, calendario y WhatsApp) y la 2026-12.17 (v0.117: lo social del equipo)
 export const NOVEDADES_PRIVACIDAD = [
+  ['camara', 'La foto de tu plato', 'Puedes hacer una foto de lo que comes en vez de apuntarlo. La veis tú y tu coach, va sin ubicación y se borra sola a los 30 días. También puedes marcar que comes fuera.', '2026-12.37'],
+  ['pausa', 'La pausa de tu asesoría', 'Si paráis un tiempo, tu coach puede ponerla en pausa: guardamos los días, el motivo (nada de salud) y su mensaje. Sin recordatorios, y tu racha no se rompe.', '2026-12.36'],
+  ['proteina', 'Tus suplementos', 'Lo que te pauta tu coach o añades tú, los días que lo marcas y la hora de tu aviso, si lo quieres. Lo veis tú y tu coach. No es para medicación.', '2026-12.35'],
+  ['diana', 'Tus objetivos, propuestos por ti', 'Puedes proponer a tu coach lo que quieres conseguir: guardamos lo que propones y su respuesta. Lo veis tú y tu coach. El peso al que quieres llegar, solo con tu consentimiento de salud.', '2026-12.34'],
   ['perfil', 'Tu perfil, más tuyo', 'Lo que prefieres evitar y tu material: los ve tu coach. Tu foto de portada, como tu foto de perfil. Tu rincón de ánimo, solo tú.', '2026-12.33'],
   ['musica', 'Tu música, más tuya', 'Tus listas por momento, tus himnos y la música de cada sesión: lo ve tu coach. En la comunidad, tu canción y el reto musical, si quieres.', '2026-12.32'],
   ['calendario', 'Tu agenda y tu compañero', 'Apuntas tu agenda y cómo te gusta que te entrenen: lo ve tu coach. «Busco compañero» enseña tu franja y tus días. El ciclo y el informe, en tu móvil.', '2026-12.31'],

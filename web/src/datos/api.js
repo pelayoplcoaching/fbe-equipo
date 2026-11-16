@@ -5,7 +5,10 @@ import { tonelajePorDia } from '../logica/destacados.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
-import { progresoObjetivo, mejorReciente } from '../logica/objetivos.js';
+import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
+import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
+import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
+import { limpiarPausa, semanaEnPausa, pausaVigente } from '../logica/pausas.js';
 import { limpiarPersonal, MOMENTO_VALIDO, LIMITES, urlMusica } from '../logica/personal.js';
 import { claveValida } from '../logica/musica.js';
 import { ID_APUNTE, ENLACE_NOVEDAD } from '../logica/apuntes.js';
@@ -26,6 +29,7 @@ import { limpiarPerfil as limpiarPerfilCarrera, limpiarEvento as limpiarEventoCa
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
+import { fotoValida, MAX_FOTO, MAX_MINI, TEXTO_FOTO, TEXTO_FUERA } from '../logica/platos.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { limpiarTarea, limpiarRespuesta } from '../logica/tareas.js';
 import { compararCheckins } from '../logica/comparar.js';
@@ -40,7 +44,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -142,6 +146,30 @@ const falta072 = (e) => {
     && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
 };
 // (073) el perfil 4: lo que evita, su material, el rincón de ánimo y la foto de portada
+// (078) sin la migración de las pausas, la app no las ofrece
+// (079) sin la migración de la foto del plato y comer fuera, la app no las ofrece
+const AVISO_079 = 'Esto aún no está disponible: hay que poner al día la base (migración 079, supabase/migraciones/079_platos.sql)';
+const falta079 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''} ${e?.codigo || ''}`;
+  return /menu_fotos|plato_foto_(guardar|quitar)|platos_limpiar|'fuera' column|column[^.]*\bfuera\b|con_foto|PGRST202|PGRST204|PGRST205|42883|42703|42P01/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|column|columna|PGRST20[245]|42883|42703|42P01/i.test(m);
+};
+const AVISO_078 = 'Esto aún no está disponible: hay que poner al día la base (migración 078, supabase/migraciones/078_pausas.sql)';
+const falta078 = (e) => /pausas/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST205|42P01/i.test(`${e?.message || ''} ${e?.code || ''}`);
+// (077) sin la migración de los suplementos, la app no los ofrece
+const AVISO_077 = 'Esto aún no está disponible: hay que poner al día la base (migración 077, supabase/migraciones/077_suplementos.sql)';
+const falta077 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
+  return /suplementos_de|suplemento_(guardar|quitar|aviso|tomar)|PGRST202|42883/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
+};
+// (076) sin la migración de los objetivos del atleta, la app no ofrece el cuestionario ni las propuestas
+const AVISO_076 = 'Esto aún no está disponible: hay que poner al día la base (migración 076, supabase/migraciones/076_objetivos_atleta.sql)';
+const falta076 = (e) => {
+  const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
+  return /objetivos_propuestas_(mias|pendientes)|objetivos_proponer|objetivo_propuesta_(retirar|resolver)|PGRST202|42883/.test(m)
+    && /schema cache|does not exist|no existe|function|funci\u00f3n|no disponible|could not find|PGRST202|42883/i.test(m);
+};
 const AVISO_073 = 'Esto aún no está disponible: hay que poner al día la base (migración «perfil 4», supabase/migraciones/073_perfil_4.sql)';
 const falta073 = (e) => {
   const m = `${e?.message || ''} ${e?.details || ''} ${e?.hint || ''} ${e?.code || ''}`;
@@ -462,7 +490,7 @@ export const FOTO_MINI_MAX = 16000;
 // (v0.160) las de la 072 que solo leen: musica_de_sesiones, musica_mas_abierta, musica_biblioteca, musica_coach_uso, comunidad_canciones,
 // comunidad_reto_musical y comunidad_listas_companeros (si contaran como escritura, lo recordado de Hoy se olvidaría)
 // (073) animo_mios y portada_de solo leen
-const RPC_DE_CONSULTA = new Set(['animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['platos_limpiar' /* (079) la limpieza de fotos caducadas no cambia nada de lo que se ve: no vacía lo recordado */, 'suplementos_de', 'objetivos_propuestas_mias', 'objetivos_propuestas_pendientes', 'animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -1544,7 +1572,15 @@ export function crearApi(backend) {
       // (v0.160) la música 3 (072): con la 070 pero sin la 072, la 2026-12.31
       if ((await api.musica072().catch(() => null)) !== true) return VERSION_LEGAL_SIN_072;
       // (v0.167) el perfil 4 (073): con la 072 pero sin la 073, la 2026-12.32
-      return (await api.perfil073().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_073;
+      if ((await api.perfil073().catch(() => null)) !== true) return VERSION_LEGAL_SIN_073;
+      // (v0.173) los objetivos que propone el atleta (076): con la 073 pero sin la 076, la 2026-12.33
+      if ((await api.objetivos076().catch(() => null)) !== true) return VERSION_LEGAL_SIN_076;
+      // (v0.174) los suplementos (077): con la 076 pero sin la 077, la 2026-12.34
+      if ((await api.suplementos077().catch(() => null)) !== true) return VERSION_LEGAL_SIN_077;
+      // (v0.175) la pausa de la asesoría (078): con la 077 pero sin la 078, la 2026-12.35
+      if ((await api.pausas078().catch(() => null)) !== true) return VERSION_LEGAL_SIN_078;
+      // (v0.174) la foto del plato y comer fuera (079): con la 078 pero sin la 079, la 2026-12.36
+      return (await api.platosDisponibles().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_079;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -1618,8 +1654,13 @@ export function crearApi(backend) {
       if (!preferenciasValidas(fila)) throw new Error('Revisa las horas: la de la mañana, de 5:00 a 12:00; la de la tarde, de 12:00 a 23:30; y el «no molestar», con principio y final distintos.');
       // (064) sin la migración, la base aún no conoce el aviso «repaso»: se guarda lo demás
       const filas = await b.upsert('preferencias_notificaciones', fila, 'usuario_id').catch((e) => {
-        if (!/preferencias_notificaciones_validas|23514/.test(`${e?.message || ''} ${e?.code || ''}`) || !(fila.desactivados || []).includes('repaso')) throw e;
-        return b.upsert('preferencias_notificaciones', { ...fila, desactivados: fila.desactivados.filter((t) => t !== 'repaso') }, 'usuario_id');
+        if (!/preferencias_notificaciones_validas|23514/.test(`${e?.message || ''} ${e?.code || ''}`) || !(fila.desactivados || []).some((t) => t === 'repaso' || t === 'suplementos')) throw e;
+        // (revisión) primero sin «suplementos» (base sin la 077); solo si sigue sin valer, también sin «repaso» (sin la 064)
+        const sin = (ts) => ({ ...fila, desactivados: fila.desactivados.filter((t) => !ts.includes(t)) });
+        return b.upsert('preferencias_notificaciones', sin(['suplementos']), 'usuario_id').catch((e2) => {
+          if (!/preferencias_notificaciones_validas|23514/.test(`${e2?.message || ''} ${e2?.code || ''}`)) throw e2;
+          return b.upsert('preferencias_notificaciones', sin(['suplementos', 'repaso']), 'usuario_id');
+        });
       });
       return conDefecto(filas[0]);
     },
@@ -2092,6 +2133,59 @@ export function crearApi(backend) {
     async borrarMenu(id) {
       return b.delete('menu_comidas', { eq: { id } });
     },
+    // ------------------------------------------------------------ la foto del plato y comer fuera (v0.174, migración 079)
+    // ¿Está la migración? (para no ofrecer lo que la base aún no tiene). null: no se ha podido saber
+    async platosDisponibles() {
+      if (!api._v079) {
+        const pr = b.select('menu_fotos', { limit: 1, cols: 'entrada_id' }).then(() => true).catch((e) => (falta079(e) ? false : null));
+        api._v079 = pr;
+        // Una vez por sesión, la limpieza de las fotos de más de 30 días (no depende de que la base tenga pg_cron)
+        pr.then((x) => { if (x === true) b.rpc('platos_limpiar', {}).catch(() => {}); });
+        pr.then((x) => { if (x == null && api._v079 === pr) api._v079 = null; });
+      }
+      return api._v079;
+    },
+    // La foto de una comida: de una que ya está en el menú (entrada) o de una nueva ({ fecha, toma, texto }). Queda hecha.
+    async guardarFotoPlato(atletaId, { entrada = null, fecha = null, toma = null, texto = null, foto, mini }) {
+      if (!fotoValida(foto, MAX_FOTO) || !fotoValida(mini, MAX_MINI)) throw new Error('No se ha podido preparar la foto. Prueba con otra.');
+      // Sin entrada, la comida se apunta en la misma llamada que la foto: o las dos cosas o ninguna
+      const fila = entrada ? null : entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FOTO });
+      if (!entrada && !fila) throw new Error('Ese texto no vale.');
+      let id;
+      try {
+        id = await b.rpc('plato_foto_guardar', entrada ? { p_entrada: entrada.id, p_foto: foto, p_mini: mini }
+          : { p_entrada: null, p_foto: foto, p_mini: mini, p_fecha: fila.fecha, p_toma: fila.toma, p_texto: fila.texto });
+      } catch (err) { if (falta079(err)) throw new Error(AVISO_079); throw err; }
+      return { ...(entrada || { ...fila, atleta_id: atletaId }), id: entrada?.id || id, hecho: true, con_foto: true };
+    },
+    async quitarFotoPlato(entradaId) {
+      try { await b.rpc('plato_foto_quitar', { p_entrada: entradaId }); } catch (e) { if (falta079(e)) throw new Error(AVISO_079); throw e; }
+    },
+    // Las miniaturas de las fotos de unos días (la semana del menú): [{ entrada_id, fecha, mini }]
+    async fotosPlatos(atletaId, desde, hasta) {
+      try { return await b.select('menu_fotos', { eq: { atleta_id: atletaId }, gte: { fecha: desde }, lte: { fecha: hasta }, cols: 'entrada_id,fecha,mini,creado_en', order: [['fecha', 'asc'], ['creado_en', 'asc']] }); }
+      catch (e) { if (falta079(e)) return []; throw e; }
+    },
+    // La foto entera de una comida (null si ya no se guarda)
+    // (coach) cuántas fotos de platos ha subido cada atleta en una semana: { atleta_id: n }
+    async platosDeLaSemana(lunes) {
+      try {
+        const out = {};
+        for (const f of await b.select('menu_fotos', { gte: { fecha: lunes }, lte: { fecha: sumarDias(lunes, 6) }, cols: 'atleta_id' })) out[f.atleta_id] = (out[f.atleta_id] || 0) + 1;
+        return out;
+      } catch (e) { if (falta079(e)) return {}; throw e; }
+    },
+    async fotoPlato(entradaId) {
+      try { return (await b.select('menu_fotos', { eq: { entrada_id: entradaId }, cols: 'entrada_id,foto,creado_en', limit: 1 }))[0] || null; }
+      catch (e) { if (falta079(e)) return null; throw e; }
+    },
+    // Comer fuera: esa comida la hace fuera de casa y cuenta como hecha
+    async apuntarFuera(atletaId, { fecha, toma, texto = null, hecho = true }) {
+      const fila = entradaMenu({ fecha, toma, texto: String(texto || '').trim() || TEXTO_FUERA });
+      if (!fila) throw new Error('Ese texto no vale.');
+      try { return (await b.insert('menu_comidas', [{ ...fila, atleta_id: atletaId, fuera: true, hecho: hecho !== false }]))[0]; }
+      catch (e) { if (falta079(e)) throw new Error(AVISO_079); return falta022(e); }
+    },
     // Copiar el menú de una semana a otra (lo que ya hubiera en la de destino se queda)
     async copiarMenuSemana(atletaId, lunesOrigen, lunesDestino) {
       const [origen, destino, asignadas, delEquipo] = await Promise.all([api.menuSemana(atletaId, lunesOrigen), api.menuSemana(atletaId, lunesDestino),
@@ -2363,7 +2457,10 @@ export function crearApi(backend) {
       const desde = sumarDias(lunesDe(hoy), -7 * 11);
       const series = await b.select('series', { eq: { atleta_id: atletaId }, gte: { registrada_en: desde }, cols: 'registrada_en', limit: 10000 });
       const objetivo = semanasObjetivo({ diasSemana, sesiones, semanas, hoy });
-      const lista = paraRacha(objetivo);
+      // (v0.175, 078) una semana de pausa sin completar cuenta como una sin nada programado: ni suma ni rompe la racha,
+      // tampoco en el calendario de la racha ni en la racha más larga (que salen de esta lista)
+      const pausas = await api.pausas(atletaId).catch(() => []);
+      const lista = paraRacha(objetivo).map((w) => (pausas.length && w.hechas < w.total && semanaEnPausa(pausas, w.fecha_inicio) ? { ...w, total: 0, hechas: 0, pausa: true } : w));
       const dias = {};
       for (const x of series) { const d = aISO(new Date(x.registrada_en)); dias[d] = (dias[d] || 0) + 1; }
       for (const x of sesiones) if (x.completada && x.fecha_realizada >= desde && !dias[x.fecha_realizada]) dias[x.fecha_realizada] = 1;
@@ -2374,7 +2471,7 @@ export function crearApi(backend) {
       // v0.68 (la bienvenida): el último día que entrenó (de las últimas 11 semanas) y si ha entrenado alguna vez
       const ultimoDia = Object.keys(dias).filter((d) => d <= hoy).sort().at(-1) || null;
       const algunaVez = !!ultimoDia || sesiones.some((x) => x.completada);
-      return { racha: racha(lista, hoy), diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
+      return { racha: racha(lista, hoy), pausas, diasEntrenados, semanasCompletas: semanasCompletas(lista, hoy), semanas: lista,
         diasSemana, actual: semanaEnCurso(objetivo, hoy), ultimoDia, algunaVez };
     },
     // Cardio hecho por semana (minutos, km y sesiones) en las últimas n semanas, para la gráfica de Progreso
@@ -2709,12 +2806,123 @@ export function crearApi(backend) {
     async objetivos(atletaId, hoy = hoyISO()) {
       const lista = await b.select('objetivos', { eq: { atleta_id: atletaId }, order: [['fecha_limite', 'asc']] });
       const enlazados = lista.filter((o) => o.ejercicio_id);
-      if (!enlazados.length) return lista;
-      const [series, ejercicios] = await Promise.all([
-        api.historial(atletaId),
-        b.select('ejercicios', { in: { id: unicos(enlazados.map((o) => o.ejercicio_id)) }, cols: 'id,nombre' }).then(porId),
+      // (076) los de peso corporal: su progreso y su previsión salen de su tendencia de peso
+      const dePeso = lista.filter((o) => !o.ejercicio_id && tipoDeObjetivo(o) === 'peso' && o.peso_objetivo != null);
+      if (!enlazados.length && !dePeso.length) return lista;
+      const [series, ejercicios, pesos] = await Promise.all([
+        enlazados.length ? api.historial(atletaId) : [],
+        enlazados.length ? b.select('ejercicios', { in: { id: unicos(enlazados.map((o) => o.ejercicio_id)) }, cols: 'id,nombre' }).then(porId) : {},
+        dePeso.length ? b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(hoy, -400) }, order: [['fecha', 'asc']] }).catch(() => []) : [],
       ]);
-      return lista.map((o) => (o.ejercicio_id ? { ...o, ejercicio: ejercicios[o.ejercicio_id]?.nombre || null, auto: progresoObjetivo(o, series, hoy) } : o));
+      return lista.map((o) => (o.ejercicio_id ? { ...o, ejercicio: ejercicios[o.ejercicio_id]?.nombre || null, auto: progresoObjetivo(o, series, hoy) }
+        : dePeso.includes(o) ? { ...o, autoPeso: progresoPeso(o, pesos, hoy) } : o));
+    },
+    // ------------------------------------------------------------ los objetivos que propone el atleta (migración 076)
+    // ¿Está la 076? true / false / null (no se sabe: un corte). Si la función está, contesta o dice que no es para él
+    async objetivos076() {
+      if (!api._v076) {
+        const pr = b.rpc('objetivos_propuestas_mias', { p_todo: false }).then(() => true).catch((e) => (falta076(e) ? false : /42501|Solo el atleta/i.test(`${e?.message || ''} ${e?.code || ''}`) ? true : null));
+        api._v076 = pr;
+        pr.then((x) => { if (x == null && api._v076 === pr) api._v076 = null; });
+      }
+      return api._v076;
+    },
+    // El atleta: { contestado_en, propuestas } (null sin la 076). Con todo: true, también las contestadas hace tiempo
+    async objetivosPropuestos({ todo = false } = {}) {
+      try { return (await b.rpc('objetivos_propuestas_mias', { p_todo: todo })) || { contestado_en: null, propuestas: [] }; } catch (e) { if (falta076(e)) return null; throw e; }
+    },
+    // Contesta el cuestionario: de 0 a 5 propuestas del formulario (ninguna: sigue con los mismos)
+    async proponerObjetivos(lista = []) {
+      const limpias = [];
+      for (const x of lista) { const r = limpiarPropuesta(x); if (r.error) throw new Error(r.error); limpias.push(r.datos); }
+      try { return await b.rpc('objetivos_proponer', { p_propuestas: limpias }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    async retirarPropuesta(id) {
+      try { await b.rpc('objetivo_propuesta_retirar', { p_id: id }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    // El coach: las que esperan (de todos o de un atleta); sin la 076, ninguna
+    async propuestasPendientes(atletaId = null) {
+      try { return (await b.rpc('objetivos_propuestas_pendientes', { p_atleta: atletaId })) || []; } catch (e) { if (falta076(e)) return []; throw e; }
+    },
+    // El coach acepta una propuesta: crea el objetivo (con lo que haya ajustado en `cambios`) y la da por aceptada.
+    // En los de fuerza y de peso, el punto de partida es el de hoy (su 1RM estimado o su tendencia de peso)
+    async aceptarPropuesta(p, cambios = {}, nota = null, hoy = hoyISO()) {
+      const fila = { ...objetivoDePropuesta(p), ...cambios, atleta_id: p.atleta_id };
+      if (fila.tipo === 'fuerza' && fila.ejercicio_id) fila.e1rm_inicio = await api.e1rmActual(p.atleta_id, fila.ejercicio_id, hoy).catch(() => null);
+      if (fila.tipo === 'peso') fila.peso_inicio = await api.tendenciaPesoActual(p.atleta_id, hoy).catch(() => null);
+      const creado = await api.crear('objetivos', fila);
+      try { await b.rpc('objetivo_propuesta_resolver', { p_id: p.id, p_aceptar: true, p_objetivo: creado.id, p_nota: nota || null }); }
+      catch (e) {
+        // (revisión) si la respuesta se perdió pero la base sí la aceptó, el objetivo se queda; solo se deshace si sigue esperando
+        const sigue = await api.propuestasPendientes(p.atleta_id).then((l) => l.some((x) => x.id === p.id)).catch(() => null);
+        if (sigue === false) return creado;
+        if (sigue === true) await api.borrar('objetivos', creado.id).catch(() => {});
+        if (falta076(e)) throw new Error(AVISO_076);
+        throw e;
+      }
+      return creado;
+    },
+    async descartarPropuesta(id, nota = null) {
+      try { return await b.rpc('objetivo_propuesta_resolver', { p_id: id, p_aceptar: false, p_objetivo: null, p_nota: nota || null }); } catch (e) { if (falta076(e)) throw new Error(AVISO_076); throw e; }
+    },
+    // ------------------------------------------------------------ las pausas de la asesoría (migración 078)
+    // Las de un atleta, por fecha (el atleta, las suyas); sin la 078, ninguna
+    async pausas(atletaId) {
+      try { return await b.select('pausas', { eq: { atleta_id: atletaId }, order: [['desde', 'asc']] }); } catch (e) { if (falta078(e)) return []; throw e; }
+    },
+    // ¿Está la 078? true / false / null
+    async pausas078() {
+      if (!api._v078) {
+        const pr = b.select('pausas', { limit: 1, cols: 'id' }).then(() => true).catch((e) => (falta078(e) ? false : null));
+        api._v078 = pr;
+        pr.then((x) => { if (x == null && api._v078 === pr) api._v078 = null; });
+      }
+      return api._v078;
+    },
+    // El coach la pone (sin id) o la cambia
+    async guardarPausa(atletaId, datos) {
+      const r = limpiarPausa(datos);
+      if (r.error) throw new Error(r.error);
+      try { return datos.id ? await api.actualizar('pausas', datos.id, r.datos) : await api.crear('pausas', { ...r.datos, atleta_id: atletaId }); }
+      catch (e) { if (falta078(e)) throw new Error(AVISO_078); throw e; }
+    },
+    async quitarPausa(id) { return api.borrar('pausas', id); },
+    // ------------------------------------------------------------ los suplementos (migración 077)
+    // ¿Está la 077? true / false / null (no se sabe: un corte)
+    async suplementos077() {
+      if (!api._v077) {
+        const pr = b.rpc('suplementos_de', { p_atleta: null, p_desde: null, p_todos: false }).then(() => true)
+          .catch((e) => (falta077(e) ? false : /42501|22023|Solo el atleta|no existe/i.test(`${e?.message || ''} ${e?.code || ''}`) ? true : null));
+        api._v077 = pr;
+        pr.then((x) => { if (x == null && api._v077 === pr) api._v077 = null; });
+      }
+      return api._v077;
+    },
+    // { suplementos, tomas } de un atleta (el atleta, los suyos: atletaId null); null sin la 077
+    async suplementos(atletaId = null, { desde = null, todos = false } = {}) {
+      try { return (await b.rpc('suplementos_de', { p_atleta: atletaId, p_desde: desde, p_todos: todos })) || { suplementos: [], tomas: [] }; } catch (e) { if (falta077(e)) return null; throw e; }
+    },
+    async guardarSuplemento(atletaId, datos) {
+      const r = limpiarSuplemento(datos);
+      if (r.error) throw new Error(r.error);
+      try { return await b.rpc('suplemento_guardar', { p_atleta: atletaId, p_datos: r.datos }); } catch (e) { if (falta077(e)) throw new Error(AVISO_077); throw e; }
+    },
+    async quitarSuplemento(id) {
+      try { await b.rpc('suplemento_quitar', { p_id: id }); } catch (e) { if (falta077(e)) throw new Error(AVISO_077); throw e; }
+    },
+    // El aviso al móvil: su hora («HH:MM») o null para quitarlo
+    async avisoSuplemento(id, hora = null) {
+      if (hora != null && !horaValida(hora)) throw new Error('La hora del aviso, entre las 5:00 y las 23:30.');
+      try { return await b.rpc('suplemento_aviso', { p_id: id, p_hora: hora }); } catch (e) { if (falta077(e)) throw new Error(AVISO_077); throw e; }
+    },
+    async tomarSuplemento(id, fecha, hecho = true) {
+      try { await b.rpc('suplemento_tomar', { p_id: id, p_fecha: fecha, p_hecho: hecho }); } catch (e) { if (falta077(e)) throw new Error(AVISO_077); throw e; }
+    },
+    // Su tendencia de peso de ahora (si se ha pesado en los últimos 14 días), para medir desde ahí un objetivo de peso
+    async tendenciaPesoActual(atletaId, hoy = hoyISO()) {
+      const pesos = await b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(hoy, -120) }, order: [['fecha', 'asc']] });
+      const a = progresoPeso({ peso_objetivo: 1 }, pesos, hoy)?.actual;
+      return a != null ? a : null;
     },
     // Al enlazar un objetivo: su mejor 1RM estimado de ahora, para medir el progreso desde ahí
     async e1rmActual(atletaId, ejercicioId, hoy = hoyISO()) {
@@ -5566,6 +5774,12 @@ export function crearApi(backend) {
       out.apuntes_duelos = perfilId && perfilId === uid() ? (await b.rpc('apuntes_duelos_mios').catch(() => [])) || [] : [];
       // (v0.157, 069) su agenda de vida, entera (el manual va con «personal»)
       out.agenda_vida = (await api.agenda(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', hasta: '2100-01-01' }).catch(() => [])) || [];
+      // (v0.173, 076) lo que ha propuesto como objetivo (y cuándo contestó el cuestionario); solo el propio atleta
+      if (perfilId && perfilId === uid()) out.objetivos_propuestos = (await api.objetivosPropuestos({ todo: true }).catch(() => null)) || null;
+      // (v0.175, 078) las pausas de su asesoría
+      out.pausas = await api.pausas(atletaId).catch(() => []);
+      // (v0.174, 077) sus suplementos (también los archivados) y los días que los tomó
+      out.suplementos = (await api.suplementos(perfilId && perfilId === uid() ? null : atletaId, { desde: '2000-01-01', todos: true }).catch(() => null)) || null;
       // (072) la música que abrió en cada sesión y lo que más abre (desde siempre)
       out.musica_abierta = (await api.musicaMasAbierta('2000-01', '2100-12', perfilId && perfilId === uid() ? null : atletaId, 2000).catch(() => [])) || [];
       // (v0.160, 072) la música de cada sesión y las aperturas por mes; y, si es suya, la lista que comparte con sus parejas de racha
@@ -5612,6 +5826,8 @@ export function crearApi(backend) {
         .map(({ id, dispositivo, creada_en, usada_en }) => ({ id, dispositivo, creada_en, usada_en })) : [];
       // Comidas (v0.26): sus comidas del día, su recetario (con las recetas) y su menú
       for (const t of ['comidas_atleta', 'recetas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (079) las fotos de sus platos que aún se guardan (30 días)
+      out.menu_fotos = await b.select('menu_fotos', { eq: { atleta_id: atletaId }, pagina: 5 }).catch((e) => { if (falta079(e)) return []; throw e; });
       // La comunidad (v0.43): si entró, con qué nombre y lo que ha publicado, comentado, reaccionado y avisado. El
       // propio atleta, con comunidad_mis_datos() (también lo oculto y aunque haya salido); el coach, de las tablas.
       if (perfilId && perfilId === uid()) out.comunidad = await b.rpc('comunidad_mis_datos', {}).catch(() => null);
@@ -5679,6 +5895,9 @@ export function crearApi(backend) {
       // unas veinte esperas seguidas; ahora, las cinco de la cadena más larga). Los cálculos son los mismos.
       const desde = sumarDias(lunesDe(hoy), -63);
       const lunesHoy = lunesDe(hoy);
+      // (v0.175, 078) las pausas de todos (son pocas); sin la 078, ninguna
+      const pausasDe = {};
+      for (const x of await b.select('pausas', { in: { atleta_id: ids } }).catch(() => [])) (pausasDe[x.atleta_id] ||= []).push(x);
       // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
       const delPrograma = (async () => {
         const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
@@ -5783,8 +6002,11 @@ export function crearApi(backend) {
           peso: chispaPeso(P[a.id] || [], hoy, 8),
           sesiones: nat ? nat.chispa : chispaSesiones(misSemanas, ses6.filter((x) => idsMias.has(x.semana_id)), hoy, 6),
         };
-        return { ...resumenAtleta({
-          atleta: a, bloque, semana,
+        // (v0.175, 078) en pausa: para el panel, las alertas, el tablero y «A quién escribir» cuenta como pausado
+        // (en la base sigue activo, para que le lleguen los mensajes de su coach)
+        const pausa = pausaVigente(pausasDe[a.id] || [], hoy);
+        return { pausa: pausa || null, ...resumenAtleta({
+          atleta: pausa && a.estado === 'activo' ? { ...a, estado: 'pausado' } : a, bloque, semana,
           semanas: bloque ? semanasPorBloque[bloque.id] || [] : [],
           sesiones: semana ? sesiones[semana.id] || [] : [],
           pesos: P[a.id] || [], checkins: cs,
@@ -6054,6 +6276,8 @@ export function crearApi(backend) {
         if (cambios.length) items.recetas = cambios.map((c) => ({ ...c, receta: R[c.receta_id] || null, atleta: A[c.atleta_id] || null })).filter((c) => c.atleta && c.receta);
       }
       items.comunidad = comunidad;
+      // (076) los objetivos que proponen los atletas y esperan respuesta
+      items.objetivos = (await api.propuestasPendientes().catch(() => [])).map((x) => ({ ...x, atleta: A[x.atleta_id] || null })).filter((x) => x.atleta);
       {
         const { tareas, EJ, AR } = deTareas;
         items.tareas = tareas.map((t) => ({ ...t, atleta: A[t.atleta_id] || null, ejercicio: EJ[t.ejercicio_id] || null, archivo: AR[t.archivo_id] || null })).filter((t) => t.atleta);
@@ -6062,8 +6286,8 @@ export function crearApi(backend) {
       const hilo = (c) => c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
       const unicosHilos = [...new Map(items.comentarios.map((c) => [hilo(c), c])).values()];
       const porAtleta = {};
-      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas, items.tareas]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
-      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length + items.tareas.length, porAtleta };
+      for (const lista of [items.sesiones, items.checkins, unicosHilos, items.archivos, items.recetas, items.tareas, items.objetivos]) for (const x of lista) porAtleta[x.atleta.id] = (porAtleta[x.atleta.id] || 0) + 1;
+      return { ...items, total: items.sesiones.length + items.checkins.length + unicosHilos.length + items.archivos.length + items.recetas.length + items.comunidad.length + items.tareas.length + items.objetivos.length, porAtleta };
     },
     async marcarRevisado(tipo, id, revisado = true) {
       const [tabla, col] = REVISION[tipo];

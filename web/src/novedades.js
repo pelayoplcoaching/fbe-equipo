@@ -6,6 +6,44 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.174': {
+    atleta: [
+      'Si tu coach te lleva la nutrición: hazle una foto a tu plato y la comida queda hecha. En Comidas o en «Tu menú de hoy».',
+      '¿Comes fuera? Márcalo: te sale una pauta corta para elegir bien y esa comida cuenta como hecha.',
+    ],
+    coach: [
+      'Fotos de platos: las ves en las comidas de cada atleta y, juntas, en la revisión semanal. Se guardan 30 días.',
+      'Las comidas fuera de casa salen marcadas en su menú y cuentan como hechas. Migración 079.',
+    ],
+  },
+  '0.173': {
+    atleta: [
+      'En Hoy, dile a tu coach qué quieres conseguir: una marca, tu peso, una carrera o lo que quieras. Te lo preguntará en cada bloque.',
+      'Tus suplementos, en Hoy: márcalos con un toque y ponte un aviso al móvil a tu hora. Añade los tuyos desde Perfil.',
+      'Si paras unos días (vacaciones, trabajo), tu coach pone tu asesoría en pausa: sin recordatorios, y tu racha te espera.',
+    ],
+    coach: [
+      'Tus atletas te proponen objetivos: llegan a Revisar y los aceptas (ajustando cifra o fecha) o los descartas.',
+      'Suplementos: páutalos en la ficha (Seguimiento) y mira qué días los marcan. Objetivo nuevo de «Peso corporal», con previsión.',
+      'Pausa de la asesoría, en la ficha (Datos): sin recordatorios ni alertas, y la racha no se rompe. Migraciones 076, 077 y 078.',
+    ],
+  },
+  '0.172': {
+    atleta: [
+      'Todas las guías de Aprende estrenan portada, y antebrazo, aductores y lumbares ya tienen su estatua.',
+    ],
+    coach: [
+      '29 portadas de guía y tres estatuas nuevas. Tus 12 guías de texto ya tienen estantería: salen al publicarlas.',
+    ],
+  },
+  '0.171': {
+    atleta: [
+      'Si entrenas antebrazo, aductores o lumbares, debajo de tu mapa muscular ya tienes el botón a su guía.',
+    ],
+    coach: [
+      'Las guías de antebrazo, aductores y lumbares ya llevan su grupo y salen debajo del mapa muscular. Migración 075.',
+    ],
+  },
   '0.170': {
     atleta: [
       'Aprende crece: 16 guías nuevas en Entrenar, Comer y Salud, de la rodilla y la creatina a la analítica y el alcohol.',

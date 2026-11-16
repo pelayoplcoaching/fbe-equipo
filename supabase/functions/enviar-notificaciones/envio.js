@@ -11,7 +11,7 @@
 // email, RESEND_API_KEY y AVISOS_REMITENTE. SUPABASE_URL y la clave de servicio los pone Supabase solo.
 import { enviarPush, comprobarVapid, ENDPOINT_VALIDO } from './webpush.js';
 
-const RECORDATORIOS = new Set(['sesion_hoy', 'checkin', 'habitos', 'nutricion', 'repaso']);
+const RECORDATORIOS = new Set(['sesion_hoy', 'checkin', 'habitos', 'nutricion', 'repaso', 'suplementos']);
 // Las que conviene que lleguen ya aunque el móvil esté en ahorro de batería
 const URGENTES = new Set(['respuesta', 'mensaje', 'prueba', 'sesion_hoy', 'checkin', 'habitos', 'nutricion', 'descanso']);
 // Una sola a la vez en el móvil (la nueva sustituye a la anterior del mismo tipo, y vuelve a sonar)

@@ -1,3 +1,5 @@
+import { PropuestasDe } from './PropuestasObjetivo.jsx';
+import { tipoDeObjetivo, textoPropuesta } from '../../logica/objetivos-atleta.js';
 import { Fragment } from 'preact';
 import { VideosVistosAtleta } from '../Videos.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
@@ -24,6 +26,8 @@ import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
+import { SuplementosCoach } from './SuplementosCoach.jsx';
+import { PausaCoach } from '../Pausas.jsx';
 import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
@@ -39,7 +43,7 @@ import { ordenReal } from '../../logica/orden-sesion.js';
 import { LoSuyo, ParaHablarle } from './PersonalCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
 import { CarreraFicha } from './CarreraCoach.jsx';
-import { conCarrera } from '../../logica/carrera.js';
+import { conCarrera, leerTiempo, fmtTiempo } from '../../logica/carrera.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -431,6 +435,8 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
       <Reserva id="seg-tareas"><TareasCoach atleta={atleta} alCambiar={alCambiar} /></Reserva>
       {conEntrenamiento(atleta) && <Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva>}
       <Reserva id="seg-habitos"><HabitosCoach atleta={atleta} /></Reserva>
+      {/* (v0.174, 077) lo que toma: lo pauta el coach o lo añade el atleta */}
+      <SuplementosCoach atleta={atleta} />
       <Reserva id="seg-progreso"><VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} /></Reserva>
       {conEntrenamiento(atleta) && <Reserva id="seg-carga"><CargaEntreno atletaId={atleta.id} /></Reserva>}
       {conEntrenamiento(atleta) && <Reserva id="seg-volumen"><VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} /></Reserva>}
@@ -499,13 +505,15 @@ function Objetivos({ atleta }) {
   const [editar, setEditar] = useState(null);
   return (
     <div class="pila">
+      {/* (v0.173, 076) lo que propone el atleta y espera respuesta */}
+      <PropuestasDe atleta={atleta} alCambiar={() => lista.recargar(true)} />
       <div class="separa"><p class="peq secundario">Los objetivos los ve el atleta en su progreso, con la barra y los días que quedan.</p><button class="btn btn-primario btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo objetivo</button></div>
       {!(lista.datos || []).length ? <div class="panel"><Vacio icono="diana" titulo="Sin objetivos">Por ejemplo: «Press banca 70 kg a una repetición» para el final del bloque.</Vacio></div> : (
         <div class="panel"><ul class="lista">
           {lista.datos.map((o) => (
             <li key={o.id}>
-              <button class="respuesta objetivo-fila" data-hecho={o.auto?.conseguido || o.estado === 'completado' ? '' : undefined} style={{ '--f': Math.min(1, Math.max(0, (o.auto ? o.auto.pct : o.progreso_pct || 0) / 100)) }} onClick={() => setEditar(o)}>
-                <span><span class="nombre">{o.titulo}</span><br /><span class="detalle">{o.auto?.conseguido ? `Conseguido el ${fmtCorta(o.auto.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}, {o.auto ? o.auto.pct : o.progreso_pct} %{o.auto ? ' (automático)' : ''}{o.fecha_limite ? `, para el ${fmtCorta(o.fecha_limite)}` : ''}</span></span>
+              <button class="respuesta objetivo-fila" data-hecho={o.auto?.conseguido || o.estado === 'completado' ? '' : undefined} style={{ '--f': Math.min(1, Math.max(0, (o.auto ? o.auto.pct : o.autoPeso ? (o.estado === 'completado' ? 100 : o.autoPeso.pct) : o.progreso_pct || 0) / 100)) }} onClick={() => setEditar(o)}>
+                <span><span class="nombre">{o.titulo}</span><br /><span class="detalle">{o.auto?.conseguido ? `Conseguido el ${fmtCorta(o.auto.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}, {o.auto ? o.auto.pct : o.autoPeso ? (o.estado === 'completado' ? 100 : o.autoPeso.pct) : o.progreso_pct} %{o.auto || o.autoPeso ? ' (automático)' : ''}{o.propuesto_por_atleta ? ', lo propuso el atleta' : ''}{o.fecha_limite ? `, para el ${fmtCorta(o.fecha_limite)}` : ''}</span></span>
                 <Icono n="editar" />
               </button>
             </li>
@@ -521,16 +529,22 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
   const { api, aviso } = useApp();
   const nuevo = !objetivo.id;
   const biblioteca = useCarga(() => api.biblioteca(), []);
+  // (v0.173) los objetivos de peso corporal, solo con la migración 076
+  const con076 = useCarga(() => api.objetivos076().catch(() => null), []);
   const [f, setF] = useState({
     titulo: objetivo.titulo || '', descripcion: objetivo.descripcion || '', fecha_limite: objetivo.fecha_limite || '', progreso_pct: objetivo.progreso_pct ?? 0, estado: objetivo.estado || 'en_curso',
-    tipo: objetivo.ejercicio_id ? 'marca' : nuevo ? 'marca' : 'manual',
+    tipo: objetivo.ejercicio_id ? 'marca' : nuevo ? 'marca' : tipoDeObjetivo(objetivo) === 'peso' ? 'peso' : 'manual',
+    // (v0.173, 076) los de peso corporal (progreso automático con su tendencia) y los de carrera (distancia y tiempo)
+    peso: objetivo.peso_objetivo != null ? Number(objetivo.peso_objetivo) : null, km: objetivo.distancia_km != null ? Number(objetivo.distancia_km) : null, tiempo: objetivo.tiempo_seg ? fmtTiempo(objetivo.tiempo_seg) : '',
     ejercicio_id: objetivo.ejercicio_id || null, ejercicio: objetivo.ejercicio || null, kg: objetivo.kg_objetivo != null ? Number(objetivo.kg_objetivo) : null, reps: objetivo.reps_objetivo ?? 1,
   });
   const [elegir, setElegir] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const marca = f.tipo === 'marca';
-  const sugerido = marca && f.ejercicio && f.kg ? `${f.ejercicio} ${textoMarca(f.kg, f.reps)}` : '';
-  const valido = (f.titulo.trim() || sugerido) && (!marca || (f.ejercicio_id && f.kg > 0 && f.reps >= 1 && f.reps <= REPS_MAX_OBJETIVO));
+  const marca = f.tipo === 'marca', dePeso = f.tipo === 'peso', deCarrera = f.tipo === 'manual' && objetivo.tipo === 'carrera';
+  const sugerido = marca && f.ejercicio && f.kg ? `${f.ejercicio} ${textoMarca(f.kg, f.reps)}` : dePeso && f.peso ? textoPropuesta({ tipo: 'peso', peso_kg: f.peso }) : '';
+  const segCarrera = deCarrera ? leerTiempo(f.tiempo) : null;
+  const valido = (f.titulo.trim() || sugerido) && (!marca || (f.ejercicio_id && f.kg > 0 && f.reps >= 1 && f.reps <= REPS_MAX_OBJETIVO))
+    && (!dePeso || (f.peso >= 30 && f.peso <= 300)) && (!deCarrera || (f.km >= 0.1 && f.km <= 500 && segCarrera >= 30));
   async function guardar(e) {
     e.preventDefault();
     if (!valido || guardando) return;
@@ -544,7 +558,25 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
         fila.e1rm_inicio = await api.e1rmActual(atleta.id, f.ejercicio_id).catch(() => null);
         if (!nuevo) fila.creado_en = new Date().toISOString();
       }
-    } else Object.assign(fila, { ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, progreso_pct: Math.round(f.progreso_pct || 0) });
+    } else if (dePeso) {
+      Object.assign(fila, { ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, tipo: 'peso', peso_objetivo: f.peso });
+      // El punto de partida, su tendencia de hoy (al crearlo o al pasarlo a objetivo de peso)
+      if (nuevo || tipoDeObjetivo(objetivo) !== 'peso') {
+        fila.peso_inicio = await api.tendenciaPesoActual(atleta.id).catch(() => null);
+        if (!nuevo) fila.creado_en = new Date().toISOString();
+      }
+    } else {
+      Object.assign(fila, { ejercicio_id: null, kg_objetivo: null, reps_objetivo: null, e1rm_inicio: null, progreso_pct: Math.round(f.progreso_pct || 0) });
+      if (deCarrera) Object.assign(fila, { distancia_km: f.km, tiempo_seg: segCarrera });
+      else if (!nuevo && tipoDeObjetivo(objetivo) === 'peso') Object.assign(fila, { tipo: 'libre', peso_objetivo: null, peso_inicio: null });
+      // (revisión) una marca que pasa a «Otro» deja de ser de fuerza
+      else if (!nuevo && objetivo.tipo === 'fuerza') fila.tipo = 'libre';
+    }
+    // (revisión) uno de carrera que pasa a marca o a peso suelta su distancia y su tiempo
+    if (!nuevo && objetivo.tipo === 'carrera' && (marca || dePeso)) Object.assign(fila, { distancia_km: null, tiempo_seg: null });
+    // (sin la 076 no hay columna «tipo»: solo se toca si el objetivo ya tenía uno distinto)
+    if (marca && objetivo.tipo && objetivo.tipo !== 'fuerza') fila.tipo = 'fuerza';
+    if (marca && !nuevo && tipoDeObjetivo(objetivo) === 'peso') Object.assign(fila, { peso_objetivo: null, peso_inicio: null });
     try {
       if (nuevo) await api.crear('objetivos', { ...fila, atleta_id: atleta.id }); else await api.actualizar('objetivos', objetivo.id, fila);
       alCerrar(true);
@@ -555,7 +587,7 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
     <Hoja titulo={nuevo ? 'Nuevo objetivo' : 'Editar objetivo'} alCerrar={() => alCerrar(false)}>
       <form class="pila" onSubmit={guardar}>
         <Segmentos etiqueta="Tipo de objetivo" valor={f.tipo} alCambiar={(v) => v && setF({ ...f, tipo: v })}
-          opciones={[['marca', 'Marca en un ejercicio'], ['manual', 'Otro (lo marcas tú)']]} />
+          opciones={[['marca', 'Marca en un ejercicio'], ...(con076.datos === true || dePeso ? [['peso', 'Peso corporal']] : []), ['manual', 'Otro (lo marcas tú)']]} />
         {marca && (
           <div class="pila-s objetivo-marca">
             <div class="campo"><span class="etq">Ejercicio</span>
@@ -567,11 +599,23 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
             <p class="mini terciario">El progreso se calcula solo con su 1RM estimado en este ejercicio (de 1 a {REPS_MAX_OBJETIVO} repeticiones), desde el que tenga hoy; se da por conseguido cuando haga una serie con al menos esa carga y esas repeticiones. En dominadas o fondos, la marca son los kilos de lastre; si es solo con el peso del cuerpo, usa «Otro».</p>
           </div>
         )}
+        {dePeso && (
+          <div class="pila-s objetivo-marca">
+            <div class="campo"><label for="ob-peso">Peso al que quiere llegar (kg)</label><Paso id="ob-peso" valor={f.peso} paso={0.5} min={30} max={300} dec={1} etiqueta="kilos del objetivo de peso" alCambiar={(v) => setF({ ...f, peso: v })} /></div>
+            <p class="mini terciario">El progreso se calcula solo con su tendencia de peso, desde la que tenga hoy, y le sale la previsión («a este ritmo, hacia el…») si se pesa al menos una vez por semana.</p>
+          </div>
+        )}
+        {deCarrera && (
+          <div class="rejilla-campos">
+            <div class="campo"><label for="ob-km">Distancia (km)</label><Paso id="ob-km" valor={f.km} paso={1} min={0.1} max={500} dec={2} etiqueta="kilómetros del objetivo" alCambiar={(v) => setF({ ...f, km: v })} /></div>
+            <div class="campo"><label for="ob-tiempo">Tiempo</label><input id="ob-tiempo" class="entrada" maxLength={8} value={f.tiempo} onInput={(e) => setF({ ...f, tiempo: e.currentTarget.value })} placeholder="50:00" /></div>
+          </div>
+        )}
         <div class="campo"><label for="ob-titulo">Objetivo</label><input id="ob-titulo" class="entrada" required={!sugerido} value={f.titulo} onInput={(e) => setF({ ...f, titulo: e.currentTarget.value })} placeholder={sugerido || 'Sentadilla 100 kg × 3'} /></div>
         <div class="campo"><label for="ob-desc">Detalle (opcional)</label><input id="ob-desc" class="entrada" value={f.descripcion} onInput={(e) => setF({ ...f, descripcion: e.currentTarget.value })} /></div>
         <div class="rejilla-campos">
           <div class="campo"><label for="ob-fecha">Para el</label><input id="ob-fecha" type="date" class="entrada" value={f.fecha_limite} onInput={(e) => setF({ ...f, fecha_limite: e.currentTarget.value })} /></div>
-          {!marca && <div class="campo"><label for="ob-pct">Progreso (%)</label><Paso id="ob-pct" valor={f.progreso_pct} paso={10} min={0} max={100} dec={0} etiqueta="porcentaje de progreso" alCambiar={(v) => setF({ ...f, progreso_pct: v ?? 0 })} /></div>}
+          {!marca && !dePeso && <div class="campo"><label for="ob-pct">Progreso (%)</label><Paso id="ob-pct" valor={f.progreso_pct} paso={10} min={0} max={100} dec={0} etiqueta="porcentaje de progreso" alCambiar={(v) => setF({ ...f, progreso_pct: v ?? 0 })} /></div>}
         </div>
         {objetivo.auto?.conseguido && objetivo.estado !== 'completado' && <p class="mini ok-t">Lo consiguió el {fmtCorta(objetivo.auto.conseguido.fecha)}: ponle el estado «Conseguido» para cerrarlo.</p>}
         <div class="campo"><span class="etq">Estado</span><Segmentos etiqueta="Estado del objetivo" valor={f.estado} alCambiar={(v) => setF({ ...f, estado: v || f.estado })} opciones={ESTADOS_OBJETIVO} /></div>
@@ -699,6 +743,8 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   return (
     <div class="pila">
       <ServicioYNivel atleta={atleta} recargar={recargar} />
+      {/* (v0.175, 078) pausar la asesoría: sin recordatorios ni alertas, y la racha no se rompe */}
+      <PausaCoach atleta={atleta} alCambiar={() => { recargar(); alCambiar?.(); }} />
       <CuestionarioCoach atleta={atleta} alCambiar={alCambiar} />
       <LoQueUsa atleta={atleta} />
       <form class="panel panel-pad pila" onSubmit={async (e) => {

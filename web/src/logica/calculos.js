@@ -837,7 +837,8 @@ export function semanaActual(semanas, hoy = hoyISO()) {
 // La semana en curso suma si ya está completa y no rompe la racha si aún no lo está.
 // Las semanas sin nada programado (descansos entre bloques) no cuentan ni rompen.
 // semanas: [{ fecha_inicio, total, hechas }] (pueden repetirse lunes: se suman)
-export function racha(semanas, hoy = hoyISO()) {
+// (v0.175) enPausa(lunes): las semanas de pausa de la asesoría sin completar tampoco cuentan ni rompen
+export function racha(semanas, hoy = hoyISO(), enPausa = null) {
   const lunes = lunesDe(hoy);
   const porLunes = new Map();
   for (const s of semanas) {
@@ -852,7 +853,7 @@ export function racha(semanas, hoy = hoyISO()) {
   for (const [k, x] of lista) {
     const completa = x.hechas >= x.total;
     if (k === lunes) { if (completa) n++; continue; }
-    if (!completa) break;
+    if (!completa) { if (enPausa?.(k)) continue; break; }
     n++;
   }
   return n;

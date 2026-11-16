@@ -1549,6 +1549,38 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .resultado-cribado.alerta { background: var(--alerta-suave); } .resultado-cribado.alerta svg { color: var(--alerta); }
 .entrada.entrada-num { max-width: 12em; font-variant-numeric: tabular-nums; }
 .tarjeta-cuestionario strong { font-size: var(--letra-15-5); }
+/* (v0.175) pausar la asesoria: el aviso de Hoy y la caja de la ficha */
+.aviso-pausa svg { color: var(--aviso); }
+/* (v0.174) los suplementos: la tarjeta de Hoy, su hoja y la fila de la ficha del coach */
+.suplementos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.suplemento-fila { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-12); align-items: center; width: 100%; min-height: 48px; padding: var(--esp-8) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); color: var(--tinta); text-align: left; }
+.suplemento-marca { display: grid; place-items: center; width: var(--esp-24); height: var(--esp-24); border-radius: 50%; border: var(--filo-fino) solid var(--tinta-3); }
+.suplemento-marca svg { width: var(--ico-16); height: var(--ico-16); }
+.suplemento-fila[aria-pressed="true"] { border-color: var(--morado); background: var(--morado-suave); }
+.suplemento-fila[aria-pressed="true"] .suplemento-marca { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.suplemento-nombre { font-weight: 600; }
+.suplemento-aviso { display: flex; flex-wrap: wrap; gap: var(--esp-8); align-items: center; }
+.suplemento-aviso label { display: inline-flex; gap: var(--esp-4); align-items: center; }
+.suplemento-aviso label svg { width: var(--ico-16); height: var(--ico-16); }
+.opciones-suplemento { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.suplemento-coach-fila { grid-template-columns: minmax(0, 1fr) auto; }
+.suplemento-semana { display: inline-flex; gap: var(--esp-4); align-items: center; }
+.punto-dia { width: var(--esp-8); height: var(--esp-8); border-radius: 50%; background: var(--linea); }
+.punto-dia[data-hecho] { background: var(--morado); }
+/* (v0.173) los objetivos que propone el atleta: la tarjeta de Hoy, el cuestionario y sus propuestas en Progreso */
+.tarjeta-objetivos .fila-envolver { gap: var(--esp-8); }
+.seccion-objetivos:has(> h2:only-child) { display: none; }
+.objetivos-actuales ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.objetivos-actuales li { display: flex; gap: var(--esp-8); align-items: center; }
+.objetivos-actuales li svg { flex: none; width: var(--ico-16); height: var(--ico-16); color: var(--morado); }
+.opciones-objetivo { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.opciones-objetivo button:disabled { color: var(--tinta-3); }
+.cuestionario-objetivos .selector-chips { margin-bottom: var(--esp-8); }
+.propuestas-tuyas { padding: var(--esp-4) 0 0; }
+.propuestas-lista { border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); }
+.propuesta-fila { display: flex; gap: var(--esp-12); align-items: center; justify-content: space-between; padding: var(--esp-12) var(--esp-14); }
+.propuesta-fila > .pila-xs { min-width: 0; }
+.propuesta-coach .propuesta-campos { display: grid; gap: var(--esp-8); }
 /* Coach: lo que ha contestado, como una ficha */
 .separa-envolver { flex-wrap: wrap; }
 .datos-cuest { border-top: var(--filo-fino) solid var(--linea); padding: var(--esp-14) var(--esp-16) var(--esp-16); display: grid; gap: var(--esp-10); }
@@ -4791,3 +4823,24 @@ html[data-teclado] .pildora-descanso { display: none; }
 .nm-previa img { width: 100%; max-height: 45vh; object-fit: contain; border-radius: var(--r-s); background: var(--hoja-2); }
 .nm-norma { display: flex; gap: var(--esp-6); align-items: flex-start; color: var(--tinta-2); }
 .nm-norma svg { flex: none; width: var(--ico-16); height: var(--ico-16); margin-top: 1px; stroke-width: 2; }
+/* (v0.174) La foto del plato y comer fuera */
+.platos-botones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); }
+.platos-botones > :only-child { grid-column: 1 / -1; }
+.platos-botones.en-hoy { margin-top: var(--esp-8); }
+.plato-boton { justify-content: center; min-height: 44px; }
+.plato-vista { display: block; width: 100%; max-height: 52vh; object-fit: contain; border-radius: var(--r-s); background: var(--hoja-2); }
+.plato-hueco { display: grid; place-items: center; aspect-ratio: 4 / 3; max-height: 40vh; width: 100%; border-radius: var(--r-s); background: var(--hoja-2); color: var(--tinta-3); border: var(--filo-fino) dashed var(--linea); }
+.plato-hueco svg { width: var(--ico-32); height: var(--ico-32); }
+.plato-tomas { flex-wrap: wrap; }
+.entrada-menu.con-foto { grid-template-columns: 30px minmax(0, 1fr) 44px; }
+.plato-mini-boton { padding: 0; border: 0; background: none; width: 44px; height: 44px; border-radius: var(--r-xs); }
+.plato-mini { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-xs); object-fit: cover; background: var(--hoja-2); color: var(--tinta-3); }
+.plato-mini.sin svg { width: var(--ico-16); height: var(--ico-16); }
+.chip-fuera { justify-self: start; min-height: 22px; font-size: var(--letra-12); margin-top: var(--esp-2); }
+.chip-fuera svg, .plato-marca svg { width: var(--ico-14); height: var(--ico-14); }
+.plato-marca { display: inline-flex; align-items: center; gap: var(--esp-4); }
+.pauta-fuera-lista { margin: 0; padding-left: 1.3em; display: grid; gap: var(--esp-6); font-size: var(--letra-15); }
+.platos-tira { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--esp-8); }
+.plato-celda { display: grid; gap: var(--esp-4); justify-items: center; width: 100%; padding: 0; border: 0; background: none; color: var(--tinta); }
+.plato-celda .mini { color: var(--tinta); }
+.plato-celda img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-s); background: var(--hoja-2); }
