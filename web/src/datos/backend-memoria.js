@@ -112,7 +112,8 @@ const DEFECTOS = {
   comidas_atleta: () => ({ tomas: ['desayuno', 'comida', 'merienda', 'cena'], opcional: null, actualizado_en: ahora() }),
   // Migración 023: los días sin su comida opcional
   menu_dias: () => ({ creado_en: ahora() }),
-  menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, creado_en: ahora() }),
+  menu_comidas: () => ({ receta_id: null, raciones: 1, kcal: null, proteina_g: null, carbos_g: null, grasa_g: null, hecho: false, orden: 0, fuera: false, con_foto: false, creado_en: ahora() }),
+  menu_fotos: () => ({ creado_en: ahora() }),
   preguntas_checkin: () => ({ atleta_id: null, tipo: 'escala', unidad: null, ayuda: null, etiqueta_min: null, etiqueta_max: null, orden: 0, activa: true, creado_en: ahora() }),
   // Migración 027: la comunidad del equipo
   comunidad_posts: () => ({ tipo: 'post', texto: null, foto_ruta: null, sesion_id: null, resumen: null, fijada: false, oculta: false, atleta_id: null, creado_en: ahora(), menciones: [], encuesta: null, reto_id: null, tema: null, fotos: null, mejor_comentario: null, publicar_en: null, retenida: false }),
@@ -136,7 +137,7 @@ const CASCADA = {
     ['marcas', 'atleta_id'], ['objetivos', 'atleta_id'], ['archivos', 'atleta_id'], ['comentarios', 'atleta_id'], ['recursos', 'atleta_id'],
     ['notas_ejercicio', 'atleta_id'], ['avisos', 'atleta_id'], ['habitos', 'atleta_id'], ['registros_habito', 'atleta_id'],
     ['planes_nutricion', 'atleta_id'], ['registros_nutricion', 'atleta_id'], ['cuestionarios', 'atleta_id'], ['preguntas_checkin', 'atleta_id'],
-    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['pausas', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
+    ['cobros_atletas', 'atleta_id'], ['agenda_vida', 'atleta_id'], ['objetivos_propuestos', 'atleta_id'], ['objetivos_rondas', 'atleta_id'], ['suplementos', 'atleta_id'], ['suplementos_tomas', 'atleta_id'], ['pausas', 'atleta_id'], ['menu_fotos', 'atleta_id'], ['musica_sesion', 'atleta_id'], ['musica_aperturas_lista', 'atleta_id'], ['pagos', 'atleta_id'], ['recetas_atleta', 'atleta_id'], ['comidas_atleta', 'atleta_id'], ['menu_comidas', 'atleta_id'], ['menu_dias', 'atleta_id'], ['recetas_favoritas', 'atleta_id'], ['videos_vistos', 'atleta_id'], ['travesia_semanas', 'atleta_id'], ['apuntes_vistos', 'atleta_id'], ['travesia_envios', 'atleta_id'], ['travesia_perfil', 'atleta_id'], ['travesia_dia', 'atleta_id'], ['travesia_aullidos', 'atleta_id'], ['travesia_aullidos', 'para_atleta_id'], ['travesia_liga', 'atleta_id'], ['apuntes_semanas', 'atleta_id'],
     ['comunidad_miembros', 'atleta_id'], ['comunidad_posts', 'atleta_id'], ['comunidad_comentarios', 'atleta_id'], ['comunidad_reacciones', 'atleta_id'],
     ['comunidad_votos', 'atleta_id'], ['comunidad_animos', 'atleta_id'], ['comunidad_animos', 'para_atleta_id'],
     ['comunidad_comentario_reacciones', 'atleta_id'], ['comunidad_bienvenidas', 'atleta_id'], ['comunidad_bienvenidas', 'para_atleta_id'],
@@ -164,6 +165,7 @@ const CASCADA = {
   comunidad_eventos: [['comunidad_evento_asistentes', 'evento_id']],
   recetas: [['recetas_atleta', 'receta_id'], ['recetas_favoritas', 'receta_id']],
   habitos: [['registros_habito', 'habito_id']],
+  menu_comidas: [['menu_fotos', 'entrada_id']],   // (079) la foto se va con su comida
   bloques: [['semanas', 'bloque_id']],
   semanas: [['sesiones', 'semana_id']],
   sesiones: [['sesion_ejercicios', 'sesion_id'], ['comentarios', 'sesion_id']],
@@ -185,7 +187,7 @@ const cumple = (fila, f = {}) => {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
-const SIN_ID = ['videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
+const SIN_ID = ['menu_fotos', 'videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
   'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas', 'portadas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
@@ -772,7 +774,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'checkins') validarRespuestas(f, null);
     // Como la 022: el menú es dato de salud (con su consentimiento, lo escriba quien lo escriba) y el atleta solo
     // apunta recetas de su recetario (o texto libre)
-    if (t === 'menu_comidas') comprobarMenu(f, null);
+    if (t === 'menu_comidas') { comprobarMenu(f, null); f.con_foto = false; }   // (079) con_foto lo lleva la base
     // Como la 023: un día sin la comida opcional es dato de salud (con consentimiento) y va una vez por día
     if (t === 'menu_dias') {
       if (!consentimientoDe(f.atleta_id)) throw new Error('Para organizar el menú hace falta el consentimiento de datos de salud del atleta');
@@ -1152,7 +1154,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     recetas_atleta: (f) => (f.variante == null || ['con', 'sin'].includes(f.variante)) && TOMAS.includes(f.toma) && entre(Number(f.factor), 0.25, 5) && entre(n(f.orden), 0, 999) && textoCorto(f.nota, 300) && (f.cambio_nota == null || (f.cambio_pedido_en != null && textoCorto(f.cambio_nota, 300))),
     comidas_atleta: (f) => Array.isArray(f.tomas) && f.tomas.length >= 1 && f.tomas.length <= 6 && f.tomas.every((t) => TOMAS.includes(t)) && new Set(f.tomas).size === f.tomas.length,
     menu_comidas: (f) => fechaValida(f.fecha) && TOMAS.includes(f.toma) && textoCorto(f.texto, 120) && f.texto != null && entre(Number(f.raciones), 0.25, 10)
-      && entre(n(f.kcal), 0, 15000) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000) && entre(n(f.orden), 0, 99),
+      && entre(n(f.kcal), 0, 15000) && entre(n(f.proteina_g), 0, 1500) && entre(n(f.carbos_g), 0, 2500) && entre(n(f.grasa_g), 0, 1000) && entre(n(f.orden), 0, 99)
+      && (f.fuera == null || typeof f.fuera === 'boolean') && !(f.fuera && f.receta_id),   // (079) comer fuera no es una receta
     // Migración 020: cobros
     cobros_atletas: (f) => ['mensual', 'trimestral', 'semestral', 'anual'].includes(f.ciclo) && (f.precio_mes == null || entre(Number(f.precio_mes), 0, 10000))
       && textoCorto(f.servicio, 60) && textoCorto(f.nota, 500),
@@ -3367,6 +3370,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (['objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas'].includes(t)) throw sinPermisoTabla(t);
       // (078) las pausas: el coach, todas; el atleta, las suyas
       if (t === 'pausas' && !esCoach()) return copia(tabla('pausas').filter((x) => x.atleta_id === miAtletaId() && cumple(x, f)));
+      // (079) las fotos de los platos: 30 días; el coach, todas; el atleta, las suyas
+      if (t === 'menu_fotos') {
+        const vivas = tabla('menu_fotos').filter((x) => Date.now() - Date.parse(x.creado_en) < 30 * 864e5 && (esCoach() || x.atleta_id === miAtletaId()) && cumple(x, f));
+        vivas.sort((a, b2) => String(a.fecha).localeCompare(String(b2.fecha)) || String(a.creado_en).localeCompare(String(b2.creado_en)));
+        const cols = f.cols ? String(f.cols).split(',') : null;
+        return copia((f.limit ? vivas.slice(0, f.limit) : vivas).map((x) => (cols ? Object.fromEntries(cols.map((k) => [k, x[k]])) : x)));
+      }
       sinRedDemo();
       // Para ver las siluetas de carga en la demo: localStorage «fbe-demo-retraso» = milisegundos por consulta
       const retraso = (() => { try { return Math.min(5000, Number(localStorage.getItem('fbe-demo-retraso')) || 0); } catch { return 0; } })();
@@ -3401,6 +3411,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       // Sin conexión (el navegador lo dice), los mensajes no salen (como en el de verdad): así la demo enseña la bandeja de
       // salida (⏱) y cómo se envían solos al volver la cobertura
       if (t === 'comentarios' && typeof navigator !== 'undefined' && navigator.onLine === false) { const e = new Error('Sin conexión.'); e.sinConexion = true; throw e; }
+      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_guardar
       // (para probar «!» con «Reintentar» y «Eliminar» en la demo: localStorage «fbe-demo-rechazar» = 1 rechaza el siguiente)
       if (t === 'comentarios') { let r = null; try { r = localStorage.getItem('fbe-demo-rechazar'); if (r) localStorage.removeItem('fbe-demo-rechazar'); } catch { /* */ } if (r) throw new Error('La demo ha rechazado este mensaje (prueba)'); }
       const lista = Array.isArray(filas) ? filas : [filas];
@@ -3411,6 +3422,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     async update(t, cambios, f) {
       sinRedDemo();
       if (t === 'pausas' && !esCoach()) return [];   // (078) las pausas, solo el coach
+      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079)
       if (t === 'recetas_favoritas') throw sinPermisoTabla(t);   // (055) se pone o se quita, no se cambia
       // (051, como su trigger) al retirar el consentimiento de datos de salud, Salud del iPhone se desconecta y lo que
       // llegó de ahí se borra (lo que escribió él se queda)
@@ -3555,7 +3567,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         }
       }
       if (t === 'habitos') for (const fila of filas) protegerHabito(fila, c);
-      if (t === 'menu_comidas') for (const fila of filas) comprobarMenu({ ...fila, ...c }, fila);
+      if (t === 'menu_comidas') { delete c.con_foto; for (const fila of filas) comprobarMenu({ ...fila, ...c }, fila); }   // (079) con_foto no se cambia desde la app
       // Como la 023: tampoco al cambiarla, la misma receta dos veces en una comida para el mismo tipo de día
       if (t === 'recetas_atleta' && ('toma' in c || 'variante' in c)) for (const fila of filas) {
         const m = { ...fila, ...c };
@@ -3614,6 +3626,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async upsert(t, filas, onConflict) {
       sinRedDemo();
+      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079)
       soloCoach(t);
       // Como la 037: la valoración del atleta (una por vídeo)
       if (t === 'video_autoevaluacion') {
@@ -3739,6 +3752,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
+      if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
       // (078) las pausas las quita el coach
       if (t === 'pausas') {
         if (!esCoach()) return [];
@@ -3863,6 +3877,42 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const agendaDe = (p) => { if (esCoach()) { if (!p || !tabla('atletas').some((x) => x.id === p)) throw new Error('Ese atleta no existe'); return p; } const a = miAtletaId(); if (!a) throw new Error('Solo el atleta o su coach'); return a; };
       const agendaJson = (x) => ({ id: x.id, tipo: x.tipo, fecha: x.fecha, titulo: x.titulo ?? null, nota: x.nota ?? null, respuesta: x.respuesta ?? null, respuesta_nota: x.respuesta_nota ?? null, respondida_en: x.respondida_en ?? null, autor: x.autor, creado_en: x.creado_en });
       // (077) los suplementos: todo por funciones (como la base)
+      // (079) la foto del plato
+      if (nombre === 'plato_foto_guardar' || nombre === 'plato_foto_quitar') {
+        const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
+        const e = tabla('menu_comidas').find((x) => x.id === args?.p_entrada);
+        const purgar = () => {
+          const viejas = tabla('menu_fotos').filter((x) => Date.now() - Date.parse(x.creado_en) >= 30 * 864e5);
+          for (const v of viejas) { const m = tabla('menu_comidas').find((x) => x.id === v.entrada_id); if (m) m.con_foto = false; tabla('menu_fotos').splice(tabla('menu_fotos').indexOf(v), 1); }
+        };
+        if (nombre === 'plato_foto_quitar') {
+          if (!e) return null;
+          if (!esCoach()) {
+            if (!miAtletaId() || e.atleta_id !== miAtletaId()) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
+            if (deBaja()) throw Object.assign(new Error(BAJA), { code: '42501' });
+          }
+          const i = tabla('menu_fotos').findIndex((x) => x.entrada_id === e.id);
+          if (i >= 0) tabla('menu_fotos').splice(i, 1);
+          e.con_foto = false;
+          persistirYa();
+          return null;
+        }
+        if (!e || !miAtletaId() || e.atleta_id !== miAtletaId()) throw Object.assign(new Error('Eso no es tuyo'), { code: '42501' });
+        if (deBaja()) throw Object.assign(new Error(BAJA), { code: '42501' });
+        if (!consentimientoDe(e.atleta_id)) throw Object.assign(new Error('Para guardar la foto del plato hace falta tu consentimiento de datos de salud'), { code: '42501' });
+        const hoyM = fMadrid();
+        if (e.fecha < sumar(hoyM, -7) || e.fecha > sumar(hoyM, 1)) throw Object.assign(new Error('La foto, de una comida de esta semana'), { code: '22023' });
+        const vale = (v, max) => typeof v === 'string' && v.length >= 200 && v.length <= max && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(v);
+        if (!vale(args?.p_foto, 400000) || !vale(args?.p_mini, 24000)) throw Object.assign(new Error('Esa foto no vale'), { code: '22023' });
+        if (tabla('menu_fotos').filter((x) => x.atleta_id === e.atleta_id && x.fecha === e.fecha && x.entrada_id !== e.id).length >= 12) throw Object.assign(new Error('Como mucho, 12 fotos por día'), { code: '22023' });
+        const ya = tabla('menu_fotos').find((x) => x.entrada_id === e.id);
+        if (ya) Object.assign(ya, { foto: args.p_foto, mini: args.p_mini, fecha: e.fecha, creado_en: ahora() });
+        else tabla('menu_fotos').push({ entrada_id: e.id, atleta_id: e.atleta_id, fecha: e.fecha, foto: args.p_foto, mini: args.p_mini, creado_en: ahora() });
+        e.con_foto = true; e.hecho = true;
+        purgar();
+        persistirYa();
+        return null;
+      }
       if (/^suplementos?_(de|guardar|quitar|aviso|tomar)$/.test(nombre)) {
         const BAJA = 'Tu cuenta está de baja: puedes ver y descargar tus datos, pero no añadir ni cambiar nada';
         const supDe = (pa) => { if (esCoach()) { if (!pa || !tabla('atletas').some((x) => x.id === pa)) throw new Error('Ese atleta no existe'); return pa; } const a = miAtletaId(); if (!a) throw Object.assign(new Error('Solo el atleta o su coach'), { code: '42501' }); return a; };

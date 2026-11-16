@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { CabCoach } from './CabCoach.jsx';
 import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, ErrorCaja, Hoja, useUnaVez } from '../comunes.jsx';
 import { HojaNuevaTarea } from '../Tareas.jsx';
+import { HojaPlatosSemana } from '../Platos.jsx';
 import { borradorRevision } from '../../logica/cierre.js';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
 import { ordenRevision, avisosRevision } from '../../logica/revision.js';
@@ -22,6 +23,8 @@ export function RevisionSemanal({ abrirAtleta }) {
   const [filtro, setFiltro] = useState('pendientes');
   const [cambios, setCambios] = useState({}); // atleta_id → { hecha?, nota? } (lo tocado aquí, encima de lo cargado)
   const datos = res.datos;
+  // (079) cuántas fotos de sus platos ha subido cada uno esta semana
+  const platos = useCarga(() => (datos?.lunes ? api.platosDeLaSemana(datos.lunes).catch(() => ({})) : Promise.resolve({})), [datos?.lunes]);
   const filas = useMemo(() => (datos?.filas || []).map((f) => ({ ...f, ...(cambios[f.atleta_id] || {}) })), [datos, cambios]);
   const ordenadas = useMemo(() => ordenRevision(filas), [filas]);
   const hechas = filas.filter((f) => f.hecha).length;
@@ -64,7 +67,7 @@ export function RevisionSemanal({ abrirAtleta }) {
             <div class="panel"><Vacio icono="hecho" ilustracion={filtro === 'pendientes' ? 'todo' : null} titulo={filtro === 'pendientes' ? '¡Revisión terminada!' : 'Nadie revisado aún'}>{filtro === 'pendientes' ? 'Has revisado a todos esta semana.' : 'Marca a cada atleta cuando acabes con él.'}</Vacio></div>
           ) : (
             <ul class="revision-lista">
-              {vista.map((f) => <FilaRevision key={f.atleta_id} f={f} con040={datos.revisiones} guardar={(c) => guardar(f, c)} abrirAtleta={abrirAtleta} />)}
+              {vista.map((f) => <FilaRevision key={f.atleta_id} f={f} con040={datos.revisiones} guardar={(c) => guardar(f, c)} abrirAtleta={abrirAtleta} lunes={datos.lunes} platos={platos.datos?.[f.atleta_id] || 0} />)}
             </ul>
           )}
         </div>
@@ -73,7 +76,7 @@ export function RevisionSemanal({ abrirAtleta }) {
   );
 }
 
-function FilaRevision({ f, con040, guardar, abrirAtleta }) {
+function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0 }) {
   const [nota, setNota] = useState(f.nota || '');
   const [verNota, setVerNota] = useState(!!f.nota);
   const area = useRef(null);
@@ -82,7 +85,7 @@ function FilaRevision({ f, con040, guardar, abrirAtleta }) {
   const { completadas, total } = f.sesiones;
   const idCasilla = `rev-${f.atleta_id}`;
   const soltarNota = () => { if ((nota || '').trim() !== (f.nota || '').trim()) guardar({ nota }); };
-  const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea'
+  const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea' | (079) 'platos'
   return (
     <li class={`panel revision-fila ${f.hecha ? 'hecha' : ''}`}>
       <div class="revision-cab">
@@ -118,7 +121,10 @@ function FilaRevision({ f, con040, guardar, abrirAtleta }) {
         {/* (054) el mensaje de repaso, ya redactado con sus datos; y una tarea, sin salir de aquí */}
         <button class="btn btn-peq" onClick={() => setHoja('mensaje')}><Icono n="editar" /> Redactar mensaje</button>
         <button class="btn btn-peq" onClick={() => setHoja('tarea')}><Icono n="hecho" /> Mandar una tarea</button>
+        {/* (079) las fotos de sus platos de la semana */}
+        {platos > 0 && <button class="btn btn-peq" onClick={() => setHoja('platos')}><Icono n="camara" /> {platos === 1 ? '1 plato' : `${platos} platos`}</button>}
       </div>
+      {hoja === 'platos' && <HojaPlatosSemana atleta={{ id: f.atleta_id, nombre: f.nombre }} lunes={lunes} alCerrar={() => setHoja(null)} />}
       {hoja === 'mensaje' && <HojaBorrador f={f} alCerrar={() => setHoja(null)} />}
       {hoja === 'tarea' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} alCerrar={() => setHoja(null)} />}
     </li>

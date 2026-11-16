@@ -21,6 +21,8 @@ const mayus = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // La foto de una receta (o un hueco con el icono, si no tiene)
 // (diseño, tanda 21) sin foto, la escena de su toma del día (Ilustraciones.jsx) en vez del icono del plato
+import { usePlatos, BotonesPlato, HojaFotoPlato, HojaFuera, FotoDeEntrada, PautaFuera, MiniPlato } from './Platos.jsx';
+import { fechaAdmiteFoto } from '../logica/platos.js';
 export function FotoReceta({ receta, grande = false, src = null, toma = null }) {
   const foto = src || (grande ? receta?.foto || receta?.foto_mini : receta?.foto_mini);
   return foto
@@ -257,7 +259,11 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   const menu = useCarga(() => api.menuSemana(atletaId, lunes), [atletaId, lunes], { recuerdo: `menu:${atletaId}:${lunes}` });
   const op = recetario.opcional;
   const diasSin = useCarga(() => (op ? api.diasSin(atletaId, lunes) : Promise.resolve([])), [atletaId, lunes, op], { recuerdo: `dias-sin:${atletaId}:${lunes}:${op || ''}` });
-  const [hoja, setHoja] = useState(null); // { tipo: 'anadir', toma } | { tipo: 'entrada', e } | 'compra' | 'copiar' | 'receta'
+  const [hoja, setHoja] = useState(null); // { tipo: 'anadir', toma } | { tipo: 'entrada', e } | { tipo: 'foto', toma, entrada } | { tipo: 'fuera', toma } | 'compra' | 'copiar' | 'receta'
+  // (079) la foto del plato y comer fuera: las miniaturas de la semana, si la base ya las tiene
+  const conPlatos = usePlatos();
+  const fotos = useCarga(() => (conPlatos ? api.fotosPlatos(atletaId, lunes, sumarDias(lunes, 6)) : Promise.resolve([])), [atletaId, lunes, conPlatos], { recuerdo: `platos:${atletaId}:${lunes}:${conPlatos}` });
+  const miniDe = Object.fromEntries((fotos.datos || []).map((f) => [f.entrada_id, f.mini]));
   const [ocupado, una] = useUnaVez();
   const entradas = menu.datos || [];
   const porDia = menuPorDia(entradas, lunes);
@@ -265,7 +271,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
   const sin = !!op && (diasSin.datos || []).includes(dia);
   const tomas = tomasDelDia(ordenarTomas([...recetario.tomas, ...Object.keys(delDia)]), op, sin, Object.keys(delDia));
   const plan = planVigente(planes, dia);
-  const recargar = () => { menu.recargar(true); diasSin.recargar(true); };
+  const recargar = () => { menu.recargar(true); diasSin.recargar(true); fotos.recargar(true); };
   // (pulido 5) el interruptor y las casillas cambian al tocarlos y se guardan por detrás (si no se puede guardar, se
   // deshace y se avisa)
   const cambiarSin = () => { const pon = !sin, d = dia; diasSin.alMomento((xs) => (pon ? [...xs.filter((x) => x !== d), d] : xs.filter((x) => x !== d)), () => api.marcarDiaSin(atletaId, d, pon)).catch((err) => aviso(err.message, 'error')); };
@@ -299,12 +305,14 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
                   <button type="button" class="btn-texto" onClick={() => setHoja({ tipo: 'anadir', toma: t })} aria-label={`Añadir a ${NOMBRE_TOMA[t].toLowerCase()}`}><Icono n="mas" /> Añadir</button>
                 </div>
                 {(delDia[t] || []).map((e) => (
-                  <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id} {...deslizarHecho(() => marcar(e))}>
+                  <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}${e.con_foto ? ' con-foto' : ''}`} key={e.id} {...deslizarHecho(() => marcar(e))}>
                     <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
                     <button type="button" class="entrada-texto" onClick={() => setHoja({ tipo: 'entrada', e })}>
                       <span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>
                       {(e.kcal != null || e.proteina_g != null) && <span class="mini terciario num">{textoMacros(e, true)}</span>}
+                      {e.fuera && <span class="chip chip-fuera"><Icono n="ubicacion" /> Fuera</span>}
                     </button>
+                    {e.con_foto && <button type="button" class="plato-mini-boton" onClick={() => setHoja({ tipo: 'entrada', e })} aria-label={`Ver la foto de ${e.texto}`}><MiniPlato mini={miniDe[e.id]} /></button>}
                   </div>
                 ))}
                 {!(delDia[t] || []).length && <span class="mini terciario">Nada todavía</span>}
@@ -320,8 +328,13 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
         <button class="btn plano" onClick={() => setHoja('copiar')}><Icono n="copiar" /> Copiar o vaciar</button>
         {alCambiarComidas && <button class="btn plano" onClick={alCambiarComidas}><Icono n="ajustes" /> {recetario.tomas.length} comidas al día</button>}
       </div>
-      {hoja?.tipo === 'anadir' && <HojaAnadir atletaId={atletaId} fecha={dia} toma={hoja.toma} recetario={recetario} sin={sin} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
-      {hoja?.tipo === 'entrada' && <HojaEntrada e={hoja.e} recetario={recetario} esCoach={esCoach} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
+      {hoja?.tipo === 'anadir' && <HojaAnadir atletaId={atletaId} fecha={dia} toma={hoja.toma} recetario={recetario} sin={sin} alCerrar={() => setHoja(null)} alGuardado={recargar}
+        alFoto={conPlatos && !esCoach && fechaAdmiteFoto(dia, hoy) ? () => setHoja({ tipo: 'foto', toma: hoja.toma, entrada: null }) : null}
+        alFuera={conPlatos && !esCoach ? () => setHoja({ tipo: 'fuera', toma: hoja.toma }) : null} />}
+      {hoja?.tipo === 'entrada' && <HojaEntrada e={hoja.e} recetario={recetario} esCoach={esCoach} plan={plan} alCerrar={() => setHoja(null)} alCambiar={recargar}
+        alFoto={conPlatos && !esCoach && fechaAdmiteFoto(hoja.e.fecha, hoy) ? () => setHoja({ tipo: 'foto', toma: hoja.e.toma, entrada: hoja.e }) : null} />}
+      {hoja?.tipo === 'foto' && <HojaFotoPlato atletaId={atletaId} fecha={hoja.entrada?.fecha || dia} toma={hoja.toma} entrada={hoja.entrada} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
+      {hoja?.tipo === 'fuera' && <HojaFuera atletaId={atletaId} fecha={dia} toma={hoja.toma} tomas={recetario.tomas} plan={plan} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja === 'rellenar' && <HojaRellenar atletaId={atletaId} lunes={lunes} entradas={entradas} recetario={recetario} diasSin={diasSin.datos || []} planes={planes} esCoach={esCoach} alCerrar={() => setHoja(null)} alGuardado={recargar} />}
       {hoja === 'compra' && <HojaCompra entradas={entradas} recetario={recetario} lunes={lunes} alCerrar={() => setHoja(null)} />}
       {hoja === 'copiar' && <HojaCopiar atletaId={atletaId} lunes={lunes} entradas={entradas} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
@@ -330,7 +343,7 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
 }
 
 // Añadir a una toma: una receta de su recetario (primero las de esa comida) o lo que escriba
-function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, alGuardado }) {
+function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, alGuardado, alFoto = null, alFuera = null }) {
   const { api, aviso } = useApp();
   // Solo las que valen para ese día (con o sin su comida opcional), si las hay de los dos tipos (v0.27)
   const delDia = (xs) => paraElDia(xs, !!recetario.opcional && sin);
@@ -361,6 +374,8 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
   );
   return (
     <Hoja titulo={`${NOMBRE_TOMA[toma]}, ${fmtConDia(fecha)}`} alCerrar={alCerrar}>
+      {/* (079) lo más rápido, arriba: la foto de lo que come o que come fuera */}
+      <BotonesPlato alFoto={alFoto} alFuera={alFuera} />
       {recetario.opcional && recetario.asignaciones.some((a) => a.variante) && <p class="mini terciario">{sin ? `Día sin ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}: las opciones un poco más grandes.` : `Día con ${NOMBRE_TOMA[recetario.opcional].toLowerCase()}.`}</p>}
       {propias.length > 0 && <><h3 class="etq">De tu recetario para {NOMBRE_TOMA[toma].toLowerCase()}</h3><div class="panel"><ul class="lista">{propias.map(fila)}</ul></div></>}
       {otras.length > 0 && <><h3 class="etq">{propias.length ? 'Otras de tu recetario' : 'De tu recetario'}</h3><div class="panel"><ul class="lista">{otras.map(fila)}</ul></div></>}
@@ -390,7 +405,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
 }
 
 // Algo del menú: cambiar las raciones, verlo, marcarlo y borrarlo
-function HojaEntrada({ e, recetario, esCoach, alCerrar, alCambiar }) {
+function HojaEntrada({ e, recetario, esCoach, plan = null, alCerrar, alCambiar, alFoto = null }) {
   const { api, aviso } = useApp();
   const [raciones, setRaciones] = useState(Number(e.raciones));
   const [ver, setVer] = useState(false);
@@ -405,7 +420,13 @@ function HojaEntrada({ e, recetario, esCoach, alCerrar, alCambiar }) {
   return (
     <Hoja titulo={e.texto} alCerrar={alCerrar}>
       <p class="peq secundario">{NOMBRE_TOMA[e.toma]}, {fmtConDia(e.fecha)}{e.kcal != null ? ` · ${textoMacros(cambiarMacros(e, raciones), true)}` : ''}</p>
-      <div class="separa"><span class="peq">Raciones</span><div style="max-width:150px"><Paso valor={raciones} paso={0.5} min={0.25} max={10} dec={2} etiqueta="raciones" alCambiar={(v) => v && setRaciones(v)} /></div></div>
+      {/* (079) su foto, la pauta de comer fuera y hacerle la foto a lo que ya estaba apuntado */}
+      {e.con_foto && <FotoDeEntrada e={e} />}
+      {e.fuera && !esCoach && <PautaFuera toma={e.toma} plan={plan} tomas={recetario.tomas} />}
+      {e.fuera && esCoach && <p class="peq"><span class="chip chip-fuera"><Icono n="ubicacion" /> Fuera</span> Esta comida la hizo fuera de casa.</p>}
+      {alFoto && <button class="btn" disabled={ocupado} onClick={alFoto}><Icono n="camara" /> {e.con_foto ? 'Cambiar la foto' : 'Hacerle la foto al plato'}</button>}
+      {e.con_foto && <button class="btn plano" disabled={ocupado} onClick={() => hacer(() => api.quitarFotoPlato(e.id), 'Foto quitada')}><Icono n="basura" /> Quitar la foto</button>}
+      {!e.fuera && !e.con_foto && <div class="separa"><span class="peq">Raciones</span><div style="max-width:150px"><Paso valor={raciones} paso={0.5} min={0.25} max={10} dec={2} etiqueta="raciones" alCambiar={(v) => v && setRaciones(v)} /></div></div>}
       {raciones !== Number(e.raciones) && <button class="btn btn-primario" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { raciones }), 'Raciones cambiadas')}>Guardar las raciones</button>}
       <button class="btn" disabled={ocupado} onClick={() => hacer(() => api.cambiarMenu(e, { hecho: !e.hecho }), e.hecho ? 'Marcada sin comer' : '¡Bien!')}><Icono n="hecho" /> {e.hecho ? 'Marcar como no comida' : 'Ya me la he comido'}</button>
       {(a?.receta || delEquipo) && <button class="btn plano" onClick={() => setVer(true)}><Icono n="receta" /> Ver la receta</button>}

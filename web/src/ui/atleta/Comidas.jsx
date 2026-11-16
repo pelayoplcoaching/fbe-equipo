@@ -4,7 +4,8 @@ import { useState } from 'preact/hooks';
 import { usePestanasDeslizables } from '../deslizar.js';
 import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Pestanas, Vacio, Siluetas, ErrorCaja, Pista, usePreferencia, useApuntar } from '../comunes.jsx';
 import { MenuSemana, VistaRecetario, HojaReceta, HojaElegirDia, HojaTusComidas, FotoReceta } from '../ComidasComun.jsx';
-import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros } from '../../logica/comidas.js';
+import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros, tomaDeLaHora } from '../../logica/comidas.js';
+import { usePlatos, BotonesPlato, HojaFotoPlato, HojaFuera } from '../Platos.jsx';
 import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
@@ -94,10 +95,15 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const menu = useCarga(() => (salud ? api.menuSemana(atleta.id, hoy).catch(() => []) : Promise.resolve([])), [atleta.id, salud], { recuerdo: `menu-hoy:${atleta.id}:${hoy}:${!!salud}` });
   // (pulido 2.4) aquí basta con saber qué comidas hace y si tiene recetas: el recetario entero (hasta 1,4 MB) no se baja
   const recetario = useCarga(() => api.recetarioDeHoy(atleta.id).catch(() => null), [atleta.id], { recuerdo: `recetario-hoy:${atleta.id}` });
-  const planes = useCarga(() => (compacto ? Promise.resolve([]) : api.planesNutricion(atleta.id).catch(() => [])), [atleta.id], { recuerdo: `planes-menu:${atleta.id}:${!!compacto}` });
+  // (079) la foto del plato y comer fuera, desde Hoy: en la comida que toca por la hora
+  const conPlatos = usePlatos();
+  const [plato, setPlato] = useState(null);   // 'foto' | 'fuera'
+  // (el plan solo hace falta entero; en compacto, al abrir «Como fuera», para decirle cuánta proteína buscar)
+  const pidePlan = !compacto || plato === 'fuera';
+  const planes = useCarga(() => (pidePlan ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, pidePlan], { recuerdo: `planes-menu:${atleta.id}:${pidePlan}` });
   const [ocupado, una] = useUnaVez();
   const deHoy = (menu.datos || []).filter((e) => e.fecha === hoy);
-  if (compacto && !deHoy.length) return null;
+  if (compacto && !deHoy.length && !(salud && conPlatos)) return null;
   if (!salud) {
     return compacto ? null : (
       <section class="seccion seccion-menu-hoy"><div class="seccion-cab"><h2>Tu menú de hoy</h2></div>
@@ -106,6 +112,19 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
     );
   }
   const tomas = ordenarTomas([...(recetario.datos?.tomas || []), ...deHoy.map((e) => e.toma)]);
+  const susTomas = recetario.datos?.tomas || [];
+  const tomaAhora = tomaDeLaHora(new Date().getHours(), susTomas) || susTomas[0] || 'comida';
+  const platos = conPlatos && (
+    <>
+      <BotonesPlato clase="en-hoy" alFoto={() => setPlato('foto')} alFuera={() => setPlato('fuera')} />
+      {plato === 'foto' && <HojaFotoPlato atletaId={atleta.id} fecha={hoy} toma={tomaAhora} tomas={susTomas} alCerrar={() => setPlato(null)} alGuardado={() => menu.recargar(true)} />}
+      {plato === 'fuera' && <HojaFuera atletaId={atleta.id} fecha={hoy} toma={tomaAhora} tomas={susTomas} plan={planVigente(planes.datos || [], hoy)} alCerrar={() => setPlato(null)} alGuardado={() => menu.recargar(true)} />}
+    </>
+  );
+  // (079) en Hoy, sin nada en el menú: solo los dos accesos (la foto de lo que come ya le vale de apunte)
+  if (compacto && !deHoy.length) {
+    return <section class="seccion seccion-platos-hoy" aria-labelledby="platos-hoy-t"><div class="seccion-cab"><h2 id="platos-hoy-t">Lo que comes hoy</h2><button class="btn-texto" onClick={() => irA('comidas')}><Icono n="calendario" /> Tu semana</button></div>{platos}</section>;
+  }
   const t = totalesDia(deHoy);
   const obj = objetivoDelDia(planVigente(planes.datos || [], hoy), true);
   // (pulido 5) la casilla se marca al tocarla y se guarda por detrás (si no se puede guardar, se desmarca y se avisa)
@@ -130,7 +149,8 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
                 {deHoy.filter((e) => e.toma === x).map((e) => (
                   <div class={`entrada-menu ${e.hecho ? 'hecha' : ''}`} key={e.id}>
                     <button type="button" class="casilla-redonda" aria-pressed={e.hecho ? 'true' : 'false'} aria-label={`${e.texto}: ${e.hecho ? 'comida' : 'sin comer'}`} onClick={() => marcar(e)}>{e.hecho && <Icono n="hecho" />}</button>
-                    <span class="entrada-texto"><span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>{e.kcal != null && <span class="mini terciario num">{textoMacros(e, true)}</span>}</span>
+                    <span class="entrada-texto"><span class={e.hecho ? 'tachado' : ''}>{e.texto}{Number(e.raciones) !== 1 ? <span class="terciario num"> ×{num(e.raciones, 2)}</span> : ''}</span>{e.kcal != null && <span class="mini terciario num">{textoMacros(e, true)}</span>}
+                      {(e.con_foto || e.fuera) && <span class="mini terciario plato-marca"><Icono n={e.con_foto ? 'camara' : 'ubicacion'} /> {e.con_foto ? 'Con foto' : 'Fuera'}</span>}</span>
                   </div>
                 ))}
               </li>
@@ -139,6 +159,7 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
           {t.conDatos > 0 && <div class="panel-pad mini secundario num">En el menú: {fmtKcal(t.kcal)} kcal y {num(t.proteina_g, 0)} g de proteína{obj ? <> <span class="terciario">(tu objetivo: {fmtKcal(obj.kcal)} y {num(obj.proteina, 0)} g)</span></> : ''}</div>}
         </div>
       )}
+      {platos}
     </section>
   );
 }

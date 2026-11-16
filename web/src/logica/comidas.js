@@ -235,7 +235,8 @@ export function menuPorDia(entradas = [], lunes) {
 // Copiar una semana a otra: las mismas comidas, 7 días después (o los que haya entre los dos lunes), sin «hecho»
 export function copiarMenu(entradas = [], lunesOrigen, lunesDestino) {
   const dias = Math.round((Date.parse(lunesDestino) - Date.parse(lunesOrigen)) / 864e5);
-  return entradas.filter((e) => e.fecha >= lunesOrigen && e.fecha <= sumarDias(lunesOrigen, 6)).map((e) => ({
+  // (079) lo que fue una foto del plato o una comida fuera no se copia: es de aquel día
+  return entradas.filter((e) => e.fecha >= lunesOrigen && e.fecha <= sumarDias(lunesOrigen, 6) && !e.con_foto && !e.fuera).map((e) => ({
     fecha: sumarDias(e.fecha, dias), toma: e.toma, receta_id: e.receta_id ?? null, texto: e.texto, raciones: Number(e.raciones),
     kcal: e.kcal ?? null, proteina_g: e.proteina_g ?? null, carbos_g: e.carbos_g ?? null, grasa_g: e.grasa_g ?? null, hecho: false, orden: e.orden || 0,
   }));
