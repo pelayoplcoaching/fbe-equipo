@@ -103,7 +103,8 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
   const planes = useCarga(() => (pidePlan ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, pidePlan], { recuerdo: `planes-menu:${atleta.id}:${pidePlan}` });
   const [ocupado, una] = useUnaVez();
   const deHoy = (menu.datos || []).filter((e) => e.fecha === hoy);
-  if (compacto && !deHoy.length && !(salud && conPlatos)) return null;
+  // (079) sin menú, en compacto salen solo los dos accesos, y solo cuando ya se sabe que hoy no hay nada (mientras carga, nada: Hoy no salta)
+  if (compacto && !deHoy.length && !(salud && conPlatos && menu.datos)) return null;
   if (!salud) {
     return compacto ? null : (
       <section class="seccion seccion-menu-hoy"><div class="seccion-cab"><h2>Tu menú de hoy</h2></div>

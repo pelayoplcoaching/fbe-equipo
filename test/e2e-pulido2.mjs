@@ -128,7 +128,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
     }
     // ---------- 2. Las consultas idénticas se comparten
     {
-      const repetidas = (p) => p.evaluate(() => { const c = {}; for (const q of window.__q) if (!q.startsWith('rpc:')) c[q] = (c[q] || 0) + 1; return { total: window.__q.filter((q) => !q.startsWith('rpc:')).length, repetidas: Object.values(c).reduce((s, n) => s + n - 1, 0) }; });
+      const repetidas = (p) => p.evaluate(() => { const c = {}; for (const q of window.__q) if (!q.startsWith('rpc:')) c[q] = (c[q] || 0) + 1; return { total: window.__q.filter((q) => !q.startsWith('rpc:')).length, repetidas: Object.values(c).reduce((s, n) => s + n - 1, 0), cuales: Object.entries(c).filter(([, n]) => n > 1).map(([q, n]) => `${n}x ${q.slice(0, 90)}`).join(' | ') }; });
       const { ctx, p } = await abrir(null, {}, { retraso: 120 });
       await p.evaluate(() => { window.__q = []; });
       await entrar(p, /Ana López/);
@@ -136,7 +136,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       await p.waitForTimeout(2500);
       const alAbrir = await repetidas(p);
       await cerrarAvisos(p);
-      check(alAbrir.total > 30 && alAbrir.repetidas <= 8, `al abrir la app, el atleta ya casi no repite consultas (${alAbrir.total} consultas, ${alAbrir.repetidas} repetidas; antes, 116 y 37)`);
+      check(alAbrir.total > 30 && alAbrir.repetidas <= 8, `al abrir la app, el atleta ya casi no repite consultas (${alAbrir.total} consultas, ${alAbrir.repetidas} repetidas; antes, 116 y 37)${alAbrir.repetidas > 8 ? `: ${alAbrir.cuales}` : ''}`);
       // Ir y volver deprisa entre pestañas no vuelve a pedir lo que se acaba de pedir
       await p.evaluate(() => { localStorage.removeItem('fbe-demo-retraso'); });
       await irASeccion(p, 'Semana'); await p.waitForTimeout(300);

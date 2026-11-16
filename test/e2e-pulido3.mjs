@@ -169,11 +169,16 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
       };
       await vuelta();   // (la primera pasada deja cargado y recordado todo lo de Hoy y Semana)
       const enseguida = await vuelta();
-      const hoyAntes = await p.locator('main').innerText();
+      // («hace 55 min» pasa a «hace 56 min» si el reloj adelantado cruza el minuto: eso no es un cambio de la pantalla)
+      const sinReloj = (t) => t.replace(/hace \d+ (min|h|s)\b|hoy, \d{1,2}:\d{2}/g, 'hace un rato');
+      const hoyAntes = sinReloj(await p.locator('main').innerText());
       await adelantar(p, 21000);
       const pasado = await vuelta();
       check(pasado >= 8 && enseguida <= 3, `atleta: volver a Hoy a los pocos segundos pide ${enseguida} consultas; pasados 20 s, ${pasado}`);
-      check(hoyAntes.length > 100 && await p.locator('main').innerText() === hoyAntes, 'y Hoy enseña lo mismo las dos veces');
+      const hoyDespues = sinReloj(await p.locator('main').innerText());
+      // (si falla, dice la primera línea que cambia)
+      const distinta = (() => { const x = hoyAntes.split('\n'), y = hoyDespues.split('\n'); const i = x.findIndex((l, k) => l !== y[k]); return i < 0 ? (x.length === y.length ? '' : `sobran o faltan líneas (${x.length} y ${y.length})`) : `«${x[i]}» → «${y[i]}»`; })();
+      check(hoyAntes.length > 100 && hoyDespues === hoyAntes, `y Hoy enseña lo mismo las dos veces${hoyDespues === hoyAntes ? '' : `: ${distinta.slice(0, 200)}`}`);
       await ctx.close();
     }
     // ---------- 5. La biblioteca de ejercicios se guarda en el dispositivo y solo se baja cuando cambia
