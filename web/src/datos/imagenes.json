@@ -4624,6 +4624,72 @@
     },
     "color": "#453667"
   },
+  "isq-buenos-dias-barra": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-barra-192.0f7ff576.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-barra-512.9fb1f122.webp"
+    },
+    "color": "#3f3168"
+  },
+  "isq-buenos-dias-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-buenos-dias-goma-192.9ddd68c8.webp",
+      "512": "imagenes/ejercicio/isq-buenos-dias-goma-512.23c1521c.webp"
+    },
+    "color": "#3c2e67"
+  },
+  "isq-curl-deslizante": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-deslizante-192.040c5761.webp",
+      "512": "imagenes/ejercicio/isq-curl-deslizante-512.d827e36f.webp"
+    },
+    "color": "#3e286f"
+  },
+  "isq-curl-goma-tumbado": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-goma-tumbado-192.cac239d0.webp",
+      "512": "imagenes/ejercicio/isq-curl-goma-tumbado-512.f2362faa.webp"
+    },
+    "color": "#3e286d"
+  },
+  "isq-curl-nordico": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-nordico-192.6ddd9fe5.webp",
+      "512": "imagenes/ejercicio/isq-curl-nordico-512.36d2ce76.webp"
+    },
+    "color": "#3e2b6d"
+  },
+  "isq-curl-nordico-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-curl-nordico-goma-192.ee8461d2.webp",
+      "512": "imagenes/ejercicio/isq-curl-nordico-goma-512.fdfd70ce.webp"
+    },
+    "color": "#412d70"
+  },
   "isq-extensiones-45-isquio": {
     "proporcion": [
       1,
@@ -4634,6 +4700,17 @@
       "512": "imagenes/ejercicio/isq-extensiones-45-isquio-512.76d9f65c.webp"
     },
     "color": "#3f2d63"
+  },
+  "isq-ghr": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-ghr-192.1f998ce7.webp",
+      "512": "imagenes/ejercicio/isq-ghr-512.f8c3db69.webp"
+    },
+    "color": "#3b266a"
   },
   "isq-leg-curl-de-pie": {
     "proporcion": [
@@ -4668,6 +4745,17 @@
     },
     "color": "#48346c"
   },
+  "isq-leg-curl-tumbado-unilateral": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-leg-curl-tumbado-unilateral-192.edd927e0.webp",
+      "512": "imagenes/ejercicio/isq-leg-curl-tumbado-unilateral-512.bd9d7d6f.webp"
+    },
+    "color": "#402873"
+  },
   "isq-peso-muerto-convencional": {
     "proporcion": [
       1,
@@ -4678,6 +4766,39 @@
       "512": "imagenes/ejercicio/isq-peso-muerto-convencional-512.e3f4bf79.webp"
     },
     "color": "#4b3a72"
+  },
+  "isq-peso-muerto-deficit": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-deficit-192.5f11eea7.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-deficit-512.82233428.webp"
+    },
+    "color": "#443470"
+  },
+  "isq-peso-muerto-pausa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-pausa-192.69a825c5.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-pausa-512.d24faf92.webp"
+    },
+    "color": "#44346f"
+  },
+  "isq-peso-muerto-piernas-rigidas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-peso-muerto-piernas-rigidas-192.38923eff.webp",
+      "512": "imagenes/ejercicio/isq-peso-muerto-piernas-rigidas-512.81ce2c67.webp"
+    },
+    "color": "#443471"
   },
   "isq-peso-muerto-rumano": {
     "proporcion": [
@@ -4700,6 +4821,50 @@
       "512": "imagenes/ejercicio/isq-peso-muerto-unilateral-512.9747f15f.webp"
     },
     "color": "#412c6b"
+  },
+  "isq-puente-talones-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-puente-talones-banco-192.fe5d7ddf.webp",
+      "512": "imagenes/ejercicio/isq-puente-talones-banco-512.a1fa4cec.webp"
+    },
+    "color": "#3a286a"
+  },
+  "isq-rdl-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-goma-192.4d149975.webp",
+      "512": "imagenes/ejercicio/isq-rdl-goma-512.f38c72d8.webp"
+    },
+    "color": "#3e2d6e"
+  },
+  "isq-rdl-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-kettlebell-192.c7a28834.webp",
+      "512": "imagenes/ejercicio/isq-rdl-kettlebell-512.005eb405.webp"
+    },
+    "color": "#3e2e68"
+  },
+  "isq-rdl-polea": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/isq-rdl-polea-192.b23a789c.webp",
+      "512": "imagenes/ejercicio/isq-rdl-polea-512.6664940e.webp"
+    },
+    "color": "#433270"
   },
   "isq-rumano-mancuernas": {
     "proporcion": [
