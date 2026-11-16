@@ -6176,6 +6176,10 @@ try {
   console.log('\nPausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve');
   const { probarPausas } = await import('./e2e-pausas.mjs');
   await probarPausas({ navegador, check });
+
+  console.log('\nLa foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal');
+  const { probarPlatos } = await import('./e2e-platos.mjs');
+  await probarPlatos({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
