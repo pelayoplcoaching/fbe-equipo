@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.179': {
+    atleta: [
+      'Notas de voz como en WhatsApp: mantén el micro y suelta para enviar, o sube el dedo al candado para grabar sin mantener.',
+      'Duran hasta 2 minutos, se pueden pausar, y al acabar una suena la siguiente.',
+      'Si el micro está bloqueado, la app te enseña cómo activarlo paso a paso.',
+    ],
+    coach: [
+      'Notas de voz como en WhatsApp: soltar para enviar, candado, pausa, onda en vivo y reproducción seguida.',
+      'Los dos minutos necesitan la migración 081; sin ella, siguen en un minuto.',
+    ],
+  },
   '0.178': {
     atleta: [
       'El vídeo que grabas para tu coach con la cámara de la app ya se puede guardar en tu móvil: «Guardar en mi móvil».',

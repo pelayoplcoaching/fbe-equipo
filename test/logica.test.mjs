@@ -2636,10 +2636,37 @@ console.log('\nv0.55: el chat, aún más como WhatsApp');
 console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el móvil y más');
 {
   const V = await import('../web/src/logica/notasVoz.js');
-  check(V.textoContador(42.7) === '0:42 / 1:00' && V.textoContador(75) === '1:00 / 1:00' && V.textoContador(0) === '0:00 / 1:00', 'notas de voz: «0:42 / 1:00» (y nunca más de 1:00)');
-  check(!V.quedaPoco(49.9) && V.quedaPoco(50) && V.quedaPoco(59.9) && !V.quedaPoco(60) && V.segundosRestantes(52.2) === 8, 'avisa en los últimos 10 segundos («Quedan 8 s»)');
-  check(!V.alLimite(59.99) && V.alLimite(60) && V.alLimite(61), 'al minuto se para sola');
-  check(V.duracionGuardada(0.3) === 1 && V.duracionGuardada(42.6) === 43 && V.duracionGuardada(64) === 60 && V.duracionGuardada(NaN) === 1, 'la duración que se guarda: de 1 a 60 segundos enteros (la base acepta hasta 61)');
+  // (v0.179) hasta dos minutos con la 081; sin ella (o si la base no lo dice), el minuto de siempre
+  check(V.LIMITE_VOZ_SEG === 120 && V.LIMITE_VOZ_SIN_081 === 60 && V.limiteVoz(120) === 120 && V.limiteVoz(null) === 60 && V.limiteVoz(undefined) === 60 && V.limiteVoz('x') === 60 && V.limiteVoz(30) === 60 && V.limiteVoz(900) === 120 && V.limiteVoz(90) === 90,
+    '(v0.179) el límite: dos minutos si la base lo dice (081); si no, un minuto; nunca más de dos ni menos de uno');
+  check(V.textoLimite(120) === '2 minutos' && V.textoLimite(60) === '1 minuto' && V.textoLimite() === '2 minutos', 'y se dice en claro: «1 minuto», «2 minutos»');
+  check(V.textoContador(42.7, 60) === '0:42 / 1:00' && V.textoContador(75, 60) === '1:00 / 1:00' && V.textoContador(0, 60) === '0:00 / 1:00' && V.textoContador(75) === '1:15 / 2:00' && V.textoContador(500) === '2:00 / 2:00', 'notas de voz: «0:42 / 1:00» (y nunca más del límite)');
+  check(!V.quedaPoco(49.9, 60) && V.quedaPoco(50, 60) && V.quedaPoco(59.9, 60) && !V.quedaPoco(60, 60) && V.segundosRestantes(52.2, 60) === 8 && !V.quedaPoco(100) && V.quedaPoco(110) && V.quedaPoco(119.9) && !V.quedaPoco(120) && V.segundosRestantes(112.2) === 8,
+    'avisa en los últimos 10 segundos («Quedan 8 s»), sea cual sea el límite');
+  check(!V.alLimite(59.99, 60) && V.alLimite(60, 60) && V.alLimite(61, 60) && !V.alLimite(119.99) && V.alLimite(120), 'al llegar al límite se para sola');
+  check(V.duracionGuardada(0.3) === 1 && V.duracionGuardada(42.6) === 43 && V.duracionGuardada(64, 60) === 60 && V.duracionGuardada(NaN) === 1 && V.duracionGuardada(64) === 64 && V.duracionGuardada(300) === 120,
+    'la duración que se guarda: segundos enteros de 1 al límite (la base acepta uno más)');
+  // (v0.179) el permiso: la primera vez no se graba a ciegas; bloqueado, los pasos; y nada colgado si el dedo ya no está
+  check(V.trasPermiso({ permiso: 'prompt', tardoMs: 50 }) === 'listo' && V.trasPermiso({ permiso: 'prompt', manos: true }) === 'listo' && V.trasPermiso({ permiso: 'granted', tardoMs: 4000 }) === 'grabar'
+    && V.trasPermiso({ permiso: null, tardoMs: 4000 }) === 'listo' && V.trasPermiso({ permiso: null, tardoMs: 200 }) === 'grabar'
+    && V.trasPermiso({ permiso: 'granted', dedoPuesto: false }) === 'corta' && V.trasPermiso({ permiso: 'granted', dedoPuesto: false, manos: true }) === 'grabar',
+    '(v0.179) al llegar el micro: si el sistema acaba de preguntar, no se graba (se dice que ya está listo); si ya tenía permiso, graba; si lo soltó antes, no se queda colgada');
+  {
+    const ios = V.ayudaMicro('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15', true), iosWeb = V.ayudaMicro('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', false);
+    const and = V.ayudaMicro('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/130', true), pc = V.ayudaMicro('Mozilla/5.0 (Windows NT 10.0) Chrome/130', false);
+    check(/iPhone/.test(ios.aparato) && /Ajustes/.test(ios.pasos[0]) && /Safari/.test(ios.pasos.join(' ')) && /sitio web/.test(iosWeb.pasos.join(' ')) && and.aparato === 'Android' && /Permisos/.test(and.pasos.join(' '))
+      && pc.aparato === 'ordenador' && [ios, iosWeb, and, pc].every((a) => a.pasos.length >= 3 && a.pasos.every((t) => t.length <= 120)) && V.ayudaMicro().pasos.length >= 3,
+      '«Cómo activarlo»: los pasos para iPhone (instalada o en Safari), Android y ordenador');
+    check(V.esPermisoDenegado({ name: 'NotAllowedError' }) && V.esPermisoDenegado({ name: 'SecurityError' }) && !V.esPermisoDenegado({ name: 'NotFoundError' }) && !V.esPermisoDenegado(null)
+      && /bloqueado/.test(V.errorMicro({ name: 'NotAllowedError' })) && /cortado/.test(V.errorMicro({ name: 'AbortError' })) && /https/.test(V.errorMicro({ name: 'SinContexto' })), 'y los errores nuevos: bloqueado, cortado por el móvil y sin dirección segura');
+  }
+  // (v0.179) la onda en vivo y la reproducción encadenada
+  check(igual(V.ondaViva([0.5, 1], 4), [0, 0, 50, 100]) && V.ondaViva([], 28).length === 28 && igual(V.ondaViva([0.1, 0.2, 0.3], 2), [20, 30]) && igual(V.ondaViva([2, -1, NaN], 3), [100, 0, 0]), 'la onda en vivo: los últimos niveles, de 0 a 100');
+  {
+    const ms = [{ id: 1, archivo: { tipo: 'audio' } }, { id: 2, archivo: { tipo: 'audio' } }, { id: 3, texto: 'hola' }, { id: 4, archivo: { tipo: 'audio' } }, { id: 5, archivo: { tipo: 'audio' }, eliminado: true }, { id: 6, archivo: { tipo: 'adjunto' } }];
+    check(V.siguienteVoz(ms, 1) === 2 && V.siguienteVoz(ms, 2) === null && V.siguienteVoz(ms, 4) === null && V.siguienteVoz(ms, 6) === null && V.siguienteVoz(ms, 99) === null && V.siguienteVoz(null, 1) === null,
+      'al acabar una nota suena la siguiente solo si va justo después (y no está eliminada)');
+  }
   check(V.formatoGrabacion((t) => t === 'audio/webm;codecs=opus')?.tipo === 'audio/webm' && V.formatoGrabacion((t) => t === 'audio/mp4')?.ext === 'm4a'
     && V.formatoGrabacion(() => false) === null && V.formatoGrabacion(null) === null, 'el formato: Opus en WebM (Chrome, Android) o MP4/AAC (iPhone); si no hay, no se graba');
   check(V.tipoAudio('audio/webm;codecs=opus').tipo === 'audio/webm' && V.tipoAudio('audio/x-m4a').tipo === 'audio/mp4' && V.tipoAudio('video/webm') === null && V.tipoAudio('audio/wav') === null,
@@ -2649,10 +2676,10 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     'la forma de onda: de 8 a 64 barras de 0 a 100 (lo más alto, al 100)');
   check(V.gestoVoz(-130, 0) === 'cancelar' && V.gestoVoz(0, -90) === 'bloquear' && V.gestoVoz(-20, -20) === null && V.gestoVoz(-120, -100) === 'cancelar', 'deslizar a la izquierda cancela; hacia arriba, sigue grabando sin el dedo');
   check(V.siguienteVelocidad(1) === 1.5 && V.siguienteVelocidad(1.5) === 2 && V.siguienteVelocidad(2) === 1 && V.textoVelocidad(1.5) === '1,5×', '1× → 1,5× → 2×');
-  check(/permiso/.test(V.errorMicro({ name: 'NotAllowedError' })) && /ningún micro/.test(V.errorMicro({ name: 'NotFoundError' })) && /navegador/.test(V.errorMicro({ name: 'NoSoportado' })) && /otra app/.test(V.errorMicro({ name: 'NotReadableError' })),
+  check(/bloqueado/.test(V.errorMicro({ name: 'NotAllowedError' })) && /ningún micro/.test(V.errorMicro({ name: 'NotFoundError' })) && /navegador/.test(V.errorMicro({ name: 'NoSoportado' })) && /otra app/.test(V.errorMicro({ name: 'NotReadableError' })),
     'permiso denegado, sin micro, micro ocupado o sin grabación: cada uno con su mensaje claro');
   const nv = readFileSync(new URL('../web/src/ui/chat/NotaVoz.jsx', import.meta.url), 'utf8');
-  check(/getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/.test(nv) && /onstop = \(\) => \{\s*soltarMicro\(\)/.test(nv), 'el micro se suelta en cuanto se para la grabación (sin el indicador encendido)');
+  check(/getTracks\(\)\.forEach\(\(t\) => \{ t\.onended = null; t\.stop\(\); \}\)/.test(nv) && /onstop = \(\) => \{[^}]*?soltarMicro\(\)/.test(nv) && /visibilitychange/.test(nv) && /wakeLock/.test(nv), 'el micro se suelta en cuanto se para la grabación (sin el indicador encendido)');
 
   const E = await import('../web/src/logica/encuestas.js');
   check(E.opcionesEncuesta(['  Sí ', 'No']).ok && igual(E.opcionesEncuesta(['  Sí ', 'No']).opciones, ['Sí', 'No']) && !E.opcionesEncuesta(['Solo una']).ok && !E.opcionesEncuesta(Array.from({ length: 13 }, (_, i) => `o${i}`)).ok

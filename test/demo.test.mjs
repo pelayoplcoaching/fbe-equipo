@@ -1130,8 +1130,8 @@ console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir en l
   await comoAna();
   const hoy = new Date().toISOString().slice(0, 10);
   const voz = (extra = {}) => ({ atleta_id: ana.id, tipo: 'audio', ruta: `${ana.id}/audio-${hoy}-${Math.random().toString(36).slice(2, 8)}.webm`, mime: 'audio/webm', bytes: 2000, duracion_seg: 10, ...extra });
-  check(!!(await b8.insert('archivos', [voz({ onda: Array(16).fill(40) })]))[0], 'Ana registra una nota de voz');
-  check(await lanza(() => b8.insert('archivos', [voz({ duracion_seg: 62 })])) && await lanza(() => b8.insert('archivos', [voz({ bytes: 3145729 })])) && await lanza(() => b8.insert('archivos', [voz({ mime: 'audio/wav' })]))
+  check(!!(await b8.insert('archivos', [voz({ onda: Array(16).fill(40), duracion_seg: 121 })]))[0] && await b8.rpc('voz_limite_seg', {}) === 120, 'Ana registra una nota de voz, de hasta dos minutos (como la 081: voz_limite_seg = 120)');
+  check(await lanza(() => b8.insert('archivos', [voz({ duracion_seg: 122 })])) && await lanza(() => b8.insert('archivos', [voz({ bytes: 3145729 })])) && await lanza(() => b8.insert('archivos', [voz({ mime: 'audio/wav' })]))
     && await lanza(() => b8.insert('archivos', [voz({ ruta: `${ana.id}/audio-${hoy}-x.exe` })])) && await lanza(() => b8.insert('archivos', [voz({ onda: [1, 2] })])) && await lanza(() => b8.insert('archivos', [voz({ nombre: 'x.webm' })])),
     'de 1 a 61 s, hasta 3 MB, de los formatos de grabar, con su ruta y una onda de 8 a 64 barras (como la base)');
   const mV = await a8.enviarMensaje(ana.id, { archivo: new File([new Uint8Array(900)], 'n.webm', { type: 'audio/webm;codecs=opus' }), autor: 'atleta', duracion_seg: 7.4, onda: Array(20).fill(30) });

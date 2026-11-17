@@ -1,7 +1,13 @@
-// Las notas de voz del chat (v0.56): lo que no depende de la pantalla ni del micro. Como mucho UN minuto (lo pide el
-// coach): se ve «0:42 / 1:00», avisa en los últimos 10 segundos y al llegar al minuto se para sola (y se queda lo grabado,
-// para escucharlo y enviarlo). Sin transcripción.
-export const LIMITE_VOZ_SEG = 60;
+// Las notas de voz del chat (v0.56): lo que no depende de la pantalla ni del micro. Sin transcripción.
+// (v0.179) Como mucho DOS minutos (antes, uno): con la migración 081 la base acepta hasta 121 s; sin ella, la app sigue en
+// el minuto de siempre (limiteVoz). Se ve «0:42» y, cerca del final, lo que queda; al llegar al límite se para sola (y se
+// queda lo grabado, para escucharlo y enviarlo).
+export const LIMITE_VOZ_SEG = 120;
+export const LIMITE_VOZ_SIN_081 = 60;
+// El límite de esta base: lo que diga (voz_limite_seg, de la 081), entre 60 y 120; si no lo dice, el minuto
+export const limiteVoz = (deLaBase) => { const n = Math.round(Number(deLaBase)); return Number.isFinite(n) && n >= LIMITE_VOZ_SIN_081 ? Math.min(LIMITE_VOZ_SEG, n) : LIMITE_VOZ_SIN_081; };
+// «1 minuto», «2 minutos», «1 minuto y medio»
+export const textoLimite = (limite = LIMITE_VOZ_SEG) => (limite % 60 === 0 ? `${limite / 60} minuto${limite === 60 ? '' : 's'}` : `${mmss(limite)} min`);
 export const AVISO_VOZ_SEG = 10;
 export const MIN_VOZ_SEG = 1;
 export const MAX_VOZ_BYTES = 3 * 1048576;
@@ -15,8 +21,8 @@ export const quedaPoco = (seg, limite = LIMITE_VOZ_SEG, aviso = AVISO_VOZ_SEG) =
 export const segundosRestantes = (seg, limite = LIMITE_VOZ_SEG) => Math.max(0, Math.ceil(limite - seg));
 // ¿Hay que pararla ya? (el minuto)
 export const alLimite = (seg, limite = LIMITE_VOZ_SEG) => seg >= limite;
-// La duración que se guarda: segundos enteros, de 1 a 60 (la base acepta hasta 61, por si el redondeo)
-export const duracionGuardada = (seg) => Math.max(MIN_VOZ_SEG, Math.min(LIMITE_VOZ_SEG, Math.round(Number(seg) || 0)));
+// La duración que se guarda: segundos enteros, de 1 al límite (la base acepta uno más, por si el redondeo)
+export const duracionGuardada = (seg, limite = LIMITE_VOZ_SEG) => Math.max(MIN_VOZ_SEG, Math.min(limite, Math.round(Number(seg) || 0)));
 
 // El formato: Opus en WebM (Chrome, Firefox, Android) o, si no, MP4/AAC (Safari de iPhone). esCompatible: la función
 // MediaRecorder.isTypeSupported. Devuelve { grabar, tipo, ext } (grabar: lo que se le pide a MediaRecorder; tipo: el MIME
@@ -68,12 +74,61 @@ export const PULSACION_CORTA_MS = 300;
 export const siguienteVelocidad = (v) => VELOCIDADES[(VELOCIDADES.indexOf(v) + 1) % VELOCIDADES.length] || 1;
 export const textoVelocidad = (v) => `${String(v).replace('.', ',')}×`;
 
+// (v0.179) Los niveles de la onda en vivo: los últimos n (0…1), para dibujarla mientras se graba
+export const ondaViva = (niveles = [], n = 28) => { const xs = (Array.isArray(niveles) ? niveles : []).slice(-n).map((x) => Math.round(Math.max(0, Math.min(1, Number(x) || 0)) * 100)); return [...Array(Math.max(0, n - xs.length)).fill(0), ...xs]; };
+// (v0.179) Al acabar una nota suena la siguiente, como en WhatsApp: el mensaje que va justo después, si también es una
+// nota de voz (de quien sea). mensajes: en orden; con archivo.tipo === 'audio'. Devuelve su id o null.
+export function siguienteVoz(mensajes = [], id) {
+  const xs = Array.isArray(mensajes) ? mensajes : [];
+  const i = xs.findIndex((m) => m && String(m.id) === String(id));
+  const s = i < 0 ? null : xs[i + 1];
+  return s && s.archivo?.tipo === 'audio' && !s.eliminado && !s.programado ? s.id : null;
+}
+// (v0.179) Qué se hace cuando por fin llega el micro. Antes se grababa siempre: si había salido el aviso del sistema (la
+// primera vez), el dedo ya no estaba y la grabación se quedaba colgada o se perdía. Ahora, como WhatsApp:
+//   · permiso: 'granted' | 'prompt' | null (lo que decía el navegador ANTES de pedir el micro; null si no lo sabe);
+//   · tardoMs: lo que ha tardado en llegar; dedoPuesto: sigue manteniendo el micro; manos: lo tocó (o usó el teclado).
+// Devuelve 'grabar', 'listo' (se acaba de dar el permiso: no se graba, se dice que ya puede) o 'corta' (lo soltó enseguida).
+export const PERMISO_LENTO_MS = 1500;
+export function trasPermiso({ permiso = null, tardoMs = 0, dedoPuesto = true, manos = false } = {}) {
+  if (permiso === 'prompt') return 'listo';
+  if (permiso !== 'granted' && tardoMs >= PERMISO_LENTO_MS) return 'listo';
+  return manos || dedoPuesto ? 'grabar' : 'corta';
+}
+// (v0.179) Cómo activar el micro, paso a paso, según el aparato (ua: navigator.userAgent; instalada: como app en la pantalla de inicio)
+export function ayudaMicro(ua = '', instalada = false) {
+  const u = String(ua || '');
+  const ios = /iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && /Mobile/.test(u));
+  if (ios) return {
+    aparato: 'iPhone o iPad',
+    pasos: instalada
+      ? ['Abre Ajustes del iPhone.', 'Entra en Apps y luego en Safari.', 'Baja hasta «Micrófono» y elige «Permitir» (o «Preguntar»).', 'Cierra la app del todo y vuelve a abrirla.']
+      : ['Toca el icono de la izquierda de la barra de direcciones (aA o el del puzle).', 'Elige «Ajustes del sitio web».', 'En «Micrófono», elige «Permitir».', 'Vuelve al chat y mantén pulsado el micro.'],
+    nota: 'El iPhone puede volver a preguntar cada vez que abres la app: con «Permitir» en Ajustes deja de hacerlo.',
+  };
+  if (/Android/.test(u)) return {
+    aparato: 'Android',
+    pasos: instalada
+      ? ['Mantén pulsado el icono de la app y toca la «i» (Información de la app).', 'Entra en «Permisos» y luego en «Micrófono».', 'Elige «Permitir solo mientras se usa la app».', 'Vuelve al chat y mantén pulsado el micro.']
+      : ['Toca el candado (o los ajustes) a la izquierda de la dirección.', 'Entra en «Permisos».', 'Activa «Micrófono».', 'Vuelve al chat y mantén pulsado el micro.'],
+    nota: 'Si no aparece, mira también Ajustes del móvil → Apps → Chrome → Permisos → Micrófono.',
+  };
+  return {
+    aparato: 'ordenador',
+    pasos: ['Haz clic en el candado (o los ajustes) a la izquierda de la dirección.', 'En «Micrófono», elige «Permitir».', 'Recarga la página.', 'Comprueba en los ajustes de sonido del ordenador que hay un micro conectado.'],
+    nota: null,
+  };
+}
+export const esPermisoDenegado = (e) => ['NotAllowedError', 'SecurityError', 'PermissionDeniedError'].includes(e?.name || '');
+
 // Los mensajes de error, claros (permiso denegado, sin micro, sin grabación en este navegador)
 export function errorMicro(e) {
   const n = e?.name || '';
-  if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') return 'No hay permiso para usar el micro: actívalo en los ajustes del navegador para esta app.';
+  if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') return 'El micro está bloqueado para esta app. Toca «Cómo activarlo» y te lo enseñamos paso a paso.';
   if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') return 'No se encuentra ningún micro en este dispositivo.';
   if (n === 'NotReadableError' || n === 'TrackStartError') return 'El micro lo está usando otra app: ciérrala y vuelve a probar.';
+  if (n === 'AbortError') return 'El móvil ha cortado el micro. Vuelve a probar.';
+  if (n === 'SinContexto') return 'Para grabar hace falta abrir la app con su dirección segura (https).';
   if (n === 'NoSoportado') return 'Este navegador no puede grabar notas de voz. Prueba con Chrome, Safari o Firefox actualizados.';
   return 'No se ha podido grabar la nota de voz.';
 }

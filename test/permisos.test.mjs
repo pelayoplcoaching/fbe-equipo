@@ -3701,10 +3701,14 @@ console.log('\nNotas de voz, encuestas, «escuchado» y reacciones a elegir (mig
   const hoy = new Date().toISOString().slice(0, 10);
   const onda = Array.from({ length: 32 }, (_, i) => (i * 7) % 101);
   const voz = (extra = {}) => ({ atleta_id: aAna.id, tipo: 'audio', ruta: `${aAna.id}/audio-${hoy}-${uuid().slice(0, 8)}.webm`, mime: 'audio/webm', bytes: 30000, duracion_seg: 12, onda: `{${onda.join(',')}}`, ...extra });
-  const [vA] = await insArch(voz());
-  check(vA.tipo === 'audio' && vA.subido_por === 'atleta' && vA.onda.length === 32, 'Ana registra una nota de voz (a su nombre, con su onda)');
-  check(await fallaArch(voz({ duracion_seg: 0 })) && await fallaArch(voz({ duracion_seg: 62 })) && await fallaArch(voz({ duracion_seg: null })) && await fallaArch(voz({ bytes: 3145729 })) && await fallaArch(voz({ bytes: null })),
-    'de 1 a 61 segundos (el minuto y un margen) y hasta 3 MB');
+  const [vA] = await insArch(voz({ duracion_seg: 121 }));
+  check(vA.tipo === 'audio' && vA.subido_por === 'atleta' && vA.onda.length === 32 && vA.duracion_seg === 121, 'Ana registra una nota de voz (a su nombre, con su onda), de hasta dos minutos (081)');
+  check(await fallaArch(voz({ duracion_seg: 0 })) && await fallaArch(voz({ duracion_seg: 122 })) && await fallaArch(voz({ duracion_seg: null })) && await fallaArch(voz({ bytes: 3145729 })) && await fallaArch(voz({ bytes: null })),
+    '(081) de 1 a 121 segundos (los dos minutos y un margen) y hasta 3 MB');
+  check((await q(`select public.voz_limite_seg() n`))[0].n === 120, '(081) la app puede preguntar el límite: voz_limite_seg() = 120');
+  await anon();
+  check(await falla(`select public.voz_limite_seg()`), 'sin sesión, no');
+  await como(ana);
   check(await fallaArch(voz({ mime: 'audio/wav' })) && await fallaArch(voz({ mime: 'video/webm' })) && await fallaArch(voz({ ruta: `${aAna.id}/audio-${hoy}-x.exe` })) && await fallaArch(voz({ ruta: `${aAna.id}/adjunto-${hoy}-x.webm` }))
     && await fallaArch(voz({ ruta: `${aLuis.id}/audio-${hoy}-x.webm` })) && await fallaArch(voz({ nombre: 'nota.webm' })) && await fallaArch(voz({ poster_ruta: `${aAna.id}/x.jpg` })) && await fallaArch(voz({ paginas: 1 })),
     'solo los formatos que graban los navegadores, con su ruta audio-… en su carpeta, sin nombre, miniatura ni páginas');

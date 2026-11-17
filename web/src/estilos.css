@@ -4847,3 +4847,35 @@ html[data-teclado] .pildora-descanso { display: none; }
 
 /* v0.175: el cardio de la semana del calendario, bajo las sesiones del microciclo */
 .cardio-cal { margin: var(--esp-12) 0 var(--esp-8); }
+
+/* v0.179: las notas de voz, como WhatsApp: el candado al mantener, la onda en vivo, la pausa y la ayuda del micro */
+.chat-micro-caja { position: relative; display: inline-flex; flex: none; }
+.chat-micro.grabando { transform: scale(1.25); }
+.chat-candado { position: absolute; left: 50%; bottom: calc(100% + var(--esp-10)); display: grid; justify-items: center; gap: var(--esp-2); padding: var(--esp-10) var(--esp-8);
+  border-radius: var(--r-pildora); background: var(--hoja); box-shadow: var(--sombra); color: var(--tinta-2); pointer-events: none; z-index: calc(var(--capa-pegado) + 2);
+  transform: translate(-50%, calc(var(--sube, 0) * -14px)); }
+.chat-candado svg { width: var(--ico-18); height: var(--ico-18); }
+.chat-candado svg + svg { width: var(--ico-14); height: var(--ico-14); }
+body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
+.chat-grabando-borrar { flex: none; color: var(--alerta); }
+.chat-grabando-onda { flex: 1 1 60px; min-width: 40px; max-width: 150px; height: 26px; display: flex; align-items: center; gap: var(--esp-2); overflow: hidden; }
+.chat-grabando-onda span { flex: 1; min-width: 2px; border-radius: var(--r-2); background: var(--morado); }
+.chat-grabando.bloqueada { flex-wrap: nowrap; gap: var(--esp-6); padding-inline: var(--esp-4); }
+.chat-grabando .chat-grabando-aviso { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-grabando.bloqueada .chat-grabando-aviso { display: none; }
+.chat-grabando.bloqueada.acaba .chat-grabando-aviso { display: inline; flex: 1 1 auto; }
+.chat-grabando.bloqueada.acaba .chat-grabando-onda { display: none; }
+.chat-grabando.bloqueada .chat-grabando-onda { max-width: none; }
+.chat-grabando.bloqueada .chat-grabando-acciones { gap: var(--esp-2); flex: none; }
+.chat-grabando.pausada .chat-grabando-punto { animation: none; background: var(--tinta-3); }
+.chat-grabando.pausada .chat-grabando-onda span { background: var(--tinta-3); }
+.chat-grabando-seguir { color: var(--alerta); }
+.ayuda-micro { margin: var(--esp-4) 0 var(--esp-8); padding-left: var(--esp-20); display: grid; gap: var(--esp-6); }
+@media (prefers-reduced-motion: no-preference) {
+  .chat-candado { animation: candado-entra var(--mov-medio) ease-out; }
+  .chat-candado svg + svg { animation: candado-flecha 1s ease-in-out infinite; }
+  .chat-micro { transition: transform var(--mov-rapido) ease-out; }
+}
+@keyframes candado-entra { from { transform: translate(-50%, 10px); } }
+@keyframes candado-flecha { 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .chat-micro.grabando { transform: none; } }

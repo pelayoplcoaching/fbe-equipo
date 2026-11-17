@@ -1199,9 +1199,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la migración 014: tipos, miniatura en su carpeta y duración
     archivos: (f) => (f.pose == null || (f.tipo === 'foto_progreso' && ['frente', 'perfil', 'espalda'].includes(f.pose)))
       && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento', 'audio'].includes(f.tipo)
-      // Como la 034: una nota de voz, audio de 1 a 61 segundos y hasta 3 MB, con su ruta audio-…; su onda, de 8 a 64 barras
+      // Como la 034 y la 081: una nota de voz, audio de 1 a 121 segundos y hasta 3 MB, con su ruta audio-…; su onda, de 8 a 64 barras
       && (f.tipo !== 'audio' || (['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac'].includes(f.mime) && n(f.bytes) >= 1 && n(f.bytes) <= 3145728
-        && entero(n(f.duracion_seg)) && entre(n(f.duracion_seg), 1, 61) && /\/audio-[A-Za-z0-9._-]+\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(String(f.ruta)) && f.nombre == null && f.poster_ruta == null && f.paginas == null))
+        && entero(n(f.duracion_seg)) && entre(n(f.duracion_seg), 1, 121) && /\/audio-[A-Za-z0-9._-]+\.(webm|ogg|m4a|mp4|mp3|aac|wav)$/.test(String(f.ruta)) && f.nombre == null && f.poster_ruta == null && f.paginas == null))
       && (f.onda == null || (f.tipo === 'audio' && Array.isArray(f.onda) && f.onda.length >= 8 && f.onda.length <= 64 && f.onda.every((x) => Number.isInteger(x) && x >= 0 && x <= 100)))
       // Como la 033: un documento es un PDF de hasta 20 MB, con su nombre (saneado) y una ruta .pdf
       && (f.tipo !== 'documento' || (f.mime === 'application/pdf' && n(f.bytes) >= 1 && n(f.bytes) <= 20971520 && /\.pdf$/.test(String(f.ruta)) && /\.pdf$/i.test(String(f.nombre ?? '')) && f.poster_ruta == null))
@@ -5010,6 +5010,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           return { enviados: ids.length, saltados, ids };
         } catch (e) { db = antes; throw e; }
       }
+      // Migración 081: cuánto puede durar una nota de voz (dos minutos)
+      if (nombre === 'voz_limite_seg') return 120;
       // Migración 034: «escuchado», encuestas y votos
       if (nombre === 'marcar_escuchado') {
         if (!uid || !(esCoach() || miAtletaId())) throw new Error('Necesitas iniciar sesión');

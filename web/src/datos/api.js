@@ -48,7 +48,7 @@ import { VERSION_LEGAL, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LE
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
-import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida } from '../logica/notasVoz.js';
+import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida, limiteVoz, LIMITE_VOZ_SIN_081 } from '../logica/notasVoz.js';
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida, retoMaximo, insigniasDe, MAX_FOTOS, fotosDe, busquedaValida,
   eventoValido, programadoValido, MAX_PLANTILLAS, MAX_MOTIVO_DESTACADO, palabrasDeTexto, MAX_PALABRAS } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
@@ -3254,6 +3254,20 @@ export function crearApi(backend) {
       return api._c034;
     },
     async exigir034() { if (!(await api.chat034())) throw new Error(AVISO_034); },
+    // (v0.179, 081) cuánto puede durar una nota de voz en esta base: dos minutos con la 081; sin ella, el minuto de siempre.
+    // Si la pregunta falla por otra cosa (sin red), el minuto ahora y se vuelve a preguntar la próxima vez.
+    async vozLimite() {
+      if (typeof backend.rpc !== 'function') return LIMITE_VOZ_SIN_081;
+      if (!api._vozLim) {
+        const pr = backend.rpc('voz_limite_seg', {}).then((n) => limiteVoz(n), (e) => {
+          const falta = /voz_limite_seg|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
+          if (!falta && api._vozLim === pr) api._vozLim = null;
+          return LIMITE_VOZ_SIN_081;
+        });
+        api._vozLim = pr;
+      }
+      return api._vozLim;
+    },
     // «Escuchado» (el micro azul): quien recibe una nota de voz la reproduce. Sin la 034, o con «en línea» apagado, nada.
     async marcarEscuchado(comentarioId) {
       if (!comentarioId || typeof backend.rpc !== 'function') return null;
@@ -3554,7 +3568,7 @@ export function crearApi(backend) {
       if (!archivo) return api.comentar({ atletaId, texto: t, autor, respondeA, clienteId });
       const esPdf = archivo.type === 'application/pdf';
       const esVideo = /^video\//.test(archivo.type || '');
-      // (v0.56) una nota de voz: hasta un minuto y 3 MB, sin pie
+      // (v0.56) una nota de voz: hasta dos minutos (081; sin ella, uno) y 3 MB, sin pie
       const esAudio = /^audio\//.test(archivo.type || '');
       if (esPdf && archivo.size > PDF_MAX_MB * 1024 * 1024) throw new Error(`El PDF pesa más de ${PDF_MAX_MB} MB`);
       if (esPdf) await api.exigir033();
@@ -3566,7 +3580,7 @@ export function crearApi(backend) {
       const tipo = esPdf ? 'documento' : esAudio ? 'audio' : enDiario ? (esVideo ? 'video_tecnica' : 'foto_progreso') : 'adjunto';
       const delChat = tipo === 'adjunto' || tipo === 'documento' || tipo === 'audio';
       const fila = await api.subirArchivo(atletaId, archivo, { tipo, nota_atleta: enDiario && t ? t.slice(0, 500) : null, poster: esPdf || esAudio ? null : poster,
-        duracion_seg: esPdf ? null : esAudio ? duracionGuardada(duracion_seg) : duracion_seg, alProgreso, senal,
+        duracion_seg: esPdf ? null : esAudio ? duracionGuardada(duracion_seg, await api.vozLimite()) : duracion_seg, alProgreso, senal,
         ...(esPdf ? { nombre: nombreSeguroPdf(archivo.name), paginas } : {}), ...(esAudio && ondaValida(onda) ? { onda } : {}),
         ...(derivado_de && tipo === 'adjunto' && /^image\//.test(archivo.type || '') ? { derivado_de } : {}) });
       // (v0.56) «Cancelar» justo cuando acababa de subirse: no sale (y su archivo se retira)
@@ -3851,7 +3865,7 @@ export function crearApi(backend) {
       if (!tipoAudio(audio?.type)) throw new Error('Ese audio no se puede enviar');
       if (audio.size > MAX_VOZ_BYTES) throw new Error('La voz pesa demasiado (más de 3 MB)');
       const archivo = audio instanceof File ? audio : new File([audio], `voz.${tipoAudio(audio.type).ext}`, { type: audio.type });
-      const fila = await api.subirArchivo(video.atleta_id, archivo, { tipo: 'audio', duracion_seg: duracionGuardada(seg), onda: ondaValida(onda) ? onda : null });
+      const fila = await api.subirArchivo(video.atleta_id, archivo, { tipo: 'audio', duracion_seg: duracionGuardada(seg, LIMITE_VOZ_SIN_081), onda: ondaValida(onda) ? onda : null });
       try {
         await b.upsert('video_revisiones', [{ archivo_id: video.id, atleta_id: video.atleta_id, voz_archivo_id: fila.id, voz_inicio: Math.round(Math.max(0, Number(inicio) || 0) * 100) / 100 }], 'archivo_id').catch(falta035);
       } catch (e) { await api.borrarArchivo(fila).catch(() => {}); throw e; }

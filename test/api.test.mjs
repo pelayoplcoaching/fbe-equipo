@@ -1928,6 +1928,24 @@ console.log('\nv0.56: notas de voz, encuestas, «escuchado» y reacciones a eleg
     'Ana manda una nota de voz: audio/webm (sin parámetros), ruta audio-…, 42 s, su onda y «Nota de voz» (sin pie)');
   const iphone = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(500)], 'n.mp4', { type: 'audio/mp4' }), autor: 'atleta', duracion_seg: 2 });
   check((await b.sql(`select ruta, mime from archivos where id = $1`, [iphone.archivo_id]))[0].ruta.endsWith('.m4a'), 'la del iPhone (audio/mp4), .m4a');
+  // (v0.179, 081) hasta dos minutos; sin la 081, la app se queda en el minuto (y no manda más de lo que acepta la base)
+  {
+    check(await api.vozLimite() === 120, '(081) la app sabe que en esta base una nota de voz puede durar dos minutos');
+    const larga = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(900)], 'n.webm', { type: 'audio/webm' }), autor: 'atleta', duracion_seg: 118.4 });
+    const tope = await api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(900)], 'n.webm', { type: 'audio/webm' }), autor: 'atleta', duracion_seg: 300 });
+    const durs = (await b.sql(`select duracion_seg from archivos where id = any($1::uuid[]) order by duracion_seg`, [[larga.archivo_id, tope.archivo_id]])).map((x) => x.duracion_seg);
+    check(durs[0] === 118 && durs[1] === 120, 'una nota de 1:58 se guarda entera, y nunca más de 2:00');
+    const noEsta = () => { const e = new Error('Could not find the function public.voz_limite_seg without parameters in the schema cache'); e.code = 'PGRST202'; return e; };
+    const sin081 = crearApi({ ...b, auth: b.auth, storage: b.storage, select: b.select.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), insert: b.insert.bind(b),
+      rpc: async (n, a) => { if (n === 'voz_limite_seg') throw noEsta(); return b.rpc(n, a); } });
+    check(await sin081.vozLimite() === 60, 'sin la 081, el minuto de siempre');
+    const corta = await sin081.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(900)], 'n.webm', { type: 'audio/webm' }), autor: 'atleta', duracion_seg: 95 });
+    check((await b.sql(`select duracion_seg from archivos where id = $1`, [corta.archivo_id]))[0].duracion_seg === 60, 'y no manda más de lo que esa base acepta (60 s)');
+    let veces = 0;
+    const sinRed = crearApi({ ...b, auth: b.auth, storage: b.storage, select: b.select.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), insert: b.insert.bind(b),
+      rpc: async (n, a) => { if (n === 'voz_limite_seg') { veces++; if (veces === 1) throw new Error('Failed to fetch'); } return b.rpc(n, a); } });
+    check(await sinRed.vozLimite() === 60 && await sinRed.vozLimite() === 120, 'si la pregunta falla por la red, el minuto ahora y se vuelve a preguntar después');
+  }
   check(await lanza(() => api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(3 * 1048576 + 1)], 'n.webm', { type: 'audio/webm' }), autor: 'atleta', duracion_seg: 10 }))
     && await lanza(() => api.enviarMensaje(aAna.id, { archivo: new File([new Uint8Array(10)], 'n.wav', { type: 'audio/wav' }), autor: 'atleta', duracion_seg: 10 })), 'más de 3 MB o un formato que no es de los de grabar, no');
   const convA = await api.conversacion(aAna.id);

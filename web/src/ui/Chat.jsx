@@ -31,7 +31,8 @@ import { HojaReenviar } from './chat/Reenviar.jsx';
 import { HojaConvertir } from './chat/Convertir.jsx';
 import { InfoContacto, HojaSilenciar } from './chat/InfoContacto.jsx';
 import { DocumentoChat } from './chat/Documento.jsx';
-import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat } from './chat/NotaVoz.jsx';
+import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat, AyudaMicro, ponerOrdenVoz } from './chat/NotaVoz.jsx';
+import { LIMITE_VOZ_SIN_081 } from '../logica/notasVoz.js';
 import { EditorFoto } from './chat/EditorFoto.jsx';
 import { EncuestaChat, HojaEncuesta } from './chat/Encuesta.jsx';
 import { HojaReaccionesRapidas } from './chat/Emojis.jsx';
@@ -58,7 +59,7 @@ import { comprimible } from '../logica/imagen.js';
 // enviar y al recibir; las fotos se reducen (sin EXIF) con «HD» y un editor (recortar, girar, dibujar, texto); el progreso
 // de cada envío dentro de su burbuja, con «Cancelar»; pegar o soltar archivos (ordenador); encuestas (el coach); ir a una
 // fecha y buscar por tipo; tonos de piel y tus seis reacciones; Ctrl/Cmd+F, Escape y ↑ para editar; y notas de voz de
-// hasta un minuto.
+// hasta dos minutos (v0.179; antes, uno).
 // yo: 'coach' o 'atleta'. irContexto({tipo, id}): abrir la sesión, el check-in o el archivo.
 // cabecera: { izquierda, titulo, sub, derecha, verFicha } para pintar aquí la cabecera de la pantalla (con su estado, la
 // búsqueda y el menú); sin ella (en la ficha), una fila de herramientas. perfilOtro: el perfil del atleta (para el coach).
@@ -746,8 +747,14 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   };
   const reintentarSubida = (id) => { cambiarSubida(id, { estado: 'espera', error: null, progreso: 0 }); subidasRef.current = subidasRef.current.map((y) => (y.id === id ? { ...y, estado: 'espera', error: null } : y)); procesarSubidas(); };
 
-  // v0.56: las notas de voz (hasta un minuto); al enviarla, sale como las fotos: al momento, con su progreso
-  const grab = useGrabadora({ alError: (m) => aviso(m, 'error') });
+  // v0.56: las notas de voz; al enviarla, sale como las fotos: al momento, con su progreso
+  // (v0.179) hasta dos minutos con la migración 081 (sin ella, el minuto de siempre); al soltar el micro, sale; y el orden
+  // de los mensajes, para que al acabar una nota suene la siguiente
+  const [limiteVoz, setLimiteVoz] = useState(LIMITE_VOZ_SIN_081);
+  useEffect(() => { let vivo = true; api.vozLimite?.().then((n) => { if (vivo && n) setLimiteVoz(n); }).catch(() => {}); return () => { vivo = false; }; }, []);
+  useEffect(() => { ponerOrdenVoz(mensajes); return () => ponerOrdenVoz([]); }, [mensajes]);
+  const enviarVozRef = useRef(null);
+  const grab = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setHoja('micro'), alEnviar: (x) => enviarVozRef.current?.(x), limite: limiteVoz, clave: atletaId ? `chat-${atletaId}` : null });
   const enviarVoz = (x) => {
     const archivo = new File([x.blob], `nota-de-voz.${x.ext}`, { type: x.tipo });
     let url = null;
@@ -757,6 +764,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     setCitando(null);
     encolarSubidas([{ archivo, url, esAudio: true, seg: x.seg, onda: x.onda, respondeA: citaId }]);
   };
+  enviarVozRef.current = enviarVoz;
 
   // v0.54: lo del menú de cada mensaje
   const responder = (c) => { setMenu(null); setEditando(null); setSeleccion(null); setCitando(c); setTimeout(() => area.current?.focus(), 0); };
@@ -967,7 +975,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
 
   const conTexto = !!texto.trim();
   const mostrarEnviar = conTexto || adjuntos.length > 0 || !!editando;
-  const grabandoVoz = grab.estado === 'grabando' || grab.estado === 'pidiendo';
+  const grabandoVoz = grab.estado === 'grabando' || grab.estado === 'pidiendo' || grab.estado === 'pausada';
   return (
     <div class={`chat ${fondo && cabecera ? 'con-fondo' : ''} ${seleccion ? 'seleccionando' : ''} ${emojis ? 'con-emojis' : ''} ${soltando ? 'soltando' : ''}`} ref={raiz} aria-label={`Chat con ${otro}`} {...arrastrar}>
       {soltando && <div class="chat-soltar" aria-hidden="true"><Icono n="clip" /><strong>Suelta aquí para adjuntarlo</strong><span class="peq">Fotos, vídeos o PDF</span></div>}
@@ -1149,6 +1157,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         <HojaRespuestas nombre={primerNombre} texto={texto} alCerrar={() => setGuardadas(false)}
           alElegir={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()}\n\n${t}` : t)); setGuardadas(false); area.current?.focus(); }} />
       )}
+      {hoja === 'micro' && <AyudaMicro alCerrar={() => setHoja(null)} />}
       {hoja === 'adjuntar' && (
         <Hoja titulo="Adjuntar" alCerrar={() => setHoja(null)}>
           <ul class="lista hoja-acciones chat-adjuntar">
@@ -1569,7 +1578,7 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerr
             ))}
           </ul>
         ))}
-        {pest === 'voz' && (!voces.length ? <Vacio icono="micro" imagen="vacio-notas-voz" titulo="Sin notas de voz">Las notas de voz que os mandéis (de hasta un minuto) salen aquí.</Vacio> : (
+        {pest === 'voz' && (!voces.length ? <Vacio icono="micro" imagen="vacio-notas-voz" titulo="Sin notas de voz">Las notas de voz que os mandéis salen aquí.</Vacio> : (
           <ul class="lista chat-docs">
             {voces.map((m) => (
               <li key={m.archivo.id} class="panel-pad chat-doc">

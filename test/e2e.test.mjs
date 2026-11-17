@@ -4917,25 +4917,25 @@ try {
   const grabando = p.getByRole('group', { name: 'Grabando una nota de voz' });
   await grabando.waitFor();
   await p.getByRole('button', { name: 'Parar y escucharla' }).waitFor();
-  const contador = await grabando.locator('.chat-grabando-tiempo', { hasText: /^0:0\d \/ 1:00$/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
-  check(contador && (await grabando.textContent()).includes('Máximo 1 minuto'), 'graba con el aviso del minuto a la vista: «0:01 / 1:00» y «Máximo 1 minuto»');
+  const contador = await grabando.locator('.chat-grabando-tiempo', { hasText: /^0:0\d$/ }).waitFor({ timeout: 5000 }).then(() => true, () => false);
+  check(contador && (await grabando.textContent()).includes('Hasta 2 minutos') && await grabando.locator('.chat-grabando-onda span').count() === 28, 'graba con el tiempo, la onda en vivo y el límite a la vista: «0:01» y «Hasta 2 minutos» (v0.179)');
   await revisar('voz-grabando');
   await p.waitForTimeout(1500);
-  // Los últimos 10 segundos (el reloj de la prueba se adelanta: no hace falta esperar un minuto)
-  await p.evaluate(() => { const t0 = performance.now(); window.__fbeRelojVoz = () => performance.now() + 50000 + 0 * t0; });
+  // Los últimos 10 segundos (el reloj de la prueba se adelanta: no hace falta esperar dos minutos)
+  await p.evaluate(() => { const t0 = performance.now(); window.__fbeRelojVoz = () => performance.now() + 110000 + 0 * t0; });
   await p.locator('.chat-grabando.acaba').waitFor();
-  check((await grabando.textContent()).includes('Quedan') && /^0:5\d \/ 1:00$/.test((await grabando.locator('.chat-grabando-tiempo').textContent()).trim()), 'en los últimos 10 segundos avisa («Quedan 9 s · máx. 1 minuto»)');
-  // Al minuto se para sola, y lo grabado se queda para escucharlo y enviarlo
-  await p.evaluate(() => { window.__fbeRelojVoz = () => performance.now() + 61000; });
+  check((await grabando.textContent()).includes('Quedan') && /^1:5\d$/.test((await grabando.locator('.chat-grabando-tiempo').textContent()).trim()), 'en los últimos 10 segundos avisa («Quedan 9 s»)');
+  // A los dos minutos se para sola, y lo grabado se queda para escucharlo y enviarlo
+  await p.evaluate(() => { window.__fbeRelojVoz = () => performance.now() + 121000; });
   const revisarVoz = p.getByRole('group', { name: 'Nota de voz grabada' });
   await revisarVoz.waitFor();
   await p.evaluate(() => { delete window.__fbeRelojVoz; });
-  check((await revisarVoz.textContent()).includes('Has llegado al minuto: se ha parado sola') && await revisarVoz.getByRole('button', { name: 'Enviar la nota de voz' }).count() === 1
-    && await revisarVoz.getByRole('button', { name: 'Eliminar la nota de voz' }).count() === 1, 'al minuto se para sola: «Has llegado al minuto», y se queda para escucharla, enviarla o borrarla');
+  check((await revisarVoz.textContent()).includes('Has llegado a los 2 minutos: se ha parado sola') && await revisarVoz.getByRole('button', { name: 'Enviar la nota de voz' }).count() === 1
+    && await revisarVoz.getByRole('button', { name: 'Eliminar la nota de voz' }).count() === 1, 'a los dos minutos se para sola: «Has llegado a los 2 minutos», y se queda para escucharla, enviarla o borrarla');
   check(await hay(p.locator('.chat-grabando'), 0) && await p.evaluate(() => window.__pistas.length > 0 && window.__pistas.every((t) => t.readyState === 'ended')), 'y el micro se suelta en cuanto para (sin el indicador encendido)');
   await revisarVoz.locator('audio[src^="blob:"]').first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
-  await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(1:00\)/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
-  check(await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(1:00\)/ }).count() === 1 && await revisarVoz.locator('audio[src^="blob:"]').count() === 1, 'se puede escuchar antes (1:00)');
+  await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(2:00\)/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
+  check(await revisarVoz.getByRole('button', { name: /^Escuchar la nota de voz \(2:00\)/ }).count() === 1 && await revisarVoz.locator('audio[src^="blob:"]').count() === 1, 'se puede escuchar antes (2:00)');
   const vel = revisarVoz.getByRole('button', { name: /^Velocidad/ });
   await vel.click();
   check((await vel.getAttribute('aria-label')).includes('1,5×'), 'a 1×, 1,5× o 2×');
@@ -4944,11 +4944,11 @@ try {
   const burbujaVoz = p.locator('.burbuja.mia.con-voz').last();
   await burbujaVoz.waitFor();
   await burbujaVoz.locator('.voz-play').waitFor({ timeout: 10000 });
-  check(/1:00/.test(await burbujaVoz.locator('.voz-play').getAttribute('aria-label')) && await burbujaVoz.locator('.voz-onda span').count() >= 8, 'enviada: sale en su burbuja, con ▶, su onda y su duración (1:00)');
+  check(/2:00/.test(await burbujaVoz.locator('.voz-play').getAttribute('aria-label')) && await burbujaVoz.locator('.voz-onda span').count() >= 8, 'enviada: sale en su burbuja, con ▶, su onda y su duración (2:00)');
   check(await p.evaluate(() => window.__sonidos.includes('enviado')), 'y suena el tono de «enviado» (con el chat abierto)');
   await p.waitForFunction(() => (JSON.parse(localStorage.getItem('fbe-demo-v2')).archivos || []).some((a) => a.tipo === 'audio'), null, { timeout: 5000 }).catch(() => {});
   const filaV = (await demo()).archivos.filter((a) => a.tipo === 'audio').at(-1);
-  check(filaV && filaV.duracion_seg === 60 && filaV.mime === 'audio/webm' && filaV.onda?.length === 40 && /\/audio-.*\.webm$/.test(filaV.ruta), 'se guarda como nota de voz: 60 s, audio/webm, su onda y su ruta audio-…');
+  check(filaV && filaV.duracion_seg === 120 && filaV.mime === 'audio/webm' && filaV.onda?.length === 40 && /\/audio-.*\.webm$/.test(filaV.ruta), 'se guarda como nota de voz: 120 s (081), audio/webm, su onda y su ruta audio-…');
   // Mantener pulsado y deslizar a la izquierda: se cancela (no se envía nada)
   const caja = await micro.boundingBox();
   const cx = caja.x + caja.width / 2, cy = caja.y + caja.height / 2;
@@ -4956,7 +4956,7 @@ try {
   await p.mouse.move(cx, cy); await p.mouse.down();
   await grabando.waitFor();
   await p.waitForTimeout(700);
-  check((await grabando.textContent()).includes('Desliza para cancelar'), 'manteniéndolo: «‹ Desliza para cancelar · ↑ para no mantener»');
+  check((await grabando.textContent()).includes('Desliza para cancelar'), 'manteniéndolo: «‹ Desliza para cancelar» (y el candado encima del micro)');
   await p.mouse.move(cx - 60, cy, { steps: 3 }); await p.mouse.move(cx - 160, cy, { steps: 4 });
   await p.mouse.up();
   check(await hay(grabando, 0) && await hay(p.getByRole('group', { name: 'Nota de voz grabada' }), 0) && await p.locator('.burbuja.con-voz').count() === antesVoz, 'deslizar a la izquierda la cancela (no queda nada)');
@@ -4976,8 +4976,10 @@ try {
   // Reproducir la enviada (en su burbuja): se descarga al tocar ▶
   await burbujaVoz.locator('.voz-play').click();
   check(await hay(burbujaVoz.locator('audio'), 1), 'en la burbuja, ▶ la reproduce (se descarga al tocarla)');
+  check((await burbujaVoz.locator('.voz-vel').textContent()).trim() === '1,5×', '(v0.179) con la velocidad que se eligió antes (1,5×: se recuerda)');
   await burbujaVoz.locator('.voz-vel').click();
-  check((await burbujaVoz.locator('.voz-vel').textContent()).trim() === '1,5×', 'con su velocidad (1,5×)');
+  check((await burbujaVoz.locator('.voz-vel').textContent()).trim() === '2×', 'y se cambia (2×)');
+  await p.evaluate(() => { try { localStorage.removeItem('fbe-voz-velocidad'); } catch { /* */ } });
 
   // 5 y 6: una foto se reduce (sin EXIF) y sale al momento con su progreso; «Cancelar» la para
   await p.locator('input[type=file][accept="image/*,video/*"]').setInputFiles({ name: 'tecnica.png', mimeType: 'image/png', buffer: png });
@@ -5715,6 +5717,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ los vídeos de la v0.60:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.179: las notas de voz, como WhatsApp (test/e2e-voz-179.mjs)
+console.log('\nv0.179: las notas de voz, como WhatsApp');
+try {
+  const { probarVoz179 } = await import('./e2e-voz-179.mjs');
+  await probarVoz179({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ las notas de voz (v0.179):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
 // v0.178: «Guardar en mi móvil» para el vídeo grabado con la cámara de la app (test/e2e-guardar-178.mjs)
