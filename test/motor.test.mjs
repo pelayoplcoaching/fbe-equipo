@@ -302,6 +302,24 @@ console.log('\nTop set + back-off y peaking');
   const tb = [{ reps: 6, kg: 100 }, { reps: 8, kg: 90 }, { reps: 8, kg: 90 }];
   const a = ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)]);
   check(forma(a) === '7×100 8×90 8×90' && a.tipo === 'reps' && a.motivo === 'Serie 1: una repetición más · series 2 y 3: back-off, igual', 'top + back-off: la top suma una repetición y las back-off se quedan igual');
+
+  // --- (16/11/2026) reglas propias de un atleta: la top con su rango (1–8) y su RPE (8,5), y al subir de kilos baja 2 ---
+  {
+    const RA = resolverReglas({ nivel: 'intermedio', atleta: { porSerie: { bajaAlSubir: 2 }, topSet: { rango: [1, 8], rpeSube: 8.5 } } });
+    const con = (top, rpe, apoyo = 8) => ps(D([{ reps: top, kg: 100 }, { reps: 8, kg: 90 }, { reps: 8, kg: 90 }]), [S(1, 100, top, rpe), S(2, 90, 8, apoyo), S(3, 90, 8, apoyo)], { reglas: RA });
+    check(forma(con(5, 7)) === '5×102.5 8×90 8×90', 'top sobrada (RPE 7): sube kilos con las mismas repeticiones');
+    check(forma(con(5, 8.5)) === '6×100 8×90 8×90' && forma(con(3, 8)) === '4×100 8×90 8×90', 'top a RPE 7,5–8,5: una repetición más, también por debajo de 6 (su rango es 1–8)');
+    const dura = con(5, 9);
+    check(dura.tipo === 'mantener' && dura.motivo.includes('RPE por encima de 8,5'), 'top por encima de RPE 8,5: igual (las demás series siguen sumando hasta RPE 9)');
+    const tope = con(8, 8);
+    check(forma(tope) === '6×102.5 8×90 8×90' && tope.motivo.startsWith('Serie 1: al tope (8), sube 2,5 kg y baja a 6'), 'top al tope (8): sube kilos y baja 2 repeticiones, no al mínimo');
+    check(forma(con(5, 8, 7)) === '6×100 8×92.5 8×92.5', 'las de apoyo, como siempre: igual, salvo que vayan fáciles');
+    // sin top (series iguales): el rango del tipo y «baja 2» al subir
+    const plano = ps(D([{ reps: 10, kg: 60 }, { reps: 10, kg: 60 }]), [S(1, 60, 10, 8), S(2, 60, 10, 8)], { reglas: RA });
+    check(forma(plano) === '8×62.5 8×62.5', 'en las demás series, al tope (10): sube kilos y baja 2 (a 8)');
+    const sinPropias = ps(D([{ reps: 10, kg: 60 }, { reps: 10, kg: 60 }]), [S(1, 60, 10, 8), S(2, 60, 10, 8)]);
+    check(forma(sinPropias) === '6×62.5 6×62.5', 'y sin reglas propias, al mínimo como siempre');
+  }
   check(forma(ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)], { topSet: false })) === '7×100 9×90 9×90' && forma(ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 8), S(3, 90, 8, 8.5)], { reglas: conReglas({ topSet: { backoff: 'solas' } }) })) === '7×100 9×90 9×90',
     'sin top set (o con la regla de que progresen solas), las back-off suman repeticiones como cualquier serie');
   const b = ps(D(tb), [S(1, 100, 6, 8), S(2, 90, 8, 7), S(3, 90, 8, 6.5)]);
@@ -686,7 +704,7 @@ console.log('\nReglas guardadas por atleta');
   check(leerGuardadas({ perfil: 'novato' }).perfil === null && leerGuardadas({ perfil: 'inventado' }).descartado.includes('perfil'), 'los perfiles de nivel no se eligen a mano: salen solos del nivel');
   const guardado = paraGuardar(g);
   check(guardado.v === 1 && igual(leerGuardadas(guardado), { ...g, descartado: [] }) && igual(Object.keys(guardado), ['v', 'perfil', 'atleta', 'porEjercicio']) && igual(Object.keys(paraGuardar({ perfil: 'casa' })), ['v', 'perfil']), 'lo que se guarda vuelve igual al leerlo, sin claves vacías');
-  check(igual(reglasDeAtleta(g), { perfil: 'intermedio_fuerza', rpeSube: 8.5, rangos: { basico: [5, 8], multiarticular: null, aislamiento: null } }) && igual(reglaDeEjercicio(g, 'x'), { modelo: 'doble', rango: [12, 20], salto: 1, rpeSube: 8 })
+  check(igual(reglasDeAtleta(g), { perfil: 'intermedio_fuerza', rpeSube: 8.5, rangos: { basico: [5, 8], multiarticular: null, aislamiento: null }, bajaAlSubir: null, rangoTop: null, rpeSubeTop: null, sinDescarga: false }) && igual(reglaDeEjercicio(g, 'x'), { modelo: 'doble', rango: [12, 20], salto: 1, rpeSube: 8 })
     && igual(reglaDeEjercicio(g, 'nada'), { modelo: null, rango: null, salto: null, rpeSube: null }) && tieneRegla(g, 'x') && !tieneRegla(g, 'y'), 'las reglas tal como se editan, del atleta y de un ejercicio');
   check(resumenGuardadas(g) === 'Perfil Fuerza · suma repeticiones hasta RPE 8,5 · básicos 5–8 · 1 ejercicio con regla propia' && resumenGuardadas(vacias) === 'Las de partida para su nivel'
     && resumenRegla(g, 'x') === 'Doble progresión · 12–20 repeticiones · sube de 1 kg en 1 kg · suma repeticiones hasta RPE 8' && resumenRegla(g, 'nada') === '' && resumenGuardadas(leerGuardadas({ atleta: { porSerie: { rpeSube: 8 } } })) === 'Suma repeticiones hasta RPE 8',
@@ -706,6 +724,21 @@ console.log('\nReglas guardadas por atleta');
     && conReglaDeEjercicio(g, '', { modelo: 'doble' }).errores.length === 1, 'y los valores imposibles se rechazan con su motivo');
   const lleno = { perfil: null, atleta: {}, porEjercicio: Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`e${i}`, { modelo: 'doble' }])) };
   check(conReglaDeEjercicio(lleno, 'nuevo', { modelo: 'doble' }).errores.length === 1 && !conReglaDeEjercicio(lleno, 'e3', { modelo: 'triple' }).errores && Object.keys(leerGuardadas({ porEjercicio: { ...lleno.porEjercicio, mas: { modelo: 'doble' } } }).porEjercicio).length === 200, 'hay un tope de ejercicios con regla propia');
+
+  // (16/11/2026) las reglas propias de atleta nuevas: al subir de kilos, la serie top y la descarga
+  {
+    const n1 = conReglasDeAtleta(vacias, { bajaAlSubir: '2', rangoTop: ['1', '8'], rpeSubeTop: '8.5', sinDescarga: true });
+    check(igual(n1.guardadas.atleta, { porSerie: { bajaAlSubir: 2 }, topSet: { rango: [1, 8], rpeSube: 8.5 }, descarga: { cuando: 'manual' } }), 'al subir de kilos, la serie top y «sin descarga por señales» se guardan en la capa del atleta');
+    const vuelta = leerGuardadas(paraGuardar(n1.guardadas));
+    check(igual(vuelta.atleta, n1.guardadas.atleta) && vuelta.descartado.length === 0 && igual(reglasDeAtleta(vuelta), { perfil: null, rpeSube: null, rangos: { basico: null, multiarticular: null, aislamiento: null }, bajaAlSubir: 2, rangoTop: [1, 8], rpeSubeTop: 8.5, sinDescarga: true }), 'y se leen igual al volver de la base');
+    check(resumenGuardadas(vuelta) === 'Al subir de kilos baja 2 repeticiones · serie top 1–8 · la top suma hasta RPE 8,5 · sin descarga por señales', `y su resumen: ${resumenGuardadas(vuelta)}`);
+    check(conReglasDeAtleta(vacias, { bajaAlSubir: '7' }).errores.length === 1 && conReglasDeAtleta(vacias, { rangoTop: ['8', '1'] }).errores.length === 1 && conReglasDeAtleta(vacias, { rpeSubeTop: '8.2' }).errores.length === 1, 'con valores imposibles, su motivo');
+    const sucia = leerGuardadas({ atleta: { topSet: { rango: [1, 8], backoff: 'solas', peaking: { reps: 2 } }, descarga: { cuando: 'programada', cadaSemanas: 4 }, porSerie: { bajaAlSubir: 9 } } });
+    check(igual(sucia.atleta, { topSet: { rango: [1, 8] } }) && sucia.descartado.length >= 3, 'de la serie top solo entran su rango y su RPE; de la descarga, solo «manual»');
+    const m = paraElMotor(vuelta);
+    const R2 = resolverReglas({ nivel: 'intermedio', atleta: m.reglas.atleta });
+    check(R2.porSerie.bajaAlSubir === 2 && igual(R2.topSet.rango, [1, 8]) && R2.topSet.rpeSube === 8.5 && R2.descarga.cuando === 'manual' && R2.porSerie.rpeSube === 9, 'y el motor las recibe sin tocar las demás reglas FBE');
+  }
 
   // Y lo que hace el motor con ellas
   const con = (guardadas) => { const m = paraElMotor(leerGuardadas(guardadas)); return proponerSemana(congelar(entradaBase({ atleta: { nivel: 'intermedio', perfil: m.perfil }, reglas: m.reglas }))); };

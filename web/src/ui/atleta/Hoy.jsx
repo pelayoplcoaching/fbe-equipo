@@ -7,6 +7,7 @@ import { TarjetaVida, BotonSemanaDificil } from './Vida.jsx';
 import { RetoDelMes } from './Compania.jsx';
 import { useTrato } from '../trato.js';
 import { MensajeCoach } from './Personal.jsx';
+import { FraseDeHoy, AvisoRitmoPeso } from './AMedida.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
@@ -564,6 +565,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
+      {/* (a medida, 080) lo que su coach le ha dejado escrito para hoy: el saludo, el día de pierna o la semana completa */}
+      {atleta.estado !== 'baja' && <FraseDeHoy estado={e.tipo} sesion={siguiente} ejercicios={ejercicios} semanaId={semana?.id} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {e.tipo !== 'entreno' && !hayImagen(escenaHoy(e.tipo, hoy)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
@@ -632,6 +635,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ocultos={P.dialesOcultos} entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
+      {/* (a medida, 080) su ritmo de peso se sale de los márgenes que le puso su coach (con la tendencia de varias semanas) */}
+      {atleta.estado !== 'baja' && <AvisoRitmoPeso salud={salud} />}
       {/* (v0.143) de viaje, en otra zona horaria: qué hora es en cada sitio y las notificaciones de noche */}
       <AvisoViaje />
       {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}

@@ -6180,6 +6180,10 @@ try {
   console.log('\nLa foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal');
   const { probarPlatos } = await import('./e2e-platos.mjs');
   await probarPlatos({ navegador, check });
+
+  console.log('\n«A su medida»: las frases, las imágenes y el ritmo de peso que el coach le pone a cada atleta');
+  const { probarAMedida } = await import('./e2e-a-medida.mjs');
+  await probarAMedida({ navegador, check });
 } catch (e) {
   fallos++;
   console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));

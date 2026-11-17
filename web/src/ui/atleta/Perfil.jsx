@@ -17,6 +17,7 @@ import { FilaSuplementos } from './Suplementos.jsx';
 import { FilaCobro } from './Cobro.jsx';
 import { FilaFoto } from '../FotoPerfil.jsx';
 import { Carnet } from './Carnet.jsx';
+import { useImagenPropia } from './AMedida.jsx';
 import { LoTuyo } from './LoTuyo.jsx';
 import { Conexiones } from './Conexiones.jsx';
 import { PortadaPerfil, FotoConAnillo } from '../PerfilVisual.jsx';
@@ -179,6 +180,8 @@ function CabezaPerfil({ p, correo }) {
   const [elegir, setElegir] = useState(false);
   // (perfil, tanda 4, migración 073) su foto de portada (la ven su coach y, si estáis en la comunidad, el equipo)
   const { aviso, propio } = useApp();
+  // (a medida, 080) la imagen que le ha puesto su coach: su portada mientras no ponga una foto suya
+  const imagenSuya = useImagenPropia('perfil');
   const portadaFoto = useCarga(() => (propio || !api.portadaFoto ? Promise.resolve(undefined) : api.portadaFoto().catch(() => null)), [atleta.id]);
   const [subiendo, setSubiendo] = useState(false);
   const ponerFoto = async (archivo) => {
@@ -192,7 +195,7 @@ function CabezaPerfil({ p, correo }) {
   };
   return (
     <section class="perfil-cabeza con-portada" data-portada={portadaValida(portada)} aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || null} />
+      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || imagenSuya || null} />
       <button type="button" class="btn-icono perfil-portada-btn" aria-label="Cambiar el color de la portada" aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
       {elegir && (
         <div class="perfil-portadas" role="radiogroup" aria-label="Color de la portada">

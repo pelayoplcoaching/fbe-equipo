@@ -94,6 +94,20 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(await hay(reglas.getByRole('alert'), 1) && /Básicos: el rango/.test(await reglas.getByRole('alert').textContent()), 'un rango al revés no se guarda y dice por qué');
     await reglas.getByRole('button', { name: 'Volver a las de partida', exact: true }).click();
     check(await hay(reglas.getByText(/Las de partida para su nivel/), 1) && await suben() === subenAntes, 'al volver a las de partida, la propuesta es la de antes');
+    // (16/11/2026) reglas propias de cada atleta: al subir de kilos, la serie top y la descarga
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await reglas.getByLabel('Al llegar al tope y subir de kilos').selectOption({ label: 'Baja 2 repeticiones' });
+    await reglas.getByLabel('Serie top: mínimo de repeticiones').fill('1');
+    await reglas.getByLabel('Serie top: máximo de repeticiones').fill('8');
+    await reglas.getByLabel('La top suma una repetición hasta').selectOption('8.5');
+    await reglas.getByRole('checkbox', { name: /Sin descarga por señales/ }).check();
+    await revisar('reglas-atleta-propias');
+    await reglas.getByRole('button', { name: 'Guardar reglas', exact: true }).click();
+    check(await hay(reglas.getByText('Al subir de kilos baja 2 repeticiones · serie top 1–8 · la top suma hasta RPE 8,5 · sin descarga por señales.'), 1), 'las reglas propias del atleta (al subir de kilos, la serie top y sin descarga por señales) se guardan y se resumen');
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    check(await reglas.getByLabel('Al llegar al tope y subir de kilos').inputValue() === '2' && await reglas.getByLabel('Serie top: máximo de repeticiones').inputValue() === '8' && await reglas.getByRole('checkbox', { name: /Sin descarga por señales/ }).isChecked(), 'y al volver a abrir, siguen puestas');
+    await reglas.getByRole('button', { name: 'Volver a las de partida', exact: true }).click();
+    check(await hay(reglas.getByText(/Las de partida para su nivel/), 1) && await suben() === subenAntes, 'y se quitan con «Volver a las de partida»');
 
     // Regla propia de un ejercicio: se pone en su fila, cambia solo esa fila y sigue ahí al volver a abrir la hoja
     const filaSube = hoja.locator('.carga-sug', { has: p.locator('.chip', { hasText: /^Sube kilos$/ }) }).first();
