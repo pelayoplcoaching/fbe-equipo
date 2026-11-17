@@ -3,7 +3,7 @@
 // día, con los totales frente a su plan, copiar semanas y la lista de la compra). Sustituye a las bases de datos
 // de Desayuno, Comida, Merienda y Cena y al «Planificador semanal» de Notion.
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenComida } from '../logica/imagenes.js';
+import { imagenComida, imagenReceta } from '../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Reserva, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, copiar, Segmentos, usePorTramos, useApuntar } from './comunes.jsx';
 import { COLOR_MACRO, MacrosDia } from './NutricionComun.jsx';
@@ -25,9 +25,13 @@ import { usePlatos, BotonesPlato, HojaFotoPlato, HojaFuera, FotoDeEntrada, Pauta
 import { fechaAdmiteFoto } from '../logica/platos.js';
 export function FotoReceta({ receta, grande = false, src = null, toma = null }) {
   const foto = src || (grande ? receta?.foto || receta?.foto_mini : receta?.foto_mini);
-  return foto
-    ? <img class={`receta-foto ${grande ? 'grande' : ''}`} src={foto} alt="" loading="lazy" decoding="async" />
-    : <span class={`receta-foto vacia ${grande ? 'grande' : ''} toma-${toma || 'sin'}`} aria-hidden="true"><Ilustracion n={iluDeToma(toma)} clase="receta-escena" /></span>;
+  if (foto) return <img class={`receta-foto ${grande ? 'grande' : ''}`} src={foto} alt="" loading="lazy" decoding="async" />;
+  // (imágenes, tanda 11) sin foto, el plato tipo que se reconoce por su nombre; si no se reconoce, la escena de su toma
+  const escena = <span class={`receta-foto vacia ${grande ? 'grande' : ''} toma-${toma || 'sin'}`} aria-hidden="true"><Ilustracion n={iluDeToma(toma)} clase="receta-escena" /></span>;
+  const plato = imagenReceta(receta?.nombre);
+  return plato && hayImagen(plato)
+    ? <Imagen id={plato} clase={`receta-foto plato-tipo ${grande ? 'grande' : ''}`} tamanos={grande ? '(min-width: 640px) 560px, 92vw' : '104px'} alternativa={escena} />
+    : escena;
 }
 
 // Una receta del recetario, en tarjeta: foto, nombre y sus macros (ya con el factor del atleta)

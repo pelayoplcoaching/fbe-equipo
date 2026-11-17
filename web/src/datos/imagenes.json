@@ -7369,6 +7369,66 @@
     },
     "color": "#442e61"
   },
+  "receta-arroz": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-arroz-240.28bdaf4c.webp",
+      "480": "imagenes/receta/receta-arroz-480.4b466a9e.webp",
+      "960": "imagenes/receta/receta-arroz-960.251dae33.webp"
+    },
+    "color": "#563e64"
+  },
+  "receta-avena": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-avena-240.ff32cc0b.webp",
+      "480": "imagenes/receta/receta-avena-480.b58f7731.webp",
+      "960": "imagenes/receta/receta-avena-960.b8f622c7.webp"
+    },
+    "color": "#473972"
+  },
+  "receta-batido": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-batido-240.96856524.webp",
+      "480": "imagenes/receta/receta-batido-480.fea306b8.webp",
+      "960": "imagenes/receta/receta-batido-960.c5338ed2.webp"
+    },
+    "color": "#543967"
+  },
+  "receta-bocadillo": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-bocadillo-240.5b7b651c.webp",
+      "480": "imagenes/receta/receta-bocadillo-480.e16a0062.webp",
+      "960": "imagenes/receta/receta-bocadillo-960.f90055ae.webp"
+    },
+    "color": "#573766"
+  },
+  "receta-carne": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-carne-240.29f5a042.webp",
+      "480": "imagenes/receta/receta-carne-480.d76d8786.webp",
+      "960": "imagenes/receta/receta-carne-960.288b47d4.webp"
+    },
+    "color": "#4d3661"
+  },
   "receta-encaja": {
     "proporcion": [
       1,
@@ -7379,6 +7439,90 @@
       "320": "imagenes/coach/receta-encaja-320.570357f9.webp"
     },
     "color": "#6b618e"
+  },
+  "receta-ensalada": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-ensalada-240.bf47229b.webp",
+      "480": "imagenes/receta/receta-ensalada-480.f0467f5e.webp",
+      "960": "imagenes/receta/receta-ensalada-960.b5938e28.webp"
+    },
+    "color": "#4b3d61"
+  },
+  "receta-huevos": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-huevos-240.a01cc06f.webp",
+      "480": "imagenes/receta/receta-huevos-480.4e6bae36.webp",
+      "960": "imagenes/receta/receta-huevos-960.49330222.webp"
+    },
+    "color": "#4a395c"
+  },
+  "receta-legumbres": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-legumbres-240.d695467b.webp",
+      "480": "imagenes/receta/receta-legumbres-480.8f08ce7e.webp",
+      "960": "imagenes/receta/receta-legumbres-960.f4c248e3.webp"
+    },
+    "color": "#4a315d"
+  },
+  "receta-pasta": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-pasta-240.ac342431.webp",
+      "480": "imagenes/receta/receta-pasta-480.be8408d0.webp",
+      "960": "imagenes/receta/receta-pasta-960.7028155a.webp"
+    },
+    "color": "#553961"
+  },
+  "receta-pescado": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-pescado-240.fd7dbeb3.webp",
+      "480": "imagenes/receta/receta-pescado-480.3f455ee8.webp",
+      "960": "imagenes/receta/receta-pescado-960.cb443b99.webp"
+    },
+    "color": "#503964"
+  },
+  "receta-tostadas": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-tostadas-240.838f7662.webp",
+      "480": "imagenes/receta/receta-tostadas-480.6eac1785.webp",
+      "960": "imagenes/receta/receta-tostadas-960.b87b4035.webp"
+    },
+    "color": "#513f66"
+  },
+  "receta-yogur": {
+    "proporcion": [
+      4,
+      3
+    ],
+    "archivos": {
+      "240": "imagenes/receta/receta-yogur-240.83acba1d.webp",
+      "480": "imagenes/receta/receta-yogur-480.c57342b1.webp",
+      "960": "imagenes/receta/receta-yogur-960.8af9ece6.webp"
+    },
+    "color": "#4b3566"
   },
   "regalo": {
     "proporcion": [

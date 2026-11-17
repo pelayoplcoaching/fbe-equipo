@@ -300,5 +300,19 @@ const lee0 = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'u
   check(l['primer-mes'].proporcion.join(':') === '5:2' && l['companero'].proporcion.join(':') === '3:1', 'los faroles y la puerta caben (5:2); las zapatillas, en franja');
 }
 
+// (imágenes, tanda 11) El plato tipo de una receta sin foto, reconocido por su nombre
+console.log('\nEl plato tipo de las recetas');
+{
+  const { imagenReceta } = await import('../web/src/logica/imagenes.js');
+  const casos = { 'Tostadas con huevo y aguacate': 'tostadas', 'Porridge de avena con plátano': 'avena', 'Yogur griego con frutos rojos y nueces': 'yogur', 'Pollo al curry con arroz basmati': 'arroz', 'Lentejas estofadas con verduras': 'legumbres', 'Salmón al horno con patata y brócoli': 'pescado', 'Tortilla de claras con pavo y ensalada': 'huevos', 'Bocadillo de atún con tomate': 'bocadillo', 'Ensalada de garbanzos, atún y huevo': 'ensalada', 'Batido de proteína con plátano': 'batido', 'Macarrones con atún': 'pasta', 'Ternera con patatas': 'carne' };
+  check(Object.entries(casos).every(([n, id]) => imagenReceta(n) === `receta-${id}`), 'cada receta, su plato: gana lo que se nombra antes, y la carne o el pescado con arroz o pasta son de arroz o de pasta');
+  check(new Set(Object.values(casos)).size === 12 && Object.values(casos).every((id) => fuenteImagen(`receta-${id}`)), 'los doce platos están en la lista');
+  check(imagenReceta('Crema de calabaza') === null && imagenReceta('') === null && imagenReceta(null) === null, 'si no se reconoce nada (o no hay nombre), ninguno: se queda la escena de su toma');
+  const l = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes.json', import.meta.url), 'utf8'));
+  check(Object.values(casos).every((id) => l[`receta-${id}`].proporcion.join(':') === '4:3'), 'a 4:3, como la foto de una receta');
+  const cc = readFileSync(new URL('../web/src/ui/ComidasComun.jsx', import.meta.url), 'utf8');
+  check(/if \(foto\) return <img/.test(cc) && /imagenReceta\(receta\?\.nombre\)/.test(cc) && /alternativa=\{escena\}/.test(cc), 'la foto de la receta manda; sin foto, el plato tipo; y si no se pinta, la escena de siempre');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

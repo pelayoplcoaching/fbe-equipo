@@ -98,6 +98,40 @@ export function imagenEjercicio(ej) {
 const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
 export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
 
+// ---------- El plato tipo de una receta sin foto ----------
+// (imágenes, tanda 11) Cada atleta tiene sus recetas, así que no se enlazan una a una: se reconoce la familia por el
+// nombre («Lentejas estofadas…» -> legumbres). Gana lo que se nombra antes («Tostadas con huevo» -> tostadas); la carne
+// con arroz o con pasta es un plato de arroz o de pasta. Si no se reconoce nada, null: se queda la escena de su toma.
+const PLATOS = [
+  ['batido', /\b(batidos?|smoothies?)\b/],
+  ['avena', /\b(avena|porridge|gachas|overnight)\b/],
+  ['yogur', /\b(yogur(es)?|yogurt|skyr|kefir|queso batido|queso fresco batido)\b/],
+  ['tostadas', /\b(tostadas?|tostas?)\b/],
+  ['bocadillo', /\b(bocadillos?|bocatas?|sandwich(es)?|wraps?|burritos?|fajitas?)\b/],
+  ['ensalada', /\b(ensaladas?|ensaladilla|poke)\b/],
+  ['pasta', /\b(pasta|espaguetis?|macarrones|tallarines|fideos|lasana|noodles)\b/],
+  ['legumbres', /\b(lentejas?|garbanzos?|alubias?|fabada|potaje|hummus|judiones)\b/],
+  ['arroz', /\b(arroz|risotto|paella)\b/],
+  ['huevos', /\b(tortillas?|huevos?|revueltos?|claras)\b/],
+  ['pescado', /\b(pescado|salmon|merluza|bacalao|atun|lubina|dorada|gambas?|langostinos?|sepia|calamar(es)?|emperador)\b/],
+  ['carne', /\b(pollo|pavo|ternera|cerdo|lomo|solomillo|filetes?|carne|hamburguesas?|albondigas?|entrecot|chuletas?)\b/],
+];
+export function imagenReceta(nombre) {
+  const n = normalNombre(nombre);
+  if (!n) return null;
+  let mejor = null;
+  for (const [id, re] of PLATOS) {
+    const m = re.exec(n);
+    if (m && (!mejor || m.index < mejor.en)) mejor = { id, en: m.index };
+  }
+  if (!mejor) return null;
+  if (mejor.id === 'carne' || mejor.id === 'pescado') {
+    const base = PLATOS.find(([id, re]) => (id === 'arroz' || id === 'pasta') && re.test(n));
+    if (base) return `receta-${base[0]}`;
+  }
+  return `receta-${mejor.id}`;
+}
+
 // ---------- Las tarjetas para compartir ----------
 // La de la propia tarjeta (d.fondo: el bloque, el mes del equipo o el tuyo) o, en la de una sesión, la del récord si lo
 // hubo y la de la barra si no
