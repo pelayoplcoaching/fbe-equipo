@@ -8,7 +8,7 @@
 export const NOVEDADES = {
   '0.178': {
     atleta: [
-      'Al grabar un vídeo para tu coach con la cámara de la app, ahora puedes guardarlo también en tu móvil: «Guardar en mi móvil» y, en el iPhone, «Guardar vídeo».',
+      'El vídeo que grabas para tu coach con la cámara de la app ya se puede guardar en tu móvil: «Guardar en mi móvil».',
     ],
   },
   '0.177': {
