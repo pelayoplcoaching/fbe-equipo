@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.177': {
+    atleta: [
+      'Las recetas sin foto enseñan ahora un plato parecido, y las guías de calentamiento y de material empiezan con sus figuras.',
+      'Tus suplementos, tu material de casa y de viaje y tu objetivo llevan su dibujo.',
+      'Los días especiales también: día flojo, semana difícil, guardia y pausa por vacaciones.',
+    ],
+  },
   '0.176': {
     atleta: [
       'Tu coach puede dejarte frases suyas para algunos momentos: el saludo en Hoy, un récord o un ejercicio concreto.',
