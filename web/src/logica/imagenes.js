@@ -98,6 +98,82 @@ export function imagenEjercicio(ej) {
 const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
 export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
 
+// ---------- Las figuras de dentro de una guía ----------
+// (imágenes, tanda 11) Una tira de figuras de ejemplo al principio de una guía. Hoy solo la de calentamiento: diez
+// movimientos de movilidad. Son ejemplos para hacerse una idea; no cambian lo que el coach haya puesto en la sesión.
+const TIRAS_GUIA = {
+  calentamiento: {
+    titulo: 'Movimientos de ejemplo',
+    figuras: [
+      ['mov-gato-camello', 'Gato-camello'], ['mov-rotacion-toracica', 'Rotación torácica'], ['mov-cadera-90-90', 'Cadera 90/90'],
+      ['mov-flexor-cadera', 'Flexor de cadera'], ['mov-tobillo-pared', 'Tobillo a la pared'], ['mov-hombro-goma', 'Hombros con goma'],
+      ['mov-sentadilla-profunda', 'Sentadilla profunda'], ['mov-zancada-rotacion', 'Zancada con rotación'],
+      ['mov-isquios-dinamico', 'Isquios dinámico'], ['mov-circulos-brazos', 'Círculos de brazos'],
+    ],
+  },
+  material: {
+    titulo: 'Material para entrenar en casa',
+    figuras: [
+      ['material-mancuernas', 'Mancuernas'], ['material-gomas', 'Gomas'], ['material-kettlebell', 'Kettlebell'],
+      ['material-barra-dominadas', 'Barra de dominadas'], ['material-esterilla', 'Esterilla'], ['material-banco', 'Banco'],
+      ['material-anillas', 'Suspensión (TRX)'], ['material-barra-discos', 'Barra y discos'],
+    ],
+  },
+};
+// El suplemento de la lista de FBE (por su clave; los que el atleta escribe con sus palabras no llevan)
+const SUPLEMENTOS_IMG = ['creatina', 'proteina', 'cafeina', 'vitamina-d', 'omega-3', 'magnesio', 'citrulina', 'beta-alanina'];
+export function imagenSuplemento(s) { return s?.clave && SUPLEMENTOS_IMG.includes(s.clave) ? `supl-${s.clave}` : null; }
+// El objetivo del cuestionario (logica/cuestionario.js: fuerza, musculo, perder_grasa, salud, rendimiento, otro)
+const OBJETIVOS_IMG = ['fuerza', 'musculo', 'perder_grasa', 'salud', 'rendimiento', 'otro'];
+export function imagenObjetivo(clave) { return OBJETIVOS_IMG.includes(clave) ? `objetivo-${clave.replace(/_/g, '-')}` : null; }
+// Los días especiales: lo que más pesa en «¿Cómo llegas hoy?» cuando el día sale flojo o difícil (molestias, mala noche
+// o sin energía); la semana difícil, la guardia y la pausa por vacaciones llevan el suyo donde se avisan.
+export function imagenDia(prep) {
+  if (!prep) return null;
+  if (prep.molestias === 1) return 'dia-molestias';
+  if (prep.sueno === 1) return 'dia-mala-noche';
+  if (prep.energia === 1) return 'dia-enfermo';
+  return null;
+}
+// El material de «¿Dónde entrenas hoy?» (logica/material.js): los que tienen dibujo
+const MATERIAL_IMG = { mancuernas: 'mancuernas', gomas: 'gomas', kettlebells: 'kettlebell', dominadas: 'barra-dominadas', banco: 'banco', barra: 'barra-discos' };
+export function imagenMaterial(clave) { return MATERIAL_IMG[clave] ? `material-${MATERIAL_IMG[clave]}` : null; }
+export function tiraGuia(clave) { return TIRAS_GUIA[clave] || null; }
+
+// ---------- El plato tipo de una receta sin foto ----------
+// (imágenes, tanda 11) Cada atleta tiene sus recetas, así que no se enlazan una a una: se reconoce la familia por el
+// nombre («Lentejas estofadas…» -> legumbres). Gana lo que se nombra antes («Tostadas con huevo» -> tostadas); la carne
+// con arroz o con pasta es un plato de arroz o de pasta. Si no se reconoce nada, null: se queda la escena de su toma.
+const PLATOS = [
+  ['batido', /\b(batidos?|smoothies?)\b/],
+  ['avena', /\b(avena|porridge|gachas|overnight)\b/],
+  ['yogur', /\b(yogur(es)?|yogurt|skyr|kefir|queso batido|queso fresco batido)\b/],
+  ['tostadas', /\b(tostadas?|tostas?)\b/],
+  ['bocadillo', /\b(bocadillos?|bocatas?|sandwich(es)?|wraps?|burritos?|fajitas?)\b/],
+  ['ensalada', /\b(ensaladas?|ensaladilla|poke)\b/],
+  ['pasta', /\b(pasta|espaguetis?|macarrones|tallarines|fideos|lasana|noodles)\b/],
+  ['legumbres', /\b(lentejas?|garbanzos?|alubias?|fabada|potaje|hummus|judiones)\b/],
+  ['arroz', /\b(arroz|risotto|paella)\b/],
+  ['huevos', /\b(tortillas?|huevos?|revueltos?|claras)\b/],
+  ['pescado', /\b(pescado|salmon|merluza|bacalao|atun|lubina|dorada|gambas?|langostinos?|sepia|calamar(es)?|emperador)\b/],
+  ['carne', /\b(pollo|pavo|ternera|cerdo|lomo|solomillo|filetes?|carne|hamburguesas?|albondigas?|entrecot|chuletas?)\b/],
+];
+export function imagenReceta(nombre) {
+  const n = normalNombre(nombre);
+  if (!n) return null;
+  let mejor = null;
+  for (const [id, re] of PLATOS) {
+    const m = re.exec(n);
+    if (m && (!mejor || m.index < mejor.en)) mejor = { id, en: m.index };
+  }
+  if (!mejor) return null;
+  if (mejor.id === 'carne' || mejor.id === 'pescado') {
+    const base = PLATOS.find(([id, re]) => (id === 'arroz' || id === 'pasta') && re.test(n));
+    if (base) return `receta-${base[0]}`;
+  }
+  return `receta-${mejor.id}`;
+}
+
 // ---------- Las tarjetas para compartir ----------
 // La de la propia tarjeta (d.fondo: el bloque, el mes del equipo o el tuyo) o, en la de una sesión, la del récord si lo
 // hubo y la de la barra si no

@@ -5,6 +5,11 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, IcoIos, useUnaVez } from '../comunes.jsx';
 import { suplementosDeHoy, detalleSuplemento, porAnadir, constanciaSuplemento, MOMENTOS, MAX_SUPLEMENTOS, MAX_NOMBRE, MAX_DOSIS, HORA_MIN, HORA_MAX, horaValida } from '../../logica/suplementos.js';
 import { fechaMadrid } from '../../logica/fechas.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenSuplemento } from '../../logica/imagenes.js';
+
+// (imágenes, tanda 11) el dibujo del suplemento, si es de la lista de FBE
+const Dibujo = ({ s }) => (hayImagen(imagenSuplemento(s)) ? <Imagen id={imagenSuplemento(s)} clase="supl-img" tamanos="40px" /> : null);
 
 // Sus suplementos y lo que ha marcado (null sin la 077 o en el modo atleta del coach: no se ofrece nada)
 export function useSuplementos() {
@@ -38,6 +43,7 @@ export function TarjetaSuplementos({ estado }) {
                 <button type="button" class="suplemento-fila" aria-pressed={s.tomado ? 'true' : 'false'} onClick={() => marcar(s)}>
                   <span class="suplemento-marca" aria-hidden="true">{s.tomado && <Icono n="hecho" />}</span>
                   <span class="pila-xs"><span class="suplemento-nombre">{s.nombre}</span>{detalleSuplemento(s) && <span class="mini secundario">{detalleSuplemento(s)}</span>}</span>
+                  <Dibujo s={s} />
                 </button>
               </li>
             ))}
@@ -110,9 +116,9 @@ export function HojaSuplementos({ estado, alCerrar }) {
               return (
                 <li key={s.id} class="panel-pad pila-s">
                   <div class="separa">
-                    <span class="pila-xs"><strong>{s.nombre}</strong>
+                    <span class="fila supl-con-img"><Dibujo s={s} /><span class="pila-xs"><strong>{s.nombre}</strong>
                       <span class="mini secundario">{[detalleSuplemento(s), s.origen === 'coach' ? 'Te lo ha pautado tu coach' : null].filter(Boolean).join('. ')}</span>
-                      {c.de > 0 && <span class="mini terciario num">{c.tomados} de {c.de} días{c.racha > 1 ? `, ${c.racha} seguidos` : ''}</span>}</span>
+                      {c.de > 0 && <span class="mini terciario num">{c.tomados} de {c.de} días{c.racha > 1 ? `, ${c.racha} seguidos` : ''}</span>}</span></span>
                     {s.origen === 'atleta' && (
                       <span class="fila">
                         <button class="btn btn-icono plano" aria-label={`Cambiar ${s.nombre}`} onClick={() => { setError(null); setF({ id: s.id, clave: s.clave, nombre: s.nombre, dosis: s.dosis || '', momento: s.momento }); }}><Icono n="editar" /></button>
@@ -139,6 +145,7 @@ export function HojaSuplementos({ estado, alCerrar }) {
             <div class="opciones opciones-suplemento" role="group" aria-labelledby="su-lista">
               {porAnadir(activos).map((x) => (
                 <button type="button" key={x.clave} disabled={ocupado} onClick={() => hacer(() => api.guardarSuplemento(null, x), `${x.nombre}, en tu lista`)}>
+                  <Dibujo s={x} />
                   <span class="pila-xs"><span>{x.nombre}</span><span class="mini secundario">{x.dosis}</span></span>
                 </button>
               ))}

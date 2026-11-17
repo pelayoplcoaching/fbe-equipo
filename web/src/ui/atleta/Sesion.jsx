@@ -817,7 +817,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       )}
 
       {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
-        : consejo && !sesion.completada && <ConsejoDia consejo={consejo} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
+        : consejo && !sesion.completada && <ConsejoDia consejo={consejo} prep={prep} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
       {/* (v0.129) la música de la portada, a mano durante la sesión */}
       {!sesion.completada && (

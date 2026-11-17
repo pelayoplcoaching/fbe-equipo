@@ -1,5 +1,6 @@
 // Pausar la asesoría (migración 078). Coach: en la ficha, la pausa de ahora (o la próxima), ponerla, cambiarla,
 // terminarla hoy o quitarla. Atleta: en Hoy, que su asesoría está en pausa y cuándo vuelve.
+import { Imagen } from './Imagen.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, useUnaVez } from './comunes.jsx';
 import { MOTIVOS_PAUSA, NOMBRE_MOTIVO, MAX_NOTA_PAUSA, pausaVigente, pausaProxima, textoPausaAtleta, textoPausaCoach, textoHasta, diasDePausa } from '../logica/pausas.js';
@@ -14,7 +15,7 @@ export function AvisoPausa() {
   const t = textoPausaAtleta(p);
   return (
     <section class="nota-coach aviso-pausa" aria-label="Asesoría en pausa">
-      <Icono n="pausa" />
+      {p.motivo === 'vacaciones' ? <Imagen id="dia-vacaciones" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="pausa" />} /> : <Icono n="pausa" />}
       <div class="pila-xs"><strong>{t.titulo}</strong><span class="peq">{t.detalle}</span>{p.nota && <span class="cita peq">«{p.nota}»</span>}</div>
     </section>
   );

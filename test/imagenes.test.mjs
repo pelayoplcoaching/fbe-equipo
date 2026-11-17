@@ -300,5 +300,58 @@ const lee0 = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'u
   check(l['primer-mes'].proporcion.join(':') === '5:2' && l['companero'].proporcion.join(':') === '3:1', 'los faroles y la puerta caben (5:2); las zapatillas, en franja');
 }
 
+// (imágenes, tanda 11) Las figuras de dentro de la guía de calentamiento
+console.log('\nLas figuras de dentro de una guía');
+{
+  const { tiraGuia } = await import('../web/src/logica/imagenes.js');
+  const t = tiraGuia('calentamiento');
+  check(t && t.figuras.length === 10 && t.figuras.every(([id, n]) => fuenteImagen(id) && n), 'la de calentamiento lleva diez figuras, todas en la lista y con nombre');
+  check(tiraGuia('rutinas') === null && tiraGuia(undefined) === null, 'las demás guías, ninguna');
+  const gj = readFileSync(new URL('../web/src/ui/Guias.jsx', import.meta.url), 'utf8');
+  check(/tiraGuia\(clave\)/.test(gj) && /class="tira-figuras"/.test(gj), 'el lector de la guía la pinta');
+}
+
+// (imágenes, tanda 11) Suplementos y material
+console.log('\nSuplementos y material');
+{
+  const { imagenSuplemento, imagenMaterial, tiraGuia } = await import('../web/src/logica/imagenes.js');
+  const { SUPLEMENTOS_FBE } = await import('../web/src/logica/suplementos.js');
+  const { MATERIAL_PERFIL } = await import('../web/src/logica/material.js');
+  check(SUPLEMENTOS_FBE.length === 8 && SUPLEMENTOS_FBE.every((s) => fuenteImagen(imagenSuplemento(s))), 'los ocho suplementos de la lista de FBE tienen su dibujo');
+  check(imagenSuplemento({ clave: null, nombre: 'Creatina' }) === null && imagenSuplemento(null) === null, 'el que el atleta escribe con sus palabras, ninguno');
+  const con = MATERIAL_PERFIL.filter(([k]) => imagenMaterial(k));
+  check(con.length === 6 && con.every(([k]) => fuenteImagen(imagenMaterial(k))) && imagenMaterial('poleas') === null, 'seis materiales del perfil con dibujo; el resto, sin él');
+  const t = tiraGuia('material');
+  check(t && t.figuras.length === 8 && t.figuras.every(([id]) => fuenteImagen(id)), 'la guía de material enseña los ocho');
+  check(/<Dibujo s=\{s\} \/>/.test(lee0('ui/atleta/Suplementos.jsx')) && /imagenMaterial\(k\)/.test(lee0('ui/atleta/PerfilMas.jsx')), 'se pintan en Hoy, en la hoja de suplementos y en la de material');
+}
+
+// (imágenes, tanda 11) Objetivos y días especiales
+console.log('\nObjetivos y días especiales');
+{
+  const { imagenObjetivo, imagenDia } = await import('../web/src/logica/imagenes.js');
+  const { OBJETIVOS } = await import('../web/src/logica/cuestionario.js');
+  check(OBJETIVOS.length === 6 && OBJETIVOS.every(([k]) => fuenteImagen(imagenObjetivo(k))) && imagenObjetivo('nada') === null, 'cada objetivo del cuestionario tiene su dibujo');
+  check(imagenDia({ sueno: 1, energia: 1, molestias: 1 }) === 'dia-molestias' && imagenDia({ sueno: 1, energia: 2, molestias: 2 }) === 'dia-mala-noche'
+    && imagenDia({ sueno: 2, energia: 1, molestias: 3 }) === 'dia-enfermo' && imagenDia({ sueno: 2, energia: 2, molestias: 2 }) === null && imagenDia(null) === null, 'el día flojo: mandan las molestias, luego la mala noche, luego la energía');
+  check(['enfermo', 'saliente', 'expres', 'molestias', 'vacaciones', 'mala-noche'].every((d) => fuenteImagen(`dia-${d}`)), 'los seis días están en la lista');
+  check(lee0('ui/atleta/Vida.jsx').includes('id="dia-expres"') && lee0('ui/atleta/Vida.jsx').includes('id="dia-saliente"') && lee0('ui/Pausas.jsx').includes('id="dia-vacaciones"')
+    && /imagenDia\(prep\)/.test(lee0('ui/atleta/Preparacion.jsx')) && /imagenObjetivo\(v\)/.test(lee0('ui/atleta/Cuestionario.jsx')), 'cada uno, donde se avisa');
+}
+
+// (imágenes, tanda 11) El plato tipo de una receta sin foto, reconocido por su nombre
+console.log('\nEl plato tipo de las recetas');
+{
+  const { imagenReceta } = await import('../web/src/logica/imagenes.js');
+  const casos = { 'Tostadas con huevo y aguacate': 'tostadas', 'Porridge de avena con plátano': 'avena', 'Yogur griego con frutos rojos y nueces': 'yogur', 'Pollo al curry con arroz basmati': 'arroz', 'Lentejas estofadas con verduras': 'legumbres', 'Salmón al horno con patata y brócoli': 'pescado', 'Tortilla de claras con pavo y ensalada': 'huevos', 'Bocadillo de atún con tomate': 'bocadillo', 'Ensalada de garbanzos, atún y huevo': 'ensalada', 'Batido de proteína con plátano': 'batido', 'Macarrones con atún': 'pasta', 'Ternera con patatas': 'carne' };
+  check(Object.entries(casos).every(([n, id]) => imagenReceta(n) === `receta-${id}`), 'cada receta, su plato: gana lo que se nombra antes, y la carne o el pescado con arroz o pasta son de arroz o de pasta');
+  check(new Set(Object.values(casos)).size === 12 && Object.values(casos).every((id) => fuenteImagen(`receta-${id}`)), 'los doce platos están en la lista');
+  check(imagenReceta('Crema de calabaza') === null && imagenReceta('') === null && imagenReceta(null) === null, 'si no se reconoce nada (o no hay nombre), ninguno: se queda la escena de su toma');
+  const l = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes.json', import.meta.url), 'utf8'));
+  check(Object.values(casos).every((id) => l[`receta-${id}`].proporcion.join(':') === '4:3'), 'a 4:3, como la foto de una receta');
+  const cc = readFileSync(new URL('../web/src/ui/ComidasComun.jsx', import.meta.url), 'utf8');
+  check(/if \(foto\) return <img/.test(cc) && /imagenReceta\(receta\?\.nombre\)/.test(cc) && /alternativa=\{escena\}/.test(cc), 'la foto de la receta manda; sin foto, el plato tipo; y si no se pinta, la escena de siempre');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
