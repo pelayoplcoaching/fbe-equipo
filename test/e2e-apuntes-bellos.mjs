@@ -93,7 +93,9 @@ export async function probarApuntesBellos({ navegador, check, base = 'http://loc
         await hoja.getByRole('button', { name: 'Lo sabía', exact: true }).click();
         const ida = hoja.locator('.apunte-saliente');
         sello = await ida.count() === 1 && /¡Lo sabías!/.test(await ida.textContent()) && /va-derecha/.test(await ida.getAttribute('class')) && await ida.getAttribute('aria-hidden') === 'true';
-        check(sello && await hoja.locator('.apuntes-puntos i').count() === puntos0 + 1 && await hoja.locator('.apuntes-puntos i').last().getAttribute('class') === 'sabia',
+        // (la tira ensena como mucho los 12 ultimos: si ya estaba llena, no crece)
+        const puntos1 = await hoja.locator('.apuntes-puntos i').count();
+        check(sello && (puntos1 === puntos0 + 1 || (puntos0 === 12 && puntos1 === 12)) && await hoja.locator('.apuntes-puntos i').last().getAttribute('class') === 'sabia',
           '«Lo sabía»: la tarjeta se va a la derecha con el sello «¡Lo sabías!» y arriba se enciende un punto verde');
         await ida.waitFor({ state: 'detached', timeout: 2000 });
         continue;
@@ -107,9 +109,19 @@ export async function probarApuntesBellos({ navegador, check, base = 'http://loc
     // (uno que se pueda deslizar ya: ni tapado, ni una pregunta o un ejercicio sin hacer)
     for (let i = 0; i < 6 && await tarjeta.locator('.apunte-destapar, .apunte-recordar, .practica:not(.micro), .apunte-opcion:not([disabled])').count(); i++) { await hoja.getByRole('button', { name: /Otro apunte/ }).click(); await p.waitForTimeout(700); }
     await p.waitForTimeout(500);
-    await hoja.locator('.apuntes-cuerpo').evaluate((el) => { el.scrollTop = 0; });
+    // (arriba del todo, tambien la hoja: al tocar un boton de abajo, Chrome la deja corrida aunque no tenga barra)
+    await tarjeta.evaluate((el) => { for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) e.scrollTop = 0; });
     await p.waitForTimeout(100);
-    const antes = await tarjeta.textContent(), caja = await tarjeta.boundingBox();
+    // (la tarjeta, ya quieta y en su sitio: segun el dia, el mazo llega aqui a medio movimiento)
+    let caja = await tarjeta.boundingBox();
+    for (let i = 0; i < 20; i++) {
+      await p.waitForTimeout(150);
+      const otra = await tarjeta.boundingBox();
+      const quieta = otra && caja && Math.abs(otra.y - caja.y) < 1 && Math.abs(otra.x - caja.x) < 1 && otra.y >= 0;
+      caja = otra;
+      if (quieta) break;
+    }
+    const antes = await tarjeta.textContent();
     // (por el medio del texto, dentro de la pantalla)
     const x = caja.x + caja.width * 0.6, y = Math.min(700, Math.max(caja.y + 40, caja.y + Math.min(caja.height / 2, 180)));
     await p.mouse.move(x, y);
@@ -119,7 +131,7 @@ export async function probarApuntesBellos({ navegador, check, base = 'http://loc
     await p.mouse.move(x - 170, y + 6, { steps: 6 });
     await p.mouse.up();
     await p.waitForTimeout(120);
-    if (!arrastre[0]) console.log('    (arrastre)', JSON.stringify(caja), await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return `${e.tagName}.${e.className}`; }, [x, y]), await tarjeta.getAttribute('class'));
+    if (!arrastre[0]) console.log('    (arrastre)', JSON.stringify(caja), await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? `${e.tagName}.${e.className}` : 'fuera de la pantalla'; }, [x, y]), await tarjeta.getAttribute('class'));
     check(arrastre[0] && /translateX\(-\d/.test(arrastre[1]) && /rotate\(-/.test(arrastre[1]) && arrastre[2] === 'Siguiente' && await tarjeta.textContent() !== antes && await hoja.locator('.apunte-saliente.va-izquierda').count() === 1,
       'deslizando con el dedo: la tarjeta sigue al dedo, gira un poco, asoma «Siguiente» y al soltar pasa al siguiente');
     check(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'nada se sale de la pantalla');
