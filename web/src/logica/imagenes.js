@@ -98,6 +98,22 @@ export function imagenEjercicio(ej) {
 const COMIDAS = { desayuno: 'desayuno', media_manana: 'media-manana', comida: 'comida', merienda: 'merienda', cena: 'cena', recena: 'cena' };
 export function imagenComida(toma) { return COMIDAS[toma] ? `comida-${COMIDAS[toma]}` : null; }
 
+// ---------- Las figuras de dentro de una guía ----------
+// (imágenes, tanda 11) Una tira de figuras de ejemplo al principio de una guía. Hoy solo la de calentamiento: diez
+// movimientos de movilidad. Son ejemplos para hacerse una idea; no cambian lo que el coach haya puesto en la sesión.
+const TIRAS_GUIA = {
+  calentamiento: {
+    titulo: 'Movimientos de ejemplo',
+    figuras: [
+      ['mov-gato-camello', 'Gato-camello'], ['mov-rotacion-toracica', 'Rotación torácica'], ['mov-cadera-90-90', 'Cadera 90/90'],
+      ['mov-flexor-cadera', 'Flexor de cadera'], ['mov-tobillo-pared', 'Tobillo a la pared'], ['mov-hombro-goma', 'Hombros con goma'],
+      ['mov-sentadilla-profunda', 'Sentadilla profunda'], ['mov-zancada-rotacion', 'Zancada con rotación'],
+      ['mov-isquios-dinamico', 'Isquios dinámico'], ['mov-circulos-brazos', 'Círculos de brazos'],
+    ],
+  },
+};
+export function tiraGuia(clave) { return TIRAS_GUIA[clave] || null; }
+
 // ---------- El plato tipo de una receta sin foto ----------
 // (imágenes, tanda 11) Cada atleta tiene sus recetas, así que no se enlazan una a una: se reconoce la familia por el
 // nombre («Lentejas estofadas…» -> legumbres). Gana lo que se nombra antes («Tostadas con huevo» -> tostadas); la carne

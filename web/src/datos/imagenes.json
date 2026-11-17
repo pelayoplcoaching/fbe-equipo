@@ -5793,6 +5793,116 @@
     },
     "color": "#49346d"
   },
+  "mov-cadera-90-90": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-cadera-90-90-192.052c59e0.webp",
+      "512": "imagenes/mov/mov-cadera-90-90-512.db66b8ad.webp"
+    },
+    "color": "#3e2e6c"
+  },
+  "mov-circulos-brazos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-circulos-brazos-192.a3a98e22.webp",
+      "512": "imagenes/mov/mov-circulos-brazos-512.3fbbfd3d.webp"
+    },
+    "color": "#362969"
+  },
+  "mov-flexor-cadera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-flexor-cadera-192.1a12372d.webp",
+      "512": "imagenes/mov/mov-flexor-cadera-512.93a7cb7a.webp"
+    },
+    "color": "#3a2a6b"
+  },
+  "mov-gato-camello": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-gato-camello-192.e301e8db.webp",
+      "512": "imagenes/mov/mov-gato-camello-512.a50b21a6.webp"
+    },
+    "color": "#3a2d66"
+  },
+  "mov-hombro-goma": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-hombro-goma-192.01578437.webp",
+      "512": "imagenes/mov/mov-hombro-goma-512.810ec8f4.webp"
+    },
+    "color": "#3b2b6c"
+  },
+  "mov-isquios-dinamico": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-isquios-dinamico-192.3871c34e.webp",
+      "512": "imagenes/mov/mov-isquios-dinamico-512.44605e0e.webp"
+    },
+    "color": "#3d2a74"
+  },
+  "mov-rotacion-toracica": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-rotacion-toracica-192.f24ccbe2.webp",
+      "512": "imagenes/mov/mov-rotacion-toracica-512.ebe562c6.webp"
+    },
+    "color": "#3d2e6b"
+  },
+  "mov-sentadilla-profunda": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-sentadilla-profunda-192.8ffd059a.webp",
+      "512": "imagenes/mov/mov-sentadilla-profunda-512.f0d81c7e.webp"
+    },
+    "color": "#412f78"
+  },
+  "mov-tobillo-pared": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-tobillo-pared-192.336859e3.webp",
+      "512": "imagenes/mov/mov-tobillo-pared-512.0d4500c5.webp"
+    },
+    "color": "#443479"
+  },
+  "mov-zancada-rotacion": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/mov/mov-zancada-rotacion-192.fe18f43d.webp",
+      "512": "imagenes/mov/mov-zancada-rotacion-512.4044ea9e.webp"
+    },
+    "color": "#3e2b74"
+  },
   "musica-acompana": {
     "proporcion": [
       1,

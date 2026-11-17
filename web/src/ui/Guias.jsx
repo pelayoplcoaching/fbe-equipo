@@ -10,7 +10,7 @@ import { fmtCorta } from '../logica/fechas.js';
 import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGrande } from './comunes.jsx';
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia } from '../logica/imagenes.js';
+import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia, tiraGuia } from '../logica/imagenes.js';
 import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { apuntesDeGuias, apuntesDeGlosario, apuntesDeNovedades, apuntesDeFicha, preguntasDeFicha, masFallados, mensajeDeApunte } from '../logica/apuntes.js';
 import { dominioEquipo, nombreTema } from '../logica/apuntes-camino.js';
@@ -153,12 +153,22 @@ export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null })
     );
   }
   const ir = (i) => raiz.current?.querySelector(`[data-seccion="${i}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const tira = tiraGuia(clave);
   const partes = [...g.secciones.map((s, i) => [i, s.titulo]), ...(g.sueltas.length ? [['sueltas', 'Más ejercicios']] : []), ...(g.ideas.length ? [['ideas', 'Ideas clave']] : [])];
   return (
     <div class="pila lector-guia" ref={raiz}>
       {hayImagen(imagenPortadaGuia(clave)) && <Imagen id={imagenPortadaGuia(clave)} clase="franja-ilu portada-guia" tamanos="(min-width: 720px) 640px, 100vw" prioridad />}
       {g.entrada && <p class="secundario">{g.entrada}</p>}
       {g.cita && <blockquote class="guia-cita">{g.cita}</blockquote>}
+      {/* (imágenes, tanda 11) las figuras de ejemplo de la guía */}
+      {tira && tira.figuras.some(([id]) => hayImagen(id)) && (
+        <div class="pila-xs">
+          <p class="peq terciario">{tira.titulo}</p>
+          <ul class="tira-figuras" aria-label={tira.titulo}>
+            {tira.figuras.filter(([id]) => hayImagen(id)).map(([id, nombre]) => <li key={id}><Imagen id={id} clase="tira-figura" tamanos="132px" /><span>{nombre}</span></li>)}
+          </ul>
+        </div>
+      )}
       {partes.length > 1 && (
         <div class="selector-chips" role="group" aria-label="Partes de la guía">
           {partes.map(([i, t]) => <button type="button" key={i} onClick={() => ir(i)}>{t}</button>)}

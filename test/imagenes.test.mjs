@@ -300,6 +300,17 @@ const lee0 = (f) => readFileSync(new URL(`../web/src/${f}`, import.meta.url), 'u
   check(l['primer-mes'].proporcion.join(':') === '5:2' && l['companero'].proporcion.join(':') === '3:1', 'los faroles y la puerta caben (5:2); las zapatillas, en franja');
 }
 
+// (imágenes, tanda 11) Las figuras de dentro de la guía de calentamiento
+console.log('\nLas figuras de dentro de una guía');
+{
+  const { tiraGuia } = await import('../web/src/logica/imagenes.js');
+  const t = tiraGuia('calentamiento');
+  check(t && t.figuras.length === 10 && t.figuras.every(([id, n]) => fuenteImagen(id) && n), 'la de calentamiento lleva diez figuras, todas en la lista y con nombre');
+  check(tiraGuia('rutinas') === null && tiraGuia(undefined) === null, 'las demás guías, ninguna');
+  const gj = readFileSync(new URL('../web/src/ui/Guias.jsx', import.meta.url), 'utf8');
+  check(/tiraGuia\(clave\)/.test(gj) && /class="tira-figuras"/.test(gj), 'el lector de la guía la pinta');
+}
+
 // (imágenes, tanda 11) El plato tipo de una receta sin foto, reconocido por su nombre
 console.log('\nEl plato tipo de las recetas');
 {
