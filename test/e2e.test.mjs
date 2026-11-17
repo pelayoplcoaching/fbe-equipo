@@ -5717,6 +5717,16 @@ try {
   console.log('  ✗ los vídeos de la v0.60:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.178: «Guardar en mi móvil» para el vídeo grabado con la cámara de la app (test/e2e-guardar-178.mjs)
+console.log('\nv0.178: guardar en el móvil el vídeo grabado en la app');
+try {
+  const { probarGuardar178 } = await import('./e2e-guardar-178.mjs');
+  await probarGuardar178({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ guardar en el móvil (v0.178):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.61: los vídeos de técnica, tanda B (segunda mitad): revisar la sesión con un solo resumen, la estela del movimiento (y
 // al exportar), el perfil carga–velocidad, el informe del mes y solo con wifi (test/e2e-videos-061.mjs)
 console.log('\nv0.61: los vídeos de técnica, tanda B (segunda mitad)');

@@ -230,6 +230,21 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
       aviso(err.sinConexion ? 'Sin cobertura y no se ha podido guardar el vídeo en el móvil: cuando vuelva la cobertura, elígelo otra vez para enviarlo' : err.message, 'error');
     } finally { if (enHoja()) { setSubiendo(false); setPreparando(null); setSubida(null); } }
   }
+  // (v0.178) El vídeo grabado con la cámara de la app solo está en la app: «Guardar en mi móvil» lo pasa al menú de compartir
+  // del móvil (en el iPhone, «Guardar vídeo» lo deja en Fotos; una web no puede guardarlo allí sola) o, donde no hay, lo descarga
+  const deCamara = esVideo && !!archivo && /^grabacion-\d+\./.test(archivo.name || '');
+  const guardarEnMovil = async () => {
+    try {
+      if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [archivo] })) { await navigator.share({ files: [archivo] }); return; }
+      const url = URL.createObjectURL(archivo);
+      const e = Object.assign(document.createElement('a'), { href: url, download: archivo.name });
+      document.body.appendChild(e); e.click(); e.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      aviso('Vídeo descargado');
+    } catch (err) {
+      if (err?.name !== 'AbortError') aviso('No se ha podido guardar el vídeo en el móvil', 'error');
+    }
+  };
   const mb = (n) => (n < 104858 ? 'menos de 0,1' : (n / MB).toLocaleString('es-ES', { maximumFractionDigits: n < 10 * MB ? 1 : 0 }));
   const cerrar = () => { if (preparando != null) { cancelar.current?.(); return; } if (subiendo && subida != null) { irAFondo(); return; } if (!subiendo) { setArchivo(null); setFallo(null); if (inicial) alCancelar?.(); } };
   // (v0.61) Cerrar la hoja mientras sube: la subida sigue sola (la píldora de arriba dice cuánto lleva) y avisa al terminar; la
@@ -297,6 +312,12 @@ export function SubirArchivo({ atletaId, tipo = 'video_tecnica', sesionEjercicio
                   : <>{archivo.name || 'Archivo'}, {mb(archivo.size)} MB. </>}
                 Se guarda en tu carpeta privada: solo lo veis tú y tu coach.
               </p>
+              {deCamara && (
+                <div class="pila-xs guardar-movil">
+                  <button type="button" class="btn btn-peq plano" disabled={subiendo} onClick={guardarEnMovil}><Icono n="descargar" /> Guardar en mi móvil</button>
+                  <span class="mini terciario">Lo grabado aquí no queda en tus fotos. En el iPhone: toca y elige «Guardar vídeo».</span>
+                </div>
+              )}
               {fallo && (
                 <div class="error" role="alert">
                   {fallo}

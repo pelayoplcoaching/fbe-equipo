@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.178': {
+    atleta: [
+      'Al grabar un vídeo para tu coach con la cámara de la app, ahora puedes guardarlo también en tu móvil: «Guardar en mi móvil» y, en el iPhone, «Guardar vídeo».',
+    ],
+  },
   '0.177': {
     atleta: [
       'Las recetas sin foto enseñan ahora un plato parecido, y las guías de calentamiento y de material empiezan con sus figuras.',
