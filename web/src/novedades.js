@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.176': {
+    atleta: [
+      'Tu coach puede dejarte frases suyas para algunos momentos: el saludo en Hoy, un récord o un ejercicio concreto.',
+      'Si te pone una imagen, la verás en tu perfil y en tu carné.',
+      'Si tu peso baja o sube más rápido de lo que habéis acordado, Hoy te avisa.',
+    ],
+    coach: [
+      'En la ficha, en Objetivos, «A su medida»: frases por momento y por ejercicio, tres imágenes y márgenes de ritmo de peso para cada atleta.',
+      '«Programar según FBE» admite reglas propias de un atleta.',
+      'Necesita la migración 080.',
+    ],
+  },
   '0.175': {
     atleta: [
       'Los ejercicios nuevos de la biblioteca ya tienen su figura: la ves en la ficha, en la Biblioteca y durante la sesión.',

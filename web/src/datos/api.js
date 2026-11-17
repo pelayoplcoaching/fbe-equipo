@@ -44,7 +44,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -1589,7 +1589,9 @@ export function crearApi(backend) {
       // (v0.175) la pausa de la asesoría (078): con la 077 pero sin la 078, la 2026-12.35
       if ((await api.pausas078().catch(() => null)) !== true) return VERSION_LEGAL_SIN_078;
       // (v0.174) la foto del plato y comer fuera (079): con la 078 pero sin la 079, la 2026-12.36
-      return (await api.platosDisponibles().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_079;
+      if ((await api.platosDisponibles().catch(() => null)) !== true) return VERSION_LEGAL_SIN_079;
+      // (v0.176) «A su medida» (080): con la 079 pero sin la 080, la 2026-12.37
+      return (await api.aMedida080().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_080;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2197,6 +2199,15 @@ export function crearApi(backend) {
       if (valor && new TextEncoder().encode(JSON.stringify(valor)).length > 38000) throw new Error('Son demasiadas frases (o demasiado largas) para guardarlas todas: quita alguna.');
       try { await b.update('atletas', { propio: valor }, { eq: { id: atletaId } }); } catch (e) { if (falta080(e)) throw new Error(AVISO_080); throw e; }
       return valor;
+    },
+    // ¿Está la 080? (para la versión de la política). null: no se ha podido saber
+    async aMedida080() {
+      if (!api._v080) {
+        const pr = b.select('atletas_imagenes', { limit: 1, cols: 'hueco' }).then(() => true).catch((e) => (falta080(e) ? false : null));
+        api._v080 = pr;
+        pr.then((x) => { if (x == null && api._v080 === pr) api._v080 = null; });
+      }
+      return api._v080;
     },
     // Qué huecos de imagen tiene puestos un atleta: { perfil: 'cuándo', … }. Sin la 080, null (y no se ofrece).
     // Se recuerda mientras la app está abierta (el coach, al cambiarlas, lo vacía).
