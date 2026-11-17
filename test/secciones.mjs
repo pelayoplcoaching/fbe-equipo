@@ -7,8 +7,14 @@ export async function irASeccion(p, nombre) {
   const enBarra = p.locator('nav.tabs .tab', { hasText: nombre }).first();
   if (await enBarra.isVisible().catch(() => false)) return enBarra.click();
   await p.locator('nav.tabs .tab-mas').click();
-  await p.locator('.hoja-mas .mas-fila button', { hasText: nombre }).first().click();
-  await p.locator('.hoja-mas').waitFor({ state: 'detached' });
+  const fila = p.locator('.hoja-mas .mas-fila button', { hasText: nombre }).first();
+  await fila.click();
+  // A veces, con la máquina cargada, el toque cae mientras la hoja aún sube y no hace nada: si sigue abierta, se repite una vez
+  const cerrada = await p.locator('.hoja-mas').waitFor({ state: 'detached', timeout: 6000 }).then(() => true).catch(() => false);
+  if (!cerrada) {
+    if (await fila.isVisible().catch(() => false)) await fila.click();
+    await p.locator('.hoja-mas').waitFor({ state: 'detached' });
+  }
   return undefined;
 }
 
