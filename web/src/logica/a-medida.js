@@ -172,7 +172,8 @@ export function avisoRitmoPeso(pesos = [], propio = null, { fase = null, hoy } =
   if (tramo.length < 4 || diasEntre(tramo[0].fecha, ultimo.fecha) < 14) return null;
   const ritmo = ritmoPeso(serie, 28);
   if (!ritmo) return null;
-  const semana = Number(ritmo.pctSemana) || 0;
+  // (el % por semana, sin el redondeo a decimas de ritmoPeso: al pasarlo a mes daba saltos de 0,4 puntos)
+  const semana = ultimo.tendencia > 0 && Number.isFinite(ritmo.kgSemana) ? (ritmo.kgSemana / ultimo.tendencia) * 100 : Number(ritmo.pctSemana) || 0;
   if (m.baja_semana != null && fase !== 'ganar' && -semana > m.baja_semana) {
     return { tipo: 'baja', pct: Math.round(-semana * 10) / 10, margen: m.baja_semana, cada: 'semana',
       texto: `Tu peso baja un ${pct(-semana)} % a la semana (lo buscado: hasta un ${pct(m.baja_semana)} %). Tan rápido se pierde también músculo: coméntalo con tu coach.` };

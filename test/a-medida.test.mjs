@@ -110,6 +110,13 @@ const VETADAS = new Set(['17681eac36dbdb02', '48cb0041ceae7ad8', '3e72b749a20d07
 const limpio = (t) => !(t.toLowerCase().match(/[a-z\u00e0-\u00ff]+/g) || []).some((w) => VETADAS.has(createHash('sha256').update(w).digest('hex').slice(0, 16)));
 check(limpio(lee('web/src/datos/semilla-demo.js')) && limpio(lee('web/src/datos/a-medida-demo.js')) && limpio(lee('web/src/logica/a-medida.js') + lee('web/src/ui/atleta/AMedida.jsx') + lee('web/src/ui/coach/AMedidaCoach.jsx') + lee('supabase/migraciones/080_a_medida.sql')) && VETADAS.size === 11,
   'en el repositorio no hay nada de ningún atleta de verdad');
+// (v0.176) el margen al mes se mira con el ritmo sin redondear: 0,11 kg por semana en 80 kg (0,6 % al mes) ya pasa de 0,5
+{
+  const sube = (kgSemana) => Array.from({ length: 9 }, (_, i) => ({ fecha: new Date(Date.UTC(2026, 9, 20 + i * 3)).toISOString().slice(0, 10), kg: 80 + kgSemana * i * 3 / 7 }));
+  const margen = { v: 1, frases: {}, ejercicios: [], peso: { sube_mes: 0.5 } };
+  check(M.avisoRitmoPeso(sube(0.05), margen, { hoy: '2026-11-14' }) === null && M.avisoRitmoPeso(sube(0.11), margen, { hoy: '2026-11-14' })?.pct === 0.6,
+    'el aviso de subir: con 0,5 % al mes de margen, 0,2 % no avisa y 0,6 % sí (sin saltos por redondeo)');
+}
 const guardado = await api.guardarPropio(ruben.id, { frases: { saludo: ['Hola, Rubén', ' ', 'Hola, Rubén'], record: ['Marca nueva'] }, ejercicios: [{ texto: 'peso muerto', frases: ['Barra pegada'] }], peso: { baja_semana: '1', sube_mes: '1,5' } });
 check(guardado.v === 1 && guardado.frases.saludo.length === 1 && guardado.peso.sube_mes === 1.5 && igual((await api.ficha(ruben.id)).atleta.propio, guardado), 'el coach guarda lo de un atleta (limpio) y queda en su ficha');
 check(await lanza(() => api.guardarPropio(ruben.id, { frases: Object.fromEntries(M.CLAVES_MOMENTO.map((k) => [k, Array.from({ length: 12 }, (_, i) => `${i}${'ñ'.repeat(159)}`)])), ejercicios: Array.from({ length: 8 }, (_, i) => ({ texto: `ejercicio ${i}`, frases: Array.from({ length: 12 }, (_, j) => `${j}${'ñ'.repeat(159)}`) })) }))
