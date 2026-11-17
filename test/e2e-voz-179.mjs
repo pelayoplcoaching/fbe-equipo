@@ -189,7 +189,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
   const srv = await servir(new URL('../dist', import.meta.url).pathname, 4181);
-  const navegador = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
+  const navegador = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
   let ok = 0, fallos = 0;
   const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
   await probarVoz179({ navegador, check, base: 'http://localhost:4181' });
