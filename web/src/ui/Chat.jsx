@@ -754,7 +754,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   useEffect(() => { let vivo = true; api.vozLimite?.().then((n) => { if (vivo && n) setLimiteVoz(n); }).catch(() => {}); return () => { vivo = false; }; }, []);
   useEffect(() => { ponerOrdenVoz(mensajes); return () => ponerOrdenVoz([]); }, [mensajes]);
   const enviarVozRef = useRef(null);
-  const grab = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setHoja('micro'), alEnviar: (x) => enviarVozRef.current?.(x), limite: limiteVoz, clave: atletaId ? `chat-${atletaId}` : null });
+  const grab = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setHoja('micro'), alEnviar: (x) => enviarVozRef.current?.(x), limite: limiteVoz, clave: atletaId ? `chat-${miId || ''}-${atletaId}` : null });
   const enviarVoz = (x) => {
     const archivo = new File([x.blob], `nota-de-voz.${x.ext}`, { type: x.tipo });
     let url = null;
@@ -1582,7 +1582,7 @@ function HojaArchivosChat({ mensajes, hayMas, pestana = 'multimedia', yo, alCerr
           <ul class="lista chat-docs">
             {voces.map((m) => (
               <li key={m.archivo.id} class="panel-pad chat-doc">
-                <NotaVozChat c={porId[m.mensajeId] || { id: m.mensajeId, archivo: m.archivo }} mio={porId[m.mensajeId]?.autor === yo} />
+                <NotaVozChat c={porId[m.mensajeId] || { id: m.mensajeId, archivo: m.archivo }} mio={porId[m.mensajeId]?.autor === yo} encadena={false} />
                 <span class="mini terciario">{cuandoInfo(porId[m.mensajeId]?.creado_en)}</span>
                 <button type="button" class="btn btn-peq" onClick={() => alIr(m.mensajeId)}>Ir al mensaje</button>
               </li>

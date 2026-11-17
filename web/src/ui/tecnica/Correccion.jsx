@@ -13,7 +13,7 @@ import { esYoutube } from '../../logica/youtube.js';
 import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
 import { reproductorDe, textoMomento } from '../Video.jsx';
 import { ponerCorrecciones, useCorrecciones } from './correcciones.js';
-import { useGrabadora, ReproductorVoz } from '../chat/NotaVoz.jsx';
+import { useGrabadora, ReproductorVoz, AyudaMicro } from '../chat/NotaVoz.jsx';
 import { textoContador } from '../../logica/notasVoz.js';
 import { AVISO_035 } from '../../datos/api.js';
 import { SubirArchivo, CompararVideos } from '../Archivos.jsx';
@@ -233,7 +233,8 @@ function VozSobreVideo({ video, revision, alGuardar }) {
   const { api, aviso } = useApp();
   const [inicio, setInicio] = useState(0);
   const [ocupado, setOcupado] = useState(false);
-  const g = useGrabadora({ alError: (m) => aviso(m, 'error') });
+  const [ayuda, setAyuda] = useState(false);
+  const g = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setAyuda(true) });
   const rep = () => reproductorDe(video.id);
   useEffect(() => {
     if (g.estado === 'grabando') { const r = rep(); r?.velocidad?.(1); r?.reproducir(); }
@@ -251,11 +252,12 @@ function VozSobreVideo({ video, revision, alGuardar }) {
   return (
     <div class="campo voz-video">
       <span class="etq">Tu voz sobre el vídeo</span>
+      {ayuda && <AyudaMicro alCerrar={() => setAyuda(false)} />}
       {g.estado === 'grabando' || g.estado === 'pidiendo' ? (
         <div class="fila-envolver voz-video-grabando" role="group" aria-label="Grabando tu voz sobre el vídeo">
           <span class="chat-grabando-punto" aria-hidden="true" />
-          <span class="num" role="timer">{g.estado === 'pidiendo' ? 'Abriendo el micro…' : textoContador(g.seg)}</span>
-          <button type="button" class="btn btn-peq btn-primario" onClick={g.parar}><Icono n="parar" /> Parar</button>
+          <span class="num" role="timer">{g.estado === 'pidiendo' ? 'Abriendo el micro…' : textoContador(g.seg, g.limite)}</span>
+          <button type="button" class="btn btn-peq btn-primario" onClick={() => g.parar()}><Icono n="parar" /> Parar</button>
           <button type="button" class="btn btn-peq plano" onClick={g.cancelar}>Cancelar</button>
         </div>
       ) : g.estado === 'revisar' && g.grabado ? (

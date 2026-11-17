@@ -21,8 +21,11 @@ import {
 // El reloj se puede cambiar en las pruebas (window.__fbeRelojVoz): así se prueba el límite sin esperarlo.
 const reloj = () => (typeof globalThis.__fbeRelojVoz === 'function' ? globalThis.__fbeRelojVoz() : performance.now());
 const vibrar = (ms = 25) => { try { if (leerAjustes().vibracion) navigator.vibrate?.(ms); } catch { /* */ } };
-// Lo grabado y sin enviar, por conversación (se conserva al cambiar de pantalla; no al cerrar la app)
+// Lo grabado y sin enviar, por conversación (se conserva al cambiar de pantalla; no al cerrar la app ni al cerrar sesión)
 const borradores = new Map();
+// (revisión) Hay navegadores que siguen diciendo «preguntar» después de dar el permiso (no lo recuerdan): si en esta página
+// ya se ha conseguido el micro una vez, no se vuelve a tratar como «la primera vez»
+let microConcedido = false;
 
 export function puedeGrabar() {
   return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof globalThis.MediaRecorder === 'function'
@@ -40,12 +43,12 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
   const [bloqueada, setBloqueada] = useState(false);
   const [grabado, setGrabado] = useState(() => (clave && borradores.get(clave)) || null);
   const [vivos, setVivos] = useState([]);
+  const [recien, setRecien] = useState(false);   // lo de revisar se acaba de grabar (no es un borrador recuperado)
   const r = useRef({});
   const op = useRef({});
   op.current = { alError, alAviso, alAyuda, alEnviar, limite, clave };
   const guardarBorrador = (g) => { const k = op.current.clave; if (!k) return; if (g) borradores.set(k, g); else borradores.delete(k); };
-  const soltarMicro = () => {
-    const x = r.current;
+  const soltarMicro = (x = r.current) => {
     clearInterval(x.tic);
     document.removeEventListener('visibilitychange', x.alOcultar);
     try { x.bloqueo?.release?.().catch?.(() => {}); } catch { /* */ }
@@ -53,7 +56,17 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     try { x.ctx?.close(); } catch { /* */ }
     x.stream = null; x.ctx = null; x.analizador = null; x.bloqueo = null;
   };
-  useEffect(() => () => { r.current.cancelada = true; try { r.current.rec?.state !== 'inactive' && r.current.rec?.stop(); } catch { /* */ } soltarMicro(); }, []);
+  // Al irse de la pantalla: si aún se pedía el micro, nada; si ya grababa, se para y lo grabado queda de borrador
+  useEffect(() => () => {
+    const x = r.current;
+    x.desmontada = true;
+    const grababa = x.rec && x.rec.state !== 'inactive' && !x.cancelada;
+    if (!grababa) { x.cancelada = true; soltarMicro(x); return; }
+    if (x.desde != null) { x.acum = (x.acum || 0) + (reloj() - x.desde); x.desde = null; }
+    if (!x.limite) x.seg = (x.acum || 0) / 1000;
+    x.alParar = 'revisar'; x.cortada = x.cortada || 'salida';
+    try { x.rec.stop(); } catch { soltarMicro(x); }
+  }, []);
   // Los segundos grabados de verdad (sin las pausas)
   const segundos = (x) => ((x.acum || 0) + (x.desde != null ? reloj() - x.desde : 0)) / 1000;
 
@@ -62,9 +75,10 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     if (typeof navigator !== 'undefined' && !navigator.mediaDevices?.getUserMedia && globalThis.isSecureContext === false) { op.current.alError(errorMicro({ name: 'SinContexto' })); return; }
     if (!puedeGrabar()) { op.current.alError(errorMicro({ name: 'NoSoportado' })); return; }
     setEstado('pidiendo'); setBloqueada(manos); setSeg(0); setGrabado(null); setVivos([]);
-    const x = r.current = { cancelada: false, trozos: [], niveles: [], dedo: !manos, manos, acum: 0, desde: null };
+    const x = r.current = { cancelada: false, trozos: [], niveles: [], dedo: !manos, manos, acum: 0, desde: null, clave: op.current.clave };
     const t0 = performance.now();
-    const permiso = await permisoMicro();
+    const dicho = await permisoMicro();
+    const permiso = dicho !== 'denied' && microConcedido ? 'granted' : dicho;
     if (x.cancelada) { setEstado('nada'); return; }
     // Bloqueado de antes: no se pide (no saldría nada): se enseña cómo activarlo
     if (permiso === 'denied') { setEstado('nada'); setBloqueada(false); if (op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro({ name: 'NotAllowedError' })); return; }
@@ -78,6 +92,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
       if (esPermisoDenegado(e) && op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro(e));
       return;
     }
+    microConcedido = true;
     if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); setEstado('nada'); return; }
     // Acaba de dar el permiso (o lo soltó antes de que llegara el micro): no se graba a ciegas
     const que = trasPermiso({ permiso, tardoMs: performance.now() - t0, dedoPuesto: x.dedo, manos: x.manos });
@@ -100,32 +115,37 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     rec.ondataavailable = (ev) => { if (ev.data?.size) x.trozos.push(ev.data); };
     rec.onstop = () => {
       const s = Math.min(op.current.limite, x.seg || 0);
-      soltarMicro();
-      if (x.cancelada) { setEstado('nada'); return; }
-      setBloqueada(false);
-      if (s < MIN_VOZ_SEG - 0.4 || !x.trozos.length) { setEstado('nada'); op.current.alAviso?.('Mantén pulsado el micro mientras hablas (o tócalo y habla).'); return; }
+      soltarMicro(x);
+      const esta = r.current === x && !x.desmontada;   // (revisión) una grabación vieja no toca la pantalla de la nueva
+      if (x.cancelada) { if (esta) setEstado('nada'); return; }
+      if (esta) setBloqueada(false);
+      if (s < MIN_VOZ_SEG - 0.4 || !x.trozos.length) { if (esta) { setEstado('nada'); op.current.alAviso?.('Mantén pulsado el micro mientras hablas (o tócalo y habla).'); } return; }
       const blob = new Blob(x.trozos, { type: f.tipo });
       const g = { blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s, op.current.limite), onda: ondaDe(x.niveles, 40), limite: !!x.limite, cortada: x.cortada || null, tope: op.current.limite };
+      // Se fue de la pantalla grabando: queda de borrador (se verá al volver)
+      if (x.desmontada) { if (x.clave) borradores.set(x.clave, g); return; }
+      if (!esta) return;
       sonarFBE('nota-acaba');   // (sonido 2, tanda 7) como en WhatsApp
       // Al soltar (o con «Enviar»), sale ya; si se paró sola, la cortó el móvil o se pidió escucharla, se revisa
       if (x.alParar === 'enviar' && !x.limite && !x.cortada && op.current.alEnviar) { setGrabado(null); setEstado('nada'); setSeg(0); op.current.alEnviar(g); return; }
-      setGrabado(g); guardarBorrador(g);
+      setGrabado(g); guardarBorrador(g); setRecien(true);
       setEstado('revisar');
     };
     // El móvil corta el micro (una llamada, otro uso): lo grabado se queda
-    rec.onerror = () => { x.cortada = 'micro'; parar(); };
-    stream.getTracks().forEach((t) => { t.onended = () => { if (x.rec?.state !== 'inactive') { x.cortada = 'micro'; parar(); } }; });
+    rec.onerror = () => { if (r.current === x) { x.cortada = 'micro'; parar(); } };
+    stream.getTracks().forEach((t) => { t.onended = () => { if (r.current === x && x.rec?.state !== 'inactive') { x.cortada = 'micro'; parar(); } }; });
     // (si el navegador no deja empezar, el micro se suelta y se dice)
-    try { rec.start(250); } catch (e) { soltarMicro(); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
+    try { rec.start(250); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
     x.desde = reloj();
     setEstado('grabando');
     sonarFBE('nota-empieza');   // (sonido 2, tanda 7)
     vibrar();
     // La pantalla, encendida mientras se graba; y si se sale de la app, se para y lo grabado se queda
     try { navigator.wakeLock?.request('screen').then((b) => { if (x.stream) x.bloqueo = b; else b.release().catch(() => {}); }).catch(() => {}); } catch { /* */ }
-    x.alOcultar = () => { if (document.visibilityState === 'hidden' && x.rec?.state !== 'inactive') { x.cortada = 'salida'; parar(); } };
+    x.alOcultar = () => { if (r.current === x && document.visibilityState === 'hidden' && x.rec?.state !== 'inactive') { x.cortada = 'salida'; parar(); } };
     document.addEventListener('visibilitychange', x.alOcultar);
     x.tic = setInterval(() => {
+      if (r.current !== x) { clearInterval(x.tic); return; }
       if (x.desde == null) return;   // en pausa
       const s = segundos(x);
       x.seg = s;
@@ -176,8 +196,8 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
   const bloquear = () => { if (!bloqueada) vibrar(15); setBloqueada(true); };
   // El dedo ya no está en el micro mientras se pedía (lo soltó, o el aviso del permiso se llevó el toque)
   const dedoFuera = ({ toque = false } = {}) => { const x = r.current; x.dedo = false; if (toque) { x.manos = true; setBloqueada(true); } };
-  const descartar = () => { setGrabado(null); setEstado('nada'); setSeg(0); setBloqueada(false); guardarBorrador(null); };
-  return { estado, seg, bloqueada, setBloqueada: (v) => (v ? bloquear() : setBloqueada(false)), grabado, vivos, limite, puedePausar, empezar, parar, pausar, seguir, cancelar, descartar, dedoFuera };
+  const descartar = () => { setGrabado(null); setEstado('nada'); setSeg(0); setBloqueada(false); setRecien(false); guardarBorrador(null); };
+  return { estado, seg, bloqueada, setBloqueada: (v) => (v ? bloquear() : setBloqueada(false)), grabado, vivos, recien, limite, puedePausar, empezar, parar, pausar, seguir, cancelar, descartar, dedoFuera };
 }
 
 // El botón del micro (con el cuadro vacío, donde va «Enviar»): mantener (y soltar para enviar), deslizar, o tocar
@@ -199,8 +219,9 @@ export function BotonMicro({ g, disabled = false }) {
     else if (gesto === 'bloquear') { p.current = null; setArrastre(0); document.documentElement.style.removeProperty('--voz-dx'); g.setBloqueada(true); }
     else { document.documentElement.style.setProperty('--voz-dx', `${Math.min(0, e.clientX - x.x)}px`); setArrastre(Math.max(0, Math.min(1, (x.y - e.clientY) / 80))); }
   };
-  const arriba = () => {
+  const arriba = (e) => {
     const x = p.current;
+    if (x && e?.pointerId != null && x.id != null && e.pointerId !== x.id) return;   // otro dedo
     p.current = null;
     setArrastre(0);
     document.documentElement.style.removeProperty('--voz-dx');
@@ -223,6 +244,7 @@ export function BotonMicro({ g, disabled = false }) {
     if (g.estado === 'pidiendo') g.dedoFuera();
     else if (g.estado === 'grabando') g.setBloqueada(true);
   };
+  useEffect(() => () => { document.documentElement.style.removeProperty('--voz-dx'); }, []);
   // Con el teclado (Enter o Espacio) o un lector de pantalla: empieza sin mantener
   const clic = (e) => { if (e.detail === 0 && g.estado === 'nada' && !disabled) g.empezar({ manos: true }); };
   const manteniendo = g.estado === 'grabando' && !g.bloqueada;
@@ -254,7 +276,8 @@ export function PanelGrabando({ g }) {
     return () => document.removeEventListener('keydown', tecla);
   }, [g.bloqueada]);
   const parar = useRef(null);
-  useEffect(() => { if (g.bloqueada && g.estado === 'grabando') setTimeout(() => parar.current?.focus(), 0); }, [g.bloqueada]);
+  const enfocado = useRef(false);
+  useEffect(() => { if (g.bloqueada && g.estado === 'grabando' && !enfocado.current) { enfocado.current = true; setTimeout(() => parar.current?.focus(), 0); } }, [g.bloqueada, g.estado]);
   const barras = g.vivos?.length ? g.vivos : Array(28).fill(0);
   return (
     <div class={`chat-grabando ${poco ? 'acaba' : ''} ${g.bloqueada ? 'bloqueada' : ''} ${pausada ? 'pausada' : ''}`} role="group" aria-label="Grabando una nota de voz">
@@ -283,7 +306,8 @@ export function PanelRevisar({ g, alEnviar, enviando = false }) {
   const [url, setUrl] = useState(null);
   useEffect(() => { if (!x) return undefined; const u = URL.createObjectURL(x.blob); setUrl(u); return () => URL.revokeObjectURL(u); }, [x]);
   const enviar = useRef(null);
-  useEffect(() => { setTimeout(() => enviar.current?.focus(), 0); }, []);
+  // El foco va a «Enviar» solo si se acaba de grabar (con un borrador recuperado al abrir el chat, no: un Enter la mandaría)
+  useEffect(() => { if (g.recien) setTimeout(() => enviar.current?.focus(), 0); }, []);
   if (!x) return null;
   const tope = x.tope || g.limite;
   return (
@@ -318,6 +342,9 @@ let sonandoAhora = null;
 const posiciones = new Map();
 let orden = [];
 export const ponerOrdenVoz = (mensajes) => { orden = Array.isArray(mensajes) ? mensajes : []; };
+// Al cerrar sesión: ni borradores ni posiciones de otra cuenta
+export const olvidarVoz = () => { borradores.clear(); posiciones.clear(); orden = []; };
+try { if (typeof window !== 'undefined') window.addEventListener('fbe-voz-olvidar', olvidarVoz); } catch { /* */ }
 const CLAVE_VEL = 'fbe-voz-velocidad';
 const leerVel = () => { try { const v = Number(localStorage.getItem(CLAVE_VEL)); return VELOCIDADES.includes(v) ? v : 1; } catch { return 1; } };
 const guardarVel = (v) => { try { localStorage.setItem(CLAVE_VEL, String(v)); } catch { /* */ } try { window.dispatchEvent(new CustomEvent('fbe-voz-velocidad', { detail: v })); } catch { /* */ } };
@@ -353,12 +380,12 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
       setCargando(false);
     }
     if (!u) return;
-    x.current.pendiente = t;
+    x.current.pendiente = t; x.current.intento = true;
     setTimeout(() => {
       const b = audio.current;
       if (!b) return;
       b.playbackRate = vel;
-      if (x.current.pendiente > 0.3) { try { b.currentTime = x.current.pendiente; } catch { /* al cargar */ } }
+      if (x.current.pendiente > 0.3 && b.readyState >= 1) { try { b.currentTime = x.current.pendiente; x.current.pendiente = 0; } catch { /* al cargar */ } }
       b.play().then(() => setFallo(null)).catch(() => { if (!silencioso) setFallo('No se pudo reproducir: toca para reintentar'); });
     }, 0);
   }
@@ -368,6 +395,10 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
   const buscar = (e) => { const v = Number(e.currentTarget.value); setT(v); recordar(v); if (audio.current) audio.current.currentTime = v; };
   // El enlace caduca a la hora: si falla con uno pedido, se pide otro (una vez) y sigue por donde iba
   const alFallar = () => {
+    // (revisión) solo se vuelve a intentar si se quería oír (no al mover la barra de una nota parada)
+    const queria = sonando || x.current.intento;
+    x.current.intento = false;
+    if (!queria) return;
     if (pedirUrl && !x.current.reintentado) { x.current.reintentado = true; setSonando(false); sonar({ nuevoEnlace: true }); return; }
     setSonando(false); setFallo('No se pudo reproducir: toca para reintentar'); x.current.reintentado = false;
   };
@@ -388,9 +419,10 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
       {!compacto && <span class={`voz-micro ${escuchada ? 'escuchada' : ''}`} title={escuchada ? 'Escuchada' : 'Sin escuchar'}><Icono n="micro" /><span class="sr">{escuchada ? 'Escuchada' : 'Sin escuchar'}</span></span>}
       {url && (
         <audio ref={audio} src={url} preload="metadata" data-pausa-musica
-          onPlay={(e) => { if (sonandoAhora && sonandoAhora !== e.currentTarget) { try { sonandoAhora.pause(); } catch { /* */ } } sonandoAhora = e.currentTarget; x.current.reintentado = false; setSonando(true); alReproducir?.(); }}
+          onPlay={(e) => { if (sonandoAhora && sonandoAhora !== e.currentTarget) { try { sonandoAhora.pause(); } catch { /* */ } } sonandoAhora = e.currentTarget; x.current.reintentado = false; x.current.intento = false; setSonando(true); alReproducir?.(); }}
           onPause={(e) => { setSonando(false); if (!e.currentTarget.ended) recordar(e.currentTarget.currentTime); }}
           onEnded={() => { setSonando(false); setT(0); if (clave) posiciones.delete(clave); if (audio.current) audio.current.currentTime = 0; if (sonandoAhora === audio.current) sonandoAhora = null; alAcabar?.(); }}
+          onLoadedMetadata={(e) => { if (x.current.pendiente > 0.3) { try { e.currentTarget.currentTime = x.current.pendiente; } catch { /* */ } x.current.pendiente = 0; } }}
           onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onError={alFallar} />
       )}
     </div>
@@ -400,16 +432,18 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
 // La nota de voz en la burbuja: se descarga al tocar ▶ (con su enlace firmado); a quien la recibe, al reproducirla,
 // le cuenta como escuchada (el micro azul del otro lado), si tiene «en línea» activado. (v0.179) Al acabar, suena la
 // siguiente si va justo después (como WhatsApp).
-export function NotaVozChat({ c, mio, alEscuchada }) {
+export function NotaVozChat({ c, mio, alEscuchada, encadena = true }) {
   const { api } = useApp();
   const a = c.archivo;
   const control = useRef(null);
   useEffect(() => {
+    if (!encadena) return undefined;   // (revisión) solo la burbuja: en «Archivos» la misma nota no suena dos veces
     const f = (e) => { if (String(e.detail) === String(c.id)) control.current?.sonar({ silencioso: true }); };
     window.addEventListener('fbe-voz-siguiente', f);
     return () => window.removeEventListener('fbe-voz-siguiente', f);
   }, [c.id]);
   const acabar = () => {
+    if (!encadena) return;
     const sig = siguienteVoz(orden, c.id);
     if (sig == null) return;
     sonarFBE('nota-acaba');

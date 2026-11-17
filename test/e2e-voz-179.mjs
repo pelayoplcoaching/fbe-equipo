@@ -63,6 +63,13 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     await p.locator('.toast', { hasText: 'Micro activado' }).waitFor({ timeout: 8000 });
     await p.mouse.up();
     check(await grabando.count() === 0 && await revisar.count() === 0 && await micSuelto() && await nVoz() === antes, 'la primera vez (el sistema pregunta por el micro) no se graba a ciegas: «Micro activado. Ya puedes grabar» y el micro se suelta');
+    // Y si el navegador sigue diciendo «preguntar» después de darlo (no lo recuerda), a la segunda ya graba
+    await p.locator('.toast').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    await micro.focus(); await p.keyboard.press('Enter');
+    await p.getByRole('button', { name: 'Parar y escucharla' }).waitFor({ timeout: 8000 }).catch(() => {});
+    check(await grabando.count() === 1 && await p.evaluate(() => document.activeElement?.getAttribute('aria-label')) === 'Parar y escucharla', 'a la segunda, aunque el navegador siga diciendo «preguntar», ya graba (y con el teclado, el foco va a «Parar y escucharla»)');
+    await p.getByRole('button', { name: 'Eliminar la grabación' }).click();
+    await grabando.waitFor({ state: 'detached' });
     // Bloqueado: los pasos para activarlo
     await p.evaluate(() => { window.__permisoMicro = 'denied'; });
     await p.locator('.toast').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
@@ -89,6 +96,7 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     [cx, cy] = await centro();
     await p.mouse.move(cx, cy); await p.mouse.down();
     await grabando.waitFor();
+    await p.locator('.chat-candado').waitFor({ timeout: 5000 }).catch(() => {});
     check(await p.locator('.chat-candado').count() === 1 && /Desliza para cancelar/.test(await grabando.textContent()), 'manteniendo: el candado encima del micro y «‹ Desliza para cancelar»');
     await p.waitForTimeout(1800);
     await p.mouse.up();
@@ -140,6 +148,21 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     await p.waitForFunction((n) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).archivos || []).filter((a) => a.tipo === 'audio').length === n + 1, n2, { timeout: 10000 }).catch(() => {});
     check(await nVoz() === n2 + 1 && await revisar.count() === 0, 'se envía desde la revisión');
 
+    // Cambiar de pantalla MIENTRAS se graba: lo grabado queda de borrador (y al volver, el foco no va a «Enviar»)
+    [cx, cy] = await centro();
+    await p.mouse.move(cx, cy); await p.mouse.down(); await p.waitForTimeout(80); await p.mouse.up();
+    await p.getByRole('button', { name: 'Pausar la grabación' }).waitFor({ timeout: 8000 });
+    await p.waitForTimeout(1500);
+    await p.locator('.tab', { hasText: 'Hoy' }).first().click();
+    await p.waitForTimeout(700);
+    check(await micSuelto(), 'al cambiar de pantalla mientras se graba, el micro se suelta');
+    await cerrarAvisos();
+    await p.locator('.tab', { hasText: 'Mensajes' }).first().click();
+    await revisar.waitFor({ timeout: 10000 }).catch(() => {});
+    check(await revisar.count() === 1 && await p.evaluate(() => document.activeElement?.getAttribute('aria-label')) !== 'Enviar la nota de voz', 'y lo grabado está al volver, sin el foco en «Enviar» (un Enter no la manda sin querer)');
+    await revisar.getByRole('button', { name: 'Eliminar la nota de voz' }).click();
+    await revisar.waitFor({ state: 'detached' });
+
     // ---- Reproducir: una a la vez, la siguiente sola, y por dónde se dejó
     const burbujas = p.locator('.burbuja.mia.con-voz');
     await p.waitForFunction(() => document.querySelectorAll('.burbuja.mia.con-voz .voz-play').length >= 3, null, { timeout: 15000 }).catch(() => {});
@@ -174,10 +197,18 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     const b3b = p.locator('.burbuja.mia.con-voz').nth(total - 1);
     await b3b.locator('.voz-play').click();
     await b3b.locator('audio').waitFor({ state: 'attached', timeout: 10000 });
-    await b3b.locator('.voz-play').click().catch(() => {});
-    await b3b.locator('audio').evaluate((a) => { a.pause(); a.dispatchEvent(new Event('error')); });
-    await b3b.locator('.voz.sonando').waitFor({ timeout: 10000 }).catch(() => {});
-    check(await b3b.locator('.voz.sonando').count() === 1 && !/No se pudo/.test(await b3b.textContent()), 'si el enlace del audio falla (caduca a la hora), se pide otro y suena, sin error');
+    await b3b.locator('.voz.sonando').waitFor({ timeout: 10000 });
+    const src0 = await b3b.locator('audio').getAttribute('src');
+    await p.evaluate(() => { window.__pedidas = 0; });
+    await b3b.locator('audio').evaluate((a) => { a.dispatchEvent(new Event('error')); });
+    await p.waitForTimeout(1200);
+    check(!/No se pudo/.test(await b3b.textContent()) && await b3b.locator('audio').evaluate((a) => !a.error), `si el enlace del audio falla mientras suena (caduca a la hora), se pide otro y sigue, sin error (${src0 ? 'con enlace' : 'sin enlace'})`);
+    // Con la nota parada, mover la barra con un enlace caducado no la pone a sonar sola
+    await b3b.locator('audio').evaluate((a) => a.pause());
+    await p.waitForTimeout(300);
+    await b3b.locator('audio').evaluate((a) => { a.dispatchEvent(new Event('error')); });
+    await p.waitForTimeout(800);
+    check(await b3b.locator('.voz.sonando').count() === 0, 'y con la nota parada, un fallo del enlace no la pone a sonar sola');
     check(errores.length === 0, `sin errores en la página${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
   } catch (e) {
     check(false, `Notas de voz (v0.179): ${e.message.split('\n').slice(0, 4).join(' / ')}`);

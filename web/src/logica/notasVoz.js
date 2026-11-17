@@ -99,6 +99,13 @@ export function trasPermiso({ permiso = null, tardoMs = 0, dedoPuesto = true, ma
 export function ayudaMicro(ua = '', instalada = false) {
   const u = String(ua || '');
   const ios = /iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && /Mobile/.test(u));
+  // En el iPhone, con Chrome, Firefox o Edge (no Safari): el permiso está en los ajustes de ese navegador
+  const otro = ios && /CriOS|FxiOS|EdgiOS/.test(u) ? (/CriOS/.test(u) ? 'Chrome' : /FxiOS/.test(u) ? 'Firefox' : 'Edge') : null;
+  if (otro) return {
+    aparato: 'iPhone o iPad',
+    pasos: ['Abre Ajustes del iPhone.', `Entra en Apps y luego en ${otro}.`, 'Activa «Micrófono».', 'Vuelve al chat y mantén pulsado el micro.'],
+    nota: `Si ${otro} vuelve a preguntar al grabar, elige «Permitir».`,
+  };
   if (ios) return {
     aparato: 'iPhone o iPad',
     pasos: instalada

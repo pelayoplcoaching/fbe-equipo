@@ -2679,7 +2679,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(/bloqueado/.test(V.errorMicro({ name: 'NotAllowedError' })) && /ningún micro/.test(V.errorMicro({ name: 'NotFoundError' })) && /navegador/.test(V.errorMicro({ name: 'NoSoportado' })) && /otra app/.test(V.errorMicro({ name: 'NotReadableError' })),
     'permiso denegado, sin micro, micro ocupado o sin grabación: cada uno con su mensaje claro');
   const nv = readFileSync(new URL('../web/src/ui/chat/NotaVoz.jsx', import.meta.url), 'utf8');
-  check(/getTracks\(\)\.forEach\(\(t\) => \{ t\.onended = null; t\.stop\(\); \}\)/.test(nv) && /onstop = \(\) => \{[^}]*?soltarMicro\(\)/.test(nv) && /visibilitychange/.test(nv) && /wakeLock/.test(nv), 'el micro se suelta en cuanto se para la grabación (sin el indicador encendido)');
+  check(/getTracks\(\)\.forEach\(\(t\) => \{ t\.onended = null; t\.stop\(\); \}\)/.test(nv) && /onstop = \(\) => \{[^}]*?soltarMicro\(x\)/.test(nv) && /visibilitychange/.test(nv) && /wakeLock/.test(nv), 'el micro se suelta en cuanto se para la grabación (sin el indicador encendido)');
 
   const E = await import('../web/src/logica/encuestas.js');
   check(E.opcionesEncuesta(['  Sí ', 'No']).ok && igual(E.opcionesEncuesta(['  Sí ', 'No']).opciones, ['Sí', 'No']) && !E.opcionesEncuesta(['Solo una']).ok && !E.opcionesEncuesta(Array.from({ length: 13 }, (_, i) => `o${i}`)).ok

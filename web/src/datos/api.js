@@ -3260,7 +3260,7 @@ export function crearApi(backend) {
       if (typeof backend.rpc !== 'function') return LIMITE_VOZ_SIN_081;
       if (!api._vozLim) {
         const pr = backend.rpc('voz_limite_seg', {}).then((n) => limiteVoz(n), (e) => {
-          const falta = /voz_limite_seg|PGRST202|42883|could not find|schema cache/i.test(`${e?.message || ''} ${e?.code || ''}`);
+          const falta = /PGRST202|42883|could not find the function|function .*voz_limite_seg.* does not exist/i.test(`${e?.message || ''} ${e?.code || ''}`);
           if (!falta && api._vozLim === pr) api._vozLim = null;
           return LIMITE_VOZ_SIN_081;
         });
