@@ -1,7 +1,7 @@
 // (personalización 3, tanda 7) Que respete cómo es él: su manual de instrucciones (lo ve su coach), lo que no quiere
 // ver (en el móvil), su ciclo (opcional, con el consentimiento de salud y solo en el móvil) y su informe para el médico
 // o el fisio (se genera aquí y no sale hasta que lo comparte).
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono } from '../comunes.jsx';
 import { FEEDBACK, MOTIVA, OCULTABLES, limpiarOcultar, patronCiclo, informeSalud } from '../../logica/respeto.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
@@ -70,11 +70,14 @@ export function leerCiclo(atletaId) {
   try { const v = JSON.parse(localStorage.getItem(claveCiclo(atletaId)) || '[]'); return Array.isArray(v) ? v.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort() : []; } catch { return []; }
 }
 function guardarCiclo(atletaId, lista) { try { localStorage.setItem(claveCiclo(atletaId), JSON.stringify([...new Set(lista)].sort())); } catch { /* */ } }
+// Avisa a quien lo pinta fuera de la hoja (la tarjeta de Perfil), que no se entera de lo guardado en el móvil
+const CAMBIO_CICLO = 'fbe-ciclo-cambio';
+function avisarCiclo() { try { window.dispatchEvent(new Event(CAMBIO_CICLO)); } catch { /* */ } }
 export function HojaCiclo({ alCerrar }) {
   const { atleta } = useApp();
   const [lista, setLista] = useState(() => leerCiclo(atleta.id));
   const [fecha, setFecha] = useState('');
-  const poner = (l) => { guardarCiclo(atleta.id, l); setLista(leerCiclo(atleta.id)); };
+  const poner = (l) => { guardarCiclo(atleta.id, l); setLista(leerCiclo(atleta.id)); avisarCiclo(); };
   return (
     <Hoja titulo="Tu ciclo" alCerrar={alCerrar}>
       <div class="pila">
@@ -96,6 +99,13 @@ export function HojaCiclo({ alCerrar }) {
 // En Perfil: su patrón (si ha apuntado su ciclo y tiene el consentimiento de salud)
 export function PatronCiclo({ entrenos, salud }) {
   const { atleta, propio } = useApp();
+  // (v0.176) se vuelve a pintar al apuntar o quitar un inicio: antes dependia de que Perfil se repintara por otra cosa
+  const [, repintar] = useState(0);
+  useEffect(() => {
+    const f = () => repintar((n) => n + 1);
+    window.addEventListener(CAMBIO_CICLO, f);
+    return () => window.removeEventListener(CAMBIO_CICLO, f);
+  }, []);
   if (!salud || propio || !atleta?.id) return null;
   const inicios = leerCiclo(atleta.id);
   if (!inicios.length) return null;
