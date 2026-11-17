@@ -87,6 +87,9 @@ export function RecuerdoProgreso({ sesionId }) {
   );
 }
 
+import { Imagen as ImagenObj, hayImagen as hayImagenObj } from '../Imagen.jsx';
+import { imagenObjetivo } from '../../logica/imagenes.js';
+import { objetivosDe } from '../../logica/cuestionario.js';
 const NOMBRE_OBJETIVO = Object.fromEntries(OBJETIVOS);
 export function CifraObjetivo({ progreso, constancia, salud }) {
   const { api, atleta } = useApp();
@@ -96,6 +99,7 @@ export function CifraObjetivo({ progreso, constancia, salud }) {
   if (!c) return null;
   return (
     <section class="panel panel-pad cifra-objetivo" aria-labelledby="cifra-objetivo-t">
+      {hayImagenObj(imagenObjetivo(objetivosDe(cuestionario.datos)[0])) && <ImagenObj id={imagenObjetivo(objetivosDe(cuestionario.datos)[0])} clase="cifra-objetivo-img" tamanos="56px" />}
       <span class="t-sobre" id="cifra-objetivo-t">Tu objetivo: {c.titulo.toLowerCase()}</span>
       <span class="peq secundario">{c.etiqueta}</span>
       <p class="cifra-objetivo-v"><span class="num">{c.cifra}</span> <small>{c.unidad}</small></p>

@@ -62,11 +62,11 @@ export function TarjetaVida({ sesiones = [] }) {
       )}
       {dificil && (
         <div class="vida-dificil pila-xs">
-          <p class="vida-fila"><Icono n="escudo" /><span><strong>Semana difícil.</strong> Si solo te da para lo obligatorio, con eso vale. Tu sesión no cambia: es un consejo.</span></p>
+          <p class="vida-fila"><Imagen id="dia-expres" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="escudo" />} /><span><strong>Semana difícil.</strong> Si solo te da para lo obligatorio, con eso vale. Tu sesión no cambia: es un consejo.</span></p>
           {minimo.length > 0 && <ul class="vida-minimo">{minimo.map((s) => <li key={s.id}><strong>{s.nombre}</strong>: {s.obligatorios.join(', ')}</li>)}</ul>}
         </div>
       )}
-      {choques.map((c) => <p key={`${c.id}-${c.que}`} class="vida-fila vida-guardia"><Icono n="alerta" /><span>{c.texto}</span></p>)}
+      {choques.map((c) => <p key={`${c.id}-${c.que}`} class="vida-fila vida-guardia"><Imagen id="dia-saliente" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="alerta" />} /><span>{c.texto}</span></p>)}
     </section>
   );
 }
@@ -179,7 +179,8 @@ export function HojaGuardias({ alCerrar }) {
 // ---------- En el check-in: lo de la semana pasada ----------
 export function SeguimientoCheckin({ id, anterior, molestias }) {
   const t = seguimientoCheckin(id, anterior, molestias);
-  return t ? <p class="ck-seguimiento"><Icono n="historial" /><span>{t}</span></p> : null;
+  const dia = id === 'sueno' ? 'dia-mala-noche' : id === 'molestias' ? 'dia-molestias' : null;
+  return t ? <p class="ck-seguimiento">{dia ? <Imagen id={dia} clase="ico-ilu" tamanos="44px" alternativa={<Icono n="historial" />} /> : <Icono n="historial" />}<span>{t}</span></p> : null;
 }
 
 // ---------- En la ficha del coach: su vida ----------

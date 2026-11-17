@@ -1,3 +1,5 @@
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenDia } from '../../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { Icono, Segmentos } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
@@ -57,10 +59,11 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
 
 // El consejo del día, arriba de la sesión
 // En un día flojo o malo, el atleta elige si hoy sube la carga o va con los pesos de la última vez (v0.32)
-export function ConsejoDia({ consejo, alCambiar, alQuitar, eleccion = null, alElegir }) {
+export function ConsejoDia({ consejo, alCambiar, alQuitar, eleccion = null, alElegir, prep = null }) {
+  const dia = consejo.frenar ? imagenDia(prep) : null; // (imágenes, tanda 11) el dibujo del día flojo o difícil
   return (
     <div class={`consejo-dia ${consejo.nivel}`} role="status">
-      <Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} />
+      {dia && hayImagen(dia) ? <Imagen id={dia} clase="ico-ilu" tamanos="44px" alternativa={<Icono n="alerta" />} /> : <Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} />}
       <div class="pila-xs">
         <strong>{consejo.titulo}</strong>
         <span class="peq">{consejo.texto}</span>

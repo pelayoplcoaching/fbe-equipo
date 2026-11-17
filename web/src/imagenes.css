@@ -414,3 +414,18 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .tira-figuras li { flex: none; width: 132px; display: grid; gap: var(--esp-4); scroll-snap-align: start; }
 .tira-figuras .tira-figura { width: 132px; aspect-ratio: 1; border-radius: var(--r-s); object-fit: cover; display: block; }
 .tira-figuras span { font-size: var(--letra-12-5); color: var(--tinta-2); text-align: center; line-height: 1.25; }
+
+/* (imágenes, tanda 11) El dibujo de un suplemento de la lista de FBE y el del material de casa o de viaje */
+.supl-img { flex: none; width: 40px; height: 40px; border-radius: var(--r-xs); object-fit: cover; display: block; }
+.suplemento-fila:has(.supl-img) { grid-template-columns: auto minmax(0, 1fr) auto; }
+.supl-con-img { align-items: center; gap: var(--esp-12); min-width: 0; }
+.opciones-suplemento button:has(.supl-img) { display: flex; align-items: center; gap: var(--esp-8); text-align: left; }
+.material-nombre { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-8); }
+.material-img { flex: none; width: 36px; height: 36px; border-radius: var(--r-xs); object-fit: cover; display: block; }
+
+/* (imágenes, tanda 11) El dibujo de cada objetivo (cuestionario y «Tu objetivo») y el de los días especiales */
+.objetivo-img { flex: none; width: 40px; height: 40px; border-radius: var(--r-xs); object-fit: cover; display: block; }
+.opciones button:has(> .objetivo-img) { display: flex; align-items: center; gap: var(--esp-8); text-align: left; }
+.cifra-objetivo-img { float: right; width: 56px; height: 56px; margin-left: var(--esp-12); border-radius: var(--r-s); object-fit: cover; }
+.consejo-dia:has(> .ico-ilu), .ck-seguimiento:has(> .ico-ilu), .aviso-pausa:has(> .ico-ilu) { align-items: center; gap: var(--esp-12); }
+.consejo-dia:has(> .ico-ilu), .aviso-pausa:has(> .ico-ilu) { grid-template-columns: 44px minmax(0, 1fr); }

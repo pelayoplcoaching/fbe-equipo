@@ -311,6 +311,34 @@ console.log('\nLas figuras de dentro de una guía');
   check(/tiraGuia\(clave\)/.test(gj) && /class="tira-figuras"/.test(gj), 'el lector de la guía la pinta');
 }
 
+// (imágenes, tanda 11) Suplementos y material
+console.log('\nSuplementos y material');
+{
+  const { imagenSuplemento, imagenMaterial, tiraGuia } = await import('../web/src/logica/imagenes.js');
+  const { SUPLEMENTOS_FBE } = await import('../web/src/logica/suplementos.js');
+  const { MATERIAL_PERFIL } = await import('../web/src/logica/material.js');
+  check(SUPLEMENTOS_FBE.length === 8 && SUPLEMENTOS_FBE.every((s) => fuenteImagen(imagenSuplemento(s))), 'los ocho suplementos de la lista de FBE tienen su dibujo');
+  check(imagenSuplemento({ clave: null, nombre: 'Creatina' }) === null && imagenSuplemento(null) === null, 'el que el atleta escribe con sus palabras, ninguno');
+  const con = MATERIAL_PERFIL.filter(([k]) => imagenMaterial(k));
+  check(con.length === 6 && con.every(([k]) => fuenteImagen(imagenMaterial(k))) && imagenMaterial('poleas') === null, 'seis materiales del perfil con dibujo; el resto, sin él');
+  const t = tiraGuia('material');
+  check(t && t.figuras.length === 8 && t.figuras.every(([id]) => fuenteImagen(id)), 'la guía de material enseña los ocho');
+  check(/<Dibujo s=\{s\} \/>/.test(lee0('ui/atleta/Suplementos.jsx')) && /imagenMaterial\(k\)/.test(lee0('ui/atleta/PerfilMas.jsx')), 'se pintan en Hoy, en la hoja de suplementos y en la de material');
+}
+
+// (imágenes, tanda 11) Objetivos y días especiales
+console.log('\nObjetivos y días especiales');
+{
+  const { imagenObjetivo, imagenDia } = await import('../web/src/logica/imagenes.js');
+  const { OBJETIVOS } = await import('../web/src/logica/cuestionario.js');
+  check(OBJETIVOS.length === 6 && OBJETIVOS.every(([k]) => fuenteImagen(imagenObjetivo(k))) && imagenObjetivo('nada') === null, 'cada objetivo del cuestionario tiene su dibujo');
+  check(imagenDia({ sueno: 1, energia: 1, molestias: 1 }) === 'dia-molestias' && imagenDia({ sueno: 1, energia: 2, molestias: 2 }) === 'dia-mala-noche'
+    && imagenDia({ sueno: 2, energia: 1, molestias: 3 }) === 'dia-enfermo' && imagenDia({ sueno: 2, energia: 2, molestias: 2 }) === null && imagenDia(null) === null, 'el día flojo: mandan las molestias, luego la mala noche, luego la energía');
+  check(['enfermo', 'saliente', 'expres', 'molestias', 'vacaciones', 'mala-noche'].every((d) => fuenteImagen(`dia-${d}`)), 'los seis días están en la lista');
+  check(lee0('ui/atleta/Vida.jsx').includes('id="dia-expres"') && lee0('ui/atleta/Vida.jsx').includes('id="dia-saliente"') && lee0('ui/Pausas.jsx').includes('id="dia-vacaciones"')
+    && /imagenDia\(prep\)/.test(lee0('ui/atleta/Preparacion.jsx')) && /imagenObjetivo\(v\)/.test(lee0('ui/atleta/Cuestionario.jsx')), 'cada uno, donde se avisa');
+}
+
 // (imágenes, tanda 11) El plato tipo de una receta sin foto, reconocido por su nombre
 console.log('\nEl plato tipo de las recetas');
 {

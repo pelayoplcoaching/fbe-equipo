@@ -2737,6 +2737,72 @@
     },
     "color": "#4b367a"
   },
+  "dia-enfermo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-enfermo-96.a45b9d56.webp",
+      "192": "imagenes/dia/dia-enfermo-192.89f9df36.webp"
+    },
+    "color": "#3a2e66"
+  },
+  "dia-expres": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-expres-96.d81316e5.webp",
+      "192": "imagenes/dia/dia-expres-192.c8bb694b.webp"
+    },
+    "color": "#3a2c63"
+  },
+  "dia-mala-noche": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-mala-noche-96.52c85485.webp",
+      "192": "imagenes/dia/dia-mala-noche-192.6600b004.webp"
+    },
+    "color": "#3e2c68"
+  },
+  "dia-molestias": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-molestias-96.e186b8c9.webp",
+      "192": "imagenes/dia/dia-molestias-192.06ec0540.webp"
+    },
+    "color": "#3f2c61"
+  },
+  "dia-saliente": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-saliente-96.fded8615.webp",
+      "192": "imagenes/dia/dia-saliente-192.93e37625.webp"
+    },
+    "color": "#3a2e61"
+  },
+  "dia-vacaciones": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/dia/dia-vacaciones-96.91f1673a.webp",
+      "192": "imagenes/dia/dia-vacaciones-192.4912eddf.webp"
+    },
+    "color": "#3f2d69"
+  },
   "difusion": {
     "proporcion": [
       4,
@@ -5262,6 +5328,102 @@
     },
     "color": "#785f95"
   },
+  "material-anillas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-anillas-96.77aa1f9f.webp",
+      "192": "imagenes/material/material-anillas-192.0d22c9f7.webp",
+      "512": "imagenes/material/material-anillas-512.5a9232f0.webp"
+    },
+    "color": "#2a1a58"
+  },
+  "material-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-banco-96.f7f8ed45.webp",
+      "192": "imagenes/material/material-banco-192.4c2544c3.webp",
+      "512": "imagenes/material/material-banco-512.1c10a94d.webp"
+    },
+    "color": "#32215e"
+  },
+  "material-barra-discos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-barra-discos-96.6e9b0235.webp",
+      "192": "imagenes/material/material-barra-discos-192.4befe57b.webp",
+      "512": "imagenes/material/material-barra-discos-512.e26f26f4.webp"
+    },
+    "color": "#2c1c58"
+  },
+  "material-barra-dominadas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-barra-dominadas-96.3310cf34.webp",
+      "192": "imagenes/material/material-barra-dominadas-192.298d6384.webp",
+      "512": "imagenes/material/material-barra-dominadas-512.cc2e32d1.webp"
+    },
+    "color": "#352760"
+  },
+  "material-esterilla": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-esterilla-96.0fb80329.webp",
+      "192": "imagenes/material/material-esterilla-192.e4614798.webp",
+      "512": "imagenes/material/material-esterilla-512.b7d26397.webp"
+    },
+    "color": "#302260"
+  },
+  "material-gomas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-gomas-96.7432f544.webp",
+      "192": "imagenes/material/material-gomas-192.d80c2f7b.webp",
+      "512": "imagenes/material/material-gomas-512.2122a548.webp"
+    },
+    "color": "#3d2d6d"
+  },
+  "material-kettlebell": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-kettlebell-96.fb203586.webp",
+      "192": "imagenes/material/material-kettlebell-192.e85a1f4c.webp",
+      "512": "imagenes/material/material-kettlebell-512.2ce1df78.webp"
+    },
+    "color": "#2f245b"
+  },
+  "material-mancuernas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/material/material-mancuernas-96.1fef59a9.webp",
+      "192": "imagenes/material/material-mancuernas-192.3d018ffd.webp",
+      "512": "imagenes/material/material-mancuernas-512.18c913d5.webp"
+    },
+    "color": "#362862"
+  },
   "medalla-bascula-bronce": {
     "proporcion": [
       1,
@@ -6067,6 +6229,72 @@
       "1080": "imagenes/coach/nutricion-pautas-1080.80976a79.webp"
     },
     "color": "#695680"
+  },
+  "objetivo-fuerza": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-fuerza-96.2947c048.webp",
+      "192": "imagenes/objetivo/objetivo-fuerza-192.ad0c499b.webp"
+    },
+    "color": "#2d2054"
+  },
+  "objetivo-musculo": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-musculo-96.f28cb2da.webp",
+      "192": "imagenes/objetivo/objetivo-musculo-192.dedfaad4.webp"
+    },
+    "color": "#433268"
+  },
+  "objetivo-otro": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-otro-96.d1a6b2bd.webp",
+      "192": "imagenes/objetivo/objetivo-otro-192.8503f41f.webp"
+    },
+    "color": "#3b276a"
+  },
+  "objetivo-perder-grasa": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-perder-grasa-96.937ec89c.webp",
+      "192": "imagenes/objetivo/objetivo-perder-grasa-192.bd1afe77.webp"
+    },
+    "color": "#402e69"
+  },
+  "objetivo-rendimiento": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-rendimiento-96.d3766939.webp",
+      "192": "imagenes/objetivo/objetivo-rendimiento-192.f9d7d787.webp"
+    },
+    "color": "#392665"
+  },
+  "objetivo-salud": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/objetivo/objetivo-salud-96.e8fd5d69.webp",
+      "192": "imagenes/objetivo/objetivo-salud-192.0ae5a668.webp"
+    },
+    "color": "#3f2a6c"
   },
   "para-hablarle": {
     "proporcion": [
@@ -8018,6 +8246,94 @@
       "1080": "imagenes/acceso/sin-conexion-1080.e67eac86.webp"
     },
     "color": "#302357"
+  },
+  "supl-beta-alanina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-beta-alanina-96.f60a7897.webp",
+      "192": "imagenes/supl/supl-beta-alanina-192.bad984a8.webp"
+    },
+    "color": "#442d73"
+  },
+  "supl-cafeina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-cafeina-96.1e9d6f13.webp",
+      "192": "imagenes/supl/supl-cafeina-192.bd70ee62.webp"
+    },
+    "color": "#3f2966"
+  },
+  "supl-citrulina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-citrulina-96.d1391d7b.webp",
+      "192": "imagenes/supl/supl-citrulina-192.4bde00dc.webp"
+    },
+    "color": "#422361"
+  },
+  "supl-creatina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-creatina-96.b138f150.webp",
+      "192": "imagenes/supl/supl-creatina-192.2d9cb4fa.webp"
+    },
+    "color": "#3f3066"
+  },
+  "supl-magnesio": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-magnesio-96.43aa550c.webp",
+      "192": "imagenes/supl/supl-magnesio-192.81d9f1c4.webp"
+    },
+    "color": "#3f2a6d"
+  },
+  "supl-omega-3": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-omega-3-96.90650ead.webp",
+      "192": "imagenes/supl/supl-omega-3-192.fc1503ee.webp"
+    },
+    "color": "#402863"
+  },
+  "supl-proteina": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-proteina-96.d2d37642.webp",
+      "192": "imagenes/supl/supl-proteina-192.efed2038.webp"
+    },
+    "color": "#473573"
+  },
+  "supl-vitamina-d": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "96": "imagenes/supl/supl-vitamina-d-96.58b02139.webp",
+      "192": "imagenes/supl/supl-vitamina-d-192.0623eb89.webp"
+    },
+    "color": "#482e63"
   },
   "tiempo-hoy": {
     "proporcion": [

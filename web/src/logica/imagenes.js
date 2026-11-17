@@ -111,7 +111,33 @@ const TIRAS_GUIA = {
       ['mov-isquios-dinamico', 'Isquios dinámico'], ['mov-circulos-brazos', 'Círculos de brazos'],
     ],
   },
+  material: {
+    titulo: 'Material para entrenar en casa',
+    figuras: [
+      ['material-mancuernas', 'Mancuernas'], ['material-gomas', 'Gomas'], ['material-kettlebell', 'Kettlebell'],
+      ['material-barra-dominadas', 'Barra de dominadas'], ['material-esterilla', 'Esterilla'], ['material-banco', 'Banco'],
+      ['material-anillas', 'Suspensión (TRX)'], ['material-barra-discos', 'Barra y discos'],
+    ],
+  },
 };
+// El suplemento de la lista de FBE (por su clave; los que el atleta escribe con sus palabras no llevan)
+const SUPLEMENTOS_IMG = ['creatina', 'proteina', 'cafeina', 'vitamina-d', 'omega-3', 'magnesio', 'citrulina', 'beta-alanina'];
+export function imagenSuplemento(s) { return s?.clave && SUPLEMENTOS_IMG.includes(s.clave) ? `supl-${s.clave}` : null; }
+// El objetivo del cuestionario (logica/cuestionario.js: fuerza, musculo, perder_grasa, salud, rendimiento, otro)
+const OBJETIVOS_IMG = ['fuerza', 'musculo', 'perder_grasa', 'salud', 'rendimiento', 'otro'];
+export function imagenObjetivo(clave) { return OBJETIVOS_IMG.includes(clave) ? `objetivo-${clave.replace(/_/g, '-')}` : null; }
+// Los días especiales: lo que más pesa en «¿Cómo llegas hoy?» cuando el día sale flojo o difícil (molestias, mala noche
+// o sin energía); la semana difícil, la guardia y la pausa por vacaciones llevan el suyo donde se avisan.
+export function imagenDia(prep) {
+  if (!prep) return null;
+  if (prep.molestias === 1) return 'dia-molestias';
+  if (prep.sueno === 1) return 'dia-mala-noche';
+  if (prep.energia === 1) return 'dia-enfermo';
+  return null;
+}
+// El material de «¿Dónde entrenas hoy?» (logica/material.js): los que tienen dibujo
+const MATERIAL_IMG = { mancuernas: 'mancuernas', gomas: 'gomas', kettlebells: 'kettlebell', dominadas: 'barra-dominadas', banco: 'banco', barra: 'barra-discos' };
+export function imagenMaterial(clave) { return MATERIAL_IMG[clave] ? `material-${MATERIAL_IMG[clave]}` : null; }
 export function tiraGuia(clave) { return TIRAS_GUIA[clave] || null; }
 
 // ---------- El plato tipo de una receta sin foto ----------

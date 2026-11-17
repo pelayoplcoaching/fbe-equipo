@@ -5,7 +5,7 @@ import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../com
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
-import { imagenPasoCuestionario } from '../../logica/imagenes.js';
+import { imagenPasoCuestionario, imagenObjetivo } from '../../logica/imagenes.js';
 
 const PASOS = [
   ['objetivo', 'Tus objetivos', ['objetivos', 'objetivo_detalle']],
@@ -130,7 +130,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
                   return (
                     <button type="button" key={v} aria-pressed={i >= 0 ? 'true' : 'false'}
                       onClick={() => set('objetivos')(i >= 0 ? lista.filter((x) => x !== v) : [...lista, v])}>
-                      {t}{i === 0 && lista.length > 1 && <span class="chip morado mini objetivo-principal">Principal</span>}
+                      {hayImagen(imagenObjetivo(v)) && <Imagen id={imagenObjetivo(v)} clase="objetivo-img" tamanos="40px" />}{t}{i === 0 && lista.length > 1 && <span class="chip morado mini objetivo-principal">Principal</span>}
                     </button>
                   );
                 })}

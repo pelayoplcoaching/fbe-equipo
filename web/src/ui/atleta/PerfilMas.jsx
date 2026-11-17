@@ -18,6 +18,8 @@ import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercici
 import { descargar } from '../comunes.jsx';
 import { sumarDias } from '../../logica/fechas.js';
 import { NOMBRE_MATERIAL } from '../../logica/material.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { imagenMaterial } from '../../logica/imagenes.js';
 import { MATERIAL_PERFIL, PERFILES_DEFECTO } from '../../logica/material.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { leerApuntes } from '../apuntes.js';
@@ -471,7 +473,7 @@ function HojaMaterial({ inicial, alCerrar, alGuardar }) {
           <fieldset key={l} class="pila-s material-perfil">
             <legend class="peq"><strong>{t}</strong></legend>
             {MATERIAL_PERFIL.map(([k, nombre]) => (
-              <label class="casilla" key={k}><input type="checkbox" checked={m[l].includes(k)} onChange={(e) => marcar(l, k, e.currentTarget.checked)} /><span>{nombre}</span></label>
+              <label class="casilla" key={k}><input type="checkbox" checked={m[l].includes(k)} onChange={(e) => marcar(l, k, e.currentTarget.checked)} /><span class="material-nombre">{nombre}{hayImagen(imagenMaterial(k)) && <Imagen id={imagenMaterial(k)} clase="material-img" tamanos="36px" />}</span></label>
             ))}
           </fieldset>
         ))}
