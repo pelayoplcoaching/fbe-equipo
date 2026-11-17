@@ -2,7 +2,6 @@ import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenDia } from '../../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { Icono, Segmentos } from '../comunes.jsx';
-import { Imagen } from '../Imagen.jsx';
 import { PREGUNTAS, completa, consejoPreparacion, textoPreparacion } from '../../logica/preparacion.js';
 
 // «¿Cómo llegas hoy?» antes de la primera serie: tres toques; al contestar la tercera se guarda sola.
