@@ -136,6 +136,7 @@ export const P = {
   recortar: 'M6 3v14a1 1 0 0 0 1 1h14M3 6h14a1 1 0 0 1 1 1v14',
   texto: 'M5 6V4h14v2M12 4v16M9 20h6',
   deshacer: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  rehacer: 'M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13',
   vista: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 14.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z',
   agarre: 'M9 6h.6M14.4 6h.6M9 12h.6M14.4 12h.6M9 18h.6M14.4 18h.6',
   // v0.63: borrar en el teclado de la serie (la tecla de retroceso)

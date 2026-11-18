@@ -4983,3 +4983,27 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
   .tabla-pauta .fbe-series thead th { white-space: normal; }
   .editor-sesion-barra { flex-wrap: wrap; }
 }
+
+/* ---------- v0.185: el editor manual, segunda tanda (revisar antes de publicar, que cambia, varios a la vez, historial) ---------- */
+.duracion-sesion { flex: none; display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--tinta-3); white-space: nowrap; }
+.duracion-sesion.se-pasa { color: var(--alerta); font-weight: 650; }
+.duracion-sesion svg { width: var(--ico-14); height: var(--ico-14); }
+.anadir-sesiones { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-8); }
+@media (max-width: 560px) { .anadir-sesiones { grid-template-columns: minmax(0, 1fr); } }
+.cambios-semana > summary { cursor: pointer; font-weight: 650; font-size: var(--letra-14); }
+.lista-cambios, .lista-avisos, .historial-editor { list-style: none; margin: var(--esp-10) 0 0; padding: 0; display: grid; gap: var(--esp-8); }
+.lista-cambios li { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-10); align-items: baseline; font-size: var(--letra-14); }
+.lista-cambios li > span { color: var(--tinta-2); }
+.lista-cambios .cambio-nuevo > span { color: var(--ok); }
+.lista-cambios .cambio-quitado > span { color: var(--tinta-3); }
+.lista-avisos li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-8); align-items: start; }
+.lista-avisos svg { width: var(--ico-18); height: var(--ico-18); color: var(--alerta); margin-top: var(--esp-2); }
+.varios-lista { border: 0; margin: 0; padding: 0; display: grid; gap: var(--esp-2); min-width: 0; }
+.varios-lista > legend { padding: 0; margin-bottom: var(--esp-6); font-size: var(--letra-14); font-weight: 600; color: var(--tinta-2); }
+.varios-fila { display: flex; align-items: center; gap: var(--esp-8); min-height: 40px; }
+.varios-fila input[type="checkbox"] { width: 20px; height: 20px; flex: none; accent-color: var(--morado); }
+.historial-editor li { display: grid; gap: var(--esp-2); padding-bottom: var(--esp-8); border-bottom: var(--filo-fino) solid var(--linea); }
+.historial-fecha { display: flex; flex-wrap: wrap; gap: var(--esp-8); align-items: baseline; }
+.marca-buscador { margin-left: var(--esp-8); padding: 0 var(--esp-6); border-radius: var(--r-xs); background: var(--morado-suave); color: var(--morado); font-weight: 650; }
+.tabla-pauta .col-ejercicio > .mas-ejercicio { display: inline-block; width: 12.5rem; min-height: 34px; margin: var(--esp-6) var(--esp-6) 0 0; vertical-align: top; }
+@media (max-width: 699px) { .tabla-pauta .col-ejercicio > .mas-ejercicio { display: block; width: 100%; margin: var(--esp-6) 0 0; } }

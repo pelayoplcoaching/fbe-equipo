@@ -1,11 +1,12 @@
 // (v0.184) El editor manual del programa: las cuentas (deshacer, valores de partida, atajos, + y −, reordenar) y las
 // operaciones nuevas contra la demo (copiar una sesión, duplicar un ejercicio, ordenar, añadir varios).
 //   node test/editor.test.mjs
-import { CAMPOS_PAUTA, filaDe, antesDe, etiquetaCambio, apilar, cambiarId, basePauta, tipoDe, DESCANSO_TIPO, comoLaAnterior, detalleDeHechas, pasoDe, saltoKg, igualarSeries, reordenar, resumenSesion } from '../web/src/logica/editor.js';
+import { CAMPOS_PAUTA, filaDe, antesDe, etiquetaCambio, apilar, cambiarId, basePauta, tipoDe, DESCANSO_TIPO, comoLaAnterior, detalleDeHechas, pasoDe, saltoKg, igualarSeries, reordenar, resumenSesion,
+  kilosDe, revisarSemana, SALTO_AVISO_PCT, cambiosDeSemana, parejasSiguientes, LLEVAR, cambiosParaPareja, ordenBuscador, conReciente, usosEnBloque, notasFrecuentes, conNota, historialParaEditor } from '../web/src/logica/editor.js';
 import { REGLAS_FBE, resolverReglas } from '../web/src/logica/motor/index.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
-import { crearApi } from '../web/src/datos/api.js';
+import { crearApi, NOMBRE_GUARDADAS } from '../web/src/datos/api.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -112,6 +113,83 @@ b.update = update0;
 check(choque === 0, 'al reordenar sesiones nunca hay dos con el mismo orden a la vez (la base no lo admite)');
 dd = await api.bloqueCompleto(bloque.id);
 check(dd.sesiones[sem.id][0].id === dup.id && igual(dd.sesiones[sem.id].map((x) => x.orden), idsS.map((_, k) => k + 1)), 'ordenarSesiones: la copia pasa a ser la primera');
+
+
+// ===================================================================================================== v0.185
+console.log('Revisar antes de publicar');
+const SS = [{ id: 's1', nombre: 'Torso', tipo: 'fuerza' }, { id: 's2', nombre: 'Pierna', tipo: 'fuerza' }];
+const N = { e1: 'Press banca', e2: 'Remo', e3: 'Sentadilla' };
+const P = (id, extra = {}) => ({ id, ejercicio_id: 'e1', series: 3, reps_min: 6, reps_max: 8, carga_sugerida_kg: 50, ...extra });
+const av = (o) => revisarSemana({ sesiones: SS, nombres: N, ...o }).map((x) => `${x.sesion}|${x.texto}`);
+check(igual(av({ pautas: { s1: [P('a')], s2: [P('b', { ejercicio_id: 'e3' })] } }), []), 'una semana normal no avisa de nada');
+check(igual(revisarSemana({ sesiones: [] }).map((x) => x.texto), ['La semana no tiene ninguna sesión.']), 'sin sesiones, lo dice');
+check(av({ pautas: { s1: [P('a')], s2: [] } }).join() === 'Pierna|Está vacía: sin ejercicios, cardio ni indicaciones.' && av({ pautas: { s1: [P('a')] }, sesiones: [SS[0], { id: 's3', nombre: 'Cardio', tipo: 'cardio' }] }).length === 0
+  && av({ pautas: { s1: [P('a')] }, sesiones: [SS[0], { id: 's3', nombre: 'Movilidad', tipo: 'movilidad', dinamica: '10 min de movilidad' }] }).length === 0, 'una sesión vacía avisa; una de cardio o con indicaciones, no');
+check(av({ pautas: { s1: [P('a', { reps_min: 10, reps_max: 6 })], s2: [P('b')] } })[0] === 'Torso|Press banca: el rango está al revés (de 10 a 6).', 'un rango al revés');
+check(av({ pautas: { s1: [P('a', { reps_min: 60, reps_max: 60 })], s2: [P('b')] } })[0] === 'Torso|Press banca: 60 repeticiones. ¿Son kilos?' && av({ pautas: { s1: [P('a', { series_detalle: [{ reps: 5, kg: 60 }, { reps: 45, kg: 60 }] })], s2: [P('b')] } })[0].includes('45 repeticiones'), 'repeticiones que parecen kilos (también serie a serie)');
+const prev = { a: { pauta: P('x', { carga_sugerida_kg: 50 }) } };
+check(av({ pautas: { s1: [P('a', { carga_sugerida_kg: 62.5 })], s2: [P('b')] }, previas: prev })[0] === 'Torso|Press banca: de 50 a 62,5 kg (+25 %).' && av({ pautas: { s1: [P('a', { carga_sugerida_kg: 60 })], s2: [P('b')] }, previas: prev }).length === 0 && SALTO_AVISO_PCT === 20, 'un salto de kilos de más del 20 % avisa; uno del 20 %, no');
+check(av({ pautas: { s1: [P('a', { carga_sugerida_kg: 35 })], s2: [P('b')] }, previas: prev })[0] === 'Torso|Press banca: de 50 a 35 kg (−30 %).' && av({ pautas: { s1: [P('a', { carga_sugerida_kg: 35 })], s2: [P('b')] }, previas: prev, foco: 'descarga' }).length === 0, 'una bajada grande avisa, salvo en una semana de descarga');
+check(kilosDe(P('a')) === 50 && kilosDe(P('a', { carga_sugerida_kg: null })) === null && kilosDe(P('a', { series_detalle: [{ kg: 60 }, { kg: 50 }] })) === 60, 'los kilos de trabajo: los de la casilla o los más altos del serie a serie');
+
+console.log('Qué cambia respecto a la semana anterior');
+const cs = (o) => cambiosDeSemana({ nombres: N, ...o }).map((x) => `${x.tipo}:${x.nombre}:${x.texto}`);
+const A1 = P('x1'), A2 = P('x2', { ejercicio_id: 'e2', series: 3 });
+check(igual(cs({ actuales: [P('a')], previas: { a: { pauta: A1 } }, anteriores: [A1] }), []), 'si no cambia nada, lista vacía');
+check(igual(cs({ actuales: [P('a', { carga_sugerida_kg: 52.5 }), P('b', { ejercicio_id: 'e2', series: 4 })], previas: { a: { pauta: A1 }, b: { pauta: A2 } }, anteriores: [A1, A2] }), ['cambia:Press banca:50 → 52,5 kg', 'cambia:Remo:una serie más']), 'kilos y series');
+check(igual(cs({ actuales: [P('a', { reps_min: 5, reps_max: 6, rpe_objetivo: 8 })], previas: { a: { pauta: A1 } }, anteriores: [A1] }), ['cambia:Press banca:6–8 → 5–6 reps · RPE – → 8']), 'repeticiones y RPE, en una línea');
+check(igual(cs({ actuales: [P('a'), P('n', { ejercicio_id: 'e3' })], previas: { a: { pauta: A1 } }, anteriores: [A1, A2] }), ['nuevo:Sentadilla:nuevo (3 × 6–8)', 'quitado:Remo:ya no está']), 'los nuevos y los que ya no están');
+check(cs({ actuales: [P('a', { series_detalle: [{ reps: 5, kg: 50 }] })], previas: { a: { pauta: A1 } }, anteriores: [A1] })[0].includes('ahora serie a serie'), 'pasar a serie a serie se dice');
+
+console.log('Llevar a las semanas siguientes');
+const DB = { semanas: [{ id: 'w1', numero: 1 }, { id: 'w2', numero: 2 }, { id: 'w3', numero: 3 }],
+  sesiones: { w1: [{ id: 'a1', orden: 1, nombre: 'Torso' }], w2: [{ id: 'a2', orden: 1, nombre: 'Torso' }], w3: [{ id: 'a3', orden: 1, nombre: 'Torso' }] },
+  pautas: { a1: [{ id: 'p1', sesion_id: 'a1', ejercicio_id: 'e9', descanso_seg: 180, notas_coach: 'codos pegados' }, { id: 'q1', sesion_id: 'a1', ejercicio_id: 'e2' }],
+    a2: [{ id: 'p2', sesion_id: 'a2', ejercicio_id: 'e1', descanso_seg: 120, notas_coach: null }, { id: 'q2', sesion_id: 'a2', ejercicio_id: 'e2' }],
+    a3: [{ id: 'p3', sesion_id: 'a3', ejercicio_id: 'e1', descanso_seg: 120, notas_coach: null }] },
+  series: { p3: [{ numero: 1 }] } };
+const par = parejasSiguientes(DB, DB.pautas.a1[0], DB.semanas[0]);
+check(igual(par.map((x) => [x.semana.numero, x.pauta.id, x.conSeries]), [[2, 'p2', false], [3, 'p3', true]]), 'acabas de sustituir el ejercicio: en las siguientes le corresponde el que ocupa su mismo puesto');
+check(igual(parejasSiguientes(DB, DB.pautas.a1[1], DB.semanas[0]).map((x) => x.pauta.id), ['q2']) && parejasSiguientes(DB, DB.pautas.a3[0], DB.semanas[2]).length === 0, 'el mismo ejercicio, por su nombre; y desde la última semana, ninguna');
+check(igual(cambiosParaPareja(DB.pautas.a1[0], par[0], ['ejercicio', 'nota', 'descanso']), { ejercicio_id: 'e9', notas_coach: 'codos pegados', descanso_seg: 180 }), 'se lleva solo lo marcado que de verdad cambia');
+check(igual(cambiosParaPareja(DB.pautas.a1[0], par[1], ['ejercicio', 'descanso']), { descanso_seg: 180 }) && cambiosParaPareja(DB.pautas.a1[0], par[1], ['ejercicio']) === null, 'con series ya hechas no se le cambia el ejercicio');
+check(LLEVAR.map((x) => x[0]).join() === 'ejercicio,variante,nota,descanso,prioridad,pauta', 'lo que se puede llevar');
+
+console.log('Buscador, notas e historial');
+const L = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+check(igual(ordenBuscador(L, { recientes: ['c'], usos: { d: 3, b: 1 } }).map((x) => `${x.ejercicio.id}${x.marca ? `:${x.marca}` : ''}`), ['c:reciente', 'd:bloque', 'b:bloque', 'a']), 'arriba los recientes, luego los del bloque (más usados primero), luego el resto');
+check(igual(ordenBuscador(L).map((x) => x.ejercicio.id), ['a', 'b', 'c', 'd']), 'sin recientes ni usos, el orden de siempre');
+check(igual(conReciente(['a', 'b'], 'b'), ['b', 'a']) && conReciente(['1', '2', '3', '4', '5', '6', '7', '8'], '9').length === 8, 'los recientes: el último primero, sin repetir, ocho como mucho');
+check(igual(usosEnBloque(DB), { e9: 1, e2: 2, e1: 2 }), 'cuántas veces sale cada ejercicio en el bloque');
+check(igual(notasFrecuentes({ pautas: { x: [{ notas_coach: 'pausa abajo' }, { notas_coach: 'pausa abajo' }, { notas_coach: 'codos pegados' }, { notas_coach: '  ' }] } }, ['controla la bajada', 'pausa abajo']), ['controla la bajada', 'pausa abajo', 'codos pegados']), 'notas frecuentes: las tuyas y las del bloque, sin repetir');
+check(igual(conNota(['a'], ' b '), ['b', 'a']) && igual(conNota(['a'], ''), ['a']) && conNota([], 'x'.repeat(200)).length === 0, 'una nota nueva se recuerda (las muy largas, no)');
+const hs = historialParaEditor([{ fecha: '2026-11-10', sesion_id: 's9', series: [{ numero: 1 }], mejor: 70, record: true }, { fecha: '2026-11-03', sesion_id: 's8', series: [], mejor: null }], { s9: { id: 'pp' } }, 1);
+check(hs.length === 1 && hs[0].pauta.id === 'pp' && hs[0].record && hs[0].mejor === 70, 'el historial: las últimas sesiones, con lo pautado si es de este bloque');
+
+console.log('Contra la demo: mover y copiar un ejercicio, y las sesiones guardadas');
+dd = await api.bloqueCompleto(bloque.id);
+const [sA, sB] = dd.sesiones[sem.id];
+const nA = dd.pautas[sA.id].length, nB = dd.pautas[sB.id].length;
+const mov = dd.pautas[sA.id][nA - 1];
+const cop = await api.copiarPautaA(mov.id, sB.id);
+dd = await api.bloqueCompleto(bloque.id);
+check(dd.pautas[sA.id].length === nA && dd.pautas[sB.id].length === nB + 1 && dd.pautas[sB.id][nB].id === cop.id && cop.ejercicio_id === mov.ejercicio_id && cop.series === mov.series, 'copiarPautaA: el ejercicio aparece al final de la otra sesión, con su prescripción');
+await api.borrar('sesion_ejercicios', cop.id);
+await api.moverPautaA(mov.id, sB.id);
+dd = await api.bloqueCompleto(bloque.id);
+check(dd.pautas[sA.id].length === nA - 1 && dd.pautas[sB.id][nB].id === mov.id, 'moverPautaA: sale de una sesión y entra al final de la otra, con el mismo id (lo registrado va con él)');
+await api.moverPautaA(mov.id, sA.id);
+check((await api.sesionesGuardadas()).length === 0, 'sin sesiones guardadas, lista vacía');
+const g1 = await api.guardarSesion(sA.id);
+const g2 = await api.guardarSesion(sB.id, 'Pierna de viaje');
+const gs = await api.sesionesGuardadas();
+check(gs.length === 2 && gs[0].id === g1.id && gs[0].nombre === sA.nombre && gs[0].ejercicios === nA && gs[1].nombre === 'Pierna de viaje', 'guardarSesion: se guardan con sus ejercicios (y con otro nombre si se da)');
+const plant = (await b.select('bloques', { eq: { es_plantilla: true } })).filter((x) => x.nombre === NOMBRE_GUARDADAS);
+check(plant.length === 1 && plant[0].atleta_id == null, 'viven en una sola plantilla, «Sesiones guardadas»');
+const antesS = (await api.bloqueCompleto(bloque.id)).sesiones[otra.id].length;
+const usada = await api.copiarSesion(g2.id, otra.id);
+dd = await api.bloqueCompleto(bloque.id);
+check(dd.sesiones[otra.id].length === antesS + 1 && dd.sesiones[otra.id].find((x) => x.id === usada.id).nombre === 'Pierna de viaje' && dd.pautas[usada.id].length === nB, 'y se añaden a cualquier semana con todos sus ejercicios');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);
