@@ -4927,11 +4927,11 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .editor-sesion.soltar-antes::before, .editor-sesion.soltar-despues::after { content: ""; position: absolute; left: 0; right: 0; height: 4px; border-radius: var(--r-xs); background: var(--morado); }
 .editor-sesion.soltar-antes::before { top: calc(var(--esp-8) * -1); }
 .editor-sesion.soltar-despues::after { bottom: calc(var(--esp-8) * -1); }
-.tabla-pauta .acciones-fila { display: grid; grid-template-columns: repeat(2, 36px); gap: 2px; }
+.tabla-pauta .acciones-fila { display: grid; grid-template-columns: repeat(2, 36px); gap: var(--esp-2); }
 .tabla-pauta .acciones-fila > .btn-icono { width: 36px; height: 36px; }
 .tabla-pauta td[data-col="Kilos"] { min-width: 108px; }
 .tabla-pauta .col-ejercicio > .fbe-series-caja, .tabla-pauta .col-ejercicio > .atajos-previa { contain: inline-size; width: calc(100% + var(--sale)); margin-right: calc(-1 * var(--sale)); }
-.con-pasos { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 2px; align-items: stretch; }
+.con-pasos { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: var(--esp-2); align-items: stretch; }
 .con-pasos .paso { min-height: 40px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta-2); }
 .con-pasos .paso:hover { border-color: var(--morado); color: var(--morado); }
 .con-pasos .paso svg { width: var(--ico-14); height: var(--ico-14); }
@@ -4946,7 +4946,7 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 /* que columna se esta tocando: su nombre sale sobre la casilla al entrar en ella */
 @media (min-width: 700px) {
 .tabla-pauta td[data-col] { position: relative; }
-.tabla-pauta td[data-col]:focus-within::before { content: attr(data-col); position: absolute; left: var(--esp-4); bottom: calc(100% - 6px); z-index: 3; padding: 1px var(--esp-6); border-radius: var(--r-xs); background: var(--tinta); color: var(--hoja); font-size: var(--letra-11); font-weight: 650; white-space: nowrap; pointer-events: none; }
+.tabla-pauta td[data-col]:focus-within::before { content: attr(data-col); position: absolute; left: var(--esp-4); bottom: calc(100% - 6px); z-index: 3; padding: 0 var(--esp-6); border-radius: var(--r-xs); background: var(--tinta); color: var(--hoja); font-size: var(--letra-11); font-weight: 650; white-space: nowrap; pointer-events: none; }
 }
 /* en pantallas anchas la tabla cabe entera: sus titulos se quedan arriba al bajar */
 @media (min-width: 1280px) {
@@ -4961,7 +4961,7 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .elegir-varios { display: flex; flex-wrap: wrap; gap: var(--esp-10); align-items: center; justify-content: space-between; }
 .elegir-varios > span { flex: 1; min-width: 160px; }
 .vista-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-10); }
-.vista-ejercicios li { display: grid; gap: 2px; }
+.vista-ejercicios li { display: grid; gap: var(--esp-2); }
 .vista-nombre { display: flex; align-items: baseline; gap: var(--esp-6); min-width: 0; }
 .vista-nombre > .disco { flex: none; align-self: center; }
 .vista-letra { font-weight: 750; color: var(--morado); }
