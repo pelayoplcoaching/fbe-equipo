@@ -210,15 +210,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         aviso(`Deshecho: ${paso.etiqueta.charAt(0).toLowerCase()}${paso.etiqueta.slice(1)}`);
       } catch (e) { setEstado(''); aviso(e.message, 'error'); }
     } else if (paso.tipo === 'borrada') {
-      const { id: viejo, ...fila } = paso.fila;
-      const nueva = await estructura(async () => {
-        const n = await api.crear('sesion_ejercicios', Object.fromEntries(Object.entries(fila).filter(([k]) => !['creado_en', 'created_at', 'actualizado_en', 'updated_at'].includes(k))));
-        // vuelve a su sitio: los demás se corren
-        const ids = (dRef.current?.pautas?.[fila.sesion_id] || []).filter((x) => x.id !== viejo).map((x) => x.id);
-        ids.splice(Math.max(0, Math.min(ids.length, (fila.orden || 1) - 1)), 0, n.id);
-        await api.ordenarPautas(fila.sesion_id, ids);
-        return n;
-      }, 'Deshecho: el ejercicio vuelve a su sitio');
+      const viejo = paso.fila.id;
+      const nueva = await estructura(() => api.restaurarPauta(paso.fila, (dRef.current?.pautas?.[paso.fila.sesion_id] || []).map((x) => x.id)), 'Deshecho: el ejercicio vuelve a su sitio');
       if (nueva) setPila((x) => cambiarId(x, viejo, nueva.id));
       setVersion((v) => v + 1);
     } else if (paso.tipo === 'orden') {

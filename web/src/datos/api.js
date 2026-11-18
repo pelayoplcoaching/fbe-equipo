@@ -6733,6 +6733,15 @@ export function crearApi(backend) {
       await api.copiarMusica([[s.id, copia.id]]);
       return copia;
     },
+    // (v0.184) deshacer «quitar un ejercicio»: vuelve a crearlo con su prescripcion (solo sus campos de siempre) en su sitio
+    async restaurarPauta(fila, idsAntes = []) {
+      const limpia = Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || fila[c] != null).map((c) => [c, fila[c] ?? null]));
+      const [n] = await b.insert('sesion_ejercicios', [{ ...limpia, sesion_id: fila.sesion_id }]);
+      const ids = idsAntes.filter((x) => x !== fila.id);
+      ids.splice(Math.max(0, Math.min(ids.length, (fila.orden || 1) - 1)), 0, n.id);
+      await api.ordenarPautas(fila.sesion_id, ids);
+      return n;
+    },
     async moverPauta(sesionId, pautaId, delta) {
       const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] });
       const i = pautas.findIndex((p) => p.id === pautaId);
