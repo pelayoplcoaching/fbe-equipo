@@ -1,6 +1,7 @@
 // «Aprende» (migración 057): las guías del coach por grupo muscular y la ficha de técnica de cada ejercicio. Aquí, lo
 // que se pinta: el texto con su negrita, los bloques de una sección, la ficha (pasos, errores, niveles, cuándo sí y
 // cuándo no, y la tabla por objetivo), el lector de una guía y la pantalla con todas. Todo es texto: nunca HTML.
+import { audioParaMicro } from './sonido.js';
 import { Fragment } from 'preact';
 import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { VideoYoutube } from './YouTube.jsx';
@@ -609,6 +610,7 @@ export function GrabarAudio({ valor, alCambiar, max = 300, maxBytes = 5242880, e
   useEffect(() => () => { try { rec.current?.r.stop(); rec.current?.s.getTracks().forEach((t) => t.stop()); } catch { /* nada */ } }, []);
   const empezar = async () => {
     try {
+      audioParaMicro(true);   // (v0.180.2)
       const s = await navigator.mediaDevices.getUserMedia({ audio: true });
       const r = new MediaRecorder(s), trozos = [], t0 = Date.now();
       r.ondataavailable = (e) => { if (e.data?.size) trozos.push(e.data); };

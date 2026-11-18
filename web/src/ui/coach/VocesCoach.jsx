@@ -6,7 +6,7 @@ import { Imagen } from '../Imagen.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono } from '../comunes.jsx';
 import { FRASES_VOZ, MAX_VOZ_MS, olvidarVocesCoach } from '../voces-coach.js';
-import { contexto } from '../sonido.js';
+import { contexto, audioParaMicro } from '../sonido.js';
 
 const TIPOS = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
 const puedeGrabarVoz = () => typeof globalThis.MediaRecorder === 'function' && !!navigator.mediaDevices?.getUserMedia;
@@ -27,6 +27,7 @@ export function VocesCoach() {
   const grabar = async (clave) => {
     if (rec.current) { try { rec.current.stop(); } catch { /* */ } return; }
     let flujo;
+    audioParaMicro(true);   // (v0.180.2)
     try { flujo = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
     catch { aviso('Sin permiso para el micrófono: dalo en los ajustes del navegador', 'error'); return; }
     const tipo = TIPOS.find((t) => globalThis.MediaRecorder.isTypeSupported?.(t)) || '';

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Hoja, useApp } from '../comunes.jsx';
-import { sonarFBE } from '../sonido.js';
+import { sonarFBE, audioParaMicro } from '../sonido.js';
 import { leerAjustes } from '../ajustes.js';
 import {
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
@@ -75,6 +75,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     document.removeEventListener('visibilitychange', x.alOcultar);
     try { x.bloqueo?.release?.().catch?.(() => {}); } catch { /* */ }
     try { x.stream?.getTracks().forEach((t) => { t.onended = null; t.stop(); }); } catch { /* */ }
+    if (x.stream) audioParaMicro(false);
     try { x.ctx?.close(); } catch { /* */ }
     x.stream = null; x.ctx = null; x.analizador = null; x.bloqueo = null;
   };
@@ -108,22 +109,24 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     // Bloqueado de antes: no se pide (no saldría nada): se enseña cómo activarlo
     if (permiso === 'denied') { setEstado('nada'); setBloqueada(false); if (op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro({ name: 'NotAllowedError' })); return; }
     let stream;
+    audioParaMicro(true);   // (v0.180.2) en el iPhone, el audio en «ambient» no deja abrir el micro
     try {
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
       // (v0.180.1) si el navegador no acepta esos ajustes (o falla por otra cosa que no sea el permiso), se pide el micro a secas
       catch (e) { if (esPermisoDenegado(e)) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
     } catch (e) {
+      audioParaMicro(false);
       setEstado('nada'); setBloqueada(false);
       if (x.cancelada) return;
       if (esPermisoDenegado(e) && op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro(e));
       return;
     }
     if (!microConcedido || !microRecordado()) recordarMicro(true);
-    if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); setEstado('nada'); return; }
+    if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); audioParaMicro(false); setEstado('nada'); return; }
     // Acaba de dar el permiso (o lo soltó antes de que llegara el micro): no se graba a ciegas
     const que = trasPermiso({ permiso, tardoMs: performance.now() - t0, dedoPuesto: x.dedo, manos: x.manos });
     if (que !== 'grabar') {
-      stream.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((t) => t.stop()); audioParaMicro(false);
       setEstado('nada'); setBloqueada(false);
       op.current.alAviso?.(que === 'listo' ? 'Micro activado. Ya puedes grabar: mantén pulsado el micro (o tócalo).' : 'Mantén pulsado el micro mientras hablas (o tócalo y habla).');
       return;
@@ -395,14 +398,15 @@ export function ActivarMicro({ alCerrar, soloProbar = false }) {
   const [pico, setPico] = useState(0);
   const [error, setError] = useState(null);
   const x = useRef({});
-  const soltar = () => { const y = x.current; clearInterval(y.tic); clearTimeout(y.fin); try { y.stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ } try { y.ctx?.close(); } catch { /* */ } x.current = {}; };
+  const soltar = () => { const y = x.current; clearInterval(y.tic); clearTimeout(y.fin); try { y.stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ } if (y.stream) audioParaMicro(false); try { y.ctx?.close(); } catch { /* */ } x.current = {}; };
   useEffect(() => soltar, []);
   async function activar() {
     if (!navigator.mediaDevices?.getUserMedia) { setError(errorMicro({ name: globalThis.isSecureContext === false ? 'SinContexto' : 'NoSoportado' })); setFase('fallo'); return; }
     setFase('pidiendo'); setError(null);
     let stream;
+    audioParaMicro(true);
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { if (esPermisoDenegado(e)) { recordarMicro(false); setFase('bloqueado'); } else { setError(errorMicro(e)); setFase('fallo'); } return; }
+    catch (e) { audioParaMicro(false); if (esPermisoDenegado(e)) { recordarMicro(false); setFase('bloqueado'); } else { setError(errorMicro(e)); setFase('fallo'); } return; }
     recordarMicro(true);
     const y = x.current = { stream, pico: 0 };
     try {

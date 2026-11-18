@@ -20,6 +20,17 @@ export function contexto() {
   } catch { return null; }
 }
 export const contextoListo = () => ctx;
+// (v0.180.2) En el iPhone, con el audio en «ambient» (lo de arriba) el micro NO se puede abrir: getUserMedia falla con un
+// error que no es de permiso. Antes de pedir el micro se pasa a «play-and-record» y, al soltarlo, se vuelve a como estaba.
+let modoAntes = null;
+export function audioParaMicro(si) {
+  try {
+    const s = navigator.audioSession;
+    if (!s) return;
+    if (si) { if (s.type !== 'play-and-record') { modoAntes = s.type; s.type = 'play-and-record'; } }
+    else if (s.type === 'play-and-record') { s.type = modoAntes && modoAntes !== 'play-and-record' ? modoAntes : 'auto'; modoAntes = null; }
+  } catch { /* solo Safari */ }
+}
 
 // ---------- (sonido 2, tanda 4) La mezcla ----------
 // Todo lo de la app pasa por un limitador (que nada suene de golpe demasiado fuerte) antes de salir. Lo de fondo (la música
