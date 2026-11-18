@@ -42,7 +42,7 @@ function TablaSeries({ filas, ejercicio, base, destino }) {
   if (!filas.length) return <span class="mini secundario">Hizo: sin registrar</span>;
   const hayPropuesta = filas.some((x) => x.propuesta);
   return (
-    <div class="fbe-series-caja">
+    <div class="fbe-series-caja" tabIndex={0} role="group" aria-label={`${ejercicio}: series`}>
       <table class="fbe-series num" aria-label={`${ejercicio}, serie a serie`}>
         <thead><tr><th scope="col">Serie</th><th scope="col">Pautado (sem. {base})</th><th scope="col">Hizo</th>{hayPropuesta && <th scope="col">Propuesta (sem. {destino})</th>}</tr></thead>
         <tbody>

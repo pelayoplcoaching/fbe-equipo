@@ -2437,10 +2437,11 @@ try {
     'el de Ana (intermedia) avisa de cómo pautarle y atenúa las casillas que su nivel no usa');
   await revisar('nivel-editor');
   // v0.27.8: en el editor, lo que hizo la última vez en cada ejercicio (kilos, reps y RPE)
-  const ultimaVez = p.locator('.ultima-vez-coach').first();
+  // (v0.181) con semana anterior registrada sale la tabla serie a serie (pautado, hizo, programado); si no, «Última vez»
+  const ultimaVez = p.locator('.fbe-series-caja.en-editor, .ultima-vez-coach').first();
   const hayUltima = await ultimaVez.waitFor({ timeout: 6000 }).then(() => true, () => false);
   const textoUltima = hayUltima ? await ultimaVez.textContent() : '';
-  check(hayUltima && /Última vez/.test(textoUltima) && /\d+×\d+/.test(textoUltima) && /@\d/.test(textoUltima), `en el editor de Ana, cada ejercicio trae lo que hizo la última vez con su RPE («${textoUltima.trim().slice(0, 70)}»)`);
+  check(hayUltima && /Última vez|Hizo/.test(textoUltima) && /\d kg × \d+ reps/.test(textoUltima) && /@\d/.test(textoUltima), `en el editor de Ana, cada ejercicio trae lo que hizo la última vez con su RPE («${textoUltima.trim().slice(0, 70)}»)`);
 
   // v0.28: pautar serie a serie
   const modo = p.locator('.tabla-pauta select[aria-label="Serie top y back-off"]').first();

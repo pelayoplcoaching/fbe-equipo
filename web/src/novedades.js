@@ -9,6 +9,7 @@ export const NOVEDADES = {
   '0.181': {
     coach: [
       'Programar según FBE: lo pautado, lo que hizo y la propuesta, una serie por fila y con unidades (60 kg × 8 reps @8).',
+      'La misma tabla sale en el editor, bajo cada ejercicio: lo pautado y lo hecho la semana anterior y lo programado ahora.',
       'La carga sube de 2,5 en 2,5 kg en todo. Las mancuernas de su gimnasio y el salto de un ejercicio se cambian en la hoja.',
     ],
   },

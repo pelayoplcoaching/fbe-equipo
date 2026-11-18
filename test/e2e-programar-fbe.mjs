@@ -222,6 +222,13 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(ahora === antes && /Borrador/.test(ahora), `la semana sigue en borrador tras aplicar ${n} cambios (${ahora})`);
     check(await p.getByText('Borrador: el atleta no verá esta semana hasta que la publiques.').count() === 1, 'nada se ha publicado');
     await foto('fbe-3-editor-despues');
+    // (v0.181) en el editor, junto a cada ejercicio: lo pautado y lo hecho la semana anterior y lo programado ahora
+    const tablaEd = p.locator('.fbe-series-caja.en-editor').first();
+    await tablaEd.scrollIntoViewIfNeeded();
+    const textoEd = await tablaEd.textContent();
+    check(/Pautado \(sem\. \d+\)/.test(textoEd) && /Hizo/.test(textoEd) && /Programado \(sem\. \d+\)/.test(textoEd) && /\d kg × \d+ reps/.test(textoEd) && await p.locator('.fbe-series-caja.en-editor td.cambia').count() >= 1,
+      'tras aplicar, el editor enseña en cada ejercicio lo pautado, lo que hizo y lo programado, serie a serie');
+    await foto('fbe-3b-editor-tabla');
     check(await p.getByLabel('Nota para el atleta').inputValue() === `${textoBorrador} Y descansa bien.`, 'la nota queda guardada en la semana y el editor la enseña');
     // Volver a abrir: lo aplicado ya no sale como cambio
     await boton.click();

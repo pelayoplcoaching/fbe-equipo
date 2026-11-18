@@ -4901,6 +4901,11 @@ body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
 .fbe-series th, .fbe-series td { text-align: left; padding: var(--esp-2) var(--esp-10) var(--esp-2) 0; vertical-align: top; }
 .fbe-series thead th { color: var(--tinta-3); font-weight: 600; border-bottom: var(--filo-fino) solid var(--linea); }
 .fbe-series tbody th { color: var(--tinta-3); font-weight: 600; width: 1%; }
-.fbe-series td { font-weight: 400; }
+.fbe-series td { font-weight: 400; white-space: nowrap; }
 .fbe-series td.hizo { color: var(--tinta); font-weight: 600; }
 .fbe-series td.cambia { color: var(--morado); font-weight: 700; }
+.fbe-series-caja.en-editor { margin-top: var(--esp-6); }
+.fbe-series-caja.en-editor .fbe-series { width: auto; }
+.tabla-pauta .fbe-series th, .tabla-pauta .fbe-series td { padding: var(--esp-2) var(--esp-14) var(--esp-2) 0; }
+.tabla-pauta .fbe-series th, .tabla-pauta .fbe-series td { border: 0; background: none; height: auto; }
+@media (max-width: 560px) { .fbe-series td { white-space: normal; } }

@@ -13,6 +13,7 @@ import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
+import { pautasDeSemana, emparejar, seriesEnFilas, textoSerieFBE } from '../../logica/motor/index.js';
 import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
@@ -91,6 +92,17 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const conKg = (p) => bloque.es_plantilla || modoCarga(nivel, p.prioridad) !== 'rpe' || p.carga_sugerida_kg != null;
   const conDatos = !bloque.es_plantilla && sesionesAnt.some((x) => (d.pautas[x.id] || []).some((p) => (d.series[p.id] || []).length))
     && sesiones.some((x) => (d.pautas[x.id] || []).some(conKg));
+
+  // (v0.181) cada pauta de esta semana con la suya de la semana anterior (misma sesion y ejercicio) y lo que hizo en
+  // ella: para ver, junto a lo que se programa, lo pautado y lo hecho serie a serie
+  const previas = {};
+  if (anterior && !bloque.es_plantilla) {
+    const A = pautasDeSemana(d, anterior), B = pautasDeSemana(d, semana);
+    for (const [idA, b] of Object.entries(emparejar(A.pautas, A.sesiones, B.pautas, B.sesiones))) {
+      const pa = A.pautas.find((x) => String(x.id) === String(idA));
+      if (pa) previas[b.id] = { pauta: pa, hechas: d.series[pa.id] || [], semana: anterior.numero };
+    }
+  }
 
   // «Programar según FBE»: de qué semana se parte y cuál se programa (la siguiente se crea si aún no existe)
   const paraFbe = semanasParaProgramar(d, semana);
@@ -255,7 +267,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
 
       {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} notasAtleta={notasAtleta.datos || {}} evitados={evitadosAtleta.datos || {}} fbe={fichasFbe.datos || null}
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} previas={previas} numeroSemana={semana?.numero ?? null} notasAtleta={notasAtleta.datos || {}} evitados={evitadosAtleta.datos || {}} fbe={fichasFbe.datos || null}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -553,9 +565,32 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 }
 
 // «25×10 @8», «12 reps @7» (sin kilos) o «25×10» (sin RPE)
-const textoSerieHecha = (x) => `${x.kg != null ? `${num(x.kg, 2)}×${x.reps ?? '–'}` : `${x.reps ?? '–'} reps`}${x.rpe != null ? ` @${num(x.rpe, 1)}` : ''}`;
+// (v0.181) siempre con unidades: «60 kg × 8 reps @8»
+const textoSerieHecha = (x) => textoSerieFBE({ kg: x.kg, reps: x.reps, rpe: x.rpe != null ? Number(x.rpe) : x.rir != null ? 10 - Number(x.rir) : null }) || '–';
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
+// (v0.181) Junto a lo que se programa: lo pautado y lo que hizo la semana anterior, y lo programado ahora, serie a serie
+function TablaSemanaAnterior({ previa, pauta, numero, nombre }) {
+  const filas = seriesEnFilas({ pautada: previa.pauta, hechas: previa.hechas, propuesta: pauta });
+  return (
+    <div class="fbe-series-caja en-editor" tabIndex={0} role="group" aria-label={`${nombre}: series de la semana ${previa.semana} y lo programado`}>
+      <table class="fbe-series num" aria-label={`${nombre}: la semana ${previa.semana} y lo programado, serie a serie`}>
+        <thead><tr><th scope="col">Serie</th><th scope="col">Pautado (sem. {previa.semana})</th><th scope="col">Hizo</th><th scope="col">Programado{numero != null ? ` (sem. ${numero})` : ''}</th></tr></thead>
+        <tbody>
+          {filas.map((x) => (
+            <tr key={x.n}>
+              <th scope="row">{x.n}</th>
+              <td class="secundario">{x.pautado || '–'}</td>
+              <td class="hizo">{x.hizo || 'sin hacer'}</td>
+              <td class={x.cambia ? 'cambia' : ''}>{x.propuesta || '–'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, previas = {}, numeroSemana = null, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
   const { api } = useApp();
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
@@ -639,7 +674,8 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
                     {evitados[p.ejercicio_id] && <div class="mini aviso-evitado" role="note"><Icono n="alerta" /><span>Prefiere evitarlo: {textoMotivo(evitados[p.ejercicio_id]).toLowerCase()}. Es solo un aviso.</span></div>}
                     {notasAtleta[p.ejercicio_id] && <div class="mini nota-atleta-coach" title="Su nota fijada en este ejercicio (la escribe el atleta en su sesión)"><Icono n="chincheta" /><span><span class="terciario">Su nota: </span>{notasAtleta[p.ejercicio_id].texto}</span></div>}
-                    {ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
+                    {previas[p.id]?.hechas.length > 0 && <TablaSemanaAnterior previa={previas[p.id]} pauta={p} numero={numeroSemana} nombre={ejercicios[p.ejercicio_id]?.nombre || 'Ejercicio'} />}
+                    {!(previas[p.id]?.hechas.length > 0) && ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
                       <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
                     {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}</td>
                   {tieneDetalle(p) ? <>
