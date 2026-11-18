@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Hoja, useApp } from '../comunes.jsx';
-import { sonarFBE } from '../sonido.js';
+import { sonarFBE, audioParaMicro } from '../sonido.js';
 import { leerAjustes } from '../ajustes.js';
 import {
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, esPermisoDenegado, ayudaMicro, trasPermiso, siguienteVoz, textoLimite, mmss, duracionGuardada, MIN_VOZ_SEG, VELOCIDADES,
-  esSilencio, textoMicro, resultadoPrueba,
+  esSilencio, textoMicro, resultadoPrueba, tipoAudio, opcionesGrabadora,
 } from '../../logica/notasVoz.js';
 
 // Las notas de voz del chat (v0.56), como WhatsApp. (v0.179) De hasta DOS minutos (con la migración 081; sin ella, uno) y:
@@ -75,6 +75,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     document.removeEventListener('visibilitychange', x.alOcultar);
     try { x.bloqueo?.release?.().catch?.(() => {}); } catch { /* */ }
     try { x.stream?.getTracks().forEach((t) => { t.onended = null; t.stop(); }); } catch { /* */ }
+    if (x.stream) audioParaMicro(false);
     try { x.ctx?.close(); } catch { /* */ }
     x.stream = null; x.ctx = null; x.analizador = null; x.bloqueo = null;
   };
@@ -108,21 +109,24 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     // Bloqueado de antes: no se pide (no saldría nada): se enseña cómo activarlo
     if (permiso === 'denied') { setEstado('nada'); setBloqueada(false); if (op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro({ name: 'NotAllowedError' })); return; }
     let stream;
+    audioParaMicro(true);   // (v0.180.2) en el iPhone, el audio en «ambient» no deja abrir el micro
     try {
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
-      catch (e) { if (e?.name !== 'OverconstrainedError') throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      // (v0.180.1) si el navegador no acepta esos ajustes (o falla por otra cosa que no sea el permiso), se pide el micro a secas
+      catch (e) { if (esPermisoDenegado(e)) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
     } catch (e) {
+      audioParaMicro(false);
       setEstado('nada'); setBloqueada(false);
       if (x.cancelada) return;
       if (esPermisoDenegado(e) && op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro(e));
       return;
     }
     if (!microConcedido || !microRecordado()) recordarMicro(true);
-    if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); setEstado('nada'); return; }
+    if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); audioParaMicro(false); setEstado('nada'); return; }
     // Acaba de dar el permiso (o lo soltó antes de que llegara el micro): no se graba a ciegas
     const que = trasPermiso({ permiso, tardoMs: performance.now() - t0, dedoPuesto: x.dedo, manos: x.manos });
     if (que !== 'grabar') {
-      stream.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((t) => t.stop()); audioParaMicro(false);
       setEstado('nada'); setBloqueada(false);
       op.current.alAviso?.(que === 'listo' ? 'Micro activado. Ya puedes grabar: mantén pulsado el micro (o tócalo).' : 'Mantén pulsado el micro mientras hablas (o tócalo y habla).');
       return;
@@ -130,7 +134,13 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     x.stream = stream;
     const f = formatoGrabacion((t) => globalThis.MediaRecorder.isTypeSupported(t));
     let rec;
-    try { rec = new globalThis.MediaRecorder(stream, { mimeType: f.grabar, audioBitsPerSecond: 32000 }); } catch (e) { soltarMicro(); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
+    // (v0.180.1) si no acepta el formato o los 32 kbps, se prueba sin ellos antes de rendirse
+    let fallo = null;
+    for (const o of opcionesGrabadora(f.grabar)) { try { rec = new globalThis.MediaRecorder(stream, o); break; } catch (e) { fallo = e; } }
+    if (!rec) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(fallo)); return; }
+    // El formato de verdad es el que diga la grabadora (si lo eligió ella)
+    const real = tipoAudio(rec.mimeType);
+    if (real) { f.tipo = real.tipo; f.ext = real.ext; }
     x.rec = rec; x.formato = f;
     // Los niveles, para la forma de onda (si no hay WebAudio, plana)
     try {
@@ -162,7 +172,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     rec.onerror = () => { if (r.current === x) { x.cortada = 'micro'; parar(); } };
     stream.getTracks().forEach((t) => { t.onended = () => { if (r.current === x && x.rec?.state !== 'inactive') { x.cortada = 'micro'; parar(); } }; });
     // (si el navegador no deja empezar, el micro se suelta y se dice)
-    try { rec.start(250); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
+    try { rec.start(250); } catch (e0) { try { rec.start(); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; } }
     x.desde = reloj();
     setEstado('grabando');
     try { sonandoAhora?.pause(); } catch { /* */ }   // (v0.180) lo que estuviera sonando se calla
@@ -388,14 +398,15 @@ export function ActivarMicro({ alCerrar, soloProbar = false }) {
   const [pico, setPico] = useState(0);
   const [error, setError] = useState(null);
   const x = useRef({});
-  const soltar = () => { const y = x.current; clearInterval(y.tic); clearTimeout(y.fin); try { y.stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ } try { y.ctx?.close(); } catch { /* */ } x.current = {}; };
+  const soltar = () => { const y = x.current; clearInterval(y.tic); clearTimeout(y.fin); try { y.stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ } if (y.stream) audioParaMicro(false); try { y.ctx?.close(); } catch { /* */ } x.current = {}; };
   useEffect(() => soltar, []);
   async function activar() {
     if (!navigator.mediaDevices?.getUserMedia) { setError(errorMicro({ name: globalThis.isSecureContext === false ? 'SinContexto' : 'NoSoportado' })); setFase('fallo'); return; }
     setFase('pidiendo'); setError(null);
     let stream;
+    audioParaMicro(true);
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { if (esPermisoDenegado(e)) { recordarMicro(false); setFase('bloqueado'); } else { setError(errorMicro(e)); setFase('fallo'); } return; }
+    catch (e) { audioParaMicro(false); if (esPermisoDenegado(e)) { recordarMicro(false); setFase('bloqueado'); } else { setError(errorMicro(e)); setFase('fallo'); } return; }
     recordarMicro(true);
     const y = x.current = { stream, pico: 0 };
     try {

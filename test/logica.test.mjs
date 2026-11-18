@@ -2683,6 +2683,20 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     'la forma de onda: de 8 a 64 barras de 0 a 100 (lo más alto, al 100)');
   check(V.gestoVoz(-130, 0) === 'cancelar' && V.gestoVoz(0, -90) === 'bloquear' && V.gestoVoz(-20, -20) === null && V.gestoVoz(-120, -100) === 'cancelar', 'deslizar a la izquierda cancela; hacia arriba, sigue grabando sin el dedo');
   check(V.siguienteVelocidad(1) === 1.5 && V.siguienteVelocidad(1.5) === 2 && V.siguienteVelocidad(2) === 1 && V.textoVelocidad(1.5) === '1,5×', '1× → 1,5× → 2×');
+  // (v0.180.1) el fallo desconocido dice su nombre; el micro que no arranca, qué hacer; y la grabadora se prueba de tres formas
+  check(V.errorMicro({ name: 'NotSupportedError', message: 'mimeType is not supported' }) === 'No se ha podido grabar la nota de voz (NotSupportedError: mimeType is not supported).' && V.errorMicro(null) === 'No se ha podido grabar la nota de voz.'
+    && /no ha arrancado/.test(V.errorMicro({ name: 'InvalidStateError' })) && JSON.stringify(V.opcionesGrabadora('audio/mp4')) === JSON.stringify([{ mimeType: 'audio/mp4', audioBitsPerSecond: 32000 }, { mimeType: 'audio/mp4' }, {}]) && V.opcionesGrabadora(null).length === 1,
+    'un fallo desconocido al grabar dice cuál es; y la grabadora se intenta con formato y calidad, solo con formato y a secas');
+  // (v0.180.2) en el iPhone, con el audio en «ambient» el micro no se abre: se pasa a grabar y se devuelve al soltar
+  {
+    const ses = { type: 'ambient' };
+    Object.defineProperty(globalThis.navigator, 'audioSession', { value: ses, configurable: true });
+    const { audioParaMicro } = await import('../web/src/ui/sonido.js');
+    audioParaMicro(true); const grabando = ses.type; audioParaMicro(true); audioParaMicro(false); const despues = ses.type;
+    ses.type = 'auto'; audioParaMicro(true); audioParaMicro(false); const auto = ses.type; audioParaMicro(false);
+    delete globalThis.navigator.audioSession;
+    check(grabando === 'play-and-record' && despues === 'ambient' && auto === 'auto', 'antes de pedir el micro el audio del iPhone pasa a «grabar» y, al soltarlo, vuelve a como estaba');
+  }
   check(/bloqueado/.test(V.errorMicro({ name: 'NotAllowedError' })) && /ningún micro/.test(V.errorMicro({ name: 'NotFoundError' })) && /navegador/.test(V.errorMicro({ name: 'NoSoportado' })) && /otra app/.test(V.errorMicro({ name: 'NotReadableError' })),
     'permiso denegado, sin micro, micro ocupado o sin grabación: cada uno con su mensaje claro');
   const nv = readFileSync(new URL('../web/src/ui/chat/NotaVoz.jsx', import.meta.url), 'utf8');
