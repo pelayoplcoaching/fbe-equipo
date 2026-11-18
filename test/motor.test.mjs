@@ -1,14 +1,19 @@
 // «Programar según FBE»: reglas, lectura, modelos, semana y la propuesta completa. Lógica pura.
 //   node test/motor.test.mjs
-import { REGLAS_FBE, PERFILES, resolverReglas, fusionar, limpiarReglas, modeloDe, esBasico, MODELOS_DISPONIBLES,
+import { REGLAS_FBE, PERFILES, resolverReglas as resolverReglasHoy, fusionar, limpiarReglas, modeloDe, esBasico, MODELOS_DISPONIBLES,
   leerEjercicio, tendencia, textoHecho, saltoDe, cumpleCriterio, SIN_DATOS,
   porSerie, topSet, estructuraTop, topPeaking, rangoDe, doble, triple, lineal, soloReps, campos, completoLineal, falloLineal, MODELO_BASE,
   aplicarDescarga, senalesDescarga, tramoVuelta, aplicarVuelta, aplicarMantenimiento, diasParado, esMalDia,
-  proponerSemana, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta,
+  proponerSemana as proponerSemanaHoy, cargaZona, entradaDesdeBloque, emparejar, pautasDeSemana, cambiosDePropuesta, diferencias, textoPauta,
   leerGuardadas, paraGuardar, paraElMotor, hayGuardadas, conReglasDeAtleta, conReglaDeEjercicio, reglasDeAtleta, reglaDeEjercicio, tieneRegla, resumenGuardadas, resumenRegla,
   notaDeSemana, claseParaNota, enumerar, registroDePropuesta, fusionarRegistro, leerRegistro, acuerdoDeRegistro, textoAcuerdo, acuerdoDeCopia, textoAcuerdoDeCopia, pautaCompacta,
-  compararVolumen, pautasConPropuestas, sombraDeCopia, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
+  compararVolumen, pautasConPropuestas, sombraDeCopia as sombraDeCopiaHoy, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
 
+// (v0.182) Las pruebas anteriores a la regla por RPE pasan la regla clasica en la capa FBE
+const CLASICA = { porSerie: { regla: 'clasica' } };
+const resolverReglas = (o = {}) => resolverReglasHoy({ ...o, fbe: fusionar(CLASICA, o.fbe) });
+const sombraDeCopia = (c, o = {}) => sombraDeCopiaHoy(c, { ...o, reglas: { ...(o.reglas || {}), fbe: fusionar(CLASICA, o.reglas?.fbe) } });
+const proponerSemana = (e = {}) => proponerSemanaHoy({ ...e, reglas: { ...(e.reglas || {}), fbe: fusionar(CLASICA, e.reglas?.fbe) } });
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
 const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -18,7 +23,8 @@ const congelar = (o) => { if (o && typeof o === 'object' && !Object.isFrozen(o))
 const P = (extra = {}) => ({ id: 'p1', sesion_id: 's1', ejercicio_id: 'banca', orden: 1, prioridad: 'alta', series: 3, reps_min: 8, reps_max: 12,
   rir_objetivo: null, rpe_objetivo: 8, carga_sugerida_kg: 80, backoff_pct: null, series_detalle: null, ...extra });
 const S = (numero, kg, reps, rpe = null, extra = {}) => ({ numero, kg, reps, rpe, rir: null, ...extra });
-const R = REGLAS_FBE;
+// (v0.182) Todo lo de este archivo anterior a la regla por RPE se prueba con la regla clasica (la del 5/11); la nueva, al final
+const R = fusionar(REGLAS_FBE, { porSerie: { regla: 'clasica' } });
 const conReglas = (capa) => fusionar(R, capa);
 const leer = (pauta, series, extra = {}) => leerEjercicio({ pauta, series, nombre: 'Press banca', reglas: R, ...extra });
 
@@ -1031,4 +1037,40 @@ if (fallos) process.exit(1);
   check(tb.length === 4 && tb[0].pautado === '100 kg × 5 reps @8' && tb[1].pautado === '−10 % × 5 reps @8' && tb[3].pautado === null && tb[3].hizo === '80 kg × 5 reps' && tb.every((x) => x.propuesta === null && !x.cambia),
     'con top + back-off las de apoyo llevan su %; una serie de más sale en su fila; sin propuesta, nada cambia');
   check(seriesDePauta(null).length === 0 && seriesEnFilas().length === 0, 'sin pauta no hay filas');
+}
+
+// ---------- (v0.182) la regla por RPE y zona del rango, los rangos por tipo y prioridad y kilos para todos ----------
+{
+  const RN = resolverReglasHoy({});
+  const banca = { nombre: 'Press banca', tipo: ['basico'], grupos_musculares: ['pectoral'] }, hip = { nombre: 'Hip thrust', tipo: ['basico'], grupos_musculares: ['gluteo'] };
+  const jalon = { nombre: 'Jalón al pecho', tipo: ['multiarticular'], grupos_musculares: ['espalda'] }, prensa = { nombre: 'Prensa', tipo: ['multiarticular'], grupos_musculares: ['cuadriceps'] };
+  const lat = { nombre: 'Elevaciones laterales con mancuernas', tipo: ['aislamiento'], grupos_musculares: ['deltoides'] };
+  const run = (ej, pauta, series, extra = {}) => porSerie(leerEjercicio({ pauta, series, nombre: ej.nombre, reglas: extra.reglas || RN }), pauta, { nombre: ej.nombre, reglas: extra.reglas || RN, ejercicio: ej, nivel: extra.nivel ?? 'intermedio', ...extra });
+  const f = (r) => r.propuesta.series_detalle ? r.propuesta.series_detalle.map((x) => `${x.reps}×${x.kg ?? '-'}`).join(' ') : 'igual';
+  check(RN.porSerie.regla === 'rpe' && igual(rangoDe({ pauta: P({ prioridad: 'alta', reps_min: 3, reps_max: 5 }), ejercicio: banca, reglas: RN }), [6, 10]) && igual(rangoDe({ pauta: P({ prioridad: 'muy_baja' }), ejercicio: banca, reglas: RN }), [8, 12])
+    && igual(rangoDe({ pauta: P({ prioridad: 'baja' }), ejercicio: jalon, reglas: RN }), [10, 15]) && igual(rangoDe({ pauta: P(), ejercicio: hip, reglas: RN }), [8, 12])
+    && igual(rangoDe({ pauta: P(), ejercicio: banca, reglas: fusionar(RN, { porSerie: { rangos: { basico: [5, 8] } } }) }), [5, 8]) && igual(rangoDe({ pauta: P(), ejercicio: hip, reglas: fusionar(RN, { porSerie: { rango: [10, 15] } }) }), [10, 15]),
+    'el rango sale de la tabla (tipo × prioridad) y manda sobre el de la pauta; el hip thrust, 8–12; antes, la regla del ejercicio y los rangos del atleta');
+  const p4 = P({ series: 4, reps_min: 6, reps_max: 10, carga_sugerida_kg: 35 });
+  const a = run(banca, p4, [S(1, 35, 10, 7), S(2, 35, 10, 8), S(3, 35, 10, 8), S(4, 35, 10, 8)]);
+  check(a.tipo === 'subir' && f(a) === '8×37.5 7×37.5 7×37.5 7×37.5', 'al tope a RPE 7–8: sube un salto y las repeticiones se calculan (35 × 10 → 37,5 × 8 o 7), no al mínimo');
+  check(f(run(banca, p4, [S(1, 35, 10, 9), S(2, 35, 8, 8)])).startsWith('6×37.5 9×35'), 'a RPE 9 en el tope: sube y baja al mínimo del rango; en rango a RPE 8, una repetición más');
+  check(f(run(hip, P({ series: 2, carga_sugerida_kg: 107.5 }), [S(1, 107.5, 12, 6), S(2, 107.5, 12, 6)])) === '12×110 12×110', 'con carga alta y RPE 6: un solo salto con las mismas repeticiones (nunca dos saltos)');
+  check(f(run(banca, p4, [S(1, 35, 8, 8, { rpe: null }), S(2, 35, 8, 10), S(3, 35, 8, 9.5), S(4, 35, 7, 9)])) === '8×35 7×35 8×35 8×35', 'sin RPE, igual; a RPE 10, una repetición menos; a 9,5, igual; a 9 en rango, una más');
+  const d = run(jalon, P({ series: 3, prioridad: 'media', carga_sugerida_kg: 60 }), [S(1, 60, 10, 8.5), S(2, 60, 10, 8.5), S(3, 60, 10, 8)]);
+  check(f(d) === '11×60 10×60 11×60' && /espera a la primera/.test(d.motivo), 'varias series a RPE 8,5 o más: solo progresa la primera; las más fáciles siguen por su cuenta');
+  check(f(run(prensa, P({ series: 2, prioridad: 'media', carga_sugerida_kg: 100 }), [S(1, 100, 8, 7.5), S(2, 100, 8, 7.5)])) === '8×102.5 8×102.5'
+    && f(run(banca, P({ series: 2, reps_min: 6, reps_max: 10, carga_sugerida_kg: 60 }), [S(1, 60, 9, 7.5), S(2, 60, 9, 7.5)])) === 'igual'
+    && f(run(jalon, P({ series: 2, prioridad: 'media', carga_sugerida_kg: 60 }), [S(1, 60, 8, 7), S(2, 60, 10, 7)])) === '9×60 9×62.5',
+    'a RPE 7–7,5: en pierna sube de kilos en cualquier parte del rango; en empuje, solo en el tope; en el resto, en la parte alta');
+  const top = run(banca, P({ series: 3, reps_min: 6, reps_max: 10, carga_sugerida_kg: null }), [S(1, 97.5, 7, 8), S(2, 92.5, 8, 8.5), S(3, 87.5, 8, 8)]);
+  check(f(top) === '6×100 9×92.5 9×87.5', 'la serie pesada de un Obligatorio sube kilos antes que repeticiones (97,5 × 7 a RPE 8 → 100 × 6); y se escriben kilos aunque la pauta no los llevara');
+  const l = run(lat, P({ series: 2, prioridad: 'baja', carga_sugerida_kg: 6 }), [S(1, 6, 15, 7), S(2, 6, 16, 7)]);
+  check(f(l) === '16×6 17×6' && l.alternativas[0].id === 'subir_carga' && l.alternativas[0].propuesta.series_detalle[0].kg === 8.5 && f(run(lat, P({ series: 1, prioridad: 'baja', carga_sugerida_kg: 6 }), [S(1, 6, 17, 7)])).endsWith('×8.5'),
+    'carga baja (el salto pesa más del 10 %): sigue con repeticiones hasta dos por encima del tope, con la alternativa «Subir carga»; después, sube');
+  const av = run(jalon, P({ series: 2, prioridad: 'baja', carga_sugerida_kg: null, rpe_objetivo: 9 }), [S(1, 40, 12, 9.5), S(2, 40, 12, 9.5)], { nivel: 'avanzado' });
+  check(f(av) === '12×40 12×40' && av.propuesta.carga_sugerida_kg === 40, 'a un avanzado también se le escriben los kilos que movió, aunque nada progrese');
+  check(f(run(banca, p4, [S(1, 35, 10, 7)], { nivel: 'novato' })).startsWith('7×37.5'), 'el novato baja una repetición más que el cálculo');
+  const clasica = run(banca, p4, [S(1, 35, 10, 7), S(2, 35, 10, 8), S(3, 35, 10, 8), S(4, 35, 10, 8)], { reglas: R });
+  check(f(clasica) === '6×37.5 6×37.5 6×37.5 6×37.5', 'la regla clásica sigue disponible (al tope, sube y vuelve al suelo)');
 }
