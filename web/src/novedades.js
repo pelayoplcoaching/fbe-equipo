@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.181': {
+    coach: [
+      'Programar según FBE: lo pautado, lo que hizo y la propuesta, una serie por fila y con unidades (60 kg × 8 reps @8).',
+      'La carga sube de 2,5 en 2,5 kg en todo. Las mancuernas de su gimnasio y el salto de un ejercicio se cambian en la hoja.',
+    ],
+  },
   '0.180': {
     atleta: [
       'En Ajustes › Mensajes puedes activar y probar el micro con un botón, y ver si está activado o bloqueado.',

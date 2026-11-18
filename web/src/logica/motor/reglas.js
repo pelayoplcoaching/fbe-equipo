@@ -63,8 +63,9 @@ export const REGLAS_FBE = Object.freeze({
       maxPct: 10,          // tope de subida de kilos de una semana a otra
     },
   },
-  // Salto de carga: el del ejercicio (2,5 kg barra, 2 kg mancuernas, 2,5 o 5 kg máquinas), unos kilos fijos o un %
-  salto: { tipo: 'ejercicio', valor: null },
+  // Salto de carga: 2,5 kg de partida, unos kilos fijos (regla propia del ejercicio) o un %
+  // (v0.181) De partida 2,5 kg en todo; `mancuernas` (regla del atleta): el salto de las de su gimnasio
+  salto: { tipo: 'ejercicio', valor: null, mancuernas: null },
   doble: {
     criterio: 'todas_menos_una', // cuándo sube: ver CRITERIOS_SUBIDA
     margen: 0.5,                 // puntos de RPE por encima del objetivo que aún valen como «sin pasarse»
@@ -156,7 +157,7 @@ const IDS_MODELO = MODELOS.map(([k]) => k);
 const ESQUEMA = {
   modelos: { basico: UNO_DE(IDS_MODELO), resto: UNO_DE(IDS_MODELO) },
   modelo: UNO_DE(IDS_MODELO),
-  salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20) },
+  salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20), mancuernas: UNO_DE([1, 2, 2.5]) },
   porSerie: { rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), bajaAlSubir: UNO_DE([1, 2, 3, 4]), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
   topSet: { detectar: (v) => typeof v === 'boolean', backoff: UNO_DE(['faciles', 'solas', 'igual']), backoffFacilRpe: NUM(5, 8.5), rpeSube: NUM(6, 10),
     rango: (r) => Array.isArray(r) && r.length === 2 && r.every((x) => Number.isInteger(x) && x >= 1 && x <= 50) && r[0] <= r[1] },

@@ -71,8 +71,8 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     const filas = await hoja.locator('.carga-sug').count();
     check(filas >= 4 && /Programar la semana \d+ según FBE/.test(await hoja.textContent()), `la hoja enseña la propuesta ejercicio a ejercicio (${filas} filas)`);
     const texto = await hoja.textContent();
-    check(/Hizo: /.test(texto) && /Confianza (alta|media|baja)/.test(texto) && /sigue en borrador/.test(texto), 'cada fila trae lo que hizo y la confianza, y la hoja dice que la semana sigue en borrador');
-    check(await hoja.locator('.carga-sug input[type=checkbox]').count() >= 1 && /→/.test(texto), 'las filas que cambian se pueden marcar y enseñan el antes y el después');
+    check(await hoja.locator('table.fbe-series').count() >= 1 && /\d kg × \d+ reps @\d/.test(await hoja.locator('table.fbe-series td.hizo').first().textContent()) && /Pautado \(sem\. \d+\)/.test(texto) && /Propuesta \(sem\. \d+\)/.test(texto) && /Sus reglas aquí: de \d+ a \d+ repeticiones · sube de 2,5 kg en 2,5 kg/.test(texto) && /Confianza (alta|media|baja)/.test(texto) && /sigue en borrador/.test(texto), 'cada fila trae lo pautado, lo que hizo y lo propuesto serie a serie y con unidades, sus reglas y la confianza, y la hoja dice que la semana sigue en borrador');
+    check(await hoja.locator('.carga-sug input[type=checkbox]').count() >= 1 && await hoja.locator('table.fbe-series td.cambia').count() >= 1, 'las filas que cambian se pueden marcar y enseñan el antes y el después');
     await foto('fbe-1-hoja-escritorio');
     await revisar('hoja-escritorio');
 
@@ -108,6 +108,14 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(await reglas.getByLabel('Al llegar al tope y subir de kilos').inputValue() === '2' && await reglas.getByLabel('Serie top: máximo de repeticiones').inputValue() === '8' && await reglas.getByRole('checkbox', { name: /Sin descarga por señales/ }).isChecked(), 'y al volver a abrir, siguen puestas');
     await reglas.getByRole('button', { name: 'Volver a las de partida', exact: true }).click();
     check(await hay(reglas.getByText(/Las de partida para su nivel/), 1) && await suben() === subenAntes, 'y se quitan con «Volver a las de partida»');
+    // (v0.181) las mancuernas de su gimnasio: una regla del atleta, a la vista
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await reglas.getByLabel('Mancuernas de su gimnasio').selectOption({ label: 'Suben de 2 en 2 kg' });
+    await reglas.getByRole('button', { name: 'Guardar reglas', exact: true }).click();
+    check(await hay(reglas.getByText('Mancuernas de 2 en 2 kg.'), 1), 'el salto de las mancuernas de su gimnasio se guarda en las reglas del atleta');
+    await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
+    await reglas.getByRole('button', { name: 'Volver a las de partida', exact: true }).click();
+    await reglas.getByText(/Las de partida para su nivel/).waitFor();
 
     // Regla propia de un ejercicio: se pone en su fila, cambia solo esa fila y sigue ahí al volver a abrir la hoja
     const filaSube = hoja.locator('.carga-sug', { has: p.locator('.chip', { hasText: /^Sube kilos$/ }) }).first();

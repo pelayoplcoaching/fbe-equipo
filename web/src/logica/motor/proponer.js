@@ -12,8 +12,8 @@
 //   contexto   { checkins, molestias, carga: { ratio }, diasSinEntrenar, focoAnterior, focoSiguiente, semanasDesdeDescarga }
 import { seriesPautadasPorGrupo, rangoVolumen, esBarra, NOMBRE_ZONA } from '../calculos.js';
 import { resolverReglas, fusionar, modeloDe, esBasico, NOMBRE_MODELO } from './reglas.js';
-import { leerEjercicio, tendencia, SIN_DATOS } from './lectura.js';
-import { MODELO, CAMPOS, campos, falloLineal } from './modelos.js';
+import { leerEjercicio, tendencia, saltoDe, SIN_DATOS } from './lectura.js';
+import { MODELO, CAMPOS, campos, falloLineal, rangoDe } from './modelos.js';
 import { compararVolumen } from './volumen.js';
 import { senalesDescarga, aplicarDescarga, motivoDescarga, tramoVuelta, aplicarVuelta, motivoVuelta, aplicarMantenimiento, esMalDia, NOMBRE_DESCARGA } from './semana.js';
 
@@ -106,7 +106,9 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
     const frenos = [];
     const fila = { pauta_id: p.id, sesion_id: p.sesion_id, ejercicio_id: p.ejercicio_id, ejercicio: nombre, prioridad: p.prioridad || 'media',
       modelo, ...(pendiente ? { modeloPedido: pedido } : {}), diagnostico: l.diagnostico, banderas: l.banderas, hecho: l.texto,
-      tendencia: tendencia([...lecturas.map((x) => x.e1rm), l.e1rm], R), antes: campos(p) };
+      tendencia: tendencia([...lecturas.map((x) => x.e1rm), l.e1rm], R), antes: campos(p),
+      // (v0.181) las reglas que valen de verdad para este ejercicio, para ensenarlas en su fila
+      regla: { rango: [...rangoDe({ pauta: pautaBase, ejercicio: ej, reglas: R })], salto: saltoDe(nombre, l.kgTrabajo > 0 ? l.kgTrabajo : Number(pautaBase.carga_sugerida_kg) || 0, R) } };
 
     let r;
     if (modelo === 'a_mano') r = MODELO.a_mano(l, p);

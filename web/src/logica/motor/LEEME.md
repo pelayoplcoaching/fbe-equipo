@@ -42,6 +42,21 @@ const { filas, semana, descarga } = proponerSemana({
 Cada fila trae `antes`, `propuesta`, `cambios`, `tipo`, `motivo`, `confianza` (alta, media o baja), `frenos`, `avisos` y
 hasta dos `alternativas`. `descarga` trae las señales y, si hay alguna, la versión de descarga de toda la semana.
 
+## Puesta a punto, primera pasada (v0.181, 18/11/2026)
+
+Decisiones de Pelayo: el salto de carga es de 2,5 kg en todo (`SALTO_FBE`; ya no se adivina por el nombre: ni 2 kg en
+mancuernas ni 5 kg en máquinas desde 50 kg). Las mancuernas del gimnasio del atleta son una regla suya
+(`atleta.salto.mancuernas`: 2 o 1) y el salto propio de un ejercicio sigue en `porEjercicio.<id>.salto`. Nunca más de un
+salto de golpe. Cada fila trae `regla: { rango, salto }` (lo que vale de verdad para ese ejercicio) y la hoja enseña lo
+pautado, lo que hizo y la propuesta serie a serie (`seriesEnFilas`, `textoSerieFBE` en `adaptador.js`).
+
+Acordado para la segunda pasada (sin hacer): regla por RPE y zona del rango (6–6,5 sube; 7–7,5 sube en la parte alta;
+8–8,5 solo en el tope; 9 en el tope sube y baja al mínimo; 9,5 igual; 10 una repetición menos), repeticiones al subir
+calculadas según lo que pesa el salto sobre la carga (novatos, una menos), pierna medio punto antes y empuje medio punto
+después, cargas bajas (salto de más del 10 %) siguen con repeticiones hasta dos por encima del tope con botón para subir,
+sin RPE apuntado se queda igual, rangos por tipo y prioridad (manda la tabla sobre el rango de la pauta) y kilos para
+todos los niveles.
+
 ## Reglas propias de cada atleta (16/11/2026)
 
 Cada atleta puede llevar, además del perfil, los rangos y el RPE, tres reglas más (se editan en «Reglas de este atleta» y
@@ -230,7 +245,7 @@ repeticiones; antes se quedaba igual, como las series con kilos de intensificaci
 node test/motor.test.mjs
 ```
 
-334 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
+348 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
 la base (series 1–20, RPE 1–10, rango ordenado, detalle válido), los ejercicios «a mano» no se tocan y la misma entrada
 da siempre la misma salida.
 

@@ -31,15 +31,17 @@ export const PERFILES_ELEGIBLES = [
 export const VALORES_RPE_SUBE = [7, 7.5, 8, 8.5, 9, 9.5, 10];
 // Al subir de kilos en el tope del rango: cuántas repeticiones baja ('' = vuelve al mínimo)
 export const VALORES_BAJA = [1, 2, 3, 4];
+// (v0.181) El salto de las mancuernas del gimnasio del atleta, si no es el de partida (2,5 kg)
+export const VALORES_MANCUERNAS = [2, 1];
 export const VACIAS = Object.freeze({ perfil: null, atleta: {}, porEjercicio: {} });
 
 const esObjeto = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 
 // De una capa cualquiera, solo lo que se edita por atleta (rpeSube y rangos por tipo)
 function capaAtleta(capa, descartado, donde = 'atleta') {
-  const { reglas, descartado: mal } = limpiarReglas(esObjeto(capa) ? { porSerie: capa.porSerie, topSet: capa.topSet, descarga: capa.descarga } : {});
+  const { reglas, descartado: mal } = limpiarReglas(esObjeto(capa) ? { porSerie: capa.porSerie, topSet: capa.topSet, descarga: capa.descarga, salto: capa.salto } : {});
   mal.forEach((x) => descartado.push(`${donde}.${x}`));
-  if (esObjeto(capa)) Object.keys(capa).filter((k) => !['porSerie', 'topSet', 'descarga'].includes(k)).forEach((k) => descartado.push(`${donde}.${k}`));
+  if (esObjeto(capa)) Object.keys(capa).filter((k) => !['porSerie', 'topSet', 'descarga', 'salto'].includes(k)).forEach((k) => descartado.push(`${donde}.${k}`));
   const p = reglas.porSerie || {}, out = {}, fin = {};
   if (p.rpeSube != null) out.rpeSube = p.rpeSube;
   if (p.rangos) out.rangos = p.rangos;
@@ -54,6 +56,9 @@ function capaAtleta(capa, descartado, donde = 'atleta') {
   if (Object.keys(top).length) fin.topSet = top;
   if (reglas.descarga?.cuando === 'manual') fin.descarga = { cuando: 'manual' };
   else if (esObjeto(capa) && capa.descarga != null) descartado.push(`${donde}.descarga`);
+  // (v0.181) del salto, por atleta, solo el de las mancuernas de su gimnasio (2,5 es el de partida: no se guarda)
+  if (VALORES_MANCUERNAS.includes(reglas.salto?.mancuernas)) fin.salto = { mancuernas: reglas.salto.mancuernas };
+  else if (esObjeto(capa) && capa.salto != null && capa.salto.mancuernas !== 2.5) descartado.push(`${donde}.salto`);
   return fin;
 }
 
@@ -122,12 +127,12 @@ const rangoDeTexto = (min, max) => {
 export function reglasDeAtleta(g) {
   const p = g?.atleta?.porSerie || {};
   return { perfil: g?.perfil || null, rpeSube: p.rpeSube ?? null, rangos: Object.fromEntries(TIPOS_RANGO.map(([t]) => [t, p.rangos?.[t] || null])),
-    bajaAlSubir: p.bajaAlSubir ?? null, rangoTop: g?.atleta?.topSet?.rango || null, rpeSubeTop: g?.atleta?.topSet?.rpeSube ?? null, sinDescarga: g?.atleta?.descarga?.cuando === 'manual' };
+    bajaAlSubir: p.bajaAlSubir ?? null, rangoTop: g?.atleta?.topSet?.rango || null, rpeSubeTop: g?.atleta?.topSet?.rpeSube ?? null, sinDescarga: g?.atleta?.descarga?.cuando === 'manual', mancuernas: g?.atleta?.salto?.mancuernas ?? null };
 }
 
 // Pone las reglas del atleta a partir del formulario. rangos: { basico: ['5', '8'], … } con textos (vacío = el de siempre).
 // Devuelve { guardadas } o { errores: ['Básicos: …'] }.
-export function conReglasDeAtleta(g, { perfil = null, rpeSube = null, rangos = {}, bajaAlSubir = null, rangoTop = [], rpeSubeTop = null, sinDescarga = false } = {}) {
+export function conReglasDeAtleta(g, { perfil = null, rpeSube = null, rangos = {}, bajaAlSubir = null, rangoTop = [], rpeSubeTop = null, sinDescarga = false, mancuernas = null } = {}) {
   const errores = [], rs = {};
   for (const [t, nombre] of TIPOS_RANGO) {
     const r = rangoDeTexto(rangos[t]?.[0], rangos[t]?.[1]);
@@ -143,10 +148,12 @@ export function conReglasDeAtleta(g, { perfil = null, rpeSube = null, rangos = {
   if (rt.error) errores.push('Serie top: el rango va de un mínimo a un máximo entre 1 y 50 repeticiones');
   const rpeTop = rpeSubeTop == null || rpeSubeTop === '' ? null : Number(rpeSubeTop);
   if (rpeTop != null && !VALORES_RPE_SUBE.includes(rpeTop)) errores.push('El RPE de la serie top tiene que ser uno de la lista');
+  const man = mancuernas == null || mancuernas === '' ? null : Number(mancuernas);
+  if (man != null && !VALORES_MANCUERNAS.includes(man)) errores.push('Las mancuernas suben de 2,5, de 2 o de 1 kg');
   if (errores.length) return { errores };
   const porSerie = { ...(rpe != null ? { rpeSube: rpe } : {}), ...(Object.keys(rs).length ? { rangos: rs } : {}), ...(baja != null ? { bajaAlSubir: baja } : {}) };
   const topSet = { ...(rt.rango ? { rango: rt.rango } : {}), ...(rpeTop != null ? { rpeSube: rpeTop } : {}) };
-  const atleta = { ...(Object.keys(porSerie).length ? { porSerie } : {}), ...(Object.keys(topSet).length ? { topSet } : {}), ...(sinDescarga ? { descarga: { cuando: 'manual' } } : {}) };
+  const atleta = { ...(Object.keys(porSerie).length ? { porSerie } : {}), ...(Object.keys(topSet).length ? { topSet } : {}), ...(sinDescarga ? { descarga: { cuando: 'manual' } } : {}), ...(man != null ? { salto: { mancuernas: man } } : {}) };
   return { guardadas: { perfil: perfil || null, atleta, porEjercicio: { ...(g?.porEjercicio || {}) } } };
 }
 
@@ -190,6 +197,7 @@ export function resumenGuardadas(g) {
   if (a.rangoTop) partes.push(`serie top ${a.rangoTop[0]}–${a.rangoTop[1]}`);
   if (a.rpeSubeTop != null) partes.push(`la top suma hasta RPE ${num(a.rpeSubeTop)}`);
   if (a.sinDescarga) partes.push('sin descarga por señales');
+  if (a.mancuernas != null) partes.push(`mancuernas de ${num(a.mancuernas)} en ${num(a.mancuernas)} kg`);
   const n = Object.keys(g.porEjercicio || {}).length;
   if (n) partes.push(`${n} ${n === 1 ? 'ejercicio con regla propia' : 'ejercicios con regla propia'}`);
   const texto = partes.join(' · ');

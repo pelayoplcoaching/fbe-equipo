@@ -4894,3 +4894,13 @@ body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
 .voz.nueva .voz-play { background: var(--morado); color: var(--sobre-morado); }
 .voz.nueva .voz-onda span { background: var(--morado); }
 @media (prefers-reduced-motion: no-preference) { .micro-medidor span { transition: transform var(--mov-rapido) linear; } }
+
+/* v0.181: Programar segun FBE, serie a serie (pautado, hizo, propuesta), una fila por serie */
+.fbe-series-caja { overflow-x: auto; }
+.fbe-series { width: 100%; border-collapse: collapse; font-size: var(--letra-12-5); }
+.fbe-series th, .fbe-series td { text-align: left; padding: var(--esp-2) var(--esp-10) var(--esp-2) 0; vertical-align: top; }
+.fbe-series thead th { color: var(--tinta-3); font-weight: 600; border-bottom: var(--filo-fino) solid var(--linea); }
+.fbe-series tbody th { color: var(--tinta-3); font-weight: 600; width: 1%; }
+.fbe-series td { font-weight: 400; }
+.fbe-series td.hizo { color: var(--tinta); font-weight: 600; }
+.fbe-series td.cambia { color: var(--morado); font-weight: 700; }

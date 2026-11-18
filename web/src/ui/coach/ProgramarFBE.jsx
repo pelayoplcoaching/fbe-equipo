@@ -11,7 +11,7 @@ import { CabCoach } from './CabCoach.jsx';
 import { useApp, useCarga, Hoja, Icono, Cargando } from '../comunes.jsx';
 import { sumarDias, fmtCorta } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
-import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA,
+import { proponerSemana, entradaDesdeBloque, pautasDeSemana, emparejar, cambiosDePropuesta, diferencias, textoPauta, seriesEnFilas, esBasico, compararVolumen, pautasConPropuestas, NOMBRE_DESCARGA,
   leerGuardadas, paraGuardar, paraElMotor, tieneRegla, resumenRegla,
   notaDeSemana, claseParaNota, registroDePropuesta, fusionarRegistro, leerRegistro, acuerdoDeRegistro, textoAcuerdo } from '../../logica/motor/index.js';
 import { ReglasAtleta, ReglaEjercicio } from './ReglasFBE.jsx';
@@ -35,6 +35,29 @@ export function semanasParaProgramar(d, semana) {
     return { base: semana, destino: siguiente };
   }
   return null;
+}
+
+// (v0.181) Lo pautado, lo que hizo y lo propuesto, una serie por fila y siempre con unidades
+function TablaSeries({ filas, ejercicio, base, destino }) {
+  if (!filas.length) return <span class="mini secundario">Hizo: sin registrar</span>;
+  const hayPropuesta = filas.some((x) => x.propuesta);
+  return (
+    <div class="fbe-series-caja">
+      <table class="fbe-series num" aria-label={`${ejercicio}, serie a serie`}>
+        <thead><tr><th scope="col">Serie</th><th scope="col">Pautado (sem. {base})</th><th scope="col">Hizo</th>{hayPropuesta && <th scope="col">Propuesta (sem. {destino})</th>}</tr></thead>
+        <tbody>
+          {filas.map((x) => (
+            <tr key={x.n}>
+              <th scope="row">{x.n}</th>
+              <td class="secundario">{x.pautado || '–'}</td>
+              <td class="hizo">{x.hizo || 'sin hacer'}</td>
+              {hayPropuesta && <td class={x.cambia ? 'cambia' : ''}>{x.propuesta || '–'}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, alAplicar }) {
@@ -215,16 +238,19 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                             <span class={`chip ${cConf}`} data-conf={f.confianza}>{tConf}</span>
                             {tieneRegla(guardadas, f.ejercicio_id) && <span class="chip morado">Regla propia</span>}
                           </span>
-                          <span class="mini secundario">Hizo: {f.hecho || 'sin registrar'}</span>
+                          {/* (v0.181) serie a serie, con unidades: lo pautado, lo que hizo y lo propuesto, una fila por serie */}
+                          <TablaSeries ejercicio={f.ejercicio} base={base.numero} destino={destino.numero}
+                            filas={seriesEnFilas({ pautada: f.antes, hechas: entrada.series[f.pauta_id], propuesta: actual ? propuesta : null })} />
                           {!actual ? <span class="mini secundario">Este ejercicio ya no está en la semana {destino.numero}: no se aplica.</span>
-                            : cambia ? <span class="peq"><span class="secundario">{textoPauta(actual)} →</span> <b class="num">{textoPauta(propuesta)}</b></span>
-                              : <span class="mini secundario">Sin cambios: {textoPauta(actual)}</span>}
+                            : !cambia ? <span class="mini secundario">Sin cambios: la semana {destino.numero} ya está así.</span>
+                              : diferencias(actual, f.antes).length > 0 ? <span class="mini secundario">Ojo: en la semana {destino.numero} este ejercicio ya no está como en la {base.numero} ({textoPauta(actual)}). Si lo marcas, se cambia por la propuesta.</span> : null}
                           <span class="mini secundario">{f.motivo}{f.orientativa != null ? ` (carga orientativa: ${String(f.orientativa).replace('.', ',')} kg)` : ''}</span>
                           {notas.length > 0 && <span class="fila-envolver" style="gap:6px">{notas.map((t) => <span key={t} class="chip aviso">{t}</span>)}</span>}
+                          {editando !== f.pauta_id && f.regla && <span class="mini secundario">Sus reglas aquí: de {f.regla.rango[0]} a {f.regla.rango[1]} repeticiones · sube de {num(f.regla.salto, 2)} kg en {num(f.regla.salto, 2)} kg.</span>}
                           {tieneRegla(guardadas, f.ejercicio_id) && editando !== f.pauta_id && <span class="mini secundario">Regla propia: {resumenRegla(guardadas, f.ejercicio_id)}.</span>}
                           {atleta?.id && (editando === f.pauta_id
-                            ? <ReglaEjercicio clave={f.pauta_id} ejercicioId={f.ejercicio_id} nombre={f.ejercicio} guardadas={guardadas} ocupado={ocupado} alGuardar={guardarReglas} alCerrar={() => setEditando(null)} />
-                            : <button type="button" class="btn-texto" style="justify-self:start;min-height:28px;padding-block:2px" aria-label={`${tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar la regla' : 'Poner una regla propia'} de ${f.ejercicio}`} onClick={() => setEditando(f.pauta_id)}>{tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar la regla' : 'Regla propia'}</button>)}
+                            ? <ReglaEjercicio clave={f.pauta_id} ejercicioId={f.ejercicio_id} nombre={f.ejercicio} atleta={contexto.datos?.nombre} efectiva={f.regla} guardadas={guardadas} ocupado={ocupado} alGuardar={guardarReglas} alCerrar={() => setEditando(null)} />
+                            : <button type="button" class="btn-texto" style="justify-self:start;min-height:28px;padding-block:2px" aria-label={`${tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar la regla' : 'Poner una regla propia'} de ${f.ejercicio}`} onClick={() => setEditando(f.pauta_id)}>{tieneRegla(guardadas, f.ejercicio_id) ? 'Cambiar su salto, rango o progresión' : 'Cambiar el salto de carga o el rango'}</button>)}
                           {actual && f.alternativas.length > 0 && (
                             <div class="selector-chips" role="group" aria-label={`Qué hacer con ${f.ejercicio}`}>
                               <button type="button" aria-pressed={!eleccion[f.pauta_id] ? 'true' : 'false'} onClick={() => setEleccion((e) => ({ ...e, [f.pauta_id]: null }))}>Propuesta</button>

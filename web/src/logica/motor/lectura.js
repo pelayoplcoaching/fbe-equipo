@@ -14,7 +14,7 @@
 //
 // Además, banderas que no cambian el diagnóstico pero sí la confianza: sin esfuerzo apuntado, trabajó con otra
 // carga que la pautada, series descartadas por raras y mal día.
-import { enReserva, e1rm, incrementoCarga, esTopBackoff, tieneDetalle, num } from '../calculos.js';
+import { enReserva, e1rm, esTopBackoff, tieneDetalle, num } from '../calculos.js';
 import { REGLAS_FBE } from './reglas.js';
 
 export const DIAGNOSTICOS = ['superado', 'sobrado', 'en_rango', 'por_debajo', 'pasado', 'a_medias', 'cambiado', 'sin_registrar', 'dato_raro', 'sin_rango'];
@@ -26,11 +26,16 @@ const repsDe = (s) => Number(s?.reps) || 0;
 const rpeDe = (s) => { const r = enReserva(s || {}); return r == null ? null : 10 - r; };
 
 // El salto de carga que vale para estas reglas
+export const SALTO_FBE = 2.5;
+export const ES_MANCUERNA = /mancuerna|b\u00falgara|bulgara|kettlebell/i;
 export function saltoDe(nombre, kg, reglas = REGLAS_FBE) {
   const s = reglas.salto || {};
   if (s.tipo === 'kg' && Number(s.valor) > 0) return Number(s.valor);
   if (s.tipo === 'pct' && Number(s.valor) > 0 && Number(kg) > 0) return Math.max(0.5, Math.round((Number(kg) * Number(s.valor)) / 100 * 2) / 2);
-  return incrementoCarga(nombre, kg);
+  // (v0.181, decision de Pelayo del 18/11/2026) De partida, 2,5 kg en todo: ya no se adivina por el nombre del
+  // ejercicio. Las mancuernas del gimnasio del atleta pueden ir de 2 en 2 (o de 1 en 1): regla del atleta.
+  if (Number(s.mancuernas) > 0 && ES_MANCUERNA.test(nombre || '')) return Number(s.mancuernas);
+  return SALTO_FBE;
 }
 
 // Repeticiones en reserva que pide la pauta (o la serie pautada): RIR si lo hay; si no, 10 − RPE; si no, null

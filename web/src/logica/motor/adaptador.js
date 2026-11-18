@@ -2,7 +2,7 @@
 // se guarda. Lógica pura: no lee ni escribe nada.
 //   d: lo que devuelve api.bloqueCompleto → { bloque, semanas, sesiones: { semana_id: [] }, pautas: { sesion_id: [] },
 //      series: { pauta_id: [] } }
-import { num, cargaSemanal, cambioCarga, tieneDetalle, esTopBackoff } from '../calculos.js';
+import { num, cargaSemanal, cambioCarga, tieneDetalle, esTopBackoff, enReserva } from '../calculos.js';
 import { hoyISO } from '../fechas.js';
 import { esMalDia, diasParado } from './semana.js';
 import { CAMPOS, campos } from './modelos.js';
@@ -98,4 +98,39 @@ export function textoPauta(p) {
   const series = esTopBackoff(p) ? `1 × ${reps} + ${p.series - 1} × −${num(p.backoff_pct)} %` : `${p.series} × ${reps}`;
   const esfuerzo = p.rir_objetivo != null ? `RIR ${num(p.rir_objetivo)}` : p.rpe_objetivo != null ? `RPE ${num(p.rpe_objetivo)}` : null;
   return [series, p.carga_sugerida_kg != null ? `${num(p.carga_sugerida_kg, 2)} kg` : null, esfuerzo].filter(Boolean).join(' · ');
+}
+
+// ---------- (v0.181) la hoja, serie a serie ----------
+// Una serie en texto, siempre con sus unidades: «60 kg × 8 reps @8». Sin kilos: «8 reps @8». null si no hay nada.
+export function textoSerieFBE(x) {
+  if (!x) return null;
+  const reps = x.reps != null && x.reps !== '' ? `${x.reps} ${String(x.reps) === '1' ? 'rep' : 'reps'}` : null;
+  const kg = x.kg != null && Number(x.kg) > 0 ? `${num(x.kg, 2)} kg` : null;
+  const cuerpo = [kg, reps].filter(Boolean).join(' × ');
+  const rpe = x.rpe != null ? `@${num(x.rpe)}` : null;
+  return [cuerpo, rpe].filter(Boolean).join(' ') || null;
+}
+// Las series de una pauta, una a una: [{ kg, reps, rpe }]. Con rango, reps es «8–12»; las back-off de un
+// «top + back-off» llevan su % en vez de kilos (`pct`).
+export function seriesDePauta(p) {
+  if (!p) return [];
+  const rpeDe = (x) => (x?.rpe != null ? Number(x.rpe) : p.rir_objetivo != null ? Math.max(1, 10 - Number(p.rir_objetivo)) : p.rpe_objetivo != null ? Number(p.rpe_objetivo) : null);
+  if (tieneDetalle(p)) return p.series_detalle.map((x) => ({ kg: x.kg ?? null, reps: x.reps ?? null, rpe: rpeDe(x) }));
+  const reps = p.reps_min != null && p.reps_max != null && Number(p.reps_min) !== Number(p.reps_max) ? `${p.reps_min}\u2013${p.reps_max}` : p.reps_max ?? p.reps_min ?? null;
+  const top = esTopBackoff(p);
+  return Array.from({ length: Math.max(0, Number(p.series) || 0) }, (_, i) => ({ kg: top && i > 0 ? null : p.carga_sugerida_kg ?? null, reps, rpe: rpeDe(null), ...(top && i > 0 ? { pct: Number(p.backoff_pct) } : {}) }));
+}
+// Lo pautado, lo que hizo y lo propuesto, serie a serie: [{ n, pautado, hizo, propuesta, cambia }] (cada uno, el texto
+// de textoSerieFBE o null). `cambia`: la propuesta de esa serie no es lo que estaba pautado.
+export function seriesEnFilas({ pautada = null, hechas = [], propuesta = null } = {}) {
+  const a = seriesDePauta(pautada), c = seriesDePauta(propuesta);
+  const h = Object.fromEntries((hechas || []).filter((s) => s && s.numero != null).map((s) => [Number(s.numero), s]));
+  const n = Math.max(a.length, c.length, ...Object.keys(h).map(Number), 0);
+  const texto = (x) => (x ? (x.pct != null ? [`\u2212${num(x.pct)} %`, textoSerieFBE({ reps: x.reps, rpe: x.rpe })].filter(Boolean).join(' \u00d7 ') : textoSerieFBE(x)) : null);
+  return Array.from({ length: n }, (_, i) => {
+    const s = h[i + 1] || null, reserva = s ? enReserva(s) : null;
+    const hizo = s && (s.reps != null || s.kg != null) ? textoSerieFBE({ kg: s.kg, reps: s.reps, rpe: reserva == null ? null : 10 - reserva }) : null;
+    const pautado = texto(a[i]), prop = texto(c[i]);
+    return { n: i + 1, pautado, hizo, propuesta: prop, cambia: !!propuesta && prop !== pautado };
+  });
 }

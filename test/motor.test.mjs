@@ -86,14 +86,15 @@ console.log('\nLectura: banderas y datos raros');
   check(igual(rara.banderas.raras, [2]) && rara.hechas.length === 2 && rara.diagnostico === 'a_medias', 'una serie con 8 kg en vez de 80 se descarta y se marca');
   check(leer(P({ series: 1 }), [S(1, 800, 12, 8)]).diagnostico === 'dato_raro', 'si todo lo apuntado es raro: dato raro');
   check(leer(P(), [S(1, 80, 30, 8), S(2, 80, 12, 8), S(3, 80, 12, 8)]).banderas.raras.length === 1, 'más del doble del tope de repeticiones es raro');
-  const mancuerna = leerEjercicio({ pauta: P({ carga_sugerida_kg: 5 }), series: [S(1, 7, 12, 8), S(2, 7, 12, 8), S(3, 7, 12, 8)], nombre: 'Elevaciones laterales con mancuernas', reglas: R });
-  check(!mancuerna.banderas.raras.length && mancuerna.banderas.otraCarga === 2, 'con cargas ligeras, 2 kg más no es una errata');
+  const mancuerna = leerEjercicio({ pauta: P({ carga_sugerida_kg: 5 }), series: [S(1, 7.5, 12, 8), S(2, 7.5, 12, 8), S(3, 7.5, 12, 8)], nombre: 'Elevaciones laterales con mancuernas', reglas: R });
+  check(!mancuerna.banderas.raras.length && mancuerna.banderas.otraCarga === 2.5, 'con cargas ligeras, 2,5 kg más no es una errata');
   check(leer(P(), [S(1, 110, 8, 8), S(2, 110, 8, 8), S(3, 110, 8, 8)], { ultimaVez: 110 }).banderas.raras.length === 0, 'lejos de lo pautado pero igual que la última vez: no es raro');
   check(leer(P(), [S(1, 110, 8, 8), S(2, 110, 8, 8), S(3, 110, 8, 8)], { ultimaVez: 80 }).diagnostico === 'dato_raro', 'lejos de lo pautado y de la última vez: raro');
   check(leer(P({ carga_sugerida_kg: null }), [S(1, 0, 12, 8), S(2, null, 12, 8), S(3, 0, 11, 8)]).diagnostico === 'superado', 'peso corporal: sin kilos también se lee');
   check(leer(P(), [S(1, 80, 12, 8)], { malDia: true }).banderas.malDia, 'el mal día viaja en las banderas');
   check(textoHecho([S(1, 80, 12, 8), S(2, 80, 12, 8), S(3, 80, 11, 9)]) === '80 kg × 12, 12, 11 @8–9' && textoHecho([S(1, 0, 10)]) === '10 rep' && textoHecho([S(1, 80, 12), S(2, 75, 10)]) === '80×12 · 75×10', 'lo hecho, en una línea');
-  check(saltoDe('Press banca', 80, R) === 2.5 && saltoDe('Curl con mancuernas', 10, R) === 2 && saltoDe('x', 80, conReglas({ salto: { tipo: 'kg', valor: 1 } })) === 1 && saltoDe('x', 100, conReglas({ salto: { tipo: 'pct', valor: 2.5 } })) === 2.5, 'salto: el del ejercicio, kilos fijos o un %');
+  check(saltoDe('Press banca', 80, R) === 2.5 && saltoDe('Curl con mancuernas', 10, R) === 2.5 && saltoDe('Prensa', 120, R) === 2.5 && saltoDe('Curl con mancuernas', 10, conReglas({ salto: { mancuernas: 2 } })) === 2 && saltoDe('Press banca', 80, conReglas({ salto: { mancuernas: 2 } })) === 2.5
+    && saltoDe('Curl con mancuernas', 10, conReglas({ salto: { mancuernas: 2, tipo: 'kg', valor: 1 } })) === 1 && saltoDe('x', 80, conReglas({ salto: { tipo: 'kg', valor: 1 } })) === 1 && saltoDe('x', 100, conReglas({ salto: { tipo: 'pct', valor: 2.5 } })) === 2.5, 'salto: 2,5 kg de partida en todo (v0.181), el de las mancuernas del atleta, kilos fijos del ejercicio o un %');
   const c = { trabajo: [S(1, 80, 12), S(2, 80, 11), S(3, 80, 10)], n: 3, repsMin: 8, repsMax: 12 };
   check(cumpleCriterio('primera', c) && !cumpleCriterio('todas_menos_una', c) && cumpleCriterio('suma', c) && !cumpleCriterio('todas', c), 'los cuatro criterios de subida');
 }
@@ -137,11 +138,11 @@ console.log('\nModelo: progresión serie a serie');
   const a = ps(D(d3), [S(1, 60, 10, 8), S(2, 60, 10, 9), S(3, 60, 10, 9.5)]);
   check(a.tipo === 'reps' && forma(a) === '11×60 11×60 10×60' && a.motivo === 'Series 1 y 2: una repetición más · serie 3: igual (RPE por encima de 9)', 'RPE hasta 9: una repetición más; por encima, igual');
   const b = ps(D([{ reps: 12, kg: 60 }, { reps: 12, kg: 60 }, { reps: 11, kg: 60 }]), [S(1, 60, 12, 9), S(2, 60, 12, 9), S(3, 60, 11, 9)]);
-  check(b.tipo === 'subir' && forma(b) === '8×65 12×60 12×60' && b.motivo.startsWith('Serie 1: al tope (12), sube 5 kg y vuelve a 8 · serie 2: al tope (12) pero justa'), 'al tope: sube kilos y vuelve al suelo; de las justas, solo la primera');
-  check(forma(ps(D(d3), [S(1, 60, 12, 8), S(2, 60, 12, 8), S(3, 60, 12, 7.5)])) === '8×65 8×65 8×65', 'varias al tope y fáciles (RPE 8 o menos): suben todas');
-  check(forma(ps(D(d3), [S(1, 60, 12, 10), S(2, 60, 12, 10), S(3, 60, 12, 8)])) === '8×65 12×60 8×65', 'al tope sube aunque fuera a RPE 10 (la primera) y las fáciles');
-  check(forma(ps(D(d3), [S(1, 60, 12, 9), S(2, 60, 12, 9), S(3, 60, 12, 9)], multi, { reglas: conReglas({ porSerie: { variasAlTope: 'todas' } }) })) === '8×65 8×65 8×65'
-    && forma(ps(D(d3), [S(1, 60, 12, 7), S(2, 60, 12, 7), S(3, 60, 12, 7)], multi, { reglas: conReglas({ porSerie: { variasAlTope: 'primera' } }) })) === '8×65 12×60 12×60', 'las otras dos reglas para varias al tope');
+  check(b.tipo === 'subir' && forma(b) === '8×62.5 12×60 12×60' && b.motivo.startsWith('Serie 1: al tope (12), sube 2,5 kg y vuelve a 8 · serie 2: al tope (12) pero justa'), 'al tope: sube kilos y vuelve al suelo; de las justas, solo la primera');
+  check(forma(ps(D(d3), [S(1, 60, 12, 8), S(2, 60, 12, 8), S(3, 60, 12, 7.5)])) === '8×62.5 8×62.5 8×62.5', 'varias al tope y fáciles (RPE 8 o menos): suben todas');
+  check(forma(ps(D(d3), [S(1, 60, 12, 10), S(2, 60, 12, 10), S(3, 60, 12, 8)])) === '8×62.5 12×60 8×62.5', 'al tope sube aunque fuera a RPE 10 (la primera) y las fáciles');
+  check(forma(ps(D(d3), [S(1, 60, 12, 9), S(2, 60, 12, 9), S(3, 60, 12, 9)], multi, { reglas: conReglas({ porSerie: { variasAlTope: 'todas' } }) })) === '8×62.5 8×62.5 8×62.5'
+    && forma(ps(D(d3), [S(1, 60, 12, 7), S(2, 60, 12, 7), S(3, 60, 12, 7)], multi, { reglas: conReglas({ porSerie: { variasAlTope: 'primera' } }) })) === '8×62.5 12×60 12×60', 'las otras dos reglas para varias al tope');
   const sq = [{ reps: 8, kg: 100 }, { reps: 8, kg: 100 }, { reps: 8, kg: 100 }];
   const c = ps(D(sq), [S(1, 100, 8, 6), S(2, 100, 8, 7), S(3, 100, 8, 8)], basico);
   check(forma(c) === '8×102.5 8×102.5 9×100' && c.motivo.startsWith('Series 1 y 2: sobrada (RPE 7 o menos), sube 2,5 kg con las mismas repeticiones'), 'básico sobrado (RPE 7 o menos): sube kilos con las mismas repeticiones');
@@ -155,7 +156,7 @@ console.log('\nModelo: progresión serie a serie');
   check(forma(ps(acc, [S(1, 22, 10, 8), S(2, 22, 12, 8)], multi, { nivel: 'intermedio', reglas: conReglas({ porSerie: { sinKilos: 'como_los_demas' } }) })) === '11×22 8×24.5' && forma(ps(acc, [S(1, 22, 10, 8), S(2, 22, 12, 8)], multi, { nivel: null })) === '11×22 8×24.5', 'progresarlos como los demás, o sin nivel: también kilos');
   const piramide = P({ series: 3, reps_min: 8, reps_max: 12, carga_sugerida_kg: 80, rpe_objetivo: null });
   const f = ps(piramide, [S(1, 90, 8, 8.5), S(2, 80, 10, 8), S(3, 80, 12, 8)]);
-  check(forma(f) === '9×90 11×80 8×85' && f.propuesta.series === 3 && f.propuesta.backoff_pct === null && f.alternativas[0].propuesta.series_detalle === null, 'una pauta que no era serie a serie sale serie a serie, desde lo que hizo en cada serie');
+  check(forma(f) === '9×90 11×80 8×82.5' && f.propuesta.series === 3 && f.propuesta.backoff_pct === null && f.alternativas[0].propuesta.series_detalle === null, 'una pauta que no era serie a serie sale serie a serie, desde lo que hizo en cada serie');
   const g = ps(piramide, [S(1, 80, 12, 10), S(2, 80, 11, 10), S(3, 80, 10, 10)], multi, { reglas: conReglas({ porSerie: { variasAlTope: 'primera', rango: [8, 20] } }) });
   check(g.tipo === 'mantener' && igual(g.propuesta, campos(piramide)) && g.alternativas.length === 0, 'todo a RPE 10 en una pauta que no era serie a serie: se queda como la escribiste');
   const gd = ps(D(d3), [S(1, 60, 11, 10), S(2, 60, 10, 10), S(3, 60, 9, 10)]);
@@ -183,7 +184,9 @@ console.log('\nModelo: doble progresión');
   check(sube.tipo === 'subir' && sube.propuesta.carga_sugerida_kg === 82.5 && sube.propuesta.reps_min === 8 && sube.propuesta.reps_max === 12, 'superado: un salto más, mismo rango');
   check(sube.motivo === 'Llegó a 12 en 2 de 3 series sin pasarse de esfuerzo: sube 2,5 kg' && sube.alternativas[0].id === 'mantener' && sube.alternativas[0].propuesta.carga_sugerida_kg === 80, 'el motivo en una frase y «Mantener» de alternativa');
   const man = doble(leerEjercicio({ pauta: P({ carga_sugerida_kg: 20 }), series: [S(1, 20, 12, 8), S(2, 20, 12, 8), S(3, 20, 12, 8)], nombre: 'Press con mancuernas', reglas: R }), P({ carga_sugerida_kg: 20 }), { ...ctx, nombre: 'Press con mancuernas' });
-  check(man.propuesta.carga_sugerida_kg === 22, 'mancuernas: salto de 2 kg');
+  const R2 = conReglas({ salto: { mancuernas: 2 } });
+  const man2 = doble(leerEjercicio({ pauta: P({ carga_sugerida_kg: 20 }), series: [S(1, 20, 12, 8), S(2, 20, 12, 8), S(3, 20, 12, 8)], nombre: 'Press con mancuernas', reglas: R2 }), P({ carga_sugerida_kg: 20 }), { ...ctx, reglas: R2, nombre: 'Press con mancuernas' });
+  check(man.propuesta.carga_sugerida_kg === 22.5 && man2.propuesta.carga_sugerida_kg === 22, 'mancuernas: 2,5 kg de partida; 2 kg si las de su gimnasio van de 2 en 2');
   const libre = doble(leer(P({ carga_sugerida_kg: null }), [S(1, 40, 12, 8), S(2, 40, 12, 8), S(3, 40, 12, 8)]), P({ carga_sugerida_kg: null }), ctx);
   check(libre.tipo === 'subir' && libre.propuesta.carga_sugerida_kg === null && libre.orientativa === 42.5 && libre.motivo.includes('orientativo: 42,5 kg'), 'pauta sin kilos: no se inventan, la carga queda orientativa');
   const otra = doble(leer(P(), [S(1, 85, 12, 8), S(2, 85, 12, 8), S(3, 85, 12, 8)]), P(), ctx);
@@ -228,10 +231,10 @@ console.log('\nModelo: triple progresión');
   const lee = (p, s) => leerEjercicio({ pauta: p, series: s, nombre, reglas: R });
   const a = triple(lee(p3, hechas(3)), p3, ctx);
   check(a.tipo === 'series' && a.propuesta.series === 4 && a.propuesta.carga_sugerida_kg === 8 && a.motivo.endsWith('una serie más (4 de 5)'), 'al tope con margen de series: una serie más');
-  check(a.alternativas.map((x) => x.id).join() === 'subir,mantener' && a.alternativas[0].propuesta.carga_sugerida_kg === 10, 'alternativas: subir kilos o mantener');
+  check(a.alternativas.map((x) => x.id).join() === 'subir,mantener' && a.alternativas[0].propuesta.carga_sugerida_kg === 10.5, 'alternativas: subir kilos o mantener');
   const p5 = { ...p3, series: 5 };
   const b = triple(lee(p5, hechas(5)), p5, ctx);
-  check(b.tipo === 'subir' && b.propuesta.carga_sugerida_kg === 10 && b.propuesta.series === 3, 'al tope con todas las series: sube kilos y vuelve al mínimo de series');
+  check(b.tipo === 'subir' && b.propuesta.carga_sugerida_kg === 10.5 && b.propuesta.series === 3, 'al tope con todas las series: sube kilos y vuelve al mínimo de series');
   check(triple(lee(p3, [S(1, 8, 14, 8), S(2, 8, 13, 8), S(3, 8, 12, 8)]), p3, ctx).tipo === 'reps', 'sin llegar al tope: a sumar repeticiones');
   const sinLimites = triple(lee(p3, hechas(3)), p3, { nombre, reglas: R, previa: null });
   check(sinLimites.propuesta.series === 4 && sinLimites.motivo.includes('(4 de 5)'), 'sin límites dados: las pautadas y dos más');
@@ -493,7 +496,7 @@ const entrada = (extra = {}) => entradaBase({ ...extra, reglas: fusionar({ atlet
   check(f.a.hecho === '80 kg × 12, 12, 12 @8' && f.a.antes.carga_sugerida_kg === 80 && f.a.modelo === 'doble', 'cada fila trae lo que hizo y lo que había');
   check(f.b.tipo === 'reps' && !f.b.cambia && f.b.confianza === 'alta', 'laterales: en rango, sin cambios');
   check(f.c.tipo === 'mantener' && f.c.frenos.some((x) => x.id === 'pasado_de_esfuerzo') && f.c.confianza === 'media', 'sentadilla: pasada de esfuerzo, se mantiene y lo marca');
-  check(f.d.tipo === 'subir' && f.d.orientativa === 14 && f.d.propuesta.carga_sugerida_kg === null && f.d.propuesta.rpe_objetivo === 8 && f.d.propuesta.rir_objetivo === null && !f.d.cambia,
+  check(f.d.tipo === 'subir' && f.d.orientativa === 14.5 && f.d.propuesta.carga_sugerida_kg === null && f.d.propuesta.rpe_objetivo === 8 && f.d.propuesta.rir_objetivo === null && !f.d.cambia,
     'curl sin kilos y pautado en RIR: carga orientativa, sale en RPE y no cuenta como cambio');
   check(f.e.tipo === 'mantener' && f.e.confianza === 'baja' && f.e.frenos.some((x) => x.id === 'sin_registrar') && igual(f.e.propuesta, f.e.antes), 'remo sin registrar: se mantiene, confianza baja');
   check(r.semana.tipo === 'normal' && igual([r.semana.resumen.suben, r.semana.resumen.mantienen, r.semana.resumen.bajan], [2, 3, 0]) && igual(r.semana.resumen.confianza, { alta: 3, media: 1, baja: 1 }), 'la semana de un vistazo');
@@ -704,7 +707,7 @@ console.log('\nReglas guardadas por atleta');
   check(leerGuardadas({ perfil: 'novato' }).perfil === null && leerGuardadas({ perfil: 'inventado' }).descartado.includes('perfil'), 'los perfiles de nivel no se eligen a mano: salen solos del nivel');
   const guardado = paraGuardar(g);
   check(guardado.v === 1 && igual(leerGuardadas(guardado), { ...g, descartado: [] }) && igual(Object.keys(guardado), ['v', 'perfil', 'atleta', 'porEjercicio']) && igual(Object.keys(paraGuardar({ perfil: 'casa' })), ['v', 'perfil']), 'lo que se guarda vuelve igual al leerlo, sin claves vacías');
-  check(igual(reglasDeAtleta(g), { perfil: 'intermedio_fuerza', rpeSube: 8.5, rangos: { basico: [5, 8], multiarticular: null, aislamiento: null }, bajaAlSubir: null, rangoTop: null, rpeSubeTop: null, sinDescarga: false }) && igual(reglaDeEjercicio(g, 'x'), { modelo: 'doble', rango: [12, 20], salto: 1, rpeSube: 8 })
+  check(igual(reglasDeAtleta(g), { perfil: 'intermedio_fuerza', rpeSube: 8.5, rangos: { basico: [5, 8], multiarticular: null, aislamiento: null }, bajaAlSubir: null, rangoTop: null, rpeSubeTop: null, sinDescarga: false, mancuernas: null }) && igual(reglaDeEjercicio(g, 'x'), { modelo: 'doble', rango: [12, 20], salto: 1, rpeSube: 8 })
     && igual(reglaDeEjercicio(g, 'nada'), { modelo: null, rango: null, salto: null, rpeSube: null }) && tieneRegla(g, 'x') && !tieneRegla(g, 'y'), 'las reglas tal como se editan, del atleta y de un ejercicio');
   check(resumenGuardadas(g) === 'Perfil Fuerza · suma repeticiones hasta RPE 8,5 · básicos 5–8 · 1 ejercicio con regla propia' && resumenGuardadas(vacias) === 'Las de partida para su nivel'
     && resumenRegla(g, 'x') === 'Doble progresión · 12–20 repeticiones · sube de 1 kg en 1 kg · suma repeticiones hasta RPE 8' && resumenRegla(g, 'nada') === '' && resumenGuardadas(leerGuardadas({ atleta: { porSerie: { rpeSube: 8 } } })) === 'Suma repeticiones hasta RPE 8',
@@ -730,7 +733,12 @@ console.log('\nReglas guardadas por atleta');
     const n1 = conReglasDeAtleta(vacias, { bajaAlSubir: '2', rangoTop: ['1', '8'], rpeSubeTop: '8.5', sinDescarga: true });
     check(igual(n1.guardadas.atleta, { porSerie: { bajaAlSubir: 2 }, topSet: { rango: [1, 8], rpeSube: 8.5 }, descarga: { cuando: 'manual' } }), 'al subir de kilos, la serie top y «sin descarga por señales» se guardan en la capa del atleta');
     const vuelta = leerGuardadas(paraGuardar(n1.guardadas));
-    check(igual(vuelta.atleta, n1.guardadas.atleta) && vuelta.descartado.length === 0 && igual(reglasDeAtleta(vuelta), { perfil: null, rpeSube: null, rangos: { basico: null, multiarticular: null, aislamiento: null }, bajaAlSubir: 2, rangoTop: [1, 8], rpeSubeTop: 8.5, sinDescarga: true }), 'y se leen igual al volver de la base');
+    check(igual(vuelta.atleta, n1.guardadas.atleta) && vuelta.descartado.length === 0 && igual(reglasDeAtleta(vuelta), { perfil: null, rpeSube: null, rangos: { basico: null, multiarticular: null, aislamiento: null }, bajaAlSubir: 2, rangoTop: [1, 8], rpeSubeTop: 8.5, sinDescarga: true, mancuernas: null }), 'y se leen igual al volver de la base');
+    // (v0.181) las mancuernas de su gimnasio
+    const n2 = conReglasDeAtleta(vacias, { mancuernas: '2' });
+    check(igual(n2.guardadas.atleta, { salto: { mancuernas: 2 } }) && igual(leerGuardadas(paraGuardar(n2.guardadas)).atleta, { salto: { mancuernas: 2 } }) && reglasDeAtleta(n2.guardadas).mancuernas === 2
+      && /mancuernas de 2 en 2 kg/i.test(resumenGuardadas(n2.guardadas)) && conReglasDeAtleta(vacias, { mancuernas: '3' }).errores.length === 1 && igual(conReglasDeAtleta(vacias, { mancuernas: '' }).guardadas.atleta, {})
+      && !leerGuardadas({ atleta: { salto: { tipo: 'kg', valor: 5 } } }).atleta.salto, 'el salto de las mancuernas del atleta se guarda, se lee y se resume; el salto en kilos no es regla de atleta');
     check(resumenGuardadas(vuelta) === 'Al subir de kilos baja 2 repeticiones · serie top 1–8 · la top suma hasta RPE 8,5 · sin descarga por señales', `y su resumen: ${resumenGuardadas(vuelta)}`);
     check(conReglasDeAtleta(vacias, { bajaAlSubir: '7' }).errores.length === 1 && conReglasDeAtleta(vacias, { rangoTop: ['8', '1'] }).errores.length === 1 && conReglasDeAtleta(vacias, { rpeSubeTop: '8.2' }).errores.length === 1, 'con valores imposibles, su motivo');
     const sucia = leerGuardadas({ atleta: { topSet: { rango: [1, 8], backoff: 'solas', peaking: { reps: 2 } }, descarga: { cuando: 'programada', cadaSemanas: 4 }, porSerie: { bajaAlSubir: 9 } } });
@@ -1009,3 +1017,18 @@ console.log('\nMil semanas al azar');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);
+
+// (v0.181) la hoja serie a serie y las reglas efectivas de cada fila
+{
+  const { seriesEnFilas, textoSerieFBE, seriesDePauta } = await import('../web/src/logica/motor/index.js');
+  check(textoSerieFBE({ kg: 60, reps: 8, rpe: 8 }) === '60 kg × 8 reps @8' && textoSerieFBE({ kg: 57.5, reps: 1, rpe: 9.5 }) === '57,5 kg × 1 rep @9,5' && textoSerieFBE({ reps: 12 }) === '12 reps' && textoSerieFBE({ kg: 0, reps: 10, rpe: 8 }) === '10 reps @8' && textoSerieFBE(null) === null,
+    'una serie en texto lleva siempre sus unidades: kilos, repeticiones y @RPE');
+  const filas = seriesEnFilas({ pautada: { series: 3, reps_min: 8, reps_max: 12, carga_sugerida_kg: 60, rpe_objetivo: 8 }, hechas: [{ numero: 1, kg: 60, reps: 12, rpe: 8 }, { numero: 2, kg: 60, reps: 10, rir: 1 }],
+    propuesta: { series: 3, series_detalle: [{ reps: 8, kg: 62.5, rpe: 8 }, { reps: 11, kg: 60, rpe: 8 }, { reps: 12, kg: 60, rpe: 8 }] } });
+  check(filas.length === 3 && filas[0].pautado === '60 kg × 8–12 reps @8' && filas[0].hizo === '60 kg × 12 reps @8' && filas[0].propuesta === '62,5 kg × 8 reps @8' && filas[0].cambia
+    && filas[1].hizo === '60 kg × 10 reps @9' && filas[2].hizo === null && filas[2].propuesta === '60 kg × 12 reps @8', 'pautado, hizo y propuesta, una fila por serie (el RIR se enseña como RPE; la serie sin hacer, vacía)');
+  const tb = seriesEnFilas({ pautada: { series: 3, reps_min: 5, reps_max: 5, carga_sugerida_kg: 100, backoff_pct: 10, rir_objetivo: 2 }, hechas: [{ numero: 4, kg: 80, reps: 5 }] });
+  check(tb.length === 4 && tb[0].pautado === '100 kg × 5 reps @8' && tb[1].pautado === '−10 % × 5 reps @8' && tb[3].pautado === null && tb[3].hizo === '80 kg × 5 reps' && tb.every((x) => x.propuesta === null && !x.cambia),
+    'con top + back-off las de apoyo llevan su %; una serie de más sale en su fila; sin propuesta, nada cambia');
+  check(seriesDePauta(null).length === 0 && seriesEnFilas().length === 0, 'sin pauta no hay filas');
+}

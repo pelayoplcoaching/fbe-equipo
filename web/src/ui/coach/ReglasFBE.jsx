@@ -4,7 +4,7 @@
 // Usan clases que ya existen; no añaden estilos.
 import { useState } from 'preact/hooks';
 import { PERFILES, PERFILES_ELEGIBLES, perfilDeNivel, VALORES_RPE_SUBE, VALORES_BAJA, TIPOS_RANGO, DE_PARTIDA, MODELOS_DISPONIBLES, NOMBRE_MODELO,
-  reglasDeAtleta, conReglasDeAtleta, reglaDeEjercicio, conReglaDeEjercicio, resumenGuardadas, hayGuardadas, tieneRegla } from '../../logica/motor/index.js';
+  VALORES_MANCUERNAS, reglasDeAtleta, conReglasDeAtleta, reglaDeEjercicio, conReglaDeEjercicio, resumenGuardadas, hayGuardadas, tieneRegla } from '../../logica/motor/index.js';
 import { num } from '../../logica/calculos.js';
 
 const soloCifras = (v) => v.replace(/[^0-9]/g, '');
@@ -30,7 +30,7 @@ export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
   const inicial = () => {
     const a = reglasDeAtleta(guardadas);
     return { perfil: a.perfil || '', rpeSube: a.rpeSube == null ? '' : String(a.rpeSube), rangos: Object.fromEntries(TIPOS_RANGO.map(([t]) => [t, (a.rangos[t] || ['', '']).map(String)])),
-      bajaAlSubir: a.bajaAlSubir == null ? '' : String(a.bajaAlSubir), rangoTop: (a.rangoTop || ['', '']).map(String), rpeSubeTop: a.rpeSubeTop == null ? '' : String(a.rpeSubeTop), sinDescarga: !!a.sinDescarga };
+      bajaAlSubir: a.bajaAlSubir == null ? '' : String(a.bajaAlSubir), rangoTop: (a.rangoTop || ['', '']).map(String), rpeSubeTop: a.rpeSubeTop == null ? '' : String(a.rpeSubeTop), sinDescarga: !!a.sinDescarga, mancuernas: a.mancuernas == null ? '' : String(a.mancuernas) };
   };
   const [abierto, setAbierto] = useState(false);
   const [f, setF] = useState(inicial);
@@ -59,6 +59,14 @@ export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
               {PERFILES_ELEGIBLES.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
             </select>
             <span class="ayuda">{f.perfil ? PERFILES_ELEGIBLES.find(([id]) => id === f.perfil)[2] : 'Todos los ejercicios progresan serie a serie, con las reglas generales.'}</span>
+          </div>
+          <div class="campo">
+            <label for="fbe-mancuernas">Mancuernas de su gimnasio</label>
+            <select id="fbe-mancuernas" class="selector" value={f.mancuernas} onChange={(e) => setF({ ...f, mancuernas: e.currentTarget.value })}>
+              <option value="">Suben de 2,5 en 2,5 kg (de partida)</option>
+              {VALORES_MANCUERNAS.map((v) => <option key={v} value={String(v)}>Suben de {v} en {v} kg</option>)}
+            </select>
+            <span class="ayuda">Vale para todos sus ejercicios con mancuernas. En lo demás, la carga sube de 2,5 en 2,5 kg salvo que le pongas otro salto a un ejercicio, en su fila.</span>
           </div>
           <div class="campo">
             <label for="fbe-rpe">Suma una repetición hasta</label>
@@ -116,7 +124,7 @@ export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
 }
 
 // La regla de un ejercicio, dentro de su fila
-export function ReglaEjercicio({ clave, ejercicioId, nombre, guardadas, ocupado, alGuardar, alCerrar }) {
+export function ReglaEjercicio({ clave, ejercicioId, nombre, atleta = null, efectiva = null, guardadas, ocupado, alGuardar, alCerrar }) {
   const r = reglaDeEjercicio(guardadas, ejercicioId);
   const [f, setF] = useState({ modelo: r.modelo || '', rango: (r.rango || ['', '']).map(String), salto: r.salto == null ? '' : num(r.salto, 2), rpeSube: r.rpeSube == null ? '' : String(r.rpeSube) });
   const [errores, setErrores] = useState([]);
@@ -129,6 +137,27 @@ export function ReglaEjercicio({ clave, ejercicioId, nombre, guardadas, ocupado,
   };
   return (
     <div class="panel panel-pad pila-s" role="group" aria-label={`Regla propia de ${nombre}`}>
+      <strong class="peq">{nombre}, solo para {atleta || 'este atleta'}</strong>
+      <p class="mini secundario">Lo que pongas aquí vale para este ejercicio en todas sus semanas y manda sobre todo lo demás. Lo que dejes vacío sigue con las reglas generales.</p>
+      <div style={DOS}>
+        <div class="campo">
+          <label for={id('salto')}>Salto de carga (kg)</label>
+          <input id={id('salto')} class="entrada" style="width:100%;height:auto" inputMode="decimal" placeholder={efectiva && r.salto == null ? num(efectiva.salto, 2) : '2,5'} value={f.salto} onInput={(e) => setF({ ...f, salto: e.currentTarget.value.replace(/[^0-9.,]/g, '') })} />
+          <span class="ayuda">Lo que sube cada vez en su máquina o con sus discos. Vacío: 2,5 kg.</span>
+        </div>
+        <div class="campo">
+          <span class="etq">Rango de repeticiones</span>
+          <div class="rejilla-volumen">
+            <div class="fila-vol">
+              <span class="mini secundario">De</span>
+              <input inputMode="numeric" style={ANCHO} aria-label={`${nombre}: mínimo de repeticiones`} placeholder={efectiva && !r.rango ? String(efectiva.rango[0]) : ''} value={f.rango[0]} onInput={(e) => setF({ ...f, rango: [soloCifras(e.currentTarget.value), f.rango[1]] })} />
+              <span class="terciario" aria-hidden="true">–</span>
+              <input inputMode="numeric" style={ANCHO} aria-label={`${nombre}: máximo de repeticiones`} placeholder={efectiva && !r.rango ? String(efectiva.rango[1]) : ''} value={f.rango[1]} onInput={(e) => setF({ ...f, rango: [f.rango[0], soloCifras(e.currentTarget.value)] })} />
+            </div>
+          </div>
+          <span class="ayuda">Al llegar al máximo, sube de kilos. Vacío: el de siempre.</span>
+        </div>
+      </div>
       <div style={DOS}>
         <div class="campo">
           <label for={id('modelo')}>Cómo progresa</label>
@@ -142,24 +171,6 @@ export function ReglaEjercicio({ clave, ejercicioId, nombre, guardadas, ocupado,
           <SelectorRpe id={id('rpe')} valor={f.rpeSube} alCambiar={(v) => setF({ ...f, rpeSube: v })} />
         </div>
       </div>
-      <div style={DOS}>
-        <div class="campo">
-          <span class="etq">Rango de repeticiones</span>
-          <div class="rejilla-volumen">
-            <div class="fila-vol">
-              <span class="mini secundario">De</span>
-              <input inputMode="numeric" style={ANCHO} aria-label={`${nombre}: mínimo de repeticiones`} value={f.rango[0]} onInput={(e) => setF({ ...f, rango: [soloCifras(e.currentTarget.value), f.rango[1]] })} />
-              <span class="terciario" aria-hidden="true">–</span>
-              <input inputMode="numeric" style={ANCHO} aria-label={`${nombre}: máximo de repeticiones`} value={f.rango[1]} onInput={(e) => setF({ ...f, rango: [f.rango[0], soloCifras(e.currentTarget.value)] })} />
-            </div>
-          </div>
-        </div>
-        <div class="campo">
-          <label for={id('salto')}>Salto de carga (kg)</label>
-          <input id={id('salto')} class="entrada" style="width:100%;height:auto" inputMode="decimal" placeholder="El del ejercicio" value={f.salto} onInput={(e) => setF({ ...f, salto: e.currentTarget.value.replace(/[^0-9.,]/g, '') })} />
-        </div>
-      </div>
-      <p class="mini terciario">Vacío: lo de siempre. Vale solo para este atleta y manda sobre sus reglas y sobre el rango de la pauta.</p>
       {errores.length > 0 && <p class="error" role="alert">{errores.join('. ')}.</p>}
       <div class="fila-envolver">
         <button type="button" class="btn btn-primario btn-peq" disabled={ocupado} onClick={() => enviar(f)}>Guardar regla</button>
