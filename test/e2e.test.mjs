@@ -5729,6 +5729,16 @@ try {
   console.log('  ✗ las notas de voz (v0.179):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.180: las notas de voz, segunda tanda (test/e2e-voz-180.mjs)
+console.log('\nv0.180: las notas de voz, segunda tanda');
+try {
+  const { probarVoz180 } = await import('./e2e-voz-180.mjs');
+  await probarVoz180({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ las notas de voz, segunda tanda (v0.180):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.178: «Guardar en mi móvil» para el vídeo grabado con la cámara de la app (test/e2e-guardar-178.mjs)
 console.log('\nv0.178: guardar en el móvil el vídeo grabado en la app');
 try {

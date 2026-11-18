@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.180': {
+    atleta: [
+      'En Ajustes › Mensajes puedes activar y probar el micro con un botón, y ver si está activado o bloqueado.',
+      'Notas de voz: escucha lo grabado en pausa y sigue grabando; si no se oye nada, te avisa antes de enviarla.',
+      'Si prefieres escuchar cada nota antes de enviarla, enciéndelo en Ajustes › Mensajes.',
+    ],
+    coach: [
+      'Notas de voz: «grabando audio…» en el chat, mandos en la pantalla de bloqueo y reenvío solo al volver la conexión.',
+    ],
+  },
   '0.179': {
     atleta: [
       'Notas de voz como en WhatsApp: mantén el micro y suelta para enviar, o sube el dedo al candado para grabar sin mantener.',

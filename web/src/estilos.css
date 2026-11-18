@@ -4883,13 +4883,13 @@ body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
 /* v0.180: el micro bloqueado en el boton, el progreso del limite, el medidor de la prueba y la nota sin escuchar */
 .chat-micro.sin-permiso { position: relative; }
 .chat-micro-aviso { position: absolute; top: calc(var(--esp-2) * -1); right: calc(var(--esp-2) * -1); width: var(--ico-16); height: var(--ico-16); border-radius: 50%;
-  display: grid; place-items: center; background: var(--alerta); color: var(--sobre-alerta, var(--hoja)); font-size: var(--t-mini); font-weight: 800; line-height: 1; }
+  display: grid; place-items: center; background: var(--alerta); color: var(--hoja); font-size: var(--letra-12-5); font-weight: 800; line-height: 1; }
 .chat-grabando { position: relative; }
 .chat-grabando-progreso { position: absolute; left: var(--esp-12); right: var(--esp-12); bottom: 0; height: 2px; border-radius: var(--r-2); background: var(--linea); overflow: hidden; pointer-events: none; }
 .chat-grabando-progreso::after { content: ""; position: absolute; inset: 0; transform-origin: left center; transform: scaleX(var(--hecho, 0)); background: var(--morado); }
 .chat-grabando.acaba .chat-grabando-progreso::after { background: var(--alerta); }
 .chat-previa-voz .chat-grabando-seguir { flex: none; }
-.micro-medidor { height: var(--esp-12); border-radius: var(--r-pildora); background: var(--fondo-2); overflow: hidden; margin: var(--esp-8) 0; }
+.micro-medidor { height: var(--esp-12); border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; margin: var(--esp-8) 0; }
 .micro-medidor span { display: block; height: 100%; border-radius: inherit; background: var(--morado); transform-origin: left center; transform: scaleX(max(0.03, var(--nivel, 0))); }
 .voz.nueva .voz-play { background: var(--morado); color: var(--sobre-morado); }
 .voz.nueva .voz-onda span { background: var(--morado); }

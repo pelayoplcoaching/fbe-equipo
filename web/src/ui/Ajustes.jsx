@@ -322,7 +322,7 @@ export function AjustesMensajes({ coach = false }) {
         alCambiar={cambiarVisible} />
       <FilaIos icono="imagen" titulo="Fondo del chat" detalle={a.fondoChat === 'liso' ? 'Liso' : 'Con dibujos de FBE, muy suaves (con el negro puro, liso)'}
         bloque={<Segmentos opciones={[['dibujos', 'Con dibujos'], ['liso', 'Liso']]} valor={a.fondoChat || 'dibujos'} etiqueta="Fondo del chat" alCambiar={(v) => cambiar('fondoChat', v || 'dibujos')} />} />
-      <FilaIos icono="micro" titulo="Micrófono" valor={tm.titulo} detalle={tm.detalle}
+      <FilaIos icono="micro" titulo={`Micrófono: ${tm.titulo.toLowerCase()}`} detalle={tm.detalle}
         bloque={<button type="button" class="btn btn-peq" onClick={() => setHojaMicro(tm.clave === 'bloqueado' ? 'ayuda' : tm.clave === 'activado' ? 'probar' : 'activar')}>{tm.boton}</button>} />
       <Interruptor id="aj-voz-revisar" icono="play" texto="Escuchar las notas de voz antes de enviarlas" valor={a.vozRevisar === true}
         ayuda="Apagado, la nota sale al soltar el micro (como en WhatsApp). Encendido, siempre la escuchas primero y la envías tú." alCambiar={(v) => cambiar('vozRevisar', v)} />

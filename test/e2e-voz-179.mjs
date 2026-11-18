@@ -55,14 +55,22 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     check(/hasta 2 minutos/.test(await micro.getAttribute('aria-label')), 'el micro dice el límite nuevo: hasta 2 minutos (con la 081)');
 
     // ---- El permiso
-    // La primera vez (el sistema pregunta): no graba a ciegas
+    // La primera vez (el sistema pregunta): no graba a ciegas; (v0.180) sale la hoja «Activar el micro», con su prueba
     await p.evaluate(() => { window.__permisoMicro = 'prompt'; });
     let [cx, cy] = await centro();
     const antes = await nVoz();
     await p.mouse.move(cx, cy); await p.mouse.down();
-    await p.locator('.toast', { hasText: 'Micro activado' }).waitFor({ timeout: 8000 });
+    const activar = p.getByRole('dialog', { name: 'Activar el micro' });
+    await activar.waitFor({ timeout: 8000 });
     await p.mouse.up();
-    check(await grabando.count() === 0 && await revisar.count() === 0 && await micSuelto() && await nVoz() === antes, 'la primera vez (el sistema pregunta por el micro) no se graba a ciegas: «Micro activado. Ya puedes grabar» y el micro se suelta');
+    check(await grabando.count() === 0 && await revisar.count() === 0 && await p.evaluate(() => window.__pistas.length === 0) && await nVoz() === antes, 'la primera vez (el sistema va a preguntar por el micro) no se graba a ciegas: sale «Activar el micro», sin abrir aún el micro');
+    await activar.getByRole('button', { name: 'Activar el micro' }).click();
+    await activar.getByRole('meter', { name: 'Nivel del micro' }).waitFor({ timeout: 8000 });
+    check(/Micro activado/.test(await activar.textContent()) && /Di algo/.test(await activar.textContent()), '(v0.180) al tocar el botón se activa y se prueba: «Micro activado. Di algo para probarlo», con su medidor');
+    await activar.getByRole('button', { name: 'Listo' }).waitFor({ timeout: 9000 });
+    check(/se te oye|se oye/i.test(await activar.textContent()) && await micSuelto() && await p.evaluate(() => localStorage.getItem('fbe-micro-activado') === '1'), 'a los 4 segundos dice cómo se oye, suelta el micro y lo recuerda en este aparato');
+    await activar.getByRole('button', { name: 'Listo' }).click();
+    await activar.waitFor({ state: 'detached' });
     // Y si el navegador sigue diciendo «preguntar» después de darlo (no lo recuerda), a la segunda ya graba
     await p.locator('.toast').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     await micro.focus(); await p.keyboard.press('Enter');

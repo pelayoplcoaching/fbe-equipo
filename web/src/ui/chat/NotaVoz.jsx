@@ -135,7 +135,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     // Los niveles, para la forma de onda (si no hay WebAudio, plana)
     try {
       const C = globalThis.AudioContext || globalThis.webkitAudioContext;
-      if (C) { x.ctx = new C(); x.ctx.resume?.().catch?.(() => {}); const fuente = x.ctx.createMediaStreamSource(stream); x.analizador = x.ctx.createAnalyser(); x.analizador.fftSize = 512; fuente.connect(x.analizador); x.buf = new Uint8Array(x.analizador.fftSize); }
+      if (C) { x.ctx = new C(); x.ctx.resume?.().catch?.(() => {}); const fuente = x.ctx.createMediaStreamSource(stream); x.analizador = x.ctx.createAnalyser(); x.analizador.fftSize = 512; fuente.connect(x.analizador); x.buf = new Uint8Array(x.analizador.fftSize); x.conNivel = true; }
     } catch { x.analizador = null; }
     rec.ondataavailable = (ev) => { if (ev.data?.size) x.trozos.push(ev.data); };
     rec.onstop = () => {
@@ -147,7 +147,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
       if (s < MIN_VOZ_SEG - 0.4 || !x.trozos.length) { if (esta) { setEstado('nada'); op.current.alAviso?.('Mantén pulsado el micro mientras hablas (o tócalo y habla).'); } return; }
       const blob = new Blob(x.trozos, { type: f.tipo });
       // (v0.180) no se oye nada (micro tapado o silenciado): no sale sola, se avisa
-      const mudo = !!x.analizador && esSilencio(x.niveles);
+      const mudo = !!x.conNivel && esSilencio(x.niveles);
       const g = { blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s, op.current.limite), onda: ondaDe(x.niveles, 40), limite: !!x.limite, cortada: x.cortada || null, tope: op.current.limite, mudo };
       // Se fue de la pantalla grabando: queda de borrador (se verá al volver)
       if (x.desmontada) { if (x.clave) borradores.set(x.clave, g); return; }

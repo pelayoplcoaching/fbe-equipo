@@ -2428,7 +2428,7 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
   }
   check(M.textoUltimaVez('2026-11-03T18:42:00', ahora) === 'últ. vez hoy a las 18:42' && M.textoUltimaVez('2026-11-02T07:05:00', ahora) === 'últ. vez ayer a las 7:05' && M.textoUltimaVez('2026-10-30T10:00:00', ahora) === 'últ. vez el vie a las 10:00'
     && M.textoUltimaVez('2026-09-01T10:00:00', ahora) === 'últ. vez el 1 sept' && M.textoUltimaVez(null) === null, '«últ. vez hoy a las 18:42», ayer, esta semana o la fecha');
-  check(M.estadoConexion({ escribiendo: true, enLinea: true }) === 'escribiendo…' && M.estadoConexion({ enLinea: true }) === 'en línea' && M.estadoConexion({}) === null, '«escribiendo…» antes que «en línea»');
+  check(M.estadoConexion({ escribiendo: 'voz', enLinea: true }) === 'grabando audio…' && M.estadoConexion({ escribiendo: true, enLinea: true }) === 'escribiendo…' && M.estadoConexion({ enLinea: true }) === 'en línea' && M.estadoConexion({}) === null, '«escribiendo…» antes que «en línea»');
   const enl = M.enlacesDe([{ id: '1', texto: 'https://a.es y https://youtu.be/gMgvBspQ9lk' }, { id: '2', texto: 'otra vez https://a.es' }, { id: '3', texto: 'https://b.es', eliminado_en: 'x' }]);
   check(igual(enl.map((x) => [x.url, x.mensajeId]), [['https://a.es', '2'], ['https://youtu.be/gMgvBspQ9lk', '1']]) && enl[1].youtube === 'gMgvBspQ9lk', 'los enlaces del chat: sin repetir, los últimos primero, sin lo eliminado');
   check(igual(M.mediosDe([{ id: '1', archivo: { id: 'f', mime: 'image/jpeg' } }, { id: '2', archivo: { id: 'v', mime: 'video/mp4' } }, { id: '3', archivo: { id: 'g' }, eliminado_en: 'x' }]).map((x) => x.tipo), ['video', 'foto']), 'las fotos y los vídeos');
@@ -2660,6 +2660,13 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     check(V.esPermisoDenegado({ name: 'NotAllowedError' }) && V.esPermisoDenegado({ name: 'SecurityError' }) && !V.esPermisoDenegado({ name: 'NotFoundError' }) && !V.esPermisoDenegado(null)
       && /bloqueado/.test(V.errorMicro({ name: 'NotAllowedError' })) && /cortado/.test(V.errorMicro({ name: 'AbortError' })) && /https/.test(V.errorMicro({ name: 'SinContexto' })), 'y los errores nuevos: bloqueado, cortado por el móvil y sin dirección segura');
   }
+  // (v0.180) la segunda tanda: el silencio, el estado del micro y su prueba
+  check(V.esSilencio(Array(20).fill(0.01)) && V.esSilencio(Array(12).fill(0)) && !V.esSilencio([...Array(19).fill(0), 0.3]) && !V.esSilencio([0, 0, 0]) && !V.esSilencio(null),
+    '(v0.180) no se oye nada: todos los niveles por debajo del ruido (con menos de un segundo de muestras, no se opina)');
+  check(V.textoMicro('prompt').clave === 'sin-activar' && V.textoMicro('prompt').boton === 'Activar el micro' && V.textoMicro(null).clave === 'sin-activar' && V.textoMicro('granted').clave === 'activado'
+    && V.textoMicro('prompt', true).clave === 'activado' && V.textoMicro(null, true).clave === 'activado' && V.textoMicro('denied', true).clave === 'bloqueado' && V.textoMicro('denied').boton === 'Cómo activarlo'
+    && V.textoMicro('granted').boton === 'Probar el micro', 'el micro, en claro: sin activar (botón «Activar el micro»), activado («Probar el micro») o bloqueado («Cómo activarlo»)');
+  check(V.resultadoPrueba(0.3) === 'bien' && V.resultadoPrueba(0.05) === 'bajo' && V.resultadoPrueba(0.001) === 'nada' && V.resultadoPrueba() === 'nada', 'la prueba del micro: se oye bien, bajo o nada');
   // (v0.179) la onda en vivo y la reproducción encadenada
   check(igual(V.ondaViva([0.5, 1], 4), [0, 0, 50, 100]) && V.ondaViva([], 28).length === 28 && igual(V.ondaViva([0.1, 0.2, 0.3], 2), [20, 30]) && igual(V.ondaViva([2, -1, NaN], 3), [100, 0, 0]), 'la onda en vivo: los últimos niveles, de 0 a 100');
   {
