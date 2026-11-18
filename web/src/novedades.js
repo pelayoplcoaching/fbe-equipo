@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.183': {
+    coach: [
+      'Descarga: solo cuando pones ese foco. Un tercio menos de series, −10 % de kilos y RPE 7; accesorios, la mitad.',
+      'Tras la descarga se repite la última semana normal, sin subir. A los novatos: una serie menos y RPE 7.',
+      'Peaking: solo la serie pesada de los básicos Obligatorio, hasta 1 repetición a RPE 9; el resto se queda igual.',
+    ],
+  },
   '0.182': {
     coach: [
       'Programar según FBE decide por el RPE de cada serie: con RPE bajo sube kilos antes; al subir, calcula las repeticiones.',

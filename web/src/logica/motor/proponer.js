@@ -120,6 +120,10 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       frenos.push({ id: 'paron', texto: `Parón de ${dias} días` });
     } else if (modo === 'mantenimiento') {
       r = { tipo: 'mantenimiento', propuesta: aplicarMantenimiento(p, { reglas: R }), orientativa: null, motivo: 'Mantenimiento: mismas cargas con menos series', alternativas: [{ id: 'mantener', etiqueta: 'Sin recortar', propuesta: campos(p) }], avisos: [] };
+    } else if (retoma && base && generales.descarga.vuelta === 'repetir') {
+      // (v0.183) tras la descarga se repite la ultima semana normal tal cual, sin subir
+      r = { tipo: 'mantener', propuesta: campos(pautaBase), orientativa: null, motivo: 'Tras la descarga: repite la última semana normal, sin subir', alternativas: [], avisos: [] };
+      frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga' });
     } else if (retoma && !base) {
       r = { tipo: 'mantener', propuesta: campos(p), orientativa: null, motivo: 'Tras la descarga no hay una semana normal anterior de la que partir: revisa la carga', alternativas: [], avisos: [] };
       frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga, sin semana normal anterior' });
@@ -212,8 +216,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
   const conDescarga = () => filas.map((f) => {
     if (f._r.tipo === 'sin_tocar') return cerrar(f, f._r);
     const tipo = f._R.descarga.tipo;
-    return cerrar({ ...f, frenos: [] }, { tipo: 'descarga', propuesta: aplicarDescarga(f._p, { tipo, nombre: f.ejercicio, kgBase: f._l.kgTrabajo, reglas: f._R }), orientativa: null,
-      motivo: motivoDescarga(tipo, f._R), alternativas: [{ id: 'mantener', etiqueta: 'Sin descarga', propuesta: campos(f._p) }], avisos: [] });
+    return cerrar({ ...f, frenos: [] }, { tipo: 'descarga', propuesta: aplicarDescarga(f._p, { tipo, nombre: f.ejercicio, kgBase: f._l.kgTrabajo, reglas: f._R, nivel: atleta.nivel ?? null }), orientativa: null,
+      motivo: motivoDescarga(tipo, f._R, { prioridad: f.prioridad, nivel: atleta.nivel ?? null }), alternativas: [{ id: 'mantener', etiqueta: 'Sin descarga', propuesta: campos(f._p) }], avisos: [] });
   });
   const esDescarga = pedida || programada;
   const propuestaDescarga = esDescarga || senales.length ? conDescarga() : null;

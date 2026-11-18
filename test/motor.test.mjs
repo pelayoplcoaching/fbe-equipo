@@ -10,7 +10,7 @@ import { REGLAS_FBE, PERFILES, resolverReglas as resolverReglasHoy, fusionar, li
   compararVolumen, pautasConPropuestas, sombraDeCopia as sombraDeCopiaHoy, compararFila, claseDeSerie, seriesPautadas, compararInformes, textoInforme } from '../web/src/logica/motor/index.js';
 
 // (v0.182) Las pruebas anteriores a la regla por RPE pasan la regla clasica en la capa FBE
-const CLASICA = { porSerie: { regla: 'clasica' } };
+const CLASICA = { porSerie: { regla: 'clasica' }, descarga: { cuando: 'senales', tipo: 'ligera', vuelta: 'progresar' }, topSet: { peaking: { rpeMin: 8, soloObligatorio: false, resto: 'regla' } } };
 const resolverReglas = (o = {}) => resolverReglasHoy({ ...o, fbe: fusionar(CLASICA, o.fbe) });
 const sombraDeCopia = (c, o = {}) => sombraDeCopiaHoy(c, { ...o, reglas: { ...(o.reglas || {}), fbe: fusionar(CLASICA, o.reglas?.fbe) } });
 const proponerSemana = (e = {}) => proponerSemanaHoy({ ...e, reglas: { ...(e.reglas || {}), fbe: fusionar(CLASICA, e.reglas?.fbe) } });
@@ -24,7 +24,7 @@ const P = (extra = {}) => ({ id: 'p1', sesion_id: 's1', ejercicio_id: 'banca', o
   rir_objetivo: null, rpe_objetivo: 8, carga_sugerida_kg: 80, backoff_pct: null, series_detalle: null, ...extra });
 const S = (numero, kg, reps, rpe = null, extra = {}) => ({ numero, kg, reps, rpe, rir: null, ...extra });
 // (v0.182) Todo lo de este archivo anterior a la regla por RPE se prueba con la regla clasica (la del 5/11); la nueva, al final
-const R = fusionar(REGLAS_FBE, { porSerie: { regla: 'clasica' } });
+const R = fusionar(REGLAS_FBE, { porSerie: { regla: 'clasica' }, descarga: { cuando: 'senales', tipo: 'ligera', vuelta: 'progresar' }, topSet: { peaking: { rpeMin: 8, soloObligatorio: false, resto: 'regla' } } });
 const conReglas = (capa) => fusionar(R, capa);
 const leer = (pauta, series, extra = {}) => leerEjercicio({ pauta, series, nombre: 'Press banca', reglas: R, ...extra });
 
@@ -1071,6 +1071,44 @@ console.log('\nMil semanas al azar');
   check(f(run(banca, p4, [S(1, 35, 10, 7)], { nivel: 'novato' })).startsWith('7×37.5'), 'el novato baja una repetición más que el cálculo');
   const clasica = run(banca, p4, [S(1, 35, 10, 7), S(2, 35, 10, 8), S(3, 35, 10, 8), S(4, 35, 10, 8)], { reglas: R });
   check(f(clasica) === '6×37.5 6×37.5 6×37.5 6×37.5', 'la regla clásica sigue disponible (al tope, sube y vuelve al suelo)');
+}
+
+// ---------- (v0.183) descarga solo con el foco, la descarga FBE, la vuelta y el peaking ----------
+{
+  const RN = resolverReglasHoy({});
+  const pa = P({ series: 6, reps_min: 8, reps_max: 12, carga_sugerida_kg: 100, rpe_objetivo: 9, prioridad: 'alta' });
+  const d1 = aplicarDescarga(pa, { tipo: 'fbe', nombre: 'Press banca', kgBase: 100, reglas: RN, nivel: 'intermedio' });
+  check(d1.series === 4 && d1.carga_sugerida_kg === 90 && d1.rpe_objetivo === 7 && d1.reps_min === 8 && d1.reps_max === 12, 'descarga FBE: un tercio menos de series, −10 % de kilos y RPE 7, mismas repeticiones');
+  const d2 = aplicarDescarga({ ...pa, prioridad: 'baja', rpe_objetivo: null, rir_objetivo: 1 }, { tipo: 'fbe', nombre: 'Curl', kgBase: 100, reglas: RN, nivel: 'intermedio' });
+  check(d2.series === 3 && d2.carga_sugerida_kg === 90 && d2.rpe_objetivo === 7 && d2.rir_objetivo === null, 'los accesorios, la mitad de series (y el esfuerzo queda en RPE 7 aunque viniera en RIR)');
+  const d3 = aplicarDescarga(pa, { tipo: 'fbe', nombre: 'Press banca', kgBase: 100, reglas: RN, nivel: 'novato' });
+  check(d3.series === 5 && d3.carga_sugerida_kg === 100 && d3.rpe_objetivo === 7, 'a los novatos, más suave: una serie menos y RPE 7 sin bajar kilos');
+  const det = aplicarDescarga({ ...pa, series: 3, series_detalle: [{ reps: 8, kg: 100 }, { reps: 10, kg: 90, rpe: 8 }, { reps: 12, kg: 80, rpe: 6 }] }, { tipo: 'fbe', nombre: 'Press banca', reglas: RN, nivel: 'intermedio' });
+  check(det.series_detalle.length === 2 && det.series_detalle[0].kg === 90 && det.series_detalle[0].rpe === 7 && det.series_detalle[1].rpe === 7 && det.series_detalle[0].reps === 8, 'serie a serie: se quita un tercio de las series, cada una con −10 % y RPE 7 (una que iba a menos no sube)');
+  // La semana: sin el foco no hay descarga ni señales; con él, la de FBE; tras ella, se repite la última semana normal
+  const ses = [{ id: 's1', orden: 1, completada: true }];
+  const ejs = { banca: { nombre: 'Press banca', tipo: ['basico'], grupos_musculares: ['pectoral'] }, curl: { nombre: 'Curl con barra', tipo: ['aislamiento'], grupos_musculares: ['biceps'] } };
+  const pautas = [P({ id: 'a', series: 3, reps_min: 6, reps_max: 10, carga_sugerida_kg: 100 }), P({ id: 'b', ejercicio_id: 'curl', orden: 2, prioridad: 'baja', series: 4, reps_min: 10, reps_max: 15, carga_sugerida_kg: 20 })];
+  const series = { a: [S(1, 100, 8, 10), S(2, 100, 8, 10), S(3, 100, 8, 10)], b: [S(1, 20, 12, 10), S(2, 20, 12, 10), S(3, 20, 12, 10), S(4, 20, 12, 10)] };
+  const checkins = [{ semana_inicio: '2026-11-02', energia: 1, recuperacion: 1 }, { semana_inicio: '2026-11-09', energia: 1, recuperacion: 1 }];
+  const normal = proponerSemanaHoy({ pautas, sesiones: ses, series, ejercicios: ejs, atleta: { nivel: 'intermedio' }, contexto: { checkins } });
+  check(normal.semana.tipo === 'normal' && normal.descarga.senales.length === 0 && !normal.descarga.propuesta && normal.descarga.filas === null, 'sin el foco «Descarga» el motor ni la propone ni avisa, aunque el check-in venga bajo dos semanas');
+  const desc = proponerSemanaHoy({ pautas, sesiones: ses, series, ejercicios: ejs, atleta: { nivel: 'intermedio' }, contexto: { focoSiguiente: 'descarga' } });
+  const fd = Object.fromEntries(desc.filas.map((x) => [x.pauta_id, x]));
+  check(desc.semana.tipo === 'descarga' && fd.a.propuesta.series === 2 && fd.a.propuesta.carga_sugerida_kg === 90 && fd.a.propuesta.rpe_objetivo === 7 && fd.b.propuesta.series === 2 && /un tercio menos/.test(fd.a.motivo) && /la mitad/.test(fd.b.motivo),
+    'con el foco: la descarga FBE en toda la semana (principales un tercio menos; accesorios la mitad)');
+  const vuelta = proponerSemanaHoy({ pautas: pautas.map((x) => ({ ...x, series: 2 })), sesiones: ses, series: {}, ejercicios: ejs, atleta: { nivel: 'intermedio' },
+    historial: { a: [{ foco: 'intensidad', pauta: pautas[0], series: [S(1, 100, 10, 7), S(2, 100, 10, 7), S(3, 100, 10, 7)] }], b: [{ foco: 'intensidad', pauta: pautas[1], series: series.b }] }, contexto: { focoAnterior: 'descarga' } });
+  const fv = Object.fromEntries(vuelta.filas.map((x) => [x.pauta_id, x]));
+  check(fv.a.tipo === 'mantener' && fv.a.propuesta.series === 3 && fv.a.propuesta.carga_sugerida_kg === 100 && /repite la última semana normal/.test(fv.a.motivo), 'tras la descarga: repite la última semana normal tal cual, sin subir (aunque fuera fácil)');
+  // Peaking: solo la serie pesada de los básicos Obligatorio; lo demás se queda igual
+  const pk = (pauta, ss, ej = ejs.banca) => porSerie(leerEjercicio({ pauta, series: ss, nombre: ej.nombre, reglas: RN }), pauta, { nombre: ej.nombre, reglas: RN, ejercicio: ej, nivel: 'intermedio', peaking: true, topSet: true });
+  const top = pk(P({ series: 3, reps_min: 3, reps_max: 5, carga_sugerida_kg: 100 }), [S(1, 100, 4, 8), S(2, 90, 6, 7), S(3, 90, 6, 7)]);
+  const sd = top.propuesta.series_detalle;
+  check(top.fase === 'peaking' && sd[0].reps === 3 && sd[0].kg > 100 && sd[1].kg === 90 && sd[1].reps === 6 && sd[2].kg === 90, 'peaking: la serie pesada baja una repetición con más kilos (apunta a RPE 9); las de apoyo se quedan igual aunque fueran fáciles');
+  check(pk(P({ series: 3, prioridad: 'media', reps_min: 3, reps_max: 5, carga_sugerida_kg: 100 }), [S(1, 100, 4, 8), S(2, 90, 6, 7), S(3, 90, 6, 7)]).tipo === 'mantener'
+    && /se queda igual/.test(pk(P({ ejercicio_id: 'curl', prioridad: 'baja', carga_sugerida_kg: 20 }), [S(1, 20, 12, 6), S(2, 20, 12, 6), S(3, 20, 12, 6)], ejs.curl).motivo),
+    'en la semana de peaking, un básico que no es Obligatorio y los accesorios se quedan igual');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

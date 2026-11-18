@@ -18,7 +18,7 @@ export const MODELOS_DISPONIBLES = ['por_serie', 'top_set', 'doble', 'triple', '
 export const MODELO_BASE = 'por_serie';
 
 export const CRITERIOS_SUBIDA = ['todas', 'todas_menos_una', 'primera', 'suma'];
-export const TIPOS_DESCARGA = ['ligera', 'volumen', 'intensidad', 'tecnica'];
+export const TIPOS_DESCARGA = ['fbe', 'ligera', 'volumen', 'intensidad', 'tecnica'];
 
 export const REGLAS_FBE = Object.freeze({
   // Modelo de partida según el tipo de ejercicio; `modelo` (a nivel de ejercicio) manda sobre los dos
@@ -75,7 +75,9 @@ export const REGLAS_FBE = Object.freeze({
       suelo: 1,            // hasta cuántas repeticiones baja; al llegar, solo se ajustan los kilos
       kilos: 'calculados', // 'calculados' (los que mantienen el esfuerzo, desde el 1RM estimado) | 'salto' (un salto fijo)
       rpe: 'hecho',        // el esfuerzo que se mantiene: 'hecho' (el RPE al que le salió la top) | 'pauta' (el pautado; si no lo hay, el que hizo)
-      rpeMin: 8,           // … que nunca baja de aquí: una top fácil no se queda fácil
+      rpeMin: 9,           // … que nunca baja de aquí (v0.183: hasta 1 repeticion a RPE 9)
+      soloObligatorio: true, // (v0.183) solo los basicos «Obligatorio»
+      resto: 'igual',      // (v0.183) lo demas esas semanas: 'igual' (no progresa) | 'regla' (sigue su regla)
       duraRpe: 9,          // por encima, la top se repite tal cual
       maxPct: 10,          // tope de subida de kilos de una semana a otra
     },
@@ -94,9 +96,15 @@ export const REGLAS_FBE = Object.freeze({
   lineal: { fallosAntesDeBajar: 2, bajadaPct: 10, bajadasParaSalir: 2 },
   soloReps: { sube: 'una_total' }, // 'una_total' | 'una_cada_serie'
   descarga: {
-    cuando: 'senales',  // 'senales' | 'programada' | 'mixta' | 'manual'
+    // (v0.183, decisiones de Pelayo del 18/11/2026) Solo hay descarga cuando el coach pone ese foco en la semana
+    // ('manual'): el motor ni la propone ni avisa. La de partida es la suya ('fbe'): un tercio menos de series,
+    // −10 % de kilos y RPE 7 con las mismas repeticiones; Accesorio y Prescindible, la mitad de series; a los
+    // novatos, una serie menos y RPE 7 sin bajar kilos. Después se repite la ultima semana normal, sin subir.
+    cuando: 'manual',   // 'senales' | 'programada' | 'mixta' | 'manual'
     cadaSemanas: 5,     // solo con 'programada' o 'mixta'
-    tipo: 'ligera',     // ver TIPOS_DESCARGA
+    tipo: 'fbe',        // ver TIPOS_DESCARGA
+    fbe: { series: 0.67, kgPct: 10, rpe: 7, accesorios: 0.5, novato: { quitar: 1, kgPct: 0, rpe: 7 } },
+    vuelta: 'repetir',  // tras la descarga: 'repetir' (la ultima semana normal tal cual) | 'progresar' (desde ella, con la regla)
     intensidadPct: 15,  // recorte de kilos en la de intensidad
     tecnicaPct: 20,     // recorte de kilos en la de técnica
   },
@@ -182,7 +190,7 @@ const ESQUEMA = {
   triple: { seriesMin: NUM(1, 10), seriesMax: NUM(1, 12), seriesExtra: NUM(1, 4) },
   lineal: { fallosAntesDeBajar: NUM(1, 3), bajadaPct: NUM(5, 15), bajadasParaSalir: NUM(1, 5) },
   soloReps: { sube: UNO_DE(['una_total', 'una_cada_serie']) },
-  descarga: { cuando: UNO_DE(['senales', 'programada', 'mixta', 'manual']), cadaSemanas: NUM(3, 12), tipo: UNO_DE(TIPOS_DESCARGA), intensidadPct: NUM(5, 30), tecnicaPct: NUM(5, 40) },
+  descarga: { vuelta: UNO_DE(['repetir', 'progresar']), cuando: UNO_DE(['senales', 'programada', 'mixta', 'manual']), cadaSemanas: NUM(3, 12), tipo: UNO_DE(TIPOS_DESCARGA), intensidadPct: NUM(5, 30), tecnicaPct: NUM(5, 40) },
   mantenimiento: { activo: (v) => typeof v === 'boolean', series: NUM(0.25, 1) },
   frenos: { semanaAMedias: NUM(0, 1), paron: NUM(3, 60), pasadoDeEsfuerzo: NUM(0.5, 3), sobrado: NUM(1, 4), datoRaroPct: NUM(10, 100), datoRaroSaltos: NUM(1, 10), datoRaroReps: NUM(1.5, 5), checkinBajo: NUM(1, 4), detalleCorta: NUM(1, 5) },
   molestias: UNO_DE(['avisar', 'leve', 'moderada', 'grave']),
@@ -192,7 +200,7 @@ const ESQUEMA = {
   escala: UNO_DE(['rpe', 'rir', 'pauta']),
   rpeMax: NUM(5, 10),
 };
-const PEAKING = { cuando: UNO_DE(['foco', 'nunca']), reps: UNO_DE([1, 2]), suelo: UNO_DE([1, 2, 3, 4, 5]), kilos: UNO_DE(['calculados', 'salto']), rpe: UNO_DE(['pauta', 'hecho']), rpeMin: NUM(6, 9.5), duraRpe: NUM(8, 10), maxPct: NUM(2.5, 20) };
+const PEAKING = { soloObligatorio: (v) => typeof v === 'boolean', resto: UNO_DE(['igual', 'regla']), cuando: UNO_DE(['foco', 'nunca']), reps: UNO_DE([1, 2]), suelo: UNO_DE([1, 2, 3, 4, 5]), kilos: UNO_DE(['calculados', 'salto']), rpe: UNO_DE(['pauta', 'hecho']), rpeMin: NUM(6, 9.5), duraRpe: NUM(8, 10), maxPct: NUM(2.5, 20) };
 const tramoVale = (t) => esObjeto(t) && NUM(1, 365)(t.desde) && NUM(0, 50)(t.kgPct) && NUM(0, 3)(t.series) && (t.rpeMax == null || NUM(5, 10)(t.rpeMax));
 
 // Limpia una capa de reglas (lo que escribe el coach o lo que viene de la base): se queda solo con lo que el motor

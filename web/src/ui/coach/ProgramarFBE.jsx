@@ -182,7 +182,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
       )}
       {r.semana.peaking != null && !otra && (
         <p class="nota-coach" role="note"><Icono n="diana" /><span><strong>Semana de peaking.</strong> {r.semana.peaking
-          ? 'En los básicos, la serie top baja una repetición y lleva los kilos que mantienen el esfuerzo; las back-off y el resto de ejercicios siguen como siempre.'
+          ? 'En los básicos «Obligatorio», la serie pesada baja una repetición y lleva los kilos que mantienen el esfuerzo (hasta 1 repetición a RPE 9); las demás series y el resto de ejercicios se quedan igual.'
           : 'No hay ningún básico con kilos registrados del que partir: la propuesta es la de una semana normal.'}{destino.foco !== 'peaking' ? ` El foco de la semana ${destino.numero} no cambia: si quieres que conste, márcalo en el editor.` : ''}</span></p>
       )}
       {(hayOtra || puedePico) && (

@@ -10,7 +10,7 @@ import { saltoDe, SIN_DATOS } from './lectura.js';
 import { REGLAS_FBE } from './reglas.js';
 
 const dos = (x) => Math.round(x * 100) / 100;
-export const NOMBRE_DESCARGA = { ligera: 'ligera', volumen: 'de volumen', intensidad: 'de intensidad', tecnica: 'de técnica' };
+export const NOMBRE_DESCARGA = { fbe: 'FBE', ligera: 'ligera', volumen: 'de volumen', intensidad: 'de intensidad', tecnica: 'de técnica' };
 
 // «¿Cómo llegas hoy?» en el nivel más bajo
 export const esMalDia = (sesion) => consejoPreparacion(sesion?.preparacion)?.nivel === 'malo';
@@ -34,8 +34,15 @@ function recortarKg(kg, pct, nombre, reglas) {
 const minimoSeries = (p) => (esTopBackoff(p) ? 2 : 1);
 
 // Aplica a una pauta un recorte: { kgPct, series: n a quitar | 'mitad' | factor (0–1), rpeMenos, rpeMax }
-function recortar(pauta, { kgPct = 0, quitar = 0, factor = null, rpeMenos = 0, rpeMax = null }, nombre, reglas) {
+function recortar(pauta, { kgPct = 0, quitar = 0, factor = null, rpeMenos = 0, rpeMax = null, rpeFijo = null }, nombre, reglas) {
   const p = campos(pauta);
+  // (v0.183) rpeFijo: el esfuerzo objetivo de la descarga (se pone aunque la pauta no llevara ninguno; el RIR se quita)
+  if (rpeFijo != null) {
+    const fijo = (v) => (v == null ? rpeFijo : Math.min(Number(v), rpeFijo));
+    p.rpe_objetivo = p.rir_objetivo != null ? Math.min(Math.max(1, 10 - Number(p.rir_objetivo)), rpeFijo) : fijo(p.rpe_objetivo);
+    p.rir_objetivo = null;
+    if (Array.isArray(p.series_detalle)) p.series_detalle = p.series_detalle.map((x) => ({ ...x, rpe: fijo(x.rpe) }));
+  }
   const rpe = (v) => { if (v == null) return v; let x = Number(v); if (rpeMenos) x = Math.min(x, Math.max(5, x - rpeMenos)); if (rpeMax != null) x = Math.min(x, rpeMax); return x; };
   const cuantas = (n) => Math.max(minimoSeries(pauta), factor != null ? Math.round(n * factor) : n - quitar);
   if (tieneDetalle(pauta)) {
@@ -62,16 +69,28 @@ function recortar(pauta, { kgPct = 0, quitar = 0, factor = null, rpeMenos = 0, r
 //   volumen     la mitad de las series, mismos kilos, RPE −1
 //   intensidad  mismas series, −15 % de kilos, RPE −2
 //   tecnica     una serie menos, −20 % de kilos, RPE máximo 6
-export function aplicarDescarga(pauta, { tipo = 'ligera', nombre = '', kgBase = 0, reglas = REGLAS_FBE } = {}) {
+export function aplicarDescarga(pauta, { tipo = 'ligera', nombre = '', kgBase = 0, reglas = REGLAS_FBE, nivel = null } = {}) {
   const base = !tieneDetalle(pauta) && pauta.carga_sugerida_kg != null && kgBase > 0 ? { ...pauta, carga_sugerida_kg: dos(kgBase) } : pauta;
   const d = reglas.descarga;
+  if (tipo === 'fbe') {
+    const f = d.fbe || REGLAS_FBE.descarga.fbe;
+    if (nivel === 'novato') return recortar(base, { kgPct: f.novato.kgPct, quitar: f.novato.quitar, rpeFijo: f.novato.rpe }, nombre, reglas);
+    const accesorio = pauta.prioridad === 'baja' || pauta.prioridad === 'muy_baja';
+    return recortar(base, { kgPct: f.kgPct, factor: accesorio ? f.accesorios : f.series, rpeFijo: f.rpe }, nombre, reglas);
+  }
   if (tipo === 'volumen') return recortar(base, { factor: 0.5, rpeMenos: 1 }, nombre, reglas);
   if (tipo === 'intensidad') return recortar(base, { kgPct: d.intensidadPct, rpeMenos: 2 }, nombre, reglas);
   if (tipo === 'tecnica') return recortar(base, { kgPct: d.tecnicaPct, quitar: 1, rpeMax: 6 }, nombre, reglas);
   return campos(progresarPauta(campos(base), undefined, { nombre, descarga: true }));
 }
-export function motivoDescarga(tipo, reglas = REGLAS_FBE) {
+export function motivoDescarga(tipo, reglas = REGLAS_FBE, { prioridad = null, nivel = null } = {}) {
   const d = reglas.descarga;
+  if (tipo === 'fbe') {
+    const f = d.fbe || REGLAS_FBE.descarga.fbe;
+    if (nivel === 'novato') return `Descarga: una serie menos y RPE ${num(f.novato.rpe)}, con los mismos kilos y repeticiones`;
+    return prioridad === 'baja' || prioridad === 'muy_baja' ? `Descarga: la mitad de las series, −${num(f.kgPct)} % de kilos y RPE ${num(f.rpe)}, mismas repeticiones`
+      : `Descarga: un tercio menos de series, −${num(f.kgPct)} % de kilos y RPE ${num(f.rpe)}, mismas repeticiones`;
+  }
   return {
     ligera: 'Descarga ligera: una serie menos, −10 % de kilos y RPE −1',
     volumen: 'Descarga de volumen: la mitad de las series, mismos kilos y RPE −1',

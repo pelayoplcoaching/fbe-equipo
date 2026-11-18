@@ -52,6 +52,7 @@ export function ReglasAtleta({ nombre, nivel, guardadas, ocupado, alGuardar }) {
       </div>
       {!abierto ? <p class="mini secundario">{resumenGuardadas(guardadas)}{hayGuardadas(guardadas) ? '.' : ` (${dePartida.toLowerCase()}): progresión serie a serie.`}</p> : (
         <div class="pila">
+          <p class="mini secundario">Lo que cambia la propuesta ahora: el perfil, las mancuernas de su gimnasio y los rangos. Con la regla por RPE, «Suma una repetición hasta», «Al llegar al tope», la serie top y la casilla de la descarga ya no hacen nada (la descarga solo sale cuando pones ese foco en la semana).</p>
           <div class="campo">
             <label for="fbe-perfil">Perfil</label>
             <select id="fbe-perfil" class="selector" value={f.perfil} onChange={(e) => setF({ ...f, perfil: e.currentTarget.value })}>
@@ -169,6 +170,7 @@ export function ReglaEjercicio({ clave, ejercicioId, nombre, atleta = null, efec
         <div class="campo">
           <label for={id('rpe')}>Suma una repetición hasta</label>
           <SelectorRpe id={id('rpe')} valor={f.rpeSube} alCambiar={(v) => setF({ ...f, rpeSube: v })} />
+          <span class="ayuda">Con la regla por RPE ya no se usa.</span>
         </div>
       </div>
       {errores.length > 0 && <p class="error" role="alert">{errores.join('. ')}.</p>}

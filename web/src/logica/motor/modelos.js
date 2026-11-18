@@ -278,7 +278,11 @@ export function porSerie(l, pauta, ctx) {
   const { reglas, nombre = '', ejercicio = null, nivel = null } = ctx;
   const R = reglas.porSerie, T = reglas.topSet;
   const basico = esBasico(ejercicio);
-  const pico = !!ctx.peaking && basico && T.peaking.cuando === 'foco';
+  const semanaPico = !!ctx.peaking && T.peaking.cuando === 'foco';
+  const pico = semanaPico && basico && (!T.peaking.soloObligatorio || pauta.prioridad === 'alta');
+  // (v0.183) en una semana de peaking, lo que no es la serie pesada de un basico Obligatorio se queda igual
+  const restoIgual = semanaPico && T.peaking.resto === 'igual';
+  if (restoIgual && !pico) return { tipo: 'mantener', propuesta: campos(pauta), orientativa: null, motivo: 'Semana de peaking: este ejercicio se queda igual', alternativas: [], avisos: [] };
   if (esTopBackoff(pauta)) {
     if (pico) return picoTopBackoff(l, pauta, ctx);
     const r = doble(l, pauta, ctx);
@@ -350,8 +354,8 @@ export function porSerie(l, pauta, ctx) {
       acciones.push(pk.accion === 'suelo' ? (pk.delta > 0 ? 'pk_suelo_sube' : 'pk_suelo') : pk.delta > 0 ? 'pk' : 'pk_mismo');
       return pk.accion === 'suelo' && !(pk.delta > 0) ? igual() : con({ kg: pk.kg, reps: pk.reps });
     }
-    if (rol[i] === 'backoff' && T.backoff !== 'solas') {
-      if (T.backoff === 'faciles' && mueveKg && rpe != null && rpe <= T.backoffFacilRpe) { acciones.push('bo_sube'); return con({ kg: subir(), reps }); }
+    if (rol[i] === 'backoff' && (T.backoff !== 'solas' || restoIgual)) {
+      if (!restoIgual && T.backoff === 'faciles' && mueveKg && rpe != null && rpe <= T.backoffFacilRpe) { acciones.push('bo_sube'); return con({ kg: subir(), reps }); }
       acciones.push('bo_igual'); return igual();
     }
     if (porRpe && rol[i] === 'normal') {

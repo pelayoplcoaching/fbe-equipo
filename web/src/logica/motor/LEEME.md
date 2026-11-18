@@ -78,7 +78,20 @@ pautado, lo que hizo y la propuesta serie a serie (`seriesEnFilas`, `textoSerieF
   El acuerdo con lo programado baja del 69 % al 52 % en dirección: es esperable (38 de las 84 semanas se programaron con
   el motor anterior y las reglas nuevas cambian a propósito lo que Pelayo corregía).
 
-Sin hacer: peaking y descarga (tercera pasada); «Suma una repetición hasta» de los formularios ya no aplica a la regla
+## Tercera pasada: descarga y peaking (v0.183, 18/11/2026)
+
+- `descarga.cuando: 'manual'` de partida: sin el foco «Descarga» no hay señales ni propuesta (la hoja ya no enseña «Podría
+  tocar descarga» ni «Ver la semana como descarga»). `descarga.tipo: 'fbe'` (`descarga.fbe`): series × 0,67, −10 % de
+  kilos, RPE 7 (`rpeFijo`: se pone aunque la pauta no llevara esfuerzo y quita el RIR), mismas repeticiones; prioridad
+  baja y muy baja, series × 0,5; novato, una serie menos y RPE 7 sin bajar kilos. `descarga.vuelta: 'repetir'`: tras la
+  descarga, la última semana normal tal cual.
+- Peaking: `topSet.peaking.soloObligatorio`, `resto: 'igual'`, `rpeMin: 9`, suelo 1. En la semana de peaking, lo que no es
+  un básico Obligatorio devuelve «mantener», y dentro de él las series de apoyo no se tocan.
+- Los focos de volumen, intensidad, adaptación y técnica no cambian nada (decisión).
+- Pendiente menor: quitar de los formularios los campos que la regla por RPE no usa (de momento, avisados) y reescribir
+  el aviso de nivel del editor (`AYUDA_NIVEL`), que describe el reparto antiguo de kilos y RPE por nivel.
+
+(Nota de la v0.182:) «Suma una repetición hasta» de los formularios ya no aplica a la regla
 por RPE (solo a la clásica y al top set).
 
 ## Reglas propias de cada atleta (16/11/2026)
