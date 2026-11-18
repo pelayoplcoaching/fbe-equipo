@@ -6678,6 +6678,56 @@ export function crearApi(backend) {
       for (const o of otros) if (o.id !== bloqueId) await b.update('bloques', { estado: 'finalizado' }, { eq: { id: o.id } });
       return (await b.update('bloques', { estado: 'activo' }, { eq: { id: bloqueId } }))[0];
     },
+    // (v0.184) varios ejercicios de una vez, cada uno con sus valores de partida: [{ ejercicio_id, ...base }]
+    async nuevasPautas(sesionId, lista = []) {
+      if (!lista.length) return [];
+      const ps = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'desc']], limit: 1 });
+      const desde = ps[0]?.orden || 0;
+      return b.insert('sesion_ejercicios', lista.slice(0, 20).map((x, i) => ({
+        sesion_id: sesionId, orden: desde + i + 1, prioridad: 'media', series: 3, reps_min: 8, reps_max: 10, rir_objetivo: 2, descanso_seg: 120, ...x,
+      })));
+    },
+    // (v0.184) el orden de los ejercicios de una sesion (o de las sesiones de una semana), tal como llega
+    async ordenarPautas(sesionId, ids = []) {
+      const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] });
+      const pos = Object.fromEntries(ids.map((id, k) => [id, k + 1]));
+      const resto = pautas.filter((p) => !(p.id in pos));
+      resto.forEach((p, k) => { pos[p.id] = ids.length + k + 1; });
+      await Promise.all(pautas.map((p) => (p.orden !== pos[p.id] ? b.update('sesion_ejercicios', { orden: pos[p.id] }, { eq: { id: p.id } }) : null)));
+    },
+    async ordenarSesiones(semanaId, ids = []) {
+      const sesiones = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'asc']] });
+      const pos = Object.fromEntries(ids.map((id, k) => [id, k + 1]));
+      sesiones.filter((x) => !(x.id in pos)).forEach((x, k) => { pos[x.id] = ids.length + k + 1; });
+      await Promise.all(sesiones.map((x) => (x.orden !== pos[x.id] ? b.update('sesiones', { orden: pos[x.id] }, { eq: { id: x.id } }) : null)));
+    },
+    // (v0.184) el mismo ejercicio otra vez, justo debajo, con su prescripcion
+    async duplicarPauta(pautaId) {
+      const [p] = await b.select('sesion_ejercicios', { eq: { id: pautaId } });
+      if (!p) return null;
+      const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: p.sesion_id }, order: [['orden', 'asc']] });
+      const fila = Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null]));
+      const [copia] = await b.insert('sesion_ejercicios', [{ ...fila, sesion_id: p.sesion_id, orden: pautas.length + 1 }]);
+      const ids = pautas.map((x) => x.id);
+      ids.splice(ids.indexOf(pautaId) + 1, 0, copia.id);
+      await api.ordenarPautas(p.sesion_id, ids);
+      return copia;
+    },
+    // (v0.184) una sesion entera (con sus ejercicios, su cardio, su video y su musica) a otra semana del bloque, o a la
+    // suya («(copia)»). Tal cual, sin progresion; lo registrado no se copia.
+    async copiarSesion(sesionId, semanaDestinoId) {
+      const [s] = await b.select('sesiones', { eq: { id: sesionId } });
+      if (!s) return null;
+      const ss = await b.select('sesiones', { eq: { semana_id: semanaDestinoId }, order: [['orden', 'desc']], limit: 1 });
+      const misma = s.semana_id === semanaDestinoId;
+      const [copia] = await b.insert('sesiones', [{ semana_id: semanaDestinoId, orden: (ss[0]?.orden || 0) + 1, nombre: misma ? `${s.nombre} (copia)`.slice(0, 80) : s.nombre, tipo: s.tipo, intencion: s.intencion, dinamica: s.dinamica, cardio: s.cardio ?? null, ...(s.video_url ? { video_url: s.video_url, video_titulo: s.video_titulo ?? null } : {}) }]);
+      const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] });
+      if (pautas.length) {
+        await b.insert('sesion_ejercicios', pautas.map((p) => ({ ...Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null])), sesion_id: copia.id })));
+      }
+      await api.copiarMusica([[s.id, copia.id]]);
+      return copia;
+    },
     async moverPauta(sesionId, pautaId, delta) {
       const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] });
       const i = pautas.findIndex((p) => p.id === pautaId);

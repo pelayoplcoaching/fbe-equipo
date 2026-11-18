@@ -2429,7 +2429,7 @@ try {
   await p.locator('.toast', { hasText: 'Ya no ve nada de nutrición' }).waitFor();
   await p.getByRole('tab', { name: 'Programa' }).click();
   await p.locator('.aviso-nivel').waitFor();
-  check(await p.locator('.tabla-pauta th', { hasText: /^Kg$/ }).count() === 0 && await p.locator('.tabla-pauta th', { hasText: /^RPE$/ }).count() > 0, 'su editor, a RPE: sin la columna de kg');
+  check(await p.locator('.tabla-pauta th', { hasText: /^Kilos$/ }).count() === 0 && await p.locator('.tabla-pauta th', { hasText: /^RPE$/ }).count() > 0, 'su editor, a RPE: sin la columna de kg');
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.locator('.tarjeta-atleta', { hasText: 'Ana López' }).first().click();
   await p.locator('.aviso-nivel').waitFor();
@@ -5961,6 +5961,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ cómo va la app en cada dispositivo:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
+// v0.184: el editor manual del programa, más cómodo (test/e2e-editor-184.mjs)
+console.log('\nv0.184: el editor manual, más cómodo');
+try {
+  const { probarEditor184 } = await import('./e2e-editor-184.mjs');
+  await probarEditor184({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.184:', e.message.split('\n')[0]);
 }
 
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)

@@ -4909,3 +4909,77 @@ body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
 .tabla-pauta .fbe-series th, .tabla-pauta .fbe-series td { padding: var(--esp-2) var(--esp-14) var(--esp-2) 0; }
 .tabla-pauta .fbe-series th, .tabla-pauta .fbe-series td { border: 0; background: none; height: auto; }
 @media (max-width: 560px) { .fbe-series td { white-space: normal; } }
+
+/* ---------- v0.184: el editor manual, mas comodo (deshacer, plegar, arrastrar, + y -, varios de una vez) ---------- */
+.editor-sesion { position: relative; }
+.editor-sesion-barra { display: flex; align-items: center; gap: var(--esp-8); min-width: 0; }
+.plegar-sesion { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; gap: var(--esp-6); }
+.plegar-sesion > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-sesion.plegada .plegar-sesion { color: var(--tinta); font-size: var(--letra-14); }
+.menu-sesion { flex: none; width: auto; max-width: 180px; min-height: 36px; font-size: var(--letra-13); }
+.asa-mover { cursor: grab; touch-action: none; color: var(--tinta-3); flex: none; }
+.asa-mover svg { width: var(--ico-18); height: var(--ico-18); stroke-width: 2.6; }
+body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.tabla-pauta tr.arrastrando > td { background-color: var(--morado-suave); }
+.editor-sesion.arrastrando { outline: 2px solid var(--morado); outline-offset: 2px; }
+.tabla-pauta tr.soltar-antes > td, .tabla-pauta tr.soltar-despues > td { background-image: linear-gradient(var(--morado), var(--morado)); background-size: 100% 3px; background-repeat: no-repeat; background-position: top; }
+.tabla-pauta tr.soltar-despues > td { background-position: bottom; }
+.editor-sesion.soltar-antes::before, .editor-sesion.soltar-despues::after { content: ""; position: absolute; left: 0; right: 0; height: 4px; border-radius: var(--r-xs); background: var(--morado); }
+.editor-sesion.soltar-antes::before { top: calc(var(--esp-8) * -1); }
+.editor-sesion.soltar-despues::after { bottom: calc(var(--esp-8) * -1); }
+.tabla-pauta .acciones-fila { display: grid; grid-template-columns: repeat(2, 36px); gap: 2px; }
+.tabla-pauta .acciones-fila > .btn-icono { width: 36px; height: 36px; }
+.tabla-pauta td[data-col="Kilos"] { min-width: 108px; }
+.tabla-pauta .col-ejercicio > .fbe-series-caja, .tabla-pauta .col-ejercicio > .atajos-previa { contain: inline-size; width: calc(100% + var(--sale)); margin-right: calc(-1 * var(--sale)); }
+.con-pasos { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: 2px; align-items: stretch; }
+.con-pasos .paso { min-height: 40px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta-2); }
+.con-pasos .paso:hover { border-color: var(--morado); color: var(--morado); }
+.con-pasos .paso svg { width: var(--ico-14); height: var(--ico-14); }
+.detalle-cab, .detalle-fila { grid-template-columns: 24px 96px 116px 48px 32px; gap: var(--esp-4); }
+.tabla-pauta .con-pasos input.n { min-width: 0; padding-inline: var(--esp-2); }
+.deshacer-flotante { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 6; background: var(--hoja); box-shadow: var(--sombra); }
+@media (min-width: 900px) { .deshacer-flotante { bottom: 24px; right: 24px; } }
+@media (min-width: 700px) { .tabla-pauta-env .tabla-pauta .col-ejercicio > .detalle-series { width: 22.5rem; } }
+.detalle-fila .con-pasos .paso { min-height: 36px; background: var(--hoja); }
+.detalle-acciones { gap: var(--esp-12); }
+.atajos-previa { gap: var(--esp-12); margin-top: var(--esp-6); }
+/* que columna se esta tocando: su nombre sale sobre la casilla al entrar en ella */
+@media (min-width: 700px) {
+.tabla-pauta td[data-col] { position: relative; }
+.tabla-pauta td[data-col]:focus-within::before { content: attr(data-col); position: absolute; left: var(--esp-4); bottom: calc(100% - 6px); z-index: 3; padding: 1px var(--esp-6); border-radius: var(--r-xs); background: var(--tinta); color: var(--hoja); font-size: var(--letra-11); font-weight: 650; white-space: nowrap; pointer-events: none; }
+}
+/* en pantallas anchas la tabla cabe entera: sus titulos se quedan arriba al bajar */
+@media (min-width: 1280px) {
+  .tabla-pauta-env { overflow-x: visible; }
+  .tabla-pauta-env .tabla-pauta > thead > tr > th { position: sticky; top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 4; background: var(--hoja); padding-top: var(--esp-6); border-bottom: var(--filo-fino) solid var(--linea); }
+}
+.lista-elegir .elegir-fila { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; }
+.lista-elegir .elegir-fila:has(.elegir-marca) { grid-template-columns: auto minmax(0, 1fr); }
+.lista-elegir .elegir-fila + .elegir-fila { border-top: var(--filo-fino) solid var(--linea); }
+.lista-elegir .elegir-fila.marcado { background: var(--morado-suave); }
+.elegir-marca { width: 22px; height: 22px; margin: 0 0 0 var(--esp-12); accent-color: var(--morado); }
+.elegir-varios { display: flex; flex-wrap: wrap; gap: var(--esp-10); align-items: center; justify-content: space-between; }
+.elegir-varios > span { flex: 1; min-width: 160px; }
+.vista-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-10); }
+.vista-ejercicios li { display: grid; gap: 2px; }
+.vista-nombre { display: flex; align-items: baseline; gap: var(--esp-6); min-width: 0; }
+.vista-nombre > .disco { flex: none; align-self: center; }
+.vista-letra { font-weight: 750; color: var(--morado); }
+@media (max-width: 699px) {
+  .tabla-pauta-env .tabla-pauta tr[data-fila] > td.col-acciones { position: static; order: 0; grid-column: 1 / -1; padding: 0 var(--esp-4); }
+  .tabla-pauta .acciones-fila { display: flex; justify-content: flex-end; gap: var(--esp-2); }
+  .tabla-pauta .acciones-fila > span:empty { display: none; }
+  .tabla-pauta-env .tabla-pauta .col-ejercicio > .btn-ejercicio { margin-right: 0; width: 100%; }
+  .tabla-pauta .col-ejercicio > .fbe-series-caja, .tabla-pauta .col-ejercicio > .atajos-previa, .tabla-pauta .col-ejercicio > .detalle-series { contain: none; width: 100%; margin-right: 0; }
+  .tabla-pauta .fbe-series thead { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .tabla-pauta .fbe-series tbody { display: table-row-group; }
+  .tabla-pauta .fbe-series tbody td, .tabla-pauta .fbe-series tbody th { display: table-cell; padding: var(--esp-2) var(--esp-8) var(--esp-2) 0; }
+  .tabla-pauta .fbe-series td::before { content: none; display: none; }
+  .tabla-pauta td[data-col="Kilos"] { min-width: 0; }
+  .tabla-pauta tbody tr[data-fila]:has(> td) > td[data-col="Kilos"]:nth-child(n+4):not(:nth-last-child(-n+2)) { grid-column: span 26; }
+  .tabla-pauta td[data-col="Kilos"]::before { content: "Kilos"; }
+  .tabla-pauta .fbe-series-caja.en-editor .fbe-series { width: 100%; table-layout: fixed; }
+  .tabla-pauta .fbe-series thead th:first-child { width: 2.4rem; }
+  .tabla-pauta .fbe-series thead th { white-space: normal; }
+  .editor-sesion-barra { flex-wrap: wrap; }
+}

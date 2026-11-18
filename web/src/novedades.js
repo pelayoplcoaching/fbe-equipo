@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.184': {
+    coach: [
+      'Editor del programa: botón «Deshacer», + y − en los kilos con el salto del ejercicio y «Como la semana pasada» o «Lo que hizo».',
+      'Sesiones y ejercicios se pliegan, se duplican y se reordenan arrastrando; una sesión se copia a otra semana.',
+      '«Como lo verá el atleta» antes de publicar, y en el buscador puedes marcar varios ejercicios y añadirlos de una vez.',
+    ],
+  },
   '0.183': {
     coach: [
       'Descarga: solo cuando pones ese foco. Un tercio menos de series, −10 % de kilos y RPE 7; accesorios, la mitad.',

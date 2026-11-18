@@ -3,7 +3,7 @@ import { enlacesFichas, todasLasFichas } from '../../datos/guias.js';
 import { lunesDe as lunesDeGuias, sumarDias as sumarDiasGuias, hoyISO as hoyGuias } from '../../logica/fechas.js';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Siluetas, useApp, useCarga, Icono, Disco, Cargando, ErrorCaja, Hoja, Paso, Segmentos } from '../comunes.jsx';
-import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, desglosePautadoPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta } from '../../logica/calculos.js';
+import { FOCOS, INTENCIONES, PRIORIDADES, NOMBRE_GRUPO, GRUPOS, TIPOS_SESION, LETRAS_SUPERSERIE, etiquetasSuperserie, seriesPautadasPorGrupo, desglosePautadoPorGrupo, rangoVolumen, estadoVolumen, num, mmss, tieneDetalle, detalleDesdePauta, pauta as pautaAtleta } from '../../logica/calculos.js';
 import { rangoSemana, lunesDe, fmtCorta, fmtConDia, sumarDias } from '../../logica/fechas.js';
 import { sugerirCargas } from '../../logica/sugerencias.js';
 import { leerTempo, explicarTempo } from '../../logica/tempo.js';
@@ -13,7 +13,9 @@ import { revisarVariante, equivalentes } from '../../logica/variantes.js';
 import { MODALIDADES, limpiarCardio, textoCardio, palabrasEsfuerzo } from '../../logica/cardio.js';
 import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
-import { pautasDeSemana, emparejar, seriesEnFilas, textoSerieFBE } from '../../logica/motor/index.js';
+import { pautasDeSemana, emparejar, seriesEnFilas, textoSerieFBE, leerGuardadas, paraElMotor, resolverReglas } from '../../logica/motor/index.js';
+import { CAMPOS_PAUTA, antesDe, etiquetaCambio, apilar, cambiarId, basePauta, comoLaAnterior, detalleDeHechas, pasoDe, saltoKg, igualarSeries, reordenar, resumenSesion } from '../../logica/editor.js';
+import { asa } from './arrastre.js';
 import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
@@ -44,6 +46,19 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const [version, setVersion] = useState(0); // cambia al aplicar cambios en bloque, para refrescar los campos
   const [publicarEn, setPublicarEn] = useState(null); // semana a publicar en un bloque que aún no es el activo
   const [fbe, setFbe] = useState(null); // «Programar según FBE»: { base, destino } (ids de semana)
+  // (v0.184) deshacer: los últimos cambios, del más viejo al más nuevo ({ tipo, etiqueta, … }); se vacía al cambiar de bloque
+  const [pila, setPila] = useState([]);
+  useEffect(() => { setPila([]); }, [bloqueId]);
+  // (v0.184) lo plegado: «s:<id>» una sesión, «p:<id>» lo de debajo de un ejercicio (se recuerda mientras dure la pestaña)
+  const [plegado, setPlegado] = useState(() => { try { return new Set(JSON.parse(sessionStorage.getItem('fbe-editor-plegado') || '[]')); } catch { return new Set(); } });
+  const plegar = (claves, si) => setPlegado((x) => {
+    const n = new Set(x);
+    for (const c of [].concat(claves)) { if (si ?? !x.has(c)) n.add(c); else n.delete(c); }
+    try { sessionStorage.setItem('fbe-editor-plegado', JSON.stringify([...n].slice(-400))); } catch { /* sin almacenamiento, vale mientras esté abierta */ }
+    return n;
+  });
+  const [vistaAtleta, setVistaAtleta] = useState(false); // «Como lo verá el atleta»
+  const dRef = useRef(null);
 
   useEffect(() => {
     if (!carga.datos) return;
@@ -79,6 +94,15 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   // (perfil, tanda 4) lo que el atleta prefiere evitar: un aviso junto a la pauta y al elegir (no cambia nada)
   const evitadosAtleta = useCarga(() => (atletaId && api.personalAtletas ? api.personalAtletas().then((l) => mapaEvitados((l || []).find((x) => x.atleta_id === atletaId))).catch(() => ({})) : Promise.resolve({})), [atletaId]);
 
+  // (v0.184) sus reglas guardadas: de ellas salen el salto de kilos de los botones + y − y el rango de un ejercicio nuevo
+  const fichaReglas = useCarga(() => (atletaId ? api.ficha(atletaId).then((x) => x?.atleta?.reglas_motor ?? null).catch(() => null) : Promise.resolve(null)), [atletaId]);
+  const reglasDe = useMemo(() => {
+    const suyas = paraElMotor(leerGuardadas(fichaReglas.datos));
+    const memo = {};
+    return (ejercicioId) => (memo[ejercicioId] ||= resolverReglas({ fbe: suyas.reglas?.fbe, nivel, perfil: suyas.perfil, atleta: suyas.reglas?.atleta, bloque: suyas.reglas?.bloque, ejercicio: suyas.reglas?.porEjercicio?.[ejercicioId] }));
+  }, [fichaReglas.datos, nivel]);
+  dRef.current = d;
+
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
   if (!d) return null;
@@ -108,10 +132,14 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const paraFbe = semanasParaProgramar(d, semana);
 
   // Guarda un campo y lo refleja en local sin recargar (los inputs no pierden el foco)
-  async function guardar(tabla, id, cambios) {
+  const nombreDe = (pautaId) => { const f = Object.values(dRef.current?.pautas || {}).flat().find((x) => x.id === pautaId); return ejercicios[f?.ejercicio_id]?.nombre || ''; };
+  async function guardar(tabla, id, cambios, { sinPila = false } = {}) {
     setEstado('Guardando…');
+    // (v0.184) lo que había, para poder deshacerlo (solo si de verdad cambia algo)
+    const antes = sinPila ? null : antesDe(dRef.current, tabla, id, cambios);
     try {
       await api.actualizar(tabla, id, cambios);
+      if (antes) setPila((x) => apilar(x, { tipo: 'campo', tabla, id, antes, etiqueta: etiquetaCambio(tabla, cambios, tabla === 'sesion_ejercicios' ? nombreDe(id) : '') }));
       setD((x) => parchear(x, tabla, id, cambios));
       setEstado('Guardado');
       if (tabla === 'bloques') alCambiarBloque?.(); // el nombre o el estado salen en el selector de bloques
@@ -123,8 +151,10 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   // Pauta serie a serie: guarda el detalle (o lo quita) y el resumen que sale de él
   async function guardarDetalle(id, detalle) {
     setEstado('Guardando…');
+    const antes = antesDe(dRef.current, 'sesion_ejercicios', id, CAMPOS_PAUTA);
     try {
       const cambios = await api.guardarDetalle(id, detalle);
+      if (antes) setPila((x) => apilar(x, { tipo: 'campo', tabla: 'sesion_ejercicios', id, antes, etiqueta: `Series de ${nombreDe(id) || 'un ejercicio'}` }));
       setD((x) => parchear(x, 'sesion_ejercicios', id, cambios));
       setEstado('Guardado');
     } catch (e) { setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1); }
@@ -139,12 +169,76 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
     finally { enCurso.current = false; }
   }
 
+  // (v0.184) Toda la prescripción de un ejercicio de una vez («como la semana pasada», «lo que hizo»): un solo paso que deshacer
+  async function aplicarPauta(id, cambios, etiqueta) {
+    const antes = antesDe(dRef.current, 'sesion_ejercicios', id, CAMPOS_PAUTA);
+    setEstado('Guardando…');
+    try {
+      let hechos = cambios;
+      if (cambios.series_detalle) {
+        // serie a serie: el resumen sale del detalle; el RIR, si venía, se guarda aparte
+        hechos = await api.guardarDetalle(id, cambios.series_detalle);
+        if ('rir_objetivo' in cambios) { await api.actualizar('sesion_ejercicios', id, { rir_objetivo: cambios.rir_objetivo }); hechos = { ...hechos, rir_objetivo: cambios.rir_objetivo }; }
+      } else await api.actualizar('sesion_ejercicios', id, cambios);
+      if (antes) setPila((x) => apilar(x, { tipo: 'campo', tabla: 'sesion_ejercicios', id, antes, etiqueta }));
+      setD((x) => parchear(x, 'sesion_ejercicios', id, hechos));
+      setEstado('Guardado'); setVersion((v) => v + 1);
+    } catch (e) { setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1); }
+  }
+  // Quitar un ejercicio se puede deshacer (vuelve con su prescripción; lo que el atleta hubiera registrado en él, no)
+  async function quitarPauta(p) {
+    const fila = { ...p };
+    const ok = await estructura(async () => { await api.borrar('sesion_ejercicios', p.id); return true; });
+    if (ok) setPila((x) => apilar(x, { tipo: 'borrada', fila, etiqueta: `Quitar ${ejercicios[p.ejercicio_id]?.nombre || 'un ejercicio'}` }));
+  }
+  // Reordenar (arrastrando o con las flechas): el orden nuevo de los ejercicios de una sesión, o de las sesiones de la semana
+  async function ordenar(tipo, donde, ids, antes) {
+    const ok = await estructura(async () => { await (tipo === 'pautas' ? api.ordenarPautas(donde, ids) : api.ordenarSesiones(donde, ids)); return true; });
+    if (ok) setPila((x) => apilar(x, { tipo: 'orden', que: tipo, donde, ids: antes, etiqueta: tipo === 'pautas' ? 'Mover un ejercicio' : 'Mover una sesión' }));
+  }
+  async function deshacer() {
+    const paso = pila[pila.length - 1];
+    if (!paso) return;
+    setPila((x) => x.slice(0, -1));
+    if (paso.tipo === 'campo') {
+      setEstado('Guardando…');
+      try {
+        await api.actualizar(paso.tabla, paso.id, paso.antes);
+        setD((x) => parchear(x, paso.tabla, paso.id, paso.antes));
+        setEstado('Guardado'); setVersion((v) => v + 1);
+        if (paso.tabla === 'bloques') alCambiarBloque?.();
+        aviso(`Deshecho: ${paso.etiqueta.charAt(0).toLowerCase()}${paso.etiqueta.slice(1)}`);
+      } catch (e) { setEstado(''); aviso(e.message, 'error'); }
+    } else if (paso.tipo === 'borrada') {
+      const { id: viejo, ...fila } = paso.fila;
+      const nueva = await estructura(async () => {
+        const n = await api.crear('sesion_ejercicios', Object.fromEntries(Object.entries(fila).filter(([k]) => !['creado_en', 'created_at', 'actualizado_en', 'updated_at'].includes(k))));
+        // vuelve a su sitio: los demás se corren
+        const ids = (dRef.current?.pautas?.[fila.sesion_id] || []).filter((x) => x.id !== viejo).map((x) => x.id);
+        ids.splice(Math.max(0, Math.min(ids.length, (fila.orden || 1) - 1)), 0, n.id);
+        await api.ordenarPautas(fila.sesion_id, ids);
+        return n;
+      }, 'Deshecho: el ejercicio vuelve a su sitio');
+      if (nueva) setPila((x) => cambiarId(x, viejo, nueva.id));
+      setVersion((v) => v + 1);
+    } else if (paso.tipo === 'orden') {
+      await estructura(() => (paso.que === 'pautas' ? api.ordenarPautas(paso.donde, paso.ids) : api.ordenarSesiones(paso.donde, paso.ids)), 'Deshecho: vuelve al orden de antes');
+    }
+  }
+  const ultimo = pila[pila.length - 1];
+
   return (
-    <div class="pila">
+    <div class="pila" onKeyDown={(e) => {
+      // Ctrl+Z (o Cmd+Z) fuera de una casilla: deshace el último cambio guardado (dentro de una casilla, lo de siempre)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && ultimo) { e.preventDefault(); deshacer(); }
+    }}>
       <div class="panel panel-pad pila editor-bloque">
         <div class="separa">
           <strong>{bloque.es_plantilla ? 'Plantilla' : `Bloque ${bloque.numero ?? ''}`}</strong>
-          <span class={`guardado ${estado === 'Guardado' ? 'ok' : ''}`} role="status">{estado === 'Guardado' && <Icono n="hecho" width="16" height="16" />}{estado}</span>
+          <span class="fila" style="gap:var(--esp-10)">
+            <span class={`guardado ${estado === 'Guardado' ? 'ok' : ''}`} role="status">{estado === 'Guardado' && <Icono n="hecho" width="16" height="16" />}{estado}</span>
+            <button class="btn btn-peq btn-deshacer" disabled={!ultimo} title={ultimo ? `Deshacer: ${ultimo.etiqueta}` : 'No hay nada que deshacer'} onClick={deshacer}><Icono n="deshacer" /> Deshacer</button>
+          </span>
         </div>
         <div class="rejilla-campos">
           <div class="campo"><label for={`b-nombre-${bloque.id}`}>Nombre</label>
@@ -224,6 +318,11 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
                   estructura(() => api.publicarSemana(semana.id, true), `Semana ${semana.numero} publicada`);
                 }}><Icono n="enviar" /> Publicar al atleta</button>)}
               <button class="btn btn-peq" onClick={() => setDuplicar(true)}><Icono n="duplicar" /> Preparar las siguientes</button>
+              {!bloque.es_plantilla && sesiones.length > 0 && <button class="btn btn-peq" onClick={() => setVistaAtleta(true)}><Icono n="vista" /> Como lo verá el atleta</button>}
+              {sesiones.length > 1 && (() => {
+                const todas = sesiones.every((x) => plegado.has(`s:${x.id}`));
+                return <button class="btn btn-peq" onClick={() => plegar(sesiones.map((x) => `s:${x.id}`), !todas)}><Icono n={todas ? 'abajo' : 'arriba'} /> {todas ? 'Desplegar todas' : 'Plegar todas'}</button>;
+              })()}
               {conDatos && <button class="btn btn-peq" onClick={() => setSugerir(true)}><Icono n="rayo" /> Cargas sugeridas</button>}
               {paraFbe && <button class="btn btn-peq" onClick={async () => {
                 let destino = paraFbe.destino;
@@ -266,8 +365,17 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
           {nivel !== 'novato' && ' Donde no pongas kg, el atleta ve en cada serie su peso de la última vez.'} Lo cambias en Datos.</span></p>
       )}
 
-      {semana && sesiones.map((s) => (
-        <EditorSesion key={`${s.id}-${version}`} sesion={s} conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} previas={previas} numeroSemana={semana?.numero ?? null} notasAtleta={notasAtleta.datos || {}} evitados={evitadosAtleta.datos || {}} fbe={fichasFbe.datos || null}
+      {semana && sesiones.map((s, iSesion) => (
+        <EditorSesion key={`${s.id}-${version}`} sesion={s} indice={iSesion} total={sesiones.length} plegado={plegado} plegar={plegar}
+          semanas={d.semanas} semanaId={semana.id} reglasDe={reglasDe} aplicarPauta={aplicarPauta} quitarPauta={quitarPauta}
+          ordenarPautas={(ids, antes) => ordenar('pautas', s.id, ids, antes)}
+          moverSesion={(a) => { const antes = sesiones.map((x) => x.id); ordenar('sesiones', semana.id, reordenar(antes, iSesion, a), antes); }}
+          copiarSesion={async (destinoId) => {
+            const w = d.semanas.find((x) => x.id === destinoId);
+            await estructura(() => api.copiarSesion(s.id, destinoId), destinoId === semana.id ? `«${s.nombre}» duplicada al final de la semana` : `«${s.nombre}» copiada a la semana ${w?.numero ?? ''}`);
+          }}
+          duplicarPauta={(p) => estructura(() => api.duplicarPauta(p.id), 'Ejercicio duplicado justo debajo')}
+          conCarrera={!!carreraDe && !bloque.es_plantilla} zonasCarrera={zonasCarrera} pautas={d.pautas[s.id] || []} series={d.series} ejercicios={ejercicios} nivel={bloque.es_plantilla ? null : nivel} ultimas={ultimas.datos || {}} previas={previas} numeroSemana={semana?.numero ?? null} notasAtleta={notasAtleta.datos || {}} evitados={evitadosAtleta.datos || {}} fbe={fichasFbe.datos || null}
           guardar={guardar} guardarDetalle={guardarDetalle} estructura={estructura} elegir={(pautaId) => setElegir({ sesionId: s.id, pautaId })}
           corregirVariante={['finalizado', 'cancelado'].includes(bloque.estado) ? null : async (p, nuevo) => {
             await estructura(() => api.corregirVariante({ bloqueId: bloque.id, ejercicioId: p.ejercicio_id, variante: p.variante, nuevoEjercicioId: nuevo?.id || null }),
@@ -320,8 +428,17 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         const ev = (evitadosAtleta.datos || {})[ej.id];
         if (ev) aviso(`Ojo: prefiere evitar ${ej.nombre} (${textoMotivo(ev).toLowerCase()}). Se pone igual; coméntaselo si hace falta.`);
         if (pautaId) await guardar('sesion_ejercicios', pautaId, { ejercicio_id: ej.id });
-        else await estructura(() => api.nuevaPauta(sesionId, ej.id));
+        else await estructura(() => api.nuevaPauta(sesionId, ej.id, basePauta(ej, reglasDe(ej.id))));
+      }} varios={!elegir.pautaId} alElegirVarios={async (lista) => {
+        const { sesionId } = elegir;
+        setElegir(null);
+        const ev = lista.filter((ej) => (evitadosAtleta.datos || {})[ej.id]);
+        if (ev.length) aviso(`Ojo: prefiere evitar ${ev.map((ej) => ej.nombre).join(', ')}. Se ${ev.length === 1 ? 'pone' : 'ponen'} igual; coméntaselo si hace falta.`);
+        await estructura(() => api.nuevasPautas(sesionId, lista.map((ej) => ({ ejercicio_id: ej.id, ...basePauta(ej, reglasDe(ej.id)) }))), `${lista.length} ejercicios añadidos`);
       }} />}
+      {/* lejos de la cabecera del bloque, deshacer sigue a mano */}
+      {ultimo && <button class="btn deshacer-flotante" aria-label={`Deshacer el último cambio: ${ultimo.etiqueta}`} onClick={deshacer}><Icono n="deshacer" /> Deshacer</button>}
+      {vistaAtleta && semana && <VistaAtleta semana={semana} sesiones={sesiones} pautas={d.pautas} ejercicios={ejercicios} alCerrar={() => setVistaAtleta(false)} />}
       {publicarEn && (
         <Hoja titulo="Este bloque aún no es el activo" alCerrar={() => setPublicarEn(null)}>
           <p class="peq secundario">El atleta solo ve las semanas publicadas de su bloque activo. Si lo activas ahora, el bloque que tenía activo pasa a finalizado y en su programa verá este.</p>
@@ -354,6 +471,44 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </Hoja>
       )}
     </div>
+  );
+}
+
+// (v0.184) «Como lo verá el atleta»: la semana tal como le sale en su programa (cada sesión con su dinámica, su cardio
+// y sus ejercicios con series, repeticiones, esfuerzo, kilos, descanso y tu nota). Solo se mira: no cambia nada.
+function VistaAtleta({ semana, sesiones, pautas, ejercicios, alCerrar }) {
+  return (
+    <Hoja titulo={`Semana ${semana.numero}, como la verá el atleta`} alCerrar={alCerrar} ancho={560}>
+      {semana.programacion !== 'programada' && <p class="peq secundario">Está en borrador: no la verá hasta que la publiques.</p>}
+      {semana.nota_coach && <p class="nota vista-nota"><strong>Tu nota de la semana: </strong>{semana.nota_coach}</p>}
+      <div class="pila vista-atleta">
+        {sesiones.map((s) => {
+          const lista = pautas[s.id] || [];
+          const letras = etiquetasSuperserie(lista);
+          return (
+            <div key={s.id} class="panel panel-pad pila-s vista-sesion">
+              <div><strong>{s.nombre}</strong>{s.intencion && <span class="secundario peq"> · {(INTENCIONES.find(([v]) => v === s.intencion) || [])[1] || s.intencion}</span>}</div>
+              {s.dinamica && <p class="peq secundario" style="white-space:pre-wrap">{s.dinamica}</p>}
+              {s.cardio && textoCardio(s.cardio) && <p class="peq"><Icono n="intervalos" /> {textoCardio(s.cardio)}</p>}
+              {lista.length > 0 && <ol class="vista-ejercicios">
+                {lista.map((p) => {
+                  const v = pautaAtleta(p);
+                  return (
+                    <li key={p.id}>
+                      <span class="vista-nombre">{letras[p.id] && <span class="mini vista-letra">{letras[p.id]}</span>}<Disco prioridad={p.prioridad} /> <strong>{ejercicios[p.ejercicio_id]?.nombre || 'Ejercicio'}</strong>{p.variante && <span class="secundario"> ({p.variante})</span>}</span>
+                      <span class="peq num">{[v.series, v.esfuerzo, v.carga, p.tempo ? `tempo ${p.tempo}` : null, v.descanso ? `descanso ${v.descanso}` : null].filter(Boolean).join(' · ')}</span>
+                      {tieneDetalle(p) && <span class="mini secundario num">{p.series_detalle.map((x, k) => `S${k + 1}: ${textoSerieFBE({ kg: x.kg, reps: x.reps, rpe: x.rpe }) || '–'}`).join('  ·  ')}</span>}
+                      {p.notas_coach && <span class="mini secundario">Nota: {p.notas_coach}</span>}
+                    </li>
+                  );
+                })}
+              </ol>}
+              {!lista.length && !s.cardio && <p class="peq secundario">Sin ejercicios todavía.</p>}
+            </div>
+          );
+        })}
+      </div>
+    </Hoja>
   );
 }
 
@@ -527,8 +682,29 @@ function parchear(d, tabla, id, cambios) {
 
 // Pauta serie a serie: una fila por serie con sus reps, kilos y RPE (cada uno opcional); añadir o quitar series.
 // Cada cambio se guarda al salir del campo; el resumen de la fila (series, reps, kg, RPE) sale de aquí.
-function DetalleSeries({ pauta, hechas = [], alGuardar }) {
+// (v0.184) Una casilla con sus botones − y +: suben o bajan el número un paso (el salto de kilos del ejercicio, o una
+// repetición) y lo guardan. No entran en el recorrido del tabulador: con teclado se escribe el número, como siempre.
+function Pasos({ paso, etiqueta, alCambiar, decimales = 2, children }) {
+  const mover = (dir) => (e) => {
+    const inp = e.currentTarget.parentElement.querySelector('input');
+    if (!inp) return;
+    const v = pasoDe(inp.value, Number(typeof paso === 'function' ? paso(inp.value) : paso) || 1, dir);
+    if (v == null) return;
+    inp.value = num(v, decimales);
+    alCambiar(v);
+  };
+  return (
+    <span class="con-pasos">
+      <button type="button" class="paso" tabIndex={-1} aria-label={`Bajar ${etiqueta}`} onClick={mover(-1)}><Icono n="menos" /></button>
+      {children}
+      <button type="button" class="paso" tabIndex={-1} aria-label={`Subir ${etiqueta}`} onClick={mover(1)}><Icono n="mas" /></button>
+    </span>
+  );
+}
+
+function DetalleSeries({ pauta, hechas = [], alGuardar, salto = () => 2.5 }) {
   const d = pauta.series_detalle;
+  const [rev, setRev] = useState(0); // al igualar las series, las casillas se vuelven a pintar
   // Lo último escrito, aunque aún no haya vuelto de guardarse (dos cambios seguidos no se pisan)
   const ultimo = useRef(d);
   const pendientes = useRef(0);
@@ -550,16 +726,23 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
       <div class="detalle-cab" aria-hidden="true"><span /><span>Reps</span><span>Kg</span><span>RPE</span><span /></div>
       {d.map((x, i) => (
         // La clave cambia al añadir o quitar series (las filas se rehacen), no al escribir (no se pierde el foco)
-        <div class="detalle-fila" data-fila key={`${pauta.id}-${d.length}-${i}`}>
+        <div class="detalle-fila" data-fila key={`${pauta.id}-${d.length}-${i}-${rev}`}>
           <span class="n mini">S{i + 1}</span>
-          <input class="n" data-celda="reps" enterKeyHint="next" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
-          <input class="n" data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
+          <Pasos paso={1} decimales={0} etiqueta={`las repeticiones de la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'reps', String(v))}>
+            <input class="n" data-celda="reps" enterKeyHint="next" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
+          </Pasos>
+          <Pasos paso={salto} etiqueta={`los kilos de la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'kg', String(v))}>
+            <input class="n" data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
+          </Pasos>
           <input class="n" data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label={`RPE de la serie ${i + 1}`} defaultValue={x.rpe == null ? '' : num(x.rpe, 1)} onChange={(e) => cambiar(i, 'rpe', e.currentTarget.value)} />
           <button class="btn btn-icono plano" aria-label={`Quitar la serie ${i + 1}`} disabled={d.length <= 1} onClick={() => guardar(ultimo.current.filter((_, k) => k !== i))}><Icono n="cerrar" /></button>
           {hecha[i + 1] && <span class="mini hecho-semana detalle-hecha">Hecho: {textoSerieHecha(hecha[i + 1])}</span>}
         </div>
       ))}
-      <button class="btn-texto mini" disabled={d.length >= 20} onClick={() => guardar([...ultimo.current, { ...ultimo.current[ultimo.current.length - 1] }])}><Icono n="mas" /> Serie</button>
+      <div class="fila-envolver detalle-acciones">
+        <button class="btn-texto mini" disabled={d.length >= 20} onClick={() => guardar([...ultimo.current, { ...ultimo.current[ultimo.current.length - 1] }])}><Icono n="mas" /> Serie</button>
+        {d.length > 1 && <button class="btn-texto mini" title="Las demás series quedan con las repeticiones, los kilos y el RPE de la primera" onClick={async () => { await guardar(igualarSeries(ultimo.current)); setRev((v) => v + 1); }}><Icono n="copiar" /> Copiar la serie 1 a las demás</button>}
+      </div>
     </div>
   );
 }
@@ -569,9 +752,17 @@ function DetalleSeries({ pauta, hechas = [], alGuardar }) {
 const textoSerieHecha = (x) => textoSerieFBE({ kg: x.kg, reps: x.reps, rpe: x.rpe != null ? Number(x.rpe) : x.rir != null ? 10 - Number(x.rir) : null }) || '–';
 
 // (v0.181) Junto a lo que se programa: lo pautado y lo que hizo la semana anterior, y lo programado ahora, serie a serie
-function TablaSemanaAnterior({ previa, pauta, numero, nombre }) {
+function TablaSemanaAnterior({ previa, pauta, numero, nombre, aplicar = null }) {
   const filas = seriesEnFilas({ pautada: previa.pauta, hechas: previa.hechas, propuesta: pauta });
+  const hecho = detalleDeHechas(previa.hechas);
   return (
+    <>
+    {aplicar && (
+      <div class="fila-envolver atajos-previa">
+        <button class="btn-texto mini" aria-label={`${nombre}: programar como la semana ${previa.semana}`} onClick={() => aplicar(comoLaAnterior(previa.pauta), `Como la semana pasada en ${nombre}`)}><Icono n="reiniciar" /> Como la semana pasada</button>
+        {hecho && <button class="btn-texto mini" aria-label={`${nombre}: programar lo que hizo en la semana ${previa.semana}`} onClick={() => aplicar({ series_detalle: hecho }, `Lo que hizo en ${nombre}`)}><Icono n="hecho" /> Lo que hizo</button>}
+      </div>
+    )}
     <div class="fbe-series-caja en-editor" tabIndex={0} role="group" aria-label={`${nombre}: series de la semana ${previa.semana} y lo programado`}>
       <table class="fbe-series num" aria-label={`${nombre}: la semana ${previa.semana} y lo programado, serie a serie`}>
         <thead><tr><th scope="col">Serie</th><th scope="col">Pautado (sem. {previa.semana})</th><th scope="col">Hizo</th><th scope="col">Programado{numero != null ? ` (sem. ${numero})` : ''}</th></tr></thead>
@@ -587,11 +778,15 @@ function TablaSemanaAnterior({ previa, pauta, numero, nombre }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
-function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, previas = {}, numeroSemana = null, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null }) {
+function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, previas = {}, numeroSemana = null, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null,
+  indice = 0, total = 1, plegado = new Set(), plegar = () => {}, semanas = [], semanaId = null, reglasDe = () => undefined, aplicarPauta = null, quitarPauta = null, ordenarPautas = null, moverSesion = null, copiarSesion = null, duplicarPauta = null }) {
   const { api } = useApp();
+  const cerrada = plegado.has(`s:${sesion.id}`);
+  const saltoDePauta = (p) => (valor) => saltoKg(ejercicios[p.ejercicio_id]?.nombre, valor, reglasDe(p.ejercicio_id));
   const lista = useMemo(() => Object.values(ejercicios), [ejercicios]);
   const numero = (pautaId, campo, dec = false) => (e) => {
     const t = e.currentTarget.value.replace(',', '.').trim();
@@ -611,7 +806,28 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
   const etiquetas = etiquetasSuperserie(pautas);
   const sueltas = pautas.filter((p) => p.superserie && !etiquetas[p.id]);
   return (
-    <section class="panel panel-pad editor-sesion" aria-label={sesion.nombre} onKeyDown={teclaEnRejilla}>
+    <section class={`panel panel-pad editor-sesion ${cerrada ? 'plegada' : ''}`} aria-label={sesion.nombre} onKeyDown={teclaEnRejilla}>
+      <div class="editor-sesion-barra">
+        {total > 1 && moverSesion && <button type="button" class="btn btn-icono plano asa-mover" aria-label={`Arrastrar ${sesion.nombre} para cambiarla de sitio`} title="Arrastra para cambiarla de sitio"
+          onPointerDown={(e) => asa(e, { contenedor: e.currentTarget.closest('section.editor-sesion')?.parentElement, selector: ':scope > section.editor-sesion', indice, alSoltar: (_, a) => moverSesion(a) })}><Icono n="agarre" /></button>}
+        <button type="button" class="btn-texto plegar-sesion" aria-expanded={cerrada ? 'false' : 'true'} onClick={() => plegar(`s:${sesion.id}`)}>
+          <Icono n={cerrada ? 'derecha' : 'abajo'} /><span>{cerrada ? <><strong>{sesion.nombre}</strong> <span class="secundario">· {resumenSesion(sesion, pautas)}{sesion.completada ? ' · hecha' : ''}</span></> : 'Plegar'}</span>
+        </button>
+        <select class="selector menu-sesion" aria-label={`Más acciones de ${sesion.nombre}`} value="" onChange={(e) => {
+          const v = e.currentTarget.value; e.currentTarget.value = '';
+          if (v === 'subir') moverSesion?.(indice - 1); else if (v === 'bajar') moverSesion?.(indice + 1);
+          else if (v === 'compacto') plegar(pautas.map((p) => `p:${p.id}`), !pautas.every((p) => plegado.has(`p:${p.id}`)));
+          else if (v.startsWith('a:')) copiarSesion?.(v.slice(2));
+        }}>
+          <option value="">Copiar, mover…</option>
+          <option value={`a:${semanaId}`}>Duplicar en esta semana</option>
+          {semanas.filter((w) => w.id !== semanaId).map((w) => <option key={w.id} value={`a:${w.id}`}>Copiar a la semana {w.numero}</option>)}
+          {indice > 0 && <option value="subir">Subir un puesto</option>}
+          {indice < total - 1 && <option value="bajar">Bajar un puesto</option>}
+          {pautas.length > 0 && <option value="compacto">{pautas.every((p) => plegado.has(`p:${p.id}`)) ? 'Ver el detalle de los ejercicios' : 'Ver solo la tabla (sin el detalle)'}</option>}
+        </select>
+      </div>
+      {!cerrada && <>
       <div class="editor-sesion-cab">
         <input class="entrada" aria-label="Nombre de la sesión" style="font-weight:700" defaultValue={sesion.nombre} onChange={(e) => guardar('sesiones', sesion.id, { nombre: e.currentTarget.value.trim() || sesion.nombre })} />
         <select class="selector" aria-label="Tipo de sesión" value={sesion.tipo || 'fuerza'} onChange={(e) => guardar('sesiones', sesion.id, { tipo: e.currentTarget.value })}>
@@ -636,20 +852,22 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
         <div class="tabla-pauta-env">
           <table class="tabla-pauta">
             <thead><tr>
-              <th style="width:168px">Prioridad</th><th style="width:74px" title="Misma letra en ejercicios seguidos: se alternan y se descansa al acabar la ronda">Súper.</th><th class="col-ejercicio">Ejercicio</th><th style="width:64px">Series</th><th style="width:66px">Reps mín.</th><th style="width:66px">Reps máx.</th>
-              {col.rir && <th style="width:58px">RIR</th>}{col.rpe && <th style="width:58px">RPE</th>}{col.kg && <th style="width:76px">Kg</th>}<th style="width:88px">Descanso</th><th style="width:110px"><span class="sr">Acciones</span></th>
+              <th style="width:168px">Prioridad</th><th style="width:96px" title="Misma letra en ejercicios seguidos: se alternan y se descansa al acabar la ronda">Superserie</th><th class="col-ejercicio">Ejercicio</th><th style="width:64px">Series</th><th style="width:62px">Reps de</th><th style="width:62px">Reps a</th>
+              {col.rir && <th style="width:58px">RIR</th>}{col.rpe && <th style="width:58px">RPE</th>}{col.kg && <th style="width:112px">Kilos</th>}<th style="width:88px">Descanso</th><th style="width:80px"><span class="sr">Acciones</span></th>
             </tr></thead>
             <tbody>
               {pautas.map((p, i) => (
-                <tr key={p.id} data-fila>
-                  <td><span class="sel-prioridad"><Disco prioridad={p.prioridad} />
+                <tr key={p.id} data-fila class={plegado.has(`p:${p.id}`) ? 'sin-detalle' : ''}>
+                  <td data-col="Prioridad"><span class="sel-prioridad">
+                    <Disco prioridad={p.prioridad} />
                     <select aria-label="Prioridad" value={p.prioridad} onChange={(e) => guardar('sesion_ejercicios', p.id, { prioridad: e.currentTarget.value })}>
                       {PRIORIDADES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
                     </select></span></td>
-                  <td><select aria-label="Superserie" value={p.superserie || ''} class={etiquetas[p.id] ? 'ss-activa' : ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { superserie: nulo(e.currentTarget.value) })}>
+                  <td data-col="Superserie"><select aria-label="Superserie" value={p.superserie || ''} class={etiquetas[p.id] ? 'ss-activa' : ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { superserie: nulo(e.currentTarget.value) })}>
                     <option value="">—</option>{LETRAS_SUPERSERIE.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select></td>
                   <td class="col-ejercicio"><button class="btn btn-peq btn-ejercicio" onClick={() => elegir(p.id)}>{ejercicios[p.ejercicio_id]?.nombre || 'Elegir ejercicio'}</button>
+                    {!plegado.has(`p:${p.id}`) && <>
                     <Equivalentes ejercicio={ejercicios[p.ejercicio_id]} lista={lista} alCambiar={(ej) => guardar('sesion_ejercicios', p.id, { ejercicio_id: ej.id })} />
                     <div class="variante-tempo">
                       <input class="variante" aria-label="Variante" placeholder="Variante: pausa, agarre…" defaultValue={p.variante || ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { variante: nulo(e.currentTarget.value.trim()) })} />
@@ -671,41 +889,48 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     {fbe && <AyudaFicha ejercicioId={p.ejercicio_id} fichas={fbe.fichas} enlaces={fbe.enlaces} molestias={fbe.molestias} />}
                     <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
-                    {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} />}
+                    {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} salto={saltoDePauta(p)} />}
                     {evitados[p.ejercicio_id] && <div class="mini aviso-evitado" role="note"><Icono n="alerta" /><span>Prefiere evitarlo: {textoMotivo(evitados[p.ejercicio_id]).toLowerCase()}. Es solo un aviso.</span></div>}
                     {notasAtleta[p.ejercicio_id] && <div class="mini nota-atleta-coach" title="Su nota fijada en este ejercicio (la escribe el atleta en su sesión)"><Icono n="chincheta" /><span><span class="terciario">Su nota: </span>{notasAtleta[p.ejercicio_id].texto}</span></div>}
-                    {previas[p.id]?.hechas.length > 0 && <TablaSemanaAnterior previa={previas[p.id]} pauta={p} numero={numeroSemana} nombre={ejercicios[p.ejercicio_id]?.nombre || 'Ejercicio'} />}
+                    {previas[p.id]?.hechas.length > 0 && <TablaSemanaAnterior previa={previas[p.id]} pauta={p} numero={numeroSemana} nombre={ejercicios[p.ejercicio_id]?.nombre || 'Ejercicio'} aplicar={aplicarPauta ? (c, etiqueta) => aplicarPauta(p.id, c, etiqueta) : null} />}
                     {!(previas[p.id]?.hechas.length > 0) && ultimas[p.ejercicio_id]?.series.length > 0 && <div class="mini registro-serie ultima-vez-coach" title="Lo que hizo la última vez antes de esta semana">
                       <span class="terciario">Última vez{ultimas[p.ejercicio_id].fecha ? ` (${fmtCorta(ultimas[p.ejercicio_id].fecha)})` : ''}: </span>{ultimas[p.ejercicio_id].series.map(textoSerieHecha).join(' · ')}</div>}
-                    {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}</td>
+                    {series[p.id]?.length > 0 && <div class="mini registro-serie hecho-semana" style="margin-top:3px"><span class="terciario">Esta semana: </span>{[...series[p.id]].sort((a, c) => a.numero - c.numero).map(textoSerieHecha).join(' · ')}</div>}
+                    </>}</td>
                   {tieneDetalle(p) ? <>
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.series}</td>
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_min ?? '–'}</td>
                     <td class="resumen-detalle num" title="Serie a serie: cámbialo en las series de debajo">{p.reps_max ?? '–'}</td>
-                    {col.rir && <td><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                    {col.rir && <td data-col="RIR"><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
                     {col.rpe && <td class="resumen-detalle num" title="El RPE de la última serie">{p.rpe_objetivo == null ? '–' : num(p.rpe_objetivo, 1)}</td>}
                     {col.kg && <td class="resumen-detalle num" title="Los kilos de la mayoría de las series">{p.carga_sugerida_kg == null ? '–' : num(p.carga_sugerida_kg, 2)}</td>}
                   </> : <>
-                  <td><input class="n" data-celda="series" enterKeyHint="next" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
+                  <td data-col="Series"><input class="n" data-celda="series" enterKeyHint="next" inputMode="numeric" aria-label="Series" key={`series-${p.series}`} defaultValue={p.series} onChange={(e) => {
                     // Con top + back-off hacen falta al menos dos series: con una sola, deja de serlo.
                     // La «key» lo vuelve a pintar si las series cambian desde fuera (elegir back-off las sube a 2)
                     const v = parseInt(e.currentTarget.value, 10);
                     if (!Number.isNaN(v) && v < 2 && p.backoff_pct != null) guardar('sesion_ejercicios', p.id, { series: v, backoff_pct: null });
                     else numero(p.id, 'series')(e);
                   }} /></td>
-                  <td><input class="n" data-celda="reps_min" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones mínimas" defaultValue={p.reps_min ?? ''} onChange={numero(p.id, 'reps_min')} /></td>
-                  <td><input class="n" data-celda="reps_max" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
-                  {col.rir && <td><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
-                  {col.rpe && <td><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
-                  {col.kg && <td><input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} /></td>}
+                  <td data-col="Reps de"><input class="n" data-celda="reps_min" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones mínimas" defaultValue={p.reps_min ?? ''} onChange={numero(p.id, 'reps_min')} /></td>
+                  <td data-col="Reps a"><input class="n" data-celda="reps_max" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
+                  {col.rir && <td data-col="RIR"><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
+                  {col.rpe && <td data-col="RPE"><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
+                  {col.kg && <td data-col="Kilos"><Pasos paso={saltoDePauta(p)} etiqueta={`los kilos de ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} alCambiar={(v) => guardar('sesion_ejercicios', p.id, { carga_sugerida_kg: v })}>
+                    <input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} />
+                  </Pasos></td>}
                   </>}
-                  <td><select aria-label="Descanso" value={p.descanso_seg ?? ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { descanso_seg: e.currentTarget.value === '' ? null : Number(e.currentTarget.value) })}>
+                  <td data-col="Descanso"><select aria-label="Descanso" value={p.descanso_seg ?? ''} onChange={(e) => guardar('sesion_ejercicios', p.id, { descanso_seg: e.currentTarget.value === '' ? null : Number(e.currentTarget.value) })}>
                     <option value="">—</option>{DESCANSOS.map((s) => <option key={s} value={s}>{s ? mmss(s) : 'Sin descanso'}</option>)}
                   </select></td>
-                  <td><span class="fila" style="gap:2px">
-                    <button class="btn btn-icono plano" aria-label="Subir" disabled={i === 0} onClick={() => estructura(() => api.moverPauta(sesion.id, p.id, -1))}><Icono n="arriba" /></button>
-                    <button class="btn btn-icono plano" aria-label="Bajar" disabled={i === pautas.length - 1} onClick={() => estructura(() => api.moverPauta(sesion.id, p.id, 1))}><Icono n="abajo" /></button>
-                    <button class="btn btn-icono plano btn-peligro" aria-label="Quitar ejercicio" onClick={() => estructura(() => api.borrar('sesion_ejercicios', p.id))}><Icono n="cerrar" /></button>
+                  <td class="col-acciones"><span class="acciones-fila">
+                    {pautas.length > 1 && ordenarPautas ? <button type="button" class="btn btn-icono plano asa-mover" aria-label={`Arrastrar ${ejercicios[p.ejercicio_id]?.nombre || 'el ejercicio'} para cambiarlo de sitio`} title="Arrastra para cambiarlo de sitio"
+                      onPointerDown={(e) => asa(e, { contenedor: e.currentTarget.closest('tbody'), selector: ':scope > tr[data-fila]', indice: i, alSoltar: (de, a) => { const antes = pautas.map((x) => x.id); ordenarPautas(reordenar(antes, de, a), antes); } })}><Icono n="agarre" /></button> : <span />}
+                    <button type="button" class="btn btn-icono plano" aria-expanded={plegado.has(`p:${p.id}`) ? 'false' : 'true'} title={plegado.has(`p:${p.id}`) ? 'Ver el detalle (variante, notas, semana anterior)' : 'Ocultar el detalle y dejar solo la fila'} aria-label={`${plegado.has(`p:${p.id}`) ? 'Ver' : 'Ocultar'} el detalle de ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} onClick={() => plegar(`p:${p.id}`)}><Icono n={plegado.has(`p:${p.id}`) ? 'ojo' : 'vista'} /></button>
+                    <button class="btn btn-icono plano" aria-label="Subir" disabled={i === 0} onClick={() => { const antes = pautas.map((x) => x.id); if (ordenarPautas) ordenarPautas(reordenar(antes, i, i - 1), antes); else estructura(() => api.moverPauta(sesion.id, p.id, -1)); }}><Icono n="arriba" /></button>
+                    <button class="btn btn-icono plano" aria-label="Bajar" disabled={i === pautas.length - 1} onClick={() => { const antes = pautas.map((x) => x.id); if (ordenarPautas) ordenarPautas(reordenar(antes, i, i + 1), antes); else estructura(() => api.moverPauta(sesion.id, p.id, 1)); }}><Icono n="abajo" /></button>
+                    {duplicarPauta && <button class="btn btn-icono plano" aria-label={`Duplicar ${ejercicios[p.ejercicio_id]?.nombre || 'el ejercicio'}`} title="Duplicar: el mismo ejercicio otra vez, justo debajo" onClick={() => duplicarPauta(p)}><Icono n="duplicar" /></button>}
+                    <button class="btn btn-icono plano btn-peligro" aria-label="Quitar ejercicio" onClick={() => (quitarPauta ? quitarPauta(p) : estructura(() => api.borrar('sesion_ejercicios', p.id)))}><Icono n="cerrar" /></button>
                   </span></td>
                 </tr>
               ))}
@@ -715,6 +940,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
       )}
       {sueltas.length > 0 && <p class="mini terciario">La letra {sueltas[0].superserie} solo está en un ejercicio (o no van seguidos): para una superserie, pon la misma letra a dos o más ejercicios seguidos.</p>}
       <button class="btn-texto" onClick={() => elegir(null)}><Icono n="mas" /> Añadir ejercicio</button>
+      </>}
     </section>
   );
 }
@@ -810,8 +1036,9 @@ function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
   );
 }
 
-export function ElegirEjercicio({ biblioteca, alCerrar, alElegir, evitados = {} }) {
+export function ElegirEjercicio({ biblioteca, alCerrar, alElegir, evitados = {}, varios = false, alElegirVarios = null }) {
   const { api, aviso } = useApp();
+  const [marcados, setMarcados] = useState([]); // (v0.184) varios de una vez: los marcados, en el orden en que se marcan
   const [q, setQ] = useState('');
   const [grupo, setGrupo] = useState(null);
   const [creando, setCreando] = useState(false);
@@ -828,15 +1055,23 @@ export function ElegirEjercicio({ biblioteca, alCerrar, alElegir, evitados = {} 
       {biblioteca.cargando ? <Cargando /> : (
         <div class="lista-elegir">
           {lista.slice(0, 80).map((e) => (
-            <button key={e.id} data-g={(e.grupos_musculares || [])[0] || undefined} onClick={() => alElegir(e)}>
+            <div key={e.id} class={`elegir-fila ${marcados.some((x) => x.id === e.id) ? 'marcado' : ''}`}>
+            {varios && alElegirVarios && <input type="checkbox" class="elegir-marca" aria-label={`Marcar ${e.nombre} para añadir varios`} checked={marcados.some((x) => x.id === e.id)}
+              onChange={() => setMarcados((m) => (m.some((x) => x.id === e.id) ? m.filter((x) => x.id !== e.id) : m.length >= 20 ? m : [...m, e]))} />}
+            <button data-g={(e.grupos_musculares || [])[0] || undefined} onClick={() => alElegir(e)}>
               <span style="font-weight:600">{e.nombre}</span>
               <span class="mini terciario">{(e.grupos_musculares || []).map((g) => NOMBRE_GRUPO[g]).join(', ') || 'Sin grupo'}{(e.tipo || []).includes('basico') ? '; básico' : ''}{e.rango_reps ? `; ${e.rango_reps.toLowerCase()}` : ''}{e.video_url ? '; con vídeo' : ''}</span>
               {evitados[e.id] && <span class="mini aviso-evitado"><Icono n="alerta" />Lo prefiere evitar ({textoMotivo(evitados[e.id]).toLowerCase()})</span>}
             </button>
+            </div>
           ))}
           {!lista.length && <div class="panel-pad secundario">Ningún ejercicio coincide.</div>}
         </div>
       )}
+      {varios && alElegirVarios && (marcados.length > 0
+        ? <div class="elegir-varios"><span class="peq">{marcados.map((x) => x.nombre).join(' · ')}</span>
+          <button class="btn btn-primario" onClick={() => alElegirVarios(marcados)}><Icono n="mas" /> Añadir {marcados.length} {marcados.length === 1 ? 'ejercicio' : 'ejercicios'}</button></div>
+        : <p class="mini terciario">Toca un ejercicio para añadirlo, o marca varias casillas para añadirlos de una vez.</p>)}
       {q.trim() && !creando && <button class="btn-texto" onClick={() => setCreando(true)}><Icono n="mas" /> Crear «{q.trim()}» en la biblioteca</button>}
       {creando && (
         <div class="nota pila-s">
