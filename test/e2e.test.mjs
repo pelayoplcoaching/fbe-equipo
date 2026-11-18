@@ -5973,6 +5973,16 @@ try {
   console.log('  ✗ v0.185:', e.message.split('\n')[0]);
 }
 
+// v0.186: el editor manual, tercera tanda (test/e2e-editor-186.mjs)
+console.log('\nv0.186: el editor manual, tercera tanda');
+try {
+  const { probarEditor186 } = await import('./e2e-editor-186.mjs');
+  await probarEditor186({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.186:', e.message.split('\n')[0]);
+}
+
 // v0.184: el editor manual del programa, más cómodo (test/e2e-editor-184.mjs)
 console.log('\nv0.184: el editor manual, más cómodo');
 try {

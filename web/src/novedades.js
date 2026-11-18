@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.186': {
+    coach: [
+      'Editor: cada sesión dice cómo le fue (día, minutos, esfuerzo y su nota) y abajo, quién queda por programar, con un botón para ir.',
+      'Candado y nota solo para ti en un ejercicio, vista compacta de la semana, % de su mejor 1RM y «Traer de otro atleta».',
+      'Sin conexión, lo escrito queda marcado y se guarda solo al volver. Antes de publicar avisa de repetidos y músculos a cero.',
+    ],
+  },
   '0.185': {
     coach: [
       'Antes de publicar, la app avisa de lo que parece un despiste (saltos de kilos, repeticiones raras, sesiones vacías).',

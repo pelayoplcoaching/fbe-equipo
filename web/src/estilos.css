@@ -5007,5 +5007,35 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .historial-editor li { display: grid; gap: var(--esp-2); padding-bottom: var(--esp-8); border-bottom: var(--filo-fino) solid var(--linea); }
 .historial-fecha { display: flex; flex-wrap: wrap; gap: var(--esp-8); align-items: baseline; }
 .marca-buscador { margin-left: var(--esp-8); padding: 0 var(--esp-6); border-radius: var(--r-xs); background: var(--morado-suave); color: var(--morado); font-weight: 650; }
-.tabla-pauta .col-ejercicio > .mas-ejercicio { display: inline-block; width: 12.5rem; min-height: 34px; margin: var(--esp-6) var(--esp-6) 0 0; vertical-align: top; }
-@media (max-width: 699px) { .tabla-pauta .col-ejercicio > .mas-ejercicio { display: block; width: 100%; margin: var(--esp-6) 0 0; } }
+/* (v0.186) en bloque: en linea se montaba sobre la variante cuando el ejercicio no lleva ayuda de la guia entre medias */
+.tabla-pauta-env .tabla-pauta .col-ejercicio > select.equivalentes.mas-ejercicio { display: block; width: 12.5rem; min-height: 34px; margin: var(--esp-6) 0 0; }
+@media (max-width: 699px) { .tabla-pauta-env .tabla-pauta .col-ejercicio > select.equivalentes.mas-ejercicio { width: 100%; } }
+
+/* ---------- v0.186: el editor manual, tercera tanda (como le fue, por programar, candado, nota solo para el coach, sin conexion) ---------- */
+.como-fue { display: flex; align-items: flex-start; gap: var(--esp-6); margin: 0; }
+.como-fue svg { flex: none; width: var(--ico-14); height: var(--ico-14); margin-top: var(--esp-2); }
+.como-fue.hecha { color: var(--ok); }
+.chip-fijado { display: flex; width: fit-content; margin: var(--esp-6) 0 0; background: var(--morado-suave); border-color: transparent; color: var(--morado); font-weight: 650; }
+.nota-solo-coach { display: flex; align-items: center; gap: var(--esp-6); margin-top: var(--esp-4); color: var(--tinta-3); }
+.nota-solo-coach svg { flex: none; width: var(--ico-14); height: var(--ico-14); }
+.tabla-pauta-env .tabla-pauta .col-ejercicio .nota-solo-coach input.variante { flex: 1; min-width: 0; width: auto; margin-top: 0; }
+/* La casilla del ejercicio es estrecha y lo de debajo se sale hacia la derecha (--sale), como la variante */
+@media (min-width: 700px) { .tabla-pauta-env .tabla-pauta .col-ejercicio > .nota-solo-coach { width: calc(100% + var(--sale, 0px)); max-width: 36rem; } }
+.pct-rm { margin-top: var(--esp-4); }
+.tabla-pauta tbody > tr.sin-guardar > td { background: var(--aviso-suave); }
+.guardado.pendiente { color: var(--alerta); font-weight: 650; }
+.sin-guardar-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); background: var(--aviso-suave); }
+.sin-guardar-aviso svg { flex: none; width: var(--ico-18); height: var(--ico-18); color: var(--alerta); }
+.sin-guardar-aviso > span { flex: 1 1 14rem; min-width: 0; }
+.siguiente-atleta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); }
+.siguiente-atleta > span { flex: 1 1 14rem; min-width: 0; }
+.siguiente-atleta .selector { flex: none; width: auto; max-width: 180px; min-height: 36px; font-size: var(--letra-13); }
+.anadir-sesiones { display: flex; flex-wrap: wrap; }
+.anadir-sesiones > .btn-ancho { flex: 1 1 12rem; width: auto; }
+/* La barra de abajo: deshacer y, en el movil, ir al ejercicio anterior o al siguiente */
+.barra-editor { position: fixed; right: max(var(--esp-16), env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 6; display: flex; align-items: center; gap: var(--esp-8); }
+.barra-editor .btn { background: var(--hoja); box-shadow: var(--sombra); }
+.barra-editor .deshacer-flotante { position: static; }
+.barra-editor .solo-movil { display: none; }
+@media (max-width: 699px) { .barra-editor .solo-movil { display: inline-flex; } }
+@media (min-width: 900px) { .barra-editor { bottom: var(--esp-24); right: var(--esp-24); } }

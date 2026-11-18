@@ -2,7 +2,7 @@
 import { hoyISO, lunesDe, sumarDias, aISO, rangoSemana, diasEntre, fechaMadrid, instanteMadrid } from '../logica/fechas.js';
 import { semanasCompletas, resumenPautas } from '../logica/diseno.js';
 import { tonelajePorDia } from '../logica/destacados.js';
-import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle } from '../logica/calculos.js';
+import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle, e1rm } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
@@ -39,6 +39,7 @@ import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
+import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
@@ -6172,7 +6173,8 @@ export function crearApi(backend) {
         b.select('molestias', { eq: { atleta_id: atletaId }, order: [['semana_inicio', 'desc']], limit: 100 }),
         b.select('notas_coach', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']] }),
       ]);
-      return { atleta, checkins, pesos, molestias, notas };
+      // (v0.186) las notas de un ejercicio (las del editor) no salen entre las notas de la ficha
+      return { atleta, checkins, pesos, molestias, notas: (notas || []).filter((n) => !leerNotaEjercicio(n.texto)) };
     },
     // Lo que tiene puesto este atleta (para que el coach vea de un vistazo cuánto le pide la app y lo mantenga sencillo)
     async funcionesAtleta(atletaId) {
@@ -6531,6 +6533,7 @@ export function crearApi(backend) {
       }
       const sesiones = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'asc']] });
       const opciones = opcionesDe(progresion);
+      const fijos = new Set(progresion.fijos || []);
       const descarga = !!progresion.descarga || (!!destinoId && nueva.foco === 'descarga');
       if (descarga) [nueva] = await b.update('semanas', { foco: 'descarga' }, { eq: { id: nueva.id } });
       // El nombre de cada ejercicio, para el salto de carga (barra, mancuernas, máquina)
@@ -6545,7 +6548,9 @@ export function crearApi(backend) {
         if (!pautas.length) continue;
         await b.insert('sesion_ejercicios', pautas.map((p) => {
           // (series_detalle solo si la base lo tiene: sin la 024, la fila no trae la columna y no se manda)
-          const f = progresarPauta(Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null])), opciones, { nombre: nombres[p.ejercicio_id] || '', descarga });
+          const campos = Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null]));
+          // (v0.186) los ejercicios con candado pasan tal cual: ni progresan ni se descargan
+          const f = fijos.has(p.ejercicio_id) ? campos : progresarPauta(campos, opciones, { nombre: nombres[p.ejercicio_id] || '', descarga });
           f.sesion_id = copiaSesion.id;
           return f;
         }));
@@ -6734,6 +6739,64 @@ export function crearApi(backend) {
       }
       await api.copiarMusica([[s.id, copia.id]]);
       return copia;
+    },
+    // (v0.186) cuantos comentarios escribio el atleta en cada sesion: { sesionId: n }
+    async comentariosDeSesiones(ids = []) {
+      if (!ids.length) return {};
+      const filas = await b.select('comentarios', { in: { sesion_id: ids }, eq: { autor: 'atleta' }, cols: 'sesion_id,eliminado_en' });
+      const out = {};
+      for (const c of filas) if (!c.eliminado_en && c.sesion_id) out[c.sesion_id] = (out[c.sesion_id] || 0) + 1;
+      return out;
+    },
+    // (v0.186) la nota solo para el coach y el candado de cada ejercicio de un atleta: { ejercicioId: { id, nota, fijado } }.
+    // Viven en sus notas privadas (el atleta nunca las ve), una por ejercicio.
+    async notasDeEjercicio(atletaId) {
+      return notasPorEjercicio(await b.select('notas_coach', { eq: { atleta_id: atletaId }, order: [['creado_en', 'asc']] }));
+    },
+    async guardarNotaDeEjercicio(atletaId, ejercicioId, { nota = '', fijado = false } = {}) {
+      const texto = escribirNotaEjercicio(ejercicioId, { nota, fijado });
+      const viejas = (await b.select('notas_coach', { eq: { atleta_id: atletaId } })).filter((n) => leerNotaEjercicio(n.texto)?.ejercicioId === String(ejercicioId));
+      // primero la nueva y despues se quitan las viejas: si algo falla a medias, no se pierde lo que habia
+      const nueva = texto ? (await b.insert('notas_coach', [{ atleta_id: atletaId, texto }]))[0] : null;
+      for (const v of viejas) await b.delete('notas_coach', { eq: { id: v.id } });
+      return nueva ? { id: nueva.id, ...leerNotaEjercicio(nueva.texto) } : null;
+    },
+    // (v0.186) las sesiones del programa de un atleta, para traer una al de otro: las de sus 4 ultimas semanas con
+    // sesiones, de la mas nueva a la mas vieja. [{ numero, sesiones: [{ id, nombre, tipo, ejercicios, series }] }]
+    async sesionesDeAtleta(atletaId) {
+      const bloque = bloqueActual(await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, in: { estado: ['activo', 'ajustado', 'planificado'] } }));
+      if (!bloque) return [];
+      const semanas = await b.select('semanas', { eq: { bloque_id: bloque.id }, order: [['numero', 'desc']] });
+      const sesiones = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, order: [['orden', 'asc']] }) : [];
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, cols: 'sesion_id,series' }) : [];
+      return semanas.map((w) => ({ numero: w.numero, sesiones: sesiones.filter((x) => x.semana_id === w.id).map((x) => {
+        const suyas = pautas.filter((p) => p.sesion_id === x.id);
+        return { id: x.id, nombre: x.nombre, tipo: x.tipo, ejercicios: suyas.length, series: suyas.reduce((t, p) => t + (Number(p.series) || 0), 0) };
+      }) })).filter((w) => w.sesiones.length).slice(0, 4);
+    },
+    // (v0.186) su mejor 1RM estimado en cada ejercicio, de todo su historial: { ejercicioId: kg }
+    async mejoresRm(atletaId) {
+      const out = {};
+      for (const x of await api.historial(atletaId)) {
+        const v = e1rm(x) || 0;
+        if (v > 0 && x.ejercicio_id && v > (out[x.ejercicio_id] || 0)) out[x.ejercicio_id] = v;
+      }
+      return out;
+    },
+    // (v0.186) quien queda por programar: los atletas activos con entrenamiento, sin pausa hoy, cuyo bloque no tiene
+    // publicada esta semana o la que viene. [{ atleta_id, nombre, bloque_id, falta: 'esta'|'siguiente' }]
+    async porProgramar(hoy = hoyISO()) {
+      const atletas = (await api.atletas()).filter((a) => a.estado === 'activo' && a.entrenamiento !== false);
+      if (!atletas.length) return [];
+      const ids = atletas.map((a) => a.id);
+      const pausasDe = {};
+      for (const x of await b.select('pausas', { in: { atleta_id: ids } }).catch(() => [])) (pausasDe[x.atleta_id] ||= []).push(x);
+      const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
+      const filas = atletas.filter((a) => !pausaVigente(pausasDe[a.id] || [], hoy))
+        .map((a) => ({ atleta_id: a.id, nombre: a.nombre, bloque: bloqueActual(candidatos.filter((x) => x.atleta_id === a.id)) })).filter((x) => x.bloque);
+      if (!filas.length) return [];
+      const semanas = agrupar(await b.select('semanas', { in: { bloque_id: filas.map((x) => x.bloque.id) }, cols: 'id,bloque_id,fecha_inicio,programacion' }), 'bloque_id');
+      return quienFalta(filas.map((x) => ({ atleta_id: x.atleta_id, nombre: x.nombre, bloque_id: x.bloque.id, semanas: semanas[x.bloque.id] || [] })), lunesDe(hoy), sumarDias);
     },
     // (v0.185) un ejercicio a otra sesion: lo mueve (con lo que el atleta tenga registrado en el) o lo copia, al final
     async moverPautaA(pautaId, sesionId) {

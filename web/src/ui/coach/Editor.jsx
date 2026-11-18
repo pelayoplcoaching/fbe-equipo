@@ -15,7 +15,8 @@ import { teclaEnRejilla } from '../rejilla.js';
 import { ProgramarFBE, semanasParaProgramar } from './ProgramarFBE.jsx';
 import { pautasDeSemana, emparejar, seriesEnFilas, textoSerieFBE, leerGuardadas, paraElMotor, resolverReglas } from '../../logica/motor/index.js';
 import { CAMPOS_PAUTA, antesDe, etiquetaCambio, apilar, cambiarId, basePauta, comoLaAnterior, detalleDeHechas, pasoDe, saltoKg, igualarSeries, reordenar, resumenSesion,
-  revisarSemana, cambiosDeSemana, parejasSiguientes, LLEVAR, cambiosParaPareja, ordenBuscador, conReciente, usosEnBloque, notasFrecuentes, conNota, historialParaEditor } from '../../logica/editor.js';
+  revisarSemana, cambiosDeSemana, parejasSiguientes, LLEVAR, cambiosParaPareja, ordenBuscador, conReciente, usosEnBloque, notasFrecuentes, conNota, historialParaEditor,
+  comoLeFue, sesionPrevia, pctDeRm, conPendiente, sinPendiente, kilosDe } from '../../logica/editor.js';
 import { asa } from './arrastre.js';
 import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
@@ -69,6 +70,11 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const [guardadas, setGuardadas] = useState(false);    // «Añadir sesión guardada»
   const [notasMias, setNotasMias] = useState(() => { try { return JSON.parse(localStorage.getItem('fbe-editor-notas') || '[]'); } catch { return []; } });
   const dRef = useRef(null);
+  // (v0.186) lo que no se pudo guardar por la conexión (se reintenta solo) y la hoja «Traer de otro atleta»
+  const [pendientes, setPendientes] = useState([]);
+  const pendRef = useRef([]);
+  pendRef.current = pendientes;
+  const [deOtro, setDeOtro] = useState(false);
 
   useEffect(() => {
     if (!carga.datos) return;
@@ -115,6 +121,28 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   // (v0.185) los minutos por sesión que dijo tener en su cuestionario, para avisar si una sesión se pasa
   const cuestionario = useCarga(() => (atletaId ? api.cuestionario(atletaId).catch(() => null) : Promise.resolve(null)), [atletaId]);
   const minutosSesion = Number(cuestionario.datos?.minutos_sesion) || null;
+  // (v0.186) sus comentarios en las sesiones hechas de esta semana y de la anterior; su nota solo para el coach y el
+  // candado de cada ejercicio; su mejor 1RM estimado; y quién queda por programar
+  const numeroSemana = d && semanaId ? d.semanas.find((w) => w.id === semanaId)?.numero : null;
+  const idsHechas = d && semanaId ? d.semanas.filter((w) => w.id === semanaId || w.numero === numeroSemana - 1).flatMap((w) => d.sesiones[w.id] || []).filter((x) => x.completada).map((x) => x.id).sort() : [];
+  const comentarios = useCarga(() => (atletaId && idsHechas.length ? api.comentariosDeSesiones(idsHechas).catch(() => ({})) : Promise.resolve({})), [atletaId, idsHechas.join(',')]);
+  const notasEj = useCarga(() => (atletaId ? api.notasDeEjercicio(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
+  const [mias, setMias] = useState({});  // lo que se acaba de cambiar en esas notas, sin esperar a recargar
+  useEffect(() => { setMias({}); }, [atletaId]);
+  const privadas = { ...(notasEj.datos || {}), ...mias };
+  const rms = useCarga(() => (atletaId ? api.mejoresRm(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
+  const faltan = useCarga(() => (atletaId ? api.porProgramar().catch(() => []) : Promise.resolve([])), [atletaId]);
+  // Lo pendiente de guardar: se reintenta al volver la conexión y cada 10 s; y avisa si se va a cerrar la pestaña
+  useEffect(() => {
+    if (!pendientes.length) return undefined;
+    const otra = () => reintentarRef.current?.();
+    const salir = (e) => { e.preventDefault(); e.returnValue = ''; };
+    const t = setInterval(otra, 10000);
+    window.addEventListener('online', otra);
+    window.addEventListener('beforeunload', salir);
+    return () => { clearInterval(t); window.removeEventListener('online', otra); window.removeEventListener('beforeunload', salir); };
+  }, [pendientes.length > 0]);
+  const reintentarRef = useRef(null);
 
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
@@ -160,10 +188,47 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       setEstado('Guardado');
       if (tabla === 'bloques') alCambiarBloque?.(); // el nombre o el estado salen en el selector de bloques
     } catch (e) {
+      // (v0.186) Sin conexión: lo escrito se queda a la vista, marcado, y se guarda solo cuando vuelva
+      if (e?.sinConexion) {
+        setPendientes((x) => conPendiente(x, tabla, id, cambios));
+        setD((x) => parchear(x, tabla, id, cambios));
+        setEstado('Sin guardar');
+        return;
+      }
       // Si la base no lo acepta, los campos vuelven a lo que hay guardado (no se queda a la vista un valor que no vale)
       setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1);
     }
   }
+  // (v0.186) Vuelve a intentar lo que quedó sin guardar, en orden; lo que la base rechace se suelta y se dice
+  const reintentando = useRef(false);
+  async function reintentar(aMano = false) {
+    if (reintentando.current || !pendRef.current.length) return;
+    reintentando.current = true;
+    let hechos = 0;
+    try {
+      for (const x of [...pendRef.current]) {
+        try { await api.actualizar(x.tabla, x.id, x.cambios); hechos++; setPendientes((l) => sinPendiente(l, x.tabla, x.id)); }
+        catch (e) {
+          if (e?.sinConexion) { if (aMano) aviso('Sigue sin conexión: lo intento otra vez en unos segundos', 'error'); break; }
+          setPendientes((l) => sinPendiente(l, x.tabla, x.id)); aviso(e.message, 'error'); await carga.recargar(true); setVersion((v) => v + 1);
+        }
+      }
+      if (hechos) { setEstado('Guardado'); aviso(hechos === 1 ? 'Guardado el cambio que estaba pendiente' : `Guardados los ${hechos} cambios que estaban pendientes`); if (pendRef.current.some((x) => x.tabla === 'bloques')) alCambiarBloque?.(); }
+    } finally { reintentando.current = false; }
+  }
+  reintentarRef.current = reintentar;
+  // (v0.186) la nota solo para el coach y el candado de un ejercicio (por atleta: valen en todas sus semanas)
+  async function guardarPrivada(ejercicioId, cambios) {
+    const ahora = { nota: '', fijado: false, ...(privadas[ejercicioId] || {}), ...cambios };
+    setEstado('Guardando…');
+    try {
+      await api.guardarNotaDeEjercicio(atletaId, ejercicioId, ahora);
+      setMias((x) => ({ ...x, [ejercicioId]: ahora }));
+      setEstado('Guardado');
+      if ('fijado' in cambios) aviso(cambios.fijado ? 'Con candado: «Programar según FBE» y «Preparar las siguientes» lo dejan como está' : 'Candado quitado');
+    } catch (e) { setEstado(''); aviso(e.message, 'error'); setVersion((v) => v + 1); }
+  }
+  const fijos = new Set(Object.entries(privadas).filter(([, x]) => x?.fijado).map(([id]) => id));
   // Pauta serie a serie: guarda el detalle (o lo quita) y el resumen que sale de él
   async function guardarDetalle(id, detalle) {
     setEstado('Guardando…');
@@ -278,14 +343,16 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   }
   // (v0.185) Publicar: antes, lo que parece un despiste (se puede publicar igual)
   function pedirPublicar(w, sesionesW, activar) {
-    const avisos = revisarSemana({ sesiones: sesionesW, pautas: dRef.current.pautas, previas, nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])), foco: w.foco });
+    const avisos = revisarSemana({ sesiones: sesionesW, pautas: dRef.current.pautas, previas, nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])), foco: w.foco,
+      evitados: evitadosAtleta.datos || {}, grupos: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, (e.grupos_musculares || []).slice(0, 1)])), nombresGrupo: NOMBRE_GRUPO,
+      anteriores: w.id === semana?.id && !bloque.es_plantilla ? sesionesAnt.flatMap((x) => dRef.current.pautas[x.id] || []) : [] });
     if (avisos.length) { setRevisar({ semana: w, avisos, activar }); return; }
     publicar(w, activar);
   }
   function publicar(w, activar) {
     // El atleta solo ve el bloque activo: si este no lo es, se pregunta
     if (activar) { setPublicarEn(w); return; }
-    estructura(() => api.publicarSemana(w.id, true), `Semana ${w.numero} publicada`);
+    estructura(() => api.publicarSemana(w.id, true), `Semana ${w.numero} publicada`).then((ok) => { if (ok) faltan.recargar(true); });
   }
   const ultimo = pila[pila.length - 1];
 
@@ -301,11 +368,18 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         <div class="separa">
           <strong>{bloque.es_plantilla ? 'Plantilla' : `Bloque ${bloque.numero ?? ''}`}</strong>
           <span class="fila" style="gap:var(--esp-10)">
-            <span class={`guardado ${estado === 'Guardado' ? 'ok' : ''}`} role="status">{estado === 'Guardado' && <Icono n="hecho" width="16" height="16" />}{estado}</span>
+            <span class={`guardado ${estado === 'Guardado' ? 'ok' : ''} ${pendientes.length ? 'pendiente' : ''}`} role="status">{estado === 'Guardado' && <Icono n="hecho" width="16" height="16" />}{estado}</span>
             <button class="btn btn-peq btn-deshacer" disabled={!ultimo} title={ultimo ? `Deshacer: ${ultimo.etiqueta}` : 'No hay nada que deshacer'} onClick={deshacer}><Icono n="deshacer" /> Deshacer</button>
             <button class="btn btn-peq btn-icono" disabled={!rehechos.length} aria-label="Rehacer" title={rehechos.length ? `Rehacer: ${rehechos[rehechos.length - 1].etiqueta}` : 'No hay nada que rehacer'} onClick={rehacer}><Icono n="rehacer" /></button>
           </span>
         </div>
+        {pendientes.length > 0 && (
+          <div class="nota sin-guardar-aviso" role="alert">
+            <Icono n="alerta" />
+            <span>{pendientes.length === 1 ? 'Hay 1 cambio sin guardar' : `Hay ${pendientes.length} cambios sin guardar`} por la conexión. Se guardan solos en cuanto vuelva; no cierres esta página.</span>
+            <button class="btn btn-peq" onClick={() => reintentar(true)}>Reintentar ahora</button>
+          </div>
+        )}
         <div class="rejilla-campos">
           <div class="campo"><label for={`b-nombre-${bloque.id}`}>Nombre</label>
             <input id={`b-nombre-${bloque.id}`} class="entrada" defaultValue={bloque.nombre} onChange={(e) => guardar('bloques', bloque.id, { nombre: e.currentTarget.value.trim() || bloque.nombre })} /></div>
@@ -385,6 +459,12 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
                 const todas = sesiones.every((x) => plegado.has(`s:${x.id}`));
                 return <button class="btn btn-peq" onClick={() => plegar(sesiones.map((x) => `s:${x.id}`), !todas)}><Icono n={todas ? 'abajo' : 'arriba'} /> {todas ? 'Desplegar todas' : 'Plegar todas'}</button>;
               })()}
+              {sesiones.some((x) => (d.pautas[x.id] || []).length) && (() => {
+                // (v0.186) toda la semana en compacto: solo las filas de cada tabla, sin lo de debajo de cada ejercicio
+                const claves = sesiones.flatMap((x) => (d.pautas[x.id] || []).map((p) => `p:${p.id}`));
+                const compacta = claves.every((c) => plegado.has(c));
+                return <button class="btn btn-peq" aria-pressed={compacta ? 'true' : 'false'} title="Deja solo la fila de cada ejercicio (series, repeticiones, esfuerzo y kilos), para repasar la semana de un tirón" onClick={() => plegar(claves, !compacta)}><Icono n={compacta ? 'vista' : 'ojo'} /> {compacta ? 'Ver el detalle' : 'Vista compacta'}</button>;
+              })()}
               {conDatos && <button class="btn btn-peq" onClick={() => setSugerir(true)}><Icono n="rayo" /> Cargas sugeridas</button>}
               {paraFbe && <button class="btn btn-peq" onClick={async () => {
                 let destino = paraFbe.destino;
@@ -438,6 +518,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             await estructura(() => api.copiarSesion(s.id, destinoId), destinoId === semana.id ? `«${s.nombre}» duplicada al final de la semana` : `«${s.nombre}» copiada a la semana ${w?.numero ?? ''}`);
           }}
           duplicarPauta={(p) => estructura(() => api.duplicarPauta(p.id), 'Ejercicio duplicado justo debajo')}
+          previaSesion={!bloque.es_plantilla ? sesionPrevia(s, d.pautas[s.id] || [], previas, sesionesAnt) : null} numeroAnterior={anterior?.numero ?? null} comentarios={comentarios.datos || {}}
+          privadas={atletaId ? privadas : null} guardarPrivada={atletaId ? guardarPrivada : null} rms={rms.datos || {}} sinGuardar={pendientes}
           sesionesSemana={sesiones} haySiguientes={d.semanas.some((w) => w.numero > semana.numero)} conHistorial={!!atletaId} minutosSesion={minutosSesion} notasLista={`notas-frecuentes-${bloque.id}`}
           menuSesion={async (v) => {
             if (v === 'varios') setVariosEn(s.id);
@@ -462,7 +544,27 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       {semana && <div class="anadir-sesiones">
         <button class="btn btn-ancho" onClick={() => estructura(() => api.nuevaSesion(semana.id))}><Icono n="mas" /> Añadir sesión</button>
         <button class="btn" onClick={() => setGuardadas(true)}><Icono n="plantillas" /> Añadir sesión guardada</button>
+        {atletaId && <button class="btn" onClick={() => setDeOtro(true)}><Icono n="atletas" /> Traer de otro atleta</button>}
       </div>}
+      {semana && atletaId && (() => {
+        // (v0.186) quién queda por programar, sin contar a este
+        const otros = (faltan.datos || []).filter((x) => x.atleta_id !== atletaId);
+        if (!otros.length) return null;
+        const sig = otros[0];
+        return (
+          <div class="panel panel-pad siguiente-atleta">
+            <span class="peq"><strong>Por programar: {otros.length}.</strong> <span class="secundario">Siguiente: {sig.nombre} ({sig.falta === 'esta' ? 'no tiene publicada esta semana' : 'le falta la semana que viene'}).</span></span>
+            <button class="btn btn-peq btn-primario" onClick={() => window.dispatchEvent(new CustomEvent('fbe-abrir-atleta', { detail: { atletaId: sig.atleta_id, pestana: 'programa' } }))}>Ir a {sig.nombre.split(' ')[0]} <Icono n="derecha" /></button>
+            {otros.length > 1 && (
+              <select class="selector" aria-label="Otro atleta por programar" value="" onChange={(e) => { const v = e.currentTarget.value; e.currentTarget.value = ''; if (v) window.dispatchEvent(new CustomEvent('fbe-abrir-atleta', { detail: { atletaId: v, pestana: 'programa' } })); }}>
+                <option value="">Elegir otro…</option>
+                {otros.slice(1).map((x) => <option key={x.atleta_id} value={x.atleta_id}>{x.nombre}{x.falta === 'esta' ? ' (esta semana)' : ''}</option>)}
+              </select>
+            )}
+          </div>
+        );
+      })()}
+      {deOtro && semana && <SesionDeOtro atletaId={atletaId} alCerrar={() => setDeOtro(false)} alElegir={async (g, de) => { setDeOtro(false); await estructura(() => api.copiarSesion(g.id, semana.id), `«${g.nombre}» de ${de} añadida a la semana ${semana.numero}`); }} />}
       <datalist id={`notas-frecuentes-${bloque.id}`}>{notasFrecuentes(d, notasMias).map((t) => <option key={t} value={t} />)}</datalist>
       {revisar && (
         <Hoja titulo={`Antes de publicar la semana ${revisar.semana.numero}`} alCerrar={() => setRevisar(null)} ancho={560}>
@@ -488,7 +590,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         <CargasSugeridas filas={sugerirCargas({
           // Con nivel, solo los ejercicios que se pautan con kg (los de RPE los carga el atleta)
           // (las pautadas serie a serie llevan sus kilos en cada serie: no se proponen aquí)
-          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []).filter((p) => conKg(p) && !tieneDetalle(p)), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
+          ahora: sesiones.flatMap((x) => d.pautas[x.id] || []).filter((p) => conKg(p) && !tieneDetalle(p) && !fijos.has(p.ejercicio_id)), antes: sesionesAnt.flatMap((x) => d.pautas[x.id] || []),
           series: d.series, sesionesAhora: sesiones, sesionesAntes: sesionesAnt,
           nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])), foco: semana.foco,
         })} sesiones={sesiones} semana={semana} anterior={anterior} alCerrar={() => setSugerir(false)}
@@ -501,7 +603,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
       )}
       {fbe && d.semanas.some((w) => w.id === fbe.base) && d.semanas.some((w) => w.id === fbe.destino) && (
         <ProgramarFBE d={d} base={d.semanas.find((w) => w.id === fbe.base)} destino={d.semanas.find((w) => w.id === fbe.destino)} ejercicios={ejercicios}
-          atleta={{ id: atletaId, nivel, volumen_objetivo: volumenObjetivo }} alCerrar={() => setFbe(null)}
+          atleta={{ id: atletaId, nivel, volumen_objetivo: volumenObjetivo }} fijos={fijos} alCerrar={() => setFbe(null)}
           alAplicar={async (lista, extra = {}) => {
             const w = d.semanas.find((x) => x.id === fbe.destino);
             setFbe(null);
@@ -512,9 +614,9 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             setVersion((v) => v + 1);
           }} />
       )}
-      {duplicar && semana && <Duplicar semana={semana} pautas={sesiones.flatMap((x) => d.pautas[x.id] || [])} ejercicios={ejercicios} alCerrar={() => setDuplicar(false)} alHacer={async (prog) => {
+      {duplicar && semana && <Duplicar semana={semana} pautas={sesiones.flatMap((x) => d.pautas[x.id] || [])} ejercicios={ejercicios} fijos={fijos} alCerrar={() => setDuplicar(false)} alHacer={async (prog) => {
         setDuplicar(false);
-        const nuevas = await estructura(() => api.prepararSemanas(semana.id, prog));
+        const nuevas = await estructura(() => api.prepararSemanas(semana.id, { ...prog, fijos: [...fijos] }));
         if (nuevas?.length) {
           setSemanaId(nuevas[0].id);
           aviso(nuevas.length === 1 ? `Semana ${nuevas[0].numero} preparada, en borrador` : `Semanas ${nuevas.map((w) => w.numero).join(', ')} preparadas, en borrador: revísalas y publícalas`);
@@ -535,7 +637,14 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         await estructura(() => api.nuevasPautas(sesionId, lista.map((ej) => ({ ejercicio_id: ej.id, ...basePauta(ej, reglasDe(ej.id)) }))), `${lista.length} ejercicios añadidos`);
       }} />}
       {/* lejos de la cabecera del bloque, deshacer sigue a mano */}
-      {ultimo && <button class="btn deshacer-flotante" aria-label={`Deshacer el último cambio: ${ultimo.etiqueta}`} onClick={deshacer}><Icono n="deshacer" /> Deshacer</button>}
+      {/* (v0.186) en el móvil, además: saltar al ejercicio anterior o al siguiente sin tanto desplazamiento */}
+      <div class={`barra-editor ${ultimo ? '' : 'sin-deshacer'}`}>
+        {semana && sesiones.some((x) => (d.pautas[x.id] || []).length) && <>
+          <button class="btn btn-icono solo-movil" aria-label="Ir al ejercicio anterior" onClick={() => irAFila(-1)}><Icono n="arriba" /></button>
+          <button class="btn btn-icono solo-movil" aria-label="Ir al ejercicio siguiente" onClick={() => irAFila(1)}><Icono n="abajo" /></button>
+        </>}
+        {ultimo && <button class="btn deshacer-flotante" aria-label={`Deshacer el último cambio: ${ultimo.etiqueta}`} onClick={deshacer}><Icono n="deshacer" /> Deshacer</button>}
+      </div>
       {vistaAtleta && semana && <VistaAtleta semana={semana} sesiones={sesiones} pautas={d.pautas} ejercicios={ejercicios} alCerrar={() => setVistaAtleta(false)} />}
       {publicarEn && (
         <Hoja titulo="Este bloque aún no es el activo" alCerrar={() => setPublicarEn(null)}>
@@ -705,6 +814,53 @@ function SesionesGuardadas({ alCerrar, alElegir }) {
           </button></div>
         ))}</div>}
       <p class="mini terciario">Se añade al final de la semana, tal como la guardaste. Para cambiarlas o borrarlas: Plantillas → «Sesiones guardadas».</p>
+    </Hoja>
+  );
+}
+
+// (v0.186) Lleva la pantalla al ejercicio anterior o al siguiente (la barra del móvil): el primero cuya fila empieza por
+// debajo de la cabecera, o el último que queda por encima
+function irAFila(dir) {
+  const filas = [...document.querySelectorAll('.tabla-pauta tbody > tr[data-fila]')];
+  if (!filas.length) return;
+  const tope = 96;
+  const destino = dir > 0 ? filas.find((f) => f.getBoundingClientRect().top > tope + 8) : [...filas].reverse().find((f) => f.getBoundingClientRect().top < tope - 8);
+  if (!destino) return;
+  const suave = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: window.scrollY + destino.getBoundingClientRect().top - tope, behavior: suave ? 'smooth' : 'auto' });
+}
+
+// (v0.186) «Traer de otro atleta»: una sesión del programa de otro atleta, copiada al final de esta semana (sus
+// ejercicios con su prescripción; nada de lo que él haya registrado)
+function SesionDeOtro({ atletaId, alCerrar, alElegir }) {
+  const { api } = useApp();
+  const atletas = useCarga(() => api.atletas().then((l) => l.filter((a) => a.id !== atletaId && a.estado !== 'baja' && a.entrenamiento !== false)), [atletaId]);
+  const [de, setDe] = useState('');
+  const suyas = useCarga(() => (de ? api.sesionesDeAtleta(de) : Promise.resolve(null)), [de]);
+  const nombre = (atletas.datos || []).find((a) => a.id === de)?.nombre || '';
+  return (
+    <Hoja titulo="Traer una sesión de otro atleta" alCerrar={alCerrar} ancho={520}>
+      {atletas.cargando ? <Cargando /> : atletas.error ? <ErrorCaja error={atletas.error} reintentar={atletas.recargar} /> : (
+        <div class="campo"><label for="de-otro-atleta">¿De quién?</label>
+          <select id="de-otro-atleta" class="selector" value={de} onChange={(e) => setDe(e.currentTarget.value)}>
+            <option value="">Elige un atleta</option>
+            {(atletas.datos || []).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+          </select></div>
+      )}
+      {de && (suyas.cargando ? <Cargando /> : suyas.error ? <ErrorCaja error={suyas.error} reintentar={suyas.recargar} /> : !(suyas.datos || []).length
+        ? <p class="secundario">No tiene sesiones en su bloque actual.</p>
+        : suyas.datos.map((w) => (
+          <div key={w.numero} class="pila-xs">
+            <strong class="peq">Semana {w.numero}</strong>
+            <div class="lista-elegir">{w.sesiones.map((x) => (
+              <div key={x.id} class="elegir-fila"><button onClick={() => alElegir(x, nombre.split(' ')[0])}>
+                <span style="font-weight:600">{x.nombre}</span>
+                <span class="mini terciario">{x.ejercicios ? `${x.ejercicios} ${x.ejercicios === 1 ? 'ejercicio' : 'ejercicios'} · ${x.series} series` : x.tipo === 'cardio' ? 'Cardio' : 'Sin ejercicios'}</span>
+              </button></div>
+            ))}</div>
+          </div>
+        )))}
+      <p class="mini terciario">Se copia al final de esta semana con sus ejercicios, series, repeticiones, esfuerzo y kilos. Repasa los kilos: son los del otro atleta.</p>
     </Hoja>
   );
 }
@@ -1019,7 +1175,8 @@ function TablaSemanaAnterior({ previa, pauta, numero, nombre, aplicar = null }) 
 
 function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDetalle, estructura, elegir, borrar, corregirVariante, nivel = null, ultimas = {}, previas = {}, numeroSemana = null, notasAtleta = {}, evitados = {}, fbe = null, conCarrera = false, zonasCarrera = null,
   indice = 0, total = 1, plegado = new Set(), plegar = () => {}, semanas = [], semanaId = null, reglasDe = () => undefined, aplicarPauta = null, quitarPauta = null, ordenarPautas = null, moverSesion = null, copiarSesion = null, duplicarPauta = null,
-  sesionesSemana = [], haySiguientes = false, conHistorial = false, minutosSesion = null, notasLista = null, menuSesion = null, masEjercicio = null }) {
+  sesionesSemana = [], haySiguientes = false, conHistorial = false, minutosSesion = null, notasLista = null, menuSesion = null, masEjercicio = null,
+  previaSesion = null, numeroAnterior = null, comentarios = {}, privadas = null, guardarPrivada = null, rms = {}, sinGuardar = [] }) {
   const { api } = useApp();
   const cerrada = plegado.has(`s:${sesion.id}`);
   // (v0.185) lo que dura, a ojo: 40 s por serie más los descansos, y los minutos del cardio
@@ -1034,6 +1191,10 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
     guardar('sesion_ejercicios', pautaId, { [campo]: v });
   };
   const hechas = pautas.reduce((t, p) => t + (series[p.id]?.length || 0), 0);
+  // (v0.186) cómo le fue: esta, si ya la hizo, y la que le corresponde de la semana anterior
+  const fue = comoLeFue(sesion, { series: hechas, comentarios: comentarios[sesion.id] || 0, fecha: fmtConDia });
+  const fueAntes = previaSesion ? comoLeFue(previaSesion, { comentarios: comentarios[previaSesion.id] || 0, fecha: fmtConDia }) : null;
+  const pendiente = (id) => sinGuardar.some((x) => x.tabla === 'sesion_ejercicios' && x.id === id);
   // Con nivel, solo las columnas que se usan; en cada fila, la que no toca por su prioridad queda atenuada
   const col = columnasEditor(nivel, pautas);
   const fuera = (p, campo) => {
@@ -1081,7 +1242,10 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
         </select>
         <button class="btn btn-icono plano btn-peligro" aria-label={`Borrar ${sesion.nombre}`} onClick={borrar}><Icono n="basura" /></button>
       </div>
-      {sesion.completada && <p class="peq" style="color:var(--ok)">Hecha por el atleta{hechas ? `: ${hechas} series registradas` : ''}.</p>}
+      {fue && <p class="peq como-fue hecha"><Icono n="hecho" /><span><strong>{fue.texto.charAt(0).toUpperCase() + fue.texto.slice(1)}.</strong>{fue.nota && <> <span class="secundario">Su nota: «{fue.nota}»</span></>}</span></p>}
+      {previaSesion && numeroAnterior != null && (fueAntes
+        ? <p class="mini como-fue"><Icono n="reloj" /><span><span class="terciario">Semana {numeroAnterior}: </span>{fueAntes.texto}.{fueAntes.nota && <> Su nota: «{fueAntes.nota}»</>}</span></p>
+        : <p class="mini como-fue terciario"><Icono n="reloj" /><span>Semana {numeroAnterior}: «{previaSesion.nombre}» no la hizo (o no la cerró).</span></p>)}
       {!sesion.completada && sesion.dia_previsto && <p class="mini terciario plan-coach"><Icono n="calendario" /> El atleta la tiene prevista el {fmtConDia(sesion.dia_previsto)}.</p>}
       <textarea class="area" style="min-height:56px" aria-label="Dinámica de la sesión" placeholder={sesion.tipo === 'cardio' ? 'Qué hacer: por ejemplo, 30 min en zona 2 (puedes hablar sin ahogarte) o 6 × 2 min fuerte con 2 min suave' : 'Dinámica: calentamiento, orden, indicaciones…'} defaultValue={sesion.dinamica || ''}
         onChange={(e) => guardar('sesiones', sesion.id, { dinamica: nulo(e.currentTarget.value.trim()) })} />
@@ -1100,7 +1264,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
             </tr></thead>
             <tbody>
               {pautas.map((p, i) => (
-                <tr key={p.id} data-fila class={plegado.has(`p:${p.id}`) ? 'sin-detalle' : ''}>
+                <tr key={p.id} data-fila class={`${plegado.has(`p:${p.id}`) ? 'sin-detalle' : ''} ${pendiente(p.id) ? 'sin-guardar' : ''}`} title={pendiente(p.id) ? 'Sin guardar: se guarda solo cuando vuelva la conexión' : undefined}>
                   <td data-col="Prioridad"><span class="sel-prioridad">
                     <Disco prioridad={p.prioridad} />
                     <select aria-label="Prioridad" value={p.prioridad} onChange={(e) => guardar('sesion_ejercicios', p.id, { prioridad: e.currentTarget.value })}>
@@ -1110,6 +1274,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     <option value="">—</option>{LETRAS_SUPERSERIE.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select></td>
                   <td class="col-ejercicio"><button class="btn btn-peq btn-ejercicio" onClick={() => elegir(p.id)}>{ejercicios[p.ejercicio_id]?.nombre || 'Elegir ejercicio'}</button>
+                    {privadas?.[p.ejercicio_id]?.fijado && <span class="chip chip-fijado" title="Con candado: «Programar según FBE», «Preparar las siguientes» y «Cargas sugeridas» lo dejan como está. Se quita en «Mover, llevar, historial…»"><Icono n="candado" /> Fijado</span>}
                     {!plegado.has(`p:${p.id}`) && <>
                     <Equivalentes ejercicio={ejercicios[p.ejercicio_id]} lista={lista} alCambiar={(ej) => guardar('sesion_ejercicios', p.id, { ejercicio_id: ej.id })} />
                     <div class="variante-tempo">
@@ -1130,10 +1295,11 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                       </select>
                     </div>
                     {fbe && <AyudaFicha ejercicioId={p.ejercicio_id} fichas={fbe.fichas} enlaces={fbe.enlaces} molestias={fbe.molestias} />}
-                    {masEjercicio && (sesionesSemana.length > 1 || haySiguientes || conHistorial) && (
-                      <select class="equivalentes mas-ejercicio" aria-label={`Más acciones de ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} value="" onChange={(e) => { const v = e.currentTarget.value; e.currentTarget.value = ''; if (v) masEjercicio(p, v); }}>
+                    {masEjercicio && (sesionesSemana.length > 1 || haySiguientes || conHistorial || guardarPrivada) && (
+                      <select class="equivalentes mas-ejercicio" aria-label={`Más acciones de ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} value="" onChange={(e) => { const v = e.currentTarget.value; e.currentTarget.value = ''; if (v === 'candado') guardarPrivada(p.ejercicio_id, { fijado: !privadas?.[p.ejercicio_id]?.fijado }); else if (v) masEjercicio(p, v); }}>
                         <option value="">Mover, llevar, historial…</option>
                         {conHistorial && <option value="historial">Ver su historial</option>}
+                        {guardarPrivada && p.ejercicio_id && <option value="candado">{privadas?.[p.ejercicio_id]?.fijado ? 'Quitar el candado' : 'Poner candado: que no lo cambien los automáticos'}</option>}
                         {haySiguientes && <option value="llevar">Llevar a las semanas siguientes…</option>}
                         {sesionesSemana.filter((x) => x.id !== sesion.id).map((x) => <option key={`m${x.id}`} value={`m:${x.id}`}>Mover a {x.nombre}</option>)}
                         {sesionesSemana.filter((x) => x.id !== sesion.id).map((x) => <option key={`c${x.id}`} value={`c:${x.id}`}>Copiar a {x.nombre}</option>)}
@@ -1141,6 +1307,16 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                     )}
                     <AvisoVariante pauta={p} ejercicio={ejercicios[p.ejercicio_id]} lista={lista} corregir={corregirVariante} />
                     <NotaPauta valor={p.notas_coach} lista={notasLista} alGuardar={(v) => guardar('sesion_ejercicios', p.id, { notas_coach: v })} />
+                    {guardarPrivada && p.ejercicio_id && <label class="nota-solo-coach" title="Solo la ves tú. Va con el ejercicio: sale en todas las semanas en las que este atleta lo tenga">
+                      <Icono n="candado" /><span class="sr">Nota solo para ti sobre {ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}</span>
+                      <input class="variante" key={`priv-${privadas?.[p.ejercicio_id]?.nota || ''}`} maxLength={300} placeholder="Solo para ti (el atleta no la ve)" defaultValue={privadas?.[p.ejercicio_id]?.nota || ''}
+                        onChange={(e) => guardarPrivada(p.ejercicio_id, { nota: e.currentTarget.value.trim() })} />
+                    </label>}
+                    {(() => {
+                      // (v0.186) en los básicos, qué parte de su mejor 1RM estimado son los kilos pautados
+                      const r = (ejercicios[p.ejercicio_id]?.tipo || []).includes('basico') ? pctDeRm(kilosDe(p), rms[p.ejercicio_id]) : null;
+                      return r ? <div class="mini pct-rm num" title="Su mejor 1RM estimado sale de todo su historial (kilos, repeticiones y esfuerzo de cada serie)"><span class="terciario">{num(kilosDe(p), 2)} kg son el </span><strong>{r.pct} %</strong><span class="terciario"> de su mejor 1RM estimado ({num(r.mejor, 1)} kg)</span></div> : null;
+                    })()}
                     {tieneDetalle(p) && <DetalleSeries pauta={p} hechas={series[p.id] || []} alGuardar={(d) => guardarDetalle(p.id, d)} salto={saltoDePauta(p)} />}
                     {evitados[p.ejercicio_id] && <div class="mini aviso-evitado" role="note"><Icono n="alerta" /><span>Prefiere evitarlo: {textoMotivo(evitados[p.ejercicio_id]).toLowerCase()}. Es solo un aviso.</span></div>}
                     {notasAtleta[p.ejercicio_id] && <div class="mini nota-atleta-coach" title="Su nota fijada en este ejercicio (la escribe el atleta en su sesión)"><Icono n="chincheta" /><span><span class="terciario">Su nota: </span>{notasAtleta[p.ejercicio_id].texto}</span></div>}
@@ -1228,7 +1404,8 @@ function AvisoVariante({ pauta, ejercicio, lista, corregir }) {
   );
 }
 
-function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
+function Duplicar({ semana, pautas = [], ejercicios = {}, fijos = new Set(), alCerrar, alHacer }) {
+  const nFijos = new Set(pautas.filter((p) => fijos.has(p.ejercicio_id)).map((p) => p.ejercicio_id)).size;
   const conKg = pautas.filter((p) => p.carga_sugerida_kg != null);
   const [n, setN] = useState(1);
   const cuantos = (k) => `${k} ${k === 1 ? 'ejercicio' : 'ejercicios'}`;
@@ -1283,6 +1460,7 @@ function Duplicar({ semana, pautas = [], ejercicios = {}, alCerrar, alHacer }) {
           <ul class="lista-ejemplo peq secundario">{ejemplo(conKg[0], kgTxt)}{conEsfuerzo && conEsfuerzo !== conKg[0] && ejemplo(conEsfuerzo, esfTxt)}</ul>
         </div>
       )}
+      {nFijos > 0 && <p class="mini terciario"><Icono n="candado" width="14" height="14" /> {nFijos === 1 ? '1 ejercicio con candado pasa' : `${nFijos} ejercicios con candado pasan`} tal cual, sin estos cambios.</p>}
       <button class="btn btn-primario btn-grande" onClick={() => alHacer({ n, ...opciones, descargaUltima: descarga })}><Icono n="duplicar" /> {n === 1 ? 'Preparar la semana siguiente' : `Preparar ${n} semanas`}</button>
     </Hoja>
   );

@@ -60,7 +60,7 @@ function TablaSeries({ filas, ejercicio, base, destino }) {
   );
 }
 
-export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, alAplicar }) {
+export function ProgramarFBE({ d, base, destino, ejercicios, atleta, fijos = new Set(), alCerrar, alAplicar }) {
   const { api, aviso } = useApp();
   // El check-in y las molestias de la semana hecha (y el check-in de la anterior, para las señales de descarga), y la
   // ficha del atleta, de donde salen su nombre y sus reglas guardadas
@@ -112,7 +112,9 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
     const cambia = actual ? diferencias(actual, propuesta).length > 0 : false;
     return { f, actual, propuesta, cambia, alternativa };
   });
-  const dePartida = new Set(vistas.filter((v) => v.cambia && v.f.confianza !== 'baja').map((v) => v.f.pauta_id));
+  // (v0.186) los ejercicios con candado no vienen marcados: se quedan como están salvo que los marques
+  const conCandado = (v) => !!v.actual && fijos.has(v.actual.ejercicio_id);
+  const dePartida = new Set(vistas.filter((v) => v.cambia && v.f.confianza !== 'baja' && !conCandado(v)).map((v) => v.f.pauta_id));
   const marcadas = new Set([...(marcas || dePartida)].filter((id) => vistas.find((v) => v.f.pauta_id === id)?.cambia));
   const alternar = (id) => { const n = new Set(marcadas); if (n.has(id)) n.delete(id); else n.add(id); setMarcas(n); };
   const aplicables = vistas.filter((v) => v.cambia);
@@ -222,6 +224,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                 <strong class="peq">{s.nombre}</strong>
                 <ul class="lista cargas-sug" style="max-height:none">
                   {suyas.map(({ f, actual, propuesta, cambia }) => {
+                    const candado = !!actual && fijos.has(actual.ejercicio_id);
                     const [tTipo, cTipo] = TIPO[f.tipo] || [f.tipo, ''];
                     const [tConf, cConf] = CONFIANZA[f.confianza] || [f.confianza, ''];
                     const notas = [...f.frenos.map((x) => x.texto), ...f.avisos.map((x) => x.texto)];
@@ -233,6 +236,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
                         <div class="pila-xs" style="gap:5px">
                           <span class="fila-envolver" style="align-items:center;gap:6px">
                             <strong>{f.ejercicio}</strong>
+                            {candado && <span class="chip chip-fijado" title="Con candado en el editor: no viene marcado. Si lo marcas, se aplica igual"><Icono n="candado" /> Fijado</span>}
                             <span class={`chip ${cTipo}`} data-d={f.tipo}>{tTipo}</span>
                             {f.fase === 'peaking' && <span class="chip morado">Peaking</span>}
                             <span class={`chip ${cConf}`} data-conf={f.confianza}>{tConf}</span>

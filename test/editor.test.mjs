@@ -2,7 +2,8 @@
 // operaciones nuevas contra la demo (copiar una sesión, duplicar un ejercicio, ordenar, añadir varios).
 //   node test/editor.test.mjs
 import { CAMPOS_PAUTA, filaDe, antesDe, etiquetaCambio, apilar, cambiarId, basePauta, tipoDe, DESCANSO_TIPO, comoLaAnterior, detalleDeHechas, pasoDe, saltoKg, igualarSeries, reordenar, resumenSesion,
-  kilosDe, revisarSemana, SALTO_AVISO_PCT, cambiosDeSemana, parejasSiguientes, LLEVAR, cambiosParaPareja, ordenBuscador, conReciente, usosEnBloque, notasFrecuentes, conNota, historialParaEditor } from '../web/src/logica/editor.js';
+  kilosDe, revisarSemana, SALTO_AVISO_PCT, cambiosDeSemana, parejasSiguientes, LLEVAR, cambiosParaPareja, ordenBuscador, conReciente, usosEnBloque, notasFrecuentes, conNota, historialParaEditor,
+  comoLeFue, sesionPrevia, leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, pctDeRm, porProgramar, conPendiente, sinPendiente } from '../web/src/logica/editor.js';
 import { REGLAS_FBE, resolverReglas } from '../web/src/logica/motor/index.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
@@ -190,6 +191,78 @@ const antesS = (await api.bloqueCompleto(bloque.id)).sesiones[otra.id].length;
 const usada = await api.copiarSesion(g2.id, otra.id);
 dd = await api.bloqueCompleto(bloque.id);
 check(dd.sesiones[otra.id].length === antesS + 1 && dd.sesiones[otra.id].find((x) => x.id === usada.id).nombre === 'Pierna de viaje' && dd.pautas[usada.id].length === nB, 'y se añaden a cualquier semana con todos sus ejercicios');
+
+console.log('Tercera tanda (v0.186): las cuentas');
+const f3 = (x) => `el ${x}`;
+check(comoLeFue({ completada: false }) === null && igual(comoLeFue({ completada: true, fecha_realizada: '2026-11-10', duracion_min: 62, rpe_sesion: 8, nota_atleta: ' Bien ' }, { series: 18, comentarios: 2, fecha: f3 }),
+  { texto: 'hecha el el 2026-11-10 · 62 min · esfuerzo 8/10 · 18 series · 2 comentarios suyos', nota: 'Bien' }) && comoLeFue({ completada: true }).texto === 'hecha', 'cómo le fue una sesión: fecha, minutos, esfuerzo, series, comentarios y su nota');
+check(sesionPrevia({ nombre: 'Torso' }, [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }], { p1: { pauta: { sesion_id: 'a' } }, p2: { pauta: { sesion_id: 'b' } }, p3: { pauta: { sesion_id: 'b' } } }, [{ id: 'a', nombre: 'Torso' }, { id: 'b', nombre: 'Otra' }]).id === 'b'
+  && sesionPrevia({ nombre: 'Torso' }, [], {}, [{ id: 'a', nombre: 'Torso' }]).id === 'a' && sesionPrevia({ nombre: 'X' }, [], {}, [{ id: 'a', nombre: 'Torso' }]) === null, 'la sesión de la semana anterior: de donde vienen más ejercicios o, si no, la del mismo nombre');
+check(escribirNotaEjercicio('e1', {}) === null && escribirNotaEjercicio('e1', { fijado: true }) === '#ej:e1:fijo#' && escribirNotaEjercicio('e1', { nota: '  subir  luego ' }) === '#ej:e1# subir luego'
+  && igual(leerNotaEjercicio('#ej:e1:fijo# hola'), { ejercicioId: 'e1', fijado: true, nota: 'hola' }) && igual(leerNotaEjercicio('#ej:e1:fijo#'), { ejercicioId: 'e1', fijado: true, nota: '' })
+  && leerNotaEjercicio('una nota normal') === null && leerNotaEjercicio('hablamos de #ej:e1# ayer') === null && escribirNotaEjercicio('e1', { nota: 'x'.repeat(500) }).length === 300 + '#ej:e1# '.length, 'la nota de un ejercicio: se escribe con su marca, se lee de vuelta y una nota normal no se confunde');
+check(igual(notasPorEjercicio([{ id: 2, texto: '#ej:e1# nueva', creado_en: '2026-02' }, { id: 1, texto: '#ej:e1:fijo# vieja', creado_en: '2026-01' }, { id: 3, texto: 'otra' }]), { e1: { id: 2, nota: 'nueva', fijado: false } }), 'de sus notas privadas salen las de ejercicio (la más nueva de cada uno)');
+check(igual(pctDeRm(70, 85), { pct: 82, mejor: 85 }) && pctDeRm(null, 85) === null && pctDeRm(70, 0) === null && pctDeRm('', undefined) === null, 'el porcentaje de su mejor 1RM estimado');
+const sumar3 = (iso, n) => { const x = new Date(`${iso}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const pp3 = porProgramar([
+  { atleta_id: 1, nombre: 'Zoe', bloque_id: 'b1', semanas: [{ fecha_inicio: '2026-11-16', programacion: 'programada' }, { fecha_inicio: '2026-11-23', programacion: 'en_programacion' }] },
+  { atleta_id: 2, nombre: 'Ana', bloque_id: 'b2', semanas: [{ fecha_inicio: '2026-11-16', programacion: 'programada' }, { fecha_inicio: '2026-11-23', programacion: 'programada' }] },
+  { atleta_id: 3, nombre: 'Leo', bloque_id: 'b3', semanas: [{ fecha_inicio: '2026-11-09', programacion: 'programada' }] },
+  { atleta_id: 4, nombre: 'Sin fechas', bloque_id: 'b4', semanas: [{ fecha_inicio: null, programacion: 'en_programacion' }] },
+  { atleta_id: 5, nombre: 'Eva', bloque_id: 'b5', semanas: [{ fecha_inicio: '2026-11-16', programacion: 'programada' }] },
+], '2026-11-16', sumar3);
+check(igual(pp3.map((x) => `${x.nombre}:${x.falta}`), ['Leo:esta', 'Eva:siguiente', 'Zoe:siguiente']), 'por programar: primero a quien le falta esta semana; quien tiene la siguiente publicada no sale, ni un bloque sin fechas');
+let pen3 = conPendiente([], 'sesion_ejercicios', 'p1', { series: 4 });
+pen3 = conPendiente(pen3, 'sesion_ejercicios', 'p1', { carga_sugerida_kg: 60 });
+pen3 = conPendiente(pen3, 'sesiones', 's1', { nombre: 'x' });
+check(pen3.length === 2 && igual(pen3[0].cambios, { series: 4, carga_sugerida_kg: 60 }) && sinPendiente(pen3, 'sesion_ejercicios', 'p1').length === 1, 'lo pendiente de guardar: un cambio por fila, con lo último de cada campo');
+const S13 = { id: 's', nombre: 'Torso' };
+const av3 = (extra) => revisarSemana({ sesiones: [S13], pautas: { s: [{ id: 'a', ejercicio_id: 'e1', series: 3, carga_sugerida_kg: null }, { id: 'b', ejercicio_id: 'e1', series: 3, carga_sugerida_kg: 40 }] }, nombres: { e1: 'Press banca' }, ...extra }).map((x) => x.texto);
+check(av3({}).includes('Press banca está 2 veces.'), 'antes de publicar: un ejercicio repetido en la sesión');
+check(av3({ evitados: { e1: { motivo: 'x' } } }).filter((t) => t === 'Press banca: lo tiene entre lo que prefiere evitar.').length === 2, 'un ejercicio que prefiere evitar');
+check(av3({ previas: { a: { pauta: { carga_sugerida_kg: 50 } } } }).includes('Press banca: la semana pasada llevaba kilos (50 kg) y esta no.') && !av3({ previas: { b: { pauta: { carga_sugerida_kg: 40 } } } }).some((t) => /llevaba kilos/.test(t)), 'kilos que la semana pasada tenía y esta no');
+check(av3({ grupos: { e1: ['pectoral'], e2: ['espalda'] }, nombresGrupo: { espalda: 'Espalda' }, anteriores: [{ ejercicio_id: 'e2', series: 4 }, { ejercicio_id: 'e1', series: 3 }] }).includes('Esta semana no hay ninguna serie de espalda (la pasada, 4).')
+  && !av3({ foco: 'descarga', grupos: { e2: ['espalda'] }, anteriores: [{ ejercicio_id: 'e2', series: 4 }] }).some((t) => /ninguna serie/.test(t)), 'un músculo que se queda sin series (en una descarga no avisa)');
+
+console.log('Contra la demo: notas de ejercicio, candado, por programar y traer de otro atleta');
+const atletaId = bloque.atleta_id;
+dd = await api.bloqueCompleto(bloque.id);
+const ej3 = dd.pautas[dd.sesiones[sem.id][0].id][0].ejercicio_id;
+const notasAntes = (await api.ficha(atletaId)).notas.length;
+check(igual(await api.notasDeEjercicio(atletaId), {}), 'sin notas de ejercicio, nada');
+await api.guardarNotaDeEjercicio(atletaId, ej3, { nota: 'subir cuando pueda' });
+await api.guardarNotaDeEjercicio(atletaId, ej3, { nota: 'subir cuando pueda', fijado: true });
+const ne = await api.notasDeEjercicio(atletaId);
+check(Object.keys(ne).length === 1 && ne[ej3].nota === 'subir cuando pueda' && ne[ej3].fijado === true && (await b.select('notas_coach', { eq: { atleta_id: atletaId } })).filter((n) => leerNotaEjercicio(n.texto)).length === 1, 'la nota y el candado de un ejercicio se guardan en una sola nota privada (la anterior se quita)');
+check((await api.ficha(atletaId)).notas.length === notasAntes, 'y no salen entre las notas de su ficha');
+// el candado: al preparar la semana siguiente, ese ejercicio pasa tal cual
+const conKilos = dd.pautas[dd.sesiones[sem.id][0].id].find((p) => p.ejercicio_id === ej3);
+await api.actualizar('sesion_ejercicios', conKilos.id, { carga_sugerida_kg: 50, series_detalle: null, backoff_pct: null });
+const otroEj = dd.pautas[dd.sesiones[sem.id][0].id].find((p) => p.ejercicio_id !== ej3);
+await api.actualizar('sesion_ejercicios', otroEj.id, { carga_sugerida_kg: 50, series_detalle: null, backoff_pct: null });
+const [nuevaSem] = await api.prepararSemanas(sem.id, { n: 1, kg: 5, rpe: 0, rir: 0, reps: 0, fijos: [ej3] });
+dd = await api.bloqueCompleto(bloque.id);
+const copias = dd.sesiones[nuevaSem.id].flatMap((x) => dd.pautas[x.id] || []);
+const kilos = (ps, id) => ps.filter((p) => p.ejercicio_id === id).map((p) => Number(p.carga_sugerida_kg)).sort((x, y) => x - y);
+const origen = dd.sesiones[sem.id].flatMap((x) => dd.pautas[x.id] || []);
+check(igual(kilos(copias, ej3), kilos(origen, ej3)) && kilos(copias, ej3).includes(50) && igual(kilos(copias, otroEj.ejercicio_id), kilos(origen, otroEj.ejercicio_id).map((k) => k + 5)), 'con candado, «Preparar las siguientes» lo copia tal cual; los demás progresan');
+await api.guardarNotaDeEjercicio(atletaId, ej3, { nota: '', fijado: false });
+check(igual(await api.notasDeEjercicio(atletaId), {}), 'al vaciarla y quitar el candado, la nota desaparece');
+const rmsDe = await api.mejoresRm(atletaId);
+check(Object.keys(rmsDe).length > 0 && Object.values(rmsDe).every((v) => v > 0), `su mejor 1RM estimado por ejercicio (${Object.keys(rmsDe).length})`);
+const hechasIds = Object.values(dd.sesiones).flat().filter((x) => x.completada).map((x) => x.id);
+const cs3 = await api.comentariosDeSesiones(hechasIds);
+check(typeof cs3 === 'object' && Object.values(cs3).every((n) => n > 0) && igual(await api.comentariosDeSesiones([]), {}), 'los comentarios del atleta por sesión');
+const faltanA = await api.porProgramar();
+check(Array.isArray(faltanA) && faltanA.every((x) => x.atleta_id && x.nombre && x.bloque_id && ['esta', 'siguiente'].includes(x.falta)), `quién queda por programar (${faltanA.length})`);
+const otros3 = (await api.atletas()).filter((a) => a.id !== atletaId);
+let deOtro = null;
+for (const a of otros3) { const w = await api.sesionesDeAtleta(a.id); if (w.length) { deOtro = w; break; } }
+check(!!deOtro && deOtro.length <= 4 && deOtro[0].sesiones.length > 0 && deOtro.every((w, i) => i === 0 || w.numero < deOtro[i - 1].numero) && deOtro[0].sesiones.every((x) => x.id && x.nombre), 'las sesiones de otro atleta: sus últimas semanas, de la más nueva a la más vieja');
+const nSes3 = dd.sesiones[nuevaSem.id].length;
+const tr3 = await api.copiarSesion(deOtro[0].sesiones[0].id, nuevaSem.id);
+dd = await api.bloqueCompleto(bloque.id);
+check(dd.sesiones[nuevaSem.id].length === nSes3 + 1 && (dd.pautas[tr3.id] || []).length === deOtro[0].sesiones[0].ejercicios && !(dd.pautas[tr3.id] || []).some((p) => (dd.series[p.id] || []).length), 'y una de ellas se copia a esta semana con sus ejercicios, sin nada registrado');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

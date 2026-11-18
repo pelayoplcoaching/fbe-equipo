@@ -150,6 +150,12 @@ export function CoachApp() {
     setPeticion({ ...d, id: Date.now() });
   };
   const pide = (t) => (peticion?.tab === t ? peticion : null);
+  // (v0.186) desde el editor: «Siguiente atleta por programar»
+  useEffect(() => {
+    const abrir = (e) => { if (e.detail?.atletaId) { ir({ tab: 'atletas', atletaId: e.detail.atletaId, pestana: e.detail.pestana || 'programa' }); window.scrollTo(0, 0); } };
+    window.addEventListener('fbe-abrir-atleta', abrir);
+    return () => window.removeEventListener('fbe-abrir-atleta', abrir);
+  }, []);
   const mac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
   // En el móvil la barra tiene cinco huecos: las cuatro de cada día y «Más» con el resto (en pantallas anchas caben todas)
   const estrecha = useEstrecha();

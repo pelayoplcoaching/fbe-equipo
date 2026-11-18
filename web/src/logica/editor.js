@@ -138,7 +138,8 @@ export function kilosDe(p) {
 //   sesiones: las de la semana; pautas: { sesionId: [pauta] }; previas: { pautaId: { pauta } } (su pareja de la semana
 //   anterior); nombres: { ejercicioId: nombre }; foco: el de la semana; saltoPct: a partir de que cambio de kilos avisa
 export const SALTO_AVISO_PCT = 20;
-export function revisarSemana({ sesiones = [], pautas = {}, previas = {}, nombres = {}, foco = null, saltoPct = SALTO_AVISO_PCT } = {}) {
+export function revisarSemana({ sesiones = [], pautas = {}, previas = {}, nombres = {}, foco = null, saltoPct = SALTO_AVISO_PCT,
+  evitados = {}, grupos = {}, anteriores = [], nombresGrupo = {} } = {}) {
   const avisos = [];
   const di = (sesion, texto, pautaId = null) => avisos.push({ sesion: sesion?.nombre || '', texto, pautaId });
   if (!sesiones.length) { avisos.push({ sesion: '', texto: 'La semana no tiene ninguna sesión.', pautaId: null }); return avisos; }
@@ -146,9 +147,16 @@ export function revisarSemana({ sesiones = [], pautas = {}, previas = {}, nombre
     const lista = pautas[s.id] || [];
     const conCardio = s.tipo === 'cardio' || !!s.cardio;
     if (!lista.length && !conCardio && !String(s.dinamica || '').trim() && !s.video_url) di(s, 'Está vacía: sin ejercicios, cardio ni indicaciones.');
+    // (v0.186) el mismo ejercicio dos veces en la sesion (un duplicado que se quedo)
+    const veces = {};
+    for (const p of lista) if (p.ejercicio_id) veces[p.ejercicio_id] = (veces[p.ejercicio_id] || 0) + 1;
+    for (const [id, k] of Object.entries(veces)) if (k > 1) di(s, `${nombres[id] || 'Un ejercicio'} está ${k} veces.`);
     for (const p of lista) {
       const n = nombres[p.ejercicio_id] || 'Un ejercicio';
       if (!p.ejercicio_id) di(s, 'Hay una fila sin ejercicio elegido.', p.id);
+      // (v0.186) lo que el atleta prefiere evitar, y los kilos que la semana pasada tenia y esta no
+      if (evitados[p.ejercicio_id]) di(s, `${n}: lo tiene entre lo que prefiere evitar.`, p.id);
+      if (previas[p.id]?.pauta && kilosDe(previas[p.id].pauta) != null && kilosDe(p) == null && !tieneDetalle(p)) di(s, `${n}: la semana pasada llevaba kilos (${fmt(kilosDe(previas[p.id].pauta))} kg) y esta no.`, p.id);
       if (!(Number(p.series) > 0)) di(s, `${n}: sin series.`, p.id);
       const a = numero(p.reps_min), b = numero(p.reps_max);
       if (a != null && b != null && a > b) di(s, `${n}: el rango está al revés (de ${a} a ${b}).`, p.id);
@@ -163,6 +171,12 @@ export function revisarSemana({ sesiones = [], pautas = {}, previas = {}, nombre
         else if (pct < -saltoPct && foco !== 'descarga') di(s, `${n}: de ${fmt(antes)} a ${fmt(kg)} kg (−${Math.round(-pct)} %).`, p.id);
       }
     }
+  }
+  // (v0.186) un musculo que la semana pasada tenia series y esta se queda sin ninguna
+  if (anteriores.length && foco !== 'descarga') {
+    const cuenta = (ps) => { const c = {}; for (const p of ps) for (const g of grupos[p.ejercicio_id] || []) c[g] = (c[g] || 0) + (Number(p.series) || 0); return c; };
+    const antes = cuenta(anteriores), ahora = cuenta(sesiones.flatMap((x) => pautas[x.id] || []));
+    for (const [g, k] of Object.entries(antes)) if (k > 0 && !(ahora[g] > 0)) avisos.push({ sesion: '', texto: `Esta semana no hay ninguna serie de ${(nombresGrupo[g] || g).toLowerCase()} (la pasada, ${k}).`, pautaId: null });
   }
   return avisos;
 }
@@ -265,3 +279,80 @@ export function conNota(guardadas = [], texto, max = 12) { const t = String(text
 export function historialParaEditor(sesiones = [], pautadas = {}, n = 6) {
   return sesiones.slice(0, n).map((s) => ({ fecha: s.fecha, series: s.series || [], mejor: s.mejor ?? null, top: s.top || null, record: !!s.record, pauta: (s.sesion_id && pautadas[s.sesion_id]) || null }));
 }
+
+// =====================================================================================================================
+// (v0.186) Tercera tanda: como le fue cada sesion, la nota solo para el coach y el candado de un ejercicio, el 1RM
+// estimado junto a los kilos, quien queda por programar y los cambios que esperan a que vuelva la conexion.
+// =====================================================================================================================
+
+// Como le fue una sesion: «hecha el 10/11 · 62 min · esfuerzo 8/10 · 18 series · 2 comentarios». null si no la hizo.
+//   sesion: la fila; series: cuantas registro; comentarios: cuantos escribio el; fecha: (iso) => texto
+export function comoLeFue(sesion, { series = 0, comentarios = 0, fecha = (x) => x } = {}) {
+  if (!sesion?.completada) return null;
+  const partes = [sesion.fecha_realizada ? `hecha el ${fecha(sesion.fecha_realizada)}` : 'hecha'];
+  if (Number(sesion.duracion_min) > 0) partes.push(`${Math.round(Number(sesion.duracion_min))} min`);
+  if (sesion.rpe_sesion != null) partes.push(`esfuerzo ${fmt(sesion.rpe_sesion)}/10`);
+  if (series > 0) partes.push(`${series} ${series === 1 ? 'serie' : 'series'}`);
+  if (comentarios > 0) partes.push(`${comentarios} ${comentarios === 1 ? 'comentario suyo' : 'comentarios suyos'}`);
+  return { texto: partes.join(' · '), nota: String(sesion.nota_atleta || '').trim() || null };
+}
+// La sesion de la semana anterior que corresponde a esta: de la que salen mas de sus ejercicios (previas) o, si no hay
+// ninguno emparejado, la del mismo nombre
+export function sesionPrevia(sesion, pautas = [], previas = {}, sesionesAnt = []) {
+  const votos = {};
+  for (const p of pautas) { const sid = previas[p.id]?.pauta?.sesion_id; if (sid) votos[sid] = (votos[sid] || 0) + 1; }
+  const mejor = Object.entries(votos).sort((a, b) => b[1] - a[1])[0];
+  return (mejor && sesionesAnt.find((x) => String(x.id) === String(mejor[0]))) || sesionesAnt.find((x) => x.nombre === sesion?.nombre) || null;
+}
+
+// La nota solo para el coach y el candado de un ejercicio, por atleta: viven en sus notas privadas (el atleta nunca las
+// ve), una por ejercicio, con una marca delante. «#ej:<id>:fijo# texto».
+const MARCA_EJ = /^#ej:([^:#\s]+)(:fijo)?#[ ]?([\s\S]*)$/;
+export function leerNotaEjercicio(texto) {
+  const m = MARCA_EJ.exec(String(texto ?? ''));
+  return m ? { ejercicioId: m[1], fijado: !!m[2], nota: m[3].trim() } : null;
+}
+export function escribirNotaEjercicio(ejercicioId, { nota = '', fijado = false } = {}) {
+  const t = String(nota ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  return t || fijado ? `#ej:${ejercicioId}${fijado ? ':fijo' : ''}# ${t}`.trim() : null;
+}
+// { ejercicioId: { id, nota, fijado } } de las notas privadas de un atleta (si hay dos de un ejercicio, la mas nueva)
+export function notasPorEjercicio(notas = []) {
+  const out = {};
+  for (const n of [...notas].sort((a, b) => String(a.creado_en || '').localeCompare(String(b.creado_en || '')))) {
+    const x = leerNotaEjercicio(n.texto);
+    if (x) out[x.ejercicioId] = { id: n.id, nota: x.nota, fijado: x.fijado };
+  }
+  return out;
+}
+
+// «70 kg es el 82 % de su mejor 1RM estimado (85 kg)». null si no hay con que comparar.
+export function pctDeRm(kg, mejor) {
+  const k = numero(kg), m = numero(mejor);
+  if (!(k > 0) || !(m > 0)) return null;
+  return { pct: Math.round((k / m) * 100), mejor: Math.round(m * 10) / 10 };
+}
+
+// Quien queda por programar. Cada atleta con su bloque y sus semanas: le falta «esta» si hoy no tiene semana publicada,
+// «siguiente» si no la tiene para el lunes que viene. Primero los de esta semana; despues, por nombre.
+//   filas: [{ atleta_id, nombre, bloque_id, semanas: [{ fecha_inicio, programacion }] }]; lunes: el de esta semana (iso)
+export function porProgramar(filas = [], lunes, sumar) {
+  const siguiente = sumar(lunes, 7);
+  const out = [];
+  for (const f of filas) {
+    const publicadas = (f.semanas || []).filter((w) => w.programacion === 'programada' && w.fecha_inicio).map((w) => w.fecha_inicio);
+    if (!(f.semanas || []).some((w) => w.fecha_inicio)) continue;  // un bloque sin fechas no va por calendario
+    const esta = publicadas.some((x) => x === lunes), prox = publicadas.some((x) => x >= siguiente);
+    if (prox) continue;
+    out.push({ atleta_id: f.atleta_id, nombre: f.nombre, bloque_id: f.bloque_id, falta: esta ? 'siguiente' : 'esta' });
+  }
+  return out.sort((a, b) => (a.falta === b.falta ? String(a.nombre).localeCompare(String(b.nombre), 'es') : a.falta === 'esta' ? -1 : 1));
+}
+
+// Los cambios que no se pudieron guardar por la conexion: uno por fila, con lo ultimo que se escribio en cada campo
+export function conPendiente(lista, tabla, id, cambios) {
+  const k = lista.findIndex((x) => x.tabla === tabla && x.id === id);
+  if (k < 0) return [...lista, { tabla, id, cambios: { ...cambios } }];
+  return lista.map((x, i) => (i === k ? { ...x, cambios: { ...x.cambios, ...cambios } } : x));
+}
+export function sinPendiente(lista, tabla, id) { return lista.filter((x) => !(x.tabla === tabla && x.id === id)); }
