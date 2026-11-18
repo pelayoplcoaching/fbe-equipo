@@ -4988,6 +4988,8 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .duracion-sesion { flex: none; display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--tinta-3); white-space: nowrap; }
 .duracion-sesion.se-pasa { color: var(--alerta); font-weight: 650; }
 .duracion-sesion svg { width: var(--ico-14); height: var(--ico-14); }
+/* En el movil la duracion baja a su propia linea: si no, deja sin sitio al boton de plegar */
+@media (max-width: 699px) { .duracion-sesion { order: 9; flex-basis: 100%; } }
 .anadir-sesiones { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-8); }
 @media (max-width: 560px) { .anadir-sesiones { grid-template-columns: minmax(0, 1fr); } }
 .cambios-semana > summary { cursor: pointer; font-weight: 650; font-size: var(--letra-14); }
