@@ -6699,7 +6699,12 @@ export function crearApi(backend) {
       const sesiones = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'asc']] });
       const pos = Object.fromEntries(ids.map((id, k) => [id, k + 1]));
       sesiones.filter((x) => !(x.id in pos)).forEach((x, k) => { pos[x.id] = ids.length + k + 1; });
-      await Promise.all(sesiones.map((x) => (x.orden !== pos[x.id] ? b.update('sesiones', { orden: pos[x.id] }, { eq: { id: x.id } }) : null)));
+      // La base no deja dos sesiones de una semana con el mismo orden (unique (semana_id, orden)): las que cambian pasan
+      // primero a un puesto de paso, lejos de los de verdad, y despues a su sitio, una a una
+      const cambian = sesiones.filter((x) => x.orden !== pos[x.id]);
+      const paso = Math.max(1000, ...sesiones.map((x) => x.orden || 0)) + 1;
+      for (const [k, x] of cambian.entries()) await b.update('sesiones', { orden: paso + k }, { eq: { id: x.id } });
+      for (const x of cambian) await b.update('sesiones', { orden: pos[x.id] }, { eq: { id: x.id } });
     },
     // (v0.184) el mismo ejercicio otra vez, justo debajo, con su prescripcion
     async duplicarPauta(pautaId) {

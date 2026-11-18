@@ -99,7 +99,17 @@ const pd = dd.pautas[dup.id], po = dd.pautas[ses.id];
 check(pd.length === po.length && pd.every((p, k) => p.ejercicio_id === po[k].ejercicio_id && p.series === po[k].series && p.carga_sugerida_kg === po[k].carga_sugerida_kg && p.id !== po[k].id) && pd.every((p) => !(dd.series[p.id] || []).length), 'lleva sus ejercicios con la misma prescripción y nada de lo registrado');
 // ordenar sesiones
 const idsS = dd.sesiones[sem.id].map((x) => x.id);
+// La base real no admite dos sesiones de una semana con el mismo orden: se vigila cada escritura
+let choque = 0;
+const update0 = b.update.bind(b);
+b.update = async (tabla, cambios, filtro) => {
+  const r = await update0(tabla, cambios, filtro);
+  if (tabla === 'sesiones' && 'orden' in cambios) { const o = (await b.select('sesiones', { eq: { semana_id: sem.id } })).map((x) => x.orden); if (new Set(o).size !== o.length) choque++; }
+  return r;
+};
 await api.ordenarSesiones(sem.id, reordenar(idsS, idsS.length - 1, 0));
+b.update = update0;
+check(choque === 0, 'al reordenar sesiones nunca hay dos con el mismo orden a la vez (la base no lo admite)');
 dd = await api.bloqueCompleto(bloque.id);
 check(dd.sesiones[sem.id][0].id === dup.id && igual(dd.sesiones[sem.id].map((x) => x.orden), idsS.map((_, k) => k + 1)), 'ordenarSesiones: la copia pasa a ser la primera');
 
