@@ -78,14 +78,14 @@ export async function probarEditor184({ navegador, check, base = 'http://localho
     // --- + y − y deshacer
     const n0 = await filas().count();
     const antes = await kg(0).inputValue();
-    await fila(0).getByRole('button', { name: /^Subir los kilos de/ }).click();
+    await fila(0).getByRole('button', { name: /^Más kilos en / }).click();
     await guardado();
     const mas = await kg(0).inputValue();
     check(Number(mas.replace(',', '.')) === Number(antes.replace(',', '.')) + 2.5, `el botón + sube los kilos con el salto del ejercicio (${antes} → ${mas})`);
-    await fila(0).getByRole('button', { name: /^Bajar los kilos de/ }).click();
+    await fila(0).getByRole('button', { name: /^Menos kilos en / }).click();
     await guardado();
     check(await kg(0).inputValue() === antes, 'y el − los baja');
-    await fila(0).getByRole('button', { name: /^Subir los kilos de/ }).click();
+    await fila(0).getByRole('button', { name: /^Más kilos en / }).click();
     await guardado();
     check(!(await deshacer().isDisabled()) && /^Deshacer: Kilos de /.test(await deshacer().getAttribute('title')), 'el botón «Deshacer» dice qué va a deshacer');
     await deshacer().click();
@@ -98,7 +98,7 @@ export async function probarEditor184({ navegador, check, base = 'http://localho
     await fila(0).getByRole('button', { name: /programar lo que hizo/ }).click();
     check(await hay(fila(0).locator('.detalle-series .detalle-fila'), 3), '«Lo que hizo» deja el ejercicio serie a serie con lo que hizo en cada una');
     const reps1 = await fila(0).locator('.detalle-fila').first().locator('input[data-celda="reps"]').inputValue();
-    await fila(0).locator('.detalle-fila').first().getByRole('button', { name: /^Subir las repeticiones de la serie 1/ }).click();
+    await fila(0).locator('.detalle-fila').first().getByRole('button', { name: /^Una repetición más en la serie 1/ }).click();
     await guardado();
     check(Number(await fila(0).locator('.detalle-fila').first().locator('input[data-celda="reps"]').inputValue()) === Number(reps1) + 1, 'en serie a serie, + y − también en las repeticiones');
     await fila(0).getByRole('button', { name: /Copiar la serie 1 a las demás/ }).click();

@@ -684,7 +684,7 @@ function parchear(d, tabla, id, cambios) {
 // Cada cambio se guarda al salir del campo; el resumen de la fila (series, reps, kg, RPE) sale de aquí.
 // (v0.184) Una casilla con sus botones − y +: suben o bajan el número un paso (el salto de kilos del ejercicio, o una
 // repetición) y lo guardan. No entran en el recorrido del tabulador: con teclado se escribe el número, como siempre.
-function Pasos({ paso, etiqueta, alCambiar, decimales = 2, children }) {
+function Pasos({ paso, menos, mas, alCambiar, decimales = 2, children }) {
   const mover = (dir) => (e) => {
     const inp = e.currentTarget.parentElement.querySelector('input');
     if (!inp) return;
@@ -695,9 +695,9 @@ function Pasos({ paso, etiqueta, alCambiar, decimales = 2, children }) {
   };
   return (
     <span class="con-pasos">
-      <button type="button" class="paso" tabIndex={-1} aria-label={`Bajar ${etiqueta}`} onClick={mover(-1)}><Icono n="menos" /></button>
+      <button type="button" class="paso" tabIndex={-1} aria-label={menos} onClick={mover(-1)}><Icono n="menos" /></button>
       {children}
-      <button type="button" class="paso" tabIndex={-1} aria-label={`Subir ${etiqueta}`} onClick={mover(1)}><Icono n="mas" /></button>
+      <button type="button" class="paso" tabIndex={-1} aria-label={mas} onClick={mover(1)}><Icono n="mas" /></button>
     </span>
   );
 }
@@ -728,10 +728,10 @@ function DetalleSeries({ pauta, hechas = [], alGuardar, salto = () => 2.5 }) {
         // La clave cambia al añadir o quitar series (las filas se rehacen), no al escribir (no se pierde el foco)
         <div class="detalle-fila" data-fila key={`${pauta.id}-${d.length}-${i}-${rev}`}>
           <span class="n mini">S{i + 1}</span>
-          <Pasos paso={1} decimales={0} etiqueta={`las repeticiones de la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'reps', String(v))}>
+          <Pasos paso={1} decimales={0} menos={`Una repetición menos en la serie ${i + 1}`} mas={`Una repetición más en la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'reps', String(v))}>
             <input class="n" data-celda="reps" enterKeyHint="next" inputMode="numeric" aria-label={`Repeticiones de la serie ${i + 1}`} defaultValue={x.reps ?? ''} onChange={(e) => cambiar(i, 'reps', e.currentTarget.value)} />
           </Pasos>
-          <Pasos paso={salto} etiqueta={`los kilos de la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'kg', String(v))}>
+          <Pasos paso={salto} menos={`Menos kilos en la serie ${i + 1}`} mas={`Más kilos en la serie ${i + 1}`} alCambiar={(v) => cambiar(i, 'kg', String(v))}>
             <input class="n" data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label={`Kilos de la serie ${i + 1}`} defaultValue={x.kg == null ? '' : num(x.kg, 2)} onChange={(e) => cambiar(i, 'kg', e.currentTarget.value)} />
           </Pasos>
           <input class="n" data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label={`RPE de la serie ${i + 1}`} defaultValue={x.rpe == null ? '' : num(x.rpe, 1)} onChange={(e) => cambiar(i, 'rpe', e.currentTarget.value)} />
@@ -916,7 +916,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
                   <td data-col="Reps a"><input class="n" data-celda="reps_max" enterKeyHint="next" inputMode="numeric" aria-label="Repeticiones máximas" defaultValue={p.reps_max ?? ''} onChange={numero(p.id, 'reps_max')} /></td>
                   {col.rir && <td data-col="RIR"><input class="n" data-celda="rir" enterKeyHint="next" inputMode="decimal" aria-label="RIR objetivo" defaultValue={p.rir_objetivo == null ? '' : num(p.rir_objetivo, 1)} onChange={numero(p.id, 'rir_objetivo', true)} /></td>}
                   {col.rpe && <td data-col="RPE"><input class={`n ${fuera(p, 'rpe_objetivo') ? 'fuera-nivel' : ''}`} data-celda="rpe" enterKeyHint="next" inputMode="decimal" aria-label="RPE objetivo" title={titulo(p, 'rpe_objetivo')} placeholder={fuera(p, 'rpe_objetivo') ? '·' : ''} defaultValue={p.rpe_objetivo == null ? '' : num(p.rpe_objetivo, 1)} onChange={numero(p.id, 'rpe_objetivo', true)} /></td>}
-                  {col.kg && <td data-col="Kilos"><Pasos paso={saltoDePauta(p)} etiqueta={`los kilos de ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} alCambiar={(v) => guardar('sesion_ejercicios', p.id, { carga_sugerida_kg: v })}>
+                  {col.kg && <td data-col="Kilos"><Pasos paso={saltoDePauta(p)} menos={`Menos kilos en ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} mas={`Más kilos en ${ejercicios[p.ejercicio_id]?.nombre || 'este ejercicio'}`} alCambiar={(v) => guardar('sesion_ejercicios', p.id, { carga_sugerida_kg: v })}>
                     <input class={`n ${fuera(p, 'carga_sugerida_kg') ? 'fuera-nivel' : ''}`} data-celda="kg" enterKeyHint="next" inputMode="decimal" aria-label="Carga sugerida en kg" title={titulo(p, 'carga_sugerida_kg')} placeholder={fuera(p, 'carga_sugerida_kg') ? '·' : ''} defaultValue={p.carga_sugerida_kg == null ? '' : num(p.carga_sugerida_kg, 2)} onChange={numero(p.id, 'carga_sugerida_kg', true)} />
                   </Pasos></td>}
                   </>}
