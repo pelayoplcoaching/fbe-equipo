@@ -5963,6 +5963,16 @@ try {
   console.log('  ✗ cómo va la app en cada dispositivo:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// v0.185: el editor manual, segunda tanda (test/e2e-editor-185.mjs)
+console.log('\nv0.185: el editor manual, segunda tanda');
+try {
+  const { probarEditor185 } = await import('./e2e-editor-185.mjs');
+  await probarEditor185({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.185:', e.message.split('\n')[0]);
+}
+
 // v0.184: el editor manual del programa, más cómodo (test/e2e-editor-184.mjs)
 console.log('\nv0.184: el editor manual, más cómodo');
 try {

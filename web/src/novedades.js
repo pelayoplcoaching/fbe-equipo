@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.185': {
+    coach: [
+      'Antes de publicar, la app avisa de lo que parece un despiste (saltos de kilos, repeticiones raras, sesiones vacías).',
+      'Editor: cambia varios ejercicios a la vez, llévalos a las semanas siguientes o a otra sesión, y mira su historial.',
+      '«Rehacer», sesiones guardadas, duración de cada sesión y «Qué cambia respecto a la semana anterior».',
+    ],
+  },
   '0.184': {
     coach: [
       'Editor del programa: botón «Deshacer», + y − en los kilos con el salto del ejercicio y «Como la semana pasada» o «Lo que hizo».',
