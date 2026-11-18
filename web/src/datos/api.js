@@ -436,6 +436,8 @@ function bloqueActual(bloques) {
 }
 
 // Campos que se copian al duplicar prescripción
+// (v0.185) la plantilla donde viven las sesiones guardadas
+export const NOMBRE_GUARDADAS = 'Sesiones guardadas';
 const CAMPOS_SE = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'series', 'reps_min', 'reps_max',
   'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'descanso_seg', 'tempo', 'notas_coach', 'variante', 'backoff_pct', 'series_detalle'];
 
@@ -6726,6 +6728,40 @@ export function crearApi(backend) {
         await b.insert('sesion_ejercicios', pautas.map((p) => ({ ...Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null])), sesion_id: copia.id })));
       }
       await api.copiarMusica([[s.id, copia.id]]);
+      return copia;
+    },
+    // (v0.185) un ejercicio a otra sesion: lo mueve (con lo que el atleta tenga registrado en el) o lo copia, al final
+    async moverPautaA(pautaId, sesionId) {
+      const ps = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'desc']], limit: 1 });
+      const [p] = await b.update('sesion_ejercicios', { sesion_id: sesionId, orden: (ps[0]?.orden || 0) + 1, superserie: null }, { eq: { id: pautaId } });
+      return p;
+    },
+    async copiarPautaA(pautaId, sesionId) {
+      const [p] = await b.select('sesion_ejercicios', { eq: { id: pautaId } });
+      if (!p) return null;
+      const ps = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'desc']], limit: 1 });
+      const fila = Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || c in p).map((c) => [c, p[c] ?? null]));
+      return (await b.insert('sesion_ejercicios', [{ ...fila, superserie: null, sesion_id: sesionId, orden: (ps[0]?.orden || 0) + 1 }]))[0];
+    },
+    // (v0.185) Sesiones guardadas: viven en una plantilla mas, «Sesiones guardadas» (una semana con una sesion por cada
+    // una), asi que se editan en Plantillas como cualquier otra y no hace falta tabla nueva. Se crea al guardar la primera.
+    async sesionesGuardadas() {
+      const [bloque] = await b.select('bloques', { eq: { es_plantilla: true, nombre: NOMBRE_GUARDADAS }, limit: 1 });
+      if (!bloque) return [];
+      const [semana] = await b.select('semanas', { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']], limit: 1 });
+      if (!semana) return [];
+      const sesiones = await b.select('sesiones', { eq: { semana_id: semana.id }, order: [['orden', 'asc']] });
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, cols: 'sesion_id,series' }) : [];
+      return sesiones.map((x) => ({ id: x.id, nombre: x.nombre, tipo: x.tipo, ejercicios: pautas.filter((p) => p.sesion_id === x.id).length, series: pautas.filter((p) => p.sesion_id === x.id).reduce((t, p) => t + (Number(p.series) || 0), 0) }));
+    },
+    async guardarSesion(sesionId, nombre = null) {
+      let [bloque] = await b.select('bloques', { eq: { es_plantilla: true, nombre: NOMBRE_GUARDADAS }, limit: 1 });
+      if (!bloque) [bloque] = await b.insert('bloques', [{ es_plantilla: true, atleta_id: null, nombre: NOMBRE_GUARDADAS, foco: null, estado: 'planificado' }]);
+      let [semana] = await b.select('semanas', { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']], limit: 1 });
+      if (!semana) [semana] = await b.insert('semanas', [{ bloque_id: bloque.id, numero: 1, foco: null, programacion: 'no_iniciada' }]);
+      const copia = await api.copiarSesion(sesionId, semana.id);
+      const n = String(nombre || '').trim().slice(0, 80);
+      if (copia && n && n !== copia.nombre) return (await b.update('sesiones', { nombre: n }, { eq: { id: copia.id } }))[0];
       return copia;
     },
     async moverPauta(sesionId, pautaId, delta) {
