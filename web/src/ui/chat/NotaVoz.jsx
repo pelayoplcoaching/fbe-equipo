@@ -5,7 +5,7 @@ import { leerAjustes } from '../ajustes.js';
 import {
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, esPermisoDenegado, ayudaMicro, trasPermiso, siguienteVoz, textoLimite, mmss, duracionGuardada, MIN_VOZ_SEG, VELOCIDADES,
-  esSilencio, textoMicro, resultadoPrueba,
+  esSilencio, textoMicro, resultadoPrueba, tipoAudio, opcionesGrabadora,
 } from '../../logica/notasVoz.js';
 
 // Las notas de voz del chat (v0.56), como WhatsApp. (v0.179) De hasta DOS minutos (con la migración 081; sin ella, uno) y:
@@ -110,7 +110,8 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     let stream;
     try {
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
-      catch (e) { if (e?.name !== 'OverconstrainedError') throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      // (v0.180.1) si el navegador no acepta esos ajustes (o falla por otra cosa que no sea el permiso), se pide el micro a secas
+      catch (e) { if (esPermisoDenegado(e)) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
     } catch (e) {
       setEstado('nada'); setBloqueada(false);
       if (x.cancelada) return;
@@ -130,7 +131,13 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     x.stream = stream;
     const f = formatoGrabacion((t) => globalThis.MediaRecorder.isTypeSupported(t));
     let rec;
-    try { rec = new globalThis.MediaRecorder(stream, { mimeType: f.grabar, audioBitsPerSecond: 32000 }); } catch (e) { soltarMicro(); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
+    // (v0.180.1) si no acepta el formato o los 32 kbps, se prueba sin ellos antes de rendirse
+    let fallo = null;
+    for (const o of opcionesGrabadora(f.grabar)) { try { rec = new globalThis.MediaRecorder(stream, o); break; } catch (e) { fallo = e; } }
+    if (!rec) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(fallo)); return; }
+    // El formato de verdad es el que diga la grabadora (si lo eligió ella)
+    const real = tipoAudio(rec.mimeType);
+    if (real) { f.tipo = real.tipo; f.ext = real.ext; }
     x.rec = rec; x.formato = f;
     // Los niveles, para la forma de onda (si no hay WebAudio, plana)
     try {
@@ -162,7 +169,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActiva
     rec.onerror = () => { if (r.current === x) { x.cortada = 'micro'; parar(); } };
     stream.getTracks().forEach((t) => { t.onended = () => { if (r.current === x && x.rec?.state !== 'inactive') { x.cortada = 'micro'; parar(); } }; });
     // (si el navegador no deja empezar, el micro se suelta y se dice)
-    try { rec.start(250); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
+    try { rec.start(250); } catch (e0) { try { rec.start(); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; } }
     x.desde = reloj();
     setEstado('grabando');
     try { sonandoAhora?.pause(); } catch { /* */ }   // (v0.180) lo que estuviera sonando se calla

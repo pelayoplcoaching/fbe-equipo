@@ -149,5 +149,12 @@ export function errorMicro(e) {
   if (n === 'AbortError') return 'El móvil ha cortado el micro. Vuelve a probar.';
   if (n === 'SinContexto') return 'Para grabar hace falta abrir la app con su dirección segura (https).';
   if (n === 'NoSoportado') return 'Este navegador no puede grabar notas de voz. Prueba con Chrome, Safari o Firefox actualizados.';
-  return 'No se ha podido grabar la nota de voz.';
+  // (v0.180.1) el iPhone a veces no arranca el micro a la primera (otra app con el audio, la app recien abierta)
+  if (n === 'InvalidStateError') return 'El micro no ha arrancado. Cierra la app del todo, vuelve a abrirla y prueba otra vez.';
+  // Lo que no se conoce se dice con su nombre, para poder arreglarlo
+  const detalle = [n, String(e?.message || '').slice(0, 80)].filter(Boolean).join(': ');
+  return `No se ha podido grabar la nota de voz${detalle ? ` (${detalle})` : ''}.`;
 }
+// (v0.180.1) Las formas de crear la grabadora, de la mejor a la que acepta cualquier navegador: con formato y 32 kbps,
+// solo con formato, y como el navegador quiera
+export const opcionesGrabadora = (mime) => [...(mime ? [{ mimeType: mime, audioBitsPerSecond: 32000 }, { mimeType: mime }] : []), {}];
