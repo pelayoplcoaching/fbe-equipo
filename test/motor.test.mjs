@@ -1053,9 +1053,10 @@ console.log('\nMil semanas al azar');
   check(a.tipo === 'subir' && f(a) === '8×37.5 7×37.5 7×37.5 7×37.5', 'al tope a RPE 7–8: sube un salto y las repeticiones se calculan (35 × 10 → 37,5 × 8 o 7), no al mínimo');
   check(f(run(banca, p4, [S(1, 35, 10, 9), S(2, 35, 8, 8)])).startsWith('6×37.5 9×35'), 'a RPE 9 en el tope: sube y baja al mínimo del rango; en rango a RPE 8, una repetición más');
   check(f(run(hip, P({ series: 2, carga_sugerida_kg: 107.5 }), [S(1, 107.5, 12, 6), S(2, 107.5, 12, 6)])) === '12×110 12×110', 'con carga alta y RPE 6: un solo salto con las mismas repeticiones (nunca dos saltos)');
-  check(f(run(banca, p4, [S(1, 35, 8, 8, { rpe: null }), S(2, 35, 8, 10), S(3, 35, 8, 9.5), S(4, 35, 7, 9)])) === '8×35 7×35 8×35 8×35', 'sin RPE, igual; a RPE 10, una repetición menos; a 9,5, igual; a 9 en rango, una más');
-  const d = run(jalon, P({ series: 3, prioridad: 'media', carga_sugerida_kg: 60 }), [S(1, 60, 10, 8.5), S(2, 60, 10, 8.5), S(3, 60, 10, 8)]);
-  check(f(d) === '11×60 10×60 11×60' && /espera a la primera/.test(d.motivo), 'varias series a RPE 8,5 o más: solo progresa la primera; las más fáciles siguen por su cuenta');
+  check(f(run(banca, p4, [S(1, 35, 8, 8, { rpe: null }), S(2, 35, 8, 10), S(3, 35, 5, 10), S(4, 35, 7, 9)])) === '8×35 8×35 4×35 8×35' && run(banca, p4, [S(1, 35, 8, 10), S(2, 35, 8, 9.5)]).tipo === 'mantener',
+    'sin RPE, igual; a RPE 10, igual, y una repetición menos solo si no llegó a lo pautado (6); a 9,5, igual; a 9 en rango, una más');
+  const d = run(jalon, P({ series: 4, prioridad: 'media', carga_sugerida_kg: 60 }), [S(1, 60, 10, 8.5), S(2, 60, 10, 9), S(3, 60, 10, 8.5), S(4, 60, 10, 8)]);
+  check(f(d) === '11×60 11×60 10×60 11×60' && /espera a las primeras/.test(d.motivo), 'varias series a RPE 8,5 o más: solo progresan la primera y la segunda; las más fáciles siguen por su cuenta');
   check(f(run(prensa, P({ series: 2, prioridad: 'media', carga_sugerida_kg: 100 }), [S(1, 100, 8, 7.5), S(2, 100, 8, 7.5)])) === '8×102.5 8×102.5'
     && f(run(banca, P({ series: 2, reps_min: 6, reps_max: 10, carga_sugerida_kg: 60 }), [S(1, 60, 9, 7.5), S(2, 60, 9, 7.5)])) === 'igual'
     && f(run(jalon, P({ series: 2, prioridad: 'media', carga_sugerida_kg: 60 }), [S(1, 60, 8, 7), S(2, 60, 10, 7)])) === '9×60 9×62.5',

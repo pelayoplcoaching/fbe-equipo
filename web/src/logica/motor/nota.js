@@ -27,7 +27,7 @@ export function enumerar(nombres) {
 export function claseParaNota({ fila, alternativa = null, propuesta = null, hechas = [] }) {
   if (!alternativa) {
     if (fila.tipo === 'subir') return fila.fase === 'peaking' ? 'peaking_kilos' : 'kilos';
-    return { reps: 'reps', series: 'series', peaking: 'peaking', bajar: 'baja' }[fila.tipo] || null;
+    return { reps: 'reps', series: 'series', peaking: 'peaking', bajar: 'baja', menos: 'baja' }[fila.tipo] || null;
   }
   if (alternativa.id === 'mantener' || !propuesta) return null;
   // Otra opción de un toque: se mira qué hace con cada serie respecto a lo que se hizo

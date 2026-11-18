@@ -44,7 +44,8 @@ export const REGLAS_FBE = Object.freeze({
     rpeObjetivo: 8,        // al subir de kilos, las repeticiones se calculan para quedar en este esfuerzo
     cargaBajaPct: 10,      // «carga baja»: el salto pesa mas de este % de la carga; ahi se sigue con repeticiones…
     sobreTope: 2,          // … hasta estas por encima del tope (con la alternativa «Subir carga»)
-    soloPrimeraDesde: 8.5, // varias series a este RPE o mas: solo progresa la primera
+    soloPrimeraDesde: 8.5, // varias series a este RPE o mas: solo progresan las primeras…
+    cuantasDuras: 2,       // … estas (decision del 18/11/2026: la primera y la segunda)
     rangos: { basico: [6, 10], multiarticular: [8, 12], aislamiento: [10, 15] },
     rango: null,            // [mín, máx] propio de un ejercicio (manda sobre todo lo demás)
     rangoDeLaPauta: true,   // si la pauta (no serie a serie) trae un rango mín–máx, se respeta
@@ -174,7 +175,7 @@ const ESQUEMA = {
   modelos: { basico: UNO_DE(IDS_MODELO), resto: UNO_DE(IDS_MODELO) },
   modelo: UNO_DE(IDS_MODELO),
   salto: { tipo: UNO_DE(['ejercicio', 'kg', 'pct']), valor: NUM(0.25, 20), mancuernas: UNO_DE([1, 2, 2.5]) },
-  porSerie: { regla: UNO_DE(['rpe', 'clasica']), rpeObjetivo: NUM(6, 9.5), cargaBajaPct: NUM(2, 50), sobreTope: UNO_DE([0, 1, 2, 3, 4]), soloPrimeraDesde: NUM(7, 10), rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), bajaAlSubir: UNO_DE([1, 2, 3, 4]), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
+  porSerie: { regla: UNO_DE(['rpe', 'clasica']), rpeObjetivo: NUM(6, 9.5), cargaBajaPct: NUM(2, 50), sobreTope: UNO_DE([0, 1, 2, 3, 4]), soloPrimeraDesde: NUM(7, 10), cuantasDuras: UNO_DE([1, 2, 3, 4]), rangoDeLaPauta: (v) => typeof v === 'boolean', sobradoRpe: NUM(5, 8.5), sobradoEn: UNO_DE(['basicos', 'todos', 'ninguno']), rpeSube: NUM(6, 10), bajaAlSubir: UNO_DE([1, 2, 3, 4]), variasAlTope: UNO_DE(['todas', 'primera', 'faciles']), topeFacilRpe: NUM(6, 10), sinKilos: UNO_DE(['no_tocar', 'solo_reps', 'como_los_demas']) },
   topSet: { detectar: (v) => typeof v === 'boolean', backoff: UNO_DE(['faciles', 'solas', 'igual']), backoffFacilRpe: NUM(5, 8.5), rpeSube: NUM(6, 10),
     rango: (r) => Array.isArray(r) && r.length === 2 && r.every((x) => Number.isInteger(x) && x >= 1 && x <= 50) && r[0] <= r[1] },
   doble: { criterio: UNO_DE(CRITERIOS_SUBIDA), margen: NUM(0, 1), sobrado: UNO_DE([1, 2]), porDebajo: UNO_DE(['mantener', 'bajar_segunda', 'bajar_pct']), bajarPct: NUM(2.5, 20) },

@@ -319,7 +319,9 @@ export function porSerie(l, pauta, ctx) {
   const estKg = porRpe && pauta.prioridad === 'alta' ? estructuraTop(datos.map((x) => x?.kg || null)) : null;
   const pesada = (i) => !!estKg && estKg.forma === 'top_primero' && i === estKg.tops[0];
   const movimiento = movimientoDe(ejercicio);
-  let yaDura = false;   // ya ha progresado una serie a RPE alto: las demas a ese RPE esperan
+  let duras = 0;        // series a RPE alto que ya han progresado: pasadas `cuantasDuras`, las demas a ese RPE esperan
+  // Lo pautado en repeticiones para cada serie (a RPE 10 solo se baja si no llego a ello)
+  const pautadasEn = (i) => (detalle ? pauta.series_detalle[i]?.reps : pauta.reps_min ?? pauta.reps_max) ?? null;
   let ligeras = 0;
   const objetivoPauta = objetivoReserva(pauta);
   const pk = pico && est ? topPeaking(est.tops.filter((i) => datos[i]).map((i) => ({ kg: datos[i].kg, reps: datos[i].reps, rpe: datos[i].rpe,
@@ -355,7 +357,8 @@ export function porSerie(l, pauta, ctx) {
     if (porRpe && rol[i] === 'normal') {
       // ---- (v0.182) la regla por RPE y zona del rango ----
       if (rpe == null) { acciones.push('sin_rpe'); return igual(); }
-      if (rpe >= 10) { acciones.push('menos'); return con({ kg: kgBase, reps: Math.max(1, reps - 1) }); }
+      // A RPE 10: igual; una repeticion menos solo si ademas no llego a las pautadas (decision del 18/11/2026)
+      if (rpe >= 10) { const pt = pautadasEn(i); if (pt != null && reps < Number(pt)) { acciones.push('menos'); return con({ kg: kgBase, reps: Math.max(1, reps - 1) }); } acciones.push('igual10'); return con({ kg: kgBase, reps }); }
       if (rpe > 9) { acciones.push('igual'); return igual(); }
       const zona = reps >= tope ? 'tope' : reps >= suelo + (tope - suelo) / 2 ? 'alta' : 'baja';
       let subeKg = false;
@@ -372,8 +375,8 @@ export function porSerie(l, pauta, ctx) {
       const ligera = subeKg && (paso / kg) * 100 > R.cargaBajaPct && reps < tope + R.sobreTope && !ctx.subirLigera;
       if (ligera) ligeras++;
       if (subeKg && !ligera) {
-        if (dura && yaDura) { acciones.push('espera'); return con({ kg: kgBase, reps }); }
-        if (dura) yaDura = true;
+        if (dura && duras >= R.cuantasDuras) { acciones.push('espera'); return con({ kg: kgBase, reps }); }
+        if (dura) duras++;
         const kg2 = subir();
         // Las repeticiones con los kilos nuevos: las que dejan el esfuerzo en rpeObjetivo (Epley con las de reserva);
         // a RPE 9 en el tope, al minimo del rango; nunca mas de las que hizo; el novato, una menos
@@ -389,8 +392,8 @@ export function porSerie(l, pauta, ctx) {
       // No sube de kilos: una repeticion mas (sin pasar del tope, salvo carga baja)
       const techo = ligera ? tope + R.sobreTope : tope;
       if (reps >= techo) { acciones.push(mueveKg ? 'igual' : 'tope'); return con({ kg: kgBase, reps: Math.max(reps, Number(o.reps ?? reps)) }); }
-      if (dura && yaDura) { acciones.push('espera_rep'); return con({ kg: kgBase, reps }); }
-      if (dura) yaDura = true;
+      if (dura && duras >= R.cuantasDuras) { acciones.push('espera_rep'); return con({ kg: kgBase, reps }); }
+      if (dura) duras++;
       acciones.push(ligera ? 'ligera_rep' : 'rep'); return con({ kg: kgBase, reps: reps + 1 });
     }
     if (reps >= tope) {
@@ -410,7 +413,7 @@ export function porSerie(l, pauta, ctx) {
     tope_kg: `al tope (${tope}), sube ${kilos(salto)} y ${R.bajaAlSubir && d[i].reps > suelo ? `baja a ${d[i].reps}` : `vuelve a ${suelo}`}`, sobrada: `sobrada (RPE ${num(R.sobradoRpe)} o menos), sube ${kilos(salto)} con las mismas repeticiones`,
     rep: 'una repetición más', igual: `igual (RPE por encima de ${num(rpeSubeEn(i))})`, espera: `al tope (${tope}) pero justa, espera a que suba la primera`,
     tope: `al tope (${tope}): le toca subir de carga, que elige ${laEligeEl ? 'el atleta' : 'tú'}`, bajo: `por debajo del rango (${suelo}–${tope}), igual`, falta: 'sin hacer, igual',
-    sin_rpe: 'sin RPE apuntado, igual', menos: 'a RPE 10, una repetición menos', espera_rep: `a RPE ${num(R.soloPrimeraDesde)} o más, espera a la primera`,
+    sin_rpe: 'sin RPE apuntado, igual', menos: 'a RPE 10 y sin llegar a lo pautado, una repetición menos', igual10: 'a RPE 10, igual', espera_rep: `a RPE ${num(R.soloPrimeraDesde)} o más, espera a las ${R.cuantasDuras === 1 ? 'primera' : 'primeras'}`,
     rpe_kg: `sube ${kilos(salto)} con las mismas repeticiones`, rpe_kg_baja: `sube ${kilos(salto)} y baja a ${d[i].reps}`,
     ligera_rep: `carga baja (el salto pesa más del ${num(R.cargaBajaPct)} %): una repetición más antes de subir`,
     bo_sube: `back-off fácil (RPE ${num(T.backoffFacilRpe)} o menos), sube ${kilos(salto)}`, bo_igual: 'back-off, igual',
@@ -436,7 +439,7 @@ export function porSerie(l, pauta, ctx) {
   // Tampoco si la pauta no era serie a serie y ninguna serie progresa: se deja como la escribió el coach
   // (v0.182: con la regla por RPE, si la pauta no llevaba kilos y él los movió, se escriben aunque nada progrese)
   const ponKilos = porRpe && !detalle && pauta.carga_sugerida_kg == null && d.some((x) => x.kg != null);
-  const nadaProgresa = !detalle && !ponKilos && acciones.every((a) => ['igual', 'falta', 'bajo', 'espera', 'espera_rep', 'sin_rpe', 'tope', 'bo_igual', 'pk_dura', 'pk_suelo'].includes(a));
+  const nadaProgresa = !detalle && !ponKilos && acciones.every((a) => ['igual', 'falta', 'bajo', 'espera', 'espera_rep', 'sin_rpe', 'igual10', 'tope', 'bo_igual', 'pk_dura', 'pk_suelo'].includes(a));
   const sinCambios = nadaProgresa || JSON.stringify(limpiarDetalle(d)) === JSON.stringify(limpiarDetalle(pautado));
   const enPico = !!pk && acciones.some((a) => a.startsWith('pk'));
   return { tipo: sinCambios && tipo !== 'mantener' ? 'mantener' : tipo, propuesta: sinCambios ? campos(pauta) : conDetalle({ ...pauta, backoff_pct: null }, d), motivo,

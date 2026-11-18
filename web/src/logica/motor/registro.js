@@ -15,7 +15,7 @@ import { tieneRegla } from './guardadas.js';
 export const VERSION_REGISTRO = 1;
 export const MAX_FILAS_REGISTRO = 80;
 export const DECISIONES = ['aplicada', 'alternativa', 'no', 'igual', 'fuera'];
-const TIPOS = ['subir', 'reps', 'series', 'mantener', 'bajar', 'tope', 'peaking', 'sin_tocar', 'descarga', 'vuelta', 'mantenimiento'];
+const TIPOS = ['subir', 'reps', 'series', 'mantener', 'bajar', 'tope', 'peaking', 'sin_tocar', 'descarga', 'vuelta', 'mantenimiento', 'menos'];
 const CONFIANZAS = ['alta', 'media', 'baja'];
 const SEMANAS = ['normal', 'descarga', 'vuelta', 'repetir', 'mantenimiento'];
 

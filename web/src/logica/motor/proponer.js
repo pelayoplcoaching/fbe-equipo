@@ -236,7 +236,7 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       motivo: esDescarga ? (pedida ? 'La semana está marcada como descarga' : `Toca descarga programada (cada ${d.cadaSemanas} semanas)`)
         : modo === 'vuelta' ? `Parón de ${dias} días` : modo === 'repetir' ? `Hizo ${hechas} de ${total} sesiones` : modo === 'mantenimiento' ? 'Mantenimiento activo' : null,
       resumen: {
-        suben: cuenta(finales, ['subir', 'series']), mantienen: cuenta(finales, ['reps', 'mantener', 'tope', 'peaking', 'sin_tocar']), bajan: cuenta(finales, ['bajar', 'descarga', 'vuelta', 'mantenimiento']),
+        suben: cuenta(finales, ['subir', 'series']), mantienen: cuenta(finales, ['reps', 'mantener', 'tope', 'peaking', 'sin_tocar']), bajan: cuenta(finales, ['bajar', 'menos', 'descarga', 'vuelta', 'mantenimiento']),
         confianza: { alta: finales.filter((f) => f.confianza === 'alta').length, media: finales.filter((f) => f.confianza === 'media').length, baja: finales.filter((f) => f.confianza === 'baja').length },
         seriesPorGrupo: { antes, despues: seriesPautadasPorGrupo(finales.map((f) => ({ ejercicio_id: f.ejercicio_id, series: f.propuesta.series })), ejercicios) },
       },

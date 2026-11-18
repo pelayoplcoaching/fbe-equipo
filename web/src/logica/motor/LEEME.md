@@ -50,12 +50,36 @@ mancuernas ni 5 kg en máquinas desde 50 kg). Las mancuernas del gimnasio del at
 salto de golpe. Cada fila trae `regla: { rango, salto }` (lo que vale de verdad para ese ejercicio) y la hoja enseña lo
 pautado, lo que hizo y la propuesta serie a serie (`seriesEnFilas`, `textoSerieFBE` en `adaptador.js`).
 
-Acordado para la segunda pasada (sin hacer): regla por RPE y zona del rango (6–6,5 sube; 7–7,5 sube en la parte alta;
-8–8,5 solo en el tope; 9 en el tope sube y baja al mínimo; 9,5 igual; 10 una repetición menos), repeticiones al subir
-calculadas según lo que pesa el salto sobre la carga (novatos, una menos), pierna medio punto antes y empuje medio punto
-después, cargas bajas (salto de más del 10 %) siguen con repeticiones hasta dos por encima del tope con botón para subir,
-sin RPE apuntado se queda igual, rangos por tipo y prioridad (manda la tabla sobre el rango de la pauta) y kilos para
-todos los niveles.
+## Segunda pasada: la regla por RPE (v0.182, 18/11/2026)
+
+`porSerie.regla: 'rpe'` es la de partida (`'clasica'` deja la del 5/11; las pruebas antiguas la usan). En `porSerie()`:
+
+| RPE | Parte baja | Parte alta (desde la mitad del rango) | Tope |
+| --- | --- | --- | --- |
+| ≤ 6,5 | sube | sube | sube |
+| 7–7,5 | +1 rep (pierna: sube) | sube (empuje: +1 rep) | sube |
+| 8–8,5 | +1 rep (serie pesada de un Obligatorio: sube) | +1 rep (pesada: sube) | sube |
+| 9 | +1 rep | +1 rep | sube y baja al mínimo |
+| 9,5 | igual | igual | igual |
+| 10 | igual; −1 rep solo si no llegó a lo pautado | | |
+| sin RPE | igual | | |
+
+- Al subir: un solo salto; repeticiones = las que dejan el esfuerzo en `rpeObjetivo` (8) con Epley y las de reserva, nunca más
+  de las hechas ni por debajo del suelo (la serie pesada de un básico sí puede: hasta 3); novato, una menos.
+- `soloPrimeraDesde` (8,5) y `cuantasDuras` (2): con varias series a ese RPE o más, solo progresan las dos primeras.
+- Carga baja (`cargaBajaPct` 10, `sobreTope` 2): sigue con repeticiones hasta tope + 2; alternativa `subir_carga`.
+- Rangos: `rangoDe()` → regla del ejercicio > rangos del atleta (si no son los de partida) > `rangosEjercicio` (hip thrust
+  8–12) > `rangosPrioridad[tipo][prioridad]`. El rango de la pauta ya no manda.
+- Movimiento (`movimientoDe`): pierna = cuádriceps, isquiotibiales, glúteo, gemelo, aductores; empuje = pectoral,
+  deltoides, tríceps; por el primer grupo muscular.
+- Kilos para todos: `mueveKg` = movió kilos, sea cual sea el nivel; si la pauta no los llevaba, se escriben.
+- Tipo nuevo de fila: `menos`.
+- En la copia del 18/11 (84 pares de semanas, 5967 series): RPE sin apuntar 12 %, 10 el 7 %, 9,5 el 7 %, 8,5–9 el 25 %.
+  El acuerdo con lo programado baja del 69 % al 52 % en dirección: es esperable (38 de las 84 semanas se programaron con
+  el motor anterior y las reglas nuevas cambian a propósito lo que Pelayo corregía).
+
+Sin hacer: peaking y descarga (tercera pasada); «Suma una repetición hasta» de los formularios ya no aplica a la regla
+por RPE (solo a la clásica y al top set).
 
 ## Reglas propias de cada atleta (16/11/2026)
 

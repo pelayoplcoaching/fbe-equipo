@@ -18,7 +18,7 @@ import { ReglasAtleta, ReglaEjercicio } from './ReglasFBE.jsx';
 
 const TIPO = {
   subir: ['Sube kilos', 'ok'], reps: ['Más repeticiones', 'morado'], series: ['Una serie más', 'morado'], mantener: ['Igual', ''], bajar: ['Baja kilos', 'aviso'],
-  tope: ['Al tope', 'aviso'], peaking: ['Menos repeticiones', 'morado'], sin_tocar: ['A mano', ''], descarga: ['Descarga', 'aviso'], vuelta: ['Vuelta', 'aviso'], mantenimiento: ['Mantenimiento', ''],
+  tope: ['Al tope', 'aviso'], menos: ['Una repetición menos', 'aviso'], peaking: ['Menos repeticiones', 'morado'], sin_tocar: ['A mano', ''], descarga: ['Descarga', 'aviso'], vuelta: ['Vuelta', 'aviso'], mantenimiento: ['Mantenimiento', ''],
 };
 const CONFIANZA = { alta: ['Confianza alta', 'ok'], media: ['Confianza media', 'aviso'], baja: ['Confianza baja', ''] };
 
@@ -207,7 +207,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, alCerrar, a
           <div class="fila-envolver" style="align-items:center">
             <span class="chip ok num">{cuenta(['subir', 'series'])} suben</span>
             <span class="chip num">{cuenta(['reps', 'mantener', 'tope', 'peaking', 'sin_tocar'])} siguen con su carga</span>
-            {cuenta(['bajar', 'descarga', 'vuelta', 'mantenimiento']) > 0 && <span class="chip aviso num">{cuenta(['bajar', 'descarga', 'vuelta', 'mantenimiento'])} bajan</span>}
+            {cuenta(['bajar', 'menos', 'descarga', 'vuelta', 'mantenimiento']) > 0 && <span class="chip aviso num">{cuenta(['bajar', 'menos', 'descarga', 'vuelta', 'mantenimiento'])} bajan</span>}
           </div>
           <div class="selector-chips" role="group" aria-label="Qué marcar">
             <button type="button" aria-pressed="false" onClick={() => setMarcas(new Set(aplicables.filter((v) => v.f.confianza === 'alta').map((v) => v.f.pauta_id)))}>Solo confianza alta</button>

@@ -81,12 +81,16 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(await hay(reglas, 1) && /Reglas de Ana López/.test(await reglas.textContent()) && /Las de partida para su nivel/.test(await reglas.textContent()), 'la hoja enseña las reglas del atleta: de partida, las de su nivel');
     const suben = () => hoja.locator('.carga-sug .chip', { hasText: /^Sube kilos$/ }).count();
     const subenAntes = await suben();
+    // (v0.182) con la regla por RPE, en la demo lo que progresa son sobre todo repeticiones: vale cualquiera de las dos
+    const PROGRESA = /^(Sube kilos|Más repeticiones)$/;
+    const progresan = () => hoja.locator('.carga-sug .chip', { hasText: PROGRESA }).count();
+    const progresanAntes = await progresan();
     await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
     await reglas.getByLabel('Perfil').selectOption({ label: 'En casa o de viaje' });
     await foto('fbe-6-reglas-atleta');
     await revisar('reglas-atleta');
     await reglas.getByRole('button', { name: 'Guardar reglas', exact: true }).click();
-    check(await hay(reglas.getByText('Perfil En casa o de viaje.'), 1) && subenAntes >= 1 && await suben() === 0, `con el perfil «En casa o de viaje» ya no se proponen kilos (antes subían ${subenAntes})`);
+    check(await hay(reglas.getByText('Perfil En casa o de viaje.'), 1) && progresanAntes >= 1 && await suben() === 0, `con el perfil «En casa o de viaje» no se proponen kilos (antes progresaban ${progresanAntes} ejercicios)`);
     await reglas.getByRole('button', { name: 'Cambiar', exact: true }).click();
     await reglas.getByLabel('Básicos: mínimo de repeticiones').fill('9');
     await reglas.getByLabel('Básicos: máximo de repeticiones').fill('5');
@@ -118,7 +122,7 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await reglas.getByText(/Las de partida para su nivel/).waitFor();
 
     // Regla propia de un ejercicio: se pone en su fila, cambia solo esa fila y sigue ahí al volver a abrir la hoja
-    const filaSube = hoja.locator('.carga-sug', { has: p.locator('.chip', { hasText: /^Sube kilos$/ }) }).first();
+    const filaSube = hoja.locator('.carga-sug', { has: p.locator('.chip', { hasText: PROGRESA }) }).first();
     const ejercicio = (await filaSube.locator('strong').first().textContent()).trim();
     const fila = () => hoja.locator('.carga-sug', { has: p.locator('strong', { hasText: new RegExp(`^${ejercicio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).first();
     await fila().getByRole('button', { name: `Poner una regla propia de ${ejercicio}`, exact: true }).click();
@@ -128,7 +132,7 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     await foto('fbe-7-regla-ejercicio');
     await revisar('regla-ejercicio');
     await editor.getByRole('button', { name: 'Guardar regla', exact: true }).click();
-    check(await hay(fila().locator('.chip', { hasText: /^Regla propia$/ }), 1) && await fila().locator('.chip', { hasText: /^Sube kilos$/ }).count() === 0 && /Regla propia: Mantener · sube de 1,25 kg en 1,25 kg\./.test(await fila().textContent()) && await suben() === subenAntes - 1,
+    check(await hay(fila().locator('.chip', { hasText: /^Regla propia$/ }), 1) && await fila().locator('.chip', { hasText: PROGRESA }).count() === 0 && /Regla propia: Mantener · sube de 1,25 kg en 1,25 kg\./.test(await fila().textContent()) && await progresan() === progresanAntes - 1,
       `la regla propia de ${ejercicio} cambia su fila y solo la suya`);
     check(await hay(reglas.getByText('1 ejercicio con regla propia.'), 1), 'y cuenta en el resumen de las reglas del atleta');
     await hoja.getByRole('button', { name: 'Cancelar', exact: true }).click();
@@ -138,7 +142,7 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     check(await hay(fila().locator('.chip', { hasText: /^Regla propia$/ }), 1), 'la regla está guardada en la ficha: sigue ahí al volver a abrir la hoja');
     await fila().getByRole('button', { name: `Cambiar la regla de ${ejercicio}`, exact: true }).click();
     await editor.getByRole('button', { name: 'Quitar regla', exact: true }).click();
-    check(await hay(hoja.locator('.carga-sug .chip', { hasText: /^Regla propia$/ }), 0) && await suben() === subenAntes && await hay(reglas.getByText(/Las de partida para su nivel/), 1), 'al quitarla, todo vuelve a como estaba');
+    check(await hay(hoja.locator('.carga-sug .chip', { hasText: /^Regla propia$/ }), 0) && await suben() === subenAntes && await progresan() === progresanAntes && await hay(reglas.getByText(/Las de partida para su nivel/), 1), 'al quitarla, todo vuelve a como estaba');
 
     // El volumen por músculo de la semana que quedaría: plegado, con el recuento y el rango de cada músculo
     const resumenVol = hoja.locator('details.vol-desglose summary');
@@ -204,11 +208,11 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
 
     // La nota de la semana: el borrador dice lo que cambia con lo marcado, se puede editar y se guarda al aplicar
     const campoNota = hoja.getByLabel(/^Nota de la semana \d+ para Ana López$/);
-    check(await campoNota.count() === 1 && /Borrador con lo marcado: «Esta semana subes kilos en /.test(await hoja.textContent()), 'la hoja trae un borrador de la nota de la semana con lo que cambia');
+    check(await campoNota.count() === 1 && /Borrador con lo marcado: «Esta semana (subes kilos|busca una repetición más) en /.test(await hoja.textContent()), 'la hoja trae un borrador de la nota de la semana con lo que cambia');
     await hoja.getByRole('button', { name: 'Usar el borrador', exact: true }).click();
     const textoBorrador = await campoNota.inputValue();
     await campoNota.fill(`${textoBorrador} Y descansa bien.`);
-    check(/^Esta semana subes kilos en .+\. El resto, igual que la semana pasada\.$/.test(textoBorrador) && /y guardar la nota$/.test((await aplicar.textContent()).trim()), 'el borrador se usa de un toque, se edita y el botón dice que también guarda la nota');
+    check(/^Esta semana (subes kilos|busca una repetición más) en .+\.( El resto, igual que la semana pasada\.)?$/.test(textoBorrador) && /y guardar la nota$/.test((await aplicar.textContent()).trim()), 'el borrador se usa de un toque, se edita y el botón dice que también guarda la nota');
     await campoNota.scrollIntoViewIfNeeded();
     await foto('fbe-9-nota');
     await revisar('hoja-nota');

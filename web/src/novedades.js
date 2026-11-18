@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.182': {
+    coach: [
+      'Programar según FBE decide por el RPE de cada serie: con RPE bajo sube kilos antes; al subir, calcula las repeticiones.',
+      'Rangos por tipo y prioridad (mandan sobre los de la pauta), kilos a todos los niveles y «Subir carga» en cargas bajas.',
+      'Sin RPE apuntado la serie se queda igual; a RPE 8,5 o más solo progresan las dos primeras series.',
+    ],
+  },
   '0.181': {
     coach: [
       'Programar según FBE: lo pautado, lo que hizo y la propuesta, una serie por fila y con unidades (60 kg × 8 reps @8).',
