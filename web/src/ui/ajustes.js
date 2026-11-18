@@ -22,6 +22,8 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, juegoDescanso: false, apunteDescanso: false, calmaJuego: false, sonidoJuego: false, loboJuego: 'tiza', descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
   // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
   sonidosChat: true, fotosHd: false,
+  // (v0.180) notas de voz: escucharlas siempre antes de enviarlas (apagado: al soltar el micro, salen, como en WhatsApp)
+  vozRevisar: false,
   // v0.60: «Difuminar la cara» al enviar un vídeo, encendido de serie en este móvil (apagado si no se elige)
   difuminarCara: false,
   // v0.61: «Subir los vídeos solo con wifi» (solo sale donde el navegador dice si es wifi: Chrome de Android)
@@ -92,6 +94,7 @@ export function normalizarAjustes(guardado = {}) {
   // v0.54: el fondo del chat, con dibujos o liso
   if (!['dibujos', 'liso'].includes(a.fondoChat)) a.fondoChat = AJUSTES_DEFECTO.fondoChat;
   a.sonidosChat = a.sonidosChat !== false;
+  a.vozRevisar = a.vozRevisar === true;
   // (personalización 2) qué celebrar y cómo (récords, rachas, semanas, bloques y lo demás: con todo, solo vibración o nada)
   a.celebrar = limpiarCelebrar(a.celebrar);
   // (personalización 3) lo que no quiere ver: sin báscula, sin calorías, sin rankings

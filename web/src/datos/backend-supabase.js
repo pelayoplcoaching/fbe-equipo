@@ -311,7 +311,7 @@ export function crearBackendSupabase({ url, anonKey }) {
           if (x.cerrado) return;
           const c = sb.channel(`chat:${atletaId}`, { config: { private: true, broadcast: { self: false }, presence: { key: uidYo, enabled: true } } });
           x.canal = c;
-          c.on('broadcast', { event: 'escribiendo' }, ({ payload }) => repartir('alEscribir', payload?.r === 'coach' ? 'coach' : 'atleta'))
+          c.on('broadcast', { event: 'escribiendo' }, ({ payload }) => repartir('alEscribir', payload?.r === 'coach' ? 'coach' : 'atleta', payload?.v ? 'voz' : null))
             .on('broadcast', { event: 'cambio' }, () => repartir('alCambio'))
             .on('presence', { event: 'sync' }, () => repartir('alPresencia', enLinea()));
           c.subscribe(async (estado) => {
@@ -330,10 +330,11 @@ export function crearBackendSupabase({ url, anonKey }) {
     if (x.listo) setTimeout(() => oyente.alEstado?.(true), 0);
     let ultimoEscribiendo = 0;
     return {
-      escribiendo(rol) {
+      // (v0.180) que = 'voz': está grabando una nota de voz («grabando audio…»); las apps de antes lo ven como «escribiendo…»
+      escribiendo(rol, que = null) {
         if (!x.listo || !x.canal || Date.now() - ultimoEscribiendo < 2500) return;
         ultimoEscribiendo = Date.now();
-        x.canal.send({ type: 'broadcast', event: 'escribiendo', payload: { r: rol === 'coach' ? 'coach' : 'atleta' } }).catch?.(() => {});
+        x.canal.send({ type: 'broadcast', event: 'escribiendo', payload: { r: rol === 'coach' ? 'coach' : 'atleta', ...(que === 'voz' ? { v: 1 } : {}) } }).catch?.(() => {});
       },
       cambio() { if (x.listo && x.canal) x.canal.send({ type: 'broadcast', event: 'cambio', payload: {} }).catch?.(() => {}); },
       soltar() {

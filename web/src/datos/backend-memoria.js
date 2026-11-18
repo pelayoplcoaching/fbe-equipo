@@ -3106,7 +3106,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     const decir = (tipo, extra = {}) => { try { bc.postMessage({ tipo, de: yo, ...extra }); } catch { /* */ } };
     bc.onmessage = ({ data }) => {
       if (!data || data.de === yo) return;
-      if (data.tipo === 'escribiendo') oyente.alEscribir?.(data.r === 'coach' ? 'coach' : 'atleta');
+      if (data.tipo === 'escribiendo') oyente.alEscribir?.(data.r === 'coach' ? 'coach' : 'atleta', data.v ? 'voz' : null);
       else if (data.tipo === 'cambio') oyente.alCambio?.();
       else if (visible && (data.tipo === 'hola' || data.tipo === 'aqui')) { vistos.set(data.de, Date.now()); oyente.alPresencia?.(enLinea()); if (data.tipo === 'hola') decir('aqui'); }
       else if (visible && data.tipo === 'adios') { vistos.delete(data.de); oyente.alPresencia?.(enLinea()); }
@@ -3118,7 +3118,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     setTimeout(() => oyente.alEstado?.(true), 0);
     let ultimo = 0;
     return {
-      escribiendo(rol) { if (Date.now() - ultimo < 2500) return; ultimo = Date.now(); decir('escribiendo', { r: rol === 'coach' ? 'coach' : 'atleta' }); },
+      escribiendo(rol, que = null) { if (Date.now() - ultimo < 2500) return; ultimo = Date.now(); decir('escribiendo', { r: rol === 'coach' ? 'coach' : 'atleta', ...(que === 'voz' ? { v: 1 } : {}) }); },
       cambio() { decir('cambio'); },
       soltar() { canales.delete(x); x.cerrar(); },
     };

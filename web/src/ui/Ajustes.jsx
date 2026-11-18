@@ -1,4 +1,6 @@
 /* global __APP_VERSION__ */
+import { useEstadoMicro, ActivarMicro, AyudaMicro } from './chat/NotaVoz.jsx';
+import { textoMicro } from '../logica/notasVoz.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
 import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
@@ -309,6 +311,10 @@ export function AjustesMensajes({ coach = false }) {
     } catch (e) { aviso(e.message, 'error'); } finally { setOcupado(false); }
   }
   const otro = coach ? 'tus atletas' : 'tu coach';
+  // (v0.180) el micro de las notas de voz: cómo está, y activarlo o probarlo con un botón
+  const micro = useEstadoMicro();
+  const tm = textoMicro(micro.estado, micro.recordado);
+  const [hojaMicro, setHojaMicro] = useState(null);
   return (
     <GrupoIos titulo="Mensajes" id="grupo-mensajes" pie="El fondo, los sonidos y las fotos en HD se guardan en este móvil; lo de «en línea», en tu cuenta.">
       <Interruptor id="aj-en-linea" icono="ojo" texto="Mostrar cuándo estoy en línea" valor={visible !== false} desactivado={visible === null || ocupado}
@@ -316,6 +322,12 @@ export function AjustesMensajes({ coach = false }) {
         alCambiar={cambiarVisible} />
       <FilaIos icono="imagen" titulo="Fondo del chat" detalle={a.fondoChat === 'liso' ? 'Liso' : 'Con dibujos de FBE, muy suaves (con el negro puro, liso)'}
         bloque={<Segmentos opciones={[['dibujos', 'Con dibujos'], ['liso', 'Liso']]} valor={a.fondoChat || 'dibujos'} etiqueta="Fondo del chat" alCambiar={(v) => cambiar('fondoChat', v || 'dibujos')} />} />
+      <FilaIos icono="micro" titulo="Micrófono" valor={tm.titulo} detalle={tm.detalle}
+        bloque={<button type="button" class="btn btn-peq" onClick={() => setHojaMicro(tm.clave === 'bloqueado' ? 'ayuda' : tm.clave === 'activado' ? 'probar' : 'activar')}>{tm.boton}</button>} />
+      <Interruptor id="aj-voz-revisar" icono="play" texto="Escuchar las notas de voz antes de enviarlas" valor={a.vozRevisar === true}
+        ayuda="Apagado, la nota sale al soltar el micro (como en WhatsApp). Encendido, siempre la escuchas primero y la envías tú." alCambiar={(v) => cambiar('vozRevisar', v)} />
+      {hojaMicro === 'ayuda' && <AyudaMicro alCerrar={() => setHojaMicro(null)} />}
+      {(hojaMicro === 'activar' || hojaMicro === 'probar') && <ActivarMicro soloProbar={hojaMicro === 'probar'} alCerrar={() => setHojaMicro(null)} />}
       <Interruptor id="aj-sonidos-chat" icono="altavoz" texto="Sonidos del chat" valor={a.sonidosChat !== false}
         ayuda="Un tono suave al enviar y al recibir un mensaje, solo con el chat abierto (nunca en una conversación silenciada)." alCambiar={(v) => cambiar('sonidosChat', v)} />
       <Interruptor id="aj-fotos-hd" icono="imagen" texto="Enviar las fotos en HD" valor={a.fotosHd === true}

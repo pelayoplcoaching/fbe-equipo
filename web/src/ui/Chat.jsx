@@ -31,7 +31,7 @@ import { HojaReenviar } from './chat/Reenviar.jsx';
 import { HojaConvertir } from './chat/Convertir.jsx';
 import { InfoContacto, HojaSilenciar } from './chat/InfoContacto.jsx';
 import { DocumentoChat } from './chat/Documento.jsx';
-import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat, AyudaMicro, ponerOrdenVoz } from './chat/NotaVoz.jsx';
+import { useGrabadora, BotonMicro, PanelGrabando, PanelRevisar, NotaVozChat, AyudaMicro, ActivarMicro, useEstadoMicro, ponerOrdenVoz } from './chat/NotaVoz.jsx';
 import { LIMITE_VOZ_SIN_081 } from '../logica/notasVoz.js';
 import { EditorFoto } from './chat/EditorFoto.jsx';
 import { EncuestaChat, HojaEncuesta } from './chat/Encuesta.jsx';
@@ -483,7 +483,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     let t = null;
     const h = api.canalChat(atletaId, {
       rol: yo, visible: miVisible,
-      alEscribir: (q) => { if (q === yo) return; setEscribe(true); clearTimeout(t); t = setTimeout(() => setEscribe(false), 5000); },
+      alEscribir: (q, que) => { if (q === yo) return; setEscribe(que === 'voz' ? 'voz' : true); clearTimeout(t); t = setTimeout(() => setEscribe(false), 5000); },
       alPresencia: (x) => setEnLinea(!!x),
       alCambio: () => { recargar.current?.(true); fijado.recargar(true); },
       alEstado: (ok) => { if (!ok) { setEscribe(false); setEnLinea(false); } },
@@ -747,6 +747,13 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   };
   const reintentarSubida = (id) => { cambiarSubida(id, { estado: 'espera', error: null, progreso: 0 }); subidasRef.current = subidasRef.current.map((y) => (y.id === id ? { ...y, estado: 'espera', error: null } : y)); procesarSubidas(); };
 
+  // (v0.180) una nota de voz que no pudo salir (sin conexión) se vuelve a enviar sola al volver la conexión
+  useEffect(() => {
+    const vuelve = () => { for (const x of subidasRef.current) if (x.estado === 'fallo' && x.esAudio) reintentarSubida(x.id); };
+    window.addEventListener('online', vuelve);
+    return () => window.removeEventListener('online', vuelve);
+  }, []);
+
   // v0.56: las notas de voz; al enviarla, sale como las fotos: al momento, con su progreso
   // (v0.179) hasta dos minutos con la migración 081 (sin ella, el minuto de siempre); al soltar el micro, sale; y el orden
   // de los mensajes, para que al acabar una nota suene la siguiente
@@ -754,7 +761,9 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   useEffect(() => { let vivo = true; api.vozLimite?.().then((n) => { if (vivo && n) setLimiteVoz(n); }).catch(() => {}); return () => { vivo = false; }; }, []);
   useEffect(() => { ponerOrdenVoz(mensajes); return () => ponerOrdenVoz([]); }, [mensajes]);
   const enviarVozRef = useRef(null);
-  const grab = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setHoja('micro'), alEnviar: (x) => enviarVozRef.current?.(x), limite: limiteVoz, clave: atletaId ? `chat-${miId || ''}-${atletaId}` : null });
+  // (v0.180) el estado del micro (bloqueado: el botón lo avisa), la hoja «Activar el micro» la primera vez, y «grabando audio…» para la otra parte
+  const micro = useEstadoMicro();
+  const grab = useGrabadora({ alError: (m) => aviso(m, 'error'), alAviso: (m) => aviso(m), alAyuda: () => setHoja('micro'), alActivar: () => setHoja('activar-micro'), alGrabando: () => canal.current?.escribiendo(yo, 'voz'), alEnviar: (x) => enviarVozRef.current?.(x), limite: limiteVoz, clave: atletaId ? `chat-${miId || ''}-${atletaId}` : null });
   const enviarVoz = (x) => {
     const archivo = new File([x.blob], `nota-de-voz.${x.ext}`, { type: x.tipo });
     let url = null;
@@ -1130,7 +1139,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             </div>
             )}
             {mostrarEnviar ? <button class="btn btn-primario btn-icono chat-enviar" aria-label={editando ? 'Guardar el cambio' : 'Enviar'} disabled={enviando || (!conTexto && !adjuntos.length)}><Icono n={editando ? 'hecho' : 'enviar'} /></button>
-              : !(grabandoVoz && grab.bloqueada) && <BotonMicro g={grab} />}
+              : !(grabandoVoz && grab.bloqueada) && <BotonMicro g={grab} bloqueado={micro.estado === 'denied'} />}
           </div>
           )}
           {emojis && <PanelEmojis alElegir={ponerEmoji} />}
@@ -1158,6 +1167,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
           alElegir={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()}\n\n${t}` : t)); setGuardadas(false); area.current?.focus(); }} />
       )}
       {hoja === 'micro' && <AyudaMicro alCerrar={() => setHoja(null)} />}
+      {hoja === 'activar-micro' && <ActivarMicro alCerrar={() => setHoja(null)} />}
       {hoja === 'adjuntar' && (
         <Hoja titulo="Adjuntar" alCerrar={() => setHoja(null)}>
           <ul class="lista hoja-acciones chat-adjuntar">
@@ -1442,7 +1452,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
         </button>
       )}
       {sub && <SubidaChat x={sub} alCancelar={() => alCancelarSubida(sub.id)} alReintentar={() => alReintentarSubida(sub.id)} />}
-      {c.archivo && !eliminado && (esDoc ? <DocumentoChat archivo={c.archivo} /> : esVoz ? <NotaVozChat c={c} mio={mio} alEscuchada={alRecargar} /> : <MedioChat archivo={c.archivo} alAbrir={alAbrir} />)}
+      {c.archivo && !eliminado && (esDoc ? <DocumentoChat archivo={c.archivo} /> : esVoz ? <NotaVozChat c={c} mio={mio} alEscuchada={alRecargar} de={mio ? null : String(nombreDe(c.autor) || '').replace(/^Tu coach$/, 'tu coach')} /> : <MedioChat archivo={c.archivo} alAbrir={alAbrir} />)}
       {conEncuesta && <EncuestaChat key={`${c.encuesta.id}:${(c.encuesta.voto || []).join(',')}`} c={c} yo={yo} alVotado={alRecargar} />}
       {eliminado ? <p class="burbuja-texto burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em>{hueco}</p>
         : conEncuesta || (sub && !c.texto) ? null

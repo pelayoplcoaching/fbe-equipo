@@ -5,6 +5,7 @@ import { leerAjustes } from '../ajustes.js';
 import {
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, esPermisoDenegado, ayudaMicro, trasPermiso, siguienteVoz, textoLimite, mmss, duracionGuardada, MIN_VOZ_SEG, VELOCIDADES,
+  esSilencio, textoMicro, resultadoPrueba,
 } from '../../logica/notasVoz.js';
 
 // Las notas de voz del chat (v0.56), como WhatsApp. (v0.179) De hasta DOS minutos (con la migración 081; sin ella, uno) y:
@@ -20,12 +21,16 @@ import {
 // El micro se suelta en cuanto se para (no se queda encendido).
 // El reloj se puede cambiar en las pruebas (window.__fbeRelojVoz): así se prueba el límite sin esperarlo.
 const reloj = () => (typeof globalThis.__fbeRelojVoz === 'function' ? globalThis.__fbeRelojVoz() : performance.now());
-const vibrar = (ms = 25) => { try { if (leerAjustes().vibracion) navigator.vibrate?.(ms); } catch { /* */ } };
+const vibrar = (ms = 25) => { try { if (leerAjustes().vibracion) navigator.vibrate?.(ms); } catch { /* */ } };   // ms: milisegundos o un patrón
 // Lo grabado y sin enviar, por conversación (se conserva al cambiar de pantalla; no al cerrar la app ni al cerrar sesión)
 const borradores = new Map();
 // (revisión) Hay navegadores que siguen diciendo «preguntar» después de dar el permiso (no lo recuerdan): si en esta página
 // ya se ha conseguido el micro una vez, no se vuelve a tratar como «la primera vez»
 let microConcedido = false;
+// (v0.180) Y en este aparato: una vez activado, no se vuelve a enseñar la hoja de «Activar el micro» aunque el navegador diga «preguntar»
+const CLAVE_MICRO = 'fbe-micro-activado';
+const microRecordado = () => { try { return localStorage.getItem(CLAVE_MICRO) === '1'; } catch { return false; } };
+const recordarMicro = (si) => { microConcedido = !!si; try { if (si) localStorage.setItem(CLAVE_MICRO, '1'); else localStorage.removeItem(CLAVE_MICRO); } catch { /* */ } try { window.dispatchEvent(new Event('fbe-micro')); } catch { /* */ } };
 
 export function puedeGrabar() {
   return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof globalThis.MediaRecorder === 'function'
@@ -35,9 +40,25 @@ export function puedeGrabar() {
 async function permisoMicro() {
   try { const r = await navigator.permissions?.query?.({ name: 'microphone' }); return r?.state || null; } catch { return null; }
 }
+// (v0.180) El estado del micro para la app, al día: 'granted' | 'prompt' | 'denied' | null, y si ya se activó en este aparato.
+// Se entera solo si el permiso cambia (en los ajustes del móvil) o si se activa desde otra pantalla.
+export function useEstadoMicro() {
+  const [e, setE] = useState({ estado: null, recordado: microRecordado() });
+  useEffect(() => {
+    let vivo = true, pr = null;
+    const leer = async () => { const estado = await permisoMicro(); if (vivo) setE({ estado, recordado: microRecordado() || microConcedido }); };
+    const cambio = () => leer();
+    leer();
+    (async () => { try { pr = await navigator.permissions?.query?.({ name: 'microphone' }); if (pr && vivo) pr.onchange = cambio; } catch { /* */ } })();
+    window.addEventListener('fbe-micro', cambio);
+    document.addEventListener('visibilitychange', cambio);
+    return () => { vivo = false; if (pr) pr.onchange = null; window.removeEventListener('fbe-micro', cambio); document.removeEventListener('visibilitychange', cambio); };
+  }, []);
+  return e;
+}
 
 // La grabación: estado 'nada' | 'pidiendo' | 'grabando' | 'pausada' | 'revisar' y lo grabado ({ blob, tipo, ext, seg, onda, limite })
-export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar = null, limite = LIMITE_VOZ_SIN_081, clave = null }) {
+export function useGrabadora({ alError, alAviso = null, alAyuda = null, alActivar = null, alEnviar = null, alGrabando = null, limite = LIMITE_VOZ_SIN_081, clave = null }) {
   const [estado, setEstado] = useState(() => (clave && borradores.has(clave) ? 'revisar' : 'nada'));
   const [seg, setSeg] = useState(0);
   const [bloqueada, setBloqueada] = useState(false);
@@ -46,7 +67,8 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
   const [recien, setRecien] = useState(false);   // lo de revisar se acaba de grabar (no es un borrador recuperado)
   const r = useRef({});
   const op = useRef({});
-  op.current = { alError, alAviso, alAyuda, alEnviar, limite, clave };
+  op.current = { alError, alAviso, alAyuda, alActivar, alEnviar, alGrabando, limite, clave };
+  const [previa, setPrevia] = useState(null);   // (v0.180) lo grabado hasta la pausa, para escucharlo y seguir
   const guardarBorrador = (g) => { const k = op.current.clave; if (!k) return; if (g) borradores.set(k, g); else borradores.delete(k); };
   const soltarMicro = (x = r.current) => {
     clearInterval(x.tic);
@@ -78,8 +100,11 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     const x = r.current = { cancelada: false, trozos: [], niveles: [], dedo: !manos, manos, acum: 0, desde: null, clave: op.current.clave };
     const t0 = performance.now();
     const dicho = await permisoMicro();
-    const permiso = dicho !== 'denied' && microConcedido ? 'granted' : dicho;
+    // Ya se activó aquí y el navegador sigue diciendo «preguntar» (no lo recuerda bien): no se sabe, se decide por lo que tarde
+    const permiso = dicho === 'denied' ? 'denied' : microConcedido ? 'granted' : dicho === 'prompt' && microRecordado() ? null : dicho;
     if (x.cancelada) { setEstado('nada'); return; }
+    // (v0.180) La primera vez en este aparato: en vez del aviso del sistema con el dedo puesto, la hoja «Activar el micro»
+    if (permiso === 'prompt' && op.current.alActivar) { setEstado('nada'); setBloqueada(false); op.current.alActivar(); return; }
     // Bloqueado de antes: no se pide (no saldría nada): se enseña cómo activarlo
     if (permiso === 'denied') { setEstado('nada'); setBloqueada(false); if (op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro({ name: 'NotAllowedError' })); return; }
     let stream;
@@ -92,7 +117,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
       if (esPermisoDenegado(e) && op.current.alAyuda) op.current.alAyuda(); else op.current.alError(errorMicro(e));
       return;
     }
-    microConcedido = true;
+    if (!microConcedido || !microRecordado()) recordarMicro(true);
     if (x.cancelada) { stream.getTracks().forEach((t) => t.stop()); setEstado('nada'); return; }
     // Acaba de dar el permiso (o lo soltó antes de que llegara el micro): no se graba a ciegas
     const que = trasPermiso({ permiso, tardoMs: performance.now() - t0, dedoPuesto: x.dedo, manos: x.manos });
@@ -121,13 +146,15 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
       if (esta) setBloqueada(false);
       if (s < MIN_VOZ_SEG - 0.4 || !x.trozos.length) { if (esta) { setEstado('nada'); op.current.alAviso?.('Mantén pulsado el micro mientras hablas (o tócalo y habla).'); } return; }
       const blob = new Blob(x.trozos, { type: f.tipo });
-      const g = { blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s, op.current.limite), onda: ondaDe(x.niveles, 40), limite: !!x.limite, cortada: x.cortada || null, tope: op.current.limite };
+      // (v0.180) no se oye nada (micro tapado o silenciado): no sale sola, se avisa
+      const mudo = !!x.analizador && esSilencio(x.niveles);
+      const g = { blob, tipo: f.tipo, ext: f.ext, seg: duracionGuardada(s, op.current.limite), onda: ondaDe(x.niveles, 40), limite: !!x.limite, cortada: x.cortada || null, tope: op.current.limite, mudo };
       // Se fue de la pantalla grabando: queda de borrador (se verá al volver)
       if (x.desmontada) { if (x.clave) borradores.set(x.clave, g); return; }
       if (!esta) return;
       sonarFBE('nota-acaba');   // (sonido 2, tanda 7) como en WhatsApp
       // Al soltar (o con «Enviar»), sale ya; si se paró sola, la cortó el móvil o se pidió escucharla, se revisa
-      if (x.alParar === 'enviar' && !x.limite && !x.cortada && op.current.alEnviar) { setGrabado(null); setEstado('nada'); setSeg(0); op.current.alEnviar(g); return; }
+      if (x.alParar === 'enviar' && !x.limite && !x.cortada && !mudo && !leerAjustes().vozRevisar && op.current.alEnviar) { setGrabado(null); setEstado('nada'); setSeg(0); op.current.alEnviar(g); return; }
       setGrabado(g); guardarBorrador(g); setRecien(true);
       setEstado('revisar');
     };
@@ -138,6 +165,8 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     try { rec.start(250); } catch (e) { soltarMicro(x); setEstado('nada'); op.current.alError(errorMicro(e)); return; }
     x.desde = reloj();
     setEstado('grabando');
+    try { sonandoAhora?.pause(); } catch { /* */ }   // (v0.180) lo que estuviera sonando se calla
+    op.current.alGrabando?.();
     sonarFBE('nota-empieza');   // (sonido 2, tanda 7)
     vibrar();
     // La pantalla, encendida mientras se graba; y si se sale de la app, se para y lo grabado se queda
@@ -156,6 +185,9 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
         x.niveles.push(Math.min(1, Math.sqrt(suma / x.buf.length) * 3));
       } else x.niveles.push(0);
       setSeg(s); setVivos(ondaViva(x.niveles, 28));
+      op.current.alGrabando?.();   // «grabando audio…» para la otra parte (el canal ya lo espacia)
+      // (v0.180) a 10 s del final, un toque
+      if (!x.avisado && quedaPoco(s, op.current.limite)) { x.avisado = true; vibrar([30, 60, 30]); }
       // Al llegar al límite, se para sola (y lo grabado se queda)
       if (alLimite(s, op.current.limite)) { x.seg = op.current.limite; x.limite = true; vibrar(60); parar(); }
     }, 100);
@@ -167,6 +199,7 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     if (x.desde != null) { x.acum = (x.acum || 0) + (reloj() - x.desde); x.desde = null; }
     if (!x.limite) x.seg = (x.acum || 0) / 1000;
     x.alParar = enviar ? 'enviar' : 'revisar';
+    setPrevia(null);
     try { if (x.rec && x.rec.state !== 'inactive') x.rec.stop(); else { soltarMicro(); if (estado !== 'revisar') setEstado('nada'); } } catch { soltarMicro(); setEstado('nada'); }
   }
   const puedePausar = typeof globalThis.MediaRecorder === 'function' && typeof globalThis.MediaRecorder.prototype?.pause === 'function';
@@ -177,11 +210,22 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     x.acum = (x.acum || 0) + (reloj() - x.desde); x.desde = null;
     setEstado('pausada');
   }
+  // (v0.180) Escuchar lo grabado hasta la pausa, sin parar (como WhatsApp): después se puede seguir grabando
+  async function escuchar() {
+    const x = r.current;
+    if (estado !== 'pausada' || !x.rec) return;
+    const antes = x.trozos.length;
+    try { x.rec.requestData(); } catch { /* */ }
+    for (let i = 0; i < 10 && x.trozos.length === antes; i++) await new Promise((ok) => setTimeout(ok, 50));
+    if (r.current !== x || x.rec.state !== 'paused' || !x.trozos.length) return;
+    setPrevia({ blob: new Blob(x.trozos, { type: x.formato.tipo }), seg: Math.max(1, Math.round((x.acum || 0) / 1000)), onda: ondaDe(x.niveles, 40) });
+  }
   function seguir() {
     const x = r.current;
     if (estado !== 'pausada' || !x.rec || x.rec.state !== 'paused') return;
     try { x.rec.resume(); } catch { return; }
     x.desde = reloj();
+    setPrevia(null);
     setEstado('grabando');
   }
   function cancelar() {
@@ -191,17 +235,18 @@ export function useGrabadora({ alError, alAviso = null, alAyuda = null, alEnviar
     try { if (x.rec && x.rec.state !== 'inactive') x.rec.stop(); } catch { /* */ }
     soltarMicro();
     if (estado === 'grabando' || estado === 'pausada') vibrar(40);
+    setPrevia(null);
     setEstado('nada'); setGrabado(null); setSeg(0); setBloqueada(false); guardarBorrador(null);
   }
   const bloquear = () => { if (!bloqueada) vibrar(15); setBloqueada(true); };
   // El dedo ya no está en el micro mientras se pedía (lo soltó, o el aviso del permiso se llevó el toque)
   const dedoFuera = ({ toque = false } = {}) => { const x = r.current; x.dedo = false; if (toque) { x.manos = true; setBloqueada(true); } };
   const descartar = () => { setGrabado(null); setEstado('nada'); setSeg(0); setBloqueada(false); setRecien(false); guardarBorrador(null); };
-  return { estado, seg, bloqueada, setBloqueada: (v) => (v ? bloquear() : setBloqueada(false)), grabado, vivos, recien, limite, puedePausar, empezar, parar, pausar, seguir, cancelar, descartar, dedoFuera };
+  return { estado, seg, bloqueada, setBloqueada: (v) => (v ? bloquear() : setBloqueada(false)), grabado, vivos, recien, previa, limite, puedePausar, empezar, parar, pausar, seguir, escuchar, cancelar, descartar, dedoFuera };
 }
 
 // El botón del micro (con el cuadro vacío, donde va «Enviar»): mantener (y soltar para enviar), deslizar, o tocar
-export function BotonMicro({ g, disabled = false }) {
+export function BotonMicro({ g, disabled = false, bloqueado = false }) {
   const p = useRef(null);
   const [arrastre, setArrastre] = useState(0);   // cuánto ha subido el dedo hacia el candado (0…1)
   const abajo = (e) => {
@@ -251,10 +296,11 @@ export function BotonMicro({ g, disabled = false }) {
   return (
     <span class="chat-micro-caja">
       {manteniendo && <span class="chat-candado" aria-hidden="true" style={{ '--sube': arrastre }}><Icono n="candado" /><Icono n="arriba" /></span>}
-      <button type="button" class={`btn btn-primario btn-icono chat-enviar chat-micro ${manteniendo ? 'grabando' : ''}`} aria-label={`Grabar una nota de voz (hasta ${textoLimite(g.limite)})`} title="Mantén pulsado para grabar y suelta para enviar (o toca)"
+      <button type="button" class={`btn btn-primario btn-icono chat-enviar chat-micro ${manteniendo ? 'grabando' : ''} ${bloqueado ? 'sin-permiso' : ''}`} aria-label={`Grabar una nota de voz (hasta ${textoLimite(g.limite)})${bloqueado ? '. El micro está bloqueado: toca para ver cómo activarlo' : ''}`} title="Mantén pulsado para grabar y suelta para enviar (o toca)"
         disabled={disabled} onPointerDown={abajo} onPointerMove={mover} onPointerUp={arriba} onPointerCancel={cancelado}
         onClick={clic} onContextMenu={(e) => e.preventDefault()}>
         <Icono n="micro" />
+        {bloqueado && <span class="chat-micro-aviso" aria-hidden="true">!</span>}
       </button>
     </span>
   );
@@ -279,6 +325,17 @@ export function PanelGrabando({ g }) {
   const enfocado = useRef(false);
   useEffect(() => { if (g.bloqueada && g.estado === 'grabando' && !enfocado.current) { enfocado.current = true; setTimeout(() => parar.current?.focus(), 0); } }, [g.bloqueada, g.estado]);
   const barras = g.vivos?.length ? g.vivos : Array(28).fill(0);
+  // (v0.180) en pausa, lo grabado se puede escuchar sin parar; y después, seguir
+  const [urlPrevia, setUrlPrevia] = useState(null);
+  useEffect(() => { if (!g.previa) { setUrlPrevia(null); return undefined; } const u = URL.createObjectURL(g.previa.blob); setUrlPrevia(u); return () => URL.revokeObjectURL(u); }, [g.previa]);
+  if (pausada && g.previa && urlPrevia) return (
+    <div class="chat-revisar-voz chat-previa-voz" role="group" aria-label="Grabando una nota de voz">
+      <button type="button" class="btn btn-icono plano chat-grabando-borrar" aria-label="Eliminar la grabación" onClick={g.cancelar}><Icono n="basura" /></button>
+      <ReproductorVoz url={urlPrevia} duracion={g.previa.seg} onda={g.previa.onda} propio compacto />
+      <button type="button" class="btn btn-icono plano chat-grabando-seguir" aria-label="Seguir grabando" onClick={g.seguir}><Icono n="micro" /></button>
+      <button type="button" class="btn btn-primario btn-icono chat-enviar" aria-label="Enviar la nota de voz" onClick={() => g.parar({ enviar: true })}><Icono n="enviar" /></button>
+    </div>
+  );
   return (
     <div class={`chat-grabando ${poco ? 'acaba' : ''} ${g.bloqueada ? 'bloqueada' : ''} ${pausada ? 'pausada' : ''}`} role="group" aria-label="Grabando una nota de voz">
       {g.bloqueada && <button type="button" class="btn btn-icono plano chat-grabando-borrar" aria-label="Eliminar la grabación" onClick={g.cancelar}><Icono n="basura" /></button>}
@@ -287,12 +344,13 @@ export function PanelGrabando({ g }) {
       {g.estado !== 'pidiendo' && <span class="chat-grabando-onda" aria-hidden="true">{barras.map((h, i) => <span key={i} style={{ height: `${Math.max(10, h)}%` }} />)}</span>}
       <span class="mini chat-grabando-aviso">{poco ? `Quedan ${restan} s` : pausada ? 'En pausa' : g.bloqueada ? `Hasta ${textoLimite(g.limite)}` : g.estado === 'pidiendo' ? '' : '‹ Desliza para cancelar'}</span>
       <span class="sr" aria-live="assertive">{dicho}</span>
+      {g.estado !== 'pidiendo' && <span class="chat-grabando-progreso" aria-hidden="true" style={{ '--hecho': Math.min(1, g.seg / g.limite) }} />}
       {g.bloqueada && g.estado !== 'pidiendo' && (
         <span class="fila chat-grabando-acciones">
           {g.puedePausar && (pausada
             ? <button type="button" class="btn btn-icono plano chat-grabando-seguir" aria-label="Seguir grabando" onClick={g.seguir}><Icono n="micro" /></button>
             : <button type="button" class="btn btn-icono plano" aria-label="Pausar la grabación" onClick={g.pausar}><Icono n="pausa" /></button>)}
-          <button type="button" ref={parar} class="btn btn-icono plano" aria-label="Parar y escucharla" onClick={() => g.parar()}><Icono n="play" /></button>
+          <button type="button" ref={parar} class="btn btn-icono plano" aria-label={pausada ? 'Escuchar lo grabado' : 'Parar y escucharla'} onClick={() => (pausada ? g.escuchar() : g.parar())}><Icono n="play" /></button>
           <button type="button" class="btn btn-primario btn-icono chat-enviar" aria-label="Enviar la nota de voz" onClick={() => g.parar({ enviar: true })}><Icono n="enviar" /></button>
         </span>
       )}
@@ -316,8 +374,84 @@ export function PanelRevisar({ g, alEnviar, enviando = false }) {
       <ReproductorVoz url={url} duracion={x.seg} onda={x.onda} propio compacto />
       <button type="button" ref={enviar} class="btn btn-primario btn-icono chat-enviar" aria-label="Enviar la nota de voz" disabled={enviando} onClick={() => alEnviar(x)}><Icono n="enviar" /></button>
       {x.limite && <p class="mini chat-revisar-aviso" role="status">{tope === 60 ? 'Has llegado al minuto' : `Has llegado a los ${textoLimite(tope)}`}: se ha parado sola. Escúchala y envíala.</p>}
+      {x.mudo && <p class="mini chat-revisar-aviso" role="status">No se oye nada en la grabación. Mira que el micro no esté tapado ni silenciado (o los auriculares) antes de enviarla.</p>}
       {!x.limite && x.cortada && <p class="mini chat-revisar-aviso" role="status">{x.cortada === 'salida' ? 'Has salido de la app y la grabación se ha parado' : 'El móvil ha cortado el micro'}: lo grabado está aquí. Escúchala y envíala, o bórrala.</p>}
     </div>
+  );
+}
+
+// (v0.180) Activar el micro con un botón (la primera vez, o desde Ajustes): pide el permiso, lo prueba unos segundos
+// («di algo») y dice si se oye. Si está bloqueado, los pasos. Devuelve por alCerrar(true) si quedó activado.
+export function ActivarMicro({ alCerrar, soloProbar = false }) {
+  const [fase, setFase] = useState('inicio');   // inicio | pidiendo | probando | hecho | bloqueado | fallo
+  const [nivel, setNivel] = useState(0);
+  const [pico, setPico] = useState(0);
+  const [error, setError] = useState(null);
+  const x = useRef({});
+  const soltar = () => { const y = x.current; clearInterval(y.tic); clearTimeout(y.fin); try { y.stream?.getTracks().forEach((t) => t.stop()); } catch { /* */ } try { y.ctx?.close(); } catch { /* */ } x.current = {}; };
+  useEffect(() => soltar, []);
+  async function activar() {
+    if (!navigator.mediaDevices?.getUserMedia) { setError(errorMicro({ name: globalThis.isSecureContext === false ? 'SinContexto' : 'NoSoportado' })); setFase('fallo'); return; }
+    setFase('pidiendo'); setError(null);
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { if (esPermisoDenegado(e)) { recordarMicro(false); setFase('bloqueado'); } else { setError(errorMicro(e)); setFase('fallo'); } return; }
+    recordarMicro(true);
+    const y = x.current = { stream, pico: 0 };
+    try {
+      const C = globalThis.AudioContext || globalThis.webkitAudioContext;
+      y.ctx = new C(); y.ctx.resume?.().catch?.(() => {});
+      const an = y.ctx.createAnalyser(); an.fftSize = 512; y.ctx.createMediaStreamSource(stream).connect(an);
+      const buf = new Uint8Array(an.fftSize);
+      y.tic = setInterval(() => {
+        an.getByteTimeDomainData(buf);
+        let suma = 0; for (const v of buf) { const d = (v - 128) / 128; suma += d * d; }
+        const n = Math.min(1, Math.sqrt(suma / buf.length) * 3);
+        y.pico = Math.max(y.pico, n); setNivel(n); setPico(y.pico);
+      }, 100);
+    } catch { /* sin medidor: se da por activado */ }
+    setFase('probando');
+    y.fin = setTimeout(() => { const p = x.current.pico || 0; soltar(); setPico(p); setFase('hecho'); }, 4000);
+  }
+  const instalada = typeof matchMedia === 'function' && (matchMedia('(display-mode: standalone)').matches || globalThis.navigator?.standalone === true);
+  const a = ayudaMicro(globalThis.navigator?.userAgent || '', instalada);
+  const res = resultadoPrueba(pico);
+  return (
+    <Hoja titulo={soloProbar ? 'Probar el micro' : 'Activar el micro'} alCerrar={() => { soltar(); alCerrar(fase === 'hecho' || fase === 'probando'); }}>
+      {fase === 'inicio' && (
+        <>
+          <p class="peq secundario">{soloProbar ? 'Vamos a escucharte unos segundos para comprobar que el micro funciona. No se graba ni se guarda nada.' : 'Para mandar notas de voz, la app necesita tu micro. Actívalo ahora y no te lo preguntará en mitad de una grabación.'}</p>
+          {!soloProbar && <p class="mini terciario">Al tocar el botón, el móvil te preguntará: elige «Permitir». Solo se usa mientras grabas.</p>}
+          <button type="button" class="btn btn-primario btn-grande" onClick={activar}><Icono n="micro" /> {soloProbar ? 'Probar el micro' : 'Activar el micro'}</button>
+        </>
+      )}
+      {fase === 'pidiendo' && <p class="peq secundario" role="status">Abriendo el micro… Si el móvil pregunta, elige «Permitir».</p>}
+      {fase === 'probando' && (
+        <>
+          <p class="peq" role="status"><b>Micro activado.</b> Di algo para probarlo:</p>
+          <div class="micro-medidor" role="meter" aria-label="Nivel del micro" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(nivel * 100)}><span style={{ '--nivel': nivel }} /></div>
+          <p class="mini terciario">No se graba ni se guarda nada.</p>
+        </>
+      )}
+      {fase === 'hecho' && (
+        <>
+          <p class="peq" role="status">{res === 'bien' ? <><b>Se te oye bien.</b> Ya puedes grabar: mantén pulsado el micro del chat y suelta para enviar.</> : res === 'bajo' ? <><b>Micro activado, pero se te oye bajo.</b> Acércate al móvil o mira que no esté tapado.</> : <><b>Micro activado, pero no se oye nada.</b> Mira que no esté tapado ni silenciado, o prueba sin auriculares.</>}</p>
+          <div class="fila">
+            {res !== 'bien' && <button type="button" class="btn plano" onClick={activar}>Probar otra vez</button>}
+            <button type="button" class="btn btn-primario" onClick={() => alCerrar(true)}>Listo</button>
+          </div>
+        </>
+      )}
+      {fase === 'bloqueado' && (
+        <>
+          <p class="peq secundario">El micro está bloqueado para la app. Se activa una vez, en tu {a.aparato}:</p>
+          <ol class="ayuda-micro">{a.pasos.map((t) => <li key={t} class="peq">{t}</li>)}</ol>
+          {a.nota && <p class="mini terciario">{a.nota}</p>}
+          <div class="fila"><button type="button" class="btn plano" onClick={activar}>Volver a probar</button><button type="button" class="btn btn-primario" onClick={() => alCerrar(false)}>Entendido</button></div>
+        </>
+      )}
+      {fase === 'fallo' && (<><p class="peq" role="alert">{error}</p><div class="fila"><button type="button" class="btn plano" onClick={activar}>Volver a probar</button><button type="button" class="btn btn-primario" onClick={() => alCerrar(false)}>Cerrar</button></div></>)}
+    </Hoja>
   );
 }
 
@@ -352,7 +486,7 @@ const guardarVel = (v) => { try { localStorage.setItem(CLAVE_VEL, String(v)); } 
 // El reproductor (en la burbuja y al revisar): ▶/❚❚, la onda con lo escuchado, el tiempo y 1×/1,5×/2×. url: la del
 // audio, o pedirUrl() la primera vez que se reproduce (así no se descarga nada hasta que se toca). clave: para recordar por
 // dónde se dejó. Si el enlace ha caducado (el chat lleva mucho abierto), se pide otro y sigue por donde iba.
-export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion = 0, onda = null, propio = false, escuchada = false, alReproducir = null, compacto = false, clave = null, mime = null, alAcabar = null, control = null }) {
+export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion = 0, onda = null, propio = false, escuchada = false, alReproducir = null, compacto = false, clave = null, mime = null, alAcabar = null, control = null, nueva = false, titulo = null }) {
   const audio = useRef(null);
   const [url, setUrl] = useState(urlDada);
   const [sonando, setSonando] = useState(false);
@@ -402,9 +536,30 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
     if (pedirUrl && !x.current.reintentado) { x.current.reintentado = true; setSonando(false); sonar({ nuevoEnlace: true }); return; }
     setSonando(false); setFallo('No se pudo reproducir: toca para reintentar'); x.current.reintentado = false;
   };
+  // (v0.180) Mientras suena: los mandos de la pantalla de bloqueo y de los auriculares, y la pantalla encendida
+  const fuera = useRef({});
+  const alSonar = (b) => {
+    try {
+      const ms = navigator.mediaSession;
+      if (ms && globalThis.MediaMetadata && !ms.metadata) {   // (si ya los lleva otra cosa, como la pista del descanso, no se tocan)
+        ms.metadata = new globalThis.MediaMetadata({ title: titulo || 'Nota de voz', artist: 'FBE Equipo' });
+        ms.setActionHandler('play', () => b.play().catch(() => {}));
+        ms.setActionHandler('pause', () => b.pause());
+        fuera.current.ms = true;
+      }
+    } catch { /* */ }
+    try { navigator.wakeLock?.request('screen').then((w) => { if (b.paused) w.release().catch(() => {}); else fuera.current.w = w; }).catch(() => {}); } catch { /* */ }
+  };
+  const alCallar = () => {
+    try { fuera.current.w?.release?.().catch?.(() => {}); } catch { /* */ }
+    fuera.current.w = null;
+    try { if (fuera.current.ms && navigator.mediaSession) { navigator.mediaSession.setActionHandler('play', null); navigator.mediaSession.setActionHandler('pause', null); navigator.mediaSession.metadata = null; } } catch { /* */ }
+    fuera.current.ms = false;
+  };
+  useEffect(() => alCallar, []);
   const hecho = Math.min(1, t / total);
   return (
-    <div class={`voz ${propio ? 'propia' : ''} ${compacto ? 'compacta' : ''} ${sonando ? 'sonando' : ''}`}>
+    <div class={`voz ${propio ? 'propia' : ''} ${compacto ? 'compacta' : ''} ${sonando ? 'sonando' : ''} ${nueva ? 'nueva' : ''}`}>
       <button type="button" class="btn btn-icono voz-play" aria-label={sonando ? 'Pausar la nota de voz' : `Escuchar la nota de voz (${mmss(total)})`} onClick={alternar} disabled={cargando}>
         <Icono n={sonando ? 'pausa' : 'play'} />
       </button>
@@ -419,8 +574,8 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
       {!compacto && <span class={`voz-micro ${escuchada ? 'escuchada' : ''}`} title={escuchada ? 'Escuchada' : 'Sin escuchar'}><Icono n="micro" /><span class="sr">{escuchada ? 'Escuchada' : 'Sin escuchar'}</span></span>}
       {url && (
         <audio ref={audio} src={url} preload="metadata" data-pausa-musica
-          onPlay={(e) => { if (sonandoAhora && sonandoAhora !== e.currentTarget) { try { sonandoAhora.pause(); } catch { /* */ } } sonandoAhora = e.currentTarget; x.current.reintentado = false; x.current.intento = false; setSonando(true); alReproducir?.(); }}
-          onPause={(e) => { setSonando(false); if (!e.currentTarget.ended) recordar(e.currentTarget.currentTime); }}
+          onPlay={(e) => { if (sonandoAhora && sonandoAhora !== e.currentTarget) { try { sonandoAhora.pause(); } catch { /* */ } } sonandoAhora = e.currentTarget; x.current.reintentado = false; x.current.intento = false; setSonando(true); alSonar(e.currentTarget); alReproducir?.(); }}
+          onPause={(e) => { setSonando(false); alCallar(); if (!e.currentTarget.ended) recordar(e.currentTarget.currentTime); }}
           onEnded={() => { setSonando(false); setT(0); if (clave) posiciones.delete(clave); if (audio.current) audio.current.currentTime = 0; if (sonandoAhora === audio.current) sonandoAhora = null; alAcabar?.(); }}
           onLoadedMetadata={(e) => { if (x.current.pendiente > 0.3) { try { e.currentTarget.currentTime = x.current.pendiente; } catch { /* */ } x.current.pendiente = 0; } }}
           onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onError={alFallar} />
@@ -432,7 +587,7 @@ export function ReproductorVoz({ url: urlDada = null, pedirUrl = null, duracion 
 // La nota de voz en la burbuja: se descarga al tocar ▶ (con su enlace firmado); a quien la recibe, al reproducirla,
 // le cuenta como escuchada (el micro azul del otro lado), si tiene «en línea» activado. (v0.179) Al acabar, suena la
 // siguiente si va justo después (como WhatsApp).
-export function NotaVozChat({ c, mio, alEscuchada, encadena = true }) {
+export function NotaVozChat({ c, mio, alEscuchada, encadena = true, de = null }) {
   const { api } = useApp();
   const a = c.archivo;
   const control = useRef(null);
@@ -451,7 +606,7 @@ export function NotaVozChat({ c, mio, alEscuchada, encadena = true }) {
   };
   return (
     <ReproductorVoz pedirUrl={() => api.urlArchivo(a.ruta, { tipo: 'audio' })} duracion={a.duracion_seg} onda={a.onda} propio={mio} escuchada={!!c.escuchado_en}
-      clave={a.id || a.ruta} mime={a.mime || null} control={control} alAcabar={acabar}
+      clave={a.id || a.ruta} mime={a.mime || null} control={control} alAcabar={acabar} nueva={!mio && !c.escuchado_en} titulo={de ? `Nota de voz de ${de}` : 'Nota de voz'}
       alReproducir={() => { if (!mio && !c.escuchado_en) api.marcarEscuchado(c.id).then((x) => { if (x) alEscuchada?.(); }); }} />
   );
 }

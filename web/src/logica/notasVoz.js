@@ -126,6 +126,18 @@ export function ayudaMicro(ua = '', instalada = false) {
     nota: null,
   };
 }
+// (v0.180) No se oye nada: todos los niveles (0…1) por debajo de un hilo de ruido. Con menos de un segundo de muestras, no se opina
+export const SILENCIO_VOZ = 0.02;
+export const esSilencio = (niveles = []) => { const xs = Array.isArray(niveles) ? niveles : []; return xs.length >= 10 && xs.every((x) => (Number(x) || 0) < SILENCIO_VOZ); };
+// (v0.180) Cómo está el micro para la app, en claro. estado: 'granted' | 'prompt' | 'denied' | null; recordado: ya se activó en este aparato
+export function textoMicro(estado, recordado = false) {
+  if (estado === 'denied') return { clave: 'bloqueado', titulo: 'Bloqueado', detalle: 'La app no puede grabar hasta que lo actives en los ajustes del móvil.', boton: 'Cómo activarlo' };
+  if (estado === 'granted' || (recordado && estado !== 'prompt')) return { clave: 'activado', titulo: 'Activado', detalle: 'Listo para grabar notas de voz. Solo se usa mientras grabas.', boton: 'Probar el micro' };
+  if (recordado) return { clave: 'activado', titulo: 'Activado', detalle: 'Ya lo activaste aquí. Si el móvil vuelve a preguntar al grabar, elige «Permitir».', boton: 'Probar el micro' };
+  return { clave: 'sin-activar', titulo: 'Sin activar', detalle: 'Actívalo ahora y el móvil no te lo preguntará en mitad de una nota de voz.', boton: 'Activar el micro' };
+}
+// (v0.180) La prueba del micro: lo más alto que se ha oído (0…1) dice si se oye bien, bajo o nada
+export const resultadoPrueba = (pico = 0) => { const p = Number(pico) || 0; return p >= 0.12 ? 'bien' : p >= SILENCIO_VOZ ? 'bajo' : 'nada'; };
 export const esPermisoDenegado = (e) => ['NotAllowedError', 'SecurityError', 'PermissionDeniedError'].includes(e?.name || '');
 
 // Los mensajes de error, claros (permiso denegado, sin micro, sin grabación en este navegador)

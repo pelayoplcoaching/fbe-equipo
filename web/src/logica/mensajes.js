@@ -181,6 +181,7 @@ export function textoUltimaVez(iso, ahora = Date.now()) {
   return `últ. vez el ${d.getDate()} ${MESES[d.getMonth()]}${d.getFullYear() !== new Date(ahora).getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 }
 export function estadoConexion({ escribiendo = false, enLinea = false, ultima = null } = {}, ahora = Date.now()) {
+  if (escribiendo === 'voz') return 'grabando audio…';   // (v0.180)
   if (escribiendo) return 'escribiendo…';
   if (enLinea) return 'en línea';
   return textoUltimaVez(ultima, ahora);
