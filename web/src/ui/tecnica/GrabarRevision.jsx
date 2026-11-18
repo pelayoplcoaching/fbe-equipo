@@ -6,6 +6,7 @@
 // Si este navegador no puede grabar un lienzo con sonido, el botón ni sale (la voz sobre el vídeo de siempre sigue ahí).
 // También, «Responder con vídeo» (2): la cámara de delante y el micro, hasta un minuto, en el hilo de un vídeo (el coach o el
 // atleta), como un mensaje de vídeo.
+import { audioParaMicro } from '../sonido.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja, usePreferencia } from '../comunes.jsx';
 import { reproductorDe } from '../Video.jsx';
@@ -67,6 +68,7 @@ export function GrabarRevision({ video, nombreAtleta = 'Atleta', alCerrar, alEnv
     const sigue = () => vivo.current && turno.current === mio;
     const x = r.current = { ...r.current, cancelada: false };
     let micro = null, cara = null;
+    audioParaMicro(true);   // (v0.180.2) en el iPhone, con el audio en «ambient» el micro no se abre
     try { micro = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
     catch (e) { if (sigue()) { soltar(); setFase('preparar'); setError(textoError(e, 'el micro')); } return; }
     if (!sigue()) { soltarFlujo(micro); return; }
