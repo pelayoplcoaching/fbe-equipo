@@ -6701,7 +6701,12 @@ export function crearApi(backend) {
       const sesiones = await b.select('sesiones', { eq: { semana_id: semanaId }, order: [['orden', 'asc']] });
       const pos = Object.fromEntries(ids.map((id, k) => [id, k + 1]));
       sesiones.filter((x) => !(x.id in pos)).forEach((x, k) => { pos[x.id] = ids.length + k + 1; });
-      await Promise.all(sesiones.map((x) => (x.orden !== pos[x.id] ? b.update('sesiones', { orden: pos[x.id] }, { eq: { id: x.id } }) : null)));
+      // La base no deja dos sesiones de una semana con el mismo orden (unique (semana_id, orden)): las que cambian pasan
+      // primero a un puesto de paso, lejos de los de verdad, y despues a su sitio, una a una
+      const cambian = sesiones.filter((x) => x.orden !== pos[x.id]);
+      const paso = Math.max(1000, ...sesiones.map((x) => x.orden || 0)) + 1;
+      for (const [k, x] of cambian.entries()) await b.update('sesiones', { orden: paso + k }, { eq: { id: x.id } });
+      for (const x of cambian) await b.update('sesiones', { orden: pos[x.id] }, { eq: { id: x.id } });
     },
     // (v0.184) el mismo ejercicio otra vez, justo debajo, con su prescripcion
     async duplicarPauta(pautaId) {
@@ -6763,6 +6768,15 @@ export function crearApi(backend) {
       const n = String(nombre || '').trim().slice(0, 80);
       if (copia && n && n !== copia.nombre) return (await b.update('sesiones', { nombre: n }, { eq: { id: copia.id } }))[0];
       return copia;
+    },
+    // (v0.184) deshacer «quitar un ejercicio»: vuelve a crearlo con su prescripcion (solo sus campos de siempre) en su sitio
+    async restaurarPauta(fila, idsAntes = []) {
+      const limpia = Object.fromEntries(CAMPOS_SE.filter((c) => c !== 'series_detalle' || fila[c] != null).map((c) => [c, fila[c] ?? null]));
+      const [n] = await b.insert('sesion_ejercicios', [{ ...limpia, sesion_id: fila.sesion_id }]);
+      const ids = idsAntes.filter((x) => x !== fila.id);
+      ids.splice(Math.max(0, Math.min(ids.length, (fila.orden || 1) - 1)), 0, n.id);
+      await api.ordenarPautas(fila.sesion_id, ids);
+      return n;
     },
     async moverPauta(sesionId, pautaId, delta) {
       const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] });
