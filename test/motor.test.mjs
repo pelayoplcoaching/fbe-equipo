@@ -1021,9 +1021,6 @@ console.log('\nMil semanas al azar');
   check(problemas.length === 0, `mil semanas al azar: ni un fallo, ni una pauta inválida (${problemas.length} problemas)`);
 }
 
-console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
-if (fallos) process.exit(1);
-
 // (v0.181) la hoja serie a serie y las reglas efectivas de cada fila
 {
   const { seriesEnFilas, textoSerieFBE, seriesDePauta } = await import('../web/src/logica/motor/index.js');
@@ -1074,3 +1071,6 @@ if (fallos) process.exit(1);
   const clasica = run(banca, p4, [S(1, 35, 10, 7), S(2, 35, 10, 8), S(3, 35, 10, 8), S(4, 35, 10, 8)], { reglas: R });
   check(f(clasica) === '6×37.5 6×37.5 6×37.5 6×37.5', 'la regla clásica sigue disponible (al tope, sube y vuelve al suelo)');
 }
+
+console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
+if (fallos) process.exit(1);
