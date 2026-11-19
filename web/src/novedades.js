@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.191': {
+    coach: [
+      'Revisión semanal: la semana de cada atleta sin salir (sesiones, check-in, récords, lo que escribió) y modo «uno a uno».',
+      'Mensaje más fino, tus frases, nota de voz, «revisado al enviar», pedir el check-in a varios, orden, filtros y teclado.',
+      'Cada tarjeta dice si falta la semana que viene; tu nota sale al programarle; semanas pasadas y pausados aparte.',
+    ],
+  },
   '0.190': {
     atleta: [
       'Compartir: añade tu foto a la tarjeta. Sale en un recuadro arriba a la derecha, sin tapar tus cifras. En «Personalizar».',

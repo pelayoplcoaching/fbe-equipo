@@ -132,6 +132,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const privadas = { ...(notasEj.datos || {}), ...mias };
   const rms = useCarga(() => (atletaId ? api.mejoresRm(atletaId).catch(() => ({})) : Promise.resolve({})), [atletaId]);
   const faltan = useCarga(() => (atletaId ? api.porProgramar().catch(() => []) : Promise.resolve([])), [atletaId]);
+  // (v0.191) lo que apuntó en la revisión semanal de este atleta, delante al programarle
+  const notaRevision = useCarga(() => (atletaId ? api.notaDeRevision(atletaId).catch(() => null) : Promise.resolve(null)), [atletaId]);
   // Lo pendiente de guardar: se reintenta al volver la conexión y cada 10 s; y avisa si se va a cerrar la pestaña
   useEffect(() => {
     if (!pendientes.length) return undefined;
@@ -482,6 +484,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
             </div>
           </div>
           {!bloque.es_plantilla && semana.programacion !== 'programada' && <p class="peq secundario">Borrador: el atleta no verá esta semana hasta que la publiques.</p>}
+          {notaRevision.datos?.nota && <p class="peq nota-de-revision"><Icono n="historial" /> <span><strong>De tu revisión:</strong> {notaRevision.datos.nota}</span></p>}
           <div class="rejilla-campos">
             <div class="campo"><label for={`s-foco-${semana.id}`}>Foco semanal</label>
               <select id={`s-foco-${semana.id}`} class="selector" value={semana.foco || ''} onChange={(e) => guardar('semanas', semana.id, { foco: nulo(e.currentTarget.value) })}>

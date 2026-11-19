@@ -22,6 +22,7 @@ import './travesia.css';
 import './sonido.css';
 import './apuntes.css';
 import './visual.css';
+import './revision.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

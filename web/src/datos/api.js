@@ -40,6 +40,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
+import { estadoProxima, progresoSemana, comentariosSemana } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
@@ -4274,7 +4275,11 @@ export function crearApi(backend) {
       const contar = (xs) => xs.reduce((m, x) => { m[x.atleta_id] = (m[x.atleta_id] || 0) + 1; return m; }, {});
       const L = contar(sinLeer), V = contar(videos);
       let revs = [];
-      if (con040) revs = await b.select('revisiones_semanales', { in: { lunes: [lunes, anterior] } }).catch(() => []);
+      // (v0.191) las 8 últimas semanas: la de ahora, la anterior y el historial de notas de cada uno
+      const lunes8 = Array.from({ length: 8 }, (_, i) => sumarDias(lunes, -7 * i));
+      if (con040) revs = await b.select('revisiones_semanales', { in: { lunes: lunes8 } }).catch(() => []);
+      // (v0.191) cómo está la semana que viene de cada uno (publicada, en borrador o sin programar); si falla, sin ese dato
+      const proximas = await api.proximaSemanaDe(resumenes.filter((r) => r.bloque?.id).map((r) => ({ atleta_id: r.atleta_id, bloque_id: r.bloque.id })), lunes).catch(() => ({}));
       const R = {};
       for (const r of revs) (R[r.atleta_id] ||= {})[r.lunes] = r;
       const filas = resumenes.filter((r) => r.estado !== 'baja').map((r) => {
@@ -4288,9 +4293,64 @@ export function crearApi(backend) {
           mensajes: L[r.atleta_id] || 0,
           peso: r.peso || null, ultimaSesion: r.ultimaSesion || null, alertas: r.alertas || [],
           hecha: !!esta?.hecha, nota: esta?.nota || '', notaAnterior: pasada?.nota || '',
+          // (v0.191)
+          pausa: r.pausa ? { hasta: r.pausa.hasta || null, motivo: r.pausa.motivo || null } : null,
+          proxima: r.servicio === 'nutricion' || r.estado === 'pausado' ? null : proximas[r.atleta_id] ?? null,
+          diasNutricion: r.diasNutricion ?? null, habitos: r.habitos?.pct ?? null,
+          historial: lunes8.map((l) => R[r.atleta_id]?.[l]).filter(Boolean).map((x) => ({ lunes: x.lunes, hecha: !!x.hecha, nota: x.nota || '' })),
         };
       });
       return { lunes, revisiones: con040 === true, filas };
+    },
+    // (v0.191) { atleta_id: 'publicada' | 'borrador' | 'sin' | null } de la semana siguiente a `lunes`
+    async proximaSemanaDe(filas, lunes) {
+      const ids = unicos((filas || []).map((x) => x.bloque_id).filter(Boolean));
+      if (!ids.length) return {};
+      const semanas = agrupar(await b.select('semanas', { in: { bloque_id: ids }, cols: 'id,bloque_id,fecha_inicio,programacion' }), 'bloque_id');
+      return Object.fromEntries(filas.map((x) => [x.atleta_id, estadoProxima(semanas[x.bloque_id] || [], lunes)]));
+    },
+    // (v0.191) una semana pasada, solo para verla: quién quedó revisado y con qué nota
+    async revisionDeSemana(lunes) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lunes))) throw new Error('Esa semana no vale');
+      const [atletas, revs] = await Promise.all([api.atletas(), b.select('revisiones_semanales', { eq: { lunes } }).catch(() => [])]);
+      const R = Object.fromEntries(revs.map((r) => [r.atleta_id, r]));
+      return { lunes, filas: atletas.filter((a) => a.estado !== 'baja' || R[a.id]).map((a) => ({ atleta_id: a.id, nombre: a.nombre, foto: a.foto || null, hecha: !!R[a.id]?.hecha, nota: R[a.id]?.nota || '' }))
+        .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es')) };
+    },
+    // (v0.191) la última nota de la revisión de un atleta (para tenerla delante al programar): { lunes, nota } o null
+    async notaDeRevision(atletaId) {
+      if (!atletaId || (await api.revision040().catch(() => null)) === false) return null;
+      const filas = await b.select('revisiones_semanales', { eq: { atleta_id: atletaId }, order: [['lunes', 'desc']], limit: 6 }).catch(() => []);
+      const x = filas.find((r) => String(r.nota || '').trim());
+      return x ? { lunes: x.lunes, nota: String(x.nota).trim() } : null;
+    },
+    // (v0.191) todo lo de un atleta en la semana, para revisarlo sin salir: su check-in (el de esta semana o, si aún no
+    // lo ha enviado, el de la pasada) con el anterior, sus sesiones una a una, récords y parones, lo que escribió y el
+    // resumen de la semana. Nada nuevo: lo mismo que el coach ya ve en la ficha
+    async detalleRevision(atletaId, lunes) {
+      const [ck0, series, bloques, resumen] = await Promise.all([
+        api.checkin(atletaId, lunes).catch(() => null),
+        api.historial(atletaId).catch(() => []),
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' }).catch(() => []),
+        api.resumenSemanaAtleta(atletaId).catch(() => null),
+      ]);
+      let ck = ck0, deEsta = !!ck0?.checkin;
+      if (!deEsta) { ck = await api.checkin(atletaId, sumarDias(lunes, -7)).catch(() => null); }
+      const fin = sumarDias(lunes, 6);
+      const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,fecha_inicio,programacion,numero' }).catch(() => []) : [];
+      const todas = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, cols: 'id,semana_id,nombre,tipo,orden,completada,fecha_realizada,duracion_min,rpe_sesion,nota_atleta,cardio_hecho' }).catch(() => []) : [];
+      const deLaSemana = new Set(semanas.filter((w) => w.programacion === 'programada' && w.fecha_inicio && lunesDe(w.fecha_inicio) === lunes).map((w) => w.id));
+      const cuenta = {};
+      for (const x of series) if (x.sesion_id && Number(x.reps) > 0) cuenta[x.sesion_id] = (cuenta[x.sesion_id] || 0) + 1;
+      const hechas = todas.filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada >= lunes && x.fecha_realizada <= fin);
+      const pendientes = todas.filter((x) => !x.completada && deLaSemana.has(x.semana_id));
+      const sesiones = [...hechas.sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? -1 : 1)), ...pendientes.sort((x, y) => (x.orden || 0) - (y.orden || 0))]
+        .map((x) => ({ id: x.id, nombre: x.nombre, tipo: x.tipo, completada: !!x.completada, fecha: x.fecha_realizada || null, duracion_min: x.duracion_min ?? null, rpe_sesion: x.rpe_sesion ?? null,
+          nota_atleta: x.nota_atleta || '', cardio_hecho: x.cardio_hecho || null, series: cuenta[x.id] || 0 }));
+      return {
+        lunes, checkin: ck?.checkin || null, checkinDeEstaSemana: deEsta, anterior: ck?.anterior || null, molestias: ck?.checkin ? ck.molestias || [] : [],
+        sesiones, progreso: progresoSemana(series, lunes), comentarios: comentariosSemana(sesiones, series, lunes), resumen,
+      };
     },
     async marcarRevision(atletaId, lunes, cambios) {
       if ((await api.revision040()) === false) throw new Error('Para guardar la revisión semanal falta ejecutar la migración 040 en Supabase (supabase/migraciones/040_revision_semanal.sql).');

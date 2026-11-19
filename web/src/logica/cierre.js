@@ -71,7 +71,8 @@ export function habitosSugeridos(cuestionario = null, existentes = []) {
 // ---------------------------------------------------------------- la revisión semanal: el borrador del mensaje
 // f: la fila de la revisión (nombre, sesiones {completadas,total}, checkin, molestia, videos, mensajes, notaAnterior);
 // r: el resumen de la semana (atleta_resumen_semana), si lo hay. Un mensaje corto, en el tono del coach, para retocar.
-export function borradorRevision(f, r = null) {
+// (v0.191) `extra` (de logica/revision.js: extraParaBorrador): sus récords, lo que se quedó sin hacer y lo que contó en el check-in
+export function borradorRevision(f, r = null, extra = null) {
   const nombre = String(f?.nombre || '').split(' ')[0] || 'Hola';
   const { completadas = 0, total = 0 } = f?.sesiones || {};
   const lineas = [`Hola, ${nombre}. Repaso de tu semana:`];
@@ -81,7 +82,17 @@ export function borradorRevision(f, r = null) {
   const rpe = r?.sesiones?.rpe_sesion ?? r?.sesiones?.rpe_series;
   if (rpe != null) lineas.push(rpe >= 8.5 ? `Esfuerzo medio ${num(rpe)}: alto. Vigila la recuperación esta semana.` : rpe <= 6 ? `Esfuerzo medio ${num(rpe)}: hay margen para apretar un poco.` : `Esfuerzo medio ${num(rpe)}: en su sitio.`);
   if (r?.sesiones?.toneladas) lineas.push(`${num(r.sesiones.series, 0)} series y ${num(r.sesiones.toneladas)} toneladas movidas.`);
+  if (extra?.pendientes?.length && completadas > 0 && extra.pendientes.length <= 3) lineas.push(`Sin hacer: ${extra.pendientes.join(', ')}.`);
+  if (extra?.records?.length) lineas.push(extra.records.length === 1 ? `🏆 Récord en ${extra.records[0].ejercicio} (${extra.records[0].marca}). Enhorabuena.` : `🏆 Récords en ${extra.records.map((x) => x.ejercicio).join(', ')}. Enhorabuena.`);
+  if (extra?.parados?.length) lineas.push(`${extra.parados.join(' y ')}: ${extra.parados.length === 1 ? 'lleva' : 'llevan'} un par de semanas sin moverse; lo miro al programar.`);
   if (r?.peso?.kg != null) lineas.push(`Peso: ${num(r.peso.kg)} kg${r.peso.cambio_4s != null ? ` (${r.peso.cambio_4s > 0 ? '+' : ''}${num(r.peso.cambio_4s)} kg en 4 semanas)` : ''}.`);
+  const ck = extra?.checkin;
+  if (ck) {
+    const bajos = [['energia', 'la energía'], ['recuperacion', 'la recuperación'], ['motivacion', 'la motivación']].filter(([k]) => ck[k] != null && Number(ck[k]) <= 2).map(([, t]) => t);
+    if (bajos.length) lineas.push(`En el check-in me dices que ${bajos.join(' y ')} ${bajos.length === 1 ? 'va justa' : 'van justas'}: lo tengo en cuenta para esta semana.`);
+    if (ck.horas_sueno === '<5' || ck.horas_sueno === '5-6') lineas.push(`Duermes poco (${ck.horas_sueno} h): es lo primero que yo intentaría mejorar.`);
+    if (ck.notas) lineas.push('He leído lo que me cuentas en el check-in.');
+  }
   if (f?.molestia >= 3) lineas.push('Veo molestias fuertes en el check-in: cuéntame cómo va y adaptamos lo que haga falta.');
   else if (f?.molestia >= 2) lineas.push('Apuntaste alguna molestia: ojo con ella, y me dices.');
   if (!f?.checkin) lineas.push('Me falta tu check-in de la semana: son dos minutos y me ayuda a ajustarte el plan.');

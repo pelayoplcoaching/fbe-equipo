@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.191: la revisión semanal, más fácil de pasar (test/e2e-revision-191.mjs)
+console.log('\nv0.191: la revisión semanal, más fácil de pasar');
+try {
+  const { probarRevision191 } = await import('./e2e-revision-191.mjs');
+  await probarRevision191({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.191:', e.message.split('\n')[0]);
+}
+
 // v0.186: el editor manual, tercera tanda (test/e2e-editor-186.mjs)
 console.log('\nv0.186: el editor manual, tercera tanda');
 try {
