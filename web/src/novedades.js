@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.188': {
+    atleta: [
+      'Compartir: siete fondos nuevos para tus tarjetas (rack, discos, mancuernas, magnesio, banco, barra y kettlebells). Están en «Personalizar».',
+    ],
+  },
   '0.187': {
     atleta: [
       'Compartir: las tarjetas cuadran con nombres largos, hay formato cuadrado y dos plantillas nuevas, «Lista» y «Récord».',

@@ -1659,6 +1659,26 @@
     },
     "color": "#55386a"
   },
+  "compartir-banco": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-banco-1024.2abd099f.webp"
+    },
+    "color": "#33235a"
+  },
+  "compartir-barra-suelo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-barra-suelo-1024.3b0b7b9e.webp"
+    },
+    "color": "#2e1c52"
+  },
   "compartir-bloque": {
     "proporcion": [
       4,
@@ -1668,6 +1688,46 @@
       "1024": "imagenes/compartir/compartir-bloque-1024.b7f94d30.webp"
     },
     "color": "#422b65"
+  },
+  "compartir-discos": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-discos-1024.b09441a9.webp"
+    },
+    "color": "#352666"
+  },
+  "compartir-kettlebells": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-kettlebells-1024.9d12354d.webp"
+    },
+    "color": "#2d1d51"
+  },
+  "compartir-magnesio": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-magnesio-1024.222b9901.webp"
+    },
+    "color": "#2f2257"
+  },
+  "compartir-mancuernas": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-mancuernas-1024.d11688aa.webp"
+    },
+    "color": "#302155"
   },
   "compartir-mes": {
     "proporcion": [
@@ -1688,6 +1748,16 @@
       "1024": "imagenes/compartir/compartir-racha-1024.e7709cfb.webp"
     },
     "color": "#442952"
+  },
+  "compartir-rack": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-rack-1024.7475e2f0.webp"
+    },
+    "color": "#372867"
   },
   "compartir-record": {
     "proporcion": [
