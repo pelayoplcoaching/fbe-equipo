@@ -92,7 +92,7 @@
 .rev-pasos li.hecho { color: var(--tinta); }
 .rev-pasos li.hecho svg { color: var(--ok); }
 .rev-pasos li.hecho span:not(.sr) { text-decoration: line-through; }
-.rev-pedir { cursor: pointer; font: inherit; font-size: inherit; border: var(--filo-fino) solid transparent; display: inline-flex; align-items: center; gap: var(--esp-4); min-height: 28px; }
+.rev-pedir { cursor: pointer; font-family: inherit; border: var(--filo-fino) solid transparent; display: inline-flex; align-items: center; gap: var(--esp-4); min-height: 28px; }
 .rev-pedir svg { width: var(--ico-14); height: var(--ico-14); }
 .rev-pedir:hover { border-color: var(--linea); }
 .rev-extra { align-items: center; gap: var(--esp-12); }

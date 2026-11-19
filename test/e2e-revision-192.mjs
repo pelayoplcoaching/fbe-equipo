@@ -100,6 +100,7 @@ export async function probarRevision192({ navegador, check, base = 'http://local
     const quien = (await primera.locator('.revision-quien strong').textContent()).trim();
     await primera.getByLabel(`Estado de la revisión de ${quien}`).selectOption('esperando');
     check(await hasta(async () => (await filaDe(quien).locator('.chip', { hasText: 'Esperando su respuesta' }).count()) === 1) && await hasta(async () => (await p.locator('.rev-filtro', { hasText: /A medias \(1\)/ }).count()) === 1), 'un atleta se queda «esperando su respuesta» y sale su filtro');
+    await p.waitForTimeout(700);   // (la demo guarda con un pequeño margen)
     await p.reload();
     await p.locator('.revision-fila').first().waitFor();
     check(await hasta(async () => (await filaDe(quien).locator('.chip', { hasText: 'Esperando su respuesta' }).count()) === 1), 'y sigue así al volver');
