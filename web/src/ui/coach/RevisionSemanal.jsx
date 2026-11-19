@@ -347,7 +347,7 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
         <div class="fila-envolver rev-abrir">
           <button type="button" class="btn-texto mini" aria-expanded={abierta ? 'true' : 'false'} onClick={alternar}><Icono n={abierta ? 'arriba' : 'abajo'} /> {abierta ? 'Ocultar su semana' : 'Ver su semana aquí'}</button>
           {alFoco && <button type="button" class="btn-texto mini" onClick={alFoco}>Uno a uno desde aquí</button>}
-          {sinProgramar && f.bloque?.id && <button type="button" class="btn-texto mini" onClick={() => programarAqui('fbe')}>Programar según FBE</button>}
+          {sinProgramar && f.bloque?.id && <button type="button" class="btn-texto mini" onClick={() => programarAqui('fbe')}>Propuesta según FBE</button>}
           {mover && <span class="rev-mover"><button type="button" class="btn-icono plano" aria-label={`Subir a ${f.nombre}`} disabled={!mover.subir} onClick={mover.subir || undefined}><Icono n="arriba" /></button><button type="button" class="btn-icono plano" aria-label={`Bajar a ${f.nombre}`} disabled={!mover.bajar} onClick={mover.bajar || undefined}><Icono n="abajo" /></button></span>}
         </div>
       )}
