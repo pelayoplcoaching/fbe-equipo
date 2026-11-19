@@ -129,7 +129,7 @@
 .rev-lado-chat { position: sticky; top: var(--esp-8); min-width: 0; }
 .rev-ultimos, .rev-audios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
 .rev-ultimos li { display: grid; gap: var(--esp-2); padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); overflow-wrap: anywhere; }
-.rev-ultimos li.mio { border-left: 3px solid var(--morado); }
+.rev-ultimos li.mio { border-left: var(--filo-marca) solid var(--morado); }
 .rev-mini-acciones { gap: var(--esp-12); }
 .rev-citar { cursor: pointer; font-family: inherit; border: var(--filo-fino) solid transparent; display: inline-flex; align-items: center; gap: var(--esp-4); min-height: 28px; }
 .rev-citar:hover { border-color: var(--linea); }
