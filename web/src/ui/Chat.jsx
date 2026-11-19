@@ -71,7 +71,7 @@ const almacen = () => { try { return window.localStorage; } catch { return null;
 const enOrdenador = () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 const ahorroDatos = () => typeof navigator !== 'undefined' && !!navigator.connection?.saveData;
 
-export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', fotoOtro = null, irContexto, alLeer, alCambiar, cabecera = null, perfilOtro = null, saltarA = null, archivosIniciales = null }) {
+export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coach', fotoOtro = null, irContexto, alLeer, alCambiar, cabecera = null, perfilOtro = null, saltarA = null, archivosIniciales = null, insertar = null }) {
   const { api, perfil, aviso, modo } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const miId = perfil?.id || null;
@@ -82,6 +82,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const conv = useCarga(async () => { const d = await api.conversacion(atletaId, { limite }); if (d && typeof d === 'object') limiteDe.current.set(d, limite); return d; }, [atletaId, limite]);
   const borradorInicial = useMemo(() => leerBorrador(almacen(), miId, atletaId), [miId, atletaId]);
   const [texto, setTexto] = useState(borradorInicial?.texto || '');
+  // (v0.193) desde la revisión semanal: un dato que se cita entra en lo que se está escribiendo
+  useEffect(() => { if (insertar?.texto) setTexto((t) => (t ? `${t.trimEnd()} ${insertar.texto}` : insertar.texto)); }, [insertar?.n]);
   const [adjuntos, setAdjuntos] = useState([]);      // [{ id, archivo, url, esVideo, esPdf, paginas }]
   const [enDiario, setEnDiario] = useState(true);    // los vídeos del atleta, a su diario (como vídeo de técnica)
   const [enviando, setEnviando] = useState(false);

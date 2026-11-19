@@ -4394,6 +4394,10 @@ export function crearApi(backend) {
         b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'foto_progreso' }, gte: { fecha: lunes }, cols: 'id,fecha' }).then((xs) => xs.filter((x) => x.fecha <= fin).length).catch(() => 0),
         b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null).catch(() => null),
       ]);
+      // (v0.193) las notas de voz que aún no ha escuchado el coach (para oírlas en la tarjeta)
+      const idsAudio = unicos(sinLeer.map((c) => c.archivo_id).filter(Boolean));
+      const audios = idsAudio.length ? (await b.select('archivos', { in: { id: idsAudio } }).catch(() => [])).filter((a) => a.tipo === 'audio') : [];
+      const mensajeDeAudio = Object.fromEntries(sinLeer.filter((c) => c.archivo_id).map((c) => [c.archivo_id, c]));
       const ejDeVideo = videos.length ? porId(await b.select('ejercicios', { in: { id: unicos(videos.map((v) => v.ejercicio_id).filter(Boolean)) }, cols: 'id,nombre' }).catch(() => [])) : {};
       const planCarrera = atleta?.carrera ? await b.select('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).then((x) => x[0] || null).catch(() => null) : null;
       const sesiones = [...hechas.sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? -1 : 1)), ...pendientes.sort((x, y) => (x.orden || 0) - (y.orden || 0))]
@@ -4407,7 +4411,43 @@ export function crearApi(backend) {
         mensajes: sinLeer.filter((c) => String(c.texto || '').trim() || c.archivo_id).map((c) => ({ id: c.id, texto: String(c.texto || '').trim(), adjunto: !!c.archivo_id, creado_en: c.creado_en })),
         videos: videos.map((v) => ({ id: v.id, poster_ruta: v.poster_ruta || null, ejercicio: ejDeVideo[v.ejercicio_id]?.nombre || null, fecha: v.fecha || null, duracion_seg: v.duracion_seg ?? null, nota_atleta: v.nota_atleta || '' })),
         fotos, carrera: atleta?.carrera ? carreraDeLaSemana(sesiones, planCarrera) : null,
+        // (v0.193)
+        checkinId: ck?.checkin?.id || null,
+        audios: audios.map((a) => ({ id: a.id, ruta: a.ruta, duracion_seg: a.duracion_seg ?? null, onda: a.onda || null, mime: a.mime || null, comentario_id: mensajeDeAudio[a.id]?.id || null, creado_en: mensajeDeAudio[a.id]?.creado_en || a.creado_en })),
+        atleta: atleta ? { id: atleta.id, nivel: atleta.nivel || null, volumen_objetivo: atleta.volumen_objetivo ?? null, carrera: !!atleta.carrera, entrenamiento: atleta.entrenamiento !== false, perfil_id: atleta.perfil_id || null } : null,
       };
+    },
+    // (v0.193) lo último que se han dicho (para tenerlo delante al revisar): los n últimos mensajes ya enviados
+    async ultimosMensajes(atletaId, n = 3) {
+      const filas = await b.select('comentarios', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']], limit: Math.max(12, n * 2) }).catch(() => []);
+      const ahora = Date.now();
+      const ms = filas.filter((c) => !c.eliminado_en && (!c.enviar_en || Date.parse(c.enviar_en) <= ahora)).slice(0, n).reverse();
+      const ids = unicos(ms.map((c) => c.archivo_id).filter(Boolean));
+      const AR = ids.length ? porId(await b.select('archivos', { in: { id: ids } }).catch(() => [])) : {};
+      return ms.map((c) => {
+        const a = AR[c.archivo_id];
+        return { id: c.id, autor: c.autor, texto: String(c.texto || '').trim(), adjunto: !!c.archivo_id, creado_en: c.creado_en, sinLeer: c.autor === 'atleta' && !c.leido_en,
+          audio: a?.tipo === 'audio' ? { id: a.id, ruta: a.ruta, duracion_seg: a.duracion_seg ?? null, onda: a.onda || null, mime: a.mime || null } : null };
+      });
+    },
+    // (v0.193) el vídeo anterior de ese mismo ejercicio (para compararlo con el nuevo), o null
+    async videoAnterior(video) {
+      if (!video?.atleta_id || !video?.ejercicio_id) return null;
+      const filas = await b.select('archivos', { eq: { atleta_id: video.atleta_id, ejercicio_id: video.ejercicio_id, tipo: 'video_tecnica' }, order: [['creado_en', 'desc']], limit: 12 }).catch(() => []);
+      return filas.find((x) => x.id !== video.id && x.creado_en < video.creado_en) || null;
+    },
+    // (v0.193, opcional) al dar a un atleta por revisado, dar también por revisado lo suyo que espera en «Revisar»
+    // (sesiones, check-ins y vídeos). Devuelve lo marcado, para poder deshacerlo: [{ tipo, id }]
+    async revisarLoDe(atletaId) {
+      const bj = await api.bandeja();
+      const suyo = (xs) => (xs || []).filter((x) => (x.atleta?.id || x.atleta_id) === atletaId);
+      const lista = [...suyo(bj.sesiones).map((x) => ({ tipo: 'sesion', id: x.id })), ...suyo(bj.checkins).map((x) => ({ tipo: 'checkin', id: x.id })), ...suyo(bj.archivos).map((x) => ({ tipo: 'archivo', id: x.id }))];
+      const hechos = [];
+      for (const x of lista) { try { await api.marcarRevisado(x.tipo, x.id); hechos.push(x); } catch { /* lo que no se pueda, se queda en «Revisar» */ } }
+      return hechos;
+    },
+    async deshacerRevisados(lista) {
+      for (const x of lista || []) { try { await api.marcarRevisado(x.tipo, x.id, false); } catch { /* */ } }
     },
     async marcarRevision(atletaId, lunes, cambios) {
       if ((await api.revision040()) === false) throw new Error('Para guardar la revisión semanal falta ejecutar la migración 040 en Supabase (supabase/migraciones/040_revision_semanal.sql).');

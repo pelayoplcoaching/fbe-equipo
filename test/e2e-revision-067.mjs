@@ -128,8 +128,12 @@ export async function probarRevision067({ navegador, check, base = 'http://local
     check(await vista.locator('.revision-fila.hecha', { hasText: nombre }).locator('textarea').inputValue() === 'Subir 2,5 kg en sentadilla', 'se guarda: al volver a abrir la app, sigue revisado y con su nota');
     // «Programar» abre su ficha en Programa
     await vista.locator('.revision-fila', { hasText: nombre }).getByRole('button', { name: 'Programar' }).click();
+    // (v0.193) abre el editor ahí mismo; desde la hoja, «Abrir en su ficha» lleva a Programa
+    const hojaProg = p.getByRole('dialog').last();
+    await hojaProg.locator('.semanas-tabs, .rev-editor').first().waitFor();
+    await hojaProg.getByRole('button', { name: 'Abrir en su ficha' }).click();
     await p.getByRole('tab', { name: 'Programa', selected: true }).waitFor();
-    check(await p.getByRole('tab', { name: 'Programa', selected: true }).count() === 1, '«Programar» abre su ficha en Programa');
+    check(await p.getByRole('tab', { name: 'Programa', selected: true }).count() === 1, '«Programar» abre su programa (y de ahí, su ficha en Programa)');
   } catch (e) {
     check(false, `v0.67: ${e.message.split('\n').slice(0, 6).join(' ')} | en: ${(e.stack || '').split('\n').find((l) => l.includes('e2e-revision-067')) || '?'}`);
     await p.screenshot({ path: new URL('./e2e-fallo-067.png', import.meta.url).pathname }).catch(() => {});

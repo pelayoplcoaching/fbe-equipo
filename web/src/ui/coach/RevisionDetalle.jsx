@@ -3,7 +3,9 @@ import { useApp, useCarga, Icono, Hoja, useUnaVez } from '../comunes.jsx';
 import { borradorRevision } from '../../logica/cierre.js';
 import { sumarDias, fmtConDia } from '../../logica/fechas.js';
 import { num, NOMBRE_ZONA } from '../../logica/calculos.js';
-import { lineasCheckin, pautadoFrenteAHecho, extraParaBorrador, conFrase, sinFrase, insertarFrase, conNombre, textoCorto, TONOS, tonoDe, conTono, proximoLunesALas } from '../../logica/revision.js';
+import { lineasCheckin, pautadoFrenteAHecho, extraParaBorrador, conFrase, sinFrase, insertarFrase, conNombre, textoCorto, TONOS, tonoDe, conTono, proximoLunesALas, citaDe } from '../../logica/revision.js';
+import { Hilo } from '../Hilo.jsx';
+import { VideosRevision, AudiosSinEscuchar } from './RevisionTodo.jsx';
 import { useGrabadora, PanelGrabando, PanelRevisar, AyudaMicro, ActivarMicro } from '../chat/NotaVoz.jsx';
 
 // v0.191: lo de cada atleta en la semana, sin salir de la revisión (se pide al abrirlo y se recuerda un rato)
@@ -25,8 +27,10 @@ export const guardarPref = (p) => guardarLocal('fbe-revision-pref', p);
 
 const SIGNO = { sube: 'Sube', baja: 'Baja' };
 
-export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
+export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null, alCitar = null, alAjustar = null, compacto = false }) {
   const { api } = useApp();
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [hiloCheckin, setHiloCheckin] = useState(false);
   const d = useCarga(() => pedirDetalle(api, f.atleta_id, lunes), [f.atleta_id, lunes]);
   if (d.cargando && !d.datos) return <p class="peq secundario rev-detalle-espera" role="status">Cargando su semana...</p>;
   if (d.error || !d.datos) return <p class="peq rev-detalle-espera">No se ha podido cargar su semana. <button type="button" class="btn-texto mini" onClick={() => { olvidarDetalle(f.atleta_id); d.recargar(); }}>Reintentar</button></p>;
@@ -40,9 +44,12 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
       {x.videos?.length > 0 && (
         <section class="rev-bloque" aria-label="Vídeos sin revisar">
           <h2>Vídeos sin revisar</h2>
-          <ul class="rev-videos">{x.videos.map((v) => <li key={v.id}><MiniVideo v={v} nombre={f.nombre} alAbrir={() => abrirAtleta(f.atleta_id, 'videos', null)} /></li>)}</ul>
+          {corrigiendo && !compacto ? <VideosRevision f={f} alCambiar={(n) => { olvidarDetalle(f.atleta_id); alCambiar?.({ videos: Math.max(0, (f.videos || 0) + n) }); }} />
+            : <ul class="rev-videos">{x.videos.map((v) => <li key={v.id}><MiniVideo v={v} nombre={f.nombre} alAbrir={() => (compacto ? abrirAtleta(f.atleta_id, 'videos', null) : setCorrigiendo(true))} /></li>)}</ul>}
+          {corrigiendo && !compacto && <button type="button" class="btn-texto mini" onClick={() => setCorrigiendo(false)}>Cerrar la corrección</button>}
         </section>
       )}
+      {!compacto && <AudiosSinEscuchar audios={x.audios} />}
       <section class="rev-bloque" aria-label="Sus sesiones de la semana">
         <h2>Sesiones</h2>
         {x.comparacion?.length > 0 && (
@@ -51,12 +58,12 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
           </dl>
         )}
         {!x.sesiones.length ? <p class="peq secundario">Sin sesiones esta semana.</p> : (
-          <ul class="rev-sesiones">{x.sesiones.map((s) => <SesionRevision key={s.id} s={s} atletaId={f.atleta_id} />)}</ul>
+          <ul class="rev-sesiones">{x.sesiones.map((s) => <SesionRevision key={s.id} s={s} atletaId={f.atleta_id} nombre={f.nombre} alCitar={alCitar} conHilo={!compacto} />)}</ul>
         )}
         {x.cortos?.length > 0 && (
           <div class="pila-xs">
             <span class="peq secundario">Dónde se quedó corto</span>
-            <ul class="rev-comentarios">{x.cortos.slice(0, 8).map((c) => <li key={c.id}><span><strong>{c.ejercicio}:</strong> {textoCorto(c)}</span></li>)}</ul>
+            <ul class="rev-comentarios">{x.cortos.slice(0, 8).map((c) => <li key={c.id}><span><strong>{c.ejercicio}:</strong> {textoCorto(c)}</span><span class="fila-envolver rev-mini-acciones">{alCitar && <button type="button" class="btn-texto mini" onClick={() => alCitar(citaDe.corto(c))}>Citar</button>}{alAjustar && c.ejercicio_id && <button type="button" class="btn-texto mini" onClick={() => alAjustar(c.ejercicio_id)}>Ajustarlo en la semana que viene</button>}</span></li>)}</ul>
           </div>
         )}
       </section>
@@ -86,6 +93,13 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
             </dl>
             {molestias.length > 0 && <p class="peq rev-molestias"><strong>Molestias:</strong> {molestias.map((m) => `${NOMBRE_ZONA[m.zona] || m.zona} ${m.intensidad}/3${m.notas ? ` (${m.notas})` : ''}`).join(' · ')}</p>}
             {String(x.checkin.notas || '').trim() && <p class="cita">«{String(x.checkin.notas).trim()}»</p>}
+            {!compacto && (
+              <div class="fila-envolver rev-mini-acciones">
+                {x.checkinId && <button type="button" class="btn-texto mini" aria-expanded={hiloCheckin ? 'true' : 'false'} onClick={() => setHiloCheckin((v) => !v)}>{hiloCheckin ? 'Cerrar los comentarios' : 'Comentar el check-in'}</button>}
+                {alCitar && lineas.length > 0 && <button type="button" class="btn-texto mini" onClick={() => alCitar(citaDe.checkin(lineas))}>Citar en el chat</button>}
+              </div>
+            )}
+            {hiloCheckin && x.checkinId && <Hilo atletaId={f.atleta_id} checkinId={x.checkinId} nombreAtleta={f.nombre} />}
           </div>
         )}
       </section>
@@ -94,8 +108,12 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
         <section class="rev-bloque" aria-label="Récords y parones">
           <h2>Récords y parones</h2>
           <ul class="rev-progreso">
-            {x.progreso.records.map((r) => <li key={r.ejercicio_id} class="chip ok"><Icono n="trofeo" /> {r.ejercicio}: {r.marca}</li>)}
-            {x.progreso.parados.map((r) => <li key={r.ejercicio_id} class={`chip ${r.estado === 'baja' ? 'aviso' : 'info'}`}>{r.ejercicio}: {r.estado === 'baja' ? 'dos semanas bajando' : 'dos semanas parado'}</li>)}
+            {x.progreso.records.map((r) => (alCitar
+              ? <li key={r.ejercicio_id}><button type="button" class="chip ok rev-citar" title="Citarlo en el chat" onClick={() => alCitar(citaDe.record(r))}><Icono n="trofeo" /> {r.ejercicio}: {r.marca}</button></li>
+              : <li key={r.ejercicio_id} class="chip ok"><Icono n="trofeo" /> {r.ejercicio}: {r.marca}</li>))}
+            {x.progreso.parados.map((r) => (alAjustar
+              ? <li key={r.ejercicio_id}><button type="button" class={`chip rev-citar ${r.estado === 'baja' ? 'aviso' : 'info'}`} title="Ajustarlo en la semana que viene" onClick={() => alAjustar(r.ejercicio_id)}>{r.ejercicio}: {r.estado === 'baja' ? 'dos semanas bajando' : 'dos semanas parado'}</button></li>
+              : <li key={r.ejercicio_id} class={`chip ${r.estado === 'baja' ? 'aviso' : 'info'}`}>{r.ejercicio}: {r.estado === 'baja' ? 'dos semanas bajando' : 'dos semanas parado'}</li>))}
           </ul>
         </section>
       )}
@@ -138,9 +156,10 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
   );
 }
 
-function SesionRevision({ s, atletaId }) {
+function SesionRevision({ s, atletaId, nombre = 'Atleta', alCitar = null, conHilo = false }) {
   const { api } = useApp();
   const [abierta, setAbierta] = useState(false);
+  const [hilo, setHilo] = useState(false);
   const d = useCarga(() => (abierta ? api.sesion(s.id, atletaId) : Promise.resolve(null)), [abierta, s.id]);
   const filas = d.datos ? pautadoFrenteAHecho(d.datos.ejercicios) : [];
   return (
@@ -163,6 +182,13 @@ function SesionRevision({ s, atletaId }) {
           </table>
         </div>
       ))}
+      {abierta && (conHilo || alCitar) && (
+        <div class="fila-envolver rev-mini-acciones">
+          {conHilo && s.completada && <button type="button" class="btn-texto mini" aria-expanded={hilo ? 'true' : 'false'} onClick={() => setHilo((v) => !v)}>{hilo ? 'Cerrar los comentarios' : 'Comentar esta sesión'}</button>}
+          {alCitar && <button type="button" class="btn-texto mini" onClick={() => alCitar(citaDe.sesion(s))}>Citar en el chat</button>}
+        </div>
+      )}
+      {hilo && <Hilo atletaId={atletaId} sesionId={s.id} nombreAtleta={nombre} />}
     </li>
   );
 }

@@ -151,6 +151,15 @@ console.log('\nLa revisión semanal, segunda tanda (v0.192): lo puro');
     && !RV.lineasCheckin({ adherencia_desayuno: 5 }).some((x) => /desayuno/.test(x.etiqueta)), 'quien es solo de nutrición ve la adherencia comida a comida');
 }
 
+console.log('\nLa revisión semanal, tercera tanda (v0.193): lo puro');
+{
+  check(RV.citaDe.record({ ejercicio: 'Press banca', marca: '80 kg x 6' }) === 'Récord en Press banca (80 kg x 6).' && /dos semanas bajando/.test(RV.citaDe.parado({ ejercicio: 'Curl', estado: 'baja', marca: '12 kg x 10' }))
+    && RV.citaDe.corto({ ejercicio: 'Remo', cortas: 2, tope: 0, faltan: 0 }) === 'Remo: 2 por debajo del rango.' && RV.citaDe.sesion({ nombre: 'Torso A', completada: true, rpe_sesion: 8, duracion_min: 65 }) === 'Torso A, esfuerzo 8, 65 min:'
+    && /sin hacer/.test(RV.citaDe.sesion({ nombre: 'Torso B', completada: false })) && RV.citaDe.checkin([{ etiqueta: 'Energía', valor: '2/5', cambio: 'baja' }, { etiqueta: 'Sueño', valor: '6-7 h', cambio: null }]) === 'Del check-in: energía 2/5.', 'un dato de su semana se cita en una frase');
+  check(RV.pestanasDe(f('A', { videos: 2 })).map(([k]) => k).join() === 'semana,chat,videos,programar' && RV.pestanasDe(f('A')).map(([k]) => k).join() === 'semana,chat,programar' && RV.pestanasDe(f('N', { servicio: 'nutricion' })).map(([k]) => k).join() === 'semana,chat', 'las pestañas de uno a uno: solo las que le tocan');
+  check(RV.quedoCorto([{ sesion_ejercicio_id: 'p', ejercicio_id: 'e1', fecha: '2026-11-17', reps: 3, rpe: 8, ejercicio: 'Banca' }], [{ id: 'p', reps_min: 5, series: 1 }], L)[0].ejercicio_id === 'e1', 'lo corto dice de qué ejercicio es (para ajustarlo)');
+}
+
 console.log('\nLa revisión semanal (v0.191): contra la demo');
 {
   const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
@@ -185,6 +194,21 @@ console.log('\nLa revisión semanal (v0.191): contra la demo');
   check(malo, 'un estado que no existe, tampoco en la demo');
   const d2 = await api.detalleRevision(con.atleta_id, lunes);
   check(Array.isArray(d2.comparacion) && Array.isArray(d2.cortos) && Array.isArray(d2.mensajes) && Array.isArray(d2.videos) && typeof d2.fotos === 'number', 'el detalle trae lo de la segunda tanda');
+  // (v0.193)
+  const um = await api.ultimosMensajes(con.atleta_id, 4);
+  check(Array.isArray(um) && um.length <= 4 && um.every((m) => 'autor' in m && 'sinLeer' in m && 'audio' in m) && (um.length < 2 || um[0].creado_en <= um[um.length - 1].creado_en), 'lo último que os habéis dicho, de más antiguo a más nuevo');
+  check((await api.videoAnterior(null)) === null && (await api.videoAnterior({ id: 'x', atleta_id: con.atleta_id })) === null, 'sin ejercicio no hay vídeo anterior que comparar');
+  const bj0 = await api.bandeja();
+  const suyos0 = [...bj0.sesiones, ...bj0.checkins, ...bj0.archivos].filter((x) => (x.atleta?.id || x.atleta_id) === con.atleta_id).length;
+  const marcados = await api.revisarLoDe(con.atleta_id);
+  const bj1 = await api.bandeja();
+  const suyos1 = [...bj1.sesiones, ...bj1.checkins, ...bj1.archivos].filter((x) => (x.atleta?.id || x.atleta_id) === con.atleta_id).length;
+  await api.deshacerRevisados(marcados);
+  const bj2 = await api.bandeja();
+  const suyos2 = [...bj2.sesiones, ...bj2.checkins, ...bj2.archivos].filter((x) => (x.atleta?.id || x.atleta_id) === con.atleta_id).length;
+  check(marcados.length === suyos0 && suyos1 === 0 && suyos2 === suyos0, `dar por revisado lo suyo de «Revisar» (${suyos0}) y deshacerlo`);
+  const d3 = await api.detalleRevision(con.atleta_id, lunes);
+  check(Array.isArray(d3.audios) && 'checkinId' in d3 && d3.atleta?.id === con.atleta_id, 'el detalle trae sus audios sin escuchar, el check-in para comentarlo y sus datos para el editor');
   await backend.auth.entrar('ana@fbe.demo', 'demo');
   let sinAjustes = false; try { sinAjustes = !(await backend.select('revision_ajustes', {})).length; } catch { sinAjustes = true; }
   let noEscribe = false; try { await backend.upsert('revision_ajustes', [{ frases: ['x'] }], 'usuario_id'); } catch { noEscribe = true; }

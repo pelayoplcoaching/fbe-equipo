@@ -31,7 +31,7 @@ const normal = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/
 const nulo = (v) => (v === '' || v === undefined ? null : v);
 
 // Editor de un bloque (de un atleta o plantilla): semanas, sesiones y prescripción, con guardado al salir de cada campo.
-export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null, nivel = null, carreraDe = null }) {
+export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBloque, volumenObjetivo = null, nivel = null, carreraDe = null, alEntrar = null, ejercicioFoco = null }) {
   const { api, aviso } = useApp();
   const carga = useCarga(() => api.bloqueCompleto(bloqueId), [bloqueId]);
   // (v0.133) Con la carrera encendida: sus zonas (para las partes) y el plan de la semana que se edita
@@ -146,6 +146,10 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   }, [pendientes.length > 0]);
   const reintentarRef = useRef(null);
 
+  // (v0.193) al abrirse desde la revisión semanal (ver alEntrarRef más abajo): se mira tras cada pintado hasta que se cumple
+  const entrado = useRef(false);
+  const alEntrarRef = useRef(null);
+  useEffect(() => { alEntrarRef.current?.(); });
   if (carga.cargando && !d) return <Siluetas forma="tarjetas" n={3} texto="Cargando el bloque" />;
   if (carga.error) return <ErrorCaja error={carga.error} reintentar={carga.recargar} />;
   if (!d) return null;
@@ -173,6 +177,28 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
 
   // «Programar según FBE»: de qué semana se parte y cuál se programa (la siguiente se crea si aún no existe)
   const paraFbe = semanasParaProgramar(d, semana);
+  async function lanzarFbe() {
+    if (!paraFbe) return;
+    let destino = paraFbe.destino;
+    if (!destino) {
+      // La semana siguiente aún no existe: se crea igual que esta, en borrador, y sobre ella va la propuesta
+      const nuevas = await estructura(() => api.prepararSemanas(paraFbe.base.id, { n: 1, kg: 'igual', rpe: 0, rir: 0, reps: 0 }));
+      destino = nuevas?.[0] || null;
+      if (!destino) return;
+      aviso(`Semana ${destino.numero} creada en borrador`);
+    }
+    setSemanaId(destino.id);
+    setFbe({ base: paraFbe.base.id, destino: destino.id });
+  }
+  // (v0.193) abierto desde la revisión semanal: lanzar ya «Programar según FBE», o ir al ejercicio que se quiere retocar
+  alEntrarRef.current = () => {
+    if (entrado.current || !semana) return;
+    if (alEntrar === 'fbe') { if (!paraFbe) return; entrado.current = true; lanzarFbe(); return; }
+    if (ejercicioFoco) {
+      entrado.current = true;
+      setTimeout(() => { const el = document.querySelector(`tr[data-ejercicio="${ejercicioFoco}"]`); if (el) { el.scrollIntoView({ block: 'center' }); el.classList.add('fila-foco'); } }, 150);
+    }
+  };
 
   // Guarda un campo y lo refleja en local sin recargar (los inputs no pierden el foco)
   const apilarNuevo = (paso) => { setPila((x) => apilar(x, paso)); setRehechos([]); };
@@ -468,18 +494,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
                 return <button class="btn btn-peq" aria-pressed={compacta ? 'true' : 'false'} title="Deja solo la fila de cada ejercicio (series, repeticiones, esfuerzo y kilos), para repasar la semana de un tirón" onClick={() => plegar(claves, !compacta)}><Icono n={compacta ? 'vista' : 'ojo'} /> {compacta ? 'Ver el detalle' : 'Vista compacta'}</button>;
               })()}
               {conDatos && <button class="btn btn-peq" onClick={() => setSugerir(true)}><Icono n="rayo" /> Cargas sugeridas</button>}
-              {paraFbe && <button class="btn btn-peq" onClick={async () => {
-                let destino = paraFbe.destino;
-                if (!destino) {
-                  // La semana siguiente aún no existe: se crea igual que esta, en borrador, y sobre ella va la propuesta
-                  const nuevas = await estructura(() => api.prepararSemanas(paraFbe.base.id, { n: 1, kg: 'igual', rpe: 0, rir: 0, reps: 0 }));
-                  destino = nuevas?.[0] || null;
-                  if (!destino) return;
-                  aviso(`Semana ${destino.numero} creada en borrador`);
-                }
-                setSemanaId(destino.id);
-                setFbe({ base: paraFbe.base.id, destino: destino.id });
-              }}><Icono n="diana" /> {paraFbe.base.id === semana.id ? 'Programar la siguiente según FBE' : 'Programar según FBE'}</button>}
+              {paraFbe && <button class="btn btn-peq" onClick={lanzarFbe}><Icono n="diana" /> {paraFbe.base.id === semana.id ? 'Programar la siguiente según FBE' : 'Programar según FBE'}</button>}
               <button class="btn btn-peq btn-icono btn-peligro" aria-label={`Borrar semana ${semana.numero}`} onClick={() => setConfirmarBorrado({ tipo: 'semana', id: semana.id })}><Icono n="basura" /></button>
             </div>
           </div>
@@ -1267,7 +1282,7 @@ function EditorSesion({ sesion, pautas, series, ejercicios, guardar, guardarDeta
             </tr></thead>
             <tbody>
               {pautas.map((p, i) => (
-                <tr key={p.id} data-fila class={`${plegado.has(`p:${p.id}`) ? 'sin-detalle' : ''} ${pendiente(p.id) ? 'sin-guardar' : ''}`} title={pendiente(p.id) ? 'Sin guardar: se guarda solo cuando vuelva la conexión' : undefined}>
+                <tr key={p.id} data-fila data-ejercicio={p.ejercicio_id} class={`${plegado.has(`p:${p.id}`) ? 'sin-detalle' : ''} ${pendiente(p.id) ? 'sin-guardar' : ''}`} title={pendiente(p.id) ? 'Sin guardar: se guarda solo cuando vuelva la conexión' : undefined}>
                   <td data-col="Prioridad"><span class="sel-prioridad">
                     <Disco prioridad={p.prioridad} />
                     <select aria-label="Prioridad" value={p.prioridad} onChange={(e) => guardar('sesion_ejercicios', p.id, { prioridad: e.currentTarget.value })}>

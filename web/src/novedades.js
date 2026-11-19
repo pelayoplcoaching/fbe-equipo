@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.193': {
+    coach: [
+      'Revisión semanal, todo desde ahí: uno a uno con pestañas de Su semana, Chat, Vídeos y Programar (teclas 1 a 4).',
+      'Chat rápido al lado con notas de voz, corregir los vídeos ahí mismo y el editor del programa sin salir.',
+      'Citar un dato en el chat, comentar check-in y sesiones, ajustar un ejercicio y cierre de la revisión.',
+    ],
+  },
   '0.192': {
     coach: [
       'Revisión semanal: mensajes sin leer y vídeos en la tarjeta, «pedírselo» desde un aviso, tono del mensaje y envío programado.',

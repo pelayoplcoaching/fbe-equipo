@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.193: la revisión semanal, tercera tanda (test/e2e-revision-193.mjs)
+console.log('\nv0.193: la revisión semanal, tercera tanda');
+try {
+  const { probarRevision193 } = await import('./e2e-revision-193.mjs');
+  await probarRevision193({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.193:', e.message.split('\n')[0]);
+}
+
 // v0.192: la revisión semanal, segunda tanda (test/e2e-revision-192.mjs)
 console.log('\nv0.192: la revisión semanal, segunda tanda');
 try {

@@ -5,7 +5,8 @@ import { HojaNuevaTarea } from '../Tareas.jsx';
 import { HojaPlatosSemana } from '../Platos.jsx';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
 import { avisosRevision, avisosPanel, partirPausados, ordenarRevision, ORDENES, moverEnOrden, FILTROS_REVISION, filtrarRevision, cuentaFiltro, TEXTO_PROXIMA, LOTES, destinatariosLote, siguientePendiente,
-  ESTADOS_REVISION, TEXTO_ESTADO, pasosRevision, puntoDelBloque, resumenRevision, COLUMNAS_TABLA, ordenarTabla, ajustesDeRevision } from '../../logica/revision.js';
+  ESTADOS_REVISION, TEXTO_ESTADO, pasosRevision, puntoDelBloque, resumenRevision, COLUMNAS_TABLA, ordenarTabla, ajustesDeRevision, pestanasDe } from '../../logica/revision.js';
+import { ChatRevision, ChatRapido, VideosRevision, ProgramarRevision, HojaProgramar, CierreRevision, olvidarBandeja } from './RevisionTodo.jsx';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
 import { ChispaSesiones } from './Panel.jsx';
 import { Dictar } from '../Dictar.jsx';
@@ -59,6 +60,12 @@ export function RevisionSemanal({ abrirAtleta }) {
   useEffect(() => { if (typeof matchMedia !== 'function') return undefined; const m = matchMedia('(min-width: 1000px)'); const f = () => setAncha(m.matches); m.addEventListener?.('change', f); return () => m.removeEventListener?.('change', f); }, []);
   const [colTabla, setColTabla] = useState({ col: 'nombre', dir: 1 });
   const [pedir, setPedir] = useState(null);   // { f, alerta }: «pedírselo» desde un aviso
+  // (v0.193) uno a uno con pestañas (su semana, chat, vídeos, programar), lo que se cita en el chat y el cierre
+  const [pestana, setPestana] = useState('semana');
+  const [cita, setCita] = useState(null);
+  const [programar, setProgramar] = useState({ modo: null, ejercicio: null });
+  const [cierre, setCierre] = useState(false);
+  const [chatVersion, setChatVersion] = useState(0);
   const datos = res.datos;
   // (079) cuántas fotos de sus platos ha subido cada uno esta semana
   const platos = useCarga(() => (datos?.lunes ? api.platosDeLaSemana(datos.lunes).catch(() => ({})) : Promise.resolve({})), [datos?.lunes]);
@@ -78,7 +85,12 @@ export function RevisionSemanal({ abrirAtleta }) {
     try {
       await api.marcarRevision(f.atleta_id, datos.lunes, c);
       // (al marcarlo, en «Pendientes» se va de la lista: por si fue sin querer, «Deshacer»)
-      if (c.hecha === true && !callado) aviso(`${f.nombre.split(' ')[0]}, revisado`, 'ok', { texto: 'Deshacer', fn: () => guardar(f, { hecha: false }) });
+      if (c.hecha === true && !callado) {
+        // (v0.193, opcional) también lo suyo que espera en «Revisar»; «Deshacer» lo devuelve todo
+        let mas = [];
+        if (pref.revisarTodo) { mas = await api.revisarLoDe(f.atleta_id).catch(() => []); olvidarBandeja(); if (mas.length) setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), videos: 0 } })); }
+        aviso(`${f.nombre.split(' ')[0]}, revisado${mas.length ? ` (y ${mas.length} en «Revisar»)` : ''}`, 'ok', { texto: 'Deshacer', fn: async () => { if (mas.length) { await api.deshacerRevisados(mas); olvidarBandeja(); res.recargar(true); } guardar(f, { hecha: false }); } });
+      }
       return true;
     } catch (e) { setCambios((x) => ({ ...x, [f.atleta_id]: antes })); aviso(e?.message || 'No se ha podido guardar: vuelve a intentarlo', 'error'); return false; }
   };
@@ -88,15 +100,16 @@ export function RevisionSemanal({ abrirAtleta }) {
     if (bien && c.hecha === true && foco?.actual === f.atleta_id) {
       const yaHechas = new Set(filas.filter((x) => x.hecha || x.atleta_id === f.atleta_id).map((x) => x.atleta_id));
       const sig = siguientePendiente(foco.ids, yaHechas, f.atleta_id);
-      if (sig) setFoco({ ids: foco.ids, actual: sig }); else { setFoco(null); aviso('Has revisado a todos', 'ok'); }
+      if (sig) { setFoco({ ids: foco.ids, actual: sig }); setPestana('semana'); } else { setFoco(null); setCierre(true); }
     }
   };
   const empezar = (desde = null) => {
     const ids = (vista.length ? vista : ordenadas).map((f) => f.atleta_id);
     if (!ids.length) return;
+    setPestana('semana'); setCierre(false);
     setFoco({ ids, actual: desde && ids.includes(desde) ? desde : ids[0] });
   };
-  const mover = (delta) => { if (!foco) return; const i = foco.ids.indexOf(foco.actual), j = i + delta; if (j >= 0 && j < foco.ids.length) setFoco({ ids: foco.ids, actual: foco.ids[j] }); };
+  const mover = (delta) => { if (!foco) return; const i = foco.ids.indexOf(foco.actual), j = i + delta; if (j >= 0 && j < foco.ids.length) { setFoco({ ids: foco.ids, actual: foco.ids[j] }); setPestana('semana'); setProgramar({ modo: null, ejercicio: null }); } };
   const alternar = (id) => setAbiertos((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const moverMio = (id, delta) => cambiarPref({ mio: moverEnOrden(ordenadas.map((f) => f.atleta_id), id, delta) });
 
@@ -118,6 +131,7 @@ export function RevisionSemanal({ abrirAtleta }) {
     else if (k === 'm' && fila) { e.preventDefault(); setPedirHoja({ id: fila.atleta_id, hoja: 'mensaje', n: Date.now() }); }
     else if (k === 'Enter' && fila && !foco && t === document.body) { e.preventDefault(); alternar(fila.atleta_id); }
     else if (k === 'u' && !foco) { e.preventDefault(); empezar(actual); }
+    else if (foco && fila && /^[1-4]$/.test(k)) { const ps = pestanasDe(fila); if (ps[Number(k) - 1]) { e.preventDefault(); setPestana(ps[Number(k) - 1][0]); } }
     else if (k === 'Escape' && foco) { e.preventDefault(); setFoco(null); }
   };
   useEffect(() => { const f = (e) => teclas.current?.(e); document.addEventListener('keydown', f); return () => document.removeEventListener('keydown', f); }, []);
@@ -127,7 +141,7 @@ export function RevisionSemanal({ abrirAtleta }) {
   const lunesVisto = datos ? sumarDias(datos.lunes, -7 * atras) : null;
   const enFoco = foco ? todas.find((f) => f.atleta_id === foco.actual) : null;
   const propsFila = (f) => ({ f, con040: datos.revisiones, guardar: (c) => (('hecha' in c) ? marcar(f, c) : guardar(f, c)), abrirAtleta, lunes: datos.lunes, platos: platos.datos?.[f.atleta_id] || 0, pedirHoja: pedirHoja?.id === f.atleta_id ? pedirHoja : null,
-    con082: datos.con082, frases, alFrases: ponerFrases, alPedir: (alerta) => setPedir({ f, alerta }), alCambiar: (c) => setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), ...c } })) });
+    con082: datos.con082, ancha, frases, alFrases: ponerFrases, alPedir: (alerta) => setPedir({ f, alerta }), alCambiar: (c) => setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), ...c } })) });
 
   return (
     <div class="contenido coach revision">
@@ -150,6 +164,8 @@ export function RevisionSemanal({ abrirAtleta }) {
       ) : atras > 0 ? <SemanaPasada lunes={lunesVisto} abrirAtleta={abrirAtleta} />
         : !todas.length ? (
         <div class="panel"><Vacio ilustracion="atletas" titulo="Aún no tienes atletas">Cuando des de alta a alguien, saldrá aquí para tu revisión de cada semana.</Vacio></div>
+      ) : cierre ? (
+        <CierreRevision filas={filas} abrirAtleta={abrirAtleta} alSeguir={() => setCierre(false)} />
       ) : foco && enFoco ? (
         <div class="pila rev-uno">
           <div class="panel panel-pad rev-uno-barra">
@@ -158,7 +174,34 @@ export function RevisionSemanal({ abrirAtleta }) {
             <button type="button" class="btn btn-peq" disabled={foco.ids.indexOf(foco.actual) === foco.ids.length - 1} onClick={() => mover(1)}>Siguiente <span aria-hidden="true">›</span></button>
             <button type="button" class="btn-texto mini rev-uno-salir" onClick={() => setFoco(null)}>Ver la lista</button>
           </div>
-          <ul class="revision-lista"><FilaRevision key={enFoco.atleta_id} {...propsFila(enFoco)} abierta unoAUno /></ul>
+          {(() => {
+            const ps = pestanasDe(enFoco), actual = ps.some(([k]) => k === pestana) ? pestana : 'semana';
+            const citar = (t) => { setCita({ texto: t, n: Date.now() }); aviso('Citado: lo tienes en el chat rápido y en el chat completo'); };
+            const alEscribir = () => { olvidarDetalle(enFoco.atleta_id); setCambios((x) => ({ ...x, [enFoco.atleta_id]: { ...(x[enFoco.atleta_id] || {}), mensajes: 0, escritos: (enFoco.escritos || 0) + 1 } })); };
+            const ajustar = (ej) => { setProgramar({ modo: null, ejercicio: ej }); setPestana('programar'); };
+            const tarjeta = <ul class="revision-lista"><FilaRevision key={enFoco.atleta_id} {...propsFila(enFoco)} abierta unoAUno alChat={() => setPestana('chat')} alProgramar={(modo = null) => { setProgramar({ modo, ejercicio: null }); setPestana('programar'); }} alCitar={citar} alAjustar={ajustar} /></ul>;
+            return (
+              <>
+                <div class="selector-chips rev-pestanas" role="tablist" aria-label="Qué ver de este atleta">
+                  {ps.map(([k, t], n) => <button key={k} type="button" role="tab" aria-selected={actual === k ? 'true' : 'false'} aria-pressed={actual === k ? 'true' : 'false'} title={`Tecla ${n + 1}`} onClick={() => setPestana(k)}>{t}{k === 'videos' ? ` (${enFoco.videos})` : ''}</button>)}
+                </div>
+                {actual === 'semana' && (ancha ? (
+                  <div class="rev-dos">
+                    {tarjeta}
+                    <div class="rev-lado-chat"><div class="panel panel-pad"><ChatRapido key={`${enFoco.atleta_id}-${chatVersion}`} f={enFoco} insertar={cita} alChat={() => setPestana('chat')} alEnviado={alEscribir} /></div></div>
+                  </div>
+                ) : <>{tarjeta}<div class="panel panel-pad"><ChatRapido key={`${enFoco.atleta_id}-${chatVersion}`} f={enFoco} insertar={cita} n={3} alChat={() => setPestana('chat')} alEnviado={alEscribir} /></div></>)}
+                {actual === 'chat' && <ChatRevision f={enFoco} insertar={cita} alCambiar={() => setChatVersion((n) => n + 1)} />}
+                {actual === 'videos' && <div class="panel panel-pad"><VideosRevision f={enFoco} alCambiar={(n) => setCambios((x) => ({ ...x, [enFoco.atleta_id]: { ...(x[enFoco.atleta_id] || {}), videos: Math.max(0, (enFoco.videos || 0) + n) } }))} /></div>}
+                {actual === 'programar' && (
+                  <div class={`rev-editor-env ${ancha ? 'con-lado' : ''}`}>
+                    {ancha && <aside class="panel panel-pad rev-editor-lado" aria-label="Su semana"><strong>{enFoco.nombre}</strong>{enFoco.nota && <p class="peq rev-tu-nota"><span><strong>Tu nota:</strong> {enFoco.nota}</span></p>}<DetalleRevision f={enFoco} lunes={datos.lunes} abrirAtleta={abrirAtleta} compacto /></aside>}
+                    <div class="panel panel-pad rev-editor-caja"><ProgramarRevision f={enFoco} modo={programar.modo} ejercicio={programar.ejercicio} abrirAtleta={abrirAtleta} alCambiar={() => res.recargar(true)} /></div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       ) : (
         <div class="pila">
@@ -170,6 +213,7 @@ export function RevisionSemanal({ abrirAtleta }) {
               {vista.length > 0 && <button type="button" class="btn btn-primario btn-peq" onClick={() => empezar(null)}><Icono n="play" /> Revisar uno a uno</button>}
               {Object.keys(LOTES).map((tipo) => { const n = destinatariosLote(filas, tipo).length; return n > 0 && <button key={tipo} type="button" class="btn btn-peq" onClick={() => setLote(tipo)}><Icono n="enviar" /> {LOTES[tipo].titulo} ({n})</button>; })}
             </div>
+            {datos.revisiones && <label class="rev-marcar rev-opcion"><input type="checkbox" checked={!!pref.revisarTodo} onChange={(e) => cambiarPref({ revisarTodo: e.currentTarget.checked })} /> <span>Al dar a alguien por revisado, dar también por revisado lo suyo que espera en «Revisar» (sesiones, check-in y vídeos)</span></label>}
             {(() => { const r = resumenRevision(filas); return (
               <details class="rev-resumen">
                 <summary>Resumen de la revisión</summary>
@@ -228,7 +272,7 @@ export function RevisionSemanal({ abrirAtleta }) {
           ) : (
             <ul class="revision-lista">
               {vista.map((f, i) => <FilaRevision key={f.atleta_id} {...propsFila(f)} abierta={abiertos.has(f.atleta_id)} alternar={() => alternar(f.atleta_id)} senalada={cursor === f.atleta_id}
-                alFoco={() => empezar(f.atleta_id)} mover={pref.orden === 'mio' && !marcados.size ? { subir: i > 0 ? () => moverMio(f.atleta_id, -1) : null, bajar: i < vista.length - 1 ? () => moverMio(f.atleta_id, 1) : null } : null} />)}
+                alFoco={() => empezar(f.atleta_id)} alChat={() => { empezar(f.atleta_id); setPestana('chat'); }} alCitar={(t) => { empezar(f.atleta_id); setCita({ texto: t, n: Date.now() }); aviso('Citado en su chat'); }} mover={pref.orden === 'mio' && !marcados.size ? { subir: i > 0 ? () => moverMio(f.atleta_id, -1) : null, bajar: i < vista.length - 1 ? () => moverMio(f.atleta_id, 1) : null } : null} />)}
             </ul>
           )}
           {pausados.length > 0 && (
@@ -248,7 +292,7 @@ export function RevisionSemanal({ abrirAtleta }) {
   );
 }
 
-function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null, con082 = false, frases = null, alFrases = null, alPedir = null, alCambiar = null }) {
+function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null, con082 = false, frases = null, alFrases = null, alPedir = null, alCambiar = null, alChat = null, alProgramar = null, alCitar = null, alAjustar = null, ancha = false }) {
   const [nota, setNota] = useState(f.nota || '');
   const [verNota, setVerNota] = useState(!!f.nota || unoAUno);
   const area = useRef(null);
@@ -258,7 +302,10 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
   const { completadas, total } = f.sesiones;
   const idCasilla = `rev-${f.atleta_id}`;
   const soltarNota = () => { if ((nota || '').trim() !== (f.nota || '').trim()) guardar({ nota }); };
-  const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea' | (079) 'platos'
+  const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea' | (079) 'platos' | (v0.193) 'chat' | 'programar'
+  const [prog, setProg] = useState({ modo: null, ejercicio: null });
+  const citar = alCitar;
+  const programarAqui = (modo = null, ejercicio = null) => { if (alProgramar && !ejercicio) alProgramar(modo); else if (alAjustar && ejercicio) alAjustar(ejercicio); else { setProg({ modo, ejercicio }); setHoja('programar'); } };
   useEffect(() => { if (pedirHoja?.hoja) setHoja(pedirHoja.hoja); }, [pedirHoja?.n]);
   const sinProgramar = f.proxima === 'sin' || f.proxima === 'borrador';
   const punto = puntoDelBloque(f);
@@ -300,10 +347,11 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
         <div class="fila-envolver rev-abrir">
           <button type="button" class="btn-texto mini" aria-expanded={abierta ? 'true' : 'false'} onClick={alternar}><Icono n={abierta ? 'arriba' : 'abajo'} /> {abierta ? 'Ocultar su semana' : 'Ver su semana aquí'}</button>
           {alFoco && <button type="button" class="btn-texto mini" onClick={alFoco}>Uno a uno desde aquí</button>}
+          {sinProgramar && f.bloque?.id && <button type="button" class="btn-texto mini" onClick={() => programarAqui('fbe')}>Programar según FBE</button>}
           {mover && <span class="rev-mover"><button type="button" class="btn-icono plano" aria-label={`Subir a ${f.nombre}`} disabled={!mover.subir} onClick={mover.subir || undefined}><Icono n="arriba" /></button><button type="button" class="btn-icono plano" aria-label={`Bajar a ${f.nombre}`} disabled={!mover.bajar} onClick={mover.bajar || undefined}><Icono n="abajo" /></button></span>}
         </div>
       )}
-      {abierta && lunes && <DetalleRevision f={f} lunes={lunes} abrirAtleta={abrirAtleta} alCambiar={alCambiar} />}
+      {abierta && lunes && <DetalleRevision f={f} lunes={lunes} abrirAtleta={abrirAtleta} alCambiar={alCambiar} alCitar={citar} alAjustar={f.servicio === 'nutricion' ? null : (ej) => programarAqui(null, ej)} />}
       {con040 && (verNota ? (
         <label class="pila-xs revision-nota">
           <span class="fila-entre"><span class="peq secundario">Nota de esta semana (te saldrá la próxima y al programarle)</span><Dictar etiqueta="Dictar la nota" alTexto={(t) => { const n = nota ? `${nota.trimEnd()} ${t}` : t; setNota(n.slice(0, 500)); guardar({ nota: n.slice(0, 500) }); }} /></span>
@@ -324,8 +372,8 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
         </div>
       )}
       <div class="revision-acciones">
-        <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'mensajes', null)}><Icono n="mensaje" /> Chat</button>
-        <button class={`btn btn-peq ${sinProgramar ? 'rev-falta' : ''}`} title={sinProgramar ? 'Le falta la semana que viene' : undefined} onClick={() => abrirAtleta(f.atleta_id, 'programa', null)}><Icono n="semana" /> Programar</button>
+        <button class="btn btn-peq" onClick={() => (alChat ? alChat() : abrirAtleta(f.atleta_id, 'mensajes', null))}><Icono n="mensaje" /> Chat</button>
+        <button class={`btn btn-peq ${sinProgramar ? 'rev-falta' : ''}`} title={sinProgramar ? 'Le falta la semana que viene' : undefined} onClick={() => (f.servicio === 'nutricion' || !f.bloque?.id ? abrirAtleta(f.atleta_id, 'programa', null) : programarAqui())}><Icono n="semana" /> Programar</button>
         <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'seguimiento', null)}><Icono n="progreso" /> Seguimiento</button>
         {/* (054) el mensaje de repaso, ya redactado con sus datos; y una tarea, sin salir de aquí */}
         <button class="btn btn-peq" onClick={() => setHoja('mensaje')}><Icono n="editar" /> Redactar mensaje</button>
@@ -336,6 +384,8 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
       {hoja === 'platos' && <HojaPlatosSemana atleta={{ id: f.atleta_id, nombre: f.nombre }} lunes={lunes} alCerrar={() => setHoja(null)} />}
       {hoja === 'mensaje' && <HojaBorrador f={f} lunes={lunes} alCerrar={() => setHoja(null)} frases={frases} alFrases={alFrases} alEnviado={(marcar) => { olvidarDetalle(f.atleta_id); alCambiar?.({ escritos: (f.escritos || 0) + 1 }); if (marcar && con040) guardar({ hecha: true }); }} />}
       {hoja === 'tarea-nota' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} inicial={{ tipo: 'texto', titulo: nota.trim().slice(0, 80), detalle: nota.trim().length > 80 ? nota.trim() : '' }} alCerrar={() => setHoja(null)} />}
+      {hoja === 'programar' && <HojaProgramar f={f} modo={prog.modo} ejercicio={prog.ejercicio} abrirAtleta={abrirAtleta} alCerrar={() => { setHoja(null); alCambiar?.({}); }}
+        lado={ancha && lunes ? <><button type="button" class="btn-texto mini" onClick={() => abrirAtleta(f.atleta_id, 'programa', null)}>Abrir en su ficha</button>{f.nota && <p class="peq rev-tu-nota"><span><strong>Tu nota:</strong> {f.nota}</span></p>}<DetalleRevision f={f} lunes={lunes} abrirAtleta={abrirAtleta} compacto /></> : <button type="button" class="btn-texto mini" onClick={() => abrirAtleta(f.atleta_id, 'programa', null)}>Abrir en su ficha</button>} />}
       {hoja === 'tarea' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} alCerrar={() => setHoja(null)} />}
     </li>
   );

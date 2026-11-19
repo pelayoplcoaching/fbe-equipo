@@ -298,7 +298,7 @@ export function quedoCorto(series, pautas, lunes) {
     const cortas = p.reps_min ? ss.filter((s) => Number(s.reps) < Number(p.reps_min)).length : 0;
     const tope = ss.filter((s) => Number(s.rpe) >= 10).length;
     const faltan = Math.max(0, (Number(p.series) || 0) - ss.length);
-    if (cortas || tope || faltan) out.push({ id, ejercicio: ss[0].ejercicio || 'Ejercicio', cortas, tope, faltan });
+    if (cortas || tope || faltan) out.push({ id, ejercicio: ss[0].ejercicio || 'Ejercicio', ejercicio_id: ss[0].ejercicio_id || null, cortas, tope, faltan });
   }
   return out.sort((a, b) => (b.cortas + b.tope + b.faltan) - (a.cortas + a.tope + a.faltan) || a.ejercicio.localeCompare(b.ejercicio, 'es'));
 }
@@ -401,4 +401,19 @@ export function ajustesParaGuardar(a) {
     modo: ORDENES.some(([k]) => k === a?.modo) ? a.modo : null,
     vista: ['lista', 'tabla'].includes(a?.vista) ? a.vista : null,
   };
+}
+
+// ================================================================ v0.193: tercera tanda
+// Un dato de su semana, en una frase para citarlo en el chat
+export const citaDe = {
+  record: (r) => `Récord en ${r.ejercicio} (${r.marca}).`,
+  parado: (r) => `${r.ejercicio}: ${r.estado === 'baja' ? 'lleva dos semanas bajando' : 'lleva dos semanas sin moverse'} (${r.marca}).`,
+  corto: (c) => `${c.ejercicio}: ${textoCorto(c)}.`,
+  sesion: (x) => (x.completada ? `${x.nombre}${x.rpe_sesion != null ? `, esfuerzo ${n1(x.rpe_sesion)}` : ''}${x.duracion_min != null ? `, ${x.duracion_min} min` : ''}:` : `${x.nombre}, que se quedó sin hacer:`),
+  checkin: (lineas) => `Del check-in: ${(lineas || []).filter((l) => l.cambio === 'baja').map((l) => `${l.etiqueta.toLowerCase()} ${l.valor}`).join(', ') || (lineas || []).slice(0, 3).map((l) => `${l.etiqueta.toLowerCase()} ${l.valor}`).join(', ')}.`,
+};
+export const PESTANAS_UNO = [['semana', 'Su semana'], ['chat', 'Chat'], ['videos', 'Vídeos'], ['programar', 'Programar']];
+// Las pestañas que le tocan: sin vídeos por revisar no hay «Vídeos»; quien solo lleva nutrición no tiene «Programar»
+export function pestanasDe(f) {
+  return PESTANAS_UNO.filter(([k]) => (k !== 'videos' || f.videos > 0) && (k !== 'programar' || f.servicio !== 'nutricion'));
 }
