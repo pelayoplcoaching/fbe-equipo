@@ -111,6 +111,8 @@ export async function probarObjetivos({ navegador, check, base = 'http://localho
     d = p.getByRole('dialog', { name: 'Objetivo propuesto' });
     await d.waitFor();
     check(await d.locator('#pr-kg').inputValue() === '120' && await d.locator('#pr-reps').inputValue() === '3', 'su hoja trae lo que pidió, para ajustarlo');
+    // La hoja entra animada: si se mide a media entrada, el contraste de los chips sale falso.
+    await p.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter((a) => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1500))]));
     await axeEn(p, '[role=dialog]', errores, 'hoja de la propuesta');
     await d.locator('#pr-kg').fill('110'); await d.locator('#pr-kg').blur();
     await d.locator('#pr-nota').fill('Primero 110, luego vamos a por 120');
