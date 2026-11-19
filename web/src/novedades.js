@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.187': {
+    atleta: [
+      'Compartir: las tarjetas cuadran con nombres largos, hay formato cuadrado y dos plantillas nuevas, «Lista» y «Récord».',
+      'Elige el fondo de la tarjeta, o toca «Sorpréndeme». La hoja abre más corta y recuerda tu estilo; el resto, en «Personalizar».',
+      'Publica en el equipo desde la misma hoja con unas palabras, y saca fuera tus publicaciones del muro con un toque.',
+    ],
+  },
   '0.186': {
     coach: [
       'Editor: cada sesión dice cómo le fue (día, minutos, esfuerzo y su nota) y abajo, quién queda por programar, con un botón para ir.',

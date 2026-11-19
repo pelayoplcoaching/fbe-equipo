@@ -3,11 +3,12 @@ import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { useApp, useCarga, Hoja, Icono, Cargando, descargar, copiar, usePreferencia, Segmentos, P } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
-import { fondoTarjeta, focoFondo, fuenteImagen } from '../logica/imagenes.js';
+import { fondoTarjeta, fondoLogro, fondoElegido, focoFondo, fuenteImagen, fondosDisponibles, grupoFondo } from '../logica/imagenes.js';
 import { fmtCorta } from '../logica/fechas.js';
 import { hayImagen } from './Imagen.jsx';
 import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHandle, conArroba, handleEquipo, PREF_HANDLE, pieDeFoto, resumenTexto, nombreArchivo as nombreArchivoDe, cifrasCardio, PREF_RECORDATORIO, recordatorioCompartir,
-  PALETAS, paletaDe, PREF_PALETA, limpiarFrase, PREF_FRASE, TONOS, PREF_TONO, textoAlternativo, PREF_COMPARTIDOS, anotarCompartido, textoCompartido } from '../logica/compartir.js';
+  PALETAS, paletaDe, PREF_PALETA, limpiarFrase, PREF_FRASE, TONOS, PREF_TONO, textoAlternativo, PREF_COMPARTIDOS, anotarCompartido, textoCompartido,
+  PREF_FONDO, PREF_PLANTILLA, PREF_PEGATINA, PREF_PERSONALIZAR, plantillaInicial, sorpresa } from '../logica/compartir.js';
 import { leerAjustes } from './ajustes.js';
 import { textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { lanzarConfeti } from './confeti.js';
@@ -21,17 +22,24 @@ import { lanzarConfeti } from './confeti.js';
 // (compartir) El ancho es siempre 1080; el alto depende del formato: 1350 (publicación, 4:5) o 1920 (historia, 9:16).
 // Lo que se dibuja ocupa siempre HC = 1350 de alto, centrado: en la historia, el fondo sigue arriba y abajo (el hueco que
 // tapan los controles de Instagram). H y oy se fijan en cada tarjeta (empezar) antes de pintar.
-const W = 1080, HC = 1350, M = 80;
-let H = HC, oy = 0;
+// (v0.187) La historia reparte el contenido en 1440 de alto (deja 230 arriba y 250 abajo, lo que tapan los controles) y el
+// cuadrado (1080 x 1080) pinta lo mismo a escala 0,8 y centrado. entrar() y salir() ponen y quitan ese encaje.
+const W = 1080, M = 80;
+let HC = 1350, H = HC, oy = 0, ox = 0, EC = 1;
+const entrar = (x) => { x.save(); x.translate(ox, oy); x.scale(EC, EC); };
+const salir = (x) => { x.restore(); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; };
 // (diseño, tanda 15) Los colores de la marca nueva: la noche morada de la portada y de la bienvenida (no el negro de
 // antes), el lobo en blanco y el dorado solo para los récords. Los cuatro colores de los discos ya no van en el pie.
 // (compartir, tanda 2) Las paletas están en logica/compartir.js (PALETAS): «Noche» es la de la marca; «Clara», fondo claro;
 // Bosque, Brasa, Hielo y Grafito, la noche con otro acento. C es la paleta de la tarjeta que se está pintando.
-let C = paletaDe('noche');
+let C = paletaDe('noche'), PAL = 'noche';
 // Prepara el lienzo de una tarjeta: su formato, su paleta y el desplazamiento del contenido
 function empezar({ formato = 'publicacion', paleta = 'noche' } = {}) {
   const t = tamanoFormato(formato);
-  H = t.H; oy = Math.round((H - HC) / 2); C = paletaDe(paleta, leerAjustes().acento);
+  H = t.H; C = paletaDe(paleta, leerAjustes().acento); PAL = paleta;
+  if (formato === 'historia') { HC = 1440; oy = 230; ox = 0; EC = 1; }
+  else if (formato === 'cuadrado') { HC = 1350; EC = H / HC; oy = 0; ox = Math.round((W - W * EC) / 2); }
+  else { HC = 1350; oy = 0; ox = 0; EC = 1; }
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   return cv;
@@ -109,12 +117,41 @@ async function cargarFondo(id) {
 // letras (blancas y lilas) siguen leyéndose sobre el resplandor
 function fondoIlustrado(x, img) {
   fondoNoche(x);
-  const e = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-  const w = img.naturalWidth * e, h = img.naturalHeight * e;
-  x.drawImage(img, (W - w) * (img.fbeFoco ?? 0.5), H - h, w, h);
-  const g = x.createLinearGradient(0, oy, 0, H);
-  g.addColorStop(0, 'rgba(21, 15, 54, 0.15)'); g.addColorStop(0.45, 'rgba(21, 15, 54, 0.25)'); g.addColorStop(0.86, 'rgba(21, 15, 54, 0.6)'); g.addColorStop(1, 'rgba(21, 15, 54, 0.74)');
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // (v0.187) las verticales cubren el ancho y se pegan abajo; las apaisadas (cardio) cubren todo. Arriba se funden con
+  // la noche (sin corte) y, con otra paleta oscura, solo ponen la luz: el color lo da la paleta.
+  const vertical = img.naturalHeight >= img.naturalWidth;
+  const e = vertical ? W / img.naturalWidth : Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const w = img.naturalWidth * e, h = Math.ceil(img.naturalHeight * e);
+  const t = document.createElement('canvas');
+  t.width = W; t.height = h;
+  const tx = t.getContext('2d');
+  tx.drawImage(img, (W - w) * (img.fbeFoco ?? 0.5), 0, w, h);
+  if (H - h > -40) {
+    // (de una vez y a todo el lienzo: «destination-in» borra lo que queda fuera de lo pintado)
+    const f = tx.createLinearGradient(0, 0, 0, h);
+    f.addColorStop(0, 'rgba(0, 0, 0, 0)'); f.addColorStop(0.1, 'rgba(0, 0, 0, .3)'); f.addColorStop(0.26, 'rgba(0, 0, 0, 1)'); f.addColorStop(1, 'rgba(0, 0, 0, 1)');
+    tx.globalCompositeOperation = 'destination-in'; tx.fillStyle = f; tx.fillRect(0, 0, W, h);
+  }
+  x.save();
+  if (PAL !== 'noche') x.globalCompositeOperation = 'luminosity';
+  x.drawImage(t, 0, H - h);
+  x.restore();
+  // El velo: algo mas arriba (donde van las letras) y una franja al pie para la firma; el motivo, casi limpio
+  velo(x, 0, H, [[0, 0.34], [0.5, 0.22], [0.8, 0.06], [1, 0.06]]);
+  const pieY = Math.round(oy + (HC - 190) * EC);
+  velo(x, pieY, H, [[0, 0], [Math.min(1, (150 * EC) / Math.max(1, H - pieY)), 0.62], [1, 0.62]]);
+}
+// Un velo del color de fondo de la paleta entre dos alturas: paradas [posicion, opacidad]
+function velo(x, y0, y1, paradas) {
+  if (y1 <= y0) return;
+  const t = document.createElement('canvas');
+  t.width = 4; t.height = y1 - y0;
+  const tx = t.getContext('2d');
+  const g = tx.createLinearGradient(0, 0, 0, t.height);
+  for (const [p, a] of paradas) g.addColorStop(p, `rgba(0, 0, 0, ${a})`);
+  tx.fillStyle = g; tx.fillRect(0, 0, 4, t.height);
+  tx.globalCompositeOperation = 'source-in'; tx.fillStyle = C.fondo; tx.fillRect(0, 0, 4, t.height);
+  x.drawImage(t, 0, y0, W, y1 - y0);
 }
 
 // El lobo de la marca, en vectorial (ui/lobo-trazo.js), con la esquina de arriba a la izquierda en (px, py) y el alto
@@ -208,32 +245,55 @@ function utiles(x) {
     x.restore();
   };
 
-  return { letra, cortar, lineas, icono };
+  // (v0.187) Un titulo que siempre cabe: prueba los tamanos de mayor a menor hasta que entra en `max` lineas sin cortar
+  // ninguna palabra; si ni con el menor, se corta con puntos. Las lineas salen parejas (sin una palabra suelta al final).
+  const titulo = (texto, { tams, ancho, max = 2, peso = 800, estilo = 'expanded', luego = null }) => {
+    const t = String(texto || '').trim();
+    for (const tam of tams) {
+      letra(peso, tam, estilo);
+      const ls = lineas(t, ancho, 99);
+      if (ls.length <= max && ls.every((l) => x.measureText(l).width <= ancho)) {
+        let mejor = ls;
+        if (ls.length > 1) for (let a = ancho * 0.96; a > ancho * 0.5; a -= ancho * 0.04) { const p = lineas(t, a, 99); if (p.length !== ls.length || p.some((l) => x.measureText(l).width > ancho)) break; mejor = p; }
+        return { ls: mejor, tam };
+      }
+    }
+    // (luego: otra tanda de tamanos con mas lineas, antes de cortar)
+    if (luego) return titulo(texto, { ancho, peso, estilo, ...luego, luego: null });
+    const tam = tams[tams.length - 1];
+    letra(peso, tam, estilo);
+    return { ls: lineas(t, ancho, max).map((l) => cortar(l, ancho)), tam };
+  };
+
+  return { letra, cortar, lineas, icono, titulo };
 }
 const aBlob = (cv) => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
 
 // (compartir) formato: publicacion | historia; pegatina: la clave de una pegatina (o ''); handle y equipo: los @ del pie
-export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '' } = {}) {
+export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
   await cargarFuentes();
   const cv = empezar({ formato, paleta });
   d = frase ? { ...d, frase } : d;
   FIRMA = { handle, equipo };
   const x = cv.getContext('2d');
-  const { letra, cortar, lineas, icono } = utiles(x);
+  const { letra, cortar, lineas, icono, titulo } = utiles(x);
   // (imágenes) la ilustración de fondo, salvo con la foto del atleta (y no en la clara)
-  // (la ilustración, solo en la noche de la marca: con otra paleta no pega)
-  const ilu = (plantilla === 'foto' && foto) || paleta !== 'noche' ? null : await cargarFondo(fondoTarjeta(d));
-  if (ilu) ilu.fbeFoco = focoFondo(fondoTarjeta(d));
+  // (v0.187) fondo: 'auto' (el de la tarjeta), '' (sin dibujo) o el que elija; vale con todas las paletas oscuras
+  if (plantilla === 'lista') plantilla = 'clasica';
+  if (plantilla === 'record' && !(d.records || []).length) plantilla = 'cifras';
+  const idFondo = fondoElegido(fondo, fondoTarjeta(d));
+  const ilu = (plantilla === 'foto' && foto) || C.clara || !idFondo ? null : await cargarFondo(idFondo);
+  if (ilu) ilu.fbeFoco = focoFondo(idFondo);
   if (plantilla !== 'clasica') {
-    dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, ilu });
-    x.translate(0, oy); pegatina(x, letra, pegatinaTarjeta(peg)); x.translate(0, -oy);
+    dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, titulo, ilu });
+    entrar(x); pegatina(x, letra, pegatinaTarjeta(peg)); salir(x);
     return aBlob(cv);
   }
 
   // Fondo: la ilustración o, sin ella, la noche de la marca y, abajo a la derecha, el lobo en grande y muy tenue
   if (ilu) fondoIlustrado(x, ilu);
   else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055); }
-  x.translate(0, oy);
+  entrar(x);
 
   // Marca y fecha
   marca(x, letra);
@@ -243,9 +303,10 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
 
   // Nombre de la sesión
   let y = 290;
-  letra(800, 118, 'semi-expanded'); x.fillStyle = C.tinta;
-  for (const l of lineas(d.nombre, W - 2 * M, 2)) { x.fillText(l, M - 4, y); y += 120; }
-  y -= 54;
+  const tn = titulo(d.nombre, { tams: [118, 98, 82], ancho: W - 2 * M, estilo: 'semi-expanded', luego: { tams: [70, 60], max: 3 } });
+  x.fillStyle = C.tinta;
+  for (const l of tn.ls) { x.fillText(l, M - 4, y); y += tn.tam + 2; }
+  y += 66 - (tn.tam + 2);
   if (d.subtitulo) { letra(650, 40); x.fillStyle = C.morado; x.fillText(d.subtitulo, M, y); }
   if (d.frase) { y = frasePropia(x, letra, cortar, d.frase, y + (d.subtitulo ? 58 : 0)) - 20; }
 
@@ -309,9 +370,9 @@ export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, fo
     }));
   }
   // Pie: un filo y la firma, con el lobo (sobre la ilustración, en claro)
-  pie(x, letra, ilu ? '#EEECFF' : C.tinta3);
+  pie(x, letra, ilu ? C.tinta2 : C.tinta3);
   pegatina(x, letra, pegatinaTarjeta(peg));
-  x.translate(0, -oy);
+  salir(x);
   return aBlob(cv);
 }
 
@@ -337,7 +398,7 @@ function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) 
   x.restore();
   x.globalAlpha = 1;
 }
-function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, ilu = null }) {
+function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, titulo, ilu = null }) {
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
   // Fondo: la foto (cubriendo, con un degradado que deja leer) o la noche de la marca con el dibujo de la sesión
   fondoNoche(x);
@@ -359,9 +420,16 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     g.addColorStop(0, 'rgba(21, 15, 54, 0)'); g.addColorStop(0.5, 'rgba(21, 15, 54, .85)'); g.addColorStop(1, C.fondo);
     x.fillStyle = g; x.fillRect(0, oy + HC * 0.35, W, H - oy - HC * 0.35);
   } else {
-    dibujarArte(x, d, { escala: 2.2, dx: 330, dy: oy - 60, opacidad: C.clara ? 0.5 : 0.4 });
+    // (v0.187) en la clara, mas abajo y mas tenue: no choca con la fecha
+    dibujarArte(x, d, { escala: 2.2, dx: 330, dy: oy + (C.clara ? 90 : -60) * EC, opacidad: C.clara ? 0.2 : 0.4 });
   }
-  x.translate(0, oy);
+  // (v0.187) el brillo dorado del record, detras de la marca
+  if (plantilla === 'record' && !C.clara) {
+    const g = x.createRadialGradient(W * 0.5, oy + 640 * EC, 0, W * 0.5, oy + 640 * EC, 700 * EC);
+    g.addColorStop(0, 'rgba(233, 212, 154, .2)'); g.addColorStop(1, 'rgba(233, 212, 154, 0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+  }
+  entrar(x);
   // La marca: el lobo y «FBE Equipo»; la fecha a la derecha
   marca(x, letra);
   letra(500, 30); x.fillStyle = r ? '#DDDDE3' : C.tinta2; x.textAlign = 'right';
@@ -377,15 +445,16 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
   };
   if (plantilla === 'poster') {
     // (tanda 2) El nombre enorme, en condensada, llenando la tarjeta; las cifras pequeñas abajo
-    const palabras = String(d.nombre || '').split(/\s+/).filter(Boolean);
-    letra(650, 230, 'condensed'); x.fillStyle = C.tinta;
-    let filas = lineas(palabras.join(' '), W - 2 * M, 4);
-    let tam = 230;
-    while (filas.length > 3 && tam > 150) { tam -= 20; letra(650, tam, 'condensed'); filas = lineas(palabras.join(' '), W - 2 * M, 4); }
+    // (v0.187) el tamano baja hasta que cabe entero: tres lineas como mucho en grande, cuatro en pequeno
+    const nombre = String(d.nombre || '').toUpperCase();
+    let tp = titulo(nombre, { tams: [230, 210, 190, 170, 150], ancho: W - 2 * M, max: 3, peso: 650, estilo: 'condensed' });
+    if (tp.ls.some((l) => l.endsWith('…'))) tp = titulo(nombre, { tams: [150, 130, 112, 96], ancho: W - 2 * M, max: 4, peso: 650, estilo: 'condensed' });
+    const filas = tp.ls, tam = tp.tam;
+    x.fillStyle = C.tinta;
     const altoFila = Math.round(tam * 0.92);
     const bloque = filas.length * altoFila;
     let y = Math.max(330, Math.round((HC - 320 - bloque) / 2)) + Math.round(tam * 0.8);
-    for (const l of filas) { x.fillText(l.toUpperCase(), M - 8, y); y += altoFila; }
+    for (const l of filas) { x.fillText(l, M - 8, y); y += altoFila; }
     y -= Math.round(tam * 0.1);
     if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y + 40, C.morado, 40) - 10;
     // Las cifras, en una fila pequeña
@@ -401,28 +470,72 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
   } else if (plantilla === 'cifras') {
     // El nombre arriba y las cifras en grande, como un marcador (2 × 2)
     let y = 300;
-    letra(800, 96, 'expanded'); x.fillStyle = C.tinta;
-    for (const l of lineas(d.nombre, W - 2 * M, 2)) { x.fillText(l, M - 4, y); y += 100; }
+    const tn = titulo(d.nombre, { tams: [96, 80, 66], ancho: W - 2 * M, luego: { tams: [60, 52], max: 3 } });
+    x.fillStyle = C.tinta;
+    for (const l of tn.ls) { x.fillText(l, M - 4, y); y += tn.tam + 4; }
+    y += 100 - (tn.tam + 4) + 6;
     if (d.subtitulo) { letra(650, 38); x.fillStyle = C.morado; x.fillText(d.subtitulo, M, y - 40); }
     if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y + (d.subtitulo ? 24 : -20), C.tinta2, 36) - 10;
-    const top = Math.max(y + 60, 560);
-    const celda = (W - 2 * M) / 2, alto = (HC - 220 - top) / 2;
+    // (v0.187) cada cifra con su etiqueta y aire hasta la fila siguiente (antes la etiqueta de abajo se pegaba al numero)
+    const top = Math.max(y + 50, 540);
+    const celda = (W - 2 * M) / 2, alto = (HC - 200 - top) / 2;
+    const tamC = Math.max(120, Math.min(210, alto - 110));
     cifras.slice(0, 4).forEach((c, i) => {
       const cx = M + (i % 2) * celda, cy = top + Math.floor(i / 2) * alto;
-      etiqueta(c.t, cx, cy + 10);
-      cifra(c, cx - 6, cy + 10 + Math.min(220, alto - 40), Math.min(232, alto - 30));
+      etiqueta(c.t, cx, cy + 34);
+      cifra(c, cx - 6, cy + 34 + 28 + Math.round(tamC * 0.78), tamC);
     });
-    x.fillStyle = C.linea; x.fillRect(M, top + alto - 16, W - 2 * M, 2);
+    if (cifras.length > 2) { x.fillStyle = C.linea; x.fillRect(M, top + alto - 12, W - 2 * M, 2); }
+  } else if (plantilla === 'record') {
+    // (v0.187) «Récord»: el ejercicio y la marca en grande y en dorado; la sesion y sus cifras, pequenas abajo
+    const rs = d.records || [], r0 = rs[0] || {};
+    let y = 318;
+    icono('trofeo', M + 20, y - 12, 40, C.oro);
+    letra(750, 30); espaciado(4); x.fillStyle = C.oro; x.fillText(rs.length === 1 ? 'NUEVO RÉCORD' : `${rs.length} RÉCORDS`, M + 56, y); espaciado(0);
+    y += 104;
+    const tn = titulo(r0.nombre, { tams: [92, 78, 64], ancho: W - 2 * M, estilo: 'semi-expanded', luego: { tams: [56, 50], max: 3 } });
+    x.fillStyle = C.tinta;
+    for (const l of tn.ls) { x.fillText(l, M - 3, y); y += tn.tam + 6; }
+    // la marca: tan grande como quepa
+    let tm = 250;
+    const marcaTxt = String(r0.texto || '');
+    letra(650, tm, 'condensed');
+    while (tm > 110 && x.measureText(marcaTxt).width > W - 2 * M) { tm -= 10; letra(650, tm, 'condensed'); }
+    y += Math.round(tm * 0.74);
+    x.fillStyle = C.oro; x.fillText(cortar(marcaTxt, W - 2 * M), M - 6, y);
+    y += 74;
+    for (const r of rs.slice(1, 3)) {
+      if (y > HC - 440) break;
+      letra(700, 36); x.fillStyle = C.tinta; const nn = cortar(r.nombre, (W - 2 * M) * 0.58); x.fillText(nn, M, y);
+      letra(700, 36, 'semi-expanded'); x.fillStyle = C.oro; x.textAlign = 'right'; x.fillText(cortar(r.texto, (W - 2 * M) * 0.38), W - M, y); x.textAlign = 'left';
+      y += 56;
+    }
+    if (d.frase && y < HC - 440) frasePropia(x, letra, cortar, d.frase, y + 6, C.tinta2, 36);
+    // abajo: la sesion y sus cifras
+    x.fillStyle = C.linea; x.fillRect(M, HC - 372, W - 2 * M, 2);
+    letra(700, 38); x.fillStyle = C.tinta2; x.fillText(cortar(`${d.nombre}${d.subtitulo ? ` · ${d.subtitulo}` : ''}`, W - 2 * M), M, HC - 308);
+    const resto = cifras.filter((c) => c.k !== 'records').slice(0, 3);
+    const anchoCol = (W - 2 * M) / Math.max(1, resto.length);
+    resto.forEach((c, i) => {
+      const cx = M + i * anchoCol;
+      letra(800, 60, 'semi-expanded'); x.fillStyle = C.tinta; x.fillText(c.v, cx, HC - 218);
+      const w = x.measureText(c.v).width;
+      if (c.u) { letra(600, 28); x.fillStyle = C.tinta2; x.fillText(c.u, cx + w + 8, HC - 218); }
+      etiqueta(c.t, cx, HC - 180, C.tinta3);
+    });
   } else {
     // «Mínima» y «Con tu foto»: el nombre y la cifra (o cifras) abajo
     const h = d.cardio ? cifras[1] || cifras[0] : cifraHeroe(d);
     let y = plantilla === 'minima' ? HC - 600 : HC - 470;
     if (d.frase) y -= 70;
-    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#DDD9FF' : C.morado; x.fillText(d.subtitulo, M, y - 112); }
-    letra(800, 100, 'expanded'); x.fillStyle = C.tinta;
-    const ls = lineas(d.nombre, W - 2 * M, 2);
-    y -= (ls.length - 1) * 100;
-    for (const l of ls) { x.fillText(l, M - 4, y); y += 104; }
+    // (v0.187) el subtitulo va encima de la primera linea del nombre, tenga una o dos (antes se montaba con dos)
+    const tn = titulo(d.nombre, { tams: [100, 84, 70], ancho: W - 2 * M, luego: { tams: [62, 54], max: 3 } });
+    const ls = tn.ls;
+    y -= (ls.length - 1) * (tn.tam + 4);
+    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#DDD9FF' : C.morado; x.fillText(cortar(d.subtitulo, W - 2 * M), M, y - tn.tam - 12); }
+    letra(800, tn.tam, 'expanded'); x.fillStyle = C.tinta;
+    for (const l of ls) { x.fillText(l, M - 4, y); y += tn.tam + 4; }
+    y += 100 - tn.tam;
     if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y - 30, r ? '#DDD9FF' : C.morado, 36) - 10;
     if (plantilla === 'minima' && h) {
       etiqueta(h.t, M, y + 30);
@@ -433,30 +546,31 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     }
   }
   // Pie: un filo y la firma, con el lobo
-  pie(x, letra, r ? '#DDDDE3' : ilu ? '#EEECFF' : C.tinta3);
-  x.textAlign = 'left';
-  x.translate(0, -oy);
+  pie(x, letra, r ? '#DDDDE3' : ilu ? C.tinta2 : C.tinta3);
+  salir(x);
 }
 
 // ---------- (compartir) la tarjeta de un logro: récord, racha, semana completa, la semana del equipo, un reto… ----------
 // d: { tipo, etiqueta, nombre, cifra { v, u, t }, lineas [texto…], fecha, llama, puntos (la gráfica), comparar (antes y
 // ahora), lista (el plan de la semana), cita { texto, autor } } (logica/compartir.js). paleta: la de PALETAS.
-export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '' } = {}) {
+export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
   await cargarFuentes();
   const cv = empezar({ formato, paleta });
   d = frase ? { ...d, frase } : d;
   FIRMA = { handle, equipo };
   const x = cv.getContext('2d');
-  const { letra, cortar, lineas, icono } = utiles(x);
+  const { letra, cortar, lineas, icono, titulo } = utiles(x);
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
-  fondoNoche(x);
-  // El lobo en grande y muy tenue abajo a la derecha, y un resplandor dorado arriba (los récords) o del acento
-  dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055);
+  // (v0.187) con ilustracion de fondo (la del logro o la elegida); sin ella, el lobo en grande y muy tenue
+  const idFondo = fondoElegido(fondo, fondoLogro(d));
+  const ilu = C.clara || !idFondo ? null : await cargarFondo(idFondo);
+  if (ilu) fondoIlustrado(x, ilu);
+  else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055); }
   const dorado = d.tipo === 'record' || d.tipo === 'logro';
-  let g = x.createRadialGradient(W * 0.8, oy + 420, 0, W * 0.8, oy + 420, 620);
+  let g = x.createRadialGradient(W * 0.8, oy + 420 * EC, 0, W * 0.8, oy + 420 * EC, 620);
   g.addColorStop(0, dorado ? (C.clara ? 'rgba(233, 212, 154, .35)' : 'rgba(233, 212, 154, .22)') : `rgba(${C.resplandor}, ${C.clara ? 0.16 : 0.28})`); g.addColorStop(1, 'rgba(0, 0, 0, 0)');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.translate(0, oy);
+  entrar(x);
   marca(x, letra);
   letra(500, 30); x.fillStyle = C.tinta2; x.textAlign = 'right';
   x.fillText(fechaLarga(d.fecha || new Date().toISOString().slice(0, 10)), W - M, M + 40);
@@ -472,9 +586,11 @@ export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg =
   y += 96;
   // El nombre: en grande si cabe en dos líneas; si no, algo más pequeño y hasta tres
   const anchoNombre = W - 2 * M - 190;
-  letra(800, 88, 'semi-expanded'); x.fillStyle = C.tinta;
-  let ls = lineas(d.nombre || '', anchoNombre, 3), tam = 88;
-  if (ls.length > 2) { tam = 66; letra(800, tam, 'semi-expanded'); ls = lineas(d.nombre || '', anchoNombre, 3); }
+  // (v0.187) lineas parejas («Del 9 nov / al 15 nov») y sin cortar si cabe mas pequeno
+  let tn = titulo(d.nombre || '', { tams: [88], ancho: anchoNombre, max: 2, estilo: 'semi-expanded' });
+  if (tn.ls.some((l) => l.endsWith('…'))) tn = titulo(d.nombre || '', { tams: [66, 56], ancho: anchoNombre, max: 3, estilo: 'semi-expanded' });
+  const ls = tn.ls, tam = tn.tam;
+  x.fillStyle = C.tinta;
   for (const l of ls) { x.fillText(l, M - 3, y); y += tam + 6; }
   if (ls.length > 2) y -= 40;
   if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y + 10, C.morado, 36) - 30;
@@ -544,9 +660,9 @@ export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg =
     for (const l of ql) { if (y > HC - 190) break; x.fillText(l, M, y); y += 44; }
     if (d.cita.autor && y <= HC - 180) { letra(600, 30); x.fillStyle = C.tinta3; x.fillText(`— ${d.cita.autor}`, M, y + 4); }
   }
-  pie(x, letra, C.tinta3);
+  pie(x, letra, ilu ? C.tinta2 : C.tinta3);
   pegatina(x, letra, pegatinaTarjeta(peg));
-  x.translate(0, -oy);
+  salir(x);
   return aBlob(cv);
 }
 
@@ -572,11 +688,18 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   const { aviso, api, propio } = useApp();
   const [img, setImg] = useState(null);
   const [error, setError] = useState(null);
-  const lasPlantillas = plantillas ? PLANTILLAS_TARJETA : null;
-  const [plantilla, setPlantilla] = useState(plantillas ? 'cifras' : 'clasica');
+  // (v0.187) «Récord» solo si la sesión tuvo alguno; la plantilla, el fondo y la pegatina se recuerdan en el móvil
+  const nRecords = (datos?.records || []).length;
+  const lasPlantillas = plantillas ? PLANTILLAS_TARJETA.filter(([k]) => k !== 'record' || nRecords > 0) : null;
+  const [plantillaGuardada, setPlantillaGuardada] = usePreferencia(PREF_PLANTILLA, 'cifras');
+  const [plantilla, setPlantillaAhora] = useState(() => (plantillas ? plantillaInicial(plantillaGuardada, PLANTILLAS_TARJETA.map(([k]) => k), { records: nRecords }) : 'clasica'));
+  const setPlantilla = (k) => { setPlantillaAhora(k); if (plantillas && k !== 'foto') setPlantillaGuardada(k); };
+  const [fondo, setFondo] = usePreferencia(PREF_FONDO, 'auto');
+  const [personalizar, setPersonalizar] = usePreferencia(PREF_PERSONALIZAR, false);
+  const [fraseEquipo, setFraseEquipo] = useState('');
   const [formato, setFormato] = usePreferencia('fbe-compartir-formato', 'publicacion');
   const [paleta, setPaleta] = usePreferencia(PREF_PALETA, 'noche');
-  const [peg, setPeg] = useState('');
+  const [peg, setPeg] = usePreferencia(PREF_PEGATINA, '');
   const [handle, setHandle] = usePreferencia(PREF_HANDLE, '');
   const [frase, setFrase] = usePreferencia(PREF_FRASE, '');
   const [conFrase, setConFrase] = useState(false);
@@ -603,9 +726,17 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   const datosConCita = cita.datos ? { ...datos, cita: cita.datos } : datos;
   const fraseActiva = conFrase && personalizable ? frase : '';
   const opciones = { plantilla: plantilla === 'foto' && !foto?.img ? 'minima' : plantilla, foto: plantilla === 'foto' ? foto?.img || null : null, formato: personalizable ? formato : 'publicacion',
-    pegatina: peg, handle, equipo: equipoHandle, paleta: personalizable ? paleta : 'noche', frase: fraseActiva };
+    pegatina: personalizable ? peg : '', handle, equipo: equipoHandle, paleta: personalizable ? paleta : 'noche', frase: fraseActiva, fondo: personalizable ? fondo : 'auto' };
+  // (v0.187) los fondos que hay, con los de esta tarjeta delante
+  const fondos = personalizable && hayImagen('compartir-sesion') ? fondosDisponibles(grupoFondo(datos, logro || !plantillas ? tipo : 'sesion')) : [];
+  const conFondo = fondos.length > 0 && opciones.paleta !== 'clara' && plantilla !== 'foto';
+  const sorprender = () => {
+    const s = sorpresa({ plantillas: lasPlantillas ? lasPlantillas.map(([k]) => k) : [], fondos: conFondo ? fondos.map(([k]) => k) : [], ahora: { plantilla, paleta, fondo } });
+    if (lasPlantillas && s.plantilla) setPlantilla(s.plantilla);
+    setPaleta(s.paleta); if (conFondo) setFondo(s.fondo);
+  };
   // La imagen que se ve lleva lo con que se pintó: mientras no coincide con lo elegido, se está preparando
-  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${opciones.formato}:${peg}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}`;
+  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${opciones.formato}:${opciones.pegatina}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}:${opciones.fondo}`;
   const preparando = !img || img.clave !== clave;
   const pintar = (d, o) => (dibujar || (logro ? dibujarLogro : dibujarTarjeta))(d, o);
   useEffect(() => {
@@ -671,7 +802,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     setPublicando(true);
     try {
       const jpeg = await aJpeg(img.blob);
-      await api.publicarEnComunidad({ fotos: [jpeg], texto: equipo.texto ?? pie.split('\n').slice(0, 2).join('\n'), tema: equipo.tema || 'logros' });
+      await api.publicarEnComunidad({ fotos: [jpeg], texto: [fraseEquipo.trim(), equipo.texto ?? pie.split('\n').slice(0, 2).join('\n')].filter(Boolean).join('\n').slice(0, 500), tema: equipo.tema || 'logros' });
       setPublicada(true); aviso('Publicado en el equipo'); anotar(); lanzarConfeti({ vibracion: null }); alPublicado?.();
     } catch (e) { aviso(e.message, 'error'); } finally { setPublicando(false); }
   };
@@ -735,7 +866,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
           {lasPlantillas.map(([k, t]) => (
             <label class="plantilla-op" key={k}>
               <input type="radio" name="plantilla-tarjeta" value={k} checked={plantilla === k} onChange={() => { setPlantilla(k); if (k === 'foto' && !foto) entrada.current?.click(); }} />
-              <span class={`plantilla-mini mini-${k}`} aria-hidden="true">{k === 'cifras' ? '42' : k === 'minima' ? 'A' : k === 'foto' ? <Icono n="camara" /> : k === 'poster' ? 'Aa' : <Icono n="luna" />}</span>
+              <span class={`plantilla-mini mini-${k}`} aria-hidden="true">{k === 'cifras' ? '42' : k === 'minima' ? 'A' : k === 'foto' ? <Icono n="camara" /> : k === 'poster' ? 'Aa' : k === 'lista' ? <Icono n="ordenar" /> : k === 'record' ? <Icono n="trofeo" /> : <Icono n="luna" />}</span>
               <span class="plantilla-nombre">{t}</span>
             </label>
           ))}
@@ -748,46 +879,9 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
         </div>
       )}
       {plantillas && <input ref={entrada} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir una foto para la tarjeta" onChange={elegirFoto} />}
-      {personalizable && (
-        <div class="compartir-opciones">
-          <div class="campo"><span class="etq">Formato</span><Segmentos etiqueta="Formato de la imagen" valor={formato} alCambiar={(v) => setFormato(v || 'publicacion')} opciones={FORMATOS.map(([k, t]) => [k, t])} /></div>
-          {plantilla !== 'foto' && (
-            <div class="campo">
-              <span class="etq">Colores</span>
-              <div class="chips-fila paletas" role="radiogroup" aria-label="Colores">
-                {PALETAS.map(([k, t, c]) => <button type="button" key={k} role="radio" aria-checked={paleta === k ? 'true' : 'false'} class={`paleta-op ${paleta === k ? 'activo' : ''}`} style={`--pf:${c.noche};--pa:${c.morado};--pt:${c.tinta}`} onClick={() => setPaleta(k)}><span class="paleta-muestra" aria-hidden="true"><i /></span>{t}</button>)}
-              </div>
-            </div>
-          )}
-          <div class="campo">
-            <span class="etq">Pegatina</span>
-            <div class="chips-fila" role="radiogroup" aria-label="Pegatina">
-              {PEGATINAS_TARJETA.map(([k, t]) => <button type="button" key={k} role="radio" aria-checked={peg === k ? 'true' : 'false'} class={`chip chip-boton ${peg === k ? 'activo' : ''}`} onClick={() => setPeg(k)}>{t}</button>)}
-            </div>
-          </div>
-          <div class="campo compartir-frase">
-            {conFrase ? (
-              <div class="fila">
-                <input class="entrada" type="text" maxLength={70} value={frase} placeholder="Tu frase (hasta 70 letras)" aria-label="Tu frase en la tarjeta" onInput={(e) => setFrase(limpiarFrase(e.currentTarget.value))} autoFocus />
-                <button type="button" class="btn btn-peq" onClick={() => { setConFrase(false); }}>Quitar</button>
-              </div>
-            ) : <button type="button" class="btn-texto" onClick={() => setConFrase(true)}>{frase ? `Añadir tu frase: «${frase}»` : 'Añadir una frase tuya a la tarjeta'}</button>}
-          </div>
-          <div class="campo compartir-handle">
-            {editarHandle ? (
-              <form class="fila" onSubmit={(e) => { e.preventDefault(); guardarHandle(e.currentTarget.elements.h.value); }}>
-                <input name="h" class="entrada" type="text" inputMode="text" autoCapitalize="off" autoComplete="off" maxLength={31} placeholder="@tu_instagram" defaultValue={handle} aria-label="Tu nombre de Instagram" autoFocus />
-                <button class="btn btn-peq btn-primario">Guardar</button>
-                {handle && <button type="button" class="btn btn-peq" onClick={() => { setHandle(''); setEditarHandle(false); }}>Quitar</button>}
-              </form>
-            ) : <button type="button" class="btn-texto" onClick={() => setEditarHandle(true)}>{handle ? `${conArroba(handle)} en la tarjeta · cambiar` : 'Poner tu @ de Instagram en la tarjeta'}</button>}
-            {editarHandle && <span class="mini terciario">Sale en el pie de la imagen y en el texto. Se guarda solo en este móvil.</span>}
-          </div>
-        </div>
-      )}
       {error ? <div class="error" role="alert">{error}</div> : !img ? <Cargando texto="Preparando la imagen" /> : (
         <>
-          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'historia' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
+          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'historia' : opciones.formato === 'cuadrado' ? 'cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
             onTouchStart={lasPlantillas ? alTocar : undefined} onTouchEnd={lasPlantillas ? alSoltar : undefined}>
             {comoInstagram && (
               <div class="marco-ig-cab" aria-hidden="true">
@@ -818,6 +912,69 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
             <button class={`btn ${puedeCompartir ? '' : 'btn-primario'}`} onClick={guardar}><Icono n="descargar" /> Guardar imagen</button>
             {paginasCarrusel?.length > 1 && <button class="btn" disabled={carruselEstado === 'preparando' || preparando} onClick={compartirCarrusel}><Icono n="imagen" /> {carruselEstado === 'preparando' ? 'Preparando…' : `Carrusel (${paginasCarrusel.length})`}</button>}
           </div>
+          {/* (v0.187) publicar en el equipo, a la vista y con una frase si quiere */}
+          {equipo && enEquipo.datos === true && !publicada && (
+            <div class="compartir-equipo">
+              <input class="entrada" type="text" maxLength={140} value={fraseEquipo} placeholder="Unas palabras para el equipo (opcional)" aria-label="Unas palabras para el equipo" onInput={(e) => setFraseEquipo(e.currentTarget.value)} />
+              <button type="button" class="btn" disabled={publicando || preparando} onClick={publicarEquipo}><Icono n="equipo" /> {publicando ? 'Publicando…' : 'Publicar en el equipo'}</button>
+            </div>
+          )}
+          {publicada && <p class="nota peq"><Icono n="hecho" /> Publicada en el muro del equipo.</p>}
+          {personalizable && (
+            <div class="fila-envolver compartir-estilo">
+              <button type="button" class="btn btn-peq" aria-expanded={personalizar ? 'true' : 'false'} aria-controls="compartir-opciones" onClick={() => setPersonalizar(!personalizar)}><Icono n="ajustes" /> {personalizar ? 'Ocultar las opciones' : 'Personalizar'}</button>
+              <button type="button" class="btn btn-peq" disabled={preparando} onClick={sorprender}><Icono n="estrella" /> Sorpréndeme</button>
+            </div>
+          )}
+          {personalizable && personalizar && (
+        <div class="compartir-opciones" id="compartir-opciones">
+          <div class="campo"><span class="etq">Formato</span><Segmentos etiqueta="Formato de la imagen" valor={formato} alCambiar={(v) => setFormato(v || 'publicacion')} opciones={FORMATOS.map(([k, t]) => [k, t])} /></div>
+          {plantilla !== 'foto' && (
+            <div class="campo">
+              <span class="etq">Colores</span>
+              <div class="chips-fila paletas" role="radiogroup" aria-label="Colores">
+                {PALETAS.map(([k, t, c]) => <button type="button" key={k} role="radio" aria-checked={paleta === k ? 'true' : 'false'} class={`paleta-op ${paleta === k ? 'activo' : ''}`} style={`--pf:${c.noche};--pa:${c.morado};--pt:${c.tinta}`} onClick={() => setPaleta(k)}><span class="paleta-muestra" aria-hidden="true"><i /></span>{t}</button>)}
+              </div>
+            </div>
+          )}
+          {conFondo && (
+            <div class="campo">
+              <span class="etq">Fondo</span>
+              <div class="chips-fila fondos-fila" role="radiogroup" aria-label="Fondo">
+                {[['auto', 'Automático'], ['', 'Sin dibujo'], ...fondos].map(([k, t]) => (
+                  <button type="button" key={k || 'ninguno'} role="radio" aria-checked={fondo === k ? 'true' : 'false'} class={`fondo-op ${fondo === k ? 'activo' : ''}`} onClick={() => setFondo(k)}>
+                    <span class="fondo-muestra" aria-hidden="true">{k && k !== 'auto' ? <img src={fuenteImagen(k).src} alt="" loading="lazy" /> : <Icono n={k === 'auto' ? 'estrella' : 'cerrar'} />}</span>{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div class="campo">
+            <span class="etq">Pegatina</span>
+            <div class="chips-fila" role="radiogroup" aria-label="Pegatina">
+              {PEGATINAS_TARJETA.map(([k, t]) => <button type="button" key={k} role="radio" aria-checked={peg === k ? 'true' : 'false'} class={`chip chip-boton ${peg === k ? 'activo' : ''}`} onClick={() => setPeg(k)}>{t}</button>)}
+            </div>
+          </div>
+          <div class="campo compartir-frase">
+            {conFrase ? (
+              <div class="fila">
+                <input class="entrada" type="text" maxLength={70} value={frase} placeholder="Tu frase (hasta 70 letras)" aria-label="Tu frase en la tarjeta" onInput={(e) => setFrase(limpiarFrase(e.currentTarget.value))} autoFocus />
+                <button type="button" class="btn btn-peq" onClick={() => { setConFrase(false); }}>Quitar</button>
+              </div>
+            ) : <button type="button" class="btn-texto" onClick={() => setConFrase(true)}>{frase ? `Añadir tu frase: «${frase}»` : 'Añadir una frase tuya a la tarjeta'}</button>}
+          </div>
+          <div class="campo compartir-handle">
+            {editarHandle ? (
+              <form class="fila" onSubmit={(e) => { e.preventDefault(); guardarHandle(e.currentTarget.elements.h.value); }}>
+                <input name="h" class="entrada" type="text" inputMode="text" autoCapitalize="off" autoComplete="off" maxLength={31} placeholder="@tu_instagram" defaultValue={handle} aria-label="Tu nombre de Instagram" autoFocus />
+                <button class="btn btn-peq btn-primario">Guardar</button>
+                {handle && <button type="button" class="btn btn-peq" onClick={() => { setHandle(''); setEditarHandle(false); }}>Quitar</button>}
+              </form>
+            ) : <button type="button" class="btn-texto" onClick={() => setEditarHandle(true)}>{handle ? `${conArroba(handle)} en la tarjeta · cambiar` : 'Poner tu @ de Instagram en la tarjeta'}</button>}
+            {editarHandle && <span class="mini terciario">Sale en el pie de la imagen y en el texto. Se guarda solo en este móvil.</span>}
+          </div>
+        </div>
+      )}
           {personalizable && (
             <div class="fila-envolver compartir-destinos" aria-label="Enviar a">
               {DESTINOS.map(([k, t, url]) => <button type="button" key={k} class={`btn btn-peq destino-${k}`} onClick={() => aDestino(k, url)}>{t}</button>)}
@@ -842,10 +999,6 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
               {video?.estado === 'error' && <span class="mini terciario">No se ha podido grabar aquí ({video.mensaje}).</span>}
             </div>
           )}
-          {equipo && enEquipo.datos === true && !publicada && (
-            <button type="button" class="btn" disabled={publicando || preparando} onClick={publicarEquipo}><Icono n="equipo" /> {publicando ? 'Publicando…' : 'Publicar en el equipo'}</button>
-          )}
-          {publicada && <p class="nota peq"><Icono n="hecho" /> Publicada en el muro del equipo.</p>}
           <p class="mini terciario">{nota || (logro ? 'Solo lleva el logro y sus cifras: nada de peso corporal, salud ni nutrición.' : plantillas ? 'Solo lleva el nombre de la sesión, la duración, las series, el tonelaje y tus récords: nada de peso corporal, salud ni nutrición.' : 'Solo lleva el nombre de la sesión, las series, el tonelaje, los minutos y tus mejores series: nada de peso corporal ni datos de salud.')} {personalizable && 'Instagram y Facebook no cogen la imagen desde una web: con sus botones se guarda, se copia el texto y se abre la app para que la subas. '}En el móvil también puedes mantener pulsada la imagen para guardarla.</p>
         </>
       )}

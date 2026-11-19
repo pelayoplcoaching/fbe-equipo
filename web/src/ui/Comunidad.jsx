@@ -999,6 +999,10 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar, llega = false }) {
           <button type="button" class="btn btn-peq plano post-comentar" onClick={() => setHoja('comentarios')}>
             <Icono n="mensaje" /> {post.comentarios ? `${post.comentarios} ${post.comentarios === 1 ? 'comentario' : 'comentarios'}` : 'Comentar'}
           </button>
+          {/* (v0.187) lo mio, fuera del equipo, a un toque (antes solo en las opciones) */}
+          {post.mio && ['entreno', 'logro', 'aniversario'].includes(post.tipo) && (
+            <button type="button" class="btn btn-icono plano post-fuera" aria-label="Compartir fuera" title="Compartir fuera del equipo (Instagram, WhatsApp…)" onClick={() => setHoja('fuera')}><Icono n="compartir" /></button>
+          )}
           {post.con043 && (
             <button type="button" class={`btn btn-icono plano post-guardar ${guardado ? 'guardado' : ''}`} aria-label="Guardar" aria-pressed={guardado ? 'true' : 'false'}
               title={guardado ? 'Guardada (solo la ves tú)' : 'Guardar'} disabled={ocupado} onClick={guardar}><Icono n="guardar" /></button>

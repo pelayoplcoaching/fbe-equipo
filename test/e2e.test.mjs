@@ -875,7 +875,7 @@ try {
   // v0.51: plantillas «Cifras» (de entrada), «Mínima» y «Con tu foto» (una foto del móvil, que no se sube); v0.116: y «Póster»
   // («Clara» pasa a ser una paleta)
   const plantillas = p.getByRole('group', { name: 'Plantilla' });
-  check((await plantillas.getByRole('radio').count()) === 4 && await plantillas.getByRole('radio', { name: 'Póster' }).count() === 1 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre cuatro plantillas (con «Póster»); de entrada, «Cifras»');
+  check((await plantillas.getByRole('radio').count()) >= 5 && await plantillas.getByRole('radio', { name: 'Lista' }).count() === 1 && await plantillas.getByRole('radio', { name: 'Póster' }).count() === 1 && await plantillas.getByRole('radio', { name: 'Cifras' }).isChecked() && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Cifras)'), 'elige entre las plantillas (con «Póster» y, v0.187, «Lista»); de entrada, «Cifras»');
   await revisar('compartir');
   const srcAntes = await p.locator('.tarjeta-img').getAttribute('src');
   await plantillas.getByRole('radio', { name: 'Mínima' }).click();
@@ -5971,6 +5971,16 @@ try {
 } catch (e) {
   fallos++;
   console.log('  ✗ v0.185:', e.message.split('\n')[0]);
+}
+
+// v0.187: compartir, tercera tanda (test/e2e-compartir-187.mjs)
+console.log('\nv0.187: compartir, tercera tanda');
+try {
+  const { probarCompartir187 } = await import('./e2e-compartir-187.mjs');
+  await probarCompartir187({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
 // v0.186: el editor manual, tercera tanda (test/e2e-editor-186.mjs)

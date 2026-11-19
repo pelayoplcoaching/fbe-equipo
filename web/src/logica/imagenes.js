@@ -185,6 +185,47 @@ export function fondoTarjeta(d = {}) {
   if (d.cardio && CARDIO_IMG[d.cardio.modalidad]) return `cardio-${CARDIO_IMG[d.cardio.modalidad]}`;
   return 'compartir-sesion';
 }
+// (v0.187) Los fondos que se pueden elegir en la hoja de compartir: [id, nombre, grupo]. Los cinco primeros son los de
+// siempre; los demas salen en la lista segun van llegando sus imagenes (los que no estan, no se ofrecen).
+export const FONDOS_COMPARTIR = [
+  ['compartir-sesion', 'Barra y magnesio', 'sesion'], ['compartir-record', 'Luz dorada', 'record'], ['compartir-racha', 'Brasas', 'racha'],
+  ['compartir-mes', 'Fases de la luna', 'tiempo'], ['compartir-bloque', 'Cordillera', 'tiempo'],
+  ['compartir-rack', 'Rack', 'sesion'], ['compartir-discos', 'Discos', 'sesion'], ['compartir-mancuernas', 'Mancuernas', 'sesion'], ['compartir-magnesio', 'Magnesio', 'sesion'],
+  ['compartir-banco', 'Banco', 'sesion'], ['compartir-barra-suelo', 'Barra en el suelo', 'sesion'], ['compartir-kettlebells', 'Kettlebells', 'sesion'],
+  ['compartir-trofeo', 'Trofeo', 'record'], ['compartir-cima', 'Cima', 'record'], ['compartir-confeti', 'Confeti', 'record'], ['compartir-barra-oro', 'Barra arriba', 'record'], ['compartir-estrella', 'Estrella', 'record'],
+  ['compartir-hoguera', 'Hoguera', 'racha'], ['compartir-cadena', 'Cadena', 'racha'], ['compartir-huellas', 'Huellas', 'racha'], ['compartir-escalera', 'Escalera', 'racha'],
+  ['compartir-luna', 'Luna llena', 'tiempo'], ['compartir-amanecer', 'Amanecer', 'tiempo'], ['compartir-sendero', 'Sendero', 'tiempo'], ['compartir-bosque', 'Bosque', 'tiempo'], ['compartir-constelacion', 'Constelación', 'tiempo'],
+  ['compartir-pista', 'Pista', 'cardio'], ['compartir-carretera', 'Carretera', 'cardio'], ['compartir-zapatillas', 'Zapatillas', 'cardio'], ['compartir-bici', 'Bici', 'cardio'],
+  ['compartir-manada', 'Manada', 'equipo'], ['compartir-lobo-luna', 'Lobo y luna', 'equipo'], ['compartir-lobos-nieve', 'Lobos en la nieve', 'equipo'], ['compartir-fogata-equipo', 'Fogata', 'equipo'], ['compartir-gimnasio', 'Gimnasio de noche', 'equipo'],
+];
+export const fondoValido = (id) => id === 'auto' || id === '' || FONDOS_COMPARTIR.some(([k]) => k === id);
+// Los que tienen imagen (lista: la de imagenes.json), con los del grupo de la tarjeta delante
+export function fondosDisponibles(grupo = null, lista = LISTA) {
+  const hay = FONDOS_COMPARTIR.filter(([id]) => Object.prototype.hasOwnProperty.call(lista, id) && lista[id]?.archivos);
+  return grupo ? [...hay.filter((f) => f[2] === grupo), ...hay.filter((f) => f[2] !== grupo)] : hay;
+}
+// El fondo de una tarjeta de logro, segun lo que cuenta (si su imagen aun no esta, el de siempre de ese tipo o ninguno)
+const FONDO_LOGRO = { record: ['compartir-record'], logro: ['compartir-record'], racha: ['compartir-racha'], semana: ['compartir-mes'], plan: ['compartir-mes'], mes: ['compartir-mes'], anio: ['compartir-bloque'],
+  comparativa: ['compartir-bloque'], reto: ['compartir-manada', 'compartir-bloque'], equipo: ['compartir-manada', 'compartir-mes'] };
+export function fondoLogro(d = {}, lista = LISTA) {
+  if (FONDOS_TARJETA.includes(d.fondo)) return `compartir-${d.fondo}`;
+  const c = FONDO_LOGRO[d.llama ? 'racha' : d.tipo] || [];
+  return c.find((id) => Object.prototype.hasOwnProperty.call(lista, id)) || null;
+}
+// El grupo de fondos que le va a una tarjeta (para ponerlos delante en la lista)
+export function grupoFondo(d = {}, tipo = 'sesion') {
+  if (d.cardio) return 'cardio';
+  if (tipo === 'record' || tipo === 'logro' || d.records?.length) return 'record';
+  if (tipo === 'racha' || d.llama) return 'racha';
+  if (tipo === 'equipo' || tipo === 'reto') return 'equipo';
+  return tipo === 'sesion' ? 'sesion' : 'tiempo';
+}
+// Lo elegido en la hoja: 'auto' (el de la tarjeta), '' (sin dibujo) o uno de la lista (si no existe, el de la tarjeta)
+export function fondoElegido(elegido, porDefecto, lista = LISTA) {
+  if (elegido === '') return null;
+  if (elegido && elegido !== 'auto' && Object.prototype.hasOwnProperty.call(lista, elegido) && FONDOS_COMPARTIR.some(([k]) => k === elegido)) return elegido;
+  return porDefecto || null;
+}
 // Dónde va el motivo de un fondo apaisado al recortarlo para una tarjeta vertical (0 izquierda, 1 derecha): las de
 // cardio lo llevan a la derecha
 export function focoFondo(id) { return String(id || '').startsWith('cardio-') ? 0.8 : 0.5; }

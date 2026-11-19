@@ -94,6 +94,9 @@ export const PLANTILLAS_TARJETA = [
   ['foto', 'Con tu foto', 'Elige una foto del móvil'],
   // (compartir, tanda 2) el nombre enorme, como un cartel
   ['poster', 'Póster', 'El nombre en grande'],
+  // (v0.187) los ejercicios con su mejor serie, y el récord en grande (solo si lo hubo)
+  ['lista', 'Lista', 'Tus ejercicios y su mejor serie'],
+  ['record', 'Récord', 'Tu récord en grande'],
 ];
 // d: lo de datosTarjeta (nombre, series, tonelaje en kg, minutos, records). Solo lo del entreno.
 export function cifrasTarjeta(d = {}) {

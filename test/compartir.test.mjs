@@ -11,7 +11,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const lanza = (f) => { try { f(); return false; } catch { return true; } };
 
 console.log('Formatos, plantillas y pegatinas');
-check(FORMATOS.length === 2 && formatoValido('historia') && !formatoValido('cuadrado') && tamanoFormato('historia').H === 1920 && tamanoFormato('nada').H === 1350, 'publicación (4:5) e historia (9:16); lo raro, publicación');
+check(FORMATOS.length === 3 && formatoValido('historia') && formatoValido('cuadrado') && tamanoFormato('cuadrado').H === 1080 && !formatoValido('panoramica') && tamanoFormato('historia').H === 1920 && tamanoFormato('nada').H === 1350, 'publicación (4:5) e historia (9:16); lo raro, publicación');
 check(PLANTILLAS_TARJETA.some(([k]) => k === 'poster') && PALETAS.length === 6 && paletaValida('clara') && !paletaValida('rosa') && paletaDe('bosque').clara === false && paletaDe('clara').clara, 'la plantilla «Póster» y las seis paletas');
 check(PEGATINAS_TARJETA[0][0] === '' && PEGATINAS_TARJETA.length === 7 && pegatinaTarjeta('pr') === 'PR' && pegatinaTarjeta('') === null && pegatinaTarjeta('x') === null, 'las pegatinas del equipo, y ninguna');
 
@@ -85,6 +85,30 @@ const est = { sesionId: 's1', fecha: '2026-11-07', records: ['Sentadilla'], tarj
 check(recordatorioCompartir(est, '2026-11-08')?.titulo === 'Tu récord de ayer en Sentadilla' && recordatorioCompartir({ ...est, fecha: '2026-11-08' }, '2026-11-08').titulo.includes('de hoy'), 'el récord de ayer (o de hoy)');
 check(recordatorioCompartir({ ...est, records: ['A', 'B'] }, '2026-11-08').titulo === 'Tus 2 récords de ayer', 'varios récords');
 check(recordatorioCompartir({ ...est, compartida: true }, '2026-11-08') === null && recordatorioCompartir({ ...est, quitado: true }, '2026-11-08') === null && recordatorioCompartir(est, '2026-11-12') === null && recordatorioCompartir(null) === null && recordatorioCompartir({ ...est, records: [] }, '2026-11-08') === null, 'ya compartido, quitado, de hace más de 3 días o sin récords: nada');
+
+// ---------- v0.187: plantillas nuevas, fondos, tu estilo y «Sorpréndeme» ----------
+{
+  const { plantillaInicial, sorpresa } = await import('../web/src/logica/compartir.js');
+  const { FONDOS_COMPARTIR, fondoValido, fondosDisponibles, fondoLogro, fondoElegido, grupoFondo } = await import('../web/src/logica/imagenes.js');
+  const claves = PLANTILLAS_TARJETA.map(([k]) => k);
+  check(claves.includes('lista') && claves.includes('record') && claves[0] === 'cifras', 'v0.187: plantillas «Lista» y «Récord»');
+  check(plantillaInicial('poster', claves) === 'poster' && plantillaInicial('foto', claves) === 'cifras' && plantillaInicial('record', claves, { records: 0 }) === 'cifras'
+    && plantillaInicial('record', claves, { records: 1 }) === 'record' && plantillaInicial('rara', claves) === 'cifras', 'se recuerda la plantilla (no «Con tu foto»; «Récord», solo con récord)');
+  check(FONDOS_COMPARTIR.length === 35 && new Set(FONDOS_COMPARTIR.map(([k]) => k)).size === 35 && FONDOS_COMPARTIR.every(([k, t, g]) => /^compartir-[a-z-]+$/.test(k) && t && ['sesion', 'record', 'racha', 'tiempo', 'cardio', 'equipo'].includes(g)),
+    '35 fondos (los 5 de siempre y 30 nuevos), cada uno con su nombre y su grupo');
+  check(fondoValido('auto') && fondoValido('') && fondoValido('compartir-luna') && !fondoValido('otra-cosa'), 'el fondo elegido: automático, sin dibujo o uno de la lista');
+  const lista = { 'compartir-sesion': { archivos: { 1024: 'a' } }, 'compartir-record': { archivos: { 1024: 'b' } }, 'compartir-luna': { archivos: { 1024: 'c' } }, 'otra': { archivos: { 1024: 'd' } } };
+  const disp = fondosDisponibles('tiempo', lista);
+  check(disp.length === 3 && disp[0][0] === 'compartir-luna' && fondosDisponibles(null, lista)[0][0] === 'compartir-sesion', 'solo se ofrecen los fondos que tienen imagen, con los de la tarjeta delante');
+  check(fondoElegido('', 'compartir-sesion', lista) === null && fondoElegido('auto', 'compartir-sesion', lista) === 'compartir-sesion' && fondoElegido('compartir-luna', 'compartir-sesion', lista) === 'compartir-luna'
+    && fondoElegido('compartir-bici', 'compartir-sesion', lista) === 'compartir-sesion' && fondoElegido('otra', null, lista) === null, 'un fondo que aún no tiene imagen (o no es de la lista) cae en el de la tarjeta');
+  check(fondoLogro({ tipo: 'record' }, lista) === 'compartir-record' && fondoLogro({ tipo: 'equipo' }, lista) === null && fondoLogro({ tipo: 'equipo' }, { ...lista, 'compartir-mes': { archivos: {} } }) === 'compartir-mes'
+    && fondoLogro({ tipo: 'racha', fondo: 'bloque' }, lista) === 'compartir-bloque', 'cada logro trae su fondo (y, si su imagen no está, el siguiente o ninguno)');
+  check(grupoFondo({ cardio: {} }) === 'cardio' && grupoFondo({ records: [1] }) === 'record' && grupoFondo({}, 'racha') === 'racha' && grupoFondo({}, 'equipo') === 'equipo' && grupoFondo({}) === 'sesion' && grupoFondo({}, 'mes') === 'tiempo', 'el grupo de fondos de cada tarjeta');
+  const s1 = sorpresa({ plantillas: ['cifras', 'foto', 'poster'], fondos: ['a', 'b'], ahora: { plantilla: 'cifras', paleta: 'noche', fondo: 'a' } }, () => 0);
+  check(s1.plantilla === 'poster' && s1.paleta !== 'noche' && s1.paleta !== 'clara' && s1.fondo === 'b', '«Sorpréndeme»: otra plantilla (nunca «Con tu foto»), otra paleta oscura y otro fondo');
+  check(sorpresa({ ahora: { plantilla: 'clasica', paleta: 'bosque', fondo: 'auto' } }, () => 0.99).fondo === 'auto', 'sin fondos que elegir, se queda en automático');
+}
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

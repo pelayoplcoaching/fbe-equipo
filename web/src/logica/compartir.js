@@ -15,6 +15,8 @@ import { textoRacha, unidadReto } from './comunidad.js';
 export const FORMATOS = [
   ['publicacion', 'Publicación', '4:5, para el muro', 1080, 1350],
   ['historia', 'Historia', '9:16, para historias', 1080, 1920],
+  // (v0.187) el cuadrado, para el feed y los grupos
+  ['cuadrado', 'Cuadrado', '1:1, para el feed y los grupos', 1080, 1080],
 ];
 export const formatoValido = (f) => FORMATOS.some(([k]) => k === f);
 export const tamanoFormato = (f) => { const x = FORMATOS.find(([k]) => k === f) || FORMATOS[0]; return { W: x[3], H: x[4] }; };
@@ -48,6 +50,28 @@ export const PREF_PALETA = 'fbe-compartir-paleta';
 // La frase propia del atleta en la tarjeta (tanda 2): hasta 70 caracteres, una línea
 export const limpiarFrase = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 70);
 export const PREF_FRASE = 'fbe-compartir-frase';
+
+// ---------- (v0.187) el fondo, tu estilo y «Sorpréndeme» ----------
+export const PREF_FONDO = 'fbe-compartir-fondo';
+export const PREF_PLANTILLA = 'fbe-compartir-plantilla';
+export const PREF_PEGATINA = 'fbe-compartir-pegatina';
+export const PREF_PERSONALIZAR = 'fbe-compartir-personalizar';
+// La plantilla recordada, si vale para esta tarjeta («Con tu foto» no se recuerda: la foto no se guarda; «Récord», solo
+// si hay récord)
+export function plantillaInicial(recordada, claves = [], { records = 0 } = {}) {
+  if (!claves.includes(recordada) || recordada === 'foto') return claves[0] || 'cifras';
+  if (recordada === 'record' && !records) return claves[0] || 'cifras';
+  return recordada;
+}
+// Una combinación al azar distinta de la actual: plantilla (nunca «Con tu foto»), paleta oscura y fondo
+export function sorpresa({ plantillas = [], paletas = PALETAS.map(([k]) => k), fondos = [], ahora = {} } = {}, azar = Math.random) {
+  const uno = (lista, actual) => { const l = lista.filter((k) => k !== actual); const de = l.length ? l : lista; return de.length ? de[Math.floor(azar() * de.length) % de.length] : actual; };
+  return {
+    plantilla: plantillas.length ? uno(plantillas.filter((k) => k !== 'foto'), ahora.plantilla) : ahora.plantilla,
+    paleta: uno(paletas.filter((k) => k !== 'clara'), ahora.paleta),
+    fondo: fondos.length ? uno(fondos, ahora.fondo) : 'auto',
+  };
+}
 
 // ---------- la pegatina ----------
 export const PEGATINAS_TARJETA = [['', 'Ninguna'], ...PEGATINAS];
