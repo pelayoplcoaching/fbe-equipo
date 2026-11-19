@@ -33,6 +33,18 @@ const salir = (x) => { x.restore(); x.textAlign = 'left'; x.textBaseline = 'alph
 // (compartir, tanda 2) Las paletas están en logica/compartir.js (PALETAS): «Noche» es la de la marca; «Clara», fondo claro;
 // Bosque, Brasa, Hielo y Grafito, la noche con otro acento. C es la paleta de la tarjeta que se está pintando.
 let C = paletaDe('noche'), PAL = 'noche';
+// (v0.188) Las tarjetas se pintan de una en una. El formato, la paleta y la firma son de todo el modulo y pintar espera
+// a la letra y al dibujo de fondo: si dos se pintaban a la vez (al cambiar deprisa de formato o de colores, o con el
+// movil lento cargando el fondo), la segunda le cambiaba el formato y los colores a la primera a medio pintar y salia
+// una tarjeta mezclada (clara por dentro, oscura por fuera y con el dibujo encima).
+let turno = Promise.resolve();
+function enTurno(fn) {
+  const r = turno.then(fn, fn);
+  turno = r.catch(() => {});
+  return r;
+}
+export const dibujarTarjeta = (d, o) => enTurno(() => pintarTarjeta(d, o));
+export const dibujarLogro = (d, o) => enTurno(() => pintarLogro(d, o));
 // Prepara el lienzo de una tarjeta: su formato, su paleta y el desplazamiento del contenido
 function empezar({ formato = 'publicacion', paleta = 'noche' } = {}) {
   const t = tamanoFormato(formato);
@@ -282,7 +294,7 @@ function utiles(x) {
 const aBlob = (cv) => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
 
 // (compartir) formato: publicacion | historia; pegatina: la clave de una pegatina (o ''); handle y equipo: los @ del pie
-export async function dibujarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
+async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
   await cargarFuentes();
   const cv = empezar({ formato, paleta });
   d = frase ? { ...d, frase } : d;
@@ -428,9 +440,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     fondoIlustrado(x, ilu);
   } else if (plantilla === 'minima') {
     dibujarArte(x, d, { escala: 3.4, dx: -180, dy: oy - 60, opacidad: 0.9 });
-    const g = x.createLinearGradient(0, oy + HC * 0.35, 0, H);
-    g.addColorStop(0, 'rgba(21, 15, 54, 0)'); g.addColorStop(0.5, 'rgba(21, 15, 54, .85)'); g.addColorStop(1, C.fondo);
-    x.fillStyle = g; x.fillRect(0, oy + HC * 0.35, W, H - oy - HC * 0.35);
+    velo(x, Math.round(oy + HC * 0.35), H, [[0, 0], [0.5, 0.85], [1, 1]]);
   } else {
     // (v0.187) en la clara, mas abajo y mas tenue: no choca con la fecha
     dibujarArte(x, d, { escala: 2.2, dx: 330, dy: oy + (C.clara ? 90 : -60) * EC, opacidad: C.clara ? 0.2 : 0.4 });
@@ -565,7 +575,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
 // ---------- (compartir) la tarjeta de un logro: récord, racha, semana completa, la semana del equipo, un reto… ----------
 // d: { tipo, etiqueta, nombre, cifra { v, u, t }, lineas [texto…], fecha, llama, puntos (la gráfica), comparar (antes y
 // ahora), lista (el plan de la semana), cita { texto, autor } } (logica/compartir.js). paleta: la de PALETAS.
-export async function dibujarLogro(d, { formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
+async function pintarLogro(d, { formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
   await cargarFuentes();
   const cv = empezar({ formato, paleta });
   d = frase ? { ...d, frase } : d;
