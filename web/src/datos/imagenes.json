@@ -1699,6 +1699,16 @@
     },
     "color": "#2e1c52"
   },
+  "compartir-bici": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-bici-1024.eda5230d.webp"
+    },
+    "color": "#352461"
+  },
   "compartir-bloque": {
     "proporcion": [
       4,
@@ -1728,6 +1738,16 @@
       "1024": "imagenes/compartir/compartir-cadena-1024.124b0d66.webp"
     },
     "color": "#302252"
+  },
+  "compartir-carretera": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-carretera-1024.68e1232f.webp"
+    },
+    "color": "#342263"
   },
   "compartir-cima": {
     "proporcion": [
@@ -1779,6 +1799,26 @@
     },
     "color": "#382354"
   },
+  "compartir-fogata-equipo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-fogata-equipo-1024.7620fa27.webp"
+    },
+    "color": "#36215c"
+  },
+  "compartir-gimnasio": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-gimnasio-1024.4df7f01e.webp"
+    },
+    "color": "#392561"
+  },
   "compartir-hoguera": {
     "proporcion": [
       2,
@@ -1809,6 +1849,26 @@
     },
     "color": "#2d1d51"
   },
+  "compartir-lobo-luna": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-lobo-luna-1024.c2233ca0.webp"
+    },
+    "color": "#3c2866"
+  },
+  "compartir-lobos-nieve": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-lobos-nieve-1024.865cd10a.webp"
+    },
+    "color": "#432e74"
+  },
   "compartir-luna": {
     "proporcion": [
       2,
@@ -1829,6 +1889,16 @@
     },
     "color": "#2f2257"
   },
+  "compartir-manada": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-manada-1024.87c50709.webp"
+    },
+    "color": "#362360"
+  },
   "compartir-mancuernas": {
     "proporcion": [
       2,
@@ -1848,6 +1918,16 @@
       "1024": "imagenes/compartir/compartir-mes-1024.b3d03a69.webp"
     },
     "color": "#352356"
+  },
+  "compartir-pista": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-pista-1024.93ebde8b.webp"
+    },
+    "color": "#372961"
   },
   "compartir-racha": {
     "proporcion": [
@@ -1908,6 +1988,16 @@
       "1024": "imagenes/compartir/compartir-trofeo-1024.04cbc87d.webp"
     },
     "color": "#392856"
+  },
+  "compartir-zapatillas": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-zapatillas-1024.d2f0b3b3.webp"
+    },
+    "color": "#342660"
   },
   "cua-bulgara-hatfield": {
     "proporcion": [
