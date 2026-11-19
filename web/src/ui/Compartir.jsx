@@ -141,13 +141,14 @@ function fondoIlustrado(x, img) {
   const pieY = Math.round(oy + (HC - 190) * EC);
   velo(x, pieY, H, [[0, 0], [Math.min(1, (150 * EC) / Math.max(1, H - pieY)), 0.62], [1, 0.62]]);
   // (v0.188) con un dibujo detras, cada letra lleva un halo del color del fondo: se lee tambien encima de lo claro
-  // (el oro del trofeo, la barra). Dos pasadas: una sola se queda corta sobre el dorado.
+  // (el oro del trofeo, la barra). Dos pasadas (un filo y la letra): una sola se queda corta sobre el dorado.
   if (!x.fbeHalo) {
     const escribir = x.fillText.bind(x);
     x.fbeHalo = true;
     x.fillText = (...a) => {
       x.save(); x.shadowColor = C.fondo; x.shadowBlur = 26; x.shadowOffsetX = 0; x.shadowOffsetY = 0;
-      escribir(...a); escribir(...a);
+      x.strokeStyle = C.fondo; x.lineWidth = 3; x.lineJoin = 'round'; x.strokeText(...a);
+      escribir(...a);
       x.restore();
     };
   }
