@@ -2634,6 +2634,31 @@ console.log('\nv0.67: «Revisión semanal»');
   let largo = null;
   try { await api.marcarRevision(una.atleta_id, r1.lunes, { nota: 'x'.repeat(501) }); } catch (e) { largo = e.message; }
   check(/500/.test(largo || ''), 'una nota de más de 500 caracteres se rechaza con un aviso claro');
+  // (v0.192, 082) «a medias», los ajustes del coach y lo que la revisión trae de más
+  check(r1.con082 === true && await api.revision082() === true && r1.filas.every((f) => 'estadoRevision' in f && 'escritos' in f && 'cobro' in f), '(082) la app sabe que está la 082; cada fila trae su estado, lo escrito y el cobro');
+  await api.marcarRevision(una.atleta_id, r1.lunes, { estado: 'esperando' });
+  check((await api.revisionSemanal(hoyR)).filas.find((f) => f.atleta_id === una.atleta_id).estadoRevision === 'esperando', 'un atleta se queda «esperando su respuesta»');
+  let malEstado = null;
+  try { await api.marcarRevision(una.atleta_id, r1.lunes, { estado: 'raro' }); } catch (e) { malEstado = e.message; }
+  await api.marcarRevision(una.atleta_id, r1.lunes, { estado: null });
+  check(/no vale/.test(malEstado || '') && (await api.revisionSemanal(hoyR)).filas.find((f) => f.atleta_id === una.atleta_id).estadoRevision === null, 'un estado que no existe, no; y se puede quitar');
+  check(await api.revisionAjustes() === null, 'sin ajustes guardados, nada');
+  await api.guardarRevisionAjustes({ frases: ['  Buen   trabajo ', '', 'Buen trabajo'], orden: [una.atleta_id, 'no-es-id'], modo: 'mio', vista: 'tabla' });
+  const aj = await api.revisionAjustes();
+  check(aj.frases.join() === 'Buen trabajo' && aj.orden.join() === una.atleta_id && aj.modo === 'mio' && aj.vista === 'tabla', 'los ajustes de la revisión se guardan limpios (frases sin repetir, solo identificadores)');
+  await api.guardarRevisionAjustes({ frases: [], orden: [], modo: 'urgencia', vista: 'lista' });
+  check((await b.sql(`select count(*)::int n from revision_ajustes`))[0].n === 1 && (await api.revisionAjustes()).modo === 'urgencia', 'una sola fila por coach: la segunda vez se cambia la misma');
+  {
+    const noEsta = () => { const e = new Error('Could not find the table public.revision_ajustes in the schema cache'); e.code = 'PGRST205'; return e; };
+    const sin082 = crearApi({ ...b, auth: b.auth, storage: b.storage, select: async (t, o) => { if (t === 'revision_ajustes') throw noEsta(); return b.select(t, o); }, update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), insert: b.insert.bind(b), rpc: b.rpc.bind(b) });
+    let falta = null;
+    try { await sin082.marcarRevision(una.atleta_id, r1.lunes, { estado: 'programar' }); } catch (e) { falta = e.message; }
+    check((await sin082.revisionSemanal(hoyR)).con082 === false && await sin082.revisionAjustes() === undefined && await sin082.guardarRevisionAjustes({ frases: ['x'] }) === false && /082/.test(falta || ''),
+      'sin la 082: la revisión funciona igual, los ajustes se quedan en el aparato y «a medias» avisa de qué falta');
+    await sin082.marcarRevision(una.atleta_id, r1.lunes, { hecha: true });
+  }
+  const det = await api.detalleRevision(una.atleta_id, r1.lunes);
+  check(Array.isArray(det.comparacion) && Array.isArray(det.cortos) && Array.isArray(det.mensajes) && Array.isArray(det.videos) && typeof det.fotos === 'number' && 'carrera' in det, 'el detalle trae la comparación con la semana anterior, lo corto, sus mensajes, sus vídeos y sus fotos');
 }
 
 console.log('\nv0.69: la comunidad, primera tanda (041)');

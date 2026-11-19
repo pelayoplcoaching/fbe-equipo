@@ -3,7 +3,7 @@ import { useApp, useCarga, Icono, Hoja, useUnaVez } from '../comunes.jsx';
 import { borradorRevision } from '../../logica/cierre.js';
 import { sumarDias, fmtConDia } from '../../logica/fechas.js';
 import { num, NOMBRE_ZONA } from '../../logica/calculos.js';
-import { lineasCheckin, pautadoFrenteAHecho, extraParaBorrador, conFrase, sinFrase, insertarFrase, conNombre } from '../../logica/revision.js';
+import { lineasCheckin, pautadoFrenteAHecho, extraParaBorrador, conFrase, sinFrase, insertarFrase, conNombre, textoCorto, TONOS, tonoDe, conTono, proximoLunesALas } from '../../logica/revision.js';
 import { useGrabadora, PanelGrabando, PanelRevisar, AyudaMicro, ActivarMicro } from '../chat/NotaVoz.jsx';
 
 // v0.191: lo de cada atleta en la semana, sin salir de la revisión (se pide al abrirlo y se recuerda un rato)
@@ -25,23 +25,52 @@ export const guardarPref = (p) => guardarLocal('fbe-revision-pref', p);
 
 const SIGNO = { sube: 'Sube', baja: 'Baja' };
 
-export function DetalleRevision({ f, lunes, abrirAtleta }) {
+export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null }) {
   const { api } = useApp();
   const d = useCarga(() => pedirDetalle(api, f.atleta_id, lunes), [f.atleta_id, lunes]);
   if (d.cargando && !d.datos) return <p class="peq secundario rev-detalle-espera" role="status">Cargando su semana...</p>;
   if (d.error || !d.datos) return <p class="peq rev-detalle-espera">No se ha podido cargar su semana. <button type="button" class="btn-texto mini" onClick={() => { olvidarDetalle(f.atleta_id); d.recargar(); }}>Reintentar</button></p>;
   const x = d.datos;
-  const lineas = lineasCheckin(x.checkin, x.anterior);
+  const lineas = lineasCheckin(x.checkin, x.anterior, { porComida: f.servicio === 'nutricion' });
   const molestias = (x.molestias || []).filter((m) => Number(m.intensidad) > 0);
   const peso = x.resumen?.peso;
   return (
     <div class="rev-detalle">
+      {x.mensajes?.length > 0 && <MensajesSinLeer f={f} mensajes={x.mensajes} alHecho={() => { olvidarDetalle(f.atleta_id); d.recargar(); alCambiar?.({ mensajes: 0 }); }} abrirAtleta={abrirAtleta} />}
+      {x.videos?.length > 0 && (
+        <section class="rev-bloque" aria-label="Vídeos sin revisar">
+          <h2>Vídeos sin revisar</h2>
+          <ul class="rev-videos">{x.videos.map((v) => <li key={v.id}><MiniVideo v={v} nombre={f.nombre} alAbrir={() => abrirAtleta(f.atleta_id, 'videos', null)} /></li>)}</ul>
+        </section>
+      )}
       <section class="rev-bloque" aria-label="Sus sesiones de la semana">
         <h2>Sesiones</h2>
+        {x.comparacion?.length > 0 && (
+          <dl class="rev-checkin rev-compara" aria-label="Esta semana frente a la anterior">
+            {x.comparacion.map((l) => <div key={l.clave} class={l.cambio ? `cambia ${l.cambio}` : ''}><dt>{l.etiqueta}</dt><dd><strong class="num">{l.valor}</strong><span class="peq secundario"> la anterior {l.antes}{l.cambio ? ` (${SIGNO[l.cambio].toLowerCase()})` : ''}</span></dd></div>)}
+          </dl>
+        )}
         {!x.sesiones.length ? <p class="peq secundario">Sin sesiones esta semana.</p> : (
           <ul class="rev-sesiones">{x.sesiones.map((s) => <SesionRevision key={s.id} s={s} atletaId={f.atleta_id} />)}</ul>
         )}
+        {x.cortos?.length > 0 && (
+          <div class="pila-xs">
+            <span class="peq secundario">Dónde se quedó corto</span>
+            <ul class="rev-comentarios">{x.cortos.slice(0, 8).map((c) => <li key={c.id}><span><strong>{c.ejercicio}:</strong> {textoCorto(c)}</span></li>)}</ul>
+          </div>
+        )}
       </section>
+
+      {x.carrera && (
+        <section class="rev-bloque" aria-label="Carrera">
+          <h2>Carrera{x.carrera.etiqueta ? ` (${x.carrera.etiqueta})` : ''}</h2>
+          <ul class="rev-progreso">
+            <li class={`chip num ${x.carrera.estado === 'bien' ? '' : 'aviso'}`}>{num(x.carrera.km)} km en {x.carrera.salidas === 1 ? '1 salida' : `${x.carrera.salidas} salidas`}{x.carrera.previsto ? ` (previsto: ${x.carrera.previsto})` : ''}</li>
+            {x.carrera.semaforo && <li class={`chip ${x.carrera.semaforo === 'verde' ? 'ok' : x.carrera.semaforo === 'rojo' ? 'alerta' : 'aviso'}`}>Semáforo: {x.carrera.semaforo === 'ambar' ? 'ámbar' : x.carrera.semaforo}</li>}
+          </ul>
+          {x.carrera.clave && <p class="peq secundario">Clave de la semana: {x.carrera.clave}</p>}
+        </section>
+      )}
 
       <section class="rev-bloque" aria-label="Su check-in">
         <h2>Check-in{x.checkin && !x.checkinDeEstaSemana ? ' (el de la semana pasada)' : ''}</h2>
@@ -82,6 +111,14 @@ export function DetalleRevision({ f, lunes, abrirAtleta }) {
           </ul>
         </section>
       )}
+
+      {x.fotos > 0 && (
+        <section class="rev-bloque" aria-label="Fotos de progreso">
+          <h2>Fotos de progreso</h2>
+          <p class="peq">{x.fotos === 1 ? 'Ha subido 1 foto esta semana.' : `Ha subido ${x.fotos} fotos esta semana.`} <button type="button" class="btn-texto mini" onClick={() => abrirAtleta(f.atleta_id, 'videos', null)}>Verlas en su ficha</button></p>
+        </section>
+      )}
+      {f.servicio === 'nutricion' && <p class="peq"><button type="button" class="btn-texto mini" onClick={() => abrirAtleta(f.atleta_id, 'nutricion', null)}>Ver su menú y su plan de nutrición</button></p>}
 
       {x.comentarios.length > 0 && (
         <section class="rev-bloque" aria-label="Lo que ha escrito esta semana">
@@ -132,19 +169,24 @@ function SesionRevision({ s, atletaId }) {
 
 // El mensaje de repaso de la semana: redactado con sus datos (ahora también récords, lo que no hizo y el check-in), con
 // tus frases frecuentes a un toque, la opción de mandarlo de voz y de darlo por revisado al enviar
-export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
+export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDadas = null, alFrases = null }) {
   const { api, aviso } = useApp();
   const resumen = useCarga(() => api.resumenSemanaAtleta(f.atleta_id).catch(() => null), [f.atleta_id]);
   const detalle = useCarga(() => pedirDetalle(api, f.atleta_id, lunes).catch(() => null), [f.atleta_id, lunes]);
   const [texto, setTexto] = useState(() => borradorRevision(f, null));
   const [tocado, setTocado] = useState(false);
   const [ocupado, una] = useUnaVez();
-  const [frases, setFrases] = useState(() => leer('fbe-revision-frases', []));
+  const [frasesMias, setFrases] = useState(() => leer('fbe-revision-frases', []));
+  const frases = frasesDadas || frasesMias;
+  // (v0.192) el tono del mensaje y, si se quiere, la hora a la que sale
+  const [tono, setTono] = useState('auto');
+  const [programar, setProgramar] = useState(false);
+  const [cuando, setCuando] = useState(() => proximoLunesALas());
   const [marcar, setMarcar] = useState(() => prefRevision().marcarAlEnviar !== false);
   const [hoja, setHoja] = useState(null);
   const area = useRef(null);
   const cursor = useRef(null);
-  const rehacer = () => borradorRevision(f, resumen.datos || null, extraParaBorrador(detalle.datos));
+  const rehacer = (t = tono) => conTono(borradorRevision(f, resumen.datos || null, extraParaBorrador(detalle.datos)), t === 'auto' ? null : t, f.nombre);
   // Cuando llegan el resumen y el detalle, el borrador se rehace (salvo que ya lo esté editando)
   useEffect(() => { if (!tocado && (resumen.datos !== undefined || detalle.datos)) setTexto(rehacer()); }, [resumen.datos, detalle.datos]);
   const primer = f.nombre.split(' ')[0];
@@ -153,8 +195,10 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
     const limpio = texto.trim();
     if (!limpio) return;
     try {
-      await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: globalThis.crypto?.randomUUID?.() || `rev-${Date.now()}` });
-      hecho('Mensaje enviado');
+      const enviarEn = programar ? new Date(cuando) : null;
+      if (programar && (Number.isNaN(enviarEn.getTime()) || enviarEn.getTime() <= Date.now() + 60000)) { aviso('Elige una hora que aún no haya pasado', 'error'); return; }
+      await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: globalThis.crypto?.randomUUID?.() || `rev-${Date.now()}`, ...(programar ? { enviarEn: enviarEn.toISOString() } : {}) });
+      hecho(programar ? 'Mensaje programado' : 'Mensaje enviado');
     } catch (e) { aviso(e?.message || 'No se ha podido enviar', 'error'); }
   });
   // La nota de voz, desde aquí: las mismas piezas del chat (hasta 2 minutos, se escucha antes de enviar)
@@ -174,7 +218,7 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
     } catch (e) { aviso(e?.message || 'No se ha podido enviar la nota de voz', 'error'); } finally { setEnviandoVoz(false); }
   };
   const grabando = g.estado === 'pidiendo' || g.estado === 'grabando' || g.estado === 'pausada';
-  const ponerFrases = (l) => { setFrases(l); guardarLocal('fbe-revision-frases', l); };
+  const ponerFrases = (l) => { setFrases(l); guardarLocal('fbe-revision-frases', l); alFrases?.(l); };
   const insertar = (fr) => {
     const r = insertarFrase(texto, conNombre(fr, f.nombre), cursor.current);
     setTocado(true); setTexto(r.texto); cursor.current = r.cursor;
@@ -192,6 +236,9 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
   return (
     <Hoja titulo={`Repaso de la semana para ${primer}`} alCerrar={alCerrar} ancho={620}>
       <div class="pila">
+        <div class="selector-chips rev-tonos" role="group" aria-label="Tono del mensaje">
+          {TONOS.map(([k, t]) => <button key={k} type="button" aria-pressed={tono === k ? 'true' : 'false'} onClick={() => { setTono(k); setTocado(false); setTexto(rehacer(k)); }}>{k === 'auto' ? `${t} (${TONOS.find(([x]) => x === tonoDe(f))[1].toLowerCase()})` : t}</button>)}
+        </div>
         <div class="pila-xs revision-nota">
           <label class="peq secundario" for={`rev-msg-${f.atleta_id}`}>Redactado con sus datos de la semana{resumen.cargando || detalle.cargando ? ' (completándolo…)' : ''}. Edítalo a tu gusto.</label>
           <textarea id={`rev-msg-${f.atleta_id}`} ref={area} rows="9" maxLength={2000} value={texto} onInput={(e) => { setTocado(true); setTexto(e.currentTarget.value); recordar(e); }} onSelect={recordar} onKeyUp={recordar} onClick={recordar} />
@@ -204,13 +251,15 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
             ))}</ul>
           ) : <p class="peq secundario">Aún no tienes ninguna: selecciona un trozo del mensaje y pulsa «Guardar lo seleccionado». Se quedan en este aparato.</p>}
         </div>
+        <label class="rev-marcar"><input type="checkbox" checked={programar} onChange={(e) => setProgramar(e.currentTarget.checked)} /> <span>Programar el envío</span></label>
+        {programar && <label class="rev-cuando"><span class="peq secundario">Saldrá el</span> <input type="datetime-local" value={cuando} onInput={(e) => setCuando(e.currentTarget.value)} aria-label="Cuándo sale el mensaje" /></label>}
         <label class="rev-marcar"><input type="checkbox" checked={marcar} onChange={(e) => { const v = e.currentTarget.checked; setMarcar(v); guardarPref({ ...prefRevision(), marcarAlEnviar: v }); }} /> <span>Al enviar, darlo por revisado</span></label>
         {g.estado === 'revisar' ? <div class="rev-voz"><PanelRevisar g={g} alEnviar={(x) => enviarVozRef.current(x)} enviando={enviandoVoz} /></div>
           : grabando ? <div class="rev-voz"><PanelGrabando g={g} /></div> : (
             <div class="fila-envolver">
               <button type="button" class="btn" onClick={() => { setTocado(false); setTexto(rehacer()); area.current?.focus(); }}><Icono n="reiniciar" /> Volver al redactado</button>
               <button type="button" class="btn" onClick={() => g.empezar({ manos: true })}><Icono n="micro" /> Mejor una nota de voz</button>
-              <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n="enviar" /> Enviar</button>
+              <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n={programar ? 'reloj' : 'enviar'} /> {programar ? 'Programar' : 'Enviar'}</button>
             </div>
           )}
       </div>
@@ -221,10 +270,10 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado }) {
 }
 
 // Pedir lo que falta a varios a la vez: la lista (se puede quitar a quien no toque) y el mensaje, que lleva el nombre de cada uno
-export function HojaLote({ titulo, destinatarios, alCerrar }) {
+export function HojaLote({ titulo, destinatarios, alCerrar, uno = false }) {
   const { api, aviso } = useApp();
   const [fuera, setFuera] = useState(() => new Set());
-  const [plantilla, setPlantilla] = useState(() => (destinatarios[0] ? destinatarios[0].texto.replace(`Hola, ${destinatarios[0].nombre.split(' ')[0]}.`, 'Hola, {nombre}.') : ''));
+  const [plantilla, setPlantilla] = useState(() => (!destinatarios[0] ? '' : uno ? destinatarios[0].texto : destinatarios[0].texto.replace(`Hola, ${destinatarios[0].nombre.split(' ')[0]}.`, 'Hola, {nombre}.')));
   const [ocupado, una] = useUnaVez();
   const [hechos, setHechos] = useState(0);
   const elegidos = destinatarios.filter((x) => !fuera.has(x.atleta_id));
@@ -245,16 +294,16 @@ export function HojaLote({ titulo, destinatarios, alCerrar }) {
     <Hoja titulo={titulo} alCerrar={() => alCerrar(false)} ancho={560}>
       <div class="pila">
         <div class="pila-xs revision-nota">
-          <label class="peq secundario" for="rev-lote-texto">El mensaje. «{'{nombre}'}» se cambia por el nombre de cada uno.</label>
+          <label class="peq secundario" for="rev-lote-texto">{uno ? 'El mensaje. Retócalo si quieres.' : <>El mensaje. «{'{nombre}'}» se cambia por el nombre de cada uno.</>}</label>
           <textarea id="rev-lote-texto" rows="4" maxLength={1000} value={plantilla} onInput={(e) => setPlantilla(e.currentTarget.value)} />
         </div>
-        <fieldset class="rev-lote">
+        {!uno && <fieldset class="rev-lote">
           <legend class="peq secundario">A quién ({elegidos.length} de {destinatarios.length})</legend>
           <ul>{destinatarios.map((x) => (
             <li key={x.atleta_id}><label><input type="checkbox" checked={!fuera.has(x.atleta_id)} onChange={(e) => { const on = e.currentTarget.checked; setFuera((s) => { const n = new Set(s); if (on) n.delete(x.atleta_id); else n.add(x.atleta_id); return n; }); }} /> <span>{x.nombre}</span></label></li>
           ))}</ul>
-        </fieldset>
-        <button type="button" class="btn btn-primario" disabled={ocupado || !plantilla.trim() || !elegidos.length} onClick={enviar}><Icono n="enviar" /> {ocupado ? `Enviando (${hechos} de ${elegidos.length})` : elegidos.length === 1 ? 'Enviar a 1 atleta' : `Enviar a ${elegidos.length} atletas`}</button>
+        </fieldset>}
+        <button type="button" class="btn btn-primario" disabled={ocupado || !plantilla.trim() || !elegidos.length} onClick={enviar}><Icono n="enviar" /> {ocupado ? `Enviando (${hechos} de ${elegidos.length})` : uno ? 'Enviar' : elegidos.length === 1 ? 'Enviar a 1 atleta' : `Enviar a ${elegidos.length} atletas`}</button>
       </div>
     </Hoja>
   );
@@ -279,5 +328,50 @@ export function SemanaPasada({ lunes, abrirAtleta }) {
         </li>
       ))}</ul>
     </div>
+  );
+}
+
+// (v0.192) Sus mensajes sin leer, ahí mismo: se leen, se contestan y quedan leídos
+function MensajesSinLeer({ f, mensajes, alHecho, abrirAtleta }) {
+  const { api, aviso } = useApp();
+  const [texto, setTexto] = useState('');
+  const [ocupado, una] = useUnaVez();
+  const hora = (iso) => { try { return new Date(iso).toLocaleString('es-ES', { weekday: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+  const cerrar = (responder) => una(async () => {
+    try {
+      const t = texto.trim();
+      if (responder && t) await api.enviarMensaje(f.atleta_id, { texto: t, autor: 'coach', clienteId: globalThis.crypto?.randomUUID?.() || `rev-resp-${Date.now()}` });
+      await api.marcarLeidos(mensajes.map((m) => m.id));
+      aviso(responder && t ? 'Respuesta enviada' : 'Marcados como leídos', 'ok');
+      setTexto('');
+      alHecho();
+    } catch (e) { aviso(e?.message || 'No se ha podido', 'error'); }
+  });
+  return (
+    <section class="rev-bloque" aria-label="Mensajes sin leer">
+      <h2>{mensajes.length === 1 ? '1 mensaje sin leer' : `${mensajes.length} mensajes sin leer`}</h2>
+      <ul class="rev-mensajes">{mensajes.map((m) => <li key={m.id}><span class="peq secundario">{hora(m.creado_en)}</span><span>{m.texto || 'Te ha enviado un archivo'}{m.adjunto && m.texto ? ' (con archivo)' : ''}</span></li>)}</ul>
+      <div class="rev-responder">
+        <textarea rows="2" maxLength={2000} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} aria-label={`Responder a ${f.nombre}`} placeholder="Responder aquí..." />
+        <div class="fila-envolver">
+          <button type="button" class="btn btn-peq btn-primario" disabled={ocupado || !texto.trim()} onClick={() => cerrar(true)}><Icono n="enviar" /> Responder</button>
+          <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => cerrar(false)}><Icono n="hecho" /> Marcar leídos</button>
+          {mensajes.some((m) => m.adjunto) && <button type="button" class="btn-texto mini" onClick={() => abrirAtleta(f.atleta_id, 'mensajes', null)}>Abrir el chat</button>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// La miniatura de un vídeo sin revisar: lleva a sus vídeos en la ficha, donde se corrige
+function MiniVideo({ v, nombre, alAbrir }) {
+  const { api } = useApp();
+  const [url, setUrl] = useState(null);
+  useEffect(() => { let vivo = true; setUrl(null); if (v.poster_ruta) api.urlArchivo(v.poster_ruta).then((u) => vivo && setUrl(u)).catch(() => {}); return () => { vivo = false; }; }, [v.poster_ruta]);
+  return (
+    <button type="button" class="rev-video" onClick={alAbrir} aria-label={`Corregir el vídeo de ${nombre.split(' ')[0]}${v.ejercicio ? `: ${v.ejercicio}` : ''}`}>
+      <span class="rev-video-img">{url ? <img src={url} alt="" loading="lazy" onError={() => setUrl(null)} /> : <Icono n="video" />}</span>
+      <span class="rev-video-texto"><strong>{v.ejercicio || 'Vídeo de técnica'}</strong><span class="peq secundario">{v.fecha ? fmtConDia(v.fecha) : ''}{v.nota_atleta ? ` · «${v.nota_atleta.slice(0, 60)}»` : ''}</span></span>
+    </button>
   );
 }

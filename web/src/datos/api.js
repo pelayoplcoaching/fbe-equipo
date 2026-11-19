@@ -40,7 +40,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
-import { estadoProxima, progresoSemana, comentariosSemana } from '../logica/revision.js';
+import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
@@ -4279,6 +4279,13 @@ export function crearApi(backend) {
       const lunes8 = Array.from({ length: 8 }, (_, i) => sumarDias(lunes, -7 * i));
       if (con040) revs = await b.select('revisiones_semanales', { in: { lunes: lunes8 } }).catch(() => []);
       // (v0.191) cómo está la semana que viene de cada uno (publicada, en borrador o sin programar); si falla, sin ese dato
+      // (v0.192) lo que el coach le ha escrito esta semana (para «Repaso enviado»), el objetivo de su bloque y si está la 082
+      const [escritosCoach, bloquesObj, con082] = await Promise.all([
+        b.select('comentarios', { eq: { autor: 'coach' }, gte: { creado_en: `${lunes}T00:00:00` }, cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
+        (async () => { const ids = unicos(resumenes.map((r) => r.bloque?.id).filter(Boolean)); return ids.length ? b.select('bloques', { in: { id: ids }, cols: 'id,objetivo' }).catch(() => []) : []; })(),
+        con040 ? api.revision082().catch(() => null) : null,
+      ]);
+      const E = contar(escritosCoach), OBJ = Object.fromEntries(bloquesObj.map((x) => [x.id, x.objetivo || null]));
       const proximas = await api.proximaSemanaDe(resumenes.filter((r) => r.bloque?.id).map((r) => ({ atleta_id: r.atleta_id, bloque_id: r.bloque.id })), lunes).catch(() => ({}));
       const R = {};
       for (const r of revs) (R[r.atleta_id] ||= {})[r.lunes] = r;
@@ -4298,9 +4305,43 @@ export function crearApi(backend) {
           proxima: r.servicio === 'nutricion' || r.estado === 'pausado' ? null : proximas[r.atleta_id] ?? null,
           diasNutricion: r.diasNutricion ?? null, habitos: r.habitos?.pct ?? null,
           historial: lunes8.map((l) => R[r.atleta_id]?.[l]).filter(Boolean).map((x) => ({ lunes: x.lunes, hecha: !!x.hecha, nota: x.nota || '' })),
+          // (v0.192)
+          estadoRevision: esta?.estado || null, escritos: E[r.atleta_id] || 0,
+          bloque: r.bloque ? { ...r.bloque, objetivo: OBJ[r.bloque.id] || null } : null, semana: r.semana || null,
+          chispa: r.chispas?.sesiones || null,
+          // solo si debe algo: 'retrasado' | 'pendiente' | 'vencido' (sin importes)
+          cobro: ['retrasado', 'pendiente', 'vencido'].includes(r.cobro?.estado) ? r.cobro.estado : null,
         };
       });
-      return { lunes, revisiones: con040 === true, filas };
+      return { lunes, revisiones: con040 === true, con082: con082 === true, filas };
+    },
+    // ¿Está la 082 (los ajustes de la revisión y «a medias»)? true / false / null (no se sabe: un corte). Como revision040
+    async revision082() {
+      if (!api._v082) {
+        const pr = (async () => {
+          try { await b.select('revision_ajustes', { limit: 1, cols: 'usuario_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/revision_ajustes|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v082 = pr;
+        pr.then((x) => { if (x == null && api._v082 === pr) api._v082 = null; });
+      }
+      return api._v082;
+    },
+    // (v0.192, 082) los ajustes de la revisión del coach (sus frases, su orden, cómo la ve): la fila, o null si aún no
+    // hay nada guardado; undefined si falta la 082 (se quedan en el aparato)
+    async revisionAjustes() {
+      if ((await api.revision082()) !== true) return undefined;
+      const [x] = await b.select('revision_ajustes', { limit: 1 });
+      return x ? { frases: x.frases || [], orden: x.orden || [], modo: x.modo || null, vista: x.vista || null } : null;
+    },
+    async guardarRevisionAjustes(ajustes) {
+      if ((await api.revision082()) !== true) return false;
+      await b.upsert('revision_ajustes', [ajustesParaGuardar(ajustes)], 'usuario_id');
+      return true;
     },
     // (v0.191) { atleta_id: 'publicada' | 'borrador' | 'sin' | null } de la semana siguiente a `lunes`
     async proximaSemanaDe(filas, lunes) {
@@ -4344,18 +4385,40 @@ export function crearApi(backend) {
       for (const x of series) if (x.sesion_id && Number(x.reps) > 0) cuenta[x.sesion_id] = (cuenta[x.sesion_id] || 0) + 1;
       const hechas = todas.filter((x) => x.completada && x.fecha_realizada && x.fecha_realizada >= lunes && x.fecha_realizada <= fin);
       const pendientes = todas.filter((x) => !x.completada && deLaSemana.has(x.semana_id));
+      // (v0.192) las pautas de las sesiones hechas (para ver dónde se quedó corto), sus mensajes sin leer, sus vídeos sin
+      // revisar, cuántas fotos de progreso ha subido (no se cargan aquí) y, si corre, lo previsto de carrera
+      const [pautasSem, sinLeer, videos, fotos, atleta] = await Promise.all([
+        hechas.length ? b.select('sesion_ejercicios', { in: { sesion_id: hechas.map((x) => x.id) }, cols: 'id,sesion_id,series,reps_min,reps_max' }).catch(() => []) : [],
+        b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'atleta' }, nulo: ['leido_en'], order: [['creado_en', 'asc']], limit: 30 }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
+        b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'video_tecnica' }, nulo: ['revisado_en'], order: [['creado_en', 'asc']], limit: 12 }).catch(() => []),
+        b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'foto_progreso' }, gte: { fecha: lunes }, cols: 'id,fecha' }).then((xs) => xs.filter((x) => x.fecha <= fin).length).catch(() => 0),
+        b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null).catch(() => null),
+      ]);
+      const ejDeVideo = videos.length ? porId(await b.select('ejercicios', { in: { id: unicos(videos.map((v) => v.ejercicio_id).filter(Boolean)) }, cols: 'id,nombre' }).catch(() => [])) : {};
+      const planCarrera = atleta?.carrera ? await b.select('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).then((x) => x[0] || null).catch(() => null) : null;
       const sesiones = [...hechas.sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? -1 : 1)), ...pendientes.sort((x, y) => (x.orden || 0) - (y.orden || 0))]
         .map((x) => ({ id: x.id, nombre: x.nombre, tipo: x.tipo, completada: !!x.completada, fecha: x.fecha_realizada || null, duracion_min: x.duracion_min ?? null, rpe_sesion: x.rpe_sesion ?? null,
           nota_atleta: x.nota_atleta || '', cardio_hecho: x.cardio_hecho || null, series: cuenta[x.id] || 0 }));
       return {
         lunes, checkin: ck?.checkin || null, checkinDeEstaSemana: deEsta, anterior: ck?.anterior || null, molestias: ck?.checkin ? ck.molestias || [] : [],
         sesiones, progreso: progresoSemana(series, lunes), comentarios: comentariosSemana(sesiones, series, lunes), resumen,
+        // (v0.192)
+        comparacion: compararSemanas(series, lunes), cortos: quedoCorto(series, pautasSem, lunes),
+        mensajes: sinLeer.filter((c) => String(c.texto || '').trim() || c.archivo_id).map((c) => ({ id: c.id, texto: String(c.texto || '').trim(), adjunto: !!c.archivo_id, creado_en: c.creado_en })),
+        videos: videos.map((v) => ({ id: v.id, poster_ruta: v.poster_ruta || null, ejercicio: ejDeVideo[v.ejercicio_id]?.nombre || null, fecha: v.fecha || null, duracion_seg: v.duracion_seg ?? null, nota_atleta: v.nota_atleta || '' })),
+        fotos, carrera: atleta?.carrera ? carreraDeLaSemana(sesiones, planCarrera) : null,
       };
     },
     async marcarRevision(atletaId, lunes, cambios) {
       if ((await api.revision040()) === false) throw new Error('Para guardar la revisión semanal falta ejecutar la migración 040 en Supabase (supabase/migraciones/040_revision_semanal.sql).');
       const fila = { atleta_id: atletaId, lunes };
       if ('hecha' in cambios) fila.hecha = !!cambios.hecha;
+      // (v0.192, 082) «a medias»: esperando su respuesta o falta programarle (null: nada)
+      if ('estado' in cambios) {
+        if (cambios.estado != null && !['esperando', 'programar'].includes(cambios.estado)) throw new Error('Ese estado no vale');
+        if ((await api.revision082()) !== true) throw new Error('Para dejar una revisión «a medias» falta ejecutar la migración 082 en Supabase (supabase/migraciones/082_revision_a_medias.sql).');
+        fila.estado = cambios.estado || null;
+      }
       if ('nota' in cambios) {
         const nota = String(cambios.nota ?? '').trim();
         if ([...nota].length > 500) throw new Error('La nota, como mucho 500 caracteres');

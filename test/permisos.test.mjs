@@ -5198,6 +5198,45 @@ console.log('\nLa revisión semanal del coach (migración 040)');
   await q(`insert into revisiones_semanales (atleta_id, lunes) values ($1, '2026-11-02')`, [aTmp.id]);
   await q(`delete from atletas where id = $1`, [aTmp.id]);
   check((await q(`select count(*)::int n from revisiones_semanales where atleta_id = $1`, [aTmp.id]))[0].n === 0, 'al borrar un atleta, sus revisiones se van con él');
+
+  // (v0.192, 082) «a medias» y los ajustes de la revisión de cada coach
+  await su();
+  check((await q(`select numero from fbe_migraciones where numero = 82`)).length === 1
+    && (await q(`select relname from pg_class where relname = 'revision_ajustes' and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 1
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = 'revision_ajustes' and grantee in ('anon', 'PUBLIC')`)).length === 0, '(082) la tabla de ajustes de la revisión, con RLS y sin nada para quien no ha entrado');
+  const nuevas082 = ['revision_ajustes_validos', 'revision_ajustes_preparar'];
+  check(!(await q(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any($1) and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`, [nuevas082])).length
+    && (await q(`select count(*)::int n from pg_proc where proname = any($1) and not prosecdef`, [nuevas082]))[0].n === 2, '(082) sus funciones, con search_path vacío y sin permisos de su dueño');
+  const ajOk = async (f, o, m, v) => (await q(`select public.revision_ajustes_validos($1::jsonb, $2::jsonb, $3, $4) ok`, [f, o, m, v]))[0].ok;
+  const uuid = '11111111-2222-3333-4444-555555555555';
+  check(await ajOk('[]', '[]', null, null) && await ajOk('["Buen trabajo"]', `["${uuid}"]`, 'mio', 'tabla') && !(await ajOk('[""]', '[]', null, null)) && !(await ajOk(JSON.stringify(['x'.repeat(301)]), '[]', null, null))
+    && !(await ajOk(JSON.stringify(Array(21).fill('a')), '[]', null, null)) && !(await ajOk('[1]', '[]', null, null)) && !(await ajOk('{}', '[]', null, null)) && !(await ajOk('[]', '["no-es-un-id"]', null, null))
+    && !(await ajOk('[]', JSON.stringify(Array(501).fill(uuid)), null, null)) && !(await ajOk('[]', '[]', 'raro', null)) && !(await ajOk('[]', '[]', null, 'raro')) && !(await ajOk(null, '[]', null, null)),
+    '(082) el validador: hasta 20 frases de 1 a 300 letras, hasta 500 identificadores, y el orden y la vista de los que hay; lo demás, false (nunca un error)');
+  await como(pelayo, 'aal2');
+  await q(`insert into revision_ajustes (frases, orden, modo, vista) values ('["Buen trabajo"]', '[]', 'mio', 'tabla')`);
+  const mios082 = await q(`select usuario_id, frases, modo, vista from revision_ajustes`);
+  let eMal082 = null;
+  try { await q(`update revision_ajustes set modo = 'raro'`); } catch (e) { eMal082 = e.message; }
+  await q(`update revisiones_semanales set estado = 'esperando' where atleta_id = $1 and lunes = '2026-11-02'`, [aAna.id]);
+  let eEstado = null;
+  try { await q(`update revisiones_semanales set estado = 'otro' where atleta_id = $1 and lunes = '2026-11-02'`, [aAna.id]); } catch (e) { eEstado = e.message; }
+  check(mios082.length === 1 && mios082[0].usuario_id === pelayo && mios082[0].frases[0] === 'Buen trabajo' && /revision_ajustes_validos/.test(eMal082 || '')
+    && (await q(`select estado from revisiones_semanales where atleta_id = $1 and lunes = '2026-11-02'`, [aAna.id]))[0].estado === 'esperando' && /revisiones_semanales_estado/.test(eEstado || ''),
+    '(082) el coach guarda sus ajustes (a su nombre) y deja a un atleta «a medias»; un estado o un orden que no existen, no');
+  await como(ana);
+  const ve082 = await q(`select * from revision_ajustes`);
+  let eAna082 = null;
+  try { await q(`insert into revision_ajustes (frases) values ('["x"]')`); } catch (e) { eAna082 = e.message; }
+  await q(`update revision_ajustes set frases = '[]'`);
+  await q(`delete from revision_ajustes`);
+  await como(intruso);
+  const veIntruso082 = await q(`select * from revision_ajustes`);
+  await su();
+  check(!ve082.length && /row-level security/.test(eAna082 || '') && !veIntruso082.length && (await q(`select frases from revision_ajustes`))[0]?.frases?.[0] === 'Buen trabajo',
+    '(082) un atleta ni ve ni toca los ajustes del coach, ni nadie más');
+  await q(`update revisiones_semanales set estado = null`);
+  await q(`delete from revision_ajustes`);
   await q(`delete from revisiones_semanales`);
 
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');

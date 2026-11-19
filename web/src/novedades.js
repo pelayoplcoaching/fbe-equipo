@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.192': {
+    coach: [
+      'Revisión semanal: mensajes sin leer y vídeos en la tarjeta, «pedírselo» desde un aviso, tono del mensaje y envío programado.',
+      'Esta semana frente a la anterior, dónde se quedó corto, su bloque, carrera, tus pasos, tabla en ordenador y resumen.',
+      'Con la migración 082: dejar a alguien «a medias» y tener tus frases y tu orden en todos tus aparatos.',
+    ],
+  },
   '0.191': {
     coach: [
       'Revisión semanal: la semana de cada atleta sin salir (sesiones, check-in, récords, lo que escribió) y modo «uno a uno».',

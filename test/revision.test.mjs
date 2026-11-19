@@ -100,6 +100,57 @@ const f = (id, x = {}) => ({ atleta_id: id, nombre: id, estado: 'activo', servic
   check(borradorRevision(fila, null) === borradorRevision(fila, null, null) && RV.extraParaBorrador(null) === null && RV.extraParaBorrador({ checkin: { energia: 1 }, checkinDeEstaSemana: false }).checkin === null, 'sin esos datos, el de siempre (y el check-in viejo no se cita)');
 }
 
+console.log('\nLa revisión semanal, segunda tanda (v0.192): lo puro');
+{
+  const p = RV.pasosRevision(f('A', { videos: 1, mensajes: 0, escritos: 2, proxima: 'borrador' }));
+  check(p.map((x) => `${x.clave}:${x.hecho ? 1 : 0}`).join() === 'videos:0,mensajes:1,repaso:1,programar:0' && RV.pasosRevision(f('N', { servicio: 'nutricion' })).map((x) => x.clave).join() === 'mensajes,repaso', 'tus pasos con cada atleta se tachan solos');
+  check(RV.filtrarRevision([f('A', { estadoRevision: 'esperando' }), f('B'), f('C', { estadoRevision: 'programar', hecha: true })], ['a_medias']).map((x) => x.atleta_id).join() === 'A' && RV.TEXTO_ESTADO.esperando === 'Esperando su respuesta', '«A medias» tiene su filtro (los ya revisados no cuentan)');
+}
+{
+  const s = (fecha, kg, reps, rpe) => ({ fecha, kg, reps, rpe });
+  const c = RV.compararSemanas([s('2026-11-17', 100, 5, 8), s('2026-11-18', 100, 5, 9), s('2026-11-10', 100, 5, 8), s('2026-11-03', 500, 5, 8)], L), de = (k) => c.find((x) => x.clave === k);
+  check(de('series').valor === '2' && de('series').antes === '1' && de('series').cambio === 'sube' && de('toneladas').valor === '1' && de('toneladas').antes === '0,5' && de('rpe').valor === '8,5' && de('rpe').cambio === 'sube'
+    && RV.compararSemanas([], L).length === 0 && RV.compararSemanas([s('2026-11-17', 100, 5, 8)], L)[0].cambio === null, 'esta semana frente a la anterior: series, toneladas y esfuerzo');
+}
+{
+  const s = (pauta, reps, rpe, ej = 'Banca') => ({ sesion_ejercicio_id: pauta, fecha: '2026-11-17', reps, rpe, ejercicio: ej });
+  const q = RV.quedoCorto([s('p1', 6, 8), s('p1', 4, 10), s('p2', 10, 8, 'Remo'), s('p2', 10, 8, 'Remo'), s('p3', 8, 8, 'Curl'), { ...s('p1', 2, 10), fecha: '2026-11-10' }, s('otra', 1, 10)],
+    [{ id: 'p1', reps_min: 5, series: 3 }, { id: 'p2', reps_min: 8, series: 2 }, { id: 'p3', reps_min: 8, series: 3 }], L);
+  check(q.map((x) => x.ejercicio).join() === 'Banca,Curl' && q[0].cortas === 1 && q[0].tope === 1 && q[0].faltan === 1 && RV.textoCorto(q[0]) === '1 por debajo del rango, 1 a RPE 10, falta 1 serie' && RV.textoCorto(q[1]) === 'faltan 2 series', 'dónde se quedó corto: bajo el rango, a tope o con series sin hacer');
+}
+{
+  check(RV.puntoDelBloque({ bloque: { numero: 3, foco: 'volumen' }, semana: { numero: 4, total: 6 } }) === 'Bloque 3 · semana 4 de 6 · foco: volumen' && RV.puntoDelBloque({}) === '' && RV.puntoDelBloque({ bloque: { nombre: 'Base' } }) === 'Base', 'en qué punto del bloque está');
+  const ses = [{ completada: true, cardio_hecho: { modalidad: 'carrera', km: 8, semaforo: 'verde' } }, { completada: true, cardio_hecho: { modalidad: 'carrera', km: 12.5, semaforo: 'ambar' } }, { completada: true, cardio_hecho: { modalidad: 'bici', km: 30 } }, { completada: false }];
+  const cr = RV.carreraDeLaSemana(ses, { km_min: 25, km_max: 30, etiqueta: 'Base 2' });
+  check(cr.km === 20.5 && cr.salidas === 2 && cr.previsto === '25-30 km' && cr.semaforo === 'ambar' && cr.estado === 'bien' && RV.carreraDeLaSemana(ses, { km_min: 30, km_max: 30 }).estado === 'de_menos'
+    && RV.carreraDeLaSemana(ses, { km_max: 15 }).estado === 'de_mas' && RV.carreraDeLaSemana([], null) === null && RV.carreraDeLaSemana(ses, null).previsto === null, 'la carrera: lo corrido frente a lo previsto y su semáforo');
+}
+{
+  const fila = f('Ana López', { sesiones: { completadas: 3, total: 3 } });
+  const base = borradorRevision(fila, null);
+  const red = RV.conTono(base, 'redonda', fila.nombre), flo = RV.conTono(base, 'floja', fila.nombre);
+  check(red.startsWith('Hola, Ana. Semana redonda') && red.endsWith('💪') && red.split('\n').length === base.split('\n').length && flo.includes('más floja') && RV.conTono(base, null, fila.nombre) === base && RV.conTono(base, 'auto', fila.nombre) === base, 'el tono cambia cómo abre y cómo cierra el mensaje; lo de en medio, sus datos');
+  const sin = RV.conTono(borradorRevision(f('Ana', { sesiones: { completadas: 0, total: 3 } }), null), 'sin', 'Ana');
+  check(!/no hemos podido entrenar/.test(sin) && /no ha salido el entreno/.test(sin) && RV.tonoDe(f('A', { sesiones: { completadas: 0, total: 3 } })) === 'sin' && RV.tonoDe(f('A', { sesiones: { completadas: 1, total: 3 } })) === 'floja' && RV.tonoDe(fila) === 'redonda', 'sin entrenar no lo dice dos veces; y el tono automático sale de sus sesiones');
+  check(RV.proximoLunesALas(new Date(2026, 10, 19, 20, 0)) === '2026-11-23T08:00' && RV.proximoLunesALas(new Date(2026, 10, 23, 7, 0)) === '2026-11-30T08:00' && RV.proximoLunesALas(new Date(2026, 10, 22, 23, 0), 9) === '2026-11-23T09:00', 'programar el envío: por defecto, el lunes que viene a las 8');
+}
+{
+  const r = RV.resumenRevision([f('Ana L', { hecha: true, escritos: 1, proxima: 'publicada' }), f('Beto', { proxima: 'sin', checkin: false }), f('Caro', { estadoRevision: 'esperando', proxima: 'borrador' })]);
+  check(r.total === 3 && r.revisados === 1 && r.conRepaso === 1 && r.porProgramar.join() === 'Beto,Caro' && r.esperando.join() === 'Caro' && r.sinCheckin.join() === 'Beto', 'el resumen de la revisión');
+  const filas = [f('Zoe', { videos: 2, sesiones: { completadas: 1, total: 4 } }), f('Ana', { videos: 0, proxima: 'sin' }), f('Beto', { videos: 5, proxima: 'publicada' })];
+  check(RV.ordenarTabla(filas, 'nombre').map((x) => x.nombre).join() === 'Ana,Beto,Zoe' && RV.ordenarTabla(filas, 'videos', -1).map((x) => x.nombre).join() === 'Beto,Zoe,Ana' && RV.ordenarTabla(filas, 'sesiones').map((x) => x.nombre)[0] === 'Zoe'
+    && RV.ordenarTabla(filas, 'proxima').map((x) => x.nombre)[0] === 'Ana' && RV.ordenarTabla(filas, 'rara').length === 3, 'la tabla se ordena por cualquier columna');
+}
+{
+  const id = '11111111-2222-3333-4444-555555555555';
+  check(RV.ajustesDeRevision(null, { frases: ['a'], orden: [id], modo: 'mio' }).frases.join() === 'a' && RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: null, vista: 'tabla' }, { frases: ['a'], modo: 'nombre' }).frases.join() === 'b'
+    && RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: null, vista: null }, { modo: 'nombre' }).modo === 'nombre' && RV.ajustesDeRevision(null, null).modo === 'urgencia', 'los ajustes: manda la base; si allí no hay nada, lo de este aparato');
+  const g = RV.ajustesParaGuardar({ frases: [' a  b ', 'a b', '', 'x'.repeat(400)], orden: [id, 'malo', 7], modo: 'raro', vista: 'tabla' });
+  check(g.frases.length === 2 && g.frases[0] === 'a b' && g.frases[1].length === 300 && g.orden.join() === id && g.modo === null && g.vista === 'tabla', 'y solo se sube lo que cabe en la base');
+  check(RV.lineasCheckin({ adherencia_desayuno: 5, adherencia_cena: 2 }, { adherencia_cena: 4 }, { porComida: true }).filter((x) => /^Adherencia: /.test(x.etiqueta)).map((x) => `${x.etiqueta}:${x.valor}:${x.cambio}`).join() === 'Adherencia: desayuno:5/5:null,Adherencia: cena:2/5:baja'
+    && !RV.lineasCheckin({ adherencia_desayuno: 5 }).some((x) => /desayuno/.test(x.etiqueta)), 'quien es solo de nutrición ve la adherencia comida a comida');
+}
+
 console.log('\nLa revisión semanal (v0.191): contra la demo');
 {
   const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
@@ -122,7 +173,22 @@ console.log('\nLa revisión semanal (v0.191): contra la demo');
   check(pasada.filas.find((x) => x.atleta_id === con.atleta_id)?.hecha === true && pasada.filas.length >= rev.filas.length, 'una semana, solo para verla');
   let mal = false; try { await api.revisionDeSemana('ayer'); } catch { mal = true; }
   check(mal, 'una semana que no vale, no');
+  // (v0.192) en la demo, como la 082
+  check((await api.revisionSemanal(hoy)).con082 === true && await api.revisionAjustes() === null, 'la demo se comporta como una base con la 082');
+  await api.guardarRevisionAjustes({ frases: ['Muy bien'], orden: [con.atleta_id], modo: 'mio', vista: 'tabla' });
+  await api.guardarRevisionAjustes({ frases: ['Muy bien', 'A por ello'], orden: [con.atleta_id], modo: 'nombre', vista: 'lista' });
+  const aj = await api.revisionAjustes();
+  check(aj.frases.length === 2 && aj.modo === 'nombre' && (await backend.select('revision_ajustes', {})).length === 1, 'los ajustes del coach se guardan en una sola fila');
+  await api.marcarRevision(con.atleta_id, lunes, { hecha: false, estado: 'programar' });
+  check((await api.revisionSemanal(hoy)).filas.find((x) => x.atleta_id === con.atleta_id).estadoRevision === 'programar', 'y un atleta se queda «a medias»');
+  let malo = false; try { await backend.upsert('revisiones_semanales', [{ atleta_id: con.atleta_id, lunes, estado: 'otro' }], 'atleta_id,lunes'); } catch { malo = true; }
+  check(malo, 'un estado que no existe, tampoco en la demo');
+  const d2 = await api.detalleRevision(con.atleta_id, lunes);
+  check(Array.isArray(d2.comparacion) && Array.isArray(d2.cortos) && Array.isArray(d2.mensajes) && Array.isArray(d2.videos) && typeof d2.fotos === 'number', 'el detalle trae lo de la segunda tanda');
   await backend.auth.entrar('ana@fbe.demo', 'demo');
+  let sinAjustes = false; try { sinAjustes = !(await backend.select('revision_ajustes', {})).length; } catch { sinAjustes = true; }
+  let noEscribe = false; try { await backend.upsert('revision_ajustes', [{ frases: ['x'] }], 'usuario_id'); } catch { noEscribe = true; }
+  check(sinAjustes && noEscribe, 'un atleta no ve ni toca los ajustes del coach');
   let negado = false; try { const r = await crearApi(backend).revisionDeSemana(lunes); negado = !r.filas.some((x) => x.nota); } catch { negado = true; }
   check(negado, 'un atleta no ve las notas de la revisión');
 }

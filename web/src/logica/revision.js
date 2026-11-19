@@ -113,7 +113,8 @@ const ESCALAS = [['energia', 'Energía'], ['recuperacion', 'Recuperación'], ['m
 const ADH = ['adherencia_desayuno', 'adherencia_comida', 'adherencia_merienda', 'adherencia_cena'];
 const media = (xs) => { const v = xs.map(Number).filter((x) => Number.isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
 // [{ clave, etiqueta, valor, cambio: 'sube'|'baja'|null, antes }]; `notas`, aparte
-export function lineasCheckin(c, anterior = null) {
+const COMIDAS = [['adherencia_desayuno', 'Desayuno'], ['adherencia_comida', 'Comida'], ['adherencia_merienda', 'Merienda'], ['adherencia_cena', 'Cena']];
+export function lineasCheckin(c, anterior = null, { porComida = false } = {}) {
   if (!c) return [];
   const out = [];
   const comparar = (a, b) => (a == null || b == null || a === b ? null : a > b ? 'sube' : 'baja');
@@ -121,6 +122,8 @@ export function lineasCheckin(c, anterior = null) {
   if (c.horas_sueno) out.push({ clave: 'horas_sueno', etiqueta: 'Sueño', valor: `${c.horas_sueno} h`, cambio: null, antes: anterior?.horas_sueno && anterior.horas_sueno !== c.horas_sueno ? `${anterior.horas_sueno} h` : null });
   const adh = media(ADH.map((k) => c[k])), adhAntes = anterior ? media(ADH.map((k) => anterior[k])) : null;
   if (adh != null) out.push({ clave: 'adherencia', etiqueta: 'Adherencia a las comidas', valor: `${n1(adh)}/5`, cambio: comparar(Math.round(adh * 10), adhAntes == null ? null : Math.round(adhAntes * 10)), antes: adhAntes != null ? `${n1(adhAntes)}/5` : null });
+  // (v0.192) quien es solo de nutrición: la adherencia, comida a comida
+  if (porComida) for (const [k, etq] of COMIDAS) if (c[k] != null) out.push({ clave: k, etiqueta: `Adherencia: ${etq.toLowerCase()}`, valor: `${c[k]}/5`, cambio: comparar(Number(c[k]), anterior?.[k] == null ? null : Number(anterior[k])), antes: anterior?.[k] != null ? `${anterior[k]}/5` : null });
   if (c.saciedad != null) out.push({ clave: 'saciedad', etiqueta: 'Saciedad', valor: `${c.saciedad}/4`, cambio: comparar(Number(c.saciedad), anterior?.saciedad == null ? null : Number(anterior.saciedad)), antes: anterior?.saciedad != null ? `${anterior.saciedad}/4` : null });
   if (c.pasos_media != null) out.push({ clave: 'pasos_media', etiqueta: 'Pasos al día', valor: Number(c.pasos_media).toLocaleString('es-ES'), cambio: comparar(Number(c.pasos_media), anterior?.pasos_media == null ? null : Number(anterior.pasos_media)), antes: anterior?.pasos_media != null ? Number(anterior.pasos_media).toLocaleString('es-ES') : null });
   if (c.calorias_media != null) out.push({ clave: 'calorias_media', etiqueta: 'Calorías al día', valor: `${Number(c.calorias_media).toLocaleString('es-ES')} kcal`, cambio: null, antes: anterior?.calorias_media != null && anterior.calorias_media !== c.calorias_media ? `${Number(anterior.calorias_media).toLocaleString('es-ES')} kcal` : null });
@@ -237,4 +240,165 @@ export function siguientePendiente(ids, hechas, actual) {
   const i = ids.indexOf(actual);
   for (let k = 1; k <= ids.length; k += 1) { const id = ids[(i + k) % ids.length]; if (id !== actual && !hechas.has(id)) return id; }
   return null;
+}
+
+// ================================================================ v0.192: segunda tanda
+// ---------------------------------------------------------------- «a medias» (082)
+export const ESTADOS_REVISION = [['esperando', 'Esperando su respuesta'], ['programar', 'Falta programarle']];
+export const TEXTO_ESTADO = Object.fromEntries(ESTADOS_REVISION);
+CUMPLE.a_medias = (f) => !!f.estadoRevision && !f.hecha;
+FILTROS_REVISION.push(['a_medias', 'A medias']);
+
+// ---------------------------------------------------------------- tus pasos con cada atleta (se tachan solos)
+// [{ clave, texto, hecho }]: solo los que le tocan a ese atleta
+export function pasosRevision(f) {
+  const out = [];
+  if (f.servicio !== 'nutricion') out.push({ clave: 'videos', texto: 'Vídeos vistos', hecho: !(f.videos > 0) });
+  out.push({ clave: 'mensajes', texto: 'Mensajes leídos', hecho: !(f.mensajes > 0) });
+  out.push({ clave: 'repaso', texto: 'Le has escrito', hecho: (f.escritos || 0) > 0 });
+  if (f.proxima) out.push({ clave: 'programar', texto: 'Semana que viene publicada', hecho: f.proxima === 'publicada' });
+  return out;
+}
+
+// ---------------------------------------------------------------- esta semana frente a la anterior
+const cifrasDe = (series) => {
+  const v = (series || []).filter((s) => Number(s.reps) > 0);
+  const rpes = v.map((s) => Number(s.rpe)).filter((x) => Number.isFinite(x) && x > 0);
+  return { series: v.length, toneladas: Math.round(v.reduce((t, s) => t + (Number(s.kg) || 0) * Number(s.reps), 0) / 100) / 10, rpe: rpes.length ? Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 10) / 10 : null };
+};
+// [{ clave, etiqueta, valor, antes, cambio }] (sin series en ninguna de las dos, nada)
+export function compararSemanas(series, lunes) {
+  const fin = masDias(lunes, 6), antes0 = masDias(lunes, -7), antes1 = masDias(lunes, -1);
+  const a = cifrasDe((series || []).filter((s) => s.fecha >= lunes && s.fecha <= fin));
+  const b = cifrasDe((series || []).filter((s) => s.fecha >= antes0 && s.fecha <= antes1));
+  if (!a.series && !b.series) return [];
+  const cmp = (x, y) => (x == null || y == null || !y || x === y ? null : x > y ? 'sube' : 'baja');
+  return [
+    { clave: 'series', etiqueta: 'Series', valor: `${a.series}`, antes: `${b.series}`, cambio: cmp(a.series, b.series) },
+    { clave: 'toneladas', etiqueta: 'Toneladas', valor: n1(a.toneladas), antes: n1(b.toneladas), cambio: cmp(a.toneladas, b.toneladas) },
+    { clave: 'rpe', etiqueta: 'Esfuerzo medio', valor: a.rpe == null ? '-' : n1(a.rpe), antes: b.rpe == null ? '-' : n1(b.rpe), cambio: cmp(a.rpe, b.rpe) },
+  ];
+}
+
+// ---------------------------------------------------------------- dónde se quedó corto
+// series: las del historial (con sesion_ejercicio_id); pautas: [{ id, reps_min, series }] de las sesiones de la semana.
+// [{ ejercicio, cortas, tope, faltan }] solo de los que tienen algo
+export function quedoCorto(series, pautas, lunes) {
+  const fin = masDias(lunes, 6);
+  const P = new Map((pautas || []).map((p) => [p.id, p]));
+  const porPauta = new Map();
+  for (const s of series || []) {
+    if (!s.fecha || s.fecha < lunes || s.fecha > fin || !(Number(s.reps) > 0) || !P.has(s.sesion_ejercicio_id)) continue;
+    if (!porPauta.has(s.sesion_ejercicio_id)) porPauta.set(s.sesion_ejercicio_id, []);
+    porPauta.get(s.sesion_ejercicio_id).push(s);
+  }
+  const out = [];
+  for (const [id, ss] of porPauta) {
+    const p = P.get(id);
+    const cortas = p.reps_min ? ss.filter((s) => Number(s.reps) < Number(p.reps_min)).length : 0;
+    const tope = ss.filter((s) => Number(s.rpe) >= 10).length;
+    const faltan = Math.max(0, (Number(p.series) || 0) - ss.length);
+    if (cortas || tope || faltan) out.push({ id, ejercicio: ss[0].ejercicio || 'Ejercicio', cortas, tope, faltan });
+  }
+  return out.sort((a, b) => (b.cortas + b.tope + b.faltan) - (a.cortas + a.tope + a.faltan) || a.ejercicio.localeCompare(b.ejercicio, 'es'));
+}
+export function textoCorto(x) {
+  return [x.cortas ? `${x.cortas} por debajo del rango` : '', x.tope ? `${x.tope} a RPE 10` : '', x.faltan ? (x.faltan === 1 ? 'falta 1 serie' : `faltan ${x.faltan} series`) : ''].filter(Boolean).join(', ');
+}
+
+// ---------------------------------------------------------------- en qué punto del bloque está
+export function puntoDelBloque(f) {
+  const b = f?.bloque, w = f?.semana;
+  if (!b) return '';
+  return [b.numero != null ? `Bloque ${b.numero}` : b.nombre || 'Bloque', w?.numero != null ? `semana ${w.numero}${w.total ? ` de ${w.total}` : ''}` : '', w?.foco || b.foco ? `foco: ${w?.foco || b.foco}` : ''].filter(Boolean).join(' · ');
+}
+
+// ---------------------------------------------------------------- carrera: lo corrido frente a lo previsto
+export function carreraDeLaSemana(sesiones, plan) {
+  const hechas = (sesiones || []).filter((x) => x.completada && x.cardio_hecho && x.cardio_hecho.modalidad === 'carrera');
+  const km = Math.round(hechas.reduce((t, x) => t + (Number(x.cardio_hecho.km) || 0), 0) * 10) / 10;
+  if (!plan && !hechas.length) return null;
+  const min = plan?.km_min != null ? Number(plan.km_min) : null, max = plan?.km_max != null ? Number(plan.km_max) : null;
+  const previsto = min != null && max != null ? (min === max ? `${n1(max)} km` : `${n1(min)}-${n1(max)} km`) : max != null ? `${n1(max)} km` : min != null ? `${n1(min)} km` : null;
+  const semaforos = hechas.map((x) => x.cardio_hecho.semaforo).filter(Boolean);
+  const peor = semaforos.includes('rojo') ? 'rojo' : semaforos.includes('ambar') ? 'ambar' : semaforos.length ? 'verde' : null;
+  return { km, salidas: hechas.length, previsto, etiqueta: plan?.etiqueta || null, clave: plan?.clave || null, semaforo: peor, estado: max != null && km > max * 1.1 ? 'de_mas' : min != null && km < min * 0.8 ? 'de_menos' : 'bien' };
+}
+
+// ---------------------------------------------------------------- el tono del mensaje
+export const TONOS = [['auto', 'Automático'], ['redonda', 'Semana redonda'], ['floja', 'Semana floja'], ['sin', 'Sin entrenar']];
+export function tonoDe(f) {
+  const { completadas = 0, total = 0 } = f?.sesiones || {};
+  if (f?.servicio === 'nutricion') return 'redonda';
+  if (total > 0 && completadas === 0) return 'sin';
+  if (total > 0 && completadas >= total) return 'redonda';
+  return total > 0 && completadas / total < 0.67 ? 'floja' : 'redonda';
+}
+const ABRE = { redonda: (n) => `Hola, ${n}. Semana redonda, te la repaso:`, floja: (n) => `Hola, ${n}. Semana más floja de lo normal; sin drama, la repaso:`, sin: (n) => `Hola, ${n}. Esta semana no ha salido el entreno.` };
+const CIERRA = { redonda: 'Así da gusto. A por la siguiente. 💪', floja: 'Para esta semana, un objetivo corto: cumplir las sesiones. Si algo no encaja, dímelo y lo ajusto.', sin: 'Cuéntame qué ha pasado y te lo adapto: mejor poco que nada.' };
+// Cambia la primera y la última línea del redactado (las de en medio, sus datos, se quedan); 'auto': tal cual
+export function conTono(texto, tono, nombre) {
+  if (!ABRE[tono]) return String(texto || '');
+  const lineas = String(texto || '').split('\n');
+  if (lineas.length < 2) return String(texto || '');
+  const medio = lineas.slice(1, -1).filter((l) => !(tono === 'sin' && /no hemos podido entrenar/.test(l)));
+  return [ABRE[tono](nombreCorto(nombre) || 'qué tal'), ...medio, CIERRA[tono]].join('\n');
+}
+
+// ---------------------------------------------------------------- programar el envío: el lunes que viene a las 8 (hora del aparato)
+// → 'AAAA-MM-DDTHH:MM' para un campo datetime-local. ahora: Date
+export function proximoLunesALas(ahora = new Date(), hora = 8) {
+  const d = new Date(ahora.getTime());
+  const dias = ((8 - d.getDay()) % 7) || 7;
+  d.setDate(d.getDate() + dias); d.setHours(hora, 0, 0, 0);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// ---------------------------------------------------------------- el resumen al terminar
+export function resumenRevision(filas) {
+  const xs = filas || [];
+  const nombres = (ys) => ys.map((f) => nombreCorto(f.nombre)).sort((a, b) => a.localeCompare(b, 'es'));
+  return {
+    total: xs.length, revisados: xs.filter((f) => f.hecha).length,
+    conRepaso: xs.filter((f) => (f.escritos || 0) > 0).length,
+    porProgramar: nombres(xs.filter((f) => f.proxima === 'sin' || f.proxima === 'borrador')),
+    esperando: nombres(xs.filter((f) => f.estadoRevision === 'esperando' && !f.hecha)),
+    sinCheckin: nombres(xs.filter((f) => !f.checkin && f.servicio !== 'nutricion')),
+  };
+}
+
+// ---------------------------------------------------------------- la vista de tabla (ordenador)
+export const COLUMNAS_TABLA = [['nombre', 'Atleta'], ['sesiones', 'Sesiones'], ['checkin', 'Check-in'], ['videos', 'Vídeos'], ['mensajes', 'Mensajes'], ['molestia', 'Molestia'], ['proxima', 'Semana que viene']];
+const VALOR = {
+  nombre: (f) => String(f.nombre || ''),
+  sesiones: (f) => (f.sesiones?.total ? (f.sesiones.completadas || 0) / f.sesiones.total : -1),
+  checkin: (f) => (f.checkin ? 1 : 0),
+  videos: (f) => f.videos || 0, mensajes: (f) => f.mensajes || 0, molestia: (f) => f.molestia || 0,
+  proxima: (f) => ({ sin: 0, borrador: 1, publicada: 2 }[f.proxima] ?? 3),
+};
+export function ordenarTabla(filas, col = 'nombre', dir = 1) {
+  const v = VALOR[col] || VALOR.nombre;
+  return [...(filas || [])].sort((a, b) => {
+    const x = v(a), y = v(b);
+    const c = typeof x === 'string' ? x.localeCompare(y, 'es') : x - y;
+    return (c * dir) || String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es');
+  });
+}
+
+// ---------------------------------------------------------------- los ajustes, entre aparatos (082)
+// Lo de la base manda si existe; si aún no hay nada allí, se sube lo de este aparato. → { frases, orden, modo, vista }
+export function ajustesDeRevision(remoto, local) {
+  const l = local || {};
+  if (!remoto) return { frases: [...(l.frases || [])], orden: [...(l.orden || [])], modo: l.modo || 'urgencia', vista: l.vista || 'lista' };
+  return { frases: Array.isArray(remoto.frases) ? remoto.frases : [], orden: Array.isArray(remoto.orden) ? remoto.orden : [], modo: remoto.modo || l.modo || 'urgencia', vista: remoto.vista || l.vista || 'lista' };
+}
+// Lo que cabe en la base: frases limpias (20 de 300) y solo identificadores con forma de identificador (500)
+export function ajustesParaGuardar(a) {
+  return {
+    frases: [...new Set((a?.frases || []).map((x) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 300)).filter(Boolean))].slice(0, 20),
+    orden: (a?.orden || []).filter((x) => /^[0-9a-fA-F-]{36}$/.test(String(x))).slice(0, 500),
+    modo: ORDENES.some(([k]) => k === a?.modo) ? a.modo : null,
+    vista: ['lista', 'tabla'].includes(a?.vista) ? a.vista : null,
+  };
 }

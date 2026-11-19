@@ -69,7 +69,9 @@ const DEFECTOS = {
   // Como la 039: la velocidad mínima de un ejercicio (para el 1RM estimado por la velocidad)
   umbrales_velocidad: () => ({ actualizado_en: ahora() }),
   // Como la 040: la revisión semanal del coach (una por atleta y lunes)
-  revisiones_semanales: () => ({ hecha: false, nota: null, actualizado_en: ahora() }),
+  revisiones_semanales: () => ({ hecha: false, nota: null, estado: null, actualizado_en: ahora() }),
+  // Como la 082: los ajustes de la revisión de cada coach
+  revision_ajustes: () => ({ frases: [], orden: [], modo: null, vista: null, actualizado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null, resumen_sesion: false }),
@@ -190,7 +192,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['menu_fotos', 'atletas_imagenes', 'videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_semanas', 'portadas'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_semanas', 'portadas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120, autoevaluacion: 30 };
@@ -373,6 +375,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     umbrales_velocidad: () => esCoach(),
     // Como la 040: la revisión semanal, solo el coach
     revisiones_semanales: () => esCoach(),
+    // Como la 082: los ajustes de la revisión, solo su coach
+    revision_ajustes: (x) => esCoach() && x.usuario_id === sesion?.user.id,
     // Como la 056: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
     carrera_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_eventos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
@@ -1237,7 +1241,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 039: de 0,05 a 1 m/s con 3 decimales como mucho (umbral_velocidad_valido)
     umbrales_velocidad: (f) => umbralValido(f.vmin),
     // Como la 040: el lunes, un lunes; la nota, de 500 caracteres como mucho
-    revisiones_semanales: (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f.lunes)) && new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && (f.nota == null || [...String(f.nota)].length <= 500),
+    revisiones_semanales: (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f.lunes)) && new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && (f.nota == null || [...String(f.nota)].length <= 500) && (f.estado == null || ['esperando', 'programar'].includes(f.estado)),
+    // Como la 082 (revision_ajustes_validos)
+    revision_ajustes: (f) => Array.isArray(f.frases) && f.frases.length <= 20 && f.frases.every((x) => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 300)
+      && Array.isArray(f.orden) && f.orden.length <= 500 && f.orden.every((x) => typeof x === 'string' && /^[0-9a-fA-F-]{36}$/.test(x))
+      && (f.modo == null || ['urgencia', 'nombre', 'antiguedad', 'mio'].includes(f.modo)) && (f.vista == null || ['lista', 'tabla'].includes(f.vista)),
     semanas: (f) => f.foco == null || FOCOS_SEMANA.includes(f.foco),
     bloques: (f) => f.foco == null || FOCOS_BLOQUE.includes(f.foco),
     habitos: (f) => {
@@ -1352,7 +1360,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -3660,6 +3668,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           if (!existente) return insertar(t, fila);
           const m = { ...existente, ...copia(fila) };
           prepararUmbral(m, existente);
+          comprobarChecks(t, m);
+          return Object.assign(existente, m);
+        });
+        persistirYa();
+        return copia(res);
+      }
+      // Como la 082: una por coach (la suya; la hora la pone la base)
+      if (t === 'revision_ajustes') {
+        const res = (Array.isArray(filas) ? filas : [filas]).map((fila) => {
+          const yo = sesion?.user.id;
+          if (fila.usuario_id && fila.usuario_id !== yo) throw sinPermiso();
+          const existente = tabla(t).find((x) => x.usuario_id === yo);
+          const m = { ...(existente || {}), ...copia(fila), usuario_id: yo, actualizado_en: ahora() };
+          if (!existente) return insertar(t, m);
           comprobarChecks(t, m);
           return Object.assign(existente, m);
         });

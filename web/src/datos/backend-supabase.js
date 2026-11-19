@@ -17,6 +17,8 @@ export const CLAVE_TABLA = { menu_fotos: 'entrada_id', atletas_imagenes: 'atleta
   umbrales_velocidad: 'ejercicio_id',
   // v0.67 (migración 040): la revisión semanal del coach
   revisiones_semanales: 'atleta_id,lunes',
+  // v0.192 (migración 082): los ajustes de la revisión de cada coach
+  revision_ajustes: 'usuario_id',
   // v0.69 (migración 041): 💪 a un comentario y las bienvenidas a los nuevos
   comunidad_comentario_reacciones: 'comentario_id,autor_id', comunidad_bienvenidas: 'de,para',
   // v0.70 (migración 042): el reparto de los retos por equipos

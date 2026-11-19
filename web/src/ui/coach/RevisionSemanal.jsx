@@ -4,9 +4,15 @@ import { useApp, useCarga, Siluetas, Vacio, Avatar, Icono, CabeceraGrande, Error
 import { HojaNuevaTarea } from '../Tareas.jsx';
 import { HojaPlatosSemana } from '../Platos.jsx';
 import { fechaMadrid, sumarDias, desdeISO } from '../../logica/fechas.js';
-import { avisosRevision, avisosPanel, partirPausados, ordenarRevision, ORDENES, moverEnOrden, FILTROS_REVISION, filtrarRevision, cuentaFiltro, TEXTO_PROXIMA, LOTES, destinatariosLote, siguientePendiente } from '../../logica/revision.js';
+import { avisosRevision, avisosPanel, partirPausados, ordenarRevision, ORDENES, moverEnOrden, FILTROS_REVISION, filtrarRevision, cuentaFiltro, TEXTO_PROXIMA, LOTES, destinatariosLote, siguientePendiente,
+  ESTADOS_REVISION, TEXTO_ESTADO, pasosRevision, puntoDelBloque, resumenRevision, COLUMNAS_TABLA, ordenarTabla, ajustesDeRevision } from '../../logica/revision.js';
+import { mensajeParaAlerta } from '../../logica/cierre.js';
+import { ChispaSesiones } from './Panel.jsx';
+import { Dictar } from '../Dictar.jsx';
 import { DetalleRevision, HojaBorrador, HojaLote, SemanaPasada, prefRevision, guardarPref, olvidarDetalle } from './RevisionDetalle.jsx';
 
+// (v0.192) los avisos que se le pueden pedir con un mensaje ya escrito (logica/cierre.js: mensajeParaAlerta)
+const PEDIBLES = new Set(['sin_entrenar', 'sesion_abierta', 'sin_peso', 'cumplimiento', 'esfuerzo', 'habitos']);
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const rango = (lunes) => {
   const a = desdeISO(lunes), b = desdeISO(sumarDias(lunes, 6));
@@ -31,6 +37,28 @@ export function RevisionSemanal({ abrirAtleta }) {
   const [atras, setAtras] = useState(0);        // semanas hacia atrás (0: esta)
   const [lote, setLote] = useState(null);
   const [pedirHoja, setPedirHoja] = useState(null);   // { id, hoja }: abrir una hoja de una fila desde el teclado
+  // (v0.192) las frases y el orden, también en la base (082) para tenerlos en todos tus aparatos; la tabla, en pantallas anchas
+  const [frases, setFrases] = useState(() => { try { return JSON.parse(localStorage.getItem('fbe-revision-frases') || '[]'); } catch { return []; } });
+  const enLaBase = useRef(false);
+  const subir = (a) => { if (enLaBase.current) api.guardarRevisionAjustes(a).catch(() => {}); };
+  useEffect(() => {
+    let vivo = true;
+    api.revisionAjustes().then((remoto) => {
+      if (!vivo || remoto === undefined) return;
+      enLaBase.current = true;
+      const local = { frases, orden: pref.mio, modo: pref.orden, vista: pref.vista };
+      const a = ajustesDeRevision(remoto, local);
+      if (!remoto) { if (local.frases.length || local.orden.length) subir(a); return; }
+      setFrases(a.frases); try { localStorage.setItem('fbe-revision-frases', JSON.stringify(a.frases)); } catch { /* */ }
+      setPref((x) => { const n = { ...x, orden: a.modo, mio: a.orden, vista: a.vista }; guardarPref(n); return n; });
+    }).catch(() => {});
+    return () => { vivo = false; };
+  }, []);
+  const ponerFrases = (l) => { setFrases(l); subir({ frases: l, orden: pref.mio, modo: pref.orden, vista: pref.vista }); };
+  const [ancha, setAncha] = useState(() => typeof matchMedia === 'function' && matchMedia('(min-width: 1000px)').matches);
+  useEffect(() => { if (typeof matchMedia !== 'function') return undefined; const m = matchMedia('(min-width: 1000px)'); const f = () => setAncha(m.matches); m.addEventListener?.('change', f); return () => m.removeEventListener?.('change', f); }, []);
+  const [colTabla, setColTabla] = useState({ col: 'nombre', dir: 1 });
+  const [pedir, setPedir] = useState(null);   // { f, alerta }: «pedírselo» desde un aviso
   const datos = res.datos;
   // (079) cuántas fotos de sus platos ha subido cada uno esta semana
   const platos = useCarga(() => (datos?.lunes ? api.platosDeLaSemana(datos.lunes).catch(() => ({})) : Promise.resolve({})), [datos?.lunes]);
@@ -41,11 +69,12 @@ export function RevisionSemanal({ abrirAtleta }) {
   const hechas = filas.filter((f) => f.hecha).length;
   const deEstado = ordenadas.filter((f) => filtro === 'todos' || (filtro === 'hechos' ? f.hecha : !f.hecha));
   const vista = filtrarRevision(deEstado, marcados);
-  const cambiarPref = (c) => setPref((x) => { const n = { ...x, ...c }; guardarPref(n); return n; });
+  const cambiarPref = (c) => setPref((x) => { const n = { ...x, ...c }; guardarPref(n); subir({ frases, orden: n.mio, modo: n.orden, vista: n.vista }); return n; });
+  const enTabla = ancha && pref.vista === 'tabla';
 
   const guardar = async (f, c, { callado = false } = {}) => {
     const antes = cambios[f.atleta_id] || {};
-    setCambios((x) => ({ ...x, [f.atleta_id]: { ...antes, ...c } }));
+    setCambios((x) => ({ ...x, [f.atleta_id]: { ...antes, ...c, ...('estado' in c ? { estadoRevision: c.estado } : {}) } }));
     try {
       await api.marcarRevision(f.atleta_id, datos.lunes, c);
       // (al marcarlo, en «Pendientes» se va de la lista: por si fue sin querer, «Deshacer»)
@@ -97,7 +126,8 @@ export function RevisionSemanal({ abrirAtleta }) {
 
   const lunesVisto = datos ? sumarDias(datos.lunes, -7 * atras) : null;
   const enFoco = foco ? todas.find((f) => f.atleta_id === foco.actual) : null;
-  const propsFila = (f) => ({ f, con040: datos.revisiones, guardar: (c) => (('hecha' in c) ? marcar(f, c) : guardar(f, c)), abrirAtleta, lunes: datos.lunes, platos: platos.datos?.[f.atleta_id] || 0, pedirHoja: pedirHoja?.id === f.atleta_id ? pedirHoja : null });
+  const propsFila = (f) => ({ f, con040: datos.revisiones, guardar: (c) => (('hecha' in c) ? marcar(f, c) : guardar(f, c)), abrirAtleta, lunes: datos.lunes, platos: platos.datos?.[f.atleta_id] || 0, pedirHoja: pedirHoja?.id === f.atleta_id ? pedirHoja : null,
+    con082: datos.con082, frases, alFrases: ponerFrases, alPedir: (alerta) => setPedir({ f, alerta }), alCambiar: (c) => setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), ...c } })) });
 
   return (
     <div class="contenido coach revision">
@@ -140,6 +170,18 @@ export function RevisionSemanal({ abrirAtleta }) {
               {vista.length > 0 && <button type="button" class="btn btn-primario btn-peq" onClick={() => empezar(null)}><Icono n="play" /> Revisar uno a uno</button>}
               {Object.keys(LOTES).map((tipo) => { const n = destinatariosLote(filas, tipo).length; return n > 0 && <button key={tipo} type="button" class="btn btn-peq" onClick={() => setLote(tipo)}><Icono n="enviar" /> {LOTES[tipo].titulo} ({n})</button>; })}
             </div>
+            {(() => { const r = resumenRevision(filas); return (
+              <details class="rev-resumen">
+                <summary>Resumen de la revisión</summary>
+                <ul>
+                  <li>Revisados: <strong class="num">{r.revisados} de {r.total}</strong>. Les has escrito esta semana a <strong class="num">{r.conRepaso}</strong>.</li>
+                  {r.porProgramar.length > 0 && <li>Falta la semana que viene de {r.porProgramar.length}: {r.porProgramar.join(', ')}.</li>}
+                  {r.esperando.length > 0 && <li>Esperando respuesta de: {r.esperando.join(', ')}.</li>}
+                  {r.sinCheckin.length > 0 && <li>Sin check-in: {r.sinCheckin.join(', ')}.</li>}
+                  {!r.porProgramar.length && !r.esperando.length && !r.sinCheckin.length && <li>No queda nada suelto.</li>}
+                </ul>
+              </details>
+            ); })()}
             <p class="peq secundario rev-atajos"><Icono n="teclado" /> Con teclado: J y K para moverte, X revisado, M mensaje, Intro para ver su semana, U uno a uno.</p>
           </div>
           <div class="selector-chips" role="group" aria-label="Qué ver">
@@ -151,6 +193,9 @@ export function RevisionSemanal({ abrirAtleta }) {
             <label class="rev-orden"><span class="peq secundario">Orden</span>
               <select value={pref.orden} onChange={(e) => cambiarPref({ orden: e.currentTarget.value })} aria-label="Orden de la lista">{ORDENES.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
             </label>
+            {ancha && <div class="selector-chips rev-vista" role="group" aria-label="Cómo verlo">
+              {[['lista', 'Tarjetas'], ['tabla', 'Tabla']].map(([k, t]) => <button key={k} type="button" aria-pressed={(pref.vista || 'lista') === k ? 'true' : 'false'} onClick={() => cambiarPref({ vista: k })}>{t}</button>)}
+            </div>}
             <div class="rev-filtros" role="group" aria-label="Solo los que tienen">
               {FILTROS_REVISION.map(([k, t]) => { const n = cuentaFiltro(deEstado, k); return (n > 0 || marcados.has(k)) && (
                 <button key={k} type="button" class="chip rev-filtro" aria-pressed={marcados.has(k) ? 'true' : 'false'} onClick={() => setMarcados((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; })}>{t} ({n})</button>
@@ -159,6 +204,27 @@ export function RevisionSemanal({ abrirAtleta }) {
           </div>
           {!vista.length ? (
             <div class="panel"><Vacio icono="hecho" ilustracion={filtro === 'pendientes' && !marcados.size ? 'todo' : null} titulo={marcados.size ? 'Nadie con eso' : filtro === 'pendientes' ? '¡Revisión terminada!' : 'Nadie revisado aún'}>{marcados.size ? 'Quita algún filtro para ver a los demás.' : filtro === 'pendientes' ? 'Has revisado a todos esta semana.' : 'Marca a cada atleta cuando acabes con él.'}</Vacio></div>
+          ) : enTabla ? (
+            <div class="panel rev-tabla-env">
+              <table class="rev-tabla rev-tabla-todos">
+                <thead><tr>
+                  {COLUMNAS_TABLA.map(([k, t]) => <th key={k} scope="col" aria-sort={colTabla.col === k ? (colTabla.dir > 0 ? 'ascending' : 'descending') : 'none'}><button type="button" class="btn-texto" onClick={() => setColTabla((c) => ({ col: k, dir: c.col === k ? -c.dir : 1 }))}>{t}{colTabla.col === k ? (colTabla.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>)}
+                  <th scope="col">Revisado</th>
+                </tr></thead>
+                <tbody>{ordenarTabla(vista, colTabla.col, colTabla.dir).map((f) => (
+                  <tr key={f.atleta_id} class={f.hecha ? 'hecha' : ''}>
+                    <th scope="row"><button type="button" class="btn-texto" onClick={() => empezar(f.atleta_id)}>{f.nombre}</button>{f.estadoRevision && !f.hecha ? <span class="chip info">{TEXTO_ESTADO[f.estadoRevision]}</span> : null}</th>
+                    <td class="num">{f.servicio === 'nutricion' ? '-' : f.sesiones.total ? `${f.sesiones.completadas} de ${f.sesiones.total}` : f.sesiones.completadas || '-'}</td>
+                    <td>{f.checkin ? 'Enviado' : f.servicio === 'nutricion' ? '-' : 'Falta'}</td>
+                    <td class="num">{f.videos || '-'}</td>
+                    <td class="num">{f.mensajes || '-'}</td>
+                    <td class="num">{f.molestia >= 2 ? `${f.molestia}/5` : '-'}</td>
+                    <td>{f.proxima ? TEXTO_PROXIMA[f.proxima].replace('Semana que viene ', '') : '-'}</td>
+                    <td>{datos.revisiones && <input type="checkbox" checked={f.hecha} onChange={(e) => marcar(f, { hecha: e.currentTarget.checked })} aria-label={`Revisión de ${f.nombre} terminada`} />}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
           ) : (
             <ul class="revision-lista">
               {vista.map((f, i) => <FilaRevision key={f.atleta_id} {...propsFila(f)} abierta={abiertos.has(f.atleta_id)} alternar={() => alternar(f.atleta_id)} senalada={cursor === f.atleta_id}
@@ -177,11 +243,12 @@ export function RevisionSemanal({ abrirAtleta }) {
         </div>
       )}
       {lote && <HojaLote titulo={LOTES[lote].titulo} destinatarios={destinatariosLote(filas, lote)} alCerrar={() => setLote(null)} />}
+      {pedir && <HojaLote titulo={`Pedírselo a ${pedir.f.nombre.split(' ')[0]}`} destinatarios={[{ atleta_id: pedir.f.atleta_id, nombre: pedir.f.nombre, texto: mensajeParaAlerta(pedir.alerta, pedir.f.nombre) }]} uno alCerrar={() => setPedir(null)} />}
     </div>
   );
 }
 
-function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null }) {
+function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null, con082 = false, frases = null, alFrases = null, alPedir = null, alCambiar = null }) {
   const [nota, setNota] = useState(f.nota || '');
   const [verNota, setVerNota] = useState(!!f.nota || unoAUno);
   const area = useRef(null);
@@ -194,6 +261,8 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
   const [hoja, setHoja] = useState(null);   // (054) 'mensaje' | 'tarea' | (079) 'platos'
   useEffect(() => { if (pedirHoja?.hoja) setHoja(pedirHoja.hoja); }, [pedirHoja?.n]);
   const sinProgramar = f.proxima === 'sin' || f.proxima === 'borrador';
+  const punto = puntoDelBloque(f);
+  const pasos = pasosRevision(f);
   return (
     <li id={`rev-fila-${f.atleta_id}`} class={`panel revision-fila ${f.hecha ? 'hecha' : ''} ${senalada ? 'rev-cursor' : ''}`}>
       <div class="revision-cab">
@@ -201,6 +270,8 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
         <div class="pila-xs revision-quien">
           <strong>{f.nombre}</strong>
           <span class="peq secundario">{f.servicio === 'nutricion' ? 'Solo nutrición' : total ? `${completadas} de ${total} sesiones esta semana` : completadas ? `${completadas} sesiones esta semana` : 'Sin sesiones esta semana'}{f.peso?.kg != null ? ` · ${String(f.peso.kg).replace('.', ',')} kg${f.peso.cambio ? ` (${f.peso.cambio > 0 ? '+' : ''}${String(f.peso.cambio).replace('.', ',')})` : ''}` : ''}</span>
+          {punto && <span class="peq secundario rev-punto">{punto}{f.bloque?.objetivo ? ` · Objetivo: ${f.bloque.objetivo}` : ''}</span>}
+          {f.chispa && f.servicio !== 'nutricion' && <ChispaSesiones semanas={f.chispa} />}
           {total > 0 && <span class="barra-sesiones" aria-hidden="true"><span style={{ width: `${Math.min(100, Math.round((completadas / total) * 100))}%` }} /></span>}
         </div>
         {con040 && (
@@ -213,10 +284,17 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
       {(avisos.length > 0 || extra.length > 0 || f.proxima) && (
         <ul class="revision-avisos" aria-label="Lo que pide tu atención">
           {avisos.map((a) => <li key={a.tipo} class={`chip ${a.nivel}`}>{a.texto}</li>)}
-          {extra.map((a, i) => <li key={`${a.tipo}-${i}`} class={`chip ${a.nivel}`}>{a.texto}</li>)}
+          {extra.map((a, i) => (alPedir && PEDIBLES.has(a.tipo)
+            ? <li key={`${a.tipo}-${i}`}><button type="button" class={`chip rev-pedir ${a.nivel}`} title="Pedírselo con un mensaje" onClick={() => alPedir(a)}>{a.texto} <Icono n="enviar" /></button></li>
+            : <li key={`${a.tipo}-${i}`} class={`chip ${a.nivel}`}>{a.texto}</li>))}
+          {f.cobro && <li class="chip info rev-cobro">Cobro pendiente</li>}
+          {f.estadoRevision && !f.hecha && <li class="chip aviso">{TEXTO_ESTADO[f.estadoRevision]}</li>}
           {f.proxima && <li class={`chip ${f.proxima === 'publicada' ? 'ok' : 'aviso'}`}>{TEXTO_PROXIMA[f.proxima]}</li>}
         </ul>
       )}
+      <ul class="rev-pasos" aria-label="Tus pasos con este atleta">
+        {pasos.map((x) => <li key={x.clave} class={x.hecho ? 'hecho' : ''}><Icono n={x.hecho ? 'hecho' : 'reloj'} /> <span>{x.texto}</span><span class="sr">{x.hecho ? ' (hecho)' : ' (pendiente)'}</span></li>)}
+      </ul>
       {f.notaAnterior && <p class="peq revision-anterior"><Icono n="historial" /> La semana pasada: {f.notaAnterior}</p>}
       {!unoAUno && alternar && (
         <div class="fila-envolver rev-abrir">
@@ -225,13 +303,26 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
           {mover && <span class="rev-mover"><button type="button" class="btn-icono plano" aria-label={`Subir a ${f.nombre}`} disabled={!mover.subir} onClick={mover.subir || undefined}><Icono n="arriba" /></button><button type="button" class="btn-icono plano" aria-label={`Bajar a ${f.nombre}`} disabled={!mover.bajar} onClick={mover.bajar || undefined}><Icono n="abajo" /></button></span>}
         </div>
       )}
-      {abierta && lunes && <DetalleRevision f={f} lunes={lunes} abrirAtleta={abrirAtleta} />}
+      {abierta && lunes && <DetalleRevision f={f} lunes={lunes} abrirAtleta={abrirAtleta} alCambiar={alCambiar} />}
       {con040 && (verNota ? (
         <label class="pila-xs revision-nota">
-          <span class="peq secundario">Nota de esta semana (te saldrá la próxima y al programarle)</span>
+          <span class="fila-entre"><span class="peq secundario">Nota de esta semana (te saldrá la próxima y al programarle)</span><Dictar etiqueta="Dictar la nota" alTexto={(t) => { const n = nota ? `${nota.trimEnd()} ${t}` : t; setNota(n.slice(0, 500)); guardar({ nota: n.slice(0, 500) }); }} /></span>
           <textarea ref={area} rows="2" maxLength={500} value={nota} onInput={(e) => setNota(e.currentTarget.value)} onBlur={soltarNota} placeholder="Ej.: subir 2,5 kg en sentadilla; preguntar por el hombro" />
         </label>
       ) : <button class="btn-texto mini" onClick={() => { setVerNota(true); requestAnimationFrame(() => area.current?.focus()); }}>Añadir nota</button>)}
+      {con040 && (verNota || con082) && (
+        <div class="fila-envolver rev-extra">
+          {verNota && nota.trim() && <button type="button" class="btn-texto mini" onClick={() => setHoja('tarea-nota')}><Icono n="hecho" /> Convertir la nota en tarea</button>}
+          {con082 && !f.hecha && (
+            <label class="rev-estado"><span class="peq secundario">A medias</span>
+              <select value={f.estadoRevision || ''} aria-label={`Estado de la revisión de ${f.nombre}`} onChange={(e) => guardar({ estado: e.currentTarget.value || null })}>
+                <option value="">No</option>
+                {ESTADOS_REVISION.map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
       <div class="revision-acciones">
         <button class="btn btn-peq" onClick={() => abrirAtleta(f.atleta_id, 'mensajes', null)}><Icono n="mensaje" /> Chat</button>
         <button class={`btn btn-peq ${sinProgramar ? 'rev-falta' : ''}`} title={sinProgramar ? 'Le falta la semana que viene' : undefined} onClick={() => abrirAtleta(f.atleta_id, 'programa', null)}><Icono n="semana" /> Programar</button>
@@ -243,7 +334,8 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
         {platos > 0 && <button class="btn btn-peq" onClick={() => setHoja('platos')}><Icono n="camara" /> {platos === 1 ? '1 plato' : `${platos} platos`}</button>}
       </div>
       {hoja === 'platos' && <HojaPlatosSemana atleta={{ id: f.atleta_id, nombre: f.nombre }} lunes={lunes} alCerrar={() => setHoja(null)} />}
-      {hoja === 'mensaje' && <HojaBorrador f={f} lunes={lunes} alCerrar={() => setHoja(null)} alEnviado={(marcar) => { olvidarDetalle(f.atleta_id); if (marcar && con040) guardar({ hecha: true }); }} />}
+      {hoja === 'mensaje' && <HojaBorrador f={f} lunes={lunes} alCerrar={() => setHoja(null)} frases={frases} alFrases={alFrases} alEnviado={(marcar) => { olvidarDetalle(f.atleta_id); alCambiar?.({ escritos: (f.escritos || 0) + 1 }); if (marcar && con040) guardar({ hecha: true }); }} />}
+      {hoja === 'tarea-nota' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} inicial={{ tipo: 'texto', titulo: nota.trim().slice(0, 80), detalle: nota.trim().length > 80 ? nota.trim() : '' }} alCerrar={() => setHoja(null)} />}
       {hoja === 'tarea' && <HojaNuevaTarea atleta={{ id: f.atleta_id, nombre: f.nombre }} alCerrar={() => setHoja(null)} />}
     </li>
   );
