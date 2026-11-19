@@ -1659,6 +1659,16 @@
     },
     "color": "#55386a"
   },
+  "compartir-amanecer": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-amanecer-1024.ae5436ab.webp"
+    },
+    "color": "#3a245c"
+  },
   "compartir-banco": {
     "proporcion": [
       2,
@@ -1699,6 +1709,26 @@
     },
     "color": "#422b65"
   },
+  "compartir-bosque": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-bosque-1024.e9ca0fe2.webp"
+    },
+    "color": "#342260"
+  },
+  "compartir-cadena": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-cadena-1024.124b0d66.webp"
+    },
+    "color": "#302252"
+  },
   "compartir-cima": {
     "proporcion": [
       2,
@@ -1729,6 +1759,16 @@
     },
     "color": "#352666"
   },
+  "compartir-escalera": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-escalera-1024.43782885.webp"
+    },
+    "color": "#36255d"
+  },
   "compartir-estrella": {
     "proporcion": [
       2,
@@ -1739,6 +1779,26 @@
     },
     "color": "#382354"
   },
+  "compartir-hoguera": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-hoguera-1024.e398fec5.webp"
+    },
+    "color": "#352557"
+  },
+  "compartir-huellas": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-huellas-1024.851c8110.webp"
+    },
+    "color": "#412f6c"
+  },
   "compartir-kettlebells": {
     "proporcion": [
       2,
@@ -1748,6 +1808,16 @@
       "1024": "imagenes/compartir/compartir-kettlebells-1024.9d12354d.webp"
     },
     "color": "#2d1d51"
+  },
+  "compartir-luna": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-luna-1024.9a68a702.webp"
+    },
+    "color": "#3f2c60"
   },
   "compartir-magnesio": {
     "proporcion": [
@@ -1808,6 +1878,16 @@
       "1024": "imagenes/compartir/compartir-record-1024.3c0ea125.webp"
     },
     "color": "#472f56"
+  },
+  "compartir-sendero": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-sendero-1024.d48ceb8d.webp"
+    },
+    "color": "#341e5b"
   },
   "compartir-sesion": {
     "proporcion": [
