@@ -43,7 +43,7 @@ export async function probarCompartir187({ navegador, check, base = 'http://loca
     check(n >= 70 && tamanos.length === 0, `el banco pinta ${n} tarjetas, cada una con su tamaño (publicación, historia y cuadrado)${tamanos.length ? `: ${tamanos.slice(0, 3).join(' | ')}` : ''}`);
     check(fuera.length === 0, `ningún texto se sale de la imagen${fuera.length ? `: ${fuera.slice(0, 4).join(' | ')} (${fuera.length})` : ''}`);
     check(r190 >= 40, `(v0.190) con tu foto en el recuadro: ${r190} tarjetas la llevan`);
-    check(montados.length === 0, `ningún texto se monta sobre otro (ni sobre tu foto)${montados.length ? `: ${montados.slice(0, 4).join(' | ')} (${montados.length})` : ''}`);
+    check(montados.length === 0, `ningún texto se monta sobre otro (ni sobre tu foto)${montados.length ? `: ${montados.slice(0, 12).join(' | ')} (${montados.length})` : ''}`);
   } catch (e) {
     check(false, `Compartir 187, el banco: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); rmSync(join(DIST, '_banco-tarjetas.js'), { force: true }); rmSync(join(DIST, '_banco-tarjetas.html'), { force: true }); }

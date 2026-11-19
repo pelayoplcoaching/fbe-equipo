@@ -232,7 +232,8 @@ function pegatina(x, letra, texto) {
   const t = texto.toUpperCase();
   const w = x.measureText(t).width + 56, h = 72;
   x.save();
-  x.translate(W - M - w / 2, 190); x.rotate(-0.07);
+  // (v0.190) con tu foto en el recuadro, la pegatina va en su borde de abajo (arriba le tapaba la cara)
+  x.translate(W - M - w / 2, REC ? FB - 20 : 190); x.rotate(-0.07);
   x.fillStyle = C.clara ? '#593EDE' : C.oro;
   x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, 16); x.fill();
   x.fillStyle = C.clara ? '#FFFFFF' : '#140B3A'; x.textAlign = 'center'; x.textBaseline = 'middle';
@@ -494,8 +495,8 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     // (v0.187) el tamano baja hasta que cabe entero: tres lineas como mucho en grande, cuatro en pequeno
     const nombre = String(d.nombre || '').toUpperCase();
     // (v0.190) con tu foto arriba, el nombre empieza debajo de ella y algo mas pequeno
-    let tp = titulo(nombre, { tams: REC ? [170, 150, 130] : [230, 210, 190, 170, 150], ancho: W - 2 * M, max: 3, peso: 650, estilo: 'condensed' });
-    if (tp.ls.some((l) => l.endsWith('…'))) tp = titulo(nombre, { tams: REC ? [124, 112, 96] : [150, 130, 112, 96], ancho: W - 2 * M, max: 4, peso: 650, estilo: 'condensed' });
+    let tp = titulo(nombre, { tams: REC ? (d.frase ? [150, 130, 112] : [170, 150, 130]) : [230, 210, 190, 170, 150], ancho: W - 2 * M, max: 3, peso: 650, estilo: 'condensed' });
+    if (tp.ls.some((l) => l.endsWith('…'))) tp = titulo(nombre, { tams: REC ? (d.frase ? [104, 92, 80] : [124, 112, 96]) : [150, 130, 112, 96], ancho: W - 2 * M, max: 4, peso: 650, estilo: 'condensed' });
     const filas = tp.ls, tam = tp.tam;
     x.fillStyle = C.tinta;
     const altoFila = Math.round(tam * 0.92);
