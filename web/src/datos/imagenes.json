@@ -1769,6 +1769,16 @@
     },
     "color": "#382554"
   },
+  "compartir-constelacion": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-constelacion-1024.9b025344.webp"
+    },
+    "color": "#2f1c5b"
+  },
   "compartir-discos": {
     "proporcion": [
       2,
