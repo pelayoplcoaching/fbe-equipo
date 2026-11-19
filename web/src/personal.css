@@ -155,7 +155,7 @@
 .chip-boton.activo { background: var(--morado); color: var(--blanco); border-color: var(--morado); }
 .compartir-handle .fila { gap: var(--esp-8); flex-wrap: wrap; }
 .compartir-handle .entrada { flex: 1 1 160px; }
-.tarjeta-previa.historia .tarjeta-img { aspect-ratio: 9 / 16; max-width: 300px; }
+.tarjeta-previa.previa-historia .tarjeta-img { aspect-ratio: 9 / 16; max-width: 300px; }
 .compartir-botones { margin-top: var(--esp-2); }
 .compartir-destinos { gap: var(--esp-8); align-items: center; }
 .destino-whatsapp { border-color: color-mix(in srgb, var(--verde-400) 60%, transparent); }
@@ -197,9 +197,9 @@
 .marco-ig-pie { display: flex; flex-wrap: wrap; gap: var(--esp-12); padding: var(--esp-10) var(--esp-12) var(--esp-2); font-size: var(--letra-17); color: var(--noche-0); }
 .marco-ig-pie .marco-ig-guardar { margin-left: auto; }
 .marco-ig-pie .marco-ig-texto { flex: 0 0 100%; margin: var(--esp-4) 0 0; font-size: var(--letra-13); color: var(--noche-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.tarjeta-previa.marco-ig.historia { background: var(--negro); padding: 0; }
-.tarjeta-previa.marco-ig.historia .marco-ig-cab { position: absolute; top: 0; left: 0; right: 0; color: var(--blanco); z-index: 1; }
-.tarjeta-previa.marco-ig.historia .marco-ig-cab .marco-ig-puntos { color: var(--blanco); }
+.tarjeta-previa.marco-ig.previa-historia { background: var(--negro); padding: 0; }
+.tarjeta-previa.marco-ig.previa-historia .marco-ig-cab { position: absolute; top: 0; left: 0; right: 0; color: var(--blanco); z-index: 1; }
+.tarjeta-previa.marco-ig.previa-historia .marco-ig-cab .marco-ig-puntos { color: var(--blanco); }
 .compartir-texto-caja .seg-compacto { align-self: start; }
 .compartir-video .video-previa { width: 110px; border-radius: var(--r-10); aspect-ratio: 4 / 5; object-fit: cover; background: var(--negro); }
 .compartir-video .fila-envolver { align-items: center; }
@@ -604,7 +604,7 @@ html[data-sin-ranking] .ranking, html[data-sin-ranking] .ranking-lista, html[dat
 .a-medida-hueco .btn.ocupado { opacity: .7; }
 
 /* (v0.187) compartir: la hoja mas corta, los fondos y el formato cuadrado */
-.tarjeta-previa.cuadrado .tarjeta-img { aspect-ratio: 1 / 1; }
+.tarjeta-previa.previa-cuadrado .tarjeta-img { aspect-ratio: 1 / 1; }
 .compartir-equipo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-8); align-items: center; }
 .compartir-estilo { gap: var(--esp-8); }
 .fondos-fila { flex-wrap: nowrap; overflow-x: auto; padding: var(--esp-4); margin: calc(var(--esp-4) * -1); scrollbar-width: thin; }

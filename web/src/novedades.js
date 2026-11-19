@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.189': {
+    atleta: [
+      'Arreglado: al compartir como historia, un círculo oscuro tapaba media tarjeta en la vista previa. Ya se ve entera.',
+    ],
+  },
   '0.188': {
     atleta: [
       'Compartir: 30 fondos nuevos para tus tarjetas: sala de pesas, récords, rachas, paisajes, cardio y la manada. En «Personalizar».',

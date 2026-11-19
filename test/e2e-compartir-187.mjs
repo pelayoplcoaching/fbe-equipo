@@ -97,6 +97,11 @@ export async function probarCompartir187({ navegador, check, base = 'http://loca
     await hoja.locator('.tarjeta-img').waitFor({ timeout: 15000 });
     check(await hoja.locator('#compartir-opciones').count() === 1 && await hoja.getByRole('radiogroup', { name: 'Pegatina' }).getByRole('radio', { name: 'Constancia' }).getAttribute('aria-checked') === 'true'
       && (await hoja.getByRole('radiogroup', { name: 'Colores' }).locator('[aria-checked="true"]').textContent()).trim() === paleta.trim(), 'al volver a abrirla, recuerda tu estilo (opciones, colores y pegatina)');
+    // (v0.189) en historia, la vista previa es solo la tarjeta: sin el disco oscuro de «Tu semana» (chocaban los nombres)
+    await hoja.getByText(/^Historia/).first().click();
+    await p.waitForFunction(() => document.querySelector('.tarjeta-img')?.naturalHeight === 1920, null, { timeout: 15000 });
+    const previa = await hoja.locator('.tarjeta-previa').evaluate((e) => ({ antes: getComputedStyle(e, '::before').content, clase: e.className }));
+    check(previa.antes === 'none' && !/(^|\s)historia(\s|$)/.test(previa.clase), `en historia, nada tapa la vista previa (${previa.antes})`);
     await p.keyboard.press('Escape');
   } catch (e) {
     check(false, `Compartir 187, la hoja: ${e.message.split('\n')[0]}`);

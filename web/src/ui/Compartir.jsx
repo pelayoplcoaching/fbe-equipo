@@ -903,7 +903,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
       {plantillas && <input ref={entrada} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir una foto para la tarjeta" onChange={elegirFoto} />}
       {error ? <div class="error" role="alert">{error}</div> : !img ? <Cargando texto="Preparando la imagen" /> : (
         <>
-          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'historia' : opciones.formato === 'cuadrado' ? 'cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
+          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'previa-historia' : opciones.formato === 'cuadrado' ? 'previa-cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
             onTouchStart={lasPlantillas ? alTocar : undefined} onTouchEnd={lasPlantillas ? alSoltar : undefined}>
             {comoInstagram && (
               <div class="marco-ig-cab" aria-hidden="true">
