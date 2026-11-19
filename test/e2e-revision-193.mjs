@@ -77,8 +77,8 @@ export async function probarRevision193({ navegador, check, base = 'http://local
     await filaDe(quienProg).getByRole('button', { name: 'Uno a uno desde aquí' }).click();
     const uno = p.locator('.rev-uno');
     await uno.waitFor();
-    const pest = uno.getByRole('tablist', { name: 'Qué ver de este atleta' });
-    check((await pest.getByRole('tab').allTextContents()).map((t) => t.replace(/ \(\d+\)$/, '')).join().startsWith('Su semana,Chat') && await pest.getByRole('tab', { name: 'Programar' }).count() === 1, 'uno a uno tiene pestañas: Su semana, Chat, (Vídeos) y Programar');
+    const pest = uno.getByRole('group', { name: 'Qué ver de este atleta' });
+    check((await pest.getByRole('button').allTextContents()).map((t) => t.replace(/ \(\d+\)$/, '')).join().startsWith('Su semana,Chat') && await pest.getByRole('button', { name: 'Programar' }).count() === 1, 'uno a uno tiene pestañas: Su semana, Chat, (Vídeos) y Programar');
     // 1, 3 y 5: el chat rápido al lado
     const rapido = uno.locator('.rev-chat-rapido');
     check(await hasta(async () => (await rapido.count()) === 1 && (await uno.locator('.rev-dos .revision-fila').count()) === 1), 'en ancho, su semana y el chat rápido van lado a lado');
@@ -105,10 +105,10 @@ export async function probarRevision193({ navegador, check, base = 'http://local
     check(await hasta(async () => (await uno.locator('.rev-chat .chat-escribir').count()) === 1 && (await uno.locator('.rev-chat', { hasText: 'Mensaje de prueba 193' }).count()) === 1, 15000), 'la tecla 2 abre el chat completo, con lo que acabas de mandar');
     await foto('193-chat');
     // 11 y 14: programar en su pestaña
-    await pest.getByRole('tab', { name: 'Programar' }).click();
+    await pest.getByRole('button', { name: 'Programar' }).click();
     check(await hasta(async () => (await uno.locator('.rev-editor .semanas-tabs').count()) === 1, 15000) && await uno.locator('.rev-editor-lado').count() === 1, 'la pestaña «Programar» es el editor, con su semana al lado');
     await revisar('uno-programar');
-    await pest.getByRole('tab', { name: 'Su semana' }).click();
+    await pest.getByRole('button', { name: 'Su semana' }).click();
     // 17: comentar el check-in
     const comentar = uno.getByRole('button', { name: 'Comentar el check-in' });
     if (await comentar.count()) {
@@ -125,7 +125,7 @@ export async function probarRevision193({ navegador, check, base = 'http://local
       const quienV = (await conVideo.locator('.revision-quien strong').textContent()).trim();
       await conVideo.getByRole('button', { name: 'Uno a uno desde aquí' }).click();
       await uno.waitFor();
-      await pest.getByRole('tab', { name: /^Vídeos/ }).click();
+      await pest.getByRole('button', { name: /^Vídeos/ }).click();
       check(await hasta(async () => (await uno.locator('.rev-video-panel').count()) === 1, 15000) && await uno.getByRole('button', { name: 'Pedir que lo repita' }).count() === 1 && await uno.getByRole('button', { name: 'Vídeo revisado' }).count() === 1, 'la pestaña «Vídeos» trae el vídeo con su corrección, pedir que lo repita y darlo por revisado');
       await foto('193-video');
       await uno.getByRole('button', { name: 'Pedir que lo repita' }).click();
@@ -134,7 +134,7 @@ export async function probarRevision193({ navegador, check, base = 'http://local
       await p.keyboard.press('Escape');
       await hasta(async () => (await p.getByRole('dialog').count()) === 0);
       await uno.getByRole('button', { name: 'Vídeo revisado' }).click();
-      check(await hasta(async () => /No tiene vídeos por revisar/.test(await uno.textContent()) || (await uno.locator('.rev-video-panel').count()) === 1), 'al darlo por revisado pasa al siguiente (o no queda ninguno)');
+      check(await hasta(async () => (await pest.getByRole('button', { name: /^Vídeos/ }).count()) === 0 || (await uno.locator('.rev-video-panel').count()) === 1), 'al darlo por revisado pasa al siguiente (o, si no quedan, se va la pestaña)');
       await uno.getByRole('button', { name: 'Ver la lista' }).click();
       await p.locator('.revision-progreso').waitFor();
       check(quienV.length > 0, '(vídeo corregido)');
@@ -148,12 +148,12 @@ export async function probarRevision193({ navegador, check, base = 'http://local
     for (let i = 0; i < total + 2; i++) {
       const c = filas().first().getByLabel(/^Revisión de .* terminada$/);
       if (!(await c.count()) || (await filas().count()) <= 1) break;
-      await c.check();
-      await p.waitForTimeout(350);
+      await c.click();
+      await p.waitForTimeout(450);
     }
     await p.getByRole('button', { name: 'Revisar uno a uno' }).click();
     await uno.waitFor();
-    await uno.getByLabel(/^Revisión de .* terminada$/).check();
+    await uno.getByLabel(/^Revisión de .* terminada$/).click();
     check(await hasta(async () => (await p.locator('.rev-cierre').count()) === 1) && /Revisión terminada/.test(await p.locator('.rev-cierre h2').textContent()), 'al revisar al último sale el cierre de la revisión');
     await revisar('cierre');
     await foto('193-cierre');
@@ -172,6 +172,7 @@ export async function probarRevision193({ navegador, check, base = 'http://local
     await uno.waitFor();
     await uno.locator('.rev-chat-rapido').waitFor();
     await p.waitForTimeout(600);
+    if (process.env.ANCHOS) console.log(await p.evaluate(() => [...document.querySelectorAll('.contenido.revision *')].filter((el) => el.getBoundingClientRect().right > 361).slice(0, 8).map((el) => `${el.tagName}.${el.className} ${Math.round(el.getBoundingClientRect().right)}`)));
     const cabe = await p.evaluate(() => document.documentElement.scrollWidth <= 360 && [...document.querySelectorAll('.revision-fila, .rev-pestanas, .rev-chat-rapido, .rev-uno-barra')].every((el) => { const r = el.getBoundingClientRect(); return r.width === 0 || (r.left >= -1 && r.right <= 361); }));
     await revisar('movil-uno');
     await foto('193-movil');

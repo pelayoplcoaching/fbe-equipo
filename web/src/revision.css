@@ -146,3 +146,8 @@
 .rev-cierre-cifras li { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
 .rev-cierre-cifras strong { font-size: var(--letra-22); }
 tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
+
+.rev-uno, .rev-uno > *, .rev-dos > * { min-width: 0; }
+.rev-editor-caja { overflow-x: auto; }
+.rev-citar, .rev-pedir { white-space: normal; text-align: left; max-width: 100%; }
+.rev-progreso > li, .revision-avisos > li { max-width: 100%; min-width: 0; }

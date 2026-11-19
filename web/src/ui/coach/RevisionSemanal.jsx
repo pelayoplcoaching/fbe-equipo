@@ -182,8 +182,8 @@ export function RevisionSemanal({ abrirAtleta }) {
             const tarjeta = <ul class="revision-lista"><FilaRevision key={enFoco.atleta_id} {...propsFila(enFoco)} abierta unoAUno alChat={() => setPestana('chat')} alProgramar={(modo = null) => { setProgramar({ modo, ejercicio: null }); setPestana('programar'); }} alCitar={citar} alAjustar={ajustar} /></ul>;
             return (
               <>
-                <div class="selector-chips rev-pestanas" role="tablist" aria-label="Qué ver de este atleta">
-                  {ps.map(([k, t], n) => <button key={k} type="button" role="tab" aria-selected={actual === k ? 'true' : 'false'} aria-pressed={actual === k ? 'true' : 'false'} title={`Tecla ${n + 1}`} onClick={() => setPestana(k)}>{t}{k === 'videos' ? ` (${enFoco.videos})` : ''}</button>)}
+                <div class="selector-chips rev-pestanas" role="group" aria-label="Qué ver de este atleta">
+                  {ps.map(([k, t], n) => <button key={k} type="button" aria-pressed={actual === k ? 'true' : 'false'} title={`Tecla ${n + 1}`} onClick={() => setPestana(k)}>{t}{k === 'videos' ? ` (${enFoco.videos})` : ''}</button>)}
                 </div>
                 {actual === 'semana' && (ancha ? (
                   <div class="rev-dos">
