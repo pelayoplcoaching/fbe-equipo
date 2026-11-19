@@ -8,7 +8,8 @@
 export const NOVEDADES = {
   '0.188': {
     atleta: [
-      'Compartir: siete fondos nuevos para tus tarjetas (rack, discos, mancuernas, magnesio, banco, barra y kettlebells). Están en «Personalizar».',
+      'Compartir: doce fondos nuevos para tus tarjetas, siete de sala de pesas y cinco para los récords. Están en «Personalizar».',
+      'Y las letras de la tarjeta se leen mejor cuando caen encima del dibujo.',
     ],
   },
   '0.187': {

@@ -140,6 +140,17 @@ function fondoIlustrado(x, img) {
   velo(x, 0, H, [[0, 0.34], [0.5, 0.22], [0.8, 0.06], [1, 0.06]]);
   const pieY = Math.round(oy + (HC - 190) * EC);
   velo(x, pieY, H, [[0, 0], [Math.min(1, (150 * EC) / Math.max(1, H - pieY)), 0.62], [1, 0.62]]);
+  // (v0.188) con un dibujo detras, cada letra lleva un halo del color del fondo: se lee tambien encima de lo claro
+  // (el oro del trofeo, la barra). Dos pasadas: una sola se queda corta sobre el dorado.
+  if (!x.fbeHalo) {
+    const escribir = x.fillText.bind(x);
+    x.fbeHalo = true;
+    x.fillText = (...a) => {
+      x.save(); x.shadowColor = C.fondo; x.shadowBlur = 26; x.shadowOffsetX = 0; x.shadowOffsetY = 0;
+      escribir(...a); escribir(...a);
+      x.restore();
+    };
+  }
 }
 // Un velo del color de fondo de la paleta entre dos alturas: paradas [posicion, opacidad]
 function velo(x, y0, y1, paradas) {

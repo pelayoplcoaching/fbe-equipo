@@ -1669,6 +1669,16 @@
     },
     "color": "#33235a"
   },
+  "compartir-barra-oro": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-barra-oro-1024.78ad0f88.webp"
+    },
+    "color": "#3c2750"
+  },
   "compartir-barra-suelo": {
     "proporcion": [
       2,
@@ -1689,6 +1699,26 @@
     },
     "color": "#422b65"
   },
+  "compartir-cima": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-cima-1024.f2a8aae8.webp"
+    },
+    "color": "#34245c"
+  },
+  "compartir-confeti": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-confeti-1024.542e328c.webp"
+    },
+    "color": "#382554"
+  },
   "compartir-discos": {
     "proporcion": [
       2,
@@ -1698,6 +1728,16 @@
       "1024": "imagenes/compartir/compartir-discos-1024.b09441a9.webp"
     },
     "color": "#352666"
+  },
+  "compartir-estrella": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-estrella-1024.2f1cf3c7.webp"
+    },
+    "color": "#382354"
   },
   "compartir-kettlebells": {
     "proporcion": [
@@ -1778,6 +1818,16 @@
       "1024": "imagenes/compartir/compartir-sesion-1024.53249527.webp"
     },
     "color": "#3b2e64"
+  },
+  "compartir-trofeo": {
+    "proporcion": [
+      2,
+      3
+    ],
+    "archivos": {
+      "1024": "imagenes/compartir/compartir-trofeo-1024.04cbc87d.webp"
+    },
+    "color": "#392856"
   },
   "cua-bulgara-hatfield": {
     "proporcion": [
