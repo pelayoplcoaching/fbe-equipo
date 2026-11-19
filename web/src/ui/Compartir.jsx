@@ -28,6 +28,26 @@ const W = 1080, M = 80;
 let HC = 1350, H = HC, oy = 0, ox = 0, EC = 1;
 const entrar = (x) => { x.save(); x.translate(ox, oy); x.scale(EC, EC); };
 const salir = (x) => { x.restore(); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; };
+// (v0.190) Tu foto en un recuadro, arriba a la derecha (bajo la fecha), sin tapar las cifras: el titulo se estrecha para
+// dejarle sitio. REC es la foto de la tarjeta que se esta pintando (las tarjetas se pintan de una en una).
+const FW = 280, FH = 350, FX = W - M - FW, FY = 150, FB = FY + FH;
+let REC = null;
+const anchoTitulo = () => W - 2 * M - (REC ? FW + 30 : 0);
+function recuadroFoto(x) {
+  if (!REC) return;
+  const r = encajarFoto(REC.naturalWidth || REC.width, REC.naturalHeight || REC.height, FW, FH);
+  x.save();
+  x.shadowColor = C.clara ? 'rgba(20, 11, 58, .22)' : 'rgba(0, 0, 0, .5)'; x.shadowBlur = 40; x.shadowOffsetY = 14;
+  x.fillStyle = C.fondo; x.beginPath(); x.roundRect(FX, FY, FW, FH, 28); x.fill();
+  x.restore();
+  x.save();
+  x.beginPath(); x.roundRect(FX, FY, FW, FH, 28); x.clip();
+  x.drawImage(REC, r.sx, r.sy, r.sw, r.sh, FX, FY, FW, FH);
+  x.restore();
+  x.save();
+  x.strokeStyle = 'rgba(255, 255, 255, .9)'; x.lineWidth = 5; x.beginPath(); x.roundRect(FX, FY, FW, FH, 28); x.stroke();
+  x.restore();
+}
 // (diseño, tanda 15) Los colores de la marca nueva: la noche morada de la portada y de la bienvenida (no el negro de
 // antes), el lobo en blanco y el dorado solo para los récords. Los cuatro colores de los discos ya no van en el pie.
 // (compartir, tanda 2) Las paletas están en logica/compartir.js (PALETAS): «Noche» es la de la marca; «Clara», fondo claro;
@@ -48,7 +68,7 @@ export const dibujarLogro = (d, o) => enTurno(() => pintarLogro(d, o));
 // Prepara el lienzo de una tarjeta: su formato, su paleta y el desplazamiento del contenido
 function empezar({ formato = 'publicacion', paleta = 'noche' } = {}) {
   const t = tamanoFormato(formato);
-  H = t.H; C = paletaDe(paleta, leerAjustes().acento); PAL = paleta;
+  H = t.H; C = paletaDe(paleta, leerAjustes().acento); PAL = paleta; REC = null;
   if (formato === 'historia') { HC = 1440; oy = 230; ox = 0; EC = 1; }
   else if (formato === 'cuadrado') { HC = 1350; EC = H / HC; oy = 0; ox = Math.round((W - W * EC) / 2); }
   else { HC = 1350; oy = 0; ox = 0; EC = 1; }
@@ -71,7 +91,7 @@ function fondoNoche(x) {
 function frasePropia(x, letra, cortar, t, y, color = C.morado, tam = 38) {
   if (!t) return y;
   letra(500, tam, 'normal', 'italic'); x.fillStyle = color;
-  x.fillText(cortar(`«${t}»`, W - 2 * M), M, y);
+  x.fillText(cortar(`«${t}»`, REC && y - tam < FB + 12 ? anchoTitulo() : W - 2 * M), M, y);
   letra(500, tam);
   return y + tam + 26;
 }
@@ -294,13 +314,14 @@ function utiles(x) {
 const aBlob = (cv) => new Promise((ok, mal) => cv.toBlob((b) => (b ? ok(b) : mal(new Error('No se ha podido crear la imagen.'))), 'image/png'));
 
 // (compartir) formato: publicacion | historia; pegatina: la clave de una pegatina (o ''); handle y equipo: los @ del pie
-async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto' } = {}) {
+async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 'publicacion', pegatina: peg = '', handle = '', equipo = handleEquipo(), paleta = 'noche', frase = '', fondo = 'auto', recuadro = null } = {}) {
   await cargarFuentes();
   const cv = empezar({ formato, paleta });
   d = frase ? { ...d, frase } : d;
   FIRMA = { handle, equipo };
   const x = cv.getContext('2d');
   const { letra, cortar, lineas, icono, titulo } = utiles(x);
+  REC = plantilla === 'foto' ? null : recuadro;
   // (imágenes) la ilustración de fondo, salvo con la foto del atleta (y no en la clara)
   // (v0.187) fondo: 'auto' (el de la tarjeta), '' (sin dibujo) o el que elija; vale con todas las paletas oscuras
   if (plantilla === 'lista') plantilla = 'clasica';
@@ -324,17 +345,19 @@ async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 
   letra(500, 30); x.fillStyle = C.tinta2; x.textAlign = 'right';
   x.fillText(d.etiquetaFecha || fechaLarga(d.fecha), W - M, M + 40);
   x.textAlign = 'left';
+  recuadroFoto(x);
 
   // Nombre de la sesión
   let y = 290;
-  const tn = titulo(d.nombre, { tams: [118, 98, 82], ancho: W - 2 * M, estilo: 'semi-expanded', luego: { tams: [70, 60], max: 3 } });
+  const tn = titulo(d.nombre, { tams: [118, 98, 82], ancho: anchoTitulo(), estilo: 'semi-expanded', luego: { tams: [70, 60], max: 3 } });
   x.fillStyle = C.tinta;
   for (const l of tn.ls) { x.fillText(l, M - 4, y); y += tn.tam + 2; }
   y += 66 - (tn.tam + 2);
-  if (d.subtitulo) { letra(650, 40); x.fillStyle = C.morado; x.fillText(d.subtitulo, M, y); }
+  if (d.subtitulo) { letra(650, 40); x.fillStyle = C.morado; x.fillText(REC ? cortar(d.subtitulo, anchoTitulo()) : d.subtitulo, M, y); }
   if (d.frase) { y = frasePropia(x, letra, cortar, d.frase, y + (d.subtitulo ? 58 : 0)) - 20; }
 
-  // Cifras
+  // Cifras (con tu foto en el recuadro, por debajo de ella)
+  if (REC) y = Math.max(y, FB - 30);
   y += 140;
   const cifras = d.cifras || (d.cardio ? cifrasCardio(d.cardio).map((c) => [`${c.v}${c.u ? ` ${c.u}` : ''}`, c.t.toLowerCase()])
     : [[String(d.series), d.series === 1 ? 'serie' : 'series'], [num(d.tonelaje / 1000, 1), 'toneladas'], [d.minutos ? String(d.minutos) : '—', 'minutos']]);
@@ -457,6 +480,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
   letra(500, 30); x.fillStyle = r ? '#DDDDE3' : C.tinta2; x.textAlign = 'right';
   x.fillText(fechaLarga(d.fecha), W - M, M + 40);
   x.textAlign = 'left';
+  recuadroFoto(x);
   const cifras = d.cardio ? cifrasCardio(d.cardio) : cifrasTarjeta(d);
   const etiqueta = (t, cx, cy, color = C.tinta2) => { letra(750, 28); espaciado(3); x.fillStyle = color; x.fillText(t.toUpperCase(), cx, cy); espaciado(0); };
   const cifra = (c, cx, cy, tam, ancho) => {
@@ -469,13 +493,14 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     // (tanda 2) El nombre enorme, en condensada, llenando la tarjeta; las cifras pequeñas abajo
     // (v0.187) el tamano baja hasta que cabe entero: tres lineas como mucho en grande, cuatro en pequeno
     const nombre = String(d.nombre || '').toUpperCase();
-    let tp = titulo(nombre, { tams: [230, 210, 190, 170, 150], ancho: W - 2 * M, max: 3, peso: 650, estilo: 'condensed' });
-    if (tp.ls.some((l) => l.endsWith('…'))) tp = titulo(nombre, { tams: [150, 130, 112, 96], ancho: W - 2 * M, max: 4, peso: 650, estilo: 'condensed' });
+    // (v0.190) con tu foto arriba, el nombre empieza debajo de ella y algo mas pequeno
+    let tp = titulo(nombre, { tams: REC ? [170, 150, 130] : [230, 210, 190, 170, 150], ancho: W - 2 * M, max: 3, peso: 650, estilo: 'condensed' });
+    if (tp.ls.some((l) => l.endsWith('…'))) tp = titulo(nombre, { tams: REC ? [124, 112, 96] : [150, 130, 112, 96], ancho: W - 2 * M, max: 4, peso: 650, estilo: 'condensed' });
     const filas = tp.ls, tam = tp.tam;
     x.fillStyle = C.tinta;
     const altoFila = Math.round(tam * 0.92);
     const bloque = filas.length * altoFila;
-    let y = Math.max(330, Math.round((HC - 320 - bloque) / 2)) + Math.round(tam * 0.8);
+    let y = Math.max(REC ? FB + 30 : 330, Math.round((HC - 320 - bloque) / 2)) + Math.round(tam * 0.8);
     for (const l of filas) { x.fillText(l, M - 8, y); y += altoFila; }
     y -= Math.round(tam * 0.1);
     if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y + 40, C.morado, 40) - 10;
@@ -492,11 +517,11 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
   } else if (plantilla === 'cifras') {
     // El nombre arriba y las cifras en grande, como un marcador (2 × 2)
     let y = 300;
-    const tn = titulo(d.nombre, { tams: [96, 80, 66], ancho: W - 2 * M, luego: { tams: [60, 52], max: 3 } });
+    const tn = titulo(d.nombre, { tams: [96, 80, 66], ancho: anchoTitulo(), luego: { tams: [60, 52], max: 3 } });
     x.fillStyle = C.tinta;
     for (const l of tn.ls) { x.fillText(l, M - 4, y); y += tn.tam + 4; }
     y += 100 - (tn.tam + 4) + 6;
-    if (d.subtitulo) { letra(650, 38); x.fillStyle = C.morado; x.fillText(d.subtitulo, M, y - 40); }
+    if (d.subtitulo) { letra(650, 38); x.fillStyle = C.morado; x.fillText(REC ? cortar(d.subtitulo, anchoTitulo()) : d.subtitulo, M, y - 40); }
     if (d.frase) y = frasePropia(x, letra, cortar, d.frase, y + (d.subtitulo ? 24 : -20), C.tinta2, 36) - 10;
     // (v0.187) cada cifra con su etiqueta y aire hasta la fila siguiente (antes la etiqueta de abajo se pegaba al numero)
     const top = Math.max(y + 50, 540);
@@ -515,7 +540,7 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     icono('trofeo', M + 20, y - 12, 40, C.oro);
     letra(750, 30); espaciado(4); x.fillStyle = C.oro; x.fillText(rs.length === 1 ? 'NUEVO RÉCORD' : `${rs.length} RÉCORDS`, M + 56, y); espaciado(0);
     y += 104;
-    const tn = titulo(r0.nombre, { tams: [92, 78, 64], ancho: W - 2 * M, estilo: 'semi-expanded', luego: { tams: [56, 50], max: 3 } });
+    const tn = titulo(r0.nombre, { tams: [92, 78, 64], ancho: anchoTitulo(), estilo: 'semi-expanded', luego: { tams: [56, 50], max: 3 } });
     x.fillStyle = C.tinta;
     for (const l of tn.ls) { x.fillText(l, M - 3, y); y += tn.tam + 6; }
     // la marca: tan grande como quepa
@@ -551,10 +576,14 @@ function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono,
     let y = plantilla === 'minima' ? HC - 600 : HC - 470;
     if (d.frase) y -= 70;
     // (v0.187) el subtitulo va encima de la primera linea del nombre, tenga una o dos (antes se montaba con dos)
-    const tn = titulo(d.nombre, { tams: [100, 84, 70], ancho: W - 2 * M, luego: { tams: [62, 54], max: 3 } });
+    let tn = titulo(d.nombre, { tams: [100, 84, 70], ancho: W - 2 * M, luego: { tams: [62, 54], max: 3 } });
+    // (v0.190) si el nombre sube hasta la altura de tu foto, se estrecha para no meterse debajo
+    const arriba = (t) => y - (t.ls.length - 1) * (t.tam + 4) - t.tam - (d.subtitulo ? 50 : 0);
+    const junto = REC && arriba(tn) < FB + 16;
+    if (junto) tn = titulo(d.nombre, { tams: [84, 70], ancho: anchoTitulo(), luego: { tams: [62, 54], max: 3 } });
     const ls = tn.ls;
     y -= (ls.length - 1) * (tn.tam + 4);
-    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#DDD9FF' : C.morado; x.fillText(cortar(d.subtitulo, W - 2 * M), M, y - tn.tam - 12); }
+    if (d.subtitulo) { letra(700, 34); x.fillStyle = r ? '#DDD9FF' : C.morado; x.fillText(cortar(d.subtitulo, junto ? anchoTitulo() : W - 2 * M), M, y - tn.tam - 12); }
     letra(800, tn.tam, 'expanded'); x.fillStyle = C.tinta;
     for (const l of ls) { x.fillText(l, M - 4, y); y += tn.tam + 4; }
     y += 100 - tn.tam;
@@ -728,6 +757,8 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   const [tono, setTono] = usePreferencia(PREF_TONO, 'sobrio');
   const [editarHandle, setEditarHandle] = useState(false);
   const [foto, setFoto] = useState(null); // { img, url }
+  const [recuadro, setRecuadro] = useState(null); // (v0.190) { img, url }: tu foto en un recuadro de la tarjeta
+  const entradaRec = useRef(null);
   const [verTexto, setVerTexto] = useState(false);
   const [comoInstagram, setComoInstagram] = usePreferencia('fbe-compartir-marco', false);
   const [publicando, setPublicando] = useState(false);
@@ -747,7 +778,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     }).catch(() => null) : Promise.resolve(null)), [logro, tipo]);
   const datosConCita = cita.datos ? { ...datos, cita: cita.datos } : datos;
   const fraseActiva = conFrase && personalizable ? frase : '';
-  const opciones = { plantilla: plantilla === 'foto' && !foto?.img ? 'minima' : plantilla, foto: plantilla === 'foto' ? foto?.img || null : null, formato: personalizable ? formato : 'publicacion',
+  const opciones = { plantilla: plantilla === 'foto' && !foto?.img ? 'minima' : plantilla, foto: plantilla === 'foto' ? foto?.img || null : null, recuadro: plantillas && plantilla !== 'foto' ? recuadro?.img || null : null, formato: personalizable ? formato : 'publicacion',
     pegatina: personalizable ? peg : '', handle, equipo: equipoHandle, paleta: personalizable ? paleta : 'noche', frase: fraseActiva, fondo: personalizable ? fondo : 'auto' };
   // (v0.187) los fondos que hay, con los de esta tarjeta delante
   const fondos = personalizable && hayImagen('compartir-sesion') ? fondosDisponibles(grupoFondo(datos, logro || !plantillas ? tipo : 'sesion')) : [];
@@ -758,7 +789,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     setPaleta(s.paleta); if (conFondo) setFondo(s.fondo);
   };
   // La imagen que se ve lleva lo con que se pintó: mientras no coincide con lo elegido, se está preparando
-  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${opciones.formato}:${opciones.pegatina}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}:${opciones.fondo}`;
+  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${recuadro?.url || ''}:${opciones.formato}:${opciones.pegatina}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}:${opciones.fondo}`;
   const preparando = !img || img.clave !== clave;
   const pintar = (d, o) => (dibujar || (logro ? dibujarLogro : dibujarTarjeta))(d, o);
   useEffect(() => {
@@ -773,10 +804,11 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   // Al cerrar, fuera las URL de la imagen, de la foto y del vídeo (la foto no se guarda en ningún sitio)
   const imgRef = useRef(null); imgRef.current = img;
   const fotoRef = useRef(null); fotoRef.current = foto;
+  const recRef = useRef(null); recRef.current = recuadro;
   const videoRef = useRef(null); videoRef.current = video;
   const montada = useRef(true);
-  useEffect(() => () => { montada.current = false; if (imgRef.current?.url) URL.revokeObjectURL(imgRef.current.url); if (fotoRef.current?.url) URL.revokeObjectURL(fotoRef.current.url); if (videoRef.current?.url) URL.revokeObjectURL(videoRef.current.url); }, []);
-  const elegirFoto = (e) => {
+  useEffect(() => () => { montada.current = false; if (imgRef.current?.url) URL.revokeObjectURL(imgRef.current.url); if (fotoRef.current?.url) URL.revokeObjectURL(fotoRef.current.url); if (recRef.current?.url) URL.revokeObjectURL(recRef.current.url); if (videoRef.current?.url) URL.revokeObjectURL(videoRef.current.url); }, []);
+  const elegirFoto = (e, enRecuadro = false) => {
     const f = e.currentTarget.files?.[0];
     e.currentTarget.value = '';
     if (!f) return;
@@ -786,6 +818,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     // (si la hoja se cierra mientras se abre la foto, su URL se libera aquí: nadie la va a usar)
     im.onload = () => {
       if (!montada.current) { URL.revokeObjectURL(url); return; }
+      if (enRecuadro) { setRecuadro((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { img: im, url }; }); return; }
       setFoto((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { img: im, url }; }); setPlantilla('foto');
     };
     im.onerror = () => { URL.revokeObjectURL(url); if (montada.current) aviso('No se ha podido abrir esa imagen. Prueba con otra.', 'error'); };
@@ -900,7 +933,8 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
           <span class="mini terciario">La foto se prepara aquí, en tu móvil, y no se sube a ningún sitio: solo sale si tú compartes la imagen.</span>
         </div>
       )}
-      {plantillas && <input ref={entrada} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir una foto para la tarjeta" onChange={elegirFoto} />}
+      {plantillas && <input ref={entrada} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir una foto para la tarjeta" onChange={(e) => elegirFoto(e)} />}
+      {plantillas && <input ref={entradaRec} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir tu foto para el recuadro" onChange={(e) => elegirFoto(e, true)} />}
       {error ? <div class="error" role="alert">{error}</div> : !img ? <Cargando texto="Preparando la imagen" /> : (
         <>
           <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'previa-historia' : opciones.formato === 'cuadrado' ? 'previa-cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
@@ -951,6 +985,16 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
           {personalizable && personalizar && (
         <div class="compartir-opciones" id="compartir-opciones">
           <div class="campo"><span class="etq">Formato</span><Segmentos etiqueta="Formato de la imagen" valor={formato} alCambiar={(v) => setFormato(v || 'publicacion')} opciones={FORMATOS.map(([k, t]) => [k, t])} /></div>
+          {plantillas && plantilla !== 'foto' && (
+            <div class="campo">
+              <span class="etq">Tu foto</span>
+              <div class="fila-envolver">
+                <button type="button" class="btn btn-peq" onClick={() => entradaRec.current?.click()}><Icono n="camara" /> {recuadro ? 'Cambiar mi foto' : 'Añadir mi foto'}</button>
+                {recuadro && <button type="button" class="btn-texto mini" onClick={() => setRecuadro((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return null; })}>Quitar mi foto</button>}
+              </div>
+              <span class="mini terciario">Sale en un recuadro, arriba a la derecha. Se prepara en tu móvil y no se sube a ningún sitio.</span>
+            </div>
+          )}
           {plantilla !== 'foto' && (
             <div class="campo">
               <span class="etq">Colores</span>

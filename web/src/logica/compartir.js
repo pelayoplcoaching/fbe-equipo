@@ -366,7 +366,7 @@ export const PREF_COMPARTIDOS = 'fbe-compartidos';
 export const MAX_COMPARTIDOS = 12;
 export function anotarCompartido(lista, { datos, tipo = 'sesion', logro = false, plantillas = false, opciones = {}, titulo = '' }, ahora = new Date().toISOString()) {
   if (!datos) return lista || [];
-  const { foto, ...resto } = opciones || {};
+  const { foto, recuadro, ...resto } = opciones || {};
   const entrada = { cuando: ahora, tipo, logro, plantillas, titulo: titulo || datos.nombre || '', datos, opciones: { ...resto, plantilla: resto.plantilla === 'foto' ? 'minima' : resto.plantilla } };
   const clave = JSON.stringify([tipo, datos.nombre, datos.fecha, datos.cifra?.v, datos.series]);
   const sin = (lista || []).filter((x) => JSON.stringify([x.tipo, x.datos?.nombre, x.datos?.fecha, x.datos?.cifra?.v, x.datos?.series]) !== clave);

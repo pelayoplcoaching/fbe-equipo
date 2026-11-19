@@ -26,10 +26,12 @@ export async function probarCompartir187({ navegador, check, base = 'http://loca
     await p.goto(`${base}/_banco-tarjetas.html`);
     const n = await p.evaluate(() => globalThis.casos().length);
     const fuera = [], montados = [], tamanos = [];
+    let r190 = 0;
     const ALTO = { publicacion: 1350, historia: 1920, cuadrado: 1080 };
     for (let i = 0; i < n; i++) {
       const r = await p.evaluate((k) => globalThis.pintar(k), i);
       const formato = r.nombre.split('/').pop();
+      if (r.textos.some((t) => t.t === '[tu foto]')) r190++;
       if (r.ancho !== 1080 || (ALTO[formato] && r.alto !== ALTO[formato])) tamanos.push(`${r.nombre}: ${r.ancho}×${r.alto}`);
       for (const t of r.textos) if (t.x0 < 30 || t.x1 > r.ancho - 30 || t.y0 < 30 || t.y1 > r.alto - 20) fuera.push(`${r.nombre}: «${t.t}» (${Math.round(t.x0)}–${Math.round(t.x1)})`);
       for (let a = 0; a < r.textos.length; a++) for (let b = a + 1; b < r.textos.length; b++) {
@@ -40,7 +42,8 @@ export async function probarCompartir187({ navegador, check, base = 'http://loca
     }
     check(n >= 70 && tamanos.length === 0, `el banco pinta ${n} tarjetas, cada una con su tamaño (publicación, historia y cuadrado)${tamanos.length ? `: ${tamanos.slice(0, 3).join(' | ')}` : ''}`);
     check(fuera.length === 0, `ningún texto se sale de la imagen${fuera.length ? `: ${fuera.slice(0, 4).join(' | ')} (${fuera.length})` : ''}`);
-    check(montados.length === 0, `ningún texto se monta sobre otro${montados.length ? `: ${montados.slice(0, 4).join(' | ')} (${montados.length})` : ''}`);
+    check(r190 >= 40, `(v0.190) con tu foto en el recuadro: ${r190} tarjetas la llevan`);
+    check(montados.length === 0, `ningún texto se monta sobre otro (ni sobre tu foto)${montados.length ? `: ${montados.slice(0, 4).join(' | ')} (${montados.length})` : ''}`);
   } catch (e) {
     check(false, `Compartir 187, el banco: ${e.message.split('\n')[0]}`);
   } finally { await ctx.close(); rmSync(join(DIST, '_banco-tarjetas.js'), { force: true }); rmSync(join(DIST, '_banco-tarjetas.html'), { force: true }); }
