@@ -54,6 +54,12 @@ export async function probarApuntesBellos({ navegador, check, base = 'http://loc
     await tarjeta.waitFor();
     // (con el décimo apunte, la primera medalla, en grande)
     const nueva = hoja.locator('.apuntes-medalla-nueva');
+    // (el día que toca un mito o un error, no cuenta como visto hasta destaparlo y contestar: se contesta antes de mirar la medalla)
+    if (await tarjeta.locator('.apunte-destapar').count()) {
+      await tarjeta.locator('.apunte-destapar').click();
+      await p.waitForTimeout(600);
+      await hoja.getByRole('button', { name: 'Lo sabía', exact: true }).click();
+    }
     await nueva.waitFor({ timeout: 4000 }).catch(() => {});
     check(await nueva.count() === 1 && /Nueva medalla/.test(await nueva.textContent()) && /Curioso/.test(await nueva.textContent()) && await nueva.locator('.metal-bronce').count() === 1 && await nueva.getAttribute('role') === 'status',
       'con el décimo apunte, la medalla nueva se presenta en grande (de bronce: «Curioso»)');
