@@ -218,7 +218,7 @@ export function RevisionSemanal({ abrirAtleta }) {
               <details class="rev-resumen">
                 <summary>Resumen de la revisión</summary>
                 <ul>
-                  <li>Revisados: <strong class="num">{r.revisados} de {r.total}</strong>. Les has escrito esta semana a <strong class="num">{r.conRepaso}</strong>.</li>
+                  <li>Revisados: <b class="num">{r.revisados} de {r.total}</b>. Les has escrito esta semana a <b class="num">{r.conRepaso}</b>.</li>
                   {r.porProgramar.length > 0 && <li>Falta la semana que viene de {r.porProgramar.length}: {r.porProgramar.join(', ')}.</li>}
                   {r.esperando.length > 0 && <li>Esperando respuesta de: {r.esperando.join(', ')}.</li>}
                   {r.sinCheckin.length > 0 && <li>Sin check-in: {r.sinCheckin.join(', ')}.</li>}
