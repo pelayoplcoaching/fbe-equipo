@@ -143,6 +143,7 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
       const dia = p.locator('.cab-coach-dia');
       check(await hasta(async () => (await dia.count()) === 0 || /sesión hoy|te ha(n)? escrito/.test(await dia.textContent())), `el saludo dice quién tiene sesión hoy o te ha escrito («${(await dia.textContent().catch(() => '')) || 'sin nada hoy'}»)`);
     }
+    if (await p.locator('.cab-coach').count()) check(await p.locator('.cab-coach > .cab-cielo').count() === 1, 'el saludo del coach, con el cielo de la hora');
     // El tablero con color
     await p.getByRole('button', { name: 'Tablero' }).click();
     check(await hasta(async () => (await p.locator('.tablero-columna').count()) > 0), 'el tablero');
@@ -177,6 +178,40 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     await foto('200-ficha');
     check(errores.length === 0, `el coach, sin errores ni problemas de accesibilidad${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
   } finally { await ctx.close(); }
+
+  // ---------------------------------------------------------------- Segunda tanda: luna, lluvia, fuegos, lobo, estrellas y «Con el sol»
+  errores.length = 0;
+  const noche = await nuevoContexto({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, colorScheme: 'dark' });
+  try {
+    await noche.clock.setFixedTime(new Date('2026-11-20T23:15:00+01:00'));
+    await entrarComo(noche, /Ana López/, () => { try { localStorage.setItem('fbe-probar-cielo', 'noche'); localStorage.setItem('fbe-probar-luna', '0.62'); } catch { /* */ } });
+    await cerrarDialogos();
+    await p.locator('.hero-dia').waitFor();
+    check(await hasta(async () => (await p.locator('.hero-dia > .cielo-hora .cielo-luna').getAttribute('data-ilum')) === '0.62'), 'de noche, la luna en su fase (62 %)');
+    check(await p.locator('.temporada-capa.temporada-estrellas i').count() === 16 && await p.locator('.temporada-capa.temporada-estrellas').isVisible(), 'fuera de temporada, de noche y en oscuro: estrellas tenues de fondo');
+    // El lobo aúlla con tres toques
+    const marca = p.locator('header.cabecera .titulo').first();
+    for (let i = 0; i < 3; i++) await marca.click();
+    check(await hasta(async () => /lobo-aulla/.test(await marca.getAttribute('class')), 2000), 'tres toques al lobo de arriba: aúlla');
+    check(await hasta(async () => !/lobo-aulla/.test(await marca.getAttribute('class')), 4000), 'y vuelve a su sitio');
+    // Lluvia y fuegos (lo que diría la previsión y la fecha)
+    await p.evaluate(() => { localStorage.setItem('fbe-probar-clima', 'lluvia'); localStorage.setItem('fbe-probar-fiesta', '1'); });
+    await p.reload();
+    await p.locator('.hero-dia').waitFor();
+    check(await hasta(async () => (await p.locator('.hero-dia > .cielo-hora.con-lluvia .cielo-gota').count()) >= 10), 'si llueve donde está, llueve en la portada');
+    check(await p.locator('.hero-dia > .cielo-hora .cielo-fuego').count() === 4 && await p.locator('.hero-dia .toca-hoy.fiesta').count() === 1, 'en Nochevieja, fuegos y su pastilla');
+    await revisar('hoy-lluvia-fiesta');
+    await foto('200-lluvia-fiesta');
+    await p.evaluate(() => { localStorage.removeItem('fbe-probar-clima'); localStorage.removeItem('fbe-probar-fiesta'); });
+    // «Con el sol»: a las 23:15, oscuro
+    await p.evaluate(() => { location.hash = '#ajustes'; });
+    const tema = p.getByRole('group', { name: 'Tema', exact: true });
+    await tema.waitFor();
+    await tema.getByRole('button', { name: /Con el sol/ }).click();
+    check(await hasta(async () => (await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'dark' && (await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).tema)) === 'sol'), 'tema «Con el sol» a las 23:15: oscuro');
+    await revisar('ajustes-sol');
+    check(errores.length === 0, `la segunda tanda, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+  } finally { await noche.close(); }
 
   // ---------------------------------------------------------------- La pantalla de entrar, con su cielo (y con reducir movimiento)
   errores.length = 0;
