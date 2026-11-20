@@ -217,7 +217,7 @@ function Recursos() {
           {hayFaq && <button class="btn btn-peq plano" onClick={() => setDescartadas([...descartadas, ...faltan.map(([t]) => t)])}>No, gracias</button>}
         </div>
       )}
-      {lista.cargando && !lista.datos ? <Cargando /> : !todos.length ? <div class="panel"><Vacio icono="biblioteca" titulo="Sin recursos todavía">Una guía de alimentación, un enlace a un vídeo, cómo medir la cintura…</Vacio></div> : (
+      {lista.cargando && !lista.datos ? <Cargando /> : !todos.length ? <div class="panel"><Vacio ilustracion="biblioteca" icono="biblioteca" titulo="Sin recursos todavía">Una guía de alimentación, un enlace a un vídeo, cómo medir la cintura…</Vacio></div> : (
         CATEGORIAS_RECURSO.map(([c, t]) => [c, t, todos.filter((r) => r.categoria === c)]).filter(([, , xs]) => xs.length).map(([c, t, xs]) => (
           <section class="seccion" key={c}>
             <h2>{t}</h2>

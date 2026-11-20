@@ -273,7 +273,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
         {/* (diseño, tanda 47) dentro de la fila que se desliza, que es su caja: sobre su borde de abajo, sin empujar nada */}
         {mejora && hecha && !record && <div class="serie-mejora" aria-hidden="true"><Icono n="arriba" /><span class="num">{mejora}</span><span>que la última vez</span></div>}
       </div>
-      {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: {record.texto}</span></div>}
+      {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: <b class="record-cifra">{record.texto}</b></span></div>}
       {activa && barra && !hecha && <div class="serie-discos"><Placas kg={aNumero(kg) ?? propuesta.kg} discos={teclado ? discosCon(teclado.discoMinimo) : undefined} /></div>}
       {pendiente && hecha && <div class="pendiente-envio">Serie {numero} guardada en el móvil; se enviará al volver la conexión.</div>}
       {app && campo && (

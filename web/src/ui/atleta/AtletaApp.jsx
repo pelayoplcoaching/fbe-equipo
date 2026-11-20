@@ -21,6 +21,8 @@ import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
+import { Escena200, useEscena200 } from '../Escena200.jsx';
+import { useBienvenidaAbierta } from '../Bienvenida.jsx';
 import { programaConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { usePendientesArchivos, BandaPendientes, PildoraSubida } from '../Pendientes.jsx';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
@@ -84,6 +86,9 @@ export function AtletaApp() {
   // (v0.65) la versión de la app que vio esta cuenta en este móvil (para «Novedades»), antes de nada; y el aviso de privacidad
   // va primero: las novedades esperan a que no esté (y a estar en Hoy, fuera de una sesión)
   useState(() => { if (!propio) prepararVersionVista(api.uid()); });
+  // (v0.200) la escena de la versión 200, una vez (antes que «Novedades», y nunca encima de la bienvenida del día)
+  const [verEscena200, cerrarEscena200] = useEscena200(propio ? null : api.uid());
+  const bienvenidaAbierta = useBienvenidaAbierta();
   const [privacidadLista, setPrivacidadLista] = useState(false);
   // Vídeos guardados en el móvil sin cobertura: se envían solos (en cualquier pestaña)
   const pendientesArchivos = usePendientesArchivos(api, atleta?.id, aviso);
@@ -253,7 +258,7 @@ export function AtletaApp() {
       {/* (v0.56) las novedades de la política, una vez (el coach en su modo atleta, no) */}
       {!propio && <AvisoPrivacidad alTerminar={() => setPrivacidadLista(true)} />}
       {/* (v0.65) y después, las de la app tras actualizarla: en Hoy, nunca en mitad de una sesión */}
-      {!propio && privacidadLista && !sesionId && tab === 'hoy' && <AvisoNovedades uid={api.uid()} rol="atleta" />}
+      {!propio && privacidadLista && !sesionId && tab === 'hoy' && (verEscena200 ? !bienvenidaAbierta && <Escena200 rol="atleta" alCerrar={cerrarEscena200} /> : <AvisoNovedades uid={api.uid()} rol="atleta" />)}
     </>
   );
 }

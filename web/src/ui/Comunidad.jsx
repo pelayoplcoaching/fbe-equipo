@@ -1552,7 +1552,7 @@ export function PreguntasEquipo({ coach = false }) {
   const lista = useCarga(() => api.preguntasEquipo(), [vuelta]);
   const [ocupado, una] = useUnaVez();
   if (lista.datos === null && lista.cargando) return <Siluetas forma="tarjetas" n={2} texto="Cargando las preguntas" />;
-  if (lista.datos === null) return <Vacio icono="pregunta" titulo="Preguntas del equipo">{AVISO_043}.</Vacio>;
+  if (lista.datos === null) return <Vacio ilustracion="espera" icono="pregunta" titulo="Preguntas del equipo">{AVISO_043}.</Vacio>;
   const filas = lista.datos || [];
   const quitar = (q) => una(async () => {
     try { await api.borrarPreguntaFrecuente(q.id); aviso('Pregunta quitada de la lista'); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); }
@@ -1566,7 +1566,7 @@ export function PreguntasEquipo({ coach = false }) {
           : 'Lo que tu coach ha contestado en el muro, a mano para todos. ¿Tienes otra? Publícala en el muro con el tema «Pregunta para el coach».'}</p>
       </div>
       {!filas.length ? (
-        <Vacio icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : 'Cuando tu coach conteste y guarde alguna, saldrá aquí.'}</Vacio>
+        <Vacio ilustracion="preguntas" icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : 'Cuando tu coach conteste y guarde alguna, saldrá aquí.'}</Vacio>
       ) : (
         <ul class="lista preguntas-lista">
           {filas.map((q) => (

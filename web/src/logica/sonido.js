@@ -67,7 +67,7 @@ export const SONIDOS = {
   seguimos: { apartado: 'entreno', notas: () => [[nota(3), 0, 0.12, 0.75], [nota(3), 0.2, 0.12, 0.75], [nota(5), 0.4, 0.3, 0.8]] },
   progresion: { apartado: 'entreno', notas: () => [[nota(3), 0, 0.1, 0.7], [nota(7), 0.1, 0.28, 0.8]] },
   hito: { apartado: 'avisos', notas: ({ tipo = 'racha' } = {}) => {
-    const base = { racha: 0, aniversario: 2, bloque: 3 }[tipo] ?? 0;
+    const base = { racha: 0, semana: 1, aniversario: 2, bloque: 3 }[tipo] ?? 0;   // (v0.200) y la semana completa, un tono por encima de la racha
     return [[nota(base), 0, 0.14, 0.8], [nota(base + 2), 0.12, 0.14, 0.8], [nota(base + 3), 0.24, 0.14, 0.85], [nota(base + 5), 0.36, 0.14, 0.9], [nota(base + 7), 0.48, 0.6, 1], [nota(base + 5), 0.48, 0.6, 0.6]];
   } },
   'nota-empieza': { apartado: 'chat', notas: () => [[nota(3), 0, 0.07, 0.6]] },

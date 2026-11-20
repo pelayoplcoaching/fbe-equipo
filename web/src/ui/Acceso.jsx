@@ -3,6 +3,7 @@ import { useApp, Marca, Icono, Hoja } from './comunes.jsx';
 import { guardarActivacionPendiente } from './App.jsx';
 import { PRIVACIDAD, TEXTO_CONSENTIMIENTO_SALUD } from '../legal.js';
 import { Imagen } from './Imagen.jsx';
+import { CieloHora } from './Cielo.jsx';
 
 const PERSONAS_DEMO = [
   ['pelayo@fbe.demo', 'Pelayo', 'Coach: panel de atletas y programación', 'P'],
@@ -43,6 +44,8 @@ export function Acceso() {
     <div class="app">
       {/* (imágenes, bloque T) la noche de arriba: el lobo bajo la luna al entrar; la puerta del gimnasio al activar la cuenta */}
       <Imagen key={vista === 'activar' ? 'activar' : 'acceso'} id={vista === 'activar' ? 'activar-fondo' : 'acceso-fondo'} clase="acceso-fondo" tamanos="(min-width: 700px) 480px, 85vw" prioridad />
+      {/* (v0.200) y encima, el cielo de la hora: la luz del amanecer o del atardecer, o las estrellas de la noche */}
+      <CieloHora clase="acceso-cielo" />
       <div class="acceso"><div class="acceso-caja">
       <Marca />
       {vista === 'entrar' && (

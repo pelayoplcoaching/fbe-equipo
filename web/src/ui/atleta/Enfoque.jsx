@@ -250,7 +250,7 @@ function EnfoquePantalla({
                 <button class="btn-texto peligro" onClick={() => { quitar(e, numero); setSel(null); }}>Quitar la serie {numero}</button>
               </div>
             )}
-            {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: {record.texto}</span></div>}
+            {record && <div class="record-serie"><Icono n="trofeo" /><span><strong>Récord</strong>: <b class="record-cifra">{record.texto}</b></span></div>}
           </>
         )}
 

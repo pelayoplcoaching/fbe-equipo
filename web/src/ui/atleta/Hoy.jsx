@@ -55,6 +55,8 @@ import { TarjetaAnio } from './TuAnio.jsx';
 import { RecordatorioCompartir } from '../Compartir.jsx';
 import { textoCierreAuto } from '../../logica/cierre.js';
 import { TarjetaAniversario } from '../Celebracion.jsx';
+import { CieloHora } from '../Cielo.jsx';
+import { ConAro } from '../Aro.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
 import { lanzarConfeti } from '../confeti.js';
@@ -80,6 +82,7 @@ export { duracionEstimada };
 export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos, releer, recargarConsentimientos }) {
   const { api, atleta, perfil, propio } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
+  const sesSemana = p?.actual ? (p.sesiones?.[p.actual.id] || []) : [];
   // Solo nutrición (v0.26): sin nada de entrenamiento
   const entrena = conEntrenamiento(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
@@ -128,7 +131,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <h1 class="sr">Hoy</h1>
         <div class="titulo"><Marca /></div>
         <span class="sub">{fmtConDia(hoyISO())}</span>
-        {!propio && <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></button>}
+        {/* (v0.200) con el aro de su semana alrededor: lo hecho de lo previsto (las sesiones publicadas de esta semana) */}
+        {!propio && <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><ConAro hechas={sesSemana.filter((s) => s.completada).length} total={entrena ? sesSemana.length : 0}><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></ConAro></button>}
       </header>
       <BandaDemo />
       <BandaConexion />
@@ -467,7 +471,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   useEffect(() => {
     if (!claveSemana || semanaCelebrada === claveSemana) return;
     setSemanaCelebrada(claveSemana);
-    const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo', momento: 'semana' }), 420);
+    // (v0.200) con su fanfarria, si celebra las semanas con todo y tiene el sonido puesto
+    const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo', momento: 'semana', sonido: ['hito', { tipo: 'semana' }] }), 420);
     return () => clearTimeout(t);
   }, [claveSemana]);
   if (e.tipo === 'sin_semana') {
@@ -568,6 +573,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {/* (a medida, 080) lo que su coach le ha dejado escrito para hoy: el saludo, el día de pierna o la semana completa */}
       {atleta.estado !== 'baja' && <FraseDeHoy estado={e.tipo} sesion={siguiente} ejercicios={ejercicios} semanaId={semana?.id} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
+        {/* (v0.200) el cielo de la hora detrás de todo: amanecer, día, atardecer o noche, con el sol de Madrid de cada mes */}
+        <CieloHora clase="hero-cielo" />
         {e.tipo !== 'entreno' && !hayImagen(escenaHoy(e.tipo, hoy)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}

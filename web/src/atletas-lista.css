@@ -173,3 +173,18 @@
 .aside-cab { gap: var(--esp-10); align-items: center; }
 .aside-cab strong { font-size: var(--letra-17-5); }
 .tarjeta-atleta-env.seleccionada { outline: 2px solid var(--morado); outline-offset: 0; }
+
+/* v0.200 (belleza) */
+/* El tablero de Atletas: cada columna con su color y su cuenta --------------------------------------------- */
+.tablero-columna { position: relative; overflow: hidden; --col-c: var(--tinta-3);
+  background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--col-c) 10%, var(--hoja-2)) 0%, var(--hoja-2) 9rem); }
+.tablero-columna::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: var(--esp-4); background: var(--col-c); }
+.tablero-columna[data-tono="morado"] { --col-c: var(--morado); }
+.tablero-columna[data-tono="azul"] { --col-c: var(--info); }
+.tablero-columna[data-tono="verde"] { --col-c: var(--ok); }
+.tablero-columna[data-tono="ambar"] { --col-c: var(--oro); }
+.tablero-columna[data-tono="rojo"] { --col-c: var(--alerta); }
+.tablero-columna h2 { display: flex; align-items: center; gap: var(--esp-6); }
+.tablero-cuenta { display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; padding: 0 var(--esp-6); border-radius: var(--r-pildora);
+  background: color-mix(in srgb, var(--col-c) 18%, var(--hoja)); color: var(--tinta); font-size: var(--letra-12); font-weight: 750; font-variant-numeric: tabular-nums; }
+

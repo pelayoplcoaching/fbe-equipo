@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.200': {
+    atleta: [
+      'Versión 200: el cielo de Hoy cambia con la hora (amanecer, día, atardecer y noche), y el de la pantalla de entrar, también.',
+      'En Navidad y en invierno, copos finos arriba (se apagan en Ajustes). Y dos colores nuevos para elegir: Abeto y Granada.',
+      'El aro de tu semana alrededor de tu foto, dibujos en las pantallas vacías y la semana completa, con su sonido.',
+    ],
+    coach: [
+      'Versión 200: el cielo de la hora, la decoración de temporada (se apaga en Ajustes) y dos colores nuevos: Abeto y Granada.',
+      'Atletas: el aro de la semana en cada foto, el tablero con un color por columna y, en el saludo, quién entrena y quién te escribió.',
+      'La ficha toma el color de la primera etiqueta del atleta, y las barras de las gráficas crecen al verse y llevan degradado.',
+    ],
+  },
   '0.199': {
     coach: [
       'Atletas, segunda tanda: recordatorios por atleta, tus avisos, tu orden a mano, tablero y panel al lado en el ordenador.',

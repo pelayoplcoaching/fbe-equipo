@@ -169,6 +169,10 @@ export const ACENTOS = [
   { id: 'orquidea', nombre: 'Orquídea', ...acento('purpura') },
   { id: 'oceano', nombre: 'Océano', claro: { morado: oklch(0.47, 0.11, 225), hover: oklch(0.41, 0.1, 225), suave: oklch(0.95, 0.03, 225), sobre: BLANCO, hero2: oklch(0.28, 0.07, 225), hero: oklch(0.2, 0.045, 225) }, oscuro: { morado: oklch(0.8, 0.11, 220), hover: oklch(0.86, 0.09, 220), suave: oklch(0.27, 0.05, 225), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 225), hero: oklch(0.245, 0.05, 225) } },
   { id: 'lima', nombre: 'Lima', claro: { morado: oklch(0.47, 0.12, 128), hover: oklch(0.41, 0.11, 128), suave: oklch(0.95, 0.05, 125), sobre: BLANCO, hero2: oklch(0.28, 0.07, 130), hero: oklch(0.2, 0.04, 130) }, oscuro: { morado: oklch(0.85, 0.17, 125), hover: oklch(0.9, 0.14, 125), suave: oklch(0.27, 0.05, 128), sobre: NOCHE[0], hero2: oklch(0.36, 0.08, 130), hero: oklch(0.245, 0.045, 130) } },
+  // (v0.200) los dos de invierno: el verde oscuro del abeto (más verde y más hondo que el pino) y el rojo de la granada
+  // (granate: más frío y más oscuro que el rojo de los avisos, para no confundirse con ellos)
+  { id: 'abeto', nombre: 'Abeto', ...acento('verde', 0.43) },
+  { id: 'granada', nombre: 'Granada', claro: { morado: oklch(0.45, 0.16, 12), hover: oklch(0.39, 0.15, 12), suave: oklch(0.95, 0.025, 12), sobre: BLANCO, hero2: oklch(0.28, 0.08, 12), hero: oklch(0.2, 0.05, 12) }, oscuro: { morado: oklch(0.78, 0.12, 12), hover: oklch(0.85, 0.09, 12), suave: oklch(0.27, 0.06, 12), sobre: NOCHE[0], hero2: oklch(0.36, 0.09, 12), hero: oklch(0.245, 0.055, 12) } },
   { id: 'grafito', nombre: 'Grafito', claro: { morado: e('neutro', 800), hover: e('neutro', 900), suave: e('neutro', 100), sobre: BLANCO, hero2: oklch(0.3, 0, 0), hero: oklch(0.2, 0, 0) }, oscuro: { morado: e('neutro', 200), hover: e('neutro', 100), suave: e('neutro', 900), sobre: NOCHE[0], hero2: oklch(0.37, 0, 0), hero: oklch(0.245, 0, 0) } },
 ];
 

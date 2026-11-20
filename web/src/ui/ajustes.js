@@ -118,6 +118,8 @@ export function normalizarAjustes(guardado = {}) {
   a.vozVelocidad = [0.85, 1, 1.15].includes(Number(a.vozVelocidad)) ? Number(a.vozVelocidad) : 1;
   a.contarReps = a.contarReps === true; a.auricularesSerie = a.auricularesSerie === true;
   a.paisajeDescanso = ['marron', 'lluvia', 'bosque'].includes(a.paisajeDescanso) ? a.paisajeDescanso : null;
+  // (v0.200) la decoración de temporada (copos en Navidad y en invierno), encendida de serie
+  a.temporada = a.temporada !== false;
   return a;
 }
 export function leerAjustes() {

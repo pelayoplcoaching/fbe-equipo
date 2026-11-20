@@ -140,7 +140,7 @@ export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null })
     if (seccionInicial == null || !g) return;
     raiz.current?.querySelector(`[data-seccion="${seccionInicial < 0 ? 'ideas' : seccionInicial}"]`)?.scrollIntoView({ block: 'start' });
   }, [seccionInicial, !!g]);
-  if (!d.datos) return d.error ? <ErrorCaja error={d.error} reintentar={() => d.recargar(true)} /> : d.cargando ? <Siluetas forma="tarjetas" n={3} texto="Cargando la guía" /> : <div class="panel"><Vacio icono="biblioteca" titulo="Esa guía ya no está" /></div>;
+  if (!d.datos) return d.error ? <ErrorCaja error={d.error} reintentar={() => d.recargar(true)} /> : d.cargando ? <Siluetas forma="tarjetas" n={3} texto="Cargando la guía" /> : <div class="panel"><Vacio ilustracion="biblioteca" icono="biblioteca" titulo="Esa guía ya no está" /></div>;
   const una = soloSeccion && !entera ? g.secciones.find((x) => x.clave === soloSeccion) : null;
   if (una) {
     return (
@@ -315,7 +315,7 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
   const halladas = buscando ? buscarFichas(fichas.datos || [], q) : [];
   const enTexto = useMemo(() => (buscando && textos.datos ? buscarEnGuias(textos.datos.filter((g) => esCoach || g.publicada), q) : []), [buscando, q, textos.datos, esCoach]);
   if (!guias.datos) return guias.error ? <ErrorCaja error={guias.error} reintentar={() => guias.recargar(true)} /> : <Siluetas forma="tarjetas" n={4} texto="Cargando las guías" />;
-  if (!gs.length) return <div class="panel"><Vacio icono="biblioteca" titulo="Aún no hay guías">{esCoach ? 'Cuando cargues tus guías, tus atletas las leerán en «Aprende» y cada ejercicio enlazado enseñará su ficha de técnica.' : 'Cuando tu coach publique sus guías, las leerás aquí.'}</Vacio></div>;
+  if (!gs.length) return <div class="panel"><Vacio ilustracion="biblioteca" icono="biblioteca" titulo="Aún no hay guías">{esCoach ? 'Cuando cargues tus guías, tus atletas las leerán en «Aprende» y cada ejercicio enlazado enseñará su ficha de técnica.' : 'Cuando tu coach publique sus guías, las leerás aquí.'}</Vacio></div>;
   const abrirHallazgo = (h) => alAbrir(gs.find((g) => g.id === h.guia.id) || h.guia, h.seccion);
   return (
     <div class="pila aprende">

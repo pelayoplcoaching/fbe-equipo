@@ -13,6 +13,7 @@ import { SeccionesFicha } from './SeccionesFicha.jsx';
 import { CompararFotos } from '../CompararFotos.jsx';
 import { CompararVideos } from '../Archivos.jsx';
 import { CabeceraGrande, useUnaVez, useAncho, Siluetas, Reserva, useApp, useCarga, Icono, ErrorCaja, Hoja, Vacio, Paso, Segmentos, HojaExportar, Avatar } from '../comunes.jsx';
+import { useEtiquetasAtleta, Etiquetas } from './PanelLista.jsx';
 import { EditorBloque, ElegirEjercicio } from './Editor.jsx';
 import { textoMarca, REPS_MAX_OBJETIVO } from '../../logica/objetivos.js';
 import { Invitacion } from './Panel.jsx';
@@ -71,6 +72,8 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
   const { api } = useApp();
   // (pulido 4) una ficha que ya se abrió se enseña al momento y se pone al día por detrás
   const ficha = useCarga(() => api.ficha(atletaId), [atletaId], { recuerdo: `ficha:${api.uid()}:${atletaId}` });
+  // (v0.200) sus etiquetas de la lista: la cabecera toma el color de la primera
+  const etq = useEtiquetasAtleta(atletaId);
   // v0.49: su resumen del panel (bloque, cumplimiento, peso y última actividad) para la cabecera; solo el coach. Se
   // reutiliza el que ya cargó el panel; si no lo hay (búsqueda, notificación), se piden solo las filas de este atleta
   const resumen = useCarga(() => (resumenInicial ? Promise.resolve(resumenInicial) : api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null)), [atletaId]);
@@ -89,7 +92,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
 
   return (
     <div class="contenido coach">
-      <CabeceraGrande>
+      <CabeceraGrande clase={etq.color ? `cab-etiqueta cab-etq-${etq.color}` : ''}>
         <button class="btn btn-icono plano" onClick={alVolver} aria-label="Volver a atletas"><Icono n="atras" /></button>
         {a ? <span class={`avatar-estado estado-${r ? estadoAtleta(r) : 'cargando'}`}><Avatar nombre={a.nombre} foto={a.foto} ampliable perfilId={a.perfil_id || null} /></span>
           /* (pulido 2.3) mientras llega la ficha, la foto y la línea de debajo del nombre ya tienen su sitio */
@@ -98,6 +101,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           <h1>{a?.nombre || 'Atleta'}</h1>
           <div class="sub">{r?.semana ? `${r.bloque?.nombre ? `${r.bloque.nombre} · ` : ''}Semana ${r.semana.numero} de ${r.semana.total}` : a?.objetivo || (a && !a.perfil_id ? 'Pendiente de activar su cuenta' : !a || (resumen.cargando && !r) ? '\u00a0' : '')}</div>
           {!a && !ficha.error && <div class="mini terciario" aria-hidden="true">&nbsp;</div>}
+          {a && etq.etiquetas.length > 0 && <div class="ficha-etiquetas"><Etiquetas etiquetas={etq.etiquetas} colores={etq.colores} /></div>}
           {a && (a.nivel || servicioDe(a) !== 'completo' || (conEntrenamiento(a) && diasSemanaValido(a.dias_semana))) && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, conEntrenamiento(a) && diasSemanaValido(a.dias_semana) && textoDiasSemana(diasSemanaValido(a.dias_semana)), servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
@@ -249,11 +253,11 @@ function Registro({ atleta, alCambiar }) {
     return { completo, ejercicios: Object.fromEntries(biblioteca.map((e) => [e.id, e])) };
   }, [atleta.id]);
   if (datos.cargando && !datos.datos) return <Siluetas forma="tarjetas" n={3} />;
-  if (!datos.datos) return <div class="panel"><Vacio icono="semana" titulo="Sin bloque">Cuando tenga un bloque, aquí verás lo que registra frente a lo pautado.</Vacio></div>;
+  if (!datos.datos) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Sin bloque">Cuando tenga un bloque, aquí verás lo que registra frente a lo pautado.</Vacio></div>;
   const { completo, ejercicios } = datos.datos;
   const sesiones = completo.semanas.slice().reverse().flatMap((w) => (completo.sesiones[w.id] || []).slice().reverse().map((s) => ({ ...s, semana: w })))
     .filter((s) => s.completada || (completo.pautas[s.id] || []).some((p) => completo.series[p.id]?.length));
-  if (!sesiones.length) return <div class="panel"><Vacio icono="semana" titulo="Todavía no ha registrado nada en este bloque" /></div>;
+  if (!sesiones.length) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Todavía no ha registrado nada en este bloque" /></div>;
   return <ListaRegistro atleta={atleta} sesiones={sesiones} completo={completo} ejercicios={ejercicios} recargar={() => { datos.recargar(true); alCambiar?.(); }} />;
 }
 
@@ -526,7 +530,7 @@ function Objetivos({ atleta }) {
       {/* (v0.173, 076) lo que propone el atleta y espera respuesta */}
       <PropuestasDe atleta={atleta} alCambiar={() => lista.recargar(true)} />
       <div class="separa"><p class="peq secundario">Los objetivos los ve el atleta en su progreso, con la barra y los días que quedan.</p><button class="btn btn-primario btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo objetivo</button></div>
-      {!(lista.datos || []).length ? <div class="panel"><Vacio icono="diana" titulo="Sin objetivos">Por ejemplo: «Press banca 70 kg a una repetición» para el final del bloque.</Vacio></div> : (
+      {!(lista.datos || []).length ? <div class="panel"><Vacio ilustracion="objetivos" icono="diana" titulo="Sin objetivos">Por ejemplo: «Press banca 70 kg a una repetición» para el final del bloque.</Vacio></div> : (
         <div class="panel"><ul class="lista">
           {lista.datos.map((o) => (
             <li key={o.id}>
@@ -739,7 +743,7 @@ function ServicioYNivel({ atleta, recargar }) {
 
 function SinNutricion({ irADatos }) {
   return (
-    <div class="panel"><Vacio icono="nutricion" titulo="Solo le llevas el entrenamiento" accion={<button class="btn" onClick={irADatos}>Cambiarlo en Datos</button>}>
+    <div class="panel"><Vacio ilustracion="nutricion" icono="nutricion" titulo="Solo le llevas el entrenamiento" accion={<button class="btn" onClick={irADatos}>Cambiarlo en Datos</button>}>
       No ve nada de nutrición en su app. Si empiezas a llevársela, cámbialo en Datos.
     </Vacio></div>
   );

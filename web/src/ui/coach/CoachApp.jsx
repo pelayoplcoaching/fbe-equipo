@@ -25,6 +25,7 @@ import { urgentesBandeja } from '../../logica/revisar.js';
 import { repartirPestanas, PREFERIDAS_COACH } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
+import { Escena200, useEscena200 } from '../Escena200.jsx';
 import { fijarUnidadPeso } from '../../logica/unidades.js';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
@@ -49,6 +50,8 @@ export function CoachApp() {
   useState(() => prepararVersionVista(api.uid()));
   // v0.68: la bienvenida del día, para ti: «Valar morghulis, coach supremo» (una vez al día, en este dispositivo)
   const [verDia, cerrarDia] = useBienvenida(api.uid());
+  // (v0.200) la escena de la versión 200, una vez, después de la bienvenida del día y antes de «Novedades»
+  const [verEscena200, cerrarEscena200] = useEscena200(api.uid());
   const comunidad = useCarga(() => api.comunidad(), []);
   const pestanas = comunidad.datos?.activa ? TODAS : TABS;
   const pestanasRef = useRef(pestanas);
@@ -226,7 +229,7 @@ export function CoachApp() {
       </main>
     </div>
     {buscar && <Buscador alCerrar={cerrarBuscar} ir={ir} />}
-    {verDia ? <Bienvenida rol="coach" panel={panelDia} alCerrar={cerrarDia} /> : !buscar && <AvisoNovedades uid={api.uid()} rol="coach" />}
+    {verDia ? <Bienvenida rol="coach" panel={panelDia} alCerrar={cerrarDia} /> : !buscar && (verEscena200 ? <Escena200 rol="coach" alCerrar={cerrarEscena200} /> : <AvisoNovedades uid={api.uid()} rol="coach" />)}
     </>
   );
 }

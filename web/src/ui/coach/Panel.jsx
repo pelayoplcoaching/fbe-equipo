@@ -14,6 +14,8 @@ import { equipoHoy, arcoDial } from '../../logica/tablero.js';
 import { hoyISO, fmtConDia } from '../../logica/fechas.js';
 import { horaMadrid } from '../../logica/perfil.js';
 import { CabCoach } from './CabCoach.jsx';
+import { ConAro } from '../Aro.jsx';
+import { resumenDiaCoach, tonoColumna } from '../../logica/belleza.js';
 import { AvisoAlmacenamientoPanel } from '../tecnica/Limpieza.jsx';
 import { CumplesHoy } from './PersonalCoach.jsx';
 import { EnviosPendientes } from '../atleta/CoachSabe.jsx';
@@ -25,7 +27,7 @@ import { ChatRapido } from './RevisionTodo.jsx';
 import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
   etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar,
   conUmbrales, novedadesDe, recordatorioDe, recordatorioParaHoy, textoRecordatorio, limpiarRecordatorio, textoContacto, textoHito, resumenColumna, csvLista, moverManual,
-  cuantosFiltros, limpiarTarjeta, CAMPOS_TARJETA } from '../../logica/panel-atletas.js';
+  cuantosFiltros, limpiarTarjeta, CAMPOS_TARJETA, colorEtiqueta } from '../../logica/panel-atletas.js';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -160,6 +162,12 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
   }, [!!datos]);
 
   const atencion = lista.filter((r) => r.alertas.some((a) => a.nivel !== 'info'));
+  // (v0.200) el día del equipo para el saludo: los que tienen sesión hoy y los que te han escrito
+  const diaCoach = (() => {
+    const d = resumenDiaCoach({ filas: lista, hoy: ex.hoy || {}, sinLeer: ex.sinLeer || {}, atencion: 0 });
+    const t = [d.entrenan ? `${d.entrenan} ${d.entrenan === 1 ? 'tiene' : 'tienen'} sesión hoy${d.hechas ? ` (${d.hechas} ya ${d.hechas === 1 ? 'la ha hecho' : 'la han hecho'})` : ''}` : '', d.escritos ? `${d.escritos} ${d.escritos === 1 ? 'te ha escrito' : 'te han escrito'}` : ''].filter(Boolean);
+    return { ...d, trozos: t.length ? `${t.join(' · ').replace(/^./, (c) => c.toUpperCase())}.` : '' };
+  })();
   const invitados = lista.filter((r) => r.estado === 'invitado');
   const deBaja = lista.filter((r) => r.estado === 'baja');
   // v0.51: «Hoy en tu equipo» con lo que ya ha cargado el panel (sin consultas nuevas)
@@ -215,7 +223,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
   const nombreCelda = (r, atajos = null) => (
     <div class="nombre">
       {elegir && <input type="checkbox" class="marcar-atleta" checked={elegidos.includes(r.atleta_id)} onClick={(e) => e.stopPropagation()} onChange={() => elegirUno(r.atleta_id)} aria-label={`Elegir a ${r.nombre.split(' ')[0]}`} />}
-      <span class="avatar-env"><Avatar nombre={r.nombre} foto={r.foto} />{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
+      <span class="avatar-env"><ConAro hechas={r.sesiones?.completadas} total={r.estado === 'activo' && r.servicio !== 'nutricion' ? r.sesiones?.total : 0}><Avatar nombre={r.nombre} foto={r.foto} /></ConAro>{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
       <span class="nombre-txt">
         <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}</span>
         <span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}</span>
@@ -247,7 +255,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
                     <div key={r.atleta_id} class={`tarjeta-atleta-env ${elegidos.includes(r.atleta_id) ? 'elegida' : ''} ${enLateral && sel === r.atleta_id ? 'seleccionada' : ''}`}>
                       <button class="tarjeta-atleta" data-atleta={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => (enLateral ? setSel(r.atleta_id) : abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')))} aria-pressed={enLateral ? (sel === r.atleta_id ? 'true' : 'false') : undefined}>
                         <div class="cab">
-                          <span class="avatar-env"><Avatar nombre={r.nombre} foto={r.foto} />{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
+                          <span class="avatar-env"><ConAro hechas={r.sesiones?.completadas} total={r.estado === 'activo' && r.servicio !== 'nutricion' ? r.sesiones?.total : 0}><Avatar nombre={r.nombre} foto={r.foto} /></ConAro>{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
                           <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                           {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
                         </div>
@@ -284,6 +292,8 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       {/* (imágenes, bloque S) el saludo del día, en tu mesa */}
       <CabCoach id="coach-panel" titulo={`${saludoCoach(horaMadrid(Date.now()))}${perfil?.nombre ? `, ${perfil.nombre.split(' ')[0]}` : ''}`}>
         <span class="peq">{fmtConDia(hoy).replace(/^./, (c) => c.toUpperCase())}{atencion.length ? ` · ${atencion.length} ${atencion.length === 1 ? 'necesita' : 'necesitan'} atención` : ' · Todo en orden'}</span>
+        {/* (v0.200) y el día en una frase: quién entrena hoy y quién te ha escrito (solo cuántos) */}
+        {!cargando && diaCoach.trozos && <span class="peq cab-coach-dia">{diaCoach.trozos}</span>}
       </CabCoach>
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       {/* (v0.104) quién cumple años hoy */}
@@ -521,9 +531,10 @@ function CampoTarjeta({ k, r, extra, hoy }) {
 function Tablero({ grupos, por, extra, colores, hoy, abrir }) {
   return (
     <div class="tablero-atletas" role="region" aria-label="Tablero de atletas">
-      {grupos.map((g) => (
-        <section key={g.clave || 'todos'} class="tablero-columna" aria-label={`${g.titulo}: ${g.items.length}`}>
-          <h2 class="peq">{g.titulo} <span class="terciario num">({g.items.length})</span></h2>
+      {grupos.map((g, i) => (
+        <section key={g.clave || 'todos'} class="tablero-columna" data-tono={tonoColumna(por, g.clave, i, (k) => colorEtiqueta(k, colores))} aria-label={`${g.titulo}: ${g.items.length}`}>
+          {/* (v0.200) cada columna con su color (lo que significa) y su cuenta en una pastilla */}
+          <h2 class="peq">{g.titulo} <span class="tablero-cuenta num" aria-hidden="true">{g.items.length}</span></h2>
           <ul class="tablero-lista">
             {g.items.map((r) => (
               <li key={r.atleta_id}>

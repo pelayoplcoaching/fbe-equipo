@@ -367,7 +367,7 @@ export function ModerarComunidad() {
   const [ocupado, una] = useUnaVez();
   if (datos.cargando && !datos.datos) return <Siluetas forma="tarjetas" n={2} texto="Cargando la moderación" />;
   const [mod, retenidos, silenciados] = datos.datos || [null, [], []];
-  if (!mod) return <Vacio icono="escudo" titulo="Moderar">{AVISO_044}.</Vacio>;
+  if (!mod) return <Vacio ilustracion="espera" icono="escudo" titulo="Moderar">{AVISO_044}.</Vacio>;
   const palabras = texto ?? (mod.palabras || []).join('\n');
   const minutos = lento ?? mod.lento_min ?? 0;
   const recargar = () => setVuelta((v) => v + 1);
@@ -447,7 +447,7 @@ export function PanelComunidad() {
   const { aviso } = useApp();
   if (panel.cargando && !panel.datos) return <Siluetas forma="tarjetas" n={3} texto="Cargando el panel" />;
   const x = panel.datos;
-  if (!x) return <Vacio icono="progreso" titulo="Panel de la comunidad">{AVISO_044}.</Vacio>;
+  if (!x) return <Vacio ilustracion="espera" icono="progreso" titulo="Panel de la comunidad">{AVISO_044}.</Vacio>;
   const actual = dest.datos?.actual || null;
   const historial = (dest.datos?.historial || []).filter((d) => d.id !== actual?.id).slice(0, 8);
   const quitar = () => una(async () => { try { await api.quitarDestacado(); aviso('Ya no hay atleta de la semana'); setVuelta((v) => v + 1); } catch (e) { aviso(e.message, 'error'); } });

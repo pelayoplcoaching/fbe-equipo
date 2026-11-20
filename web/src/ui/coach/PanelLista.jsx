@@ -3,6 +3,7 @@
 // (mensajes sin leer, la semana que viene, su teléfono); y las hojas: columnas, filtros, vistas, varios a la vez y teclas.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, usePreferencia, Hoja, Icono, Segmentos, useUnaVez } from '../comunes.jsx';
+import { leerPreferencia } from '../preferencias.js';
 import { lunesDe, hoyISO, fechaMadrid } from '../../logica/fechas.js';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
 import { TIPOS_TAREA } from '../../logica/tareas.js';
@@ -21,6 +22,18 @@ import {
 
 // (v0.199) la fecha de Madrid de un instante
 const fechaMadridDe = (iso) => { try { return fechaMadrid(new Date(iso)); } catch { return String(iso).slice(0, 10); } };
+
+// (v0.200) Las etiquetas de un atleta y el color de la primera, para la cabecera de su ficha: lo mismo que la lista (de la
+// base con la 085, con su mismo recuerdo; si no, lo de este aparato). Solo lee.
+export function useEtiquetasAtleta(atletaId) {
+  const { api } = useApp();
+  const remoto = useCarga(() => api.panelAtletas().catch(() => null), [], { recuerdo: `panel085:${api.uid()}` });
+  const enBase = !!remoto.datos && typeof remoto.datos === 'object';
+  const panel = enBase ? remoto.datos.atletas : leerPreferencia('fbe-panel-atletas', {}) || {};
+  const ajustes = enBase ? remoto.datos.ajustes : limpiarAjustesPanel(leerPreferencia('fbe-panel-ajustes', null) || AJUSTES_PANEL);
+  const etiquetas = limpiarPanelAtleta(panel?.[atletaId])?.etiquetas || [];
+  return { etiquetas, colores: ajustes?.colores || {}, color: etiquetas.length ? colorEtiqueta(etiquetas[0], ajustes?.colores || {}) : null };
+}
 
 // ---------------------------------------------------------------- lo tuyo: en la base (085) o en este aparato
 export function usePanelCoach() {

@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Hoja, Icono, Anillo, PortadaHistoria } from './comunes.jsx';
+import { Hoja, Icono, Anillo, PortadaHistoria, CifraSube } from './comunes.jsx';
 import { MapaMuscular } from './MapaMuscular.jsx';
 import { HojaCompartir } from './Compartir.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
@@ -85,9 +85,9 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
 
         <div class="informe-cifras">
           <div class="informe-cifra"><Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || 1} tam={56} /><span class="pila-xs"><b class="num">{r.sesiones.hechas} de {r.sesiones.total}</b><span class="mini secundario">sesiones</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num">{c.series.pct ?? '—'} %</b><span class="mini secundario">de las series pautadas ({c.series.hechas} de {c.series.pautadas})</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num">{toneladas(r.tonelaje)} t</b><span class="mini secundario">{r.series} series{r.minutos ? `, ${Math.round(r.minutos / 60)} h` : ''}</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num">{r.records.length}</b><span class="mini secundario">{r.records.length === 1 ? 'récord' : 'récords'}</span></span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(c.series.pct ?? '—')} /> %</b><span class="mini secundario">de las series pautadas ({c.series.hechas} de {c.series.pautadas})</span></span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={toneladas(r.tonelaje)} /> t</b><span class="mini secundario">{r.series} series{r.minutos ? `, ${Math.round(r.minutos / 60)} h` : ''}</span></span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(r.records.length)} /></b><span class="mini secundario">{r.records.length === 1 ? 'récord' : 'récords'}</span></span></div>
         </div>
 
         {r.principales.length > 0 && (

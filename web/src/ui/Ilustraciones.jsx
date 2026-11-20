@@ -278,6 +278,71 @@ const DIBUJOS = {
       <Suelo y={100} />
     </>
   ),
+  // (v0.200) Sin objetivos: la diana con la flecha clavada y una banderita
+  objetivos: () => (
+    <>
+      <circle class="ilu-relleno ilu-trazo" cx="72" cy="58" r="34" />
+      <circle class="ilu-tenue" cx="72" cy="58" r="22" />
+      <circle class="ilu-acento" cx="72" cy="58" r="9" />
+      <path class="ilu-trazo" d="M74 56l44-30M110 22l9 4-2 9M104 28l7 3" />
+      <path class="ilu-tenue" d="M128 70v26M128 70h16l-5 6 5 6h-16" />
+      <Suelo y={100} />
+    </>
+  ),
+  // (v0.200) Sin plan de nutrición: el plato con el tenedor, el cuchillo y una hoja
+  nutricion: () => (
+    <>
+      <circle class="ilu-relleno ilu-trazo" cx="80" cy="60" r="32" />
+      <circle class="ilu-tenue" cx="80" cy="60" r="20" />
+      <path class="ilu-acento" d="M72 64c4-12 14-16 20-14-2 8-8 16-20 14zM72 64l12-9" />
+      <path class="ilu-trazo" d="M34 32v16a5 5 0 0 0 10 0V32M39 32v60" />
+      <path class="ilu-trazo" d="M124 32c-6 4-8 14-6 26h6v34" />
+      <Suelo y={102} />
+    </>
+  ),
+  // (v0.200) Sin recursos ni guías: dos libros de pie, uno abierto y el lobo en su tapa
+  biblioteca: () => (
+    <>
+      <rect class="ilu-relleno ilu-trazo" x="30" y="30" width="22" height="66" rx="3" />
+      <rect class="ilu-trazo" x="54" y="38" width="18" height="58" rx="3" />
+      <path class="ilu-tenue" d="M36 42h10M36 48h10M58 50h10" />
+      <path class="ilu-trazo" d="M84 92c10-6 22-6 32 0V48c-10-6-22-6-32 0zM116 92c10-6 22-6 32 0V48c-10-6-22-6-32 0z" />
+      <Lobo x={92} y={56} w={18} />
+      <path class="ilu-tenue" d="M124 60h16M124 68h12M124 76h14" />
+      <Suelo y={100} x1={20} x2={152} />
+    </>
+  ),
+  // (v0.200) Sin actividad: el reloj y la línea del pulso, quieta
+  actividad: () => (
+    <>
+      <circle class="ilu-relleno ilu-trazo" cx="56" cy="54" r="28" />
+      <path class="ilu-acento" d="M56 38v16l11 7" />
+      <path class="ilu-tenue" d="M56 30v3M56 75v3M32 54h3M77 54h3" />
+      <path class="ilu-trazo" d="M92 66h12l6-14 8 26 6-12h18" />
+      <circle class="ilu-tenue" cx="146" cy="66" r="3" />
+      <Suelo y={100} />
+    </>
+  ),
+  // (v0.200) Sin hábitos: la libreta con sus casillas y un brote que sale
+  habitos: () => (
+    <>
+      <rect class="ilu-relleno ilu-trazo" x="38" y="24" width="60" height="72" rx="6" />
+      <path class="ilu-tenue" d="M50 40h6v6h-6zM50 56h6v6h-6zM50 72h6v6h-6zM64 43h22M64 59h22M64 75h16" />
+      <path class="ilu-acento" d="M51 43l2 2 4-5" />
+      <path class="ilu-trazo" d="M124 96V66" />
+      <path class="ilu-acento" d="M124 74c-12 0-18-8-18-18 12 0 18 8 18 18zM124 68c0-10 6-16 16-16 0 10-6 16-16 16z" />
+      <Suelo y={100} />
+    </>
+  ),
+  // (v0.200) Sin preguntas: el bocadillo con la interrogación y dos puntos que esperan
+  preguntas: () => (
+    <>
+      <path class="ilu-relleno ilu-trazo" d="M40 24h72a10 10 0 0 1 10 10v34a10 10 0 0 1-10 10H70l-16 14V78H40a10 10 0 0 1-10-10V34a10 10 0 0 1 10-10z" />
+      <path class="ilu-acento" d="M66 42a10 10 0 1 1 14 9c-3 2-4 4-4 7M76 66v1" />
+      <circle class="ilu-tenue" cx="132" cy="88" r="3" /><circle class="ilu-tenue" cx="142" cy="88" r="3" />
+      <Suelo y={102} />
+    </>
+  ),
 };
 
 export const ILUSTRACIONES = Object.keys(DIBUJOS);

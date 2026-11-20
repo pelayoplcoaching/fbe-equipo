@@ -66,7 +66,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     // --- En Perfil (ajustes de este móvil): Océano, alto contraste y daltonismo ---
     await irAAjustes(p);
     await p.locator('.acento-op').first().waitFor();
-    check(await p.locator('.acento-op').count() === 9 && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.acento-muestra')).backgroundImage)), 'nueve acentos para elegir (con Orquídea), en muestras con volumen');
+    check(await p.locator('.acento-op').count() === 11 && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.acento-muestra')).backgroundImage)), 'once acentos para elegir (con Orquídea, Abeto y Granada), en muestras con volumen');
     await p.locator('.acento-op', { hasText: 'Océano' }).click();
     const oceano = P.ACENTOS.find((a) => a.id === 'oceano').claro.morado;
     check(await varRaiz('--morado') === oceano, `Océano: el acento pasa a ${oceano}`);

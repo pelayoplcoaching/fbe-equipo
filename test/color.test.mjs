@@ -87,7 +87,7 @@ console.log('\nContraste de todas las parejas');
 
 console.log('\nLos acentos');
 {
-  check(P.ACENTOS.length === 9 && ['oceano', 'lima', 'orquidea'].every((id) => P.ACENTOS.some((a) => a.id === id)), 'nueve acentos: los seis de siempre, Océano, Lima y Orquídea (tanda 2)');
+  check(P.ACENTOS.length === 11 && ['oceano', 'lima', 'orquidea', 'abeto', 'granada'].every((id) => P.ACENTOS.some((a) => a.id === id)), 'once acentos: los seis de siempre, Océano, Lima y Orquídea (tanda 2), y Abeto y Granada (v0.200)');
   const malos = P.ACENTOS.filter((a) => !acentoValido(a)).map((a) => a.id);
   check(malos.length === 0, `todos pasan AA como texto, en botones y en la tarjeta del día, en claro, oscuro y negro puro (cada uno, sobre sus neutros)${malos.length ? `: ${malos}` : ''}`);
   const vid = P.ACENTOS.flatMap((a) => ['claro', 'oscuro', 'oled'].flatMap((t) => ['barra', 'cabecera', 'hoja'].flatMap((tipo) => parejasVidrio(a, t, tipo).filter((x) => x.ratio < 4.5).map((x) => `${a.id}/${t}/${x.que}`))));

@@ -41,7 +41,7 @@ export function Actividad({ atleta, irA }) {
         {FILTROS.map(([k, t]) => <button key={k} aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}</button>)}
       </div>
       {res.cargando && !res.datos ? <Siluetas forma="lista" n={6} texto="Cargando su actividad" /> : !lista.length ? (
-        <div class="panel"><Vacio icono="historial" titulo={`Nada en los últimos ${dias} días`}>Cuando entrene, se pese, envíe su check-in o te escriba, aparecerá aquí.</Vacio></div>
+        <div class="panel"><Vacio ilustracion="actividad" icono="historial" titulo={`Nada en los últimos ${dias} días`}>Cuando entrene, se pese, envíe su check-in o te escriba, aparecerá aquí.</Vacio></div>
       ) : (
         <ol class="actividad">
           {grupos.map((g) => (

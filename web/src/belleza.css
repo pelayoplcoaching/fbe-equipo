@@ -1,0 +1,155 @@
+/* v0.200: la tanda de belleza. El cielo de la hora (Hoy y la pantalla de entrar), la decoracion de temporada, la escena de
+   la version 200, los dibujos de los vacios que se trazan, las barras de las graficas que crecen y con degradado, el aro
+   de la semana alrededor de la foto, el record con la letra ancha, el rebote de la pestana, la onda al pulsar, el
+   tablero de Atletas con color y la ficha con el color de su etiqueta.
+   Solo ASCII; colores, tamanos y espacios, con tokens; todo con su version oscura; con reducir movimiento, quieto. */
+
+:root {
+  --copo: color-mix(in srgb, var(--acento-300) 70%, var(--blanco));
+  --copo-brillo: color-mix(in srgb, var(--acento-200) 40%, transparent);
+  --onda-op: .2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --copo: var(--blanco); --copo-brillo: color-mix(in srgb, var(--acento-200) 35%, transparent); --onda-op: .26; }
+}
+:root[data-theme="dark"] { --copo: var(--blanco); --copo-brillo: color-mix(in srgb, var(--acento-200) 35%, transparent); --onda-op: .26; }
+
+/* -- 1 - La temporada: copos finos detras del contenido, arriba de la pantalla ----------------------------------------
+   La capa va fija y por debajo de todo lo que se lee (body aislado solo mientras hay temporada): se ve en el fondo de
+   la pagina y a traves de la cabecera de vidrio, nunca encima de un texto. Navidad, 14 copos; invierno, 7. */
+:root[data-temporada] body { isolation: isolate; }
+.temporada-capa { position: fixed; z-index: -1; top: 0; left: 0; right: 0; height: min(46vh, 22rem); overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 55%, transparent); mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 55%, transparent); }
+.temporada-capa i { position: absolute; top: var(--y); left: var(--x); width: var(--tam); height: var(--tam); border-radius: 50%; opacity: var(--op);
+  background: radial-gradient(circle, var(--copo) 0 45%, var(--copo-brillo) 60%, transparent 72%); }
+.temporada-invierno i { opacity: calc(var(--op) * .8); }
+@media (prefers-reduced-motion: no-preference) {
+  .temporada-capa i { top: calc(var(--tam) * -2); animation: copo-cae var(--dura) linear var(--espera) infinite; }
+}
+@keyframes copo-cae { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(var(--deriva), min(46vh, 22rem), 0); } }
+@media (forced-colors: active) { .temporada-capa { display: none; } }
+
+/* -- 2 - La onda: un circulo del color del texto del boton que se abre desde el dedo ---------------------------------- */
+.onda-capa { position: fixed; z-index: var(--capa-encima); overflow: hidden; pointer-events: none; }
+.onda-capa i { position: absolute; border-radius: 50%; background: currentColor; opacity: 0; transform: scale(0);
+  animation: onda-abre .55s var(--curva-casa) forwards; }
+@keyframes onda-abre { 0% { opacity: var(--onda-op); transform: scale(.08); } 100% { opacity: 0; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce), (forced-colors: active) { .onda-capa { display: none; } }
+
+/* -- 3 - El cielo de la hora: detras de la portada de Hoy y en la noche de la pantalla de entrar ----------------------- */
+.cielo-hora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cielo-hora i { position: absolute; display: block; }
+.hero-dia > .hero-cielo { z-index: -1; }
+.cielo-amanecer { background: radial-gradient(120% 72% at 10% 112%, color-mix(in srgb, var(--rosa-300) 34%, transparent) 0%, color-mix(in srgb, var(--ambar-300) 14%, transparent) 42%, transparent 72%); }
+.cielo-amanecer .cielo-sol { left: 6%; bottom: -3.5rem; width: 9rem; height: 9rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--oro-100) 52%, transparent), transparent); }
+.cielo-dia { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--cielo-300) 18%, transparent) 0%, transparent 58%); }
+.cielo-dia .cielo-luz { right: -12%; top: -45%; width: 72%; height: 130%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--cielo-100) 22%, transparent), transparent); }
+.cielo-atardecer { background: radial-gradient(110% 82% at 94% 108%, color-mix(in srgb, var(--naranja-400) 36%, transparent) 0%, color-mix(in srgb, var(--rosa-400) 14%, transparent) 42%, transparent 72%); }
+.cielo-atardecer .cielo-sol { right: 5%; bottom: -2.5rem; width: 7rem; height: 7rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ambar-200) 62%, transparent), transparent); }
+.cielo-noche .cielo-estrella { width: calc(var(--tam) * 3); height: calc(var(--tam) * 3); margin: calc(var(--tam) * -1) 0 0 calc(var(--tam) * -1); border-radius: 50%; opacity: .6;
+  background: radial-gradient(circle, var(--blanco) 0 22%, color-mix(in srgb, var(--marca-200) 45%, transparent) 34%, transparent 62%); }
+/* (en la pantalla de entrar: la franja de noche de arriba, encima de su dibujo y debajo del formulario) */
+.app > .acceso-cielo { position: absolute; z-index: 0; top: 0; left: 0; right: 0; height: var(--noche, 14rem); }
+@media (prefers-reduced-motion: no-preference) {
+  .cielo-noche .cielo-estrella { animation: cielo-titila 3.2s ease-in-out var(--espera, 0s) infinite alternate; }
+  .cielo-amanecer .cielo-sol, .cielo-atardecer .cielo-sol { animation: cielo-respira 9s ease-in-out infinite alternate; }
+  html[data-oculta] :is(.cielo-estrella, .cielo-sol, .temporada-capa i) { animation-play-state: paused; }
+}
+@keyframes cielo-titila { from { opacity: .25; transform: scale(.8); } to { opacity: .8; transform: scale(1); } }
+@keyframes cielo-respira { from { transform: scale(1); } to { transform: scale(1.12); } }
+@media (forced-colors: active) { .cielo-hora { display: none; } }
+
+/* -- 4 - La escena de la version 200 ----------------------------------------------------------------------------------
+   El lobo se dibuja de un trazo y se llena; debajo sube el 200 cifra a cifra; despues, el titulo, el texto y Seguir.
+   Lo que se lee entra con un recorte y un desplazamiento, nunca con transparencia. */
+.escena-200 { position: fixed; inset: 0; z-index: var(--capa-escena); display: grid; place-items: center; overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(var(--esp-24) + env(safe-area-inset-top, 0px)) var(--esp-20) calc(var(--esp-24) + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(60rem 38rem at 50% 28%, color-mix(in srgb, var(--morado) 48%, var(--tinta-noche)) 0%, var(--tinta-noche) 72%); color: var(--blanco); }
+.e200-cuerpo { width: min(26rem, 100%); display: grid; justify-items: center; gap: var(--esp-14); text-align: center; }
+.e200-lobo { width: min(8.5rem, 38vw); height: auto; overflow: visible; }
+.e200-trazo { stroke: var(--acento-200); stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; }
+.e200-lleno { fill: var(--blanco); }
+.e200-cifra { display: flex; gap: var(--esp-2); margin: 0; font-size: calc(var(--letra-24) * 3.6); font-weight: 900; font-stretch: var(--ancho-expandido); line-height: .95; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.e200-cifra span { display: inline-block; background: linear-gradient(var(--oklab,) 180deg, var(--blanco) 30%, var(--acento-200)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--blanco); }
+.escena-200 h1 { margin: 0; font-size: var(--tipo-titulo); font-stretch: var(--ancho-titulo); font-weight: 800; line-height: 1.12; text-wrap: balance; color: var(--blanco); }
+.e200-texto { margin: 0; font-size: var(--letra-16); line-height: 1.5; color: color-mix(in srgb, var(--blanco) 84%, var(--acento-200)); text-wrap: pretty; }
+.e200-seguir { width: 100%; margin-top: var(--esp-8); }
+@media (prefers-reduced-motion: no-preference) {
+  .e200-trazo { stroke-dasharray: 1; stroke-dashoffset: 1; animation: e200-traza 1.35s cubic-bezier(.45, .05, .3, 1) .2s forwards; }
+  .e200-lleno { fill-opacity: 0; animation: e200-llena .55s ease-out 1.3s forwards; }
+  .e200-cifra span { animation: e200-sube .6s var(--curva-llega) 1.55s backwards; }
+  .e200-cifra span:nth-child(2) { animation-delay: 1.65s; }
+  .e200-cifra span:nth-child(3) { animation-delay: 1.75s; }
+  .escena-200 h1, .e200-texto, .e200-seguir { animation: e200-asoma .6s var(--curva-llega) 1.95s backwards; }
+  .e200-texto { animation-delay: 2.05s; }
+  .e200-seguir { animation-delay: 2.15s; }
+  .escena-200.lista .e200-lobo { animation: e200-late 2.6s ease-in-out .3s infinite alternate; }
+}
+@media (prefers-reduced-motion: reduce) { .e200-trazo { display: none; } }
+@keyframes e200-traza { to { stroke-dashoffset: 0; } }
+@keyframes e200-llena { to { fill-opacity: 1; } }
+@keyframes e200-sube { from { transform: translateY(.45em); clip-path: inset(0 0 100% 0); } to { transform: none; clip-path: inset(0 0 -10% 0); } }
+@keyframes e200-asoma { from { transform: translateY(var(--esp-12)); clip-path: inset(0 0 100% 0); } to { transform: none; clip-path: inset(-20% -20% -20% -20%); } }
+@keyframes e200-late { from { transform: scale(1); } to { transform: scale(1.04); } }
+
+/* -- 5 - Los dibujos de los vacios se trazan al aparecer (una vez); el relleno llega detras -------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .vacio.con-ilustracion > svg.ilustracion > :is(path, circle, rect, ellipse),
+  .vacio.con-ilustracion > svg.ilustracion > g > path { animation: ilu-traza 1.1s var(--curva-casa) .12s backwards; }
+  .vacio.con-ilustracion > svg.ilustracion > .ilu-relleno { animation: ilu-traza 1.1s var(--curva-casa) .12s backwards, ilu-rellena .5s ease-out .85s backwards; }
+}
+@keyframes ilu-traza { from { stroke-dasharray: 400; stroke-dashoffset: 400; } to { stroke-dasharray: 400; stroke-dashoffset: 0; } }
+@keyframes ilu-rellena { from { fill-opacity: 0; } }
+
+/* -- 6 - Las barras de las graficas: crecen desde abajo la primera vez que se ven, y llevan degradado --------------- */
+.defs-belleza { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+.deg-acento-a { stop-color: color-mix(in srgb, var(--morado) 58%, var(--blanco)); }
+.deg-acento-b { stop-color: var(--morado); }
+.deg-seq-a { stop-color: color-mix(in srgb, var(--seq-3) 62%, var(--hoja)); }
+.deg-seq-b { stop-color: var(--seq-3); }
+.deg-azul-a { stop-color: color-mix(in srgb, var(--disco-azul) 55%, var(--hoja)); }
+.deg-azul-b { stop-color: var(--disco-azul); }
+.deg-ok-a { stop-color: color-mix(in srgb, var(--ok) 55%, var(--hoja)); }
+.deg-ok-b { stop-color: var(--ok); }
+.grafica-carga .barra:not(.en-curso) { fill: url(#deg-barra-seq) var(--seq-3); }
+.grafica-carga .barra.ultima { fill: url(#deg-barra-acento) var(--morado); }
+.grafica-cardio .barra:not(.vacia) { fill: url(#deg-barra-azul) var(--disco-azul); }
+.grafica-negocio .barra.altas { fill: url(#deg-barra-ok) var(--ok); }
+@media (prefers-reduced-motion: no-preference) {
+  svg.grafica.grafica-crece :is(rect.barra, rect.barra-dia) { transform-box: fill-box; transform-origin: 50% 100%; animation: barra-crece .7s var(--curva-llega) backwards; animation-delay: calc(var(--orden, 0) * 45ms); }
+}
+@keyframes barra-crece { from { transform: scaleY(0); } }
+@media (forced-colors: active) { .grafica-carga .barra, .grafica-cardio .barra, .grafica-negocio .barra { fill: CanvasText; } }
+
+/* -- 7 - El aro de la semana alrededor de la foto (Hoy y la lista de Atletas) ----------------------------------------- */
+.con-aro { position: relative; display: inline-grid; place-items: center; flex: none; }
+.con-aro > .aro-semana { position: absolute; top: calc(var(--esp-4) * -1); left: calc(var(--esp-4) * -1); width: calc(100% + var(--esp-8)); height: calc(100% + var(--esp-8)); overflow: visible; pointer-events: none; transform: rotate(-90deg); }
+.aro-semana circle { fill: none; stroke-width: 2.4; }
+.aro-semana .aro-pista { stroke: var(--linea); }
+.aro-semana .aro-lleno { stroke: var(--morado); stroke-linecap: round; }
+.con-aro.completa .aro-semana .aro-lleno { stroke: var(--ok); }
+@media (prefers-reduced-motion: no-preference) {
+  .aro-semana { animation: aro-asoma .7s var(--curva-casa) .15s backwards; }
+}
+@keyframes aro-asoma { from { transform: rotate(-150deg) scale(.86); opacity: 0; } }
+@media (forced-colors: active) { .aro-semana .aro-lleno { stroke: Highlight; } .aro-semana .aro-pista { stroke: CanvasText; } }
+
+/* -- 8 - El record, con la cifra en la letra ancha ------------------------------------------------------------------- */
+.record-serie .record-cifra { font-weight: 800; font-stretch: var(--ancho-expandido); font-size: var(--letra-15); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--tinta); }
+
+/* -- 9 - La pestana elegida da un pequeno rebote (en el movil; en el lateral del coach, no) -------------------------- */
+@media (prefers-reduced-motion: no-preference) and (max-width: 899px) {
+  .tab[aria-current="page"] .tab-ico svg { animation: tab-rebota .45s var(--curva-rebote) backwards; }
+}
+@keyframes tab-rebota { 0% { transform: scale(.8); } 55% { transform: scale(1.12) translateY(-2px); } 100% { transform: translateY(-1px); } }
+
+/* -- 11 - La ficha, con el color de su primera etiqueta (un velo arriba y el aro de la foto) ------------------------ */
+.cabecera-grande.cab-etiqueta { --etq-c: var(--tinta-3); background-image: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--etq-c) 16%, transparent) 0%, transparent 100%); }
+.cabecera-grande.cab-etq-morado { --etq-c: var(--morado); }
+.cabecera-grande.cab-etq-azul { --etq-c: var(--info); }
+.cabecera-grande.cab-etq-verde { --etq-c: var(--ok); }
+.cabecera-grande.cab-etq-ambar { --etq-c: var(--oro); }
+.cabecera-grande.cab-etq-rojo { --etq-c: var(--alerta); }
+.cabecera-grande.cab-etiqueta .avatar-estado .avatar { outline: var(--filo-medio) solid var(--etq-c); outline-offset: 2px; }
+.ficha-etiquetas { display: flex; flex-wrap: wrap; gap: var(--esp-4); margin-top: var(--esp-4); }
+@media (forced-colors: active) { .cabecera-grande.cab-etiqueta { background-image: none; } }

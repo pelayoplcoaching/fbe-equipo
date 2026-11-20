@@ -60,7 +60,7 @@ export function HojaReenviar({ mensajes, alCerrar, alHecho }) {
   return (
     <Hoja titulo="Reenviar a…" alCerrar={alCerrar} medio>
       <p class="peq secundario reenviar-que">{mensajes.length === 1 ? extractoCita(mensajes[0], 120) : `${mensajes.length} mensajes`}</p>
-      {atletas.cargando && !atletas.datos ? <Cargando /> : !lista.length ? <Vacio icono="atletas" titulo="Sin atletas">Da de alta a un atleta para reenviarle mensajes.</Vacio> : (
+      {atletas.cargando && !atletas.datos ? <Cargando /> : !lista.length ? <Vacio ilustracion="atletas" icono="atletas" titulo="Sin atletas">Da de alta a un atleta para reenviarle mensajes.</Vacio> : (
         <ElegirAtletas atletas={lista} elegidos={elegidos} alCambiar={setElegidos} max={50} etiqueta="A quién reenviarlo" />
       )}
       <div class="hoja-pie-fijo">

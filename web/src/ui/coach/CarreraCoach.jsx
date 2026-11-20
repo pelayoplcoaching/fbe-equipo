@@ -28,7 +28,7 @@ export function CarreraFicha({ atleta }) {
   const recargar = () => datos.recargar(true);
   if (datos.error) return <ErrorCaja error={datos.error} reintentar={datos.recargar} />;
   if (!d) return <Siluetas forma="tarjetas" n={3} texto="Cargando su carrera" />;
-  if (d.falta056) return <div class="panel"><Vacio icono="pasos" titulo="Falta la migración 056">Para llevarle la carrera, ejecuta en Supabase supabase/migraciones/056_carrera.sql.</Vacio></div>;
+  if (d.falta056) return <div class="panel"><Vacio ilustracion="espera" icono="pasos" titulo="Falta la migración 056">Para llevarle la carrera, ejecuta en Supabase supabase/migraciones/056_carrera.sql.</Vacio></div>;
   return (
     <div class="pila carrera-ficha">
       <ResumenCarrera d={d} />

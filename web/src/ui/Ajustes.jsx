@@ -81,6 +81,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           <span class="peq terciario">El color de los botones, los enlaces y lo que eliges. Todos se leen bien en claro y en oscuro.</span>
         </fieldset>
       </li>
+      {/* (v0.200) la decoración de temporada: copos finos arriba en Navidad (del 20 de diciembre al 6 de enero) y en invierno */}
+      <Interruptor id="aj-temporada" icono="nieve" texto="Decoración de temporada" ayuda="Copos finos en lo alto de la pantalla en Navidad (del 20 de diciembre al 6 de enero) y, más pocos, en invierno" valor={a.temporada !== false} alCambiar={(v) => cambiar('temporada', v)} />
       {/* (color, mejoras 17 y 18) más contraste y ayuda para daltonismo */}
       <Interruptor id="aj-contraste" icono="sol" texto="Alto contraste" ayuda="Textos y líneas al máximo, para ver mejor o entrenar con mucha luz" valor={!!a.altoContraste} alCambiar={(v) => cambiar('altoContraste', v)} />
       <Interruptor id="aj-daltonismo" icono="ojo-abierto" texto="Ayuda para daltonismo" ayuda="Lo hecho, en azul, y lo que falta o va mal, en naranja, en vez de verde y rojo" valor={!!a.daltonismo} alCambiar={(v) => cambiar('daltonismo', v)} />
