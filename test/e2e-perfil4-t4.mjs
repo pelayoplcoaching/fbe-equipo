@@ -26,7 +26,8 @@ export async function probarPerfil4T4({ navegador, check, base = 'http://localho
     await h.waitFor({ state: 'detached' });
     check((await atajos.locator('.atajo-perfil').allTextContents()).map((t) => t.trim()).join('|') === 'Check-in|Progreso|Tu carné|Cambiar', 'y se cambian (se guardan en este móvil)');
     await atajos.getByRole('button', { name: 'Progreso' }).click();
-    await p.locator('nav.tabs [aria-current="page"], nav.tabs .activa').first().waitFor({ timeout: 3000 }).catch(() => {});
+    // (espera a que Perfil se vaya de verdad, hasta 10 s: con la máquina cargada, 3 s fijos se quedaban cortos)
+    await p.locator('.perfil-cabeza').first().waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
     check(await p.locator('.perfil-cabeza').count() === 0, 'un atajo lleva a su sitio (Progreso)');
     const { irASeccion } = await import('./secciones.mjs');
     await irASeccion(p, 'Perfil');
