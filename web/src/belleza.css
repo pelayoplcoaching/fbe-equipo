@@ -43,11 +43,11 @@
 .cielo-hora i { position: absolute; display: block; }
 .hero-dia > .hero-cielo { z-index: -1; }
 .cielo-amanecer { background: radial-gradient(120% 72% at 10% 112%, color-mix(in srgb, var(--rosa-300) 34%, transparent) 0%, color-mix(in srgb, var(--ambar-300) 14%, transparent) 42%, transparent 72%); }
-.cielo-amanecer .cielo-sol { left: 6%; bottom: -3.5rem; width: 9rem; height: 9rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--oro-100) 52%, transparent), transparent); }
+.cielo-amanecer .cielo-sol { left: 4%; bottom: -4.75rem; width: 9rem; height: 9rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--oro-100) 34%, transparent), transparent); }
 .cielo-dia { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--cielo-300) 18%, transparent) 0%, transparent 58%); }
 .cielo-dia .cielo-luz { right: -12%; top: -45%; width: 72%; height: 130%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--cielo-100) 22%, transparent), transparent); }
 .cielo-atardecer { background: radial-gradient(110% 82% at 94% 108%, color-mix(in srgb, var(--naranja-400) 36%, transparent) 0%, color-mix(in srgb, var(--rosa-400) 14%, transparent) 42%, transparent 72%); }
-.cielo-atardecer .cielo-sol { right: 5%; bottom: -2.5rem; width: 7rem; height: 7rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ambar-200) 62%, transparent), transparent); }
+.cielo-atardecer .cielo-sol { right: 3%; bottom: -3.75rem; width: 7rem; height: 7rem; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--ambar-200) 40%, transparent), transparent); }
 .cielo-noche .cielo-estrella { width: calc(var(--tam) * 3); height: calc(var(--tam) * 3); margin: calc(var(--tam) * -1) 0 0 calc(var(--tam) * -1); border-radius: 50%; opacity: .6;
   background: radial-gradient(circle, var(--blanco) 0 22%, color-mix(in srgb, var(--marca-200) 45%, transparent) 34%, transparent 62%); }
 /* (en la pantalla de entrar: la franja de noche de arriba, encima de su dibujo y debajo del formulario) */
@@ -164,7 +164,8 @@
   transform: translateX(calc(var(--ilum) * 112% * var(--lado))); }
 .cielo-luna.llena b { display: none; }
 .cielo-luna::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 62% 64%, color-mix(in srgb, var(--marca-200) 30%, transparent) 0 14%, transparent 16%), radial-gradient(circle at 34% 58%, color-mix(in srgb, var(--marca-200) 26%, transparent) 0 9%, transparent 11%); }
-.hero-dia > .cielo-hora .cielo-luna { top: 12%; right: 30%; }
+/* (en la portada, asomando por el borde derecho: el texto nunca llega ahi, no queda nada encima de la luna) */
+.hero-dia > .cielo-hora .cielo-luna { top: 30%; right: -0.375rem; width: 1.6rem; height: 1.6rem; }
 
 /* -- 14 - Lo que cae donde estas: lluvia, nieve, niebla o tormenta (con la prevision que ya guardo el tiempo) ----------- */
 .cielo-hora.con-lluvia, .cielo-hora.con-tormenta { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--cielo-900) 30%, transparent), transparent 70%); }

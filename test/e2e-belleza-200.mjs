@@ -55,7 +55,7 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
   // ---------------------------------------------------------------- La atleta: escena, cielo y aro (en el móvil, en oscuro)
   const movil = await nuevoContexto({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true, colorScheme: 'dark' });
   try {
-    await entrarComo(movil, /Ana López/, () => { try { localStorage.setItem('fbe-probar-cielo', 'noche'); } catch { /* */ } });
+    await entrarComo(movil, /Ana López/, () => { try { if (!localStorage.getItem('fbe-probar-cielo')) localStorage.setItem('fbe-probar-cielo', 'noche'); } catch { /* */ } });   // (solo la primera vez: al recargar manda lo que ponga la prueba)
     await cerrarDialogos();
     await p.locator('.hero-dia').waitFor();
     // El cielo de la noche detrás de la portada
