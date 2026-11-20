@@ -32,7 +32,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     await p.goto(`${base}/?demo&paleta`);
     await p.getByRole('heading', { name: 'Paleta de FBE Equipo' }).waitFor();
     check(await p.locator('.pal-escala:not(.pal-sis)').count() === 14 && await p.locator('.pal-escala').first().locator('.pal-muestra').count() === 11, '«Paleta» (?demo&paleta): las trece escalas de 50 a 950 y la noche');
-    check(await p.locator('.pal-estado').count() === 4 && await p.locator('.pal-grad:not(.pal-tono)').count() === 4 && await p.locator('.pal-tono').count() === 6 && await p.locator('.pal-acento').count() === 9, 'los cuatro estados, los cuatro degradados, los seis tonos de la tarjeta del día y los nueve acentos');
+    check(await p.locator('.pal-estado').count() === 4 && await p.locator('.pal-grad:not(.pal-tono)').count() === 4 && await p.locator('.pal-tono').count() === 6 && await p.locator('.pal-acento').count() === 11, 'los cuatro estados, los cuatro degradados, los seis tonos de la tarjeta del día y los once acentos');
     // (tanda 2) la tabla de contraste y los controles: se recalcula con el tema, el acento y el alto contraste
     const filas = () => p.locator('.pal-tabla tbody tr').evaluateAll((trs) => trs.map((tr) => [tr.querySelector('th').textContent.trim(), ...[...tr.querySelectorAll('td')].map((td) => td.textContent.trim())]));
     const f1 = await filas();

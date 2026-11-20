@@ -124,7 +124,9 @@ export function useExtrasPanel(lista, { conProgreso = false } = {}) {
   const hitos = {};
   if (hit.datos) for (const r of lista || []) { const h = proximoHito(r, { cumple: hit.datos.cumples[r.atleta_id] || null, carreras: hit.datos.carreras[r.atleta_id] || [] }, hoy); if (h) hitos[r.atleta_id] = h; }
   return { sinLeer, contacto, hitos, hoy: hoyT.datos || {}, progreso: prog.datos || {}, cargandoProgreso: conProgreso && prog.cargando && !prog.datos,
-    proxima: prox.datos || {}, telefonos: contactos.datos || {}, cargando: conv.cargando && !conv.datos };
+    proxima: prox.datos || {}, telefonos: contactos.datos || {}, cargando: conv.cargando && !conv.datos,
+    // (v0.200) el día del saludo espera a «hoy toca» y a los mensajes (para guardarle el sitio mientras llegan)
+    cargandoDia: (hoyT.cargando && !hoyT.datos) || (conv.cargando && !conv.datos) };
 }
 
 // ---------------------------------------------------------------- etiquetas

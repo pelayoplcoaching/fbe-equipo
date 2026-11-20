@@ -293,7 +293,8 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       <CabCoach id="coach-panel" titulo={`${saludoCoach(horaMadrid(Date.now()))}${perfil?.nombre ? `, ${perfil.nombre.split(' ')[0]}` : ''}`}>
         <span class="peq">{fmtConDia(hoy).replace(/^./, (c) => c.toUpperCase())}{atencion.length ? ` · ${atencion.length} ${atencion.length === 1 ? 'necesita' : 'necesitan'} atención` : ' · Todo en orden'}</span>
         {/* (v0.200) y el día en una frase: quién entrena hoy y quién te ha escrito (solo cuántos) */}
-        {!cargando && diaCoach.trozos && <span class="peq cab-coach-dia">{diaCoach.trozos}</span>}
+        {/* (con su sitio guardado mientras llega: si no, al llegar empujaba la página) */}
+        <Reserva id="panel-dia-coach" cargando={cargando || ex.cargandoDia}>{!cargando && !ex.cargandoDia && diaCoach.trozos && <span class="peq cab-coach-dia">{diaCoach.trozos}</span>}</Reserva>
       </CabCoach>
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       {/* (v0.104) quién cumple años hoy */}
