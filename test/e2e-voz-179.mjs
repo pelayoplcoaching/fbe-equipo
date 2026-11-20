@@ -73,8 +73,12 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     await activar.waitFor({ state: 'detached' });
     // Y si el navegador sigue diciendo «preguntar» después de darlo (no lo recuerda), a la segunda ya graba
     await p.locator('.toast').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
+    // (con la máquina cargada, el primer Enter puede llegar mientras el botón aún se está montando: si no ha empezado a
+    // grabar en 8 s, se pulsa otra vez; lo que se comprueba, igual)
+    const listo179 = async () => (await grabando.count()) === 1 && (await p.evaluate(() => document.activeElement?.getAttribute('aria-label'))) === 'Parar y escucharla';
+    const esperar179 = async (ms) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await listo179().catch(() => false)) return true; await p.waitForTimeout(150); } return listo179().catch(() => false); };
     await micro.focus(); await p.keyboard.press('Enter');
-    await p.getByRole('button', { name: 'Parar y escucharla' }).waitFor({ timeout: 8000 }).catch(() => {});
+    if (!(await esperar179(8000)) && (await grabando.count()) === 0) { await micro.focus(); await p.keyboard.press('Enter'); await esperar179(8000); }
     check(await grabando.count() === 1 && await p.evaluate(() => document.activeElement?.getAttribute('aria-label')) === 'Parar y escucharla', 'a la segunda, aunque el navegador siga diciendo «preguntar», ya graba (y con el teclado, el foco va a «Parar y escucharla»)');
     await p.getByRole('button', { name: 'Eliminar la grabación' }).click();
     await grabando.waitFor({ state: 'detached' });
