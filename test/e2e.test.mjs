@@ -5993,6 +5993,16 @@ try {
   console.log('  ✗ v0.199:', e.message.split('\n')[0]);
 }
 
+// v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
+console.log('\nv0.200: la tanda de belleza');
+try {
+  const { probarBelleza200 } = await import('./e2e-belleza-200.mjs');
+  await probarBelleza200({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.200:', e.message.split('\n')[0]);
+}
+
 // v0.198: la lista de Atletas a tu gusto (test/e2e-atletas-198.mjs)
 console.log('\nv0.198: Atletas a tu gusto');
 try {
