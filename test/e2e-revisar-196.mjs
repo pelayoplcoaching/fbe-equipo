@@ -1,4 +1,4 @@
-// (v0.196) «Revisar», segunda tanda: dos columnas, uno a uno, teclas (/ y ?), el resumen de la tanda, tus frases por
+// (v0.196) «Revisar», segunda tanda: dos columnas, uno a uno, teclas (b y ?), el resumen de la tanda, tus frases por
 // tipo y tu «Visto», contestar con un emoji, tarea y vídeo desde la tarjeta, la nota para la revisión semanal, fijar
 // arriba, «En 3 días», la gráfica de la sesión, lo último que os habéis dicho, por motivo y tus tiempos. En ordenador y
 // a 360 px en oscuro.
@@ -64,14 +64,14 @@ export async function probarRevisar196({ navegador, check, base = 'http://localh
     const mas = async (t) => { const b = t.locator('button.revisar-mas-btn'); if ((await b.getAttribute('aria-expanded')) !== 'true') await b.click(); return t.getByRole('group', { name: 'Más acciones' }); };
     const cerrarHoja = async (h) => { await p.keyboard.press('Escape'); await h.waitFor({ state: 'hidden' }).catch(() => {}); };
 
-    // Teclas: «?» y «/»
+    // Teclas: «?» y «b»
     await p.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => {});
     await p.keyboard.press('?');
     const teclas = p.getByRole('dialog', { name: 'Teclas de Revisar' });
     check(await hasta(async () => teclas.isVisible()), '«?» enseña las teclas');
     await cerrarHoja(teclas);
-    await p.keyboard.press('/');
-    check(await hasta(async () => p.evaluate(() => document.activeElement?.closest?.('.revisar-buscar') != null)), '«/» lleva a buscar');
+    await p.keyboard.press('b');
+    check(await hasta(async () => p.evaluate(() => document.activeElement?.closest?.('.revisar-buscar') != null)), '«b» lleva a buscar');
     await p.locator('h1').click();
 
     // Por motivo
@@ -173,7 +173,7 @@ export async function probarRevisar196({ navegador, check, base = 'http://localh
     await p.getByRole('button', { name: 'Dos columnas' }).click();
 
     // Tus tiempos
-    await p.getByRole('button', { name: 'Tus tiempos' }).click();
+    await p.getByRole('button', { name: 'Tus tiempos', exact: true }).click();
     const htp = p.getByRole('dialog', { name: 'Tus tiempos en Revisar' });
     check(await hasta(async () => (await htp.locator('tbody tr').count()) === 5), 'tus tiempos: todo, sesiones, check-ins, vídeos y mensajes');
     await cerrarHoja(htp);
