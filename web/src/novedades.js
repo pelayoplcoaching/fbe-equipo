@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.195': {
+    coach: [
+      'Revisar: busca por atleta, ordena por urgencia o agrupa por día. Cada atleta, con su semana del bloque y tu última respuesta.',
+      'Sesiones serie a serie con sus récords, check-in frente al anterior y lo que le dijiste del ejercicio. Tus frases en el hilo.',
+      '«Visto 💪», nota de voz, «Mañana», programar, elegir varias y todo lo de un atleta de golpe. Y lo revisado hoy, por si acaso.',
+    ],
+  },
   '0.194': {
     coach: [
       'Revisión semanal: el progreso de cada atleta sin ir a su ficha. Semáforo de peso, medidas, comida y descanso, y una frase.',

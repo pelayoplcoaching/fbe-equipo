@@ -138,7 +138,7 @@ export function lineasCheckin(c, anterior = null, { porComida = false } = {}) {
 }
 
 // ---------------------------------------------------------------- récords y parones de la semana
-const e1rmDe = (s) => {
+export const e1rmDe = (s) => {
   const k = Number(s.kg), r = Number(s.reps);
   if (!k || !r || r < 1 || r > 12) return null;
   const reserva = s.rir != null && s.rir !== '' ? Number(s.rir) : s.rpe != null && s.rpe !== '' ? Math.max(0, 10 - Number(s.rpe)) : 0;

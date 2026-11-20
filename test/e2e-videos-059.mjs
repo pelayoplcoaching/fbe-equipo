@@ -142,7 +142,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.getByRole('group', { name: 'Objetivo' }).getByRole('button', { name: '48 h' }).click();
     await p.waitForFunction(() => [...document.querySelectorAll('.chip.espera')].some((c) => c.textContent.includes('hace 30 h') && c.classList.contains('espera-aviso')));
     check(true, 'con el de 48 h, en ámbar (cerca del objetivo)');
-    await p.getByLabel('Orden de los vídeos').selectOption('espera');
+    await p.getByLabel('Cómo ordenar lo que hay por revisar').selectOption('espera');
     await p.waitForTimeout(300);
     const primero = await p.locator('.tarjeta-revisar').first().locator('.chip.espera').textContent().catch(() => '');
     check(primero.includes('hace 30 h'), 'ordenado por «más tiempo esperando», el suyo va primero');

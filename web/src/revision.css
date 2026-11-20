@@ -197,3 +197,71 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
 .rev-linea .ultimo { fill: var(--morado); stroke: var(--hoja); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .rev-linea .meta { stroke: var(--tinta-3); stroke-width: 1.5; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
 .rev-lineas { display: grid; gap: var(--esp-8); }
+
+/* v0.195: la pestana Revisar (ui/coach/Revisar.jsx y RevisarExtra.jsx). Solo ASCII; todo con tokens. */
+.revisar-herramientas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); }
+.revisar-buscar { flex: 1 1 14rem; min-width: 0; display: flex; align-items: center; gap: var(--esp-6); position: relative; }
+.revisar-buscar svg { position: absolute; left: var(--esp-10); width: var(--ico-16); height: var(--ico-16); color: var(--tinta-2); pointer-events: none; }
+.revisar-buscar .entrada { width: 100%; min-width: 0; padding-left: var(--esp-32); }
+.revisar-herramientas .selector { min-height: 36px; }
+.revisar-herramientas .btn[aria-pressed="true"] { background: var(--tinta); color: var(--hoja); border-color: var(--tinta); }
+
+.revisar-nuevas { display: flex; align-items: center; gap: var(--esp-8); width: 100%; text-align: left; padding: var(--esp-10) var(--esp-14); border-radius: var(--r-10); border: var(--filo-fino) solid var(--morado); background: var(--morado-suave); color: var(--tinta); font: inherit; cursor: pointer; }
+.revisar-nuevas svg { width: var(--ico-18); height: var(--ico-18); color: var(--morado); flex: none; }
+.revisar-pospuestas { display: inline-flex; align-items: center; gap: var(--esp-4); justify-self: start; }
+.revisar-pospuestas svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-sin-resultados { display: grid; gap: var(--esp-8); justify-items: start; }
+.revisar-cuenta-dia { margin: 0; text-align: center; color: var(--tinta-2); }
+.revisar-pie { justify-content: flex-start; }
+.revisar-pie svg { width: var(--ico-14); height: var(--ico-14); }
+
+/* Lo urgente: un punto junto al nombre y los motivos bajo la cabecera */
+.revisar-urg { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: var(--esp-6); vertical-align: middle; }
+.revisar-urg.urg-alta { background: var(--alerta); outline: 3px solid var(--alerta-suave); }
+.revisar-urg.urg-media { background: var(--aviso); outline: 3px solid var(--aviso-suave); }
+.revisar-motivos.urg-t-alta { color: var(--alerta); font-weight: 650; }
+.grupo-revisar-ctx { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-4) var(--esp-12); padding: 0 var(--esp-4); }
+.grupo-revisar-acciones { gap: var(--esp-4); }
+.grupo-revisar-acciones .btn svg, .revisar-acciones .btn svg { width: var(--ico-14); height: var(--ico-14); }
+.grupo-dia .ico-reporte.ico-dia { background: var(--morado-suave); color: var(--morado); }
+
+/* Las tarjetas: recordes, cambios del check-in, lo que le dijiste, la sesion serie a serie */
+.revisar-marcas { gap: var(--esp-4); }
+.revisar-marcas .chip { white-space: normal; max-width: 100%; height: auto; text-align: left; }
+.revisar-record svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-cambios { margin: 0; }
+.revisar-cambio.baja { font-weight: 650; }
+.revisar-ver-series { display: inline-flex; align-items: center; gap: var(--esp-4); justify-self: start; }
+.revisar-ver-series svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-detalle { max-width: 100%; overflow-x: auto; }
+.revisar-dicho { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); }
+.revisar-dicho .cita { margin: 0; }
+.revisar-dicho .btn-texto { display: inline-flex; align-items: center; gap: var(--esp-4); justify-self: start; }
+.revisar-dicho .btn-texto svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-acciones { gap: var(--esp-6); }
+.hilo-frases { gap: var(--esp-4); margin-top: var(--esp-6); }
+.hilo-frase { cursor: pointer; border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; font-size: var(--letra-13); min-height: 32px; text-align: left; }
+.hilo-frase:hover { border-color: var(--morado); }
+
+/* Elegir varias */
+.revisar-item.eligiendo { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-6); }
+.revisar-elegir { display: grid; place-items: center; min-width: 36px; min-height: 44px; cursor: pointer; }
+.revisar-elegir input { width: 20px; height: 20px; accent-color: var(--morado); }
+.revisar-item.elegida .tarjeta-revisar { outline: 2px solid var(--morado); outline-offset: 2px; }
+.revisar-barra-elegir { position: sticky; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); padding: var(--esp-10) var(--esp-14); border-radius: var(--r-pildora); background: var(--hoja); border: var(--filo-fino) solid var(--linea); box-shadow: var(--sombra-alta); }
+.revisar-barra-elegir .num { margin-right: auto; font-weight: 650; }
+@media (min-width: 900px) { .revisar-barra-elegir { bottom: var(--esp-16); } }
+
+/* Lo revisado hoy */
+.revisados-hoy { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.revisado-hoy { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); }
+@media (max-width: 480px) { .revisado-hoy { grid-template-columns: auto minmax(0, 1fr); } .revisado-hoy .btn { grid-column: 2; justify-self: start; } }
+
+/* Vista compacta (en ancho): mas tarjetas por pantalla, textos a dos lineas */
+@media (min-width: 900px) {
+  .revisar-compacta .grupo-revisar-items { grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: var(--esp-8); }
+  .revisar-compacta .tarjeta-revisar { padding: var(--esp-10); gap: var(--esp-6); }
+  .revisar-compacta .tarjeta-revisar .cita { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .revisar-compacta .revisar-mini { max-height: 9rem; }
+  .revisar-compacta .grupo-revisar-cab { min-height: 2.75rem; }
+}

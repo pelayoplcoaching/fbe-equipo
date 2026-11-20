@@ -7,6 +7,7 @@ import { ponerCorrecciones } from './tecnica/correcciones.js';
 import { ChipsFrases } from './tecnica/Frases.jsx';
 import { insertarFrase, dibujoEnMomento, dibujoParaFrase, limpiarTextoFrase } from '../logica/correccion.js';
 import { partirMomentos } from '../logica/momentos.js';
+import { conNombre } from '../logica/revision.js';
 import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tecnica/GrabarRevision.jsx';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
@@ -16,7 +17,7 @@ import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tec
 // v0.59 (4): en el hilo de un vídeo, el coach tiene sus frases de corrección a un toque (ejercicio: el del vídeo)
 // v0.60 (1 y 2, 038): las respuestas en vídeo del hilo de un vídeo de técnica (la revisión grabada del coach, o un vídeo con
 // la cámara de delante del coach o del atleta) se ven en su mensaje; «Responder con vídeo» graba una (hasta un minuto).
-export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null }) {
+export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null, frasesRapidas = null }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const hilo = useCarga(() => api.comentarios({ atletaId, sesionId, checkinId, archivoId }), [atletaId, sesionId, checkinId, archivoId]);
@@ -115,6 +116,15 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           <button type="button" class="btn-texto mini" aria-label="Quitar el dibujo" onClick={() => setDibujo(null)}><Icono n="cerrar" /></button></div>
       )}
       {yo === 'coach' && archivoId && !enChat && <ChipsFrases ejercicio={ejercicio} alElegir={usarFrase} />}
+      {/* (v0.195) en «Revisar», tus frases de siempre a un toque (con su nombre) */}
+      {yo === 'coach' && frasesRapidas?.length > 0 && (
+        <div class="fila-envolver hilo-frases" role="group" aria-label="Frases rápidas">
+          {frasesRapidas.slice(0, 6).map((fr) => {
+            const t = conNombre(fr, nombreAtleta);
+            return <button key={fr} type="button" class="chip hilo-frase" onClick={() => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }}>{t}</button>;
+          })}
+        </div>
+      )}
       {con037.datos && textoFrase && <button type="button" class="btn-texto mini" onClick={guardarComoFrase}><Icono n="mas" /> Guardar como frase{dibujo ? ' (con el dibujo)' : ''}</button>}
       <div class="hilo-extras">
         {archivoId && !dibujando && (

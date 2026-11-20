@@ -68,6 +68,7 @@ import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos
 import { umbralValido } from '../logica/cargaVelocidad.js';
 import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
+import { semanaDelBloque, marcasSesion } from '../logica/revisar.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -4491,6 +4492,65 @@ export function crearApi(backend) {
     async deshacerRevisados(lista) {
       for (const x of lista || []) { try { await api.marcarRevisado(x.tipo, x.id, false); } catch { /* */ } }
     },
+    // (v0.195) Revisar: de cada atleta, en qué semana del bloque va y cuándo le contestaste por última vez.
+    // { atleta_id: { semana, total, bloque, bloqueId, ultima } } (ultima: instante o null si nunca)
+    async contextoRevisar(ids, hoy = hoyISO()) {
+      const xs = unicos(ids || []);
+      if (!xs.length) return {};
+      const [bloques, coment] = await Promise.all([
+        b.select('bloques', { in: { atleta_id: xs }, eq: { es_plantilla: false }, cols: 'id,atleta_id,nombre,fecha_inicio,creado_en' }).catch(() => []),
+        b.select('comentarios', { in: { atleta_id: xs }, eq: { autor: 'coach' }, order: [['creado_en', 'desc']], limit: 600, cols: 'atleta_id,creado_en,enviar_en,eliminado_en' }).catch(() => []),
+      ]);
+      const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id,numero,fecha_inicio,programacion' }).catch(() => []) : [];
+      const B = agrupar(bloques, 'atleta_id');
+      const ahora = Date.now();
+      const ultima = {};
+      for (const c of coment) if (!c.eliminado_en && (!c.enviar_en || Date.parse(c.enviar_en) <= ahora) && !(c.atleta_id in ultima)) ultima[c.atleta_id] = c.creado_en;
+      const out = {};
+      for (const id of xs) {
+        const bs = B[id] || [];
+        const ids2 = new Set(bs.map((x) => x.id));
+        const s = semanaDelBloque(bs, semanas.filter((w) => ids2.has(w.bloque_id)), hoy);
+        out[id] = { semana: s?.semana ?? null, total: s?.total ?? null, bloque: s?.bloque || null, bloqueId: s?.bloqueId || null, ultima: ultima[id] || null };
+      }
+      return out;
+    },
+    // (v0.195) Revisar: los récords y lo que bajó de cada sesión por revisar (con su historial). { sesion_id: { records, bajas } }
+    async marcasSesiones(sesiones) {
+      const xs = (sesiones || []).filter((s) => s?.id && (s.atleta?.id || s.atleta_id));
+      const porAtleta = agrupar(xs.map((s) => ({ ...s, _a: s.atleta?.id || s.atleta_id })), '_a');
+      const out = {};
+      for (const [atletaId, lista] of Object.entries(porAtleta)) {
+        const series = await api.historial(atletaId).catch(() => null);
+        if (!series) continue;
+        for (const s of lista) out[s.id] = marcasSesion(series, s);
+      }
+      return out;
+    },
+    // (v0.195) Revisar: lo que has dado por revisado hoy (para devolverlo a pendiente si fue sin querer).
+    // [{ tipo, id, atleta, titulo, revisado_en }], lo último primero
+    async revisadosHoy(hoy = hoyISO()) {
+      const desde = new Date(`${hoy}T00:00:00`).toISOString();
+      const sel = (t, o) => b.select(t, o).catch(() => []);
+      const [ses, cks, arcs, tars, atletas] = await Promise.all([
+        sel('sesiones', { gte: { revisada_en: desde }, cols: 'id,semana_id,nombre,fecha_realizada,revisada_en' }),
+        sel('checkins', { gte: { revisado_en: desde }, cols: 'id,atleta_id,semana_inicio,revisado_en' }),
+        sel('archivos', { gte: { revisado_en: desde }, cols: 'id,atleta_id,tipo,ejercicio_id,fecha,revisado_en' }).then((xs) => xs.filter((a) => a.tipo === 'video_tecnica' || a.tipo === 'foto_progreso')),
+        sel('tareas', { gte: { revisada_en: desde }, cols: 'id,atleta_id,titulo,revisada_en' }),
+        api.atletas().catch(() => []),
+      ]);
+      const A = porId(atletas);
+      const W = ses.length ? porId(await sel('semanas', { in: { id: unicos(ses.map((x) => x.semana_id)) }, cols: 'id,bloque_id' })) : {};
+      const BL = Object.keys(W).length ? porId(await sel('bloques', { in: { id: unicos(Object.values(W).map((w) => w.bloque_id)) }, cols: 'id,atleta_id' })) : {};
+      const EJ = arcs.some((a) => a.ejercicio_id) ? porId(await sel('ejercicios', { in: { id: unicos(arcs.map((a) => a.ejercicio_id).filter(Boolean)) }, cols: 'id,nombre' })) : {};
+      const out = [
+        ...ses.map((x) => ({ tipo: 'sesion', id: x.id, atleta: A[BL[W[x.semana_id]?.bloque_id]?.atleta_id] || null, titulo: x.nombre || 'Sesión', revisado_en: x.revisada_en })),
+        ...cks.map((x) => ({ tipo: 'checkin', id: x.id, atleta: A[x.atleta_id] || null, titulo: 'Check-in', revisado_en: x.revisado_en })),
+        ...arcs.map((x) => ({ tipo: 'archivo', id: x.id, atleta: A[x.atleta_id] || null, titulo: x.tipo === 'foto_progreso' ? 'Foto de progreso' : EJ[x.ejercicio_id]?.nombre ? `Vídeo: ${EJ[x.ejercicio_id].nombre}` : 'Vídeo de técnica', revisado_en: x.revisado_en })),
+        ...tars.map((x) => ({ tipo: 'tarea', id: x.id, atleta: A[x.atleta_id] || null, titulo: x.titulo ? `Tarea: ${x.titulo}` : 'Tarea', revisado_en: x.revisado_en || x.revisada_en })),
+      ].filter((x) => x.atleta);
+      return out.sort((a, z) => String(z.revisado_en || '').localeCompare(String(a.revisado_en || '')));
+    },
     async marcarRevision(atletaId, lunes, cambios) {
       if ((await api.revision040()) === false) throw new Error('Para guardar la revisión semanal falta ejecutar la migración 040 en Supabase (supabase/migraciones/040_revision_semanal.sql).');
       const fila = { atleta_id: atletaId, lunes };
@@ -6474,7 +6534,7 @@ export function crearApi(backend) {
       // esperas seguidas; ahora, dos). Lo que se arma con ello es lo mismo.
       const vids = archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta);
       const [
-        [semanas, bloques], [pautas, series], molestias, sesionesAdj, preguntas, deVideos, deRecetas, comunidad, deTareas,
+        [semanas, bloques], [pautas, series], molestias, sesionesAdj, preguntas, deVideos, deRecetas, comunidad, deTareas, previosCk,
       ] = await Promise.all([
         (async () => {
           const semanas = porId(await b.select('semanas', { in: { id: unicos(sesiones.map((s) => s.semana_id)) } }));
@@ -6528,6 +6588,8 @@ export function crearApi(backend) {
           ]);
           return { tareas, EJ, AR };
         })(),
+        // (v0.195) el check-in anterior de cada uno (para ver qué ha cambiado sin abrir su ficha)
+        checkins.length ? b.select('checkins', { in: { atleta_id: unicos(checkins.map((c) => c.atleta_id)) }, gte: { semana_inicio: sumarDias(desde, -35) }, order: [['semana_inicio', 'desc']] }).catch(() => []) : [],
       ]);
       const seriesPorPauta = agrupar(series, 'sesion_ejercicio_id');
       const pautasPorSesion = agrupar(pautas, 'sesion_id');
@@ -6546,7 +6608,7 @@ export function crearApi(backend) {
           };
         }).filter((s) => s.atleta),
         checkins: checkins.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, molestias: molestias.filter((m) => m.atleta_id === c.atleta_id && m.semana_inicio === c.semana_inicio && m.intensidad > 0),
-          respuestasLeidas: respuestasDe(c, preguntas) })).filter((c) => c.atleta),
+          respuestasLeidas: respuestasDe(c, preguntas), anterior: previosCk.find((x) => x.atleta_id === c.atleta_id && x.semana_inicio < c.semana_inicio) || null })).filter((c) => c.atleta),
         comentarios: comentarios.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, sesion: c.sesion_id ? todasSesiones[c.sesion_id] || null : null })).filter((c) => c.atleta),
         archivos: vids,
         recetas: [],

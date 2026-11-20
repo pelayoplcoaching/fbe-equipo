@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.195: Revisar, veinte mejoras (test/e2e-revisar-195.mjs)
+console.log('\nv0.195: Revisar, veinte mejoras');
+try {
+  const { probarRevisar195 } = await import('./e2e-revisar-195.mjs');
+  await probarRevisar195({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.195:', e.message.split('\n')[0]);
+}
+
 // v0.194: la revisión semanal, el progreso (test/e2e-revision-194.mjs)
 console.log('\nv0.194: la revisión semanal, el progreso');
 try {
