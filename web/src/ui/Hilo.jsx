@@ -8,6 +8,7 @@ import { ChipsFrases } from './tecnica/Frases.jsx';
 import { insertarFrase, dibujoEnMomento, dibujoParaFrase, limpiarTextoFrase } from '../logica/correccion.js';
 import { partirMomentos } from '../logica/momentos.js';
 import { conNombre } from '../logica/revision.js';
+import { Dictar } from './Dictar.jsx';
 import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tecnica/GrabarRevision.jsx';
 
 // Conversación entre coach y atleta pegada a una sesión, un check-in o un vídeo.
@@ -145,6 +146,8 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           }}><Icono n="reloj" /> Comentar este momento</button>
         )}
         {yo === 'coach' && <button type="button" class="btn-texto mini responder-guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /> Respuestas guardadas</button>}
+        {/* (v0.196) en «Revisar», dictar la respuesta */}
+        {yo === 'coach' && frasesRapidas && <Dictar alTexto={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }} etiqueta="Dictar la respuesta" clase="btn-texto mini" />}
         {puedeVideo && (delVideo.datos.con038
           ? <button type="button" class="btn-texto mini" onClick={() => setConVideo(true)} aria-haspopup="dialog"><Icono n="camara" /> Responder con vídeo</button>
           : <span class="mini terciario">Responder con vídeo: Disponible tras la migración 038</span>)}

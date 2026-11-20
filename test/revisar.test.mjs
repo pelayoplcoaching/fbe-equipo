@@ -131,5 +131,67 @@ console.log('\nRevisar (v0.195): contra la demo');
   } else check(false, 'la demo tiene sesiones por revisar');
 }
 
+console.log('\nRevisar, segunda tanda (v0.196): lo puro');
+{
+  const fila = (sesion, fecha, ej, kg, reps) => ({ sesion_id: sesion, fecha, ejercicio_id: ej, ejercicio: ej === 'sq' ? 'Sentadilla' : 'Curl', kg, reps, rpe: 8, registrada_en: `${fecha}T10:00:00` });
+  const series = [fila('a', '2026-11-03', 'sq', 100, 5), fila('b', '2026-11-10', 'sq', 105, 5), fila('c', '2026-11-17', 'sq', 107.5, 5), fila('c', '2026-11-17', 'sq', 100, 5), fila('c', '2026-11-17', 'cu', 15, 10), fila('d', '2026-11-24', 'sq', 110, 5)];
+  const p = R.principalSesion(series, { id: 'c', fecha_realizada: '2026-11-17' });
+  check(p.ejercicio === 'Sentadilla' && p.puntos.length === 3 && p.puntos[2].valor > p.puntos[0].valor, 'la gráfica: el ejercicio con más series y sus sesiones hasta esta (no las de después)');
+  check(R.principalSesion(series, { id: 'a', fecha_realizada: '2026-11-03' }) === null, 'con una sola sesión, sin gráfica');
+  check(R.cumpleMotivo(ck('1', { molestias: [{ intensidad: 3 }] }), 'molestias', ahora) && !R.cumpleMotivo(ck('1'), 'molestias', ahora), 'por motivo: molestias');
+  check(R.cumpleMotivo(msg('1', '¿Y ahora?'), 'preguntas', ahora) && R.cumpleMotivo(ses('1', { rpeMax: 10 }), 'rpe10', ahora) && R.cumpleMotivo(ses('1', { fecha_realizada: '2026-11-10' }), 'esperando', ahora), 'preguntas, RPE 10 y más de 3 días');
+  check(R.cumpleMotivo(ses('1'), null, ahora), 'sin motivo, vale todo');
+  check(R.frasesPara('sesiones', { sesiones: ['A', 'B'] }, ['B', 'C']).join() === 'A,B,C', 'tus frases: las del tipo primero y luego las de todo, sin repetir');
+  let pt = R.conFraseTipo({}, 'videos', '  Rodillas  fuera ');
+  check(pt.videos[0] === 'Rodillas fuera' && R.sinFraseTipo(pt, 'videos', 'Rodillas fuera').videos.length === 0, 'añadir y quitar una frase de un tipo');
+  check(R.textoVisto('') === 'Visto 💪' && R.textoVisto('  Genial 🔥 ') === 'Genial 🔥', 'tu «Visto» o el de siempre');
+  check(R.diasHastaLunes('2026-11-20') === 3 && R.diasHastaLunes('2026-11-23') === 7 && R.diasHastaLunes('2026-11-22') === 1, 'hasta el lunes: del viernes, 3; del lunes, 7; del domingo, 1');
+  const { mapa, viejas } = R.mapaApartados([{ clave: 's-1', hasta: '2026-11-21', fijada: false }, { clave: 's-2', hasta: '2026-11-19', fijada: false }, { clave: 's-3', hasta: null, fijada: true }, { clave: 's-4', hasta: '2026-11-10', fijada: true }], hoy);
+  check(Object.keys(mapa).join() === 's-1,s-3,s-4' && viejas.join() === 's-2' && mapa['s-4'].hasta === null, 'lo apartado de la base: lo que ya volvió y no está fijado, fuera (para borrarlo)');
+  check(R.apartadaHoy(mapa, 's-1', hoy) && !R.apartadaHoy(mapa, 's-3', hoy) && R.fijada(mapa, 's-3'), 'apartada hoy y fijada arriba');
+  const local = R.mapaDesdeLocal({ 's-9': '2026-11-22', viejo: '2026-11-01' }, ['s-8'], hoy);
+  check(local['s-9'].hasta === '2026-11-22' && local['s-8'].fijada && !local.viejo, 'lo de este aparato, al mismo formato');
+  const t = R.tiemposDe([{ llega: '2026-11-20T08:00:00', hecho: '2026-11-20T10:00:00' }, { llega: '2026-11-19', hecho: '2026-11-20T00:00:00' }, { llega: '2026-11-20T10:00:00', hecho: '2026-11-20T09:00:00' }]);
+  check(t.n === 2 && t.mediana === 7 && t.p90 === 12, 'tus tiempos: mediana y P90 en horas (un día suelto, desde su mediodía; lo imposible, fuera)');
+  check(R.rachaCeros(['2026-11-18', '2026-11-19', '2026-11-20'], hoy) === 3 && R.rachaCeros(['2026-11-18', '2026-11-19'], hoy) === 2 && R.rachaCeros(['2026-11-17'], hoy) === 0, 'la racha: días seguidos a cero acabando hoy o ayer');
+  check(R.conDia(['2026-11-19'], hoy).join() === '2026-11-19,2026-11-20' && R.conDia(['2026-11-20'], hoy).length === 1, 'apuntar el día sin repetir');
+  check(R.textoResumenTanda({ revisadas: 5, contestadas: 2, desde: Date.now() - 12 * 60000, quedan: 3 }) === '5 revisadas, 2 contestadas, en 12 minutos. Quedan 3.', 'el resumen de la tanda');
+  check(R.notaConMas('Hablar del sueño', 'Torso A, esfuerzo 9') === 'Hablar del sueño · Torso A, esfuerzo 9' && [...R.notaConMas('x'.repeat(490), 'nuevo texto')].length <= 500, 'la nota para la revisión semanal se suma (y no pasa de 500)');
+  check(R.resumenItem(msg('1', 'hola')) === '«hola»' && R.resumenItem(ses('1', { nombre: 'Torso A' })) === 'Sesión: Torso A', 'una línea de cada cosa para las dos columnas');
+}
+
+console.log('\nRevisar, segunda tanda (v0.196): contra la demo');
+{
+  const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  await backend.auth.entrar('pelayo@fbe.demo', 'demo');
+  const api = crearApi(backend);
+  const hoy2 = (await import('../web/src/logica/fechas.js')).fechaMadrid();
+  check(await api.revisar083() === true, 'la demo ya tiene lo de la 083');
+  check(Object.keys(await api.apartadosRevisar(hoy2)).length === 0, 'al principio, nada apartado');
+  await api.guardarApartado('s-11111111-2222-3333-4444-555555555555', { hasta: sumarDias(hoy2, 1) });
+  await api.guardarApartado('m-general-abc', { fijada: true });
+  let m = await api.apartadosRevisar(hoy2);
+  check(m['s-11111111-2222-3333-4444-555555555555']?.hasta === sumarDias(hoy2, 1) && m['m-general-abc']?.fijada, 'apartar hasta mañana y fijar, en la base');
+  await api.guardarApartado('m-general-abc', {});
+  m = await api.apartadosRevisar(hoy2);
+  check(!m['m-general-abc'], 'y quitarlo');
+  let mal = null; try { await api.guardarApartado('s-x', { hasta: sumarDias(hoy2, -1) }); } catch (e) { mal = e.message; }
+  check(/de hoy a 60 días/.test(mal || ''), 'un día pasado, no');
+  const bj = await api.bandeja();
+  const ana = bj.checkins[0]?.atleta || bj.sesiones[0]?.atleta;
+  await api.notaParaRevision(ana.id, 'Preguntarle por el hombro', hoy2);
+  await api.notaParaRevision(ana.id, 'Subir el press', hoy2);
+  const nota = await api.notaDeRevision(ana.id);
+  check(nota?.nota?.endsWith('Preguntarle por el hombro · Subir el press'), 'la nota para la revisión semanal se suma a la de esta semana');
+  const t = await api.tiemposRevisar();
+  check(['sesiones', 'checkins', 'videos', 'mensajes', 'todo'].every((k) => typeof t[k]?.n === 'number') && typeof t.semana === 'number', 'tus tiempos, de todo');
+  check(bj.comentarios.every((c) => 'audio' in c), 'los mensajes traen su nota de voz (o null)');
+  const backend2 = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  await backend2.auth.entrar('ana@fbe.demo', 'demo');
+  const apiAna = crearApi(backend2);
+  let negado = false; try { await apiAna.guardarApartado('s-ana', { fijada: true }); } catch { negado = true; }
+  check(negado || Object.keys((await apiAna.apartadosRevisar(hoy2)) || {}).length === 0, 'un atleta no aparta nada');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

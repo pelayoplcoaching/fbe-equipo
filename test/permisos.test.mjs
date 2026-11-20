@@ -5239,6 +5239,38 @@ console.log('\nLa revisión semanal del coach (migración 040)');
   await q(`delete from revision_ajustes`);
   await q(`delete from revisiones_semanales`);
 
+  // (v0.196, 083) lo apartado y lo fijado en «Revisar», de cada coach
+  check((await q(`select numero from fbe_migraciones where numero = 83`)).length === 1
+    && (await q(`select relname from pg_class where relname = 'revisar_apartados' and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 1
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = 'revisar_apartados' and grantee in ('anon', 'PUBLIC')`)).length === 0, '(083) la tabla de lo apartado, con RLS y sin nada para quien no ha entrado');
+  check(!(await q(`select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'revisar_apartados_preparar' and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`)).length
+    && (await q(`select count(*)::int n from pg_proc where proname = 'revisar_apartados_preparar' and not prosecdef`))[0].n === 1, '(083) su función, con search_path vacío y sin permisos de su dueño');
+  await como(pelayo, 'aal2');
+  const hoy083 = (await q(`select (now() at time zone 'Europe/Madrid')::date::text d`))[0].d;
+  await q(`insert into revisar_apartados (clave, hasta) values ('s-11111111-2222-3333-4444-555555555555', $1::date + 1)`, [hoy083]);
+  await q(`insert into revisar_apartados (clave, fijada) values ('m-general-11111111-2222-3333-4444-555555555555', true)`);
+  const mios083 = await q(`select usuario_id, clave from revisar_apartados order by clave`);
+  const mal083 = [];
+  for (const [sql, args] of [
+    [`insert into revisar_apartados (clave, hasta) values ('s-x', $1::date - 1)`, [hoy083]],
+    [`insert into revisar_apartados (clave, hasta) values ('s-y', $1::date + 61)`, [hoy083]],
+    [`insert into revisar_apartados (clave) values ('s-z')`, []],
+    [`insert into revisar_apartados (clave, fijada) values ('<script>', true)`, []],
+  ]) { try { await q(sql, args); mal083.push(null); } catch (e) { mal083.push(e.message); } }
+  check(mios083.length === 2 && mios083.every((x) => x.usuario_id === pelayo) && mal083.every(Boolean),
+    '(083) el coach aparta (hasta mañana) y fija a su nombre; un día pasado, uno a más de 60 días, sin día ni fijada o una clave rara, no');
+  await como(ana);
+  const ve083 = await q(`select * from revisar_apartados`);
+  let eAna083 = null;
+  try { await q(`insert into revisar_apartados (clave, fijada) values ('s-ana', true)`); } catch (e) { eAna083 = e.message; }
+  await q(`delete from revisar_apartados`);
+  await como(intruso);
+  const veIntruso083 = await q(`select * from revisar_apartados`);
+  await su();
+  check(!ve083.length && /row-level security/.test(eAna083 || '') && !veIntruso083.length && (await q(`select count(*)::int n from revisar_apartados`))[0].n === 2,
+    '(083) un atleta ni ve ni toca lo apartado del coach, ni nadie más');
+  await q(`delete from revisar_apartados`);
+
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
   const sin39 = new PGlite();
   await sin39.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));

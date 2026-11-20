@@ -265,3 +265,48 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
   .revisar-compacta .revisar-mini { max-height: 9rem; }
   .revisar-compacta .grupo-revisar-cab { min-height: 2.75rem; }
 }
+
+/* v0.196: Revisar, segunda tanda. Solo ASCII; todo con tokens. */
+.revisar-mas { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4); padding: var(--esp-6) var(--esp-8); border-radius: var(--r-10); background: var(--hoja-2); }
+.revisar-mas .btn svg, .revisar-mas-btn svg, .revisar-fotos-btn svg, .revisar-pie .btn-texto svg, .revisar-racha svg, .revisar-racha-chip svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-emojis { display: inline-flex; gap: var(--esp-2); }
+.revisar-emoji { min-width: 40px; font-size: var(--letra-16); }
+.revisar-fijar[aria-pressed="true"] { color: var(--morado); }
+.revisar-cardio { margin: 0; }
+.revisar-racha, .revisar-racha-chip { display: inline-flex; align-items: center; gap: var(--esp-4); margin: 0; }
+.revisar-racha svg, .revisar-racha-chip svg { color: var(--aviso); }
+.revisar-resumen { margin: 0; }
+.revisar-ultimos-btn, .revisar-fotos-btn { display: inline-flex; align-items: center; gap: var(--esp-4); justify-self: start; }
+.revisar-ultimos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.revisar-ultimos li { display: grid; gap: var(--esp-2); padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); max-width: 90%; }
+.revisar-ultimos li.mio { justify-self: end; background: var(--morado-suave); }
+.revisar-frase-nueva { gap: var(--esp-8); }
+.revisar-frase-nueva .entrada { flex: 1; min-width: 0; }
+.revisar-atajos { display: grid; gap: var(--esp-6); margin: 0; }
+.revisar-atajos div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: center; gap: var(--esp-10); }
+.revisar-atajos dd { margin: 0; }
+.revisar-fotos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-12); }
+.revisar-fotos figure { margin: 0; display: grid; gap: var(--esp-6); }
+.revisar-fotos img { width: 100%; height: auto; border-radius: var(--r-10); background: var(--hoja-2); }
+
+/* Uno a uno */
+.revisar-uno { display: grid; gap: var(--esp-12); }
+.revisar-uno-nav { align-items: center; gap: var(--esp-8); }
+.revisar-uno-nav .btn svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-uno-fin { justify-items: start; }
+
+/* Dos columnas (en ancho): la lista a la izquierda y la tarjeta a la derecha */
+.revisar-columnas { display: grid; grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr); gap: var(--esp-16); align-items: start; }
+.revisar-col-lista { position: sticky; top: var(--esp-12); max-height: calc(100vh - 7rem); overflow-y: auto; border-radius: var(--r-14); border: var(--filo-fino) solid var(--linea); background: var(--hoja); }
+.revisar-col-lista ul { list-style: none; margin: 0; padding: var(--esp-4); display: grid; gap: var(--esp-2); }
+.revisar-fila { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-10); padding: var(--esp-8) var(--esp-10); border: 0; border-radius: var(--r-10); background: transparent; color: var(--tinta); font: inherit; text-align: left; cursor: pointer; }
+.revisar-fila:hover { background: var(--hoja-2); }
+.revisar-fila.activa { background: var(--morado-suave); }
+.revisar-fila-txt { min-width: 0; }
+.revisar-fila-nombre { font-weight: 650; }
+.revisar-fila-que { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.revisar-fila-equipo { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--alerta-suave); color: var(--alerta); }
+.revisar-fila-equipo svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-col-panel { display: grid; gap: var(--esp-8); min-width: 0; }
+.revisar-col-ctx { margin: 0; }
+.revisar-columnas-btn svg, .revisar-uno-btn svg { width: var(--ico-14); height: var(--ico-14); }

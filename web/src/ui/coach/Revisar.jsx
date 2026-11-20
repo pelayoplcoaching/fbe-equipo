@@ -26,13 +26,22 @@ import { horasEsperando, textoEspera, nivelEspera, NOMBRE_NIVEL_ESPERA, ordenarG
 import {
   fechaItem, urgenciaItem, urgenciaGrupo, ordenarUrgente, pesoUrgencia, agruparPorDia, pospuestosVigentes, posponer, sinPosponer, coincideNombre,
   separarNuevas, revisablesDe, bandejaSin, textoContexto, textoCuentaDia,
+  apartadaHoy, fijada as esFijada, MOTIVOS_REVISAR, cumpleMotivo, frasesPara, conDia, rachaCeros, textoRacha, textoResumenTanda,
 } from '../../logica/revisar.js';
-import { DetalleSesion, MarcasSesion, CambiosCheckin, LoQueLeDijiste, HojaVoz, HojaRevisadosHoy, useFrasesRevisar, TEXTO_VISTO } from './RevisarExtra.jsx';
+import { DetalleSesion, MarcasSesion, CambiosCheckin, LoQueLeDijiste, HojaVoz, HojaRevisadosHoy, useFrasesRevisar } from './RevisarExtra.jsx';
+import { useApartados, usePreferenciasFrases, HojaFrases, MasAcciones, HojaNotaRevision, HojaTiempos, HojaAtajos, HojaFotos, UltimosMensajes, UnoAUno, ListaColumnas } from './RevisarMas.jsx';
+import { HojaNuevaTarea } from '../Tareas.jsx';
+import { AudiosSinEscuchar } from './RevisionTodo.jsx';
+import { Linea } from './RevisionProgreso.jsx';
+import { textoCardio } from '../../logica/cardio.js';
 import { HojaProgramar } from './RevisionTodo.jsx';
 
 // «Deshacer» en el aviso: vuelve a dejarlo pendiente
 // (los botones cuya acción tiene «Deshacer» llevan data-deshacer: solo esos se pueden pulsar deslizando la tarjeta)
-const deshacer = (api, tipo, id, recargar) => ({ texto: 'Deshacer', fn: async () => { await api.marcarRevisado(tipo, id, false); recargar(); } });
+// (v0.196) el último «Deshacer» se recuerda: la tecla «u» lo hace
+let ultimoDeshacer = null;
+const recordarDeshacer = (d) => { ultimoDeshacer = d; return d; };
+const deshacer = (api, tipo, id, recargar) => recordarDeshacer({ texto: 'Deshacer', fn: async () => { await api.marcarRevisado(tipo, id, false); recargar(); } });
 
 // (v0.195) lo que comparten las tarjetas: tus frases, los récords de cada sesión, apartar hasta mañana, la nota de voz,
 // programar y contestar «Visto»
@@ -58,8 +67,11 @@ function irA(t) {
 // v0.50: «r», «e» y «o» solo actúan sobre la tarjeta que tiene el foco (tras plegar un grupo o cambiar el filtro, la
 // posición de antes ya no es la misma tarjeta); clave: lo que cambia la lista (filtro y grupos plegados)
 // (v0.195) y «v» contesta «Visto», «m» lo deja para mañana
-function useAtajos(caja, n, clave = '') {
+// (v0.196) y «p» programar, «u» deshacer lo último, «/» buscar, «?» ver las teclas; en dos columnas, j/k cambian de tarjeta
+function useAtajos(caja, n, clave = '', extra = {}) {
   const [i, setI] = useState(-1);
+  const extraRef = useRef(extra);
+  extraRef.current = extra;
   useEffect(() => { setI(-1); }, [clave]);
   useEffect(() => {
     const tarjetas = () => [...(caja.current?.querySelectorAll('.tarjeta-revisar') || [])];
@@ -70,6 +82,11 @@ function useAtajos(caja, n, clave = '') {
       const t = tarjetas();
       const actual = t.indexOf(document.activeElement?.closest?.('.tarjeta-revisar'));
       const k = actual >= 0 ? actual : i;
+      const x = extraRef.current;
+      if (e.key === '/') { e.preventDefault(); x.buscar?.(); return; }
+      if (e.key === '?') { e.preventDefault(); x.ayuda?.(); return; }
+      if (e.key === 'u') { if (ultimoDeshacer) { e.preventDefault(); const d = ultimoDeshacer; ultimoDeshacer = null; d.fn(); x.deshecho?.(); } return; }
+      if (x.mover && (e.key === 'j' || e.key === 'k')) { e.preventDefault(); x.mover(e.key === 'j' ? 1 : -1); return; }
       if (e.key === 'j' || (e.key === 'ArrowDown' && actual >= 0)) { e.preventDefault(); enfocar(k + 1); }
       else if (e.key === 'k' || (e.key === 'ArrowUp' && actual >= 0)) { e.preventDefault(); enfocar(k <= 0 ? 0 : k - 1); }
       else if (actual >= 0 && t[actual]) {
@@ -87,6 +104,7 @@ function useAtajos(caja, n, clave = '') {
           }
         }
         else if (e.key === 'o') { e.preventDefault(); boton('.nombre-atleta')?.click(); }
+        else if (e.key === 'p') { const b = boton('button.revisar-programar'); if (b) { e.preventDefault(); b.click(); } }
       }
     };
     document.addEventListener('keydown', tecla);
@@ -117,8 +135,24 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const [objetivo, setObjetivo] = usePreferencia('fbe-objetivo-revision', OBJETIVO_REVISION);
   const [agrupar, setAgrupar] = usePreferencia('fbe-revisar-agrupar', 'atleta');
   const [compacta, setCompacta] = usePreferencia('fbe-revisar-compacta', false);
-  const [pospMapa, setPospMapa] = usePreferencia('fbe-revisar-pospuestos', {});
+  // (v0.196) lo apartado y lo fijado: en la base con la 083 (igual en todos tus aparatos)
+  const hoyAp = hoyISO();
+  const ap = useApartados(hoyAp);
   const [verPospuestas, setVerPospuestas] = useState(false);
+  const [vista, setVista] = usePreferencia('fbe-revisar-vista', 'tarjetas');
+  const [ancho, setAncho] = useState(() => { try { return matchMedia('(min-width: 1100px)').matches; } catch { return false; } });
+  useEffect(() => { try { const m = matchMedia('(min-width: 1100px)'); const f = () => setAncho(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); } catch { return undefined; } }, []);
+  const columnas = vista === 'columnas' && ancho;
+  const [sel, setSel] = useState(null);
+  const selIdx = useRef(0);
+  const [uno, setUno] = useState(false);
+  const [motivo, setMotivo] = useState(null);
+  const tanda = useRef({ revisadas: 0, contestadas: 0, desde: null });
+  const [, setTandaV] = useState(0);
+  const anotar = (k, n = 1) => { const t = tanda.current; if (!t.desde) t.desde = Date.now(); t[k] += n; setTandaV((v) => v + 1); };
+  const [verResumen, setVerResumen] = useState(false);
+  const [ceros, setCeros] = usePreferencia('fbe-revisar-ceros', []);
+  const pf = usePreferenciasFrases();
   const [buscar, setBuscar] = useState('');
   const [eligiendo, setEligiendo] = useState(false);
   const [elegidas, setElegidas] = useState(() => new Set());
@@ -126,9 +160,16 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const d = bandeja.datos;
   const hoy = hoyISO();
   const caja = useRef(null);
-  useAtajos(caja, d?.total || 0, `${filtro}|${agrupar}|${orden}|${[...plegados].sort().join(',')}`);
+  const moverRef = useRef(null);
+  useAtajos(caja, d?.total || 0, `${filtro}|${agrupar}|${orden}|${[...plegados].sort().join(',')}`, {
+    buscar: () => document.querySelector('.revisar-buscar input')?.focus(),
+    ayuda: () => setHoja({ tipo: 'teclas' }),
+    deshecho: () => aviso('Deshecho'),
+    mover: columnas ? (k) => moverRef.current?.(k) : null,
+  });
   const recargar = () => bandeja.recargar(true);
-  const frases = useFrasesRevisar();
+  const fr = useFrasesRevisar();
+  const frases = fr.frases;
 
   // Lo que llega mientras miras se queda aparte (no mueve la lista). Lo que llega al entrar (la recarga de la pestaña)
   // cuenta como ya visto
@@ -192,23 +233,39 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (!marcasR.length) return;
     try {
       await bandeja.alMomento((x) => bandejaSin(x, marcasR), async () => { for (const m of marcasR) await api.marcarRevisado(m.tipo, m.id); });
-      aviso(texto, 'ok', { texto: 'Deshacer', fn: async () => { await api.deshacerRevisados(marcasR); recargar(); } });
+      anotar('revisadas', lista.length);
+      aviso(texto, 'ok', recordarDeshacer({ texto: 'Deshacer', fn: async () => { await api.deshacerRevisados(marcasR); recargar(); } }));
     } catch (e) { aviso(e.message, 'error'); }
   };
-  const pospRef = useRef(pospMapa);
-  pospRef.current = pospMapa;
-  const apartar = (clave) => {
+  const apartar = (clave, dias = 1) => {
     const el = caja.current?.querySelector(`[data-item="${clave}"]`);
     const sig = tarjetaSiguiente(caja.current, el);
-    setPospMapa(posponer(pospRef.current, clave, hoy));
-    aviso('Te lo recuerdo mañana', 'ok', { texto: 'Deshacer', fn: () => setPospMapa(sinPosponer(pospRef.current, clave)) });
+    const antes = ap.previo(clave);
+    ap.apartar(clave, dias);
+    aviso(dias === 1 ? 'Te lo recuerdo mañana' : `Te lo recuerdo en ${dias} días`, 'ok', recordarDeshacer({ texto: 'Deshacer', fn: () => ap.poner(clave, antes) }));
     requestAnimationFrame(() => irA(sig));
   };
   const compartido = {
-    frases, marcas: marcas.datos || {}, apartar, quitar, quitarHilo, abrirAtleta, recargar,
+    frases, marcas: marcas.datos || {}, apartar, quitar, quitarHilo, abrirAtleta, recargar, anotar, hoy: hoyAp,
+    visto: pf.visto,
+    frasesDe: (tipo) => { const l = frasesPara(tipo, pf.porTipo, fr.generales); return l.length ? l : frases; },
+    esFijada: (clave) => esFijada(ap.mapa, clave),
+    fijar: (clave) => { const v = !esFijada(ap.mapa, clave); ap.fijar(clave); aviso(v ? 'Fijada arriba' : 'Ya no está fijada'); },
     voz: (x) => setHoja({ tipo: 'voz', ...x }),
     programar: (atleta) => setHoja({ tipo: 'programar', atleta }),
+    tarea: (atleta, inicial = {}) => setHoja({ tipo: 'tarea', atleta, inicial }),
+    nota: (atleta, texto = '') => setHoja({ tipo: 'nota', atleta, texto }),
+    fotos: (foto) => setHoja({ tipo: 'fotos', foto }),
   };
+
+  // (v0.196) después de pintar: la racha de dejarla a cero y quitar el «fijada» a lo que ya no está por revisar
+  const tras = useRef({});
+  useEffect(() => {
+    const t = tras.current;
+    if (!t.listo) return;
+    if (t.aCero && !(ceros || []).includes(hoyAp)) setCeros(conDia(ceros, hoyAp));
+    for (const k of t.fijadasFuera || []) ap.poner(k, { hasta: ap.mapa[k]?.hasta || null, fijada: false });
+  });
 
   if (bandeja.cargando && !d) return <div class="contenido coach"><Siluetas forma="tarjetas" n={3} texto="Cargando lo que tienes por revisar" /></div>;
 
@@ -217,9 +274,10 @@ export function Revisar({ bandeja, abrirAtleta }) {
   for (const c of d?.comentarios || []) {
     const clave = c.sesion_id || c.checkin_id || c.archivo_id || `general-${c.atleta_id}`;
     let h = hilos.find((x) => x.clave === clave);
-    if (!h) { h = { clave, ultimo: c, n: 0, ids: [] }; hilos.push(h); }
+    if (!h) { h = { clave, ultimo: c, n: 0, ids: [], audios: [] }; hilos.push(h); }
     h.n++;
     h.ids.push(c.id);
+    if (c.audio) h.audios.push({ ...c.audio, comentario_id: c.id });
   }
   const todos = d ? [
     ...hilos.map((h) => ({ tipo: 'mensajes', clave: `m-${h.clave}`, atleta: h.ultimo.atleta ? { ...h.ultimo.atleta, id: h.ultimo.atleta.id || h.ultimo.atleta_id } : null, h })),
@@ -236,11 +294,14 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const { vistas, nuevas } = separarNuevas(todos, conocidas.current);
   const verNuevas = () => { for (const x of nuevas) conocidas.current.add(x.clave); setVersion((v) => v + 1); };
   // Apartadas hasta mañana: fuera de la lista (salvo que las quieras ver)
-  const posp = pospuestosVigentes(pospMapa, hoy);
-  const esPospuesta = (x) => !!posp[x.clave];
+  const esPospuesta = (x) => apartadaHoy(ap.mapa, x.clave, hoy);
   const nPosp = vistas.filter(esPospuesta).length;
   const enLista = vistas.filter((x) => (verPospuestas ? esPospuesta(x) : !esPospuesta(x)));
-  const buscados = buscar.trim() ? enLista.filter((x) => x.atleta && coincideNombre(x.atleta.nombre, buscar)) : enLista;
+  const ahora = new Date();
+  const porNombre = buscar.trim() ? enLista.filter((x) => x.atleta && coincideNombre(x.atleta.nombre, buscar)) : enLista;
+  // (v0.196) por motivo: molestias, preguntas, RPE 10 o lo que lleva más de 3 días
+  const cuentaMotivo = Object.fromEntries(MOTIVOS_REVISAR.map(([k]) => [k, porNombre.filter((x) => cumpleMotivo(x, k, ahora)).length]));
+  const buscados = motivo ? porNombre.filter((x) => cumpleMotivo(x, motivo, ahora)) : porNombre;
 
   const cuentas = { mensajes: 0, sesiones: 0, checkins: 0, videos: 0, recetas: 0, comunidad: 0, tareas: 0, objetivos: 0 };
   for (const x of buscados) {
@@ -253,7 +314,6 @@ export function Revisar({ bandeja, abrirAtleta }) {
   const conVideos = (d?.archivos || []).some((a) => a.tipo === 'video_tecnica');
   const esperan = videosQueEsperan((d?.archivos || []).filter((a) => a.tipo === 'video_tecnica'));   // (054) los que llevan 3 días o más
   const claveEspera = (x) => { const f = fechaItem(x); return f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? `${f}T12:00:00` : f; };
-  const ahora = new Date();
   let grupos;
   if (agrupar === 'dia') {
     grupos = agruparPorDia(items, hoy);
@@ -264,6 +324,26 @@ export function Revisar({ bandeja, abrirAtleta }) {
     if (orden === 'espera') grupos = ordenarGruposPorEspera(grupos, claveEspera);
     else if (orden === 'urgente') grupos = ordenarUrgente(grupos, ahora);
   }
+  // (v0.196) lo fijado, arriba del todo
+  const fijadas = items.filter((x) => esFijada(ap.mapa, x.clave));
+  if (fijadas.length) {
+    const fuera = new Set(fijadas.map((x) => x.clave));
+    grupos = [{ id: 'fijadas', titulo: 'Fijadas arriba', icono: 'chincheta', atleta: null, items: fijadas, n: fijadas.length, tipos: fijadas.reduce((t, x) => ({ ...t, [x.tipo]: (t[x.tipo] || 0) + 1 }), {}) },
+      ...grupos.map((g) => { const its = g.items.filter((x) => !fuera.has(x.clave)); return { ...g, items: its, n: its.length }; }).filter((g) => g.items.length)];
+  }
+  // Todas, en el orden en que se ven (para uno a uno y la vista en dos columnas)
+  const plano = grupos.flatMap((g) => (plegados.has(g.id) && !columnas ? [] : g.items));
+  // En dos columnas: la elegida (o, si se ha ido, la que ocupa su sitio)
+  let iSel = plano.findIndex((x) => x.clave === sel);
+  if (iSel < 0) iSel = Math.min(selIdx.current, plano.length - 1);
+  const elegidaCol = columnas ? plano[iSel] || null : null;
+  if (columnas) selIdx.current = Math.max(0, iSel);
+  moverRef.current = (k) => {
+    const j = Math.max(0, Math.min(plano.length - 1, iSel + k));
+    setSel(plano[j]?.clave || null);
+    selIdx.current = j;
+    requestAnimationFrame(() => irA(caja.current?.querySelector('.revisar-col-panel .tarjeta-revisar')));
+  };
   const revisables = new Map(revisablesDe(items).map((x) => [x.clave, x]));
   const alternar = (id) => setPlegados((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const alternarElegida = (clave) => setElegidas((s) => { const n = new Set(s); if (n.has(clave)) n.delete(clave); else n.add(clave); return n; });
@@ -287,6 +367,14 @@ export function Revisar({ bandeja, abrirAtleta }) {
   };
   const visibleTotal = vistas.length - nPosp;
   const atletaHoja = hoja?.tipo === 'programar' ? hoja.atleta : null;
+  tras.current = {
+    listo: !!d && !bandeja.cargando,
+    aCero: !!d && d.total != null && visibleTotal === 0 && !nuevas.length,
+    fijadasFuera: d ? Object.keys(ap.mapa).filter((k) => ap.mapa[k]?.fijada && !todos.some((x) => x.clave === k)) : [],
+  };
+  const racha = textoRacha(rachaCeros(visibleTotal === 0 && d ? conDia(ceros, hoy) : ceros, hoy));
+  const hayTanda = tanda.current.revisadas + tanda.current.contestadas > 0;
+  const resumenTanda = hayTanda ? textoResumenTanda({ ...tanda.current, quedan: visibleTotal }) : '';
 
   return (
     <CtxRevisar.Provider value={compartido}>
@@ -324,6 +412,8 @@ export function Revisar({ bandeja, abrirAtleta }) {
               <button type="button" aria-pressed={agrupar === 'dia' ? 'true' : 'false'} onClick={() => setAgrupar('dia')}>Por día</button>
             </div>
             <button type="button" class="btn btn-peq solo-ancho" aria-pressed={compacta ? 'true' : 'false'} onClick={() => setCompacta(!compacta)}><Icono n="vista" /> Vista compacta</button>
+            {ancho && <button type="button" class="btn btn-peq revisar-columnas-btn" aria-pressed={columnas ? 'true' : 'false'} onClick={() => setVista(columnas ? 'tarjetas' : 'columnas')}><Icono n="enfoque" /> Dos columnas</button>}
+            <button type="button" class="btn btn-peq revisar-uno-btn" onClick={() => setUno(true)} aria-haspopup="dialog" disabled={!plano.length}><Icono n="play" /> Uno a uno</button>
             <button type="button" class="btn btn-peq revisar-elegir-btn" aria-pressed={eligiendo ? 'true' : 'false'} onClick={() => (eligiendo ? salirDeElegir() : setEligiendo(true))}><Icono n="hecho" /> {eligiendo ? 'Dejar de elegir' : 'Elegir varias'}</button>
           </div>
         )}
@@ -332,6 +422,13 @@ export function Revisar({ bandeja, abrirAtleta }) {
             <button key={k} aria-pressed={filtro === k ? 'true' : 'false'} onClick={() => setFiltro(k)}>{t}{k !== 'todo' ? ` (${cuentas[k]})` : ''}</button>
           ))}
         </div>
+        {(motivo || MOTIVOS_REVISAR.some(([k]) => cuentaMotivo[k] > 0)) && (
+          <div class="selector-chips revisar-motivos-chips" role="group" aria-label="Por motivo">
+            {MOTIVOS_REVISAR.map(([k, t]) => (cuentaMotivo[k] > 0 || motivo === k) && (
+              <button key={k} type="button" aria-pressed={motivo === k ? 'true' : 'false'} onClick={() => setMotivo(motivo === k ? null : k)}>{t} ({cuentaMotivo[k]})</button>
+            ))}
+          </div>
+        )}
         {(nPosp > 0 || verPospuestas) && (
           <button type="button" class="btn-texto mini revisar-pospuestas" aria-pressed={verPospuestas ? 'true' : 'false'} onClick={() => setVerPospuestas(!verPospuestas)}>
             <Icono n="reloj" /> {verPospuestas ? 'Volver a lo de hoy' : nPosp === 1 ? 'Ver la que has dejado para mañana' : `Ver las ${nPosp} que has dejado para mañana`}
@@ -352,10 +449,23 @@ export function Revisar({ bandeja, abrirAtleta }) {
         )}
         {conVideos && (filtro === 'todo' || filtro === 'videos') && <TiemposRevision objetivo={objetivo} setObjetivo={setObjetivo} />}
         {seguidos && <RevisionSeguida videos={d.archivos.filter((a) => a.tipo === 'video_tecnica')} abrirAtleta={abrirAtleta} alCerrar={() => { setSeguidos(false); recargar(); }} />}
-        {!d?.total ? <BandejaVacia cuenta={cuentaHoy.datos} /> : !visibles ? (
+        {!d?.total ? <BandejaVacia cuenta={cuentaHoy.datos} racha={racha} tanda={resumenTanda} /> : !visibles ? (
           <div class="panel panel-pad revisar-sin-resultados" role="status">
-            <p class="peq">{buscar.trim() ? `Nada por revisar de «${buscar.trim()}».` : verPospuestas ? 'No has dejado nada para mañana.' : 'Nada por revisar con este filtro.'}</p>
+            <p class="peq">{buscar.trim() ? `Nada por revisar de «${buscar.trim()}».` : verPospuestas ? 'No has dejado nada para mañana.' : visibleTotal === 0 ? 'Lo de hoy, al día: solo queda lo que has dejado para otro día.' : 'Nada por revisar con este filtro.'}</p>
             {buscar.trim() && <button type="button" class="btn btn-peq" onClick={() => setBuscar('')}>Quitar la búsqueda</button>}
+            {visibleTotal === 0 && racha && <p class="peq revisar-racha">{racha}.</p>}
+          </div>
+        ) : columnas ? (
+          <div class="revisar-columnas" ref={caja}>
+            <ListaColumnas items={plano} sel={elegidaCol?.clave || null} ahora={ahora} alElegir={(k) => { setSel(k); selIdx.current = plano.findIndex((x) => x.clave === k); requestAnimationFrame(() => irA(caja.current?.querySelector('.revisar-col-panel .tarjeta-revisar'))); }} />
+            <div class="revisar-col-panel">
+              {elegidaCol && (
+                <>
+                  {elegidaCol.atleta && ctx.datos?.[elegidaCol.atleta.id] && <p class="mini secundario revisar-col-ctx">{textoContexto(ctx.datos[elegidaCol.atleta.id], ahora)}</p>}
+                  <Deslizable key={elegidaCol.clave} clave={elegidaCol.clave}>{tarjeta(elegidaCol)}</Deslizable>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <div class={`rejilla-revisar ${compacta ? 'revisar-compacta' : ''}`} ref={caja}>
@@ -363,7 +473,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
               const c = g.atleta ? ctx.datos?.[g.atleta.id] : null;
               const suyas = g.items.map((x) => revisables.get(x.clave)).filter(Boolean);
               return (
-                <GrupoRevisar key={g.id} g={g} abierto={!plegados.has(g.id)} alternar={() => alternar(g.id)} urg={urgenciaGrupo(g.items, ahora)}
+                <GrupoRevisar key={g.id} g={g} abierto={!plegados.has(g.id)} alternar={() => alternar(g.id)} urg={g.id === 'fijadas' ? null : urgenciaGrupo(g.items, ahora)}
                   contexto={c ? textoContexto(c, ahora) : ''}
                   acciones={g.atleta && !eligiendo ? (
                     <>
@@ -398,13 +508,26 @@ export function Revisar({ bandeja, abrirAtleta }) {
             <button type="button" class="btn btn-peq" onClick={salirDeElegir}>Cancelar</button>
           </div>
         )}
+        {verResumen && resumenTanda && <p class="panel panel-pad peq revisar-resumen" role="status"><strong>Esta tanda:</strong> {resumenTanda}</p>}
         <div class="fila-envolver revisar-pie">
           <button type="button" class="btn-texto mini" onClick={() => setHoja({ tipo: 'hoy' })} aria-haspopup="dialog"><Icono n="historial" /> Lo que has revisado hoy</button>
+          <button type="button" class="btn-texto mini" onClick={() => setHoja({ tipo: 'tiempos' })} aria-haspopup="dialog"><Icono n="reloj" /> Tus tiempos</button>
+          <button type="button" class="btn-texto mini" onClick={() => setHoja({ tipo: 'frases' })} aria-haspopup="dialog"><Icono n="mensaje" /> Tus frases</button>
+          <button type="button" class="btn-texto mini solo-ancho" onClick={() => setHoja({ tipo: 'teclas' })} aria-haspopup="dialog"><Icono n="teclado" /> Teclas</button>
+          {hayTanda && <button type="button" class="btn-texto mini" aria-expanded={verResumen ? 'true' : 'false'} onClick={() => setVerResumen(!verResumen)}><Icono n="progreso" /> Resumen de esta tanda</button>}
+          {racha && visibleTotal > 0 && <span class="mini secundario revisar-racha-chip"><Icono n="llama" /> {racha}</span>}
         </div>
-        <p class="mini terciario">Comentar algo lo da por revisado; deslizar una tarjeta a la derecha, también. «Mañana» la aparta hasta mañana (en este aparato). Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
-        {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>v</kbd> visto, <kbd>m</kbd> mañana, <kbd>o</kbd> abrir su ficha.</p>}
+        <p class="mini terciario">Comentar algo lo da por revisado; deslizar una tarjeta a la derecha, también. «Mañana» la aparta hasta mañana{ap.enBase ? '' : ' (en este aparato)'}. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
+        {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>v</kbd> visto, <kbd>m</kbd> mañana, <kbd>p</kbd> programar, <kbd>u</kbd> deshacer, <kbd>/</kbd> buscar, <kbd>?</kbd> todas, <kbd>o</kbd> abrir su ficha.</p>}
+        {uno && <UnoAUno items={plano} render={(x) => <Deslizable clave={x.clave}>{tarjeta(x)}</Deslizable>} alCerrar={() => setUno(false)} />}
         {hoja?.tipo === 'voz' && <HojaVoz atleta={hoja.atleta} cita={hoja.cita || null} respondeA={hoja.respondeA || null} alCerrar={() => setHoja(null)} alEnviado={hoja.alEnviado} />}
         {hoja?.tipo === 'hoy' && <HojaRevisadosHoy alCerrar={() => setHoja(null)} alCambio={recargar} />}
+        {hoja?.tipo === 'tiempos' && <HojaTiempos alCerrar={() => setHoja(null)} racha={racha} />}
+        {hoja?.tipo === 'teclas' && <HojaAtajos alCerrar={() => setHoja(null)} />}
+        {hoja?.tipo === 'frases' && <HojaFrases generales={fr.generales} guardarGenerales={fr.guardar} porTipo={pf.porTipo} setPorTipo={pf.setPorTipo} vistoPropio={pf.vistoPropio} setVisto={pf.setVisto} alCerrar={() => setHoja(null)} />}
+        {hoja?.tipo === 'tarea' && <HojaNuevaTarea atleta={hoja.atleta} inicial={hoja.inicial || {}} alCerrar={() => setHoja(null)} />}
+        {hoja?.tipo === 'nota' && <HojaNotaRevision atleta={hoja.atleta} texto={hoja.texto || ''} alCerrar={() => setHoja(null)} />}
+        {hoja?.tipo === 'fotos' && <HojaFotos foto={hoja.foto} alCerrar={() => setHoja(null)} />}
         {atletaHoja && (
           <HojaProgramar f={{ atleta_id: atletaHoja.id, nombre: atletaHoja.nombre || 'Atleta', servicio: atletaHoja.entrenamiento === false ? 'nutricion' : 'ambos', bloque: ctx.datos?.[atletaHoja.id]?.bloqueId ? { id: ctx.datos[atletaHoja.id].bloqueId } : null }}
             abrirAtleta={(id, p, x) => { setHoja(null); abrirAtleta(id, p, x); }} alCerrar={() => setHoja(null)} />
@@ -425,7 +548,7 @@ function GrupoRevisar({ g, abierto, alternar, children, urg = null, contexto = '
     <section class={`grupo-revisar ${abierto ? '' : 'plegado'} ${g.titulo ? 'grupo-dia' : ''}`} aria-labelledby={`${id}-cab`}>
       <h2 class="grupo-revisar-h">
         <button type="button" id={`${id}-cab`} class="grupo-revisar-cab" aria-expanded={abierto ? 'true' : 'false'} aria-controls={abierto ? id : undefined} onClick={alternar}>
-          {g.titulo ? <span class="ico-reporte ico-dia" aria-hidden="true"><Icono n="calendario" /></span> : g.atleta ? <Avatar nombre={nombre} foto={g.atleta.foto} /> : <span class="ico-reporte" aria-hidden="true"><Icono n="bandera" /></span>}
+          {g.titulo ? <span class="ico-reporte ico-dia" aria-hidden="true"><Icono n={g.icono || 'calendario'} /></span> : g.atleta ? <Avatar nombre={nombre} foto={g.atleta.foto} /> : <span class="ico-reporte" aria-hidden="true"><Icono n="bandera" /></span>}
           <span class="pila-xs grupo-revisar-quien">
             <span class="grupo-revisar-nombre">{nombre}{urg?.nivel && <span class={`revisar-urg urg-${urg.nivel}`} title={urg.motivos.join(' · ')} aria-hidden="true" />}</span>
             <span class="mini terciario">{tipos}</span>
@@ -555,15 +678,17 @@ function Cabecera({ atleta, tipo, cuando: c, abrirAtleta, pestana }) {
 }
 
 // Los botones de cada tarjeta: comentar, «Visto 💪» (contesta y lo da por revisado), revisado, nota de voz y «Mañana»
-function Acciones({ abierto, setAbierto, revisar, etiquetaComentar = 'Comentar', visto = null, voz = null, manana = null, extra = null }) {
+function Acciones({ abierto, setAbierto, revisar, etiquetaComentar = 'Comentar', visto = null, voz = null, manana = null, extra = null, mas = null }) {
+  const x = useContext(CtxRevisar);
   return (
     <div class="fila-envolver revisar-acciones">
       <button class="btn btn-peq" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}><Icono n="mensaje" /> {abierto ? 'Cerrar' : etiquetaComentar}</button>
-      {visto && <button type="button" class="btn btn-peq revisar-visto" onClick={visto}>{TEXTO_VISTO}</button>}
+      {visto && <button type="button" class="btn btn-peq revisar-visto" onClick={visto}>{x.visto || 'Visto 💪'}</button>}
       {revisar && <button class="btn btn-peq revisar-hecho" data-deshacer="" onClick={revisar}><Icono n="hecho" /> Revisado</button>}
       {voz && <button type="button" class="btn btn-peq revisar-voz" onClick={voz} aria-haspopup="dialog"><Icono n="micro" /> Voz</button>}
-      {manana && <button type="button" class="btn btn-peq btn-texto revisar-manana" onClick={manana}><Icono n="reloj" /> Mañana</button>}
+      {manana && <button type="button" class="btn btn-peq btn-texto revisar-manana" onClick={() => manana(1)}><Icono n="reloj" /> Mañana</button>}
       {extra}
+      {mas && <MasAcciones hoy={x.hoy} {...mas} apartar={manana} />}
     </div>
   );
 }
@@ -582,23 +707,40 @@ function TarjetaMensaje({ h, recargar, abrirAtleta }) {
   const contexto = c.sesion_id ? `en ${c.sesion?.nombre || 'una sesión'}` : c.checkin_id ? 'en su check-in' : archivoId ? 'en un vídeo' : 'mensaje';
   const primer = c.atleta.nombre.split(' ')[0];
   // (v0.195) «Visto 💪»: le contesta donde escribió (en su sesión, su check-in, su vídeo o el chat) y sus mensajes quedan leídos
-  const visto = async () => {
+  const contestar = async (texto) => {
     try {
       await x.quitarHilo(h, async () => {
-        if (c.sesion_id || c.checkin_id || archivoId) await api.comentar({ atletaId: c.atleta_id, sesionId: c.sesion_id || null, checkinId: c.checkin_id || null, archivoId, texto: TEXTO_VISTO, autor: 'coach', clienteId: nuevoId('visto') });
-        else await api.enviarMensaje(c.atleta_id, { texto: TEXTO_VISTO, autor: 'coach', respondeA: c.id, clienteId: nuevoId('visto') });
+        if (c.sesion_id || c.checkin_id || archivoId) await api.comentar({ atletaId: c.atleta_id, sesionId: c.sesion_id || null, checkinId: c.checkin_id || null, archivoId, texto, autor: 'coach', clienteId: nuevoId('visto') });
+        else await api.enviarMensaje(c.atleta_id, { texto, autor: 'coach', respondeA: c.id, clienteId: nuevoId('visto') });
         await api.marcarLeidos(h.ids);
       });
+      x.anotar('contestadas');
       aviso(`Contestado a ${primer}`, 'ok');
     } catch (e) { aviso(e.message, 'error'); }
   };
-  const voz = () => x.voz({ atleta: c.atleta, respondeA: c.id, alEnviado: () => { x.quitarHilo(h, () => api.marcarLeidos(h.ids)).catch(() => {}); } });
+  const visto = () => contestar(x.visto || 'Visto 💪');
+  // (v0.196) un emoji: en un mensaje del chat, como reacción a su último mensaje; si va pegado a algo, como respuesta
+  const emoji = async (e) => {
+    if (c.sesion_id || c.checkin_id || archivoId) return contestar(e);
+    try {
+      await x.quitarHilo(h, async () => { await api.reaccionarMensaje(c.id, e); await api.marcarLeidos(h.ids); });
+      x.anotar('contestadas');
+      aviso(`${e} a ${primer}`, 'ok');
+    } catch (err) { aviso(err.message, 'error'); }
+  };
+  const voz = () => x.voz({ atleta: c.atleta, respondeA: c.id, alEnviado: () => { x.anotar('contestadas'); x.quitarHilo(h, () => api.marcarLeidos(h.ids)).catch(() => {}); } });
+  const [ultimos, setUltimos] = useState(false);
+  const clave = `m-${h.clave}`;
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar mensaje-pendiente">
       <Cabecera atleta={c.atleta} tipo={contexto} cuando={cuando(c.creado_en)} abrirAtleta={abrirAtleta} pestana={c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : archivoId ? 'videos' : 'programa'} />
-      {!abierto && <p class="cita">«{c.texto}»{h.n > 1 ? <span class="terciario"> y {h.n - 1} más</span> : ''}</p>}
-      {abierto && <Hilo atletaId={c.atleta_id} sesionId={c.sesion_id} checkinId={c.checkin_id} archivoId={c.archivo_id} enChat={!!c.adjunto} nombreAtleta={c.atleta.nombre} alCambiar={recargar} alLeer={() => { leido.current = true; }} frasesRapidas={x.frases} />}
-      <Acciones abierto={abierto} setAbierto={alternar} etiquetaComentar="Responder" visto={visto} voz={voz} manana={() => x.apartar(`m-${h.clave}`)} />
+      {!abierto && (c.texto ? <p class="cita">«{c.texto}»{h.n > 1 ? <span class="terciario"> y {h.n - 1} más</span> : ''}</p> : h.n > 1 ? <p class="peq terciario">{h.n} mensajes</p> : null)}
+      {!abierto && h.audios?.length > 0 && <AudiosSinEscuchar audios={h.audios} />}
+      {!abierto && <button type="button" class="btn-texto mini revisar-ultimos-btn" aria-expanded={ultimos ? 'true' : 'false'} onClick={() => setUltimos(!ultimos)}>{ultimos ? 'Ocultar lo anterior' : 'Lo último que os habéis dicho'}</button>}
+      {!abierto && ultimos && <UltimosMensajes atletaId={c.atleta_id} nombre={c.atleta.nombre} />}
+      {abierto && <Hilo atletaId={c.atleta_id} sesionId={c.sesion_id} checkinId={c.checkin_id} archivoId={c.archivo_id} enChat={!!c.adjunto} nombreAtleta={c.atleta.nombre} alCambiar={() => { x.anotar('contestadas'); recargar(); }} alLeer={() => { leido.current = true; }} frasesRapidas={x.frasesDe('todo')} />}
+      <Acciones abierto={abierto} setAbierto={alternar} etiquetaComentar="Responder" visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}
+        mas={{ emoji, tarea: () => x.tarea(c.atleta), nota: () => x.nota(c.atleta, c.texto ? `Su mensaje: «${c.texto.slice(0, 120)}»` : ''), fijada: x.esFijada(clave), fijar: () => x.fijar(clave) }} />
     </article>
   );
 }
@@ -609,11 +751,15 @@ function TarjetaSesion({ s, recargar, quitar, abrirAtleta }) {
   const [abierto, setAbierto] = useState(false);
   const [detalle, setDetalle] = useState(false);
   const primer = s.atleta.nombre.split(' ')[0];
-  const revisar = async () => { try { await quitar('sesiones', s.id, () => api.marcarRevisado('sesion', s.id)); aviso('Sesión revisada', 'ok', deshacer(api, 'sesion', s.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
-  const visto = async () => { try { await quitar('sesiones', s.id, () => api.comentar({ atletaId: s.atleta.id, sesionId: s.id, texto: TEXTO_VISTO, autor: 'coach', clienteId: nuevoId('visto') })); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } };
-  const voz = () => x.voz({ atleta: s.atleta, cita: `Sobre tu sesión «${s.nombre}» 👆`, alEnviado: () => { quitar('sesiones', s.id, () => api.marcarRevisado('sesion', s.id)).catch(() => {}); } });
+  const revisar = async () => { try { await quitar('sesiones', s.id, () => api.marcarRevisado('sesion', s.id)); x.anotar('revisadas'); aviso('Sesión revisada', 'ok', deshacer(api, 'sesion', s.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
+  const contestar = async (texto) => { try { await quitar('sesiones', s.id, () => api.comentar({ atletaId: s.atleta.id, sesionId: s.id, texto, autor: 'coach', clienteId: nuevoId('visto') })); x.anotar('contestadas'); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } };
+  const visto = () => contestar(x.visto || 'Visto 💪');
+  const voz = () => x.voz({ atleta: s.atleta, cita: `Sobre tu sesión «${s.nombre}» 👆`, alEnviado: () => { x.anotar('contestadas'); quitar('sesiones', s.id, () => api.marcarRevisado('sesion', s.id)).catch(() => {}); } });
   // (v0.195) al comentar, la tarjeta se va (la base ya la da por revisada) y el foco pasa a la siguiente
-  const comentado = () => { quitar('sesiones', s.id, async () => {}).catch(() => {}); };
+  const comentado = () => { x.anotar('contestadas'); quitar('sesiones', s.id, async () => {}).catch(() => {}); };
+  const clave = `s-${s.id}`;
+  const m = x.marcas?.[s.id];
+  const pauta = s.cardio ? textoCardio(s.cardio) : '';
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={s.atleta} tipo={`S${s.semana?.numero ?? '?'}`} cuando={fmtConDia(s.fecha_realizada)} abrirAtleta={abrirAtleta} pestana="registro" />
@@ -625,13 +771,17 @@ function TarjetaSesion({ s, recargar, quitar, abrirAtleta }) {
         {s.rpeMax >= 10 && <span class="chip aviso">Alguna serie a RPE 10</span>}
         {s.cortas > 0 && <span class="chip aviso">{s.cortas} por debajo del rango</span>}
       </div>
-      <MarcasSesion m={x.marcas?.[s.id]} />
+      {pauta && <p class="mini secundario revisar-cardio"><span>Pautado: {pauta}</span>{cardioHechoValido(s.cardio_hecho) && <span> · Hecho: {textoCardioHecho(s.cardio_hecho)}</span>}</p>}
+      <MarcasSesion m={m} />
       {s.preparacion && <ChipLlegada preparacion={s.preparacion} soloAvisos />}
       {s.nota_atleta && <p class="cita">«{s.nota_atleta}»</p>}
       {s.series.pautadas > 0 && <button type="button" class="btn-texto mini revisar-ver-series" aria-expanded={detalle ? 'true' : 'false'} onClick={() => setDetalle(!detalle)}><Icono n={detalle ? 'arriba' : 'abajo'} /> {detalle ? 'Ocultar las series' : 'Ver serie a serie'}</button>}
+      {detalle && m?.principal && <Linea puntos={m.principal.puntos} etiqueta={`${m.principal.ejercicio}, 1RM estimado`} unidad=" kg" rangoMin={5} />}
       {detalle && <DetalleSesion s={s} />}
-      {abierto && <Hilo atletaId={s.atleta.id} sesionId={s.id} nombreAtleta={s.atleta.nombre} alCambiar={comentado} frasesRapidas={x.frases} />}
-      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} visto={visto} voz={voz} manana={() => x.apartar(`s-${s.id}`)}
+      {abierto && <Hilo atletaId={s.atleta.id} sesionId={s.id} nombreAtleta={s.atleta.nombre} alCambiar={comentado} frasesRapidas={x.frasesDe('sesiones')} />}
+      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}
+        mas={{ emoji: contestar, tarea: () => x.tarea(s.atleta), video: () => x.tarea(s.atleta, { tipo: 'video', titulo: m?.principal ? `Grábame ${m.principal.ejercicio.toLowerCase()}` : 'Grábame un vídeo de técnica', ejercicio_id: m?.principal?.ejercicio_id || '' }),
+          nota: () => x.nota(s.atleta, `${s.nombre}${s.rpe_sesion ? `, esfuerzo ${num(s.rpe_sesion)}` : ''}${s.nota_atleta ? `: «${s.nota_atleta.slice(0, 100)}»` : ''}`), fijada: x.esFijada(clave), fijar: () => x.fijar(clave) }}
         extra={s.atleta.entrenamiento !== false ? <button type="button" class="btn btn-peq btn-texto revisar-programar" onClick={() => x.programar(s.atleta)}><Icono n="editar" /> Programar</button> : null} />
     </article>
   );
@@ -642,10 +792,12 @@ function TarjetaCheckin({ c, recargar, quitar, abrirAtleta }) {
   const x = useContext(CtxRevisar);
   const [abierto, setAbierto] = useState(false);
   const primer = c.atleta.nombre.split(' ')[0];
-  const revisar = async () => { try { await quitar('checkins', c.id, () => api.marcarRevisado('checkin', c.id)); aviso('Check-in revisado', 'ok', deshacer(api, 'checkin', c.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
-  const visto = async () => { try { await quitar('checkins', c.id, () => api.comentar({ atletaId: c.atleta.id, checkinId: c.id, texto: TEXTO_VISTO, autor: 'coach', clienteId: nuevoId('visto') })); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } };
-  const voz = () => x.voz({ atleta: c.atleta, cita: 'Sobre tu check-in 👆', alEnviado: () => { quitar('checkins', c.id, () => api.marcarRevisado('checkin', c.id)).catch(() => {}); } });
-  const comentado = () => { quitar('checkins', c.id, async () => {}).catch(() => {}); };
+  const revisar = async () => { try { await quitar('checkins', c.id, () => api.marcarRevisado('checkin', c.id)); x.anotar('revisadas'); aviso('Check-in revisado', 'ok', deshacer(api, 'checkin', c.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
+  const contestar = async (texto) => { try { await quitar('checkins', c.id, () => api.comentar({ atletaId: c.atleta.id, checkinId: c.id, texto, autor: 'coach', clienteId: nuevoId('visto') })); x.anotar('contestadas'); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } };
+  const visto = () => contestar(x.visto || 'Visto 💪');
+  const voz = () => x.voz({ atleta: c.atleta, cita: 'Sobre tu check-in 👆', alEnviado: () => { x.anotar('contestadas'); quitar('checkins', c.id, () => api.marcarRevisado('checkin', c.id)).catch(() => {}); } });
+  const comentado = () => { x.anotar('contestadas'); quitar('checkins', c.id, async () => {}).catch(() => {}); };
+  const clave = `c-${c.id}`;
   const adh = [c.adherencia_desayuno, c.adherencia_comida, c.adherencia_merienda, c.adherencia_cena].filter(Boolean);
   const mediaAdh = adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null;
   return (
@@ -663,8 +815,9 @@ function TarjetaCheckin({ c, recargar, quitar, abrirAtleta }) {
       <CambiosCheckin c={c} />
       {(c.respuestasLeidas || []).filter((r) => r.pregunta.tipo === 'texto').map((r) => <p key={r.pregunta.id} class="peq"><span class="secundario">{r.pregunta.texto}</span> «{r.texto}»</p>)}
       {c.notas && <p class="cita">«{c.notas}»</p>}
-      {abierto && <Hilo atletaId={c.atleta.id} checkinId={c.id} nombreAtleta={c.atleta.nombre} alCambiar={comentado} frasesRapidas={x.frases} />}
-      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} visto={visto} voz={voz} manana={() => x.apartar(`c-${c.id}`)}
+      {abierto && <Hilo atletaId={c.atleta.id} checkinId={c.id} nombreAtleta={c.atleta.nombre} alCambiar={comentado} frasesRapidas={x.frasesDe('checkins')} />}
+      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}
+        mas={{ emoji: contestar, tarea: () => x.tarea(c.atleta), nota: () => x.nota(c.atleta, c.notas ? `Del check-in: «${c.notas.slice(0, 120)}»` : 'Del check-in: '), fijada: x.esFijada(clave), fijar: () => x.fijar(clave) }}
         extra={c.atleta.entrenamiento !== false ? <button type="button" class="btn btn-peq btn-texto revisar-programar" onClick={() => x.programar(c.atleta)}><Icono n="editar" /> Programar</button> : null} />
     </article>
   );
@@ -677,11 +830,13 @@ function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_RE
   // (v0.57) una repetición de un vídeo corregido: lado a lado con el original
   const [comparar, setComparar] = useState(null);
   const verOriginal = async () => { try { const o = await api.archivo(a.repite_de); if (!o) { aviso('El original ya no está', 'error'); return; } setComparar([o, a]); } catch (e) { aviso(e.message, 'error'); } };
-  const revisar = async () => { try { await quitar('archivos', a.id, () => api.marcarRevisado('archivo', a.id)); aviso('Vídeo revisado', 'ok', deshacer(api, 'archivo', a.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
+  const revisar = async () => { try { await quitar('archivos', a.id, () => api.marcarRevisado('archivo', a.id)); x.anotar('revisadas'); aviso('Vídeo revisado', 'ok', deshacer(api, 'archivo', a.id, recargar)); } catch (e) { aviso(e.message, 'error'); } };
   const primer = a.atleta.nombre.split(' ')[0];
   const esVideo = a.tipo === 'video_tecnica';
-  const visto = esVideo ? async () => { try { await quitar('archivos', a.id, () => api.comentar({ atletaId: a.atleta.id, archivoId: a.id, texto: TEXTO_VISTO, autor: 'coach', clienteId: nuevoId('visto') })); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } } : null;
-  const voz = () => x.voz({ atleta: a.atleta, cita: `Sobre tu ${esVideo ? `vídeo${a.ejercicio?.nombre ? ` de ${a.ejercicio.nombre}` : ''}` : 'foto de progreso'} 👆`, alEnviado: () => { quitar('archivos', a.id, () => api.marcarRevisado('archivo', a.id)).catch(() => {}); } });
+  const contestar = async (texto) => { try { await quitar('archivos', a.id, () => api.comentar({ atletaId: a.atleta.id, archivoId: a.id, texto, autor: 'coach', clienteId: nuevoId('visto') })); x.anotar('contestadas'); aviso(`Contestado a ${primer}`, 'ok'); } catch (e) { aviso(e.message, 'error'); } };
+  const visto = esVideo ? () => contestar(x.visto || 'Visto 💪') : null;
+  const voz = () => x.voz({ atleta: a.atleta, cita: `Sobre tu ${esVideo ? `vídeo${a.ejercicio?.nombre ? ` de ${a.ejercicio.nombre}` : ''}` : 'foto de progreso'} 👆`, alEnviado: () => { x.anotar('contestadas'); quitar('archivos', a.id, () => api.marcarRevisado('archivo', a.id)).catch(() => {}); } });
+  const clave = `v-${a.id}`;
   return (
     <article tabIndex={-1} class="panel panel-pad pila-s tarjeta-revisar">
       <Cabecera atleta={a.atleta} tipo={a.tipo === 'foto_progreso' ? 'Foto de progreso' : a.ejercicio?.nombre ? `Vídeo: ${a.ejercicio.nombre}` : 'Vídeo de técnica'} cuando={fmtConDia(a.fecha)} abrirAtleta={abrirAtleta} pestana="videos" />
@@ -693,6 +848,7 @@ function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_RE
           {a.repite_de && <button type="button" class="btn btn-peq" onClick={verOriginal}><Icono n="duplicar" /> Repetición: comparar con el original</button>}
         </div>
       )}
+      {a.tipo === 'foto_progreso' && <button type="button" class="btn-texto mini revisar-fotos-btn" onClick={() => x.fotos(a)} aria-haspopup="dialog"><Icono n="imagen" /> Comparar con la anterior</button>}
       {comparar && <CompararVideos videos={comparar} nombreDe={(v) => (v.id === a.id ? 'Repetición' : 'Original')} inicialA={a.id} inicialB={comparar[0].id} alCerrar={() => setComparar(null)} />}
       {!abierto ? (
         <div class="revisar-video">
@@ -701,8 +857,10 @@ function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_RE
           {!abierto && a.autoevaluacion && (a.autoevaluacion.nota || a.autoevaluacion.rpe != null) && <p class="peq secundario">{textoAutoevaluacion(a.autoevaluacion, a.atleta?.nombre).titulo} {[a.autoevaluacion.rpe != null ? textoAutoevaluacion(a.autoevaluacion).rpe : null, a.autoevaluacion.nota ? `«${a.autoevaluacion.nota}»` : null].filter(Boolean).join(' · ')}</p>}
         </div>
       ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
-      {abierto && <><VerArchivo archivo={a} />{esVideo && <LoQueLeDijiste a={a} />}{esVideo && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} alCambiar={recargar} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} frasesRapidas={x.frases} /></>}
-      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" visto={visto} voz={voz} manana={() => x.apartar(`v-${a.id}`)} />
+      {abierto && <><VerArchivo archivo={a} />{esVideo && <LoQueLeDijiste a={a} />}{esVideo && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} frasesRapidas={x.frasesDe('videos')} alCambiar={() => { x.anotar('contestadas'); recargar(); }} /></>}
+      <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}
+        mas={{ emoji: esVideo ? contestar : null, tarea: () => x.tarea(a.atleta), video: esVideo ? () => x.tarea(a.atleta, { tipo: 'video', titulo: a.ejercicio?.nombre ? `Repíteme ${a.ejercicio.nombre.toLowerCase()}` : 'Repíteme el vídeo', ejercicio_id: a.ejercicio?.id || a.ejercicio_id || '' }) : null,
+          nota: () => x.nota(a.atleta, esVideo ? `Vídeo de ${a.ejercicio?.nombre || 'técnica'}${a.nota_atleta ? `: «${a.nota_atleta.slice(0, 100)}»` : ''}` : 'Foto de progreso nueva'), fijada: x.esFijada(clave), fijar: () => x.fijar(clave) }} />
     </article>
   );
 }
@@ -756,7 +914,8 @@ function TarjetaSesionVideos({ g, recargar, abrirAtleta, objetivo = OBJETIVO_REV
       <div class="fila-envolver">
         <button type="button" class="btn btn-peq btn-primario" onClick={() => setAbierta(true)} aria-haspopup="dialog"><Icono n="video" /> Revisar la sesión</button>
         {separar && <button type="button" class="btn btn-peq" onClick={separar}>Ver uno a uno</button>}
-        {clave && <button type="button" class="btn btn-peq btn-texto revisar-manana" onClick={() => x.apartar(clave)}><Icono n="reloj" /> Mañana</button>}
+        {clave && <button type="button" class="btn btn-peq btn-texto revisar-manana" onClick={() => x.apartar(clave, 1)}><Icono n="reloj" /> Mañana</button>}
+        {clave && <button type="button" class="btn btn-peq btn-texto revisar-fijar" aria-pressed={x.esFijada(clave) ? 'true' : 'false'} onClick={() => x.fijar(clave)}><Icono n="chincheta" /> {x.esFijada(clave) ? 'Quitar de arriba' : 'Fijar arriba'}</button>}
       </div>
     </article>
   );
@@ -914,11 +1073,13 @@ function FotoAvisada({ ruta, n = 0, total = 0 }) {
 
 // Bandeja vacía (v0.50): «Todo al día», con la barra en su soporte en línea y el lobo
 // (v0.195) y lo que llevas revisado hoy
-function BandejaVacia({ cuenta = null }) {
+function BandejaVacia({ cuenta = null, racha = '', tanda = '' }) {
   return (
     <div class="panel bandeja-vacia">
       <Vacio ilustracion="todo" titulo="Todo al día">Tus atletas tienen respuesta: aquí saldrá lo nuevo de sus sesiones, check-ins, mensajes y vídeos.</Vacio>
       {cuenta > 0 && <p class="peq revisar-cuenta-dia" role="status">{textoCuentaDia(cuenta)}</p>}
+      {tanda && <p class="peq revisar-cuenta-dia"><strong>Esta tanda:</strong> {tanda}</p>}
+      {racha && <p class="peq revisar-racha"><Icono n="llama" /> {racha}.</p>}
     </div>
   );
 }

@@ -68,7 +68,7 @@ import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos
 import { umbralValido } from '../logica/cargaVelocidad.js';
 import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
-import { semanaDelBloque, marcasSesion } from '../logica/revisar.js';
+import { semanaDelBloque, marcasSesion, principalSesion, mapaApartados, tiemposDe, notaConMas } from '../logica/revisar.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -4523,9 +4523,76 @@ export function crearApi(backend) {
       for (const [atletaId, lista] of Object.entries(porAtleta)) {
         const series = await api.historial(atletaId).catch(() => null);
         if (!series) continue;
-        for (const s of lista) out[s.id] = marcasSesion(series, s);
+        for (const s of lista) out[s.id] = { ...marcasSesion(series, s), principal: principalSesion(series, s) };
       }
       return out;
+    },
+    // (v0.196, 083) ¿Está la tabla de lo apartado y fijado en «Revisar»? true / false (sin la 083) / null (no se sabe)
+    async revisar083() {
+      if (!api._v083) {
+        const pr = (async () => {
+          try { await b.select('revisar_apartados', { limit: 1, cols: 'clave' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/revisar_apartados|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v083 = pr;
+        pr.then((x) => { if (x == null && api._v083 === pr) api._v083 = null; });
+      }
+      return api._v083;
+    },
+    // (v0.196, 083) lo apartado y fijado del coach: { clave: { hasta, fijada } }, o null sin la 083 (entonces, en el aparato).
+    // Lo que ya volvió (y no está fijado) se borra de paso
+    async apartadosRevisar(hoy = fechaMadrid()) {
+      if ((await api.revisar083()) !== true) return null;
+      const filas = await b.select('revisar_apartados', { cols: 'clave,hasta,fijada' });
+      const { mapa, viejas } = mapaApartados(filas, hoy);
+      if (viejas.length) b.delete('revisar_apartados', { in: { clave: viejas } }).catch(() => {});
+      return mapa;
+    },
+    // (v0.196, 083) apartar una tarjeta hasta un día y/o fijarla arriba (sin nada, se quita). false sin la 083
+    async guardarApartado(clave, { hasta = null, fijada = false } = {}) {
+      if ((await api.revisar083()) !== true) return false;
+      await b.delete('revisar_apartados', { eq: { clave } });
+      if (hasta || fijada) await b.insert('revisar_apartados', [{ usuario_id: uid(), clave, hasta: hasta || null, fijada: !!fijada }]);
+      return true;
+    },
+    // (v0.196) una nota para la revisión semanal de esta semana (se suma a la que haya)
+    async notaParaRevision(atletaId, texto, hoy = fechaMadrid()) {
+      const lunes = lunesDe(hoy);
+      const [fila] = await b.select('revisiones_semanales', { eq: { atleta_id: atletaId, lunes } }).catch(() => []);
+      return api.marcarRevision(atletaId, lunes, { nota: notaConMas(fila?.nota, texto) });
+    },
+    // (v0.196) tus tiempos en «Revisar», de todo (30 días): de que llega a que lo das por revisado (o lo contestas)
+    // { sesiones, checkins, videos, mensajes, todo: { mediana, p90, n }, semana }
+    async tiemposRevisar({ ahora = Date.now() } = {}) {
+      const desde = new Date(ahora - 30 * 864e5).toISOString();
+      const lunes = new Date(`${lunesDe(hoyISO(new Date(ahora)))}T00:00:00`).toISOString();
+      const sel = (t, o) => b.select(t, o).catch(() => []);
+      const [ses, cks, arcs, msgs] = await Promise.all([
+        sel('sesiones', { gte: { revisada_en: desde }, cols: 'id,fecha_realizada,revisada_en' }),
+        sel('checkins', { gte: { revisado_en: desde }, cols: 'id,creado_en,revisado_en' }),
+        sel('archivos', { gte: { revisado_en: desde }, eq: { tipo: 'video_tecnica' }, cols: 'id,creado_en,revisado_en' }),
+        sel('comentarios', { eq: { autor: 'atleta' }, gte: { leido_en: desde }, cols: 'id,creado_en,leido_en' }),
+      ]);
+      const P = {
+        sesiones: ses.filter((x) => x.fecha_realizada).map((x) => ({ llega: x.fecha_realizada, hecho: x.revisada_en })),
+        checkins: cks.filter((x) => x.creado_en).map((x) => ({ llega: x.creado_en, hecho: x.revisado_en })),
+        videos: arcs.map((x) => ({ llega: x.creado_en, hecho: x.revisado_en })),
+        mensajes: msgs.map((x) => ({ llega: x.creado_en, hecho: x.leido_en })),
+      };
+      const out = Object.fromEntries(Object.entries(P).map(([k, v]) => [k, tiemposDe(v)]));
+      out.todo = tiemposDe(Object.values(P).flat());
+      out.semana = [...ses.map((x) => x.revisada_en), ...cks.map((x) => x.revisado_en), ...arcs.map((x) => x.revisado_en)].filter((x) => x && x >= lunes).length;
+      return out;
+    },
+    // (v0.196) la foto de progreso anterior a esta, del mismo atleta (o null)
+    async fotoAnterior(foto) {
+      if (!foto?.atleta_id) return null;
+      const filas = await b.select('archivos', { eq: { atleta_id: foto.atleta_id, tipo: 'foto_progreso' }, order: [['creado_en', 'desc']], limit: 12 }).catch(() => []);
+      return filas.find((x) => x.id !== foto.id && x.creado_en < foto.creado_en) || null;
     },
     // (v0.195) Revisar: lo que has dado por revisado hoy (para devolverlo a pendiente si fue sin querer).
     // [{ tipo, id, atleta, titulo, revisado_en }], lo último primero
@@ -6534,7 +6601,7 @@ export function crearApi(backend) {
       // esperas seguidas; ahora, dos). Lo que se arma con ello es lo mismo.
       const vids = archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta);
       const [
-        [semanas, bloques], [pautas, series], molestias, sesionesAdj, preguntas, deVideos, deRecetas, comunidad, deTareas, previosCk,
+        [semanas, bloques], [pautas, series], molestias, sesionesAdj, preguntas, deVideos, deRecetas, comunidad, deTareas, audiosMsg, previosCk,
       ] = await Promise.all([
         (async () => {
           const semanas = porId(await b.select('semanas', { in: { id: unicos(sesiones.map((s) => s.semana_id)) } }));
@@ -6588,6 +6655,13 @@ export function crearApi(backend) {
           ]);
           return { tareas, EJ, AR };
         })(),
+        // (v0.196) las notas de voz de los mensajes sin leer (para oírlas en la tarjeta)
+        (async () => {
+          const ids = unicos(comentarios.map((c) => c.archivo_id).filter(Boolean));
+          if (!ids.length) return {};
+          const xs = await b.select('archivos', { in: { id: ids } }).catch(() => []);
+          return Object.fromEntries(xs.filter((x) => x.tipo === 'audio').map((x) => [x.id, { id: x.id, ruta: x.ruta, duracion_seg: x.duracion_seg ?? null, onda: x.onda || null, mime: x.mime || null }]));
+        })(),
         // (v0.195) el check-in anterior de cada uno (para ver qué ha cambiado sin abrir su ficha)
         checkins.length ? b.select('checkins', { in: { atleta_id: unicos(checkins.map((c) => c.atleta_id)) }, gte: { semana_inicio: sumarDias(desde, -35) }, order: [['semana_inicio', 'desc']] }).catch(() => []) : [],
       ]);
@@ -6609,7 +6683,8 @@ export function crearApi(backend) {
         }).filter((s) => s.atleta),
         checkins: checkins.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, molestias: molestias.filter((m) => m.atleta_id === c.atleta_id && m.semana_inicio === c.semana_inicio && m.intensidad > 0),
           respuestasLeidas: respuestasDe(c, preguntas), anterior: previosCk.find((x) => x.atleta_id === c.atleta_id && x.semana_inicio < c.semana_inicio) || null })).filter((c) => c.atleta),
-        comentarios: comentarios.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, sesion: c.sesion_id ? todasSesiones[c.sesion_id] || null : null })).filter((c) => c.atleta),
+        comentarios: comentarios.map((c) => ({ ...c, atleta: A[c.atleta_id] || null, sesion: c.sesion_id ? todasSesiones[c.sesion_id] || null : null,
+          audio: c.archivo_id && audiosMsg[c.archivo_id] ? audiosMsg[c.archivo_id] : null })).filter((c) => c.atleta),
         archivos: vids,
         recetas: [],
       };

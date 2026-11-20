@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.196': {
+    coach: [
+      'Revisar: dos columnas en ordenador, uno a uno para todo, más teclas y el resumen de cada tanda. Tus frases por tipo y tu «Visto».',
+      'Desde la tarjeta: emoji, tarea, pedir un vídeo, nota para su revisión semanal y fijar arriba. Gráfica de la sesión y cardio.',
+      'Lo apartado y lo fijado, igual en el móvil y en el ordenador (migración 083). Tus tiempos de todo y tu racha dejándola a cero.',
+    ],
+  },
   '0.195': {
     coach: [
       'Revisar: busca por atleta, ordena por urgencia o agrupa por día. Cada atleta, con su semana del bloque y tu última respuesta.',

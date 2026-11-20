@@ -19,6 +19,8 @@ export const CLAVE_TABLA = { menu_fotos: 'entrada_id', atletas_imagenes: 'atleta
   revisiones_semanales: 'atleta_id,lunes',
   // v0.192 (migración 082): los ajustes de la revisión de cada coach
   revision_ajustes: 'usuario_id',
+  // v0.196 (migración 083): lo apartado o fijado en «Revisar»
+  revisar_apartados: 'usuario_id,clave',
   // v0.69 (migración 041): 💪 a un comentario y las bienvenidas a los nuevos
   comunidad_comentario_reacciones: 'comentario_id,autor_id', comunidad_bienvenidas: 'de,para',
   // v0.70 (migración 042): el reparto de los retos por equipos

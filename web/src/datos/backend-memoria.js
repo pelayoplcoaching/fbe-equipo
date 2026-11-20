@@ -72,6 +72,7 @@ const DEFECTOS = {
   revisiones_semanales: () => ({ hecha: false, nota: null, estado: null, actualizado_en: ahora() }),
   // Como la 082: los ajustes de la revisión de cada coach
   revision_ajustes: () => ({ frases: [], orden: [], modo: null, vista: null, actualizado_en: ahora() }),
+  revisar_apartados: () => ({ hasta: null, fijada: false, creado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null, resumen_sesion: false }),
@@ -192,7 +193,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x));
 // Tablas con una fila por atleta y sin «id» (su clave es atleta_id)
 const SIN_ID = ['menu_fotos', 'atletas_imagenes', 'videos_vistos', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'youtube_canal', 'cobros_atletas', 'comidas_atleta', 'menu_dias', 'recetas_favoritas', 'ejercicios_fichas', 'comunidad_miembros', 'comunidad_reacciones', 'comunidad_votos', 'comunidad_animos', 'comunidad_comentario_reacciones', 'comunidad_bienvenidas', 'comunidad_reto_equipos', 'comunidad_guardados', 'comunidad_evento_asistentes', 'apuntes_semanas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'presencia', 'chat_cupos', 'storage_por_borrar',
-  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_semanas', 'portadas'];
+  'conversacion_fijado', 'chat_silencios', 'listas_difusion_miembros', 'encuesta_votos', 'privacidad_vista', 'video_revisiones', 'tecnica_plantillas', 'video_autoevaluacion', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'revisar_apartados', 'carrera_atleta', 'carrera_semanas', 'portadas'];
 // Como la 032: los seis emojis del chat, y cuánto se puede hacer por hora (el coach no tiene cupo)
 const EMOJIS_CHAT = ['❤️', '👍', '💪', '😂', '😮', '🙏'];
 const CUPO_CHAT = { reaccion: 120, destacar: 120, edicion: 30, eliminar: 30, presencia: 30, silenciar: 30, voto: 120, autoevaluacion: 30 };
@@ -377,6 +378,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     revisiones_semanales: () => esCoach(),
     // Como la 082: los ajustes de la revisión, solo su coach
     revision_ajustes: (x) => esCoach() && x.usuario_id === sesion?.user.id,
+    // Como la 083: lo apartado o fijado en «Revisar», solo su coach
+    revisar_apartados: (x) => esCoach() && x.usuario_id === sesion?.user.id,
     // Como la 056: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
     carrera_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_eventos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
@@ -1242,6 +1245,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     umbrales_velocidad: (f) => umbralValido(f.vmin),
     // Como la 040: el lunes, un lunes; la nota, de 500 caracteres como mucho
     revisiones_semanales: (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f.lunes)) && new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && (f.nota == null || [...String(f.nota)].length <= 500) && (f.estado == null || ['esperando', 'programar'].includes(f.estado)),
+    // Como la 083: la clave de una tarjeta y, o un día, o fijada
+    revisar_apartados: (f) => /^[a-z]{1,2}-[A-Za-z0-9-]{1,80}$/.test(String(f.clave || '')) && (f.hasta != null || f.fijada === true) && (f.hasta == null || /^\d{4}-\d{2}-\d{2}$/.test(String(f.hasta))),
     // Como la 082 (revision_ajustes_validos)
     revision_ajustes: (f) => Array.isArray(f.frases) && f.frases.length <= 20 && f.frases.every((x) => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 300)
       && Array.isArray(f.orden) && f.orden.length <= 500 && f.orden.every((x) => typeof x === 'string' && /^[0-9a-fA-F-]{36}$/.test(x))
@@ -1360,7 +1365,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['revisar_apartados', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -1664,6 +1669,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     if (t === 'privacidad_vista') {
       prepararPrivacidad(nueva, null);
       if (tabla(t).some((x) => x.usuario_id === nueva.usuario_id)) throw new Error('duplicate key value violates unique constraint "privacidad_vista_pkey"');
+    }
+    // Como la 083: la suya (el usuario lo pone la base), de hoy a 60 días, una por tarjeta y hasta 500
+    if (t === 'revisar_apartados') {
+      nueva.usuario_id = sesion?.user.id || null;
+      if (!nueva.usuario_id || !esCoach()) throw sinPermiso();
+      const hoy = fMadrid();
+      const tope = new Date(`${hoy}T12:00:00Z`); tope.setUTCDate(tope.getUTCDate() + 60);
+      if (nueva.hasta != null && (nueva.hasta < hoy || nueva.hasta > tope.toISOString().slice(0, 10))) throw new Error('El día en que vuelve a salir tiene que ser de hoy a 60 días');
+      if (tabla(t).some((x) => x.usuario_id === nueva.usuario_id && x.clave === nueva.clave)) throw new Error('duplicate key value violates unique constraint "revisar_apartados_pkey"');
+      if (tabla(t).filter((x) => x.usuario_id === nueva.usuario_id).length >= 500) throw new Error('Tienes demasiadas tarjetas apartadas o fijadas (500)');
     }
     if (t === 'chat_silencios') {
       prepararSilencio(nueva, null);

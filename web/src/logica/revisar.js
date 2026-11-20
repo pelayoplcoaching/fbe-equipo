@@ -247,3 +247,151 @@ export function textoCuentaDia(n) {
   if (!n) return '';
   return n === 1 ? 'Hoy has revisado 1 cosa.' : `Hoy has revisado ${n} cosas.`;
 }
+
+// ================================================================ v0.196: segunda tanda
+// ---------------------------------------------------------------- la gráfica del ejercicio principal de la sesión
+// El que más series tiene en la sesión (a igualdad, el de más 1RM estimado) y su mejor 1RM estimado en cada una de sus
+// últimas sesiones (hasta 8, terminando en esta): { ejercicio_id, ejercicio, puntos: [{ fecha, valor }] } o null
+export function principalSesion(series, sesion, max = 8) {
+  if (!sesion?.id) return null;
+  const de = (series || []).filter((s) => s.sesion_id === sesion.id && Number(s.reps) > 0 && s.ejercicio_id);
+  if (!de.length) return null;
+  const cuenta = new Map();
+  for (const s of de) {
+    const c = cuenta.get(s.ejercicio_id) || { n: 0, v: 0, nombre: s.ejercicio || 'Ejercicio' };
+    c.n++; c.v = Math.max(c.v, e1rmDe(s) || 0);
+    cuenta.set(s.ejercicio_id, c);
+  }
+  const [id, info] = [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n || b[1].v - a[1].v)[0];
+  const dia = sesion.fecha_realizada || de[0].fecha;
+  const porSesion = new Map();
+  for (const s of series || []) {
+    if (s.ejercicio_id !== id || !s.fecha || s.fecha > dia || !s.sesion_id) continue;
+    const v = e1rmDe(s);
+    if (v == null) continue;
+    const x = porSesion.get(s.sesion_id);
+    if (!x || v > x.valor) porSesion.set(s.sesion_id, { fecha: s.fecha, valor: Math.round(v * 10) / 10, esta: s.sesion_id === sesion.id });
+  }
+  const puntos = [...porSesion.values()].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0)).slice(-max);
+  return puntos.length >= 2 ? { ejercicio_id: id, ejercicio: info.nombre, puntos } : null;
+}
+
+// ---------------------------------------------------------------- filtrar por motivo
+export const MOTIVOS_REVISAR = [['molestias', 'Molestias'], ['preguntas', 'Preguntas'], ['rpe10', 'RPE 10'], ['esperando', 'Más de 3 días']];
+const PRUEBA_MOTIVO = {
+  molestias: (m) => /^Molestia|Llegó en un día difícil/.test(m),
+  preguntas: (m) => m === 'Te pregunta algo',
+  rpe10: (m) => m === 'Alguna serie a RPE 10',
+  esperando: (m) => m === 'Lleva más de 3 días esperando',
+};
+export const cumpleMotivo = (x, k, ahora = new Date()) => !k || urgenciaItem(x, ahora).motivos.some(PRUEBA_MOTIVO[k] || (() => false));
+
+// ---------------------------------------------------------------- tus frases, por tipo
+export const TIPOS_FRASES = [['sesiones', 'Para sesiones'], ['checkins', 'Para check-ins'], ['videos', 'Para vídeos'], ['todo', 'Para todo']];
+// Las de ese tipo primero y luego las de todo, sin repetir (hasta 8)
+export function frasesPara(tipo, porTipo, generales) {
+  const propias = tipo && tipo !== 'todo' ? (porTipo?.[tipo] || []) : [];
+  return [...new Set([...propias, ...(generales || [])].map((x) => String(x || '').trim()).filter(Boolean))].slice(0, 8);
+}
+export function conFraseTipo(porTipo, tipo, frase, max = 20) {
+  const t = String(frase || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!t) return porTipo || {};
+  const lista = (porTipo?.[tipo] || []).filter((x) => x !== t);
+  return { ...(porTipo || {}), [tipo]: [...lista, t].slice(-max) };
+}
+export const sinFraseTipo = (porTipo, tipo, frase) => ({ ...(porTipo || {}), [tipo]: (porTipo?.[tipo] || []).filter((x) => x !== frase) });
+// El texto de «Visto»: el tuyo (corto) o el de siempre
+export const textoVisto = (t) => { const x = String(t || '').replace(/\s+/g, ' ').trim().slice(0, 60); return x || 'Visto 💪'; };
+export const EMOJIS_REVISAR = ['👍', '💪', '❤️', '🙏'];
+
+// ---------------------------------------------------------------- «Mañana», con más opciones
+// Días hasta el próximo lunes (si hoy es lunes, el de la semana que viene)
+export function diasHastaLunes(hoy) {
+  const [y, m, d] = String(hoy).split('-').map(Number);
+  const dia = new Date(y, m - 1, d).getDay();   // 0 domingo … 6 sábado
+  return ((8 - dia) % 7) || 7;
+}
+export const OPCIONES_APARTAR = (hoy) => [['1', 'Mañana', 1], ['3', 'En 3 días', 3], ['lunes', 'El lunes', diasHastaLunes(hoy)]];
+// Las filas de la base (083) a un mapa { clave: { hasta, fijada } }; las pasadas y sin fijar, fuera (y se dicen aparte
+// para borrarlas)
+export function mapaApartados(filas, hoy) {
+  const mapa = {}, viejas = [];
+  for (const f of filas || []) {
+    const vale = f.fijada || (esDia(f.hasta) && f.hasta > hoy);
+    if (!vale) { viejas.push(f.clave); continue; }
+    mapa[f.clave] = { hasta: esDia(f.hasta) && f.hasta > hoy ? f.hasta : null, fijada: !!f.fijada };
+  }
+  return { mapa, viejas };
+}
+// Del mapa de «Mañana» de este aparato (de antes de la 083: { clave: 'YYYY-MM-DD' }) al de ahora
+export function mapaDesdeLocal(local, fijadas, hoy) {
+  const mapa = {};
+  for (const [k, d] of Object.entries(pospuestosVigentes(local, hoy))) mapa[k] = { hasta: d, fijada: false };
+  for (const k of fijadas || []) mapa[k] = { ...(mapa[k] || { hasta: null }), fijada: true };
+  return mapa;
+}
+export const apartadaHoy = (m, clave, hoy) => { const x = m?.[clave]; return !!(x && esDia(x.hasta) && x.hasta > hoy); };
+export const fijada = (m, clave) => !!m?.[clave]?.fijada;
+export { masDias as sumarDiasRevisar };
+
+// ---------------------------------------------------------------- tus tiempos, de todo
+const mediana = (xs) => { if (!xs.length) return null; const o = [...xs].sort((a, b) => a - b); const m = Math.floor(o.length / 2); return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2; };
+const p90 = (xs) => { if (!xs.length) return null; const o = [...xs].sort((a, b) => a - b); return o[Math.max(0, Math.ceil(0.9 * o.length) - 1)]; };
+// pares: [{ llega, hecho }] (instantes, o un día suelto: su mediodía). → { mediana, p90, n } en horas
+export function tiemposDe(pares) {
+  const t = (v) => (esDia(v) ? new Date(`${v}T12:00:00`).getTime() : Date.parse(v));
+  const hs = (pares || []).map((p) => (t(p.hecho) - t(p.llega)) / 3600000).filter((h) => Number.isFinite(h) && h >= 0);
+  return { mediana: mediana(hs), p90: p90(hs), n: hs.length };
+}
+
+// ---------------------------------------------------------------- la bandeja a cero, cada día
+export function conDia(dias, hoy, max = 90) { return [...new Set([...(dias || []).filter(esDia), hoy])].sort().slice(-max); }
+// Días seguidos (acabando hoy o ayer) en que la dejaste a cero
+export function rachaCeros(dias, hoy) {
+  const s = new Set((dias || []).filter(esDia));
+  let d = s.has(hoy) ? hoy : masDias(hoy, -1);
+  let n = 0;
+  while (s.has(d)) { n++; d = masDias(d, -1); }
+  return n;
+}
+export const textoRacha = (n) => (n >= 2 ? `${n} días seguidos dejándola a cero` : n === 1 ? 'Hoy la has dejado a cero' : '');
+
+// ---------------------------------------------------------------- el resumen de la tanda
+export function textoResumenTanda({ revisadas = 0, contestadas = 0, desde = null, quedan = 0 }, ahora = Date.now()) {
+  const min = desde ? Math.max(1, Math.round((ahora - desde) / 60000)) : null;
+  const partes = [];
+  partes.push(revisadas === 1 ? '1 revisada' : `${revisadas} revisadas`);
+  if (contestadas) partes.push(contestadas === 1 ? '1 contestada' : `${contestadas} contestadas`);
+  if (min) partes.push(min === 1 ? 'en 1 minuto' : `en ${min} minutos`);
+  return `${partes.join(', ')}. ${quedan ? (quedan === 1 ? 'Queda 1.' : `Quedan ${quedan}.`) : 'No queda nada.'}`;
+}
+
+// ---------------------------------------------------------------- las teclas
+export const ATAJOS_REVISAR = [
+  ['j / k', 'Bajar y subir (en dos columnas, la siguiente y la anterior)'], ['r', 'Responder'], ['e', 'Dar por revisado'], ['v', 'Visto'],
+  ['m', 'Para mañana'], ['p', 'Programar'], ['u', 'Deshacer lo último'], ['o', 'Abrir su ficha'], ['/', 'Buscar'], ['?', 'Ver estas teclas'],
+];
+
+// ---------------------------------------------------------------- la nota para la revisión semanal
+// La nota de la semana con lo nuevo al final (como mucho 500 caracteres, cortando lo más viejo si no cabe)
+export function notaConMas(nota, texto, max = 500) {
+  const nuevo = String(texto || '').replace(/\s+/g, ' ').trim();
+  const antes = String(nota || '').trim();
+  if (!nuevo) return antes;
+  let t = antes ? `${antes} · ${nuevo}` : nuevo;
+  if ([...t].length > max) t = [...t].slice(-max).join('').replace(/^[^·]*·\s*/, '') || [...nuevo].slice(0, max).join('');
+  return t;
+}
+
+// Una línea de lo que es cada cosa (para la lista de la vista en dos columnas)
+export function resumenItem(x) {
+  const corto = (t, n = 70) => { const s = String(t || '').replace(/\s+/g, ' ').trim(); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
+  if (x.tipo === 'mensajes') return x.h?.ultimo?.texto ? `«${corto(x.h.ultimo.texto)}»` : x.h?.ultimo?.audio ? 'Nota de voz' : 'Mensaje';
+  if (x.tipo === 'sesiones') return x.s?.nombre ? `Sesión: ${corto(x.s.nombre, 50)}` : 'Sesión';
+  if (x.tipo === 'checkins') return 'Check-in';
+  if (x.tipo === 'videos') return x.g ? `${x.g.videos.length} vídeos de una sesión` : x.a?.tipo === 'foto_progreso' ? 'Foto de progreso' : x.a?.ejercicio?.nombre ? `Vídeo: ${corto(x.a.ejercicio.nombre, 50)}` : 'Vídeo';
+  if (x.tipo === 'tareas') return x.t?.titulo ? `Tarea: ${corto(x.t.titulo, 50)}` : 'Tarea';
+  if (x.tipo === 'recetas') return 'Pide cambiar una receta';
+  if (x.tipo === 'objetivos') return 'Propone un objetivo';
+  return 'Aviso del equipo';
+}

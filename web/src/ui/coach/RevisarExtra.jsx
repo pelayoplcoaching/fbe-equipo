@@ -13,11 +13,21 @@ export const TEXTO_VISTO = 'Visto 💪';
 
 // Tus frases: las de la revisión semanal (de la base con la 082, o las de este aparato); si aún no tienes, unas de partida
 export const FRASES_PARTIDA = ['¡Buen trabajo, {nombre}!', 'Muy bien, seguimos así', 'Perfecto, la semana que viene subimos un poco', 'Cuéntame cómo te notas en la siguiente'];
+// (v0.196) también las de verdad (sin las de partida) y cómo cambiarlas (en la base con la 082 y en este aparato)
 export function useFrasesRevisar() {
-  const { api } = useApp();
+  const { api, aviso } = useApp();
   const r = useCarga(() => (api.revisionAjustes ? api.revisionAjustes().catch(() => undefined) : Promise.resolve(undefined)), []);
+  const [propias, setPropias] = useState(null);
   const a = ajustesDeRevision(r.datos || null, { frases: leer('fbe-revision-frases', []) });
-  return a.frases.length ? a.frases : FRASES_PARTIDA;
+  const generales = propias || a.frases;
+  const guardar = async (lista) => {
+    setPropias(lista);
+    try { localStorage.setItem('fbe-revision-frases', JSON.stringify(lista)); } catch { /* sin sitio */ }
+    if (r.datos !== undefined && api.guardarRevisionAjustes) {
+      try { await api.guardarRevisionAjustes({ ...a, frases: lista }); } catch (e) { aviso(e.message, 'error'); }
+    }
+  };
+  return { frases: generales.length ? generales : FRASES_PARTIDA, generales, guardar };
 }
 
 // La sesión, ejercicio a ejercicio: lo pautado frente a lo hecho (kilos x repeticiones y, entre paréntesis, el RPE)
