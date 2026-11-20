@@ -41,6 +41,7 @@ import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
 import { progresoAtleta } from '../logica/progreso-revision.js';
+import { limpiarPanelAtleta, limpiarAjustesPanel } from '../logica/panel-atletas.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
@@ -4563,6 +4564,44 @@ export function crearApi(backend) {
       return true;
     },
     // (v0.197, 084) ¿Están las etiquetas en «Revisar»? true / false / null
+    // (v0.198, 085) ¿Está la lista de Atletas a tu gusto en la base? true / false / null (no se sabe: sin conexión)
+    async panel085() {
+      if (!api._v085) {
+        const pr = (async () => {
+          try { await b.select('atletas_panel', { limit: 1, cols: 'atleta_id' }); await b.select('panel_ajustes', { limit: 1, cols: 'usuario_id' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/atletas_panel|panel_ajustes|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v085 = pr;
+        pr.then((x) => { if (x == null && api._v085 === pr) api._v085 = null; });
+      }
+      return api._v085;
+    },
+    // (v0.198, 085) Lo del coach en la lista de Atletas: { atletas: { id: { fijado, etiquetas, nota } }, ajustes } o
+    // undefined si falta la 085 (entonces se queda en el aparato)
+    async panelAtletas() {
+      if ((await api.panel085()) !== true) return undefined;
+      const [filas, aj] = await Promise.all([b.select('atletas_panel', {}), b.select('panel_ajustes', { limit: 1 })]);
+      const atletas = {};
+      for (const f of filas) { const l = limpiarPanelAtleta(f); if (l) atletas[f.atleta_id] = l; }
+      return { atletas, ajustes: limpiarAjustesPanel(aj[0]?.datos) };
+    },
+    // Lo de un atleta (fijado, etiquetas, nota): si no queda nada, se borra su fila
+    async guardarPanelAtleta(atletaId, x) {
+      if ((await api.panel085()) !== true) throw new Error('Para guardarlo igual en el móvil y en el ordenador falta ejecutar la migración 085 en Supabase (supabase/migraciones/085_atletas_a_tu_gusto.sql).');
+      const fila = limpiarPanelAtleta(x);
+      if (!fila) { await b.delete('atletas_panel', { eq: { atleta_id: atletaId } }); return null; }
+      await b.upsert('atletas_panel', [{ usuario_id: uid(), atleta_id: atletaId, ...fila }], 'usuario_id,atleta_id');
+      return fila;
+    },
+    async guardarPanelAjustes(datos) {
+      if ((await api.panel085()) !== true) return false;
+      await b.upsert('panel_ajustes', [{ usuario_id: uid(), datos: limpiarAjustesPanel(datos) }], 'usuario_id');
+      return true;
+    },
     async revisar084() {
       if (!api._v084) {
         const pr = (async () => {

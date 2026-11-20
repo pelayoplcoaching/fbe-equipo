@@ -5297,6 +5297,44 @@ console.log('\nLa revisión semanal del coach (migración 040)');
     '(084) una molestia fuerte avisa al coach (una por atleta y semana, sin decir qué ni dónde); una moderada, no');
   await q(`delete from molestias where semana_inicio = '2026-10-26'`);
 
+  // (v0.198, 085) la lista de Atletas a tu gusto: fijados, etiquetas y nota de cada atleta, y cómo ve el coach la lista
+  check((await q(`select numero from fbe_migraciones where numero = 85`)).length === 1
+    && (await q(`select relname from pg_class where relname in ('atletas_panel', 'panel_ajustes') and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 2
+    && (await q(`select 1 from information_schema.role_table_grants where table_name in ('atletas_panel', 'panel_ajustes') and grantee in ('anon', 'PUBLIC')`)).length === 0, '(085) sus dos tablas, con RLS y sin nada para quien no ha entrado');
+  check(!(await q(`select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('atletas_panel_preparar', 'panel_ajustes_preparar', 'atletas_panel_etiquetas_validas') and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`)).length
+    && (await q(`select count(*)::int n from pg_proc where proname in ('atletas_panel_preparar', 'panel_ajustes_preparar', 'atletas_panel_etiquetas_validas') and not prosecdef`))[0].n === 3, '(085) sus funciones, con search_path vacío y sin permisos de su dueño');
+  await como(pelayo, 'aal2');
+  await q(`insert into atletas_panel (atleta_id, fijado, etiquetas, nota) values ($1, true, '{Preboda,"Media maratón"}', 'Revisar rodilla')`, [aAna.id]);
+  await q(`insert into panel_ajustes (datos) values ('{"columnas":["peso"],"vistas":[]}')`);
+  const mios085 = await q(`select usuario_id, etiquetas, nota from atletas_panel`);
+  const aj085 = await q(`select usuario_id, datos from panel_ajustes`);
+  const mal085 = [];
+  for (const [sql, args] of [
+    [`update atletas_panel set etiquetas = $1 where atleta_id = $2`, [Array.from({ length: 9 }, (_, i) => `e${i}`), aAna.id]],
+    [`update atletas_panel set etiquetas = '{Preboda,preboda}' where atleta_id = $1`, [aAna.id]],
+    [`update atletas_panel set etiquetas = $1 where atleta_id = $2`, [['x'.repeat(25)], aAna.id]],
+    [`update atletas_panel set nota = $1 where atleta_id = $2`, ['a\nb', aAna.id]],
+    [`update atletas_panel set nota = $1 where atleta_id = $2`, ['x'.repeat(201), aAna.id]],
+    [`update atletas_panel set fijado = false, etiquetas = '{}', nota = null where atleta_id = $1`, [aAna.id]],
+    [`update panel_ajustes set datos = '[1,2]'`, []],
+    [`update panel_ajustes set datos = $1::jsonb`, [JSON.stringify({ x: 'y'.repeat(33000) })]],
+  ]) { try { await q(sql, args); mal085.push(null); } catch (e) { mal085.push(e.message); } }
+  check(mios085.length === 1 && mios085[0].usuario_id === pelayo && mios085[0].etiquetas.length === 2 && aj085[0]?.usuario_id === pelayo && aj085[0].datos.columnas[0] === 'peso' && mal085.every(Boolean),
+    `(085) el coach fija, etiqueta y anota a su nombre; más de 8 etiquetas, repetidas, largas, una nota con saltos o larga, una fila vacía o unos ajustes que no son un objeto (o de más de 32 KB), no${mal085.some((x) => !x) ? ` (pasaron: ${mal085.map((x, i) => (x ? null : i)).filter((x) => x != null)})` : ''}`);
+  await como(ana);
+  const ve085 = [...await q(`select * from atletas_panel`), ...await q(`select * from panel_ajustes`)];
+  let eAna085 = null;
+  try { await q(`insert into atletas_panel (atleta_id, fijado) values ($1, true)`, [aAna.id]); } catch (e) { eAna085 = e.message; }
+  await q(`delete from atletas_panel`);
+  await q(`delete from panel_ajustes`);
+  await como(intruso);
+  const veIntruso085 = [...await q(`select * from atletas_panel`), ...await q(`select * from panel_ajustes`)];
+  await su();
+  check(!ve085.length && /row-level security/.test(eAna085 || '') && !veIntruso085.length && (await q(`select count(*)::int n from atletas_panel`))[0].n === 1 && (await q(`select count(*)::int n from panel_ajustes`))[0].n === 1,
+    '(085) un atleta ni ve ni toca lo del coach (tampoco lo suyo), ni nadie más');
+  await q(`delete from atletas_panel`);
+  await q(`delete from panel_ajustes`);
+
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
   const sin39 = new PGlite();
   await sin39.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));

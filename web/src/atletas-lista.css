@@ -1,0 +1,132 @@
+/* v0.198: la lista de Atletas a tu gusto (ui/coach/Panel.jsx y PanelLista.jsx): buscar, ordenar, columnas, vista
+   compacta, grupos, filtros, contadores, vistas, varios a la vez, etiquetas, nota y lo desplegado de cada atleta.
+   Solo ASCII; colores, tamanos y espacios, con tokens. */
+.panel-herramientas { display: grid; gap: var(--esp-8); margin: var(--esp-8) 0 var(--esp-4); }
+.buscar-lista { position: relative; display: flex; align-items: center; }
+.buscar-lista svg { position: absolute; left: var(--esp-12); width: var(--ico-18); height: var(--ico-18); color: var(--tinta-3); pointer-events: none; }
+.buscar-lista .entrada { width: 100%; padding-left: var(--esp-40); min-height: 42px; }
+.herramientas-botones { gap: var(--esp-6); align-items: center; }
+.herramientas-botones select.entrada { width: auto; min-height: 36px; padding: var(--esp-4) var(--esp-10); font-size: var(--letra-13-5); }
+.herramientas-botones .btn[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); border-color: transparent; }
+.btn-icono-texto { min-width: 36px; padding-left: var(--esp-8); padding-right: var(--esp-8); }
+.btn-icono-texto svg { width: var(--ico-16); height: var(--ico-16); }
+@media (min-width: 900px) {
+  .panel-herramientas { grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); align-items: center; }
+}
+
+.vistas-chips { margin-top: var(--esp-2); }
+.contadores-panel { display: flex; flex-wrap: wrap; gap: var(--esp-6); margin: var(--esp-6) 0 var(--esp-8); }
+.contador-panel { display: inline-flex; align-items: center; gap: var(--esp-6); min-height: 32px; padding: var(--esp-2) var(--esp-12) var(--esp-2) var(--esp-4); border-radius: var(--r-pildora); border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta-2); font: inherit; font-size: var(--letra-13); font-weight: 600; cursor: pointer; }
+.contador-panel .contador-n { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 var(--esp-6); border-radius: var(--r-pildora); background: var(--aviso-suave); color: var(--aviso); font-weight: 750; }
+.contador-panel.cero .contador-n { background: var(--hoja-2); color: var(--tinta-3); }
+.contador-panel.cero { cursor: default; color: var(--tinta-3); }
+.contador-panel[aria-pressed="true"] { background: var(--tinta); color: var(--hoja); border-color: var(--tinta); }
+.contador-panel[aria-pressed="true"] .contador-n { background: var(--hoja); color: var(--tinta); }
+.filtros-activos { margin: 0 0 var(--esp-8); }
+.barra-elegir { gap: var(--esp-8); align-items: center; margin-bottom: var(--esp-8); }
+.panel-cuantos { margin: var(--esp-8) 0 0; }
+
+/* La tabla: titulos que ordenan, atajos al final, lo desplegado y los grupos */
+.atletas-tabla .th-orden { display: inline-flex; align-items: center; gap: var(--esp-4); padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; white-space: normal; text-align: left; }
+.atletas-tabla th:has(.th-orden) { white-space: normal; }
+.atletas-tabla .solo-nutri { display: block; font-weight: 650; color: var(--morado); white-space: normal; }
+.atletas-tabla .th-orden:hover { color: var(--tinta); }
+.atletas-tabla .th-orden.activo { color: var(--tinta); }
+.atletas-tabla .th-flecha { width: var(--ico-14); height: var(--ico-14); }
+.atletas-tabla .col-acciones { width: 1%; white-space: nowrap; padding-left: var(--esp-4); padding-right: var(--esp-8); }
+.atletas-tabla tbody tr.elegida td { background: var(--morado-suave); }
+.atletas-tabla .fila-grupo th { padding: var(--esp-12) var(--esp-12) var(--esp-6); font-size: var(--letra-13); font-weight: 750; color: var(--tinta-2); background: var(--hoja-2); text-align: left; }
+.atletas-tabla tbody tr.fila-detalle { cursor: default; }
+.atletas-tabla tbody tr.fila-detalle:hover td { background: transparent; }
+.atletas-tabla tr.fila-detalle td { padding-top: 0; }
+.atletas-tabla .celda-nota { max-width: 220px; font-size: var(--letra-13); color: var(--tinta-2); }
+.atletas-tabla .nombre { display: flex; align-items: flex-start; gap: var(--esp-10); }
+.nombre-txt { display: grid; gap: var(--esp-2); min-width: 0; }
+/* (diseno.css corta a dos lineas lo que va junto a la foto: aqui caben las etiquetas, la nota y los atajos) */
+.atletas-tabla .nombre > span.nombre-txt { display: grid; -webkit-line-clamp: unset; overflow: visible; line-height: 1.25; }
+.atletas-tabla .nombre-linea { font-weight: 700; }
+.nombre-linea { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--esp-6); }
+.ico-fijado { width: var(--ico-14); height: var(--ico-14); color: var(--morado); flex: none; }
+.sin-leer { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 var(--esp-6); border-radius: var(--r-pildora); background: var(--morado); color: var(--sobre-morado); font-size: var(--letra-11-5); font-weight: 750; }
+.nota-linea { display: block; color: var(--tinta-2); font-weight: 500; overflow-wrap: anywhere; }
+.texto-aviso { color: var(--aviso); font-weight: 650; }
+.elegir-atleta { width: 18px; height: 18px; margin: var(--esp-10) 0 0; flex: none; accent-color: var(--morado); }
+
+/* Etiquetas, con su color */
+.etiquetas-atleta { display: inline-flex; flex-wrap: wrap; gap: var(--esp-4); }
+.etq { display: inline-flex; align-items: center; gap: var(--esp-2); min-height: 22px; padding: 0 var(--esp-8); border-radius: var(--r-pildora); font-size: var(--letra-12); font-weight: 650; background: var(--hoja-2); color: var(--tinta-2); white-space: nowrap; }
+.etq[data-color="morado"] { background: var(--morado-suave); color: var(--morado); }
+.etq[data-color="azul"] { background: var(--info-suave); color: var(--info); }
+.etq[data-color="verde"] { background: var(--ok-suave); color: var(--ok); }
+.etq[data-color="ambar"] { background: var(--oro-suave); color: var(--oro); }
+.etq[data-color="rojo"] { background: var(--alerta-suave); color: var(--alerta); }
+.etq-quitar { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: calc(var(--esp-6) * -1); padding: 0; border: 0; border-radius: var(--r-pildora); background: none; color: inherit; cursor: pointer; }
+.etq-quitar svg { width: var(--ico-12); height: var(--ico-12); }
+
+/* Atajos de cada atleta */
+.acciones-rapidas { display: inline-flex; align-items: center; gap: var(--esp-2); }
+.acciones-rapidas.en-tabla { margin-left: calc(var(--esp-6) * -1); }
+.acciones-rapidas.en-tabla .btn-icono-mini { width: 32px; height: 32px; }
+.btn-icono-mini { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--r-10); background: none; color: var(--tinta-2); cursor: pointer; text-decoration: none; }
+.btn-icono-mini:hover { background: var(--hoja-2); color: var(--tinta); }
+.btn-icono-mini:disabled { color: var(--tinta-3); cursor: default; background: none; }
+.btn-icono-mini svg { width: var(--ico-18); height: var(--ico-18); }
+.btn-icono-mini[aria-expanded="true"] { background: var(--morado-suave); color: var(--morado); }
+
+/* Lo desplegado: lo suyo de un vistazo y lo tuyo */
+.detalle-atleta { padding: var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.detalle-datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--esp-8) var(--esp-16); margin: 0; }
+.detalle-datos div { min-width: 0; }
+.detalle-datos dt { font-size: var(--letra-12); color: var(--tinta-3); font-weight: 600; }
+.detalle-datos dd { margin: 0; font-size: var(--letra-13-5); font-weight: 600; color: var(--tinta); overflow-wrap: anywhere; }
+.detalle-avisos { margin: 0; padding-left: var(--esp-16); display: grid; gap: var(--esp-2); color: var(--tinta-2); }
+.detalle-avisos li.alerta { color: var(--alerta); font-weight: 650; }
+.detalle-avisos li.aviso { color: var(--aviso); font-weight: 650; }
+.detalle-ir { gap: var(--esp-6); }
+.detalle-tuyo { padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.detalle-tuyo .btn[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); border-color: transparent; }
+.poner-etiqueta, .nota-panel { gap: var(--esp-6); align-items: center; }
+.entrada.entrada-peq { min-height: 36px; padding: var(--esp-4) var(--esp-10); font-size: var(--letra-14); }
+.etq-entrada { max-width: 220px; }
+.nota-entrada { flex: 1 1 260px; min-width: 0; }
+
+/* Las tarjetas del movil: el pie con los atajos y lo desplegado debajo */
+.tarjeta-atleta-env { display: grid; gap: 0; border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); }
+.tarjeta-atleta-env > .tarjeta-atleta { box-shadow: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.tarjeta-atleta-env.elegida { outline: 2px solid var(--morado); outline-offset: 0; }
+.tarjeta-pie { display: flex; align-items: center; justify-content: flex-end; gap: var(--esp-8); padding: var(--esp-2) var(--esp-8) var(--esp-4); border-top: var(--filo-fino) solid var(--linea); }
+.elegir-tarjeta { display: inline-flex; align-items: center; gap: var(--esp-6); margin-right: auto; padding-left: var(--esp-8); font-size: var(--letra-13); font-weight: 600; color: var(--tinta-2); min-height: 36px; }
+.elegir-tarjeta input { width: 18px; height: 18px; accent-color: var(--morado); }
+.tarjeta-atleta-env > .detalle-atleta { margin: 0 var(--esp-8) var(--esp-8); }
+.tuyo-tarjeta { display: grid; gap: var(--esp-4); }
+.titulo-grupo { margin: var(--esp-8) 0 0; font-weight: 750; color: var(--tinta-2); }
+.lista-tarjetas { gap: var(--esp-12); }
+.grupo-tarjetas { gap: var(--esp-10); }
+
+/* Vista compacta: una linea por atleta */
+.compacta .atletas-tabla td { padding-top: var(--esp-6); padding-bottom: var(--esp-6); }
+.compacta .atletas-tabla .chispa, .compacta .atletas-tabla .mini.terciario { display: none; }
+.compacta .atletas-tabla .avatar { width: 28px; height: 28px; font-size: var(--letra-12); }
+.compacta .tarjeta-atleta { padding-top: var(--esp-8); padding-bottom: var(--esp-8); }
+.compacta .tarjeta-atleta .datos, .compacta .tarjeta-atleta .cobro-tarjeta, .compacta .tarjeta-atleta .chispa { display: none; }
+.compacta .tarjeta-atleta .cab .avatar { width: 32px; height: 32px; }
+.compacta .tarjeta-atleta .cab { grid-template-columns: 32px minmax(0, 1fr) auto; }
+.compacta .tarjeta-pie { padding-top: 0; padding-bottom: 0; }
+
+/* Hojas */
+.lista-columnas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+.columna-fila { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-8); min-height: 40px; padding: 0 var(--esp-4); border-bottom: var(--filo-fino) solid var(--linea); }
+.columna-fila.oculta { color: var(--tinta-2); }
+.fila-check { display: inline-flex; align-items: center; gap: var(--esp-8); min-height: 36px; font-size: var(--letra-14-5); }
+.fila-check input { width: 18px; height: 18px; accent-color: var(--morado); }
+.filtros-marcas { display: grid; gap: var(--esp-2); border: 0; padding: 0; margin: 0; }
+.filtros-marcas legend { margin-bottom: var(--esp-6); }
+.fila-entre { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }
+.vista-fila { padding: var(--esp-6) 0; border-bottom: var(--filo-fino) solid var(--linea); }
+.teclas-lista { display: grid; gap: var(--esp-6); margin: 0; }
+.teclas-lista div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--esp-12); align-items: center; }
+.teclas-lista dd { margin: 0; font-size: var(--letra-14); }
+
+/* La ficha: el anterior y el que viene de tu lista */
+.vecinos-ficha { gap: var(--esp-2); align-items: center; margin-left: auto; }
+.vecinos-ficha .btn-icono:disabled { color: var(--tinta-3); }

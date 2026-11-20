@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.198: la lista de Atletas a tu gusto (test/e2e-atletas-198.mjs)
+console.log('\nv0.198: Atletas a tu gusto');
+try {
+  const { probarAtletas198 } = await import('./e2e-atletas-198.mjs');
+  await probarAtletas198({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.198:', e.message.split('\n')[0]);
+}
+
 // v0.197: Revisar, tercera tanda (test/e2e-revisar-197.mjs)
 console.log('\nv0.197: Revisar, tercera tanda');
 try {

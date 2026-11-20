@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.198': {
+    coach: [
+      'Atletas a tu gusto: busca, ordena por cualquier columna, elige columnas, agrupa, vista compacta y guarda tus vistas.',
+      'Fija arriba, pon etiquetas y una nota a cada uno; despliégalo sin abrir su ficha y repasa a todos con anterior/siguiente.',
+      'Contadores que filtran, atajos en cada fila, varios a la vez y teclas. Igual en móvil y ordenador con la migración 085.',
+    ],
+  },
   '0.197': {
     coach: [
       'Revisar: respuesta ya redactada con sus datos, frases con huecos, contestar a varias a la vez o más tarde, y si la ha leído.',

@@ -972,6 +972,8 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     foto: atleta.foto || null,
     estado: atleta.estado,
     servicio: !entrena ? 'nutricion' : atleta.nutricion === false ? 'entrenamiento' : 'completo',
+    nivel: atleta.nivel || null,   // (v0.198) para ordenar, filtrar y agrupar la lista de Atletas
+    carrera: !!atleta.carrera,
     diasNutricion: d.diasNutricion ?? null,
     bloque: bloque ? { id: bloque.id, numero: bloque.numero, nombre: bloque.nombre, foco: bloque.foco } : null,
     semana: semana ? { id: semana.id, numero: semana.numero, foco: semana.foco, total: semanas.length } : null,

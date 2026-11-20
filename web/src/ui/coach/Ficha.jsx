@@ -32,6 +32,7 @@ import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './Cu
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { DIAS_SEMANA, diasSemanaValido, textoDiasSemana } from '../../logica/semana-natural.js';
+import { vecinos } from '../../logica/panel-atletas.js';
 import { NutricionFicha } from './ComidasCoach.jsx';
 import { CobrosAtleta } from './Cobros.jsx';
 import { TareasCoach } from '../Tareas.jsx';
@@ -52,7 +53,21 @@ const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['activida
 // (v0.133) Carrera, solo a quien se la llevas
 export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)) && (k !== 'carrera' || conCarrera(a)));
 
-export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar, resumenInicial = null }) {
+// (v0.198) El anterior y el que viene de tu lista de Atletas
+function VecinosFicha({ lista, atletaId, nombreDe, ir }) {
+  const v = vecinos(lista, atletaId);
+  if (!v.puesto || v.total < 2) return null;
+  const primer = (id) => (nombreDe?.(id) || '').split(' ')[0] || 'otro atleta';
+  return (
+    <div class="vecinos-ficha fila" role="group" aria-label={`Atleta ${v.puesto} de ${v.total} de tu lista`}>
+      <button type="button" class="btn btn-icono plano" disabled={!v.anterior} onClick={() => v.anterior && ir(v.anterior)} aria-label={v.anterior ? `Atleta anterior de tu lista: ${primer(v.anterior)}` : 'Es el primero de tu lista'} title={v.anterior ? primer(v.anterior) : undefined}><Icono n="atras" /></button>
+      <span class="mini terciario num" aria-hidden="true">{v.puesto}/{v.total}</span>
+      <button type="button" class="btn btn-icono plano" disabled={!v.siguiente} onClick={() => v.siguiente && ir(v.siguiente)} aria-label={v.siguiente ? `Próximo atleta de tu lista: ${primer(v.siguiente)}` : 'Es el último de tu lista'} title={v.siguiente ? primer(v.siguiente) : undefined}><Icono n="derecha" /></button>
+    </div>
+  );
+}
+
+export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambiar, resumenInicial = null, lista = [], nombreDe = null, irA = null }) {
   const { api } = useApp();
   // (pulido 4) una ficha que ya se abrió se enseña al momento y se pone al día por detrás
   const ficha = useCarga(() => api.ficha(atletaId), [atletaId], { recuerdo: `ficha:${api.uid()}:${atletaId}` });
@@ -87,6 +102,8 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
         {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
+        {/* (v0.198) repasar a todos sin volver a la lista: el anterior y el que viene, en el orden en que la dejaste */}
+        {irA && <VecinosFicha lista={lista} atletaId={atletaId} nombreDe={nombreDe} ir={(id) => irA(id, pest)} />}
       </CabeceraGrande>
       {/* (pulido 2.3) las cifras de arriba guardan su sitio mientras llega la ficha: las pestañas no bajan */}
       <Reserva id="ficha-chips" cargando={!a && !ficha.error}>{a && <ChipsFicha r={r} cargando={resumen.cargando && !r} />}</Reserva>

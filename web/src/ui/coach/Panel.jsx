@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { HojaAvisos } from '../Avisos.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
-import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO } from '../../logica/nivel.js';
+import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO, NOMBRE_NIVEL } from '../../logica/nivel.js';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
 import { BandaDemo } from '../App.jsx';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -18,6 +18,9 @@ import { CumplesHoy } from './PersonalCoach.jsx';
 import { EnviosPendientes } from '../atleta/CoachSabe.jsx';
 import { useContactos } from './Integraciones.jsx';
 import { enlaceWhatsApp } from '../../logica/integraciones.js';
+import { usePanelCoach, useExtrasPanel, Etiquetas, DetalleAtleta, AccionesRapidas, HojaColumnas, HojaFiltros, HojaVistas, HojaVarios, HojaColores, HojaTeclasPanel } from './PanelLista.jsx';
+import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
+  etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar } from '../../logica/panel-atletas.js';
 
 // v0.49: minigráficas del panel (solo las ve el coach): el peso de las últimas semanas y las sesiones hechas de las
 // programadas en las 6 últimas, con su texto para los lectores de pantalla
@@ -70,7 +73,11 @@ function Alertas({ r, pendientes, max = 0 }) {
 const sueno = (h) => (h ? `${h.replace('-', '–')} h` : '—');
 const MOLESTIA = ['Sin dolor', 'Leve', 'Moderada', 'Grave'];
 
-export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = null, peticion = null, alBuscar, abrirCuenta, alCargar }) {
+// (v0.198) Lo que se queda al abrir una ficha y volver (mientras la app siga abierta): la búsqueda, el filtro, lo
+// desplegado y por dónde ibas
+const memoria = { busqueda: '', estado: 'todos', filtros: { ...FILTROS_VACIOS }, abiertos: [], elegir: false, elegidos: [], scroll: 0, volver: false };
+
+export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, irARevisar = null, peticion = null, alBuscar, abrirCuenta, alCargar, alOrden }) {
   const { api, perfil } = useApp();
   const [pedir, setPedir] = useState(null);   // (054) { r, alerta } al que pedirle algo desde un aviso
   // (pulido 4) al volver a la lista se enseña al momento la última cargada y se pone al día por detrás
@@ -96,24 +103,104 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
   const cargando = res.cargando && !datos;
   // v0.49: lo cargado se queda en CoachApp para la cabecera de la ficha (sin volver a pedirlo)
   useEffect(() => { if (datos) alCargar?.(datos); }, [datos]);
-  const [filtro, setFiltro] = useState('todos');
   const estrecha = useEstrecha(899);   // (el mismo corte que .solo-ancho / .solo-estrecho en estilos.css)
   const [nuevo, setNuevo] = useState(false);
   const [avisos, setAvisos] = useState(false);
   useEffect(() => { if (peticion?.nuevo) setNuevo(true); if (peticion?.avisos) setAvisos(true); }, [peticion?.id]);
   const lista = datos || [];
+  const hoy = hoyISO();
+
+  // (v0.198) A tu gusto: lo tuyo de cada atleta y cómo ves la lista (con la 085, igual en el móvil y en el ordenador)
+  const pc = usePanelCoach();
+  const aj = pc.ajustes;
+  const ex = useExtrasPanel(datos);
+  const extra = { sinLeer: ex.sinLeer, proxima: ex.proxima, panel: pc.panel, pendientes };
+  const [busqueda, setBusquedaE] = useState(memoria.busqueda);
+  const [filtro, setFiltroE] = useState(memoria.estado);
+  const [filtros, setFiltrosE] = useState(memoria.filtros);
+  const [abiertos, setAbiertosE] = useState(memoria.abiertos);
+  const [elegir, setElegirE] = useState(memoria.elegir);
+  const [elegidos, setElegidosE] = useState(memoria.elegidos);
+  const setBusqueda = (v) => { memoria.busqueda = v; setBusquedaE(v); };
+  const setFiltro = (v) => { memoria.estado = v; setFiltroE(v); };
+  const setFiltros = (v) => { const l = limpiarFiltros(v); memoria.filtros = l; setFiltrosE(l); };
+  const setAbiertos = (v) => { memoria.abiertos = v; setAbiertosE(v); };
+  const setElegir = (v) => { memoria.elegir = v; setElegirE(v); if (!v) { memoria.elegidos = []; setElegidosE([]); } };
+  const setElegidos = (v) => { memoria.elegidos = v; setElegidosE(v); };
+  const [hoja, setHoja] = useState(null);   // 'columnas' | 'filtros' | 'vistas' | 'varios' | 'colores' | 'teclas'
+  const buscador = useRef(null);
+  const caja = useRef(null);
+  // Abrir una ficha desde aquí: al volver, la lista sigue donde estaba
+  const abrir = (id, pestana, foto) => { memoria.volver = true; memoria.scroll = window.scrollY; abrirFicha(id, pestana, foto); };
+  useLayoutEffect(() => {
+    if (!memoria.volver || !datos) return;
+    memoria.volver = false;
+    const y = memoria.scroll;
+    if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+  }, [!!datos]);
+
   const atencion = lista.filter((r) => r.alertas.some((a) => a.nivel !== 'info'));
   const invitados = lista.filter((r) => r.estado === 'invitado');
   const deBaja = lista.filter((r) => r.estado === 'baja');
-  // Columna de pagos solo si hay alguno apuntado (v0.25)
   // v0.51: «Hoy en tu equipo» con lo que ya ha cargado el panel (sin consultas nuevas)
-  const eq = datos ? equipoHoy(lista, hoyISO()) : null;
+  const eq = datos ? equipoHoy(lista, hoy) : null;
   const inactivos = eq ? lista.filter((r) => eq.inactivos.includes(r.atleta_id)) : [];
-  const vista = filtro === 'atencion' ? atencion : filtro === 'invitados' ? invitados : filtro === 'baja' ? deBaja : filtro === 'inactivos' ? inactivos : lista.filter((r) => r.estado !== 'baja');
+  const base = lista.filter((r) => cumpleEstado(r, filtro, eq?.inactivos || []) && coincide(r, busqueda, extra));
+  const cuentas = contar(base, extra, hoy);
+  const vista = base.filter((r) => cumpleFiltros(r, filtros, extra, hoy));
+  const ordenada = ordenar(vista, aj.orden, extra, hoy);
+  const grupos = agrupar(ordenada, aj.agrupar, extra);
+  const ids = [...new Set(grupos.flatMap((g) => g.items.map((r) => r.atleta_id)))];
+  useEffect(() => { alOrden?.(ids); }, [ids.join(',')]);
+  // Columna de pagos solo si hay alguno apuntado (v0.25)
   const conCobros = lista.some((r) => r.cobro);
+  const columnas = aj.columnas.filter((c) => conCobros || c !== 'pagos');
+  const usadas = etiquetasUsadas(pc.panel);
+  const colores = aj.colores || {};
+  const ponerAjustes = (cambio) => pc.guardarAjustes({ ...aj, ...cambio });
+  const ordenarPor = (col) => ponerAjustes({ orden: aj.orden.col === col ? { col, dir: aj.orden.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: dirInicial(col) } });
+  const desplegar = (id) => setAbiertos(abiertos.includes(id) ? abiertos.filter((x) => x !== id) : [...abiertos, id]);
+  const elegirUno = (id) => { if (!elegir) setElegir(true); setElegidos(elegidos.includes(id) ? elegidos.filter((x) => x !== id) : [...elegidos, id]); };
+  const fijar = (id) => { const p = pc.panel[id] || { fijado: false, etiquetas: [], nota: null }; pc.guardarAtleta(id, { ...p, fijado: !p.fijado }); };
+  const actual = { estado: filtro, filtros, orden: aj.orden, columnas: aj.columnas, agrupar: aj.agrupar, compacta: aj.compacta };
+  const aplicarVista = (v) => { setFiltro(v.estado); setFiltros(v.filtros); ponerAjustes({ orden: v.orden, agrupar: v.agrupar, compacta: v.compacta, ...(v.columnas ? { columnas: v.columnas } : {}) }); };
+  const vistaActiva = (aj.vistas || []).find((v) => v.estado === filtro && JSON.stringify(v.filtros) === JSON.stringify(filtros) && v.orden.col === aj.orden.col && v.orden.dir === aj.orden.dir && v.agrupar === aj.agrupar);
+  const marca = (k) => setFiltros({ ...filtros, marcas: filtros.marcas.includes(k) ? filtros.marcas.filter((x) => x !== k) : [...filtros.marcas, k] });
+  const nFiltros = (filtros.servicio ? 1 : 0) + (filtros.nivel ? 1 : 0) + (filtros.etiqueta ? 1 : 0) + filtros.marcas.length;
+
+  // Teclas (j/k, Intro, c, p, s, d, f, n, x, b, ?)
+  useAtajosPanel(caja, { buscar: () => buscador.current?.focus(), ayuda: () => setHoja('teclas'), abrir, desplegar, fijar, elegirUno, abiertos });
+
+  const filaPorId = Object.fromEntries(lista.map((r) => [r.atleta_id, r]));
+  const elegidosR = elegidos.map((id) => filaPorId[id]).filter(Boolean);
+  const nombreCelda = (r, atajos = null) => (
+    <div class="nombre">
+      {elegir && <input type="checkbox" class="elegir-atleta" checked={elegidos.includes(r.atleta_id)} onClick={(e) => e.stopPropagation()} onChange={() => elegirUno(r.atleta_id)} aria-label={`Elegir a ${r.nombre.split(' ')[0]}`} />}
+      <Avatar nombre={r.nombre} foto={r.foto} />
+      <span class="nombre-txt">
+        <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}</span>
+        <span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}</span>
+        <Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />
+        {pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}
+        {atajos}
+      </span>
+    </div>
+  );
+  const titulo = (col, texto, clase = '') => {
+    const activo = aj.orden.col === col;
+    return (
+      <th class={clase} aria-sort={activo ? (aj.orden.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+        <button type="button" class={`th-orden ${activo ? 'activo' : ''}`} onClick={() => ordenarPor(col)}>{texto}{activo && <Icono n={aj.orden.dir === 'asc' ? 'arriba' : 'abajo'} class="th-flecha" />}</button>
+      </th>
+    );
+  };
+  const detalle = (r) => (
+    <DetalleAtleta r={r} extra={extra} fila={pc.panel[r.atleta_id]} colores={colores} usadas={usadas} hoy={hoy} id={`detalle-${r.atleta_id}`}
+      alGuardar={(f) => pc.guardarAtleta(r.atleta_id, f)} abrir={abrir} telefono={ex.telefonos[r.atleta_id]} />
+  );
 
   return (
-    <div class="contenido coach">
+    <div class={`contenido coach panel-atletas ${aj.compacta ? 'compacta' : ''}`} ref={caja}>
       <CabeceraGrande>
         <div class="titulo"><h1>Atletas</h1><div class="sub">{lista.filter((r) => r.estado === 'activo').length} activos{atencion.length ? `, ${atencion.length} necesitan atención` : ''}</div></div>
         <div class="fila" style="gap:8px">
@@ -126,7 +213,7 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       <BandaDemo />
       {/* (imágenes, bloque S) el saludo del día, en tu mesa */}
       <CabCoach id="coach-panel" titulo={`${saludoCoach(horaMadrid(Date.now()))}${perfil?.nombre ? `, ${perfil.nombre.split(' ')[0]}` : ''}`}>
-        <span class="peq">{fmtConDia(hoyISO()).replace(/^./, (c) => c.toUpperCase())}{atencion.length ? ` · ${atencion.length} ${atencion.length === 1 ? 'necesita' : 'necesitan'} atención` : ' · Todo en orden'}</span>
+        <span class="peq">{fmtConDia(hoy).replace(/^./, (c) => c.toUpperCase())}{atencion.length ? ` · ${atencion.length} ${atencion.length === 1 ? 'necesita' : 'necesitan'} atención` : ' · Todo en orden'}</span>
       </CabCoach>
       <AvisoAlmacenamientoPanel abrirCuenta={abrirCuenta} />
       {/* (v0.104) quién cumple años hoy */}
@@ -136,6 +223,39 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
       <ErrorCaja error={res.error} reintentar={res.recargar} />
       {/* (pulido 2.3) el resumen del equipo guarda su sitio mientras llega la lista: los filtros no bajan */}
       <Reserva id="panel-equipo-hoy" cargando={cargando}>{eq && eq.activos > 0 && <EquipoHoy eq={eq} porRevisar={porRevisar} irARevisar={irARevisar} filtro={filtro} alFiltrar={setFiltro} />}</Reserva>
+
+      {/* (v0.198) buscar, ordenar, columnas, vista compacta, agrupar, filtros, vistas y varios a la vez */}
+      <div class="panel-herramientas">
+        <div class="buscar-lista">
+          <Icono n="buscar" />
+          <label class="sr" for="buscar-atletas">Buscar atletas</label>
+          <input id="buscar-atletas" ref={buscador} type="search" class="entrada" placeholder="Nombre, etiqueta o nota" value={busqueda} onInput={(e) => setBusqueda(e.currentTarget.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape' && busqueda) { e.preventDefault(); setBusqueda(''); } if (e.key === 'ArrowDown') { e.preventDefault(); caja.current?.querySelector('[data-atleta]')?.focus(); } }} />
+        </div>
+        <div class="fila-envolver herramientas-botones">
+          <label class="sr" for="orden-atletas">Ordenar la lista por</label>
+          <select id="orden-atletas" class="entrada entrada-peq" value={aj.orden.col} onChange={(e) => ponerAjustes({ orden: { col: e.currentTarget.value, dir: dirInicial(e.currentTarget.value) } })}>
+            {ORDENES.filter(([k]) => conCobros || k !== 'pagos').map(([k, t]) => <option key={k} value={k}>{k === 'urgencia' ? t : `Por ${t.toLowerCase()}`}</option>)}
+          </select>
+          {aj.orden.col !== 'urgencia' && <button type="button" class="btn btn-peq btn-icono-texto" onClick={() => ponerAjustes({ orden: { ...aj.orden, dir: aj.orden.dir === 'asc' ? 'desc' : 'asc' } })} aria-label={aj.orden.dir === 'asc' ? 'De menos a más. Darle la vuelta' : 'De más a menos. Darle la vuelta'}><Icono n={aj.orden.dir === 'asc' ? 'arriba' : 'abajo'} /></button>}
+          <label class="sr" for="agrupar-atletas">Agrupar la lista</label>
+          <select id="agrupar-atletas" class="entrada entrada-peq" value={aj.agrupar} onChange={(e) => ponerAjustes({ agrupar: e.currentTarget.value })}>
+            {AGRUPAR.map(([k, t]) => <option key={k} value={k}>{k ? `Agrupar: ${t.toLowerCase()}` : t}</option>)}
+          </select>
+          <button type="button" class="btn btn-peq" aria-pressed={nFiltros ? 'true' : 'false'} onClick={() => setHoja('filtros')}><Icono n="opciones" /> Filtros{nFiltros ? ` (${nFiltros})` : ''}</button>
+          {!estrecha && <button type="button" class="btn btn-peq" onClick={() => setHoja('columnas')}><Icono n="vista" /> Columnas</button>}
+          <button type="button" class="btn btn-peq" aria-pressed={aj.compacta ? 'true' : 'false'} onClick={() => ponerAjustes({ compacta: !aj.compacta })}>Vista compacta</button>
+          <button type="button" class="btn btn-peq" aria-pressed={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="seleccionar" /> Elegir varios</button>
+          <button type="button" class="btn btn-peq" onClick={() => setHoja('vistas')}><Icono n="guardar" /> Tus vistas</button>
+          {usadas.length > 0 && <button type="button" class="btn btn-peq" onClick={() => setHoja('colores')}><Icono n="paleta" /> Colores</button>}
+          {!estrecha && <button type="button" class="btn btn-peq btn-icono-texto" onClick={() => setHoja('teclas')} aria-label="Teclas de la lista"><Icono n="teclado" /></button>}
+        </div>
+      </div>
+      {(aj.vistas || []).length > 0 && (
+        <div class="selector-chips vistas-chips" role="group" aria-label="Tus vistas guardadas">
+          {aj.vistas.map((v) => <button key={v.id} type="button" aria-pressed={vistaActiva?.id === v.id ? 'true' : 'false'} onClick={() => aplicarVista(v)}>{v.nombre}</button>)}
+        </div>
+      )}
       <div class="selector-chips" role="group" aria-label="Filtrar atletas">
         <button aria-pressed={filtro === 'todos' ? 'true' : 'false'} onClick={() => setFiltro('todos')}>Todos</button>
         <button aria-pressed={filtro === 'atencion' ? 'true' : 'false'} onClick={() => setFiltro('atencion')}>Necesitan atención ({atencion.length})</button>
@@ -143,6 +263,29 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
         {deBaja.length > 0 && <button aria-pressed={filtro === 'baja' ? 'true' : 'false'} onClick={() => setFiltro('baja')}>De baja ({deBaja.length})</button>}
         {inactivos.length > 0 && <button aria-pressed={filtro === 'inactivos' ? 'true' : 'false'} onClick={() => setFiltro('inactivos')}>Sin actividad ({inactivos.length})</button>}
       </div>
+      {/* (v0.198) los contadores que filtran al tocarlos (se suman a lo de arriba) */}
+      <div class="contadores-panel" role="group" aria-label="Solo los que…">
+        {CONTADORES.map((k) => {
+          const n = cuentas[k];
+          const espera = (k === 'sinLeer' && ex.cargando) || (k === 'porProgramar' && cargando);
+          return (
+            <button key={k} type="button" class={`contador-panel ${n ? '' : 'cero'}`} data-k={k} aria-pressed={filtros.marcas.includes(k) ? 'true' : 'false'} disabled={!n && !filtros.marcas.includes(k)} onClick={() => marca(k)}>
+              <span class="contador-n num" aria-hidden="true">{espera ? '·' : n}</span><span class="contador-k">{NOMBRE_MARCA[k]}</span><span class="sr">: {espera ? 'cargando' : n}</span>
+            </button>
+          );
+        })}
+      </div>
+      {nFiltros > 0 && (
+        <p class="mini secundario filtros-activos">Solo: {textoFiltros(filtros)}. <button type="button" class="btn-texto mini" onClick={() => setFiltros({ ...FILTROS_VACIOS })}>Quitar los filtros</button></p>
+      )}
+      {elegir && (
+        <div class="barra-elegir panel panel-pad fila-envolver" role="region" aria-label="Varios a la vez">
+          <span class="peq"><strong>{elegidos.length}</strong> {elegidos.length === 1 ? 'elegido' : 'elegidos'}</span>
+          <button type="button" class="btn btn-peq" onClick={() => setElegidos(elegidos.length === ids.length ? [] : ids)}>{elegidos.length === ids.length && ids.length ? 'Ninguno' : 'Todos los de la lista'}</button>
+          <button type="button" class="btn btn-peq btn-primario" disabled={!elegidos.length} onClick={() => setHoja('varios')}><Icono n="mensaje" /> Mensaje o etiqueta</button>
+          <button type="button" class="btn btn-peq" onClick={() => setElegir(false)}>Dejar de elegir</button>
+        </div>
+      )}
 
       {/* (054) en «Necesitan atención»: lo que pide cada aviso, para pedírselo con un mensaje hecho (editable) */}
       {filtro === 'atencion' && !cargando && atencion.length > 0 && (
@@ -162,8 +305,8 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
 
       {cargando ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
         <div class="panel"><Vacio ilustracion="filtro" titulo={lista.length ? 'Nadie en esta lista' : 'Aún no hay atletas'}
-          accion={!lista.length ? <button class="btn btn-primario" onClick={() => setNuevo(true)}>Añadir el primero</button> : <button class="btn btn-peq" onClick={() => setFiltro('todos')}>Ver a todos</button>}>
-          {lista.length ? 'Nadie cumple este filtro: todo en orden por aquí.' : 'Dales de alta y envíales su código de invitación.'}
+          accion={!lista.length ? <button class="btn btn-primario" onClick={() => setNuevo(true)}>Añadir el primero</button> : <button class="btn btn-peq" onClick={() => { setFiltro('todos'); setFiltros({ ...FILTROS_VACIOS }); setBusqueda(''); }}>Ver a todos</button>}>
+          {lista.length ? (busqueda ? `Nadie coincide con «${busqueda}».` : 'Nadie cumple este filtro: todo en orden por aquí.') : 'Dales de alta y envíales su código de invitación.'}
         </Vacio></div>
       ) : (
         <>
@@ -172,60 +315,142 @@ export function Panel({ abrir, pendientes = {}, porRevisar = null, irARevisar = 
           {!estrecha && <div class="panel solo-ancho">
             <div class="tabla-env">
               <table class="atletas-tabla">
-                <thead><tr><th>Atleta</th><th>Avisos</th>{conCobros && <th>Pagos</th>}<th>Semana</th><th>Sesiones</th><th>Peso</th><th class="col-extra">Sueño</th><th class="col-extra">Motivación</th><th>Molestias</th><th>Último registro</th></tr></thead>
-                <tbody>
-                  {vista.map((r) => (
-                    <tr key={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
-                      <td class="celda-estado"><div class="nombre"><Avatar nombre={r.nombre} foto={r.foto} /><span>{r.nombre}<span class="sr">. {NOMBRE_ESTADO[estadoAtleta(r)]}</span></span></div></td>
-                      <td class="celda-avisos">{r.alertas.length || pendientes[r.atleta_id] ? <Alertas r={r} pendientes={pendientes[r.atleta_id]} max={2} /> : <span class="terciario">—</span>}</td>
-                      {conCobros && <td><CobroPanel c={r.cobro} /></td>}
-                      {r.servicio === 'nutricion' ? (
-                        <td colSpan={2}><span class="chip morado">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días apuntados</div>}</td>
-                      ) : (
-                        <>
-                          <td class="num-c">{r.semana ? <><span class="semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span><div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>
-                          <td><div class="celda-sesiones"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></td>
-                        </>
-                      )}
-                      <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg<ChispaPeso puntos={r.chispas?.peso} />{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>
-                      <td class="num-c col-extra">{sueno(r.checkin?.horas_sueno)}</td>
-                      <td class="col-extra">{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>
-                      <td>{r.maxMolestia ? <span class={`chip ${r.maxMolestia >= 2 ? 'aviso' : 'info'}`}>{MOLESTIA[r.maxMolestia]}</span> : <span class="terciario">—</span>}</td>
-                      <td class="num-c">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                <thead><tr>{titulo('nombre', 'Atleta')}{columnas.map((c) => titulo(c, TITULO_COLUMNA[c], ['sueno', 'motivacion'].includes(c) ? 'col-extra' : ''))}</tr></thead>
+                {grupos.map((g) => (
+                  <tbody key={g.clave || 'todos'}>
+                    {aj.agrupar && <tr class="fila-grupo"><th colSpan={columnas.length + 1} scope="colgroup">{g.titulo} <span class="terciario num">({g.items.length})</span></th></tr>}
+                    {g.items.map((r) => {
+                      const abierto = abiertos.includes(r.atleta_id);
+                      return [
+                        <tr key={r.atleta_id} data-atleta={r.atleta_id} data-estado={estadoAtleta(r)} class={elegidos.includes(r.atleta_id) ? 'elegida' : ''} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')); }}>
+                          <td class="celda-estado">{nombreCelda(r, <AccionesRapidas r={r} abrir={abrir} telefono={ex.telefonos[r.atleta_id]} todas={false} abierto={abierto} alDesplegar={() => desplegar(r.atleta_id)} detalleId={`detalle-${r.atleta_id}`} clase="en-tabla" />)}</td>
+                          {columnas.map((c) => <Celda key={c} c={c} r={r} extra={extra} pendientes={pendientes} hoy={hoy} />)}
+                        </tr>,
+                        abierto && <tr key={`${r.atleta_id}-detalle`} class="fila-detalle"><td colSpan={columnas.length + 1}>{detalle(r)}</td></tr>,
+                      ];
+                    })}
+                  </tbody>
+                ))}
               </table>
             </div>
           </div>}
-          {estrecha && <div class="pila solo-estrecho">
-            {vista.map((r) => (
-              <button class="tarjeta-atleta" key={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
-                <div class="cab">
-                  <Avatar nombre={r.nombre} foto={r.foto} />
-                  <span><strong>{r.nombre}</strong>{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
-                  {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
-                </div>
-                <Alertas r={r} pendientes={pendientes[r.atleta_id]} />
-                {r.estado === 'activo' && (
-                  <div class="datos">
-                    {r.servicio === 'nutricion'
-                      ? <div><div class="k">Nutrición</div><div class="v">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</div></div>
-                      : <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></div>}
-                    <div><div class="k">Peso</div><div class="v">{r.peso ? `${num(r.peso.kg)}${r.peso.ritmo ? ` (${signo(r.peso.ritmo.kgSemana, 2)}/sem)` : r.peso.cambio != null ? ` (${signo(r.peso.cambio)})` : ''}` : '—'}<ChispaPeso puntos={r.chispas?.peso} /></div></div>
-                    {r.servicio !== 'nutricion' && <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>}
-                  </div>
-                )}
-                {r.cobro && <div class="cobro-tarjeta"><span class="k">Pagos</span><CobroPanel c={r.cobro} enLinea /></div>}
-              </button>
+          {estrecha && <div class="pila solo-estrecho lista-tarjetas">
+            {grupos.map((g) => (
+              <div key={g.clave || 'todos'} class="pila grupo-tarjetas">
+                {aj.agrupar && <h2 class="titulo-grupo peq">{g.titulo} <span class="terciario num">({g.items.length})</span></h2>}
+                {g.items.map((r) => {
+                  const abierto = abiertos.includes(r.atleta_id);
+                  return (
+                    <div key={r.atleta_id} class={`tarjeta-atleta-env ${elegidos.includes(r.atleta_id) ? 'elegida' : ''}`}>
+                      <button class="tarjeta-atleta" data-atleta={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar'))}>
+                        <div class="cab">
+                          <Avatar nombre={r.nombre} foto={r.foto} />
+                          <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
+                          {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
+                        </div>
+                        {(etiquetasDe(r, extra).length > 0 || pc.panel[r.atleta_id]?.nota) && <div class="tuyo-tarjeta"><Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />{pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}</div>}
+                        <Alertas r={r} pendientes={pendientes[r.atleta_id]} />
+                        {r.estado === 'activo' && (
+                          <div class="datos">
+                            {r.servicio === 'nutricion'
+                              ? <div><div class="k">Nutrición</div><div class="v">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</div></div>
+                              : <div><div class="k">Sesiones</div><div class="v"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} corto /><ChispaSesiones semanas={r.chispas?.sesiones} /></div></div>}
+                            <div><div class="k">Peso</div><div class="v">{r.peso ? `${num(r.peso.kg)}${r.peso.ritmo ? ` (${signo(r.peso.ritmo.kgSemana, 2)}/sem)` : r.peso.cambio != null ? ` (${signo(r.peso.cambio)})` : ''}` : '—'}<ChispaPeso puntos={r.chispas?.peso} /></div></div>
+                            {r.servicio !== 'nutricion' && <div><div class="k">Último registro</div><div class="v">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</div></div>}
+                          </div>
+                        )}
+                        {r.cobro && <div class="cobro-tarjeta"><span class="k">Pagos</span><CobroPanel c={r.cobro} enLinea /></div>}
+                      </button>
+                      <div class="tarjeta-pie">
+                        {elegir && <label class="elegir-tarjeta"><input type="checkbox" checked={elegidos.includes(r.atleta_id)} onChange={() => elegirUno(r.atleta_id)} /> <span>Elegir<span class="sr"> a {r.nombre.split(' ')[0]}</span></span></label>}
+                        <AccionesRapidas r={r} abrir={abrir} telefono={ex.telefonos[r.atleta_id]} abierto={abierto} alDesplegar={() => desplegar(r.atleta_id)} detalleId={`detalle-${r.atleta_id}`} />
+                      </div>
+                      {abierto && detalle(r)}
+                    </div>
+                  );
+                })}
+              </div>
             ))}
           </div>}
+          <p class="mini terciario panel-cuantos">{ordenada.length === lista.filter((r) => r.estado !== 'baja').length && !busqueda && !nFiltros ? '' : `${ordenada.length} de ${lista.length} atletas`}{!pc.enBase && pc.listo && (Object.keys(pc.panel).length || (aj.vistas || []).length) ? ' · Tus etiquetas, notas y vistas se guardan en este aparato hasta que ejecutes la migración 085.' : ''}</p>
         </>
       )}
+      {hoja === 'columnas' && <HojaColumnas columnas={aj.columnas} conCobros={conCobros} alCambiar={(c) => ponerAjustes({ columnas: c })} alCerrar={() => setHoja(null)} />}
+      {hoja === 'filtros' && <HojaFiltros filtros={filtros} usadas={usadas} alCambiar={setFiltros} alCerrar={() => setHoja(null)} />}
+      {hoja === 'vistas' && <HojaVistas ajustes={aj} actual={actual} alCambiar={(a) => pc.guardarAjustes(a)} alCerrar={() => setHoja(null)} />}
+      {hoja === 'colores' && <HojaColores usadas={usadas} colores={colores} alCambiar={(c) => ponerAjustes({ colores: c })} alCerrar={() => setHoja(null)} />}
+      {hoja === 'teclas' && <HojaTeclasPanel alCerrar={() => setHoja(null)} />}
+      {hoja === 'varios' && <HojaVarios elegidos={elegidosR} usadas={usadas} colores={colores} alCerrar={() => setHoja(null)} alHecho={() => setElegir(false)}
+        alEtiquetar={(e, poner) => pc.guardarVarios(conEtiqueta(pc.panel, elegidos, e, poner))} />}
       {avisos && <HojaAvisos alCerrar={() => setAvisos(false)} />}
       {nuevo && <NuevoAtleta alCerrar={(id) => { setNuevo(false); res.recargar(true); if (id) abrir(id); }} />}
     </div>
   );
+}
+
+// (v0.198) Una celda de la tabla, según su columna
+function Celda({ c, r, extra, pendientes, hoy }) {
+  const nutri = r.servicio === 'nutricion';
+  switch (c) {
+    case 'avisos': return <td class="celda-avisos">{r.alertas.length || pendientes[r.atleta_id] ? <Alertas r={r} pendientes={pendientes[r.atleta_id]} max={2} /> : <span class="terciario">—</span>}</td>;
+    case 'pagos': return <td><CobroPanel c={r.cobro} /></td>;
+    case 'semana': return <td class="num-c">{nutri ? <><span class="peq solo-nutri">Solo nutrición</span>{r.diasNutricion != null && <div class="mini terciario">{r.diasNutricion}/7 días</div>}</> : r.semana ? <><span class="semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span><div class="mini terciario">{r.semana.foco ? NOMBRE_FOCO[r.semana.foco] : r.bloque?.nombre}</div></> : '—'}</td>;
+    case 'sesiones': return <td>{nutri ? <span class="terciario">—</span> : <div class="celda-sesiones"><Pips hechas={r.sesiones.completadas} total={r.sesiones.total} /><Cumple c={r.cumplimiento} /><ChispaSesiones semanas={r.chispas?.sesiones} /></div>}</td>;
+    case 'peso': return <td class="num-c">{r.peso ? <>{num(r.peso.kg)} kg<ChispaPeso puntos={r.chispas?.peso} />{r.peso.ritmo ? <div class="mini terciario">{signo(r.peso.ritmo.kgSemana, 2)}/sem</div> : r.peso.cambio != null && <div class="mini terciario">{signo(r.peso.cambio)}</div>}</> : '—'}</td>;
+    case 'sueno': return <td class="num-c col-extra">{sueno(r.checkin?.horas_sueno)}</td>;
+    case 'motivacion': return <td class="col-extra">{r.checkin?.motivacion ? ESCALAS.motivacion[r.checkin.motivacion - 1] : '—'}</td>;
+    case 'energia': return <td>{r.checkin?.energia ? ESCALAS.energia[r.checkin.energia - 1] : '—'}</td>;
+    case 'molestias': return <td>{r.maxMolestia ? <span class={`chip ${r.maxMolestia >= 2 ? 'aviso' : 'info'}`}>{MOLESTIA[r.maxMolestia]}</span> : <span class="terciario">—</span>}</td>;
+    case 'ultimo': return <td class="num-c">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</td>;
+    case 'cumplido': { const p = r.cumplimiento?.series?.pct; return <td class="num-c">{p != null ? <span class={`cumple ${p >= 90 ? 'ok' : p >= 75 ? '' : 'aviso'}`}>{p} %</span> : '—'}</td>; }
+    case 'sinEntrenar': { const d = diasSinEntrenar(r, hoy); return <td class="num-c">{d == null ? '—' : d === 0 ? 'Hoy' : <span class={d >= 7 ? 'texto-aviso' : ''}>{d} {d === 1 ? 'día' : 'días'}</span>}</td>; }
+    case 'checkin': return <td>{r.estado !== 'activo' ? '—' : checkinAlDia(r, hoy) ? <span class="chip ok">Al día</span> : <span class="chip aviso">Falta</span>}</td>;
+    case 'habitos': return <td class="num-c">{r.habitos?.pct != null ? `${r.habitos.pct} %` : '—'}</td>;
+    case 'nutricion': return <td class="num-c">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</td>;
+    case 'fase': { const f = r.semana?.foco || r.bloque?.foco; return <td>{f ? NOMBRE_FOCO[f] || f : '—'}</td>; }
+    case 'proxima': { const p = proximaDe(r, extra); return <td>{p ? <span class={`chip ${p === 'publicada' ? 'ok' : 'aviso'}`}>{TEXTO_PROXIMA_CORTO[p]}</span> : '—'}</td>; }
+    case 'mensajes': { const n = sinLeerDe(r, extra); return <td class="num-c">{n ? <span class="chip morado">{n} sin leer</span> : <span class="terciario">—</span>}</td>; }
+    case 'nivel': return <td>{r.nivel ? NOMBRE_NIVEL[r.nivel] : '—'}</td>;
+    case 'servicio': return <td>{Object.fromEntries(SERVICIOS)[r.servicio] || '—'}</td>;
+    case 'alta': return <td class="num-c">{r.fecha_alta ? fmtCorta(r.fecha_alta) : '—'}</td>;
+    case 'nota': return <td class="celda-nota">{extra.panel?.[r.atleta_id]?.nota || <span class="terciario">—</span>}</td>;
+    default: return <td>—</td>;
+  }
+}
+
+// (v0.198) Las teclas de la lista: j/k (o flechas desde una fila) para moverse, y las de cada atleta
+function useAtajosPanel(caja, x) {
+  const ref = useRef(x);
+  ref.current = x;
+  useEffect(() => {
+    const filas = () => [...(caja.current?.querySelectorAll('[data-atleta]') || [])].filter((e) => e.getClientRects().length);
+    const tecla = (e) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable="true"]') || document.querySelector('[aria-modal="true"]')) return;
+      const t = filas();
+      const actual = t.indexOf(document.activeElement?.closest?.('[data-atleta]'));
+      const ir = (k) => { if (!t.length) return; const j = Math.max(0, Math.min(t.length - 1, k)); t[j].focus({ preventScroll: true }); t[j].scrollIntoView({ block: 'nearest' }); };
+      const o = ref.current;
+      if (e.key === 'b') { e.preventDefault(); o.buscar(); return; }
+      if (e.key === '?') { e.preventDefault(); o.ayuda(); return; }
+      if (e.key === 'j' || (e.key === 'ArrowDown' && actual >= 0)) { e.preventDefault(); ir(actual + 1); return; }
+      if (e.key === 'k' || (e.key === 'ArrowUp' && actual >= 0)) { e.preventDefault(); ir(actual <= 0 ? 0 : actual - 1); return; }
+      if (actual < 0) return;
+      const id = t[actual].dataset.atleta;
+      if (e.key === 'c') { e.preventDefault(); o.abrir(id, 'mensajes'); }
+      else if (e.key === 'p') { e.preventDefault(); o.abrir(id, 'programa'); }
+      else if (e.key === 's') { e.preventDefault(); o.abrir(id, 'seguimiento'); }
+      else if (e.key === 'd') { e.preventDefault(); o.desplegar(id); }
+      else if (e.key === 'f') { e.preventDefault(); o.fijar(id); }
+      else if (e.key === 'x') { e.preventDefault(); o.elegirUno(id); }
+      else if (e.key === 'n') {
+        e.preventDefault();
+        if (!o.abiertos.includes(id)) o.desplegar(id);
+        setTimeout(() => document.getElementById(`nota-${id}`)?.focus(), 80);
+      }
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, []);
 }
 
 // v0.51: «Hoy en tu equipo», como un resumen de WHOOP: cuántos de los activos han entrenado hoy (un dial), lo que

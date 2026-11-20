@@ -113,6 +113,10 @@ export function CoachApp() {
   // v0.49: los resúmenes que ya cargó el panel, para la cabecera de la ficha (si se abre desde otro sitio, la ficha
   // pide solo los de ese atleta)
   const resumenesPanel = useRef(null);
+  // (v0.198) el orden de la lista de Atletas tal y como la dejaste (filtro, búsqueda y orden): para ir al anterior y al
+  // siguiente desde la ficha
+  const ordenLista = useRef([]);
+  const irAVecino = (atletaId, pestana) => conTransicion(() => { setFicha({ atletaId, pestana }); setPeticion(null); }, 'adelante');
   // (tanda 11 de diseño) el panel de tu bienvenida, con lo que ya está cargado: la bandeja, los mensajes sin leer y, si
   // la lista de atletas ha llegado, cuántos han entrenado hoy y cuántos necesitan atención. Ni una consulta más.
   const [resumenesDia, setResumenesDia] = useState(null);
@@ -206,9 +210,10 @@ export function CoachApp() {
       )}
       <main key={tab} class="vista" data-tirar={!ficha && TIRAR.includes(tab) ? '' : undefined}>
       {tab === 'atletas' && (ficha
-        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)} />
+        ? <Ficha key={`${ficha.atletaId}:${ficha.n || 0}`} atletaId={ficha.atletaId} pestanaInicial={ficha.pestana} resumenInicial={resumenesPanel.current?.find((r) => r.atleta_id === ficha.atletaId) || null} alVolver={cerrarFicha} alCambiar={() => bandeja.recargar(true)}
+            lista={ordenLista.current} nombreDe={(id) => resumenesPanel.current?.find((r) => r.atleta_id === id)?.nombre || null} irA={irAVecino} />
         : <Panel abrir={abrirAtleta} pendientes={bandeja.datos?.porAtleta || {}} porRevisar={bandeja.datos ? total : null}
-            irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; if (verDia) setResumenesDia(l); }} />)}
+            irARevisar={() => conTransicion(() => { setTab('revisar'); setFicha(null); setPeticion(null); }, 'adelante')} peticion={pide('atletas')} alBuscar={abrirBuscar} abrirCuenta={() => { setTab('cuenta'); setFicha(null); }} alCargar={(l) => { resumenesPanel.current = l; if (verDia) setResumenesDia(l); }} alOrden={(ids) => { ordenLista.current = ids; }} />)}
       {tab === 'revisar' && <Revisar bandeja={bandeja} abrirAtleta={abrirAtleta} />}
       {tab === 'revision' && <RevisionSemanal abrirAtleta={abrirAtleta} />}
       {tab === 'radar' && <RadarContacto abrirAtleta={abrirAtleta} />}
