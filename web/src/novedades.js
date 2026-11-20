@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.194': {
+    coach: [
+      'Revisión semanal: el progreso de cada atleta sin ir a su ficha. Semáforo de peso, medidas, comida y descanso, y una frase.',
+      'Peso medio frente a la semana anterior y su ritmo, medidas frente a la última y al inicio del bloque, adherencia y menú.',
+      'Sueño, pasos, pulso y VFC frente a las semanas anteriores, gráficas, filtro «Algo en rojo» y orden por progreso.',
+    ],
+  },
   '0.193': {
     coach: [
       'Revisión semanal, todo desde ahí: uno a uno con pestañas de Su semana, Chat, Vídeos y Programar (teclas 1 a 4).',

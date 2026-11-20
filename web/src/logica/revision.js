@@ -29,6 +29,9 @@ export function ordenRevision(filas) {
 // ================================================================ v0.191: la revisión, más fácil de pasar
 // (todo puro: lo usa la pantalla y lo prueban test/revision.test.mjs)
 
+import { NOMBRE_FOCO } from './calculos.js';
+import { compararProgreso } from './progreso-revision.js';
+
 const lunesDeFecha = (iso) => {
   const d = new Date(`${String(iso).slice(0, 10)}T12:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
@@ -66,6 +69,8 @@ export const ORDENES = [['urgencia', 'Lo urgente primero'], ['nombre', 'Por nomb
 // El orden elegido. Los ya revisados, siempre al final. «mio»: los ids como los dejó el coach; los nuevos, detrás, por nombre
 export function ordenarRevision(filas, modo = 'urgencia', { mio = [], lunes = null } = {}) {
   if (modo === 'urgencia' || !ORDENES.some(([k]) => k === modo)) return ordenRevision(filas);
+  // (v0.194) lo que peor va primero (semáforo de progreso); a igualdad, lo urgente
+  if (modo === 'progreso') { const base = ordenRevision(filas); return [...base].sort((a, b) => (Number(!!a.hecha) - Number(!!b.hecha)) || compararProgreso(a, b) || (base.indexOf(a) - base.indexOf(b))); }
   const porNombre = (a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es');
   const sitio = new Map((mio || []).map((id, i) => [id, i]));
   const cmp = modo === 'nombre' ? porNombre
@@ -224,14 +229,16 @@ export function insertarFrase(texto, frase, pos = null) {
 }
 
 // ---------------------------------------------------------------- lo que el mensaje redactado puede nombrar
-export function extraParaBorrador(detalle) {
-  if (!detalle) return null;
+export function extraParaBorrador(detalle, progreso = null) {
+  if (!detalle && !progreso?.paraAtleta?.length) return null;
+  if (!detalle) return { records: [], parados: [], pendientes: [], checkin: null, progreso: progreso.paraAtleta };
   const pendientes = (detalle.sesiones || []).filter((x) => !x.completada).map((x) => x.nombre).filter(Boolean);
   return {
     records: (detalle.progreso?.records || []).slice(0, 3).map((r) => ({ ejercicio: r.ejercicio, marca: r.marca })),
     parados: (detalle.progreso?.parados || []).slice(0, 2).map((r) => r.ejercicio),
     pendientes,
     checkin: detalle.checkin && detalle.checkinDeEstaSemana ? { energia: detalle.checkin.energia ?? null, motivacion: detalle.checkin.motivacion ?? null, recuperacion: detalle.checkin.recuperacion ?? null, horas_sueno: detalle.checkin.horas_sueno || null, notas: String(detalle.checkin.notas || '').trim() } : null,
+    progreso: progreso?.paraAtleta || []
   };
 }
 
@@ -310,7 +317,7 @@ export function textoCorto(x) {
 export function puntoDelBloque(f) {
   const b = f?.bloque, w = f?.semana;
   if (!b) return '';
-  return [b.numero != null ? `Bloque ${b.numero}` : b.nombre || 'Bloque', w?.numero != null ? `semana ${w.numero}${w.total ? ` de ${w.total}` : ''}` : '', w?.foco || b.foco ? `foco: ${w?.foco || b.foco}` : ''].filter(Boolean).join(' · ');
+  return [b.numero != null ? `Bloque ${b.numero}` : b.nombre || 'Bloque', w?.numero != null ? `semana ${w.numero}${w.total ? ` de ${w.total}` : ''}` : '', w?.foco || b.foco ? `foco: ${(NOMBRE_FOCO[w?.foco || b.foco] || w?.foco || b.foco).toLowerCase()}` : ''].filter(Boolean).join(' · ');
 }
 
 // ---------------------------------------------------------------- carrera: lo corrido frente a lo previsto
@@ -365,6 +372,8 @@ export function resumenRevision(filas) {
     porProgramar: nombres(xs.filter((f) => f.proxima === 'sin' || f.proxima === 'borrador')),
     esperando: nombres(xs.filter((f) => f.estadoRevision === 'esperando' && !f.hecha)),
     sinCheckin: nombres(xs.filter((f) => !f.checkin && f.servicio !== 'nutricion')),
+    // (v0.194)
+    enRojo: nombres(xs.filter((f) => (f.progreso?.rojos || 0) > 0)),
   };
 }
 
@@ -398,7 +407,7 @@ export function ajustesParaGuardar(a) {
   return {
     frases: [...new Set((a?.frases || []).map((x) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 300)).filter(Boolean))].slice(0, 20),
     orden: (a?.orden || []).filter((x) => /^[0-9a-fA-F-]{36}$/.test(String(x))).slice(0, 500),
-    modo: ORDENES.some(([k]) => k === a?.modo) ? a.modo : null,
+    modo: MODOS_EN_BASE.includes(a?.modo) ? a.modo : null,
     vista: ['lista', 'tabla'].includes(a?.vista) ? a.vista : null,
   };
 }
@@ -417,3 +426,12 @@ export const PESTANAS_UNO = [['semana', 'Su semana'], ['chat', 'Chat'], ['videos
 export function pestanasDe(f) {
   return PESTANAS_UNO.filter(([k]) => (k !== 'videos' || f.videos > 0) && (k !== 'programar' || f.servicio !== 'nutricion'));
 }
+
+// ================================================================ v0.194: el progreso
+ORDENES.push(['progreso', 'Lo que peor va primero']);
+CUMPLE.progreso_rojo = (f) => (f.progreso?.rojos || 0) > 0;
+FILTROS_REVISION.push(['progreso_rojo', 'Algo en rojo']);
+COLUMNAS_TABLA.push(['progreso', 'Progreso']);
+VALOR.progreso = (f) => -(((f.progreso?.rojos || 0) * 10) + (f.progreso?.ambar || 0));
+// Los modos de orden que admite la base (082): los demás se quedan solo en el aparato
+export const MODOS_EN_BASE = ['urgencia', 'nombre', 'antiguedad', 'mio'];

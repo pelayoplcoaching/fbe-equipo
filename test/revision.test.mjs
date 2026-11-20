@@ -160,6 +160,60 @@ console.log('\nLa revisión semanal, tercera tanda (v0.193): lo puro');
   check(RV.quedoCorto([{ sesion_ejercicio_id: 'p', ejercicio_id: 'e1', fecha: '2026-11-17', reps: 3, rpe: 8, ejercicio: 'Banca' }], [{ id: 'p', reps_min: 5, series: 1 }], L)[0].ejercicio_id === 'e1', 'lo corto dice de qué ejercicio es (para ajustarlo)');
 }
 
+console.log('\nLa revisión semanal, el progreso (v0.194): lo puro');
+{
+  const PR = await import('../web/src/logica/progreso-revision.js');
+  const dias = (desde, n, f) => Array.from({ length: n }, (_, i) => { const d = new Date(`${desde}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + i); return f(d.toISOString().slice(0, 10), i); });
+  // Peso: baja 0,5 kg por semana desde 85 durante 8 semanas, pesándose a diario
+  const pesos = dias('2026-09-28', 56, (fecha, i) => ({ fecha, kg: Math.round((85 - (i / 7) * 0.5) * 10) / 10 }));
+  const plan = { fase: 'perder', ritmo_pct: -0.6 };
+  const p = PR.progresoDePeso({ pesos, plan, objetivo: { peso_objetivo: 78, peso_inicio: 85 }, lunes: L, hoy: '2026-11-22' });
+  check(p.esta.lunes === L && p.antes.lunes === '2026-11-09' && p.dif < 0 && Math.abs(p.dif + 0.5) < 0.1 && p.diasEsta === 7 && p.semanas.length === 8, 'peso: la media de la semana frente a la anterior y los días que se ha pesado');
+  check(p.ritmo && Math.abs(p.ritmo.kgSemana + 0.5) < 0.05 && p.estado === 'verde' && p.meta === 78 && p.falta < 0 && p.prevision?.semanas > 0, 'peso: su ritmo frente al del plan (verde), lo que le queda y en cuántas semanas');
+  check(PR.estadoRitmo(-0.6, -0.6) === 'verde' && PR.estadoRitmo(-0.3, -0.6) === 'ambar' && PR.estadoRitmo(0.5, -0.6) === 'rojo' && PR.estadoRitmo(-0.6, -0.6, true) === 'rojo'
+    && PR.estadoRitmo(0.1, 0) === 'verde' && PR.estadoRitmo(0.4, 0) === 'ambar' && PR.estadoRitmo(0.7, 0) === 'rojo' && PR.estadoRitmo(null, -0.5) === 'gris' && PR.estadoRitmo(-0.5, null) === 'gris', 'los umbrales del peso');
+  const sube = dias('2026-10-26', 28, (fecha, i) => ({ fecha, kg: 80 + i * 0.05 }));
+  check(PR.progresoDePeso({ pesos: sube, plan, lunes: L, hoy: '2026-11-22' }).contrario === true && PR.progresoDePeso({ pesos: sube, plan, lunes: L, hoy: '2026-11-22' }).estado === 'rojo', 'si las dos últimas semanas van al revés de lo buscado, rojo');
+  check(PR.progresoDePeso({ pesos: [], lunes: L, hoy: '2026-11-22' }).sinPesos && PR.progresoDePeso({ pesos: [], lunes: L, hoy: '2026-11-22' }).estado === 'gris', 'sin pesos, gris');
+  check(/^Baja 0,5 kg\/semana; su plan busca bajar 0,4/.test(PR.textoRitmo(p)), `el ritmo, en palabras («${PR.textoRitmo(p)}»)`);
+  // Medidas
+  const med = [{ fecha: '2026-09-01', cintura_cm: 90, cadera_cm: 100 }, { fecha: '2026-10-20', cintura_cm: 88, cadera_cm: 99 }, { fecha: '2026-11-17', cintura_cm: 86.5, cadera_cm: 99.2, brazo_cm: 35 }];
+  const m = PR.progresoDeMedidas({ medidas: med, fase: 'perder', bloqueInicio: '2026-10-01', hoy: '2026-11-20', peso: { dif: -0.1 } });
+  const ci = m.cambios.find((c) => c.clave === 'cintura_cm');
+  check(ci.dif === -1.5 && ci.difBloque === -1.5 && m.cambios.find((c) => c.clave === 'brazo_cm').dif === null && m.primeraBloque === '2026-10-20' && m.estado === 'verde' && m.diasDesde === 3 && !m.pedir, 'medidas: frente a la anterior y frente a la primera del bloque');
+  check(/^Peso estable y cintura −1,5 cm: buena señal de recomposición/.test(m.juntos), `peso y cintura juntos («${m.juntos}»)`);
+  const vieja = PR.progresoDeMedidas({ medidas: med, fase: 'perder', hoy: '2026-12-30' });
+  check(vieja.pedir && vieja.estado === 'ambar' && PR.progresoDeMedidas({ medidas: [], hoy: '2026-11-20' }).nunca && PR.progresoDeMedidas({ medidas: [{ fecha: '2026-11-01', cintura_cm: 80 }, { fecha: '2026-11-15', cintura_cm: 81.2 }], fase: 'perder', hoy: '2026-11-20' }).estado === 'rojo'
+    && PR.progresoDeMedidas({ medidas: [{ fecha: '2026-11-01', cintura_cm: 80 }, { fecha: '2026-11-15', cintura_cm: 81.2 }], fase: 'ganar', hoy: '2026-11-20' }).estado === 'ambar', 'medidas: viejas (ámbar y pedirlas), sin medidas, y la cintura según su fase');
+  // Comida
+  const ck = (l, x) => ({ semana_inicio: l, ...x });
+  const checkins = [ck('2026-11-09', { adherencia_desayuno: 5, adherencia_comida: 5, adherencia_merienda: 4, adherencia_cena: 4, horas_sueno: '7-8', energia: 4, saciedad: 3, fc_reposo: 55 }),
+    ck(L, { adherencia_desayuno: 5, adherencia_comida: 4, adherencia_merienda: 2, adherencia_cena: 4, horas_sueno: '5-6', energia: 2, recuperacion: 2, saciedad: 2, calorias_media: 2100, fc_reposo: 62 }),
+    ck('2026-10-26', { fc_reposo: 55 }), ck('2026-11-02', { fc_reposo: 56 }), ck('2026-10-19', { fc_reposo: 57 })];
+  const menu = [{ fecha: '2026-11-16', hecho: true }, { fecha: '2026-11-16', hecho: true }, { fecha: '2026-11-17', hecho: false }, { fecha: '2026-11-10', hecho: true }];
+  const c = PR.progresoDeComida({ checkins, menu, registros: [{ fecha: '2026-11-17', kcal: 2000, completo: true }, { fecha: '2026-11-18', kcal: 2200, completo: true }], plan: { kcal: 2300 }, lunes: L });
+  check(c.adherencia.esta === 3.8 && c.adherencia.antes === 4.5 && c.adherencia.peor.etiqueta === 'Merienda' && c.estado === 'ambar' && c.deEstaSemana, 'comida: la adherencia frente a la anterior y la comida que más falla');
+  check(c.menu.total === 3 && c.menu.hechas === 2 && c.menu.pct === 67 && c.menu.pctAntes === 100 && c.menu.dias[0].hechas === 2 && c.menu.dias.length === 7, 'comida: el menú hecho, día a día');
+  check(c.kcal.media === 2100 && c.kcal.fuente === 'registro' && c.kcal.dif === -200 && c.saciedad === 2 && c.saciedadAntes === 3 && c.serie.length === 6, 'comida: calorías frente a su plan, saciedad y 6 semanas');
+  // Descanso
+  const salud = dias('2026-11-09', 14, (fecha, i) => ({ fecha, sueno_min: i < 7 ? 450 : (i % 2 ? 330 : 400), pasos: i < 7 ? 8000 : 10000 }));
+  const dS = PR.progresoDeDescanso({ checkins, salud, pasosObjetivo: 9000, lunes: L });
+  check(dS.sueno.fuente === 'salud' && dS.sueno.esta < 6.5 && dS.sueno.antes === 7.5 && dS.sueno.cortas === 4 && dS.pasos.esta === 10000 && dS.pasos.antes === 8000 && dS.pasos.objetivo === 9000, 'descanso: sueño del iPhone (con noches cortas) y pasos, frente a la anterior');
+  const dC = PR.progresoDeDescanso({ checkins, salud: null, lunes: L });
+  check(dC.sueno.fuente === 'checkin' && dC.sueno.esta === 5.5 && dC.estado === 'rojo' && dC.fc.dif >= 5 && dC.avisos.some((x) => /pulso/.test(x)) && dC.avisos.some((x) => /recuperación/.test(x)) && dC.series.energia.length === 6, 'descanso: sin iPhone, el check-in; pulso por encima de su media y recuperación baja, avisados');
+  // Todo junto
+  const todo = PR.progresoAtleta({ pesos, plan, checkins, medidas: med, menu, salud: null }, { lunes: L, hoy: '2026-11-22', nombre: 'Ana López' });
+  check(todo.semaforo.peso === 'verde' && todo.semaforo.comida === 'ambar' && todo.semaforo.descanso === 'rojo' && todo.rojos === 1 && todo.peorEstado === 'rojo', 'el semáforo de cuatro puntos');
+  check(/^Baja al ritmo previsto, .*le cuesta la merienda, duerme poco/.test(todo.frase), `la frase («${todo.frase}»)`);
+  check(todo.paraAtleta.some((x) => /^Peso medio de la semana: /.test(x)) && PR.progresoAtleta({}, { lunes: L }).frase === 'Sin pesos.' && PR.progresoAtleta({ nutricion: false }, { lunes: L }).comida.fuera, 'las líneas para el mensaje; sin datos, poco; sin nutrición, sin el bloque de comida');
+  const filas = [f('A', { progreso: { rojos: 0, ambar: 1, desvio: 0 } }), f('B', { progreso: { rojos: 2, ambar: 0, desvio: 0 } }), f('C', { progreso: { rojos: 0, ambar: 1, desvio: 0.5 } }), f('D', { hecha: true, progreso: { rojos: 4 } })];
+  check(RV.ordenarRevision(filas, 'progreso').map((x) => x.atleta_id).join() === 'B,C,A,D' && RV.filtrarRevision(filas, ['progreso_rojo']).map((x) => x.atleta_id).join() === 'B,D' && RV.resumenRevision(filas).enRojo.join() === 'B,D', 'ordenar y filtrar por progreso, y el resumen');
+  check(RV.ajustesParaGuardar({ modo: 'progreso' }).modo === null && RV.ajustesParaGuardar({ modo: 'mio' }).modo === 'mio', '«Lo que peor va primero» se queda en el aparato (la 082 no lo conoce)');
+  check(RV.puntoDelBloque({ bloque: { numero: 1, foco: 'adaptacion' } }) === 'Bloque 1 · foco: adaptación', 'el foco, con su tilde');
+  const t = borradorRevision(f('Ana', { sesiones: { completadas: 3, total: 3 } }), { peso: { kg: 80 } }, RV.extraParaBorrador(null, todo));
+  check(/Peso medio de la semana/.test(t) && !/^Peso: 80/m.test(t), 'el mensaje redactado usa el peso medio (y no repite el de siempre)');
+}
+
 console.log('\nLa revisión semanal (v0.191): contra la demo');
 {
   const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
@@ -194,6 +248,11 @@ console.log('\nLa revisión semanal (v0.191): contra la demo');
   check(malo, 'un estado que no existe, tampoco en la demo');
   const d2 = await api.detalleRevision(con.atleta_id, lunes);
   check(Array.isArray(d2.comparacion) && Array.isArray(d2.cortos) && Array.isArray(d2.mensajes) && Array.isArray(d2.videos) && typeof d2.fotos === 'number', 'el detalle trae lo de la segunda tanda');
+  // (v0.194)
+  const pe = await api.progresoEquipo(rev.filas, lunes);
+  check(Object.keys(pe).length === rev.filas.length && Object.values(pe).every((x) => x && x.semaforo && typeof x.frase === 'string'), 'el progreso de todo el equipo, en una consulta');
+  check(Object.values(pe).some((x) => x.peso.esta) && Object.values(pe).some((x) => x.semaforo.peso !== 'gris'), 'con pesos de la demo, alguno tiene su peso comparado');
+  check(Object.keys(await api.progresoEquipo([], lunes)).length === 0, 'sin atletas, nada');
   // (v0.193)
   const um = await api.ultimosMensajes(con.atleta_id, 4);
   check(Array.isArray(um) && um.length <= 4 && um.every((m) => 'autor' in m && 'sinLeer' in m && 'audio' in m) && (um.length < 2 || um[0].creado_en <= um[um.length - 1].creado_en), 'lo último que os habéis dicho, de más antiguo a más nuevo');

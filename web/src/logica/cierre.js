@@ -85,7 +85,9 @@ export function borradorRevision(f, r = null, extra = null) {
   if (extra?.pendientes?.length && completadas > 0 && extra.pendientes.length <= 3) lineas.push(`Sin hacer: ${extra.pendientes.join(', ')}.`);
   if (extra?.records?.length) lineas.push(extra.records.length === 1 ? `🏆 Récord en ${extra.records[0].ejercicio} (${extra.records[0].marca}). Enhorabuena.` : `🏆 Récords en ${extra.records.map((x) => x.ejercicio).join(', ')}. Enhorabuena.`);
   if (extra?.parados?.length) lineas.push(`${extra.parados.join(' y ')}: ${extra.parados.length === 1 ? 'lleva' : 'llevan'} un par de semanas sin moverse; lo miro al programar.`);
-  if (r?.peso?.kg != null) lineas.push(`Peso: ${num(r.peso.kg)} kg${r.peso.cambio_4s != null ? ` (${r.peso.cambio_4s > 0 ? '+' : ''}${num(r.peso.cambio_4s)} kg en 4 semanas)` : ''}.`);
+  // (v0.194) el progreso (peso medio de la semana, cintura), si lo hay; si no, el peso de siempre
+  if (extra?.progreso?.length) lineas.push(...extra.progreso);
+  else if (r?.peso?.kg != null) lineas.push(`Peso: ${num(r.peso.kg)} kg${r.peso.cambio_4s != null ? ` (${r.peso.cambio_4s > 0 ? '+' : ''}${num(r.peso.cambio_4s)} kg en 4 semanas)` : ''}.`);
   const ck = extra?.checkin;
   if (ck) {
     const bajos = [['energia', 'la energía'], ['recuperacion', 'la recuperación'], ['motivacion', 'la motivación']].filter(([k]) => ck[k] != null && Number(ck[k]) <= 2).map(([, t]) => t);

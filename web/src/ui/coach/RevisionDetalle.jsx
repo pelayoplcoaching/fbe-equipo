@@ -212,7 +212,7 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
   const [hoja, setHoja] = useState(null);
   const area = useRef(null);
   const cursor = useRef(null);
-  const rehacer = (t = tono) => conTono(borradorRevision(f, resumen.datos || null, extraParaBorrador(detalle.datos)), t === 'auto' ? null : t, f.nombre);
+  const rehacer = (t = tono) => conTono(borradorRevision(f, resumen.datos || null, extraParaBorrador(detalle.datos, f.progreso)), t === 'auto' ? null : t, f.nombre);
   // Cuando llegan el resumen y el detalle, el borrador se rehace (salvo que ya lo esté editando)
   useEffect(() => { if (!tocado && (resumen.datos !== undefined || detalle.datos)) setTexto(rehacer()); }, [resumen.datos, detalle.datos]);
   const primer = f.nombre.split(' ')[0];

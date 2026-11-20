@@ -40,6 +40,7 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
+import { progresoAtleta } from '../logica/progreso-revision.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
@@ -4416,6 +4417,47 @@ export function crearApi(backend) {
         audios: audios.map((a) => ({ id: a.id, ruta: a.ruta, duracion_seg: a.duracion_seg ?? null, onda: a.onda || null, mime: a.mime || null, comentario_id: mensajeDeAudio[a.id]?.id || null, creado_en: mensajeDeAudio[a.id]?.creado_en || a.creado_en })),
         atleta: atleta ? { id: atleta.id, nivel: atleta.nivel || null, volumen_objetivo: atleta.volumen_objetivo ?? null, carrera: !!atleta.carrera, entrenamiento: atleta.entrenamiento !== false, perfil_id: atleta.perfil_id || null } : null,
       };
+    },
+    // (v0.194) el progreso de cada atleta para la revisión: peso, medidas, comida y descanso comparados con las semanas
+    // anteriores, con su semáforo. Una consulta por tabla para todo el equipo (y la de Salud del iPhone, una por atleta).
+    // filas: las de revisionSemanal. Devuelve { atleta_id: progreso } (de logica/progreso-revision.js)
+    async progresoEquipo(filas, lunes, hoy = null) {
+      const xs = (filas || []).filter((f) => f?.atleta_id);
+      const ids = xs.map((f) => f.atleta_id);
+      if (!ids.length) return {};
+      const fin = sumarDias(lunes, 6), desde = sumarDias(lunes, -63);
+      const sel = (t, o) => b.select(t, o).catch(() => []);
+      const idsBloque = unicos(xs.map((f) => f.bloque?.id).filter(Boolean));
+      const [pesos, medidas, objetivos, planes, registros, menu, checkins, habitos, bloques, salud] = await Promise.all([
+        sel('pesos', { in: { atleta_id: ids }, gte: { fecha: desde }, lte: { fecha: fin }, order: [['fecha', 'asc']], cols: 'atleta_id,fecha,kg' }),
+        sel('medidas', { in: { atleta_id: ids }, order: [['fecha', 'asc']] }),
+        sel('objetivos', { in: { atleta_id: ids, estado: ['no_iniciado', 'en_curso'] } }).then((o) => o.filter((x) => x.tipo === 'peso' && x.peso_objetivo != null)),
+        sel('planes_nutricion', { in: { atleta_id: ids }, lte: { desde: fin }, order: [['desde', 'asc']], cols: 'atleta_id,desde,fase,ritmo_pct,kcal,modo' }),
+        sel('registros_nutricion', { in: { atleta_id: ids }, gte: { fecha: sumarDias(lunes, -7) }, lte: { fecha: fin }, cols: 'atleta_id,fecha,kcal,completo,cumplido' }),
+        sel('menu_comidas', { in: { atleta_id: ids }, gte: { fecha: sumarDias(lunes, -7) }, lte: { fecha: fin }, cols: 'atleta_id,fecha,hecho' }),
+        sel('checkins', { in: { atleta_id: ids }, gte: { semana_inicio: desde }, order: [['semana_inicio', 'asc']] }),
+        sel('habitos', { in: { atleta_id: ids }, cols: 'atleta_id,icono,unidad,objetivo,activo' }),
+        idsBloque.length ? sel('bloques', { in: { id: idsBloque }, cols: 'id,fecha_inicio' }) : [],
+        // Salud del iPhone: solo de quien lo tiene conectado (y con su consentimiento); si no, null
+        Promise.all(xs.map((f) => api.saludDiaria(f.atleta_id, sumarDias(lunes, -35), fin).catch(() => null))),
+      ]);
+      const G = (lista) => agrupar(lista, 'atleta_id');
+      const P = G(pesos), M = G(medidas), O = G(objetivos), PL = G(planes), R = G(registros), MN = G(menu), C = G(checkins), H = G(habitos);
+      const BI = Object.fromEntries(bloques.map((x) => [x.id, x.fecha_inicio || null]));
+      const out = {};
+      xs.forEach((f, i) => {
+        const id = f.atleta_id;
+        const obj = (O[id] || []).sort((a, z) => String(z.creado_en || '').localeCompare(String(a.creado_en || '')))[0] || null;
+        const plan = (PL[id] || []).filter((x) => x.desde <= fin).pop() || null;
+        const habPasos = (H[id] || []).find((h) => h.activo !== false && (h.icono === 'pasos' || h.unidad === 'pasos'));
+        const sl = Array.isArray(salud[i]) ? salud[i] : Array.isArray(salud[i]?.dias) ? salud[i].dias : null;
+        out[id] = progresoAtleta({
+          pesos: P[id] || [], medidas: M[id] || [], objetivo: obj, plan, registros: R[id] || [], menu: MN[id] || [], checkins: C[id] || [],
+          salud: sl, pasosObjetivo: habPasos?.objetivo != null ? Number(habPasos.objetivo) : null,
+          bloqueInicio: f.bloque?.id ? BI[f.bloque.id] || null : null, nutricion: f.servicio !== 'entrenamiento',
+        }, { lunes, hoy: hoy || hoyISO(), nombre: f.nombre });
+      });
+      return out;
     },
     // (v0.193) lo último que se han dicho (para tenerlo delante al revisar): los n últimos mensajes ya enviados
     async ultimosMensajes(atletaId, n = 3) {

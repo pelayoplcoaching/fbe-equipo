@@ -8,6 +8,7 @@ import { avisosRevision, avisosPanel, partirPausados, ordenarRevision, ORDENES, 
   ESTADOS_REVISION, TEXTO_ESTADO, pasosRevision, puntoDelBloque, resumenRevision, COLUMNAS_TABLA, ordenarTabla, ajustesDeRevision, pestanasDe } from '../../logica/revision.js';
 import { ChatRevision, ChatRapido, VideosRevision, ProgramarRevision, HojaProgramar, CierreRevision, olvidarBandeja } from './RevisionTodo.jsx';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
+import { ProgresoRevision, Semaforo } from './RevisionProgreso.jsx';
 import { ChispaSesiones } from './Panel.jsx';
 import { Dictar } from '../Dictar.jsx';
 import { DetalleRevision, HojaBorrador, HojaLote, SemanaPasada, prefRevision, guardarPref, olvidarDetalle } from './RevisionDetalle.jsx';
@@ -69,7 +70,9 @@ export function RevisionSemanal({ abrirAtleta }) {
   const datos = res.datos;
   // (079) cuántas fotos de sus platos ha subido cada uno esta semana
   const platos = useCarga(() => (datos?.lunes ? api.platosDeLaSemana(datos.lunes).catch(() => ({})) : Promise.resolve({})), [datos?.lunes]);
-  const todas = useMemo(() => (datos?.filas || []).map((f) => ({ ...f, ...(cambios[f.atleta_id] || {}) })), [datos, cambios]);
+  // (v0.194) el progreso de cada uno (peso, medidas, comida, descanso), que llega después de la lista
+  const progresos = useCarga(() => (datos?.lunes ? api.progresoEquipo(datos.filas, datos.lunes).catch(() => ({})) : Promise.resolve({})), [datos?.lunes, datos?.filas?.length]);
+  const todas = useMemo(() => (datos?.filas || []).map((f) => ({ ...f, ...(cambios[f.atleta_id] || {}), progreso: progresos.datos ? progresos.datos[f.atleta_id] || null : undefined })), [datos, cambios, progresos.datos]);
   // (v0.191) los pausados, aparte: ni cuentan ni salen como pendientes
   const { activos: filas, pausados } = useMemo(() => partirPausados(todas), [todas]);
   const ordenadas = useMemo(() => ordenarRevision(filas, pref.orden, { mio: pref.mio, lunes: datos?.lunes }), [filas, pref.orden, pref.mio, datos?.lunes]);
@@ -141,7 +144,7 @@ export function RevisionSemanal({ abrirAtleta }) {
   const lunesVisto = datos ? sumarDias(datos.lunes, -7 * atras) : null;
   const enFoco = foco ? todas.find((f) => f.atleta_id === foco.actual) : null;
   const propsFila = (f) => ({ f, con040: datos.revisiones, guardar: (c) => (('hecha' in c) ? marcar(f, c) : guardar(f, c)), abrirAtleta, lunes: datos.lunes, platos: platos.datos?.[f.atleta_id] || 0, pedirHoja: pedirHoja?.id === f.atleta_id ? pedirHoja : null,
-    con082: datos.con082, ancha, frases, alFrases: ponerFrases, alPedir: (alerta) => setPedir({ f, alerta }), alCambiar: (c) => setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), ...c } })) });
+    con082: datos.con082, ancha, frases, alFrases: ponerFrases, alPedir: (alerta) => setPedir({ f, alerta }), alPedirTexto: (texto) => setPedir({ f, texto }), alCambiar: (c) => setCambios((x) => ({ ...x, [f.atleta_id]: { ...(x[f.atleta_id] || {}), ...c } })) });
 
   return (
     <div class="contenido coach revision">
@@ -222,7 +225,8 @@ export function RevisionSemanal({ abrirAtleta }) {
                   {r.porProgramar.length > 0 && <li>Falta la semana que viene de {r.porProgramar.length}: {r.porProgramar.join(', ')}.</li>}
                   {r.esperando.length > 0 && <li>Esperando respuesta de: {r.esperando.join(', ')}.</li>}
                   {r.sinCheckin.length > 0 && <li>Sin check-in: {r.sinCheckin.join(', ')}.</li>}
-                  {!r.porProgramar.length && !r.esperando.length && !r.sinCheckin.length && <li>No queda nada suelto.</li>}
+                  {r.enRojo.length > 0 && <li>Con algo de su progreso en rojo: {r.enRojo.join(', ')}.</li>}
+                  {!r.porProgramar.length && !r.esperando.length && !r.sinCheckin.length && !r.enRojo.length && <li>No queda nada suelto.</li>}
                 </ul>
               </details>
             ); })()}
@@ -264,6 +268,7 @@ export function RevisionSemanal({ abrirAtleta }) {
                     <td class="num">{f.mensajes || '-'}</td>
                     <td class="num">{f.molestia >= 2 ? `${f.molestia}/5` : '-'}</td>
                     <td>{f.proxima ? TEXTO_PROXIMA[f.proxima].replace('Semana que viene ', '') : '-'}</td>
+                    <td>{f.progreso ? <Semaforo progreso={f.progreso} compacto /> : <span class="peq secundario">...</span>}</td>
                     <td>{datos.revisiones && <input type="checkbox" checked={f.hecha} onChange={(e) => marcar(f, { hecha: e.currentTarget.checked })} aria-label={`Revisión de ${f.nombre} terminada`} />}</td>
                   </tr>
                 ))}</tbody>
@@ -287,12 +292,12 @@ export function RevisionSemanal({ abrirAtleta }) {
         </div>
       )}
       {lote && <HojaLote titulo={LOTES[lote].titulo} destinatarios={destinatariosLote(filas, lote)} alCerrar={() => setLote(null)} />}
-      {pedir && <HojaLote titulo={`Pedírselo a ${pedir.f.nombre.split(' ')[0]}`} destinatarios={[{ atleta_id: pedir.f.atleta_id, nombre: pedir.f.nombre, texto: mensajeParaAlerta(pedir.alerta, pedir.f.nombre) }]} uno alCerrar={() => setPedir(null)} />}
+      {pedir && <HojaLote titulo={`Pedírselo a ${pedir.f.nombre.split(' ')[0]}`} destinatarios={[{ atleta_id: pedir.f.atleta_id, nombre: pedir.f.nombre, texto: pedir.texto || mensajeParaAlerta(pedir.alerta, pedir.f.nombre) }]} uno alCerrar={() => setPedir(null)} />}
     </div>
   );
 }
 
-function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null, con082 = false, frases = null, alFrases = null, alPedir = null, alCambiar = null, alChat = null, alProgramar = null, alCitar = null, alAjustar = null, ancha = false }) {
+function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 0, abierta = false, alternar = null, unoAUno = false, senalada = false, alFoco = null, mover = null, pedirHoja = null, con082 = false, frases = null, alFrases = null, alPedir = null, alPedirTexto = null, alCambiar = null, alChat = null, alProgramar = null, alCitar = null, alAjustar = null, ancha = false }) {
   const [nota, setNota] = useState(f.nota || '');
   const [verNota, setVerNota] = useState(!!f.nota || unoAUno);
   const area = useRef(null);
@@ -342,6 +347,7 @@ function FilaRevision({ f, con040, guardar, abrirAtleta, lunes = null, platos = 
       <ul class="rev-pasos" aria-label="Tus pasos con este atleta">
         {pasos.map((x) => <li key={x.clave} class={x.hecho ? 'hecho' : ''}><Icono n={x.hecho ? 'hecho' : 'reloj'} /> <span>{x.texto}</span><span class="sr">{x.hecho ? ' (hecho)' : ' (pendiente)'}</span></li>)}
       </ul>
+      {f.progreso !== null && <ProgresoRevision key={`prog-${f.atleta_id}-${unoAUno ? 1 : 0}`} f={f} abierto={unoAUno} alPedir={alPedirTexto} />}
       {f.notaAnterior && <p class="peq revision-anterior"><Icono n="historial" /> La semana pasada: {f.notaAnterior}</p>}
       {!unoAUno && alternar && (
         <div class="fila-envolver rev-abrir">
