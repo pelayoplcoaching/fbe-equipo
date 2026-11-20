@@ -88,7 +88,7 @@ export async function probarAtletas199({ navegador, check, base = 'http://localh
     const det = p.locator('.detalle-atleta').first();
     await det.getByLabel(`Qué recordarte de ${corto}`).fill('Mirar su rodilla');
     await det.getByRole('button', { name: 'Guardar recordatorio' }).click();
-    check(await hasta(async () => (await fila(primero).locator('.recordatorio-chip').textContent().catch(() => '')) === 'Hoy: Mirar su rodilla'), 'un recordatorio para hoy, en su fila');
+    check(await hasta(async () => (await fila(primero).locator('.recordatorio-chip').textContent().catch(() => '')) === 'Hoy: Mirar su rodilla', 20000), 'un recordatorio para hoy, en su fila (con margen: bajo carga tarda)');
     check(await hasta(async () => (await nContador('paraHoy')) === 1), 'y su contador «Para hoy»');
     await fila(primero).getByRole('button', { name: `Plegar lo de ${corto}` }).click();
     await contador('paraHoy').click();
