@@ -59,7 +59,7 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
   try {
     await entrar(ctx);
     const total = await filas().count();
-    check(total >= 5 && await p.locator('.contadores-panel button').count() === 5, `la lista con sus herramientas y los cinco contadores (${total} atletas)`);
+    check(total >= 5 && await p.locator('.contadores-panel button').count() === 8, `la lista con sus herramientas y los ocho contadores (cinco de la v0.198 y tres de la v0.199) (${total} atletas)`);
 
     // Buscar
     const buscar = p.getByLabel('Buscar atletas');

@@ -23,14 +23,20 @@ import {
 const fechaMadridDe = (iso) => { try { return fechaMadrid(new Date(iso)); } catch { return String(iso).slice(0, 10); } };
 
 // ---------------------------------------------------------------- lo tuyo: en la base (085) o en este aparato
+// Lo último que tocaste (por cuenta), para que al volver de una ficha la lista esté como la dejaste aunque la base aún
+// no haya contestado (o aunque el guardado de los ajustes, que espera medio segundo, no hubiera salido todavía)
+const memPanel = { uid: null, atl: null, aj: null };
 export function usePanelCoach() {
   const { api, aviso } = useApp();
+  if (memPanel.uid !== api.uid()) { memPanel.uid = api.uid(); memPanel.atl = null; memPanel.aj = null; }
   const [localAtl, setLocalAtl] = usePreferencia('fbe-panel-atletas', {});
   const [localAj, setLocalAj] = usePreferencia('fbe-panel-ajustes', null);
   const remoto = useCarga(() => api.panelAtletas().catch(() => null), [], { recuerdo: `panel085:${api.uid()}` });
   const enBase = !!remoto.datos && typeof remoto.datos === 'object';
-  const [atl, setAtl] = useState(null);
-  const [aj, setAj] = useState(null);
+  const [atl, setAtlE] = useState(memPanel.atl);
+  const [aj, setAjE] = useState(memPanel.aj);
+  const setAtl = (x) => { memPanel.atl = x; setAtlE(x); };
+  const setAj = (x) => { memPanel.aj = x; setAjE(x); };
   // Lo que estaba en este aparato pasa a la base (una vez)
   const subido = useRef(false);
   useEffect(() => {
@@ -69,9 +75,15 @@ export function usePanelCoach() {
     if (!enBase) { setLocalAj(l); return; }
     // (lo que se toca seguido, como el orden, se guarda una vez)
     clearTimeout(tGuardar.current);
-    tGuardar.current = setTimeout(() => { api.guardarPanelAjustes(refA.current).catch((e) => aviso(e?.message || 'No se han podido guardar tus ajustes de la lista', 'error')); }, 500);
+    tGuardar.current = setTimeout(() => { tGuardar.current = null; api.guardarPanelAjustes(refA.current).catch((e) => aviso(e?.message || 'No se han podido guardar tus ajustes de la lista', 'error')); }, 500);
   };
-  useEffect(() => () => clearTimeout(tGuardar.current), []);
+  // (al salir de la lista con un guardado pendiente, por ejemplo al abrir una ficha justo después de cambiar el orden, sale ya)
+  useEffect(() => () => {
+    if (!tGuardar.current) return;
+    clearTimeout(tGuardar.current);
+    tGuardar.current = null;
+    api.guardarPanelAjustes(refA.current).catch(() => {});
+  }, []);
   return { panel, ajustes, enBase, guardarAtleta, guardarVarios, guardarAjustes, listo: !remoto.cargando || !!remoto.datos };
 }
 
