@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, useUnaVez, cuando, Avatar } from '../comunes.jsx';
 import { lineasCheckin, pautadoFrenteAHecho, ajustesDeRevision } from '../../logica/revision.js';
-import { cambiosCheckin, NOMBRE_REVISADO } from '../../logica/revisar.js';
+import { cambiosCheckin, NOMBRE_REVISADO, volumenTarjeta, coincideNombre } from '../../logica/revisar.js';
+import { rangoVolumen, NOMBRE_GRUPO, textoSerie, num } from '../../logica/calculos.js';
 import { CompararVideos } from '../Archivos.jsx';
 import { useGrabadora, PanelGrabando, PanelRevisar, AyudaMicro, ActivarMicro } from '../chat/NotaVoz.jsx';
 
@@ -31,20 +32,60 @@ export function useFrasesRevisar() {
 }
 
 // La sesión, ejercicio a ejercicio: lo pautado frente a lo hecho (kilos x repeticiones y, entre paréntesis, el RPE)
-export function DetalleSesion({ s }) {
-  const { api } = useApp();
+// (v0.197) con lo que hizo la vez anterior, ajustar la carga de su próxima sesión en un toque y su volumen de la semana
+export function DetalleSesion({ s, m = null }) {
+  const { api, aviso } = useApp();
   const d = useCarga(() => api.sesion(s.id, s.atleta.id), [s.id]);
+  const [ocupado, una] = useUnaVez();
+  const [ajustes, setAjustes] = useState({});
   if (d.cargando && !d.datos) return <p class="peq secundario" role="status">Cargando la sesión...</p>;
   if (d.error) return <p class="peq">No se ha podido cargar la sesión.</p>;
-  const filas = pautadoFrenteAHecho(d.datos?.ejercicios || []);
+  const ejs = d.datos?.ejercicios || [];
+  const filas = pautadoFrenteAHecho(ejs);
   if (!filas.length) return <p class="peq secundario">Sin ejercicios pautados.</p>;
+  const ajustar = (p, delta) => una(async () => {
+    try {
+      const r = await api.ajustarProxima(s.atleta.id, p.ejercicio_id, delta);
+      if (!r) { aviso(`No tiene ${p.ejercicio?.nombre || 'ese ejercicio'} en ninguna sesión por delante`); return; }
+      setAjustes((x) => ({ ...x, [p.id]: r }));
+      aviso(`${p.ejercicio?.nombre || 'Ejercicio'}: ${num(r.antes)} → ${num(r.despues)} kg en «${r.sesion}»${r.semana ? ` (semana ${r.semana})` : ''}`, 'ok');
+    } catch (e) { aviso(e.message, 'error'); }
+  });
+  const vol = m?.volumen ? volumenTarjeta(m.volumen, (g) => rangoVolumen(s.atleta.volumen_objetivo, g)) : [];
   return (
-    <div class="rev-tabla-env revisar-detalle">
-      <table class="rev-tabla">
-        <caption class="sr">{s.nombre}: pautado frente a hecho</caption>
-        <thead><tr><th scope="col">Ejercicio</th><th scope="col">Pautado</th><th scope="col">Hecho</th></tr></thead>
-        <tbody>{filas.map((p) => <tr key={p.id} class={p.falta > 0 ? 'corta' : ''}><th scope="row">{p.nombre}</th><td class="num">{p.pautado}</td><td class="num">{p.hecho}{p.falta > 0 && p.hecho !== 'Sin hacer' ? ` (faltan ${p.falta})` : ''}</td></tr>)}</tbody>
-      </table>
+    <div class="pila-s">
+      <div class="rev-tabla-env revisar-detalle">
+        <table class="rev-tabla">
+          <caption class="sr">{s.nombre}: pautado frente a hecho y la vez anterior</caption>
+          <thead><tr><th scope="col">Ejercicio</th><th scope="col">Pautado</th><th scope="col">Hecho</th><th scope="col">La vez anterior</th><th scope="col">Su próxima</th></tr></thead>
+          <tbody>{filas.map((f, i) => {
+            const p = ejs[i];
+            const antes = (p?.ultimas?.series || []).filter((x) => Number(x.reps) > 0).map(textoSerie).join(', ');
+            const conKilos = (p?.hechas || []).some((x) => Number(x.kg) > 0);
+            const aj = ajustes[f.id];
+            return (
+              <tr key={f.id} class={f.falta > 0 ? 'corta' : ''}>
+                <th scope="row">{f.nombre}</th><td class="num">{f.pautado}</td>
+                <td class="num">{f.hecho}{f.falta > 0 && f.hecho !== 'Sin hacer' ? ` (faltan ${f.falta})` : ''}</td>
+                <td class="num">{antes || '—'}</td>
+                <td class="revisar-proxima">{conKilos ? (
+                  <span class="fila-envolver">
+                    <button type="button" class="btn btn-peq" disabled={ocupado} aria-label={`Bajar 2,5 kg a ${f.nombre} en su próxima sesión`} onClick={() => ajustar(p, -2.5)}>−2,5</button>
+                    <button type="button" class="btn btn-peq" disabled={ocupado} aria-label={`Subir 2,5 kg a ${f.nombre} en su próxima sesión`} onClick={() => ajustar(p, 2.5)}>+2,5</button>
+                    {aj && <span class="mini secundario num">{num(aj.despues)} kg</span>}
+                  </span>
+                ) : <span class="mini terciario">—</span>}</td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+      </div>
+      {vol.length > 0 && (
+        <div class="pila-xs revisar-volumen">
+          <span class="mini secundario">Su semana por músculo (series):</span>
+          <div class="fila-envolver">{vol.map((v) => <span key={v.grupo} class={`chip num vol-${v.estado}`}>{NOMBRE_GRUPO[v.grupo] || v.grupo} {num(v.n)} de {v.min}–{v.max}<span class="sr">, {v.estado === 'dentro' ? 'dentro de su rango' : v.estado === 'bajo' ? 'por debajo' : 'por encima'}</span></span>)}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -147,21 +188,29 @@ export function HojaVoz({ atleta, cita = null, respondeA = null, alCerrar, alEnv
 // Lo que has dado por revisado hoy, por si alguna fue sin querer: «Volver a pendiente»
 export function HojaRevisadosHoy({ alCerrar, alCambio }) {
   const { api, aviso } = useApp();
-  const lista = useCarga(() => api.revisadosHoy(), []);
+  const [dias, setDias] = useState(1);
+  const [buscar, setBuscar] = useState('');
+  const lista = useCarga(() => api.revisadosHoy(undefined, dias), [dias]);
   const [ocupado, una] = useUnaVez();
   const volver = (x) => una(async () => {
     try { await api.marcarRevisado(x.tipo, x.id, false); aviso('Vuelve a «Revisar»', 'ok'); await lista.recargar(true); alCambio?.(); }
     catch (e) { aviso(e.message, 'error'); }
   });
-  const xs = lista.datos || [];
+  const xs = (lista.datos || []).filter((x) => !buscar.trim() || coincideNombre(`${x.atleta.nombre} ${x.titulo}`, buscar));
   return (
-    <Hoja titulo="Lo que has revisado hoy" alCerrar={alCerrar}>
-      {lista.cargando && !lista.datos ? <p class="peq secundario" role="status">Cargando...</p> : !xs.length ? <p class="peq secundario">Hoy aún no has dado nada por revisado.</p> : (
+    <Hoja titulo={dias === 1 ? 'Lo que has revisado hoy' : `Lo que has revisado (${dias} días)`} alCerrar={alCerrar}>
+      <div class="fila-envolver revisados-filtros">
+        <div class="segmentos" role="group" aria-label="Desde cuándo">
+          {[[1, 'Hoy'], [7, '7 días'], [30, '30 días']].map(([k, t]) => <button key={k} type="button" aria-pressed={dias === k ? 'true' : 'false'} onClick={() => setDias(k)}>{t}</button>)}
+        </div>
+        <input type="search" class="entrada" placeholder="Buscar" aria-label="Buscar en lo revisado" value={buscar} onInput={(e) => setBuscar(e.currentTarget.value)} />
+      </div>
+      {lista.cargando && !lista.datos ? <p class="peq secundario" role="status">Cargando...</p> : !xs.length ? <p class="peq secundario">{buscar.trim() ? 'Nada con esa búsqueda.' : dias === 1 ? 'Hoy aún no has dado nada por revisado.' : 'No has revisado nada en estos días.'}</p> : (
         <ul class="revisados-hoy">
           {xs.map((x) => (
             <li key={`${x.tipo}-${x.id}`} class="revisado-hoy">
               <Avatar nombre={x.atleta.nombre} foto={x.atleta.foto} clase="peq" />
-              <span class="pila-xs"><span class="peq"><strong>{x.atleta.nombre}</strong>: {x.titulo}</span><span class="mini terciario">{NOMBRE_REVISADO[x.tipo]}, {cuando(x.revisado_en)}</span></span>
+              <span class="pila-xs"><span class="peq"><strong>{x.atleta.nombre}</strong>: {x.titulo}</span><span class="mini terciario">{NOMBRE_REVISADO[x.tipo]}, {cuando(x.revisado_en)}{x.leido === true ? <span class="revisado-leido">, ha leído tu respuesta <span aria-hidden="true">✓✓</span></span> : x.leido === false ? <span>, aún no ha leído tu respuesta <span aria-hidden="true">✓</span></span> : ''}</span></span>
               <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => volver(x)} aria-label={`Volver a pendiente: ${x.atleta.nombre}, ${x.titulo}`}>Volver a pendiente</button>
             </li>
           ))}

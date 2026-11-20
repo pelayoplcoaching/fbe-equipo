@@ -5271,6 +5271,32 @@ console.log('\nLa revisión semanal del coach (migración 040)');
     '(083) un atleta ni ve ni toca lo apartado del coach, ni nadie más');
   await q(`delete from revisar_apartados`);
 
+  // (v0.197, 084) la etiqueta de cada tarjeta y el aviso de una molestia fuerte
+  check((await q(`select numero from fbe_migraciones where numero = 84`)).length === 1
+    && (await q(`select column_name from information_schema.columns where table_name = 'revisar_apartados' and column_name = 'etiqueta'`)).length === 1, '(084) la columna de la etiqueta');
+  await como(pelayo, 'aal2');
+  await q(`insert into revisar_apartados (clave, etiqueta) values ('c-11111111-2222-3333-4444-555555555555', 'Para la llamada')`);
+  const mal084 = [];
+  for (const [sql, args] of [[`insert into revisar_apartados (clave, etiqueta) values ('c-x', $1)`, ['x'.repeat(31)]], [`insert into revisar_apartados (clave, etiqueta) values ('c-y', $1)`, ['a\nb']], [`insert into revisar_apartados (clave, etiqueta) values ('c-z', '')`, []]]) {
+    try { await q(sql, args); mal084.push(null); } catch (e) { mal084.push(e.message); }
+  }
+  check((await q(`select etiqueta from revisar_apartados`))[0]?.etiqueta === 'Para la llamada' && mal084.every(Boolean), '(084) una etiqueta sola vale; de más de 30, con saltos de línea o vacía, no');
+  await q(`delete from revisar_apartados`);
+  await su();
+  const antes084 = (await q(`select count(*)::int n from notificaciones where clave like 'urgente:%'`))[0].n;
+  await como(ana);
+  await q(`insert into molestias (atleta_id, semana_inicio, zona, intensidad) values ($1, '2026-10-26', 'cuadriceps', 2)`, [aAna.id]);
+  await su();
+  const tras2 = (await q(`select count(*)::int n from notificaciones where clave like 'urgente:%'`))[0].n;
+  await como(ana);
+  await q(`update molestias set intensidad = 3 where atleta_id = $1 and semana_inicio = '2026-10-26' and zona = 'cuadriceps'`, [aAna.id]);
+  await q(`insert into molestias (atleta_id, semana_inicio, zona, intensidad) values ($1, '2026-10-26', 'hombros', 3)`, [aAna.id]);
+  await su();
+  const urg084 = await q(`select n.usuario_id, n.titulo, n.cuerpo from notificaciones n where clave like 'urgente:%'`);
+  check(tras2 === antes084 && urg084.length === antes084 + 1 && urg084.every((x) => x.usuario_id === pelayo && /algo urgente en su check-in/.test(x.titulo) && !/hombro|cuadr/i.test(`${x.titulo} ${x.cuerpo}`)),
+    '(084) una molestia fuerte avisa al coach (una por atleta y semana, sin decir qué ni dónde); una moderada, no');
+  await q(`delete from molestias where semana_inicio = '2026-10-26'`);
+
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
   const sin39 = new PGlite();
   await sin39.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));

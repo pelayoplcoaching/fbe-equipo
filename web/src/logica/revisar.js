@@ -317,9 +317,9 @@ export const OPCIONES_APARTAR = (hoy) => [['1', 'Mañana', 1], ['3', 'En 3 días
 export function mapaApartados(filas, hoy) {
   const mapa = {}, viejas = [];
   for (const f of filas || []) {
-    const vale = f.fijada || (esDia(f.hasta) && f.hasta > hoy);
+    const vale = f.fijada || f.etiqueta || (esDia(f.hasta) && f.hasta > hoy);
     if (!vale) { viejas.push(f.clave); continue; }
-    mapa[f.clave] = { hasta: esDia(f.hasta) && f.hasta > hoy ? f.hasta : null, fijada: !!f.fijada };
+    mapa[f.clave] = { hasta: esDia(f.hasta) && f.hasta > hoy ? f.hasta : null, fijada: !!f.fijada, etiqueta: f.etiqueta || null };
   }
   return { mapa, viejas };
 }

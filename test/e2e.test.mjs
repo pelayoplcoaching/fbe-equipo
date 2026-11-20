@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.197: Revisar, tercera tanda (test/e2e-revisar-197.mjs)
+console.log('\nv0.197: Revisar, tercera tanda');
+try {
+  const { probarRevisar197 } = await import('./e2e-revisar-197.mjs');
+  await probarRevisar197({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.197:', e.message.split('\n')[0]);
+}
+
 // v0.196: Revisar, segunda tanda (test/e2e-revisar-196.mjs)
 console.log('\nv0.196: Revisar, segunda tanda');
 try {

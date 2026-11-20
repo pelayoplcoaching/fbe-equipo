@@ -193,5 +193,62 @@ console.log('\nRevisar, segunda tanda (v0.196): contra la demo');
   check(negado || Object.keys((await apiAna.apartadosRevisar(hoy2)) || {}).length === 0, 'un atleta no aparta nada');
 }
 
+console.log('\nRevisar, tercera tanda (v0.197): lo puro');
+{
+  check(R.rellenarFrase('¡Récord en {récord}, {nombre}!', 'Ana López', { record: 'sentadilla (100 kg x 5)' }) === '¡Récord en sentadilla (100 kg x 5), Ana!', 'los huecos de tus frases se rellenan con sus datos');
+  check(R.rellenarFrase('Esfuerzo {esfuerzo}, {nombre}', '', {}) === 'Esfuerzo', 'lo que falta desaparece sin dejar comas sueltas');
+  check(R.rellenarFrase('{series} series de {ejercicio}', 'Ana', { series: '17/17', ejercicio: 'press banca' }) === '17/17 series de press banca', '{series} y {ejercicio}');
+  const sx = ses('9', { nombre: 'Torso A', rpe_sesion: 8, series: { hechas: 15, pautadas: 17 }, rpeMax: 10, nota_atleta: 'bien' });
+  const mm = { 9: { records: [{ ejercicio_id: 'sq', ejercicio: 'Sentadilla', marca: '105 kg x 5' }], bajas: [], principal: { ejercicio: 'Sentadilla' } } };
+  const v = R.variablesDe(sx, mm);
+  check(v.record === 'sentadilla (105 kg x 5)' && v.esfuerzo === '8' && v.series === '15/17' && v.ejercicio === 'sentadilla', 'los datos de una sesión para los huecos');
+  const b = R.borradorTarjeta(sx, mm, 'Ana López');
+  check(/^¡Bien, Ana! Torso A: 15 de 17 series, con un esfuerzo de 8\./.test(b) && /Récord en sentadilla/.test(b) && /faltaron/.test(b) && /RPE 10/.test(b) && /nota/.test(b), 'la respuesta redactada de una sesión: series, esfuerzo, récord, lo que faltó, el RPE 10 y su nota');
+  const bc = R.borradorTarjeta(ck('1', { energia: 2, molestias: [{ intensidad: 2 }] }), {}, 'Ana');
+  check(/molestia/.test(bc) && /energía está baja/.test(bc), 'la de un check-in: la molestia y la energía');
+  const pa = R.patronesAtleta({ checkins: [{ semana_inicio: '2026-11-16', energia: 2 }, { semana_inicio: '2026-11-09', energia: 1 }, { semana_inicio: '2026-11-02', energia: 2 }], molestias: [{ semana_inicio: '2026-11-16', zona: 'hombros', intensidad: 1 }, { semana_inicio: '2026-11-09', zona: 'hombros', intensidad: 2 }], saltadas: [{ nombre: 'Pierna B' }, { nombre: 'Torso B' }] });
+  check(pa.some((x) => x.clave === 'energia' && x.nivel === 'alta') && pa.some((x) => x.clave === 'molestia-hombros') && pa.some((x) => x.clave === 'saltadas' && x.sesiones.length === 2), 'avisos de patrón: energía baja tres semanas, la misma molestia que vuelve y sesiones sin hacer');
+  check(R.patronesAtleta({ checkins: [{ semana_inicio: '2026-11-16', energia: 4 }] }).length === 0, 'sin patrón, nada');
+  check(R.urgentesBandeja({ checkins: [{ molestias: [{ intensidad: 3 }] }, { molestias: [{ intensidad: 1 }] }], archivos: [{ autoevaluacion: { molestia: true } }, {}] }) === 2, 'lo urgente contado para la pestaña');
+  const sig = R.siguienteImportante([ses('1'), ck('2', { molestias: [{ intensidad: 3 }] }), msg('3', '¿?')], ahora);
+  check(sig.clave === 'c-2', 'lo siguiente más importante: la molestia fuerte');
+  check(R.minutosRestantes([ses('1'), ck('2'), msg('3', 'x')]) === 7 && R.minutosRestantes([ses('1')], { revisadas: 3, contestadas: 0, desde: Date.now() - 6 * 60000 }) === 2, 'cuánto te queda: de partida por tipo o a tu ritmo de esta tanda');
+  check(R.textoRestante(7) === 'Te quedan unos 7 min' && R.textoRestante(75) === 'Te quedan unas 1 h y 15 min', 'en palabras');
+  check(R.limpiarEtiqueta('  Para   la llamada  ') === 'Para la llamada' && R.etiquetasDe({ a: { etiqueta: 'B' }, b: { etiqueta: 'A' }, c: {} }).join() === 'A,B', 'etiquetas limpias y sin repetir');
+  const vt = R.volumenTarjeta({ pecho: 12, dorsales: 6, biceps: 25 }, () => [10, 20]);
+  check(vt.length === 3 && vt.find((x) => x.grupo === 'dorsales').estado === 'bajo' && vt.find((x) => x.grupo === 'biceps').estado === 'alto', 'su semana por músculo frente a su rango');
+  check(R.esDeslizarIzquierda(-200, 10, 360) && !R.esDeslizarIzquierda(-40, 0, 360) && !R.esDeslizarIzquierda(200, 0, 360), 'deslizar a la izquierda (lo bastante)');
+  const cola = R.conOp([], 'revisar', ['sesion', '1']);
+  check(cola.length === 1 && cola[0].op === 'revisar' && cola[0].id, 'lo hecho sin conexión, a la cola');
+  const { mapa: mE } = R.mapaApartados([{ clave: 's-1', hasta: null, fijada: false, etiqueta: 'Para la llamada' }], hoy);
+  check(mE['s-1']?.etiqueta === 'Para la llamada', 'una tarjeta solo con etiqueta se guarda');
+}
+
+console.log('\nRevisar, tercera tanda (v0.197): contra la demo');
+{
+  const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
+  await backend.auth.entrar('pelayo@fbe.demo', 'demo');
+  const api = crearApi(backend);
+  const hoy3 = (await import('../web/src/logica/fechas.js')).fechaMadrid();
+  check(await api.revisar084() === true, 'la demo ya tiene las etiquetas (084)');
+  await api.guardarApartado('s-22222222-2222-3333-4444-555555555555', { etiqueta: 'Para la llamada' });
+  check((await api.apartadosRevisar(hoy3))['s-22222222-2222-3333-4444-555555555555']?.etiqueta === 'Para la llamada', 'una etiqueta, en la base');
+  const bj = await api.bandeja();
+  const ids = [...new Set([...bj.sesiones, ...bj.checkins].map((x) => x.atleta.id))];
+  const pt = await api.patronesRevisar(ids, hoy3);
+  check(ids.every((id) => Array.isArray(pt[id])), 'los avisos de patrón de cada atleta');
+  const s0 = bj.sesiones[0];
+  const det = await api.sesion(s0.id, s0.atleta.id);
+  const conKg = det.ejercicios.find((p) => p.hechas.some((x) => Number(x.kg) > 0));
+  if (conKg) {
+    const r = await api.ajustarProxima(s0.atleta.id, conKg.ejercicio_id, 2.5, hoy3);
+    check(r === null || (r.despues === Math.round((r.antes + 2.5) * 4) / 4 && r.sesion), `ajustar su próxima sesión: ${r ? `${r.antes} → ${r.despues} kg en ${r.sesion}` : 'no tiene ninguna por delante'}`);
+  } else check(true, '(la sesión no tiene kilos)');
+  await api.comentar({ atletaId: s0.atleta.id, sesionId: s0.id, texto: 'Visto', autor: 'coach' });
+  const rv = await api.revisadosHoy(hoy3, 7);
+  const suya = rv.find((x) => x.tipo === 'sesion' && x.id === s0.id);
+  check(suya && suya.leido === false, 'lo revisado (7 días), con si ha leído tu respuesta (aún no)');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

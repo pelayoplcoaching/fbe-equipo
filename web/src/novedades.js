@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.197': {
+    coach: [
+      'Revisar: respuesta ya redactada con sus datos, frases con huecos, contestar a varias a la vez o más tarde, y si la ha leído.',
+      'La vez anterior y +2,5 kg en su próxima sesión en un toque, volumen por músculo, avisos de patrón, etiquetas y su chat al lado.',
+      'Lo siguiente más importante, cuánto te queda, aviso al móvil si algo es urgente (migración 084) y deslizar a la izquierda.',
+    ],
+  },
   '0.196': {
     coach: [
       'Revisar: dos columnas en ordenador, uno a uno para todo, más teclas y el resumen de cada tanda. Tus frases por tipo y tu «Visto».',

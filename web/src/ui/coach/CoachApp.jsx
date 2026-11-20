@@ -21,6 +21,7 @@ import { Conversaciones } from './Conversaciones.jsx';
 import { EquipoCoach } from './EquipoCoach.jsx';
 import { RecibirCompartidoCoach } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
+import { urgentesBandeja } from '../../logica/revisar.js';
 import { repartirPestanas, PREFERIDAS_COACH } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
@@ -122,6 +123,8 @@ export function CoachApp() {
   }) : null;
   const cerrarFicha = () => conTransicion(() => { setFicha(null); setPeticion(null); }, 'cerrar');
   const total = bandeja.datos?.total || 0;
+  // (v0.197) lo urgente (una molestia fuerte), con su punto rojo en la pestaña
+  const urgentes = urgentesBandeja(bandeja.datos);
 
   // Búsqueda rápida: Ctrl/Cmd + K en cualquier sitio, o «/» si no se está escribiendo
   const [buscar, setBuscar] = useState(false);
@@ -190,7 +193,7 @@ export function CoachApp() {
           </button>
           {reparto.barra.map(([id, texto, icono]) => (
             <button key={id} data-tab={id} class={`tab ${id === 'cuenta' ? 'tab-cuenta' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => elegirPestana(id)}>
-              <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{estrecha && CORTAS[id] ? <><span class="sr">{texto}</span><span aria-hidden="true">{CORTAS[id]}</span></> : texto}
+              <span class="tab-ico"><Icono n={icono} class={`ico-${icono}`} />{id === 'revisar' && <Insignia n={total} etiqueta={`${total} por revisar`} />}{id === 'revisar' && urgentes > 0 && <span class="tab-urgente" title={urgentes === 1 ? '1 urgente' : `${urgentes} urgentes`}><span class="sr">, {urgentes === 1 ? '1 urgente' : `${urgentes} urgentes`}</span></span>}{id === 'mensajes' && <Insignia n={sinLeer.datos || 0} etiqueta={`${sinLeer.datos || 0} mensajes sin leer`} />}</span>{estrecha && CORTAS[id] ? <><span class="sr">{texto}</span><span aria-hidden="true">{CORTAS[id]}</span></> : texto}
             </button>
           ))}
           {reparto.mas.length > 0 && <BotonMas activa={reparto.mas.some(([t]) => t === tab)} abierta={verMas} alAbrir={() => setVerMas(true)} />}

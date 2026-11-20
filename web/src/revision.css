@@ -310,3 +310,24 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
 .revisar-col-panel { display: grid; gap: var(--esp-8); min-width: 0; }
 .revisar-col-ctx { margin: 0; }
 .revisar-columnas-btn svg, .revisar-uno-btn svg { width: var(--ico-14); height: var(--ico-14); }
+
+/* v0.197: Revisar, tercera tanda. Solo ASCII; todo con tokens. */
+.tab-ico { position: relative; }
+.tab-urgente { position: absolute; left: var(--esp-6); top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--alerta); outline: 2px solid var(--hoja); }
+.revisar-patrones { list-style: none; margin: 0; padding: 0 var(--esp-4); display: grid; gap: var(--esp-2); }
+.revisar-patrones li { display: flex; align-items: center; gap: var(--esp-4); color: var(--tinta-2); }
+.revisar-patrones li svg { width: var(--ico-14); height: var(--ico-14); flex: none; }
+.revisar-patrones li.patron-alta { color: var(--alerta); font-weight: 650; }
+.revisar-patrones li.patron-media svg { color: var(--aviso); }
+.revisar-etiqueta { display: inline-flex; align-items: center; gap: var(--esp-4); cursor: pointer; border: var(--filo-fino) solid var(--morado); background: var(--morado-suave); color: var(--tinta); font: inherit; font-size: var(--letra-13); min-height: 32px; }
+.revisar-etiqueta svg, .revisar-etiquetas-chips svg, .revisar-cola svg, .revisar-siguiente-btn svg, .hilo-redactar svg { width: var(--ico-14); height: var(--ico-14); }
+.revisar-etiquetas-chips button { display: inline-flex; align-items: center; gap: var(--esp-4); }
+.revisar-cola { display: flex; align-items: center; gap: var(--esp-6); margin: 0; padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--aviso-suave); color: var(--tinta); }
+.revisar-restante { white-space: nowrap; }
+.revisar-proxima .btn { min-width: 44px; }
+.revisar-volumen .chip.vol-bajo { border: var(--filo-fino) solid var(--aviso); }
+.revisar-volumen .chip.vol-alto { border: var(--filo-fino) solid var(--alerta); }
+.revisados-filtros { align-items: center; gap: var(--esp-8); margin-bottom: var(--esp-8); }
+.revisados-filtros .entrada { flex: 1 1 10rem; min-width: 0; }
+.revisado-leido { color: var(--ok); }
+.deslizable-fondo.izquierda { justify-content: flex-end; padding-left: 0; padding-right: var(--esp-20); background: var(--aviso-suave); color: var(--tinta); }

@@ -72,7 +72,7 @@ const DEFECTOS = {
   revisiones_semanales: () => ({ hecha: false, nota: null, estado: null, actualizado_en: ahora() }),
   // Como la 082: los ajustes de la revisión de cada coach
   revision_ajustes: () => ({ frases: [], orden: [], modo: null, vista: null, actualizado_en: ahora() }),
-  revisar_apartados: () => ({ hasta: null, fijada: false, creado_en: ahora() }),
+  revisar_apartados: () => ({ hasta: null, fijada: false, etiqueta: null, creado_en: ahora() }),
   videos_modelo: () => ({ poster_ruta: null, duracion_seg: null, mime: null, bytes: null, angulo: null, orden: 0, creado_en: ahora() }),
   video_autoevaluacion: () => ({ rpe: null, nota: null, molestia: null, zona: null, creado_en: ahora(), actualizado_en: ahora() }),
   comentarios: () => ({ sesion_id: null, checkin_id: null, archivo_id: null, leido_en: null, creado_en: ahora(), dibujo: null, adjunto: false, enviar_en: null, responde_a: null, editado_en: null, eliminado_en: null, cliente_id: null, reenviado: false, entregado_en: null, escuchado_en: null, video_respuesta_id: null, resumen_sesion: false }),
@@ -1246,7 +1246,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     // Como la 040: el lunes, un lunes; la nota, de 500 caracteres como mucho
     revisiones_semanales: (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f.lunes)) && new Date(`${f.lunes}T12:00:00Z`).getUTCDay() === 1 && (f.nota == null || [...String(f.nota)].length <= 500) && (f.estado == null || ['esperando', 'programar'].includes(f.estado)),
     // Como la 083: la clave de una tarjeta y, o un día, o fijada
-    revisar_apartados: (f) => /^[a-z]{1,2}-[A-Za-z0-9-]{1,80}$/.test(String(f.clave || '')) && (f.hasta != null || f.fijada === true) && (f.hasta == null || /^\d{4}-\d{2}-\d{2}$/.test(String(f.hasta))),
+    // (y como la 084: una etiqueta de 1 a 30 caracteres, sin caracteres de control)
+    revisar_apartados: (f) => /^[a-z]{1,2}-[A-Za-z0-9-]{1,80}$/.test(String(f.clave || '')) && (f.hasta != null || f.fijada === true || f.etiqueta != null) && (f.hasta == null || /^\d{4}-\d{2}-\d{2}$/.test(String(f.hasta)))
+      && (f.etiqueta == null || (typeof f.etiqueta === 'string' && [...f.etiqueta].length >= 1 && [...f.etiqueta].length <= 30 && !/[\u0000-\u001f\u007f]/.test(f.etiqueta))),
     // Como la 082 (revision_ajustes_validos)
     revision_ajustes: (f) => Array.isArray(f.frases) && f.frases.length <= 20 && f.frases.every((x) => typeof x === 'string' && [...x].length >= 1 && [...x].length <= 300)
       && Array.isArray(f.orden) && f.orden.length <= 500 && f.orden.every((x) => typeof x === 'string' && /^[0-9a-fA-F-]{36}$/.test(x))

@@ -7,7 +7,7 @@ import { ponerCorrecciones } from './tecnica/correcciones.js';
 import { ChipsFrases } from './tecnica/Frases.jsx';
 import { insertarFrase, dibujoEnMomento, dibujoParaFrase, limpiarTextoFrase } from '../logica/correccion.js';
 import { partirMomentos } from '../logica/momentos.js';
-import { conNombre } from '../logica/revision.js';
+import { rellenarFrase } from '../logica/revisar.js';
 import { Dictar } from './Dictar.jsx';
 import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tecnica/GrabarRevision.jsx';
 
@@ -18,7 +18,7 @@ import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tec
 // v0.59 (4): en el hilo de un vídeo, el coach tiene sus frases de corrección a un toque (ejercicio: el del vídeo)
 // v0.60 (1 y 2, 038): las respuestas en vídeo del hilo de un vídeo de técnica (la revisión grabada del coach, o un vídeo con
 // la cámara de delante del coach o del atleta) se ven en su mensaje; «Responder con vídeo» graba una (hasta un minuto).
-export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null, frasesRapidas = null }) {
+export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null, frasesRapidas = null, variables = null, borrador = null }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const hilo = useCarga(() => api.comentarios({ atletaId, sesionId, checkinId, archivoId }), [atletaId, sesionId, checkinId, archivoId]);
@@ -121,7 +121,7 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
       {yo === 'coach' && frasesRapidas?.length > 0 && (
         <div class="fila-envolver hilo-frases" role="group" aria-label="Frases rápidas">
           {frasesRapidas.slice(0, 6).map((fr) => {
-            const t = conNombre(fr, nombreAtleta);
+            const t = rellenarFrase(fr, nombreAtleta, variables || {});
             return <button key={fr} type="button" class="chip hilo-frase" onClick={() => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }}>{t}</button>;
           })}
         </div>
@@ -146,6 +146,8 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           }}><Icono n="reloj" /> Comentar este momento</button>
         )}
         {yo === 'coach' && <button type="button" class="btn-texto mini responder-guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /> Respuestas guardadas</button>}
+        {/* (v0.197) en «Revisar», una respuesta ya redactada con sus datos */}
+        {yo === 'coach' && borrador && <button type="button" class="btn-texto mini hilo-redactar" onClick={() => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${borrador}` : borrador)); area.current?.focus(); }}><Icono n="editar" /> Redactar con sus datos</button>}
         {/* (v0.196) en «Revisar», dictar la respuesta */}
         {yo === 'coach' && frasesRapidas && <Dictar alTexto={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }} etiqueta="Dictar la respuesta" clase="btn-texto mini" />}
         {puedeVideo && (delVideo.datos.con038

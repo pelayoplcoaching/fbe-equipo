@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, useUnaVez, usePreferencia, cuando, Avatar } from '../comunes.jsx';
 import {
   mapaDesdeLocal, apartadaHoy, sumarDiasRevisar, OPCIONES_APARTAR, TIPOS_FRASES, conFraseTipo, sinFraseTipo, textoVisto, EMOJIS_REVISAR, ATAJOS_REVISAR,
-  urgenciaItem, resumenItem,
+  urgenciaItem, resumenItem, rellenarFrase, limpiarEtiqueta, ETIQUETAS_PARTIDA,
 } from '../../logica/revisar.js';
+import { ChatRapido } from './RevisionTodo.jsx';
 import { textoHoras } from '../../logica/correccion.js';
 import { conFrase, sinFrase, conNombre } from '../../logica/revision.js';
 
@@ -16,6 +17,9 @@ export function useApartados(hoy) {
   const { api, aviso } = useApp();
   const [local, setLocal] = usePreferencia('fbe-revisar-pospuestos', {});
   const [fijLocal, setFijLocal] = usePreferencia('fbe-revisar-fijadas', []);
+  // (v0.197) las etiquetas: en la base con la 084; sin ella, en este aparato
+  const [etqLocal, setEtqLocal] = usePreferencia('fbe-revisar-etiquetas', {});
+  const con084 = useCarga(() => api.revisar084().catch(() => false), []);
   const remoto = useCarga(() => api.apartadosRevisar(hoy).catch(() => null), []);
   const [mapa, setMapa] = useState(null);
   const enBase = remoto.datos != null && typeof remoto.datos === 'object';
@@ -30,26 +34,43 @@ export function useApartados(hoy) {
       setLocal({}); setFijLocal([]);
     }
   }, [remoto.datos]);
-  const actual = enBase ? (mapa || remoto.datos) : mapaDesdeLocal(local, fijLocal, hoy);
+  const base = enBase ? (mapa || remoto.datos) : mapaDesdeLocal(local, fijLocal, hoy);
+  const etqEnBase = enBase && con084.datos === true;
+  // Sin la 084, las etiquetas de este aparato se ponen encima
+  const actual = etqEnBase ? base : (() => {
+    const m = { ...base };
+    for (const [k, e] of Object.entries(etqLocal || {})) if (e) m[k] = { ...(m[k] || { hasta: null, fijada: false }), etiqueta: e };
+    return m;
+  })();
   const ref = useRef(actual);
   ref.current = actual;
   const poner = async (clave, valor) => {
     const antes = ref.current;
     const nuevo = { ...antes };
-    if (valor && (valor.hasta || valor.fijada)) nuevo[clave] = { hasta: valor.hasta || null, fijada: !!valor.fijada }; else delete nuevo[clave];
+    const etiqueta = valor?.etiqueta ? limpiarEtiqueta(valor.etiqueta) : null;
+    if (valor && (valor.hasta || valor.fijada || etiqueta)) nuevo[clave] = { hasta: valor.hasta || null, fijada: !!valor.fijada, etiqueta }; else delete nuevo[clave];
+    // Las etiquetas sin la 084 van al aparato
+    if (!etqEnBase) {
+      const e = { ...(etqLocal || {}) };
+      if (etiqueta) e[clave] = etiqueta; else delete e[clave];
+      if ((etqLocal || {})[clave] !== e[clave]) setEtqLocal(e);
+    }
     if (enBase) {
+      const paraBase = etqEnBase ? (valor || {}) : { hasta: valor?.hasta || null, fijada: !!valor?.fijada };
+      const sinNada = !paraBase.hasta && !paraBase.fijada && !(etqEnBase && etiqueta);
       setMapa(nuevo);
       ref.current = nuevo;
-      try { await api.guardarApartado(clave, valor || {}); } catch (e) { setMapa(antes); aviso(e.message, 'error'); }
+      try { await api.guardarApartado(clave, sinNada ? {} : paraBase); } catch (e) { setMapa(antes); aviso(e.message, 'error'); }
     } else {
       const loc = {}, fij = [];
       for (const [k, v] of Object.entries(nuevo)) { if (v.hasta) loc[k] = v.hasta; if (v.fijada) fij.push(k); }
       setLocal(loc); setFijLocal(fij);
     }
   };
-  const apartar = (clave, dias = 1) => { const m = ref.current[clave]; return poner(clave, { hasta: sumarDiasRevisar(hoy, dias), fijada: !!m?.fijada }); };
-  const fijar = (clave) => { const m = ref.current[clave]; return poner(clave, { hasta: apartadaHoy(ref.current, clave, hoy) ? m.hasta : null, fijada: !m?.fijada }); };
-  return { mapa: actual, poner, apartar, fijar, enBase, previo: (clave) => ref.current[clave] || null };
+  const apartar = (clave, dias = 1) => { const m = ref.current[clave]; return poner(clave, { hasta: sumarDiasRevisar(hoy, dias), fijada: !!m?.fijada, etiqueta: m?.etiqueta || null }); };
+  const fijar = (clave) => { const m = ref.current[clave]; return poner(clave, { hasta: apartadaHoy(ref.current, clave, hoy) ? m.hasta : null, fijada: !m?.fijada, etiqueta: m?.etiqueta || null }); };
+  const etiquetar = (clave, etiqueta) => { const m = ref.current[clave]; return poner(clave, { hasta: apartadaHoy(ref.current, clave, hoy) ? m.hasta : null, fijada: !!m?.fijada, etiqueta }); };
+  return { mapa: actual, poner, apartar, fijar, etiquetar, enBase, previo: (clave) => ref.current[clave] || null };
 }
 
 // ---------------------------------------------------------------- tus frases por tipo y tu «Visto»
@@ -100,7 +121,7 @@ export function HojaFrases({ generales, guardarGenerales, porTipo, setPorTipo, v
 
 // ---------------------------------------------------------------- el menú «Más» de cada tarjeta
 // opciones: { emoji, tarea, video, nota, fijada, fijar, apartar }
-export function MasAcciones({ hoy, emoji = null, tarea = null, video = null, nota = null, fijada = false, fijar = null, apartar = null }) {
+export function MasAcciones({ hoy, emoji = null, tarea = null, video = null, nota = null, fijada = false, fijar = null, apartar = null, programada = null, etiqueta = null, etiquetaActual = null }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <>
@@ -111,6 +132,8 @@ export function MasAcciones({ hoy, emoji = null, tarea = null, video = null, not
           {tarea && <button type="button" class="btn btn-peq btn-texto" onClick={tarea}><Icono n="hecho" /> Mandarle una tarea</button>}
           {video && <button type="button" class="btn btn-peq btn-texto" onClick={video}><Icono n="video" /> Pedirle un vídeo</button>}
           {nota && <button type="button" class="btn btn-peq btn-texto" onClick={nota}><Icono n="editar" /> Para la revisión semanal</button>}
+          {programada && <button type="button" class="btn btn-peq btn-texto" onClick={programada}><Icono n="reloj" /> Contestar más tarde</button>}
+          {etiqueta && <button type="button" class="btn btn-peq btn-texto revisar-etiquetar" onClick={etiqueta}><Icono n="bandera" /> {etiquetaActual ? 'Cambiar la etiqueta' : 'Ponerle una etiqueta'}</button>}
           {fijar && <button type="button" class="btn btn-peq btn-texto revisar-fijar" aria-pressed={fijada ? 'true' : 'false'} onClick={fijar}><Icono n="chincheta" /> {fijada ? 'Quitar de arriba' : 'Fijar arriba'}</button>}
           {apartar && OPCIONES_APARTAR(hoy).slice(1).map(([k, t, dias]) => <button key={k} type="button" class="btn btn-peq btn-texto" onClick={() => apartar(dias)}><Icono n="reloj" /> {t}</button>)}
         </div>
@@ -272,5 +295,87 @@ export function ListaColumnas({ items, sel, alElegir, ahora = new Date() }) {
         })}
       </ul>
     </nav>
+  );
+}
+
+// ================================================================ v0.197
+// ---------------------------------------------------------------- contestar a varias con el mismo mensaje
+export function HojaContestarVarias({ n, frases = [], alCerrar, alEnviar }) {
+  const [texto, setTexto] = useState('');
+  const [ocupado, una] = useUnaVez();
+  return (
+    <Hoja titulo={n === 1 ? 'Contestar a 1' : `Contestar a ${n} a la vez`} alCerrar={alCerrar} ancho={620}>
+      <div class="pila">
+        <label class="pila-xs"><span class="peq secundario">El mismo mensaje en cada una, con los huecos rellenos con los datos de cada uno ({'{nombre}'}, {'{récord}'}, {'{esfuerzo}'}, {'{series}'}, {'{ejercicio}'}). Se dan por revisadas.</span>
+          <textarea class="area" rows={4} maxLength={2000} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} aria-label="Mensaje para todas" placeholder="¡Buen trabajo, {nombre}!" /></label>
+        {frases.length > 0 && <div class="fila-envolver hilo-frases" role="group" aria-label="Frases rápidas">{frases.slice(0, 6).map((fr) => <button key={fr} type="button" class="chip hilo-frase" onClick={() => setTexto((x) => (x.trim() ? `${x.trimEnd()} ${fr}` : fr))}>{fr}</button>)}</div>}
+        <p class="mini secundario">Así le llegaría a uno: «{rellenarFrase(texto || '¡Buen trabajo, {nombre}!', 'Ana López', { record: 'sentadilla (100 kg x 5)', esfuerzo: '8', series: '17/17', ejercicio: 'sentadilla' })}»</p>
+        <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={() => una(async () => { await alEnviar(texto.trim()); alCerrar(); })}><Icono n="enviar" /> Contestar a {n === 1 ? '1' : `las ${n}`}</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// ---------------------------------------------------------------- contestar más tarde (le llega a su chat a esa hora)
+const pad2 = (n) => String(n).padStart(2, '0');
+export function mananaALas(hora = 8, ahora = new Date()) {
+  const d = new Date(ahora); d.setDate(d.getDate() + 1); d.setHours(hora, 0, 0, 0);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(hora)}:00`;
+}
+export function HojaProgramada({ atleta, cita = null, alCerrar, alEnviado }) {
+  const { api, aviso } = useApp();
+  const [texto, setTexto] = useState('');
+  const [cuando, setCuando] = useState(() => mananaALas(8));
+  const [ocupado, una] = useUnaVez();
+  const primer = atleta.nombre.split(' ')[0];
+  const enviar = () => una(async () => {
+    const t = new Date(cuando);
+    if (Number.isNaN(t.getTime()) || t.getTime() <= Date.now() + 60000) { aviso('Elige una hora que aún no haya pasado', 'error'); return; }
+    try {
+      await api.enviarMensaje(atleta.id, { texto: cita ? `${cita}\n${texto.trim()}` : texto.trim(), autor: 'coach', enviarEn: t.toISOString(), clienteId: globalThis.crypto?.randomUUID?.() || `rev-prog-${Date.now()}` });
+      aviso(`Le llegará a ${primer} a esa hora`, 'ok');
+      alEnviado?.();
+      alCerrar();
+    } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <Hoja titulo={`Contestar a ${primer} más tarde`} alCerrar={alCerrar}>
+      <div class="pila">
+        <label class="pila-xs"><span class="peq secundario">Le llega a su chat a la hora que elijas{cita ? <>, empezando por «{cita}»</> : ''}.</span>
+          <textarea class="area" rows={3} maxLength={2000} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} aria-label="Mensaje" /></label>
+        <label class="rev-cuando"><span class="peq secundario">Saldrá el</span> <input type="datetime-local" value={cuando} onInput={(e) => setCuando(e.currentTarget.value)} aria-label="Cuándo sale la respuesta" /></label>
+        <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n="reloj" /> Programar</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// ---------------------------------------------------------------- tu etiqueta para una tarjeta
+export function HojaEtiqueta({ actual = null, todas = [], enBase = true, alCerrar, alElegir }) {
+  const [texto, setTexto] = useState('');
+  const opciones = [...new Set([...ETIQUETAS_PARTIDA, ...todas])];
+  return (
+    <Hoja titulo="Etiqueta" alCerrar={alCerrar}>
+      <div class="pila">
+        <div class="selector-chips" role="group" aria-label="Tus etiquetas">
+          {opciones.map((e) => <button key={e} type="button" aria-pressed={actual === e ? 'true' : 'false'} onClick={() => { alElegir(e); alCerrar(); }}>{e}</button>)}
+        </div>
+        <form class="fila revisar-frase-nueva" onSubmit={(ev) => { ev.preventDefault(); const t = limpiarEtiqueta(texto); if (t) { alElegir(t); alCerrar(); } }}>
+          <input class="entrada" maxLength={30} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} aria-label="Etiqueta nueva" placeholder="Otra etiqueta" />
+          <button class="btn btn-primario" disabled={!limpiarEtiqueta(texto)}>Poner</button>
+        </form>
+        {actual && <button type="button" class="btn" onClick={() => { alElegir(null); alCerrar(); }}><Icono n="cerrar" /> Quitar «{actual}»</button>}
+        {!enBase && <p class="mini terciario">Se guardan en este aparato hasta que ejecutes la migración 084.</p>}
+      </div>
+    </Hoja>
+  );
+}
+
+// ---------------------------------------------------------------- su chat, en una hoja (lo último y contestar)
+export function HojaChat({ atleta, alCerrar, alEnviado }) {
+  return (
+    <Hoja titulo={`Chat con ${atleta.nombre.split(' ')[0]}`} alCerrar={alCerrar} ancho={620}>
+      <ChatRapido f={{ atleta_id: atleta.id, nombre: atleta.nombre }} n={12} alEnviado={alEnviado} />
+    </Hoja>
   );
 }
