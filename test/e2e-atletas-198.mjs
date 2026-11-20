@@ -101,7 +101,7 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
     check(await hasta(async () => (await nombres())[0] === elegido), `fijado: ${corto} sube arriba`);
     await det.getByLabel('Etiqueta nueva').fill('Preboda');
     await det.getByRole('button', { name: 'Poner' }).click();
-    check(await hasta(async () => (await fila(elegido).locator('.etq').allTextContents()).includes('Preboda')), 'una etiqueta, a la vista en su fila');
+    check(await hasta(async () => (await fila(elegido).locator('.chip-etiqueta').allTextContents()).includes('Preboda')), 'una etiqueta, a la vista en su fila');
     await det.getByLabel('Tu nota').fill('Revisar rodilla');
     await det.getByRole('button', { name: 'Guardar nota' }).click();
     check(await hasta(async () => (await fila(elegido).locator('.nota-linea').textContent().catch(() => '')) === 'Revisar rodilla'), 'tu nota, en su fila');
@@ -152,14 +152,14 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
     // Varios a la vez: una etiqueta a dos
     await p.getByRole('button', { name: 'Elegir varios' }).click();
     const dos = (await nombres()).slice(0, 2);
-    for (const n of dos) await fila(n).locator('input.elegir-atleta').check();
+    for (const n of dos) await fila(n).locator('input.marcar-atleta').check();
     await p.getByRole('button', { name: 'Mensaje o etiqueta' }).click();
     const hva = p.getByRole('dialog', { name: 'Con 2 atletas' });
     await hva.getByRole('button', { name: 'Etiqueta', exact: true }).click();
     await hva.getByLabel('Etiqueta').fill('Revisión domingo');
     await hva.getByRole('button', { name: 'Ponérsela' }).click();
-    check(await hasta(async () => (await Promise.all(dos.map(async (n) => (await fila(n).locator('.etq').allTextContents()).includes('Revisión domingo')))).every(Boolean)), 'una etiqueta a varios a la vez');
-    check(await hasta(async () => (await p.locator('input.elegir-atleta').count()) === 0), 'y se deja de elegir');
+    check(await hasta(async () => (await Promise.all(dos.map(async (n) => (await fila(n).locator('.chip-etiqueta').allTextContents()).includes('Revisión domingo')))).every(Boolean)), 'una etiqueta a varios a la vez');
+    check(await hasta(async () => (await p.locator('input.marcar-atleta').count()) === 0), 'y se deja de elegir');
 
     // Teclas
     await filas().first().focus();
@@ -196,7 +196,7 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
     // Se queda guardado (en la demo, como con la 085)
     await p.reload();
     await p.locator('[data-atleta]').first().waitFor();
-    check(await hasta(async () => (await nombres())[0] === elegido && (await fila(elegido).locator('.etq').allTextContents()).includes('Preboda')), 'al volver a entrar, lo fijado, las etiquetas y la nota siguen ahí');
+    check(await hasta(async () => (await nombres())[0] === elegido && (await fila(elegido).locator('.chip-etiqueta').allTextContents()).includes('Preboda')), 'al volver a entrar, lo fijado, las etiquetas y la nota siguen ahí');
     await revisar('ancho');
     await foto('198-ancho');
     check(errores.length === 0, `sin errores ni problemas de accesibilidad en el ordenador${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);

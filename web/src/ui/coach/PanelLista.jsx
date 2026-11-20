@@ -85,7 +85,7 @@ export function Etiquetas({ etiquetas = [], colores = {}, quitar = null }) {
   return (
     <span class="etiquetas-atleta">
       {etiquetas.map((e) => (
-        <span key={e} class="etq" data-color={colorEtiqueta(e, colores)}>
+        <span key={e} class="chip-etiqueta" data-color={colorEtiqueta(e, colores)}>
           {e}
           {quitar && <button type="button" class="etq-quitar" onClick={(ev) => { ev.stopPropagation(); quitar(e); }} aria-label={`Quitar la etiqueta ${e}`}><Icono n="cerrar" width="12" height="12" /></button>}
         </span>
@@ -103,7 +103,7 @@ function PonerEtiqueta({ usadas = [], tiene = [], alPoner, id }) {
     <div class="pila-xs">
       <form class="fila-envolver poner-etiqueta" onSubmit={(e) => { e.preventDefault(); poner(t); }}>
         <label class="sr" for={`etq-${id}`}>Etiqueta nueva</label>
-        <input id={`etq-${id}`} class="entrada entrada-peq etq-entrada" maxLength={24} value={t} placeholder="Etiqueta nueva" onInput={(e) => setT(e.currentTarget.value)} disabled={tiene.length >= MAX_ETIQUETAS} />
+        <input id={`etq-${id}`} class="entrada entrada-lista etq-entrada" maxLength={24} value={t} placeholder="Etiqueta nueva" onInput={(e) => setT(e.currentTarget.value)} disabled={tiene.length >= MAX_ETIQUETAS} />
         <button type="submit" class="btn btn-peq" disabled={!t.trim() || tiene.length >= MAX_ETIQUETAS}>Poner</button>
       </form>
       {sugeridas.length > 0 && (
@@ -156,7 +156,7 @@ export function DetalleAtleta({ r, extra, fila, colores, usadas, alGuardar, hoy,
         <PonerEtiqueta id={`${r.atleta_id}`} usadas={usadas} tiene={p.etiquetas} alPoner={(e) => guardar({ etiquetas: [...p.etiquetas, e] })} />
         <form class="fila-envolver nota-panel" onSubmit={(e) => { e.preventDefault(); guardar({ nota }); }}>
           <label class="sr" for={`nota-${r.atleta_id}`}>Tu nota</label>
-          <input id={`nota-${r.atleta_id}`} class="entrada entrada-peq nota-entrada" maxLength={MAX_NOTA} value={nota} placeholder="Una línea para ti: «Revisar rodilla»" onInput={(e) => setNota(e.currentTarget.value)} />
+          <input id={`nota-${r.atleta_id}`} class="entrada entrada-lista nota-entrada" maxLength={MAX_NOTA} value={nota} placeholder="Una línea para ti: «Revisar rodilla»" onInput={(e) => setNota(e.currentTarget.value)} />
           <button type="submit" class="btn btn-peq" disabled={ocupado || (nota.trim() || null) === (p.nota || null)}>Guardar nota</button>
         </form>
       </div>
@@ -254,7 +254,7 @@ export function HojaVistas({ ajustes, actual, alCambiar, alCerrar }) {
         {(ajustes.vistas || []).length > 0 && (
           <ul class="lista">
             {ajustes.vistas.map((v) => (
-              <li key={v.id} class="fila-entre vista-fila">
+              <li key={v.id} class="fila-panel vista-fila">
                 <span class="peq">{v.nombre}</span>
                 <button type="button" class="btn btn-peq" onClick={() => alCambiar(quitarVista(ajustes, v.id))} aria-label={`Quitar la vista ${v.nombre}`}><Icono n="basura" /> Quitar</button>
               </li>
@@ -311,7 +311,7 @@ export function HojaVarios({ elegidos, usadas, colores, alEtiquetar, alCerrar, a
             <div class="campo"><label for="varios-etq">Etiqueta</label>
               <input id="varios-etq" class="entrada" list="varios-etq-usadas" maxLength={24} value={etq} placeholder="Revisión domingo" onInput={(e) => setEtq(e.currentTarget.value)} />
               <datalist id="varios-etq-usadas">{usadas.map((u) => <option key={u} value={u} />)}</datalist></div>
-            {limpiarEtiqueta(etq) && <p class="mini"><span class="etq" data-color={colorEtiqueta(etq, colores)}>{limpiarEtiqueta(etq)}</span></p>}
+            {limpiarEtiqueta(etq) && <p class="mini"><span class="chip-etiqueta" data-color={colorEtiqueta(etq, colores)}>{limpiarEtiqueta(etq)}</span></p>}
             <div class="fila-envolver">
               <button type="button" class="btn btn-primario" disabled={ocupado || !limpiarEtiqueta(etq)} onClick={() => etiquetar(true)}>Ponérsela</button>
               <button type="button" class="btn" disabled={ocupado || !limpiarEtiqueta(etq)} onClick={() => etiquetar(false)}>Quitársela</button>
@@ -331,10 +331,10 @@ export function HojaColores({ usadas, colores, alCambiar, alCerrar }) {
       {!usadas.length ? <p class="peq secundario">Aún no has puesto ninguna etiqueta. Despliega un atleta (la flecha de su fila) y ponle una.</p> : (
         <ul class="lista">
           {usadas.map((u) => (
-            <li key={u} class="fila-entre">
-              <span class="etq" data-color={colorEtiqueta(u, colores)}>{u}</span>
+            <li key={u} class="fila-panel">
+              <span class="chip-etiqueta" data-color={colorEtiqueta(u, colores)}>{u}</span>
               <label class="sr" for={`color-${u}`}>Color de {u}</label>
-              <select id={`color-${u}`} class="entrada entrada-peq" value={colorEtiqueta(u, colores)} onChange={(e) => alCambiar({ ...colores, [u.toLowerCase()]: e.currentTarget.value })}>
+              <select id={`color-${u}`} class="entrada entrada-lista" value={colorEtiqueta(u, colores)} onChange={(e) => alCambiar({ ...colores, [u.toLowerCase()]: e.currentTarget.value })}>
                 {COLORES_ETIQUETA.map((c) => <option key={c} value={c}>{NOMBRE[c]}</option>)}
               </select>
             </li>
