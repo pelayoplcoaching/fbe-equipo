@@ -141,7 +141,7 @@ export async function probarRevisar196({ navegador, check, base = 'http://localh
     n = await numSub();
     const t3 = await fijar(tarjetas().filter({ has: p.locator('button.revisar-mas-btn') }).first());
     await (await mas(t3)).getByRole('button', { name: 'En 3 días' }).click();
-    check(await hasta(async () => (await numSub()) === n - 1) && await p.getByRole('button', { name: /dejado para mañana/ }).isVisible(), '«En 3 días» también la aparta');
+    check(await hasta(async () => (await numSub()) === n - 1) && await p.getByRole('button', { name: /dejado para otro día/ }).isVisible(), '«En 3 días» también la aparta');
 
     // El resumen de la tanda
     await p.getByRole('button', { name: 'Resumen de esta tanda' }).click();

@@ -279,7 +279,7 @@ export function principalSesion(series, sesion, max = 8) {
 // ---------------------------------------------------------------- filtrar por motivo
 export const MOTIVOS_REVISAR = [['molestias', 'Molestias'], ['preguntas', 'Preguntas'], ['rpe10', 'RPE 10'], ['esperando', 'Más de 3 días']];
 const PRUEBA_MOTIVO = {
-  molestias: (m) => /^Molestia|Llegó en un día difícil/.test(m),
+  molestias: (m) => /^Molestia|Lleg\u00f3 en un d\u00eda dif\u00edcil/.test(m),
   preguntas: (m) => m === 'Te pregunta algo',
   rpe10: (m) => m === 'Alguna serie a RPE 10',
   esperando: (m) => m === 'Lleva más de 3 días esperando',
@@ -369,7 +369,7 @@ export function textoResumenTanda({ revisadas = 0, contestadas = 0, desde = null
 // ---------------------------------------------------------------- las teclas
 export const ATAJOS_REVISAR = [
   ['j / k', 'Bajar y subir (en dos columnas, la siguiente y la anterior)'], ['r', 'Responder'], ['e', 'Dar por revisado'], ['v', 'Visto'],
-  ['m', 'Para mañana'], ['p', 'Programar'], ['u', 'Deshacer lo último'], ['o', 'Abrir su ficha'], ['/', 'Buscar'], ['?', 'Ver estas teclas'],
+  ['m', 'Para mañana'], ['p', 'Programar'], ['u', 'Deshacer lo último'], ['o', 'Abrir su ficha'], ['b', 'Buscar un atleta'], ['?', 'Ver estas teclas'],
 ];
 
 // ---------------------------------------------------------------- la nota para la revisión semanal
@@ -379,7 +379,7 @@ export function notaConMas(nota, texto, max = 500) {
   const antes = String(nota || '').trim();
   if (!nuevo) return antes;
   let t = antes ? `${antes} · ${nuevo}` : nuevo;
-  if ([...t].length > max) t = [...t].slice(-max).join('').replace(/^[^·]*·\s*/, '') || [...nuevo].slice(0, max).join('');
+  if ([...t].length > max) t = [...t].slice(-max).join('').replace(/^[^\u00b7]*\u00b7\s*/, '') || [...nuevo].slice(0, max).join('');
   return t;
 }
 
@@ -395,3 +395,132 @@ export function resumenItem(x) {
   if (x.tipo === 'objetivos') return 'Propone un objetivo';
   return 'Aviso del equipo';
 }
+
+// ================================================================ v0.197: tercera tanda
+// ---------------------------------------------------------------- tus frases con huecos que se rellenan solos
+// {nombre}, {récord} (o {record}), {esfuerzo}, {series} y {ejercicio}. Si un dato no está, su hueco desaparece.
+export const HUECOS_FRASES = ['{nombre}', '{récord}', '{esfuerzo}', '{series}', '{ejercicio}'];
+export function rellenarFrase(frase, nombre, vars = {}) {
+  const primer = String(nombre || '').trim().split(/\s+/)[0] || '';
+  const dato = { nombre: primer, record: vars.record, 'récord': vars.record, esfuerzo: vars.esfuerzo, series: vars.series, ejercicio: vars.ejercicio };
+  return String(frase || '')
+    .replace(/\{(nombre|r[e\u00e9]cord|esfuerzo|series|ejercicio)\}/gi, (_, k) => { const v = dato[k.toLowerCase()]; return v == null || v === '' ? '' : String(v); })
+    .replace(/\s+([,.!?;:])/g, '$1').replace(/\(\s*\)/g, '').replace(/\s{2,}/g, ' ').replace(/^[\s,]+/, '').replace(/[\s,;:]+$/, '').trim();
+}
+// Los datos de una tarjeta para esos huecos
+export function variablesDe(x, marcas = {}) {
+  if (x?.tipo === 'sesiones') {
+    const s = x.s || {};
+    const m = marcas?.[s.id];
+    const r = m?.records?.[0];
+    return {
+      record: r ? `${r.ejercicio.toLowerCase()} (${r.marca})` : null,
+      esfuerzo: s.rpe_sesion != null ? n1(s.rpe_sesion) : null,
+      series: s.series ? `${s.series.hechas}/${s.series.pautadas}` : null,
+      ejercicio: m?.principal?.ejercicio ? m.principal.ejercicio.toLowerCase() : null,
+    };
+  }
+  if (x?.tipo === 'videos' && x.a) return { ejercicio: x.a.ejercicio?.nombre ? x.a.ejercicio.nombre.toLowerCase() : null };
+  return {};
+}
+
+// ---------------------------------------------------------------- la respuesta redactada con sus datos
+export function borradorTarjeta(x, marcas = {}, nombre = '') {
+  const primer = String(nombre || x?.atleta?.nombre || '').trim().split(/\s+/)[0] || '';
+  const hola = primer ? `¡Bien, ${primer}!` : '¡Bien!';
+  if (x?.tipo === 'sesiones') {
+    const s = x.s || {};
+    const m = marcas?.[s.id] || { records: [], bajas: [] };
+    const partes = [`${hola} ${s.nombre || 'La sesión'}${s.series?.pautadas ? `: ${s.series.hechas} de ${s.series.pautadas} series` : ''}${s.rpe_sesion != null ? `, con un esfuerzo de ${n1(s.rpe_sesion)}` : ''}.`];
+    if (m.records.length) partes.push(m.records.length === 1 ? `Récord en ${m.records[0].ejercicio.toLowerCase()} (${m.records[0].marca}), ¡enhorabuena!` : `Récords en ${m.records.map((r) => r.ejercicio.toLowerCase()).join(' y ')}, ¡enhorabuena!`);
+    if (m.bajas.length) partes.push(`En ${m.bajas[0].ejercicio.toLowerCase()} bajaste algo respecto a la última vez: ¿cómo te notaste?`);
+    if (s.series && s.series.hechas < s.series.pautadas) partes.push('Te faltaron algunas series: cuéntame si fue por tiempo o porque no llegabas.');
+    if (Number(s.rpeMax) >= 10) partes.push('Alguna serie se fue a RPE 10: ojo con apurar tanto, mejor dejar 1 o 2 en la recámara.');
+    if (s.nota_atleta) partes.push('Gracias por la nota, me ayuda mucho.');
+    return partes.join(' ');
+  }
+  if (x?.tipo === 'checkins') {
+    const c = x.c || {};
+    const partes = [`¡Gracias por el check-in${primer ? `, ${primer}` : ''}!`];
+    const fuerte = (c.molestias || []).find((mm) => Number(mm.intensidad) >= 2);
+    if (fuerte) partes.push('He visto la molestia que marcas: cuéntame cuándo te aparece y si va a más, y lo ajustamos.');
+    if (c.energia != null && Number(c.energia) <= 2) partes.push('La energía está baja esta semana: ¿cómo vas de sueño y de estrés?');
+    else if (c.energia != null && Number(c.energia) >= 4) partes.push('Me alegra ver la energía alta.');
+    if (c.notas) partes.push('Leído lo que comentas, lo tengo en cuenta para la semana que viene.');
+    return partes.join(' ');
+  }
+  if (x?.tipo === 'videos') {
+    const ej = x.a?.ejercicio?.nombre ? ` de ${x.a.ejercicio.nombre.toLowerCase()}` : '';
+    return `${hola} Visto el vídeo${ej}.`;
+  }
+  if (x?.tipo === 'mensajes') return primer ? `¡Hola, ${primer}! ` : '';
+  return '';
+}
+
+// ---------------------------------------------------------------- avisos de patrón
+// checkins: los suyos de las últimas semanas (cualquier orden); molestias: las suyas (con semana_inicio y zona);
+// saltadas: sesiones de semanas ya pasadas que se quedaron sin hacer ([{ nombre, lunes }])
+export function patronesAtleta({ checkins = [], molestias = [], saltadas = [] } = {}) {
+  const out = [];
+  const ck = [...checkins].sort((a, b) => (a.semana_inicio < b.semana_inicio ? 1 : -1));
+  if (ck.length >= 3 && ck.slice(0, 3).every((c) => c.energia != null && Number(c.energia) <= 2)) out.push({ clave: 'energia', nivel: 'alta', texto: 'Tres semanas seguidas con la energía baja' });
+  else if (ck.length >= 2 && ck.slice(0, 2).every((c) => c.recuperacion != null && Number(c.recuperacion) <= 2)) out.push({ clave: 'recuperacion', nivel: 'media', texto: 'Dos semanas seguidas recuperando mal' });
+  const semanas = [...new Set(ck.map((c) => c.semana_inicio))].slice(0, 3);
+  const zonas = new Map();
+  for (const m of molestias) if (Number(m.intensidad) >= 1 && semanas.includes(m.semana_inicio)) { const s = zonas.get(m.zona) || new Set(); s.add(m.semana_inicio); zonas.set(m.zona, s); }
+  for (const [zona, s] of zonas) if (s.size >= 2) out.push({ clave: `molestia-${zona}`, nivel: 'alta', zona, texto: `La misma molestia vuelve (${s.size} semanas)` });
+  if (saltadas.length >= 2) out.push({ clave: 'saltadas', nivel: 'media', texto: `${saltadas.length} sesiones sin hacer en las últimas semanas`, sesiones: saltadas.map((x) => x.nombre) });
+  else if (saltadas.length === 1) out.push({ clave: 'saltadas', nivel: null, texto: `Se quedó sin hacer: ${saltadas[0].nombre}`, sesiones: [saltadas[0].nombre] });
+  return out;
+}
+
+// ---------------------------------------------------------------- lo urgente, contado (para la pestaña)
+export function urgentesBandeja(d) {
+  if (!d) return 0;
+  let n = 0;
+  for (const c of d.checkins || []) if ((c.molestias || []).some((m) => Number(m.intensidad) >= 3)) n++;
+  for (const a of d.archivos || []) if (a.autoevaluacion?.molestia) n++;
+  return n;
+}
+
+// ---------------------------------------------------------------- lo siguiente más importante y cuánto te queda
+export function siguienteImportante(items, ahora = new Date()) {
+  let mejor = null, k = null;
+  for (const x of items || []) {
+    const u = urgenciaItem(x, ahora);
+    const v = [pesoUrgencia(u), u.horas ?? -1];
+    if (!k || v[0] > k[0] || (v[0] === k[0] && v[1] > k[1])) { k = v; mejor = x; }
+  }
+  return mejor;
+}
+// Minutos por tipo (de partida) o lo que llevas de media en esta tanda (si ya llevas tres o más)
+export const MINUTOS_TIPO = { mensajes: 1.5, sesiones: 2, checkins: 3, videos: 4, tareas: 1.5, recetas: 1.5, objetivos: 2, comunidad: 1 };
+export function minutosRestantes(items, tanda = null, ahora = Date.now()) {
+  const n = (items || []).length;
+  if (!n) return 0;
+  const hechas = (tanda?.revisadas || 0) + (tanda?.contestadas || 0);
+  if (hechas >= 3 && tanda?.desde) return Math.max(1, Math.round(((ahora - tanda.desde) / 60000 / hechas) * n));
+  return Math.max(1, Math.round((items || []).reduce((t, x) => t + (MINUTOS_TIPO[x.tipo] || 2) * (x.tipo === 'videos' && x.g ? x.g.videos.length : 1), 0)));
+}
+export const textoRestante = (min) => (!min ? '' : min < 60 ? `Te quedan unos ${min} min` : `Te quedan unas ${Math.floor(min / 60)} h${min % 60 >= 10 ? ` y ${min % 60} min` : ''}`);
+
+// ---------------------------------------------------------------- tus etiquetas
+export const limpiarEtiqueta = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+export const ETIQUETAS_PARTIDA = ['Para la llamada', 'Esperando analítica', 'Hablar en la revisión'];
+export function etiquetasDe(mapa) { return [...new Set(Object.values(mapa || {}).map((v) => v?.etiqueta).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')); }
+
+// ---------------------------------------------------------------- el volumen de su semana, por músculo
+// cuenta: { grupo: series }; rango(grupo) → [min, max]. → [{ grupo, n, min, max, estado }] (los que tienen algo)
+export function volumenTarjeta(cuenta, rango) {
+  return Object.entries(cuenta || {}).filter(([, n]) => n > 0).map(([grupo, n]) => {
+    const [min, max] = rango(grupo);
+    return { grupo, n: Math.round(n * 2) / 2, min, max, estado: n < min ? 'bajo' : n > max ? 'alto' : 'dentro' };
+  }).sort((a, b) => b.n - a.n);
+}
+
+// ---------------------------------------------------------------- deslizar a la izquierda
+export const esDeslizarIzquierda = (dx, dy, ancho) => dx < 0 && Math.abs(dx) > Math.max(80, ancho * 0.35) && Math.abs(dx) > Math.abs(dy) * 1.5;
+
+// ---------------------------------------------------------------- sin conexión: lo que se hace, en cola
+// cola: [{ id, op, args }]; op: 'revisar' | 'comentar' | 'leidos'
+export function conOp(cola, op, args) { return [...(cola || []), { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, op, args }].slice(-200); }

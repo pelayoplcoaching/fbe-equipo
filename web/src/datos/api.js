@@ -68,7 +68,7 @@ import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos
 import { umbralValido } from '../logica/cargaVelocidad.js';
 import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
-import { semanaDelBloque, marcasSesion, principalSesion, mapaApartados, tiemposDe, notaConMas } from '../logica/revisar.js';
+import { semanaDelBloque, marcasSesion, principalSesion, mapaApartados, tiemposDe, notaConMas, patronesAtleta, limpiarEtiqueta } from '../logica/revisar.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -4523,7 +4523,7 @@ export function crearApi(backend) {
       for (const [atletaId, lista] of Object.entries(porAtleta)) {
         const series = await api.historial(atletaId).catch(() => null);
         if (!series) continue;
-        for (const s of lista) out[s.id] = { ...marcasSesion(series, s), principal: principalSesion(series, s) };
+        for (const s of lista) out[s.id] = { ...marcasSesion(series, s), principal: principalSesion(series, s), volumen: s.fecha_realizada ? seriesPorGrupo(series, lunesDe(s.fecha_realizada)) : null };
       }
       return out;
     },
@@ -4547,18 +4547,95 @@ export function crearApi(backend) {
     // Lo que ya volvió (y no está fijado) se borra de paso
     async apartadosRevisar(hoy = fechaMadrid()) {
       if ((await api.revisar083()) !== true) return null;
-      const filas = await b.select('revisar_apartados', { cols: 'clave,hasta,fijada' });
+      const con084 = (await api.revisar084()) === true;
+      const filas = await b.select('revisar_apartados', { cols: con084 ? 'clave,hasta,fijada,etiqueta' : 'clave,hasta,fijada' });
       const { mapa, viejas } = mapaApartados(filas, hoy);
       if (viejas.length) b.delete('revisar_apartados', { in: { clave: viejas } }).catch(() => {});
       return mapa;
     },
     // (v0.196, 083) apartar una tarjeta hasta un día y/o fijarla arriba (sin nada, se quita). false sin la 083
-    async guardarApartado(clave, { hasta = null, fijada = false } = {}) {
+    async guardarApartado(clave, { hasta = null, fijada = false, etiqueta = null } = {}) {
       if ((await api.revisar083()) !== true) return false;
+      const et = etiqueta ? limpiarEtiqueta(etiqueta) : null;
+      if (et && (await api.revisar084()) !== true) throw new Error('Para guardar etiquetas falta ejecutar la migración 084 en Supabase (supabase/migraciones/084_revisar_etiquetas_urgente.sql).');
       await b.delete('revisar_apartados', { eq: { clave } });
-      if (hasta || fijada) await b.insert('revisar_apartados', [{ usuario_id: uid(), clave, hasta: hasta || null, fijada: !!fijada }]);
+      if (hasta || fijada || et) await b.insert('revisar_apartados', [{ usuario_id: uid(), clave, hasta: hasta || null, fijada: !!fijada, ...(et ? { etiqueta: et } : {}) }]);
       return true;
     },
+    // (v0.197, 084) ¿Están las etiquetas en «Revisar»? true / false / null
+    async revisar084() {
+      if (!api._v084) {
+        const pr = (async () => {
+          if ((await api.revisar083()) !== true) return false;
+          try { await b.select('revisar_apartados', { limit: 1, cols: 'etiqueta' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/etiqueta|schema cache|does not exist|no existe|column|could not find|PGRST20[0-9]|42703/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v084 = pr;
+        pr.then((x) => { if (x == null && api._v084 === pr) api._v084 = null; });
+      }
+      return api._v084;
+    },
+    // (v0.197) los avisos de patrón de cada atleta: energía baja varias semanas, la misma molestia que vuelve y sesiones
+    // de semanas ya pasadas que se quedaron sin hacer. { atleta_id: [{ clave, nivel, texto }] }
+    async patronesRevisar(ids, hoy = fechaMadrid()) {
+      const xs = unicos(ids || []);
+      if (!xs.length) return {};
+      const desde = sumarDias(lunesDe(hoy), -28), esteLunes = lunesDe(hoy);
+      const sel = (t, o) => b.select(t, o).catch(() => []);
+      const [cks, mols, bloques] = await Promise.all([
+        sel('checkins', { in: { atleta_id: xs }, gte: { semana_inicio: desde }, cols: 'atleta_id,semana_inicio,energia,recuperacion' }),
+        sel('molestias', { in: { atleta_id: xs }, gte: { semana_inicio: desde }, cols: 'atleta_id,semana_inicio,zona,intensidad' }),
+        sel('bloques', { in: { atleta_id: xs }, eq: { es_plantilla: false }, cols: 'id,atleta_id' }),
+      ]);
+      const semanas = bloques.length ? (await sel('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, gte: { fecha_inicio: sumarDias(esteLunes, -21) }, cols: 'id,bloque_id,fecha_inicio,programacion' }))
+        .filter((w) => w.programacion === 'programada' && w.fecha_inicio && lunesDe(w.fecha_inicio) < esteLunes) : [];
+      const pend = semanas.length ? await sel('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, eq: { completada: false }, cols: 'id,semana_id,nombre,tipo' }) : [];
+      const W = porId(semanas), BA = Object.fromEntries(bloques.map((x) => [x.id, x.atleta_id]));
+      const C = agrupar(cks, 'atleta_id'), M = agrupar(mols, 'atleta_id');
+      const S = {};
+      for (const x of pend) { const w = W[x.semana_id]; const a = w && BA[w.bloque_id]; if (a) (S[a] ||= []).push({ nombre: x.nombre || 'Sesión', lunes: lunesDe(w.fecha_inicio) }); }
+      return Object.fromEntries(xs.map((id) => [id, patronesAtleta({ checkins: C[id] || [], molestias: M[id] || [], saltadas: S[id] || [] })]));
+    },
+    // (v0.197) en su próxima sesión con ese ejercicio (sin hacer, de esta semana en adelante), sube o baja la carga.
+    // Devuelve { sesion, semana, antes, despues } o null si no hay ninguna por delante
+    async ajustarProxima(atletaId, ejercicioId, deltaKg, hoy = fechaMadrid()) {
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' });
+      if (!bloques.length) return null;
+      const semanas = (await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id,numero,fecha_inicio,programacion' }))
+        .filter((w) => !w.fecha_inicio || lunesDe(w.fecha_inicio) >= lunesDe(hoy));
+      if (!semanas.length) return null;
+      const sesiones = await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, eq: { completada: false }, cols: 'id,semana_id,nombre,orden' });
+      if (!sesiones.length) return null;
+      const pautas = await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) }, eq: { ejercicio_id: ejercicioId } });
+      if (!pautas.length) return null;
+      const W = porId(semanas), SE = porId(sesiones);
+      const clave = (p) => { const se = SE[p.sesion_id], w = W[se?.semana_id]; return [w?.fecha_inicio || '9999', w?.numero ?? 999, se?.orden ?? 999, p.orden ?? 999]; };
+      const p = [...pautas].sort((a, z) => { const x = clave(a), y = clave(z); for (let i = 0; i < 4; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; })[0];
+      const redondear = (v) => Math.max(0, Math.round(v * 4) / 4);
+      let antes, despues;
+      if (Array.isArray(p.series_detalle) && p.series_detalle.some((x) => Number(x.kg) > 0)) {
+        antes = Math.max(...p.series_detalle.map((x) => Number(x.kg) || 0));
+        await api.guardarDetalle(p.id, p.series_detalle.map((x) => (Number(x.kg) > 0 ? { ...x, kg: redondear(Number(x.kg) + deltaKg) } : x)));
+        despues = redondear(antes + deltaKg);
+      } else {
+        let base = Number(p.carga_sugerida_kg) || null;
+        if (base == null) {
+          const ult = (await api.ultimasPorEjercicio(atletaId, [ejercicioId], null).catch(() => ({})))[ejercicioId];
+          base = ult ? Math.max(0, ...ult.series.map((x) => Number(x.kg) || 0)) || null : null;
+        }
+        if (base == null) throw new Error('No sé con qué carga empezar: ponla a mano en su programa.');
+        antes = base;
+        despues = redondear(base + deltaKg);
+        await b.update('sesion_ejercicios', { carga_sugerida_kg: despues }, { eq: { id: p.id } });
+      }
+      const se = SE[p.sesion_id];
+      return { sesion: se?.nombre || 'Sesión', semana: W[se?.semana_id]?.numero ?? null, antes, despues };
+    },
+
     // (v0.196) una nota para la revisión semanal de esta semana (se suma a la que haya)
     async notaParaRevision(atletaId, texto, hoy = fechaMadrid()) {
       const lunes = lunesDe(hoy);
@@ -4596,8 +4673,8 @@ export function crearApi(backend) {
     },
     // (v0.195) Revisar: lo que has dado por revisado hoy (para devolverlo a pendiente si fue sin querer).
     // [{ tipo, id, atleta, titulo, revisado_en }], lo último primero
-    async revisadosHoy(hoy = hoyISO()) {
-      const desde = new Date(`${hoy}T00:00:00`).toISOString();
+    async revisadosHoy(hoy = hoyISO(), dias = 1) {
+      const desde = new Date(`${sumarDias(hoy, 1 - Math.max(1, dias))}T00:00:00`).toISOString();
       const sel = (t, o) => b.select(t, o).catch(() => []);
       const [ses, cks, arcs, tars, atletas] = await Promise.all([
         sel('sesiones', { gte: { revisada_en: desde }, cols: 'id,semana_id,nombre,fecha_realizada,revisada_en' }),
@@ -4616,6 +4693,15 @@ export function crearApi(backend) {
         ...arcs.map((x) => ({ tipo: 'archivo', id: x.id, atleta: A[x.atleta_id] || null, titulo: x.tipo === 'foto_progreso' ? 'Foto de progreso' : EJ[x.ejercicio_id]?.nombre ? `Vídeo: ${EJ[x.ejercicio_id].nombre}` : 'Vídeo de técnica', revisado_en: x.revisado_en })),
         ...tars.map((x) => ({ tipo: 'tarea', id: x.id, atleta: A[x.atleta_id] || null, titulo: x.titulo ? `Tarea: ${x.titulo}` : 'Tarea', revisado_en: x.revisado_en || x.revisada_en })),
       ].filter((x) => x.atleta);
+      // (v0.197) si ha leído lo último que le contestaste ahí (sesión, check-in o vídeo): true, false o null si no contestaste
+      const col = { sesion: 'sesion_id', checkin: 'checkin_id', archivo: 'archivo_id' };
+      const resp = await Promise.all(Object.entries(col).map(([t, c]) => {
+        const ids = out.filter((x) => x.tipo === t).map((x) => x.id);
+        return ids.length ? sel('comentarios', { in: { [c]: ids }, eq: { autor: 'coach' }, order: [['creado_en', 'desc']], cols: `${c},leido_en,eliminado_en` }) : [];
+      }));
+      const leido = {};
+      Object.keys(col).forEach((t, i) => { for (const r of resp[i]) { const k = `${t}:${r[col[t]]}`; if (!(k in leido) && !r.eliminado_en) leido[k] = !!r.leido_en; } });
+      for (const x of out) x.leido = leido[`${x.tipo}:${x.id}`] ?? null;
       return out.sort((a, z) => String(z.revisado_en || '').localeCompare(String(a.revisado_en || '')));
     },
     async marcarRevision(atletaId, lunes, cambios) {
