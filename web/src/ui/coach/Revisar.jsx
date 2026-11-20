@@ -67,7 +67,7 @@ function irA(t) {
 // v0.50: «r», «e» y «o» solo actúan sobre la tarjeta que tiene el foco (tras plegar un grupo o cambiar el filtro, la
 // posición de antes ya no es la misma tarjeta); clave: lo que cambia la lista (filtro y grupos plegados)
 // (v0.195) y «v» contesta «Visto», «m» lo deja para mañana
-// (v0.196) y «p» programar, «u» deshacer lo último, «/» buscar, «?» ver las teclas; en dos columnas, j/k cambian de tarjeta
+// (v0.196) y «p» programar, «u» deshacer lo último, «b» buscar (la «/» ya abre el buscador de la app), «?» ver las teclas; en dos columnas, j/k cambian de tarjeta
 function useAtajos(caja, n, clave = '', extra = {}) {
   const [i, setI] = useState(-1);
   const extraRef = useRef(extra);
@@ -83,7 +83,7 @@ function useAtajos(caja, n, clave = '', extra = {}) {
       const actual = t.indexOf(document.activeElement?.closest?.('.tarjeta-revisar'));
       const k = actual >= 0 ? actual : i;
       const x = extraRef.current;
-      if (e.key === '/') { e.preventDefault(); x.buscar?.(); return; }
+      if (e.key === 'b') { e.preventDefault(); x.buscar?.(); return; }
       if (e.key === '?') { e.preventDefault(); x.ayuda?.(); return; }
       if (e.key === 'u') { if (ultimoDeshacer) { e.preventDefault(); const d = ultimoDeshacer; ultimoDeshacer = null; d.fn(); x.deshecho?.(); } return; }
       if (x.mover && (e.key === 'j' || e.key === 'k')) { e.preventDefault(); x.mover(e.key === 'j' ? 1 : -1); return; }
@@ -431,7 +431,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
         )}
         {(nPosp > 0 || verPospuestas) && (
           <button type="button" class="btn-texto mini revisar-pospuestas" aria-pressed={verPospuestas ? 'true' : 'false'} onClick={() => setVerPospuestas(!verPospuestas)}>
-            <Icono n="reloj" /> {verPospuestas ? 'Volver a lo de hoy' : nPosp === 1 ? 'Ver la que has dejado para mañana' : `Ver las ${nPosp} que has dejado para mañana`}
+            <Icono n="reloj" /> {verPospuestas ? 'Volver a lo de hoy' : nPosp === 1 ? 'Ver la que has dejado para otro día' : `Ver las ${nPosp} que has dejado para otro día`}
           </button>
         )}
         {/* (054) arriba, lo que más espera: vídeos de técnica de hace 3 días o más */}
@@ -451,7 +451,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
         {seguidos && <RevisionSeguida videos={d.archivos.filter((a) => a.tipo === 'video_tecnica')} abrirAtleta={abrirAtleta} alCerrar={() => { setSeguidos(false); recargar(); }} />}
         {!d?.total ? <BandejaVacia cuenta={cuentaHoy.datos} racha={racha} tanda={resumenTanda} /> : !visibles ? (
           <div class="panel panel-pad revisar-sin-resultados" role="status">
-            <p class="peq">{buscar.trim() ? `Nada por revisar de «${buscar.trim()}».` : verPospuestas ? 'No has dejado nada para mañana.' : visibleTotal === 0 ? 'Lo de hoy, al día: solo queda lo que has dejado para otro día.' : 'Nada por revisar con este filtro.'}</p>
+            <p class="peq">{buscar.trim() ? `Nada por revisar de «${buscar.trim()}».` : verPospuestas ? 'No has dejado nada para otro día.' : visibleTotal === 0 ? 'Lo de hoy, al día: solo queda lo que has dejado para otro día.' : 'Nada por revisar con este filtro.'}</p>
             {buscar.trim() && <button type="button" class="btn btn-peq" onClick={() => setBuscar('')}>Quitar la búsqueda</button>}
             {visibleTotal === 0 && racha && <p class="peq revisar-racha">{racha}.</p>}
           </div>
@@ -518,7 +518,7 @@ export function Revisar({ bandeja, abrirAtleta }) {
           {racha && visibleTotal > 0 && <span class="mini secundario revisar-racha-chip"><Icono n="llama" /> {racha}</span>}
         </div>
         <p class="mini terciario">Comentar algo lo da por revisado; deslizar una tarjeta a la derecha, también. «Mañana» la aparta hasta mañana{ap.enBase ? '' : ' (en este aparato)'}. Las sesiones y los check-ins de más de 4 semanas salen de la bandeja solos.</p>
-        {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>v</kbd> visto, <kbd>m</kbd> mañana, <kbd>p</kbd> programar, <kbd>u</kbd> deshacer, <kbd>/</kbd> buscar, <kbd>?</kbd> todas, <kbd>o</kbd> abrir su ficha.</p>}
+        {d?.total > 0 && <p class="mini terciario solo-ancho atajos">Con el teclado: <kbd>j</kbd> <kbd>k</kbd> para moverte, <kbd>r</kbd> responder, <kbd>e</kbd> revisado, <kbd>v</kbd> visto, <kbd>m</kbd> mañana, <kbd>p</kbd> programar, <kbd>u</kbd> deshacer, <kbd>b</kbd> buscar, <kbd>?</kbd> todas, <kbd>o</kbd> abrir su ficha.</p>}
         {uno && <UnoAUno items={plano} render={(x) => <Deslizable clave={x.clave}>{tarjeta(x)}</Deslizable>} alCerrar={() => setUno(false)} />}
         {hoja?.tipo === 'voz' && <HojaVoz atleta={hoja.atleta} cita={hoja.cita || null} respondeA={hoja.respondeA || null} alCerrar={() => setHoja(null)} alEnviado={hoja.alEnviado} />}
         {hoja?.tipo === 'hoy' && <HojaRevisadosHoy alCerrar={() => setHoja(null)} alCambio={recargar} />}

@@ -124,7 +124,7 @@ export async function probarRevisar195({ navegador, check, base = 'http://localh
     n = await numSub();
     await tarjetas().filter({ has: p.locator('button.revisar-manana') }).first().locator('button.revisar-manana').click();
     check(await hasta(async () => (await numSub()) === n - 1), '«Mañana» la aparta de la lista');
-    const verPos = p.getByRole('button', { name: /dejado para mañana/ });
+    const verPos = p.getByRole('button', { name: /dejado para otro día/ });
     check(await hasta(async () => verPos.isVisible()), 'y se puede ver lo apartado');
     await verPos.click();
     check(await hasta(async () => (await tarjetas().count()) === 1), 'lo apartado, aparte');

@@ -279,7 +279,7 @@ export function principalSesion(series, sesion, max = 8) {
 // ---------------------------------------------------------------- filtrar por motivo
 export const MOTIVOS_REVISAR = [['molestias', 'Molestias'], ['preguntas', 'Preguntas'], ['rpe10', 'RPE 10'], ['esperando', 'Más de 3 días']];
 const PRUEBA_MOTIVO = {
-  molestias: (m) => /^Molestia|Llegó en un día difícil/.test(m),
+  molestias: (m) => /^Molestia|Lleg\u00f3 en un d\u00eda dif\u00edcil/.test(m),
   preguntas: (m) => m === 'Te pregunta algo',
   rpe10: (m) => m === 'Alguna serie a RPE 10',
   esperando: (m) => m === 'Lleva más de 3 días esperando',
@@ -369,7 +369,7 @@ export function textoResumenTanda({ revisadas = 0, contestadas = 0, desde = null
 // ---------------------------------------------------------------- las teclas
 export const ATAJOS_REVISAR = [
   ['j / k', 'Bajar y subir (en dos columnas, la siguiente y la anterior)'], ['r', 'Responder'], ['e', 'Dar por revisado'], ['v', 'Visto'],
-  ['m', 'Para mañana'], ['p', 'Programar'], ['u', 'Deshacer lo último'], ['o', 'Abrir su ficha'], ['/', 'Buscar'], ['?', 'Ver estas teclas'],
+  ['m', 'Para mañana'], ['p', 'Programar'], ['u', 'Deshacer lo último'], ['o', 'Abrir su ficha'], ['b', 'Buscar un atleta'], ['?', 'Ver estas teclas'],
 ];
 
 // ---------------------------------------------------------------- la nota para la revisión semanal
@@ -379,7 +379,7 @@ export function notaConMas(nota, texto, max = 500) {
   const antes = String(nota || '').trim();
   if (!nuevo) return antes;
   let t = antes ? `${antes} · ${nuevo}` : nuevo;
-  if ([...t].length > max) t = [...t].slice(-max).join('').replace(/^[^·]*·\s*/, '') || [...nuevo].slice(0, max).join('');
+  if ([...t].length > max) t = [...t].slice(-max).join('').replace(/^[^\u00b7]*\u00b7\s*/, '') || [...nuevo].slice(0, max).join('');
   return t;
 }
 
