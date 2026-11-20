@@ -30,6 +30,12 @@ export const COLUMNAS = [
   { id: 'servicio', titulo: 'Servicio' },
   { id: 'alta', titulo: 'Con FBE desde' },
   { id: 'nota', titulo: 'Tu nota' },
+  // (v0.199)
+  { id: 'progreso', titulo: 'Progreso' },
+  { id: 'hoy', titulo: 'Hoy toca' },
+  { id: 'contacto', titulo: 'Último contacto' },
+  { id: 'hito', titulo: 'Próximo hito' },
+  { id: 'recordatorio', titulo: 'Recordatorio' },
 ];
 export const TITULO_COLUMNA = Object.fromEntries(COLUMNAS.map((c) => [c.id, c.titulo]));
 const IDS_COLUMNA = new Set(COLUMNAS.map((c) => c.id));
@@ -89,13 +95,19 @@ export const MARCAS = [
   ['molestias', 'Con molestias'],
   ['sinLeer', 'Chat sin leer'],
   ['pago', 'Pagos pendientes'],
+  // (v0.199)
+  ['paraHoy', 'Recordatorio para hoy'],
+  ['hoyToca', 'Entrenan hoy'],
+  ['novedades', 'Con novedades'],
+  ['progresoRojo', 'Progreso en rojo'],
+  ['ultimaSemana', 'Última semana del bloque'],
   ['pausa', 'En pausa'],
   ['carrera', 'Con carrera'],
   ['fijados', 'Fijados'],
 ];
 export const NOMBRE_MARCA = Object.fromEntries(MARCAS);
 // Los contadores de arriba (los que más ahorran): los cinco primeros
-export const CONTADORES = MARCAS.slice(0, 5).map(([k]) => k);
+export const CONTADORES = MARCAS.slice(0, 8).map(([k]) => k);
 export function cumpleMarca(k, r, extra, hoy) {
   if (k === 'sinCheckin') return activo(r) && !checkinAlDia(r, hoy);
   if (k === 'porProgramar') return porProgramar(r, extra);
@@ -105,9 +117,15 @@ export function cumpleMarca(k, r, extra, hoy) {
   if (k === 'pausa') return r.estado === 'pausado';
   if (k === 'carrera') return !!r.carrera;
   if (k === 'fijados') return fijado(r, extra);
+  if (k === 'paraHoy') return recordatorioParaHoy(r, extra, hoy);
+  if (k === 'hoyToca') return !!extra.hoy?.[r.atleta_id];
+  if (k === 'novedades') return (extra.novedades?.[r.atleta_id] || []).length > 0;
+  if (k === 'progresoRojo') return (extra.progreso?.[r.atleta_id]?.rojos || 0) > 0;
+  if (k === 'ultimaSemana') return !!r.semana && r.semana.total > 1 && r.semana.numero >= r.semana.total;
   return true;
 }
-export const FILTROS_VACIOS = { servicio: null, nivel: null, etiqueta: null, marcas: [] };
+export const FILTROS_VACIOS = { servicio: null, nivel: null, etiqueta: null, marcas: [], minDias: null, maxCumplido: null, minMeses: null };
+const entero = (v, min, max) => { const n = Math.round(Number(v)); return v !== null && v !== '' && Number.isFinite(n) && n >= min && n <= max ? n : null; };
 export function limpiarFiltros(f) {
   const x = f && typeof f === 'object' ? f : {};
   return {
@@ -115,23 +133,32 @@ export function limpiarFiltros(f) {
     nivel: NIVELES.some(([k]) => k === x.nivel) || x.nivel === 'sin' ? x.nivel : null,
     etiqueta: typeof x.etiqueta === 'string' && x.etiqueta.trim() ? x.etiqueta.trim().slice(0, 24) : null,
     marcas: [...new Set((Array.isArray(x.marcas) ? x.marcas : []).filter((k) => NOMBRE_MARCA[k]))],
+    // (v0.199) por rango: más de N días sin entrenar, menos de X % cumplido, con FBE desde hace más de N meses
+    minDias: entero(x.minDias, 1, 365), maxCumplido: entero(x.maxCumplido, 1, 100), minMeses: entero(x.minMeses, 1, 240),
   };
 }
-export const hayFiltros = (f) => !!(f.servicio || f.nivel || f.etiqueta || f.marcas?.length);
+export const hayFiltros = (f) => !!(f.servicio || f.nivel || f.etiqueta || f.marcas?.length || f.minDias || f.maxCumplido || f.minMeses);
+export const cuantosFiltros = (f) => (f.servicio ? 1 : 0) + (f.nivel ? 1 : 0) + (f.etiqueta ? 1 : 0) + (f.marcas?.length || 0) + (f.minDias ? 1 : 0) + (f.maxCumplido ? 1 : 0) + (f.minMeses ? 1 : 0);
 export const textoFiltros = (f) => [
   f.servicio && Object.fromEntries(SERVICIOS)[f.servicio],
   f.nivel && (f.nivel === 'sin' ? 'Sin nivel' : NOMBRE_NIVEL[f.nivel]),
   f.etiqueta && `«${f.etiqueta}»`,
   ...(f.marcas || []).map((k) => NOMBRE_MARCA[k]),
+  f.minDias && `más de ${f.minDias} días sin entrenar`,
+  f.maxCumplido && `menos del ${f.maxCumplido} % cumplido`,
+  f.minMeses && `con FBE desde hace más de ${f.minMeses} ${f.minMeses === 1 ? 'mes' : 'meses'}`,
 ].filter(Boolean).join(', ');
 export function cumpleFiltros(r, f, extra, hoy) {
   if (f.servicio && r.servicio !== f.servicio) return false;
   if (f.nivel && (f.nivel === 'sin' ? !!r.nivel : r.nivel !== f.nivel)) return false;
   if (f.etiqueta && !etiquetasDe(r, extra).some((e) => e.toLowerCase() === f.etiqueta.toLowerCase())) return false;
+  if (f.minDias) { const d = diasSinEntrenar(r, hoy); if (!entrena(r) || (d != null && d <= f.minDias)) return false; }
+  if (f.maxCumplido) { const p = r.cumplimiento?.series?.pct; if (p == null || p >= f.maxCumplido) return false; }
+  if (f.minMeses) { const d = diasDesde(r.fecha_alta, hoy); if (d == null || d < f.minMeses * 30.44) return false; }
   return (f.marcas || []).every((k) => cumpleMarca(k, r, extra, hoy));
 }
 export function cumpleEstado(r, estado, inactivos = []) {
-  if (estado === 'atencion') return r.alertas.some((a) => a.nivel !== 'info');
+  if (estado === 'atencion') return necesitaAtencion(r);
   if (estado === 'invitados') return r.estado === 'invitado';
   if (estado === 'baja') return r.estado === 'baja';
   if (estado === 'inactivos') return inactivos.includes(r.atleta_id);
@@ -180,13 +207,19 @@ export function valorOrden(col, r, extra = {}, hoy) {
     case 'servicio': return r.servicio || null;
     case 'alta': return r.fecha_alta || null;
     case 'nota': { const n = panelDe(r, extra)?.nota; return n ? normal(n) : null; }
+    case 'mano': { const i = (extra.ordenManual || []).indexOf(r.atleta_id); return i < 0 ? null : i; }
+    case 'progreso': { const p = extra.progreso?.[r.atleta_id]; return p ? p.rojos * 10 + p.ambar : null; }
+    case 'hoy': { const h = extra.hoy?.[r.atleta_id]; return h ? (h.hecha ? 1 : 0) : null; }
+    case 'contacto': { const c = extra.contacto?.[r.atleta_id]; return c ? diasDesde(c.fecha, hoy) : 9999; }
+    case 'hito': { const h = extra.hitos?.[r.atleta_id]; return h ? h.dias : null; }
+    case 'recordatorio': { const x = extra.recordatorios?.[r.atleta_id]; return x ? x.fecha : null; }
     default: return null;
   }
 }
 // El sentido con el que empieza cada columna al tocarla (lo más útil arriba)
-const EMPIEZA_DESC = new Set(['avisos', 'pagos', 'molestias', 'ultimo', 'sinEntrenar', 'mensajes', 'checkin', 'semana']);
+const EMPIEZA_DESC = new Set(['avisos', 'pagos', 'molestias', 'ultimo', 'sinEntrenar', 'mensajes', 'checkin', 'semana', 'progreso', 'contacto']);
 export const dirInicial = (col) => (EMPIEZA_DESC.has(col) ? 'desc' : 'asc');
-export const ORDENES = [['urgencia', 'Lo urgente primero'], ['nombre', 'Nombre'], ...COLUMNAS.filter((c) => !['nota'].includes(c.id)).map((c) => [c.id, c.titulo])];
+export const ORDENES = [['urgencia', 'Lo urgente primero'], ['mano', 'A tu manera'], ['nombre', 'Nombre'], ...COLUMNAS.filter((c) => !['nota'].includes(c.id)).map((c) => [c.id, c.titulo])];
 export function limpiarOrden(o) {
   const col = ORDENES.some(([k]) => k === o?.col) ? o.col : 'urgencia';
   return { col, dir: o?.dir === 'desc' || o?.dir === 'asc' ? o.dir : dirInicial(col) };
@@ -213,7 +246,7 @@ export function ordenar(lista, orden, extra = {}, hoy) {
 }
 
 // ---------------------------------------------------------------- grupos
-export const AGRUPAR = [['', 'Sin agrupar'], ['estado', 'Estado'], ['servicio', 'Servicio'], ['nivel', 'Nivel'], ['fase', 'Fase del bloque'], ['etiqueta', 'Etiqueta']];
+export const AGRUPAR = [['', 'Sin agrupar'], ['estado', 'Estado'], ['servicio', 'Servicio'], ['nivel', 'Nivel'], ['fase', 'Fase del bloque'], ['etiqueta', 'Etiqueta'], ['proxima', 'Semana que viene']];
 const NOMBRE_ESTADO_GRUPO = { activo: 'Activos', pausado: 'En pausa', invitado: 'Sin activar', baja: 'De baja' };
 const ORDEN_ESTADO = ['activo', 'pausado', 'invitado', 'baja'];
 export const limpiarAgrupar = (x) => (AGRUPAR.some(([k]) => k === x) ? x : '');
@@ -232,6 +265,7 @@ export function agrupar(lista, por, extra = {}) {
     else if (por === 'servicio') meter(r.servicio, Object.fromEntries(SERVICIOS)[r.servicio] || r.servicio, SERVICIOS.findIndex(([k]) => k === r.servicio), r);
     else if (por === 'nivel') meter(r.nivel || 'sin', r.nivel ? NOMBRE_NIVEL[r.nivel] : 'Sin nivel', r.nivel ? ORDEN_NIVEL[r.nivel] : 99, r);
     else if (por === 'fase') { const f = r.semana?.foco || r.bloque?.foco; meter(f || 'sin', f ? NOMBRE_FOCO[f] || f : 'Sin fase', f ? 0 : 99, r); }
+    else if (por === 'proxima') { const p = proximaDe(r, extra); meter(p || 'na', p ? TEXTO_PROXIMA_CORTO[p] : 'No aplica', p ? ORDEN_PROXIMA[p] : 99, r); }
     else if (por === 'etiqueta') {
       const es = etiquetasDe(r, extra);
       if (!es.length) meter('', 'Sin etiqueta', 99, r);
@@ -322,7 +356,19 @@ export function limpiarAjustesPanel(d) {
     const e = limpiarEtiqueta(k).toLowerCase();
     if (e && COLORES_ETIQUETA.includes(c)) colores[e] = c;
   }
-  return { columnas: limpiarColumnas(x.columnas), orden: limpiarOrden(x.orden), agrupar: limpiarAgrupar(x.agrupar), compacta: !!x.compacta, vistas, colores };
+  // (v0.199) tus avisos, las tarjetas del móvil, tu orden, los recordatorios, el tablero, el panel al lado y tu última visita
+  const recordatorios = {};
+  for (const [id, v] of Object.entries(x.recordatorios && typeof x.recordatorios === 'object' ? x.recordatorios : {}).slice(0, 300)) {
+    const l = limpiarRecordatorio(v);
+    if (/^[0-9a-fA-F-]{36}$/.test(id) && l) recordatorios[id] = l;
+  }
+  return {
+    columnas: limpiarColumnas(x.columnas), orden: limpiarOrden(x.orden), agrupar: limpiarAgrupar(x.agrupar), compacta: !!x.compacta, vistas, colores,
+    umbrales: limpiarUmbrales(x.umbrales), tarjeta: limpiarTarjeta(x.tarjeta),
+    ordenManual: [...new Set((Array.isArray(x.ordenManual) ? x.ordenManual : []).filter((i) => /^[0-9a-fA-F-]{36}$/.test(String(i))))].slice(0, 500),
+    recordatorios, tablero: !!x.tablero, lateral: !!x.lateral,
+    visto: typeof x.visto === 'string' && !Number.isNaN(Date.parse(x.visto)) ? x.visto : null,
+  };
 }
 // La vista de ahora, para guardarla con un nombre (si ya hay una con ese nombre, se sustituye)
 export function guardarVista(ajustes, nombre, actual) {
@@ -347,3 +393,213 @@ export function vecinos(ids = [], id) {
 // ---------------------------------------------------------------- mensajes a varios
 // {nombre} = su nombre de pila
 export const conNombre = (texto, nombre) => String(texto || '').replace(/\{nombre\}/gi, String(nombre || '').trim().split(/\s+/)[0] || '');
+
+// ================================================================ (v0.199) segunda tanda
+// ---------------------------------------------------------------- recordatorios: un día y una línea por atleta
+export const MAX_RECORDATORIO = 120;
+export function limpiarRecordatorio(v) {
+  if (!v || typeof v !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(v.fecha || ''))) return null;
+  const texto = [...sinControl(v.texto).replace(/\s+/g, ' ').trim()].slice(0, MAX_RECORDATORIO).join('').trim();
+  return { fecha: v.fecha, texto: texto || 'Mirar cómo va' };
+}
+export const recordatorioDe = (r, extra = {}) => extra.recordatorios?.[r.atleta_id] || null;
+export const recordatorioParaHoy = (r, extra, hoy) => { const x = recordatorioDe(r, extra); return !!x && x.fecha <= hoy; };
+export function textoRecordatorio(x, hoy) {
+  if (!x) return '';
+  const d = diasDesde(x.fecha, hoy);
+  const cuando = d > 0 ? (d === 1 ? 'ayer' : `hace ${d} días`) : d === 0 ? 'hoy' : d === -1 ? 'mañana' : `el ${Number(x.fecha.slice(8, 10))}/${Number(x.fecha.slice(5, 7))}`;
+  return `${cuando[0].toUpperCase()}${cuando.slice(1)}: ${x.texto}`;
+}
+
+// ---------------------------------------------------------------- avisos a tu medida
+// dias: desde cuántos días sin registrar series avisa; cumplido: por debajo de qué % de lo pautado (4 semanas);
+// molestia: desde qué intensidad (2 moderada, 3 grave); checkin: si no tener check-in la semana pasada cuenta como atención
+export const UMBRALES = { dias: 5, cumplido: 80, molestia: 2, checkin: false };
+export function limpiarUmbrales(u) {
+  const x = u && typeof u === 'object' ? u : {};
+  return {
+    dias: entero(x.dias, 2, 60) ?? UMBRALES.dias,
+    cumplido: entero(x.cumplido, 10, 100) ?? UMBRALES.cumplido,
+    molestia: x.molestia === 3 || x.molestia === '3' ? 3 : 2,
+    checkin: !!x.checkin,
+  };
+}
+// Los avisos de un atleta con tus umbrales (los de días sin entrenar, cumplimiento y molestia se recalculan; el resto, igual)
+export function conUmbrales(r, umbrales, hoy) {
+  const u = limpiarUmbrales(umbrales);
+  if (r.estado !== 'activo' || (u.dias === UMBRALES.dias && u.cumplido === UMBRALES.cumplido && u.molestia === UMBRALES.molestia && !u.checkin)) return r;
+  let alertas = r.alertas.filter((a) => !['sin_entrenar', 'cumplimiento', 'molestia'].includes(a.tipo));
+  const ent = entrena(r);
+  const d = r.ultimaSerie ? diasDesde(r.ultimaSerie, hoy) : null;
+  const viejaSinEnt = r.alertas.find((a) => a.tipo === 'sin_entrenar');
+  if (ent && r.bloque && ((d != null && d >= u.dias) || (d == null && viejaSinEnt))) alertas.push({ tipo: 'sin_entrenar', nivel: 'aviso', texto: d == null ? 'Todavía no ha registrado ninguna serie' : `${d} días sin registrar series` });
+  const cu = r.cumplimiento;
+  if (ent && cu?.series?.pautadas >= 12 && cu.series.pct < u.cumplido) alertas.push({ tipo: 'cumplimiento', nivel: 'aviso', texto: `Solo el ${cu.series.pct} % de lo pautado (4 sem.)` });
+  const vm = r.alertas.find((a) => a.tipo === 'molestia');
+  if ((r.maxMolestia || 0) >= u.molestia && vm) alertas.push(vm);
+  if (u.checkin) alertas = alertas.map((a) => (a.tipo === 'sin_checkin' ? { ...a, nivel: 'aviso' } : a));
+  const orden = { alerta: 0, aviso: 1, info: 2 };
+  alertas.sort((a, b) => orden[a.nivel] - orden[b.nivel]);
+  return { ...r, alertas, prioridad: alertas.length ? orden[alertas[0].nivel] : 3 };
+}
+export const necesitaAtencion = (r) => r.alertas.some((a) => a.nivel !== 'info');
+
+// ---------------------------------------------------------------- las tarjetas del móvil: tres datos a elegir
+export const CAMPOS_TARJETA = [['sesiones', 'Sesiones'], ['peso', 'Peso'], ['ultimo', 'Último registro'], ['cumplido', '% cumplido'], ['sinEntrenar', 'Días sin entrenar'],
+  ['checkin', 'Check-in'], ['energia', 'Energía'], ['sueno', 'Sueño'], ['contacto', 'Último contacto'], ['progreso', 'Progreso'], ['proxima', 'Semana que viene'], ['hoy', 'Hoy toca'], ['hito', 'Próximo hito']];
+export const TARJETA_DEFECTO = ['sesiones', 'peso', 'ultimo'];
+export function limpiarTarjeta(xs) {
+  const ok = new Set(CAMPOS_TARJETA.map(([k]) => k));
+  const out = [...new Set((Array.isArray(xs) ? xs : []).filter((x) => ok.has(x)))].slice(0, 3);
+  return out.length ? out : [...TARJETA_DEFECTO];
+}
+
+// ---------------------------------------------------------------- tu orden a mano
+// Mover a `id` un puesto entre los que se ven (`visibles`, en el orden de ahora); el resto de tu orden no se toca
+export function moverManual(orden, visibles, id, dir) {
+  const vis = [...visibles];
+  const i = vis.indexOf(id), j = i + dir;
+  if (i < 0 || j < 0 || j >= vis.length) return [...new Set([...(orden || []), ...vis])];
+  [vis[i], vis[j]] = [vis[j], vis[i]];
+  const resto = (orden || []).filter((x) => !vis.includes(x));
+  return [...vis, ...resto];
+}
+
+// ---------------------------------------------------------------- hoy toca, último contacto y próximo hito
+// Hoy: las sesiones de su semana con el día previsto hoy o hechas hoy → { hecha, nombre } o nada
+export function hoyTocaDe(sesiones = [], hoy) {
+  const de = sesiones.filter((x) => x.dia_previsto === hoy || (x.completada && String(x.fecha_realizada || '').slice(0, 10) === hoy));
+  if (!de.length) return null;
+  const hecha = de.some((x) => x.completada);
+  return { hecha, nombre: (de.find((x) => x.completada) || de[0]).nombre || 'Sesión' };
+}
+export function textoContacto(c, hoy) {
+  if (!c?.fecha) return 'Nunca';
+  const d = diasDesde(c.fecha, hoy);
+  return `${d <= 0 ? 'Hoy' : d === 1 ? 'Ayer' : `Hace ${d} días`} (${c.autor === 'coach' ? 'tú' : 'él o ella'})`;
+}
+const diaDelAno = (mes, dia, desde) => {
+  const y = Number(desde.slice(0, 4));
+  for (const a of [y, y + 1]) { const f = `${a}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`; if (f >= desde && !Number.isNaN(Date.parse(`${f}T12:00:00Z`))) return f; }
+  return null;
+};
+// Lo primero que llega en los próximos `ventana` días: cumpleaños, aniversario con FBE, fin de bloque, carrera, fin de
+// la pausa o un pago que vence. datos: { cumple: { mes, dia } | null, carreras: [{ nombre, fecha }] }
+export function proximoHito(r, datos = {}, hoy, ventana = 14) {
+  const hasta = (() => { const d = new Date(`${hoy}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + ventana); return d.toISOString().slice(0, 10); })();
+  const xs = [];
+  const c = datos.cumple;
+  if (c?.mes && c?.dia) { const f = diaDelAno(c.mes, c.dia, hoy); if (f && f <= hasta) xs.push({ tipo: 'cumple', fecha: f, texto: 'Su cumpleaños' }); }
+  if (r.fecha_alta && r.estado !== 'baja') {
+    const [y, m, d] = r.fecha_alta.split('-').map(Number);
+    const f = diaDelAno(m, d, hoy);
+    const anos = f ? Number(f.slice(0, 4)) - y : 0;
+    if (f && anos >= 1 && f <= hasta) xs.push({ tipo: 'aniversario', fecha: f, texto: anos === 1 ? '1 año con FBE' : `${anos} años con FBE` });
+  }
+  if (r.semana && r.semana.total > 1 && r.semana.numero >= r.semana.total && entrena(r)) xs.push({ tipo: 'bloque', fecha: hoy, texto: 'Última semana del bloque' });
+  for (const e of datos.carreras || []) if (e.fecha >= hoy && e.fecha <= hasta) xs.push({ tipo: 'carrera', fecha: e.fecha, texto: `Carrera: ${e.nombre}` });
+  if (r.pausa?.hasta && r.pausa.hasta >= hoy && r.pausa.hasta <= hasta) xs.push({ tipo: 'pausa', fecha: r.pausa.hasta, texto: 'Termina su pausa' });
+  const ph = r.cobro?.pagadoHasta;
+  if (ph && ph >= hoy && ph <= hasta && r.estado !== 'baja') xs.push({ tipo: 'pago', fecha: ph, texto: 'Vence su pago' });
+  const h = xs.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0))[0];
+  if (!h) return null;
+  return { ...h, dias: diasDesde(hoy, h.fecha) };
+}
+export function textoHito(h) {
+  if (!h) return '';
+  const cuando = h.dias === 0 ? 'hoy' : h.dias === 1 ? 'mañana' : `en ${h.dias} días`;
+  return h.tipo === 'bloque' ? h.texto : `${h.texto}, ${cuando}`;
+}
+
+// ---------------------------------------------------------------- lo nuevo desde tu última visita
+// desde: la fecha y hora de tu visita anterior (ISO). Por días, salvo los mensajes (con su hora)
+export function novedadesDe(r, extra = {}, desde) {
+  if (!desde) return [];
+  const dia = String(desde).slice(0, 10);
+  const out = [];
+  const u = [r.ultimaSerie, r.ultimaSesion].filter(Boolean).sort().at(-1);
+  if (u && u >= dia) out.push('Ha entrenado');
+  if (r.checkin?.creado && r.checkin.creado > desde) out.push('Check-in nuevo');
+  const c = extra.contacto?.[r.atleta_id];
+  if (c?.autor === 'atleta' && c.instante && c.instante > desde) out.push('Te ha escrito');
+  if (r.peso?.fecha && r.peso.fecha > dia) out.push('Peso nuevo');
+  return out;
+}
+
+// ---------------------------------------------------------------- lo que dice cada columna, en texto (para el CSV y las medias)
+const fmt = (n, d = 1) => (n == null ? '' : String(Math.round(n * 10 ** d) / 10 ** d).replace('.', ','));
+export function textoColumna(col, r, extra = {}, hoy) {
+  const p = panelDe(r, extra);
+  switch (col) {
+    case 'avisos': return r.alertas.map((a) => a.texto).join('; ');
+    case 'pagos': return r.cobro?.estado || '';
+    case 'semana': return r.semana ? `S${r.semana.numero}/${r.semana.total}` : r.servicio === 'nutricion' ? 'Solo nutrición' : '';
+    case 'sesiones': return r.sesiones?.total ? `${r.sesiones.completadas}/${r.sesiones.total}` : '';
+    case 'peso': return r.peso ? fmt(r.peso.kg) : '';
+    case 'sueno': return r.checkin?.horas_sueno || '';
+    case 'motivacion': return r.checkin?.motivacion ? String(r.checkin.motivacion) : '';
+    case 'energia': return r.checkin?.energia ? String(r.checkin.energia) : '';
+    case 'molestias': return String(r.maxMolestia || 0);
+    case 'ultimo': return r.ultimaSerie || '';
+    case 'cumplido': return r.cumplimiento?.series?.pct != null ? String(r.cumplimiento.series.pct) : '';
+    case 'sinEntrenar': { const d = diasSinEntrenar(r, hoy); return d == null ? '' : String(d); }
+    case 'checkin': return r.estado !== 'activo' ? '' : checkinAlDia(r, hoy) ? 'Al día' : 'Falta';
+    case 'habitos': return r.habitos?.pct != null ? String(r.habitos.pct) : '';
+    case 'nutricion': return r.diasNutricion != null ? String(r.diasNutricion) : '';
+    case 'fase': { const f = r.semana?.foco || r.bloque?.foco; return f ? NOMBRE_FOCO[f] || f : ''; }
+    case 'proxima': { const x = proximaDe(r, extra); return x ? TEXTO_PROXIMA_CORTO[x] : ''; }
+    case 'mensajes': return String(sinLeerDe(r, extra));
+    case 'nivel': return r.nivel ? NOMBRE_NIVEL[r.nivel] : '';
+    case 'servicio': return Object.fromEntries(SERVICIOS)[r.servicio] || '';
+    case 'alta': return r.fecha_alta || '';
+    case 'nota': return p?.nota || '';
+    case 'progreso': { const x = extra.progreso?.[r.atleta_id]; return x ? x.frase || '' : ''; }
+    case 'hoy': { const h = extra.hoy?.[r.atleta_id]; return h ? `${h.nombre}${h.hecha ? ' (hecha)' : ''}` : ''; }
+    case 'contacto': return textoContacto(extra.contacto?.[r.atleta_id], hoy);
+    case 'hito': return textoHito(extra.hitos?.[r.atleta_id]);
+    case 'recordatorio': return textoRecordatorio(recordatorioDe(r, extra), hoy);
+    default: return '';
+  }
+}
+// CSV para Excel o Sheets (punto y coma, como lo abre Excel en español), con BOM para las tildes
+export function csvLista(lista, columnas, extra = {}, hoy) {
+  const celda = (v) => { const t = String(v ?? ''); const s = /^[=+\-@]/.test(t) ? `'${t}` : t; return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const cab = ['Atleta', 'Etiquetas', ...columnas.map((c) => TITULO_COLUMNA[c] || c)];
+  const filas = lista.map((r) => [r.nombre, etiquetasDe(r, extra).join(', '), ...columnas.map((c) => textoColumna(c, r, extra, hoy))]);
+  return `﻿${[cab, ...filas].map((f) => f.map(celda).join(';')).join('\r\n')}\r\n`;
+}
+// La fila de medias al pie de la tabla (solo de los que se ven)
+const media = (xs) => { const v = xs.filter((x) => x != null && Number.isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+export function resumenColumna(col, lista, extra = {}, hoy) {
+  const act = lista.filter((r) => r.estado === 'activo');
+  if (!act.length) return '';
+  switch (col) {
+    case 'cumplido': { const m = media(act.map((r) => r.cumplimiento?.series?.pct ?? null)); return m == null ? '' : `${Math.round(m)} % de media`; }
+    case 'sesiones': { const t = act.reduce((a, r) => a + (r.sesiones?.total || 0), 0), h = act.reduce((a, r) => a + Math.min(r.sesiones?.completadas || 0, r.sesiones?.total || 0), 0); return t ? `${h} de ${t} esta semana` : ''; }
+    case 'sueno': { const m = media(act.map((r) => { const x = String(r.checkin?.horas_sueno || '').match(/\d+(?:[.,]\d+)?/g); return x ? x.map((y) => Number(y.replace(',', '.'))).reduce((a, b) => a + b, 0) / x.length : null; })); return m == null ? '' : `${fmt(m)} h de media`; }
+    case 'energia': case 'motivacion': { const m = media(act.map((r) => r.checkin?.[col] ?? null)); return m == null ? '' : `${fmt(m)} de 5 de media`; }
+    case 'molestias': { const n = act.filter((r) => conMolestias(r)).length; return `${n} con molestias`; }
+    case 'sinEntrenar': { const m = media(act.filter(entrena).map((r) => diasSinEntrenar(r, hoy))); return m == null ? '' : `${Math.round(m)} días de media`; }
+    case 'checkin': return `${act.filter((r) => checkinAlDia(r, hoy)).length} de ${act.length} al día`;
+    case 'habitos': { const m = media(act.map((r) => r.habitos?.pct ?? null)); return m == null ? '' : `${Math.round(m)} % de media`; }
+    case 'nutricion': { const m = media(act.map((r) => r.diasNutricion ?? null)); return m == null ? '' : `${fmt(m)}/7 de media`; }
+    case 'proxima': { const xs = act.map((r) => proximaDe(r, extra)).filter(Boolean); return xs.length ? `${xs.filter((x) => x === 'publicada').length} de ${xs.length} publicadas` : ''; }
+    case 'mensajes': { const n = act.reduce((a, r) => a + sinLeerDe(r, extra), 0); return n ? `${n} sin leer` : ''; }
+    case 'hoy': { const xs = act.map((r) => extra.hoy?.[r.atleta_id]).filter(Boolean); return xs.length ? `${xs.filter((x) => x.hecha).length} de ${xs.length} hechas` : ''; }
+    case 'progreso': { const xs = act.map((r) => extra.progreso?.[r.atleta_id]).filter(Boolean); return xs.length ? `${xs.filter((x) => x.rojos > 0).length} en rojo` : ''; }
+    case 'peso': return '';
+    default: return '';
+  }
+}
+
+// ---------------------------------------------------------------- mensajes a varios con los datos de cada uno
+// {nombre}, {semana} (4 de 6), {sesiones} (2 de 3), {cumplido} (95 %) y {dias} (días sin entrenar)
+export const HUECOS_VARIOS = ['{nombre}', '{semana}', '{sesiones}', '{cumplido}', '{dias}'];
+export function rellenarVarios(texto, r, hoy) {
+  const d = diasSinEntrenar(r, hoy);
+  return conNombre(texto, r.nombre)
+    .replace(/\{semana\}/gi, r.semana ? `${r.semana.numero} de ${r.semana.total}` : 'esta')
+    .replace(/\{sesiones\}/gi, r.sesiones?.total ? `${r.sesiones.completadas} de ${r.sesiones.total}` : 'tus sesiones')
+    .replace(/\{cumplido\}/gi, r.cumplimiento?.series?.pct != null ? `${r.cumplimiento.series.pct} %` : 'casi todo')
+    .replace(/\{dias\}/gi, d == null ? 'unos' : String(d));
+}

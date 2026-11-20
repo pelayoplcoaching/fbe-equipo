@@ -130,3 +130,46 @@
 /* La ficha: el anterior y el que viene de tu lista */
 .vecinos-ficha { gap: var(--esp-2); align-items: center; margin-left: auto; }
 .vecinos-ficha .btn-icono:disabled { color: var(--tinta-3); }
+
+/* v0.199: segunda tanda (novedades, recordatorios, hitos, semaforo, medias, tablero y panel al lado) */
+.avatar-env { position: relative; display: inline-flex; flex: none; }
+.punto-nuevo { position: absolute; top: calc(var(--esp-2) * -1); right: calc(var(--esp-2) * -1); width: 12px; height: 12px; border-radius: var(--r-pildora); background: var(--morado); outline: 2px solid var(--hoja); }
+.extras-nombre { display: grid; gap: var(--esp-2); justify-items: start; }
+.recordatorio-chip { min-height: 22px; padding: 0 var(--esp-8); font-size: var(--letra-12); white-space: normal; text-align: left; }
+.recordatorio-chip svg { width: var(--ico-12); height: var(--ico-12); flex: none; }
+.hito-linea { display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--tinta-2); font-weight: 600; }
+.hito-linea svg { width: var(--ico-12); height: var(--ico-12); color: var(--oro); flex: none; }
+.semaforo-panel { display: inline-flex; gap: var(--esp-4); align-items: center; }
+.sem-punto { display: inline-block; width: 10px; height: 10px; border-radius: var(--r-pildora); background: var(--tinta-3); }
+.sem-punto.verde { background: var(--ok); }
+.sem-punto.ambar { background: var(--aviso); }
+.sem-punto.rojo { background: var(--alerta); }
+.sem-punto.gris { background: var(--linea); }
+.atletas-tabla tfoot th, .atletas-tabla tfoot td { padding: var(--esp-8); border-top: var(--filo-medio) solid var(--linea); vertical-align: top; text-align: left; font-weight: 600; }
+.atletas-tabla tfoot th { padding-left: var(--esp-16); color: var(--tinta-2); }
+.entrada.entrada-num { width: 72px; min-height: 32px; padding: var(--esp-2) var(--esp-6); text-align: center; }
+.filtros-rango { display: grid; gap: var(--esp-4); border: 0; padding: 0; margin: 0; }
+.filtros-rango legend { margin-bottom: var(--esp-6); }
+.recordatorio-panel { gap: var(--esp-6); align-items: center; }
+.rec-fecha { max-width: 170px; }
+.resultado-preparar li.hecha strong { color: var(--ok); }
+.resultado-preparar li.error { color: var(--alerta); }
+.segmentos-varios { flex-wrap: wrap; }
+
+/* El tablero */
+.tablero-atletas { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: var(--esp-12); overflow-x: auto; padding-bottom: var(--esp-8); }
+.tablero-columna { display: grid; align-content: start; gap: var(--esp-8); padding: var(--esp-10); border-radius: var(--r); background: var(--hoja-2); min-width: 0; }
+.tablero-columna h2 { margin: 0; font-weight: 750; color: var(--tinta-2); }
+.tablero-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.tablero-tarjeta { display: flex; gap: var(--esp-10); align-items: flex-start; width: 100%; padding: var(--esp-10); border: 0; border-radius: var(--r-10); background: var(--hoja); box-shadow: var(--sombra); text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.tablero-tarjeta .avatar { width: 32px; height: 32px; font-size: var(--letra-12); flex: none; }
+.tablero-nombre { font-weight: 700; }
+@media (max-width: 899px) { .tablero-atletas { grid-auto-columns: minmax(220px, 82%); } }
+
+/* El panel de al lado (ordenador) */
+.con-lateral { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: var(--esp-16); align-items: start; }
+.lista-lateral { max-height: calc(100vh - 120px); overflow-y: auto; padding: var(--esp-2); }
+.aside-atleta { position: sticky; top: var(--esp-16); padding: var(--esp-16); border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); min-width: 0; }
+.aside-cab { gap: var(--esp-10); align-items: center; }
+.aside-cab strong { font-size: var(--letra-17-5); }
+.tarjeta-atleta-env.seleccionada { outline: 2px solid var(--morado); outline-offset: 0; }

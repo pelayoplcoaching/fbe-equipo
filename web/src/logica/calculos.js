@@ -981,7 +981,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     sesiones: d.diasSemana ? { completadas: d.semanaNatural?.hechas || 0, total: d.semanaNatural?.objetivo || 0 } : { completadas, total: sesiones.length },
     diasSemana: d.diasSemana || null,
     peso: peso ? { kg: Number(peso.kg), fecha: peso.fecha, cambio: pesoAnterior ? Math.round((peso.kg - pesoAnterior.kg) * 10) / 10 : null, ritmo: ritmoPeso(tendenciaPeso(pesos)) } : null,
-    checkin: checkin ? { semana: checkin.semana_inicio, horas_sueno: checkin.horas_sueno, energia: checkin.energia, motivacion: checkin.motivacion } : null,
+    checkin: checkin ? { semana: checkin.semana_inicio, horas_sueno: checkin.horas_sueno, energia: checkin.energia, motivacion: checkin.motivacion, creado: checkin.creado_en || null } : null,
     maxMolestia,
     ultimaSerie: d.ultimaSerie || null,
     // v0.51: la última sesión terminada (también las de cardio, que no llevan series), para «Hoy en tu equipo»

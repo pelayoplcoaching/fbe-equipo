@@ -153,7 +153,7 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
     await p.getByRole('button', { name: 'Elegir varios' }).click();
     const dos = (await nombres()).slice(0, 2);
     for (const n of dos) await fila(n).locator('input.elegir-atleta').check();
-    await p.getByRole('button', { name: 'Mensaje o etiqueta' }).click();
+    await p.getByRole('button', { name: 'Hacer algo con ellos' }).click();
     const hva = p.getByRole('dialog', { name: 'Con 2 atletas' });
     await hva.getByRole('button', { name: 'Etiqueta', exact: true }).click();
     await hva.getByLabel('Etiqueta').fill('Revisión domingo');
@@ -213,7 +213,10 @@ export async function probarAtletas198({ navegador, check, base = 'http://localh
     await t.getByRole('button', { name: `Desplegar lo de ${corto}` }).click();
     check(await hasta(async () => (await t.locator('.detalle-atleta').count()) === 1), 'y se despliega en el móvil');
     await t.getByRole('button', { name: `Chat con ${corto}` }).click();
-    check(await hasta(async () => (await p.getByRole('tab', { name: 'Mensajes', selected: true }).count()) === 1), 'el atajo del chat abre su ficha en Mensajes');
+    const hch = p.getByRole('dialog', { name: `Chat con ${corto}` });
+    await hch.waitFor();
+    await hch.getByRole('button', { name: 'Abrir el chat completo' }).click();
+    check(await hasta(async () => (await p.getByRole('tab', { name: 'Mensajes', selected: true }).count()) === 1), 'el atajo del chat abre el chat rápido y, desde él, su ficha en Mensajes');
     await p.getByRole('button', { name: 'Volver a atletas' }).click();
     await p.locator('.tarjeta-atleta').first().waitFor();
     await revisar('movil');

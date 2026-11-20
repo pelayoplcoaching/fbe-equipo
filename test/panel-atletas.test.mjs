@@ -90,6 +90,59 @@ const v = P.vecinos(['a', 'b', 'c'], 'b');
 check(v.anterior === 'a' && v.siguiente === 'c' && v.puesto === 2 && v.total === 3 && P.vecinos(['a'], 'a').siguiente === null && P.vecinos(['a'], 'z').puesto === 0, 'el anterior y el siguiente de la lista');
 check(P.conNombre('Hola, {nombre}. ¿Qué tal, {NOMBRE}?', 'Ana López') === 'Hola, Ana. ¿Qué tal, Ana?', '{nombre} = su nombre de pila');
 
+// ---------------------------------------------------------------- (v0.199) segunda tanda
+console.log('\nAtletas, segunda tanda (v0.199): lo puro');
+{
+  // Avisos a tu medida
+  const r1 = r('Uno', { ultimaSerie: '2026-11-17', bloque: { id: 'b' }, alertas: [{ tipo: 'sin_checkin', nivel: 'info', texto: 'Sin check-in' }], prioridad: 2, cumplimiento: { series: { pct: 85, pautadas: 40 } }, maxMolestia: 2 });
+  check(P.conUmbrales(r1, P.UMBRALES, hoy) === r1, 'con los avisos de siempre, el atleta queda igual');
+  const u = P.conUmbrales(r1, { dias: 3, cumplido: 90, molestia: 3, checkin: true }, hoy);
+  check(u.alertas.some((a) => a.tipo === 'sin_entrenar' && a.texto === '3 días sin registrar series') && u.alertas.some((a) => a.tipo === 'cumplimiento') && u.alertas.find((a) => a.tipo === 'sin_checkin').nivel === 'aviso' && P.necesitaAtencion(u) && u.prioridad === 1,
+    'tus avisos: 3 días, menos del 90 % y el check-in cuentan');
+  const r2 = { ...carlos, alertas: [{ tipo: 'sin_entrenar', nivel: 'aviso', texto: '15 días' }] };
+  check(!P.conUmbrales(r2, { dias: 20, cumplido: 50 }, hoy).alertas.some((a) => a.tipo === 'sin_entrenar'), 'con 20 días, quien lleva 15 ya no salta');
+  check(P.limpiarUmbrales({ dias: 0, cumplido: 'x', molestia: '3' }).dias === 5 && P.limpiarUmbrales({ molestia: '3' }).molestia === 3, 'umbrales limpios');
+
+  // Recordatorios
+  const ex2 = { recordatorios: { 'Ana López': { fecha: '2026-11-20', texto: 'Mirar rodilla' }, 'Carlos Vera': { fecha: '2026-11-26', texto: 'Llamarle' } } };
+  check(P.recordatorioParaHoy(ana, ex2, hoy) && !P.recordatorioParaHoy(carlos, ex2, hoy), 'el recordatorio de hoy, para hoy; el de dentro de unos días, no');
+  check(P.textoRecordatorio(ex2.recordatorios['Ana López'], hoy) === 'Hoy: Mirar rodilla' && P.textoRecordatorio(ex2.recordatorios['Carlos Vera'], hoy) === 'El 26/11: Llamarle' && P.textoRecordatorio({ fecha: '2026-11-18', texto: 'x' }, hoy) === 'Hace 2 días: x', 'el recordatorio, en palabras');
+  check(P.limpiarRecordatorio({ fecha: 'mañana' }) === null && P.limpiarRecordatorio({ fecha: '2026-12-01', texto: '  ' }).texto === 'Mirar cómo va', 'recordatorios limpios');
+
+  // Tarjetas, orden a mano
+  check(P.limpiarTarjeta(['peso', 'raro', 'peso', 'hoy', 'hito', 'cumplido']).join() === 'peso,hoy,hito' && P.limpiarTarjeta([]).join() === 'sesiones,peso,ultimo', 'tarjetas: hasta tres datos; sin elegir, los de siempre');
+  const om = P.moverManual(['a', 'b', 'c', 'd'], ['b', 'c'], 'c', -1);
+  check(om.slice(0, 2).join() === 'c,b' && om.includes('a') && om.includes('d') && P.moverManual([], ['x', 'y'], 'x', -1).join() === 'x,y', 'tu orden a mano: mover entre los que ves');
+  check(nombres(P.ordenar(base, { col: 'mano' }, { ordenManual: ['Marta Gil', 'Carlos Vera'] }, hoy)).startsWith('Marta,Carlos'), 'ordenar a tu manera');
+
+  // Hoy toca, contacto, hito, novedades
+  check(P.hoyTocaDe([{ dia_previsto: hoy, completada: false, nombre: 'Torso A' }], hoy).nombre === 'Torso A' && P.hoyTocaDe([{ dia_previsto: '2026-11-19', completada: true, fecha_realizada: hoy, nombre: 'Pierna' }], hoy).hecha === true && P.hoyTocaDe([{ dia_previsto: '2026-11-21' }], hoy) === null, 'hoy toca: la prevista hoy o la hecha hoy');
+  check(P.textoContacto({ fecha: '2026-11-17', autor: 'coach' }, hoy) === 'Hace 3 días (tú)' && P.textoContacto(null, hoy) === 'Nunca', 'el último contacto');
+  const h1 = P.proximoHito({ ...ana, fecha_alta: '2025-11-25' }, { cumple: { mes: 11, dia: 30 }, carreras: [{ nombre: 'San Silvestre', fecha: '2026-12-31' }] }, hoy);
+  check(h1?.tipo === 'aniversario' && h1.dias === 5 && P.textoHito(h1) === '1 año con FBE, en 5 días', `el próximo hito, el que antes llegue (${P.textoHito(h1)})`);
+  check(P.proximoHito(ana, { cumple: { mes: 11, dia: 21 } }, hoy).texto === 'Su cumpleaños' && P.proximoHito({ ...ana, semana: { numero: 6, total: 6 } }, {}, hoy).texto === 'Última semana del bloque' && P.proximoHito(ana, { cumple: { mes: 1, dia: 15 } }, hoy) === null, 'cumpleaños, fin de bloque, y nada si queda lejos');
+  check(P.proximoHito({ ...ana, cobro: { pagadoHasta: '2026-11-22' } }, {}, hoy).tipo === 'pago' && P.proximoHito(ana, { carreras: [{ nombre: 'Getafe', fecha: '2026-11-29' }] }, hoy).texto === 'Carrera: Getafe', 'un pago que vence y una carrera');
+  const nv = P.novedadesDe({ ...ana, ultimaSerie: '2026-11-20', checkin: { semana: '2026-11-16', creado: '2026-11-20T09:00:00Z' }, peso: { fecha: '2026-11-19' } }, { contacto: { 'Ana López': { autor: 'atleta', instante: '2026-11-20T10:00:00Z' } } }, '2026-11-19T20:00:00Z');
+  check(nv.join() === 'Ha entrenado,Check-in nuevo,Te ha escrito' && P.novedadesDe(ana, {}, null).length === 0, `lo nuevo desde tu última visita (${nv.join(', ')})`);
+
+  // Filtros por rango y marcas nuevas
+  const fr = P.limpiarFiltros({ minDias: '10', maxCumplido: 0, minMeses: 'x' });
+  check(fr.minDias === 10 && fr.maxCumplido === null && fr.minMeses === null && P.cuantosFiltros(fr) === 1, 'filtros por rango, limpios');
+  const masDe10 = base.filter((x) => P.cumpleFiltros(x, { ...P.FILTROS_VACIOS, minDias: 10 }, {}, hoy)).map((x) => x.nombre.split(' ')[0]).join();
+  check(masDe10 === 'Carlos,Marta,Iván' && base.filter((x) => P.cumpleFiltros(x, { ...P.FILTROS_VACIOS, maxCumplido: 80 }, {}, hoy)).map((x) => x.nombre.split(' ')[0]).join() === 'Carlos',
+    `más de 10 días sin entrenar (${masDe10}); menos del 80 % cumplido`);
+  check(P.cumpleMarca('ultimaSemana', { ...ana, semana: { numero: 6, total: 6 } }, {}, hoy) && P.cumpleMarca('hoyToca', ana, { hoy: { 'Ana López': { hecha: false } } }, hoy) && P.cumpleMarca('progresoRojo', ana, { progreso: { 'Ana López': { rojos: 1 } } }, hoy), 'las marcas nuevas');
+  check(P.CONTADORES.length === 8 && P.CONTADORES.includes('paraHoy') && P.CONTADORES.includes('novedades'), 'ocho contadores');
+
+  // Medias, CSV y mensajes con datos
+  check(P.resumenColumna('cumplido', [ana, carlos], {}, hoy) === '87 % de media' && P.resumenColumna('checkin', [ana, carlos], {}, hoy) === '1 de 2 al día' && P.resumenColumna('peso', [ana], {}, hoy) === '', 'las medias del pie de la tabla');
+  const csv = P.csvLista([ana, { ...carlos, nombre: '=Carlos; "Vera"' }], ['peso', 'cumplido'], extra, hoy);
+  check(csv.startsWith('﻿Atleta;Etiquetas;Peso;% cumplido') && csv.includes('Ana López;Media maratón, preboda;61,7;99') && csv.includes(`"'=Carlos; ""Vera"""`), 'el CSV: con tildes, punto y coma, comillas y sin fórmulas');
+  check(P.rellenarVarios('{nombre}, semana {semana}: {sesiones}, {cumplido}, {dias} días', ana, hoy) === 'Ana, semana 4 de 6: 0 de 3, 99 %, 2 días', 'mensajes con los datos de cada uno');
+  check(P.limpiarAjustesPanel({ recordatorios: { 'no-es-id': { fecha: '2026-11-20' }, '11111111-2222-3333-4444-555555555555': { fecha: '2026-11-20', texto: 'x' } } }).recordatorios['11111111-2222-3333-4444-555555555555'].texto === 'x'
+    && P.limpiarAjustesPanel({ tablero: 1 }).tablero === true && Object.keys(P.limpiarAjustesPanel({ recordatorios: { x: { fecha: '2026-11-20' } } }).recordatorios).length === 0, 'los ajustes nuevos, limpios');
+}
+
 console.log('\nAtletas a tu gusto (v0.198): contra la demo (como la 085)');
 {
   const backend = crearBackendMemoria({ semilla: () => semillaDemo(), persistir: false });
@@ -137,6 +190,17 @@ console.log('\nAtletas a tu gusto (v0.198): contra la demo (como la 085)');
   await b2.auth.entrar('pelayo@fbe.demo', 'demo');
   await api2.borrarAtleta(r2[0].atleta_id).catch(() => {});
   check(!(await b2.select('atletas_panel', {})).some((x) => x.atleta_id === r2[0].atleta_id), 'al borrar un atleta, su fila se va');
+  // (v0.199) hoy toca, hitos y preparar la semana que viene de varios en borrador
+  const hoyT = await api2.hoyTocaEquipo(r2.filter((x) => x.semana).map((x) => ({ atleta_id: x.atleta_id, semana_id: x.semana.id })), hoy);
+  check(Object.values(hoyT).every((h) => typeof h.hecha === 'boolean' && h.nombre), 'hoy toca, de cada uno');
+  const hi = await api2.hitosEquipo(r2.map((x) => x.atleta_id), hoy);
+  check(hi && typeof hi.cumples === 'object' && typeof hi.carreras === 'object', 'los datos para el próximo hito');
+  const conBloque = r2.filter((x) => x.bloque && x.estado === 'activo').map((x) => x.atleta_id);
+  const antesPub = (await b2.select('semanas', {})).filter((w) => w.programacion === 'programada').length;
+  const prep = await api2.prepararSiguienteVarios(conBloque, { kg: 'igual' });
+  const prep2 = await api2.prepararSiguienteVarios(conBloque, { kg: 'igual' });
+  check(prep.length === conBloque.length && prep.every((x) => ['hecha', 'ya', 'sin_bloque'].includes(x.estado)) && prep2.every((x) => x.estado !== 'hecha'), `preparar la semana que viene de varios: ${prep.map((x) => x.estado).join(', ')}; la segunda vez, ya la tienen`);
+  check((await b2.select('semanas', {})).filter((w) => w.programacion === 'programada').length === antesPub, 'y no publica nada (quedan en borrador)');
   // La semana que viene, para los contadores
   const conB = r2.filter((x) => x.bloque);
   const px = await api2.proximaSemanaDe(conB.map((x) => ({ atleta_id: x.atleta_id, bloque_id: x.bloque.id })), (await import('../web/src/logica/fechas.js')).lunesDe(hoy));

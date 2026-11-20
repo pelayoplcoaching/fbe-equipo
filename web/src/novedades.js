@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.199': {
+    coach: [
+      'Atletas, segunda tanda: recordatorios por atleta, tus avisos, tu orden a mano, tablero y panel al lado en el ordenador.',
+      'Hoy toca, último contacto, próximo hito, semáforo de progreso, lo nuevo desde tu última visita y medias al pie de la tabla.',
+      'Chat y voz sin salir de la lista; a varios: mensajes con sus datos o programados, tareas y preparar su semana en borrador.',
+    ],
+  },
   '0.198': {
     coach: [
       'Atletas a tu gusto: busca, ordena por cualquier columna, elige columnas, agrupa, vista compacta y guarda tus vistas.',

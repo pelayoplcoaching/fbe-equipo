@@ -41,7 +41,7 @@ import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
 import { progresoAtleta } from '../logica/progreso-revision.js';
-import { limpiarPanelAtleta, limpiarAjustesPanel } from '../logica/panel-atletas.js';
+import { limpiarPanelAtleta, limpiarAjustesPanel, hoyTocaDe } from '../logica/panel-atletas.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
@@ -4601,6 +4601,48 @@ export function crearApi(backend) {
       if ((await api.panel085()) !== true) return false;
       await b.upsert('panel_ajustes', [{ usuario_id: uid(), datos: limpiarAjustesPanel(datos) }], 'usuario_id');
       return true;
+    },
+    // (v0.199) Hoy toca: de cada atleta con semana en curso, la sesión prevista hoy o hecha hoy → { id: { hecha, nombre } }
+    async hoyTocaEquipo(filas, hoy = hoyISO()) {
+      const xs = (filas || []).filter((f) => f?.semana_id);
+      if (!xs.length) return {};
+      const ses = agrupar(await b.select('sesiones', { in: { semana_id: unicos(xs.map((f) => f.semana_id)) }, cols: 'id,semana_id,nombre,dia_previsto,completada,fecha_realizada' }).catch(() => []), 'semana_id');
+      const out = {};
+      for (const f of xs) { const h = hoyTocaDe(ses[f.semana_id] || [], hoy); if (h) out[f.atleta_id] = h; }
+      return out;
+    },
+    // (v0.199) Para el próximo hito: su cumpleaños (con la 050) y sus carreras de las próximas semanas (con la 056)
+    async hitosEquipo(ids, hoy = hoyISO()) {
+      if (!ids?.length) return { cumples: {}, carreras: {} };
+      const [personal, carreras] = await Promise.all([
+        api.personalAtletas().catch(() => []),
+        b.select('carrera_eventos', { in: { atleta_id: ids }, gte: { fecha: hoy }, lte: { fecha: sumarDias(hoy, 21) }, cols: 'atleta_id,nombre,fecha,decision', order: [['fecha', 'asc']] }).catch(() => []),
+      ]);
+      const cumples = {};
+      for (const p of personal || []) if (p?.atleta_id && p.cumple_mes && p.cumple_dia) cumples[p.atleta_id] = { mes: p.cumple_mes, dia: p.cumple_dia };
+      return { cumples, carreras: agrupar((carreras || []).filter((e) => e.decision !== 'no'), 'atleta_id') };
+    },
+    // (v0.199) Preparar la semana que viene de varios a la vez, en borrador (lo mismo que «Preparar las siguientes» desde
+    // su última semana; respeta los candados; no publica nada). → [{ atleta_id, estado: 'hecha'|'ya'|'sin_bloque'|'error', numero, error }]
+    async prepararSiguienteVarios(ids, progresion = {}, hoy = hoyISO()) {
+      const out = [];
+      const siguiente = sumarDias(lunesDe(hoy), 7);
+      for (const id of ids || []) {
+        try {
+          const candidatos = await b.select('bloques', { eq: { atleta_id: id, es_plantilla: false }, in: { estado: ['activo', 'ajustado', 'planificado'] } });
+          const bl = bloqueActual(candidatos);
+          if (!bl) { out.push({ atleta_id: id, estado: 'sin_bloque' }); continue; }
+          const semanas = await b.select('semanas', { eq: { bloque_id: bl.id }, order: [['numero', 'asc']] });
+          if (!semanas.length) { out.push({ atleta_id: id, estado: 'sin_bloque' }); continue; }
+          if (semanas.some((w) => w.fecha_inicio && lunesDe(w.fecha_inicio) >= siguiente)) { out.push({ atleta_id: id, estado: 'ya' }); continue; }
+          const origen = semanas[semanas.length - 1];
+          const notas = await api.notasDeEjercicio(id).catch(() => ({}));
+          const fijos = Object.entries(notas || {}).filter(([, x]) => x?.fijado).map(([k]) => k);
+          const [nueva] = await api.prepararSemanas(origen.id, { n: 1, kg: progresion.kg ?? 'salto', rpe: progresion.rpe ?? 0, rir: 0, reps: progresion.reps ?? 0, fijos });
+          out.push({ atleta_id: id, estado: 'hecha', numero: nueva?.numero ?? null });
+        } catch (e) { out.push({ atleta_id: id, estado: 'error', error: e?.message || 'No se ha podido' }); }
+      }
+      return out;
     },
     async revisar084() {
       if (!api._v084) {

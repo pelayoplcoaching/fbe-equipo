@@ -5983,6 +5983,16 @@ try {
   console.log('  ✗ v0.187:', e.message.split('\n')[0]);
 }
 
+// v0.199: Atletas, segunda tanda (test/e2e-atletas-199.mjs)
+console.log('\nv0.199: Atletas, segunda tanda');
+try {
+  const { probarAtletas199 } = await import('./e2e-atletas-199.mjs');
+  await probarAtletas199({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.199:', e.message.split('\n')[0]);
+}
+
 // v0.198: la lista de Atletas a tu gusto (test/e2e-atletas-198.mjs)
 console.log('\nv0.198: Atletas a tu gusto');
 try {
