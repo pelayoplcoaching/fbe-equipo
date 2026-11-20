@@ -9,6 +9,8 @@
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 // v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
 // v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
+import { momentoDelDia, horaDecimal } from '../logica/cielo.js';
+import { hoyISO } from '../logica/fechas.js';
 import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
 import { cssAcento, acentoDe, ACENTO_DEFECTO } from '../logica/acentos.js';
@@ -63,7 +65,8 @@ let escuchaContraste = false;
 // Copia en memoria: si el navegador no deja guardar (almacenamiento lleno o bloqueado), lo elegido vale
 // igual mientras la app esté abierta (antes se volvía a los de serie: «elijo otro sonido y suena el de siempre»)
 let enMemoria = null;
-const TEMAS = ['sistema', 'claro', 'oscuro'];
+// (v0.200) «con el sol»: claro de día y oscuro de noche, con la puesta de sol de Madrid de cada mes (logica/cielo.js)
+const TEMAS = ['sistema', 'claro', 'oscuro', 'sol'];
 // El tamaño de la letra: su nombre y cuánto crece la raíz (100 % son los 16 px del navegador)
 export const TAMANOS_LETRA = [['normal', 'Normal', 100], ['grande', 'Grande', 112.5], ['muy-grande', 'Muy grande', 125]];
 const LETRAS = TAMANOS_LETRA.map(([k]) => k);
@@ -143,9 +146,22 @@ export const EVENTO_AJUSTES = 'fbe-ajustes';
 
 // El tema usa el mismo atributo que el visor que aloja la demo (data-theme); con «sistema» se respeta lo que hubiera.
 let temaPrevio;
+// (v0.200) El tema que toca «con el sol» ahora mismo: oscuro desde media hora después de la puesta hasta el amanecer
+export const temaConSol = (d = new Date()) => (momentoDelDia(horaDecimal(d), hoyISO()) === 'noche' ? 'oscuro' : 'claro');
+let relojSol = null;
+function alVolverSol() { if (document.visibilityState === 'visible') aplicarTema(); }
 export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) {
-  const tema = TEMAS.includes(temaPedido) ? temaPedido : 'sistema';
+  const pedido = TEMAS.includes(temaPedido) ? temaPedido : 'sistema';
   if (typeof document === 'undefined') return;
+  // «con el sol» se mira cada cinco minutos (y al volver a la app) mientras esté elegido
+  if (pedido === 'sol' && !relojSol) {
+    relojSol = setInterval(() => aplicarTema(), 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', alVolverSol);
+  } else if (pedido !== 'sol' && relojSol) {
+    clearInterval(relojSol); relojSol = null;
+    document.removeEventListener('visibilitychange', alVolverSol);
+  }
+  const tema = pedido === 'sol' ? temaConSol() : pedido;
   const r = document.documentElement;
   if (temaPrevio === undefined) temaPrevio = r.getAttribute('data-theme');
   if (tema === 'claro') r.setAttribute('data-theme', 'light');

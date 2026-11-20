@@ -1,7 +1,7 @@
 // (v0.200, belleza) Lo que se instala una vez al arrancar (main.jsx): la decoración de temporada y la onda al pulsar un
 // botón. Los estilos, en belleza.css. Todo es adorno: no recibe toques, no lo leen los lectores de pantalla y, con
 // «reducir movimiento», se queda quieto (los copos) o no sale (la onda).
-import { temporadaDe, coposDe, semillaDia } from '../logica/cielo.js';
+import { temporadaDe, coposDe, semillaDia, decoracionDe, horaDecimal } from '../logica/cielo.js';
 import { leerAjustes, EVENTO_AJUSTES } from './ajustes.js';
 import { sinMovimiento } from './transiciones.js';
 import { hoyISO } from '../logica/fechas.js';
@@ -14,9 +14,11 @@ export const automatico = () => typeof navigator !== 'undefined' && !!navigator.
 let capa = null, puesta = null;
 export function aplicarTemporada(a = leerAjustes(), hoy = hoyISO()) {
   if (typeof document === 'undefined' || !document.body) return null;
-  const t = a.temporada !== false ? temporadaDe(hoy) : null;
+  // (segunda tanda) sin temporada, de noche, estrellas tenues (que solo se ven en oscuro)
+  const t = decoracionDe({ fecha: hoy, hora: horaDecimal(), encendida: a.temporada !== false });
   const r = document.documentElement;
-  if (t) r.setAttribute('data-temporada', t); else r.removeAttribute('data-temporada');
+  if (t && t !== 'estrellas') r.setAttribute('data-temporada', t); else r.removeAttribute('data-temporada');
+  if (t) r.setAttribute('data-fondo-cielo', t); else r.removeAttribute('data-fondo-cielo');
   const clave = t ? `${t}|${hoy}` : null;
   if (clave === puesta && (!t || capa?.isConnected)) return t;
   puesta = clave;
@@ -141,6 +143,8 @@ export function instalarBelleza() {
   ponerDegradados();
   if (!sinMovimiento()) vigilarGraficas();
   window.addEventListener(EVENTO_AJUSTES, () => aplicarTemporada());
+  // (al anochecer salen las estrellas: se mira cada diez minutos)
+  setInterval(() => aplicarTemporada(), 10 * 60 * 1000);
   // (al volver a la app: si ha pasado la medianoche, la del día nuevo)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicarTemporada(); });
   document.addEventListener('pointerdown', (e) => {

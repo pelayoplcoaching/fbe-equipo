@@ -1,11 +1,14 @@
 // (imágenes, bloque S) Las cabeceras ilustradas del lado del coach: una franja oscura con el texto a la izquierda y la
 // ilustración a la derecha (la pieza común .cab-ilu). Sin la imagen (demo de un solo archivo, ahorro de datos), nada.
 import { Imagen, hayImagen } from '../Imagen.jsx';
+import { CieloHora } from '../Cielo.jsx';
 
 export function CabCoach({ id, titulo, children = null, clase = '' }) {
   if (!hayImagen(id)) return null;
   return (
     <div class={`cab-ilu cab-coach ${clase}`}>
+      {/* (v0.200) el cielo de la hora detrás, como en la portada de Hoy de los atletas */}
+      <CieloHora clase="cab-cielo" />
       <div class="cab-ilu-texto pila-xs">
         {titulo && <strong class="cab-coach-t">{titulo}</strong>}
         {children}

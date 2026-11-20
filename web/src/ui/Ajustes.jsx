@@ -3,7 +3,7 @@ import { useEstadoMicro, ActivarMicro, AyudaMicro } from './chat/NotaVoz.jsx';
 import { textoMicro } from '../logica/notasVoz.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
-import { leerAjustes, guardarAjustes, TAMANOS_LETRA } from './ajustes.js';
+import { leerAjustes, guardarAjustes, TAMANOS_LETRA, temaConSol } from './ajustes.js';
 import { prepararAudio, pitar, sonarSerie, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar, vocesEspanol } from './voz.js';
 import { PruebaSonido } from './PruebaSonido.jsx';
@@ -18,7 +18,8 @@ import { puedeDifuminar } from './tecnica/Difuminar.jsx';
 import { leerRed, mostrarOpcionWifi } from '../logica/red.js';
 
 // (diseño, tanda 21) con su icono: el sol y la luna giran al elegirse (diseno.css, bloque 64)
-const TEMAS = [['sistema', <><Icono n="movil" class="seg-ico" /> Sistema</>], ['claro', <><Icono n="sol" class="seg-ico" /> Claro</>], ['oscuro', <><Icono n="luna" class="seg-ico" /> Oscuro</>]];
+// (v0.200) «Con el sol»: claro de día y oscuro desde la puesta de sol (la de Madrid de cada mes)
+const TEMAS = [['sistema', <><Icono n="movil" class="seg-ico" /> Sistema</>], ['claro', <><Icono n="sol" class="seg-ico" /> Claro</>], ['oscuro', <><Icono n="luna" class="seg-ico" /> Oscuro</>], ['sol', <><Icono n="reloj" class="seg-ico" /> Con el sol</>]];
 export const VERSION_APP = typeof __APP_VERSION__ === 'undefined' ? '' : String(__APP_VERSION__);
 
 // icono (v0.50): con él, la fila lleva su cuadrito a la izquierda, como el resto de la lista agrupada
@@ -42,6 +43,17 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
   // (sonido, tanda 1) varios a la vez (un perfil de sonido)
   const cambiarVarios = (o) => { const n = { ...a, ...o }; setA(n); guardarAjustes(n); };
+  // (v0.200) el color de acento nuevo entra con un barrido en círculo desde la muestra elegida (transición de vista)
+  const cambiarAcento = (id, ev) => {
+    const r = typeof document !== 'undefined' ? document.documentElement : null;
+    if (!r || typeof document.startViewTransition !== 'function' || sinMovimiento() || r.dataset.vt) { cambiar('acento', id); return; }
+    const caja = ev?.currentTarget?.closest?.('.acento-op')?.getBoundingClientRect?.();
+    if (caja) { r.style.setProperty('--vt-x', `${Math.round(caja.left + caja.width / 2)}px`); r.style.setProperty('--vt-y', `${Math.round(caja.top + caja.height / 2)}px`); }
+    r.dataset.vt = 'acento';
+    let vt;
+    try { vt = document.startViewTransition(() => cambiar('acento', id)); } catch { delete r.dataset.vt; cambiar('acento', id); return; }
+    vt.finished.catch(() => {}).finally(() => { if (r.dataset.vt === 'acento') delete r.dataset.vt; });
+  };
   // (diseño, tanda 21) el tema cambia fundiéndose (transición de vista de todo el documento), no a golpe
   const cambiarTema = (t) => {
     const r = typeof document !== 'undefined' ? document.documentElement : null;
@@ -58,12 +70,12 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
     <>
     <GrupoIos titulo={`Este ${coach ? 'dispositivo' : 'móvil'}`} id="grupo-este-movil">
       {antes}
-      <FilaIos icono="tema" titulo="Tema" detalle="Con «Sistema», claro u oscuro según tu móvil u ordenador."
+      <FilaIos icono="tema" titulo="Tema" detalle={a.tema === 'sol' ? `Con el sol: claro de día y oscuro desde la puesta de sol (hoy, ahora, ${temaConSol() === 'oscuro' ? 'oscuro' : 'claro'}).` : 'Con «Sistema», claro u oscuro según tu móvil u ordenador; con «Con el sol», oscuro desde la puesta de sol.'}
         bloque={<Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" alCambiar={(v) => cambiarTema(v || 'sistema')} />} />
       {/* v0.49: negro puro para pantallas OLED, cuando se ve el tema oscuro */}
       {a.tema !== 'claro' && (
         <Interruptor id="aj-oled" icono="sueno" texto="Negro puro (OLED)" valor={!!a.oled} alCambiar={(v) => cambiar('oled', v)}
-          ayuda={a.tema === 'oscuro' ? 'El fondo, negro del todo: en pantallas OLED gasta menos batería.' : 'Cuando tu móvil esté en oscuro, el fondo será negro del todo (en pantallas OLED gasta menos batería).'} />
+          ayuda={a.tema === 'oscuro' ? 'El fondo, negro del todo: en pantallas OLED gasta menos batería.' : a.tema === 'sol' ? 'De noche, el fondo será negro del todo (en pantallas OLED gasta menos batería).' : 'Cuando tu móvil esté en oscuro, el fondo será negro del todo (en pantallas OLED gasta menos batería).'} />
       )}
       <li class="fila-ios fila-ios-bloque">
         <IcoIos n="paleta" />
@@ -72,7 +84,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           <div class="acentos-lista">
             {ACENTOS.map((c) => (
               <label key={c.id} class="acento-op" style={{ '--m-claro': c.claro.morado, '--m-oscuro': c.oscuro.morado }}>
-                <input type="radio" name="aj-acento" class="sr" value={c.id} checked={(a.acento || 'morado') === c.id} onChange={() => cambiar('acento', c.id)} />
+                <input type="radio" name="aj-acento" class="sr" value={c.id} checked={(a.acento || 'morado') === c.id} onChange={(e) => cambiarAcento(c.id, e)} />
                 <span class="acento-muestra" aria-hidden="true"><Icono n="hecho" /></span>
                 <span class="acento-nombre">{c.nombre}</span>
               </label>
@@ -82,7 +94,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
         </fieldset>
       </li>
       {/* (v0.200) la decoración de temporada: copos finos arriba en Navidad (del 20 de diciembre al 6 de enero) y en invierno */}
-      <Interruptor id="aj-temporada" icono="nieve" texto="Decoración de temporada" ayuda="Copos finos en lo alto de la pantalla en Navidad (del 20 de diciembre al 6 de enero) y, más pocos, en invierno" valor={a.temporada !== false} alCambiar={(v) => cambiar('temporada', v)} />
+      <Interruptor id="aj-temporada" icono="nieve" texto="Decoración de temporada" ayuda="Copos finos en lo alto de la pantalla en Navidad (del 20 de diciembre al 6 de enero) y, más pocos, en invierno; el resto del año, de noche y en oscuro, unas estrellas tenues" valor={a.temporada !== false} alCambiar={(v) => cambiar('temporada', v)} />
       {/* (color, mejoras 17 y 18) más contraste y ayuda para daltonismo */}
       <Interruptor id="aj-contraste" icono="sol" texto="Alto contraste" ayuda="Textos y líneas al máximo, para ver mejor o entrenar con mucha luz" valor={!!a.altoContraste} alCambiar={(v) => cambiar('altoContraste', v)} />
       <Interruptor id="aj-daltonismo" icono="ojo-abierto" texto="Ayuda para daltonismo" ayuda="Lo hecho, en azul, y lo que falta o va mal, en naranja, en vez de verde y rojo" valor={!!a.daltonismo} alCambiar={(v) => cambiar('daltonismo', v)} />

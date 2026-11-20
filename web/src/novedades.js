@@ -8,12 +8,12 @@
 export const NOVEDADES = {
   '0.200': {
     atleta: [
-      'Versión 200: el cielo de Hoy cambia con la hora (amanecer, día, atardecer y noche), y el de la pantalla de entrar, también.',
-      'En Navidad y en invierno, copos finos arriba (se apagan en Ajustes). Y dos colores nuevos para elegir: Abeto y Granada.',
-      'El aro de tu semana alrededor de tu foto, dibujos en las pantallas vacías y la semana completa, con su sonido.',
+      'Versión 200: el cielo de Hoy sigue la hora, con la luna de verdad y el tiempo que hace. Y en Ajustes, el tema «Con el sol».',
+      'Copos en Navidad, fuegos en Nochevieja y estrellas de noche en oscuro (se apagan en Ajustes). Dos colores nuevos: Abeto y Granada.',
+      'El aro de tu semana en tu foto, el estreno de cada bloque, discos de pesas en el confeti del récord y dibujos en lo vacío.',
     ],
     coach: [
-      'Versión 200: el cielo de la hora, la decoración de temporada (se apaga en Ajustes) y dos colores nuevos: Abeto y Granada.',
+      'Versión 200: el cielo de la hora (también en tus saludos), copos en Navidad y el tema «Con el sol». Y dos colores: Abeto y Granada.',
       'Atletas: el aro de la semana en cada foto, el tablero con un color por columna y, en el saludo, quién entrena y quién te escribió.',
       'La ficha toma el color de la primera etiqueta del atleta, y las barras de las gráficas crecen al verse y llevan degradado.',
     ],

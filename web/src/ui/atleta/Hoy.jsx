@@ -9,6 +9,8 @@ import { useTrato } from '../trato.js';
 import { MensajeCoach } from './Personal.jsx';
 import { FraseDeHoy, AvisoRitmoPeso } from './AMedida.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { vibrar } from '../hapticos.js';
+import { sonarFBE } from '../sonido.js';
 import { Fragment } from 'preact';
 import { VideoSemanaHoy, DirectoHoy } from '../Videos.jsx';
 import { GuiaSugerida, MitoDeLaSemana } from '../Guias.jsx';
@@ -55,7 +57,7 @@ import { TarjetaAnio } from './TuAnio.jsx';
 import { RecordatorioCompartir } from '../Compartir.jsx';
 import { textoCierreAuto } from '../../logica/cierre.js';
 import { TarjetaAniversario } from '../Celebracion.jsx';
-import { CieloHora } from '../Cielo.jsx';
+import { CieloHora, fiestaAhora } from '../Cielo.jsx';
 import { ConAro } from '../Aro.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
@@ -83,6 +85,18 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   const { api, atleta, perfil, propio } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
   const sesSemana = p?.actual ? (p.sesiones?.[p.actual.id] || []) : [];
+  const [aulla, setAulla] = useState(false);
+  const toquesLobo = useRef([]);
+  const tocarLobo = () => {
+    const ahora = Date.now();
+    toquesLobo.current = [...toquesLobo.current.filter((t) => ahora - t < 1200), ahora];
+    if (toquesLobo.current.length < 3 || aulla) return;
+    toquesLobo.current = [];
+    setAulla(true);
+    vibrar('anillo');
+    try { sonarFBE('hito', { tipo: 'aniversario' }); } catch { /* sin sonido */ }
+    setTimeout(() => setAulla(false), 1900);
+  };
   // Solo nutrición (v0.26): sin nada de entrenamiento
   const entrena = conEntrenamiento(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
@@ -129,7 +143,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     <div class="contenido" inert={verBienvenida ? '' : undefined} aria-hidden={verBienvenida ? 'true' : undefined}>
       <header class="cabecera">
         <h1 class="sr">Hoy</h1>
-        <div class="titulo"><Marca /></div>
+        {/* (v0.200) el lobo de arriba aúlla con tres toques seguidos (un guiño; solo adorno) */}
+        <div class={`titulo${aulla ? ' lobo-aulla' : ''}`} onClick={tocarLobo}><Marca /></div>
         <span class="sub">{fmtConDia(hoyISO())}</span>
         {/* (v0.200) con el aro de su semana alrededor: lo hecho de lo previsto (las sesiones publicadas de esta semana) */}
         {!propio && <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><ConAro hechas={sesSemana.filter((s) => s.completada).length} total={entrena ? sesSemana.length : 0}><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></ConAro></button>}
@@ -467,6 +482,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const recienHecha = useRef(null);
   if (recienHecha.current === null) { try { recienHecha.current = sessionStorage.getItem('fbe-recien-hecha') === '1'; sessionStorage.removeItem('fbe-recien-hecha'); } catch { recienHecha.current = false; } }
   // (con objetivo de días por semana, se espera a la constancia: la clave lleva el lunes de la semana natural)
+  // (v0.200) el estreno del bloque (su primera semana, el primer día y el siguiente) y la fiesta de fin de año
+  const estreno = semana?.numero === 1 && !!semana.fecha_inicio && diasEntre(semana.fecha_inicio, hoy) >= 0 && diasEntre(semana.fecha_inicio, hoy) <= 1;
+  const fiesta = fiestaAhora() ? (hoy.slice(5) === '01-01' ? `¡Feliz ${hoy.slice(0, 4)}!` : '¡Último día del año!') : null;
   const claveSemana = e.tipo === 'semana' && semana && (!dias || constancia.datos) ? `${atleta.id}:${semana.id}:${natural?.lunes || semana.fecha_inicio || ''}` : null;
   useEffect(() => {
     if (!claveSemana || semanaCelebrada === claveSemana) return;
@@ -574,7 +592,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {atleta.estado !== 'baja' && <FraseDeHoy estado={e.tipo} sesion={siguiente} ejercicios={ejercicios} semanaId={semana?.id} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {/* (v0.200) el cielo de la hora detrás de todo: amanecer, día, atardecer o noche, con el sol de Madrid de cada mes */}
-        <CieloHora clase="hero-cielo" />
+        <CieloHora clase="hero-cielo" conTiempo />
         {e.tipo !== 'entreno' && !hayImagen(escenaHoy(e.tipo, hoy)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}
         {/* (diseño, tanda 15) el dibujo de la sesión (el mismo de su portada), al fondo de la tarjeta: cada día, el suyo.
             Sale cuando ya se sabe qué ejercicios lleva (su patrón principal decide el dibujo): así es el mismo que verá al abrirla */}
@@ -589,6 +607,10 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </div>
           {/* (054) el objetivo del bloque, a la vista cada día */}
           {p.bloque.objetivo && <p class="hero-objetivo"><Icono n="bandera" /> {p.bloque.objetivo}</p>}
+          {/* (v0.200) los dos primeros días de un bloque nuevo, su estreno: el nombre se escribe solo */}
+          {estreno && <p class="estreno-bloque"><span class="estreno-sello">Estreno</span><span class="estreno-nombre">{p.bloque.nombre}</span></p>}
+          {/* (v0.200) Nochevieja y Año Nuevo, con sus fuegos detrás */}
+          {fiesta && <span class="chip toca-hoy fiesta"><Icono n="estrella" />{fiesta}</span>}
           {e.tipo === 'entreno' && enSemana && toca.hoy && <span class="chip toca-hoy"><Icono n="calendario" />Hoy toca</span>}
           {e.tipo === 'descanso' && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
           {e.tipo === 'hecha' && <span class="chip toca-hoy hecha"><Icono n="hecho" />Hecha hoy</span>}

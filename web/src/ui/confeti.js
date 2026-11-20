@@ -22,7 +22,7 @@ function colores() {
 // momento (personalización 2): 'record', 'racha', 'semana', 'bloque' u 'otros', para respetar lo que el atleta quiere
 // celebrar (con todo, solo vibración o nada); sin momento, como siempre
 // (sonido 2) sonido: [clave, datos] de su fanfarria (ui/sonido.js), solo si se celebra con todo (aunque no haya confeti)
-export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = null } = {}) {
+export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = null, discos = false } = {}) {
   const modo = momento ? modoCelebrar(leerAjustes(), momento) : 'todo';
   if (modo === 'nada') return false;
   if (modo === 'vibrar') { vibrar(vibracion || 'record'); return false; }
@@ -42,7 +42,7 @@ export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = n
   document.body.appendChild(lienzo);
   x.scale(dpr, dpr);
   const n = cuantasParticulas({ nucleos: navigator.hardwareConcurrency || 8, memoria: navigator.deviceMemory || 8, ancho });
-  const ps = crearParticulas(n, { ancho, alto, colores: colores(), semilla: (Date.now() & 0xffff) || 7 });
+  const ps = crearParticulas(n, { ancho, alto, colores: colores(), semilla: (Date.now() & 0xffff) || 7, discos: discos || momento === 'record' });
   const t0 = performance.now();
   let previo = t0, raf = 0;
   const parar = () => {
@@ -67,7 +67,13 @@ export function lanzarConfeti({ vibracion = 'record', momento = null, sonido = n
       x.rotate(p.giro);
       x.scale(1, Math.max(0.15, Math.abs(Math.cos(p.balanceo))));
       x.fillStyle = p.color;
-      if (p.forma === 'circulo') { x.beginPath(); x.arc(0, 0, p.w / 2, 0, Math.PI * 2); x.fill(); } else x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      if (p.forma === 'circulo') { x.beginPath(); x.arc(0, 0, p.w / 2, 0, Math.PI * 2); x.fill(); }
+      else if (p.forma === 'disco') {
+        // (v0.200) un disco de pesas: el aro con su agujero y un filo de luz arriba
+        const R = p.w * 0.95;
+        x.beginPath(); x.arc(0, 0, R, 0, Math.PI * 2); x.arc(0, 0, R * 0.32, 0, Math.PI * 2, true); x.fill('evenodd');
+        x.globalAlpha *= 0.45; x.strokeStyle = '#ffffff'; x.lineWidth = 1.2; x.beginPath(); x.arc(0, 0, R * 0.72, Math.PI * 1.1, Math.PI * 1.7); x.stroke();
+      } else x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       x.restore();
     }
     raf = requestAnimationFrame(cuadro);

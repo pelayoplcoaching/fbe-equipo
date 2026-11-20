@@ -157,7 +157,8 @@ export function celebrar(momento = 'record', datos = {}) {
   vibrar('record');
   if (modo === 'vibrar') return;
   // v0.52: y confeti (nunca con «reducir movimiento»; la vibración ya va aquí arriba)
-  lanzarConfeti({ vibracion: null });
+  // (v0.200) en los récords, con discos de pesas entre el papel
+  lanzarConfeti({ vibracion: null, discos: momento === 'record' });
   sonarFBE(datos.sonido || (datos.tipo === 'reps' ? 'record-reps' : 'record-peso'), datos);
 }
 

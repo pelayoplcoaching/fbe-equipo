@@ -1,7 +1,9 @@
 /* v0.200: la tanda de belleza. El cielo de la hora (Hoy y la pantalla de entrar), la decoracion de temporada, la escena de
    la version 200, los dibujos de los vacios que se trazan, las barras de las graficas que crecen y con degradado, el aro
    de la semana alrededor de la foto, el record con la letra ancha, el rebote de la pestana, la onda al pulsar, el
-   tablero de Atletas con color y la ficha con el color de su etiqueta.
+   tablero de Atletas con color y la ficha con el color de su etiqueta. Segunda tanda (al final): la luna de verdad, la
+   lluvia, la nieve y la niebla en la portada, los fuegos de fin de ano, el estreno de bloque, el lobo que aulla, el
+   barrido del acento, las estrellas de fondo de noche en oscuro y el cielo en el saludo del coach.
    Solo ASCII; colores, tamanos y espacios, con tokens; todo con su version oscura; con reducir movimiento, quieto. */
 
 :root {
@@ -17,7 +19,7 @@
 /* -- 1 - La temporada: copos finos detras del contenido, arriba de la pantalla ----------------------------------------
    La capa va fija y por debajo de todo lo que se lee (body aislado solo mientras hay temporada): se ve en el fondo de
    la pagina y a traves de la cabecera de vidrio, nunca encima de un texto. Navidad, 14 copos; invierno, 7. */
-:root[data-temporada] body { isolation: isolate; }
+:root[data-fondo-cielo] body { isolation: isolate; }
 .temporada-capa { position: fixed; z-index: -1; top: 0; left: 0; right: 0; height: min(46vh, 22rem); overflow: hidden; pointer-events: none;
   -webkit-mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 55%, transparent); mask-image: linear-gradient(var(--oklab,) to bottom, var(--negro) 55%, transparent); }
 .temporada-capa i { position: absolute; top: var(--y); left: var(--x); width: var(--tam); height: var(--tam); border-radius: 50%; opacity: var(--op);
@@ -137,12 +139,6 @@
 /* -- 8 - El record, con la cifra en la letra ancha ------------------------------------------------------------------- */
 .record-serie .record-cifra { font-weight: 800; font-stretch: var(--ancho-expandido); font-size: var(--letra-15); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--tinta); }
 
-/* -- 9 - La pestana elegida da un pequeno rebote (en el movil; en el lateral del coach, no) -------------------------- */
-@media (prefers-reduced-motion: no-preference) and (max-width: 899px) {
-  .tab[aria-current="page"] .tab-ico svg { animation: tab-rebota .45s var(--curva-rebote) backwards; }
-}
-@keyframes tab-rebota { 0% { transform: scale(.8); } 55% { transform: scale(1.12) translateY(-2px); } 100% { transform: translateY(-1px); } }
-
 /* -- 11 - La ficha, con el color de su primera etiqueta (un velo arriba y el aro de la foto) ------------------------ */
 .cabecera-grande.cab-etiqueta { --etq-c: var(--tinta-3); background-image: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--etq-c) 16%, transparent) 0%, transparent 100%); }
 .cabecera-grande.cab-etq-morado { --etq-c: var(--morado); }
@@ -153,3 +149,97 @@
 .cabecera-grande.cab-etiqueta .avatar-estado .avatar { outline: var(--filo-medio) solid var(--etq-c); outline-offset: 2px; }
 .ficha-etiquetas { display: flex; flex-wrap: wrap; gap: var(--esp-4); margin-top: var(--esp-4); }
 @media (forced-colors: active) { .cabecera-grande.cab-etiqueta { background-image: none; } }
+
+/* -- 12 - El aro de la semana ocupa el sitio del aro de adorno de la foto de Hoy (diseno.css, bloque 132) ------------ */
+.cabecera .btn-avatar:has(> .con-aro) { padding: 0; background: none; }
+
+/* ===================================================================================================================
+   Segunda tanda de la v0.200
+   =================================================================================================================== */
+
+/* -- 13 - La luna de verdad: un disco claro con la sombra de su fase (creciente, a la derecha; menguante, a la izquierda) */
+.cielo-luna { top: 14%; right: 9%; width: 1.9rem; height: 1.9rem; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 38% 34%, var(--blanco), color-mix(in srgb, var(--marca-100) 80%, var(--blanco)) 70%); opacity: .88; }
+.cielo-luna b { position: absolute; inset: -6%; border-radius: 50%; background: color-mix(in srgb, var(--hero) 94%, transparent);
+  transform: translateX(calc(var(--ilum) * 112% * var(--lado))); }
+.cielo-luna.llena b { display: none; }
+.cielo-luna::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 62% 64%, color-mix(in srgb, var(--marca-200) 30%, transparent) 0 14%, transparent 16%), radial-gradient(circle at 34% 58%, color-mix(in srgb, var(--marca-200) 26%, transparent) 0 9%, transparent 11%); }
+.hero-dia > .cielo-hora .cielo-luna { top: 12%; right: 30%; }
+
+/* -- 14 - Lo que cae donde estas: lluvia, nieve, niebla o tormenta (con la prevision que ya guardo el tiempo) ----------- */
+.cielo-hora.con-lluvia, .cielo-hora.con-tormenta { background: linear-gradient(var(--oklab,) 180deg, color-mix(in srgb, var(--cielo-900) 30%, transparent), transparent 70%); }
+.cielo-gota { top: -18%; width: 1.5px; height: 1.1rem; border-radius: var(--r-2); background: linear-gradient(var(--oklab,) 180deg, transparent, color-mix(in srgb, var(--cielo-100) 55%, transparent)); transform: rotate(12deg); }
+.cielo-copo { top: -8%; width: 5px; height: 5px; border-radius: 50%; background: radial-gradient(circle, var(--blanco) 0 40%, transparent 70%); opacity: .8; }
+.cielo-niebla { left: -20%; top: 30%; width: 140%; height: 40%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--blanco) 16%, transparent), transparent); }
+.cielo-niebla.otra { top: 55%; left: -40%; opacity: .7; }
+.cielo-relampago { inset: 0; background: color-mix(in srgb, var(--blanco) 22%, transparent); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .cielo-gota { animation: gota-cae var(--dura) linear var(--espera) infinite; }
+  .cielo-copo { animation: copo-hero var(--dura) linear var(--espera) infinite; }
+  .cielo-niebla { animation: niebla-pasa 18s ease-in-out infinite alternate; }
+  .cielo-niebla.otra { animation-duration: 24s; animation-direction: alternate-reverse; }
+  .cielo-relampago { animation: relampago 7s linear 2s infinite; }
+  html[data-oculta] :is(.cielo-gota, .cielo-copo, .cielo-niebla, .cielo-relampago, .cielo-fuego) { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) { .cielo-gota { top: var(--y, 40%); } .cielo-copo { top: 45%; } }
+@keyframes gota-cae { from { transform: translate3d(0, 0, 0) rotate(12deg); } to { transform: translate3d(-2.2rem, 14rem, 0) rotate(12deg); } }
+@keyframes copo-hero { from { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(.6rem, 6rem, 0); } to { transform: translate3d(-.4rem, 13rem, 0); } }
+@keyframes niebla-pasa { from { transform: translateX(-6%); } to { transform: translateX(10%); } }
+@keyframes relampago { 0%, 93%, 100% { opacity: 0; } 94% { opacity: 1; } 95% { opacity: .2; } 96% { opacity: .8; } }
+
+/* -- 15 - Nochevieja y Ano Nuevo: fuegos detras de la portada (y su pastilla) ----------------------------------------- */
+.cielo-fuego { width: 5.5rem; height: 5.5rem; margin: -2.75rem 0 0 -2.75rem; border-radius: 50%; opacity: 0; --c: var(--oro-200);
+  background: repeating-conic-gradient(from 8deg, var(--c) 0deg 5deg, transparent 5deg 30deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 26%, var(--negro) 30% 58%, transparent 62%); mask-image: radial-gradient(circle, transparent 0 26%, var(--negro) 30% 58%, transparent 62%); }
+.cielo-fuego.fuego-b { --c: var(--rosa-300); }
+.cielo-fuego.fuego-c { --c: var(--acento-200); }
+.hero-dia .toca-hoy.fiesta { background: color-mix(in srgb, var(--oro-200) 24%, transparent); color: var(--oro-100); }
+@media (prefers-reduced-motion: no-preference) {
+  .cielo-fuego { animation: fuego-estalla 2.8s cubic-bezier(.15, .7, .3, 1) var(--espera) infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .cielo-fuego { opacity: .5; } }
+@keyframes fuego-estalla { 0% { transform: scale(.15); opacity: 0; } 12% { opacity: 1; } 60% { opacity: .7; } 100% { transform: scale(1.25); opacity: 0; } }
+
+/* -- 16 - El estreno de un bloque: el nombre se escribe solo (con un recorte, nunca con transparencia) ----------------- */
+.estreno-bloque { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); margin: var(--esp-2) 0 0; color: var(--sobre-hero); }
+.estreno-sello { padding: var(--esp-2) var(--esp-8); border-radius: var(--r-pildora); background: color-mix(in srgb, var(--oro-200) 24%, transparent); color: var(--oro-100); font-size: var(--letra-12); font-weight: 800; letter-spacing: .04em; }
+.estreno-nombre { font-size: var(--letra-17); font-weight: 750; font-stretch: var(--ancho-titulo); }
+@media (prefers-reduced-motion: no-preference) {
+  .estreno-nombre { animation: estreno-escribe 1.3s steps(24, end) .35s backwards; }
+  .estreno-sello { animation: estreno-sello .5s var(--curva-rebote) .1s backwards; }
+}
+@keyframes estreno-escribe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes estreno-sello { from { transform: scale(.6) rotate(-8deg); } }
+
+/* -- 17 - El lobo de arriba aulla (tres toques seguidos) ---------------------------------------------------------- */
+.titulo.lobo-aulla .marca { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  .titulo.lobo-aulla .marca img { animation: lobo-aulla 1.6s var(--curva-casa); transform-origin: 50% 85%; }
+  .titulo.lobo-aulla .marca::after { content: ""; position: absolute; left: 0; top: 50%; width: 1.75rem; height: 1.75rem; margin-top: -0.875rem; border-radius: 50%;
+    border: var(--filo-medio) solid var(--acento-300); pointer-events: none; animation: lobo-onda 1.1s ease-out .25s 2 both; }
+}
+@keyframes lobo-aulla { 0%, 100% { transform: none; } 18%, 72% { transform: rotate(-18deg) translateY(-2px); } 45% { transform: rotate(-20deg) translateY(-3px) scale(1.04); } }
+@keyframes lobo-onda { from { transform: scale(.7); opacity: .9; } to { transform: scale(2.2); opacity: 0; } }
+
+/* -- 18 - El color de acento nuevo entra con un barrido en circulo desde la muestra que tocas -------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-vt="acento"]::view-transition-old(root) { animation: none; }
+  :root[data-vt="acento"]::view-transition-new(root) { animation: acento-barrido .65s var(--curva-casa) both; }
+}
+@keyframes acento-barrido { from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); } to { clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 50%)); } }
+
+/* -- 19 - Estrellas tenues en el fondo de la app, de noche y en oscuro (fuera de Navidad e invierno) ------------------ */
+.temporada-estrellas { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .temporada-estrellas { display: block; } }
+:root[data-theme="dark"] .temporada-estrellas { display: block; }
+.temporada-estrellas i { top: var(--y); width: calc(var(--tam) * .7); height: calc(var(--tam) * .7); opacity: calc(var(--op) * .7);
+  background: radial-gradient(circle, var(--blanco) 0 35%, color-mix(in srgb, var(--acento-200) 35%, transparent) 55%, transparent 72%); }
+@media (prefers-reduced-motion: no-preference) {
+  .temporada-estrellas i { top: var(--y); animation: estrella-fondo calc(var(--dura) * .4) ease-in-out var(--espera) infinite alternate; }
+}
+@keyframes estrella-fondo { from { opacity: calc(var(--op) * .2); } to { opacity: calc(var(--op) * .8); } }
+
+/* -- 20 - El saludo del coach con el cielo de la hora (detras del texto y del dibujo) ------------------------------ */
+.cab-ilu > .cab-cielo { z-index: 0; }
+.cab-ilu > .cab-cielo .cielo-luna { right: 44%; }
+

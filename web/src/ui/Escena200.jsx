@@ -24,8 +24,8 @@ export function useEscena200(uid) {
 }
 
 const TEXTO = {
-  atleta: 'Doscientas versiones desde la primera. Esta trae un cielo que cambia con la hora, copos en Navidad, dos colores nuevos y muchos detalles. Gracias por entrenar con nosotros.',
-  coach: 'Doscientas versiones de tu app. Esta trae el cielo de la hora, la decoración de temporada, dos colores nuevos y una lista de Atletas más bonita.',
+  atleta: 'Doscientas versiones desde la primera. Esta trae un cielo que sigue la hora y la luna, copos en Navidad, colores nuevos y muchos detalles. Gracias por entrenar con nosotros.',
+  coach: 'Doscientas versiones de tu app. Esta trae el cielo de la hora, la decoración de temporada, el tema «Con el sol», dos colores nuevos y una lista de Atletas más bonita.',
 };
 
 export function Escena200({ rol = 'atleta', alCerrar }) {

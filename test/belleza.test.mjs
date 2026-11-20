@@ -115,5 +115,42 @@ console.log('\nEn su sitio');
   check(/class="record-cifra"/.test(src('ui/atleta/FilaSerie.jsx')) && /class="record-cifra"/.test(src('ui/atleta/Enfoque.jsx')), 'la cifra del récord, en la letra ancha (en la serie y en el modo enfoque)');
 }
 
+console.log('\nSegunda tanda: la luna, lo que cae, fin de año, estrellas, tema con el sol y discos');
+{
+  const { crearParticulas } = await import('../web/src/logica/confeti.js');
+  const { temaConSol } = await import('../web/src/ui/ajustes.js');
+  // La luna: el 5 de diciembre de 2025 fue luna llena; el 20 de noviembre de 2025, nueva
+  const llena = C.faseLuna(Date.UTC(2025, 11, 5, 0, 0)), nueva = C.faseLuna(Date.UTC(2025, 10, 20, 6, 0));
+  check(llena.ilum > 0.97 && nueva.ilum < 0.03, `la fase de la luna de verdad (llena ${llena.ilum.toFixed(2)}, nueva ${nueva.ilum.toFixed(2)})`);
+  check(C.lunaParaPintar(Date.UTC(2025, 10, 20, 6, 0)) === null && C.lunaParaPintar(Date.UTC(2025, 11, 5)).llena === true, 'en luna nueva no se pinta; llena, entera');
+  check(C.faseLuna(Date.UTC(2025, 10, 27)).creciente === true && C.faseLuna(Date.UTC(2025, 11, 12)).creciente === false, 'creciente y menguante, cada una a su lado');
+  // Lo que cae
+  check(C.climaDe(61) === 'lluvia' && C.climaDe(81) === 'lluvia' && C.climaDe(73) === 'nieve' && C.climaDe(45) === 'niebla' && C.climaDe(95) === 'tormenta' && C.climaDe(0) === null && C.climaDe(null) === null, 'los códigos del tiempo: lluvia, nieve, niebla, tormenta o nada');
+  const ahora = Date.UTC(2026, 11, 10, 9, 30);
+  const cache = { en: ahora - 30 * 60000, prev: { offset: 3600, horas: [{ hora: '2026-12-10T10:00', codigo: 63 }, { hora: '2026-12-10T11:00', codigo: 0 }] } };
+  check(C.climaDeCache(cache, ahora) === 'lluvia', 'con la previsión guardada, la hora de ahora en su zona: llueve');
+  check(C.climaDeCache({ ...cache, en: ahora - 4 * 3600000 }, ahora) === null && C.climaDeCache(null, ahora) === null && C.climaDeCache({ en: ahora, prev: { horas: [] } }, ahora) === null, 'previsión vieja (más de 3 h), sin previsión o sin esa hora: nada');
+  // Fin de año
+  check(C.esFinDeAno('2026-12-31', 21) && C.esFinDeAno('2027-01-01', 10) && !C.esFinDeAno('2026-12-31', 12) && !C.esFinDeAno('2027-01-02', 10), 'fuegos el 31 desde las 20:00 y todo el 1 de enero');
+  // Estrellas de fondo y decoración
+  check(C.decoracionDe({ fecha: '2026-12-24', hora: 12 }) === 'navidad' && C.decoracionDe({ fecha: '2026-11-20', hora: 23 }) === 'estrellas' && C.decoracionDe({ fecha: '2026-11-20', hora: 12 }) === null, 'Navidad manda; fuera de temporada, de noche, estrellas; de día, nada');
+  check(C.decoracionDe({ fecha: '2026-12-24', hora: 23, encendida: false }) === null && C.coposDe('estrellas', 3).length === 16, 'apagada, nada; las estrellas, 16');
+  // Tema con el sol
+  check(normalizarAjustes({ tema: 'sol' }).tema === 'sol' && ['claro', 'oscuro'].includes(temaConSol()), 'el tema «Con el sol» se guarda y da claro u oscuro');
+  // Discos en el confeti de récord
+  const ps = crearParticulas(40, { ancho: 400, alto: 800, colores: ['#000'], discos: true });
+  const sin = crearParticulas(40, { ancho: 400, alto: 800, colores: ['#000'] });
+  check(ps.filter((x) => x.forma === 'disco').length === 8 && sin.every((x) => x.forma !== 'disco'), 'en los récords, uno de cada cinco es un disco de pesas; en lo demás, ninguno');
+  // En su sitio
+  const css = src('belleza.css');
+  check(!/tab-rebota/.test(css), 'sin rebote propio de la pestaña (ya había uno por icono)');
+  check(/data-vt="acento"/.test(css) && /cambiarAcento\(c\.id, e\)/.test(src('ui/Ajustes.jsx')) && /\['sol', /.test(src('ui/Ajustes.jsx')), 'el barrido del acento y «Con el sol» en Ajustes');
+  const hoy = src('ui/atleta/Hoy.jsx');
+  check(/lobo-aulla/.test(hoy) && /estreno-bloque/.test(hoy) && /conTiempo/.test(hoy) && /fiestaAhora\(\)/.test(hoy), 'en Hoy: el lobo que aúlla, el estreno, el tiempo y la fiesta');
+  check(/CieloHora/.test(src('ui/coach/CabCoach.jsx')), 'el saludo del coach, con su cielo');
+  check(/discos: momento === 'record'/.test(src('ui/atleta/sesion-comun.jsx')), 'los récords de la sesión piden los discos');
+  check(/export \{ faseLuna, climaDe \} from '\.\/cielo\.js'/.test(src('logica/travesia.js')), 'la travesía usa la misma luna y el mismo tiempo');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

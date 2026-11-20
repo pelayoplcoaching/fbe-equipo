@@ -23,7 +23,8 @@ export function cuantasParticulas({ nucleos = 8, memoria = 8, ancho = 390 } = {}
 export const escalaLienzo = (dpr = 1) => Math.max(1, Math.min(CONFETI.escalaMaxima, Number(dpr) || 1));
 
 // n partículas: dos chorros desde arriba (a un tercio y a dos tercios del ancho), hacia arriba y hacia fuera
-export function crearParticulas(n, { ancho, alto, colores, semilla = 7 }) {
+// (v0.200) discos: en los récords, uno de cada cinco es un disco de pesas (un aro con su agujero), algo más grande
+export function crearParticulas(n, { ancho, alto, colores, semilla = 7, discos = false }) {
   const r = aleatorio(semilla);
   return Array.from({ length: n }, (_, i) => {
     const lado = i % 2 ? 1 : -1;
@@ -35,7 +36,7 @@ export function crearParticulas(n, { ancho, alto, colores, semilla = 7 }) {
       giro: r() * Math.PI * 2, vgiro: (r() - 0.5) * 14,
       balanceo: r() * Math.PI * 2, vbalanceo: 4 + r() * 6,
       w: 6 + r() * 6, h: 9 + r() * 7,
-      color: colores[i % colores.length], forma: r() < 0.3 ? 'circulo' : 'papel',
+      color: colores[i % colores.length], forma: discos && i % 5 === 0 ? 'disco' : r() < 0.3 ? 'circulo' : 'papel',
     };
   });
 }

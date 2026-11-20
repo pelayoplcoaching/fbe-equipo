@@ -6,6 +6,7 @@
 // Las medidas van en metros y segundos. El lobo no muere: si tropieza, pierde el ritmo (vuelve a la velocidad de salida)
 // y sigue. Así la etapa siempre dura el descanso entero y lo que cambia es lo lejos que llega.
 
+import { faseLuna, climaDe } from './cielo.js';
 import { lunesDe, sumarDias } from './fechas.js';
 
 export const GRAVEDAD = 46;      // m/s²
@@ -638,22 +639,9 @@ export function progresoReto(reto, hoy) {
 export const hoyDe = (guardado, dia) => { const t = limpiarTravesia(guardado); return t.hoy.dia === dia ? t.hoy : { ...HOY_VACIO(), dia }; };
 
 // ---------- (tanda 1) El cielo de verdad ----------
-// La fase de la luna en un instante: { ilum: de 0 (nueva) a 1 (llena), creciente }
-export function faseLuna(ms) {
-  const SINODICO = 29.530588853, NUEVA = Date.UTC(2000, 0, 6, 18, 14);
-  const edad = ((((ms - NUEVA) / 86400000) % SINODICO) + SINODICO) % SINODICO;
-  return { ilum: (1 - Math.cos((2 * Math.PI * edad) / SINODICO)) / 2, creciente: edad < SINODICO / 2 };
-}
-// Qué cae, según el código del tiempo (los de la OMM que da la previsión): 'lluvia' | 'nieve' | 'niebla' | 'tormenta' | null
-export function climaDe(codigo) {
-  const c = Number(codigo);
-  if (!Number.isFinite(c)) return null;
-  if (c >= 95) return 'tormenta';
-  if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'nieve';
-  if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return 'lluvia';
-  if (c === 45 || c === 48) return 'niebla';
-  return null;
-}
+// La fase de la luna y lo que cae según el código del tiempo: en logica/cielo.js desde la v0.200 (los usa también el
+// cielo de la portada de Hoy); aquí siguen a mano para lo de siempre
+export { faseLuna, climaDe } from './cielo.js';
 // El ambiente de la etapa: la hora (de la previsión, si dice si es de día; si no, del reloj), la luna, lo que cae y el
 // paisaje, que cambia cada 5 km de travesía (montaña, bosque, nieve, amanecer)
 export const PAISAJES = ['montaña', 'bosque', 'nieve', 'amanecer'];
