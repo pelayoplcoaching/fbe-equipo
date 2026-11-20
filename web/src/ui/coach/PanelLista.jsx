@@ -108,7 +108,7 @@ export function Etiquetas({ etiquetas = [], colores = {}, quitar = null }) {
   return (
     <span class="etiquetas-atleta">
       {etiquetas.map((e) => (
-        <span key={e} class="etq" data-color={colorEtiqueta(e, colores)}>
+        <span key={e} class="chip-etiqueta" data-color={colorEtiqueta(e, colores)}>
           {e}
           {quitar && <button type="button" class="etq-quitar" onClick={(ev) => { ev.stopPropagation(); quitar(e); }} aria-label={`Quitar la etiqueta ${e}`}><Icono n="cerrar" width="12" height="12" /></button>}
         </span>
@@ -126,7 +126,7 @@ function PonerEtiqueta({ usadas = [], tiene = [], alPoner, id }) {
     <div class="pila-xs">
       <form class="fila-envolver poner-etiqueta" onSubmit={(e) => { e.preventDefault(); poner(t); }}>
         <label class="sr" for={`etq-${id}`}>Etiqueta nueva</label>
-        <input id={`etq-${id}`} class="entrada entrada-peq etq-entrada" maxLength={24} value={t} placeholder="Etiqueta nueva" onInput={(e) => setT(e.currentTarget.value)} disabled={tiene.length >= MAX_ETIQUETAS} />
+        <input id={`etq-${id}`} class="entrada entrada-lista etq-entrada" maxLength={24} value={t} placeholder="Etiqueta nueva" onInput={(e) => setT(e.currentTarget.value)} disabled={tiene.length >= MAX_ETIQUETAS} />
         <button type="submit" class="btn btn-peq" disabled={!t.trim() || tiene.length >= MAX_ETIQUETAS}>Poner</button>
       </form>
       {sugeridas.length > 0 && (
@@ -191,15 +191,15 @@ export function DetalleAtleta({ r, extra, fila, colores, usadas, alGuardar, hoy,
         <PonerEtiqueta id={`${r.atleta_id}`} usadas={usadas} tiene={p.etiquetas} alPoner={(e) => guardar({ etiquetas: [...p.etiquetas, e] })} />
         <form class="fila-envolver nota-panel" onSubmit={(e) => { e.preventDefault(); guardar({ nota }); }}>
           <label class="sr" for={`nota-${r.atleta_id}`}>Tu nota</label>
-          <input id={`nota-${r.atleta_id}`} class="entrada entrada-peq nota-entrada" maxLength={MAX_NOTA} value={nota} placeholder="Una línea para ti: «Revisar rodilla»" onInput={(e) => setNota(e.currentTarget.value)} />
+          <input id={`nota-${r.atleta_id}`} class="entrada entrada-lista nota-entrada" maxLength={MAX_NOTA} value={nota} placeholder="Una línea para ti: «Revisar rodilla»" onInput={(e) => setNota(e.currentTarget.value)} />
           <button type="submit" class="btn btn-peq" disabled={ocupado || (nota.trim() || null) === (p.nota || null)}>Guardar nota</button>
         </form>
         {alRecordatorio && (
           <form class="fila-envolver recordatorio-panel" onSubmit={(e) => { e.preventDefault(); alRecordatorio({ fecha: recF, texto: recT }); }}>
             <label class="peq secundario" for={`rec-f-${r.atleta_id}`}>Recuérdamelo el</label>
-            <input id={`rec-f-${r.atleta_id}`} type="date" class="entrada entrada-peq rec-fecha" value={recF} onInput={(e) => setRecF(e.currentTarget.value)} />
+            <input id={`rec-f-${r.atleta_id}`} type="date" class="entrada entrada-lista rec-fecha" value={recF} onInput={(e) => setRecF(e.currentTarget.value)} />
             <label class="sr" for={`rec-t-${r.atleta_id}`}>Qué recordarte de {primer}</label>
-            <input id={`rec-t-${r.atleta_id}`} class="entrada entrada-peq nota-entrada" maxLength={MAX_RECORDATORIO} value={recT} placeholder="Mirar su rodilla" onInput={(e) => setRecT(e.currentTarget.value)} />
+            <input id={`rec-t-${r.atleta_id}`} class="entrada entrada-lista nota-entrada" maxLength={MAX_RECORDATORIO} value={recT} placeholder="Mirar su rodilla" onInput={(e) => setRecT(e.currentTarget.value)} />
             <button type="submit" class="btn btn-peq" disabled={!/^\d{4}-\d{2}-\d{2}$/.test(recF)}>{recordatorio ? 'Cambiar recordatorio' : 'Guardar recordatorio'}</button>
             {recordatorio && <button type="button" class="btn btn-peq" onClick={() => alRecordatorio(null)}>Quitar recordatorio</button>}
           </form>
@@ -291,9 +291,9 @@ export function HojaFiltros({ filtros, usadas, alCambiar, alCerrar }) {
             </select></div>
         )}
         <fieldset class="campo filtros-rango"><legend class="etq">Por rango</legend>
-          <label class="fila-check">Más de <input type="number" class="entrada entrada-peq entrada-num" min="1" max="365" value={f.minDias ?? ''} onInput={(e) => alCambiar({ ...f, minDias: e.currentTarget.value })} aria-label="Más de cuántos días sin entrenar" /> días sin entrenar</label>
-          <label class="fila-check">Menos del <input type="number" class="entrada entrada-peq entrada-num" min="1" max="100" value={f.maxCumplido ?? ''} onInput={(e) => alCambiar({ ...f, maxCumplido: e.currentTarget.value })} aria-label="Menos de qué porcentaje cumplido" /> % cumplido (4 semanas)</label>
-          <label class="fila-check">Con FBE desde hace más de <input type="number" class="entrada entrada-peq entrada-num" min="1" max="240" value={f.minMeses ?? ''} onInput={(e) => alCambiar({ ...f, minMeses: e.currentTarget.value })} aria-label="Con FBE desde hace más de cuántos meses" /> meses</label>
+          <label class="fila-check">Más de <input type="number" class="entrada entrada-lista entrada-cifra" min="1" max="365" value={f.minDias ?? ''} onInput={(e) => alCambiar({ ...f, minDias: e.currentTarget.value })} aria-label="Más de cuántos días sin entrenar" /> días sin entrenar</label>
+          <label class="fila-check">Menos del <input type="number" class="entrada entrada-lista entrada-cifra" min="1" max="100" value={f.maxCumplido ?? ''} onInput={(e) => alCambiar({ ...f, maxCumplido: e.currentTarget.value })} aria-label="Menos de qué porcentaje cumplido" /> % cumplido (4 semanas)</label>
+          <label class="fila-check">Con FBE desde hace más de <input type="number" class="entrada entrada-lista entrada-cifra" min="1" max="240" value={f.minMeses ?? ''} onInput={(e) => alCambiar({ ...f, minMeses: e.currentTarget.value })} aria-label="Con FBE desde hace más de cuántos meses" /> meses</label>
         </fieldset>
         <fieldset class="campo filtros-marcas"><legend class="etq">Solo los que…</legend>
           {MARCAS.map(([k, t]) => <label key={k} class="fila-check"><input type="checkbox" checked={f.marcas.includes(k)} onChange={() => marca(k)} /> {t}</label>)}
@@ -323,7 +323,7 @@ export function HojaVistas({ ajustes, actual, alCambiar, alCerrar }) {
         {(ajustes.vistas || []).length > 0 && (
           <ul class="lista">
             {ajustes.vistas.map((v) => (
-              <li key={v.id} class="fila-entre vista-fila">
+              <li key={v.id} class="fila-panel vista-fila">
                 <span class="peq">{v.nombre}</span>
                 <button type="button" class="btn btn-peq" onClick={() => alCambiar(quitarVista(ajustes, v.id))} aria-label={`Quitar la vista ${v.nombre}`}><Icono n="basura" /> Quitar</button>
               </li>
@@ -436,7 +436,7 @@ export function HojaVarios({ elegidos, usadas, colores, alEtiquetar, alFijar, al
             <div class="campo"><label for="varios-etq">Etiqueta</label>
               <input id="varios-etq" class="entrada" list="varios-etq-usadas" maxLength={24} value={etq} placeholder="Revisión domingo" onInput={(e) => setEtq(e.currentTarget.value)} />
               <datalist id="varios-etq-usadas">{usadas.map((u) => <option key={u} value={u} />)}</datalist></div>
-            {limpiarEtiqueta(etq) && <p class="mini"><span class="etq" data-color={colorEtiqueta(etq, colores)}>{limpiarEtiqueta(etq)}</span></p>}
+            {limpiarEtiqueta(etq) && <p class="mini"><span class="chip-etiqueta" data-color={colorEtiqueta(etq, colores)}>{limpiarEtiqueta(etq)}</span></p>}
             <div class="fila-envolver">
               <button type="button" class="btn btn-primario" disabled={ocupado || !limpiarEtiqueta(etq)} onClick={() => etiquetar(true)}>Ponérsela</button>
               <button type="button" class="btn" disabled={ocupado || !limpiarEtiqueta(etq)} onClick={() => etiquetar(false)}>Quitársela</button>
@@ -473,8 +473,8 @@ export function HojaUmbrales({ umbrales, alCambiar, alCerrar }) {
     <Hoja titulo="Tus avisos" alCerrar={alCerrar} ancho={520}>
       <form class="pila" onSubmit={(e) => { e.preventDefault(); alCambiar(limpiarUmbrales(f)); alCerrar(); }}>
         <p class="peq secundario">Decide qué te salta como aviso y cuenta en «Necesitan atención».</p>
-        <label class="fila-check">Desde <input type="number" class="entrada entrada-peq entrada-num" min="2" max="60" value={f.dias} onInput={(e) => setF({ ...f, dias: e.currentTarget.value })} aria-label="Desde cuántos días sin registrar series" /> días sin registrar series</label>
-        <label class="fila-check">Por debajo del <input type="number" class="entrada entrada-peq entrada-num" min="10" max="100" value={f.cumplido} onInput={(e) => setF({ ...f, cumplido: e.currentTarget.value })} aria-label="Por debajo de qué porcentaje de lo pautado" /> % de lo pautado (4 semanas)</label>
+        <label class="fila-check">Desde <input type="number" class="entrada entrada-lista entrada-cifra" min="2" max="60" value={f.dias} onInput={(e) => setF({ ...f, dias: e.currentTarget.value })} aria-label="Desde cuántos días sin registrar series" /> días sin registrar series</label>
+        <label class="fila-check">Por debajo del <input type="number" class="entrada entrada-lista entrada-cifra" min="10" max="100" value={f.cumplido} onInput={(e) => setF({ ...f, cumplido: e.currentTarget.value })} aria-label="Por debajo de qué porcentaje de lo pautado" /> % de lo pautado (4 semanas)</label>
         <div class="campo"><span class="etq">Molestias</span><Segmentos etiqueta="Molestias" valor={Number(f.molestia)} opciones={[[2, 'Desde moderadas'], [3, 'Solo graves']]} alCambiar={(v) => v && setF({ ...f, molestia: v })} /></div>
         <label class="fila-check"><input type="checkbox" checked={!!f.checkin} onChange={(e) => setF({ ...f, checkin: e.currentTarget.checked })} /> Que la falta de check-in cuente como atención</label>
         <div class="fila-envolver">
@@ -508,10 +508,10 @@ export function HojaColores({ usadas, colores, alCambiar, alCerrar }) {
       {!usadas.length ? <p class="peq secundario">Aún no has puesto ninguna etiqueta. Despliega un atleta (la flecha de su fila) y ponle una.</p> : (
         <ul class="lista">
           {usadas.map((u) => (
-            <li key={u} class="fila-entre">
-              <span class="etq" data-color={colorEtiqueta(u, colores)}>{u}</span>
+            <li key={u} class="fila-panel">
+              <span class="chip-etiqueta" data-color={colorEtiqueta(u, colores)}>{u}</span>
               <label class="sr" for={`color-${u}`}>Color de {u}</label>
-              <select id={`color-${u}`} class="entrada entrada-peq" value={colorEtiqueta(u, colores)} onChange={(e) => alCambiar({ ...colores, [u.toLowerCase()]: e.currentTarget.value })}>
+              <select id={`color-${u}`} class="entrada entrada-lista" value={colorEtiqueta(u, colores)} onChange={(e) => alCambiar({ ...colores, [u.toLowerCase()]: e.currentTarget.value })}>
                 {COLORES_ETIQUETA.map((c) => <option key={c} value={c}>{NOMBRE[c]}</option>)}
               </select>
             </li>

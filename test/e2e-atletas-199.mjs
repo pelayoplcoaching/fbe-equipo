@@ -134,7 +134,7 @@ export async function probarAtletas199({ navegador, check, base = 'http://localh
     // Varios a la vez: mensaje con datos y preparar la semana que viene
     await p.getByRole('button', { name: 'Elegir varios' }).click();
     const dos = (await nombres()).filter((n) => !/Marta|Lucía/.test(n)).slice(0, 2);
-    for (const n of dos) await fila(n).locator('input.elegir-atleta').check();
+    for (const n of dos) await fila(n).locator('input.marcar-atleta').check();
     await p.getByRole('button', { name: 'Hacer algo con ellos' }).click();
     const hv = p.getByRole('dialog', { name: 'Con 2 atletas' });
     await hv.getByLabel(/^Mensaje \(se rellena/).fill('Vas por la semana {semana}');

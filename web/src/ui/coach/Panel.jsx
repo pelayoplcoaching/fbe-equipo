@@ -214,10 +214,10 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
   const elegidosR = elegidos.map((id) => filaPorId[id]).filter(Boolean);
   const nombreCelda = (r, atajos = null) => (
     <div class="nombre">
-      {elegir && <input type="checkbox" class="elegir-atleta" checked={elegidos.includes(r.atleta_id)} onClick={(e) => e.stopPropagation()} onChange={() => elegirUno(r.atleta_id)} aria-label={`Elegir a ${r.nombre.split(' ')[0]}`} />}
+      {elegir && <input type="checkbox" class="marcar-atleta" checked={elegidos.includes(r.atleta_id)} onClick={(e) => e.stopPropagation()} onChange={() => elegirUno(r.atleta_id)} aria-label={`Elegir a ${r.nombre.split(' ')[0]}`} />}
       <span class="avatar-env"><Avatar nombre={r.nombre} foto={r.foto} />{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
       <span class="nombre-txt">
-        <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}</span>
+        <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}</span>
         <span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}</span>
         <Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />
         {pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}
@@ -248,7 +248,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
                       <button class="tarjeta-atleta" data-atleta={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => (enLateral ? setSel(r.atleta_id) : abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')))} aria-pressed={enLateral ? (sel === r.atleta_id ? 'true' : 'false') : undefined}>
                         <div class="cab">
                           <span class="avatar-env"><Avatar nombre={r.nombre} foto={r.foto} />{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
-                          <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
+                          <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                           {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
                         </div>
                         {(etiquetasDe(r, extra).length > 0 || pc.panel[r.atleta_id]?.nota || recordatorioDe(r, extra) || extra.hitos[r.atleta_id]) && <div class="tuyo-tarjeta"><Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />{pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}<ExtrasNombre r={r} extra={extra} hoy={hoy} /></div>}
@@ -304,12 +304,12 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
         </div>
         <div class="fila-envolver herramientas-botones">
           <label class="sr" for="orden-atletas">Ordenar la lista por</label>
-          <select id="orden-atletas" class="entrada entrada-peq" value={aj.orden.col} onChange={(e) => ponerAjustes({ orden: { col: e.currentTarget.value, dir: dirInicial(e.currentTarget.value) } })}>
+          <select id="orden-atletas" class="entrada entrada-lista" value={aj.orden.col} onChange={(e) => ponerAjustes({ orden: { col: e.currentTarget.value, dir: dirInicial(e.currentTarget.value) } })}>
             {ORDENES.filter(([k]) => conCobros || k !== 'pagos').map(([k, t]) => <option key={k} value={k}>{k === 'urgencia' ? t : `Por ${t.toLowerCase()}`}</option>)}
           </select>
           {aj.orden.col !== 'urgencia' && <button type="button" class="btn btn-peq btn-icono-texto" onClick={() => ponerAjustes({ orden: { ...aj.orden, dir: aj.orden.dir === 'asc' ? 'desc' : 'asc' } })} aria-label={aj.orden.dir === 'asc' ? 'De menos a más. Darle la vuelta' : 'De más a menos. Darle la vuelta'}><Icono n={aj.orden.dir === 'asc' ? 'arriba' : 'abajo'} /></button>}
           <label class="sr" for="agrupar-atletas">Agrupar la lista</label>
-          <select id="agrupar-atletas" class="entrada entrada-peq" value={aj.agrupar} onChange={(e) => ponerAjustes({ agrupar: e.currentTarget.value })}>
+          <select id="agrupar-atletas" class="entrada entrada-lista" value={aj.agrupar} onChange={(e) => ponerAjustes({ agrupar: e.currentTarget.value })}>
             {AGRUPAR.map(([k, t]) => <option key={k} value={k}>{k ? `Agrupar: ${t.toLowerCase()}` : t}</option>)}
           </select>
           <button type="button" class="btn btn-peq" aria-pressed={nFiltros ? 'true' : 'false'} onClick={() => setHoja('filtros')}><Icono n="opciones" /> Filtros{nFiltros ? ` (${nFiltros})` : ''}</button>
@@ -549,7 +549,7 @@ function Tablero({ grupos, por, extra, colores, hoy, abrir }) {
 function AsideAtleta({ r, detalle, abrir }) {
   return (
     <aside class="aside-atleta pila" aria-label={`Lo de ${r.nombre}`}>
-      <div class="fila-entre">
+      <div class="fila-panel">
         <span class="fila aside-cab"><Avatar nombre={r.nombre} foto={r.foto} /><strong>{r.nombre}</strong></span>
         <button type="button" class="btn btn-peq btn-primario" onClick={() => abrir(r.atleta_id)}>Abrir su ficha</button>
       </div>
@@ -575,7 +575,7 @@ function Celda({ c, r, extra, pendientes, hoy }) {
     case 'molestias': return <td>{r.maxMolestia ? <span class={`chip ${r.maxMolestia >= 2 ? 'aviso' : 'info'}`}>{MOLESTIA[r.maxMolestia]}</span> : <span class="terciario">—</span>}</td>;
     case 'ultimo': return <td class="num-c">{r.ultimaSerie ? hace(r.ultimaSerie) : '—'}</td>;
     case 'cumplido': { const p = r.cumplimiento?.series?.pct; return <td class="num-c">{p != null ? <span class={`cumple ${p >= 90 ? 'ok' : p >= 75 ? '' : 'aviso'}`}>{p} %</span> : '—'}</td>; }
-    case 'sinEntrenar': { const d = diasSinEntrenar(r, hoy); return <td class="num-c">{d == null ? '—' : d === 0 ? 'Hoy' : <span class={d >= 7 ? 'texto-aviso' : ''}>{d} {d === 1 ? 'día' : 'días'}</span>}</td>; }
+    case 'sinEntrenar': { const d = diasSinEntrenar(r, hoy); return <td class="num-c">{d == null ? '—' : d === 0 ? 'Hoy' : <span class={d >= 7 ? 'aviso-lista' : ''}>{d} {d === 1 ? 'día' : 'días'}</span>}</td>; }
     case 'checkin': return <td>{r.estado !== 'activo' ? '—' : checkinAlDia(r, hoy) ? <span class="chip ok">Al día</span> : <span class="chip aviso">Falta</span>}</td>;
     case 'habitos': return <td class="num-c">{r.habitos?.pct != null ? `${r.habitos.pct} %` : '—'}</td>;
     case 'nutricion': return <td class="num-c">{r.diasNutricion != null ? `${r.diasNutricion}/7 días` : '—'}</td>;

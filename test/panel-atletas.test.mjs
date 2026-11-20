@@ -207,5 +207,38 @@ console.log('\nAtletas a tu gusto (v0.198): contra la demo (como la 085)');
   check(conB.every((x) => [null, 'publicada', 'borrador', 'sin'].includes(px[x.atleta_id] ?? null)), 'la semana que viene de cada uno');
 }
 
+// Las reglas de la lista no tocan otras pantallas: cada selector de atletas-lista.css lleva al menos una clase
+// propia de la lista (o de la tabla y las tarjetas de atletas). Una clase suelta que ya se usa en otro sitio
+// (.etq, .fila-entre, .elegir-atleta...) cambiaba también las etiquetas de los formularios, el chat o la revisión.
+{
+  console.log('\nLa hoja de la lista no se sale de la lista');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const dir = new URL('../web/src/', import.meta.url);
+  const propias = new Set(['web/src/ui/coach/Panel.jsx', 'web/src/ui/coach/PanelLista.jsx']);
+  const deLaLista = new Set(['atletas-tabla', 'tarjeta-atleta', 'vecinos-ficha']);   // la de la ficha, solo para el anterior/siguiente
+  const quitar = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '');
+  const otrasCss = readdirSync(dir).filter((f) => f.endsWith('.css') && f !== 'atletas-lista.css').map((f) => quitar(readFileSync(new URL(f, dir), 'utf8'))).join('\n');
+  const jsx = [];
+  const andar = (d, rel) => { for (const e of readdirSync(d, { withFileTypes: true })) { const r2 = `${rel}/${e.name}`; if (e.isDirectory()) andar(new URL(`${e.name}/`, d), r2); else if (/\.jsx?$/.test(e.name) && !propias.has(r2)) jsx.push(readFileSync(new URL(e.name, d), 'utf8')); } };
+  andar(new URL('ui/', dir), 'web/src/ui');
+  const otroJsx = jsx.join('\n');
+  const usada = (k) => new RegExp(`\\.${k}(?![\\w-])`).test(otrasCss) || new RegExp(`class(?:Name)?=[^\\n>]*[\\s"'\\x60{]${k}(?![\\w-])`).test(otroJsx);
+  const hoja = quitar(process.env.HOJA_LISTA ? readFileSync(process.env.HOJA_LISTA, 'utf8') : readFileSync(new URL('atletas-lista.css', dir), 'utf8'));
+  const selectores = [];
+  for (const m of hoja.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
+    const cab = m[1].trim();
+    if (!cab || cab.startsWith('@')) continue;
+    for (const s of cab.split(',')) selectores.push(s.trim());
+  }
+  // Dentro de @media, el bloque interior tambien se lee arriba (el regex coge la regla mas interna)
+  const fuera = selectores.filter((s) => {
+    const clases = [...s.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((x) => x[1]);
+    if (!clases.length) return /^(html|body|:root|main)\b/.test(s);
+    return clases.every((k) => !deLaLista.has(k) && usada(k));
+  });
+  check(selectores.length > 100, `se leen las reglas de la hoja (${selectores.length} selectores)`);
+  check(fuera.length === 0, `ningún selector usa solo clases de otras pantallas${fuera.length ? `: ${fuera.slice(0, 6).join(' | ')}` : ''}`);
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 if (fallos) process.exit(1);

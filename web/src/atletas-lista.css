@@ -47,19 +47,19 @@
 .atletas-tabla .nombre-linea { font-weight: 700; }
 .nombre-linea { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--esp-6); }
 .ico-fijado { width: var(--ico-14); height: var(--ico-14); color: var(--morado); flex: none; }
-.sin-leer { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 var(--esp-6); border-radius: var(--r-pildora); background: var(--morado); color: var(--sobre-morado); font-size: var(--letra-11-5); font-weight: 750; }
+.cuenta-sin-leer { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 var(--esp-6); border-radius: var(--r-pildora); background: var(--morado); color: var(--sobre-morado); font-size: var(--letra-11-5); font-weight: 750; }
 .nota-linea { display: block; color: var(--tinta-2); font-weight: 500; overflow-wrap: anywhere; }
-.texto-aviso { color: var(--aviso); font-weight: 650; }
-.elegir-atleta { width: 18px; height: 18px; margin: var(--esp-10) 0 0; flex: none; accent-color: var(--morado); }
+.aviso-lista { color: var(--aviso); font-weight: 650; }
+.marcar-atleta { width: 18px; height: 18px; margin: var(--esp-10) 0 0; flex: none; accent-color: var(--morado); }
 
 /* Etiquetas, con su color */
 .etiquetas-atleta { display: inline-flex; flex-wrap: wrap; gap: var(--esp-4); }
-.etq { display: inline-flex; align-items: center; gap: var(--esp-2); min-height: 22px; padding: 0 var(--esp-8); border-radius: var(--r-pildora); font-size: var(--letra-12); font-weight: 650; background: var(--hoja-2); color: var(--tinta-2); white-space: nowrap; }
-.etq[data-color="morado"] { background: var(--morado-suave); color: var(--morado); }
-.etq[data-color="azul"] { background: var(--info-suave); color: var(--info); }
-.etq[data-color="verde"] { background: var(--ok-suave); color: var(--ok); }
-.etq[data-color="ambar"] { background: var(--oro-suave); color: var(--oro); }
-.etq[data-color="rojo"] { background: var(--alerta-suave); color: var(--alerta); }
+.chip-etiqueta { display: inline-flex; align-items: center; gap: var(--esp-2); min-height: 22px; padding: 0 var(--esp-8); border-radius: var(--r-pildora); font-size: var(--letra-12); font-weight: 650; background: var(--hoja-2); color: var(--tinta-2); white-space: nowrap; }
+.chip-etiqueta[data-color="morado"] { background: var(--morado-suave); color: var(--morado); }
+.chip-etiqueta[data-color="azul"] { background: var(--info-suave); color: var(--info); }
+.chip-etiqueta[data-color="verde"] { background: var(--ok-suave); color: var(--ok); }
+.chip-etiqueta[data-color="ambar"] { background: var(--oro-suave); color: var(--oro); }
+.chip-etiqueta[data-color="rojo"] { background: var(--alerta-suave); color: var(--alerta); }
 .etq-quitar { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: calc(var(--esp-6) * -1); padding: 0; border: 0; border-radius: var(--r-pildora); background: none; color: inherit; cursor: pointer; }
 .etq-quitar svg { width: var(--ico-12); height: var(--ico-12); }
 
@@ -86,7 +86,7 @@
 .detalle-tuyo { padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
 .detalle-tuyo .btn[aria-pressed="true"] { background: var(--morado-suave); color: var(--morado); border-color: transparent; }
 .poner-etiqueta, .nota-panel { gap: var(--esp-6); align-items: center; }
-.entrada.entrada-peq { min-height: 36px; padding: var(--esp-4) var(--esp-10); font-size: var(--letra-14); }
+.entrada.entrada-lista { min-height: 36px; padding: var(--esp-4) var(--esp-10); font-size: var(--letra-14); }
 .etq-entrada { max-width: 220px; }
 .nota-entrada { flex: 1 1 260px; min-width: 0; }
 
@@ -121,7 +121,7 @@
 .fila-check input { width: 18px; height: 18px; accent-color: var(--morado); }
 .filtros-marcas { display: grid; gap: var(--esp-2); border: 0; padding: 0; margin: 0; }
 .filtros-marcas legend { margin-bottom: var(--esp-6); }
-.fila-entre { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }
+.fila-panel { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }
 .vista-fila { padding: var(--esp-6) 0; border-bottom: var(--filo-fino) solid var(--linea); }
 .teclas-lista { display: grid; gap: var(--esp-6); margin: 0; }
 .teclas-lista div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--esp-12); align-items: center; }
@@ -147,7 +147,7 @@
 .sem-punto.gris { background: var(--linea); }
 .atletas-tabla tfoot th, .atletas-tabla tfoot td { padding: var(--esp-8); border-top: var(--filo-medio) solid var(--linea); vertical-align: top; text-align: left; font-weight: 600; }
 .atletas-tabla tfoot th { padding-left: var(--esp-16); color: var(--tinta-2); }
-.entrada.entrada-num { width: 72px; min-height: 32px; padding: var(--esp-2) var(--esp-6); text-align: center; }
+.entrada.entrada-cifra { width: 72px; min-height: 32px; padding: var(--esp-2) var(--esp-6); text-align: center; }
 .filtros-rango { display: grid; gap: var(--esp-4); border: 0; padding: 0; margin: 0; }
 .filtros-rango legend { margin-bottom: var(--esp-6); }
 .recordatorio-panel { gap: var(--esp-6); align-items: center; }
