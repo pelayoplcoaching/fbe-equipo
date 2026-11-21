@@ -5,15 +5,17 @@
 // «Sin revisar». Las fichas de color y el aro de cada sesión son de la v0.204.
 import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Icono } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Icono, Segmentos, Hoja, HojaExportar, copiar } from '../comunes.jsx';
+import { MiniLinea } from '../atleta/ProgresoPiezas.jsx';
 import { ChipLlegada } from '../atleta/Preparacion.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { DetalleArchivo } from '../Diario.jsx';
 import { HistorialEjercicio } from '../Herramientas.jsx';
-import { num, pauta, textoSerie, etiquetasSuperserie, eventosRecord } from '../../logica/calculos.js';
+import { num, pauta, textoSerie, etiquetasSuperserie, eventosRecord, seriesACsv } from '../../logica/calculos.js';
 import { esfuerzoSerie, tonoEsfuerzo } from '../../logica/progreso-visual-2.js';
-import { vezAnterior, frenteAnterior, e1rmDelDia, toneladas, faltan, descansoFrente, mmss, horarioSesion, notasDeSeries } from '../../logica/registro-actividad.js';
-import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
+import { vezAnterior, frenteAnterior, e1rmDelDia, toneladas, faltan, descansoFrente, mmss, horarioSesion, notasDeSeries,
+  desvioEsfuerzo, tonoDesvio, textoDesvio, porEjercicios, resumenSemanaBloque, rendimientoDia, textoSesion, filasCsvBloque, emparejarSesiones } from '../../logica/registro-actividad.js';
+import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD, textoCardio } from '../../logica/cardio.js';
 import { ordenReal } from '../../logica/orden-sesion.js';
 import { fmtConDia, fmtCorta } from '../../logica/fechas.js';
 import { pesoTxt, pesoNum, etiquetaPeso, difVista } from '../../logica/unidades.js';
@@ -97,7 +99,15 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
   const [ajustes, setAjustes] = useState({});
   const [felicitadas, setFelicitadas] = useState(() => new Set());
   const [ocupado, una] = useUnaVez();
+  // (v0.206) por sesiones o por ejercicios; comentar una serie; comparar dos sesiones; descargar el bloque
+  const [vista, setVista] = useState('sesiones');
+  const [comentando, setComentando] = useState(null);
+  const [comparar, setComparar] = useState(null);
+  const [exportar, setExportar] = useState(false);
+  const [revisadas, setRevisadas] = useState(() => new Set());
   const records = comun?.records || new Set();
+  const ejs = porEjercicios(completo, ejercicios);
+  const lineaDe = Object.fromEntries(ejs.map((e) => [e.id, e.linea]));
   const conTuyo = useCarga(() => api.sesionesConTuyo(atleta.id, sesiones.filter((s) => s.completada).map((s) => s.id)).catch(() => new Set()), [atleta.id, sesiones.map((s) => s.id).join()]);
   // las semanas con algo registrado, para saltar a una
   const semanas = [...new Map(sesiones.map((s) => [s.semana.id, s.semana])).values()].sort((a, b) => a.numero - b.numero);
@@ -132,14 +142,21 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
   return (
     <div class="pila">
       <div class="registro-filtros">
+        <Segmentos opciones={[['sesiones', 'Por sesiones'], ['ejercicios', 'Por ejercicios']]} valor={vista} alCambiar={(v) => v && setVista(v)} etiqueta="Cómo ver el registro" clase="seg-compacto" />
+        <button type="button" class="btn btn-peq" onClick={() => setExportar(true)}><Icono n="descargar" /> Descargar el bloque</button>
+      </div>
+      {vista === 'ejercicios' && <PorEjercicios ejs={ejs} semanas={completo.semanas} />}
+      {vista === 'sesiones' && <ResumenSemana completo={completo} semana={semana !== 'todas' ? completo.semanas.find((w) => w.id === semana) : semanas[semanas.length - 1]} revisadas={revisadas}
+        alRevisar={(ids) => una(async () => { try { for (const id of ids) await api.marcarRevisado('sesion', id); setRevisadas((r) => new Set([...r, ...ids])); aviso(ids.length === 1 ? 'Sesión revisada' : `${ids.length} sesiones revisadas`, 'ok'); recargar(); } catch (e) { aviso(e.message, 'error'); } })} />}
+      {vista === 'sesiones' && <div class="registro-filtros">
         <div class="selector-chips" role="group" aria-label="Qué semana ver">
           <button type="button" aria-pressed={semana === 'todas' ? 'true' : 'false'} onClick={() => setSemana('todas')}>Todas</button>
           {semanas.map((w) => <button type="button" key={w.id} aria-pressed={semana === w.id ? 'true' : 'false'} onClick={() => setSemana(w.id)}>S{w.numero}</button>)}
         </div>
         <button type="button" class="btn btn-peq" aria-pressed={sinRevisar ? 'true' : 'false'} onClick={() => setSinRevisar(!sinRevisar)}><Icono n="hecho" /> Sin revisar ({sesiones.filter((s) => s.completada && !s.revisada_en).length})</button>
-      </div>
-      {!visibles.length && <p class="peq secundario">{sinRevisar ? 'Todo revisado en esta selección.' : 'Nada registrado en esta semana.'}</p>}
-      {visibles.map((s) => {
+      </div>}
+      {vista === 'sesiones' && !visibles.length && <p class="peq secundario">{sinRevisar ? 'Todo revisado en esta selección.' : 'Nada registrado en esta semana.'}</p>}
+      {vista === 'sesiones' && visibles.map((s) => {
         const ps = completo.pautas[s.id] || [];
         const todasSeries = ps.flatMap((p) => completo.series[p.id] || []);
         const hechasS = todasSeries.filter(conReps);
@@ -149,6 +166,15 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
         const ton = toneladas(hechasS);
         const fecha = s.fecha_realizada || hechasS[0]?.registrada_en?.slice(0, 10) || null;
         const ya = felicitadas.has(s.id) || conTuyo.datos?.has?.(s.id);
+        // (v0.206) cómo rindió frente a la vez anterior (la media de lo que cambió su 1RM en lo que se puede comparar)
+        const rend = comun ? rendimientoDia(ps.map((p) => {
+          const hs = (completo.series[p.id] || []).filter(conReps);
+          const id = hs.find((h) => h.sustituto_id)?.sustituto_id || p.ejercicio_id;
+          const ant = vezAnterior(comun.historial, id, s.id, fecha);
+          const rm = ant ? e1rmDelDia(hs, comun.historial, id, s.id, fecha, ant.series) : null;
+          return rm && rm.cambio != null ? { hoy: rm.valor, antes: rm.valor - rm.cambio } : null;
+        })) : null;
+        const cardioP = s.cardio ? textoCardio(s.cardio) : '';
         return (
           <section id={`reg-${s.id}`} class={`panel panel-pad pila-s registro-sesion${s.completada && !s.revisada_en ? ' por-revisar' : ''}`} data-rpe={s.rpe_sesion ? Math.min(10, Math.max(5, Math.floor(s.rpe_sesion))) : undefined} key={s.id}>
             <div class="separa registro-cab" style="flex-wrap:wrap">
@@ -163,7 +189,15 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
                 {hechasS.length > 0 && <span><Icono n="hoy" />{hechasS.length} {hechasS.length === 1 ? 'serie' : 'series'}{ton > 0 ? `, ${toneladasTxt(ton)}` : ''}</span>}
               </p>
             )}
-            {s.preparacion && <ChipLlegada preparacion={s.preparacion} />}
+            {(s.preparacion || rend) && (
+              <div class="registro-dia">
+                {s.preparacion && <ChipLlegada preparacion={s.preparacion} />}
+                {rend && <span class={`chip num ${rend.pct >= 1 ? 'ok' : rend.pct <= -2 ? 'aviso' : ''}`} title="La media de lo que cambió su 1RM estimado frente a la vez anterior">Rindió {rend.pct > 0 ? '+' : rend.pct < 0 ? '−' : '±'}{num(Math.abs(rend.pct), 1)} % frente a la vez anterior</span>}
+              </div>
+            )}
+            {(cardioP || cardioHechoValido(s.cardio_hecho)) && (
+              <p class="registro-cardio mini secundario"><Icono n="pasos" />{cardioP && <span>Pautado: {cardioP}</span>}{cardioHechoValido(s.cardio_hecho) && <span>Hecho: {NOMBRE_MODALIDAD[s.cardio_hecho.modalidad]?.toLowerCase()}, {textoCardioHecho(s.cardio_hecho)}</span>}{cardioP && !cardioHechoValido(s.cardio_hecho) && s.completada && <span class="aviso-t">Sin apuntar</span>}</p>
+            )}
             {s.nota_atleta && <div class="nota-coach"><Icono n="mensaje" /><div>{s.nota_atleta}</div></div>}
             <HechoEnOtroOrden pautas={ps} series={completo.series} ejercicios={ejercicios} />
             {ps.length > 0 && (
@@ -186,11 +220,15 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
                   const tonE = toneladas(conR);
                   const aj = ajustes[p.id];
                   const conKilos = conR.some((h) => Number(h.kg) > 0) || p.carga_sugerida_kg != null;
+                  const desv = desvioEsfuerzo(p, conR);
+                  const linea = lineaDe[efId] || [];
                   return (
                     <li key={p.id} class={`registro-ej${f.saltado ? ' saltado' : ''}`}>
                       <div class="registro-ej-cab">
                         <span class="registro-ej-nombre">{etq && <span class="ss-etq">{etq}</span>}{nombre}
                           {cambios.length > 0 && <span class="mini cambio">Hecho como {cambios.map((id) => ejercicios[id]?.nombre).filter(Boolean).join(', ')}</span>}</span>
+                        {linea.length > 1 && <MiniLinea valores={linea} ancho={64} alto={22} clase="registro-linea" />}
+                        {desv != null && <span class={`chip num registro-desvio ${tonoDesvio(desv)}`}>{textoDesvio(desv)}</span>}
                         {f.saltado && <span class="chip aviso registro-saltado">Saltado</span>}
                         {vids.length > 0 && <MiniVideo a={vids[0]} n={vids.length} nombre={nombre} alAbrir={() => setVideo({ a: vids[0], nombre })} />}
                       </div>
@@ -204,9 +242,10 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
                               const rec = records.has(h.id);
                               const nota = String(h.nota || '').trim();
                               return (
-                                <Fragment key={i}>{i ? <span class="sr">, </span> : ''}<span class={`serie-ficha esf-${esf} ${(p.reps_min != null && h.reps < p.reps_min) || pasado(p, h) ? 'corto' : ''} ${rec ? 'record' : ''} ${nota ? 'con-nota' : ''}`}>
-                                  {rec && <Icono n="trofeo" />}{textoSerie(h)}{nota && <Icono n="mensaje" />}{(NOMBRE_ESF[esf] || rec || nota) && <span class="sr"> ({[rec ? 'récord' : '', NOMBRE_ESF[esf], nota ? 'con nota' : ''].filter(Boolean).join(', ')})</span>}
-                                </span></Fragment>
+                                <Fragment key={i}>{i ? <span class="sr">, </span> : ''}<button type="button" class={`serie-ficha esf-${esf} ${(p.reps_min != null && h.reps < p.reps_min) || pasado(p, h) ? 'corto' : ''} ${rec ? 'record' : ''} ${nota ? 'con-nota' : ''}`}
+                                  aria-pressed={comentando?.h === h.id ? 'true' : 'false'} title="Comentar esta serie" onClick={() => setComentando(comentando?.h === h.id ? null : { s: s.id, p: p.id, h: h.id, n: h.numero ?? i + 1, texto: textoSerie(h), nombre })}>
+                                  {rec && <Icono n="trofeo" />}{textoSerie(h)}{nota && <Icono n="mensaje" />}{(NOMBRE_ESF[esf] || rec || nota) && <span class="sr"> ({[rec ? 'récord' : '', NOMBRE_ESF[esf], nota ? 'con nota' : ''].filter(Boolean).join(', ')})</span>}<span class="sr">. Comentar esta serie</span>
+                                </button></Fragment>
                               );
                             })}
                             {/* (v0.205) las que faltaron de lo pautado, como fichas vacías */}
@@ -215,6 +254,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
                           </span>
                         ) : <span class="terciario">—</span>}
                       </div>
+                      {comentando?.p === p.id && <ComentarSerie atleta={atleta} c={comentando} alCerrar={() => setComentando(null)} />}
                       {notas.length > 0 && (
                         <ul class="registro-notas">
                           {notas.map((x) => <li key={x.numero}><Icono n="mensaje" /><span><b>Serie {x.numero}:</b> «{x.nota}»</span></li>)}
@@ -247,10 +287,12 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
             )}
             <div class="fila-envolver">
               <button class="btn btn-peq" aria-expanded={hilo === s.id ? 'true' : 'false'} onClick={() => setHilo(hilo === s.id ? null : s.id)}><Icono n="mensaje" /> Comentarios</button>
+              <button class="btn btn-peq" onClick={async () => { const ok = await copiar(textoSesion(s, ps, completo.series, ejercicios, fmtCorta)); aviso(ok ? 'Sesión copiada: pégala donde quieras' : 'No se ha podido copiar', ok ? 'ok' : 'error'); }}><Icono n="copiar" /> Copiar</button>
+              {sesiones.length > 1 && <button class="btn btn-peq" onClick={() => setComparar(s)}><Icono n="intercambiar" /> Comparar</button>}
               {s.completada && (ya
                 ? <span class="chip"><Icono n="hecho" />{felicitadas.has(s.id) ? '«Bien hecho» enviado' : 'Ya le has escrito'}</span>
                 : <button class="btn btn-peq" disabled={ocupado} onClick={() => felicitar(s)} aria-label={`Decirle «Bien hecho» por ${s.nombre}`}>💪 Bien hecho</button>)}
-              {s.completada && (s.revisada_en
+              {s.completada && (s.revisada_en || revisadas.has(s.id)
                 ? <span class="chip ok"><Icono n="hecho" />Revisada</span>
                 : <button class="btn btn-peq" onClick={async () => { try { await api.marcarRevisado('sesion', s.id); aviso('Sesión revisada'); recargar(); } catch (e) { aviso(e.message, 'error'); } }}><Icono n="hecho" /> Marcar revisada</button>)}
             </div>
@@ -258,9 +300,12 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
           </section>
         );
       })}
-      {!todas && semana === 'todas' && !sinRevisar && filtradas.length > 6 && <button class="btn" onClick={() => setTodas(true)}>Ver las {filtradas.length - 6} sesiones anteriores</button>}
-      <p class="mini terciario">Cada serie es una ficha del color de su esfuerzo frente a lo pautado: en verde, en su sitio; en azul, más suave; en naranja, por encima del esfuerzo o por debajo del rango de repeticiones; en gris, sin RPE. Las de récord, en dorado; las que faltaron, vacías; las que llevan nota, con su bocadillo. Debajo de cada ejercicio, lo que hizo la vez anterior (con flecha si hoy mejoró o bajó), su 1RM estimado del día y el descanso que hizo de verdad (en ámbar si se aleja medio minuto o más del pautado). El aro de cada sesión, las series hechas de las pautadas, del color de su esfuerzo.</p>
+      {vista === 'sesiones' && !todas && semana === 'todas' && !sinRevisar && filtradas.length > 6 && <button class="btn" onClick={() => setTodas(true)}>Ver las {filtradas.length - 6} sesiones anteriores</button>}
+      <p class="mini terciario">Cada serie es una ficha del color de su esfuerzo frente a lo pautado: en verde, en su sitio; en azul, más suave; en naranja, por encima del esfuerzo o por debajo del rango de repeticiones; en gris, sin RPE. Las de récord, en dorado; las que faltaron, vacías; las que llevan nota, con su bocadillo. Debajo de cada ejercicio, lo que hizo la vez anterior (con flecha si hoy mejoró o bajó), su 1RM estimado del día y el descanso que hizo de verdad (en ámbar si se aleja medio minuto o más del pautado). El aro de cada sesión, las series hechas de las pautadas, del color de su esfuerzo. Toca una serie para comentarla.</p>
       {historial && <HistorialEjercicio atletaId={atleta.id} ejercicio={historial} compartir={false} alCerrar={() => setHistorial(null)} />}
+      {comparar && <CompararSesiones s={comparar} sesiones={sesiones} completo={completo} ejercicios={ejercicios} alCerrar={() => setComparar(null)} />}
+      {exportar && <HojaExportar titulo="El registro del bloque" nombre={`registro-${(atleta.nombre || 'atleta').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-bloque.csv`} tipo="text/csv"
+        contenido={seriesACsv(filasCsvBloque(completo, ejercicios))} alCerrar={() => setExportar(false)} />}
       {video && (
         <DetalleArchivo a={video.a} lista={comun?.diario || []} atletaId={atleta.id} nombreAtleta={atleta.nombre} esCoach nombre={video.nombre}
           alCerrar={() => setVideo(null)} alCambiar={recargarDiario}
@@ -270,19 +315,21 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
   );
 }
 
-// (v0.205) Su vídeo de ese ejercicio en esa sesión: la miniatura (o el primer fotograma), que abre el vídeo y su corrección
-function MiniVideo({ a, n, nombre, alAbrir }) {
+// (v0.205) Su vídeo de ese ejercicio en esa sesión: la miniatura (o el primer fotograma), que abre el vídeo y su corrección.
+// (v0.206) También en Actividad, y con las fotos de progreso
+export function MiniVideo({ a, n = 1, nombre = '', alAbrir }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
+  const foto = a.tipo === 'foto_progreso';
   useEffect(() => {
     let vivo = true;
     api.urlArchivo(a.poster_ruta || a.ruta).then((u) => vivo && setUrl(u)).catch(() => {});
     return () => { vivo = false; };
   }, [a.id]);
   return (
-    <button type="button" class="registro-video" onClick={alAbrir} aria-label={`Ver su vídeo de ${nombre}${n > 1 ? ` (${n} vídeos)` : ''}${a.revisado_en ? '' : ', sin revisar'}`}>
-      {url ? (a.poster_ruta ? <img src={url} alt="" loading="lazy" /> : <video src={url} muted playsInline preload="metadata" />) : <span class="registro-video-hueco" />}
-      <span class="registro-video-play" aria-hidden="true"><Icono n="play" /></span>
+    <button type="button" class="registro-video" onClick={alAbrir} aria-label={`${foto ? 'Ver su foto de progreso' : `Ver su vídeo${nombre ? ` de ${nombre}` : ''}`}${n > 1 ? ` (${n} vídeos)` : ''}${a.revisado_en ? '' : ', sin revisar'}`}>
+      {url ? (a.poster_ruta || foto ? <img src={url} alt="" loading="lazy" /> : <video src={url} muted playsInline preload="metadata" />) : <span class="registro-video-hueco" />}
+      {!foto && <span class="registro-video-play" aria-hidden="true"><Icono n="play" /></span>}
       {!a.revisado_en && <span class="registro-video-punto" aria-hidden="true" />}
     </button>
   );
@@ -305,5 +352,124 @@ function HechoEnOtroOrden({ pautas, series, ejercicios }) {
       <span class="orden-real-cab"><Icono n="ordenar" /><strong>Hecho en otro orden</strong></span>
       <ol>{real.map((b) => <li key={b.clave}>{textoBloque(b)}</li>)}</ol>
     </div>
+  );
+}
+
+// (v0.206) Por ejercicios: cada ejercicio con sus semanas en columnas (la mejor serie de cada una), su minilínea y su
+// desvío de esfuerzo en todo el bloque
+function PorEjercicios({ ejs, semanas }) {
+  const ws = [...semanas].sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+  if (!ejs.length) return <p class="peq secundario">Todavía no hay series en este bloque.</p>;
+  return (
+    <div class="panel tabla-env registro-por-ejercicio" tabIndex={0} role="region" aria-label="El bloque por ejercicios">
+      <table class="tabla-simple">
+        <caption class="sr">Cada ejercicio con la mejor serie de cada semana del bloque</caption>
+        <thead><tr><th scope="col">Ejercicio</th>{ws.map((w) => <th scope="col" key={w.id} class="num">S{w.numero}</th>)}<th scope="col">Esfuerzo</th></tr></thead>
+        <tbody>
+          {ejs.map((e) => (
+            <tr key={e.id}>
+              <th scope="row"><span class="pe-nombre">{e.nombre}</span>{e.linea.length > 1 && <MiniLinea valores={e.linea} ancho={56} alto={18} clase="registro-linea" />}</th>
+              {e.cols.map((c, i) => {
+                const prev = e.cols.slice(0, i).reverse().find((x) => x.e1rm != null);
+                const dir = c.e1rm != null && prev ? (c.e1rm > prev.e1rm + 0.2 ? 'sube' : c.e1rm < prev.e1rm - 0.2 ? 'baja' : '') : '';
+                return (
+                  <td key={c.semanaId} class={`num pe-celda ${dir}`}>
+                    {c.mejor ? <>{textoSerie(c.mejor)}{dir && <Icono n={dir === 'sube' ? 'arriba' : 'abajo'} />}<span class="mini terciario"> ({c.n})</span>{dir && <span class="sr">{dir === 'sube' ? ', sube' : ', baja'}</span>}</> : <span class="terciario">—</span>}
+                  </td>
+                );
+              })}
+              <td>{e.desvio != null ? <span class={`chip num registro-desvio ${tonoDesvio(e.desvio)}`}>{textoDesvio(e.desvio)}</span> : <span class="terciario">—</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// (v0.206) La semana arriba: sesiones, series hechas de las pautadas, toneladas y esfuerzo medio, frente a la anterior; y
+// revisar de un toque las que faltan
+function ResumenSemana({ completo, semana, revisadas, alRevisar }) {
+  if (!semana) return null;
+  const r = resumenSemanaBloque(completo, semana.id);
+  const ant = completo.semanas.find((w) => w.numero === semana.numero - 1);
+  const a = ant ? resumenSemanaBloque(completo, ant.id) : null;
+  const pend = r.porRevisar.filter((id) => !revisadas.has(id));
+  const dif = (v, b, dec = 0, u = '') => (b == null || v == null || v === b ? null : <span class={`frente-anterior ${v > b ? 'sube' : 'baja'}`}>{v > b ? '+' : '−'}{num(Math.abs(v - b), dec)}{u}<span class="sr"> frente a la semana anterior</span></span>);
+  return (
+    <section class="panel panel-pad registro-semana" aria-label={`Resumen de la semana ${semana.numero}`}>
+      <div class="separa">
+        <strong>Semana {semana.numero}{a ? <span class="mini terciario"> frente a la {ant.numero}</span> : null}</strong>
+        {pend.length > 0 && <button type="button" class="btn btn-peq" onClick={() => alRevisar(pend)}><Icono n="hecho" /> Revisar {pend.length === 1 ? 'la que falta' : `las ${pend.length} que faltan`}</button>}
+      </div>
+      <dl class="registro-semana-cifras">
+        <div><dt>Sesiones</dt><dd class="num">{r.sesiones.hechas} de {r.sesiones.total} {dif(r.sesiones.hechas, a?.sesiones.hechas)}</dd></div>
+        <div><dt>Series</dt><dd class="num">{r.series.hechas} de {r.series.pautadas} {dif(r.series.hechas, a?.series.hechas)}</dd></div>
+        <div><dt>Toneladas</dt><dd class="num">{num(Math.round(r.toneladas / 100) / 10, 1)} t {dif(Math.round(r.toneladas / 100) / 10, a ? Math.round(a.toneladas / 100) / 10 : null, 1, ' t')}</dd></div>
+        <div><dt>Esfuerzo</dt><dd>{r.desvio != null ? <span class={`chip num registro-desvio ${tonoDesvio(r.desvio)}`}>{textoDesvio(r.desvio)}</span> : <span class="terciario">sin RPE</span>}</dd></div>
+      </dl>
+    </section>
+  );
+}
+
+// (v0.206) Comentar una serie: va al hilo de la sesión, con la serie citada
+function ComentarSerie({ atleta, c, alCerrar }) {
+  const { api, aviso } = useApp();
+  const [texto, setTexto] = useState('');
+  const [ocupado, una] = useUnaVez();
+  const cita = `Sobre la serie ${c.n} de ${c.nombre} (${c.texto})`;
+  return (
+    <form class="registro-comentar pila-s" onSubmit={(e) => {
+      e.preventDefault();
+      const t = texto.trim();
+      if (!t) return;
+      una(async () => {
+        try { await api.comentar({ atletaId: atleta.id, sesionId: c.s, autor: 'coach', texto: `${cita}: ${t}` }); aviso('Comentario enviado en el hilo de la sesión', 'ok'); alCerrar(); }
+        catch (err) { aviso(err?.message || 'No se ha podido enviar', 'error'); }
+      });
+    }}>
+      <label class="mini secundario" for={`com-${c.h}`}>{cita}</label>
+      <textarea id={`com-${c.h}`} class="entrada" rows={2} maxLength={1500} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} placeholder="Tu comentario" />
+      <div class="fila-envolver">
+        <button class="btn btn-primario btn-peq" disabled={ocupado || !texto.trim()}><Icono n="enviar" /> Enviar</button>
+        <button type="button" class="btn btn-peq" onClick={alCerrar}>Cancelar</button>
+      </div>
+    </form>
+  );
+}
+
+// (v0.206) Dos sesiones lado a lado: la elegida y otra del bloque (de entrada, la última con el mismo nombre)
+function CompararSesiones({ s, sesiones, completo, ejercicios, alCerrar }) {
+  const otras = sesiones.filter((x) => x.id !== s.id);
+  const mismo = otras.filter((x) => x.nombre === s.nombre);
+  const [otra, setOtra] = useState((mismo.find((x) => (x.fecha_realizada || '') < (s.fecha_realizada || '9')) || mismo[0] || otras[0])?.id || null);
+  const b = otras.find((x) => x.id === otra);
+  const filas = b ? emparejarSesiones({ pautas: completo.pautas[s.id] || [], series: completo.series }, { pautas: completo.pautas[b.id] || [], series: completo.series }) : [];
+  const etq = (x) => `S${x.semana.numero}: ${x.nombre}${x.fecha_realizada ? ` (${fmtCorta(x.fecha_realizada)})` : ''}`;
+  return (
+    <Hoja titulo="Comparar sesiones" alCerrar={alCerrar} ancho={760}>
+      <div class="pila">
+        <div class="campo"><label for="cmp-otra">Con</label>
+          <select id="cmp-otra" class="selector" value={otra || ''} onChange={(e) => setOtra(e.currentTarget.value)}>
+            {otras.map((x) => <option key={x.id} value={x.id}>{etq(x)}</option>)}
+          </select></div>
+        {b && (
+          <div class="tabla-env" tabIndex={0} role="region" aria-label="Las dos sesiones, ejercicio a ejercicio">
+            <table class="tabla-simple registro-comparar">
+              <thead><tr><th scope="col">Ejercicio</th><th scope="col">{etq(s)}</th><th scope="col">{etq(b)}</th></tr></thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.id}>
+                    <th scope="row">{ejercicios[f.id]?.nombre || 'Ejercicio'}{f.fr && f.fr.dir !== 'igual' && <span class={`registro-antes ${f.fr.dir}`}><Icono n={f.fr.dir === 'sube' ? 'arriba' : 'abajo'} /><span class="sr">{f.fr.dir === 'sube' ? ' (mejor en la primera)' : ' (mejor en la segunda)'}</span></span>}</th>
+                    <td class="num">{f.a.length ? f.a.map(textoSerie).join(', ') : <span class="terciario">—</span>}</td>
+                    <td class="num">{f.b.length ? f.b.map(textoSerie).join(', ') : <span class="terciario">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Hoja>
   );
 }

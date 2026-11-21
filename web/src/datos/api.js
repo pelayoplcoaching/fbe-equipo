@@ -6,7 +6,7 @@ import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjer
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { resumenAnterior, diasConRecord } from '../logica/progreso-visual-2.js';
-import { horaDe, paronesDe, diasDeAtleta, textoDia, textoParon, detalleParon } from '../logica/registro-actividad.js';
+import { horaDe, paronesDe, diasDeAtleta, textoDia, textoParon, detalleParon, ritmoEntrenos } from '../logica/registro-actividad.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
@@ -2693,13 +2693,16 @@ export function crearApi(backend) {
         api.entrenamientos(atletaId),
         api.historial(atletaId),
         b.select('checkins', { eq: { atleta_id: atletaId }, gte: { semana_inicio: sumarDias(desde, -7) } }).catch(() => []),
-        b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: desde }, order: [['fecha', 'asc']] }).catch(() => []),
+        // (v0.206) 4 semanas más de pesos, para la tendencia de cada pesada
+        b.select('pesos', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(desde, -28) }, order: [['fecha', 'asc']] }).catch(() => []),
         b.select('archivos', { eq: { atleta_id: atletaId }, gte: { fecha: desde } }),
         b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'atleta' }, gte: { creado_en: `${desde}T00:00:00` } }).then((xs) => xs.filter((c) => !c.eliminado_en)),
       ]);
       // (v0.66) las sesiones a las que ya le has dicho «Bien hecho» (o le has escrito algo en su hilo)
-      const conTuyo = new Set(await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${desde}T00:00:00` }, cols: 'sesion_id,eliminado_en' })
-        .then((xs) => xs.filter((c) => c.sesion_id && !c.eliminado_en).map((c) => c.sesion_id)).catch(() => []));
+      // (v0.206) y todo lo que le has escrito tú (para «Lo mío también»)
+      const tuyos = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${desde}T00:00:00` } })
+        .then((xs) => xs.filter((c) => !c.eliminado_en && !programado(c))).catch(() => []);
+      const conTuyo = new Set(tuyos.filter((c) => c.sesion_id).map((c) => c.sesion_id));
       const recordsPorSesion = {};
       for (const e of eventosRecord(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
       const ev = [];
@@ -2720,19 +2723,38 @@ export function crearApi(backend) {
         ev.push({ tipo: 'checkin', fecha: f, cuando: c.creado_en || `${f}T09:00`, hora: horaDe(c.creado_en), clave: `c:${c.id}`, checkinId: c.id, foco: { checkinId: c.id }, icono: 'checkin', pestana: 'seguimiento', titulo: `Envió su check-in (${rangoSemana(c.semana_inicio)})`,
           detalle: [c.energia ? `energía ${c.energia}/5` : null, c.motivacion ? `motivación ${c.motivacion}/5` : null, c.horas_sueno ? `sueño ${c.horas_sueno.replace('-', '–')} h` : null].filter(Boolean).join(', '), aviso: (c.energia && c.energia <= 2) || (c.motivacion && c.motivacion <= 2) });
       }
-      // Pesos: uno por semana (la última pesada), para no llenar la lista
+      // Pesos: uno por semana (la última pesada), para no llenar la lista. (v0.206) con su tendencia, lo que cambió en la
+      // semana y las pesadas de esa semana (su minilínea)
+      const tendPeso = Object.fromEntries(tendenciaPeso(pesos).map((p) => [p.fecha, p.tendencia]));
       const porSemana = {};
       for (const p of pesos) (porSemana[lunesDe(p.fecha)] ||= []).push(p);
-      for (const lista of Object.values(porSemana)) {
+      for (const [lunes, lista] of Object.entries(porSemana)) {
         const u = lista[lista.length - 1];
-        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: u.creado_en && horaDe(u.creado_en) ? u.creado_en : `${u.fecha}T08:00`, hora: horaDe(u.creado_en), clave: `p:${u.fecha}`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`, detalle: lista.length > 1 ? `${lista.length} pesadas esa semana` : '', kg: Number(u.kg) });
+        if (u.fecha < desde) continue;
+        const antes = [...pesos].reverse().find((p) => p.fecha < lunes);
+        const t = tendPeso[u.fecha], t0 = antes ? tendPeso[antes.fecha] : null;
+        const cambio = t != null && t0 != null ? Math.round((t - t0) * 10) / 10 : null;
+        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: u.creado_en && horaDe(u.creado_en) ? u.creado_en : `${u.fecha}T08:00`, hora: horaDe(u.creado_en), clave: `p:${u.fecha}`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`,
+          detalle: [t != null ? `tendencia ${num(t)} kg${cambio != null ? ` (${cambio > 0 ? '+' : cambio < 0 ? '−' : '±'}${num(Math.abs(cambio))} en la semana)` : ''}` : null, lista.length > 1 ? `${lista.length} pesadas esa semana` : null].filter(Boolean).join(', ').replace(/^./, (c) => c.toUpperCase()),
+          kg: Number(u.kg), tendencia: t ?? null, cambioSemana: cambio, semanaKg: lista.map((p) => Number(p.kg)) });
       }
       for (const a of archivos) ev.push({ tipo: a.tipo === 'foto_progreso' ? 'foto' : 'video', fecha: fechaDe(a.creado_en) || a.fecha, cuando: a.creado_en || `${a.fecha}T19:00`, hora: horaDe(a.creado_en), clave: `a:${a.id}`, foco: { archivoId: a.id }, icono: a.tipo === 'foto_progreso' ? 'camara' : 'video', pestana: 'videos',
+        archivo: a,
         titulo: a.tipo === 'foto_progreso' ? 'Subió una foto de progreso' : 'Envió un vídeo de técnica', detalle: a.nota_atleta || '', aviso: !a.revisado_en });
       for (const c of comentarios) ev.push({ tipo: 'mensaje', fecha: fechaDe(c.creado_en), cuando: c.creado_en, hora: horaDe(c.creado_en), clave: `m:${c.id}`, icono: 'mensaje', pestana: c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : c.archivo_id ? 'videos' : 'mensajes',
         foco: c.sesion_id ? { sesionId: c.sesion_id } : c.checkin_id ? { checkinId: c.checkin_id } : c.archivo_id ? { archivoId: c.archivo_id } : null,
         comentarioId: c.id, hilo: { sesionId: c.sesion_id || null, checkinId: c.checkin_id || null, archivoId: c.archivo_id || null }, texto: c.texto,
         titulo: 'Te escribió', detalle: `«${c.texto.length > 140 ? `${c.texto.slice(0, 140)}…` : c.texto}»` });
+      // (v0.206) lo tuyo (sale solo con «Lo mío también»): lo que le has escrito, en el hilo que sea o en su chat
+      for (const c of tuyos) {
+        const f = fechaDe(c.enviar_en && c.enviar_en > c.creado_en ? c.enviar_en : c.creado_en);
+        if (!f || f < desde || f > hoy) continue;
+        const kudos = /^(\u{1F4AA}|\u{1F525}|\u{1F44F}|\u{1F64C}|\u{1F3C6})/u.test(c.texto || '');
+        ev.push({ tipo: 'mio', mio: true, fecha: f, cuando: c.creado_en, hora: horaDe(c.creado_en), clave: `t:${c.id}`, icono: kudos ? 'estrella' : 'enviar', pestana: c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : c.archivo_id ? 'videos' : 'mensajes',
+          foco: c.sesion_id ? { sesionId: c.sesion_id } : c.checkin_id ? { checkinId: c.checkin_id } : c.archivo_id ? { archivoId: c.archivo_id } : null,
+          titulo: kudos ? 'Le felicitaste' : c.sesion_id ? 'Le escribiste en una sesión' : c.checkin_id ? 'Le escribiste en su check-in' : c.archivo_id ? 'Le escribiste en un vídeo' : 'Le escribiste',
+          detalle: c.texto ? `«${c.texto.length > 140 ? `${c.texto.slice(0, 140)}…` : c.texto}»` : 'Nota de voz o archivo' });
+      }
       // (v0.205) lo que no hizo: las sesiones de semanas ya pasadas que quedaron sin hacer (no a quien va por microciclos, que
       // sigue su orden, ni en una semana de pausa) y los días seguidos sin entrenar
       const [extra, diasSemana, pausas] = await Promise.all([
@@ -7373,6 +7395,10 @@ export function crearApi(backend) {
       }
       await api.copiarMusica([[s.id, copia.id]]);
       return copia;
+    },
+    // (v0.206) su ritmo: entrenos y duración media de las 4 últimas semanas frente a las 4 de antes
+    async ritmoEntreno(atletaId, hoy = hoyISO()) {
+      return ritmoEntrenos(await api.entrenamientos(atletaId), hoy);
     },
     // (v0.186) cuantos comentarios escribio el atleta en cada sesion: { sesionId: n }
     // (v0.205) las sesiones a las que ya le has escrito algo en su hilo (Registro: «Ya le has escrito»)

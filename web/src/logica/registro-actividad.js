@@ -153,7 +153,7 @@ export function nuevosDesde(eventos = [], vistaMs = null) {
 }
 // Los filtros de la actividad
 export const FILTROS_ACTIVIDAD = [['todo', 'Todo'], ['sesion', 'Sesiones'], ['record', 'Récords'], ['checkin', 'Check-ins'], ['mensaje', 'Mensajes'], ['peso', 'Pesos'], ['dia', 'Comidas y hábitos'], ['media', 'Vídeos y fotos'], ['nohecho', 'Lo que no hizo']];
-const DE_FILTRO = { media: ['video', 'foto'], nohecho: ['saltada', 'paron'] };
+const DE_FILTRO = { media: ['video', 'foto'], nohecho: ['saltada', 'paron'], mensaje: ['mensaje', 'mio'] };
 export function filtrarActividad(eventos = [], filtro = 'todo', busca = '') {
   const q = String(busca || '').trim().toLowerCase();
   return (eventos || []).filter((e) => {
@@ -183,3 +183,197 @@ export const detalleParon = (p) => (p.desde === p.hasta ? `el ${fmtCorta(p.desde
 export const FRASES_KUDOS = ['💪 ¡Bien hecho! He visto tu entreno.', '🔥 ¡Qué sesión! Sigue así.', '👏 Muy buen trabajo hoy.', '🙌 Constancia de la buena. ¡Vamos!'];
 export const textoKudosRecord = (ejercicio) => `🏆 ¡Récord en ${ejercicio}! Enhorabuena, se nota el trabajo.`;
 export const TEXTO_KUDOS_CHECKIN = '🙌 Gracias por el check-in. Lo miro y te digo.';
+
+// ================================================================ (v0.206) segunda tanda
+const esfReal = (h) => (h.rpe != null && h.rpe !== '' ? Number(h.rpe) : h.rir != null && h.rir !== '' ? 10 - Number(h.rir) : null);
+const esfObjetivo = (p) => (p.rpe_objetivo != null ? Number(p.rpe_objetivo) : p.rir_objetivo != null ? 10 - Number(p.rir_objetivo) : null);
+const r1 = (v) => Math.round(v * 10) / 10;
+
+// ---------------------------------------------------------------- Registro
+// Cuánto se pasa (o se queda) de media del esfuerzo pautado en un ejercicio: +0,8 / −0,5 (null sin RPE u objetivo)
+export function desvioEsfuerzo(p = {}, hechas = []) {
+  const obj = esfObjetivo(p);
+  if (obj == null) return null;
+  const ds = (hechas || []).filter(conReps).map(esfReal).filter((v) => v != null).map((v) => v - obj);
+  return ds.length ? r1(ds.reduce((a, b) => a + b, 0) / ds.length) : null;
+}
+export const tonoDesvio = (d) => (d == null ? '' : d > 0.5 ? 'pasado' : d < -0.5 ? 'suave' : 'justo');
+export const textoDesvio = (d) => (d == null ? '' : d === 0 ? 'justo en lo pautado' : `${d > 0 ? '+' : '−'}${num(Math.abs(d), 1)} ${d > 0 ? 'por encima' : 'por debajo'} de lo pautado`);
+// Cada ejercicio del bloque con sus semanas: la mejor serie de cada una (y su 1RM), para ver la progresión de un vistazo
+// completo: { semanas, sesiones: { semanaId: [s] }, pautas: { sesionId: [p] }, series: { pautaId: [h] } }
+export function porEjercicios(completo, nombres = {}) {
+  const semanas = [...(completo?.semanas || [])].sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+  const out = new Map();
+  for (const w of semanas) {
+    for (const s of completo.sesiones?.[w.id] || []) {
+      for (const p of completo.pautas?.[s.id] || []) {
+        for (const h of (completo.series?.[p.id] || []).filter(conReps)) {
+          const id = h.sustituto_id || p.ejercicio_id;
+          if (!out.has(id)) out.set(id, { id, nombre: nombres[id]?.nombre || 'Ejercicio', orden: out.size, porSemana: {}, pautas: [] });
+          const e = out.get(id);
+          (e.porSemana[w.id] ||= []).push(h);
+          if (!h.sustituto_id && !e.pautas.includes(p)) e.pautas.push(p);
+        }
+      }
+    }
+  }
+  return [...out.values()].map((e) => {
+    const cols = semanas.map((w) => {
+      const ss = e.porSemana[w.id] || [];
+      if (!ss.length) return { semanaId: w.id, numero: w.numero, n: 0, mejor: null, e1rm: null };
+      const m = mejorDe(ss);
+      const mejor = m?.tipo === 'kg' ? ss.filter((s) => Number(s.kg) > 0).reduce((a, s) => ((e1rm(s) || 0) > (e1rm(a) || 0) ? s : a)) : ss.reduce((a, s) => (Number(s.reps) > Number(a.reps) ? s : a));
+      return { semanaId: w.id, numero: w.numero, n: ss.length, mejor, e1rm: m?.tipo === 'kg' ? r1(m.valor) : null };
+    });
+    const todas = Object.values(e.porSemana).flat();
+    const desv = e.pautas.length ? desvioEsfuerzo(e.pautas[0], todas) : null;
+    return { id: e.id, nombre: e.nombre, orden: e.orden, cols, linea: cols.map((c) => c.e1rm).filter((v) => v != null), desvio: desv, series: todas.length };
+  }).sort((a, b) => b.series - a.series || a.orden - b.orden);
+}
+// Una semana del bloque: sesiones hechas, series hechas de las pautadas, toneladas y el esfuerzo medio frente al pautado
+export function resumenSemanaBloque(completo, semanaId) {
+  const ses = completo?.sesiones?.[semanaId] || [];
+  let hechasS = 0, pautadas = 0, ton = 0;
+  const ds = [];
+  for (const s of ses) {
+    for (const p of completo.pautas?.[s.id] || []) {
+      const hs = (completo.series?.[p.id] || []).filter(conReps);
+      pautadas += Number(p.series) || 0;
+      hechasS += Math.min(hs.length, Number(p.series) || hs.length);
+      ton += toneladas(hs);
+      const obj = esfObjetivo(p);
+      if (obj != null) for (const h of hs) { const v = esfReal(h); if (v != null) ds.push(v - obj); }
+    }
+  }
+  return {
+    sesiones: { hechas: ses.filter((s) => s.completada).length, total: ses.length },
+    series: { hechas: hechasS, pautadas },
+    toneladas: ton,
+    desvio: ds.length ? r1(ds.reduce((a, b) => a + b, 0) / ds.length) : null,
+    porRevisar: ses.filter((s) => s.completada && !s.revisada_en).map((s) => s.id),
+  };
+}
+// Cómo rindió en la sesión frente a la vez anterior: la media del cambio de su 1RM estimado en los ejercicios que puede
+// comparar (en %), o null. pares: [{ hoy, antes }] (1RM de hoy y de la vez anterior)
+export function rendimientoDia(pares = []) {
+  const v = (pares || []).filter((x) => x && x.hoy > 0 && x.antes > 0).map((x) => (x.hoy / x.antes - 1) * 100);
+  if (!v.length) return null;
+  return { pct: r1(v.reduce((a, b) => a + b, 0) / v.length), n: v.length };
+}
+// Una sesión como texto, para pegarla en un mensaje
+export function textoSesion(s, ps = [], series = {}, nombres = {}, fmtFecha = (f) => f) {
+  const lin = [`S${s.semana?.numero ?? ''}: ${s.nombre}${s.fecha_realizada ? ` (${fmtFecha(s.fecha_realizada)})` : ''}${s.rpe_sesion ? `, esfuerzo ${num(s.rpe_sesion)}/10` : ''}`];
+  for (const p of ps) {
+    const hs = (series[p.id] || []).filter(conReps);
+    const id = hs.find((h) => h.sustituto_id)?.sustituto_id || p.ejercicio_id;
+    lin.push(`${nombres[id]?.nombre || 'Ejercicio'}: ${hs.length ? hs.map(textoSerieCorta).join(', ') : 'sin hacer'}`);
+  }
+  return lin.join('\n');
+}
+const textoSerieCorta = (h) => `${Number(h.kg) > 0 ? `${num(Number(h.kg), 2)}×${h.reps}` : `${h.reps} rep`}${h.rpe != null && h.rpe !== '' ? ` @${num(Number(h.rpe))}` : ''}`;
+// Las filas del CSV del bloque (para seriesACsv): una por serie hecha
+export function filasCsvBloque(completo, nombres = {}) {
+  const out = [];
+  const semanas = [...(completo?.semanas || [])].sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+  for (const w of semanas) for (const s of completo.sesiones?.[w.id] || []) for (const p of completo.pautas?.[s.id] || []) {
+    for (const h of completo.series?.[p.id] || []) {
+      out.push({ fecha: s.fecha_realizada || String(h.registrada_en || '').slice(0, 10), pautado: nombres[p.ejercicio_id]?.nombre || 'Ejercicio', ejercicio: h.sustituto_id ? nombres[h.sustituto_id]?.nombre || 'Ejercicio' : nombres[p.ejercicio_id]?.nombre || 'Ejercicio',
+        sustituto: !!h.sustituto_id, numero: h.numero, kg: h.kg, reps: h.reps, rpe: h.rpe, rir: h.rir, nota: h.nota || null });
+    }
+  }
+  return out;
+}
+// Dos sesiones lado a lado: cada ejercicio (por el que hizo de verdad) con lo de una y lo de otra
+export function emparejarSesiones(a = { pautas: [], series: {} }, b = { pautas: [], series: {} }) {
+  const lado = (x) => {
+    const m = new Map();
+    for (const p of x.pautas || []) {
+      const hs = (x.series?.[p.id] || []).filter(conReps);
+      const id = hs.find((h) => h.sustituto_id)?.sustituto_id || p.ejercicio_id;
+      m.set(id, [...(m.get(id) || []), ...hs]);
+    }
+    return m;
+  };
+  const A = lado(a), B = lado(b);
+  return [...new Set([...A.keys(), ...B.keys()])].map((id) => ({ id, a: A.get(id) || [], b: B.get(id) || [], fr: frenteAnterior(A.get(id) || [], B.get(id) || []) }));
+}
+
+// ---------------------------------------------------------------- Actividad
+// «Para mirar»: lo de los últimos días que pide atención, con su motivo
+export function paraMirar(eventos = [], hoy, dias = 7) {
+  const desde = sumarDias(hoy, -dias + 1);
+  return (eventos || []).filter((e) => e.fecha >= desde && !e.mio && (e.aviso || e.tipo === 'saltada' || e.tipo === 'paron'))
+    .map((e) => ({ ...e, motivo: e.tipo === 'checkin' ? 'Energía o motivación baja' : e.tipo === 'video' || e.tipo === 'foto' ? 'Sin revisar' : e.tipo === 'saltada' ? 'Sesión sin hacer' : e.tipo === 'paron' ? 'Días sin entrenar' : 'Mírale' }));
+}
+// Los récords y los comentarios de una sesión, colgando de ella (si la sesión está en la lista): la lista sin ellos y,
+// en cada sesión, sus hijos { records, mensajes }
+export function colgarDeSesion(items = []) {
+  const ses = new Map((items || []).filter((e) => e.tipo === 'sesion' && e.sesionId).map((e) => [e.sesionId, { ...e, hijos: { records: [], mensajes: [] } }]));
+  const out = [];
+  for (const e of items || []) {
+    if (e.tipo === 'sesion' && ses.has(e.sesionId)) { out.push(ses.get(e.sesionId)); continue; }
+    const padre = e.tipo === 'record' ? ses.get(e.sesionId) : e.tipo === 'mensaje' ? ses.get(e.hilo?.sesionId) : null;
+    if (padre) padre.hijos[e.tipo === 'record' ? 'records' : 'mensajes'].push(e);
+    else out.push(e);
+  }
+  return out;
+}
+// La semana entera (al desplegar su banda): sesiones hechas de las previstas, récords, días con comidas, peso y su check-in
+// previstas: { lunes: total } (de la constancia)
+export function detalleSemana(eventos = [], lunes, previstas = {}) {
+  const fin = sumarDias(lunes, 6);
+  const de = (t) => (eventos || []).filter((e) => e.tipo === t && e.fecha >= lunes && e.fecha <= fin && !e.mio);
+  const ck = de('checkin')[0] || null, peso = de('peso')[0] || null;
+  return {
+    lunes,
+    sesiones: de('sesion').length, previstas: previstas[lunes] ?? null,
+    records: de('record').length,
+    comidas: de('dia').filter((d) => /kcal|plan|plato/.test(d.detalle || '')).length,
+    peso: peso ? { kg: peso.kg, tendencia: peso.tendencia ?? null, cambio: peso.cambioSemana ?? null } : null,
+    checkin: ck ? (ck.detalle || 'enviado') : null,
+    noHizo: de('saltada').map((e) => e.titulo.replace(/^No hizo /, '')),
+  };
+}
+export function textoResumenSemana(d, nombre = '') {
+  if (!d) return '';
+  const l = [`${nombre ? `${nombre}, s` : 'S'}emana del ${fmtCorta(d.lunes)}:`];
+  l.push(`- Sesiones: ${d.sesiones}${d.previstas != null ? ` de ${d.previstas}` : ''}${d.noHizo.length ? ` (sin hacer: ${d.noHizo.join(', ')})` : ''}`);
+  if (d.records) l.push(`- Récords: ${d.records}`);
+  if (d.comidas) l.push(`- Días con la comida apuntada: ${d.comidas}`);
+  if (d.peso) l.push(`- Peso: ${num(d.peso.kg)} kg${d.peso.tendencia != null ? ` (tendencia ${num(d.peso.tendencia)}${d.peso.cambio != null ? `, ${d.peso.cambio > 0 ? '+' : d.peso.cambio < 0 ? '−' : '±'}${num(Math.abs(d.peso.cambio))} en la semana` : ''})` : ''}`);
+  l.push(`- Check-in: ${d.checkin || 'sin enviar'}`);
+  return l.join('\n');
+}
+// El calendario de un mes: semanas de lunes a domingo, cada día con lo que hubo (sesión, récord, check-in, peso, mensaje,
+// lo que no hizo)
+export function calendarioActividad(eventos = [], mes, hoy) {
+  const [y, m] = mes.split('-').map(Number);
+  const primero = `${mes}-01`;
+  const ultimo = sumarDias(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, '0')}-01`, -1);
+  const porDia = {};
+  for (const e of eventos || []) if (!e.mio && e.fecha >= primero && e.fecha <= ultimo) (porDia[e.fecha] ||= new Set()).add(e.tipo === 'records' ? 'record' : e.tipo);
+  const semanas = [];
+  let d = lunesDe(primero);
+  while (d <= ultimo) {
+    const fila = [];
+    for (let i = 0; i < 7; i++) { const f = sumarDias(d, i); fila.push({ fecha: f, fuera: f < primero || f > ultimo, futuro: f > hoy, tipos: [...(porDia[f] || [])] }); }
+    semanas.push(fila);
+    d = sumarDias(d, 7);
+  }
+  return semanas;
+}
+// Su ritmo: entrenos y duración media de las 4 últimas semanas frente a las 4 de antes. entrenos: [{ fecha, duracion_min }]
+export function ritmoEntrenos(entrenos = [], hoy) {
+  const tramo = (a, b) => {
+    const xs = (entrenos || []).filter((e) => e.fecha && e.fecha > a && e.fecha <= b);
+    const conMin = xs.filter((e) => Number(e.duracion_min) > 0);
+    return { n: xs.length, minutos: conMin.length ? Math.round(conMin.reduce((t, e) => t + Number(e.duracion_min), 0) / conMin.length) : null };
+  };
+  return { ahora: tramo(sumarDias(hoy, -28), hoy), antes: tramo(sumarDias(hoy, -56), sumarDias(hoy, -28)) };
+}
+// Lo que ya has marcado como visto (en este aparato), como mucho 500
+export const MAX_VISTOS = 500;
+export function sumarVistos(vistos = [], claves = []) {
+  const s = [...new Set([...(vistos || []), ...(claves || [])].filter(Boolean))];
+  return s.slice(Math.max(0, s.length - MAX_VISTOS));
+}

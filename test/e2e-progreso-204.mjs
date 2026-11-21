@@ -231,6 +231,9 @@ export async function probarProgreso204({ navegador, check, base = 'http://local
     await p.getByRole('tab', { name: 'Actividad' }).first().click();
     await p.locator('.actividad-item').first().waitFor({ timeout: 10000 });
     check(await p.locator('.actividad-semana').count() >= 1 && /\d+ sesi(ón|ones)/.test(await p.locator('.actividad-semana').first().textContent()), `(19) Actividad: cada semana empieza con su resumen («${(await p.locator('.actividad-semana').first().textContent().catch(() => '')).trim()}»)`);
+    // (v0.206) con «Todo», los récords cuelgan de su sesión; juntos en una tarjeta, con el filtro «Récords»
+    await p.getByRole('group', { name: 'Qué ver' }).getByRole('button', { name: 'Récords' }).click();
+    await p.locator('.actividad-item').first().waitFor({ timeout: 10000 }).catch(() => {});
     const juntos = p.locator('.actividad-records > .actividad-item').first();
     if (await juntos.count()) {
       check(/^\d+ récords/.test(await juntos.locator('.actividad-titulo').textContent()) && await juntos.getAttribute('aria-expanded') === 'false', '(18) los récords de un mismo día, en una tarjeta');

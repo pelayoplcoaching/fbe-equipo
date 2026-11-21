@@ -6030,6 +6030,16 @@ try {
   console.log('  ✗ v0.205:', e.message.split('\n')[0]);
 }
 
+// v0.206: Registro y Actividad, segunda tanda (test/e2e-registro-206.mjs)
+console.log('\nv0.206: Registro y Actividad, segunda tanda');
+try {
+  const { probarRegistro206 } = await import('./e2e-registro-206.mjs');
+  await probarRegistro206({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.206:', e.message.split('\n')[0]);
+}
+
 // v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
 console.log('\nv0.200: la tanda de belleza');
 try {
