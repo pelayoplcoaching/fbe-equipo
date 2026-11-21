@@ -80,6 +80,11 @@ export async function probarAtletas199({ navegador, check, base = 'http://localh
     check((await hu.getByLabel('Desde cuántos días sin registrar series').inputValue()) === '2', 'y se guardan');
     await hu.getByRole('button', { name: 'Los de siempre' }).click();
     await hu.getByRole('button', { name: 'Guardar mis avisos' }).click();
+    // (v0.202, revisión) que la lista se rehaga con los avisos de siempre ANTES de desplegar una fila: bajo carga, si se
+    // despliega antes, la lista se vuelve a pintar a mitad y el recordatorio se escribe en una fila que ya no está
+    await hu.waitFor({ state: 'hidden' }).catch(() => {});
+    await hasta(async () => (await atencion()) === a0);
+    await p.waitForTimeout(400);
 
     // Recordatorio para hoy
     const primero = (await nombres())[0];
