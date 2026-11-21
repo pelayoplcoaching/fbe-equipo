@@ -50,7 +50,8 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
   const [tono, setTono] = useState(() => suTono || tonoGuardado());
   // (v0.202) Dónde le llega: su chat, el hilo de su última sesión o el de su check-in (cuentan igual como contacto)
   const ultima = f.motivos.find((m) => m.id === 'saludo')?.datos || {};
-  const ck = f.extra?.checkin?.id ? f.extra.checkin : null;
+  // (su check-in, si es de los últimos 10 días)
+  const ck = f.extra?.checkin?.id && f.extra.checkin.creado_en && Date.now() - Date.parse(f.extra.checkin.creado_en) <= 10 * 864e5 ? f.extra.checkin : null;
   const [donde, setDonde] = useState('chat');
   const [verVoz, setVerVoz] = useState(false);
   const [verSesion, setVerSesion] = useState(false);
