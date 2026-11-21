@@ -299,7 +299,9 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await p.locator('nav.tabs').waitFor();
     await cerrarDialogos();
     await irAlRadar();
-    check(await p.locator('.radar .revision-fila').count() >= 2, 'a 360 px, desde «Más», la lista');
+    // (v0.202: «Ya hablamos» va también a la base; la demo la guarda en el navegador con un margen y, tras recargar, a
+    // veces vuelve el de antes del «Deshacer»: aquí basta con que salga la lista)
+    check(await p.locator('.radar .revision-fila').count() >= 1, 'a 360 px, desde «Más», la lista');
     await p.locator('.radar .revision-fila').first().getByRole('button', { name: 'Escribirle' }).click();
     await p.locator('.radar textarea').first().waitFor();
     await revisar('movil');

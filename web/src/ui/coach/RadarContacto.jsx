@@ -54,11 +54,14 @@ export function RadarContacto({ abrirAtleta }) {
   }, []);
   // Guardar lo tuyo: en la base si está la 086 (lo que cambia), y lo de «Ya hablamos» y «Mañana» también en el aparato.
   // (siempre sobre lo último, aunque lo llame un «Deshacer» de antes)
+  // (de uno en uno y en orden: «Ya hablamos» y su «Deshacer» seguidos no se pisan)
   const ajRef = useRef(aj); ajRef.current = aj;
+  const cola = useRef(Promise.resolve());
   const guardarAj = (nuevo, cambios) => {
     ajRef.current = nuevo;
     setAj(nuevo);
-    if (enBase) api.guardarRadarAjustes?.(cambios).catch((e) => aviso(e?.message || 'No se ha podido guardar en la base: se queda en este dispositivo', 'error'));
+    if (!enBase) return;
+    cola.current = cola.current.then(() => api.guardarRadarAjustes?.(cambios)).catch((e) => aviso(e?.message || 'No se ha podido guardar en la base: se queda en este dispositivo', 'error'));
   };
 
   const x = useMemo(() => {
