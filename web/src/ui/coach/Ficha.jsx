@@ -101,7 +101,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {a && (a.nivel || servicioDe(a) !== 'completo' || (conEntrenamiento(a) && diasSemanaValido(a.dias_semana))) && <div class="mini terciario">{[conEntrenamiento(a) && a.nivel && `Nivel ${NOMBRE_NIVEL[a.nivel].toLowerCase()}`, conEntrenamiento(a) && diasSemanaValido(a.dias_semana) && textoDiasSemana(diasSemanaValido(a.dias_semana)), servicioDe(a) !== 'completo' && Object.fromEntries(SERVICIOS)[servicioDe(a)]].filter(Boolean).join(' · ')}</div>}
         </div>
         {/* Sin cuenta vinculada (aunque se haya cambiado su estado a mano), siempre se le puede dar un código */}
-        {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq" onClick={() => setInvitar(true)}><Icono n="enviar" /> Código</button>}
+        {a && !a.perfil_id && a.estado !== 'baja' && <button class="btn btn-primario btn-peq btn-codigo" onClick={() => setInvitar(true)}><Icono n="enviar" /> <span class="btn-codigo-txt">Código</span></button>}
         {/* (v0.198) repasar a todos sin volver a la lista: el anterior y el que viene, en el orden en que la dejaste */}
         {irA && <VecinosFicha lista={lista} atletaId={atletaId} nombreDe={nombreDe} ir={(id) => irA(id, pest)} />}
       </CabeceraGrande>

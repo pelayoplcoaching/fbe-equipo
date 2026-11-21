@@ -130,7 +130,7 @@
 /* La ficha: el anterior y el que viene de tu lista */
 .vecinos-ficha { gap: var(--esp-2); align-items: center; margin-left: auto; }
 .vecinos-ficha .btn-icono:disabled { color: var(--tinta-3); }
-
+@media (max-width: 420px) { .vecinos-ficha > .num { display: none; } }   /* (v0.199: a 360 px la cabecera de la ficha iba justa) */
 /* v0.199: segunda tanda (novedades, recordatorios, hitos, semaforo, medias, tablero y panel al lado) */
 .avatar-env { position: relative; display: inline-flex; flex: none; }
 .punto-nuevo { position: absolute; top: calc(var(--esp-2) * -1); right: calc(var(--esp-2) * -1); width: 12px; height: 12px; border-radius: var(--r-pildora); background: var(--morado); outline: 2px solid var(--hoja); }
