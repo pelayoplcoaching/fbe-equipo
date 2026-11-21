@@ -16,7 +16,7 @@ import { vibrar } from './hapticos.js';
 import {
   REACCIONES_CHAT, MAX_FOTOS, extractoCita, separadorNoLeidos, textoNoLeidos, coincidencias, resumenReacciones, puedeEditar, puedeEliminar,
   puedeReaccionar, infoMensaje, estadoConexion, enlacesDe, mediosDe, consultaRapida, filtrarRapidas, leerBorrador, guardarBorrador, borrarBorrador,
-  esMarcador, cuandoInfo,
+  esMarcador, cuandoInfo, rellenarHuecos,
 } from '../logica/mensajes.js';
 import {
   soloEmojis, recortarLargo, etiquetaDia, estadoEnvio, TEXTO_ESTADO, conPendientes, reenviable, accionesSeleccion, textoCopiado,
@@ -880,7 +880,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const filtradas = qRapida !== null ? filtrarRapidas(rapidas || [], qRapida).slice(0, 5) : [];
   const verRapidas = qRapida !== null && filtradas.length > 0;
   useEffect(() => { setIRapida(0); }, [qRapida]);
-  const rellenar = (t) => String(t || '').replace(/\{nombre\}/g, primerNombre);
+  // (v0.201) {nombre} y {apodo} (sin apodo, su nombre); los demás huecos se quedan a la vista para completarlos
+  const rellenar = (t) => rellenarHuecos(t, { nombre: primerNombre });
   const elegirRapida = (r) => { setTexto(rellenar(r.texto)); setTimeout(() => { if (area.current) { ajustarAlto(area.current); area.current.focus(); } }, 0); };
   function teclaArea(e) {
     if (verRapidas) {

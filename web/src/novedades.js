@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.201': {
+    coach: [
+      'A quién escribir: lo que te escribió a la vista, «Cómo está» cada uno, si se enfría, lo próximo y lo pendiente de hablar.',
+      'Mensajes en cuatro tonos (también con humor), varios temas a la vez, más situaciones, tus respuestas y tu manera de escribir.',
+      'Programa el mensaje, «Recuérdamelo», apunta temas pendientes (también en su ficha) y la ronda con los de Hoy. Migración 086.',
+    ],
+  },
   '0.200': {
     atleta: [
       'Versión 200: el cielo de Hoy sigue la hora, con la luna de verdad y el tiempo que hace. Y en Ajustes, el tema «Con el sol».',

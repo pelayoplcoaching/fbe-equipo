@@ -6,10 +6,14 @@
 //   'pronto'    va por debajo del objetivo, pero le acabas de escribir: le toca otra vez dentro de uno o dos días
 //   'al_dia'    cumple el objetivo
 //   'pospuesto' lo has dejado para otro día
+// (v0.201) También 'hoy', aunque vayas al día: su cumpleaños, una carrera, la vuelta de una pausa, tu recordatorio o un
+// tema que te apuntaste para hoy (el porqué de cada motivo). Y si tocaba hoy pero tienes un mensaje programado para él,
+// 'pronto': ya le llega.
 // Son reglas a la vista, no una puntuación: el porqué de cada uno sale escrito.
-import { contactoDe, haceDias } from './contactos.js';
+import { contactoDe, haceDias, cuandoSale } from './contactos.js';
 import { motivosDe, cuandoFue } from './motivos.js';
 import { sumarDias } from '../fechas.js';
+import { proximoHito, textoHito } from '../panel-atletas.js';
 
 export const AJUSTES_RADAR = {
   objetivo: 2,      // días de contacto personal en los últimos 7
@@ -21,12 +25,15 @@ export const NOMBRE_GRUPO_RADAR = { hoy: 'Hoy', pronto: 'En unos días', al_dia:
 const primerNombre = (n) => String(n || '').trim().split(/\s+/)[0] || 'tu atleta';
 
 // Una fila del radar para un atleta activo
-export function filaRadar({ resumen: r, contacto, sesiones = [], records = [], checkinEl = null, hoy, pospuestoHasta = null, ajustes = AJUSTES_RADAR }) {
+// extra: lo de ese atleta que trae datos/radar.js (ver motivosDe); programado: { enviar_en } si tienes un mensaje
+// programado para él que aún no ha salido
+export function filaRadar({ resumen: r, contacto, sesiones = [], records = [], checkinEl = null, hoy, pospuestoHasta = null, ajustes = AJUSTES_RADAR, extra = {}, programado = null }) {
   const c = contacto || contactoDe(null, r.atleta_id);
-  const motivos = motivosDe({ resumen: r, sesiones, records, ultimoContacto: c.ultimo, checkinEl, hoy });
+  const motivos = motivosDe({ resumen: r, sesiones, records, ultimoContacto: c.ultimo, checkinEl, hoy, extra: { ...extra, teEscribio: c.teEscribio || null } });
   const { objetivo, separacion } = { ...AJUSTES_RADAR, ...ajustes };
   const faltan = Math.max(0, objetivo - c.en7);
   const urgente = motivos.find((m) => m.urgente) || null;
+  const toca = motivos.find((m) => m.pideHoy) || null;
   let grupo, porque;
   if (pospuestoHasta && pospuestoHasta > hoy) {
     grupo = 'pospuesto';
@@ -37,6 +44,9 @@ export function filaRadar({ resumen: r, contacto, sesiones = [], records = [], c
   } else if (urgente) {
     grupo = 'hoy';
     porque = urgente.id === 'dia_malo' ? 'Llegó en un día difícil y aún no habéis hablado' : 'Molestia fuerte en el check-in y aún no habéis hablado';
+  } else if (toca) {
+    grupo = 'hoy';
+    porque = toca.pideHoy;
   } else if (faltan > 0 && (c.diasSin == null || c.diasSin >= separacion)) {
     grupo = 'hoy';
     porque = c.ultimo == null ? 'Ningún mensaje personal tuyo en las últimas 4 semanas' : `Tu último mensaje personal fue ${haceDias(c.diasSin)}`;
@@ -48,11 +58,26 @@ export function filaRadar({ resumen: r, contacto, sesiones = [], records = [], c
     grupo = 'al_dia';
     porque = `${c.en7 === 1 ? '1 día' : `${c.en7} días`} de contacto en los últimos 7`;
   }
+  // Con un mensaje tuyo programado, quien tocaba hoy pasa a «En unos días»: ya le llega
+  if (grupo === 'hoy' && programado?.enviar_en) {
+    grupo = 'pronto';
+    porque = `Tienes un mensaje programado para ${cuandoSale(programado.enviar_en, hoy)}`;
+  }
   return {
     atleta_id: r.atleta_id, nombre: r.nombre, primerNombre: primerNombre(r.nombre), foto: r.foto || null, servicio: r.servicio,
     contacto: c, objetivo, faltan, grupo, porque, urgente: !!urgente, teEscribio: c.teEscribio || null, motivos, motivo: motivos[0] || null,
     pospuestoHasta: grupo === 'pospuesto' ? pospuestoHasta : null,
+    // (v0.201) lo que tiene abierto contigo, si se está enfriando, lo programado, lo próximo y lo que te escribió
+    pendientes: motivos.filter((m) => m.pendiente), enfriando: extra.enfriando || null, programado: programado || null,
+    hito: hitoDe(r, extra, hoy), mensajeAtleta: c.teEscribio ? (extra.mensajeAtleta || null) : null,
+    resumen: r, extra,
   };
+}
+
+// Lo próximo que tiene (lo de la lista de Atletas, sin los pagos): { tipo, fecha, dias, texto } o null
+function hitoDe(r, extra, hoy) {
+  const h = proximoHito({ ...r, cobro: null }, { cumple: extra.cumple || null, carreras: (extra.carreras || []).filter((e) => e.fecha >= hoy) }, hoy);
+  return h ? { ...h, texto: textoHito(h) } : null;
 }
 
 // «mañana», «pasado mañana», «el jueves»
@@ -80,10 +105,12 @@ export function ordenRadar(filas) {
 // El radar entero. resumenes: las filas del panel (api.resumenes); contactos: contactosPorAtleta(…);
 // sesiones y records: { [atleta_id]: [...] }; checkins: { [atleta_id]: día en que envió el último }; pospuestos:
 // { [atleta_id]: hasta }. Solo salen los atletas activos.
-export function radar({ resumenes = [], contactos = {}, sesiones = {}, records = {}, checkins = {}, pospuestos = {}, hoy, ajustes = AJUSTES_RADAR }) {
+// (v0.201) extra: { [atleta_id]: lo suyo de datos/radar.js }; programados: { [atleta_id]: { enviar_en } }
+export function radar({ resumenes = [], contactos = {}, sesiones = {}, records = {}, checkins = {}, pospuestos = {}, hoy, ajustes = AJUSTES_RADAR, extra = {}, programados = {} }) {
   const filas = ordenRadar(resumenes.filter((r) => r && r.estado === 'activo').map((r) => filaRadar({
     resumen: r, contacto: contactoDe(contactos, r.atleta_id), sesiones: sesiones[r.atleta_id] || [], records: records[r.atleta_id] || [],
     checkinEl: checkins[r.atleta_id] || null, hoy, pospuestoHasta: pospuestos[r.atleta_id] || null, ajustes,
+    extra: extra[r.atleta_id] || {}, programado: programados[r.atleta_id] || null,
   })));
   const cuenta = Object.fromEntries(GRUPOS_RADAR.map((g) => [g, filas.filter((f) => f.grupo === g).length]));
   const objetivo = { ...AJUSTES_RADAR, ...ajustes }.objetivo;

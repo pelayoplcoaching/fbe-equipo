@@ -40,6 +40,8 @@ import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
+import { leerPendiente, pendientesPorAtleta } from '../logica/radar/pendientes.js';
+import { limpiarEstilo } from '../logica/radar/borrador.js';
 import { progresoAtleta } from '../logica/progreso-revision.js';
 import { limpiarPanelAtleta, limpiarAjustesPanel, hoyTocaDe } from '../logica/panel-atletas.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
@@ -4602,6 +4604,43 @@ export function crearApi(backend) {
       await b.upsert('panel_ajustes', [{ usuario_id: uid(), datos: limpiarAjustesPanel(datos) }], 'usuario_id');
       return true;
     },
+    // (v0.201, 086) ¿Está la 086 (las respuestas guardadas con su situación y tu manera de escribir en «A quién
+    // escribir»)? true / false / null (no se sabe: sin conexión)
+    async radar086() {
+      if (!api._v086) {
+        const pr = (async () => {
+          try { await b.select('radar_ajustes', { limit: 1, cols: 'usuario_id' }); await b.select('respuestas_guardadas', { limit: 1, cols: 'id,situacion' }); return true; }
+          catch (e) {
+            const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
+            if (/radar_ajustes|situacion|schema cache|does not exist|no existe|relation|column|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) return false;
+            return null;
+          }
+        })();
+        api._v086 = pr;
+        pr.then((x) => { if (x == null && api._v086 === pr) api._v086 = null; });
+      }
+      return api._v086;
+    },
+    // Tu manera de escribir en los borradores ({ saludo, apodo, cierre, emoji, corto }); undefined sin la 086 (entonces
+    // se queda en el aparato)
+    async estiloRadar() {
+      if ((await api.radar086()) !== true) return undefined;
+      const [x] = await b.select('radar_ajustes', { limit: 1 });
+      return limpiarEstilo(x?.datos?.estilo);
+    },
+    async guardarEstiloRadar(estilo) {
+      if ((await api.radar086()) !== true) return false;
+      const [x] = await b.select('radar_ajustes', { limit: 1 }).catch(() => []);
+      const datos = { ...(x?.datos && typeof x.datos === 'object' ? x.datos : {}), estilo: limpiarEstilo(estilo) };
+      await b.upsert('radar_ajustes', [{ usuario_id: uid(), datos }], 'usuario_id');
+      return true;
+    },
+    // Guardar una respuesta tuya (desde el chat o desde «A quién escribir»), con su situación si la base la tiene
+    async crearRespuesta({ titulo, texto, situacion = null, orden = 0 }) {
+      const fila = { titulo: String(titulo || '').trim().slice(0, 80), texto: String(texto || '').trim().slice(0, 4000), orden };
+      if (situacion && (await api.radar086()) === true) fila.situacion = String(situacion).slice(0, 40);
+      return api.crear('respuestas_guardadas', fila);
+    },
     // (v0.199) Hoy toca: de cada atleta con semana en curso, la sesión prevista hoy o hecha hoy → { id: { hecha, nombre } }
     async hoyTocaEquipo(filas, hoy = hoyISO()) {
       const xs = (filas || []).filter((f) => f?.semana_id);
@@ -6673,7 +6712,9 @@ export function crearApi(backend) {
         b.select('notas_coach', { eq: { atleta_id: atletaId }, order: [['creado_en', 'desc']] }),
       ]);
       // (v0.186) las notas de un ejercicio (las del editor) no salen entre las notas de la ficha
-      return { atleta, checkins, pesos, molestias, notas: (notas || []).filter((n) => !leerNotaEjercicio(n.texto)) };
+      // (v0.201) ni tus temas pendientes de «A quién escribir»: van aparte (los abiertos y los ya hablados)
+      return { atleta, checkins, pesos, molestias, notas: (notas || []).filter((n) => !leerNotaEjercicio(n.texto) && !leerPendiente(n.texto)),
+        pendientes: pendientesPorAtleta(notas || [], { todos: true })[atletaId] || [] };
     },
     // Lo que tiene puesto este atleta (para que el coach vea de un vistazo cuánto le pide la app y lo mantenga sencillo)
     async funcionesAtleta(atletaId) {

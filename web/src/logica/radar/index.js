@@ -5,3 +5,5 @@ export * from './motivos.js';
 export * from './borrador.js';
 export * from './radar.js';
 export * from './local.js';
+export * from './pendientes.js';
+export * from './senales.js';

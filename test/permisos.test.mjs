@@ -5335,6 +5335,41 @@ console.log('\nLa revisión semanal del coach (migración 040)');
   await q(`delete from atletas_panel`);
   await q(`delete from panel_ajustes`);
 
+  // (v0.201, 086) «A quién escribir»: el tema de cada respuesta guardada y la manera de escribir del coach
+  check((await q(`select numero from fbe_migraciones where numero = 86`)).length === 1
+    && (await q(`select relname from pg_class where relname = 'radar_ajustes' and relrowsecurity and relnamespace = 'public'::regnamespace`)).length === 1
+    && (await q(`select 1 from information_schema.role_table_grants where table_name = 'radar_ajustes' and grantee in ('anon', 'PUBLIC')`)).length === 0
+    && (await q(`select 1 from information_schema.columns where table_name = 'respuestas_guardadas' and column_name = 'situacion'`)).length === 1, '(086) su tabla, con RLS y sin nada para quien no ha entrado, y el tema de las respuestas');
+  check(!(await q(`select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'radar_ajustes_preparar' and not ('search_path=""' = any(coalesce(p.proconfig, '{}')))`)).length
+    && (await q(`select count(*)::int n from pg_proc where proname = 'radar_ajustes_preparar' and not prosecdef`))[0].n === 1, '(086) su función, con search_path vacío y sin permisos de su dueño');
+  await como(pelayo, 'aal2');
+  await q(`insert into radar_ajustes (datos) values ('{"estilo":{"saludo":"nombre","cierre":"¡Vamos!"}}')`);
+  await q(`insert into respuestas_guardadas (titulo, texto, situacion) values ('Récord', 'Récord en {ejercicio}. Buen trabajo', 'record')`);
+  const aj086 = await q(`select usuario_id, datos from radar_ajustes`);
+  const r086 = await q(`select situacion from respuestas_guardadas where titulo = 'Récord'`);
+  const mal086 = [];
+  for (const [sql, args] of [
+    [`update radar_ajustes set datos = '[1,2]'`, []],
+    [`update radar_ajustes set datos = $1::jsonb`, [JSON.stringify({ x: 'y'.repeat(17000) })]],
+    [`update respuestas_guardadas set situacion = $1 where titulo = 'Récord'`, ['x'.repeat(41)]],
+    [`update respuestas_guardadas set situacion = $1 where titulo = 'Récord'`, ['a\nb']],
+    [`update respuestas_guardadas set situacion = '' where titulo = 'Récord'`, []],
+  ]) { try { await q(sql, args); mal086.push(null); } catch (e) { mal086.push(e.message); } }
+  check(aj086.length === 1 && aj086[0].usuario_id === pelayo && aj086[0].datos.estilo.saludo === 'nombre' && r086[0]?.situacion === 'record' && mal086.every(Boolean),
+    `(086) el coach guarda su manera de escribir a su nombre y el tema de una respuesta; unos ajustes que no son un objeto (o de más de 16 KB) o un tema largo, con saltos o vacío, no${mal086.some((x) => !x) ? ` (pasaron: ${mal086.map((x, i) => (x ? null : i)).filter((x) => x != null)})` : ''}`);
+  await como(ana);
+  const ve086 = [...await q(`select * from radar_ajustes`), ...await q(`select * from respuestas_guardadas`)];
+  let eAna086 = null;
+  try { await q(`insert into radar_ajustes (datos) values ('{}')`); } catch (e) { eAna086 = e.message; }
+  await q(`delete from radar_ajustes`);
+  await como(intruso);
+  const veIntruso086 = await q(`select * from radar_ajustes`);
+  await su();
+  check(!ve086.length && /row-level security/.test(eAna086 || '') && !veIntruso086.length && (await q(`select count(*)::int n from radar_ajustes`))[0].n === 1,
+    '(086) un atleta ni ve ni toca la manera de escribir ni las respuestas del coach (ni puede poner la suya), ni nadie más');
+  await q(`delete from radar_ajustes`);
+  await q(`delete from respuestas_guardadas where titulo = 'Récord'`);
+
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
   const sin39 = new PGlite();
   await sin39.exec(readFileSync(new URL('./entorno-supabase.sql', import.meta.url), 'utf8'));

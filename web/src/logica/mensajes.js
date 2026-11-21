@@ -227,6 +227,19 @@ export function filtrarRapidas(lista = [], consulta = '') {
   return [...filas].sort((a, b) => (normalLetras(b.titulo || '').includes(q) ? 1 : 0) - (normalLetras(a.titulo || '').includes(q) ? 1 : 0)).slice(0, 8);
 }
 
+// (v0.201) Los huecos de las respuestas guardadas: {nombre}, {apodo}, {sesion}, {ejercicio}, {marca}, {objetivo} y {dias}.
+// Se rellenan los que se saben; los que no, se quedan a la vista ({ejercicio}) para que el coach los complete.
+// {apodo} sin apodo es su nombre.
+export const HUECOS = ['nombre', 'apodo', 'sesion', 'ejercicio', 'marca', 'objetivo', 'dias'];
+export function rellenarHuecos(texto, datos = {}) {
+  const d = { ...datos };
+  if (!d.apodo && d.nombre) d.apodo = d.nombre;
+  return String(texto ?? '').replace(/\{(nombre|apodo|sesion|ejercicio|marca|objetivo|dias)\}/g, (todo, k) => {
+    const v = d[k];
+    return v == null || String(v).trim() === '' ? todo : String(v).trim();
+  });
+}
+
 // Borradores: lo que se empieza a escribir y no se envía, por conversación, en el propio móvil. almacen: algo con
 // getItem/setItem/removeItem/key/length (localStorage); si falla (bloqueado o lleno), no pasa nada.
 export const PREFIJO_BORRADOR = 'fbe-borrador-';

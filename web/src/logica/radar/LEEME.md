@@ -103,3 +103,39 @@ emojis y el 10 % nombra al atleta.
 - No tiene frases propias del coach ni objetivo distinto por servicio: `AJUSTES_RADAR` y `FRASES` están preparados para
   ello.
 - No avisa con notificaciones ni cuenta contactos por otros canales, salvo los que el coach apunta a mano.
+
+## v0.201: lo que te cuenta de cada uno, lo pendiente y los mensajes en cuatro tonos
+
+**Datos** (`datos/radar.js`, todo con `catch`: lo que falte se queda vacío): el texto de lo último que te escribió y de
+lo último que le preguntaste (solo esos dos mensajes, por id), su último check-in entero, sus datos personales (apodo,
+porqué, favoritos, cumpleaños), sus carreras de los últimos 3 días y los próximos 7, la última pausa terminada, su
+última conexión (si no la oculta), tu nota, etiquetas y recordatorio de Atletas (085), tus temas pendientes, los
+objetivos que propuso y los vídeos sin corregir. Al abrir su fila, además de sus récords: sus objetivos
+(`objetivoPrincipal`) y lo que le has escrito en 4 semanas (para no repetirle una frase).
+
+**Motivos nuevos** (`motivos.js`, con `extra`): contestarle (`responder`), tu pregunta sin respuesta (de 3 a 14 días),
+tu recordatorio, tus pendientes, la nota del check-in, vídeos, objetivo propuesto, receta, se enfría, se pasa del RPE,
+carga, hábitos, comidas, peso, sin bloque, cumpleaños (hoy o ayer), carrera antes y después, vuelta de una pausa,
+primera semana, aniversario, fin de bloque, bloque nuevo, descarga, objetivo cumplido o cerca, Navidad. Cada motivo
+lleva `pendiente` (sale en «Pendiente de hablar» hasta que le escribes después de su día) y `pideHoy` (el porqué para
+escribirle hoy aunque vaya al día: cumpleaños, carrera hoy o mañana, después de una carrera, vuelta de una pausa,
+aniversario hoy, tu recordatorio o un tema tuyo, si no le has escrito desde entonces). `SITUACIONES` (36) son las de
+la biblioteca para elegir a mano.
+
+**Reparto**: lo de siempre, más `pideHoy` → «Hoy». Si toca «Hoy» y tienes un mensaje programado para él, «En unos días».
+
+**Se enfría** (`senales.js`): con dos de tres señales: no abre la app en 7 días o más; las dos últimas semanas
+acabadas, 60 % o menos de las tres anteriores (si hacía 1,5 o más por semana); te escribe la mitad o menos que en las
+dos semanas anteriores (si te escribía 4 o más).
+
+**Tus pendientes** (`pendientes.js`): en `notas_coach` con una marca (`#pend:AAAA-MM-DD# texto`, y `:hecho:AAAA-MM-DD`
+al hablarlo). Las notas de la ficha no los enseñan como notas: van aparte, con «Hecho» y los ya hablados.
+
+**Borradores** (`borrador.js`): cada motivo en cuatro tonos (`TONOS`), con frases con dato (primero) y para cualquiera;
+`borradorVarios` une varios temas («Por cierto, …», «Y otra cosa: …»); `aplicarEstilo` pone tu manera de escribir
+(su nombre al empezar, tu cierre, un emoji, más corto); con `evitar` se salta lo ya enviado. Los huecos de tus
+respuestas (`rellenarHuecos`, en `logica/mensajes.js`): {nombre}, {apodo}, {sesion}, {ejercicio}, {marca}, {objetivo},
+{dias}.
+
+**La 086**: `respuestas_guardadas.situacion` (el tema de cada respuesta) y `radar_ajustes` (tu manera de escribir, solo
+tuya). Sin ella, la manera de escribir se guarda en el aparato y las respuestas no llevan tema.

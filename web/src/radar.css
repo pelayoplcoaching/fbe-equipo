@@ -1,0 +1,73 @@
+/* v0.201: «A quién escribir», primera tanda (ui/coach/RadarContacto.jsx y RadarBorrador.jsx): lo que te escribio, como
+   esta, lo pendiente de hablar, los temas, los cuatro tonos, tus respuestas, programar, la ronda y tu manera de escribir.
+   Solo ASCII; colores, tamanos y espacios, con tokens. */
+.rad-cab-acciones { display: flex; flex-wrap: wrap; margin-top: var(--esp-2); }
+.rad-cab-acciones .btn { flex: 1 1 auto; }
+/* En el borrador, los temas se ven todos (en varias filas), no en una tira que se desliza */
+.rad-temas.selector-chips { flex-wrap: wrap; overflow-x: visible; }
+.rad-temas.selector-chips button { flex: 0 1 auto; max-width: 100%; white-space: normal; text-align: left; min-height: 36px; }
+/* Las acciones del borrador: las que caben en cada fila, sin partir las palabras */
+.rad-acciones { display: flex; flex-wrap: wrap; }
+.rad-acciones .btn { flex: 1 1 auto; white-space: nowrap; }
+.rad-ronda { display: grid; gap: var(--esp-10); }
+
+/* Lo que te escribio, a la vista */
+.rad-cita { display: grid; gap: var(--esp-2); margin: 0; padding: var(--esp-8) var(--esp-12); border-left: var(--filo-marca) solid var(--morado); border-radius: 0 var(--r-10) var(--r-10) 0; background: var(--hoja-2); min-width: 0; }
+.revision-fila.hecha .rad-cita { background: var(--hoja); }
+.rad-cita-texto { color: var(--tinta); font-size: var(--letra-14); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Lo que se abre al tocar «Escribirle» */
+.rad-borrador { padding-top: var(--esp-4); }
+.rad-como, .rad-pend { display: grid; gap: var(--esp-8); padding: var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); min-width: 0; }
+.revision-fila.hecha .rad-como, .revision-fila.hecha .rad-pend { background: var(--hoja); }
+.rad-como h2, .rad-pend h2 { margin: 0; font-size: var(--letra-13); font-weight: 700; color: var(--tinta-2); }
+.rad-datos { display: grid; gap: var(--esp-6); margin: 0; }
+.rad-dato { display: grid; grid-template-columns: minmax(96px, 30%) 1fr; gap: var(--esp-10); align-items: baseline; min-width: 0; }
+.rad-dato dt { font-size: var(--letra-12); color: var(--tinta-2); }
+.rad-dato dd { margin: 0; font-size: var(--letra-14); color: var(--tinta); overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 420px) { .rad-dato { grid-template-columns: 1fr; gap: var(--esp-2); } }
+.rad-enfria { display: grid; gap: var(--esp-4); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--aviso-suave); border: var(--filo-fino) solid var(--aviso-borde); color: var(--tinta); }
+.rad-enfria ul { margin: 0; padding-left: var(--esp-18); }
+
+.rad-pend-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.rad-pend-fila { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-8); min-width: 0; }
+.rad-pend-incluir { display: flex; align-items: flex-start; gap: var(--esp-8); min-width: 0; font-size: var(--letra-14); color: var(--tinta); cursor: pointer; }
+.rad-pend-incluir input { margin-top: var(--esp-2); flex: none; width: var(--ico-18); height: var(--ico-18); accent-color: var(--morado); }
+.rad-pend-incluir span { overflow-wrap: anywhere; min-width: 0; }
+.rad-pend-nuevo input[type="text"] { flex: 1 1 180px; min-width: 0; }
+.rad-pend-nuevo input, .rad-pend-nuevo select, .rad-recordar select, .rad-programar input, .rad-guardar input, .rad-guardar select, .rad-estilo input[type="text"] {
+  min-height: 36px; padding: var(--esp-4) var(--esp-10); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; font-size: var(--letra-14);
+}
+.rad-pend-nuevo select, .rad-recordar select, .rad-guardar select { max-width: 100%; }
+
+/* Los temas: los detectados y cualquiera de la biblioteca */
+.rad-mas svg { width: var(--ico-14); height: var(--ico-14); }
+.rad-situaciones { display: grid; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); }
+.rad-situaciones-fila { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+
+/* Los cuatro tonos, cada uno con su propuesta entera */
+.rad-tonos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--esp-8); }
+.rad-tono { display: grid; gap: var(--esp-4); align-content: start; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); cursor: pointer; min-width: 0; }
+.rad-tono.elegido { border-color: var(--morado); box-shadow: var(--anillo-acento-fino); background: var(--morado-suave); }
+.rad-tono:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+.rad-tono-nombre { font-size: var(--letra-12); font-weight: 700; color: var(--tinta-2); }
+.rad-tono.elegido .rad-tono-nombre { color: var(--tinta); }
+.rad-tono-texto { font-size: var(--letra-14); color: var(--tinta); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) { .rad-tono { transition: border-color var(--mov-breve), background-color var(--mov-breve); } }
+
+.rad-aviso { color: var(--tinta); padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); background: var(--aviso-suave); border: var(--filo-fino) solid var(--aviso-borde); }
+.rad-recordar { align-items: center; gap: var(--esp-8); }
+.rad-programar { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.rad-programar .fila-envolver { align-items: center; gap: var(--esp-8); }
+
+/* Tus respuestas guardadas */
+.rad-mias { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.rad-mias-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.rad-mia-btn { display: grid; gap: var(--esp-2); width: 100%; text-align: left; padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; cursor: pointer; min-width: 0; }
+.rad-mia-btn:hover { border-color: var(--morado); }
+.rad-mias-titulo { display: flex; align-items: center; gap: var(--esp-6); flex-wrap: wrap; font-weight: 650; font-size: var(--letra-14); }
+.rad-guardar { align-items: center; gap: var(--esp-8); }
+.rad-guardar input[type="text"] { flex: 1 1 180px; min-width: 0; }
+
+/* Tu manera de escribir */
+.rad-ejemplo { margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta); font-size: var(--letra-14); overflow-wrap: anywhere; }

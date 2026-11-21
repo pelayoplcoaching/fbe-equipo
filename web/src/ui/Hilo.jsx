@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useUnaVez, useApp, useCarga, Icono, Cargando, Hoja, cuando } from './comunes.jsx';
+import { rellenarHuecos } from '../logica/mensajes.js';
 import { RESPUESTAS_EJEMPLO } from '../datos/respuestas.js';
 import { TextoConMomentos, BotonDibujo, reproductorDe, textoMomento } from './Video.jsx';
 import { describirDibujo, dibujoValido } from '../logica/dibujo.js';
@@ -173,7 +174,7 @@ export function HojaRespuestas({ nombre, texto, alCerrar, alElegir }) {
   const lista = useCarga(() => api.respuestasGuardadas(), []);
   const [titulo, setTitulo] = useState('');
   const [editar, setEditar] = useState(false);
-  const rellenar = (t) => t.replace(/\{nombre\}/g, nombre);
+  const rellenar = (t) => rellenarHuecos(t, { nombre });
   // El nombre del atleta (palabra entera, también con tildes) pasa a ser {nombre}
   const comoPlantilla = (t) => {
     if (!nombre || nombre === 'Atleta') return t;

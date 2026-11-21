@@ -106,3 +106,62 @@ export function textoContacto(c, { objetivo = 2 } = {}) {
   const ultimo = c?.ultimo ? `último: ${haceDias(c.diasSin)}` : 'sin mensajes tuyos en 4 semanas';
   return `${n} de ${objetivo} ${objetivo === 1 ? 'día' : 'días'} de contacto en los últimos 7 · ${ultimo}`;
 }
+
+// ---------- (v0.201) Lo último de cada conversación, lo programado y cuánto escribe el atleta ----------
+
+// El último mensaje del atleta y el último personal del coach (sin difusiones ni programados por salir), de cada atleta:
+// { [atleta_id]: { atleta: { id, dia, t } | null, coach: { id, dia, t } | null } }. Solo ids y días: el texto se pide aparte.
+export function ultimosMensajes(comentarios = [], { ahora = Date.now() } = {}) {
+  const masivos = difusiones(comentarios);
+  const out = {};
+  for (const c of comentarios) {
+    if (!vale(c, ahora) || !c.atleta_id) continue;
+    const t = instante(c);
+    const x = (out[c.atleta_id] ||= { atleta: null, coach: null });
+    if (c.autor === 'coach') {
+      if (masivos.has(c.id)) continue;
+      if (!x.coach || t > x.coach.t) x.coach = { id: c.id, t, dia: fechaMadrid(new Date(t)) };
+    } else if (c.autor === 'atleta' && !c.resumen_sesion) {
+      if (!x.atleta || t > x.atleta.t) x.atleta = { id: c.id, t, dia: fechaMadrid(new Date(t)) };
+    }
+  }
+  return out;
+}
+
+// Los mensajes del coach programados que aún no han salido: { [atleta_id]: { id, enviar_en } } (el más próximo)
+export function programadosPorAtleta(comentarios = [], { ahora = Date.now() } = {}) {
+  const out = {};
+  for (const c of comentarios) {
+    if (!c || c.autor !== 'coach' || c.eliminado_en || !c.enviar_en || !c.atleta_id || haSalido(c, ahora)) continue;
+    const prev = out[c.atleta_id];
+    if (!prev || Date.parse(c.enviar_en) < Date.parse(prev.enviar_en)) out[c.atleta_id] = { id: c.id, enviar_en: c.enviar_en };
+  }
+  return out;
+}
+
+// Cuántos mensajes te ha escrito cada atleta en los últimos 14 días y en los 14 anteriores: { [atleta_id]: { ult, prev } }
+export function mensajesDelAtleta(comentarios = [], { hoy = fechaMadrid(), ahora = Date.now() } = {}) {
+  const corte = sumarDias(hoy, -13), corte2 = sumarDias(hoy, -27);
+  const out = {};
+  for (const c of comentarios) {
+    if (!vale(c, ahora) || c.autor !== 'atleta' || c.resumen_sesion || !c.atleta_id) continue;
+    const dia = fechaMadrid(new Date(instante(c)));
+    if (dia > hoy || dia < corte2) continue;
+    const x = (out[c.atleta_id] ||= { ult: 0, prev: 0 });
+    if (dia >= corte) x.ult++; else x.prev++;
+  }
+  return out;
+}
+
+// «mañana a las 9:00», «hoy a las 18:30», «el jueves a las 9:00»
+export function cuandoSale(iso, hoy = fechaMadrid()) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t);
+  const dia = fechaMadrid(d);
+  const hora = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', minute: '2-digit' }).format(d);
+  const n = diasEntre(hoy, dia);
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const cuando = n <= 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${DIAS[new Date(`${dia}T12:00:00Z`).getUTCDay()]}` : `el ${Number(dia.slice(8, 10))}/${Number(dia.slice(5, 7))}`;
+  return `${cuando} a las ${hora}`;
+}

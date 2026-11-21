@@ -1,0 +1,392 @@
+// (v0.201) «A quién escribir»: lo que se abre al tocar «Escribirle». Cómo está el atleta, lo pendiente de hablar con
+// él, los temas (varios a la vez, también cualquiera de la biblioteca), el mensaje en cuatro tonos, tus respuestas
+// guardadas, y enviar, programar o dejarlo en su chat. Y la hoja de «Tu manera de escribir».
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useApp, useUnaVez, Icono, Hoja, Segmentos } from '../comunes.jsx';
+import { leerBorrador, guardarBorrador, rellenarHuecos } from '../../logica/mensajes.js';
+import { sumarDias, instanteMadrid, partesMadrid } from '../../logica/fechas.js';
+import { borradorVarios, aplicarEstilo, varianteInicial, cuantasConDatos, yaEnviada, TONOS, NOMBRE_TONO, MAX_BORRADOR,
+  cuandoFue, cuandoSale, resumenCheckin, SITUACIONES, NOMBRE_GRUPO, motivoDeSituacion, textoSeguimiento, NOMBRE_SITUACION,
+  ESTILO_DEFECTO, EMOJIS_ESTILO, MAX_CIERRE, limpiarEstilo, MAX_PENDIENTE } from '../../logica/radar/index.js';
+import { apuntarPendiente, pendienteHecho } from '../../datos/radar.js';
+import { useContactos, BotonWhatsApp } from './Integraciones.jsx';
+
+const almacen = () => { try { return window.localStorage; } catch { return null; } };
+const uuid = () => globalThis.crypto?.randomUUID?.() || `radar-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+const CLAVE_TONO = 'fbe-radar-tono';
+const tonoGuardado = () => { try { const t = almacen()?.getItem(CLAVE_TONO); return TONOS.includes(t) ? t : 'cercano'; } catch { return 'cercano'; } };
+const num = (x) => String(x).replace('.', ',');
+
+// Lo que se rellena solo en tus respuestas guardadas: su nombre, su apodo y el dato de los temas elegidos
+function datosHuecos(f, motivos) {
+  const d = { nombre: f.primerNombre, apodo: f.extra?.personal?.apodo || null };
+  for (const m of motivos) {
+    const x = m.datos || {};
+    if (x.sesion && !d.sesion) d.sesion = x.sesion;
+    if (x.ejercicio && !d.ejercicio) { d.ejercicio = x.ejercicio; d.marca = String(x.texto || '').replace(/\s*\(antes[^)]*\)\s*$/, '').trim() || null; }
+    if (x.objetivo && !d.objetivo) d.objetivo = x.objetivo;
+    if (x.dias != null && d.dias == null) d.dias = x.dias;
+  }
+  return d;
+}
+
+export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DEFECTO, abierto = null, alPendiente }) {
+  const { api, perfil, aviso } = useApp();
+  const pendientes = f.pendientes;
+  const otros = f.motivos.filter((m) => !m.pendiente);
+  const [aMano, setAMano] = useState([]);          // situaciones elegidas de la biblioteca
+  const todos = useMemo(() => [...f.motivos, ...aMano.filter((m) => !f.motivos.some((x) => x.clave === m.clave))], [f.motivos, aMano]);
+  const [sel, setSel] = useState(() => [f.motivo?.clave || 'saludo']);
+  const elegidos = todos.filter((m) => sel.includes(m.clave));
+  const [tono, setTono] = useState(tonoGuardado);
+  const [vuelta, setVuelta] = useState(0);
+  const base = useMemo(() => varianteInicial(f.atleta_id, hoy), [f.atleta_id, hoy]);
+  const evitar = abierto?.enviados || [];
+  const quien = { nombre: f.primerNombre, apodo: f.extra?.personal?.apodo || '' };
+  // (las propuestas solo cambian con lo elegido, no cada vez que la lista se recalcula: así no se pisa lo que escribes)
+  const estiloClave = JSON.stringify(estilo || {});
+  const claveSel = elegidos.map((m) => `${m.clave}:${JSON.stringify(m.datos || {})}`).join('|');
+  const propuestas = useMemo(() => Object.fromEntries(TONOS.map((t) => [t,
+    aplicarEstilo(borradorVarios(elegidos.length ? elegidos : [f.motivos[f.motivos.length - 1]], { hoy, variante: base, vuelta, tono: t, evitar }), estilo, quien)])),
+  [claveSel, vuelta, evitar.length, estiloClave]);
+  const [texto, setTexto] = useState(() => propuestas[tono]);
+  const tocado = useRef(false);
+  // Al cambiar de temas, de tono o de frase, el borrador se rehace con la propuesta (lo escrito a mano se cambia);
+  // cuando llega lo que ya le mandaste (para no repetir), solo si aún no has tocado el texto
+  const primera = useRef(true);
+  useEffect(() => { if (primera.current) { primera.current = false; return; } tocado.current = false; setTexto(propuestas[tono]); }, [claveSel, vuelta, tono, estiloClave]);
+  useEffect(() => { if (!tocado.current) setTexto(propuestas[tono]); }, [evitar.length]);
+  const [ocupado, una] = useUnaVez();
+  const [recordar, setRecordar] = useState(0);
+  const [verProgramar, setVerProgramar] = useState(false);
+  const [verMas, setVerMas] = useState(false);
+  const [verMias, setVerMias] = useState(false);
+  const area = useRef(null);
+  const contactos = useContactos([f.atleta_id]);   // (v0.105, 051) su teléfono, para escribirle por WhatsApp
+  const enChat = useMemo(() => leerBorrador(almacen(), perfil?.id, f.atleta_id)?.texto || null, [perfil?.id, f.atleta_id]);
+  useEffect(() => { area.current?.focus({ preventScroll: true }); }, []);
+
+  const alternar = (clave) => setSel((s) => (s.includes(clave) ? (s.length > 1 ? s.filter((x) => x !== clave) : s) : [...s, clave]));
+  const elegirTono = (t) => { setTono(t); try { almacen()?.setItem(CLAVE_TONO, t); } catch { /* */ } };
+  const elegirSituacion = (sid) => {
+    const m = motivoDeSituacion(sid, todos);
+    if (!todos.some((x) => x.clave === m.clave)) setAMano((l) => [...l, m]);
+    setSel((s) => (s.includes(m.clave) ? s : [...s, m.clave]));
+    setVerMas(false);
+  };
+  const limpio = texto.trim();
+  const repetido = limpio && yaEnviada(limpio, evitar);
+  const responder = elegidos.find((m) => m.id === 'responder' && m.datos?.mensajeId);
+
+  // Después de enviar (o programar): tus pendientes elegidos quedan hechos y, si lo pediste, uno nuevo para preguntar
+  async function despues() {
+    for (const m of elegidos.filter((x) => x.id === 'pendiente_mio' && x.datos?.notaId)) {
+      try { await pendienteHecho({ api }, { id: m.datos.notaId, texto: m.datos.texto, desde: m.desde }, { hoy }); alPendiente?.({ hecho: m.datos.notaId }); } catch { /* se queda abierto */ }
+    }
+    if (recordar > 0) {
+      const tema = elegidos.find((m) => !['saludo', 'responder', 'pendiente_mio', 'recordatorio'].includes(m.id));
+      const t = textoSeguimiento(tema?.etiqueta || '');
+      const desde = sumarDias(hoy, recordar);
+      try { const n = await apuntarPendiente({ api }, f.atleta_id, t, { desde }); alPendiente?.({ nuevo: { id: n?.id || uuid(), atleta_id: f.atleta_id, texto: t, desde, hecho: null } }); }
+      catch (e) { aviso(e?.message || 'No se ha podido apuntar el recordatorio', 'error'); }
+    }
+  }
+  const enviar = (enviarEn = null) => una(async () => {
+    if (!limpio) return;
+    try {
+      await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: uuid(), enviarEn, respondeA: responder?.datos?.mensajeId || null });
+      await despues();
+      aviso(enviarEn ? `Programado para ${cuandoSale(enviarEn, hoy)}` : `Mensaje enviado a ${f.primerNombre}`, 'ok');
+      alEnviar?.({ enviarEn, texto: limpio });
+    } catch (e) { aviso(e?.message || 'No se ha podido enviar: vuelve a intentarlo', 'error'); }
+  });
+  const alChat = () => {
+    if (limpio) guardarBorrador(almacen(), perfil?.id, f.atleta_id, limpio);
+    abrirAtleta?.(f.atleta_id, 'mensajes', null);
+  };
+  const idArea = `${id}-texto`;
+  const otras = TONOS.some((t) => elegidos.some((m) => cuantasConDatos(m, { hoy, tono: t }) > 1));
+  return (
+    <div id={id} class="pila-s rad-borrador">
+      <ComoEsta f={f} hoy={hoy} />
+      <Pendientes f={f} hoy={hoy} lista={pendientes} sel={sel} alternar={alternar} alPendiente={alPendiente} />
+
+      <div class="pila-xs">
+        <span class="peq secundario" id={`${id}-temas`}>De qué hablarle (puedes elegir varios)</span>
+        <div class="selector-chips rad-temas" role="group" aria-labelledby={`${id}-temas`}>
+          {[...otros, ...aMano.filter((m) => !f.motivos.some((x) => x.clave === m.clave))].map((m) => (
+            <button key={m.clave} aria-pressed={sel.includes(m.clave) ? 'true' : 'false'} onClick={() => alternar(m.clave)}>{m.etiqueta}</button>
+          ))}
+          <button class="rad-mas" aria-expanded={verMas ? 'true' : 'false'} onClick={() => setVerMas(!verMas)}><Icono n="mas" /> Más situaciones</button>
+        </div>
+        {verMas && (
+          <div class="rad-situaciones" role="group" aria-label="Todas las situaciones">
+            {SITUACIONES.map(([g, xs]) => (
+              <div key={g} class="pila-xs">
+                <span class="mini terciario">{NOMBRE_GRUPO[g]}</span>
+                <div class="rad-situaciones-fila">
+                  {xs.map(([sid, nombre]) => <button key={sid} class="btn btn-peq" onClick={() => elegirSituacion(sid)}>{nombre}</button>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div class="rad-tonos" role="radiogroup" aria-label="Tono del mensaje">
+        {TONOS.map((t) => (
+          <label key={t} class={`rad-tono ${tono === t ? 'elegido' : ''}`}>
+            <input type="radio" class="sr" name={`${id}-tono`} value={t} checked={tono === t} onChange={() => elegirTono(t)} />
+            <span class="rad-tono-nombre">{NOMBRE_TONO[t]}</span>
+            <span class="rad-tono-texto">{propuestas[t]}</span>
+          </label>
+        ))}
+      </div>
+
+      <div class="pila-xs revision-nota">
+        <label class="peq secundario" for={idArea}>Mensaje para {f.primerNombre} (edítalo a tu gusto)</label>
+        <textarea id={idArea} ref={area} rows="3" maxLength={MAX_BORRADOR} value={texto} onInput={(e) => { tocado.current = true; setTexto(e.currentTarget.value); }} />
+      </div>
+      {repetido && <p class="mini rad-aviso" style={{ margin: 0 }}>Ya le mandaste este mismo mensaje hace poco. Cambia alguna frase para que no le llegue repetido.</p>}
+      {responder && <p class="mini terciario" style={{ margin: 0 }}>Irá como respuesta a su mensaje.</p>}
+      {enChat && enChat !== limpio && <p class="mini terciario" style={{ margin: 0 }}>En su chat tienes un borrador a medias: «Abrir en su chat» lo cambia por este.</p>}
+      <div class="fila-envolver rad-recordar">
+        <label class="peq secundario" for={`${id}-recordar`}>Recuérdamelo para preguntarle cómo sigue</label>
+        <select id={`${id}-recordar`} value={String(recordar)} onChange={(e) => setRecordar(Number(e.currentTarget.value))}>
+          <option value="0">No</option><option value="3">En 3 días</option><option value="7">En 7 días</option>
+        </select>
+      </div>
+      <div class="revision-acciones rad-acciones">
+        <button class="btn btn-peq btn-primario" onClick={() => enviar()} disabled={ocupado || !limpio}><Icono n="mensaje" /> {ocupado ? 'Enviando…' : 'Enviar'}</button>
+        <button class="btn btn-peq" aria-expanded={verProgramar ? 'true' : 'false'} onClick={() => setVerProgramar(!verProgramar)} disabled={!limpio}><Icono n="reloj" /> Programar</button>
+        <button class="btn btn-peq" onClick={() => setVuelta((v) => v + 1)} disabled={!otras}>Otras frases</button>
+        <button class="btn btn-peq" aria-expanded={verMias ? 'true' : 'false'} onClick={() => setVerMias(!verMias)}><Icono n="guardar" /> Mis respuestas</button>
+        <button class="btn btn-peq" onClick={alChat} disabled={!abrirAtleta}>Abrir en su chat</button>
+        {contactos.datos && contactos.datos[f.atleta_id] && <BotonWhatsApp telefono={contactos.datos[f.atleta_id]} texto={limpio} />}
+      </div>
+      {verProgramar && <Programar hoy={hoy} ocupado={ocupado} alProgramar={(iso) => enviar(iso)} />}
+      {verMias && <MisRespuestas f={f} elegidos={elegidos} texto={limpio} alElegir={(t) => { tocado.current = true; setTexto(t); setVerMias(false); }} />}
+    </div>
+  );
+}
+
+// ---------- Cómo está: lo que sabes de él, en una tarjeta ----------
+function ComoEsta({ f, hoy }) {
+  const r = f.resumen || {};
+  const e = f.extra || {};
+  const filas = [];
+  const entrena = r.servicio !== 'nutricion';
+  if (entrena && r.semana) filas.push(['Bloque', `${r.bloque?.nombre ? `${r.bloque.nombre}, ` : ''}semana ${r.semana.numero} de ${r.semana.total}${r.semana.foco === 'descarga' ? ' (descarga)' : ''}`]);
+  else if (entrena && !r.bloque) filas.push(['Bloque', 'Sin bloque activo']);
+  const ult = (f.motivos.find((m) => m.id === 'saludo')?.datos) || {};
+  if (entrena && r.sesiones?.total) filas.push(['Esta semana', `${r.sesiones.completadas} de ${r.sesiones.total} sesiones${ult.sesion && ult.fecha ? `; la última, ${ult.sesion}, ${cuandoFue(ult.fecha, hoy)}` : ''}`]);
+  const ck = resumenCheckin(e.checkin);
+  if (ck?.partes?.length) filas.push([`Check-in${ck.semana ? ` (semana del ${Number(ck.semana.slice(8, 10))}/${Number(ck.semana.slice(5, 7))})` : ''}`, ck.partes.join(' · ')]);
+  if (ck?.nota) filas.push(['Su nota', `«${ck.nota}»`]);
+  if (r.servicio !== 'entrenamiento' && r.peso?.kg) filas.push(['Peso', `${num(r.peso.kg)} kg${r.peso.cambio != null ? ` (${r.peso.cambio > 0 ? '+' : ''}${num(r.peso.cambio)} desde el anterior)` : ''}`]);
+  const o = e.objetivo || null;
+  if (o) filas.push(['Objetivo', `${o.titulo}${o.pct != null ? `: ${o.pct} %` : ''}${o.conseguido ? ', conseguido' : o.aTiempo === true ? ', va en fecha' : o.aTiempo === false ? ', a este ritmo no llega a la fecha' : ''}`]);
+  const p = e.personal;
+  if (p?.apodo) filas.push(['Su apodo', p.apodo]);
+  if (p?.porque) filas.push(['Su porqué', `«${p.porque}»`]);
+  if (p?.favoritos?.length) filas.push(['Sus favoritos', p.favoritos.filter(Boolean).join(', ')]);
+  if (e.panel?.nota || e.panel?.etiquetas?.length) filas.push(['Tu nota', [e.panel?.nota, ...(e.panel?.etiquetas || [])].filter(Boolean).join(' · ')]);
+  if (f.hito) filas.push(['Próximo', f.hito.texto]);
+  if (e.conexion) {
+    const d = Math.max(0, Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${String(e.conexion).slice(0, 10)}T12:00:00Z`)) / 864e5));
+    filas.push(['La app', d === 0 ? 'La ha abierto hoy' : d === 1 ? 'La abrió ayer' : `La abrió hace ${d} días`]);
+  }
+  return (
+    <section class="rad-como" aria-label={`Cómo está ${f.primerNombre}`}>
+      <h2>Cómo está</h2>
+      {filas.length ? (
+        <dl class="rad-datos">
+          {filas.map(([k, v]) => <div key={k} class="rad-dato"><dt>{k}</dt><dd>{v}</dd></div>)}
+        </dl>
+      ) : <p class="peq secundario" style={{ margin: 0 }}>Aún no hay datos suyos de estas semanas.</p>}
+      {f.enfriando && (
+        <div class="rad-enfria">
+          <strong class="peq">Se está enfriando</strong>
+          <ul>{f.enfriando.razones.map((x) => <li key={x.id} class="peq">{x.texto}</li>)}</ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- Pendiente de hablar: lo abierto (se tacha solo al escribirle) y tus temas ----------
+function Pendientes({ f, hoy, lista, sel, alternar, alPendiente }) {
+  const { api, aviso } = useApp();
+  const [nuevo, setNuevo] = useState('');
+  const [cuando, setCuando] = useState(0);
+  const [ocupado, una] = useUnaVez();
+  const idNuevo = `rad-pend-${f.atleta_id}`;
+  const apuntar = (e) => {
+    e.preventDefault();
+    const t = nuevo.trim();
+    if (!t) return;
+    una(async () => {
+      const desde = sumarDias(hoy, cuando);
+      try {
+        const n = await apuntarPendiente({ api }, f.atleta_id, t, { desde });
+        alPendiente?.({ nuevo: { id: n?.id || uuid(), atleta_id: f.atleta_id, texto: t, desde, hecho: null } });
+        setNuevo('');
+        aviso(cuando ? `Apuntado: te saldrá ${cuando === 3 ? 'dentro de 3 días' : 'dentro de una semana'}` : 'Apuntado en sus pendientes', 'ok');
+      } catch (err) { aviso(err?.message || 'No se ha podido apuntar', 'error'); }
+    });
+  };
+  const hecho = (m) => una(async () => {
+    try { await pendienteHecho({ api }, { id: m.datos.notaId, texto: m.datos.texto, desde: m.desde }, { hoy }); alPendiente?.({ hecho: m.datos.notaId }); aviso('Hecho: ya no saldrá como pendiente', 'ok'); }
+    catch (err) { aviso(err?.message || 'No se ha podido marcar', 'error'); }
+  });
+  return (
+    <section class="rad-pend" aria-label={`Pendiente de hablar con ${f.primerNombre}`}>
+      <h2>Pendiente de hablar</h2>
+      {lista.length ? (
+        <ul class="rad-pend-lista">
+          {lista.map((m) => (
+            <li key={m.clave} class="rad-pend-fila">
+              <label class="rad-pend-incluir">
+                <input type="checkbox" checked={sel.includes(m.clave)} onChange={() => alternar(m.clave)} />
+                <span>{m.etiqueta}{m.desde && m.desde < hoy ? <span class="mini terciario"> · desde {cuandoFue(m.desde, hoy)}</span> : null}</span>
+              </label>
+              {m.id === 'pendiente_mio' && <button class="btn btn-peq" disabled={ocupado} onClick={() => hecho(m)} aria-label={`Hecho: ${m.etiqueta}`}><Icono n="hecho" /> Hecho</button>}
+            </li>
+          ))}
+        </ul>
+      ) : <p class="peq secundario" style={{ margin: 0 }}>Nada pendiente con {f.primerNombre}.</p>}
+      <form class="fila-envolver rad-pend-nuevo" onSubmit={apuntar}>
+        <label class="sr" for={idNuevo}>Apuntar un tema pendiente con {f.primerNombre}</label>
+        <input id={idNuevo} type="text" maxLength={MAX_PENDIENTE} placeholder="Apuntar un tema (solo lo ves tú)" value={nuevo} onInput={(e) => setNuevo(e.currentTarget.value)} />
+        <label class="sr" for={`${idNuevo}-cuando`}>Cuándo te sale</label>
+        <select id={`${idNuevo}-cuando`} value={String(cuando)} onChange={(e) => setCuando(Number(e.currentTarget.value))}>
+          <option value="0">Desde hoy</option><option value="3">En 3 días</option><option value="7">En 7 días</option>
+        </select>
+        <button class="btn btn-peq" type="submit" disabled={ocupado || !nuevo.trim()}><Icono n="mas" /> Apuntar</button>
+      </form>
+    </section>
+  );
+}
+
+// ---------- Programar el mensaje ----------
+function Programar({ hoy, ocupado, alProgramar }) {
+  const ahora = partesMadrid();
+  const opciones = [
+    ...(ahora.hora < '17:30' ? [['Hoy a las 18:00', instanteMadrid(hoy, '18:00')]] : []),
+    ['Mañana a las 9:00', instanteMadrid(sumarDias(hoy, 1), '09:00')],
+    ['Mañana a las 19:00', instanteMadrid(sumarDias(hoy, 1), '19:00')],
+  ];
+  const [dia, setDia] = useState(sumarDias(hoy, 1));
+  const [hora, setHora] = useState('09:00');
+  const otra = instanteMadrid(dia, hora);
+  return (
+    <div class="rad-programar pila-xs" role="group" aria-label="Programar el mensaje">
+      <div class="fila-envolver">
+        {opciones.map(([t, iso]) => <button key={t} class="btn btn-peq" disabled={ocupado || !iso} onClick={() => alProgramar(iso)}>{t}</button>)}
+      </div>
+      <div class="fila-envolver">
+        <label class="peq secundario" for="rad-prog-dia">Otro día</label>
+        <input id="rad-prog-dia" type="date" min={hoy} max={sumarDias(hoy, 90)} value={dia} onInput={(e) => setDia(e.currentTarget.value)} />
+        <label class="sr" for="rad-prog-hora">Hora</label>
+        <input id="rad-prog-hora" type="time" value={hora} onInput={(e) => setHora(e.currentTarget.value)} />
+        <button class="btn btn-peq" disabled={ocupado || !otra} onClick={() => alProgramar(otra)}>Programar</button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Tus respuestas guardadas, según el tema, y guardar el borrador como tuyo ----------
+function MisRespuestas({ f, elegidos, texto, alElegir }) {
+  const { api, aviso } = useApp();
+  const [lista, setLista] = useState(null);
+  const [titulo, setTitulo] = useState('');
+  const [situacion, setSituacion] = useState(() => elegidos.find((m) => m.id !== 'saludo')?.id || '');
+  const [ocupado, una] = useUnaVez();
+  const cargar = () => api.respuestasGuardadas().then((l) => setLista(l || [])).catch(() => setLista([]));
+  useEffect(() => { cargar(); }, []);
+  const temas = new Set(elegidos.map((m) => (m.id === 'molestia_fuerte' ? 'molestia' : m.id === 'dia_flojo' ? 'dia_malo' : m.id)));
+  const ordenadas = (lista || []).map((r) => ({ ...r, encaja: !!r.situacion && temas.has(r.situacion) })).sort((a, b) => Number(b.encaja) - Number(a.encaja));
+  const huecos = datosHuecos(f, elegidos);
+  // El nombre del atleta (palabra entera) pasa a ser {nombre}, como en el chat
+  const comoPlantilla = (t) => {
+    const n = f.primerNombre;
+    if (!n || n === 'tu atleta') return t;
+    const seguro = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return t.replace(new RegExp(`(^|[^\\p{L}])${seguro}(?!\\p{L})`, 'gu'), '$1{nombre}');
+  };
+  const guardar = (e) => {
+    e.preventDefault();
+    if (!titulo.trim() || !texto) return;
+    una(async () => {
+      try { await api.crearRespuesta({ titulo, texto: comoPlantilla(texto), situacion: situacion || null, orden: (lista?.length || 0) + 1 }); setTitulo(''); aviso('Guardada en tus respuestas', 'ok'); cargar(); }
+      catch (err) { aviso(err?.message || 'No se ha podido guardar', 'error'); }
+    });
+  };
+  return (
+    <div class="rad-mias pila-s">
+      {lista == null ? <p class="peq secundario" style={{ margin: 0 }}>Cargando tus respuestas…</p> : !ordenadas.length ? (
+        <p class="peq secundario" style={{ margin: 0 }}>Aún no tienes respuestas guardadas. Guarda este borrador como tuyo y te saldrá aquí y con «/» en el chat.</p>
+      ) : (
+        <ul class="rad-mias-lista">
+          {ordenadas.slice(0, 12).map((r) => (
+            <li key={r.id}>
+              <button class="rad-mia-btn" onClick={() => alElegir(rellenarHuecos(r.texto, huecos))}>
+                <span class="rad-mias-titulo">{r.titulo}{r.encaja ? <span class="chip mini ok">Para este tema</span> : r.situacion ? <span class="mini terciario"> · {NOMBRE_SITUACION[r.situacion] || r.situacion}</span> : null}</span>
+                <span class="mini terciario">{rellenarHuecos(r.texto, huecos).slice(0, 110)}{r.texto.length > 110 ? '…' : ''}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form class="fila-envolver rad-guardar" onSubmit={guardar}>
+        <label class="sr" for={`rad-mia-${f.atleta_id}`}>Nombre de la respuesta</label>
+        <input id={`rad-mia-${f.atleta_id}`} type="text" maxLength={80} placeholder="Guardar este borrador como…" value={titulo} onInput={(e) => setTitulo(e.currentTarget.value)} />
+        <label class="sr" for={`rad-mia-sit-${f.atleta_id}`}>Para qué tema</label>
+        <select id={`rad-mia-sit-${f.atleta_id}`} value={situacion} onChange={(e) => setSituacion(e.currentTarget.value)}>
+          <option value="">Sin tema</option>
+          {SITUACIONES.flatMap(([, xs]) => xs).map(([sid, nombre]) => <option key={sid} value={sid}>{nombre}</option>)}
+        </select>
+        <button class="btn btn-peq" type="submit" disabled={ocupado || !titulo.trim() || !texto}><Icono n="guardar" /> Guardar como mía</button>
+      </form>
+      <p class="mini terciario" style={{ margin: 0 }}>En tus respuestas, {'{nombre}'}, {'{apodo}'}, {'{sesion}'}, {'{ejercicio}'}, {'{marca}'}, {'{objetivo}'} y {'{dias}'} se rellenan solos con lo suyo.</p>
+    </div>
+  );
+}
+
+// ---------- Tu manera de escribir ----------
+export function HojaEstilo({ estilo, alGuardar, alCerrar }) {
+  const [e, setE] = useState(() => limpiarEstilo(estilo));
+  const cambia = (k, v) => setE((x) => ({ ...x, [k]: v }));
+  const ejemplo = aplicarEstilo(borradorVarios([{ id: 'record', datos: { ejercicio: 'sentadilla', texto: '100 kg × 5' } }, { id: 'sin_checkin', datos: {} }], { tono: 'cercano' }), e, { nombre: 'Ana', apodo: 'Anita' });
+  return (
+    <Hoja titulo="Tu manera de escribir" alCerrar={alCerrar}>
+      <div class="pila rad-estilo">
+        <p class="peq secundario" style={{ margin: 0 }}>Se aplica a todos los borradores de «A quién escribir». Siempre puedes editarlos antes de enviar.</p>
+        <div class="pila-xs">
+          <span class="peq" id="rad-est-saludo">Empezar con su nombre</span>
+          <Segmentos etiqueta="Empezar con su nombre" valor={e.saludo} alCambiar={(v) => cambia('saludo', v || e.saludo)}
+            opciones={[['no', 'No'], ['nombre', '«Ana, …»'], ['hola', '«Hola, Ana. …»']]} />
+        </div>
+        <label class="fila-envolver"><input type="checkbox" checked={e.apodo} onChange={(ev) => cambia('apodo', ev.currentTarget.checked)} /> <span class="peq">Con su apodo, si lo ha puesto en su perfil</span></label>
+        <div class="pila-xs">
+          <label class="peq" for="rad-est-cierre">Tu cierre habitual (opcional)</label>
+          <input id="rad-est-cierre" type="text" maxLength={MAX_CIERRE} placeholder="Por ejemplo: ¡Vamos!" value={e.cierre} onInput={(ev) => cambia('cierre', ev.currentTarget.value)} />
+        </div>
+        <div class="pila-xs">
+          <span class="peq">Un emoji al final</span>
+          <Segmentos etiqueta="Un emoji al final" valor={e.emoji} alCambiar={(v) => cambia('emoji', v ?? '')}
+            opciones={EMOJIS_ESTILO.map((x) => [x, x || 'Ninguno'])} />
+        </div>
+        <label class="fila-envolver"><input type="checkbox" checked={e.corto} onChange={(ev) => cambia('corto', ev.currentTarget.checked)} /> <span class="peq">Más corto: solo la primera frase de cada tema</span></label>
+        <div class="pila-xs">
+          <span class="peq secundario">Así quedaría</span>
+          <p class="rad-ejemplo">{ejemplo}</p>
+        </div>
+        <div class="revision-acciones">
+          <button class="btn btn-primario" onClick={() => alGuardar(e)}>Guardar</button>
+          <button class="btn" onClick={() => setE({ ...ESTILO_DEFECTO })}>Como venía</button>
+        </div>
+      </div>
+    </Hoja>
+  );
+}

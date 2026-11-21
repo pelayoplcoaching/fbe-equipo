@@ -5,7 +5,11 @@ import { difusiones, contactosPorAtleta, contactoDe, textoContacto, haceDias, DI
   motivosDe, semanasSeguidas, cuandoFue, queApunto,
   borradorDe, cuantasFrases, varianteInicial, MAX_BORRADOR,
   radar, filaRadar, ordenRadar, textoResumenRadar, AJUSTES_RADAR, GRUPOS_RADAR,
-  leerLocal, limpiarLocal, marcarHablado, posponer, PREFIJO_RADAR } from '../web/src/logica/radar/index.js';
+  leerLocal, limpiarLocal, marcarHablado, posponer, PREFIJO_RADAR,
+  TONOS, NOMBRE_TONO, borradorVarios, aplicarEstilo, limpiarEstilo, ESTILO_DEFECTO, EMOJIS_ESTILO, normalFrase, yaEnviada, cuantasConDatos, hayFrases,
+  SITUACIONES, motivoDeSituacion, ultimosMensajes, programadosPorAtleta, mensajesDelAtleta, cuandoSale,
+  leerPendiente, escribirPendiente, pendientesPorAtleta, textoSeguimiento, enfriandoDe, resumenCheckin, objetivoPrincipal } from '../web/src/logica/radar/index.js';
+import { rellenarHuecos, HUECOS } from '../web/src/logica/mensajes.js';
 import { sumarDias } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -138,35 +142,71 @@ console.log('Borradores');
   ];
   const sesionesDe = [[], [{ nombre: 'Torso A', fecha: dia(0), preparacion: { sueno: 1, energia: 1, molestias: 1 } }], [{ nombre: 'Pierna B', fecha: dia(2), preparacion: { sueno: 1, energia: 3, molestias: 3 } }], [{ nombre: 'Full body', fecha: dia(5), preparacion: null }]];
   const records = [{ ejercicio: 'Sentadilla barra alta', texto: '1RM estimado 100 kg (antes 97,5)', fecha: dia(1) }];
-  const vistos = new Set(); let malos = [], n = 0;
+  // Todas las situaciones de la biblioteca, sin datos (elegidas a mano), en los cuatro tonos
+  const aMano = SITUACIONES.flatMap(([, xs]) => xs.map(([id]) => ({ id, datos: {} })));
+  const vistos = new Set(); const malos = []; let n = 0;
+  const GENERO = /\b(listo|lista|preparado|preparada|motivado|motivada|cansado|cansada|bienvenido|vivo|viva|sobrado|sobrada|seguro|segura|contento|contenta)\b/i;
+  const revisa = (m, t, tono, v) => {
+    n++;
+    const entrada = /[\s:]$/.test(t);   // las entradas («Visto. », «Un tema pendiente: ») esperan que sigas escribiendo
+    if (!t || t.length > 200 || /undefined|null|NaN|\[object|\s{2}|\(\)/.test(t) || /[\u{1F300}-\u{1FAFF}☀-➿]/u.test(t) || /^(hola|buenas)/i.test(t)
+      || (!entrada && /\.$/.test(t)) || (!entrada && t !== t.trim()) || t[0] !== t[0].toUpperCase() || GENERO.test(t)) malos.push(`${m.id}/${tono}/${v}: ${t}`);
+  };
   for (const r of casos) for (const ss of sesionesDe) for (const rec of [[], records]) {
     for (const m of motivosDe({ resumen: r, sesiones: ss, records: rec, hoy: HOY })) {
       vistos.add(m.id);
-      for (let v = 0; v < cuantasFrases(m); v++) {
-        const t = borradorDe(m, { hoy: HOY, variante: v }); n++;
-        if (!t || t.length > 160 || /undefined|null|NaN|\[object|\s{2}|\(\)/.test(t) || /[\u{1F300}-\u{1FAFF}☀-➿]/u.test(t) || /^(hola|buenas)/i.test(t) || /[.!]$/.test(t) || t !== t.trim() || t[0] !== t[0].toUpperCase()) malos.push(`${m.id}/${v}: ${t}`);
-      }
+      for (const tono of TONOS) for (let v = 0; v < cuantasFrases(m, tono); v++) revisa(m, borradorDe(m, { hoy: HOY, vuelta: v, tono }), tono, v);
     }
   }
-  check(malos.length === 0, `${n} borradores (todos los motivos y frases): cortos, sin emojis, sin saludo de fórmula ni punto final, sin huecos${malos.length ? `: ${malos.slice(0, 3).join(' | ')}` : ''}`);
-  check(['molestia_fuerte', 'molestia', 'dia_malo', 'dia_flojo', 'parado', 'pendientes', 'cumplimiento', 'sin_checkin', 'record', 'semana_completa', 'racha', 'saludo'].every((k) => vistos.has(k)), 'la prueba pasa por los doce motivos');
+  for (const m of aMano) for (const tono of TONOS) for (let v = 0; v < cuantasFrases(m, tono); v++) revisa(m, borradorDe(m, { hoy: HOY, vuelta: v, tono }), tono, v);
+  check(malos.length === 0, `${n} borradores (todos los motivos, las situaciones a mano y los cuatro tonos): cortos, sin emojis, sin saludo de fórmula ni punto final, sin huecos y sin depender del género${malos.length ? `: ${malos.slice(0, 3).join(' | ')}` : ''}`);
+  check(['molestia_fuerte', 'molestia', 'dia_malo', 'dia_flojo', 'parado', 'pendientes', 'cumplimiento', 'sin_checkin', 'record', 'semana_completa', 'racha', 'saludo'].every((k) => vistos.has(k)), 'la prueba pasa por los doce motivos de siempre');
+  check(aMano.length >= 36 && aMano.every((m) => hayFrases(m.id)) && TONOS.length === 4 && TONOS.every((t) => NOMBRE_TONO[t]), 'cada situación de la biblioteca tiene sus frases, y hay cuatro tonos');
   const m = (id, datos) => ({ id, datos });
-  check(borradorDe(m('parado', { dias: 6 }), { hoy: HOY, variante: 0 }) === 'Llevas 6 días sin apuntar nada. ¿Todo bien?', 'lleva días sin registrar');
-  check(borradorDe(m('parado', { dias: null }), { hoy: HOY, variante: 0 }) === '¿Has podido empezar ya? Si tienes cualquier duda con la app o con el programa, dime', 'quien no ha empezado');
-  check(borradorDe(m('record', { ejercicio: 'Sentadilla', texto: '1RM estimado 100 kg (antes 97,5)' }), { hoy: HOY, variante: 0 }) === 'Récord en Sentadilla: 1RM estimado 100 kg. Buen trabajo', 'el récord, con la marca y sin la coletilla «(antes…)»');
-  check(borradorDe(m('semana_completa', { total: 4 }), { hoy: HOY, variante: 0 }) === 'Semana completa, 4 de 4. Buen trabajo' && borradorDe(m('semana_completa', { total: 1 }), { hoy: HOY, variante: 0 }) === 'Semana completa. Buen trabajo', 'semana completa (con una sola sesión, sin la cuenta)');
-  check(borradorDe(m('pendientes', { hechas: 1, total: 4, faltan: 3 }), { hoy: HOY, variante: 2 }) === 'Te quedan 3 sesiones esta semana. Si vas justo de tiempo, lo reorganizamos'
-    && borradorDe(m('pendientes', { hechas: 1, total: 2, faltan: 1 }), { hoy: HOY, variante: 2 }).startsWith('Te queda 1 sesión'), 'le quedan sesiones (en singular también)');
-  check(borradorDe(m('dia_malo', { sesion: 'Pierna A', fecha: dia(1), que: 'habías dormido mal' }), { hoy: HOY, variante: 0 }) === 'Ayer apuntaste que habías dormido mal. ¿Cómo estás hoy?'
-    && borradorDe(m('dia_malo', { sesion: 'Pierna A', fecha: HOY, que: 'habías dormido mal' }), { hoy: HOY, variante: 0 }) === 'Hoy apuntaste que habías dormido mal. ¿Cómo ha ido?'
-    && borradorDe(m('dia_flojo', { sesion: 'Pierna A', fecha: dia(3), que: 'habías dormido mal' }), { hoy: HOY, variante: 2 }) === '¿Qué tal la sesión del lunes? Vi que habías dormido mal', 'el día difícil, con su día («del lunes», «de ayer»)');
-  check(borradorDe(m('molestia', { zonas: 'Rodilla, hombro' }), { hoy: HOY, variante: 0 }) === 'Vi lo que apuntaste en el check-in (rodilla, hombro). ¿Cómo sigue?' && borradorDe(m('molestia', { zonas: '' }), { hoy: HOY, variante: 0 }) === 'Vi lo que apuntaste en el check-in. ¿Cómo sigue?', 'la molestia, con sus zonas (o sin ellas)');
-  check(borradorDe(m('saludo', { sesion: 'Torso A', fecha: dia(1) }), { hoy: HOY, variante: 0 }) === '¿Qué tal fue Torso A ayer?' && borradorDe(m('saludo', {}), { hoy: HOY, variante: 0 }) === '¿Cómo va la semana?'
-    && borradorDe(m('saludo', { nutricion: true }), { hoy: HOY, variante: 0 }) === '¿Qué tal llevas el plan esta semana?', 'el saludo: con su última sesión, sin ella y para quien solo lleva nutrición');
-  check(borradorDe(m('saludo', {}), { hoy: HOY, variante: 3 }) === borradorDe(m('saludo', {}), { hoy: HOY, variante: 0 }) && borradorDe(m('saludo', {}), { hoy: HOY, variante: -1 }) === borradorDe(m('saludo', {}), { hoy: HOY, variante: 2 }), 'las frases dan la vuelta (cualquier entero vale)');
-  check(borradorDe(null, { hoy: HOY }) === '¿Cómo va la semana?' && borradorDe(m('raro', {}), { hoy: HOY }) === '¿Cómo va la semana?' && cuantasFrases(m('raro')) === 3, 'un motivo desconocido cae en el saludo');
-  check(varianteInicial('a', HOY) === varianteInicial('a', HOY) && varianteInicial('a', HOY) !== varianteInicial('b', HOY) && varianteInicial('a', HOY) !== varianteInicial('a', dia(1)) && Number.isInteger(varianteInicial('a', HOY)), 'cada atleta empieza por una frase distinta, estable en el día');
-  check(borradorDe(m('record', { ejercicio: 'x'.repeat(900), texto: '' }), { hoy: HOY }).length === MAX_BORRADOR, `nunca pasa de ${MAX_BORRADOR} letras`);
+  check(borradorDe(m('parado', { dias: 6 }), { hoy: HOY, tono: 'directo' }) === 'Llevas 6 días sin apuntar nada. ¿Todo bien?', 'lleva días sin registrar');
+  check(borradorDe(m('parado', { dias: null }), { hoy: HOY }) === '¿Has podido empezar ya? Si tienes cualquier duda con la app o con el programa, dime', 'quien no ha empezado');
+  check(borradorDe(m('record', { ejercicio: 'Sentadilla', texto: '1RM estimado 100 kg (antes 97,5)' }), { hoy: HOY, tono: 'directo' }) === 'Récord en Sentadilla: 1RM estimado 100 kg. Buen trabajo', 'el récord, con la marca y sin la coletilla «(antes…)»');
+  check(borradorDe(m('semana_completa', { total: 4 }), { hoy: HOY, tono: 'directo' }) === 'Semana completa, 4 de 4. Buen trabajo' && borradorDe(m('semana_completa', { total: 1 }), { hoy: HOY, tono: 'directo' }) === 'Semana completa. Buen trabajo', 'semana completa (con una sola sesión, sin la cuenta)');
+  check(borradorDe(m('pendientes', { hechas: 1, total: 4, faltan: 3 }), { hoy: HOY, tono: 'directo' }) === 'Te quedan 3 sesiones esta semana. Si vas justo de tiempo, lo reorganizamos'
+    && borradorDe(m('pendientes', { hechas: 1, total: 2, faltan: 1 }), { hoy: HOY, tono: 'directo' }).startsWith('Te queda 1 sesión'), 'le quedan sesiones (en singular también)');
+  check(borradorDe(m('dia_malo', { sesion: 'Pierna A', fecha: dia(1), que: 'habías dormido mal' }), { hoy: HOY }) === 'Ayer apuntaste que habías dormido mal. ¿Cómo estás hoy?'
+    && borradorDe(m('dia_malo', { sesion: 'Pierna A', fecha: HOY, que: 'habías dormido mal' }), { hoy: HOY }) === 'Hoy apuntaste que habías dormido mal. ¿Cómo ha ido?'
+    && borradorDe(m('dia_flojo', { sesion: 'Pierna A', fecha: dia(3), que: 'habías dormido mal' }), { hoy: HOY, vuelta: 1 }) === '¿Qué tal la sesión del lunes? Vi que habías dormido mal', 'el día difícil, con su día («del lunes», «de ayer»)');
+  check(borradorDe(m('molestia', { zonas: 'Rodilla, hombro' }), { hoy: HOY }) === 'Vi lo que apuntaste en el check-in (rodilla, hombro). ¿Cómo sigue?' && borradorDe(m('molestia', { zonas: '' }), { hoy: HOY }) === 'Vi lo que apuntaste en el check-in. ¿Cómo sigue?'
+    && borradorDe(m('molestia', { zonas: 'Hombros (moderada), Zona lumbar (leve)' }), { hoy: HOY }) === 'Vi lo que apuntaste en el check-in (hombros, zona lumbar). ¿Cómo sigue?', 'la molestia, con sus zonas (sin la intensidad entre paréntesis) o sin ellas');
+  check(borradorDe(m('saludo', { sesion: 'Torso A', fecha: dia(1) }), { hoy: HOY }) === '¿Qué tal fue Torso A ayer?' && borradorDe(m('saludo', {}), { hoy: HOY }) === '¿Cómo va la semana?'
+    && borradorDe(m('saludo', { nutricion: true }), { hoy: HOY }) === '¿Qué tal llevas el plan esta semana?', 'el saludo: con su última sesión, sin ella y para quien solo lleva nutrición');
+  check(borradorDe(m('saludo', {}), { hoy: HOY, vuelta: 2 }) === borradorDe(m('saludo', {}), { hoy: HOY, vuelta: 0 }) && borradorDe(m('saludo', {}), { hoy: HOY, vuelta: -1 }) === borradorDe(m('saludo', {}), { hoy: HOY, vuelta: 1 }), 'las frases dan la vuelta (cualquier entero vale)');
+  check(borradorDe(null, { hoy: HOY }) === '¿Cómo va la semana?' && borradorDe(m('raro', {}), { hoy: HOY }) === '¿Cómo va la semana?' && cuantasFrases(m('raro')) === 2, 'un motivo desconocido cae en el saludo');
+  // Los cuatro tonos, distintos; primero las frases con su dato; lo ya enviado se salta
+  const rec = m('record', { ejercicio: 'Press banca', texto: '80 kg × 5' });
+  const cuatro = TONOS.map((t) => borradorDe(rec, { hoy: HOY, tono: t }));
+  check(new Set(cuatro).size === 4 && cuatro.every((t) => t.includes('Press banca')), `los cuatro tonos dicen cosas distintas, todos con el dato: ${cuatro.join(' | ')}`);
+  check(borradorDe(rec, { hoy: HOY, tono: 'humor', variante: 7 }).includes('Press banca'), 'la variante (atleta y día) gira entre las frases con dato, sin caer en la de cualquiera');
+  const yaDicho = [normalFrase(cuatro[1])];
+  check(borradorDe(rec, { hoy: HOY, tono: 'directo', evitar: yaDicho }) !== cuatro[1] && yaEnviada(`${cuatro[1]}!`, yaDicho) && !yaEnviada('Hola', yaDicho), 'una frase que ya le mandaste se salta (y se reconoce aunque cambie un signo)');
+  check(borradorDe(m('sin_checkin', {}), { hoy: HOY, tono: 'motivador', evitar: [normalFrase(borradorDe(m('sin_checkin', {}), { hoy: HOY, tono: 'motivador' }))] }).length > 0, 'si todas se enviaron ya, vuelve a la primera (nunca vacío)');
+  check(cuantasConDatos(rec, { hoy: HOY, tono: 'cercano' }) === 2 && cuantasConDatos(m('video', {}), { hoy: HOY, tono: 'directo' }) === 1, 'cuántas frases distintas hay con esos datos (para «Otras frases»)');
+  // Varios temas en un mensaje
+  const mol = m('molestia', { zonas: 'Hombros' });
+  const ck = m('sin_checkin', {});
+  const varios = borradorVarios([ck, rec, mol], { hoy: HOY });
+  check(varios.startsWith('Vi lo que apuntaste en el check-in (hombros). ¿Cómo sigue? Por cierto, he visto el récord en Press banca') && varios.includes(' Y otra cosa: no me ha llegado tu check-in') && !/\.$/.test(varios), `varios temas, en orden de importancia y unidos («Por cierto», «Y otra cosa»): «${varios}»`);
+  check(borradorVarios([m('responder', { mensajeId: 'x' }), rec], { hoy: HOY, tono: 'directo' }) === 'Visto. Récord en Press banca: 80 kg × 5. Buen trabajo', 'contestarle es una entrada: lo demás va detrás sin «Por cierto»');
+  check(borradorVarios([], { hoy: HOY }) === '¿Cómo va la semana?' && borradorVarios([rec], { hoy: HOY, tono: 'directo' }) === borradorDe(rec, { hoy: HOY, tono: 'directo' }), 'sin temas, saludar; con uno, su frase');
+  // Tu manera de escribir
+  const base = borradorVarios([mol, rec], { hoy: HOY });
+  check(aplicarEstilo(base, { saludo: 'nombre' }, { nombre: 'Ana' }).startsWith('Ana, vi lo que apuntaste') && aplicarEstilo(base, { saludo: 'hola' }, { nombre: 'Ana' }).startsWith('Hola, Ana. Vi lo que'), 'empezar con su nombre («Ana, …» o «Hola, Ana. …»)');
+  check(aplicarEstilo(base, { saludo: 'nombre', apodo: true }, { nombre: 'Ana', apodo: 'Anita' }).startsWith('Anita, ') && aplicarEstilo(base, { saludo: 'nombre', apodo: true }, { nombre: 'Ana', apodo: '' }).startsWith('Ana, '), 'con su apodo si lo tiene (si no, su nombre)');
+  check(aplicarEstilo('Récord nuevo. Buen trabajo', { cierre: '¡Vamos!', emoji: '💪' }) === 'Récord nuevo. Buen trabajo. ¡Vamos! 💪' && aplicarEstilo('¿Cómo sigue?', { cierre: 'Un abrazo' }) === '¿Cómo sigue? Un abrazo', 'tu cierre y tu emoji, al final y con su punto');
+  check(aplicarEstilo(base, { corto: true }) === 'Vi lo que apuntaste en el check-in (hombros). Por cierto, he visto el récord en Press banca (80 kg × 5)', `más corto: la primera frase de cada tema («${aplicarEstilo(base, { corto: true })}»)`);
+  check(aplicarEstilo('Visto. ', { cierre: '¡Vamos!', emoji: '💪', saludo: 'nombre' }, { nombre: 'Ana' }) === 'Ana, visto. ', 'a una entrada no se le pone cierre ni emoji (sigues escribiendo tú)');
+  check(aplicarEstilo('¿Qué tal?', ESTILO_DEFECTO, { nombre: 'Ana' }) === '¿Qué tal?' && aplicarEstilo('RPE alto', { saludo: 'nombre' }, { nombre: 'Ana' }) === 'Ana, RPE alto', 'de serie no cambia nada; las siglas no se pasan a minúscula');
+  const raro = limpiarEstilo({ saludo: 'grito', apodo: 'si', cierre: `a\nb${'x'.repeat(60)}`, emoji: '🐍', corto: 1 });
+  check(raro.saludo === 'no' && raro.apodo === false && raro.cierre.length === 40 && !/\n/.test(raro.cierre) && raro.emoji === '' && raro.corto === false && EMOJIS_ESTILO.includes(''), 'lo que no vale se limpia (saludo, emoji, cierre de 40 como mucho y sin saltos)');
+  // Los huecos de tus respuestas
+  check(rellenarHuecos('{nombre}: {ejercicio} en {dias} días. {apodo}', { nombre: 'Ana', ejercicio: 'Sentadilla', dias: 3 }) === 'Ana: Sentadilla en 3 días. Ana'
+    && rellenarHuecos('Hola {apodo}, {marca} y {objetivo}', { nombre: 'Ana', apodo: 'Anita' }) === 'Hola Anita, {marca} y {objetivo}' && HUECOS.length === 7, 'los huecos se rellenan con lo que se sabe; lo que no, se queda a la vista; {apodo} sin apodo es su nombre');
 }
 
 console.log('A quién escribir hoy');
@@ -234,6 +274,91 @@ console.log('Lo apuntado a mano (en el dispositivo)');
   check(igual(leerLocal(a, 'u1', HOY), { fuera: {}, pospuestos: {} }), 'ni con lo guardado estropeado');
 }
 
+console.log('(v0.201) Lo último de cada conversación, lo programado y cuánto escribe');
+{
+  const cs = [M('a', 'coach', 3), M('a', 'atleta', 1), M('b', 'atleta', 4), M('b', 'coach', 2), M('c', 'coach', 1, { cliente_id: 'd' }), M('d', 'coach', 1, { cliente_id: 'd' }),
+    M('e', 'atleta', 0, { resumen_sesion: true }), M('e', 'coach', 2)];
+  const u = ultimosMensajes(cs, { ahora: AHORA });
+  check(u.a.atleta.dia === dia(1) && u.a.coach.dia === dia(3) && u.b.coach.dia === dia(2) && u.b.atleta.dia === dia(4), 'lo último del atleta y lo último tuyo, de cada uno');
+  check(!u.c?.coach && !u.d?.coach && !u.e.atleta && u.e.coach.dia === dia(2), 'sin las difusiones ni los resúmenes automáticos de sesión');
+  const futuro = new Date(AHORA + 15 * 3600000).toISOString(), luego = new Date(AHORA + 40 * 3600000).toISOString();
+  const pg = programadosPorAtleta([{ id: 'p1', atleta_id: 'a', autor: 'coach', creado_en: dia(0), enviar_en: luego }, { id: 'p2', atleta_id: 'a', autor: 'coach', creado_en: dia(0), enviar_en: futuro },
+    { id: 'p3', atleta_id: 'b', autor: 'coach', creado_en: dia(1), enviar_en: new Date(AHORA - 3600000).toISOString() }, { id: 'p4', atleta_id: 'c', autor: 'coach', creado_en: dia(0), enviar_en: futuro, eliminado_en: dia(0) }], { ahora: AHORA });
+  check(pg.a?.id === 'p2' && !pg.b && !pg.c, 'lo programado que aún no ha salido (el más próximo); ni lo ya enviado ni lo eliminado');
+  check(cuandoSale('2026-11-06T08:00:00Z', HOY) === 'mañana a las 9:00' && cuandoSale('2026-11-05T17:30:00Z', HOY) === 'hoy a las 18:30' && cuandoSale('2026-11-09T08:00:00Z', HOY) === 'el lunes a las 9:00', 'cuándo sale, en palabras y en hora de Madrid');
+  const me = mensajesDelAtleta([M('a', 'atleta', 1), M('a', 'atleta', 3), M('a', 'atleta', 15), M('a', 'atleta', 16), M('a', 'atleta', 20), M('a', 'atleta', 27), M('a', 'atleta', 30), M('a', 'coach', 1)], { hoy: HOY, ahora: AHORA });
+  check(me.a.ult === 2 && me.a.prev === 4, 'cuántos mensajes te ha escrito en las 2 últimas semanas y en las 2 anteriores');
+}
+
+console.log('(v0.201) Tus temas pendientes');
+{
+  const t = escribirPendiente('  Preguntarle   por la boda ', { desde: HOY });
+  check(t === '#pend:2026-11-05# Preguntarle por la boda' && leerPendiente(t).texto === 'Preguntarle por la boda' && leerPendiente(t).desde === HOY && leerPendiente(t).hecho === null, 'se escriben con su marca (y se leen)');
+  check(leerPendiente(escribirPendiente('x', { desde: HOY, hecho: dia(-1) })).hecho === dia(-1) && escribirPendiente('', { desde: HOY }) === null && escribirPendiente('x', { desde: 'mal' }) === null && leerPendiente('Nota normal') === null && leerPendiente('#ej:abc# nota') === null, 'hechos, vacíos, sin fecha y notas normales');
+  const notas = [{ id: '1', atleta_id: 'a', texto: '#pend:2026-11-04# Uno' }, { id: '2', atleta_id: 'a', texto: '#pend:2026-11-01:hecho:2026-11-03# Hecho' }, { id: '3', atleta_id: 'a', texto: 'Normal' }, { id: '4', atleta_id: 'a', texto: '#pend:2026-11-02# Antes' }];
+  const pa = pendientesPorAtleta(notas);
+  check(pa.a.map((p) => p.id).join(',') === '4,1' && pendientesPorAtleta(notas, { todos: true }).a.length === 3, 'los abiertos de cada atleta, del más antiguo al más nuevo (con todos: también los hechos)');
+  check(textoSeguimiento('Molestias: Hombros') === 'Preguntar cómo sigue: molestias: Hombros' && textoSeguimiento('') === 'Preguntar cómo sigue', 'el texto de «Recuérdamelo»');
+}
+
+console.log('(v0.201) Cómo está: si se enfría, su check-in y su objetivo');
+{
+  const sem = (xs) => ({ servicio: 'completo', chispas: { sesiones: xs.map((h) => ({ hechas: h, total: 3 })) } });
+  const enf = enfriandoDe({ resumen: sem([3, 3, 3, 1, 0, 0]), mensajes: { ult: 1, prev: 6 }, conexion: `${dia(9)}T10:00:00Z`, hoy: HOY });
+  check(enf && enf.razones.length === 3 && /9 días/.test(enf.razones[0].texto) && /0,5 sesiones por semana, antes 3/.test(enf.razones[1].texto) && /1 mensaje en 2 semanas, antes 6/.test(enf.razones[2].texto), 'se enfría: no abre la app, entrena menos que su media y te escribe menos (con el porqué)');
+  check(enfriandoDe({ resumen: sem([3, 3, 3, 1, 0, 0]), mensajes: null, conexion: null, hoy: HOY }) === null, 'con una sola señal, no');
+  check(enfriandoDe({ resumen: sem([1, 1, 1, 0, 0, 0]), mensajes: { ult: 0, prev: 2 }, conexion: `${dia(2)}T10:00:00Z`, hoy: HOY }) === null, 'quien entrenaba poco o escribía poco, no cuenta como enfriarse');
+  const rc = resumenCheckin({ semana_inicio: '2026-11-02', horas_sueno: '5-6', energia: 2, recuperacion: 4, motivacion: 5, adherencia_desayuno: 5, adherencia_comida: 3, notas: ' Semana dura ', revisado_en: null });
+  check(rc.partes.join(' · ') === 'Sueño 5-6 h · Energía 2/5 · Recuperación 4/5 · Motivación 5/5 · Comida 80 %' && rc.nota === 'Semana dura' && rc.bajo.join(',') === 'sueño,energía' && resumenCheckin(null) === null, 'su check-in en una línea, con su nota y lo que va bajo');
+  const ob = objetivoPrincipal([{ id: 'x', titulo: 'Viejo', estado: 'completado' }, { id: 'y', titulo: 'Sentadilla 140', auto: { pct: 88, prevision: { fecha: '2027-01-10', aTiempo: true } } }]);
+  check(ob.titulo === 'Sentadilla 140' && ob.pct === 88 && ob.cerca && !ob.conseguido && ob.aTiempo === true, 'su objetivo en curso, con su progreso: cerca y en fecha');
+  check(objetivoPrincipal([{ titulo: 'Peso 70', autoPeso: { pct: 100, llegado: true } }]).conseguido && objetivoPrincipal([{ titulo: 'Peso 70', autoPeso: { pct: 20, alejandose: true } }]).peso.alejandose && objetivoPrincipal([]) === null, 'conseguido, peso que se aleja y sin objetivos');
+}
+
+console.log('(v0.201) Los motivos nuevos');
+{
+  const con = (extra, r = {}, ultimo = null) => motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 }, ...r }), ultimoContacto: ultimo, hoy: HOY, extra });
+  const resp = con({ teEscribio: { dia: dia(1) }, mensajeAtleta: { id: 'm1', texto: '¿Cambio el press?' } });
+  check(resp[0].id === 'responder' && resp[0].pendiente && resp[0].datos.pregunta && resp[0].datos.mensajeId === 'm1' && resp[0].etiqueta === 'Te escribió ayer', 'te escribió: lo primero que contestar, con su texto (y si era una pregunta)');
+  check(ids(con({ preguntaCoach: { texto: '¿Qué tal la rodilla?', dia: dia(4) } })) === 'pregunta_sin_respuesta,saludo' && ids(con({ preguntaCoach: { texto: '¿Qué tal?', dia: dia(1) } })) === 'saludo'
+    && ids(con({ preguntaCoach: { texto: 'Buen trabajo', dia: dia(4) } })) === 'saludo', 'tu pregunta sin respuesta, desde los 3 días (y solo si era una pregunta)');
+  const pm = con({ pendientes: [{ id: 'n1', texto: 'Preguntarle por la boda', desde: dia(1) }, { id: 'n2', texto: 'Futuro', desde: dia(-2) }] });
+  check(pm[0].id === 'pendiente_mio' && pm[0].clave === 'pend-n1' && pm[0].pideHoy && !pm.some((m) => m.etiqueta === 'Futuro'), 'tus pendientes que ya han llegado (los de otro día, aún no), con su clave y pidiendo hoy');
+  check(!con({ pendientes: [{ id: 'n1', texto: 'x', desde: dia(1) }] }, {}, dia(0))[0].pideHoy, 'si ya le has escrito desde entonces, no pide hoy (pero sigue pendiente hasta que lo marques)');
+  check(con({ recordatorio: { fecha: HOY, texto: 'Mirar su rodilla' } })[0].pideHoy === 'Tu recordatorio: «Mirar su rodilla»' && ids(con({ recordatorio: { fecha: dia(-1), texto: 'x' } })) === 'saludo', 'tu recordatorio de la lista de Atletas, cuando llega su día');
+  check(ids(con({ checkin: { notas: 'Duermo poco', revisado_en: null, semana_inicio: '2026-10-26' } })) === 'nota_checkin,saludo' && ids(con({ checkin: { notas: 'x', revisado_en: '2026-11-04', semana_inicio: '2026-10-26' } })) === 'saludo'
+    && ids(con({ checkin: { notas: 'x', revisado_en: null, semana_inicio: '2026-10-26' } }, {}, dia(0))) === 'saludo', 'una nota en su check-in sin revisar ni contestar');
+  check(ids(con({ videos: { n: 2, desde: dia(2) }, propuestas: 1 }, { alertas: [{ tipo: 'receta', nivel: 'aviso', texto: 'Pide cambiar una receta' }] })) === 'video,objetivo_propuesto,receta,saludo', 'vídeos sin corregir, un objetivo propuesto y una receta que pide cambiar');
+  const flojos = con({ enfriando: { razones: [{ id: 'app', texto: 'a' }, { id: 'entrena', texto: 'b' }] } }, { alertas: [{ tipo: 'esfuerzo', nivel: 'info', texto: 'RPE' }, { tipo: 'carga', nivel: 'info', texto: 'C' }, { tipo: 'habitos', nivel: 'info', texto: 'H' }, { tipo: 'nutricion_registro', texto: 'N' }, { tipo: 'nutricion_ritmo', texto: 'P' }, { tipo: 'sin_bloque', nivel: 'aviso', texto: 'S' }] });
+  check(ids(flojos) === 'enfriando,esfuerzo,carga,habitos,comidas,peso,sin_bloque,saludo' && flojos[0].datos.razones.length === 2, 'se enfría y los avisos del panel que antes no miraba');
+  const cumpleHoy = con({ cumple: { mes: 11, dia: 5 } });
+  check(cumpleHoy[0].id === 'cumple' && cumpleHoy[0].pideHoy === 'Hoy es su cumpleaños' && con({ cumple: { mes: 11, dia: 4 } })[0].datos.cuando === 'ayer' && ids(con({ cumple: { mes: 11, dia: 4 } }, {}, dia(1))) === 'saludo', 'su cumpleaños hoy (o ayer, si aún no le has escrito)');
+  const car = con({ carreras: [{ nombre: '10K', fecha: dia(-1) }, { nombre: 'Media', fecha: dia(2) }, { nombre: 'Lejana', fecha: dia(-10) }] });
+  check(car.find((m) => m.id === 'carrera_antes')?.etiqueta === '10K: mañana' && car.find((m) => m.id === 'carrera_antes').pideHoy && car.find((m) => m.id === 'carrera_despues')?.datos.nombre === 'Media' && !car.some((m) => /Lejana/.test(m.etiqueta)), 'antes y después de una carrera (la de mañana pide hoy)');
+  check(con({ pausaFin: dia(2) })[0].id === 'vuelta_pausa' && ids(con({ pausaFin: dia(9) })) === 'saludo', 'vuelve de una pausa (en la última semana)');
+  check(ids(con({}, { fecha_alta: dia(3) })) === 'primera_semana,saludo' && con({}, { fecha_alta: '2025-11-05' })[0].pideHoy === 'Hoy hace 1 año que empezó en FBE' && ids(con({}, { fecha_alta: '2024-11-03' })) === 'aniversario,saludo', 'su primera semana y su aniversario con FBE');
+  check(ids(con({}, { semana: { numero: 4, total: 4, foco: 'descarga' }, bloque: { nombre: 'Fuerza' } })) === 'fin_bloque,descarga,saludo' && ids(con({}, { semana: { numero: 1, total: 4 } })) === 'bloque_nuevo,saludo', 'fin de bloque, bloque nuevo y descarga');
+  check(ids(con({ objetivo: { titulo: 'Sentadilla 140', conseguido: true } })) === 'objetivo_cumplido,saludo' && con({ objetivo: { titulo: 'S', cerca: true, pct: 90 } })[0].etiqueta === 'Cerca de su objetivo (90 %)', 'su objetivo, conseguido o cerca');
+  check(ids(motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 } }), hoy: '2026-12-24' })) === 'fiestas,saludo' && ids(motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 } }), hoy: '2027-01-07' })) === 'saludo', 'en Navidad, el tema de las fiestas');
+  check(motivoDeSituacion('viaje', []).etiqueta === 'De viaje' && motivoDeSituacion('molestia', motivosDe({ resumen: R({ alertas: [{ tipo: 'molestia', nivel: 'alerta', texto: 'Dolor grave: Rodilla' }] }), hoy: HOY })).id === 'molestia_fuerte' && motivoDeSituacion('raro', []).grupo === 'saludo', 'elegir una situación de la biblioteca (si ya está detectada, la detectada)');
+}
+
+console.log('(v0.201) A quién escribir: lo que pide hoy y lo programado');
+{
+  const alDia = [M('x', 'coach', 0), M('x', 'coach', 3)];
+  const cts = contactosPorAtleta(alDia, { hoy: HOY, ahora: AHORA });
+  const fila = (extra = {}, programado = null) => filaRadar({ resumen: R({ atleta_id: 'x', sesiones: { completadas: 2, total: 4 } }), contacto: cts.x, hoy: HOY, extra, programado });
+  check(fila().grupo === 'al_dia' && fila({ cumple: { mes: 11, dia: 5 } }).grupo === 'al_dia', 'al día; su cumpleaños no lo saca si hoy ya le has escrito');
+  const sin = contactosPorAtleta([M('y', 'coach', 2), M('y', 'coach', 3)], { hoy: HOY, ahora: AHORA });
+  const f2 = filaRadar({ resumen: R({ atleta_id: 'y', sesiones: { completadas: 2, total: 4 } }), contacto: sin.y, hoy: HOY, extra: { cumple: { mes: 11, dia: 5 } } });
+  check(f2.grupo === 'hoy' && f2.porque === 'Hoy es su cumpleaños' && f2.hito?.tipo === 'cumple', 'aunque vaya al día, su cumpleaños lo pone en «Hoy», con el porqué y su hito');
+  const lejos = contactosPorAtleta([M('z', 'coach', 9)], { hoy: HOY, ahora: AHORA });
+  const fz = filaRadar({ resumen: R({ atleta_id: 'z', sesiones: { completadas: 2, total: 4 } }), contacto: lejos.z, hoy: HOY, programado: { enviar_en: '2026-11-06T08:00:00Z' } });
+  check(fz.grupo === 'pronto' && fz.porque === 'Tienes un mensaje programado para mañana a las 9:00', 'si tocaba hoy pero tienes un mensaje programado, «En unos días»: ya le llega');
+  const fp = filaRadar({ resumen: R({ atleta_id: 'z', sesiones: { completadas: 2, total: 4 } }), contacto: lejos.z, hoy: HOY, extra: { pendientes: [{ id: 'n', texto: 'Boda', desde: dia(1) }], videos: { n: 1 } } });
+  check(fp.pendientes.map((m) => m.id).join(',') === 'pendiente_mio,video' && fp.extra.videos.n === 1, 'cada fila lleva lo pendiente de hablar y lo suyo');
+}
+
 console.log('Con la demo (lo que lee de la base)');
 // (v0.93) la demo siembra el contacto «hace N horas» y el radar cuenta por días de Madrid: de noche lo de hace unas
 // horas caía en el día anterior. Esta parte corre con el reloj a mediodía de hoy (Madrid); al acabar, el de verdad
@@ -266,10 +391,25 @@ try {
   // (entre las 23 y las 24, el mensaje «de ayer» de la demo —hace 23 horas— cae en el día de hoy: Ana tiene entonces un
   // solo día de contacto en la semana y sale «en unos días» en vez de «al día»; las dos cosas están bien)
   const ana = g['Ana López'];
-  check((ana.contacto.en7 >= 2 ? ana.grupo === 'al_dia' : ana.grupo === 'pronto') && g['Rubén Martín'].grupo === 'hoy' && !!g['Rubén Martín'].teEscribio && g['Carlos Vera'].motivo.id === 'parado' && g['Lucía Ferrer'].motivo.datos.nutricion === true, 'Ana al día; Rubén te escribió; Carlos lleva días parado; a Lucía (solo nutrición), saludo de nutrición');
+  check((ana.contacto.en7 >= 2 ? ana.grupo === 'al_dia' : ana.grupo === 'pronto') && g['Rubén Martín'].grupo === 'hoy' && !!g['Rubén Martín'].teEscribio && g['Carlos Vera'].motivos.some((m) => m.id === 'parado') && g['Lucía Ferrer'].motivos.at(-1).datos.nutricion === true, 'Ana al día; Rubén te escribió; Carlos lleva días parado; a Lucía (solo nutrición), saludo de nutrición');
+  // (v0.201) lo de cada uno: lo que te escribió (con su texto), su check-in entero, su cumpleaños, lo programado
+  check(/peso muerto/.test(g['Rubén Martín'].mensajeAtleta?.texto || '') && g['Rubén Martín'].motivos[1]?.id === 'responder', 'lo que te escribió Rubén, a la vista y como lo primero que contestar tras su día difícil');
+  check(g['Carlos Vera'].grupo === 'hoy' && g['Carlos Vera'].porque === 'Hoy es su cumpleaños' && g['Carlos Vera'].hito?.tipo === 'cumple', 'el cumpleaños de Carlos (la demo lo pone hoy) lo pone en «Hoy», con su porqué');
+  check(Object.values(d.extra).some((e) => e.checkin && 'energia' in e.checkin) && Object.keys(d.programados).length >= 1 && d.extra[g['Ana López'].atleta_id].videos?.n >= 1, 'su check-in entero, lo programado y los vídeos sin corregir');
+  const { abrirRadar, apuntarPendiente, pendienteHecho } = await import('../web/src/datos/radar.js');
+  const ab = await abrirRadar({ api, backend: b }, g['Ana López'].atleta_id, { hoy: d.hoy });
+  check(Array.isArray(ab.objetivos) && ab.enviados.length > 0 && ab.enviados.every((t) => t === t.toLowerCase()), 'al abrir su fila: sus objetivos y lo que le has escrito (para no repetirlo)');
   const rec = await recordsRecientes({ api }, g['Ana López'].atleta_id, { hoy: d.hoy });
   check(rec.length > 0 && rec.every((r) => r.ejercicio && !/^Récord/.test(r.ejercicio) && r.fecha), 'los récords recientes de una atleta, con su ejercicio');
   check(JSON.stringify(await b.select('comentarios', {})) === antes, 'no escribe nada');
+  // Tus pendientes: van con tus notas privadas (con su marca) y no salen entre las notas de la ficha
+  const nota = await apuntarPendiente({ api }, g['Ana López'].atleta_id, 'Preguntarle por el viaje', { desde: d.hoy });
+  const d2 = await datosRadar({ api, backend: b });
+  check(d2.extra[g['Ana López'].atleta_id].pendientes.some((p) => p.texto === 'Preguntarle por el viaje'), 'un tema pendiente apuntado sale en su fila');
+  const ficha = await api.ficha(g['Ana López'].atleta_id);
+  check(!ficha.notas.some((n) => /pend:/.test(n.texto)) && ficha.pendientes.some((p) => p.texto === 'Preguntarle por el viaje' && !p.hecho), 'en la ficha, aparte de las notas');
+  await pendienteHecho({ api }, nota, { hoy: d.hoy });
+  check(!(await datosRadar({ api, backend: b })).extra[g['Ana López'].atleta_id].pendientes.length && (await api.ficha(g['Ana López'].atleta_id)).pendientes[0].hecho === d.hoy, 'y al marcarlo hecho deja de salir (se queda en su historia)');
   // Como atleta no se ve nada de otros (lo cierra la base, no esta pantalla)
   await b.auth.salir();
   await b.auth.entrar('ana@fbe.demo', 'demo');

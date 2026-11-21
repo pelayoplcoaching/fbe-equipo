@@ -23,6 +23,8 @@ export const CLAVE_TABLA = { menu_fotos: 'entrada_id', atletas_imagenes: 'atleta
   revisar_apartados: 'usuario_id,clave',
   // v0.198 (migración 085): la lista de Atletas a tu gusto
   atletas_panel: 'usuario_id,atleta_id', panel_ajustes: 'usuario_id',
+  // v0.201 (migración 086): tu manera de escribir en «A quién escribir»
+  radar_ajustes: 'usuario_id',
   // v0.69 (migración 041): 💪 a un comentario y las bienvenidas a los nuevos
   comunidad_comentario_reacciones: 'comentario_id,autor_id', comunidad_bienvenidas: 'de,para',
   // v0.70 (migración 042): el reparto de los retos por equipos

@@ -26,6 +26,8 @@ import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../log
 import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
+import { escribirPendiente, MAX_PENDIENTE } from '../../logica/radar/pendientes.js';
+import { pendienteHecho } from '../../datos/radar.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
 import { SuplementosCoach } from './SuplementosCoach.jsx';
 import { PausaCoach } from '../Pausas.jsx';
@@ -130,7 +132,7 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
           {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />{/* (YouTube) los vídeos de YouTube que ha visto en la app */}<VideosVistosAtleta atletaId={a.id} /></>}
           {pest === 'objetivos' && <><ParaHablarle atleta={a} /><LoSuyo atletaId={a.id} />{/* (080) lo que tú le escribes a este atleta: frases, imágenes y márgenes de peso */}<AMedida atleta={a} recargar={() => ficha.recargar(true)} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
-          {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} recargar={() => ficha.recargar(true)} />}
+          {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} pendientes={ficha.datos.pendientes || []} recargar={() => ficha.recargar(true)} />}
           {pest === 'datos' && <ContactoAtleta atleta={a} />}
           {pest === 'datos' && <Datos atleta={a} recargar={() => ficha.recargar(true)} alBorrar={alVolver} invitar={() => setInvitar(true)} alCambiar={alCambiar} />}
         </div>
@@ -650,21 +652,51 @@ function EditarObjetivo({ atleta, objetivo, alCerrar }) {
   );
 }
 
-function Notas({ atleta, notas, recargar }) {
+function Notas({ atleta, notas, pendientes = [], recargar }) {
   const { api, aviso } = useApp();
   const [texto, setTexto] = useState('');
+  // (v0.201) un tema pendiente de hablar con él: sale en «A quién escribir» hasta que lo hablas
+  const [esPendiente, setEsPendiente] = useState(false);
   const [ocupado, una] = useUnaVez();
+  const hoy = hoyISO();
+  const abiertos = pendientes.filter((p) => !p.hecho);
+  const hablados = pendientes.filter((p) => p.hecho).sort((a, b) => (a.hecho < b.hecho ? 1 : -1));
+  const nombre = String(atleta?.nombre || '').split(' ')[0] || 'el atleta';
   return (
     <div class="pila">
       <form class="panel panel-pad pila nota-nueva-form" onSubmit={(e) => {
         e.preventDefault();
         if (!texto.trim()) return;
-        una(async () => { try { await api.crearNota(atleta.id, texto.trim()); setTexto(''); recargar(); } catch (err) { aviso(err.message, 'error'); } });
+        una(async () => {
+          try {
+            await api.crearNota(atleta.id, esPendiente ? escribirPendiente(texto, { desde: hoy }) : texto.trim());
+            setTexto(''); if (esPendiente) aviso(`Apuntado: te saldrá en «A quién escribir» hasta que lo habléis`, 'ok');
+            recargar();
+          } catch (err) { aviso(err.message, 'error'); }
+        });
       }}>
-        <div class="campo"><label for="nota-nueva">Nota privada</label>
-          <textarea id="nota-nueva" class="area" value={texto} onInput={(e) => setTexto(e.currentTarget.value)} placeholder="Solo la ves tú. El atleta no sabe que existe." /></div>
-        <button class="btn btn-primario" disabled={!texto.trim() || ocupado}>Guardar nota</button>
+        <div class="campo"><label for="nota-nueva">{esPendiente ? `Tema pendiente de hablar con ${nombre}` : 'Nota privada'}</label>
+          <textarea id="nota-nueva" class="area" value={texto} maxLength={esPendiente ? MAX_PENDIENTE : undefined} onInput={(e) => setTexto(e.currentTarget.value)} placeholder={esPendiente ? 'Por ejemplo: preguntarle por la boda' : 'Solo la ves tú. El atleta no sabe que existe.'} /></div>
+        <label class="fila-envolver peq"><input type="checkbox" checked={esPendiente} onChange={(e) => setEsPendiente(e.currentTarget.checked)} /> Es un tema pendiente de hablar con {nombre} (te sale en «A quién escribir»)</label>
+        <button class="btn btn-primario" disabled={!texto.trim() || ocupado}>{esPendiente ? 'Apuntar tema' : 'Guardar nota'}</button>
       </form>
+      {(abiertos.length > 0 || hablados.length > 0) && (
+        <div class="panel panel-pad pila-s">
+          <strong class="peq">Pendiente de hablar con {nombre}</strong>
+          {abiertos.length ? abiertos.map((p) => (
+            <div key={p.id} class="separa">
+              <span>{p.texto}<span class="mini terciario">{p.desde > hoy ? ` · te sale el ${fmtCorta(p.desde)}` : ` · desde el ${fmtCorta(p.desde)}`}</span></span>
+              <button class="btn btn-peq" disabled={ocupado} onClick={() => una(async () => { try { await pendienteHecho({ api }, p, { hoy }); recargar(); } catch (err) { aviso(err.message, 'error'); } })}><Icono n="hecho" /> Hecho</button>
+            </div>
+          )) : <span class="peq secundario">Nada pendiente.</span>}
+          {hablados.length > 0 && (
+            <details class="peq secundario">
+              <summary>Ya hablados ({hablados.length})</summary>
+              <ul style={{ margin: '8px 0 0', paddingLeft: '18px' }}>{hablados.slice(0, 20).map((p) => <li key={p.id}>{p.texto} · el {fmtCorta(p.hecho)}</li>)}</ul>
+            </details>
+          )}
+        </div>
+      )}
       {notas.map((n) => (
         <div class="panel panel-pad pila-s nota-privada" key={n.id}>
           <div class="separa"><span class="peq terciario">{fmtCorta(aISO(new Date(n.creado_en)))}</span>

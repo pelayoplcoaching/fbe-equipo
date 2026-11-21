@@ -2,6 +2,9 @@
 // hoy y por qué, el borrador (cambiar de motivo, otra frase, editar), enviar desde la fila, «Ya hablamos», «Mañana» y
 // dejar el borrador en su chat. En escritorio y a 360 px en oscuro, sin errores de consola, sin desbordes y sin fallos de
 // accesibilidad.
+// (v0.201) Lo que te escribió a la vista, «Cómo está», lo pendiente de hablar (apuntar y marcar hecho), varios temas a
+// la vez y cualquiera de la biblioteca, los cuatro tonos, tus respuestas guardadas, tu manera de escribir, programar,
+// «Recuérdamelo», no repetir lo enviado y la ronda con los de Hoy.
 // Necesita la pantalla enganchada en CoachApp.jsx (la pestaña «A quién escribir»): test/radar-enganche.patch.
 //   Suelta:  npm run build && node test/e2e-radar.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarRadar } = await import('./e2e-radar.mjs'); await probarRadar({ navegador, check });
@@ -64,6 +67,9 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await p.locator('.radar .revision-lista, .radar .vacio').first().waitFor();
   };
   const fila = (nombre) => p.locator('.radar .revision-fila', { hasText: nombre }).first();
+  // (v0.201) el borrador se rehace al momento siguiente de tocar un tema o un tono: se espera a que cambie
+  const valorTras = async (loc, antes, ms = 5000) => { const fin = Date.now() + ms; let v = await loc.inputValue(); while (v === antes && Date.now() < fin) { await p.waitForTimeout(80); v = await loc.inputValue(); } return v; };
+  const valorCon = async (loc, re, ms = 5000) => { const fin = Date.now() + ms; let v = await loc.inputValue(); while (!re.test(v) && Date.now() < fin) { await p.waitForTimeout(80); v = await loc.inputValue(); } return v; };
   const chip = (texto) => p.locator('.radar .selector-chips').first().getByRole('button', { name: texto });
 
   try {
@@ -83,26 +89,41 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     check(nombres[0] === 'Rubén Martín', 'primero, quien te escribió y tiene el último mensaje');
     check(/Te escribió hoy y lo último de la conversación es suyo/.test(await fila('Rubén Martín').textContent()), 'y dice por qué');
     check(/0 de 2 días de contacto en los últimos 7 · sin mensajes tuyos en 4 semanas/.test(await fila('Carlos Vera').textContent()), 'de cada uno, los días de contacto y el último');
+    // (v0.201) lo que te escribió Rubén, a la vista; Carlos, en «Hoy» por su cumpleaños
+    check(/peso muerto/.test(await fila('Rubén Martín').locator('.rad-cita').textContent().catch(() => '')), 'lo que te escribió, a la vista en su fila');
+    check(/Hoy es su cumpleaños/.test(await fila('Carlos Vera').textContent()), 'el cumpleaños, como motivo y como porqué');
     check(await fila('Carlos Vera').locator('.chip.aviso', { hasText: /días sin registrar series/ }).count() === 1, 'con lo que pasa (lleva días sin registrar)');
     await revisar('lista');
     await foto('radar-1-lista');
 
-    // El borrador de Carlos: parte del motivo más importante, se cambia de motivo y de frase
+    // El borrador de Carlos: parte del motivo más importante (su cumpleaños), en cuatro tonos; se añaden temas y se cambia de frase
     await fila('Carlos Vera').getByRole('button', { name: 'Escribirle' }).click();
     const area = fila('Carlos Vera').locator('textarea');
     await area.waitFor();
     const primero = await area.inputValue();
-    check(/\d+ días/.test(primero) && !/[\u{1F300}-\u{1FAFF}]/u.test(primero) && primero.length < 120, `el borrador es corto, con el dato y sin emojis: «${primero}»`);
-    await fila('Carlos Vera').getByRole('button', { name: 'Otra frase' }).click();
-    const segundo = await area.inputValue();
-    check(segundo !== primero && /\d+ días/.test(segundo), `«Otra frase» da otra del mismo motivo: «${segundo}»`);
+    check(/[Cc]umpleaños|[Ff]elicidades/.test(primero) && !/[\u{1F300}-\u{1FAFF}]/u.test(primero) && primero.length < 120, `el borrador es corto, del tema más importante y sin emojis: «${primero}»`);
+    check(await fila('Carlos Vera').locator('.rad-tono').count() === 4 && await fila('Carlos Vera').getByRole('radio', { name: /Cercano/ }).isChecked(), 'cuatro tonos para elegir (cercano, de serie)');
+    check(await fila('Carlos Vera').locator('.rad-como').count() === 1 && /Esta semana|Bloque/.test(await fila('Carlos Vera').locator('.rad-como').textContent()), '«Cómo está»: su bloque y su semana');
+    await fila('Carlos Vera').locator('.rad-tono', { hasText: 'Con humor' }).click();
+    const humor = await valorTras(area, primero);
+    check(humor !== primero && /[Cc]umpleaños|[Ff]elicidades/.test(humor), `con humor, otra frase del mismo tema: «${humor}»`);
+    await fila('Carlos Vera').locator('.selector-chips').getByRole('button', { name: /días sin registrar/ }).click();
+    const dos = await valorTras(area, humor);
+    check(/Por cierto, /.test(dos) && /\d+ días|noticias tuyas/.test(dos), `dos temas en un mensaje: «${dos}»`);
+    await fila('Carlos Vera').getByRole('button', { name: 'Otras frases' }).click();
+    check(await valorTras(area, dos) !== dos, '«Otras frases» da otras');
+    await fila('Carlos Vera').locator('.rad-tono', { hasText: 'Cercano' }).click();
+    await fila('Carlos Vera').getByRole('button', { name: 'Más situaciones' }).click();
+    await fila('Carlos Vera').locator('.rad-situaciones').getByRole('button', { name: 'De viaje' }).click();
+    check(/viaje/i.test(await valorCon(area, /viaje/i)) && await fila('Carlos Vera').locator('.selector-chips').getByRole('button', { name: 'De viaje' }).getAttribute('aria-pressed') === 'true', 'cualquier situación de la biblioteca (de viaje) se añade como tema');
     await fila('Carlos Vera').locator('.selector-chips').getByRole('button', { name: 'Solo saludar' }).click();
-    const saludo = await area.inputValue();
-    check(saludo !== segundo && !/días sin|sesiones tuyas/.test(saludo), `al cambiar de motivo cambia el borrador: «${saludo}»`);
+    check(/[Cc]umpleaños|[Ff]elicidades/.test(await valorCon(area, /[Cc]umpleaños|[Ff]elicidades/)), 'y se pueden combinar con el saludo');
     await area.fill('¿Qué tal la semana? Cuéntame cómo vas');
     await revisar('borrador');
     await foto('radar-2-borrador');
     // Enviar: sale el mensaje, la fila deja de estar en «Hoy» y cuenta un día de contacto
+    // «Recuérdamelo en 3 días»: al enviar, te apunta preguntarle cómo sigue
+    await fila('Carlos Vera').getByLabel('Recuérdamelo para preguntarle cómo sigue').selectOption('3');
     await fila('Carlos Vera').getByRole('button', { name: 'Enviar', exact: true }).click();
     check(await hay(fila('Carlos Vera'), 0), 'al enviar, sale de «Hoy»');
     check(await hay(chip(/^Hoy \(3\)$/), 1) && await hay(chip(/^En unos días \(1\)$/), 1), 'y pasa a «En unos días»');
@@ -111,13 +132,48 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     check(/le toca otra vez pasado mañana/.test(await fila('Carlos Vera').textContent()), 'y dice cuándo le toca otra vez');
     const enBase = await p.evaluate(() => globalThis.__fbeDemo.select('comentarios', { eq: { autor: 'coach', texto: '¿Qué tal la semana? Cuéntame cómo vas' } }).then((x) => x.length));
     check(enBase === 1, 'el mensaje está en su chat, una sola vez');
+    const recuerda = await p.evaluate(() => globalThis.__fbeDemo.select('notas_coach', {}).then((xs) => xs.filter((n) => /^#pend:/.test(n.texto)).map((n) => n.texto)));
+    check(recuerda.length === 1 && /Preguntar cómo sigue/.test(recuerda[0]), `«Recuérdamelo» apunta preguntarle cómo sigue dentro de 3 días: ${recuerda[0] || 'nada'}`);
+    // Lo enviado no se le repite: el mismo texto avisa
+    await fila('Carlos Vera').getByRole('button', { name: 'Escribirle' }).click();
+    await fila('Carlos Vera').locator('textarea').fill('¿Qué tal la semana? Cuéntame cómo vas');
+    check(await hay(fila('Carlos Vera').locator('.rad-aviso', { hasText: 'Ya le mandaste' }), 1), 'si escribes lo mismo que ya le mandaste, te avisa');
+    await fila('Carlos Vera').getByRole('button', { name: 'Cerrar' }).click();
+
+    // (v0.201) Lucía: apuntar un tema pendiente, verlo, marcarlo hecho; guardar el borrador como tuyo; programarlo
+    await chip(/^Hoy/).click();
+    await fila('Lucía Ferrer').getByRole('button', { name: 'Escribirle' }).click();
+    const lu = fila('Lucía Ferrer');
+    await lu.locator('textarea').waitFor();
+    check(await lu.locator('.rad-pend').count() === 1 && /receta/i.test(await lu.locator('.rad-pend').textContent()), '«Pendiente de hablar»: lo que tiene abierto (la receta que pide cambiar)');
+    await lu.getByLabel('Apuntar un tema pendiente con Lucía').fill('Preguntarle por la boda');
+    await lu.locator('.rad-pend-nuevo').getByRole('button', { name: 'Apuntar' }).click();
+    check(await hay(lu.locator('.rad-pend-fila', { hasText: 'Preguntarle por la boda' }), 1), 'un tema tuyo, apuntado, sale en su lista');
+    check(await hay(lu.locator('.rad-pend-fila', { hasText: 'Preguntarle por la boda' }).getByRole('checkbox'), 1) && !(await lu.locator('.rad-pend-fila', { hasText: 'Preguntarle por la boda' }).getByRole('checkbox').isChecked()), 'y se puede incluir en el mensaje');
+    await lu.locator('.rad-pend-fila', { hasText: 'Preguntarle por la boda' }).getByRole('button', { name: /Hecho/ }).click();
+    check(await hay(lu.locator('.rad-pend-fila', { hasText: 'Preguntarle por la boda' }), 0), 'al marcarlo hecho, deja de salir');
+    await revisar('pendientes');
+    await foto('radar-5-pendientes');
+    await lu.getByRole('button', { name: 'Mis respuestas' }).click();
+    await lu.getByLabel('Nombre de la respuesta').fill('Receta nueva');
+    await lu.getByRole('button', { name: 'Guardar como mía' }).click();
+    check(await hay(lu.locator('.rad-mia-btn', { hasText: 'Receta nueva' }), 1), 'el borrador, guardado en tus respuestas (y sale en la lista)');
+    const guardada = await p.evaluate(() => globalThis.__fbeDemo.select('respuestas_guardadas', {}).then((xs) => xs.find((r) => r.titulo === 'Receta nueva')));
+    check(guardada?.situacion === 'receta' && /\{nombre\}|receta/i.test(guardada.texto), `con su tema (la receta): ${guardada?.situacion}`);
+    await lu.getByRole('button', { name: 'Programar' }).click();
+    await lu.locator('.rad-programar').getByRole('button', { name: 'Mañana a las 9:00' }).click();
+    check(await hay(fila('Lucía Ferrer'), 0) && await hay(p.getByText('Programado para mañana a las 9:00').first(), 1), 'programar para mañana a las 9:00: sale de «Hoy»');
+    const prog = await p.evaluate(() => globalThis.__fbeDemo.select('comentarios', { eq: { autor: 'coach' } }).then((xs) => xs.filter((c) => c.enviar_en && Date.parse(c.enviar_en) > Date.now()).length));
+    check(prog >= 1, 'y queda programado en su chat');
+    await chip(/^En unos días/).click();
+    check(/Programado: mañana a las 9:00/.test(await fila('Lucía Ferrer').textContent()) && /Tienes un mensaje programado para mañana a las 9:00/.test(await fila('Lucía Ferrer').textContent()), 'en «En unos días», con lo programado y el porqué');
 
     // «Ya hablamos» cuenta como contacto de hoy (en este dispositivo) y se puede deshacer
     await chip(/^Hoy/).click();
     await fila('Iván Prieto').getByRole('button', { name: 'Ya hablamos' }).click();
-    check(await hay(fila('Iván Prieto'), 0) && await hay(chip(/^Hoy \(2\)$/), 1), '«Ya hablamos» lo saca de «Hoy»');
+    check(await hay(fila('Iván Prieto'), 0) && await hay(chip(/^Hoy \(1\)$/), 1), '«Ya hablamos» lo saca de «Hoy»');
     await p.getByRole('button', { name: 'Deshacer' }).click();
-    check(await hay(fila('Iván Prieto'), 1) && await hay(chip(/^Hoy \(3\)$/), 1), 'y «Deshacer» lo devuelve');
+    check(await hay(fila('Iván Prieto'), 1) && await hay(chip(/^Hoy \(2\)$/), 1), 'y «Deshacer» lo devuelve');
     // «Mañana»: pospuesto hasta mañana; «Proponer ya» lo trae de vuelta
     await fila('Iván Prieto').getByRole('button', { name: 'Mañana' }).click();
     check(await hay(chip(/^Pospuestos \(1\)$/), 1) && await hay(fila('Iván Prieto'), 0), '«Mañana» lo pasa a «Pospuestos»');
@@ -133,6 +189,31 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await fila('Iván Prieto').getByRole('button', { name: 'Proponer ya' }).click();
     check(await hay(chip(/^Pospuestos/), 0), '«Proponer ya» lo devuelve a su sitio');
 
+    // (v0.201) Tu manera de escribir: empezar con su nombre y tu cierre
+    await p.getByRole('button', { name: 'Tu manera de escribir' }).click();
+    const hojaE = p.getByRole('dialog');
+    await hojaE.getByRole('button', { name: '«Ana, …»' }).click();
+    await hojaE.getByLabel('Tu cierre habitual (opcional)').fill('¡Vamos!');
+    check(/^Ana, .*¡Vamos!$/.test(await hojaE.locator('.rad-ejemplo').textContent()), 'la hoja enseña cómo quedaría');
+    await revisar('estilo');
+    await hojaE.getByRole('button', { name: 'Guardar' }).click();
+    await hojaE.waitFor({ state: 'detached' }).catch(() => {});
+    const est = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => xs[0]?.datos?.estilo || null));
+    check(est?.saludo === 'nombre' && est?.cierre === '¡Vamos!', 'tu manera de escribir, guardada (igual en el móvil y en el ordenador)');
+    // La ronda: los de Hoy, uno detrás de otro
+    await chip(/^Hoy/).click();
+    await p.getByRole('button', { name: /^Escribir a los de Hoy \(\d+\)$/ }).click();
+    check(await hay(p.locator('.rad-ronda', { hasText: /Ronda: 1 de \d+/ }), 1) && await p.locator('.radar .revision-fila').count() === 1 && await p.locator('.radar .revision-fila textarea').count() === 1, 'la ronda: uno a uno, con su borrador ya abierto');
+    const enRonda = await p.locator('.radar .revision-fila textarea').inputValue();
+    check(/^[A-ZÁÉÍÓÚ][a-záéíóú]+, .*¡Vamos!$/.test(enRonda), `con tu manera de escribir: «${enRonda}»`);
+    await p.locator('.rad-ronda').getByRole('button', { name: 'Saltar' }).click();
+    check(await hay(p.locator('.rad-ronda', { hasText: /Ronda terminada|Ronda: 2 de/ }), 1), '«Saltar» pasa al siguiente');
+    await revisar('ronda');
+    await foto('radar-6-ronda');
+    const terminar = p.locator('.rad-ronda').getByRole('button', { name: /Terminar la ronda|Volver a la lista/ });
+    await terminar.click();
+    check(await hay(p.locator('.rad-ronda'), 0), 'y se termina cuando quieras');
+
     // «Todos», con el grupo de cada uno; al día, Ana
     await chip(/^Todos \(5\)$/).click();
     check(await p.locator('.radar .revision-fila').count() === 5, '«Todos»: los cinco atletas activos');
@@ -141,7 +222,7 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await fila('Ana López').getByRole('button', { name: 'Escribirle' }).click();
     check(await hay(fila('Ana López').locator('.selector-chips button', { hasText: /^Récord en / }), 1), 'al abrir su fila salen sus récords recientes como motivo');
     await fila('Ana López').locator('.selector-chips button', { hasText: /^Récord en / }).click();
-    const record = await fila('Ana López').locator('textarea').inputValue();
+    const record = await valorCon(fila('Ana López').locator('textarea'), /[Rr]écord en /);
     check(/[Rr]écord en /.test(record) && !/antes/.test(record), `el borrador del récord, sin la coletilla: «${record}»`);
     await revisar('todos');
 
