@@ -1,0 +1,88 @@
+/* v0.205: Registro y Actividad del atleta, en la ficha del coach (ui/coach/RegistroCoach.jsx y ui/coach/Actividad.jsx).
+   Solo ASCII; colores, tamanos y espacios, con tokens (y su version oscura). */
+:root { --ra-sangria: calc(var(--esp-48) + var(--esp-12)); }
+
+/* ---------------------------------------------------------------- Registro */
+.registro-bloque { max-width: 420px; }
+.registro-filtros { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-8) var(--esp-12); }
+.registro-filtros .selector-chips { min-width: 0; }
+.registro-titulo { margin: 0; font-size: var(--letra-16); font-weight: 750; line-height: 1.25; }
+.registro-titulo:focus { outline: none; }
+.registro-sesion.enfocada { box-shadow: var(--anillo-acento); }
+.registro-cifras { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); margin: 0; }
+.registro-cifras span { display: inline-flex; align-items: center; gap: var(--esp-4); }
+.registro-cifras svg { width: var(--ico-14); height: var(--ico-14); color: var(--tinta-3); }
+.registro-ejs { list-style: none; margin: 0; padding: 0; display: grid; }
+.registro-ej { display: grid; gap: var(--esp-6); padding: var(--esp-12) 0; border-top: var(--filo-fino) solid var(--linea); }
+.registro-ej.saltado .registro-ej-nombre { color: var(--tinta-2); }
+.registro-ej-cab { display: flex; align-items: center; gap: var(--esp-8); flex-wrap: wrap; }
+.registro-ej-nombre { display: grid; gap: var(--esp-2); font-weight: 650; flex: 1 1 12rem; min-width: 0; }
+.registro-ej-nombre .cambio { font-weight: 500; }
+.registro-serie { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-4) var(--esp-8); }
+.registro-etq { flex: 0 0 4.5rem; font-size: var(--letra-12); font-weight: 650; color: var(--tinta-3); }
+.serie-hueco { display: inline-flex; align-items: center; justify-content: center; min-width: 3.2rem; padding: var(--esp-2) var(--esp-6); border-radius: var(--r-6);
+  border: var(--filo-fino) dashed var(--aviso); color: var(--aviso); font-weight: 700; }
+.serie-ficha.con-nota svg:last-of-type { width: var(--ico-12); height: var(--ico-12); }
+.registro-notas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.registro-notas li { display: flex; gap: var(--esp-6); align-items: flex-start; font-size: var(--letra-13); color: var(--tinta-2); }
+.registro-notas svg { flex: none; width: var(--ico-14); height: var(--ico-14); margin-top: var(--esp-2); color: var(--morado); }
+.registro-meta { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-14); margin: 0; }
+.registro-meta span { display: inline-flex; align-items: center; gap: var(--esp-2); }
+.registro-meta svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.5; }
+.registro-antes.sube svg { color: var(--ok); }
+.registro-antes.baja svg { color: var(--aviso); }
+.registro-meta .desc-fuera { color: var(--aviso); font-weight: 650; }
+.registro-ej-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-14); }
+.registro-proxima { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6); }
+.registro-proxima .btn-peq { min-width: 3rem; font-variant-numeric: tabular-nums; }
+.registro-saltado { flex: none; }
+.registro-video { position: relative; flex: none; width: 3.5rem; height: 3.5rem; padding: 0; border: 0; border-radius: var(--r-10); overflow: hidden; background: var(--hoja-2); cursor: pointer; }
+.registro-video img, .registro-video video, .registro-video-hueco { display: block; width: 100%; height: 100%; object-fit: cover; }
+.registro-video-play { position: absolute; inset: 0; display: grid; place-items: center; color: var(--blanco); background: color-mix(in srgb, var(--noche-0) 35%, transparent); }
+.registro-video-play svg { width: var(--ico-18); height: var(--ico-18); fill: currentColor; }
+.registro-video-punto { position: absolute; top: var(--esp-4); right: var(--esp-4); width: var(--esp-8); height: var(--esp-8); border-radius: 50%; background: var(--aviso); border: var(--filo-fino) solid var(--hoja); }
+@media (min-width: 760px) {
+  .registro-ej { grid-template-columns: minmax(12rem, 1.2fr) minmax(0, 1fr) minmax(0, 1.6fr); align-items: start; column-gap: var(--esp-16); }
+  .registro-ej-cab { grid-column: 1; grid-row: 1 / span 2; }
+  .registro-ej > .registro-serie[data-etq="Pautado"] { grid-column: 2; grid-row: 1; }
+  .registro-ej > .registro-serie[data-etq="Hecho"] { grid-column: 3; grid-row: 1; }
+  .registro-ej > .registro-notas, .registro-ej > .registro-meta, .registro-ej > .registro-ej-acciones { grid-column: 2 / -1; }
+  .registro-etq { flex-basis: auto; }
+}
+
+/* ---------------------------------------------------------------- Actividad */
+.actividad-cabecera { display: grid; gap: var(--esp-12); }
+.act-cifras { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-10) var(--esp-14); }
+.act-cifras div { display: grid; gap: var(--esp-2); min-width: 0; }
+.act-cifras dt { font-size: var(--letra-12); font-weight: 650; color: var(--tinta-3); }
+.act-cifras dd { margin: 0; font-size: var(--letra-15); font-weight: 700; color: var(--tinta); }
+@media (min-width: 620px) { .act-cifras { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.act-mapa { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: var(--esp-2); }
+.act-mapa i { aspect-ratio: 1; border-radius: var(--r-2); background: var(--hoja-2); position: relative; }
+.act-mapa i.si { background: var(--morado); }
+.act-mapa i.record::after { content: ""; position: absolute; top: -25%; right: -25%; width: 55%; height: 55%; border-radius: 50%; background: var(--oro-500); }
+.act-mapa i.hoy { outline: var(--filo-medio) solid var(--tinta-3); outline-offset: 1px; }
+.actividad-busca { position: relative; display: flex; align-items: center; }
+.actividad-busca svg { position: absolute; left: var(--esp-10); width: var(--ico-16); height: var(--ico-16); color: var(--tinta-3); pointer-events: none; }
+.actividad-busca .entrada { padding-left: var(--esp-32); }
+.actividad-nuevos { display: flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--tinta-2); }
+.actividad-hora { margin-left: var(--esp-6); font-size: var(--letra-12); font-weight: 600; color: var(--tinta-3); }
+.chip-nuevo { min-height: 0; padding: 0 var(--esp-6); margin-left: var(--esp-6); font-size: var(--letra-11); }
+.actividad .lista > li.nuevo { border-left: var(--filo-fuerte) solid var(--morado); }
+.actividad-visto { display: flex; align-items: center; gap: var(--esp-10); padding: var(--esp-6) var(--esp-14); font-size: var(--letra-12); font-weight: 650; color: var(--morado); }
+.actividad-visto::before, .actividad-visto::after { content: ""; flex: 1; border-top: var(--filo-fino) dashed var(--morado); }
+.lista > li:has(> .actividad-acciones) { display: grid; }
+.actividad-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-10); margin: calc(-1 * var(--esp-4)) var(--esp-14) var(--esp-10) var(--ra-sangria); }
+.actividad-acciones .actividad-kudos { margin: 0; }
+.actividad-acciones > span.actividad-kudos { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4); }
+.actividad-records-lista .actividad-kudos { margin: calc(-1 * var(--esp-4)) 0 var(--esp-10) var(--ra-sangria); }
+.kudos-frases { display: flex; flex-wrap: wrap; gap: var(--esp-6); flex-basis: 100%; }
+.kudos-frases .chip { white-space: normal; text-align: left; cursor: pointer; }
+.actividad-series { list-style: none; margin: 0 var(--esp-14) var(--esp-12) var(--ra-sangria); padding: var(--esp-10) var(--esp-12); display: grid; gap: var(--esp-8); border-radius: var(--r-10); background: var(--hoja-2); }
+.actividad-series li { display: grid; gap: var(--esp-4); }
+.actividad-series-nombre { font-weight: 650; font-size: var(--letra-14); }
+.actividad-respuesta { margin: 0 var(--esp-14) var(--esp-12) var(--ra-sangria); }
+.actividad-respuesta .btn { justify-self: start; }
+@media (max-width: 420px) {
+  :root { --ra-sangria: var(--esp-14); }
+}

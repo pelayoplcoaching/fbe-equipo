@@ -23,7 +23,8 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 // esCoach: la misma pantalla en la ficha, con «Marcar revisado».
 // (v0.204) cuerpo: { pesos, medidas } (solo el atleta, con su consentimiento de salud): cada foto de progreso con la
 // tendencia de su peso de ese día y, en «Antes y después», el cambio de peso y de medidas entre las dos
-export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar, cuerpo = null }) {
+// (v0.205) abrirInicial: el id de un vídeo o foto que abrir al llegar (desde la Actividad del coach)
+export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar, cuerpo = null, abrirInicial = null, alUsarFoco = null }) {
   const { api, aviso } = useApp();
   // (pulido 4) al volver, el diario que ya se cargó se enseña al momento y se pone al día por detrás
   const datos = useCarga(() => api.diario(atletaId), [atletaId], { recuerdo: `diario:${api.uid()}:${atletaId}` });
@@ -34,6 +35,12 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
   const [comparar, setComparar] = useState(null); // 'videos' | 'fotos'
   const lista = datos.datos || [];
   const recargar = () => { datos.recargar(true); alCambiar?.(); };
+  useEffect(() => {
+    if (!abrirInicial || !datos.datos) return;
+    const a = datos.datos.find((x) => x.id === abrirInicial);
+    if (a) setAbierto(a);
+    alUsarFoco?.();
+  }, [abrirInicial, datos.datos]);
   // (v0.57) al enviar una repetición de un vídeo corregido, sale en el diario
   useEffect(() => { const al = () => datos.recargar(true); window.addEventListener('fbe-video-repetido', al); return () => window.removeEventListener('fbe-video-repetido', al); }, []);
   const videos = lista.filter((a) => a.tipo === 'video_tecnica');

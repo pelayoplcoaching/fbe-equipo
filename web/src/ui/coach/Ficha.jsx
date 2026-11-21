@@ -1,14 +1,13 @@
 import { PropuestasDe } from './PropuestasObjetivo.jsx';
 import { tipoDeObjetivo, textoPropuesta } from '../../logica/objetivos-atleta.js';
-import { Fragment } from 'preact';
 import { VideosVistosAtleta } from '../Videos.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
 import { VERSION_LEGAL } from '../../legal.js';
 import { textoPrivacidadVista } from '../../logica/privacidad.js';
 import { useEffect, useState } from 'preact/hooks';
-import { ChipLlegada } from '../atleta/Preparacion.jsx';
 import { CumplimientoYBloques } from './Cumplimiento.jsx';
 import { Actividad } from './Actividad.jsx';
+import { Registro } from './RegistroCoach.jsx';
 import { SeccionesFicha } from './SeccionesFicha.jsx';
 import { CompararFotos } from '../CompararFotos.jsx';
 import { CompararVideos } from '../Archivos.jsx';
@@ -22,10 +21,8 @@ import { Hilo } from '../Hilo.jsx';
 import { Chat } from '../Chat.jsx';
 import { Diario } from '../Diario.jsx';
 import { MiTecnica } from '../tecnica/MiTecnica.jsx';
-import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { VerArchivo } from '../Archivos.jsx';
-import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO, eventosRecord } from '../../logica/calculos.js';
-import { esfuerzoSerie, tonoEsfuerzo } from '../../logica/progreso-visual-2.js';
+import { num, signo, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { escribirPendiente, MAX_PENDIENTE } from '../../logica/radar/pendientes.js';
 import { pendienteHecho, contactoDeAtleta } from '../../datos/radar.js';
@@ -44,7 +41,6 @@ import { TusMeses } from '../atleta/TuMes.jsx';
 import { CompararCheckins } from './CompararCheckins.jsx';
 import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';
-import { ordenReal } from '../../logica/orden-sesion.js';
 import { LoSuyo, ParaHablarle } from './PersonalCoach.jsx';
 import { AMedida } from './AMedidaCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
@@ -84,6 +80,9 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
   const resumen = useCarga(() => (resumenInicial ? Promise.resolve(resumenInicial) : api.resumenes(undefined, { soloAtleta: atletaId }).then((x) => x[0] || null).catch(() => null)), [atletaId]);
   const r = resumen.datos;
   const [pest, setPest] = useState(pestanaInicial);
+  // (v0.205) desde Actividad, a qué ir justo: { sesionId, bloqueId } en Registro, { checkinId } en Seguimiento, { archivoId } en Vídeos
+  const [foco, setFoco] = useState(null);
+  const irDesdeActividad = (pestana, f = null) => { setFoco(f); setPest(pestana); };
   const [invitar, setInvitar] = useState(false);
   const a = ficha.datos?.atleta;
   // Abierta en Nutrición (desde la búsqueda) a quien solo le llevas el entrenamiento: a Datos, donde se cambia
@@ -127,12 +126,12 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
               <Chat atletaId={a.id} nombreAtleta={a.nombre} fotoOtro={a.foto} perfilOtro={a.perfil_id || null} alCambiar={alCambiar} irContexto={(ctx) => setPest(ctx.tipo === 'sesion' ? 'registro' : ctx.tipo === 'checkin' ? 'seguimiento' : 'videos')} />
             </section>
           )}
-          {pest === 'actividad' && <Actividad atleta={a} irA={setPest} />}
-          {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} />}
+          {pest === 'actividad' && <Actividad atleta={a} irA={irDesdeActividad} />}
+          {pest === 'registro' && <Registro atleta={a} alCambiar={alCambiar} foco={foco?.sesionId || foco?.bloqueId ? foco : null} alUsarFoco={() => setFoco(null)} />}
           {pest === 'carrera' && conCarrera(a) && <CarreraFicha atleta={a} />}
-          {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} /></>}
+          {pest === 'seguimiento' && <><SaludDelMovil atleta={a} /><Seguimiento atleta={a} ficha={ficha.datos} alCambiar={alCambiar} recargarFicha={() => ficha.recargar(true)} checkinInicial={foco?.checkinId || null} alUsarFoco={() => setFoco(null)} /></>}
           {pest === 'nutricion' && (conNutricion(a) ? <NutricionFicha atleta={a} /> : <SinNutricion irADatos={() => setPest('datos')} />)}
-          {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} />{/* (YouTube) los vídeos de YouTube que ha visto en la app */}<VideosVistosAtleta atletaId={a.id} /></>}
+          {pest === 'videos' && <><MiTecnica atletaId={a.id} nombreAtleta={a.nombre} esCoach /><Diario atletaId={a.id} nombreAtleta={a.nombre} esCoach alCambiar={alCambiar} abrirInicial={foco?.archivoId || null} alUsarFoco={() => setFoco(null)} />{/* (YouTube) los vídeos de YouTube que ha visto en la app */}<VideosVistosAtleta atletaId={a.id} /></>}
           {pest === 'objetivos' && <><ParaHablarle atleta={a} /><LoSuyo atletaId={a.id} />{/* (080) lo que tú le escribes a este atleta: frases, imágenes y márgenes de peso */}<AMedida atleta={a} recargar={() => ficha.recargar(true)} /><Objetivos atleta={a} /></>}
           {pest === 'cobros' && <CobrosAtleta atleta={a} />}
           {pest === 'notas' && <Notas atleta={a} notas={ficha.datos.notas} pendientes={ficha.datos.pendientes || []} recargar={() => ficha.recargar(true)} />}
@@ -247,138 +246,7 @@ function NuevoBloque({ atleta, bloques, alCerrar }) {
   );
 }
 
-// Lo registrado frente a lo pautado, sesión a sesión (las más recientes primero)
-function Registro({ atleta, alCambiar }) {
-  const { api } = useApp();
-  const datos = useCarga(async () => {
-    const bloques = await api.bloquesDe(atleta.id);
-    const activo = bloques.find((b) => ['activo', 'ajustado'].includes(b.estado)) || bloques[0];
-    if (!activo) return null;
-    // (v0.204) y sus récords (las series que lo fueron salen en dorado)
-    const [completo, biblioteca, records] = await Promise.all([api.bloqueCompleto(activo.id), api.biblioteca(),
-      api.historial(atleta.id).then((ss) => new Set(eventosRecord(ss).eventos.map((e) => e.serie_id).filter(Boolean))).catch(() => new Set())]);
-    return { completo, ejercicios: Object.fromEntries(biblioteca.map((e) => [e.id, e])), records };
-  }, [atleta.id]);
-  if (datos.cargando && !datos.datos) return <Siluetas forma="tarjetas" n={3} />;
-  if (!datos.datos) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Sin bloque">Cuando tenga un bloque, aquí verás lo que registra frente a lo pautado.</Vacio></div>;
-  const { completo, ejercicios, records } = datos.datos;
-  const sesiones = completo.semanas.slice().reverse().flatMap((w) => (completo.sesiones[w.id] || []).slice().reverse().map((s) => ({ ...s, semana: w })))
-    .filter((s) => s.completada || (completo.pautas[s.id] || []).some((p) => completo.series[p.id]?.length));
-  if (!sesiones.length) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Todavía no ha registrado nada en este bloque" /></div>;
-  return <ListaRegistro atleta={atleta} sesiones={sesiones} completo={completo} ejercicios={ejercicios} records={records} recargar={() => { datos.recargar(true); alCambiar?.(); }} />;
-}
-
-// RPE de la serie por encima del pautado (medio punto de margen)
-const pasado = (p, h) => {
-  if (h.rpe == null) return false;
-  const objetivo = p.rpe_objetivo != null ? Number(p.rpe_objetivo) : p.rir_objetivo != null ? 10 - Number(p.rir_objetivo) : null;
-  return objetivo != null && Number(h.rpe) > objetivo + 0.5;
-};
-
-// (v0.204) El medidor de una sesión: un aro con las series hechas de las pautadas, del color de su esfuerzo
-const NOMBRE_TONO = { suave: 'suave', medio: 'medio', duro: 'duro', sin: 'sin apuntar' };
-function MedidorSesion({ hechas, pautadas, rpe }) {
-  if (!pautadas) return null;
-  const p = Math.min(1, hechas / pautadas), R = 15, C = 2 * Math.PI * R;
-  const tono = tonoEsfuerzo(rpe);
-  return (
-    <svg class={`medidor-sesion esf-${tono}`} viewBox="0 0 40 40" width="40" height="40" role="img" aria-label={`${hechas} de ${pautadas} series pautadas hechas; esfuerzo ${rpe ? `${num(rpe)} de 10 (${NOMBRE_TONO[tono]})` : 'sin apuntar'}`}>
-      <circle class="medidor-fondo" cx="20" cy="20" r={R} />
-      <circle class="medidor-lleno" cx="20" cy="20" r={R} stroke-dasharray={`${(C * p).toFixed(2)} ${C.toFixed(2)}`} transform="rotate(-90 20 20)" />
-      <text x="20" y="23.5" text-anchor="middle">{hechas}</text>
-    </svg>
-  );
-}
-const NOMBRE_ESF = { suave: 'más suave de lo pautado', justo: 'al esfuerzo pautado', pasado: 'por encima del esfuerzo pautado', corto: 'por debajo de las repeticiones', sin: '' };
-
-function ListaRegistro({ atleta, sesiones, completo, ejercicios, records = new Set(), recargar }) {
-  const { api, aviso } = useApp();
-  const [todas, setTodas] = useState(false);
-  const [hilo, setHilo] = useState(null);
-  const visibles = todas ? sesiones : sesiones.slice(0, 6);
-  return (
-    <div class="pila">
-      {visibles.map((s) => (
-        <section class={`panel panel-pad pila-s registro-sesion${s.completada && !s.revisada_en ? ' por-revisar' : ''}`} data-rpe={s.rpe_sesion ? Math.min(10, Math.max(5, Math.floor(s.rpe_sesion))) : undefined} key={s.id}>
-          <div class="separa registro-cab" style="flex-wrap:wrap">
-            {(() => {
-              const ps = completo.pautas[s.id] || [];
-              const pautadas = ps.reduce((t, p) => t + (Number(p.series) || 0), 0);
-              const hechas = ps.reduce((t, p) => t + Math.min((completo.series[p.id] || []).filter((h) => Number(h.reps) > 0).length, Number(p.series) || 0), 0);
-              return <MedidorSesion hechas={hechas} pautadas={pautadas} rpe={s.rpe_sesion} />;
-            })()}
-            <strong>S{s.semana.numero}: {s.nombre}</strong>
-            <span class="peq secundario">{s.fecha_realizada ? fmtConDia(s.fecha_realizada) : 'En curso'}{s.rpe_sesion ? `, esfuerzo ${s.rpe_sesion}/10` : ''}{cardioHechoValido(s.cardio_hecho) ? `, ${NOMBRE_MODALIDAD[s.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(s.cardio_hecho)}` : s.duracion_min ? `, ${s.duracion_min} min` : ''}</span>
-          </div>
-          {s.preparacion && <ChipLlegada preparacion={s.preparacion} />}
-          {s.nota_atleta && <div class="nota-coach"><Icono n="mensaje" /><div>{s.nota_atleta}</div></div>}
-          <HechoEnOtroOrden pautas={completo.pautas[s.id] || []} series={completo.series} ejercicios={ejercicios} />
-          {(completo.pautas[s.id] || []).length > 0 && (
-            <div class="tabla-env">
-              <table class="tabla-simple tabla-registro">
-                <thead><tr><th>Ejercicio</th><th>Pautado</th><th>Hecho</th></tr></thead>
-                <tbody>
-                  {(completo.pautas[s.id] || []).map((p, _, lista) => {
-                    const pa = pauta(p);
-                    const etq = etiquetasSuperserie(lista)[p.id];
-                    const hechas = completo.series[p.id] || [];
-                    const cambios = [...new Set(hechas.map((h) => h.sustituto_id).filter(Boolean))].map((id) => ejercicios[id]?.nombre).filter(Boolean);
-                    return (
-                      <tr key={p.id}>
-                        <td>{etq && <span class="ss-etq">{etq}</span>}{ejercicios[p.ejercicio_id]?.nombre}{cambios.length > 0 && <div class="mini cambio">Hecho como {cambios.join(', ')}</div>}</td>
-                        <td class="registro-serie" data-etq="Pautado">{pa.series}{pa.esfuerzo ? `, ${pa.esfuerzo}` : ''}{pa.carga ? `, ${pa.carga}` : ''}</td>
-                        <td class="registro-serie" data-etq="Hecho">{hechas.length ? <span class="fichas-serie">{hechas.map((h, i) => {
-                          // (v0.204) cada serie, una ficha del color de su esfuerzo frente a lo pautado; la de récord, en dorado
-                          const esf = esfuerzoSerie(p, h);
-                          const rec = records.has(h.id);
-                          return (
-                            <Fragment key={i}>{i ? <span class="sr">, </span> : ''}<span class={`serie-ficha esf-${esf} ${(p.reps_min != null && h.reps < p.reps_min) || pasado(p, h) ? 'corto' : ''} ${rec ? 'record' : ''}`}>
-                              {rec && <Icono n="trofeo" />}{textoSerie(h)}{(NOMBRE_ESF[esf] || rec) && <span class="sr"> ({[rec ? 'récord' : '', NOMBRE_ESF[esf]].filter(Boolean).join(', ')})</span>}
-                            </span></Fragment>
-                          );
-                        })}</span> : <span class="terciario">—</span>}
-                          {hechas.length > 0 && hechas.length < p.series && <span class="corto"> ({hechas.length}/{p.series})</span>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div class="fila-envolver">
-            <button class="btn btn-peq" aria-expanded={hilo === s.id ? 'true' : 'false'} onClick={() => setHilo(hilo === s.id ? null : s.id)}><Icono n="mensaje" /> Comentarios</button>
-            {s.completada && (s.revisada_en
-              ? <span class="chip ok"><Icono n="hecho" />Revisada</span>
-              : <button class="btn btn-peq" onClick={async () => { try { await api.marcarRevisado('sesion', s.id); aviso('Sesión revisada'); recargar(); } catch (e) { aviso(e.message, 'error'); } }}><Icono n="hecho" /> Marcar revisada</button>)}
-          </div>
-          {hilo === s.id && <Hilo atletaId={atleta.id} sesionId={s.id} nombreAtleta={atleta.nombre} alCambiar={recargar} vacio="Sin comentarios en esta sesión." />}
-        </section>
-      ))}
-      {!todas && sesiones.length > 6 && <button class="btn" onClick={() => setTodas(true)}>Ver las {sesiones.length - 6} sesiones anteriores</button>}
-      <p class="mini terciario">Cada serie es una ficha del color de su esfuerzo frente a lo pautado: en verde, en su sitio; en azul, más suave; en naranja, por encima del esfuerzo o por debajo del rango de repeticiones (y los ejercicios con menos series de las pautadas); en gris, sin RPE. Las de récord, en dorado. El aro de cada sesión, las series hechas de las pautadas, del color de su esfuerzo.</p>
-    </div>
-  );
-}
-
-// v0.64 (4): si el atleta hizo los ejercicios en otro orden que el pautado (p. ej. con la máquina ocupada), el orden de verdad:
-// sale de la hora de cada serie (ya se guardaba), sin nada nuevo en la base. Con el nombre del ejercicio que hizo (si lo cambió)
-function HechoEnOtroOrden({ pautas, series, ejercicios }) {
-  const real = ordenReal(pautas, series);
-  if (!real) return null;
-  const porId = Object.fromEntries(pautas.map((p) => [p.id, p]));
-  const etq = etiquetasSuperserie(pautas);
-  const nombre = (id) => {
-    const sust = (series[id] || []).map((h) => h.sustituto_id).filter(Boolean).at(-1);
-    return ejercicios[sust || porId[id]?.ejercicio_id]?.nombre || 'Ejercicio';
-  };
-  const textoBloque = (b) => b.ids.map((id) => `${etq[id] ? `${etq[id]} ` : ''}${nombre(id)}`).join(' + ');
-  return (
-    <div class="orden-real">
-      <span class="orden-real-cab"><Icono n="ordenar" /><strong>Hecho en otro orden</strong></span>
-      <ol>{real.map((b) => <li key={b.clave}>{textoBloque(b)}</li>)}</ol>
-    </div>
-  );
-}
+// (v0.205) El registro, sesión a sesión, vive en RegistroCoach.jsx
 
 // Carga de entrenamiento semanal: RPE de la sesión × minutos (Foster y cols., 2001)
 function CargaEntreno({ atletaId }) {
@@ -480,7 +348,7 @@ function VolumenObjetivo({ atleta, alGuardar }) {
   );
 }
 
-function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
+function Seguimiento({ atleta, ficha, alCambiar, recargarFicha, checkinInicial = null, alUsarFoco = null }) {
   const { api, aviso } = useApp();
   const [versionVol, setVersionVol] = useState(0);
   const { molestias } = ficha;
@@ -488,6 +356,12 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const preguntas = useCarga(() => api.preguntasCheckin(atleta.id, { archivadas: true }).catch(() => []), [atleta.id]);
   const [abierto, setAbierto] = useState(null);
   const lista = checkins.datos || ficha.checkins;
+  // (v0.205) desde Actividad: ese check-in, abierto
+  useEffect(() => {
+    if (!checkinInicial) return;
+    const c = (lista || []).find((x) => x.id === checkinInicial);
+    if (c) { setAbierto(c); alUsarFoco?.(); }
+  }, [checkinInicial, lista]);
   const respuestasAbierto = abierto ? respuestasDe(abierto, Object.fromEntries((preguntas.datos || []).map((p) => [p.id, p]))) : [];
   const media = (c) => { const v = [c.adherencia_desayuno, c.adherencia_comida, c.adherencia_merienda, c.adherencia_cena].filter(Boolean); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const porSemana = molestias.reduce((m, x) => ((m[x.semana_inicio] ||= []).push(x), m), {});

@@ -6,6 +6,7 @@ import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjer
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { resumenAnterior, diasConRecord } from '../logica/progreso-visual-2.js';
+import { horaDe, paronesDe, diasDeAtleta, textoDia, textoParon, detalleParon } from '../logica/registro-actividad.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
@@ -2646,7 +2647,7 @@ export function crearApi(backend) {
           series: ss.length, tonelaje: ss.reduce((t, s) => t + (Number(s.kg) || 0) * (Number(s.reps) || 0), 0),
           records: recordsPorSesion[x.id] || 0,
           musculos: Object.entries(musc).sort((a, c) => c[1] - a[1]).slice(0, 3).map(([g]) => g),
-          bloque: bl ? { numero: bl.numero, nombre: bl.nombre } : null, semana: w?.numero ?? null,
+          bloque: bl ? { id: bl.id, numero: bl.numero, nombre: bl.nombre } : null, semana: w?.numero ?? null,
           // v0.116 (el perfil): las series por grupo, la hora de la primera serie y los ejercicios que hizo
           grupos: musc, inicio: ss.reduce((m, s) => (s.registrada_en && (!m || s.registrada_en < m) ? s.registrada_en : m), null),
           ejercicios: [...new Map(ss.filter((s) => s.ejercicio_id).map((s) => [s.ejercicio_id, { id: s.ejercicio_id, nombre: s.ejercicio }])).values()],
@@ -2702,17 +2703,21 @@ export function crearApi(backend) {
       const recordsPorSesion = {};
       for (const e of eventosRecord(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
       const ev = [];
+      // (v0.205) cada cosa con su hora de verdad (si la hay), su clave (para «Nuevo») y a qué lleva al tocarla (foco)
       for (const x of entrenos.filter((e) => e.fecha && e.fecha >= desde)) {
         const rec = recordsPorSesion[x.id] || [];
-        ev.push({ tipo: 'sesion', fecha: x.fecha, cuando: `${x.fecha}T20:00`, icono: 'hoy', pestana: 'registro', sesionId: x.id, nombreSesion: x.nombre, comentada: conTuyo.has(x.id),
+        const hora = horaDe(x.inicio);
+        ev.push({ tipo: 'sesion', fecha: x.fecha, cuando: x.inicio && hora ? x.inicio : `${x.fecha}T20:00`, hora, clave: `s:${x.id}`, icono: 'hoy', pestana: 'registro', foco: { sesionId: x.id, bloqueId: x.bloque?.id || null },
+          sesionId: x.id, nombreSesion: x.nombre, comentada: conTuyo.has(x.id), ejercicios: (x.ejercicios || []).map((e) => e.nombre),
           titulo: `Hizo ${x.nombre}`, detalle: [x.series ? `${x.series} series` : null, x.tonelaje ? `${num(Math.round(x.tonelaje / 100) / 10, 1)} t` : null, cardioHechoValido(x.cardio_hecho) ? `${NOMBRE_MODALIDAD[x.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(x.cardio_hecho)}` : x.duracion_min ? `${x.duracion_min} min` : null, x.rpe_sesion ? `esfuerzo ${num(x.rpe_sesion)}/10` : null].filter(Boolean).join(', ') });
-        for (const r of rec) ev.push({ tipo: 'record', fecha: x.fecha, cuando: `${x.fecha}T19:59`, icono: 'trofeo', pestana: 'seguimiento', titulo: `Récord en ${r.ejercicio}`, detalle: r.record.texto });
+        for (const r of rec) ev.push({ tipo: 'record', fecha: x.fecha, cuando: x.inicio && hora ? new Date(Date.parse(x.inicio) - 1000).toISOString() : `${x.fecha}T19:59`, clave: `r:${x.id}:${r.ejercicio_id}`, icono: 'trofeo', pestana: 'registro', foco: { sesionId: x.id, bloqueId: x.bloque?.id || null },
+          sesionId: x.id, ejercicio: r.ejercicio, ejercicios: [r.ejercicio], titulo: `Récord en ${r.ejercicio}`, detalle: r.record.texto });
       }
       for (const c of checkins) {
         // Se cuenta el día en que lo envió (como muy tarde, el lunes siguiente a su semana)
         const f = [fechaDe(c.creado_en), sumarDias(c.semana_inicio, 7)].filter(Boolean).sort()[0];
         if (f < desde) continue;
-        ev.push({ tipo: 'checkin', fecha: f, cuando: c.creado_en || `${f}T09:00`, icono: 'checkin', pestana: 'seguimiento', titulo: `Envió su check-in (${rangoSemana(c.semana_inicio)})`,
+        ev.push({ tipo: 'checkin', fecha: f, cuando: c.creado_en || `${f}T09:00`, hora: horaDe(c.creado_en), clave: `c:${c.id}`, checkinId: c.id, foco: { checkinId: c.id }, icono: 'checkin', pestana: 'seguimiento', titulo: `Envió su check-in (${rangoSemana(c.semana_inicio)})`,
           detalle: [c.energia ? `energía ${c.energia}/5` : null, c.motivacion ? `motivación ${c.motivacion}/5` : null, c.horas_sueno ? `sueño ${c.horas_sueno.replace('-', '–')} h` : null].filter(Boolean).join(', '), aviso: (c.energia && c.energia <= 2) || (c.motivacion && c.motivacion <= 2) });
       }
       // Pesos: uno por semana (la última pesada), para no llenar la lista
@@ -2720,14 +2725,73 @@ export function crearApi(backend) {
       for (const p of pesos) (porSemana[lunesDe(p.fecha)] ||= []).push(p);
       for (const lista of Object.values(porSemana)) {
         const u = lista[lista.length - 1];
-        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: `${u.fecha}T08:00`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`, detalle: lista.length > 1 ? `${lista.length} pesadas esa semana` : '', kg: Number(u.kg) });
+        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: u.creado_en && horaDe(u.creado_en) ? u.creado_en : `${u.fecha}T08:00`, hora: horaDe(u.creado_en), clave: `p:${u.fecha}`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`, detalle: lista.length > 1 ? `${lista.length} pesadas esa semana` : '', kg: Number(u.kg) });
       }
-      for (const a of archivos) ev.push({ tipo: a.tipo === 'foto_progreso' ? 'foto' : 'video', fecha: fechaDe(a.creado_en) || a.fecha, cuando: a.creado_en || `${a.fecha}T19:00`, icono: a.tipo === 'foto_progreso' ? 'camara' : 'video', pestana: 'videos',
+      for (const a of archivos) ev.push({ tipo: a.tipo === 'foto_progreso' ? 'foto' : 'video', fecha: fechaDe(a.creado_en) || a.fecha, cuando: a.creado_en || `${a.fecha}T19:00`, hora: horaDe(a.creado_en), clave: `a:${a.id}`, foco: { archivoId: a.id }, icono: a.tipo === 'foto_progreso' ? 'camara' : 'video', pestana: 'videos',
         titulo: a.tipo === 'foto_progreso' ? 'Subió una foto de progreso' : 'Envió un vídeo de técnica', detalle: a.nota_atleta || '', aviso: !a.revisado_en });
-      for (const c of comentarios) ev.push({ tipo: 'mensaje', fecha: fechaDe(c.creado_en), cuando: c.creado_en, icono: 'mensaje', pestana: c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : c.archivo_id ? 'videos' : 'programa',
+      for (const c of comentarios) ev.push({ tipo: 'mensaje', fecha: fechaDe(c.creado_en), cuando: c.creado_en, hora: horaDe(c.creado_en), clave: `m:${c.id}`, icono: 'mensaje', pestana: c.sesion_id ? 'registro' : c.checkin_id ? 'seguimiento' : c.archivo_id ? 'videos' : 'mensajes',
+        foco: c.sesion_id ? { sesionId: c.sesion_id } : c.checkin_id ? { checkinId: c.checkin_id } : c.archivo_id ? { archivoId: c.archivo_id } : null,
+        comentarioId: c.id, hilo: { sesionId: c.sesion_id || null, checkinId: c.checkin_id || null, archivoId: c.archivo_id || null }, texto: c.texto,
         titulo: 'Te escribió', detalle: `«${c.texto.length > 140 ? `${c.texto.slice(0, 140)}…` : c.texto}»` });
+      // (v0.205) lo que no hizo: las sesiones de semanas ya pasadas que quedaron sin hacer (no a quien va por microciclos, que
+      // sigue su orden, ni en una semana de pausa) y los días seguidos sin entrenar
+      const [extra, diasSemana, pausas] = await Promise.all([
+        api.extraActividad(atletaId, desde, hoy).catch(() => ({})),
+        diasSemanaDe(atletaId).catch(() => null),
+        api.pausas(atletaId).catch(() => []),
+      ]);
+      const lunesHoy = lunesDe(hoy);
+      if (!diasSemana) {
+        for (const x of extra.sinHacer || []) {
+          if (!x.lunes || x.lunes >= lunesHoy || sumarDias(x.lunes, 6) < desde || (pausas.length && semanaEnPausa(pausas, x.lunes))) continue;
+          const f = sumarDias(x.lunes, 6);
+          ev.push({ tipo: 'saltada', fecha: f, cuando: `${f}T23:30`, clave: `x:${x.id}`, icono: 'alerta', pestana: 'registro', foco: { bloqueId: x.bloqueId || null }, titulo: `No hizo ${x.nombre}`, detalle: `Semana del ${rangoSemana(x.lunes)}`, aviso: true });
+        }
+      }
+      for (const pr of paronesDe(entrenos.map((e) => e.fecha), hoy, { desde })) {
+        if (pausas.length && semanaEnPausa(pausas, lunesDe(pr.desde))) continue;
+        ev.push({ tipo: 'paron', fecha: pr.hasta, cuando: `${pr.hasta}T12:00`, clave: `z:${pr.desde}`, icono: 'pausa', pestana: 'registro', titulo: textoParon(pr), detalle: detalleParon(pr), aviso: pr.sigue && pr.dias >= 7 });
+      }
+      // Su día: hábitos, comidas, fotos de plato, suplementos y lo de Salud (una línea por día)
+      for (const [f, d] of Object.entries(extra.dias || {})) {
+        if (f < desde || f > hoy) continue;
+        const t = textoDia(d);
+        if (t) ev.push({ tipo: 'dia', fecha: f, cuando: `${f}T22:00`, clave: `d:${f}`, icono: 'nutricion', pestana: d.kcal != null || d.cumplido != null || d.fotos ? 'nutricion' : 'seguimiento', titulo: 'Su día', detalle: t.charAt(0).toUpperCase() + t.slice(1) });
+      }
+      // Los objetivos que te propone (con la 076)
+      for (const o of extra.propuestas || []) {
+        const f = fechaDe(o.creado_en);
+        if (!f || f < desde) continue;
+        ev.push({ tipo: 'objetivo', fecha: f, cuando: o.creado_en, hora: horaDe(o.creado_en), clave: `o:${o.id}`, icono: 'diana', pestana: 'objetivos', titulo: 'Te propuso un objetivo', detalle: o.titulo || o.texto || o.descripcion || '' });
+      }
       // Por día (lo más reciente primero) y, dentro del día, por hora
       return ev.filter((e) => e.fecha >= desde).sort((x, y) => (`${x.fecha}|${x.cuando}` < `${y.fecha}|${y.cuando}` ? 1 : -1));
+    },
+    // (v0.205) lo que la actividad suma de su día a día (cada cosa con su permiso; lo que falle o no esté, fuera) y las
+    // sesiones de sus semanas publicadas que no hizo
+    async extraActividad(atletaId, desde, hoy = hoyISO()) {
+      const [habitos, registrosHabito, nutricion, fotos, sup, salud, propuestas, bloques] = await Promise.all([
+        b.select('habitos', { eq: { atleta_id: atletaId } }).catch(() => []),
+        api.registrosHabitos(atletaId, desde, hoy).catch(() => []),
+        api.registrosNutricion(atletaId, desde, hoy).catch(() => []),
+        api.fotosPlatos(atletaId, desde, hoy).catch(() => []),
+        api.suplementos(atletaId, { desde }).catch(() => null),
+        api.saludDiaria(atletaId, desde, hoy).catch(() => null),
+        api.propuestasPendientes(atletaId).catch(() => []),
+        b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' }).catch(() => []),
+      ]);
+      let sinHacer = [];
+      if (bloques.length) {
+        const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' }, gte: { fecha_inicio: sumarDias(desde, -7) }, cols: 'id,bloque_id,fecha_inicio' }).catch(() => []);
+        const W = porId(semanas);
+        const ses = semanas.length ? await b.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, eq: { completada: false }, cols: 'id,semana_id,nombre,tipo' }).catch(() => []) : [];
+        sinHacer = ses.map((x) => ({ id: x.id, nombre: x.nombre, lunes: W[x.semana_id]?.fecha_inicio ? lunesDe(W[x.semana_id].fecha_inicio) : null, bloqueId: W[x.semana_id]?.bloque_id || null }));
+      }
+      return {
+        dias: diasDeAtleta({ habitos, registrosHabito, nutricion, fotos, tomas: sup?.tomas || [], salud: salud?.dias || [] }, desde),
+        propuestas: propuestas || [],
+        sinHacer,
+      };
     },
     // Avisos del coach en vigor para este atleta (los generales y los suyos), del más reciente al más antiguo
     async avisos(atletaId, hoy = hoyISO()) {
@@ -7311,6 +7375,12 @@ export function crearApi(backend) {
       return copia;
     },
     // (v0.186) cuantos comentarios escribio el atleta en cada sesion: { sesionId: n }
+    // (v0.205) las sesiones a las que ya le has escrito algo en su hilo (Registro: «Ya le has escrito»)
+    async sesionesConTuyo(atletaId, ids = []) {
+      if (!ids.length) return new Set();
+      const filas = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, in: { sesion_id: ids }, cols: 'sesion_id,eliminado_en' }).catch(() => []);
+      return new Set(filas.filter((c) => c.sesion_id && !c.eliminado_en).map((c) => c.sesion_id));
+    },
     async comentariosDeSesiones(ids = []) {
       if (!ids.length) return {};
       const filas = await b.select('comentarios', { in: { sesion_id: ids }, eq: { autor: 'atleta' }, cols: 'sesion_id,eliminado_en' });

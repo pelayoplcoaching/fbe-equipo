@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.205': {
+    coach: [
+      'Registro: elige bloque y semana; en cada ejercicio, la vez anterior, su 1RM del día, toneladas, descanso real y notas.',
+      'Registro: lo saltado, su vídeo de ese día, «−2,5 / +2,5 kg» para su próxima sesión, su historial y «Bien hecho».',
+      'Actividad: su día, lo que no hizo, la hora, lo nuevo, ver la sesión, contestarle y felicitarle desde ahí, y más filtros.',
+    ],
+  },
   '0.204': {
     atleta: [
       'Tus gráficas a pantalla completa, varios ejercicios juntos en % y, detrás, en gris, el periodo anterior para comparar.',
