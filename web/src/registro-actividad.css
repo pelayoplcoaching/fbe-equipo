@@ -144,6 +144,7 @@ button.serie-ficha[aria-pressed="true"] { box-shadow: var(--anillo-acento); }
 .actividad .lista > li.apagado .actividad-ico { --ac: var(--tinta-3); }
 .actividad .lista > li.mio { background: var(--morado-suave); }
 .actividad .lista > li.mio .actividad-ico { --ac: var(--morado); }
+.actividad .lista > li.mio .actividad-hora { color: var(--tinta-2); }
 .chip-tu { min-height: 0; padding: 0 var(--esp-6); font-size: var(--letra-11); }
 .act-peso-linea { display: inline-flex; align-items: center; gap: var(--esp-6); }
 .actividad-hijos { list-style: none; margin: 0 var(--esp-14) var(--esp-10) var(--ra-sangria); padding: 0; display: grid; gap: var(--esp-6); }

@@ -316,7 +316,8 @@ export function Actividad({ atleta, irA }) {
       {res.datos && vista === 'lista' && <button class="btn btn-peq" style="justify-self:start" onClick={() => setDias(dias + 30)}>Ver 30 días más</button>}
       {voz && <HojaVoz atleta={atleta} respondeA={voz.comentarioId} alCerrar={() => setVoz(null)} alEnviado={() => marcar(voz.clave, 'Contestado')} />}
       {archivo && <DetalleArchivo a={archivo} lista={[]} atletaId={atleta.id} nombreAtleta={atleta.nombre} esCoach nombre={archivo.tipo === 'foto_progreso' ? 'Foto de progreso' : 'Vídeo de técnica'}
-        alCerrar={() => setArchivo(null)} alCambiar={() => res.recargar(true)} />}
+        alCerrar={() => setArchivo(null)} alCambiar={() => res.recargar(true)}
+        alBorrar={async () => { try { await api.borrarArchivo(archivo); aviso(archivo.tipo === 'foto_progreso' ? 'Foto borrada' : 'Vídeo borrado'); setArchivo(null); res.recargar(true); } catch (err) { aviso(err?.message || 'No se ha podido borrar', 'error'); } }} />}
     </div>
   );
 }

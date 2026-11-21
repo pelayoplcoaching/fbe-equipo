@@ -59,7 +59,7 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
       await ses.waitFor({ timeout: 10000 });
       if (primera) {
         const sem = p.locator('.registro-semana');
-        check(await sem.count() === 1 && /Semana \d+/.test(await sem.textContent()) && /Sesiones\d+ de \d+/.test((await sem.textContent()).replace(/\s+/g, '')) && /Toneladas/.test(await sem.textContent()), `(2) la semana arriba: sesiones, series, toneladas y esfuerzo («${(await sem.textContent()).replace(/\s+/g, ' ').slice(0, 90)}»)`);
+        check(await sem.count() === 1 && /Semana \d+/.test(await sem.textContent()) && /Sesiones\d+de\d+/.test((await sem.textContent()).replace(/\s+/g, '')) && /Toneladas/.test(await sem.textContent()), `(2) la semana arriba: sesiones, series, toneladas y esfuerzo («${(await sem.textContent()).replace(/\s+/g, ' ').slice(0, 90)}»)`);
         check(await p.locator('.registro-ej .registro-desvio').count() >= 1 && /(por encima|por debajo) de lo pautado|justo en lo pautado/.test(await p.locator('.registro-ej .registro-desvio').first().textContent()), `(4) el desvío de esfuerzo de cada ejercicio («${await p.locator('.registro-ej .registro-desvio').first().textContent().catch(() => '')}»)`);
         check(await p.locator('.registro-ej-cab svg.registro-linea').count() >= 1, '(3) la minilínea de su 1RM en el bloque, junto al nombre');
         const rend = p.locator('.registro-dia .chip', { hasText: 'Rindió' });
@@ -72,26 +72,26 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
         await form.getByRole('button', { name: 'Enviar' }).click();
         check(await toast(/Comentario enviado/), 'y va al hilo de la sesión');
         // Copiar la sesión
-        await ses.getByRole('button', { name: 'Copiar' }).click();
+        await ses.getByRole('button', { name: 'Copiar', exact: true }).click();
         check(await toast(/Sesión copiada|No se ha podido copiar/), '(9) copiar una sesión como texto');
         const pegado = await p.evaluate(() => navigator.clipboard.readText()).catch(() => '');
         if (pegado) check(/^S\d+: /.test(pegado) && pegado.split('\n').length >= 2, `con cada ejercicio en su línea («${pegado.split('\n')[0]}»)`);
         // Comparar
-        await ses.getByRole('button', { name: 'Comparar' }).click();
+        await ses.getByRole('button', { name: 'Comparar', exact: true }).click();
         const cmp = p.locator('[role=dialog]', { hasText: 'Comparar sesiones' }).last();
         check(await hasta(async () => (await cmp.locator('.registro-comparar tbody tr').count()) >= 1), '(8) comparar dos sesiones lado a lado');
         await revisar('comparar');
         await p.keyboard.press('Escape');
         await cmp.waitFor({ state: 'hidden' }).catch(() => {});
         // Por ejercicios
-        await p.getByRole('button', { name: 'Por ejercicios' }).click();
+        await p.getByRole('button', { name: 'Por ejercicios', exact: true }).click();
         const tabla = p.locator('.registro-por-ejercicio table');
         check(await hasta(async () => (await tabla.locator('tbody tr').count()) >= 2) && /S1/.test(await tabla.locator('thead').textContent()), `(1) por ejercicios: cada uno con sus semanas en columnas (${await tabla.locator('tbody tr').count()})`);
         await revisar('por-ejercicios');
-        await p.getByRole('button', { name: 'Por sesiones' }).click();
+        await p.getByRole('button', { name: 'Por sesiones', exact: true }).click();
         await ses.waitFor();
         // Descargar el bloque
-        await p.getByRole('button', { name: 'Descargar el bloque' }).click();
+        await p.getByRole('button', { name: 'Descargar el bloque', exact: true }).click();
         const hoja = p.locator('[role=dialog]', { hasText: 'El registro del bloque' }).last();
         check(await hasta(async () => await hoja.isVisible()), '(10) descargar el registro del bloque en hoja de cálculo');
         await p.keyboard.press('Escape');
@@ -103,10 +103,10 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
           check(await toast(/revisadas?/), '(9) revisar la semana entera de un toque');
         } else check(true, '(9) (la semana ya estaba revisada)');
       } else {
-        await p.getByRole('button', { name: 'Por ejercicios' }).click();
+        await p.getByRole('button', { name: 'Por ejercicios', exact: true }).click();
         await p.locator('.registro-por-ejercicio table').waitFor();
         await revisar(`por-ejercicios-${ancho}`);
-        await p.getByRole('button', { name: 'Por sesiones' }).click();
+        await p.getByRole('button', { name: 'Por sesiones', exact: true }).click();
         await ses.locator('button.serie-ficha').first().click();
         await p.locator('.registro-comentar').waitFor();
       }
@@ -120,14 +120,14 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
         const mirar = p.locator('.actividad-mirar');
         check(!(await mirar.count()) || (await mirar.locator('.mirar-item .chip.aviso').count()) >= 1, `(11) «Para mirar», con su motivo (${await mirar.locator('.mirar-item').count()})`);
         const hijos = p.locator('.actividad-hijos .act-hijo-record');
-        check(!(await hijos.count()) || (await p.locator('.actividad-hijos').first().getByRole('button', { name: /^Felicitarle por su récord en / }).count()) >= 1, `(12) los récords de una sesión, colgando de ella, con «Felicitar» (${await hijos.count()})`);
+        check(!(await hijos.count()) || (await hijos.first().getByRole('button', { name: /^Felicitarle por su récord en / }).count()) >= 1, `(12) los récords de una sesión, colgando de ella, con «Felicitar» (${await hijos.count()})`);
         check(await p.locator('.actividad-item.act-record').count() === 0 || await hijos.count() === 0, 'y no sueltos en el día');
         // La semana desplegada
         const banda = p.locator('button.actividad-semana').first();
         await banda.click();
         const det = p.locator('.actividad-semana-detalle').first();
         check(await hasta(async () => await det.isVisible()) && /Sesiones/.test(await det.textContent()) && /Check-in/.test(await det.textContent()) && await banda.getAttribute('aria-expanded') === 'true', '(13) la banda de la semana se despliega: sesiones, comidas, peso y su check-in');
-        await det.getByRole('button', { name: 'Copiar el resumen' }).click();
+        await det.getByRole('button', { name: 'Copiar el resumen', exact: true }).click();
         check(await toast(/Resumen copiado|No se ha podido copiar/), '(19) y su resumen, listo para pegar');
         const res = await p.evaluate(() => navigator.clipboard.readText()).catch(() => '');
         if (res) check(/^Ana, semana del /.test(res) && /- Sesiones: \d+/.test(res), `con lo de esa semana («${res.split('\n')[0]}»)`);
@@ -143,7 +143,7 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
           await cerrarDialogos();
         } else check(true, '(15) (sin fotos ni vídeos en estos 30 días)');
         // Lo mío también
-        const mio = p.getByRole('button', { name: 'Lo mío también' });
+        const mio = p.getByRole('button', { name: 'Lo mío también', exact: true });
         await mio.click();
         check(await hasta(async () => (await p.locator('.actividad li.mio').count()) >= 1) && /Le escribiste en una sesión|Le felicitaste/.test(await p.locator('.actividad li.mio').first().textContent()), `(17) «Lo mío también»: lo que le escribiste, en otro color (${await p.locator('.actividad li.mio').count()})`);
         await mio.click();
@@ -153,16 +153,16 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
         await vb.click();
         check(await hasta(async () => (await p.locator('.actividad li.apagado').count()) >= 1), '(18) marcar como visto: se apaga');
         check(await p.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('fbe-actividad-vistos:'))), 'y se acuerda (en este aparato)');
-        await p.getByRole('button', { name: 'Todo visto' }).click();
+        await p.getByRole('button', { name: 'Todo visto', exact: true }).click();
         check(await hasta(async () => (await p.locator('.act-visto-btn[aria-pressed="false"]').count()) === 0) && await p.locator('.actividad-mirar').count() === 0, '«Todo visto»: todo apagado y nada en «Para mirar»');
         await revisar('actividad-vistos');
       } else {
         await p.locator('button.actividad-semana').first().click();
         await p.locator('.actividad-semana-detalle').first().waitFor();
-        await p.getByRole('button', { name: 'Lo mío también' }).click();
+        await p.getByRole('button', { name: 'Lo mío también', exact: true }).click();
       }
       // El calendario
-      await p.getByRole('button', { name: 'Calendario' }).click();
+      await p.getByRole('button', { name: 'Calendario', exact: true }).click();
       const cal = p.locator('.actividad-cal');
       await cal.waitFor();
       const dias = await cal.locator('.act-cal-dia').count();
@@ -180,7 +180,7 @@ export async function probarRegistro206({ navegador, check, base = 'http://local
         check(await cal.getByRole('button', { name: 'Mes siguiente' }).isDisabled(), 'sin pasar de este mes');
       }
       await revisar(`calendario-${ancho}`);
-      await p.getByRole('button', { name: 'Lista' }).click();
+      await p.getByRole('button', { name: 'Lista', exact: true }).click();
       await p.locator('.actividad-item').first().waitFor();
       await revisar(`actividad-${ancho}`);
       check(errores.length === 0, `Registro y Actividad (segunda tanda) a ${ancho} px en ${tema === 'dark' ? 'oscuro' : 'claro'}, sin errores ni problemas de accesibilidad${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);

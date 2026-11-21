@@ -304,7 +304,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
       <p class="mini terciario">Cada serie es una ficha del color de su esfuerzo frente a lo pautado: en verde, en su sitio; en azul, más suave; en naranja, por encima del esfuerzo o por debajo del rango de repeticiones; en gris, sin RPE. Las de récord, en dorado; las que faltaron, vacías; las que llevan nota, con su bocadillo. Debajo de cada ejercicio, lo que hizo la vez anterior (con flecha si hoy mejoró o bajó), su 1RM estimado del día y el descanso que hizo de verdad (en ámbar si se aleja medio minuto o más del pautado). El aro de cada sesión, las series hechas de las pautadas, del color de su esfuerzo. Toca una serie para comentarla.</p>
       {historial && <HistorialEjercicio atletaId={atleta.id} ejercicio={historial} compartir={false} alCerrar={() => setHistorial(null)} />}
       {comparar && <CompararSesiones s={comparar} sesiones={sesiones} completo={completo} ejercicios={ejercicios} alCerrar={() => setComparar(null)} />}
-      {exportar && <HojaExportar titulo="El registro del bloque" nombre={`registro-${(atleta.nombre || 'atleta').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-bloque.csv`} tipo="text/csv"
+      {exportar && <HojaExportar titulo="El registro del bloque" nombre={`registro-${(atleta.nombre || 'atleta').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-bloque.csv`} tipo="text/csv"
         contenido={seriesACsv(filasCsvBloque(completo, ejercicios))} alCerrar={() => setExportar(false)} />}
       {video && (
         <DetalleArchivo a={video.a} lista={comun?.diario || []} atletaId={atleta.id} nombreAtleta={atleta.nombre} esCoach nombre={video.nombre}
