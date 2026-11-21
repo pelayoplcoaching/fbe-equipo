@@ -23,6 +23,13 @@ export async function entrarPerfil(ctx, nombre, base, errores) {
 }
 export async function axeEn(q, sel, errores, paso) {
   if (!(await q.evaluate(() => !!window.axe))) await q.addScriptTag({ path: AXE });
+  // Que no mida un color a medio cambiar (un boton recien tocado aun pasando a su color de pulsado): espera a que
+  // acaben las transiciones y animaciones que terminan (hasta 1,5 s; las infinitas, como un cargando, no cuentan)
+  await q.evaluate(async () => {
+    const fin = Date.now() + 1500;
+    const vivas = () => document.getAnimations().filter((a) => a.playState === 'running' && a.effect?.getTiming?.().iterations !== Infinity);
+    while (vivas().length && Date.now() < fin) await new Promise((r) => setTimeout(r, 50));
+  }).catch(() => {});
   const v = await q.evaluate(async (s) => (await window.axe.run(document.querySelector(s) || document, {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] }, rules: { region: { enabled: false } },
   })).violations.map((x) => `${x.id}: ${x.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`), sel);
