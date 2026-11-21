@@ -67,11 +67,24 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
   [claveSel, vuelta, evitar.length, estiloClave]);
   const [texto, setTexto] = useState(() => propuestas[tono]);
   const tocado = useRef(false);
-  // Al cambiar de temas, de tono o de frase, el borrador se rehace con la propuesta (lo escrito a mano se cambia);
-  // cuando llega lo que ya le mandaste (para no repetir), solo si aún no has tocado el texto
+  // Al cambiar de temas, de tono o de frase, el borrador se rehace con la propuesta en el mismo toque (lo escrito a mano
+  // se cambia); cuando llega lo que ya le mandaste (para no repetir) o cambias tu manera de escribir, solo si aún no has
+  // tocado el texto
+  const propuestaDe = ({ sel: s2 = sel, aMano: a2 = aMano, tono: t2 = tono, vuelta: v2 = vuelta } = {}) => {
+    const tod = [...f.motivos, ...a2.filter((m) => !f.motivos.some((x) => x.clave === m.clave))];
+    const el = tod.filter((m) => s2.includes(m.clave));
+    return aplicarEstilo(borradorVarios(el.length ? el : [f.motivos[f.motivos.length - 1]], { hoy, variante: base, vuelta: v2, tono: t2, evitar }), estilo, quien);
+  };
+  const rehacer = (c) => {
+    if (c.sel) setSel(c.sel);
+    if (c.aMano) setAMano(c.aMano);
+    if (c.tono) setTono(c.tono);
+    if (c.vuelta != null) setVuelta(c.vuelta);
+    tocado.current = false;
+    setTexto(propuestaDe(c));
+  };
   const primera = useRef(true);
-  useEffect(() => { if (primera.current) { primera.current = false; return; } tocado.current = false; setTexto(propuestas[tono]); }, [claveSel, vuelta, tono, estiloClave]);
-  useEffect(() => { if (!tocado.current) setTexto(propuestas[tono]); }, [evitar.length]);
+  useEffect(() => { if (primera.current) { primera.current = false; return; } if (!tocado.current) setTexto(propuestas[tono]); }, [evitar.length, estiloClave]);
   const [ocupado, una] = useUnaVez();
   const [recordar, setRecordar] = useState(0);
   const [verProgramar, setVerProgramar] = useState(false);
@@ -82,12 +95,11 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
   const enChat = useMemo(() => leerBorrador(almacen(), perfil?.id, f.atleta_id)?.texto || null, [perfil?.id, f.atleta_id]);
   useEffect(() => { area.current?.focus({ preventScroll: true }); }, []);
 
-  const alternar = (clave) => setSel((s) => (s.includes(clave) ? (s.length > 1 ? s.filter((x) => x !== clave) : s) : [...s, clave]));
-  const elegirTono = (t) => { setTono(t); try { almacen()?.setItem(CLAVE_TONO, t); } catch { /* */ } };
+  const alternar = (clave) => rehacer({ sel: sel.includes(clave) ? (sel.length > 1 ? sel.filter((x) => x !== clave) : sel) : [...sel, clave] });
+  const elegirTono = (t) => { rehacer({ tono: t }); try { almacen()?.setItem(CLAVE_TONO, t); } catch { /* */ } };
   const elegirSituacion = (sid) => {
     const m = motivoDeSituacion(sid, todos);
-    if (!todos.some((x) => x.clave === m.clave)) setAMano((l) => [...l, m]);
-    setSel((s) => (s.includes(m.clave) ? s : [...s, m.clave]));
+    rehacer({ aMano: todos.some((x) => x.clave === m.clave) ? aMano : [...aMano, m], sel: sel.includes(m.clave) ? sel : [...sel, m.clave] });
     setVerMas(false);
   };
   const limpio = texto.trim();
@@ -202,7 +214,7 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
         <button class="btn btn-peq btn-primario" onClick={() => enviar()} disabled={ocupado || !limpio}><Icono n="mensaje" /> {ocupado ? 'Enviando…' : 'Enviar'}</button>
         <button class="btn btn-peq" aria-expanded={verProgramar ? 'true' : 'false'} onClick={() => setVerProgramar(!verProgramar)} disabled={!limpio || donde !== 'chat'}><Icono n="reloj" /> Programar</button>
         <button class="btn btn-peq" onClick={() => setVerVoz(true)}><Icono n="micro" /> Nota de voz</button>
-        <button class="btn btn-peq" onClick={() => setVuelta((v) => v + 1)} disabled={!otras}>Otras frases</button>
+        <button class="btn btn-peq" onClick={() => rehacer({ vuelta: vuelta + 1 })} disabled={!otras}>Otras frases</button>
         <button class="btn btn-peq" aria-expanded={verMias ? 'true' : 'false'} onClick={() => setVerMias(!verMias)}><Icono n="guardar" /> Mis respuestas</button>
         <button class="btn btn-peq" onClick={alChat} disabled={!abrirAtleta}>Abrir en su chat</button>
         {contactos.datos && contactos.datos[f.atleta_id] && <BotonWhatsApp telefono={contactos.datos[f.atleta_id]} texto={limpio} />}

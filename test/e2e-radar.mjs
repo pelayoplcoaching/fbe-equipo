@@ -209,7 +209,7 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     // La ronda: los de Hoy, uno detrás de otro
     await chip(/^Hoy/).click();
     await p.getByRole('button', { name: /^Escribir a los de Hoy \(\d+\)$/ }).click();
-    check(await hay(p.locator('.rad-ronda', { hasText: /Ronda: 1 de \d+/ }), 1) && await p.locator('.radar .revision-fila').count() === 1 && await p.locator('.radar .revision-fila textarea').count() === 1, 'la ronda: uno a uno, con su borrador ya abierto');
+    check(await hay(p.locator('.rad-ronda', { hasText: /Ronda: 1 de \d+/ }), 1) && await hay(p.locator('.radar .revision-fila'), 1) && await hay(p.locator('.radar .revision-fila textarea'), 1), 'la ronda: uno a uno, con su borrador ya abierto');
     const enRonda = await p.locator('.radar .revision-fila textarea').inputValue();
     check(/^[A-ZÁÉÍÓÚ][a-záéíóú]+, .*¡Vamos!$/.test(enRonda), `con tu manera de escribir: «${enRonda}»`);
     await p.locator('.rad-ronda').getByRole('button', { name: 'Saltar' }).click();
