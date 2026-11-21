@@ -165,7 +165,8 @@ console.log('Lo que tiene que estar en su sitio');
   check(/<FlechaCifra/.test(pr) && /<DiasSemanaMini/.test(pr) && /records=\{datos\.diasRecord\}/.test(pr) && /<EscaleraRecords/.test(pr) && /tono="oro"/.test(pr) && /useTrofeosNuevos/.test(pr) && /cuerpo=\{salud && progreso\.datos/.test(pr), 'y las cifras, las semanas, el mapa, la escalera, los músculos, el destello y las fotos');
   check(/class="tira-bascula"/.test(src('ui/comunes.jsx')) && /linea-previa/.test(src('ui/comunes.jsx')), 'las gráficas: la tira de la báscula y la línea del periodo anterior');
   check(/proximaMedalla\(lista\)/.test(src('ui/Logros.jsx')) && /GraficaProteina/.test(src('ui/atleta/Nutricion.jsx')) && /<EsfuerzoSemanas/.test(src('ui/InformeBloque.jsx')) && /<FrenteAnterior/.test(src('ui/InformeBloque.jsx')), 'medallas, proteína, bloque frente al anterior y esfuerzo por semana');
-  const fi = src('ui/coach/Ficha.jsx');
+  // (v0.205) el registro vive ahora en su archivo (RegistroCoach.jsx)
+  const fi = src('ui/coach/Ficha.jsx') + src('ui/coach/RegistroCoach.jsx');
   check(/<MedidorSesion/.test(fi) && /serie-ficha esf-/.test(fi) && /<ModoLlamada/.test(fi) && /agruparRecords/.test(src('ui/coach/Actividad.jsx')) && /actividad-semana/.test(src('ui/coach/Actividad.jsx')), 'la ficha del coach: fichas, medidor, modo llamada y la actividad');
   check(!/[^\x00-\x7F]/.test((src('ui/coach/Actividad.jsx').match(/\/\^[^/]*\//g) || []).join('')), 'sin letras con tilde dentro de una expresión regular (rompen la compilación)');
 }
