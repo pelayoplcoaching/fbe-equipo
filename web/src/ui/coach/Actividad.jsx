@@ -76,6 +76,7 @@ export function Actividad({ atleta, irA }) {
                         {e.records.map((r, j) => (
                           <li key={j}>
                             <button class="actividad-item act-record" onClick={() => irA(r.pestana)}>
+                              <span class="actividad-ico" aria-hidden="true"><Icono n="trofeo" /></span>
                               <span class="pila-xs"><span class="actividad-titulo">{r.titulo}</span>{r.detalle && <span class="peq secundario">{r.detalle}</span>}</span>
                               <Icono n="derecha" />
                             </button>

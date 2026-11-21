@@ -1373,7 +1373,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const d = trazoSuave(puntos.map((p, i) => [X(i), Y(p.y)]));
   const area = `${d} L${X(n - 1).toFixed(1)} ${H - abj} L${X(0).toFixed(1)} ${H - abj}Z`;
   morph.finales.current = { linea: d, area };
-  const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+  // (v0.204) sin pisarse: si dos fechas caen muy juntas (el eje empieza antes, en un test), solo la de más a la derecha
+  const etiquetasX = (n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1]).filter((i, k, a) => k === a.length - 1 || X(a[k + 1]) - X(i) >= 46);
   const ultimo = puntos[n - 1];
   const prs = records ? indicesRecord(puntos.map((p) => p.y)) : [];
   const enCursoOk = enCurso && n >= 2;

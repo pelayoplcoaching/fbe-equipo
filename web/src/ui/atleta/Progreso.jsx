@@ -175,7 +175,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               </div>
               {cambioPeso != null && <p class="cambio-rango peq secundario"><Odometro texto={`${conSigno(cambioPeso)} kg`} clase="num" /> de tendencia en {nombreRango(rP)}</p>}
               {graficaPeso()}
-              {ventanaPeso.length > 0 && <p class="mini terciario dias-bascula-txt num">{diasPesadaRango} {diasPesadaRango === 1 ? 'día' : 'días'} con pesada en {nombreRango(rP)}</p>}
+              {ventanaPeso.length > 0 && <p class="mini terciario dias-bascula-txt num">{diasPesadaRango} {diasPesadaRango === 1 ? 'día' : 'días'} con pesada en {nombreRango(rP)}{previoPeso.length > 1 ? `; en gris, ${PREVIO[rP]}` : ''}</p>}
               {seriePeso.length > 1 && <SelectorRango valor={rP} alCambiar={setRangoPeso} etiqueta="Rango de la gráfica del peso" />}
               <NotaGrafica>Cada punto es una pesada; la línea, la tendencia (media que suaviza el agua y la sal del día a día). El ritmo sale de las pesadas de las últimas 3 semanas. Las marcas de abajo, sobre el eje, son los días que te pesaste.{metaP ? ' La línea discontinua es la meta de tu objetivo y la punteada, hacia dónde vas a este ritmo; el ritmo sale en verde si va hacia ella y en ámbar si va en el otro sentido.' : ''} En 1M, 3M y 6M, la línea gris es la tendencia del periodo anterior, puesta debajo para comparar. En 6M y Todo, las franjas de fondo son los bloques (B1, B2…).</NotaGrafica>
             </>

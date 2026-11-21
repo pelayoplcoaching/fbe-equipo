@@ -137,7 +137,8 @@ export function GraficaProteina({ dias, alto = 120 }) {
   const xs = (dias || []).map((_, i) => X(i) + ancho / 2);
   const raspado = useRaspado(n, xs);
   if (!n || !dias.some((d) => d.prot != null)) return null;
-  const tono = (d) => (d.prot == null || !d.objetivo ? '' : d.prot >= d.objetivo * 0.9 ? 'si' : d.prot >= d.objetivo * 0.75 ? 'casi' : 'no');
+  // hoy, aún en curso: sin color de cumplido (como la barra de las calorías)
+  const tono = (d) => (d.prot == null || !d.objetivo ? '' : d.prot >= d.objetivo * 0.9 ? 'si' : d.estado === 'en_curso' ? 'curso' : d.prot >= d.objetivo * 0.75 ? 'casi' : 'no');
   const conDato = dias.filter((d) => d.prot != null && d.estado !== 'en_curso' && d.estado !== 'incompleto');
   const media = conDato.length ? Math.round(conDato.reduce((t, d) => t + d.prot, 0) / conDato.length) : null;
   const enFranja = dias.filter((d) => tono(d) === 'si').length;

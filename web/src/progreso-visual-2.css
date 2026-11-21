@@ -15,7 +15,7 @@
 /* ---------------------------------------------------------------- 1. a pantalla completa */
 .seccion-cab .btn-ampliar { margin-left: auto; color: var(--tinta-2); }
 .seccion-cab .btn-ampliar svg { width: var(--ico-20); height: var(--ico-20); }
-.velo .hoja-dialogo.hoja-completa { width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; align-content: start;
+.velo .hoja-dialogo.hoja-completa { width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; align-content: start; grid-auto-rows: max-content; background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none;
   padding-top: calc(var(--esp-10) + env(safe-area-inset-top, 0px)); }
 @media (min-width: 700px) { .velo .hoja-dialogo.hoja-completa { border-radius: 0; } }
 .hoja-grafica .grafica-grande { width: min(1100px, 100%); justify-self: center; }
@@ -67,7 +67,7 @@
 
 /* ---------------------------------------------------------------- 6. el mapa de constancia, con records y check-ins */
 .cr-celda.con-record { position: relative; }
-.cr-celda.con-record::before { content: ""; position: absolute; top: -18%; right: -18%; width: 52%; height: 52%; border-radius: 50%; background: var(--oro-400); box-shadow: var(--anillo-suave); }
+.cr-celda.con-record::before { content: ""; position: absolute; top: -22%; right: -22%; width: 58%; height: 58%; box-sizing: border-box; border-radius: 50%; background: var(--oro-500); border: var(--filo-medio) solid var(--hoja); }
 .cr-celda.con-checkin { border-bottom: var(--filo-fuerte) solid var(--pv-cuerpo); }
 .cr-leyenda-marcas { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); justify-content: flex-end; }
 .cr-leyenda-marcas span { display: inline-flex; align-items: center; gap: var(--esp-6); }
@@ -76,18 +76,18 @@
 /* ---------------------------------------------------------------- 7. la escalera de un record */
 .escalera-caja { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding-bottom: var(--esp-4); }
 .lista-records.escalera { display: flex; align-items: flex-end; gap: var(--esp-4); min-height: 190px; min-width: min-content; padding: var(--esp-8) var(--esp-4) 0; }
-.lista-records.escalera li { flex: 1 0 64px; max-width: 120px; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: var(--esp-4); padding: 0; border: 0; height: calc(60px + 120px * var(--alto)); }
+.lista-records.escalera li { flex: 1 0 64px; max-width: 120px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; justify-items: stretch; align-items: stretch; gap: var(--esp-4); padding: 0; border: 0; height: calc(60px + 120px * var(--alto)); }
 .lista-records.escalera li + li { border-top: 0; }
-.escalon-cifra { font-size: var(--letra-12); font-weight: 750; color: var(--tinta); text-align: center; line-height: 1.15; }
+.escalon-cifra { font-size: var(--letra-12); font-weight: 750; color: var(--tinta); text-align: center; line-height: 1.15; white-space: nowrap; }
 .escalon { width: 100%; border-radius: var(--r-6) var(--r-6) var(--r-2) var(--r-2); background: color-mix(in srgb, var(--morado) 22%, var(--hoja)); display: grid; place-items: start center; padding-top: var(--esp-6); color: var(--neutro-950); }
 .escalera li.ultima .escalon { background: var(--grad-record); }
 .escalon svg { width: var(--ico-18); height: var(--ico-18); stroke-width: 2; }
-.escalon-fecha { color: var(--tinta-3); white-space: nowrap; }
+.escalon-fecha { color: var(--tinta-3); white-space: nowrap; text-align: center; }
 
 /* ---------------------------------------------------------------- 8. el mapa muscular de tus records */
 .mapa-records { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); align-items: center; gap: var(--esp-14); }
 .mapa-records .mapa-muscular { margin: 0; }
-.mapa-muscular.mapa-oro .m4 { fill: var(--oro-400); }
+.mapa-muscular.mapa-oro .musculo.m4 { fill: var(--oro-400); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--oro-400) 60%, transparent)); }
 .mapa-muscular.mapa-oro .m0 { fill: var(--linea); }
 @media (max-width: 420px) { .mapa-records { grid-template-columns: 1fr; justify-items: center; text-align: center; } .mapa-records .mapa-muscular { width: min(220px, 100%); } }
 
@@ -120,6 +120,7 @@
 .grafica-proteina .barra-proteina.si { fill: var(--ok); }
 .grafica-proteina .barra-proteina.casi { fill: var(--oro-400); }
 .grafica-proteina .barra-proteina.no { fill: var(--aviso); }
+.grafica-proteina .barra-proteina.curso { fill: color-mix(in srgb, var(--morado) 35%, var(--hoja)); }
 .grafica-proteina .barra-proteina.elegida { stroke: var(--tinta); stroke-width: 1.5; }
 
 /* ---------------------------------------------------------------- 14. tu bloque frente al anterior */
@@ -171,12 +172,12 @@
 .trofeos-fila { display: inline-flex; gap: var(--esp-2); color: var(--oro-600); }
 .trofeos-fila svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2.25; }
 .actividad-records > .actividad-item[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
-.actividad-records-lista { list-style: none; margin: 0; padding: 0 0 0 var(--esp-28); }
+.actividad-records-lista { list-style: none; margin: 0; padding: 0 0 0 var(--esp-16); }
 .actividad-records-lista li + li { border-top: var(--filo-fino) solid var(--linea); }
 
 /* ---------------------------------------------------------------- 20. el modo llamada */
 .llamada-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-12); }
 .modo-llamada .llamada-panel { width: min(1100px, 100%); justify-self: center; display: grid; gap: var(--esp-16); }
-.modo-llamada .pestanas-progreso { width: min(1100px, 100%); justify-self: center; }
+.modo-llamada .pestanas-progreso { width: min(1100px, 100%); justify-self: center; margin-top: 0; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .modo-llamada .llamada-panel .seccion h2 { font-size: var(--letra-22); }
 .modo-llamada .llamada-panel .cifra .v { font-size: calc(var(--letra-24) * 1.5); }
