@@ -5039,3 +5039,11 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .barra-editor .solo-movil { display: none; }
 @media (max-width: 699px) { .barra-editor .solo-movil { display: inline-flex; } }
 @media (min-width: 900px) { .barra-editor { bottom: var(--esp-24); right: var(--esp-24); } }
+
+/* v0.199: a 360 px la cabecera de la ficha iba justa al pixel (volver, foto, nombre y Codigo) y, con otra letra, se
+   salia: el nombre cede sitio y, en pantallas estrechas, Codigo queda solo con su icono (el nombre del boton sigue) */
+.cabecera-grande:has(.btn-codigo) .titulo { min-width: 0; }
+@media (max-width: 420px) {
+  .cabecera-grande .btn-codigo { padding-left: var(--esp-10); padding-right: var(--esp-10); }
+  .cabecera-grande .btn-codigo .btn-codigo-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
