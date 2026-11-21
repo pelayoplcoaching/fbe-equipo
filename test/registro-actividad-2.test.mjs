@@ -50,6 +50,8 @@ console.log('Registro: el desvío de esfuerzo y el bloque por ejercicios');
   const dom = pe.find((e) => e.id === 'dom');
   check(dom && dom.cols[0].mejor.reps === 8 && dom.cols[0].e1rm === null && dom.linea.length === 0, 'sin kilos: la serie con más repeticiones (y sin 1RM)');
   check(pe.some((e) => e.id === 'jal' && e.cols[1].n === 1), 'lo que hizo en lugar de lo pautado, por el ejercicio que hizo de verdad');
+  const gem = R.porEjercicios({ semanas: [{ id: 'w', numero: 1 }], sesiones: { w: [{ id: 's' }] }, pautas: { s: [{ id: 'p', ejercicio_id: 'g' }] }, series: { p: [{ kg: 30, reps: 14 }, { kg: 30, reps: 15 }, { kg: 25, reps: 15 }] } }, {})[0];
+  check(gem.cols[0].mejor.reps === 15 && gem.cols[0].mejor.kg === 30 && gem.cols[0].e1rm === null && gem.linea.length === 0, 'con más de 12 repeticiones: la serie que más mueve, sin 1RM');
 }
 
 console.log('Registro: la semana arriba, el rendimiento del día y la sesión como texto');

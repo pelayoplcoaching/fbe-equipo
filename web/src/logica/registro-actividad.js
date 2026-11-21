@@ -222,7 +222,10 @@ export function porEjercicios(completo, nombres = {}) {
       const ss = e.porSemana[w.id] || [];
       if (!ss.length) return { semanaId: w.id, numero: w.numero, n: 0, mejor: null, e1rm: null };
       const m = mejorDe(ss);
-      const mejor = m?.tipo === 'kg' ? ss.filter((s) => Number(s.kg) > 0).reduce((a, s) => ((e1rm(s) || 0) > (e1rm(a) || 0) ? s : a)) : ss.reduce((a, s) => (Number(s.reps) > Number(a.reps) ? s : a));
+      const conKg = ss.filter((s) => Number(s.kg) > 0);
+      const mejor = m?.tipo === 'kg' ? conKg.reduce((a, s) => ((e1rm(s) || 0) > (e1rm(a) || 0) ? s : a))
+        : m?.tipo === 'carga' ? conKg.reduce((a, s) => (Number(s.kg) * Number(s.reps) > Number(a.kg) * Number(a.reps) ? s : a))
+          : ss.reduce((a, s) => (Number(s.reps) > Number(a.reps) ? s : a));
       return { semanaId: w.id, numero: w.numero, n: ss.length, mejor, e1rm: m?.tipo === 'kg' ? r1(m.valor) : null };
     });
     const todas = Object.values(e.porSemana).flat();
