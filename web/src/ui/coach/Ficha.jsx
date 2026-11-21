@@ -24,7 +24,8 @@ import { Diario } from '../Diario.jsx';
 import { MiTecnica } from '../tecnica/MiTecnica.jsx';
 import { cardioHechoValido, textoCardioHecho, NOMBRE_MODALIDAD } from '../../logica/cardio.js';
 import { VerArchivo } from '../Archivos.jsx';
-import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
+import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO, eventosRecord } from '../../logica/calculos.js';
+import { esfuerzoSerie, tonoEsfuerzo } from '../../logica/progreso-visual-2.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { escribirPendiente, MAX_PENDIENTE } from '../../logica/radar/pendientes.js';
 import { pendienteHecho, contactoDeAtleta } from '../../datos/radar.js';
@@ -49,7 +50,7 @@ import { AMedida } from './AMedidaCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
 import { CarreraFicha } from './CarreraCoach.jsx';
 import { conCarrera, leerTiempo, fmtTiempo } from '../../logica/carrera.js';
-import { IndiceSeguimiento, TendenciasCheckin } from './SeguimientoPiezas.jsx';
+import { IndiceSeguimiento, TendenciasCheckin, ModoLlamada } from './SeguimientoPiezas.jsx';
 import { nivelCheckin, adherenciaMedia, zonaCarga, fueraDeZona } from '../../logica/seguimiento-visual.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
@@ -253,16 +254,18 @@ function Registro({ atleta, alCambiar }) {
     const bloques = await api.bloquesDe(atleta.id);
     const activo = bloques.find((b) => ['activo', 'ajustado'].includes(b.estado)) || bloques[0];
     if (!activo) return null;
-    const [completo, biblioteca] = await Promise.all([api.bloqueCompleto(activo.id), api.biblioteca()]);
-    return { completo, ejercicios: Object.fromEntries(biblioteca.map((e) => [e.id, e])) };
+    // (v0.204) y sus récords (las series que lo fueron salen en dorado)
+    const [completo, biblioteca, records] = await Promise.all([api.bloqueCompleto(activo.id), api.biblioteca(),
+      api.historial(atleta.id).then((ss) => new Set(eventosRecord(ss).eventos.map((e) => e.serie_id).filter(Boolean))).catch(() => new Set())]);
+    return { completo, ejercicios: Object.fromEntries(biblioteca.map((e) => [e.id, e])), records };
   }, [atleta.id]);
   if (datos.cargando && !datos.datos) return <Siluetas forma="tarjetas" n={3} />;
   if (!datos.datos) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Sin bloque">Cuando tenga un bloque, aquí verás lo que registra frente a lo pautado.</Vacio></div>;
-  const { completo, ejercicios } = datos.datos;
+  const { completo, ejercicios, records } = datos.datos;
   const sesiones = completo.semanas.slice().reverse().flatMap((w) => (completo.sesiones[w.id] || []).slice().reverse().map((s) => ({ ...s, semana: w })))
     .filter((s) => s.completada || (completo.pautas[s.id] || []).some((p) => completo.series[p.id]?.length));
   if (!sesiones.length) return <div class="panel"><Vacio ilustracion="semana" icono="semana" titulo="Todavía no ha registrado nada en este bloque" /></div>;
-  return <ListaRegistro atleta={atleta} sesiones={sesiones} completo={completo} ejercicios={ejercicios} recargar={() => { datos.recargar(true); alCambiar?.(); }} />;
+  return <ListaRegistro atleta={atleta} sesiones={sesiones} completo={completo} ejercicios={ejercicios} records={records} recargar={() => { datos.recargar(true); alCambiar?.(); }} />;
 }
 
 // RPE de la serie por encima del pautado (medio punto de margen)
@@ -272,7 +275,23 @@ const pasado = (p, h) => {
   return objetivo != null && Number(h.rpe) > objetivo + 0.5;
 };
 
-function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
+// (v0.204) El medidor de una sesión: un aro con las series hechas de las pautadas, del color de su esfuerzo
+const NOMBRE_TONO = { suave: 'suave', medio: 'medio', duro: 'duro', sin: 'sin apuntar' };
+function MedidorSesion({ hechas, pautadas, rpe }) {
+  if (!pautadas) return null;
+  const p = Math.min(1, hechas / pautadas), R = 15, C = 2 * Math.PI * R;
+  const tono = tonoEsfuerzo(rpe);
+  return (
+    <svg class={`medidor-sesion esf-${tono}`} viewBox="0 0 40 40" width="40" height="40" role="img" aria-label={`${hechas} de ${pautadas} series pautadas hechas; esfuerzo ${rpe ? `${num(rpe)} de 10 (${NOMBRE_TONO[tono]})` : 'sin apuntar'}`}>
+      <circle class="medidor-fondo" cx="20" cy="20" r={R} />
+      <circle class="medidor-lleno" cx="20" cy="20" r={R} stroke-dasharray={`${(C * p).toFixed(2)} ${C.toFixed(2)}`} transform="rotate(-90 20 20)" />
+      <text x="20" y="23.5" text-anchor="middle">{hechas}</text>
+    </svg>
+  );
+}
+const NOMBRE_ESF = { suave: 'más suave de lo pautado', justo: 'al esfuerzo pautado', pasado: 'por encima del esfuerzo pautado', corto: 'por debajo de las repeticiones', sin: '' };
+
+function ListaRegistro({ atleta, sesiones, completo, ejercicios, records = new Set(), recargar }) {
   const { api, aviso } = useApp();
   const [todas, setTodas] = useState(false);
   const [hilo, setHilo] = useState(null);
@@ -281,7 +300,13 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
     <div class="pila">
       {visibles.map((s) => (
         <section class={`panel panel-pad pila-s registro-sesion${s.completada && !s.revisada_en ? ' por-revisar' : ''}`} data-rpe={s.rpe_sesion ? Math.min(10, Math.max(5, Math.floor(s.rpe_sesion))) : undefined} key={s.id}>
-          <div class="separa" style="flex-wrap:wrap">
+          <div class="separa registro-cab" style="flex-wrap:wrap">
+            {(() => {
+              const ps = completo.pautas[s.id] || [];
+              const pautadas = ps.reduce((t, p) => t + (Number(p.series) || 0), 0);
+              const hechas = ps.reduce((t, p) => t + Math.min((completo.series[p.id] || []).filter((h) => Number(h.reps) > 0).length, Number(p.series) || 0), 0);
+              return <MedidorSesion hechas={hechas} pautadas={pautadas} rpe={s.rpe_sesion} />;
+            })()}
             <strong>S{s.semana.numero}: {s.nombre}</strong>
             <span class="peq secundario">{s.fecha_realizada ? fmtConDia(s.fecha_realizada) : 'En curso'}{s.rpe_sesion ? `, esfuerzo ${s.rpe_sesion}/10` : ''}{cardioHechoValido(s.cardio_hecho) ? `, ${NOMBRE_MODALIDAD[s.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(s.cardio_hecho)}` : s.duracion_min ? `, ${s.duracion_min} min` : ''}</span>
           </div>
@@ -302,9 +327,16 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
                       <tr key={p.id}>
                         <td>{etq && <span class="ss-etq">{etq}</span>}{ejercicios[p.ejercicio_id]?.nombre}{cambios.length > 0 && <div class="mini cambio">Hecho como {cambios.join(', ')}</div>}</td>
                         <td class="registro-serie" data-etq="Pautado">{pa.series}{pa.esfuerzo ? `, ${pa.esfuerzo}` : ''}{pa.carga ? `, ${pa.carga}` : ''}</td>
-                        <td class="registro-serie" data-etq="Hecho">{hechas.length ? hechas.map((h, i) => (
-                          <Fragment key={i}>{i ? ', ' : ''}<span class={(p.reps_min != null && h.reps < p.reps_min) || pasado(p, h) ? 'corto' : ''}>{textoSerie(h)}</span></Fragment>
-                        )) : <span class="terciario">—</span>}
+                        <td class="registro-serie" data-etq="Hecho">{hechas.length ? <span class="fichas-serie">{hechas.map((h, i) => {
+                          // (v0.204) cada serie, una ficha del color de su esfuerzo frente a lo pautado; la de récord, en dorado
+                          const esf = esfuerzoSerie(p, h);
+                          const rec = records.has(h.id);
+                          return (
+                            <Fragment key={i}>{i ? <span class="sr">, </span> : ''}<span class={`serie-ficha esf-${esf} ${(p.reps_min != null && h.reps < p.reps_min) || pasado(p, h) ? 'corto' : ''} ${rec ? 'record' : ''}`}>
+                              {rec && <Icono n="trofeo" />}{textoSerie(h)}{(NOMBRE_ESF[esf] || rec) && <span class="sr"> ({[rec ? 'récord' : '', NOMBRE_ESF[esf]].filter(Boolean).join(', ')})</span>}
+                            </span></Fragment>
+                          );
+                        })}</span> : <span class="terciario">—</span>}
                           {hechas.length > 0 && hechas.length < p.series && <span class="corto"> ({hechas.length}/{p.series})</span>}</td>
                       </tr>
                     );
@@ -323,7 +355,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, recargar }) {
         </section>
       ))}
       {!todas && sesiones.length > 6 && <button class="btn" onClick={() => setTodas(true)}>Ver las {sesiones.length - 6} sesiones anteriores</button>}
-      <p class="mini terciario">En naranja, las series por debajo del rango de repeticiones, por encima del esfuerzo pautado o los ejercicios con menos series de las pautadas.</p>
+      <p class="mini terciario">Cada serie es una ficha del color de su esfuerzo frente a lo pautado: en verde, en su sitio; en azul, más suave; en naranja, por encima del esfuerzo o por debajo del rango de repeticiones (y los ejercicios con menos series de las pautadas); en gris, sin RPE. Las de récord, en dorado. El aro de cada sesión, las series hechas de las pautadas, del color de su esfuerzo.</p>
     </div>
   );
 }
@@ -464,9 +496,16 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const entrena = conEntrenamiento(atleta);
   // (v0.203) el índice que se queda arriba: a qué apartado ir sin bajar a mano (la pestaña mide varias pantallas)
   const apartados = [entrena && ['seg-a-cumplimiento', 'Cumplimiento'], ['seg-a-habitos', 'Hábitos'], ['seg-a-progreso', 'Progreso'], entrena && ['seg-a-carga', 'Carga'], ['seg-a-checkins', 'Check-ins'], ['seg-a-meses', 'Meses']].filter(Boolean);
+  // (v0.204) el modo llamada: su progreso a pantalla completa para enseñárselo en una videollamada
+  const [llamada, setLlamada] = useState(false);
   return (
     <div class="pila">
       <IndiceSeguimiento apartados={apartados} />
+      <div class="llamada-fila">
+        <button type="button" class="btn btn-peq" onClick={() => setLlamada(true)}><Icono n="video" /> Ver con {(atleta.nombre || 'él').split(' ')[0]}</button>
+        <span class="mini terciario">Su progreso a pantalla completa y sin tus notas, para compartir pantalla en una videollamada.</span>
+      </div>
+      {llamada && <ModoLlamada atleta={atleta} entrena={entrena} alCerrar={() => setLlamada(false)} />}
       {/* (pulido 2.3) cada bloque guarda, mientras carga, el sitio que ocupó la última vez: no se empujan al llegar */}
       <Reserva id="seg-tareas"><TareasCoach atleta={atleta} alCambiar={alCambiar} /></Reserva>
       {entrena && <div id="seg-a-cumplimiento" class="seg-apartado"><Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva></div>}

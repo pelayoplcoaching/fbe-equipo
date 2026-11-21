@@ -2,7 +2,7 @@
 // adaptativo (como MacroFactor), el ajuste para el ritmo que buscas con «Revisar y aplicar», sus semanas y sus días.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Segmentos, Paso, Vacio, Siluetas, ErrorCaja, Grafica } from '../comunes.jsx';
-import { TarjetaPlan, GraficaIngesta, textoPlan, textoRitmoCorto, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
+import { TarjetaPlan, GraficaIngesta, GraficaProteina, textoPlan, textoRitmoCorto, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
 import { MODOS_NUTRICION, FASES_NUTRICION, NIVELES_ACTIVIDAD, fmtKcal, kcalDeMacros, planInicial, proteinaPorKg, textoRitmo } from '../../logica/nutricion.js';
 import { hoyISO, lunesDe, sumarDias, fmtConDia } from '../../logica/fechas.js';
 import { num, signo } from '../../logica/calculos.js';
@@ -31,7 +31,8 @@ export function NutricionCoach({ atleta }) {
   const conCifras = actualOSiguiente && actualOSiguiente.modo !== 'sin_contar';
   const semanas = [r.semana, ...r.anteriores];
   const dias = [...semanas].reverse().flatMap((w) => w.dias).filter((d) => !d.futuro).slice(-28)
-    .map((d) => ({ iso: d.iso, kcal: d.reg?.kcal != null ? Number(d.reg.kcal) : null, objetivo: d.obj?.kcal ?? null, estado: d.estado }));
+    .map((d) => ({ iso: d.iso, kcal: d.reg?.kcal != null ? Number(d.reg.kcal) : null, objetivo: d.obj?.kcal ?? null, estado: d.estado,
+      prot: d.reg?.proteina_g != null ? Number(d.reg.proteina_g) : null, objProt: d.obj?.proteina ?? null }));
   // Cambiar: si ya hay una versión preparada para más adelante, se parte de esa (con su fecha y su motivo), para no
   // pisarla con las cifras de la vigente; si no, de la vigente, como versión nueva del lunes
   const abrir = (base = r.siguiente || plan, extra = {}) => {
@@ -89,6 +90,8 @@ export function NutricionCoach({ atleta }) {
                 {dias.map((d) => <i key={d.iso} class={d.estado} title={`${fmtConDia(d.iso)}: ${NOMBRE_ESTADO_DIA[d.estado]}`} />)}
               </div>
             )}
+            {/* (v0.204) su proteína de cada día, con la franja de su objetivo */}
+            {conCifras && dias.some((d) => d.prot != null) && <GraficaProteina dias={dias.map((d) => ({ iso: d.iso, prot: d.prot, objetivo: d.objProt, estado: d.estado }))} />}
             <div class="tabla-desliza" tabIndex={0} role="region" aria-label="Semanas de nutrición">
               <table class="tabla-nutricion num">
                 <thead><tr><th scope="col">Semana</th><th scope="col">Días</th>{conCifras && <th scope="col">Kcal (obj.)</th>}{conCifras && <th scope="col">Prot. (obj.)</th>}<th scope="col">Bien</th></tr></thead>

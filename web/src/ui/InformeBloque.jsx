@@ -7,12 +7,51 @@ import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
 import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';
 import { MensajeCoach } from './atleta/Personal.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { pesoTxt, pesoNum } from '../logica/unidades.js';
+import { pesoTxt, pesoNum, difVista, etiquetaPeso } from '../logica/unidades.js';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
 // principales, semana a semana, músculos, récords y (con consentimiento) el peso. Lo ven el atleta y el coach.
 
 const toneladas = (kg) => num(Math.round(kg / 100) / 10, 1);
+
+// (v0.204) Una cifra del bloque frente a la del bloque anterior: su flecha y la diferencia (igual para el atleta y el
+// coach: el texto no dice «tu» ni «su»)
+function FrenteAnterior({ v, antes, b, dec = 0, unidad = '' }) {
+  if (antes == null || v == null) return null;
+  const d = Math.round((v - antes) * 10 ** dec) / 10 ** dec;
+  const dir = d > 0 ? 'sube' : d < 0 ? 'baja' : 'igual';
+  const cifra = `${num(Math.abs(d), dec)}${unidad}`;
+  return (
+    <span class={`frente-anterior ${dir}`}>
+      <span class="sr">{dir === 'igual' ? `; igual que en el bloque anterior` : `; ${cifra} ${d > 0 ? 'más' : 'menos'} que en el bloque anterior`}{b ? ` (B${b})` : ''}</span>
+      <span aria-hidden="true">{dir !== 'igual' && <Icono n={d > 0 ? 'arriba' : 'abajo'} />}{dir === 'igual' ? '=' : `${d > 0 ? '+' : '−'}${cifra}`}{b ? ` frente al B${b}` : ' frente al anterior'}</span>
+    </span>
+  );
+}
+
+// (v0.204) El esfuerzo de cada semana frente a lo pautado: más suave, en su sitio y por encima (de las series con RPE)
+function EsfuerzoSemanas({ semanas }) {
+  const ws = semanas.filter((w) => !w.futura);
+  return (
+    <ol class="esfuerzo-semanas" aria-label="Esfuerzo frente a lo pautado, semana a semana">
+      {ws.map((w) => {
+        const e = w.cumplimiento?.esfuerzo || { conEsfuerzo: 0 };
+        const encima = e.conEsfuerzo ? e.pctEncima : 0, suave = e.conEsfuerzo ? e.pctDebajo ?? 0 : 0;
+        const justo = e.conEsfuerzo ? Math.max(0, 100 - encima - suave) : 0;
+        return (
+          <li key={w.numero} class={e.conEsfuerzo ? '' : 'sin'}>
+            <span class="sr">Semana {w.numero}: {e.conEsfuerzo ? `${suave} % más suave, ${justo} % en su sitio y ${encima} % por encima (de ${e.conEsfuerzo} series con RPE)` : 'sin series con RPE'}</span>
+            <span class="esf-col" aria-hidden="true">
+              {e.conEsfuerzo > 0 && <><i class="encima" style={{ flexGrow: encima }} /><i class="justo" style={{ flexGrow: justo }} /><i class="suave" style={{ flexGrow: suave }} /></>}
+            </span>
+            <strong aria-hidden="true">S{w.numero}</strong>
+            <span class="mini num" aria-hidden="true">{e.conEsfuerzo ? `${encima} %` : '—'}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 export const tituloBloque = (b) => (b.numero ? `Bloque ${b.numero}: ${b.nombre}` : b.nombre);
 
 // Línea mínima con los valores de cada semana (los huecos se saltan)
@@ -58,6 +97,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
   const [compartir, setCompartir] = useState(false);
   const c = r.cumplimiento;
   const tu = coach ? 'sus' : 'tus';
+  const ant = r.anterior || null;  // (v0.204) el bloque de antes, para comparar
   const datosTarjeta = {
     fondo: 'bloque',   // (imágenes) las montañas
     nombre: tituloBloque(r.bloque), subtitulo: `${r.semanasTotal} semanas, ${rangoLargo(r.inicio, r.fin)}`, fecha: r.fin,
@@ -84,10 +124,10 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
         {r.terminado && !coach && <MensajeCoach momento="bloque" />}
 
         <div class="informe-cifras">
-          <div class="informe-cifra"><Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || 1} tam={56} /><span class="pila-xs"><b class="num">{r.sesiones.hechas} de {r.sesiones.total}</b><span class="mini secundario">sesiones</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(c.series.pct ?? '—')} /> %</b><span class="mini secundario">de las series pautadas ({c.series.hechas} de {c.series.pautadas})</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={toneladas(r.tonelaje)} /> t</b><span class="mini secundario">{r.series} series{r.minutos ? `, ${Math.round(r.minutos / 60)} h` : ''}</span></span></div>
-          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(r.records.length)} /></b><span class="mini secundario">{r.records.length === 1 ? 'récord' : 'récords'}</span></span></div>
+          <div class="informe-cifra"><Anillo hechas={r.sesiones.hechas} total={r.sesiones.total || 1} tam={56} /><span class="pila-xs"><b class="num">{r.sesiones.hechas} de {r.sesiones.total}</b><span class="mini secundario">sesiones</span>{ant && <FrenteAnterior v={r.sesiones.hechas} antes={ant.sesiones} b={ant.numero} />}</span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(c.series.pct ?? '—')} /> %</b><span class="mini secundario">de las series pautadas ({c.series.hechas} de {c.series.pautadas})</span>{ant && c.series.pct != null && <FrenteAnterior v={c.series.pct} antes={ant.pctSeries} b={ant.numero} unidad=" %" />}</span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={toneladas(r.tonelaje)} /> t</b><span class="mini secundario">{r.series} series{r.minutos ? `, ${Math.round(r.minutos / 60)} h` : ''}</span>{ant && <FrenteAnterior v={Math.round(r.tonelaje / 100) / 10} antes={Math.round(ant.tonelaje / 100) / 10} b={ant.numero} dec={1} unidad=" t" />}</span></div>
+          <div class="informe-cifra"><span class="pila-xs"><b class="num"><CifraSube texto={String(r.records.length)} /></b><span class="mini secundario">{r.records.length === 1 ? 'récord' : 'récords'}</span>{ant && <FrenteAnterior v={r.records.length} antes={ant.records} b={ant.numero} />}</span></div>
         </div>
 
         {r.principales.length > 0 && (
@@ -97,7 +137,8 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
               {r.principales.map((p) => (
                 <li key={p.ejercicio_id}>
                   <span class="pila-xs"><strong>{p.nombre}</strong>
-                    <span class="mini secundario num">{p.cambio != null ? `${pesoNum(p.inicio.e1rm, 1)} → ${pesoTxt(p.fin.e1rm, 1)} (S${p.inicio.semana} a S${p.fin.semana})` : pesoTxt(p.fin.e1rm, 1)}</span></span>
+                    <span class="mini secundario num">{p.cambio != null ? `${pesoNum(p.inicio.e1rm, 1)} → ${pesoTxt(p.fin.e1rm, 1)} (S${p.inicio.semana} a S${p.fin.semana})` : pesoTxt(p.fin.e1rm, 1)}</span>
+                    {ant?.e1rm?.[p.ejercicio_id] != null && <FrenteAnterior v={difVista(p.fin.e1rm)} antes={difVista(ant.e1rm[p.ejercicio_id])} b={ant.numero} dec={1} unidad={` ${etiquetaPeso()}`} />}</span>
                   <Linea valores={p.valores} etiqueta={`1RM estimado por semana: ${p.valores.map((v) => (v == null ? 'sin datos' : pesoTxt(v, 1))).join(', ')}`} />
                   {p.cambio != null ? <span class={`chip num ${p.cambio > 0 ? 'ok' : ''}`}>{signo(p.cambio, 1)} %</span> : <span />}
                 </li>
@@ -115,9 +156,9 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
         {c.esfuerzo.conEsfuerzo > 0 && (
           <section class="pila-s">
             <h3>Esfuerzo frente a lo pautado</h3>
-            <div class="barra-partida" role="img" aria-label={`${100 - c.esfuerzo.pctEncima} % al esfuerzo pautado o por debajo, ${c.esfuerzo.pctEncima} % por encima`}>
-              <span style={{ width: `${100 - c.esfuerzo.pctEncima}%` }} /><span class="encima" style={{ width: `${c.esfuerzo.pctEncima}%` }} />
-            </div>
+            {/* (v0.204) una barra por semana (antes, una sola de todo el bloque) */}
+            <EsfuerzoSemanas semanas={r.semanas} />
+            <span class="leyenda-esfuerzo mini terciario" aria-hidden="true"><span><i class="encima" />Por encima</span><span><i class="justo" />En su sitio</span><span><i class="suave" />Más suave</span></span>
             <p class="peq secundario">{coach
               ? `${c.esfuerzo.pctEncima} % de las series con RPE fueron más de medio punto por encima de lo pautado (${c.esfuerzo.encima} de ${c.esfuerzo.conEsfuerzo}).`
               : `El ${100 - c.esfuerzo.pctEncima} % de tus series fueron al esfuerzo pautado o más suaves; el ${c.esfuerzo.pctEncima} %, por encima. Pasarse a menudo acumula fatiga: si te pasa, cuéntaselo a tu coach.`}</p>

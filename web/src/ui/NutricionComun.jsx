@@ -123,6 +123,47 @@ export function TarjetaPlan({ plan, siguiente = null, diasEntreno = 4, acciones 
 }
 
 // Lo comido cada día (barras, con el color de cómo fue) frente a lo que tocaba (raya). dias: [{ iso, kcal, objetivo, estado }]
+// (v0.204) La proteína de cada día, a la vista: una barra por día con la franja de su objetivo detrás (del 90 % del
+// objetivo, lo que ya cuenta como cumplido, hasta el objetivo). dias: [{ iso, prot, objetivo, estado }]
+export function GraficaProteina({ dias, alto = 120 }) {
+  const [W, ref] = useAncho();
+  const n = dias?.length || 0;
+  const H = alto, izq = 34, der = 8, arr = 8, abj = 20;
+  const valores = (dias || []).flatMap((d) => [d.prot, d.objetivo]).filter((v) => v != null);
+  const hi = Math.max(1, ...valores) * 1.1, lo = 0;
+  const ancho = (W - izq - der) / Math.max(1, n);
+  const X = (i) => izq + i * ancho;
+  const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
+  const xs = (dias || []).map((_, i) => X(i) + ancho / 2);
+  const raspado = useRaspado(n, xs);
+  if (!n || !dias.some((d) => d.prot != null)) return null;
+  const tono = (d) => (d.prot == null || !d.objetivo ? '' : d.prot >= d.objetivo * 0.9 ? 'si' : d.prot >= d.objetivo * 0.75 ? 'casi' : 'no');
+  const conDato = dias.filter((d) => d.prot != null && d.estado !== 'en_curso' && d.estado !== 'incompleto');
+  const media = conDato.length ? Math.round(conDato.reduce((t, d) => t + d.prot, 0) / conDato.length) : null;
+  const enFranja = dias.filter((d) => tono(d) === 'si').length;
+  const textoDia = (i) => { const d = dias[i]; return d.prot == null ? `${fmtConDia(d.iso)}: proteína sin apuntar` : `${fmtConDia(d.iso)}: ${d.prot} g de proteína${d.objetivo ? ` de ${d.objetivo} g` : ''}`; };
+  const resumen = `Proteína de cada día: ${dias.filter((d) => d.prot != null).length} días apuntados${media != null ? `, media ${media} g` : ''}; ${enFranja} en la franja de su objetivo (del 90 % en adelante)`;
+  const sel = raspado.sel;
+  // la franja del objetivo, por tramos de días con el mismo objetivo
+  const tramos = [];
+  dias.forEach((d, i) => { const u = tramos[tramos.length - 1]; if (d.objetivo && u && u.obj === d.objetivo && u.fin === i - 1) u.fin = i; else if (d.objetivo) tramos.push({ obj: d.objetivo, ini: i, fin: i }); });
+  const etiquetasX = [0, Math.floor((n - 1) / 2), n - 1];
+  return (
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={dias.map((d) => Y(d.prot ?? d.objetivo ?? lo))} etiqueta="Proteína de cada día" textoPunto={textoDia} resumen={resumen}>
+      <svg class="grafica grafica-proteina" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        {tramos.map((t) => <rect key={t.ini} class="franja-proteina" x={X(t.ini)} width={X(t.fin) + ancho - X(t.ini)} y={Y(t.obj)} height={Math.max(1, Y(t.obj * 0.9) - Y(t.obj))} rx="2" />)}
+        {[Math.round(hi * 0.45 / 10) * 10, Math.round(hi * 0.85 / 10) * 10].filter((t, i, a) => t > 0 && a.indexOf(t) === i).map((t) => (
+          <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{t} g</text></g>
+        ))}
+        {dias.map((d, i) => d.prot != null && (
+          <rect key={d.iso} class={`barra-proteina ${tono(d)} ${i === sel ? 'elegida' : ''}`} x={X(i) + ancho * 0.22} width={Math.max(2, ancho * 0.56)} y={Y(d.prot)} height={Math.max(1, Y(lo) - Y(d.prot))} rx="2" />
+        ))}
+        {etiquetasX.map((i, k) => <text key={k} x={X(i) + ancho / 2} y={H - 4} text-anchor={k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}>{fmtCorta(dias[i].iso)}</text>)}
+      </svg>
+    </CajaGrafica>
+  );
+}
+
 export function GraficaIngesta({ dias, alto = 150, etiqueta }) {
   const [W, ref] = useAncho();
   const n = dias?.length || 0;

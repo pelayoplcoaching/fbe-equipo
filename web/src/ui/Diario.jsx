@@ -11,6 +11,8 @@ import { PanelCorreccion, EstadoVideo } from './tecnica/Correccion.jsx';
 import { RecordatoriosAtleta } from './tecnica/Recordatorios.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenHerramienta } from '../logica/imagenes.js';
+import { num } from '../logica/calculos.js';
+import { pesoEnFecha } from '../logica/progreso-visual-2.js';
 
 const NOMBRE_POSE = Object.fromEntries(POSES);
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -19,7 +21,9 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 // miniatura. Sustituye a lo que antes iba a Instagram: se queda aquí, privado, con la corrección del coach en
 // cada uno. El atleta sube desde aquí (sin pasar por una sesión), destaca los que quiere volver a ver y compara.
 // esCoach: la misma pantalla en la ficha, con «Marcar revisado».
-export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar }) {
+// (v0.204) cuerpo: { pesos, medidas } (solo el atleta, con su consentimiento de salud): cada foto de progreso con la
+// tendencia de su peso de ese día y, en «Antes y después», el cambio de peso y de medidas entre las dos
+export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar, cuerpo = null }) {
   const { api, aviso } = useApp();
   // (pulido 4) al volver, el diario que ya se cargó se enseña al momento y se pone al día por detrás
   const datos = useCarga(() => api.diario(atletaId), [atletaId], { recuerdo: `diario:${api.uid()}:${atletaId}` });
@@ -86,7 +90,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         <div class="diario-mes" key={m.clave}>
           <h3 class="mes-etq">{m.titulo}</h3>
           <div class="diario-rejilla">
-            {m.items.map((a) => <Miniatura key={a.id} a={a} nombre={nombreDe(a)} alAbrir={() => setAbierto(a)} />)}
+            {m.items.map((a) => <Miniatura key={a.id} a={a} nombre={nombreDe(a)} alAbrir={() => setAbierto(a)} kg={cuerpo && a.tipo === 'foto_progreso' ? pesoEnFecha(cuerpo.pesos, a.fecha) : null} />)}
           </div>
         </div>
       ))}
@@ -99,7 +103,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
       )}
       {nuevaFoto && <NuevaFoto fotos={fotos} alCerrar={() => setNuevaFoto(false)} alSubir={() => { setNuevaFoto(false); recargar(); }} />}
       {comparar === 'videos' && <CompararVideos videos={videos} nombreDe={nombreDe} alCerrar={() => setComparar(null)} />}
-      {comparar === 'fotos' && <CompararFotos fotos={fotos} alCerrar={() => setComparar(null)} />}
+      {comparar === 'fotos' && <CompararFotos fotos={fotos} cuerpo={cuerpo} alCerrar={() => setComparar(null)} />}
       {abierto && (
         <DetalleArchivo a={lista.find((x) => x.id === abierto.id) || abierto} lista={lista} atletaId={atletaId} nombreAtleta={nombreAtleta} esCoach={esCoach} nombre={nombreDe(abierto)}
           alCerrar={() => setAbierto(null)} alCambiar={recargar}
@@ -110,7 +114,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
 }
 
 // Una casilla de la cuadrícula: la miniatura (o el primer fotograma), la duración, la estrella y el estado
-function Miniatura({ a, nombre, alAbrir }) {
+function Miniatura({ a, nombre, alAbrir, kg = null }) {
   const { api } = useApp();
   const [url, setUrl] = useState(null);
   const [sinPoster, setSinPoster] = useState(false);
@@ -124,12 +128,13 @@ function Miniatura({ a, nombre, alAbrir }) {
     return () => { vivo = false; };
   }, [a.ruta, a.poster_ruta, conPoster]);
   return (
-    <button class={`diario-item ${a.destacado ? 'destacado' : ''}`} data-id={a.id} onClick={alAbrir} aria-label={`${nombre}, ${fmtConDia(a.fecha)}${a.destacado ? ', destacado' : ''}${a.respondido ? ', con respuesta del coach' : ''}`}>
+    <button class={`diario-item ${a.destacado ? 'destacado' : ''}`} data-id={a.id} onClick={alAbrir} aria-label={`${nombre}, ${fmtConDia(a.fecha)}${kg != null ? `, con ${num(kg)} kg de tendencia` : ''}${a.destacado ? ', destacado' : ''}${a.respondido ? ', con respuesta del coach' : ''}`}>
       <span class="diario-medio">
         {!url ? <span class="medio-chat-hueco" /> : esFoto || conPoster ? <img src={url} alt="" loading="lazy" onError={() => conPoster && setSinPoster(true)} /> : <video src={url} muted playsInline preload="metadata" />}
         {!esFoto && <span class="medio-chat-play" aria-hidden="true"><Icono n="play" />{a.duracion_seg ? <span class="num">{mmssCorto(a.duracion_seg)}</span> : null}</span>}
         {a.destacado && <span class="diario-estrella" aria-hidden="true"><Icono n="libre" /></span>}
         {a.respondido && <span class="diario-coach" aria-hidden="true"><Icono n="mensaje" /></span>}
+        {kg != null && <span class="diario-kg num" aria-hidden="true"><Icono n="bascula" />{num(kg)}</span>}
       </span>
       <span class="diario-pie"><span class="diario-nombre">{nombre}{esFoto && a.pose ? ` · ${NOMBRE_POSE[a.pose]}` : ''}</span><span class="mini terciario">{fmtCorta(a.fecha)}</span></span>
     </button>

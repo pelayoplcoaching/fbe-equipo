@@ -3,6 +3,7 @@ import { pedirSubProgreso } from './atleta/sub-progreso.js';
 import { useApp, useCarga, Icono, Hoja, usePreferencia } from './comunes.jsx';
 import { num } from '../logica/calculos.js';
 import { logrosNuevos, nivelesVistos } from '../logica/logros.js';
+import { proximaMedalla } from '../logica/progreso-visual-2.js';
 import { metalDe } from '../logica/tablero.js';
 import { imagenMedalla, archivoPara } from '../logica/imagenes.js';
 import { hayImagen } from './Imagen.jsx';
@@ -129,6 +130,8 @@ export function Logros({ salud }) {
   const lista = res.datos?.lista;
   if (!lista) return null;
   const medallas = lista.reduce((t, l) => t + l.nivel, 0), total = lista.length * 4;
+  // (v0.204) la medalla que tienes más cerca brilla y dice cuánto te falta
+  const proxima = proximaMedalla(lista);
   return (
     <section class="seccion" aria-labelledby="logros-titulo">
       <div class="seccion-cab"><h2 id="logros-titulo">Logros</h2><span class="peq secundario num">{medallas} de {total} medallas</span></div>
@@ -136,12 +139,13 @@ export function Logros({ salud }) {
         <ul class="logros">
           {lista.map((l) => (
             <li key={l.id}>
-              <button class="logro" onClick={() => setAbierto(l)}
-                aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}`}>
+              <button class={`logro ${l.id === proxima ? 'proxima' : ''}`} onClick={() => setAbierto(l)}
+                aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}${l.id === proxima ? `. Es la que tienes más cerca: te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}` : ''}`}>
                 <MedallaMetal nivel={l.nivel} logro={l.id} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
                 <span class="logro-metal" aria-hidden="true">{nombreMetal(l.nivel)}</span>
                 <span class="logro-titulo">{l.titulo}</span>
                 <span class="mini terciario num">{l.siguiente ? `${abreviar(l.valor)} de ${abreviar(l.siguiente.umbral)}` : 'Completo'}</span>
+                {l.id === proxima && <span class="logro-falta num" aria-hidden="true">Te {l.siguiente.falta === 1 ? 'falta' : 'faltan'} {abreviar(l.siguiente.falta)}</span>}
               </button>
             </li>
           ))}

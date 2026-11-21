@@ -4,7 +4,7 @@
 import { Imagen } from '../Imagen.jsx';
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Paso, Segmentos, usePreferencia } from '../comunes.jsx';
-import { TarjetaPlan, GraficaIngesta, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
+import { TarjetaPlan, GraficaIngesta, GraficaProteina, NOMBRE_ESTADO_DIA, MacrosDia } from '../NutricionComun.jsx';
 import { fmtKcal, kcalDeMacros, objetivoDelDia, planVigente, NOMBRE_CUMPLIDO } from '../../logica/nutricion.js';
 import { hoyISO, sumarDias, fmtConDia, lunesDe, diasEntre } from '../../logica/fechas.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
@@ -232,16 +232,25 @@ export function NutricionProgreso() {
   if (!r || !r.planes.length) return null;
   const semanas = [r.semana, ...r.anteriores].reverse();
   const dias = semanas.flatMap((w) => w.dias).filter((d) => !d.futuro).slice(-28)
-    .map((d) => ({ iso: d.iso, kcal: d.reg?.kcal != null ? Number(d.reg.kcal) : null, objetivo: d.obj?.kcal ?? null, estado: d.estado }));
+    .map((d) => ({ iso: d.iso, kcal: d.reg?.kcal != null ? Number(d.reg.kcal) : null, objetivo: d.obj?.kcal ?? null, estado: d.estado,
+      // (v0.204) la proteína, para su barra junto a la de las calorías
+      prot: d.reg?.proteina_g != null ? Number(d.reg.proteina_g) : null, objProt: d.obj?.proteina ?? null }));
   const conCifras = r.plan && r.plan.modo !== 'sin_contar';
   return (
     <section class="seccion">
       <div class="seccion-cab"><h2>Tu nutrición</h2><span class="peq secundario">Últimas 4 semanas</span></div>
       <div class="panel panel-pad pila">
+        {conCifras && <h3 class="sub-seccion">Calorías</h3>}
         {conCifras ? <GraficaIngesta dias={dias} /> : (
           <div class="tira-cumplido" role="img" aria-label={`Has seguido el plan ${dias.filter((d) => d.estado === 'si').length} de los últimos ${dias.length} días`}>
             {dias.map((d) => <i key={d.iso} class={d.estado} title={`${fmtConDia(d.iso)}: ${NOMBRE_ESTADO_DIA[d.estado]}`} />)}
           </div>
+        )}
+        {conCifras && dias.some((d) => d.prot != null) && (
+          <>
+            <h3 class="sub-seccion">Proteína</h3>
+            <GraficaProteina dias={dias.map((d) => ({ iso: d.iso, prot: d.prot, objetivo: d.objProt, estado: d.estado }))} />
+          </>
         )}
         <div class="tabla-desliza" tabIndex={0} role="region" aria-label="Semanas de nutrición">
         <table class="tabla-nutricion num">

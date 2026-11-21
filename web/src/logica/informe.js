@@ -24,7 +24,7 @@ export function cumplimiento({ sesiones, pautas, series, soloHechas = false }, h
   const misPautas = pautas.filter((p) => ids.has(p.sesion_id));
   const porPauta = {};
   for (const s of series) if (conRepes(s)) (porPauta[s.sesion_ejercicio_id] ||= []).push(s);
-  let hechas = 0, pautadas = 0, conEsfuerzo = 0, encima = 0;
+  let hechas = 0, pautadas = 0, conEsfuerzo = 0, encima = 0, debajo = 0;
   for (const p of misPautas) {
     const ss = porPauta[p.id] || [];
     pautadas += Number(p.series) || 0;
@@ -36,13 +36,14 @@ export function cumplimiento({ sesiones, pautas, series, soloHechas = false }, h
       if (e == null) continue;
       conEsfuerzo++;
       if (e > obj + 0.5) encima++;
+      else if (e < obj - 0.5) debajo++;  // (v0.204) más suave de lo pautado, para las barras de cada semana
     }
   }
   const sesHechas = tocaban.filter((x) => x.completada).length;
   return {
     sesiones: { hechas: sesHechas, total: tocaban.length, pct: pct(sesHechas, tocaban.length) },
     series: { hechas, pautadas, pct: pct(hechas, pautadas) },
-    esfuerzo: { conEsfuerzo, encima, pctEncima: pct(encima, conEsfuerzo) },
+    esfuerzo: { conEsfuerzo, encima, debajo, pctEncima: pct(encima, conEsfuerzo), pctDebajo: pct(debajo, conEsfuerzo) },
   };
 }
 

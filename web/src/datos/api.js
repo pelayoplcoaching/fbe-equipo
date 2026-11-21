@@ -5,6 +5,7 @@ import { tonelajePorDia } from '../logica/destacados.js';
 import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjercicio, seriesACsv, mejoresMarcas, vitrina, racha, mapaCalor, cargaSemanal, cambioCarga, eventosRecord, resumenSemanal, num, tendenciaPeso, ritmoPeso, limpiarDetalle, agregadosDetalle, e1rm } from '../logica/calculos.js';
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
+import { resumenAnterior, diasConRecord } from '../logica/progreso-visual-2.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
@@ -2719,7 +2720,7 @@ export function crearApi(backend) {
       for (const p of pesos) (porSemana[lunesDe(p.fecha)] ||= []).push(p);
       for (const lista of Object.values(porSemana)) {
         const u = lista[lista.length - 1];
-        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: `${u.fecha}T08:00`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`, detalle: lista.length > 1 ? `${lista.length} pesadas esa semana` : '' });
+        ev.push({ tipo: 'peso', fecha: u.fecha, cuando: `${u.fecha}T08:00`, icono: 'bascula', pestana: 'seguimiento', titulo: `Se pesó: ${num(Number(u.kg))} kg`, detalle: lista.length > 1 ? `${lista.length} pesadas esa semana` : '', kg: Number(u.kg) });
       }
       for (const a of archivos) ev.push({ tipo: a.tipo === 'foto_progreso' ? 'foto' : 'video', fecha: fechaDe(a.creado_en) || a.fecha, cuando: a.creado_en || `${a.fecha}T19:00`, icono: a.tipo === 'foto_progreso' ? 'camara' : 'video', pestana: 'videos',
         titulo: a.tipo === 'foto_progreso' ? 'Subió una foto de progreso' : 'Envió un vídeo de técnica', detalle: a.nota_atleta || '', aviso: !a.revisado_en });
@@ -2782,7 +2783,9 @@ export function crearApi(backend) {
       return bloques.filter((bl) => semPorBloque[bl.id]?.length)
         .map((bl) => informeBloque({ bloque: bl, semanas: semPorBloque[bl.id], sesiones, pautas, series, eventos, pesos, soloHechas: !!diasSemana }, hoy))
         .filter(Boolean)
-        .sort((x, y) => (x.inicio < y.inicio ? 1 : -1));
+        .sort((x, y) => (x.inicio < y.inicio ? 1 : -1))
+        // (v0.204) cada uno con lo del bloque de antes (el siguiente de la lista), para compararlo
+        .map((r, i, todos) => ({ ...r, anterior: resumenAnterior(todos.slice(i + 1).find((x) => !x.vacio)) }));
     },
     // Logros: cuentas de toda su historia (sesiones, racha más larga, toneladas, récords, vídeos, check-ins y días con peso)
     async logros(atletaId, { salud = true, hoy = hoyISO() } = {}) {
@@ -2861,9 +2864,11 @@ export function crearApi(backend) {
         return { id, nombre: ss[0].ejercicio, grupos_musculares: ss[0].grupos || [], puntos, series: ss.length, mejor: Math.max(0, ...puntos.map((p) => p.valor)) };
       }).filter((e) => e.puntos.length).sort((a, c) => c.series - a.series);
       const lunes = lunesDe(hoyISO());
+      const er = eventosRecord(series);
       return {
         // v0.52: los kilos movidos de cada día (para la gráfica del tonelaje y los destacados), del mismo historial
-        pesos, checkins, ejercicios, medidas, vitrina: vitrina(series), volumenObjetivo: ficha?.volumen_objetivo || null, tonelaje: tonelajePorDia(series),
+        // (v0.204) y los días con récord (para el mapa de constancia)
+        pesos, checkins, ejercicios, medidas, vitrina: vitrina(series, undefined, undefined, er), diasRecord: diasConRecord(er.eventos), volumenObjetivo: ficha?.volumen_objetivo || null, tonelaje: tonelajePorDia(series),
         volumen: { estaSemana: seriesPorGrupo(series, lunes), anterior: seriesPorGrupo(series, sumarDias(lunes, -7)) },
       };
     },

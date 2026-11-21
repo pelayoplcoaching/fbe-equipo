@@ -1,0 +1,182 @@
+/* v0.204: progreso y seguimiento, segunda tanda (ui/comunes.jsx Grafica y GraficaPeso, ui/atleta/Progreso.jsx,
+   ui/atleta/ProgresoPiezas2.jsx, ui/MapaMuscular.jsx, ui/Logros.jsx, ui/Diario.jsx, ui/CompararFotos.jsx,
+   ui/NutricionComun.jsx, ui/InformeBloque.jsx, ui/coach/Ficha.jsx, ui/coach/Actividad.jsx y
+   ui/coach/SeguimientoPiezas.jsx). Solo ASCII; colores, tamanos y espacios, con tokens (y su version oscura). */
+:root { --pv2-previa: color-mix(in srgb, var(--tinta) 24%, var(--hoja)); --pv2-suave: var(--azul-600); --pv2-suave-fondo: var(--azul-50); --pv2-oro-texto: var(--oro-800); --pv2-oro-fondo: var(--oro-50); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pv2-previa: color-mix(in srgb, var(--tinta) 30%, var(--hoja)); --pv2-suave: var(--azul-300); --pv2-suave-fondo: var(--azul-950); --pv2-oro-texto: var(--oro-200); --pv2-oro-fondo: var(--oro-950); } }
+:root[data-theme="dark"] { --pv2-previa: color-mix(in srgb, var(--tinta) 30%, var(--hoja)); --pv2-suave: var(--azul-300); --pv2-suave-fondo: var(--azul-950); --pv2-oro-texto: var(--oro-200); --pv2-oro-fondo: var(--oro-950); }
+
+/* ---------------------------------------------------------------- 3 y 12. el periodo anterior y la tira de la bascula */
+.grafica .linea-previa { fill: none; stroke: var(--pv2-previa); stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+.grafica .dia-bascula { stroke: color-mix(in srgb, var(--morado) 70%, var(--hoja)); stroke-width: 1.75; stroke-linecap: round; }
+.progreso-panel[data-sub="cuerpo"] .grafica .dia-bascula { stroke: var(--pv-cuerpo); }
+.dias-bascula-txt { margin-top: calc(-1 * var(--esp-8)); }
+
+/* ---------------------------------------------------------------- 1. a pantalla completa */
+.seccion-cab .btn-ampliar { margin-left: auto; color: var(--tinta-2); }
+.seccion-cab .btn-ampliar svg { width: var(--ico-20); height: var(--ico-20); }
+.velo .hoja-dialogo.hoja-completa { width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; align-content: start;
+  padding-top: calc(var(--esp-10) + env(safe-area-inset-top, 0px)); }
+@media (min-width: 700px) { .velo .hoja-dialogo.hoja-completa { border-radius: 0; } }
+.hoja-grafica .grafica-grande { width: min(1100px, 100%); justify-self: center; }
+.hoja-grafica .grafica-caja .grafica text { font-size: var(--letra-12); }
+@media (orientation: landscape) and (max-height: 520px) {
+  .velo .hoja-dialogo.hoja-grafica { gap: var(--esp-8); padding-top: calc(var(--esp-4) + env(safe-area-inset-top, 0px)); }
+  .hoja-grafica .hoja-cab .asa { display: none; }
+}
+
+/* ---------------------------------------------------------------- 2. comparar ejercicios */
+.btn-comparar { justify-self: start; }
+.btn-comparar[aria-pressed="true"] { color: var(--morado); }
+.chips-comparar button.c1[aria-pressed="true"] { background: color-mix(in srgb, var(--serie-1) 14%, var(--hoja)); border-color: var(--serie-1); color: var(--tinta); }
+.chips-comparar button.c2[aria-pressed="true"] { background: color-mix(in srgb, var(--serie-2) 14%, var(--hoja)); border-color: var(--serie-2); color: var(--tinta); }
+.chips-comparar button.c3[aria-pressed="true"] { background: color-mix(in srgb, var(--serie-3) 14%, var(--hoja)); border-color: var(--serie-3); color: var(--tinta); }
+.grafica .linea-comparar { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.grafica .linea-comparar.c1, .grafica .fin-comparar.c1 { stroke: var(--serie-1); }
+.grafica .linea-comparar.c2, .grafica .fin-comparar.c2 { stroke: var(--serie-2); }
+.grafica .linea-comparar.c3, .grafica .fin-comparar.c3 { stroke: var(--serie-3); }
+.grafica .fin-comparar { fill: var(--hoja); stroke-width: 2.5; }
+.grafica .eje-cero { stroke: var(--tinta-3); stroke-width: 1; }
+.leyenda-comparar { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-6) var(--esp-16); font-size: var(--letra-13); color: var(--tinta-2); }
+.leyenda-comparar li { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.leyenda-comparar i { width: var(--esp-14); height: var(--esp-4); border-radius: var(--r-pildora); background: currentColor; }
+.leyenda-comparar .c1 i { background: var(--serie-1); }
+.leyenda-comparar .c2 i { background: var(--serie-2); }
+.leyenda-comparar .c3 i { background: var(--serie-3); }
+.leyenda-comparar b { color: var(--tinta); font-weight: 700; }
+
+/* ---------------------------------------------------------------- 4. tus cifras, con su flecha */
+.cifras dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-4) var(--esp-6); }
+.cifra-flecha { display: inline-flex; align-items: center; gap: var(--esp-2); font-size: var(--letra-12); font-weight: 700; letter-spacing: 0; line-height: 1; padding: var(--esp-2) var(--esp-6);
+  border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2); font-stretch: normal; }
+.cifra-flecha svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.5; }
+.cifra-flecha.sube { background: var(--ok-suave); color: var(--ok); }
+.cifra-flecha.baja { background: var(--aviso-suave); color: var(--aviso); }
+
+/* ---------------------------------------------------------------- 5. los dias de la semana, en miniatura */
+.dias-mini-fila { display: inline-flex; gap: var(--esp-4); margin-top: var(--esp-2); }
+.dias-mini-fila i { width: var(--ico-16); height: var(--ico-16); border-radius: 50%; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-3); font-style: normal; }
+.dias-mini-fila i b { font-size: var(--letra-10); font-weight: 700; line-height: 1; }
+.dias-mini-fila i.si { background: var(--morado); color: var(--sobre-morado); }
+
+/* Y cada mes, su calendario en miniatura (un punto por dia entrenado) */
+.calendario-mini { display: inline-grid; grid-template-columns: repeat(7, var(--esp-6)); gap: var(--esp-2); margin-top: var(--esp-4); }
+.calendario-mini i { width: var(--esp-6); height: var(--esp-6); border-radius: 50%; background: var(--linea); }
+.calendario-mini i.fuera { background: transparent; }
+.calendario-mini i.si { background: var(--morado); }
+
+/* ---------------------------------------------------------------- 6. el mapa de constancia, con records y check-ins */
+.cr-celda.con-record { position: relative; }
+.cr-celda.con-record::before { content: ""; position: absolute; top: -18%; right: -18%; width: 52%; height: 52%; border-radius: 50%; background: var(--oro-400); box-shadow: var(--anillo-suave); }
+.cr-celda.con-checkin { border-bottom: var(--filo-fuerte) solid var(--pv-cuerpo); }
+.cr-leyenda-marcas { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); justify-content: flex-end; }
+.cr-leyenda-marcas span { display: inline-flex; align-items: center; gap: var(--esp-6); }
+@media (forced-colors: active) { .cr-celda.con-record::before { background: CanvasText; } }
+
+/* ---------------------------------------------------------------- 7. la escalera de un record */
+.escalera-caja { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding-bottom: var(--esp-4); }
+.lista-records.escalera { display: flex; align-items: flex-end; gap: var(--esp-4); min-height: 190px; min-width: min-content; padding: var(--esp-8) var(--esp-4) 0; }
+.lista-records.escalera li { flex: 1 0 64px; max-width: 120px; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: var(--esp-4); padding: 0; border: 0; height: calc(60px + 120px * var(--alto)); }
+.lista-records.escalera li + li { border-top: 0; }
+.escalon-cifra { font-size: var(--letra-12); font-weight: 750; color: var(--tinta); text-align: center; line-height: 1.15; }
+.escalon { width: 100%; border-radius: var(--r-6) var(--r-6) var(--r-2) var(--r-2); background: color-mix(in srgb, var(--morado) 22%, var(--hoja)); display: grid; place-items: start center; padding-top: var(--esp-6); color: var(--neutro-950); }
+.escalera li.ultima .escalon { background: var(--grad-record); }
+.escalon svg { width: var(--ico-18); height: var(--ico-18); stroke-width: 2; }
+.escalon-fecha { color: var(--tinta-3); white-space: nowrap; }
+
+/* ---------------------------------------------------------------- 8. el mapa muscular de tus records */
+.mapa-records { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); align-items: center; gap: var(--esp-14); }
+.mapa-records .mapa-muscular { margin: 0; }
+.mapa-muscular.mapa-oro .m4 { fill: var(--oro-400); }
+.mapa-muscular.mapa-oro .m0 { fill: var(--linea); }
+@media (max-width: 420px) { .mapa-records { grid-template-columns: 1fr; justify-items: center; text-align: center; } .mapa-records .mapa-muscular { width: min(220px, 100%); } }
+
+/* ---------------------------------------------------------------- 9. la proxima medalla */
+.logro.proxima { background: var(--pv2-oro-fondo); box-shadow: var(--anillo-suave); }
+.logro.proxima .medalla-metal { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--oro-400) 55%, transparent)); }
+.logro-falta { font-size: var(--letra-11); font-weight: 750; color: var(--pv2-oro-texto); }
+
+/* ---------------------------------------------------------------- 10. el trofeo nuevo destella una vez */
+.trofeo-tarjeta.destella::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(var(--oklab,) 105deg, transparent 30%, color-mix(in srgb, var(--oro-200) 75%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%); animation: trofeo-destello 1.1s cubic-bezier(.4, 0, .2, 1) .15s 1 both; }
+.trofeo-tarjeta.destella { box-shadow: var(--sombra), var(--anillo-suave); }
+@keyframes trofeo-destello { to { transform: translateX(110%); } }
+@media (prefers-reduced-motion: reduce) { .trofeo-tarjeta.destella::after { animation: none; display: none; } }
+
+/* ---------------------------------------------------------------- 11. tus fotos con su peso */
+.diario-kg { position: absolute; left: var(--esp-6); bottom: var(--esp-6); display: inline-flex; align-items: center; gap: var(--esp-4); padding: var(--esp-2) var(--esp-6); border-radius: var(--r-pildora);
+  background: var(--tinta-noche); color: var(--blanco); font-size: var(--letra-11); font-weight: 700; }
+.diario-kg svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.25; }
+.fotos-cambios { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: var(--esp-8); }
+.fotos-cambios li { display: grid; gap: var(--esp-2); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); }
+.fotos-cambios b { font-size: var(--letra-16); font-weight: 750; }
+.fotos-cambios li.baja b { color: var(--pv-baja); }
+.fotos-cambios li.sube b { color: var(--pv-sube); }
+
+/* ---------------------------------------------------------------- 13. la proteina */
+.grafica-proteina .franja-proteina { fill: var(--ok-suave); }
+.grafica-proteina .barra-proteina { fill: color-mix(in srgb, var(--tinta-3) 45%, var(--hoja)); }
+.grafica-proteina .barra-proteina.si { fill: var(--ok); }
+.grafica-proteina .barra-proteina.casi { fill: var(--oro-400); }
+.grafica-proteina .barra-proteina.no { fill: var(--aviso); }
+.grafica-proteina .barra-proteina.elegida { stroke: var(--tinta); stroke-width: 1.5; }
+
+/* ---------------------------------------------------------------- 14. tu bloque frente al anterior */
+.frente-anterior { display: inline-flex; align-items: center; gap: var(--esp-2); font-size: var(--letra-11); font-weight: 650; color: var(--tinta-3); }
+.frente-anterior svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.5; }
+.frente-anterior.sube { color: var(--ok); }
+.frente-anterior.baja { color: var(--aviso); }
+
+/* ---------------------------------------------------------------- 15. el esfuerzo del bloque semana a semana */
+.esfuerzo-semanas { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; gap: var(--esp-6); overflow-x: auto; padding-bottom: var(--esp-2); }
+.esfuerzo-semanas li { flex: 1 0 34px; max-width: 64px; display: grid; justify-items: center; gap: var(--esp-4); }
+.esf-col { width: 100%; height: 96px; border-radius: var(--r-6); overflow: hidden; display: flex; flex-direction: column; background: var(--hoja-2); }
+.esf-col i { display: block; min-height: 0; }
+.esf-col i.encima, .leyenda-esfuerzo i.encima { background: var(--aviso); }
+.esf-col i.justo, .leyenda-esfuerzo i.justo { background: var(--ok); }
+.esf-col i.suave, .leyenda-esfuerzo i.suave { background: var(--pv2-suave); }
+.esfuerzo-semanas li.sin .esf-col { background: repeating-linear-gradient(-45deg, var(--hoja-2) 0 4px, var(--linea) 4px 5px); }
+.esfuerzo-semanas strong { font-size: var(--letra-12); }
+.leyenda-esfuerzo { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); }
+.leyenda-esfuerzo span { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.leyenda-esfuerzo i { width: var(--esp-10); height: var(--esp-10); border-radius: var(--r-2); }
+
+/* ---------------------------------------------------------------- 16. el registro, con las series como fichas */
+.fichas-serie { display: inline-flex; flex-wrap: wrap; gap: var(--esp-4); }
+.serie-ficha { display: inline-flex; align-items: center; gap: var(--esp-4); padding: var(--esp-2) var(--esp-6); border-radius: var(--r-6); font-variant-numeric: tabular-nums; white-space: nowrap;
+  background: var(--hoja-2); color: var(--tinta-2); border: var(--filo-fino) solid var(--linea); }
+.serie-ficha.esf-justo { background: var(--ok-suave); color: var(--ok); border-color: transparent; }
+.serie-ficha.esf-suave { background: var(--pv2-suave-fondo); color: var(--pv2-suave); border-color: transparent; }
+.serie-ficha.esf-pasado, .serie-ficha.esf-corto, .serie-ficha.corto { background: var(--aviso-suave); color: var(--aviso); border-color: transparent; }
+.serie-ficha.record { background: var(--grad-record); color: var(--neutro-950); border-color: var(--oro-300); font-weight: 700; }
+.serie-ficha svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.25; }
+
+/* ---------------------------------------------------------------- 17. el registro, con su medidor */
+.registro-cab { align-items: center; justify-content: flex-start; gap: var(--esp-6) var(--esp-10); }
+.registro-cab > .peq { margin-left: auto; }
+.medidor-sesion { flex: none; }
+.medidor-sesion .medidor-fondo { fill: none; stroke: var(--hoja-2); stroke-width: 5; }
+.medidor-sesion .medidor-lleno { fill: none; stroke: var(--morado); stroke-width: 5; stroke-linecap: round; }
+.medidor-sesion.esf-suave .medidor-lleno { stroke: var(--pv2-suave); }
+.medidor-sesion.esf-medio .medidor-lleno { stroke: var(--ok); }
+.medidor-sesion.esf-duro .medidor-lleno { stroke: var(--aviso); }
+.medidor-sesion.esf-sin .medidor-lleno { stroke: var(--tinta-3); }
+.medidor-sesion text { font-size: var(--letra-12); font-weight: 750; fill: var(--tinta); }
+
+/* ---------------------------------------------------------------- 18 y 19. la actividad: records juntos y cada semana */
+.actividad-semana { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--esp-2) var(--esp-10); margin: var(--esp-8) 0 var(--esp-4); padding: var(--esp-8) var(--esp-12);
+  border-radius: var(--r-10); background: var(--acento-a8); border-left: var(--filo-fuerte) solid var(--morado); }
+.actividad-semana strong { color: var(--tinta); }
+.trofeos-fila { display: inline-flex; gap: var(--esp-2); color: var(--oro-600); }
+.trofeos-fila svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2.25; }
+.actividad-records > .actividad-item[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.actividad-records-lista { list-style: none; margin: 0; padding: 0 0 0 var(--esp-28); }
+.actividad-records-lista li + li { border-top: var(--filo-fino) solid var(--linea); }
+
+/* ---------------------------------------------------------------- 20. el modo llamada */
+.llamada-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-12); }
+.modo-llamada .llamada-panel { width: min(1100px, 100%); justify-self: center; display: grid; gap: var(--esp-16); }
+.modo-llamada .pestanas-progreso { width: min(1100px, 100%); justify-self: center; }
+.modo-llamada .llamada-panel .seccion h2 { font-size: var(--letra-22); }
+.modo-llamada .llamada-panel .cifra .v { font-size: calc(var(--letra-24) * 1.5); }

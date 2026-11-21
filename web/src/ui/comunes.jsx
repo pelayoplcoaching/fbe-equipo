@@ -144,6 +144,8 @@ export const P = {
   // v0.64: cambiar el orden de la sesión (flechas arriba y abajo) y el asa para arrastrar (seis puntos)
   ordenar: 'M7 4v16M3.5 7.5L7 4l3.5 3.5M17 20V4M13.5 16.5L17 20l3.5-3.5',
   asa: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',
+  // (v0.204) ver una gráfica a pantalla completa (las cuatro esquinas)
+  ampliar: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   hd: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM8 9v6M8 12h3M11 9v6M14 9v6h1a3 3 0 0 0 0-6z',
 };
 
@@ -1341,7 +1343,8 @@ const textoPrevision = (meta, prev) => (prev ? (prev.llega ? `; a este ritmo lle
 //   meta      { y, texto, hasta } la línea de la meta y, con hasta (fecha de la previsión), la previsión punteada
 //   bloques   los del atleta: sus franjas de fondo (solo si caen al menos dos dentro)
 //   marcas    [{ x, y, texto }] tests y competiciones: un rombo dorado en su día
-export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null }) {
+// (v0.204) previo: [{ x, y }] el periodo anterior, ya movido debajo del de ahora (en fantasma, detrás); textoPrevio, cuál es
+export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null, previo = null, textoPrevio = 'el periodo anterior' }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = puntos?.length || 0;
@@ -1359,7 +1362,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const xDe = (f) => izq + (diasEntre(ini, f) / total) * ancho;
   const X = (i) => (conFechas ? xDe(fx[i]) : izq + (n === 1 ? ancho / 2 : (i * ancho) / (n - 1)));
   const conMeta = meta && Number.isFinite(meta.y) ? meta : null;
-  const { lo, hi, ticks } = escalaGrafica([...(puntos || []).map((p) => p.y), ...(conMeta ? [conMeta.y] : []), ...marcasV.map((m) => m.y)], { rangoMin });
+  const previoV = conFechas ? (previo || []).filter((p) => p && sonFechas([p.x]) && p.x >= ini && p.x <= fin && Number.isFinite(p.y)) : [];
+  const { lo, hi, ticks } = escalaGrafica([...(puntos || []).map((p) => p.y), ...(conMeta ? [conMeta.y] : []), ...marcasV.map((m) => m.y), ...previoV.map((p) => p.y)], { rangoMin });
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
   const xs = (puntos || []).map((_, i) => X(i));
   const raspado = useRaspado(n, xs);
@@ -1384,7 +1388,8 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const resumen = `${etiqueta || 'Evolución'}. ${n} ${n === 1 ? 'punto' : 'puntos'}, del ${fmtCorta(puntos[0].x)} (${conU(puntos[0].y)}) al ${fmtCorta(ultimo.x)} (${conU(ultimo.y)}); el más alto, ${conU(ys[iMax])} el ${fmtCorta(puntos[iMax].x)}${prs.length ? `; ${prs.length} ${prs.length === 1 ? 'récord' : 'récords'}` : ''}`
     + `${huecos.length ? `; ${huecos.length === 1 ? 'un parón' : `${huecos.length} parones`} sin datos` : ''}${enCursoOk ? '; la última semana aún está en curso' : ''}`
     + `${conMeta ? `; ${conMeta.texto}${textoPrevision(conMeta, prev)}` : ''}${marcasV.length ? `; ${marcasV.length} ${marcasV.length === 1 ? 'marca de test o competición' : 'marcas de test o competición'}` : ''}`
-    + `${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}.`;
+    + `${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}`
+    + `${previoV.length > 1 ? `; en gris, ${textoPrevio} (de ${conU(previoV[0].y)} a ${conU(previoV[previoV.length - 1].y)})` : ''}.`;
   const sel = raspado.sel;
   return (
     <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)}>
@@ -1397,6 +1402,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
             <text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text>
           </g>
         ))}
+        {previoV.length > 1 && <path class="linea-previa" d={trazoSuave(previoV.map((p) => [xDe(p.x), Y(p.y)]))} />}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
         <CapaMeta meta={conMeta} prev={prev} xDe={xDe} Y={Y} izq={izq} der={der} W={W} ultimo={{ x: dN, y: ultimo.y }} />
         <path class="linea" ref={morph.linea} d={d} pathLength="1" mask={tramos.length ? `url(#tramos-${id})` : undefined} />
@@ -1415,13 +1421,17 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
 
 // Peso: cada pesada como un punto y la tendencia como línea, con el eje x en días reales
 // (v0.203) meta: { y, texto, hasta } (el objetivo de peso corporal con su previsión) y bloques (sus franjas de fondo)
-export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, bloques = null }) {
+// (v0.204) previo: [{ fecha, tendencia }] el periodo anterior, ya movido (en fantasma, detrás); y abajo, una marca en
+// cada día que se pesó (la tira de la báscula)
+export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, bloques = null, previo = null, textoPrevio = 'el periodo anterior' }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = serie?.length || 0;
-  const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 14, abj = 22;
+  const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 14, abj = 26; // (v0.204) abajo, la tira de la báscula
   const conMeta = meta && Number.isFinite(meta.y) ? meta : null;
-  const ys0 = [...(serie || []).flatMap((p) => [p.kg, p.tendencia]), ...(conMeta && n ? [conMeta.y] : [])];
+  const d00 = serie?.[0]?.fecha, dN0 = serie?.[n - 1]?.fecha;
+  const previoV = n > 1 ? (previo || []).filter((p) => p && p.fecha >= d00 && p.fecha <= dN0 && Number.isFinite(p.tendencia)) : [];
+  const ys0 = [...(serie || []).flatMap((p) => [p.kg, p.tendencia]), ...(conMeta && n ? [conMeta.y] : []), ...previoV.map((p) => p.tendencia)];
   let lo = n ? Math.min(...ys0) : 0, hi = n ? Math.max(...ys0) : 1;
   if (hi - lo < 1.5) { const m = (hi + lo) / 2; lo = m - 0.75; hi = m + 0.75; }
   const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
@@ -1444,8 +1454,10 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, b
   const prev = conMeta && n > 1 && conMeta.hasta ? puntoPrevision({ x: dN, y: ult.tendencia }, { x: conMeta.hasta, y: conMeta.y }, fin) : null;
   const fechasX = total >= 14 ? [d0, aISO(new Date(Date.parse(`${d0}T12:00:00`) + (diasEntre(d0, dN) / 2) * 864e5)), dN] : [d0, dN];
   const textoPunto = (i) => `${fmtCorta(serie[i].fecha)}: ${num(serie[i].kg)} kg (tendencia ${num(serie[i].tendencia)})`;
-  const resumen = `${etiqueta || 'Peso'}. ${n} ${n === 1 ? 'pesada' : 'pesadas'} del ${fmtCorta(d0)} al ${fmtCorta(dN)}; la tendencia va de ${num(serie[0].tendencia)} a ${num(ult.tendencia)} kg`
-    + `${conMeta ? `; ${conMeta.texto}${textoPrevision(conMeta, prev)}` : ''}${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}.`;
+  const diasPesada = new Set(serie.map((p) => p.fecha)).size;
+  const resumen = `${etiqueta || 'Peso'}. ${n} ${n === 1 ? 'pesada' : 'pesadas'} del ${fmtCorta(d0)} al ${fmtCorta(dN)} (${diasPesada} ${diasPesada === 1 ? 'día' : 'días'} con pesada); la tendencia va de ${num(serie[0].tendencia)} a ${num(ult.tendencia)} kg`
+    + `${conMeta ? `; ${conMeta.texto}${textoPrevision(conMeta, prev)}` : ''}${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}`
+    + `${previoV.length > 1 ? `; en gris, ${textoPrevio} (de ${num(previoV[0].tendencia)} a ${num(previoV[previoV.length - 1].tendencia)} kg)` : ''}.`;
   const sel = raspado.sel;
   return (
     <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={serie.map((p) => Y(Math.max(p.kg, p.tendencia)))} etiqueta={etiqueta || 'Peso'} textoPunto={textoPunto} resumen={resumen}>
@@ -1455,8 +1467,11 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, b
         {ticks.map((t) => (
           <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text></g>
         ))}
+        {previoV.length > 1 && <path class="linea-previa" d={trazoSuave(previoV.map((p) => [X(p.fecha), Y(p.tendencia)]))} />}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
         <CapaMeta meta={conMeta} prev={prev} xDe={X} Y={Y} izq={izq} der={der} W={W} ultimo={{ x: dN, y: ult.tendencia }} />
+        {/* (v0.204) la tira de la báscula: una marca en cada día que se pesó, sobre el eje */}
+        <g class="tira-bascula">{[...new Set(serie.map((p) => p.fecha))].map((f) => <line key={f} class="dia-bascula" x1={X(f)} x2={X(f)} y1={H - abj + 2} y2={H - abj + 7} />)}</g>
         {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
         <path class="linea" ref={morph.linea} d={linea} pathLength="1" />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}

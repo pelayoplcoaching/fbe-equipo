@@ -6010,6 +6010,16 @@ try {
   console.log('  ✗ v0.203:', e.message.split('\n')[0]);
 }
 
+// v0.204: progreso y seguimiento, segunda tanda (test/e2e-progreso-204.mjs)
+console.log('\nv0.204: progreso y seguimiento, segunda tanda');
+try {
+  const { probarProgreso204 } = await import('./e2e-progreso-204.mjs');
+  await probarProgreso204({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.204:', e.message.split('\n')[0]);
+}
+
 // v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
 console.log('\nv0.200: la tanda de belleza');
 try {

@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.204': {
+    atleta: [
+      'Tus gráficas a pantalla completa, varios ejercicios juntos en % y, detrás, en gris, el periodo anterior para comparar.',
+      'Tus cifras con flecha frente a las 4 semanas de antes, tus días en miniatura y el mapa con tus récords y check-ins.',
+      'La escalera de cada récord, la próxima medalla, el trofeo nuevo que destella, tus fotos con su peso y la proteína.',
+    ],
+    coach: [
+      'Registro con cada serie como ficha del color de su esfuerzo (la de récord, en dorado) y un aro por sesión.',
+      'Actividad con los récords del día juntos y el resumen de cada semana; el informe del bloque, frente al anterior.',
+      '«Ver con…»: su progreso a pantalla completa y sin tus notas, para enseñárselo en una videollamada.',
+    ],
+  },
   '0.203': {
     atleta: [
       'Tu progreso, más claro: cada punto en su fecha, la semana en curso en claro, tu meta y tus tests dentro de la gráfica.',

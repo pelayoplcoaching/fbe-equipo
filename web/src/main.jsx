@@ -27,6 +27,7 @@ import './atletas-lista.css';
 import './belleza.css';
 import './radar.css';
 import './progreso-visual.css';
+import './progreso-visual-2.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

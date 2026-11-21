@@ -652,15 +652,16 @@ export function eventosRecord(series) {
     for (const s of lote) {
       if (rec[s.id] && !vistos.has(s.ejercicio_id)) {
         vistos.add(s.ejercicio_id);
-        eventos.push({ fecha: s.fecha, sesion_id: s.sesion_id || null, ejercicio_id: s.ejercicio_id, ejercicio: s.ejercicio, record: rec[s.id] });
+        eventos.push({ fecha: s.fecha, sesion_id: s.sesion_id || null, ejercicio_id: s.ejercicio_id, ejercicio: s.ejercicio, record: rec[s.id], serie_id: s.id ?? null });
       }
     }
     for (const s of lote) sumarMarca(m, s);
   }
   return { eventos, marcas: m };
 }
-export function vitrina(series, hoy = hoyISO(), dias = 30) {
-  const { eventos, marcas: m } = eventosRecord(series);
+// (v0.204) previo: el eventosRecord(series) ya hecho (Progreso lo usa también para los días de récord)
+export function vitrina(series, hoy = hoyISO(), dias = 30, previo = null) {
+  const { eventos, marcas: m } = previo || eventosRecord(series);
   const desde = sumarDias(hoy, -dias);
   const nombres = Object.fromEntries(series.map((s) => [s.ejercicio_id, s.ejercicio]));
   const ultimo = {}, subida = {};
@@ -714,6 +715,8 @@ export function resumenSemanal(d, lunes, { eventos = null } = {}) {
       return { minutos: c.minutos + Number(h.minutos), km: Math.round((c.km + (Number(h.km) || 0)) * 10) / 10, sesiones: c.sesiones + 1 };
     }, { minutos: 0, km: 0, sesiones: 0 }),
     records: ev.map((e) => ({ ejercicio: e.ejercicio, texto: e.record.texto, tipo: e.record.tipo })),
+    // (v0.204) los días que entrenó (con series o con una sesión hecha), para su calendario en miniatura
+    dias: [...new Set([...series.map((s) => s.fecha), ...hechas.map((x) => x.fecha_realizada)].filter(Boolean))].sort(),
     mejor,
     musculos,
     musculoTop: top ? { grupo: top[0], series: top[1] } : null,

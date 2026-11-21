@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, Hoja, Segmentos, Cargando } from './comunes.jsx';
 import { fmtCorta, diasEntre } from '../logica/fechas.js';
+import { num } from '../logica/calculos.js';
+import { cambiosEntreFotos } from '../logica/progreso-visual-2.js';
 
 // Antes y después: dos fotos de progreso lado a lado o una encima de otra con un deslizador.
 // fotos: archivos de tipo foto_progreso (de más reciente a más antigua o al revés: se ordenan aquí)
@@ -34,7 +36,8 @@ function Tira({ fotos, urls, elegida, alElegir, etiqueta }) {
 
 const POSES = [['frente', 'Frente'], ['perfil', 'Perfil'], ['espalda', 'Espalda']];
 
-export function CompararFotos({ fotos, alCerrar }) {
+// (v0.204) cuerpo: { pesos, medidas }: debajo, el cambio de peso (tendencia) y de medidas entre las dos fotos
+export function CompararFotos({ fotos, alCerrar, cuerpo = null }) {
   // Se compara la misma pose: de entrada, la que tiene más fotos (si hay al menos dos)
   const poses = POSES.filter(([p]) => fotos.filter((f) => f.pose === p).length >= 2);
   const [pose, setPose] = useState(() => [...poses].sort((a, b) => fotos.filter((f) => f.pose === b[0]).length - fotos.filter((f) => f.pose === a[0]).length)[0]?.[0] || 'todas');
@@ -76,6 +79,22 @@ export function CompararFotos({ fotos, alCerrar }) {
           </div>
         )}
         {fa && fd && <p class="peq secundario num">{fa.id === fd.id ? 'Es la misma foto: elige otra abajo.' : `${dias} días entre una y otra (${Math.round(dias / 7)} semanas).`}</p>}
+        {cuerpo && fa && fd && fa.id !== fd.id && (() => {
+          const [x, y] = fa.fecha <= fd.fecha ? [fa, fd] : [fd, fa];
+          const cambios = cambiosEntreFotos(cuerpo, x.fecha, y.fecha);
+          if (!cambios.length) return null;
+          return (
+            <ul class="fotos-cambios" aria-label="Lo que cambió entre una foto y otra">
+              {cambios.map((c) => (
+                <li key={c.k} class={c.cambio > 0 ? 'sube' : c.cambio < 0 ? 'baja' : ''}>
+                  <span class="mini secundario">{c.t}</span>
+                  <b class="num">{c.cambio > 0 ? '+' : c.cambio < 0 ? '−' : '±'}{num(Math.abs(c.cambio))} {c.u}</b>
+                  <span class="mini terciario num">{num(c.antes)} → {num(c.despues)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
         <div class="pila-s"><span class="peq secundario">Antes</span><Tira fotos={orden} urls={urls} elegida={antes} alElegir={setAntes} etiqueta="Antes" /></div>
         <div class="pila-s"><span class="peq secundario">Después</span><Tira fotos={orden} urls={urls} elegida={despues} alElegir={setDespues} etiqueta="Después" /></div>
         <p class="mini terciario">Compáralas con la misma luz, ropa y postura. Las fotos no salen de vuestra carpeta privada.</p>

@@ -46,8 +46,16 @@ export function TarjetaMes({ salud }) {
 }
 
 // El calendario del mes: un punto por día entrenado
-export function CalendarioMes({ mes, dias, peq = false }) {
+// (v0.204) mini: en la fila de «Tus meses», solo los puntos (sin cabecera ni números)
+export function CalendarioMes({ mes, dias, peq = false, mini = false }) {
   const semanas = calendarioMes(mes, dias);
+  if (mini) {
+    return (
+      <span class="calendario-mini" role="img" aria-label={`${dias.length} ${dias.length === 1 ? 'día entrenado' : 'días entrenados'} en ${nombreMes(mes)}`}>
+        {semanas.flat().map((d) => <i key={d.iso} class={`${d.fuera ? 'fuera' : ''} ${d.entrenado ? 'si' : ''}`} />)}
+      </span>
+    );
+  }
   return (
     <div class={`calendario-mes ${peq ? 'peq' : ''}`} role="img" aria-label={`${dias.length} ${dias.length === 1 ? 'día entrenado' : 'días entrenados'} en ${nombreMes(mes)}`}>
       {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => <span key={d} class="cal-cab" aria-hidden="true">{d}</span>)}
@@ -237,6 +245,8 @@ export function TusMeses({ atletaId = null, atleta: deQuien = null, salud = true
                 <span class="pila-xs">
                   <strong>{capital(mesConAnio(r.mes))}</strong>
                   <span class="peq secundario">{r.conEntreno ? `${r.sesiones.hechas} de ${r.sesiones.previstas || r.sesiones.hechas} sesiones, ${r.dias} días entrenando${r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}` : r.nutricion?.dias ? `${r.nutricion.dias} días de nutrición apuntados` : 'Hábitos del mes'}</span>
+                  {/* (v0.204) el mes en miniatura: un punto por día entrenado */}
+                  {r.conEntreno && r.diasEntrenados && <CalendarioMes mes={r.mes} dias={r.diasEntrenados} mini />}
                 </span>
                 <PortadaHistoria tono="mes peq" />
               </button>

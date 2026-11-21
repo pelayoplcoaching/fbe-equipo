@@ -45,10 +45,10 @@ const DETRAS = {
     ['lumbares', 'M44.5 84 L50 88.5 L55.5 84 L57 93 L43 93 Z']],
 };
 
-function Figura({ partes, series }) {
+function Figura({ partes, series, nivel = nivelSeries, unidad = 'series' }) {
   const musc = (g, d, k) => (
-    <path key={k} class={`musculo m${nivelSeries(series[g])}`} d={d}>
-      <title>{NOMBRE_GRUPO[g]}: {num(series[g] || 0)} series</title>
+    <path key={k} class={`musculo m${nivel(series[g])}`} d={d}>
+      <title>{NOMBRE_GRUPO[g]}: {num(series[g] || 0)} {unidad === 'récord' ? (series[g] === 1 ? 'récord' : 'récords') : unidad}</title>
     </path>
   );
   const mitad = (
@@ -68,13 +68,14 @@ function Figura({ partes, series }) {
   );
 }
 
-export function MapaMuscular({ series = {}, etiqueta = 'Series por músculo', leyenda = true }) {
+// (v0.204) tono «oro» (los músculos con récord), con su unidad («récord») y su nivel (cuánto se pinta cada valor)
+export function MapaMuscular({ series = {}, etiqueta = 'Series por músculo', leyenda = true, tono = '', unidad = 'series', nivel = nivelSeries }) {
   const texto = GRUPOS.filter(([g]) => series[g]).map(([g, n]) => `${n} ${num(series[g])}`).join(', ');
   return (
-    <figure class="mapa-muscular">
+    <figure class={`mapa-muscular${tono ? ` mapa-${tono}` : ''}`}>
       <svg viewBox="0 0 220 212" role="img" aria-label={`${etiqueta}: ${texto || 'ninguna'}`}>
-        <g><Figura partes={DELANTE} series={series} /></g>
-        <g transform="translate(120 0)"><Figura partes={DETRAS} series={series} /></g>
+        <g><Figura partes={DELANTE} series={series} nivel={nivel} unidad={unidad} /></g>
+        <g transform="translate(120 0)"><Figura partes={DETRAS} series={series} nivel={nivel} unidad={unidad} /></g>
         <text x="50" y="209" text-anchor="middle">Delante</text>
         <text x="170" y="209" text-anchor="middle">Detrás</text>
       </svg>

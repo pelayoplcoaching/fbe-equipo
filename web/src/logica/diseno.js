@@ -153,7 +153,7 @@ export function historiaRecords(series = [], ejercicioId) {
   return {
     unidad: kg ? 'kg' : 'rep',
     puntos: kg ? conKg : sinKg,
-    veces: eventos.map((e) => ({ fecha: e.fecha, texto: e.record.texto, tipo: e.record.tipo })).reverse(),
+    veces: eventos.map((e) => ({ fecha: e.fecha, texto: e.record.texto, tipo: e.record.tipo, record: e.record })).reverse(),
   };
 }
 // ¿Récord reciente? (menos de 30 días, como la vitrina)

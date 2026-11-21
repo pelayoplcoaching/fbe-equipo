@@ -4,7 +4,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { num } from '../../logica/calculos.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { tendenciasCheckin } from '../../logica/seguimiento-visual.js';
-import { Icono } from '../comunes.jsx';
+import { Icono, Hoja, Pestanas } from '../comunes.jsx';
+import { VistaProgreso } from '../atleta/Progreso.jsx';
 import { sinMovimiento } from '../transiciones.js';
 import { MiniLinea } from '../atleta/ProgresoPiezas.jsx';
 
@@ -59,5 +60,22 @@ export function TendenciasCheckin({ checkins = [] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// ---------------------------------------------------------------- (v0.204) el modo llamada
+// Su progreso a pantalla completa, grande y sin lo que solo es para ti (apuntar o borrar marcas, la nota del volumen),
+// para compartir pantalla en una videollamada. Por pestañas, como en su app.
+export function ModoLlamada({ atleta, entrena, alCerrar }) {
+  const subs = entrena ? [['fuerza', 'Fuerza'], ['cuerpo', 'Cuerpo'], ['logros', 'Logros']] : [['cuerpo', 'Cuerpo'], ['logros', 'Objetivos']];
+  const [sub, setSub] = useState(subs[0][0]);
+  const nombre = (atleta.nombre || 'Atleta').split(' ')[0];
+  return (
+    <Hoja titulo={`El progreso de ${nombre}`} alCerrar={alCerrar} clase="hoja-completa modo-llamada">
+      <Pestanas opciones={subs} valor={sub} alCambiar={setSub} etiqueta="Qué ver de su progreso" idBase="llamada" clase="pestanas-progreso pestanas-justas" />
+      <div class="progreso-panel llamada-panel" id="llamada-panel" role="tabpanel" aria-labelledby={`llamada-${sub}`} data-sub={sub}>
+        <VistaProgreso atletaId={atleta.id} esCoach entrenamiento={entrena} llamada />
+      </div>
+    </Hoja>
   );
 }
