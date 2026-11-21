@@ -399,7 +399,7 @@ function ResumenSemana({ completo, semana, revisadas, alRevisar }) {
   return (
     <section class="panel panel-pad registro-semana" aria-label={`Resumen de la semana ${semana.numero}`}>
       <div class="separa">
-        <strong>Semana {semana.numero}{a ? <span class="mini terciario"> frente a la {ant.numero}</span> : null}</strong>
+        <span class="registro-semana-tit"><strong>Semana {semana.numero}</strong>{a ? <span class="mini terciario">frente a la semana {ant.numero}</span> : null}</span>
         {pend.length > 0 && <button type="button" class="btn btn-peq" onClick={() => alRevisar(pend)}><Icono n="hecho" /> Revisar {pend.length === 1 ? 'la que falta' : `las ${pend.length} que faltan`}</button>}
       </div>
       <dl class="registro-semana-cifras">

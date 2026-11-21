@@ -126,7 +126,7 @@ export function Actividad({ atleta, irA }) {
   // (v0.206) marcar como visto (y quitarlo): lo visto se apaga
   const botonVisto = (e) => (e.mio || !e.clave ? null : vistos.has(e.clave)
     ? <button type="button" class="btn-icono plano act-visto-btn" aria-pressed="true" onClick={() => quitarVisto(e.clave)} aria-label={`Visto: ${e.titulo}. Tocar para volver a marcarlo`} title="Visto"><Icono n="hecho" /></button>
-    : <button type="button" class="btn-icono plano act-visto-btn" aria-pressed="false" onClick={() => verVistos([e.clave, ...(e.hijos ? [...e.hijos.records, ...e.hijos.mensajes].map((x) => x.clave) : [])])} aria-label={`Marcar como visto: ${e.titulo}`} title="Marcar como visto"><Icono n="ojo" /></button>);
+    : <button type="button" class="btn-icono plano act-visto-btn" aria-pressed="false" onClick={() => verVistos([e.clave, ...(e.hijos ? [...e.hijos.records, ...e.hijos.mensajes].map((x) => x.clave) : [])])} aria-label={`Marcar como visto: ${e.titulo}`} title="Marcar como visto"><Icono n="ojo-abierto" /></button>);
   // (v0.206) lo que cuelga de una sesión: sus récords (con «Felicitar») y lo que te escribió en ella (con «Responder»)
   const hijosDe = (e) => {
     const h = e.hijos;
