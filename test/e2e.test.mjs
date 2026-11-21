@@ -1161,7 +1161,10 @@ try {
   // v0.49: color de acento (seis) y negro puro, en el móvil
   const acentos = p.locator('.acento-op');
   check(await acentos.count() === 11 && await p.getByRole('radio', { name: 'Morado FBE' }).isChecked(), '(color) once colores de acento (con Abeto y Granada), el morado FBE de serie');
+  // (v0.200) el acento nuevo entra con una transición de vista: se leen los colores cuando ha terminado (en GitHub, más lento, se leían antes)
+  const acentoPuesto = () => p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 5000 }).catch(() => {});
   await p.locator('.acento-op', { hasText: 'Verde pino' }).click();
+  await acentoPuesto();
   const tokens = () => p.evaluate(() => { const c = getComputedStyle(document.documentElement); return { morado: c.getPropertyValue('--morado').trim().toUpperCase(), fondo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"][media*="dark"]')?.content }; });
   const t1 = await tokens();
   check(t1.morado === '#00635E' && await p.getByRole('radio', { name: 'Verde pino' }).isChecked() && await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).acento === 'pino'),
@@ -1176,6 +1179,7 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   await p.getByRole('switch', { name: 'Negro puro (OLED)' }).uncheck();
   await p.locator('.acento-op', { hasText: 'Morado FBE' }).click();
+  await acentoPuesto();
   await p.emulateMedia({ colorScheme: null });
   const t3 = await tokens();
   check(t3.morado === '#593EDE' && t3.fondo !== 'rgb(0, 0, 0)' && await p.evaluate(() => !document.getElementById('fbe-acento')?.textContent), 'y vuelve al morado FBE sin negro puro');

@@ -25,6 +25,8 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     }
   };
   const varRaiz = (n) => p.evaluate((x) => getComputedStyle(document.documentElement).getPropertyValue(x).trim().toUpperCase(), n);
+  // (v0.200) el acento entra con una transición de vista: se elige y se espera a que termine antes de leer los colores
+  const elegirAcento = async (nombre) => { await p.locator('.acento-op', { hasText: nombre }).click(); await p.waitForFunction(() => !document.documentElement.dataset.vt, null, { timeout: 5000 }).catch(() => {}); };
   const colorDe = (sel, prop) => p.evaluate(([s, pr]) => { const el = document.querySelector(s); if (!el) return null; const c = document.createElement('canvas').getContext('2d'); c.fillStyle = getComputedStyle(el)[pr]; return c.fillStyle.toUpperCase(); }, [sel, prop]);
 
   try {
@@ -67,7 +69,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     await irAAjustes(p);
     await p.locator('.acento-op').first().waitFor();
     check(await p.locator('.acento-op').count() === 11 && /gradient/.test(await p.evaluate(() => getComputedStyle(document.querySelector('.acento-muestra')).backgroundImage)), 'once acentos para elegir (con Orquídea, Abeto y Granada), en muestras con volumen');
-    await p.locator('.acento-op', { hasText: 'Océano' }).click();
+    await elegirAcento('Océano');
     const oceano = P.ACENTOS.find((a) => a.id === 'oceano').claro.morado;
     check(await varRaiz('--morado') === oceano, `Océano: el acento pasa a ${oceano}`);
     // (tanda 2) los neutros siguen al acento, y la barra del sistema, el fondo exacto
@@ -84,7 +86,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     await dalt.click();
     check(await varRaiz('--ok') === P.DALTONISMO.claro.ok && await varRaiz('--alerta') === P.DALTONISMO.claro.alerta, 'daltonismo: lo hecho en azul y lo que falla en naranja');
     await dalt.click();
-    await p.locator('.acento-op', { hasText: 'Morado FBE' }).click();
+    await elegirAcento('Morado FBE');
     check(await varRaiz('--morado') === P.ACENTOS[0].claro.morado && await varRaiz('--ok') === P.valor('claro', 'ok') && await varRaiz('--tiza') === P.valor('claro', 'tiza'), 'y todo vuelve a lo de serie (también los neutros)');
     await p.keyboard.press('Escape');
     // los iconos a dos tintas
@@ -98,7 +100,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
       return p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas') ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, { runOnly: ['color-contrast'] })).violations.flatMap((v) => v.nodes.slice(0, 4).map((n) => n.target.join(' '))));
     };
     await irAAjustes(p);
-    await p.locator('.acento-op', { hasText: 'Lima' }).click();
+    await elegirAcento('Lima');
     const lima = P.ACENTOS.find((a) => a.id === 'lima');
     check(await varRaiz('--acento-600') === P.escalaAcento(lima)[600] && await varRaiz('--acento-600') !== P.ESCALAS.marca[600], `(tanda 3) con Lima, la escala del acento es la suya (--acento-600: ${P.escalaAcento(lima)[600]})`);
     await irASeccion(p, 'Hoy');
@@ -124,7 +126,7 @@ export async function probarColor({ navegador, check, base = 'http://localhost:4
     check(malHoja.length === 0, `y en la hoja elevada, todo el texto pasa AA (axe)${malHoja.length ? `: ${malHoja.join(' | ')}` : ''}`);
     await p.keyboard.press('Escape');
     await p.locator('.hoja-dialogo').waitFor({ state: 'detached' }).catch(() => {});
-    await p.locator('.acento-op', { hasText: 'Morado FBE' }).click();
+    await elegirAcento('Morado FBE');
     await p.emulateMedia({ colorScheme: 'light' });
     check(await varRaiz('--acento-600') === P.ESCALAS.marca[600] && await varRaiz('--tinta') === P.valor('claro', 'tinta'), 'y de vuelta al morado, la escala de la marca');
     await irASeccion(p, 'Hoy');
