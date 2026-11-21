@@ -125,7 +125,7 @@ export async function probarRevision191({ navegador, check, base = 'http://local
     check(await hasta(async () => (await hoja.locator('.rev-frase').count()) === 1), 'un trozo del mensaje se guarda como frase');
     await area.fill('Hola.');
     await hoja.locator('.rev-frase').first().click();
-    check(/^Hola\.\nMuy buen trabajo esta semana\.$/.test(await area.inputValue()), 'y entra en el mensaje con un toque');
+    check(await hasta(async () => /^Hola\.\nMuy buen trabajo esta semana\.$/.test(await area.inputValue())), 'y entra en el mensaje con un toque');
     await revisar('mensaje');
     check(await hoja.getByRole('button', { name: 'Mejor una nota de voz' }).count() === 1, 'desde ahí se puede grabar una nota de voz');
     await hoja.getByRole('button', { name: 'Enviar', exact: true }).click();
