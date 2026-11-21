@@ -87,7 +87,12 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     check(await hasta(async () => (await escena.count()) === 0), 'Seguir la cierra');
     const nov = p.getByRole('dialog', { name: 'Novedades' });
     const { NOVEDADES } = await import('../web/src/novedades.js');
-    check(await hasta(async () => (await nov.textContent()).includes(NOVEDADES['0.200'].atleta[0])), 'y después, «Novedades» con lo de la 0.200');
+    // (v0.204) lo que toca al venir de la 0.199: las frases más nuevas (como mucho cinco; la de la 0.200 ya no cabe)
+    const { novedadesQueVer } = await import('../web/src/logica/novedades-app.js');
+    const { readFileSync } = await import('node:fs');
+    const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+    const primera = novedadesQueVer(NOVEDADES, { vista: '0.199.0', actual: version })[0];
+    check(!!primera && await hasta(async () => (await nov.textContent()).includes(primera)), 'y después, «Novedades» con lo de las versiones nuevas');
     await nov.getByRole('button', { name: 'Vale' }).click();
     check(await hasta(async () => (await p.locator('.hero-dia > .cielo-hora.cielo-atardecer .cielo-sol').count()) === 1), 'de tarde: el sol que se pone detrás de la portada');
     await p.reload();

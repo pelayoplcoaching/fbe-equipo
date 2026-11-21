@@ -69,8 +69,9 @@
 .cr-celda.con-record { position: relative; }
 .cr-celda.con-record::before { content: ""; position: absolute; top: -22%; right: -22%; width: 58%; height: 58%; box-sizing: border-box; border-radius: 50%; background: var(--oro-500); border: var(--filo-medio) solid var(--hoja); }
 .cr-celda.con-checkin { border-bottom: var(--filo-fuerte) solid var(--pv-cuerpo); }
-.cr-leyenda-marcas { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); justify-content: flex-end; }
-.cr-leyenda-marcas span { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.cr-marcas { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); justify-content: flex-end; }
+.cr-marcas span { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.cr-marcas .cr-celda { width: 11px; height: 11px; }
 @media (forced-colors: active) { .cr-celda.con-record::before { background: CanvasText; } }
 
 /* ---------------------------------------------------------------- 7. la escalera de un record */

@@ -450,7 +450,7 @@ export function MapaConstancia({ atletaId, esCoach = false, records = null, chec
         <span class="cr-leyenda mini terciario" aria-hidden="true">Menos <i class="cr-celda n0" /><i class="cr-celda n1" /><i class="cr-celda n2" /> Más</span>
       </div>
       {(recordsVista > 0 || checkinsVista > 0) && (
-        <span class="cr-leyenda cr-leyenda-marcas mini terciario" aria-hidden="true">
+        <span class="cr-marcas mini terciario" aria-hidden="true">
           {recordsVista > 0 && <span><i class="cr-celda n1 con-record" /> Récord</span>}
           {checkinsVista > 0 && <span><i class="cr-celda n1 con-checkin" /> Check-in</span>}
         </span>
