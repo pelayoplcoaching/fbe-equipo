@@ -5,7 +5,6 @@ import { useApp, useCarga, useUnaVez, Icono, Hoja, Segmentos, Vacio } from '../c
 import { AnilloHabito, COLOR_HABITO } from '../atleta/Habitos.jsx';
 import { PLANTILLAS_HABITO, ICONOS_HABITO, textoObjetivo, textoValor } from '../../logica/habitos.js';
 import { LETRAS_DIA } from '../../logica/plan.js';
-import { fmtConDia } from '../../logica/fechas.js';
 import { num, leerNumero } from '../../logica/calculos.js';
 
 const MAX_HABITOS = 6;
@@ -32,28 +31,26 @@ export function HabitosCoach({ atleta }) {
           <ul class="lista">
             {lista.map((r) => {
               const h = r.habito;
+              // (v0.203) en una fila compacta: su aro, la semana en casillas y las cifras en una línea; tocarla abre su
+              // hoja (cambiarlo o quitarlo), en vez de los dos botones de antes
               return (
                 <li key={h.id} class="habito-coach">
-                  <AnilloHabito h={h} fraccion={r.pct7.pct / 100} cumple={r.pct7.pct >= 100} tam={44} />
-                  <div class="pila-xs" style="min-width:0">
-                    <strong>{h.nombre}</strong>{h.origen === 'sugerido' && <span class="chip morado mini" title="Lo activó el atleta desde los hábitos sugeridos">Lo eligió él</span>}
-                    <span class="mini terciario">{textoObjetivo(h)}</span>
-                    <span class="semana-mini" role="img" style={{ '--c': COLOR_HABITO[h.icono] }}
-                      aria-label={`Esta semana: ${r.semana.cumplidos} de ${r.semana.pedidos} días`}>
-                      {r.semana.dias.map((d, i) => (
-                        <i key={d.iso} class={`${d.cumple ? 'si' : d.valor != null ? 'casi' : ''} ${d.futuro ? 'futuro' : ''}`} title={`${fmtConDia(d.iso)}${d.valor != null ? `: ${textoValor(h, d.valor)}` : ''}`}>{LETRAS_DIA[i]}</i>
-                      ))}
+                  <button type="button" class="habito-coach-fila" onClick={() => setEditando(h)} aria-label={`Cambiar ${h.nombre}: ${textoObjetivo(h)}. ${r.pct7.pct} % en 7 días, ${r.pct30.pct} % en 30. Esta semana, ${r.semana.cumplidos} de ${r.semana.pedidos} días`}>
+                    <AnilloHabito h={h} fraccion={r.pct7.pct / 100} cumple={r.pct7.pct >= 100} tam={40} />
+                    <span class="pila-xs habito-coach-txt">
+                      <span class="habito-coach-nombre"><strong>{h.nombre}</strong>{h.origen === 'sugerido' && <span class="chip morado mini">Lo eligió él</span>}</span>
+                      <span class="mini terciario">{textoObjetivo(h)}</span>
+                      <span class="habito-coach-linea">
+                        <span class="semana-mini" style={{ '--c': COLOR_HABITO[h.icono] }} aria-hidden="true">
+                          {r.semana.dias.map((d, i) => (
+                            <i key={d.iso} class={`${d.cumple ? 'si' : d.valor != null ? 'casi' : ''} ${d.futuro ? 'futuro' : ''}`}>{LETRAS_DIA[i]}</i>
+                          ))}
+                        </span>
+                        <span class="habito-coach-cifras mini num" aria-hidden="true"><b>{r.pct7.pct} %</b> en 7 días · {r.pct30.pct} % en 30{r.media7 != null ? ` · media ${textoValor(h, Math.round(r.media7 * 10) / 10)}` : ''}</span>
+                      </span>
                     </span>
-                  </div>
-                  <div class="habito-coach-cifras num">
-                    <span><b>{r.pct7.pct} %</b> 7 días</span>
-                    <span class="terciario">{r.pct30.pct} % 30 días</span>
-                    {r.media7 != null && <span class="terciario">media {textoValor(h, Math.round(r.media7 * 10) / 10)}</span>}
-                  </div>
-                  <span class="fila" style="gap:2px">
-                    <button class="btn btn-icono plano" aria-label={`Cambiar ${h.nombre}`} onClick={() => setEditando(h)}><Icono n="editar" /></button>
-                    <button class="btn btn-icono plano btn-peligro" aria-label={`Quitar ${h.nombre}`} onClick={() => setQuitando(h)}><Icono n="basura" /></button>
-                  </span>
+                    <Icono n="derecha" />
+                  </button>
                 </li>
               );
             })}
@@ -61,7 +58,7 @@ export function HabitosCoach({ atleta }) {
         )}
       </div>
       {lista.length > 0 && <p class="mini terciario">El % es de los días pedidos (por ejemplo, 5 de 6), contando solo desde que pusiste el hábito. La media es de los días apuntados.</p>}
-      {editando && <HojaHabitoCoach habito={editando === 'nuevo' ? null : editando} alCerrar={() => setEditando(null)}
+      {editando && <HojaHabitoCoach habito={editando === 'nuevo' ? null : editando} alCerrar={() => setEditando(null)} alQuitar={(h) => { setEditando(null); setQuitando(h); }}
         alGuardar={async (fila) => {
           await api.guardarHabito(atleta.id, fila, editando === 'nuevo' ? null : editando.id);
           aviso(editando === 'nuevo' ? `Hábito «${fila.nombre}» añadido` : 'Hábito guardado');
@@ -83,7 +80,7 @@ export function HabitosCoach({ atleta }) {
   );
 }
 
-function HojaHabitoCoach({ habito, alCerrar, alGuardar }) {
+function HojaHabitoCoach({ habito, alCerrar, alGuardar, alQuitar = null }) {
   const [f, setF] = useState(() => habito ? { ...habito, objetivo: habito.objetivo == null ? '' : num(habito.objetivo, 2) } : { nombre: '', tipo: 'numero', objetivo: '', unidad: '', sentido: 'al_menos', dias_semana: 7, icono: 'libre' });
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -139,6 +136,7 @@ function HojaHabitoCoach({ habito, alCerrar, alGuardar }) {
         </div>
         {error && <div class="error" role="alert">{error}</div>}
         <button class="btn btn-primario btn-grande" disabled={ocupado}>{habito ? 'Guardar' : 'Añadir hábito'}</button>
+        {habito && alQuitar && <button type="button" class="btn btn-peligro" onClick={() => alQuitar(habito)}><Icono n="basura" /> Quitar el hábito</button>}
       </form>
     </Hoja>
   );

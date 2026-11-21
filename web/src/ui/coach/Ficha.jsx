@@ -49,6 +49,8 @@ import { AMedida } from './AMedidaCoach.jsx';
 import { SaludDelMovil, ContactoAtleta } from './Integraciones.jsx';
 import { CarreraFicha } from './CarreraCoach.jsx';
 import { conCarrera, leerTiempo, fmtTiempo } from '../../logica/carrera.js';
+import { IndiceSeguimiento, TendenciasCheckin } from './SeguimientoPiezas.jsx';
+import { nivelCheckin, adherenciaMedia, zonaCarga, fueraDeZona } from '../../logica/seguimiento-visual.js';
 
 // Las de entrenamiento, fuera a quien solo le llevas la nutrición (v0.26); Nutrición, a quien solo el entrenamiento
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
@@ -355,7 +357,9 @@ function CargaEntreno({ atletaId }) {
   const { semanas, cambio } = c.datos;
   const hay = semanas.some((w) => w.carga > 0);
   const H = 170, izq = 8, der = 8, arr = 18, abj = 22;
-  const max = Math.max(1, ...semanas.map((w) => w.carga), cambio?.media || 0);
+  // (v0.203) la zona normal alrededor de su media (de la mitad a vez y media): lo que se sale, en ámbar
+  const zona = cambio ? zonaCarga(cambio.media) : null;
+  const max = Math.max(1, ...semanas.map((w) => w.carga), cambio?.media || 0, zona ? Math.min(zona.hasta, Math.max(1, ...semanas.map((w) => w.carga)) * 1.15) : 0);
   const ancho = (W - izq - der) / semanas.length;
   const Y = (v) => arr + (1 - v / max) * (H - arr - abj);
   const fuera = cambio && (cambio.ratio >= 1.5 || cambio.ratio <= 0.5);
@@ -368,12 +372,16 @@ function CargaEntreno({ atletaId }) {
       <div class="panel panel-pad pila">
         {!hay ? <p class="secundario">Aparece cuando termine sesiones con su esfuerzo (RPE de la sesión) y su duración.</p> : (
           <svg class="grafica grafica-carga" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img"
-            aria-label={`Carga semanal de las últimas ${semanas.length} semanas${cambio ? `; la semana pasada, ${cambio.carga} UA, ${num(cambio.ratio)} veces su media de ${cambio.media}` : ''}`}>
+            aria-label={`Carga semanal de las últimas ${semanas.length} semanas${cambio ? `; la semana pasada, ${cambio.carga} UA, ${num(cambio.ratio)} veces su media de ${cambio.media}` : ''}${zona ? `; zona normal, de ${Math.round(zona.desde)} a ${Math.round(zona.hasta)} UA${semanas.some((w) => !w.enCurso && fueraDeZona(w.carga, zona)) ? `, fuera de ella: ${semanas.filter((w) => !w.enCurso && fueraDeZona(w.carga, zona)).map((w) => fmtCorta(w.lunes)).join(', ')}` : ''}` : ''}`}>
+            <defs><linearGradient id="deg-carga-fuera" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-fuera-a" /><stop offset="1" class="deg-fuera-b" /></linearGradient></defs>
+            {zona && <rect class="zona-carga" x={izq} width={W - izq - der} y={Y(Math.min(zona.hasta, max))} height={Math.max(0, Y(zona.desde) - Y(Math.min(zona.hasta, max)))} rx="6" />}
             {semanas.map((w, i) => {
               const x = izq + i * ancho + ancho * 0.18, bw = ancho * 0.64;
+              const sale = !w.enCurso && fueraDeZona(w.carga, zona);
               return (
                 <g key={w.lunes}>
-                  {w.carga > 0 && <rect class={`barra ${w.enCurso ? 'en-curso' : ''} ${w.lunes === cambio?.semana ? 'ultima' : ''}`} x={x} y={Y(w.carga)} width={bw} height={H - abj - Y(w.carga)} rx="4" />}
+                  {w.carga > 0 && <rect class={`barra ${w.enCurso ? 'en-curso' : ''} ${w.lunes === cambio?.semana ? 'ultima' : ''} ${sale ? 'fuera' : ''}`} x={x} y={Y(w.carga)} width={bw} height={H - abj - Y(w.carga)} rx="4" />}
+                  {!(w.carga > 0) && !w.enCurso && <rect class="sin-carga" x={x} y={H - abj - 2} width={bw} height="2" rx="1" />}
                   {w.carga > 0 && <text class="valor-barra" x={x + bw / 2} y={Y(w.carga) - 5} text-anchor="middle">{w.carga}</text>}
                   {(i % 2 === 1 || i === semanas.length - 1) && <text x={x + bw / 2} y={H - 5} text-anchor="middle">{fmtCorta(w.lunes)}</text>}
                 </g>
@@ -382,7 +390,7 @@ function CargaEntreno({ atletaId }) {
             {cambio && <line class="media" x1={izq} x2={W - der} y1={Y(cambio.media)} y2={Y(cambio.media)} stroke-dasharray="5 4" />}
           </svg>
         )}
-        <p class="mini terciario">RPE de cada sesión (1 a 10) por sus minutos, sumado por semana (Foster y cols., 2001), en unidades arbitrarias. La línea es la media de las cuatro semanas anteriores a la última completa; la semana en curso va en claro. Sirve para ver saltos bruscos, no para predecir lesiones.</p>
+        <p class="mini terciario">RPE de cada sesión (1 a 10) por sus minutos, sumado por semana (Foster y cols., 2001), en unidades arbitrarias. La línea es la media de las cuatro semanas anteriores a la última completa; la franja de fondo, su zona normal (de la mitad a vez y media de esa media), y las semanas que se salen van en ámbar. La semana en curso va en claro; una raya en el suelo, semana sin carga. Sirve para ver saltos bruscos, no para predecir lesiones.</p>
       </div>
     </section>
   );
@@ -453,42 +461,50 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
   const porSemana = molestias.reduce((m, x) => ((m[x.semana_inicio] ||= []).push(x), m), {});
   const recargar = () => { checkins.recargar(true); alCambiar?.(); };
   const [comparar, setComparar] = useState(false);
+  const entrena = conEntrenamiento(atleta);
+  // (v0.203) el índice que se queda arriba: a qué apartado ir sin bajar a mano (la pestaña mide varias pantallas)
+  const apartados = [entrena && ['seg-a-cumplimiento', 'Cumplimiento'], ['seg-a-habitos', 'Hábitos'], ['seg-a-progreso', 'Progreso'], entrena && ['seg-a-carga', 'Carga'], ['seg-a-checkins', 'Check-ins'], ['seg-a-meses', 'Meses']].filter(Boolean);
   return (
     <div class="pila">
+      <IndiceSeguimiento apartados={apartados} />
       {/* (pulido 2.3) cada bloque guarda, mientras carga, el sitio que ocupó la última vez: no se empujan al llegar */}
       <Reserva id="seg-tareas"><TareasCoach atleta={atleta} alCambiar={alCambiar} /></Reserva>
-      {conEntrenamiento(atleta) && <Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva>}
-      <Reserva id="seg-habitos"><HabitosCoach atleta={atleta} /></Reserva>
+      {entrena && <div id="seg-a-cumplimiento" class="seg-apartado"><Reserva id="seg-cumplimiento"><CumplimientoYBloques atletaId={atleta.id} diasSemana={diasSemanaValido(atleta.dias_semana)} /></Reserva></div>}
+      <div id="seg-a-habitos" class="seg-apartado"><Reserva id="seg-habitos"><HabitosCoach atleta={atleta} /></Reserva></div>
       {/* (v0.174, 077) lo que toma: lo pauta el coach o lo añade el atleta */}
       <SuplementosCoach atleta={atleta} />
-      <Reserva id="seg-progreso"><VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={conEntrenamiento(atleta)} /></Reserva>
-      {conEntrenamiento(atleta) && <Reserva id="seg-carga"><CargaEntreno atletaId={atleta.id} /></Reserva>}
+      <div id="seg-a-progreso" class="seg-apartado"><Reserva id="seg-progreso"><VistaProgreso key={versionVol} atletaId={atleta.id} esCoach entrenamiento={entrena} /></Reserva></div>
+      {entrena && <div id="seg-a-carga" class="seg-apartado"><Reserva id="seg-carga"><CargaEntreno atletaId={atleta.id} /></Reserva></div>}
       {conEntrenamiento(atleta) && <Reserva id="seg-volumen"><VolumenObjetivo atleta={atleta} alGuardar={() => { setVersionVol((v) => v + 1); recargarFicha?.(); }} /></Reserva>}
       <Reserva id="seg-checkin" cargando={preguntas.cargando && !preguntas.datos}><CheckinAMedida atleta={atleta} preguntas={preguntas} checkins={lista} recargarFicha={recargarFicha} /></Reserva>
-      <section class="seccion">
+      <section class="seccion seg-apartado" id="seg-a-checkins">
         <div class="seccion-cab">
           <h2>Check-ins</h2>
           {lista.length >= 2 && <button class="btn-texto" onClick={() => setComparar(true)}><Icono n="intercambiar" /> Comparar dos</button>}
         </div>
+        {/* (v0.203) cómo van sus respuestas, de un vistazo: una minilínea de 8 semanas por dato */}
+        {lista.length >= 2 && <TendenciasCheckin checkins={lista} />}
         {!lista.length ? <div class="panel"><Vacio ilustracion="checkins" titulo="Sin check-ins todavía">Cuando envíe el primero, lo verás aquí con su peso, sus respuestas y sus fotos de esas fechas.</Vacio></div> : (
           <div class="panel"><div class="tabla-env">
-            <table class="tabla-simple tabla-clic">
+            <table class="tabla-simple tabla-clic tabla-checkins">
               <thead><tr><th>Semana</th><th>Sueño</th><th>Energía</th><th>Recup.</th><th>Motivación</th><th>Adherencia</th><th>Pasos</th><th>Molestias</th><th><span class="sr">Estado</span></th></tr></thead>
               <tbody>
                 {lista.map((c) => {
                   const m = media(c);
                   const mol = (porSemana[c.semana_inicio] || []).filter((x) => x.intensidad > 0);
+                  // (v0.203) cada casilla con el color de su escala (bien, regular o mal); en el móvil, una tarjeta por semana
+                  const nv = (campo, v) => { const n = nivelCheckin(campo, v); return n ? `nivel-${n}` : ''; };
                   return (
                     <tr key={c.id} tabIndex={0} onClick={() => setAbierto(c)} onKeyDown={(e) => { if (e.key === 'Enter') setAbierto(c); }}>
-                      <td>{rangoSemana(c.semana_inicio)}</td>
-                      <td>{c.horas_sueno ? `${c.horas_sueno.replace('-', '–')} h` : '—'}</td>
-                      <td>{c.energia ?? '—'}</td>
-                      <td>{c.recuperacion ?? '—'}</td>
-                      <td>{c.motivacion ? ESCALAS.motivacion[c.motivacion - 1] : '—'}</td>
-                      <td>{m ? ESCALAS.adherencia[Math.round(m) - 1] : '—'}</td>
-                      <td>{c.pasos_media ? num(c.pasos_media, 0) : '—'}</td>
-                      <td>{mol.length ? mol.map((x) => `${NOMBRE_ZONA[x.zona]} ${x.intensidad}`).join(', ') : '—'}</td>
-                      <td>{c.revisado_en ? <Icono n="hecho" width="18" height="18" titulo="Revisado" /> : <span class="chip morado">Pendiente</span>}</td>
+                      <td class="ck-semana" data-etq="Semana">{rangoSemana(c.semana_inicio)}</td>
+                      <td class={nv('sueno', c.horas_sueno)} data-etq="Sueño">{c.horas_sueno ? `${c.horas_sueno.replace('-', '–')} h` : '—'}</td>
+                      <td class={nv('energia', c.energia)} data-etq="Energía">{c.energia ?? '—'}</td>
+                      <td class={nv('recuperacion', c.recuperacion)} data-etq="Recup.">{c.recuperacion ?? '—'}</td>
+                      <td class={nv('motivacion', c.motivacion)} data-etq="Motivación">{c.motivacion ? ESCALAS.motivacion[c.motivacion - 1] : '—'}</td>
+                      <td class={nv('adherencia', adherenciaMedia(c))} data-etq="Adherencia">{m ? ESCALAS.adherencia[Math.round(m) - 1] : '—'}</td>
+                      <td class={nv('pasos', c.pasos_media)} data-etq="Pasos">{c.pasos_media ? num(c.pasos_media, 0) : '—'}</td>
+                      <td class={nv('molestias', mol.length ? Math.max(...mol.map((x) => x.intensidad)) : null)} data-etq="Molestias">{mol.length ? mol.map((x) => `${NOMBRE_ZONA[x.zona]} ${x.intensidad}`).join(', ') : '—'}</td>
+                      <td class="ck-estado">{c.revisado_en ? <Icono n="hecho" width="18" height="18" titulo="Revisado" /> : <span class="chip morado">Pendiente</span>}</td>
                     </tr>
                   );
                 })}
@@ -501,10 +517,10 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha }) {
             <div class="nota" key={c.id}><strong>{rangoSemana(c.semana_inicio)}: </strong>{c.notas}</div>
           ))}</div>
         )}
-        <p class="mini terciario">Energía y recuperación de 1 (peor) a 5 (mejor). Molestias de 0 a 3. Toca una semana para comentarla.</p>
+        <p class="mini terciario">Energía y recuperación de 1 (peor) a 5 (mejor). Molestias de 0 a 3. En verde, lo que va bien; en ámbar, lo regular; en rojo suave, lo que conviene mirar (sueño de menos de 6 horas, escalas de 2 o menos, menos de 5000 pasos, molestia moderada o más). Toca una semana para comentarla.</p>
       </section>
       {comparar && <CompararCheckins atleta={atleta} checkins={lista} alCerrar={() => setComparar(false)} />}
-      <TusMeses atleta={atleta} atletaId={atleta.id} esCoach />
+      <div id="seg-a-meses" class="seg-apartado"><TusMeses atleta={atleta} atletaId={atleta.id} esCoach /></div>
       {abierto && (
         <Hoja titulo={`Check-in, ${rangoSemana(abierto.semana_inicio)}`} alCerrar={() => setAbierto(null)}>
           {respuestasAbierto.length > 0 && (

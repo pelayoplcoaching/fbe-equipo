@@ -1,0 +1,196 @@
+/* v0.203: progreso y seguimiento, mas bonitos (ui/comunes.jsx Grafica y GraficaPeso, ui/atleta/Progreso.jsx,
+   ui/atleta/ProgresoPiezas.jsx, ui/Objetivos.jsx, ui/coach/Ficha.jsx, ui/coach/SeguimientoPiezas.jsx y
+   ui/coach/HabitosCoach.jsx). Solo ASCII; colores, tamanos y espacios, con tokens (y su version oscura). */
+:root { --pv-cuerpo: var(--turquesa-600); --pv-cuerpo-suave: var(--turquesa-50); --pv-logros: var(--oro); --pv-baja: var(--turquesa-700); --pv-sube: var(--marca-600); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pv-cuerpo: var(--turquesa-300); --pv-cuerpo-suave: var(--turquesa-950); --pv-logros: var(--oro); --pv-baja: var(--turquesa-300); --pv-sube: var(--marca-300); } }
+:root[data-theme="dark"] { --pv-cuerpo: var(--turquesa-300); --pv-cuerpo-suave: var(--turquesa-950); --pv-logros: var(--oro); --pv-baja: var(--turquesa-300); --pv-sube: var(--marca-300); }
+
+/* ---------------------------------------------------------------- las graficas */
+/* Los tramos sin datos (un paron) y la semana que aun no ha acabado: rectos y discontinuos */
+.grafica .linea-hueco, .grafica .linea-curso { fill: none; stroke: var(--morado); stroke-width: 2.25; stroke-dasharray: 2 6; stroke-linecap: round; }
+.grafica .linea-curso { stroke: color-mix(in srgb, var(--morado) 55%, var(--hoja)); stroke-dasharray: 5 5; }
+.grafica .punto.en-curso { fill: var(--hoja); stroke: color-mix(in srgb, var(--morado) 60%, var(--hoja)); stroke-dasharray: 3 2.5; }
+/* Las franjas de los bloques, detras de todo */
+.grafica .franja.par { fill: color-mix(in srgb, var(--morado) 7%, transparent); }
+.grafica .franja.impar { fill: color-mix(in srgb, var(--tinta) 4%, transparent); }
+.grafica text.franja-etq { font-size: var(--letra-10); font-weight: 750; fill: var(--tinta-3); }
+/* La meta y la prevision */
+.grafica .meta { stroke: var(--ok); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.grafica text.meta-etq { font-size: var(--letra-11); font-weight: 750; fill: var(--ok); paint-order: stroke fill; stroke: var(--hoja); stroke-width: 4px; stroke-linejoin: round; }
+.grafica .prevision { stroke: var(--ok); stroke-width: 2.25; stroke-dasharray: 0.5 5; stroke-linecap: round; fill: none; }
+.grafica .meta-bandera { fill: var(--ok-suave); stroke: var(--ok); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+/* Los tests y competiciones: un rombo dorado */
+.grafica .marca-test { fill: var(--oro-300); stroke: var(--oro); stroke-width: 1.5; stroke-linejoin: round; }
+/* El globo del dedo, en oro sobre un record */
+.grafica-globo.globo-record { display: inline-flex; align-items: center; gap: var(--esp-4); background: var(--grad-record); color: var(--neutro-950); border-color: var(--oro-300); }
+.grafica-globo.globo-record svg { width: var(--ico-14); height: var(--ico-14); flex: none; }
+@media (forced-colors: active) { .grafica .marca-test, .grafica .meta-bandera { fill: CanvasText; } .grafica-globo.globo-record { background: Canvas; color: CanvasText; } }
+
+/* La grafica fantasma: lo que falta para que salga */
+.grafica-fantasma { position: relative; display: grid; place-items: center; min-height: 120px; padding: var(--esp-8) 0; }
+.grafica-fantasma svg { position: absolute; inset: var(--esp-8) 0; width: 100%; height: calc(100% - var(--esp-16)); }
+.grafica-fantasma svg line { stroke: var(--linea); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.grafica-fantasma svg path { fill: none; stroke: color-mix(in srgb, var(--morado) 35%, var(--hoja)); stroke-width: 2.5; stroke-dasharray: 2 7; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.grafica-fantasma p { position: relative; margin: 0; max-width: 30ch; text-align: center; padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); background: var(--hoja); box-shadow: var(--anillo-suave); }
+
+/* La minilinea (trofeos, cifra del objetivo, tendencias del check-in) */
+.mini-linea { display: block; overflow: visible; }
+.mini-linea polyline { fill: none; stroke: var(--morado); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.mini-linea circle { fill: var(--morado); }
+
+/* ---------------------------------------------------------------- cada pestana de Progreso con su color */
+.progreso-panel[data-sub="cuerpo"] .grafica :is(.linea, .linea-hueco) { stroke: var(--pv-cuerpo); }
+.progreso-panel[data-sub="cuerpo"] .grafica :is(.deg-a, .deg-b) { stop-color: var(--pv-cuerpo); }
+.progreso-panel[data-sub="cuerpo"] .grafica .punto { stroke: var(--pv-cuerpo); }
+.progreso-panel[data-sub="cuerpo"] .grafica .punto.ultimo { fill: var(--pv-cuerpo); stroke: color-mix(in srgb, var(--pv-cuerpo) 25%, transparent); }
+.progreso-panel[data-sub="cuerpo"] .grafica path.linea { filter: drop-shadow(0 5px 5px color-mix(in srgb, var(--pv-cuerpo) 30%, transparent)); }
+.progreso-panel[data-sub="cuerpo"] .grafica-guia { border-left-color: color-mix(in srgb, var(--pv-cuerpo) 55%, transparent); }
+.progreso-panel[data-sub="logros"] .mapa-constancia .cr-celda.n1 { background: color-mix(in srgb, var(--oro-400) 55%, var(--hoja)); }
+.progreso-panel[data-sub="logros"] .mapa-constancia .cr-celda.n2 { background: var(--oro-500); }
+.progreso-panel[data-sub="logros"] .bloque-aros .sello-semana:not(.completa) { background: conic-gradient(var(--oro-500) calc(var(--p) * 1turn), var(--hoja-3) 0); }
+.contenido:has(> .progreso-panel[data-sub="cuerpo"]) .pestanas-progreso[data-raya]::after { background: var(--pv-cuerpo); }
+.contenido:has(> .progreso-panel[data-sub="logros"]) .pestanas-progreso[data-raya]::after { background: var(--oro-500); }
+.contenido:has(> .progreso-panel[data-sub="cuerpo"]) .pestanas-progreso:not([data-raya]) button[aria-selected="true"]::after { background: var(--pv-cuerpo); }
+.contenido:has(> .progreso-panel[data-sub="logros"]) .pestanas-progreso:not([data-raya]) button[aria-selected="true"]::after { background: var(--oro-500); }
+
+/* ---------------------------------------------------------------- tu cuerpo en cifras */
+/* La figura mide el doble de alto que de ancho y las etiquetas se colocan a la altura de su medida (en % de ese alto) */
+.cuerpo-cifras { display: grid; grid-template-columns: minmax(0, 1fr) 124px minmax(0, 1fr); align-items: stretch; }
+.cc-figura { display: block; width: 100%; height: auto; aspect-ratio: 1 / 2; overflow: visible; }
+.cc-cuerpo { fill: var(--hoja-2); stroke: var(--linea); stroke-width: 0.8; }
+.cc-guia { fill: none; stroke: var(--tinta-3); stroke-width: 0.7; stroke-dasharray: 1.5 2; stroke-linejoin: round; }
+.cc-guia.elegida { stroke: var(--pv-cuerpo); stroke-width: 1.2; stroke-dasharray: none; }
+.cc-punto { fill: var(--hoja); stroke: var(--tinta-3); stroke-width: 1; }
+.cc-punto.elegida { fill: var(--pv-cuerpo); stroke: var(--pv-cuerpo); }
+.cc-lado { position: relative; min-width: 0; }
+.cc-etq { position: absolute; top: calc(var(--y) * 1%); transform: translateY(-50%); display: grid; gap: 0; max-width: 100%; padding: var(--esp-2) var(--esp-8); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; cursor: pointer; text-align: left; }
+.cc-lado.izq .cc-etq { right: 0; justify-items: end; text-align: right; }
+.cc-lado.der .cc-etq { left: 0; }
+.cc-etq.elegida { border-color: var(--pv-cuerpo); box-shadow: 0 0 0 1px var(--pv-cuerpo); background: var(--pv-cuerpo-suave); }
+.cc-nombre { font-size: var(--letra-11-5); font-weight: 650; color: var(--tinta-2); }
+.cc-l2 { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--esp-4); }
+.cc-lado.izq .cc-l2 { justify-content: flex-end; }
+.cc-valor { font-size: var(--letra-14); font-weight: 800; line-height: 1.15; }
+.cc-valor small { font-size: var(--letra-11); font-weight: 650; color: var(--tinta-2); }
+.cc-cambio { display: inline-flex; align-items: center; gap: 1px; font-size: var(--letra-11-5); font-weight: 750; }
+.cc-cambio svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.5; }
+.cc-etq.baja .cc-cambio { color: var(--pv-baja); }
+.cc-etq.sube .cc-cambio { color: var(--pv-sube); }
+.cc-etq.igual .cc-cambio { color: var(--tinta-2); }
+@media (prefers-reduced-motion: no-preference) { .cc-etq { transition: border-color var(--mov-breve), background-color var(--mov-breve); } }
+@media (max-width: 360px) { .cuerpo-cifras { grid-template-columns: minmax(0, 1fr) 108px minmax(0, 1fr); } .cc-etq { padding: var(--esp-2) var(--esp-6); } }
+
+/* ---------------------------------------------------------------- series por musculo: la semana en curso, rayada */
+.barra-fila.vol-curso .relleno { background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--morado) 55%, var(--hoja)) 0 4px, color-mix(in srgb, var(--morado) 30%, var(--hoja)) 4px 8px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--morado) 45%, transparent); }
+@media (forced-colors: active) { .barra-fila.vol-curso .relleno { background: Highlight; } }
+
+/* ---------------------------------------------------------------- la vitrina: minilinea y lo que subio */
+.trofeo-pie { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-6); margin-top: var(--esp-4); min-width: 0; }
+.trofeo-subida { display: inline-flex; align-items: center; gap: 1px; padding: 1px var(--esp-6); border-radius: var(--r-pildora); background: var(--ok-suave); color: var(--ok); font-size: var(--letra-11-5); font-weight: 750; white-space: nowrap; }
+.trofeo-subida svg { width: var(--ico-12); height: var(--ico-12); stroke-width: 2.5; }
+.trofeo-linea { margin-left: auto; }
+.trofeo-tarjeta.reciente .trofeo-linea polyline { stroke: var(--oro); }
+.trofeo-tarjeta.reciente .trofeo-linea circle { fill: var(--oro); }
+
+/* ---------------------------------------------------------------- las marcas, en tarjetas con su sello */
+.marcas-rejilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--esp-10); }
+.marca-tarjeta { width: 100%; height: 100%; display: grid; align-content: start; gap: var(--esp-4); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r); background: var(--hoja); color: var(--tinta); font: inherit; text-align: left; cursor: pointer; box-shadow: var(--sombra); }
+.marca-tarjeta:hover { background: var(--hoja-2); }
+.marca-sello { justify-self: start; display: inline-flex; align-items: center; gap: var(--esp-4); padding: 2px var(--esp-8); border-radius: var(--r-pildora); font-size: var(--letra-11-5); font-weight: 750; background: var(--hoja-2); color: var(--tinta-2); }
+.marca-sello svg { width: var(--ico-12); height: var(--ico-12); }
+.marca-tarjeta.competicion .marca-sello { background: var(--oro-suave); color: var(--oro); }
+.marca-tarjeta.test .marca-sello { background: var(--morado-suave); color: var(--morado); }
+.marca-nombre { font-weight: 650; font-size: var(--letra-14); overflow-wrap: anywhere; }
+.marca-valor { margin: 0; font-size: var(--letra-20); font-weight: 800; line-height: 1.1; }
+.marca-valor small { font-size: var(--letra-12); font-weight: 650; color: var(--tinta-2); }
+@media (prefers-reduced-motion: no-preference) { .marca-tarjeta { transition: background-color var(--mov-breve); } }
+
+/* ---------------------------------------------------------------- la cifra de tu objetivo: su camino */
+.cifra-objetivo-linea { margin-top: var(--esp-2); }
+.cifra-camino { display: grid; gap: var(--esp-4); width: 100%; margin-top: var(--esp-6); }
+.camino-pista { position: relative; height: 8px; border-radius: var(--r-pildora); background: var(--hoja-2); }
+.camino-lleno { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--morado) 45%, var(--hoja)), var(--morado)); }
+.camino-ahora { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--hoja); border: 3px solid var(--morado); }
+.camino-extremos { display: flex; justify-content: space-between; gap: var(--esp-8); color: var(--tinta-2); }
+.camino-meta { display: inline-flex; align-items: center; gap: var(--esp-2); color: var(--ok); font-weight: 750; }
+.camino-meta svg { width: var(--ico-12); height: var(--ico-12); }
+
+/* ---------------------------------------------------------------- objetivos: icono y donde deberias ir hoy */
+.objetivo-titulo { display: inline-flex; align-items: center; gap: var(--esp-8); min-width: 0; }
+.objetivo-ico { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--morado-suave); color: var(--morado); }
+.objetivo-ico svg { width: var(--ico-16); height: var(--ico-16); }
+.objetivo[data-tipo="peso"] .objetivo-ico { background: var(--pv-cuerpo-suave); color: var(--pv-cuerpo); }
+.objetivo[data-tipo="carrera"] .objetivo-ico { background: var(--info-suave); color: var(--info); }
+.progreso-barra:has(.barra-tiempo) { position: relative; overflow: visible; }
+.progreso-barra:has(.barra-tiempo) > span { border-radius: inherit; }
+.progreso-barra .barra-tiempo { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--tinta); }
+.progreso-barra.por-delante span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 55%, var(--hoja)), var(--ok)); box-shadow: none; }
+.progreso-barra.por-detras span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--aviso) 55%, var(--hoja)), var(--aviso)); box-shadow: none; }
+
+/* ---------------------------------------------------------------- el bloque, en aros */
+.bloque-aros { list-style: none; margin: 0; padding: var(--esp-2) 0 0; display: flex; flex-wrap: wrap; gap: var(--esp-10); }
+.bloque-aros li { display: grid; justify-items: center; gap: var(--esp-4); color: var(--tinta-2); }
+.bloque-aros li.actual { color: var(--tinta); font-weight: 750; }
+.bloque-aros li.actual .sello-semana { box-shadow: 0 0 0 3px var(--hoja), 0 0 0 5px var(--acento-a30); }
+
+/* ---------------------------------------------------------------- Seguimiento: el indice que se queda arriba */
+.indice-seg { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + var(--esp-6)); z-index: 3; margin-inline: calc(var(--esp-4) * -1); }
+.indice-seg-tira { display: flex; gap: var(--esp-6); overflow-x: auto; padding: var(--esp-6); border-radius: var(--r-pildora); background: var(--vidrio-hoja, var(--hoja)); box-shadow: var(--sombra), var(--anillo-suave); scrollbar-width: none; }
+.indice-seg-tira::-webkit-scrollbar { display: none; }
+.indice-seg-tira button { flex: none; min-height: 34px; padding: 0 var(--esp-12); border-radius: var(--r-pildora); border: 0; background: transparent; color: var(--tinta-2); font: inherit; font-size: var(--letra-13-5); font-weight: 650; cursor: pointer; white-space: nowrap; }
+.indice-seg-tira button[aria-current="true"] { background: var(--tinta); color: var(--tiza); }
+.indice-seg-tira button:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.seg-apartado { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--cab-pegada, 3.875rem) + 64px); }
+.seg-apartado h2[tabindex="-1"]:focus { outline: none; }
+@media (prefers-reduced-motion: no-preference) { .indice-seg-tira button { transition: background-color var(--mov-breve), color var(--mov-breve); } }
+
+/* ---------------------------------------------------------------- check-ins: tendencias y casillas en color */
+.tendencias-checkin { list-style: none; margin: 0 0 var(--esp-10); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr)); gap: var(--esp-8); }
+.tendencia { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja); box-shadow: var(--anillo-suave); min-width: 0; }
+.tendencia-nombre { color: var(--tinta-2); font-weight: 650; }
+.tendencia-valor { display: inline-flex; align-items: center; gap: var(--esp-2); font-size: var(--letra-17); font-weight: 800; }
+.tendencia-valor svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2.5; }
+.tendencia.sube .tendencia-valor svg { color: var(--ok); }
+.tendencia.baja .tendencia-valor svg { color: var(--aviso); }
+.tabla-checkins td.nivel-bien { background: color-mix(in srgb, var(--ok-suave) 45%, transparent); }
+.tabla-checkins td.nivel-regular { background: color-mix(in srgb, var(--aviso-suave) 80%, transparent); }
+.tabla-checkins td.nivel-mal { background: color-mix(in srgb, var(--alerta-suave) 85%, transparent); color: var(--tinta); font-weight: 650; }
+.tabla-clic.tabla-checkins tbody tr:hover td.nivel-bien { background: var(--ok-suave); }
+.tabla-clic.tabla-checkins tbody tr:hover td.nivel-regular { background: var(--aviso-suave); }
+.tabla-clic.tabla-checkins tbody tr:hover td.nivel-mal { background: var(--alerta-suave); }
+/* En el movil, una tarjeta por semana (la misma tabla: cada casilla lleva su etiqueta) */
+@media (max-width: 640px) {
+  .tabla-checkins thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .tabla-checkins, .tabla-checkins tbody { display: block; }
+  .tabla-checkins tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-4); padding: var(--esp-10) var(--esp-12); border-bottom: var(--filo-fino) solid var(--linea); }
+  .tabla-checkins td { display: grid; gap: 1px; padding: var(--esp-4) var(--esp-8); border: 0; border-radius: var(--r-6); min-width: 0; overflow-wrap: anywhere; }
+  .tabla-checkins td[data-etq]::before { content: attr(data-etq); font-size: var(--letra-11); font-weight: 650; color: var(--tinta-3); }
+  .tabla-checkins td.ck-semana { grid-column: 1; font-weight: 750; padding-inline: 0; }
+  .tabla-checkins td.ck-semana::before { content: none; }
+  .tabla-checkins td.ck-estado { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+  .tabla-checkins td[data-etq="Molestias"] { grid-column: 1 / -1; }
+  .panel:has(> .tabla-env > .tabla-checkins) .tabla-env { overflow: visible; }
+}
+
+/* ---------------------------------------------------------------- habitos del coach, compactos */
+.habito-coach { display: block; padding: 0; }
+.habito-coach-fila { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--esp-12); align-items: center; width: 100%; padding: var(--esp-12) var(--esp-14); border: 0; background: transparent; color: var(--tinta); font: inherit; text-align: left; cursor: pointer; }
+.habito-coach-fila:hover { background: var(--hoja-2); }
+.habito-coach-fila > svg:last-child { width: var(--ico-18); height: var(--ico-18); color: var(--tinta-3); }
+.habito-coach-txt { min-width: 0; }
+.habito-coach-nombre { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6); }
+.habito-coach-linea { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4) var(--esp-10); }
+.habito-coach-linea .semana-mini { margin-top: 0; }
+.habito-coach-fila .habito-coach-cifras { display: inline; text-align: left; font-size: var(--letra-12-5); color: var(--tinta-2); }
+.habito-coach-fila .habito-coach-cifras b { font-size: var(--letra-14); color: var(--tinta); }
+
+/* ---------------------------------------------------------------- la carga: su zona normal */
+.grafica-carga .zona-carga { fill: color-mix(in srgb, var(--ok) 9%, transparent); stroke: color-mix(in srgb, var(--ok) 25%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.grafica-carga .barra.fuera { fill: url(#deg-carga-fuera) var(--aviso); }
+.grafica-carga .deg-fuera-a { stop-color: color-mix(in srgb, var(--aviso) 55%, var(--blanco)); }
+.grafica-carga .deg-fuera-b { stop-color: var(--aviso); }
+.grafica-carga .sin-carga { fill: var(--tinta-3); }
+@media (forced-colors: active) { .grafica-carga .zona-carga { fill: none; stroke: CanvasText; } .grafica-carga .sin-carga { fill: CanvasText; } }
+
+/* ---------------------------------------------------------------- el cardio: la semana de ahora, en claro */
+.grafica.grafica-cardio .barra.en-curso { fill: color-mix(in srgb, var(--disco-azul) 28%, var(--hoja)); stroke: var(--disco-azul); stroke-width: 1.5; stroke-dasharray: 3 3; }

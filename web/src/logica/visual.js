@@ -3,7 +3,7 @@
 // calendario de constancia, el estado de cada atleta en el panel y sus minigráficas.
 import { num } from './calculos.js';
 import { pesoTxt } from './unidades.js';
-import { lunesDe, sumarDias, desdeISO } from './fechas.js';
+import { lunesDe, sumarDias, desdeISO, diasEntre } from './fechas.js';
 import { normal as sinTildes } from './busqueda.js';
 
 const normal = (t) => sinTildes(t).trim();
@@ -84,6 +84,51 @@ export function indicesRecord(valores) {
   let max = -Infinity;
   valores.forEach((v, i) => { if (i > 0 && v > max) r.push(i); if (v > max) max = v; });
   return r;
+}
+
+// ---------- (v0.203) las gráficas con fechas de verdad ----------
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+export const sonFechas = (xs = []) => xs.length > 0 && xs.every((x) => typeof x === 'string' && ISO.test(x));
+// Los huecos de una serie con fechas: los tramos (del punto i - 1 al i) mucho más largos de lo normal (más de 2,5
+// veces la separación mediana y de 14 días). Devuelve los índices i donde acaba cada hueco. Con menos de 3 puntos no
+// hay «lo normal» con que comparar: ninguno.
+export function huecosSerie(fechas = [], { minimo = 14, factor = 2.5 } = {}) {
+  if (!sonFechas(fechas) || fechas.length < 3) return [];
+  const d = fechas.slice(1).map((f, i) => diasEntre(fechas[i], f));
+  const orden = [...d].sort((a, b) => a - b);
+  const umbral = Math.max(minimo, orden[Math.floor((orden.length - 1) / 2)] * factor);
+  return d.map((x, i) => (x > umbral ? i + 1 : -1)).filter((i) => i > 0);
+}
+// Hasta dónde llega el eje x cuando hay que dibujar la previsión hacia una meta: hasta su fecha, pero como mucho la
+// mitad del tramo que se ve más allá del último punto (para no aplastar la gráfica)
+export function finDominio(d0, dN, hasta = null) {
+  if (!hasta || !ISO.test(String(hasta)) || hasta <= dN) return dN;
+  const tramo = Math.max(14, diasEntre(d0, dN));
+  const tope = sumarDias(dN, Math.round(tramo * 0.5));
+  return hasta < tope ? hasta : tope;
+}
+// La previsión dibujada: del último punto hacia la meta (fecha y valor). Si la meta queda más allá del final del eje,
+// hasta el final, con el valor que tocaría ese día (en línea recta). → { x, y, llega }
+export function puntoPrevision(desde, meta, fin) {
+  if (!desde || !meta?.x || meta.x <= desde.x) return null;
+  if (meta.x <= fin) return { x: meta.x, y: meta.y, llega: true };
+  const k = diasEntre(desde.x, fin) / Math.max(1, diasEntre(desde.x, meta.x));
+  return { x: fin, y: desde.y + (meta.y - desde.y) * k, llega: false };
+}
+// Las franjas de los bloques que caen dentro del eje (al menos dos, si no, no dicen nada): [{ desde, hasta, etiqueta, n }]
+// bloques: [{ numero, nombre, fecha_inicio, fecha_fin, estado }] (de cualquier orden)
+export function franjasBloques(bloques = [], d0, dN, hoy = dN) {
+  const xs = (bloques || []).filter((b) => b?.fecha_inicio && ISO.test(b.fecha_inicio) && b.fecha_inicio <= hoy && b.estado !== 'cancelado')
+    .sort((a, b) => (a.fecha_inicio < b.fecha_inicio ? -1 : 1));
+  const out = [];
+  xs.forEach((b, i) => {
+    const sig = xs[i + 1]?.fecha_inicio;
+    let fin = b.fecha_fin && ISO.test(b.fecha_fin) ? b.fecha_fin : sig ? sumarDias(sig, -1) : hoy;
+    if (sig && fin >= sig) fin = sumarDias(sig, -1);
+    const desde = b.fecha_inicio < d0 ? d0 : b.fecha_inicio, hasta = fin > dN ? dN : fin;
+    if (hasta >= desde) out.push({ desde, hasta, etiqueta: b.numero ? `B${b.numero}` : 'Bloque', nombre: b.nombre || '', n: out.length });
+  });
+  return out.length >= 2 ? out : [];
 }
 
 // ---------- constancia (calendario de 16 semanas) ----------

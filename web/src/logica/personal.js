@@ -140,7 +140,9 @@ function cifraDe(o, { progreso, constancia, salud, hoy }) {
     const antes = [...ej.puntos].reverse().find((p) => p.semana <= limite) || ej.puntos[0];
     const cambio = Math.round((ultimo.valor - antes.valor) * 10) / 10;
     const semanas = Math.max(1, Math.round(diasEntre(antes.semana, ultimo.semana) / 7));
+    // (v0.203) serie: sus últimas semanas, para la minilínea; ejercicioId: para buscar su objetivo del coach
     return { titulo: o === 'fuerza' ? 'Ganar fuerza' : 'Rendir más', etiqueta: `${ej.nombre}: 1RM estimado`, cifra: pesoNum(ultimo.valor, 1), unidad: etiquetaPeso(),
+      serie: ej.puntos.slice(-10).map((p) => p.valor), ejercicioId: ej.id,
       detalle: cambio > 0 ? `+${num(difVista(cambio))} ${etiquetaPeso()} en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : cambio < 0 ? `${num(difVista(cambio))} ${etiquetaPeso()} en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}` : `igual que hace ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`,
       sube: cambio > 0 ? true : cambio < 0 ? false : null };
   }
@@ -164,7 +166,7 @@ function cifraDe(o, { progreso, constancia, salud, hoy }) {
     if (dias < 7) return null;
     const cambio = Math.round((ult.tendencia - ref.tendencia) * 10) / 10;
     const semanas = Math.round(dias / 7);
-    return { titulo: 'Perder grasa', etiqueta: 'Tu peso (tendencia)', cifra: num(ult.tendencia, 1), unidad: 'kg',
+    return { titulo: 'Perder grasa', etiqueta: 'Tu peso (tendencia)', cifra: num(ult.tendencia, 1), unidad: 'kg', serie: t.filter((p) => diasEntre(p.fecha, ult.fecha) <= 84).map((p) => p.tendencia), peso: true,
       detalle: `${cambio > 0 ? '+' : ''}${num(cambio, 1)} kg en ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`, sube: cambio < 0 ? true : cambio > 0 ? false : null };
   }
   if (o === 'salud') {

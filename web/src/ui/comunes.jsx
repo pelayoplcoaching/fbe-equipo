@@ -2,7 +2,7 @@ import { trozosCerrados, avatarDe } from '../logica/paleta.js';
 import { createContext, Component, render as pintarEn, h } from 'preact';
 import { reportarError } from '../registro-errores.js';
 import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { escalaGrafica, puntoMasCercano, indicesRecord, trazoSuave } from '../logica/visual.js';
+import { escalaGrafica, puntoMasCercano, indicesRecord, trazoSuave, sonFechas, huecosSerie, finDominio, puntoPrevision, franjasBloques } from '../logica/visual.js';
 import { num, leerNumero } from '../logica/calculos.js';
 import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
@@ -1182,7 +1182,8 @@ export function useRaspado(n, xs) {
 }
 
 // La caja de una gráfica: el deslizador accesible, la etiqueta flotante del punto elegido y el resumen en texto
-export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children }) {
+// (v0.203) destacado(i): si ese punto es un récord, el globo sale en oro y con su trofeo
+export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children, destacado = null }) {
   const { sel, eventos, caja } = raspado;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
@@ -1203,8 +1204,8 @@ export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resum
         {/* (diseño, tanda 18) la guía vertical del punto elegido */}
         {sel != null && <span class="grafica-guia" style={{ left: `${izq}%` }} aria-hidden="true" />}
         {sel != null && (
-          <div class={`grafica-globo ${izq > 70 ? 'a-la-izq' : izq < 30 ? 'a-la-der' : ''}`} style={{ left: `${izq}%`, top: `${Math.max(0, ys[sel] - 8)}px` }} aria-hidden="true">
-            {textoPunto(sel)}
+          <div class={`grafica-globo ${izq > 70 ? 'a-la-izq' : izq < 30 ? 'a-la-der' : ''}${destacado?.(sel) ? ' globo-record' : ''}`} style={{ left: `${izq}%`, top: `${Math.max(0, ys[sel] - 8)}px` }} aria-hidden="true">
+            {destacado?.(sel) && <Icono n="trofeo" />}{textoPunto(sel)}
           </div>
         )}
       </div>
@@ -1287,17 +1288,78 @@ export function CifraSube({ texto, clase = '', espera = 120 }) {
   return <Odometro texto={t} clase={clase} desde={puesta ? null : t.replace(/\d/g, '0')} caja={ref} />;
 }
 
+// (v0.203) Lo que acompaña a la línea, detrás y delante: las franjas de los bloques (B1, B2...), la meta con su
+// banderita y la previsión punteada hasta ella. Todo decorativo (aria-hidden): lo que dice va en el resumen en texto.
+function CapaFranjas({ franjas, xDe, arr, base }) {
+  if (!franjas?.length) return null;
+  return (
+    <g class="franjas" aria-hidden="true">
+      {franjas.map((f) => {
+        const x1 = xDe(f.desde), w = Math.max(2, xDe(f.hasta) - x1);
+        return (
+          <g key={f.desde}>
+            <rect class={`franja ${f.n % 2 ? 'impar' : 'par'}`} x={x1} y={arr - 12} width={w} height={base - arr + 12} rx="4" />
+            {w >= 24 && <text class="franja-etq" x={x1 + 5} y={arr - 2}>{f.etiqueta}</text>}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+function CapaMeta({ meta, prev, xDe, Y, izq, der, W, ultimo }) {
+  if (!meta || !Number.isFinite(meta.y)) return null;
+  const y = Y(meta.y);
+  return (
+    <g class="capa-meta" aria-hidden="true">
+      <line class="meta" x1={izq} x2={W - der} y1={y} y2={y} />
+      <text class="meta-etq" x={izq + 4} y={y - 6}>{meta.texto}</text>
+      {prev && <line class="prevision" x1={xDe(ultimo.x)} y1={Y(ultimo.y)} x2={xDe(prev.x)} y2={Y(prev.y)} />}
+      {prev?.llega && <path class="meta-bandera" transform={`translate(${xDe(prev.x).toFixed(1)} ${y.toFixed(1)})`} d="M0 0V-15M0 -15h9.5l-2.6 3.2 2.6 3.2H0" />}
+    </g>
+  );
+}
+// Los tramos que no se dibujan seguidos (un parón sin datos o la semana que aún no ha acabado): la línea de verdad se
+// tapa ahí con una máscara (su trazo «d» sigue siendo uno, el que se transforma al cambiar de rango) y encima va recto
+// y discontinuo
+function mascaraTramos(id, tramos, X, W, H) {
+  if (!tramos.length) return null;
+  return (
+    <mask id={`tramos-${id}`} maskUnits="userSpaceOnUse" x="0" y="0" width={W} height={H}>
+      <rect x="0" y="0" width={W} height={H} fill="white" />
+      {tramos.map((i) => { const a = X(i - 1) + 4, b = X(i) - 4; return b > a ? <rect key={i} x={a} y="0" width={b - a} height={H} fill="black" /> : null; })}
+    </mask>
+  );
+}
+const textoPrevision = (meta, prev) => (prev ? (prev.llega ? `; a este ritmo llegaría hacia el ${fmtCorta(prev.x)}` : '; la previsión sigue más allá del final de la gráfica') : '');
+
 // puntos: [{x: 'YYYY-MM-DD', y: número}]
 // rangoMin: el eje y abarca como poco esto (para que 2000 → 2080 kcal no parezca una montaña)
 // records: marca los puntos que superan a todos los anteriores (1RM estimado, tonelaje…)
 // clave (v0.52): al cambiar, la línea se transforma en la nueva
-export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave }) {
+// (v0.203) Con fechas en x, cada punto va en su día de verdad (un parón se ve como hueco, en discontinuo). Y además:
+//   enCurso   el último punto es de una semana que aún no ha acabado: hueco y con su tramo en discontinuo
+//   meta      { y, texto, hasta } la línea de la meta y, con hasta (fecha de la previsión), la previsión punteada
+//   bloques   los del atleta: sus franjas de fondo (solo si caen al menos dos dentro)
+//   marcas    [{ x, y, texto }] tests y competiciones: un rombo dorado en su día
+export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = puntos?.length || 0;
   const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 16, abj = 22; // más alta si hay mucho ancho
-  const { lo, hi, ticks } = escalaGrafica((puntos || []).map((p) => p.y), { rangoMin });
-  const X = (i) => izq + (n === 1 ? (W - izq - der) / 2 : (i * (W - izq - der)) / (n - 1));
+  const fx = (puntos || []).map((p) => p.x);
+  const conFechas = n > 1 && sonFechas(fx);
+  const d0 = fx[0], dN = fx[n - 1];
+  const fin = conFechas ? finDominio(d0, dN, meta?.hasta) : dN;
+  // las marcas (ya filtradas por el rango) pueden ser de antes del primer punto (el test del primer día del bloque): el eje
+  // empieza entonces en la primera de ellas
+  const marcasV = conFechas ? (marcas || []).filter((m) => m && sonFechas([m.x]) && m.x <= fin && Number.isFinite(m.y)) : [];
+  const ini = marcasV.reduce((a, m) => (m.x < a ? m.x : a), d0);
+  const total = conFechas ? Math.max(1, diasEntre(ini, fin)) : 1;
+  const ancho = W - izq - der;
+  const xDe = (f) => izq + (diasEntre(ini, f) / total) * ancho;
+  const X = (i) => (conFechas ? xDe(fx[i]) : izq + (n === 1 ? ancho / 2 : (i * ancho) / (n - 1)));
+  const conMeta = meta && Number.isFinite(meta.y) ? meta : null;
+  const { lo, hi, ticks } = escalaGrafica([...(puntos || []).map((p) => p.y), ...(conMeta ? [conMeta.y] : []), ...marcasV.map((m) => m.y)], { rangoMin });
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
   const xs = (puntos || []).map((_, i) => X(i));
   const raspado = useRaspado(n, xs);
@@ -1310,16 +1372,25 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const etiquetasX = n <= 2 ? puntos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
   const ultimo = puntos[n - 1];
   const prs = records ? indicesRecord(puntos.map((p) => p.y)) : [];
+  const enCursoOk = enCurso && n >= 2;
+  const huecos = conFechas ? huecosSerie(fx) : [];
+  const tramos = [...new Set([...huecos, ...(enCursoOk ? [n - 1] : [])])];
+  const franjas = conFechas && bloques?.length ? franjasBloques(bloques, ini, fin, fin) : [];
+  const prev = conMeta && conFechas && conMeta.hasta ? puntoPrevision({ x: dN, y: ultimo.y }, { x: conMeta.hasta, y: conMeta.y }, fin) : null;
   const conU = (v) => `${num(v, dec)}${unidad ? ` ${unidad}` : ''}`;
-  const textoPunto = (i) => `${fmtCorta(puntos[i].x)}: ${conU(puntos[i].y)}${prs.includes(i) ? ', récord' : ''}`;
+  const textoPunto = (i) => `${fmtCorta(puntos[i].x)}: ${conU(puntos[i].y)}${prs.includes(i) ? ', récord' : ''}${enCursoOk && i === n - 1 ? ', semana en curso' : ''}`;
   const ys = puntos.map((p) => p.y);
   const iMax = ys.indexOf(Math.max(...ys));
-  const resumen = `${etiqueta || 'Evolución'}. ${n} ${n === 1 ? 'punto' : 'puntos'}, del ${fmtCorta(puntos[0].x)} (${conU(puntos[0].y)}) al ${fmtCorta(ultimo.x)} (${conU(ultimo.y)}); el más alto, ${conU(ys[iMax])} el ${fmtCorta(puntos[iMax].x)}${prs.length ? `; ${prs.length} ${prs.length === 1 ? 'récord' : 'récords'}` : ''}.`;
+  const resumen = `${etiqueta || 'Evolución'}. ${n} ${n === 1 ? 'punto' : 'puntos'}, del ${fmtCorta(puntos[0].x)} (${conU(puntos[0].y)}) al ${fmtCorta(ultimo.x)} (${conU(ultimo.y)}); el más alto, ${conU(ys[iMax])} el ${fmtCorta(puntos[iMax].x)}${prs.length ? `; ${prs.length} ${prs.length === 1 ? 'récord' : 'récords'}` : ''}`
+    + `${huecos.length ? `; ${huecos.length === 1 ? 'un parón' : `${huecos.length} parones`} sin datos` : ''}${enCursoOk ? '; la última semana aún está en curso' : ''}`
+    + `${conMeta ? `; ${conMeta.texto}${textoPrevision(conMeta, prev)}` : ''}${marcasV.length ? `; ${marcasV.length} ${marcasV.length === 1 ? 'marca de test o competición' : 'marcas de test o competición'}` : ''}`
+    + `${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}.`;
   const sel = raspado.sel;
   return (
-    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen}>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)}>
       <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-        <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient></defs>
+        <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient>{mascaraTramos(id, tramos, X, W, H)}</defs>
+        <CapaFranjas franjas={franjas} xDe={xDe} arr={arr} base={H - abj} />
         {ticks.map((t) => (
           <g key={t}>
             <line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" />
@@ -1327,12 +1398,15 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
           </g>
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
-        <path class="linea" ref={morph.linea} d={d} pathLength="1" />
+        <CapaMeta meta={conMeta} prev={prev} xDe={xDe} Y={Y} izq={izq} der={der} W={W} ultimo={{ x: dN, y: ultimo.y }} />
+        <path class="linea" ref={morph.linea} d={d} pathLength="1" mask={tramos.length ? `url(#tramos-${id})` : undefined} />
+        {tramos.map((i) => <line key={i} class={enCursoOk && i === n - 1 ? 'linea-curso' : 'linea-hueco'} x1={X(i - 1)} y1={Y(puntos[i - 1].y)} x2={X(i)} y2={Y(puntos[i].y)} />)}
         {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
-        {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
-        {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}</text>}
+        {marcasV.map((m) => { const mx = xDe(m.x), my = Y(m.y); return <path key={`${m.x}-${m.y}`} class="marca-test" d={`M${mx.toFixed(1)} ${(my - 6.5).toFixed(1)}l6.5 6.5-6.5 6.5-6.5-6.5z`} />; })}
+        {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''} ${enCursoOk && i === n - 1 ? 'en-curso' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
+        {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}{enCursoOk ? ' (en curso)' : ''}</text>}
         {etiquetasX.map((i) => (
-          <text key={i} x={X(i)} y={H - 4} text-anchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}>{fmtCorta(puntos[i].x)}</text>
+          <text key={i} x={X(i)} y={H - 4} text-anchor={i === 0 ? 'start' : i === n - 1 && !prev ? 'end' : 'middle'}>{fmtCorta(puntos[i].x)}</text>
         ))}
       </svg>
     </CajaGrafica>
@@ -1340,17 +1414,20 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
 }
 
 // Peso: cada pesada como un punto y la tendencia como línea, con el eje x en días reales
-export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
+// (v0.203) meta: { y, texto, hasta } (el objetivo de peso corporal con su previsión) y bloques (sus franjas de fondo)
+export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, bloques = null }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = serie?.length || 0;
   const H = Math.max(alto, Math.min(240, Math.round(W * 0.3))), izq = 34, der = 14, arr = 14, abj = 22;
-  const ys0 = (serie || []).flatMap((p) => [p.kg, p.tendencia]);
+  const conMeta = meta && Number.isFinite(meta.y) ? meta : null;
+  const ys0 = [...(serie || []).flatMap((p) => [p.kg, p.tendencia]), ...(conMeta && n ? [conMeta.y] : [])];
   let lo = n ? Math.min(...ys0) : 0, hi = n ? Math.max(...ys0) : 1;
   if (hi - lo < 1.5) { const m = (hi + lo) / 2; lo = m - 0.75; hi = m + 0.75; }
   const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
   const d0 = serie?.[0]?.fecha, dN = serie?.[n - 1]?.fecha;
-  const total = n ? Math.max(1, diasEntre(d0, dN)) : 1;
+  const fin = n > 1 ? finDominio(d0, dN, conMeta?.hasta) : dN;
+  const total = n ? Math.max(1, diasEntre(d0, fin)) : 1;
   const X = (f) => izq + (n === 1 ? (W - izq - der) / 2 : (diasEntre(d0, f) / total) * (W - izq - der));
   const Y = (v) => arr + (1 - (v - lo) / (hi - lo)) * (H - arr - abj);
   const xs = (serie || []).map((p) => X(p.fecha));
@@ -1363,18 +1440,23 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
   const paso = hi - lo > 6 ? 1 : 0.5;
   const ticks = [...new Set([lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8].map((t) => Math.round(t / paso) * paso))];
   const ult = serie[n - 1];
-  const fechasX = total >= 14 ? [d0, aISO(new Date(Date.parse(`${d0}T12:00:00`) + (total / 2) * 864e5)), dN] : [d0, dN];
+  const franjas = n > 1 && bloques?.length ? franjasBloques(bloques, d0, fin, fin) : [];
+  const prev = conMeta && n > 1 && conMeta.hasta ? puntoPrevision({ x: dN, y: ult.tendencia }, { x: conMeta.hasta, y: conMeta.y }, fin) : null;
+  const fechasX = total >= 14 ? [d0, aISO(new Date(Date.parse(`${d0}T12:00:00`) + (diasEntre(d0, dN) / 2) * 864e5)), dN] : [d0, dN];
   const textoPunto = (i) => `${fmtCorta(serie[i].fecha)}: ${num(serie[i].kg)} kg (tendencia ${num(serie[i].tendencia)})`;
-  const resumen = `${etiqueta || 'Peso'}. ${n} ${n === 1 ? 'pesada' : 'pesadas'} del ${fmtCorta(d0)} al ${fmtCorta(dN)}; la tendencia va de ${num(serie[0].tendencia)} a ${num(ult.tendencia)} kg.`;
+  const resumen = `${etiqueta || 'Peso'}. ${n} ${n === 1 ? 'pesada' : 'pesadas'} del ${fmtCorta(d0)} al ${fmtCorta(dN)}; la tendencia va de ${num(serie[0].tendencia)} a ${num(ult.tendencia)} kg`
+    + `${conMeta ? `; ${conMeta.texto}${textoPrevision(conMeta, prev)}` : ''}${franjas.length ? `; de fondo, ${franjas.length} bloques (${franjas.map((f) => f.etiqueta).join(', ')})` : ''}.`;
   const sel = raspado.sel;
   return (
     <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={serie.map((p) => Y(Math.max(p.kg, p.tendencia)))} etiqueta={etiqueta || 'Peso'} textoPunto={textoPunto} resumen={resumen}>
       <svg class="grafica grafica-peso" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient></defs>
+        <CapaFranjas franjas={franjas} xDe={X} arr={arr} base={H - abj} />
         {ticks.map((t) => (
           <g key={t}><line class="eje" x1={izq} x2={W - der} y1={Y(t)} y2={Y(t)} stroke-dasharray="2 4" /><text x={izq - 6} y={Y(t) + 4} text-anchor="end">{num(t, 1)}</text></g>
         ))}
         <path class="area-deg" ref={morph.relleno} d={area} fill={`url(#deg-${id})`} />
+        <CapaMeta meta={conMeta} prev={prev} xDe={X} Y={Y} izq={izq} der={der} W={W} ultimo={{ x: dN, y: ult.tendencia }} />
         {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
         <path class="linea" ref={morph.linea} d={linea} pathLength="1" />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
@@ -1383,10 +1465,24 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave }) {
         {/* (visual 8) la cifra de la última tendencia, junto a su punto (como en las demás gráficas) */}
         {sel == null && <text class="valor" x={Math.min(X(ult.fecha), W - der)} y={Y(ult.tendencia) - 10} text-anchor="end">{num(ult.tendencia)} kg</text>}
         {[...new Set(fechasX)].map((f, i, arr2) => (
-          <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr2.length - 1 ? 'end' : 'middle'}>{fmtCorta(f)}</text>
+          <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr2.length - 1 && !prev ? 'end' : 'middle'}>{fmtCorta(f)}</text>
         ))}
       </svg>
     </CajaGrafica>
+  );
+}
+
+// (v0.203) Antes de tener datos para una gráfica: su dibujo en punteado, con lo que falta para que salga encima
+export function GraficaFantasma({ texto, forma = 'sube' }) {
+  const d = forma === 'baja' ? 'M8 34 C 70 40, 120 62, 170 70 S 260 96, 292 100' : forma === 'ondula' ? 'M8 76 C 50 52, 90 52, 130 70 S 210 92, 250 60 S 285 44, 292 46' : 'M8 98 C 60 92, 100 74, 150 66 S 240 40, 292 26';
+  return (
+    <div class="grafica-fantasma">
+      <svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <line x1="8" x2="292" y1="40" y2="40" /><line x1="8" x2="292" y1="80" y2="80" />
+        <path d={d} />
+      </svg>
+      <p class="peq secundario">{texto}</p>
+    </div>
   );
 }
 

@@ -663,11 +663,15 @@ export function vitrina(series, hoy = hoyISO(), dias = 30) {
   const { eventos, marcas: m } = eventosRecord(series);
   const desde = sumarDias(hoy, -dias);
   const nombres = Object.fromEntries(series.map((s) => [s.ejercicio_id, s.ejercicio]));
-  const ultimo = {};
-  for (const e of eventos) ultimo[e.ejercicio_id] = e.fecha;
+  const ultimo = {}, subida = {};
+  for (const e of eventos) {
+    ultimo[e.ejercicio_id] = e.fecha;
+    // (v0.203) cuánto subió la última vez que batió su mejor marca (1RM estimado, o repeticiones sin carga)
+    if (e.record?.tipo === 'e1rm' || e.record?.tipo === 'reps') subida[e.ejercicio_id] = { tipo: e.record.tipo, antes: e.record.antes, valor: e.record.tipo === 'e1rm' ? e.record.valor : e.record.reps, fecha: e.fecha };
+  }
   const ejercicios = Object.entries(m).filter(([, x]) => x.e1rm || x.repsSinCarga).map(([id, x]) => ({
     id, nombre: nombres[id] || 'Ejercicio', e1rm: x.e1rm, kgPorReps: x.kgPorReps, repsSinCarga: x.repsSinCarga,
-    ultimoRecord: ultimo[id] || null,
+    ultimoRecord: ultimo[id] || null, subida: subida[id] || null,
   })).sort((a, b) => ((b.ultimoRecord || b.e1rm?.fecha || '') > (a.ultimoRecord || a.e1rm?.fecha || '') ? 1 : -1));
   return { ejercicios, recientes: eventos.filter((e) => e.fecha >= desde).reverse() };
 }

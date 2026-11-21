@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.203': {
+    atleta: [
+      'Tu progreso, más claro: cada punto en su fecha, la semana en curso en claro, tu meta y tus tests dentro de la gráfica.',
+      'Tus medidas sobre una figura, tus trofeos con cuánto subiste, tus marcas en tarjetas y tus objetivos frente al plazo.',
+      'Cuerpo en turquesa y Logros en oro; las semanas del bloque en aros y una gráfica de muestra mientras no hay datos.',
+    ],
+    coach: [
+      'Seguimiento con índice arriba, los check-ins en color (en el móvil, en tarjetas) y la tendencia de cada respuesta.',
+      'Hábitos en una fila (tócalo para cambiarlo o quitarlo) y la carga con su zona normal: lo que se sale, en ámbar.',
+      'Su progreso igual que lo ve él: meta y tests en la gráfica, bloques de fondo, medidas sobre la figura y marcas en tarjetas.',
+    ],
+  },
   '0.202': {
     coach: [
       'A quién escribir, segunda tanda: tu objetivo y tu tono con cada uno, con qué tono te contesta y si ha leído tu último mensaje.',

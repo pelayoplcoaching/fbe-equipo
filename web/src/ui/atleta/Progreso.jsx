@@ -6,7 +6,8 @@ import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { PropuestasTuyas } from './ObjetivosTuyos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
-import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
+import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
+import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros } from './ProgresoPiezas.jsx';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { Conexiones } from './Conexiones.jsx';
 import { GrupoReloj } from './Reloj.jsx';
@@ -52,11 +53,12 @@ function SelectorRango({ valor, alCambiar, etiqueta }) {
 const nombreRango = (k) => RANGOS_GRAFICA.find(([x]) => x === k)?.[3] || '';
 const conSigno = (v, dec = 1) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${num(Math.abs(v), dec)}`;
 
-export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null, salud = false }) {
+export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null, salud = false, objetivosDados = null }) {
   const { api, propio: modoAtletaCoach } = useApp();
   const propio = useCarga(() => (progresoDado ? Promise.resolve(null) : api.progreso(atletaId)), [atletaId, !!progresoDado]);
   const { datos, cargando, error, recargar } = progresoDado || propio;
-  const objetivos = useCarga(() => api.objetivos(atletaId).catch(() => []), [atletaId]);
+  const objetivosPropios = useCarga(() => (objetivosDados ? Promise.resolve(null) : api.objetivos(atletaId).catch(() => [])), [atletaId, !!objetivosDados]);
+  const objetivos = objetivosDados || objetivosPropios;
   const constanciaPropia = useCarga(() => (constanciaDada ? Promise.resolve(null) : api.constancia(atletaId).catch(() => null)), [atletaId, !!constanciaDada]);
   const cardio = useCarga(() => api.cardioSemanas(atletaId, 8).catch(() => []), [atletaId]);
   const constanciaTotal = constanciaDada || constanciaPropia;
@@ -67,6 +69,11 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   const [rangoPeso, setRangoPeso] = useState(null);
   const [rangoFuerza, setRangoFuerza] = useState(null);
   const [rangoTon, setRangoTon] = useState(null);
+  // (v0.203) los bloques (sus franjas de fondo en 6M y Todo), las marcas de test (rombos en el 1RM) y qué semana de
+  // series por músculo se ve
+  const bloques = useCarga(() => api.bloquesDe(atletaId).catch(() => []), [atletaId]);
+  const marcas = useCarga(() => api.marcas(atletaId).catch(() => []), [atletaId]);
+  const [semanaVol, setSemanaVol] = useState('esta');
   if (cargando && !datos) return <Siluetas forma="tarjetas" n={4} texto="Cargando tu progreso" />;
   if (error) return <ErrorCaja error={error} reintentar={recargar} />;
   const { pesos, ejercicios, volumen, medidas } = datos;
@@ -80,19 +87,30 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   const semanasTon = tonelajePorSemana(datos.tonelaje || {});
   const rT = rangoTon || rangoConDatos(semanasTon, '3m', hoy, { clave: 'semana', semanal: true });
   const ventanaTon = filtrarRango(semanasTon, rT, hoy, { clave: 'semana', semanal: true });
-  const mediaTon = ventanaTon.length ? ventanaTon.reduce((t, w) => t + w.valor, 0) / ventanaTon.length / 1000 : 0;
+  // (v0.203) la semana de ahora aún no ha acabado: en la gráfica va en claro y no baja la media
+  const tonEnCurso = ventanaTon.length > 0 && ventanaTon[ventanaTon.length - 1].semana === lunesDe(hoy);
+  const cerradasTon = tonEnCurso && ventanaTon.length > 1 ? ventanaTon.slice(0, -1) : ventanaTon;
+  const mediaTon = cerradasTon.length ? cerradasTon.reduce((t, w) => t + w.valor, 0) / cerradasTon.length / 1000 : 0;
   const mejorTon = ventanaTon.length ? Math.max(...ventanaTon.map((w) => w.valor)) / 1000 : 0;
   const ritmo = ritmoPeso(seriePeso);
-  const grupos = GRUPOS.map(([g, n]) => [g, n, volumen.estaSemana[g] || 0, volumen.anterior[g] || 0]).filter(([, , a, b]) => a || b);
+  // (v0.203) esta semana (aún en curso) o la pasada (cerrada)
+  const volPasada = semanaVol === 'pasada';
+  const volFuente = volPasada ? volumen.anterior : volumen.estaSemana;
+  const grupos = GRUPOS.map(([g, n]) => [g, n, volFuente[g] || 0, volPasada ? 0 : volumen.anterior[g] || 0]).filter(([, , a, b]) => a || b);
   const objetivoVol = datos.volumenObjetivo;
   const maxVol = Math.max(24, ...grupos.map(([g, , a, b]) => Math.max(a, b, rangoVolumen(objetivoVol, g)[1] + 4)));
   const conMedida = MEDIDAS.filter(([k]) => medidas.some((m) => m[k] != null));
-  const puntosMedida = medidas.filter((m) => m[medida] != null).map((m) => ({ x: m.fecha, y: Number(m[medida]) }));
+  // (v0.203) si la elegida no tiene datos (de serie, la cintura), la primera que los tenga
+  const medidaV = conMedida.some(([k]) => k === medida) ? medida : conMedida[0]?.[0] || medida;
+  const puntosMedida = medidas.filter((m) => m[medidaV] != null).map((m) => ({ x: m.fecha, y: Number(m[medidaV]) }));
   const objActivos = (objetivos.datos || []).filter((o) => o.estado !== 'descartado');
+  const largo = (r) => r === '6m' || r === 'todo';
+  const metaP = metaPeso(objActivos);
+  const frenteMeta = ritmoFrenteMeta(ritmo, ultPeso?.tendencia, metaP);
 
   let constancia = null;
   if (programa?.semanas?.length) {
-    const filas = programa.semanas.map((s) => { const ss = programa.sesiones[s.id] || []; return { n: s.numero, hechas: ss.filter((x) => x.completada).length, total: ss.length }; });
+    const filas = programa.semanas.map((s) => { const ss = programa.sesiones[s.id] || []; return { n: s.numero, hechas: ss.filter((x) => x.completada).length, total: ss.length, fecha_inicio: s.fecha_inicio || null }; });
     const hechas = filas.reduce((t, f) => t + f.hechas, 0), total = filas.reduce((t, f) => t + f.total, 0);
     constancia = { filas, hechas, total };
   }
@@ -113,16 +131,16 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       <section class="seccion seccion-peso" data-grupo="cuerpo">
         <h2>Peso corporal</h2>
         <div class="panel panel-pad pila">
-          {!ultPeso ? <p class="secundario">Aún no hay pesos registrados. Se apuntan desde Hoy o en el check-in semanal.</p> : (
+          {!ultPeso ? <GraficaFantasma forma="baja" texto="Aún no hay pesos registrados. Se apuntan desde Hoy o en el check-in semanal." /> : (
             <>
               <div class="cifra">
                 <span class="v num">{num(ultPeso.tendencia)}</span><span class="u">kg de tendencia</span>
-                {ritmo && <span class="chip num">{signo(ritmo.kgSemana, 2)} kg por semana ({signo(ritmo.pctSemana)} %)</span>}
+                {ritmo && <span class={`chip num ${frenteMeta === 'hacia' ? 'ok' : frenteMeta === 'contra' ? 'aviso' : ''}`}>{frenteMeta && <Icono n="diana" />}{signo(ritmo.kgSemana, 2)} kg por semana ({signo(ritmo.pctSemana)} %){frenteMeta && <span class="sr">{frenteMeta === 'hacia' ? ', hacia el objetivo' : ', en el otro sentido del objetivo'}</span>}</span>}
               </div>
               {cambioPeso != null && <p class="cambio-rango peq secundario"><Odometro texto={`${conSigno(cambioPeso)} kg`} clase="num" /> de tendencia en {nombreRango(rP)}</p>}
-              <GraficaPeso serie={ventanaPeso} clave={rP} etiqueta={`Peso: tendencia ${num(ultPeso.tendencia)} kg${ritmo ? `, ${signo(ritmo.kgSemana, 2)} kg por semana` : ''}`} />
+              <GraficaPeso serie={ventanaPeso} clave={rP} meta={metaP} bloques={largo(rP) ? bloques.datos : null} etiqueta={`Peso: tendencia ${num(ultPeso.tendencia)} kg${ritmo ? `, ${signo(ritmo.kgSemana, 2)} kg por semana` : ''}`} />
               {seriePeso.length > 1 && <SelectorRango valor={rP} alCambiar={setRangoPeso} etiqueta="Rango de la gráfica del peso" />}
-              <NotaGrafica>Cada punto es una pesada; la línea, la tendencia (media que suaviza el agua y la sal del día a día). El ritmo sale de las pesadas de las últimas 3 semanas.</NotaGrafica>
+              <NotaGrafica>Cada punto es una pesada; la línea, la tendencia (media que suaviza el agua y la sal del día a día). El ritmo sale de las pesadas de las últimas 3 semanas.{metaP ? ' La línea discontinua es la meta de tu objetivo y la punteada, hacia dónde vas a este ritmo; el ritmo sale en verde si va hacia ella y en ámbar si va en el otro sentido.' : ''} En 6M y Todo, las franjas de fondo son los bloques (B1, B2…).</NotaGrafica>
             </>
           )}
         </div>
@@ -132,17 +150,16 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
         <section class="seccion" data-grupo="cuerpo">
           <h2>Medidas</h2>
           <div class="panel panel-pad pila">
-            <div class="selector-chips" role="group" aria-label="Medida">
-              {conMedida.map(([k, t]) => <button key={k} aria-pressed={k === medida ? 'true' : 'false'} onClick={() => setMedida(k)}>{t}</button>)}
-            </div>
+            {/* (v0.203) tu cuerpo en cifras: cada medida en su sitio de la figura, con su cambio; tocar una la elige */}
+            <CuerpoEnCifras medidas={medidas} claves={conMedida} elegida={puntosMedida.length ? medidaV : null} alElegir={setMedida} />
             {puntosMedida.length > 0 && (
               <div class="cifra">
                 <span class="v num">{num(puntosMedida[puntosMedida.length - 1].y)}</span><span class="u">cm, el {fmtCorta(puntosMedida[puntosMedida.length - 1].x)}</span>
                 {puntosMedida.length > 1 && <span class="chip num">{signo(puntosMedida[puntosMedida.length - 1].y - puntosMedida[0].y)} cm desde el {fmtCorta(puntosMedida[0].x)}</span>}
               </div>
             )}
-            {puntosMedida.length > 1 ? <Grafica puntos={puntosMedida} unidad="cm" etiqueta={`Evolución de ${medida.replace('_cm', '')}`} />
-              : <p class="peq secundario">Con dos mediciones aparece la gráfica. Se apuntan en el check-in cada 4 semanas.</p>}
+            {puntosMedida.length > 1 ? <Grafica puntos={puntosMedida} unidad="cm" etiqueta={`Evolución de ${medidaV.replace('_cm', '')}`} />
+              : <GraficaFantasma forma="baja" texto="Con dos mediciones aparece la gráfica. Se apuntan en el check-in cada 4 semanas." />}
           </div>
         </section>
       )}
@@ -163,24 +180,36 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               const pts = filtrarRango(ej.puntos, rF, hoy, { clave: 'semana', semanal: true });
               const ult = ej.puntos[ej.puntos.length - 1];
               const ganado = pts.length > 1 ? pts[pts.length - 1].valor - pts[0].valor : null;
+              // (v0.203) su objetivo dentro de la gráfica, sus tests como rombos y, en 6M y Todo, los bloques de fondo
+              const metaF = metaFuerza(objActivos, ej.id);
+              const marcasEj = filtrarRango((marcas.datos || []).filter((m) => m.ejercicio_id === ej.id && Number(m.kg) > 0)
+                .map((m) => ({ x: m.fecha, y: difVista(e1rm({ kg: Number(m.kg), reps: Number(m.reps) || 1, rir: 0 }) ?? Number(m.kg)), texto: `${pesoTxt(m.kg, 2)} × ${m.reps}` })), rF, hoy, { clave: 'x' });
               return (
                 <>
                   <div class="cifra">
                     <CifraSube texto={pesoNum(ult.valor, 1)} clase="v num" /><span class="u">{etiquetaPeso()}, semana del {fmtCorta(ult.semana)}</span>
                     {ganado != null && <span class={`chip num ${ganado > 0 ? 'ok' : ''}`}><Odometro texto={`${conSigno(difVista(ganado))} ${etiquetaPeso()}`} /> en {nombreRango(rF)}</span>}
                   </div>
-                  {pts.length > 1 ? <Grafica records clave={`${rF}:${ej.id}`} puntos={pts.map((p) => ({ x: p.semana, y: difVista(p.valor) }))} unidad={etiquetaPeso()} etiqueta={`1RM estimado en ${ej.nombre}`} />
-                    : <p class="peq secundario">{ej.puntos.length > 1 ? 'En este rango hay menos de dos semanas con datos: prueba uno más amplio.' : 'Con dos semanas de datos aparece la gráfica.'}</p>}
+                  {pts.length > 1 ? <Grafica records clave={`${rF}:${ej.id}`} puntos={pts.map((p) => ({ x: p.semana, y: difVista(p.valor) }))} unidad={etiquetaPeso()} etiqueta={`1RM estimado en ${ej.nombre}`}
+                    meta={metaF} marcas={marcasEj} bloques={largo(rF) ? bloques.datos : null} />
+                    : ej.puntos.length > 1 ? <p class="peq secundario">En este rango hay menos de dos semanas con datos: prueba uno más amplio.</p>
+                      : <GraficaFantasma texto="Con dos semanas de datos aparece la gráfica." />}
                   {ej.puntos.length > 1 && <SelectorRango valor={rF} alCambiar={setRangoFuerza} etiqueta="Rango de la gráfica del 1RM estimado" />}
                 </>
               );
             })()}
             <button class="btn-texto" style="justify-self:start" onClick={() => setHistorial(ej)}><Icono n="historial" /> Gráficas, récords e historial</button>
-            <NotaGrafica>Mejor serie de cada semana, con la fórmula de Epley y contando las repeticiones en recámara (RIR = 10 − RPE).</NotaGrafica>
+            <NotaGrafica>Mejor serie de cada semana, con la fórmula de Epley y contando las repeticiones en recámara (RIR = 10 − RPE). Cada punto va en su semana: si hubo un parón, el tramo sale discontinuo. Los rombos dorados son tus marcas de test o competición; la línea discontinua, la meta de tu objetivo de ese ejercicio y la punteada, hacia dónde vas a este ritmo. En 6M y Todo, las franjas de fondo son los bloques (B1, B2…).</NotaGrafica>
           </div>
         )}
       </section>
 
+      {semanasTon.length === 1 && (
+        <section class="seccion" data-grupo="fuerza">
+          <h2>Tonelaje por semana</h2>
+          <div class="panel panel-pad"><GraficaFantasma texto="Con dos semanas entrenando aparece la gráfica de las toneladas que mueves cada semana." /></div>
+        </section>
+      )}
       {semanasTon.length > 1 && (
         <section class="seccion" data-grupo="fuerza">
           <h2>Tonelaje por semana</h2>
@@ -189,33 +218,39 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               <CifraSube texto={num(mediaTon, 1)} clase="v num" /><span class="u">t de media por semana en {nombreRango(rT)}</span>
               {ventanaTon.length > 1 && <span class="chip num chip-mejor">Mejor semana: <Odometro texto={`${num(mejorTon, 1)} t`} /></span>}
             </div>
-            {ventanaTon.length > 1 ? <Grafica records clave={rT} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />
+            {ventanaTon.length > 1 ? <Grafica records clave={rT} enCurso={tonEnCurso} bloques={largo(rT) ? bloques.datos : null} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />
               : <p class="peq secundario">En este rango hay menos de dos semanas con datos: prueba uno más amplio.</p>}
             <SelectorRango valor={rT} alCambiar={setRangoTon} etiqueta="Rango de la gráfica del tonelaje" />
-            <NotaGrafica>Toneladas movidas cada semana: carga × repeticiones de todas tus series.</NotaGrafica>
+            <NotaGrafica>Toneladas movidas cada semana: carga × repeticiones de todas tus series. La semana de ahora va en claro y discontinua hasta que acaba, y no cuenta en la media.</NotaGrafica>
           </div>
         </section>
       )}
 
-      <Vitrina datos={datos.vitrina} esCoach={esCoach} atletaId={atletaId} irA={irA} abrirHistorial={(x) => setHistorial({ id: x.id, nombre: x.nombre })} />
+      <Vitrina datos={datos.vitrina} ejercicios={ejercicios} esCoach={esCoach} atletaId={atletaId} irA={irA} abrirHistorial={(x) => setHistorial({ id: x.id, nombre: x.nombre })} />
 
-      <Marcas atletaId={atletaId} ejercicios={ejercicios} esCoach={esCoach} />
+      <Marcas atletaId={atletaId} ejercicios={ejercicios} esCoach={esCoach} marcas={marcas} />
 
       <section class="seccion" data-grupo="fuerza">
-        <h2>Series por músculo esta semana</h2>
+        <div class="seccion-cab">
+          <h2>Series por músculo</h2>
+          {/* (v0.203) esta semana, aún en curso, o la pasada, ya cerrada */}
+          <Segmentos opciones={[['esta', 'Esta semana'], ['pasada', 'La pasada']]} valor={semanaVol} alCambiar={(v) => v && setSemanaVol(v)} etiqueta="Qué semana de series ver" clase="seg-compacto" />
+        </div>
         <div class="panel panel-pad pila">
-          {grupos.length > 0 && <MapaMuscular series={volumen.estaSemana} etiqueta="Series por músculo esta semana" />}
+          {grupos.length > 0 && <MapaMuscular series={volFuente} etiqueta={volPasada ? 'Series por músculo la semana pasada' : 'Series por músculo esta semana'} />}
           {/* (057) las guías de los músculos que ha entrenado */}
           {grupos.length > 0 && <GuiasDeGrupos grupos={grupos.map(([g]) => g)} />}
-          {!grupos.length ? <p class="secundario">Sin series registradas estas dos semanas.</p> : (
+          {!grupos.length ? <p class="secundario">{volPasada ? 'Sin series registradas la semana pasada.' : 'Sin series registradas estas dos semanas.'}</p> : (
             <div class="barras">
               {grupos.map(([g, nombre, a, b]) => {
                 const [min, max] = rangoVolumen(objetivoVol, g);
-                const estado = estadoVolumen(a, [min, max]);
+                // (v0.203) mientras la semana no acaba, quedarse por debajo no es «poco»: la barra va rayada, en curso
+                const est0 = estadoVolumen(a, [min, max]);
+                const estado = !volPasada && est0 === 'bajo' ? 'curso' : est0;
                 return (
                   <div class={`barra-fila vol-${estado}`} key={g}>
                     <span>{nombre}</span>
-                    <span class="pista" role="img" aria-label={`${nombre}: ${num(a)} series esta semana (objetivo de ${min} a ${max}), ${num(b)} la anterior`}>
+                    <span class="pista" role="img" aria-label={`${nombre}: ${num(a)} series ${volPasada ? 'la semana pasada' : 'esta semana'} (objetivo de ${min} a ${max})${estado === 'curso' ? ', semana en curso' : ''}${volPasada ? '' : `, ${num(b)} la anterior`}`}>
                       <span class="banda" style={{ left: `${(min / maxVol) * 100}%`, width: `${((max - min) / maxVol) * 100}%` }} />
                       <span class="relleno" style={{ width: `${(a / maxVol) * 100}%` }} />
                       {b > 0 && <span class="previo" style={{ left: `calc(${(b / maxVol) * 100}% - 1px)` }} />}
@@ -226,7 +261,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               })}
             </div>
           )}
-          <p class="mini terciario">La franja es {objetivoVol ? 'el rango de series semanales que te ha marcado tu coach' : 'un rango orientativo de 10 a 20 series semanales por músculo'}{esCoach ? ' (se ajusta abajo, en «Volumen objetivo»)' : ''}. La marca vertical, la semana pasada. El músculo principal de cada ejercicio cuenta 1 serie y los secundarios, media.</p>
+          <p class="mini terciario">La franja es {objetivoVol ? 'el rango de series semanales que te ha marcado tu coach' : 'un rango orientativo de 10 a 20 series semanales por músculo'}{esCoach ? ' (se ajusta abajo, en «Volumen objetivo»)' : ''}.{volPasada ? '' : ' Mientras la semana no acaba, lo que aún no llega va rayado (en curso), no en gris. La marca vertical, la semana pasada.'} El músculo principal de cada ejercicio cuenta 1 serie y los secundarios, media.</p>
         </div>
       </section>
 
@@ -245,12 +280,8 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
             {constancia && (
               <div class="pila-s">
                 <span class="peq secundario">En este bloque, {constancia.hechas} de {constancia.total} sesiones</span>
-                {constancia.filas.map((f) => (
-                  <div class="separa" key={f.n}>
-                    <span class="peq">Semana {f.n}</span>
-                    <span class="pips" role="img" aria-label={`${f.hechas} de ${f.total} sesiones`}>{Array.from({ length: f.total }, (_, i) => <i key={i} class={i < f.hechas ? 'hecha' : ''} />)}</span>
-                  </div>
-                ))}
+                {/* (v0.203) una semana, un aro (como en «Tus semanas»), con la de ahora resaltada */}
+                <BloqueAros filas={constancia.filas} />
               </div>
             )}
           </div>
@@ -280,14 +311,18 @@ function GraficaCardio({ semanas }) {
   const n = semanas.length;
   const ancho = (W - izq - der) / n;
   const Y = (v) => arr + (1 - v / max) * (H - arr - abj);
+  // (v0.203) la semana de ahora, en claro (aún no ha acabado)
+  const lunesHoy = lunesDe(hoyISO());
+  const curso = semanas[n - 1]?.lunes === lunesHoy;
   return (
-    <svg class="grafica grafica-cardio" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Cardio por semana: ${semanas.map((w) => `${w.minutos} minutos`).join(', ')}`}>
+    <svg class="grafica grafica-cardio" ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Cardio por semana: ${semanas.map((w) => `${w.minutos} minutos`).join(', ')}${curso ? ' (la última semana, aún en curso)' : ''}`}>
       {semanas.map((w, i) => {
         const x = izq + i * ancho + ancho * 0.18, bw = ancho * 0.64;
         const vacia = !w.minutos;
+        const enCurso = curso && i === n - 1;
         return (
           <g key={w.lunes}>
-            <rect class={`barra ${vacia ? 'vacia' : ''} ${i === n - 1 ? 'ultima' : ''}`} x={x} width={bw} y={vacia ? H - abj - 3 : Y(w.minutos)} height={vacia ? 3 : H - abj - Y(w.minutos)} rx="5" />
+            <rect class={`barra ${vacia ? 'vacia' : ''} ${i === n - 1 && !enCurso ? 'ultima' : ''} ${enCurso && !vacia ? 'en-curso' : ''}`} x={x} width={bw} y={vacia ? H - abj - 3 : Y(w.minutos)} height={vacia ? 3 : H - abj - Y(w.minutos)} rx="5" />
             {!vacia && <text class="v" x={x + bw / 2} y={Y(w.minutos) - 6} text-anchor="middle">{w.minutos}'</text>}
             {!vacia && w.km > 0 && <text x={x + bw / 2} y={Y(w.minutos) - 19} text-anchor="middle">{num(w.km, 1)} km</text>}
             {(i === 0 || i === n - 1 || i === Math.floor((n - 1) / 2)) && <text x={x + bw / 2} y={H - 5} text-anchor="middle">{fmtCorta(w.lunes)}</text>}
@@ -365,7 +400,7 @@ export function MapaConstancia({ atletaId, esCoach = false }) {
 // La vitrina de récords (v0.50): una tarjeta por ejercicio, como un trofeo: su mejor marca (el 1RM estimado de su
 // mejor serie, o las repeticiones si va sin carga), la serie y el día, y «Nuevo» si la batió hace menos de 30 días.
 // Al tocarla, una hoja con cómo ha ido subiendo (la gráfica táctil) y cada vez que la batió.
-function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
+function Vitrina({ datos, ejercicios = [], esCoach, atletaId, abrirHistorial, irA }) {
   const [todas, setTodas] = useState(false);
   const [abierta, setAbierta] = useState(null);
   if (!datos) return null;
@@ -381,6 +416,15 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
     );
   }
   const hace30 = new Set(datos.recientes.map((r) => r.ejercicio_id));
+  // (v0.203) en cada trofeo, su minilínea (el 1RM de sus últimas semanas) y cuánto subió la última vez que lo batió
+  const puntosDe = Object.fromEntries((ejercicios || []).map((e) => [e.id, (e.puntos || []).slice(-8).map((p) => p.valor)]));
+  const subidaDe = (x) => {
+    const u = x.subida;
+    if (!u || !(u.valor > u.antes)) return null;
+    if (u.tipo === 'e1rm' && x.e1rm && Math.abs(u.valor - x.e1rm.valor) < 0.05) return `+${num(difVista(u.valor - u.antes), 1)} ${etiquetaPeso()}`;
+    if (u.tipo === 'reps' && !x.e1rm && u.valor === x.repsSinCarga) return `+${u.valor - u.antes} rep`;
+    return null;
+  };
   const lista = todas ? datos.ejercicios : datos.ejercicios.slice(0, 6);
   return (
     <section class="seccion" data-grupo="fuerza">
@@ -394,12 +438,18 @@ function Vitrina({ datos, esCoach, atletaId, abrirHistorial, irA }) {
           const fecha = x.e1rm?.fecha || x.ultimoRecord;
           return (
             <li key={x.id}>
-              <button class={`trofeo-tarjeta ${reciente ? 'reciente' : ''}`} onClick={() => setAbierta(x)} aria-label={`${x.nombre}: ${x.e1rm ? `${pesoNum(x.e1rm.valor, 1)} ${nombrePeso()} de 1RM estimado` : `${x.repsSinCarga} repeticiones`}${reciente ? ', récord nuevo' : ''}. Ver cómo ha ido`}>
+              <button class={`trofeo-tarjeta ${reciente ? 'reciente' : ''}`} onClick={() => setAbierta(x)} aria-label={`${x.nombre}: ${x.e1rm ? `${pesoNum(x.e1rm.valor, 1)} ${nombrePeso()} de 1RM estimado` : `${x.repsSinCarga} repeticiones`}${reciente ? ', récord nuevo' : ''}${subidaDe(x) ? `, ${subidaDe(x)} frente al récord anterior` : ''}. Ver cómo ha ido`}>
                 <span class="trofeo-ico" aria-hidden="true"><Icono n="trofeo" /></span>
                 {reciente && <span class="trofeo-nuevo" aria-hidden="true">Nuevo</span>}
                 <span class="trofeo-nombre" aria-hidden="true">{x.nombre}</span>
                 <span class="trofeo-valor num" aria-hidden="true">{x.e1rm ? <>{pesoNum(x.e1rm.valor, 1)}<small> {etiquetaPeso()}</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
                 <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${pesoTxt(x.e1rm.kg, 2)} × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha ? ` · ${fmtCorta(fecha)}` : ''}</span>
+                {(subidaDe(x) || (puntosDe[x.id] || []).length > 1) && (
+                  <span class="trofeo-pie" aria-hidden="true">
+                    {subidaDe(x) && <span class="trofeo-subida num"><Icono n="arriba" />{subidaDe(x)}</span>}
+                    <MiniLinea valores={puntosDe[x.id]} ancho={64} alto={22} clase="trofeo-linea" />
+                  </span>
+                )}
               </button>
             </li>
           );
@@ -459,29 +509,44 @@ function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial, esCoach =
 }
 
 // Marcas de test o competición. El 1RM estimado de las series va aparte (arriba).
-function Marcas({ atletaId, ejercicios, esCoach }) {
+// (v0.203) cada una como tarjeta con su sello (Test o Competición) y el 1RM que supone; borrarla, desde su hoja
+function Marcas({ atletaId, ejercicios, esCoach, marcas: dadas = null }) {
   const { api, aviso } = useApp();
-  const marcas = useCarga(() => api.marcas(atletaId).catch(() => []), [atletaId]);
+  const propias = useCarga(() => (dadas ? Promise.resolve(null) : api.marcas(atletaId).catch(() => [])), [atletaId, !!dadas]);
+  const marcas = dadas || propias;
   const [nueva, setNueva] = useState(false);
+  const [abierta, setAbierta] = useState(null);
   const lista = marcas.datos || [];
   if (!lista.length && !ejercicios.length && esCoach) return null;
+  const rm = (m) => (Number(m.reps) > 1 ? e1rm({ kg: Number(m.kg), reps: Number(m.reps), rir: 0 }) : null);
   return (
     <section class="seccion" data-grupo="fuerza">
       <div class="seccion-cab"><h2>Marcas</h2><button class="btn-texto" onClick={() => setNueva(true)}><Icono n="mas" /> Apuntar marca</button></div>
-      <div class="panel">
-        {!lista.length ? <p class="panel-pad peq secundario">Los tests y las competiciones van aquí: lo que levantas de verdad a 1, 3 o 5 repeticiones.</p> : (
-          <ul class="lista">
-            {lista.map((m) => (
-              <li key={m.id} class="marca-fila">
-                <span class="ico"><Icono n="trofeo" /></span>
-                <span><strong>{m.ejercicio}</strong><br /><span class="peq secundario">{fmtCorta(m.fecha)}{m.tipo === 'competicion' ? ', en competición' : ', test'}{m.notas ? `. ${m.notas}` : ''}</span></span>
-                <span class="num">{pesoTxt(m.kg, 2)} × {m.reps}</span>
-                <button class="btn btn-icono plano" aria-label={`Borrar la marca de ${m.ejercicio}`} onClick={async () => { await api.borrarMarca(m.id); marcas.recargar(true); aviso('Marca borrada'); }}><Icono n="basura" /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {!lista.length ? <div class="panel"><p class="panel-pad peq secundario">Los tests y las competiciones van aquí: lo que levantas de verdad a 1, 3 o 5 repeticiones.</p></div> : (
+        <ul class="marcas-rejilla">
+          {lista.map((m) => (
+            <li key={m.id}>
+              <button type="button" class={`marca-tarjeta ${m.tipo === 'competicion' ? 'competicion' : 'test'}`} onClick={() => setAbierta(m)}
+                aria-label={`${m.ejercicio}: ${pesoTxt(m.kg, 2)} × ${m.reps}, ${m.tipo === 'competicion' ? 'en competición' : 'test'}, el ${fmtCorta(m.fecha)}${rm(m) ? `; equivale a un 1RM de ${pesoTxt(rm(m), 1)}` : ''}. Ver la marca`}>
+                <span class="marca-sello" aria-hidden="true"><Icono n={m.tipo === 'competicion' ? 'trofeo' : 'diana'} />{m.tipo === 'competicion' ? 'Competición' : 'Test'}</span>
+                <span class="marca-nombre" aria-hidden="true">{m.ejercicio}</span>
+                <span class="marca-valor num" aria-hidden="true">{pesoNum(m.kg, 2)}<small> {etiquetaPeso()} × {m.reps}</small></span>
+                <span class="mini terciario num" aria-hidden="true">{rm(m) ? `1RM ${pesoTxt(rm(m), 1)} · ` : Number(m.reps) === 1 ? '1RM real · ' : ''}{fmtCorta(m.fecha)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {abierta && (
+        <Hoja titulo={abierta.ejercicio} alCerrar={() => setAbierta(null)}>
+          <div class="pila">
+            <p class="marca-valor num">{pesoNum(abierta.kg, 2)}<small> {etiquetaPeso()} × {abierta.reps}</small></p>
+            <p class="peq secundario">{abierta.tipo === 'competicion' ? 'En competición' : 'Test'}, el {fmtCorta(abierta.fecha)}{rm(abierta) ? `. Equivale a un 1RM estimado de ${pesoTxt(rm(abierta), 1)}` : Number(abierta.reps) === 1 ? '. Es tu 1RM de verdad' : ''}.</p>
+            {abierta.notas && <p class="cita">«{abierta.notas}»</p>}
+            <button class="btn btn-peligro" onClick={async () => { try { await api.borrarMarca(abierta.id); setAbierta(null); marcas.recargar(true); aviso('Marca borrada'); } catch (e) { aviso(e.message, 'error'); } }}><Icono n="basura" /> Borrar la marca</button>
+          </div>
+        </Hoja>
+      )}
       {nueva && <NuevaMarca atletaId={atletaId} ejercicios={ejercicios} alCerrar={(hecha) => { setNueva(false); if (hecha) marcas.recargar(true); }} />}
     </section>
   );
@@ -608,6 +673,8 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
   // v0.52: lo de Progreso se carga una vez para la vista y para los destacados
   const progreso = useCarga(() => api.progreso(atleta.id), [atleta.id], rec('progreso'));
   const semanas = useCarga(() => (entrena ? api.resumenesSemanales(atleta.id, 4).catch(() => []) : Promise.resolve([])), [atleta.id, entrena], rec('semanas'));
+  // (v0.203) sus objetivos, una vez: para la cifra de arriba (su camino) y para las gráficas (la meta)
+  const objetivos = useCarga(() => api.objetivos(atleta.id).catch(() => []), [atleta.id]);
   const llegando = [progreso, constancia, semanas].some((c) => c.cargando && !c.datos);
   // La sub-pestaña: Resumen, salvo que se haya pedido otra al venir («Ver la gráfica» del peso, «Ver mis logros»)
   const [sub, setSub] = useState(() => tomarSubProgreso() || 'resumen');
@@ -632,7 +699,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           {/* (pulido 2.3) cada bloque del resumen guarda, mientras llega, el sitio que ocupó la última vez: ya no se van
               empujando unos a otros según cargan */}
           {/* (v0.104) lo de su objetivo del cuestionario (la cifra que le importa) y sus tres ejercicios */}
-          {entrena && <Reserva id="prog-personal" cargando={llegando}><CifraObjetivo progreso={progreso.datos} constancia={constancia.datos} salud={salud} /><TusEjercicios progreso={progreso.datos} /></Reserva>}
+          {entrena && <Reserva id="prog-personal" cargando={llegando}><CifraObjetivo progreso={progreso.datos} constancia={constancia.datos} salud={salud} objetivos={objetivos.datos || []} /><TusEjercicios progreso={progreso.datos} /></Reserva>}
           {entrena && <Reserva id="prog-destacados" cargando={llegando}><Destacados progreso={progreso.datos} constancia={constancia.datos} programa={programa.datos} /></Reserva>}
           {entrena && <Reserva id="prog-anillos" cargando={llegando}><AnillosSemana programa={programa} salud={salud} checkinSemana={checkinSemana} constancia={constancia} /></Reserva>}
           {entrena && <Reserva id="prog-cifras" cargando={llegando}><Cifras constancia={constancia} semanas={semanas} /></Reserva>}
@@ -642,7 +709,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           {entrena && <Reserva id="prog-bloques"><TusBloques salud={salud} /></Reserva>}
         </Grupo>
         <Grupo g="logros">{entrena && <Logros salud={salud} />}</Grupo>
-        <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} salud={salud} />
+        <VistaProgreso atletaId={atleta.id} programa={programa.datos} constanciaDada={constancia} progresoDado={progreso} entrenamiento={entrena} irA={irA} salud={salud} objetivosDados={objetivos} />
         <Grupo g="cuerpo">
           {salud && <HabitosMes />}
           {salud && conNutricion(atleta) && <NutricionProgreso />}

@@ -90,8 +90,23 @@ export function RecuerdoProgreso({ sesionId }) {
 import { Imagen as ImagenObj, hayImagen as hayImagenObj } from '../Imagen.jsx';
 import { imagenObjetivo } from '../../logica/imagenes.js';
 import { objetivosDe } from '../../logica/cuestionario.js';
+import { metaFuerza, metaPeso, MiniLinea } from './ProgresoPiezas.jsx';
 const NOMBRE_OBJETIVO = Object.fromEntries(OBJETIVOS);
-export function CifraObjetivo({ progreso, constancia, salud }) {
+// (v0.203) objetivos: los suyos (del coach o propuestos y aceptados): si hay uno de ese ejercicio (o de peso), su
+// camino (de dónde empezó, dónde está y la meta); y siempre, la minilínea de sus últimas semanas
+function CaminoObjetivo({ o, peso }) {
+  const x = peso ? o.autoPeso : o.auto;
+  if (!x || x.inicio == null || x.actual == null || x.meta == null) return null;
+  const pct = Math.max(0, Math.min(100, Number(peso ? x.pct : x.pct) || 0));
+  const f = (v) => (peso ? `${num(v)} kg` : `${pesoNum(v, 1)} ${etiquetaPeso()}`);
+  return (
+    <div class="cifra-camino" role="img" aria-label={`Tu objetivo «${o.titulo}»: empezaste en ${f(x.inicio)}, vas por ${f(x.actual)} y la meta es ${f(x.meta)} (${pct} %)`}>
+      <span class="camino-pista" aria-hidden="true"><span class="camino-lleno" style={{ width: `${pct}%` }} /><span class="camino-ahora" style={{ left: `${pct}%` }} /></span>
+      <span class="camino-extremos mini num" aria-hidden="true"><span>{f(x.inicio)}</span><span class="camino-meta"><Icono n="bandera" />{f(x.meta)}</span></span>
+    </div>
+  );
+}
+export function CifraObjetivo({ progreso, constancia, salud, objetivos = [] }) {
   const { api, atleta } = useApp();
   const cuestionario = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id]);
   if (!cuestionario.datos || !progreso) return null;
@@ -104,6 +119,8 @@ export function CifraObjetivo({ progreso, constancia, salud }) {
       <span class="peq secundario">{c.etiqueta}</span>
       <p class="cifra-objetivo-v"><span class="num">{c.cifra}</span> <small>{c.unidad}</small></p>
       <span class={`chip ${c.sube === true ? 'ok' : c.sube === false ? 'aviso' : 'morado'} cifra-objetivo-cambio`}>{c.sube === true && <Icono n="arriba" />}{c.sube === false && <Icono n="abajo" />}{c.detalle}</span>
+      <MiniLinea valores={c.serie} ancho={120} alto={34} clase="cifra-objetivo-linea" />
+      {(() => { const m = c.peso ? metaPeso(objetivos) : c.ejercicioId ? metaFuerza(objetivos, c.ejercicioId) : null; return m ? <CaminoObjetivo o={m.objetivo} peso={!!c.peso} /> : null; })()}
       {c.otros.length > 0 && <span class="mini terciario">También: {c.otros.map((o) => (NOMBRE_OBJETIVO[o] || o).toLowerCase()).join(', ')}.</span>}
     </section>
   );

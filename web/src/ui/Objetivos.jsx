@@ -1,8 +1,12 @@
 import { NOMBRE_ESTADO_OBJETIVO, num, signo } from '../logica/calculos.js';
+import { Icono } from './comunes.jsx';
 import { textoMarca } from '../logica/objetivos.js';
 import { tipoDeObjetivo, ritmoCarrera } from '../logica/objetivos-atleta.js';
 import { fmtCorta, hoyISO, diasEntre } from '../logica/fechas.js';
 import { pesoNum, pesoTxt, difVista, etiquetaPeso } from '../logica/unidades.js';
+
+// (v0.203) el icono de cada tipo de objetivo
+const ICONO_TIPO = { fuerza: 'hoy', peso: 'bascula', carrera: 'pasos', libre: 'diana' };
 
 // Un objetivo en Progreso (atleta) o en la ficha (coach). Si está enlazado a un ejercicio, el progreso es automático.
 export function TarjetaObjetivo({ o, esCoach = false }) {
@@ -15,17 +19,27 @@ export function TarjetaObjetivo({ o, esCoach = false }) {
   const pct = a ? a.pct : w ? (o.estado === 'completado' ? 100 : w.pct) : o.progreso_pct;
   const conseguido = a?.conseguido || o.estado === 'completado';
   const plazo = o.fecha_limite ? `para el ${fmtCorta(o.fecha_limite)}${quedan >= 0 ? ` (quedan ${quedan} días)` : ''}` : '';
+  // (v0.203) dónde debería ir hoy: la parte del plazo que ya ha pasado (desde que se puso hasta la fecha límite). Si el
+  // progreso va por delante, la barra en verde; si va por detrás, en ámbar
+  const desde = o.creado_en ? String(o.creado_en).slice(0, 10) : null;
+  const plazoDias = desde && o.fecha_limite ? diasEntre(desde, o.fecha_limite) : 0;
+  const tiempo = !conseguido && o.estado !== 'completado' && o.estado !== 'descartado' && plazoDias > 0 ? Math.max(0, Math.min(1, diasEntre(desde, hoy) / plazoDias)) : null;
+  const marcha = tiempo != null && tiempo >= 0.03 ? (pct >= tiempo * 100 ? 'por-delante' : 'por-detras') : '';
   return (
     <li class={`panel-pad pila-s objetivo ${a || w ? 'auto' : ''}`} data-tipo={tipo}>
       <div class="separa">
-        <strong>{o.titulo}</strong>
+        <strong class="objetivo-titulo"><span class="objetivo-ico" aria-hidden="true"><Icono n={ICONO_TIPO[tipo] || 'diana'} /></span>{o.titulo}</strong>
         <span class={`chip ${conseguido ? 'ok' : o.estado === 'en_curso' ? 'morado' : ''}`}>
           {a?.conseguido ? `Conseguido el ${fmtCorta(a.conseguido.fecha)}` : NOMBRE_ESTADO_OBJETIVO[o.estado]}
         </span>
       </div>
       {o.descripcion && <p class="peq secundario">{o.descripcion}</p>}
       {o.propuesto_por_atleta && <span class="mini terciario">{esCoach ? 'Lo propuso el atleta.' : 'Lo propusiste tú.'}</span>}
-      <div class={`progreso-barra ${conseguido ? 'hecho' : ''}`} role="img" aria-label={`Progreso: ${pct} %`}><span style={{ width: `${pct}%` }} /></div>
+      <div class={`progreso-barra ${conseguido ? 'hecho' : marcha}`} role="img" aria-label={`Progreso: ${pct} %${marcha ? `; ha pasado el ${Math.round(tiempo * 100)} % del plazo: ${marcha === 'por-delante' ? 'va por delante' : 'va por detrás'}` : ''}`}>
+        <span style={{ width: `${pct}%` }} />
+        {marcha && <i class="barra-tiempo" style={{ left: `${(tiempo * 100).toFixed(1)}%` }} />}
+      </div>
+      {marcha && <span class={`mini ${marcha === 'por-delante' ? 'ok-t' : 'aviso-t'}`}>{marcha === 'por-delante' ? 'Por delante del plazo' : 'Algo por detrás del plazo'}: {esCoach ? 'lleva' : 'llevas'} el {pct} % y ha pasado el {Math.round(tiempo * 100)} % del tiempo.</span>}
       {a ? (
         <div class="pila-xs">
           <span class="mini secundario num">

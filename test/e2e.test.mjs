@@ -6000,6 +6000,16 @@ try {
   console.log('  ✗ v0.199:', e.message.split('\n')[0]);
 }
 
+// v0.203: progreso y seguimiento, más bonitos (test/e2e-progreso-203.mjs)
+console.log('\nv0.203: progreso y seguimiento, más bonitos');
+try {
+  const { probarProgreso203 } = await import('./e2e-progreso-203.mjs');
+  await probarProgreso203({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.203:', e.message.split('\n')[0]);
+}
+
 // v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
 console.log('\nv0.200: la tanda de belleza');
 try {
