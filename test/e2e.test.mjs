@@ -150,7 +150,10 @@ async function revisar(paso) {
   ]));
   if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
   // (con una hoja abierta, la píldora del día del chat queda detrás de su velo difuminado y nadie la lee: fuera de la revisión)
-  const axe = await p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas') ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, {
+  // (y si justo al mirar vuelve a aparecer o a irse —al grabar una nota de voz el chat se mueve—, a medio fundir tampoco se
+  // mira: su contraste de verdad es el de entera, que se revisa en las demás pasadas; salió en «voz-grabando»)
+  const axe = await p.evaluate(async () => (await window.axe.run(document.body.hasAttribute('data-hojas')
+    || [...document.querySelectorAll('.chat-dia-flotante')].some((x) => !['0', '1'].includes(getComputedStyle(x).opacity)) ? { include: [document], exclude: [['.chat-dia-flotante']] } : document, {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
     rules: { region: { enabled: false } },
   })).violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`));
