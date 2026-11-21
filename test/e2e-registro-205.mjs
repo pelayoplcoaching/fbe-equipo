@@ -66,7 +66,7 @@ export async function probarRegistro205({ navegador, check, base = 'http://local
         const sem = chips.getByRole('button').nth(1);
         const txtSem = await sem.textContent();
         await sem.click();
-        check(await hasta(async () => (await p.locator('.registro-sesion h3').allTextContents()).every((t) => t.startsWith(`${txtSem}:`))), `y se salta a una semana (${txtSem})`);
+        check(await hasta(async () => (await p.locator('.registro-sesion .registro-titulo').allTextContents()).every((t) => t.startsWith(`${txtSem}:`))), `y se salta a una semana (${txtSem})`);
         await chips.getByRole('button', { name: 'Todas' }).click();
         check(await hasta(async () => (await p.locator('.registro-meta .registro-antes').count()) >= 1) && /^La vez anterior \(\d+ \w+\): /.test(await p.locator('.registro-antes').first().textContent()), '(2) en cada ejercicio, lo que hizo la vez anterior');
         check(/1RM \d/.test(await p.locator('.registro-meta').first().textContent()), '(3) y su 1RM estimado del día');
@@ -150,7 +150,7 @@ export async function probarRegistro205({ navegador, check, base = 'http://local
         const sesion = p.locator('.actividad-item.act-sesion').first();
         const nombre = (await sesion.locator('.actividad-titulo').textContent()).replace(/^Hizo /, '').replace(/\d\d:\d\d.*$/, '').replace(/Nuevo$/, '').trim();
         await sesion.click();
-        check(await hasta(async () => await p.locator('.registro-sesion.enfocada').count() === 1 && (await p.locator('.registro-sesion.enfocada h3').textContent()).includes(nombre)), `(14) tocar una sesión lleva a esa sesión en Registro (${nombre})`);
+        check(await hasta(async () => await p.locator('.registro-sesion.enfocada').count() === 1 && (await p.locator('.registro-sesion.enfocada .registro-titulo').textContent()).includes(nombre)), `(14) tocar una sesión lleva a esa sesión en Registro (${nombre})`);
         await p.getByRole('tab', { name: 'Actividad' }).first().click();
         await p.locator('.actividad-item').first().waitFor();
         const ck = p.locator('.actividad-item.act-checkin').first();

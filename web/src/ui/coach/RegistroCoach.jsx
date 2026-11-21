@@ -110,7 +110,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
     if (el) {
       el.scrollIntoView({ block: 'start', behavior: 'auto' });
       el.classList.add('enfocada');
-      el.querySelector('h3')?.focus({ preventScroll: true });
+      el.querySelector('.registro-titulo')?.focus({ preventScroll: true });
       setTimeout(() => el.classList.remove('enfocada'), 2400);
     }
     alUsarFoco?.();
@@ -153,7 +153,7 @@ function ListaRegistro({ atleta, sesiones, completo, ejercicios, comun, recargar
           <section id={`reg-${s.id}`} class={`panel panel-pad pila-s registro-sesion${s.completada && !s.revisada_en ? ' por-revisar' : ''}`} data-rpe={s.rpe_sesion ? Math.min(10, Math.max(5, Math.floor(s.rpe_sesion))) : undefined} key={s.id}>
             <div class="separa registro-cab" style="flex-wrap:wrap">
               <MedidorSesion hechas={hechasN} pautadas={pautadas} rpe={s.rpe_sesion} />
-              <h3 class="registro-titulo" tabIndex={-1}>S{s.semana.numero}: {s.nombre}</h3>
+              <h2 class="registro-titulo" tabIndex={-1}>S{s.semana.numero}: {s.nombre}</h2>
               <span class="peq secundario">{s.fecha_realizada ? fmtConDia(s.fecha_realizada) : 'En curso'}{s.rpe_sesion ? `, esfuerzo ${s.rpe_sesion}/10` : ''}{cardioHechoValido(s.cardio_hecho) ? `, ${NOMBRE_MODALIDAD[s.cardio_hecho.modalidad].toLowerCase()}: ${textoCardioHecho(s.cardio_hecho)}` : s.duracion_min ? `, ${s.duracion_min} min` : ''}</span>
             </div>
             {/* (v0.205) su hora, cuánto duró y lo que movió */}
