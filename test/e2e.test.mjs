@@ -6020,6 +6020,16 @@ try {
   console.log('  ✗ v0.204:', e.message.split('\n')[0]);
 }
 
+// v0.205: Registro y Actividad del atleta, en su ficha (test/e2e-registro-205.mjs)
+console.log('\nv0.205: Registro y Actividad del atleta');
+try {
+  const { probarRegistro205 } = await import('./e2e-registro-205.mjs');
+  await probarRegistro205({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ v0.205:', e.message.split('\n')[0]);
+}
+
 // v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
 console.log('\nv0.200: la tanda de belleza');
 try {
