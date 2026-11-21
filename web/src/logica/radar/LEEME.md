@@ -139,3 +139,25 @@ respuestas (`rellenarHuecos`, en `logica/mensajes.js`): {nombre}, {apodo}, {sesi
 
 **La 086**: `respuestas_guardadas.situacion` (el tema de cada respuesta) y `radar_ajustes` (tu manera de escribir, solo
 tuya). Sin ella, la manera de escribir se guarda en el aparato y las respuestas no llevan tema.
+
+## v0.202: a la medida de cada uno, más formas de contacto y los que no están activos
+
+**Lo tuyo en la base** (`ajustes.js`, `radar_ajustes.datos` de la 086; sin ella, en el aparato): `objetivos` (1, 2 o 3
+días por atleta; de serie 2), `tonos`, `enlace` (reservar una llamada), `envios` (los últimos 100 con su tono, al minuto,
+para `tonoQueContesta`: respuesta suya en 48 h, con al menos 2 envíos de ese tono), `hablado` (`[{ dia, canal }]` de las
+4 últimas semanas), `pospuestos` y `reenganche`. `juntarLocal` une lo del aparato y lo de la base.
+
+**Reparto**: cada uno con su objetivo (`radar({ objetivoDe })`); si su último mensaje es tuyo, de ayer o antes, y no lo
+ha leído (`sinLeer`, con `leido_en`), quien tocaba «Hoy» pasa a «En unos días» (salvo urgente, te escribió o pide hoy).
+`otros`: sin activar (`invitaciones`), en pausa (su pausa en el resumen) y antiguos (de baja hace 30 a 90 días, si no
+les has escrito ya), con `motivosOtros`.
+
+**Motivos nuevos**: el plan de los nuevos (`PLAN_NUEVOS`: día del alta, tercer día, día 7 y día 28; cada uno, ese día y
+dos más si no le has escrito desde entonces, pidiendo hoy), `semana_corta` (el domingo), `mes` (los dos últimos y los
+dos primeros días del mes; cifras al abrir con `abrirRadar({ mes })`), `llamada` (se enfría, 10 días parado o molestia
+fuerte; con tu enlace), el fin de bloque con sus números (`abrirRadar({ bloqueId })`), y `pausa_mitad`, `pausa_vuelta`,
+`invitado`, `antiguo`.
+
+**Contacto en 8 semanas**: `historiaContacto` (los mismos criterios que el contacto) y `cumplimientoContacto`; los
+mensajes se leen ahora de 56 días (`DIAS_GRAFICA`). `horaHabitual`: la franja de dos horas en que más te escribe (con 4
+mensajes o más). La ficha: `contactoDeAtleta`.

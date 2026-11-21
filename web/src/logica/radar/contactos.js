@@ -165,3 +165,53 @@ export function cuandoSale(iso, hoy = fechaMadrid()) {
   const cuando = n <= 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${DIAS[new Date(`${dia}T12:00:00Z`).getUTCDay()]}` : `el ${Number(dia.slice(8, 10))}/${Number(dia.slice(5, 7))}`;
   return `${cuando} a las ${hora}`;
 }
+
+// (v0.202) Tu contacto en las últimas `semanas` ventanas de 7 días (de la más antigua a la actual): { [atleta_id]: [días] }
+// (los mismos criterios que contactosPorAtleta: ni difusiones, ni programados por salir, ni eliminados; con «Ya hablamos»)
+export function historiaContacto(comentarios = [], { hoy = fechaMadrid(), ahora = Date.now(), fuera = {}, semanas = 8 } = {}) {
+  const masivos = difusiones(comentarios);
+  const desde = sumarDias(hoy, -(VENTANA_DIAS * semanas - 1));
+  const dias = {};
+  const poner = (id, dia) => { if (dia >= desde && dia <= hoy) (dias[id] ||= new Set()).add(dia); };
+  for (const c of comentarios) {
+    if (!vale(c, ahora) || c.autor !== 'coach' || !c.atleta_id || masivos.has(c.id)) continue;
+    poner(c.atleta_id, fechaMadrid(new Date(instante(c))));
+  }
+  for (const [id, ds] of Object.entries(fuera || {})) for (const d of ds || []) poner(id, d);
+  const out = {};
+  for (const [id, set] of Object.entries(dias)) {
+    out[id] = Array.from({ length: semanas }, (_, i) => {
+      const fin = sumarDias(hoy, -VENTANA_DIAS * (semanas - 1 - i)), ini = sumarDias(fin, -(VENTANA_DIAS - 1));
+      return [...set].filter((d) => d >= ini && d <= fin).length;
+    });
+  }
+  return out;
+}
+
+// Por semana, qué parte de los atletas llegó a su objetivo de contacto: [{ semana: 'lunes' de esa ventana, pct, cumplen, total }]
+// historia: historiaContacto(…); ids: los atletas que cuentan; objetivoDe(id) → días
+export function cumplimientoContacto(historia = {}, ids = [], objetivoDe = () => 2, { hoy = fechaMadrid(), semanas = 8 } = {}) {
+  return Array.from({ length: semanas }, (_, i) => {
+    const fin = sumarDias(hoy, -VENTANA_DIAS * (semanas - 1 - i));
+    const cumplen = ids.filter((id) => (historia[id]?.[i] || 0) >= objetivoDe(id)).length;
+    return { desde: sumarDias(fin, -(VENTANA_DIAS - 1)), hasta: fin, cumplen, total: ids.length, pct: ids.length ? Math.round((cumplen / ids.length) * 100) : 0 };
+  });
+}
+
+// La hora a la que suele escribirte (de sus mensajes de las últimas semanas, en hora de Madrid): { hora: 19, n } o null
+export function horaHabitual(comentarios = [], atletaId, { minimo = 4 } = {}) {
+  const horas = Array(24).fill(0);
+  let n = 0;
+  for (const c of comentarios || []) {
+    if (!c || c.atleta_id !== atletaId || c.autor !== 'atleta' || c.eliminado_en || c.resumen_sesion) continue;
+    const t = Date.parse(c.creado_en);
+    if (!Number.isFinite(t)) continue;
+    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t)));
+    if (Number.isFinite(h)) { horas[h]++; n++; }
+  }
+  if (n < minimo) return null;
+  // La franja de dos horas con más mensajes; se propone su primera hora
+  let mejor = 0, hora = 0;
+  for (let h = 0; h < 24; h++) { const s = horas[h] + horas[(h + 1) % 24]; if (s > mejor) { mejor = s; hora = h; } }
+  return mejor >= Math.max(2, Math.ceil(n * 0.3)) ? { hora, n } : null;
+}

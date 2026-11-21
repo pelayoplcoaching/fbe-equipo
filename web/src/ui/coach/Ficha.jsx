@@ -27,7 +27,7 @@ import { VerArchivo } from '../Archivos.jsx';
 import { num, signo, pauta, textoSerie, ESCALAS, NOMBRE_ZONA, ESTADOS_OBJETIVO, NOMBRE_ESTADO_OBJETIVO, etiquetasSuperserie, GRUPOS, rangoVolumen, limpiarObjetivo, VOLUMEN_DEFECTO } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, rangoSemana, aISO, hace } from '../../logica/fechas.js';
 import { escribirPendiente, MAX_PENDIENTE } from '../../logica/radar/pendientes.js';
-import { pendienteHecho } from '../../datos/radar.js';
+import { pendienteHecho, contactoDeAtleta } from '../../datos/radar.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
 import { SuplementosCoach } from './SuplementosCoach.jsx';
 import { PausaCoach } from '../Pausas.jsx';
@@ -680,6 +680,7 @@ function Notas({ atleta, notas, pendientes = [], recargar }) {
         <label class="fila-envolver peq"><input type="checkbox" checked={esPendiente} onChange={(e) => setEsPendiente(e.currentTarget.checked)} /> Es un tema pendiente de hablar con {nombre} (te sale en «A quién escribir»)</label>
         <button class="btn btn-primario" disabled={!texto.trim() || ocupado}>{esPendiente ? 'Apuntar tema' : 'Guardar nota'}</button>
       </form>
+      <ContactoFicha atleta={atleta} nombre={nombre} />
       {(abiertos.length > 0 || hablados.length > 0) && (
         <div class="panel panel-pad pila-s">
           <strong class="peq">Pendiente de hablar con {nombre}</strong>
@@ -704,6 +705,24 @@ function Notas({ atleta, notas, pendientes = [], recargar }) {
           <p style="white-space:pre-line">{n.texto}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// (v0.202) El contacto con él, de un vistazo: tus días de contacto en las 8 últimas semanas y tu último mensaje
+function ContactoFicha({ atleta, nombre }) {
+  const { api, backend } = useApp();
+  const c = useCarga(() => contactoDeAtleta({ api, backend }, atleta.id), [atleta.id]);
+  if (!c.datos) return null;
+  const { semanas, ultimo, objetivo } = c.datos;
+  const total = semanas.reduce((a, b) => a + b, 0);
+  return (
+    <div class="panel panel-pad pila-s contacto-ficha">
+      <strong class="peq">Contacto con {nombre}</strong>
+      <div class="contacto-semanas" role="img" aria-label={`Días de contacto por semana, de hace 8 semanas a esta: ${semanas.join(', ')}`}>
+        {semanas.map((n, i) => <span key={i} class={`contacto-sem ${n >= objetivo ? 'llega' : n > 0 ? 'algo' : ''}`} title={`${n} ${n === 1 ? 'día' : 'días'}`}>{n}</span>)}
+      </div>
+      <span class="peq secundario">{total} {total === 1 ? 'día' : 'días'} de contacto en 8 semanas (tu objetivo con {nombre}: {objetivo} por semana){ultimo ? `; tu último mensaje, ${ultimo}` : '; ningún mensaje tuyo en 8 semanas'}.</span>
     </div>
   );
 }

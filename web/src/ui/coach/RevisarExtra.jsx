@@ -148,7 +148,8 @@ export function LoQueLeDijiste({ a }) {
 }
 
 // Nota de voz desde la tarjeta: le llega a su chat y, debajo, de qué hablas (si es de una sesión, un check-in o un vídeo)
-export function HojaVoz({ atleta, cita = null, respondeA = null, alCerrar, alEnviado }) {
+// (v0.202) guion: los puntos de los que hablarle (desde «A quién escribir»), a la vista mientras grabas
+export function HojaVoz({ atleta, cita = null, respondeA = null, alCerrar, alEnviado, guion = null }) {
   const { api, aviso } = useApp();
   const primer = (atleta?.nombre || 'Atleta').split(' ')[0];
   const [limite, setLimite] = useState(60);
@@ -175,6 +176,7 @@ export function HojaVoz({ atleta, cita = null, respondeA = null, alCerrar, alEnv
     <Hoja titulo={`Nota de voz para ${primer}`} alCerrar={alCerrar}>
       <div class="pila">
         <p class="peq secundario">Le llega a su chat{cita ? <>, con esta frase debajo: «{cita}»</> : '.'}</p>
+        {guion?.length > 0 && <div class="rad-guion"><span class="peq">De qué hablarle</span><ul>{guion.map((g, i) => <li key={i} class="peq">{g}</li>)}</ul></div>}
         {g.estado === 'revisar' ? <div class="rev-voz"><PanelRevisar g={g} alEnviar={(x) => enviarRef.current(x)} enviando={enviando} /></div>
           : grabando ? <div class="rev-voz"><PanelGrabando g={g} /></div>
             : <button type="button" class="btn btn-primario revisar-grabar" onClick={() => g.empezar({ manos: true })}><Icono n="micro" /> Grabar la nota</button>}

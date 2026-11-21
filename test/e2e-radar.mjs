@@ -5,6 +5,9 @@
 // (v0.201) Lo que te escribió a la vista, «Cómo está», lo pendiente de hablar (apuntar y marcar hecho), varios temas a
 // la vez y cualquiera de la biblioteca, los cuatro tonos, tus respuestas guardadas, tu manera de escribir, programar,
 // «Recuérdamelo», no repetir lo enviado y la ronda con los de Hoy.
+// (v0.202) «Ya hablamos» con su canal y en la base, tu objetivo y tu tono con cada uno, dónde le llega (su sesión), la
+// nota de voz con guion, la ronda por tema, los que no están activos (sin activar: nuevo código), la gráfica de 8
+// semanas y el teclado.
 // Necesita la pantalla enganchada en CoachApp.jsx (la pestaña «A quién escribir»): test/radar-enganche.patch.
 //   Suelta:  npm run build && node test/e2e-radar.mjs   (CHROME_PATH si Chrome no está en /opt/google/chrome/chrome)
 //   Dentro de e2e.test.mjs:  const { probarRadar } = await import('./e2e-radar.mjs'); await probarRadar({ navegador, check });
@@ -171,7 +174,10 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     // «Ya hablamos» cuenta como contacto de hoy (en este dispositivo) y se puede deshacer
     await chip(/^Hoy/).click();
     await fila('Iván Prieto').getByRole('button', { name: 'Ya hablamos' }).click();
-    check(await hay(fila('Iván Prieto'), 0) && await hay(chip(/^Hoy \(1\)$/), 1), '«Ya hablamos» lo saca de «Hoy»');
+    await fila('Iván Prieto').locator('.rad-canal').getByRole('button', { name: 'WhatsApp' }).click();
+    check(await hay(fila('Iván Prieto'), 0) && await hay(chip(/^Hoy \(1\)$/), 1), '«Ya hablamos» (por WhatsApp) lo saca de «Hoy»');
+    const habl = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => JSON.stringify(xs[0]?.datos?.hablado || {})));
+    check(/whatsapp/.test(habl), 'y se guarda en la base con su canal (igual en el móvil y en el ordenador)');
     await p.getByRole('button', { name: 'Deshacer' }).click();
     check(await hay(fila('Iván Prieto'), 1) && await hay(chip(/^Hoy \(2\)$/), 1), 'y «Deshacer» lo devuelve');
     // «Mañana»: pospuesto hasta mañana; «Proponer ya» lo trae de vuelta
@@ -214,6 +220,36 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await terminar.click();
     check(await hay(p.locator('.rad-ronda'), 0), 'y se termina cuando quieras');
 
+    // (v0.202) La gráfica de 8 semanas
+    await p.locator('.rad-grafica summary').click();
+    check(await p.locator('.rad-grafica svg rect.rad-barra').count() === 8, 'tu contacto en 8 semanas: una barra por semana');
+    // Ronda por tema: los que tienen ese motivo
+    const temaOpc = await p.locator('#rad-ronda-tema option').allTextContents();
+    check(temaOpc.length > 1, `ronda por tema: ${temaOpc.slice(1, 4).join(' · ')}`);
+    await p.locator('#rad-ronda-tema').selectOption({ index: 1 });
+    check(await hay(p.locator('.rad-ronda', { hasText: /Ronda \(.+\): 1 de \d+/ }), 1), 'la ronda por tema empieza con su nombre');
+    await p.locator('.rad-ronda').getByRole('button', { name: /Terminar la ronda|Volver a la lista/ }).click();
+    // Los que no están activos: sin activar (la invitada), con un código nuevo
+    check(await hay(chip(/^Sin activar \(1\)$/), 1), '«Sin activar»: quien aún no ha entrado en la app');
+    await chip(/^Sin activar/).click();
+    await fila('Marta Gil').getByRole('button', { name: 'Escribirle' }).click();
+    check(await fila('Marta Gil').locator('.rad-tono').count() === 4 && /cuenta|código|app/i.test(await fila('Marta Gil').locator('textarea').inputValue()), 'su recordatorio, en cuatro tonos');
+    await fila('Marta Gil').getByRole('button', { name: 'Nuevo código y mensaje' }).click();
+    check(await hay(p.getByRole('dialog').locator('.codigo-grande'), 1), 'y un código nuevo con su mensaje para mandárselo');
+    await revisar('sin-activar');
+    await p.keyboard.press('Escape');
+    await p.getByRole('dialog').waitFor({ state: 'detached' }).catch(() => {});
+    // El teclado: ↓ marca un atleta, E abre su borrador, Escape lo cierra
+    await chip(/^Todos/).click();
+    await p.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => {});
+    await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown');
+    check(await hay(p.locator('.radar .revision-fila.rev-cursor'), 1) && (await p.locator('.radar .revision-fila').nth(1).getAttribute('class')).includes('rev-cursor'), 'con el teclado, ↓ marca el siguiente');
+    await p.keyboard.press('e');
+    check(await hay(p.locator('.radar .revision-fila.rev-cursor textarea'), 1), 'y E abre su borrador');
+    await p.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => {});
+    await p.keyboard.press('Escape');
+    check(await hay(p.locator('.radar .revision-fila textarea'), 0), 'Escape lo cierra');
+
     // «Todos», con el grupo de cada uno; al día, Ana
     await chip(/^Todos \(5\)$/).click();
     check(await p.locator('.radar .revision-fila').count() === 5, '«Todos»: los cinco atletas activos');
@@ -226,6 +262,27 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     check(/[Rr]écord en /.test(record) && !/antes/.test(record), `el borrador del récord, sin la coletilla: «${record}»`);
     await revisar('todos');
 
+    // (v0.202) Su tono: con humor, siempre con Ana; y tu objetivo con ella: 3 días
+    await fila('Ana López').locator('.rad-tono', { hasText: 'Con humor' }).click();
+    await fila('Ana López').getByRole('button', { name: /Usar siempre «con humor» con Ana/ }).click();
+    const tonos = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => xs[0]?.datos?.tonos || {}));
+    check(Object.values(tonos).includes('humor') && await hay(fila('Ana López').locator('.rad-tono.elegido', { hasText: 'su tono' }), 1), 'su tono, guardado (sale el primero y marcado)');
+    await fila('Ana López').locator('.rad-objetivo').getByRole('button', { name: '3 días' }).click();
+    check(await hay(fila('Ana López').locator('.revision-quien', { hasText: 'de 3 días de contacto' }), 1), 'tu objetivo con Ana: 3 días por semana (y su fila lo cuenta así)');
+    check(/al día con su objetivo de contacto/.test(await p.locator('.radar .revision-progreso').textContent()), 'el resumen cuenta a cada uno con su objetivo');
+    await fila('Ana López').locator('.rad-objetivo').getByRole('button', { name: '2 días' }).click();
+    // Dónde le llega: en el hilo de su última sesión (sin programar)
+    const enSesion = fila('Ana López').locator('.rad-donde').getByRole('button', { name: /En su sesión/ });
+    if (await enSesion.count()) {
+      await enSesion.click();
+      check(await fila('Ana López').getByRole('button', { name: 'Programar' }).isDisabled(), 'como comentario en su sesión (y eso no se programa)');
+      await fila('Ana López').locator('.rad-donde').getByRole('button', { name: 'En su chat' }).click();
+    } else check(false, 'Ana tiene una sesión reciente para comentarla');
+    // La nota de voz, con los puntos de los que hablarle
+    await fila('Ana López').getByRole('button', { name: 'Nota de voz' }).click();
+    check(await hay(p.getByRole('dialog').locator('.rad-guion li'), 1) || await p.getByRole('dialog').locator('.rad-guion li').count() >= 1, 'la nota de voz, con su guion a la vista');
+    await p.keyboard.press('Escape');
+    await p.getByRole('dialog').waitFor({ state: 'detached' }).catch(() => {});
     // Dejar el borrador en su chat: abre su ficha en Mensajes con el texto ya escrito
     await fila('Ana López').locator('textarea').fill('Vaya semana llevas. Sigue así');
     await fila('Ana López').getByRole('button', { name: 'Abrir en su chat' }).click();

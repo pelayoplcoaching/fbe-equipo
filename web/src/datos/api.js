@@ -42,6 +42,7 @@ import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
 import { leerPendiente, pendientesPorAtleta } from '../logica/radar/pendientes.js';
 import { limpiarEstilo } from '../logica/radar/borrador.js';
+import { limpiarAjustesRadar } from '../logica/radar/ajustes.js';
 import { progresoAtleta } from '../logica/progreso-revision.js';
 import { limpiarPanelAtleta, limpiarAjustesPanel, hoyTocaDe } from '../logica/panel-atletas.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
@@ -4634,6 +4635,20 @@ export function crearApi(backend) {
       const datos = { ...(x?.datos && typeof x.datos === 'object' ? x.datos : {}), estilo: limpiarEstilo(estilo) };
       await b.upsert('radar_ajustes', [{ usuario_id: uid(), datos }], 'usuario_id');
       return true;
+    },
+    // (v0.202) Todo lo tuyo de «A quién escribir» (limpiarAjustesRadar): undefined sin la 086
+    async radarAjustes() {
+      if ((await api.radar086()) !== true) return undefined;
+      const [x] = await b.select('radar_ajustes', { limit: 1 });
+      return limpiarAjustesRadar(x?.datos);
+    },
+    // Cambiar parte (por ejemplo { objetivos }): se lee lo que hay y se guarda junto. → lo guardado, o false sin la 086
+    async guardarRadarAjustes(cambios = {}) {
+      if ((await api.radar086()) !== true) return false;
+      const [x] = await b.select('radar_ajustes', { limit: 1 }).catch(() => []);
+      const datos = limpiarAjustesRadar({ ...(x?.datos && typeof x.datos === 'object' ? x.datos : {}), ...cambios });
+      await b.upsert('radar_ajustes', [{ usuario_id: uid(), datos }], 'usuario_id');
+      return datos;
     },
     // Guardar una respuesta tuya (desde el chat o desde «A quién escribir»), con su situación si la base la tiene
     async crearRespuesta({ titulo, texto, situacion = null, orden = 0 }) {

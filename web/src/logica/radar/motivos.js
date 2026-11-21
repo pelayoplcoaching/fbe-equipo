@@ -51,10 +51,15 @@ export function semanasSeguidas(semanas = []) {
   return n;
 }
 
+// (v0.202) El plan de contacto de los nuevos: [motivo, día desde el alta, etiqueta]
+// (el día del alta es su primer día: 0)
+export const PLAN_NUEVOS = [['nuevo_dia1', 0, 'Su primer día en FBE'], ['nuevo_dia3', 2, 'Su tercer día en FBE'], ['nuevo_semana1', 7, 'Su primera semana en FBE'], ['nuevo_mes1', 28, 'Su primer mes en FBE']];
 export const ORDEN_MOTIVOS = ['molestia_fuerte', 'dia_malo', 'responder', 'molestia', 'cumple', 'carrera_antes', 'carrera_despues', 'enfriando',
-  'recordatorio', 'pendiente_mio', 'pregunta_sin_respuesta', 'nota_checkin', 'video', 'objetivo_propuesto', 'receta', 'vuelta_pausa', 'primera_semana',
+  'recordatorio', 'pendiente_mio', 'pregunta_sin_respuesta', 'nota_checkin', 'video', 'objetivo_propuesto', 'receta', 'vuelta_pausa',
+  'nuevo_dia1', 'nuevo_dia3', 'nuevo_semana1', 'nuevo_mes1', 'primera_semana', 'llamada',
   'parado', 'dia_flojo', 'objetivo_cumplido', 'record', 'cerca_objetivo', 'semana_completa', 'racha', 'aniversario', 'fin_bloque', 'bloque_nuevo',
-  'descarga', 'pendientes', 'cumplimiento', 'esfuerzo', 'carga', 'habitos', 'comidas', 'peso', 'sin_bloque', 'sin_checkin', 'fiestas', 'viaje', 'saludo'];
+  'descarga', 'semana_corta', 'mes', 'pendientes', 'cumplimiento', 'esfuerzo', 'carga', 'habitos', 'comidas', 'peso', 'sin_bloque', 'sin_checkin', 'fiestas', 'viaje',
+  'pausa_mitad', 'pausa_vuelta', 'invitado', 'antiguo', 'saludo'];
 const ORDEN = ORDEN_MOTIVOS;
 
 // resumen: la fila del panel (api.resumenes); sesiones: sus sesiones hechas de los últimos días [{ nombre, fecha, preparacion }];
@@ -194,8 +199,14 @@ export function motivosDe({ resumen: r, sesiones = [], records = [], ultimoConta
   }
   if (r.fecha_alta && r.fecha_alta <= hoy) {
     const n = diasEntre(r.fecha_alta, hoy);
-    if (n <= 7) out.push({ id: 'primera_semana', grupo: 'momento', nivel: 'morado', etiqueta: n === 0 ? 'Empieza hoy en FBE' : 'Su primera semana en FBE', datos: { dias: n }, desde: r.fecha_alta });
-    else {
+    // (v0.202) El plan de sus primeras semanas: día 1, día 3, primera semana y primer mes (cada uno, ese día y hasta dos
+    // más si aún no le has escrito desde entonces)
+    const plan = PLAN_NUEVOS.find(([, d]) => n >= d && n <= d + 2 && !yaHablado(sumarDias(r.fecha_alta, d)));
+    if (plan) {
+      const [id, d, etiqueta] = plan;
+      out.push({ id, grupo: 'momento', nivel: 'morado', etiqueta, datos: { dias: n }, desde: sumarDias(r.fecha_alta, d), pideHoy: `${etiqueta}: toca escribirle` });
+    } else if (n <= 7) out.push({ id: 'primera_semana', grupo: 'momento', nivel: 'morado', etiqueta: n === 0 ? 'Empieza hoy en FBE' : 'Su primera semana en FBE', datos: { dias: n }, desde: r.fecha_alta });
+    else if (n <= 31) { /* entre medias del plan, nada */ } else {
       const anos = Number(hoy.slice(0, 4)) - Number(r.fecha_alta.slice(0, 4));
       const este = `${hoy.slice(0, 4)}${r.fecha_alta.slice(4)}`;
       const d = diasEntre(este, hoy);
@@ -205,10 +216,17 @@ export function motivosDe({ resumen: r, sesiones = [], records = [], ultimoConta
   }
   if (entrena && r.semana?.total > 1) {
     const bloque = r.bloque?.nombre || null;
-    if (r.semana.numero >= r.semana.total) out.push({ id: 'fin_bloque', grupo: 'momento', nivel: 'info', etiqueta: 'Última semana del bloque', datos: { bloque, total: r.semana.total }, desde: null });
+    if (r.semana.numero >= r.semana.total) out.push({ id: 'fin_bloque', grupo: 'momento', nivel: 'info', etiqueta: 'Última semana del bloque', datos: { bloque, total: r.semana.total, ...(ex.bloqueCifras || {}) }, desde: null });
     else if (r.semana.numero === 1) out.push({ id: 'bloque_nuevo', grupo: 'momento', nivel: 'info', etiqueta: 'Empieza bloque nuevo', datos: { bloque, total: r.semana.total }, desde: null });
   }
   if (entrena && r.semana?.foco === 'descarga') out.push({ id: 'descarga', grupo: 'momento', nivel: 'info', etiqueta: 'Semana de descarga', datos: {}, desde: null });
+  // (v0.202) El domingo, a quien se ha quedado corto, el cierre de su semana
+  if (entrena && desdeISO(hoy).getDay() === 0 && (r.sesiones?.total || 0) > 0 && (r.sesiones.completadas || 0) < r.sesiones.total) {
+    out.push({ id: 'semana_corta', grupo: 'momento', nivel: 'info', etiqueta: `Cierra la semana con ${r.sesiones.completadas} de ${r.sesiones.total}`, datos: { hechas: r.sesiones.completadas, total: r.sesiones.total }, desde: null });
+  }
+  // Su mes en números: los dos últimos días del mes y los dos primeros del siguiente
+  const dm = Number(hoy.slice(8, 10)), finMes = new Date(Date.UTC(Number(hoy.slice(0, 4)), Number(hoy.slice(5, 7)), 0)).getUTCDate();
+  if (entrena && (dm >= finMes - 1 || dm <= 2)) out.push({ id: 'mes', grupo: 'momento', nivel: 'info', etiqueta: dm <= 2 ? 'Su mes pasado en números' : 'Su mes en números', datos: { ...(ex.mesCifras || {}) }, desde: null });
   const o = ex.objetivo;
   if (o?.conseguido) out.push({ id: 'objetivo_cumplido', grupo: 'bien', nivel: 'ok', etiqueta: `Objetivo conseguido: ${corto(o.titulo, 50)}`, datos: { objetivo: o.titulo }, desde: null });
   else if (o?.cerca) out.push({ id: 'cerca_objetivo', grupo: 'bien', nivel: 'ok', etiqueta: `Cerca de su objetivo (${o.pct} %)`, datos: { objetivo: o.titulo, pct: o.pct }, desde: null });
@@ -216,11 +234,16 @@ export function motivosDe({ resumen: r, sesiones = [], records = [], ultimoConta
     out.push({ id: 'peso', grupo: 'flojo', nivel: 'info', etiqueta: o.peso.alejandose ? 'El peso se aleja de su objetivo' : 'El peso no se mueve', datos: { objetivo: o.titulo }, desde: null });
   }
   if ((mmdd(hoy) >= '12-20') || (mmdd(hoy) <= '01-06')) out.push({ id: 'fiestas', grupo: 'momento', nivel: 'info', etiqueta: 'Navidad', datos: {}, desde: null });
+  // (v0.202) Proponerle una llamada: si se enfría, si lleva 10 días o más sin entrenar o con una molestia fuerte
+  const parado10 = out.find((m) => m.id === 'parado' && (m.datos.dias ?? 0) >= 10);
+  if (ex.enfriando || parado10 || out.some((m) => m.id === 'molestia_fuerte')) {
+    out.push({ id: 'llamada', grupo: 'flojo', nivel: 'info', etiqueta: 'Proponerle una llamada', datos: { enlace: ex.enlace || '' }, desde: null });
+  }
 
   // Siempre queda saludar: con su última sesión, si la hay
   const ultima = recientes.find((s) => diasEntre(s.fecha, hoy) <= 7) || null;
   out.push({ id: 'saludo', grupo: 'saludo', nivel: 'info', etiqueta: 'Solo saludar',
-    datos: { sesion: ultima?.nombre || null, fecha: ultima?.fecha || null, nutricion: !entrena }, desde: null, urgente: false });
+    datos: { sesion: ultima?.nombre || null, fecha: ultima?.fecha || null, sesionId: ultima?.id || null, nutricion: !entrena }, desde: null, urgente: false });
 
   return out.map((m) => ({ clave: m.id, pendiente: false, pideHoy: null, urgente: false, ...m }))
     .sort((a, b) => ORDEN.indexOf(a.id) - ORDEN.indexOf(b.id) || String(a.desde || '').localeCompare(String(b.desde || '')));
@@ -230,9 +253,9 @@ export function motivosDe({ resumen: r, sesiones = [], records = [], ultimoConta
 export const SITUACIONES = [
   ['salud', [['molestia', 'Una molestia'], ['dia_malo', 'Un día difícil']]],
   ['pendiente', [['responder', 'Contestarle'], ['pregunta_sin_respuesta', 'Volver a preguntarle'], ['nota_checkin', 'Su nota del check-in'], ['video', 'Un vídeo suyo'], ['objetivo_propuesto', 'Su objetivo propuesto'], ['receta', 'Una receta que pide cambiar']]],
-  ['flojo', [['enfriando', 'Se está enfriando'], ['parado', 'Lleva días sin entrenar'], ['pendientes', 'Le quedan sesiones'], ['cumplimiento', 'No le da para todo'], ['esfuerzo', 'Se pasa del RPE'], ['carga', 'Mucha carga'], ['habitos', 'Los hábitos'], ['comidas', 'Apuntar las comidas'], ['peso', 'El peso'], ['sin_checkin', 'Falta el check-in'], ['sin_bloque', 'Su bloque nuevo']]],
+  ['flojo', [['enfriando', 'Se está enfriando'], ['llamada', 'Proponerle una llamada'], ['parado', 'Lleva días sin entrenar'], ['pendientes', 'Le quedan sesiones'], ['cumplimiento', 'No le da para todo'], ['esfuerzo', 'Se pasa del RPE'], ['carga', 'Mucha carga'], ['habitos', 'Los hábitos'], ['comidas', 'Apuntar las comidas'], ['peso', 'El peso'], ['sin_checkin', 'Falta el check-in'], ['sin_bloque', 'Su bloque nuevo']]],
   ['bien', [['record', 'Un récord'], ['semana_completa', 'Semana completa'], ['racha', 'Una racha'], ['cerca_objetivo', 'Cerca del objetivo'], ['objetivo_cumplido', 'Objetivo conseguido']]],
-  ['momento', [['cumple', 'Su cumpleaños'], ['aniversario', 'Su aniversario en FBE'], ['primera_semana', 'Su primera semana'], ['vuelta_pausa', 'La vuelta de una pausa'], ['fin_bloque', 'Fin de bloque'], ['bloque_nuevo', 'Bloque nuevo'], ['descarga', 'Semana de descarga'], ['carrera_antes', 'Antes de una carrera'], ['carrera_despues', 'Después de una carrera'], ['viaje', 'De viaje'], ['fiestas', 'Navidad']]],
+  ['momento', [['cumple', 'Su cumpleaños'], ['aniversario', 'Su aniversario en FBE'], ['nuevo_dia1', 'Su primer día'], ['nuevo_dia3', 'Su tercer día'], ['primera_semana', 'Su primera semana'], ['nuevo_mes1', 'Su primer mes'], ['vuelta_pausa', 'La vuelta de una pausa'], ['fin_bloque', 'Fin de bloque'], ['bloque_nuevo', 'Bloque nuevo'], ['descarga', 'Semana de descarga'], ['semana_corta', 'Cierre de semana corta'], ['mes', 'Su mes en números'], ['carrera_antes', 'Antes de una carrera'], ['carrera_despues', 'Después de una carrera'], ['viaje', 'De viaje'], ['fiestas', 'Navidad']]],
   ['saludo', [['saludo', 'Solo saludar']]],
 ];
 export const NOMBRE_SITUACION = Object.fromEntries(SITUACIONES.flatMap(([, xs]) => xs));
@@ -243,4 +266,25 @@ export function motivoDeSituacion(id, motivos = []) {
   const ya = (motivos || []).find((m) => m.id === id || (id === 'molestia' && m.id === 'molestia_fuerte') || (id === 'dia_malo' && m.id === 'dia_flojo'));
   if (ya) return ya;
   return { id, clave: `elegido-${id}`, grupo: GRUPO_SITUACION[id] || 'saludo', nivel: 'info', etiqueta: NOMBRE_SITUACION[id] || 'Solo saludar', datos: {}, desde: null, urgente: false, pendiente: false, pideHoy: null, aMano: true };
+}
+
+
+// (v0.202) Los que no están activos: sin activar su cuenta, en pausa y antiguos atletas. extra: { invitacion: { creada_en },
+// pausa: { desde, hasta }, bajaEn } → los motivos de su fila (sin el saludo)
+export function motivosOtros({ resumen: r, extra = {}, hoy }) {
+  const out = [];
+  if (!r) return out;
+  if (r.estado === 'invitado') {
+    const dia = extra.invitacion?.creada_en ? String(extra.invitacion.creada_en).slice(0, 10) : null;
+    out.push({ id: 'invitado', grupo: 'pendiente', nivel: 'info', etiqueta: dia ? `Sin activar su cuenta (invitación del ${Number(dia.slice(8, 10))}/${Number(dia.slice(5, 7))})` : 'Sin activar su cuenta', datos: { dias: dia ? diasEntre(dia, hoy) : null }, desde: dia });
+  } else if (r.estado === 'pausado' && r.pausa?.desde) {
+    const p = r.pausa;
+    const total = p.hasta ? diasEntre(p.desde, p.hasta) : null, pasados = diasEntre(p.desde, hoy);
+    if (p.hasta && diasEntre(hoy, p.hasta) <= 2) out.push({ id: 'pausa_vuelta', grupo: 'momento', nivel: 'morado', etiqueta: `Vuelve ${diasEntre(hoy, p.hasta) <= 0 ? 'mañana' : diasEntre(hoy, p.hasta) === 1 ? 'pasado mañana' : 'en tres días'} de su pausa`, datos: { hasta: p.hasta }, desde: null });
+    else out.push({ id: 'pausa_mitad', grupo: 'momento', nivel: 'info', etiqueta: total ? `En pausa: lleva ${pasados} de ${total} días` : `En pausa desde hace ${pasados} días`, datos: { pasados, total }, desde: p.desde });
+  } else if (r.estado === 'baja' && extra.bajaEn) {
+    const n = diasEntre(extra.bajaEn, hoy);
+    out.push({ id: 'antiguo', grupo: 'momento', nivel: 'info', etiqueta: `De baja desde hace ${n < 60 ? `${n} días` : `${Math.round(n / 30)} meses`}`, datos: { dias: n }, desde: extra.bajaEn });
+  }
+  return out.map((m) => ({ clave: m.id, pendiente: false, pideHoy: null, urgente: false, ...m }));
 }

@@ -71,3 +71,30 @@
 
 /* Tu manera de escribir */
 .rad-ejemplo { margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta); font-size: var(--letra-14); overflow-wrap: anywhere; }
+
+/* v0.202: segunda tanda (por donde hablasteis, ronda por tema, grafica de 8 semanas, su tono, donde le llega, objetivo,
+   guion de la nota de voz y el contacto en la ficha) */
+.rad-canal { align-items: center; gap: var(--esp-6); }
+.rad-ronda-tema { align-items: center; gap: var(--esp-8); }
+.rad-ronda-tema select { min-height: 36px; padding: var(--esp-4) var(--esp-10); border-radius: var(--r-10); border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--tinta); font: inherit; font-size: var(--letra-14); max-width: 100%; }
+.rad-grafica { display: grid; gap: var(--esp-8); }
+.rad-grafica summary { cursor: pointer; color: var(--tinta); font-weight: 600; }
+.rad-grafica-fig { margin: 0; display: grid; gap: var(--esp-4); max-width: 420px; }
+.rad-grafica-fig svg { width: 100%; height: auto; display: block; }
+.rad-barra { fill: var(--morado-suave); stroke: var(--morado); stroke-width: 1; }
+.rad-barra.actual { fill: var(--morado); }
+.rad-barra-txt { fill: var(--tinta-2); font-size: var(--letra-10); font-family: inherit; }
+.rad-escapan { margin: 0; padding-left: var(--esp-18); display: grid; gap: var(--esp-2); color: var(--tinta); }
+.rad-atajos { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) { .rad-atajos { display: block; } }
+.rad-su-tono { align-items: center; gap: var(--esp-10); }
+.rad-donde .segmentos { flex-wrap: wrap; }
+.rad-ver-sesion { justify-self: start; }
+.rad-sesion { padding: var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); overflow-x: auto; }
+.rad-objetivo .segmentos { flex-wrap: wrap; }
+.rad-guion { display: grid; gap: var(--esp-4); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta); }
+.rad-guion ul { margin: 0; padding-left: var(--esp-18); }
+.contacto-semanas { display: flex; gap: var(--esp-4); flex-wrap: wrap; }
+.contacto-sem { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: var(--r-6); background: var(--hoja-2); color: var(--tinta-2); font-size: var(--letra-12); font-weight: 600; border: var(--filo-fino) solid var(--linea); }
+.contacto-sem.algo { background: var(--morado-suave); color: var(--tinta); }
+.contacto-sem.llega { background: var(--ok-suave); border-color: var(--ok-borde); color: var(--tinta); }

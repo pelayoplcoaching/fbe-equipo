@@ -7,3 +7,4 @@ export * from './radar.js';
 export * from './local.js';
 export * from './pendientes.js';
 export * from './senales.js';
+export * from './ajustes.js';

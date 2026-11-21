@@ -8,7 +8,9 @@ import { difusiones, contactosPorAtleta, contactoDe, textoContacto, haceDias, DI
   leerLocal, limpiarLocal, marcarHablado, posponer, PREFIJO_RADAR,
   TONOS, NOMBRE_TONO, borradorVarios, aplicarEstilo, limpiarEstilo, ESTILO_DEFECTO, EMOJIS_ESTILO, normalFrase, yaEnviada, cuantasConDatos, hayFrases,
   SITUACIONES, motivoDeSituacion, ultimosMensajes, programadosPorAtleta, mensajesDelAtleta, cuandoSale,
-  leerPendiente, escribirPendiente, pendientesPorAtleta, textoSeguimiento, enfriandoDe, resumenCheckin, objetivoPrincipal } from '../web/src/logica/radar/index.js';
+  leerPendiente, escribirPendiente, pendientesPorAtleta, textoSeguimiento, enfriandoDe, resumenCheckin, objetivoPrincipal,
+  limpiarAjustesRadar, limpiarEnlace, objetivoDe, OBJETIVOS, conEnvio, MAX_ENVIOS, tonoQueContesta, juntarLocal, conHablado, conPospuesto,
+  historiaContacto, cumplimientoContacto, horaHabitual, motivosOtros } from '../web/src/logica/radar/index.js';
 import { rellenarHuecos, HUECOS } from '../web/src/logica/mensajes.js';
 import { sumarDias } from '../web/src/logica/fechas.js';
 
@@ -125,7 +127,7 @@ const ids = (ms) => ms.map((m) => m.id).join(',');
   // El orden: salud fuerte, día difícil, molestia, parado, día flojo, lo que va bien, lo demás, saludar
   const todo = motivosDe({ resumen: R({ sesiones: { completadas: 4, total: 4 }, alertas: [{ tipo: 'molestia', nivel: 'alerta', texto: 'Dolor grave: Lumbar' }, { tipo: 'sin_checkin', nivel: 'info', texto: 's' }, { tipo: 'cumplimiento', nivel: 'aviso', texto: 'c' }] }),
     sesiones: [{ nombre: 'S', fecha: dia(0), preparacion: { sueno: 1, energia: 1, molestias: 1 } }], records: [{ ejercicio: 'E', texto: '', fecha: dia(0) }], hoy: HOY });
-  check(ids(todo) === 'molestia_fuerte,dia_malo,record,semana_completa,cumplimiento,sin_checkin,saludo', 'el orden de los motivos');
+  check(ids(todo) === 'molestia_fuerte,dia_malo,llamada,record,semana_completa,cumplimiento,sin_checkin,saludo', 'el orden de los motivos');
 }
 
 console.log('Borradores');
@@ -330,13 +332,13 @@ console.log('(v0.201) Los motivos nuevos');
     && ids(con({ checkin: { notas: 'x', revisado_en: null, semana_inicio: '2026-10-26' } }, {}, dia(0))) === 'saludo', 'una nota en su check-in sin revisar ni contestar');
   check(ids(con({ videos: { n: 2, desde: dia(2) }, propuestas: 1 }, { alertas: [{ tipo: 'receta', nivel: 'aviso', texto: 'Pide cambiar una receta' }] })) === 'video,objetivo_propuesto,receta,saludo', 'vídeos sin corregir, un objetivo propuesto y una receta que pide cambiar');
   const flojos = con({ enfriando: { razones: [{ id: 'app', texto: 'a' }, { id: 'entrena', texto: 'b' }] } }, { alertas: [{ tipo: 'esfuerzo', nivel: 'info', texto: 'RPE' }, { tipo: 'carga', nivel: 'info', texto: 'C' }, { tipo: 'habitos', nivel: 'info', texto: 'H' }, { tipo: 'nutricion_registro', texto: 'N' }, { tipo: 'nutricion_ritmo', texto: 'P' }, { tipo: 'sin_bloque', nivel: 'aviso', texto: 'S' }] });
-  check(ids(flojos) === 'enfriando,esfuerzo,carga,habitos,comidas,peso,sin_bloque,saludo' && flojos[0].datos.razones.length === 2, 'se enfría y los avisos del panel que antes no miraba');
+  check(ids(flojos) === 'enfriando,llamada,esfuerzo,carga,habitos,comidas,peso,sin_bloque,saludo' && flojos[0].datos.razones.length === 2, 'se enfría y los avisos del panel que antes no miraba (y, si se enfría, proponerle una llamada)');
   const cumpleHoy = con({ cumple: { mes: 11, dia: 5 } });
   check(cumpleHoy[0].id === 'cumple' && cumpleHoy[0].pideHoy === 'Hoy es su cumpleaños' && con({ cumple: { mes: 11, dia: 4 } })[0].datos.cuando === 'ayer' && ids(con({ cumple: { mes: 11, dia: 4 } }, {}, dia(1))) === 'saludo', 'su cumpleaños hoy (o ayer, si aún no le has escrito)');
   const car = con({ carreras: [{ nombre: '10K', fecha: dia(-1) }, { nombre: 'Media', fecha: dia(2) }, { nombre: 'Lejana', fecha: dia(-10) }] });
   check(car.find((m) => m.id === 'carrera_antes')?.etiqueta === '10K: mañana' && car.find((m) => m.id === 'carrera_antes').pideHoy && car.find((m) => m.id === 'carrera_despues')?.datos.nombre === 'Media' && !car.some((m) => /Lejana/.test(m.etiqueta)), 'antes y después de una carrera (la de mañana pide hoy)');
   check(con({ pausaFin: dia(2) })[0].id === 'vuelta_pausa' && ids(con({ pausaFin: dia(9) })) === 'saludo', 'vuelve de una pausa (en la última semana)');
-  check(ids(con({}, { fecha_alta: dia(3) })) === 'primera_semana,saludo' && con({}, { fecha_alta: '2025-11-05' })[0].pideHoy === 'Hoy hace 1 año que empezó en FBE' && ids(con({}, { fecha_alta: '2024-11-03' })) === 'aniversario,saludo', 'su primera semana y su aniversario con FBE');
+  check(ids(con({}, { fecha_alta: dia(3) })) === 'nuevo_dia3,saludo' && ids(con({}, { fecha_alta: dia(5) })) === 'primera_semana,saludo' && ids(con({}, { fecha_alta: dia(0) })) === 'nuevo_dia1,saludo' && con({}, { fecha_alta: '2025-11-05' })[0].pideHoy === 'Hoy hace 1 año que empezó en FBE' && ids(con({}, { fecha_alta: '2024-11-03' })) === 'aniversario,saludo', 'su primera semana y su aniversario con FBE');
   check(ids(con({}, { semana: { numero: 4, total: 4, foco: 'descarga' }, bloque: { nombre: 'Fuerza' } })) === 'fin_bloque,descarga,saludo' && ids(con({}, { semana: { numero: 1, total: 4 } })) === 'bloque_nuevo,saludo', 'fin de bloque, bloque nuevo y descarga');
   check(ids(con({ objetivo: { titulo: 'Sentadilla 140', conseguido: true } })) === 'objetivo_cumplido,saludo' && con({ objetivo: { titulo: 'S', cerca: true, pct: 90 } })[0].etiqueta === 'Cerca de su objetivo (90 %)', 'su objetivo, conseguido o cerca');
   check(ids(motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 } }), hoy: '2026-12-24' })) === 'fiestas,saludo' && ids(motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 } }), hoy: '2027-01-07' })) === 'saludo', 'en Navidad, el tema de las fiestas');
@@ -357,6 +359,72 @@ console.log('(v0.201) A quién escribir: lo que pide hoy y lo programado');
   check(fz.grupo === 'pronto' && fz.porque === 'Tienes un mensaje programado para mañana a las 9:00', 'si tocaba hoy pero tienes un mensaje programado, «En unos días»: ya le llega');
   const fp = filaRadar({ resumen: R({ atleta_id: 'z', sesiones: { completadas: 2, total: 4 } }), contacto: lejos.z, hoy: HOY, extra: { pendientes: [{ id: 'n', texto: 'Boda', desde: dia(1) }], videos: { n: 1 } } });
   check(fp.pendientes.map((m) => m.id).join(',') === 'pendiente_mio,video' && fp.extra.videos.n === 1, 'cada fila lleva lo pendiente de hablar y lo suyo');
+}
+
+console.log('(v0.202) Lo tuyo en la base: objetivo, tono, enlace, envíos, «Ya hablamos» y «Mañana»');
+{
+  const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const aj = limpiarAjustesRadar({ objetivos: { [A]: 3, [B]: 7, mal: 1 }, tonos: { [A]: 'humor', [B]: 'gritón' }, enlace: 'https://calendly.com/pelayo/30min',
+    envios: [{ a: A, t: '2026-11-01T10:00:00Z', tono: 'directo' }, { a: 'x', t: 'y', tono: 'z' }], hablado: { [A]: [{ dia: dia(1), canal: 'whatsapp' }, { dia: dia(40) }, { dia: dia(2), canal: 'raro' }] },
+    pospuestos: { [A]: dia(-1), [B]: dia(1) }, reenganche: { [A]: dia(3), [B]: 'no' }, estilo: { saludo: 'hola' } }, HOY);
+  check(aj.objetivos[A] === 3 && !(B in aj.objetivos) && aj.tonos[A] === 'humor' && !(B in aj.tonos) && aj.enlace.startsWith('https://calendly.com/') && aj.estilo.saludo === 'hola', 'se limpia: objetivos de 1 a 3, tonos que existen, enlace http(s) y tu manera de escribir');
+  check(aj.envios.length === 1 && aj.envios[0].t === '2026-11-01T10:00Z' && aj.hablado[A].length === 2 && aj.hablado[A][1].canal === 'whatsapp' && aj.hablado[A][0].canal === 'app' && aj.pospuestos[A] === dia(-1) && !aj.pospuestos[B] && aj.reenganche[A] === dia(3) && !aj.reenganche[B],
+    'envíos válidos (al minuto), «Ya hablamos» de las 4 últimas semanas con su canal, «Mañana» que aún no ha llegado y a quién ya escribiste');
+  check(limpiarEnlace('javascript:alert(1)') === '' && limpiarEnlace('https://a.com/x y') === '' && limpiarEnlace('ftp://a.com') === '' && limpiarEnlace('http://a.com').startsWith('http://'), 'el enlace: solo http o https, sin espacios');
+  check(objetivoDe(aj, A) === 3 && objetivoDe(aj, B) === 2 && objetivoDe(null, A) === 2 && OBJETIVOS.join() === '1,2,3', 'tu objetivo con cada uno (de serie, 2)');
+  let e = aj;
+  for (let i = 0; i < 130; i++) e = conEnvio(e, { atleta: A, tono: 'cercano', t: new Date(Date.parse('2026-11-01T10:00:00Z') + i * 60000).toISOString() });
+  check(e.envios.length === MAX_ENVIOS && conEnvio(aj, { atleta: A, tono: 'raro' }) === aj, `se guardan los últimos ${MAX_ENVIOS} envíos con tono (y un tono que no existe, no)`);
+  const env = [{ a: A, t: '2026-11-01T10:00Z', tono: 'directo' }, { a: A, t: '2026-11-03T10:00Z', tono: 'directo' }, { a: A, t: '2026-11-05T10:00Z', tono: 'cercano' }, { a: A, t: '2026-11-07T10:00Z', tono: 'cercano' }];
+  const cs = [{ atleta_id: A, autor: 'atleta', creado_en: '2026-11-01T12:00:00Z' }, { atleta_id: A, autor: 'atleta', creado_en: '2026-11-03T20:00:00Z' }, { atleta_id: A, autor: 'atleta', creado_en: '2026-11-08T22:00:00Z' }];
+  const tq = tonoQueContesta(env, cs, A);
+  check(tq.tono === 'directo' && tq.contestadas === 2 && tq.total === 2 && tonoQueContesta(env.slice(0, 1), cs, A) === null, `con qué tono te contesta más (en 48 h; con al menos 2 envíos): ${tq.tono}, ${tq.contestadas} de ${tq.total}`);
+  const j = juntarLocal({ fuera: { [A]: [dia(0)] }, pospuestos: { [B]: dia(-2) }, canales: {} }, { hablado: { [A]: [{ dia: dia(1), canal: 'llamada' }] }, pospuestos: { [B]: dia(-1), [A]: dia(-3) } });
+  check(j.fuera[A].join() === [dia(1), dia(0)].join() && j.canales[A][dia(1)] === 'llamada' && j.pospuestos[B] === dia(-2) && j.pospuestos[A] === dia(-3), 'lo de este aparato y lo de la base, juntos (el «Mañana» más lejano)');
+  const h = conHablado(aj, B, HOY, true, 'persona');
+  check(h.hablado[B][0].canal === 'persona' && !conHablado(h, B, HOY, false).hablado[B] && conPospuesto(aj, B, HOY, 2).pospuestos[B] === dia(-2) && !conPospuesto(aj, A, HOY, 0).pospuestos[A], '«Ya hablamos» con su canal (y quitarlo) y «Mañana» (y «Proponer ya»)');
+}
+
+console.log('(v0.202) Tu contacto en 8 semanas y su hora');
+{
+  const cs = [M('a', 'coach', 0), M('a', 'coach', 1), M('a', 'coach', 8), M('a', 'coach', 50), M('b', 'coach', 3, { cliente_id: 'd' }), M('c', 'coach', 3, { cliente_id: 'd' }), M('b', 'coach', 20)];
+  const hi = historiaContacto(cs, { hoy: HOY, ahora: AHORA, fuera: { b: [dia(2)] } });
+  check(hi.a.join() === '1,0,0,0,0,0,1,2' && hi.b.join() === '0,0,0,0,0,1,0,1' && !hi.c, `días de contacto por semana, sin difusiones y con «Ya hablamos»: a ${hi.a}, b ${hi.b}`);
+  const cu = cumplimientoContacto(hi, ['a', 'b', 'z'], (id) => (id === 'b' ? 1 : 2), { hoy: HOY });
+  check(cu.length === 8 && cu[7].cumplen === 2 && cu[7].pct === 67 && cu[6].cumplen === 0 && cu[7].hasta === HOY, 'qué parte llega a su objetivo cada semana (cada uno con el suyo)');
+  const hora = (h, n) => ({ atleta_id: 'a', autor: 'atleta', creado_en: `2026-11-0${n}T${String(h - 1).padStart(2, '0')}:10:00Z` });
+  check(horaHabitual([hora(19, 1), hora(20, 2), hora(19, 3), hora(9, 4), hora(20, 4)], 'a')?.hora === 19 && horaHabitual([hora(19, 1)], 'a') === null, 'la hora a la que suele escribirte (con al menos 4 mensajes)');
+}
+
+console.log('(v0.202) Motivos nuevos y los que no están activos');
+{
+  const con = (extra, r = {}, ultimo = null, hoy = HOY) => motivosDe({ resumen: R({ sesiones: { completadas: 2, total: 4 }, ...r }), ultimoContacto: ultimo, hoy, extra });
+  const d1 = con({}, { fecha_alta: dia(1) });
+  check(d1[0].id === 'nuevo_dia1' && d1[0].pideHoy && ids(con({}, { fecha_alta: dia(1) }, dia(1))).startsWith('primera_semana') && ids(con({}, { fecha_alta: dia(7) })).startsWith('nuevo_semana1') && ids(con({}, { fecha_alta: dia(29) })).startsWith('nuevo_mes1') && ids(con({}, { fecha_alta: dia(15) })) === 'saludo',
+    'el plan de los nuevos: primer día, tercero, primera semana y primer mes (pidiendo hoy si aún no le has escrito)');
+  const dom = '2026-11-08';
+  check(ids(con({}, { sesiones: { completadas: 1, total: 3 } }, null, dom)).includes('semana_corta') && !ids(con({}, { sesiones: { completadas: 3, total: 3 } }, null, dom)).includes('semana_corta') && !ids(con({}, { sesiones: { completadas: 1, total: 3 } })).includes('semana_corta'), 'el domingo, la semana que se ha quedado corta');
+  check(con({ mesCifras: { sesiones: 12, records: 2 } }, {}, null, '2026-11-30').find((m) => m.id === 'mes')?.datos.sesiones === 12 && con({}, {}, null, '2026-12-01').find((m) => m.id === 'mes')?.etiqueta === 'Su mes pasado en números' && !ids(con({})).includes('mes'), 'su mes en números (los dos últimos y los dos primeros días)');
+  check(con({ enfriando: { razones: [] }, enlace: 'https://c.com/x' }).find((m) => m.id === 'llamada')?.datos.enlace === 'https://c.com/x' && ids(con({}, { ultimaSerie: dia(12), alertas: [{ tipo: 'sin_entrenar', nivel: 'aviso', texto: 'x' }] })).includes('llamada') && !ids(con({}, { ultimaSerie: dia(6), alertas: [{ tipo: 'sin_entrenar', nivel: 'aviso', texto: 'x' }] })).includes('llamada'), 'proponerle una llamada (se enfría, 10 días parado o molestia fuerte), con tu enlace');
+  check(con({ bloqueCifras: { hechas: 14, totalSesiones: 16, records: 3 } }, { semana: { numero: 4, total: 4 } })[0].datos.records === 3, 'el fin de bloque, con sus números');
+  const inv = motivosOtros({ resumen: { estado: 'invitado' }, extra: { invitacion: { creada_en: '2026-11-01T10:00:00Z' } }, hoy: HOY });
+  check(inv[0].id === 'invitado' && inv[0].datos.dias === 4 && /1\/11/.test(inv[0].etiqueta), 'sin activar su cuenta, con el día de la invitación');
+  check(motivosOtros({ resumen: { estado: 'pausado', pausa: { desde: dia(10), hasta: dia(-10) } }, hoy: HOY })[0].id === 'pausa_mitad' && motivosOtros({ resumen: { estado: 'pausado', pausa: { desde: dia(10), hasta: dia(-1) } }, hoy: HOY })[0].id === 'pausa_vuelta', 'en pausa: a mitad y cuando vuelve');
+  check(motivosOtros({ resumen: { estado: 'baja' }, extra: { bajaEn: dia(45) }, hoy: HOY })[0].id === 'antiguo' && motivosOtros({ resumen: { estado: 'activo' }, hoy: HOY }).length === 0, 'antiguos atletas');
+}
+
+console.log('(v0.202) El reparto con tu objetivo, «sin leer» y los no activos');
+{
+  const cs = [M('t', 'coach', 2), M('u', 'coach', 2), M('v', 'coach', 3)];
+  const res = [R({ atleta_id: 't', nombre: 'T' }), R({ atleta_id: 'u', nombre: 'U' }), R({ atleta_id: 'v', nombre: 'V' }),
+    R({ atleta_id: 'i', nombre: 'Inés', estado: 'invitado' }), R({ atleta_id: 'p', nombre: 'Pau', estado: 'pausado', pausa: { desde: dia(5), hasta: dia(-20) } }),
+    R({ atleta_id: 'b1', nombre: 'Baja vieja', estado: 'baja' }), R({ atleta_id: 'b2', nombre: 'Baja reciente', estado: 'baja' }), R({ atleta_id: 'b3', nombre: 'Baja ya escrita', estado: 'baja' })];
+  const x = radar({ resumenes: res, contactos: contactosPorAtleta(cs, { hoy: HOY, ahora: AHORA }), hoy: HOY, objetivoDe: (id) => (id === 't' ? 1 : 2),
+    extra: { v: { sinLeer: { dia: dia(3) } } }, extraOtros: { i: { invitacion: { creada_en: dia(2) } }, b1: { bajaEn: dia(200) }, b2: { bajaEn: dia(40) }, b3: { bajaEn: dia(40) } }, reenganche: { b3: dia(1) } });
+  const g = Object.fromEntries(x.filas.map((f) => [f.atleta_id, f]));
+  check(g.t.grupo === 'al_dia' && g.t.objetivo === 1 && g.u.grupo === 'hoy' && x.variosObjetivos && /al día con su objetivo de contacto/.test(textoResumenRadar(x)), 'cada uno con su objetivo: con 1 día por semana, al día; el resumen lo dice');
+  check(g.v.grupo === 'pronto' && /no ha leído tu último mensaje/i.test(g.v.porque) && g.v.sinLeer, 'si no ha leído tu último mensaje, no se le propone otro encima («En unos días»)');
+  check(x.otros.invitado.map((f) => f.nombre).join() === 'Inés' && x.otros.pausado[0]?.motivo.id === 'pausa_mitad' && x.otros.antiguo.map((f) => f.nombre).join() === 'Baja reciente', 'aparte: sin activar, en pausa y antiguos (de baja hace 30 a 90 días y una sola vez)');
 }
 
 console.log('Con la demo (lo que lee de la base)');
@@ -402,6 +470,11 @@ try {
   const rec = await recordsRecientes({ api }, g['Ana López'].atleta_id, { hoy: d.hoy });
   check(rec.length > 0 && rec.every((r) => r.ejercicio && !/^Récord/.test(r.ejercicio) && r.fecha), 'los récords recientes de una atleta, con su ejercicio');
   check(JSON.stringify(await b.select('comentarios', {})) === antes, 'no escribe nada');
+  // (v0.202) El contacto para la ficha: 8 semanas, tu último mensaje y tu objetivo con él
+  const { contactoDeAtleta } = await import('../web/src/datos/radar.js');
+  const cf = await contactoDeAtleta({ api, backend: b }, g['Ana López'].atleta_id, { hoy: d.hoy });
+  check(cf.semanas.length === 8 && cf.semanas[7] >= 1 && cf.objetivo === 2 && /hoy|ayer|hace/.test(cf.ultimo || ''), `el contacto de su ficha: ${cf.semanas.join(' · ')}, último ${cf.ultimo}`);
+  check(d.otros && Object.keys(d.otros).length >= 1 && Object.values(d.extra).some((e) => 'sinLeer' in e), 'lo de los que no están activos y si han leído tu último mensaje');
   // Tus pendientes: van con tus notas privadas (con su marca) y no salen entre las notas de la ficha
   const nota = await apuntarPendiente({ api }, g['Ana López'].atleta_id, 'Preguntarle por el viaje', { desde: d.hoy });
   const d2 = await datosRadar({ api, backend: b });

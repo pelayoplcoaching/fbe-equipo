@@ -309,9 +309,9 @@ const FRASES = {
     humor: [() => 'Se acabaron las vacaciones del hierro. ¿Con ganas de volver?'],
   },
   fin_bloque: {
-    cercano: [() => 'Última semana del bloque. ¿Cómo te has visto estas semanas? Me sirve para preparar el siguiente'],
+    cercano: [(d) => (d.hechas ? `Última semana del bloque: ${sesiones(d.hechas)}${d.totalSesiones ? ` de ${d.totalSesiones}` : ''}${d.records ? ` y ${d.records === 1 ? 'un récord' : `${d.records} récords`}` : ''}. ¿Cómo te has visto?` : null), () => 'Última semana del bloque. ¿Cómo te has visto estas semanas? Me sirve para preparar el siguiente'],
     directo: [() => 'Esta es la última semana del bloque. Dime qué te ha funcionado y qué no, y lo tengo en cuenta para el siguiente'],
-    motivador: [() => 'Última semana del bloque: a cerrarlo bien. Luego vemos todo lo que has avanzado'],
+    motivador: [(d) => (d.records ? `Cierras el bloque con ${d.records === 1 ? 'un récord' : `${d.records} récords`}. Eso es lo que da el trabajo constante. A por el siguiente` : null), () => 'Última semana del bloque: a cerrarlo bien. Luego vemos todo lo que has avanzado'],
     humor: [() => 'Última semana del bloque: el último capítulo de la temporada. Que no decaiga'],
   },
   bloque_nuevo: {
@@ -349,6 +349,73 @@ const FRASES = {
     directo: [() => 'Para estas fiestas: dime qué días puedes entrenar y adapto la semana'],
     motivador: [() => 'En Navidad no se trata de progresar, sino de no soltarlo. Con un par de sesiones por semana, en enero lo agradeces'],
     humor: [() => 'Navidad: turrón, cenas y sentadillas. No en ese orden, pero casi. ¿Cómo lo llevas?'],
+  },
+  // (v0.202) Los primeros días, la llamada, el cierre de la semana, el mes y los que no están activos
+  nuevo_dia1: {
+    cercano: [() => 'Te doy la bienvenida al equipo. ¿Qué tal el primer día? Cualquier duda con la app o el programa, me dices'],
+    directo: [() => 'Primer día: si algo de la app o del programa no te cuadra, dímelo hoy y lo ajustamos'],
+    motivador: [() => 'Primer día hecho: lo más difícil era empezar, y ya está. ¿Cómo te has encontrado?'],
+    humor: [() => 'Primer día superado. ¿La app te trata bien o tengo que hablar con ella?'],
+  },
+  nuevo_dia3: {
+    cercano: [() => '¿Qué tal estos primeros días? ¿Cómo te están sentando las sesiones?'],
+    directo: [() => 'Tercer día: ¿algún ejercicio que no te encaje o alguna duda con la técnica?'],
+    motivador: [() => 'Tres días y ya vas cogiendo el ritmo. ¿Cómo lo llevas?'],
+    humor: [() => 'Tres días dentro y sin rendirse. ¿Las agujetas ya te hablan?'],
+  },
+  nuevo_semana1: {
+    cercano: [() => 'Primera semana completa en el equipo. ¿Cómo te has visto? Cuéntame qué tal y lo que cambiarías'],
+    directo: [() => 'Llevas una semana: dime qué te ha costado más y qué te ha ido bien, y ajusto la siguiente'],
+    motivador: [() => 'Primera semana hecha. Así se empieza: con constancia. A por la segunda'],
+    humor: [() => 'Una semana ya. Oficialmente eres parte del equipo: no hay vuelta atrás'],
+  },
+  nuevo_mes1: {
+    cercano: [() => 'Ya llevas un mes con nosotros. ¿Cómo te encuentras? Me gustaría saber qué tal lo ves todo'],
+    directo: [() => 'Un mes: buen momento para revisar. Dime qué quieres mantener y qué cambiarías'],
+    motivador: [() => 'Un mes de trabajo. Lo que has hecho estas semanas es la base de todo lo que viene'],
+    humor: [() => 'Un mes ya. Esto ya no es una prueba: es costumbre'],
+  },
+  llamada: {
+    cercano: [(d) => (d.enlace ? `¿Te apetece que hablemos un rato por llamada esta semana? Aquí puedes elegir hora: ${d.enlace}` : null), () => '¿Te apetece que hablemos un rato por llamada esta semana? Dime qué hora te viene bien'],
+    directo: [(d) => (d.enlace ? `Mejor lo hablamos por llamada. Elige hora aquí y lo vemos con calma: ${d.enlace}` : null), () => 'Mejor lo hablamos por llamada. ¿Qué día y hora te viene bien?'],
+    motivador: [(d) => (d.enlace ? `Hablemos diez minutos y lo encauzamos juntos. Elige hora aquí: ${d.enlace}` : null), () => 'Hablemos diez minutos y lo encauzamos juntos. ¿Cuándo te viene bien?'],
+    humor: [(d) => (d.enlace ? `Esto se arregla mejor hablando que por escrito. Elige hora y te llamo: ${d.enlace}` : null), () => 'Esto se arregla mejor hablando que por escrito. ¿Cuándo te llamo?'],
+  },
+  semana_corta: {
+    cercano: [(d) => (d.total ? `Cierras la semana con ${d.hechas} de ${sesiones(d.total)}. ¿Qué ha pasado? Si hay que ajustar algo, lo vemos` : null), () => '¿Qué tal la semana? Si te ha costado llegar a todo, lo vemos para la siguiente'],
+    directo: [(d) => (d.total ? `${d.hechas} de ${d.total} esta semana. Dime cuántos días puedes de verdad la siguiente y lo ajusto` : null), () => 'Dime cuántos días puedes entrenar la semana que viene y ajusto el plan'],
+    motivador: [(d) => (d.hechas ? `${sesiones(d.hechas)} esta semana: no es la semana perfecta, pero suma. La siguiente, a por todas` : null), () => 'No ha sido la semana perfecta, pero cuenta. La siguiente, a por todas'],
+    humor: [() => 'Esta semana el calendario ha ganado la partida. La que viene le damos la revancha'],
+  },
+  mes: {
+    cercano: [(d) => (d.sesiones ? `Este mes llevas ${sesiones(d.sesiones)}${d.records ? ` y ${d.records === 1 ? 'un récord' : `${d.records} récords`}` : ''}. ¿Cómo lo ves?` : null), () => 'Fin de mes: ¿cómo lo has visto? Si quieres, repasamos juntos lo que has avanzado'],
+    directo: [(d) => (d.sesiones ? `Tu mes: ${sesiones(d.sesiones)}${d.records ? `, ${d.records === 1 ? '1 récord' : `${d.records} récords`}` : ''}. Seguimos con lo que funciona` : null), () => 'Cerramos el mes. Dime qué quieres mantener y qué cambiamos el siguiente'],
+    motivador: [(d) => (d.sesiones ? `${sesiones(d.sesiones)} este mes. Así, mes a mes, es como se nota el cambio` : null), () => 'Otro mes de trabajo hecho. Así, mes a mes, es como se nota el cambio'],
+    humor: [(d) => (d.sesiones ? `Balance del mes: ${sesiones(d.sesiones)} y cero excusas. Me gusta este informe` : null), () => 'Balance del mes: trabajo hecho. Me gusta este informe'],
+  },
+  pausa_mitad: {
+    cercano: [() => '¿Qué tal la pausa? Solo quería saber de ti. Cuando quieras volver, lo tengo todo preparado'],
+    directo: [() => 'Te escribo para ver cómo vas. Cuando tengas fecha de vuelta, dímelo y te preparo la semana'],
+    motivador: [() => 'Descansar también es parte del proceso. Cuando vuelvas, retomamos con calma'],
+    humor: [() => 'Paso a ver cómo va esa pausa. La barra te guarda el sitio'],
+  },
+  pausa_vuelta: {
+    cercano: [() => 'En unos días vuelves. ¿Cómo estás? Te preparo una vuelta suave'],
+    directo: [() => 'Se acaba tu pausa: la primera semana va más suave. Dime si hay algo que deba saber'],
+    motivador: [() => 'Ya queda poco para volver. Retomamos con calma y en unas semanas estás donde lo dejaste'],
+    humor: [() => 'Se acaban las vacaciones del hierro. ¿Con ganas de volver?'],
+  },
+  invitado: {
+    cercano: [() => 'Te he dejado tu acceso a la app del equipo. Cuando tengas un rato, entra y me dices si todo va bien'],
+    directo: [() => 'Aún no has activado tu cuenta de la app. Entra con tu código y lo tienes todo listo'],
+    motivador: [() => 'Tienes todo preparado en la app para empezar. Solo falta que entres con tu código'],
+    humor: [() => 'Tu cuenta de la app sigue esperándote con los brazos abiertos. Entra con tu código cuando puedas'],
+  },
+  antiguo: {
+    cercano: [() => '¿Qué tal estás? Me acordaba de ti y quería saber cómo te va. Un abrazo'],
+    directo: [() => 'Te escribo para saber cómo te va. Si en algún momento quieres retomar, aquí estoy'],
+    motivador: [() => 'Espero que sigas moviéndote. Si algún día quieres retomarlo, lo preparamos con calma'],
+    humor: [() => 'Hace tiempo que no sé de ti. ¿Sigues entrenando o te has pasado al sofá?'],
   },
   saludo: {
     cercano: [

@@ -1,8 +1,12 @@
 // (v0.201) «A quién escribir»: lo que se abre al tocar «Escribirle». Cómo está el atleta, lo pendiente de hablar con
 // él, los temas (varios a la vez, también cualquiera de la biblioteca), el mensaje en cuatro tonos, tus respuestas
 // guardadas, y enviar, programar o dejarlo en su chat. Y la hoja de «Tu manera de escribir».
+// (v0.202) Su objetivo de contacto y su tono, con qué tono te contesta más, enviarlo como comentario en su sesión o en
+// su check-in, nota de voz con guion, programar a su hora, Ctrl+Intro, y el borrador de quien no está activo.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, useUnaVez, Icono, Hoja, Segmentos } from '../comunes.jsx';
+import { useApp, useUnaVez, Icono, Hoja, Segmentos, copiar } from '../comunes.jsx';
+import { HojaVoz, DetalleSesion } from './RevisarExtra.jsx';
+import { Invitacion } from './Panel.jsx';
 import { leerBorrador, guardarBorrador, rellenarHuecos } from '../../logica/mensajes.js';
 import { sumarDias, instanteMadrid, partesMadrid } from '../../logica/fechas.js';
 import { borradorVarios, aplicarEstilo, varianteInicial, cuantasConDatos, yaEnviada, TONOS, NOMBRE_TONO, MAX_BORRADOR,
@@ -30,15 +34,26 @@ function datosHuecos(f, motivos) {
   return d;
 }
 
-export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DEFECTO, abierto = null, alPendiente }) {
+export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DEFECTO, abierto = null, alPendiente,
+  objetivo = 2, alObjetivo = null, tono: suTono = null, alTono = null, tonoContesta = null, hora = null, historia = null, temaInicial = null }) {
   const { api, perfil, aviso } = useApp();
   const pendientes = f.pendientes;
   const otros = f.motivos.filter((m) => !m.pendiente);
   const [aMano, setAMano] = useState([]);          // situaciones elegidas de la biblioteca
   const todos = useMemo(() => [...f.motivos, ...aMano.filter((m) => !f.motivos.some((x) => x.clave === m.clave))], [f.motivos, aMano]);
-  const [sel, setSel] = useState(() => [f.motivo?.clave || 'saludo']);
+  // (v0.202) en una ronda por tema, ese tema; en el cierre del domingo, el de su semana
+  const [sel, setSel] = useState(() => {
+    const t = temaInicial === 'cierre' ? f.motivos.find((m) => m.id === 'semana_completa' || m.id === 'semana_corta') : temaInicial ? f.motivos.find((m) => m.id === temaInicial) : null;
+    return [(t || f.motivo)?.clave || 'saludo'];
+  });
   const elegidos = todos.filter((m) => sel.includes(m.clave));
-  const [tono, setTono] = useState(tonoGuardado);
+  const [tono, setTono] = useState(() => suTono || tonoGuardado());
+  // (v0.202) Dónde le llega: su chat, el hilo de su última sesión o el de su check-in (cuentan igual como contacto)
+  const ultima = f.motivos.find((m) => m.id === 'saludo')?.datos || {};
+  const ck = f.extra?.checkin?.id ? f.extra.checkin : null;
+  const [donde, setDonde] = useState('chat');
+  const [verVoz, setVerVoz] = useState(false);
+  const [verSesion, setVerSesion] = useState(false);
   const [vuelta, setVuelta] = useState(0);
   const base = useMemo(() => varianteInicial(f.atleta_id, hoy), [f.atleta_id, hoy]);
   const evitar = abierto?.enviados || [];
@@ -94,10 +109,12 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
   const enviar = (enviarEn = null) => una(async () => {
     if (!limpio) return;
     try {
-      await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: uuid(), enviarEn, respondeA: responder?.datos?.mensajeId || null });
+      if (donde === 'sesion' && ultima.sesionId && !enviarEn) await api.comentar({ atletaId: f.atleta_id, sesionId: ultima.sesionId, texto: limpio, autor: 'coach', clienteId: uuid() });
+      else if (donde === 'checkin' && ck && !enviarEn) await api.comentar({ atletaId: f.atleta_id, checkinId: ck.id, texto: limpio, autor: 'coach', clienteId: uuid() });
+      else await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: uuid(), enviarEn, respondeA: responder?.datos?.mensajeId || null });
       await despues();
-      aviso(enviarEn ? `Programado para ${cuandoSale(enviarEn, hoy)}` : `Mensaje enviado a ${f.primerNombre}`, 'ok');
-      alEnviar?.({ enviarEn, texto: limpio });
+      aviso(enviarEn ? `Programado para ${cuandoSale(enviarEn, hoy)}` : donde === 'sesion' ? `Comentado en su sesión (${ultima.sesion})` : donde === 'checkin' ? 'Contestado en su check-in' : `Mensaje enviado a ${f.primerNombre}`, 'ok');
+      alEnviar?.({ enviarEn, texto: limpio, tono });
     } catch (e) { aviso(e?.message || 'No se ha podido enviar: vuelve a intentarlo', 'error'); }
   });
   const alChat = () => {
@@ -106,9 +123,12 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
   };
   const idArea = `${id}-texto`;
   const otras = TONOS.some((t) => elegidos.some((m) => cuantasConDatos(m, { hoy, tono: t }) > 1));
+  // Los puntos de la nota de voz: cada tema elegido con su dato
+  const guion = elegidos.filter((m) => m.id !== 'saludo').map((m) => m.etiqueta).slice(0, 3);
+  if (!guion.length) guion.push(ultima.sesion ? `Qué tal ${ultima.sesion}` : 'Cómo va la semana');
   return (
     <div id={id} class="pila-s rad-borrador">
-      <ComoEsta f={f} hoy={hoy} />
+      <ComoEsta f={f} hoy={hoy} objetivo={objetivo} alObjetivo={alObjetivo} historia={historia} />
       <Pendientes f={f} hoy={hoy} lista={pendientes} sel={sel} alternar={alternar} alPendiente={alPendiente} />
 
       <div class="pila-xs">
@@ -137,15 +157,36 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
         {TONOS.map((t) => (
           <label key={t} class={`rad-tono ${tono === t ? 'elegido' : ''}`}>
             <input type="radio" class="sr" name={`${id}-tono`} value={t} checked={tono === t} onChange={() => elegirTono(t)} />
-            <span class="rad-tono-nombre">{NOMBRE_TONO[t]}</span>
+            <span class="rad-tono-nombre">{NOMBRE_TONO[t]}{suTono === t ? ' · su tono' : ''}</span>
             <span class="rad-tono-texto">{propuestas[t]}</span>
           </label>
         ))}
       </div>
+      {/* (v0.202) su tono y con cuál te contesta más */}
+      {(alTono || tonoContesta) && (
+        <div class="fila-envolver rad-su-tono">
+          {tonoContesta && <span class="peq secundario">Te contesta más con el tono {NOMBRE_TONO[tonoContesta.tono].toLowerCase()} ({tonoContesta.contestadas} de {tonoContesta.total}).</span>}
+          {alTono && (suTono === tono
+            ? <button class="btn-texto" onClick={() => alTono(null)}>Quitar «{NOMBRE_TONO[tono].toLowerCase()}» como su tono</button>
+            : <button class="btn-texto" onClick={() => alTono(tono)}>Usar siempre «{NOMBRE_TONO[tono].toLowerCase()}» con {f.primerNombre}</button>)}
+        </div>
+      )}
+      {(ultima.sesionId || ck) && (
+        <div class="pila-xs rad-donde">
+          <span class="peq secundario" id={`${id}-donde`}>Dónde le llega</span>
+          <Segmentos etiqueta="Dónde le llega" valor={donde} alCambiar={(v) => setDonde(v || 'chat')}
+            opciones={[['chat', 'En su chat'], ...(ultima.sesionId ? [['sesion', `En su sesión (${ultima.sesion})`]] : []), ...(ck ? [['checkin', 'En su check-in']] : [])]} />
+          {ultima.sesionId && (
+            <button class="btn-texto rad-ver-sesion" aria-expanded={verSesion ? 'true' : 'false'} onClick={() => setVerSesion(!verSesion)}>{verSesion ? 'Ocultar' : 'Ver'} su sesión: {ultima.sesion}{ultima.fecha ? `, ${cuandoFue(ultima.fecha, hoy)}` : ''}</button>
+          )}
+          {verSesion && ultima.sesionId && <div class="rad-sesion"><DetalleSesion s={{ id: ultima.sesionId, atleta: { id: f.atleta_id, nombre: f.nombre } }} /></div>}
+        </div>
+      )}
 
       <div class="pila-xs revision-nota">
         <label class="peq secundario" for={idArea}>Mensaje para {f.primerNombre} (edítalo a tu gusto)</label>
-        <textarea id={idArea} ref={area} rows="3" maxLength={MAX_BORRADOR} value={texto} onInput={(e) => { tocado.current = true; setTexto(e.currentTarget.value); }} />
+        <textarea id={idArea} ref={area} rows="3" maxLength={MAX_BORRADOR} value={texto} onInput={(e) => { tocado.current = true; setTexto(e.currentTarget.value); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); enviar(); } }} />
       </div>
       {repetido && <p class="mini rad-aviso" style={{ margin: 0 }}>Ya le mandaste este mismo mensaje hace poco. Cambia alguna frase para que no le llegue repetido.</p>}
       {responder && <p class="mini terciario" style={{ margin: 0 }}>Irá como respuesta a su mensaje.</p>}
@@ -158,20 +199,22 @@ export function Borrador({ id, f, hoy, alEnviar, abrirAtleta, estilo = ESTILO_DE
       </div>
       <div class="revision-acciones rad-acciones">
         <button class="btn btn-peq btn-primario" onClick={() => enviar()} disabled={ocupado || !limpio}><Icono n="mensaje" /> {ocupado ? 'Enviando…' : 'Enviar'}</button>
-        <button class="btn btn-peq" aria-expanded={verProgramar ? 'true' : 'false'} onClick={() => setVerProgramar(!verProgramar)} disabled={!limpio}><Icono n="reloj" /> Programar</button>
+        <button class="btn btn-peq" aria-expanded={verProgramar ? 'true' : 'false'} onClick={() => setVerProgramar(!verProgramar)} disabled={!limpio || donde !== 'chat'}><Icono n="reloj" /> Programar</button>
+        <button class="btn btn-peq" onClick={() => setVerVoz(true)}><Icono n="micro" /> Nota de voz</button>
         <button class="btn btn-peq" onClick={() => setVuelta((v) => v + 1)} disabled={!otras}>Otras frases</button>
         <button class="btn btn-peq" aria-expanded={verMias ? 'true' : 'false'} onClick={() => setVerMias(!verMias)}><Icono n="guardar" /> Mis respuestas</button>
         <button class="btn btn-peq" onClick={alChat} disabled={!abrirAtleta}>Abrir en su chat</button>
         {contactos.datos && contactos.datos[f.atleta_id] && <BotonWhatsApp telefono={contactos.datos[f.atleta_id]} texto={limpio} />}
       </div>
-      {verProgramar && <Programar hoy={hoy} ocupado={ocupado} alProgramar={(iso) => enviar(iso)} />}
+      {verProgramar && <Programar hoy={hoy} ocupado={ocupado} hora={hora} nombre={f.primerNombre} alProgramar={(iso) => enviar(iso)} />}
+      {verVoz && <HojaVoz atleta={{ id: f.atleta_id, nombre: f.nombre }} guion={guion} alCerrar={() => setVerVoz(false)} alEnviado={() => { despues(); alEnviar?.({}); }} />}
       {verMias && <MisRespuestas f={f} elegidos={elegidos} texto={limpio} alElegir={(t) => { tocado.current = true; setTexto(t); setVerMias(false); }} />}
     </div>
   );
 }
 
 // ---------- Cómo está: lo que sabes de él, en una tarjeta ----------
-function ComoEsta({ f, hoy }) {
+function ComoEsta({ f, hoy, objetivo = 2, alObjetivo = null, historia = null }) {
   const r = f.resumen || {};
   const e = f.extra || {};
   const filas = [];
@@ -204,6 +247,14 @@ function ComoEsta({ f, hoy }) {
           {filas.map(([k, v]) => <div key={k} class="rad-dato"><dt>{k}</dt><dd>{v}</dd></div>)}
         </dl>
       ) : <p class="peq secundario" style={{ margin: 0 }}>Aún no hay datos suyos de estas semanas.</p>}
+      {historia?.length > 0 && <p class="mini terciario" style={{ margin: 0 }}>Tus días de contacto, 8 últimas semanas: {historia.join(' · ')}</p>}
+      {alObjetivo && (
+        <div class="pila-xs rad-objetivo">
+          <span class="peq secundario">Tu objetivo de contacto con {f.primerNombre}</span>
+          <Segmentos etiqueta={`Objetivo de contacto con ${f.primerNombre}`} valor={objetivo} alCambiar={(v) => alObjetivo(v || objetivo)}
+            opciones={[[1, '1 día por semana'], [2, '2 días'], [3, '3 días']]} />
+        </div>
+      )}
       {f.enfriando && (
         <div class="rad-enfria">
           <strong class="peq">Se está enfriando</strong>
@@ -269,9 +320,13 @@ function Pendientes({ f, hoy, lista, sel, alternar, alPendiente }) {
 }
 
 // ---------- Programar el mensaje ----------
-function Programar({ hoy, ocupado, alProgramar }) {
+function Programar({ hoy, ocupado, alProgramar, hora: habitual = null, nombre = '' }) {
   const ahora = partesMadrid();
+  // (v0.202) a la hora a la que suele escribirte: hoy si aún no ha pasado, si no mañana
+  const suHora = habitual ? `${String(habitual.hora).padStart(2, '0')}:00` : null;
+  const suDia = suHora && ahora.hora < suHora ? hoy : sumarDias(hoy, 1);
   const opciones = [
+    ...(suHora ? [[`A su hora: ${suDia === hoy ? 'hoy' : 'mañana'} a las ${habitual.hora}:00`, instanteMadrid(suDia, suHora)]] : []),
     ...(ahora.hora < '17:30' ? [['Hoy a las 18:00', instanteMadrid(hoy, '18:00')]] : []),
     ['Mañana a las 9:00', instanteMadrid(sumarDias(hoy, 1), '09:00')],
     ['Mañana a las 19:00', instanteMadrid(sumarDias(hoy, 1), '19:00')],
@@ -284,6 +339,7 @@ function Programar({ hoy, ocupado, alProgramar }) {
       <div class="fila-envolver">
         {opciones.map(([t, iso]) => <button key={t} class="btn btn-peq" disabled={ocupado || !iso} onClick={() => alProgramar(iso)}>{t}</button>)}
       </div>
+      {suHora && <p class="mini terciario" style={{ margin: 0 }}>{nombre ? `${nombre} suele` : 'Suele'} escribirte sobre las {habitual.hora}:00.</p>}
       <div class="fila-envolver">
         <label class="peq secundario" for="rad-prog-dia">Otro día</label>
         <input id="rad-prog-dia" type="date" min={hoy} max={sumarDias(hoy, 90)} value={dia} onInput={(e) => setDia(e.currentTarget.value)} />
@@ -354,8 +410,9 @@ function MisRespuestas({ f, elegidos, texto, alElegir }) {
 }
 
 // ---------- Tu manera de escribir ----------
-export function HojaEstilo({ estilo, alGuardar, alCerrar }) {
+export function HojaEstilo({ estilo, enlace = '', enBase = false, alGuardar, alCerrar }) {
   const [e, setE] = useState(() => limpiarEstilo(estilo));
+  const [link, setLink] = useState(enlace || '');
   const cambia = (k, v) => setE((x) => ({ ...x, [k]: v }));
   const ejemplo = aplicarEstilo(borradorVarios([{ id: 'record', datos: { ejercicio: 'sentadilla', texto: '100 kg × 5' } }, { id: 'sin_checkin', datos: {} }], { tono: 'cercano' }), e, { nombre: 'Ana', apodo: 'Anita' });
   return (
@@ -382,11 +439,65 @@ export function HojaEstilo({ estilo, alGuardar, alCerrar }) {
           <span class="peq secundario">Así quedaría</span>
           <p class="rad-ejemplo">{ejemplo}</p>
         </div>
+        <div class="pila-xs">
+          <label class="peq" for="rad-est-enlace">Tu enlace para reservar una llamada (opcional)</label>
+          <input id="rad-est-enlace" type="url" inputMode="url" maxLength={300} placeholder="https://calendly.com/…" value={link} onInput={(ev) => setLink(ev.currentTarget.value)} />
+          <span class="mini terciario">Sale en «Proponerle una llamada».{enBase ? '' : ' Para guardarlo hace falta la migración 086.'}</span>
+        </div>
         <div class="revision-acciones">
-          <button class="btn btn-primario" onClick={() => alGuardar(e)}>Guardar</button>
+          <button class="btn btn-primario" onClick={() => alGuardar({ estilo: e, enlace: link })}>Guardar</button>
           <button class="btn" onClick={() => setE({ ...ESTILO_DEFECTO })}>Como venía</button>
         </div>
       </div>
     </Hoja>
+  );
+}
+
+// ---------- (v0.202) El borrador de quien no está activo: sin activar, en pausa o antiguo ----------
+// En pausa le llega a su chat (sigue con la cuenta); a los demás, por WhatsApp o copiado (no entran en la app)
+export function BorradorOtro({ id, f, hoy, estilo = ESTILO_DEFECTO, alEnviar, alYaEscrito }) {
+  const { api, aviso } = useApp();
+  const motivo = f.motivo;
+  const [tono, setTono] = useState(tonoGuardado);
+  const [vuelta, setVuelta] = useState(0);
+  const quien = { nombre: f.primerNombre, apodo: '' };
+  const propuestas = useMemo(() => Object.fromEntries(TONOS.map((t) => [t, aplicarEstilo(borradorVarios([motivo], { hoy, vuelta, tono: t }), estilo, quien)])), [vuelta, JSON.stringify(estilo || {})]);
+  const [texto, setTexto] = useState(() => propuestas[tono]);
+  useEffect(() => { setTexto(propuestas[tono]); }, [propuestas, tono]);
+  const [ocupado, una] = useUnaVez();
+  const [verInv, setVerInv] = useState(false);
+  const contactos = useContactos([f.atleta_id]);
+  const limpio = texto.trim();
+  const chat = f.grupo === 'pausado';
+  const enviar = () => una(async () => {
+    try { await api.enviarMensaje(f.atleta_id, { texto: limpio, autor: 'coach', clienteId: uuid() }); aviso(`Mensaje enviado a ${f.primerNombre}`, 'ok'); alEnviar?.({ texto: limpio, tono }); }
+    catch (e) { aviso(e?.message || 'No se ha podido enviar', 'error'); }
+  });
+  const idArea = `${id}-texto`;
+  return (
+    <div id={id} class="pila-s rad-borrador">
+      <div class="rad-tonos" role="radiogroup" aria-label="Tono del mensaje">
+        {TONOS.map((t) => (
+          <label key={t} class={`rad-tono ${tono === t ? 'elegido' : ''}`}>
+            <input type="radio" class="sr" name={`${id}-tono`} value={t} checked={tono === t} onChange={() => setTono(t)} />
+            <span class="rad-tono-nombre">{NOMBRE_TONO[t]}</span>
+            <span class="rad-tono-texto">{propuestas[t]}</span>
+          </label>
+        ))}
+      </div>
+      <div class="pila-xs revision-nota">
+        <label class="peq secundario" for={idArea}>Mensaje para {f.primerNombre} (edítalo a tu gusto)</label>
+        <textarea id={idArea} rows="3" maxLength={MAX_BORRADOR} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} />
+      </div>
+      {!chat && <p class="mini terciario" style={{ margin: 0 }}>{f.grupo === 'invitado' ? 'Aún no entra en la app: mándaselo por WhatsApp o cópialo.' : 'Ya no está en el equipo: mándaselo por WhatsApp o cópialo, y después «Ya le escribí».'}</p>}
+      <div class="revision-acciones rad-acciones">
+        {chat && <button class="btn btn-peq btn-primario" onClick={enviar} disabled={ocupado || !limpio}><Icono n="mensaje" /> Enviar</button>}
+        <button class="btn btn-peq" onClick={async () => aviso((await copiar(limpio)) ? 'Mensaje copiado' : 'Selecciona el texto y cópialo')} disabled={!limpio}><Icono n="copiar" /> Copiar</button>
+        {contactos.datos && contactos.datos[f.atleta_id] && <BotonWhatsApp telefono={contactos.datos[f.atleta_id]} texto={limpio} />}
+        <button class="btn btn-peq" onClick={() => setVuelta((v) => v + 1)}>Otras frases</button>
+        {f.grupo === 'invitado' && <button class="btn btn-peq" onClick={() => setVerInv(true)}>Nuevo código y mensaje</button>}
+      </div>
+      {verInv && <Invitacion atleta={{ id: f.atleta_id, nombre: f.nombre }} alCerrar={() => setVerInv(false)} />}
+    </div>
   );
 }

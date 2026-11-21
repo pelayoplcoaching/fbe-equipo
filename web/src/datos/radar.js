@@ -5,18 +5,20 @@
 // tus recordatorios y pendientes, objetivos propuestos y vídeos sin corregir. Todo lo que falte (una migración que no
 // está) se queda vacío, sin romper nada.
 import { fechaMadrid, sumarDias, diasEntre } from '../logica/fechas.js';
-import { DIAS_HISTORIA, ultimosMensajes, programadosPorAtleta, mensajesDelAtleta } from '../logica/radar/contactos.js';
+import { DIAS_HISTORIA, ultimosMensajes, programadosPorAtleta, mensajesDelAtleta, historiaContacto, haSalido, haceDias } from '../logica/radar/contactos.js';
+import { objetivoDe } from '../logica/radar/ajustes.js';
 import { pendientesPorAtleta, escribirPendiente, leerPendiente } from '../logica/radar/pendientes.js';
 import { enfriandoDe } from '../logica/radar/senales.js';
 import { normalFrase } from '../logica/radar/borrador.js';
 
 const COLS = 'id,atleta_id,autor,creado_en,eliminado_en';
 // De más a menos columnas: una base sin las migraciones del chat más nuevas responde igual, con menos detalle
-const INTENTOS = [`${COLS},enviar_en,cliente_id,resumen_sesion`, `${COLS},enviar_en,cliente_id`, `${COLS},enviar_en`, COLS];
+// (v0.202) leido_en: si ha leído tu último mensaje
+const INTENTOS = [`${COLS},enviar_en,cliente_id,resumen_sesion,leido_en`, `${COLS},enviar_en,cliente_id,resumen_sesion`, `${COLS},enviar_en,cliente_id`, `${COLS},enviar_en`, COLS];
 
 // Solo lo que hace falta para contar (ni el texto ni a qué van unidos), también con un backend que no recorta columnas
 const loJusto = (c) => ({ id: c.id, atleta_id: c.atleta_id, autor: c.autor, creado_en: c.creado_en, eliminado_en: c.eliminado_en || null,
-  enviar_en: c.enviar_en || null, cliente_id: c.cliente_id || null, resumen_sesion: !!c.resumen_sesion });
+  enviar_en: c.enviar_en || null, cliente_id: c.cliente_id || null, resumen_sesion: !!c.resumen_sesion, ...('leido_en' in c ? { leido_en: c.leido_en || null } : {}) });
 
 async function comentariosRecientes(backend, desde) {
   let error = null;
@@ -48,7 +50,8 @@ async function sesionesRecientes(backend, atletaIds, desde) {
 // El día (de Madrid) en que cada atleta envió su último check-in ({ [atleta_id]: 'YYYY-MM-DD' }) y (v0.201) ese check-in
 // entero, para el resumen de «Cómo está» y su nota: { dias, filas }
 const COLS_CK = 'atleta_id,semana_inicio,creado_en';
-const COLS_CK_TODO = `${COLS_CK},horas_sueno,energia,recuperacion,motivacion,adherencia_desayuno,adherencia_comida,adherencia_merienda,adherencia_cena,satisfaccion_dieta,notas,revisado_en`;
+// (v0.202) con su id, para contestarle en el hilo del check-in
+const COLS_CK_TODO = `id,${COLS_CK},horas_sueno,energia,recuperacion,motivacion,adherencia_desayuno,adherencia_comida,adherencia_merienda,adherencia_cena,satisfaccion_dieta,notas,revisado_en`;
 async function ultimosCheckins(backend, atletaIds, desde) {
   if (!atletaIds.length) return { dias: {}, filas: {} };
   const q = (cols) => backend.select('checkins', { in: { atleta_id: atletaIds }, gte: { semana_inicio: desde }, order: [['semana_inicio', 'desc']], cols });
@@ -109,7 +112,10 @@ async function extraRadar({ api, backend }, { hoy, resumenes, activos, comentari
     const p = personalDe[id] || null;
     // La última pausa que ya ha terminado (vuelve al día siguiente de su «hasta»), si fue en la última semana
     const fin = (pausas || []).filter((x) => x.atleta_id === id && x.hasta && x.hasta < hoy).map((x) => sumarDias(x.hasta, 1)).sort().pop() || null;
+    // (v0.202) tu último mensaje (si lo último es tuyo) sin leer, de ayer o antes
+    const ultimoMio = coachUltimo ? comentarios.find((c) => c.id === u.coach.id) : null;
     out[id] = {
+      sinLeer: ultimoMio && !ultimoMio.leido_en && 'leido_en' in ultimoMio && u.coach.dia < hoy ? { dia: u.coach.dia } : null,
       mensajeAtleta: atletaUltimo ? { id: u.atleta.id, dia: u.atleta.dia, texto: texto[u.atleta.id] ?? null } : null,
       preguntaCoach: coachUltimo && texto[u.coach.id] ? { id: u.coach.id, dia: u.coach.dia, texto: texto[u.coach.id] } : null,
       checkin: checkinFilas[id] || null,
@@ -129,27 +135,64 @@ async function extraRadar({ api, backend }, { hoy, resumenes, activos, comentari
   return out;
 }
 
-// Todo lo que el radar necesita, de una vez: { hoy, resumenes, comentarios, sesiones, checkins, extra, programados }
+// (v0.202) Lo de los que no están activos: su última invitación (sin activar) y el día de su baja (antiguos)
+async function extraOtros(backend, resumenes) {
+  const ids = resumenes.filter((r) => ['invitado', 'baja'].includes(r.estado)).map((r) => r.atleta_id);
+  if (!ids.length) return {};
+  const [inv, at] = await Promise.all([
+    backend.select('invitaciones', { in: { atleta_id: ids }, order: [['creada_en', 'desc']], cols: 'atleta_id,creada_en,usada_en' }).catch(() => []),
+    backend.select('atletas', { in: { id: ids }, cols: 'id,baja_en' }).catch(() => []),
+  ]);
+  const out = {};
+  for (const i of inv || []) if (!out[i.atleta_id]?.invitacion) (out[i.atleta_id] ||= {}).invitacion = { creada_en: i.creada_en };
+  for (const a of at || []) if (a.baja_en) (out[a.id] ||= {}).bajaEn = a.baja_en;
+  return out;
+}
+
+// Todo lo que el radar necesita, de una vez: { hoy, resumenes, comentarios, sesiones, checkins, extra, programados, otros }
+// (v0.202) Los mensajes de las 8 últimas semanas (para la gráfica de tu contacto)
+export const DIAS_GRAFICA = 56;
 export async function datosRadar({ api, backend }, { hoy = fechaMadrid() } = {}) {
   const resumenes = await api.resumenes(hoy);
   const activos = resumenes.filter((r) => r.estado === 'activo').map((r) => r.atleta_id);
-  const [comentarios, sesiones, cks] = await Promise.all([
-    comentariosRecientes(backend, sumarDias(hoy, -DIAS_HISTORIA)),
+  const [comentarios, sesiones, cks, otros] = await Promise.all([
+    comentariosRecientes(backend, sumarDias(hoy, -DIAS_GRAFICA)),
     sesionesRecientes(backend, activos, sumarDias(hoy, -7)).catch(() => ({})),
     ultimosCheckins(backend, activos, sumarDias(hoy, -21)).catch(() => ({ dias: {}, filas: {} })),
+    extraOtros(backend, resumenes).catch(() => ({})),
   ]);
   const extra = await extraRadar({ api, backend }, { hoy, resumenes, activos, comentarios, checkinFilas: cks.filas }).catch(() => ({}));
-  return { hoy, resumenes, comentarios, sesiones, checkins: cks.dias, extra, programados: programadosPorAtleta(comentarios) };
+  return { hoy, resumenes, comentarios, sesiones, checkins: cks.dias, extra, programados: programadosPorAtleta(comentarios), otros };
 }
 
 // (v0.201) Al abrir la fila de un atleta: sus objetivos (para «Cómo está» y si está cerca o lo ha conseguido) y lo que
 // le has escrito en las últimas 4 semanas (para no repetirle una frase). → { objetivos, enviados: [texto normalizado] }
-export async function abrirRadar({ api, backend }, atletaId, { hoy = fechaMadrid() } = {}) {
-  const [objetivos, mios] = await Promise.all([
+// (v0.202) Con mes: true, las cifras de su mes (o del pasado, los dos primeros días); con bloqueId, las de su bloque
+export async function abrirRadar({ api, backend }, atletaId, { hoy = fechaMadrid(), mes = false, bloqueId = null } = {}) {
+  const [objetivos, mios, mesCifras, bloqueCifras] = await Promise.all([
     api.objetivos ? api.objetivos(atletaId, hoy).catch(() => []) : [],
     backend.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${sumarDias(hoy, -DIAS_HISTORIA)}T00:00:00` }, order: [['creado_en', 'desc']], limit: 80, cols: 'id,texto,eliminado_en' }).catch(() => []),
+    mes && api.resumenesMensuales ? cifrasMes(api, atletaId, hoy).catch(() => null) : null,
+    bloqueId ? cifrasBloque({ api, backend }, atletaId, bloqueId, hoy).catch(() => null) : null,
   ]);
-  return { objetivos: objetivos || [], enviados: (mios || []).filter((c) => !c.eliminado_en && c.texto).map((c) => normalFrase(c.texto)) };
+  return { objetivos: objetivos || [], enviados: (mios || []).filter((c) => !c.eliminado_en && c.texto).map((c) => normalFrase(c.texto)), mesCifras, bloqueCifras };
+}
+// { sesiones, records } del mes (el pasado, los dos primeros días del mes)
+async function cifrasMes(api, atletaId, hoy) {
+  const meses = await api.resumenesMensuales(atletaId, { n: 2, salud: false, nutricion: false });
+  const quiero = Number(hoy.slice(8, 10)) <= 2 ? sumarDias(`${hoy.slice(0, 8)}01`, -1).slice(0, 7) : hoy.slice(0, 7);
+  const m = (meses || []).find((x) => String(x.mes || '').slice(0, 7) === quiero) || null;
+  return m ? { sesiones: m.sesiones?.hechas || 0, records: Array.isArray(m.records) ? m.records.length : 0 } : null;
+}
+// { hechas, totalSesiones, records } de su bloque
+async function cifrasBloque({ api, backend }, atletaId, bloqueId, hoy) {
+  const semanas = await backend.select('semanas', { eq: { bloque_id: bloqueId }, cols: 'id,fecha_inicio' });
+  if (!semanas.length) return null;
+  const ses = await backend.select('sesiones', { in: { semana_id: semanas.map((w) => w.id) }, cols: 'id,completada' });
+  const inicio = semanas.map((w) => w.fecha_inicio).filter(Boolean).sort()[0] || null;
+  const dias = inicio ? Math.max(1, Math.min(120, Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${inicio}T12:00:00Z`)) / 864e5) + 1)) : 30;
+  const ev = api.actividad ? await api.actividad(atletaId, dias, hoy).catch(() => []) : [];
+  return { hechas: ses.filter((x) => x.completada).length, totalSesiones: ses.length, records: (ev || []).filter((e) => e.tipo === 'record').length };
 }
 
 // (v0.201) Tus temas pendientes: apuntar uno (desde hoy o desde otro día, para «Recuérdamelo») y darlo por hablado
@@ -169,4 +212,22 @@ export async function pendienteHecho({ api }, nota, { hoy = fechaMadrid() } = {}
 export async function recordsRecientes({ api }, atletaId, { hoy = fechaMadrid(), dias = 7 } = {}) {
   const eventos = await api.actividad(atletaId, dias, hoy);
   return eventos.filter((e) => e.tipo === 'record').map((e) => ({ ejercicio: String(e.titulo || '').replace(/^R\u00e9cord en /, ''), texto: e.detalle || '', fecha: e.fecha }));
+}
+
+// (v0.202) El contacto con un atleta para su ficha: { semanas: [días por semana, 8], ultimo: 'hace 3 días' | null, objetivo }
+export async function contactoDeAtleta({ api, backend }, atletaId, { hoy = fechaMadrid() } = {}) {
+  const [filas, aj] = await Promise.all([
+    backend.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${sumarDias(hoy, -DIAS_GRAFICA)}T00:00:00` }, cols: 'id,atleta_id,autor,creado_en,eliminado_en,enviar_en,cliente_id' })
+      .catch(() => backend.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, gte: { creado_en: `${sumarDias(hoy, -DIAS_GRAFICA)}T00:00:00` }, cols: 'id,atleta_id,autor,creado_en,eliminado_en' })),
+    api.radarAjustes ? api.radarAjustes().catch(() => undefined) : undefined,
+  ]);
+  // (una difusión no cuenta: aquí no se ven los demás atletas del mismo envío, así que se mira el cliente_id con todos)
+  const envios = [...new Set((filas || []).map((c) => c.cliente_id).filter(Boolean))];
+  const masivos = envios.length ? await backend.select('comentarios', { in: { cliente_id: envios }, cols: 'id,atleta_id,cliente_id' }).catch(() => []) : [];
+  const porEnvio = {};
+  for (const c of masivos || []) (porEnvio[c.cliente_id] ||= new Set()).add(c.atleta_id);
+  const propios = (filas || []).filter((c) => !c.cliente_id || (porEnvio[c.cliente_id]?.size || 1) < 2);
+  const semanas = historiaContacto(propios, { hoy })[atletaId] || Array(8).fill(0);
+  const ult = propios.filter((c) => !c.eliminado_en && haSalido(c)).map((c) => fechaMadrid(new Date(c.enviar_en || c.creado_en))).sort().pop() || null;
+  return { semanas, ultimo: ult ? haceDias(diasEntre(ult, hoy)) : null, objetivo: objetivoDe(aj, atletaId) };
 }

@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.202': {
+    coach: [
+      'A quién escribir, segunda tanda: tu objetivo y tu tono con cada uno, con qué tono te contesta y si ha leído tu último mensaje.',
+      'Comenta su sesión o su check-in desde aquí, nota de voz con guion, una llamada, su mes y su bloque en números y su mejor hora.',
+      'Ronda por tema y cierre del domingo, los que no están activos, tu contacto en 8 semanas, «Contacto» en su ficha y teclado.',
+    ],
+  },
   '0.201': {
     coach: [
       'A quién escribir: lo que te escribió a la vista, «Cómo está» cada uno, si se enfría, lo próximo y lo pendiente de hablar.',
