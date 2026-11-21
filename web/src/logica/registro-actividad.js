@@ -25,7 +25,12 @@ export function vezAnterior(historial = [], ejercicioId, sesionId, fecha = null)
 // Lo mejor de unas series: su 1RM estimado más alto (con carga) o sus repeticiones (sin carga)
 export function mejorDe(series = []) {
   const conKg = (series || []).filter((s) => conReps(s) && Number(s.kg) > 0);
-  if (conKg.length) return { tipo: 'kg', valor: Math.max(...conKg.map((s) => e1rm(s) || 0)) };
+  if (conKg.length) {
+    const rms = conKg.map((s) => e1rm(s)).filter((v) => v > 0);
+    if (rms.length) return { tipo: 'kg', valor: Math.max(...rms) };
+    // con muchas repeticiones (más de 12) no hay 1RM estimado: la serie que más mueve, kilos por repeticiones
+    return { tipo: 'carga', valor: Math.max(...conKg.map((s) => Number(s.kg) * Number(s.reps))) };
+  }
   const r = (series || []).filter(conReps);
   return r.length ? { tipo: 'reps', valor: Math.max(...r.map((s) => Number(s.reps))) } : null;
 }
@@ -34,7 +39,7 @@ export function frenteAnterior(hechas = [], anteriores = []) {
   const a = mejorDe(hechas), b = mejorDe(anteriores);
   if (!a || !b || a.tipo !== b.tipo || !(b.valor > 0)) return null;
   const d = a.valor - b.valor;
-  const umbral = a.tipo === 'kg' ? Math.max(0.25, b.valor * 0.005) : 0.5;
+  const umbral = a.tipo === 'reps' ? 0.5 : Math.max(0.25, b.valor * 0.005);
   return { dir: d > umbral ? 'sube' : d < -umbral ? 'baja' : 'igual', d: Math.round(d * 10) / 10, tipo: a.tipo };
 }
 // Su 1RM estimado del día en un ejercicio, frente a la vez anterior y frente a su mejor marca de antes de ese día

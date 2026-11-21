@@ -96,7 +96,7 @@ export function Actividad({ atleta, irA }) {
             <div><dt>Último check-in</dt><dd>{cab.checkin ? haceDias(cab.checkin.dias) : 'Ninguno en 30 días'}</dd></div>
           </dl>
           <div class="act-mapa" role="img" aria-label={`Sus últimos 30 días: ${cab.entrenos30} con entreno`}>
-            {cab.mapa.map((d) => <i key={d.fecha} class={`${d.si ? 'si' : ''} ${d.record ? 'record' : ''} ${d.hoy ? 'hoy' : ''}`} />)}
+            {cab.mapa.map((d) => <i key={d.fecha} class={`${d.si ? 'am-si' : ''} ${d.record ? 'am-rec' : ''} ${d.hoy ? 'am-hoy' : ''}`} />)}
           </div>
         </section>
       )}

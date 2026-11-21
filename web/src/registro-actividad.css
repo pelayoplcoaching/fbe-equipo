@@ -57,11 +57,12 @@
 .act-cifras dt { font-size: var(--letra-12); font-weight: 650; color: var(--tinta-3); }
 .act-cifras dd { margin: 0; font-size: var(--letra-15); font-weight: 700; color: var(--tinta); }
 @media (min-width: 620px) { .act-cifras { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.act-mapa { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: var(--esp-2); }
-.act-mapa i { aspect-ratio: 1; border-radius: var(--r-2); background: var(--hoja-2); position: relative; }
-.act-mapa i.si { background: var(--morado); }
-.act-mapa i.record::after { content: ""; position: absolute; top: -25%; right: -25%; width: 55%; height: 55%; border-radius: 50%; background: var(--oro-500); }
-.act-mapa i.hoy { outline: var(--filo-medio) solid var(--tinta-3); outline-offset: 1px; }
+/* (las clases del mapa llevan am-: .record ya es otra cosa en estilos.css) */
+.act-mapa { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: var(--esp-2); max-width: 30rem; }
+.act-mapa i { display: block; min-width: 0; padding: 0; aspect-ratio: 1; border-radius: var(--r-2); background: var(--hoja-3); position: relative; }
+.act-mapa i.am-si { background: var(--morado); }
+.act-mapa i.am-rec::after { content: ""; position: absolute; top: -25%; right: -25%; width: 55%; height: 55%; border-radius: 50%; background: var(--oro-500); }
+.act-mapa i.am-hoy { outline: var(--filo-medio) solid var(--tinta-3); outline-offset: 1px; }
 .actividad-busca { position: relative; display: flex; align-items: center; }
 .actividad-busca svg { position: absolute; left: var(--esp-10); width: var(--ico-16); height: var(--ico-16); color: var(--tinta-3); pointer-events: none; }
 .actividad-busca .entrada { padding-left: var(--esp-32); }

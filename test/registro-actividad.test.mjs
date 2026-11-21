@@ -110,10 +110,19 @@ console.log('Actividad ampliada, en la demo');
   check(hoyISO().length === 10, '(fecha de hoy)');
 }
 
+console.log('Muchas repeticiones (sin 1RM estimado)');
+{
+  const hoy = [{ kg: 30, reps: 15, rpe: 9 }, { kg: 30, reps: 14 }], antes = [{ kg: 30, reps: 13 }];
+  check(R.mejorDe(hoy).tipo === 'carga' && R.mejorDe(hoy).valor === 450, 'con más de 12 repeticiones, la serie que más mueve (kilos por repeticiones)');
+  check(R.frenteAnterior(hoy, antes).dir === 'sube', 'y se compara con la vez anterior igual');
+  check(R.e1rmDelDia(hoy, [], 'e', 's') === null, 'sin «1RM 0 kg»');
+}
+
 console.log('Lo que tiene que estar en su sitio');
 {
   const css = src('registro-actividad.css');
   check(/^[\x00-\x7F]*$/.test(css), 'registro-actividad.css, solo ASCII');
+  check(!/\.act-mapa i\.(si|record|hoy)\b/.test(css) && /am-rec/.test(src('ui/coach/Actividad.jsx')), 'el mapa de 30 días con clases propias (.record ya existe)');
   check(!/opacity/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')), 'ningún texto entra con opacidad');
   check(src('main.jsx').indexOf("'./registro-actividad.css'") > src('main.jsx').indexOf("'./progreso-visual-2.css'"), 'se carga después de la tanda de progreso');
   const reg = src('ui/coach/RegistroCoach.jsx');
