@@ -9,6 +9,19 @@ const NOCHE = '#0B0726', MORADO_NOCHE = '#1E1548', TIZA = '#F1F0F6', ORO = '#F2C
 let VIOLETA = '#5438D8', LAVANDA = '#A08CFF';
 export function acentoTravesia(claro, oscuro) { if (/^#[0-9A-F]{6}$/i.test(claro || '')) VIOLETA = claro; if (/^#[0-9A-F]{6}$/i.test(oscuro || '')) LAVANDA = oscuro; }
 
+// (v0.207) Un óvalo o un arco con radio negativo (algo que se encoge en su animación y pasa de 0 un instante) hace que
+// el navegador corte el dibujo con un error («IndexSizeError»: pasó una vez en la 0.153). En los lienzos del juego, un radio
+// negativo se queda en 0: ese trozo no se ve durante ese cuadro y lo demás sigue.
+export function sinRadiosNegativos(c) {
+  if (!c || c.__radiosSeguros) return c;
+  const ovalo = typeof c.ellipse === 'function' ? c.ellipse.bind(c) : null, arco = typeof c.arc === 'function' ? c.arc.bind(c) : null;
+  const r0 = (r) => (r > 0 ? r : 0);
+  if (ovalo) c.ellipse = (x, y, rx, ry, ...resto) => ovalo(x, y, r0(rx), r0(ry), ...resto);
+  if (arco) c.arc = (x, y, r, ...resto) => arco(x, y, r0(r), ...resto);
+  c.__radiosSeguros = true;
+  return c;
+}
+
 // Tres cordilleras al fondo, de lejos a cerca: cada una, una fila de picos que se repite cada `periodo` px
 function cordillera(semilla, { periodo, alto, ancho, n }) {
   const r = azar(semilla);
@@ -68,7 +81,7 @@ function cordilleraPintada(capa, nc, { suelo, dpr, deDia, tinte, bruma, ligero }
   const alto = Math.ceil(suelo * Math.max(capa.picos.reduce((m, q) => Math.max(m, q.h), 0), ligero ? 0 : 0.24)) + 2;
   const lienzo = document.createElement('canvas');
   lienzo.width = Math.ceil(capa.periodo * dpr); lienzo.height = Math.ceil(alto * dpr);
-  const c = lienzo.getContext('2d');
+  const c = sinRadiosNegativos(lienzo.getContext('2d'));
   if (!c) return null;
   c.setTransform(dpr, 0, 0, dpr, 0, alto * dpr - suelo * dpr);   // (y en las mismas medidas que la pantalla: el pie, en `suelo`)
   for (let k = -1; k <= 1; k++) {
@@ -327,6 +340,7 @@ function pino(c, px, base, ph, oscuro, claro, nevado) {
 // brillos); contraste: los obstáculos con borde claro; temblor: false para que el tropiezo no sacuda la pantalla;
 // combo: el multiplicador de ahora (las estrellas cogidas dicen «+2»)
 export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, fantasma = null, amigo = null, pueblo = null, skin = null, seguidores = 0, corren = 0, cielo: constel = null, meta = null, fin = false, ligero = false, minimo = false, contraste = false, temblor = true, combo = 1, adornos = [], marcas = [], reloj = null, quedan = null, especial = null, dorada = false }) {
+  sinRadiosNegativos(c);
   // (top, tanda 2) la tormenta del momento raro: mientras dura, llueve y relampaguea
   const enTormenta = !!e.tormenta && e.x >= e.tormenta.desde && e.x <= e.tormenta.hasta;
   const fase = amb?.fase || 'noche', paisaje = amb?.paisaje || 0, clima = enTormenta ? 'tormenta' : amb?.clima || null;
@@ -1445,6 +1459,7 @@ export function pintar(c, e, p, { w, h, t, dt = 0, quieto = false, amb = null, f
 
 // (tanda 3) Un lobo suelto, parado en mitad de la zancada, para elegirlo en «Tu travesía»
 export function pintarLobo(c, { w, h, skin = null, fase = 0.9 }) {
+  sinRadiosNegativos(c);
   c.clearRect(0, 0, w, h);
   const u = Math.min(w / 3.2, h / 1.75);
   c.save(); c.translate(w * 0.53, h * 0.94); c.scale(u, -u);
@@ -1455,6 +1470,7 @@ export function pintarLobo(c, { w, h, skin = null, fase = 0.9 }) {
 // (remate, tanda 7) «La vuelta a casa»: al acabar la sesión, el lobo vuelve a su guarida bajo el cielo de esa hora.
 // k: de 0 (sale de la izquierda) a 1 (ya ha llegado y se sienta). Escena fija salvo el lobo; sin texto (lo pone la tarjeta)
 export function pintarVuelta(c, { w, h, k = 1, t = 0, fase = 'noche', paisaje = 0, skin = null }) {
+  sinRadiosNegativos(c);
   const cielo = CIELOS[fase] || CIELOS.noche, deDia = fase === 'dia';
   const g = c.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, cielo[0]); g.addColorStop(0.6, cielo[1]); g.addColorStop(1, cielo[2]);
