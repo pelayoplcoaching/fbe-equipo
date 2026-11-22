@@ -40,7 +40,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
           if (a && y === sy && a.top < alto && a.top + a.h > 0 && Math.abs(r.top - a.top) > max) { max = Math.abs(r.top - a.top); quien = el; }
           antes.set(el, { top: r.top, h: r.height }); }
         // (y qué se movió, para que el fallo lo diga: la clase del bloque y los px)
-        if (max > 3) { window.__mov += Math.round(max); (window.__quien ||= []).push(`${quien.tagName.toLowerCase()}.${[...quien.classList].slice(0, 2).join('.')} ${Math.round(max)}`); }
+        if (max > 3) { window.__mov += Math.round(max); window.__movMax = Math.max(window.__movMax || 0, Math.round(max)); (window.__quien ||= []).push(`${quien.tagName.toLowerCase()}.${[...quien.classList].slice(0, 2).join('.')} ${Math.round(max)}`); }
         window.__huecos = Math.max(window.__huecos, document.querySelectorAll('.reserva-hueco[data-hueco]').length);
         sy = y; requestAnimationFrame(paso);
       };
@@ -168,7 +168,7 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
     // ---------- 3. Pantallas que no se mueven al cargar
     {
       const quieta = (p) => p.evaluate(() => new Promise((r) => { let h = -1, n = 0; const i = setInterval(() => { const a = document.documentElement.scrollHeight + document.querySelectorAll('.siluetas, .reserva-hueco[data-hueco]').length * 100000; if (a === h) n++; else { h = a; n = 0; } if (n >= 10) { clearInterval(i); r(); } }, 80); }));
-      const medir = async (p, accion) => { await p.evaluate(() => { window.__mov = 0; window.__huecos = 0; window.__quien = []; }); await accion(); await p.waitForTimeout(300); await quieta(p); return p.evaluate(() => ({ px: window.__mov, huecos: window.__huecos, quedan: document.querySelectorAll('.reserva-hueco[data-hueco]').length, quien: [...new Set(window.__quien)].slice(0, 3).join(', ') })); };
+      const medir = async (p, accion) => { await p.evaluate(() => { window.__mov = 0; window.__movMax = 0; window.__huecos = 0; window.__quien = []; }); await accion(); await p.waitForTimeout(300); await quieta(p); return p.evaluate(() => ({ px: window.__mov, max: window.__movMax || 0, huecos: window.__huecos, quedan: document.querySelectorAll('.reserva-hueco[data-hueco]').length, quien: [...new Set(window.__quien)].slice(0, 3).join(', ') })); };
       for (const [quien, listo, otras] of [[/Ana López/, '.hero-dia', ['Semana', 'Comidas', 'Progreso']], [/Pelayo/, 'button.tarjeta-atleta:visible', ['Revisar']]]) {
         const { ctx, p } = await abrir(null, {}, { retraso: 200 });
         // La primera vez en este dispositivo no se sabe cuánto ocupa cada cosa: se pasa por las pantallas y se apunta
@@ -189,8 +189,9 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
         }
         const hoy = await medir(p, () => irASeccion(p, quien.source.includes('Ana') ? 'Hoy' : 'Atletas'));
         // (con la máquina cargada, la fila de los botones de Hoy puede asentarse unos pocos px al volver: de 3 a 7 px, unas
-        // 8 veces en las pasadas completas de noviembre. Un salto de verdad, de lo que llega tarde, son decenas de px)
-        check(hoy.px <= 8, `${quien.source}: y al volver a la primera pantalla sale entera al momento (${hoy.px} px${hoy.quien ? `: ${hoy.quien}` : ''})`);
+        // 8 veces en las pasadas completas de noviembre; en la de Año Nuevo, tres de 4 o 5 px seguidos, 13 en total. Un salto
+        // de verdad, de lo que llega tarde, son decenas de px de golpe: por eso se mira el mayor salto, y la suma con holgura)
+        check(hoy.max <= 8 && hoy.px <= 16, `${quien.source}: y al volver a la primera pantalla sale entera al momento (${hoy.px} px; el mayor salto, ${hoy.max}${hoy.quien ? `: ${hoy.quien}` : ''})`);
         await ctx.close();
       }
     }
