@@ -306,9 +306,12 @@ export async function probarPulido3({ navegador, check, base = 'http://localhost
           `al salir una versión en la que solo cambia un archivo, la actualización descarga ${bajadas.length} de ${precarga.length} (${bajadas.join(', ')}); antes, todos`);
         // Se activa («Actualizar») y la app queda entera con lo nuevo
         await p.evaluate(async () => { const reg = await navigator.serviceWorker.getRegistration(); reg.waiting?.postMessage('activar'); });
-        const trasActivar = await esperar(async () => { const g = await guardado(); return Object.keys(g).length === 1 && g['fbe-atletas-siguiente'] ? g['fbe-atletas-siguiente'] : null; });
+        // (v0.207: la anterior se guarda unos días, para quien tenga la app abierta con ella; solo ella)
+        let cachesTras = [];
+        const trasActivar = await esperar(async () => { const g = await guardado(); cachesTras = Object.keys(g); return g['fbe-atletas-siguiente'] && Object.keys(g).length <= 2 ? g['fbe-atletas-siguiente'] : null; });
         const iconoGuardado = await p.evaluate(async () => { const r = await (await caches.open('fbe-atletas-siguiente')).match('icono.svg'); return r ? r.text() : ''; });
         const falta = trasActivar ? precarga.map((u) => (u === './' ? '/' : `/${u}`)).filter((u) => !trasActivar.includes(u)) : ['todo'];
+        check(cachesTras.every((k) => k === 'fbe-atletas-siguiente' || k === `fbe-atletas-${vA}`), `y de las anteriores solo se guarda la última (${cachesTras.join(', ')})`);
         check(falta.length === 0 && iconoGuardado === icono, `la versión nueva queda guardada entera (${trasActivar ? trasActivar.length : 0} archivos${falta.length ? `; faltan ${falta.join(', ')}` : ''}), con el archivo cambiado, y la anterior se borra`);
         // Y abre sin conexión (la demo, tras guardarse su código en la versión nueva)
         await p.reload();

@@ -5994,6 +5994,16 @@ if (parte('Cómo va la app en cada dispositivo')) try {
   console.log('  ✗ cómo va la app en cada dispositivo:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// (v0.207) «Móvil lento»: abrir la app, empezar la sesión y pasar a Progreso con el procesador frenado 4 veces y la base
+// a 170 ms por consulta, con tiempos máximos (test/e2e-movil-lento.mjs)
+if (parte('v0.207: un móvil lento')) try {
+  const { probarMovilLento } = await import('./e2e-movil-lento.mjs');
+  await probarMovilLento({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el móvil lento:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.185: el editor manual, segunda tanda (test/e2e-editor-185.mjs)
 if (parte('v0.185: el editor manual, segunda tanda')) try {
   const { probarEditor185 } = await import('./e2e-editor-185.mjs');
