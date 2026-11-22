@@ -2864,12 +2864,22 @@ try {
   check((await hojaVotos.textContent()).includes('Ana L.') && (await hojaVotos.textContent()).includes('Carlos V.'), '«Ver quién ha votado»: los nombres de cada opción');
   await revisar('equipo-encuesta');
   await hojaVotos.getByRole('button', { name: 'Cerrar', exact: true }).click();
-  // Los filtros del muro
-  await p.getByRole('button', { name: 'Logros', exact: true }).click();
-  await p.waitForFunction(() => { const x = document.querySelectorAll('.post'); return x.length > 0 && [...x].every((e) => e.classList.contains('post-logro')); });
+  await hojaVotos.waitFor({ state: 'detached' });
+  // Los filtros del muro. (Una vez, en la pasada completa del 16/12, el toque en «Logros» no se quedó: seguía «Todo»
+  // marcado y el muro entero; suelto, con la misma fecha y con la máquina ocupada, pasa siempre. Si el muro no cambia en
+  // 8 s, se avisa (⚠, con lo que había) y se toca otra vez.)
+  const filtrarMuro = async (nombre, listo) => {
+    const b = p.getByRole('button', { name: nombre, exact: true });
+    await b.click();
+    if (await p.waitForFunction(listo, null, { timeout: 8000 }).then(() => true).catch(() => false)) return;
+    const habia = await p.evaluate(() => `marcado «${document.querySelector('.chip-filtro[aria-pressed="true"]')?.textContent || 'ninguno'}», ${document.querySelectorAll('.post').length} publicaciones, dirección ${location.hash}`);
+    console.log(`  ⚠ el filtro «${nombre}» no cambió el muro en 8 s (${habia}): se toca otra vez`);
+    await b.click();
+    await p.waitForFunction(listo);
+  };
+  await filtrarMuro('Logros', () => { const x = document.querySelectorAll('.post'); return x.length > 0 && [...x].every((e) => e.classList.contains('post-logro')); });
   check(await p.locator('.post').count() === await p.locator('.post-logro').count() && await p.getByRole('button', { name: 'Logros', exact: true }).getAttribute('aria-pressed') === 'true', 'el filtro «Logros»: solo los logros');
-  await p.getByRole('button', { name: 'Lo mío', exact: true }).click();
-  await p.waitForFunction(() => { const x = document.querySelectorAll('.post'); return x.length === 1 && x[0].textContent.includes('Primera semana en el equipo'); });
+  await filtrarMuro('Lo mío', () => { const x = document.querySelectorAll('.post'); return x.length === 1 && x[0].textContent.includes('Primera semana en el equipo'); });
   check(await p.locator('.post', { hasText: 'Primera semana en el equipo' }).count() === 1, '«Lo mío»: solo lo suyo');
   await revisar('equipo-filtros');
   await p.getByRole('button', { name: 'Todo', exact: true }).click();
