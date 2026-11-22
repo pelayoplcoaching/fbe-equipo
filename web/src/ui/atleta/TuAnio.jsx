@@ -3,7 +3,7 @@
 // siempre que toque. Solo entrenamiento: nada de peso, medidas, nutrición, hábitos ni datos de salud.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Capa, PortadaHistoria, usePreferencia } from '../comunes.jsx';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../../logica/anio.js';
 import { nombreSaludo } from '../../logica/personal.js';
 import { num } from '../../logica/calculos.js';

@@ -10,7 +10,7 @@ import { lanzarConfeti } from '../confeti.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach } from './Personal.jsx';
 import { imagenCelebracion, imagenHito } from '../../logica/imagenes.js';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { datosRacha } from '../../logica/compartir.js';
 
 // La llama: tres capas que titilan a destiempo (transform desde la base). Sus colores son el fuego, no el tema.

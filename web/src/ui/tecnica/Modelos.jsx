@@ -4,7 +4,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando } from '../comunes.jsx';
 import { Reproductor } from '../Video.jsx';
-import { capturarPoster } from '../Archivos.jsx';
+import { capturarPoster } from '../archivos-perezoso.jsx';
 import { CamaraVideo, puedeGrabarVideo } from './CamaraVideo.jsx';
 
 export const ANGULOS_MODELO = ['De lado', 'De frente', 'A 45°', 'Desde atrás'];

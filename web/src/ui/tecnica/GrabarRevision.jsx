@@ -10,7 +10,7 @@ import { audioParaMicro } from '../sonido.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja, usePreferencia } from '../comunes.jsx';
 import { reproductorDe } from '../Video.jsx';
-import { VerArchivo } from '../Archivos.jsx';
+import { VerArchivo } from '../archivos-perezoso.jsx';
 import { revocarLuego, crearGrabacion, puedeComponer, pintarFotograma, pintarDibujo, pintarBurbuja, pintarPildora, pintarMarcaAgua, pintarTextos, soltarFlujo, formatoComposicion, pintarEstela } from './compositor.js';
 import { useCorrecciones } from './correcciones.js';
 import { medidasSalida, burbuja, esquinaMasCercana, esquinaValida, NOMBRE_ESQUINA, ESQUINAS, MAX_SEG_REVISION, MAX_SEG_CARA, elegirFormato, lineaDeCapas, capasEn } from '../../logica/composicion.js';

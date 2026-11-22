@@ -10,7 +10,7 @@ import { pesoNum, pesoTxt, etiquetaPeso, difVista } from '../logica/unidades.js'
 import { BotonModelo } from './tecnica/Modelos.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGrupo, imagenEjercicio } from '../logica/imagenes.js';
-import { HojaCompartir } from './Compartir.jsx';
+import { HojaCompartir } from './compartir-perezoso.jsx';
 import { datosComparativa } from '../logica/compartir.js';
 import { FichaFBE, HojaGuia } from './Guias.jsx';
 import { fichaDeEjercicio } from '../datos/guias.js';

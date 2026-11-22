@@ -22,16 +22,9 @@ import { leerRed, mostrarOpcionWifi } from '../logica/red.js';
 const TEMAS = [['sistema', <><Icono n="movil" class="seg-ico" /> Sistema</>], ['claro', <><Icono n="sol" class="seg-ico" /> Claro</>], ['oscuro', <><Icono n="luna" class="seg-ico" /> Oscuro</>], ['sol', <><Icono n="reloj" class="seg-ico" /> Con el sol</>]];
 export const VERSION_APP = typeof __APP_VERSION__ === 'undefined' ? '' : String(__APP_VERSION__);
 
-// icono (v0.50): con él, la fila lleva su cuadrito a la izquierda, como el resto de la lista agrupada
-export function Interruptor({ id, texto, ayuda, valor, alCambiar, desactivado = false, icono = null, tono = '' }) {
-  return (
-    <li class={`panel-pad interruptor-fila${icono ? ' fila-ios con-ico' : ''}`}>
-      {icono && <IcoIos n={icono} tono={tono} />}
-      <label for={id} class="pila-xs"><span>{texto}</span>{ayuda && <span class="peq terciario">{ayuda}</span>}</label>
-      <input id={id} type="checkbox" role="switch" class="interruptor" checked={valor} disabled={desactivado} onChange={(e) => alCambiar(e.currentTarget.checked)} />
-    </li>
-  );
-}
+// (v0.207) Interruptor, en su propio archivo (Hoy y las notificaciones lo usan y así no cargan los ajustes al abrir la app)
+import { Interruptor } from './Interruptor.jsx';
+export { Interruptor };
 
 // Ajustes de este dispositivo (v0.50, en lista agrupada): tema, negro puro, acento y tamaño de la letra; en el móvil
 // del atleta, además, «Sonido y vibración» (en su hoja), la pantalla encendida y los kilos en Hoy. El coach solo ve

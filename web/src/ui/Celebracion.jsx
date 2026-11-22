@@ -10,7 +10,7 @@
 // Sin la 045, lo que la necesita no sale (las tres reacciones de siempre, sin pegatinas, momentos ni hitos).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, cuando } from './comunes.jsx';
-import { HojaCompartir } from './Compartir.jsx';
+import { HojaCompartir } from './compartir-perezoso.jsx';
 import { reducirFoto } from './FotoPerfil.jsx';
 import { lanzarConfeti } from './confeti.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';

@@ -4,7 +4,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
 import { semanaTipo, repartirComoSiempre, textoDias } from '../../logica/personal.js';
 import { HojaSuscripcion, useIntegraciones } from './Conexiones.jsx';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { datosPlanSemana } from '../../logica/compartir.js';
 import { diaPrevistoValido, cuandoDia, repartir, calendarioICS, LETRAS_DIA } from '../../logica/plan.js';
 import { sumarDias, hoyISO, desdeISO, fmtConDia, rangoSemana } from '../../logica/fechas.js';

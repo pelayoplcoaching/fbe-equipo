@@ -3,7 +3,7 @@
 // el cambio se anuncia. La tarjeta del día, los avisos de tu coach y «Tu día» no se mueven ni se quitan.
 import { useRef, useState } from 'preact/hooks';
 import { Hoja, Icono } from '../comunes.jsx';
-import { Interruptor } from '../Ajustes.jsx';
+import { Interruptor } from '../Interruptor.jsx';
 import { ARRIBA_HOY, DIALES_HOY, leerPanel, moverSeccion, alternarSeccion, alternarDial, panelPorDefecto, nombreSeccion } from '../../logica/hoy-panel.js';
 
 // pref / fijar: lo guardado (usePreferencia); disponibles: las secciones que hoy tienen algo; diales: los que puede tener

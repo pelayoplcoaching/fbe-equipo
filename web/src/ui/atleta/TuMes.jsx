@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Anillo, usePreferencia, Cargando, Capa, PortadaHistoria } from '../comunes.jsx';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } from '../../logica/mes.js';
 import { num } from '../../logica/calculos.js';

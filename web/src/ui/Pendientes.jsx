@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono } from './comunes.jsx';
-import { capturarPoster } from './Archivos.jsx';
+import { capturarPoster } from './archivos-perezoso.jsx';
 import { EVENTO_PENDIENTES, listarPendientes, quitarPendiente, marcarPendiente, archivoDe, conCerrojo, ponerSubida, sigueEnElMovil, PERDIDO } from '../datos/pendientes.js';
 import { leerRed, motivoEspera, ETIQUETA_ESPERA, TEXTO_ESPERA } from '../logica/red.js';
 import { ajuste } from './ajustes.js';

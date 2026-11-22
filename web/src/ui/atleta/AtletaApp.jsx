@@ -10,6 +10,7 @@ import { hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
 import { hayGuias } from '../../datos/guias.js';
 import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
@@ -100,7 +101,7 @@ export function AtletaApp() {
   // cerrar con la app abierta: se vuelve a mirar al volver a la app.
   const comunidad = useCarga(() => (propio || atleta.estado === 'baja' ? Promise.resolve({ activa: false }) : api.comunidad()), [atleta.id, atleta.estado]);
   // (pulido 2.10) con la app ya quieta, se van trayendo por detrás las pantallas que se cargan al abrirlas
-  useEffect(() => precargarEnReposo([Sesion, Semana, Progreso, Mensajes, Perfil, Comidas, Recetas, Aprende, ...(comunidad.datos?.activa ? [Equipo] : []), Checkin, VideoEnlazado]), [!!comunidad.datos?.activa]);
+  useEffect(() => precargarEnReposo([Sesion, Semana, Progreso, Mensajes, Perfil, Comidas, Recetas, Aprende, ...(comunidad.datos?.activa ? [Equipo] : []), Checkin, VideoEnlazado, HojaCompartir]), [!!comunidad.datos?.activa]);
   useEffect(() => {
     const al = () => { if (document.visibilityState === 'visible') comunidad.recargar(true); };
     document.addEventListener('visibilitychange', al);

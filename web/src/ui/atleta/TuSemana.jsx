@@ -7,7 +7,7 @@ import { ajuste } from '../ajustes.js';
 import { Imagen } from '../Imagen.jsx';
 import { imagenCelebracion } from '../../logica/imagenes.js';
 import { pesoTxt } from '../../logica/unidades.js';
-import { HojaCompartir } from '../Compartir.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { datosSemanaCompleta } from '../../logica/compartir.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];

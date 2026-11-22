@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Paso, Segmentos, Cargando, Vacio, useUnaVez, cuando } from './comunes.jsx';
 import { NuevaFoto } from './atleta/CamaraGuiada.jsx';
-import { SubirArchivo, VerArchivo } from './Archivos.jsx';
+import { SubirArchivo, VerArchivo } from './archivos-perezoso.jsx';
 import { TIPOS_TAREA, NOMBRE_TIPO_TAREA, ICONO_TAREA, PLANTILLAS_SUGERIDAS, cuandoTarea, estadoTarea, resumenTareas, MAX_RESPUESTA } from '../logica/tareas.js';
 import { hoyISO, sumarDias, fmtConDia } from '../logica/fechas.js';
 

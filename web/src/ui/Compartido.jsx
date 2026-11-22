@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Cargando, Icono } from './comunes.jsx';
-import { SubirArchivo } from './Archivos.jsx';
+import { SubirArchivo } from './archivos-perezoso.jsx';
 import { queToca } from '../logica/plan.js';
 
 // «Compartir → FBE Equipo» un vídeo desde la galería (v0.48, Android con la app instalada). El service worker lo deja

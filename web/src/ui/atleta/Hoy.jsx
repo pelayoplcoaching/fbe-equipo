@@ -19,7 +19,7 @@ import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargand
 import { resumenDia, ordenDia, colocarDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { Hilo } from '../Hilo.jsx';
-import { VerArchivo } from '../Archivos.jsx';
+import { VerArchivo } from '../archivos-perezoso.jsx';
 import { TarjetaSemana, HistoriaSemana } from './TuSemana.jsx';
 import { Bienvenida, PrimerosPasos } from './Bienvenida.jsx';
 import { AvisoLogros } from '../Logros.jsx';
@@ -54,7 +54,7 @@ import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '
 import { HojaTarea } from '../Tareas.jsx';
 import { TarjetaMes } from './TuMes.jsx';
 import { TarjetaAnio } from './TuAnio.jsx';
-import { RecordatorioCompartir } from '../Compartir.jsx';
+import { RecordatorioCompartir } from '../RecordatorioCompartir.jsx';
 import { textoCierreAuto } from '../../logica/cierre.js';
 import { TarjetaAniversario } from '../Celebracion.jsx';
 import { CieloHora, fiestaAhora } from '../Cielo.jsx';

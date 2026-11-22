@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono } from './comunes.jsx';
-import { NOVEDADES } from '../novedades.js';
 import { novedadesQueVer, claveVersionVista, versionVistaInicial } from '../logica/novedades-app.js';
 import { clavePrivacidadLocal } from '../logica/privacidad.js';
 
@@ -17,12 +16,27 @@ export function prepararVersionVista(uid) {
 }
 
 // La hoja «Novedades», una vez por versión (cerrarla de cualquier forma cuenta como vista, en este móvil)
+// (v0.207, rendimiento) La lista de novedades (novedades.js, unos 55 KB) solo se pide si esta versión aún no se ha visto en
+// este móvil: casi siempre ni se carga
 export function AvisoNovedades({ uid, rol = 'atleta' }) {
-  const [lista] = useState(() => (uid ? novedadesQueVer(NOVEDADES, { vista: leer(claveVersionVista(uid)), actual: VERSION_APP, rol }) : []));
-  const [ver, setVer] = useState(lista.length > 0);
+  const [lista, setLista] = useState([]);
+  const [ver, setVer] = useState(false);
   const hecho = useRef(false);
-  // Sin nada que contar de esta versión (un arreglo, o nada para el coach), queda vista igualmente
-  useEffect(() => { if (uid && !lista.length) guardar(claveVersionVista(uid), VERSION_APP); }, []);
+  useEffect(() => {
+    if (!uid) return undefined;
+    const vista = leer(claveVersionVista(uid));
+    if (vista === VERSION_APP) return undefined;
+    let vivo = true;
+    import('../novedades.js').then(({ NOVEDADES }) => {
+      if (!vivo) return;
+      const l = novedadesQueVer(NOVEDADES, { vista, actual: VERSION_APP, rol });
+      // Sin nada que contar de esta versión (un arreglo, o nada para el coach), queda vista igualmente
+      if (!l.length) { guardar(claveVersionVista(uid), VERSION_APP); return; }
+      setLista(l);
+      setVer(true);
+    }).catch(() => { /* sin la lista (sin conexión y sin guardar): ya saldrá la próxima vez */ });
+    return () => { vivo = false; };
+  }, []);
   if (!ver) return null;
   const cerrar = () => {
     if (hecho.current) return;

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { Hoja, Icono, Anillo, PortadaHistoria, CifraSube } from './comunes.jsx';
 import { MapaMuscular } from './MapaMuscular.jsx';
-import { HojaCompartir } from './Compartir.jsx';
+import { HojaCompartir } from './compartir-perezoso.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
 import { num, signo, NOMBRE_FOCO } from '../logica/calculos.js';
 import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';

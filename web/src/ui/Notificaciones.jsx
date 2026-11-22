@@ -3,7 +3,7 @@
 // es de cada navegador.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando, FilaIos } from './comunes.jsx';
-import { Interruptor } from './Ajustes.jsx';
+import { Interruptor } from './Interruptor.jsx';
 import { conNutricion } from '../logica/nivel.js';
 import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
 import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail, EVENTO_PUSH } from '../datos/push.js';
