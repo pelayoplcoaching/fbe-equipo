@@ -61,7 +61,14 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     const antes = await nVoz();
     await p.mouse.move(cx, cy); await p.mouse.down();
     const activar = p.getByRole('dialog', { name: 'Activar el micro' });
-    await activar.waitFor({ timeout: 8000 });
+    // (con la máquina cargada, el chat aún puede estar colocándose y el toque caer fuera del botón: si en 8 s no ha
+    // salido la hoja, se suelta, se vuelve a medir dónde está el botón y se pulsa otra vez)
+    if (!(await activar.waitFor({ timeout: 8000 }).then(() => true).catch(() => false))) {
+      await p.mouse.up();
+      [cx, cy] = await centro();
+      await p.mouse.move(cx, cy); await p.mouse.down();
+      await activar.waitFor({ timeout: 8000 });
+    }
     await p.mouse.up();
     check(await grabando.count() === 0 && await revisar.count() === 0 && await p.evaluate(() => window.__pistas.length === 0) && await nVoz() === antes, 'la primera vez (el sistema va a preguntar por el micro) no se graba a ciegas: sale «Activar el micro», sin abrir aún el micro');
     await activar.getByRole('button', { name: 'Activar el micro' }).click();
@@ -87,7 +94,11 @@ export async function probarVoz179({ navegador, check, base = 'http://localhost:
     await p.locator('.toast').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     await micro.focus(); await p.keyboard.press('Enter');
     const ayuda = p.getByRole('dialog', { name: 'Activar el micro' });
-    await ayuda.waitFor({ timeout: 8000 });
+    // (como arriba: si el primer Enter llega antes de tiempo, se pulsa otra vez)
+    if (!(await ayuda.waitFor({ timeout: 8000 }).then(() => true).catch(() => false))) {
+      await micro.focus(); await p.keyboard.press('Enter');
+      await ayuda.waitFor({ timeout: 8000 });
+    }
     check(await ayuda.locator('ol.ayuda-micro li').count() >= 3 && /bloqueado/.test(await ayuda.textContent()), 'con el micro bloqueado, «Activar el micro»: los pasos para ese aparato (en vez de un error sin más)');
     await ayuda.getByRole('button', { name: 'Entendido' }).click();
     await ayuda.waitFor({ state: 'detached' });

@@ -11,6 +11,7 @@
 //   · «Saltar» la para y lo suelta todo (vuelve «ambient»); fuera de la sesión, la píldora la lleva y ⏭ la salta;
 //   · a 360 px en oscuro, con el teclado y sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
+import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
@@ -81,7 +82,7 @@ export async function probarPista062({ navegador, check, base = 'http://localhos
   }
   async function hojaSonido(pg) {
     await cerrarDialogos(pg);
-    await pg.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(pg);
     await pg.getByRole('button', { name: /^Sonido y vibración/ }).click();
     const h = pg.getByRole('dialog', { name: 'Sonido y vibración' });
     await h.waitFor();

@@ -6,6 +6,7 @@
 //   A 390 px, sin errores, desbordes ni fallos de accesibilidad.
 //   Dentro de e2e.test.mjs:  const { probarViaje } = await import('./e2e-viaje.mjs'); await probarViaje({ navegador, check });
 import { createRequire } from 'node:module';
+import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -54,11 +55,14 @@ export async function probarViaje({ navegador, check, base = 'http://localhost:4
     await p.locator('nav.tabs, button.persona').first().waitFor();
     if (await p.locator('button.persona').count()) await p.getByRole('button', { name: /Ana López/ }).first().click();
     await p.locator('nav.tabs').waitFor();
+    // La portada de carga (el lobo) tapa la app hasta que se va: con la máquina cargada tarda, y un toque con force
+    // caía en ella y no hacía nada
+    await p.waitForFunction(() => !document.getElementById('portada'));
     await cerrarDialogos();
   };
   const hojaNotificaciones = async () => {
     await p.waitForTimeout(400);
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     await p.locator('.fila-notificaciones').waitFor();
     await p.locator('.fila-notificaciones').getByRole('button', { name: /^Notificaciones/ }).click();
     const h = p.getByRole('dialog', { name: 'Notificaciones' });

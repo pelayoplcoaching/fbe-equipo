@@ -9,6 +9,7 @@
 //   · volver al teclado del móvil (desde el teclado y en Perfil) y a 360 px en oscuro, sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
 import { devices } from 'playwright';
+import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -342,7 +343,7 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
       '«Usar el teclado del móvil» vuelve al de siempre (los campos con su teclado y el RPE en su desplegable) y se guarda en este móvil');
     await p.locator('.sesion-vista .cabecera').getByRole('button', { name: 'Volver' }).click();
     await p.locator('nav.tabs').waitFor();
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     const sw = p.getByRole('switch', { name: /Teclado de la app al apuntar las series/ });
     await sw.waitFor();
     check(!(await sw.isChecked()), 'en Perfil → Este móvil, «Teclado de la app al apuntar las series», apagado');

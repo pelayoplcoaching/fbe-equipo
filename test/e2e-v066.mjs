@@ -3,6 +3,7 @@
 //   · el coach, en la Actividad de Ana, dice «Bien hecho» a un entreno con un toque: un mensaje en el hilo de esa sesión.
 import { createRequire } from 'node:module';
 import { devices } from 'playwright';
+import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -91,7 +92,7 @@ export async function probarV066({ navegador, check, base = 'http://localhost:41
     await cerrarDialogos();
 
     // ---------------------------------------------------------------- modo gimnasio
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     const sw = p.getByRole('switch', { name: /Modo gimnasio/ });
     await sw.scrollIntoViewIfNeeded();
     check(!(await sw.isChecked()) && !(await p.evaluate(() => document.documentElement.hasAttribute('data-gimnasio'))), '«Modo gimnasio» sale en Este móvil, apagado de serie');

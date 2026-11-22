@@ -20,11 +20,36 @@ export async function irASeccion(p, nombre) {
 
 // (visual 3) Perfil tiene dos vistas, «Tú» y «Ajustes»: va a Perfil y pasa a «Ajustes» (conexiones, el reloj, este
 // móvil, los mensajes, guías, preguntas y la cuenta)
+// Con la máquina cargada, un toque puede caer mientras la pantalla aún se está montando y no hacer nada: si a los pocos
+// segundos no se ve «Ajustes» elegida, se vuelve a intentar (hasta tres veces) desde donde se haya quedado.
 export async function irAAjustes(p) {
-  await irASeccion(p, 'Perfil');
   const t = p.getByRole('tab', { name: 'Ajustes', exact: true });
-  await t.waitFor({ timeout: 10000 });
-  if ((await t.getAttribute('aria-selected')) !== 'true') await t.click();
+  const elegida = () => t.getAttribute('aria-selected', { timeout: 2000 }).then((v) => v === 'true').catch(() => false);
+  for (let i = 1; i <= 3; i++) {
+    if (!(await t.isVisible().catch(() => false))) await irASeccion(p, 'Perfil');
+    if (!(await t.waitFor({ timeout: 10000 }).then(() => true).catch(() => false))) continue;
+    if (!(await elegida())) await t.click({ timeout: 5000 }).catch(() => {});
+    for (let n = 0; n < 20 && !(await elegida()); n++) await p.waitForTimeout(200);
+    if (await elegida()) return;
+  }
+  // La última, sin red: que el error diga qué faltaba
+  await t.waitFor({ timeout: 2000 });
+  if (!(await elegida())) throw new Error('irAAjustes: la pestaña «Ajustes» del perfil no se deja elegir');
+}
+
+// Lo mismo, pero entrando por el enlace #ajustes (como al tocar una notificación): si en unos segundos no ha llevado a
+// «Ajustes», se entra tocando, con irAAjustes
+// (Pasaba 1 de cada 3 pasadas completas tras cerrar una sesión con «Volver», y nunca suelta: si vuelve a pasar, el
+// aviso ⚠ dice dónde se quedó, para buscar la causa en la app.)
+export async function irAAjustesPorEnlace(p) {
+  const antes = await p.evaluate(() => location.hash);
+  await p.evaluate(() => { location.hash = '#ajustes'; });
+  const t = p.getByRole('tab', { name: 'Ajustes', exact: true });
+  const ok = await p.waitForFunction(() => document.querySelector('[role=tab][aria-selected="true"]')?.textContent.trim() === 'Ajustes', null, { timeout: 6000 }).then(() => true).catch(() => false);
+  if (ok && await t.isVisible().catch(() => false)) return;
+  const donde = await p.evaluate(() => `dirección ${location.hash}, pestaña ${document.querySelector('nav.tabs .tab[aria-current="page"]')?.textContent.trim() || '?'}, vista ${document.querySelector('[role=tab][aria-selected="true"]')?.textContent.trim() || '-'}`).catch(() => '?');
+  console.log(`  ⚠ el enlace #ajustes no llevó a Ajustes en 6 s (antes ${antes || 'sin #'}; ahora ${donde}): se entra tocando`);
+  await irAAjustes(p);
 }
 
 // ¿Tiene esa sección (en la barra o en «Más»)? Deja «Más» cerrada

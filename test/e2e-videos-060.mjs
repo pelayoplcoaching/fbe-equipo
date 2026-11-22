@@ -10,7 +10,7 @@
 //   · la atleta ve las dos respuestas en vídeo en su hilo y responde con la suya;
 //   · todo a 360 px, en oscuro, con el teclado y sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
-import { subProgreso } from './secciones.mjs';
+import { subProgreso, irAAjustesPorEnlace } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -328,7 +328,7 @@ export async function probarVideos060({ navegador, check, base = 'http://localho
     check(await estrecho('hilo-atleta-v060'), 'a 360 px en oscuro, su vídeo con las respuestas cabe');
     // «Este móvil»: difuminar la cara de serie
     await cerrarDialogos();
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     const aj = p.getByRole('switch', { name: 'Difuminar la cara al enviar un vídeo' });
     await aj.waitFor({ timeout: 8000 }).catch(() => {});
     if (await aj.count()) {

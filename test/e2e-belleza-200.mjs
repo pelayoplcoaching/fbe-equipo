@@ -5,6 +5,7 @@
 //   Suelta:  npm run build && node test/e2e-belleza-200.mjs
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
@@ -118,7 +119,7 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     check(await hasta(async () => (await p.evaluate(() => window.__ondas)) >= 1, 2000), 'al pulsar, la onda');
     check(await hasta(async () => (await p.locator('.onda-capa').count()) === 0, 3000), 'y se va sola');
     // Se apaga en Ajustes
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     const sw = p.getByRole('switch', { name: /Decoración de temporada/ });
     await sw.waitFor();
     check(await sw.isChecked(), 'en Ajustes, «Decoración de temporada», encendida de serie');
@@ -209,7 +210,7 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     await foto('200-lluvia-fiesta');
     await p.evaluate(() => { localStorage.removeItem('fbe-probar-clima'); localStorage.removeItem('fbe-probar-fiesta'); });
     // «Con el sol»: a las 23:15, oscuro
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     const tema = p.getByRole('group', { name: 'Tema', exact: true });
     await tema.waitFor();
     await tema.getByRole('button', { name: /Con el sol/ }).click();

@@ -145,7 +145,8 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     // (v0.195: el orden vale para todo; aquí se mira entre los vídeos)
     await p.getByRole('group', { name: 'Qué revisar' }).getByRole('button', { name: /^Vídeos/ }).click();
     await p.getByLabel('Cómo ordenar lo que hay por revisar').selectOption('espera');
-    await p.waitForTimeout(300);
+    // (con la máquina cargada, la lista tarda en recolocarse: se espera a que el primero sea el suyo, hasta 8 s)
+    await p.waitForFunction(() => document.querySelector('.tarjeta-revisar .chip.espera')?.textContent.includes('hace 30 h'), null, { timeout: 8000 }).catch(() => {});
     const primero = await p.locator('.tarjeta-revisar').first().locator('.chip.espera').textContent().catch(() => '');
     check(primero.includes('hace 30 h'), 'ordenado por «más tiempo esperando», el suyo va primero');
     await p.getByRole('button', { name: 'Tus tiempos de revisión' }).click();

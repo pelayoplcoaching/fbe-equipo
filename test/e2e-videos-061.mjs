@@ -13,7 +13,7 @@
 //     «cellular» de prueba, sale, y un vídeo espera («Esperando wifi») hasta «Subir ahora»;
 //   · a 360 px en oscuro, con el teclado y sin fallos de accesibilidad.
 import { createRequire } from 'node:module';
-import { subProgreso } from './secciones.mjs';
+import { subProgreso, irAAjustesPorEnlace } from './secciones.mjs';
 import { readFileSync } from 'node:fs';
 import { centroEn, W as VW, H as VH, DURACION } from '../scripts/video-barra-demo.mjs';
 
@@ -350,7 +350,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await revisar('mi-tecnica-perfil');
 
     // ---------------------------------------------------------------- 20. Solo con wifi
-    await p.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(p);
     await p.locator('#grupo-este-movil').waitFor({ timeout: 10000 }).catch(() => {});
     const tipo = await p.evaluate(() => navigator.connection?.type ?? null);
     check(tipo === null && await p.getByRole('switch', { name: 'Subir los vídeos solo con wifi' }).count() === 0, '(20) donde el navegador no dice el tipo de conexión (este Chromium, como el iPhone o el ordenador), la opción no sale');
@@ -375,7 +375,7 @@ export async function probarVideos061({ navegador, check, base = 'http://localho
     await q.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
     await q.waitForFunction(() => !document.getElementById('portada'));
     await entrarComo('Ana López', q);
-    await q.evaluate(() => { location.hash = '#ajustes'; });
+    await irAAjustesPorEnlace(q);
     const sw = q.getByRole('switch', { name: 'Subir los vídeos solo con wifi' });
     await sw.waitFor({ timeout: 10000 });
     check(!(await sw.isChecked()), '(20) con datos móviles (Chrome de Android), «Subir los vídeos solo con wifi» sale, apagada');
