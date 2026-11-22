@@ -1764,7 +1764,7 @@ try {
   // v0.50: el día de descanso (si hoy no es domingo, Torso B pasa a mañana un momento): una idea para hoy y lo que viene
   if (new Date().getDay() !== 0) {
     const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    await p.locator('.toca-hoy').waitFor();
+    await p.locator('.toca-hoy:not(.fiesta)').waitFor();
     // (en el centro: arriba la taparía la cabecera pegada)
     await abrirEnHoy(p, 'semana');   // (diseño 9) en Hoy, esta sección va plegada
     await p.getByRole('button', { name: 'Tu plan', exact: true }).evaluate((b) => b.scrollIntoView({ block: 'center' }));
@@ -1863,10 +1863,10 @@ try {
   await abrirAjustes(p);
   await p.getByRole('group', { name: 'Tamaño de la letra' }).getByRole('button', { name: 'Normal' }).click();
   await p.locator('.tab', { hasText: 'Hoy' }).click();
-  await p.locator('.toca-hoy').waitFor();
+  await p.locator('.toca-hoy:not(.fiesta)').waitFor();
 
   console.log('\nDemo: serie top, intervalos y cámara guiada');
-  await p.locator('.toca-hoy').waitFor();
+  await p.locator('.toca-hoy:not(.fiesta)').waitFor();
   check((await p.locator('.titular h2').textContent()) === 'Torso B', 'Ana tenía Torso B para hoy: «Hoy toca»');
   // v0.51: con Torso B prevista para hoy, «Cómo llegas» se contesta desde Hoy y la sesión ya no lo vuelve a preguntar
   // (la misma regla: contestado hoy en este móvil). Si hoy ya hizo otra sesión (los lunes), el dial enseña esa.

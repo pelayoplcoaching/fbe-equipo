@@ -77,8 +77,12 @@ export async function probarTravesia3({ navegador, check, base = 'http://localho
     // lado y en «este mes» aún no están los tres)
     const hoyT = fechaMadrid();
     const semanaEnEsteMes = sumarDias(lunesDe(hoyT), 3).slice(0, 7) === hoyT.slice(0, 7);
-    const eq = await p.locator('.tv-equipo').textContent();
-    check(/Entre todos, este mes/.test(eq) && (semanaEnEsteMes ? /de 50 km · 3 lobos/.test(eq) : /de 50 km/.test(eq)), `y lo que suma el equipo en el mes, con su meta${semanaEnEsteMes ? '' : ' (hoy, esta semana es del mes de al lado)'}`);
+    // (y si es el principio del mes y esta semana aún es del mes pasado, este mes no lleva nada: la barra no sale)
+    if (!semanaEnEsteMes && Number(hoyT.slice(8, 10)) <= 7) check(await p.locator('.tv-equipo').count() === 0, 'y lo del equipo en el mes no sale: esta semana aún cuenta en el mes pasado y este no lleva nada');
+    else {
+      const eq = await p.locator('.tv-equipo').textContent();
+      check(/Entre todos, este mes/.test(eq) && (semanaEnEsteMes ? /de 50 km · 3 lobos/.test(eq) : /de 50 km/.test(eq)), `y lo que suma el equipo en el mes, con su meta${semanaEnEsteMes ? '' : ' (hoy, esta semana es del mes de al lado)'}`);
+    }
     const lobos = p.locator('.tv-lobo');
     check(await lobos.count() === 7 && await lobos.first().getAttribute('aria-pressed') === 'true' && await lobos.nth(4).isDisabled() && /Recorre 25 km/.test(await lobos.nth(4).textContent()) && await lobos.nth(3).isEnabled(),
       'sus lobos: el de tiza, elegido; el dorado ya lo tiene (cinco retos) y el de nieve dice cómo se consigue');

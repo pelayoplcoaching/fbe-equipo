@@ -27,11 +27,12 @@ export async function probarPulido2({ navegador, check, base = 'http://localhost
       } });
     }, retraso);
     // (3) cada fotograma: cuánto se mueve, sin desplazar la pantalla, lo que ya se estaba viendo (window.__mov, en px)
+    //     (sin el cielo de la portada: la lluvia, la nieve o los fuegos de Año Nuevo son adorno que se anima, no algo que se recoloca)
     await p.addInitScript(() => {
       window.__mov = 0; window.__huecos = 0;
       const antes = new WeakMap(); let sy = 0;
       const bloques = () => { const m = document.querySelector('main'); const out = []; if (!m) return out;
-        const baja = (n, prof) => { for (const h of n.children) { if (h.classList.contains('reserva')) { baja(h, prof); continue; } if (h.classList.contains('reserva-hueco')) continue; out.push(h); if (prof < 3 && h.children.length && !/^(svg|button|ul|table)$/i.test(h.tagName)) baja(h, prof + 1); } };
+        const baja = (n, prof) => { for (const h of n.children) { if (h.classList.contains('reserva')) { baja(h, prof); continue; } if (h.classList.contains('reserva-hueco') || h.classList.contains('cielo-hora')) continue; out.push(h); if (prof < 3 && h.children.length && !/^(svg|button|ul|table)$/i.test(h.tagName)) baja(h, prof + 1); } };
         baja(m, 0); return out; };
       const paso = () => {
         const y = window.scrollY, alto = window.innerHeight; let max = 0, quien = null;

@@ -5,6 +5,7 @@
 //   Suelta:  npm run build && node test/e2e-perfil4-t2.mjs
 import { pathToFileURL } from 'node:url';
 import { entrarPerfil, axeEn } from './e2e-perfil4-t1.mjs';
+import { fechaMadrid } from '../web/src/logica/fechas.js';
 
 export async function probarPerfil4T2({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -16,7 +17,10 @@ export async function probarPerfil4T2({ navegador, check, base = 'http://localho
     // Resumen: la equivalencia
     const eq = p.locator('.equivalencia');
     await eq.waitFor({ timeout: 8000 }).catch(() => {});
-    check(/^Este año has (levantado lo que pes|recorrido)/.test((await eq.textContent().catch(() => '')).trim()), `la equivalencia del día: «${(await eq.textContent().catch(() => '—')).trim()}»`);
+    // (los primeros días de enero aún puede no llevar nada este año: entonces no sale)
+    const principioDeAno = /-01-0[1-7]$/.test(fechaMadrid());
+    const textoEq = (await eq.textContent().catch(() => '')).trim();
+    check(/^Este año has (levantado lo que pes|recorrido)/.test(textoEq) || (principioDeAno && !textoEq), `la equivalencia del día: «${textoEq || '—'}»${principioDeAno && !textoEq ? ' (principio de año: aún nada)' : ''}`);
     // Datos: el trimestre
     await pest.getByRole('tab', { name: /Datos|Estad/ }).click();
     const tri = p.locator('.trimestre');
