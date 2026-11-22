@@ -40,7 +40,7 @@ import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { conCarrera } from '../../logica/carrera.js';
 import { tonoDia } from '../../logica/paleta.js';
 import { CarreraHoy, TuCarrera } from './Carrera.jsx';
-import { MenuHoy } from './Comidas.jsx';
+import { MenuHoy } from './MenuHoy.jsx';
 import { planVigente } from '../../logica/nutricion.js';
 import { ajuste } from '../ajustes.js';
 import { AvisoCobro } from './Cobro.jsx';
@@ -48,7 +48,7 @@ import { HojaCuestionario, TarjetaCuestionario, pendiente } from './Cuestionario
 import { TarjetaObjetivos, useObjetivosPropuestos } from './ObjetivosTuyos.jsx';
 import { TarjetaSuplementos, useSuplementos } from './Suplementos.jsx';
 import { AvisoPausa } from '../Pausas.jsx';
-import { TarjetaCardio } from './Sesion.jsx';
+import { TarjetaCardio } from './TarjetaCardio.jsx';
 import { ArteSesion } from './Portada.jsx';
 import { cardioValido, cardioHechoValido, textoCardio, textoCardioHecho } from '../../logica/cardio.js';
 import { HojaTarea } from '../Tareas.jsx';

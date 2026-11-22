@@ -4,7 +4,7 @@
 // la lista de ejercicios con sus pictogramas y un «Empezar» grande. Al empezar, la sesión de siempre.
 import { useApp, useCarga, Icono, Avatar, Disco } from '../comunes.jsx';
 import { PictoEjercicio } from '../Pictograma.jsx';
-import { TarjetaCardio } from './Sesion.jsx';
+import { TarjetaCardio } from './TarjetaCardio.jsx';
 import { LOBO } from '../marca-lobo.js';
 import { arteSesion } from '../../logica/arte.js';
 import { resumenPautas } from '../../logica/diseno.js';

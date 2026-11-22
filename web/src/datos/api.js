@@ -6,7 +6,6 @@ import { resumenAtleta, semanaActual, e1rmPorSemana, seriesPorGrupo, resumenEjer
 import { rachaMaxima, calcularLogros } from '../logica/logros.js';
 import { informeBloque, cumplimiento } from '../logica/informe.js';
 import { resumenAnterior, diasConRecord } from '../logica/progreso-visual-2.js';
-import { horaDe, paronesDe, diasDeAtleta, textoDia, textoParon, detalleParon, ritmoEntrenos } from '../logica/registro-actividad.js';
 import { progresoObjetivo, progresoPeso, mejorReciente } from '../logica/objetivos.js';
 import { limpiarPropuesta, objetivoDePropuesta, tipoDeObjetivo } from '../logica/objetivos-atleta.js';
 import { limpiarSuplemento, horaValida } from '../logica/suplementos.js';
@@ -41,12 +40,9 @@ import { panelNegocio } from '../logica/negocio.js';
 import { normal as normalTexto } from '../logica/busqueda.js';
 import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
-import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor.js';
+import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor-notas.js';
 import { leerPendiente, pendientesPorAtleta } from '../logica/radar/pendientes.js';
-import { limpiarEstilo } from '../logica/radar/borrador.js';
-import { limpiarAjustesRadar } from '../logica/radar/ajustes.js';
 import { progresoAtleta } from '../logica/progreso-revision.js';
-import { limpiarPanelAtleta, limpiarAjustesPanel, hoyTocaDe } from '../logica/panel-atletas.js';
 import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
@@ -540,6 +536,13 @@ const RPC_DE_CONSULTA = new Set(['platos_limpiar' /* (079) la limpieza de fotos 
 // nada) tampoco cuenta: si contara, lo recordado de Hoy (los diales) se olvidaría al abrir la app y, al volver, se moverían
 const esSondeo = (m, a) => m === 'rpc' && a[0] === 'personal_ajustes_guardar' && a[1]?.p_datos == null;
 const esEscritura = (m, a) => (m !== 'rpc' || !RPC_DE_CONSULTA.has(a[0]) || (a[0] === 'presencia_marcar' && !!a[1] && Object.keys(a[1]).length > 0)) && !esSondeo(m, a);
+
+// (v0.207, rendimiento) Lo que solo hace falta en algunas pantallas (la lista de Atletas del coach, «A quién escribir»,
+// Registro y Actividad) se carga al usarlo, no al abrir la app
+const logicaPanelAtletas = () => import('../logica/panel-atletas.js');
+const logicaAjustesRadar = () => import('../logica/radar/ajustes.js');
+const logicaBorradorRadar = () => import('../logica/radar/borrador.js');
+const logicaActividad = () => import('../logica/registro-actividad.js');
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
@@ -2718,6 +2721,7 @@ export function crearApi(backend) {
     // Actividad de un atleta (para el coach): lo que ha hecho en los últimos días, de lo más reciente a lo más antiguo.
     // [{ tipo, fecha, cuando, titulo, detalle, icono, pestana, aviso }]
     async actividad(atletaId, dias = 45, hoy = hoyISO()) {
+      const { horaDe, paronesDe, textoDia, textoParon, detalleParon } = await logicaActividad();
       const desde = sumarDias(hoy, -dias);
       const [entrenos, series, checkins, pesos, archivos, comentarios] = await Promise.all([
         api.entrenamientos(atletaId),
@@ -2822,6 +2826,7 @@ export function crearApi(backend) {
     // (v0.205) lo que la actividad suma de su día a día (cada cosa con su permiso; lo que falle o no esté, fuera) y las
     // sesiones de sus semanas publicadas que no hizo
     async extraActividad(atletaId, desde, hoy = hoyISO()) {
+      const { diasDeAtleta } = await logicaActividad();
       const [habitos, registrosHabito, nutricion, fotos, sup, salud, propuestas, bloques] = await Promise.all([
         b.select('habitos', { eq: { atleta_id: atletaId } }).catch(() => []),
         api.registrosHabitos(atletaId, desde, hoy).catch(() => []),
@@ -4711,13 +4716,14 @@ export function crearApi(backend) {
     // undefined si falta la 085 (entonces se queda en el aparato)
     async panelAtletas() {
       if ((await api.panel085()) !== true) return undefined;
-      const [filas, aj] = await Promise.all([b.select('atletas_panel', {}), b.select('panel_ajustes', { limit: 1 })]);
+      const [filas, aj, { limpiarPanelAtleta, limpiarAjustesPanel }] = await Promise.all([b.select('atletas_panel', {}), b.select('panel_ajustes', { limit: 1 }), logicaPanelAtletas()]);
       const atletas = {};
       for (const f of filas) { const l = limpiarPanelAtleta(f); if (l) atletas[f.atleta_id] = l; }
       return { atletas, ajustes: limpiarAjustesPanel(aj[0]?.datos) };
     },
     // Lo de un atleta (fijado, etiquetas, nota): si no queda nada, se borra su fila
     async guardarPanelAtleta(atletaId, x) {
+      const { limpiarPanelAtleta } = await logicaPanelAtletas();
       if ((await api.panel085()) !== true) throw new Error('Para guardarlo igual en el móvil y en el ordenador falta ejecutar la migración 085 en Supabase (supabase/migraciones/085_atletas_a_tu_gusto.sql).');
       const fila = limpiarPanelAtleta(x);
       if (!fila) { await b.delete('atletas_panel', { eq: { atleta_id: atletaId } }); return null; }
@@ -4725,6 +4731,7 @@ export function crearApi(backend) {
       return fila;
     },
     async guardarPanelAjustes(datos) {
+      const { limpiarAjustesPanel } = await logicaPanelAtletas();
       if ((await api.panel085()) !== true) return false;
       await b.upsert('panel_ajustes', [{ usuario_id: uid(), datos: limpiarAjustesPanel(datos) }], 'usuario_id');
       return true;
@@ -4750,10 +4757,11 @@ export function crearApi(backend) {
     // se queda en el aparato)
     async estiloRadar() {
       if ((await api.radar086()) !== true) return undefined;
-      const [x] = await b.select('radar_ajustes', { limit: 1 });
+      const [[x], { limpiarEstilo }] = await Promise.all([b.select('radar_ajustes', { limit: 1 }), logicaBorradorRadar()]);
       return limpiarEstilo(x?.datos?.estilo);
     },
     async guardarEstiloRadar(estilo) {
+      const { limpiarEstilo } = await logicaBorradorRadar();
       if ((await api.radar086()) !== true) return false;
       const [x] = await b.select('radar_ajustes', { limit: 1 }).catch(() => []);
       const datos = { ...(x?.datos && typeof x.datos === 'object' ? x.datos : {}), estilo: limpiarEstilo(estilo) };
@@ -4763,11 +4771,12 @@ export function crearApi(backend) {
     // (v0.202) Todo lo tuyo de «A quién escribir» (limpiarAjustesRadar): undefined sin la 086
     async radarAjustes() {
       if ((await api.radar086()) !== true) return undefined;
-      const [x] = await b.select('radar_ajustes', { limit: 1 });
+      const [[x], { limpiarAjustesRadar }] = await Promise.all([b.select('radar_ajustes', { limit: 1 }), logicaAjustesRadar()]);
       return limpiarAjustesRadar(x?.datos);
     },
     // Cambiar parte (por ejemplo { objetivos }): se lee lo que hay y se guarda junto. → lo guardado, o false sin la 086
     async guardarRadarAjustes(cambios = {}) {
+      const { limpiarAjustesRadar } = await logicaAjustesRadar();
       if ((await api.radar086()) !== true) return false;
       const [x] = await b.select('radar_ajustes', { limit: 1 }).catch(() => []);
       const datos = limpiarAjustesRadar({ ...(x?.datos && typeof x.datos === 'object' ? x.datos : {}), ...cambios });
@@ -4784,6 +4793,7 @@ export function crearApi(backend) {
     async hoyTocaEquipo(filas, hoy = hoyISO()) {
       const xs = (filas || []).filter((f) => f?.semana_id);
       if (!xs.length) return {};
+      const { hoyTocaDe } = await logicaPanelAtletas();
       const ses = agrupar(await b.select('sesiones', { in: { semana_id: unicos(xs.map((f) => f.semana_id)) }, cols: 'id,semana_id,nombre,dia_previsto,completada,fecha_realizada' }).catch(() => []), 'semana_id');
       const out = {};
       for (const f of xs) { const h = hoyTocaDe(ses[f.semana_id] || [], hoy); if (h) out[f.atleta_id] = h; }
@@ -7434,7 +7444,8 @@ export function crearApi(backend) {
     },
     // (v0.206) su ritmo: entrenos y duración media de las 4 últimas semanas frente a las 4 de antes
     async ritmoEntreno(atletaId, hoy = hoyISO()) {
-      return ritmoEntrenos(await api.entrenamientos(atletaId), hoy);
+      const [{ ritmoEntrenos }, entrenos] = await Promise.all([logicaActividad(), api.entrenamientos(atletaId)]);
+      return ritmoEntrenos(entrenos, hoy);
     },
     // (v0.186) cuantos comentarios escribio el atleta en cada sesion: { sesionId: n }
     // (v0.205) las sesiones a las que ya le has escrito algo en su hilo (Registro: «Ya le has escrito»)

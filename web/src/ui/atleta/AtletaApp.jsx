@@ -5,16 +5,9 @@ import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
-import { Mensajes } from './Mensajes.jsx';
 import { Hoy } from './Hoy.jsx';
-import { Sesion } from './Sesion.jsx';
-import { Semana } from './Semana.jsx';
-import { Progreso } from './Progreso.jsx';
-import { Perfil } from './Perfil.jsx';
-import { Comidas, Recetas } from './Comidas.jsx';
 import { hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
 import { hayGuias } from '../../datos/guias.js';
-import { Aprende } from '../Guias.jsx';
 import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
@@ -36,7 +29,6 @@ import { estadoActividad } from '../../logica/actividad.js';
 import { leerEnlaceVideo } from '../../logica/tecnica.js';
 import { repartirPestanas, PREFERIDAS_ATLETA } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
-import { VideoEnlazado } from '../tecnica/MiTecnica.jsx';
 import { leerAjustes, EVENTO_AJUSTES } from '../ajustes.js';
 import { fijarUnidadPeso } from '../../logica/unidades.js';
 
@@ -44,6 +36,18 @@ import { fijarUnidadPeso } from '../../logica/unidades.js';
 // cargan al abrirlos, y por detrás en cuanto la app se queda quieta: no hacen falta para arrancar
 const Equipo = perezoso(() => import('../Comunidad.jsx'), 'Equipo');
 const Checkin = perezoso(() => import('./Checkin.jsx'), 'Checkin');
+// (v0.207, rendimiento) Al abrir la app solo se carga Hoy: la sesión y el resto de pantallas van en su propio trozo, que
+// se pide al abrirlas o, antes, por detrás en cuanto la app se queda quieta (la sesión, la primera). El service worker los
+// guarda con lo demás, así que también abren sin conexión.
+const Sesion = perezoso(() => import('./Sesion.jsx'), 'Sesion');
+const Semana = perezoso(() => import('./Semana.jsx'), 'Semana');
+const Progreso = perezoso(() => import('./Progreso.jsx'), 'Progreso');
+const Mensajes = perezoso(() => import('./Mensajes.jsx'), 'Mensajes');
+const Perfil = perezoso(() => import('./Perfil.jsx'), 'Perfil');
+const Comidas = perezoso(() => import('./Comidas.jsx'), 'Comidas');
+const Recetas = perezoso(() => import('./Comidas.jsx'), 'Recetas');
+const Aprende = perezoso(() => import('../Guias.jsx'), 'Aprende');
+const VideoEnlazado = perezoso(() => import('../tecnica/MiTecnica.jsx'), 'VideoEnlazado', { mientras: null });
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -96,7 +100,7 @@ export function AtletaApp() {
   // cerrar con la app abierta: se vuelve a mirar al volver a la app.
   const comunidad = useCarga(() => (propio || atleta.estado === 'baja' ? Promise.resolve({ activa: false }) : api.comunidad()), [atleta.id, atleta.estado]);
   // (pulido 2.10) con la app ya quieta, se van trayendo por detrás las pantallas que se cargan al abrirlas
-  useEffect(() => precargarEnReposo([...(comunidad.datos?.activa ? [Equipo] : []), Checkin]), [!!comunidad.datos?.activa]);
+  useEffect(() => precargarEnReposo([Sesion, Semana, Progreso, Mensajes, Perfil, Comidas, Recetas, Aprende, ...(comunidad.datos?.activa ? [Equipo] : []), Checkin, VideoEnlazado]), [!!comunidad.datos?.activa]);
   useEffect(() => {
     const al = () => { if (document.visibilityState === 'visible') comunidad.recargar(true); };
     document.addEventListener('visibilitychange', al);
