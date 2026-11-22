@@ -86,6 +86,10 @@ export async function probarRevision191({ navegador, check, base = 'http://local
     await filas().nth(1).getByRole('button', { name: /^Subir a / }).click();
     const despues = await nombres();
     check(despues[0] === antes[1] && despues[1] === antes[0], '«Mi orden»: se sube a uno con su flecha');
+    // (la demo guarda con un pequeño margen: recargar al instante, con la máquina ocupada, a veces llegaba antes que el
+    // guardado, como en la pasada del 24/12. Fuera de la demo, si se recarga antes de que llegue a la base, ya manda lo
+    // del aparato: v0.206.1)
+    await p.waitForTimeout(700);
     await p.reload();
     await p.locator('.revision-fila').first().waitFor();
     check((await nombres()).join() === despues.join() && await p.getByLabel('Orden de la lista').inputValue() === 'mio', 'y el orden se recuerda al volver');

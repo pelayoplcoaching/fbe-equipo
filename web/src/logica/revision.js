@@ -397,9 +397,10 @@ export function ordenarTabla(filas, col = 'nombre', dir = 1) {
 
 // ---------------------------------------------------------------- los ajustes, entre aparatos (082)
 // Lo de la base manda si existe; si aún no hay nada allí, se sube lo de este aparato. → { frases, orden, modo, vista }
-export function ajustesDeRevision(remoto, local) {
+// (v0.206.1) Salvo `sinSubir`: un cambio hecho en este aparato que no llegó a la base (se recargó o se cerró antes) manda.
+export function ajustesDeRevision(remoto, local, sinSubir = false) {
   const l = local || {};
-  if (!remoto) return { frases: [...(l.frases || [])], orden: [...(l.orden || [])], modo: l.modo || 'urgencia', vista: l.vista || 'lista' };
+  if (!remoto || sinSubir) return { frases: [...(l.frases || [])], orden: [...(l.orden || [])], modo: l.modo || 'urgencia', vista: l.vista || 'lista' };
   return { frases: Array.isArray(remoto.frases) ? remoto.frases : [], orden: Array.isArray(remoto.orden) ? remoto.orden : [], modo: remoto.modo || l.modo || 'urgencia', vista: remoto.vista || l.vista || 'lista' };
 }
 // Lo que cabe en la base: frases limpias (20 de 300) y solo identificadores con forma de identificador (500)

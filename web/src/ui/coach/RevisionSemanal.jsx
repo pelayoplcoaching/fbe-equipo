@@ -13,6 +13,8 @@ import { ChispaSesiones } from './Panel.jsx';
 import { Dictar } from '../Dictar.jsx';
 import { DetalleRevision, HojaBorrador, HojaLote, SemanaPasada, prefRevision, guardarPref, olvidarDetalle } from './RevisionDetalle.jsx';
 
+const SIN_SUBIR = 'fbe-revision-sin-subir';
+
 // (v0.192) los avisos que se le pueden pedir con un mensaje ya escrito (logica/cierre.js: mensajeParaAlerta)
 const PEDIBLES = new Set(['sin_entrenar', 'sesion_abierta', 'sin_peso', 'cumplimiento', 'esfuerzo', 'habitos']);
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -42,15 +44,28 @@ export function RevisionSemanal({ abrirAtleta }) {
   // (v0.192) las frases y el orden, también en la base (082) para tenerlos en todos tus aparatos; la tabla, en pantallas anchas
   const [frases, setFrases] = useState(() => { try { return JSON.parse(localStorage.getItem('fbe-revision-frases') || '[]'); } catch { return []; } });
   const enLaBase = useRef(false);
-  const subir = (a) => { if (enLaBase.current) api.guardarRevisionAjustes(a).catch(() => {}); };
+  // (v0.206.1) mientras un cambio no llega a la base queda una marca en el aparato: si se recarga antes, lo de aquí manda
+  const subidas = useRef(0);
+  const subir = (a) => {
+    const marca = `${Date.now()}-${++subidas.current}`;
+    try { localStorage.setItem(SIN_SUBIR, marca); } catch { /* */ }
+    if (!enLaBase.current) return;
+    api.guardarRevisionAjustes(a).then((ok) => { try { if (ok && localStorage.getItem(SIN_SUBIR) === marca) localStorage.removeItem(SIN_SUBIR); } catch { /* */ } }).catch(() => {});
+  };
   useEffect(() => {
     let vivo = true;
     api.revisionAjustes().then((remoto) => {
       if (!vivo || remoto === undefined) return;
       enLaBase.current = true;
-      const local = { frases, orden: pref.mio, modo: pref.orden, vista: pref.vista };
-      const a = ajustesDeRevision(remoto, local);
-      if (!remoto) { if (local.frases.length || local.orden.length) subir(a); return; }
+      let sinSubir = false;
+      try { sinSubir = !!localStorage.getItem(SIN_SUBIR); } catch { /* */ }
+      // (lo de este aparato, leído ahora: puede haber cambiado mientras llegaba la base)
+      const p = prefRevision();
+      let fr = frases;
+      try { fr = JSON.parse(localStorage.getItem('fbe-revision-frases') || '[]'); } catch { /* */ }
+      const local = { frases: fr, orden: p.mio, modo: p.orden, vista: p.vista };
+      const a = ajustesDeRevision(remoto, local, sinSubir);
+      if (!remoto || sinSubir) { if (sinSubir || local.frases.length || local.orden.length) subir(a); return; }
       setFrases(a.frases); try { localStorage.setItem('fbe-revision-frases', JSON.stringify(a.frases)); } catch { /* */ }
       setPref((x) => { const n = { ...x, orden: a.modo, mio: a.orden, vista: a.vista }; guardarPref(n); return n; });
     }).catch(() => {});

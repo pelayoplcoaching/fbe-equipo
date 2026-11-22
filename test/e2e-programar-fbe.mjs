@@ -245,8 +245,20 @@ export async function probarProgramarFBE({ navegador, check, base = 'http://loca
     // Solo la nota: sin nada marcado, el botón guarda la nota y nada más
     await hoja.getByLabel(/^Nota de la semana \d+ para Ana López$/).fill('Semana tranquila.');
     check((await hoja.locator('.btn-primario').textContent()).trim() === 'Guardar la nota', 'sin cambios que aplicar, se puede guardar solo la nota');
+    // (el aviso dura 2,8 s: en la pasada completa del 24/12, con la máquina ocupada, se fue sin que la prueba lo viera.
+    // Se apunta cada aviso que sale desde antes de tocar, y si falta se dice cuáles salieron)
+    await p.evaluate(() => {
+      const vistos = (window.__avisosVistos = []);
+      const o = new MutationObserver(() => { for (const t of document.querySelectorAll('.toast')) if (!vistos.includes(t.textContent)) vistos.push(t.textContent); });
+      o.observe(document.body, { childList: true, subtree: true, characterData: true });
+      window.__dejarDeVerAvisos = () => o.disconnect();
+    });
     await hoja.locator('.btn-primario').click();
-    check(await hay(p.getByRole('dialog'), 0) && await hay(p.getByText(/Nota guardada en la semana \d+/), 1), 'y lo dice al guardarla');
+    const avisosVistos = () => p.evaluate(() => window.__avisosVistos || []);
+    let dijo = false;
+    for (let fin = Date.now() + 15000; !dijo && Date.now() < fin; await p.waitForTimeout(150)) dijo = (await avisosVistos()).some((t) => /Nota guardada en la semana \d+/.test(t));
+    check(await hay(p.getByRole('dialog'), 0) && dijo, `y lo dice al guardarla${dijo ? '' : ` (avisos vistos: ${JSON.stringify(await avisosVistos())})`}`);
+    await p.evaluate(() => window.__dejarDeVerAvisos?.());
     await p.waitForTimeout(600);
     check(await p.getByLabel('Nota para el atleta').inputValue() === 'Semana tranquila.', 'el editor enseña la nota nueva');
     await boton.click();

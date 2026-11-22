@@ -145,6 +145,8 @@ console.log('\nLa revisión semanal, segunda tanda (v0.192): lo puro');
   const id = '11111111-2222-3333-4444-555555555555';
   check(RV.ajustesDeRevision(null, { frases: ['a'], orden: [id], modo: 'mio' }).frases.join() === 'a' && RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: null, vista: 'tabla' }, { frases: ['a'], modo: 'nombre' }).frases.join() === 'b'
     && RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: null, vista: null }, { modo: 'nombre' }).modo === 'nombre' && RV.ajustesDeRevision(null, null).modo === 'urgencia', 'los ajustes: manda la base; si allí no hay nada, lo de este aparato');
+  check(RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: 'urgencia', vista: 'lista' }, { frases: ['a'], orden: [id], modo: 'mio', vista: 'tabla' }, true).orden.join() === id
+    && RV.ajustesDeRevision({ frases: ['b'], orden: [], modo: 'urgencia', vista: 'lista' }, { frases: ['a'], orden: [id], modo: 'mio' }, true).modo === 'mio', 'pero un cambio de este aparato que no llegó a subirse manda sobre la base');
   const g = RV.ajustesParaGuardar({ frases: [' a  b ', 'a b', '', 'x'.repeat(400)], orden: [id, 'malo', 7], modo: 'raro', vista: 'tabla' });
   check(g.frases.length === 2 && g.frases[0] === 'a b' && g.frases[1].length === 300 && g.orden.join() === id && g.modo === null && g.vista === 'tabla', 'y solo se sube lo que cabe en la base');
   check(RV.lineasCheckin({ adherencia_desayuno: 5, adherencia_cena: 2 }, { adherencia_cena: 4 }, { porComida: true }).filter((x) => /^Adherencia: /.test(x.etiqueta)).map((x) => `${x.etiqueta}:${x.valor}:${x.cambio}`).join() === 'Adherencia: desayuno:5/5:null,Adherencia: cena:2/5:baja'
