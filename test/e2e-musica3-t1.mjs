@@ -144,7 +144,17 @@ export async function probarMusica3Sesion({ navegador, check, base = 'http://loc
     // tocar al ritmo: 6 toques cada 0,5 s → 120 bpm, más lenta que 170 pasos
     await cad.getByRole('button', { name: /A cuántos bpm va lo que suena/ }).click();
     const boton = cad.locator('.tocar-ritmo-boton');
-    for (let i = 0; i < 6; i++) { await boton.click(); await q.waitForTimeout(500); }
+    // (los seis toques, con el reloj de la página: desde fuera, cada clic llegaba algo tarde y con la máquina ocupada
+    // —o en diciembre, con la nieve de temporada— salían 109 bpm)
+    await boton.waitFor();
+    await q.evaluate(() => new Promise((ok) => {
+      const b = document.querySelector('.cadencia .tocar-ritmo-boton');
+      let n = 0;
+      const t0 = performance.now();
+      const uno = () => { b.click(); n++; if (n < 6) setTimeout(uno, Math.max(0, t0 + n * 500 - performance.now())); else ok(); };
+      uno();
+    }));
+    await q.waitForTimeout(200);
     const r = (await cad.locator('.tocar-ritmo-r').textContent()).trim();
     check(/^1[12]\d bpm/.test(r) && /No encaja con tus 170 pasos\/min/.test(r), `«¿A cuántos bpm va lo que suena?» (${r.slice(0, 70)})`);
     check(await q.evaluate(() => document.documentElement.scrollWidth <= 390), 'nada se sale a 390 px (cardio)');
