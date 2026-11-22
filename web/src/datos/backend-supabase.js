@@ -218,14 +218,48 @@ export function crearBackendSupabase({ url, anonKey }) {
     // Para paginar hace falta un orden estable: la clave de la tabla (casi todas, «id»; las que van por persona, no)
     // (una clave de varias columnas va separada por comas: «atleta_id,fecha»)
     for (const clave of (CLAVE_TABLA[tabla] || 'id').split(',')) if (tope > PAGINA && !orden.some(([c]) => c === clave)) orden.push([clave, 'asc']);
-    const filas = [];
-    for (let desde = 0; desde < tope; desde += PAGINA) {
+    const pagina = (desde, hasta) => pedir(() => {
+      let q = aplicarFiltro(sb.from(tabla).select(f.cols || '*'), f);
+      for (const [col, dir] of orden) q = q.order(col, { ascending: dir !== 'desc', nullsFirst: false });
+      return q.range(desde, hasta);
+    });
+    const hasta0 = Math.min(PAGINA, tope) - 1;
+    const primera = await pagina(0, hasta0);
+    if (primera.error) throw traducir(primera.error);
+    const filas = [...primera.data];
+    if (primera.data.length < hasta0 + 1 || tope <= PAGINA) return filas;
+    // (v0.207, datos que crecen) Si hay más de una página, a la vez que la segunda se pregunta cuántas filas hay en total
+    // (solo la cuenta, sin filas) y las demás se piden a la vez, de seis en seis, en vez de una detrás de otra. Con dos
+    // años de historial (unas 8000 series) eran 8 esperas seguidas a la base; ahora, 3. Lo de menos de una página (casi
+    // todo) no cambia. Sin la cuenta, una detrás de otra, como antes.
+    const [cuenta, segunda] = await Promise.all([
+      pedir(() => aplicarFiltro(sb.from(tabla).select(f.cols || '*', { count: 'exact', head: true }), f)).catch(() => null),
+      pagina(PAGINA, Math.min(2 * PAGINA, tope) - 1),
+    ]);
+    if (segunda.error) throw traducir(segunda.error);
+    filas.push(...segunda.data);
+    if (segunda.data.length < Math.min(2 * PAGINA, tope) - PAGINA) return filas;
+    const total = Math.min(tope, Number.isFinite(cuenta?.count) && !cuenta?.error ? cuenta.count : Infinity);
+    if (Number.isFinite(total)) {
+      const desdes = [];
+      for (let d = 2 * PAGINA; d < total; d += PAGINA) desdes.push(d);
+      const partes = new Array(desdes.length);
+      let i = 0;
+      const obrero = async () => {
+        while (i < desdes.length) {
+          const k = i++;
+          const { data, error } = await pagina(desdes[k], Math.min(desdes[k] + PAGINA, total) - 1);
+          if (error) throw traducir(error);
+          partes[k] = data;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(6, desdes.length) }, obrero));
+      for (const x of partes) filas.push(...x);
+      return filas;
+    }
+    for (let desde = 2 * PAGINA; desde < tope; desde += PAGINA) {
       const hasta = Math.min(desde + PAGINA, tope) - 1;
-      const { data, error } = await pedir(() => {
-        let q = aplicarFiltro(sb.from(tabla).select(f.cols || '*'), f);
-        for (const [col, dir] of orden) q = q.order(col, { ascending: dir !== 'desc', nullsFirst: false });
-        return q.range(desde, hasta);
-      });
+      const { data, error } = await pagina(desde, hasta);
       if (error) throw traducir(error);
       filas.push(...data);
       if (data.length < hasta - desde + 1) break;
