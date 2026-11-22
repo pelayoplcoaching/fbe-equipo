@@ -6004,6 +6004,16 @@ if (parte('v0.207: un móvil lento')) try {
   console.log('  ✗ el móvil lento:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
+// (v0.207) Uso largo: la app abierta mucho rato, yendo y viniendo entre pantallas; ni la memoria ni los temporizadores ni
+// los oyentes crecen sin parar (test/e2e-uso-largo.mjs)
+if (parte('v0.207: la app abierta mucho rato')) try {
+  const { probarUsoLargo } = await import('./e2e-uso-largo.mjs');
+  await probarUsoLargo({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el uso largo:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+
 // v0.185: el editor manual, segunda tanda (test/e2e-editor-185.mjs)
 if (parte('v0.185: el editor manual, segunda tanda')) try {
   const { probarEditor185 } = await import('./e2e-editor-185.mjs');
