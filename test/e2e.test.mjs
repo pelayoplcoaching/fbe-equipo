@@ -3304,8 +3304,9 @@ try {
   await hojaTA.waitFor({ state: 'detached' });
   check(await hay(tuDia.locator('.fila-dia.hecho', { hasText: '¿Cómo has dormido esta semana?' }), 1), 'la contesta y queda hecha');
 
-  // Tu mes (historia) en Hoy
-  const tarjetaMes = p.locator('.tarjeta-mes');
+  // Tu mes (historia) en Hoy. (En diciembre y enero también sale «Tu año en FBE», que lleva la misma clase: se deja fuera,
+  // si no la prueba fallaba esos dos meses)
+  const tarjetaMes = p.locator('.tarjeta-mes:not(.tarjeta-anio)');
   await tarjetaMes.waitFor();
   check(/^Tu [a-z]+$/.test(await tarjetaMes.getAttribute('aria-label')), `en Hoy, la tarjeta «${await tarjetaMes.getAttribute('aria-label')}»`);
   await tarjetaMes.locator('.tarjeta-semana-abrir').click();
@@ -3328,7 +3329,7 @@ try {
   await cerrarDialogos();
   if (await historia.isVisible().catch(() => false)) await p.keyboard.press('Escape');
   await historia.waitFor({ state: 'detached' });
-  check(await hay(p.locator('.tarjeta-mes'), 0), 'vista, la tarjeta ya no vuelve a salir en Hoy');
+  check(await hay(p.locator('.tarjeta-mes:not(.tarjeta-anio)'), 0), 'vista, la tarjeta ya no vuelve a salir en Hoy');
 
   // Tu bloque entero
   await p.getByRole('button', { name: 'Tu bloque', exact: true }).click();
