@@ -89,6 +89,16 @@ const agrupar = (filas, col) => filas.reduce((m, f) => ((m[f[col]] ||= []).push(
 export const cuboDe = (ruta, tipo = null) => (tipo ? (tipo === 'audio' ? 'voz' : 'archivos') : /^[^/]+\/audio-[^/]+$/.test(String(ruta || '')) ? 'voz' : 'archivos');
 const porCampo = (filas, col) => Object.fromEntries(filas.map((f) => [f[col], f]));
 const unicos = (xs) => [...new Set(xs.filter((x) => x != null))];
+// (v0.207) fn sobre cada elemento, como mucho n a la vez (para lo que se pide atleta por atleta: ni uno detrás de
+// otro, que con muchos tardaba segundos, ni todos de golpe)
+export async function deNEnN(xs, n, fn) {
+  const lista = [...(xs || [])];
+  const out = new Array(lista.length);
+  let i = 0;
+  const obrero = async () => { while (i < lista.length) { const k = i++; out[k] = await fn(lista[k], k); } };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(n, lista.length)) }, obrero));
+  return out;
+}
 // Las menciones de una publicación o un comentario, con el nombre de quien se ve (las de quien ya no está, fuera)
 const mencionadosDe = (ids, personas) => (ids || []).filter((id) => personas[id]).map((id) => ({ perfil_id: id, nombre: personas[id].nombre }));
 // Servicio y nivel (v0.22) sin la migración 018 en la base: un aviso que diga qué falta, no el error técnico
@@ -759,6 +769,15 @@ export function crearApi(backend) {
   olvidarFotos = () => { fotos = null; };
   // Una foto «gorda» es la de siempre (384 px) aún en «foto»: pendiente de aligerar
   const FOTO_GORDA = 20000;
+  // (v0.207) los atletas del coach ya, y sus fotos por detrás (quien solo necesita saber quiénes son, como la lista
+  // de atletas para pedir lo de cada uno, no espera a las fotos: una espera menos al abrir la app)
+  async function atletasYFotos() {
+    const yo = uid();
+    const atletas = (await b.select('atletas', { order: [['nombre', 'asc']] })).filter((a) => !yo || a.perfil_id !== yo);
+    const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
+    return { atletas, fotosP: ids.length ? fotosDePerfiles(ids) : null };
+  }
+  const conFotoDe = (a, deCada) => ({ ...a, foto: (a.perfil_id && deCada.get(a.perfil_id)) || null });
   async function fotosDePerfiles(ids) {
     const f = misFotos(), ahora = Date.now();
     const faltan = ids.filter((id) => !(ahora - (f.cuando.get(id) || 0) < FOTOS_VALEN));
@@ -2453,8 +2472,12 @@ export function crearApi(backend) {
       if (ya && ya.gen === generacion && Date.now() - ya.t < 4000) return (await ya.p).map((s) => ({ ...s }));
       const p = api.historialSinCompartir(atletaId);
       const entrada = { gen: generacion, t: Date.now(), p };
-      historiales.clear();
+      // (v0.207) se recuerdan los de varios atletas (antes, solo el último): Revisar pide los de varios a la vez y cada
+      // uno borraba el del anterior. Los viejos (más de 4 s o de antes de una escritura) se van solos al pedir otro
+      for (const [k, v] of historiales) if (v.gen !== generacion || Date.now() - v.t >= 4000) historiales.delete(k);
+      historiales.delete(clave);
       historiales.set(clave, entrada);
+      for (const k of [...historiales.keys()].slice(0, Math.max(0, historiales.size - 8))) historiales.delete(k);
       p.catch(() => { if (historiales.get(clave) === entrada) historiales.delete(clave); });
       return (await p).map((s) => ({ ...s }));
     },
@@ -2465,27 +2488,34 @@ export function crearApi(backend) {
     // se va adelantando solo. Sin la migración, se baja entero como hasta ahora (ya sin las columnas que no se usan).
     async historialSinCompartir(atletaId) {
       const yo = uid();
-      let g = null;
+      let g = null, desdeCorte = null;
       const k = `${yo}:${atletaId}`;
       if (guardandoHistorial.has(k)) await guardandoHistorial.get(k);
       if (yo && atletaId && con048 !== false) {
         g = historialesGuardados.get(k) || (notaHistorial().includes(k) ? (await copiaDelMovil().leer(yo, CLAVE_HISTORIAL(atletaId)).catch(() => null))?.datos : null) || null;
         if (g && !(typeof g.corte === 'string' && typeof g.huella === 'string' && Array.isArray(g.filas))) g = null;
         if (g) {
+          // (v0.207) la huella y lo nuevo desde el corte se piden a la vez: casi siempre cuadra y lo nuevo ya está aquí
+          // (una espera menos por atleta); si no cuadra, lo pedido no se usa y se baja todo, como antes
+          desdeCorte = b.select('series', { eq: { atleta_id: atletaId }, gte: { registrada_en: g.corte }, order: [['registrada_en', 'asc']] });
+          desdeCorte.catch(() => {});
           try { if ((await b.rpc('historial_huella', { p_atleta: atletaId, p_antes: g.corte })) === g.huella) con048 = true; else g = null; } catch (e) { if (!falta048(e)) throw e; con048 = false; g = null; }
         }
       }
       // Lo nuevo (o todo): las series con, de su pauta, la sesión y el ejercicio, y el día de la sesión
       // (todas: el adaptador de Supabase pagina de 1000 en 1000; con un tope, a los pocos años se perderían las más nuevas)
-      const series = await b.select('series', { eq: { atleta_id: atletaId }, ...(g ? { gte: { registrada_en: g.corte } } : {}), order: [['registrada_en', 'asc']] });
+      const series = await (g && desdeCorte ? desdeCorte : b.select('series', { eq: { atleta_id: atletaId }, order: [['registrada_en', 'asc']] }));
       const pautas = porId(series.length ? await b.select('sesion_ejercicios', { in: { id: unicos(series.map((s) => s.sesion_ejercicio_id)) }, cols: 'id,sesion_id,ejercicio_id' }) : []);
       const sesIds = unicos(Object.values(pautas).map((p) => p.sesion_id));
-      const sesiones = porId(sesIds.length ? await b.select('sesiones', { in: { id: sesIds }, cols: 'id,fecha_realizada' }) : []);
+      // Los nombres de los ejercicios, siempre de ahora (son pocos y pueden cambiar). (v0.207) a la vez que los días de
+      // las sesiones: los dos salen ya de las pautas
+      const ejIds = unicos([...(g ? g.filas : []).flatMap((s) => [s._pautado, s.sustituto_id]), ...series.flatMap((s) => [pautas[s.sesion_ejercicio_id]?.ejercicio_id || null, s.sustituto_id])]);
+      const [sesiones, ejercicios] = await Promise.all([
+        sesIds.length ? b.select('sesiones', { in: { id: sesIds }, cols: 'id,fecha_realizada' }).then(porId) : {},
+        ejIds.length ? b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares' }).then(porId) : {},
+      ]);
       const nuevas = series.map((s) => { const p = pautas[s.sesion_ejercicio_id] || {}; return { ...s, _sesion: p.sesion_id || null, _pautado: p.ejercicio_id || null, _dia: sesiones[p.sesion_id]?.fecha_realizada || null }; });
       const todas = g ? [...g.filas, ...nuevas] : nuevas;
-      // Los nombres de los ejercicios, siempre de ahora (son pocos y pueden cambiar)
-      const ejIds = unicos(todas.flatMap((s) => [s._pautado, s.sustituto_id]));
-      const ejercicios = porId(ejIds.length ? await b.select('ejercicios', { in: { id: ejIds }, cols: 'id,nombre,grupos_musculares' }) : []);
       // Adelantar el corte: la primera vez, cuando lo nuevo ya es mucho o cuando el corte se queda viejo. Lo de la última
       // semana se pide siempre (es lo que se corrige); lo anterior queda guardado con la huella que da la base ahora
       if (yo && atletaId && con048 !== false && todas.length && (!g || nuevas.length > 250 || Date.now() - Date.parse(g.corte) > 21 * 86400000)) {
@@ -4362,28 +4392,30 @@ export function crearApi(backend) {
     // nota de la anterior (con la 040; sin ella, revisiones: false)
     async revisionSemanal(hoy = fechaMadrid()) {
       const lunes = lunesDe(hoy), anterior = sumarDias(lunes, -7);
-      const [resumenes, sinLeer, videos, con040] = await Promise.all([
+      // (v0.191) las 8 últimas semanas: la de ahora, la anterior y el historial de notas de cada uno
+      const lunes8 = Array.from({ length: 8 }, (_, i) => sumarDias(lunes, -7 * i));
+      // (v0.207) todo lo que no sale de la lista de atletas se pide a la vez que ella (antes, tres esperas más detrás)
+      const con040P = api.revision040().catch(() => null);
+      const [resumenes, sinLeer, videos, con040, revs, escritosCoach, con082] = await Promise.all([
         api.resumenes(hoy),
         b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
         // (054: antes buscaba el tipo «video», que no existe: los vídeos sin revisar nunca salían en la revisión)
         b.select('archivos', { eq: { tipo: 'video_tecnica' }, nulo: ['revisado_en'], cols: 'atleta_id' }).catch(() => []),
-        api.revision040().catch(() => null),
+        con040P,
+        con040P.then((c) => (c ? b.select('revisiones_semanales', { in: { lunes: lunes8 } }).catch(() => []) : [])),
+        // (v0.192) lo que el coach le ha escrito esta semana (para «Repaso enviado») y si está la 082
+        b.select('comentarios', { eq: { autor: 'coach' }, gte: { creado_en: `${lunes}T00:00:00` }, cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
+        con040P.then((c) => (c ? api.revision082().catch(() => null) : null)),
       ]);
       const contar = (xs) => xs.reduce((m, x) => { m[x.atleta_id] = (m[x.atleta_id] || 0) + 1; return m; }, {});
       const L = contar(sinLeer), V = contar(videos);
-      let revs = [];
-      // (v0.191) las 8 últimas semanas: la de ahora, la anterior y el historial de notas de cada uno
-      const lunes8 = Array.from({ length: 8 }, (_, i) => sumarDias(lunes, -7 * i));
-      if (con040) revs = await b.select('revisiones_semanales', { in: { lunes: lunes8 } }).catch(() => []);
       // (v0.191) cómo está la semana que viene de cada uno (publicada, en borrador o sin programar); si falla, sin ese dato
-      // (v0.192) lo que el coach le ha escrito esta semana (para «Repaso enviado»), el objetivo de su bloque y si está la 082
-      const [escritosCoach, bloquesObj, con082] = await Promise.all([
-        b.select('comentarios', { eq: { autor: 'coach' }, gte: { creado_en: `${lunes}T00:00:00` }, cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
+      // (v0.192) y el objetivo de su bloque. Los dos salen de la lista: a la vez
+      const [bloquesObj, proximas] = await Promise.all([
         (async () => { const ids = unicos(resumenes.map((r) => r.bloque?.id).filter(Boolean)); return ids.length ? b.select('bloques', { in: { id: ids }, cols: 'id,objetivo' }).catch(() => []) : []; })(),
-        con040 ? api.revision082().catch(() => null) : null,
+        api.proximaSemanaDe(resumenes.filter((r) => r.bloque?.id).map((r) => ({ atleta_id: r.atleta_id, bloque_id: r.bloque.id })), lunes).catch(() => ({})),
       ]);
       const E = contar(escritosCoach), OBJ = Object.fromEntries(bloquesObj.map((x) => [x.id, x.objetivo || null]));
-      const proximas = await api.proximaSemanaDe(resumenes.filter((r) => r.bloque?.id).map((r) => ({ atleta_id: r.atleta_id, bloque_id: r.bloque.id })), lunes).catch(() => ({}));
       const R = {};
       for (const r of revs) (R[r.atleta_id] ||= {})[r.lunes] = r;
       const filas = resumenes.filter((r) => r.estado !== 'baja').map((r) => {
@@ -4615,11 +4647,12 @@ export function crearApi(backend) {
       const xs = (sesiones || []).filter((s) => s?.id && (s.atleta?.id || s.atleta_id));
       const porAtleta = agrupar(xs.map((s) => ({ ...s, _a: s.atleta?.id || s.atleta_id })), '_a');
       const out = {};
-      for (const [atletaId, lista] of Object.entries(porAtleta)) {
+      // (v0.207) de cuatro en cuatro atletas (antes, uno detrás de otro: con diez en la bandeja, Revisar tardaba segundos)
+      await deNEnN(Object.entries(porAtleta), 4, async ([atletaId, lista]) => {
         const series = await api.historial(atletaId).catch(() => null);
-        if (!series) continue;
+        if (!series) return;
         for (const s of lista) out[s.id] = { ...marcasSesion(series, s), principal: principalSesion(series, s), volumen: s.fecha_realizada ? seriesPorGrupo(series, lunesDe(s.fecha_realizada)) : null };
-      }
+      });
       return out;
     },
     // (v0.196, 083) ¿Está la tabla de lo apartado y fijado en «Revisar»? true / false (sin la 083) / null (no se sabe)
@@ -6606,25 +6639,25 @@ export function crearApi(backend) {
     // Los atletas del coach. Su propia ficha de atleta (modo atleta, v0.37: la vinculada a su cuenta) no sale en las
     // listas: ni en Atletas ni en Revisar, Mensajes o Cobros
     async atletas() {
-      const yo = uid();
-      const atletas = (await b.select('atletas', { order: [['nombre', 'asc']] })).filter((a) => !yo || a.perfil_id !== yo);
-      const ids = unicos(atletas.map((a) => a.perfil_id).filter(Boolean));
-      if (!ids.length) return atletas;
-      const deCada = await fotosDePerfiles(ids);
-      return atletas.map((a) => ({ ...a, foto: (a.perfil_id && deCada.get(a.perfil_id)) || null }));
+      const { atletas, fotosP } = await atletasYFotos();
+      if (!fotosP) return atletas;
+      const deCada = await fotosP;
+      return atletas.map((a) => conFotoDe(a, deCada));
     },
     // soloAtleta (v0.49): el de un atleta (la cabecera de su ficha), con los mismos cálculos que el panel
     async resumenes(hoy = hoyISO(), { soloAtleta = null } = {}) {
-      const atletas = (await api.atletas()).filter((a) => !soloAtleta || a.id === soloAtleta);
+      // (v0.207) sus fotos llegan a la vez que lo demás (antes, primero las fotos y luego todo lo demás)
+      const { atletas: todos, fotosP } = await atletasYFotos();
+      const atletas = todos.filter((a) => !soloAtleta || a.id === soloAtleta);
       if (!atletas.length) return [];
       const ids = atletas.map((a) => a.id);
       // (pulido 4) Todo lo que solo depende de la lista de atletas se pide a la vez (antes, una consulta detrás de otra:
       // unas veinte esperas seguidas; ahora, las cinco de la cadena más larga). Los cálculos son los mismos.
       const desde = sumarDias(lunesDe(hoy), -63);
       const lunesHoy = lunesDe(hoy);
-      // (v0.175, 078) las pausas de todos (son pocas); sin la 078, ninguna
+      // (v0.175, 078) las pausas de todos (son pocas); sin la 078, ninguna. (v0.207) a la vez que lo demás
       const pausasDe = {};
-      for (const x of await b.select('pausas', { in: { atleta_id: ids } }).catch(() => [])) (pausasDe[x.atleta_id] ||= []).push(x);
+      const lasPausas = b.select('pausas', { in: { atleta_id: ids } }).catch(() => []).then((xs) => { for (const x of xs) (pausasDe[x.atleta_id] ||= []).push(x); });
       // El bloque de cada atleta: el activo (o ajustado); si no tiene, el planificado más reciente (como lo que ve el atleta)
       const delPrograma = (async () => {
         const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
@@ -6697,7 +6730,9 @@ export function crearApi(backend) {
         b.select('pagos', { in: { atleta_id: ids } }).catch(() => null),
         // (054) Las sesiones empezadas y sin terminar (sin la migración, ninguna)
         api.sesionesAbiertas().catch(() => []),
+        lasPausas,
       ]);
+      const deCada = fotosP ? await fotosP : null;
       const lunesSem4 = Object.fromEntries(sem4.map((w) => [w.id, lunesDe(w.fecha_inicio)]));
       const bloqueDeSemana = Object.fromEntries(todasSemanas.map((w) => [w.id, w.bloque_id]));
       const atletaDeBloque = Object.fromEntries(todosBloques.map((x) => [x.id, x.atleta_id]));
@@ -6732,8 +6767,9 @@ export function crearApi(backend) {
         // (v0.175, 078) en pausa: para el panel, las alertas, el tablero y «A quién escribir» cuenta como pausado
         // (en la base sigue activo, para que le lleguen los mensajes de su coach)
         const pausa = pausaVigente(pausasDe[a.id] || [], hoy);
+        const aF = deCada ? conFotoDe(a, deCada) : a;
         return { pausa: pausa || null, ...resumenAtleta({
-          atleta: pausa && a.estado === 'activo' ? { ...a, estado: 'pausado' } : a, bloque, semana,
+          atleta: pausa && aF.estado === 'activo' ? { ...aF, estado: 'pausado' } : aF, bloque, semana,
           semanas: bloque ? semanasPorBloque[bloque.id] || [] : [],
           sesiones: semana ? sesiones[semana.id] || [] : [],
           pesos: P[a.id] || [], checkins: cs,
@@ -7452,12 +7488,17 @@ export function crearApi(backend) {
     // (v0.186) quien queda por programar: los atletas activos con entrenamiento, sin pausa hoy, cuyo bloque no tiene
     // publicada esta semana o la que viene. [{ atleta_id, nombre, bloque_id, falta: 'esta'|'siguiente' }]
     async porProgramar(hoy = hoyISO()) {
-      const atletas = (await api.atletas()).filter((a) => a.estado === 'activo' && a.entrenamiento !== false);
+      // (v0.207) sin esperar a sus fotos, que aquí no salen
+      const atletas = (await atletasYFotos()).atletas.filter((a) => a.estado === 'activo' && a.entrenamiento !== false);
       if (!atletas.length) return [];
       const ids = atletas.map((a) => a.id);
       const pausasDe = {};
-      for (const x of await b.select('pausas', { in: { atleta_id: ids } }).catch(() => [])) (pausasDe[x.atleta_id] ||= []).push(x);
-      const candidatos = await b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } });
+      // (v0.207) las pausas y los bloques, a la vez
+      const [pausas, candidatos] = await Promise.all([
+        b.select('pausas', { in: { atleta_id: ids } }).catch(() => []),
+        b.select('bloques', { in: { atleta_id: ids, estado: ['activo', 'ajustado', 'planificado'] }, eq: { es_plantilla: false } }),
+      ]);
+      for (const x of pausas) (pausasDe[x.atleta_id] ||= []).push(x);
       const filas = atletas.filter((a) => !pausaVigente(pausasDe[a.id] || [], hoy))
         .map((a) => ({ atleta_id: a.id, nombre: a.nombre, bloque: bloqueActual(candidatos.filter((x) => x.atleta_id === a.id)) })).filter((x) => x.bloque);
       if (!filas.length) return [];
