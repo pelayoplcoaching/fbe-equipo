@@ -73,7 +73,12 @@ export async function probarTravesia3({ navegador, check, base = 'http://localho
     const duelo = await p.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('fbe-travesia-duelo-')); return k ? JSON.parse(localStorage.getItem(k)) : null; });
     check(await filas.nth(1).getByRole('button', { name: 'En duelo' }).getAttribute('aria-pressed') === 'true' && duelo?.rival === 'Carlos V.' && duelo.semana === lunes && /Duelo con Carlos V\.: 2,3 km por detrás/.test(await p.locator('.tv-manada .tv-donde').textContent()),
       'se puede retar a un compañero: el duelo de la semana se guarda en el móvil y dice cómo va (2,3 km por detrás)');
-    check(/Entre todos, este mes/.test(await p.locator('.tv-equipo').textContent()) && /de 50 km · 3 lobos/.test(await p.locator('.tv-equipo').textContent()), 'y lo que suma el equipo en el mes, con su meta');
+    // (cada semana cuenta en el mes de su jueves: los primeros o últimos días de un mes, lo de esta semana es del mes de al
+    // lado y en «este mes» aún no están los tres)
+    const hoyT = fechaMadrid();
+    const semanaEnEsteMes = sumarDias(lunesDe(hoyT), 3).slice(0, 7) === hoyT.slice(0, 7);
+    const eq = await p.locator('.tv-equipo').textContent();
+    check(/Entre todos, este mes/.test(eq) && (semanaEnEsteMes ? /de 50 km · 3 lobos/.test(eq) : /de 50 km/.test(eq)), `y lo que suma el equipo en el mes, con su meta${semanaEnEsteMes ? '' : ' (hoy, esta semana es del mes de al lado)'}`);
     const lobos = p.locator('.tv-lobo');
     check(await lobos.count() === 7 && await lobos.first().getAttribute('aria-pressed') === 'true' && await lobos.nth(4).isDisabled() && /Recorre 25 km/.test(await lobos.nth(4).textContent()) && await lobos.nth(3).isEnabled(),
       'sus lobos: el de tiza, elegido; el dorado ya lo tiene (cinco retos) y el de nieve dice cómo se consigue');
