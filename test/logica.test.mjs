@@ -1007,6 +1007,27 @@ console.log('\nErrores de la app: los avisos que se arreglan solos, aparte (v0.2
   check(separarErrores(null).reales.length === 0 && separarErrores([]).avisos.length === 0, 'sin errores, nada');
 }
 
+console.log('\nUna pantalla que no carga porque la app se actualizó con ella abierta (v0.207)');
+{
+  const { esFaltaDeTrozo, recargarPorTrozo } = await import('../web/src/ui/recarga-trozo.js');
+  const chrome = new TypeError('Failed to fetch dynamically imported module: https://atletas.example/chunks/Sesion-AB12CD34.js');
+  const safari = new TypeError('Importing a module script failed.');
+  const firefox = new TypeError('error loading dynamically imported module: https://atletas.example/chunks/Equipo-11.js');
+  check([chrome, safari, firefox].every(esFaltaDeTrozo) && !esFaltaDeTrozo(new TypeError("undefined is not an object (evaluating 'a.b')")) && !esFaltaDeTrozo(null),
+    'reconoce un trozo que no llega en Chrome, Safari y Firefox (y no otro error cualquiera)');
+  const almacen = new Map(); const ses = { getItem: (k) => almacen.get(k) ?? null, setItem: (k, v) => almacen.set(k, v) };
+  let recargas = 0; const recargar = () => { recargas++; };
+  const t0 = 1_800_000_000_000;
+  const a = recargarPorTrozo(chrome, { almacen: ses, enLinea: true, ahora: t0, recargar });
+  const b = recargarPorTrozo(safari, { almacen: ses, enLinea: true, ahora: t0 + 60_000, recargar });
+  const c = recargarPorTrozo(safari, { almacen: ses, enLinea: true, ahora: t0 + 11 * 60_000, recargar });
+  check(a && !b && c && recargas === 2, 'con conexión, la app se recarga sola para entrar con la versión nueva, como mucho una vez cada 10 minutos (nunca en bucle)');
+  const sinRed = recargarPorTrozo(chrome, { almacen: { getItem: () => null, setItem() {} }, enLinea: false, ahora: t0, recargar });
+  const otro = recargarPorTrozo(new Error('x is undefined'), { almacen: { getItem: () => null, setItem() {} }, enLinea: true, ahora: t0, recargar });
+  const sinAlmacen = recargarPorTrozo(chrome, { almacen: null, enLinea: true, ahora: t0, recargar });
+  check(!sinRed && !otro && !sinAlmacen && recargas === 2, 'sin conexión, con otro error o sin dónde apuntarlo, no se recarga');
+}
+
 console.log('\nNivel y servicio (v0.22)');
 {
   check(modoCarga('novato', 'baja') === 'kg' && modoCarga('intermedio', 'alta') === 'kg' && modoCarga('intermedio', 'media') === 'rpe' && modoCarga('intermedio', 'muy_baja') === 'rpe'

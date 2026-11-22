@@ -92,8 +92,44 @@ self.addEventListener('message', (e) => {
   if (e.data === 'guardar-demo' && DEMO.length) e.waitUntil(guardarDemo().catch(() => {}));
 });
 
+// (v0.207) La versión anterior se guarda unos días: quien tenga la app abierta con ella (el móvil sin cerrarla, sin
+// cobertura) aún puede abrir sus pantallas, cuyos trozos ya no están en el servidor (llevan su huella en el nombre). Cada
+// versión apunta en su caché cuándo se activó; al activar una nueva se queda solo la anterior (la activada más tarde) y,
+// pasados GUARDAR_ANTERIOR_DIAS desde que la nueva se activó, se quita también.
+const MARCA_ACTIVADA = 'https://fbe-sw.invalid/activada';
+const GUARDAR_ANTERIOR_DIAS = 7;
+const esDeLaApp = (k) => k.startsWith('fbe-atletas-');
+async function cuandoActivada(nombre) {
+  try { const r = await (await caches.open(nombre)).match(MARCA_ACTIVADA); return r ? Number(await r.text()) || 0 : 0; } catch { return 0; }
+}
+async function quedarseConLaAnterior() {
+  await (await caches.open(CACHE)).put(MARCA_ACTIVADA, new Response(String(Date.now())));
+  const viejas = (await caches.keys()).filter((k) => esDeLaApp(k) && k !== CACHE);
+  let anterior = null, cuando = -1;
+  for (const k of viejas) { const t = await cuandoActivada(k); if (t > cuando) { cuando = t; anterior = k; } }
+  await Promise.all(viejas.filter((k) => k !== anterior).map((k) => caches.delete(k)));
+}
+let podada = false;
+async function podarLaAnterior() {
+  if (podada) return;
+  podada = true;
+  const t = await cuandoActivada(CACHE);
+  if (!t || Date.now() - t < GUARDAR_ANTERIOR_DIAS * 864e5) return;
+  for (const k of await caches.keys()) if (esDeLaApp(k) && k !== CACHE) await caches.delete(k);
+}
+// Un trozo que esta versión no tiene (el de una pantalla de la versión anterior), de lo guardado de la anterior
+async function trozoDeOtraVersion(req) {
+  for (const k of await caches.keys()) {
+    if (!esDeLaApp(k) || k === CACHE) continue;
+    const r = await (await caches.open(k)).match(req);
+    if (r) return r;
+  }
+  return null;
+}
+
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('fbe-atletas-') && k !== CACHE) || (k.startsWith('fbe-modelos-') && k !== MODELOS)).map((k) => caches.delete(k))))
+  e.waitUntil(quedarseConLaAnterior().catch(() => {})
+    .then(() => caches.keys()).then((ks) => Promise.all(ks.filter((k) => k.startsWith('fbe-modelos-') && k !== MODELOS).map((k) => caches.delete(k))))
     .then(() => podarImagenes().catch(() => {}))
     .then(() => self.clients.claim()));
 });
@@ -152,6 +188,8 @@ self.addEventListener('fetch', (e) => {
       return r;
     });
     e.waitUntil(red.then(() => {}, () => {}));
+    // (v0.207) al abrir la app, si la versión anterior ya lleva sus días guardada, fuera
+    if (e.request.mode === 'navigate') e.waitUntil(podarLaAnterior().catch(() => {}));
     e.respondWith(caches.open(CACHE).then((c) => c.match(clave)).then((guardada) => {
       if (!guardada) return red;
       return Promise.race([red.catch(() => guardada), new Promise((ok) => { setTimeout(() => ok(guardada), ESPERA_RED_MS); })]);
@@ -177,7 +215,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   // Lo demás (código, estilos, fuentes, iconos): de la caché de la app si está (nunca de otra, como la de lo compartido)
-  e.respondWith(caches.open(CACHE).then((c) => c.match(e.request)).then((r) => r || fetch(e.request)));
+  // (v0.207) Un trozo de pantalla (chunks/, con su huella en el nombre: el mismo nombre es el mismo contenido) que esta
+  // versión no tiene: de la versión anterior, si se guarda; si no, de la red
+  const trozo = url.pathname.includes('/chunks/');
+  e.respondWith(caches.open(CACHE).then((c) => c.match(e.request)).then((r) => r || (trozo ? trozoDeOtraVersion(e.request) : null)).then((r) => r || fetch(e.request)));
 });
 
 // Notificaciones (Web Push). El servidor manda { id, titulo, cuerpo, url, etiqueta }, cifrado de extremo a

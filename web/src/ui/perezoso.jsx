@@ -6,6 +6,7 @@
 //   <Equipo …/>   ·   Equipo.precargar()
 import { useEffect, useState } from 'preact/hooks';
 import { Siluetas, cargaVisible } from './comunes.jsx';
+import { recargarPorTrozo, reintentarCarga } from './recarga-trozo.js';
 
 // cargar: () => import(…); nombre: lo que exporta el módulo; mientras: lo que se pinta mientras llega (de serie, unas
 // siluetas de pantalla; null para una hoja o algo que sale encima de otra cosa)
@@ -20,7 +21,7 @@ export function perezoso(cargar, nombre, { mientras } = {}) {
     const [C, setC] = useState(() => Cargado);
     const [error, setError] = useState(null);
     // (pulido 4, rendimiento) mientras llega el trozo, la pantalla aún no está lista
-    const traer = () => { setError(null); const lista = mientras === null ? null : cargaVisible(); pedir().then((x) => setC(() => x)).catch(setError).finally(() => lista?.()); };
+    const traer = () => { setError(null); const lista = mientras === null ? null : cargaVisible(); pedir().then((x) => setC(() => x)).catch((e) => { if (!recargarPorTrozo(e)) setError(e); }).finally(() => lista?.()); };
     useEffect(() => { if (!C) traer(); }, []);
     if (C) return <C {...props} />;
     if (mientras === null) return null;
@@ -28,7 +29,7 @@ export function perezoso(cargar, nombre, { mientras } = {}) {
       return (
         <div class="contenido"><div class="pila">
           <div class="error" role="alert">No se ha podido cargar esta pantalla. Comprueba la conexión y vuelve a intentarlo.</div>
-          <button class="btn" onClick={traer}>Reintentar</button>
+          <button class="btn" onClick={() => reintentarCarga(error, traer)}>Reintentar</button>
         </div></div>
       );
     }

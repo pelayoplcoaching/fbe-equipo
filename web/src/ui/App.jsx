@@ -14,6 +14,7 @@ import { borrarCompartido } from './Compartido.jsx';
 import { borrarPendientes } from '../datos/pendientes.js';
 const almacenLocal = () => { try { return window.localStorage; } catch { return null; } };
 import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
+import { recargarPorTrozo, reintentarCarga } from './recarga-trozo.js';
 import { vibrar } from './hapticos.js';
 import { aligerarFotos } from './fotos-ligeras.js';
 import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
@@ -40,7 +41,7 @@ try { if (localStorage.getItem(CLAVE_ROL) === 'coach') cargarCoach().catch(() =>
 function CoachApp() {
   const [C, setC] = useState(() => CoachCargada);
   const [error, setError] = useState(null);
-  const pedir = () => { setError(null); cargarCoach().then((x) => setC(() => x)).catch(setError); };
+  const pedir = () => { setError(null); cargarCoach().then((x) => setC(() => x)).catch((e) => { if (!recargarPorTrozo(e)) setError(e); }); };
   useEffect(() => {
     try { localStorage.setItem(CLAVE_ROL, 'coach'); } catch { /* */ }
     if (!C) pedir();
@@ -50,7 +51,7 @@ function CoachApp() {
     return (
       <div class="acceso"><div class="acceso-caja pila">
         <div class="error" role="alert">No se ha podido cargar la app. Comprueba la conexión y vuelve a intentarlo.</div>
-        <button class="btn" onClick={pedir}>Reintentar</button>
+        <button class="btn" onClick={() => reintentarCarga(error, pedir)}>Reintentar</button>
       </div></div>
     );
   }

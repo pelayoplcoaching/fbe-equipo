@@ -54,7 +54,9 @@ console.log('1. El historial: lo antiguo, guardado; de la base, solo lo reciente
   await con.b.update('series', { kg: (Number(tabla.kg) || 0) + 2.5 }, { eq: { id: vieja.id } });
   const antes = pedidas.length;
   const h4 = await con.api.historialSinCompartir(ana.id);
-  check(h4.find((x) => x.id === vieja.id).kg === (Number(tabla.kg) || 0) + 2.5 && pedidas[antes].desde === null, 'si se corrige una serie antigua, la huella cambia y el historial se baja entero: nunca se enseña lo de antes');
+  // (v0.207: lo nuevo desde el corte se pide a la vez que la huella, por si vale; si la huella no coincide, se descarta y se
+  // baja entero)
+  check(h4.find((x) => x.id === vieja.id).kg === (Number(tabla.kg) || 0) + 2.5 && pedidas.slice(antes).some((x) => x.desde === null), 'si se corrige una serie antigua, la huella cambia y el historial se baja entero: nunca se enseña lo de antes');
   const h5 = await con.api.historialSinCompartir(ana.id);
   check(pedidas[pedidas.length - 1].desde !== null && JSON.stringify(h5) === JSON.stringify(h4), 'y a la siguiente vuelve a pedir solo lo reciente');
   await con.b.delete('series', { eq: { id: vieja.id } });
@@ -147,11 +149,11 @@ console.log('\n7. Actualizar la app sin volver a descargar lo que no ha cambiado
   const montarSw = ({ archivos, huellas, demo = [], red, guardado = {}, sinHuellas = false, criptoRota = false }) => {
     const almacenes = new Map(Object.entries(guardado).map(([k, v]) => [k, new Map(Object.entries(v))]));
     const pedidas = [];
-    const resp = (texto, ok = true) => ({ ok, status: ok ? 200 : 404, texto, clone() { return resp(texto, ok); }, async arrayBuffer() { return new TextEncoder().encode(texto).buffer; } });
+    const resp = (texto, ok = true) => ({ ok, status: ok ? 200 : 404, texto, clone() { return resp(texto, ok); }, async arrayBuffer() { return new TextEncoder().encode(texto).buffer; }, async text() { return texto; } });
     const clave = (x) => (typeof x === 'string' ? x : x.url);
     const cache = (m) => ({
       async match(x) { return m.has(clave(x)) ? resp(m.get(clave(x))) : undefined; },
-      async put(x, r) { m.set(clave(x), r.texto); },
+      async put(x, r) { m.set(clave(x), r.texto ?? await r.text()); },
       async addAll(xs) { const rs = await Promise.all(xs.map((x) => fetch(x))); if (rs.some((r) => !r.ok)) throw new TypeError('addAll'); xs.forEach((x, i) => m.set(clave(x), rs[i].texto)); },
     });
     const caches = { async open(k) { if (!almacenes.has(k)) almacenes.set(k, new Map()); return cache(almacenes.get(k)); }, async keys() { return [...almacenes.keys()]; }, async delete(k) { return almacenes.delete(k); } };
@@ -164,7 +166,7 @@ console.log('\n7. Actualizar la app sin volver a descargar lo que no ha cambiado
     const crypto = criptoRota ? { subtle: { digest: async () => { throw new Error('sin crypto'); } } } : webcrypto;
     new Function('self', 'caches', 'fetch', 'Request', 'crypto', codigo)(self, caches, fetch, Request, crypto);
     const lanzar = async (tipo, datos = {}) => { let pr = Promise.resolve(); oyentes[tipo]({ ...datos, waitUntil: (x) => { pr = x; } }); return pr; };
-    return { almacenes, pedidas, lanzar };
+    return { almacenes, pedidas, lanzar, oyentes };
   };
   const NUEVO = { './': '<html>v2</html>', 'app.js?v=2': 'app v2', 'chunks/a-AAAA1111.js': 'trozo a', 'chunks/b-BBBB2222.js': 'trozo b NUEVO', 'icono.svg': '<svg/>', 'fonts/letra.woff2': 'letra', 'config.js': 'config' };
   const archivos = Object.keys(NUEVO);
@@ -178,7 +180,28 @@ console.log('\n7. Actualizar la app sin volver a descargar lo que no ha cambiado
     check(sw.pedidas.slice().sort().join() === ['./', 'app.js?v=2', 'chunks/b-BBBB2222.js', 'config.js'].sort().join(), `solo se descarga lo que ha cambiado; lo idéntico (un trozo, el icono, la letra) se copia de la versión anterior (descargas: ${sw.pedidas.join(', ')})`);
     check(sw.almacenes.get('fbe-atletas-vieja').get('./') === '<html>v1</html>' && sw.almacenes.get('fbe-compartido').get('x') === 'y', 'la versión anterior sigue entera hasta que se active la nueva, y las otras cachés no se tocan');
     await sw.lanzar('activate');
-    check(!sw.almacenes.has('fbe-atletas-vieja') && sw.almacenes.has('fbe-atletas-nueva'), 'al activarse la nueva, la anterior se borra');
+    // (v0.207) la anterior se guarda unos días (para quien tenga la app abierta con ella); las otras cachés, como estaban
+    check(sw.almacenes.has('fbe-atletas-vieja') && sw.almacenes.has('fbe-atletas-nueva') && sw.almacenes.get('fbe-compartido').get('x') === 'y', 'al activarse la nueva, la anterior se guarda (unos días)');
+  }
+  {
+    // (v0.207) Con varias anteriores, solo se queda la última que estuvo activa; y pasados 7 días, tampoco
+    const marca = 'https://fbe-sw.invalid/activada', dia = 864e5;
+    const sw = montarSw({ archivos, huellas, red: NUEVO, guardado: { 'fbe-atletas-muyvieja': { ...VIEJO, [marca]: String(Date.now() - 30 * dia) }, 'fbe-atletas-vieja': { ...VIEJO, [marca]: String(Date.now() - 2 * dia) }, 'fbe-atletas-sinmarca': VIEJO } });
+    await sw.lanzar('install');
+    await sw.lanzar('activate');
+    check(sw.almacenes.has('fbe-atletas-vieja') && !sw.almacenes.has('fbe-atletas-muyvieja') && !sw.almacenes.has('fbe-atletas-sinmarca'), 'con varias versiones anteriores, solo se queda la que estuvo activa la última');
+    // Una pantalla de la versión anterior (con la app abierta desde antes de actualizar): su trozo, de lo guardado
+    const pedir = async (ruta, modo = 'no-cors') => { let r = null; const esperas = []; sw.oyentes.fetch({ request: { url: `https://fbe.test/${ruta}`, method: 'GET', mode: modo }, respondWith: (x) => { r = x; }, waitUntil: (x) => { esperas.push(x); } }); const res = r ? await r : null; await Promise.all(esperas.map((x) => Promise.resolve(x).catch(() => {}))); return res; };
+    sw.almacenes.get('fbe-atletas-vieja').set('https://fbe.test/chunks/Sesion-VIEJO999.js', 'pantalla de antes');
+    const n = sw.pedidas.length;
+    const trozo = await pedir('chunks/Sesion-VIEJO999.js');
+    check(trozo?.texto === 'pantalla de antes' && sw.pedidas.length === n, 'el trozo de una pantalla de la versión anterior sale de lo guardado, sin ir a la red (donde ya no está)');
+    const otro = await pedir('otra-cosa.js');
+    check(otro && !otro.ok && sw.pedidas.includes('https://fbe.test/otra-cosa.js'), 'lo que no es un trozo de pantalla no se busca en la versión anterior: va a la red como siempre');
+    // Siete días después de activarse la nueva, al abrir la app, la anterior se quita
+    sw.almacenes.get('fbe-atletas-nueva').set(marca, String(Date.now() - 8 * dia));
+    await pedir('', 'navigate');
+    check(!sw.almacenes.has('fbe-atletas-vieja') && sw.almacenes.has('fbe-atletas-nueva'), 'pasados 7 días desde la actualización, al abrir la app se quita la versión anterior');
   }
   {
     // Un archivo con el mismo nombre pero otro contenido (o estropeado) no se aprovecha
