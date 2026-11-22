@@ -805,6 +805,11 @@ npm run claves-push # claves de las notificaciones (una vez; ver «Notificacione
 
 En Windows (PowerShell) los comandos son los mismos. Para `npm run e2e` hace falta Chrome; si no está en la ruta habitual: `$env:CHROME_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"`.
 
+**Pruebas con otra fecha y pruebas sueltas.** Una prueba no debe depender del día, de la hora ni de lo rápida que vaya la máquina (en GitHub corren a cualquier hora y más despacio): espera a lo que comprueba (`waitFor`, `waitForFunction`) en vez de esperar un tiempo fijo, y si mira algo que cambia con la fecha (el apunte del día, el día de la semana, el mes), lo calcula o lo acepta. Para comprobarlo:
+- `node test/por-fechas.mjs` pasa `npm test` (cada archivo por separado) con 18 fechas con trampa: cada día de la semana, la madrugada en que Madrid y UTC van en días distintos, la medianoche, fin de mes, día 1 y 15, Nochebuena, fin de año, año nuevo y las dos semanas del cambio de hora. Dice qué falla en cada una. `SOLO=radar node test/por-fechas.mjs 2026-11-29T21:00` para un archivo y una fecha.
+- Para el e2e con otra fecha (el navegador de las pruebas también la ve): `TZ=Europe/Madrid FBE_FECHA='2026-12-31T23:40:00+01:00' NODE_OPTIONS="--import $PWD/test/fecha-simulada.mjs" npm run e2e`. La fecha corre desde ahí, como un reloj normal.
+- `node test/suelta.mjs e2e-viaje 10` repite una parte del e2e diez veces sobre `dist/` (varias, separadas por comas); con `CARGA=1`, con la máquina ocupada, que es cuando salen los fallos por lentitud.
+
 Un cambio en la base de datos va siempre en una migración nueva (`supabase/migraciones/014_….sql`, y después `npm run instalador`), escrita para poder repetirse; las pruebas aplican el schema y todas las migraciones en orden, dos veces. Desde la migración 019, una tabla nueva **nace sin permisos** para las cuentas de la app: cada migración que cree una tabla tiene que darle los suyos a mano (`grant select, insert, update, delete on public.tabla to authenticated;` o lo que necesite), activar los permisos por fila y escribir sus políticas; una prueba comprueba que ninguna tabla queda sin permisos por fila y que sin sesión no se toca ninguna.
 
 ## Pruebas
