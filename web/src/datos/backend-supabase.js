@@ -55,6 +55,18 @@ const MENSAJES = {
   'too_many_enrolled_mfa_factors': 'Has llegado al máximo de dispositivos de verificación.',
 };
 
+// (v0.207) «JWT expired»: con el móvil dormido más de una hora, la primera consulta puede salir antes de que Supabase
+// renueve la sesión (el permiso dura una hora). La base la rechaza antes de hacer nada, también si es una escritura: se
+// renueva la sesión y se repite una vez. Si no se puede renovar (sin cobertura, o la sesión ya no vale), el error de siempre.
+export const sesionCaducada = (error) => !!error && (error.code === 'PGRST301'
+  || /\bjwt expired\b|\btoken (is|has) expired\b|\binvalid jwt\b.*\bexp\b/i.test(String(error.message || '')));
+export async function repetirSiCaduca(hacer, renovar) {
+  const r = await hacer();
+  if (!sesionCaducada(r?.error)) return r;
+  const renovada = await Promise.resolve().then(renovar).catch(() => false);
+  return renovada ? hacer() : r;
+}
+
 function traducir(error) {
   if (!error) return null;
   const tamano = String(error.statusCode) === '413' || /maximum allowed size|too large/i.test(error.message || '');
@@ -64,8 +76,10 @@ function traducir(error) {
     // Igual con los de «fuera de rango» propios («No se puede apuntar un día que aún no ha llegado»); el genérico
     // de una restricción CHECK sí se traduce
     || (error.code === '23514' && error.message && !/violates check constraint/i.test(error.message));
-  const e = new Error(tamano ? 'El archivo supera el tamaño máximo permitido.' : propio ? error.message : MENSAJES[error.code] || error.message || 'Algo ha fallado.');
+  const caducada = sesionCaducada(error);
+  const e = new Error(tamano ? 'El archivo supera el tamaño máximo permitido.' : propio ? error.message : caducada ? 'La sesión había caducado y no se ha podido renovar. Vuelve a intentarlo.' : MENSAJES[error.code] || error.message || 'Algo ha fallado.');
   e.codigo = error.code;
+  if (caducada) e.sesionCaducada = true;
   const m = String(error.message || '');
   // «The request timed out» / «The network connection was lost»: lo que dice el iPhone cuando la cobertura no da
   // (solo si no trae código: un «statement timeout» de la base es un error de verdad, no la cobertura)
@@ -174,6 +188,16 @@ export function crearBackendSupabase({ url, anonKey }) {
     e.sinConexion = true;
     throw e;
   }
+  // (v0.207) una sola renovación para todas las consultas que la piden a la vez (al despertar, Hoy pide más de 30)
+  let renovando = null;
+  const renovar = () => {
+    renovando ||= Promise.race([
+      sb.auth.refreshSession().then(({ data }) => { if (data?.session) { sesion = data.session; provisional = false; return true; } return false; }, () => false),
+      new Promise((ok) => { setTimeout(() => ok(false), ESPERA_SESION_MS * 2); }),
+    ]).finally(() => { renovando = null; });
+    return renovando;
+  };
+  const pedir = (hacer) => repetirSiCaduca(hacer, renovar);
 
   async function sel(tabla, f = {}) {
     // PostgREST limita las listas de 'in' por longitud de URL: se trocean.
@@ -196,11 +220,12 @@ export function crearBackendSupabase({ url, anonKey }) {
     for (const clave of (CLAVE_TABLA[tabla] || 'id').split(',')) if (tope > PAGINA && !orden.some(([c]) => c === clave)) orden.push([clave, 'asc']);
     const filas = [];
     for (let desde = 0; desde < tope; desde += PAGINA) {
-      let q = aplicarFiltro(sb.from(tabla).select(f.cols || '*'), f);
-      for (const [col, dir] of orden) q = q.order(col, { ascending: dir !== 'desc', nullsFirst: false });
       const hasta = Math.min(desde + PAGINA, tope) - 1;
-      q = q.range(desde, hasta);
-      const { data, error } = await q;
+      const { data, error } = await pedir(() => {
+        let q = aplicarFiltro(sb.from(tabla).select(f.cols || '*'), f);
+        for (const [col, dir] of orden) q = q.order(col, { ascending: dir !== 'desc', nullsFirst: false });
+        return q.range(desde, hasta);
+      });
       if (error) throw traducir(error);
       filas.push(...data);
       if (data.length < hasta - desde + 1) break;
@@ -510,7 +535,7 @@ export function crearBackendSupabase({ url, anonKey }) {
       // descargar (v0.55): el nombre con que se guarda («Guardar», que la persona pide)
       async url(ruta, segundos = 3600, bucket = 'archivos', { descargar = null } = {}) {
         await conSesion();
-        const { data, error } = await sb.storage.from(bucket).createSignedUrl(ruta, segundos, descargar ? { download: descargar } : undefined);
+        const { data, error } = await pedir(() => sb.storage.from(bucket).createSignedUrl(ruta, segundos, descargar ? { download: descargar } : undefined));
         if (error) throw traducir(error);
         return data.signedUrl;
       },
@@ -546,30 +571,30 @@ export function crearBackendSupabase({ url, anonKey }) {
     async select(tabla, f) { await conSesion(); return sel(tabla, f); },
     async insert(tabla, filas) {
       await conSesion();
-      const { data, error } = await sb.from(tabla).insert(filas).select();
+      const { data, error } = await pedir(() => sb.from(tabla).insert(filas).select());
       if (error) throw traducir(error);
       return data;
     },
     async update(tabla, cambios, f) {
       await conSesion();
-      const { data, error } = await aplicarFiltro(sb.from(tabla).update(cambios), f).select();
+      const { data, error } = await pedir(() => aplicarFiltro(sb.from(tabla).update(cambios), f).select());
       if (error) throw traducir(error);
       return data;
     },
     async upsert(tabla, filas, onConflict) {
       await conSesion();
-      const { data, error } = await sb.from(tabla).upsert(filas, { onConflict }).select();
+      const { data, error } = await pedir(() => sb.from(tabla).upsert(filas, { onConflict }).select());
       if (error) throw traducir(error);
       return data;
     },
     async delete(tabla, f) {
       await conSesion();
-      const { error } = await aplicarFiltro(sb.from(tabla).delete(), f);
+      const { error } = await pedir(() => aplicarFiltro(sb.from(tabla).delete(), f));
       if (error) throw traducir(error);
     },
     async rpc(nombre, args) {
       await conSesion();
-      const { data, error } = await sb.rpc(nombre, args);
+      const { data, error } = await pedir(() => sb.rpc(nombre, args));
       if (error) throw traducir(error);
       return data;
     },
