@@ -38,22 +38,77 @@ jobs:
         run: npm test
       - name: Empaquetar
         run: npm run build
-      - name: Prueba de punta a punta en Chrome
-        shell: bash
-        # Si falla, las últimas líneas salen como anotación en el resumen de la ejecución (sin abrir el registro completo)
-        run: |
-          set -o pipefail
-          npm run e2e 2>&1 | tee e2e.log || {
-            echo "::error title=Prueba de punta a punta::$(grep -v '  ✓' e2e.log | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')"
-            exit 1
-          }
+      # (v0.207) la app empaquetada, para los cuatro trozos de la prueba de punta a punta
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          include-hidden-files: true
+          retention-days: 3
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
           path: dist
 
-  publicar:
+  # (v0.207) La prueba de punta a punta, en cuatro trozos a la vez (de unos 75 minutos a unos 25). El trozo 1 lleva el flujo
+  # principal; las demás partes se reparten entre los otros tres (test/e2e.test.mjs, FBE_TROZO). Si alguna parte falla, se
+  # repite sola una vez; si pasa a la segunda, cuenta como «suelta» (un aviso en el resumen, sin parar la publicación).
+  e2e:
     needs: pruebas
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        trozo: [1, 2, 3, 4]
+    env:
+      TZ: Europe/Madrid
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Prueba de punta a punta en Chrome (trozo ${{ matrix.trozo }} de 4)
+        shell: bash
+        env:
+          FBE_TROZO: ${{ matrix.trozo }}/4
+        # Si falla, las últimas líneas salen como anotación en el resumen de la ejecución (sin abrir el registro completo)
+        run: |
+          set -o pipefail
+          anotar() { grep -v '  ✓' "$1" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g'; }
+          if FBE_INFORME=e2e-partes.json npm run e2e 2>&1 | tee e2e.log; then exit 0; fi
+          fallidas=$(node -e "try { console.log(require('./e2e-partes.json').fallidas.join(',')) } catch {}")
+          if [ -z "$fallidas" ]; then
+            echo "::error title=Prueba de punta a punta (trozo ${{ matrix.trozo }})::$(anotar e2e.log)"
+            exit 1
+          fi
+          echo "Se repiten una vez las partes que han fallado: $fallidas"
+          if FBE_TROZO= FBE_PARTES="$fallidas" FBE_INFORME=e2e-partes-2.json npm run e2e 2>&1 | tee e2e-2.log; then
+            nombres=$(node -e "console.log(require('./e2e-partes.json').nombres.join(' | '))")
+            echo "::warning title=Pruebas sueltas (trozo ${{ matrix.trozo }})::Fallaron a la primera y pasaron a la segunda: $nombres"
+            exit 0
+          fi
+          echo "::error title=Prueba de punta a punta (trozo ${{ matrix.trozo }})::$(anotar e2e-2.log)"
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-trozo-${{ matrix.trozo }}
+          path: |
+            e2e*.log
+            e2e-partes*.json
+            test/e2e-fallo.png
+          retention-days: 7
+
+  publicar:
+    needs: [pruebas, e2e]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:

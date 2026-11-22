@@ -31,6 +31,43 @@ async function conUnaRepeticion(nombre, fn) {
   await fn(check);
 }
 
+// (v0.207) La prueba en trozos, para pasarla en paralelo en GitHub: FBE_TROZO=2/4 pasa solo el trozo 2 de 4. El trozo 1
+// lleva el flujo principal; las demás partes se reparten entre los trozos según lo que tarda cada una (test/e2e-tiempos.json,
+// en segundos; una que no esté ahí va por turno). FBE_PARTES=3,17: solo esas partes (las que fallaron, para repetirlas
+// una vez). Con FBE_INFORME=<archivo>, al acabar se apuntan ahí las que han fallado y lo que ha tardado cada una.
+// Sin nada de eso, se pasa todo, como siempre.
+const PRINCIPAL = 'El flujo principal: el coach, la atleta y su semana';
+const [TROZO, TROZOS] = (/^(\d+)\/(\d+)$/.exec(process.env.FBE_TROZO || '') || [0, 1, 1]).slice(1).map(Number);
+const SOLO_PARTES = process.env.FBE_PARTES ? new Set(process.env.FBE_PARTES.split(',').map(Number)) : null;
+const TIEMPOS = (() => { try { return JSON.parse(leerArchivo(new URL('./e2e-tiempos.json', import.meta.url), 'utf8')); } catch { return {}; } })();
+const reparto = new Map([[PRINCIPAL, 1]]);
+if (TROZOS > 1) {
+  const cargas = Array.from({ length: TROZOS }, (_, i) => (i === 0 ? TIEMPOS[PRINCIPAL] || 1000 : 0));
+  for (const [t, seg] of Object.entries(TIEMPOS).filter(([t]) => t !== PRINCIPAL).sort((a, b) => b[1] - a[1])) {
+    const i = cargas.indexOf(Math.min(...cargas));
+    cargas[i] += seg;
+    reparto.set(t, i + 1);
+  }
+}
+let parteN = -1, parteActual = null, corrioPrincipal = false;
+const informe = { trozo: process.env.FBE_TROZO || null, fallidas: [], nombres: [], tiempos: {} };
+function cerrarParte() {
+  if (!parteActual) return;
+  informe.tiempos[parteActual.titulo] = Math.round((Date.now() - parteActual.t0) / 1000);
+  if (fallos > parteActual.fallos) { informe.fallidas.push(parteActual.n); informe.nombres.push(parteActual.titulo); }
+  parteActual = null;
+}
+function parte(titulo) {
+  cerrarParte();
+  parteN++;
+  const suTrozo = reparto.get(titulo) ?? (TROZOS > 1 ? 2 + (parteN % (TROZOS - 1)) : 1);
+  if (SOLO_PARTES ? !SOLO_PARTES.has(parteN) : TROZOS > 1 && suTrozo !== TROZO) return false;
+  parteActual = { n: parteN, titulo, t0: Date.now(), fallos };
+  if (titulo === PRINCIPAL) corrioPrincipal = true;
+  console.log(`\n${titulo}`);
+  return true;
+}
+
 const srv = await servir(new URL('../dist', import.meta.url).pathname, 4174);
 // Cámara de mentira (Chrome la simula con un patrón) para probar las fotos guiadas
 const navegador = await chromium.launch({ executablePath: CHROME, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
@@ -160,7 +197,7 @@ async function revisar(paso) {
   if (axe.length) errores.push(`${paso}: accesibilidad: ${axe.join(' || ')}`);
 }
 
-try {
+if (parte(PRINCIPAL)) try {
   // v0.29: portada del lobo mientras arranca (aquí sin JavaScript, para verla quieta) y que luego se va sola
   {
     const q = await ctx.newPage();
@@ -5702,13 +5739,14 @@ try {
   await p.screenshot({ path: new URL('../test/e2e-fallo.png', import.meta.url).pathname, fullPage: true });
 }
 
-if (avisosBlob.length) console.log(`  ⚠ ${avisosBlob.length} avisos de un blob: ya liberado (${[...new Set(avisosBlob)].length} distintos); no cuentan`);
-check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
+if (corrioPrincipal) {
+  if (avisosBlob.length) console.log(`  ⚠ ${avisosBlob.length} avisos de un blob: ya liberado (${[...new Set(avisosBlob)].length} distintos); no cuentan`);
+  check(errores.length === 0, errores.length ? `sin errores: ${errores.join(' || ')}` : 'sin errores de consola, desbordes ni controles sin nombre');
+}
 
 // v0.58.1: el chat de la atleta en el iPhone (táctil), con más de dos páginas de historial: sin y con la copia del móvil,
 // hasta el primer mensaje, sin saltos, e «ir a una fecha» (test/e2e-chat-iphone.mjs)
-console.log('\nv0.58.1: el chat de la atleta en el iPhone, con todo su historial');
-try {
+if (parte('v0.58.1: el chat de la atleta en el iPhone, con todo su historial')) try {
   const { probarChatIphone } = await import('./e2e-chat-iphone.mjs');
   await probarChatIphone({ navegador, check });
 } catch (e) {
@@ -5718,8 +5756,7 @@ try {
 
 // v0.59: los vídeos de técnica, tanda A (recorte solo, cómo la ha notado, tiempos de la cola, tira, repeticiones, frases,
 // recordatorios, comparar con su mejor y con el vídeo modelo, y pasar un vídeo a otro atleta) (test/e2e-videos-059.mjs)
-console.log('\nv0.59: los vídeos de técnica, tanda A');
-try {
+if (parte('v0.59: los vídeos de técnica, tanda A')) try {
   const { probarVideos059 } = await import('./e2e-videos-059.mjs');
   await conUnaRepeticion('v0.59', (chk) => probarVideos059({ navegador, check: chk }));
 } catch (e) {
@@ -5729,8 +5766,7 @@ try {
 
 // v0.60: los vídeos de técnica, tanda B (primera mitad): cámara lenta, difuminar la cara, otro ángulo, grabar la revisión
 // (con la burbuja), responder con vídeo, exportar con correcciones y dos ángulos (test/e2e-videos-060.mjs)
-console.log('\nv0.60: los vídeos de técnica, tanda B (primera mitad)');
-try {
+if (parte('v0.60: los vídeos de técnica, tanda B (primera mitad)')) try {
   const { probarVideos060 } = await import('./e2e-videos-060.mjs');
   await probarVideos060({ navegador, check });
 } catch (e) {
@@ -5739,8 +5775,7 @@ try {
 }
 
 // v0.179: las notas de voz, como WhatsApp (test/e2e-voz-179.mjs)
-console.log('\nv0.179: las notas de voz, como WhatsApp');
-try {
+if (parte('v0.179: las notas de voz, como WhatsApp')) try {
   const { probarVoz179 } = await import('./e2e-voz-179.mjs');
   await probarVoz179({ navegador, check });
 } catch (e) {
@@ -5749,8 +5784,7 @@ try {
 }
 
 // v0.180: las notas de voz, segunda tanda (test/e2e-voz-180.mjs)
-console.log('\nv0.180: las notas de voz, segunda tanda');
-try {
+if (parte('v0.180: las notas de voz, segunda tanda')) try {
   const { probarVoz180 } = await import('./e2e-voz-180.mjs');
   await probarVoz180({ navegador, check });
 } catch (e) {
@@ -5759,8 +5793,7 @@ try {
 }
 
 // v0.178: «Guardar en mi móvil» para el vídeo grabado con la cámara de la app (test/e2e-guardar-178.mjs)
-console.log('\nv0.178: guardar en el móvil el vídeo grabado en la app');
-try {
+if (parte('v0.178: guardar en el móvil el vídeo grabado en la app')) try {
   const { probarGuardar178 } = await import('./e2e-guardar-178.mjs');
   await probarGuardar178({ navegador, check });
 } catch (e) {
@@ -5770,8 +5803,7 @@ try {
 
 // v0.61: los vídeos de técnica, tanda B (segunda mitad): revisar la sesión con un solo resumen, la estela del movimiento (y
 // al exportar), el perfil carga–velocidad, el informe del mes y solo con wifi (test/e2e-videos-061.mjs)
-console.log('\nv0.61: los vídeos de técnica, tanda B (segunda mitad)');
-try {
+if (parte('v0.61: los vídeos de técnica, tanda B (segunda mitad)')) try {
   const { probarVideos061 } = await import('./e2e-videos-061.mjs');
   await conUnaRepeticion('v0.61', (chk) => probarVideos061({ navegador, check: chk }));
 } catch (e) {
@@ -5782,8 +5814,7 @@ try {
 // v0.62: «Avisar aunque bloquees el móvil» (la pista del descanso) y el descanso en la pantalla de bloqueo (Media Session):
 // dónde sale el ajuste, la pista al marcar una serie, ±15, pausa y ⏭ desde la pantalla de bloqueo, una sola voz al acabar,
 // «Saltar» lo suelta todo y el aviso al móvil sigue programado (test/e2e-pista-062.mjs)
-console.log('\nv0.62: avisar aunque bloquees el móvil y el descanso en la pantalla de bloqueo');
-try {
+if (parte('v0.62: avisar aunque bloquees el móvil y el descanso en la pantalla de bloqueo')) try {
   const { probarPista062 } = await import('./e2e-pista-062.mjs');
   await probarPista062({ navegador, check });
 } catch (e) {
@@ -5794,8 +5825,7 @@ try {
 // v0.63: apuntar las series con el dedo en un iPhone (táctil): el teclado de la app (−/+, cifras, «Siguiente» hasta marcar),
 // el cambio que pasa a las series siguientes con «Deshacer», deslizar para marcar (y cancelar), mantener pulsado, «Ahora toca»
 // en el descanso (y tocarla), el modo enfoque, volver al teclado del móvil y 360 px en oscuro (test/e2e-teclado-063.mjs)
-console.log('\nv0.63: el teclado de la app, deslizar para marcar y «Ahora toca»');
-try {
+if (parte('v0.63: el teclado de la app, deslizar para marcar y «Ahora toca»')) try {
   const { probarTeclado063 } = await import('./e2e-teclado-063.mjs');
   await probarTeclado063({ navegador, check });
 } catch (e) {
@@ -5805,8 +5835,7 @@ try {
 
 // v0.64: «Máquina ocupada · hacerlo luego» (con «Ahora toca» siguiéndolo), «Cambiar el orden» sin arrastrar y el coach viendo
 // «Hecho en otro orden», a 360 px en oscuro (test/e2e-sesion-064.mjs)
-console.log('\nv0.64: «Máquina ocupada» y el orden de la sesión');
-try {
+if (parte('v0.64: «Máquina ocupada» y el orden de la sesión')) try {
   const { probarSesion064 } = await import('./e2e-sesion-064.mjs');
   await probarSesion064({ navegador, check });
 } catch (e) {
@@ -5817,8 +5846,7 @@ try {
 // v0.65: abrir sin cobertura (con el service worker de verdad): Hoy y la sesión desde la copia del móvil, «Sin conexión · se
 // guardará al volver», una serie apuntada sin red que sigue ahí al volver a abrir y llega una sola vez; y «Novedades» una vez
 // tras cambiar de versión (nunca la primera vez), a 360 px en oscuro (test/e2e-sinred-065.mjs)
-console.log('\nv0.65: abrir sin cobertura y «Novedades»');
-try {
+if (parte('v0.65: abrir sin cobertura y «Novedades»')) try {
   const { probarSinRed065 } = await import('./e2e-sinred-065.mjs');
   await probarSinRed065({ navegador, check });
 } catch (e) {
@@ -5827,8 +5855,7 @@ try {
 }
 
 // v0.66: modo gimnasio (cifras y ✓ más grandes en la sesión) y «Bien hecho» del coach desde la Actividad (test/e2e-v066.mjs)
-console.log('\nv0.66: modo gimnasio y «Bien hecho»');
-try {
+if (parte('v0.66: modo gimnasio y «Bien hecho»')) try {
   const { probarV066 } = await import('./e2e-v066.mjs');
   await probarV066({ navegador, check });
 } catch (e) {
@@ -5837,8 +5864,7 @@ try {
 }
 
 // v0.67: «Revisión semanal» del coach (test/e2e-revision-067.mjs)
-console.log('\nv0.67: «Revisión semanal»');
-try {
+if (parte('v0.67: «Revisión semanal»')) try {
   const { probarRevision067 } = await import('./e2e-revision-067.mjs');
   await probarRevision067({ navegador, check });
 } catch (e) {
@@ -5847,8 +5873,7 @@ try {
 }
 
 // v0.68: la bienvenida del día (atleta y coach) (test/e2e-bienvenida-068.mjs)
-console.log('\nv0.68: la bienvenida del día');
-try {
+if (parte('v0.68: la bienvenida del día')) try {
   const { probarBienvenida068 } = await import('./e2e-bienvenida-068.mjs');
   await probarBienvenida068({ navegador, check });
 } catch (e) {
@@ -5858,8 +5883,7 @@ try {
 
 // v0.69: la comunidad, primera tanda (bienvenida, «Entrenando ahora», compartir sin preguntar, respuestas y 💪 a comentarios)
 // (test/e2e-comunidad-069.mjs)
-console.log('\nv0.69: la comunidad, primera tanda');
-try {
+if (parte('v0.69: la comunidad, primera tanda')) try {
   const { probarComunidad069 } = await import('./e2e-comunidad-069.mjs');
   await probarComunidad069({ navegador, check });
 } catch (e) {
@@ -5869,8 +5893,7 @@ try {
 
 // v0.70: la comunidad, segunda tanda (compañeros de racha, plantillas de retos, retos por equipos y de cardio, insignias)
 // (test/e2e-comunidad-070.mjs)
-console.log('\nv0.70: la comunidad, segunda tanda');
-try {
+if (parte('v0.70: la comunidad, segunda tanda')) try {
   const { probarComunidad070 } = await import('./e2e-comunidad-070.mjs');
   await probarComunidad070({ navegador, check });
 } catch (e) {
@@ -5880,8 +5903,7 @@ try {
 
 // v0.71: la comunidad, tercera tanda (temas, preguntas al coach y preguntas del equipo, varias fotos, guardar y buscar, la mejor
 // respuesta) (test/e2e-comunidad-071.mjs)
-console.log('\nv0.71: la comunidad, tercera tanda');
-try {
+if (parte('v0.71: la comunidad, tercera tanda')) try {
   const { probarComunidad071 } = await import('./e2e-comunidad-071.mjs');
   await probarComunidad071({ navegador, check });
 } catch (e) {
@@ -5891,8 +5913,7 @@ try {
 
 // v0.72: la comunidad, cuarta tanda (eventos y quedadas, avisos programados y plantillas, el panel, el atleta de la semana y la
 // moderación) (test/e2e-comunidad-072.mjs)
-console.log('\nv0.72: la comunidad, cuarta tanda');
-try {
+if (parte('v0.72: la comunidad, cuarta tanda')) try {
   const { probarComunidad072 } = await import('./e2e-comunidad-072.mjs');
   await probarComunidad072({ navegador, check });
 } catch (e) {
@@ -5902,8 +5923,7 @@ try {
 
 // v0.73: la comunidad, quinta tanda (aniversarios, el mes en el equipo, hitos, reacciones y pegatinas, momentos de 24 h)
 // (test/e2e-comunidad-073.mjs)
-console.log('\nv0.73: la comunidad, quinta tanda');
-try {
+if (parte('v0.73: la comunidad, quinta tanda')) try {
   const { probarComunidad073 } = await import('./e2e-comunidad-073.mjs');
   await probarComunidad073({ navegador, check });
 } catch (e) {
@@ -5912,8 +5932,7 @@ try {
 }
 
 // v0.86: «A quién escribir», el radar de contacto del coach (test/e2e-radar.mjs)
-console.log('\nv0.86: «A quién escribir»');
-try {
+if (parte('v0.86: «A quién escribir»')) try {
   const { probarRadar } = await import('./e2e-radar.mjs');
   await probarRadar({ navegador, check });
 } catch (e) {
@@ -5922,8 +5941,7 @@ try {
 }
 
 // v0.81: comprobar el recetario con el plan (test/e2e-recetario.mjs)
-console.log('\nv0.81: «Comprobar con el plan» del recetario');
-try {
+if (parte('v0.81: «Comprobar con el plan» del recetario')) try {
   const { probarRecetario } = await import('./e2e-recetario.mjs');
   await probarRecetario({ navegador, check });
 } catch (e) {
@@ -5932,8 +5950,7 @@ try {
 }
 
 // v0.79: «Rellenar la semana» en el menú semanal (test/e2e-rellenar.mjs)
-console.log('\nv0.79: «Rellenar la semana»');
-try {
+if (parte('v0.79: «Rellenar la semana»')) try {
   const { probarRellenar } = await import('./e2e-rellenar.mjs');
   await probarRellenar({ navegador, check });
 } catch (e) {
@@ -5942,8 +5959,7 @@ try {
 }
 
 // Pulido de fluidez: respuesta al pulsar, no perder el sitio, «atrás»… (test/e2e-pulido.mjs)
-console.log('\nPulido de fluidez');
-try {
+if (parte('Pulido de fluidez')) try {
   const { probarPulido } = await import('./e2e-pulido.mjs');
   await probarPulido({ navegador, check });
 } catch (e) {
@@ -5952,8 +5968,7 @@ try {
 }
 
 // Pulido de fluidez, segunda tanda: fotos ligeras, consultas compartidas, sin saltos al cargar… (test/e2e-pulido2.mjs)
-console.log('\nPulido de fluidez, segunda tanda');
-try {
+if (parte('Pulido de fluidez, segunda tanda')) try {
   const { probarPulido2 } = await import('./e2e-pulido2.mjs');
   await probarPulido2({ navegador, check });
 } catch (e) {
@@ -5962,8 +5977,7 @@ try {
 }
 
 // Pulido de fluidez, tercera tanda: historial y biblioteca guardados, no volver a pedir lo recién pedido… (test/e2e-pulido3.mjs)
-console.log('\nPulido de fluidez, tercera tanda');
-try {
+if (parte('Pulido de fluidez, tercera tanda')) try {
   const { probarPulido3 } = await import('./e2e-pulido3.mjs');
   await probarPulido3({ navegador, check });
 } catch (e) {
@@ -5972,8 +5986,7 @@ try {
 }
 
 // Pulido 4: cómo va la app en cada dispositivo (test/e2e-rendimiento.mjs)
-console.log('\nCómo va la app en cada dispositivo');
-try {
+if (parte('Cómo va la app en cada dispositivo')) try {
   const { probarRendimiento } = await import('./e2e-rendimiento.mjs');
   await probarRendimiento({ navegador, check });
 } catch (e) {
@@ -5982,8 +5995,7 @@ try {
 }
 
 // v0.185: el editor manual, segunda tanda (test/e2e-editor-185.mjs)
-console.log('\nv0.185: el editor manual, segunda tanda');
-try {
+if (parte('v0.185: el editor manual, segunda tanda')) try {
   const { probarEditor185 } = await import('./e2e-editor-185.mjs');
   await probarEditor185({ navegador, check });
 } catch (e) {
@@ -5992,8 +6004,7 @@ try {
 }
 
 // v0.187: compartir, tercera tanda (test/e2e-compartir-187.mjs)
-console.log('\nv0.187: compartir, tercera tanda');
-try {
+if (parte('v0.187: compartir, tercera tanda')) try {
   const { probarCompartir187 } = await import('./e2e-compartir-187.mjs');
   await probarCompartir187({ navegador, check });
 } catch (e) {
@@ -6002,8 +6013,7 @@ try {
 }
 
 // v0.199: Atletas, segunda tanda (test/e2e-atletas-199.mjs)
-console.log('\nv0.199: Atletas, segunda tanda');
-try {
+if (parte('v0.199: Atletas, segunda tanda')) try {
   const { probarAtletas199 } = await import('./e2e-atletas-199.mjs');
   await probarAtletas199({ navegador, check });
 } catch (e) {
@@ -6012,8 +6022,7 @@ try {
 }
 
 // v0.203: progreso y seguimiento, más bonitos (test/e2e-progreso-203.mjs)
-console.log('\nv0.203: progreso y seguimiento, más bonitos');
-try {
+if (parte('v0.203: progreso y seguimiento, más bonitos')) try {
   const { probarProgreso203 } = await import('./e2e-progreso-203.mjs');
   await probarProgreso203({ navegador, check });
 } catch (e) {
@@ -6022,8 +6031,7 @@ try {
 }
 
 // v0.204: progreso y seguimiento, segunda tanda (test/e2e-progreso-204.mjs)
-console.log('\nv0.204: progreso y seguimiento, segunda tanda');
-try {
+if (parte('v0.204: progreso y seguimiento, segunda tanda')) try {
   const { probarProgreso204 } = await import('./e2e-progreso-204.mjs');
   await probarProgreso204({ navegador, check });
 } catch (e) {
@@ -6032,8 +6040,7 @@ try {
 }
 
 // v0.205: Registro y Actividad del atleta, en su ficha (test/e2e-registro-205.mjs)
-console.log('\nv0.205: Registro y Actividad del atleta');
-try {
+if (parte('v0.205: Registro y Actividad del atleta')) try {
   const { probarRegistro205 } = await import('./e2e-registro-205.mjs');
   await probarRegistro205({ navegador, check });
 } catch (e) {
@@ -6042,8 +6049,7 @@ try {
 }
 
 // v0.206: Registro y Actividad, segunda tanda (test/e2e-registro-206.mjs)
-console.log('\nv0.206: Registro y Actividad, segunda tanda');
-try {
+if (parte('v0.206: Registro y Actividad, segunda tanda')) try {
   const { probarRegistro206 } = await import('./e2e-registro-206.mjs');
   await probarRegistro206({ navegador, check });
 } catch (e) {
@@ -6052,8 +6058,7 @@ try {
 }
 
 // v0.200: la tanda de belleza (test/e2e-belleza-200.mjs)
-console.log('\nv0.200: la tanda de belleza');
-try {
+if (parte('v0.200: la tanda de belleza')) try {
   const { probarBelleza200 } = await import('./e2e-belleza-200.mjs');
   await probarBelleza200({ navegador, check });
 } catch (e) {
@@ -6062,8 +6067,7 @@ try {
 }
 
 // v0.198: la lista de Atletas a tu gusto (test/e2e-atletas-198.mjs)
-console.log('\nv0.198: Atletas a tu gusto');
-try {
+if (parte('v0.198: Atletas a tu gusto')) try {
   const { probarAtletas198 } = await import('./e2e-atletas-198.mjs');
   await probarAtletas198({ navegador, check });
 } catch (e) {
@@ -6072,8 +6076,7 @@ try {
 }
 
 // v0.197: Revisar, tercera tanda (test/e2e-revisar-197.mjs)
-console.log('\nv0.197: Revisar, tercera tanda');
-try {
+if (parte('v0.197: Revisar, tercera tanda')) try {
   const { probarRevisar197 } = await import('./e2e-revisar-197.mjs');
   await probarRevisar197({ navegador, check });
 } catch (e) {
@@ -6082,8 +6085,7 @@ try {
 }
 
 // v0.196: Revisar, segunda tanda (test/e2e-revisar-196.mjs)
-console.log('\nv0.196: Revisar, segunda tanda');
-try {
+if (parte('v0.196: Revisar, segunda tanda')) try {
   const { probarRevisar196 } = await import('./e2e-revisar-196.mjs');
   await probarRevisar196({ navegador, check });
 } catch (e) {
@@ -6092,8 +6094,7 @@ try {
 }
 
 // v0.195: Revisar, veinte mejoras (test/e2e-revisar-195.mjs)
-console.log('\nv0.195: Revisar, veinte mejoras');
-try {
+if (parte('v0.195: Revisar, veinte mejoras')) try {
   const { probarRevisar195 } = await import('./e2e-revisar-195.mjs');
   await probarRevisar195({ navegador, check });
 } catch (e) {
@@ -6102,8 +6103,7 @@ try {
 }
 
 // v0.194: la revisión semanal, el progreso (test/e2e-revision-194.mjs)
-console.log('\nv0.194: la revisión semanal, el progreso');
-try {
+if (parte('v0.194: la revisión semanal, el progreso')) try {
   const { probarRevision194 } = await import('./e2e-revision-194.mjs');
   await probarRevision194({ navegador, check });
 } catch (e) {
@@ -6112,8 +6112,7 @@ try {
 }
 
 // v0.193: la revisión semanal, tercera tanda (test/e2e-revision-193.mjs)
-console.log('\nv0.193: la revisión semanal, tercera tanda');
-try {
+if (parte('v0.193: la revisión semanal, tercera tanda')) try {
   const { probarRevision193 } = await import('./e2e-revision-193.mjs');
   await probarRevision193({ navegador, check });
 } catch (e) {
@@ -6122,8 +6121,7 @@ try {
 }
 
 // v0.192: la revisión semanal, segunda tanda (test/e2e-revision-192.mjs)
-console.log('\nv0.192: la revisión semanal, segunda tanda');
-try {
+if (parte('v0.192: la revisión semanal, segunda tanda')) try {
   const { probarRevision192 } = await import('./e2e-revision-192.mjs');
   await probarRevision192({ navegador, check });
 } catch (e) {
@@ -6132,8 +6130,7 @@ try {
 }
 
 // v0.191: la revisión semanal, más fácil de pasar (test/e2e-revision-191.mjs)
-console.log('\nv0.191: la revisión semanal, más fácil de pasar');
-try {
+if (parte('v0.191: la revisión semanal, más fácil de pasar')) try {
   const { probarRevision191 } = await import('./e2e-revision-191.mjs');
   await probarRevision191({ navegador, check });
 } catch (e) {
@@ -6142,8 +6139,7 @@ try {
 }
 
 // v0.186: el editor manual, tercera tanda (test/e2e-editor-186.mjs)
-console.log('\nv0.186: el editor manual, tercera tanda');
-try {
+if (parte('v0.186: el editor manual, tercera tanda')) try {
   const { probarEditor186 } = await import('./e2e-editor-186.mjs');
   await probarEditor186({ navegador, check });
 } catch (e) {
@@ -6152,8 +6148,7 @@ try {
 }
 
 // v0.184: el editor manual del programa, más cómodo (test/e2e-editor-184.mjs)
-console.log('\nv0.184: el editor manual, más cómodo');
-try {
+if (parte('v0.184: el editor manual, más cómodo')) try {
   const { probarEditor184 } = await import('./e2e-editor-184.mjs');
   await probarEditor184({ navegador, check });
 } catch (e) {
@@ -6162,8 +6157,7 @@ try {
 }
 
 // v0.74: «Programar según FBE» en el editor del programa (test/e2e-programar-fbe.mjs)
-console.log('\nv0.74: «Programar según FBE»');
-try {
+if (parte('v0.74: «Programar según FBE»')) try {
   const { probarProgramarFBE } = await import('./e2e-programar-fbe.mjs');
   await probarProgramarFBE({ navegador, check });
 } catch (e) {
@@ -6173,8 +6167,7 @@ try {
 
 // v0.114: el perfil del atleta, más bonito y más social (test/e2e-perfil-114.mjs)
 // v0.133: la carrera (migración 056): el coach y el atleta, en la demo (test/e2e-carrera-133.mjs)
-console.log('\nv0.133: la carrera');
-try {
+if (parte('v0.133: la carrera')) try {
   const { probarCarrera133 } = await import('./e2e-carrera-133.mjs');
   await probarCarrera133({ navegador, check });
 } catch (e) {
@@ -6183,8 +6176,7 @@ try {
 }
 
 // v0.140: Hoy a tu gusto (test/e2e-panel-hoy.mjs)
-console.log('\nv0.140: Hoy a tu gusto');
-try {
+if (parte('v0.140: Hoy a tu gusto')) try {
   const { probarPanelHoy } = await import('./e2e-panel-hoy.mjs');
   await probarPanelHoy({ navegador, check });
   // (v0.142) el tiempo para salir (Open-Meteo de mentira)
@@ -6199,8 +6191,7 @@ try {
 }
 
 // v0.134: la música también en el modo atleta del coach (test/e2e-musica-propio.mjs)
-console.log('\nv0.134: la música en el modo atleta del coach');
-try {
+if (parte('v0.134: la música en el modo atleta del coach')) try {
   const { probarMusicaPropio } = await import('./e2e-musica-propio.mjs');
   await probarMusicaPropio({ navegador, check });
 } catch (e) {
@@ -6208,8 +6199,7 @@ try {
   console.log('  ✗ la música en el modo atleta (v0.134):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 
-console.log('\nv0.114: el perfil, más bonito y más social');
-try {
+if (parte('v0.114: el perfil, más bonito y más social')) try {
   const { probarPerfil114 } = await import('./e2e-perfil-114.mjs');
   await probarPerfil114({ navegador, check });
 } catch (e) {
@@ -6218,8 +6208,7 @@ try {
 }
 
 // v0.112: kilos o libras para las cargas (Perfil → Este móvil): la sesión en libras se guarda en kilos (test/e2e-libras-112.mjs)
-console.log('\nv0.112: kilos o libras');
-try {
+if (parte('v0.112: kilos o libras')) try {
   const { probarLibras112 } = await import('./e2e-libras-112.mjs');
   await probarLibras112({ navegador, check });
 } catch (e) {
@@ -6228,8 +6217,7 @@ try {
 }
 
 // El recetario del equipo (migración 055): recetas para todos los atletas (test/e2e-recetario-equipo.mjs)
-console.log('\nEl recetario del equipo');
-try {
+if (parte('El recetario del equipo')) try {
   const { probarRecetarioEquipo } = await import('./e2e-recetario-equipo.mjs');
   await probarRecetarioEquipo({ navegador, check });
 } catch (e) {
@@ -6238,8 +6226,7 @@ try {
 }
 
 // «Aprende» (migración 057): las guías del coach y la ficha de técnica de cada ejercicio (test/e2e-guias.mjs)
-console.log('\n«Aprende»: las guías y la ficha de cada ejercicio');
-try {
+if (parte('«Aprende»: las guías y la ficha de cada ejercicio')) try {
   const { probarGuias } = await import('./e2e-guias.mjs');
   await probarGuias({ navegador, check });
   // Las ilustraciones vivas: la portada, la bienvenida, dónde entrenas y el resumen (y quietas con «reducir movimiento»)
@@ -6422,8 +6409,7 @@ try {
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
-console.log('\nv0.58: el modelo de los puntos del cuerpo, de verdad');
-try {
+if (parte('v0.58: el modelo de los puntos del cuerpo, de verdad')) try {
   const cx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES' });
   const pm = await cx.newPage();
   const pedidasM = [];
@@ -6469,8 +6455,7 @@ try {
 }
 
 // v0.21: la página que genera las claves de las notificaciones (se abre con doble clic, sin servidor)
-console.log('\nClaves de las notificaciones (scripts/claves-notificaciones.html)');
-try {
+if (parte('Claves de las notificaciones (scripts/claves-notificaciones.html)')) try {
   const pc = await (await navegador.newContext()).newPage();
   await pc.goto(new URL('../scripts/claves-notificaciones.html', import.meta.url).href);
   await pc.getByRole('button', { name: 'Generar claves' }).click();
@@ -6484,8 +6469,7 @@ try {
   await pc.context().close();
 } catch (e) { fallos++; console.log('  ✗ la página de claves no funciona:', e.message.split('\n')[0]); }
 
-console.log('\nRecuperar un atleta (scripts/restaurar-atleta.html)');
-try {
+if (parte('Recuperar un atleta (scripts/restaurar-atleta.html)')) try {
   const pr = await (await navegador.newContext()).newPage();
   const erroresR = [];
   pr.on('pageerror', (e) => erroresR.push(e.message));
@@ -6503,8 +6487,11 @@ try {
   check(await pr.locator('#estado-archivo', { hasText: 'No se puede leer' }).waitFor({ timeout: 5000 }).then(() => true, () => false) && await pr.locator('#paso-sql').isHidden(), 'con un archivo que no es la copia, lo dice (y no deja SQL a medias)');
   await pr.context().close();
 } catch (e) { fallos++; console.log('  ✗ la página de recuperar no funciona:', e.message.split('\n')[0]); }
+cerrarParte();
 await navegador.close();
 srv.close();
+if (process.env.FBE_INFORME) { try { (await import('node:fs')).writeFileSync(process.env.FBE_INFORME, JSON.stringify(informe, null, 1)); } catch (e) { console.log('  (no se ha podido escribir el informe:', e.message, ')'); } }
+if (informe.fallidas.length) console.log(`\nPartes que han fallado: ${informe.fallidas.join(',')} (para repetirlas: FBE_PARTES=${informe.fallidas.join(',')})`);
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (repetidas.length) console.log(`⚠ repetidas por fallar a la primera: ${repetidas.join(', ')} (cuenta la segunda vez)`);
 process.exit(fallos ? 1 : 0);

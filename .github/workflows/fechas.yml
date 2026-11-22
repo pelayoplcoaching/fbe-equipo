@@ -1,0 +1,118 @@
+# (v0.207) Las pruebas por fechas, solas cada lunes: npm test con las 21 fechas con trampa de test/fechas-lista.mjs (cada
+# día de la semana, cambios de día, de mes y de año, Navidad, el cambio de hora…) y la prueba de punta a punta completa
+# con dos de ellas, que van rotando cada semana (test/fechas-semana.mjs). Así una prueba que solo falla un domingo por la
+# noche o el día 1 sale antes de que toque publicar ese día. No publica nada.
+name: Pruebas por fechas (cada lunes)
+
+on:
+  schedule:
+    # Los lunes a las 4:17 UTC (5:17 o 6:17 en Madrid)
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fechas
+  cancel-in-progress: true
+
+jobs:
+  npm-test:
+    runs-on: ubuntu-24.04
+    env:
+      TZ: Europe/Madrid
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: npm test con las 21 fechas
+        run: INFORME=por-fechas.json node test/por-fechas.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: por-fechas
+          path: por-fechas.json
+          retention-days: 14
+
+  empaquetar:
+    runs-on: ubuntu-24.04
+    outputs:
+      fechas: ${{ steps.elegir.outputs.fechas }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run build
+      - id: elegir
+        run: node test/fechas-semana.mjs >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          include-hidden-files: true
+          retention-days: 2
+
+  e2e:
+    needs: empaquetar
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        fecha: ${{ fromJSON(needs.empaquetar.outputs.fechas) }}
+        trozo: [1, 2, 3, 4]
+    env:
+      TZ: Europe/Madrid
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Prueba de punta a punta el ${{ matrix.fecha }} (trozo ${{ matrix.trozo }} de 4)
+        shell: bash
+        env:
+          FBE_TROZO: ${{ matrix.trozo }}/4
+          FBE_FECHA: ${{ matrix.fecha }}
+        run: |
+          set -o pipefail
+          export NODE_OPTIONS="--import $PWD/test/fecha-simulada.mjs"
+          anotar() { grep -v '  ✓' "$1" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g'; }
+          if FBE_INFORME=e2e-partes.json npm run e2e 2>&1 | tee e2e.log; then exit 0; fi
+          fallidas=$(node -e "try { console.log(require('./e2e-partes.json').fallidas.join(',')) } catch {}")
+          if [ -z "$fallidas" ]; then
+            echo "::error title=El ${{ matrix.fecha }} (trozo ${{ matrix.trozo }})::$(anotar e2e.log)"
+            exit 1
+          fi
+          if FBE_TROZO= FBE_PARTES="$fallidas" FBE_INFORME=e2e-partes-2.json npm run e2e 2>&1 | tee e2e-2.log; then
+            nombres=$(node -e "console.log(require('./e2e-partes.json').nombres.join(' | '))")
+            echo "::warning title=Sueltas el ${{ matrix.fecha }} (trozo ${{ matrix.trozo }})::Fallaron a la primera y pasaron a la segunda: $nombres"
+            exit 0
+          fi
+          echo "::error title=El ${{ matrix.fecha }} (trozo ${{ matrix.trozo }})::$(anotar e2e-2.log)"
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-${{ strategy.job-index }}
+          path: |
+            e2e*.log
+            e2e-partes*.json
+            test/e2e-fallo.png
+          retention-days: 14
