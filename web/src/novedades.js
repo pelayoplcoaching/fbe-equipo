@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.207': {
+    atleta: [
+      'La app abre más ligera: cada pantalla se carga al abrirla (y por detrás, con la app quieta), así que Hoy sale antes.',
+      'Si la app se actualiza con ella abierta, se recarga sola y entra; y al despertar el móvil tras una hora, ya no da error.',
+    ],
+    coach: [
+      'Revisar, la ficha, la Revisión semanal y la lista de atletas cargan más rápido: lo de cada atleta se pide a la vez.',
+      'Errores de la app, agrupados: cuántas veces, a cuántas personas, en qué versiones y si es nuevo; lo que se arregla solo, aparte.',
+    ],
+  },
   '0.206': {
     coach: [
       'Registro por ejercicios o por sesiones, con la semana arriba, su minilínea y si se pasa del esfuerzo pautado.',
