@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSy
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
+import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque } from './opciones-build.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
@@ -26,7 +27,7 @@ const POSE_ARCHIVOS = ['pose.js', 'pose_solution_packed_assets_loader.js', 'pose
   'pose_solution_wasm_bin.js', 'pose_solution_wasm_bin.wasm', 'pose_web.binarypb', 'pose_landmark_lite.tflite'];
 let rutaWorker = null;
 if (!demo) {
-  const w = await esbuild.build({ entryPoints: [join(raiz, 'web/src/ui/tecnica/analisis/seguidor.worker.js')], bundle: true, minify: true, format: 'iife', target: ['es2020', 'safari15'], write: false, legalComments: 'none', logLevel: 'warning' });
+  const w = await esbuild.build(opcionesWorker(raiz));
   const codigo = w.outputFiles[0].text;
   soloAscii(codigo, 'El worker del análisis');
   rutaWorker = `chunks/analisis-${createHash('sha256').update(codigo).digest('hex').slice(0, 8).toUpperCase()}.js`;
@@ -40,36 +41,9 @@ if (!demo) {
   copyFileSync(join(raiz, 'web/licencias/zxing-LICENSE.txt'), join(salida, 'licencias/zxing-LICENSE.txt'));
 }
 
-const comun = {
-  entryPoints: [join(raiz, 'web/src/main.jsx')],
-  bundle: true,
-  minify: true,
-  format: 'esm',
-  target: ['es2020', 'safari15'],
-  jsx: 'automatic',
-  jsxImportSource: 'preact',
-  loader: { '.json': 'json' },
-  define: { __DEMO__: demo ? 'true' : 'false', __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8')).version),
-    __WORKER_ANALISIS__: JSON.stringify(rutaWorker), __POSE__: JSON.stringify(demo ? null : POSE_DIR),
-    // (imágenes) la demo de un solo archivo no lleva las ilustraciones (no caben): sale el dibujo de líneas de siempre
-    __IMAGENES__: demo ? 'false' : 'true' },
-  // La demo privada lleva tu biblioteca real (vídeos y técnica) si está en tu ordenador; la web pública, solo nombres
-  plugins: demo && existsSync(join(raiz, 'web/src/datos/biblioteca-fbe.json')) ? [{
-    name: 'biblioteca-real',
-    setup(b) { b.onResolve({ filter: /biblioteca-generica\.json$/ }, () => ({ path: join(raiz, 'web/src/datos/biblioteca-fbe.json') })); },
-  }] : [],
-  legalComments: 'none',
-  logLevel: 'warning',
-  metafile: true,
-};
+const comun = opcionesApp(raiz, { demo, rutaWorker, poseDir: POSE_DIR });
 
-// El JavaScript empaquetado tiene que ser ASCII puro: así funciona aunque el navegador no sepa la codificación
-// (la demo abierta como archivo, un proxy que cambie las cabeceras). esbuild escapa los textos, pero no lo que va
-// dentro de una expresión regular: escríbelo con \u00e1 y similares.
-function soloAscii(js, nombre) {
-  const m = /[^\x00-\x7f]/.exec(js);
-  if (m) throw new Error(`${nombre} lleva el carácter «${m[0]}» sin escapar: «${js.slice(Math.max(0, m.index - 40), m.index + 10)}». Escríbelo como \\u${m[0].charCodeAt(0).toString(16).padStart(4, '0')} en el código fuente.`);
-}
+// (soloAscii: el JavaScript empaquetado, ASCII puro; en scripts/opciones-build.mjs)
 
 const fontFace = (src) => `@font-face{font-family:'Archivo Variable';font-style:normal;font-display:swap;font-weight:100 900;font-stretch:62% 125%;src:url(${src}) format('woff2-variations'),url(${src}) format('woff2');}`;
 
@@ -93,7 +67,7 @@ ${marcadoPortada}
   writeFileSync(join(salida, 'index.html'), html);
   console.log(`dist-demo/index.html  ${(html.length / 1024).toFixed(0)} KB`);
 } else {
-  const r = await esbuild.build({ ...comun, outdir: salida, splitting: true, entryNames: 'app', chunkNames: 'chunks/[name]-[hash]' });
+  const r = await esbuild.build({ ...comun, outdir: salida, ...PRODUCCION });
   for (const f of Object.keys(r.metafile.outputs)) if (/\.(js|css)$/.test(f)) soloAscii(readFileSync(f, 'utf8'), f);
   mkdirSync(join(salida, 'fonts'), { recursive: true });
   copyFileSync(fuente, join(salida, 'fonts/archivo-latin.woff2'));
@@ -143,11 +117,8 @@ ${marcadoPortada}
   const version = createHash('sha256').update(archivos.filter((f) => f !== 'config.js').map((f) => readFileSync(join(salida, f))).join('')).digest('hex').slice(0, 10);
   // (pulido 10) Lo que app.js importa nada más arrancar (el trozo común, desde que la app del coach va aparte) se pide a
   // la vez que él, sin esperar a leerlo: una espera menos en el primer arranque
-  const claveApp = Object.keys(r.metafile.outputs).find((f) => /(^|\/)app\.js$/.test(f));
-  const alArrancar = new Set();
-  for (const pila = [claveApp]; pila.length;) {
-    for (const im of r.metafile.outputs[pila.pop()]?.imports || []) if (im.kind === 'import-statement' && !alArrancar.has(im.path)) { alArrancar.add(im.path); pila.push(im.path); }
-  }
+  const { app: claveApp, arranque } = archivosDeArranque(r.metafile);
+  const alArrancar = new Set([...arranque].filter((f) => f !== claveApp));
   const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
