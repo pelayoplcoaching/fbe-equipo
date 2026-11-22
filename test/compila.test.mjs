@@ -11,9 +11,10 @@ import { join, relative } from 'node:path';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque } from '../scripts/opciones-build.mjs';
 
 // En KB (1024 bytes). «gz»: lo que viaja por la red (comprimido); «crudo»: lo que el móvil tiene que leer y procesar.
+// (v0.207: el código al abrir bajó de 2974 KB a unos 2050 con la lista de las ilustraciones; los estilos, 1068 KB)
 const PRESUPUESTO = {
-  js: { crudo: 3150, gz: 1030 },
-  css: { crudo: 1130, gz: 200 },
+  js: { crudo: 2150, gz: 760 },
+  css: { crudo: 1110, gz: 196 },
 };
 
 let ok = 0, fallos = 0;
@@ -45,9 +46,11 @@ console.log('\nLo que se descarga al abrir la app');
 const { app, arranque } = archivosDeArranque(r.metafile);
 const porRuta = new Map(r.outputFiles.map((f) => [relative(process.cwd(), f.path), f.contents]));
 const medir = (rutas) => rutas.reduce((t, f) => { const b = porRuta.get(f); return b ? { crudo: t.crudo + b.length, gz: t.gz + gzipSync(b, { level: 9 }).length } : t; }, { crudo: 0, gz: 0 });
-const js = medir([...arranque]);
+// (con la lista de las ilustraciones: va en su propio trozo, pero se pide y se espera al abrir)
+const lista = Object.entries(r.metafile.outputs).filter(([, o]) => Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))).map(([f]) => f);
+const js = medir([...new Set([...arranque, ...lista])]);
 const css = medir([...porRuta.keys()].filter((f) => /(^|\/)app\.css$/.test(f)));
-check(!!app && arranque.size >= 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos`);
+check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
 check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz})`);
 check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz})`);
 // (y si ha bajado mucho, que se baje el presupuesto: así no vuelve a crecer hasta donde estaba)
