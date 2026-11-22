@@ -14,7 +14,7 @@ import { RendimientoApp } from './Rendimiento.jsx';
 import { VocesCoach } from './VocesCoach.jsx';
 import { MensajesAutomaticos, AvisosZona, MusicaCoach } from './PersonalCoach.jsx';
 import { AtajosCoach } from './Integraciones.jsx';
-import { separarErrores } from '../../logica/errores-app.js';
+import { separarErrores, agruparErrores } from '../../logica/errores-app.js';
 
 export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -236,8 +236,12 @@ function ErroresApp() {
   const errores = lista.datos || [];
   // (v0.207) los avisos que se arreglan solos (notificaciones) y los del reproductor del iPhone, aparte
   const { reales, avisos } = separarErrores(errores);
+  // (v0.207) agrupados por mensaje: cuántas veces, a cuántas personas, en qué versiones y si es nuevo de la última
+  const grupos = agruparErrores(reales);
+  const rango = (vs) => (vs.length ? (vs.length === 1 ? `v${vs[0]}` : `v${vs[0]}–${vs[vs.length - 1]}`) : '');
   const linea = (e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.quien} · ${e.version || '?'} · ${e.pantalla || ''}\n${e.mensaje}${e.detalle ? `\n${e.detalle.split('\n').slice(0, 4).join('\n')}` : ''}\n${e.navegador || ''}`;
-  const texto = () => [reales.slice(0, 50).map(linea).join('\n\n'), avisos.length ? `Avisos que se arreglan solos (${avisos.length}):\n${avisos.slice(0, 10).map((e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.version || '?'} · ${e.mensaje}`).join('\n')}` : ''].filter(Boolean).join('\n\n');
+  const texto = () => [grupos.length ? `Agrupados (${grupos.length}):\n${grupos.slice(0, 30).map((g) => `${g.veces}× · ${g.personas} ${g.personas === 1 ? 'persona' : 'personas'} · ${rango(g.versiones)}${g.nuevo ? ' · NUEVO' : ''}\n  ${g.mensaje}`).join('\n')}` : '',
+    reales.slice(0, 50).map(linea).join('\n\n'), avisos.length ? `Avisos que se arreglan solos (${avisos.length}):\n${avisos.slice(0, 10).map((e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.version || '?'} · ${e.mensaje}`).join('\n')}` : ''].filter(Boolean).join('\n\n');
   const resumen = lista.cargando && !lista.datos ? 'Cargando…' : modo === 'demo' ? 'En la demo no se apuntan.'
     : !errores.length ? 'Ninguno en los últimos 60 días.'
     : `${reales.length ? `${reales.length} en los últimos 60 días` : 'Ningún fallo en los últimos 60 días'}${avisos.length ? ` (y ${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'} que se arreglan solos)` : ''}`;
@@ -258,7 +262,17 @@ function ErroresApp() {
         <p class="mini terciario">Cuando algo falla en el móvil de alguien, la app lo apunta aquí sola (sin nada de lo que estaba escribiendo). Si ves alguno, cópialo y pégaselo a Claude.</p>
         {abierto && errores.length > 0 && (
           <>
-            {reales.length > 0 && <ul class="lista errores-app">{reales.slice(0, 30).map(fila)}</ul>}
+            {grupos.length > 0 && (
+              <ul class="lista errores-app">
+                {grupos.slice(0, 30).map((g) => (
+                  <li key={g.clave} class="panel-pad pila-xs">
+                    <span class="mini terciario">{g.veces} {g.veces === 1 ? 'vez' : 'veces'} · {g.personas} {g.personas === 1 ? 'persona' : 'personas'}{g.versiones.length ? ` · ${rango(g.versiones)}` : ''}{g.ultimo ? ` · ${cuando(g.ultimo)}` : ''}</span>
+                    <span class="peq">{g.mensaje}</span>
+                    {g.nuevo && <span class="chip" style="justify-self:start">Nuevo en la v{g.versiones[0]}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
             {avisos.length > 0 && (
               <>
                 <p class="mini terciario">Avisos que se arreglan solos: la suscripción a las notificaciones se rehízo al abrir la app, o lo dijo el reproductor de vídeo del iPhone. No hace falta hacer nada.</p>

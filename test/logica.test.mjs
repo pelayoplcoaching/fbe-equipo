@@ -1005,6 +1005,18 @@ console.log('\nErrores de la app: los avisos que se arreglan solos, aparte (v0.2
   check(reales.map((e) => e.id).join() === '2,5' && avisos.map((e) => e.id).join() === '1,3,4',
     'los avisos de las notificaciones que se rehacen solas y el del reproductor del iPhone van aparte; un fallo de verdad (también de las notificaciones), en la lista');
   check(separarErrores(null).reales.length === 0 && separarErrores([]).avisos.length === 0, 'sin errores, nada');
+  // Agrupados por mensaje, con personas, versiones y si es nuevo de la última versión
+  const { agruparErrores } = await import('../web/src/logica/errores-app.js');
+  const g = agruparErrores([
+    { mensaje: "undefined is not an object (evaluating 'a.series') at 12:5", version: '0.206.1', quien: 'Ana', creado_en: '2026-11-20T10:00:00Z' },
+    { mensaje: "undefined is not an object (evaluating 'a.series') at 14:9", version: '0.205', quien: 'Luis', creado_en: '2026-11-21T10:00:00Z' },
+    { mensaje: "undefined is not an object (evaluating 'a.series') at 14:9", version: '0.206', quien: 'Ana', creado_en: '2026-11-19T10:00:00Z' },
+    { mensaje: 'No se encuentra 3f2a9c10-1111-4111-8111-111111111111 en https://x.example/a?b=1', version: '0.207', quien: 'Marta', creado_en: '2026-11-22T10:00:00Z' },
+  ]);
+  check(g.length === 2 && g[0].veces === 3 && g[0].personas === 2 && g[0].versiones.join() === '0.205,0.206' && !g[0].nuevo && /14:9/.test(g[0].mensaje),
+    'el mismo fallo con otros números cuenta como uno: cuántas veces, a cuántas personas y en qué versiones (con el mensaje más reciente)');
+  check(g[1].nuevo && g[1].versiones.join() === '0.207' && agruparErrores([{ mensaje: 'x', version: '0.207' }])[0].nuevo === false && agruparErrores([]).length === 0,
+    'y si es nuevo de la última versión (con una sola versión en la lista, no se sabe: no se marca)');
 }
 
 console.log('\nUna pantalla que no carga porque la app se actualizó con ella abierta (v0.207)');
