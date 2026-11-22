@@ -1,8 +1,22 @@
 // Las imágenes de la app (ilustraciones generadas para FBE): qué imagen toca en cada sitio y qué archivos servir.
 // La lista de archivos está en datos/imagenes.json (la escribe la herramienta de conversión: id → proporción y un
 // archivo WebP por ancho, con su huella en el nombre). Aquí no hay nada del navegador: se prueba en test/imagenes.test.mjs.
-import LISTA from '../datos/imagenes.json' with { type: 'json' };
-import EJERCICIOS_IMG from '../datos/ejercicios-imagenes.json' with { type: 'json' };
+// (v0.207, rendimiento) Las dos listas (datos/imagenes.json, unos 160 KB, y la de los ejercicios) van en su propio trozo,
+// fuera del arranque: main.jsx las pide al abrir la app, a la vez que lo demás, y espera a tenerlas antes de pintar (así no
+// cambia ningún dibujo por su ilustración al llegar). El service worker las guarda con su huella: al actualizar la app,
+// si no han cambiado, no se vuelven a bajar. Hasta que llegan (o si no llegan), sin ilustraciones: los dibujos de siempre.
+const LISTA = {};
+const EJERCICIOS_IMG = { porId: {}, porNombre: {} };
+let cargando = null;
+export function cargarListaImagenes() {
+  cargando ||= import('../datos/lista-imagenes.js').then((m) => {
+    Object.assign(LISTA, m.LISTA);
+    Object.assign(EJERCICIOS_IMG, m.EJERCICIOS_IMG);
+    IMAGENES.splice(0, IMAGENES.length, ...Object.keys(LISTA));
+    return true;
+  }).catch((e) => { cargando = null; throw e; });
+  return cargando;
+}
 import { patronEjercicio } from './diseno.js';
 
 // ---------- La portada de la sesión ----------
@@ -347,7 +361,7 @@ export function fuenteImagen(id, lista = LISTA) {
   };
 }
 
-export const IMAGENES = Object.keys(LISTA);
+export const IMAGENES = [];   // (se llena al llegar la lista: cargarListaImagenes)
 
 // ---------- Los iconos ilustrados ----------
 // 45 iconos de los cuadraditos (ios-ico) llevan su ilustración (cinco láminas de 3×3, claude/iconos-prompts.md). Se

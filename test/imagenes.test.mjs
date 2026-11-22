@@ -7,6 +7,8 @@ import { familiaPortada, fuenteImagen, imagenHabito, imagenGrupo, imagenComida, 
 import { ICONOS_HABITO } from '../web/src/logica/habitos.js';
 import { GRUPOS } from '../web/src/logica/calculos.js';
 import { TOMAS } from '../web/src/logica/comidas.js';
+// (v0.207) la lista de las ilustraciones va en su propio trozo: se carga antes, como hace la app al abrirse
+await (await import('../web/src/logica/imagenes.js')).cargarListaImagenes();
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };

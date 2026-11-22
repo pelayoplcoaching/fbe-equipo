@@ -8,6 +8,7 @@ const lee = (r) => readFileSync(new URL(`../${r}`, import.meta.url), 'utf8');
 const C = await import('../web/src/logica/calculos.js');
 const { guiaDeGrupo, estanteDe } = await import('../web/src/logica/guias.js');
 const { imagenGuia, imagenGrupo } = await import('../web/src/logica/imagenes.js');
+  await (await import('../web/src/logica/imagenes.js')).cargarListaImagenes();   // (v0.207: la lista va en su propio trozo)
 
 console.log('En la app');
 const nuevos = ['antebrazo', 'aductores', 'lumbares'];

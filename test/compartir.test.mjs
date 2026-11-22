@@ -90,6 +90,7 @@ check(recordatorioCompartir({ ...est, compartida: true }, '2026-11-08') === null
 {
   const { plantillaInicial, sorpresa } = await import('../web/src/logica/compartir.js');
   const { FONDOS_COMPARTIR, fondoValido, fondosDisponibles, fondoLogro, fondoElegido, grupoFondo } = await import('../web/src/logica/imagenes.js');
+  await (await import('../web/src/logica/imagenes.js')).cargarListaImagenes();   // (v0.207: la lista va en su propio trozo)
   const claves = PLANTILLAS_TARJETA.map(([k]) => k);
   check(claves.includes('lista') && claves.includes('record') && claves[0] === 'cifras', 'v0.187: plantillas «Lista» y «Récord»');
   check(plantillaInicial('poster', claves) === 'poster' && plantillaInicial('foto', claves) === 'cifras' && plantillaInicial('record', claves, { records: 0 }) === 'cifras'

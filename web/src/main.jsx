@@ -47,6 +47,7 @@ instalarTacto();
 instalarPantalla();
 instalarBelleza();
 import { crearApi } from './datos/api.js';
+import { cargarListaImagenes } from './logica/imagenes.js';
 import { crearCola } from './datos/cola.js';
 import { instalarRegistro } from './registro-errores.js';
 import { instalarRendimiento, enviarRendimiento } from './rendimiento.js';
@@ -56,6 +57,8 @@ import { instalarRendimiento, enviarRendimiento } from './rendimiento.js';
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__fbeInstalar = e; });
 
 async function arrancar() {
+  // (v0.207) la lista de las ilustraciones, en su propio trozo: se pide ya, a la vez que lo demás, y se espera antes de pintar
+  const listaImagenes = cargarListaImagenes().catch(() => {});
   const cfg = window.FBE_CONFIG || {};
   const conSupabase = !__DEMO__ && cfg.supabaseUrl && cfg.supabaseAnonKey && !new URLSearchParams(location.search).has('demo');
   let backend;
@@ -86,6 +89,7 @@ async function arrancar() {
     import('./ui/portada.js').then((m) => m.quitarPortada()).catch(() => {});
     return;
   }
+  await listaImagenes;
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
   // (sonido, tanda 2) el audio de la app, listo con el primer toque (sin sonar nada)
   import('./ui/sonido.js').then((m) => m.prepararAlTocar()).catch(() => {});

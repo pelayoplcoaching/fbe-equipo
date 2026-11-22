@@ -119,6 +119,8 @@ ${marcadoPortada}
   // la vez que él, sin esperar a leerlo: una espera menos en el primer arranque
   const { app: claveApp, arranque } = archivosDeArranque(r.metafile);
   const alArrancar = new Set([...arranque].filter((f) => f !== claveApp));
+  // (v0.207) y la lista de las ilustraciones (en su propio trozo, pero se espera antes de pintar): también a la vez
+  for (const [f, o] of Object.entries(r.metafile.outputs)) if (Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))) alArrancar.add(f);
   const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
