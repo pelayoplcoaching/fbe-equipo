@@ -9,7 +9,8 @@ const MAX = 15;
 
 const deRed = (e, m) => !!e?.sinConexion || e?.name === 'AbortError' || (typeof navigator !== 'undefined' && navigator.onLine === false)
   || /Failed to fetch|NetworkError|Load failed|network error|ERR_NETWORK|The Internet connection appears to be offline/i.test(m);
-const ruido = (m) => /ResizeObserver loop|Script error\.?$|^cancel(l)?ed$/i.test(m);
+// (v0.207) «Can't find variable: EmptyRanges»: del reproductor de vídeo del iPhone, no de la app
+const ruido = (m) => /ResizeObserver loop|Script error\.?$|^cancel(l)?ed$|\bEmptyRanges\b/i.test(m);
 
 export function reportarError(e, contexto = '') {
   try {

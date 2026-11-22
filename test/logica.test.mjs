@@ -982,12 +982,29 @@ console.log('\nRegistro de errores: qué se apunta (v0.21)');
   reportarError(Object.assign(new Error('Sin conexión'), { sinConexion: true }), 'carga');
   reportarError({ name: 'AbortError', message: 'aborted' }, 'carga');
   reportarError(new Error('ResizeObserver loop limit exceeded'), 'error');
+  reportarError(new ReferenceError("Can't find variable: EmptyRanges"), 'error');
   for (let i = 0; i < 30; i++) reportarError(new Error(`otro ${i}`), 'error');
   await new Promise((r) => setTimeout(r, 20));
   check(llegan[0]?.mensaje === 'x is undefined' && llegan[0].version === '0.21' && llegan[0].pantalla.startsWith('carga') && /TypeError/.test(llegan[0].detalle || ''),
     'un error de verdad se apunta con su mensaje, la pantalla, la pila y la versión');
-  check(!llegan.some((d) => /Failed to fetch|Sin conexión|aborted|ResizeObserver/.test(d.mensaje)), 'los de red, sin conexión, cancelados o ruido del navegador, no');
+  check(!llegan.some((d) => /Failed to fetch|Sin conexión|aborted|ResizeObserver|EmptyRanges/.test(d.mensaje)), 'los de red, sin conexión, cancelados o ruido del navegador (y el del reproductor de vídeo del iPhone, v0.207), no');
   check(llegan.filter((d) => d.mensaje === 'x is undefined').length === 1 && llegan.length === 15, 'cada uno una vez por sesión, y como mucho 15');
+}
+
+console.log('\nErrores de la app: los avisos que se arreglan solos, aparte (v0.207)');
+{
+  const { separarErrores } = await import('../web/src/logica/errores-app.js');
+  const lista = [
+    { id: 1, mensaje: 'push: al abrir, el navegador no tenía la suscripción: se rehace', pantalla: 'push' },
+    { id: 2, mensaje: "TypeError: undefined is not an object (evaluating 'a.series')", pantalla: 'carga #hoy' },
+    { id: 3, mensaje: 'push: al abrir, la base no tenía esta suscripción: se vuelve a apuntar', pantalla: 'push' },
+    { id: 4, mensaje: "Can't find variable: EmptyRanges", pantalla: 'error' },
+    { id: 5, mensaje: 'push: no se pudo suscribir (AbortError)', pantalla: 'push' },
+  ];
+  const { reales, avisos } = separarErrores(lista);
+  check(reales.map((e) => e.id).join() === '2,5' && avisos.map((e) => e.id).join() === '1,3,4',
+    'los avisos de las notificaciones que se rehacen solas y el del reproductor del iPhone van aparte; un fallo de verdad (también de las notificaciones), en la lista');
+  check(separarErrores(null).reales.length === 0 && separarErrores([]).avisos.length === 0, 'sin errores, nada');
 }
 
 console.log('\nNivel y servicio (v0.22)');

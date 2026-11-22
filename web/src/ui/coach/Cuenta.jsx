@@ -14,6 +14,7 @@ import { RendimientoApp } from './Rendimiento.jsx';
 import { VocesCoach } from './VocesCoach.jsx';
 import { MensajesAutomaticos, AvisosZona, MusicaCoach } from './PersonalCoach.jsx';
 import { AtajosCoach } from './Integraciones.jsx';
+import { separarErrores } from '../../logica/errores-app.js';
 
 export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
   const { perfil, backend, salir, api, aviso } = useApp();
@@ -233,26 +234,37 @@ function ErroresApp() {
   const [abierto, setAbierto] = useState(false);
   const lista = useCarga(() => (modo === 'demo' ? Promise.resolve([]) : api.erroresApp().catch(() => [])), []);
   const errores = lista.datos || [];
-  const texto = () => errores.slice(0, 50).map((e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.quien} · ${e.version || '?'} · ${e.pantalla || ''}\n${e.mensaje}${e.detalle ? `\n${e.detalle.split('\n').slice(0, 4).join('\n')}` : ''}\n${e.navegador || ''}`).join('\n\n');
+  // (v0.207) los avisos que se arreglan solos (notificaciones) y los del reproductor del iPhone, aparte
+  const { reales, avisos } = separarErrores(errores);
+  const linea = (e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.quien} · ${e.version || '?'} · ${e.pantalla || ''}\n${e.mensaje}${e.detalle ? `\n${e.detalle.split('\n').slice(0, 4).join('\n')}` : ''}\n${e.navegador || ''}`;
+  const texto = () => [reales.slice(0, 50).map(linea).join('\n\n'), avisos.length ? `Avisos que se arreglan solos (${avisos.length}):\n${avisos.slice(0, 10).map((e) => `${new Date(e.creado_en).toLocaleString('es-ES')} · ${e.version || '?'} · ${e.mensaje}`).join('\n')}` : ''].filter(Boolean).join('\n\n');
+  const resumen = lista.cargando && !lista.datos ? 'Cargando…' : modo === 'demo' ? 'En la demo no se apuntan.'
+    : !errores.length ? 'Ninguno en los últimos 60 días.'
+    : `${reales.length ? `${reales.length} en los últimos 60 días` : 'Ningún fallo en los últimos 60 días'}${avisos.length ? ` (y ${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'} que se arreglan solos)` : ''}`;
+  const fila = (e) => (
+    <li key={e.id} class="panel-pad pila-xs">
+      <span class="mini terciario">{cuando(e.creado_en)} · {e.quien}{e.pantalla ? ` · ${e.pantalla}` : ''}{e.version ? ` · v${e.version}` : ''}</span>
+      <span class="peq">{e.mensaje}</span>
+    </li>
+  );
   return (
     <section class="seccion">
       <h2>Errores de la app</h2>
       <div class="panel panel-pad pila-s">
         <div class="separa">
-          <span class="peq secundario">{lista.cargando && !lista.datos ? 'Cargando…' : modo === 'demo' ? 'En la demo no se apuntan.' : errores.length ? `${errores.length} en los últimos 60 días` : 'Ninguno en los últimos 60 días.'}</span>
+          <span class="peq secundario">{resumen}</span>
           {errores.length > 0 && <button class="btn btn-peq" onClick={() => setAbierto(!abierto)} aria-expanded={abierto ? 'true' : 'false'}>{abierto ? 'Ocultar' : 'Ver'}</button>}
         </div>
         <p class="mini terciario">Cuando algo falla en el móvil de alguien, la app lo apunta aquí sola (sin nada de lo que estaba escribiendo). Si ves alguno, cópialo y pégaselo a Claude.</p>
         {abierto && errores.length > 0 && (
           <>
-            <ul class="lista errores-app">
-              {errores.slice(0, 30).map((e) => (
-                <li key={e.id} class="panel-pad pila-xs">
-                  <span class="mini terciario">{cuando(e.creado_en)} · {e.quien}{e.pantalla ? ` · ${e.pantalla}` : ''}{e.version ? ` · v${e.version}` : ''}</span>
-                  <span class="peq">{e.mensaje}</span>
-                </li>
-              ))}
-            </ul>
+            {reales.length > 0 && <ul class="lista errores-app">{reales.slice(0, 30).map(fila)}</ul>}
+            {avisos.length > 0 && (
+              <>
+                <p class="mini terciario">Avisos que se arreglan solos: la suscripción a las notificaciones se rehízo al abrir la app, o lo dijo el reproductor de vídeo del iPhone. No hace falta hacer nada.</p>
+                <ul class="lista errores-app errores-avisos">{avisos.slice(0, 10).map(fila)}</ul>
+              </>
+            )}
             <div class="fila-acciones" style="justify-content:flex-start">
               <button class="btn btn-peq" onClick={async () => aviso((await copiar(texto())) ? 'Copiados: pégaselos a Claude' : 'No se ha podido copiar')}><Icono n="copiar" /> Copiar para Claude</button>
               <button class="btn btn-peq plano" onClick={async () => { try { await api.borrarErroresApp(); lista.recargar(true); aviso('Errores borrados'); } catch (err) { aviso(err.message, 'error'); } }}>Borrar todos</button>
