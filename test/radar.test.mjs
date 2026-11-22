@@ -461,7 +461,9 @@ try {
   const ana = g['Ana López'];
   check((ana.contacto.en7 >= 2 ? ana.grupo === 'al_dia' : ana.grupo === 'pronto') && g['Rubén Martín'].grupo === 'hoy' && !!g['Rubén Martín'].teEscribio && g['Carlos Vera'].motivos.some((m) => m.id === 'parado') && g['Lucía Ferrer'].motivos.at(-1).datos.nutricion === true, 'Ana al día; Rubén te escribió; Carlos lleva días parado; a Lucía (solo nutrición), saludo de nutrición');
   // (v0.201) lo de cada uno: lo que te escribió (con su texto), su check-in entero, su cumpleaños, lo programado
-  check(/peso muerto/.test(g['Rubén Martín'].mensajeAtleta?.texto || '') && g['Rubén Martín'].motivos[1]?.id === 'responder', 'lo que te escribió Rubén, a la vista y como lo primero que contestar tras su día difícil');
+  // (el «día difícil» cuenta 3 días y en la demo cae a mitad de semana: el domingo ya no sale y «responder» va primero)
+  const motR = g['Rubén Martín'].motivos, conDia = motR.some((m) => /^dia_(malo|flojo)$/.test(m.id));
+  check(/peso muerto/.test(g['Rubén Martín'].mensajeAtleta?.texto || '') && motR.findIndex((m) => m.id === 'responder') === (conDia ? 1 : 0), 'lo que te escribió Rubén, a la vista y como lo primero que contestar (tras su día difícil, si lo hay)');
   check(g['Carlos Vera'].grupo === 'hoy' && g['Carlos Vera'].porque === 'Hoy es su cumpleaños' && g['Carlos Vera'].hito?.tipo === 'cumple', 'el cumpleaños de Carlos (la demo lo pone hoy) lo pone en «Hoy», con su porqué');
   check(Object.values(d.extra).some((e) => e.checkin && 'energia' in e.checkin) && Object.keys(d.programados).length >= 1 && d.extra[g['Ana López'].atleta_id].videos?.n >= 1, 'su check-in entero, lo programado y los vídeos sin corregir');
   const { abrirRadar, apuntarPendiente, pendienteHecho } = await import('../web/src/datos/radar.js');
