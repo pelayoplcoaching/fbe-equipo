@@ -5,6 +5,7 @@
 //   node test/suelta.mjs e2e-viaje 10                 diez veces seguidas
 //   node test/suelta.mjs e2e-viaje,e2e-tiempo 5       varias partes, en ese orden, cinco veces
 //   CARGA=1 node test/suelta.mjs e2e-viaje 10         con la máquina ocupada (un bucle en cada núcleo menos uno)
+//   PUERTO=4175 node test/suelta.mjs e2e-viaje        mientras corre un e2e completo (que usa el 4174)
 //
 // Al final dice cuántas vueltas salieron limpias y qué comprobaciones fallaron (y cuántas veces).
 import { chromium } from 'playwright';
@@ -26,7 +27,9 @@ for (const n of nombres.split(',')) {
 const ocupar = process.env.CARGA
   ? Array.from({ length: Math.max(1, cpus().length - 1) }, () => new Worker('for (;;) { Math.sqrt(Math.random()); }', { eval: true }))
   : [];
-const srv = await servir(new URL('../dist', import.meta.url).pathname, 4174);
+// (PUERTO=4175 si hay un e2e completo usando el 4174; las partes que reciben `base` lo siguen)
+const puerto = Number(process.env.PUERTO || 4174);
+const srv = await servir(new URL('../dist', import.meta.url).pathname, puerto);
 const navegador = await chromium.launch({ executablePath: process.env.CHROME_PATH, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const fallidas = new Map();
 let limpias = 0;
@@ -42,7 +45,7 @@ try {
     };
     const t0 = Date.now();
     for (const p of partes) {
-      try { await p.fn({ navegador, check }); } catch (e) { check(false, `${p.n}: ${e.message.split('\n').slice(0, 4).join(' / ')}`); }
+      try { await p.fn({ navegador, check, base: `http://localhost:${puerto}` }); } catch (e) { check(false, `${p.n}: ${e.message.split('\n').slice(0, 4).join(' / ')}`); }
     }
     if (!fallosVuelta) limpias++;
     console.log(`vuelta ${i}/${veces}: ${fallosVuelta ? `${fallosVuelta} fallo(s)` : 'limpia'} (${Math.round((Date.now() - t0) / 1000)} s)`);

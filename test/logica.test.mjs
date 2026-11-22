@@ -2408,7 +2408,7 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
       'el día de Info: hoy, ayer o la fecha (con el año, si no es este)');
   }
   {
-    // (v0.54, revisión) L1: el formato es lineal: 4000 caracteres hechos para atascarlo, en menos de 5 ms
+    // (v0.54, revisión) L1: el formato es lineal: 4000 caracteres hechos para atascarlo, en menos de 20 ms
     const casos = { 'sin cierres': '*a '.repeat(1333), anidados: '*_~'.repeat(666) + 'x' + '~_*'.repeat(666), 'aperturas en una línea': '*x'.repeat(2000),
       mezclados: '_*~`'.repeat(1000), 'con saltos': '*a\n_b '.repeat(700), comillas: '`*'.repeat(2000), triples: '```*_'.repeat(800) };
     const tiempos = {};
@@ -2419,8 +2419,10 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
       for (let i = 0; i < 9; i++) { const t0 = performance.now(); tk(s); t.push(performance.now() - t0); }
       tiempos[k] = t.sort((a, b) => a - b)[4];
     }
-    const lento = Object.entries(tiempos).filter(([, ms]) => ms >= 5);
-    check(!lento.length, `formato lineal: 4000 caracteres patológicos en menos de 5 ms (mediana; el peor, ${Math.max(...Object.values(tiempos)).toFixed(2)} ms)${lento.length ? ' — lentos: ' + lento.map(([k, ms]) => `${k} ${ms.toFixed(1)} ms`).join(', ') : ''}`);
+    // (el tope era 5 ms y con la máquina ocupada daba 10: lo que se vigila es que no se atasque, y un formato cuadrático
+    // con 4000 caracteres tarda cientos de ms; 20 ms lo sigue cazando)
+    const lento = Object.entries(tiempos).filter(([, ms]) => ms >= 20);
+    check(!lento.length, `formato lineal: 4000 caracteres patológicos en menos de 20 ms (mediana; el peor, ${Math.max(...Object.values(tiempos)).toFixed(2)} ms)${lento.length ? ' — lentos: ' + lento.map(([k, ms]) => `${k} ${ms.toFixed(1)} ms`).join(', ') : ''}`);
     const largo = '*x'.repeat(2000) + ' *fin*';
     check(tk(largo).some((x) => x.t === 'negrita'), 'y sigue encontrando lo que sí es formato al final');
     const a1 = F.tokensDeMensaje('m1', 'Hola *Ana*'), a2 = F.tokensDeMensaje('m1', 'Hola *Ana*'), a3 = F.tokensDeMensaje('m1', 'Hola _Ana_');

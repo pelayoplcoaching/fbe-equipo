@@ -13,7 +13,8 @@ function instalarFecha(desfase) {
   const g = globalThis;
   if (g.__fbeFechaSimulada != null) return;
   const Real = g.Date;
-  const ahora = () => Real.now() + desfase;
+  // (si la prueba pone su propio reloj de Playwright, clock.install o setFixedTime, manda el suyo: ver abajo)
+  const ahora = () => Real.now() + (g.__fbeSinFechaSimulada ? 0 : desfase);
   function Date(...a) {
     if (!new.target) return new Real(ahora()).toString();
     return a.length ? new Real(...a) : new Real(ahora());
@@ -48,12 +49,36 @@ if (objetivo) {
   const guion = `(${instalarFecha.toString()})(${desfase});`;
   let pw = null;
   try { pw = await import('playwright'); } catch { /* las pruebas sin navegador no lo necesitan */ }
-  const conFecha = async (algo) => { await algo.addInitScript(guion); return algo; };
+  // Las pruebas que ponen su propio reloj de Playwright (ctx.clock.install / setFixedTime / setSystemTime: radar, comunidad
+  // 073, belleza 200) quieren esa hora exacta: en ese contexto la fecha simulada no se pone (o, si ya había páginas, se
+  // aparta) y manda el reloj de la prueba. Por eso el desfase se añade al abrir la primera página, no al crear el contexto.
+  const conFecha = (ctx) => {
+    let reloj = false, puesta = false;
+    if (ctx.clock) {
+      for (const m of ['install', 'setFixedTime', 'setSystemTime']) {
+        const orig = ctx.clock[m]?.bind(ctx.clock);
+        if (!orig) continue;
+        ctx.clock[m] = async (...a) => {
+          reloj = true;
+          if (puesta) {
+            await ctx.addInitScript(() => { globalThis.__fbeSinFechaSimulada = true; });
+            for (const pg of ctx.pages()) await pg.evaluate(() => { globalThis.__fbeSinFechaSimulada = true; }).catch(() => {});
+          }
+          return orig(...a);
+        };
+      }
+    }
+    const nueva = ctx.newPage.bind(ctx);
+    ctx.newPage = async (...a) => {
+      if (!reloj && !puesta) { puesta = true; await ctx.addInitScript(guion); }
+      return nueva(...a);
+    };
+    return ctx;
+  };
   const envolver = (navegador) => {
     const contexto = navegador.newContext.bind(navegador);
     navegador.newContext = async (...a) => conFecha(await contexto(...a));
-    const pagina = navegador.newPage.bind(navegador);
-    navegador.newPage = async (...a) => conFecha(await pagina(...a));
+    // (browser.newPage crea su contexto con newContext y su página con newPage: ya pasa por lo de arriba)
     return navegador;
   };
   for (const tipo of [pw?.chromium, pw?.firefox, pw?.webkit].filter(Boolean)) {
@@ -61,7 +86,7 @@ if (objetivo) {
     tipo.launch = async (...a) => envolver(await lanzar(...a));
     if (tipo.launchPersistentContext) {
       const persistente = tipo.launchPersistentContext.bind(tipo);
-      tipo.launchPersistentContext = async (...a) => conFecha(await persistente(...a));
+      tipo.launchPersistentContext = async (...a) => { const c = await persistente(...a); await c.addInitScript(guion); return c; };
     }
   }
 }

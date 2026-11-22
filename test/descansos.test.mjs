@@ -7,6 +7,12 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 import { apuntesDeNovedades, novedadPendiente, elegirApunte, apunteDelDia, apuntarVisto, limpiarVistos, pendienteDeSubir, conServidor } from '../web/src/logica/apuntes.js';
 import { sumarEtapa, porSubir, trasSubir, conBase, metrosDeLaSemana, limpiarTravesia, prepararEnvio } from '../web/src/logica/travesia.js';
 import { ENLACE_NOVEDAD } from '../web/src/logica/apuntes.js';
+import { lunesDe, sumarDias, fechaMadrid } from '../web/src/logica/fechas.js';
+
+// (061) Cada semana cuenta en el mes de su jueves: los primeros días de un mes (el viernes 1 de enero de 2027, la semana
+// es del 31 de diciembre) o los últimos (el lunes 30 de noviembre, del 3 de diciembre), lo de esta semana no suma en el
+// equipo de este mes. Las pruebas lo tienen en cuenta para no depender del día.
+const semanaEnEsteMes = () => { const hoy = fechaMadrid(); return sumarDias(lunesDe(hoy), 3).slice(0, 7) === hoy.slice(0, 7); };
 
 console.log('La novedad de la semana, como apunte');
 {
@@ -165,13 +171,14 @@ console.log('En la demo');
   check(m1.filas.length === 4 && m1.filas[0].nombre === 'Rubén M.' && m1.filas[0].metros === 4200 && m1.filas[0].hoy === true && !m1.filas[0].yo && m1.filas.every((f, i) => i === 0 || f.metros <= m1.filas[i - 1].metros), 'dentro, la clasificación de la semana, de más a menos');
   const yo = m1.filas.find((f) => f.yo);
   check(yo && yo.nombre === 'Ana L.' && yo.metros === 1850 && m1.filas.filter((f) => f.yo).length === 1 && m1.filas.every((f) => Object.keys(f).sort().join() === 'estrellas,hoy,mejor,metros,nombre,perfil,yo') && yo.perfil === null, 'con mi fila marcada y solo el nombre del equipo, los metros de cada uno y (062) el perfil de la comunidad de los demás, para aullarles');
-  check(m1.equipo.miembros === 4 && m1.equipo.metros >= 4200 + 2600 + 900 + 1850 && /^\d{4}-\d{2}-01$/.test(m1.equipo.mes) && new Date(`${m1.semana}T12:00:00Z`).getUTCDay() === 1, 'y lo que suma el equipo en el mes');
+  check((semanaEnEsteMes() ? m1.equipo.miembros === 4 && m1.equipo.metros >= 4200 + 2600 + 900 + 1850 : m1.equipo.mes === `${fechaMadrid().slice(0, 7)}-01`) && /^\d{4}-\d{2}-01$/.test(m1.equipo.mes) && new Date(`${m1.semana}T12:00:00Z`).getUTCDay() === 1,
+    `y lo que suma el equipo en el mes${semanaEnEsteMes() ? '' : ' (hoy, esta semana es del mes de al lado)'}`);
   await api.ajustesComunidad({ sinRanking: true });
   check((await api.travesiaManada()).filas.some((f) => f.yo), 'quien no quiere salir en el ranking se sigue viendo a sí mismo');
   await b.auth.salir();
   await b.auth.entrar('carlos@fbe.demo', 'demo');
   const m2 = await api.travesiaManada();
-  check(m2.filas.length === 3 && !m2.filas.some((f) => f.nombre === 'Ana L.') && m2.filas.find((f) => f.yo).nombre === 'Carlos V.' && m2.equipo.miembros === 3 && m2.equipo.metros === m1.equipo.metros - 1850, 'pero los demás no le ven (y, siendo la única sin salir, lo suyo no suma en el equipo: restando se sabría)');
+  check(m2.filas.length === 3 && !m2.filas.some((f) => f.nombre === 'Ana L.') && m2.filas.find((f) => f.yo).nombre === 'Carlos V.' && (semanaEnEsteMes() ? m2.equipo.miembros === 3 && m2.equipo.metros === m1.equipo.metros - 1850 : m2.equipo.miembros === m1.equipo.miembros && m2.equipo.metros === m1.equipo.metros), 'pero los demás no le ven (y, siendo la única sin salir, lo suyo no suma en el equipo: restando se sabría)');
   await b.auth.salir();
 }
 
@@ -325,11 +332,12 @@ console.log('La migración 061: la manada en la travesía');
   const [{ m }] = await q('select travesia_manada() as m');
   check(m.filas.length === 2 && m.filas[0].nombre === 'Fer M.' && m.filas[0].metros === 3000 && m.filas[1].nombre === 'Ana L.' && m.filas[1].yo === true && m.filas[0].yo === false, 'la clasificación de la semana, con el nombre de la comunidad, de más a menos; quien está fuera de la comunidad no sale');
   check(m.filas[1].hoy === true && m.filas[0].hoy === false, 'dice quién ha corrido hoy');
-  check(!m.filas.some((f) => f.nombre === 'Gus R.') && m.equipo.metros === m.filas[0].metros + m.filas[1].metros && m.equipo.miembros === 2, 'quien no quiere salir en el ranking no sale, y siendo uno solo lo suyo no suma en el equipo (restando se sabría)');
+  const enMes = semanaEnEsteMes();
+  check(!m.filas.some((f) => f.nombre === 'Gus R.') && (enMes ? m.equipo.metros === m.filas[0].metros + m.filas[1].metros && m.equipo.miembros === 2 : m.equipo.metros === 0 && m.equipo.miembros === 0), 'quien no quiere salir en el ranking no sale, y siendo uno solo lo suyo no suma en el equipo (restando se sabría)');
   await su(); await q('update comunidad_miembros set sin_ranking = true where perfil_id in ($1, $2)', [ana, fer]);
   await como(ana);
   const [{ m: m3 }] = await q('select travesia_manada() as m');
-  check(m3.filas.length === 1 && m3.filas[0].yo && m3.equipo.metros === 5000 && m3.equipo.miembros === 3, 'con tres o más sin salir, lo suyo sí suma (5 km entre los tres), sin decir de quién');
+  check(m3.filas.length === 1 && m3.filas[0].yo && (enMes ? m3.equipo.metros === 5000 && m3.equipo.miembros === 3 : m3.equipo.metros === 0 && m3.equipo.miembros === 0), 'con tres o más sin salir, lo suyo sí suma (5 km entre los tres), sin decir de quién');
   await su(); await q('update comunidad_miembros set sin_ranking = false where perfil_id in ($1, $2)', [ana, fer]);
   await como(ana);
   check(new Date(`${m.semana}T12:00:00Z`).getUTCDay() === 1 && /^\d{4}-\d\d-01/.test(m.equipo.mes), 'con el lunes de la semana y el mes del equipo');

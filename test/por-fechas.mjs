@@ -30,11 +30,14 @@ export const FECHAS = [
   '2026-12-01T09:00', // día 1
   '2026-12-15T09:00', // día 15
   '2026-12-24T18:00', // Nochebuena
+  '2026-12-30T12:00', // un 30 cuyo mañana no tiene igual 6 meses antes (no hay 31 de junio)
   '2026-12-31T23:30', // fin de año (cruza al 2027)
   '2027-01-01T10:00', // año nuevo, viernes
   '2027-03-28T10:00', // domingo del cambio a horario de verano
   '2027-03-29T08:00', // lunes después del cambio
   '2027-10-31T10:00', // domingo del cambio a horario de invierno
+  '2027-06-15T12:00', // dentro de unos meses: las fechas fijas escritas en las pruebas ya han pasado
+  '2028-02-29T12:00', // un 29 de febrero
 ];
 
 const conZona = (f) => (/[zZ]|[+-]\d\d:\d\d$/.test(f) ? f : `${f}:00${desfaseMadrid(f)}`);
@@ -71,7 +74,10 @@ for (const fecha of fechas) {
   for (const cmd of comandos) {
     const { codigo, salida } = await correr(cmd, fecha);
     if (codigo !== 0) {
-      const lineas = salida.split('\n').filter((l) => /✗|Error|assert/i.test(l)).slice(0, 8).map((l) => l.trim().slice(0, 220));
+      // Las comprobaciones que fallan (✗) y, si no hay, los errores que no sean de una comprobación que pasa
+      const todas = salida.split('\n');
+      const cruces = todas.filter((l) => /✗/.test(l));
+      const lineas = (cruces.length ? cruces : todas.filter((l) => /Error|assert/i.test(l) && !/✓/.test(l))).slice(0, 8).map((l) => l.trim().slice(0, 220));
       fallos.push({ archivo: cmd.replace('node ', ''), lineas: lineas.length ? lineas : salida.trim().split('\n').slice(-5) });
     }
   }

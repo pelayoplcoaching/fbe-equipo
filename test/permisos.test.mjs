@@ -1385,9 +1385,10 @@ console.log('\nTablas nuevas cerradas por defecto (migración 019)');
 console.log('\nControl de cobros, privado del coach (migración 020)');
 {
   await como(pelayo, 'aal2');
-  await q(`insert into cobros_atletas (atleta_id, servicio, precio_mes, ciclo, desde) values ($1, 'Performance', 75, 'trimestral', '2026-07-20')`, [aAna.id]);
-  const [pg] = await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago, metodo) values ($1, '2026-10-20', '2027-01-19', 225, 'pagado', '2026-10-21', 'transferencia') returning id`, [aAna.id]);
-  await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, '2027-01-20', '2027-04-19', 225)`, [aAna.id]);
+  // (fechas respecto a hoy: con fechas fijas, «Ana ve cómo va» empezaba a fallar el día que se acababa el periodo pagado)
+  await q(`insert into cobros_atletas (atleta_id, servicio, precio_mes, ciclo, desde) values ($1, 'Performance', 75, 'trimestral', current_date - 121)`, [aAna.id]);
+  const [pg] = await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago, metodo) values ($1, current_date - 30, current_date + 60, 225, 'pagado', current_date - 29, 'transferencia') returning id`, [aAna.id]);
+  await q(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, current_date + 61, current_date + 151, 225)`, [aAna.id]);
   check((await q(`select count(*)::int n from pagos where atleta_id = $1`, [aAna.id]))[0].n === 2, 'el coach apunta lo acordado con Ana y sus cobros');
   check(await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe, estado, fecha_pago) values ($1, '2026-11-01', '2026-11-30', 50, 'pendiente', '2026-11-02')`, [aAna.id])
     && await falla(`insert into pagos (atleta_id, periodo_desde, periodo_hasta, importe) values ($1, '2026-11-30', '2026-11-01', 50)`, [aAna.id])
@@ -6627,15 +6628,29 @@ console.log('\nLa comunidad, quinta tanda: aniversarios, el mes en el equipo, hi
   const hoyM = (await q(`select (now() at time zone 'Europe/Madrid')::date::text d`))[0].d;
   const [{ alta: altaAntes }] = await q(`select fecha_alta::text alta from atletas where id = $1`, [aAna.id]);
   const [{ alta: altaLuis }] = await q(`select fecha_alta::text alta from atletas where id = $1`, [aLuis.id]);
-  await q(`update atletas set fecha_alta = ($1::date - interval '1 month')::date where id = $2`, [hoyM, aAna.id]);
-  // (Luis: hoy no; mañana cumple 6 meses)
-  await q(`update atletas set fecha_alta = ($1::date + 1 - interval '6 months')::date where id = $2`, [hoyM, aLuis.id]);
+  // (Ana: hoy cumple 1 mes. Los días 29 a 31 puede no haber nadie que cumpla 1 mes —el 31 de diciembre, el alta sería el
+  // 31 de noviembre—: entonces se usa el primero de 6 o 12 meses que caiga hoy. Así la prueba no depende del día del mes)
+  let mesesAna = 1;
+  for (const m of [1, 6, 12]) {
+    const [{ v }] = await q(`select public.comunidad_meses_aniversario(($1::date - make_interval(months => $2))::date, $1::date) v`, [hoyM, m]);
+    if (v === m) { mesesAna = m; break; }
+  }
+  await q(`update atletas set fecha_alta = ($1::date - make_interval(months => $2))::date where id = $3`, [hoyM, mesesAna, aAna.id]);
+  // (Luis: hoy no; mañana cumple 6 meses. Como con Ana: si mañana nadie puede cumplir 6 meses —p. ej., mañana es 31 de
+  // diciembre y el alta sería el 31 de junio—, 12 o 1)
+  let mesesLuis = 6;
+  for (const m of [6, 12, 1]) {
+    const [{ v }] = await q(`select public.comunidad_meses_aniversario(($1::date + 1 - make_interval(months => $2))::date, $1::date + 1) v`, [hoyM, m]);
+    if (v === m) { mesesLuis = m; break; }
+  }
+  const cumpleLuis = mesesLuis === 1 ? '1 mes' : mesesLuis === 12 ? '1 año' : `${mesesLuis} meses`;
+  await q(`update atletas set fecha_alta = ($1::date + 1 - make_interval(months => $2))::date where id = $3`, [hoyM, mesesLuis, aLuis.id]);
   const aniversarioDeLuisHoy = (await q(`select comunidad_meses_aniversario(fecha_alta, $1::date) m from atletas where id = $2`, [hoyM, aLuis.id]))[0].m;
   await q(`select crear_recordatorios(now())`);
   await q(`select crear_recordatorios(now())`);
   const anis = await q(`select autor_id, atleta_id, texto, tema, resumen, retenida from comunidad_posts where tipo = 'aniversario'`);
-  check(aniversarioDeLuisHoy === null && anis.length === 1 && anis[0].autor_id === ana && anis[0].atleta_id === aAna.id && anis[0].resumen.meses === 1 && anis[0].texto === null && anis[0].tema === null && !anis[0].retenida,
-    'el día que Ana cumple 1 mes, crear_recordatorios() pone en el muro, una vez, su aniversario (a su nombre, con los meses)');
+  check(aniversarioDeLuisHoy === null && anis.length === 1 && anis[0].autor_id === ana && anis[0].atleta_id === aAna.id && anis[0].resumen.meses === mesesAna && anis[0].texto === null && anis[0].tema === null && !anis[0].retenida,
+    `el día que Ana cumple ${mesesAna === 1 ? '1 mes' : `${mesesAna} meses`}, crear_recordatorios() pone en el muro, una vez, su aniversario (a su nombre, con los meses)`);
   await como(luis);
   const [aniL] = await q(`select id from comunidad_posts where tipo = 'aniversario'`);
   await su();
@@ -6688,8 +6703,8 @@ console.log('\nLa comunidad, quinta tanda: aniversarios, el mes en el equipo, hi
   await q(`select crear_recordatorios(${madrid('10:00')})`, [hoyM]);
   await q(`select crear_recordatorios(${madrid('11:00')})`, [hoyM]);
   const avCoach = await q(`select usuario_id, titulo, url from notificaciones where clave like 'comunidad_aniversario:%'`);
-  check(antes9 === 0 && avCoach.length === 1 && avCoach[0].usuario_id === pelayo && avCoach[0].titulo === 'Mañana Luis cumple 6 meses en FBE 🎉' && avCoach[0].url === `#mensajes/${aLuis.id}`,
-    'al coach, el día antes (desde las 9:00), una vez: «Mañana Luis cumple 6 meses en FBE 🎉», que lleva a su chat');
+  check(antes9 === 0 && avCoach.length === 1 && avCoach[0].usuario_id === pelayo && avCoach[0].titulo === `Mañana Luis cumple ${cumpleLuis} en FBE 🎉` && avCoach[0].url === `#mensajes/${aLuis.id}`,
+    `al coach, el día antes (desde las 9:00), una vez: «Mañana Luis cumple ${cumpleLuis} en FBE 🎉», que lleva a su chat`);
   await q(`update atletas set fecha_alta = $1 where id = $2`, [altaAntes, aAna.id]);
   await q(`update atletas set fecha_alta = $1 where id = $2`, [altaLuis, aLuis.id]);
   await q(`delete from comunidad_posts where tipo = 'aniversario'`); await q(`delete from fbe_privado.comunidad_aniversarios`); await q(`delete from notificaciones`);

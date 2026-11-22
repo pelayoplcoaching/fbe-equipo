@@ -130,7 +130,10 @@ export function instalarAtras() {
 export function ponerRuta(hash) {
   if (!hay()) return;
   try { history.replaceState(history.state, '', hash); } catch { /* */ }
-  if (!propios) ruta = location.href;
+  // También mientras la app retira entradas de sobra: si no, al llegar a la entrada de antes (#hoy) no se le ponía la
+  // dirección nueva y ese cambio de # contaba como «ir a Hoy» (al tocar «Ver mis logros» en una hoja, con el móvil
+  // lento, la app volvía sola a Hoy; ver test/atras.test.mjs)
+  ruta = location.href;
 }
 
 // Mientras `abierta`, «atrás» llama a `cerrar` (si no hay una ventana encima). orden: 0 la pestaña, 1 una pantalla
