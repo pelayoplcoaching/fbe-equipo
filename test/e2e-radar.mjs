@@ -211,7 +211,10 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await p.getByRole('button', { name: /^Escribir a los de Hoy \(\d+\)$/ }).click();
     check(await hay(p.locator('.rad-ronda', { hasText: /Ronda: 1 de \d+/ }), 1) && await hay(p.locator('.radar .revision-fila'), 1) && await hay(p.locator('.radar .revision-fila textarea'), 1), 'la ronda: uno a uno, con su borrador ya abierto');
     const enRonda = await p.locator('.radar .revision-fila textarea').inputValue();
-    check(/^[A-ZÁÉÍÓÚ][a-záéíóú]+, .*¡Vamos!$/.test(enRonda), `con tu manera de escribir: «${enRonda}»`);
+    // Si el primero de la ronda solo tiene un mensaje por contestar, su borrador es una entrada («Perdona la tardanza,
+    // acabo de leerte. ») para seguir escribiendo: lleva su nombre pero no el cierre. Quién va primero depende del día.
+    const esEntrada = /[\s:]$/.test(enRonda);
+    check(/^[A-ZÁÉÍÓÚ][a-záéíóú]+, /.test(enRonda) && (esEntrada ? !enRonda.includes('¡Vamos!') : /¡Vamos!$/.test(enRonda)), `con tu manera de escribir: «${enRonda}»`);
     await p.locator('.rad-ronda').getByRole('button', { name: 'Saltar' }).click();
     check(await hay(p.locator('.rad-ronda', { hasText: /Ronda terminada|Ronda: 2 de/ }), 1), '«Saltar» pasa al siguiente');
     await revisar('ronda');
