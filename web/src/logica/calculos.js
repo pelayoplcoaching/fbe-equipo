@@ -625,7 +625,11 @@ export function recordDe(s, prev) {
 // Récords de una tanda de series en orden (las de hoy): cada una frente a lo anterior y a las previas del día.
 // clave(s) identifica cada serie en el resultado.
 export function recordsDeSesion(series, previas, clave = (s) => s.id) {
-  const m = JSON.parse(JSON.stringify(previas || {}));
+  // (v0.207, datos que crecen) solo se copian las marcas de los ejercicios de esta tanda (antes se copiaban todas: con
+  // años de historial, eventosRecord copiaba las de todos los ejercicios en cada una de sus cientos de sesiones)
+  const base = previas || {};
+  const m = {};
+  for (const s of series) { const k = s.ejercicio_id; if (k != null && Object.prototype.hasOwnProperty.call(base, k) && !Object.prototype.hasOwnProperty.call(m, k)) m[k] = JSON.parse(JSON.stringify(base[k])); }
   const conHistorial = new Set(Object.keys(m).filter((k) => m[k].n > 0));
   const out = {};
   for (const s of series) {
@@ -641,7 +645,8 @@ export function recordsDeSesion(series, previas, clave = (s) => s.id) {
 // Récords de todo el historial, sesión a sesión y en orden: [{ fecha, sesion_id, ejercicio_id, ejercicio, record }]
 // (uno por ejercicio y sesión). Devuelve también las mejores marcas finales.
 export function eventosRecord(series) {
-  const orden = [...series].sort((a, b) => ((a.fecha || '') + (a.registrada_en || '') < (b.fecha || '') + (b.registrada_en || '') ? -1 : 1));
+  // (v0.207) la clave de orden, una vez por serie (no en cada comparación)
+  const orden = series.map((s) => [(s.fecha || '') + (s.registrada_en || ''), s]).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((x) => x[1]);
   const m = {};
   const eventos = [];
   const porSesion = new Map();
