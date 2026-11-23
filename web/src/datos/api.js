@@ -4821,7 +4821,8 @@ export function crearApi(backend, opciones = {}) {
     async panel085() {
       if (!api._v085) {
         const pr = (async () => {
-          try { await b.select('atletas_panel', { limit: 1, cols: 'atleta_id' }); await b.select('panel_ajustes', { limit: 1, cols: 'usuario_id' }); return true; }
+          // (v0.210) las dos a la vez (antes, una detrás de otra)
+          try { await Promise.all([b.select('atletas_panel', { limit: 1, cols: 'atleta_id' }), b.select('panel_ajustes', { limit: 1, cols: 'usuario_id' })]); return true; }
           catch (e) {
             const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
             if (/atletas_panel|panel_ajustes|schema cache|does not exist|no existe|relation|could not find|PGRST20[0-9]|42P01/i.test(m)) return false;
@@ -4862,7 +4863,7 @@ export function crearApi(backend, opciones = {}) {
     async radar086() {
       if (!api._v086) {
         const pr = (async () => {
-          try { await b.select('radar_ajustes', { limit: 1, cols: 'usuario_id' }); await b.select('respuestas_guardadas', { limit: 1, cols: 'id,situacion' }); return true; }
+          try { await Promise.all([b.select('radar_ajustes', { limit: 1, cols: 'usuario_id' }), b.select('respuestas_guardadas', { limit: 1, cols: 'id,situacion' })]); return true; }
           catch (e) {
             const m = `${e?.message || ''} ${e?.codigo || e?.code || ''}`;
             if (/radar_ajustes|situacion|schema cache|does not exist|no existe|relation|column|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) return false;
