@@ -12,8 +12,10 @@ import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque 
 
 // En KB (1024 bytes). «gz»: lo que viaja por la red (comprimido); «crudo»: lo que el móvil tiene que leer y procesar.
 // (v0.207: el código al abrir bajó de 2974 KB a unos 2050 con la lista de las ilustraciones; los estilos, 1068 KB)
+// (v0.208: a unos 1680 KB, 568 comprimido: las hojas de Hoy al abrirlas, lo de Revisar fuera del atleta, el texto de la
+// política al leerla y lo ligero de la sesión aparte)
 const PRESUPUESTO = {
-  js: { crudo: 2150, gz: 760 },
+  js: { crudo: 1780, gz: 610 },
   css: { crudo: 1110, gz: 196 },
 };
 

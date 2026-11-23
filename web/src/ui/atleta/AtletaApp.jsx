@@ -5,7 +5,7 @@ import { hitoArranque } from '../../rendimiento.js';
 import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
-import { Hoy } from './Hoy.jsx';
+import { Hoy, precargarHoy } from './Hoy.jsx';
 import { hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
 import { hayGuias } from '../../datos/guias.js';
 import { leerVistoEquipo } from '../comunidad-local.js';
@@ -19,7 +19,7 @@ import { Escena200, useEscena200 } from '../Escena200.jsx';
 import { useBienvenidaAbierta } from '../Bienvenida.jsx';
 import { programaConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { usePendientesArchivos, BandaPendientes, PildoraSubida } from '../Pendientes.jsx';
-import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
 import { hoyISO, semanaCheckin, diaDeCheckin } from '../../logica/fechas.js';
 import { RecibirCompartido, limpiarDireccion } from '../Compartido.jsx';
 import { ponerInsignia } from '../insignia-app.js';
@@ -101,7 +101,7 @@ export function AtletaApp() {
   // cerrar con la app abierta: se vuelve a mirar al volver a la app.
   const comunidad = useCarga(() => (propio || atleta.estado === 'baja' ? Promise.resolve({ activa: false }) : api.comunidad()), [atleta.id, atleta.estado]);
   // (pulido 2.10) con la app ya quieta, se van trayendo por detrás las pantallas que se cargan al abrirlas
-  useEffect(() => precargarEnReposo([Sesion, Semana, Progreso, Mensajes, Perfil, Comidas, Recetas, Aprende, ...(comunidad.datos?.activa ? [Equipo] : []), Checkin, VideoEnlazado, HojaCompartir]), [!!comunidad.datos?.activa]);
+  useEffect(() => precargarEnReposo([Sesion, Semana, ...precargarHoy, Progreso, Mensajes, Perfil, Comidas, Recetas, Aprende, ...(comunidad.datos?.activa ? [Equipo] : []), Checkin, VideoEnlazado, HojaCompartir]), [!!comunidad.datos?.activa]);
   useEffect(() => {
     const al = () => { if (document.visibilityState === 'visible') comunidad.recargar(true); };
     document.addEventListener('visibilitychange', al);

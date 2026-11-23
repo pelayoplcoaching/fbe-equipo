@@ -115,7 +115,8 @@ check(leerGris(new Uint8ClampedArray(200 * 50).fill(200), 200, 50) === null, 'si
 console.log('Lo que lleva la app');
 const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
 check(/connect-src[^;]*https:\/\/world\.openfoodfacts\.org/.test(html) && /img-src[^;]*https:\/\/images\.openfoodfacts\.org/.test(html), 'la política de seguridad deja hablar con Open Food Facts');
-const nut = readFileSync(new URL('../web/src/ui/atleta/Nutricion.jsx', import.meta.url), 'utf8');
+// (v0.208: la hoja de apuntar está en NutricionHojas.jsx)
+const nut = readFileSync(new URL('../web/src/ui/atleta/NutricionHojas.jsx', import.meta.url), 'utf8');
 check(nut.includes('<SumarProducto') && nut.includes('Sumar un producto (código de barras)'), '«Apuntar la nutrición» tiene el botón');
 const prod = readFileSync(new URL('../web/src/ui/atleta/Productos.jsx', import.meta.url), 'utf8');
 check(prod.includes("await import('../../logica/lector-codigos.js')"), 'el lector se carga aparte, solo al abrir la cámara');

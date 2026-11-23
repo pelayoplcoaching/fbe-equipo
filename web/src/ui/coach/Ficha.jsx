@@ -2,7 +2,7 @@ import { PropuestasDe } from './PropuestasObjetivo.jsx';
 import { tipoDeObjetivo, textoPropuesta } from '../../logica/objetivos-atleta.js';
 import { VideosVistosAtleta } from '../Videos.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
-import { VERSION_LEGAL } from '../../legal.js';
+import { VERSION_LEGAL } from '../../legal-version.js';
 import { textoPrivacidadVista } from '../../logica/privacidad.js';
 import { useEffect, useState } from 'preact/hooks';
 import { CumplimientoYBloques } from './Cumplimiento.jsx';

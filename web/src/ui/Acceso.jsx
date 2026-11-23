@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useApp, Marca, Icono, Hoja } from './comunes.jsx';
+import { useApp, Marca, Icono, Hoja, Cargando } from './comunes.jsx';
 import { guardarActivacionPendiente } from './App.jsx';
-import { PRIVACIDAD, TEXTO_CONSENTIMIENTO_SALUD } from '../legal.js';
+import { TEXTO_CONSENTIMIENTO_SALUD } from '../legal-version.js';
 import { Imagen } from './Imagen.jsx';
 import { CieloHora } from './Cielo.jsx';
 
@@ -135,11 +135,26 @@ function Recuperar({ volver }) {
   );
 }
 
+// (v0.208, rendimiento) El texto de la política (unos 50 KB) se carga al leerla, no al abrir la app
+let privacidadCargada = null;
 export function TextoPrivacidad() {
+  const [texto, setTexto] = useState(privacidadCargada);
+  const [error, setError] = useState(false);
+  const traer = () => { setError(false); import('../legal.js').then((m) => { privacidadCargada = m.PRIVACIDAD; setTexto(m.PRIVACIDAD); }).catch(() => setError(true)); };
+  useEffect(() => { if (!texto) traer(); }, []);
+  if (error) {
+    return (
+      <div class="pila">
+        <div class="error" role="alert">No se ha podido cargar la política. Comprueba la conexión y vuelve a intentarlo.</div>
+        <button type="button" class="btn" onClick={traer}>Reintentar</button>
+      </div>
+    );
+  }
+  if (!texto) return <Cargando texto="Cargando la política de privacidad" />;
   return (
     <div class="pila">
       <div class="nota">Borrador pendiente de revisión: faltan los datos de contacto del responsable.</div>
-      {PRIVACIDAD.map(([t, d]) => <div class="pila-s" key={t}><strong>{t}</strong><p class="secundario">{d}</p></div>)}
+      {texto.map(([t, d]) => <div class="pila-s" key={t}><strong>{t}</strong><p class="secundario">{d}</p></div>)}
     </div>
   );
 }

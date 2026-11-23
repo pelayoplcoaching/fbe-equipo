@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, Paso } from '../comunes.jsx';
-import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-audio.js';
 import { sonarFBE } from '../sonido.js';
 import { nota, MOTIVO, notaTempo } from '../../logica/sonido.js';
 import { hablar } from '../voz.js';

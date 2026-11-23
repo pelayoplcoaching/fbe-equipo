@@ -9,7 +9,7 @@
 // propone la cámara lenta del propio móvil y elegir el vídeo de la galería.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
-import { prepararAudio, vibrarCorto } from '../atleta/sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from '../atleta/sesion-audio.js';
 import { sonarFBE } from '../sonido.js';   // (sonido, tanda 2) la cuenta y la grabación, con la familia de FBE
 import { encuadreDe, nivelDe, textoNivel, CUENTAS_ATRAS, PARAR_SOLA, MAX_GRABACION_SEG, formatoVideo, errorCamara } from '../../logica/tecnica.js';
 import { mmss } from '../../logica/notasVoz.js';

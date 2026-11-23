@@ -110,33 +110,10 @@
 // comidas que haces fuera). Solo con la 079 (api.platosDisponibles()); sin ella, la 2026-12.36 (VERSION_LEGAL_SIN_079).
 // (v0.176) 2026-12.38: «Lo que tu coach prepara para ti» (migración 080: frases, hasta tres imágenes y márgenes de ritmo
 // de peso por atleta). Solo con la 080 (api.aMedida080()); sin ella, la 2026-12.37 (VERSION_LEGAL_SIN_080).
-export const VERSION_LEGAL = '2026-12.38';
-export const VERSION_LEGAL_SIN_080 = '2026-12.37';
-export const VERSION_LEGAL_SIN_079 = '2026-12.36';
-export const VERSION_LEGAL_SIN_078 = '2026-12.35';
-export const VERSION_LEGAL_SIN_077 = '2026-12.34';
-export const VERSION_LEGAL_SIN_076 = '2026-12.33';
-export const VERSION_LEGAL_SIN_073 = '2026-12.32';
-export const VERSION_LEGAL_SIN_072 = '2026-12.31';
-export const VERSION_LEGAL_SIN_070 = '2026-12.30';
-export const VERSION_LEGAL_SIN_066 = '2026-12.29';
-export const VERSION_LEGAL_SIN_065 = '2026-12.28';
-export const VERSION_LEGAL_SIN_063 = '2026-12.27';
-export const VERSION_LEGAL_SIN_062 = '2026-12.26';
-export const VERSION_LEGAL_SIN_061 = '2026-12.25';
-export const VERSION_LEGAL_SIN_060 = '2026-12.24';
-export const VERSION_LEGAL_SIN_059 = '2026-12.23';
-export const VERSION_LEGAL_SIN_058 = '2026-12.21';
-export const VERSION_LEGAL_SIN_056 = '2026-12.19';
-export const VERSION_LEGAL_SIN_055 = '2026-12.18';
-export const VERSION_LEGAL_SIN_054 = '2026-12.17';
-export const VERSION_LEGAL_SIN_053 = '2026-12.16';
-export const VERSION_LEGAL_SIN_051 = '2026-12.15';
-export const VERSION_LEGAL_SIN_MUSICA = '2026-12.14';
-export const VERSION_LEGAL_SIN_050 = '2026-12.13';
-export const VERSION_LEGAL_SIN_045 = '2026-12.11';
-export const VERSION_LEGAL_SIN_044 = '2026-12.10';
-export const VERSION_LEGAL_SIN_043 = '2026-12.9';
+
+// (v0.208, rendimiento) Las versiones y el texto del consentimiento de salud viven en legal-version.js (pequeño, va en lo que
+// se carga al abrir); aquí queda el texto de la política, que solo se carga al leerla (Acceso.jsx: TextoPrivacidad)
+export * from './legal-version.js';
 
 export const PRIVACIDAD = [
   ['Quién trata tus datos', 'Pelayo Fernández Cidón (FBE Coaching Online), NIF 71777712W, calle Fernández de los Ríos 63, 2.º D, 28015 Madrid. Contacto para privacidad: pelayoplcoaching@gmail.com.'],
@@ -170,6 +147,3 @@ export const PRIVACIDAD = [
   ['Cuánto tiempo', 'Mientras dure la asesoría y, después, el plazo necesario para atender posibles responsabilidades. Si te das de baja y lo pides, se borran.'],
   ['Tus derechos', 'Acceso, rectificación, supresión, oposición, limitación y portabilidad. Puedes descargar tus datos desde tu perfil (los de tus cobros te los da tu coach si se los pides) y escribir al contacto de arriba para lo demás. Si crees que no se respetan, puedes reclamar ante la AEPD (aepd.es).'],
 ];
-
-export const TEXTO_CONSENTIMIENTO_SALUD =
-  'Doy mi consentimiento explícito para que mi coach trate mis datos de salud (peso, medidas, sueño, frecuencia cardiaca, molestias y alimentación) con el fin de ajustar mi plan.';

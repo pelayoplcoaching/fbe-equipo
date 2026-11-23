@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Segmentos, Paso, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { fases, duracionTotal, enCurso, normalizar, textoIntervalos, MODOS_INTERVALOS, POR_DEFECTO } from '../../logica/intervalos.js';
-import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-audio.js';
 import { sonarFBE } from '../sonido.js';
 import { nota, MOTIVO } from '../../logica/sonido.js';
 import { mmss } from '../../logica/calculos.js';

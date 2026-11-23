@@ -42,14 +42,12 @@ import { palabrasMovimiento } from '../logica/variantes.js';
 import { esTemporal } from './cola.js';
 import { leerNotaEjercicio, escribirNotaEjercicio, notasPorEjercicio, porProgramar as quienFalta } from '../logica/editor-notas.js';
 import { leerPendiente, pendientesPorAtleta } from '../logica/radar/pendientes.js';
-import { progresoAtleta } from '../logica/progreso-revision.js';
-import { estadoProxima, progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana, ajustesParaGuardar } from '../logica/revision.js';
 import { medir } from '../rendimiento.js';
 import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -62,7 +60,6 @@ import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.
 import { paraGuardarPropio, imagenValida, CLAVES_HUECO } from '../logica/a-medida.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
 import { textoSerieVideo, serieValida, puntuacionValida, checklistValido, limpiarChecklist, tempoValido, plantillaValida, limpiarPlantilla, estadoVideo, tecnicaPorEjercicio } from '../logica/tecnica.js';
-import { analisisValido } from '../logica/analisis.js';
 import { limpiarTextoRecordatorio, textoRecordatorioValido, recordatorioValido, sugerenciasRecordatorio, frasesPara, fraseValida, limpiarTextoFrase, frasesSugeridas, limpiarAutoevaluacion, autoevaluacionValida, mejorVideo, estadisticasRevision as estadisticasCola } from '../logica/correccion.js';
 import { repsManualValidas } from '../logica/repeticiones.js';
 import { tipoBase, tipoRespuestaValido, duracionRespuesta, MAX_BYTES_RESPUESTA, MAX_SEG_RESPUESTA } from '../logica/composicion.js';
@@ -70,7 +67,6 @@ import { dosAngulosValido, limitarDesfase, fpsGuardado } from '../logica/angulos
 import { umbralValido } from '../logica/cargaVelocidad.js';
 import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
-import { semanaDelBloque, marcasSesion, principalSesion, mapaApartados, tiemposDe, notaConMas, patronesAtleta, limpiarEtiqueta } from '../logica/revisar.js';
 import { AMPLIAR, ambitoDe, derivar, cubre, esCompleta, idsDe } from './lecturas.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
@@ -544,6 +540,11 @@ const logicaPanelAtletas = () => import('../logica/panel-atletas.js');
 const logicaAjustesRadar = () => import('../logica/radar/ajustes.js');
 const logicaBorradorRadar = () => import('../logica/radar/borrador.js');
 const logicaActividad = () => import('../logica/registro-actividad.js');
+// (v0.208) y lo de Revisar y la Revisión semanal (solo el coach), y comprobar un análisis de vídeo al guardarlo
+const logicaRevision = () => import('../logica/revision.js');
+const logicaRevisar = () => import('../logica/revisar.js');
+const logicaProgresoRevision = () => import('../logica/progreso-revision.js');
+const logicaAnalisis = () => import('../logica/analisis.js');
 
 export function crearApi(backend) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
@@ -4012,6 +4013,7 @@ export function crearApi(backend) {
     },
     // El coach guarda en la corrección el análisis de un vídeo (o lo quita con null). Devuelve la corrección.
     async guardarAnalisis(video, analisis) {
+      const { analisisValido } = await logicaAnalisis();
       // (si no se sabe si está la 036, se intenta: el error que dé, el de verdad)
       if ((await api.video036()) === false) throw new Error(AVISO_036);
       const dur = Number.isFinite(video?.duracion_seg) ? video.duracion_seg : null;
@@ -4552,12 +4554,14 @@ export function crearApi(backend) {
       return x ? { frases: x.frases || [], orden: x.orden || [], modo: x.modo || null, vista: x.vista || null } : null;
     },
     async guardarRevisionAjustes(ajustes) {
+      const { ajustesParaGuardar } = await logicaRevision();
       if ((await api.revision082()) !== true) return false;
       await b.upsert('revision_ajustes', [ajustesParaGuardar(ajustes)], 'usuario_id');
       return true;
     },
     // (v0.191) { atleta_id: 'publicada' | 'borrador' | 'sin' | null } de la semana siguiente a `lunes`
     async proximaSemanaDe(filas, lunes) {
+      const { estadoProxima } = await logicaRevision();
       const ids = unicos((filas || []).map((x) => x.bloque_id).filter(Boolean));
       if (!ids.length) return {};
       const semanas = agrupar(await b.select('semanas', { in: { bloque_id: ids }, cols: 'id,bloque_id,fecha_inicio,programacion' }), 'bloque_id');
@@ -4582,6 +4586,7 @@ export function crearApi(backend) {
     // lo ha enviado, el de la pasada) con el anterior, sus sesiones una a una, récords y parones, lo que escribió y el
     // resumen de la semana. Nada nuevo: lo mismo que el coach ya ve en la ficha
     async detalleRevision(atletaId, lunes) {
+      const { progresoSemana, comentariosSemana, compararSemanas, quedoCorto, carreraDeLaSemana } = await logicaRevision();
       const [ck0, series, bloques, resumen] = await Promise.all([
         api.checkin(atletaId, lunes).catch(() => null),
         api.historial(atletaId).catch(() => []),
@@ -4634,6 +4639,7 @@ export function crearApi(backend) {
     // anteriores, con su semáforo. Una consulta por tabla para todo el equipo (y la de Salud del iPhone, una por atleta).
     // filas: las de revisionSemanal. Devuelve { atleta_id: progreso } (de logica/progreso-revision.js)
     async progresoEquipo(filas, lunes, hoy = null) {
+      const { progresoAtleta } = await logicaProgresoRevision();
       const xs = (filas || []).filter((f) => f?.atleta_id);
       const ids = xs.map((f) => f.atleta_id);
       if (!ids.length) return {};
@@ -4706,6 +4712,7 @@ export function crearApi(backend) {
     // (v0.195) Revisar: de cada atleta, en qué semana del bloque va y cuándo le contestaste por última vez.
     // { atleta_id: { semana, total, bloque, bloqueId, ultima } } (ultima: instante o null si nunca)
     async contextoRevisar(ids, hoy = hoyISO()) {
+      const { semanaDelBloque } = await logicaRevisar();
       const xs = unicos(ids || []);
       if (!xs.length) return {};
       const [bloques, coment] = await Promise.all([
@@ -4728,6 +4735,7 @@ export function crearApi(backend) {
     },
     // (v0.195) Revisar: los récords y lo que bajó de cada sesión por revisar (con su historial). { sesion_id: { records, bajas } }
     async marcasSesiones(sesiones) {
+      const { marcasSesion, principalSesion } = await logicaRevisar();
       const xs = (sesiones || []).filter((s) => s?.id && (s.atleta?.id || s.atleta_id));
       const porAtleta = agrupar(xs.map((s) => ({ ...s, _a: s.atleta?.id || s.atleta_id })), '_a');
       const out = {};
@@ -4758,6 +4766,7 @@ export function crearApi(backend) {
     // (v0.196, 083) lo apartado y fijado del coach: { clave: { hasta, fijada } }, o null sin la 083 (entonces, en el aparato).
     // Lo que ya volvió (y no está fijado) se borra de paso
     async apartadosRevisar(hoy = fechaMadrid()) {
+      const { mapaApartados } = await logicaRevisar();
       if ((await api.revisar083()) !== true) return null;
       const con084 = (await api.revisar084()) === true;
       const filas = await b.select('revisar_apartados', { cols: con084 ? 'clave,hasta,fijada,etiqueta' : 'clave,hasta,fijada' });
@@ -4767,6 +4776,7 @@ export function crearApi(backend) {
     },
     // (v0.196, 083) apartar una tarjeta hasta un día y/o fijarla arriba (sin nada, se quita). false sin la 083
     async guardarApartado(clave, { hasta = null, fijada = false, etiqueta = null } = {}) {
+      const { limpiarEtiqueta } = await logicaRevisar();
       if ((await api.revisar083()) !== true) return false;
       const et = etiqueta ? limpiarEtiqueta(etiqueta) : null;
       if (et && (await api.revisar084()) !== true) throw new Error('Para guardar etiquetas falta ejecutar la migración 084 en Supabase (supabase/migraciones/084_revisar_etiquetas_urgente.sql).');
@@ -4930,6 +4940,7 @@ export function crearApi(backend) {
     // (v0.197) los avisos de patrón de cada atleta: energía baja varias semanas, la misma molestia que vuelve y sesiones
     // de semanas ya pasadas que se quedaron sin hacer. { atleta_id: [{ clave, nivel, texto }] }
     async patronesRevisar(ids, hoy = fechaMadrid()) {
+      const { patronesAtleta } = await logicaRevisar();
       const xs = unicos(ids || []);
       if (!xs.length) return {};
       const desde = sumarDias(lunesDe(hoy), -28), esteLunes = lunesDe(hoy);
@@ -4986,6 +4997,7 @@ export function crearApi(backend) {
 
     // (v0.196) una nota para la revisión semanal de esta semana (se suma a la que haya)
     async notaParaRevision(atletaId, texto, hoy = fechaMadrid()) {
+      const { notaConMas } = await logicaRevisar();
       const lunes = lunesDe(hoy);
       const [fila] = await b.select('revisiones_semanales', { eq: { atleta_id: atletaId, lunes } }).catch(() => []);
       return api.marcarRevision(atletaId, lunes, { nota: notaConMas(fila?.nota, texto) });
@@ -4993,6 +5005,7 @@ export function crearApi(backend) {
     // (v0.196) tus tiempos en «Revisar», de todo (30 días): de que llega a que lo das por revisado (o lo contestas)
     // { sesiones, checkins, videos, mensajes, todo: { mediana, p90, n }, semana }
     async tiemposRevisar({ ahora = Date.now() } = {}) {
+      const { tiemposDe } = await logicaRevisar();
       const desde = new Date(ahora - 30 * 864e5).toISOString();
       const lunes = new Date(`${lunesDe(hoyISO(new Date(ahora)))}T00:00:00`).toISOString();
       const sel = (t, o) => b.select(t, o).catch(() => []);
@@ -5801,7 +5814,8 @@ export function crearApi(backend) {
       // (quien ya se buscó y no está —alguien que salió del equipo— no hace que se pidan otra vez)
       const vale = f.personas && Date.now() - f.personasT < FOTOS_VALEN && !(con || []).some((id) => id && !f.personas[id] && !f.fuera.has(id));
       if (vale) return f.personas;
-      const filas = await b.rpc('comunidad_personas', {}).catch(() => null);
+      // (v0.208) si es porque ha escrito alguien que no estaba, de la base de verdad: no lo compartido de hace un momento
+      const filas = await ((con || []).length ? backend.rpc('comunidad_personas', {}) : b.rpc('comunidad_personas', {})).catch(() => null);
       const personas = Object.fromEntries((filas || []).map((x) => [x.perfil_id, { nombre: x.nombre, foto: x.foto || null, coach: !!x.coach }]));
       if (filas && fotos === f) {
         f.personas = personas; f.personasT = Date.now(); f.fuera = new Set();

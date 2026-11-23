@@ -2,7 +2,7 @@
 // (hierba, nieve, madera de cornisas y puentes), el viento, que sube con la velocidad, y un eco en la montaña. Además,
 // «jugar sin mirar»: pitidos en estéreo que avisan de cada obstáculo (más agudos cuanto más cerca; dos para el monte,
 // grave para la rama). Va por el mismo contexto de audio que el resto y respeta el ajuste general de sonido.
-import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
+import { contextoAudio, prepararAudio } from './sesion-audio.js';
 import { leerAjustes } from '../ajustes.js';
 import { volumenDe } from '../../logica/sonido.js';
 import { salida as salidaMezcla } from '../sonido.js';

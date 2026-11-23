@@ -10,7 +10,7 @@ import { conEntrenamiento } from '../../logica/nivel.js';
 import { urlSegura } from '../../logica/diseno.js';
 import { BandaDemo } from '../App.jsx';
 import { TextoPrivacidad } from '../Acceso.jsx';
-import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
 import { CATEGORIAS_RECURSO } from '../../logica/calculos.js';
 import { FilaCuestionario } from './Cuestionario.jsx';
 import { FilaSuplementos } from './Suplementos.jsx';

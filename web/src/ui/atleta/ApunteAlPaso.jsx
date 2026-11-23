@@ -3,7 +3,9 @@ import { Icono, useApp, useCarga } from '../comunes.jsx';
 import { guiaPorClave } from '../../datos/guias.js';
 import { apuntesDeGuias } from '../../logica/apuntes.js';
 import { hoyISO } from '../../logica/fechas.js';
-import { HojaGuia } from '../Guias.jsx';
+import { perezoso } from '../perezoso.jsx';
+// (v0.208) la hoja de la guía, al abrirla (no con lo que se carga al abrir la app)
+const HojaGuia = perezoso(() => import('../Guias.jsx'), 'HojaGuia', { mientras: null });
 
 // (tanda 2) Un apunte «al paso», fuera del gimnasio: una idea de la guía que viene a cuento donde se está (nutrición al
 // mirar el menú, composición al pesarse, sueño en los hábitos). Una al día, la misma todo el día. No pide nada hasta que

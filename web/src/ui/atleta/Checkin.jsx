@@ -7,7 +7,7 @@ import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
 import { semanaCheckin, hoyISO, lunesDe, sumarDias, rangoSemana, fmtCorta, diasEntre } from '../../logica/fechas.js';
-import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { pregunta, limpiarRespuestas, respuestasNoValidas } from '../../logica/preguntas.js';
 import { vibrar } from '../hapticos.js';

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono } from '../comunes.jsx';
 import { leerEnCurso, borrarEnCurso, EVENTO_EN_CURSO } from '../en-curso.js';
 import { estadoActividad, anuncioActividad, etiquetaActividad } from '../../logica/actividad.js';
-import { pitar, vibrarAviso } from './sesion-comun.jsx';
+import { pitar, vibrarAviso } from './sesion-audio.js';
 import { leerAjustes } from '../ajustes.js';
 import { hablar } from '../voz.js';
 import { pistaManda, pistaSono, pistaFinal } from '../pista-descanso.js';

@@ -7,7 +7,7 @@ import { proximaMedalla } from '../logica/progreso-visual-2.js';
 import { metalDe } from '../logica/tablero.js';
 import { imagenMedalla, archivoPara } from '../logica/imagenes.js';
 import { hayImagen } from './Imagen.jsx';
-import { celebrar } from './atleta/sesion-comun.jsx';
+import { celebrar } from './atleta/sesion-audio.js';
 import { useBienvenidaAbierta } from './Bienvenida.jsx';
 import { useTurnoCelebracion } from './turno-celebracion.js';
 

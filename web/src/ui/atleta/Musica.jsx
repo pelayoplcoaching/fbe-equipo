@@ -16,7 +16,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { apuntarReproductor } from './musica-control.js';
 import { nombreMusica, urlMusica } from '../../logica/personal.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
-import { prepararAudio, tono, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, tono, vibrarCorto } from './sesion-audio.js';
 import { usePersonal } from './Personal.jsx';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 

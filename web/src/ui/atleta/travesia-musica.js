@@ -2,7 +2,7 @@
 // sobre una escala pentatónica, a 96 pulsos por minuto: un fondo suave siempre; el bajo, con 4 seguidos sin tropezar;
 // el arpegio, con el combo ×2; y unas campanas, con el ×3. Al tropezar se quedan solo el fondo y el bajo se va apagando.
 // Apagada de entrada (su botón, en el juego); respeta el ajuste general de sonido y va por el mismo canal que el resto.
-import { contextoAudio, prepararAudio } from './sesion-comun.jsx';
+import { contextoAudio, prepararAudio } from './sesion-audio.js';
 import { leerAjustes } from '../ajustes.js';
 import { volumenDe } from '../../logica/sonido.js';
 import { salidaFondo } from '../sonido.js';

@@ -3,7 +3,7 @@
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
-import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal.js';
+import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenPasoCuestionario, imagenObjetivo } from '../../logica/imagenes.js';
 
@@ -252,20 +252,8 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
   );
 }
 
-// Tarjeta de Hoy: el coach lo pide (o pide que se actualice)
-export function TarjetaCuestionario({ cuestionario, abrir }) {
-  const actualizar = !!cuestionario?.completado_en;
-  return (
-    <section class="nota-coach tarjeta-cuestionario" aria-label="Cuestionario">
-      <Icono n="pregunta" />
-      <div class="pila-s">
-        <strong>{actualizar ? 'Tu coach te pide que actualices tu cuestionario' : 'Tu coach te pide tu cuestionario inicial'}</strong>
-        <span class="peq">{actualizar ? 'Revisa si algo ha cambiado: objetivo, tiempo, lesiones o salud.' : 'Son unos minutos: tu objetivo, tu tiempo, tu material y tu salud.'}</span>
-        <button class="btn btn-primario btn-peq" style="justify-self:start" onClick={abrir}>{actualizar ? 'Revisarlo' : 'Empezar'}</button>
-      </div>
-    </section>
-  );
-}
+// (v0.208) La tarjeta de Hoy, en CuestionarioTarjeta.jsx (la hoja del cuestionario se carga al abrirla)
+export { TarjetaCuestionario } from './CuestionarioTarjeta.jsx';
 
 // Fila de Perfil
 export function FilaCuestionario({ salud, recargarConsentimientos }) {

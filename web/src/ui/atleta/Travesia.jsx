@@ -9,7 +9,7 @@ import { loboElegido, lobosDe, constelaciones, postalesNuevas, manadaPropia, cor
 import { hoyISO, lunesDe } from '../../logica/fechas.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { compartirArchivo, conFranja, crearGrabadora, extensionDe } from './travesia-compartir.js';
-import { tono as tonoApp, prepararAudio } from './sesion-comun.jsx';
+import { tono as tonoApp, prepararAudio } from './sesion-audio.js';
 // (sonido, tanda 1) los tonos del juego, con el volumen de su apartado
 const tono = (f, d, v) => tonoApp(f, d, v, 'juego');
 import { apuntarEtapa, leerTravesia, sincronizarTravesia, manadaDe, manadaGuardada, leerDuelo, leerMeta, apuntarMeta, sincronizarMeta, empezarDia, cerrarDia, aullidosNuevos, equipoDe } from '../travesia.js';

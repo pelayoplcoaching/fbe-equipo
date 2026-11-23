@@ -148,7 +148,7 @@ console.log('\nSegunda tanda: la luna, lo que cae, fin de año, estrellas, tema 
   const hoy = src('ui/atleta/Hoy.jsx');
   check(/lobo-aulla/.test(hoy) && /estreno-bloque/.test(hoy) && /conTiempo/.test(hoy) && /fiestaAhora\(\)/.test(hoy), 'en Hoy: el lobo que aúlla, el estreno, el tiempo y la fiesta');
   check(/CieloHora/.test(src('ui/coach/CabCoach.jsx')), 'el saludo del coach, con su cielo');
-  check(/discos: momento === 'record'/.test(src('ui/atleta/sesion-comun.jsx')), 'los récords de la sesión piden los discos');
+  check(/discos: momento === 'record'/.test(src('ui/atleta/sesion-audio.js')), 'los récords de la sesión piden los discos');
   check(/export \{ faseLuna, climaDe \} from '\.\/cielo\.js'/.test(src('logica/travesia.js')), 'la travesía usa la misma luna y el mismo tiempo');
 }
 

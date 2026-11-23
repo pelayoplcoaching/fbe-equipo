@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Hoja, Segmentos, usePreferencia, useAtraparFoco, Capa } from '../comunes.jsx';
 import { LIMITE_ARCHIVO_MB } from '../../datos/api.js';
-import { prepararAudio, vibrarCorto } from './sesion-comun.jsx';
+import { prepararAudio, vibrarCorto } from './sesion-audio.js';
 import { sonarFBE } from '../sonido.js';   // (sonido, tanda 2) la cuenta y la grabación, con la familia de FBE
 import { fmtCorta, hoyISO } from '../../logica/fechas.js';
 
