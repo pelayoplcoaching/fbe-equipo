@@ -1,9 +1,9 @@
+import { useMarcaPagina } from '../marca-pagina.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Hoja, useApp } from '../comunes.jsx';
 import { sonarFBE, audioParaMicro } from '../sonido.js';
 import { leerAjustes } from '../ajustes.js';
 import {
-import { useMarcaPagina } from '../marca-pagina.js';
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, esPermisoDenegado, ayudaMicro, trasPermiso, siguienteVoz, textoLimite, mmss, duracionGuardada, MIN_VOZ_SEG, VELOCIDADES,
   esSilencio, textoMicro, resultadoPrueba, tipoAudio, opcionesGrabadora,
