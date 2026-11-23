@@ -452,9 +452,19 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   // className, una propiedad o un argumento cualquiera, armada a trozos, en index.html…) o no sale en el código: sí. Si solo
   // sale en atributos class (aunque sean de los que llevan partes variables), solo está en los elementos que la crean así.
   const mutantes = new Map();
+  // (los principios de clases armadas a trozos que salen fuera de un atributo class: classList.add(`x-${…}`)…)
+  const prefijosMutantes = [...prefijosExtra];
+  for (const f of rutas) {
+    const t = textos.get(f), ts = tramos.get(f);
+    for (const m of [...t.matchAll(/([a-zA-Z][a-zA-Z0-9_-]*-)\$\{/g), ...t.matchAll(/["'`]([a-zA-Z][a-zA-Z0-9_-]*-)["'`]\s*\+/g)]) {
+      if (!ts.some((x) => m.index >= x.ini && m.index < x.fin)) prefijosMutantes.push(m[1]);
+    }
+  }
   dueno.mutante = (c) => {
     if (mutantes.has(c)) return mutantes.get(c);
-    let r = todosPrefijos.some((p) => c.startsWith(p)) || palabrasExtra.has(c), vistas = 0;
+    let r = prefijosMutantes.some((p) => c.startsWith(p)) || palabrasExtra.has(c), vistas = 0;
+    // (una armada a trozos solo dentro de atributos class: puede no salir entera en el código, pero no se añade luego)
+    const aTrozos = todosPrefijos.some((p) => c.startsWith(p));
     const re = new RegExp(`(?<![A-Za-z0-9_-])${c.replace(/[-]/g, '\\-')}(?![A-Za-z0-9_-])`, 'g');
     for (const f of rutas) {
       if (r) break;
@@ -466,7 +476,7 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
         vistas++;
       }
     }
-    if (!vistas) r = true;
+    if (!vistas && !aTrozos) r = true;
     mutantes.set(c, r);
     return r;
   };
