@@ -133,13 +133,12 @@ function EnfoquePantalla({
   const sumarReps = (d) => setReps(String(Math.max(0, (aNumero(reps) ?? prop?.reps ?? 0) + d)));
 
   // (v0.210, uso torpe) tras marcar, el botón pasa a la serie siguiente: un doble toque sin querer marcaba dos. El segundo
-  // toque de menos de 0,8 s no cuenta
+  // toque de un doble toque (detail ≥ 2) o a menos de 0,35 s del anterior no cuenta. (El evento se llama «ev»: «e» es el
+  // ejercicio de esta pantalla.)
   const ultimoToque = useRef(0);
-  async function hecha(e) {
-    // (v0.210, uso torpe) el segundo toque de un doble toque (detail ≥ 2) o a menos de 0,35 s del anterior no marca también
-    // la serie siguiente
+  async function hecha(ev) {
     const ahora = Date.now();
-    if ((e?.detail || 0) >= 2 || ahora - ultimoToque.current < 350) return;
+    if ((ev?.detail || 0) >= 2 || ahora - ultimoToque.current < 350) return;
     ultimoToque.current = ahora;
     const v = { kg: aNumero(kg) ?? prop?.kg ?? null, reps: aNumero(reps) ?? prop?.reps ?? null, rpe: rpe === '' ? '' : Number(rpe) };
     if (v.reps == null) return;
