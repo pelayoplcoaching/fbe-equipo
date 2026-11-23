@@ -200,8 +200,10 @@ async function cerrarModales(p, hasta = 0) {
 }
 async function irA(p, pestana) {
   if ((await nModales(p)) > 0) await cerrarModales(p);
-  const ok = await p.locator('nav.tabs').count();
-  if (!ok) { await p.goto(`${base}/?demo#${pestana}`); await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {}); }
+  // (dentro de una sesión o del modo enfoque, cambiar la dirección no la cierra: se vuelve a cargar la app en la pestaña)
+  const enSesion = await p.locator('.sesion-vista, .portada-sesion, .enfoque, .travesia').count().catch(() => 0);
+  const ok = !enSesion && await p.locator('nav.tabs').count();
+  if (!ok) { await p.goto(`${base}/?demo#${pestana}`); await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {}); await p.waitForTimeout(600); }
   await p.evaluate((h) => { if (location.hash !== `#${h}`) location.hash = h; }, pestana);
   await p.waitForTimeout(900);
   await cerrarModales(p);
