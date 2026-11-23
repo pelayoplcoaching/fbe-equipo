@@ -97,7 +97,9 @@ ${marcadoPortada}
     extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
   const cssTrozos = [];
   for (const [f, css] of partesTrozos.porTrozo) {
-    const nombre = f.replace(/\.js$/, `.${createHash('sha256').update(css).digest('hex').slice(0, 8)}.css`);
+    // (con el mismo nombre que su trozo: así el código del trozo, con su orden de pedirlos, sigue siendo el mismo mientras no
+    // cambie su código; «mismo nombre, mismo contenido» vale para los trozos; los estilos se renuevan por su huella)
+    const nombre = f.replace(/\.js$/, '.css');
     writeFileSync(join(salida, nombre), css);
     writeFileSync(join(salida, f), `globalThis.__fbeCss&&globalThis.__fbeCss(${JSON.stringify(nombre)});\n${leerSalida(f)}`);
     cssTrozos.push(nombre);

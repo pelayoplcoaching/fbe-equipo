@@ -24,7 +24,9 @@ export function pedirEstilo(ruta) {
   return p;
 }
 
-// Los que se están pidiendo ahora (para esperarlos antes de pintar lo que los necesita)
+// Los que se están pidiendo ahora (para esperarlos antes de pintar lo que los necesita). (Si uno no está en el servidor
+// —un trozo guardado de antes, con estilos que ya no tiene—, la pantalla sale con los comunes: lo que era suyo y ahora es
+// de varias pantallas está en ellos.)
 export function estilosPendientes() {
   return pedidos.size ? Promise.all(pedidos.values()) : Promise.resolve();
 }
