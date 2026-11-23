@@ -837,8 +837,11 @@ const apuntarLuego = (r) => {
   porApuntar.add(r);
   if (apuntarT || typeof window === 'undefined') return;
   apuntarT = true;
-  // (después de pintar: el fotograma siguiente y, tras él, en cuanto haya un hueco)
-  (window.requestAnimationFrame || ((f) => setTimeout(f, 16)))(() => setTimeout(apuntarTodas, 0));
+  // (cuando el móvil esté desocupado: con lo demás ya pintado, medir no obliga a colocar la página otra vez. Con un
+  // fotograma y un hueco, como antes, al abrir la app aún iban llegando datos y medir recolocaba el panel del coach
+  // entero: 200 ms con el móvil lento y 60 atletas. Sin requestIdleCallback, como Safari, al cabo de un rato)
+  if (window.requestIdleCallback) window.requestIdleCallback(apuntarTodas, { timeout: 3000 });
+  else setTimeout(apuntarTodas, 400);
 };
 export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase = '', children }) {
   const app = useContext(Ctx);
