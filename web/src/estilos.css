@@ -4936,12 +4936,10 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .tabla-pauta .acciones-fila > .btn-icono { width: 36px; height: 36px; }
 .tabla-pauta td[data-col="Kilos"] { min-width: 108px; }
 .tabla-pauta .col-ejercicio > .fbe-series-caja, .tabla-pauta .col-ejercicio > .atajos-previa { contain: inline-size; width: calc(100% + var(--sale)); margin-right: calc(-1 * var(--sale)); }
-.con-pasos { display: grid; grid-template-columns: 22px minmax(0, 1fr) 22px; gap: var(--esp-2); align-items: stretch; }
+.con-pasos { display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px; gap: var(--esp-2); align-items: stretch; }
 .con-pasos .paso { min-height: 40px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta-2); }
 .con-pasos .paso:hover { border-color: var(--morado); color: var(--morado); }
 .con-pasos .paso svg { width: var(--ico-14); height: var(--ico-14); }
-/* (v0.210) en el movil, las flechas de los kilos y las repeticiones, de 24 px de ancho (para el dedo; en el ordenador, 22) */
-@media (max-width: 699px) { .con-pasos { grid-template-columns: 24px minmax(0, 1fr) 24px; } }
 .detalle-cab, .detalle-fila { grid-template-columns: 24px 96px 116px 48px 32px; gap: var(--esp-4); }
 .tabla-pauta .con-pasos input.n { min-width: 0; padding-inline: var(--esp-2); }
 .deshacer-flotante { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 6; background: var(--hoja); box-shadow: var(--sombra); }
@@ -5054,3 +5052,7 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
   .cabecera-grande .btn-codigo { padding-left: var(--esp-10); padding-right: var(--esp-10); }
   .cabecera-grande .btn-codigo .btn-codigo-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* (v0.210) Toques: una etiqueta que lleva dentro su casilla u opcion mide al menos 24 px de alto (se toca toda ella). Sin
+   especificidad (:where): si una regla pone otro alto, gana esa. */
+:where(label:has(> input[type="checkbox"], > input[type="radio"])) { min-height: 24px; }

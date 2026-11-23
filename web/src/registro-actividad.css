@@ -158,7 +158,7 @@ button.serie-ficha[aria-pressed="true"] { box-shadow: var(--anillo-acento); }
 .actividad-hijos { list-style: none; margin: 0 var(--esp-14) var(--esp-10) var(--ra-sangria); padding: 0; display: grid; gap: var(--esp-6); }
 .actividad-hijos > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-10); padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2); border-left: var(--filo-fuerte) solid transparent; }
 .actividad-hijos > li.nuevo { border-left-color: var(--morado); }
-.actividad-hijo { flex: 1 1 14rem; min-width: 0; display: flex; align-items: flex-start; gap: var(--esp-8); padding: 0; border: 0; background: none; color: inherit; font: inherit; font-size: var(--letra-14); text-align: left; cursor: pointer; }
+.actividad-hijo { flex: 1 1 14rem; min-width: 0; min-height: 24px; display: flex; align-items: flex-start; gap: var(--esp-8); padding: 0; border: 0; background: none; color: inherit; font: inherit; font-size: var(--letra-14); text-align: left; cursor: pointer; }
 .actividad-hijo svg { flex: none; width: var(--ico-16); height: var(--ico-16); margin-top: var(--esp-2); }
 .act-hijo-record .actividad-hijo svg { color: var(--oro-600); }
 .act-hijo-mensaje .actividad-hijo svg { color: var(--morado); }
