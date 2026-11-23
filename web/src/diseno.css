@@ -4220,7 +4220,11 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    el centro se enciende como una luna, salen doce rayos y dos ondas, y el lobo asoma sobre «¡Vamos!». */
 .reloj-descanso svg { overflow: visible; }
 .arco-punta { transform-box: view-box; transform-origin: center; }
-.reloj-descanso.suave .arco-punta { transition: transform var(--mov-medio) linear; }
+/* (v0.211) el arco del descanso avanza a saltos de un cuarto de segundo, sin transicion; solo un salto grande (mas o menos
+   15 s, pausa o seguir) se anima un momento (clase arco-suave) */
+.reloj-descanso.arco-suave .arco { transition: stroke-dashoffset var(--mov-medio) linear; }
+.reloj-descanso.arco-suave .arco-punta { transition: transform var(--mov-medio) linear; }
+@media (prefers-reduced-motion: reduce) { .reloj-descanso.arco-suave .arco, .reloj-descanso.arco-suave .arco-punta { transition: none; } }
 .arco-punta circle { fill: var(--blanco); filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px var(--blanco)); }
 .onda-segundo, .cierre-onda { fill: none; stroke: var(--c); transform-box: fill-box; transform-origin: center; opacity: 0; pointer-events: none; }
 .onda-segundo { stroke-width: 3; }
@@ -4240,7 +4244,6 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
   .cierre-rayos { animation: cierre-rayos .75s var(--curva-casa) .3s both; }
   .vamos-lobo { animation: vamos-lobo .5s var(--curva-rebote) .12s both; }
 }
-@media (prefers-reduced-motion: reduce) { .reloj-descanso.suave .arco-punta { transition: none; } }
 @keyframes onda-segundo { from { opacity: .75; transform: scale(1); } to { opacity: 0; transform: scale(1.2); } }
 @keyframes cierre-arco { from { stroke-dashoffset: 1; } }
 @keyframes cierre-luna { from { transform: scale(0); } }

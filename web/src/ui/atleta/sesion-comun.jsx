@@ -49,7 +49,7 @@ const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notificatio
 // encadenada cada 250 ms y el navegador recalculaba estilos, recolocaba y repintaba en cada fotograma de todo el descanso
 // (en un móvil lento, un tercio del trabajo de la página mientras esperas). Ahora avanzan a saltos de un cuarto de
 // segundo, con el resto del reloj (un par de píxeles cada vez: se ve seguido) y solo un salto grande (±15 s, pausa o
-// seguir) se anima, con la clase «suave».
+// seguir) se anima, con la clase «arco-suave».
 function ArcoDescanso({ q, frac, R, C }) {
   return (
     <>
@@ -272,7 +272,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
       </div>
-      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''} ${suave ? 'suave' : ''}`} {...gestoDial} onClick={tocarReloj}>
+      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''} ${suave ? 'arco-suave' : ''}`} {...gestoDial} onClick={tocarReloj}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <DegradadoAro id="aro-descanso" gira />
