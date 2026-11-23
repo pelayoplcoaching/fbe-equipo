@@ -81,5 +81,18 @@ check(sujetoDe('.a .b::before').base === '.a .b' && sujetoDe('.a .b::before').su
   check(r3.porTrozo.get('chunks/Travesia-1.js') === '.tv-cola::before{color:red}@media (min-width:700px){.hoy:where(.tv-cola)::before{color:blue}}', `con pseudo-elemento y @media (${r3.porTrozo.get('chunks/Travesia-1.js')})`);
 }
 
+// (v0.211) El dueño de una clase tiene que pintarla: la demo traía «m3» en sus datos y la regla de .musculo.m3 se iba a su
+// trozo (en la app de verdad, sin demo, el brillo de los músculos de nivel 3 no salía). Y los principios sin guion (`m${n}`)
+{
+  const { duenosDeCodigo, prefijosDe: pref } = await import('../scripts/css-coach.mjs');
+  check(pref('`musculo m${n}`').has('m#') && pref('`cr-celda n${d.nivel}`').has('n#') && !pref('`hola ${x}`').has('hola#'), 'principios sin guion: m${n} y n${d.nivel} (y no «hola ${x}»)');
+  const a = 'x("div",{class:"tarjeta"}),x("span",{class:`musculo m${n}`})', b = 'const DATOS={nivel:"m3",chip:"chip"};x("p",{class:"otra"})';
+  const solo = (txt) => duenosDeCodigo({ textos: new Map([['chunks/B.js', txt], ['chunks/C.js', 'x("i",{class:"nada"})']]), candidatos: new Set(['chunks/B.js', 'chunks/C.js']) });
+  const d = duenosDeCodigo({ textos: new Map([['chunks/A.js', a], ['chunks/B.js', b]]), candidatos: new Set(['chunks/A.js', 'chunks/B.js']) });
+  const d2 = duenosDeCodigo({ textos: new Map([['chunks/A.js', a], ['chunks/C.js', 'x("i",{class:"nada"})']]), candidatos: new Set(['chunks/A.js', 'chunks/C.js']) });
+  check(solo(b)('m3') === null && solo(b)('chip') === null && solo(b)('otra') === 'chunks/B.js' && d('m3') === null && d2('m3') === 'chunks/A.js' && d2('tarjeta') === 'chunks/A.js',
+    `una clase que un trozo solo nombra en sus datos no es suya (solo en datos: ${solo(b)('m3')}; pintada en A y nombrada en B: ${d('m3')}; solo pintada en A: ${d2('m3')})`);
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

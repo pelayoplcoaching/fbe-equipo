@@ -18,8 +18,12 @@ export function prefijosDe(texto) {
   return new Set([
     ...[...t.matchAll(/([a-zA-Z][a-zA-Z0-9_-]*-)\$\{/g)].map((m) => m[1]),
     ...[...t.matchAll(/["'`]([a-zA-Z][a-zA-Z0-9_-]*-)["'`]\s*\+/g)].map((m) => m[1]),
+    // (v0.211) y sin guion: `m${n}`, `n${d.nivel}`, `c${i}` (m0 a m4, n0 a n2, c1 a c4): «m#» casa con m y cifras
+    ...[...t.matchAll(/(?<![A-Za-z0-9_$-])([a-zA-Z][a-zA-Z0-9_]*)\$\{/g)].map((m) => `${m[1]}#`),
   ]);
 }
+// Si una clase sale de un principio armado a trozos: «x-» casa con todo lo que empiece por x-; «m#», con m y cifras
+export const casaPrefijo = (p, c) => (p.endsWith('#') ? c.length > p.length - 1 && c.startsWith(p.slice(0, -1)) && /^\d+$/.test(c.slice(p.length - 1)) : c.startsWith(p));
 
 // Partir por comas de primer nivel (fuera de paréntesis, corchetes y comillas)
 export function partir(s, sep = ',') {
@@ -388,13 +392,31 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   const prefijos = new Map(rutas.map((f) => [f, [...prefijosDe(textos.get(f))]]));
   const palabrasExtra = palabrasDe(extra), prefijosExtra = [...prefijosDe(extra)];
   const memo = new Map();
+  // (v0.211) Para ser dueño de una clase, el trozo tiene que ponerla en el atributo class de algún elemento (entera o armada
+  // con su principio: `m${n}`, `tono-${t}`). Si solo la nombra (un texto de los datos de la demo que se llama como una
+  // clase, «m3»), no: sus estilos se irían con un trozo que no la pinta y faltarían donde se usa.
+  const tramosCache = new Map();
+  const tramosDe = (f) => { if (!tramosCache.has(f)) tramosCache.set(f, tramosDeClass(textos.get(f))); return tramosCache.get(f); };
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+  const enClase = (f, c) => {
+    const t = textos.get(f), ts = tramosDe(f);
+    if (!ts.length) return false;
+    const dentro = (i) => ts.some((x) => i >= x.ini && i < x.fin);
+    for (const m of t.matchAll(new RegExp(`(?<![A-Za-z0-9_-])${esc(c)}(?![A-Za-z0-9_-])`, 'g'))) if (dentro(m.index)) return true;
+    for (const p of prefijos.get(f)) {
+      if (!casaPrefijo(p, c)) continue;
+      const base = p.endsWith('#') ? p.slice(0, -1) : p;
+      for (const m of t.matchAll(new RegExp(`(?<![A-Za-z0-9_$-])${esc(base)}\\$\\{`, 'g'))) if (dentro(m.index)) return true;
+    }
+    return false;
+  };
   const dueno = (c) => {
     if (memo.has(c)) return memo.get(c);
     let r = null;
-    if (!(palabrasExtra.has(c) || prefijosExtra.some((p) => c.startsWith(p)))) {
-      const donde = rutas.filter((f) => palabras.get(f).has(c) || prefijos.get(f).some((p) => c.startsWith(p)));
-      if (donde.length && donde.every((f) => coach.has(f))) r = 'coach';
-      else if (donde.length === 1 && candidatos.has(donde[0])) r = donde[0];
+    if (!(palabrasExtra.has(c) || prefijosExtra.some((p) => casaPrefijo(p, c)))) {
+      const donde = rutas.filter((f) => palabras.get(f).has(c) || prefijos.get(f).some((p) => casaPrefijo(p, c)));
+      if (donde.length && donde.every((f) => coach.has(f)) && donde.some((f) => enClase(f, c))) r = 'coach';
+      else if (donde.length === 1 && candidatos.has(donde[0]) && enClase(donde[0], c)) r = donde[0];
     }
     memo.set(c, r);
     return r;
@@ -417,7 +439,7 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   };
   // ¿Puede una clase acabar en un elemento que lleva otra cuyo dueño es o? Si sale en su código o en lo que alcanza (o en
   // index.html): sí; si no, no
-  dueno.puedeIr = (o, c) => { const a = alcance(o); return a.palabras.has(c) || a.prefijos.some((p) => c.startsWith(p)); };
+  dueno.puedeIr = (o, c) => { const a = alcance(o); return a.palabras.has(c) || a.prefijos.some((p) => casaPrefijo(p, c)); };
   // (v0.210) Las clases «precisas»: las que solo salen en el atributo class de elementos (h("div",{class:"…"}), o con partes
   // que solo eligen entre textos: `a ${x?"b":""}`), sin propiedades sueltas (...p) en el mismo elemento ni otra forma de
   // ponerlas (classList, className, HTML en un texto, una propiedad de un componente, un nombre armado a trozos): de cada una
@@ -428,7 +450,7 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   dueno.junto = (c) => {
     if (juntos.has(c)) return juntos.get(c);
     let r = { clases: new Set(), etiquetas: new Set() }, vistas = 0;
-    if (todosPrefijos.some((p) => c.startsWith(p)) || palabrasExtra.has(c)) r = null;
+    if (todosPrefijos.some((p) => casaPrefijo(p, c)) || palabrasExtra.has(c)) r = null;
     const re = new RegExp(`(?<![A-Za-z0-9_-])${c.replace(/[-]/g, '\\-')}(?![A-Za-z0-9_-])`, 'g');
     fuera: for (const f of rutas) {
       if (!r) break;
@@ -459,12 +481,15 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
     for (const m of [...t.matchAll(/([a-zA-Z][a-zA-Z0-9_-]*-)\$\{/g), ...t.matchAll(/["'`]([a-zA-Z][a-zA-Z0-9_-]*-)["'`]\s*\+/g)]) {
       if (!ts.some((x) => m.index >= x.ini && m.index < x.fin)) prefijosMutantes.push(m[1]);
     }
+    for (const m of t.matchAll(/(?<![A-Za-z0-9_$-])([a-zA-Z][a-zA-Z0-9_]*)\$\{/g)) {
+      if (!ts.some((x) => m.index >= x.ini && m.index < x.fin)) prefijosMutantes.push(`${m[1]}#`);
+    }
   }
   dueno.mutante = (c) => {
     if (mutantes.has(c)) return mutantes.get(c);
-    let r = prefijosMutantes.some((p) => c.startsWith(p)) || palabrasExtra.has(c), vistas = 0;
+    let r = prefijosMutantes.some((p) => casaPrefijo(p, c)) || palabrasExtra.has(c), vistas = 0;
     // (una armada a trozos solo dentro de atributos class: puede no salir entera en el código, pero no se añade luego)
-    const aTrozos = todosPrefijos.some((p) => c.startsWith(p));
+    const aTrozos = todosPrefijos.some((p) => casaPrefijo(p, c));
     const re = new RegExp(`(?<![A-Za-z0-9_-])${c.replace(/[-]/g, '\\-')}(?![A-Za-z0-9_-])`, 'g');
     for (const f of rutas) {
       if (r) break;
@@ -574,7 +599,7 @@ const escribir = (nodos) => nodos.map((x) => (x.tipo === 'regla' ? `${x.sel}{${x
 // principios de clases armadas a trozos en el resto. Devuelve { comun, coach, reglas: cuántas reglas pasan al del coach }
 export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtros = new Set(), duenoDe = null }) {
   const prefijos = [...prefijosOtros];
-  const delCoach = (c) => palabrasCoach.has(c) && !palabrasOtros.has(c) && !prefijos.some((p) => c.startsWith(p));
+  const delCoach = (c) => palabrasCoach.has(c) && !palabrasOtros.has(c) && !prefijos.some((p) => casaPrefijo(p, c));
   const selectorCoach = (s) => /(^|[\s>+~])\.app\.coach(?![A-Za-z0-9_-])/.test(s) || clasesNecesarias(s).some(delCoach);
   let reglas = 0;
   const arbol = leer(css);
@@ -620,10 +645,10 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '', dueno
   // El único trozo donde sale una clase (o null si sale en varios, en ninguno o fuera de los trozos)
   const dueno = (c) => {
     if (memo.has(c)) return memo.get(c);
-    let d = palabrasExtra.has(c) || prefijosExtra.some((p) => c.startsWith(p)) ? undefined : null;
+    let d = palabrasExtra.has(c) || prefijosExtra.some((p) => casaPrefijo(p, c)) ? undefined : null;
     if (d !== undefined) {
       for (const f of rutas) {
-        if (palabras.get(f).has(c) || prefijos.get(f).some((p) => c.startsWith(p))) { if (d) { d = null; break; } d = f; }
+        if (palabras.get(f).has(c) || prefijos.get(f).some((p) => casaPrefijo(p, c))) { if (d) { d = null; break; } d = f; }
       }
     }
     const r = d && candidatos.has(d) ? d : null;
