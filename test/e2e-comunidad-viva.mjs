@@ -117,6 +117,9 @@ export async function probarComunidadViva({ navegador, check, base = 'http://loc
     await perfil.locator('.pe-insignias .insignia, .insignias-perfil, .pe-sub').first().waitFor();
     const cuantas = await perfil.locator('.pe-insignias .insignia').count();
     check(await perfil.locator('.pe-insignias .insignia.nueva').count() === 0, 'la primera vez que abres tu perfil, ninguna insignia se mueve (no se sabe cuál es nueva)');
+    // (v0.214) lo visto se apunta en un efecto, un poco después de pintar: se espera a que esté (en GitHub, una vez, se miró antes
+    // y no estaba: «sin insignias todavía» fallaba con insignias)
+    await p.waitForFunction(() => Object.keys(localStorage).some((x) => x.startsWith('fbe-insignias-vistas:')), null, { timeout: 3000 }).catch(() => {});
     const clave = await p.evaluate(() => Object.keys(localStorage).find((x) => x.startsWith('fbe-insignias-vistas:')) || null);
     if (cuantas && clave) {
       await p.keyboard.press('Escape');
