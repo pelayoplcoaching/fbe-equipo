@@ -5,7 +5,7 @@
 //   npm run build
 //   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste] [--quien=atleta,coach]
 //                              [--atletas=Ana López,Carlos Vera] [--hondo] [--salida=/tmp/auditoria] [--dist=dist] [--puerto=4410]
-//                              [--raros] [--capturas=/tmp/cap-210]
+//                              [--raros] [--capturas=/tmp/cap-210] [--sin-axe]
 // --hondo: también explora dentro de cada hoja (una capa más). Sin él, solo abre y revisa.
 // --capturas: guarda una captura de cada estado (con el mismo nombre en cada pasada: para comparar dos construcciones con
 //   compara.mjs, como los estilos repartidos de la v0.210).
@@ -23,6 +23,7 @@ import { rarificar } from './datos-raros.mjs';
 
 const arg = (k, def) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : def; };
 const hondo = process.argv.includes('--hondo');
+const sinAxe = process.argv.includes('--sin-axe');
 const RAROS = process.argv.includes('--raros') ? (() => { const db = semillaDemo(); console.log('datos raros:', rarificar(db, { hoy: new Date().toISOString().slice(0, 10) })); return JSON.stringify(db); })() : null;
 const SALIDA = resolve(arg('salida', '/tmp/auditoria'));
 const DIST = resolve(arg('dist', 'dist'));
@@ -136,7 +137,7 @@ async function revisar(p, ctx, { conAxe = true } = {}) {
     for (const x of r.rotas.slice(0, 4)) apuntar(ctx, 'imagen rota', x);
     for (const x of r.raros) apuntar(ctx, 'texto raro', x);
   }
-  if (conAxe) for (const x of await axe(p)) apuntar(ctx, 'accesibilidad', x);
+  if (conAxe && !sinAxe) for (const x of await axe(p)) apuntar(ctx, 'accesibilidad', x);
   const lt = await p.evaluate(() => { const l = (window.__lt || []).splice(0); return l; }).catch(() => []);
   for (const t of lt) if (t > 200) apuntar(ctx, 'bloqueo', `${Math.round(t)} ms`);
 }
