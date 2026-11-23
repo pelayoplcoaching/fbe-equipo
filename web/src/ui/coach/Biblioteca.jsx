@@ -68,7 +68,7 @@ function Ejercicios({ peticion = null }) {
         </div>
       )}
       {lista.cargando && !lista.datos ? <Siluetas forma="lista" n={8} texto="Cargando la biblioteca" /> : (
-        <div class="panel"><ul class="lista">
+        <div class="panel"><ul class="lista lista-larga">
           {vista.map((e) => (
             <li key={e.id}>
               <button class="dia fila-biblioteca" onClick={() => setEditar(e)}>

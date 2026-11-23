@@ -5058,3 +5058,10 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 /* (v0.210) Toques: una etiqueta que lleva dentro su casilla u opcion mide al menos 24 px de alto (se toca toda ella). Sin
    especificidad (:where): si una regla pone otro alto, gana esa. */
 :where(label:has(> input[type="checkbox"], > input[type="radio"])) { min-height: 24px; }
+
+/* (v0.211, rendimiento) Listas largas que se pintan enteras (los 300 ejercicios de la Biblioteca del coach): cada fila
+   fuera de la vista no calcula estilos ni se coloca hasta que se acerca (en un movil lento, abrir la Biblioteca pasa de
+   unos 660 a unos 420 ms). Con contencion, el anillo de foco va por dentro de la fila (si no, se recortaria). */
+.lista-larga > li { content-visibility: auto; contain-intrinsic-size: auto 4.5rem; }
+.lista-larga > li > :focus-visible { outline-offset: -2px; }
+
