@@ -843,6 +843,19 @@ const apuntarLuego = (r) => {
   if (window.requestIdleCallback) window.requestIdleCallback(apuntarTodas, { timeout: 3000 });
   else setTimeout(apuntarTodas, 400);
 };
+// (v0.214) Mientras cargan, cada Reserva medía lo pintado nada más pintarse y escribía su hueco: al abrir Hoy, con la docena
+// de Reservas, unas 25 colocaciones de la página seguidas en la misma tarea (medir, escribir, medir...: 300 ms con el móvil
+// lento). Ahora se revisan todas juntas justo después (en una microtarea: antes de que se pinte nada, así que lo de debajo
+// sigue sin moverse): primero se mide todo y luego se escribe.
+const porRevisar = new Set();
+let revisarPedido = false;
+const revisarTodas = () => {
+  revisarPedido = false;
+  const lista = [...porRevisar];
+  porRevisar.clear();
+  const medidas = lista.map((r) => r.leer());
+  lista.forEach((r, i) => r.escribir(medidas[i]));
+};
 export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase = '', children }) {
   const app = useContext(Ctx);
   const clave = `${String(app?.api?.uid?.() || '').slice(0, 8)}:${id}`;
@@ -868,15 +881,13 @@ export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase
     return alto(el, hueco);
   };
   r.apuntar = (actual) => apuntarAlto(clave, actual, inicial > 0);
-  r.revisar = () => {
+  // Lo que se lee (todas las Reservas a la vez, antes de escribir nada): null si no hay caja; { cargado } si ya no carga;
+  // si carga, lo que ocupa lo pintado
+  r.leer = () => {
     const el = caja.current;
     const hueco = el?.lastElementChild;
-    if (!el || !hueco) return;
-    if (!cargaAhora()) {
-      if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
-      apuntarLuego(r);
-      return;
-    }
+    if (!el || !hueco || !el.isConnected) return null;
+    if (!cargaAhora()) return { cargado: true };
     const actual = alto(el, hueco);
     // (el hueco, con algo ya pintado, es un hijo más de la rejilla o la pila que lo contiene: lleva su separación.
     // Se busca el primer antepasado con caja: los de display: contents no cuentan)
@@ -885,12 +896,27 @@ export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase
       while (caja0 && caja0.parentElement && getComputedStyle(caja0).display === 'contents') caja0 = caja0.parentElement;
       r.separa = caja0 ? parseFloat(getComputedStyle(caja0).rowGap) || 0 : 0;
     }
+    return { actual };
+  };
+  r.escribir = (m) => {
+    const hueco = m && caja.current?.lastElementChild;
+    if (!hueco) return;
+    if (m.cargado) {
+      if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
+      apuntarLuego(r);
+      return;
+    }
+    const { actual } = m;
     const falta = (altosGuardados()[clave] ?? inicial) - actual - (actual > 0 ? r.separa : 0);
     if (falta > 8) {
       const h = `${Math.round(falta)}px`, tipo = actual > 0 || liso ? 'resto' : 'entero';
       if (hueco.style.height !== h) hueco.style.height = h;
       if (hueco.dataset.hueco !== tipo) hueco.dataset.hueco = tipo;
     } else if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
+  };
+  r.revisar = () => {
+    porRevisar.add(r);
+    if (!revisarPedido) { revisarPedido = true; (globalThis.queueMicrotask || ((f) => Promise.resolve().then(f)))(revisarTodas); }
   };
   useLayoutEffect(() => { reg.current.revisar(); });
   return (
