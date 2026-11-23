@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.210': {
+    atleta: [
+      'Abrir una sesión y Hoy va más rápido: la app pide a la vez lo que antes pedía una cosa detrás de otra.',
+      'Si el servidor tiene un mal rato, tus series esperan en el móvil y se mandan solas luego. Un doble toque sin querer en ✓ ya no la desmarca.',
+    ],
+    coach: [
+      'Cada pantalla trae sus estilos al abrirla: tus atletas descargan menos al entrar y todo se ve igual que antes.',
+      'El aviso de cumpleaños habla en plural cuando cumplen varios.',
+    ],
+  },
   '0.209': {
     atleta: [
       'Si tu móvil va lento, la app se pone ligera sola: sin cristal ni adornos que se mueven. También lo puedes elegir en Ajustes.',
