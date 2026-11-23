@@ -31,7 +31,7 @@ const filas = [];
 async function sesion(nombre, movil) {
   const ctx = await nav.newContext(movil ? { viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid' }
     : { viewport: { width: 1280, height: 860 }, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
-  if (RAROS) await ctx.addInitScript((db) => { try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: ${e.message}`); } }, RAROS);
+  if (RAROS) await ctx.addInitScript((db) => { if (window !== window.top) return; /* (los marcos de otros sitios, como el de YouTube, no) */ try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: ${e.message}`); } }, RAROS);
   await ctx.addInitScript(() => {
     try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* */ }
     window.__ev = []; window.__lt = [];

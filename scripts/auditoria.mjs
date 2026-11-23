@@ -177,7 +177,7 @@ async function entrar(conf, nombre) {
   if (CAPTURAS) await ctx.clock.setFixedTime(new Date(`${new Date().toISOString().slice(0, 10)}T11:00:00+01:00`));
   if (RAROS) await ctx.addInitScript((db) => {
     // una vez por pestaña (al recargar se queda lo que haya cambiado la app)
-    try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: no caben (${e.message})`); }
+    if (window !== window.top) return; /* (los marcos de otros sitios, como el de YouTube, no) */ try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: no caben (${e.message})`); }
   }, RAROS);
   await ctx.addInitScript((aj) => {
     try { localStorage.setItem('fbe-escena-200', '1'); if (aj && !localStorage.getItem('fbe-ajustes')) localStorage.setItem('fbe-ajustes', JSON.stringify(aj)); } catch { /* */ }
