@@ -9,9 +9,11 @@ export const NOVEDADES = {
   '0.211': {
     atleta: [
       'Durante la sesión, el móvil trabaja mucho menos mientras descansas: el reloj del descanso y el punto verde ya no gastan batería sin parar.',
+      'Escribir en el chat va fluido aunque la conversación tenga meses de mensajes.',
     ],
     coach: [
       'La Biblioteca de ejercicios abre antes, aunque tenga cientos: solo se dibuja lo que ves.',
+      'En los chats largos, escribir ya no se traba, y las tablas anchas (récords, check-ins, atletas) se pueden mover con el teclado.',
     ],
   },
   '0.210': {
