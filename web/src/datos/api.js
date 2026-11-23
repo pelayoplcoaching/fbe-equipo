@@ -738,6 +738,20 @@ export function crearApi(backend, opciones = {}) {
   let con048 = null;
   let con049 = null;   // (pulido 4) lo mismo para las funciones del rendimiento
   const CLAVE_HISTORIAL = (atletaId) => `historial:${atletaId}`;
+  // (v0.212, rendimiento) Cada copia del historial lleva, escondida (con un símbolo: no sale en JSON ni en las copias),
+  // la lista de la que sale; así los récords de toda la historia (eventosDe) se calculan una vez por historial pedido y
+  // no en cada función que los usa al abrir una pantalla (en Hoy, los logros, el informe del bloque y la semana pasada;
+  // en Progreso, varias). Se calculan con la lista de la que sale (nadie toca su copia antes de pedirlos)
+  const BASE_HISTORIAL = Symbol('historial');
+  const copiaHistorial = (base) => { const c = base.map((s) => ({ ...s })); Object.defineProperty(c, BASE_HISTORIAL, { value: base }); return c; };
+  const eventosMemo = new WeakMap();
+  const eventosDe = (series) => {
+    const base = series?.[BASE_HISTORIAL];
+    if (!base) return eventosRecord(series);
+    let r = eventosMemo.get(base);
+    if (!r) { r = eventosRecord(base); eventosMemo.set(base, r); }
+    return r;
+  };
   const historialesGuardados = new Map();   // «cuenta:atleta» → { corte, huella, filas } (los últimos que se han visto)
   // De quién hay historial guardado en este dispositivo: una nota a mano (localStorage) para no abrir la base del
   // navegador cuando no hay nada que leer (la primera vez, eso solo retrasaría lo que se va a pedir de todos modos)
@@ -1863,7 +1877,7 @@ export function crearApi(backend, opciones = {}) {
       return (await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, eq: { completada: true }, cols: 'id' })).length;
     },
     async cuantosRecords(atletaId) {
-      return eventosRecord(await api.historial(atletaId)).eventos.length;
+      return eventosDe(await api.historial(atletaId)).eventos.length;
     },
     // v0.50: lo que trae cada sesión de una semana (para sus tarjetas en Semana): cuántos ejercicios y series, los
     // minutos estimados y los músculos que más trabaja. Solo lee la pauta y los grupos de cada ejercicio.
@@ -2572,7 +2586,7 @@ export function crearApi(backend, opciones = {}) {
     async historial(atletaId) {
       const clave = `${uid()}:${atletaId}`;  // por usuario: con otra sesión, otra respuesta (y otros permisos)
       const ya = historiales.get(clave);
-      if (ya && ya.gen === generacion && Date.now() - ya.t < 4000) return (await ya.p).map((s) => ({ ...s }));
+      if (ya && ya.gen === generacion && Date.now() - ya.t < 4000) return copiaHistorial(await ya.p);
       const p = api.historialSinCompartir(atletaId);
       const entrada = { gen: generacion, t: Date.now(), p };
       // (v0.207) se recuerdan los de varios atletas (antes, solo el último): Revisar pide los de varios a la vez y cada
@@ -2582,7 +2596,7 @@ export function crearApi(backend, opciones = {}) {
       historiales.set(clave, entrada);
       for (const k of [...historiales.keys()].slice(0, Math.max(0, historiales.size - 8))) historiales.delete(k);
       p.catch(() => { if (historiales.get(clave) === entrada) historiales.delete(clave); });
-      return (await p).map((s) => ({ ...s }));
+      return copiaHistorial(await p);
     },
     // (pulido 3.1) El historial ya no se baja entero en cada visita. Lo antiguo (las series anteriores a un «corte»)
     // se guarda en el dispositivo, con la copia de siempre (por cuenta, se borra al cerrar la sesión), y cada vez se
@@ -2774,7 +2788,7 @@ export function crearApi(backend, opciones = {}) {
       const sem = porId(semanas), blo = porId(bloques);
       const porSesion = agrupar(series.filter((x) => x.sesion_id), 'sesion_id');
       const recordsPorSesion = {};
-      for (const e of eventosRecord(series).eventos) if (e.sesion_id) recordsPorSesion[e.sesion_id] = (recordsPorSesion[e.sesion_id] || 0) + 1;
+      for (const e of eventosDe(series).eventos) if (e.sesion_id) recordsPorSesion[e.sesion_id] = (recordsPorSesion[e.sesion_id] || 0) + 1;
       return sesiones.map((x) => {
         const ss = (porSesion[x.id] || []).filter((s) => Number(s.reps) > 0);
         const musc = {};
@@ -2811,7 +2825,7 @@ export function crearApi(backend, opciones = {}) {
       // v0.53: con objetivo de días por semana, cada semana natural con su objetivo (la completa, la de su objetivo)
       const objetivo = semanasObjetivo({ diasSemana, sesiones, semanas, hoy });
       const listaRacha = paraRacha(objetivo);
-      const { eventos } = eventosRecord(series);
+      const { eventos } = eventosDe(series);
       const lunesHoy = lunesDe(hoy);
       return Array.from({ length: n }, (_, i) => {
         const lunes = sumarDias(lunesHoy, -7 * (i + 1));
@@ -2844,7 +2858,7 @@ export function crearApi(backend, opciones = {}) {
         .then((xs) => xs.filter((c) => !c.eliminado_en && !programado(c))).catch(() => []);
       const conTuyo = new Set(tuyos.filter((c) => c.sesion_id).map((c) => c.sesion_id));
       const recordsPorSesion = {};
-      for (const e of eventosRecord(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
+      for (const e of eventosDe(series).eventos) if (e.sesion_id) (recordsPorSesion[e.sesion_id] ||= []).push(e);
       const ev = [];
       // (v0.205) cada cosa con su hora de verdad (si la hay), su clave (para «Nuevo») y a qué lleva al tocarla (foco)
       for (const x of entrenos.filter((e) => e.fecha && e.fecha >= desde)) {
@@ -3032,7 +3046,7 @@ export function crearApi(backend, opciones = {}) {
         historialP,
         pesosP,
       ]);
-      const { eventos } = eventosRecord(series);
+      const { eventos } = eventosDe(series);
       const semPorBloque = agrupar(semanas, 'bloque_id');
       return bloques.filter((bl) => semPorBloque[bl.id]?.length)
         .map((bl) => informeBloque({ bloque: bl, semanas: semPorBloque[bl.id], sesiones, pautas, series, eventos, pesos, soloHechas: !!diasSemana }, hoy))
@@ -3065,7 +3079,7 @@ export function crearApi(backend, opciones = {}) {
         sesiones: sesiones.filter((x) => x.completada).length,
         racha: rachaMaxima(listaRacha, hoy),
         toneladas: Math.floor(hechas.reduce((t, s) => t + (Number(s.kg) || 0) * (Number(s.reps) || 0), 0) / 1000),
-        records: eventosRecord(series).eventos.length,
+        records: eventosDe(series).eventos.length,
         videos: videos.length,
         checkins: checkins.length,
         peso: new Set(pesos.map((p) => p.fecha)).size,
@@ -3120,7 +3134,7 @@ export function crearApi(backend, opciones = {}) {
         return { id, nombre: ss[0].ejercicio, grupos_musculares: ss[0].grupos || [], puntos, series: ss.length, mejor: Math.max(0, ...puntos.map((p) => p.valor)) };
       }).filter((e) => e.puntos.length).sort((a, c) => c.series - a.series);
       const lunes = lunesDe(hoyISO());
-      const er = eventosRecord(series);
+      const er = eventosDe(series);
       return {
         // v0.52: los kilos movidos de cada día (para la gráfica del tonelaje y los destacados), del mismo historial
         // (v0.204) y los días con récord (para el mapa de constancia)
