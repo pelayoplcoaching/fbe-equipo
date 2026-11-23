@@ -3326,16 +3326,24 @@ try {
   const pantallas = await historia.locator('.historia-barras > span').count();
   for (let i = 0; i < pantallas - 1; i++) { await p.keyboard.press('ArrowRight'); await p.waitForTimeout(150); }
   const fin = historia.locator('.historia-fin-botones').getByRole('button', { name: 'Compartir' });
-  check(pantallas >= 4 && await fin.isVisible(), `${pantallas} pantallas con las flechas; al final, compartir`);
-  await revisar('tu-mes-fin');
-  await fin.click();
-  const hojaComp = p.getByRole('dialog', { name: /Compartir/ }).last();
-  await hojaComp.waitFor();
-  await hojaComp.locator('p', { hasText: 'nada de peso' }).waitFor({ timeout: 8000 }).catch(() => {});
-  check((await hojaComp.textContent()).includes('nada de peso, medidas, nutrición, hábitos ni datos de salud'), 'la imagen para compartir dice lo que lleva (y que no lleva peso, medidas, nutrición ni salud)');
-  await revisar('tu-mes-compartir');
-  await p.keyboard.press('Escape');
-  await p.waitForTimeout(250);
+  // (v0.206.1) La demo de Ana solo tiene cuatro semanas de entrenos: a final de mes (desde el 29 de noviembre) su mes
+  // anterior ya no tiene sesiones, y la historia de ese mes sale sin las pantallas del entreno ni «Compartir» (no hay
+  // nada que compartir), con «A por el siguiente» al final. Si no, se comparte como siempre
+  const conEntreno = pantallas >= 4;
+  if (!conEntreno) {
+    check(await historia.locator('.historia-fin-botones').getByRole('button', { name: 'A por el siguiente' }).isVisible() && !(await fin.count()), `un mes sin entrenos (${pantallas} pantallas): al final, «A por el siguiente» y sin compartir`);
+  } else {
+    check(await fin.isVisible(), `${pantallas} pantallas con las flechas; al final, compartir`);
+    await revisar('tu-mes-fin');
+    await fin.click();
+    const hojaComp = p.getByRole('dialog', { name: /Compartir/ }).last();
+    await hojaComp.waitFor();
+    await hojaComp.locator('p', { hasText: 'nada de peso' }).waitFor({ timeout: 8000 }).catch(() => {});
+    check((await hojaComp.textContent()).includes('nada de peso, medidas, nutrición, hábitos ni datos de salud'), 'la imagen para compartir dice lo que lleva (y que no lleva peso, medidas, nutrición ni salud)');
+    await revisar('tu-mes-compartir');
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(250);
+  }
   await cerrarDialogos();
   if (await historia.isVisible().catch(() => false)) await p.keyboard.press('Escape');
   await historia.waitFor({ state: 'detached' });
