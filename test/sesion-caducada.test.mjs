@@ -2,6 +2,7 @@
 // renovara la sesión, y fallaba (4 veces en un mes, a 3 personas). Ahora se renueva la sesión y se repite una vez.
 // Primero la regla suelta; luego el adaptador de Supabase de verdad, con una red de mentira.
 import { sesionCaducada, repetirSiCaduca, crearBackendSupabase } from '../web/src/datos/backend-supabase.js';
+import { esTemporal } from '../web/src/datos/cola.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -71,6 +72,41 @@ globalThis.fetch = async (url, op = {}) => {
   const antes = red.tokens.length;
   const e = await b.select('atletas', {}).then(() => null, (x) => x);
   check(e?.sesionCaducada && /caducado/.test(e.message) && red.tokens.length - antes === 2, `si ni así vale, un aviso claro («${e?.message}») tras un solo reintento`);
+}
+
+// (v0.210) Cuando no contesta la base sino la pasarela de Supabase (502 con una página HTML, un aviso en inglés), no hay
+// conexión con la base o hay demasiadas peticiones: no es un error de lo que se hizo. Antes se enseñaba tal cual (el HTML
+// de la pasarela) y la cola daba la serie por rechazada; ahora es como la falta de cobertura (se reintenta luego).
+console.log('\nEl servidor no puede ahora (v0.210)');
+{
+  const casos = {
+    pasarela: () => new Response('<html><head><title>502 Bad Gateway</title></head><body><center>cloudflare</center></body></html>', { status: 502, headers: { 'content-type': 'text/html' } }),
+    kong: () => json({ message: 'An invalid response was received from the upstream server' }, 502),
+    sin_base: () => json({ code: 'PGRST003', details: null, hint: null, message: 'Timed out acquiring connection from connection pool.' }, 504),
+    muchas: () => json({ message: 'Too Many Requests' }, 429),
+    regla: () => json({ code: '23514', details: null, hint: null, message: 'new row for relation "series" violates check constraint "series_kg_check"' }, 400),
+    tiempo: () => json({ code: '57014', details: null, hint: null, message: 'canceling statement due to statement timeout' }, 500),
+    permiso: () => json({ code: '42501', details: null, hint: null, message: 'permission denied for table series' }, 403),
+  };
+  globalThis.fetch = async (url) => {
+    const u = new URL(String(url));
+    if (u.pathname === '/auth/v1/token') return json(sesionNueva('t9'));
+    if (u.pathname.startsWith('/auth/v1/')) return json({});
+    return (casos[u.pathname.split('/').pop()] || (() => json([])))();
+  };
+  const b = crearBackendSupabase({ url: URL_B, anonKey: 'anon' });
+  await b.auth.entrar('atleta@fbe.demo', 'demo');
+  const fallo = (t, escribir = false) => (escribir ? b.insert(t, [{ x: 1 }]) : b.select(t, {})).then(() => null, (e) => e);
+  for (const t of ['pasarela', 'kong', 'sin_base', 'muchas']) {
+    const e = await fallo(t);
+    check(e?.sinConexion && e.servidor && !/html|upstream|Too Many|Timed out/i.test(e.message), `${t}: como sin cobertura, con un aviso claro («${e?.message}»)`);
+  }
+  const ei = await fallo('pasarela', true);
+  check(ei?.sinConexion && esTemporal(ei), 'una serie apuntada con la pasarela caída se queda en la cola para luego');
+  for (const [t, re] of [['regla', /fuera de rango/], ['tiempo', /statement timeout/], ['permiso', /permiso/]]) {
+    const e = await fallo(t);
+    check(e && !e.sinConexion && !e.servidor && !esTemporal(e) && re.test(e.message), `${t}: un error de la base sigue siendo un error («${e?.message}»)`);
+  }
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

@@ -61,10 +61,17 @@ const MENSAJES = {
 export const sesionCaducada = (error) => !!error && (error.code === 'PGRST301'
   || /\bjwt expired\b|\btoken (is|has) expired\b|\binvalid jwt\b.*\bexp\b/i.test(String(error.message || '')));
 export async function repetirSiCaduca(hacer, renovar) {
-  const r = await hacer();
+  const r = conEstado(await hacer());
   if (!sesionCaducada(r?.error)) return r;
   const renovada = await Promise.resolve().then(renovar).catch(() => false);
-  return renovada ? hacer() : r;
+  return renovada ? conEstado(await hacer()) : r;
+}
+// (v0.210) El código de la respuesta (502, 503…), en el propio error: para saber si contestó la base o la pasarela
+function conEstado(r) {
+  if (r?.error && typeof r.error === 'object' && Number.isFinite(r.status) && r.error.estado == null) {
+    try { r.error.estado = r.status; } catch { /* si no se deja, se queda sin él */ }
+  }
+  return r;
 }
 
 function traducir(error) {
@@ -86,6 +93,18 @@ function traducir(error) {
   e.sinConexion = (typeof navigator !== 'undefined' && navigator.onLine === false)
     || (!error.code && /Failed to fetch|NetworkError|Load failed|fetch failed|timed out|connection was lost|network connection|ERR_NETWORK|ERR_INTERNET/i.test(m));
   if (e.sinConexion) e.message = 'Sin conexión.';
+  // (v0.210) La pasarela de Supabase o un corte suyo (502, 503, 504, con una página HTML o un aviso en inglés y sin código
+  // de la base), demasiadas peticiones (429) o una espera agotada (408): no falla lo que se hizo, es que el servidor no
+  // puede ahora. Se trata como la falta de cobertura (la cola lo reintenta luego y las pantallas enseñan lo guardado) y
+  // no se enseña el HTML de la pasarela. Un error de la base con su código (un «statement timeout», una regla) sigue igual.
+  const estado = Number(error.estado ?? error.status ?? error.statusCode) || 0;
+  const codigoBase = error.code && !/^(PGRST00[0-3]|08|53|57P0)/.test(String(error.code));
+  if (!e.sinConexion && !tamano && !propio && !caducada && !MENSAJES[error.code]
+    && (((estado >= 500 || estado === 429 || estado === 408) && !codigoBase) || /^\s*<(!doctype|html|head|body)\b/i.test(m))) {
+    e.sinConexion = true;
+    e.servidor = true;
+    e.message = 'El servidor no responde ahora. Prueba en un momento.';
+  }
   return e;
 }
 
