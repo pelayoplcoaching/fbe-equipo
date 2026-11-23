@@ -67,11 +67,20 @@ function revisarEnPagina() {
   const vw = innerWidth;
   const sw = document.documentElement.scrollWidth;
   if (sw > vw + 1) out.desborde = `${sw} px de ancho en una pantalla de ${vw}`;
+  // (v0.210) lo que va dentro de una caja de 1 px que recorta (lo solo para lectores de pantalla, como la cabecera de la
+  // tabla del editor en el móvil) no se ve, aunque su propio tamaño sea normal
+  const ocultas = [...document.querySelectorAll('body *')].filter((a) => {
+    const r = a.getBoundingClientRect();
+    if (r.width > 2 && r.height > 2) return false;
+    const cs = getComputedStyle(a);
+    return /(hidden|clip)/.test(`${cs.overflowX} ${cs.overflowY}`) || /inset\(50%\)/.test(cs.clipPath);
+  });
   const visible = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width <= 2 || r.height <= 2) return false;
     const cs = getComputedStyle(el);
-    return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05 && !el.closest('[aria-hidden="true"], [inert], .sr');
+    return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05 && !el.closest('[aria-hidden="true"], [inert], .sr')
+      && !ocultas.some((a) => a !== el && a.contains(el));
   };
   const desc = (el) => {
     const t = (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 48);
@@ -87,16 +96,19 @@ function revisarEnPagina() {
     if (cs.textOverflow === 'ellipsis' || cs.webkitLineClamp !== 'none' && cs.webkitLineClamp) continue;
     const r = el.getBoundingClientRect();
     if (/(hidden|clip)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 2) { out.cortados.push(desc(el)); continue; }
+    let recorta = false;   // (v0.210) una caja de más arriba lo recorta (con «…» o no): no se sale de la pantalla
     for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
       const ca = getComputedStyle(a);
       if (/(auto|scroll)/.test(ca.overflowX)) break;
-      if (/(hidden|clip)/.test(ca.overflowX) && ca.textOverflow !== 'ellipsis') {
+      if (/(hidden|clip)/.test(ca.overflowX)) {
+        recorta = true;
+        if (ca.textOverflow === 'ellipsis') break;
         const ra = a.getBoundingClientRect();
         if (ra.width > 4 && (r.right > ra.right + 2 || r.left < ra.left - 2) && !vistos.has(a)) { vistos.add(a); out.cortados.push(`${desc(el)} (no cabe en ${desc(a).slice(0, 40)})`); }
         break;
       }
     }
-    if (r.right > vw + 1 && r.left < vw - 1 && getComputedStyle(el).position !== 'fixed' && !desplazable(el)) out.fuera.push(desc(el));
+    if (!recorta && r.right > vw + 1 && r.left < vw - 1 && getComputedStyle(el).position !== 'fixed' && !desplazable(el)) out.fuera.push(desc(el));
   }
   for (const el of document.querySelectorAll('button, a[href], [role="button"], [role="tab"], select, input[type="checkbox"], input[type="radio"], summary')) {
     if (!visible(el)) continue;

@@ -63,7 +63,7 @@
 .carrera-fases > legend { padding: 0; margin-bottom: var(--esp-6); }
 .rejilla-carrera { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--esp-10); }
 .rejilla-carrera .campo { margin: 0; min-width: 0; }
-.carrera-zonas-mano summary { cursor: pointer; }
+.carrera-zonas-mano summary { cursor: pointer; padding-block: var(--esp-4); }
 .interruptor-linea { align-items: center; gap: var(--esp-12); cursor: pointer; }
 .campo-check-largo { display: flex; align-items: flex-start; gap: var(--esp-12); cursor: pointer; }
 .campo-check { display: flex; align-items: center; gap: var(--esp-6); align-self: end; min-height: 40px; }

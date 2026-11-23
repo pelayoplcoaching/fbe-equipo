@@ -167,7 +167,7 @@ export function CanalYoutubeCoach({ alCambiarRecursos = null }) {
   });
   return (
     <section class="panel panel-pad pila-s canal-coach" aria-labelledby="canal-coach-t">
-      <h3 id="canal-coach-t" class="peq"><Icono n="video" /> Tu canal de YouTube</h3>
+      <h2 id="canal-coach-t" class="peq"><Icono n="video" /> Tu canal de YouTube</h2>
       <p class="mini secundario">Sus últimos vídeos salen en «Aprende» de tus atletas. Hace falta la función «youtube-canal» desplegada en Supabase.</p>
       <div class="campo"><label for="canal-yt">Enlace o id del canal</label>
         <input id="canal-yt" class="entrada" value={valor} placeholder="https://www.youtube.com/@tu-canal" onInput={(e) => setTexto(e.currentTarget.value)} /></div>
@@ -200,7 +200,7 @@ export function MasVistosEquipo() {
   if (!lista.length) return null;
   return (
     <section class="panel panel-pad pila-s mas-vistos" aria-labelledby="mas-vistos-t">
-      <h3 id="mas-vistos-t" class="peq"><Icono n="ojo" /> Los vídeos más vistos del equipo</h3>
+      <h2 id="mas-vistos-t" class="peq"><Icono n="ojo" /> Los vídeos más vistos del equipo</h2>
       <ol class="lista mas-vistos-lista">
         {lista.map((v) => (
           <li key={v.video}>

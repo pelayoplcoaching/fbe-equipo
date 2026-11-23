@@ -24,6 +24,14 @@ check(res.find((r) => r.nombre === 'Lucía Ferrer')?.servicio === 'nutricion' &&
 check(res.find((r) => r.nombre === 'Lucía Ferrer').alertas.some((a) => a.tipo === 'receta'), 'Lucía pide cambiar una receta (aviso en el panel)');
 for (const r of res) console.log('    ', r.nombre.padEnd(14), r.semana ? `S${r.semana.numero}/${r.semana.total}` : '—', `${r.sesiones.completadas}/${r.sesiones.total}`, r.peso ? `${r.peso.kg} (${r.peso.cambio})` : '', '|', r.alertas.map((a) => a.texto).join(' · '));
 check(res.find((r) => r.nombre === 'Carlos Vera').alertas.some((a) => a.tipo === 'sin_entrenar'), 'Carlos aparece sin entrenar');
+// (v0.210) guardar el canal de YouTube (Biblioteca → Recursos): en la demo fallaba con «Cannot read properties of
+// undefined (reading 'split')», porque su upsert pedía columnas y la API no las daba (la base usa la clave primaria)
+{
+  const g = await api.guardarCanalYoutube({ canal: '@otro-canal', activo: true }).then((r) => r, (e) => e);
+  check(!(g instanceof Error) && g?.canal === '@otro-canal' && (await api.canalYoutube())?.canal === '@otro-canal' && (await b.select('youtube_canal')).length === 1,
+    `el coach guarda su canal de YouTube en la demo (una sola fila)${g instanceof Error ? `: ${g.message}` : ''}`);
+  await api.guardarCanalYoutube({ canal: '@canal-demo', activo: true });
+}
 // v0.49: la franja y las minigráficas del panel, y el resumen de un solo atleta para la cabecera de su ficha
 {
   const { estadoAtleta } = await import('../web/src/logica/visual.js');

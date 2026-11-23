@@ -652,7 +652,7 @@ img.medio { background: var(--hoja-2); }
 /* Revisar (bandeja del coach) */
 .rejilla-revisar { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--esp-12); align-items: start; }
 .tarjeta-revisar { gap: var(--esp-10); }
-.revisar-cab .nombre-atleta { padding: 0; min-height: 0; color: var(--tinta); font-weight: 750; font-size: var(--letra-15-5); }
+.revisar-cab .nombre-atleta { padding: 0; min-height: 24px; color: var(--tinta); font-weight: 750; font-size: var(--letra-15-5); }
 .mensaje-pendiente { box-shadow: inset 3px 0 0 var(--morado), var(--sombra); }
 .tabla-clic tbody tr { cursor: pointer; }
 .tabla-clic tbody tr:hover td { background: var(--hoja-2); }
@@ -735,7 +735,7 @@ img.medio { background: var(--hoja-2); }
 .barra-fila.vol-alto .relleno { background: var(--aviso); }
 .barra-fila.vol-alto .v { color: var(--aviso); }
 .vol-chips { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
-.vol-desglose summary { cursor: pointer; width: max-content; max-width: 100%; }
+.vol-desglose summary { cursor: pointer; width: max-content; max-width: 100%; padding-block: var(--esp-4); }
 .vol-desglose ul { margin: var(--esp-6) 0 var(--esp-4); padding-left: var(--esp-18); display: grid; gap: var(--esp-4); }
 .vol-desglose p { margin: var(--esp-2) 0 0; }
 .vol-chip { display: inline-flex; gap: var(--esp-6); align-items: baseline; padding: var(--esp-4) var(--esp-10); border-radius: var(--r-pildora); font-size: var(--letra-13); background: var(--hoja-2); color: var(--tinta-2); }
@@ -4940,6 +4940,8 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .con-pasos .paso { min-height: 40px; min-width: 0; padding: 0; display: flex; align-items: center; justify-content: center; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta-2); }
 .con-pasos .paso:hover { border-color: var(--morado); color: var(--morado); }
 .con-pasos .paso svg { width: var(--ico-14); height: var(--ico-14); }
+/* (v0.210) en el movil, las flechas de los kilos y las repeticiones, de 24 px de ancho (para el dedo; en el ordenador, 22) */
+@media (max-width: 699px) { .con-pasos { grid-template-columns: 24px minmax(0, 1fr) 24px; } }
 .detalle-cab, .detalle-fila { grid-template-columns: 24px 96px 116px 48px 32px; gap: var(--esp-4); }
 .tabla-pauta .con-pasos input.n { min-width: 0; padding-inline: var(--esp-2); }
 .deshacer-flotante { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 6; background: var(--hoja); box-shadow: var(--sombra); }
@@ -4962,7 +4964,7 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .lista-elegir .elegir-fila:has(.elegir-marca) { grid-template-columns: auto minmax(0, 1fr); }
 .lista-elegir .elegir-fila + .elegir-fila { border-top: var(--filo-fino) solid var(--linea); }
 .lista-elegir .elegir-fila.marcado { background: var(--morado-suave); }
-.elegir-marca { width: 22px; height: 22px; margin: 0 0 0 var(--esp-12); accent-color: var(--morado); }
+.elegir-marca { width: 24px; height: 24px; margin: 0 0 0 var(--esp-12); accent-color: var(--morado); }
 .elegir-varios { display: flex; flex-wrap: wrap; gap: var(--esp-10); align-items: center; justify-content: space-between; }
 .elegir-varios > span { flex: 1; min-width: 160px; }
 .vista-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-10); }
@@ -4997,7 +4999,7 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 @media (max-width: 699px) { .duracion-sesion { order: 9; flex-basis: 100%; } }
 .anadir-sesiones { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-8); }
 @media (max-width: 560px) { .anadir-sesiones { grid-template-columns: minmax(0, 1fr); } }
-.cambios-semana > summary { cursor: pointer; font-weight: 650; font-size: var(--letra-14); }
+.cambios-semana > summary { cursor: pointer; font-weight: 650; font-size: var(--letra-14); padding-block: var(--esp-2); }
 .lista-cambios, .lista-avisos, .historial-editor { list-style: none; margin: var(--esp-10) 0 0; padding: 0; display: grid; gap: var(--esp-8); }
 .lista-cambios li { display: flex; flex-wrap: wrap; gap: var(--esp-2) var(--esp-10); align-items: baseline; font-size: var(--letra-14); }
 .lista-cambios li > span { color: var(--tinta-2); }

@@ -3810,7 +3810,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(res);
       }
-      const cols = onConflict.split(',').map((c) => c.trim());
+      // (v0.210) sin columnas, la clave primaria (como Postgres): guardar el canal de YouTube en la demo fallaba con «split»
+      const cols = String(onConflict || 'id').split(',').map((c) => c.trim());
       const lista = Array.isArray(filas) ? filas : [filas];
       const res = lista.map((f) => {
         const existente = tabla(t).find((x) => cols.every((c) => x[c] === f[c]));

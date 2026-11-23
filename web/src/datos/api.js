@@ -5788,7 +5788,7 @@ export function crearApi(backend, opciones = {}) {
     async guardarCanalYoutube({ canal, activo = true }) {
       const c = String(canal || '').trim();
       if (!c) { await b.delete('youtube_canal', { eq: { id: true } }).catch(falta059); api._canalVideos = null; return null; }
-      const [r] = await b.upsert('youtube_canal', [{ id: true, canal: c, activo: !!activo, actualizado_en: new Date().toISOString() }]).catch(falta059);
+      const [r] = await b.upsert('youtube_canal', [{ id: true, canal: c, activo: !!activo, actualizado_en: new Date().toISOString() }], 'id').catch(falta059);
       api._canalVideos = null;
       return r || null;
     },

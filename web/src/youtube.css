@@ -50,8 +50,8 @@
 @media (prefers-reduced-motion: no-preference) { .directo-hoy.ahora .directo-punto { animation: yt-latido 1.4s ease-in-out infinite; } }
 @keyframes yt-latido { 50% { opacity: .35; } }
 .guia-video { margin: 0; display: grid; gap: var(--esp-6); }
-.canal-coach h3, .mas-vistos h3, .vistos-atleta h3 { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; }
-.canal-coach h3 svg, .mas-vistos h3 svg, .vistos-atleta h3 svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
+.canal-coach h2, .mas-vistos h2, .vistos-atleta h3 { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; }
+.canal-coach h2 svg, .mas-vistos h2 svg, .vistos-atleta h3 svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .canal-lista li { gap: var(--esp-8); padding: var(--esp-8) 0; }
 .canal-video { text-align: left; }
 .fila-video { display: grid; gap: var(--esp-2); width: 100%; padding: var(--esp-8) 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
