@@ -3,7 +3,9 @@ import { useEstadoMicro, ActivarMicro, AyudaMicro } from './chat/NotaVoz.jsx';
 import { textoMicro } from '../logica/notasVoz.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Segmentos, Icono, useApp, Hoja, GrupoIos, FilaIos, IcoIos } from './comunes.jsx';
-import { leerAjustes, guardarAjustes, TAMANOS_LETRA, temaConSol } from './ajustes.js';
+import { leerAjustes, guardarAjustes, TAMANOS_LETRA, temaConSol, leerLento } from './ajustes.js';
+import { OPCIONES_LIGERO, lentoVigente, DIAS_LENTO } from '../logica/ligero.js';
+import { hoyISO, diasEntre } from '../logica/fechas.js';
 import { prepararAudio, pitar, sonarSerie, SONIDOS_DESCANSO } from './atleta/sesion-comun.jsx';
 import { hayVoz, hablar, vocesEspanol } from './voz.js';
 import { PruebaSonido } from './PruebaSonido.jsx';
@@ -29,6 +31,18 @@ export { Interruptor };
 // Ajustes de este dispositivo (v0.50, en lista agrupada): tema, negro puro, acento y tamaño de la letra; en el móvil
 // del atleta, además, «Sonido y vibración» (en su hoja), la pantalla encendida y los kilos en Hoy. El coach solo ve
 // lo de la pantalla. antes: filas que van al principio del grupo (las notificaciones de este móvil).
+// (v0.209) Lo que dice la fila del modo ligero: qué hace y cómo está ahora en este móvil
+function detalleLigero(a) {
+  const que = 'Sin cristal esmerilado, sin el cielo que se mueve, sin nieve ni brillos: todo se ve igual de claro, pero se queda quieto y va más suelto.';
+  if (a.ligero === 'si') return `${que} Puesto siempre.`;
+  if (a.ligero === 'no') return `${que} Apagado siempre.`;
+  const l = leerLento();
+  const hoy = hoyISO();
+  if (!lentoVigente(l, hoy)) return `${que} Con «Automático» se pone solo si este móvil va lento; ahora va bien.`;
+  const quedan = Math.max(1, DIAS_LENTO - diasEntre(l.desde, hoy));
+  return `${que} Ahora, puesto: ${l.por === 'memoria' ? 'este móvil tiene poca memoria' : 'este móvil iba lento al abrir la app'} (se vuelve a mirar dentro de ${quedan === 1 ? '1 día' : `${quedan} días`}).`;
+}
+
 export function AjustesDispositivo({ coach = false, antes = null }) {
   const { modo } = useApp() || {};
   const [a, setA] = useState(leerAjustes);
@@ -88,6 +102,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
       </li>
       {/* (v0.200) la decoración de temporada: copos finos arriba en Navidad (del 20 de diciembre al 6 de enero) y en invierno */}
       <Interruptor id="aj-temporada" icono="nieve" texto="Decoración de temporada" ayuda="Copos finos en lo alto de la pantalla en Navidad (del 20 de diciembre al 6 de enero) y, más pocos, en invierno; el resto del año, de noche y en oscuro, unas estrellas tenues" valor={a.temporada !== false} alCambiar={(v) => cambiar('temporada', v)} />
+      {/* (v0.209) el modo ligero: sin lo decorativo que más cuesta, solo si el móvil va lento (o siempre, o nunca) */}
+      <FilaIos icono="rayo" titulo="Modo ligero" detalle={detalleLigero(a)}
+        bloque={<Segmentos opciones={OPCIONES_LIGERO} valor={a.ligero || 'auto'} etiqueta="Modo ligero" alCambiar={(v) => cambiar('ligero', v || 'auto')} />} />
       {/* (color, mejoras 17 y 18) más contraste y ayuda para daltonismo */}
       <Interruptor id="aj-contraste" icono="sol" texto="Alto contraste" ayuda="Textos y líneas al máximo, para ver mejor o entrenar con mucha luz" valor={!!a.altoContraste} alCambiar={(v) => cambiar('altoContraste', v)} />
       <Interruptor id="aj-daltonismo" icono="ojo-abierto" texto="Ayuda para daltonismo" ayuda="Lo hecho, en azul, y lo que falta o va mal, en naranja, en vez de verde y rojo" valor={!!a.daltonismo} alCambiar={(v) => cambiar('daltonismo', v)} />

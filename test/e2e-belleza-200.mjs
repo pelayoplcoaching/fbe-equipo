@@ -127,6 +127,13 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     check(await hasta(async () => (await p.locator('.temporada-capa').count()) === 0 && !(await p.evaluate(() => document.documentElement.hasAttribute('data-temporada')))), 'al apagarla, se van los copos');
     await sw.click();
     check(await hasta(async () => (await p.locator('.temporada-capa i').count()) === 14), 'y al encenderla, vuelven');
+    // (v0.209) El modo ligero: «Automático» de serie (en las pruebas no se pone solo); «Siempre» quita el cristal y la nieve
+    const lig = p.getByRole('group', { name: 'Modo ligero' });
+    check((await lig.locator('[aria-pressed="true"]').textContent()) === 'Automático' && !(await p.evaluate(() => document.documentElement.hasAttribute('data-ligero'))), 'el modo ligero, en «Automático» de serie (y en las pruebas no se pone solo)');
+    await lig.getByRole('button', { name: 'Siempre' }).click();
+    check(await hasta(async () => p.evaluate(() => document.documentElement.hasAttribute('data-ligero') && getComputedStyle(document.querySelector('nav.tabs')).backdropFilter === 'none' && getComputedStyle(document.querySelector('.temporada-capa')).display === 'none')), 'con «Siempre», sin cristal esmerilado ni nieve');
+    await lig.getByRole('button', { name: 'Automático' }).click();
+    check(await hasta(async () => !(await p.evaluate(() => document.documentElement.hasAttribute('data-ligero'))) && (await p.locator('.temporada-capa i').count()) === 14), 'y en «Automático», todo como estaba');
     check(await p.locator('.acento-op').count() === 11 && await p.locator('.acento-op', { hasText: 'Abeto' }).count() === 1 && await p.locator('.acento-op', { hasText: 'Granada' }).count() === 1, 'los dos colores nuevos, para elegir: Abeto y Granada');
     await p.locator('.acento-op', { hasText: 'Granada' }).click();
     check(await hasta(async () => /oklch|#|rgb/.test(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--morado'))) && (await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-ajustes')).acento)) === 'granada'), 'y se aplica Granada');

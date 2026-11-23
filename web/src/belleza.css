@@ -249,3 +249,18 @@
    Lo que anima sin parar (el cielo de la hora, la llama de la racha) se para mientras no se ve: ui/marca-pagina.js le
    pone data-pausa al salir de la pantalla y se lo quita al volver (sigue donde estaba, sin saltos). */
 [data-pausa], [data-pausa] *, [data-pausa]::before, [data-pausa]::after, [data-pausa] *::before, [data-pausa] *::after { animation-play-state: paused !important; }
+
+/* -- 22 - Modo ligero (v0.209, rendimiento) -----------------------------------------------------------------------------
+   Con el móvil lento (o elegido en Ajustes: ui/ajustes.js pone data-ligero en <html>), fuera lo decorativo que más cuesta:
+   el cristal esmerilado (los mismos fondos lisos que con «Alto contraste»), la nieve de temporada y el tiempo del cielo,
+   y lo que anima sin parar por adorno (el cielo, la llama, las escenas, los brillos), quieto. Lo útil sigue igual: los
+   temporizadores, la grabación, las cargas y lo que avisa. */
+:root[data-ligero] { --vidrio: var(--hoja); --vidrio-cab: var(--tiza); --vidrio-hoja: var(--hoja); --vidrio-flota: var(--flota); --vidrio-filtro: none; }
+:root[data-ligero] *, :root[data-ligero] *::before, :root[data-ligero] *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:root[data-ligero] .temporada-capa, :root[data-ligero] .cielo-gota, :root[data-ligero] .cielo-copo, :root[data-ligero] .cielo-niebla,
+:root[data-ligero] .cielo-relampago, :root[data-ligero] .cielo-fuego { display: none; }
+:root[data-ligero] .cielo-hora *, :root[data-ligero] .llama *, :root[data-ligero] .bdia-rayo, :root[data-ligero] .bdia-luz-tarde, :root[data-ligero] .bdia-estrella,
+:root[data-ligero] .escena-estrellas circle, :root[data-ligero] .escena-halo, :root[data-ligero] .escena-chispas path, :root[data-ligero] .e200-lobo,
+:root[data-ligero] .hito-fondo, :root[data-ligero] .hito-chispas i, :root[data-ligero] .temporada-estrellas i, :root[data-ligero] .tv-fiesta::after,
+:root[data-ligero] .apuntes::before, :root[data-ligero] .apuntes::after, :root[data-ligero] .apunte-ondas i, :root[data-ligero] .apuntes-medalla-dibujo .brillo,
+:root[data-ligero] .apuntes-cinta::after, :root[data-ligero] .sil, :root[data-ligero] .medio-chat-hueco, :root[data-ligero] .cm-rayos { animation-play-state: paused !important; }

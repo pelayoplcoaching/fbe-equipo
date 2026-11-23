@@ -38,6 +38,7 @@ import { instalarPastilla } from './ui/pastilla.js';
 import { instalarTacto } from './ui/tacto.js';
 import { instalarPantalla } from './ui/pantalla.js';
 import { instalarBelleza } from './ui/belleza.js';
+import { instalarLigero } from './ui/ligero.js';
 
 aplicarTema();
 instalarPulido();
@@ -46,6 +47,7 @@ instalarPastilla();
 instalarTacto();
 instalarPantalla();
 instalarBelleza();
+instalarLigero();
 import { crearApi } from './datos/api.js';
 import { cargarListaImagenes } from './logica/imagenes.js';
 import { crearCola } from './datos/cola.js';

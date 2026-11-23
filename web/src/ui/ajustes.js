@@ -18,6 +18,7 @@ import { superficiesDe } from '../logica/paleta.js';
 import { descansoValido, DESCANSO_DEFECTO } from '../logica/calculos.js';
 
 import { limpiarVolumenes, horaValida } from '../logica/sonido.js';
+import { opcionLigero, lentoVigente, ligeroActivo } from '../logica/ligero.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
@@ -54,7 +55,9 @@ export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 
   // prueba de sonido (aún no hecha), la voz del móvil elegida y su velocidad, contar las repeticiones con el metrónomo (no),
   // el paisaje sonoro del descanso (ninguno) y marcar la serie desde los auriculares (no)
   silencioActivo: false, silencioDesde: '23:00', silencioHasta: '08:00', sonidoTeclado: false, avisoSeguimos: true, pruebaSonido: false,
-  vozNombre: null, vozVelocidad: 1, contarReps: false, paisajeDescanso: null, auricularesSerie: false };
+  vozNombre: null, vozVelocidad: 1, contarReps: false, paisajeDescanso: null, auricularesSerie: false,
+  // (v0.209) el modo ligero: Automático (si este móvil va lento), Siempre o Nunca (logica/ligero.js)
+  ligero: 'auto' };
 // (color, mejora 19; color 2, 14) la barra del sistema, del color exacto del fondo de cada tema con el acento elegido
 // (los neutros siguen al acento: logica/paleta.js)
 const coloresBarra = (acento) => ({ claro: superficiesDe(acento, 'claro').tiza, oscuro: superficiesDe(acento, 'oscuro').tiza, oled: '#000000' });
@@ -123,8 +126,15 @@ export function normalizarAjustes(guardado = {}) {
   a.paisajeDescanso = ['marron', 'lluvia', 'bosque'].includes(a.paisajeDescanso) ? a.paisajeDescanso : null;
   // (v0.200) la decoración de temporada (copos en Navidad y en invierno), encendida de serie
   a.temporada = a.temporada !== false;
+  a.ligero = opcionLigero(a.ligero);
   return a;
 }
+// (v0.209) Si este móvil va lento (lo decide ui/ligero.js y lo guarda aquí, en el propio móvil)
+export const CLAVE_LENTO = 'fbe-lento';
+export function leerLento() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_LENTO) || 'null'); } catch { return null; }
+}
+export const conLigero = (a = leerAjustes()) => ligeroActivo(a.ligero, lentoVigente(leerLento(), hoyISO()));
 export function leerAjustes() {
   let guardado = {};
   try {
@@ -182,6 +192,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (alto) r.setAttribute('data-contraste', 'alto'); else r.removeAttribute('data-contraste');
   if (!escuchaContraste) { escuchaContraste = true; try { matchMedia('(prefers-contrast: more)').addEventListener?.('change', () => aplicarTema()); } catch { /* */ } }
   if (a.daltonismo) r.setAttribute('data-daltonismo', ''); else r.removeAttribute('data-daltonismo');
+  // (v0.209) el modo ligero (las reglas, al final de belleza.css)
+  if (conLigero(a)) r.setAttribute('data-ligero', ''); else r.removeAttribute('data-ligero');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento, { alto });
