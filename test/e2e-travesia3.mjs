@@ -16,7 +16,7 @@ export async function probarTravesia3({ navegador, check, base = 'http://localho
   p.on('pageerror', (e) => errores.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });
   const trozos = [];
-  p.on('request', (r) => { if (/\/chunks\/TravesiaHoja-/.test(r.url())) trozos.push(r.url()); });
+  p.on('request', (r) => { if (/\/chunks\/TravesiaHoja-[^/]*\.js(\?|$)/.test(r.url())) trozos.push(r.url()); });
   const fueraAvisos = async () => {
     for (let i = 0; i < 4; i++) {
       await p.waitForTimeout(300);
