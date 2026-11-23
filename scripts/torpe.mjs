@@ -109,9 +109,12 @@ console.log('Atleta: doble toque en lo que guarda');
     const h1 = await p.evaluate(() => location.hash).catch(() => '');
     check(abiertas === 0 && h1 === h0 && (await p.locator('nav.tabs').count()) === 1, `«atrás» con «Más» abierto cierra la hoja y se queda en ${h0} (${h1}, ${abiertas} hojas)`);
   }
-  // 6. Girar el móvil con una hoja abierta
-  if (await mas.count()) {
-    await mas.click();
+  // 6. Girar el móvil con una hoja abierta («Ordenar Hoy»: la de «Más» se va sola en horizontal, porque ya caben todas)
+  await p.evaluate(() => { location.hash = 'hoy'; }); await p.waitForTimeout(800); await cerrar(p);
+  const ordenar = p.getByRole('button', { name: 'Ordenar Hoy' }).first();
+  if (await ordenar.count()) {
+    await ordenar.scrollIntoViewIfNeeded().catch(() => {});
+    await ordenar.click();
     await p.locator('[aria-modal="true"]').first().waitFor({ timeout: 5000 }).catch(() => {});
     await p.setViewportSize({ width: 844, height: 390 });
     await p.waitForTimeout(800);
