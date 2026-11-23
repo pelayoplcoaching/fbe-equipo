@@ -5643,7 +5643,9 @@ if (parte(PRINCIPAL)) try {
   await tarj.locator('.analisis-progreso').waitFor({ state: 'detached' });
   check(await tarj.locator('.tabla-velocidad').count() === 0 && await tarj.getByRole('button', { name: 'Seguir la barra' }).isEnabled(), '«Cancelar» lo para (sin resultado) y se puede volver a empezar');
   await tarj.getByRole('button', { name: 'Seguir la barra' }).click();
-  await tarj.locator('.tabla-velocidad').waitFor({ timeout: 90000 });
+  // (v0.212) seguir la barra va fotograma a fotograma (un «seeked» por fotograma): en un ordenador, unos 32 s; en la CI de
+  // GitHub, con el procesador compartido, alguna vez pasó de 90 y la parte 0 entera se tuvo que repetir
+  await tarj.locator('.tabla-velocidad').waitFor({ timeout: 180000 });
   check(pedidas.some((u) => /chunks\/analisis-[0-9A-Z]+\.js/.test(u)) && !pedidas.some((u) => !u.startsWith('http://localhost:4174/') && !/^(data|blob):/.test(u) && !/i\.ytimg\.com/.test(u)),
     'la barra se sigue en un Web Worker de la propia app; nada sale a otro servidor');
   // La capa se dibuja un poco después de la tabla (en CI, a veces tarda): se espera a que esté entera
