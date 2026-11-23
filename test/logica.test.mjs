@@ -4871,5 +4871,21 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
     'la política 2026-12.38 cuenta lo que el coach prepara para cada atleta: frases, tres imágenes y márgenes de peso (solo los dos)');
 }
 
+{
+  console.log('\nFormateadores y memorias (v0.211-0.213)');
+  const F = await import('../web/src/logica/fechas.js');
+  const casos = ['2026-03-29T00:59:00Z', '2026-03-29T01:00:00Z', '2026-10-25T00:59:00Z', '2026-10-25T01:00:00Z', '2026-12-31T22:59:59Z', '2026-12-31T23:00:00Z', '2027-01-01T00:30:00Z'];
+  const aMano = (iso) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso)).map((x) => [x.type, x.value])); return `${p.year}-${p.month}-${p.day}`; };
+  check(casos.every((c) => F.fechaMadrid(c) === aMano(c)) && F.fechaMadrid('no es una fecha') === 'NaN-NaN-NaN', 'fechaMadrid con su formateador guardado da lo mismo, también en los cambios de hora y en Nochevieja');
+  check(F.partesMadrid('2026-10-25T00:30:00Z').hora === '02:30' && F.partesMadrid('2026-10-25T01:30:00Z').hora === '02:30' && F.partesMadrid('2027-01-01T00:30:00Z').fecha === '2027-01-01', 'partesMadrid, igual (la hora repetida del cambio de octubre)');
+  const { fmtNum } = await import('../web/src/logica/formato-numero.js');
+  const nums = [0, 1.25, 999.95, 1000, 12345.678, -2500.4, NaN];
+  check(nums.every((x) => fmtNum(x, 0, 1) === x.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) && fmtNum(x, 2, 2, true) === x.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true })), 'fmtNum da el mismo texto que toLocaleString con esas opciones');
+  const V = await import('../web/src/logica/variantes.js');
+  const a = V.materialesDe('Press militar con mancuernas'); a.add('barra'); a.delete('mancuernas');
+  const b = V.materialesDe('Press militar con mancuernas');
+  check(b.has('mancuernas') && !b.has('barra') && b !== a, 'materialesDe recuerda lo de cada nombre pero devuelve un Set nuevo (cambiar uno no estropea el siguiente)');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
