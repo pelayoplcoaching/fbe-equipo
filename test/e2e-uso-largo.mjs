@@ -6,7 +6,7 @@
 // lo que hay tras la última: con la memoria recogida (el recolector, a mano), lo de cada vuelta debe quedarse igual.
 import { irASeccion } from './secciones.mjs';
 
-const VUELTAS = 6;
+const VUELTAS = Number(process.env.FBE_VUELTAS) || 6;
 
 export async function probarUsoLargo({ navegador, check, base = 'http://localhost:4174' }) {
   for (const [quien, pantallas, listo] of [

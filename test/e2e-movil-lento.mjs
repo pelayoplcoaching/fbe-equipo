@@ -7,7 +7,8 @@
 // aguantan una máquina cargada (GitHub) y saltan con lo que de verdad se nota, como Revisar pasando de 70 ms a 4,5 s.
 import { irASeccion } from './secciones.mjs';
 
-export const MAXIMOS = { abrir: 6000, sesion: 4000, progreso: 4000 };
+// (v0.207, medido en un ordenador normal: abrir unos 2 s, empezar la sesión unos 3,4 s —con su animación de entrada—, Progreso 1 s)
+export const MAXIMOS = { abrir: 5000, sesion: 8500, progreso: 2500 };
 const FRENO_CPU = 4, RETRASO_BASE_MS = 170;
 
 export async function probarMovilLento({ navegador, check, base = 'http://localhost:4174' }) {

@@ -62,6 +62,10 @@ export function instalarPastilla() {
       }
     }
     for (const g of tocados) apuntar(g);
+    // (v0.207) Los grupos que han salido de la página, fuera de la lista y del medidor: si no, cada visita a una pantalla
+    // con segmentos (Progreso, con sus gráficas) dejaba su árbol entero vivo en memoria (unos 700 KB por visita; lo vio
+    // la prueba de uso largo). El medidor no avisa de lo que se quita.
+    if (cambios.some((c) => c.removedNodes?.length)) for (const g of grupos) if (!g.isConnected) { grupos.delete(g); mirador?.unobserve(g); }
   }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed', 'aria-selected'] });
   for (const g of document.querySelectorAll(TODO)) apuntar(g);
 }
