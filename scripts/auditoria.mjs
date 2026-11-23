@@ -212,7 +212,16 @@ async function entrar(conf, nombre) {
     const n = await p.evaluate(async () => ({ atletas: (await globalThis.__fbeDemo.select('atletas', {})).length, mensajes: (await globalThis.__fbeDemo.select('comentarios', {})).length })).catch(() => null);
     console.log(`datos raros en el navegador (${nombre}): ${JSON.stringify(n)}`);
   }
-  if (c.sinRed) { await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1')); await ctx.setOffline(true); p.__sinRed = true; await p.waitForTimeout(500); }
+  if (c.sinRed) {
+    // (v0.212) con el service worker de verdad (en localhost solo con «fbe-sw-local», como e2e-sinred-065): sin él, volver
+    // a cargar la app sin conexión sacaba la página de error del navegador y lo demás de la pasada no valía
+    await p.evaluate(() => { localStorage.setItem('fbe-sw-local', '1'); localStorage.setItem('fbe-demo-sin-red', '1'); });
+    await p.reload();
+    await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {});
+    await p.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 20000 }).catch(() => console.log('sin service worker: las recargas sin conexión no valdrán'));
+    await p.waitForTimeout(1500);
+    await ctx.setOffline(true); p.__sinRed = true; await p.waitForTimeout(500);
+  }
   return { ctx, p, errores };
 }
 
@@ -231,12 +240,11 @@ async function irA(p, pestana) {
   const enSesion = await p.locator('.sesion-vista, .portada-sesion, .enfoque, .travesia').count().catch(() => 0);
   const ok = !enSesion && await p.locator('nav.tabs').count();
   if (!ok) {
-    // (sin conexión, volver a cargar la página necesita la red del servidor de pruebas: se abre un momento y se vuelve a
-    // cortar; la demo sigue sin llegar a la «base» por «fbe-demo-sin-red»)
-    const sinRed = !!p.__sinRed;
-    if (sinRed) await p.context().setOffline(false);
-    await p.goto(`${base}/?demo#${pestana}`);
-    if (sinRed) await p.context().setOffline(true);
+    await p.goto(`${base}/?demo#${pestana}`).catch(async (e) => {
+      // (sin conexión y sin service worker, la recarga no llega: se abre la red un momento y se vuelve a cortar)
+      if (!p.__sinRed) throw e;
+      await p.context().setOffline(false); await p.goto(`${base}/?demo#${pestana}`); await p.context().setOffline(true);
+    });
     await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {}); await p.waitForTimeout(600);
   }
   await p.evaluate((h) => { if (location.hash !== `#${h}`) location.hash = h; }, pestana);
