@@ -120,6 +120,8 @@ if (quienes.includes('atleta')) {
     await cerrar(p);
     const marcar = p.locator('.ejercicio button.marcar, .ejercicio .serie button[aria-label*="Hecha"], .ejercicio button[aria-label^="Marcar"]').first();
     if (await marcar.count()) await paso(s, 'atleta', 'marcar una serie', () => marcar.tap());
+    // (lo que cuesta el descanso en marcha, sin tocar nada: 5 segundos con el temporizador corriendo)
+    if (await p.locator('.temporizador, .descanso, [class*="descanso"]').count()) await paso(s, 'atleta', 'descanso en marcha (5 s quieto)', () => p.waitForTimeout(5000));
     await cerrar(p);
     await paso(s, 'atleta', 'volver a Hoy', () => p.locator('.sesion-vista .cabecera').getByRole('button', { name: 'Volver' }).first().tap(), () => p.locator('.hero-dia').waitFor({ timeout: 30000 }));
   }
