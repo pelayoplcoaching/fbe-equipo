@@ -132,11 +132,21 @@ ${marcadoPortada}
   // lo guarda la primera vez que se abre la demo, no en cada instalación y actualización de todo el mundo
   const deLaDemo = (f) => /^chunks\/(semilla-demo|backend-memoria|fotos-demo|poster-demo)-[A-Z0-9]+\.js$/.test(f);
   // (imágenes, bloque T) la de «Sin conexión» sí se precarga (unos pocos KB): es la pantalla que sale justo cuando no hay red
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (v0.208) ni el código que solo usa el coach (su app y lo que solo ella importa): el móvil de un atleta no lo guarda; el
+  // del coach, la primera vez que entra (mensaje «guardar-coach»)
+  const salidas = r.metafile.outputs;
+  const entradaCoach = Object.keys(salidas).find((f) => salidas[f].entryPoint?.endsWith('web/src/ui/coach/CoachApp.jsx'));
+  const alcance = (desde, saltar) => { const v = new Set(); const c = [desde]; while (c.length) { const x = c.pop(); if (!x || v.has(x) || x === saltar) continue; v.add(x); for (const im of salidas[x]?.imports || []) if (!im.external && salidas[im.path]) c.push(im.path); } return v; };
+  const deAtleta = alcance(claveApp, entradaCoach);
+  const soloCoachRutas = new Set(entradaCoach ? [...alcance(entradaCoach)].filter((f) => !deAtleta.has(f) && f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))) : []);
+  const soloCoach = (f) => soloCoachRutas.has(f);
+  if (!soloCoachRutas.size) throw new Error('No se encuentra la app del coach en lo construido (CoachApp.jsx): el service worker la guardaría en todos los móviles');
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f) && !soloCoach(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
-  const huellas = Object.fromEntries(precache.filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));
+  const coachArchivos = archivos.filter(soloCoach);
+  const huellas = Object.fromEntries([...precache, ...coachArchivos].filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
-    .replaceAll('__HUELLAS__', JSON.stringify(huellas)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(archivos.filter(deLaDemo)))
+    .replaceAll('__HUELLAS__', JSON.stringify(huellas)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(archivos.filter(deLaDemo))).replaceAll('__COACH_ARCHIVOS__', JSON.stringify(coachArchivos))
     .replaceAll('__IMAGENES_ARCHIVOS__', JSON.stringify(listaImagenes)).replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
   for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');

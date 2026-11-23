@@ -21,7 +21,8 @@ function montar({ sin048 = false } = {}) {
     if (sin048 && /^(conversaciones_resumen|ultimas_series)$/.test(n)) return Promise.reject(new Error(`Could not find the function public.${n} in the schema cache`));
     return rpc(n, ...a);
   };
-  return { b, api: crearApi(b), cuenta, n: (t) => cuenta[t] || 0 };
+  // (v0.208: sin las lecturas que se cubren, que servirían lo recién pedido sin ir a la base: aquí se cuenta qué pide cada función)
+  return { b, api: crearApi(b, { cubrir: false }), cuenta, n: (t) => cuenta[t] || 0 };
 }
 const sinVolatil = (x) => JSON.parse(JSON.stringify(x, (k, v) => (k === 'foto' ? undefined : v)));
 

@@ -546,7 +546,10 @@ const logicaRevisar = () => import('../logica/revisar.js');
 const logicaProgresoRevision = () => import('../logica/progreso-revision.js');
 const logicaAnalisis = () => import('../logica/analisis.js');
 
-export function crearApi(backend) {
+// opciones.cubrir: false apaga lo de la v0.208 (las lecturas que se cubren, datos/lecturas.js, y las funciones de consulta
+// compartidas): para pruebas que cuentan las consultas de una función concreta (el historial que baja solo lo reciente),
+// sin que la anterior le sirva lo que pide
+export function crearApi(backend, opciones = {}) {
   // Cualquier escritura invalida lo que se haya guardado en memoria (el historial compartido, abajo)
   let generacion = 0;
   let personalMemo = null, mensajesMemo = null, personalAtletasMemo = null;  // (050) lo de personal_mio, mensajes_coach y personal_atletas, un minuto
@@ -658,6 +661,7 @@ export function crearApi(backend) {
   };
   // → promesa de las filas, o null si esta lectura no sale de un ámbito (se pide como siempre)
   const ampliada = (t, f) => {
+    if (opciones.cubrir === false) return null;
     const quien = uid() || '';
     const a = ambitoDe(t, f);
     if (!a) {
@@ -730,7 +734,7 @@ export function crearApi(backend) {
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
     const f = (...a) => backend[m](...a);   // (ya cuenta la escritura, arriba)
     b[m] = (...a) => {
-      if (m === 'rpc' && a.length <= 2 && typeof a[0] === 'string' && !esEscritura(m, a) && !NO_COMPARTIR.test(a[0])) return rpcCompartida(f, a);
+      if (m === 'rpc' && opciones.cubrir !== false && a.length <= 2 && typeof a[0] === 'string' && !esEscritura(m, a) && !NO_COMPARTIR.test(a[0])) return rpcCompartida(f, a);
       const r = f(...a);
       if (avisa(m, a[0], a[1])) Promise.resolve(r).then(() => empujar(), () => {});
       // (pulido 4) Lo que las pantallas recuerdan para enseñarlo al volver (useCarga, «recuerdo») deja de valer en
@@ -915,6 +919,21 @@ export function crearApi(backend) {
   const fotoValida = (x, max) => typeof x === 'string' && x.length <= max && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
   const falta047 = (e) => /foto_grande/.test(`${e?.message || ''} ${e?.details || ''} ${e?.hint || ''}`);
 
+  // (v0.208) La etapa del día de La travesía que no se pudo mandar (sin conexión): la mejor de hoy, en este móvil y por cuenta
+  const claveEtapa = (id) => `fbe-etapa-pendiente:${id}`;
+  const leerEtapaPendiente = (id) => {
+    if (!id) return null;
+    try { const x = JSON.parse(localStorage.getItem(claveEtapa(id)) || 'null'); return x && /^\d{4}-\d{2}-\d{2}$/.test(x.dia) && Number.isFinite(x.metros) ? x : null; } catch { return null; }
+  };
+  const borrarEtapaPendiente = (id) => { try { localStorage.removeItem(claveEtapa(id)); } catch { /* */ } };
+  const guardarEtapaPendiente = ({ metros, estrellas, rastro }) => {
+    const id = uid();
+    if (!id || !Number.isFinite(Number(metros))) return;
+    const dia = fechaMadrid(), ya = leerEtapaPendiente(id);
+    if (ya && ya.dia === dia && ya.metros >= Number(metros)) return;
+    try { localStorage.setItem(claveEtapa(id), JSON.stringify({ dia, metros: Math.round(Number(metros)), estrellas: Math.round(Number(estrellas) || 0), rastro: Array.isArray(rastro) ? rastro.slice(0, 480) : null })); } catch { /* sin sitio: se pierde, como antes */ }
+  };
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('online', () => { api.enviarEtapaPendiente().catch(() => {}); });
   const api = {
     backend: b,
     uid,
@@ -5434,17 +5453,37 @@ export function crearApi(backend) {
     // (062) La etapa del día: apunta un intento ({ dia, metros, estrellas, intentos }) y la clasificación de hoy ({ dia,
     // filas: [{ nombre, metros, yo }] }, o null fuera de la comunidad)
     // (063) con el rastro de ese intento (para el fantasma de los compañeros); si la base aún no tiene la 063, sin él
+    // (v0.208) Sin conexión, el resultado no se pierde: se guarda en el móvil (el mejor del día) y se manda al volver la red
+    // (enviarEtapaPendiente: al volver la conexión y la próxima vez que se abra la app). Solo vale el mismo día de Madrid:
+    // la base lo cuenta como intento de hoy, y mañana ya no sería de hoy.
     async etapaDelDia(metros, estrellas = 0, rastro = null) {
+      try { return await api.etapaDelDiaYa(metros, estrellas, rastro); } catch (e) {
+        if (!esTemporal(e) && !(typeof navigator !== 'undefined' && navigator.onLine === false)) throw e;
+        guardarEtapaPendiente({ metros, estrellas, rastro });
+        return null;
+      }
+    },
+    async enviarEtapaPendiente() {
+      const id = uid();
+      const p = leerEtapaPendiente(id);
+      if (!p) return false;
+      if (p.dia !== fechaMadrid()) { borrarEtapaPendiente(id); return false; }
+      try { await api.etapaDelDiaYa(p.metros, p.estrellas, p.rastro, { lanzar: true }); borrarEtapaPendiente(id); return true; } catch { return false; }
+    },
+    async etapaDelDiaYa(metros, estrellas = 0, rastro = null, { lanzar = true } = {}) {
       if (api._sin062 || !uid()) return null;
       const datos = { p_metros: Math.round(metros), p_estrellas: Math.round(estrellas) };
       if (Array.isArray(rastro) && rastro.length && !api._sin063) {
         try { return (await b.rpc('sumar_etapa_del_dia', { ...datos, p_rastro: rastro })) || null; } catch (e) {
+          if (lanzar && (esTemporal(e) || (typeof navigator !== 'undefined' && navigator.onLine === false))) throw e;
           if (!/sumar_etapa_del_dia|schema cache|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) return null;
           api._sin063 = true;
         }
       }
       try { return (await b.rpc('sumar_etapa_del_dia', datos)) || null; } catch (e) {
         if (/sumar_etapa_del_dia|schema cache|does not exist|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`)) api._sin062 = true;
+        // (v0.208) sin conexión, a quien lo pidió (etapaDelDia lo guarda para luego); lo demás, como antes
+        if (lanzar && (esTemporal(e) || (typeof navigator !== 'undefined' && navigator.onLine === false))) throw e;
         return null;
       }
     },

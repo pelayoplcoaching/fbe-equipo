@@ -46,6 +46,8 @@ export function CoachApp() {
   const { api, propioCoach, entrarModoAtleta, pedidoCoach, consumirPedidoCoach } = useApp();
   // v0.112: la app del coach, siempre en kilos (las libras son un ajuste del atleta en su móvil)
   useState(() => fijarUnidadPeso('kg'));
+  // (v0.208) que este móvil guarde la app del coach para abrir sin conexión (el de los atletas no la guarda: sw.js, COACH)
+  useEffect(() => { try { navigator.serviceWorker?.ready.then((reg) => reg.active?.postMessage('guardar-coach')).catch(() => {}); } catch { /* sin service worker */ } }, []);
   // (v0.65) «Novedades» tras actualizar la app: al coach, solo lo que es para él
   useState(() => prepararVersionVista(api.uid()));
   // v0.68: la bienvenida del día, para ti: «Valar morghulis, coach supremo» (una vez al día, en este dispositivo)
