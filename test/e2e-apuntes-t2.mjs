@@ -28,7 +28,23 @@ export async function probarApuntesPractica({ navegador, check, base = 'http://l
   const chip = async () => (await tarjeta.locator('.apunte-etq .chip').textContent().catch(() => '')).trim();
   const DEF = new Map(GLOSARIO.map(([t, x]) => [t, primeraFrase(x, 90)]));
   // Pasa al siguiente apunte con lo que pida el que hay (sin practicar: los ejercicios se saltan)
+  // (v0.206.1) Las tres explicaciones: solo algunos apuntes las tienen, y el mazo cambia cada día (el 28/3/2027 ninguno
+  // de los tres primeros las traía). Se prueban en el primero que las tenga, antes de pasarlo, en cualquier momento.
+  let niveles = false;
+  const probarNiveles = async () => {
+    if (niveles || !(await tarjeta.locator('.apunte-niveles').count())) return;
+    const antes = await tarjeta.locator('.apunte-texto').textContent();
+    const facil = tarjeta.locator('.apunte-niveles').getByRole('button', { name: 'Más fácil' });
+    if (await facil.isDisabled()) return;
+    await facil.click();
+    const despues = await tarjeta.locator('.apunte-texto').textContent();
+    let bien = despues.length < antes.length && await facil.getAttribute('aria-pressed') === 'true';
+    await tarjeta.locator('.apunte-niveles').getByRole('button', { name: 'Normal' }).click();
+    bien &&= (await tarjeta.locator('.apunte-texto').textContent()) === antes;
+    niveles = bien;
+  };
   const pasar = async () => {
+    await probarNiveles();
     if (await hoja.locator('.apunte-recordar').count()) { await hoja.locator('.apunte-recordar').click(); await hoja.getByRole('button', { name: /^Bien/ }).click(); }
     else if (await tarjeta.locator('.apunte-destapar').count()) { await tarjeta.locator('.apunte-destapar').click(); await hoja.getByRole('button', { name: 'Lo sabía', exact: true }).click(); }
     else if (await tarjeta.locator('.apunte-opcion').count() && !(await tarjeta.locator('.apunte-opcion[disabled]').count())) { await tarjeta.locator('.apunte-opcion').first().click(); await hoja.locator('.apuntes-pie .btn-primario').click(); }
@@ -45,21 +61,9 @@ export async function probarApuntesPractica({ navegador, check, base = 'http://l
     await tarjeta.waitFor();
 
     // --- Tres explicaciones: en el glosario, «Más fácil» acorta ---
-    let niveles = false;
     const vistos = [];
     for (let i = 0; i < 3; i++) {
       vistos.push(await chip());
-      if (!niveles && await tarjeta.locator('.apunte-niveles').count()) {
-        const antes = await tarjeta.locator('.apunte-texto').textContent();
-        const facil = tarjeta.locator('.apunte-niveles').getByRole('button', { name: 'Más fácil' });
-        if (!(await facil.isDisabled())) {
-          await facil.click();
-          const despues = await tarjeta.locator('.apunte-texto').textContent();
-          niveles = despues.length < antes.length && await facil.getAttribute('aria-pressed') === 'true';
-          await tarjeta.locator('.apunte-niveles').getByRole('button', { name: 'Normal' }).click();
-          niveles &&= (await tarjeta.locator('.apunte-texto').textContent()) === antes;
-        }
-      }
       await pasar();
     }
 
@@ -113,7 +117,10 @@ export async function probarApuntesPractica({ navegador, check, base = 'http://l
     check(r0 !== r1 && /\d+(,\d)? kg/.test(r1) && await tarjeta.locator('.micro-tabla > span').count() === 4, `al moverlos, cambia la cuenta (${r0.replace(/\s+/g, ' ')} → ${r1.replace(/\s+/g, ' ')})`);
     const desborda = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!desborda, 'todo cabe a 390 px');
-    await hoja.getByRole('button', { name: 'Cerrar los apuntes' }).click();
+    // (si hasta aquí ningún apunte traía las tres explicaciones, se sigue pasando hasta dar con uno)
+    for (let i = 0; i < 30 && !niveles && await tarjeta.isVisible().catch(() => false); i++) await pasar().catch(() => {});
+    if (await tarjeta.isVisible().catch(() => false)) await probarNiveles();
+    if (await hoja.isVisible().catch(() => false)) await hoja.getByRole('button', { name: 'Cerrar los apuntes' }).click();
     await hoja.waitFor({ state: 'detached' });
     check(niveles, 'tres explicaciones: «Más fácil» lo acorta y «Normal» lo devuelve');
 

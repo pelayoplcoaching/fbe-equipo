@@ -10,6 +10,17 @@ import { irAAjustesPorEnlace } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
+// (v0.206.1) Las horas de España y de Ciudad de México se separan 7 h en invierno y 8 h con el horario de verano de
+// España (México ya no lo cambia): lo esperado se calcula con la diferencia de ese momento. Salió pasando la prueba el
+// 28/3/2027, el día del cambio de hora.
+function desfaseMexico() {
+  const ahora = new Date();
+  const enZona = (tz) => { const x = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(ahora).map((q) => [q.type, q.value])); return Date.UTC(+x.year, +x.month - 1, +x.day, +x.hour, +x.minute); };
+  return Math.round((enZona('Europe/Madrid') - enZona('America/Mexico_City')) / 3600000);
+}
+const hh = (h, m = 0) => `${String(((h % 24) + 24) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+const bonita = (h) => h.replace(/^0(\d)/, '$1');
+
 export async function probarViaje({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   const opciones = { viewport: { width: 390, height: 844 }, locale: 'es-ES', bypassCSP: true, hasTouch: true };
@@ -75,8 +86,9 @@ export async function probarViaje({ navegador, check, base = 'http://localhost:4
     const aviso = p.locator('.aviso-viaje');
     await aviso.waitFor({ timeout: 15000 });
     const tit = await aviso.locator('h2').textContent();
-    check(/^De viaje: en Ciudad de México son las \d{1,2}:\d\d$/.test(tit) && /7 h menos que en España/.test(await aviso.textContent()) && await aviso.getByRole('button', { name: /Ajustarlas a mi hora/ }).count() === 0,
-      `en Ciudad de México, Hoy lo dice: «${tit}», 7 h menos que en España (sin notificaciones activadas, no habla de ellas)`);
+    let D = desfaseMexico();
+    check(/^De viaje: en Ciudad de México son las \d{1,2}:\d\d$/.test(tit) && (await aviso.textContent()).includes(`${D} h menos que en España`) && await aviso.getByRole('button', { name: /Ajustarlas a mi hora/ }).count() === 0,
+      `en Ciudad de México, Hoy lo dice: «${tit}», ${D} h menos que en España (sin notificaciones activadas, no habla de ellas)`);
     // Con las notificaciones por email: a qué hora le llegarían y el «no molestar» para la noche de allí
     let hoja = await hojaNotificaciones();
     await hoja.getByRole('switch', { name: /Si no las tengo activadas/ }).check();
@@ -86,15 +98,20 @@ export async function probarViaje({ navegador, check, base = 'http://localhost:4
     await entrar();
     await aviso.waitFor();
     await aviso.getByRole('button', { name: 'Ajustarlas a mi hora mientras viajo' }).waitFor();
-    check(/la de la sesión \(8:30 allí\) te llegaría a las 1:30 de aquí/.test(await aviso.textContent()), 'con las notificaciones activadas: la de la sesión (8:30 en España) le llegaría a la 1:30 de allí');
+    D = desfaseMexico();
+    const llegaria = bonita(hh(8 - D, 30));
+    check((await aviso.textContent()).includes(`la de la sesión (8:30 allí) te llegaría a las ${llegaria} de aquí`), `con las notificaciones activadas: la de la sesión (8:30 en España) le llegaría a la ${llegaria} de allí`);
     await axe('aviso-viaje');
     await aviso.getByRole('button', { name: 'Ajustarlas a mi hora mientras viajo' }).click();
     await aviso.locator('.aviso-viaje-ok').waitFor();
     const ok = await aviso.locator('.aviso-viaje-ok').textContent();
-    check(/Sin notificaciones de 23:00 a 7:00 de aquí/.test(ok) && /La de la sesión de hoy: apagada mientras viajas/.test(ok) && /a las 16:30 de aquí/.test(ok), 'ajustadas: sin nada de noche aquí; la de la sesión, apagada (en México saldría de noche); las de la tarde, a las 16:30 de allí');
+    // (la de la tarde, a las 23:30 de España como mucho: 16:30 de allí en invierno, 15:30 en verano)
+    const tardeAqui = bonita(hh(23 - D, 30));
+    check(/Sin notificaciones de 23:00 a 7:00 de aquí/.test(ok) && /La de la sesión de hoy: apagada mientras viajas/.test(ok) && ok.includes(`a las ${tardeAqui} de aquí`), `ajustadas: sin nada de noche aquí; la de la sesión, apagada (en México saldría de noche); las de la tarde, a las ${tardeAqui} de allí`);
     hoja = await hojaNotificaciones();
-    check(await hoja.locator('#nt-desde').inputValue() === '06:00' && await hoja.locator('#nt-hasta').inputValue() === '14:00' && await hoja.locator('#nt-tarde').inputValue() === '23:30' && !(await hoja.getByRole('switch', { name: /^Sesión de hoy/ }).isChecked()),
-      'en sus notificaciones: el «no molestar», de 6:00 a 14:00 de España; la tarde, a las 23:30; la de la sesión, apagada');
+    const [desde, hasta] = [hh(23 + D), hh(7 + D)];
+    check(await hoja.locator('#nt-desde').inputValue() === desde && await hoja.locator('#nt-hasta').inputValue() === hasta && await hoja.locator('#nt-tarde').inputValue() === '23:30' && !(await hoja.getByRole('switch', { name: /^Sesión de hoy/ }).isChecked()),
+      `en sus notificaciones: el «no molestar», de ${bonita(desde)} a ${bonita(hasta)} de España; la tarde, a las 23:30; la de la sesión, apagada`);
     await p.keyboard.press('Escape');
     await hoja.waitFor({ state: 'detached' });
     await p.evaluate(() => { location.hash = '#hoy'; });

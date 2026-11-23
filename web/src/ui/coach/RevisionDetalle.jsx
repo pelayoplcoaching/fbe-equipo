@@ -200,7 +200,10 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
   const resumen = useCarga(() => api.resumenSemanaAtleta(f.atleta_id).catch(() => null), [f.atleta_id]);
   const detalle = useCarga(() => pedirDetalle(api, f.atleta_id, lunes).catch(() => null), [f.atleta_id, lunes]);
   const [texto, setTexto] = useState(() => borradorRevision(f, null));
-  const [tocado, setTocado] = useState(false);
+  // (v0.206.1) si ya lo está editando, como referencia y no como estado: el borrador se rehace en un efecto que corre un
+  // poco después de pintar, y si escribía justo entonces (al llegar sus datos), el efecto aún veía «sin tocar» y le borraba
+  // lo escrito
+  const tocado = useRef(false);
   const [ocupado, una] = useUnaVez();
   const [frasesMias, setFrases] = useState(() => leer('fbe-revision-frases', []));
   const frases = frasesDadas || frasesMias;
@@ -214,7 +217,7 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
   const cursor = useRef(null);
   const rehacer = (t = tono) => conTono(borradorRevision(f, resumen.datos || null, extraParaBorrador(detalle.datos, f.progreso)), t === 'auto' ? null : t, f.nombre);
   // Cuando llegan el resumen y el detalle, el borrador se rehace (salvo que ya lo esté editando)
-  useEffect(() => { if (!tocado && (resumen.datos !== undefined || detalle.datos)) setTexto(rehacer()); }, [resumen.datos, detalle.datos]);
+  useEffect(() => { if (!tocado.current && (resumen.datos !== undefined || detalle.datos)) setTexto(rehacer()); }, [resumen.datos, detalle.datos]);
   const primer = f.nombre.split(' ')[0];
   const hecho = (que) => { aviso(`${que} a ${primer}`, 'ok'); alEnviado?.(marcar && !f.hecha); alCerrar(); };
   const enviar = () => una(async () => {
@@ -247,7 +250,7 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
   const ponerFrases = (l) => { setFrases(l); guardarLocal('fbe-revision-frases', l); alFrases?.(l); };
   const insertar = (fr) => {
     const r = insertarFrase(texto, conNombre(fr, f.nombre), cursor.current);
-    setTocado(true); setTexto(r.texto); cursor.current = r.cursor;
+    tocado.current = true; setTexto(r.texto); cursor.current = r.cursor;
     requestAnimationFrame(() => { const a = area.current; if (a) { a.focus(); try { a.setSelectionRange(r.cursor, r.cursor); } catch { /* */ } } });
   };
   const guardarFrase = () => {
@@ -263,11 +266,11 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
     <Hoja titulo={`Repaso de la semana para ${primer}`} alCerrar={alCerrar} ancho={620}>
       <div class="pila">
         <div class="selector-chips rev-tonos" role="group" aria-label="Tono del mensaje">
-          {TONOS.map(([k, t]) => <button key={k} type="button" aria-pressed={tono === k ? 'true' : 'false'} onClick={() => { setTono(k); setTocado(false); setTexto(rehacer(k)); }}>{k === 'auto' ? `${t} (${TONOS.find(([x]) => x === tonoDe(f))[1].toLowerCase()})` : t}</button>)}
+          {TONOS.map(([k, t]) => <button key={k} type="button" aria-pressed={tono === k ? 'true' : 'false'} onClick={() => { setTono(k); tocado.current = false; setTexto(rehacer(k)); }}>{k === 'auto' ? `${t} (${TONOS.find(([x]) => x === tonoDe(f))[1].toLowerCase()})` : t}</button>)}
         </div>
         <div class="pila-xs revision-nota">
           <label class="peq secundario" for={`rev-msg-${f.atleta_id}`}>Redactado con sus datos de la semana{resumen.cargando || detalle.cargando ? ' (completándolo…)' : ''}. Edítalo a tu gusto.</label>
-          <textarea id={`rev-msg-${f.atleta_id}`} ref={area} rows="9" maxLength={2000} value={texto} onInput={(e) => { setTocado(true); setTexto(e.currentTarget.value); recordar(e); }} onSelect={recordar} onKeyUp={recordar} onClick={recordar} />
+          <textarea id={`rev-msg-${f.atleta_id}`} ref={area} rows="9" maxLength={2000} value={texto} onInput={(e) => { tocado.current = true; setTexto(e.currentTarget.value); recordar(e); }} onSelect={recordar} onKeyUp={recordar} onClick={recordar} />
         </div>
         <div class="pila-xs rev-frases">
           <div class="fila-entre"><span class="peq secundario">Tus frases (un toque y entran donde está el cursor)</span><button type="button" class="btn-texto mini" onClick={guardarFrase}>Guardar lo seleccionado</button></div>
@@ -283,7 +286,7 @@ export function HojaBorrador({ f, lunes, alCerrar, alEnviado, frases: frasesDada
         {g.estado === 'revisar' ? <div class="rev-voz"><PanelRevisar g={g} alEnviar={(x) => enviarVozRef.current(x)} enviando={enviandoVoz} /></div>
           : grabando ? <div class="rev-voz"><PanelGrabando g={g} /></div> : (
             <div class="fila-envolver">
-              <button type="button" class="btn" onClick={() => { setTocado(false); setTexto(rehacer()); area.current?.focus(); }}><Icono n="reiniciar" /> Volver al redactado</button>
+              <button type="button" class="btn" onClick={() => { tocado.current = false; setTexto(rehacer()); area.current?.focus(); }}><Icono n="reiniciar" /> Volver al redactado</button>
               <button type="button" class="btn" onClick={() => g.empezar({ manos: true })}><Icono n="micro" /> Mejor una nota de voz</button>
               <button type="button" class="btn btn-primario" disabled={ocupado || !texto.trim()} onClick={enviar}><Icono n={programar ? 'reloj' : 'enviar'} /> {programar ? 'Programar' : 'Enviar'}</button>
             </div>
