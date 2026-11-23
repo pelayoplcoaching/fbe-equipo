@@ -3,9 +3,11 @@
 // modelo de los puntos del cuerpo, aún más tarde (al usarlo).
 import { useEffect, useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Cargando } from '../comunes.jsx';
+import { estilosPendientes } from '../estilos-trozo.js';
 
 let modulo = null;
-const cargarPanel = () => (modulo ||= import('./analisis/PanelAnalisis.jsx').catch((e) => { modulo = null; throw e; }));
+// (v0.211) con sus estilos ya puestos (ui/estilos-trozo.js)
+const cargarPanel = () => (modulo ||= import('./analisis/PanelAnalisis.jsx').then((m) => estilosPendientes().then(() => m)).catch((e) => { modulo = null; throw e; }));
 
 export function AnalisisVideo({ video, esCoach = false, revision = null, alGuardado }) {
   const { api, atleta } = useApp();

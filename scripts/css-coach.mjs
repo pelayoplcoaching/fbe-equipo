@@ -128,3 +128,57 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
 export function cssDelCoach(css, { jsCoach, jsOtros }) {
   return separarCssCoach(css, { palabrasCoach: palabrasDe(jsCoach), palabrasOtros: palabrasDe(jsOtros), prefijosOtros: prefijosDe(jsOtros) });
 }
+
+// (v0.211, estilos a dieta 2) Lo mismo para cada trozo perezoso del atleta (La travesía, Apuntes, la sesión, el perfil…):
+// una regla va al CSS de un trozo si todos sus selectores llevan alguna clase que solo sale en ese trozo (en ningún otro
+// archivo de código, ni en index.html). textos: Map(ruta → código de cada trozo, de todos: los de arranque, los del coach y
+// los perezosos); candidatos: las rutas de los trozos perezosos que pueden llevar CSS propio; extra: lo que no es un trozo
+// (index.html, la portada). Devuelve { comun, porTrozo: Map(ruta → css), reglas }.
+export function separarCssPorTrozos(css, { textos, candidatos, extra = '' }) {
+  const rutas = [...textos.keys()];
+  const palabras = new Map(rutas.map((f) => [f, palabrasDe(textos.get(f))]));
+  const prefijos = new Map(rutas.map((f) => [f, [...prefijosDe(textos.get(f))]]));
+  const palabrasExtra = palabrasDe(extra), prefijosExtra = [...prefijosDe(extra)];
+  const memo = new Map();
+  // El único trozo donde sale una clase (o null si sale en varios, en ninguno o fuera de los trozos)
+  const dueno = (c) => {
+    if (memo.has(c)) return memo.get(c);
+    let d = palabrasExtra.has(c) || prefijosExtra.some((p) => c.startsWith(p)) ? undefined : null;
+    if (d !== undefined) {
+      for (const f of rutas) {
+        if (palabras.get(f).has(c) || prefijos.get(f).some((p) => c.startsWith(p))) { if (d) { d = null; break; } d = f; }
+      }
+    }
+    const r = d && candidatos.has(d) ? d : null;
+    memo.set(c, r);
+    return r;
+  };
+  const destinoDe = (sel) => {
+    let destino = null;
+    for (const s of partir(sel)) {
+      if (/(^|[\s>+~])\.app\.coach(?![A-Za-z0-9_-])/.test(s)) return null;
+      const ds = [...new Set(clasesNecesarias(s).map(dueno).filter(Boolean))];
+      if (!ds.length) return null;
+      if (destino) { if (!ds.includes(destino)) return null; } else if (ds.length === 1) destino = ds[0]; else return null;
+    }
+    return destino;
+  };
+  let reglas = 0;
+  function repartir(nodos) {
+    const comun = [], porTrozo = new Map();
+    const a = (f, x) => { if (!porTrozo.has(f)) porTrozo.set(f, []); porTrozo.get(f).push(x); };
+    for (const x of nodos) {
+      if (x.tipo === 'regla') {
+        const d = destinoDe(x.sel);
+        if (d) { a(d, x); reglas++; } else comun.push(x);
+      } else if (x.tipo === 'grupo') {
+        const r = repartir(x.hijos);
+        if (r.comun.length) comun.push({ ...x, hijos: r.comun });
+        for (const [f, hijos] of r.porTrozo) a(f, { ...x, hijos });
+      } else comun.push(x);
+    }
+    return { comun, porTrozo };
+  }
+  const r = repartir(leer(css));
+  return { comun: escribir(r.comun), porTrozo: new Map([...r.porTrozo].map(([f, ns]) => [f, escribir(ns)])), reglas };
+}

@@ -5,6 +5,7 @@
 //   const Equipo = perezoso(() => import('./Comunidad.jsx'), 'Equipo');
 //   <Equipo …/>   ·   Equipo.precargar()
 import { useEffect, useState } from 'preact/hooks';
+import { estilosPendientes } from './estilos-trozo.js';
 import { Siluetas, cargaVisible } from './comunes.jsx';
 import { recargarPorTrozo, reintentarCarga } from './recarga-trozo.js';
 
@@ -14,7 +15,8 @@ export function perezoso(cargar, nombre, { mientras } = {}) {
   let Cargado = null;
   let pidiendo = null;
   const pedir = () => {
-    pidiendo ||= cargar().then((m) => { Cargado = m[nombre]; return Cargado; }).catch((e) => { pidiendo = null; throw e; });
+    // (v0.211) con sus estilos ya puestos (los pide el propio trozo al cargarse: ui/estilos-trozo.js)
+    pidiendo ||= cargar().then((m) => estilosPendientes().then(() => { Cargado = m[nombre]; return Cargado; })).catch((e) => { pidiendo = null; throw e; });
     return pidiendo;
   };
   function Perezoso(props) {

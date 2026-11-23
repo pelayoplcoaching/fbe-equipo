@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from './opciones-build.mjs';
-import { cssDelCoach } from './css-coach.mjs';
+import { cssDelCoach, separarCssPorTrozos } from './css-coach.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
@@ -84,7 +84,25 @@ ${marcadoPortada}
   if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
   const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
   writeFileSync(join(salida, cssCoach), partesCss.coach);
-  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesCss.comun);
+  // (v0.211, estilos a dieta 2) y los de cada pantalla que no sale al abrir (la sesión, el perfil, La travesía, Apuntes…),
+  // con su trozo: cada trozo con estilos propios lleva al principio la orden de pedirlos (globalThis.__fbeCss, en
+  // ui/estilos-trozo.js) y ui/perezoso.jsx espera a tenerlos antes de pintar la pantalla
+  const todasJs = Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f)));
+  const { arranque: deArranque } = archivosDeArranque(r.metafile);
+  const deArranqueRel = new Set([...deArranque].map((f) => relative(salida, join(process.cwd(), f))));
+  // (la lista de las ilustraciones se pide al arrancar aunque vaya en su propio trozo)
+  for (const [f, o] of Object.entries(r.metafile.outputs)) if (Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))) deArranqueRel.add(relative(salida, join(process.cwd(), f)));
+  const perezosos = new Set(todasJs.filter((f) => !deArranqueRel.has(f) && !soloCoachRutas.has(f) && f.startsWith('chunks/')));
+  const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(todasJs.map((f) => [f, leerSalida(f)])), candidatos: perezosos,
+    extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+  const cssTrozos = [];
+  for (const [f, css] of partesTrozos.porTrozo) {
+    const nombre = f.replace(/\.js$/, `.${createHash('sha256').update(css).digest('hex').slice(0, 8)}.css`);
+    writeFileSync(join(salida, nombre), css);
+    writeFileSync(join(salida, f), `globalThis.__fbeCss&&globalThis.__fbeCss(${JSON.stringify(nombre)});\n${leerSalida(f)}`);
+    cssTrozos.push(nombre);
+  }
+  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesTrozos.comun);
 
   // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
   // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)

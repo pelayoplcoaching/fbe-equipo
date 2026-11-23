@@ -1,4 +1,6 @@
 import { render } from 'preact';
+// (v0.211) antes que nada: los trozos con estilos propios los piden al cargarse
+import './ui/estilos-trozo.js';
 import './color.css';
 import './sistema.css';
 import './estilos.css';

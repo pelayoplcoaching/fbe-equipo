@@ -25,6 +25,7 @@ import { fichaCambiada } from '../logica/nivel.js';
 import { CLAVES_COPIA } from '../logica/sin-red.js';
 import { rendimientoDe, sinArranque } from '../rendimiento.js';
 import { quitarInsignia } from './insignia-app.js';
+import { estilosPendientes } from './estilos-trozo.js';
 
 // (pulido 10) La app del coach (el panel, la ficha, el editor del programa, el motor…: una cuarta parte del código) va
 // en su propio trozo: quien entra como atleta no la espera ni la procesa al abrir. El service worker la guarda con
@@ -52,7 +53,7 @@ function estiloCoach() {
   return pidiendoEstilo;
 }
 const cargarCoach = () => {
-  pidiendoCoach ||= Promise.all([import('./coach/CoachApp.jsx'), estiloCoach()]).then(([m]) => { CoachCargada = m.CoachApp; return CoachCargada; }).catch((e) => { pidiendoCoach = null; throw e; });
+  pidiendoCoach ||= Promise.all([import('./coach/CoachApp.jsx'), estiloCoach()]).then(([m]) => estilosPendientes().then(() => { CoachCargada = m.CoachApp; return CoachCargada; })).catch((e) => { pidiendoCoach = null; throw e; });
   return pidiendoCoach;
 };
 try { if (localStorage.getItem(CLAVE_ROL) === 'coach') cargarCoach().catch(() => {}); } catch { /* */ }

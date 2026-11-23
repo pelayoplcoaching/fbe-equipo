@@ -9,7 +9,7 @@ import * as esbuild from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { join, relative } from 'node:path';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from '../scripts/opciones-build.mjs';
-import { cssDelCoach } from '../scripts/css-coach.mjs';
+import { cssDelCoach, separarCssPorTrozos } from '../scripts/css-coach.mjs';
 import { estiloPortada, marcadoPortada } from '../scripts/portada.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -18,9 +18,10 @@ import { readFileSync } from 'node:fs';
 // (v0.208: a unos 1680 KB, 568 comprimido: las hojas de Hoy al abrirlas, lo de Revisar fuera del atleta, el texto de la
 // política al leerla y lo ligero de la sesión aparte)
 // (v0.209: los estilos, de 1068 a unos 920 KB, 189 a 165 comprimido: los que solo usa el coach van aparte, scripts/css-coach.mjs)
+// (v0.211: a unos 575 KB: los de cada pantalla que no sale al abrir van con su trozo)
 const PRESUPUESTO = {
   js: { crudo: 1780, gz: 610 },
-  css: { crudo: 960, gz: 172 },
+  css: { crudo: 600, gz: 110 },
 };
 
 let ok = 0, fallos = 0;
@@ -62,12 +63,17 @@ const jsRutas = [...porRuta.keys()].filter((f) => f.endsWith('.js'));
 const rutaCss = [...porRuta.keys()].find((f) => /(^|\/)app\.css$/.test(f));
 const partesCss = cssDelCoach(texto(rutaCss), { jsCoach: jsRutas.filter((f) => soloCoach.has(f)).map(texto).join('\n'),
   jsOtros: `${jsRutas.filter((f) => !soloCoach.has(f)).map(texto).join('\n')}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
-const css = { crudo: Buffer.byteLength(partesCss.comun), gz: gzipSync(Buffer.from(partesCss.comun), { level: 9 }).length };
+// (v0.211) y sin los de cada pantalla que no sale al abrir (van con su trozo, como en scripts/build.mjs)
+const lista0 = new Set(Object.entries(r.metafile.outputs).filter(([, o]) => Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))).map(([f]) => f));
+const perezosos = new Set(jsRutas.filter((f) => !arranque.has(f) && !lista0.has(f) && !soloCoach.has(f) && /(^|\/)chunks\//.test(f)));
+const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(jsRutas.map((f) => [f, texto(f)])), candidatos: perezosos, extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+const css = { crudo: Buffer.byteLength(partesTrozos.comun), gz: gzipSync(Buffer.from(partesTrozos.comun), { level: 9 }).length };
 const cssCoach = { crudo: Buffer.byteLength(partesCss.coach), gz: gzipSync(Buffer.from(partesCss.coach), { level: 9 }).length };
 check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
 check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz})`);
 check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz})`);
 check(partesCss.reglas > 500 && kb(cssCoach.crudo) >= 100, `los del coach, aparte: ${partesCss.reglas} reglas, ${kb(cssCoach.crudo)} KB (${kb(cssCoach.gz)} comprimido) que el móvil de un atleta no descarga`);
+check(partesTrozos.reglas > 1000 && partesTrozos.porTrozo.size >= 10, `los de cada pantalla, con su trozo: ${partesTrozos.reglas} reglas en ${partesTrozos.porTrozo.size} trozos`);
 // (y si ha bajado mucho, que se baje el presupuesto: así no vuelve a crecer hasta donde estaba)
 const holgura = (x, tope) => kb(x) >= tope * 0.85;
 check(holgura(js.gz, PRESUPUESTO.js.gz) && holgura(css.gz, PRESUPUESTO.css.gz), `el presupuesto está ajustado (si lo de ahora queda más de un 15 % por debajo, toca bajarlo)`);
