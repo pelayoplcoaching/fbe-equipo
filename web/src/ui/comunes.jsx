@@ -1099,6 +1099,11 @@ export function useCambioDeDia(alCambiar) {
 // queda pegada. Sin escuchar el scroll: un IntersectionObserver vigila una marca invisible a unos 40 px del principio.
 // Al compactarse, la cabecera deja un margen igual a lo que encoge, para que lo de debajo no salte.
 // (Sin IntersectionObserver, se queda grande, como antes.)
+// (v0.214) Si la letra de la app llega después de medir el título, se vuelve a medir (evento «loadingdone»). Antes se miraba
+// document.fonts.ready al montar cada cabecera, y mirarlo obliga al navegador a calcular los estilos de la página en ese
+// momento (para saber si falta alguna letra): en cada cambio de pestaña, 40 ms con el móvil lento
+const alLlegarLetra = new Set();
+if (typeof document !== 'undefined') try { document.fonts?.addEventListener?.('loadingdone', () => { for (const f of alLlegarLetra) f(); }); } catch { /* sin FontFaceSet */ }
 export function CabeceraGrande({ clase = '', children }) {
   const cab = useRef(null);
   const alto = useRef(0);
@@ -1163,13 +1168,15 @@ export function CabeceraGrande({ clase = '', children }) {
       copia.remove();
       setJusto(ancho > h1.clientWidth + 0.5);
     };
-    medir();
+    // (v0.214) con ResizeObserver, la primera medida es la suya (después de colocar, antes de pintar): medir también aquí
+    // obligaba a colocar la página a mitad del pintado, en cada pantalla con cabecera (40 ms con el móvil lento)
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
+    if (!ro) medir();
     const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(medir);
     mo?.observe(h, { childList: true, subtree: true, characterData: true });
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
     ro?.observe(h);
-    document.fonts?.ready?.then(medir).catch(() => {});
-    return () => { mo?.disconnect(); ro?.disconnect(); };
+    alLlegarLetra.add(medir);
+    return () => { mo?.disconnect(); ro?.disconnect(); alLlegarLetra.delete(medir); };
   }, [compacta]);
   return (
     <header ref={cab} class={`cabecera cabecera-grande${compacta ? ' compacta' : ''}${justo ? ' titulo-justo' : ''}${clase ? ` ${clase}` : ''}`}>{children}</header>
@@ -1185,6 +1192,7 @@ export function usePildora(clave) {
     const cont = ref.current;
     const pild = cont?.querySelector('.tabs-pildora');
     if (!pild) return undefined;
+    let t = 0;
     const colocar = () => {
       const ico = cont.querySelector('.tab[aria-current="page"] .tab-ico');
       if (!ico || !ico.getClientRects().length) { pild.style.opacity = '0'; return; }
@@ -1193,11 +1201,13 @@ export function usePildora(clave) {
       pild.style.width = `${a.width}px`;
       pild.style.height = `${a.height}px`;
       pild.style.transform = `translate(${Math.round(a.left - b.left)}px, ${Math.round(a.top - b.top)}px)`;
+      // (la animación, desde el fotograma siguiente a la primera colocación: la primera vez, sin animación)
+      if (!pild.dataset.lista && !t) t = requestAnimationFrame(() => { pild.dataset.lista = '1'; });
     };
-    colocar();
-    const t = requestAnimationFrame(() => { pild.dataset.lista = '1'; });
+    // (v0.214) con ResizeObserver, la primera colocación es la suya (después de colocar la página, antes de pintarla), sin
+    // obligar a colocarla a mitad del pintado en cada cambio de pestaña
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(colocar) : null;
-    ro?.observe(cont);
+    if (ro) ro.observe(cont); else colocar();
     return () => { cancelAnimationFrame(t); ro?.disconnect(); };
   }, [clave]);
   return ref;
@@ -1213,8 +1223,10 @@ export function useAncho(inicial = 340) {
     obs.current = null;
     if (!el) return;
     const medir = (w) => { const x = Math.round(w); if (x >= 160) setAncho((a) => (Math.abs(a - x) > 1 ? x : a)); };
-    medir(el.getBoundingClientRect().width);
-    if (typeof ResizeObserver === 'undefined') return;
+    // (v0.214) con ResizeObserver, la primera medida es la suya: llega después de colocar la página y antes de pintarla.
+    // Medir aquí (al engancharse, en mitad del pintado de Preact) obligaba a colocarla antes de tiempo: en Progreso, cuatro
+    // veces al entrar (54 ms con el móvil lento), y luego la del observador la cambiaba igual
+    if (typeof ResizeObserver === 'undefined') { medir(el.getBoundingClientRect().width); return; }
     obs.current = new ResizeObserver(([e]) => medir(e.contentRect.width));
     obs.current.observe(el);
   }, []);
@@ -1644,7 +1656,7 @@ export function Pista({ id, children, icono = 'pregunta' }) {
       else if (sobra <= (parseFloat(getComputedStyle(p).lineHeight) || 20) + 2) setEntera(true);
       else setLarga(true);
     };
-    medir();
+    // (v0.214) la primera medida, la del observador: después de colocar la página y antes de pintarla
     const ro = new ResizeObserver(medir);
     ro.observe(p);
     return () => ro.disconnect();

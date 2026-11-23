@@ -109,13 +109,23 @@ function crecer(svg) {
   svg.querySelectorAll('rect.barra, rect.barra-dia').forEach((r, i) => r.style.setProperty('--orden', String(Math.min(i, 16))));
   svg.classList.add('grafica-crece');
 }
-function mirarGrafica(svg) {
-  if (vistas.has(svg) || !svg.querySelector('rect.barra, rect.barra-dia')) return;
+function mirarAhora(svg) {
+  if (vistas.has(svg) || !svg.isConnected) return;
   const r = svg.getBoundingClientRect();
   if (r.bottom > 0 && r.top < window.innerHeight && r.width > 0) { crecer(svg); return; }
   if (typeof IntersectionObserver === 'undefined') { crecer(svg); return; }
   io ||= new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); crecer(e.target); } }, { threshold: 0.3 });
   io.observe(svg);
+}
+// (v0.214) Dónde está la gráfica se mira cuando el navegador ya ha colocado la página y aún no la ha pintado (la primera
+// llamada de un ResizeObserver): mirarlo al llegar la gráfica (en mitad del pintado de Preact) obligaba a colocar la
+// página antes de tiempo, una vez por gráfica (en Progreso, dos: 76 ms con el móvil lento)
+let ro = null;
+function mirarGrafica(svg) {
+  if (vistas.has(svg) || !svg.querySelector('rect.barra, rect.barra-dia')) return;
+  if (typeof ResizeObserver === 'undefined') { mirarAhora(svg); return; }
+  ro ||= new ResizeObserver((es) => { for (const e of es) { ro.unobserve(e.target); mirarAhora(e.target); } });
+  ro.observe(svg);
 }
 export function vigilarGraficas() {
   if (typeof MutationObserver === 'undefined' || typeof document === 'undefined' || !document.body) return;
