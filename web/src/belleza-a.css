@@ -25,13 +25,14 @@
 
 /* -- A3 - Sin viudas: un texto de dos o mas lineas no acaba con una sola palabra en la ultima ("...esfuerzo" / "9/10").
    diseno.css ya lo pide para p, li, dd, label...; faltaban las notas pequenas de las tarjetas, que son span. El navegador
-   que no lo sepa hacer lo deja como estaba. */
-:where(.mini, .detalle, .secundario) { text-wrap: pretty; }
+   que no lo sepa hacer lo deja como estaba. Aqui y abajo, solo text-wrap-style: "text-wrap" entero tambien pondria
+   "partir lineas" y desharia un white-space: nowrap de otra regla. */
+:where(.mini, .detalle, .secundario) { text-wrap-style: pretty; }
 /* -- A4 - Lo corto de dos lineas, con las dos lineas igualadas: los botones, las etiquetas de encima de un titulo y el
-   titular de las tarjetas "Tu semana" y "Tu mes" de Hoy ("18 dias de nutricion" / "apuntados", no "18 dias de nutricion apuntados"
-   con "apuntados" solo abajo). */
-:where(.btn, .btn-texto, .t-sobre) { text-wrap: balance; }
-.tarjeta-semana .pila-xs > strong { text-wrap: balance; }
+   titular de las filas y tarjetas de Hoy y de la sesion ("18 dias de" / "nutricion apuntados", no "apuntados" solo abajo;
+   "Movilidad de cadera" / "antes de empezar"). Solo el estilo de partir (text-wrap-style): lo que no parte, sigue sin partir. */
+:where(.btn, .btn-texto, .t-sobre) { text-wrap-style: balance; }
+.pila-xs > strong { text-wrap-style: balance; }
 
 /* -- A5 - Hoy: el dibujo de la sesion pasa por detras de la linea de arriba y del objetivo ("Semana 4" quedaba tachado
    por una raya). Un halo del color de la tarjeta alrededor de las letras: la raya se corta antes de tocarlas. */
@@ -44,8 +45,8 @@
 /* -- A7 - Superseries: con la letra delante ("A2"), el nombre que no cabe sigue en la segunda linea a la altura del nombre,
    no debajo de la letra (Hoy, la portada de la sesion y la cabecera de cada ejercicio). Con las lineas igualadas: con la
    letra delante cabe menos y quedaba una palabra sola al final ("polea alta con" / "cuerda"). */
-.ej-fila .nombre:has(> .ss-etq) { display: flex; align-items: baseline; text-wrap: balance; }
-.ejercicio-cab .nombre:has(> .ss-etq) { display: inline-flex; align-items: baseline; text-wrap: balance; }
+.ej-fila .nombre:has(> .ss-etq) { display: flex; align-items: baseline; text-wrap-style: balance; }
+.ejercicio-cab .nombre:has(> .ss-etq) { display: inline-flex; align-items: baseline; text-wrap-style: balance; }
 .ej-fila .nombre > .ss-etq, .ejercicio-cab .nombre > .ss-etq { flex: none; }
 
 /* -- A8 - "Se oye bien el sonido?": en el movil no cabia en una linea y "Ahora no" se quedaba solo abajo a la izquierda.
@@ -56,3 +57,16 @@
 /* -- A9 - "La ultima vez (20 nov): 16x9 @8, 16x9 @8,5...": cada serie con su esfuerzo en la misma linea; antes "@8,5"
    podia bajar solo a la linea siguiente, lejos de su "16x9". */
 .ultima-vez .uv-serie { white-space: nowrap; }
+
+/* -- A10 - Sesion en moviles estrechos (hasta 380 px): en la cabecera no cabian el nombre, los dos botones y el reloj (a
+   320 px, "Torso B" se quedaba en 44 px: "Tors" / "B", con la "o" debajo de un boton). El reloj baja a la fila de los
+   tramos, a su derecha, como el tiempo junto a la barra de un video; el nombre gana todo ese sitio. Lo mismo con la letra
+   grande o muy grande en cualquier movil (a 390 px y muy grande, "Torso" / "B" en dos lineas). */
+@media (max-width: 380px) {
+  .sesion-vista > .cabecera.con-tramos > .tramos { order: 1; flex: 1 1 60%; }
+  .sesion-vista > .cabecera.con-tramos > .crono { order: 2; }
+}
+@media (max-width: 480px) {
+  :root[data-letra] .sesion-vista > .cabecera.con-tramos > .tramos { order: 1; flex: 1 1 60%; }
+  :root[data-letra] .sesion-vista > .cabecera.con-tramos > .crono { order: 2; }
+}

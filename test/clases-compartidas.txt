@@ -147,7 +147,7 @@ c3: apuntes.css estilos.css progreso-visual-2.css
 cab: atletas-lista.css estilos.css
 cab-equipo: equipo-belleza.css estilos.css
 cab-ilu: belleza.css diseno.css imagenes.css
-cabecera: belleza.css diseno.css estilos.css pulido.css
+cabecera: belleza-a.css belleza.css diseno.css estilos.css pulido.css
 cabecera-grande: belleza.css diseno.css estilos.css
 cadencia: diseno.css personal.css
 cadencia-v: diseno.css personal.css
@@ -241,6 +241,7 @@ con-foto: diseno.css equipo-belleza.css estilos.css imagenes.css perfil.css
 con-ilustracion: belleza.css diseno.css estilos.css visual.css
 con-mini: diseno.css imagenes.css
 con-record: diseno.css estilos.css progreso-visual-2.css
+con-tramos: belleza-a.css estilos.css
 conexion-calendario: diseno.css imagenes.css
 conexion-check: diseno.css personal.css
 conexion-enlace: diseno.css personal.css
@@ -896,7 +897,7 @@ serie-desliza: diseno.css estilos.css
 serie-ficha: progreso-visual-2.css registro-actividad.css
 serie-top: diseno.css estilos.css
 sesion-cab-num: diseno.css estilos.css
-sesion-vista: diseno.css estilos.css sistema.css
+sesion-vista: belleza-a.css diseno.css estilos.css sistema.css
 si: apuntes.css diseno.css estilos.css personal.css progreso-visual-2.css
 siguiente: diseno.css estilos.css
 sil: belleza.css diseno.css estilos.css pulido.css
@@ -995,7 +996,7 @@ todo: estilos.css revision.css
 toma-cab: diseno.css estilos.css
 tramo-barra: diseno.css estilos.css
 tramo-lleno: diseno.css estilos.css
-tramos: diseno.css estilos.css
+tramos: belleza-a.css diseno.css estilos.css
 trofeo-ico: diseno.css estilos.css
 trofeo-nuevo: diseno.css estilos.css
 trofeo-tarjeta: diseno.css estilos.css progreso-visual-2.css progreso-visual.css pulido.css
