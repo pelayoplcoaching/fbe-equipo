@@ -61,12 +61,14 @@ const conSigno = (v, dec = 1) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${num(Mat
 // coach (apuntar o borrar marcas, la nota de dónde se ajusta el volumen)
 export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null, salud = false, objetivosDados = null, llamada = false }) {
   const { api, propio: modoAtletaCoach } = useApp();
-  const propio = useCarga(() => (progresoDado ? Promise.resolve(null) : api.progreso(atletaId)), [atletaId, !!progresoDado]);
+  // (v0.213) con recuerdo: al volver a esta vista (o a la ficha del mismo atleta) sale al momento y se pone al día por detrás
+  const rv = (que, si = true) => (si ? { recuerdo: `vista-progreso:${api.uid()}:${atletaId}:${que}` } : {});
+  const propio = useCarga(() => (progresoDado ? Promise.resolve(null) : api.progreso(atletaId)), [atletaId, !!progresoDado], rv('progreso', !progresoDado));
   const { datos, cargando, error, recargar } = progresoDado || propio;
-  const objetivosPropios = useCarga(() => (objetivosDados ? Promise.resolve(null) : api.objetivos(atletaId).catch(() => [])), [atletaId, !!objetivosDados]);
+  const objetivosPropios = useCarga(() => (objetivosDados ? Promise.resolve(null) : api.objetivos(atletaId).catch(() => [])), [atletaId, !!objetivosDados], rv('objetivos', !objetivosDados));
   const objetivos = objetivosDados || objetivosPropios;
-  const constanciaPropia = useCarga(() => (constanciaDada ? Promise.resolve(null) : api.constancia(atletaId).catch(() => null)), [atletaId, !!constanciaDada]);
-  const cardio = useCarga(() => api.cardioSemanas(atletaId, 8).catch(() => []), [atletaId]);
+  const constanciaPropia = useCarga(() => (constanciaDada ? Promise.resolve(null) : api.constancia(atletaId).catch(() => null)), [atletaId, !!constanciaDada], rv('constancia', !constanciaDada));
+  const cardio = useCarga(() => api.cardioSemanas(atletaId, 8).catch(() => []), [atletaId], rv('cardio'));
   const constanciaTotal = constanciaDada || constanciaPropia;
   const [ejId, setEjId] = useState(null);
   const [historial, setHistorial] = useState(null);
@@ -77,8 +79,8 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   const [rangoTon, setRangoTon] = useState(null);
   // (v0.203) los bloques (sus franjas de fondo en 6M y Todo), las marcas de test (rombos en el 1RM) y qué semana de
   // series por músculo se ve
-  const bloques = useCarga(() => api.bloquesDe(atletaId).catch(() => []), [atletaId]);
-  const marcas = useCarga(() => api.marcas(atletaId).catch(() => []), [atletaId]);
+  const bloques = useCarga(() => api.bloquesDe(atletaId).catch(() => []), [atletaId], rv('bloques'));
+  const marcas = useCarga(() => api.marcas(atletaId).catch(() => []), [atletaId], rv('marcas'));
   const [semanaVol, setSemanaVol] = useState('esta');
   // (v0.204) comparar dos o tres ejercicios en la misma gráfica (en % desde el principio del rango)
   const [comparar, setComparar] = useState(false);
