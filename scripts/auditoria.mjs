@@ -3,7 +3,7 @@
 // (axe), la página o un texto que se salen o se cortan, botones pequeños, imágenes rotas y bloqueos largos.
 // No es una prueba que falle: deja un informe (informe.md e informe.json) para arreglar lo que salga.
 //   npm run build
-//   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste] [--quien=atleta,coach]
+//   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste,sinred] [--quien=atleta,coach]
 //                              [--atletas=Ana López,Carlos Vera] [--hondo] [--salida=/tmp/auditoria] [--dist=dist] [--puerto=4410]
 //                              [--raros] [--capturas=/tmp/cap-210] [--sin-axe]
 // --hondo: también explora dentro de cada hoja (una capa más). Sin él, solo abre y revisa.
@@ -40,6 +40,8 @@ const CONFS = {
   letra: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'light', ajustes: { letra: 'muy-grande' } },
   ordenador: { viewport: { width: 1280, height: 860 }, colorScheme: 'light' },
   contraste: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark', ajustes: { altoContraste: true } },
+  // (sin conexión desde que entra: la demo hace como el de verdad con «fbe-demo-sin-red»)
+  sinred: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'light', sinRed: true },
 };
 const confs = arg('conf', 'movil').split(',').filter((c) => CONFS[c]);
 const quienes = arg('quien', 'atleta,coach').split(',');
@@ -173,6 +175,7 @@ async function entrar(conf, nombre) {
   if (await cod.isVisible().catch(() => false)) { await cod.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
   await p.locator('nav.tabs').waitFor({ timeout: 15000 });
   await p.waitForTimeout(1500);
+  if (c.sinRed) { await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1')); await ctx.setOffline(true); await p.waitForTimeout(500); }
   return { ctx, p, errores };
 }
 
