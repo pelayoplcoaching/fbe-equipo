@@ -15,7 +15,7 @@
 // navegador, así que lo que marque (una serie, un hábito) se queda en esa pasada.
 import { chromium } from 'playwright';
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { servir } from '../test/servidor.mjs';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
@@ -32,6 +32,8 @@ const CAPTURAS = arg('capturas', null) ? resolve(arg('capturas')) : null;
 if (CAPTURAS) mkdirSync(CAPTURAS, { recursive: true });
 const nombresCaptura = new Map();
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+// (axe se mete con evaluate: un <script> en línea lo bloquea la política de seguridad de la app, que aquí sigue puesta)
+const AXE_SRC = readFileSync(AXE, 'utf8');
 mkdirSync(SALIDA, { recursive: true });
 
 const CONFS = {
@@ -113,7 +115,7 @@ function revisarEnPagina() {
 
 async function axe(p) {
   try {
-    if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
+    if (!(await p.evaluate(() => !!window.axe))) await p.evaluate(AXE_SRC);
     await p.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1200))]));
     return await p.evaluate(async () => (await window.axe.run(document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
@@ -295,7 +297,7 @@ for (const conf of confs) {
         const antes = s.errores.length;
         await revisar(s.p, ctx);
         for (const e of s.errores.slice(antes)) apuntar(ctx, 'error', e);
-        await explorar(s, ctx, pestana, 0, conf === 'movil' ? 40 : 18);
+        await explorar(s, ctx, pestana, 0, Number(arg('maximo', conf === 'movil' ? '24' : '14')));
         guardarInforme();
         process.stdout.write(`${conf} ${quien} ${pestana}: ${informe.length} hallazgos, ${estados} estados, ${Math.round((Date.now() - t0) / 1000)} s\n`);
       }
