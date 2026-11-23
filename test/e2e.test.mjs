@@ -4916,7 +4916,8 @@ if (parte(PRINCIPAL)) try {
     && await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).count() === 1, '(v0.56) a quien no ha visto la política nueva, al abrir: sus novedades en corto, «Leer la política completa» y «Entendido»');
   await revisar('aviso-privacidad');
   await avisoPriv.getByRole('button', { name: 'Leer la política completa' }).click();
-  check((await avisoPriv.textContent()).includes('Lo que se queda en tu móvil'), 'la política entera, en la misma hoja');
+  // (v0.208, el texto se carga al leerlo; v0.209, se va trayendo con el aviso a la vista)
+  check(await avisoPriv.getByText('Lo que se queda en tu móvil').first().waitFor({ timeout: 5000 }).then(() => true, () => false), 'la política entera, en la misma hoja');
   await p.keyboard.press('Escape');
   await avisoPriv.waitFor({ state: 'detached' });
   const vistaGuardada = async () => { for (let i = 0; i < 30; i++) { const ok = await p.evaluate(([u, v]) => (JSON.parse(localStorage.getItem('fbe-demo-v2')).privacidad_vista || []).some((x) => x.usuario_id === u && x.version === v), [uidAna, VERSION_LEGAL]); if (ok) return true; await p.waitForTimeout(100); } return false; };

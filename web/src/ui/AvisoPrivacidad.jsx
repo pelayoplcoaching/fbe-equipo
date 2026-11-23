@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from './comunes.jsx';
-import { TextoPrivacidad } from './Acceso.jsx';
+import { TextoPrivacidad, precargarPrivacidad } from './Acceso.jsx';
 import { debeAvisarPrivacidad, novedadesDesde } from '../logica/privacidad.js';
 
 // (v0.56) Las novedades de la política, UNA vez por versión (Pelayo: «que lo pregunte una vez, no cada vez que se abre»).
@@ -25,6 +25,8 @@ export function AvisoPrivacidad({ alTerminar = null }) {
     }).catch(() => { if (vivo) alTerminar?.(); });
     return () => { vivo = false; };
   }, []);
+  // (v0.209) con el aviso a la vista, el texto entero se va trayendo (por si toca «Leer la política completa»)
+  useEffect(() => { if (ver) precargarPrivacidad().catch(() => {}); }, [ver]);
   if (!ver) return null;
   const cerrar = () => {
     if (hecho.current) return;

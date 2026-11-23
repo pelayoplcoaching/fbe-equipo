@@ -137,10 +137,17 @@ function Recuperar({ volver }) {
 
 // (v0.208, rendimiento) El texto de la política (unos 50 KB) se carga al leerla, no al abrir la app
 let privacidadCargada = null;
+let pidiendoPrivacidad = null;
+// (v0.209) Se puede pedir antes, al enseñar el enlace o el aviso que lleva a ella: así, al tocar, ya está
+export function precargarPrivacidad() {
+  if (privacidadCargada) return Promise.resolve(privacidadCargada);
+  pidiendoPrivacidad ||= import('../legal.js').then((m) => (privacidadCargada = m.PRIVACIDAD)).catch((e) => { pidiendoPrivacidad = null; throw e; });
+  return pidiendoPrivacidad;
+}
 export function TextoPrivacidad() {
   const [texto, setTexto] = useState(privacidadCargada);
   const [error, setError] = useState(false);
-  const traer = () => { setError(false); import('../legal.js').then((m) => { privacidadCargada = m.PRIVACIDAD; setTexto(m.PRIVACIDAD); }).catch(() => setError(true)); };
+  const traer = () => { setError(false); precargarPrivacidad().then(setTexto, () => setError(true)); };
   useEffect(() => { if (!texto) traer(); }, []);
   if (error) {
     return (
