@@ -80,7 +80,9 @@ ${marcadoPortada}
   // (v0.209, estilos a dieta) y sus estilos, aparte (scripts/css-coach.mjs): los carga la app del coach antes de pintarse
   const leerSalida = (f) => readFileSync(join(salida, f), 'utf8');
   const jsDe = (coach) => Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))).filter((f) => soloCoachRutas.has(f) === coach).map(leerSalida).join('\n');
-  const partesCss = cssDelCoach(readFileSync(cssRuta, 'utf8'), { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+  // (para estudiar el reparto: FBE_CSS_ORIGINAL=<archivo.json> guarda el CSS sin repartir y qué trozo es cada cosa)
+  const cssOriginal = readFileSync(cssRuta, 'utf8');
+  const partesCss = cssDelCoach(cssOriginal, { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
   if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
   const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
   writeFileSync(join(salida, cssCoach), partesCss.coach);
@@ -93,6 +95,7 @@ ${marcadoPortada}
   // (la lista de las ilustraciones se pide al arrancar aunque vaya en su propio trozo)
   for (const [f, o] of Object.entries(r.metafile.outputs)) if (Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))) deArranqueRel.add(relative(salida, join(process.cwd(), f)));
   const perezosos = new Set(todasJs.filter((f) => !deArranqueRel.has(f) && !soloCoachRutas.has(f) && f.startsWith('chunks/')));
+  if (process.env.FBE_CSS_ORIGINAL) writeFileSync(process.env.FBE_CSS_ORIGINAL, JSON.stringify({ css: cssOriginal, todas: todasJs, coach: [...soloCoachRutas], arranque: [...deArranqueRel], perezosos: [...perezosos], extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` }));
   const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(todasJs.map((f) => [f, leerSalida(f)])), candidatos: perezosos,
     extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
   const cssTrozos = [];
