@@ -901,6 +901,14 @@ export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase
 }
 
 const recuerdos = new Map();
+// (v0.213) como mucho MAX_RECUERDOS: un coach que abre las fichas de muchos atletas iba acumulando lo de cada uno (su
+// progreso entero, sus marcas…) hasta la próxima escritura. Se queda con lo último usado (un Map guarda el orden)
+const MAX_RECUERDOS = 150;
+const recordar = (clave, datos) => {
+  recuerdos.delete(clave);
+  recuerdos.set(clave, datos);
+  if (recuerdos.size > MAX_RECUERDOS) for (const k of [...recuerdos.keys()].slice(0, recuerdos.size - MAX_RECUERDOS)) { recuerdos.delete(k); cargados.delete(k); }
+};
 let escrituras = 0;
 // (pulido 3.4) No volver a pedir lo recién pedido. Al volver a una pantalla, lo recordado que se cargó hace menos de
 // FRESCO_MS se enseña sin pedirlo otra vez (antes se volvía a pedir todo en cada visita: en un rato de ir y volver,
@@ -953,7 +961,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     try {
       const datos = await fn();
       // (solo se recuerda lo que se cargó entero sin que se escribiera nada mientras)
-      if (clave && datos != null && antes === escrituras) { recuerdos.set(clave, datos); cargados.set(clave, { t: Date.now(), epoca: epocaAntes }); }
+      if (clave && datos != null && antes === escrituras) { recordar(clave, datos); cargados.set(clave, { t: Date.now(), epoca: epocaAntes }); }
       if (vivo.current && n === ultima.current) { base.current = datos; setEstado({ datos: conPendientes(datos), error: null, cargando: false }); }
     } catch (error) {
       reportarError(error, 'carga');
@@ -992,7 +1000,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
       ultima.current++;
       base.current = transformar ? transformar(e.detail.datos) : e.detail.datos;
       // (lo que se recuerda para la vuelta es lo de la base, no la copia que se enseñó mientras llegaba)
-      if (claveRecuerdo.current && base.current != null) recuerdos.set(claveRecuerdo.current, base.current);
+      if (claveRecuerdo.current && base.current != null) recordar(claveRecuerdo.current, base.current);
       setEstado({ datos: conPendientes(base.current), error: null, cargando: false });
     };
     window.addEventListener('fbe-copia', al);
