@@ -7,6 +7,8 @@
 // Lo demás (las variables, @font-face, @keyframes, las reglas mixtas…) se queda donde estaba. El CSS del coach se carga
 // detrás del común (ui/App.jsx, antes de pintar su app), así que sus reglas siguen yendo después de las generales.
 
+import { posix } from 'node:path';
+
 // Las palabras que pueden ser clases en un texto (código o HTML), y los principios de las clases armadas a trozos
 export function palabrasDe(texto) {
   return new Set(String(texto).match(/[A-Za-z0-9_-]+/g) || []);
@@ -269,11 +271,16 @@ function declaraciones(cuerpo) {
 // copian en su archivo, en su sitio, limitadas a lo que ella cumple (con :where(), que no suma especificidad) y solo con
 // las propiedades de esas familias: así, en sus elementos, todo gana y pierde como en el original. Cada copia queda en
 // reglas[j].copias (Map destino → [{ sel, cuerpo }]). Si una regla tendría más de maxCopias, se queda en el común.
+//
+// Y (duenoDe.puedeIr, del build) una clase que solo sale en el código de un sitio solo comparte elemento con clases de ese
+// código o del que importa (sus componentes, que reciben la clase por sus propiedades): si el otro sujeto lleva una clase que
+// no sale en nada de eso, no pueden ser el mismo elemento.
 export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, maxCopias = 12 } = {}) {
+  const puedeIr = typeof duenoDe.puedeIr === 'function' ? duenoDe.puedeIr : null;
   const info = reglas.map((x) => {
     const sels = partir(x.sel).map((s) => {
       const suj = sujetoDe(s);
-      return { k: `${especificidad(s)}|${pseudoElemento(s)}`, etiqueta: suj.etiqueta, duenos: [...new Set(suj.clases.map(duenoDe).filter(Boolean))], base: suj.base, sufijo: suj.sufijo };
+      return { k: `${especificidad(s)}|${pseudoElemento(s)}`, etiqueta: suj.etiqueta, clases: suj.clases, duenos: [...new Set(suj.clases.map(duenoDe).filter(Boolean))], base: suj.base, sufijo: suj.sufijo };
     });
     return { sels, fams: familias(x.cuerpo) };
   });
@@ -285,6 +292,10 @@ export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, 
     if (a.k !== b.k) return false;
     if (a.etiqueta && b.etiqueta && a.etiqueta !== b.etiqueta) return false;
     for (const x of a.duenos) for (const y of b.duenos) if (x !== y) return false;
+    if (puedeIr) {
+      for (const o of a.duenos) for (const c of b.clases) if (!puedeIr(o, c)) return false;
+      for (const o of b.duenos) for (const c of a.clases) if (!puedeIr(o, c)) return false;
+    }
     return true;
   };
   const chocan = (i, j) => { for (const a of info[i].sels) for (const b of info[j].sels) if (juntos(a, b)) return true; return false; };
@@ -361,7 +372,7 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   const prefijos = new Map(rutas.map((f) => [f, [...prefijosDe(textos.get(f))]]));
   const palabrasExtra = palabrasDe(extra), prefijosExtra = [...prefijosDe(extra)];
   const memo = new Map();
-  return (c) => {
+  const dueno = (c) => {
     if (memo.has(c)) return memo.get(c);
     let r = null;
     if (!(palabrasExtra.has(c) || prefijosExtra.some((p) => c.startsWith(p)))) {
@@ -372,6 +383,26 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
     memo.set(c, r);
     return r;
   };
+  // Lo que importa cada trozo (también lo que carga después, con import()), y lo que se alcanza desde él
+  const importa = new Map(rutas.map((f) => {
+    const dir = f.includes('/') ? f.slice(0, f.lastIndexOf('/') + 1) : '';
+    return [f, new Set([...textos.get(f).matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+?\.js)["']/g)].map((m) => posix.normalize(dir + m[1])))];
+  }));
+  const alcances = new Map();
+  const alcance = (o) => {
+    if (alcances.has(o)) return alcances.get(o);
+    const visto = new Set(), cola = o === 'coach' ? [...coach] : [o];
+    while (cola.length) { const f = cola.pop(); if (visto.has(f) || !textos.has(f)) continue; visto.add(f); for (const g of importa.get(f) || []) cola.push(g); }
+    const a = { palabras: new Set(), prefijos: [...prefijosExtra] };
+    for (const f of visto) { for (const w of palabras.get(f)) a.palabras.add(w); a.prefijos.push(...prefijos.get(f)); }
+    for (const w of palabrasExtra) a.palabras.add(w);
+    alcances.set(o, a);
+    return a;
+  };
+  // ¿Puede una clase acabar en un elemento que lleva otra cuyo dueño es o? Si sale en su código o en lo que alcanza (o en
+  // index.html): sí; si no, no
+  dueno.puedeIr = (o, c) => { const a = alcance(o); return a.palabras.has(c) || a.prefijos.some((p) => c.startsWith(p)); };
+  return dueno;
 }
 
 const escribir = (nodos) => nodos.map((x) => (x.tipo === 'regla' ? `${x.sel}{${x.cuerpo}}` : x.tipo === 'grupo' ? `${x.pre}{${escribir(x.hijos)}}` : x.texto)).join('');
