@@ -2867,7 +2867,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
     const chatSrc = readFileSync(new URL('../web/src/ui/Chat.jsx', import.meta.url), 'utf8');
     const cssChat = readFileSync(new URL('../web/src/estilos.css', import.meta.url), 'utf8');
     check(/hayAnteriores\(\{ cargados: mensajes\.length, limite: limiteDatos, desdeCache/.test(chatSrc) && !/mensajes\.length >= limite\b/.test(chatSrc)
-      && /:root:has\(\.chat-lista\) \{ overflow-anchor: none; \}/.test(cssChat) && /volverAlAncla/.test(chatSrc),
+      && /html\.hay-chat-lista \{ overflow-anchor: none; \}/.test(cssChat) && /useMarcaPagina\('hay-chat-lista'\)/.test(chatSrc) && /volverAlAncla/.test(chatSrc),
       '(v0.58.1) el chat calcula «hay más» con la copia y con el límite de lo cargado, y ancla él mismo lo que se lee (sin el anclaje de Chromium)');
   }
   await cache.borrarTodo();
