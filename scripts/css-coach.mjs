@@ -210,7 +210,15 @@ export function sujetoDe(sel) {
   }
   const suj = s.slice(ultimo);
   const m = /^([a-zA-Z][a-zA-Z0-9-]*)/.exec(suj);
-  return { etiqueta: m ? m[1].toLowerCase() : '', clases: clasesNecesarias(suj) };
+  // (y el selector sin su pseudo-elemento: «.a .b::before» → base «.a .b», sufijo «::before»)
+  const pe = /::-?[a-z][a-z-]*(\([^)]*\))?|:(before|after|first-line|first-letter)(?![a-z-])/i.exec(suj);
+  const corte = pe ? ultimo + pe.index : s.length;
+  return { etiqueta: m ? m[1].toLowerCase() : '', clases: clasesNecesarias(suj), base: s.slice(0, corte).trim(), sufijo: s.slice(corte) };
+}
+
+// Las declaraciones de un cuerpo, cada una con su familia (para copiar solo las que hacen falta)
+function declaraciones(cuerpo) {
+  return partir(String(cuerpo), ';').map((d) => { const k = d.indexOf(':'); return k > 0 ? { texto: d, fam: `${familia(d.slice(0, k))}${/!\s*important\s*$/i.test(d) ? '!' : ''}` } : null; }).filter(Boolean);
 }
 
 // reglas: las del CSS en su orden original, cada una con .sel, .cuerpo y .dest (adónde iría: null = se queda en el común).
@@ -219,11 +227,16 @@ export function sujetoDe(sel) {
 // distintas (button y svg), ni si cada sujeto lleva una clase que solo sale en el código de un sitio distinto (duenoDe: el
 // trozo o «coach»; un elemento recibe sus clases de un solo sitio del código, y una clase que solo está en el código de La
 // travesía no acaba en el mismo elemento que otra que solo está en el del coach).
-export function respetarCascada(reglas, { duenoDe = () => null } = {}) {
+//
+// copiar (v0.210): en vez de dejar la regla en el común, se mueve igual y las reglas de después con las que puede empatar se
+// copian en su archivo, en su sitio, limitadas a lo que ella cumple (con :where(), que no suma especificidad) y solo con
+// las propiedades de esas familias: así, en sus elementos, todo gana y pierde como en el original. Cada copia queda en
+// reglas[j].copias (Map destino → [{ sel, cuerpo }]). Si una regla tendría más de maxCopias, se queda en el común.
+export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, maxCopias = 12 } = {}) {
   const info = reglas.map((x) => {
     const sels = partir(x.sel).map((s) => {
       const suj = sujetoDe(s);
-      return { k: `${especificidad(s)}|${pseudoElemento(s)}`, etiqueta: suj.etiqueta, duenos: [...new Set(suj.clases.map(duenoDe).filter(Boolean))] };
+      return { k: `${especificidad(s)}|${pseudoElemento(s)}`, etiqueta: suj.etiqueta, duenos: [...new Set(suj.clases.map(duenoDe).filter(Boolean))], base: suj.base, sufijo: suj.sufijo };
     });
     return { sels, fams: familias(x.cuerpo) };
   });
@@ -239,13 +252,15 @@ export function respetarCascada(reglas, { duenoDe = () => null } = {}) {
   };
   const chocan = (i, j) => { for (const a of info[i].sels) for (const b of info[j].sels) if (juntos(a, b)) return true; return false; };
   let quedan = 0;
+  const choques = new Map();   // i → Map(j → Set(familias))
   for (let vuelta = 0; vuelta < 20; vuelta++) {
     let cambio = false;
     for (let i = reglas.length - 1; i >= 0; i--) {
       const d = reglas[i].dest;
       if (d == null) continue;
       const fams = info[i].fams.has('*') || [...info[i].fams].some((k) => k.startsWith('*')) ? todas : [...info[i].fams, '*', '*!'];
-      let malo = false;
+      const con = new Map();
+      let demasiadas = false;
       for (const k of fams) {
         const lista = porFamilia.get(k);
         if (!lista) continue;
@@ -254,13 +269,45 @@ export function respetarCascada(reglas, { duenoDe = () => null } = {}) {
         while (lo < hi) { const m = (lo + hi) >> 1; if (lista[m] <= i) lo = m + 1; else hi = m; }
         for (let t = lo; t < lista.length; t++) {
           const j = lista[t];
-          if (reglas[j].dest !== d && chocan(i, j)) { malo = true; break; }
+          if (reglas[j].dest === d || !chocan(i, j)) continue;
+          if (!copiar) { demasiadas = true; break; }
+          if (!con.has(j)) con.set(j, new Set());
+          con.get(j).add(k);
+          if (con.size > maxCopias) { demasiadas = true; break; }
         }
-        if (malo) break;
+        if (demasiadas) break;
       }
-      if (malo) { reglas[i].dest = null; quedan++; cambio = true; }
+      if (demasiadas) { reglas[i].dest = null; quedan++; cambio = true; choques.delete(i); } else if (con.size) choques.set(i, con); else choques.delete(i);
     }
     if (!cambio) break;
+  }
+  if (!copiar) return quedan;
+  // Las copias: por cada regla de después (j) y cada destino, los selectores de las movidas que empatan con cada uno de los
+  // suyos (los contextos de :where()) y las familias que hay que copiar
+  const porJ = new Map();
+  for (const [i, con] of choques) {
+    const d = reglas[i].dest;
+    if (d == null) continue;
+    for (const [j, fs] of con) {
+      if (!porJ.has(j)) porJ.set(j, new Map());
+      const m = porJ.get(j);
+      if (!m.has(d)) m.set(d, { ctx: info[j].sels.map(() => new Set()), fams: new Set() });
+      const e = m.get(d);
+      for (const f of fs) e.fams.add(f);
+      info[j].sels.forEach((b, bi) => { for (const a of info[i].sels) if (juntos(a, b) && a.base) e.ctx[bi].add(a.base); });
+    }
+  }
+  for (const [j, m] of porJ) {
+    const decl = declaraciones(reglas[j].cuerpo);
+    for (const [d, e] of m) {
+      const cuerpo = decl.filter((x) => e.fams.has(x.fam) || e.fams.has('*') || (x.fam.endsWith('!') && e.fams.has('*!'))).map((x) => x.texto).join(';');
+      if (!cuerpo) continue;
+      const copias = [];
+      info[j].sels.forEach((b, bi) => { if (e.ctx[bi].size && b.base) copias.push({ sel: `${b.base}:where(${[...e.ctx[bi]].join(',')})${b.sufijo}`, cuerpo }); });
+      if (!copias.length) continue;
+      if (!reglas[j].copias) reglas[j].copias = new Map();
+      reglas[j].copias.set(d, copias);
+    }
   }
   return quedan;
 }
@@ -303,12 +350,14 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
   const todas = planas(arbol);
   for (const x of todas) { const sels = partir(x.sel); x.dest = sels.length && sels.every(selectorCoach) ? 'coach' : null; }
   // (v0.210) sin cambiar quién gana un empate (respetarCascada)
-  const quedan = respetarCascada(todas, { duenoDe: duenoDe || ((c) => (delCoach(c) ? 'coach' : null)) });
+  const quedan = respetarCascada(todas, { duenoDe: duenoDe || ((c) => (delCoach(c) ? 'coach' : null)), copiar: true });
+  let copias = 0;
   function repartir(nodos) {
     const comun = [], coach = [];
     for (const x of nodos) {
       if (x.tipo === 'regla') {
         if (x.dest === 'coach') { coach.push(x); reglas++; } else comun.push(x);
+        for (const c of x.copias?.get('coach') || []) { coach.push({ tipo: 'regla', sel: c.sel, cuerpo: c.cuerpo }); copias++; }
       } else if (x.tipo === 'grupo') {
         const r = repartir(x.hijos);
         if (r.comun.length) comun.push({ ...x, hijos: r.comun });
@@ -318,7 +367,7 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
     return { comun, coach };
   }
   const r = repartir(arbol);
-  return { comun: escribir(r.comun), coach: escribir(r.coach), reglas, quedan };
+  return { comun: escribir(r.comun), coach: escribir(r.coach), reglas, quedan, copias };
 }
 
 // Con lo construido: los textos de los trozos del coach y del resto (más index.html y la portada) → { comun, coach, reglas }
@@ -365,7 +414,8 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '', dueno
   const todas = planas(arbol);
   for (const x of todas) x.dest = destinoDe(x.sel);
   // (v0.210) sin cambiar quién gana un empate (respetarCascada)
-  const quedan = respetarCascada(todas, { duenoDe: duenoDe || dueno });
+  const quedan = respetarCascada(todas, { duenoDe: duenoDe || dueno, copiar: true });
+  let copias = 0;
   function repartir(nodos) {
     const comun = [], porTrozo = new Map();
     const a = (f, x) => { if (!porTrozo.has(f)) porTrozo.set(f, []); porTrozo.get(f).push(x); };
@@ -373,6 +423,7 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '', dueno
       if (x.tipo === 'regla') {
         const d = x.dest;
         if (d) { a(d, x); reglas++; } else comun.push(x);
+        for (const [f, cs] of x.copias || []) for (const c of cs) { a(f, { tipo: 'regla', sel: c.sel, cuerpo: c.cuerpo }); copias++; }
       } else if (x.tipo === 'grupo') {
         const r = repartir(x.hijos);
         if (r.comun.length) comun.push({ ...x, hijos: r.comun });
@@ -382,5 +433,5 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '', dueno
     return { comun, porTrozo };
   }
   const r = repartir(arbol);
-  return { comun: escribir(r.comun), porTrozo: new Map([...r.porTrozo].map(([f, ns]) => [f, escribir(ns)])), reglas, quedan };
+  return { comun: escribir(r.comun), porTrozo: new Map([...r.porTrozo].map(([f, ns]) => [f, escribir(ns)])), reglas, quedan, copias };
 }

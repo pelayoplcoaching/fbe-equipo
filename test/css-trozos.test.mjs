@@ -1,8 +1,9 @@
 // (v0.209 y v0.210) Los estilos repartidos al construir (scripts/css-coach.mjs): los del coach aparte y los de cada pantalla
-// con su trozo. Una regla solo se va si no puede afectar a nada de fuera ni ganar un empate que antes perdía (el archivo
-// al que va se carga después); lo demás se queda en app.css, en su orden.
+// con su trozo. Una regla solo se va si no puede afectar a nada de fuera; y como el archivo al que va se carga después, las
+// reglas de después con las que podría empatar van copiadas detrás de ella, limitadas a sus elementos (:where()), para que
+// gane y pierda como en el original. Lo demás se queda en app.css, en su orden.
 //   node test/css-trozos.test.mjs
-import { separarCssCoach, separarCssPorTrozos, clasesNecesarias, palabrasDe, prefijosDe, especificidad, pseudoElemento, familias } from '../scripts/css-coach.mjs';
+import { separarCssCoach, separarCssPorTrozos, clasesNecesarias, palabrasDe, prefijosDe, especificidad, pseudoElemento, familias, respetarCascada, leer, planas, sujetoDe } from '../scripts/css-coach.mjs';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -46,17 +47,32 @@ check(especificidad('#a .b c') === 1001001 && especificidad(':where(.a .b) .c') 
 check(pseudoElemento('.a .b::before') === 'before' && pseudoElemento('.x:hover') === '' && pseudoElemento('.a:not(.b) .c::after') === 'after' && pseudoElemento('.c:before') === 'before'
   && pseudoElemento('input:-webkit-autofill') === '' && pseudoElemento('.l::-webkit-scrollbar-thumb') === '-webkit-scrollbar-thumb', 'el pseudo-elemento del sujeto (:-webkit-autofill es del propio elemento)');
 check([...familias('margin-top:0;color:red!important;--x:1;background:url("a;b");inline-size:2px;line-height:1')].join() === 'margin,color!,--x,background,width,font', 'las propiedades por familia (y las !important aparte)');
+check(sujetoDe('.a .b::before').base === '.a .b' && sujetoDe('.a .b::before').sufijo === '::before' && sujetoDe('button.x:hover').etiqueta === 'button' && sujetoDe('.a > .b.c').clases.join() === 'b,c',
+  'el sujeto: su etiqueta, sus clases y el selector sin su pseudo-elemento');
 {
   // .tv-lobo y .chip: misma especificidad y misma propiedad; en el original ganaba .chip (va después) en un elemento con las dos
   const textos = new Map([['app.js', 'chip hoy'], ['chunks/Travesia-1.js', 'tv-lobo tv-ojo tv-cola']]);
-  const r = separarCssPorTrozos('.tv-lobo{color:red}.tv-ojo{margin:0}.tv-cola::before{color:red}.tv-lobo .x{color:red}.chip{color:blue}.hoy::after{color:blue}', { textos, candidatos: new Set(['chunks/Travesia-1.js']) });
+  const css = '.tv-lobo{color:red}.tv-ojo{margin:0}.tv-cola::before{color:red}.tv-lobo .x{color:red}.chip{color:blue;padding:0}.hoy::after{color:blue}';
+  const r = separarCssPorTrozos(css, { textos, candidatos: new Set(['chunks/Travesia-1.js']) });
   const t = r.porTrozo.get('chunks/Travesia-1.js') || '';
-  check(r.comun.startsWith('.tv-lobo{color:red}') && !t.includes('.tv-lobo{'), 'una regla que empata con otra de después (misma especificidad y propiedad) se queda en su sitio');
-  check(t === '.tv-ojo{margin:0}.tv-cola::before{color:red}.tv-lobo .x{color:red}', `se van las que no pueden empatar: otra propiedad, otro pseudo-elemento u otra especificidad (${t})`);
-  check(r.quedan === 1, `una se queda por el orden (${r.quedan})`);
-  // y en cadena: si una se queda, las de antes que empataban con ella también
-  const r2 = separarCssPorTrozos('.tv-ojo{color:red}.tv-lobo{color:red;margin:0}.chip{margin:1px}', { textos, candidatos: new Set(['chunks/Travesia-1.js']) });
-  check(r2.comun === '.tv-ojo{color:red}.tv-lobo{color:red;margin:0}.chip{margin:1px}' && r2.quedan === 2, `en cadena (${r2.comun})`);
+  check(t === '.tv-lobo{color:red}.tv-ojo{margin:0}.tv-cola::before{color:red}.tv-lobo .x{color:red}.chip:where(.tv-lobo){color:blue}',
+    `la que empata con una de después se va, y detrás de ella la de después, solo en sus elementos y solo con esa propiedad (${t})`);
+  check(r.comun === '.chip{color:blue;padding:0}.hoy::after{color:blue}' && r.copias === 1 && r.quedan === 0, 'el común sigue con lo suyo; una copia y ninguna se queda');
+  // en el modo de antes (sin copiar), la que empata se queda en su sitio
+  const reglas = planas(leer(css));
+  for (const x of reglas) x.dest = /tv-/.test(x.sel) ? 'chunks/Travesia-1.js' : null;
+  check(respetarCascada(reglas) === 1 && reglas[0].dest === null && reglas[1].dest !== null, 'sin copiar, la que empata se queda en el común (y las otras se van)');
+  // con más empates de la cuenta, se queda en el común
+  const muchas = `.tv-lobo{color:red}${Array.from({ length: 14 }, (_, k) => `.c${k}{color:blue}`).join('')}`;
+  const rm = separarCssPorTrozos(muchas, { textos: new Map([...textos, ['app.js', `chip hoy ${Array.from({ length: 14 }, (_, k) => `c${k}`).join(' ')}`]]), candidatos: new Set(['chunks/Travesia-1.js']) });
+  check(rm.quedan === 1 && rm.comun.startsWith('.tv-lobo{color:red}') && !rm.porTrozo.size, 'con más de 12 empates posibles, se queda en el común (no compensa copiar tanto)');
+  // y en cadena: las copias de varias, cada una en su sitio
+  const r2 = separarCssPorTrozos('.tv-ojo{color:red}.tv-lobo{color:red;margin:0}.chip{margin:1px}.tv-cola{margin:2px}', { textos, candidatos: new Set(['chunks/Travesia-1.js']) });
+  check(r2.porTrozo.get('chunks/Travesia-1.js') === '.tv-ojo{color:red}.tv-lobo{color:red;margin:0}.chip:where(.tv-lobo){margin:1px}.tv-cola{margin:2px}' && r2.comun === '.chip{margin:1px}',
+    `las copias, en el sitio de la regla copiada y entre las movidas (${r2.porTrozo.get('chunks/Travesia-1.js')})`);
+  // un pseudo-elemento va detrás del :where(); y lo que está en un @media, con su @media
+  const r3 = separarCssPorTrozos('.tv-cola::before{color:red}@media (min-width:700px){.hoy::before{color:blue}}', { textos, candidatos: new Set(['chunks/Travesia-1.js']) });
+  check(r3.porTrozo.get('chunks/Travesia-1.js') === '.tv-cola::before{color:red}@media (min-width:700px){.hoy:where(.tv-cola)::before{color:blue}}', `con pseudo-elemento y @media (${r3.porTrozo.get('chunks/Travesia-1.js')})`);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

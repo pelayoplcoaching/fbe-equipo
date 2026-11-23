@@ -113,7 +113,7 @@ ${marcadoPortada}
   }
   writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesTrozos.comun);
   // (v0.210) cuántas reglas se van y cuántas se quedan en el común para no cambiar quién gana un empate (css-coach.mjs)
-  console.log(`estilos: ${partesCss.reglas} reglas al CSS del coach y ${partesTrozos.reglas} a los de cada trozo; ${partesCss.quedan + partesTrozos.quedan} se quedan en el común por el orden de la cascada`);
+  console.log(`estilos: ${partesCss.reglas} reglas al CSS del coach y ${partesTrozos.reglas} a los de cada trozo (con ${partesCss.copias + partesTrozos.copias} copias para no cambiar empates); ${partesCss.quedan + partesTrozos.quedan} se quedan en el común`);
 
   // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
   // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)
