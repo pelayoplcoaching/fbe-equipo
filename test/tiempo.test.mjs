@@ -79,7 +79,8 @@ check(/fbe-tiempo-zona:\$\{/.test(ui) && /credentials: 'omit'/.test(ui) && /refe
 check(/removeItem\(CLAVE_CACHE\)/.test(ui) && /Quitar el tiempo/.test(ui), '«Quitar el tiempo» borra la zona y la previsión del móvil');
 const hoy = readFileSync(join(raiz, 'web/src/ui/atleta/Hoy.jsx'), 'utf8');
 check(/tiempo: \(e\.tipo === 'entreno' && deFuera\(siguiente\?\.cardio\)\) \|\| \(conCarrera\(atleta\) && !propio\)/.test(hoy) && /<Plegable id="tiempo"/.test(hoy), 'en Hoy, solo si lo que toca es cardio de fuera o si corre');
-const ses = readFileSync(join(raiz, 'web/src/ui/atleta/Sesion.jsx'), 'utf8');
+// (v0.207: la tarjeta de cardio de la sesión vive en TarjetaCardio.jsx)
+const ses = readFileSync(join(raiz, 'web/src/ui/atleta/TarjetaCardio.jsx'), 'utf8');
 check(/!h && !completada && deFuera\(pauta\) && <TiempoSesion/.test(ses), 'en la sesión, encima de la pauta de cardio de fuera (y no en una hecha)');
 const css = readFileSync(join(raiz, 'web/src/tiempo.css'), 'utf8');
 check(!/[^\x00-\x7F]/.test(css) && !/#[0-9a-f]{3,6}\b/i.test(css) && /prefers-reduced-motion/.test(css) && readFileSync(join(raiz, 'web/src/main.jsx'), 'utf8').includes("import './tiempo.css';"), 'su hoja de estilos: ASCII, solo tokens, respeta el movimiento reducido, y se carga');
