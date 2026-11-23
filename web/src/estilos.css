@@ -4920,7 +4920,7 @@ html.hay-grabando .chat-abajo { visibility: hidden; }
 /* ---------- v0.184: el editor manual, mas comodo (deshacer, plegar, arrastrar, + y -, varios de una vez) ---------- */
 .editor-sesion { position: relative; }
 .editor-sesion-barra { display: flex; align-items: center; gap: var(--esp-8); min-width: 0; }
-.plegar-sesion { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; gap: var(--esp-6); }
+.plegar-sesion { flex: 1; min-width: 44px; justify-content: flex-start; text-align: left; gap: var(--esp-6); }
 .plegar-sesion > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-sesion.plegada .plegar-sesion { color: var(--tinta); font-size: var(--letra-14); }
 .menu-sesion { flex: none; width: auto; max-width: 180px; min-height: 36px; font-size: var(--letra-13); }
