@@ -34,7 +34,8 @@ const NOMBRES = ['Lucas', 'Martina', 'Hugo', 'Sofía', 'Mateo', 'Valeria', 'Leo'
 const APELLIDOS = ['García', 'Fernández de Córdoba y Arrieta', 'López', 'Martínez-Villaseñor', 'Sánchez', 'Pérez', 'Gómez del Castillo', 'Ruiz',
   'Díaz', 'Moreno', 'Muñoz', 'Álvarez de Toledo', 'Romero', 'Alonso', 'Gutiérrez', 'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos'];
 
-export function rarificar(db, { hoy, ahora = new Date().toISOString() } = {}) {
+// (bloques: cuántos bloques de historia más para Ana; FBE_RAROS_BLOQUES lo cambia si no cupiera en el almacenamiento)
+export function rarificar(db, { hoy, ahora = new Date().toISOString(), bloques: nBloques = Number(process.env.FBE_RAROS_BLOQUES) || 17 } = {}) {
   const r = azar(20261123);
   const tabla = (t) => (db[t] ||= []);
   const porEmail = (e) => db.atletas.find((a) => a.email === e);
@@ -44,7 +45,7 @@ export function rarificar(db, { hoy, ahora = new Date().toISOString() } = {}) {
   // Ana: dos años de historia. Su bloque de ahora, copiado hacia atrás 17 veces, con todo hecho y revisado
   const bloque = db.bloques.find((b) => b.atleta_id === ana.id && b.estado === 'activo');
   const semanas = db.semanas.filter((s) => s.bloque_id === bloque.id).sort((a, b) => a.numero - b.numero);
-  const N = 17;
+  const N = nBloques;
   const NOMBRES_BLOQUE = ['Fuerza base', 'Hipertrofia', 'Fuerza máxima', 'Técnica y volumen', 'Recomposición'];
   bloque.numero = N + 1;
   let nSeries = 0;
