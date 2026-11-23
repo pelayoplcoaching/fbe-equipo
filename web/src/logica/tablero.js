@@ -174,10 +174,11 @@ export function anillosSemana({ sesiones = [], habitos = null, checkin = null, c
   const hechas = natural ? semanaNatural?.hechas || 0 : (sesiones || []).filter((s) => s.completada).length;
   out.push({ id: 'sesiones', nombre: 'Sesiones', valor: hechas, objetivo: total, frac: total ? lim(hechas / total) : 0, cerrado: total > 0 && hechas >= total, texto: `${hechas} de ${total}` });
   const hs = (habitos || []).filter((h) => h?.semana?.pedidos > 0);
+  // (v0.210) con un hábito, «5 de 7 días»; con varios se suman sus días y «12 de 14 días» parecía una semana de 14 días: «veces»
   if (hs.length) {
     const pedidos = hs.reduce((t, h) => t + h.semana.pedidos, 0);
     const cumplidos = hs.reduce((t, h) => t + Math.min(h.semana.cumplidos, h.semana.pedidos), 0);
-    out.push({ id: 'habitos', nombre: 'Hábitos', valor: cumplidos, objetivo: pedidos, frac: lim(cumplidos / pedidos), cerrado: hs.every((h) => h.semana.cumplidos >= h.semana.pedidos), texto: `${cumplidos} de ${pedidos} días` });
+    out.push({ id: 'habitos', nombre: 'Hábitos', valor: cumplidos, objetivo: pedidos, frac: lim(cumplidos / pedidos), cerrado: hs.every((h) => h.semana.cumplidos >= h.semana.pedidos), texto: `${cumplidos} de ${pedidos} ${hs.length > 1 ? 'veces' : 'días'}` });
   }
   if (conCheckin) out.push({ id: 'checkin', nombre: 'Check-in', valor: checkin ? 1 : 0, objetivo: 1, frac: checkin ? 1 : 0, cerrado: !!checkin, texto: checkin ? 'Enviado' : 'Pendiente' });
   return out;

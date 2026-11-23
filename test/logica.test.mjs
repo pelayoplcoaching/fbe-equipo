@@ -1879,7 +1879,8 @@ console.log('\nv0.48: tu mes, tu bloque, comparar check-ins y el panel de negoci
   console.log('\nv0.51: los anillos de la semana');
   const hab = (c, p) => ({ semana: { cumplidos: c, pedidos: p } });
   const an = T.anillosSemana({ sesiones: ses(3, 3), habitos: [hab(5, 7), hab(9, 7)], checkin: { id: 'x' } });
-  check(an.map((a) => a.id).join() === 'sesiones,habitos,checkin' && an[0].cerrado && !an[1].cerrado && an[1].valor === 12 && an[1].objetivo === 14 && an[2].cerrado, 'sesiones (cerrado), hábitos (12 de 14 días: lo de más de un hábito no tapa lo que falta de otro) y check-in (cerrado)');
+  check(an.map((a) => a.id).join() === 'sesiones,habitos,checkin' && an[0].cerrado && !an[1].cerrado && an[1].valor === 12 && an[1].objetivo === 14 && an[1].texto === '12 de 14 veces' && an[2].cerrado, 'sesiones (cerrado), hábitos (12 de 14 días: lo de más de un hábito no tapa lo que falta de otro) y check-in (cerrado)');
+  check(T.anillosSemana({ sesiones: ses(2, 1), habitos: [hab(5, 7)] })[1].texto === '5 de 7 días', 'con un solo hábito, en días (v0.210: con varios, «veces»)');
   check(T.anillosSemana({ sesiones: ses(2, 1), habitos: [], conCheckin: false }).map((a) => a.id).join() === 'sesiones' && T.anillosSemana({ sesiones: [] })[0].cerrado === false, 'sin hábitos ni check-in, solo el de las sesiones; sin sesiones, nunca cerrado');
   const c0 = T.anillosPorCelebrar(an, null, '2026-11-02');
   check(c0.celebrar.join() === 'sesiones,checkin' && c0.guardar.lunes === '2026-11-02', 'celebra los que se han cerrado');
