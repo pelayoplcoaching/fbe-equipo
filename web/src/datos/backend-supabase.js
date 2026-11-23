@@ -417,6 +417,7 @@ export function crearBackendSupabase({ url, anonKey }) {
 
   return {
     modo: 'supabase',
+    url,   // (v0.208) para recordar por base lo que se sabe de ella (las migraciones que tiene)
     canalChat,
     // Al cambiar «Mostrar cuándo estoy en línea»: los canales se vuelven a abrir con lo nuevo (y la base lo comprueba)
     reiniciarChats() {

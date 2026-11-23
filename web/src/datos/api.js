@@ -71,6 +71,7 @@ import { umbralValido } from '../logica/cargaVelocidad.js';
 import { informeMes, mesValido, textoTarjetaInforme, leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesionVideos.js';
 import { semanaDelBloque, marcasSesion, principalSesion, mapaApartados, tiemposDe, notaConMas, patronesAtleta, limpiarEtiqueta } from '../logica/revisar.js';
+import { AMPLIAR, ambitoDe, derivar, cubre, esCompleta, idsDe } from './lecturas.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -516,7 +517,7 @@ export const FOTO_MINI_MAX = 16000;
 // (v0.160) las de la 072 que solo leen: musica_de_sesiones, musica_mas_abierta, musica_biblioteca, musica_coach_uso, comunidad_canciones,
 // comunidad_reto_musical y comunidad_listas_companeros (si contaran como escritura, lo recordado de Hoy se olvidaría)
 // (073) animo_mios y portada_de solo leen
-const RPC_DE_CONSULTA = new Set(['platos_limpiar' /* (079) la limpieza de fotos caducadas no cambia nada de lo que se ve: no vacía lo recordado */, 'suplementos_de', 'objetivos_propuestas_mias', 'objetivos_propuestas_pendientes', 'animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
+const RPC_DE_CONSULTA = new Set(['platos_limpiar' /* (079) la limpieza de fotos caducadas no cambia nada de lo que se ve: no vacía lo recordado */, 'marcar_entregados' /* (v0.208) los «entregado» de los mensajes que te han llegado: en este móvil no cambia nada de lo que se ve (al abrir, vaciaba lo recordado) */, 'suplementos_de', 'objetivos_propuestas_mias', 'objetivos_propuestas_pendientes', 'animo_mios', 'portada_de', 'musica_mia', 'musica_de_sesiones', 'musica_mas_abierta', 'musica_biblioteca', 'musica_coach_uso', 'comunidad_canciones', 'comunidad_reto_musical', 'comunidad_listas_companeros', 'mi_cobro', 'agenda_lista', 'comunidad_afines', 'nombre_coach', 'foto_coach', 'recordatorios_activos', 'videos_modelo_de', 'video_correcciones', 'umbrales_velocidad_de',
   'storage_pendiente', 'storage_pendiente_cubos', 'chat_buscar', 'chat_privado_disponible', 'bloque_semanas', 'registrar_error', 'presencia_marcar',
   'comunidad_version', 'comunidad_nuevos', 'comunidad_companeros', 'comunidad_buscar', 'comunidad_panel', 'comunidad_personas', 'comunidad_perfil', 'comunidad_ranking',
   'comunidad_rachas', 'comunidad_insignias', 'comunidad_hitos', 'comunidad_mis_datos', 'comunidad_mes_equipo', 'comunidad_resumen_semana', 'comunidad_retos_totales',
@@ -602,6 +603,9 @@ export function crearApi(backend) {
   for (const caja of [backend.auth, backend.auth?.mfa]) {
     for (const k of Object.keys(caja || {})) {
       if (typeof caja[k] !== 'function' || k === 'sesion' || k === 'alCambiar') continue;
+      // (v0.208) preguntar el nivel de la sesión o los factores del segundo paso no cambia lo que se ve: no vacía lo recordado
+      // (al abrir, cada vez se tiraban las lecturas compartidas de la ráfaga de Hoy)
+      if (caja === backend.auth?.mfa && (k === 'nivel' || k === 'factores')) continue;
       const directo = caja[k].bind(caja);
       caja[k] = (...a) => { const r = directo(...a); Promise.resolve(r).then(() => { generacion++; }, () => { generacion++; }); return enVuelo(r); };
     }
@@ -610,7 +614,10 @@ export function crearApi(backend) {
   // conexión o se tira para recargar. Compartir es solo para la ráfaga de consultas de abrir una pantalla
   if (typeof window !== 'undefined' && window.addEventListener) {
     const fresco = () => { generacion++; };
-    for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, fresco);
+    // (v0.208) «fbe-copia» ya no: avisa de que llegó de la base lo que se enseñaba de la copia del móvil, y lo compartido
+    // también viene de la base (de hace unos segundos). Al recargar la app, cada aviso vaciaba lo recordado y Hoy repetía
+    // sus consultas hasta cuatro veces
+    for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, fresco);
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', fresco);
   }
   // (sql: solo lo tiene el backend de las pruebas, que escribe con él por debajo de la app)
@@ -634,23 +641,95 @@ export function crearApi(backend) {
   }
   if (typeof backend.storage?.subir === 'function') { const subir = backend.storage.subir.bind(backend.storage); backend.storage.subir = (...a) => enVuelo(subir(...a)); }
   const copiarFilas = (r) => (Array.isArray(r) ? r.map((x) => (x && typeof x === 'object' && !Array.isArray(x) ? { ...x } : x)) : r);
+  // (v0.208, rendimiento) Lecturas que se cubren (datos/lecturas.js): de unas pocas tablas pequeñas, todo el ámbito (las
+  // pesadas del atleta, sus bloques, las semanas de esos bloques…) una vez, y cada consulta sale de ahí. Vale lo mismo que
+  // las lecturas compartidas (mientras no se escriba nada desde aquí ni se vuelva a la app) y unos segundos más, lo que
+  // dura abrir una pantalla. Si la de todo el ámbito falla, cada una se pide como siempre.
+  const AMPLIA_MS = 5000;
+  const amplias = new Map();   // clave → { gen, p, pendiente, t }
+  const vale = (x) => x && x.gen === generacion && (x.pendiente || Date.now() - x.t < AMPLIA_MS);
+  const apuntarAmplia = (clave, quien, ambito, p) => {
+    if (amplias.size > 60) for (const [k, x] of amplias) if (!x.pendiente && (x.gen !== generacion || Date.now() - x.t >= AMPLIA_MS)) amplias.delete(k);
+    const e = { gen: generacion, pendiente: true, t: 0, p: null, quien, ambito, filas: null };
+    e.p = p.then((r) => { e.pendiente = false; e.t = Date.now(); e.filas = Array.isArray(r) ? r : null; return r; }, (err) => { if (amplias.get(clave) === e) amplias.delete(clave); throw err; });
+    amplias.set(clave, e);
+    return e;
+  };
+  // → promesa de las filas, o null si esta lectura no sale de un ámbito (se pide como siempre)
+  const ampliada = (t, f) => {
+    const quien = uid() || '';
+    const a = ambitoDe(t, f);
+    if (!a) {
+      // (las pedidas por su identificador: si ya están todas en un ámbito pedido, salen de ahí; las sesiones de hoy, de las de
+      // la semana)
+      const ids = idsDe(t, f);
+      if (!ids) return null;
+      const porId = new Map();
+      for (const x of amplias.values()) if (x.quien === quien && vale(x) && !x.pendiente && x.ambito.tabla === t && x.filas) for (const fila of x.filas) if (fila?.id != null) porId.set(String(fila.id), fila);
+      if (!ids.every((id) => porId.has(id))) return null;
+      return Promise.resolve(derivar(ids.map((id) => porId.get(id)), f));
+    }
+    const clave = `${quien}|${a.clave}`;
+    let e = amplias.get(clave);
+    // (o uno más grande que ya lo tenga dentro: las sesiones de las semanas de un bloque, en las de todos sus bloques)
+    if (!vale(e)) for (const x of amplias.values()) if (x.quien === quien && vale(x) && cubre(x.ambito, a)) { e = x; break; }
+    // La de todo el ámbito (el historial entero, todas las pesadas), si no está ya: se pide como siempre y lo demás sale de ella
+    if (!vale(e) && esCompleta(t, f)) {
+      const cruda = compartidaCruda(t, f);
+      apuntarAmplia(clave, quien, a, cruda);
+      return cruda.then(copiarFilas);
+    }
+    if (!vale(e)) {
+      // (las que pueden ser grandes, nunca enteras por esto)
+      if (!AMPLIAR[t]) return null;
+      let pedida;
+      try { pedida = Promise.resolve(leer(t, a.amplio)); } catch (err) { pedida = Promise.reject(err); }
+      e = apuntarAmplia(clave, quien, a, pedida);
+    }
+    return e.p.then((filas) => derivar(filas, f), () => null);
+  };
   b.select = (t, f, ...resto) => {
     if (resto.length) return leer(t, f, ...resto);
+    const amp = ampliada(t, f);
+    if (amp) return amp.then((r) => (r ? r : compartida(t, f)));
+    return compartida(t, f);
+  };
+  const compartida = (t, f) => compartidaCruda(t, f).then(copiarFilas);
+  const compartidaCruda = (t, f) => {
     let clave;
-    try { clave = `${uid() || ''}|${t}|${JSON.stringify(f || {})}`; } catch { return leer(t, f); }
+    try { clave = `${uid() || ''}|${t}|${JSON.stringify(f || {})}`; } catch { return Promise.resolve(leer(t, f)); }
     const ya = lecturas.get(clave);
-    if (ya && ya.gen === generacion && (ya.pendiente || Date.now() - ya.t < COMPARTIR_MS)) return ya.p.then(copiarFilas);
+    if (ya && ya.gen === generacion && (ya.pendiente || Date.now() - ya.t < COMPARTIR_MS)) return ya.p;
     if (lecturas.size > 150) for (const [k, e] of lecturas) if (!e.pendiente && Date.now() - e.t >= COMPARTIR_MS) lecturas.delete(k);
     const e = { gen: generacion, pendiente: true, t: 0, p: null };
     let pedida;
     try { pedida = Promise.resolve(leer(t, f)); } catch (err) { pedida = Promise.reject(err); }
     e.p = pedida.then((r) => { e.pendiente = false; e.t = Date.now(); return r; }, (err) => { if (lecturas.get(clave) === e) lecturas.delete(clave); throw err; });
     lecturas.set(clave, e);
-    return e.p.then(copiarFilas);
+    return e.p;
+  };
+  // (v0.208) Las funciones que solo consultan, también compartidas: la misma con lo mismo, a la vez o hace menos de
+  // COMPARTIR_MS (al abrir Hoy, la agenda se pedía tres veces). Las que hacen algo aunque no cambien lo que se ve
+  // (apuntar el rendimiento o un error, marcar presencia, limpiar fotos, los «entregado»), cada vez.
+  const rpcsCompartidas = new Map();
+  const NO_COMPARTIR = /^(rendimiento_|registrar_error$|presencia_marcar$|platos_limpiar$|marcar_entregados$)/;
+  const rpcCompartida = (f, a) => {
+    let clave;
+    try { clave = `${uid() || ''}|${a[0]}|${JSON.stringify(a[1] ?? null)}`; } catch { return f(...a); }
+    const ya = rpcsCompartidas.get(clave);
+    if (ya && ya.gen === generacion && (ya.pendiente || Date.now() - ya.t < COMPARTIR_MS)) return ya.p.then((r) => (Array.isArray(r) ? copiarFilas(r) : r && typeof r === 'object' ? JSON.parse(JSON.stringify(r)) : r));
+    if (rpcsCompartidas.size > 100) for (const [k, e] of rpcsCompartidas) if (!e.pendiente && Date.now() - e.t >= COMPARTIR_MS) rpcsCompartidas.delete(k);
+    const e = { gen: generacion, pendiente: true, t: 0, p: null };
+    let pedida;
+    try { pedida = Promise.resolve(f(...a)); } catch (err) { pedida = Promise.reject(err); }
+    e.p = pedida.then((r) => { e.pendiente = false; e.t = Date.now(); return r; }, (err) => { if (rpcsCompartidas.get(clave) === e) rpcsCompartidas.delete(clave); throw err; });
+    rpcsCompartidas.set(clave, e);
+    return e.p.then((r) => (Array.isArray(r) ? copiarFilas(r) : r && typeof r === 'object' ? JSON.parse(JSON.stringify(r)) : r));
   };
   for (const m of ['insert', 'update', 'upsert', 'delete', 'rpc']) {
     const f = (...a) => backend[m](...a);   // (ya cuenta la escritura, arriba)
     b[m] = (...a) => {
+      if (m === 'rpc' && a.length <= 2 && typeof a[0] === 'string' && !esEscritura(m, a) && !NO_COMPARTIR.test(a[0])) return rpcCompartida(f, a);
       const r = f(...a);
       if (avisa(m, a[0], a[1])) Promise.resolve(r).then(() => empujar(), () => {});
       // (pulido 4) Lo que las pantallas recuerdan para enseñarlo al volver (useCarga, «recuerdo») deja de valer en
@@ -7719,5 +7798,26 @@ export function crearApi(backend) {
       return r;
     },
   });
+  // (v0.208, rendimiento) Las comprobaciones de migración («¿tiene la base la 0XX?») se recuerdan en el móvil cuando dicen
+  // que sí: una migración ejecutada no se deshace, y antes se volvían a preguntar en cada apertura (unas 25 consultas al
+  // entrar). Lo que dice que no, o no se sabe, se vuelve a mirar como siempre: así se nota en cuanto se ejecuta.
+  // (por base: la clave lleva el modo y la dirección de Supabase)
+  const claveSondas = `fbe-sondas:${backend.modo || 'otro'}:${backend.url || ''}`;
+  const leerSondas = () => { try { const x = JSON.parse(localStorage.getItem(claveSondas) || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } };
+  let sondasSi = leerSondas();
+  for (const k of Object.keys(api)) {
+    if (!/^[a-zA-Z]+0\d\d$/.test(k) || /^exigir/.test(k) || typeof api[k] !== 'function') continue;
+    const original = api[k];
+    api[k] = function (...a) {
+      if (sondasSi[k] === true) return Promise.resolve(true);
+      const r = original.apply(this, a);
+      Promise.resolve(r).then((x) => {
+        if (x !== true || sondasSi[k] === true) return;
+        sondasSi = { ...leerSondas(), [k]: true };
+        try { localStorage.setItem(claveSondas, JSON.stringify(sondasSi)); } catch { /* sin almacenamiento: se pregunta cada vez, como antes */ }
+      }, () => {});
+      return r;
+    };
+  }
   return api;
 }
