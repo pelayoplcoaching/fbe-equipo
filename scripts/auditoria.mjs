@@ -245,6 +245,13 @@ async function irA(p, pestana) {
   const enSesion = await p.locator('.sesion-vista, .portada-sesion, .enfoque, .travesia').count().catch(() => 0);
   const ok = !enSesion && await p.locator('nav.tabs').count();
   if (!ok) {
+    // (v0.214) Con una sesión empezada (al explorar Hoy se marcan series), la app la vuelve a abrir al cargar, como debe, y
+    // las pestañas de después se revisaban con la sesión encima. Se vuelve a como estaba todo al entrar (lo guardado en el
+    // navegador, desde una página del mismo sitio sin la app, para que no escriba nada al salir)
+    if (enSesion && p.__foto) {
+      await p.goto(`${base}/manifest.webmanifest`).catch(() => {});
+      await p.evaluate((f) => { localStorage.clear(); for (const [k, v] of JSON.parse(f)) localStorage.setItem(k, v); }, p.__foto).catch(() => {});
+    }
     await p.goto(`${base}/?demo#${pestana}`).catch(async (e) => {
       // (sin conexión y sin service worker, la recarga no llega: se abre la red un momento y se vuelve a cortar)
       if (!p.__sinRed) throw e;
@@ -342,6 +349,7 @@ for (const conf of confs) {
     const personas = quien === 'coach' ? ['Pelayo'] : atletas;
     for (const nombre of personas) {
       const s = await entrar(conf, new RegExp(nombre));
+      s.p.__foto = await s.p.evaluate(() => JSON.stringify(Object.entries(localStorage))).catch(() => null);
       for (const pestana of PESTANAS[quien]) {
         const ctx = { conf, quien: `${quien} (${nombre})`, donde: pestana };
         await irA(s.p, pestana);
