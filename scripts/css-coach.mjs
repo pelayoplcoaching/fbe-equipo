@@ -97,6 +97,147 @@ function leer(css) {
   return bloque(null);
 }
 
+// ---------------------------------------------------------------- (v0.210) el orden de la cascada
+// Mover una regla a un archivo que se carga después cambia quién gana un empate: si otra regla que en el original iba
+// DESPUÉS (y se queda en el común, o va a otro archivo) fija la misma propiedad con la misma especificidad y sobre lo mismo
+// (el elemento, o su mismo ::before/::after…), antes ganaba esa otra y ahora ganaría la movida. Esas reglas se quedan
+// donde estaban. Se mira sin saber qué elementos llevan qué clases (cualquiera puede llevar cualquiera): se queda alguna
+// regla de más, nunca de menos.
+
+// Especificidad de un selector simple (sin comas), como un número: ids × 10⁶ + clases × 10³ + elementos
+export function especificidad(sel) {
+  const s = String(sel);
+  const n = s.length;
+  let a = 0, b = 0, c = 0, i = 0;
+  const esLetra = (ch) => ch != null && (/[A-Za-z0-9_-]/.test(ch) || ch.charCodeAt(0) > 127 || ch === '\\');
+  const ident = () => { const ini = i; while (i < n && esLetra(s[i])) { if (s[i] === '\\') i++; i++; } return s.slice(ini, i); };
+  const parentesis = () => {
+    let p = 0, q = null;
+    const ini = i;
+    for (; i < n; i++) {
+      const ch = s[i];
+      if (q) { if (ch === '\\') i++; else if (ch === q) q = null; continue; }
+      if (ch === '"' || ch === "'") q = ch;
+      else if (ch === '(') p++;
+      else if (ch === ')') { p--; if (p === 0) { i++; break; } }
+    }
+    return s.slice(ini + 1, i - 1);
+  };
+  const sumar = (x) => { a += Math.floor(x / 1e6); b += Math.floor(x / 1e3) % 1e3; c += x % 1e3; };
+  const mayor = (lista) => Math.max(0, ...partir(lista).map(especificidad));
+  while (i < n) {
+    const ch = s[i];
+    if (ch === '#') { i++; ident(); a++; } else if (ch === '.') { i++; ident(); b++; } else if (ch === '[') {
+      let q = null;
+      for (; i < n; i++) { const d = s[i]; if (q) { if (d === '\\') i++; else if (d === q) q = null; continue; } if (d === '"' || d === "'") q = d; else if (d === ']') { i++; break; } }
+      b++;
+    } else if (ch === ':') {
+      if (s[i + 1] === ':') { i += 2; ident(); c++; if (s[i] === '(') parentesis(); continue; }
+      i++;
+      const nombre = ident().toLowerCase();
+      if (['before', 'after', 'first-line', 'first-letter'].includes(nombre)) { c++; continue; }
+      if (s[i] === '(') {
+        const args = parentesis();
+        if (nombre === 'where') continue;
+        if (['is', 'not', 'has', 'matches', '-webkit-any', '-moz-any'].includes(nombre)) { sumar(mayor(args)); continue; }
+        b++;
+        const of = /\sof\s/i.exec(args);
+        if (/^nth-(last-)?child$/.test(nombre) && of) sumar(mayor(args.slice(of.index + of[0].length)));
+        continue;
+      }
+      b++;
+    } else if (esLetra(ch)) { ident(); c++; } else i++;
+  }
+  return a * 1e6 + b * 1e3 + c;
+}
+
+// El pseudo-elemento del sujeto (lo que va tras el último combinador): '' si es el propio elemento
+export function pseudoElemento(sel) {
+  const s = String(sel);
+  let prof = 0, q = null, ultimo = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { if (ch === '\\') i++; else if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") q = ch;
+    else if (ch === '(' || ch === '[') prof++;
+    else if (ch === ')' || ch === ']') prof--;
+    else if (prof === 0 && /[\s>+~]/.test(ch)) ultimo = i + 1;
+  }
+  const sujeto = s.slice(ultimo).replace(/\([^)]*\)/g, '');
+  const m = /::?(before|after|first-line|first-letter|placeholder|marker|selection|backdrop|file-selector-button|cue|part|slotted|-webkit-[a-z-]+|-moz-[a-z-]+)\b/i.exec(sujeto);
+  return m ? m[1].toLowerCase() : '';
+}
+
+// Las propiedades de un cuerpo, por familia (margin y margin-top son la misma; width e inline-size también), con las
+// !important aparte (no empatan con las normales)
+function familia(prop) {
+  let p = prop.trim().toLowerCase();
+  if (p.startsWith('--')) return p;
+  p = p.replace(/^-(webkit|moz|ms|o)-/, '');
+  if (p === 'all') return '*';
+  if (/^(min-|max-)?(width|inline-size)$/.test(p)) return 'width';
+  if (/^(min-|max-)?(height|block-size)$/.test(p)) return 'height';
+  if (/^(top|right|bottom|left|inset)(-|$)/.test(p)) return 'inset';
+  if (/^(row-gap|column-gap|gap|grid-(row-|column-)?gap)$/.test(p)) return 'gap';
+  if (/^(place|align|justify)-/.test(p)) return 'align';
+  if (p === 'line-height' || p.startsWith('font')) return 'font';
+  if (/^column(s|-count|-width)$/.test(p)) return 'column';
+  if (p === 'word-wrap') return 'overflow';
+  return p.split('-')[0];
+}
+export function familias(cuerpo) {
+  const out = new Set();
+  for (const d of partir(String(cuerpo), ';')) {
+    const k = d.indexOf(':');
+    if (k <= 0) continue;
+    out.add(`${familia(d.slice(0, k))}${/!\s*important\s*$/i.test(d) ? '!' : ''}`);
+  }
+  return out;
+}
+
+// reglas: las del CSS en su orden original, cada una con .sel, .cuerpo y .dest (adónde iría: null = se queda en el común).
+// Deja en el común (dest = null) las que, movidas, podrían ganar un empate que antes perdían. Devuelve cuántas se quedan.
+export function respetarCascada(reglas) {
+  const info = reglas.map((x) => {
+    const sels = partir(x.sel);
+    return { claves: new Set(sels.map((s) => `${especificidad(s)}|${pseudoElemento(s)}`)), fams: familias(x.cuerpo) };
+  });
+  // Por familia, las reglas que la tocan (en orden)
+  const porFamilia = new Map();
+  info.forEach((f, i) => { for (const k of f.fams) { if (!porFamilia.has(k)) porFamilia.set(k, []); porFamilia.get(k).push(i); } });
+  const todas = [...porFamilia.keys()];
+  const chocan = (i, j) => { for (const k of info[i].claves) if (info[j].claves.has(k)) return true; return false; };
+  let quedan = 0;
+  for (let vuelta = 0; vuelta < 20; vuelta++) {
+    let cambio = false;
+    for (let i = reglas.length - 1; i >= 0; i--) {
+      const d = reglas[i].dest;
+      if (d == null) continue;
+      const fams = info[i].fams.has('*') || [...info[i].fams].some((k) => k.startsWith('*')) ? todas : [...info[i].fams, '*', '*!'];
+      let malo = false;
+      for (const k of fams) {
+        const lista = porFamilia.get(k);
+        if (!lista) continue;
+        // las de después de i (búsqueda binaria del primer índice mayor que i)
+        let lo = 0, hi = lista.length;
+        while (lo < hi) { const m = (lo + hi) >> 1; if (lista[m] <= i) lo = m + 1; else hi = m; }
+        for (let t = lo; t < lista.length; t++) {
+          const j = lista[t];
+          if (reglas[j].dest !== d && chocan(i, j)) { malo = true; break; }
+        }
+        if (malo) break;
+      }
+      if (malo) { reglas[i].dest = null; quedan++; cambio = true; }
+    }
+    if (!cambio) break;
+  }
+  return quedan;
+}
+function planas(nodos, out = []) {
+  for (const x of nodos) { if (x.tipo === 'regla') out.push(x); else if (x.tipo === 'grupo') planas(x.hijos, out); }
+  return out;
+}
+
 const escribir = (nodos) => nodos.map((x) => (x.tipo === 'regla' ? `${x.sel}{${x.cuerpo}}` : x.tipo === 'grupo' ? `${x.pre}{${escribir(x.hijos)}}` : x.texto)).join('');
 
 // css: el CSS construido. palabrasCoach / palabrasOtros: las palabras del código del coach y del resto; prefijosOtros: los
@@ -106,12 +247,16 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
   const delCoach = (c) => palabrasCoach.has(c) && !palabrasOtros.has(c) && !prefijos.some((p) => c.startsWith(p));
   const selectorCoach = (s) => /(^|[\s>+~])\.app\.coach(?![A-Za-z0-9_-])/.test(s) || clasesNecesarias(s).some(delCoach);
   let reglas = 0;
+  const arbol = leer(css);
+  const todas = planas(arbol);
+  for (const x of todas) { const sels = partir(x.sel); x.dest = sels.length && sels.every(selectorCoach) ? 'coach' : null; }
+  // (v0.210) sin cambiar quién gana un empate (respetarCascada)
+  const quedan = respetarCascada(todas);
   function repartir(nodos) {
     const comun = [], coach = [];
     for (const x of nodos) {
       if (x.tipo === 'regla') {
-        const sels = partir(x.sel);
-        if (sels.length && sels.every(selectorCoach)) { coach.push(x); reglas++; } else comun.push(x);
+        if (x.dest === 'coach') { coach.push(x); reglas++; } else comun.push(x);
       } else if (x.tipo === 'grupo') {
         const r = repartir(x.hijos);
         if (r.comun.length) comun.push({ ...x, hijos: r.comun });
@@ -120,8 +265,8 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
     }
     return { comun, coach };
   }
-  const r = repartir(leer(css));
-  return { comun: escribir(r.comun), coach: escribir(r.coach), reglas };
+  const r = repartir(arbol);
+  return { comun: escribir(r.comun), coach: escribir(r.coach), reglas, quedan };
 }
 
 // Con lo construido: los textos de los trozos del coach y del resto (más index.html y la portada) → { comun, coach, reglas }
@@ -164,12 +309,17 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '' }) {
     return destino;
   };
   let reglas = 0;
+  const arbol = leer(css);
+  const todas = planas(arbol);
+  for (const x of todas) x.dest = destinoDe(x.sel);
+  // (v0.210) sin cambiar quién gana un empate (respetarCascada)
+  const quedan = respetarCascada(todas);
   function repartir(nodos) {
     const comun = [], porTrozo = new Map();
     const a = (f, x) => { if (!porTrozo.has(f)) porTrozo.set(f, []); porTrozo.get(f).push(x); };
     for (const x of nodos) {
       if (x.tipo === 'regla') {
-        const d = destinoDe(x.sel);
+        const d = x.dest;
         if (d) { a(d, x); reglas++; } else comun.push(x);
       } else if (x.tipo === 'grupo') {
         const r = repartir(x.hijos);
@@ -179,6 +329,6 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '' }) {
     }
     return { comun, porTrozo };
   }
-  const r = repartir(leer(css));
-  return { comun: escribir(r.comun), porTrozo: new Map([...r.porTrozo].map(([f, ns]) => [f, escribir(ns)])), reglas };
+  const r = repartir(arbol);
+  return { comun: escribir(r.comun), porTrozo: new Map([...r.porTrozo].map(([f, ns]) => [f, escribir(ns)])), reglas, quedan };
 }
