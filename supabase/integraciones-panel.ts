@@ -53,10 +53,17 @@ function desdeISO(iso) {
 function hoyISO(ahora = /* @__PURE__ */ new Date()) {
   return aISO(ahora);
 }
+var fmtDiaMadrid = null;
+var partesCon = (f, d) => {
+  const p = {};
+  for (const x of f.formatToParts(d)) p[x.type] = x.value;
+  return p;
+};
 function fechaMadrid(instante = /* @__PURE__ */ new Date()) {
   const d = instante instanceof Date ? instante : new Date(instante);
   try {
-    const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d).map((x) => [x.type, x.value]));
+    fmtDiaMadrid ||= new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
+    const p = partesCon(fmtDiaMadrid, d);
     return `${p.year}-${p.month}-${p.day}`;
   } catch {
     return aISO(d);
