@@ -66,13 +66,14 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
   useEffect(() => { if (!mejora) return undefined; const t = setTimeout(() => setMejora(null), 2200); return () => clearTimeout(t); }, [mejora]);
   useEffect(() => { if (!recien) return undefined; const t = setTimeout(() => setRecien(false), 600); return () => clearTimeout(t); }, [recien]);
   // (v0.210, uso torpe) un doble toque sin querer en ✓ (las manos sudadas, el móvil en una mano) marcaba la serie y la volvía
-  // a quitar: quitarla con este botón en menos de 0,7 s desde que se marcó con él no cuenta. Volver a marcarla justo después
-  // de quitarla, sí (no se pierde nada); deslizar y «Hecha» del teclado van aparte
+  // a quitar: el segundo toque de un doble toque (detail ≥ 2) o a menos de 0,35 s de marcarla con este botón no la quita.
+  // Quitarla un momento después (una corrección) sí, y volver a marcarla justo después de quitarla también (no se pierde
+  // nada); deslizar y «Hecha» del teclado van aparte
   const marcadaEn = useRef(0);
-  const tocarHecho = () => {
+  const tocarHecho = (e) => {
     const ahora = Date.now();
-    if (hecha) { if (ahora - marcadaEn.current < 700) return; }
-    else marcadaEn.current = ahora;
+    if (hecha && ((e?.detail || 0) >= 2 || ahora - marcadaEn.current < 350)) return;
+    if (!hecha) marcadaEn.current = ahora;
     marcar();
   };
   const marcar = () => {
