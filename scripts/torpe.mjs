@@ -126,7 +126,7 @@ console.log('Atleta: doble toque en lo que guarda');
   await ctx.close();
 }
 
-console.log('\nAtleta: sin conexión a mitad de la sesión, y recargar');
+console.log('\nAtleta: sin conexión a mitad de la sesión');
 {
   const { ctx, p, errores } = await entrar(/Ana López/);
   const empezar = p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first();
@@ -138,17 +138,24 @@ console.log('\nAtleta: sin conexión a mitad de la sesión, y recargar');
     await cerrar(p);
     const ej = p.locator('.ejercicio').nth(1);
     const seId = await ej.getAttribute('data-se');
+    // (la demo hace como que no hay red con «fbe-demo-sin-red»; recargar sin red ya lo prueba e2e-sinred)
+    await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1'));
     await ctx.setOffline(true);
-    const b = ej.getByRole('button', { name: /Marcar la serie 1 como hecha/ });
-    if (await b.count()) {
-      await b.click();
+    const b1 = ej.getByRole('button', { name: /Marcar la serie 1 como hecha/ });
+    if (await b1.count()) {
+      await b1.dblclick();
+      await p.waitForTimeout(500);
+      const b2 = ej.getByRole('button', { name: /Marcar la serie 2 como hecha/ });
+      if (await b2.count()) await b2.click();
       await p.waitForTimeout(800);
-      await p.reload().catch(() => {});
-      await p.waitForTimeout(2500);
+      const antes = await contar(p, 'series', { eq: { sesion_ejercicio_id: seId } }).catch(() => -1);
+      await p.evaluate(() => localStorage.removeItem('fbe-demo-sin-red'));
       await ctx.setOffline(false);
-      await p.waitForTimeout(3500);
-      const n = await contar(p, 'series', { eq: { sesion_ejercicio_id: seId } }).catch(() => -1);
-      check(n === 1, `una serie marcada sin conexión y recargando, al volver la red está en la base una vez (${n})`);
+      await p.waitForTimeout(4000);
+      const nums = await p.evaluate(async (id) => (await globalThis.__fbeDemo.select('series', { eq: { sesion_ejercicio_id: id } })).map((x) => x.numero).sort(), seId).catch(() => []);
+      check(antes === 0 && nums.join(',') === '1,2', `dos series marcadas sin conexión (una con doble toque): al volver la red, en la base una vez cada una (antes ${antes}, después ${nums.join(',')})`);
+      const pendientes = await p.evaluate(() => JSON.parse(localStorage.getItem('fbe-cola-v1') || '[]').length);
+      check(pendientes === 0, `y la cola queda vacía (${pendientes})`);
     }
   }
   check(!errores.filter((e) => !/Sin conexión|Failed to fetch|NetworkError/.test(e)).length, `sin errores (salvo los de no tener red)${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
