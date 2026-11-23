@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.215': {
+    atleta: [
+      'En un móvil pequeño o con la letra grande, el nombre de la sesión cabe en la cabecera: el reloj va junto a los tramos.',
+      'Retoques en Hoy, la sesión y el descanso: textos sin palabras sueltas, superseries alineadas y el mapa de músculos más claro en oscuro.',
+    ],
+    coach: [],
+  },
   '0.214': {
     atleta: [
       'Al cambiar de pestaña o abrir una pantalla, el móvil trabaja menos para dibujarla.',

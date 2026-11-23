@@ -31,7 +31,7 @@
 /* -- A4 - Lo corto de dos lineas, con las dos lineas igualadas: los botones, las etiquetas de encima de un titulo y el
    titular de las filas y tarjetas de Hoy y de la sesion ("18 dias de" / "nutricion apuntados", no "apuntados" solo abajo;
    "Movilidad de cadera" / "antes de empezar"). Solo el estilo de partir (text-wrap-style): lo que no parte, sigue sin partir. */
-:where(.btn, .btn-texto, .t-sobre) { text-wrap-style: balance; }
+:where(.btn, .btn-texto, .t-sobre, .enfoque-serie-n) { text-wrap-style: balance; }
 .pila-xs > strong { text-wrap-style: balance; }
 
 /* -- A5 - Hoy: el dibujo de la sesion pasa por detras de la linea de arriba y del objetivo ("Semana 4" quedaba tachado
@@ -69,4 +69,11 @@
 @media (max-width: 480px) {
   :root[data-letra] .sesion-vista > .cabecera.con-tramos > .tramos { order: 1; flex: 1 1 60%; }
   :root[data-letra] .sesion-vista > .cabecera.con-tramos > .crono { order: 2; }
+}
+
+/* -- A11 - Descanso a menos de 360 px: "Respira", "Jugar" y "Aprender" no cabian en una fila y "Aprender" bajaba solo,
+   en el centro. Los tres en la misma fila, del mismo ancho, con el dibujo encima de la palabra. */
+@media (max-width: 359px) {
+  .temporizador .descanso-extras { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+  .temporizador .descanso-extras .respira-boton { flex-direction: column; justify-content: center; gap: var(--esp-2); min-height: 52px; padding: var(--esp-6) var(--esp-4); }
 }

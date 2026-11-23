@@ -283,7 +283,7 @@ datos-cuest: diseno.css estilos.css
 deg-a: estilos.css progreso-visual.css
 deg-b: estilos.css progreso-visual.css
 der: estilos.css progreso-visual.css
-descanso-extras: apuntes.css travesia.css
+descanso-extras: apuntes.css belleza-a.css travesia.css
 deslizable: diseno.css estilos.css
 deslizable-fondo: estilos.css revision.css
 destacado: diseno.css estilos.css
@@ -359,7 +359,7 @@ enfoque-completo: diseno.css estilos.css
 enfoque-cuerpo: diseno.css estilos.css
 enfoque-pie: diseno.css estilos.css
 enfoque-puntos: diseno.css estilos.css
-enfoque-serie-n: diseno.css estilos.css
+enfoque-serie-n: belleza-a.css diseno.css estilos.css
 enfoque-series: diseno.css estilos.css
 enfoque-titulo: diseno.css estilos.css
 enorme: diseno.css estilos.css
@@ -826,7 +826,7 @@ rep-zoom-botones: diseno.css estilos.css
 rep-zoom-nivel: diseno.css estilos.css
 reproductor: diseno.css estilos.css
 reproductor-spotify: diseno.css personal.css
-respira-boton: apuntes.css diseno.css estilos.css travesia.css
+respira-boton: apuntes.css belleza-a.css diseno.css estilos.css travesia.css
 respuesta: diseno.css estilos.css pulido.css
 respuesta-cab: diseno.css estilos.css
 respuesta-coach: diseno.css estilos.css
@@ -947,7 +947,7 @@ tarjeta-previa: equipo-belleza.css estilos.css personal.css
 tarjeta-receta: diseno.css estilos.css
 tarjeta-receta-texto: diseno.css estilos.css
 tarjeta-revisar: diseno.css estilos.css revision.css
-tarjeta-semana: belleza-a.css diseno.css estilos.css
+tarjeta-semana: diseno.css estilos.css
 tarjeta-semana-abrir: diseno.css estilos.css
 tarjeta-semana-disco: diseno.css estilos.css
 tarjeta-semana-quitar: diseno.css estilos.css
@@ -964,7 +964,7 @@ tecnica-item: diseno.css estilos.css
 tecnica-linea: diseno.css estilos.css
 tecnica-ver: diseno.css estilos.css
 tempo: diseno.css estilos.css
-temporizador: apuntes.css color-capa.css diseno.css estilos.css sistema.css travesia.css
+temporizador: apuntes.css belleza-a.css color-capa.css diseno.css estilos.css sistema.css travesia.css
 tenue: diseno.css estilos.css perfil.css
 terciario: atletas-lista.css diseno.css estilos.css
 tiempo-hoy: personal.css tiempo.css
