@@ -122,11 +122,14 @@ export function anioDias(entrenos = [], hoy, semanas = 53) {
 }
 
 // La hora de Madrid de una marca de tiempo (0–23), o null
+// (v0.211, rendimiento) el formateador, uno para todas las llamadas (se llama una vez por sesión del historial)
+let fmtHoraMadrid = null;
 export function horaMadrid(ts) {
   if (!ts) return null;
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return null;
-  return Number(new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', hourCycle: 'h23' }).format(d));
+  fmtHoraMadrid ||= new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', hourCycle: 'h23' });
+  return Number(fmtHoraMadrid.format(d));
 }
 export const FRANJAS = [['manana', 'Por la mañana', 5, 12], ['mediodia', 'A mediodía', 12, 16], ['tarde', 'Por la tarde', 16, 21], ['noche', 'Por la noche', 21, 29]];
 export const franjaDe = (h) => (h == null ? null : (FRANJAS.find(([, , a, b]) => (h < 5 ? h + 24 : h) >= a && (h < 5 ? h + 24 : h) < b) || [null])[0]);

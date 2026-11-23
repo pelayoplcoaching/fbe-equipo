@@ -819,35 +819,75 @@ const apuntarAlto = (clave, alto, conCero = false) => {
 };
 // liso: el hueco no pinta silueta (para dentro de una tarjeta de color). inicial: el sitio que se guarda la primera
 // vez, cuando aún no se sabe cuánto ocupa (solo para lo que siempre sale y siempre ocupa más o menos lo mismo).
+// (v0.211, rendimiento) Medir obliga al navegador a colocar la página en ese momento, y cada Reserva medía y escribía
+// por su cuenta (en Hoy, una docena), así que cada medida después de una escritura la volvía a colocar entera: con
+// el móvil lento, 300-400 ms al abrir Hoy. Ahora, con lo cargado, el hueco se quita al momento sin medir nada y lo que
+// ocupa se apunta después de pintar, todas juntas (una sola colocación); mientras carga, solo se escribe si cambia,
+// y la separación del contenedor se mira una vez.
+const porApuntar = new Set();
+let apuntarT = null;
+const apuntarTodas = () => {
+  apuntarT = null;
+  const lista = [...porApuntar];
+  porApuntar.clear();
+  const medidas = lista.map((r) => r.medir());   // primero se mide todo (una sola colocación)...
+  lista.forEach((r, i) => { if (medidas[i] != null) r.apuntar(medidas[i]); });   // ...y luego se apunta
+};
+const apuntarLuego = (r) => {
+  porApuntar.add(r);
+  if (apuntarT || typeof window === 'undefined') return;
+  apuntarT = true;
+  // (después de pintar: el fotograma siguiente y, tras él, en cuanto haya un hueco)
+  (window.requestAnimationFrame || ((f) => setTimeout(f, 16)))(() => setTimeout(apuntarTodas, 0));
+};
 export function Reserva({ id, cargando = false, liso = false, inicial = 0, clase = '', children }) {
   const app = useContext(Ctx);
   const clave = `${String(app?.api?.uid?.() || '').slice(0, 8)}:${id}`;
   const caja = useRef(null);
   const reg = useRef(null);
-  if (!reg.current) reg.current = { cargas: new Map(), revisar: () => {} };
-  reg.current.revisar = () => {
-    const el = caja.current;
-    const hueco = el?.lastElementChild;
-    if (!el || !hueco) return;
+  if (!reg.current) reg.current = { cargas: new Map(), revisar: () => {}, separa: null };
+  const r = reg.current;
+  const cargaAhora = () => cargando || [...r.cargas.values()].some(Boolean);
+  // Lo que ocupa lo pintado (sin el hueco)
+  const alto = (el, hueco) => {
     let arriba = Infinity, abajo = -Infinity;
     for (const h of el.children) {
       if (h === hueco) continue;
-      const r = h.getBoundingClientRect();
-      if (r.height > 0) { arriba = Math.min(arriba, r.top); abajo = Math.max(abajo, r.bottom); }
+      const rc = h.getBoundingClientRect();
+      if (rc.height > 0) { arriba = Math.min(arriba, rc.top); abajo = Math.max(abajo, rc.bottom); }
     }
-    const actual = abajo > arriba ? Math.round(abajo - arriba) : 0;
-    const carga = cargando || [...reg.current.cargas.values()].some(Boolean);
-    let falta = 0;
-    if (carga) {
-      // (el hueco, con algo ya pintado, es un hijo más de la rejilla o la pila que lo contiene: lleva su separación.
-      // Se busca el primer antepasado con caja: los de display: contents no cuentan)
+    return abajo > arriba ? Math.round(abajo - arriba) : 0;
+  };
+  r.medir = () => {
+    const el = caja.current;
+    const hueco = el?.lastElementChild;
+    if (!el || !hueco || !el.isConnected || cargaAhora()) return null;
+    return alto(el, hueco);
+  };
+  r.apuntar = (actual) => apuntarAlto(clave, actual, inicial > 0);
+  r.revisar = () => {
+    const el = caja.current;
+    const hueco = el?.lastElementChild;
+    if (!el || !hueco) return;
+    if (!cargaAhora()) {
+      if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
+      apuntarLuego(r);
+      return;
+    }
+    const actual = alto(el, hueco);
+    // (el hueco, con algo ya pintado, es un hijo más de la rejilla o la pila que lo contiene: lleva su separación.
+    // Se busca el primer antepasado con caja: los de display: contents no cuentan)
+    if (actual > 0 && r.separa == null) {
       let caja0 = el.parentElement;
       while (caja0 && caja0.parentElement && getComputedStyle(caja0).display === 'contents') caja0 = caja0.parentElement;
-      const separa = actual > 0 && caja0 ? parseFloat(getComputedStyle(caja0).rowGap) || 0 : 0;
-      falta = (altosGuardados()[clave] ?? inicial) - actual - separa;
-    } else apuntarAlto(clave, actual, inicial > 0);
-    if (falta > 8) { hueco.style.height = `${Math.round(falta)}px`; hueco.dataset.hueco = actual > 0 || liso ? 'resto' : 'entero'; }
-    else if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
+      r.separa = caja0 ? parseFloat(getComputedStyle(caja0).rowGap) || 0 : 0;
+    }
+    const falta = (altosGuardados()[clave] ?? inicial) - actual - (actual > 0 ? r.separa : 0);
+    if (falta > 8) {
+      const h = `${Math.round(falta)}px`, tipo = actual > 0 || liso ? 'resto' : 'entero';
+      if (hueco.style.height !== h) hueco.style.height = h;
+      if (hueco.dataset.hueco !== tipo) hueco.dataset.hueco = tipo;
+    } else if (hueco.dataset.hueco) { hueco.style.height = ''; delete hueco.dataset.hueco; }
   };
   useLayoutEffect(() => { reg.current.revisar(); });
   return (

@@ -15,9 +15,12 @@ export function zonaDelMovil() {
 }
 
 const pad = (n) => String(n).padStart(2, '0');
+// (v0.211, rendimiento) un formateador por zona, creado una sola vez
+const fmtPorZona = new Map();
 function partes(tz, ms) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-    .formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  let f = fmtPorZona.get(tz);
+  if (!f) { f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }); fmtPorZona.set(tz, f); }
+  const p = Object.fromEntries(f.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
   return { y: Number(p.year), mo: Number(p.month), d: Number(p.day), h: Number(p.hour) % 24, mi: Number(p.minute) };
 }
 // Los minutos que una zona va por delante de UTC en ese instante (con su horario de verano)

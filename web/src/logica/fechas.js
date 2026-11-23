@@ -17,11 +17,15 @@ export function hoyISO(ahora = new Date()) {
 
 // El día en Madrid (como la base: «now() at time zone 'Europe/Madrid'») de un instante (por defecto, ahora), sea cual
 // sea la zona del navegador. Para lo que la comunidad compara con la base (v0.47).
+// (v0.211, rendimiento) cada formateador se crea una sola vez: crearlo cuesta unas quince veces más que usarlo, y
+// fechaMadrid se llama miles de veces al cargar un historial largo (en un móvil lento, de unos 100 ms a 3)
+let fmtDiaMadrid = null, fmtDiaHoraMadrid = null;
+const partesCon = (f, d) => { const p = {}; for (const x of f.formatToParts(d)) p[x.type] = x.value; return p; };
 export function fechaMadrid(instante = new Date()) {
   const d = instante instanceof Date ? instante : new Date(instante);
   try {
-    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' })
-      .formatToParts(d).map((x) => [x.type, x.value]));
+    fmtDiaMadrid ||= new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const p = partesCon(fmtDiaMadrid, d);
     return `${p.year}-${p.month}-${p.day}`;
   } catch { return aISO(d); }
 }
@@ -87,8 +91,8 @@ export const diaDeCheckin = (fecha = new Date()) => [5, 6, 0, 1].includes(fecha.
 export function partesMadrid(instante = new Date()) {
   const d = instante instanceof Date ? instante : new Date(instante);
   try {
-    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-      .formatToParts(d).map((x) => [x.type, x.value]));
+    fmtDiaHoraMadrid ||= new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const p = partesCon(fmtDiaHoraMadrid, d);
     return { fecha: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour === '24' ? '00' : p.hour}:${p.minute}` };
   } catch { return { fecha: aISO(d), hora: `${pad(d.getHours())}:${pad(d.getMinutes())}` }; }
 }

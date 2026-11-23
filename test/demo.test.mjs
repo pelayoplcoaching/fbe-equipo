@@ -3,7 +3,7 @@ import { VERSION_LEGAL as VERSION_LEGAL_D } from '../web/src/legal.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
 import { crearApi } from '../web/src/datos/api.js';
-import { hoyISO, lunesDe, sumarDias } from '../web/src/logica/fechas.js';
+import { hoyISO, lunesDe, sumarDias, diasEntre } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
 const lanza = async (fn) => { try { await fn(); return false; } catch { return true; } };
@@ -165,6 +165,34 @@ check(cargaA.length >= 4 && cargaA.every((x) => x.completada && Object.keys(x).s
   `el dial de carga lee ${cargaA.length} sesiones terminadas, solo con las columnas que necesita (también con los bloques del programa)`);
 const infAna = await api.informes(ana.id);
 check(infAna.length >= 1 && infAna[0].principales.length >= 3 && infAna[0].principales.every((x) => x.cambio != null), 'informe de su bloque con la fuerza estimada de sus ejercicios principales');
+// (v0.211) Hoy solo enseña el informe de un bloque acabado hace como mucho 21 días: con «reciente», si no hay ninguno, no
+// se pide el historial entero (ni las sesiones, ni las pautas, ni los pesos); si lo hay, sale lo mismo de siempre
+{
+  const pedidas = [];
+  const selectOrig = b.select, historialOrig = api.historial;
+  b.select = (tabla, ...r) => { pedidas.push(tabla); return selectOrig.call(b, tabla, ...r); };
+  api.historial = (...r) => { pedidas.push('historial'); return historialOrig.apply(api, r); };
+  try {
+    const hoyI = hoyISO();
+    const recientes = infAna.filter((x) => x.terminado && diasEntre(x.fin, hoyI) <= 21);
+    const r21 = await api.informes(ana.id, { reciente: 21 });
+    check(recientes.length ? igual(r21, infAna) : r21.length === 0, `Hoy: con «reciente», lo mismo de siempre si hay un bloque acabado hace poco (${recientes.length}) y, si no, nada`);
+    pedidas.length = 0;
+    await api.informes(ana.id);
+    const todos = pedidas.includes('historial');
+    pedidas.length = 0;
+    const nada = await api.informes(ana.id, { reciente: -1 });
+    check(todos && nada.length === 0 && !['historial', 'series', 'sesiones', 'sesion_ejercicios', 'pesos'].some((t) => pedidas.includes(t)), `sin ninguno, no pide el historial, ni las sesiones, ni las pautas, ni los pesos (pidió: ${[...new Set(pedidas)].join(', ') || 'nada nuevo'}; sin «reciente» sí lo pide: ${todos})`);
+    // (con un día de hoy justo después de acabar uno de sus bloques, para probar también cuando sí lo hay)
+    const conFin = infAna.find((x) => x.fin);
+    const hoyX = sumarDias(conFin.fin, 3);
+    const todosX = await api.informes(ana.id, { hoy: hoyX });
+    const recientesX = todosX.filter((x) => x.terminado && diasEntre(x.fin, hoyX) <= 21);
+    check(recientesX.length >= 1 && igual(await api.informes(ana.id, { hoy: hoyX, reciente: 21 }), todosX), `con un bloque acabado hace 3 días, lo mismo de siempre (${todosX.length} informes)`);
+    const salvoX = await api.informes(ana.id, { hoy: hoyX, reciente: 21, salvo: conFin.bloque.id });
+    check(recientesX.length === 1 ? salvoX.length === 0 : igual(salvoX, todosX), 'y si ese ya lo vio, no se pide nada (si no hay otro)');
+  } finally { b.select = selectOrig; api.historial = historialOrig; }
+}
 const sesAna = (await api.entrenamientos(ana.id))[0];
 check(!!(await api.sesion(sesAna.id, ana.id)).sesion.preparacion, 'sus sesiones traen cómo llegó');
 await b.auth.entrar('pelayo@fbe.demo', 'demo');

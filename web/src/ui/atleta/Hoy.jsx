@@ -781,12 +781,15 @@ function abrirPlegableHoy(id) {
 
 // La semana pasada en una tarjeta, hasta que la ves o la ocultas
 // Al terminar un bloque (hasta 3 semanas después), su informe en una tarjeta
+const DIAS_INFORME = 21;
 function BloqueTerminado({ salud }) {
   const { api, atleta } = useApp();
   const [visto, setVisto] = usePreferencia('fbe-informe-visto', null);
   const [abierto, setAbierto] = useState(false);
-  const res = useCarga(() => api.informes(atleta.id, { salud }).catch(() => []), [atleta.id], { recuerdo: `informes-hoy:${atleta.id}` });
-  const r = (res.datos || []).find((x) => x.terminado && !x.vacio && diasEntre(x.fin, hoyISO()) <= 21);
+  // (v0.211, rendimiento) reciente y salvo: si no hay un bloque acabado hace poco que no haya visto, no se pide su
+  // historial entero (casi nunca lo hay)
+  const res = useCarga(() => api.informes(atleta.id, { salud, reciente: DIAS_INFORME, salvo: visto }).catch(() => []), [atleta.id], { recuerdo: `informes-hoy:${atleta.id}` });
+  const r = (res.datos || []).find((x) => x.terminado && !x.vacio && diasEntre(x.fin, hoyISO()) <= DIAS_INFORME);
   if (!r || (visto === r.bloque.id && !abierto)) return null;
   return (
     <>

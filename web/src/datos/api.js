@@ -2991,11 +2991,21 @@ export function crearApi(backend, opciones = {}) {
     // Informes de sus bloques (los que tienen semanas publicadas), del más reciente al más antiguo
     // v0.53: a quien va por microciclos (objetivo de días por semana), el cumplimiento de lo hecho (las fechas de sus
     // semanas no dicen qué tocaba ya)
-    async informes(atletaId, { salud = true, hoy = hoyISO() } = {}) {
+    // (v0.211, rendimiento) reciente: para Hoy, que solo enseña el informe de un bloque acabado hace como mucho
+    // `reciente` días (y no el que ya vio, `salvo`). Antes de pedir el historial entero, las sesiones, las pautas y los
+    // pesos, se mira con los bloques y sus semanas si hay alguno así; casi siempre no, y no se pide nada más (con dos
+    // años de historial, abrir Hoy se ahorraba unos 700 ms en un móvil lento). Si lo hay, se calculan todos como siempre
+    // (el de antes hace falta para comparar)
+    async informes(atletaId, { salud = true, hoy = hoyISO(), reciente = null, salvo = null } = {}) {
+      const soloReciente = Number.isFinite(reciente);
       // (v0.210, rendimiento) el historial y los pesos no dependen del programa: se piden a la vez que él (antes, seis
       // esperas a la base una detrás de otra; ahora, cuatro)
-      const historialP = callar(api.historial(atletaId));
-      const pesosP = salud ? b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }).catch(() => []) : [];
+      let historialP = null, pesosP = null;
+      const pedirResto = () => {
+        historialP ||= callar(api.historial(atletaId));
+        pesosP ||= salud ? b.select('pesos', { eq: { atleta_id: atletaId }, order: [['fecha', 'asc']] }).catch(() => []) : Promise.resolve([]);
+      };
+      if (!soloReciente) pedirResto();
       const [bloques, diasSemana] = await Promise.all([
         b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false } }),
         diasSemanaDe(atletaId),
@@ -3003,6 +3013,19 @@ export function crearApi(backend, opciones = {}) {
       if (!bloques.length) return [];
       const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, eq: { programacion: 'programada' } });
       if (!semanas.length) return [];
+      if (soloReciente) {
+        // (el fin, como en informeBloque: el domingo de su última semana con fecha, por número)
+        const porBloque = agrupar(semanas, 'bloque_id');
+        const hay = bloques.some((bl) => {
+          if (salvo && bl.id === salvo) return false;
+          const ws = (porBloque[bl.id] || []).filter((w) => w.fecha_inicio).sort((x, y) => x.numero - y.numero);
+          if (!ws.length) return false;
+          const fin = sumarDias(lunesDe(ws[ws.length - 1].fecha_inicio), 6);
+          return fin < hoy && diasEntre(fin, hoy) <= reciente;
+        });
+        if (!hay) return [];
+        pedirResto();
+      }
       const sesiones = await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) } });
       const [pautas, series, pesos] = await Promise.all([
         sesiones.length ? b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) } }) : [],
