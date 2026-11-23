@@ -912,6 +912,17 @@ export function crearApi(backend, opciones = {}) {
     try { localStorage.setItem(claveEtapa(id), JSON.stringify({ dia, metros: Math.round(Number(metros)), estrellas: Math.round(Number(estrellas) || 0), rastro: Array.isArray(rastro) ? rastro.slice(0, 480) : null })); } catch { /* sin sitio: se pierde, como antes */ }
   };
   if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('online', () => { api.enviarEtapaPendiente().catch(() => {}); });
+
+  // (v0.210) Las últimas 800 series del atleta con sus pautas (para «la última vez» de cada ejercicio, ultimasPorEjercicio)
+  // y los últimos mensajes del coach (para «lo que te dijo», dichoPorCoach): solo dependen del atleta, así que la sesión
+  // los pide nada más empezar, a la vez que lo demás
+  const recientesParaUltimas = async (atletaId) => {
+    const recientes = await b.select('series', { eq: { atleta_id: atletaId }, order: [['registrada_en', 'desc']], limit: 800 });
+    const pautas = recientes.length ? porId(await b.select('sesion_ejercicios', { in: { id: unicos(recientes.map((s) => s.sesion_ejercicio_id)) } })) : {};
+    return { recientes, pautas };
+  };
+  const comentariosDelCoach = (atletaId) => b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, order: [['creado_en', 'desc']], limit: 300, cols: 'id,texto,creado_en,sesion_id,archivo_id,enviar_en' });
+
   const api = {
     backend: b,
     uid,
@@ -1865,14 +1876,23 @@ export function crearApi(backend, opciones = {}) {
     // Una sesión con su prescripción, las series ya hechas, lo que hizo la última vez en cada ejercicio
     // y las alternativas equivalentes de cada uno (con su propia «última vez», por si cambia).
     async sesion(sesionId, atletaId) {
-      const [sesion] = await b.select('sesiones', { eq: { id: sesionId } });
+      // (v0.210, rendimiento) Lo que no depende de nada se pide a la vez nada más empezar: la sesión, sus ejercicios, la ficha,
+      // las notas, las últimas series (para «la última vez») y los mensajes del coach (para «lo que te dijo»). Antes eran seis
+      // o siete esperas a la base una detrás de otra; ahora, tres. (Lo que se pide antes de saber si hace falta no deja errores
+      // sin recoger: si la sesión no existe, se descarta.)
+      const callar = (p) => { Promise.resolve(p).catch(() => {}); return p; };
+      const sesionP = b.select('sesiones', { eq: { id: sesionId } });
+      const pautadosP = callar(b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] }));
+      const atletaP = callar(b.select('atletas', { eq: { id: atletaId } }));
+      const notasP = callar(api.notasEjercicio(atletaId));
+      const recientesP = callar(recientesParaUltimas(atletaId));
+      const comentP = callar(comentariosDelCoach(atletaId));
+      const [sesion] = await sesionP;
       if (!sesion) throw new Error('No se encuentra la sesión.');
-      const [[semana], pautados, [atleta]] = await Promise.all([
+      const pautados = await pautadosP;
+      const [[semana], [atleta], base, hechasLista] = await Promise.all([
         b.select('semanas', { eq: { id: sesion.semana_id } }),
-        b.select('sesion_ejercicios', { eq: { sesion_id: sesionId }, order: [['orden', 'asc']] }),
-        b.select('atletas', { eq: { id: atletaId } }),
-      ]);
-      const [base, hechasLista] = await Promise.all([
+        atletaP,
         b.select('ejercicios', { in: { id: unicos(pautados.map((p) => p.ejercicio_id)) } }).then(porId),
         b.select('series', { in: { sesion_ejercicio_id: pautados.map((p) => p.id) }, order: [['numero', 'asc']] }),
       ]);
@@ -1881,10 +1901,10 @@ export function crearApi(backend, opciones = {}) {
       const todos = { ...base, ...extra };
       const hechas = agrupar(hechasLista, 'sesion_ejercicio_id');
       const [ultimas, notas, coach] = await Promise.all([
-        api.ultimasPorEjercicio(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId),
-        api.notasEjercicio(atletaId),
+        api.ultimasPorEjercicio(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId, null, recientesP),
+        notasP,
         // v0.48: lo que le dijo el coach de cada ejercicio en vídeos y sesiones anteriores (si falla, la sesión sigue)
-        api.dichoPorCoach(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId, todos).catch(() => ({})),
+        api.dichoPorCoach(atletaId, unicos([...pautados.map((p) => p.ejercicio_id), ...extraIds]), sesionId, todos, comentP).catch(() => ({})),
       ]);
       return {
         notas,
@@ -1926,7 +1946,8 @@ export function crearApi(backend, opciones = {}) {
     // Para cada ejercicio, las series de la última sesión anterior en que lo hizo (también como alternativa):
     // { ejercicio_id: { sesion_id, fecha, series, pauta } }. pauta es lo que tenía pautado aquella vez (si era el pautado).
     // hasta (ISO, opcional): solo series registradas antes (el editor del coach mira «la última vez» antes de una semana)
-    async ultimasPorEjercicio(atletaId, ejercicioIds, excluirSesionId, hasta = null) {
+    // (v0.210) previas: las últimas series ya pedidas (recientesParaUltimas), si quien llama las ha pedido antes
+    async ultimasPorEjercicio(atletaId, ejercicioIds, excluirSesionId, hasta = null, previas = null) {
       if (!ejercicioIds.length) return {};
       const res = {};
       // excluirSesionId: una sesión o varias (el editor del coach quita las de la semana que está mirando)
@@ -1948,9 +1969,9 @@ export function crearApi(backend, opciones = {}) {
         }
       };
       // Lo normal: está entre sus últimas 800 series
-      const recientes = await b.select('series', { eq: { atleta_id: atletaId }, order: [['registrada_en', 'desc']], limit: 800 });
+      const { recientes, pautas: pautasRecientes } = await (previas || recientesParaUltimas(atletaId));
       if (!recientes.length) return {};
-      repasar(recientes, porId(await b.select('sesion_ejercicios', { in: { id: unicos(recientes.map((s) => s.sesion_ejercicio_id)) } })));
+      repasar(recientes, pautasRecientes);
       // Si no (un ejercicio que no hace desde hace meses), se busca solo ese
       const faltan = recientes.length >= 800 ? ejercicioIds.filter((id) => !res[id]) : [];
       if (faltan.length) {
@@ -5145,9 +5166,10 @@ export function crearApi(backend, opciones = {}) {
     // ------------------------------------------------------------ v0.48: lo que le dijo el coach de cada ejercicio
     // De vídeos de técnica de ese ejercicio y de los comentarios del coach en sesiones anteriores que lo nombran
     // (en una sesión en que lo hizo). { ejercicio_id: { lista: [{ texto, fecha, donde, archivoId|sesionId }], total } }
-    async dichoPorCoach(atletaId, ejercicioIds, excluirSesionId = null, ejerciciosPorId = {}) {
+    // (v0.210) comentP: los mensajes del coach ya pedidos (comentariosDelCoach), si quien llama los ha pedido antes
+    async dichoPorCoach(atletaId, ejercicioIds, excluirSesionId = null, ejerciciosPorId = {}, comentP = null) {
       if (!ejercicioIds?.length) return {};
-      const coment = await b.select('comentarios', { eq: { atleta_id: atletaId, autor: 'coach' }, order: [['creado_en', 'desc']], limit: 300, cols: 'id,texto,creado_en,sesion_id,archivo_id,enviar_en' });
+      const coment = await (comentP || comentariosDelCoach(atletaId));
       const delCoach = coment.filter((c) => !programado(c) && c.texto !== 'Se eliminó este mensaje');
       if (!delCoach.length) return {};
       const arcIds = unicos(delCoach.map((c) => c.archivo_id));
