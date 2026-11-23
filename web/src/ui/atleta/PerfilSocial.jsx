@@ -8,6 +8,7 @@
 // Todo sale de lo que ya hay (sus entrenos, su progreso, la comunidad).
 import { DiaUnoYHoy, MarcasPorReps, useHistorial, PalmaresYBloques, LogrosSecretos, Equivalencia, Trimestre, RinconAnimo, DescansoPasos } from './PerfilMas.jsx';
 import { historiaEnUnaLinea } from '../../logica/rumbo.js';
+import { conEntrenamiento } from '../../logica/nivel.js';
 import { MejorMomento } from './Conocerte.jsx';
 import { AdnFbe } from './Suyo.jsx';
 import { PatronCiclo, BotonInforme } from './Respeto.jsx';
@@ -54,8 +55,10 @@ export function PerfilSecciones({ salud, irA }) {
   const { api, atleta } = useApp();
   const hoy = hoyISO();  // (v0.143) el día del móvil, como la fecha de sus entrenos
   const entrenos = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `entrenamientos:${atleta.id}` });
-  const progreso = useCarga(() => api.progreso(atleta.id).catch(() => null), [atleta.id]);
-  const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id]);
+  // (v0.212) lo mismo que Progreso, con su mismo recuerdo: pasar de Progreso al perfil (o volver) sale al momento
+  const recP = (que) => ({ recuerdo: `progreso:${api.uid()}:${atleta.id}:${que}:${conEntrenamiento(atleta) ? 1 : 0}` });
+  const progreso = useCarga(() => api.progreso(atleta.id).catch(() => null), [atleta.id], recP('progreso'));
+  const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id], conEntrenamiento(atleta) ? recP('constancia') : {});
   const [pest, setPest] = useState('resumen');
   const lista = entrenos.datos || [];
   const historial = useHistorial();
