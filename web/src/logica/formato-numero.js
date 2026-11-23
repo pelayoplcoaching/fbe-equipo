@@ -11,3 +11,8 @@ export function fmtNum(x, min = 0, max = 1, agrupar = undefined) {
   }
   return f.format(x);
 }
+
+// (v0.214) Una cifra y su unidad, en la misma línea: «41 %», «9 kg», «3 semanas»… con un espacio que no parte (en las
+// tarjetas estrechas, «41» quedaba al final de una línea y «%» al principio de la siguiente). Solo para lo que se pinta.
+const UNIDADES = /(\d) (%|kg|lb|km|m|min|h|s|kcal|g|cm|mm|rep|reps|series|semanas?|días?|sesiones?|veces)(?=$|[\s.,;:!?)…])/g;
+export const unirUnidades = (texto) => (typeof texto === 'string' ? texto.replace(UNIDADES, '$1 $2') : texto);

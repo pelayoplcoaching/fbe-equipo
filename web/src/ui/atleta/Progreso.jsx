@@ -15,6 +15,7 @@ import { Conexiones } from './Conexiones.jsx';
 import { GrupoReloj } from './Reloj.jsx';
 import { RANGOS_GRAFICA, filtrarRango, rangoConDatos } from '../../logica/rangos.js';
 import { destacados as calcularDestacados, tonelajePorSemana } from '../../logica/destacados.js';
+import { unirUnidades } from '../../logica/formato-numero.js';
 import { calendarioRacha } from '../../logica/racha.js';
 import { PantallaRacha } from './Racha.jsx';
 import { HistorialEjercicio } from '../Herramientas.jsx';
@@ -850,7 +851,7 @@ function Destacados({ progreso, constancia, programa }) {
         {lista.map((d, i) => (
           <li key={d.id} class="destacado panel" data-tipo={d.id} style={{ '--i': i }}>
             <p class="destacado-sobre"><Icono n={d.icono} />{d.sobre}</p>
-            <p class="destacado-texto">{d.texto}</p>
+            <p class="destacado-texto">{unirUnidades(d.texto)}</p>
             <MiniGrafica g={d.grafica} />
             {d.id === 'racha' && constancia && <button type="button" class="btn-texto destacado-ir" onClick={() => setVerRacha(true)}>Ver tu racha <Icono n="derecha" /></button>}
           </li>

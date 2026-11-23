@@ -3,7 +3,7 @@
 // (axe), la página o un texto que se salen o se cortan, botones pequeños, imágenes rotas y bloqueos largos.
 // No es una prueba que falle: deja un informe (informe.md e informe.json) para arreglar lo que salga.
 //   npm run build
-//   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste,sinred,horizontal] [--quien=atleta,coach]
+//   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste,sinred,horizontal,tableta] [--quien=atleta,coach]
 //                              [--atletas=Ana López,Carlos Vera] [--hondo] [--salida=/tmp/auditoria] [--dist=dist] [--puerto=4410]
 //                              [--raros] [--capturas=/tmp/cap-210] [--sin-axe]
 // --hondo: también explora dentro de cada hoja (una capa más). Sin él, solo abre y revisa.
@@ -46,6 +46,8 @@ const CONFS = {
   sinred: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'light', sinRed: true },
   // (v0.211) el móvil girado: poca altura (lo que va fijo arriba y abajo, las hojas y los teclados de números)
   horizontal: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, colorScheme: 'light' },
+  // (v0.214) una tableta en vertical (como un iPad Air) y en oscuro: el ancho de en medio, entre el móvil y el ordenador
+  tableta: { viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true, colorScheme: 'dark' },
 };
 const confs = arg('conf', 'movil').split(',').filter((c) => CONFS[c]);
 const quienes = arg('quien', 'atleta,coach').split(',');

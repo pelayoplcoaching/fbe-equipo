@@ -4885,6 +4885,10 @@ console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
   const a = V.materialesDe('Press militar con mancuernas'); a.add('barra'); a.delete('mancuernas');
   const b = V.materialesDe('Press militar con mancuernas');
   check(b.has('mancuernas') && !b.has('barra') && b !== a, 'materialesDe recuerda lo de cada nombre pero devuelve un Set nuevo (cambiar uno no estropea el siguiente)');
+  const { unirUnidades } = await import('../web/src/logica/formato-numero.js');
+  const nb = (s) => unirUnidades(s).replace(/\u00a0/g, '_');
+  check(nb('llevas un 41 % más') === 'llevas un 41_% más' && nb('ha subido 9 kg en 3 semanas.') === 'ha subido 9_kg en 3_semanas.' && nb('10 minutos') === '10 minutos' && nb('el 5 de mayo') === 'el 5 de mayo' && unirUnidades(null) === null,
+    '(v0.214) unirUnidades: la cifra y su unidad, con un espacio que no parte (y no toca «10 minutos» ni «el 5 de mayo»)');
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
