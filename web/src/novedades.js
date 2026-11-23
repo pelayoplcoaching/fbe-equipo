@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.209': {
+    atleta: [
+      'Si tu móvil va lento, la app se pone ligera sola: sin cristal ni adornos que se mueven. También lo puedes elegir en Ajustes.',
+      'Más fluida en Android: la app ya no repasa toda la pantalla con cada cambio, y el cielo de Hoy se para mientras no lo ves.',
+    ],
+    coach: [
+      'Cuenta te avisa si a tu base le falta una migración. La copia completa ya lleva todas tus tablas, y Recuperar un atleta, lo nuevo.',
+      'Tus estilos van aparte: el móvil de tus atletas descarga y procesa unos 180 KB menos al abrir la app.',
+    ],
+  },
   '0.208': {
     atleta: [
       'Hoy abre antes: al entrar, la app pide a la base la mitad que antes y carga menos; lo que sale al tocar algo, se carga entonces.',

@@ -795,6 +795,7 @@ Cosas que dependen de cómo está montado Supabase y que las pruebas locales no 
 58. (v0.197) Que la 084 está: `select numero from public.fbe_migraciones where numero = 84;` da una fila; `select column_name from information_schema.columns where table_name = 'revisar_apartados' and column_name = 'etiqueta';` da una fila; y `select tgname from pg_trigger where tgname = 'molestias_zz_urgente';` da una fila.
 59. (v0.198) Que la 085 está: `select numero from public.fbe_migraciones where numero = 85;` da una fila; y `select count(*) from public.atletas_panel;` y `select count(*) from public.panel_ajustes;` dan un número cada una (0 hasta que fijes, etiquetes o guardes algo en Atletas), no un error.
 60. (v0.201) Que la 086 está: `select numero from public.fbe_migraciones where numero = 86;` da una fila; `select column_name from information_schema.columns where table_name = 'respuestas_guardadas' and column_name = 'situacion';` da una fila; y `select count(*) from public.radar_ajustes;` da un número (0 hasta que guardes «Tu manera de escribir» en «A quién escribir»), no un error.
+61. (v0.209) Que la 087 está: `select numero from public.fbe_migraciones where numero = 87;` da una fila; `select prosecdef from pg_proc where proname = 'migracion_actual';` da `true`; y `select pg_get_functiondef('public.copia_privada()'::regprocedure) like '%animo_fijados%';` da `true`. (Desde el SQL Editor, `select public.migracion_actual();` da «Solo el coach»: es lo normal, la usa la app con tu sesión.)
 
 ## Desarrollo
 

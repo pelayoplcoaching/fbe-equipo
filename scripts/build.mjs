@@ -82,7 +82,7 @@ ${marcadoPortada}
   const jsDe = (coach) => Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))).filter((f) => soloCoachRutas.has(f) === coach).map(leerSalida).join('\n');
   const partesCss = cssDelCoach(readFileSync(cssRuta, 'utf8'), { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
   if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
-  const cssCoach = `coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
+  const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
   writeFileSync(join(salida, cssCoach), partesCss.coach);
   writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesCss.comun);
 

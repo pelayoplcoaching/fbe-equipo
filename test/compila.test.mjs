@@ -8,7 +8,10 @@
 import * as esbuild from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { join, relative } from 'node:path';
-import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque } from '../scripts/opciones-build.mjs';
+import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from '../scripts/opciones-build.mjs';
+import { cssDelCoach } from '../scripts/css-coach.mjs';
+import { estiloPortada, marcadoPortada } from '../scripts/portada.mjs';
+import { readFileSync } from 'node:fs';
 
 // En KB (1024 bytes). «gz»: lo que viaja por la red (comprimido); «crudo»: lo que el móvil tiene que leer y procesar.
 // (v0.207: el código al abrir bajó de 2974 KB a unos 2050 con la lista de las ilustraciones; los estilos, 1068 KB)
@@ -51,10 +54,19 @@ const medir = (rutas) => rutas.reduce((t, f) => { const b = porRuta.get(f); retu
 // (con la lista de las ilustraciones: va en su propio trozo, pero se pide y se espera al abrir)
 const lista = Object.entries(r.metafile.outputs).filter(([, o]) => Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))).map(([f]) => f);
 const js = medir([...new Set([...arranque, ...lista])]);
-const css = medir([...porRuta.keys()].filter((f) => /(^|\/)app\.css$/.test(f)));
+// (v0.209) los estilos del atleta, sin los que solo usa el coach (van aparte, como en scripts/build.mjs)
+const soloCoach = trozosSoloCoach(r.metafile);
+const texto = (f) => Buffer.from(porRuta.get(f)).toString('utf8');
+const jsRutas = [...porRuta.keys()].filter((f) => f.endsWith('.js'));
+const rutaCss = [...porRuta.keys()].find((f) => /(^|\/)app\.css$/.test(f));
+const partesCss = cssDelCoach(texto(rutaCss), { jsCoach: jsRutas.filter((f) => soloCoach.has(f)).map(texto).join('\n'),
+  jsOtros: `${jsRutas.filter((f) => !soloCoach.has(f)).map(texto).join('\n')}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+const css = { crudo: Buffer.byteLength(partesCss.comun), gz: gzipSync(Buffer.from(partesCss.comun), { level: 9 }).length };
+const cssCoach = { crudo: Buffer.byteLength(partesCss.coach), gz: gzipSync(Buffer.from(partesCss.coach), { level: 9 }).length };
 check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
 check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz})`);
 check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz})`);
+check(partesCss.reglas > 500 && kb(cssCoach.crudo) >= 100, `los del coach, aparte: ${partesCss.reglas} reglas, ${kb(cssCoach.crudo)} KB (${kb(cssCoach.gz)} comprimido) que el móvil de un atleta no descarga`);
 // (y si ha bajado mucho, que se baje el presupuesto: así no vuelve a crecer hasta donde estaba)
 const holgura = (x, tope) => kb(x) >= tope * 0.85;
 check(holgura(js.gz, PRESUPUESTO.js.gz) && holgura(css.gz, PRESUPUESTO.css.gz), `el presupuesto está ajustado (si lo de ahora queda más de un 15 % por debajo, toca bajarlo)`);
