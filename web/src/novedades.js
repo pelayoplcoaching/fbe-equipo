@@ -13,7 +13,7 @@ export const NOVEDADES = {
     ],
     coach: [
       'Cuenta te avisa si a tu base le falta una migración. La copia completa ya lleva todas tus tablas, y Recuperar un atleta, lo nuevo.',
-      'Tus estilos van aparte: el móvil de tus atletas descarga y procesa unos 180 KB menos al abrir la app.',
+      'Tus estilos van aparte: el móvil de tus atletas descarga y procesa unos 150 KB menos al abrir la app.',
     ],
   },
   '0.208': {

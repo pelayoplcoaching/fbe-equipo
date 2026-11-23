@@ -17,9 +17,10 @@ import { readFileSync } from 'node:fs';
 // (v0.207: el código al abrir bajó de 2974 KB a unos 2050 con la lista de las ilustraciones; los estilos, 1068 KB)
 // (v0.208: a unos 1680 KB, 568 comprimido: las hojas de Hoy al abrirlas, lo de Revisar fuera del atleta, el texto de la
 // política al leerla y lo ligero de la sesión aparte)
+// (v0.209: los estilos, de 1068 a unos 920 KB, 189 a 165 comprimido: los que solo usa el coach van aparte, scripts/css-coach.mjs)
 const PRESUPUESTO = {
   js: { crudo: 1780, gz: 610 },
-  css: { crudo: 1110, gz: 196 },
+  css: { crudo: 960, gz: 172 },
 };
 
 let ok = 0, fallos = 0;
