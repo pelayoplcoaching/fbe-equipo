@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.214': {
+    atleta: [
+      'Al cambiar de pestaña o abrir una pantalla, el móvil trabaja menos para dibujarla.',
+    ],
+    coach: [
+      'El editor de bloques cambia de semana con menos tirones.',
+    ],
+  },
   '0.213': {
     // (sin frase para el atleta: lo suyo de esta versión, Progreso al volver, ya lo dice la 0.212 y salían dos casi iguales)
     atleta: [],
