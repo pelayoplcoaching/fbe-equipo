@@ -132,7 +132,13 @@ function EnfoquePantalla({
   const sumarKg = (d) => setKg(fmtKg(Math.max(0, Math.round(((aNumero(kg) ?? prop?.kg ?? 0) + d) * 100) / 100)));
   const sumarReps = (d) => setReps(String(Math.max(0, (aNumero(reps) ?? prop?.reps ?? 0) + d)));
 
+  // (v0.210, uso torpe) tras marcar, el botón pasa a la serie siguiente: un doble toque sin querer marcaba dos. El segundo
+  // toque de menos de 0,8 s no cuenta
+  const ultimoToque = useRef(0);
   async function hecha() {
+    const ahora = Date.now();
+    if (ahora - ultimoToque.current < 800) return;
+    ultimoToque.current = ahora;
     const v = { kg: aNumero(kg) ?? prop?.kg ?? null, reps: aNumero(reps) ?? prop?.reps ?? null, rpe: rpe === '' ? '' : Number(rpe) };
     if (v.reps == null) return;
     const problema = problemaSerie(v);
