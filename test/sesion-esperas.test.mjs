@@ -1,4 +1,4 @@
-// (v0.210, rendimiento) Abrir una sesión: cuántas esperas a la base hay una detrás de otra. Con un 4G regular cada espera son
+// (v0.210, rendimiento) Abrir una sesión (y tres lecturas de Hoy): cuántas esperas a la base hay una detrás de otra. Con un 4G regular cada espera son
 // unos 170 ms, así que se notan. Se cuentan «rondas»: todo lo que la app pide a la vez va en una ronda; lo que solo se puede
 // pedir cuando llega lo anterior, en la siguiente. Antes de la v0.210, abrir una sesión eran 7 rondas; ahora, 4 como mucho.
 // Y lo que devuelve es lo mismo que pidiéndolo todo sin prisa.
@@ -55,6 +55,21 @@ for (const [nombre, s] of [['una sesión ya hecha', conHechas], ['la siguiente, 
   const r = await rondas(() => api.sesion('00000000-0000-4000-8000-000000000000', atleta.id)).then(() => 'abrió', (e) => e.message);
   await quieto();
   check(r === 'No se encuentra la sesión.' && !sinRecoger.length, `una sesión que no existe: «${r}», sin errores sin recoger (${sinRecoger.length})`);
+}
+
+console.log('\nLo que pide Hoy al abrir');
+const programaAna = await directa.programa(atleta.id);
+for (const [nombre, antes, tope, hacer] of [
+  ['la racha y la constancia', 5, 3, (api) => api.constancia(atleta.id)],
+  ['los informes de bloque', 6, 4, (api) => api.informes(atleta.id)],
+  ['los logros', 5, 3, (api) => api.logros(atleta.id)],
+  ['los resúmenes de las últimas semanas', 5, 3, (api) => api.resumenesSemanales(atleta.id)],
+  ['«Tu día»', 3, 2, (api) => api.tuDia(atleta.id, { programa: programaAna })],
+]) {
+  const api = crearApi(lento, { cubrir: false });
+  const { n, valor } = await rondas(() => hacer(api));
+  const esperada = await hacer(crearApi(b0, { cubrir: false }));
+  check(n <= tope && JSON.stringify(valor) === JSON.stringify(esperada), `${nombre}: ${n} esperas seguidas (antes, ${antes}) y lo mismo de siempre`);
 }
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
