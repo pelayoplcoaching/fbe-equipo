@@ -70,9 +70,9 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
   // Quitarla un momento después (una corrección) sí, y volver a marcarla justo después de quitarla también (no se pierde
   // nada); deslizar y «Hecha» del teclado van aparte
   const marcadaEn = useRef(0);
-  const tocarHecho = (e) => {
+  const tocarHecho = (ev) => {
     const ahora = Date.now();
-    if (hecha && ((e?.detail || 0) >= 2 || ahora - marcadaEn.current < 350)) return;
+    if (hecha && ((ev?.detail || 0) >= 2 || ahora - marcadaEn.current < 350)) return;
     if (!hecha) marcadaEn.current = ahora;
     marcar();
   };
