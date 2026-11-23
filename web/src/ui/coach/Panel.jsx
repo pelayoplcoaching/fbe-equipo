@@ -412,7 +412,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
           {/* (pulido 3.3) solo se pinta la que se ve: la tabla en pantalla ancha, las tarjetas en el móvil (antes, las dos
               a la vez y una escondida: el doble de elementos en la lista) */}
           {!estrecha && <div class="panel solo-ancho">
-            <div class="tabla-env">
+            <div class="tabla-env" tabIndex={0} role="region" aria-label="Tus atletas">
               <table class="atletas-tabla">
                 <thead><tr>{titulo('nombre', 'Atleta')}{columnas.map((c) => titulo(c, TITULO_COLUMNA[c], ['sueno', 'motivacion'].includes(c) ? 'col-extra' : ''))}</tr></thead>
                 {grupos.map((g) => (

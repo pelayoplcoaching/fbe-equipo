@@ -107,7 +107,7 @@ export function ProgresoRevision({ f, abierto: abiertoInicial = false, alPedir =
             {medidas.nunca ? <p class="peq secundario">Aún no tiene medidas apuntadas.</p> : (
               <>
                 <p class="peq secundario">Última, el {fecha(medidas.ultima)} (hace {medidas.diasDesde === 1 ? '1 día' : `${medidas.diasDesde} días`}){medidas.anterior ? `; la anterior, el ${fecha(medidas.anterior)}` : ''}{medidas.primeraBloque ? `; la primera del bloque, el ${fecha(medidas.primeraBloque)}` : ''}.</p>
-                <div class="rev-tabla-env">
+                <div class="rev-tabla-env" tabIndex={0} role="region" aria-label="Medidas">
                   <table class="rev-tabla rev-medidas">
                     <thead><tr><th scope="col">Perímetro</th><th scope="col">Última</th><th scope="col">Frente a la anterior</th>{medidas.primeraBloque && <th scope="col">Desde el inicio del bloque</th>}</tr></thead>
                     <tbody>{medidas.cambios.map((c) => (

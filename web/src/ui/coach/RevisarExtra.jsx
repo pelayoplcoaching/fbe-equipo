@@ -54,7 +54,7 @@ export function DetalleSesion({ s, m = null }) {
   const vol = m?.volumen ? volumenTarjeta(m.volumen, (g) => rangoVolumen(s.atleta.volumen_objetivo, g)) : [];
   return (
     <div class="pila-s">
-      <div class="rev-tabla-env revisar-detalle">
+      <div class="rev-tabla-env revisar-detalle" tabIndex={0} role="region" aria-label="La sesión, ejercicio a ejercicio">
         <table class="rev-tabla">
           <caption class="sr">{s.nombre}: pautado frente a hecho y la vez anterior</caption>
           <thead><tr><th scope="col">Ejercicio</th><th scope="col">Pautado</th><th scope="col">Hecho</th><th scope="col">La vez anterior</th><th scope="col">Su próxima</th></tr></thead>

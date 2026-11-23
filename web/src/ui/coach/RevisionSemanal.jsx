@@ -268,7 +268,7 @@ export function RevisionSemanal({ abrirAtleta }) {
           {!vista.length ? (
             <div class="panel"><Vacio icono="hecho" ilustracion={filtro === 'pendientes' && !marcados.size ? 'todo' : null} titulo={marcados.size ? 'Nadie con eso' : filtro === 'pendientes' ? '¡Revisión terminada!' : 'Nadie revisado aún'}>{marcados.size ? 'Quita algún filtro para ver a los demás.' : filtro === 'pendientes' ? 'Has revisado a todos esta semana.' : 'Marca a cada atleta cuando acabes con él.'}</Vacio></div>
           ) : enTabla ? (
-            <div class="panel rev-tabla-env">
+            <div class="panel rev-tabla-env" tabIndex={0} role="region" aria-label="Tus atletas esta semana">
               <table class="rev-tabla rev-tabla-todos">
                 <thead><tr>
                   {COLUMNAS_TABLA.map(([k, t]) => <th key={k} scope="col" aria-sort={colTabla.col === k ? (colTabla.dir > 0 ? 'ascending' : 'descending') : 'none'}><button type="button" class="btn-texto" onClick={() => setColTabla((c) => ({ col: k, dir: c.col === k ? -c.dir : 1 }))}>{t}{colTabla.col === k ? (colTabla.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>)}

@@ -171,7 +171,7 @@ export function HojaTiempos({ alCerrar, racha = '' }) {
     <Hoja titulo="Tus tiempos en Revisar" alCerrar={alCerrar}>
       {!e ? <p class="peq secundario" role="status">Calculando...</p> : (
         <div class="pila">
-          <div class="rev-tabla-env">
+          <div class="rev-tabla-env" tabIndex={0} role="region" aria-label="Tus tiempos en Revisar">
             <table class="rev-tabla revisar-tiempos">
               <caption class="sr">De que llega a que lo revisas o lo contestas, en los últimos 30 días</caption>
               <thead><tr><th scope="col">Qué</th><th scope="col">Mediana</th><th scope="col">P90</th><th scope="col">Cuántas</th></tr></thead>

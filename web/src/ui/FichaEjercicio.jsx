@@ -117,7 +117,7 @@ function Records({ d }) {
   if (!filas.length) return <p class="peq secundario">Sin series con carga todavía.</p>;
   return (
     <div class="pila-s">
-      <div class="tabla-env">
+      <div class="tabla-env" tabIndex={0} role="region" aria-label="Tus mejores series por repeticiones">
         <table class="tabla-simple tabla-records">
           <thead><tr><th>Reps</th><th>Tu mejor</th><th>Estimado</th></tr></thead>
           <tbody>

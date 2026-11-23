@@ -26,7 +26,7 @@ export function CompararCheckins({ atleta, checkins, alCerrar }) {
         {a === b ? <p class="peq secundario">Elige dos semanas distintas.</p> : <ErrorCaja error={d.error} reintentar={d.recargar} />}
         {a !== b && (d.cargando && !c ? <Cargando texto="Preparando la comparación" /> : c && (
           <>
-            <div class="tabla-env">
+            <div class="tabla-env" tabIndex={0} role="region" aria-label="Comparación de los dos check-ins">
               <table class="tabla-simple tabla-comparar" lang="es">
                 <caption class="sr">{`Check-in de ${rangoSemana(c.antes.checkin.semana_inicio)} frente al de ${rangoSemana(c.despues.checkin.semana_inicio)}`}</caption>
                 <thead><tr><th scope="col"><span class="sr">Dato</span></th><th scope="col">{rangoSemana(c.antes.checkin.semana_inicio)}</th><th scope="col">{rangoSemana(c.despues.checkin.semana_inicio)}</th></tr></thead>

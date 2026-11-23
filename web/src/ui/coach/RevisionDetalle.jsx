@@ -175,7 +175,7 @@ function SesionRevision({ s, atletaId, nombre = 'Atleta', alCitar = null, conHil
       </button>
       {s.nota_atleta && <p class="cita">«{s.nota_atleta}»</p>}
       {abierta && (d.cargando && !d.datos ? <p class="peq secundario" role="status">Cargando la sesión...</p> : d.error ? <p class="peq">No se ha podido cargar.</p> : !filas.length ? <p class="peq secundario">Sin ejercicios pautados.</p> : (
-        <div class="rev-tabla-env">
+        <div class="rev-tabla-env" tabIndex={0} role="region" aria-label="La sesión, ejercicio a ejercicio">
           <table class="rev-tabla">
             <thead><tr><th scope="col">Ejercicio</th><th scope="col">Pautado</th><th scope="col">Hecho</th></tr></thead>
             <tbody>{filas.map((p) => <tr key={p.id} class={p.falta > 0 && s.completada ? 'corta' : ''}><th scope="row">{p.nombre}</th><td class="num">{p.pautado}</td><td class="num">{p.hecho}{p.falta > 0 && s.completada && p.hecho !== 'Sin hacer' ? ` (faltan ${p.falta})` : ''}</td></tr>)}</tbody>

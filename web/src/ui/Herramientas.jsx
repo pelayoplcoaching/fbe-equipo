@@ -55,7 +55,7 @@ export function Calculadora({ inicial = {}, alCerrar, discos = undefined }) {
       {unoRM && (
         <section class="pila-s">
           <h3 class="peq secundario">Cargas para ese 1RM</h3>
-          <div class="tabla-env">
+          <div class="tabla-env" tabIndex={0} role="region" aria-label="Cargas para ese 1RM">
             <table class="tabla-simple tabla-rpe">
               <thead><tr><th>Reps</th>{RPE_TABLA.map((r) => <th key={r}>@{r}</th>)}</tr></thead>
               <tbody>{tabla.map((f) => (
