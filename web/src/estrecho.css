@@ -36,3 +36,7 @@
 li.panel-pad.separa > .fila-ios-izq { flex: 1 1 0; min-width: 0; }
 li.panel-pad.separa > .fila-ios-izq > div { overflow-wrap: break-word; }
 li.panel-pad.separa > .chip { flex: none; }
+
+/* (v0.214) Con la letra muy grande, las casillas de los habitos de Hoy, mas anchas (como mucho, las que quepan de 96 px):
+   en las de 74 px, "10 min de movilidad" partia "movilidad" por la mitad */
+:root[data-letra="muy-grande"] .habitos-hoy { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
