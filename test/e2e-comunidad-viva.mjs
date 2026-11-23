@@ -125,7 +125,11 @@ export async function probarComunidadViva({ navegador, check, base = 'http://loc
       await yoEn.click();
       const otra = p.getByRole('dialog').last();
       await otra.locator('.pe-insignias .insignia.nueva').first().waitFor();
-      check(await otra.locator('.pe-insignias .insignia.nueva').count() === cuantas && (await animadas(p, '.pe-insignias .insignia.nueva')).some((x) => x.startsWith('cv-insignia-llega')) && JSON.parse(await p.evaluate((c) => localStorage.getItem(c), clave)).length === cuantas,
+      const llegan = await animadas(p, '.pe-insignias .insignia.nueva');
+      // (v0.206.1) lo visto se apunta en un efecto, que corre un poco después de pintar: se espera a que esté apuntado
+      // (en GitHub, una vez, se miró antes)
+      await p.waitForFunction(([c, n]) => { try { return JSON.parse(localStorage.getItem(c) || '[]').length === n; } catch { return false; } }, [clave, cuantas], { timeout: 3000 }).catch(() => {});
+      check(await otra.locator('.pe-insignias .insignia.nueva').count() === cuantas && llegan.some((x) => x.startsWith('cv-insignia-llega')) && JSON.parse(await p.evaluate((c) => localStorage.getItem(c), clave)).length === cuantas,
         `la insignia que aún no habías visto llega girando (${cuantas}) y queda apuntada como vista en este móvil`);
     } else check(!!clave, 'sin insignias todavía: nada que llegar (pero queda apuntado que se han mirado)');
     await p.keyboard.press('Escape');
