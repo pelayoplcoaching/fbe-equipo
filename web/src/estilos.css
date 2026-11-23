@@ -4962,7 +4962,9 @@ body.arrastre-en-curso { cursor: grabbing; user-select: none; -webkit-user-selec
 .lista-elegir .elegir-fila:has(.elegir-marca) { grid-template-columns: auto minmax(0, 1fr); }
 .lista-elegir .elegir-fila + .elegir-fila { border-top: var(--filo-fino) solid var(--linea); }
 .lista-elegir .elegir-fila.marcado { background: var(--morado-suave); }
-.elegir-marca { width: 24px; height: 24px; margin: 0 0 0 var(--esp-12); accent-color: var(--morado); }
+/* (v0.212) con la especificidad de la casilla de la app (diseno.css, bloque 3: input[type="checkbox"]:not(.interruptor),
+   22 px), que ganaba: los 24 px de la v0.210 no llegaban a verse */
+input[type="checkbox"].elegir-marca:not(.interruptor) { width: 24px; height: 24px; margin: 0 0 0 var(--esp-12); accent-color: var(--morado); }
 .elegir-varios { display: flex; flex-wrap: wrap; gap: var(--esp-10); align-items: center; justify-content: space-between; }
 .elegir-varios > span { flex: 1; min-width: 160px; }
 .vista-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-10); }
