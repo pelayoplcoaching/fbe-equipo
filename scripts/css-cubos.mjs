@@ -7,11 +7,12 @@
 //
 // Aquí, sobre lo construido, sin cambiar a qué se aplica nada ni con qué fuerza:
 //   · «X:is(.a, .b)Y» → «X:is(.a)Y, X:is(.b)Y» si la parte del :is()/:where() no tiene otra clase, id, etiqueta ni atributo
-//     (si ya la tiene, el navegador ya la descarta deprisa). Con :where() siempre (no suma especificidad); con :is(), solo si
-//     todas las opciones pesan lo mismo (el :is() pesa lo que su opción más pesada). Cada opción sigue dentro de su :is() o
-//     :where() de una sola opción, que perdona lo que el navegador no entienda igual que antes, y solo si cada opción es un
-//     selector compuesto (sin combinadores: «:where(.a b)» no se puede meter en un cubo aunque vaya sola) con algo que sirva
-//     de cubo. Si una regla saldría con más de MAX selectores, se queda como estaba.
+//     (si ya la tiene, el navegador ya la descarta deprisa). Con :where() no cambia la especificidad (no suma); con :is(),
+//     que pesa lo que su opción más pesada, las más ligeras se «rellenan» repitiendo su última clase («.num.num» pesa dos
+//     clases y es lo mismo que «.num»); si no se puede, se queda como estaba. Cada opción sigue dentro de su :is() o :where()
+//     de una sola opción, que perdona lo que el navegador no entienda igual que antes. Una opción con combinadores
+//     («.x .a») va como «:is(.a):is(.x *)»: dentro de un :is()/:where(), «.x .a» no va a ningún cubo y, peor, se miran todos
+//     los antepasados; así va al cubo de .a. Si una regla saldría con más de MAX selectores, esa parte se queda como estaba.
 //   · «::view-transition-…(x)» → «:where(html)::view-transition-…(x)»: solo se piden en la raíz y, sin nada delante, se
 //     probaban en todos los elementos.
 // Lo demás (reglas con «*», con «> *», …) ya se descarta deprisa por sus antepasados.
@@ -106,21 +107,54 @@ function pseudos(comp) {
 // El primer :is()/:where() de primer nivel de un compuesto con varias opciones (o null)
 export const multiple = (comp) => pseudos(comp).find((m) => m.opciones.length > 1) || null;
 
-// Un selector complejo partido en varios (o el mismo, en una lista de uno)
+// Una opción de un :is()/:where() escrita para que vaya a un cubo, con la misma especificidad y a lo mismo:
+//   · compuesta («.a:hover»): tal cual, sola en su :is()/:where();
+//   · con combinadores («.x .a», «.x>.a»): «:is(.a):is(.x *)» (el elemento es .a y tiene un .x encima; «*» no pesa nada, así
+//     que pesa lo mismo que «.x .a»): va al cubo de .a y lo de encima solo se mira en esos elementos;
+//   · con «relleno» (un :is() con opciones de distinto peso): su última clase repetida («.num.num» es lo mismo que «.num» y
+//     pesa como dos clases) hasta pesar lo que la más pesada. Solo si lo que le falta son clases y tiene alguna.
+// null si no se puede (su última parte sin nada que sirva de cubo, o con pseudo-elemento).
+function opcionEnCubo(nombre, o, relleno = 0) {
+  const ts = trozos(o);
+  const ultima = ts[ts.length - 1].comp;
+  if (!tieneClave(ultima) || /::|:(before|after|first-line|first-letter)(?![a-zA-Z-])/i.test(primerNivel(o))) return null;
+  let u = ultima;
+  if (relleno) {
+    const cls = [...primerNivel(ultima).matchAll(/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/g)].map((m) => m[1]).pop();
+    if (!cls) return null;
+    u += `.${cls}`.repeat(relleno);
+  }
+  if (ts.length === 1) return `:${nombre}(${u})`;
+  return `:${nombre}(${u}):${nombre}(${escribirTrozos([...ts.slice(0, -1), { comb: ts[ts.length - 1].comb, comp: '*' }])})`;
+}
+// Lo que le falta a una opción para pesar como la más pesada del :is(), si solo le faltan clases (o null)
+function rellenoDe(o, tope) {
+  const d = tope - especificidad(o);
+  return d >= 0 && d % 1000 === 0 && d < 1e6 ? d / 1000 : null;
+}
+
+// Un selector complejo partido en varios (o el mismo, en una lista de uno). De derecha a izquierda: la última parte primero
+// (la que decide el cubo); una parte que haría pasar de MAX selectores se deja como está
 export function partirSelector(sel) {
   const ts = trozos(sel);
   let lista = [ts];
-  for (let k = 0; k < ts.length; k++) {
+  for (let k = ts.length - 1; k >= 0; k--) {
     const comp = ts[k].comp;
     if (tieneClave(comp)) continue;
     const m = multiple(comp);
     if (!m) continue;
-    if (!m.opciones.every((o) => compuesto(o) && tieneClave(o))) continue;
-    if (m.nombre === 'is' && new Set(m.opciones.map(especificidad)).size > 1) continue;
-    if (lista.length * m.opciones.length > MAX) return [sel];
-    const nuevos = m.opciones.map((o) => `${comp.slice(0, m.ini)}:${m.nombre}(${o})${comp.slice(m.fin)}`);
+    let nuevasOpciones;
+    if (m.nombre === 'where') nuevasOpciones = m.opciones.map((o) => opcionEnCubo('where', o));
+    else {
+      const tope = Math.max(...m.opciones.map(especificidad));
+      nuevasOpciones = m.opciones.map((o) => { const r = rellenoDe(o, tope); return r == null ? null : opcionEnCubo('is', o, r); });
+    }
+    if (nuevasOpciones.some((x) => x == null)) continue;
+    if (lista.length * nuevasOpciones.length > MAX) continue;
+    const nuevos = nuevasOpciones.map((o) => `${comp.slice(0, m.ini)}${o}${comp.slice(m.fin)}`);
     lista = lista.flatMap((l) => nuevos.map((c) => l.map((t, i) => (i === k ? { ...t, comp: c } : t))));
   }
+  if (lista.length === 1 && lista[0] === ts && !/^::view-transition/i.test(sel)) return [sel];
   const out = lista.map(escribirTrozos);
   // las transiciones de vista: solo en la raíz
   return out.map((x) => (/^::view-transition/i.test(x) ? `:where(html)${x}` : x));

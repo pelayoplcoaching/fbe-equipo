@@ -109,6 +109,9 @@ console.log('\nCada regla, a su cubo (v0.214)');
     [':where(button, [role="button"]):where(:not(:disabled)):active', [':where(button):where(:not(:disabled)):active', ':where([role="button"]):where(:not(:disabled)):active']],
     [':where([data-a="1,2"], .b:not(.c, .d))', [':where([data-a="1,2"])', ':where(.b:not(.c, .d))']],
     ['::view-transition-old(barra)', [':where(html)::view-transition-old(barra)']],
+    [':where(.a b, .c>d, .e)', [':where(b):where(.a *)', ':where(d):where(.c>*)', ':where(.e)']],
+    [':is(.num, .marcador, [class*=cifra] .v)', [':is(.num.num)', ':is(.marcador.marcador)', ':is(.v):is([class*=cifra] *)']],
+    [':is(.padrinos .pd-t, .lo-mejor .lm-t)>span:first-child', [':is(.pd-t):is(.padrinos *)>span:first-child', ':is(.lm-t):is(.lo-mejor *)>span:first-child']],
   ];
   for (const [sel, esperado] of casos) {
     const r = partirSelector(sel);
@@ -118,14 +121,16 @@ console.log('\nCada regla, a su cubo (v0.214)');
   const iguales = [
     [':is(.a, b)', 'un :is() con opciones de distinto peso (partido, la más ligera perdería fuerza)'],
     ['.x:is(.a, .b)', 'una parte que ya tiene su clase (ya va a su cubo)'],
-    [':where(.a b, .c)', 'opciones con combinadores (dentro de un :where() no van a ningún cubo)'],
+    [':is(p, li, .peq)', 'un :is() con una opción que pesa menos en clases y más en etiquetas (no se puede rellenar)'],
     [':where(:hover, :focus)', 'opciones sin clase, id, etiqueta ni atributo'],
     [':root::view-transition-old(x)', 'una transición de vista que ya dice que es de la raíz'],
-    [':where(.a,.b,.c,.d,.e) :where(.f,.g,.h,.i)', `más de ${16} selectores (5 × 4)`],
     [':not(.a, .b)', 'un :not() (no es una unión)'],
     ['.a:has(:is(.b, .c))', 'lo de dentro de un :has()'],
   ];
   for (const [sel, por] of iguales) check(JSON.stringify(partirSelector(sel)) === JSON.stringify([sel]), `se queda igual: ${por}`);
+  const tope = partirSelector(':where(.a,.b,.c,.d,.e) :where(.f,.g,.h,.i)');
+  check(JSON.stringify(tope) === JSON.stringify([':where(.a,.b,.c,.d,.e) :where(.f)', ':where(.a,.b,.c,.d,.e) :where(.g)', ':where(.a,.b,.c,.d,.e) :where(.h)', ':where(.a,.b,.c,.d,.e) :where(.i)']),
+    `con más de 16 selectores (5 × 4), solo la última parte, la que decide el cubo (${tope.length})`);
   const css = '@media (min-width:1px){:where(.a,.b){color:red}}.c,::view-transition-new(x){x:y}@keyframes k{0%{opacity:0}}:is(.d, .e) span{content:"a,b"}';
   const r = cubos(css);
   check(r.css === '@media (min-width:1px){:where(.a),:where(.b){color:red}}.c,:where(html)::view-transition-new(x){x:y}@keyframes k{0%{opacity:0}}:is(.d) span,:is(.e) span{content:"a,b"}' && r.tocados === 3 && r.nuevos === 5,
