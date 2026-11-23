@@ -5,7 +5,10 @@
 //   npm run build
 //   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste] [--quien=atleta,coach]
 //                              [--atletas=Ana López,Carlos Vera] [--hondo] [--salida=/tmp/auditoria] [--dist=dist] [--puerto=4410]
+//                              [--raros]
 // --hondo: también explora dentro de cada hoja (una capa más). Sin él, solo abre y revisa.
+// --raros: con la demo llevada al extremo (scripts/datos-raros.mjs): dos años de Ana, un chat de 1.500 mensajes, 60 atletas,
+//   nombres larguísimos y un atleta sin nada. Mejor con --atletas="Ana López,Rubén Martín,Iván Prieto".
 // Lo que toca no envía, borra, graba, sube ni comparte nada (lista NO_TOCAR); la demo guarda sus datos en el propio
 // navegador, así que lo que marque (una serie, un hábito) se queda en esa pasada.
 import { chromium } from 'playwright';
@@ -13,9 +16,12 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { servir } from '../test/servidor.mjs';
+import { semillaDemo } from '../web/src/datos/semilla-demo.js';
+import { rarificar } from './datos-raros.mjs';
 
 const arg = (k, def) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : def; };
 const hondo = process.argv.includes('--hondo');
+const RAROS = process.argv.includes('--raros') ? (() => { const db = semillaDemo(); console.log('datos raros:', rarificar(db, { hoy: new Date().toISOString().slice(0, 10) })); return JSON.stringify(db); })() : null;
 const SALIDA = resolve(arg('salida', '/tmp/auditoria'));
 const DIST = resolve(arg('dist', 'dist'));
 const PUERTO = Number(arg('puerto', '4410'));
@@ -47,7 +53,7 @@ const apuntar = (ctx, tipo, detalle) => { informe.push({ ...ctx, tipo, detalle }
 
 // Lo que se revisa en cada estado (dentro de la página)
 function revisarEnPagina() {
-  const out = { desborde: null, cortados: [], fuera: [], pequenos: [], rotas: [] };
+  const out = { desborde: null, cortados: [], fuera: [], pequenos: [], rotas: [], raros: [] };
   const vw = innerWidth;
   const sw = document.documentElement.scrollWidth;
   if (sw > vw + 1) out.desborde = `${sw} px de ancho en una pantalla de ${vw}`;
@@ -89,6 +95,11 @@ function revisarEnPagina() {
     if (r.width < 24 || r.height < 24) out.pequenos.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
   }
   for (const im of document.querySelectorAll('img')) if (im.complete && im.naturalWidth === 0 && im.getAttribute('src') && visible(im)) out.rotas.push((im.getAttribute('src') || '').slice(0, 80));
+  // Textos que delatan un fallo: NaN, undefined, null, Invalid Date, [object Object], Infinity (en lo que se ve y en lo que se lee)
+  const RARO = /(^|[^\p{L}\p{N}_])(NaN|undefined|null|Invalid Date|\[object Object\]|-?Infinity)(?![\p{L}\p{N}_])/gu;
+  const textos = [document.body.innerText || ''];
+  for (const el of document.querySelectorAll('[aria-label], [title], [placeholder], [aria-valuetext]')) for (const a of ['aria-label', 'title', 'placeholder', 'aria-valuetext']) { const v = el.getAttribute(a); if (v) textos.push(v); }
+  for (const t of textos) for (const m of t.matchAll(RARO)) { if (out.raros.length < 6) out.raros.push(`«${t.slice(Math.max(0, m.index - 30), m.index + m[0].length + 30).replace(/\s+/g, ' ').trim()}»`); }
   return out;
 }
 
@@ -111,6 +122,7 @@ async function revisar(p, ctx, { conAxe = true } = {}) {
     for (const x of r.fuera.slice(0, 6)) apuntar(ctx, 'fuera', x);
     for (const x of r.pequenos.slice(0, 8)) apuntar(ctx, 'pequeño', x);
     for (const x of r.rotas.slice(0, 4)) apuntar(ctx, 'imagen rota', x);
+    for (const x of r.raros) apuntar(ctx, 'texto raro', x);
   }
   if (conAxe) for (const x of await axe(p)) apuntar(ctx, 'accesibilidad', x);
   const lt = await p.evaluate(() => { const l = (window.__lt || []).splice(0); return l; }).catch(() => []);
@@ -126,6 +138,10 @@ const t0 = Date.now();
 async function entrar(conf, nombre) {
   const c = CONFS[conf];
   const ctx = await nav.newContext({ viewport: c.viewport, isMobile: !!c.isMobile, hasTouch: !!c.hasTouch, colorScheme: c.colorScheme, locale: 'es-ES', timezoneId: 'Europe/Madrid', reducedMotion: 'reduce' });
+  if (RAROS) await ctx.addInitScript((db) => {
+    // una vez por pestaña (al recargar se queda lo que haya cambiado la app)
+    try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: no caben (${e.message})`); }
+  }, RAROS);
   await ctx.addInitScript((aj) => {
     try { localStorage.setItem('fbe-escena-200', '1'); if (aj && !localStorage.getItem('fbe-ajustes')) localStorage.setItem('fbe-ajustes', JSON.stringify(aj)); } catch { /* */ }
     window.__lt = [];
@@ -228,7 +244,7 @@ function guardarInforme() {
     if (g.donde.length < 6) g.donde.push(`${x.conf} · ${x.quien} · ${x.donde}`);
     g.n = (g.n || 0) + 1;
   }
-  const orden = ['error', 'desborde', 'fuera', 'cortado', 'imagen rota', 'accesibilidad', 'bloqueo', 'pequeño'];
+  const orden = ['error', 'texto raro', 'desborde', 'fuera', 'cortado', 'imagen rota', 'accesibilidad', 'bloqueo', 'pequeño'];
   const lineas = [`# Auditoría de pantallas (${new Date().toISOString().slice(0, 16)})`, '', `${estados} estados revisados en ${Math.round((Date.now() - t0) / 1000)} s; ${informe.length} hallazgos en ${grupos.size} grupos. Configuraciones: ${confs.join(', ')}.`, ''];
   for (const tipo of orden) {
     const gs = [...grupos.values()].filter((g) => g.tipo === tipo).sort((a, b) => b.n - a.n);
@@ -239,6 +255,7 @@ function guardarInforme() {
   }
   writeFileSync(join(SALIDA, 'informe.md'), lineas.join('\n'));
   writeFileSync(join(SALIDA, 'informe.json'), JSON.stringify(informe, null, 1));
+  return grupos.size;
 
 }
 
@@ -282,6 +299,6 @@ for (const conf of confs) {
 await nav.close();
 srv.close?.();
 
-guardarInforme();
-console.log(`\n${estados} estados, ${informe.length} hallazgos (${grupos.size} grupos) → ${join(SALIDA, 'informe.md')}`);
+const nGrupos = guardarInforme();
+console.log(`\n${estados} estados, ${informe.length} hallazgos (${nGrupos} grupos) → ${join(SALIDA, 'informe.md')}`);
 process.exit(0);

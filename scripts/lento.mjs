@@ -4,10 +4,14 @@
 //   npm run build && node scripts/lento.mjs [--freno=4] [--quien=atleta,coach] [--perfil] [--dist=dist] [--salida=/tmp/lento]
 // --perfil: guarda además el perfil de CPU de cada paso (abrir en Chrome → Rendimiento) y las funciones que más tiempo se
 // llevan (con una construcción legible, scripts/build-legible, se ven sus nombres).
+// --raros: con la demo llevada al extremo (scripts/datos-raros.mjs: dos años de Ana, un chat de 1.500 mensajes, 60 atletas).
+// Cada paso apunta también cuánto se recalculan los estilos y se recoloca la página (lo que cuesta «repintar»).
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { servir } from '../test/servidor.mjs';
+import { semillaDemo } from '../web/src/datos/semilla-demo.js';
+import { rarificar } from './datos-raros.mjs';
 
 const arg = (k, def) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : def; };
 const FRENO = Number(arg('freno', '4'));
@@ -15,6 +19,7 @@ const DIST = resolve(arg('dist', 'dist'));
 const SALIDA = resolve(arg('salida', '/tmp/lento'));
 const PUERTO = Number(arg('puerto', '4420'));
 const conPerfil = process.argv.includes('--perfil');
+const RAROS = process.argv.includes('--raros') ? (() => { const db = semillaDemo(); rarificar(db, { hoy: new Date().toISOString().slice(0, 10) }); return JSON.stringify(db); })() : null;
 const quienes = arg('quien', 'atleta,coach').split(',');
 mkdirSync(SALIDA, { recursive: true });
 
@@ -26,6 +31,7 @@ const filas = [];
 async function sesion(nombre, movil) {
   const ctx = await nav.newContext(movil ? { viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid' }
     : { viewport: { width: 1280, height: 860 }, locale: 'es-ES', timezoneId: 'Europe/Madrid' });
+  if (RAROS) await ctx.addInitScript((db) => { try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: ${e.message}`); } }, RAROS);
   await ctx.addInitScript(() => {
     try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* */ }
     window.__ev = []; window.__lt = [];
@@ -47,6 +53,7 @@ async function sesion(nombre, movil) {
   await cerrar(p);
   const cdp = await ctx.newCDPSession(p);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: FRENO });
+  await cdp.send('Performance.enable');
   await p.evaluate(() => { localStorage.setItem('fbe-demo-retraso', '170'); });
   if (conPerfil) await cdp.send('Profiler.enable');
   return { ctx, p, cdp, errores };
@@ -62,17 +69,23 @@ async function cerrar(p) {
 async function paso(s, quien, nombre, hacer, listo) {
   const { p, cdp } = s;
   await p.evaluate(() => { window.__ev.length = 0; window.__lt.length = 0; });
+  const metricas = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
+  const m0 = await metricas();
   if (conPerfil) await cdp.send('Profiler.start');
   const t0 = Date.now();
   let ok = true;
   try { await hacer(); if (listo) await listo(); } catch (e) { ok = false; s.errores.push(`${nombre}: ${e.message.slice(0, 120)}`); }
   const ms = Date.now() - t0;
   await p.waitForTimeout(700);
+  const m1 = await metricas();
+  const d = (k) => (m1[k] || 0) - (m0[k] || 0);
   const { ev, lt } = await p.evaluate(() => ({ ev: window.__ev.slice(), lt: window.__lt.slice() }));
   const peor = ev.reduce((m, e) => Math.max(m, e.d), 0);
   const bloqueo = lt.reduce((t, e) => t + Math.max(0, e.d - 50), 0);
   const largo = lt.reduce((m, e) => Math.max(m, e.d), 0);
-  filas.push({ quien, paso: nombre, ok, ms, peorToque: Math.round(peor), bloqueo: Math.round(bloqueo), bloqueoMasLargo: Math.round(largo) });
+  filas.push({ quien, paso: nombre, ok, ms, peorToque: Math.round(peor), bloqueo: Math.round(bloqueo), bloqueoMasLargo: Math.round(largo),
+    estilos: Math.round(d('RecalcStyleCount')), estilosMs: Math.round(d('RecalcStyleDuration') * 1000), maquetar: Math.round(d('LayoutCount')),
+    maquetarMs: Math.round(d('LayoutDuration') * 1000), guionMs: Math.round(d('ScriptDuration') * 1000), nodos: Math.round(m1.Nodes || 0) });
   if (conPerfil) {
     const { profile } = await cdp.send('Profiler.stop');
     const fich = `${quien}-${nombre}`.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
@@ -142,8 +155,8 @@ if (quienes.includes('coach')) {
 }
 await nav.close(); srv.close?.();
 
-const lineas = [`# Móvil lento (freno ${FRENO}×, base a 170 ms)`, '', '| quién | paso | listo en | peor toque | bloqueo total | bloqueo más largo |', '|---|---|---|---|---|---|'];
-for (const f of filas) lineas.push(`| ${f.quien} | ${f.paso}${f.ok === false ? ' ⚠' : ''} | ${f.ms} ms | ${f.peorToque ?? ''} ms | ${f.bloqueo ?? ''} ms | ${f.bloqueoMasLargo ?? ''} ms |`);
+const lineas = [`# Móvil lento (freno ${FRENO}×, base a 170 ms${RAROS ? ', datos raros' : ''})`, '', '| quién | paso | listo en | peor toque | bloqueo total | bloqueo más largo | estilos (veces, ms) | maquetar (veces, ms) | guion | nodos |', '|---|---|---|---|---|---|---|---|---|---|'];
+for (const f of filas) lineas.push(`| ${f.quien} | ${f.paso}${f.ok === false ? ' ⚠' : ''} | ${f.ms} ms | ${f.peorToque ?? ''} ms | ${f.bloqueo ?? ''} ms | ${f.bloqueoMasLargo ?? ''} ms | ${f.estilos ?? ''} · ${f.estilosMs ?? ''} ms | ${f.maquetar ?? ''} · ${f.maquetarMs ?? ''} ms | ${f.guionMs ?? ''} ms | ${f.nodos ?? ''} |`);
 for (const f of filas.filter((x) => x.top)) lineas.push('', `## ${f.quien}: ${f.paso}`, ...f.top.map((x) => `- ${x}`));
 for (const f of filas.filter((x) => x.detalle)) lineas.push('', `## ${f.quien}: errores`, ...f.detalle.map((x) => `- ${x}`));
 writeFileSync(join(SALIDA, 'lento.md'), lineas.join('\n'));
