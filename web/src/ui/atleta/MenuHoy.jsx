@@ -2,7 +2,7 @@
 // arrastra Comidas entera (el recetario, la semana del menú) al abrir la app.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, useApuntar } from '../comunes.jsx';
-import { NOMBRE_TOMA, ordenarTomas, totalesDia, tomaDeLaHora } from '../../logica/comidas.js';
+import { NOMBRE_TOMA, ordenarTomas, totalesDia, textoMacros, tomaDeLaHora } from '../../logica/comidas.js';
 import { usePlatos, BotonesPlato, HojaFotoPlato, HojaFuera } from '../Platos.jsx';
 import { planVigente, objetivoDelDia, fmtKcal } from '../../logica/nutricion.js';
 import { hoyISO } from '../../logica/fechas.js';
