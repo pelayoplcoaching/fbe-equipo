@@ -106,7 +106,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .cabecera .titulo { flex: 1; min-width: 0; }
 .cabecera h1 { font-size: var(--tipo-titulo-s); font-stretch: var(--ancho-titulo); font-weight: 800; line-height: var(--tipo-titulo-s-lh); letter-spacing: var(--tipo-titulo-s-tr); }
 .cabecera .sub { font-size: var(--letra-13-5); color: var(--tinta-2); margin-top: 1px; }
-.marca { display: flex; align-items: center; gap: var(--esp-8); font-weight: 800; font-stretch: 125%; font-size: var(--letra-15); letter-spacing: .01em; }
+.marca { display: flex; align-items: center; gap: var(--esp-8); font-weight: 800; font-stretch: 125%; font-size: var(--letra-15); letter-spacing: .01em; white-space: nowrap; }
 .marca svg, .marca img { width: 28px; height: 28px; border-radius: var(--r-xs); display: block; }
 
 .titular { display: grid; gap: var(--esp-6); }
