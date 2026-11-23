@@ -3951,6 +3951,9 @@ if (parte(PRINCIPAL)) try {
     check(await p.locator('canvas.confeti-lienzo').count() === 0, 'el confeti se borra solo (unos 2,5 s)');
     await hitoP.getByRole('button', { name: 'Seguir' }).click();
     await hitoP.waitFor({ state: 'detached' });
+    // (v0.207) la hoja de las medallas nuevas espera su turno y sale justo después del hito: se espera un momento a que
+    // salga (si toca) y se cierra (en GitHub, más lento, salía después de cerrarDialogos y tapaba las pestañas)
+    await p.locator('[role=dialog]').first().waitFor({ timeout: 2500 }).catch(() => {});
     await cerrarDialogos();
     const hitoVisto = hitos[hitos.length - 1];
     check(await p.evaluate((h) => Object.keys(localStorage).some((k) => { try { return k.startsWith('fbe-hitos-racha-') && JSON.parse(localStorage.getItem(k)).includes(h); } catch { return false; } }), hitoVisto), 'lo celebrado se guarda en el móvil, por atleta');
