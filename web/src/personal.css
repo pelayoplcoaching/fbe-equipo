@@ -71,6 +71,8 @@
 /* 7 · El coach */
 .cumples-hoy { display: flex; gap: var(--esp-10); align-items: flex-start; }
 .cumples-hoy > svg { flex: none; width: var(--ico-20); height: var(--ico-20); color: var(--oro-400); margin-top: 1px; }
+/* (v0.210) el nombre va dentro de la frase: sin el margen lateral del boton de texto (salia "Carlos Vera .") */
+.cumples-hoy .btn-texto { padding-inline: 0; }
 .lo-suyo-porque { margin: 0; display: grid; gap: var(--esp-4); font-size: var(--letra-17); line-height: 1.4; font-style: italic; }
 .lo-suyo-porque .t-sobre { font-style: normal; }
 .lo-suyo-datos { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-4) var(--esp-14); font-size: var(--letra-15); }

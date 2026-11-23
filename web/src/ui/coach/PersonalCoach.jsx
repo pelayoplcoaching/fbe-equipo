@@ -51,7 +51,7 @@ export function CumplesHoy({ lista = [], abrir }) {
       <span>{cumplen.length === 1 ? 'Hoy cumple años ' : 'Hoy cumplen años '}
         {cumplen.map((r, i) => (
           <span key={r.atleta_id}>{i > 0 && (i === cumplen.length - 1 ? ' y ' : ', ')}<button class="btn-texto" onClick={() => abrir?.(r.atleta_id)}>{r.nombre}</button></span>
-        ))}. La app ya le felicita; si quieres, escríbele.
+        ))}{cumplen.length === 1 ? '. La app ya le felicita; si quieres, escríbele.' : '. La app ya les felicita; si quieres, escríbeles.'}
         {conTel.length > 0 && <span class="fila-envolver cumples-wa">{conTel.map((r) => <BotonWhatsApp key={r.atleta_id} telefono={contactos.datos[r.atleta_id]} texto={felicitar(r)} etiqueta={conTel.length > 1 ? `Felicitar a ${(r.nombre || '').split(' ')[0]}` : 'Felicitarle por WhatsApp'} />)}</span>}
       </span>
     </div>
