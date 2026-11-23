@@ -54,6 +54,15 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
       await p.waitForTimeout(250);
     }
   };
+  // (lo que sale encima al entrar, como las medallas nuevas, puede tardar en salir y tapar lo que se va a pulsar: se
+  // cierra y se reintenta. En la CI salía justo después de cerrarDialogos y el clic esperaba 30 s)
+  const pulsar = async (p, loc) => {
+    for (let i = 0; i < 5; i++) {
+      if (await loc.click({ timeout: 4000 }).then(() => true).catch(() => false)) return;
+      await cerrarDialogos(p);
+    }
+    await loc.click();
+  };
   const animadas = (p, sel) => p.evaluate((s) => [...document.querySelectorAll(s)].flatMap((el) => el.getAnimations().map((a) => `${a.animationName || 'transicion'}:${a.playState}`)), sel);
   const VIVAS = 'img.portada-foto, .bdia-fondo, .bdia-luz, .bdia-luz *, .franja-cruce img, .resumen-hero img.hero-foto, .hero-brillo, .habito-cab .cab-ilu-img, .toma-ilu .cab-ilu-img, .ck-ilu-img, .foco-cab .cab-ilu-img, .hito-fondo, .hito-chispas i';
 
@@ -85,7 +94,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     // el calentamiento) van aparte
     const deSesion = () => imagenes.filter((x) => x.startsWith('sesion/sesion-'));
     const antesPortada = deSesion().length;
-    await p.locator('.btn-hero').first().click();
+    await pulsar(p, p.locator('.btn-hero').first());
     const foto = p.locator('img.portada-foto');
     await foto.waitFor();
     const escala = () => foto.evaluate((el) => Number(getComputedStyle(el).scale) || 1);
@@ -95,7 +104,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     check(e0 >= 1 && e1 > e0 && e1 <= 1.0601 && (await animadas(p, 'img.portada-foto')).some((x) => x === 'portada-viva:running'), `la portada de la sesión se acerca muy despacio (${e0.toFixed(3)} → ${e1.toFixed(3)}, hasta 1,06)`);
     check(await foto.evaluate((el) => { const r = el.parentElement.getBoundingClientRect(); return getComputedStyle(el.parentElement).overflow === 'hidden' && Math.round(r.width) === innerWidth; }), 'dentro de su hueco de siempre (lo que crece queda recortado)');
     check(deSesion().length - antesPortada === 1 && new Set(imagenes).size === imagenes.length, `sin descargas de más: al abrir la portada se pide una imagen, la suya, y ninguna dos veces (${deSesion().length - antesPortada})`);
-    await p.getByRole('button', { name: 'Empezar' }).last().click();
+    await pulsar(p, p.getByRole('button', { name: 'Empezar' }).last());
     const franja = p.locator('.franja-cruce');
     await franja.waitFor();
     await cerrarDialogos(p);
@@ -136,7 +145,7 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     await p.locator('nav.tabs').waitFor();
     await cerrarDialogos(p);
     await abrirEnHoy(p, 'habitos');
-    await p.locator('.habito-tile', { hasText: 'Pasos' }).click();
+    await pulsar(p, p.locator('.habito-tile', { hasText: 'Pasos' }));
     const hoja = p.getByRole('dialog', { name: 'Pasos' });
     const cab = hoja.locator('.habito-cab');
     await cab.waitFor();
@@ -197,11 +206,11 @@ export async function probarVivas({ navegador, check, base = 'http://localhost:4
     await p.locator('.bdia-empezar').click();
     await p.locator('nav.tabs').waitFor();
     await cerrarDialogos(p);
-    await p.locator('.btn-hero').first().click();
+    await pulsar(p, p.locator('.btn-hero').first());
     await p.locator('img.portada-foto').waitFor();
     await p.waitForTimeout(300);
     check((await animadas(p, VIVAS)).length === 0 && await p.locator('img.portada-foto').evaluate((el) => (getComputedStyle(el).scale || 'none') === 'none' || getComputedStyle(el).scale === '1'), 'y la portada se queda quieta');
-    await p.getByRole('button', { name: 'Empezar' }).last().click();
+    await pulsar(p, p.getByRole('button', { name: 'Empezar' }).last());
     await p.locator('.franja-cruce').waitFor();
     await cerrarDialogos(p);
     await p.locator('.donde-entrenas .segmentos button', { hasText: 'Viaje' }).click();
