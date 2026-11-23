@@ -4,6 +4,11 @@
 // en una sesión, un vídeo o un check-in. Cinco mensajes el mismo día son un contacto. No cuentan las difusiones (el mismo
 // mensaje a varios), los mensajes programados que aún no han salido ni los eliminados.
 import { fechaMadrid, sumarDias, diasEntre } from '../fechas.js';
+// (v0.213, rendimiento) los formateadores, creados una sola vez: la hora a la que escribe cada atleta se miraba creando uno
+// por mensaje (con un chat de 1.500 mensajes, 1.500 formateadores en cada pasada del radar)
+let fmtHM = null, fmtH24 = null;
+const fmtHoraMin = () => (fmtHM ||= new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', minute: '2-digit' }));
+const fmtHora24 = () => (fmtH24 ||= new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }));
 
 export const VENTANA_DIAS = 7;        // los últimos 7 días, con hoy
 export const SEMANAS_HISTORIA = 4;    // cuántas ventanas de 7 días se enseñan hacia atrás
@@ -159,7 +164,7 @@ export function cuandoSale(iso, hoy = fechaMadrid()) {
   if (!Number.isFinite(t)) return '';
   const d = new Date(t);
   const dia = fechaMadrid(d);
-  const hora = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', minute: '2-digit' }).format(d);
+  const hora = fmtHoraMin().format(d);
   const n = diasEntre(hoy, dia);
   const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const cuando = n <= 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${DIAS[new Date(`${dia}T12:00:00Z`).getUTCDay()]}` : `el ${Number(dia.slice(8, 10))}/${Number(dia.slice(5, 7))}`;
@@ -206,7 +211,7 @@ export function horaHabitual(comentarios = [], atletaId, { minimo = 4 } = {}) {
     if (!c || c.atleta_id !== atletaId || c.autor !== 'atleta' || c.eliminado_en || c.resumen_sesion) continue;
     const t = Date.parse(c.creado_en);
     if (!Number.isFinite(t)) continue;
-    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t)));
+    const h = Number(fmtHora24().format(new Date(t)));
     if (Number.isFinite(h)) { horas[h]++; n++; }
   }
   if (n < minimo) return null;

@@ -1,6 +1,7 @@
 // Control de cobros (v0.24, migración 020): solo para el coach. Lo acordado con cada atleta (servicio, precio al
 // mes y cada cuánto paga) y sus cobros, uno por periodo, con el importe guardado tal cual. Se lleva a mano.
 import { hoyISO, sumarDias, diasEntre } from './fechas.js';
+import { fmtNum } from './formato-numero.js';
 
 export const CICLOS = [['mensual', 'Mensual', 1], ['trimestral', 'Trimestral', 3], ['semestral', 'Semestral', 6], ['anual', 'Anual', 12]];
 export const MESES_CICLO = Object.fromEntries(CICLOS.map(([v, , m]) => [v, m]));
@@ -76,7 +77,7 @@ export function cobradoEnMes(pagos = [], mes = hoyISO().slice(0, 7)) {
   return Math.round(pagos.filter((p) => p.estado === 'pagado' && p.fecha_pago?.slice(0, 7) === mes).reduce((t, p) => t + Number(p.importe || 0), 0) * 100) / 100;
 }
 
-export const fmtEuros = (x) => `${Number(x || 0).toLocaleString('es-ES', { minimumFractionDigits: Number(x) % 1 ? 2 : 0, maximumFractionDigits: 2 })} €`;
+export const fmtEuros = (x) => `${fmtNum(Number(x || 0), Number(x) % 1 ? 2 : 0, 2)} €`;
 
 // Euros escritos a la española: «1.308», «1.250,50», «74,5» o «74.50»
 export const leerEuros = (t) => {

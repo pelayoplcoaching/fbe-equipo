@@ -4,6 +4,7 @@
 // Los umbrales del semáforo están juntos en UMBRALES_PROGRESO: son el criterio del coach, para cambiarlos en un sitio.
 import { tendenciaPeso, ritmoPeso } from './calculos.js';
 import { progresoPeso } from './objetivos.js';
+import { fmtNum } from './formato-numero.js';
 
 export const UMBRALES_PROGRESO = {
   // Peso (ritmo de la tendencia, % del peso por semana, frente al que busca su plan)
@@ -38,7 +39,7 @@ const diasEntre = (a, b) => Math.round((Date.parse(`${dia(b)}T12:00:00Z`) - Date
 const r1 = (x) => (x == null || !Number.isFinite(Number(x)) ? null : Math.round(Number(x) * 10) / 10);
 const r2 = (x) => (x == null || !Number.isFinite(Number(x)) ? null : Math.round(Number(x) * 100) / 100);
 const media = (xs) => { const v = (xs || []).map(Number).filter((x) => Number.isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-export const num = (x, d = 1) => (x == null ? '-' : Number(x).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: d }));
+export const num = (x, d = 1) => (x == null ? '-' : fmtNum(Number(x), 0, d));
 export const conSigno = (x, d = 1) => (x == null ? '-' : `${x > 0 ? '+' : x < 0 ? '−' : '±'}${num(Math.abs(x), d)}`);
 const nombreCorto = (n) => String(n || '').split(' ')[0];
 const PEOR = { rojo: 3, ambar: 2, verde: 1, gris: 0 };

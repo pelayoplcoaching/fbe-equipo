@@ -3,8 +3,9 @@
 // mensaje para pedir lo que falta, los chips del resumen del chat, «tu semana de un vistazo» del check-in y su borrador.
 import { textoPlano } from './formato.js';
 import { fechaMadrid, fmtCorta, diasEntre, lunesDe, sumarDias } from './fechas.js';
+import { fmtNum } from './formato-numero.js';
 
-const num = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '' : Number(v).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: d }));
+const num = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '' : fmtNum(Number(v), 0, d));
 
 // ---------------------------------------------------------------- la sesión
 // La duración de la sesión según las series guardadas: de la primera a la última más 5 minutos (entre 5 y 300). null sin series

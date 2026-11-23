@@ -4,6 +4,7 @@
 import { hoyISO, sumarDias, diasEntre } from './fechas.js';
 import { siguientePeriodo, importePeriodo } from './cobros.js';
 import { nombreMes, sumarMes } from './mes.js';
+import { fmtNum } from './formato-numero.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 export const SIN_SERVICIO = 'Sin servicio apuntado';
@@ -70,4 +71,4 @@ export function panelNegocio(d, hoy = hoyISO(), { meses = 12 } = {}) {
 
 // Importes a la española («1.308 €», «74,50 €») o tapados, para enseñar la pantalla a alguien
 export const OCULTO = '••• €';
-export const euros = (x, oculto = false) => (oculto ? OCULTO : `${Number(x || 0).toLocaleString('es-ES', { minimumFractionDigits: Number(x) % 1 ? 2 : 0, maximumFractionDigits: 2, useGrouping: true })} €`);
+export const euros = (x, oculto = false) => (oculto ? OCULTO : `${fmtNum(Number(x || 0), Number(x) % 1 ? 2 : 0, 2, true)} €`);
