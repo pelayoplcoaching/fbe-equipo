@@ -49,7 +49,7 @@ export function Calculadora({ inicial = {}, alCerrar, discos = undefined }) {
           <div class="campo"><label for="calc-kg">{lb ? 'Lb' : 'Kg'}</label><Paso id="calc-kg" valor={kg} paso={salto} min={0} max={lb ? 1100 : 500} dec={2} etiqueta={`${nombrePeso()} de la serie`} alCambiar={(v) => setKg(v ?? 0)} /></div>
           <div class="campo"><label for="calc-reps">Repeticiones</label><Paso id="calc-reps" valor={reps} paso={1} min={1} max={12} dec={0} etiqueta="repeticiones" alCambiar={(v) => setReps(v ?? 1)} /></div>
         </div>
-        <div class="campo"><span class="etq">RPE</span><Segmentos etiqueta="RPE de la serie" valor={rpe} alCambiar={(v) => setRpe(v ?? 10)} opciones={[[6, '6'], [7, '7'], [8, '8'], [9, '9'], [10, '10']]} /></div>
+        <div class="campo"><span class="etq">RPE</span><Segmentos etiqueta="RPE de la serie" clase="seg-rpe-serie" valor={rpe} alCambiar={(v) => setRpe(v ?? 10)} opciones={[[6, '6'], [7, '7'], [8, '8'], [9, '9'], [10, '10']]} /></div>
         <div class="cifra calc-cifra"><span class="v num">{unoRM ? num(unoRM) : '—'}</span><span class="u">{u} de 1RM estimado</span></div>
       </section>
       {unoRM && (

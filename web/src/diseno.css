@@ -1993,9 +1993,15 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
    El tiempo de la sesión va en una píldora suave del acento y, mientras corre, con un punto verde que late (Sesion.jsx:
    clase corre). Terminada la sesión (los minutos), sin punto. */
 .crono-reloj { display: inline-flex; align-items: center; gap: var(--esp-6); padding: var(--esp-2) var(--esp-10); border-radius: var(--r-pildora); background: var(--morado-suave); color: var(--tinta); }
-.crono-reloj.corre::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 50%, transparent); }
-@media (prefers-reduced-motion: no-preference) { .crono-reloj.corre::before { animation: crono-late 2s ease-out infinite; } }
-@keyframes crono-late { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); } }
+.crono-reloj.corre::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+/* (v0.210, rendimiento) el latido del punto verde, con un halo que crece y se apaga (transform y opacidad: lo mueve la
+   tarjeta grafica). Antes animaba box-shadow, y el navegador recalculaba estilos y repintaba cada fotograma de toda la
+   sesion (desde la primera serie hasta el final). */
+@media (prefers-reduced-motion: no-preference) {
+  .crono-reloj.corre { position: relative; }
+  .crono-reloj.corre::after { content: ""; position: absolute; left: var(--esp-10); top: 0; bottom: 0; width: 7px; height: 7px; margin-block: auto; border-radius: 50%; background: color-mix(in srgb, var(--ok) 55%, transparent); pointer-events: none; animation: crono-late 2s ease-out infinite; }
+}
+@keyframes crono-late { 0% { transform: scale(1); opacity: 1; } 70%, 100% { transform: scale(2.7); opacity: 0; } }
 
 /* ── 119 · El último punto de las gráficas late (tanda 27) ────────────────────────────────────────────────────────────
    Como en Robinhood: el último punto de la curva de fuerza y de peso (el de hoy) lleva un halo que se abre despacio,
@@ -2378,13 +2384,13 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
 /* ── 166 · El RPE de la sesión con escala de color (tanda 30) ─────────────────────────────────────────────────────────
    Al terminar la sesión (y en la calculadora), la pastilla del esfuerzo elegido se tiñe del verde (5, cómoda) al rojo
    (10, máxima), como «¿Cómo llegas hoy?» (bloque 140). */
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--esf-e, var(--morado)) 20%, var(--hoja)); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="5"][aria-pressed="true"]) { --esf-e: var(--esf-5); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="6"][aria-pressed="true"]) { --esf-e: var(--esf-6); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="7"][aria-pressed="true"]) { --esf-e: var(--esf-7); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="8"][aria-pressed="true"]) { --esf-e: var(--esf-8); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="9"][aria-pressed="true"]) { --esf-e: var(--esf-9); }
-.segmentos:is([aria-label="RPE de la sesión"], [aria-label="RPE de la serie"]):has(> [data-v="10"][aria-pressed="true"]) { --esf-e: var(--esf-10); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [aria-pressed="true"]) { --seg-activo: color-mix(in srgb, var(--esf-e, var(--morado)) 20%, var(--hoja)); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="5"][aria-pressed="true"]) { --esf-e: var(--esf-5); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="6"][aria-pressed="true"]) { --esf-e: var(--esf-6); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="7"][aria-pressed="true"]) { --esf-e: var(--esf-7); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="8"][aria-pressed="true"]) { --esf-e: var(--esf-8); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="9"][aria-pressed="true"]) { --esf-e: var(--esf-9); }
+.segmentos:is(.seg-rpe-sesion, .seg-rpe-serie):has(> [data-v="10"][aria-pressed="true"]) { --esf-e: var(--esf-10); }
 
 /* ── 167 · Las cifras del final con su icono (tanda 30) ───────────────────────────────────────────────────────────────
    En «Sesión terminada», cada cifra lleva arriba su icono en un disco de color: la duración en el acento, las series
@@ -2634,16 +2640,16 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
 .calc-cifra { padding: var(--esp-12) var(--esp-16); border-radius: var(--r-16); background: linear-gradient(var(--oklab,) 135deg, var(--morado-suave), color-mix(in srgb, var(--morado-suave) 40%, var(--hoja))); }
 .calc-cifra .v { font-size: clamp(2.75rem, 13vw, 3.75rem); background: linear-gradient(var(--oklab,) 100deg, var(--tinta) 25%, var(--morado)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 @media (forced-colors: active), (prefers-contrast: more) { .calc-cifra .v { background: none; -webkit-text-fill-color: currentColor; } }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(2) { background: var(--acento-a8); color: var(--tinta); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="10"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(2) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(3) { background: var(--acento-a8); color: var(--tinta); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="9"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(3) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(4) { background: var(--acento-a8); color: var(--tinta); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="8"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(4) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(5) { background: var(--acento-a8); color: var(--tinta); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="7"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(5) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(6) { background: var(--acento-a8); color: var(--tinta); }
-.hoja-dialogo:has(.segmentos[aria-label="RPE de la serie"] > [data-v="6"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(6) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="10"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(2) { background: var(--acento-a8); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="10"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(2) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="9"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(3) { background: var(--acento-a8); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="9"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(3) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="8"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(4) { background: var(--acento-a8); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="8"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(4) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="7"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(5) { background: var(--acento-a8); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="7"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(5) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="6"][aria-pressed="true"]) .tabla-rpe :is(th, td):nth-child(6) { background: var(--acento-a8); color: var(--tinta); }
+.hoja-dialogo:has(.segmentos.seg-rpe-serie > [data-v="6"][aria-pressed="true"]) .tabla-rpe tr.actual td:nth-child(6) { background: var(--morado); color: var(--sobre-morado); font-weight: 800; border-radius: var(--r-xs); box-shadow: var(--sombra-accion); }
 
 /* ── 189 · «Cambiar el orden» más claro (tanda 32) ────────────────────────────────────────────────────────────────────
    El puesto de cada ejercicio va en un disco suave del acento (lleno mientras lo llevas) y el asa, más visible. */
@@ -2764,17 +2770,17 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
 /* ── 205 · La escala de color bajo el RPE al terminar (tanda 33) ──────────────────────────────────────────────────────
    Bajo los números del RPE de la sesión, una barrita del verde (cómoda) al rojo (máxima) con un punto en el valor
    elegido, de su color. */
-.campo:has(> .segmentos[aria-label="RPE de la sesión"]) > .escala-frase { position: relative; display: grid; gap: var(--esp-8); padding-top: var(--esp-2); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"]) > .escala-frase::before { content: ""; height: 5px; border-radius: var(--r-4); background: linear-gradient(var(--oklab,) 90deg, var(--esf-5), var(--esf-6), var(--esf-7), var(--esf-8), var(--esf-9), var(--esf-10)); opacity: .85; }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="5"][aria-pressed="true"]) { --pos: 8.33%; --esf-sel: var(--esf-5); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="6"][aria-pressed="true"]) { --pos: 25.0%; --esf-sel: var(--esf-6); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="7"][aria-pressed="true"]) { --pos: 41.67%; --esf-sel: var(--esf-7); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="8"][aria-pressed="true"]) { --pos: 58.33%; --esf-sel: var(--esf-8); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="9"][aria-pressed="true"]) { --pos: 75.0%; --esf-sel: var(--esf-9); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [data-v="10"][aria-pressed="true"]) { --pos: 91.67%; --esf-sel: var(--esf-10); }
-.campo:has(> .segmentos[aria-label="RPE de la sesión"] > [aria-pressed="true"]) > .escala-frase::after { content: ""; position: absolute; top: -2.5px; left: var(--pos); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--esf-sel); box-shadow: 0 0 0 2.5px var(--hoja), 0 2px 6px color-mix(in srgb, var(--tinta) 25%, transparent); }
-@media (prefers-reduced-motion: no-preference) { .campo:has(> .segmentos[aria-label="RPE de la sesión"]) > .escala-frase::after { transition: left var(--mov-medio) var(--curva-casa), background-color var(--mov-medio) var(--curva-casa); } }
-@media (forced-colors: active) { .campo:has(> .segmentos[aria-label="RPE de la sesión"]) > .escala-frase::before { background: CanvasText; } }
+.campo:has(> .segmentos.seg-rpe-sesion) > .escala-frase { position: relative; display: grid; gap: var(--esp-8); padding-top: var(--esp-2); }
+.campo:has(> .segmentos.seg-rpe-sesion) > .escala-frase::before { content: ""; height: 5px; border-radius: var(--r-4); background: linear-gradient(var(--oklab,) 90deg, var(--esf-5), var(--esf-6), var(--esf-7), var(--esf-8), var(--esf-9), var(--esf-10)); opacity: .85; }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="5"][aria-pressed="true"]) { --pos: 8.33%; --esf-sel: var(--esf-5); }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="6"][aria-pressed="true"]) { --pos: 25.0%; --esf-sel: var(--esf-6); }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="7"][aria-pressed="true"]) { --pos: 41.67%; --esf-sel: var(--esf-7); }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="8"][aria-pressed="true"]) { --pos: 58.33%; --esf-sel: var(--esf-8); }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="9"][aria-pressed="true"]) { --pos: 75.0%; --esf-sel: var(--esf-9); }
+.campo:has(> .segmentos.seg-rpe-sesion > [data-v="10"][aria-pressed="true"]) { --pos: 91.67%; --esf-sel: var(--esf-10); }
+.campo:has(> .segmentos.seg-rpe-sesion > [aria-pressed="true"]) > .escala-frase::after { content: ""; position: absolute; top: -2.5px; left: var(--pos); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--esf-sel); box-shadow: 0 0 0 2.5px var(--hoja), 0 2px 6px color-mix(in srgb, var(--tinta) 25%, transparent); }
+@media (prefers-reduced-motion: no-preference) { .campo:has(> .segmentos.seg-rpe-sesion) > .escala-frase::after { transition: left var(--mov-medio) var(--curva-casa), background-color var(--mov-medio) var(--curva-casa); } }
+@media (forced-colors: active) { .campo:has(> .segmentos.seg-rpe-sesion) > .escala-frase::before { background: CanvasText; } }
 
 /* ── 206 · Los intervalos en marcha con luz (tanda 33) ────────────────────────────────────────────────────────────────
    Sobre el color de la fase (y el grano, bloque 82): un resplandor detrás del reloj y una sombra abajo; el aro brilla y
@@ -4213,7 +4219,8 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    en los tres últimos segundos sale una onda del aro con cada segundo; al terminar, el aro se cierra de un trazo,
    el centro se enciende como una luna, salen doce rayos y dos ondas, y el lobo asoma sobre «¡Vamos!». */
 .reloj-descanso svg { overflow: visible; }
-.arco-punta { transform-box: view-box; transform-origin: center; transition: transform var(--mov-medio) linear; }
+.arco-punta { transform-box: view-box; transform-origin: center; }
+.reloj-descanso.suave .arco-punta { transition: transform var(--mov-medio) linear; }
 .arco-punta circle { fill: var(--blanco); filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px var(--blanco)); }
 .onda-segundo, .cierre-onda { fill: none; stroke: var(--c); transform-box: fill-box; transform-origin: center; opacity: 0; pointer-events: none; }
 .onda-segundo { stroke-width: 3; }
@@ -4233,7 +4240,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
   .cierre-rayos { animation: cierre-rayos .75s var(--curva-casa) .3s both; }
   .vamos-lobo { animation: vamos-lobo .5s var(--curva-rebote) .12s both; }
 }
-@media (prefers-reduced-motion: reduce) { .arco-punta { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .reloj-descanso.suave .arco-punta { transition: none; } }
 @keyframes onda-segundo { from { opacity: .75; transform: scale(1); } to { opacity: 0; transform: scale(1.2); } }
 @keyframes cierre-arco { from { stroke-dashoffset: 1; } }
 @keyframes cierre-luna { from { transform: scale(0); } }

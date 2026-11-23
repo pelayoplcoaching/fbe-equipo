@@ -1503,7 +1503,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
       )}
       <div class="campo">
         <span class="etq" id="t-rpe">¿Cuánto te ha costado la sesión entera? (RPE)</span>
-        <Segmentos etiqueta="RPE de la sesión" valor={rpe} alCambiar={setRpe} opciones={[5, 6, 7, 8, 9, 10].map((x) => [x, String(x)])} />
+        <Segmentos etiqueta="RPE de la sesión" clase="seg-rpe-sesion" valor={rpe} alCambiar={setRpe} opciones={[5, 6, 7, 8, 9, 10].map((x) => [x, String(x)])} />
         <span class="escala-frase">{rpe == null ? 'Elige un valor del 5 (cómoda) al 10 (máxima).' : ['Cómoda', 'Moderada', 'Exigente', 'Dura', 'Muy dura', 'Máxima'][rpe - 5]}</span>
       </div>
       {(deOtraSemana || sesion.fecha_realizada) && (

@@ -45,12 +45,36 @@ import { RPES, COLOR_DISCO, SONIDOS_DESCANSO, contextoAudio, prepararAudio, pita
 const conAvisoAlMovil = () => typeof Notification !== 'undefined' && Notification.permission === 'granted';
 // v0.63: toca (logica/ahora-toca.js): con el descanso en marcha, la tarjeta «Ahora toca» con lo que viene; al tocarla,
 // alToca(id, numero) lleva a esa serie (con el teclado en los kilos)
+// (v0.210, rendimiento) El arco del descanso y su punta, sin transición: antes avanzaban con una transición de 260 ms
+// encadenada cada 250 ms y el navegador recalculaba estilos, recolocaba y repintaba en cada fotograma de todo el descanso
+// (en un móvil lento, un tercio del trabajo de la página mientras esperas). Ahora avanzan a saltos de un cuarto de
+// segundo, con el resto del reloj (un par de píxeles cada vez: se ve seguido) y solo un salto grande (±15 s, pausa o
+// seguir) se anima, con la clase «suave».
+function ArcoDescanso({ q, frac, R, C }) {
+  return (
+    <>
+      <circle class="arco" style={{ stroke: 'url(#aro-descanso)' }} cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
+      {q > 0 && frac > 0 && frac < 1 && <g class="arco-punta" style={{ transform: `rotate(${360 * frac}deg)` }}><circle cx="100" cy={100 - R} r="5" /></g>}
+    </>
+  );
+}
+
 export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso = null, tras = null, inicio = null, pausa = null, pausadoEn = null, cambia = false, ultimoEj = false, alCambiar, clase = '', toca = null, alToca = null, discoMinimo = undefined, sesionId = null, ejercicio = null, empuje = null }) {
   const { api, atleta } = useApp() || {};
   const ahora = useAhora(250);
   const finRef = useRef(fin);
   finRef.current = fin;
   const pausado = Number.isFinite(pausa);
+  // (v0.210, rendimiento) Un salto grande del arco (±15 s, pausa o seguir) se anima un momento; el avance de cada cuarto
+  // de segundo, no (ArcoDescanso)
+  const [suave, setSuave] = useState(false);
+  const yaPintado = useRef(false);
+  useEffect(() => {
+    if (!yaPintado.current) { yaPintado.current = true; return undefined; }
+    setSuave(true);
+    const t = setTimeout(() => setSuave(false), 700);
+    return () => clearTimeout(t);
+  }, [fin, total, pausado]);
   const quedan = pausado ? Math.max(0, pausa / 1000) : Math.max(0, (fin - ahora) / 1000);
   const avisado = useRef(false);
   const programado = useRef(false);
@@ -248,15 +272,14 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
       </div>
-      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''}`} {...gestoDial} onClick={tocarReloj}>
+      <div class={`reloj-descanso ${fase ? 'respirando' : ''} ${quedan > 0 ? 'con-dial' : ''} ${suave ? 'suave' : ''}`} {...gestoDial} onClick={tocarReloj}>
         {fase && !quietoRespira && <span key={inicioR} ref={ponerRetraso} class="respira-circulo" aria-hidden="true" />}
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <DegradadoAro id="aro-descanso" gira />
           <circle class="carril" cx="100" cy="100" r={R} />
-          <circle class="arco" style={{ stroke: 'url(#aro-descanso)' }} cx="100" cy="100" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" />
           {/* (diseño, tanda 44) la punta del arco, con luz, mientras corre; una onda en cada uno de los tres últimos segundos;
               y, al terminar, el aro se cierra de un trazo, salen los rayos y dos ondas (el lobo llama) */}
-          {quedan > 0 && frac > 0 && frac < 1 && <g class="arco-punta" style={{ transform: `rotate(${360 * frac}deg)` }}><circle cx="100" cy={100 - R} r="5" /></g>}
+          <ArcoDescanso q={quedan} frac={frac} R={R} C={C} />
           {quedan > 0 && segundo <= 3 && !pausado && <circle key={segundo} class="onda-segundo" cx="100" cy="100" r={R} />}
           {quedan <= 0 && (
             <g class="descanso-cierre">
