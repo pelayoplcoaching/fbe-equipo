@@ -1168,10 +1168,11 @@ export function CabeceraGrande({ clase = '', children }) {
       copia.remove();
       setJusto(ancho > h1.clientWidth + 0.5);
     };
-    // (v0.214) con ResizeObserver, la primera medida es la suya (después de colocar, antes de pintar): medir también aquí
-    // obligaba a colocar la página a mitad del pintado, en cada pantalla con cabecera (40 ms con el móvil lento)
+    // (aquí sí se mide ya, aunque obligue a colocar la página: cambia el alto del título, y si se dejara para el
+    // ResizeObserver, lo de debajo se colocaría primero con el título grande y luego subiría; no llega a pintarse, pero la
+    // prueba de «nada se mueve al cargar», que mira cada fotograma, lo ve)
+    medir();
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
-    if (!ro) medir();
     const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(medir);
     mo?.observe(h, { childList: true, subtree: true, characterData: true });
     ro?.observe(h);
@@ -1656,7 +1657,7 @@ export function Pista({ id, children, icono = 'pregunta' }) {
       else if (sobra <= (parseFloat(getComputedStyle(p).lineHeight) || 20) + 2) setEntera(true);
       else setLarga(true);
     };
-    // (v0.214) la primera medida, la del observador: después de colocar la página y antes de pintarla
+    medir();
     const ro = new ResizeObserver(medir);
     ro.observe(p);
     return () => ro.disconnect();
