@@ -3,6 +3,7 @@ import { Icono, Hoja, useApp } from '../comunes.jsx';
 import { sonarFBE, audioParaMicro } from '../sonido.js';
 import { leerAjustes } from '../ajustes.js';
 import {
+import { useMarcaPagina } from '../marca-pagina.js';
   LIMITE_VOZ_SIN_081, quedaPoco, segundosRestantes, alLimite, formatoGrabacion, ondaDe, ondaViva, gestoVoz, PULSACION_CORTA_MS,
   siguienteVelocidad, textoVelocidad, errorMicro, esPermisoDenegado, ayudaMicro, trasPermiso, siguienteVoz, textoLimite, mmss, duracionGuardada, MIN_VOZ_SEG, VELOCIDADES,
   esSilencio, textoMicro, resultadoPrueba, tipoAudio, opcionesGrabadora,
@@ -303,6 +304,7 @@ export function BotonMicro({ g, disabled = false, bloqueado = false }) {
   // Con el teclado (Enter o Espacio) o un lector de pantalla: empieza sin mantener
   const clic = (e) => { if (e.detail === 0 && g.estado === 'nada' && !disabled) g.empezar({ manos: true }); };
   const manteniendo = g.estado === 'grabando' && !g.bloqueada;
+  useMarcaPagina('hay-grabando', manteniendo);
   return (
     <span class="chat-micro-caja">
       {manteniendo && <span class="chat-candado" aria-hidden="true" style={{ '--sube': arrastre }}><Icono n="candado" /><Icono n="arriba" /></span>}

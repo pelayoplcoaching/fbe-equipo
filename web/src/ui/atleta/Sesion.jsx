@@ -100,6 +100,7 @@ import { apuntarRecord } from '../Bienvenida.jsx';
 import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
 import { VideoYoutube, MiniGlobal, abrirMini } from '../YouTube.jsx';
 import { esYoutube, videoDe } from '../../logica/youtube.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // (pulido 2.10) «Compartir con el equipo», al terminar: es de la pantalla Equipo, que se carga cuando hace falta
 const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaCompartirEquipo', { mientras: null });
@@ -383,6 +384,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     }
   }, [det.datos]);
 
+  useMarcaPagina('hay-sesion-vista', !!det.datos && !det.error && !resumen);
   if (det.cargando && !det.datos) return <div class="contenido"><Siluetas forma="sesion" texto="Cargando la sesión" /></div>;
   if (det.error) return <div class="contenido"><ErrorCaja error={det.error} reintentar={det.recargar} /><button class="btn" onClick={alCerrar}>Volver</button></div>;
   const { sesion, semana, progresionAuto } = det.datos;

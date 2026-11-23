@@ -8,6 +8,7 @@ import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
+import { useMarcaPagina } from './marca-pagina.js';
 import { imagenIcono } from '../logica/imagenes.js';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
@@ -579,6 +580,8 @@ const leerY = (el) => { try { return new DOMMatrixReadOnly(getComputedStyle(el).
 // el foco entra en él al abrirse (desde la v0.50, con la capa por fuera, se quedaba en el botón que la abría)
 export function Hoja(props) { return <Capa><HojaDentro {...props} /></Capa>; }
 function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = false, clase = '' }) {
+  // (v0.209) con una hoja abierta, html.hay-velo (la barra del chat se esconde detrás)
+  useMarcaPagina('hay-velo');
   const ref = useRef(null);
   useAtraparFoco(ref);
   const arrastre = useRef(null);

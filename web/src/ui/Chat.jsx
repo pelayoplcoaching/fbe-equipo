@@ -43,6 +43,7 @@ import { prepararFoto } from './fotos.js';
 import { debeSonar, porTipo, TIPOS_BUSQUEDA, primeroDesde, ultimoEditable, hayAnteriores } from '../logica/chat.js';
 import { leerReacciones, emojiValido } from '../logica/emojis.js';
 import { comprimible } from '../logica/imagen.js';
+import { useMarcaPagina } from './marca-pagina.js';
 
 // El chat (v0.18): todos los mensajes con una persona en un solo hilo, como en WhatsApp. Lo que viene de una sesión,
 // un check-in o un vídeo lleva su etiqueta, que abre ese sitio; lo que se escribe aquí es un mensaje general.
@@ -988,6 +989,9 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   const conTexto = !!texto.trim();
   const mostrarEnviar = conTexto || adjuntos.length > 0 || !!editando;
   const grabandoVoz = grab.estado === 'grabando' || grab.estado === 'pidiendo' || grab.estado === 'pausada';
+  // (v0.209) en <html>, que hay chat (la lista y su barra): sin «:has()» que mire la página entera
+  useMarcaPagina('hay-chat-lista');
+  useMarcaPagina('hay-chat-barra');
   return (
     <div class={`chat ${fondo && cabecera ? 'con-fondo' : ''} ${seleccion ? 'seleccionando' : ''} ${emojis ? 'con-emojis' : ''} ${soltando ? 'soltando' : ''}`} ref={raiz} aria-label={`Chat con ${otro}`} {...arrastrar}>
       {soltando && <div class="chat-soltar" aria-hidden="true"><Icono n="clip" /><strong>Suelta aquí para adjuntarlo</strong><span class="peq">Fotos, vídeos o PDF</span></div>}

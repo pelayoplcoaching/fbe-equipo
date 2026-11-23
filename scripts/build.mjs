@@ -124,7 +124,9 @@ ${marcadoPortada}
   const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
-    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada()).replace('<!--PORTADA-->', () => marcadoPortada));
+    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada()).replace('<!--PORTADA-->', () => marcadoPortada)
+    // (v0.209) la marca de la portada en <html> (el fondo de la raíz, morado mientras está): la quita ui/portada.js con ella
+    .replace('<html lang="es">', '<html lang="es" class="hay-portada">'));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
   // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)
   const soloDemo = (f) => /^chunks\/video(-barra)?-demo-[A-Z0-9]+\.js$/.test(f);

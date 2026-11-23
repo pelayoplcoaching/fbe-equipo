@@ -32,6 +32,7 @@ import { repartirPestanas, PREFERIDAS_ATLETA } from '../../logica/pestanas.js';
 import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { leerAjustes, EVENTO_AJUSTES } from '../ajustes.js';
 import { fijarUnidadPeso } from '../../logica/unidades.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // (pulido 2.10) Equipo (el muro, los retos, el ranking: lo más grande después del chat) y el check-in de la semana se
 // cargan al abrirlos, y por detrás en cuanto la app se queda quieta: no hacen falta para arrancar
@@ -285,6 +286,8 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   const programa = compartido.programa.datos;
   useEffect(() => { comprobarEnCurso(atletaId, programa); }, [programa]);
   const conActividad = !sesionId && !!estadoActividad(enCurso);
+  useMarcaPagina('hay-actividad', conActividad);
+  useMarcaPagina('hay-tabs', !sesionId);
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''} ${conActividad ? 'con-actividad' : ''}`}>

@@ -334,9 +334,9 @@ select.seguida-orden { max-width: min(100%, 17rem); }
 .mensajes-dos .conversaciones > li:last-child:has(> .actual) { border-radius: 0 0 var(--r) var(--r); }
 .mensajes-chat { min-width: 0; padding-left: max(var(--esp-24), env(safe-area-inset-left, 0px)); }
 .mensajes-vacio { display: grid; place-content: center; min-height: calc(100vh - 160px); }
-.app.coach:has(.mensajes-dos) .chat-barra { left: calc(220px + var(--lista-conv) + max(24px, env(safe-area-inset-left, 0px))); }
-.app.coach:has(.mensajes-dos) .chat-fondo { left: calc(220px + var(--lista-conv)); }
-.app.coach:has(.mensajes-dos) .chat-dia-flotante, .app.coach:has(.mensajes-dos) .chat-nuevos { left: calc(50% + 110px + var(--lista-conv) / 2); }
+html.hay-mensajes-dos .app.coach .chat-barra { left: calc(220px + var(--lista-conv) + max(24px, env(safe-area-inset-left, 0px))); }
+html.hay-mensajes-dos .app.coach .chat-fondo { left: calc(220px + var(--lista-conv)); }
+html.hay-mensajes-dos .app.coach .chat-dia-flotante, html.hay-mensajes-dos .app.coach .chat-nuevos { left: calc(50% + 110px + var(--lista-conv) / 2); }
 
 /* ---------- 14. Biblioteca de ejercicios en columnas (ventanas anchas) --------------------------------------
    ui/coach/Biblioteca.jsx. Cada ejercicio era una fila a todo lo ancho con el nombre a la izquierda y el resto
@@ -1370,7 +1370,7 @@ input[type="range"]:is(.voz-barra):active::-webkit-slider-thumb { transform: sca
    del borde (el rebote de iOS) no asome blanco; y las esquinas de abajo de las hojas y la barra, limpias sobre el
    borde del móvil. */
 html { background: var(--tiza); }
-html:has(#portada) { background: var(--tinta-noche); }
+html.hay-portada { background: var(--tinta-noche); }
 @media (display-mode: standalone) {
   html { overscroll-behavior-y: none; }
   body { min-height: 100dvh; }
@@ -1819,8 +1819,8 @@ body { background: radial-gradient(150% 380px at 50% -70px, var(--acento-a8), tr
    pegada y por encima de la barra de abajo, no detrás (scroll-padding). En la sesión cuenta la cabecera de la sesión
    y la del ejercicio pegada (bloque 79). */
 html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 4.5rem); }
-html:has(nav.tabs) { scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem); }
-html:has(.sesion-vista) { scroll-padding-top: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px) + 5.25rem); scroll-padding-bottom: 1rem; }
+html.hay-tabs { scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem); }
+html.hay-sesion-vista { scroll-padding-top: calc(var(--alto-cab, 64px) + env(safe-area-inset-top, 0px) + 5.25rem); scroll-padding-bottom: 1rem; }
 
 /* ── 97 · Las tiras de lado no sacan de la pantalla (tanda 25) ────────────────────────────────────────────────────────
    Al llegar al final de una tira que se desliza de lado (chips, semanas, pestañas, fotos, menú, galería), seguir

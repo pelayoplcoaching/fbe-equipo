@@ -3,6 +3,7 @@ import { Capa, Icono, useApp, useAtraparFoco } from '../comunes.jsx';
 import { TextoChat } from '../Enlaces.jsx';
 import { sinMovimiento } from '../transiciones.js';
 import { cuandoInfo, esMarcador } from '../../logica/mensajes.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // El visor de fotos y vídeos del chat a pantalla completa (v0.55), como WhatsApp: se pasa de uno a otro deslizando a
 // los lados (todos los del chat, en orden), las fotos se amplían pellizcando o con dos toques (y se mueven ampliadas),
@@ -201,6 +202,7 @@ function VisorDentro({ medios, inicio = 0, nombreDe, alCerrar, alResponder, alRe
     if (z.current.s === 1) { z.current.x = 0; z.current.y = 0; }
     limitar(); aplicarZoom();
   };
+  useMarcaPagina('hay-visor', !!m);
 
   if (!m) return null;
   const c = m.mensaje;

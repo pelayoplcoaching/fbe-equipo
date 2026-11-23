@@ -22,12 +22,14 @@ import { objetivosDe } from '../../logica/cuestionario.js';
 import { HoyComoEstas } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
 import { TiempoHoy, Calentamiento } from './SesionTuya.jsx';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // El dibujo de la sesión, en su propio archivo (ArteSesion.jsx); se sigue exportando desde aquí
 export { ArteSesion };
 
 export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar, salud = false, prep = null }) {
   // (personalización 2) «Ana, hoy toca»: con su nombre (o su apodo), encima del nombre de la sesión
+  useMarcaPagina('hay-portada-sesion');
   const trato = useTrato();
   const paraTi = antesDelTitulo(trato, { esHoy: !sesion.dia_previsto || sesion.dia_previsto === hoyISO() });
   const { api, propio, atleta } = useApp();

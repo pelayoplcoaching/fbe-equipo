@@ -1,4 +1,5 @@
 import { modoCelebrar } from '../../logica/trato.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { faseRespira, retrasoRespira } from '../../logica/respira.js';
@@ -130,6 +131,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const caja = useRef(null);
   const [fuera, setFuera] = useState(false);
   const conPildora = !clase.includes('en-enfoque');
+  useMarcaPagina('hay-descanso', conPildora && fuera);
   useEffect(() => {
     const el = caja.current?.querySelector('.reloj-descanso');
     if (!conPildora || !el || typeof IntersectionObserver === 'undefined') return undefined;

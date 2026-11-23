@@ -7,12 +7,19 @@ const TOPE_MS = 3000; // con la sesión resuelta, como mucho esto esperando los 
 let quitada = false;
 let esperando = false;
 
+// (v0.209) La portada fuera y, con ella, su marca en <html> (el fondo de la raíz, morado mientras está; antes con
+// «html:has(#portada)», que obligaba a mirar la página entera en cada cambio)
+function sinPortada(el) {
+  el?.remove();
+  document.documentElement.classList.remove('hay-portada');
+}
+
 function quitarYa() {
   if (quitada) return;
   quitada = true;
   const el = typeof document !== 'undefined' && document.getElementById('portada');
   document.getElementById('tc-portada')?.remove();
-  if (!el) return;
+  if (!el) { sinPortada(null); return; }
   const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   // (diseño, tanda 19) Si debajo hay ya una marca con el lobo (la bienvenida del día), el lobo de la portada viaja hasta
   // ella y la noche se levanta; si no, o sin transiciones de vista, la portada se funde como siempre.
@@ -22,7 +29,7 @@ function quitarYa() {
     try {
       lobo.style.viewTransitionName = 'vt-lobo';
       document.documentElement.dataset.vt = 'portada';
-      const t = document.startViewTransition(() => { el.remove(); destino.style.viewTransitionName = 'vt-lobo'; });
+      const t = document.startViewTransition(() => { sinPortada(el); destino.style.viewTransitionName = 'vt-lobo'; });
       const fin = () => { destino.style.viewTransitionName = ''; if (document.documentElement.dataset.vt === 'portada') delete document.documentElement.dataset.vt; };
       t.finished.catch(() => {}).then(fin);
       setTimeout(() => { try { t.skipTransition(); } catch { /* */ } }, 1500);
@@ -30,7 +37,7 @@ function quitarYa() {
     } catch { lobo.style.viewTransitionName = ''; delete document.documentElement.dataset.vt; }
   }
   el.classList.add('fuera');
-  setTimeout(() => el.remove(), quieto ? 0 : 380);
+  setTimeout(() => sinPortada(el), quieto ? 0 : 380);
 }
 
 function cuandoToque(fn) {
@@ -40,7 +47,7 @@ function cuandoToque(fn) {
 
 // esperarDatos: la cuenta ya está resuelta y su primera pantalla está cargando datos; se espera a que acaben
 export function quitarPortada({ esperarDatos = false } = {}) {
-  if (quitada || typeof document === 'undefined' || !document.getElementById('portada')) { quitada = true; return; }
+  if (quitada || typeof document === 'undefined' || !document.getElementById('portada')) { if (!quitada && typeof document !== 'undefined') sinPortada(null); quitada = true; return; }
   if (!esperarDatos) { cuandoToque(quitarYa); return; }
   if (esperando) return;
   esperando = true;

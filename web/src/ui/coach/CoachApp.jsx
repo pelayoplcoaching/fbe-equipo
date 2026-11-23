@@ -27,6 +27,7 @@ import { useEstrecha, BotonMas, HojaMas } from '../BarraMas.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 import { Escena200, useEscena200 } from '../Escena200.jsx';
 import { fijarUnidadPeso } from '../../logica/unidades.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)
@@ -188,6 +189,7 @@ export function CoachApp() {
   // antes: atras.js)
   useAtras(!ficha && tab !== 'atletas', () => elegirPestana('atletas'), 0);
   useAtras(!!ficha, cerrarFicha, 1);
+  useMarcaPagina('hay-tabs');
 
   return (
     <>

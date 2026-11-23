@@ -12,6 +12,7 @@ import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, us
 import { Metronomo } from './Metronomo.jsx';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { tempoDe } from '../../logica/tempo.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 const RPE_ENFOQUE = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
@@ -24,6 +25,7 @@ function EnfoquePantalla({
   guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null, sesionId = null, ejDescanso = null,
 }) {
   const { aviso } = useApp();
+  useMarcaPagina('hay-enfoque');
   const e = ejercicios.find((x) => x.id === seId) || ejercicios[0];
   const idx = ejercicios.indexOf(e);
   // (diseño, tanda 31) al pasar de ejercicio, el cuerpo entra deslizándose desde el lado al que se va (sin rehacerlo:

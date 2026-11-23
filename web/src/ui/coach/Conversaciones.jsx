@@ -12,6 +12,7 @@ import { HojaDifusion } from './Difusion.jsx';
 import { HojaSilenciar } from '../chat/InfoContacto.jsx';
 import { useEstrecha } from '../BarraMas.jsx';
 import { cacheChat } from '../../datos/cacheChat.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 
 // Mensajes del coach (v0.18): una conversación por atleta, como la lista de chats de WhatsApp.
 // v0.54, más WhatsApp: fijar (3), archivar (con su fila «Archivados» arriba; un mensaje nuevo del atleta la saca),
@@ -39,6 +40,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
   // (diseño) En un ordenador con la ventana ancha, la lista a la izquierda y la conversación abierta a la derecha, a la
   // vez. En el móvil y en ventanas estrechas, como siempre: la conversación sustituye a la lista.
   const dos = !useEstrecha(1099);
+  useMarcaPagina('hay-mensajes-dos', dos);
   // Pulido 3: en el móvil, «atrás» con una conversación abierta vuelve a la lista
   const volverRef = useRef(null);
   useAtras(!!abierta && !dos, () => volverRef.current?.(), 2);

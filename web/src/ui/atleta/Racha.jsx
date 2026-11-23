@@ -12,12 +12,14 @@ import { MensajeCoach } from './Personal.jsx';
 import { imagenCelebracion, imagenHito } from '../../logica/imagenes.js';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { datosRacha } from '../../logica/compartir.js';
+import { usePausaFuera } from '../marca-pagina.js';
 
 // La llama: tres capas que titilan a destiempo (transform desde la base). Sus colores son el fuego, no el tema.
 export function Llama({ clase = '' }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const pausa = usePausaFuera();
   return (
-    <svg class={`llama ${clase}`} viewBox="0 0 120 150" aria-hidden="true" focusable="false">
+    <svg ref={pausa} class={`llama ${clase}`} viewBox="0 0 120 150" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id={`llama-g1-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FE5A1D" /><stop offset="1" stop-color="#EC940D" /></linearGradient>
         <linearGradient id={`llama-g2-${id}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FC8642" /><stop offset="1" stop-color="#EBC166" /></linearGradient>

@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { momentoDelDia, horaDecimal, ESTRELLAS_CIELO, MOMENTOS_CIELO, lunaParaPintar, climaDeCache, esFinDeAno } from '../logica/cielo.js';
 import { hoyISO } from '../logica/fechas.js';
+import { usePausaFuera } from './marca-pagina.js';
 
 const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const automatico = () => typeof navigator !== 'undefined' && !!navigator.webdriver;
@@ -54,8 +55,9 @@ export function CieloHora({ clase = '', conTiempo = false }) {
   const luna = m === 'noche' ? lunaAhora() : null;
   const clima = conTiempo ? climaAhora() : null;
   const fiesta = conTiempo && fiestaAhora();
+  const pausa = usePausaFuera();
   return (
-    <span class={`cielo-hora cielo-${m}${clima ? ` con-${clima}` : ''}${clase ? ` ${clase}` : ''}`} data-momento={m} data-clima={clima || undefined} aria-hidden="true">
+    <span ref={pausa} class={`cielo-hora cielo-${m}${clima ? ` con-${clima}` : ''}${clase ? ` ${clase}` : ''}`} data-momento={m} data-clima={clima || undefined} aria-hidden="true">
       {(m === 'amanecer' || m === 'atardecer') && !clima && <i class="cielo-sol" />}
       {m === 'dia' && !clima && <i class="cielo-luz" />}
       {m === 'noche' && !clima && ESTRELLAS_CIELO.map(([x, y, r, espera], i) => (

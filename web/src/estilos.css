@@ -366,7 +366,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pildora-descanso > svg:last-child { width: var(--ico-18); height: var(--ico-18); opacity: .8; stroke: currentColor; }
 .pildora-descanso.fin { animation: latido .9s ease-in-out 3; }
 .pildora-descanso:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
-body:has(.pildora-descanso) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+html.hay-descanso .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 @keyframes pildora-entra { from { opacity: 0; transform: translate(-50%, 12px); } }
 @media (prefers-reduced-motion: reduce) { .temporizador.fin, .pildora-descanso, .pildora-descanso.fin { animation: none; } .reloj-descanso .arco { transition: none; } }
 
@@ -805,7 +805,7 @@ img.medio { background: var(--hoja-2); }
 .nota-fijada-editar { display: grid; gap: var(--esp-8); }
 @media (min-width: 900px) { .enfoque-cuerpo { padding-top: var(--esp-20); } }
 /* En el modo enfoque, los avisos van justo encima del pie */
-body:has(.enfoque) .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+html.hay-enfoque .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 
 /* v0.4: peso diario con tendencia */
 .grafica-peso .pesada { fill: var(--tinta-3); opacity: .55; }
@@ -1863,7 +1863,7 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .chat-adjunto img, .chat-adjunto video { width: 56px; height: 56px; object-fit: cover; border-radius: var(--r-10); background: var(--hoja-2); display: block; }
 .chat-adjunto .casilla { grid-template-columns: 18px 1fr; gap: var(--esp-8); font-size: var(--letra-12-5); color: var(--tinta-2); }
 .chat-adjunto .casilla input { width: 16px; height: 16px; }
-.en-sesion .chat-barra, body:has(.enfoque) .chat-barra, body:has(.velo) .chat-barra { display: none; }
+.en-sesion .chat-barra, html.hay-enfoque .chat-barra, html.hay-velo .chat-barra { display: none; }
 .app.coach .chat-barra-in { max-width: var(--ancho-coach); }
 @media (min-width: 900px) {
   .app.coach .chat-barra { left: calc(220px + max(24px, env(safe-area-inset-left, 0px))); bottom: 0; padding-bottom: var(--esp-16); }
@@ -3151,7 +3151,7 @@ button.cr-celda { cursor: pointer; }
   margin: -12px calc(-1 * max(var(--esp-16), env(safe-area-inset-right, 0px))) 0 calc(-1 * max(var(--esp-16), env(safe-area-inset-left, 0px)));
   padding: calc(var(--esp-10) + env(safe-area-inset-top, 0px)) max(var(--esp-16), env(safe-area-inset-right, 0px)) var(--esp-22) max(var(--esp-16), env(safe-area-inset-left, 0px));
   min-height: 19rem; display: grid; grid-template-rows: auto 1fr auto; gap: var(--esp-12); }
-body:has(.portada-sesion)::before { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.hay-portada-sesion body::before { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .portada-arte { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; }
 .portada-arte .acento { stroke: color-mix(in srgb, var(--morado) 55%, var(--blanco)); }
 .portada-arte .claro { stroke: var(--acento-100); }
@@ -3281,7 +3281,7 @@ body:has(.portada-sesion)::before { background: transparent !important; backdrop
 :root { --alto-actividad: 58px; }
 .app.con-actividad { padding-top: var(--alto-actividad); }
 .app.con-actividad .cabecera { top: calc(env(safe-area-inset-top, 0px) + var(--alto-actividad)); }
-body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px) + var(--alto-actividad)); }
+html.hay-actividad body::before { height: calc(env(safe-area-inset-top, 0px) + var(--alto-actividad)); }
 .encurso { position: fixed; z-index: calc(var(--capa-barra) + 5); top: calc(env(safe-area-inset-top, 0px) + 7px); left: 50%; width: min(26rem, calc(100vw - 32px)); transform: translateX(-50%); display: grid; justify-items: center; }
 .encurso-pildora, .encurso-tarjeta {
   background: color-mix(in srgb, var(--flota) 88%, transparent); color: var(--sobre-flota);
@@ -3708,7 +3708,7 @@ body:has(.app.con-actividad)::before { height: calc(env(safe-area-inset-top, 0px
    escrito o adjunto). Encima del teclado del móvil (--teclado, de visualViewport) y, con él abierto, sin la barra de abajo */
 .chat-barra { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--teclado, 0px)); }
 :root[data-teclado] .chat-barra { bottom: var(--teclado, 0px); }
-:root[data-teclado] .app:has(.chat-barra) .tabs { display: none; }
+:root[data-teclado].hay-chat-barra .app .tabs { display: none; }
 .chat-pagina { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px) + var(--teclado, 0px)); }
 .chat-pagina:has(.chat.con-emojis) { padding-bottom: calc(150px + min(300px, 42dvh) + env(safe-area-inset-bottom, 0px)); }
 .chat-escribir { align-items: flex-end; gap: var(--esp-6); }
@@ -3882,7 +3882,7 @@ video.visor-medio { width: 100%; max-height: 100%; background: var(--negro); }
 .visor-accion { min-width: 64px; min-height: 52px; display: grid; justify-items: center; gap: var(--esp-2); border: 0; background: none; color: var(--blanco); font: inherit; font-size: var(--letra-12); font-weight: 650; cursor: pointer; border-radius: var(--r-s); padding: var(--esp-4) var(--esp-6); }
 .visor-accion svg { width: var(--ico-22); height: var(--ico-22); }
 .visor-accion:focus-visible { outline: 2px solid var(--blanco); outline-offset: 0; }
-body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
+html.hay-visor .chat-barra, html.hay-visor .chat-abajo { display: none; }
 
 /* Info del contacto */
 .contacto-cabeza { display: grid; justify-items: center; text-align: center; gap: var(--esp-4); padding: var(--esp-4) 0 var(--esp-12); }
@@ -3946,7 +3946,7 @@ body:has(.visor) .chat-barra, body:has(.visor) .chat-abajo { display: none; }
 .chat-tope { display: block; height: 1px; }
 /* (v0.58.1) El chat ancla él mismo lo que se lee al entrar mensajes por arriba (Safari no tiene anclaje); Chromium, que sí, no
    lo hace encima a su manera */
-:root:has(.chat-lista) { overflow-anchor: none; }
+html.hay-chat-lista { overflow-anchor: none; }
 .chat-sin-red { display: flex; align-items: center; gap: var(--esp-6); justify-content: center; margin: var(--esp-6) auto; padding: var(--esp-4) var(--esp-12); border-radius: var(--r-pildora); background: var(--hoja); box-shadow: var(--sombra); width: fit-content; color: var(--tinta-2); }
 .chat-sin-red svg { width: var(--ico-14); height: var(--ico-14); stroke-width: 2; }
 
@@ -4856,7 +4856,7 @@ html[data-teclado] .pildora-descanso { display: none; }
   transform: translate(-50%, calc(var(--sube, 0) * -14px)); }
 .chat-candado svg { width: var(--ico-18); height: var(--ico-18); }
 .chat-candado svg + svg { width: var(--ico-14); height: var(--ico-14); }
-body:has(.chat-micro.grabando) .chat-abajo { visibility: hidden; }
+html.hay-grabando .chat-abajo { visibility: hidden; }
 .chat-grabando-borrar { flex: none; color: var(--alerta); }
 .chat-grabando-onda { flex: 1 1 60px; min-width: 40px; max-width: 150px; height: 26px; display: flex; align-items: center; gap: var(--esp-2); overflow: hidden; }
 .chat-grabando-onda span { flex: 1; min-width: 2px; border-radius: var(--r-2); background: var(--morado); }

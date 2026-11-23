@@ -166,5 +166,29 @@ console.log('\nVisual (claude/visual-mejoras.md)');
   check(/\.hoja-cab \{ position: sticky/.test(vis) && /animation-timeline: scroll\(nearest\)/.test(vis), '(17) la cabecera de las hojas se queda arriba y su filo sale con el desplazamiento');
 }
 
+console.log('\nSin reglas que miren la página entera (v0.209, rendimiento)');
+{
+  // «body:has(.x)», «html:has(…)», «:root:has(…)» o «.app:has(.x)» (salvo hijos directos, «> …»): con ellas el navegador
+  // mira la página entera en cada cambio. En su lugar, una clase en <html> que pone el componente (ui/marca-pagina.js)
+  const malas = [];
+  for (const f of hojas) {
+    const css = src(f).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/[^{}]+\{/g)) {
+      for (const sel of m[0].slice(0, -1).split(',')) {
+        if (/(^|\s)(html|body|:root)(\[[^\]]*\]|\.[a-z0-9-]+)*:has\(/.test(sel.trim()) || /\.app(\.[a-z0-9-]+)*:has\((?!\s*>)/.test(sel)) malas.push(`${f}: ${sel.trim().slice(0, 80)}`);
+      }
+    }
+  }
+  check(!malas.length, malas.length ? `reglas que miran la página entera: ${malas.join(' | ')}` : 'ninguna regla con «:has()» sobre html, body o .app (las marcas las pone la app)');
+  const marcas = ['hay-velo', 'hay-enfoque', 'hay-visor', 'hay-descanso', 'hay-portada-sesion', 'hay-chat-lista', 'hay-chat-barra', 'hay-sesion-vista', 'hay-mensajes-dos', 'hay-actividad', 'hay-tabs', 'hay-grabando'];
+  const jsx = ['ui/comunes.jsx', 'ui/atleta/Enfoque.jsx', 'ui/chat/Visor.jsx', 'ui/atleta/sesion-comun.jsx', 'ui/atleta/Portada.jsx', 'ui/Chat.jsx', 'ui/atleta/Sesion.jsx', 'ui/coach/Conversaciones.jsx', 'ui/atleta/AtletaApp.jsx', 'ui/coach/CoachApp.jsx', 'ui/chat/NotaVoz.jsx'].map(src).join('\n');
+  const todoCss = hojas.map(src).join('\n');
+  const sinPoner = marcas.filter((k) => !jsx.includes(`useMarcaPagina('${k}'`));
+  const sinUso = marcas.filter((k) => !todoCss.includes(`.${k}`));
+  check(!sinPoner.length && !sinUso.length, `cada marca la pone su componente y la usa el CSS${sinPoner.length ? ` (sin poner: ${sinPoner})` : ''}${sinUso.length ? ` (sin usar: ${sinUso})` : ''}`);
+  check(/hay-portada/.test(src('ui/portada.js')) && /class="hay-portada"/.test(readFileSync(new URL('../../scripts/build.mjs', dir), 'utf8')), 'la de la portada de arranque la pone el build en <html> y la quita la portada al irse');
+  check(/\[data-pausa\][^{]*\{ animation-play-state: paused/.test(src('belleza.css')) && /usePausaFuera\(\)/.test(src('ui/Cielo.jsx')) && /usePausaFuera\(\)/.test(src('ui/atleta/Racha.jsx')), 'el cielo de la hora y la llama de la racha se paran mientras no se ven');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

@@ -244,3 +244,8 @@
 .cab-ilu > .cab-cielo { z-index: 0; }
 .cab-ilu > .cab-cielo .cielo-luna { right: 44%; }
 
+
+/* -- 21 - Pausa fuera de la pantalla (v0.209, rendimiento) ------------------------------------------------------------
+   Lo que anima sin parar (el cielo de la hora, la llama de la racha) se para mientras no se ve: ui/marca-pagina.js le
+   pone data-pausa al salir de la pantalla y se lo quita al volver (sigue donde estaba, sin saltos). */
+[data-pausa], [data-pausa] *, [data-pausa]::before, [data-pausa]::after, [data-pausa] *::before, [data-pausa] *::after { animation-play-state: paused !important; }
