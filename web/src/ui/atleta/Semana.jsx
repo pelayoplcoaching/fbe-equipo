@@ -79,7 +79,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                 <button type="button" class="btn btn-icono plano" disabled={!anterior} onClick={() => irA(-1)} aria-label={anterior ? `Semana anterior (semana ${anterior.numero})` : 'Semana anterior'}><Icono n="atras" /></button>
                 <div class="semana-nav-titulo">
                   <h2 id="semana-titulo">Semana {semana.numero}{semana.id === p.actual?.id ? <span class="chip morado">Ahora</span> : null}</h2>
-                  <span class="peq secundario num">{semana.fecha_inicio ? rangoSemana(semana.fecha_inicio) : 'Sin fecha'} · {hechasSemana} de {sesiones.length} hechas</span>
+                  <span class="peq secundario num">{semana.fecha_inicio ? rangoSemana(semana.fecha_inicio) : 'Sin fecha'} · {`${hechasSemana}\u00a0de\u00a0${sesiones.length}`} hechas</span>
                 </div>
                 <button type="button" class="btn btn-icono plano" disabled={!posterior} onClick={() => irA(1)} aria-label={posterior ? `Semana siguiente (semana ${posterior.numero})` : 'Semana siguiente'}><Icono n="derecha" /></button>
               </div>
@@ -172,8 +172,9 @@ function Entrenamientos({ abrirSesion }) {
                       <span class="peq secundario">
                         {e.fecha ? fmtConDia(e.fecha) : ''}
                         {e.tipo && e.tipo !== 'fuerza' ? `, ${NOMBRE_TIPO_SESION[e.tipo].toLowerCase()}` : ''}
-                        {e.duracion_min ? `, ${e.duracion_min} min` : ''}
-                        {e.series ? `, ${e.series} series, ${num(Math.round(e.tonelaje / 100) / 10)} t` : ''}
+                        {/* (v0.214) cada cifra con su unidad, sin partirse entre dos líneas */}
+                        {e.duracion_min ? `, ${e.duracion_min}\u00a0min` : ''}
+                        {e.series ? `, ${e.series}\u00a0series, ${num(Math.round(e.tonelaje / 100) / 10)}\u00a0t` : ''}
                       </span>
                       {e.musculos.length > 0 && <span class="mini terciario">{e.musculos.map((g) => NOMBRE_GRUPO[g]).join(', ')}</span>}
                     </span>
