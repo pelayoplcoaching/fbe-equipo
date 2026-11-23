@@ -10,6 +10,7 @@ import { gzipSync } from 'node:zlib';
 import { join, relative } from 'node:path';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from '../scripts/opciones-build.mjs';
 import { cssDelCoach, separarCssPorTrozos, duenosDeCodigo } from '../scripts/css-coach.mjs';
+import { cubos } from '../scripts/css-cubos.mjs';
 import { estiloPortada, marcadoPortada } from '../scripts/portada.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -71,8 +72,10 @@ const partesCss = cssDelCoach(texto(rutaCss), { jsCoach: jsRutas.filter((f) => s
   jsOtros: `${jsRutas.filter((f) => !soloCoach.has(f)).map(texto).join('\n')}\n${extraCss}`, duenoDe });
 // (v0.210) y sin los de cada pantalla que no sale al abrir (van con su trozo, como en scripts/build.mjs)
 const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(jsRutas.map((f) => [f, texto(f)])), candidatos: perezosos, extra: extraCss, duenoDe });
-const css = { crudo: Buffer.byteLength(partesTrozos.comun), gz: gzipSync(Buffer.from(partesTrozos.comun), { level: 9 }).length };
-const cssCoach = { crudo: Buffer.byteLength(partesCss.coach), gz: gzipSync(Buffer.from(partesCss.coach), { level: 9 }).length };
+// (v0.214) con las reglas «universales» metidas en cubos, como en scripts/build.mjs (scripts/css-cubos.mjs)
+const comunCss = cubos(partesTrozos.comun).css, coachCss = cubos(partesCss.coach).css;
+const css = { crudo: Buffer.byteLength(comunCss), gz: gzipSync(Buffer.from(comunCss), { level: 9 }).length };
+const cssCoach = { crudo: Buffer.byteLength(coachCss), gz: gzipSync(Buffer.from(coachCss), { level: 9 }).length };
 check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
 check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz})`);
 check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz})`);

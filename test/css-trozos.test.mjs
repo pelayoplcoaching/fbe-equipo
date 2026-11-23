@@ -94,5 +94,44 @@ check(sujetoDe('.a .b::before').base === '.a .b' && sujetoDe('.a .b::before').su
     `una clase que un trozo solo nombra en sus datos no es suya (solo en datos: ${solo(b)('m3')}; pintada en A y nombrada en B: ${d('m3')}; solo pintada en A: ${d2('m3')})`);
 }
 
+// (v0.214) Las reglas «universales» (se prueban en todos los elementos) partidas para que cada una vaya a su cubo, sin
+// cambiar a qué se aplican ni con qué fuerza (scripts/css-cubos.mjs)
+console.log('\nCada regla, a su cubo (v0.214)');
+{
+  const { trozos, partirSelector, cubos } = await import('../scripts/css-cubos.mjs');
+  check(JSON.stringify(trozos('.a>.b .c+d~e:is(.f .g, .h)')) === JSON.stringify([{ comb: '', comp: '.a' }, { comb: '>', comp: '.b' }, { comb: ' ', comp: '.c' }, { comb: '+', comp: 'd' }, { comb: '~', comp: 'e:is(.f .g, .h)' }]),
+    'los trozos de un selector, con sus combinadores (y sin mirar dentro de los paréntesis)');
+  const casos = [
+    [':where(.a, .b)', [':where(.a)', ':where(.b)']],
+    [':where(.a,.b)::after', [':where(.a)::after', ':where(.b)::after']],
+    [':is(.hero-dia, .carnet) ::selection', [':is(.hero-dia) ::selection', ':is(.carnet) ::selection']],
+    ['.app :is(.a, .b) > *', ['.app :is(.a)>*', '.app :is(.b)>*']],
+    [':where(button, [role="button"]):where(:not(:disabled)):active', [':where(button):where(:not(:disabled)):active', ':where([role="button"]):where(:not(:disabled)):active']],
+    [':where([data-a="1,2"], .b:not(.c, .d))', [':where([data-a="1,2"])', ':where(.b:not(.c, .d))']],
+    ['::view-transition-old(barra)', [':where(html)::view-transition-old(barra)']],
+  ];
+  for (const [sel, esperado] of casos) {
+    const r = partirSelector(sel);
+    check(JSON.stringify(r) === JSON.stringify(esperado) && r.every((x) => especificidad(x) === especificidad(sel)) && r.every((x) => pseudoElemento(x) === pseudoElemento(sel)),
+      `«${sel}» → ${r.join(' , ')} (con la misma especificidad y el mismo pseudo-elemento)`);
+  }
+  const iguales = [
+    [':is(.a, b)', 'un :is() con opciones de distinto peso (partido, la más ligera perdería fuerza)'],
+    ['.x:is(.a, .b)', 'una parte que ya tiene su clase (ya va a su cubo)'],
+    [':where(.a b, .c)', 'opciones con combinadores (dentro de un :where() no van a ningún cubo)'],
+    [':where(:hover, :focus)', 'opciones sin clase, id, etiqueta ni atributo'],
+    [':root::view-transition-old(x)', 'una transición de vista que ya dice que es de la raíz'],
+    [':where(.a,.b,.c,.d,.e) :where(.f,.g,.h,.i)', `más de ${16} selectores (5 × 4)`],
+    [':not(.a, .b)', 'un :not() (no es una unión)'],
+    ['.a:has(:is(.b, .c))', 'lo de dentro de un :has()'],
+  ];
+  for (const [sel, por] of iguales) check(JSON.stringify(partirSelector(sel)) === JSON.stringify([sel]), `se queda igual: ${por}`);
+  const css = '@media (min-width:1px){:where(.a,.b){color:red}}.c,::view-transition-new(x){x:y}@keyframes k{0%{opacity:0}}:is(.d, .e) span{content:"a,b"}';
+  const r = cubos(css);
+  check(r.css === '@media (min-width:1px){:where(.a),:where(.b){color:red}}.c,:where(html)::view-transition-new(x){x:y}@keyframes k{0%{opacity:0}}:is(.d) span,:is(.e) span{content:"a,b"}' && r.tocados === 3 && r.nuevos === 5,
+    `todo un CSS, con sus @media, @keyframes y comillas (${r.css}; ${r.tocados} tocados, ${r.nuevos} nuevos)`);
+  check(cubos(r.css).css === r.css && cubos(r.css).tocados === 0, 'y pasarlo dos veces da lo mismo');
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

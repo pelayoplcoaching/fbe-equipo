@@ -8,6 +8,7 @@ import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from './opciones-build.mjs';
 import { cssDelCoach, separarCssPorTrozos, duenosDeCodigo } from './css-coach.mjs';
+import { cubos } from './css-cubos.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
@@ -51,7 +52,9 @@ const fontFace = (src) => `@font-face{font-family:'Archivo Variable';font-style:
 if (demo) {
   const r = await esbuild.build({ ...comun, write: false, outdir: salida, splitting: false });
   const js = r.outputFiles.find((f) => f.path.endsWith('.js')).text;
-  const css = r.outputFiles.find((f) => f.path.endsWith('.css')).text;
+  // (v0.214) con las reglas «universales» metidas en cubos (scripts/css-cubos.mjs)
+  const cssDemo = r.outputFiles.find((f) => f.path.endsWith('.css')).text;
+  const css = process.env.FBE_SIN_CUBOS ? cssDemo : cubos(cssDemo).css;
   soloAscii(js, 'La demo'); soloAscii(css, 'El CSS de la demo');
   const fuente64 = readFileSync(fuente).toString('base64');
   const html = `<title>FBE Equipo</title>
@@ -99,6 +102,12 @@ ${marcadoPortada}
   if (process.env.FBE_CSS_ORIGINAL) writeFileSync(process.env.FBE_CSS_ORIGINAL, JSON.stringify({ css: cssOriginal, todas: todasJs, coach: [...soloCoachRutas], arranque: [...deArranqueRel], perezosos: [...perezosos], extra: extraCss }));
   const partesCss = cssDelCoach(cssOriginal, { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${extraCss}`, duenoDe });
   if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
+  // (v0.214) Cada archivo de estilos, con las reglas «universales» metidas en cubos (scripts/css-cubos.mjs): se calculan antes
+  // sin cambiar a qué se aplican ni con qué fuerza. Al final, para que valga también para las copias de respetarCascada
+  let cubosTocados = 0;
+  // (FBE_SIN_CUBOS=1: sin partir, para comparar)
+  const conCubos = (x) => { if (process.env.FBE_SIN_CUBOS) return x; const c = cubos(x); cubosTocados += c.tocados; return c.css; };
+  partesCss.coach = conCubos(partesCss.coach);
   const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
   writeFileSync(join(salida, cssCoach), partesCss.coach);
   // (v0.210) Los estilos de cada pantalla perezosa, con su trozo. Para no cambiar quién gana un empate al cargarlos después
@@ -111,13 +120,13 @@ ${marcadoPortada}
     // (con el mismo nombre que su trozo: así el código del trozo, con su orden de pedirlos, sigue siendo el mismo mientras no
     // cambie su código; «mismo nombre, mismo contenido» vale para los trozos; los estilos se renuevan por su huella)
     const nombre = f.replace(/\.js$/, '.css');
-    writeFileSync(join(salida, nombre), css);
+    writeFileSync(join(salida, nombre), conCubos(css));
     writeFileSync(join(salida, f), `globalThis.__fbeCss&&globalThis.__fbeCss(${JSON.stringify(nombre)});\n${leerSalida(f)}`);
     cssTrozos.push(nombre);
   }
-  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesTrozos.comun);
+  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + conCubos(partesTrozos.comun));
   // (v0.210) cuántas reglas se van y cuántas se quedan en el común para no cambiar quién gana un empate (css-coach.mjs)
-  console.log(`estilos: ${partesCss.reglas} reglas al CSS del coach y ${partesTrozos.reglas} a los de cada trozo (con ${partesCss.copias + partesTrozos.copias} copias para no cambiar empates); ${partesCss.quedan + partesTrozos.quedan} se quedan en el común`);
+  console.log(`estilos: ${partesCss.reglas} reglas al CSS del coach y ${partesTrozos.reglas} a los de cada trozo (con ${partesCss.copias + partesTrozos.copias} copias para no cambiar empates); ${partesCss.quedan + partesTrozos.quedan} se quedan en el común; ${cubosTocados} selectores partidos para que vayan a su cubo`);
 
   // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
   // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)
