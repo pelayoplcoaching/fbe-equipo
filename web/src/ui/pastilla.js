@@ -12,40 +12,56 @@ const TODO = `${VALE}, ${RAYA}`;
 const grupos = new Set();
 let mirador = null;
 
-function colocarRaya(g) {
-  const b = g.querySelector(':scope > [role="tab"][aria-selected="true"]');
-  if (!b || !b.offsetWidth) { if (g.dataset.raya != null) { delete g.dataset.raya; delete g.dataset.lista; } return; }
-  g.style.setProperty('--raya-x', `${b.offsetLeft}px`);
-  g.style.setProperty('--raya-w', `${b.offsetWidth}px`);
-  if (g.dataset.raya == null) {
-    g.dataset.raya = '';
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (g.dataset.raya != null) g.dataset.lista = ''; }));
+// (v0.212, rendimiento) Medir (offsetLeft, offsetWidth…) obliga al navegador a colocar la página en ese momento. Antes se
+// medía en cuanto cambiaba el DOM (en el MutationObserver) y cada grupo medía y escribía por su cuenta: al abrir la ficha
+// de un atleta, eso recolocaba la ficha entera antes de tiempo (unos 120 ms con el móvil lento). Ahora se mide en el
+// fotograma siguiente (antes de pintarlo: no se ve ningún salto) y en dos pasadas: primero se mide todo y luego se escribe.
+function medir(g) {
+  if (!g.isConnected) { grupos.delete(g); mirador?.unobserve(g); return null; }
+  if (g.matches(RAYA)) {
+    const b = g.querySelector(':scope > [role="tab"][aria-selected="true"]');
+    return { g, raya: true, b: b && b.offsetWidth ? { x: b.offsetLeft, w: b.offsetWidth } : null };
   }
-}
-function colocar(g) {
-  if (!g.isConnected) { grupos.delete(g); mirador?.unobserve(g); return; }
-  if (g.matches(RAYA)) { colocarRaya(g); return; }
   const elegidas = g.querySelectorAll(':scope > button[aria-pressed="true"]');
   const b = elegidas.length === 1 ? elegidas[0] : null;
-  if (!b || !b.offsetWidth) { if (g.dataset.pastilla != null) { delete g.dataset.pastilla; delete g.dataset.lista; } return; }
-  g.style.setProperty('--seg-x', `${b.offsetLeft}px`);
-  g.style.setProperty('--seg-y', `${b.offsetTop}px`);
-  g.style.setProperty('--seg-w', `${b.offsetWidth}px`);
-  g.style.setProperty('--seg-h', `${b.offsetHeight}px`);
-  if (g.dataset.pastilla == null) {
-    g.dataset.pastilla = '';
+  return { g, raya: false, b: b && b.offsetWidth ? { x: b.offsetLeft, y: b.offsetTop, w: b.offsetWidth, h: b.offsetHeight } : null };
+}
+function aplicar({ g, raya, b }) {
+  const marca = raya ? 'raya' : 'pastilla';
+  if (!b) { if (g.dataset[marca] != null) { delete g.dataset[marca]; delete g.dataset.lista; } return; }
+  if (raya) {
+    g.style.setProperty('--raya-x', `${b.x}px`);
+    g.style.setProperty('--raya-w', `${b.w}px`);
+  } else {
+    g.style.setProperty('--seg-x', `${b.x}px`);
+    g.style.setProperty('--seg-y', `${b.y}px`);
+    g.style.setProperty('--seg-w', `${b.w}px`);
+    g.style.setProperty('--seg-h', `${b.h}px`);
+  }
+  if (g.dataset[marca] == null) {
+    g.dataset[marca] = '';
     // (la primera vez se coloca sin deslizarse; a partir del siguiente fotograma, ya con movimiento)
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (g.dataset.pastilla != null) g.dataset.lista = ''; }));
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (g.dataset[marca] != null) g.dataset.lista = ''; }));
   }
 }
+function colocar(gs) {
+  const medidas = [];
+  for (const g of gs) { const m = medir(g); if (m) medidas.push(m); }
+  for (const m of medidas) aplicar(m);
+}
+const pendientes = new Set();
+let pedido = 0;
 function apuntar(g) {
   if (!grupos.has(g)) { grupos.add(g); mirador?.observe(g); }
-  colocar(g);
+  pendientes.add(g);
+  if (pedido) return;
+  const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (f) => setTimeout(f, 16);
+  pedido = raf(() => { pedido = 0; const gs = [...pendientes]; pendientes.clear(); colocar(gs); });
 }
 
 export function instalarPastilla() {
   if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
-  if (typeof ResizeObserver !== 'undefined') mirador = new ResizeObserver((es) => { for (const e of es) colocar(e.target); });
+  if (typeof ResizeObserver !== 'undefined') mirador = new ResizeObserver((es) => colocar(es.map((e) => e.target)));
   new MutationObserver((cambios) => {
     const tocados = new Set();
     // (un nodo cuyo padre también ha entrado en esta tanda no se recorre aparte: su padre ya lo cubre)
