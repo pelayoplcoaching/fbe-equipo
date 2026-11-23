@@ -6254,186 +6254,274 @@ if (parte('El recetario del equipo')) try {
 }
 
 // «Aprende» (migración 057): las guías del coach y la ficha de técnica de cada ejercicio (test/e2e-guias.mjs)
+// (v0.207) Cada una, su parte: así se reparten entre los trozos en GitHub y, si una se corta, las demás siguen
 if (parte('«Aprende»: las guías y la ficha de cada ejercicio')) try {
   const { probarGuias } = await import('./e2e-guias.mjs');
   await probarGuias({ navegador, check });
-  // Las ilustraciones vivas: la portada, la bienvenida, dónde entrenas y el resumen (y quietas con «reducir movimiento»)
-  console.log('\nLas ilustraciones vivas');
+} catch (e) { fallos++; console.log('  ✗ «Aprende»: las guías y la ficha de cada ejercicio:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Las ilustraciones vivas: la portada, la bienvenida, dónde entrenas y el resumen (y quietas con «reducir movimiento»)
+if (parte('Las ilustraciones vivas')) try {
   const { probarVivas } = await import('./e2e-vivas.mjs');
   await probarVivas({ navegador, check });
-  // La comunidad viva: la manada, el muro, la encuesta, los retos, el ranking, el ánimo y las insignias
-  console.log('\nLa comunidad viva');
+} catch (e) { fallos++; console.log('  ✗ Las ilustraciones vivas:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// La comunidad viva: la manada, el muro, la encuesta, los retos, el ranking, el ánimo y las insignias
+if (parte('La comunidad viva')) try {
   const { probarComunidadViva } = await import('./e2e-comunidad-viva.mjs');
   await probarComunidadViva({ navegador, check });
-  // Hoy y la sesión, bonitos: «Tu día» ordenado, el botón de empezar a mano y «¿Cómo llegas hoy?» de una en una
-  console.log('\nHoy y la sesión, bonitos');
+} catch (e) { fallos++; console.log('  ✗ La comunidad viva:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Hoy y la sesión, bonitos: «Tu día» ordenado, el botón de empezar a mano y «¿Cómo llegas hoy?» de una en una
+if (parte('Hoy y la sesión, bonitos')) try {
   const { probarHoyBello } = await import('./e2e-hoy-bello.mjs');
   await probarHoyBello({ navegador, check });
-  // La travesía, más bonita: la tarjeta, la ruta, la entrada y la salida, la estrella al contador, el marco del final y el paisaje que se funde
-  console.log('\nLa travesía, más bonita');
+} catch (e) { fallos++; console.log('  ✗ Hoy y la sesión, bonitos:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// La travesía, más bonita: la tarjeta, la ruta, la entrada y la salida, la estrella al contador, el marco del final y el paisaje que se funde
+if (parte('La travesía, más bonita')) try {
   const { probarTravesiaBella } = await import('./e2e-travesia-bella.mjs');
   await probarTravesiaBella({ navegador, check });
-  // «La travesía», el juego del descanso: la tarjeta, «Jugar» en el descanso, la etapa que acaba con él y lo que se guarda
-  console.log('\nLa travesía, el juego del descanso');
+} catch (e) { fallos++; console.log('  ✗ La travesía, más bonita:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// «La travesía», el juego del descanso: la tarjeta, «Jugar» en el descanso, la etapa que acaba con él y lo que se guarda
+if (parte('La travesía, el juego del descanso')) try {
   const { probarTravesia } = await import('./e2e-travesia.mjs');
   await probarTravesia({ navegador, check });
-  // «Apuntes», formación en los descansos: el apunte del día, «Aprender» en el descanso, las tarjetas con vuelta y el repaso
-  console.log('\nApuntes, formación en los descansos');
+} catch (e) { fallos++; console.log('  ✗ La travesía, el juego del descanso:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// «Apuntes», formación en los descansos: el apunte del día, «Aprender» en el descanso, las tarjetas con vuelta y el repaso
+if (parte('Apuntes, formación en los descansos')) try {
   const { probarApuntes } = await import('./e2e-apuntes.mjs');
   await probarApuntes({ navegador, check });
-  // Los descansos con la base (060): la novedad de la semana del coach, y la travesía y los apuntes que suben y vuelven
-  console.log('\nLos descansos con la base (060)');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, formación en los descansos:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Los descansos con la base (060): la novedad de la semana del coach, y la travesía y los apuntes que suben y vuelven
+if (parte('Los descansos con la base (060)')) try {
   const { probarDescansosBase } = await import('./e2e-descansos-base.mjs');
   await probarDescansosBase({ navegador, check });
-  // Apuntes, tanda 2: lo tuyo primero, preguntas de tres opciones, guardar, leer la guía, el reto de la siguiente serie…
-  console.log('\nApuntes, tanda 2');
+} catch (e) { fallos++; console.log('  ✗ Los descansos con la base (060):', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes, tanda 2: lo tuyo primero, preguntas de tres opciones, guardar, leer la guía, el reto de la siguiente serie…
+if (parte('Apuntes, tanda 2')) try {
   const { probarApuntes2 } = await import('./e2e-apuntes2.mjs');
   await probarApuntes2({ navegador, check });
-  // La travesía, tanda 3: «Tu travesía» (el mapa, las postales, la manada con su duelo, los lobos, las constelaciones)
-  console.log('\nLa travesía, tanda 3');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, tanda 2:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// La travesía, tanda 3: «Tu travesía» (el mapa, las postales, la manada con su duelo, los lobos, las constelaciones)
+if (parte('La travesía, tanda 3')) try {
   const { probarTravesia3 } = await import('./e2e-travesia3.mjs');
   await probarTravesia3({ navegador, check });
-  // Apuntes, tanda 4: los apuntes sueltos del coach, mandar un apunte, el curso de la semana, el examen y «Lo que más se falla»
-  console.log('\nApuntes, tanda 4');
+} catch (e) { fallos++; console.log('  ✗ La travesía, tanda 3:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes, tanda 4: los apuntes sueltos del coach, mandar un apunte, el curso de la semana, el examen y «Lo que más se falla»
+if (parte('Apuntes, tanda 4')) try {
   const { probarApuntes4 } = await import('./e2e-apuntes4.mjs');
   await probarApuntes4({ navegador, check });
-  // Apuntes, más bonitos: tono y sello, hoja con mazo, rotulador, vuelta, sellos y puntos, glosario en el texto, deslizar, barra, nota con aro, medalla, semana
-  console.log('\nApuntes, más bonitos');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, tanda 4:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes, más bonitos: tono y sello, hoja con mazo, rotulador, vuelta, sellos y puntos, glosario en el texto, deslizar, barra, nota con aro, medalla, semana
+if (parte('Apuntes, más bonitos')) try {
   const { probarApuntesBellos } = await import('./e2e-apuntes-bellos.mjs');
   await probarApuntesBellos({ navegador, check });
-  // Apuntes que se quedan (tanda A): repaso espaciado, recordar antes de leer, tres notas, preguntas del coach, sin conexión
-  console.log('\nApuntes que se quedan');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, más bonitos:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes que se quedan (tanda A): repaso espaciado, recordar antes de leer, tres notas, preguntas del coach, sin conexión
+if (parte('Apuntes que se quedan')) try {
   const { probarApuntesRepaso } = await import('./e2e-apuntes-t1.mjs');
   await probarApuntesRepaso({ navegador, check });
-  // Apuntes, practicar (tanda B): emparejar, hueco, verdadero o falso, microlecciones, tres explicaciones, ordenar, grábate y compáralo, antes de empezar
-  console.log('\nApuntes, practicar');
+} catch (e) { fallos++; console.log('  ✗ Apuntes que se quedan:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes, practicar (tanda B): emparejar, hueco, verdadero o falso, microlecciones, tres explicaciones, ordenar, grábate y compáralo, antes de empezar
+if (parte('Apuntes, practicar')) try {
   const { probarApuntesPractica } = await import('./e2e-apuntes-t2.mjs');
   await probarApuntesPractica({ navegador, check });
-  // Apuntes, camino y progreso (tanda C): prueba de nivel, objetivo diario, tu progreso (temas, ruta, mes), examen final y certificado
-  console.log('\nApuntes, camino y progreso');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, practicar:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes, camino y progreso (tanda C): prueba de nivel, objetivo diario, tu progreso (temas, ruta, mes), examen final y certificado
+if (parte('Apuntes, camino y progreso')) try {
   const { probarApuntesCamino } = await import('./e2e-apuntes-t3.mjs');
   await probarApuntesCamino({ navegador, check });
-  // Apuntes con los demás (tanda D): audio del coach, historia, notas y subrayados, liga, duelo y el equipo en apuntes
-  console.log('\nApuntes con los demás');
+} catch (e) { fallos++; console.log('  ✗ Apuntes, camino y progreso:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Apuntes con los demás (tanda D): audio del coach, historia, notas y subrayados, liga, duelo y el equipo en apuntes
+if (parte('Apuntes con los demás')) try {
   const { probarApuntesSocial } = await import('./e2e-apuntes-t4.mjs');
   await probarApuntesSocial({ navegador, check });
-  // Personalización 2, tanda 1: cómo te hablamos (género y tono), qué celebrar y su nombre en la portada
-  console.log('\nQue la app le hable a cada uno');
+} catch (e) { fallos++; console.log('  ✗ Apuntes con los demás:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 2, tanda 1: cómo te hablamos (género y tono), qué celebrar y su nombre en la portada
+if (parte('Que la app le hable a cada uno')) try {
   const { probarPersonalTrato } = await import('./e2e-personal-t1.mjs');
   await probarPersonalTrato({ navegador, check });
-  // Personalización 2, tanda 2: su meta y la cuenta atrás, por qué la sesión es para ella y su historia en una línea
-  console.log('\nQue sepa a qué viene');
+} catch (e) { fallos++; console.log('  ✗ Que la app le hable a cada uno:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 2, tanda 2: su meta y la cuenta atrás, por qué la sesión es para ella y su historia en una línea
+if (parte('Que sepa a qué viene')) try {
   const { probarPersonalRumbo } = await import('./e2e-personal-t2.mjs');
   await probarPersonalRumbo({ navegador, check });
-  // Personalización 2, tanda 3: los avisos del coach por zona, en la sesión de quien tiene esa molestia
-  console.log('\nQue la app le conozca');
+} catch (e) { fallos++; console.log('  ✗ Que sepa a qué viene:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 2, tanda 3: los avisos del coach por zona, en la sesión de quien tiene esa molestia
+if (parte('Que la app le conozca')) try {
   const { probarPersonalConocerte } = await import('./e2e-personal-t3.mjs');
   await probarPersonalConocerte({ navegador, check });
-  // Personalización 2, tanda 4: su foto de motivación (en el móvil) y, en la ficha del coach, «Para hablarle» y la carta del mes
-  console.log('\nQue sea suyo');
+} catch (e) { fallos++; console.log('  ✗ Que la app le conozca:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 2, tanda 4: su foto de motivación (en el móvil) y, en la ficha del coach, «Para hablarle» y la carta del mes
+if (parte('Que sea suyo')) try {
   const { probarPersonalSuyo } = await import('./e2e-personal-t4.mjs');
   await probarPersonalSuyo({ navegador, check });
-  // Personalización 3, tanda 5: con el tiempo que tiene, su calentamiento y sus alternativas (siempre como consejo)
-  console.log('\nQue la sesión de hoy sea suya');
+} catch (e) { fallos++; console.log('  ✗ Que sea suyo:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 3, tanda 5: con el tiempo que tiene, su calentamiento y sus alternativas (siempre como consejo)
+if (parte('Que la sesión de hoy sea suya')) try {
   const { probarPersonalSesionTuya } = await import('./e2e-personal-t5.mjs');
   await probarPersonalSesionTuya({ navegador, check });
-  // Personalización 3, tanda 6: lo que viene en su vida, la pregunta de después y la semana difícil (consejo)
-  console.log('\nQue la app sepa de su vida');
+} catch (e) { fallos++; console.log('  ✗ Que la sesión de hoy sea suya:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 3, tanda 6: lo que viene en su vida, la pregunta de después y la semana difícil (consejo)
+if (parte('Que la app sepa de su vida')) try {
   const { probarPersonalVida } = await import('./e2e-personal-t6.mjs');
   await probarPersonalVida({ navegador, check });
-  // Personalización 3, tanda 7: su manual, lo que no quiere ver, su ciclo (en el móvil) y su informe
-  console.log('\nQue respete cómo es');
+} catch (e) { fallos++; console.log('  ✗ Que la app sepa de su vida:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 3, tanda 7: su manual, lo que no quiere ver, su ciclo (en el móvil) y su informe
+if (parte('Que respete cómo es')) try {
   const { probarPersonalRespeto } = await import('./e2e-personal-t7.mjs');
   await probarPersonalRespeto({ navegador, check });
-  // Personalización 3, tanda 8: la voz del coach, el reto del mes, el álbum y «Busco compañero»
-  console.log('\nQue le acompañe más allá de la app');
+} catch (e) { fallos++; console.log('  ✗ Que respete cómo es:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 3, tanda 8: la voz del coach, el reto del mes, el álbum y «Busco compañero»
+if (parte('Que le acompañe más allá de la app')) try {
   const { probarPersonalCompania } = await import('./e2e-personal-t8.mjs');
   await probarPersonalCompania({ navegador, check });
-  // Personalización 3, tanda 9: «Para hablarle» con lo que le hace volver y su alerta, los hitos para regalar y la bienvenida
-  console.log('\nQue el coach le conozca sin esfuerzo');
+} catch (e) { fallos++; console.log('  ✗ Que le acompañe más allá de la app:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Personalización 3, tanda 9: «Para hablarle» con lo que le hace volver y su alerta, los hitos para regalar y la bienvenida
+if (parte('Que el coach le conozca sin esfuerzo')) try {
   const { probarPersonalCoachSabe } = await import('./e2e-personal-t9.mjs');
   await probarPersonalCoachSabe({ navegador, check });
-  // La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
-  console.log('\nLa travesía, tanda 5');
+} catch (e) { fallos++; console.log('  ✗ Que el coach le conozca sin esfuerzo:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// La travesía, tanda 5: lo visual (el cartel del paisaje, la viñeta, el cielo, el ritmo de cuadros, la tarjeta final)
+if (parte('La travesía, tanda 5')) try {
   const { probarTravesia5 } = await import('./e2e-travesia5.mjs');
   await probarTravesia5({ navegador, check });
-  // La travesía al nivel de los mejores: «Cómo juegas», rango, misiones, adornos, logros, música y la foto
-  console.log('\nLa travesía, al nivel de los mejores');
+} catch (e) { fallos++; console.log('  ✗ La travesía, tanda 5:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// La travesía al nivel de los mejores: «Cómo juegas», rango, misiones, adornos, logros, música y la foto
+if (parte('La travesía, al nivel de los mejores')) try {
   const { probarTravesiaTop } = await import('./e2e-travesia-top.mjs');
   await probarTravesiaTop({ navegador, check });
-  // El remate de La travesía (claude/descansos-mejoras-5.md): el reto del coach, el diario, los números, la liga y el lobo de un compañero
-  console.log('\nEl remate de La travesía');
+} catch (e) { fallos++; console.log('  ✗ La travesía, al nivel de los mejores:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// El remate de La travesía (claude/descansos-mejoras-5.md): el reto del coach, el diario, los números, la liga y el lobo de un compañero
+if (parte('El remate de La travesía')) try {
   const { probarTravesiaRemate } = await import('./e2e-travesia-remate.mjs');
   await probarTravesiaRemate({ navegador, check });
-  // El jugo de La travesía (claude/descansos-mejoras-6.md): la barra hacia el siguiente sitio, el sello y la cuenta del final
-  console.log('\nEl jugo de La travesía');
+} catch (e) { fallos++; console.log('  ✗ El remate de La travesía:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// El jugo de La travesía (claude/descansos-mejoras-6.md): la barra hacia el siguiente sitio, el sello y la cuenta del final
+if (parte('El jugo de La travesía')) try {
   const { probarTravesiaJugo } = await import('./e2e-travesia-jugo.mjs');
   await probarTravesiaJugo({ navegador, check });
-  // El sonido de la app (claude/sonido-mejoras.md): perfiles, apartados, «Escuchar todos», la sesión y las frases del coach
-  console.log('\nEl sonido de la app');
+} catch (e) { fallos++; console.log('  ✗ El jugo de La travesía:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// El sonido de la app (claude/sonido-mejoras.md): perfiles, apartados, «Escuchar todos», la sesión y las frases del coach
+if (parte('El sonido de la app')) try {
   const { probarSonido } = await import('./e2e-sonido.mjs');
   await probarSonido({ navegador, check });
-  // Sonido 2 (claude/sonido-mejoras-2.md): el clic, «¿Seguimos?», el fondo del descanso, el horario, la voz y «¿Se oye bien?»
-  console.log('\nSonido 2');
+} catch (e) { fallos++; console.log('  ✗ El sonido de la app:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Sonido 2 (claude/sonido-mejoras-2.md): el clic, «¿Seguimos?», el fondo del descanso, el horario, la voz y «¿Se oye bien?»
+if (parte('Sonido 2')) try {
   const { probarSonido2 } = await import('./e2e-sonido-2.mjs');
   await probarSonido2({ navegador, check });
-  // Música 3 (claude/musica-mejoras-3.md): durante la sesión, su música, con el equipo y para el coach
-  console.log('\nMúsica 3, tanda 1: durante la sesión');
+} catch (e) { fallos++; console.log('  ✗ Sonido 2:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Música 3 (claude/musica-mejoras-3.md): durante la sesión, su música, con el equipo y para el coach
+if (parte('Música 3, tanda 1: durante la sesión')) try {
   const { probarMusica3Sesion } = await import('./e2e-musica3-t1.mjs');
   await probarMusica3Sesion({ navegador, check });
-  console.log('\nMúsica 3, tanda 2: su música');
+} catch (e) { fallos++; console.log('  ✗ Música 3, tanda 1: durante la sesión:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Música 3, tanda 2: su música')) try {
   const { probarMusica3Suya } = await import('./e2e-musica3-t2.mjs');
   await probarMusica3Suya({ navegador, check });
-  console.log('\nMúsica 3, tanda 3: con el equipo');
+} catch (e) { fallos++; console.log('  ✗ Música 3, tanda 2: su música:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Música 3, tanda 3: con el equipo')) try {
   const { probarMusica3Equipo } = await import('./e2e-musica3-t3.mjs');
   await probarMusica3Equipo({ navegador, check });
-  console.log('\nMúsica 3, tanda 4: para el coach y fuera de Spotify');
+} catch (e) { fallos++; console.log('  ✗ Música 3, tanda 3: con el equipo:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Música 3, tanda 4: para el coach y fuera de Spotify')) try {
   const { probarMusica3Coach } = await import('./e2e-musica3-t4.mjs');
   await probarMusica3Coach({ navegador, check });
-  console.log('\nEl perfil, tanda 4, T1: el día 1, marcas por repeticiones, correcciones, completa tu perfil e índice');
+} catch (e) { fallos++; console.log('  ✗ Música 3, tanda 4: para el coach y fuera de Spotify:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('El perfil, tanda 4, T1: el día 1, marcas por repeticiones, correcciones, completa tu perfil e índice')) try {
   const { probarPerfil4T1 } = await import('./e2e-perfil4-t1.mjs');
   await probarPerfil4T1({ navegador, check });
-  console.log('\nEl perfil, tanda 4, T2: palmarés, historia de bloques, logros secretos, equivalencias y trimestre');
+} catch (e) { fallos++; console.log('  ✗ El perfil, tanda 4, T1: el día 1, marcas por repeticiones, correcciones, completa tu perfil e índice:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('El perfil, tanda 4, T2: palmarés, historia de bloques, logros secretos, equivalencias y trimestre')) try {
   const { probarPerfil4T2 } = await import('./e2e-perfil4-t2.mjs');
   await probarPerfil4T2({ navegador, check });
-  console.log('\nEl perfil, tanda 4, T3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada');
+} catch (e) { fallos++; console.log('  ✗ El perfil, tanda 4, T2: palmarés, historia de bloques, logros secretos, equivalencias y trimestre:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('El perfil, tanda 4, T3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada')) try {
   const { probarPerfil4T3 } = await import('./e2e-perfil4-t3.mjs');
   await probarPerfil4T3({ navegador, check });
-  console.log('\nEl perfil, tanda 4, T4: atajos, descanso y pasos, privacidad, cuenta y hoja de cálculo');
+} catch (e) { fallos++; console.log('  ✗ El perfil, tanda 4, T3: lo que evitas, tu material, tus guardados, tu rincón de ánimo y tu portada:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('El perfil, tanda 4, T4: atajos, descanso y pasos, privacidad, cuenta y hoja de cálculo')) try {
   const { probarPerfil4T4 } = await import('./e2e-perfil4-t4.mjs');
   await probarPerfil4T4({ navegador, check });
-  // Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
-  console.log('\nColor');
+} catch (e) { fallos++; console.log('  ✗ El perfil, tanda 4, T4: atajos, descanso y pasos, privacidad, cuenta y hoja de cálculo:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Color (claude/color-mejoras.md): la paleta, la tarjeta del día, los acentos, alto contraste, daltonismo y «Paleta»
+if (parte('Color')) try {
   const { probarColor } = await import('./e2e-color.mjs');
   await probarColor({ navegador, check });
-  // Visual (claude/visual-mejoras.md): Perfil en dos vistas, dos columnas en el escritorio, cifras, gráficas, miniaturas, imágenes, hojas y saltos
-  console.log('\nVisual');
+} catch (e) { fallos++; console.log('  ✗ Color:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+// Visual (claude/visual-mejoras.md): Perfil en dos vistas, dos columnas en el escritorio, cifras, gráficas, miniaturas, imágenes, hojas y saltos
+if (parte('Visual')) try {
   const { probarVisual } = await import('./e2e-visual.mjs');
   await probarVisual({ navegador, check });
-  console.log('\nLa biblioteca ampliada: 160 ejercicios más y tres grupos nuevos');
+} catch (e) { fallos++; console.log('  ✗ Visual:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('La biblioteca ampliada: 160 ejercicios más y tres grupos nuevos')) try {
   const { probarBiblioteca2 } = await import('./e2e-biblioteca2.mjs');
   await probarBiblioteca2({ navegador, check });
-  console.log('\nLos objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach');
+} catch (e) { fallos++; console.log('  ✗ La biblioteca ampliada: 160 ejercicios más y tres grupos nuevos:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Los objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach')) try {
   const { probarObjetivos } = await import('./e2e-objetivos.mjs');
   await probarObjetivos({ navegador, check });
-  console.log('\nLos suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso');
+} catch (e) { fallos++; console.log('  ✗ Los objetivos que propone el atleta: el cuestionario, Revisar y la respuesta del coach:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Los suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso')) try {
   const { probarSuplementos } = await import('./e2e-suplementos.mjs');
   await probarSuplementos({ navegador, check });
-  console.log('\nPausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve');
+} catch (e) { fallos++; console.log('  ✗ Los suplementos: el coach los pauta, el atleta los marca en Hoy y se pone su aviso:', e.message.split('\n').slice(0, 8).join('\n      ')); }
+
+if (parte('Pausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve')) try {
   const { probarPausas } = await import('./e2e-pausas.mjs');
   await probarPausas({ navegador, check });
+} catch (e) { fallos++; console.log('  ✗ Pausar la asesoría: el coach la pone, el atleta lo ve en Hoy y vuelve:', e.message.split('\n').slice(0, 8).join('\n      ')); }
 
-  console.log('\nLa foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal');
+if (parte('La foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal')) try {
   const { probarPlatos } = await import('./e2e-platos.mjs');
   await probarPlatos({ navegador, check });
+} catch (e) { fallos++; console.log('  ✗ La foto del plato y comer fuera: la foto deja la comida hecha y el coach las ve en la revisión semanal:', e.message.split('\n').slice(0, 8).join('\n      ')); }
 
-  console.log('\n«A su medida»: las frases, las imágenes y el ritmo de peso que el coach le pone a cada atleta');
+if (parte('«A su medida»: las frases, las imágenes y el ritmo de peso que el coach le pone a cada atleta')) try {
   const { probarAMedida } = await import('./e2e-a-medida.mjs');
   await probarAMedida({ navegador, check });
-} catch (e) {
-  fallos++;
-  console.log('  ✗ las guías:', e.message.split('\n').slice(0, 8).join('\n      '));
-}
+} catch (e) { fallos++; console.log('  ✗ «A su medida»: las frases, las imágenes y el ritmo de peso que el coach le pone a cada atleta:', e.message.split('\n').slice(0, 8).join('\n      ')); }
 
 // v0.58: el modelo de los puntos del cuerpo de verdad (MediaPipe Pose), con la política de seguridad de la app (sin saltarla):
 // se descarga de la propia app solo al usarlo, arranca y analiza unos fotogramas (en el vídeo de la barra no hay nadie)
