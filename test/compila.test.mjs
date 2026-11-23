@@ -9,7 +9,7 @@ import * as esbuild from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { join, relative } from 'node:path';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from '../scripts/opciones-build.mjs';
-import { cssDelCoach, separarCssPorTrozos } from '../scripts/css-coach.mjs';
+import { cssDelCoach, separarCssPorTrozos, duenosDeCodigo } from '../scripts/css-coach.mjs';
 import { estiloPortada, marcadoPortada } from '../scripts/portada.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -61,12 +61,15 @@ const soloCoach = trozosSoloCoach(r.metafile);
 const texto = (f) => Buffer.from(porRuta.get(f)).toString('utf8');
 const jsRutas = [...porRuta.keys()].filter((f) => f.endsWith('.js'));
 const rutaCss = [...porRuta.keys()].find((f) => /(^|\/)app\.css$/.test(f));
-const partesCss = cssDelCoach(texto(rutaCss), { jsCoach: jsRutas.filter((f) => soloCoach.has(f)).map(texto).join('\n'),
-  jsOtros: `${jsRutas.filter((f) => !soloCoach.has(f)).map(texto).join('\n')}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
-// (v0.211) y sin los de cada pantalla que no sale al abrir (van con su trozo, como en scripts/build.mjs)
+// (v0.210) con el dueño de cada clase mirando todo el código, como en scripts/build.mjs (para no cambiar empates de la cascada)
 const lista0 = new Set(Object.entries(r.metafile.outputs).filter(([, o]) => Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))).map(([f]) => f));
 const perezosos = new Set(jsRutas.filter((f) => !arranque.has(f) && !lista0.has(f) && !soloCoach.has(f) && /(^|\/)chunks\//.test(f)));
-const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(jsRutas.map((f) => [f, texto(f)])), candidatos: perezosos, extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+const extraCss = `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}`;
+const duenoDe = duenosDeCodigo({ textos: new Map(jsRutas.map((f) => [f, texto(f)])), coach: soloCoach, candidatos: perezosos, extra: extraCss });
+const partesCss = cssDelCoach(texto(rutaCss), { jsCoach: jsRutas.filter((f) => soloCoach.has(f)).map(texto).join('\n'),
+  jsOtros: `${jsRutas.filter((f) => !soloCoach.has(f)).map(texto).join('\n')}\n${extraCss}`, duenoDe });
+// (v0.210) y sin los de cada pantalla que no sale al abrir (van con su trozo, como en scripts/build.mjs)
+const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(jsRutas.map((f) => [f, texto(f)])), candidatos: perezosos, extra: extraCss, duenoDe });
 const css = { crudo: Buffer.byteLength(partesTrozos.comun), gz: gzipSync(Buffer.from(partesTrozos.comun), { level: 9 }).length };
 const cssCoach = { crudo: Buffer.byteLength(partesCss.coach), gz: gzipSync(Buffer.from(partesCss.coach), { level: 9 }).length };
 check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
