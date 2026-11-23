@@ -4,7 +4,7 @@ import { useApp, useCarga, Hoja, Icono, Cargando, descargar, copiar, usePreferen
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
 import { fondoTarjeta, fondoLogro, fondoElegido, focoFondo, fuenteImagen, fondosDisponibles, grupoFondo } from '../logica/imagenes.js';
-import { fmtCorta } from '../logica/fechas.js';
+import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { hayImagen } from './Imagen.jsx';
 import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHandle, conArroba, handleEquipo, PREF_HANDLE, pieDeFoto, resumenTexto, nombreArchivo as nombreArchivoDe, cifrasCardio, PREF_RECORDATORIO, recordatorioCompartir,
   PALETAS, paletaDe, PREF_PALETA, limpiarFrase, PREF_FRASE, TONOS, PREF_TONO, textoAlternativo, PREF_COMPARTIDOS, anotarCompartido, textoCompartido,
@@ -625,7 +625,7 @@ async function pintarLogro(d, { formato = 'publicacion', pegatina: peg = '', han
   entrar(x);
   marca(x, letra);
   letra(500, 30); x.fillStyle = C.tinta2; x.textAlign = 'right';
-  x.fillText(fechaLarga(d.fecha || new Date().toISOString().slice(0, 10)), W - M, M + 40);
+  x.fillText(fechaLarga(d.fecha || hoyISO()), W - M, M + 40);
   x.textAlign = 'left';
   // El icono del logro, a la derecha (con destellos si es un récord)
   const acento = dorado ? C.oro : C.morado;
