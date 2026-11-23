@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.213': {
+    atleta: [
+      'Progreso sale al momento cuando vuelves a él.',
+    ],
+    coach: [
+      'La ficha de cada atleta, Revisar, la revisión semanal y el radar van más ligeros con mucho historial.',
+    ],
+  },
   '0.212': {
     atleta: [
       'Semana, Progreso y tu perfil salen antes al volver a ellos, aunque lleves años apuntando.',
