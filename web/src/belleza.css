@@ -251,10 +251,10 @@
 [data-pausa], [data-pausa] *, [data-pausa]::before, [data-pausa]::after, [data-pausa] *::before, [data-pausa] *::after { animation-play-state: paused !important; }
 
 /* -- 22 - Modo ligero (v0.209, rendimiento) -----------------------------------------------------------------------------
-   Con el móvil lento (o elegido en Ajustes: ui/ajustes.js pone data-ligero en <html>), fuera lo decorativo que más cuesta:
-   el cristal esmerilado (los mismos fondos lisos que con «Alto contraste»), la nieve de temporada y el tiempo del cielo,
-   y lo que anima sin parar por adorno (el cielo, la llama, las escenas, los brillos), quieto. Lo útil sigue igual: los
-   temporizadores, la grabación, las cargas y lo que avisa. */
+   Con el movil lento (o elegido en Ajustes: ui/ajustes.js pone data-ligero en <html>), fuera lo decorativo que mas cuesta:
+   el cristal esmerilado (los mismos fondos lisos que con "Alto contraste"), la nieve de temporada y el tiempo del cielo,
+   y lo que anima sin parar por adorno (el cielo, la llama, las escenas, los brillos), quieto. Lo util sigue igual: los
+   temporizadores, la grabacion, las cargas y lo que avisa. */
 :root[data-ligero] { --vidrio: var(--hoja); --vidrio-cab: var(--tiza); --vidrio-hoja: var(--hoja); --vidrio-flota: var(--flota); --vidrio-filtro: none; }
 :root[data-ligero] *, :root[data-ligero] *::before, :root[data-ligero] *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 :root[data-ligero] .temporada-capa, :root[data-ligero] .cielo-gota, :root[data-ligero] .cielo-copo, :root[data-ligero] .cielo-niebla,
