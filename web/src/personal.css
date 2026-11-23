@@ -408,7 +408,7 @@
 .tiempo-hoy-t > svg, .calentamiento summary > svg:first-child, .hace-un-ano > svg { width: var(--ico-20); height: var(--ico-20); flex: none; color: var(--morado); }
 .tiempo-hoy-r p { margin: 0; }
 .tiempo-hoy-lista, .calentamiento-lista { margin: 0; padding-left: var(--esp-20); display: grid; gap: var(--esp-4); line-height: 1.4; }
-.calentamiento summary { display: flex; gap: var(--esp-8); align-items: center; font-weight: 650; cursor: pointer; list-style: none; }
+.calentamiento summary { display: flex; gap: var(--esp-8); align-items: center; font-weight: 650; cursor: pointer; list-style: none; min-height: 32px; }
 .calentamiento summary::-webkit-details-marker { display: none; }
 .calentamiento summary .plegable-flecha { margin-left: auto; }
 .calentamiento[open] .calentamiento-lista { margin-top: var(--esp-10); }

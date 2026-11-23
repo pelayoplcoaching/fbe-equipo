@@ -102,7 +102,10 @@ function revisarEnPagina() {
     if (!visible(el)) continue;
     if (el.tagName === 'A' && el.closest('p, li p, .texto, .md')) continue;   // los enlaces dentro de un texto no cuentan
     const r = el.getBoundingClientRect();
-    if (r.width < 24 || r.height < 24) out.pequenos.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
+    // (una casilla dentro de su etiqueta: se toca toda la etiqueta)
+    const etq = el.tagName === 'INPUT' ? el.closest('label') : null;
+    const re = etq ? etq.getBoundingClientRect() : r;
+    if (re.width < 24 || re.height < 24) out.pequenos.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
   }
   for (const im of document.querySelectorAll('img')) if (im.complete && im.naturalWidth === 0 && im.getAttribute('src') && visible(im)) out.rotas.push((im.getAttribute('src') || '').slice(0, 80));
   // Textos que delatan un fallo: NaN, undefined, null, Invalid Date, [object Object], Infinity (en lo que se ve y en lo que se lee)

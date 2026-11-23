@@ -756,7 +756,7 @@ img.medio { background: var(--hoja-2); }
 .enfoque-donde .terciario { font-weight: 500; font-size: var(--letra-13); }
 .enfoque-reloj { font-size: var(--letra-17); font-weight: 700; }
 .enfoque-puntos { display: flex; gap: var(--esp-4); padding: 0 max(var(--esp-16), env(safe-area-inset-right, 0px)) var(--esp-6) max(var(--esp-16), env(safe-area-inset-left, 0px)); }
-.enfoque-puntos .punto { flex: 1; min-width: 0; height: 22px; padding: 0; border: 0; background: none; display: grid; align-items: center; }
+.enfoque-puntos .punto { flex: 1; min-width: 0; height: 24px; padding: 0; border: 0; background: none; display: grid; align-items: center; }
 .enfoque-puntos .punto span { display: block; height: 5px; border-radius: var(--r-4); background: var(--linea); transition: background var(--mov-medio) ease; }
 .enfoque-puntos .punto.empezado span { background: color-mix(in srgb, var(--morado) 45%, var(--linea)); }
 .enfoque-puntos .punto.hecho span { background: var(--morado); }

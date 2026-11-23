@@ -813,7 +813,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <div class="nota-coach con-lobo">
           <img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" />
           <div>
-            <button class="btn-texto" style="padding:0;min-height:0;color:var(--tinta);font-weight:700" onClick={() => setVerDinamica(!verDinamica)} aria-expanded={verDinamica}>Cómo es la sesión</button>
+            <button class="btn-texto" style="padding:0;min-height:32px;color:var(--tinta);font-weight:700" onClick={() => setVerDinamica(!verDinamica)} aria-expanded={verDinamica}>Cómo es la sesión</button>
             {verDinamica && <p style="margin-top:4px;white-space:pre-line">{sesion.dinamica}</p>}
           </div>
         </div>
