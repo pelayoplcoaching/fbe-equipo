@@ -11,6 +11,11 @@ const HUELLAS = typeof __HUELLAS__ !== 'undefined' ? __HUELLAS__ : {};
 // (pulido 3.7) El código que solo usa la demo (sus datos de ejemplo y su «base» en memoria, más de medio mega): no se
 // descarga al instalar ni al actualizar; se guarda la primera vez que se abre la demo (mensaje «guardar-demo»)
 const DEMO = typeof __DEMO_ARCHIVOS__ !== 'undefined' ? __DEMO_ARCHIVOS__ : [];
+// (v0.208) El código que solo usa el coach (su app, cerca de 1 MB): el móvil de un atleta no lo guarda ni lo vuelve a bajar
+// en cada actualización. En el de quien entra como coach se guarda la primera vez (mensaje «guardar-coach») y, desde
+// entonces, en cada actualización como lo demás (la caché lleva la marca MARCA_COACH).
+const COACH = typeof __COACH_ARCHIVOS__ !== 'undefined' ? __COACH_ARCHIVOS__ : [];
+const MARCA_COACH = 'https://fbe-sw.invalid/coach';
 // v0.58: el modelo de los puntos del cuerpo (modelos/pose-<versión>/, unos 12 MB): no se descarga al instalar la app,
 // sino la primera vez que se usa, y entonces se guarda aquí (una caché por versión del modelo, que sobrevive a las
 // actualizaciones de la app)
@@ -58,10 +63,10 @@ async function igualQueAhora(r, u) {
 // Instalar la versión nueva sin volver a descargar lo que no ha cambiado: cada archivo se busca en lo guardado de las
 // versiones anteriores y, si es idéntico al de ahora (se comprueba su contenido, no su nombre), se copia; si no, se
 // descarga. Antes, cada actualización bajaba la app entera (unos 4 MB), aunque hubiera cambiado una línea.
-async function instalarReutilizando() {
+async function instalarReutilizando(lista) {
   const nueva = await caches.open(CACHE);
   const viejas = await Promise.all((await caches.keys()).filter((k) => k.startsWith('fbe-atletas-') && k !== CACHE).map((k) => caches.open(k)));
-  await Promise.all(ARCHIVOS.map(async (u) => {
+  await Promise.all(lista.map(async (u) => {
     let r = null;
     for (const c of viejas) {
       try { const x = await c.match(u); if (x && await igualQueAhora(x, u)) { r = x; break; } } catch { /* se descarga */ }
@@ -73,11 +78,24 @@ async function instalarReutilizando() {
     await nueva.put(u, r);
   }));
 }
+// (v0.208) ¿Es el móvil de un coach? Alguna versión guardada lleva la marca
+async function esDeCoach() {
+  for (const k of await caches.keys()) {
+    if (!k.startsWith('fbe-atletas-') || k === CACHE) continue;
+    try { if (await (await caches.open(k)).match(MARCA_COACH)) return true; } catch { /* se mira la siguiente */ }
+  }
+  return false;
+}
 self.addEventListener('install', (e) => {
   // La versión nueva se descarga y espera: la app ofrece «Actualizar» (o se activa sola al abrirla de cero)
   // (si reutilizar falla por lo que sea, se instala como siempre: todo de la red, o nada)
-  const entera = () => caches.open(CACHE).then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' }))));
-  e.waitUntil(Object.keys(HUELLAS).length ? instalarReutilizando().catch(() => entera()) : entera());
+  e.waitUntil((async () => {
+    const coach = COACH.length > 0 && await esDeCoach().catch(() => false);
+    const lista = coach ? [...ARCHIVOS, ...COACH] : ARCHIVOS;
+    const entera = () => caches.open(CACHE).then((c) => c.addAll(lista.map((u) => new Request(u, { cache: 'reload' }))));
+    await (Object.keys(HUELLAS).length ? instalarReutilizando(lista).catch(() => entera()) : entera());
+    if (coach) await (await caches.open(CACHE)).put(MARCA_COACH, new Response('1'));
+  })());
 });
 
 // Lo de la demo que falte, a la caché de esta versión (lo pide la página cuando arranca en modo demo)
@@ -87,9 +105,18 @@ async function guardarDemo() {
   for (const u of DEMO) { if (!(await c.match(u))) faltan.push(u); }
   if (faltan.length) await c.addAll(faltan);
 }
+// (v0.208) Lo del coach que falte, a la caché de esta versión, y la marca para las siguientes (lo pide su app al abrirse)
+async function guardarCoach() {
+  const c = await caches.open(CACHE);
+  const faltan = [];
+  for (const u of COACH) { if (!(await c.match(u))) faltan.push(u); }
+  if (faltan.length) await c.addAll(faltan);
+  await c.put(MARCA_COACH, new Response('1'));
+}
 self.addEventListener('message', (e) => {
   if (e.data === 'activar') self.skipWaiting();
   if (e.data === 'guardar-demo' && DEMO.length) e.waitUntil(guardarDemo().catch(() => {}));
+  if (e.data === 'guardar-coach' && COACH.length) e.waitUntil(guardarCoach().catch(() => {}));
 });
 
 // (v0.207) La versión anterior se guarda unos días: quien tenga la app abierta con ella (el móvil sin cerrarla, sin

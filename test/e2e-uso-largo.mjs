@@ -60,7 +60,10 @@ export async function probarUsoLargo({ navegador, check, base = 'http://localhos
       const despues = await medir();
       const nombre = quien.source.replace(/\\/g, '');
       const crece = despues.mb - antes.mb;
-      check(crece < Math.max(4, antes.mb * 0.15), `${nombre}: tras ${VUELTAS} vueltas por ${pantallas.join(', ')}, la memoria no crece sin parar (${antes.mb.toFixed(1)} → ${despues.mb.toFixed(1)} MB)`);
+      // (v0.208) más estricta: de 4 MB a 2,5. Lo que aún sube de una vuelta a otra (unos 160 KB al principio, 50 después) es
+      // código que el navegador compila al usarse más y sus listas de medidas, que tienen tope: no se queda nada de la app
+      // (instantáneas de memoria tras 2, 8 y 20 vueltas)
+      check(crece < Math.max(2.5, antes.mb * 0.1), `${nombre}: tras ${VUELTAS} vueltas por ${pantallas.join(', ')}, la memoria no crece sin parar (${antes.mb.toFixed(1)} → ${despues.mb.toFixed(1)} MB)`);
       check(despues.intervalos <= antes.intervalos, `${nombre}: ni los temporizadores que se repiten (${antes.intervalos} → ${despues.intervalos})`);
       check(despues.oyentes <= antes.oyentes + 2, `${nombre}: ni los oyentes de la ventana (${antes.oyentes} → ${despues.oyentes})`);
       check(despues.nodos <= antes.nodos * 1.2 + 200, `${nombre}: ni lo que hay en la pantalla (${antes.nodos} → ${despues.nodos} elementos)`);

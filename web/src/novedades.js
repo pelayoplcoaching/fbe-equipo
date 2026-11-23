@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.208': {
+    atleta: [
+      'Hoy abre antes: al entrar, la app pide a la base la mitad que antes y carga menos; lo que sale al tocar algo, se carga entonces.',
+      'Si haces la etapa del día de La travesía sin cobertura, ya no se pierde: se guarda en el móvil y se manda al volver la conexión.',
+    ],
+    coach: [
+      'Tu app pide menos a la base al abrirse. Y el móvil de tus atletas ya no guarda tu app de coach: casi 1 MB menos en cada actualización.',
+    ],
+  },
   '0.207': {
     atleta: [
       'La app abre más ligera: cada pantalla se carga al abrirla (y por detrás, con la app quieta), así que Hoy sale antes.',
