@@ -183,6 +183,8 @@ function DentroDelEquipo({ m, alCambiar }) {
       </CabeceraGrande>
       <TarjetaAniversario />
       <TiraMomentos silencio={silenciadoHasta(m)} cambios={cambios} />
+      {/* (belleza B) lo de al lado del muro: en el móvil, todo seguido (sin caja); en el escritorio, la columna de la derecha */}
+      <div class="eq-lado">
       {/* (social, 053) los cumpleaños de hoy */}
       <CumplesEquipo cambios={cambios} />
       {deBienvenida.length > 0 && (
@@ -208,12 +210,15 @@ function DentroDelEquipo({ m, alCambiar }) {
         <PlegableEquipo id="duelos" titulo="Duelos" icono="trofeo" cuenta=".duelo-fila"><Duelos cambios={cambios} /></PlegableEquipo>
         <PlegableEquipo id="album" titulo="Álbum" icono="imagen"><AlbumEquipo Foto={FotoPost} cambios={cambios} /></PlegableEquipo>
       </div>
+      </div>
+      <div class="eq-centro">
       <Pestanas opciones={con043.datos ? VISTAS_043 : VISTAS} valor={vista} alCambiar={desliz.cambiar} etiqueta="Equipo" idBase="eq" clase={con043.datos ? 'pestanas-justas' : ''} />
       <div class="pestana-panel deslizable" role="tabpanel" id="eq-panel" aria-labelledby={`eq-${vista}`} key={vista} ref={desliz.panel} {...desliz.gesto}>
         {vista === 'muro' && <Muro cambios={cambios} miembro={m} eventos={eventos} alEventos={() => setEventos((v) => v + 1)} />}
         {vista === 'retos' && <Retos miembro={m} cambios={cambios} alCompartirLogro={(r) => setCelebrar({ reto: r, celebracion: false })} />}
         {vista === 'ranking' && <Ranking miembro={m} />}
         {vista === 'preguntas' && <PreguntasEquipo />}
+      </div>
       </div>
       {ajustes && <HojaAjustesComunidad miembro={m} alCerrar={() => setAjustes(false)} alCambiar={alCambiar} />}
       {celebrar && <HojaCelebracion reto={celebrar.reto} celebracion={celebrar.celebracion} alCerrar={() => cerrarCelebracion(false)} alCompartir={() => cerrarCelebracion(true)} />}

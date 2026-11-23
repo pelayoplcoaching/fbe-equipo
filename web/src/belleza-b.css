@@ -1,0 +1,60 @@
+/* =====================================================================================================================
+   Tanda de belleza B (v0.216): Progreso, el perfil y el equipo, y el atleta en tableta y escritorio. Solo ASCII.
+   Colores y medidas, de los tokens; cada color con su version oscura; nada se mueve con "reducir movimiento".
+   Va despues de belleza-a.css y antes de color-capa.css.
+   ===================================================================================================================== */
+
+/* -- B1 - Destacados de Progreso (a dos columnas desde 560 px): si son impares, el ultimo ocupa el ancho entero. Con uno
+   solo (los "Records" de quien lleva poco) se quedaba a media anchura, con la otra mitad vacia. */
+.destacados-lista > .destacado:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* -- B2 - Progreso a dos columnas (escritorio): los bloques que van dentro de una Reserva (que no tiene caja) no llevaban
+   su hueco de abajo y los titulos ("Destacados", "Tus semanas") quedaban pegados a la tarjeta de encima. */
+@media (min-width: 1000px) {
+  .app:not(.coach) .progreso-panel > .prog-grupo > .reserva > * { break-inside: avoid; margin-bottom: var(--esp-20); }
+}
+
+/* -- B3 - Perfil a dos columnas (escritorio): el carne ocupa las dos. En la columna de la derecha dejaba un hueco de
+   unos 350 px bajo los atajos de la izquierda; asi las dos columnas de arriba quedan casi iguales y el carne, centrado. */
+@media (min-width: 1000px) {
+  .app:not(.coach) .perfil-cuerpo > .carnet-seccion { column-span: all; }
+}
+
+/* -- B4 - Tableta y escritorio: la barra de arriba (cristal) ocupa el ancho de la columna y se veia como un rectangulo
+   claro suelto encima del degradado del fondo. Con las esquinas de abajo redondeadas es una barra flotante a proposito
+   (cuelga de arriba, como las de las apps de tableta); el filo y la sombra que le salen al bajar siguen su forma. */
+@media (min-width: 700px) {
+  .app:not(.coach) .cabecera { border-end-start-radius: var(--r); border-end-end-radius: var(--r); }
+  .app:not(.coach) .cabecera-grande.compacta::after { inset-inline: var(--r); }
+}
+
+/* -- B5 - Las cuatro cifras de Progreso ("semanas completas", "dias entrenados"...): en una columna estrecha (tableta
+   en vertical) iban en cuatro y las etiquetas en tres lineas. Miran el ancho del panel, no el de la pantalla: por
+   debajo de 680 px (la columna de la tableta es de 640), dos y dos; en el escritorio, a dos columnas, ya iban dos y dos
+   (visual.css). */
+.progreso-panel { container-type: inline-size; }
+@container (max-width: 679px) {
+  .progreso-panel .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .progreso-panel .cifras > div:nth-child(2n + 1) { border-left: 0; }
+  .progreso-panel .cifras > div:nth-child(n + 3) { border-top: var(--filo-fino) solid var(--linea); }
+}
+
+/* -- B6 - Vitrina de records: la fecha, en su linea. Antes "57,5 kg x 8 @8 (punto)" / "24 nov", con el punto colgando al final de la linea. */
+.trofeo-detalle .trofeo-fecha { display: block; }
+
+/* -- B7 - Tableta (desde 700 px): la columna del atleta pasa de 560 a 640 px; en un iPad en vertical se veia una
+   columna de movil con mucho margen a los lados. La barra de abajo, el chat y lo que va fijo siguen la misma medida. */
+@media (min-width: 700px) {
+  .app:not(.coach) { --ancho-atleta: 640px; }
+}
+
+/* -- B8 - Equipo en el escritorio (desde 1100 px): el muro a la izquierda y, a su derecha, lo de al lado (cumpleanos,
+   quien entrena hoy, un empujon, lo que suena, proximos...), como una columna lateral. En el movil y la tableta, todo
+   seguido como antes: las dos envolturas no tienen caja. "dense" deja que el muro empiece arriba, junto a la columna. */
+.eq-lado, .eq-centro { display: contents; }
+@media (min-width: 1100px) {
+  .app:not(.coach) .contenido.equipo { max-width: 1120px; grid-template-columns: minmax(0, 1fr) 340px; grid-auto-flow: row dense; align-items: start; column-gap: var(--esp-24); }
+  .app:not(.coach) .contenido.equipo > :not(.eq-lado, .eq-centro) { grid-column: 1 / -1; }
+  .app:not(.coach) .contenido.equipo > .eq-centro { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 1; min-width: 0; }
+  .app:not(.coach) .contenido.equipo > .eq-lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 2; min-width: 0; }
+}

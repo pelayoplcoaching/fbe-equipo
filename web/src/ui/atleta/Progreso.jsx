@@ -529,7 +529,7 @@ function Vitrina({ datos, ejercicios = [], esCoach, atletaId, abrirHistorial, ir
                 {reciente && <span class="trofeo-nuevo" aria-hidden="true">Nuevo</span>}
                 <span class="trofeo-nombre" aria-hidden="true">{x.nombre}</span>
                 <span class="trofeo-valor num" aria-hidden="true">{x.e1rm ? <>{pesoNum(x.e1rm.valor, 1)}<small> {etiquetaPeso()}</small></> : <>{x.repsSinCarga}<small> rep</small></>}</span>
-                <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${pesoTxt(x.e1rm.kg, 2)} × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha ? ` · ${fmtCorta(fecha)}` : ''}</span>
+                <span class="trofeo-detalle num" aria-hidden="true">{x.e1rm ? `${pesoTxt(x.e1rm.kg, 2)} × ${x.e1rm.reps}${x.e1rm.rpe ? ` @${num(x.e1rm.rpe)}` : ''}` : 'Sin carga'}{fecha && <span class="trofeo-fecha">{fmtCorta(fecha)}</span>}</span>
                 {(subidaDe(x) || (puntosDe[x.id] || []).length > 1) && (
                   <span class="trofeo-pie" aria-hidden="true">
                     {subidaDe(x) && <span class="trofeo-subida num"><Icono n="arriba" />{subidaDe(x)}</span>}
