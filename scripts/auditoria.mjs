@@ -175,6 +175,11 @@ async function entrar(conf, nombre) {
   if (await cod.isVisible().catch(() => false)) { await cod.fill('123456'); await p.getByRole('button', { name: 'Entrar' }).click(); }
   await p.locator('nav.tabs').waitFor({ timeout: 15000 });
   await p.waitForTimeout(1500);
+  if (RAROS) {
+    // (que de verdad ha cargado los datos raros: si no cupieran en el almacenamiento, saldría la demo de siempre)
+    const n = await p.evaluate(async () => ({ atletas: (await globalThis.__fbeDemo.select('atletas', {})).length, mensajes: (await globalThis.__fbeDemo.select('comentarios', {})).length })).catch(() => null);
+    console.log(`datos raros en el navegador (${nombre}): ${JSON.stringify(n)}`);
+  }
   if (c.sinRed) { await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1')); await ctx.setOffline(true); await p.waitForTimeout(500); }
   return { ctx, p, errores };
 }
