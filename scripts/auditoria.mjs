@@ -202,7 +202,7 @@ async function entrar(conf, nombre) {
     const n = await p.evaluate(async () => ({ atletas: (await globalThis.__fbeDemo.select('atletas', {})).length, mensajes: (await globalThis.__fbeDemo.select('comentarios', {})).length })).catch(() => null);
     console.log(`datos raros en el navegador (${nombre}): ${JSON.stringify(n)}`);
   }
-  if (c.sinRed) { await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1')); await ctx.setOffline(true); await p.waitForTimeout(500); }
+  if (c.sinRed) { await p.evaluate(() => localStorage.setItem('fbe-demo-sin-red', '1')); await ctx.setOffline(true); p.__sinRed = true; await p.waitForTimeout(500); }
   return { ctx, p, errores };
 }
 
@@ -220,7 +220,15 @@ async function irA(p, pestana) {
   // (dentro de una sesión o del modo enfoque, cambiar la dirección no la cierra: se vuelve a cargar la app en la pestaña)
   const enSesion = await p.locator('.sesion-vista, .portada-sesion, .enfoque, .travesia').count().catch(() => 0);
   const ok = !enSesion && await p.locator('nav.tabs').count();
-  if (!ok) { await p.goto(`${base}/?demo#${pestana}`); await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {}); await p.waitForTimeout(600); }
+  if (!ok) {
+    // (sin conexión, volver a cargar la página necesita la red del servidor de pruebas: se abre un momento y se vuelve a
+    // cortar; la demo sigue sin llegar a la «base» por «fbe-demo-sin-red»)
+    const sinRed = !!p.__sinRed;
+    if (sinRed) await p.context().setOffline(false);
+    await p.goto(`${base}/?demo#${pestana}`);
+    if (sinRed) await p.context().setOffline(true);
+    await p.locator('nav.tabs').waitFor({ timeout: 15000 }).catch(() => {}); await p.waitForTimeout(600);
+  }
   await p.evaluate((h) => { if (location.hash !== `#${h}`) location.hash = h; }, pestana);
   await p.waitForTimeout(900);
   await cerrarModales(p);
