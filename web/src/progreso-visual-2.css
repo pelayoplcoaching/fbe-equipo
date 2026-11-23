@@ -148,6 +148,8 @@
 .fichas-serie { display: inline-flex; flex-wrap: wrap; gap: var(--esp-4); }
 .serie-ficha { display: inline-flex; align-items: center; gap: var(--esp-4); padding: var(--esp-2) var(--esp-6); border-radius: var(--r-6); font-variant-numeric: tabular-nums; white-space: nowrap;
   background: var(--hoja-2); color: var(--tinta-2); border: var(--filo-fino) solid var(--linea); }
+/* (v0.211) la que se toca (comentar una serie en el registro del coach), al menos 24 px de alto */
+button.serie-ficha { min-height: 24px; }
 .serie-ficha.esf-justo { background: var(--ok-suave); color: var(--ok); border-color: transparent; }
 .serie-ficha.esf-suave { background: var(--pv2-suave-fondo); color: var(--pv2-suave); border-color: transparent; }
 .serie-ficha.esf-pasado, .serie-ficha.esf-corto, .serie-ficha.corto { background: var(--aviso-suave); color: var(--aviso); border-color: transparent; }
