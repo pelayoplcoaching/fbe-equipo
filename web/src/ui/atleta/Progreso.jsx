@@ -420,6 +420,10 @@ export function MapaConstancia({ atletaId, esCoach = false, records = null, chec
   const m = mapaConstancia((datos.datos || []).map((x) => ({ fecha: x.fecha, nombre: x.nombre, series: x.series, cardio: !!x.cardio_hecho })), hoy, 16);
   const pasados = m.semanas.flatMap((w) => w.dias).filter((d) => d.nivel >= 0);
   const dia = elegido ? pasados.find((d) => d.iso === elegido) : null;
+  // (v0.210) Los cuadros son pequeños para el dedo (16 semanas caben en un móvil a 16 px): con un día elegido, «‹ ›»
+  // de 32 px pasan al de antes o al de después, para corregir un toque que cayó en el de al lado sin apuntar de nuevo
+  const iDia = dia ? pasados.indexOf(dia) : -1;
+  const pasoDia = (n) => { const sig = pasados[iDia + n]; if (sig) { setElegido(sig.iso); setFoco(sig.iso); } };
   const conRecord = new Set(records || []), conCheckin = new Set(checkins || []);
   const extras = (iso) => `${conRecord.has(iso) ? ', con récord' : ''}${conCheckin.has(iso) ? ', check-in enviado' : ''}`;
   const textoDia = (d) => `${fmtConDia(d.iso)}: ${d.n ? d.sesiones.map((x) => x.nombre).join(', ') : 'descanso'}${extras(d.iso)}`;
@@ -455,10 +459,18 @@ export function MapaConstancia({ atletaId, esCoach = false, records = null, chec
           {checkinsVista > 0 && <span><i class="cr-celda n1 con-checkin" /> Check-in</span>}
         </span>
       )}
-      <p class="cr-detalle peq" aria-live="polite">
-        {dia ? <><strong>{fmtConDia(dia.iso)}</strong>{dia.n ? `: ${dia.sesiones.map((x) => `${x.nombre}${x.series ? ` (${x.series} ${x.series === 1 ? 'serie' : 'series'})` : x.cardio ? ' (cardio)' : ''}`).join(', ')}` : ': descanso'}{extras(dia.iso)}</>
-          : <span class="terciario">{esCoach ? 'Toca un día para ver qué hizo.' : 'Toca un día para ver qué hiciste.'}</span>}
-      </p>
+      <div class="cr-detalle-fila">
+        <p class="cr-detalle peq" aria-live="polite">
+          {dia ? <><strong>{fmtConDia(dia.iso)}</strong>{dia.n ? `: ${dia.sesiones.map((x) => `${x.nombre}${x.series ? ` (${x.series} ${x.series === 1 ? 'serie' : 'series'})` : x.cardio ? ' (cardio)' : ''}`).join(', ')}` : ': descanso'}{extras(dia.iso)}</>
+            : <span class="terciario">{esCoach ? 'Toca un día para ver qué hizo.' : 'Toca un día para ver qué hiciste.'}</span>}
+        </p>
+        {dia && (
+          <span class="cr-pasos">
+            <button type="button" class="btn btn-icono plano cr-paso" aria-label="Día anterior" disabled={iDia <= 0} onClick={() => pasoDia(-1)}><Icono n="atras" /></button>
+            <button type="button" class="btn btn-icono plano cr-paso" aria-label="Día siguiente" disabled={iDia >= pasados.length - 1} onClick={() => pasoDia(1)}><Icono n="derecha" /></button>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

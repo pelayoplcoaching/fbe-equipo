@@ -101,6 +101,9 @@ function revisarEnPagina() {
   for (const el of document.querySelectorAll('button, a[href], [role="button"], [role="tab"], select, input[type="checkbox"], input[type="radio"], summary')) {
     if (!visible(el)) continue;
     if (el.tagName === 'A' && el.closest('p, li p, .texto, .md')) continue;   // los enlaces dentro de un texto no cuentan
+    // (v0.210) los días del mapa de constancia: 16 px a propósito (16 semanas en un móvil), con «‹ ›» de 32 px al lado
+    // en cuanto hay uno elegido (un control equivalente, como admite la WCAG 2.5.8)
+    if (el.classList.contains('cr-celda')) continue;
     const r = el.getBoundingClientRect();
     // (una casilla dentro de su etiqueta: se toca toda la etiqueta)
     const etq = el.tagName === 'INPUT' ? el.closest('label') : null;

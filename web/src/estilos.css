@@ -207,7 +207,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 .area { min-height: 88px; resize: vertical; line-height: 1.45; }
 .entrada:focus, .selector:focus, .area:focus { outline: 2px solid var(--foco); outline-offset: -1px; border-color: transparent; }
-.casilla { display: grid; grid-template-columns: 24px 1fr; gap: var(--esp-12); align-items: start; font-size: var(--letra-15); }
+.casilla { display: grid; grid-template-columns: 24px 1fr; gap: var(--esp-12); align-items: start; min-height: 24px; font-size: var(--letra-15); }
 .casilla input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--morado); }
 .error { background: var(--alerta-suave); color: var(--alerta); border-radius: var(--r-10); padding: var(--esp-10) var(--esp-12); font-size: var(--letra-14-5); font-weight: 560; }
 .nota { background: var(--hoja-2); border-radius: var(--r-10); padding: var(--esp-10) var(--esp-12); font-size: var(--letra-14-5); color: var(--tinta-2); }
@@ -2649,6 +2649,11 @@ button.cr-celda { cursor: pointer; }
 .cr-leyenda { display: inline-flex; align-items: center; gap: var(--esp-4); }
 .cr-leyenda .cr-celda { width: 11px; height: 11px; }
 .cr-detalle { min-height: 22px; }
+/* (v0.210) el dia elegido con sus flechas al lado: la fila guarda su alto con o sin flechas (sin salto al elegir) */
+.cr-detalle-fila { display: flex; align-items: center; gap: var(--esp-8); min-height: 32px; }
+.cr-detalle-fila .cr-detalle { flex: 1; min-width: 0; }
+.cr-pasos { display: flex; flex: none; gap: var(--esp-4); }
+.cr-pasos .cr-paso { width: 32px; height: 32px; }
 
 /* ---------- Chat: grupos, separadores pegados, fotos con hueco y «Mensajes nuevos» ---------- */
 .chat-sep { position: sticky; top: calc(var(--chat-sep-top, 64px) + env(safe-area-inset-top, 0px) + 4px); z-index: 3; box-shadow: var(--anillo-suave), 0 2px 8px -4px color-mix(in srgb, var(--noche-1) 25%, transparent); }

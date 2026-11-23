@@ -1635,6 +1635,14 @@ if (parte(PRINCIPAL)) try {
   await conSesion.last().click();
   const detalleC = (await mapaC.locator('.cr-detalle').textContent()).trim();
   check(/^(lun|mar|mié|jue|vie|sáb|dom) \d+ \w+: .+/.test(detalleC) && !detalleC.includes('descanso'), `tocar un día dice qué hizo («${detalleC}»)`);
+  // (v0.210) con un día elegido, «‹ ›» pasan al de antes y vuelven (para corregir un toque que cayó al lado)
+  const elegidoC = await mapaC.locator('button.cr-celda.elegida').getAttribute('data-dia');
+  await mapaC.getByRole('button', { name: 'Día anterior' }).click();
+  const antC = await mapaC.locator('button.cr-celda.elegida').getAttribute('data-dia');
+  await mapaC.getByRole('button', { name: 'Día siguiente' }).click();
+  check((Date.parse(elegidoC) - Date.parse(antC)) / 864e5 === 1 && await mapaC.locator('button.cr-celda.elegida').getAttribute('data-dia') === elegidoC
+    && (await mapaC.locator('.cr-detalle').textContent()).trim() === detalleC, `«Día anterior» y «Día siguiente» mueven el día elegido (${elegidoC} → ${antC} → ${elegidoC})`);
+  await conSesion.last().focus();
   const diaAntes = await p.evaluate(() => document.activeElement?.dataset.dia);
   await p.keyboard.press('ArrowLeft');
   await p.waitForFunction((d) => document.activeElement?.dataset.dia && document.activeElement.dataset.dia !== d, diaAntes, { timeout: 3000 }).catch(() => {});
