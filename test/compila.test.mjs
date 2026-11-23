@@ -18,11 +18,11 @@ import { readFileSync } from 'node:fs';
 // (v0.208: a unos 1680 KB, 568 comprimido: las hojas de Hoy al abrirlas, lo de Revisar fuera del atleta, el texto de la
 // política al leerla y lo ligero de la sesión aparte)
 // (v0.209: los estilos, de 1068 a unos 920 KB, 189 a 165 comprimido: los que solo usa el coach van aparte, scripts/css-coach.mjs)
-// (v0.210: unos 900 KB, 159 comprimido: los de cada pantalla que no sale al abrir van con su trozo, y ni esos ni los del coach
+// (v0.210: unos 875 KB, 155 comprimido: los de cada pantalla que no sale al abrir van con su trozo, y ni esos ni los del coach
 // cambian quién gana un empate de la cascada: las reglas que podrían hacerlo se quedan en el común o llevan copias detrás)
 const PRESUPUESTO = {
   js: { crudo: 1780, gz: 610 },
-  css: { crudo: 920, gz: 165 },
+  css: { crudo: 900, gz: 160 },
 };
 
 let ok = 0, fallos = 0;
