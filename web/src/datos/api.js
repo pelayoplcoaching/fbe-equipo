@@ -656,6 +656,9 @@ export function crearApi(backend, opciones = {}) {
     if (amplias.size > 60) for (const [k, x] of amplias) if (!x.pendiente && (x.gen !== generacion || Date.now() - x.t >= AMPLIA_MS)) amplias.delete(k);
     const e = { gen: generacion, pendiente: true, t: 0, p: null, quien, ambito, filas: null };
     e.p = p.then((r) => { e.pendiente = false; e.t = Date.now(); e.filas = Array.isArray(r) ? r : null; return r; }, (err) => { if (amplias.get(clave) === e) amplias.delete(clave); throw err; });
+    // (si falla, cada una se pide como siempre y la que pidió el ámbito entero ya recoge su error: este, sin nadie que lo
+    // espere, no tiene que salir como «sin recoger»; sin conexión salía el aviso «Sin conexión: no se ha podido hacer»)
+    e.p.catch(() => {});
     amplias.set(clave, e);
     return e;
   };

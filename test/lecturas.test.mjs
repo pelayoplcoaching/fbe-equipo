@@ -94,5 +94,22 @@ console.log('\nCon la app: lo de un mismo ámbito, una sola consulta');
   check(cuenta.get('pesos') === 1, `las pesadas, una sola consulta a la base (${cuenta.get('pesos')})`);
 }
 
+console.log('\nSin conexión, ningún error sin recoger');
+{
+  // (la prueba completa lo vio: sin conexión, la lectura del ámbito entero que pedía el historial fallaba sin que nadie la
+  // esperara, y salía el aviso «Sin conexión: no se ha podido hacer» al abrir la app)
+  const sinRecoger = [];
+  const apuntar = (e) => sinRecoger.push(String(e?.message || e));
+  process.removeAllListeners('unhandledRejection');
+  process.on('unhandledRejection', apuntar);
+  const sinRed = () => Object.assign(new Error('Sin conexión.'), { sinConexion: true });
+  const caido = { modo: 'prueba', url: 'x', auth: { sesion: () => ({ user: { id: 'u1' } }), alCambiar: () => () => {} },
+    async select() { throw sinRed(); }, async rpc() { throw sinRed(); }, async insert() { throw sinRed(); }, async update() { throw sinRed(); }, async upsert() { throw sinRed(); }, async delete() { throw sinRed(); } };
+  const api3 = crearApi(caido);
+  const fallan = await Promise.all([api3.pesos('a1'), api3.pesos('a1', 30), api3.historial('a1'), api3.medidas('a1')].map((x) => Promise.resolve(x).then(() => false, (e) => e?.sinConexion === true)));
+  await new Promise((r) => setTimeout(r, 50));
+  check(fallan.every(Boolean) && !sinRecoger.length, `cada lectura falla para quien la pidió y ninguna queda sin recoger${sinRecoger.length ? ` (${sinRecoger.length}: ${sinRecoger[0]})` : ''}`);
+}
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);
