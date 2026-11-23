@@ -101,7 +101,11 @@ ${marcadoPortada}
   if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
   const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
   writeFileSync(join(salida, cssCoach), partesCss.coach);
-  const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: textosJs, candidatos: perezosos, extra: extraCss, duenoDe });
+  // (v0.210) Los estilos de cada pantalla perezosa, con su trozo: probado y apagado. Para no cambiar quién gana un empate al
+  // cargarlos después (respetarCascada) casi todas sus reglas tienen que quedarse en el común o llevar copias, y el ahorro al
+  // abrir se queda en unos 40 KB, a cambio de una espera más la primera vez que se abre cada pantalla. Con true, se reparten.
+  const ESTILOS_POR_TROZO = false;
+  const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: textosJs, candidatos: ESTILOS_POR_TROZO ? perezosos : new Set(), extra: extraCss, duenoDe });
   const cssTrozos = [];
   for (const [f, css] of partesTrozos.porTrozo) {
     // (con el mismo nombre que su trozo: así el código del trozo, con su orden de pedirlos, sigue siendo el mismo mientras no
