@@ -79,6 +79,7 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     if (!(await p.getByRole('heading', { name: 'Entra en tu cuenta' }).isVisible().catch(() => false))) {
       if (!(await p.getByRole('button', { name: 'Cambiar de cuenta' }).isVisible().catch(() => false))) {
         const hoy = p.locator('.tab', { hasText: 'Hoy' });
+        await cerrarDialogos();
         if (await hoy.count()) await hoy.first().click(); else await p.locator('.tab', { hasText: 'Atletas' }).click();
         await p.waitForTimeout(800);
         await cerrarDialogos();
@@ -345,6 +346,9 @@ export async function probarVideos059({ navegador, check, base = 'http://localho
     await p.evaluate((h) => { localStorage.setItem('fbe-recuerda-viejo-2020-01-01', 'true'); localStorage.setItem(`fbe-recuerda-hoy-${h}`, 'true'); }, hoyE);
     await p.reload();
     await p.locator('nav.tabs').waitFor();
+    // (v0.207) el vídeo que estaba abierto vuelve a abrirse al recargar, y ahora su pantalla se carga aparte (llega un poco
+    // después de las pestañas): se le da tiempo antes de cerrarlo
+    await p.waitForTimeout(800);
     await cerrarDialogos();
     const claves = () => p.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('fbe-recuerda-')));
     const k1 = await claves();

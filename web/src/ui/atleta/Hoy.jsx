@@ -61,6 +61,7 @@ import { CieloHora, fiestaAhora } from '../Cielo.jsx';
 import { ConAro } from '../Aro.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { PantallaRacha, HitoRacha, useHitoRacha } from './Racha.jsx';
+import { useTurnoCelebracion } from '../turno-celebracion.js';
 import { lanzarConfeti } from '../confeti.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { Ilustracion } from '../Ilustraciones.jsx';
@@ -456,6 +457,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   // v0.52: la pantalla de la racha y, al llegar a un hito (4, 8, 12, 26 o 52 semanas), su momento, una vez en este móvil
   const [verRacha, setVerRacha] = useState(false);
   const [hito, hitoVisto] = useHitoRacha(atleta.id, constancia.datos ? constancia.datos.racha : null);
+  // (v0.207) y por turnos con la hoja de las medallas nuevas: una celebración a la vez (turno-celebracion.js)
+  const turnoHito = useTurnoCelebracion(!!hito && !verRacha);
   // Detalle de la siguiente sesión (ejercicios, duración): lo usan la tarjeta del día y la lista de debajo
   const hoy = hoyISO();
   const semana = p.actual;
@@ -689,7 +692,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {visibles.map((id) => <Fragment key={id}>{bloquesHoy[id]}</Fragment>)}
       {carreraAbierta && <TuCarrera alCerrar={() => setCarreraAbierta(false)} />}
       {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
-      {hito && !verRacha && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
+      {turnoHito && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
       {bloqueAbierto && <HojaBloque alCerrar={() => setBloqueAbierto(false)} abrirSesion={(id) => { setBloqueAbierto(false); abrirSesion(id); }} />}
       {planAbierto && (
         <Hoja titulo={`Tu plan, ${rangoSemana(semana.fecha_inicio)}`} alCerrar={() => setPlanAbierto(false)}>

@@ -9,6 +9,7 @@ import { imagenMedalla, archivoPara } from '../logica/imagenes.js';
 import { hayImagen } from './Imagen.jsx';
 import { celebrar } from './atleta/sesion-comun.jsx';
 import { useBienvenidaAbierta } from './Bienvenida.jsx';
+import { useTurnoCelebracion } from './turno-celebracion.js';
 
 // v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y diamante: la
 // cara con un degradado radial (la luz arriba a la izquierda), el canto con su degradado y su dibujo (liso, perlado,
@@ -185,7 +186,8 @@ export function AvisoLogros({ salud, irA, pausado = false }) {
   const nuevos = lista ? logrosNuevos(lista, vistos || {}) : [];
   // (v0.72) y no encima de la bienvenida del día: espera a que se cierre
   const bienvenida = useBienvenidaAbierta();
-  const ver = !pausado && !bienvenida && !cerrado && nuevos.length > 0;
+  // (v0.207) y por turnos con el hito de la racha: si ya está en pantalla, espera a que se cierre (turno-celebracion.js)
+  const ver = useTurnoCelebracion(!pausado && !bienvenida && !cerrado && nuevos.length > 0);
   // (sonido, tanda 2) cada nivel de logro (verde, amarillo, azul y rojo) con su sonido
   useEffect(() => { if (ver) celebrar('otros', { sonido: 'logro', nivel: Math.max(...nuevos.map((l) => l.nivel)) - 1 }); }, [ver]);
   if (!ver) return null;
