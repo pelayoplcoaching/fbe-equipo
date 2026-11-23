@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.211': {
+    atleta: [
+      'Durante la sesión, el móvil trabaja mucho menos mientras descansas: el reloj del descanso y el punto verde ya no gastan batería sin parar.',
+    ],
+    coach: [
+      'La Biblioteca de ejercicios abre antes, aunque tenga cientos: solo se dibuja lo que ves.',
+    ],
+  },
   '0.210': {
     atleta: [
       'Abrir una sesión y Hoy va más rápido: la app pide a la vez lo que antes pedía una cosa detrás de otra.',
