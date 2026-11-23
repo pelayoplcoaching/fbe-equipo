@@ -54,4 +54,5 @@ export const FUERA_DE_COPIA = Object.freeze({
   travesia_envios: 'el registro de envíos de La travesía, solo para que no se repitan',
   reloj: 'el enlace del reloj de cada atleta: se vuelve a vincular desde el reloj',
   menu_fotos: 'las fotos de los platos: pesan mucho y se borran solas a los 30 días',
+  animo_fijados: 'el rincón de ánimo de cada atleta: solo lo ve él, ni siquiera su coach',
 });

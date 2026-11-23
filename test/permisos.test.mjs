@@ -5371,10 +5371,10 @@ console.log('\nLa revisión semanal del coach (migración 040)');
   await q(`delete from radar_ajustes`);
   await q(`delete from respuestas_guardadas where titulo = 'Récord'`);
 
-  // (v0.209, 087) La copia privada, también con los ánimos fijados, y por qué migración va la base: solo el coach
+  // (v0.209, 087) Por qué migración va la base: solo el coach (y la copia privada sigue sin el rincón de ánimo)
   check((await q(`select numero from fbe_migraciones where numero = 87`)).length === 1
-    && (await q(`select count(*)::int n from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('migracion_actual', 'copia_privada') and p.prosecdef and 'search_path=""' = any(coalesce(p.proconfig, '{}'))`))[0].n === 2,
-    '(087) sus dos funciones, con search_path vacío');
+    && (await q(`select count(*)::int n from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'migracion_actual' and p.prosecdef and 'search_path=""' = any(coalesce(p.proconfig, '{}'))`))[0].n === 1,
+    '(087) su función, con search_path vacío');
   await como(pelayo, 'aal2');
   const m087 = (await q(`select public.migracion_actual() as n`))[0].n;
   const c087 = (await q(`select public.copia_privada() as c`))[0].c;
@@ -5386,8 +5386,8 @@ console.log('\nLa revisión semanal del coach (migración 040)');
   try { await q(`select public.migracion_actual()`); } catch (e) { eAnon087 = e.message; }
   await su();
   const max087 = (await q(`select max(numero)::int n from fbe_migraciones`))[0].n;
-  check(m087 === max087 && Array.isArray(c087?.animo_fijados) && Array.isArray(c087?.pausas) && /Solo el coach/.test(eAna087 || '') && /permission denied/.test(eAnon087 || ''),
-    `(087) el coach ve por qué migración va la base (${m087}) y la copia lleva los ánimos fijados; un atleta y quien no ha entrado, no`);
+  check(m087 === max087 && !('animo_fijados' in (c087 || {})) && Array.isArray(c087?.pausas) && /Solo el coach/.test(eAna087 || '') && /permission denied/.test(eAnon087 || ''),
+    `(087) el coach ve por qué migración va la base (${m087}); un atleta y quien no ha entrado, no`);
 
   console.log('  · La 040 sin la 039, repetida y sobre una base que ya va por delante');
   const sin39 = new PGlite();

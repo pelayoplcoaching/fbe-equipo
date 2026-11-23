@@ -4,7 +4,7 @@
 //   node test/copia.test.mjs
 import { readFileSync, readdirSync } from 'node:fs';
 import { TABLAS_COPIA, TABLAS_OPCIONALES, FUERA_DE_COPIA } from '../web/src/datos/copia-tablas.js';
-import { MIGRACION_ULTIMA, migracionesQueFaltan } from '../web/src/datos/migracion.js';
+import { MIGRACION_ULTIMA, HUECOS_MIGRACIONES, migracionesQueFaltan } from '../web/src/datos/migracion.js';
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
 import { crearApi } from '../web/src/datos/api.js';
 
@@ -31,7 +31,7 @@ const conPrivada = ARCHIVOS.filter((a) => /create or replace function public\.co
 const ultimaPrivada = sinComentarios(lee(conPrivada[conPrivada.length - 1]));
 const cuerpo = ultimaPrivada.slice(ultimaPrivada.lastIndexOf('create or replace function public.copia_privada()'));
 const PRIVADAS = [...cuerpo.slice(0, cuerpo.indexOf('end $$')).matchAll(/'([a-z_0-9]+)', coalesce\(\(select jsonb_agg\(to_jsonb\(t\)[^)]*\) from public\.([a-z_0-9]+) t\)/g)].map((m) => [m[1], m[2]]);
-check(creadas.size > 140 && PRIVADAS.length >= 20, `se leen ${creadas.size} tablas de ${ARCHIVOS.length} archivos y ${PRIVADAS.length} de la copia privada (${conPrivada[conPrivada.length - 1].split('/').pop()})`);
+check(creadas.size > 140 && PRIVADAS.length >= 15, `se leen ${creadas.size} tablas de ${ARCHIVOS.length} archivos y ${PRIVADAS.length} de la copia privada (${conPrivada[conPrivada.length - 1].split('/').pop()})`);
 check(PRIVADAS.every(([k, t]) => k === t), 'cada tabla de la copia privada va con su nombre');
 const enPrivada = new Set(PRIVADAS.map(([, t]) => t));
 const copia = new Set(TABLAS_COPIA);
@@ -48,14 +48,15 @@ const mem = lee('web/src/datos/backend-memoria.js');
 const enMem = mem.slice(mem.indexOf("if (nombre === 'copia_privada')"));
 const listaMem = [...enMem.slice(0, enMem.indexOf('.map((t) => [t, copia(tabla(t))])')).matchAll(/'([a-z_0-9]+)'/g)].map((m) => m[1]).filter((t) => t !== 'copia_privada');
 check(JSON.stringify([...listaMem].sort()) === JSON.stringify([...enPrivada].sort()), `la demo da la misma copia privada que la base${JSON.stringify([...listaMem].sort()) === JSON.stringify([...enPrivada].sort()) ? '' : ` (demo: ${listaMem.filter((t) => !enPrivada.has(t))}; base: ${[...enPrivada].filter((t) => !listaMem.includes(t))})`}`);
-check(enPrivada.has('animo_fijados') && copia.has('radar_ajustes') && copia.has('encuestas_chat') && fuera.has('errores_app'), 'dentro, lo que faltaba (los ánimos fijados, tus ajustes, las encuestas del chat); fuera, los registros técnicos');
+check(copia.has('radar_ajustes') && copia.has('encuestas_chat') && fuera.has('errores_app') && fuera.has('animo_fijados') && !enPrivada.has('animo_fijados'), 'dentro, lo que faltaba (tus ajustes, las encuestas del chat); fuera, los registros técnicos y el rincón de ánimo de cada atleta (solo lo ve él)');
 
 console.log('\nPor qué migración va la base');
 const ultimaArchivo = Number(MIG[MIG.length - 1].slice(0, 3));
 check(MIGRACION_ULTIMA === ultimaArchivo, `la app espera la última migración del repositorio (${MIGRACION_ULTIMA}; la última es la ${MIG[MIG.length - 1]}): al añadir una, súbelo en web/src/datos/migracion.js`);
 const nums = MIG.map((f) => Number(f.slice(0, 3)));
-check(nums.every((n, i) => n === i + 2), 'las migraciones van de la 002 en adelante, sin huecos (así «las que faltan» son todas las de después)');
-check(JSON.stringify(migracionesQueFaltan(85, 87)) === JSON.stringify({ base: 85, ultima: 87, faltan: ['086', '087'], alMenos: null }), 'con la base en la 085, faltan la 086 y la 087');
+const huecos = []; for (let n = 2; n <= nums[nums.length - 1]; n++) if (!nums.includes(n)) huecos.push(n);
+check(JSON.stringify(huecos) === JSON.stringify(HUECOS_MIGRACIONES), `los números que no existen (${huecos.join(', ') || 'ninguno'}) son los de HUECOS_MIGRACIONES: «las que faltan» no los cuenta`);
+check(JSON.stringify(migracionesQueFaltan(85, 87)) === JSON.stringify({ base: 85, ultima: 87, faltan: ['086', '087'], alMenos: null }) && !migracionesQueFaltan(50, 87).faltan.includes('052') && migracionesQueFaltan(50, 87).faltan.includes('053'), 'con la base en la 085, faltan la 086 y la 087 (y nunca la 052, que no existe)');
 check(migracionesQueFaltan(87, 87).faltan.length === 0 && migracionesQueFaltan(90, 87).faltan.length === 0 && migracionesQueFaltan(null, 87).alMenos === '087', 'al día, ninguna; si la base no lo sabe decir, al menos la última');
 
 console.log('\nContra el esquema real');
@@ -70,14 +71,14 @@ const bloque = await api.nuevoBloque(ana.id, { nombre: 'Base', foco: 'adaptacion
 const [ses] = await b.sql(`select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by s.id limit 1`, [bloque.id]);
 const [ej] = await b.sql(`insert into ejercicios (nombre) values ('Sentadilla de prueba') returning id`);
 const [rec] = await b.sql(`insert into recetas (nombre) values ('Avena de prueba') returning id`);
-const [hab] = await b.sql(`insert into habitos (atleta_id, nombre) values ($1, 'Pasos') returning id`, [ana.id]);
+const [hab] = await b.sql(`insert into habitos (atleta_id, nombre, tipo, objetivo, unidad, icono) values ($1, 'Pasos', 'numero', 8000, 'pasos', 'pasos') returning id`, [ana.id]);
 const [obj] = await b.sql(`insert into objetivos (atleta_id, titulo) values ($1, 'Subir la sentadilla') returning id`, [ana.id]);
 const [com] = await b.sql(`insert into comentarios (atleta_id, autor, texto) values ($1, 'coach', '¡Vamos!') returning id`, [ana.id]);
 const [sup] = await b.sql(`insert into suplementos (atleta_id, nombre, origen) values ($1, 'Creatina', 'atleta') returning id`, [ana.id]);
 // Una fila suya en cada tabla nueva que vuelve al recuperarla (y alguna más de la copia)
 const NUEVAS = [
   [`insert into revisiones_semanales (atleta_id, lunes, hecha, nota) values ($1, '2026-09-07', true, 'Bien')`, [ana.id]],
-  [`insert into pausas (atleta_id, desde, hasta, motivo) values ($1, '2026-10-01', '2026-10-10', 'viaje')`, [ana.id]],
+  [`insert into pausas (atleta_id, desde, hasta, motivo) values ($1, '2026-10-01', '2026-10-10', 'vacaciones')`, [ana.id]],
   [`insert into carrera_atleta (atleta_id, fc_max) values ($1, 190)`, [ana.id]],
   [`insert into carrera_eventos (atleta_id, nombre, fecha) values ($1, 'Media de prueba', '2026-12-13')`, [ana.id]],
   [`insert into carrera_semanas (atleta_id, lunes, km_min, km_max) values ($1, '2026-09-07', 20, 30)`, [ana.id]],
@@ -88,7 +89,7 @@ const NUEVAS = [
   [`insert into contacto_atleta (atleta_id, telefono) values ($1, '+34600000000')`, [ana.id]],
   [`insert into salud_diaria (atleta_id, fecha, pasos) values ($1, '2026-09-08', 9000)`, [ana.id]],
   [`insert into salud_copias (atleta_id, tipo, habito_id, fecha, valor_puesto) values ($1, 'pasos', $2, '2026-09-08', 9000)`, [ana.id, hab.id]],
-  [`insert into agenda_vida (atleta_id, tipo, fecha, titulo, autor) values ($1, 'viaje', '2026-10-01', 'Boda', 'atleta')`, [ana.id]],
+  [`insert into agenda_vida (atleta_id, tipo, fecha, titulo, autor) values ($1, 'evento', '2026-10-01', 'Boda', 'atleta')`, [ana.id]],
   [`insert into objetivos_propuestos (atleta_id, tipo, ejercicio_id, kg, reps, objetivo_id) values ($1, 'fuerza', $2, 100, 1, $3)`, [ana.id, ej.id, obj.id]],
   [`insert into objetivos_rondas (atleta_id) values ($1)`, [ana.id]],
   [`insert into suplementos_tomas (suplemento_id, atleta_id, fecha) values ($1, $2, '2026-09-08')`, [sup.id, ana.id]],
@@ -105,7 +106,7 @@ check(!malas.length, malas.length ? `no se pudieron preparar: ${malas.join(' | '
 const c = await api.copiaCompleta();
 const faltanEnCopia = TABLAS_COPIA.filter((t) => !Array.isArray(c[t]));
 check(!faltanEnCopia.length, faltanEnCopia.length ? `sin leer: ${faltanEnCopia.join(', ')}` : `la copia trae las ${TABLAS_COPIA.length} tablas (y ninguna falla por permisos)`);
-check(c.radar_ajustes?.length === 1 && c.privado?.animo_fijados?.length === 1 && c.privado?.suplementos_tomas?.length === 1 && [...enPrivada].every((t) => Array.isArray(c.privado?.[t])), 'con lo que faltaba: tus ajustes de «A quién escribir» y, en la privada, los ánimos fijados y todo lo demás');
+check(c.radar_ajustes?.length === 1 && c.privado?.suplementos_tomas?.length === 1 && [...enPrivada].every((t) => Array.isArray(c.privado?.[t])) && !('animo_fijados' in c.privado) && !('animo_fijados' in c), 'con lo que faltaba (tus ajustes de «A quién escribir»), la privada entera y sin el rincón de ánimo de Ana');
 const pend = await api.migracionesPendientes();
 check(pend && pend.base === MIGRACION_ULTIMA && !pend.faltan.length && !pend.alMenos, `Cuenta no avisa de nada con la base al día (va por la ${pend?.base})`);
 await b.sql(`delete from fbe_migraciones where numero > 85`);
@@ -115,7 +116,7 @@ await b.sql(`insert into fbe_migraciones (numero) values (86), (87)`);
 await b.sql(`drop function public.migracion_actual()`);
 const sin87 = await api.migracionesPendientes();
 check(sin87?.alMenos === '087' && !sin87.faltan.length, 'sin la 087 (la base no lo sabe decir), avisa de que falta al menos la 087');
-await b.sql(lee('supabase/migraciones/087_copia_al_dia.sql'));
+await b.guion(lee('supabase/migraciones/087_migraciones_pendientes.sql'));
 await b.auth.registrar('ana@fbe.test', 'contraseña-ana-1', 'Ana');
 const apiAna = crearApi(b, { cubrir: false });
 check(await apiAna.migracionesPendientes() === null, 'a un atleta no le dice nada (la función es solo del coach)');
