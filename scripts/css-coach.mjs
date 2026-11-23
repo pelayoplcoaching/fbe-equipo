@@ -164,8 +164,9 @@ export function pseudoElemento(sel) {
     else if (prof === 0 && /[\s>+~]/.test(ch)) ultimo = i + 1;
   }
   const sujeto = s.slice(ultimo).replace(/\([^)]*\)/g, '');
-  const m = /::?(before|after|first-line|first-letter|placeholder|marker|selection|backdrop|file-selector-button|cue|part|slotted|-webkit-[a-z-]+|-moz-[a-z-]+)\b/i.exec(sujeto);
-  return m ? m[1].toLowerCase() : '';
+  // (con «::» cualquiera; con un solo «:», solo los cuatro de siempre: «:-webkit-autofill» es del propio elemento)
+  const m = /::(-?[a-z][a-z-]*)|:(before|after|first-line|first-letter)(?![a-z-])/i.exec(sujeto);
+  return m ? (m[1] || m[2]).toLowerCase() : '';
 }
 
 // Las propiedades de un cuerpo, por familia (margin y margin-top son la misma; width e inline-size también), con las

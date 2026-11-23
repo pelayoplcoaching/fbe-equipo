@@ -43,7 +43,8 @@ console.log('\nLos de cada pantalla');
 console.log('\nSin cambiar quién gana un empate (v0.210)');
 check(especificidad('#a .b c') === 1001001 && especificidad(':where(.a .b) .c') === 1000 && especificidad('.a:not(.b, #c)') === 1001000 && especificidad('a::before') === 2
   && especificidad('[data-x="a b"].y:hover') === 3000 && especificidad('.a:nth-child(2n+1 of .b)') === 3000 && especificidad(':is(h1, .t) span') === 1001, 'la especificidad (ids, clases, elementos; :where cuenta cero, :is/:not/:has su argumento mayor)');
-check(pseudoElemento('.a .b::before') === 'before' && pseudoElemento('.x:hover') === '' && pseudoElemento('.a:not(.b) .c::after') === 'after', 'el pseudo-elemento del sujeto');
+check(pseudoElemento('.a .b::before') === 'before' && pseudoElemento('.x:hover') === '' && pseudoElemento('.a:not(.b) .c::after') === 'after' && pseudoElemento('.c:before') === 'before'
+  && pseudoElemento('input:-webkit-autofill') === '' && pseudoElemento('.l::-webkit-scrollbar-thumb') === '-webkit-scrollbar-thumb', 'el pseudo-elemento del sujeto (:-webkit-autofill es del propio elemento)');
 check([...familias('margin-top:0;color:red!important;--x:1;background:url("a;b");inline-size:2px;line-height:1')].join() === 'margin,color!,--x,background,width,font', 'las propiedades por familia (y las !important aparte)');
 {
   // .tv-lobo y .chip: misma especificidad y misma propiedad; en el original ganaba .chip (va después) en un elemento con las dos
