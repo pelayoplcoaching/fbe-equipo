@@ -169,30 +169,62 @@ export function pseudoElemento(sel) {
   return m ? (m[1] || m[2]).toLowerCase() : '';
 }
 
-// Las propiedades de un cuerpo, por familia (margin y margin-top son la misma; width e inline-size también), con las
-// !important aparte (no empatan con las normales)
-function familia(prop) {
+// Las propiedades de verdad que fija cada declaración (sus «longhands»): «margin» fija las cuatro de margen, «margin-inline»
+// la izquierda y la derecha (la app va de izquierda a derecha), «inline-size» es «width», «font» fija el tamaño y el interlineado…
+// Dos reglas solo empatan en lo que fijan las dos. Las !important van aparte (no empatan con las normales).
+const LADOS = ['top', 'right', 'bottom', 'left'];
+const FISICO = { 'inline-start': 'left', 'inline-end': 'right', 'block-start': 'top', 'block-end': 'bottom' };
+const TAMANOS = { 'inline-size': 'width', 'block-size': 'height', 'min-inline-size': 'min-width', 'max-inline-size': 'max-width', 'min-block-size': 'min-height', 'max-block-size': 'max-height' };
+const ATAJOS = {
+  inset: LADOS, 'inset-inline': ['left', 'right'], 'inset-block': ['top', 'bottom'],
+  'border-width': LADOS.map((l) => `border-${l}-width`), 'border-style': LADOS.map((l) => `border-${l}-style`), 'border-color': LADOS.map((l) => `border-${l}-color`),
+  'border-radius': ['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((e) => `border-${e}-radius`),
+  'border-start-start-radius': ['border-top-left-radius'], 'border-start-end-radius': ['border-top-right-radius'], 'border-end-end-radius': ['border-bottom-right-radius'], 'border-end-start-radius': ['border-bottom-left-radius'],
+  outline: ['outline-width', 'outline-style', 'outline-color'],
+  background: ['background-color', 'background-image', 'background-position', 'background-size', 'background-repeat', 'background-attachment', 'background-origin', 'background-clip'],
+  font: ['font-style', 'font-variant-caps', 'font-weight', 'font-stretch', 'font-size', 'line-height', 'font-family'],
+  'font-variant': ['font-variant-ligatures', 'font-variant-caps', 'font-variant-numeric', 'font-variant-east-asian', 'font-variant-alternates', 'font-variant-position'],
+  flex: ['flex-grow', 'flex-shrink', 'flex-basis'], 'flex-flow': ['flex-direction', 'flex-wrap'],
+  gap: ['row-gap', 'column-gap'], 'grid-gap': ['row-gap', 'column-gap'], 'grid-row-gap': ['row-gap'], 'grid-column-gap': ['column-gap'],
+  'place-items': ['align-items', 'justify-items'], 'place-content': ['align-content', 'justify-content'], 'place-self': ['align-self', 'justify-self'],
+  'grid-template': ['grid-template-rows', 'grid-template-columns', 'grid-template-areas'],
+  grid: ['grid-template-rows', 'grid-template-columns', 'grid-template-areas', 'grid-auto-rows', 'grid-auto-columns', 'grid-auto-flow'],
+  'grid-area': ['grid-row-start', 'grid-column-start', 'grid-row-end', 'grid-column-end'], 'grid-row': ['grid-row-start', 'grid-row-end'], 'grid-column': ['grid-column-start', 'grid-column-end'],
+  overflow: ['overflow-x', 'overflow-y'], 'overflow-inline': ['overflow-x'], 'overflow-block': ['overflow-y'], 'word-wrap': ['overflow-wrap'],
+  'overscroll-behavior': ['overscroll-behavior-x', 'overscroll-behavior-y'],
+  transition: ['transition-property', 'transition-duration', 'transition-timing-function', 'transition-delay', 'transition-behavior'],
+  animation: ['animation-name', 'animation-duration', 'animation-timing-function', 'animation-delay', 'animation-iteration-count', 'animation-direction', 'animation-fill-mode', 'animation-play-state', 'animation-timeline'],
+  'text-decoration': ['text-decoration-line', 'text-decoration-style', 'text-decoration-color', 'text-decoration-thickness'],
+  'list-style': ['list-style-type', 'list-style-position', 'list-style-image'], columns: ['column-width', 'column-count'],
+  mask: ['mask-image', 'mask-mode', 'mask-position', 'mask-size', 'mask-repeat', 'mask-origin', 'mask-clip', 'mask-composite'],
+  'contain-intrinsic-size': ['contain-intrinsic-width', 'contain-intrinsic-height'], container: ['container-name', 'container-type'],
+  'text-emphasis': ['text-emphasis-style', 'text-emphasis-color'],
+};
+export function longhands(prop) {
   let p = prop.trim().toLowerCase();
-  if (p.startsWith('--')) return p;
+  if (p.startsWith('--')) return [p];
   p = p.replace(/^-(webkit|moz|ms|o)-/, '');
-  if (p === 'all') return '*';
-  if (/^(min-|max-)?(width|inline-size)$/.test(p)) return 'width';
-  if (/^(min-|max-)?(height|block-size)$/.test(p)) return 'height';
-  if (/^(top|right|bottom|left|inset)(-|$)/.test(p)) return 'inset';
-  if (/^(row-gap|column-gap|gap|grid-(row-|column-)?gap)$/.test(p)) return 'gap';
-  if (/^(place|align|justify)-/.test(p)) return 'align';
-  if (p === 'line-height' || p.startsWith('font')) return 'font';
-  if (/^column(s|-count|-width)$/.test(p)) return 'column';
-  if (p === 'word-wrap') return 'overflow';
-  return p.split('-')[0];
+  if (p === 'all') return ['*'];
+  if (TAMANOS[p]) return [TAMANOS[p]];
+  if (ATAJOS[p]) return ATAJOS[p];
+  for (const b of ['margin', 'padding', 'scroll-margin', 'scroll-padding']) {
+    if (p === b) return LADOS.map((l) => `${b}-${l}`);
+    if (p === `${b}-inline`) return [`${b}-left`, `${b}-right`];
+    if (p === `${b}-block`) return [`${b}-top`, `${b}-bottom`];
+    if (p.startsWith(`${b}-`) && FISICO[p.slice(b.length + 1)]) return [`${b}-${FISICO[p.slice(b.length + 1)]}`];
+  }
+  if (p.startsWith('inset-') && FISICO[p.slice(6)]) return [FISICO[p.slice(6)]];
+  if (p === 'border') return [...LADOS.flatMap((l) => ['width', 'style', 'color'].map((x) => `border-${l}-${x}`)), 'border-image'];
+  let m = /^border-(top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end)(?:-(width|style|color))?$/.exec(p);
+  if (m) {
+    const ls = m[1] === 'inline' ? ['left', 'right'] : m[1] === 'block' ? ['top', 'bottom'] : [FISICO[m[1]] || m[1]];
+    return ls.flatMap((l) => (m[2] ? [m[2]] : ['width', 'style', 'color']).map((x) => `border-${l}-${x}`));
+  }
+  return [p];
 }
 export function familias(cuerpo) {
   const out = new Set();
-  for (const d of partir(String(cuerpo), ';')) {
-    const k = d.indexOf(':');
-    if (k <= 0) continue;
-    out.add(`${familia(d.slice(0, k))}${/!\s*important\s*$/i.test(d) ? '!' : ''}`);
-  }
+  for (const d of declaraciones(cuerpo)) for (const k of d.claves) out.add(k);
   return out;
 }
 
@@ -216,9 +248,14 @@ export function sujetoDe(sel) {
   return { etiqueta: m ? m[1].toLowerCase() : '', clases: clasesNecesarias(suj), base: s.slice(0, corte).trim(), sufijo: s.slice(corte) };
 }
 
-// Las declaraciones de un cuerpo, cada una con su familia (para copiar solo las que hacen falta)
+// Las declaraciones de un cuerpo, cada una con lo que fija (sus longhands, con «!» si es !important)
 function declaraciones(cuerpo) {
-  return partir(String(cuerpo), ';').map((d) => { const k = d.indexOf(':'); return k > 0 ? { texto: d, fam: `${familia(d.slice(0, k))}${/!\s*important\s*$/i.test(d) ? '!' : ''}` } : null; }).filter(Boolean);
+  return partir(String(cuerpo), ';').map((d) => {
+    const k = d.indexOf(':');
+    if (k <= 0) return null;
+    const imp = /!\s*important\s*$/i.test(d) ? '!' : '';
+    return { texto: d, claves: longhands(d.slice(0, k)).map((x) => `${x}${imp}`) };
+  }).filter(Boolean);
 }
 
 // reglas: las del CSS en su orden original, cada una con .sel, .cuerpo y .dest (adónde iría: null = se queda en el común).
@@ -300,7 +337,7 @@ export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, 
   for (const [j, m] of porJ) {
     const decl = declaraciones(reglas[j].cuerpo);
     for (const [d, e] of m) {
-      const cuerpo = decl.filter((x) => e.fams.has(x.fam) || e.fams.has('*') || (x.fam.endsWith('!') && e.fams.has('*!'))).map((x) => x.texto).join(';');
+      const cuerpo = decl.filter((x) => e.fams.has('*') || x.claves.some((c) => e.fams.has(c) || (c.endsWith('!') && e.fams.has('*!')))).map((x) => x.texto).join(';');
       if (!cuerpo) continue;
       const copias = [];
       info[j].sels.forEach((b, bi) => { if (e.ctx[bi].size && b.base) copias.push({ sel: `${b.base}:where(${[...e.ctx[bi]].join(',')})${b.sufijo}`, cuerpo }); });

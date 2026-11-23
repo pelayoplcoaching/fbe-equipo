@@ -46,7 +46,13 @@ check(especificidad('#a .b c') === 1001001 && especificidad(':where(.a .b) .c') 
   && especificidad('[data-x="a b"].y:hover') === 3000 && especificidad('.a:nth-child(2n+1 of .b)') === 3000 && especificidad(':is(h1, .t) span') === 1001, 'la especificidad (ids, clases, elementos; :where cuenta cero, :is/:not/:has su argumento mayor)');
 check(pseudoElemento('.a .b::before') === 'before' && pseudoElemento('.x:hover') === '' && pseudoElemento('.a:not(.b) .c::after') === 'after' && pseudoElemento('.c:before') === 'before'
   && pseudoElemento('input:-webkit-autofill') === '' && pseudoElemento('.l::-webkit-scrollbar-thumb') === '-webkit-scrollbar-thumb', 'el pseudo-elemento del sujeto (:-webkit-autofill es del propio elemento)');
-check([...familias('margin-top:0;color:red!important;--x:1;background:url("a;b");inline-size:2px;line-height:1')].join() === 'margin,color!,--x,background,width,font', 'las propiedades por familia (y las !important aparte)');
+{
+  const f = [...familias('margin-top:0;color:red!important;--x:1;background:url("a;b");inline-size:2px;line-height:1;margin-inline:0;border-inline-start:1px solid')];
+  check(f.includes('margin-top') && f.includes('color!') && !f.includes('color') && f.includes('--x') && f.includes('background-image') && f.includes('width') && f.includes('line-height')
+    && f.includes('margin-left') && f.includes('margin-right') && f.includes('border-left-color') && !f.includes('font-size') && !f.includes('border-radius'), `lo que fija cada declaración, de verdad (${f.length} propiedades; las !important aparte)`);
+  check(!familias('font-size:1px').has('font-weight') && familias('font:12px a').has('font-size') && familias('border:0').has('border-top-width') && !familias('border:0').has('border-top-left-radius'),
+    'font-size no empata con font-weight; font y border fijan sus partes (border no toca el radio)');
+}
 check(sujetoDe('.a .b::before').base === '.a .b' && sujetoDe('.a .b::before').sufijo === '::before' && sujetoDe('button.x:hover').etiqueta === 'button' && sujetoDe('.a > .b.c').clases.join() === 'b,c',
   'el sujeto: su etiqueta, sus clases y el selector sin su pseudo-elemento');
 {
