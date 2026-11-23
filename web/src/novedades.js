@@ -7,9 +7,8 @@
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
   '0.213': {
-    atleta: [
-      'Progreso sale al momento cuando vuelves a él.',
-    ],
+    // (sin frase para el atleta: lo suyo de esta versión, Progreso al volver, ya lo dice la 0.212 y salían dos casi iguales)
+    atleta: [],
     coach: [
       'La ficha de cada atleta, Revisar, la revisión semanal y el radar van más ligeros con mucho historial.',
     ],
