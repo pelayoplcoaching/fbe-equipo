@@ -141,7 +141,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 function Entrenamientos({ abrirSesion }) {
   const { api, atleta } = useApp();
-  const lista = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id]);
+  // (v0.212) recordado: al volver a Semana sale al momento (y no se vuelve a pedir si es de hace menos de 20 s)
+  const lista = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `entrenamientos:${atleta.id}` });
   const [cuantos, setCuantos] = useState(12);
   const todos = lista.datos || [];
   if (!todos.length) return null;

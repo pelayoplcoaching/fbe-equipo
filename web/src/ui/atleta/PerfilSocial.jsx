@@ -53,7 +53,7 @@ function HistoriaLinea({ sesiones, progreso, hoy }) {
 export function PerfilSecciones({ salud, irA }) {
   const { api, atleta } = useApp();
   const hoy = hoyISO();  // (v0.143) el día del móvil, como la fecha de sus entrenos
-  const entrenos = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id]);
+  const entrenos = useCarga(() => api.entrenamientos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `entrenamientos:${atleta.id}` });
   const progreso = useCarga(() => api.progreso(atleta.id).catch(() => null), [atleta.id]);
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id]);
   const [pest, setPest] = useState('resumen');
