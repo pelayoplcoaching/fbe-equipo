@@ -218,6 +218,30 @@ async function explorar(s, ctx, pestana, nivel, maximo) {
   }
 }
 
+function guardarInforme() {
+  // El informe: agrupado por tipo y por lo que dice (lo mismo en varias pantallas, una línea con dónde)
+  const grupos = new Map();
+  for (const x of informe) {
+    const clave = `${x.tipo}|${x.detalle.replace(/\d+(\.\d+)?/g, '#')}`;
+    if (!grupos.has(clave)) grupos.set(clave, { tipo: x.tipo, detalle: x.detalle, donde: [] });
+    const g = grupos.get(clave);
+    if (g.donde.length < 6) g.donde.push(`${x.conf} · ${x.quien} · ${x.donde}`);
+    g.n = (g.n || 0) + 1;
+  }
+  const orden = ['error', 'desborde', 'fuera', 'cortado', 'imagen rota', 'accesibilidad', 'bloqueo', 'pequeño'];
+  const lineas = [`# Auditoría de pantallas (${new Date().toISOString().slice(0, 16)})`, '', `${estados} estados revisados en ${Math.round((Date.now() - t0) / 1000)} s; ${informe.length} hallazgos en ${grupos.size} grupos. Configuraciones: ${confs.join(', ')}.`, ''];
+  for (const tipo of orden) {
+    const gs = [...grupos.values()].filter((g) => g.tipo === tipo).sort((a, b) => b.n - a.n);
+    if (!gs.length) continue;
+    lineas.push(`## ${tipo} (${gs.length})`, '');
+    for (const g of gs) lineas.push(`- ${g.detalle} — ${g.n}× · ${g.donde.join(' | ')}`);
+    lineas.push('');
+  }
+  writeFileSync(join(SALIDA, 'informe.md'), lineas.join('\n'));
+  writeFileSync(join(SALIDA, 'informe.json'), JSON.stringify(informe, null, 1));
+
+}
+
 for (const conf of confs) {
   for (const quien of quienes) {
     const personas = quien === 'coach' ? ['Pelayo'] : atletas;
@@ -232,6 +256,7 @@ for (const conf of confs) {
         await revisar(s.p, ctx);
         for (const e of s.errores.slice(antes)) apuntar(ctx, 'error', e);
         await explorar(s, ctx, pestana, 0, conf === 'movil' ? 40 : 18);
+        guardarInforme();
         process.stdout.write(`${conf} ${quien} ${pestana}: ${informe.length} hallazgos, ${estados} estados, ${Math.round((Date.now() - t0) / 1000)} s\n`);
       }
       // El coach: la ficha de un atleta, pestaña a pestaña
@@ -257,25 +282,6 @@ for (const conf of confs) {
 await nav.close();
 srv.close?.();
 
-// El informe: agrupado por tipo y por lo que dice (lo mismo en varias pantallas, una línea con dónde)
-const grupos = new Map();
-for (const x of informe) {
-  const clave = `${x.tipo}|${x.detalle.replace(/\d+(\.\d+)?/g, '#')}`;
-  if (!grupos.has(clave)) grupos.set(clave, { tipo: x.tipo, detalle: x.detalle, donde: [] });
-  const g = grupos.get(clave);
-  if (g.donde.length < 6) g.donde.push(`${x.conf} · ${x.quien} · ${x.donde}`);
-  g.n = (g.n || 0) + 1;
-}
-const orden = ['error', 'desborde', 'fuera', 'cortado', 'imagen rota', 'accesibilidad', 'bloqueo', 'pequeño'];
-const lineas = [`# Auditoría de pantallas (${new Date().toISOString().slice(0, 16)})`, '', `${estados} estados revisados en ${Math.round((Date.now() - t0) / 1000)} s; ${informe.length} hallazgos en ${grupos.size} grupos. Configuraciones: ${confs.join(', ')}.`, ''];
-for (const tipo of orden) {
-  const gs = [...grupos.values()].filter((g) => g.tipo === tipo).sort((a, b) => b.n - a.n);
-  if (!gs.length) continue;
-  lineas.push(`## ${tipo} (${gs.length})`, '');
-  for (const g of gs) lineas.push(`- ${g.detalle} — ${g.n}× · ${g.donde.join(' | ')}`);
-  lineas.push('');
-}
-writeFileSync(join(SALIDA, 'informe.md'), lineas.join('\n'));
-writeFileSync(join(SALIDA, 'informe.json'), JSON.stringify(informe, null, 1));
+guardarInforme();
 console.log(`\n${estados} estados, ${informe.length} hallazgos (${grupos.size} grupos) → ${join(SALIDA, 'informe.md')}`);
 process.exit(0);
