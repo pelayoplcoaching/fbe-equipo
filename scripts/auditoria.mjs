@@ -122,7 +122,17 @@ function revisarEnPagina() {
     // (una casilla dentro de su etiqueta: se toca toda la etiqueta)
     const etq = el.tagName === 'INPUT' ? el.closest('label') : null;
     const re = etq ? etq.getBoundingClientRect() : r;
-    if (re.width < 24 || re.height < 24) out.pequenos.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
+    // (v0.212) la zona de toque que agranda un ::after o ::before con «inset» negativo (como .burbuja-ctx o el nombre de
+    // la cabecera del chat) también cuenta: es lo que se toca
+    const amplia = (pseudo) => {
+      const cs = getComputedStyle(el, pseudo);
+      if (cs.content === 'none' || cs.position !== 'absolute') return { w: 0, h: 0 };
+      const px = (v) => (v.endsWith('px') ? parseFloat(v) : 0);
+      return { w: re.width - px(cs.left) - px(cs.right), h: re.height - px(cs.top) - px(cs.bottom) };
+    };
+    const a1 = amplia('::after'), a2 = amplia('::before');
+    const w = Math.max(re.width, a1.w, a2.w), h = Math.max(re.height, a1.h, a2.h);
+    if (w < 24 || h < 24) out.pequenos.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
   }
   for (const im of document.querySelectorAll('img')) if (im.complete && im.naturalWidth === 0 && im.getAttribute('src') && visible(im)) out.rotas.push((im.getAttribute('src') || '').slice(0, 80));
   // Textos que delatan un fallo: NaN, undefined, null, Invalid Date, [object Object], Infinity (en lo que se ve y en lo que se lee)
