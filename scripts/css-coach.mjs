@@ -277,6 +277,7 @@ function declaraciones(cuerpo) {
 // no sale en nada de eso, no pueden ser el mismo elemento.
 export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, maxCopias = 12 } = {}) {
   const puedeIr = typeof duenoDe.puedeIr === 'function' ? duenoDe.puedeIr : null;
+  const junto = typeof duenoDe.junto === 'function' ? duenoDe.junto : null;
   const info = reglas.map((x) => {
     const sels = partir(x.sel).map((s) => {
       const suj = sujetoDe(s);
@@ -295,6 +296,19 @@ export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, 
     if (puedeIr) {
       for (const o of a.duenos) for (const c of b.clases) if (!puedeIr(o, c)) return false;
       for (const o of b.duenos) for (const c of a.clases) if (!puedeIr(o, c)) return false;
+    }
+    // (las clases precisas: si una de un sujeto nunca comparte elemento con una precisa del otro, o con su etiqueta, no)
+    if (junto) {
+      const separa = (x, y) => {
+        for (const e of x.clases) {
+          const j = junto(e);
+          if (!j) continue;
+          for (const k of y.clases) if (k !== e && !j.clases.has(k) && junto(k)) return true;
+          if (y.etiqueta && !j.etiquetas.has(y.etiqueta)) return true;
+        }
+        return false;
+      };
+      if (separa(a, b) || separa(b, a)) return false;
     }
     return true;
   };
@@ -402,7 +416,110 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
   // ¿Puede una clase acabar en un elemento que lleva otra cuyo dueño es o? Si sale en su código o en lo que alcanza (o en
   // index.html): sí; si no, no
   dueno.puedeIr = (o, c) => { const a = alcance(o); return a.palabras.has(c) || a.prefijos.some((p) => c.startsWith(p)); };
+  // (v0.210) Las clases «precisas»: las que solo salen en el atributo class de elementos (h("div",{class:"…"}), o con partes
+  // que solo eligen entre textos: `a ${x?"b":""}`), sin propiedades sueltas (...p) en el mismo elemento ni otra forma de
+  // ponerlas (classList, className, HTML en un texto, una propiedad de un componente, un nombre armado a trozos): de cada una
+  // se sabe con qué clases y etiquetas comparte elemento. junto(c) → { clases, etiquetas } o null si no es precisa.
+  const tramos = new Map(rutas.map((f) => [f, tramosDeClass(textos.get(f))]));
+  const todosPrefijos = [...new Set([...rutas.flatMap((f) => prefijos.get(f)), ...prefijosExtra])];
+  const juntos = new Map();
+  dueno.junto = (c) => {
+    if (juntos.has(c)) return juntos.get(c);
+    let r = { clases: new Set(), etiquetas: new Set() }, vistas = 0;
+    if (todosPrefijos.some((p) => c.startsWith(p)) || palabrasExtra.has(c)) r = null;
+    const re = new RegExp(`(?<![A-Za-z0-9_-])${c.replace(/[-]/g, '\\-')}(?![A-Za-z0-9_-])`, 'g');
+    fuera: for (const f of rutas) {
+      if (!r) break;
+      if (!palabras.get(f).has(c)) continue;
+      const t = textos.get(f), ts = tramos.get(f);
+      for (const m of t.matchAll(re)) {
+        if (t[m.index - 1] === '.') continue;   // un selector («.x», querySelector): no pone la clase
+        const tr = ts.find((x) => m.index >= x.ini && m.index < x.fin);
+        if (!tr || !tr.preciso) { r = null; break fuera; }
+        vistas++;
+        for (const k of tr.clases) r.clases.add(k);
+        r.etiquetas.add(tr.etiqueta);
+      }
+    }
+    if (r && !vistas) r = null;
+    juntos.set(c, r);
+    return r;
+  };
   return dueno;
+}
+
+// Los atributos class de los elementos en el código construido: e("div",{…,class:VALOR,…}). Cada uno con su tramo
+// (ini, fin del VALOR), su etiqueta, sus clases y si es preciso: el valor es un texto, una plantilla cuyas partes solo
+// eligen entre textos (x?"a":"b", x&&"a") o una de esas elecciones, y el elemento no lleva propiedades sueltas (...p).
+function finLiteral(t, i) {
+  const q = t[i];
+  for (let k = i + 1; k < t.length; k++) {
+    const ch = t[k];
+    if (ch === '\\') { k++; continue; }
+    if (q === '`' && ch === '$' && t[k + 1] === '{') { k = finExpr(t, k + 2, '}'); continue; }
+    if (ch === q) return k + 1;
+  }
+  return t.length;
+}
+// Hasta el cierre (el carácter de cierre, sin consumirlo) o hasta una coma de primer nivel; con textos y paréntesis anidados
+function finExpr(t, i, cierre) {
+  let prof = 0;
+  for (let k = i; k < t.length; k++) {
+    const ch = t[k];
+    if (ch === '"' || ch === "'" || ch === '`') { k = finLiteral(t, k) - 1; continue; }
+    if (ch === '(' || ch === '[' || ch === '{') prof++;
+    else if (ch === ')' || ch === ']' || ch === '}') { if (prof === 0) return ch === cierre ? k : -1; prof--; } else if (ch === ',' && prof === 0 && cierre === ',') return k;
+  }
+  return -1;
+}
+const TEXTO = /^(?:"[^"\\]*"|'[^'\\]*')$/;
+const ELIGE = /^[^"'`]*?(?:\?\s*(?:"[^"\\]*"|'[^'\\]*')\s*:\s*(?:"[^"\\]*"|'[^'\\]*')|&&\s*(?:"[^"\\]*"|'[^'\\]*'))$/;
+export function tramosDeClass(t) {
+  const out = [];
+  for (const m of t.matchAll(/\(\s*"([a-z][a-z0-9-]*)"\s*,\s*\{/g)) {
+    const etiqueta = m[1];
+    let k = m.index + m[0].length, preciso = true, valor = null;
+    // las propiedades del objeto, de una en una
+    for (let vueltas = 0; vueltas < 200 && k > 0 && k < t.length; vueltas++) {
+      while (t[k] === ' ' || t[k] === '\n') k++;
+      if (t[k] === '}') break;
+      if (t.startsWith('...', k)) preciso = false;
+      const fin = finExpr(t, k, ',');
+      const finObj = finExpr(t, k, '}');
+      const hasta = fin >= 0 && (finObj < 0 || fin < finObj) ? fin : finObj;
+      if (hasta < 0) { preciso = false; break; }
+      const prop = t.slice(k, hasta);
+      if (/^class\s*:/.test(prop)) valor = { ini: k + prop.indexOf(':') + 1, fin: hasta };
+      if (t[hasta] === '}') break;
+      k = hasta + 1;
+    }
+    if (!valor) continue;
+    const v = t.slice(valor.ini, valor.fin).trim();
+    const clases = new Set();
+    const textos = [];
+    let ok = preciso;
+    if (TEXTO.test(v)) textos.push(v.slice(1, -1));
+    else if (v.startsWith('`') && v.endsWith('`')) {
+      const cuerpo = v.slice(1, -1);
+      let fijo = '', i = 0;
+      while (i < cuerpo.length) {
+        if (cuerpo[i] === '\\') { ok = false; break; }
+        if (cuerpo[i] === '$' && cuerpo[i + 1] === '{') {
+          const f = finExpr(cuerpo, i + 2, '}');
+          if (f < 0) { ok = false; break; }
+          const expr = cuerpo.slice(i + 2, f).trim();
+          if (!ELIGE.test(expr)) { ok = false; break; }
+          for (const x of expr.matchAll(/"([^"\\]*)"|'([^'\\]*)'/g)) textos.push(x[1] ?? x[2]);
+          fijo += ' ';
+          i = f + 1;
+        } else { fijo += cuerpo[i]; i++; }
+      }
+      textos.push(fijo);
+    } else if (ELIGE.test(v)) { for (const x of v.matchAll(/"([^"\\]*)"|'([^'\\]*)'/g)) textos.push(x[1] ?? x[2]); } else ok = false;
+    for (const x of textos) for (const w of x.split(/\s+/)) if (w) clases.add(w);
+    out.push({ ini: valor.ini, fin: valor.fin, etiqueta, clases, preciso: ok });
+  }
+  return out;
 }
 
 const escribir = (nodos) => nodos.map((x) => (x.tipo === 'regla' ? `${x.sel}{${x.cuerpo}}` : x.tipo === 'grupo' ? `${x.pre}{${escribir(x.hijos)}}` : x.texto)).join('');
