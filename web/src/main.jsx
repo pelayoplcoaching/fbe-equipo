@@ -31,6 +31,7 @@ import './radar.css';
 import './progreso-visual.css';
 import './progreso-visual-2.css';
 import './registro-actividad.css';
+import './belleza-a.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

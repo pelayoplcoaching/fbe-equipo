@@ -1171,7 +1171,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {ultimas && (
             <p class="ultima-vez">
               La última vez ({fmtCorta(ultimas.fecha)}):{' '}
-              {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? ` @${num(s.rpe)}` : ''}</span>)}
+              {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="uv-serie"><span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? `\u00a0@${num(s.rpe)}` : ''}</span></span>)}
             </p>
           )}
           {/* (personalización 2, tanda 3) lo de la última vez contado como persona y el descanso que de verdad hizo */}
@@ -1703,7 +1703,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       {!cardio && resumen.series > 0 && !resumen.enCola && (
         <p class={`resumen-compara ${!comparacion ? 'vacia' : comparacion.tonelaje > 0 ? 'sube' : comparacion.tonelaje < 0 ? 'baja' : ''}`} style={{ '--i': 5 }} aria-live="polite">
           {anteriores.cargando && !anteriores.datos ? <span class="sil" style="width:70%;height:14px" />
-            : comparacion ? <><Icono n={comparacion.tonelaje >= 0 ? 'arriba' : 'abajo'} /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : ''}${comparacion.series} ${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
+            : comparacion ? <><Icono n={comparacion.tonelaje >= 0 ? 'arriba' : 'abajo'} /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : '\u2212'}${Math.abs(comparacion.series)}\u00a0${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
               : <><Icono n="estrella" /><span>La primera vez que haces esta sesión: la próxima te dirá cómo vas.</span></>}
         </p>
       )}

@@ -266,7 +266,7 @@ function EnfoquePantalla({
         {info.sugerencia && !Object.keys(h).length && <p class={`sugerencia ${info.sugerencia.tipo}`}><Icono n={info.sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{info.sugerencia.texto}</p>}
         {ultimas && (
           <p class="ultima-vez">
-            La última vez ({fmtCorta(ultimas.fecha)}): {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? ` @${num(s.rpe)}` : ''}</span>)}
+            La última vez ({fmtCorta(ultimas.fecha)}): {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="uv-serie"><span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? `\u00a0@${num(s.rpe)}` : ''}</span></span>)}
           </p>
         )}
         {!notas[actual.id] && !editandoNota && <button class="btn-texto" style="justify-self:start" onClick={() => setEditandoNota(true)}><Icono n="chincheta" /> Añadir una nota a este ejercicio</button>}

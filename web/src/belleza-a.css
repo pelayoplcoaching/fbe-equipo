@@ -1,0 +1,58 @@
+/* =====================================================================================================================
+   Tanda de belleza A (v0.215): lo que el atleta ve cada dia (Hoy, la sesion, el final de la sesion). Solo ASCII.
+   Colores y medidas, de los tokens; cada color con su version oscura; nada se mueve con "reducir movimiento".
+   Va despues de belleza.css y de las hojas de Progreso, y antes de color-capa.css.
+   ===================================================================================================================== */
+
+/* -- A1 - Hoy: con cinco diales (dos filas: tres y dos), la segunda fila centrada, no pegada a la izquierda. Seis
+   columnas y cada dial ocupa dos; el cuarto de cinco empieza en la segunda. Las rayas, solo entre los de la misma fila. */
+.diales.diales-dos-filas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.diales.diales-dos-filas > .dial { grid-column: span 2; }
+.diales.diales-dos-filas > button.dial:nth-of-type(4):nth-last-of-type(2) { grid-column: 2 / span 2; }
+
+/* -- A2 - El mapa de los musculos (final de la sesion, Tu semana, Progreso, el informe del bloque): en oscuro, el primer
+   nivel ("1 a 4") casi no se distinguia de "sin series". Cada nivel, un paso mas claro; el ultimo, con algo de blanco. */
+.mapa-muscular { --mm-0: var(--linea); --mm-1: var(--seq-2); --mm-2: var(--seq-3); --mm-3: var(--seq-4); --mm-4: var(--seq-5); }
+.mapa-muscular .m0, .mapa-muscular .leyenda-mapa .m0 { fill: var(--mm-0); background: var(--mm-0); }
+.mapa-muscular .m1, .mapa-muscular .leyenda-mapa .m1 { fill: var(--mm-1); background: var(--mm-1); }
+.mapa-muscular .m2, .mapa-muscular .leyenda-mapa .m2 { fill: var(--mm-2); background: var(--mm-2); }
+.mapa-muscular .m3, .mapa-muscular .leyenda-mapa .m3 { fill: var(--mm-3); background: var(--mm-3); }
+.mapa-muscular .m4, .mapa-muscular .leyenda-mapa .m4 { fill: var(--mm-4); background: var(--mm-4); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); }
+}
+:root[data-theme="dark"] .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); }
+
+/* -- A3 - Sin viudas: un texto de dos o mas lineas no acaba con una sola palabra en la ultima ("...esfuerzo" / "9/10").
+   diseno.css ya lo pide para p, li, dd, label...; faltaban las notas pequenas de las tarjetas, que son span. El navegador
+   que no lo sepa hacer lo deja como estaba. */
+:where(.mini, .detalle, .secundario) { text-wrap: pretty; }
+/* -- A4 - Lo corto de dos lineas, con las dos lineas igualadas: los botones, las etiquetas de encima de un titulo y el
+   titular de las tarjetas "Tu semana" y "Tu mes" de Hoy ("18 dias de nutricion" / "apuntados", no "18 dias de nutricion apuntados"
+   con "apuntados" solo abajo). */
+:where(.btn, .btn-texto, .t-sobre) { text-wrap: balance; }
+.tarjeta-semana .pila-xs > strong { text-wrap: balance; }
+
+/* -- A5 - Hoy: el dibujo de la sesion pasa por detras de la linea de arriba y del objetivo ("Semana 4" quedaba tachado
+   por una raya). Un halo del color de la tarjeta alrededor de las letras: la raya se corta antes de tocarlas. */
+.hero-dia .titular .contexto, .hero-dia .hero-objetivo { text-shadow: 0 0 2px var(--hero), 0 0 6px var(--hero), 0 0 12px var(--hero); }
+
+/* -- A6 - Sesion: las comillas grandes del mensaje de tu coach asoman por encima de su caja; dentro de un ejercicio, la
+   cabecera del ejercicio (que se queda arriba al bajar) les tapaba la mitad de arriba. Con algo de aire, se ven enteras. */
+.ejercicio-cuerpo > .cita-coach:first-child { margin-top: var(--esp-12); }
+
+/* -- A7 - Superseries: con la letra delante ("A2"), el nombre que no cabe sigue en la segunda linea a la altura del nombre,
+   no debajo de la letra (Hoy, la portada de la sesion y la cabecera de cada ejercicio). Con las lineas igualadas: con la
+   letra delante cabe menos y quedaba una palabra sola al final ("polea alta con" / "cuerda"). */
+.ej-fila .nombre:has(> .ss-etq) { display: flex; align-items: baseline; text-wrap: balance; }
+.ejercicio-cab .nombre:has(> .ss-etq) { display: inline-flex; align-items: baseline; text-wrap: balance; }
+.ej-fila .nombre > .ss-etq, .ejercicio-cab .nombre > .ss-etq { flex: none; }
+
+/* -- A8 - "Se oye bien el sonido?": en el movil no cabia en una linea y "Ahora no" se quedaba solo abajo a la izquierda.
+   La pregunta arriba y las dos respuestas juntas abajo a la derecha; si hay sitio, todo en una linea, como antes. */
+.aviso-prueba-sonido > span { flex: 1 1 14rem; }
+.aviso-prueba-sonido > .btn-texto:not(.mini) { margin-inline-start: auto; }
+
+/* -- A9 - "La ultima vez (20 nov): 16x9 @8, 16x9 @8,5...": cada serie con su esfuerzo en la misma linea; antes "@8,5"
+   podia bajar solo a la linea siguiente, lejos de su "16x9". */
+.ultima-vez .uv-serie { white-space: nowrap; }
