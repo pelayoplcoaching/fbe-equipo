@@ -316,7 +316,12 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     // (v0.202: «Ya hablamos» va también a la base; la demo la guarda en el navegador con un margen y, tras recargar, a
     // veces vuelve el de antes del «Deshacer»: aquí basta con que salga la lista)
     check(await p.locator('.radar .revision-fila').count() >= 1, 'a 360 px, desde «Más», la lista');
-    await p.locator('.radar .revision-fila').first().getByRole('button', { name: 'Escribirle' }).click();
+    // (con la lista recién pintada tras recargar, el toque puede caer mientras se vuelve a pintar: si no se abre, otra vez)
+    for (let i = 0; i < 3; i++) {
+      const b = p.locator('.radar .revision-fila').first().getByRole('button', { name: 'Escribirle' });
+      if (await b.count()) await b.click().catch(() => {});
+      if (await p.locator('.radar textarea').first().waitFor({ timeout: 8000 }).then(() => true, () => false)) break;
+    }
     await p.locator('.radar textarea').first().waitFor();
     await revisar('movil');
     await foto('radar-4-movil');
