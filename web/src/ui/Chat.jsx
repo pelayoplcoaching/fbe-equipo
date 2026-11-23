@@ -1,6 +1,6 @@
 import { leerTarjetaInforme, textoMes } from '../logica/informeTecnica.js';
 import { HojaInforme } from './tecnica/InformeMes.jsx';
-import { Fragment } from 'preact';
+import { Component, Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Cargando, Hoja, cuando, Vacio, copiar, Pestanas } from './comunes.jsx';
 import { Hilo, HojaRespuestas } from './Hilo.jsx';
@@ -904,13 +904,16 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing && enOrdenador()) { e.preventDefault(); enviar(e); }
   }
 
-  // Separadores por día (v0.55: «Hoy», «Ayer», «martes», «12 de octubre»)
-  const grupos = [];
-  for (const c of vista) {
-    const clave = aISO(new Date(c.creado_en));
-    const g = grupos[grupos.length - 1];
-    if (g && g.clave === clave) g.items.push(c); else grupos.push({ clave, dia: etiquetaDia(c.creado_en), items: [c] });
-  }
+  // Separadores por día (v0.55: «Hoy», «Ayer», «martes», «12 de octubre»). (v0.211) Memorizados: al escribir no cambian
+  const grupos = useMemo(() => {
+    const gs = [];
+    for (const c of vista) {
+      const clave = aISO(new Date(c.creado_en));
+      const g = gs[gs.length - 1];
+      if (g && g.clave === clave) g.items.push(c); else gs.push({ clave, dia: etiquetaDia(c.creado_en), items: [c] });
+    }
+    return gs;
+  }, [vista]);
   const etiqueta = (c) => {
     if (!c.contexto) return null;
     if (c.contexto.tipo === 'sesion') return `En ${c.contexto.nombre}`;
@@ -919,7 +922,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
     return yo === 'coach' ? `En su ${c.contexto.nombre}` : `En tu ${c.contexto.nombre}`;
   };
   // v0.49: los mensajes seguidos de la misma persona van juntos (v0.55: el pico, en el primero de cada grupo)
-  const agrupado = Object.fromEntries(gruposChat(vista.map((c) => ({ ...c, contexto: etiqueta(c) ? c.contexto : null })), { dia: (iso) => aISO(new Date(iso)) }).map((x) => [x.id, x]));
+  const agrupado = useMemo(() => Object.fromEntries(gruposChat(vista.map((c) => ({ ...c, contexto: etiqueta(c) ? c.contexto : null })), { dia: (iso) => aISO(new Date(iso)) }).map((x) => [x.id, x])), [vista, yo]);
   const sep = separador.current;
   // v0.55: lo nuevo desde que se abrió el chat entra deslizándose (lo que ya estaba, o lo anterior que se carga, no)
   const conocidos = useRef(null);
@@ -927,6 +930,8 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   if (!conocidos.current && conv.datos) conocidos.current = new Set(vista.map((c) => c.cliente_id || c.id));
   const esNueva = (c) => !!conocidos.current && !conocidos.current.has(c.cliente_id || c.id) && (c.pendiente || c.fallo || Date.parse(c.creado_en) >= abiertoEn.current - 5000);
 
+  // (v0.211, rendimiento) lo que hacen las burbujas, siempre lo último (BurbujaFija no se vuelve a pintar si no cambia lo suyo)
+  const enBurbuja = useRef({});
   // v0.55: las fotos y los vídeos del chat, en orden, para el visor
   const medios = useMemo(() => mediosDe(mensajes).filter((m) => m.tipo === 'foto' || m.tipo === 'video').reverse().map((m) => ({ mensaje: porId[m.mensajeId], archivo: m.archivo })), [mensajes]);
   const abrirMedio = (c) => {
@@ -992,6 +997,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
   // (v0.209) en <html>, que hay chat (la lista y su barra): sin «:has()» que mire la página entera
   useMarcaPagina('hay-chat-lista');
   useMarcaPagina('hay-chat-barra');
+  enBurbuja.current = { alternar, responder, irA, abrirMedio, irContexto, cancelarSubida, reintentarSubida, recargar: () => { conv.recargar(true); avisarCambio(); } };
   return (
     <div class={`chat ${fondo && cabecera ? 'con-fondo' : ''} ${seleccion ? 'seleccionando' : ''} ${emojis ? 'con-emojis' : ''} ${soltando ? 'soltando' : ''}`} ref={raiz} aria-label={`Chat con ${otro}`} {...arrastrar}>
       {soltando && <div class="chat-soltar" aria-hidden="true"><Icono n="clip" /><strong>Suelta aquí para adjuntarlo</strong><span class="peq">Fotos, vídeos o PDF</span></div>}
@@ -1051,13 +1057,13 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
             {g.items.map((c) => (
               <Fragment key={c.cliente_id || c.id}>
                 {sep?.id === c.id && <div id="chat-sin-leer" class="chat-sin-leer" role="separator" aria-label={textoNoLeidos(sep.n).toLowerCase()}><span>{textoNoLeidos(sep.n)}</span></div>}
-                <Burbuja c={c} yo={yo} miId={miId} gr={agrupado[c.id] || { primero: true, ultimo: true }} etq={etiqueta(c)} citado={c.responde_a ? porId[c.responde_a] || null : null}
-                  nombreDe={nombreDe} consulta={buscando ? consulta : ''} actual={buscando && actualId === c.id} resaltada={resaltada === c.id} hayMas={hayMas}
+                <BurbujaFija c={c} yo={yo} miId={miId} gr={agrupado[c.id] || { primero: true, ultimo: true }} etq={etiqueta(c)} citado={c.responde_a ? porId[c.responde_a] || null : null}
+                  nombreDe={nombreDe} quienes={primerNombre} consulta={buscando ? consulta : ''} actual={buscando && actualId === c.id} resaltada={resaltada === c.id} hayMas={hayMas}
                   nueva={esNueva(c)} fijado={vigente?.comentario_id === c.id}
-                  seleccionando={!!seleccion} seleccionado={!!seleccion?.has(c.id)} alAlternar={() => alternar(c)}
-                  alMenu={() => (c.fallo ? setFallido(c) : c.pendiente ? null : setMenu(c))} alResponder={() => responder(c)} alIrA={irA} alAbrir={() => abrirMedio(c)}
-                  alContexto={() => (c.contexto.tipo === 'archivo' ? setAbierto(c) : irContexto?.(c.contexto))} alReacciones={() => setQuien(c)} alFallo={() => setFallido(c)}
-                  alCancelarSubida={cancelarSubida} alReintentarSubida={reintentarSubida} alRecargar={() => { conv.recargar(true); avisarCambio(); }} />
+                  seleccionando={!!seleccion} seleccionado={!!seleccion?.has(c.id)} alAlternar={() => enBurbuja.current.alternar(c)}
+                  alMenu={() => (c.fallo ? setFallido(c) : c.pendiente ? null : setMenu(c))} alResponder={() => enBurbuja.current.responder(c)} alIrA={(...a) => enBurbuja.current.irA(...a)} alAbrir={() => enBurbuja.current.abrirMedio(c)}
+                  alContexto={() => (c.contexto.tipo === 'archivo' ? setAbierto(c) : enBurbuja.current.irContexto?.(c.contexto))} alReacciones={() => setQuien(c)} alFallo={() => setFallido(c)}
+                  alCancelarSubida={(id) => enBurbuja.current.cancelarSubida(id)} alReintentarSubida={(id) => enBurbuja.current.reintentarSubida(id)} alRecargar={() => enBurbuja.current.recargar()} />
               </Fragment>
             ))}
           </section>
@@ -1347,6 +1353,23 @@ function TarjetaInformeChat({ mes, atletaId, yo }) {
       {abierto && <HojaInforme atletaId={atletaId} mes={mes} esCoach={yo === 'coach'} alCerrar={() => setAbierto(false)} />}
     </div>
   );
+}
+
+// (v0.211, rendimiento) Una burbuja solo se vuelve a pintar si cambia lo suyo: al escribir en un chat largo, cada tecla
+// repasaba todas (400 mensajes: en un móvil lento, unos 0,3 s por tecla). Las funciones no se comparan: las que pasa el
+// chat llaman a lo último (enBurbuja); «quienes» lleva el nombre que usa nombreDe, para que cambie con él.
+class BurbujaFija extends Component {
+  shouldComponentUpdate(n) {
+    const a = this.props;
+    for (const k in n) {
+      if (typeof n[k] === 'function') continue;
+      if (k === 'gr') { if (a.gr?.primero !== n.gr?.primero || a.gr?.ultimo !== n.gr?.ultimo) return true; continue; }
+      if (a[k] !== n[k]) return true;
+    }
+    for (const k in a) if (!(k in n)) return true;
+    return false;
+  }
+  render(p) { return <Burbuja {...p} />; }
 }
 
 function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, resaltada, hayMas, nueva, fijado, seleccionando, seleccionado, alAlternar, alMenu, alResponder, alIrA, alAbrir, alContexto, alReacciones, alFallo,
