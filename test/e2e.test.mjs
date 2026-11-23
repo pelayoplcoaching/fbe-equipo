@@ -1751,7 +1751,14 @@ if (parte(PRINCIPAL)) try {
     const hojaDiaSem = p.getByRole('dialog', { name: /^¿Qué día harás/ });
     await hojaDiaSem.waitFor();
     // (por el título: un día es una fila entera y arrastrar dentro de ella es tocarla)
-    const bbH = await hojaDiaSem.locator('.hoja-cab h2').boundingBox();
+    // (v0.211) con la hoja quieta: si aún sube, el arrastre podía empezar fuera de ella (en el fondo, que la cierra)
+    let bbH = await hojaDiaSem.locator('.hoja-cab h2').boundingBox();
+    for (let i = 0; i < 12; i++) {
+      await p.waitForTimeout(120);
+      const otra = await hojaDiaSem.locator('.hoja-cab h2').boundingBox();
+      if (otra && bbH && Math.abs(otra.y - bbH.y) < 0.5 && Math.abs(otra.x - bbH.x) < 0.5) break;
+      bbH = otra;
+    }
     await p.mouse.move(bbH.x + bbH.width * 0.9, bbH.y + bbH.height / 2);
     await p.mouse.down();
     await p.mouse.move(bbH.x + bbH.width * 0.05, bbH.y + bbH.height / 2 + 3, { steps: 8 });
