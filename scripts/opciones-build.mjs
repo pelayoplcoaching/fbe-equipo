@@ -56,3 +56,15 @@ export function archivosDeArranque(metafile) {
   }
   return { app, arranque };
 }
+
+// (v0.208) Los trozos que solo usa la app del coach (su app y lo que solo ella importa): el móvil de un atleta no los
+// guarda. Las rutas, como en metafile.outputs. (v0.209: también deciden qué estilos van aparte, scripts/css-coach.mjs)
+export function trozosSoloCoach(metafile) {
+  const salidas = metafile.outputs;
+  const { app } = archivosDeArranque(metafile);
+  const entradaCoach = Object.keys(salidas).find((f) => salidas[f].entryPoint?.endsWith('web/src/ui/coach/CoachApp.jsx'));
+  if (!entradaCoach) return new Set();
+  const alcance = (desde, saltar) => { const v = new Set(); const c = [desde]; while (c.length) { const x = c.pop(); if (!x || v.has(x) || x === saltar) continue; v.add(x); for (const im of salidas[x]?.imports || []) if (!im.external && salidas[im.path]) c.push(im.path); } return v; };
+  const deAtleta = alcance(app, entradaCoach);
+  return new Set([...alcance(entradaCoach)].filter((f) => !deAtleta.has(f) && f.endsWith('.js')));
+}

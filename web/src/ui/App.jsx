@@ -33,8 +33,26 @@ import { quitarInsignia } from './insignia-app.js';
 const CLAVE_ROL = 'fbe-ultimo-rol';
 let CoachCargada = null;
 let pidiendoCoach = null;
+// (v0.209, estilos a dieta) Sus estilos van aparte (scripts/css-coach.mjs; index.html dice cuál es): se piden a la vez que
+// su código y la app no se pinta hasta tenerlos (sin ellos, unos segundos sin estilo). Detrás de los comunes, como iban.
+// En la demo de un solo archivo no hay: van con los demás.
+let pidiendoEstilo = null;
+function estiloCoach() {
+  if (pidiendoEstilo) return pidiendoEstilo;
+  const href = typeof document !== 'undefined' && document.querySelector('meta[name="fbe-coach-css"]')?.getAttribute('content');
+  if (!href || document.querySelector('link[data-coach-css]')) return (pidiendoEstilo = Promise.resolve());
+  pidiendoEstilo = new Promise((listo, mal) => {
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href; l.dataset.coachCss = '';
+    l.onload = () => listo();
+    l.onerror = () => { l.remove(); pidiendoEstilo = null; mal(new Error(`Loading chunk ${href} failed (los estilos de la app del coach)`)); };
+    const comun = document.querySelector('link[rel="stylesheet"][href^="app.css"]');
+    if (comun) comun.after(l); else document.head.appendChild(l);
+  });
+  return pidiendoEstilo;
+}
 const cargarCoach = () => {
-  pidiendoCoach ||= import('./coach/CoachApp.jsx').then((m) => { CoachCargada = m.CoachApp; return CoachCargada; }).catch((e) => { pidiendoCoach = null; throw e; });
+  pidiendoCoach ||= Promise.all([import('./coach/CoachApp.jsx'), estiloCoach()]).then(([m]) => { CoachCargada = m.CoachApp; return CoachCargada; }).catch((e) => { pidiendoCoach = null; throw e; });
   return pidiendoCoach;
 };
 try { if (localStorage.getItem(CLAVE_ROL) === 'coach') cargarCoach().catch(() => {}); } catch { /* */ }

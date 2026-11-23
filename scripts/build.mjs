@@ -6,7 +6,8 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSy
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
-import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque } from './opciones-build.mjs';
+import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from './opciones-build.mjs';
+import { cssDelCoach } from './css-coach.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
@@ -72,7 +73,18 @@ ${marcadoPortada}
   mkdirSync(join(salida, 'fonts'), { recursive: true });
   copyFileSync(fuente, join(salida, 'fonts/archivo-latin.woff2'));
   const cssRuta = join(salida, 'app.css');
-  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + readFileSync(cssRuta, 'utf8'));
+  // (v0.208) ni el código que solo usa el coach (su app y lo que solo ella importa): el móvil de un atleta no lo guarda; el
+  // del coach, la primera vez que entra (mensaje «guardar-coach»)
+  const soloCoachRutas = new Set([...trozosSoloCoach(r.metafile)].map((f) => relative(salida, join(process.cwd(), f))));
+  if (!soloCoachRutas.size) throw new Error('No se encuentra la app del coach en lo construido (CoachApp.jsx): el service worker la guardaría en todos los móviles');
+  // (v0.209, estilos a dieta) y sus estilos, aparte (scripts/css-coach.mjs): los carga la app del coach antes de pintarse
+  const leerSalida = (f) => readFileSync(join(salida, f), 'utf8');
+  const jsDe = (coach) => Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))).filter((f) => soloCoachRutas.has(f) === coach).map(leerSalida).join('\n');
+  const partesCss = cssDelCoach(readFileSync(cssRuta, 'utf8'), { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+  if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
+  const cssCoach = `coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
+  writeFileSync(join(salida, cssCoach), partesCss.coach);
+  writeFileSync(cssRuta, fontFace('fonts/archivo-latin.woff2') + partesCss.comun);
 
   // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
   // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)
@@ -125,6 +137,8 @@ ${marcadoPortada}
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
     .replace('<!--PORTADA-ESTILO-->', () => estiloPortada()).replace('<!--PORTADA-->', () => marcadoPortada)
+    // (v0.209) dónde están los estilos del coach (los pide ui/App.jsx al cargar su app; un atleta, nunca)
+    .replace('  <link rel="stylesheet" href="app.css', () => `  <meta name="fbe-coach-css" content="${cssCoach}">\n  <link rel="stylesheet" href="app.css`)
     // (v0.209) la marca de la portada en <html> (el fondo de la raíz, morado mientras está): la quita ui/portada.js con ella
     .replace('<html lang="es">', '<html lang="es" class="hay-portada">'));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
@@ -136,13 +150,8 @@ ${marcadoPortada}
   // (imágenes, bloque T) la de «Sin conexión» sí se precarga (unos pocos KB): es la pantalla que sale justo cuando no hay red
   // (v0.208) ni el código que solo usa el coach (su app y lo que solo ella importa): el móvil de un atleta no lo guarda; el
   // del coach, la primera vez que entra (mensaje «guardar-coach»)
-  const salidas = r.metafile.outputs;
-  const entradaCoach = Object.keys(salidas).find((f) => salidas[f].entryPoint?.endsWith('web/src/ui/coach/CoachApp.jsx'));
-  const alcance = (desde, saltar) => { const v = new Set(); const c = [desde]; while (c.length) { const x = c.pop(); if (!x || v.has(x) || x === saltar) continue; v.add(x); for (const im of salidas[x]?.imports || []) if (!im.external && salidas[im.path]) c.push(im.path); } return v; };
-  const deAtleta = alcance(claveApp, entradaCoach);
-  const soloCoachRutas = new Set(entradaCoach ? [...alcance(entradaCoach)].filter((f) => !deAtleta.has(f) && f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))) : []);
-  const soloCoach = (f) => soloCoachRutas.has(f);
-  if (!soloCoachRutas.size) throw new Error('No se encuentra la app del coach en lo construido (CoachApp.jsx): el service worker la guardaría en todos los móviles');
+  // (calculados arriba, junto a sus estilos)
+  const soloCoach = (f) => soloCoachRutas.has(f) || f === cssCoach;
   const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f) && !soloCoach(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
   // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
   const coachArchivos = archivos.filter(soloCoach);
