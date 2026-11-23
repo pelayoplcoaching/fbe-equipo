@@ -11,6 +11,7 @@ import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.j
 import { fasesValidas, semanaPlanValida } from '../logica/carrera.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { ENLACE_NOVEDAD } from '../logica/apuntes.js';
+import { MIGRACION_ULTIMA } from './migracion.js';
 import { fechaMadrid as fMadrid, instanteMadrid, partesMadrid } from '../logica/fechas.js';
 import { emojiValido } from '../logica/emojis.js';
 import { leerDatos as leerDatosRendimiento, leerEntorno as leerEntornoRendimiento } from '../logica/rendimiento.js';
@@ -4693,7 +4694,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (nombre === 'contacto_mio') return tabla('contacto_atleta').find((x) => x.atleta_id === miAtletaId())?.telefono || null;
       if (nombre === 'copia_privada') {
         if (!esCoach()) throw new Error('Solo el coach');
-        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'pausas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas'].map((t) => [t, copia(tabla(t))]));
+        return Object.fromEntries(['personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'salud_copias', 'atajos_coach', 'contacto_atleta', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'pausas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'portadas', 'animo_fijados'].map((t) => [t, copia(tabla(t))]));
+      }
+      // (087) por qué migración va la base: esta, al día
+      if (nombre === 'migracion_actual') {
+        if (!esCoach()) throw new Error('Solo el coach');
+        return MIGRACION_ULTIMA;
       }
       if (nombre === 'contactos') {
         if (!esCoach()) throw new Error('Solo el coach');

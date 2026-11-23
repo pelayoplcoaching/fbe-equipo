@@ -79,7 +79,7 @@
   const R = window.FBERestaurar;
   const $ = (id) => document.getElementById(id);
   let copia = null;
-  const NOMBRES = { bloques: ['bloque', 'bloques'], semanas: ['semana', 'semanas'], sesiones: ['sesión', 'sesiones'], series: ['serie', 'series'], pesos: ['pesada', 'pesadas'], checkins: ['check-in', 'check-ins'], comentarios: ['mensaje', 'mensajes'], habitos: ['hábito', 'hábitos'], registros_nutricion: ['día de nutrición', 'días de nutrición'], cuestionarios: ['cuestionario', 'cuestionarios'] };
+  const NOMBRES = { bloques: ['bloque', 'bloques'], semanas: ['semana', 'semanas'], sesiones: ['sesión', 'sesiones'], series: ['serie', 'series'], pesos: ['pesada', 'pesadas'], checkins: ['check-in', 'check-ins'], comentarios: ['mensaje', 'mensajes'], habitos: ['hábito', 'hábitos'], registros_nutricion: ['día de nutrición', 'días de nutrición'], cuestionarios: ['cuestionario', 'cuestionarios'], revisiones_semanales: ['revisión semanal', 'revisiones semanales'], suplementos: ['suplemento', 'suplementos'], salud_diaria: ['día de salud', 'días de salud'] };
 
   $('archivo').addEventListener('change', async (e) => {
     const f = e.target.files?.[0];

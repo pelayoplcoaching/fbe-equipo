@@ -24,6 +24,7 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
     <div class="contenido coach">
       <CabeceraGrande><Avatar nombre={perfil?.nombre || 'Coach'} foto={perfil?.foto} clase="grande" lleno ampliable perfilId={perfil?.id} /><div class="titulo"><h1>{perfil?.nombre || 'Cuenta'}</h1><div class="sub">{backend.auth.sesion()?.user.email}</div></div></CabeceraGrande>
       <BandaDemo />
+      <AvisoMigraciones />
       <div class="panel">
         <ul class="lista">
           <FilaNombre />
@@ -60,6 +61,24 @@ export function Cuenta({ abrirAtleta, alCambiarComunidad } = {}) {
       </section>
       <p class="mini terciario">FBE Equipo, versión {String(__APP_VERSION__)}.</p>
       {copia && <HojaExportar titulo="Copia completa" nombre={`fbe-atletas-copia-${hoyISO()}.json`} contenido={copia} tipo="application/json" alCerrar={() => setCopia(null)} />}
+    </div>
+  );
+}
+
+// (v0.209, 087) Si a tu base le falta alguna migración, lo dice arriba: lo nuevo de esas versiones no funciona hasta
+// pegarlas. (Sin la 087, la base no sabe decir por cuál va: falta al menos esa; cada migración avisa si le falta la anterior)
+function AvisoMigraciones() {
+  const { api, modo } = useApp();
+  const m = useCarga(() => (modo === 'demo' || !api.migracionesPendientes ? Promise.resolve(null) : api.migracionesPendientes()), []);
+  const d = m.datos;
+  if (!d || (!d.faltan.length && !d.alMenos)) return null;
+  const f = d.faltan;
+  const texto = d.alMenos ? `A tu base le falta al menos la migración ${d.alMenos}.`
+    : f.length === 1 ? `A tu base le falta la migración ${f[0]}.` : `A tu base le faltan ${f.length} migraciones: de la ${f[0]} a la ${f[f.length - 1]}.`;
+  return (
+    <div class="panel panel-pad aviso-almacen" role="status" id="aviso-migraciones">
+      <Icono n="alerta" />
+      <span class="peq"><strong>{texto}</strong> Pégalas en orden en el SQL Editor de Supabase (están en supabase/migraciones; si te saltas alguna, la propia migración te dice cuál toca). Hasta entonces, lo nuevo de esas versiones no funciona.</span>
     </div>
   );
 }

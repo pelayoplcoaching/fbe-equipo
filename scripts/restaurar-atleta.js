@@ -11,17 +11,36 @@
 // - Si su cuenta ya no existe, el atleta vuelve sin cuenta (le das un código nuevo) y sus mensajes, sin autor.
 // - Los vídeos y fotos no están en la copia (están en Storage): no vuelven. Sus mensajes del chat sí, sin el
 //   adjunto; los comentarios sobre un vídeo pasan a la conversación general.
+// - (v0.209) También vuelve lo de las versiones nuevas: su revisión semanal, sus pausas, lo de carrera, sus
+//   recordatorios de técnica, sus recetas favoritas, su perfil personal y su teléfono, su salud del reloj, su agenda,
+//   sus propuestas de objetivo, sus suplementos, la música de sus sesiones y La travesía. Lo que solo se abre con
+//   funciones viene en copia.privado. No vuelven lo que se rehace solo (los vistos, las ligas, los enlaces del reloj y
+//   de la salud: se vuelven a vincular) ni lo de la comunidad (es de todos, no solo suyo).
 (function (raiz) {
+  // (v0.209) Las de las versiones nuevas que vuelven (en orden: los suplementos antes que sus tomas)
+  const NUEVAS = ['revisiones_semanales', 'pausas', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones',
+    'recordatorios_tecnica', 'recetas_favoritas', 'personal_atleta', 'contacto_atleta', 'salud_diaria', 'salud_copias', 'agenda_vida',
+    'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'musica_sesion', 'travesia_perfil', 'travesia_dia'];
+  // Su clave, si no es «id» (para no repetir y para contar cuántas filas de la copia hay en la base)
+  const CLAVE = {
+    cobros_atletas: ['atleta_id'], comidas_atleta: ['atleta_id'], menu_dias: ['atleta_id', 'fecha'],
+    revisiones_semanales: ['atleta_id', 'lunes'], carrera_atleta: ['atleta_id'], carrera_semanas: ['atleta_id', 'lunes'],
+    recetas_favoritas: ['atleta_id', 'receta_id'], personal_atleta: ['atleta_id'], contacto_atleta: ['atleta_id'],
+    salud_diaria: ['atleta_id', 'fecha'], salud_copias: ['atleta_id', 'tipo', 'fecha'], objetivos_rondas: ['atleta_id'],
+    suplementos_tomas: ['suplemento_id', 'fecha'], musica_sesion: ['sesion_id'], travesia_perfil: ['atleta_id'], travesia_dia: ['atleta_id', 'dia'],
+  };
   // En orden: cada tabla después de las que necesita
   const ORDEN = ['atletas', 'consentimientos', 'ejercicios', 'recetas', 'bloques', 'semanas', 'sesiones', 'sesion_ejercicios', 'series',
     'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos', 'notas_ejercicio', 'avisos', 'recursos',
     'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion', 'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos',
-    'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas'];
+    'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas',
+    // (v0.209) lo de las versiones nuevas (cada una después de lo que necesita: ejercicios, recetas, hábitos, objetivos, sesiones)
+    ...NUEVAS];
   // Sin «id» propio: van por atleta (una fila por atleta, o por atleta y día en menu_dias)
   const SIN_ID = ['cobros_atletas', 'comidas_atleta', 'menu_dias'];
   const CON_ATLETA = ['bloques', 'series', 'pesos', 'checkins', 'molestias', 'notas_coach', 'medidas', 'marcas', 'objetivos',
     'notas_ejercicio', 'avisos', 'recursos', 'habitos', 'registros_habito', 'planes_nutricion', 'registros_nutricion',
-    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas'];
+    'cuestionarios', 'preguntas_checkin', 'comentarios', 'cobros_atletas', 'pagos', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'tareas', ...NUEVAS];
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const COLUMNA = /^[a-z_][a-z0-9_]*$/;
 
@@ -38,7 +57,8 @@
 
   // Lo de un atleta, tabla a tabla
   function filasDe(copia, atletaId) {
-    const t = (n) => (Array.isArray(copia?.[n]) ? copia[n] : []);
+    // (v0.209) las que solo se abren con funciones vienen en copia.privado (sin la 051, no viene: se quedan fuera)
+    const t = (n) => (Array.isArray(copia?.[n]) ? copia[n] : Array.isArray(copia?.privado?.[n]) ? copia.privado[n] : []);
     const atleta = t('atletas').find((a) => a.id === atletaId);
     if (!atleta) throw new Error('Ese atleta no está en la copia.');
     const out = { atletas: [atleta] };
@@ -54,20 +74,26 @@
     out.series = out.series.filter((x) => pautas.has(x.sesion_ejercicio_id));
     const habitos = new Set(out.habitos.map((x) => x.id));
     out.registros_habito = out.registros_habito.filter((x) => habitos.has(x.habito_id));
+    const suplementos = new Set(out.suplementos.map((x) => x.id));
+    out.suplementos_tomas = out.suplementos_tomas.filter((x) => suplementos.has(x.suplemento_id));
+    out.musica_sesion = out.musica_sesion.filter((x) => sesiones.has(x.sesion_id));
     const checkins = new Set(out.checkins.map((x) => x.id));
     out.comentarios = out.comentarios.filter((c) => (!c.sesion_id || sesiones.has(c.sesion_id)) && (!c.checkin_id || checkins.has(c.checkin_id)));
     // Los ejercicios a los que apunta (por si alguno se hubiera borrado de la biblioteca)
     const usados = new Set([...out.sesion_ejercicios.map((p) => p.ejercicio_id), ...out.series.map((s) => s.sustituto_id),
-      ...out.objetivos.map((o) => o.ejercicio_id), ...out.marcas.map((m) => m.ejercicio_id), ...out.notas_ejercicio.map((n) => n.ejercicio_id), ...out.tareas.map((x) => x.ejercicio_id)].filter(Boolean));
+      ...out.objetivos.map((o) => o.ejercicio_id), ...out.marcas.map((m) => m.ejercicio_id), ...out.notas_ejercicio.map((n) => n.ejercicio_id), ...out.tareas.map((x) => x.ejercicio_id),
+      ...out.recordatorios_tecnica.map((x) => x.ejercicio_id), ...out.objetivos_propuestos.map((x) => x.ejercicio_id)].filter(Boolean));
     out.ejercicios = t('ejercicios').filter((e) => usados.has(e.id));
     // Las recetas de su recetario y de su menú (v0.26), por si alguna se hubiera borrado de tu recetario
-    const recetas = new Set([...out.recetas_atleta.map((a) => a.receta_id), ...out.menu_comidas.map((m) => m.receta_id)].filter(Boolean));
+    const recetas = new Set([...out.recetas_atleta.map((a) => a.receta_id), ...out.menu_comidas.map((m) => m.receta_id), ...out.recetas_favoritas.map((f) => f.receta_id)].filter(Boolean));
     out.recetas = t('recetas').filter((r) => recetas.has(r.id));
     out.consentimientos = atleta.perfil_id ? t('consentimientos').filter((c) => c.perfil_id === atleta.perfil_id) : [];
     // Los vídeos y fotos no vuelven: sus mensajes, sin el adjunto (ni el dibujo, que solo va sobre un vídeo)
     out.comentarios = out.comentarios.map((c) => (c.archivo_id ? { ...c, archivo_id: null, dibujo: null } : c));
     // (v0.48) Sus tareas vuelven; la foto o el vídeo con que hizo alguna, no (como los demás archivos)
     out.tareas = out.tareas.map((x) => (x.archivo_id ? { ...x, archivo_id: null } : x));
+    // (v0.209) sus recordatorios de técnica vuelven sin el vídeo al que apuntaban
+    out.recordatorios_tecnica = out.recordatorios_tecnica.map((x) => (x.archivo_id ? { ...x, archivo_id: null, segundo: null } : x));
     return out;
   }
 
@@ -82,6 +108,9 @@
     consentimientos: [['perfil_id', 'perfiles']],
     recetas_atleta: [['receta_id', 'recetas']], menu_comidas: [['receta_id', 'recetas', true]],
     tareas: [['ejercicio_id', 'ejercicios', true]],
+    recordatorios_tecnica: [['ejercicio_id', 'ejercicios']], recetas_favoritas: [['receta_id', 'recetas']], salud_copias: [['habito_id', 'habitos', true]],
+    objetivos_propuestos: [['ejercicio_id', 'ejercicios', true], ['objetivo_id', 'objetivos', true]],
+    suplementos_tomas: [['suplemento_id', 'suplementos']], musica_sesion: [['sesion_id', 'sesiones']],
   };
   const condicion = (n) => {
     const c = [...(CON_ATLETA.includes(n) ? [['atleta_id', 'atletas']] : []), ...(PADRES[n] || [])]
@@ -125,12 +154,15 @@
     partes.push('commit;');
     // Comprobación: si está, si tiene su cuenta y cuántas filas de la copia están ahora en la base
     const total = tablas.reduce((t, n) => t + filas[n].length, 0);
-    const clave = (n) => (SIN_ID.includes(n) ? 'atleta_id' : 'id'); // lo acordado y sus comidas del día van por atleta, sin id propio
-    const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-    const presentes = tablas.map((n) => (n === 'menu_dias'
-      // (sus días van por atleta y fecha: solo los de la copia, no los que se hayan marcado después)
-      ? `(select count(*) from public.menu_dias where (atleta_id, fecha) in (${filas[n].filter((f) => UUID.test(String(f.atleta_id)) && FECHA.test(String(f.fecha))).map((f) => `('${f.atleta_id}'::uuid, '${f.fecha}'::date)`).join(', ') || `(null::uuid, null::date)`}))`
-      : `(select count(*) from public.${n} where ${clave(n)} = any('{${filas[n].map((f) => f[clave(n)]).filter((x) => UUID.test(String(x))).join(',')}}'::uuid[]))`)).join('\n     + ');
+    // (lo acordado y sus comidas del día van por atleta; sus días, por atleta y fecha: solo los de la copia, no los que
+    // se hayan marcado después; (v0.209) y las nuevas, por su clave)
+    const clave = (n) => CLAVE[n] || ['id'];
+    const presentes = tablas.map((n) => {
+      const k = clave(n);
+      if (k.length === 1 && k[0].endsWith('id')) return `(select count(*) from public.${n} where ${k[0]} = any('{${filas[n].map((f) => f[k[0]]).filter((x) => UUID.test(String(x))).join(',')}}'::uuid[]))`;
+      const datos = JSON.stringify(filas[n].map((f) => Object.fromEntries(k.map((c) => [c, f[c] === undefined ? null : f[c]]))));
+      return `(select count(*) from public.${n} t where exists (select 1 from json_populate_recordset(null::public.${n}, ${literal(datos)}::json) r where ${k.map((c) => `r.${c} = t.${c}`).join(' and ')}))`;
+    }).join('\n     + ');
     partes.push(`-- Comprobación: recuperado = 1; con_cuenta = true (si es false, dale un código nuevo desde su ficha);\n-- si filas_en_la_base es menor que filas_en_la_copia, algo ya estaba con otro id y se ha dejado como está\nselect (select count(*) from public.atletas where id = '${atleta.id}') as recuperado,\n  (select perfil_id is not null from public.atletas where id = '${atleta.id}') as con_cuenta,\n  ${total} as filas_en_la_copia,\n  ${presentes || '0'} as filas_en_la_base;`);
     return { sql: partes.join('\n'), resumen, nombre: atleta.nombre || '' };
   }
