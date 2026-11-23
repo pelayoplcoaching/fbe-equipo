@@ -299,11 +299,13 @@ export function respetarCascada(reglas, { duenoDe = () => null, copiar = false, 
     }
     // (las clases precisas: si una de un sujeto nunca comparte elemento con una precisa del otro, o con su etiqueta, no)
     if (junto) {
+      // (una clase precisa solo está en los elementos que la crean: con sus clases de entonces y con las que se añaden luego)
+      const mutante = typeof duenoDe.mutante === 'function' ? duenoDe.mutante : (k) => !junto(k);
       const separa = (x, y) => {
         for (const e of x.clases) {
           const j = junto(e);
           if (!j) continue;
-          for (const k of y.clases) if (k !== e && !j.clases.has(k) && junto(k)) return true;
+          for (const k of y.clases) if (k !== e && !j.clases.has(k) && !mutante(k)) return true;
           if (y.etiqueta && !j.etiquetas.has(y.etiqueta)) return true;
         }
         return false;
@@ -434,7 +436,8 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
       const t = textos.get(f), ts = tramos.get(f);
       for (const m of t.matchAll(re)) {
         if (t[m.index - 1] === '.') continue;   // un selector («.x», querySelector): no pone la clase
-        const tr = ts.find((x) => m.index >= x.ini && m.index < x.fin);
+        let tr = null;
+        for (const x of ts) if (m.index >= x.ini && m.index < x.fin && (!tr || x.fin - x.ini < tr.fin - tr.ini)) tr = x;
         if (!tr || !tr.preciso) { r = null; break fuera; }
         vistas++;
         for (const k of tr.clases) r.clases.add(k);
@@ -443,6 +446,28 @@ export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set
     }
     if (r && !vistas) r = null;
     juntos.set(c, r);
+    return r;
+  };
+  // ¿Se puede añadir una clase a un elemento que ya existe? Si sale fuera de los atributos class de los elementos (classList,
+  // className, una propiedad o un argumento cualquiera, armada a trozos, en index.html…) o no sale en el código: sí. Si solo
+  // sale en atributos class (aunque sean de los que llevan partes variables), solo está en los elementos que la crean así.
+  const mutantes = new Map();
+  dueno.mutante = (c) => {
+    if (mutantes.has(c)) return mutantes.get(c);
+    let r = todosPrefijos.some((p) => c.startsWith(p)) || palabrasExtra.has(c), vistas = 0;
+    const re = new RegExp(`(?<![A-Za-z0-9_-])${c.replace(/[-]/g, '\\-')}(?![A-Za-z0-9_-])`, 'g');
+    for (const f of rutas) {
+      if (r) break;
+      if (!palabras.get(f).has(c)) continue;
+      const t = textos.get(f), ts = tramos.get(f);
+      for (const m of t.matchAll(re)) {
+        if (t[m.index - 1] === '.') continue;
+        if (!ts.some((x) => m.index >= x.ini && m.index < x.fin)) { r = true; break; }
+        vistas++;
+      }
+    }
+    if (!vistas) r = true;
+    mutantes.set(c, r);
     return r;
   };
   return dueno;
@@ -467,6 +492,16 @@ function finExpr(t, i, cierre) {
   for (let k = i; k < t.length; k++) {
     const ch = t[k];
     if (ch === '"' || ch === "'" || ch === '`') { k = finLiteral(t, k) - 1; continue; }
+    // una expresión regular (/…/ detrás de un operador o de un paréntesis): hasta su barra de cierre
+    if (ch === '/' && t[k + 1] !== '/' && t[k + 1] !== '*' && /[(,=:[!&|?{};+\-*%<>~^]$/.test(t.slice(Math.max(i, k - 1), k).trim() || '(')) {
+      let clase = false;
+      for (k = k + 1; k < t.length; k++) {
+        const c = t[k];
+        if (c === '\\') { k++; continue; }
+        if (c === '[') clase = true; else if (c === ']') clase = false; else if (c === '/' && !clase) break; else if (c === '\n') break;
+      }
+      continue;
+    }
     if (ch === '(' || ch === '[' || ch === '{') prof++;
     else if (ch === ')' || ch === ']' || ch === '}') { if (prof === 0) return ch === cierre ? k : -1; prof--; } else if (ch === ',' && prof === 0 && cierre === ',') return k;
   }
@@ -517,7 +552,8 @@ export function tramosDeClass(t) {
       textos.push(fijo);
     } else if (ELIGE.test(v)) { for (const x of v.matchAll(/"([^"\\]*)"|'([^'\\]*)'/g)) textos.push(x[1] ?? x[2]); } else ok = false;
     for (const x of textos) for (const w of x.split(/\s+/)) if (w) clases.add(w);
-    out.push({ ini: valor.ini, fin: valor.fin, etiqueta, clases, preciso: ok });
+    // (si no se ha podido leer bien, un tramo larguísimo no vale para nada: fuera; las clases de dentro quedan sin tramo)
+    if (ok || valor.fin - valor.ini < 300) out.push({ ini: valor.ini, fin: valor.fin, etiqueta, clases, preciso: ok });
   }
   return out;
 }
