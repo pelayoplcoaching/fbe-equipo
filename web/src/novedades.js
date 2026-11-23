@@ -10,6 +10,7 @@ export const NOVEDADES = {
     atleta: [
       'La app abre más ligera: cada pantalla se carga al abrirla (y por detrás, con la app quieta), así que Hoy sale antes.',
       'Si la app se actualiza con ella abierta, se recarga sola y entra; y al despertar el móvil tras una hora, ya no da error.',
+      'Si al volver a Hoy toca celebrar un hito de la racha y una medalla, salen una detrás de otra, no una encima de la otra.',
     ],
     coach: [
       'Revisar, la ficha, la Revisión semanal y la lista de atletas cargan más rápido: lo de cada atleta se pide a la vez.',

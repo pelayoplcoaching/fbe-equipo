@@ -26,6 +26,17 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errores.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });
+  // Lo guardado en «A quién escribir» (radar_ajustes de la demo): se guarda en cola y con el margen de la demo, así que se
+  // mira unas cuantas veces hasta que esté (como mucho 5 s) y se devuelve lo último que hay
+  const ajustesGuardados = async (sacar, listo) => {
+    let v = null;
+    for (let i = 0; i < 25; i++) {
+      v = sacar(await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => xs[0]?.datos || null)));
+      if (listo(v)) break;
+      await p.waitForTimeout(200);
+    }
+    return v;
+  };
   const hay = async (loc, n, ms = 10000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await loc.count() === n) return true; await p.waitForTimeout(100); } return (await loc.count()) === n; };
   const foto = async (nombre) => { if (capturas) await p.screenshot({ path: `${capturas}/${nombre}.png`, fullPage: true }); };
   async function revisar(paso) {
@@ -176,7 +187,7 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await fila('Iván Prieto').getByRole('button', { name: 'Ya hablamos' }).click();
     await fila('Iván Prieto').locator('.rad-canal').getByRole('button', { name: 'WhatsApp' }).click();
     check(await hay(fila('Iván Prieto'), 0) && await hay(chip(/^Hoy \(1\)$/), 1), '«Ya hablamos» (por WhatsApp) lo saca de «Hoy»');
-    const habl = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => JSON.stringify(xs[0]?.datos?.hablado || {})));
+    const habl = JSON.stringify(await ajustesGuardados((d) => d?.hablado || {}, (h) => /whatsapp/.test(JSON.stringify(h))));
     check(/whatsapp/.test(habl), 'y se guarda en la base con su canal (igual en el móvil y en el ordenador)');
     await p.getByRole('button', { name: 'Deshacer' }).click();
     check(await hay(fila('Iván Prieto'), 1) && await hay(chip(/^Hoy \(2\)$/), 1), 'y «Deshacer» lo devuelve');
@@ -204,7 +215,7 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     await revisar('estilo');
     await hojaE.getByRole('button', { name: 'Guardar' }).click();
     await hojaE.waitFor({ state: 'detached' }).catch(() => {});
-    const est = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => xs[0]?.datos?.estilo || null));
+    const est = await ajustesGuardados((d) => d?.estilo || null, (e) => e?.saludo === 'nombre');
     check(est?.saludo === 'nombre' && est?.cierre === '¡Vamos!', 'tu manera de escribir, guardada (igual en el móvil y en el ordenador)');
     // La ronda: los de Hoy, uno detrás de otro
     await chip(/^Hoy/).click();
@@ -268,7 +279,7 @@ export async function probarRadar({ navegador, check, base = 'http://localhost:4
     // (v0.202) Su tono: con humor, siempre con Ana; y tu objetivo con ella: 3 días
     await fila('Ana López').locator('.rad-tono', { hasText: 'Con humor' }).click();
     await fila('Ana López').getByRole('button', { name: /Usar siempre «con humor» con Ana/ }).click();
-    const tonos = await p.evaluate(() => globalThis.__fbeDemo.select('radar_ajustes', {}).then((xs) => xs[0]?.datos?.tonos || {}));
+    const tonos = await ajustesGuardados((d) => d?.tonos || {}, (t) => Object.values(t).includes('humor'));
     check(Object.values(tonos).includes('humor') && await hay(fila('Ana López').locator('.rad-tono.elegido', { hasText: 'su tono' }), 1), 'su tono, guardado (sale el primero y marcado)');
     await fila('Ana López').locator('.rad-objetivo').getByRole('button', { name: '3 días' }).click();
     check(await hay(fila('Ana López').locator('.revision-quien', { hasText: 'de 3 días de contacto' }), 1), 'tu objetivo con Ana: 3 días por semana (y su fila lo cuenta así)');
