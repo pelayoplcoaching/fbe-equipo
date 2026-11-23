@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.212': {
+    atleta: [
+      'Semana, Progreso y tu perfil salen antes al volver a ellos, aunque lleves años apuntando.',
+    ],
+    coach: [
+      'Al abrir la app, la lista de atletas ya no da tirones mientras van llegando sus datos.',
+    ],
+  },
   '0.211': {
     atleta: [
       'Durante la sesión, el móvil trabaja mucho menos mientras descansas: el reloj del descanso y el punto verde ya no gastan batería sin parar.',
