@@ -214,16 +214,24 @@ export function directoALaVista(recursos = [], ahora = Date.now()) {
   return { recurso: mejor, estado: ahora >= Date.parse(mejor.directo_en) - 10 * 60000 ? 'ahora' : 'pronto' };
 }
 // «hoy a las 19:00» / «mañana a las 19:00» / «el jue 13 a las 19:00» (hora de Madrid, la de la app)
+// (v0.213, rendimiento) los tres formateadores, creados una sola vez (antes, cinco por llamada; la tarjeta del directo de
+// Hoy la llama en cada pintado)
+let fmtDirecto = null;
+const formatosDirecto = () => (fmtDirecto ||= {
+  dia: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }),
+  hora: new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }),
+  semana: new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', day: 'numeric' }),
+});
 export function textoDirecto(iso, ahora = Date.now()) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  const zona = 'Europe/Madrid';
-  const dia = (x) => new Intl.DateTimeFormat('en-CA', { timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit' }).format(x);
-  const hora = new Intl.DateTimeFormat('es-ES', { timeZone: zona, hour: '2-digit', minute: '2-digit' }).format(d);
+  const f = formatosDirecto();
+  const dia = (x) => f.dia.format(x);
+  const hora = f.hora.format(d);
   const hoy = dia(new Date(ahora)), manana = dia(new Date(ahora + 86400000)), ese = dia(d);
   if (ese === hoy) return `hoy a las ${hora}`;
   if (ese === manana) return `mañana a las ${hora}`;
-  return `el ${new Intl.DateTimeFormat('es-ES', { timeZone: zona, weekday: 'short', day: 'numeric' }).format(d).replace(',', '')} a las ${hora}`;
+  return `el ${f.semana.format(d).replace(',', '')} a las ${hora}`;
 }
 // Los vídeos de los recursos, por tema (su categoría), sin los directos que ya pasaron hace más de una semana:
 // [{ categoria, videos: [recurso] }] en el orden de las categorías
