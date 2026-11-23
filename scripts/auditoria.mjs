@@ -155,6 +155,10 @@ async function axe(p) {
 }
 
 async function revisar(p, ctx, { conAxe = true } = {}) {
+  // (v0.213) los bloqueos, antes de mirar la página: lo de después (recorrer el DOM entero y axe) son tareas largas de la
+  // propia auditoría, y salían como bloqueos de la app (siempre en Plantillas, Biblioteca…). Al final se tiran
+  const lt = await p.evaluate(() => (window.__lt || []).splice(0)).catch(() => []);
+  for (const t of lt) if (t > 200) apuntar(ctx, 'bloqueo', `${Math.round(t)} ms`);
   if (CAPTURAS) {
     const base0 = `${ctx.conf}-${ctx.quien}-${ctx.donde}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 120).toLowerCase();
     const n = (nombresCaptura.get(base0) || 0) + 1;
@@ -172,8 +176,7 @@ async function revisar(p, ctx, { conAxe = true } = {}) {
     for (const x of r.raros) apuntar(ctx, 'texto raro', x);
   }
   if (conAxe && !sinAxe) for (const x of await axe(p)) apuntar(ctx, 'accesibilidad', x);
-  const lt = await p.evaluate(() => { const l = (window.__lt || []).splice(0); return l; }).catch(() => []);
-  for (const t of lt) if (t > 200) apuntar(ctx, 'bloqueo', `${Math.round(t)} ms`);
+  await p.evaluate(() => { if (window.__lt) window.__lt.length = 0; }).catch(() => {});
 }
 
 const srv = await servir(DIST, PUERTO);
