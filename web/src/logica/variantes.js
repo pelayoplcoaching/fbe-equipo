@@ -18,10 +18,19 @@ const TEXTO = Object.fromEntries(MATERIALES.map(([k, t]) => [k, t]));
 // Ejercicios que llevan el material en el nombre sin decirlo
 const IMPLICITOS = [[/^press banca\b/, 'barra'], [/^peso muerto (convencional|sumo)\b/, 'barra']];
 
+// (v0.212, rendimiento) lo de cada texto se recuerda: Revisar y la revisión semanal lo preguntan cientos de veces por los
+// mismos nombres de ejercicio (siete expresiones por pregunta). Se devuelve siempre un Set nuevo: quien lo recibe lo cambia
+const memoMateriales = new Map();
 export function materialesDe(texto) {
-  const n = normal(texto);
-  const out = new Set(MATERIALES.filter(([, , re]) => re.test(n)).map(([k]) => k));
-  return out;
+  const clave = String(texto ?? '');
+  let ks = memoMateriales.get(clave);
+  if (!ks) {
+    const n = normal(texto);
+    ks = MATERIALES.filter(([, , re]) => re.test(n)).map(([k]) => k);
+    if (memoMateriales.size >= 2000) memoMateriales.clear();
+    memoMateriales.set(clave, ks);
+  }
+  return new Set(ks);
 }
 function materialesEjercicio(nombre) {
   const out = materialesDe(nombre);
