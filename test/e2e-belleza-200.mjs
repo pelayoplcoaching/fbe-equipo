@@ -75,23 +75,29 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     await p.reload();
     // (la bienvenida del día, si sale, va antes)
     const escena = p.getByRole('dialog', { name: 'La app llega a la versión 200' });
-    for (let i = 0; i < 20 && !(await escena.isVisible().catch(() => false)); i++) {
+    const { NOVEDADES } = await import('../web/src/novedades.js');
+    const { novedadesQueVer, compararApp } = await import('../web/src/logica/novedades-app.js');
+    const { readFileSync } = await import('node:fs');
+    const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+    // (v0.210) la escena solo sale mientras la app está en la 0.200 a la 0.209 (logica/belleza.js); después, «Novedades» directamente
+    const conEscena = compararApp(version, '0.209') <= 0;
+    const nov = p.getByRole('dialog', { name: 'Novedades' });
+    for (let i = 0; i < 20 && !(await escena.isVisible().catch(() => false)) && !(!conEscena && await nov.isVisible().catch(() => false)); i++) {
       const bd = p.getByRole('button', { name: 'Empezar', exact: true });
       if (await bd.isVisible().catch(() => false)) await bd.click();
       await p.waitForTimeout(300);
     }
-    check(await escena.isVisible(), 'al venir de la 0.199: la escena de la versión 200');
-    check(await escena.locator('.e200-lobo .e200-trazo').count() === 1 && (await escena.locator('.e200-cifra').textContent()).trim() === '200' && /Gracias por entrenar/.test(await escena.textContent()), 'con el lobo, el 200 y su texto');
-    await revisar('escena-200');
-    await foto('200-escena');
-    await escena.getByRole('button', { name: 'Seguir' }).click();
-    check(await hasta(async () => (await escena.count()) === 0), 'Seguir la cierra');
-    const nov = p.getByRole('dialog', { name: 'Novedades' });
-    const { NOVEDADES } = await import('../web/src/novedades.js');
+    if (conEscena) {
+      check(await escena.isVisible(), 'al venir de la 0.199: la escena de la versión 200');
+      check(await escena.locator('.e200-lobo .e200-trazo').count() === 1 && (await escena.locator('.e200-cifra').textContent()).trim() === '200' && /Gracias por entrenar/.test(await escena.textContent()), 'con el lobo, el 200 y su texto');
+      await revisar('escena-200');
+      await foto('200-escena');
+      await escena.getByRole('button', { name: 'Seguir' }).click();
+      check(await hasta(async () => (await escena.count()) === 0), 'Seguir la cierra');
+    } else {
+      check(await escena.count() === 0, `en la ${version}, la escena de la versión 200 ya no sale (era hasta la 0.209)`);
+    }
     // (v0.204) lo que toca al venir de la 0.199: las frases más nuevas (como mucho cinco; la de la 0.200 ya no cabe)
-    const { novedadesQueVer } = await import('../web/src/logica/novedades-app.js');
-    const { readFileSync } = await import('node:fs');
-    const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
     const primera = novedadesQueVer(NOVEDADES, { vista: '0.199.0', actual: version })[0];
     check(!!primera && await hasta(async () => (await nov.textContent()).includes(primera)), 'y después, «Novedades» con lo de las versiones nuevas');
     await nov.getByRole('button', { name: 'Vale' }).click();
@@ -99,7 +105,7 @@ export async function probarBelleza200({ navegador, check, base = 'http://localh
     await p.reload();
     await p.locator('.hero-dia').waitFor();
     await p.waitForTimeout(1200);
-    check(await escena.count() === 0 && await p.evaluate(() => localStorage.getItem('fbe-escena-200')) === '1', 'y la escena no vuelve a salir en este móvil');
+    check(await escena.count() === 0 && (!conEscena || await p.evaluate(() => localStorage.getItem('fbe-escena-200')) === '1'), 'y la escena no vuelve a salir en este móvil');
     check(errores.length === 0, `la atleta, sin errores ni problemas de accesibilidad a 360 px en oscuro${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
   } finally { await movil.close(); }
 

@@ -13,7 +13,7 @@ export async function probarApuntes({ navegador, check, base = 'http://localhost
   p.on('pageerror', (e) => errores.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} ${m.location()?.url || ''}`); });
   const trozos = [];
-  p.on('request', (r) => { if (/\/chunks\/Apuntes-/.test(r.url())) trozos.push(r.url()); });
+  p.on('request', (r) => { if (/\/chunks\/Apuntes-[^/]*\.js(\?|$)/.test(r.url())) trozos.push(r.url()); });
   const fueraAvisos = async () => {
     for (let i = 0; i < 4; i++) {
       await p.waitForTimeout(300);
