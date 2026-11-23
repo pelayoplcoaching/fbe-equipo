@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from './opciones-build.mjs';
-import { cssDelCoach, separarCssPorTrozos } from './css-coach.mjs';
+import { cssDelCoach, separarCssPorTrozos, duenosDeCodigo } from './css-coach.mjs';
 
 const raiz = new URL('..', import.meta.url).pathname;
 const demo = process.argv.includes('--demo');
@@ -80,24 +80,28 @@ ${marcadoPortada}
   // (v0.209, estilos a dieta) y sus estilos, aparte (scripts/css-coach.mjs): los carga la app del coach antes de pintarse
   const leerSalida = (f) => readFileSync(join(salida, f), 'utf8');
   const jsDe = (coach) => Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f))).filter((f) => soloCoachRutas.has(f) === coach).map(leerSalida).join('\n');
-  // (para estudiar el reparto: FBE_CSS_ORIGINAL=<archivo.json> guarda el CSS sin repartir y qué trozo es cada cosa)
-  const cssOriginal = readFileSync(cssRuta, 'utf8');
-  const partesCss = cssDelCoach(cssOriginal, { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
-  if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
-  const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
-  writeFileSync(join(salida, cssCoach), partesCss.coach);
-  // (v0.211, estilos a dieta 2) y los de cada pantalla que no sale al abrir (la sesión, el perfil, La travesía, Apuntes…),
-  // con su trozo: cada trozo con estilos propios lleva al principio la orden de pedirlos (globalThis.__fbeCss, en
-  // ui/estilos-trozo.js) y ui/perezoso.jsx espera a tenerlos antes de pintar la pantalla
+  // (v0.209 y v0.210, estilos a dieta) Los trozos de código: los de arranque, los que solo usa el coach y los perezosos (que
+  // salen al tocar algo). Los estilos solo del coach van en su archivo (los carga su app antes de pintarse) y los de cada
+  // pantalla perezosa (la sesión, el perfil, La travesía, Apuntes…), con su trozo: cada trozo con estilos propios lleva al
+  // principio la orden de pedirlos (globalThis.__fbeCss, en ui/estilos-trozo.js) y ui/perezoso.jsx espera a tenerlos
   const todasJs = Object.keys(r.metafile.outputs).filter((f) => f.endsWith('.js')).map((f) => relative(salida, join(process.cwd(), f)));
   const { arranque: deArranque } = archivosDeArranque(r.metafile);
   const deArranqueRel = new Set([...deArranque].map((f) => relative(salida, join(process.cwd(), f))));
   // (la lista de las ilustraciones se pide al arrancar aunque vaya en su propio trozo)
   for (const [f, o] of Object.entries(r.metafile.outputs)) if (Object.keys(o.inputs || {}).some((m) => m.endsWith('web/src/datos/lista-imagenes.js'))) deArranqueRel.add(relative(salida, join(process.cwd(), f)));
   const perezosos = new Set(todasJs.filter((f) => !deArranqueRel.has(f) && !soloCoachRutas.has(f) && f.startsWith('chunks/')));
-  if (process.env.FBE_CSS_ORIGINAL) writeFileSync(process.env.FBE_CSS_ORIGINAL, JSON.stringify({ css: cssOriginal, todas: todasJs, coach: [...soloCoachRutas], arranque: [...deArranqueRel], perezosos: [...perezosos], extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` }));
-  const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: new Map(todasJs.map((f) => [f, leerSalida(f)])), candidatos: perezosos,
-    extra: `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}` });
+  const textosJs = new Map(todasJs.map((f) => [f, leerSalida(f)]));
+  const extraCss = `${readFileSync(join(raiz, 'web/index.html'), 'utf8')}\n${marcadoPortada}\n${estiloPortada()}`;
+  // (v0.210) el dueño de cada clase con todo el código a la vista, para no cambiar quién gana un empate al repartir
+  const duenoDe = duenosDeCodigo({ textos: textosJs, coach: soloCoachRutas, candidatos: perezosos, extra: extraCss });
+  // (para estudiar el reparto: FBE_CSS_ORIGINAL=<archivo.json> guarda el CSS sin repartir y qué trozo es cada cosa)
+  const cssOriginal = readFileSync(cssRuta, 'utf8');
+  if (process.env.FBE_CSS_ORIGINAL) writeFileSync(process.env.FBE_CSS_ORIGINAL, JSON.stringify({ css: cssOriginal, todas: todasJs, coach: [...soloCoachRutas], arranque: [...deArranqueRel], perezosos: [...perezosos], extra: extraCss }));
+  const partesCss = cssDelCoach(cssOriginal, { jsCoach: jsDe(true), jsOtros: `${jsDe(false)}\n${extraCss}`, duenoDe });
+  if (!partesCss.reglas) throw new Error('No ha salido ningún estilo solo del coach: revisa scripts/css-coach.mjs');
+  const cssCoach = `chunks/coach-${createHash('sha256').update(partesCss.coach).digest('hex').slice(0, 8)}.css`;
+  writeFileSync(join(salida, cssCoach), partesCss.coach);
+  const partesTrozos = separarCssPorTrozos(partesCss.comun, { textos: textosJs, candidatos: perezosos, extra: extraCss, duenoDe });
   const cssTrozos = [];
   for (const [f, css] of partesTrozos.porTrozo) {
     // (con el mismo nombre que su trozo: así el código del trozo, con su orden de pedirlos, sigue siendo el mismo mientras no

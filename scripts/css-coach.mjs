@@ -20,7 +20,7 @@ export function prefijosDe(texto) {
 }
 
 // Partir por comas de primer nivel (fuera de paréntesis, corchetes y comillas)
-function partir(s, sep = ',') {
+export function partir(s, sep = ',') {
   const out = [];
   let prof = 0, q = null, ini = 0;
   for (let i = 0; i < s.length; i++) {
@@ -50,7 +50,7 @@ export function clasesNecesarias(sel) {
 }
 
 // Leer el CSS (ya minificado o no) en un árbol: reglas, bloques @ con reglas dentro y el resto tal cual
-function leer(css) {
+export function leer(css) {
   let i = 0;
   const n = css.length;
   function bloque(hasta) {
@@ -196,18 +196,48 @@ export function familias(cuerpo) {
   return out;
 }
 
+// El sujeto de un selector (lo que va tras el último combinador): su etiqueta (button, svg…; '' si no lleva) y sus clases
+export function sujetoDe(sel) {
+  const s = String(sel);
+  let prof = 0, q = null, ultimo = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { if (ch === '\\') i++; else if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") q = ch;
+    else if (ch === '(' || ch === '[') prof++;
+    else if (ch === ')' || ch === ']') prof--;
+    else if (prof === 0 && /[\s>+~]/.test(ch)) ultimo = i + 1;
+  }
+  const suj = s.slice(ultimo);
+  const m = /^([a-zA-Z][a-zA-Z0-9-]*)/.exec(suj);
+  return { etiqueta: m ? m[1].toLowerCase() : '', clases: clasesNecesarias(suj) };
+}
+
 // reglas: las del CSS en su orden original, cada una con .sel, .cuerpo y .dest (adónde iría: null = se queda en el común).
 // Deja en el común (dest = null) las que, movidas, podrían ganar un empate que antes perdían. Devuelve cuántas se quedan.
-export function respetarCascada(reglas) {
+// Dos selectores solo empatan sobre lo mismo si un elemento puede cumplir los dos: no si sus sujetos son de etiquetas
+// distintas (button y svg), ni si cada sujeto lleva una clase que solo sale en el código de un sitio distinto (duenoDe: el
+// trozo o «coach»; un elemento recibe sus clases de un solo sitio del código, y una clase que solo está en el código de La
+// travesía no acaba en el mismo elemento que otra que solo está en el del coach).
+export function respetarCascada(reglas, { duenoDe = () => null } = {}) {
   const info = reglas.map((x) => {
-    const sels = partir(x.sel);
-    return { claves: new Set(sels.map((s) => `${especificidad(s)}|${pseudoElemento(s)}`)), fams: familias(x.cuerpo) };
+    const sels = partir(x.sel).map((s) => {
+      const suj = sujetoDe(s);
+      return { k: `${especificidad(s)}|${pseudoElemento(s)}`, etiqueta: suj.etiqueta, duenos: [...new Set(suj.clases.map(duenoDe).filter(Boolean))] };
+    });
+    return { sels, fams: familias(x.cuerpo) };
   });
   // Por familia, las reglas que la tocan (en orden)
   const porFamilia = new Map();
   info.forEach((f, i) => { for (const k of f.fams) { if (!porFamilia.has(k)) porFamilia.set(k, []); porFamilia.get(k).push(i); } });
   const todas = [...porFamilia.keys()];
-  const chocan = (i, j) => { for (const k of info[i].claves) if (info[j].claves.has(k)) return true; return false; };
+  const juntos = (a, b) => {
+    if (a.k !== b.k) return false;
+    if (a.etiqueta && b.etiqueta && a.etiqueta !== b.etiqueta) return false;
+    for (const x of a.duenos) for (const y of b.duenos) if (x !== y) return false;
+    return true;
+  };
+  const chocan = (i, j) => { for (const a of info[i].sels) for (const b of info[j].sels) if (juntos(a, b)) return true; return false; };
   let quedan = 0;
   for (let vuelta = 0; vuelta < 20; vuelta++) {
     let cambio = false;
@@ -234,16 +264,37 @@ export function respetarCascada(reglas) {
   }
   return quedan;
 }
-function planas(nodos, out = []) {
+export function planas(nodos, out = []) {
   for (const x of nodos) { if (x.tipo === 'regla') out.push(x); else if (x.tipo === 'grupo') planas(x.hijos, out); }
   return out;
+}
+
+// (v0.210) El dueño de cada clase con todo el código a la vista: «coach» si solo sale en el código del coach, la ruta del
+// trozo perezoso si solo sale en él, o null (sale en varios sitios, en el arranque, en index.html o en ninguno)
+export function duenosDeCodigo({ textos, coach = new Set(), candidatos = new Set(), extra = '' }) {
+  const rutas = [...textos.keys()];
+  const palabras = new Map(rutas.map((f) => [f, palabrasDe(textos.get(f))]));
+  const prefijos = new Map(rutas.map((f) => [f, [...prefijosDe(textos.get(f))]]));
+  const palabrasExtra = palabrasDe(extra), prefijosExtra = [...prefijosDe(extra)];
+  const memo = new Map();
+  return (c) => {
+    if (memo.has(c)) return memo.get(c);
+    let r = null;
+    if (!(palabrasExtra.has(c) || prefijosExtra.some((p) => c.startsWith(p)))) {
+      const donde = rutas.filter((f) => palabras.get(f).has(c) || prefijos.get(f).some((p) => c.startsWith(p)));
+      if (donde.length && donde.every((f) => coach.has(f))) r = 'coach';
+      else if (donde.length === 1 && candidatos.has(donde[0])) r = donde[0];
+    }
+    memo.set(c, r);
+    return r;
+  };
 }
 
 const escribir = (nodos) => nodos.map((x) => (x.tipo === 'regla' ? `${x.sel}{${x.cuerpo}}` : x.tipo === 'grupo' ? `${x.pre}{${escribir(x.hijos)}}` : x.texto)).join('');
 
 // css: el CSS construido. palabrasCoach / palabrasOtros: las palabras del código del coach y del resto; prefijosOtros: los
 // principios de clases armadas a trozos en el resto. Devuelve { comun, coach, reglas: cuántas reglas pasan al del coach }
-export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtros = new Set() }) {
+export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtros = new Set(), duenoDe = null }) {
   const prefijos = [...prefijosOtros];
   const delCoach = (c) => palabrasCoach.has(c) && !palabrasOtros.has(c) && !prefijos.some((p) => c.startsWith(p));
   const selectorCoach = (s) => /(^|[\s>+~])\.app\.coach(?![A-Za-z0-9_-])/.test(s) || clasesNecesarias(s).some(delCoach);
@@ -252,7 +303,7 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
   const todas = planas(arbol);
   for (const x of todas) { const sels = partir(x.sel); x.dest = sels.length && sels.every(selectorCoach) ? 'coach' : null; }
   // (v0.210) sin cambiar quién gana un empate (respetarCascada)
-  const quedan = respetarCascada(todas);
+  const quedan = respetarCascada(todas, { duenoDe: duenoDe || ((c) => (delCoach(c) ? 'coach' : null)) });
   function repartir(nodos) {
     const comun = [], coach = [];
     for (const x of nodos) {
@@ -271,8 +322,8 @@ export function separarCssCoach(css, { palabrasCoach, palabrasOtros, prefijosOtr
 }
 
 // Con lo construido: los textos de los trozos del coach y del resto (más index.html y la portada) → { comun, coach, reglas }
-export function cssDelCoach(css, { jsCoach, jsOtros }) {
-  return separarCssCoach(css, { palabrasCoach: palabrasDe(jsCoach), palabrasOtros: palabrasDe(jsOtros), prefijosOtros: prefijosDe(jsOtros) });
+export function cssDelCoach(css, { jsCoach, jsOtros, duenoDe = null }) {
+  return separarCssCoach(css, { palabrasCoach: palabrasDe(jsCoach), palabrasOtros: palabrasDe(jsOtros), prefijosOtros: prefijosDe(jsOtros), duenoDe });
 }
 
 // (v0.211, estilos a dieta 2) Lo mismo para cada trozo perezoso del atleta (La travesía, Apuntes, la sesión, el perfil…):
@@ -280,7 +331,7 @@ export function cssDelCoach(css, { jsCoach, jsOtros }) {
 // archivo de código, ni en index.html). textos: Map(ruta → código de cada trozo, de todos: los de arranque, los del coach y
 // los perezosos); candidatos: las rutas de los trozos perezosos que pueden llevar CSS propio; extra: lo que no es un trozo
 // (index.html, la portada). Devuelve { comun, porTrozo: Map(ruta → css), reglas }.
-export function separarCssPorTrozos(css, { textos, candidatos, extra = '' }) {
+export function separarCssPorTrozos(css, { textos, candidatos, extra = '', duenoDe = null }) {
   const rutas = [...textos.keys()];
   const palabras = new Map(rutas.map((f) => [f, palabrasDe(textos.get(f))]));
   const prefijos = new Map(rutas.map((f) => [f, [...prefijosDe(textos.get(f))]]));
@@ -314,7 +365,7 @@ export function separarCssPorTrozos(css, { textos, candidatos, extra = '' }) {
   const todas = planas(arbol);
   for (const x of todas) x.dest = destinoDe(x.sel);
   // (v0.210) sin cambiar quién gana un empate (respetarCascada)
-  const quedan = respetarCascada(todas);
+  const quedan = respetarCascada(todas, { duenoDe: duenoDe || dueno });
   function repartir(nodos) {
     const comun = [], porTrozo = new Map();
     const a = (f, x) => { if (!porTrozo.has(f)) porTrozo.set(f, []); porTrozo.get(f).push(x); };
