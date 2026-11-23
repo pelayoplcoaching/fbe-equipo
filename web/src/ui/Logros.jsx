@@ -179,7 +179,10 @@ function HojaLogro({ logro: l, alCerrar }) {
 // Celebración en Hoy cuando hay discos nuevos desde la última vez que se vieron (en este móvil).
 export function AvisoLogros({ salud, irA, pausado = false }) {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud], { recuerdo: `logros:${atleta.id}:${salud ? 1 : 0}` });
+  // (v0.211, rendimiento) las medallas solo cambian con lo que hace el atleta (una sesión, un récord, un vídeo, un
+  // check-in, una pesada), y cualquier cosa que se guarda desde aquí olvida lo recordado: al ir y volver a Hoy no se
+  // recalculan cada 20 s (piden el historial entero), sino al guardar algo, al volver a la app o pasados 10 minutos
+  const res = useCarga(() => api.logros(atleta.id, { salud }).catch(() => null), [atleta.id, salud], { recuerdo: `logros:${atleta.id}:${salud ? 1 : 0}`, frescoMs: 10 * 60000 });
   const [vistos, setVistos] = usePreferencia(`fbe-logros-${atleta.id}`, null);
   const [cerrado, setCerrado] = useState(false);
   const lista = res.datos?.lista;

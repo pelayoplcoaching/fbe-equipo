@@ -29,7 +29,7 @@ import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
 import { LOBO } from '../marca-lobo.js';
-import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias } from '../../logica/fechas.js';
+import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias, lunesDe } from '../../logica/fechas.js';
 import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
 import { HabitosHoy } from './Habitos.jsx';
@@ -803,7 +803,10 @@ function SemanaPasada({ salud }) {
   const { api, atleta } = useApp();
   const [vista, setVista] = usePreferencia('fbe-tu-semana-vista', null);
   const [abierta, setAbierta] = useState(false);
-  const res = useCarga(() => api.resumenesSemanales(atleta.id, 1).catch(() => []), [atleta.id], { recuerdo: `semana-pasada:${atleta.id}` });
+  // (v0.211, rendimiento) la tarjeta es siempre la de la semana pasada: si ya la vio, no se calcula (pide el historial
+  // entero y busca sus récords: con dos años de datos, unos 600 ms en un móvil lento cada vez que se vuelve a Hoy)
+  const yaVista = vista === sumarDias(lunesDe(hoyISO()), -7);
+  const res = useCarga(() => (yaVista ? Promise.resolve([]) : api.resumenesSemanales(atleta.id, 1).catch(() => [])), [atleta.id, yaVista], { recuerdo: `semana-pasada:${atleta.id}:${yaVista ? 1 : 0}` });
   const r = res.datos?.[0];
   if (!r || (vista === r.lunes && !abierta)) return null;
   return (

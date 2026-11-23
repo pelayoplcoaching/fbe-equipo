@@ -10,6 +10,7 @@ export const NOVEDADES = {
     atleta: [
       'Durante la sesión, el móvil trabaja mucho menos mientras descansas: el reloj del descanso y el punto verde ya no gastan batería sin parar.',
       'Escribir en el chat va fluido aunque la conversación tenga meses de mensajes.',
+      'Hoy se abre antes aunque lleves años apuntando: ya no repasa todo tu historial cada vez que vuelves.',
     ],
     coach: [
       'La Biblioteca de ejercicios abre antes, aunque tenga cientos: solo se dibuja lo que ves.',

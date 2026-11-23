@@ -907,7 +907,7 @@ export const FRESCO_MS = 20000;
 const cargados = new Map();   // clave del recuerdo → { t: cuándo se cargó, epoca }
 let epoca = 0;
 const envejecer = () => { epoca++; };
-const estaFresco = (clave) => { const c = clave ? cargados.get(clave) : null; return !!c && c.epoca === epoca && Date.now() - c.t < FRESCO_MS && recuerdos.has(clave); };
+const estaFresco = (clave, ms = FRESCO_MS) => { const c = clave ? cargados.get(clave) : null; return !!c && c.epoca === epoca && Date.now() - c.t < ms && recuerdos.has(clave); };
 export function olvidarRecuerdos() { escrituras++; recuerdos.clear(); cargados.clear(); }
 // Lo mismo para lo que no pasa por useCarga con recuerdo (p. ej., la bandeja del coach, que se refresca al cambiar de
 // sección): una marca al pedir y, antes de volver a pedir, si sigue valiendo
@@ -918,8 +918,10 @@ if (typeof window !== 'undefined') {
   for (const ev of ['fbe-mensaje', 'fbe-notificacion', 'fbe-recargar', 'fbe-copia', 'fbe-hilo', 'fbe-salida-enviado', 'online', 'focus', 'pageshow']) window.addEventListener(ev, envejecer);
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', envejecer);
 }
+// (v0.211) frescoMs: cuánto vale lo recordado sin volver a pedirlo (de serie, FRESCO_MS), para lo que solo cambia con lo
+// que se hace desde aquí (cualquier escritura lo olvida igual) y es caro de calcular, como las medallas de Hoy
 export function useCarga(fn, deps = [], opciones = {}) {
-  const { recuerdo = null } = opciones;
+  const { recuerdo = null, frescoMs = FRESCO_MS } = opciones;
   const recordado = () => (recuerdo && recuerdos.has(recuerdo) ? recuerdos.get(recuerdo) : null);
   const [estado, setEstado] = useState(() => { const datos = recordado(); return { datos, error: null, cargando: datos == null }; });
   const vivo = useRef(true);
@@ -964,7 +966,7 @@ export function useCarga(fn, deps = [], opciones = {}) {
     if (!alMontar && recuerdo) { base.current = datos; setEstado({ datos, error: null, cargando: datos == null }); }
     primera.current = false;
     // (pulido 3.4) al volver a la pantalla, lo recién cargado no se pide otra vez
-    if (!(alMontar && datos != null && estaFresco(recuerdo))) cargar(datos != null);
+    if (!(alMontar && datos != null && estaFresco(recuerdo, frescoMs))) cargar(datos != null);
     return () => { vivo.current = false; };
   }, [cargar]);
   // (pulido 9) «tirar para recargar» (ui/tirar.js) pide a todas las cargas montadas que se repitan en silencio, y espera
