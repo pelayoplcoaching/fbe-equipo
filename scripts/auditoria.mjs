@@ -5,8 +5,10 @@
 //   npm run build
 //   node scripts/auditoria.mjs [--conf=movil,oscuro-estrecho,letra,ordenador,contraste] [--quien=atleta,coach]
 //                              [--atletas=Ana López,Carlos Vera] [--hondo] [--salida=/tmp/auditoria] [--dist=dist] [--puerto=4410]
-//                              [--raros]
+//                              [--raros] [--capturas=/tmp/cap-210]
 // --hondo: también explora dentro de cada hoja (una capa más). Sin él, solo abre y revisa.
+// --capturas: guarda una captura de cada estado (con el mismo nombre en cada pasada: para comparar dos construcciones con
+//   compara.mjs, como los estilos repartidos de la v0.210).
 // --raros: con la demo llevada al extremo (scripts/datos-raros.mjs): dos años de Ana, un chat de 1.500 mensajes, 60 atletas,
 //   nombres larguísimos y un atleta sin nada. Mejor con --atletas="Ana López,Rubén Martín,Iván Prieto".
 // Lo que toca no envía, borra, graba, sube ni comparte nada (lista NO_TOCAR); la demo guarda sus datos en el propio
@@ -25,6 +27,9 @@ const RAROS = process.argv.includes('--raros') ? (() => { const db = semillaDemo
 const SALIDA = resolve(arg('salida', '/tmp/auditoria'));
 const DIST = resolve(arg('dist', 'dist'));
 const PUERTO = Number(arg('puerto', '4410'));
+const CAPTURAS = arg('capturas', null) ? resolve(arg('capturas')) : null;
+if (CAPTURAS) mkdirSync(CAPTURAS, { recursive: true });
+const nombresCaptura = new Map();
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 mkdirSync(SALIDA, { recursive: true });
 
@@ -115,6 +120,13 @@ async function axe(p) {
 }
 
 async function revisar(p, ctx, { conAxe = true } = {}) {
+  if (CAPTURAS) {
+    const base0 = `${ctx.conf}-${ctx.quien}-${ctx.donde}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 120).toLowerCase();
+    const n = (nombresCaptura.get(base0) || 0) + 1;
+    nombresCaptura.set(base0, n);
+    await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove())).catch(() => {});
+    await p.screenshot({ path: join(CAPTURAS, `${base0}${n > 1 ? `-${n}` : ''}.png`), animations: 'disabled' }).catch(() => {});
+  }
   const r = await p.evaluate(revisarEnPagina).catch(() => null);
   if (r) {
     if (r.desborde) apuntar(ctx, 'desborde', r.desborde);
@@ -138,6 +150,8 @@ const t0 = Date.now();
 async function entrar(conf, nombre) {
   const c = CONFS[conf];
   const ctx = await nav.newContext({ viewport: c.viewport, isMobile: !!c.isMobile, hasTouch: !!c.hasTouch, colorScheme: c.colorScheme, locale: 'es-ES', timezoneId: 'Europe/Madrid', reducedMotion: 'reduce' });
+  // (con capturas, la hora quieta: dos pasadas comparables)
+  if (CAPTURAS) await ctx.clock.setFixedTime(new Date(`${new Date().toISOString().slice(0, 10)}T11:00:00+01:00`));
   if (RAROS) await ctx.addInitScript((db) => {
     // una vez por pestaña (al recargar se queda lo que haya cambiado la app)
     try { if (!sessionStorage.getItem('fbe-raros')) { localStorage.setItem('fbe-demo-v2', db); sessionStorage.setItem('fbe-raros', '1'); } } catch (e) { console.error(`datos raros: no caben (${e.message})`); }
