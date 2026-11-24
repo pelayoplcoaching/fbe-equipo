@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.234': {
+    // (FBE Esencial, tanda 4: la comida de quien va por su cuenta; para los atletas de ahora no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial con nutrición: la app calcula su plan de comida y lo ajusta cada semana, con tus límites (necesita la migración 093).',
+      'Con un trastorno de la conducta alimentaria, su plan es de mantener y nunca baja solo. Lo ves en su ficha (Datos).',
+    ],
+  },
   '0.233': {
     // (FBE Esencial, tanda 3: la semana 5 en adelante, sola; para los atletas de ahora no cambia nada)
     atleta: [],
