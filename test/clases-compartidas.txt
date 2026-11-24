@@ -524,7 +524,7 @@ informes-mes: diseno.css estilos.css
 ingredientes: estilos.css recetario-equipo.css
 insignia: comunidad-viva.css diseno.css equipo-belleza.css estilos.css
 insignia-siguiente: equipo-belleza.css estilos.css
-interruptor: color-capa.css diseno.css estilos.css
+interruptor: belleza-c.css color-capa.css diseno.css estilos.css
 interruptor-fila: diseno.css estilos.css estrecho.css pulido.css
 intervalos: diseno.css estilos.css
 intervalos-cuenta: diseno.css estilos.css
@@ -579,6 +579,7 @@ marca-dia: diseno.css estilos.css
 marca-fila: diseno.css estilos.css
 marcador: estilos.css visual.css
 marcador-equipos: comunidad-viva.css diseno.css estilos.css
+marcar-atleta: atletas-lista.css belleza-c.css
 marco-ig: equipo-belleza.css personal.css
 mas: diseno.css estilos.css
 mas-actual: diseno.css imagenes.css
@@ -855,6 +856,7 @@ reto: comunidad-viva.css diseno.css equipo-belleza.css
 reto-equipo: comunidad-viva.css diseno.css
 reto-titulo: equipo-belleza.css estilos.css
 reto-yo: diseno.css estilos.css
+rev-tabla: belleza-c.css revision.css
 revisar-mini: estilos.css revision.css
 revision-acciones: diseno.css estilos.css revision.css
 revision-avisos: estilos.css revision.css

@@ -14,3 +14,8 @@
 @media (min-width: 560px) {
   .hero-dia > .pila + .semana-resumen { grid-column: 1 / -1; align-self: stretch; padding: var(--esp-12) 0 0; border-left: 0; border-top: var(--filo-fino) solid color-mix(in srgb, var(--blanco) 12%, transparent); }
 }
+
+/* -- C3 - Coach: casillas de 24 px (el minimo de toque) donde se quedaban en 22, las de la app (diseno.css, bloque 3),
+   que ganan por especificidad: "Elegir varios" en Atletas y "terminada" en la tabla de la revision semanal. Como la
+   de "anadir varios" del editor (v0.212). */
+input[type="checkbox"].marcar-atleta:not(.interruptor), .rev-tabla td > input[type="checkbox"]:not(.interruptor) { width: 24px; height: 24px; }
