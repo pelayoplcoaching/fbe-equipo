@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -1473,6 +1473,19 @@ export function crearApi(backend, opciones = {}) {
       return (await b.upsert('carrera_atleta', [{ ...perfil, atleta_id: atletaId }], 'atleta_id').catch(falta056))[0];
     },
     // (v0.228, 089) ¿Está la 089 (la ficha de salud para correr y la mañana siguiente)?
+    // (v0.232) ¿Está la 091 (FBE Esencial)? La columna modalidad de atletas (cualquiera con sesión ve, al menos, la suya)
+    async esencial091() {
+      if (!api._v091) {
+        const pr = b.select('atletas', { cols: 'id,modalidad', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /modalidad|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m) ? false : null;
+        });
+        api._v091 = pr;
+        pr.then((x) => { if (x == null && api._v091 === pr) api._v091 = null; });
+      }
+      return api._v091;
+    },
     async carrera089() {
       if (!api._v089) {
         const pr = b.select('carrera_mananas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
@@ -2000,7 +2013,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.176) «A su medida» (080): con la 079 pero sin la 080, la 2026-12.37
       if ((await api.aMedida080().catch(() => null)) !== true) return VERSION_LEGAL_SIN_080;
       // (v0.228) la carrera con tu salud (089): con la 080 pero sin la 089, la 2026-12.38
-      return (await api.carrera089().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_089;
+      if ((await api.carrera089().catch(() => null)) !== true) return VERSION_LEGAL_SIN_089;
+      // (v0.232) FBE Esencial (091): con la 089 pero sin la 091, la 2026-12.39
+      return (await api.esencial091().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_091;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
