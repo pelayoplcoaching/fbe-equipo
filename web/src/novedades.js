@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.226': {
+    atleta: [],
+    coach: [
+      'En el ordenador, al revisar un vídeo, el cuadro para escribir y «Dibujar sobre el vídeo» van debajo del vídeo, siempre a la vista.',
+    ],
+  },
   '0.225': {
     atleta: [],
     coach: [

@@ -486,7 +486,7 @@ hero-hecha: diseno.css estilos.css
 hero-ilu: diseno.css estilos.css
 hero-objetivo: belleza-a.css personal.css
 hero-semana: diseno.css estilos.css
-hilo-extras: diseno.css estilos.css
+hilo-extras: diseno.css estilos.css revision.css
 historia: estilos.css sistema.css
 historia-anillo: estilos.css imagenes.css
 historia-fondo: imagenes.css visual.css

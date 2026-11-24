@@ -12,6 +12,7 @@ import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { PanelCorreccion } from '../tecnica/Correccion.jsx';
 import { RevisionSeguida } from '../tecnica/RevisionSeguida.jsx';
 import { RevisionSesion } from '../tecnica/RevisionSesion.jsx';
+import { RevisionEnColumnas } from '../tecnica/RevisionColumnas.jsx';
 import { agruparPorSesion, tituloSesion } from '../../logica/sesionVideos.js';
 import { videosQueEsperan } from '../../logica/cierre.js';
 import { CabCoach } from './CabCoach.jsx';
@@ -973,19 +974,13 @@ function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_RE
         </div>
       ) : !esVideo && a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
       {abierto && (() => {
-        const hilo = <Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} frasesRapidas={x.frasesDe('videos')} variables={x.variablesDe({ tipo: 'videos', a })} borrador={x.borradorDe({ tipo: 'videos', a, atleta: a.atleta }, a.atleta.nombre)} alCambiar={() => { x.anotar('contestadas'); recargar(); }} />;
-        if (!esVideo) return <><VerArchivo archivo={a} />{hilo}</>;
-        // (v0.220) El vídeo abierto, en el ordenador: ocupa toda la fila y va en columnas (vídeo, corrección e hilo)
+        const propsHilo = { atletaId: a.atleta.id, archivoId: a.id, nombreAtleta: a.atleta.nombre, placeholder: 'Qué corregir, qué está bien…', ejercicio: a.ejercicio || null, frasesRapidas: x.frasesDe('videos'), variables: x.variablesDe({ tipo: 'videos', a }), borrador: x.borradorDe({ tipo: 'videos', a, atleta: a.atleta }, a.atleta.nombre), alCambiar: () => { x.anotar('contestadas'); recargar(); } };
+        if (!esVideo) return <><VerArchivo archivo={a} /><Hilo {...propsHilo} /></>;
+        // (v0.220) El vídeo abierto, en el ordenador: ocupa toda la fila y va en columnas (vídeo, corrección e hilo); (v0.226) la
+        // parte de escribir, debajo del vídeo
         return (
-          <div class="revdos revdos-cols revdos-tarjeta">
-            <div class="revdos-in">
-              <div class="revdos-ver">{a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}<VerArchivo archivo={a} /></div>
-              <div class="revdos-lado">
-                <div class="revdos-corregir"><LoQueLeDijiste a={a} /><PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} /></div>
-                <div class="revdos-hablar">{hilo}</div>
-              </div>
-            </div>
-          </div>
+          <RevisionEnColumnas clase="revdos-tarjeta" ver={<>{a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}<VerArchivo archivo={a} /></>}
+            corregir={<><LoQueLeDijiste a={a} /><PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} /></>} hilo={propsHilo} />
         );
       })()}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}

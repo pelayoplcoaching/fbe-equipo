@@ -8,6 +8,9 @@
 //     al lado; al bajar, el vídeo se queda a la vista.
 //   · La ficha de Ana → Vídeos → el vídeo: la hoja, ancha y en tres columnas.
 //   · En el móvil, como siempre: una cosa debajo de otra. Sin errores ni desbordes.
+// v0.226 (petición de Pelayo: «la parte de escribir y dibujar sobre el vídeo, fijas debajo del mismo»): en columnas, el
+//   cuadro de la respuesta y las herramientas (dibujar sobre el vídeo, comentar el momento…) van debajo del vídeo, en su
+//   columna, siempre a la vista; si la columna no cabe, baja por su cuenta hasta los mandos y lo de escribir se queda abajo.
 import { devices } from 'playwright';
 
 export async function probarRevisarAncho({ navegador, check, base = 'http://localhost:4174' }) {
@@ -52,11 +55,21 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   check(ver.r <= cor.x && cor.r <= hab.x && Math.abs(ver.y - cor.y) < 40 && Math.abs(cor.y - hab.y) < 40,
     `«Revisar seguidos» a 1440 px: el vídeo, la corrección y el hilo en tres columnas, una al lado de otra (${ver.w}, ${cor.w} y ${hab.w} px)`);
   const pie = await caja(s.locator('.seguida-pie'));
+  // (v0.226) la parte de escribir, debajo del vídeo y a la vista
+  const medio = await caja(s.locator('.revdos-ver .medio').first());
+  const escribir = await caja(s.locator('.revdos-ver .hilo-escribir'));
+  check(escribir.y >= medio.b && escribir.b <= pie.y && escribir.x >= ver.x && escribir.r <= ver.r + 1
+    && await s.locator('.revdos-ver .hilo-escribir textarea').isVisible() && await s.locator('.revdos-ver .hilo-escribir').getByRole('button', { name: 'Dibujar sobre el vídeo' }).isVisible()
+    && await s.locator('.revdos-hablar textarea').count() === 0,
+  `la parte de escribir (el cuadro y «Dibujar sobre el vídeo»), debajo del vídeo en su columna y a la vista (de ${escribir.y} a ${escribir.b} px)`);
+  // Si la columna no cabe, baja por su cuenta: abajo del todo, los mandos de velocidad, encima de la parte de escribir
+  await s.locator('.revdos-ver').evaluate((e) => { e.scrollTop = e.scrollHeight; });
+  await p.waitForTimeout(200);
   const velocidad = await caja(s.locator('.revdos-ver .reproductor').last());
-  check(velocidad.b <= pie.y && await s.locator('.revdos-ver').evaluate((e) => e.scrollHeight <= e.clientHeight + 2),
-    'el vídeo y todos sus mandos (fotogramas, velocidad) se ven enteros sin bajar');
-  check(await s.locator('.revdos-hablar textarea').first().isVisible() && await s.getByRole('heading', { name: 'Corrección' }).isVisible(),
-    'a la vez, la corrección y la caja para contestar');
+  const escribirAbajo = await caja(s.locator('.revdos-ver .hilo-escribir'));
+  check(velocidad.b <= escribirAbajo.y + 1 && escribirAbajo.b <= pie.y, 'y bajando por la columna del vídeo se llega a todos sus mandos (la velocidad, encima de lo de escribir)');
+  await s.locator('.revdos-ver').evaluate((e) => { e.scrollTop = 0; });
+  check(await s.getByRole('heading', { name: 'Corrección' }).isVisible(), 'a la vez, la corrección');
   const baja = await s.locator('.revdos-corregir').evaluate((e) => { const antes = e.scrollTop; e.scrollTop = 400; return getComputedStyle(e).overflowY === 'auto' && e.scrollTop > antes; });
   check(baja && await s.locator('.seguida-cuerpo').evaluate((e) => e.scrollHeight <= e.clientHeight + 2) && (await caja(s.locator('.revdos-ver'))).y === ver.y,
     'la corrección baja por su cuenta y el vídeo no se mueve');
@@ -67,8 +80,9 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   // (a 1100 px las cajas de la corrección y del hilo no cuentan: se mide lo de dentro)
   const ver2 = await caja(s.locator('.revdos-ver'));
   const cor2 = await caja(s.locator('.revdos-corregir .correccion').first());
-  const hab2 = await caja(s.locator('.revdos-hablar textarea').first());
-  check(ver2.r <= cor2.x && hab2.x >= ver2.r && hab2.y > cor2.y, 'a 1100 px, dos columnas: el vídeo y, al lado, la corrección y debajo el hilo');
+  const hab2 = await caja(s.locator('.revdos-ver textarea').first());
+  const medio2 = await caja(s.locator('.revdos-ver .medio').first());
+  check(ver2.r <= cor2.x && hab2.r <= cor2.x && hab2.y >= medio2.b, 'a 1100 px, dos columnas: el vídeo con lo de escribir debajo y, al lado, la corrección');
   await desborda(p, 'seguidos a 1100 px');
   await p.keyboard.press('Escape');
   await p.waitForTimeout(500);
@@ -89,7 +103,8 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   await p.evaluate(() => window.scrollBy(0, 500));
   await p.waitForTimeout(400);
   const v4 = await caja(t.locator('.revdos-ver'));
-  check(v4.y >= 0 && v4.y < 140 && v4.b <= 900, 'al bajar por la corrección, el vídeo se queda a la vista');
+  const e4 = await caja(t.locator('.revdos-ver .hilo-escribir'));
+  check(v4.y >= 0 && v4.y < 140 && v4.b <= 900 && e4.b <= 900 && e4.y > v4.y, 'al bajar por la corrección, el vídeo se queda a la vista, con lo de escribir debajo');
   await desborda(p, 'bandeja a 1440 px');
 
   // 3) La ficha de Ana → Vídeos → el vídeo de hoy: la hoja, ancha y en tres columnas
@@ -104,6 +119,7 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   const hc = await caja(hoja.locator('.revdos-corregir'));
   const hh = await caja(hoja.locator('.revdos-hablar'));
   check((await caja(hoja)).w > 1100 && hv.r <= hc.x && hc.r <= hh.x, 'en la ficha (Vídeos), el vídeo se abre en una hoja ancha con tres columnas');
+  check(await hoja.locator('.revdos-ver .hilo-escribir textarea').isVisible() && await hoja.locator('.revdos-hablar textarea').count() === 0, 'y ahí también, lo de escribir debajo del vídeo');
   await desborda(p, 'la hoja del diario a 1440 px');
   await ctx.close();
 

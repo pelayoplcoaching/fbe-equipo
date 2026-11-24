@@ -19,7 +19,16 @@ import { ResponderConVideo, VideoRespuesta, puedeResponderConVideo } from './tec
 // v0.59 (4): en el hilo de un vídeo, el coach tiene sus frases de corrección a un toque (ejercicio: el del vídeo)
 // v0.60 (1 y 2, 038): las respuestas en vídeo del hilo de un vídeo de técnica (la revisión grabada del coach, o un vídeo con
 // la cámara de delante del coach o del atleta) se ven en su mensaje; «Responder con vídeo» graba una (hasta un minuto).
-export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null, frasesRapidas = null, variables = null, borrador = null }) {
+export function Hilo(props) {
+  const h = useHilo(props);
+  return <div class="hilo">{h.mensajes}{h.formulario}{h.frases}{h.guardar}{h.extras}{h.modales}</div>;
+}
+
+// (v0.226) Lo de dentro del hilo, por partes: los mensajes, el cuadro para escribir (con el dibujo pendiente), las frases,
+// «Guardar como frase», las herramientas (dibujar sobre el vídeo, comentar el momento…) y sus hojas. Hilo las pone una debajo
+// de otra, como siempre; con el vídeo en columnas en el ordenador, la parte de escribir va debajo del vídeo
+// (tecnica/RevisionColumnas.jsx).
+export function useHilo({ atletaId, sesionId = null, checkinId = null, archivoId = null, enChat = false, nombreAtleta = 'Atleta', placeholder, vacio, alCambiar, alLeer, ejercicio = null, frasesRapidas = null, variables = null, borrador = null }) {
   const { api, perfil, aviso } = useApp();
   const yo = perfil?.rol === 'coach' ? 'coach' : 'atleta';
   const hilo = useCarga(() => api.comentarios({ atletaId, sesionId, checkinId, archivoId }), [atletaId, sesionId, checkinId, archivoId]);
@@ -89,23 +98,23 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
   };
   const lista = hilo.datos || [];
   const nombre = (autor) => (autor === yo ? 'Tú' : autor === 'coach' ? 'Tu coach' : nombreAtleta.split(' ')[0]);
-  return (
-    <div class="hilo">
-      {hilo.cargando && !hilo.datos ? <Cargando /> : !lista.length ? (vacio ? <p class="peq terciario">{vacio}</p> : null) : (
-        <ol class="mensajes">
-          {lista.map((c) => (
-            <li key={c.id} class={`mensaje ${c.autor === yo ? 'mio' : 'suyo'}`}>
-              <span class="quien">{nombre(c.autor)}</span>
-              {/* v0.54: lo eliminado para todos, como en el chat; lo editado, con su «Editado» */}
-              {c.eliminado_en ? <p class="burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em></p>
-                : <p>{archivoId ? <TextoConMomentos texto={c.texto} archivoId={archivoId} /> : c.texto}</p>}
-              {!c.eliminado_en && c.video_respuesta_id && <VideoRespuesta archivo={videosResp.datos?.[c.id] || (videosResp.cargando ? undefined : null)} deQuien={nombre(c.autor)} />}
-              {!c.eliminado_en && dibujoValido(c.dibujo) && <BotonDibujo dibujo={c.dibujo} archivoId={archivoId} />}
-              <span class="cuando">{cuando(c.creado_en)}{c.editado_en && !c.eliminado_en ? ', editado' : ''}{c.autor === yo && c.leido_en ? ', visto' : ''}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+  const mensajes = hilo.cargando && !hilo.datos ? <Cargando /> : !lista.length ? (vacio ? <p class="peq terciario">{vacio}</p> : null) : (
+    <ol class="mensajes">
+      {lista.map((c) => (
+        <li key={c.id} class={`mensaje ${c.autor === yo ? 'mio' : 'suyo'}`}>
+          <span class="quien">{nombre(c.autor)}</span>
+          {/* v0.54: lo eliminado para todos, como en el chat; lo editado, con su «Editado» */}
+          {c.eliminado_en ? <p class="burbuja-eliminada"><span aria-hidden="true">🚫 </span><em>Se eliminó este mensaje</em></p>
+            : <p>{archivoId ? <TextoConMomentos texto={c.texto} archivoId={archivoId} /> : c.texto}</p>}
+          {!c.eliminado_en && c.video_respuesta_id && <VideoRespuesta archivo={videosResp.datos?.[c.id] || (videosResp.cargando ? undefined : null)} deQuien={nombre(c.autor)} />}
+          {!c.eliminado_en && dibujoValido(c.dibujo) && <BotonDibujo dibujo={c.dibujo} archivoId={archivoId} />}
+          <span class="cuando">{cuando(c.creado_en)}{c.editado_en && !c.eliminado_en ? ', editado' : ''}{c.autor === yo && c.leido_en ? ', visto' : ''}</span>
+        </li>
+      ))}
+    </ol>
+  );
+  const formulario = (
+    <>
       <form class="responder" onSubmit={enviar}>
         <textarea ref={area} class="area" rows={2} aria-label={yo === 'coach' ? `Responder a ${nombreAtleta.split(' ')[0]}` : 'Escribir a tu coach'}
           placeholder={placeholder || (yo === 'coach' ? 'Responder…' : 'Escribe a tu coach…')} value={texto}
@@ -117,6 +126,10 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
         <div class="chip morado chip-dibujo"><Icono n="regla" /> Dibujo en {textoMomento(dibujo.t, true)}: {describirDibujo(dibujo, reproductorDe(archivoId)?.proporcion?.() || 1)}
           <button type="button" class="btn-texto mini" aria-label="Quitar el dibujo" onClick={() => setDibujo(null)}><Icono n="cerrar" /></button></div>
       )}
+    </>
+  );
+  const frases = (
+    <>
       {yo === 'coach' && archivoId && !enChat && <ChipsFrases ejercicio={ejercicio} alElegir={usarFrase} />}
       {/* (v0.195) en «Revisar», tus frases de siempre a un toque (con su nombre) */}
       {yo === 'coach' && frasesRapidas?.length > 0 && (
@@ -127,34 +140,40 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
           })}
         </div>
       )}
-      {con037.datos && textoFrase && <button type="button" class="btn-texto mini" onClick={guardarComoFrase}><Icono n="mas" /> Guardar como frase{dibujo ? ' (con el dibujo)' : ''}</button>}
-      <div class="hilo-extras">
-        {archivoId && !dibujando && (
-          <button type="button" class="btn-texto mini" onClick={() => {
-            const r = reproductorDe(archivoId);
-            if (!r) return;
-            setDibujando(true);
-            r.dibujar((d) => { setDibujando(false); if (d) { setDibujo(d); const m = textoMomento(d.t, true); setTexto((x) => (x.includes(m) ? x : x.trim() ? `${x.trimEnd()}\n${m} ` : `${m} `)); area.current?.focus(); } });
-          }}><Icono n="regla" /> Dibujar sobre el vídeo</button>
-        )}
-        {archivoId && (
-          <button type="button" class="btn-texto mini" onClick={() => {
-            const r = reproductorDe(archivoId);
-            if (!r) return;
-            const m = textoMomento(r.ahora(), true);
-            setTexto((x) => (x.trim() ? `${x.trimEnd()}\n${m} ` : `${m} `));
-            area.current?.focus();
-          }}><Icono n="reloj" /> Comentar este momento</button>
-        )}
-        {yo === 'coach' && <button type="button" class="btn-texto mini responder-guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /> Respuestas guardadas</button>}
-        {/* (v0.197) en «Revisar», una respuesta ya redactada con sus datos */}
-        {yo === 'coach' && borrador && <button type="button" class="btn-texto mini hilo-redactar" onClick={() => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${borrador}` : borrador)); area.current?.focus(); }}><Icono n="editar" /> Redactar con sus datos</button>}
-        {/* (v0.196) en «Revisar», dictar la respuesta */}
-        {yo === 'coach' && frasesRapidas && <Dictar alTexto={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }} etiqueta="Dictar la respuesta" clase="btn-texto mini" />}
-        {puedeVideo && (delVideo.datos.con038
-          ? <button type="button" class="btn-texto mini" onClick={() => setConVideo(true)} aria-haspopup="dialog"><Icono n="camara" /> Responder con vídeo</button>
-          : <span class="mini terciario">Responder con vídeo: Disponible tras la migración 038</span>)}
-      </div>
+    </>
+  );
+  const guardar = con037.datos && textoFrase ? <button type="button" class="btn-texto mini" onClick={guardarComoFrase}><Icono n="mas" /> Guardar como frase{dibujo ? ' (con el dibujo)' : ''}</button> : null;
+  const extras = (
+    <div class="hilo-extras">
+      {archivoId && !dibujando && (
+        <button type="button" class="btn-texto mini" onClick={() => {
+          const r = reproductorDe(archivoId);
+          if (!r) return;
+          setDibujando(true);
+          r.dibujar((d) => { setDibujando(false); if (d) { setDibujo(d); const m = textoMomento(d.t, true); setTexto((x) => (x.includes(m) ? x : x.trim() ? `${x.trimEnd()}\n${m} ` : `${m} `)); area.current?.focus(); } });
+        }}><Icono n="regla" /> Dibujar sobre el vídeo</button>
+      )}
+      {archivoId && (
+        <button type="button" class="btn-texto mini" onClick={() => {
+          const r = reproductorDe(archivoId);
+          if (!r) return;
+          const m = textoMomento(r.ahora(), true);
+          setTexto((x) => (x.trim() ? `${x.trimEnd()}\n${m} ` : `${m} `));
+          area.current?.focus();
+        }}><Icono n="reloj" /> Comentar este momento</button>
+      )}
+      {yo === 'coach' && <button type="button" class="btn-texto mini responder-guardadas" onClick={() => setGuardadas(true)}><Icono n="rayo" /> Respuestas guardadas</button>}
+      {/* (v0.197) en «Revisar», una respuesta ya redactada con sus datos */}
+      {yo === 'coach' && borrador && <button type="button" class="btn-texto mini hilo-redactar" onClick={() => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${borrador}` : borrador)); area.current?.focus(); }}><Icono n="editar" /> Redactar con sus datos</button>}
+      {/* (v0.196) en «Revisar», dictar la respuesta */}
+      {yo === 'coach' && frasesRapidas && <Dictar alTexto={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()} ${t}` : t)); area.current?.focus(); }} etiqueta="Dictar la respuesta" clase="btn-texto mini" />}
+      {puedeVideo && (delVideo.datos.con038
+        ? <button type="button" class="btn-texto mini" onClick={() => setConVideo(true)} aria-haspopup="dialog"><Icono n="camara" /> Responder con vídeo</button>
+        : <span class="mini terciario">Responder con vídeo: Disponible tras la migración 038</span>)}
+    </div>
+  );
+  const modales = (
+    <>
       {conVideo && delVideo.datos?.video && (
         <ResponderConVideo video={delVideo.datos.video} autor={yo} nombre={yo === 'coach' ? primerNombre : 'tu coach'} alCerrar={() => setConVideo(false)}
           alEnviado={async () => { await hilo.recargar(true); alCambiar?.(); }} />
@@ -163,8 +182,9 @@ export function Hilo({ atletaId, sesionId = null, checkinId = null, archivoId = 
         <HojaRespuestas nombre={primerNombre} texto={texto} alCerrar={() => setGuardadas(false)}
           alElegir={(t) => { setTexto((x) => (x.trim() ? `${x.trimEnd()}\n\n${t}` : t)); setGuardadas(false); }} />
       )}
-    </div>
+    </>
   );
+  return { mensajes, formulario, frases, guardar, extras, modales };
 }
 
 // Tus respuestas habituales: tocar una la pone en el cuadro ({nombre} = el nombre del atleta)

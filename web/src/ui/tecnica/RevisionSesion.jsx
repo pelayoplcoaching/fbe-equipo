@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Avatar, useAtraparFoco, Capa } from '../comunes.jsx';
 import { VerArchivo } from '../Archivos.jsx';
-import { Hilo } from '../Hilo.jsx';
+import { RevisionEnColumnas } from './RevisionColumnas.jsx';
 import { PanelCorreccion } from './Correccion.jsx';
 import { correccionesDe } from './correcciones.js';
 import { tituloSesion, textoSeriesPauta, borradorResumen, limpiarResumen, progresoSesion, MAX_RESUMEN } from '../../logica/sesionVideos.js';
@@ -98,27 +98,20 @@ function Pantalla({ grupo, alCerrar, abrirAtleta }) {
       </div>
       <div class="seguida-cuerpo">
         {!fin && actual ? (
-          <article key={actual.id} class="seguida-tarjeta revdos revdos-cols" aria-label={`${nombre}: ${actual.ejercicio?.nombre || 'vídeo de técnica'}`}>
-            {/* (v0.220) En el ordenador, en columnas, como «Revisar seguidos» (revision.css) */}
-            <div class="revdos-in">
-              <div class="revdos-ver">
-                <div class="separa">
-                  <button type="button" class="btn-texto nombre-atleta" onClick={() => { alCerrar(); abrirAtleta?.(atleta?.id, 'videos'); }}><Avatar nombre={nombre} foto={atleta?.foto} clase="peq" />{nombre}</button>
-                  <span class="mini terciario">{actual.ejercicio?.nombre || 'Vídeo'}{actual.serie?.numero ? ` · serie ${actual.serie.numero}` : ''}{hechos.has(actual.id) || actual.revisado_en ? ' · revisado' : ''}</span>
-                </div>
-                <SeriesSesion pautas={datos.datos?.pautas || []} actual={pautaDe(actual)} serie={actual.serie_numero} sesion={datos.datos?.sesion || null} />
-                {actual.nota_atleta && <p class="cita">«{actual.nota_atleta}»</p>}
-                <VerArchivo archivo={actual} />
+          // (v0.220) En el ordenador, en columnas, como «Revisar seguidos»; (v0.226) con la parte de escribir debajo del vídeo
+          <RevisionEnColumnas key={actual.id} como="article" clase="seguida-tarjeta" attrs={{ 'aria-label': `${nombre}: ${actual.ejercicio?.nombre || 'vídeo de técnica'}` }}
+            ver={<>
+              <div class="separa">
+                <button type="button" class="btn-texto nombre-atleta" onClick={() => { alCerrar(); abrirAtleta?.(atleta?.id, 'videos'); }}><Avatar nombre={nombre} foto={atleta?.foto} clase="peq" />{nombre}</button>
+                <span class="mini terciario">{actual.ejercicio?.nombre || 'Vídeo'}{actual.serie?.numero ? ` · serie ${actual.serie.numero}` : ''}{hechos.has(actual.id) || actual.revisado_en ? ' · revisado' : ''}</span>
               </div>
-              <div class="revdos-lado">
-                <div class="revdos-corregir"><PanelCorreccion video={actual} esCoach nombreAtleta={nombre} /></div>
-                <div class="revdos-hablar">
-                  <Hilo atletaId={actual.atleta_id} archivoId={actual.id} nombreAtleta={nombre} placeholder="Qué corregir, qué está bien…" ejercicio={actual.ejercicio || null}
-                    alCambiar={() => setHechos((h) => new Set(h).add(actual.id))} />
-                </div>
-              </div>
-            </div>
-          </article>
+              <SeriesSesion pautas={datos.datos?.pautas || []} actual={pautaDe(actual)} serie={actual.serie_numero} sesion={datos.datos?.sesion || null} />
+              {actual.nota_atleta && <p class="cita">«{actual.nota_atleta}»</p>}
+              <VerArchivo archivo={actual} />
+            </>}
+            corregir={<PanelCorreccion video={actual} esCoach nombreAtleta={nombre} />}
+            hilo={{ atletaId: actual.atleta_id, archivoId: actual.id, nombreAtleta: nombre, placeholder: 'Qué corregir, qué está bien…', ejercicio: actual.ejercicio || null,
+              alCambiar: () => setHechos((h) => new Set(h).add(actual.id)) }} />
         ) : (
           <section class="seguida-fin pila-s resumen-sesion" aria-labelledby="resumen-sesion-t">
             <strong id="resumen-sesion-t">Resumen de la sesión</strong>

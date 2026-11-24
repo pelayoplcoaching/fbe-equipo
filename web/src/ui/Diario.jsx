@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Siluetas, Vacio, Cargando } from './comunes.jsx';
 import { Hilo } from './Hilo.jsx';
+import { RevisionEnColumnas } from './tecnica/RevisionColumnas.jsx';
 import { VerArchivo, CompararVideos, SubirArchivo } from './Archivos.jsx';
 import { CompararFotos } from './CompararFotos.jsx';
 import { NuevaFoto, POSES } from './atleta/CamaraGuiada.jsx';
@@ -169,53 +170,76 @@ export function DetalleArchivo({ a, lista = [], atletaId, nombreAtleta, esCoach,
   const enColumnas = esCoach && a.tipo === 'video_tecnica';
   const destacar = async () => { try { await api.editarArchivo(a.id, { destacado: !a.destacado }); alCambiar(); } catch (e) { aviso(e.message, 'error'); } };
   const guardarPie = async () => { try { await api.editarArchivo(a.id, { nota_atleta: pie.trim() || null }); setEditar(false); alCambiar(); } catch (e) { aviso(e.message, 'error'); } };
+  // (v0.226) Lo de cada columna, para las dos maneras de enseñarlo (en columnas o una cosa debajo de otra)
+  const verDiario = (
+    <>
+      <VerArchivo archivo={a} />
+      <div class="fila-envolver">
+        <button class={`btn btn-peq ${a.destacado ? 'btn-primario' : ''}`} aria-pressed={a.destacado ? 'true' : 'false'} onClick={destacar}><Icono n="libre" /> {a.destacado ? 'Destacado' : 'Destacar'}</button>
+        {!esCoach && <button class="btn btn-peq" onClick={() => setEditar(!editar)}><Icono n="editar" /> {a.nota_atleta ? 'Cambiar el pie' : 'Poner un pie'}</button>}
+        {a.revisado_en ? <span class="chip ok"><Icono n="hecho" />{esCoach ? 'Revisado' : 'Revisado por tu coach'}</span> : !esFoto && <span class="chip">{esCoach ? 'Por revisar' : 'Pendiente de tu coach'}</span>}
+        {a.duracion_seg ? <span class="chip num">{mmssCorto(a.duracion_seg)}</span> : null}
+        {a.revision?.puntuacion != null && <span class="chip morado num tecnica-ultima" data-nota={a.revision.puntuacion}>Técnica {a.revision.puntuacion}/5</span>}
+      </div>
+      {!esFoto && a.estado && <EstadoVideo estado={a.estado} />}
+      {(original || repeticiones.length > 0) && (
+        <div class="fila-envolver">
+          {original && <button class="btn btn-peq" onClick={() => setComparar([original, a])}><Icono n="duplicar" /> Comparar con el original ({fmtCorta(original.fecha)})</button>}
+          {repeticiones.map((x) => <button key={x.id} class="btn btn-peq" onClick={() => setComparar([a, x])}><Icono n="duplicar" /> Comparar con la repetición ({fmtCorta(x.fecha)})</button>)}
+        </div>
+      )}
+    </>
+  );
+  const corregirDiario = (
+    <>
+      {!esFoto && a.tipo === 'video_tecnica' && <PanelCorreccion video={{ ...a, atleta_id: a.atleta_id || atletaId }} esCoach={esCoach} nombreAtleta={nombreAtleta} alCambiar={alCambiar} />}
+    </>
+  );
+  const antesHiloDiario = (
+    <>
+      {editar ? (
+        <div class="fila" style="gap:8px;align-items:flex-end">
+          <textarea class="area" rows={2} aria-label="Pie" maxLength={500} value={pie} onInput={(e) => setPie(e.currentTarget.value)} placeholder="Qué querías enseñar, cómo te sentiste…" />
+          <button class="btn btn-primario" onClick={guardarPie}>Guardar</button>
+        </div>
+      ) : a.nota_atleta && <p class={esCoach ? 'cita' : 'peq secundario'}>{esCoach ? `«${a.nota_atleta}»` : a.nota_atleta}</p>}
+    </>
+  );
+  const despuesHiloDiario = (
+    <>
+      <div class="fila-envolver">
+        {esCoach && !a.revisado_en && !esFoto && <button class="btn" onClick={async () => { try { await api.marcarRevisado('archivo', a.id); aviso('Revisado'); alCambiar(); } catch (e) { aviso(e.message, 'error'); } }}><Icono n="hecho" /> Marcar revisado</button>}
+        {!confirmar ? <button class="btn btn-peligro plano" onClick={() => setConfirmar(true)}><Icono n="basura" /> Borrar</button>
+          : <><span class="peq">¿Seguro? No se puede deshacer.</span><button class="btn btn-peq btn-peligro" onClick={alBorrar}>Sí, borrar</button><button class="btn btn-peq" onClick={() => setConfirmar(false)}>No</button></>}
+      </div>
+    </>
+  );
   return (
     <Hoja titulo={`${nombre}, ${fmtConDia(a.fecha)}`} alCerrar={alCerrar} ancho={enColumnas ? 1320 : 720} clase={enColumnas ? 'revdos-hoja' : ''}>
-      {/* (v0.220) El coach, con un vídeo de técnica en el ordenador: en columnas (vídeo, corrección e hilo). En el móvil
-          (y en lo demás) las cajas no cuentan y queda todo como siempre, una cosa debajo de otra (revision.css) */}
-      <div class={`revdos${enColumnas ? ' revdos-cols' : ''}`}>
-        <div class="revdos-in">
-          <div class="revdos-ver">
-            <VerArchivo archivo={a} />
-            <div class="fila-envolver">
-              <button class={`btn btn-peq ${a.destacado ? 'btn-primario' : ''}`} aria-pressed={a.destacado ? 'true' : 'false'} onClick={destacar}><Icono n="libre" /> {a.destacado ? 'Destacado' : 'Destacar'}</button>
-              {!esCoach && <button class="btn btn-peq" onClick={() => setEditar(!editar)}><Icono n="editar" /> {a.nota_atleta ? 'Cambiar el pie' : 'Poner un pie'}</button>}
-              {a.revisado_en ? <span class="chip ok"><Icono n="hecho" />{esCoach ? 'Revisado' : 'Revisado por tu coach'}</span> : !esFoto && <span class="chip">{esCoach ? 'Por revisar' : 'Pendiente de tu coach'}</span>}
-              {a.duracion_seg ? <span class="chip num">{mmssCorto(a.duracion_seg)}</span> : null}
-              {a.revision?.puntuacion != null && <span class="chip morado num tecnica-ultima" data-nota={a.revision.puntuacion}>Técnica {a.revision.puntuacion}/5</span>}
-            </div>
-            {!esFoto && a.estado && <EstadoVideo estado={a.estado} />}
-            {(original || repeticiones.length > 0) && (
-              <div class="fila-envolver">
-                {original && <button class="btn btn-peq" onClick={() => setComparar([original, a])}><Icono n="duplicar" /> Comparar con el original ({fmtCorta(original.fecha)})</button>}
-                {repeticiones.map((x) => <button key={x.id} class="btn btn-peq" onClick={() => setComparar([a, x])}><Icono n="duplicar" /> Comparar con la repetición ({fmtCorta(x.fecha)})</button>)}
-              </div>
-            )}
-          </div>
-          <div class="revdos-lado">
-            <div class="revdos-corregir">
-              {!esFoto && a.tipo === 'video_tecnica' && <PanelCorreccion video={{ ...a, atleta_id: a.atleta_id || atletaId }} esCoach={esCoach} nombreAtleta={nombreAtleta} alCambiar={alCambiar} />}
-            </div>
-            <div class="revdos-hablar">
-              {editar ? (
-                <div class="fila" style="gap:8px;align-items:flex-end">
-                  <textarea class="area" rows={2} aria-label="Pie" maxLength={500} value={pie} onInput={(e) => setPie(e.currentTarget.value)} placeholder="Qué querías enseñar, cómo te sentiste…" />
-                  <button class="btn btn-primario" onClick={guardarPie}>Guardar</button>
-                </div>
-              ) : a.nota_atleta && <p class={esCoach ? 'cita' : 'peq secundario'}>{esCoach ? `«${a.nota_atleta}»` : a.nota_atleta}</p>}
-              {!esFoto || esCoach ? (
-                <Hilo atletaId={atletaId} archivoId={a.id} nombreAtleta={nombreAtleta} alCambiar={alCambiar} ejercicio={a.ejercicio || null}
-                  placeholder={esCoach ? 'Qué corregir, qué está bien…' : undefined} vacio={esCoach ? 'Sin comentarios todavía.' : 'Tu coach te contestará aquí.'} />
-              ) : null}
-              <div class="fila-envolver">
-                {esCoach && !a.revisado_en && !esFoto && <button class="btn" onClick={async () => { try { await api.marcarRevisado('archivo', a.id); aviso('Revisado'); alCambiar(); } catch (e) { aviso(e.message, 'error'); } }}><Icono n="hecho" /> Marcar revisado</button>}
-                {!confirmar ? <button class="btn btn-peligro plano" onClick={() => setConfirmar(true)}><Icono n="basura" /> Borrar</button>
-                  : <><span class="peq">¿Seguro? No se puede deshacer.</span><button class="btn btn-peq btn-peligro" onClick={alBorrar}>Sí, borrar</button><button class="btn btn-peq" onClick={() => setConfirmar(false)}>No</button></>}
+      {/* (v0.220) El coach, con un vídeo de técnica en el ordenador: en columnas (vídeo, corrección e hilo); (v0.226) con la
+          parte de escribir debajo del vídeo (tecnica/RevisionColumnas.jsx). En el móvil (y en lo demás) las cajas no cuentan y
+          queda todo como siempre, una cosa debajo de otra (revision.css) */}
+      {enColumnas ? (
+        <RevisionEnColumnas ver={verDiario} corregir={corregirDiario} antesHilo={antesHiloDiario} despuesHilo={despuesHiloDiario}
+          hilo={{ atletaId, archivoId: a.id, nombreAtleta, alCambiar, ejercicio: a.ejercicio || null, placeholder: 'Qué corregir, qué está bien…', vacio: 'Sin comentarios todavía.' }} />
+      ) : (
+        <div class="revdos">
+          <div class="revdos-in">
+            <div class="revdos-ver">{verDiario}</div>
+            <div class="revdos-lado">
+              <div class="revdos-corregir">{corregirDiario}</div>
+              <div class="revdos-hablar">
+                {antesHiloDiario}
+                {!esFoto || esCoach ? (
+                  <Hilo atletaId={atletaId} archivoId={a.id} nombreAtleta={nombreAtleta} alCambiar={alCambiar} ejercicio={a.ejercicio || null}
+                    placeholder={esCoach ? 'Qué corregir, qué está bien…' : undefined} vacio={esCoach ? 'Sin comentarios todavía.' : 'Tu coach te contestará aquí.'} />
+                ) : null}
+                {despuesHiloDiario}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       {comparar && <CompararVideos videos={comparar} nombreDe={(v) => (v.id === comparar[0].id ? 'Original' : 'Repetición')} inicialA={comparar[1].id} inicialB={comparar[0].id} alCerrar={() => setComparar(null)} />}
     </Hoja>
   );

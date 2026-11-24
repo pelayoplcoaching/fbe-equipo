@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, Icono, Avatar, useAtraparFoco, Capa } from '../comunes.jsx';
 import { VerArchivo } from '../Archivos.jsx';
-import { Hilo } from '../Hilo.jsx';
+import { RevisionEnColumnas } from './RevisionColumnas.jsx';
 import { PanelCorreccion } from './Correccion.jsx';
 import { fmtConDia } from '../../logica/fechas.js';
 import { ordenarCola, ORDENES_COLA } from '../../logica/tecnica.js';
@@ -91,26 +91,20 @@ function Pantalla({ videos, alCerrar, abrirAtleta }) {
       </div>
       <div class="seguida-cuerpo">
         {actual ? (
-          <article key={actual.id} class={`seguida-tarjeta revdos revdos-cols ${sentido ? `entra-${sentido}` : ''}`} aria-label={`${nombre}: ${actual.ejercicio?.nombre || 'vídeo de técnica'}`}
-            onPointerDown={bajar} onPointerUp={soltar}>
-            {/* (v0.220) En el ordenador, en columnas: el vídeo, la corrección y el hilo a la vista a la vez (revision.css) */}
-            <div class="revdos-in">
-              <div class="revdos-ver">
-                <div class="separa">
-                  <button type="button" class="btn-texto nombre-atleta" onClick={() => { alCerrar(); abrirAtleta?.(actual.atleta?.id, 'videos'); }}><Avatar nombre={nombre} foto={actual.atleta?.foto} clase="peq" />{nombre}</button>
-                  <span class="mini terciario">{actual.ejercicio?.nombre ? `${actual.ejercicio.nombre}, ` : ''}{fmtConDia(actual.fecha)}{hechos.has(actual.id) ? ' · revisado' : ''}</span>
-                </div>
-                {actual.nota_atleta && <p class="cita">«{actual.nota_atleta}»</p>}
-                <VerArchivo archivo={actual} />
+          // (v0.220) En el ordenador, en columnas: el vídeo, la corrección y el hilo a la vista a la vez; (v0.226) y la parte
+          // de escribir, debajo del vídeo (RevisionColumnas.jsx, revision.css)
+          <RevisionEnColumnas key={actual.id} como="article" clase={`seguida-tarjeta${sentido ? ` entra-${sentido}` : ''}`}
+            attrs={{ 'aria-label': `${nombre}: ${actual.ejercicio?.nombre || 'vídeo de técnica'}`, onPointerDown: bajar, onPointerUp: soltar }}
+            ver={<>
+              <div class="separa">
+                <button type="button" class="btn-texto nombre-atleta" onClick={() => { alCerrar(); abrirAtleta?.(actual.atleta?.id, 'videos'); }}><Avatar nombre={nombre} foto={actual.atleta?.foto} clase="peq" />{nombre}</button>
+                <span class="mini terciario">{actual.ejercicio?.nombre ? `${actual.ejercicio.nombre}, ` : ''}{fmtConDia(actual.fecha)}{hechos.has(actual.id) ? ' · revisado' : ''}</span>
               </div>
-              <div class="revdos-lado">
-                <div class="revdos-corregir"><PanelCorreccion video={actual} esCoach nombreAtleta={nombre} /></div>
-                <div class="revdos-hablar">
-                  <Hilo atletaId={actual.atleta_id} archivoId={actual.id} nombreAtleta={nombre} alCambiar={contestado} placeholder="Qué corregir, qué está bien…" ejercicio={actual.ejercicio || null} />
-                </div>
-              </div>
-            </div>
-          </article>
+              {actual.nota_atleta && <p class="cita">«{actual.nota_atleta}»</p>}
+              <VerArchivo archivo={actual} />
+            </>}
+            corregir={<PanelCorreccion video={actual} esCoach nombreAtleta={nombre} />}
+            hilo={{ atletaId: actual.atleta_id, archivoId: actual.id, nombreAtleta: nombre, alCambiar: contestado, placeholder: 'Qué corregir, qué está bien…', ejercicio: actual.ejercicio || null }} />
         ) : (
           <div class="seguida-fin pila-s" role="status">
             <strong>Ya no quedan más</strong>
