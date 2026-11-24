@@ -55,10 +55,11 @@ const series = [
   { sesion_ejercicio_id: 'p2', numero: 1, kg: 35, reps: 12 }, { sesion_ejercicio_id: 'p2', numero: 2, kg: 0, reps: 0 },
   { sesion_ejercicio_id: 'p3', numero: 1, kg: null, reps: 40 }, { sesion_ejercicio_id: 'p3', numero: 2, kg: null, reps: 44 },
 ];
-const m = marcasDeSemana({ pautas, series, ejercicios: E });
+const m = marcasDeSemana({ pautas, series, ejercicios: E }).map((x) => ({ ...x, texto: x.texto.replace(/\u00a0/g, ' ') }));
 check(m.length === 3 && m[0].texto === '65 kg × 11' && m[1].texto === '35 kg × 12' && m[2].texto === '44 s',
   'la mejor serie de cada ejercicio: más kilos (a igualdad, más repeticiones); la plancha, más segundos');
 const m2 = marcasDeSemana({ pautas, series: [{ sesion_ejercicio_id: 'p1', numero: 1, kg: null, reps: 12, sustituto_id: 'd' }], ejercicios: E });
+check(/16\u00a0kg \u00d7\u00a012/.test(marcasDeSemana({ pautas, series: [{ sesion_ejercicio_id: 'p1', numero: 1, kg: 16, reps: 12 }], ejercicios: E })[0].texto), 'la cifra no se parte en dos líneas (espacios que no parten)');
 check(m2.length === 1 && m2[0].nombre === 'Sentadilla a un banco' && m2[0].texto === '12 repeticiones', 'si hizo la alternativa, la marca es de la alternativa');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

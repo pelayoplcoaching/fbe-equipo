@@ -114,5 +114,6 @@ export function marcasDeSemana({ pautas = [], series = [], ejercicios = {} }) {
     if (gana) mejor.set(id, { ejercicio_id: id, nombre: ej.nombre, kg, reps, porTiempo: !!ej.por_tiempo, orden: p.orden ?? 0 });
   }
   return [...mejor.values()].sort((a, b) => a.orden - b.orden)
-    .map(({ orden: _o, ...m }) => ({ ...m, texto: m.porTiempo ? `${m.reps} s` : m.kg != null ? `${num(m.kg, 2)} kg × ${m.reps}` : `${m.reps} repeticiones` }));
+    // (con espacios que no parten: «16 kg × 12» no se corta en dos líneas)
+    .map(({ orden: _o, ...m }) => ({ ...m, texto: m.porTiempo ? `${m.reps} s` : m.kg != null ? `${num(m.kg, 2)} kg × ${m.reps}` : `${m.reps} repeticiones` }));
 }

@@ -26,6 +26,7 @@ import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
+import { TarjetaMarcas } from './Esencial.jsx';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
@@ -192,6 +193,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           entre={(
             <>
               {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
+              {/* (FBE Esencial) quien va por su cuenta: sus marcas de la semana 4, en cuanto termina esa semana */}
+              {!propio && <TarjetaMarcas />}
               {!verPasos && !propio && <CuentaMeta />}
               {!verPasos && !propio && <RetoDelMes />}
               {!verPasos && !propio && <TarjetaVida sesiones={p.actual ? (p.sesiones[p.actual.id] || []) : []} />}

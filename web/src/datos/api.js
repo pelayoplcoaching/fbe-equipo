@@ -72,6 +72,7 @@ import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesion
 import { AMPLIAR, ambitoDe, derivar, cubre, esCompleta, idsDe } from './lecturas.js';
 import { TABLAS_COPIA, TABLAS_OPCIONALES } from './copia-tablas.js';
 import { migracionesQueFaltan } from './migracion.js';
+import { marcasDeSemana } from '../logica/esencial.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -2134,6 +2135,28 @@ export function crearApi(backend, opciones = {}) {
       const porFecha = semanaActual(semanas);
       const actual = diasSemana ? semanaDelMicrociclo(semanas.filter((w) => w.programacion === 'programada'), sesiones, porFecha, { sinCarrera: carril }) : porFecha;
       return { bloques, bloque, semanas, sesiones, actual, diasSemana, carril };
+    },
+
+    // (FBE Esencial) Sus marcas: las de la semana de marcas (la 4 de «Primeras 4 semanas», `semanas.marcas`, que llega con la
+    // migración de la tanda 2) del bloque más reciente que la tenga, con la mejor serie de cada ejercicio. null si no hay
+    // semana de marcas (sin esa columna, nunca) o aún no ha apuntado nada en ella.
+    async marcasEsencial(atletaId) {
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id,nombre,fecha_inicio' });
+      if (!bloques.length) return null;
+      const semanas = await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) } });
+      const semana = semanas.filter((w) => w.marcas === true).sort((x, y) => String(y.fecha_inicio).localeCompare(String(x.fecha_inicio)))[0];
+      if (!semana) return null;
+      const sesiones = await b.select('sesiones', { eq: { semana_id: semana.id }, order: [['orden', 'asc']] });
+      const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) } }) : [];
+      const series = pautas.length ? await b.select('series', { in: { sesion_ejercicio_id: pautas.map((x) => x.id) } }) : [];
+      if (!series.length) return null;
+      const ids = unicos([...pautas.map((x) => x.ejercicio_id), ...series.map((x) => x.sustituto_id).filter(Boolean)]);
+      const ejercicios = porId(await b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre,por_tiempo' }).catch(() => b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre' })));
+      return {
+        semana, bloque: bloques.find((x) => x.id === semana.bloque_id) || null,
+        completa: sesiones.length > 0 && sesiones.every((x) => x.completada), hechas: sesiones.filter((x) => x.completada).length, sesiones: sesiones.length,
+        marcas: marcasDeSemana({ pautas, series, ejercicios }),
+      };
     },
 
     // v0.50: las cifras de la cabecera del perfil, sin el historial de entrenamientos entero: cuántas sesiones ha
