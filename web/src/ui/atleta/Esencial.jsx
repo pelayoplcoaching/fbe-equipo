@@ -76,6 +76,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const pedido = useRef(false);
+  const [intento, setIntento] = useState(0);
   const hoy = hoyISO();
   const bloque = p?.bloque || null;
   const e = estadoEsencial({ bloque, cuestionario, ficha: ficha.datos, hoy });
@@ -88,7 +89,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
     api.esencialAsignarPlan()
       .then((r) => { if (r?.bloque) recargarPrograma?.(); else setError('Tu plan aún no está listo: vuelve a intentarlo en un rato.'); })
       .catch((err) => setError(err.message || 'No se ha podido preparar tu plan.'));
-  }, [listoParaPlan]);
+  }, [listoParaPlan, intento]);
   if (!e || ficha.datos?.falta091) return null;
   const marco = (contexto, icono, chip, titulo, texto, acciones = null, extra = null) => (
     <section class="hero-dia hero-espera" aria-label={titulo}>
@@ -128,7 +129,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
   }
   if (e.tipo === 'preparando') {
     return marco(null, 'reloj', 'Un momento', 'Preparando tu plan', 'Con tus respuestas, la app elige tu plan y lo deja listo desde tu lunes.',
-      error ? <button class="btn btn-grande btn-hero" onClick={() => { pedido.current = false; setError(null); ficha.recargar(true); recargarPrograma?.(); }}><Icono n="reiniciar" /> Reintentar</button> : null);
+      error ? <button class="btn btn-grande btn-hero" onClick={() => { pedido.current = false; setError(null); setIntento((n) => n + 1); }}><Icono n="reiniciar" /> Reintentar</button> : null);
   }
   // espera: con su plan, antes de su lunes
   return marco(`Tu plan: ${bloque.nombre}`, 'calendario', e.faltan === 1 ? 'Mañana' : `Faltan ${e.faltan} días`, `Empiezas el ${fechaLarga(e.inicio)}`,

@@ -98,7 +98,8 @@ export function RecibirCompartidoCoach({ alAbrirChat }) {
     leerCompartidos().then((fs) => { if (fs.length) setArchivos(fs); else if (ok) aviso('No ha llegado nada que se pueda enviar: fotos, vídeos o PDF', 'error'); });
   }, []);
   if (!archivos) return null;
-  const lista = (atletas.datos || []).filter((a) => a.estado !== 'baja').sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // (FBE Esencial: quien va por su cuenta no tiene chat: lo que le mandaras no lo vería)
+  const lista = (atletas.datos || []).filter((a) => a.estado !== 'baja' && a.modalidad !== 'por_su_cuenta').sort((a, b) => a.nombre.localeCompare(b.nombre));
   const elegir = (a) => { dejarParaChat(a.id, archivos); setArchivos(null); alAbrirChat(a.id); };
   return (
     <Hoja titulo="Enviar a…" alCerrar={() => setArchivos(null)} medio>
@@ -125,6 +126,8 @@ export function RecibirCompartido({ programa }) {
     const ok = new URLSearchParams(location.search).get('compartido') === '1';
     limpiarDireccion(['compartido']);
     if (propio || atleta.estado === 'baja') { borrarCompartido(); if (ok) aviso(atleta.estado === 'baja' ? 'Tu cuenta está de baja: no se puede enviar el vídeo' : 'En el modo atleta no se envían vídeos'); return; }
+    // (FBE Esencial) quien va por su cuenta no envía vídeos ni tiene chat con su coach
+    if (atleta.modalidad === 'por_su_cuenta') { borrarCompartido(); if (ok) aviso('En FBE Esencial no se envían vídeos ni archivos al coach'); return; }
     // (v0.56) un vídeo solo: elegir si va como vídeo de técnica o por el chat; lo demás (fotos, PDF, varios), al chat
     leerCompartidos().then((fs) => {
       setMirado(true);
