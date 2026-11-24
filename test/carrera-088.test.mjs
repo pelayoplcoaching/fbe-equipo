@@ -3,7 +3,7 @@
 // otro con la función de la base, y lo que queda (semanas, sesiones y lo que devuelve) tiene que ser lo mismo. Después,
 // quién puede llamarla: el coach, para cualquiera; el atleta, solo para sí mismo y sin refrescar; y sin la función, la app
 // lo sigue haciendo como antes. Contra el esquema real (PGlite, con RLS y los triggers del día previsto).
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
 import { crearApi } from '../web/src/datos/api.js';
 import { hoyISO, lunesDe, sumarDias, fechaMadrid } from '../web/src/logica/fechas.js';
@@ -252,7 +252,12 @@ check(rSin?.puestas === 3 && apiSin._v088 === false, 'la app del coach lo hace e
 await b.auth.entrar('ana@test', 'contraseña-ana-1');
 await q(`update atletas set estado = 'activo' where id = $1`, [ana.id]);
 check(await crearApi(b).miCarreraAlDia() === null, 'y el móvil del atleta no hace nada (ni da error)');
+// (con las de después de la 088 ya puestas, como dice su aviso: se quitan de la lista, la 088 y después las siguientes)
+await q('delete from public.fbe_migraciones where numero > 88');
 await b.guion(readFileSync(new URL('../supabase/migraciones/088_carrera_al_dia.sql', import.meta.url), 'utf8'));
+for (const n of readdirSync(new URL('../supabase/migraciones/', import.meta.url)).filter((f) => /^\d{3}_.*\.sql$/.test(f) && Number(f.slice(0, 3)) > 88).sort()) {
+  await b.guion(readFileSync(new URL(`../supabase/migraciones/${n}`, import.meta.url), 'utf8'));
+}
 check((await crearApi(b).miCarreraAlDia())?.puestas === 0, 'con la 088 otra vez (se puede repetir), vuelve a ir');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
