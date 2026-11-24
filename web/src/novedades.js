@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.220': {
+    atleta: [],
+    coach: [
+      'En el ordenador, los vídeos de técnica se revisan en columnas: el vídeo con todos sus mandos, la corrección y el hilo, a la vez.',
+    ],
+  },
   '0.219': {
     atleta: [
       'Si tu coach te pone tu ritmo umbral, cada zona de tus carreras te dice también a qué ritmo ir, en minutos por kilómetro.',

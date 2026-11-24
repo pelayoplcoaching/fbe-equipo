@@ -504,7 +504,7 @@ hitos-lista: diseno.css equipo-belleza.css estilos.css
 hoja: apuntes.css diseno.css
 hoja-acciones: diseno.css estilos.css
 hoja-cab: diseno.css estilos.css progreso-visual-2.css pulido.css visual.css
-hoja-dialogo: color.css diseno.css estilos.css progreso-visual-2.css pulido.css sistema.css visual.css
+hoja-dialogo: color.css diseno.css estilos.css progreso-visual-2.css pulido.css revision.css sistema.css visual.css
 hoja-mas: diseno.css imagenes.css
 hoy: apuntes.css diseno.css estilos.css registro-actividad.css travesia.css
 hoy-como-estas: imagenes.css personal.css
@@ -588,7 +588,7 @@ material-perfil: estilos.css perfil.css
 me-1: diseno.css estilos.css
 me-equipo: comunidad-viva.css diseno.css estilos.css
 medalla-metal: diseno.css estilos.css progreso-visual-2.css
-medio: diseno.css estilos.css
+medio: diseno.css estilos.css revision.css
 medio-chat: estilos.css pulido.css
 medio-chat-hueco: belleza.css estilos.css
 mejor: diseno.css estilos.css tiempo.css
@@ -881,12 +881,13 @@ seg-compacto: estilos.css personal.css
 segmentos: diseno.css estilos.css personal.css pulido.css radar.css sonido.css visual.css
 segmentos-envolver: estilos.css visual.css
 segmentos-peq: estilos.css personal.css
-seguida: diseno.css estilos.css
+seguida: diseno.css estilos.css revision.css
 seguida-cab: diseno.css estilos.css
 seguida-contador: diseno.css estilos.css
-seguida-cuerpo: diseno.css estilos.css
+seguida-cuerpo: diseno.css estilos.css revision.css
 seguida-orden: diseno.css estilos.css
 seguida-pie: diseno.css estilos.css
+seguida-tarjeta: estilos.css revision.css
 sel: estilos.css perfil.css
 sel-prioridad: diseno.css estilos.css
 seleccionada: atletas-lista.css estilos.css

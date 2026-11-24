@@ -971,8 +971,23 @@ function TarjetaVideo({ a, recargar, quitar, abrirAtleta, objetivo = OBJETIVO_RE
           {a.nota_atleta ? <p class="cita">«{a.nota_atleta}»</p> : !a.autoevaluacion?.nota && <p class="peq terciario">Sin nota.</p>}
           {!abierto && a.autoevaluacion && (a.autoevaluacion.nota || a.autoevaluacion.rpe != null) && <p class="peq secundario">{textoAutoevaluacion(a.autoevaluacion, a.atleta?.nombre).titulo} {[a.autoevaluacion.rpe != null ? textoAutoevaluacion(a.autoevaluacion).rpe : null, a.autoevaluacion.nota ? `«${a.autoevaluacion.nota}»` : null].filter(Boolean).join(' · ')}</p>}
         </div>
-      ) : a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
-      {abierto && <><VerArchivo archivo={a} />{esVideo && <LoQueLeDijiste a={a} />}{esVideo && <PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} />}<Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} frasesRapidas={x.frasesDe('videos')} variables={x.variablesDe({ tipo: 'videos', a })} borrador={x.borradorDe({ tipo: 'videos', a, atleta: a.atleta }, a.atleta.nombre)} alCambiar={() => { x.anotar('contestadas'); recargar(); }} /></>}
+      ) : !esVideo && a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}
+      {abierto && (() => {
+        const hilo = <Hilo atletaId={a.atleta.id} archivoId={a.id} nombreAtleta={a.atleta.nombre} placeholder="Qué corregir, qué está bien…" ejercicio={a.ejercicio || null} frasesRapidas={x.frasesDe('videos')} variables={x.variablesDe({ tipo: 'videos', a })} borrador={x.borradorDe({ tipo: 'videos', a, atleta: a.atleta }, a.atleta.nombre)} alCambiar={() => { x.anotar('contestadas'); recargar(); }} />;
+        if (!esVideo) return <><VerArchivo archivo={a} />{hilo}</>;
+        // (v0.220) El vídeo abierto, en el ordenador: ocupa toda la fila y va en columnas (vídeo, corrección e hilo)
+        return (
+          <div class="revdos revdos-cols revdos-tarjeta">
+            <div class="revdos-in">
+              <div class="revdos-ver">{a.nota_atleta && <p class="cita">«{a.nota_atleta}»</p>}<VerArchivo archivo={a} /></div>
+              <div class="revdos-lado">
+                <div class="revdos-corregir"><LoQueLeDijiste a={a} /><PanelCorreccion video={a} esCoach nombreAtleta={a.atleta.nombre} /></div>
+                <div class="revdos-hablar">{hilo}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <Acciones abierto={abierto} setAbierto={setAbierto} revisar={revisar} etiquetaComentar="Ver y comentar" visto={visto} voz={voz} manana={(dias) => x.apartar(clave, dias)}
         mas={{ emoji: esVideo ? contestar : null, tarea: () => x.tarea(a.atleta), video: esVideo ? () => x.tarea(a.atleta, { tipo: 'video', titulo: a.ejercicio?.nombre ? `Repíteme ${a.ejercicio.nombre.toLowerCase()}` : 'Repíteme el vídeo', ejercicio_id: a.ejercicio?.id || a.ejercicio_id || '' }) : null,
           nota: () => x.nota(a.atleta, esVideo ? `Vídeo de ${a.ejercicio?.nombre || 'técnica'}${a.nota_atleta ? `: «${a.nota_atleta.slice(0, 100)}»` : ''}` : 'Foto de progreso nueva'), fijada: x.esFijada(clave), fijar: () => x.fijar(clave),

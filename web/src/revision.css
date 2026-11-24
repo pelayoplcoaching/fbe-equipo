@@ -331,3 +331,39 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
 .revisados-filtros .entrada { flex: 1 1 10rem; min-width: 0; }
 .revisado-leido { color: var(--ok); }
 .deslizable-fondo.izquierda { justify-content: flex-end; padding-left: 0; padding-right: var(--esp-20); background: var(--aviso-suave); color: var(--tinta); }
+
+/* v0.220: revisar videos en el ordenador, en columnas. Solo ASCII; todo con tokens.
+   Las cajas revdos-ver, -lado, -corregir y -hablar no cuentan en el movil (display: contents): todo queda como
+   siempre, una cosa debajo de otra. Con sitio (el contenedor revdos de 700 px o mas, y la clase revdos-cols):
+   el video a la izquierda y lo demas a la derecha; con 1200 px o mas, tres columnas: video, correccion e hilo.
+   En la bandeja y en la hoja del diario, la columna del video se queda quieta al bajar (sticky); en
+   "Revisar seguidos" y "Revisar la sesion" (a pantalla completa) cada columna baja por su cuenta. */
+.revdos { container: revdos / inline-size; }
+.revdos-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--revdos-gap, var(--esp-6)); }
+.revdos-ver, .revdos-lado, .revdos-corregir, .revdos-hablar { display: contents; }
+.tarjeta-revisar > .revdos { --revdos-gap: var(--esp-10); }
+.hoja-dialogo > .revdos { --revdos-gap: var(--esp-16); }
+@container revdos (min-width: 700px) {
+  .revdos-cols > .revdos-in { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); column-gap: var(--esp-20); align-items: start; }
+  .revdos-cols .revdos-ver, .revdos-cols .revdos-lado { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--revdos-gap, var(--esp-6)); min-width: 0; }
+  .revdos-cols .revdos-ver { position: sticky; top: var(--revdos-arriba, 0px); z-index: 1; }
+  .revdos-cols .revdos-ver .medio { max-height: max(16rem, var(--revdos-video, calc(100dvh - 26rem))); }
+}
+@container revdos (min-width: 1200px) {
+  .revdos-cols > .revdos-in { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr); }
+  .revdos-cols .revdos-lado { display: contents; }
+  .revdos-cols .revdos-corregir, .revdos-cols .revdos-hablar { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: var(--revdos-gap, var(--esp-6)); min-width: 0; }
+}
+/* La bandeja: el video abierto ocupa toda la fila y su columna se queda bajo la cabecera de la pagina */
+@media (min-width: 1000px) { .grupo-revisar-items > :has(.revdos-tarjeta) { grid-column: 1 / -1; } }
+.revdos-tarjeta { --revdos-arriba: calc(var(--cab-pegada, 3.875rem) + var(--esp-8)); }
+/* La hoja del diario (el coach con un video de tecnica): mas ancha; la columna del video, quieta arriba */
+.revdos-hoja > .revdos { --revdos-video: calc(92dvh - 26rem); }
+@container revdos (min-width: 700px) { .revdos-hoja .revdos-cols > .revdos-in { --revdos-gap: var(--esp-10); } }
+/* A pantalla completa: sin bajar todo junto; cada columna, por su cuenta */
+@media (min-width: 740px) and (min-height: 560px) {
+  .seguida-cuerpo:has(> .revdos-cols) { overflow: hidden; padding-bottom: 0; }
+  .seguida-tarjeta.revdos-cols { max-width: 110rem; height: 100%; --revdos-video: calc(100dvh - 32rem); }
+  .seguida-tarjeta.revdos-cols > .revdos-in { height: 100%; align-items: stretch; }
+  .seguida .revdos-cols :is(.revdos-ver, .revdos-lado, .revdos-corregir, .revdos-hablar) { position: static; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--esp-16); scrollbar-width: thin; }
+}

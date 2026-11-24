@@ -6642,6 +6642,14 @@ if (parte('v0.219: carrera, zonas, ritmos y biblioteca')) try {
   fallos++;
   console.log('  ✗ la carrera de la v0.219:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.220: revisar los vídeos en el ordenador, en columnas (test/e2e-revisar-ancho.mjs)
+if (parte('v0.220: revisar vídeos en el ordenador, en columnas')) try {
+  const { probarRevisarAncho } = await import('./e2e-revisar-ancho.mjs');
+  await probarRevisarAncho({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ revisar vídeos en el ordenador (v0.220):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();
