@@ -1,7 +1,7 @@
 // FBE Esencial (tandas 1 y 2), en la demo ?demo=esencial. Lo llama e2e.test.mjs.
 //   · Marina (390 px): la bienvenida sin «Habla con tu coach»; en Hoy, «Rellena tu cuestionario»; lo rellena (cribado
 //     limpio) y la app le pone «Primeras 4 semanas»: su sesión con «Te sobran 4-5» y la plancha en segundos; apunta una serie.
-//   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4.
+//   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4 y (tanda 3) su plan desde la semana 5, solo.
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
 //     sin la pestaña Mensajes; «Añadir atleta» de FBE Esencial con su mensaje de invitación.
 //   Sin errores ni desbordes.
@@ -133,6 +133,11 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await h.locator('.lista-marcas li').first().waitFor();
       check((await h.locator('.lista-marcas li').count()) === 5 && /85\s?kg × 12/.test((await h.textContent()).replace(/ /g, ' ')), 'sus cinco marcas (85 kg × 12 en la prensa)');
     }
+    // (tanda 3) y, al abrir la app, su plan desde la semana 5, con los kilos de sus marcas
+    await cerrar(p);
+    const listo = await p.waitForFunction(() => /Novato 2 días · FBE Esencial/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
+    check(listo, 'Tomás, tras sus cuatro semanas: la app le prepara «Novato 2 días · FBE Esencial» (la semana 5)');
+    if (listo) check(/Tu plan desde ahora/.test(await p.locator('.hero-dia').first().textContent()), 'con la nota de la plantilla');
     await ctx.close();
   }
 
