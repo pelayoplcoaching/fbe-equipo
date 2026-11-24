@@ -50,13 +50,16 @@
 
 /* -- B8 - Equipo en el escritorio (desde 1100 px): el muro a la izquierda y, a su derecha, lo de al lado (cumpleanos,
    quien entrena hoy, un empujon, lo que suena, proximos...), como una columna lateral. En el movil y la tableta, todo
-   seguido como antes: las dos envolturas no tienen caja. "dense" deja que el muro empiece arriba, junto a la columna. */
-.eq-lado, .eq-centro { display: contents; }
+   seguido como antes: la envoltura de lo de al lado no tiene caja. El muro (las pestanas y su panel) no va envuelto:
+   deslizar.js recorta el panel con su padre mientras se mueve, y un padre sin caja no recorta (la pagina se salia 4 px
+   de lado al cambiar de pestana). La columna ocupa dos filas: la de las pestanas y la del panel; "dense" las pone
+   arriba, a su lado. */
+.eq-lado { display: contents; }
 @media (min-width: 1100px) {
   .app:not(.coach) .contenido.equipo { max-width: 1120px; grid-template-columns: minmax(0, 1fr) 340px; grid-auto-flow: row dense; align-items: start; column-gap: var(--esp-24); }
-  .app:not(.coach) .contenido.equipo > :not(.eq-lado, .eq-centro) { grid-column: 1 / -1; }
-  .app:not(.coach) .contenido.equipo > .eq-centro { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 1; min-width: 0; }
-  .app:not(.coach) .contenido.equipo > .eq-lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 2; min-width: 0; }
+  .app:not(.coach) .contenido.equipo > * { grid-column: 1 / -1; }
+  .app:not(.coach) .contenido.equipo > .eq-lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 2; grid-row: span 2; min-width: 0; }
+  .app:not(.coach) .contenido.equipo > .eq-lado ~ * { grid-column: 1; min-width: 0; }
 }
 
 /* -- B9 - Perfil con la letra grande o muy grande en un movil: en las filas con un valor a la derecha ("Como te
