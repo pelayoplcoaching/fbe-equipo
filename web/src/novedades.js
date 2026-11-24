@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.236': {
+    // (FBE Esencial: altas en grupo; para los atletas no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial: en «Añadir atleta», «¿Son varios?»: pega la lista (de Stripe o a mano) y dalos de alta de una vez.',
+      'Después, el mensaje de cada uno, listo para mandarlo por correo, y la lista de sus códigos para guardarla.',
+    ],
+  },
   '0.235': {
     // (FBE Esencial, el piloto; para los atletas de ahora no cambia nada)
     atleta: [],

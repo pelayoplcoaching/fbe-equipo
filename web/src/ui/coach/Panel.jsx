@@ -4,7 +4,7 @@ import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO, NOMBRE_NIVEL } from '../../logica/nivel.js';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
-import { inicioEsencial, fechaLarga, esLunes } from '../../logica/esencial-alta.js';
+import { inicioEsencial, esLunes } from '../../logica/esencial-alta.js';
 import { BandaDemo } from '../App.jsx';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -27,6 +27,9 @@ import { usePanelCoach, useExtrasPanel, Etiquetas, DetalleAtleta, AccionesRapida
 import { ChatRapido } from './RevisionTodo.jsx';
 import { CorredoresPanel } from './CarreraCoach.jsx';
 import { EsencialPanel } from './EsencialPanel.jsx';
+import { HojaAltasEsencial } from './EsencialAltas.jsx';
+import { mensajeInvitacion } from '../../logica/esencial-altas.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
   etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar,
   conUmbrales, novedadesDe, recordatorioDe, recordatorioParaHoy, textoRecordatorio, limpiarRecordatorio, textoContacto, textoHito, resumenColumna, csvLista, moverManual,
@@ -479,7 +482,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       )}
       {para?.tipo === 'chat' && <HojaChatRapido r={para.r} alCerrar={() => setPara(null)} alChat={() => { const id = para.r.atleta_id; setPara(null); abrir(id, 'mensajes'); }} alEnviado={() => ex.recargarConv?.()} />}
       {para?.tipo === 'voz' && <HojaVozAtleta r={para.r} alCerrar={() => setPara(null)} />}
-      {para?.tipo === 'codigo' && <Invitacion atleta={{ id: para.r.atleta_id, nombre: para.r.nombre }} alCerrar={() => setPara(null)} />}
+      {para?.tipo === 'codigo' && <Invitacion atleta={{ id: para.r.atleta_id, nombre: para.r.nombre, modalidad: para.r.modalidad }} alCerrar={() => setPara(null)} />}
       {avisos && <HojaAvisos alCerrar={() => setAvisos(false)} />}
       {nuevo && <NuevoAtleta alCerrar={(id) => { setNuevo(false); res.recargar(true); if (id) abrir(id); }} />}
     </div>
@@ -704,8 +707,10 @@ function NuevoAtleta({ alCerrar }) {
   const con056 = useCarga(() => api.carrera056().catch(() => null), []);   // (v0.133) la carrera, solo con la 056
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
+  const [varios, setVarios] = useState(false);   // (FBE Esencial) varios de una vez, pegando la lista
   const [ocupado, una] = useUnaVez();
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
+  if (varios) return <HojaAltasEsencial inicio={f.inicio} alCerrar={(hecho) => (hecho ? alCerrar(null) : setVarios(false))} />;
   if (creado) return <Invitacion atleta={creado.atleta || creado} codigoDado={creado.codigo || null} esencial={!!creado.codigo} alCerrar={() => alCerrar((creado.atleta || creado).id)} />;
   const esencial = f.modalidad === 'por_su_cuenta';
   return (
@@ -733,7 +738,8 @@ function NuevoAtleta({ alCerrar }) {
         <div class="campo"><span class="etq">Modalidad</span>
           <Segmentos etiqueta="Modalidad" valor={f.modalidad} opciones={[['seguimiento', 'Con seguimiento'], ['por_su_cuenta', 'FBE Esencial']]}
             alCambiar={(v) => v && setF({ ...f, modalidad: v })} />
-          {esencial && <span class="ayuda">Va por su cuenta: la app le asigna el plan según su cuestionario y le prepara cada semana. Sin chat ni revisión.</span>}</div>
+          {esencial && <span class="ayuda">Va por su cuenta: la app le asigna el plan según su cuestionario y le prepara cada semana. Sin chat ni revisión.</span>}
+          {esencial && <button type="button" class="btn-texto" onClick={() => setVarios(true)}><Icono n="equipo" /> ¿Son varios? Pega la lista y dalos de alta de una vez</button>}</div>
         {esencial && <>
           <div class="campo"><span class="etq">Nivel de FBE Esencial</span>
             <Segmentos etiqueta="Nivel de FBE Esencial" valor={f.esencialNutri ? 'nutri' : 'entreno'} opciones={[['entreno', 'Entrenamiento'], ['nutri', 'Entrenamiento y nutrición']]}
@@ -767,10 +773,10 @@ export function Invitacion({ atleta, alCerrar, codigoDado = null, esencial = fal
   const contactos = useContactos([atleta.id]);   // (v0.105) con su teléfono, el WhatsApp va directo a él
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
-  const inicio = esencial && atleta.esencial_inicio ? fechaLarga(atleta.esencial_inicio) : null;
-  const mensaje = !codigo.datos ? '' : esencial
-    ? `Hola, ${nombre}. Ya tienes tu plaza en FBE Esencial. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos} (caduca en 14 días y solo vale una vez). Lo primero, tu cuestionario: con él, la app te prepara tu plan${inicio ? `, que empieza el ${inicio}` : ''}.`
-    : `Hola, ${nombre}. Ya tienes tu acceso a la app de FBE Coaching. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos}. Caduca en 14 días y solo vale una vez.`;
+  // (FBE Esencial) también al generar otro código desde la lista o su ficha: su mensaje, con su lunes de inicio
+  const esEs = esencial || esPorSuCuenta(atleta);
+  const est = useCarga(() => (esEs && !atleta.esencial_inicio ? api.estadoEsencial(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, esEs], { tirar: false });
+  const mensaje = mensajeInvitacion({ nombre: atleta.nombre, codigo: codigo.datos, url, esencial: esEs, inicio: atleta.esencial_inicio || est.datos?.esencial_inicio || null });
   return (
     <Hoja titulo={`Invitación para ${nombre}`} alCerrar={alCerrar}>
       {codigo.cargando ? <Cargando /> : codigo.error ? <ErrorCaja error={codigo.error} /> : (

@@ -212,6 +212,27 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const inv = p.locator('[aria-modal="true"]').last();
     const msg = await p.waitForFunction(() => /Ya tienes tu plaza en FBE Esencial/.test(document.querySelector('[aria-modal="true"]:last-of-type, [role="dialog"]:last-of-type')?.textContent || document.body.textContent), null, { timeout: 15000 }).then(() => true).catch(() => false);
     check(msg && /que empieza el lunes/.test(await inv.textContent().catch(() => '')), 'el alta de FBE Esencial: su mensaje de invitación, con su lunes de inicio');
+    // (v0.236) varios de una vez: pegar la lista, ver lo que entiende la app y crear sus fichas con su código
+    await inv.getByRole('button', { name: /^Cerrar/ }).first().click().catch(() => {});
+    await p.waitForTimeout(800);
+    await p.getByRole('button', { name: /Atletas/ }).first().click().catch(() => {});   // (al cerrar se abre su ficha)
+    await p.waitForTimeout(800);
+    await p.getByRole('button', { name: /Añadir atleta/ }).first().click();
+    const h2 = p.locator('[aria-modal="true"]').last();
+    await h2.getByRole('button', { name: 'FBE Esencial' }).click();
+    await h2.getByRole('button', { name: /Son varios/ }).click();
+    const hv = p.locator('[aria-modal="true"]').last();
+    await hv.locator('#alt-texto').fill('Nuria Sanz, nuria@correo.com\nDiego Mora; diego@correo.com; nutrición\nsolo@correo.com');
+    const prev = await hv.getByRole('heading', { name: /Lo que ha entendido la app: 2 de 3/ }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    check(prev && /Falta el nombre/.test(await hv.textContent()) && /Con nutrición/.test(await hv.textContent()), 'varios de FBE Esencial: lo que entiende la app de la lista (2 de 3; a uno le falta el nombre)');
+    await hv.getByRole('button', { name: /Crear 2 fichas con su código/ }).click();
+    const invs = p.locator('[aria-modal="true"]').last();
+    const listas = await invs.getByText(/Creadas 2 fichas/).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const correos = await invs.locator('a[href^="mailto:"]').evaluateAll((as) => as.map((x) => x.getAttribute('href')));
+    check(listas && correos.length === 2 && correos.every((h) => /subject=/.test(h) && /FBE%20Esencial/.test(h)), 'sus invitaciones: «Correo» de cada uno, ya escrito con su código');
+    await invs.getByRole('button', { name: 'Hecho' }).click();
+    const enLista = await p.waitForFunction(() => /Nuria Sanz/.test(document.body.textContent) && /Diego Mora/.test(document.body.textContent), null, { timeout: 10000 }).then(() => true).catch(() => false);
+    check(enLista, 'y los dos salen en la lista de Atletas');
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);
