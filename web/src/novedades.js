@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.221': {
+    atleta: [],
+    coach: [
+      'Carrera: el asistente de plan. Le das la carrera, sus días, lo que corre y su nivel, y te propone todas las semanas.',
+      'En las semanas: «Rehacer desde esta semana» (con vuelta a correr tras una molestia) y copiar la anterior un 5 o un 10 % más.',
+    ],
+  },
   '0.220': {
     atleta: [],
     coach: [

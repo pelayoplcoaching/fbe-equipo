@@ -6650,6 +6650,14 @@ if (parte('v0.220: revisar vídeos en el ordenador, en columnas')) try {
   fallos++;
   console.log('  ✗ revisar vídeos en el ordenador (v0.220):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.221: carrera, tanda 2 (el asistente de plan, rehacer desde aquí con la vuelta a correr y copiar una semana)
+if (parte('v0.221: carrera, el asistente de plan')) try {
+  const { probarCarrera221 } = await import('./e2e-carrera-221.mjs');
+  await probarCarrera221({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera de la v0.221:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

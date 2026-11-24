@@ -1474,6 +1474,28 @@ export function crearApi(backend, opciones = {}) {
       if (semana.lunes === lunesDe(hoyISO())) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
       return r;
     },
+    // (v0.221) Muchas semanas a la vez (el asistente de plan, «Rehacer desde aquí», «Repetir esta semana»): se limpian como
+    // una a una y van en una sola escritura; con borrarDesde, las que ya tenía desde ese lunes y no están en la lista se
+    // quitan (el plan nuevo las sustituye). Si entre ellas está la semana en curso, lo de esa semana se pone al día.
+    async guardarSemanasCarrera(atletaId, lista = [], { borrarDesde = null } = {}) {
+      const limpias = [];
+      for (const x of lista) {
+        const { semana, error } = limpiarSemanaCarrera(x);
+        if (error) throw new Error(`Semana del ${x?.lunes || '?'}: ${error}`);
+        limpias.push({ ...semana, atleta_id: atletaId });
+      }
+      if (!limpias.length && !borrarDesde) return [];
+      const lunesNuevos = new Set(limpias.map((s) => s.lunes));
+      if (borrarDesde) {
+        const tenia = await b.select('carrera_semanas', { eq: { atleta_id: atletaId }, gte: { lunes: lunesDe(borrarDesde) }, cols: 'lunes' }).catch(falta056);
+        const fuera = tenia.map((s) => s.lunes).filter((l) => !lunesNuevos.has(l));
+        if (fuera.length) await b.delete('carrera_semanas', { eq: { atleta_id: atletaId }, in: { lunes: fuera } }).catch(falta056);
+      }
+      const r = limpias.length ? await b.upsert('carrera_semanas', limpias, 'atleta_id,lunes').catch(falta056) : [];
+      const esta = lunesDe(hoyISO());
+      if (lunesNuevos.has(esta) || (borrarDesde && lunesDe(borrarDesde) <= esta)) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
+      return r;
+    },
     async borrarCarreraSemana(atletaId, lunes) {
       const r = await b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta056);
       if (lunes === lunesDe(hoyISO())) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
