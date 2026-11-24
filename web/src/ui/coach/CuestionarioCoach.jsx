@@ -98,6 +98,10 @@ export function EsencialCoach({ atleta, alCambiar }) {
         <div><dt>Cuestionario</dt><dd>{c.cargando && !q ? 'Cargando…' : cuest}</dd></div>
         <div><dt>Visto bueno médico</dt><dd>{visto}</dd></div>
         <div><dt>Su plan</dt><dd>{bl.cargando && !bl.datos ? 'Cargando…' : bloque ? `${bloque.nombre}${bloque.fecha_inicio ? `, desde el ${fechaLarga(bloque.fecha_inicio)}` : ''}` : 'Aún no tiene'}</dd></div>
+        {/* (093) con nutrición: su plan de comida lo calcula y lo ajusta la app; si dice tener o haber tenido un TCA, mantener */}
+        {atleta.nutricion !== false && <div><dt>Comida</dt><dd>{q?.tca === true
+          ? 'La app le calcula el plan y lo ajusta cada semana. Dice tener o haber tenido un trastorno de la conducta alimentaria: su plan es de mantener y nunca baja solo.'
+          : 'La app le calcula el plan y lo ajusta cada semana (en Nutrición, sus planes y por qué cambian).'}</dd></div>}
       </dl>
       {necesita && !atleta.visto_bueno_en && (
         <div class="panel-pad pila-s" style="border-top:1px solid var(--linea)">
