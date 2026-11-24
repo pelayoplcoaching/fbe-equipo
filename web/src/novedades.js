@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.237': {
+    // (FBE Esencial: el aviso del cuestionario y dos cifras más en el panel; para los atletas de ahora no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial: si alguien activó su cuenta y no ha enviado el cuestionario, la app se lo recuerda antes de su lunes (migración 095).',
+      'En el panel de FBE Esencial ves también quién aún no ha activado su cuenta y qué parte de las series pautadas hacen.',
+    ],
+  },
   '0.236': {
     // (FBE Esencial: altas en grupo; para los atletas no cambia nada)
     atleta: [],

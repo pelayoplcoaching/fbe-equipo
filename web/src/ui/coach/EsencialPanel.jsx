@@ -14,8 +14,9 @@ export function EsencialPanel({ lista = [], abrir }) {
   const ids = suyos.map((r) => r.atleta_id);
   const enc = useCarga(() => api.encuestaEsencial(ids, TITULOS_ENCUESTA).catch(() => []), [ids.join()], { recuerdo: `encuesta-esencial:${ids.join()}` });
   const [hoja, setHoja] = useState(false);
-  if (!suyos.length) return null;
-  const c = cifrasPiloto(suyos, hoy, enc.datos || []);
+  const invitados = lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado === 'invitado');
+  if (!suyos.length && !invitados.length) return null;
+  const c = cifrasPiloto(lista, hoy, enc.datos || []);   // (con todos: cuenta también a quien aún no ha activado su cuenta)
   const filas = [...suyos].sort((a, b) => (a.estado === 'baja') - (b.estado === 'baja') || a.nombre.localeCompare(b.nombre, 'es'));
   return (
     <details class="panel panel-pad corr-panel" open={c.conAvisos > 0}>
@@ -24,10 +25,12 @@ export function EsencialPanel({ lista = [], abrir }) {
       <p class="peq secundario">
         {c.conPlan ? `Esta semana han entrenado ${c.entrenaron} de ${c.conPlan}. ` : ''}
         {c.sesiones4.pct != null ? `Sesiones apuntadas en sus 4 últimas semanas: ${c.sesiones4.hechas} de ${c.sesiones4.total} (${c.sesiones4.pct} %; el listón, ${LISTON_ESENCIAL.sesiones} %). ` : ''}
+        {c.series4.pct != null ? `Series pautadas hechas: ${c.series4.pct} %. ` : ''}
+        {c.sinActivar.length ? `Sin activar su cuenta: ${c.sinActivar.length} (${c.sinActivar.slice(0, 6).join(', ')}${c.sinActivar.length > 6 ? ` y ${c.sinActivar.length - 6} más` : ''}). ` : ''}
         {c.bajas ? `De baja: ${c.bajas}. ` : ''}
         {c.encuestas.filter((e) => e.mandadas).map((e) => `Encuesta (${e.nombre.toLowerCase()}): ${e.contestadas} de ${e.mandadas} contestadas. `).join('')}
       </p>
-      <ul class="corr-lista">
+      {filas.length > 0 && <ul class="corr-lista">
         {filas.map((r) => {
           const f = filaPiloto(r, hoy);
           return (
@@ -42,10 +45,10 @@ export function EsencialPanel({ lista = [], abrir }) {
             </li>
           );
         })}
-      </ul>
-      <div class="fila-envolver" style="margin-top:var(--esp-10)">
+      </ul>}
+      {filas.length > 0 && <div class="fila-envolver" style="margin-top:var(--esp-10)">
         <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}><Icono n="mensaje" /> {c.encuesta.mandadas ? 'Las encuestas y sus respuestas' : 'Mandar la encuesta'}</button>
-      </div>
+      </div>}
       {hoja && <HojaEncuesta suyos={filas.filter((r) => r.estado !== 'baja')} tareas={enc.datos || []} alCerrar={() => setHoja(false)} alCambiar={() => enc.recargar(true)} />}
     </details>
   );

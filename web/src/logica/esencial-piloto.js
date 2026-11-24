@@ -45,6 +45,8 @@ export function cifrasPiloto(resumenes = [], hoy, encuesta = []) {
   // (las sesiones de sus 4 últimas semanas acabadas: cumplimiento() de logica/informe.js)
   const s4 = conPlan.reduce((t, r) => ({ hechas: t.hechas + (r.cumplimiento?.sesiones?.hechas || 0), total: t.total + (r.cumplimiento?.sesiones?.total || 0) }), { hechas: 0, total: 0 });
   const pct = s4.total ? Math.round((100 * s4.hechas) / s4.total) : null;
+  // (las series pautadas hechas en esas 4 semanas: si hacen la semana tal cual se la prepara la app)
+  const se = conPlan.reduce((t, r) => ({ hechas: t.hechas + (r.cumplimiento?.series?.hechas || 0), pautadas: t.pautadas + (r.cumplimiento?.series?.pautadas || 0) }), { hechas: 0, pautadas: 0 });
   const ids = new Set(suyos.map((r) => r.atleta_id));
   // (cada encuesta: a cuántos se mandó y cuántos contestaron; «encuesta» es la última mandada, o la primera si no hay)
   const encuestas = ENCUESTAS_ESENCIAL.map((e) => {
@@ -53,6 +55,9 @@ export function cifrasPiloto(resumenes = [], hoy, encuesta = []) {
   });
   return {
     total: suyos.length, siguen: siguen.length, bajas: suyos.length - siguen.length, conPlan: conPlan.length, entrenaron,
+    // (dados de alta que aún no han activado su cuenta con su código)
+    sinActivar: resumenes.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado === 'invitado').map((r) => r.nombre),
+    series4: { ...se, pct: se.pautadas ? Math.round((100 * se.hechas) / se.pautadas) : null },
     sesionesSemana: sem, sesiones4: { ...s4, pct }, cumpleSesiones: pct != null && pct >= LISTON_ESENCIAL.sesiones,
     conAvisos: siguen.filter((r) => filaPiloto(r, hoy).nivel !== 'ok').length,
     encuestas, encuesta: [...encuestas].reverse().find((e) => e.mandadas) || encuestas[0],

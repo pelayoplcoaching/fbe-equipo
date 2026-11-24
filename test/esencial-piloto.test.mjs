@@ -23,17 +23,20 @@ check(filaPiloto({ ...base, semana: { numero: 1 }, ultimaSesion: null }, hoy).ni
   'sin haber entrenado nunca: en su semana 1, en verde; en la 2 o después, ámbar');
 
 console.log('\nLas cifras');
-const c4 = (hechas, total) => ({ sesiones: { hechas, total, pct: Math.round((100 * hechas) / total) } });
+const c4 = (hechas, total, sh = hechas * 3, sp = total * 3) => ({ sesiones: { hechas, total, pct: Math.round((100 * hechas) / total) }, series: { hechas: sh, pautadas: sp } });
 const lista = [
   { ...base, atleta_id: 'a', ultimaSesion: '2027-02-16', cumplimiento: c4(7, 8) },
   { ...base, atleta_id: 'b', ultimaSesion: '2027-02-05', cumplimiento: c4(4, 8) },
   { ...base, atleta_id: 'c', estado: 'baja', ultimaSesion: '2027-01-20', cumplimiento: c4(2, 8) },
   { ...base, atleta_id: 'd', bloque: null, semana: null, ultimaSesion: null },
   { ...base, atleta_id: 'e', modalidad: null, ultimaSesion: hoy, cumplimiento: c4(8, 8) },
+  { ...base, atleta_id: 'f', nombre: 'Nuria Sanz', estado: 'invitado', bloque: null, semana: null, ultimaSesion: null },
 ];
 const enc = [{ atleta_id: 'a', titulo: ENCUESTA_ESENCIAL.titulo, hecha_en: '2027-02-16T10:00:00Z' }, { atleta_id: 'b', titulo: ENCUESTA_ESENCIAL.titulo, hecha_en: null }, { atleta_id: 'e', titulo: ENCUESTA_ESENCIAL.titulo, hecha_en: 'x' }];
 const c = cifrasPiloto(lista, hoy, enc);
 check(c.total === 4 && c.siguen === 3 && c.bajas === 1 && c.conPlan === 2 && c.entrenaron === 1, 'cuatro por su cuenta (el de seguimiento no cuenta): siguen 3, uno de baja, 2 con plan y 1 ha entrenado esta semana');
+check(c.sinActivar.length === 1 && c.sinActivar[0] === 'Nuria Sanz' && c.total === 4, 'quien aún no ha activado su cuenta, aparte: «Sin activar su cuenta» (no cuenta entre los cuatro)');
+check(c.series4.hechas === 33 && c.series4.pautadas === 48 && c.series4.pct === 69, 'las series pautadas hechas en esas 4 semanas: 33 de 48 (69 %)');
 check(c.sesiones4.hechas === 11 && c.sesiones4.total === 16 && c.sesiones4.pct === 69 && !c.cumpleSesiones && LISTON_ESENCIAL.sesiones === 75, 'sesiones apuntadas de las pautadas en 4 semanas: 11 de 16 (69 %), por debajo del listón (75 %)');
 check(c.encuesta.mandadas === 2 && c.encuesta.contestadas === 1, 'la encuesta: mandada a 2 de los suyos y contestada por 1');
 const c12 = cifrasPiloto(lista, hoy, [...enc, { atleta_id: 'a', titulo: ENCUESTAS_ESENCIAL[1].titulo, hecha_en: null }]);
