@@ -6,6 +6,11 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.217': {
+    // (solo detalles: una luna de más en la entrada, «Te quedan» en tableta y casillas del coach; no merece hoja propia)
+    atleta: [],
+    coach: [],
+  },
   '0.216': {
     atleta: [
       'En tableta y ordenador la app aprovecha mejor la pantalla: Equipo va a dos columnas y Progreso y tu perfil quedan mejor repartidos.',
