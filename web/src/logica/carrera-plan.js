@@ -15,6 +15,24 @@
 //     o ritmo de carrera (media y maratón); afinado, poca y a ritmo de carrera.
 //   · Vuelta a correr: andar 30 min → 1 y 1 × 10 → 2 y 1 × 8 → 5 y 1 × 5 → 20-30 min seguidos; cada paso, 2 o 3 sesiones
 //     con dolor de 3/10 como mucho y sin empeorar a la mañana siguiente.
+// (v0.226) Con la revisión del experto («claude/carrera-revision-experto-respuesta.md»; Pelayo: «me fío de tu criterio»):
+//   · R42 Tope por salida (Frandsen 2025): ninguna salida más de un 10 % por encima de la más larga de los 30 días
+//     anteriores (sin contar carreras); solo una por semana, la tirada larga, puede batir esa marca.
+//   · R16 La tirada larga es la salida más larga de la semana: como mucho el 65 % de los km con 2 días, el 60 % con 3, el
+//     55 % con 4 y el 45 % con 5 o 6; como mucho 14, 18, 22 o 32 km y 1 h 30, 1 h 45, 2 h 15 o 3 h (5 km, 10 km, media,
+//     maratón).
+//   · R13 El pico, el menor entre la tabla y 12 km por día de carrera (5 y 10 km), 15 (media) o 20 (maratón); con pierna
+//     pesada 3 días o más, o «más de 60 años o vuelve de una lesión», el valor bajo (salvo que ya corra más).
+//   · R11 Empieza en lo que corre, sin saltar a un mínimo; si corre menos de 2 km por cada día que puede correr (o empieza
+//     de cero), primero «Empezar a correr»: correr y andar.
+//   · R9/R43 Las semanas que hacen falta: subir la salida más larga un 10 % por semana (con las descargas) hasta la que pide
+//     la carrera (5 y 10 km, su distancia; media, 16 km o 2 h; maratón, 28 km o 3 h), más el afinado (y 2 más con «más de 60
+//     o lesión»). En maratón, además, 30 km por semana o más de media en las 8 semanas antes del afinado. Si no llega, aviso
+//     rojo con tres salidas.
+//   · R12 Una semana de descarga cada 4 (cada 3 con «más de 60 o lesión»). R15 Con 2 días, aviso en maratón y media; sin
+//     segunda calidad con «más de 60 o lesión». R17 Si empieza o con «más de 60 o lesión», las 4 primeras semanas, rectas
+//     (las cuestas, después).
+//   · R18 El afinado, sin contar la carrera: maratón, un 20, un 40 y un 60 % menos; media, un 30 y un 50 %; 5 y 10 km, un 50 %.
 import { sumarDias, lunesDe, diasEntre, desdeISO } from './fechas.js';
 import { BIBLIOTECA_FBE } from './carrera-biblioteca.js';
 import { semanaPlanValida, fasesValidas } from './carrera.js';
@@ -28,21 +46,41 @@ export const tramoDistancia = (km) => (km <= 7 ? '5k' : km <= 15 ? '10k' : km <=
 export const SEMANAS_MIN = { '5k': 6, '10k': 8, media: 10, maraton: 14 };
 export const SEMANAS_AFINADO = { '5k': 1, '10k': 1, media: 2, maraton: 3 };
 const PICO = { '5k': [25, 40], '10k': [30, 50], media: [40, 60], maraton: [50, 80] };
+// (R13) el pico, como mucho tantos km por día de carrera a la semana
+const PICO_DIA = { '5k': 12, '10k': 12, media: 15, maraton: 20 };
 const SUBIDA = { empieza: 0.05, intermedio: 0.075, avanzado: 0.1 };
-// Lo que bajan los km en cada semana del afinado (la última, la de la carrera), respecto al pico
-const BAJADA_AFINADO = { 1: [0.5], 2: [0.3, 0.5], 3: [0.2, 0.35, 0.5] };
+// Lo que bajan los km de entreno en cada semana del afinado (la última, la de la carrera, sin contar la carrera), respecto
+// al pico (R18)
+const BAJADA_AFINADO = { 1: [0.5], 2: [0.3, 0.5], 3: [0.2, 0.4, 0.6] };
 const LARGA_MAX = { '5k': 14, '10k': 18, media: 22, maraton: 32 };
+// (R16) la tirada larga: lo que se le da de la semana según los días (la del maratón, desde la construcción, hasta el tope),
+// el tope y el tope en tiempo (minutos)
+const LARGA_PCT = { 2: 0.55, 3: 0.42, 4: 0.36, 5: 0.32, 6: 0.28 };
+export const LARGA_PCT_MAX = { 2: 0.65, 3: 0.6, 4: 0.55, 5: 0.45, 6: 0.45 };
+export const LARGA_MIN_MAX = { '5k': 90, '10k': 105, media: 135, maraton: 180 };
+// (R42) ninguna salida más de un 10 % por encima de la más larga de los 30 días anteriores
+export const PICO_SALIDA = 1.1;
+// (R43) la salida más larga que pide la carrera antes del afinado: km o, si antes llega, minutos
+const LLEGADA = { '5k': [5, null], '10k': [10, null], media: [16, 120], maraton: [28, 180] };
+// Su ritmo suave (s/km) si no se sabe por su ritmo umbral: para pasar los topes en tiempo a km
+const RITMO_SUAVE = { empieza: 420, intermedio: 390, avanzado: 345 };
 const NOMBRE_TRAMO = { '5k': '5 km', '10k': '10 km', media: 'media maratón', maraton: 'maratón' };
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const r0 = (x) => Math.round(x);
 // Los km de una sesión: con decimales hasta 10 km y enteros a partir de ahí, nunca menos de 3
 const kmSesion = (x) => Math.max(3, x < 10 ? Math.round(x * 2) / 2 : r0(x));
+const diasDe = (x) => Math.max(2, Math.min(6, Number(x) || 3));
+// Su ritmo suave (s/km): el que se diga (de su ritmo umbral) o el de su nivel
+export const ritmoSuaveDe = (ritmo, nivel) => (Number(ritmo) >= 180 && Number(ritmo) <= 900 ? Number(ritmo) : RITMO_SUAVE[nivel] || RITMO_SUAVE.intermedio);
 
-// El pico de km de la semana según la distancia y el nivel (y lo que ya hace)
-export function picoKm(km, nivel = 'intermedio', kmAhora = 0) {
-  const [lo, hi] = PICO[tramoDistancia(km)];
-  const pico = nivel === 'empieza' ? lo : nivel === 'avanzado' ? hi : r0((lo + hi) / 2);
+// El pico de km de la semana según la distancia y el nivel (y lo que ya hace). (R13) Con los días, como mucho tantos km por
+// día; con pierna pesada 3 días o más o con «más de 60 años o vuelve de una lesión» (prudente), el valor bajo de la tabla.
+export function picoKm(km, nivel = 'intermedio', kmAhora = 0, { dias = null, prudente = false, pierna = false } = {}) {
+  const t = tramoDistancia(km);
+  const [lo, hi] = PICO[t];
+  let pico = nivel === 'empieza' || prudente || pierna ? lo : nivel === 'avanzado' ? hi : r0((lo + hi) / 2);
+  if (dias) pico = Math.min(pico, PICO_DIA[t] * diasDe(dias));
   return Math.max(pico, r0(Number(kmAhora) || 0));
 }
 
