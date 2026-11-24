@@ -1220,7 +1220,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
             );
           })}
           <div class="series-acciones">
-            {luego && !completo && <button class="btn-texto btn-luego" onClick={luego} aria-label={`Máquina ocupada: hacer ${etiqueta ? 'la superserie' : ej.nombre} luego`}><Icono n="reloj" /> Máquina ocupada · hacerlo luego</button>}
+            {luego && !completo && <button class="btn-texto btn-luego" onClick={luego} aria-label={`Máquina ocupada: hacer ${etiqueta ? 'la superserie' : ej.nombre} luego`}><Icono n="reloj" /> Máquina ocupada{'\u00a0'}· hacerlo luego</button>}
             <button class="btn-texto" onClick={() => setExtra(filas - e.series + 1)}><Icono n="mas" /> Añadir serie</button>
             {quitable && <button class="btn-texto btn-quitar-serie" onClick={() => { setExtra(Math.max(0, quitable - 1 - e.series)); setBorr((b) => { const n = { ...b }; delete n[quitable]; return n; }); }} aria-label={`Quitar la serie ${quitable}, la añadida`}><Icono n="menos" /> Quitar serie {quitable}</button>}
           </div>

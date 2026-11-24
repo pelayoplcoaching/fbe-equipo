@@ -19,3 +19,8 @@
    que ganan por especificidad: "Elegir varios" en Atletas y "terminada" en la tabla de la revision semanal. Como la
    de "anadir varios" del editor (v0.212). */
 input[type="checkbox"].marcar-atleta:not(.interruptor), .rev-tabla td > input[type="checkbox"]:not(.interruptor) { width: 24px; height: 24px; }
+
+/* -- C4 - Sesion: "Maquina ocupada - hacerlo luego" no cabe en una linea en un movil estrecho. Las dos lineas iban
+   centradas (el texto de un boton se centra) y la segunda empezaba por el punto. Ahora, a la izquierda, junto a su
+   reloj, y el punto se queda al final de la primera linea (va unido a "ocupada" con un espacio que no parte). */
+.btn-luego { text-align: start; }

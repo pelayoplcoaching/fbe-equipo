@@ -131,6 +131,7 @@ btn-grande: diseno.css estilos.css pulido.css
 btn-hecha: estilos.css pulido.css
 btn-hero: diseno.css estilos.css
 btn-icono: atletas-lista.css diseno.css estilos.css personal.css productos.css pulido.css revision.css youtube.css
+btn-luego: belleza-c.css estilos.css
 btn-peligro: diseno.css equipo-belleza.css estilos.css
 btn-peq: diseno.css estilos.css pulido.css registro-actividad.css
 btn-persona-nombre: estilos.css personal.css
