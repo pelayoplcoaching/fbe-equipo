@@ -9,8 +9,8 @@
 //   · Clara Prieto: su cribado pide valoración médica y ha marcado que ya tiene el visto bueno. Pelayo lo confirma en su
 //     ficha (Datos) y la app le prepara su plan, desde el lunes que viene.
 import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
-import { filasPrimeras4, PRIMERAS_4 } from '../logica/esencial-plantilla.js';
-import { sumarDias } from '../logica/fechas.js';
+import { filasPrimeras4, PRIMERAS_4, NOVATO_2 } from '../logica/esencial-plantilla.js';
+import { sumarDias, lunesDe } from '../logica/fechas.js';
 
 // Los ejercicios de la guía con su nombre de la guía (la demo los añade si no están): grupos, tipo y si van por tiempo
 const EJERCICIOS_GUIA = [
@@ -62,6 +62,80 @@ export function copiarPlantillaEsencial(t, { plantilla, atletaId, inicio, uuid, 
   return b;
 }
 
+// La semana siguiente, como esencial_semana_siguiente() de la 092 (la demo y sus pruebas): el molde (la semana hecha o,
+// tras «Primeras 4 semanas», la plantilla de novato en un bloque nuevo) con lo del motor que cuadre y quepa en los topes.
+// Devuelve el id de la semana (la que ya hubiera para ese lunes, si la hay). Lanza los mismos errores que la base.
+const CAMPOS_MOTOR = ['series', 'reps_min', 'reps_max', 'rir_objetivo', 'rpe_objetivo', 'backoff_pct', 'series_detalle'];
+export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  const base = t('semanas').find((w) => w.id === p.base && w.programacion === 'programada');
+  const bloque = base && t('bloques').find((b) => b.id === base.bloque_id && b.atleta_id === atletaId && !b.es_plantilla);
+  if (!bloque) throw new Error('Esa semana no es tuya');
+  const inicio = p.inicio;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio || '') || lunesDe(inicio) !== inicio || inicio <= base.fecha_inicio || inicio > sumarDias(lunesDe(hoy), 7)) throw new Error('Ese lunes no vale para la semana siguiente');
+  const suyos = new Set(t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla).map((b) => b.id));
+  const ya = t('semanas').find((w) => suyos.has(w.bloque_id) && w.fecha_inicio === inicio && w.programacion === 'programada');
+  if (ya) return ya.id;
+  let molde, bloqueId, numero;
+  if (p.novato) {
+    if (bloque.nombre !== PRIMERAS_4.nombre || !base.marcas) throw new Error('El bloque de novato va después de la semana de marcas');
+    const pl = t('bloques').filter((b) => b.es_plantilla && b.nombre === NOVATO_2.nombre).sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)))[0];
+    molde = pl && t('semanas').filter((w) => w.bloque_id === pl.id).sort((x, y) => x.numero - y.numero)[0];
+    if (!molde) throw new Error(`No está la plantilla «${NOVATO_2.nombre}»`);
+    if (['activo', 'ajustado'].includes(bloque.estado)) bloque.estado = 'finalizado';
+    const nb = { id: uuid(), atleta_id: atletaId, es_plantilla: false, numero: Math.max(0, ...t('bloques').filter((b) => b.atleta_id === atletaId).map((b) => b.numero || 0)) + 1,
+      nombre: pl.nombre, foco: pl.foco ?? null, objetivo: pl.objetivo ?? null, descripcion: pl.descripcion ?? null, fecha_inicio: inicio, fecha_fin: sumarDias(inicio, 6), estado: 'activo', creado_en: ahoraISO, objetivo_logrado: null };
+    t('bloques').push(nb);
+    bloqueId = nb.id; numero = 1;
+  } else {
+    molde = base; bloqueId = bloque.id;
+    numero = Math.max(0, ...t('semanas').filter((w) => w.bloque_id === bloqueId).map((w) => w.numero || 0)) + 1;
+    bloque.fecha_fin = !bloque.fecha_fin || bloque.fecha_fin < sumarDias(inicio, 6) ? sumarDias(inicio, 6) : bloque.fecha_fin;
+  }
+  const nota = String(p.nota || '').trim().slice(0, 600) || (p.novato ? molde.nota_coach ?? null : null);
+  const foco = p.descarga ? 'descarga' : (molde.foco && molde.foco !== 'descarga' ? molde.foco : t('bloques').find((b) => b.id === bloqueId)?.foco ?? null);
+  const semana = { id: uuid(), bloque_id: bloqueId, numero, foco, fecha_inicio: inicio, nota_coach: nota, programacion: 'programada', marcas: false };
+  t('semanas').push(semana);
+  // Lo más que puede proponer en kilos: lo más que ha movido en ese ejercicio en sus dos últimas semanas, +10 % y un salto
+  const semanasRecientes = new Set(t('semanas').filter((w) => suyos.has(w.bloque_id) && w.fecha_inicio >= sumarDias(base.fecha_inicio, -7)).map((w) => w.id));
+  const pautaDe = Object.fromEntries(t('sesion_ejercicios').map((x) => [x.id, x]));
+  const sesionDe = Object.fromEntries(t('sesiones').map((x) => [x.id, x]));
+  const tope = (ejercicioId) => {
+    const kgs = t('series').filter((sr) => { const x = pautaDe[sr.sesion_ejercicio_id]; return x && semanasRecientes.has(sesionDe[x.sesion_id]?.semana_id) && (sr.sustituto_id || x.ejercicio_id) === ejercicioId && Number(sr.kg) > 0; }).map((sr) => Number(sr.kg));
+    return kgs.length ? Math.max(...kgs) : null;
+  };
+  const porTiempo = (id) => !!t('ejercicios').find((e) => e.id === id)?.por_tiempo;
+  for (const s of t('sesiones').filter((x) => x.semana_id === molde.id).sort((x, y) => x.orden - y.orden)) {
+    const ns = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: s.tipo, intencion: s.intencion ?? null, dinamica: s.dinamica ?? null,
+      fecha_realizada: null, completada: false, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null };
+    t('sesiones').push(ns);
+    const js = (p.sesiones || []).find((x) => Number(x.orden) === s.orden);
+    for (const q of t('sesion_ejercicios').filter((x) => x.sesion_id === s.id).sort((x, y) => x.orden - y.orden)) {
+      const nueva = { ...q, id: uuid(), sesion_id: ns.id };
+      const jp = js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === q.ejercicio_id);
+      if (jp) {
+        const v = { ...nueva };
+        if (!p.novato) for (const c of CAMPOS_MOTOR) v[c] = jp[c] ?? null;
+        if (v.series == null) v.series = q.series;
+        v.carga_sugerida_kg = jp.carga_sugerida_kg ?? null;
+        const tiempo = porTiempo(q.ejercicio_id), max = tiempo ? 180 : 60, tp = tope(q.ejercicio_id);
+        const det = Array.isArray(v.series_detalle) && v.series_detalle.length ? v.series_detalle : null;
+        const mal = !(v.series >= 1 && v.series <= 6) || (v.reps_min != null && !(v.reps_min >= 1 && v.reps_min <= max)) || (v.reps_max != null && !(v.reps_max >= 1 && v.reps_max <= max))
+          || (v.reps_min != null && v.reps_max != null && v.reps_min > v.reps_max) || (v.rir_objetivo != null && !(v.rir_objetivo >= 0 && v.rir_objetivo <= 5))
+          || (v.rpe_objetivo != null && !(v.rpe_objetivo >= 5 && v.rpe_objetivo <= 10)) || (v.backoff_pct != null && !(v.backoff_pct >= 0 && v.backoff_pct <= 50))
+          || (v.carga_sugerida_kg != null && (v.carga_sugerida_kg < 0 || tiempo || tp == null || v.carga_sugerida_kg > tp * 1.1 + 2.5))
+          || (det && (det.length !== v.series || v.backoff_pct != null || det.some((x) => x?.kg != null && (tp == null || x.kg > tp * 1.1 + 2.5))));
+        if (!mal) Object.assign(nueva, v, { series_detalle: det });
+      }
+      t('sesion_ejercicios').push(nueva);
+    }
+  }
+  return semana.id;
+}
+
 export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, versionLegal }) {
   const t = (nombre) => (db[nombre] ||= []);
   // Los ejercicios (con sus alternativas, por id, como en Supabase)
@@ -84,6 +158,25 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   t('bloques').push(plantilla);
   for (const w of filasPrimeras4()) {
     const semana = { id: uuid(), bloque_id: plantilla.id, numero: w.numero, foco: PRIMERAS_4.foco, fecha_inicio: null, nota_coach: w.nota, programacion: 'no_iniciada', marcas: w.marcas };
+    t('semanas').push(semana);
+    for (const s of w.sesiones) {
+      const sesion = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: 'fuerza', intencion: null, dinamica: null, fecha_realizada: null, completada: false,
+        nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null };
+      t('sesiones').push(sesion);
+      for (const e of s.ejercicios) {
+        t('sesion_ejercicios').push({ id: uuid(), sesion_id: sesion.id, ejercicio_id: ej[e.nombre].id, orden: e.orden, superserie: null, prioridad: e.prioridad, series: e.series,
+          reps_min: e.reps_min, reps_max: e.reps_max, rir_objetivo: e.rir_objetivo, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: e.descanso_seg,
+          tempo: null, notas_coach: e.notas_coach, variante: null });
+      }
+    }
+  }
+
+  // La plantilla de novato (desde la semana 5), como la crea la 092
+  const novato = { id: uuid(), atleta_id: null, es_plantilla: true, numero: null, nombre: NOVATO_2.nombre, foco: NOVATO_2.foco, objetivo: NOVATO_2.objetivo,
+    descripcion: NOVATO_2.descripcion, fecha_inicio: null, fecha_fin: null, estado: 'planificado', creado_en: ahoraISO, objetivo_logrado: null };
+  t('bloques').push(novato);
+  for (const w of filasPrimeras4(NOVATO_2)) {
+    const semana = { id: uuid(), bloque_id: novato.id, numero: w.numero, foco: NOVATO_2.foco, fecha_inicio: null, nota_coach: w.nota, programacion: 'no_iniciada', marcas: false };
     t('semanas').push(semana);
     for (const s of w.sesiones) {
       const sesion = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: 'fuerza', intencion: null, dinamica: null, fecha_realizada: null, completada: false,

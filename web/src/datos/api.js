@@ -397,6 +397,8 @@ const falta056 = (e) => {
 };
 // (091) FBE Esencial: sin la migración, ni las columnas ni las funciones
 const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
+// (FBE Esencial, tanda 3) ¿Falta la función de la 092 (la semana siguiente de quien va por su cuenta)?
+const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
 const falta088 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''} ${e?.codigo || ''}`;
@@ -7393,6 +7395,38 @@ export function crearApi(backend, opciones = {}) {
         await b.update('atletas', { visto_bueno_en: new Date().toISOString() }, { eq: { id: atletaId } });
       } catch (e) { if (falta091(e)) return { falta091: true }; throw e; }
       return api.esencialAsignarPlan(atletaId).catch((e) => ({ error: e.message }));
+    },
+    // (FBE Esencial, tanda 3, migración 092) La semana siguiente de quien va por su cuenta, sola: si toca (la última está
+    // hecha o ya es su lunes siguiente), el motor la prepara aquí, en su móvil, y la base la guarda (y lo comprueba todo).
+    // Con una posible errata antes de su lunes, no se prepara: devuelve las preguntas para la tarjeta. El motor se carga
+    // solo entonces. → null (nada que hacer) | { semana } | { preguntas, base, inicio } | { falta092: true }
+    async prepararSemanaEsencial(atletaId, { hoy = fechaMadrid() } = {}) {
+      const { siguientePaso } = await import('../logica/esencial-semana.js');
+      const prog = await api.programa(atletaId);
+      const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy });
+      if (!paso) return null;
+      const [{ propuestaEsencial }, d, atleta, esta, previa] = await Promise.all([
+        import('../logica/esencial-motor.js'),
+        api.bloqueCompleto(prog.bloque.id),
+        b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null),
+        api.checkin(atletaId, paso.base.fecha_inicio).catch(() => null),
+        api.checkin(atletaId, sumarDias(paso.base.fecha_inicio, -7)).catch(() => null),
+      ]);
+      const ids = unicos(Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id));
+      const ejercicios = porId(await api.ejerciciosPorIds(ids));
+      const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy,
+        checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
+      if (r.preguntas.length && hoy < paso.inicio) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
+      try {
+        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', nota: r.nota, descarga: r.descarga, sesiones: r.sesiones } });
+        return { semana, tipo: paso.tipo, inicio: paso.inicio };
+      } catch (e) { if (falta092(e)) return { falta092: true }; throw e; }
+    },
+    // (091) La tarjeta de posible errata: «Sí, es correcto» marca esas series como confirmadas (el motor ya no las descarta)
+    async esencialConfirmarSeries(pautaId, numeros = []) {
+      const filas = await b.select('series', { eq: { sesion_ejercicio_id: pautaId } });
+      for (const s of filas.filter((x) => numeros.includes(Number(x.numero)))) await b.update('series', { confirmada: true }, { eq: { id: s.id } });
+      return true;
     },
     async ficha(atletaId) {
       // (pulido 4) la ficha y lo suyo se piden a la vez; la foto, que sale de su perfil, a la vez que lo demás

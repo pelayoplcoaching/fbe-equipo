@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -4000,6 +4000,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const nuevo = copiarPlantillaEsencial(tabla, { plantilla: pl, atletaId: id, inicio, uuid, ahoraISO: new Date().toISOString() });
         persistirYa();
         return { bloque: nuevo.id, nuevo: true, plantilla: pl.nombre, inicio };
+      }
+      // (092) FBE Esencial: la semana siguiente, preparada por el motor en su móvil (como en la base)
+      if (nombre === 'esencial_semana_siguiente') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes preparar tu propia semana');
+        const r = semanaSiguienteEsencial(tabla, { p: args?.p || {}, atletaId: id, hoy: fechaMadrid(), uuid, ahoraISO: new Date().toISOString() });
+        persistirYa();
+        return r;
       }
       if (nombre === 'esencial_pedir_visto_bueno') {
         const a = tabla('atletas').find((x) => x.id === miAtletaId());

@@ -138,3 +138,45 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
       : 'Tu plan ya está listo. Mientras llega el día, mira tu semana 1 y piensa qué días te vienen mejor.',
     <button class="btn btn-grande btn-hero" onClick={() => irA?.('semana')}><Icono n="semana" /> Ver tu semana 1</button>);
 }
+
+// ---------- La semana siguiente, sola (tanda 3, migración 092) ----------
+// En Hoy de quien va por su cuenta y ya tiene plan: una vez al día (en este móvil), si toca, la app prepara su semana
+// siguiente con el motor. Si antes de su lunes hay una posible errata en lo apuntado, pregunta (y no prepara nada hasta
+// que conteste o llegue el lunes).
+// hechas: las sesiones hechas de su semana (al terminar la última, se vuelve a mirar sin esperar a mañana)
+export function SemanaEsencial({ recargarPrograma, abrirSesion, hechas = 0 }) {
+  const { api, atleta, aviso } = useApp();
+  const [preguntas, setPreguntas] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  const hoy = hoyISO();
+  const clave = `fbe-esencial-semana:${atleta.id}:${hoy}:${hechas}`;
+  const preparar = async (forzar = false) => {
+    try {
+      if (!forzar && sessionStorage.getItem(clave)) return;
+      sessionStorage.setItem(clave, '1');
+    } catch { /* sin almacenamiento: se intenta igual */ }
+    try {
+      const r = await api.prepararSemanaEsencial(atleta.id);
+      if (r?.preguntas?.length) { setPreguntas(r.preguntas); return; }
+      setPreguntas(null);
+      if (r?.semana) { aviso(r.tipo === 'novato' ? 'Tu plan desde la semana 5 ya está listo, con los kilos de tus marcas' : 'Tu semana siguiente ya está lista'); recargarPrograma?.(); }
+    } catch { /* (si falla, lo intenta mañana: nada que enseñar) */ }
+  };
+  useEffect(() => { preparar(); }, [atleta.id, hoy, hechas]);
+  if (!preguntas?.length) return null;
+  const q = preguntas[0];
+  return (
+    <section class="nota-coach pregunta-errata" aria-label="Una duda con lo que apuntaste">
+      <Icono n="pregunta" />
+      <div class="pila-s">
+        <strong>Antes de prepararte la semana, una duda</strong>
+        <span class="peq">{q.texto}</span>
+        <div class="fila-envolver">
+          <button type="button" class="btn btn-primario btn-peq" disabled={ocupado}
+            onClick={() => una(async () => { await api.esencialConfirmarSeries(q.pauta_id, q.series.map((s) => s.numero)).catch(() => {}); await preparar(true); })}>Sí, es correcto</button>
+          {q.sesion_id && <button type="button" class="btn btn-peq" onClick={() => abrirSesion?.(q.sesion_id)}>Corregirlo</button>}
+        </div>
+      </div>
+    </section>
+  );
+}

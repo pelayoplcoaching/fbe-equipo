@@ -147,6 +147,8 @@ begin
     select coalesce(max(numero), 0) + 1 into v_numero from public.semanas where bloque_id = v_nuevo;
     update public.bloques set fecha_fin = greatest(coalesce(fecha_fin, v_inicio + 6), v_inicio + 6) where id = v_nuevo;
   end if;
+  -- (la nota: la que manda la app con lo que cambia; en la semana 5, si no manda ninguna, la de la plantilla)
+  if v_nota is null and v_novato then select nota_coach into v_nota from public.semanas where id = v_molde; end if;
   v_foco := case when coalesce((p ->> 'descarga')::boolean, false) then 'descarga'
                  else (select coalesce(nullif(foco, 'descarga'), (select foco from public.bloques where id = v_nuevo)) from public.semanas where id = v_molde) end;
   insert into public.semanas (bloque_id, numero, foco, fecha_inicio, nota_coach, programacion)
@@ -154,8 +156,8 @@ begin
 
   -- Las sesiones y ejercicios del molde; de lo que manda la app, solo lo del motor (si cuadra con el molde y con los topes)
   for s in select * from public.sesiones where semana_id = v_molde order by orden loop
-    insert into public.sesiones (semana_id, orden, nombre, tipo, intencion, dinamica)
-    values (v_sem, s.orden, s.nombre, s.tipo, s.intencion, s.dinamica) returning id into v_ses;
+    insert into public.sesiones (semana_id, orden, nombre, tipo, intencion, dinamica, cardio)
+    values (v_sem, s.orden, s.nombre, s.tipo, s.intencion, s.dinamica, s.cardio) returning id into v_ses;
     select value into v_js from jsonb_array_elements(coalesce(p -> 'sesiones', '[]'::jsonb)) where (value ->> 'orden')::int = s.orden limit 1;
     for q in select se.*, coalesce(e.por_tiempo, false) as tiempo from public.sesion_ejercicios se join public.ejercicios e on e.id = se.ejercicio_id
              where se.sesion_id = s.id order by se.orden loop
@@ -172,14 +174,17 @@ begin
         select max(sr.kg) into v_tope from public.series sr join public.sesion_ejercicios x on x.id = sr.sesion_ejercicio_id
           join public.sesiones ss on ss.id = x.sesion_id join public.semanas ww on ww.id = ss.semana_id join public.bloques bb on bb.id = ww.bloque_id
           where bb.atleta_id = v_id and ww.fecha_inicio >= v_base.fecha_inicio - 7 and coalesce(sr.sustituto_id, x.ejercicio_id) = q.ejercicio_id;
-        v_series := coalesce((v_jp ->> 'series')::int, v_series);
-        v_rmin := (v_jp ->> 'reps_min')::int;
-        v_rmax := (v_jp ->> 'reps_max')::int;
-        v_rir := (v_jp ->> 'rir_objetivo')::numeric;
-        v_rpe := (v_jp ->> 'rpe_objetivo')::numeric;
+        -- (la semana 5: la plantilla manda en series, repeticiones y esfuerzo; de la app, solo los kilos de partida)
+        if not v_novato then
+          v_series := coalesce((v_jp ->> 'series')::int, v_series);
+          v_rmin := (v_jp ->> 'reps_min')::int;
+          v_rmax := (v_jp ->> 'reps_max')::int;
+          v_rir := (v_jp ->> 'rir_objetivo')::numeric;
+          v_rpe := (v_jp ->> 'rpe_objetivo')::numeric;
+          v_bo := (v_jp ->> 'backoff_pct')::numeric;
+          v_det := case when jsonb_typeof(v_jp -> 'series_detalle') = 'array' and jsonb_array_length(v_jp -> 'series_detalle') between 1 and 6 then v_jp -> 'series_detalle' else null end;
+        end if;
         v_kg := (v_jp ->> 'carga_sugerida_kg')::numeric;
-        v_bo := (v_jp ->> 'backoff_pct')::numeric;
-        v_det := case when jsonb_typeof(v_jp -> 'series_detalle') = 'array' and jsonb_array_length(v_jp -> 'series_detalle') between 1 and 6 then v_jp -> 'series_detalle' else null end;
         if v_series not between 1 and 6
            or (v_rmin is not null and v_rmin not between 1 and case when v_tiempo then 180 else 60 end)
            or (v_rmax is not null and v_rmax not between 1 and case when v_tiempo then 180 else 60 end)
@@ -187,7 +192,10 @@ begin
            or (v_rir is not null and v_rir not between 0 and 5)
            or (v_rpe is not null and v_rpe not between 5 and 10)
            or (v_bo is not null and v_bo not between 0 and 50)
-           or (v_kg is not null and (v_kg < 0 or v_tiempo or v_tope is null or v_kg > v_tope * 1.1 + 2.5)) then
+           or (v_kg is not null and (v_kg < 0 or v_tiempo or v_tope is null or v_kg > v_tope * 1.1 + 2.5))
+           or not public.series_detalle_valido(v_det, v_series) or (v_det is not null and v_bo is not null)
+           or exists (select 1 from jsonb_array_elements(coalesce(v_det, '[]'::jsonb)) d
+                      where jsonb_typeof(d -> 'kg') = 'number' and (v_tope is null or (d ->> 'kg')::numeric > v_tope * 1.1 + 2.5)) then
           -- (fuera de los topes: se queda la del molde, sin parar la semana)
           v_series := q.series; v_rmin := q.reps_min; v_rmax := q.reps_max; v_rir := q.rir_objetivo; v_rpe := q.rpe_objetivo;
           v_kg := q.carga_sugerida_kg; v_bo := q.backoff_pct; v_det := q.series_detalle;

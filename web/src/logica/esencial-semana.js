@@ -36,14 +36,16 @@ const DE_LA_PAUTA = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'descan
 // La semana siguiente: las sesiones y pautas de `molde` (la semana hecha o la plantilla de novato), con lo que propone el
 // motor para cada una. pares: { id de la pauta del molde: fila del motor } (las filas «pregunta» y «sin_tocar» no cambian
 // nada). soloKilos: en la semana 5 se respeta la plantilla (series, repeticiones y esfuerzo) y solo se toman los kilos.
+// Los ejercicios por tiempo (la plancha) se quedan como estaban: el motor no sabe de segundos (sus rangos son de
+// repeticiones) y cómo suben es una decisión de Pelayo pendiente.
 // Devuelve [{ orden, nombre, tipo, pautas: [...] }] para la función de la base.
-export function semanaDesdePropuesta({ sesiones = [], pautas = {}, pares = {}, soloKilos = false }) {
+export function semanaDesdePropuesta({ sesiones = [], pautas = {}, pares = {}, soloKilos = false, ejercicios = {} }) {
   return [...sesiones].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((s) => ({
     orden: s.orden, nombre: s.nombre, tipo: s.tipo || 'fuerza',
     pautas: [...(pautas[s.id] || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((p) => {
       const base = Object.fromEntries([...DE_LA_PAUTA, ...DEL_MOTOR].map((c) => [c, p[c] ?? null]));
       const f = pares[p.id];
-      if (!f || ['pregunta', 'sin_tocar'].includes(f.tipo) || !f.propuesta) return base;
+      if (!f || ['pregunta', 'sin_tocar'].includes(f.tipo) || !f.propuesta || ejercicios[p.ejercicio_id]?.por_tiempo) return base;
       if (soloKilos) return { ...base, carga_sugerida_kg: f.propuesta.carga_sugerida_kg ?? base.carga_sugerida_kg };
       return { ...base, ...Object.fromEntries(DEL_MOTOR.map((c) => [c, f.propuesta[c] ?? null])) };
     }),
