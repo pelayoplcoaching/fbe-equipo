@@ -1,12 +1,16 @@
 // Lo de carrera que ven el coach y el atleta (v0.133): la tabla de zonas, la barra del macrociclo y las partes de una sesión
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
-import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE } from '../logica/carrera.js';
+import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE, ritmo5k } from '../logica/carrera.js';
 import { serieEficiencia } from '../logica/carrera-seguimiento.js';
 
 // (v0.219) Con ritmo umbral, una columna con el ritmo de cada zona; sin pulsómetro (zonas de ritmo), sin la de FC
 export function TablaZonas({ zonas, umbral = null }) {
   const conFC = !zonas.some((z) => z.sinFC);
   const conRitmo = zonas.some((z) => z.ritmo);
+  const r5k = conRitmo && umbral ? ritmo5k({ umbral }) : null;
+  // (v0.227, R1 y R4) Cuándo no fiarse del pulso ni del ritmo
+  const notas = [conFC && 'En series de menos de 4 minutos el pulso llega tarde: manda el ritmo o el esfuerzo.',
+    conRitmo && 'En cuestas, tierra, viento o con calor (20 °C o más), manda el esfuerzo, no el ritmo.'].filter(Boolean).join(' ');
   return (
     <div class="tabla-zonas-env">
       <table class="tabla-zonas">
@@ -22,7 +26,8 @@ export function TablaZonas({ zonas, umbral = null }) {
           ))}
         </tbody>
       </table>
-      {conRitmo && <p class="mini terciario">Ritmos en minutos por kilómetro, a partir del ritmo umbral.</p>}
+      {conRitmo && <p class="mini terciario">Ritmos en minutos por kilómetro, a partir del ritmo umbral.{r5k ? ` Las series de Z5, a ritmo de 5 km: unos ${fmtRitmo(r5k)}.` : ''}</p>}
+      <p class="mini terciario zonas-notas">{notas}</p>
     </div>
   );
 }

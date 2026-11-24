@@ -92,5 +92,5 @@ export const BIBLIOTECA_FBE = [
     [{ fase: C, seg: 600, zona: 1, zona_hasta: 2 }, { fase: B, nota: 'Skipping, talones al glúteo y zancada exagerada: 2 × 20 m de cada uno, volviendo andando' },
       rectas(6), { fase: B, seg: 900, zona: 2 }], { minutos: 35 }),
   sesion('test-30', 'Test de 30 minutos', 'Para calcular tu FC umbral y tu ritmo umbral (y con ellos, tus zonas).', 'test',
-    [calentar(), { fase: B, seg: 1800, zona: 4, zona_hasta: 5, nota: 'Lo más que puedas aguantar 30 min, parejo. Apunta la FC media y el ritmo de los últimos 20 min' }, enfriar()], { zona: 4, zona_hasta: 5 }),
+    [calentar(), { fase: B, seg: 1800, zona: 4, zona_hasta: 5, nota: 'Lo más que puedas aguantar 30 min, parejo. Apunta el ritmo medio de los 30 min (tu ritmo umbral) y la FC media de los últimos 20 (tu FC umbral)' }, enfriar()], { zona: 4, zona_hasta: 5 }),
 ];

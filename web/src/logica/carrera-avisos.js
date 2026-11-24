@@ -11,18 +11,43 @@
 //   · Choques con la fuerza: calidad o tirada larga el día antes o el día después de pierna pesada → moverla.
 //   · Ajuste de la semana siguiente: todo en verde y 90 % o más de los km → seguir; algún ámbar o entre el 70 y el 90 % →
 //     repetir el volumen; rojo o dolor fuera del modelo → bajar un 20-30 %.
+// (v0.227) Con la revisión del experto («claude/carrera-revision-experto-respuesta.md»):
+//   · R42 Tope por salida (Frandsen 2025): una salida hecha más de un 10 % por encima de la más larga de los 30 días
+//     anteriores (sin carreras) → aviso; más de un 30 % → aviso y que la semana siguiente no suba.
+//   · R21 La subida brusca de la semana queda como aviso suave (nivel «info»): el fuerte es el de R42.
+//   · R24/R28 Un solo juego de cortes de cumplimiento: 90 % o más, verde; 70-89 %, ámbar; menos del 70 %, rojo; más del 115 %,
+//     de más (aviso y no sube). Quien apunta solo minutos, por minutos. El ajuste: menos del 70 % también baja un 25 %.
+//   · R25 La tirada larga, por encima del tope de sus días (65 % con 2 salidas, 60 % con 3, 55 % con 4, 45 % con 5 o más).
+//   · R27 La calidad o la tirada larga, el día después de pierna pesada (o dos días después con margen 2) → moverla; el día
+//     antes, solo aviso; el mismo día vale (primero la carrera y la fuerza 3 horas después o más).
+//   · Las carreras (las sesiones de tipo carrera) no cuentan en los km de la semana: se planifican sin ellas (R18).
 import { sumarDias, lunesDe, diasEntre, desdeISO } from './fechas.js';
-import { progresarSemana } from './carrera-plan.js';
+import { progresarSemana, LARGA_PCT_MAX, PICO_SALIDA } from './carrera-plan.js';
 
 const DURAS = ['calidad', 'larga', 'carrera', 'test'];
 const r1 = (x) => Math.round(x * 10) / 10;
 const kmPlan = (s) => (s?.km_min != null || s?.km_max != null ? (Number(s.km_min ?? s.km_max) + Number(s.km_max ?? s.km_min)) / 2 : null);
 const diaDe = (iso) => ((desdeISO(iso).getDay() + 6) % 7) + 1;
+// (v0.227) Los minutos previstos de una semana del plan, si todas sus sesiones (sin la carrera) los traen; si no, null
+export const minutosPlan = (s) => {
+  const l = (s?.sesiones || []).filter((x) => x.tipo !== 'descanso' && x.tipo !== 'carrera');
+  return l.length && l.every((x) => Number(x.minutos) > 0) ? l.reduce((a, x) => a + (x.minutos_max ? (x.minutos + x.minutos_max) / 2 : x.minutos), 0) : null;
+};
+// (R24, R28, R30) Lo que hizo de lo previsto: por km o, si apunta solo minutos, por minutos (0 si no salió; null si no se sabe)
+export function cumplimientoSemana(w, semPlan) {
+  if (!semPlan) return null;
+  const k = kmPlan(semPlan);
+  if (!w?.salidas) return k || minutosPlan(semPlan) ? 0 : null;
+  if (w.conKm > 0 && k) return w.km / k;
+  const m = minutosPlan(semPlan);
+  return m && w.min > 0 ? w.min / m : null;
+}
+export const colorCumplimiento = (p) => (p == null ? null : p >= 0.9 ? 'verde' : p >= 0.7 ? 'ambar' : 'rojo');
 
 // Lo hecho de cada semana: las n semanas que acaban en la de `hasta` (incluida), de la más antigua a la más nueva
 export function resumenSemanas(hechas = [], hasta, n = 4) {
   const ultimo = lunesDe(hasta);
-  const out = Array.from({ length: n }, (_, i) => ({ lunes: sumarDias(ultimo, -7 * (n - 1 - i)), km: 0, salidas: 0, conKm: 0, larga: 0, dolorMax: null, verde: 0, ambar: 0, rojo: 0, duras: [] }));
+  const out = Array.from({ length: n }, (_, i) => ({ lunes: sumarDias(ultimo, -7 * (n - 1 - i)), km: 0, min: 0, salidas: 0, entrenos: 0, conKm: 0, larga: 0, dolorMax: null, verde: 0, ambar: 0, rojo: 0, duras: [] }));
   const por = Object.fromEntries(out.map((x) => [x.lunes, x]));
   for (const s of hechas || []) {
     const c = s?.cardio_hecho;
@@ -31,13 +56,22 @@ export function resumenSemanas(hechas = [], hasta, n = 4) {
     const w = por[lunesDe(f)];
     if (!w) continue;
     const km = Number(c.km) || 0;
-    w.km = r1(w.km + km); w.salidas++; w.larga = Math.max(w.larga, km);
+    w.salidas++;
+    // (las carreras, fuera de los km y de la salida más larga: el plan va sin ellas)
+    if (s?.cardio?.tipo !== 'carrera') { w.km = r1(w.km + km); w.larga = Math.max(w.larga, km); w.min += (Number(c.minutos) || 0) + (Number(c.seg) || 0) / 60; w.entrenos++; }
     if (km > 0) w.conKm++;
     if (Number.isInteger(c.dolor)) w.dolorMax = Math.max(w.dolorMax ?? 0, c.dolor);
     if (c.semaforo === 'verde' || c.semaforo === 'ambar' || c.semaforo === 'rojo') w[c.semaforo]++;
     if (DURAS.includes(s?.cardio?.tipo)) w.duras.push(f);
   }
   return out;
+}
+
+// (v0.227, R5) Los km medios por semana de las n semanas terminadas antes de la de hoy (sin carreras); null sin salidas
+export function kmMedio(hechas = [], hoy, n = 8) {
+  if (!hoy) return null;
+  const ws = resumenSemanas(hechas, sumarDias(lunesDe(hoy), -7), n);
+  return ws.some((w) => w.salidas) ? r1(ws.reduce((a, w) => a + w.km, 0) / n) : null;
 }
 
 // Dos sesiones duras en días seguidos (fechas o días de la semana 1-7)
@@ -52,7 +86,7 @@ function seguidas(dias) {
 }
 
 // Los avisos de un corredor, mirando la última semana terminada (y la que va, para el semáforo) y el plan de la que viene.
-// → [{ id, nivel: 'rojo' | 'ambar', titulo, texto, propuesta: { tipo: 'parar' | 'bajar' | 'tope' | 'rehacer' | 'mover', pct, lunes, km } }]
+// → [{ id, nivel: 'rojo' | 'ambar' | 'info', titulo, texto, propuesta: { tipo: 'parar' | 'bajar' | 'tope' | 'rehacer' | 'mover', pct, lunes, km } }]
 export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
   if (!hoy) return [];
   const esta = lunesDe(hoy);
@@ -61,10 +95,27 @@ export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
   const plan = Object.fromEntries((semanas || []).map((s) => [s.lunes, s]));
   const fecha = (l) => l.slice(8, 10).replace(/^0/, '') + '/' + l.slice(5, 7).replace(/^0/, '');
   const avisos = [];
-  // Subida brusca (la pasada frente a las dos anteriores)
+  // (R42) Una salida más de un 10 % por encima de la más larga de los 30 días anteriores (sin contar carreras), la pasada o esta
+  const salidas = (hechas || []).map((x) => ({ f: String(x?.fecha_realizada || '').slice(0, 10), km: Number(x?.cardio_hecho?.km) || 0, vale: x?.cardio_hecho?.modalidad === 'carrera' && x?.cardio?.tipo !== 'carrera' }))
+    .filter((x) => x.vale && x.f && x.km > 0);
+  let pico = null;
+  for (const r of salidas) {
+    if (r.f < pasada || r.f > sumarDias(esta, 6)) continue;
+    const ref = Math.max(0, ...salidas.filter((y) => y.f < r.f && y.f >= sumarDias(r.f, -30)).map((y) => y.km));
+    if (ref >= 3 && r.km > ref * PICO_SALIDA + 0.05 && (!pico || r.km / ref > pico.km / pico.ref)) pico = { ...r, ref };
+  }
+  if (pico) {
+    const fuerte = pico.km > pico.ref * 1.3;
+    const lunesPico = lunesDe(pico.f);
+    const wPico = lunesPico === esta ? w0 : w1;
+    avisos.push({ id: 'salida', nivel: 'ambar', titulo: 'Una salida mucho más larga de lo habitual',
+      texto: `El ${fecha(pico.f)} corrió ${r1(pico.km)} km, un ${Math.round((pico.km / pico.ref - 1) * 100)} % más que su salida más larga del mes anterior (${r1(pico.ref)} km). Pasar de un 10 % se asocia a más lesiones por sobrecarga.`,
+      propuesta: fuerte ? { tipo: 'tope', pct: 0, lunes: sumarDias(lunesPico, 7), km: r1(wPico.km), texto: `Que la semana siguiente no suba (${Math.round(wPico.km)} km como mucho)` } : null });
+  }
+  // (R21) Subida brusca (la pasada frente a las dos anteriores): aviso suave
   const media = (w2.km + w3.km) / 2;
   if (media >= 5 && w1.km > media * 1.3) {
-    avisos.push({ id: 'subida', nivel: 'ambar', titulo: 'Subida brusca de kilómetros',
+    avisos.push({ id: 'subida', nivel: 'info', titulo: 'Subida brusca de kilómetros',
       texto: `La semana del ${fecha(pasada)} corrió ${r1(w1.km)} km, un ${Math.round((w1.km / media - 1) * 100)} % más que la media de las dos anteriores (${r1(media)} km).`,
       propuesta: { tipo: 'tope', pct: 10, lunes: esta, km: r1(w1.km * 1.1), texto: `Que esta semana no pase de ${Math.round(w1.km * 1.1)} km (un 10 % más)` } });
   }
@@ -87,19 +138,21 @@ export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
       texto: `${cual}: ${[sem.rojo ? `${sem.rojo} en rojo` : '', sem.ambar ? `${sem.ambar} en ámbar` : ''].filter(Boolean).join(' y ')}.`,
       propuesta: { tipo: 'bajar', pct: 25, lunes: sem === w0 ? sumarDias(esta, 7) : esta, texto: `Una semana más suave (un 25 % menos) ${sem === w0 ? 'la que viene' : 'esta'}` } });
   }
-  // Cumplimiento: dos semanas seguidas por debajo del 70 %
-  // (sin juzgar por km una semana con salidas pero sin km apuntados: quien apunta solo minutos)
-  const pct = (w) => { const k = kmPlan(plan[w.lunes]); return k && (w.conKm > 0 || w.salidas === 0) ? w.km / k : null; };
-  const p1 = pct(w1), p2 = pct(w2);
+  // (R24) Cumplimiento: dos semanas seguidas en rojo (por debajo del 70 %), por km o, si apunta solo minutos, por minutos
+  const p1 = cumplimientoSemana(w1, plan[w1.lunes]), p2 = cumplimientoSemana(w2, plan[w2.lunes]);
   if (p1 != null && p2 != null && p1 < 0.7 && p2 < 0.7) {
     avisos.push({ id: 'cumplimiento', nivel: 'ambar', titulo: 'Por debajo de lo previsto',
-      texto: `Dos semanas seguidas por debajo del 70 % de los km previstos (${Math.round(p2 * 100)} % y ${Math.round(p1 * 100)} %).`,
+      texto: `Dos semanas seguidas por debajo del 70 % de lo previsto (${Math.round(p2 * 100)} % y ${Math.round(p1 * 100)} %).`,
       propuesta: { tipo: 'rehacer', texto: 'Rehacer el plan desde esta semana' } });
+  } else if (p1 != null && p1 > 1.15) {
+    avisos.push({ id: 'exceso', nivel: 'ambar', titulo: 'Más de lo previsto',
+      texto: `La semana del ${fecha(pasada)} hizo el ${Math.round(p1 * 100)} % de lo previsto: hacer de más también es un riesgo. Mejor no subir esta semana.`, propuesta: null });
   }
-  // Tirada larga de más del 35 %
-  if (w1.salidas >= 3 && w1.km >= 10 && w1.larga > w1.km * 0.35) {
+  // (R25) La tirada larga, por encima del tope de sus días
+  const nSal = Math.min(6, Math.max(2, w1.entrenos));
+  if (w1.entrenos >= 2 && w1.km >= 10 && w1.larga > w1.km * LARGA_PCT_MAX[nSal] + 0.05) {
     avisos.push({ id: 'larga', nivel: 'ambar', titulo: 'Tirada larga muy larga para su semana',
-      texto: `${r1(w1.larga)} km de ${r1(w1.km)} en la semana del ${fecha(pasada)}: más del 35 %.`, propuesta: null });
+      texto: `${r1(w1.larga)} km de ${r1(w1.km)} en la semana del ${fecha(pasada)}: más del ${Math.round(LARGA_PCT_MAX[nSal] * 100)} % con ${w1.entrenos} salidas.`, propuesta: null });
   }
   // Dos días duros seguidos: lo hecho la pasada o lo previsto para esta
   const hechasSeguidas = seguidas(w1.duras);
@@ -121,20 +174,25 @@ export function ajusteSiguiente({ semanas = [], hechas = [], hoy, lunes = null }
   const [w2, w] = resumenSemanas(hechas, evaluada, 2);
   const previsto = kmPlan(plan[evaluada]);
   const siguiente = plan[siguienteL] || null;
-  if (!previsto || !siguiente) return null;
-  // Sin km apuntados (solo minutos), no se mira el porcentaje: deciden los semáforos y el dolor
-  const pct = w.salidas > 0 && w.conKm === 0 ? null : w.km / previsto;
+  if (!siguiente || (!previsto && !minutosPlan(plan[evaluada]))) return null;
+  // (R28) Lo que hizo de lo previsto, por km o (si apunta solo minutos) por minutos; null si no se sabe: deciden el semáforo y el dolor
+  const pct = cumplimientoSemana(w, plan[evaluada]);
   const fuera = (w.dolorMax ?? 0) >= 6 || (w.dolorMax != null && w2.dolorMax != null && w.dolorMax > w2.dolorMax && w2.dolorMax > 0 && w.dolorMax >= 3);
+  const deLo = (p) => `Hizo el ${Math.round(p * 100)} % de lo previsto`;
   let decision, motivo;
   if (w.rojo || fuera) { decision = 'bajar'; motivo = w.rojo ? 'Algún semáforo en rojo' : 'Dolor fuera de lo que se acepta'; }
+  else if (pct != null && pct < 0.7) { decision = 'bajar'; motivo = w.salidas ? deLo(pct) : 'No apuntó ninguna carrera'; }
+  else if (pct != null && pct > 1.15) { decision = 'repetir'; motivo = `${deLo(pct)}: más de lo previsto, mejor no subir`; }
   else if (w.ambar) { decision = 'repetir'; motivo = 'Algún semáforo en ámbar'; }
-  else if (pct == null) { decision = 'seguir'; motivo = 'Todo en verde (sin km apuntados, solo minutos)'; }
-  else if (pct < 0.9) { decision = 'repetir'; motivo = w.salidas ? `Hizo el ${Math.round(pct * 100)} % de los km previstos` : 'No apuntó ninguna carrera'; }
-  else { decision = 'seguir'; motivo = `Todo en verde y el ${Math.round(pct * 100)} % de los km`; }
+  else if (pct == null) { decision = 'seguir'; motivo = 'Todo en verde (sin datos para comparar con lo previsto)'; }
+  else if (pct < 0.9) { decision = 'repetir'; motivo = deLo(pct); }
+  else { decision = 'seguir'; motivo = `Todo en verde y el ${Math.round(pct * 100)} % de lo previsto`; }
   let nueva = null;
-  const kSig = kmPlan(siguiente);
+  // Repetir: la semana siguiente, con el volumen de la evaluada (en km o, si el plan va en minutos, en minutos)
+  const kSig = kmPlan(siguiente), mSig = minutosPlan(siguiente), mEv = minutosPlan(plan[evaluada]);
+  const igualA = kSig && previsto ? previsto / kSig : !kSig && !previsto && mSig && mEv ? mEv / mSig : null;
   if (decision === 'bajar') nueva = progresarSemana(siguiente, -25);
-  else if (decision === 'repetir' && kSig && kSig > previsto) nueva = progresarSemana(siguiente, Math.round((previsto / kSig - 1) * 100));
+  else if (decision === 'repetir' && igualA != null && igualA < 1) nueva = progresarSemana(siguiente, Math.round((igualA - 1) * 100));
   return { decision, motivo, evaluada, lunes: siguienteL, pct: pct == null ? null : Math.round(pct * 100), nueva: nueva ? { ...nueva, lunes: siguienteL } : null };
 }
 
@@ -151,20 +209,30 @@ export function aplicarPropuesta(propuesta, semana) {
   return null;
 }
 
-// Choques con la fuerza: la calidad o la tirada larga el día antes o el día después de pierna pesada.
-// fuerza: [{ dia (1-7), pierna: true/false, nombre }]; carreras: [{ dia, tipo, titulo }] → [{ carrera, fuerza, propuesta (dia libre) }]
-export function choquesFuerza({ fuerza = [], carreras = [] }) {
+// (R27) Choques con la fuerza: la calidad o la tirada larga el día después de pierna pesada (con margen 2, también dos días
+// después: «más de 60», nuevo en la fuerza o con agujetas) → moverla a un día libre; el día antes, solo aviso; el mismo día
+// vale, con la carrera primero y la fuerza 3 horas después o más (aviso para recordarlo).
+// fuerza: [{ dia (1-7), pierna: true/false, nombre }]; carreras: [{ dia, tipo, titulo }]
+// → [{ carrera, fuerza, tipo: 'despues' | 'antes' | 'mismo', propuesta (día libre, solo en «despues») }]
+export function choquesFuerza({ fuerza = [], carreras = [], margen = 1 }) {
   const pierna = fuerza.filter((f) => f.pierna && f.dia).map((f) => f.dia);
   const ocupados = new Set([...fuerza.map((f) => f.dia), ...carreras.map((c) => c.dia)].filter(Boolean));
+  const malo = (d) => pierna.some((p) => (d - p >= 1 && d - p <= margen) || p - d === 1);
   const out = [];
   for (const c of carreras) {
     if (!c.dia || !['calidad', 'larga'].includes(c.tipo)) continue;
-    const f = fuerza.find((x) => x.pierna && x.dia && Math.abs(x.dia - c.dia) === 1);
-    if (!f) continue;
-    // Un día libre que no esté pegado a pierna ni a otra sesión dura
-    const duras = carreras.filter((x) => x !== c && DURAS.includes(x.tipo) && x.dia).map((x) => x.dia);
-    const libre = [1, 2, 3, 4, 5, 6, 7].find((d) => d !== c.dia && !ocupados.has(d) && !pierna.some((p) => Math.abs(p - d) <= 1) && !duras.some((x) => Math.abs(x - d) <= 1)) || null;
-    out.push({ carrera: c, fuerza: f, propuesta: libre });
+    const despues = fuerza.find((x) => x.pierna && x.dia && c.dia - x.dia >= 1 && c.dia - x.dia <= margen);
+    if (despues) {
+      // Un día libre que no sea de los de después de pierna (ni el de antes) ni esté pegado a otra sesión dura
+      const duras = carreras.filter((x) => x !== c && DURAS.includes(x.tipo) && x.dia).map((x) => x.dia);
+      const libre = [1, 2, 3, 4, 5, 6, 7].find((d) => d !== c.dia && !ocupados.has(d) && !malo(d) && !duras.some((x) => Math.abs(x - d) <= 1)) || null;
+      out.push({ carrera: c, fuerza: despues, tipo: 'despues', propuesta: libre });
+      continue;
+    }
+    const antes = fuerza.find((x) => x.pierna && x.dia && x.dia - c.dia === 1);
+    if (antes) { out.push({ carrera: c, fuerza: antes, tipo: 'antes', propuesta: null }); continue; }
+    const mismo = fuerza.find((x) => x.pierna && x.dia === c.dia);
+    if (mismo) out.push({ carrera: c, fuerza: mismo, tipo: 'mismo', propuesta: null });
   }
   return out;
 }
@@ -191,7 +259,7 @@ export function resumenCorredor({ semanas = [], hechas = [], eventos = [], hoy }
   return {
     km: w0.km, salidas: w0.salidas, plan: plan ? { km_min: plan.km_min, km_max: plan.km_max, sesiones: (plan.sesiones || []).filter((x) => x.tipo !== 'descanso').length } : null,
     semaforos: { verde: w0.verde, ambar: w0.ambar, rojo: w0.rojo }, proxima, dias: proxima ? diasEntre(hoy, proxima.fecha) : null,
-    avisos, nivel: avisos.some((a) => a.nivel === 'rojo') ? 'rojo' : avisos.length ? 'ambar' : 'verde',
+    avisos, nivel: avisos.some((a) => a.nivel === 'rojo') ? 'rojo' : avisos.some((a) => a.nivel === 'ambar') ? 'ambar' : 'verde',
   };
 }
 export { diaDe as diaDeFecha };

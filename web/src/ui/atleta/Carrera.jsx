@@ -15,8 +15,9 @@ import { calendarioICS } from '../../logica/plan.js';
 import {
   zonasDe, textoZona, textoRitmo, NOMBRE_TIPO, NOMBRE_TEST, SEMAFORO, ALARMA, pautaAmbar, minutosPauta, semanasConPlan, semanaDelPlan, faseDe,
   macrociclo, carreraObjetivo, proximaCarrera, textoCuentaAtras, textoObjetivoCarrera, textoResultado, textoKm, carreraHechaPorSemana, estadoKm,
-  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera, predecirTiempo, ultimaConResultado, fmtTiempo,
+  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera, predecirTiempo, ultimaConResultado, fmtTiempo, fuenteZonas, umbralCaducado,
 } from '../../logica/carrera.js';
+import { kmMedio } from '../../logica/carrera-avisos.js';
 
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 // ¿Es una pauta de carrera con estructura (tipo, zona o partes)?
@@ -139,7 +140,8 @@ function ContenidoCarrera({ d }) {
   const p = d.perfil || {};
   // (v0.219) su tiempo previsto, con su última carrera con resultado (Riegel; en maratón, una horquilla)
   const base = obj?.distancia_km ? ultimaConResultado(d.eventos, obj.id) : null;
-  const previsto = base ? predecirTiempo(base.resultado_seg, base.distancia_km, obj.distancia_km) : null;
+  // (v0.227, R5) en maratón, con sus km de las últimas 8 semanas y si ya ha corrido alguno
+  const previsto = base ? predecirTiempo(base.resultado_seg, base.distancia_km, obj.distancia_km, { kmSemana: kmMedio(d.hechas || [], hoy), primero: !(d.eventos || []).some((e) => e.id !== obj.id && e.fecha < hoy && Number(e.distancia_km) >= 40 && Number(e.resultado_seg) > 0) }) : null;
   const prevision = previsto ? { base, p: previsto } : null;
   // (v0.223) Sus carreras y las sesiones clave de su plan, al calendario del móvil (con aviso la víspera de cada carrera)
   const aCalendario = eventosCalendarioCarrera({ eventos: d.eventos, semanas: d.semanas, hoy });
@@ -152,7 +154,7 @@ function ContenidoCarrera({ d }) {
           <strong class="carrera-objetivo-nombre">{obj.nombre}</strong>
           <span class="carrera-cuenta num">{textoCuentaAtras(obj.fecha, hoy)}</span>
           <span class="peq">{fmtConDia(obj.fecha)}{textoObjetivoCarrera(obj) ? ` · ${textoObjetivoCarrera(obj)}` : ''}</span>
-          {prevision && <span class="mini carrera-prevision">Con tu {prevision.base.nombre}, tu tiempo previsto es {fmtTiempo(prevision.p.seg)}{prevision.p.hasta ? `–${fmtTiempo(prevision.p.hasta)}` : ''}</span>}
+          {prevision && <span class="mini carrera-prevision">Con tu {prevision.base.nombre}, tu tiempo previsto es {fmtTiempo(prevision.p.seg)}{prevision.p.desde ? ` (entre ${fmtTiempo(prevision.p.desde)} y ${fmtTiempo(prevision.p.hasta)})` : ''}</span>}
         </section>
       )}
       {macrociclo(p).length > 0 && <section class="pila-s" aria-labelledby="tc-plan"><h3 id="tc-plan" class="h-panel">{p.plan_nombre || 'Tu plan'}</h3><Macrociclo perfil={p} /></section>}
@@ -169,7 +171,9 @@ function ContenidoCarrera({ d }) {
           <Imagen id="carrera-zonas" clase="franja-ilu franja-pegada franja-zonas" tamanos="(min-width: 640px) 560px, 100vw" />
           <h3 id="tc-zonas" class="h-panel">Tus zonas</h3>
           <TablaZonas zonas={zonas} umbral={p.umbral} />
-          <p class="mini terciario">{[p.test_fecha && `Del test del ${fmtConDia(p.test_fecha)}${p.test_tipo ? ` (${NOMBRE_TEST[p.test_tipo].toLowerCase()})` : ''}`, p.fc_max && `FC máxima ${p.fc_max}`, p.lthr && `FC umbral ${p.lthr}`].filter(Boolean).join(' · ')}</p>
+          <p class="mini terciario">{[p.test_fecha && `Del test del ${fmtConDia(p.test_fecha)}${p.test_tipo ? ` (${NOMBRE_TEST[p.test_tipo].toLowerCase()})` : ''}`, p.fc_max && `FC máxima ${p.fc_max}${p.test_tipo === 'estimado' && fuenteZonas(p) === 'reserva' ? ' (estimada: zonas aproximadas)' : ''}`, p.lthr && `FC umbral ${p.lthr}`].filter(Boolean).join(' · ')}</p>
+          {/* (v0.227, R1) Las zonas de un test de hace más de 6 meses */}
+          {umbralCaducado(p, hoy) && <p class="mini aviso-texto">Tu test es de hace más de 6 meses: tu coach puede pedirte repetirlo.</p>}
         </section>
       )}
 

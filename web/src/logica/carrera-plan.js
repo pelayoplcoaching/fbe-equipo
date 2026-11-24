@@ -86,6 +86,7 @@ export function picoKm(km, nivel = 'intermedio', kmAhora = 0, { dias = null, pru
 
 // Lo que ha corrido de verdad: la media de km de las 4 semanas anteriores a esta (las que no corrió, con 0) y su salida más
 // larga. hechas: sesiones completadas de carrera (con cardio_hecho). null si no hay nada apuntado.
+// (v0.226, R19 y R42) La salida más larga, sin contar las carreras (una carrera no es la marca de la que subir).
 export function kmRecientes(hechas = [], hoy) {
   const lunes = lunesDe(hoy);
   const desde = sumarDias(lunes, -28);
@@ -94,7 +95,8 @@ export function kmRecientes(hechas = [], hoy) {
     const f = String(s?.fecha_realizada || '').slice(0, 10);
     const km = Number(s?.cardio_hecho?.km) || 0;
     if (!f || f < desde || f >= lunes || s?.cardio_hecho?.modalidad !== 'carrera') continue;
-    total += km; larga = Math.max(larga, km); n++;
+    total += km; n++;
+    if (s?.cardio?.tipo !== 'carrera') larga = Math.max(larga, km);
   }
   return n ? { media: r1(total / 4), larga: r1(larga), salidas: n } : null;
 }
@@ -119,32 +121,21 @@ export function fasesPara(total, km) {
   ].filter(Boolean);
 }
 
-// Los km de cada semana: subida desde lo que hace, una de cada cuatro más suave, el pico y el afinado
-export function kmPorSemana({ total, km, nivel = 'intermedio', kmAhora = 0 }) {
+// (R9/R43) Las semanas que hacen falta para llegar a la carrera con la salida larga que pide (LLEGADA): subiendo la más larga
+// un 10 % por semana desde la de ahora, sin subir en las de descarga (una de cada 4, o de cada 3 con prudente), más el
+// afinado (y 2 más con prudente); nunca menos de SEMANAS_MIN. empezar: las semanas de «Empezar a correr» que van delante.
+// → { necesarias, llegada (km), desde (km) }
+export function semanasNecesarias({ km, largaAhora = 0, kmAhora = 0, dias = 3, nivel = 'intermedio', prudente = false, ritmoSuave = null, empezar = 0 } = {}) {
   const t = tramoDistancia(km);
-  const af = Math.min(SEMANAS_AFINADO[t], total);
-  const pico = picoKm(km, nivel, kmAhora);
-  const sube = SUBIDA[nivel] ?? SUBIDA.intermedio;
-  const inicio = Math.max(nivel === 'empieza' ? 8 : 12, Math.min(Number(kmAhora) || 0, pico));
-  const out = [];
-  let actual = inicio;
-  const construir = total - af;
-  for (let i = 0; i < construir; i++) {
-    const n = i + 1;
-    // Una de cada cuatro, más suave (no la primera ni la última antes del afinado)
-    if (n % 4 === 0 && n < construir) { out.push({ km: r0(actual * 0.75), suave: true }); continue; }
-    if (i > 0) {
-      const previas = out.slice(-2).map((x) => x.km);
-      const media = previas.reduce((a, x) => a + x, 0) / previas.length;
-      // la subida se calcula sobre la última semana normal (no sobre la suave)
-      const ultimaNormal = [...out].reverse().find((x) => !x.suave)?.km ?? actual;
-      actual = Math.min(pico, ultimaNormal * (1 + sube), media * 1.3);
-    }
-    out.push({ km: r0(actual), suave: false });
-  }
-  const ref = Math.max(...out.map((x) => x.km), inicio);
-  (BAJADA_AFINADO[af] || []).forEach((b) => out.push({ km: r0(ref * (1 - b)), afinado: true }));
-  return out;
+  const ritmo = ritmoSuaveDe(ritmoSuave, nivel);
+  const [kmLl, minLl] = LLEGADA[t];
+  const llegada = r1(minLl ? Math.min(kmLl, (minLl * 60) / ritmo) : kmLl);
+  const desde = Math.max(3, Number(largaAhora) > 0 ? Number(largaAhora) : Number(kmAhora) > 0 ? (Number(kmAhora) / diasDe(dias)) * 1.3 : 3);
+  const cada = prudente ? 3 : 4;
+  let l = desde, n = 0;
+  while (l < llegada - 0.05 && n < 60) { n++; if (n % cada !== 0) l *= PICO_SALIDA; }
+  const extra = prudente ? 2 : 0;
+  return { necesarias: Math.max(SEMANAS_MIN[t] + extra, (Number(empezar) || 0) + n + SEMANAS_AFINADO[t] + extra), llegada, desde: r1(desde) };
 }
 
 // La sesión de calidad de cada fase (de la biblioteca FBE), rotando semana a semana
@@ -183,51 +174,78 @@ function calidadAfinado(t) {
     partes: [{ fase: 'calentar', seg: 900, zona: 1, zona_hasta: 2 }, bloque, { fase: 'enfriar', seg: 600, zona: 1 }] };
 }
 
-// El reparto de una semana según los días: tipo de cada sesión y su día (lunes 1 … domingo 7)
-export function huecosSemana(dias, nivel, n) {
-  const d = Math.max(2, Math.min(6, Number(dias) || 3));
+// El reparto de una semana según los días: tipo de cada sesión y su día (lunes 1 … domingo 7). (R15) La segunda sesión de
+// calidad (5 o 6 días), solo si es avanzado y no con prudente.
+export function huecosSemana(dias, nivel, n, prudente = false) {
+  const d = diasDe(dias);
   if (d === 2) return n % 2 ? [{ tipo: 'facil', dia: 3 }, { tipo: 'calidad', dia: 6 }] : [{ tipo: 'facil', dia: 3 }, { tipo: 'larga', dia: 6 }];
   if (d === 3) return [{ tipo: 'calidad', dia: 2 }, { tipo: 'facil', dia: 4 }, { tipo: 'larga', dia: 7 }];
   if (d === 4) return [{ tipo: 'calidad', dia: 2 }, { tipo: 'facil', dia: 4 }, { tipo: 'facil', dia: 5 }, { tipo: 'larga', dia: 7 }];
-  const segunda = nivel === 'avanzado' ? 'calidad' : 'facil';
+  const segunda = nivel === 'avanzado' && !prudente ? 'calidad' : 'facil';
   if (d === 5) return [{ tipo: 'facil', dia: 1 }, { tipo: 'calidad', dia: 2 }, { tipo: segunda, dia: 4 }, { tipo: 'facil', dia: 5 }, { tipo: 'larga', dia: 7 }];
   return [{ tipo: 'facil', dia: 1 }, { tipo: 'calidad', dia: 2 }, { tipo: 'facil', dia: 3 }, { tipo: segunda, dia: 4 }, { tipo: 'facil', dia: 5 }, { tipo: 'larga', dia: 7 }];
 }
 
-// Las sesiones de una semana normal: los km repartidos (la larga, un 30 % como mucho; la calidad, la que marque la fase)
-function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase }) {
-  const huecos = huecosSemana(dias, nivel, n);
+// Los km de una sesión de calidad de la biblioteca, más o menos (a 6 min/km), o los que le tocaban
+const kmCalidad = (s, cal) => (s?.km ? Number(s.km) : s?.minutos ? Math.min(cal, s.minutos / 6) : cal);
+
+// Las sesiones de una semana normal y sus km: { sesiones, km (lo que suman), max (la salida más larga) }.
+//   · La tirada larga (R16): lo que le toca de la semana (LARGA_PCT; la del maratón, desde la construcción, hasta el tope),
+//     como mucho LARGA_PCT_MAX, LARGA_MAX y el tope en tiempo (topeKm), y (R42) como mucho un 10 % más que la salida más
+//     larga de los 30 días anteriores (ref).
+//   · Las demás, como mucho la marca (ref) y nunca más que la tirada larga.
+//   · La calidad, la de la fase (R17: con soloRectas, las rectas de la base).
+function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase, ref = 0, topeKm = Infinity, prudente = false, soloRectas = false, suave = false }) {
+  const huecos = huecosSemana(dias, nivel, n, prudente);
+  const d = huecos.length;
   const conLarga = huecos.some((h) => h.tipo === 'larga');
   const nCal = huecos.filter((h) => h.tipo === 'calidad').length;
-  const larga = conLarga ? Math.min(LARGA_MAX[t], kmSemana * (huecos.length === 2 ? 0.45 : 0.3)) : 0;
-  const cal = Math.max(5, kmSemana * (huecos.length === 2 ? 0.45 : 0.18));
   const nFacil = huecos.filter((h) => h.tipo === 'facil').length;
-  const facil = nFacil ? Math.max(3, (kmSemana - larga - cal * nCal) / nFacil) : 0;
-  const rota = fase === 'base' ? ROTA.base : fase === 'construccion' ? ROTA.construccion : fase === 'especifico' ? ROTA[t] : null;
+  const marca = ref > 0 ? ref : Infinity;
+  const pct = t === 'maraton' && !suave && (fase === 'construccion' || fase === 'especifico') ? LARGA_PCT_MAX[d] : LARGA_PCT[d];
+  // (la que ya hace, si cabe en sus topes: no se le baja de lo que ya corre en su salida larga; en la de descarga, más
+  // corta de verdad: lo suyo de la semana y como mucho tres cuartos de la marca)
+  const deseada = suave ? Math.min(kmSemana * pct, marca * 0.75) : Math.max(kmSemana * pct, Math.min(ref, kmSemana * LARGA_PCT_MAX[d]));
+  const larga = conLarga ? Math.min(LARGA_MAX[t], deseada, kmSemana * LARGA_PCT_MAX[d], marca * PICO_SALIDA, topeKm) : 0;
+  const cal = Math.min(Math.max(5, kmSemana * (d === 2 ? 0.45 : 0.18)), marca);
+  const rota = fase === 'base' ? (soloRectas ? ['rodaje-rectas'] : ROTA.base) : fase === 'construccion' ? ROTA.construccion : fase === 'especifico' ? ROTA[t] : null;
+  const calidades = [];
   let k = 0;
-  return huecos.map((h) => {
+  for (let i = 0; i < nCal; i++) {
+    const id = rota ? rota[(iFase + k++) % rota.length] : null;
+    let s = fase === 'afinado' ? calidadAfinado(t) : id ? sesionDeBiblioteca(id) : null;
+    // a unos 6 min/km: si la de la biblioteca pasa mucho de lo que le toca a la calidad esta semana, más corta
+    const kmEst = s?.minutos ? s.minutos / 6 : null;
+    if (s && kmEst && kmEst > cal * 1.3) s = escalarSesion(s, Math.max(0.5, cal / kmEst));
+    calidades.push(s);
+  }
+  const kmCal = calidades.reduce((a, s) => a + kmCalidad(s, cal), 0);
+  let facil = nFacil ? (kmSemana - larga - kmCal) / nFacil : 0;
+  facil = Math.min(facil, marca, conLarga ? larga : Infinity);
+  let q = 0;
+  const sesiones = huecos.map((h) => {
     if (h.tipo === 'larga') {
       const final = t === 'maraton' && fase === 'especifico' && iFase % 2 === 0;
       return { tipo: 'larga', titulo: 'Tirada larga', dia: h.dia, km: kmSesion(larga), zona: 2,
         ...(final ? { nota: 'Los últimos 20-30 minutos, a ritmo de maratón' } : {}) };
     }
     if (h.tipo === 'calidad') {
-      const id = rota ? rota[(iFase + k++) % rota.length] : null;
-      let s = fase === 'afinado' ? calidadAfinado(t) : id ? sesionDeBiblioteca(id) : null;
-      // a unos 6 min/km: si la de la biblioteca pasa mucho de lo que le toca a la calidad esta semana, más corta
-      const kmEst = s?.minutos ? s.minutos / 6 : null;
-      if (s && kmEst && kmEst > cal * 1.3) s = escalarSesion(s, Math.max(0.5, cal / kmEst));
+      const s = calidades[q++];
       return s ? { ...s, dia: h.dia } : { tipo: 'facil', titulo: 'Rodaje suave', dia: h.dia, km: kmSesion(cal), zona: 2 };
     }
     return { tipo: 'facil', titulo: 'Rodaje suave', dia: h.dia, km: kmSesion(facil), zona: 2 };
   });
+  // (la de calidad cuenta por lo que dura, aunque sea de tipo «fácil», como las rectas de la base)
+  const kms = sesiones.map((s, i) => (huecos[i].tipo === 'calidad' ? kmCalidad(s, cal) : Number(s.km) || 0));
+  return { sesiones, km: r1(kms.reduce((a, x) => a + x, 0)), max: Math.max(0, ...kms) };
 }
 
-// La semana de la carrera: rodajes cortos y suaves (el último, con rectas, dos días antes como pronto) y la carrera
-function semanaCarrera({ kmSemana, dias, evento, km, diaCarrera }) {
-  const d = Math.max(2, Math.min(6, Number(dias) || 3));
+// La semana de la carrera: rodajes cortos y suaves (el último, con rectas, dos días antes como pronto) y la carrera. (R18)
+// kmSemana son los km de entreno, sin contar la carrera; (R42) ninguno pasa de la marca de los 30 días anteriores.
+function semanaCarrera({ kmSemana, dias, evento, km, diaCarrera, ref = 0 }) {
+  const d = diasDe(dias);
   const antes = Math.max(1, d - 1);
-  const resto = Math.max(3, (kmSemana - km) / antes);
+  const resto = Math.max(3, Math.min(kmSemana / antes, ref > 0 ? ref : Infinity));
   const huecos = [1, 2, 3, 4, 5].filter((x) => x <= diaCarrera - 2).slice(-antes);
   const ses = huecos.map((dia, i) => (i === huecos.length - 1
     ? { tipo: 'facil', titulo: 'Rodaje con rectas', dia, km: kmSesion(Math.min(resto, 6)), zona: 2, partes: [{ fase: 'bloque', seg: 1200, zona: 2 }, { fase: 'strides', reps: 4, seg: 20, rec_seg: 60, rec: 'andando', nota: 'Rápidas y sueltas: para llegar con chispa' }] }
@@ -246,8 +264,31 @@ const CLAVE = {
 };
 const FASE_CLAVE = { Base: 'base', 'Construcción': 'construccion', 'Específico': 'especifico', Afinado: 'afinado' };
 
-// El plan entero. datos: { evento (o km y fecha), dias, kmAhora, largaAhora, nivel, hoy, inicio? }
-// → { inicio, total, fases, semanas: [{ lunes, etiqueta, km_min, km_max, clave, sesiones }], avisos, tramo }
+// (R11) Empezar a correr: correr y andar, de menos a más, para quien corre muy poco o empieza de cero (los pasos de la
+// vuelta a correr, sin el de andar y sin hablar de dolor)
+export const PASOS_EMPEZAR = [
+  { titulo: 'Correr 1 y andar 1, × 10', tipo: 'facil', minutos: 20, partes: [{ fase: 'bloque', reps: 10, seg: 60, zona: 1, zona_hasta: 2, rec_seg: 60, rec: 'andando' }], nota: 'Suave, a ritmo de poder hablar.' },
+  { titulo: 'Correr 2 y andar 1, × 8', tipo: 'facil', minutos: 24, partes: [{ fase: 'bloque', reps: 8, seg: 120, zona: 1, zona_hasta: 2, rec_seg: 60, rec: 'andando' }], nota: 'Suave, a ritmo de poder hablar.' },
+  { titulo: 'Correr 5 y andar 1, × 5', tipo: 'facil', minutos: 30, partes: [{ fase: 'bloque', reps: 5, seg: 300, zona: 2, rec_seg: 60, rec: 'andando' }], nota: 'Suave, a ritmo de poder hablar.' },
+  { titulo: '20-30 min seguidos', tipo: 'facil', minutos: 20, minutos_max: 30, zona: 2, nota: 'Suave y seguido: a partir de aquí, el plan.' },
+];
+function semanasEmpezar({ dias, desde }) {
+  const d = diasDe(dias);
+  const porPaso = d >= 4 ? 3 : 2;
+  const lista = PASOS_EMPEZAR.flatMap((p) => Array.from({ length: porPaso }, () => JSON.parse(JSON.stringify(p))));
+  const dias7 = huecosSemana(d, 'intermedio', 1).map((h) => h.dia);
+  const semanas = [];
+  for (let i = 0; i < lista.length; i += d) {
+    semanas.push({ lunes: sumarDias(lunesDe(desde), 7 * semanas.length), etiqueta: 'Empezar a correr', km_min: null, km_max: null,
+      clave: 'De correr y andar a correr seguido, poco a poco y a ritmo de poder hablar.', sesiones: lista.slice(i, i + d).map((s, j) => ({ ...s, dia: dias7[j] })), fase: 'Empezar a correr' });
+  }
+  return semanas;
+}
+
+// El plan entero. datos: { evento (o km y fecha), dias, kmAhora, largaAhora, nivel, hoy, inicio?, prudente («más de 60 años o
+// vuelve de una lesión»), pierna (pierna pesada 3 días o más por semana), ritmoSuave (s/km, de su ritmo umbral) }
+// → { inicio, total, fases, semanas: [{ lunes, etiqueta, km_min, km_max, clave, sesiones }], avisos, viable, tramo }
+// viable: { ok, necesarias, llegada, texto, opciones } (R43: si llega a la carrera con lo que pide)
 export function proponerPlan(datos = {}) {
   const km = Number(datos.km ?? datos.evento?.distancia_km);
   const fecha = datos.fecha ?? datos.evento?.fecha;
@@ -256,8 +297,11 @@ export function proponerPlan(datos = {}) {
   if (fecha <= hoy) return { error: 'La carrera tiene que ser más adelante.' };
   const t = tramoDistancia(km);
   const nivel = NIVELES_PLAN.some(([k]) => k === datos.nivel) ? datos.nivel : 'intermedio';
-  const dias = Math.max(2, Math.min(6, Number(datos.dias) || 3));
+  const dias = diasDe(datos.dias);
+  const prudente = !!datos.prudente;
+  const pierna = !!datos.pierna;
   const kmAhora = Math.max(0, Number(datos.kmAhora) || 0);
+  const ritmo = ritmoSuaveDe(datos.ritmoSuave, nivel);
   const lunesCarrera = lunesDe(fecha);
   // Empieza el lunes que se diga, o este lunes si es lunes o martes, o el que viene
   const hoyD = desdeISO(hoy).getDay();
@@ -270,32 +314,108 @@ export function proponerPlan(datos = {}) {
     total = MAX_SEMANAS_PLAN;
     avisos.push(`La carrera está lejos: el plan empieza el lunes ${inicio}, ${MAX_SEMANAS_PLAN} semanas antes; hasta entonces, que siga con lo que hace.`);
   }
-  if (total < SEMANAS_MIN[t]) avisos.push(`Quedan ${total} ${total === 1 ? 'semana' : 'semanas'} y para una ${NOMBRE_TRAMO[t]} con calma harían falta ${SEMANAS_MIN[t]}: el plan se comprime (menos base) y conviene un objetivo prudente.`);
-  const kms0 = Math.max(nivel === 'empieza' ? 8 : 12, Math.min(kmAhora, picoKm(km, nivel, kmAhora)));
-  if (kmAhora < kms0 * 0.6) avisos.push(kmAhora > 0
-    ? `Ahora corre unos ${Math.round(kmAhora)} km por semana y el plan empieza en ${kms0}: si viene de correr poco, mejor marcar «Empieza» o empezar con la vuelta a correr.`
-    : `Sin km apuntados las últimas semanas: el plan empieza en ${kms0} km por semana. Si viene de no correr, márcalo como «Empieza».`);
-  if (datos.largaAhora && t === 'maraton' && Number(datos.largaAhora) < 12) avisos.push('Su salida más larga reciente es corta para un maratón: las tiradas largas suben poco a poco y conviene un objetivo prudente.');
+  // (R11) Si corre muy poco (o empieza de cero), primero «Empezar a correr»; el resto del plan, detrás
+  const empezarAndando = !datos.sinEmpezar && (kmAhora > 0 ? kmAhora < dias * 2 : nivel === 'empieza');
+  const empezar = empezarAndando ? semanasEmpezar({ dias, desde: inicio }) : [];
+  if (empezar.length && empezar.length < total - 1) {
+    const resto = proponerPlan({ ...datos, inicio: sumarDias(inicio, 7 * empezar.length), kmAhora: dias * 3, largaAhora: 4, sinEmpezar: true });
+    if (!resto.error) {
+      const nec = semanasNecesarias({ km, largaAhora: 0, kmAhora: 0, dias, nivel, prudente, ritmoSuave: datos.ritmoSuave, empezar: empezar.length });
+      const viable = viabilidad({ t, total, nec, semanas: resto.semanas, km, dias });
+      const fases = [{ nombre: 'Empezar a correr', semanas: empezar.length, nota: 'Correr y andar, de menos a más' }, ...resto.fases];
+      const av = [...avisos, `Corre menos de 2 km por cada día que puede correr: el plan empieza con ${empezar.length} semanas de «Empezar a correr» (correr y andar).`,
+        ...resto.avisos.filter((a) => !/har\u00edan falta|Para llegar/.test(a))];
+      return { ...resto, inicio, total: empezar.length + resto.semanas.length, fases, semanas: [...empezar, ...resto.semanas], avisos: av, viable };
+    }
+  }
+  const extra = prudente ? 2 : 0;
+  if (total < SEMANAS_MIN[t] + extra) avisos.push(`Quedan ${total} ${total === 1 ? 'semana' : 'semanas'} y para una ${NOMBRE_TRAMO[t]} con calma harían falta ${SEMANAS_MIN[t] + extra}: el plan se comprime (menos base) y conviene un objetivo prudente.`);
+  if (!kmAhora) avisos.push(`Sin km apuntados las últimas semanas: el plan empieza en ${dias * 3} km por semana. Si viene de no correr, márcalo como «Empieza».`);
+  // (R15) Con 2 días
+  // (el maratón con 2 días, en la viabilidad: no se propone)
+  if (dias === 2 && t === 'media') avisos.push('Con 2 días por semana, la media sale justa: mejor 3 si puede.');
   const fases = fasesPara(total, km);
-  const kms = kmPorSemana({ total, km, nivel, kmAhora });
   const diaCarrera = ((desdeISO(fecha).getDay() + 6) % 7) + 1;
+  const af = Math.min(SEMANAS_AFINADO[t], total);
+  const construir = total - af;
+  const pico = picoKm(km, nivel, kmAhora, { dias, prudente, pierna });
+  const sube = SUBIDA[nivel] ?? SUBIDA.intermedio;
+  const cada = prudente ? 3 : 4;
+  const kms0 = Math.max(3, Math.min(kmAhora || dias * 3, pico));
+  const larga0 = Number(datos.largaAhora) > 0 ? Number(datos.largaAhora) : Math.max(3, (kms0 / dias) * 1.3);
+  const topeKm = (LARGA_MIN_MAX[t] * 60) / ritmo;
+  // Semana a semana: los km que tocan (desde lo que salió de verdad en las anteriores) y sus sesiones
+  const hechas = []; // [{ km, max, suave }]
+  const refDe = (i) => Math.max(0, ...hechas.slice(Math.max(0, i - 4), i).map((x) => x.max), i < 4 ? larga0 : 0);
   const semanas = [];
   let n = 0;
   for (const f of fases) {
     const clave = FASE_CLAVE[f.nombre];
     for (let i = 0; i < f.semanas; i++) {
       const lunes = sumarDias(inicio, n * 7);
-      const k = kms[n];
+      const ref = refDe(n);
+      let sesiones, kmS, suave = false, afinado = false;
+      if (n < construir) {
+        const nn = n + 1;
+        const normales = hechas.filter((x) => !x.suave);
+        const ultima = normales.length ? normales[normales.length - 1].km : kms0;
+        let objetivo;
+        if (nn % cada === 0 && nn < construir) { objetivo = ultima * 0.75; suave = true; }
+        else if (!hechas.length) objetivo = kms0;
+        else {
+          const previas = hechas.slice(-2).map((x) => x.km);
+          objetivo = Math.min(pico, ultima * (1 + sube), (previas.reduce((a, x) => a + x, 0) / previas.length) * 1.3);
+        }
+        const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: clave, t, n: nn, iFase: i, ref, topeKm, prudente, suave, soloRectas: (nivel === 'empieza' || prudente) && nn <= 4 });
+        sesiones = r.sesiones; kmS = r.km;
+        hechas.push({ km: r.km, max: r.max, suave });
+      } else {
+        // El afinado (R18): un % menos que el pico, sin contar la carrera
+        afinado = true;
+        const pk = Math.max(kms0, ...hechas.filter((x) => !x.suave).map((x) => x.km));
+        const b = (BAJADA_AFINADO[af] || [0.5])[n - construir] ?? 0.5;
+        const objetivo = pk * (1 - b);
+        if (n === total - 1) {
+          // (los km de la semana de la carrera, sin la carrera)
+          sesiones = semanaCarrera({ kmSemana: objetivo, dias, evento: datos.evento, km, diaCarrera, ref });
+          kmS = r1(sesiones.filter((s) => s.tipo !== 'carrera').reduce((a, s) => a + (Number(s.km) || 0), 0));
+          hechas.push({ km: kmS, max: Math.max(0, ...sesiones.filter((s) => s.tipo !== 'carrera').map((s) => Number(s.km) || 0)), suave: true });
+        } else {
+          const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: 'afinado', t, n: n + 1, iFase: i, ref, topeKm, prudente });
+          sesiones = r.sesiones; kmS = r.km;
+          hechas.push({ km: r.km, max: r.max, suave: true });
+        }
+      }
       const esCarrera = n === total - 1;
-      const sesiones = esCarrera ? semanaCarrera({ kmSemana: k.km, dias, evento: datos.evento, km, diaCarrera })
-        : sesionesSemana({ kmSemana: k.km, dias, nivel, fase: k.afinado ? 'afinado' : clave, t, n: n + 1, iFase: i });
-      const etiqueta = esCarrera ? 'Carrera' : k.afinado ? 'Afinado' : k.suave ? 'Descarga' : null;
-      const c = esCarrera ? CLAVE.carrera : k.afinado ? CLAVE.afinado : k.suave ? CLAVE.suave : CLAVE[clave];
-      semanas.push({ lunes, etiqueta, km_min: Math.max(1, r0(k.km * 0.95)), km_max: Math.max(2, r0(k.km * 1.05)), clave: c, sesiones, fase: f.nombre });
+      const etiqueta = esCarrera ? 'Carrera' : afinado ? 'Afinado' : suave ? 'Descarga' : null;
+      const c = esCarrera ? CLAVE.carrera : afinado ? CLAVE.afinado : suave ? CLAVE.suave : CLAVE[clave];
+      semanas.push({ lunes, etiqueta, km_min: Math.max(1, r0(kmS * 0.95)), km_max: Math.max(2, r0(kmS * 1.05)), clave: c, sesiones, fase: f.nombre });
       n++;
     }
   }
-  return { inicio, total, fases, semanas, avisos, tramo: t, nivel, dias, km, fecha };
+  const nec = semanasNecesarias({ km, largaAhora: datos.largaAhora, kmAhora, dias, nivel, prudente, ritmoSuave: datos.ritmoSuave });
+  const viable = viabilidad({ t, total, nec, semanas, km, dias });
+  return { inicio, total, fases, semanas, avisos, viable, tramo: t, nivel, dias, km, fecha, prudente, pierna };
+}
+
+// (R43) ¿Llega a la carrera? Con las semanas que hacen falta (semanasNecesarias) y, en maratón, 30 km por semana o más de
+// media en las 8 semanas antes del afinado (Rasmussen 2013). Si no, el texto y las tres salidas.
+function viabilidad({ t, total, nec, semanas, km, dias = 3 }) {
+  const af = Math.min(SEMANAS_AFINADO[t], total);
+  const antes = semanas.slice(0, Math.max(0, semanas.length - af)).slice(-8).map((s) => ((Number(s.km_min) || 0) + (Number(s.km_max) || 0)) / 2);
+  const media = antes.length ? antes.reduce((a, x) => a + x, 0) / antes.length : 0;
+  const pocosKm = t === 'maraton' && antes.length > 0 && media < 30;
+  const faltan = total < nec.necesarias;
+  // (R15) Un maratón con 2 días por semana no se propone: la tirada larga no se construye sin saltos grandes
+  const dosDias = t === 'maraton' && dias <= 2;
+  const ok = !faltan && !pocosKm && !dosDias;
+  const textos = [];
+  if (dosDias) textos.push('Con 2 días por semana no se construye la tirada larga del maratón sin saltos grandes.');
+  if (faltan) textos.push(`Para llegar a la ${NOMBRE_TRAMO[t]} con una salida larga de ${String(nec.llegada).replace('.', ',')} km sin subir más de un 10 % por semana harían falta unas ${nec.necesarias} semanas, y quedan ${total}.`);
+  if (pocosKm) textos.push(`En las 8 semanas antes del afinado, el plan da unos ${Math.round(media)} km por semana de media: para un maratón conviene llegar a 30 o más.`);
+  return { ok, necesarias: nec.necesarias, llegada: nec.llegada, texto: textos.join(' '),
+    opciones: ok ? [] : [dosDias ? 'Correr 3 días o más a la semana' : null, faltan || pocosKm ? 'Buscar una carrera más adelante' : null, km > 5 ? 'Elegir una distancia más corta' : null,
+      faltan || pocosKm ? 'Plantear la carrera corriendo y andando' : null].filter(Boolean) };
 }
 
 // Comprueba lo que propone (lo que se va a guardar): cada semana y las fases, como las comprobaría la base
@@ -318,7 +438,8 @@ export function rehacerDesde(perfil, datos = {}) {
     const nv = v.length;
     if (nv < plan.total - 1) {
       // Las de la vuelta sustituyen a las primeras; el resto del plan sigue con km desde la mitad de lo que hacía
-      const resto = proponerPlan({ ...datos, inicio: sumarDias(desde, 7 * nv), kmAhora: Math.max(8, (Number(datos.kmAhora) || 0) / 2) });
+      // (R11, R19) desde lo que hará al acabar la vuelta (20-30 minutos seguidos), sin saltar a un mínimo
+      const resto = proponerPlan({ ...datos, inicio: sumarDias(desde, 7 * nv), kmAhora: Math.max(plan.dias * 3, (Number(datos.kmAhora) || 0) / 2), largaAhora: 5, sinEmpezar: true });
       if (!resto.error) {
         semanas = [...v, ...resto.semanas];
         fasesNuevas = [{ nombre: 'Vuelta a correr', semanas: nv, nota: 'De andar a correr, sin dolor (3/10 como mucho)' }, ...resto.fases];

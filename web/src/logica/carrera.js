@@ -115,13 +115,36 @@ export function umbralDesdeCarrera(seg, km) {
 }
 // El rango que se guarda como ritmo umbral (5 s a cada lado): 295 → [290, 300]
 export const rangoUmbral = (r) => (r ? [r - 5, r + 5] : null);
-// Riegel: el tiempo en otra distancia; en maratón (40 km o más), una horquilla hasta un 5 % más lento (Riegel se queda
-// corto en populares). { seg, hasta } o null
-export function predecirTiempo(seg, km, km2) {
+// Riegel: el tiempo en otra distancia. (v0.227, R5) Hasta la media, tal cual (acierta en populares, Vickers 2016). En
+// maratón (40 km o más) se queda corto: horquilla del +2 al +10 % y objetivo en +6 % si corre 50 km por semana o más
+// y ya ha corrido alguno, o en +10 % si corre menos o es el primero (por defecto, el prudente).
+// → { seg (el objetivo), desde, hasta (la horquilla, solo en maratón), riegel, rodado } o null
+export function predecirTiempo(seg, km, km2, { kmSemana = null, primero = true } = {}) {
   const t = Number(seg), d = Number(km), d2 = Number(km2);
   if (!(t > 0 && d > 0 && d2 > 0)) return null;
   const p = t * (d2 / d) ** 1.06;
-  return { seg: Math.round(p), hasta: d2 >= 40 ? Math.round(p * 1.05) : null };
+  if (d2 < 40) return { seg: Math.round(p), desde: null, hasta: null, riegel: Math.round(p), rodado: null };
+  const rodado = Number(kmSemana) >= 50 && !primero;
+  return { seg: Math.round(p * (rodado ? 1.06 : 1.1)), desde: Math.round(p * 1.02), hasta: Math.round(p * 1.1), riegel: Math.round(p), rodado };
+}
+// (v0.227, R4) El ritmo de 5 km (s/km) desde el ritmo umbral (el que aguantaría unos 60 minutos), por Riegel: el ritmo de
+// las series de Z5
+export function ritmo5k(perfil) {
+  const u = ritmoUmbral(perfil);
+  if (!u) return null;
+  const p = predecirTiempo(3600, 3600 / u, 5);
+  return p ? Math.round(p.seg / 5) : null;
+}
+// (v0.227, R1) La FC umbral (y el ritmo) caducan a los 6 meses del test
+export const MESES_TEST = 6;
+export function umbralCaducado(perfil, hoy) {
+  const f = perfil?.test_fecha;
+  return !!(f && hoy && f < sumarDias(hoy, -183));
+}
+// (v0.227, R2) La FC máxima sin medir, por la edad: 208 - 0,7 x edad (Tanaka 2001; 220 - edad se queda corta en mayores)
+export function fcMaxTanaka(edad) {
+  const e = Number(edad);
+  return Number.isFinite(e) && e >= 12 && e <= 100 ? Math.round(208 - 0.7 * e) : null;
 }
 // La última carrera con resultado (para la previsión): la más reciente con tiempo y distancia, sin contar la que se edita
 export function ultimaConResultado(eventos = [], salvo = null) {
@@ -265,10 +288,12 @@ export function parteAEditor(p = {}) {
 export const SEMAFORO = {
   verde: { titulo: 'Verde', corto: 'Bien', texto: 'Sesión completa, como está pautada.' },
   ambar: { titulo: 'Ámbar', corto: 'Regular', texto: 'Hoy, sin intensidad: todo en Z1–Z2 y entre un 20 y un 40 % menos de tiempo.' },
-  rojo: { titulo: 'Rojo', corto: 'Mal', texto: 'Hoy no entrenes: descansa y cuéntaselo a tu coach.' },
+  // (v0.227, R6) Y cómo se vuelve tras fiebre o enfermedad
+  rojo: { titulo: 'Rojo', corto: 'Mal', texto: 'Hoy no entrenes: descansa y cuéntaselo a tu coach. Si es por fiebre o enfermedad, vuelve tras 24 horas sin fiebre ni malestar general, con las dos primeras sesiones suaves, como en ámbar.' },
 };
 export const PREGUNTAS_SEMAFORO = ['¿Has dormido bien?', '¿Tienes las piernas cargadas o algún dolor?', '¿Estás enfermo o con fiebre?'];
-export const ALARMA = 'Si notas dolor en el pecho, falta de aire que no es normal, mareo o fiebre, para y pide atención médica.';
+// (v0.227, R7) Los signos de alarma del cribado del ACSM (Riebe 2015)
+export const ALARMA = 'Si notas dolor o presión en el pecho, la mandíbula, el cuello o el brazo, falta de aire que no es normal, palpitaciones o latido irregular, mareo, o un desmayo o casi desmayo: para, pide atención médica y no vuelvas a correr hasta que te vea un médico. Con fiebre, no corras.';
 // La pauta de una sesión con el semáforo en ámbar: los minutos, un 20–40 % menos, y nada por encima de Z2
 export function pautaAmbar(c) {
   if (!c) return null;

@@ -54,8 +54,13 @@ export async function probarCarrera221({ navegador, check, base = 'http://localh
   check(/las 4 últimas semanas/.test(ayuda), `los km que ha corrido, ya puestos (${kmAhora}: «${ayuda.trim()}»)`);
   await hoja.getByRole('group', { name: 'Días que puede correr' }).getByRole('button', { name: '3', exact: true }).click();
   const larga = await hoja.getByLabel(/salida más larga/).inputValue();
+  // (v0.227, R8) El nivel lo propone la app por sus km (menos de 15 por semana, «Empieza»); su ritmo suave sale de su
+  // ritmo umbral (5:25 en la demo → 6:30, para los topes de tiempo de la tirada larga)
+  const kmN = Number(String(kmAhora).replace(',', '.')) || 0;
+  const nivel = await hoja.getByRole('group', { name: 'Su nivel' }).locator('button[aria-pressed="true"]').getAttribute('data-v');
+  check(nivel === (kmN >= 15 ? 'intermedio' : 'empieza'), `el nivel, propuesto por sus km (${kmN} km por semana: ${nivel})`);
   const esperado = proponerPlan({ evento: { nombre: 'Media maratón de primavera', distancia_km: 21.1, fecha: sumarDias(lunesDe(hoy), 7 * 13 + 6) }, dias: 3,
-    kmAhora: Number(String(kmAhora).replace(',', '.')) || 0, largaAhora: Number(String(larga).replace(',', '.')) || null, nivel: 'intermedio', hoy });
+    kmAhora: kmN, largaAhora: Number(String(larga).replace(',', '.')) || null, nivel, hoy, prudente: false, pierna: false, ritmoSuave: 390 });
   const res = hoja.locator('.asis-res');
   await res.locator('.macro-fase').first().waitFor();
   check(new RegExp(`${esperado.semanas.length} semanas`).test(await res.textContent()) && await res.locator('.macro-fase').count() === esperado.fases.length,

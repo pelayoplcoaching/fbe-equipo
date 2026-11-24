@@ -183,6 +183,10 @@
 .carrera-objetivo .carrera-prevision { color: inherit; opacity: 1; }
 /* (v0.219) en la ficha del coach: el calculo del ritmo umbral desde una carrera y la prevision de tiempo */
 .umbral-carrera, .prevision-carrera { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--hoja-2); }
+/* (v0.227) Las dos calculadoras de Zonas y test van en fila; abiertas, cada una a todo el ancho */
+.cz-calcs > .umbral-carrera { flex: 1 1 100%; }
+.carrera-caducado { display: flex; align-items: flex-start; gap: var(--esp-6); margin: 0; }
+.carrera-caducado svg { flex: none; margin-top: var(--esp-2); }
 .carrera-objetivo-nombre { font-size: var(--letra-21); line-height: 1.15; text-wrap: balance; }
 .carrera-cuenta { font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: var(--esp-4) 0 var(--esp-2); }
 .semana-carrera-at { padding: var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }
@@ -221,6 +225,11 @@
 .asis-res { padding: var(--esp-12); border-radius: var(--r-s); background: var(--hoja-2); }
 .asis-aviso { display: flex; align-items: flex-start; gap: var(--esp-6); margin: 0; color: var(--tinta); }
 .asis-aviso svg { flex: none; width: var(--ico-16); height: var(--ico-16); margin-top: var(--esp-2); color: var(--aviso); }
+/* (v0.227, R43) Si con el tiempo que queda no llega bien a la carrera: el aviso en rojo y las tres salidas */
+.asis-viable { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--alerta-suave); color: var(--tinta); }
+.asis-viable strong { display: flex; align-items: center; gap: var(--esp-6); }
+.asis-viable svg { flex: none; width: var(--ico-16); height: var(--ico-16); color: var(--alerta); }
+.asis-opciones { margin: 0; padding-inline-start: var(--esp-20); display: grid; gap: var(--esp-2); }
 .asis-semanas summary { cursor: pointer; padding-block: var(--esp-4); color: var(--morado); }
 .asis-lista { list-style: none; margin: var(--esp-6) 0 0; padding: 0; display: grid; gap: var(--esp-4); max-height: 22rem; overflow-y: auto; }
 .asis-lista li { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: start; gap: var(--esp-8); padding: var(--esp-6) var(--esp-8); border-radius: var(--r-10); background: var(--hoja); }
@@ -241,6 +250,9 @@
 .cav-ajuste svg { width: var(--ico-14); height: var(--ico-14); vertical-align: -2px; }
 .cav-choque { display: flex; align-items: flex-start; gap: var(--esp-6); margin: 0; padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); background: var(--aviso-suave); color: var(--tinta); }
 .cav-choque > svg { flex: none; width: var(--ico-14); height: var(--ico-14); margin-top: var(--esp-2); color: var(--aviso); }
+/* (v0.227) Avisos suaves (la subida de la semana, R21) y choques que solo recuerdan algo (R27: el dia antes, el mismo dia) */
+.cav-aviso[data-nivel="info"], .cav-choque:not([data-tipo="despues"]) { background: var(--info-suave); }
+.cav-aviso[data-nivel="info"] > svg, .cav-choque:not([data-tipo="despues"]) > svg { color: var(--info); }
 .corr-cab { display: flex; align-items: center; gap: var(--esp-8); cursor: pointer; }
 .corr-cab > svg { width: var(--ico-16); height: var(--ico-16); color: var(--morado); }
 .corr-chip { background: var(--aviso-suave); color: var(--tinta); }

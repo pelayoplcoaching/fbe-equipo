@@ -12,14 +12,16 @@ import {
   zonasFC, textoRangoZona, textoZona, textoParte, limpiarParte, parteAEditor, fmtRitmo, textoRitmo, fmtTiempo, leerRitmo, leerTiempo, macrociclo, semanasConPlan,
   semanaDelPlan, faseDe, textoCuentaAtras, textoObjetivoCarrera, textoResultado, proximaCarrera, carreraObjetivo, textoKm, carreraHechaPorSemana,
   estadoKm, minutosPauta, pautaDeReceta, SEMAFORO, semanasPlan, zonasDe as zonasVer, fuenteZonas, umbralDesdeCarrera, rangoUmbral, leerRangoRitmo, predecirTiempo, ultimaConResultado,
+  ritmoUmbral, umbralCaducado, fcMaxTanaka,
 } from '../../logica/carrera.js';
 import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
 import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN } from '../../logica/carrera-plan.js';
-import { avisosCarrera, ajusteSiguiente, aplicarPropuesta, choquesFuerza } from '../../logica/carrera-avisos.js';
+import { avisosCarrera, ajusteSiguiente, aplicarPropuesta, choquesFuerza, kmMedio } from '../../logica/carrera-avisos.js';
 import { revisionAuto, NOMBRE_COLOR } from '../../logica/carrera-seguimiento.js';
 
 const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [7, 'Domingo']];
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
+const diaNombre = (n) => (DIAS.find(([d]) => d === n)?.[1] || '').toLowerCase();
 const v = (x) => (x == null ? '' : String(x));
 let claves = 0;
 const claveNueva = () => `s${++claves}`;
@@ -40,7 +42,7 @@ export function CarreraFicha({ atleta }) {
       <ZonasCoach atleta={atleta} perfil={d.perfil} alGuardar={recargar} />
       <PlanCoach atleta={atleta} perfil={d.perfil} d={d} alGuardar={recargar} />
       <SemanasCoach atleta={atleta} d={d} alGuardar={recargar} />
-      <CarrerasCoach atleta={atleta} eventos={d.eventos} alGuardar={recargar} />
+      <CarrerasCoach atleta={atleta} eventos={d.eventos} hechas={d.hechas} alGuardar={recargar} />
       <RevisionesCoach atleta={atleta} revisiones={d.revisiones} d={d} alGuardar={recargar} />
       <HechoCarrera d={d} />
       <BibliotecaCarrera />
@@ -114,17 +116,23 @@ function ZonasCoach({ atleta, perfil, alGuardar }) {
             {['z2', 'z3', 'z4', 'z5'].map((k) => <label key={k} class="campo"><span class="etq">Empieza {k.toUpperCase()}</span><input class="entrada num" inputMode="numeric" value={f[k]} onInput={cambiar(k)} /></label>)}
           </div>
         </details>
-        <UmbralDesdeCarrera alCalcular={(r) => setF({ ...f, umbral: rangoUmbral(r).map(fmtRitmo).join('-') })} />
+        <div class="fila-envolver cz-calcs">
+          <UmbralDesdeCarrera alCalcular={(r) => setF({ ...f, umbral: rangoUmbral(r).map(fmtRitmo).join('-') })} />
+          <FcMaxEdad alUsar={(fc) => setF({ ...f, fc_max: String(fc), test_tipo: f.test_tipo || 'estimado' })} />
+        </div>
         {zonas ? <TablaZonas zonas={zonas} umbral={previa.umbral} /> : <p class="mini terciario">Con la FC umbral (por ejemplo, la FC media de los últimos 20 minutos de un test de 30) salen sus cinco zonas; sin ella, con la FC máxima y la de reposo. Con el ritmo umbral, también el ritmo de cada zona.</p>}
-        {fuente === 'reserva' && <p class="mini terciario">Zonas por la FC de reserva (Karvonen: 60, 70, 80 y 90 %). Con su FC umbral serían más precisas.</p>}
+        {fuente === 'reserva' && <p class="mini terciario">Zonas por la FC de reserva (Karvonen: 60, 70, 80 y 90 %){f.test_tipo === 'estimado' ? ', con la FC máxima estimada: son aproximadas' : ''}. Con su FC umbral serían más precisas.</p>}
         <button class="btn btn-primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar zonas'}</button>
       </form>
       {p.test_fecha && <p class="mini terciario">Test del {fmtConDia(p.test_fecha)}{p.test_tipo ? ` (${NOMBRE_TEST[p.test_tipo].toLowerCase()})` : ''}.</p>}
+      {/* (v0.227, R1) La FC umbral y el ritmo caducan a los 6 meses */}
+      {umbralCaducado(p, hoyISO()) && <p class="mini aviso-texto carrera-caducado"><Icono n="reloj" width="14" height="14" /> Es de hace más de 6 meses: conviene repetir el test o calcular el umbral con una carrera reciente.</p>}
     </section>
   );
 }
 // (v0.219) El ritmo umbral desde una carrera reciente (o el test de 30 minutos): el que aguantaría unos 60 minutos
-const DISTANCIAS_UMBRAL = [['5', '5 km'], ['10', '10 km'], ['21.0975', 'Media maratón'], ['42.195', 'Maratón'], ['test', 'Test de 30 min (ritmo de los últimos 20)']];
+// (v0.227, R3) Del test de 30 minutos, el ritmo medio de los 30 (los últimos 20 son para la FC umbral)
+const DISTANCIAS_UMBRAL = [['5', '5 km'], ['10', '10 km'], ['21.0975', 'Media maratón'], ['42.195', 'Maratón'], ['test', 'Test de 30 min (ritmo medio de los 30)']];
 function UmbralDesdeCarrera({ alCalcular }) {
   const [abierta, setAbierta] = useState(false);
   const [d, setD] = useState('10');
@@ -139,10 +147,30 @@ function UmbralDesdeCarrera({ alCalcular }) {
           <select class="selector" value={d} onChange={(e) => { setD(e.currentTarget.value); setT(''); }}>{DISTANCIAS_UMBRAL.map(([k, x]) => <option key={k} value={k}>{x}</option>)}</select></label>
         <label class="campo"><span class="etq">{d === 'test' ? 'Ritmo (min/km)' : 'Tiempo'}</span><input class="entrada num" placeholder={d === 'test' ? '5:05' : '48:30'} value={t} onInput={(e) => setT(e.currentTarget.value)} /></label>
       </div>
+      <span class="mini terciario">Mejor una carrera de 10 km o una media de los últimos 3 meses. El test de 30 minutos es un esfuerzo a tope: no para quien empieza.</span>
       {t && !r ? <span class="mini aviso-texto">{d === 'test' ? 'Escribe el ritmo como 5:05.' : 'Escribe el tiempo como 48:30 o 1:45:00.'}</span>
         : r ? <span class="mini">Ritmo umbral de unos <strong class="num">{fmtRitmo(r)} min/km</strong>{d === 'test' ? '' : ' (lo que aguantaría unos 60 minutos, por la fórmula de Riegel)'}.</span> : null}
       <div class="fila-envolver">
         <button type="button" class="btn btn-peq" disabled={!r} onClick={() => { alCalcular(r); setAbierta(false); }}>Usarlo</button>
+        <button type="button" class="btn btn-peq plano" onClick={() => setAbierta(false)}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+// (v0.227, R2) La FC máxima sin medir, por la edad (Tanaka 2001: 208 - 0,7 x edad). La edad no se guarda; el tipo de test
+// queda como «Estimado» (si no había otro) y las zonas, como aproximadas
+function FcMaxEdad({ alUsar }) {
+  const [abierta, setAbierta] = useState(false);
+  const [e, setE] = useState('');
+  const fc = fcMaxTanaka(leerNumero(e));
+  if (!abierta) return <button type="button" class="btn-texto mini" style="justify-self:start" onClick={() => setAbierta(true)}><Icono n="calculadora" width="14" height="14" /> Sin FC máxima medida: estimarla con la edad</button>;
+  return (
+    <div class="umbral-carrera panel-sub pila-s">
+      <label class="campo"><span class="etq">Edad</span><input class="entrada num" inputMode="numeric" placeholder="52" value={e} onInput={(x) => setE(x.currentTarget.value)} /></label>
+      {fc ? <span class="mini">FC máxima estimada: <strong class="num">{fc} ppm</strong> (208 − 0,7 × edad). Las zonas quedan como aproximadas; la edad no se guarda.</span>
+        : e ? <span class="mini aviso-texto">Escribe la edad en años.</span> : null}
+      <div class="fila-envolver">
+        <button type="button" class="btn btn-peq" disabled={!fc} onClick={() => { alUsar(fc); setAbierta(false); }}>Usarla</button>
         <button type="button" class="btn btn-peq plano" onClick={() => setAbierta(false)}>Cancelar</button>
       </div>
     </div>
@@ -290,7 +318,8 @@ export function CorredoresPanel({ abrir }) {
   const datos = useCarga(() => api.panelCorredores().catch(() => []), [], { recuerdo: `corredores:${api.uid()}` });
   const lista = datos.datos || [];
   if (!lista.length) return null;
-  const conAvisos = lista.filter((c) => c.avisos.length).length;
+  // (v0.227) Los avisos suaves (nivel «info», la subida de la semana) salen en la fila, pero no cuentan como «con avisos»
+  const conAvisos = lista.filter((c) => c.avisos.some((a) => a.nivel !== 'info')).length;
   return (
     <details class="panel panel-pad corr-panel" open={conAvisos > 0}>
       <summary class="corr-cab"><Icono n="pasos" /> <strong>Corredores</strong> <span class="mini terciario num">{lista.length}</span>
@@ -331,12 +360,16 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
     evento: futuras[0]?.id || 'otra', nombre: '', km: '21.0975', fecha: '',
     dias: String(Math.max(2, Math.min(6, Number(p.ventanas) || 3))),
     kmAhora: recientes ? String(Math.round(recientes.media)) : '', larga: recientes ? num(recientes.larga, recientes.larga % 1 ? 1 : 0) : '',
-    nivel: 'intermedio', conVuelta: false,
+    // (v0.227, R8) El nivel lo propone la app: «Empieza» con menos de 15 km por semana; lo confirma el coach
+    nivel: recientes && recientes.media >= 15 ? 'intermedio' : 'empieza', conVuelta: false, prudente: false, pierna: false,
   }));
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const ev = f.evento === 'otra' ? { nombre: f.nombre.trim() || 'La carrera', distancia_km: Number(f.km), fecha: f.fecha } : futuras.find((e) => e.id === f.evento) || null;
-  const datos = { evento: ev, dias: Number(f.dias), kmAhora: leerNumero(f.kmAhora) ?? 0, largaAhora: leerNumero(f.larga), nivel: f.nivel, hoy };
+  // (v0.227) Su ritmo suave (un 20 % más lento que el umbral), para los topes de tiempo de la tirada larga (R16)
+  const ru = ritmoUmbral(p);
+  const datos = { evento: ev, dias: Number(f.dias), kmAhora: leerNumero(f.kmAhora) ?? 0, largaAhora: leerNumero(f.larga), nivel: f.nivel, hoy,
+    prudente: f.prudente, pierna: f.pierna, ritmoSuave: ru ? Math.round(ru * 1.2) : null };
   const clave = JSON.stringify([datos, f.conVuelta, modo]);
   const res = useMemo(() => (rehacer ? rehacerDesde(p, { ...datos, desde: lunesDe(hoy), conVuelta: f.conVuelta }) : { plan: proponerPlan(datos) }), [clave]);
   const plan = res.plan;
@@ -383,19 +416,30 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
         <div class="pila-xs">
           <div class="rejilla-campos">
             <label class="campo"><span class="etq">Km por semana ahora</span><input class="entrada num" inputMode="decimal" placeholder="20" value={f.kmAhora} onInput={cambiar('kmAhora')} aria-describedby="asis-km-ayuda" /></label>
-            <label class="campo"><span class="etq">Su salida más larga reciente (km)</span><input class="entrada num" inputMode="decimal" placeholder="12" value={f.larga} onInput={cambiar('larga')} /></label>
+            <label class="campo"><span class="etq">Su salida más larga en 30 días (km)</span><input class="entrada num" inputMode="decimal" placeholder="12" value={f.larga} onInput={cambiar('larga')} /></label>
           </div>
           <span class="ayuda" id="asis-km-ayuda">{recientes ? `Lo que ha apuntado las 4 últimas semanas: ${num(recientes.media, recientes.media % 1 ? 1 : 0)} km de media.` : 'Sin carreras apuntadas en las 4 últimas semanas: pon lo que te diga.'}</span>
         </div>
         <div class="campo"><span class="etq">Su nivel</span>
           <Segmentos etiqueta="Su nivel" valor={f.nivel} opciones={NIVELES_PLAN} alCambiar={(x) => x && setF({ ...f, nivel: x })} />
-          <span class="ayuda">Empieza: sube un 5 % por semana; intermedio, un 7,5 %; avanzado, un 10 % (y más kilómetros en el pico).</span></div>
+          <span class="ayuda">Empieza (menos de 6 meses corriendo con regularidad o menos de 15 km por semana): sube un 5 % por semana; intermedio, un 7,5 %; avanzado, un 10 % (y más kilómetros en el pico).</span></div>
+        <label class="campo campo-check"><input type="checkbox" checked={f.prudente} onChange={(e) => setF({ ...f, prudente: e.currentTarget.checked })} />
+          <span class="peq">Más de 60 años o vuelve de una lesión <span class="mini terciario">(más semanas, una más suave cada 3, un pico más bajo y sin segunda sesión de calidad)</span></span></label>
+        <label class="campo campo-check"><input type="checkbox" checked={f.pierna} onChange={(e) => setF({ ...f, pierna: e.currentTarget.checked })} />
+          <span class="peq">Hace pierna pesada 3 días o más a la semana <span class="mini terciario">(un pico de kilómetros más bajo)</span></span></label>
         {rehacer && <label class="campo campo-check"><input type="checkbox" checked={f.conVuelta} onChange={(e) => setF({ ...f, conVuelta: e.currentTarget.checked })} />
           <span class="peq">Empezar con la vuelta a correr tras una molestia (de andar 30 minutos a 20-30 minutos seguidos, sin dolor)</span></label>}
         <section class="asis-res panel-sub pila-s" aria-live="polite" aria-label="El plan que propone">
           {!ok ? <p class="peq secundario">{plan?.error || 'Elige la carrera.'}</p> : <>
             <p class="peq"><strong>{plan.semanas.length} {plan.semanas.length === 1 ? 'semana' : 'semanas'}</strong>, del {fmtCorta(desde)} a la de la carrera ({fmtConDia(ev.fecha)}){antes ? `, después de las ${antes} que ya lleva` : ''}.</p>
             <Macrociclo perfil={{ plan_inicio: inicio, fases }} hoy={hoy} />
+            {plan.viable && !plan.viable.ok && (
+              <div class="asis-viable pila-xs" role="alert">
+                <strong class="peq"><Icono n="alerta" /> Así no llega bien a la carrera</strong>
+                <span class="peq">{plan.viable.texto}</span>
+                {plan.viable.opciones.length > 0 && <ul class="peq asis-opciones">{plan.viable.opciones.map((o) => <li key={o}>{o}</li>)}</ul>}
+              </div>
+            )}
             {plan.avisos.map((a) => <p key={a} class="asis-aviso peq"><Icono n="alerta" /> {a}</p>)}
             <details class="asis-semanas">
               <summary class="peq">Ver las {plan.semanas.length} semanas</summary>
@@ -673,7 +717,7 @@ export function PartesEditor({ partes = [], zonas = null, alCambiar, alReceta = 
 }
 
 // ---------------------------------------------------------------- sus carreras
-function CarrerasCoach({ atleta, eventos, alGuardar }) {
+function CarrerasCoach({ atleta, eventos, hechas = [], alGuardar }) {
   const [editar, setEditar] = useState(null);
   const hoy = hoyISO();
   return (
@@ -700,12 +744,12 @@ function CarrerasCoach({ atleta, eventos, alGuardar }) {
           ))}
         </ul>
       )}
-      {editar && <HojaEvento atleta={atleta} evento={editar} eventos={eventos} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
+      {editar && <HojaEvento atleta={atleta} evento={editar} eventos={eventos} hechas={hechas} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
     </section>
   );
 }
 
-function HojaEvento({ atleta, evento, eventos = [], alCerrar }) {
+function HojaEvento({ atleta, evento, eventos = [], hechas = [], alCerrar }) {
   const { api, aviso } = useApp();
   const e0 = evento || {};
   const [f, setF] = useState({ nombre: e0.nombre || '', fecha: e0.fecha || '', distancia_km: v(e0.distancia_km), desnivel_m: v(e0.desnivel_m), prioridad: e0.prioridad || 'B', decision: e0.decision || 'va',
@@ -734,7 +778,7 @@ function HojaEvento({ atleta, evento, eventos = [], alCerrar }) {
           <label class="campo"><span class="etq">Tiempo objetivo</span><input class="entrada num" placeholder="1:59:00" value={f.objetivo} onInput={cambiar('objetivo')} /></label>
           <label class="campo"><span class="etq">Ritmo objetivo (min/km)</span><input class="entrada num" placeholder="5:38" value={f.objetivo_ritmo} onInput={cambiar('objetivo_ritmo')} /></label>
         </div>
-        <Prevision eventos={eventos} salvo={e0.id || null} km={f.distancia_km} alUsar={(seg, ritmo) => setF({ ...f, objetivo: fmtTiempo(seg), objetivo_ritmo: fmtRitmo(ritmo) })} />
+        <Prevision eventos={eventos} hechas={hechas} salvo={e0.id || null} km={f.distancia_km} alUsar={(seg, ritmo) => setF({ ...f, objetivo: fmtTiempo(seg), objetivo_ritmo: fmtRitmo(ritmo) })} />
         <label class="campo"><span class="etq">Nota (el porqué, la estrategia)</span><textarea class="area" maxLength={500} value={f.nota} onInput={cambiar('nota')} /></label>
         {e0.id && <div class="rejilla-campos">
           <label class="campo"><span class="etq">Resultado</span><input class="entrada num" placeholder="1:58:43" value={f.resultado} onInput={cambiar('resultado')} /></label>
@@ -749,18 +793,24 @@ function HojaEvento({ atleta, evento, eventos = [], alCerrar }) {
   );
 }
 
-// (v0.219) La previsión con su última carrera con resultado (Riegel; en maratón, una horquilla hasta un 5 % más lenta)
-function Prevision({ eventos, salvo, km, alUsar }) {
+// (v0.219) La previsión con su última carrera con resultado (Riegel). (v0.227, R5) En maratón, horquilla del +2 al +10 % y
+// objetivo en +6 % (50 km por semana o más de media en las 8 últimas y otro maratón corrido) o en +10 % (si no)
+function Prevision({ eventos, hechas = [], salvo, km, alUsar }) {
   const base = ultimaConResultado(eventos, salvo);
   const d = Number(String(km ?? '').replace(',', '.'));
   if (!base || !(d > 0)) return null;
-  const p = predecirTiempo(base.resultado_seg, base.distancia_km, d);
+  const hoy = hoyISO();
+  const kmSemana = kmMedio(hechas, hoy);
+  const primero = !(eventos || []).some((e) => e.id !== salvo && e.fecha < hoy && Number(e.distancia_km) >= 40 && Number(e.resultado_seg) > 0);
+  const p = predecirTiempo(base.resultado_seg, base.distancia_km, d, { kmSemana, primero });
   if (!p) return null;
-  const objetivo = p.hasta || p.seg;
+  const objetivo = p.seg;
   return (
     <div class="prevision-carrera panel-sub pila-xs">
-      <span class="mini">Con su {base.nombre} ({num(Number(base.distancia_km), Number(base.distancia_km) % 1 ? 1 : 0)} km en {fmtTiempo(base.resultado_seg)}), la previsión para {num(d, d % 1 ? 1 : 0)} km: <strong class="num">{fmtTiempo(p.seg)}{p.hasta ? `–${fmtTiempo(p.hasta)}` : ''}</strong> ({fmtRitmo(Math.round(objetivo / d))} min/km).</span>
-      {p.hasta && <span class="mini terciario">En maratón, la fórmula de Riegel suele quedarse corta en corredores populares: mejor apuntar al tiempo más lento.</span>}
+      <span class="mini">Con su {base.nombre} ({num(Number(base.distancia_km), Number(base.distancia_km) % 1 ? 1 : 0)} km en {fmtTiempo(base.resultado_seg)}), la previsión para {num(d, d % 1 ? 1 : 0)} km: <strong class="num">{fmtTiempo(p.seg)}</strong> ({fmtRitmo(Math.round(objetivo / d))} min/km){p.desde ? `, entre ${fmtTiempo(p.desde)} y ${fmtTiempo(p.hasta)}` : ''}.</span>
+      {p.desde && <span class="mini terciario">En maratón, la fórmula de Riegel ({fmtTiempo(p.riegel)}) se queda corta en corredores populares: {p.rodado
+        ? `corre ${num(kmSemana, kmSemana % 1 ? 1 : 0)} km por semana de media y ya ha corrido alguno, así que el objetivo va un 6 % por encima`
+        : `${primero ? 'es su primer maratón (entre sus carreras apuntadas)' : `corre ${kmSemana == null ? 'menos de 50' : num(kmSemana, kmSemana % 1 ? 1 : 0)} km por semana de media`}, así que el objetivo va un 10 % por encima`}.</span>}
       <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => alUsar(objetivo, Math.round(objetivo / d))}>Usarlo como objetivo</button>
     </div>
   );
@@ -956,12 +1006,19 @@ export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, 
       <div class="peq"><Icono n="pasos" /> <strong>Carrera</strong>{n >= 1 && n <= total ? ` · semana ${n} de ${total}` : ''}{fase && n >= 1 && n <= total ? ` · ${fase.nombre}` : ''}
         {s?.etiqueta ? <span class="chip etiqueta-carrera">{s.etiqueta}</span> : null}{s?.ab ? <span class="chip">Fuerza {s.ab}</span> : null}{textoKm(s?.km_min, s?.km_max) ? <span class="chip num">{textoKm(s.km_min, s.km_max)}</span> : null}</div>
       {s?.clave && <p class="mini secundario">{s.clave}</p>}
-      {choques.map((c, i) => (
-        <p key={i} class="cav-choque mini" role="status"><Icono n="alerta" />
-          <span>Choque con la fuerza: <strong>{c.carrera.titulo || NOMBRE_TIPO[c.carrera.tipo]}</strong> el {DIAS.find(([n]) => n === c.carrera.dia)[1].toLowerCase()}, pegada a «{c.fuerza.nombre || 'pierna'}» ({DIAS.find(([n]) => n === c.fuerza.dia)[1].toLowerCase()}).
-            {c.propuesta ? <> <button type="button" class="btn-texto mini" disabled={moviendo} onClick={() => mover(c)}>Moverla al {DIAS.find(([n]) => n === c.propuesta)[1].toLowerCase()}</button></> : ' Sepáralas un día si puedes.'}</span>
-        </p>
-      ))}
+      {choques.map((c, i) => {
+        // (v0.227, R27) El día después de pierna pesada, moverla; el día antes, solo aviso; el mismo día vale, con la carrera primero
+        const nombre = <strong>{c.carrera.titulo || NOMBRE_TIPO[c.carrera.tipo]}</strong>;
+        const fz = `«${c.fuerza.nombre || 'pierna'}»`;
+        return (
+          <p key={i} class="cav-choque mini" role="status" data-tipo={c.tipo}><Icono n={c.tipo === 'despues' ? 'alerta' : c.tipo === 'mismo' ? 'reloj' : 'calendario'} />
+            {c.tipo === 'despues' ? <span>Choque con la fuerza: {nombre} el {diaNombre(c.carrera.dia)}, después de {fz} ({diaNombre(c.fuerza.dia)}): con las piernas cansadas, la calidad sale peor.
+              {c.propuesta ? <> <button type="button" class="btn-texto mini" disabled={moviendo} onClick={() => mover(c)}>Moverla al {diaNombre(c.propuesta)}</button></> : ' Sepáralas un día si puedes.'}</span>
+              : c.tipo === 'antes' ? <span>{nombre} el {diaNombre(c.carrera.dia)}, el día antes de {fz}: la carrera no se resiente, pero la fuerza del {diaNombre(c.fuerza.dia)} puede salir algo peor.</span>
+                : <span>{nombre} y {fz} el mismo día ({diaNombre(c.carrera.dia)}): vale, con la carrera primero y la fuerza al menos 3 horas después (mejor 6).</span>}
+          </p>
+        );
+      })}
       {items.length > 0 && <ul class="mini terciario plan-carrera-items">{items.map((x, i) => <li key={i}>{x.dia ? `${DIA_CORTO[x.dia]} · ` : ''}<strong>{x.titulo || NOMBRE_TIPO[x.tipo]}</strong>{x.minutos || x.km || x.partes ? ` — ${textoCardio({ modalidad: 'carrera', ...Object.fromEntries(Object.entries(x).filter(([k]) => !['titulo', 'dia'].includes(k))) })}` : ''}</li>)}</ul>}
       {faltan.length > 0 ? <button class="btn btn-peq" style="justify-self:start" onClick={() => estructura(() => api.anadirCarreraASemana(semana.id, faltan), faltan.length === 1 ? 'Sesión de carrera añadida a la semana' : `${faltan.length} sesiones de carrera añadidas a la semana`)}>
         <Icono n="mas" /> {faltan.length === items.length ? `Añadir ${faltan.length === 1 ? 'la sesión' : `las ${faltan.length} sesiones`} de carrera` : `Añadir las ${faltan.length} que faltan`}</button>

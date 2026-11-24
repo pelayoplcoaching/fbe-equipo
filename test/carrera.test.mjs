@@ -46,8 +46,16 @@ check(C.zonasFC({ umbral: [290, 300] }) === null && zsin.length === 5 && zsin.ev
 check(C.umbralDesdeCarrera(2910, 10) === 295 && C.umbralDesdeCarrera(1500, 5) === 315 && C.umbralDesdeCarrera(6420, 21.0975) === 294 && C.umbralDesdeCarrera(0, 10) === null
   && JSON.stringify(C.rangoUmbral(295)) === '[290,300]', 'el ritmo umbral desde una carrera: lo que aguantaría unos 60 minutos (Riegel); 10 km en 48:30 → 4:55; y su rango');
 const pm = C.predecirTiempo(2910, 10, 42.195);
-check(JSON.stringify(C.predecirTiempo(2910, 10, 21.0975)) === '{"seg":6421,"hasta":null}' && pm.seg === 13387 && pm.hasta === 14056 && C.fmtTiempo(pm.seg) === '3:43:07' && C.predecirTiempo(0, 10, 21) === null,
-  'la previsión de Riegel (10 km en 48:30 → media en 1:47:01) y, en maratón, una horquilla hasta un 5 % más lenta (3:43:07–3:54:16)');
+const pr = C.predecirTiempo(2910, 10, 42.195, { kmSemana: 55, primero: false });
+check(C.predecirTiempo(2910, 10, 21.0975).seg === 6421 && C.predecirTiempo(2910, 10, 21.0975).hasta === null && C.predecirTiempo(0, 10, 21) === null,
+  'la previsión de Riegel, tal cual hasta la media (10 km en 48:30 → media en 1:47:01)');
+check(pm.riegel === 13387 && C.fmtTiempo(pm.desde) === '3:47:34' && C.fmtTiempo(pm.hasta) === '4:05:25' && pm.seg === pm.hasta && !pm.rodado,
+  `(R5) en maratón, horquilla del +2 al +10 % sobre Riegel (3:43:07) y, si es el primero o corre menos de 50 km por semana, objetivo en +10 % (${C.fmtTiempo(pm.seg)})`);
+check(pr.rodado && C.fmtTiempo(pr.seg) === '3:56:30' && C.predecirTiempo(2910, 10, 42.195, { kmSemana: 45, primero: false }).seg === pm.seg && C.predecirTiempo(2910, 10, 42.195, { kmSemana: 60 }).seg === pm.seg,
+  `con 50 km por semana o más y otro maratón corrido, objetivo en +6 % (${C.fmtTiempo(pr.seg)}); sin saber si es el primero, el prudente`);
+check(C.ritmo5k({ umbral: [290, 300] }) === 280 && C.ritmo5k({}) === null, '(R4) las series de Z5, a ritmo de 5 km: con el umbral a 4:55, unos 4:40 min/km (Riegel)');
+check(C.fcMaxTanaka(65) === 163 && C.fcMaxTanaka(40) === 180 && C.fcMaxTanaka(5) === null && C.fcMaxTanaka('') === null, '(R2) la FC máxima sin medir, con 208 − 0,7 × edad: 163 a los 65 (con 220 − edad, 155)');
+check(C.umbralCaducado({ test_fecha: '2026-05-20' }, '2026-11-25') && !C.umbralCaducado({ test_fecha: '2026-05-30' }, '2026-11-25') && !C.umbralCaducado({}, '2026-11-25'), '(R1) el test caduca a los 6 meses');
 const evs = [{ id: 'a', fecha: '2026-10-04', distancia_km: 10, resultado_seg: 2910 }, { id: 'b', fecha: '2026-11-01', distancia_km: 21.1, resultado_seg: 6500 }, { id: 'c', fecha: '2026-11-15', distancia_km: 5, resultado_seg: null }];
 check(C.ultimaConResultado(evs)?.id === 'b' && C.ultimaConResultado(evs, 'b')?.id === 'a' && C.ultimaConResultado([]) === null, 'la última carrera con resultado (sin contar la que se edita)');
 const { BIBLIOTECA_FBE, porqueDe, PORQUE_TIPO } = await import('../web/src/logica/carrera-biblioteca.js');
@@ -88,7 +96,7 @@ check(C.textoObjetivoCarrera(ev[1]) === '21,1 km · a 5:41 min/km' && C.textoObj
 const hechas = [{ completada: true, fecha_realizada: '2026-11-10', cardio_hecho: { modalidad: 'carrera', minutos: 40, km: 7 } }, { completada: true, fecha_realizada: '2026-11-13', cardio_hecho: { modalidad: 'carrera', minutos: 60, km: 10.5 } }, { completada: true, fecha_realizada: '2026-11-13', cardio_hecho: { modalidad: 'bici', minutos: 60, km: 25 } }];
 const hs = C.carreraHechaPorSemana(hechas);
 check(hs['2026-11-09'].km === 17.5 && hs['2026-11-09'].sesiones === 2 && C.estadoKm(hs['2026-11-09'], { km_min: 16, km_max: 18 }) === 'bien' && C.estadoKm({ km: 10 }, { km_min: 16, km_max: 18 }) === 'corta', 'los km de carrera de cada semana (la bici no cuenta) frente a lo previsto');
-check(C.pautaAmbar({ minutos: 45 }).texto.startsWith('27–36 min suaves en Z1–Z2') && C.SEMAFORO.rojo.texto.includes('no entrenes') && C.ALARMA.includes('dolor en el pecho'), 'el semáforo: en ámbar, un 20–40 % menos y sin series; en rojo, no entrenar; las señales de alarma');
+check(C.pautaAmbar({ minutos: 45 }).texto.startsWith('27–36 min suaves en Z1–Z2') && C.SEMAFORO.rojo.texto.includes('no entrenes') && C.SEMAFORO.rojo.texto.includes('24 horas sin fiebre') && C.ALARMA.includes('pecho') && C.ALARMA.includes('palpitaciones') && C.ALARMA.includes('hasta que te vea un médico'), 'el semáforo: en ámbar, un 20–40 % menos y sin series; en rojo, no entrenar; las señales de alarma');
 const lpf = C.limpiarPerfil({ lthr: '181', fc_max: '194', umbral: '5:10-5:20', fases: perfil.fases, plan_inicio: '2026-10-14' });
 check(lpf.error === null && lpf.perfil.plan_inicio === '2026-10-12' && JSON.stringify(lpf.perfil.umbral) === '[310,320]' && C.limpiarPerfil({ lthr: '90' }).error && C.limpiarPerfil({ z2: '150', z3: '140', z4: '170', z5: '180' }).error, 'el perfil: el inicio, al lunes; el umbral leído; FC fuera de rango o zonas al revés, no');
 check(C.limpiarEvento({ nombre: 'Salamanca', fecha: '2027-03-07', distancia_km: '21,1', objetivo: '1:59:00', prioridad: 'A' }).evento.objetivo_seg === 7140 && C.limpiarEvento({ nombre: 'X', fecha: '2027-01-01', objetivo: 'rápido' }).error && C.limpiarEvento({ fecha: '2027-01-01' }).error, 'una carrera: tiempo objetivo leído; mal escrito o sin nombre, no');

@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.227': {
+    atleta: [
+      'Tu carrera: las señales para parar y ver al médico, más completas, y cómo volver a correr después de una fiebre.',
+      'Tus zonas te dicen cuándo manda el esfuerzo (series cortas, cuestas, calor) y tu ritmo de 5 km para las series más rápidas.',
+    ],
+    coach: [
+      'Carrera revisada por un experto: aviso si una salida pasa en más de un 10 % la más larga del mes, y tirada larga según sus días.',
+      'El asistente del plan propone el nivel, avisa en rojo si no llega bien a la carrera y tiene casillas para mayores de 60 o lesión.',
+      'En maratón, un tiempo previsto más realista (un 2-10 % por encima de Riegel), y la FC máxima sin medir, estimada por la edad.',
+      'Avisos, ajuste y revisiones, con los mismos cortes (90 y 70 % de lo previsto) y sin revisiones en rojo por un mal día de pulso.',
+    ],
+  },
   '0.226': {
     atleta: [],
     coach: [

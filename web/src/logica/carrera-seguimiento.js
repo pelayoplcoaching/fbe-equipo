@@ -6,7 +6,15 @@
 //   · Cumplimiento: el 80 % o más de los km previstos, verde; 60-80 %, ámbar; menos, rojo.
 //   · Semáforos y dolor de esas dos semanas. La revisión toma el peor de los tres; el coach la confirma o la cambia.
 // La eficiencia se mide en metros por latido (la velocidad entre las pulsaciones medias) en los rodajes suaves con pulso.
+// (v0.227) Con la revisión del experto («claude/carrera-revision-experto-respuesta.md»):
+//   · R29 La eficiencia, por la mediana de 3 o más rodajes suaves de 30 min o más frente a la de las 4 semanas anteriores,
+//     con cortes de ±5 % (el pulso a un ritmo dado varía varios puntos de un día a otro: ±2-3 % es ruido). Por sí sola nunca
+//     pasa de ámbar: estable o mejor, verde; un 5 % peor o más, ámbar.
+//   · R30 Cumplimiento con los cortes de los avisos: 90 % o más, verde; 70-89 %, ámbar; menos del 70 %, rojo. Sin las
+//     carreras (el plan va sin ellas) y, si el plan va en minutos y no hay km apuntados, por minutos.
+//   · R32 La revisión toma el peor de los tres (la eficiencia, como mucho ámbar).
 import { sumarDias, lunesDe } from './fechas.js';
+import { minutosPlan } from './carrera-avisos.js';
 
 const SUAVES = ['facil', 'recuperacion', 'larga'];
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -14,8 +22,9 @@ const kmPlan = (s) => (s?.km_min != null || s?.km_max != null ? (Number(s.km_min
 const NIVEL = { verde: 0, ambar: 1, rojo: 2 };
 export const NOMBRE_COLOR = { verde: 'verde', ambar: 'ámbar', rojo: 'rojo' };
 
-// Metros por latido de una salida suave con pulso (o null): la velocidad (m/min) entre las pulsaciones medias
-export function eficienciaDe(s) {
+// Metros por latido de una salida suave con pulso (o null): la velocidad (m/min) entre las pulsaciones medias. minMin: los
+// minutos mínimos de la salida (10 para la gráfica; 30 para la revisión, R29)
+export function eficienciaDe(s, minMin = 10) {
   const c = s?.cardio_hecho;
   if (!c || c.modalidad !== 'carrera') return null;
   const tipo = s?.cardio?.tipo;
@@ -23,7 +32,7 @@ export function eficienciaDe(s) {
   const min = (Number(c.minutos) || 0) + (Number(c.seg) || 0) / 60;
   const km = Number(c.km) || 0;
   const fc = Number(c.fc_media) || 0;
-  if (!suave || !(km > 0) || !(min >= 10) || !(fc >= 80 && fc <= 220)) return null;
+  if (!suave || !(km > 0) || !(min >= minMin) || !(fc >= 80 && fc <= 220)) return null;
   const ritmo = (min * 60) / km; // s/km
   if (ritmo < 150 || ritmo > 720) return null;
   return r2((km * 1000) / min / fc);
@@ -39,13 +48,16 @@ export function serieEficiencia(hechas = []) {
     return { ...x, media: r2(ventana.reduce((a, y) => a + y.ef, 0) / ventana.length) };
   });
 }
-// El cambio de la eficiencia entre dos tramos (en %), con al menos 2 salidas en cada uno; o null
+const mediana = (l) => { const o = [...l].sort((a, b) => a - b); const m = o.length >> 1; return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2; };
+// (R29) El cambio de la eficiencia entre dos tramos (en %), por la mediana de los rodajes suaves de 30 min o más, con al
+// menos 3 en cada uno; o null
+export const EF_MIN_MIN = 30;
+export const EF_CORTE = 5;
 function cambioEficiencia(hechas, desde, hasta, antesDesde) {
-  const de = (a, b) => (hechas || []).filter((s) => { const f = String(s?.fecha_realizada || '').slice(0, 10); return f >= a && f < b; }).map(eficienciaDe).filter((x) => x != null);
+  const de = (a, b) => (hechas || []).filter((s) => { const f = String(s?.fecha_realizada || '').slice(0, 10); return f >= a && f < b; }).map((s) => eficienciaDe(s, EF_MIN_MIN)).filter((x) => x != null);
   const ahora = de(desde, hasta), antes = de(antesDesde, desde);
-  if (ahora.length < 2 || antes.length < 2) return null;
-  const m = (l) => l.reduce((a, x) => a + x, 0) / l.length;
-  return Math.round((m(ahora) / m(antes) - 1) * 1000) / 10;
+  if (ahora.length < 3 || antes.length < 3) return null;
+  return Math.round((mediana(ahora) / mediana(antes) - 1) * 1000) / 10;
 }
 
 // La revisión de las dos semanas antes de `fecha` (por defecto, las dos últimas terminadas): los tres datos con su color,
@@ -54,22 +66,30 @@ export function revisionAuto({ semanas = [], hechas = [], fecha, hoy }) {
   const fin = lunesDe(fecha || hoy);
   const ini = sumarDias(fin, -14);
   const partes = [];
-  // Eficiencia aeróbica
-  const ef = cambioEficiencia(hechas, ini, fin, sumarDias(ini, -14));
+  // (R29) Eficiencia aeróbica: estable o mejor, verde; un 5 % peor o más, ámbar (nunca rojo por sí sola)
+  const ef = cambioEficiencia(hechas, ini, fin, sumarDias(ini, -28));
   if (ef != null) {
-    const color = ef >= 2 ? 'verde' : ef < -3 ? 'rojo' : 'ambar';
+    const color = ef <= -EF_CORTE ? 'ambar' : 'verde';
+    const como = ef >= EF_CORTE ? 'mejora' : ef > -EF_CORTE ? 'estable (el ±5 % es ruido del día a día)' : 'empeora';
     partes.push({ k: 'eficiencia', titulo: 'Eficiencia aeróbica', color,
-      texto: `${ef > 0 ? '+' : ef < 0 ? '\u2212' : ''}${String(Math.abs(ef)).replace('.', ',')} % de metros por latido en los rodajes suaves frente a las dos semanas anteriores` });
+      texto: `${ef > 0 ? '+' : ef < 0 ? '\u2212' : ''}${String(Math.abs(ef)).replace('.', ',')} % de metros por latido en los rodajes suaves frente a las 4 semanas anteriores: ${como}` });
   }
-  // Cumplimiento
+  // (R30) Cumplimiento, sin las carreras: por km o, si el plan va en minutos y no hay km apuntados, por minutos
   const dentro = (hechas || []).filter((s) => { const f = String(s?.fecha_realizada || '').slice(0, 10); return f >= ini && f < fin && s?.cardio_hecho?.modalidad === 'carrera'; });
-  const plan = [ini, sumarDias(ini, 7)].map((l) => kmPlan((semanas || []).find((s) => s.lunes === l))).filter((x) => x != null);
-  const conKm = dentro.filter((s) => Number(s.cardio_hecho.km) > 0);
-  if (plan.length === 2 && (conKm.length || !dentro.length)) {
+  const entrenos = dentro.filter((s) => s?.cardio?.tipo !== 'carrera');
+  const planes = [ini, sumarDias(ini, 7)].map((l) => (semanas || []).find((s) => s.lunes === l) || null);
+  const kmP = planes.map(kmPlan), minP = planes.map(minutosPlan);
+  const conKm = entrenos.filter((s) => Number(s.cardio_hecho.km) > 0);
+  const n1 = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
+  const colorPct = (pct) => (pct >= 90 ? 'verde' : pct >= 70 ? 'ambar' : 'rojo');
+  if (kmP.every((x) => x != null) && (conKm.length || !entrenos.length)) {
     const km = conKm.reduce((a, s) => a + Number(s.cardio_hecho.km), 0);
-    const pct = Math.round((km / (plan[0] + plan[1])) * 100);
-    partes.push({ k: 'cumplimiento', titulo: 'Cumplimiento', color: pct >= 80 ? 'verde' : pct >= 60 ? 'ambar' : 'rojo',
-      texto: `${pct} % de los km previstos (${String(Math.round(km * 10) / 10).replace('.', ',')} de ${String(Math.round((plan[0] + plan[1]) * 10) / 10).replace('.', ',')})` });
+    const pct = Math.round((km / (kmP[0] + kmP[1])) * 100);
+    partes.push({ k: 'cumplimiento', titulo: 'Cumplimiento', color: colorPct(pct), texto: `${pct} % de los km previstos (${n1(km)} de ${n1(kmP[0] + kmP[1])})` });
+  } else if (minP.every((x) => x != null)) {
+    const min = entrenos.reduce((a, s) => a + (Number(s.cardio_hecho.minutos) || 0) + (Number(s.cardio_hecho.seg) || 0) / 60, 0);
+    const pct = Math.round((min / (minP[0] + minP[1])) * 100);
+    partes.push({ k: 'cumplimiento', titulo: 'Cumplimiento', color: colorPct(pct), texto: `${pct} % de los minutos previstos (${Math.round(min)} de ${Math.round(minP[0] + minP[1])})` });
   }
   // Semáforos y dolor
   if (dentro.length) {
