@@ -13,6 +13,12 @@ const PERSONAS_DEMO = [
   ['lucia@fbe.demo', 'Lucía Ferrer', 'Atleta: solo nutrición, con su recetario y su menú', 'L'],
   ['ivan@fbe.demo', 'Iván Prieto', 'Atleta: microciclos de 4 sesiones, 3 días por semana', 'I'],
 ];
+// (FBE Esencial) en ?demo=esencial: quienes van por su cuenta, con la plantilla de la guía del vídeo
+const PERSONAS_ESENCIAL = [
+  ['marina@fbe.demo', 'Marina Ortega', 'FBE Esencial: empieza esta semana (antes, su cuestionario de salud)', 'M'],
+  ['tomas@fbe.demo', 'Tomás Rey', 'FBE Esencial: ha terminado las cuatro semanas; sus marcas', 'T'],
+  ['pelayo@fbe.demo', 'Pelayo', 'Coach: panel de atletas', 'P'],
+];
 
 // (diseño) Mientras se ve una pantalla de entrada, la barra del sistema sigue del color de la noche de la portada de
 // arranque (la franja de arriba de estas pantallas, en diseno.css, bloque 17): va la primera, que es la que manda
@@ -57,7 +63,7 @@ export function Acceso() {
           {modo === 'demo' && (
             <div class="pila">
               <div class="nota">Esto es una demo con atletas ficticios. Elige con quién entrar:</div>
-              {PERSONAS_DEMO.map(([email, nombre, rol, ini]) => (
+              {(backend.variante === 'esencial' ? PERSONAS_ESENCIAL : PERSONAS_DEMO).map(([email, nombre, rol, ini]) => (
                 <button class="persona" key={email} onClick={() => comoDemo(email)}>
                   <span class="avatar" aria-hidden="true">{ini}</span>
                   <span><strong>{nombre}</strong><br /><span class="rol">{rol}</span></span>

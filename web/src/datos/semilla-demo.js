@@ -7,6 +7,7 @@ import { FAQ } from './faq.js';
 import { RESPUESTAS_EJEMPLO } from './respuestas.js';
 import { sembrarComidas } from './semilla-comidas.js';
 import { sembrarGuias } from './semilla-guias.js';
+import { sembrarEsencial } from './semilla-esencial.js';
 import { VERSION_NORMAS } from './normas-comunidad.js';
 import { VERSION_LEGAL } from '../legal.js';
 import { MOMENTOS_COACH } from '../logica/personal.js';
@@ -85,7 +86,7 @@ const DIAS_FULL_BODY = [
   },
 ];
 
-export function semillaDemo(hoy = hoyISO()) {
+export function semillaDemo(hoy = hoyISO(), { esencial = false } = {}) {
   const r = prng(20261024);
   const db = { auth_users: [], perfiles: [], atletas: [], invitaciones: [], consentimientos: [], ejercicios: [], bloques: [], semanas: [], sesiones: [], sesion_ejercicios: [], series: [], pesos: [], checkins: [], molestias: [], notas_coach: [], medidas: [], marcas: [], objetivos: [], archivos: [], comentarios: [], recursos: [], notas_ejercicio: [], respuestas_guardadas: [], avisos: [], habitos: [], registros_habito: [], planes_nutricion: [], registros_nutricion: [], preferencias_notificaciones: [], suscripciones_push: [], notificaciones: [], cuestionarios: [], preguntas_checkin: [], cobros_atletas: [], pagos: [] };
   const ahoraISO = new Date().toISOString();
@@ -687,6 +688,8 @@ export function semillaDemo(hoy = hoyISO()) {
   // le sale la tarjeta en Hoy). Nadie tiene propuestas esperando
   db.objetivos_rondas = db.atletas.filter((a) => a.email !== 'ivan@fbe.demo').map((a) => ({ atleta_id: a.id, contestado_en: ahoraISO }));
   db.objetivos_propuestos = [];
+  // (FBE Esencial) la demo de quien va por su cuenta (?demo=esencial): aparte, para no cambiar la de siempre
+  if (esencial) sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, versionLegal: VERSION_LEGAL });
   return db;
 
   // v0.53 (al final: no cambia lo aleatorio de lo anterior): Iván va por microciclos de 4 sesiones (torso-pierna A y B)

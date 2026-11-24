@@ -74,7 +74,10 @@ async function arrancar() {
     backend = crearBackendSupabase({ url: cfg.supabaseUrl, anonKey: cfg.supabaseAnonKey });
   } else {
     const [{ crearBackendMemoria }, { semillaDemo }] = await Promise.all([import('./datos/backend-memoria.js'), import('./datos/semilla-demo.js')]);
-    backend = crearBackendMemoria({ semilla: () => semillaDemo() });
+    // (FBE Esencial) ?demo=esencial: la demo de quien va por su cuenta, con su propia copia en el almacenamiento
+    const esencial = new URLSearchParams(location.search).get('demo') === 'esencial';
+    backend = crearBackendMemoria({ semilla: () => semillaDemo(undefined, { esencial }), ...(esencial ? { clave: 'fbe-demo-esencial-v1' } : {}) });
+    if (esencial) backend.variante = 'esencial';
     // (solo en la demo, para las pruebas: lo que haría el coach desde el SQL Editor, como pasar un vídeo a otro atleta)
     globalThis.__fbeDemo = backend;
     // (y mandar ya lo medido en este dispositivo: en la demo no se manda solo)
