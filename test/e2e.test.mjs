@@ -6698,6 +6698,14 @@ if (parte('v0.229: carrera, el día de la carrera y después')) try {
   fallos++;
   console.log('  ✗ el día de la carrera de la v0.229:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.230: el atleta apunta el resultado de su carrera (migración 090)
+if (parte('v0.230: el atleta apunta el resultado de su carrera')) try {
+  const { probarCarrera230 } = await import('./e2e-carrera-230.mjs');
+  await probarCarrera230({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el resultado de la v0.230:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

@@ -3973,6 +3973,23 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const debeDesde = pagos.filter((x) => x.estado !== 'pagado' && x.periodo_desde <= hoyISO()).map((x) => x.periodo_desde).sort()[0] || null;
         return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
       }
+      // (090) el resultado de una carrera: el atleta, de las suyas que ya han sido (hasta 60 días); el coach, de cualquiera
+      if (nombre === 'carrera_resultado_poner') {
+        const ev = tabla('carrera_eventos').find((x) => x.id === args?.p_evento);
+        if (!ev) throw new Error('Esa carrera no existe');
+        const hoy = hoyISO();
+        if (!esCoach()) {
+          if (!miAtletaId() || ev.atleta_id !== miAtletaId()) throw sinPermiso();
+          if (ev.fecha > hoy) throw new Error('Esa carrera aún no ha llegado');
+          if (ev.fecha < sumar(hoy, -60)) throw new Error('El resultado se apunta en los 60 días siguientes a la carrera');
+        }
+        const seg = args?.p_seg == null ? null : Number(args.p_seg);
+        if (seg != null && (!Number.isInteger(seg) || seg < 60 || seg > 172800)) throw new Error('El tiempo, entre 1 minuto y 48 horas');
+        const nota = String(args?.p_nota ?? '').trim();
+        Object.assign(ev, { resultado_seg: seg, resultado_nota: seg == null || !nota ? null : nota.slice(0, 500) });
+        persistirYa();
+        return copia(ev);
+      }
       if (nombre === 'nombre_coach') return uid && (esCoach() || miAtletaId()) ? String(tabla('perfiles').filter((p) => p.rol === 'coach').sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)))[0]?.nombre || '').trim().split(/\s+/)[0].slice(0, 30) || null : null;
       // (048) el resumen de cada conversación y la última serie de cada atleta: con lo que ve quien llama
       // (lo que deja ver la base, sin pasar por select: el coach sin el segundo paso no ve nada)

@@ -19,7 +19,7 @@ import {
 } from '../../logica/carrera.js';
 import { kmMedio } from '../../logica/carrera-avisos.js';
 import { mananaPendiente, limpiarManana, respuestaManana, DONDE_MANANA, PIERNA_MANANA, COMO_MANANA } from '../../logica/carrera-salud.js';
-import { planDiaCarrera, esSemanaDeCarrera } from '../../logica/carrera-dia.js';
+import { planDiaCarrera, esSemanaDeCarrera, trasLaCarrera } from '../../logica/carrera-dia.js';
 
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 // ¿Es una pauta de carrera con estructura (tipo, zona o partes)?
@@ -171,7 +171,7 @@ export function TuCarrera({ alCerrar }) {
   return (
     <Hoja titulo="Tu carrera" alCerrar={alCerrar} clase="hoja-tu-carrera">
       <Imagen id="carrera" clase="franja-ilu franja-hoja franja-carrera" tamanos="(min-width: 640px) 560px, 92vw" />
-      {carrera.error ? <ErrorCaja error={carrera.error} reintentar={carrera.recargar} /> : !d ? <Siluetas forma="tarjetas" n={3} texto="Cargando tu carrera" /> : <ContenidoCarrera d={d} />}
+      {carrera.error ? <ErrorCaja error={carrera.error} reintentar={carrera.recargar} /> : !d ? <Siluetas forma="tarjetas" n={3} texto="Cargando tu carrera" /> : <ContenidoCarrera d={d} recargar={() => carrera.recargar(true)} />}
     </Hoja>
   );
 }
@@ -214,7 +214,47 @@ function PlanDia({ evento, d }) {
   );
 }
 
-function ContenidoCarrera({ d }) {
+// (v0.230, mejora 17, migración 090) El resultado de tu última carrera (de hoy hacia atrás, hasta 60 días): lo apuntas tú;
+// con él, lo que hiciste frente a lo previsto. Tu coach lo ve en su ficha.
+function ResultadoCarrera({ d, recargar }) {
+  const { api } = useApp();
+  const hoy = hoyISO();
+  const ev = (d.eventos || []).filter((e) => (e.decision === 'va' || e.decision === 'entreno') && e.fecha <= hoy && e.fecha >= sumarDias(hoy, -60) && Number(e.distancia_km) > 0)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0] || null;
+  const [t, setT] = useState('');
+  const [nota, setNota] = useState('');
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  if (!ev) return null;
+  const tras = ev.resultado_seg ? trasLaCarrera({ evento: ev, eventos: d.eventos, kmSemana: kmMedio(d.hechas || [], hoy) }) : null;
+  if (ev.resultado_seg && ev.fecha < sumarDias(hoy, -21)) return null;
+  const guardar = (e) => {
+    e.preventDefault();
+    una(async () => {
+      try {
+        const r = await api.ponerResultadoCarrera(ev.id, { resultado: t, nota });
+        if (r?.falta090) { setError('Aún no se puede apuntar desde aquí: díselo a tu coach.'); return; }
+        setError(null); recargar?.();
+      } catch (err) { setError(err.message); }
+    });
+  };
+  return (
+    <section class="panel panel-pad pila-s res-carrera" aria-labelledby="rca-titulo">
+      <h3 id="rca-titulo" class="h-panel">{ev.resultado_seg ? `Tu resultado en ${ev.nombre}` : `¿Cuánto hiciste en ${ev.nombre}?`}</h3>
+      {ev.resultado_seg ? <p class="peq">Hiciste <strong class="num">{fmtTiempo(ev.resultado_seg)}</strong>{tras?.previsto ? ` (lo previsto era ${fmtTiempo(tras.previsto)})` : ''}{ev.objetivo_seg ? `; tu objetivo, ${fmtTiempo(ev.objetivo_seg)}` : ''}. Tu coach ya lo ve.</p>
+        : <form class="pila-s" onSubmit={guardar}>
+          {error && <div class="error" role="alert">{error}</div>}
+          <div class="rejilla-campos">
+            <label class="campo"><span class="etq">Tu tiempo</span><input class="entrada num" inputMode="numeric" placeholder={Number(ev.distancia_km) >= 20 ? '1:52:30' : '48:10'} value={t} onInput={(e) => setT(e.currentTarget.value)} /></label>
+            <label class="campo"><span class="etq">Cómo fue (si quieres)</span><input class="entrada" maxLength={500} placeholder="Calor, cuestas, cómo te sentiste…" value={nota} onInput={(e) => setNota(e.currentTarget.value)} /></label>
+          </div>
+          <button class="btn btn-primario" style="justify-self:start" disabled={!t.trim() || ocupado}>{ocupado ? 'Guardando…' : 'Apuntar mi resultado'}</button>
+        </form>}
+    </section>
+  );
+}
+
+function ContenidoCarrera({ d, recargar }) {
   const hoy = hoyISO();
   const lunesHoy = lunesDe(hoy);
   const obj = carreraObjetivo(d.eventos, hoy) || proximaCarrera(d.eventos, hoy);
@@ -243,6 +283,7 @@ function ContenidoCarrera({ d }) {
           {prevision && <span class="mini carrera-prevision">Con tu {prevision.base.nombre}, tu tiempo previsto es {fmtTiempo(prevision.p.seg)}{prevision.p.desde ? ` (entre ${fmtTiempo(prevision.p.desde)} y ${fmtTiempo(prevision.p.hasta)})` : ''}</span>}
         </section>
       )}
+      <ResultadoCarrera d={d} recargar={recargar} />
       {obj && esSemanaDeCarrera(obj, hoy) && <PlanDia evento={obj} d={d} />}
       {macrociclo(p).length > 0 && <section class="pila-s" aria-labelledby="tc-plan"><h3 id="tc-plan" class="h-panel">{p.plan_nombre || 'Tu plan'}</h3><Macrociclo perfil={p} /></section>}
 

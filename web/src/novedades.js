@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.230': {
+    atleta: [
+      'Después de tu carrera, apunta tu tiempo en «Tu carrera»: verás lo que hiciste frente a lo previsto, y tu coach también.',
+    ],
+    coach: [
+      'Tus corredores apuntan el resultado de su carrera desde la app (necesita la migración 090).',
+    ],
+  },
   '0.229': {
     atleta: [
       'La semana de tu carrera, en «Tu carrera»: tu plan para el día, con el ritmo, tus pasos, qué comer y beber y qué hacer con calor.',

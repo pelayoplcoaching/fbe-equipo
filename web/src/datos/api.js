@@ -26,7 +26,7 @@ import { APARTADOS_CHECKIN, preguntasDe, respuestasDe } from '../logica/pregunta
 import { dibujoValido } from '../logica/dibujo.js';
 import { tuDia } from '../logica/dia.js';
 import { cardioHechoValido, cardioValido, cardioPorSemana, textoCardioHecho, NOMBRE_MODALIDAD, CLAVES_HECHO_013, solo013 } from '../logica/cardio.js';
-import { limpiarPerfil as limpiarPerfilCarrera, limpiarEvento as limpiarEventoCarrera, limpiarSemana as limpiarSemanaCarrera, limpiarRevision as limpiarRevisionCarrera, sesionDesdePlan } from '../logica/carrera.js';
+import { limpiarPerfil as limpiarPerfilCarrera, limpiarEvento as limpiarEventoCarrera, limpiarSemana as limpiarSemanaCarrera, limpiarRevision as limpiarRevisionCarrera, sesionDesdePlan, leerTiempo } from '../logica/carrera.js';
 import { pendiente as cuestionarioPendiente } from '../logica/cuestionario.js';
 import { revisarVariante, varianteSinMaterial } from '../logica/variantes.js';
 import { limpiarReceta, recetarioPorToma, tomasDe, ordenarTomas, entradaMenu, copiarMenu, cambiarRaciones } from '../logica/comidas.js';
@@ -1506,6 +1506,20 @@ export function crearApi(backend, opciones = {}) {
       return (await b.insert('carrera_eventos', [{ ...evento, atleta_id: atletaId }]).catch(falta056))[0];
     },
     async borrarCarreraEvento(id) { return b.delete('carrera_eventos', { eq: { id } }).catch(falta056); },
+    // (v0.230, 090) El resultado de una carrera que ya ha sido: el atleta, de las suyas (hasta 60 días después); el coach, de
+    // cualquiera. resultado: «1:52:30» o «48:10» (vacío, lo quita). Sin la 090: { falta090: true }
+    async ponerResultadoCarrera(eventoId, { resultado = '', nota = '' } = {}) {
+      const txt = String(resultado ?? '').trim();
+      const seg = txt ? leerTiempo(txt) : null;
+      if (txt && !seg) throw new Error('El tiempo se escribe como 1:52:30 o 48:10.');
+      try {
+        return await b.rpc('carrera_resultado_poner', { p_evento: eventoId, p_seg: seg, p_nota: String(nota ?? '').trim().slice(0, 500) || null });
+      } catch (e) {
+        const m = `${e?.message || ''} ${e?.code || ''}`;
+        if (/carrera_resultado_poner/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(m)) return { falta090: true };
+        throw e;
+      }
+    },
     // (v0.218) si es la semana en curso y su carrera va por calendario, lo que tiene puesto se pone al día con el plan
     async guardarCarreraSemana(atletaId, datos) {
       const { semana, error } = limpiarSemanaCarrera(datos);
