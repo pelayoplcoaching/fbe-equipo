@@ -111,6 +111,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
             <p>{suyo ? 'Te falta la parte de salud: sin ella, la app no puede prepararte tu plan. Cuando des el consentimiento de datos de salud, complétala desde Hoy o desde Perfil.'
               : 'Tu coach ya tiene tus respuestas. Te falta la parte de salud: cuando des el consentimiento de datos de salud, complétala desde Perfil.'}</p>
           )}
+          {suyo && final.resultado === 'sin_valoracion' && <p>Con tus respuestas, la app te prepara tu plan: lo verás en Hoy.</p>}
           {suyo && final.resultado && final.resultado !== 'sin_valoracion' && <p class="peq secundario">Cuando tengas su visto bueno (o si haces una Puesta a punto con Pelayo), márcalo en Hoy: Pelayo lo confirma y la app te prepara tu plan.</p>}
           <p class="peq secundario">Si algo cambia (una lesión, una medicación nueva, un embarazo…), actualízalo desde Perfil{suyo ? '.' : ': tu coach lo verá.'}</p>
           <button class="btn btn-primario btn-grande" onClick={alCerrar}>Hecho</button>

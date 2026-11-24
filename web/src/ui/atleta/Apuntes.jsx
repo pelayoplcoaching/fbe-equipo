@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icono, Capa, useApp, useCarga } from '../comunes.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
 import { FAQ } from '../../datos/faq.js';
@@ -431,7 +432,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
                 {video && <button type="button" class="btn-texto" onClick={() => abrirMini({ url: video.url, titulo: video.titulo })}><Icono n="video" />Ver el vídeo</button>}
                 {actual.tipo === 'clave' && modo === 'descanso' && !acabado && <button type="button" class="btn-texto" onClick={alaSerie}><Icono n="diana" />Lo pruebo en la siguiente serie</button>}
                 {modo === 'descanso' && ejercicio?.id && ['clave', 'clip'].includes(actual.tipo) && <button type="button" class="btn-texto" onClick={() => setComparar(true)}><Icono n="camara" />Grábate y compáralo</button>}
-                {!propio && api.enviarMensaje && <button type="button" class="btn-texto" onClick={noEntiendo}><Icono n="pregunta" />No lo entiendo</button>}
+                {!propio && api.enviarMensaje && !esPorSuCuenta(atleta) && <button type="button" class="btn-texto" onClick={noEntiendo}><Icono n="pregunta" />No lo entiendo</button>}
               </div>
             )}
           </article>

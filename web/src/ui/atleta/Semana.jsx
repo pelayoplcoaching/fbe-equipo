@@ -8,6 +8,7 @@ import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica
 import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { useDeslizar } from '../deslizar.js';
@@ -19,7 +20,7 @@ import { imagenFoco, FRASE_FOCO } from '../../logica/imagenes.js';
 const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 export function Semana({ programa, abrirSesion, noLeidos = [] }) {
-  const { api } = useApp();
+  const { api, atleta } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
   const [elegida, setElegida] = useState(null);
   const [bloque, setBloque] = useState(false);
@@ -107,7 +108,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
                       <Imagen key={imagenFoco(semana.foco)} id={imagenFoco(semana.foco)} clase="cab-ilu-img" tamanos="(min-width: 720px) 400px, 70vw" />
                     </div>
                   ) : <span class="chip morado" style="justify-self:start">Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>)}
-                  {semana.nota_coach && <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
+                  {semana.nota_coach && <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" /><div><strong>{esPorSuCuenta(atleta) ? 'Esta semana: ' : 'Tu coach: '}</strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>}
                 </div>
               )}
               {/* (057) cómo está montada la semana y por qué, de la guía de rutinas */}

@@ -67,8 +67,9 @@ export const activo = (r) => r.estado === 'activo';
 // Check-in de la semana pasada o de esta (como el aviso «Sin check-in la semana pasada»)
 export const checkinAlDia = (r, hoy) => !!r.checkin?.semana && r.checkin.semana >= restarDias(lunesDeISO(hoy), 7);
 // La semana que viene: 'publicada' | 'borrador' | 'sin' | 'sin_bloque' | null (no aplica: de baja, en pausa, solo nutrición)
+// (FBE Esencial: a quien va por su cuenta se la prepara la app: no aplica)
 export function proximaDe(r, extra = {}) {
-  if (!activo(r) || !entrena(r)) return null;
+  if (!activo(r) || !entrena(r) || r.modalidad === 'por_su_cuenta') return null;
   if (!r.bloque) return 'sin_bloque';
   return extra.proxima?.[r.atleta_id] ?? null;
 }
@@ -112,7 +113,8 @@ export const NOMBRE_MARCA = Object.fromEntries(MARCAS);
 // Los contadores de arriba (los que más ahorran): los cinco primeros
 export const CONTADORES = MARCAS.slice(0, 8).map(([k]) => k);
 export function cumpleMarca(k, r, extra, hoy) {
-  if (k === 'sinCheckin') return activo(r) && !checkinAlDia(r, hoy);
+  // (FBE Esencial: su check-in no espera respuesta; no cuenta como pendiente)
+  if (k === 'sinCheckin') return activo(r) && r.modalidad !== 'por_su_cuenta' && !checkinAlDia(r, hoy);
   if (k === 'porProgramar') return porProgramar(r, extra);
   if (k === 'molestias') return conMolestias(r);
   if (k === 'sinLeer') return sinLeerDe(r, extra) > 0;

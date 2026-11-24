@@ -56,12 +56,15 @@ const DIBUJOS = {
 
 // v0.50: en su capa (en <body>), como las hojas
 export function Bienvenida(props) { return <Capa><BienvenidaPantalla {...props} /></Capa>; }
-function BienvenidaPantalla({ nombre, alTerminar }) {
+// (FBE Esencial) suyo: va por su cuenta: sin conversación con su coach; su plan lo prepara la app
+function BienvenidaPantalla({ nombre, alTerminar, suyo = false }) {
   const ios = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const pantallas = [
-    { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tienes tu programa: cada sesión con sus ejercicios, series y cargas. El disco de color marca la prioridad de cada ejercicio.' },
+    suyo ? { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tendrás tu plan: cada sesión con sus ejercicios y sus series. Lo primero, tu cuestionario: con él, la app te lo prepara.' }
+      : { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tienes tu programa: cada sesión con sus ejercicios, series y cargas. El disco de color marca la prioridad de cada ejercicio.' },
     { dibujo: 'serie', titulo: 'Apunta cada serie', texto: 'Kilos, repeticiones y cuánto te ha costado. Si haces justo lo que te propone la app, basta con tocar ✓. Funciona aunque el gimnasio no tenga cobertura.' },
-    { dibujo: 'coach', titulo: 'Habla con tu coach', texto: 'Cada sesión y cada check-in tienen su conversación. Cuéntale cambios, dudas o molestias, o mándale un vídeo para que te corrija la técnica.' },
+    suyo ? { dibujo: 'coach', titulo: 'Cada semana, la siguiente', texto: 'Con lo que apuntas, la app te prepara la semana siguiente con las reglas de progresión de Pelayo. Y una vez por semana, tu check-in: cómo vas y si algo te molesta.' }
+      : { dibujo: 'coach', titulo: 'Habla con tu coach', texto: 'Cada sesión y cada check-in tienen su conversación. Cuéntale cambios, dudas o molestias, o mándale un vídeo para que te corrija la técnica.' },
     { dibujo: 'instalar', titulo: 'Tenla a mano', texto: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio». Se abrirá como una app.' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación». Se abrirá como una app.' },
   ];
   const [i, setI] = useState(0);

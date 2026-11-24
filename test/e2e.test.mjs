@@ -6706,6 +6706,14 @@ if (parte('v0.230: el atleta apunta el resultado de su carrera')) try {
   fallos++;
   console.log('  ✗ el resultado de la v0.230:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.232: FBE Esencial: el alta, antes de empezar (cuestionario, visto bueno), la sesión y las marcas (demo ?demo=esencial)
+if (parte('v0.232: FBE Esencial, el alta y antes de empezar')) try {
+  const { probarEsencial } = await import('./e2e-esencial.mjs');
+  await probarEsencial({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ FBE Esencial de la v0.232:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

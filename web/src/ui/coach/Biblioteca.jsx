@@ -98,7 +98,10 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
     nombre: ejercicio.nombre || '', grupos: ejercicio.grupos_musculares || [], tipo: ejercicio.tipo || [], rango_reps: ejercicio.rango_reps || '',
     video_url: ejercicio.video_url || '', instrucciones: ejercicio.instrucciones || '', errores: ejercicio.errores || '',
     alternativas: (ejercicio.alternativas || []).filter((id) => porId[id]), activo: ejercicio.activo !== false,
+    por_tiempo: !!ejercicio.por_tiempo,
   });
+  // (091) «Se mide en segundos» (la plancha): solo si la base tiene la columna (con la 091)
+  const con091 = useCarga(() => api.esencial091().catch(() => null), []);
   const [buscar, setBuscar] = useState('');
   const alternar = (k, v) => setF({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] });
   const candidatos = buscar.trim() ? todos.filter((e) => e.id !== ejercicio.id && !f.alternativas.includes(e.id) && normal(e.nombre).includes(normal(buscar))).slice(0, 8) : [];
@@ -109,6 +112,7 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
       nombre: f.nombre.trim(), grupos_musculares: f.grupos, tipo: f.tipo, rango_reps: f.rango_reps.trim() || null,
       video_url: f.video_url.trim() || null, instrucciones: f.instrucciones.trim() || null, errores: f.errores.trim() || null,
       alternativas: f.alternativas, activo: f.activo,
+      ...(con091.datos === true ? { por_tiempo: f.por_tiempo } : {}),
     };
     try {
       if (nuevo) await api.crear('ejercicios', fila); else await api.actualizar('ejercicios', ejercicio.id, fila);
@@ -170,6 +174,7 @@ function EditarEjercicio({ ejercicio, todos, porId, alCerrar }) {
         <CampoVideo id="ej-video" valor={f.video_url} alCambiar={(x) => setF((g) => ({ ...g, video_url: x }))} />
         <div class="campo"><label for="ej-inst">Claves de la técnica</label><textarea id="ej-inst" class="area" style="min-height:140px" value={f.instrucciones} onInput={(e) => setF({ ...f, instrucciones: e.currentTarget.value })} /></div>
         <div class="campo"><label for="ej-err">Errores comunes</label><textarea id="ej-err" class="area" style="min-height:100px" value={f.errores} onInput={(e) => setF({ ...f, errores: e.currentTarget.value })} /></div>
+        {con091.datos === true && <label class="casilla"><input type="checkbox" checked={f.por_tiempo} onChange={(e) => setF({ ...f, por_tiempo: e.currentTarget.checked })} /><span>Se mide en segundos (como la plancha): la pauta va en segundos y el atleta apunta segundos, no repeticiones</span></label>}
         {!nuevo && <label class="casilla"><input type="checkbox" checked={!f.activo} onChange={(e) => setF({ ...f, activo: !e.currentTarget.checked })} /><span>Ocultar al elegir ejercicios (se mantiene en los programas que ya lo usan)</span></label>}
         <button class="btn btn-primario btn-grande" disabled={ocupado}>Guardar</button>
       </form>

@@ -227,7 +227,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       {elegir && <input type="checkbox" class="marcar-atleta" checked={elegidos.includes(r.atleta_id)} onClick={(e) => e.stopPropagation()} onChange={() => elegirUno(r.atleta_id)} aria-label={`Elegir a ${r.nombre.split(' ')[0]}`} />}
       <span class="avatar-env"><ConAro hechas={r.sesiones?.completadas} total={r.estado === 'activo' && r.servicio !== 'nutricion' ? r.sesiones?.total : 0}><Avatar nombre={r.nombre} foto={r.foto} /></ConAro>{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
       <span class="nombre-txt">
-        <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}</span>
+        <span class="nombre-linea">{r.nombre}{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num" title="Mensajes sin leer">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.modalidad === 'por_su_cuenta' && <span class="chip mini"> Esencial</span>}</span>
         <span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}</span>
         <Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />
         {pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}
@@ -713,6 +713,7 @@ function NuevoAtleta({ alCerrar }) {
           try {
             // (FBE Esencial) quien va por su cuenta: su ficha, su lunes de inicio y su código (con la 091)
             if (esencial) {
+              if (!esLunes(f.inicio)) { setError('El día de inicio tiene que ser un lunes.'); return; }
               const r = await api.crearAtletaEsencial({ nombre: f.nombre, email: f.email.trim() || null, nutricion: f.esencialNutri, inicio: f.inicio });
               if (r?.falta091) { setError('Para FBE Esencial falta ejecutar la migración 091 en Supabase (supabase/migraciones/091_esencial_alta.sql).'); return; }
               setCreado(r);
@@ -763,7 +764,7 @@ export function Invitacion({ atleta, alCerrar, codigoDado = null, esencial = fal
   const contactos = useContactos([atleta.id]);   // (v0.105) con su teléfono, el WhatsApp va directo a él
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
-  const inicio = esencial && atleta.esencial_inicio ? fmtConDia(atleta.esencial_inicio).toLowerCase() : null;
+  const inicio = esencial && atleta.esencial_inicio ? fechaLarga(atleta.esencial_inicio) : null;
   const mensaje = !codigo.datos ? '' : esencial
     ? `Hola, ${nombre}. Ya tienes tu plaza en FBE Esencial. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos} (caduca en 14 días y solo vale una vez). Lo primero, tu cuestionario: con él, la app te prepara tu plan${inicio ? `, que empieza el ${inicio}` : ''}.`
     : `Hola, ${nombre}. Ya tienes tu acceso a la app de FBE Coaching. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos}. Caduca en 14 días y solo vale una vez.`;

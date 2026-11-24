@@ -53,7 +53,9 @@ import { nivelCheckin, adherenciaMedia, zonaCarga, fueraDeZona } from '../../log
 const DE_ENTRENAMIENTO = ['programa', 'actividad', 'registro', 'objetivos'];
 const PESTANAS = [['programa', 'Programa'], ['mensajes', 'Mensajes'], ['actividad', 'Actividad'], ['registro', 'Registro'], ['carrera', 'Carrera'], ['seguimiento', 'Seguimiento'], ['nutricion', 'Nutrición'], ['videos', 'Vídeos y fotos'], ['objetivos', 'Objetivos'], ['notas', 'Notas'], ['cobros', 'Cobros'], ['datos', 'Datos']];
 // (v0.133) Carrera, solo a quien se la llevas
-export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)) && (k !== 'carrera' || conCarrera(a)));
+// (FBE Esencial) quien va por su cuenta no tiene chat: sin Mensajes (lo que le escribieras no lo vería)
+export const pestanasFicha = (a) => PESTANAS.filter(([k]) => (conNutricion(a) || k !== 'nutricion') && (conEntrenamiento(a) || !DE_ENTRENAMIENTO.includes(k)) && (k !== 'carrera' || conCarrera(a))
+  && (k !== 'mensajes' || a?.modalidad !== 'por_su_cuenta'));
 
 // (v0.198) El anterior y el que viene de tu lista de Atletas
 function VecinosFicha({ lista, atletaId, nombreDe, ir }) {
@@ -92,7 +94,8 @@ export function Ficha({ atletaId, alVolver, pestanaInicial = 'programa', alCambi
     if (!conNutricion(a) && pest === 'nutricion') setPest('datos');
     else if (!conEntrenamiento(a) && DE_ENTRENAMIENTO.includes(pest)) setPest('nutricion');
     else if (!conCarrera(a) && pest === 'carrera') setPest('datos');
-  }, [a?.nutricion, a?.entrenamiento, a?.carrera, pest]);
+    else if (a?.modalidad === 'por_su_cuenta' && pest === 'mensajes') setPest('datos');
+  }, [a?.nutricion, a?.entrenamiento, a?.carrera, a?.modalidad, pest]);
 
   return (
     <div class="contenido coach">

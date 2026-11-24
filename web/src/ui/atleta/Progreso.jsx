@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { mapaConstancia } from '../../logica/visual.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { Logros } from '../Logros.jsx';
 import { AnillosSemana } from './Anillos.jsx';
 import { TarjetaObjetivo } from '../Objetivos.jsx';
@@ -61,7 +62,7 @@ const conSigno = (v, dec = 1) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${num(Mat
 // (v0.204) llamada: en el modo llamada del coach (pantalla completa para compartirla con él): sin lo que solo es para el
 // coach (apuntar o borrar marcas, la nota de dónde se ajusta el volumen)
 export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaDada = null, entrenamiento = true, irA = null, progresoDado = null, salud = false, objetivosDados = null, llamada = false }) {
-  const { api, propio: modoAtletaCoach } = useApp();
+  const { api, atleta, propio: modoAtletaCoach } = useApp();
   // (v0.213) con recuerdo: al volver a esta vista (o a la ficha del mismo atleta) sale al momento y se pone al día por detrás
   const rv = (que, si = true) => (si ? { recuerdo: `vista-progreso:${api.uid()}:${atletaId}:${que}` } : {});
   const propio = useCarga(() => (progresoDado ? Promise.resolve(null) : api.progreso(atletaId)), [atletaId, !!progresoDado], rv('progreso', !progresoDado));
@@ -160,7 +161,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
             {objActivos.map((o) => <TarjetaObjetivo key={o.id} o={o} esCoach={esCoach} />)}
           </ul></div>}
           {/* (v0.173) lo que propone él: lo que espera a su coach, lo que le ha contestado y «Proponer un objetivo» */}
-          {!esCoach && !modoAtletaCoach && <PropuestasTuyas salud={salud} />}
+          {!esCoach && !modoAtletaCoach && !esPorSuCuenta(atleta) && <PropuestasTuyas salud={salud} />}
         </section>
       )}
 

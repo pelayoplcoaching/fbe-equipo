@@ -216,7 +216,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       )}
       {p && <FinDePagina texto="Eso es todo por hoy." />}
     </div>
-    {verBienvenida && <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />}
+    {verBienvenida && <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} suyo={porSuCuenta} alTerminar={() => setBienvenidaVista(true)} />}
     {verCuestionario && (
       <HojaCuestionario inicial={cuestionario.datos} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }}
         desde={verCuestionario === 'salud' ? 'salud' : null}
@@ -674,12 +674,12 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           {e.tipo === 'semana' && dias && (
             <p class="peq secundario">
               {natural ? `Semana hecha: ${natural.hechas} de ${natural.objetivo}.` : 'Has hecho todo lo que tienes publicado.'}
-              {e.siguienteMicrociclo ? <> La siguiente, <strong>{e.siguienteMicrociclo.nombre}</strong>, cuando te toque.</> : natural && !natural.completa ? ' Tu coach publicará lo siguiente.' : ''}
+              {e.siguienteMicrociclo ? <> La siguiente, <strong>{e.siguienteMicrociclo.nombre}</strong>, cuando te toque.</> : natural && !natural.completa ? (esPorSuCuenta(atleta) ? ' La app te prepara lo siguiente.' : ' Tu coach publicará lo siguiente.') : ''}
             </p>
           )}
         </div>
         {semana.nota_coach && (
-          <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" /><div><strong>Tu coach: </strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
+          <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" /><div><strong>{esencial || esPorSuCuenta(atleta) ? 'Esta semana: ' : 'Tu coach: '}</strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
         )}
         {e.tipo === 'descanso' ? (
           <HeroDescanso proxima={e.proxima} hoy={hoy} abrirSesion={abrirSesion} abrirPlan={enSemana && sesiones.some((s) => !s.completada) ? () => setPlanAbierto(true) : null} />
@@ -688,7 +688,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ) : e.tipo === 'semana' ? (
           <div class="pila-s">
             {salud && !propio && !checkinHecho && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('checkin')}><Icono n="checkin" /> Hacer el check-in semanal</button></div>}
-            {checkinHecho && !propio && <p class="peq secundario">Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.</p>}
+            {checkinHecho && !propio && <p class="peq secundario">{esPorSuCuenta(atleta) ? 'Check-in de la semana enviado. La app te prepara lo siguiente con lo que has registrado.' : 'Check-in de la semana enviado. Tu coach prepara lo siguiente con lo que has registrado.'}</p>}
             {(checkinHecho || !salud || propio) && <div class="hero-acciones"><button class="btn btn-grande btn-hero" onClick={() => irA('progreso')}><Icono n="progreso" /> Ver tu progreso</button></div>}
             {e.hechaHoy && <div class="hero-acciones"><button class="btn btn-sobre-hero" onClick={() => abrirSesion(e.hechaHoy.id)}><Icono n="hecho" /> Ver la de hoy</button></div>}
             {e.siguienteMicrociclo && <div class="hero-acciones"><button class="btn btn-sobre-hero" onClick={() => abrirSesion(e.siguienteMicrociclo.id)}><Icono n="play" /> Adelantar {e.siguienteMicrociclo.nombre}</button></div>}

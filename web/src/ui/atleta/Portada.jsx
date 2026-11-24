@@ -44,7 +44,11 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
   const sobre = [tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Sesión de fuerza', semana?.numero ? `Semana ${semana.numero}` : null].filter(Boolean).join(' · ');
   const nota = (sesion.dinamica || semana?.nota_coach || '').trim();
   const cardio = cardioValido(sesion.cardio) ? sesion.cardio : null;
-  const porQue = sesion.completada ? null : porQueSesion({ objetivos: objetivosDe(cuest.datos), tipo, conCardio: !!cardio, meta: metaDe(trato.personal) }, trato);
+  // (FBE Esencial) quien va por su cuenta lee «te sobran»; en las semanas de aprender (te sobran 3 o más) no sale el porqué
+  // de su objetivo («las primeras series, las pesadas…»), que no encaja con ir sobrado
+  const suyo = esPorSuCuenta(atleta);
+  const aprender = suyo && ejercicios.some((e) => Number(e.rir_objetivo) >= 3);
+  const porQue = sesion.completada || aprender ? null : porQueSesion({ objetivos: objetivosDe(cuest.datos), tipo, conCardio: !!cardio, meta: metaDe(trato.personal) }, trato);
   const familia = familiaPortada({ tipo, pautas: ejercicios, cardio: !!cardio });
   return (
     <div class="contenido portada-vista">
@@ -75,7 +79,8 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       {!sesion.completada && <HoyComoEstas salud={salud} prep={prep || sesion.preparacion || null} />}
       {porQue && <p class="portada-porque"><Icono n="diana" /><span><strong>Por qué es para ti. </strong>{porQue}</span></p>}
       {nivel === 'principiante' && r.ejercicios > 0 && ejercicios.some((e) => /RIR|RPE/.test(pauta(e)?.esfuerzo || '')) && (
-        <p class="portada-nivel peq secundario">Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.</p>
+        <p class="portada-nivel peq secundario">{suyo ? 'Cuando veas «Te sobran 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más.'
+          : 'Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.'}</p>
       )}
       {/* (personalización 3, tanda 5) con el tiempo que tiene y su calentamiento: consejo, la sesión no cambia */}
       {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} />}

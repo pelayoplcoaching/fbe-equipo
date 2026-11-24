@@ -1500,7 +1500,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
                   <select id="t-dolor" class="selector" value={dolor == null ? '' : String(dolor)} onChange={(e) => setDolor(e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}>
                     <option value="">—</option>{Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
                   </select></label>
-                <span class="ayuda">{esPorSuCuenta(atleta) ? 'Si el dolor pasa de 3, apunta dónde en la nota: le llega a Pelayo como aviso.' : 'Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.'}</span>
+                <span class="ayuda">{esPorSuCuenta(atleta) ? 'Si el dolor pasa de 3, apunta dónde en la nota.' : 'Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.'}</span>
               </> : <span class="ayuda">Para apuntar cómo llegaste, las pulsaciones y el dolor hace falta tu consentimiento de datos de salud (en tu perfil).</span>}
               <div class="fila-campos"><span class="peq secundario" style="align-self:center">Desnivel positivo (m)</span><Paso id="t-desnivel" valor={desnivel} paso={10} min={0} max={10000} dec={0} etiqueta="metros de desnivel" alCambiar={setDesnivel} /></div>
             </div>

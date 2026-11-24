@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SeguimientoCheckin } from './Vida.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
@@ -68,6 +69,8 @@ function FranjaPaso({ id, sentido }) {
 
 export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer }) {
   const { api, atleta, aviso } = useApp();
+  // (FBE Esencial) quien va por su cuenta: su check-in no espera respuesta (lo usan la app y su plan); sin conversación
+  const suyo = esPorSuCuenta(atleta);
   const estaSemana = lunesDe(hoyISO());
   // El lunes se abre la semana que acaba de terminar (es la que toca contar)
   const [lunes, setLunes] = useState(() => semanaCheckin(hoyISO()));
@@ -258,7 +261,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       borrarBorradorCheckin(atleta.id, lunes); setBorrador(null);
       if (peso && ver('peso')) await api.guardarPeso(atleta.id, fechaDato, peso);
       if (ver('medidas') && Object.values(medidas).some((v) => v != null)) await api.guardarMedidas(atleta.id, fechaDato, medidas);
-      aviso(yaEnviado ? 'Check-in actualizado' : 'Check-in enviado a tu coach');
+      aviso(yaEnviado ? 'Check-in actualizado' : suyo ? 'Check-in enviado' : 'Check-in enviado a tu coach');
       setEnviado(yaEnviado ? 'actualizado' : 'enviado');
       vibrar('checkin');
       datos.recargar(true);
@@ -316,7 +319,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
                 opciones={ESCALAS.molestia.slice(1).map((t, i) => [i + 1, ['Leve', 'Moderada', 'Grave'][i], t])} />
             </div>
           ))}
-          <p class="peq secundario">Si un dolor es agudo o no mejora, avisa a tu coach directamente.</p>
+          <p class="peq secundario">{suyo ? 'Si un dolor es agudo o no mejora, para y consulta con tu médico o tu fisioterapeuta.' : 'Si un dolor es agudo o no mejora, avisa a tu coach directamente.'}</p>
         </div>
       ),
     },
@@ -395,8 +398,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       cuerpo: (avanzar) => <RespuestaPregunta p={q} valor={resp[q.id]} alCambiar={(v, ev) => { setResp((r) => ({ ...r, [q.id]: v })); if (q.tipo === 'escala' || q.tipo === 'si_no') avanzar(v, ev); }} />,
     })),
     {
-      id: 'notas', titulo: 'Algo más para tu coach', resumen: f.notas?.trim() ? (f.notas.trim().length > 90 ? `${f.notas.trim().slice(0, 88)}…` : f.notas.trim()) : null,
-      cuerpo: () => <div class="campo"><label for="ck-notas" class="sr">Algo más para tu coach</label><textarea id="ck-notas" class="area" value={f.notas || ''} onInput={(e) => set('notas')(e.currentTarget.value)} placeholder="Viajes, cambios de horario, cómo te has sentido…" /></div>,
+      id: 'notas', titulo: suyo ? 'Algo más de tu semana' : 'Algo más para tu coach', resumen: f.notas?.trim() ? (f.notas.trim().length > 90 ? `${f.notas.trim().slice(0, 88)}…` : f.notas.trim()) : null,
+      cuerpo: () => <div class="campo"><label for="ck-notas" class="sr">{suyo ? 'Algo más de tu semana' : 'Algo más para tu coach'}</label><textarea id="ck-notas" class="area" value={f.notas || ''} onInput={(e) => set('notas')(e.currentTarget.value)} placeholder="Viajes, cambios de horario, cómo te has sentido…" /></div>,
     },
   ].filter(Boolean);
   const total = pasos.length;
@@ -465,7 +468,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       {enviado && (
         <div class="ck-enviado" role="status">
           <span class="ck-enviado-ico" aria-hidden="true"><Icono n="hecho" /></span>
-          <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">Lo revisa y te contesta aquí abajo si hace falta.</span></span>
+          <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : suyo ? '¡Check-in enviado!' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">{suyo ? 'Queda en tu progreso. Si marcas una molestia moderada o grave, a Pelayo le sale como aviso.' : 'Lo revisa y te contesta aquí abajo si hace falta.'}</span></span>
           {/* (diseño, tanda 45) el check-in vuela hasta el lobo de tu coach */}
           <span class="ck-enviado-vuelo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" /></svg></span>
           <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg></span>
@@ -505,7 +508,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
 
       <div class="ck-nav">
         {enRevision ? (
-          <button class="btn btn-primario btn-grande btn-ancho" disabled={guardando || datos.cargando}>{guardando ? 'Enviando…' : yaEnviado ? 'Actualizar check-in' : 'Enviar a tu coach'}</button>
+          <button class="btn btn-primario btn-grande btn-ancho" disabled={guardando || datos.cargando}>{guardando ? 'Enviando…' : yaEnviado ? 'Actualizar check-in' : suyo ? 'Enviar' : 'Enviar a tu coach'}</button>
         ) : (
           <>
             <button type="button" class="btn btn-grande" disabled={paso === 0} onClick={() => ir(paso - 1)}><Icono n="atras" /> Atrás</button>
@@ -516,7 +519,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         )}
       </div>
     </form>
-      {yaEnviado && (
+      {yaEnviado && !suyo && (
         <section class="seccion">
           <div class="seccion-cab"><h2>Comentarios con tu coach</h2>{datos.datos.checkin.revisado_en && <span class="chip ok"><Icono n="hecho" />Revisado</span>}</div>
           <div class="panel panel-pad">

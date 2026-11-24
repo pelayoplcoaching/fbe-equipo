@@ -2,6 +2,7 @@
 // FBE o con sus palabras), quita los que puso él y elige la hora de su aviso al móvil. Los que le pauta su coach no los
 // cambia. Solo suplementos: no es para medicación.
 import { useState } from 'preact/hooks';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { useApp, useCarga, Hoja, Icono, IcoIos, useUnaVez } from '../comunes.jsx';
 import { suplementosDeHoy, detalleSuplemento, porAnadir, constanciaSuplemento, MOMENTOS, MAX_SUPLEMENTOS, MAX_NOMBRE, MAX_DOSIS, HORA_MIN, HORA_MAX, horaValida } from '../../logica/suplementos.js';
 import { fechaMadrid } from '../../logica/fechas.js';
@@ -78,7 +79,7 @@ export function FilaSuplementos() {
 const NUEVO = { clave: null, nombre: '', dosis: '', momento: 'cuando' };
 
 export function HojaSuplementos({ estado, alCerrar }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta } = useApp();
   const [f, setF] = useState(null);         // el que se está añadiendo o cambiando
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
@@ -98,7 +99,7 @@ export function HojaSuplementos({ estado, alCerrar }) {
           <div class="campo"><label for="su-dosis">Dosis (opcional)</label><input id="su-dosis" class="entrada" maxLength={MAX_DOSIS} value={f.dosis || ''} onInput={(e) => setF({ ...f, dosis: e.currentTarget.value })} placeholder="5 g, 1 cápsula…" /></div>
           <div class="campo"><label for="su-momento">Cuándo</label>
             <select id="su-momento" class="selector" value={f.momento} onChange={(e) => setF({ ...f, momento: e.currentTarget.value })}>{MOMENTOS.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></div>
-          <p class="mini terciario">Solo suplementos. La medicación no se apunta aquí: si tienes dudas con algo que tomas, escribe a tu coach.</p>
+          <p class="mini terciario">Solo suplementos. La medicación no se apunta aquí: si tienes dudas con algo que tomas, {esPorSuCuenta(atleta) ? 'consúltalo con tu médico o tu farmacéutico' : 'escribe a tu coach'}.</p>
           {error && <div class="error" role="alert">{error}</div>}
           <button class="btn btn-primario btn-grande" disabled={ocupado || !f.nombre.trim()}>{f.id ? 'Guardar' : 'Añadir'}</button>
         </form>
