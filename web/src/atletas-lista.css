@@ -51,6 +51,10 @@
 .nota-linea { display: block; color: var(--tinta-2); font-weight: 500; overflow-wrap: anywhere; }
 .aviso-lista { color: var(--aviso); font-weight: 650; }
 .marcar-atleta { width: 18px; height: 18px; margin: var(--esp-10) 0 0; flex: none; accent-color: var(--morado); }
+/* Tanda de belleza C3 (v0.217): la casilla de "Elegir varios", de 24 px (el minimo de toque). La de la app (diseno.css,
+   bloque 3) le gana a la regla de arriba por especificidad y la dejaba en 22; esta pesa lo mismo que aquella y va despues.
+   Va aqui y no en belleza-c.css: las clases de la lista solo se nombran en su hoja (lo comprueba panel-atletas.test). */
+input[type="checkbox"].marcar-atleta { width: 24px; height: 24px; }
 
 /* Etiquetas, con su color */
 .etiquetas-atleta { display: inline-flex; flex-wrap: wrap; gap: var(--esp-4); }

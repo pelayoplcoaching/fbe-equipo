@@ -581,7 +581,6 @@ marca-fila: diseno.css estilos.css
 marca-tiempo: belleza-c.css estilos.css
 marcador: estilos.css visual.css
 marcador-equipos: comunidad-viva.css diseno.css estilos.css
-marcar-atleta: atletas-lista.css belleza-c.css
 marco-ig: equipo-belleza.css personal.css
 mas: diseno.css estilos.css
 mas-actual: diseno.css imagenes.css

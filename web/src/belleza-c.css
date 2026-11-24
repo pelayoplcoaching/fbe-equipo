@@ -16,9 +16,9 @@
 }
 
 /* -- C3 - Coach: casillas de 24 px (el minimo de toque) donde se quedaban en 22, las de la app (diseno.css, bloque 3),
-   que ganan por especificidad: "Elegir varios" en Atletas y "terminada" en la tabla de la revision semanal. Como la
-   de "anadir varios" del editor (v0.212). */
-input[type="checkbox"].marcar-atleta:not(.interruptor), .rev-tabla td > input[type="checkbox"]:not(.interruptor) { width: 24px; height: 24px; }
+   que ganan por especificidad: "terminada" en la tabla de la revision semanal y, en atletas-lista.css (las clases de la
+   lista solo se nombran en su hoja), "Elegir varios" en Atletas. Como la de "anadir varios" del editor (v0.212). */
+.rev-tabla td > input[type="checkbox"]:not(.interruptor) { width: 24px; height: 24px; }
 
 /* -- C4 - Sesion: "Maquina ocupada - hacerlo luego" no cabe en una linea en un movil estrecho. Las dos lineas iban
    centradas (el texto de un boton se centra) y la segunda empezaba por el punto. Ahora, a la izquierda, junto a su
