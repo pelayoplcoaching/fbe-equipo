@@ -3974,6 +3974,30 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
       }
       // (090) el resultado de una carrera: el atleta, de las suyas que ya han sido (hasta 60 días); el coach, de cualquiera
+      // (091) FBE Esencial: su plan (en la demo, el que ya tiene; si no tiene, lo dice como la base) y el visto bueno
+      if (nombre === 'esencial_asignar_plan') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes pedir tu propio plan');
+        const a = tabla('atletas').find((x) => x.id === id);
+        if (!a) throw new Error('Ese atleta no existe');
+        if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+        const ya = tabla('bloques').filter((x) => x.atleta_id === id && !x.es_plantilla && ['activo', 'ajustado', 'planificado'].includes(x.estado))
+          .sort((x, y) => String(y.fecha_inicio || '').localeCompare(String(x.fecha_inicio || '')))[0];
+        if (ya) return { bloque: ya.id, nuevo: false };
+        const c = tabla('cuestionarios').find((x) => x.atleta_id === id);
+        if (!c?.completado_en || !c.resultado) throw new Error('Antes, el cuestionario (con la parte de salud)');
+        if (c.resultado !== 'sin_valoracion' && !a.visto_bueno_en) throw new Error('Antes de empezar, el visto bueno médico');
+        throw new Error('Función no disponible en la demo: esencial_asignar_plan');
+      }
+      if (nombre === 'esencial_pedir_visto_bueno') {
+        const a = tabla('atletas').find((x) => x.id === miAtletaId());
+        if (!a) throw new Error('No hay atleta');
+        if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+        a.visto_bueno_pedido_en = new Date().toISOString();
+        persistirYa();
+        return a.visto_bueno_pedido_en;
+      }
       if (nombre === 'carrera_resultado_poner') {
         const ev = tabla('carrera_eventos').find((x) => x.id === args?.p_evento);
         if (!ev) throw new Error('Esa carrera no existe');

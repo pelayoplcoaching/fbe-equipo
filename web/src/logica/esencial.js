@@ -43,6 +43,24 @@ export function etiquetaRpeSobran(rpe) {
 // La plantilla de la guía está en esencial-plantilla.js (solo la usan la demo y el SQL: no va en lo que se carga al abrir)
 export const NOMBRE_PRIMERAS_4 = 'Primeras 4 semanas';
 
+// La plantilla según su cuestionario (igual que fbe_privado.esencial_plantilla() de la migración 091, que es la que manda):
+// nunca ha entrenado, «Primeras 4 semanas»; si ha entrenado, en el gimnasio la full body o el torso-pierna de sus días,
+// variante A (barra y básicos) con 3 años o más y barra entre su material, si no B (máquinas y mancuernas); en casa o al
+// aire libre, la de casa según sus días y su material.
+export function plantillaEsencial({ experiencia = null, dias_semana: dias = null, lugar = null, material = null } = {}) {
+  const m = Array.isArray(material) ? material : [];
+  if ((experiencia || 'ninguna') === 'ninguna') return NOMBRE_PRIMERAS_4;
+  const d = dias ?? 2;
+  if (['gimnasio', 'gimnasio_basico'].includes(lugar || 'gimnasio')) {
+    const base = d <= 2 ? '2 días · Full body' : d === 3 ? '3 días · Full body' : d === 4 ? '4 días · Torso-pierna' : '5 días · PPL + torso-pierna';
+    return `${base}${['3_5', 'mas_5'].includes(experiencia) && m.includes('barra') ? ' · A · Barra y básicos' : ' · B · Máquinas y mancuernas'}`;
+  }
+  const mb = m.includes('mancuernas') && m.includes('banco');
+  if (d <= 2) return '2 días · Full body en casa, sin material';
+  if (d === 3) return mb ? '3 días · Full body con mancuernas y banco' : m.includes('gomas') ? '3 días · Full body con gomas' : '3 días · Full body en casa, sin material';
+  return mb ? '4 días · Torso-pierna con mancuernas y banco' : '4 días · Torso-pierna con gomas y peso corporal';
+}
+
 // ---------- Sus marcas (la semana 4) ----------
 // De lo apuntado en una semana: la mejor serie de cada ejercicio (el que hizo, también si cambió a la alternativa).
 // Con kilos, la de más kilos (a igualdad, más repeticiones); sin kilos o por tiempo, la de más repeticiones o segundos.

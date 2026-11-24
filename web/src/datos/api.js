@@ -396,6 +396,8 @@ const falta056 = (e) => {
   if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) throw new Error(`${AVISO_056} Detalle: ${e?.message || e}`);
   throw e;
 };
+// (091) FBE Esencial: sin la migración, ni las columnas ni las funciones
+const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
 const falta088 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''} ${e?.codigo || ''}`;
@@ -7336,6 +7338,39 @@ export function crearApi(backend, opciones = {}) {
     },
     async crearInvitacion(atletaId) {
       return b.rpc('crear_invitacion', { p_atleta: atletaId });
+    },
+    // ------------------------------------------------------------ FBE Esencial (migración 091)
+    // Sin la 091: { falta091: true } (la app lo dice sin romperse)
+    // El coach da de alta a quien va por su cuenta: la ficha (modalidad, nivel, servicio y el lunes en que empieza su tanda)
+    // y su código de invitación. inicio: 'AAAA-MM-DD' (un lunes); nutricion: el nivel «Entrenamiento y nutrición».
+    async crearAtletaEsencial({ nombre, email = null, nutricion = false, inicio = null }) {
+      if (!String(nombre || '').trim()) throw new Error('Falta el nombre.');
+      if (inicio && (!/^\d{4}-\d{2}-\d{2}$/.test(inicio) || lunesDe(inicio) !== inicio)) throw new Error('La fecha de inicio tiene que ser un lunes.');
+      const atleta = await api.crearAtleta({ nombre: String(nombre).trim(), email: email ? String(email).trim() : null, nivel: 'novato', nutricion: !!nutricion,
+        objetivo: nutricion ? 'FBE Esencial · Entrenamiento y nutrición' : 'FBE Esencial · Entrenamiento' });
+      try {
+        await b.update('atletas', { modalidad: 'por_su_cuenta', esencial_inicio: inicio || null }, { eq: { id: atleta.id } });
+      } catch (e) {
+        await b.delete('atletas', { eq: { id: atleta.id } }).catch(() => {});
+        if (falta091(e)) return { falta091: true };
+        throw e;
+      }
+      const codigo = await api.crearInvitacion(atleta.id);
+      return { atleta: { ...atleta, modalidad: 'por_su_cuenta', esencial_inicio: inicio || null }, codigo };
+    },
+    // Su plan (el atleta, el suyo; el coach, el de cualquiera): la plantilla según su cuestionario, desde su lunes
+    async esencialAsignarPlan(atletaId = null) {
+      try { return await b.rpc('esencial_asignar_plan', atletaId ? { p_atleta: atletaId } : {}); } catch (e) { if (falta091(e)) return { falta091: true }; throw e; }
+    },
+    async esencialPedirVistoBueno() {
+      try { return { pedido_en: await b.rpc('esencial_pedir_visto_bueno', {}) }; } catch (e) { if (falta091(e)) return { falta091: true }; throw e; }
+    },
+    // El coach confirma el visto bueno médico y, si ya tiene el cuestionario, le asigna su plan
+    async esencialConfirmarVistoBueno(atletaId) {
+      try {
+        await b.update('atletas', { visto_bueno_en: new Date().toISOString() }, { eq: { id: atletaId } });
+      } catch (e) { if (falta091(e)) return { falta091: true }; throw e; }
+      return api.esencialAsignarPlan(atletaId).catch((e) => ({ error: e.message }));
     },
     async ficha(atletaId) {
       // (pulido 4) la ficha y lo suyo se piden a la vez; la foto, que sale de su perfil, a la vez que lo demás
