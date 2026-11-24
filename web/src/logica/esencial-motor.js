@@ -33,7 +33,7 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   const normal = !descarga && (r.semana?.tipo || 'normal') === 'normal';
   const hechas = entrada.series || {};
   const soloKilos = tipo === 'novato';
-  const semana = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares, soloKilos, ejercicios, hechas, normal });
+  const semana = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares, soloKilos, ejercicios, hechas, normal, alternativas: atleta?.esencial_alternativas || {} });
   const preguntas = (r.filas || []).filter((f) => f.tipo === 'pregunta' && f.pregunta)
     .map((f) => ({ pauta_id: f.pauta_id, sesion_id: f.sesion_id, ejercicio_id: f.ejercicio_id, texto: f.pregunta.texto, series: f.pregunta.series }));
   // La nota de la semana: lo que cambia (la de la plantilla de novato ya la pone la base si no hay nada que contar). Lo
@@ -41,7 +41,10 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   if (soloKilos) return { sesiones: semana, nota: null, descarga, preguntas };
   const tiempo = (id) => !!ejercicios[id]?.por_tiempo;
   const nombre = (p) => ejercicios[p.ejercicio_id]?.nombre || p.ejercicio_id;
-  const filasNota = (r.filas || []).filter((f) => !['pregunta', 'sin_tocar'].includes(f.tipo) && !tiempo(f.ejercicio_id))
+  // (094) lo que pasa a su alternativa para siempre no se cuenta como si siguiera (es otro ejercicio, sin kilos)
+  const alts = atleta?.esencial_alternativas || {};
+  const cambiado = (id) => !!alts[id] && alts[id] !== id && !!ejercicios[alts[id]] && tiempo(alts[id]) === tiempo(id);
+  const filasNota = (r.filas || []).filter((f) => !['pregunta', 'sin_tocar'].includes(f.tipo) && !tiempo(f.ejercicio_id) && !cambiado(f.ejercicio_id))
     .map((f) => ({ ejercicio: f.ejercicio, clase: claseParaNota({ fila: f, propuesta: f.propuesta, hechas: entrada.series[f.pauta_id] }) })).filter((x) => x.clase);
   const sesionDe = Object.fromEntries(sesiones.map((s) => [s.id, s]));
   const planchas = pautas.filter((p) => tiempo(p.ejercicio_id)).map((p) => {
@@ -52,7 +55,7 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   const nombres = (ps) => new Set(ps.map(nombre)).size;
   const semanaTipo = descarga ? 'descarga' : r.semana?.tipo || 'normal';
   // (cuántos ejercicios distintos hay: los dos días son iguales; sin la plancha si se cuenta aparte)
-  const total = nombres(pautas.filter((p) => !(cambian.length && tiempo(p.ejercicio_id))));
+  const total = nombres(pautas.filter((p) => !(cambian.length && tiempo(p.ejercicio_id)) && !cambiado(p.ejercicio_id)));
   let nota = notaDeSemana({ semana: semanaTipo, descarga: r.descarga?.tipo, total, filas: filasNota }) || null;
   if (cambian.length && nota) {
     // «En la plancha, …» (si no cambia en los dos días igual, se dice en cuál)

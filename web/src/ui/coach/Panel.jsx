@@ -26,6 +26,7 @@ import { usePanelCoach, useExtrasPanel, Etiquetas, DetalleAtleta, AccionesRapida
   HojaChatRapido, HojaVozAtleta, HojaUmbrales, HojaTarjeta } from './PanelLista.jsx';
 import { ChatRapido } from './RevisionTodo.jsx';
 import { CorredoresPanel } from './CarreraCoach.jsx';
+import { EsencialPanel } from './EsencialPanel.jsx';
 import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
   etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar,
   conUmbrales, novedadesDe, recordatorioDe, recordatorioParaHoy, textoRecordatorio, limpiarRecordatorio, textoContacto, textoHito, resumenColumna, csvLista, moverManual,
@@ -453,6 +454,8 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       )}
       {/* (v0.222) los que corren, de un vistazo: debajo de la lista (llega después y así no la empuja) */}
       {!cargando && <CorredoresPanel abrir={abrir} />}
+      {/* (piloto de FBE Esencial) quienes van por su cuenta, las cifras del listón y la encuesta */}
+      {!cargando && <EsencialPanel lista={lista} abrir={abrir} />}
       {hoja === 'columnas' && <HojaColumnas columnas={aj.columnas} conCobros={conCobros} alCambiar={(c) => ponerAjustes({ columnas: c })} alCerrar={() => setHoja(null)} />}
       {hoja === 'filtros' && <HojaFiltros filtros={filtros} usadas={usadas} alCambiar={setFiltros} alCerrar={() => setHoja(null)} />}
       {hoja === 'vistas' && <HojaVistas ajustes={aj} actual={actual} alCambiar={(a) => pc.guardarAjustes(a)} alCerrar={() => setHoja(null)} />}

@@ -39,7 +39,7 @@ const api = crearApi(b);
 await b.auth.entrar('pelayo@fbe.demo', 'demo');
 const atletas = await api.atletas();
 const ivan = atletas.find((a) => /Iván/.test(a.nombre)), carlos = atletas.find((a) => /Carlos/.test(a.nombre));
-check((await api.suplementos077()) === true && (await api.versionLegal()) === legal.VERSION_LEGAL && legal.VERSION_LEGAL === '2026-12.41', 'la demo tiene la 077 (y la política nueva)');
+check((await api.suplementos077()) === true && (await api.versionLegal()) === legal.VERSION_LEGAL && legal.VERSION_LEGAL === '2026-12.42', 'la demo tiene la 077 (y la política nueva)');
 const crea = await api.guardarSuplemento(ivan.id, { ...S.deLaLista('creatina') });
 check(crea.origen === 'coach' && crea.clave === 'creatina' && crea.dosis === '3-5 g al día' && crea.activo && crea.aviso_hora === null, 'el coach le pauta la creatina de la lista');
 check(await lanza(() => api.guardarSuplemento(ivan.id, { nombre: 'creatina MONOHIDRATO' })) && await lanza(() => api.guardarSuplemento(null, { nombre: 'Zinc' })) && await lanza(() => api.tomarSuplemento(crea.id, hoyISO()))

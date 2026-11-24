@@ -1263,7 +1263,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
       {hoja === 'tecnica' && <Tecnica ej={ej} alCerrar={() => setHoja(null)} />}
       {hoja === 'descanso' && <ElegirDescanso nombre={ej.nombre} propio={descansoPropio} defecto={descansoDefecto}
         alElegir={(seg) => { elegirDescanso(seg); setHoja(null); }} alCerrar={() => setHoja(null)} />}
-      {hoja === 'cambiar' && <Cambiar e={e} actual={ej} alCerrar={() => setHoja(null)} alElegir={(x) => { cambiar(x); setHoja(null); }} />}
+      {hoja === 'cambiar' && <Cambiar e={e} actual={ej} sesionId={sesionId} alCerrar={() => setHoja(null)} alElegir={(x) => { cambiar(x); setHoja(null); }} />}
       {hoja === 'historial' && <HistorialEjercicio atletaId={atleta.id} ejercicio={ej} inicial="historial" alCerrar={() => setHoja(null)} />}
       {hoja === 'tempo' && <Metronomo tempo={tempo} nombre={ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setHoja(null)} />}
       {hoja === 'aproximacion' && <Aproximacion nombre={ej.nombre} kg={kgTrabajo} reps={e.reps_max ?? e.reps_min ?? 5} conBarra={barra} alCerrar={() => setHoja(null)} />}
@@ -1364,10 +1364,27 @@ function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
   );
 }
 
-function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
-  const { api, atleta } = useApp();
+function Cambiar({ e, actual, sesionId = null, alCerrar, alElegir: elegir }) {
+  const { api, atleta, aviso } = useApp();
   const elegidaAntes = useAlternativaElegida(e.ejercicio.id);
-  const alElegir = (x) => { apuntarAlternativa(atleta?.id, e.ejercicio.id, x?.id); elegir(x); };
+  // (FBE Esencial, 094) «En mi gimnasio no está»: la alternativa para siempre (sus sesiones sin hacer y las semanas que le
+  // prepare la app). Esta sesión la cambia la app como siempre. Si lo que tiene pautado ya es la alternativa de otro, puede
+  // volver a ese otro.
+  const suyo = esPorSuCuenta(atleta);
+  const [siempre, setSiempre] = useState(false);
+  const guia = suyo ? Object.entries(atleta?.esencial_alternativas || {}).find(([, alt]) => alt === e.ejercicio.id)?.[0] || null : null;
+  const deGuia = useCarga(() => (guia ? api.ejerciciosPorIds([guia]).then((l) => l[0] || null).catch(() => null) : Promise.resolve(null)), [guia]);
+  const paraSiempre = async (x, volver = false) => {
+    try {
+      await api.esencialAlternativa(e.ejercicio.id, volver ? null : x.id, { excepto: sesionId });
+      aviso(volver ? `Vuelves a ${x.nombre} en tus próximas sesiones` : `Hecho: tus próximas sesiones ya llevan ${x.nombre}`);
+      return true;
+    } catch (err) { aviso(err.message, 'error'); return false; }
+  };
+  const alElegir = async (x) => {
+    if (suyo && siempre && x && x.id !== e.ejercicio.id && !x.por_tiempo && e.alternativas.some((a) => a.id === x.id) && !(await paraSiempre(x))) return;
+    apuntarAlternativa(atleta?.id, e.ejercicio.id, x?.id); elegir(x);
+  };
   const [otros, setOtros] = useState(false);
   const biblioteca = useCarga(() => (otros ? api.biblioteca() : Promise.resolve([])), [otros]);
   const principal = e.ejercicio.grupos_musculares?.[0];
@@ -1392,6 +1409,16 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
         <Imagen id="alternativas" clase="intro-ilu-img" tamanos="64px" />
         <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas{esPorSuCuenta(atleta) ? '' : ' y tu coach verá el cambio'}.</p>
       </div>
+      {suyo && !e.ejercicio?.por_tiempo && e.alternativas.some((a) => !a.por_tiempo) && (
+        <label class="casilla">
+          <input type="checkbox" checked={siempre} onChange={(ev) => setSiempre(ev.currentTarget.checked)} />
+          <span>En mi gimnasio no está: dejarlo cambiado para siempre <span class="mini terciario">(tus próximas sesiones ya vendrán con la que elijas)</span></span>
+        </label>
+      )}
+      {suyo && guia && deGuia.datos && (
+        <button type="button" class="btn-texto" onClick={async () => { if (await paraSiempre(deGuia.datos, true)) { apuntarAlternativa(atleta?.id, e.ejercicio.id, deGuia.datos.id); elegir(deGuia.datos); } }}>
+          <Icono n="reiniciar" /> Volver a {deGuia.datos.nombre} (para siempre)</button>
+      )}
       <div class="lista-elegir">
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
         {/* (personalización 3, tanda 5) la que eligió la última vez, delante */}

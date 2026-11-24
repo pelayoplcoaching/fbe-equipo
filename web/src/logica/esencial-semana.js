@@ -71,12 +71,19 @@ const DE_LA_PAUTA = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'descan
 // nada). soloKilos: en la semana 5 se respeta la plantilla (series, repeticiones y esfuerzo) y solo se toman los kilos.
 // Los ejercicios por tiempo (la plancha), con su regla (planchaSiguiente): hechas, { id de la pauta: series apuntadas };
 // normal, si la semana que propone el motor es una normal (ni descarga, ni a medias, ni tras un parón).
+// alternativas (094): { ejercicio: alternativa } que ha elegido para siempre (solo entre ejercicios que se miden igual);
+// si la semana hecha aún llevaba el de la guía, va la alternativa, sin kilos (son de otro ejercicio), como
+// esencial_semana_siguiente de la base. ejercicios tiene que llevar también las alternativas.
 // Devuelve [{ orden, nombre, tipo, pautas: [...] }] para la función de la base.
-export function semanaDesdePropuesta({ sesiones = [], pautas = {}, pares = {}, soloKilos = false, ejercicios = {}, hechas = {}, normal = true }) {
+export function semanaDesdePropuesta({ sesiones = [], pautas = {}, pares = {}, soloKilos = false, ejercicios = {}, hechas = {}, normal = true, alternativas = {} }) {
   return [...sesiones].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((s) => ({
     orden: s.orden, nombre: s.nombre, tipo: s.tipo || 'fuerza',
     pautas: [...(pautas[s.id] || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((p) => {
       const base = Object.fromEntries([...DE_LA_PAUTA, ...DEL_MOTOR].map((c) => [c, p[c] ?? null]));
+      const alt = alternativas?.[p.ejercicio_id];
+      if (alt && alt !== p.ejercicio_id && ejercicios[alt] && !!ejercicios[alt].por_tiempo === !!ejercicios[p.ejercicio_id]?.por_tiempo) {
+        return { ...base, ejercicio_id: alt, carga_sugerida_kg: null, series_detalle: null };
+      }
       const f = pares[p.id];
       if (ejercicios[p.ejercicio_id]?.por_tiempo) {
         const sube = planchaDeLaSemana({ p, fila: f, hechas: hechas[p.id], soloKilos, normal });

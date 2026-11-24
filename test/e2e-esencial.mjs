@@ -182,6 +182,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.waitForTimeout(1200);
     await cerrar(p);
     check((await p.getByText('Esencial', { exact: true }).count()) >= 4, 'en la lista, el chip «Esencial» en los cuatro');
+    // (v0.235) el panel del piloto, debajo de la lista, y la encuesta de la semana 6
+    const piloto = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
+    if ((await piloto.getAttribute('open').catch(() => null)) === null) await piloto.locator('summary').click().catch(() => {});
+    check(/Tomás Rey/.test(await piloto.textContent().catch(() => '')) && /han entrenado/.test(await piloto.textContent().catch(() => '')), 'en Atletas, el panel «FBE Esencial»: cada uno y quién ha entrenado esta semana');
+    await piloto.getByRole('button', { name: /encuesta/ }).click();
+    const he = p.locator('[aria-modal="true"]').last();
+    await he.getByRole('button', { name: /Mandarla a 4 atletas/ }).click();
+    const mandada = await he.getByRole('button', { name: 'Ya la tienen todos' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(mandada && /Sin contestar: /.test(await he.textContent().catch(() => '')), 'la encuesta de la semana 6, mandada a los cuatro (y quién no ha contestado)');
+    await he.getByRole('button', { name: /^Cerrar/ }).first().click().catch(() => {});
     await p.getByText('Clara Prieto').first().click();
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
     const sec = p.locator('section[aria-labelledby="esencial-coach"]');

@@ -12,10 +12,13 @@ export function textoVigencia(a, hoy = hoyISO()) {
   return a.hasta ? `Hasta el ${corta(a.hasta)}` : 'Sin fecha de fin';
 }
 
+// A quién va un aviso (094: también a un grupo)
+const paraQuien = (a, nombre) => (a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : a.grupo === 'esencial' ? 'Para los de FBE Esencial' : a.grupo === 'seguimiento' ? 'Para los que llevan seguimiento' : 'Para todos');
+
 // Atleta: los avisos en vigor de su coach, fijados arriba en Hoy hasta que los cierra (en este móvil)
 export function AvisosCoach() {
   const { api, atleta } = useApp();
-  const res = useCarga(() => api.avisos(atleta.id).catch(() => []), [atleta.id], { recuerdo: `avisos:${atleta.id}` });
+  const res = useCarga(() => api.avisos(atleta.id, hoyISO(), { esencial: atleta.modalidad === 'por_su_cuenta' }).catch(() => []), [atleta.id], { recuerdo: `avisos:${atleta.id}` });
   const [cerrados, setCerrados] = usePreferencia(`fbe-avisos-cerrados-${atleta.id}`, []);
   const lista = (res.datos || []).filter((a) => !cerrados.includes(a.id));
   if (!lista.length) return null;
@@ -59,7 +62,8 @@ export function HojaAvisos({ alCerrar }) {
     if (!valido) return;
     setOcupado(true);
     try {
-      await api.guardarAviso({ texto: f.texto.trim(), atleta_id: f.para || null, desde: f.desde, hasta: f.hasta || null, enviarEn: instante });
+      const grupo = f.para.startsWith('grupo:') ? f.para.slice(6) : null;
+      await api.guardarAviso({ texto: f.texto.trim(), atleta_id: grupo ? null : f.para || null, grupo, desde: f.desde, hasta: f.hasta || null, enviarEn: instante });
       aviso(instante ? `Aviso programado para el ${fmtProgramado(instante)}` : 'Aviso publicado');
       setF({ ...f, texto: '', para: '', desde: hoy, hasta: '', programar: false });
       avisos.recargar(true);
@@ -76,7 +80,7 @@ export function HojaAvisos({ alCerrar }) {
           {vigentes.map((a) => (
             <li key={a.id} class="panel-pad aviso-fila">
               <div class="pila-xs">
-                <span class="mini terciario">{a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : 'Para todos'}. {a.programado ? `Programado para el ${fmtProgramado(a.enviar_en)}` : a.desde > hoy ? 'Programado' : 'En vigor'}{a.programado && !a.hasta ? '' : `: ${textoVigencia(a, hoy).toLowerCase()}`}</span>
+                <span class="mini terciario">{paraQuien(a, nombre)}. {a.programado ? `Programado para el ${fmtProgramado(a.enviar_en)}` : a.desde > hoy ? 'Programado' : 'En vigor'}{a.programado && !a.hasta ? '' : `: ${textoVigencia(a, hoy).toLowerCase()}`}</span>
                 <span>{a.texto}</span>
                 {a.programado && <button class="btn-texto mini" style="justify-self:start" onClick={() => setCambiar(a)}><Icono n="editar" /> Cambiar</button>}
               </div>
@@ -93,7 +97,7 @@ export function HojaAvisos({ alCerrar }) {
               {caducados.map((a) => (
                 <li key={a.id} class="panel-pad aviso-fila">
                   <div class="pila-xs">
-                    <span class="mini terciario">{a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : 'Para todos'}. Caducó el {corta(a.hasta)}</span>
+                    <span class="mini terciario">{paraQuien(a, nombre)}. Caducó el {corta(a.hasta)}</span>
                     <span>{a.texto}</span>
                   </div>
                   <button class="btn btn-icono plano" onClick={() => quitar(a)} aria-label={`Borrar el aviso caducado «${a.texto.slice(0, 40)}»`}><Icono n="basura" /></button>
@@ -113,6 +117,13 @@ export function HojaAvisos({ alCerrar }) {
           <label for="av-para">Para</label>
           <select id="av-para" class="selector" value={f.para} onChange={(e) => setF({ ...f, para: e.currentTarget.value })}>
             <option value="">Todos tus atletas</option>
+            {/* (094) con atletas de FBE Esencial: un aviso solo para ellos o solo para los que llevan seguimiento */}
+            {(atletas.datos || []).some((a) => a.modalidad === 'por_su_cuenta' && a.estado !== 'baja') && (
+              <>
+                <option value="grupo:esencial">Todos los de FBE Esencial</option>
+                <option value="grupo:seguimiento">Todos los que llevan seguimiento</option>
+              </>
+            )}
             {(atletas.datos || []).filter((a) => a.estado !== 'baja').map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         </div>

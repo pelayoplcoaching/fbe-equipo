@@ -82,6 +82,15 @@ const sd = semanaDesdePropuesta({ sesiones: [{ id: 's1', orden: 1, nombre: 'Día
 check(sd[0].pautas[0].reps_min === 35 && sd[0].pautas[0].reps_max === 45 && sd[0].pautas[0].carga_sugerida_kg === 5 && sd[0].pautas[0].series === 2,
   'en la semana que se guarda, su regla y no lo del motor (que cuenta repeticiones)');
 
+console.log('\nLa alternativa para siempre (094), al preparar la semana');
+const pa = (id, ej, extra = {}) => ({ id, ejercicio_id: ej, orden: 1, series: 3, reps_min: 10, reps_max: 12, rir_objetivo: 2, carga_sugerida_kg: 85, ...extra });
+const ejs = { pr: { nombre: 'Prensa de piernas' }, se: { nombre: 'Sentadilla a un banco' }, pl: { nombre: 'Plancha abdominal', por_tiempo: true }, cu: { nombre: 'Curl de bíceps con mancuernas' } };
+const sa = semanaDesdePropuesta({ sesiones: [{ id: 's1', orden: 1, nombre: 'Día 1' }], pautas: { s1: [pa('q1', 'pr'), pa('q2', 'pl', { orden: 5, series: 2, reps_min: 40, reps_max: 50, carga_sugerida_kg: null })] },
+  pares: { q1: { tipo: 'subir', propuesta: { series: 3, reps_min: 10, reps_max: 12, rir_objetivo: 2, carga_sugerida_kg: 90 } } }, ejercicios: ejs, alternativas: { pr: 'se', pl: 'cu' } });
+check(sa[0].pautas[0].ejercicio_id === 'se' && sa[0].pautas[0].carga_sugerida_kg === null && sa[0].pautas[0].series === 3 && sa[0].pautas[0].reps_max === 12,
+  'si la semana hecha aún llevaba la prensa: va la sentadilla a un banco, sin los kilos de la prensa');
+check(sa[0].pautas[1].ejercicio_id === 'pl', 'entre la plancha (por tiempo) y el curl, nada para siempre: la plancha se queda');
+
 console.log('\nEn la demo: Tomás aguanta 50 s en la semana 5');
 const w5T = pT.actual;
 for (const s of pT.sesiones[w5T.id]) {
@@ -94,6 +103,10 @@ for (const s of pT.sesiones[w5T.id]) {
   }
   await apiD.marcarSesion(s.id, { completada: true, fecha_realizada: hoyISO() });
 }
+// (y, antes, dice que en su gimnasio no hay prensa: para siempre, la sentadilla a un banco)
+const idDe = async (nombre) => (await bd.select('ejercicios', { eq: { nombre } }))[0].id;
+const [idPrensa, idSent] = [await idDe('Prensa de piernas'), await idDe('Sentadilla a un banco')];
+const cambiadas = await apiD.esencialAlternativa(idPrensa, idSent);
 const r6 = await apiD.prepararSemanaEsencial(tomas.id);
 const pT6 = await apiD.programa(tomas.id);
 const w6T = pT6.semanas.find((w) => w.bloque_id === pT6.bloque.id && w.numero === 2);
@@ -101,7 +114,9 @@ check(r6?.tipo === 'siguiente' && w6T?.fecha_inicio === lunesDe(sumarDias(fechaM
 const ses6 = w6T ? await apiD.sesion(pT6.sesiones[w6T.id][0].id, tomas.id) : null;
 const pl6 = ses6?.ejercicios.find((e) => e.ejercicio.por_tiempo);
 check(pl6?.reps_min === 35 && pl6.reps_max === 45 && Number(pl6.carga_sugerida_kg) === 5, `la plancha, con 5 kg y de 35 a 45 s (${pl6?.reps_min}-${pl6?.reps_max} s, ${pl6?.carga_sugerida_kg} kg)`);
-check(/en la plancha, con peso: 5 kg encima y otra vez de 35 a 45 segundos/i.test(w6T?.nota_coach || ''), `y la nota lo cuenta («${w6T?.nota_coach}»)`);
+check(/en la plancha, con peso: 5 kg encima y otra vez de 35 a 45 segundos/i.test(w6T?.nota_coach || '') && !/Prensa/.test(w6T?.nota_coach || ''), `y la nota lo cuenta, sin hablar de la prensa («${w6T?.nota_coach}»)`);
+const pr6 = ses6?.ejercicios.find((e) => e.orden === 1);
+check(cambiadas === 0 && pr6?.ejercicio_id === idSent && pr6.carga_sugerida_kg == null, 'su semana 6 lleva la sentadilla a un banco (la 5 ya estaba hecha: no cambió nada de ella), sin kilos sugeridos');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

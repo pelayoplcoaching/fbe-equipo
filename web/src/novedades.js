@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.235': {
+    // (FBE Esencial, el piloto; para los atletas de ahora no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial, en Atletas: el piloto de un vistazo (quién entrena, sus avisos y el listón) y las encuestas de las semanas 6 y 12.',
+      'Si en su gimnasio falta una máquina, la cambian para siempre; y a los 7 días sin entrenar les llega un aviso amable (migración 094).',
+      'En Avisos, ahora puedes mandar uno solo a los de FBE Esencial o solo a los que llevan seguimiento.',
+    ],
+  },
   '0.234': {
     // (FBE Esencial, tanda 4: la comida de quien va por su cuenta; para los atletas de ahora no cambia nada)
     atleta: [],

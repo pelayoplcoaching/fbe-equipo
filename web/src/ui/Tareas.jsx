@@ -4,6 +4,7 @@ import { NuevaFoto } from './atleta/CamaraGuiada.jsx';
 import { SubirArchivo, VerArchivo } from './archivos-perezoso.jsx';
 import { TIPOS_TAREA, NOMBRE_TIPO_TAREA, ICONO_TAREA, PLANTILLAS_SUGERIDAS, cuandoTarea, estadoTarea, resumenTareas, MAX_RESPUESTA } from '../logica/tareas.js';
 import { hoyISO, sumarDias, fmtConDia } from '../logica/fechas.js';
+import { esPorSuCuenta } from '../logica/esencial.js';
 
 // ---------------------------------------------------------------- atleta
 // Una tarea del coach: qué es, para cuándo y hacerla (con la cámara guiada, apuntando el peso, enviando el vídeo o
@@ -17,13 +18,15 @@ export function HojaTarea({ tarea, alCerrar, alCambiar, salud = true, darConsent
   const [cintura, setCintura] = useState(null);
   const [ocupado, una] = useUnaVez();
   const baja = atleta.estado === 'baja';
+  // (FBE Esencial) quien va por su cuenta no tiene bandeja de su coach: la lee Pelayo (la encuesta del piloto)
+  const suyo = esPorSuCuenta(atleta);
   const hecha = !!t.hecha_en;
   const ejercicio = useCarga(() => (t.ejercicio_id ? api.ejerciciosPorIds([t.ejercicio_id]).then((l) => l[0] || null).catch(() => null) : Promise.resolve(null)), [t.ejercicio_id]);
   const pideSalud = (t.tipo === 'foto' || t.tipo === 'medida') && !salud;
   const completar = (archivoId = null) => una(async () => {
     try {
       await api.completarTarea(t.id, { respuesta, archivoId });
-      aviso('Tarea hecha: tu coach ya lo ve');
+      aviso(suyo ? 'Hecho: Pelayo lo leerá' : 'Tarea hecha: tu coach ya lo ve');
       alCambiar?.(); alCerrar();
     } catch (e) { aviso(e.message, 'error'); }
   });
@@ -37,11 +40,11 @@ export function HojaTarea({ tarea, alCerrar, alCambiar, salud = true, darConsent
     <Hoja titulo={t.titulo} alCerrar={alCerrar}>
       <div class="pila">
         <p class="tarea-tipo"><Icono n={ICONO_TAREA[t.tipo]} /><span><strong>{NOMBRE_TIPO_TAREA[t.tipo]}</strong>{ejercicio.datos ? `: ${ejercicio.datos.nombre}` : ''}. <span class="secundario">{hecha ? `Hecha ${cuando(t.hecha_en)}` : cuandoTarea(t)}</span></span></p>
-        {t.detalle && <p class="nota-coach"><Icono n="mensaje" /><span><strong>Tu coach: </strong>{t.detalle}</span></p>}
+        {t.detalle && <p class="nota-coach"><Icono n="mensaje" /><span><strong>{suyo ? 'Pelayo: ' : 'Tu coach: '}</strong>{t.detalle}</span></p>}
         {hecha ? (
           <>
             {t.respuesta && <p class="cita">«{t.respuesta}»</p>}
-            <p class="peq secundario">{t.revisada_en ? 'Tu coach ya la ha visto.' : 'Tu coach la verá en su bandeja.'}</p>
+            <p class="peq secundario">{suyo ? 'Gracias: Pelayo lo leerá.' : t.revisada_en ? 'Tu coach ya la ha visto.' : 'Tu coach la verá en su bandeja.'}</p>
             {!t.revisada_en && !baja && <button class="btn" disabled={ocupado} onClick={deshacer}><Icono n="reiniciar" /> Deshacer (no la he hecho)</button>}
           </>
         ) : baja ? (

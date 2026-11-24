@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -398,6 +398,7 @@ const falta056 = (e) => {
 // (091) FBE Esencial: sin la migración, ni las columnas ni las funciones
 const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (FBE Esencial, tanda 3) ¿Falta la función de la 092 (la semana siguiente de quien va por su cuenta)?
+const falta094 = (e) => /esencial_alternativa/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta093 = (e) => /esencial_(plan|ajuste)_comida/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
@@ -2032,7 +2033,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.232) FBE Esencial (091): con la 089 pero sin la 091, la 2026-12.39
       if ((await api.esencial091().catch(() => null)) !== true) return VERSION_LEGAL_SIN_091;
       // (v0.234) la comida de FBE Esencial (093): con la 091 pero sin la 093, la 2026-12.40
-      return (await api.esencial093().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_093;
+      if ((await api.esencial093().catch(() => null)) !== true) return VERSION_LEGAL_SIN_093;
+      // (v0.235) lo del piloto de FBE Esencial (094): con la 093 pero sin la 094, la 2026-12.41
+      return (await api.esencial094().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_094;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -3296,22 +3299,25 @@ export function crearApi(backend, opciones = {}) {
       };
     },
     // Avisos del coach en vigor para este atleta (los generales y los suyos), del más reciente al más antiguo
-    async avisos(atletaId, hoy = hoyISO()) {
+    async avisos(atletaId, hoy = hoyISO(), { esencial = false } = {}) {
       const [generales, suyos] = await Promise.all([
         b.select('avisos', { nulo: ['atleta_id'], lte: { desde: hoy } }),
         b.select('avisos', { eq: { atleta_id: atletaId }, lte: { desde: hoy } }),
       ]);
-      return [...generales, ...suyos].filter((a) => !a.hasta || a.hasta >= hoy).sort((x, y) => (x.creado_en < y.creado_en ? 1 : -1));
+      // (094) los de un grupo, solo a ese grupo: los de FBE Esencial o los que llevan seguimiento
+      const deSuGrupo = (a) => !a.grupo || a.grupo === (esencial ? 'esencial' : 'seguimiento');
+      return [...generales.filter(deSuGrupo), ...suyos].filter((a) => !a.hasta || a.hasta >= hoy).sort((x, y) => (x.creado_en < y.creado_en ? 1 : -1));
     },
     // Coach: todos sus avisos (la hoja separa los caducados, que se pueden borrar)
     async avisosCoach() {
       return (await b.select('avisos', { order: [['desde', 'asc'], ['creado_en', 'asc']] })).map((a) => ({ ...a, programado: programado(a) }));
     },
     // Coach: publicar un aviso o cambiarlo; enviarEn (v0.48): a esa hora (desde ese día) y no antes
-    async guardarAviso({ texto, atleta_id = null, desde = hoyISO(), hasta = null, enviarEn = null }, id = null) {
+    async guardarAviso({ texto, atleta_id = null, grupo = null, desde = hoyISO(), hasta = null, enviarEn = null }, id = null) {
       const t = String(texto || '').trim();
       if (!t || t.length > 600) throw new Error('El aviso, de 1 a 600 letras');
-      const fila = { texto: t, atleta_id: atleta_id || null, desde, hasta: hasta || null };
+      if (grupo && !['seguimiento', 'esencial'].includes(grupo)) throw new Error('Ese grupo no existe');
+      const fila = { texto: t, atleta_id: grupo ? null : atleta_id || null, desde, hasta: hasta || null, ...(grupo ? { grupo } : {}) };
       if (enviarEn) {
         const cuando = Date.parse(enviarEn);
         if (!Number.isFinite(cuando) || cuando <= Date.now() + 60000) throw new Error('Elige una hora que aún no haya pasado');
@@ -3320,8 +3326,10 @@ export function crearApi(backend, opciones = {}) {
         fila.desde = fechaMadrid(new Date(cuando));
         if (fila.hasta && fila.hasta < fila.desde) throw new Error('La fecha de fin es anterior a la de salida');
       } else if (id) fila.enviar_en = null;
-      if (id) return (await b.update('avisos', fila, { eq: { id } }).catch(falta030))[0];
-      return (await b.insert('avisos', [fila]).catch(falta030))[0];
+      // (094) sin la 094, un aviso para un grupo no se puede guardar (sí los de siempre)
+      const sinGrupo = (e) => { if (grupo && /grupo|schema cache|42703|PGRST20[0-9]/i.test(`${e?.message || ''} ${e?.code || ''}`)) throw new Error('Para mandar un aviso solo a un grupo falta la migración 094.'); return falta030(e); };
+      if (id) return (await b.update('avisos', fila, { eq: { id } }).catch(sinGrupo))[0];
+      return (await b.insert('avisos', [fila]).catch(sinGrupo))[0];
     },
     // «¿Cómo llegas hoy?» (datos de salud: la base exige el consentimiento)
     async guardarPreparacion(sesionId, preparacion) {
@@ -7428,7 +7436,8 @@ export function crearApi(backend, opciones = {}) {
         api.checkin(atletaId, paso.base.fecha_inicio).catch(() => null),
         api.checkin(atletaId, sumarDias(paso.base.fecha_inicio, -7)).catch(() => null),
       ]);
-      const ids = unicos(Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id));
+      // (094) con sus alternativas para siempre (por si van por tiempo)
+      const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
       const ejercicios = porId(await api.ejerciciosPorIds(ids));
       const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy,
         checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
@@ -7455,6 +7464,38 @@ export function crearApi(backend, opciones = {}) {
       try {
         return await b.rpc('esencial_ajuste_comida', { p, ...(atletaId ? { p_atleta: atletaId } : {}) });
       } catch (e) { if (falta093(e)) return { falta093: true }; throw e; }
+    },
+    // (094) FBE Esencial: «en mi gimnasio, siempre esta». Cambia sus sesiones sin hacer (menos la que tiene abierta,
+    // `excepto`) y las semanas que le prepare la app. alternativaId vacío: vuelve al de la guía. Devuelve cuántos cambió.
+    async esencialAlternativa(ejercicioId, alternativaId = null, { excepto = null, atletaId = null } = {}) {
+      try {
+        return await b.rpc('esencial_alternativa', { p_ejercicio: ejercicioId, p_alternativa: alternativaId || null, p_excepto: excepto || null, ...(atletaId ? { p_atleta: atletaId } : {}) });
+      } catch (e) { if (falta094(e)) throw new Error('Para dejarlo cambiado para siempre falta la migración 094: díselo a Pelayo.'); throw e; }
+    },
+    // (094) ¿Está la 094? La columna esencial_alternativas de atletas
+    async esencial094() {
+      if (!api._v094) {
+        const pr = b.select('atletas', { cols: 'id,esencial_alternativas', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /esencial_alternativas|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m) ? false : null;
+        });
+        api._v094 = pr;
+        pr.then((x) => { if (x == null && api._v094 === pr) api._v094 = null; });
+      }
+      return api._v094;
+    },
+    // (piloto de FBE Esencial) La encuesta de las semanas 6 y 12: una tarea de texto a cada uno (030). Las que ya tienen,
+    // por su título (la más reciente de cada atleta va primero).
+    async encuestaEsencial(ids = [], titulos) {
+      if (!ids.length) return [];
+      return b.select('tareas', { in: { atleta_id: ids, titulo: [].concat(titulos) }, order: [['creada_en', 'desc']] }).catch(() => []);
+    },
+    async enviarEncuestaEsencial(ids = [], { titulo, detalle }) {
+      const fecha = fechaMadrid();
+      let n = 0;
+      for (const id of ids) { await api.ponerTarea(id, { tipo: 'texto', titulo, detalle, fecha }); n++; }
+      return n;
     },
     // (093) Si dijo que tiene o ha tenido un trastorno de la conducta alimentaria (con TCA, el plan no baja solo)
     async esencialTca(atletaId) {

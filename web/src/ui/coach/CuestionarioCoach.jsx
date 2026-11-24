@@ -68,6 +68,10 @@ export function EsencialCoach({ atleta, alCambiar }) {
   const { api, aviso } = useApp();
   const c = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id, atleta.visto_bueno_en]);
   const bl = useCarga(() => api.bloquesDe(atleta.id).catch(() => []), [atleta.id, atleta.visto_bueno_en]);
+  // (094) las alternativas que ha elegido para siempre en su gimnasio, con sus nombres
+  const alts = Object.entries(atleta.esencial_alternativas || {});
+  const nombres = useCarga(() => (alts.length ? api.ejerciciosPorIds(alts.flat()).catch(() => []) : Promise.resolve([])), [alts.flat().join()]);
+  const nombreEj = Object.fromEntries((nombres.datos || []).map((x) => [x.id, x.nombre]));
   const [ocupado, una] = useUnaVez();
   const [error, setError] = useState(null);
   const q = c.datos;
@@ -98,6 +102,7 @@ export function EsencialCoach({ atleta, alCambiar }) {
         <div><dt>Cuestionario</dt><dd>{c.cargando && !q ? 'Cargando…' : cuest}</dd></div>
         <div><dt>Visto bueno médico</dt><dd>{visto}</dd></div>
         <div><dt>Su plan</dt><dd>{bl.cargando && !bl.datos ? 'Cargando…' : bloque ? `${bloque.nombre}${bloque.fecha_inicio ? `, desde el ${fechaLarga(bloque.fecha_inicio)}` : ''}` : 'Aún no tiene'}</dd></div>
+        {alts.length > 0 && <div><dt>Su gimnasio</dt><dd>{alts.map(([g, a]) => `${nombreEj[g] || '…'} → ${nombreEj[a] || '…'}`).join('; ')} <span class="terciario">(lo eligió para siempre)</span></dd></div>}
         {/* (093) con nutrición: su plan de comida lo calcula y lo ajusta la app; si dice tener o haber tenido un TCA, mantener */}
         {atleta.nutricion !== false && <div><dt>Comida</dt><dd>{q?.tca === true
           ? 'La app le calcula el plan y lo ajusta cada semana. Dice tener o haber tenido un trastorno de la conducta alimentaria: su plan es de mantener y nunca baja solo.'

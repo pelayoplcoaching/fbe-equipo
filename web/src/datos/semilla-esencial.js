@@ -119,14 +119,18 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     t('sesiones').push(ns);
     const js = (p.sesiones || []).find((x) => Number(x.orden) === s.orden);
     for (const q of t('sesion_ejercicios').filter((x) => x.sesion_id === s.id).sort((x, y) => x.orden - y.orden)) {
-      const nueva = { ...q, id: uuid(), sesion_id: ns.id };
-      const jp = js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === q.ejercicio_id);
+      // (094) su alternativa para siempre (solo entre ejercicios que se miden igual), sin los kilos del otro ejercicio
+      const alt = (a.esencial_alternativas || {})[q.ejercicio_id];
+      const ej = alt && t('ejercicios').some((e) => e.id === alt) && porTiempo(alt) === porTiempo(q.ejercicio_id) ? alt : q.ejercicio_id;
+      const nueva = { ...q, id: uuid(), sesion_id: ns.id, ejercicio_id: ej };
+      if (ej !== q.ejercicio_id) Object.assign(nueva, { carga_sugerida_kg: null, series_detalle: null });
+      const jp = js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === ej);
       if (jp) {
         const v = { ...nueva };
         if (!p.novato) for (const c of CAMPOS_MOTOR) v[c] = jp[c] ?? null;
         if (v.series == null) v.series = q.series;
         v.carga_sugerida_kg = jp.carga_sugerida_kg ?? null;
-        const tiempo = porTiempo(q.ejercicio_id), max = 60, tp = tope(q.ejercicio_id);
+        const tiempo = porTiempo(ej), max = 60, tp = tope(ej);
         const det = Array.isArray(v.series_detalle) && v.series_detalle.length ? v.series_detalle : null;
         const mal = !(v.series >= 1 && v.series <= 6) || (v.reps_min != null && !(v.reps_min >= 1 && v.reps_min <= max)) || (v.reps_max != null && !(v.reps_max >= 1 && v.reps_max <= max))
           || (v.reps_min != null && v.reps_max != null && v.reps_min > v.reps_max) || (v.rir_objetivo != null && !(v.rir_objetivo >= 0 && v.rir_objetivo <= 5))
@@ -139,6 +143,37 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     }
   }
   return semana.id;
+}
+
+// (094) La alternativa para siempre, como esencial_alternativa() de la base: solo entre las alternativas del ejercicio de la
+// guía; cambia las sesiones sin hacer (sin series de ese ejercicio), menos la que tiene abierta. Devuelve cuántas cambió.
+export function alternativaEsencialDemo(t, { ejercicio, alternativa = null, excepto = null, atletaId }) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  const mapa = { ...(a.esencial_alternativas || {}) };
+  const guia = Object.keys(mapa).find((k) => mapa[k] === ejercicio) || ejercicio;
+  const desde = mapa[guia] || guia;
+  let hasta;
+  if (!alternativa || alternativa === guia) { hasta = guia; delete mapa[guia]; } else {
+    const g = t('ejercicios').find((e) => e.id === guia);
+    if (!(g?.alternativas || []).includes(alternativa)) throw new Error('Esa no es una alternativa de ese ejercicio');
+    if (!!g.por_tiempo !== !!t('ejercicios').find((e) => e.id === alternativa)?.por_tiempo) throw new Error('Para siempre, solo entre ejercicios que se miden igual (la plancha se cambia en cada sesión)');
+    hasta = alternativa; mapa[guia] = alternativa;
+  }
+  a.esencial_alternativas = mapa;
+  if (desde === hasta) return 0;
+  const suyos = new Set(t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla && ['activo', 'ajustado', 'planificado'].includes(b.estado)).map((b) => b.id));
+  const semanas = new Set(t('semanas').filter((w) => suyos.has(w.bloque_id)).map((w) => w.id));
+  const sesiones = new Set(t('sesiones').filter((x) => semanas.has(x.semana_id) && !x.completada && x.id !== excepto).map((x) => x.id));
+  const conSeries = new Set(t('series').map((x) => x.sesion_ejercicio_id));
+  let n = 0;
+  for (const q of t('sesion_ejercicios').filter((x) => sesiones.has(x.sesion_id) && x.ejercicio_id === desde && !conSeries.has(x.id))) {
+    Object.assign(q, { ejercicio_id: hasta, carga_sugerida_kg: null, series_detalle: null });
+    n++;
+  }
+  return n;
 }
 
 // (093) La comida de quien va por su cuenta, como esencial_plan_comida() y esencial_ajuste_comida() de la base (la demo y
