@@ -389,8 +389,6 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
           </ul>
         </section>
       )}
-      {/* (v0.222) los que corren, de un vistazo (al final: llega después de la lista y así no la empuja) */}
-      {!cargando && <CorredoresPanel abrir={abrir} />}
       {pedir && <HojaPedir r={pedir.r} alerta={pedir.alerta} alCerrar={() => setPedir(null)} />}
 
       {cargando ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (
@@ -452,6 +450,8 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
           <p class="mini terciario panel-cuantos">{ordenada.length === lista.filter((r) => r.estado !== 'baja').length && !busqueda && !nFiltros ? '' : `${ordenada.length} de ${lista.length} atletas`}{!pc.enBase && pc.listo && (Object.keys(pc.panel).length || (aj.vistas || []).length) ? ' · Tus etiquetas, notas y vistas se guardan en este aparato hasta que ejecutes la migración 085.' : ''}</p>
         </>
       )}
+      {/* (v0.222) los que corren, de un vistazo: debajo de la lista (llega después y así no la empuja) */}
+      {!cargando && <CorredoresPanel abrir={abrir} />}
       {hoja === 'columnas' && <HojaColumnas columnas={aj.columnas} conCobros={conCobros} alCambiar={(c) => ponerAjustes({ columnas: c })} alCerrar={() => setHoja(null)} />}
       {hoja === 'filtros' && <HojaFiltros filtros={filtros} usadas={usadas} alCambiar={setFiltros} alCerrar={() => setHoja(null)} />}
       {hoja === 'vistas' && <HojaVistas ajustes={aj} actual={actual} alCambiar={(a) => pc.guardarAjustes(a)} alCerrar={() => setHoja(null)} />}

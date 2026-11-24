@@ -286,7 +286,8 @@ function AvisosCoach({ atleta, d, alGuardar }) {
 // plan, los semáforos, la próxima carrera y los avisos). Un toque abre su pestaña Carrera.
 export function CorredoresPanel({ abrir }) {
   const { api } = useApp();
-  const datos = useCarga(() => api.panelCorredores().catch(() => []), []);
+  // (con recuerdo: al volver a Atletas en menos de 20 s no se pide otra vez, salvo que se haya escrito algo o llegue un aviso)
+  const datos = useCarga(() => api.panelCorredores().catch(() => []), [], { recuerdo: `corredores:${api.uid()}` });
   const lista = datos.datos || [];
   if (!lista.length) return null;
   const conAvisos = lista.filter((c) => c.avisos.length).length;
