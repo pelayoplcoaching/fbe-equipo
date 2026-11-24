@@ -7,13 +7,13 @@
 //   pautas     [sesion_ejercicios] de la semana hecha       sesiones  [sesiones] de esa semana
 //   series     { pauta_id: [series] } lo hecho              ejercicios { id: { nombre, grupos_musculares, tipo } }
 //   historial  { pauta_id o ejercicio_id: [{ foco, pauta, series, malDia }] } semanas anteriores, de la más antigua a la más reciente
-//   atleta     { nivel, perfil, volumen_objetivo }
+//   atleta     { nivel, perfil, volumen_objetivo, modalidad } (modalidad 'por_su_cuenta': sin seguimiento, con los frenos del 24/11/2026)
 //   reglas     { fbe, atleta, bloque, porEjercicio: { ejercicio_id: {…} }, porPauta: { pauta_id: {…} } } capas ya limpias
 //   contexto   { checkins, molestias, carga: { ratio }, diasSinEntrenar, focoAnterior, focoSiguiente, semanasDesdeDescarga }
 import { seriesPautadasPorGrupo, rangoVolumen, esBarra, NOMBRE_ZONA } from '../calculos.js';
 import { resolverReglas, fusionar, modeloDe, esBasico, NOMBRE_MODELO } from './reglas.js';
-import { leerEjercicio, tendencia, saltoDe, SIN_DATOS } from './lectura.js';
-import { MODELO, CAMPOS, campos, falloLineal, rangoDe } from './modelos.js';
+import { leerEjercicio, tendencia, saltoDe, textoHecho, SIN_DATOS } from './lectura.js';
+import { MODELO, CAMPOS, campos, falloLineal, rangoDe, desdeLoHecho, unSaltoComoMucho, FRENO_POR_SU_CUENTA } from './modelos.js';
 import { compararVolumen } from './volumen.js';
 import { senalesDescarga, aplicarDescarga, motivoDescarga, tramoVuelta, aplicarVuelta, motivoVuelta, aplicarMantenimiento, esMalDia, NOMBRE_DESCARGA } from './semana.js';
 
@@ -68,6 +68,8 @@ function confianzaDe({ modo, l, r, frenos, previa, pendiente, sinHistorial }) {
 }
 
 export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejercicios = {}, historial = {}, atleta = {}, reglas: capas = {}, contexto = {} } = {}) {
+  // «Por su cuenta» (sin seguimiento): los cuatro frenos de modelos.js (desdeLoHecho, porSerie) y la pregunta por erratas
+  const porSuCuenta = atleta?.modalidad === 'por_su_cuenta';
   const generales = resolverReglas({ fbe: capas.fbe, nivel: atleta.nivel, perfil: atleta.perfil, atleta: capas.atleta, bloque: capas.bloque });
   const reglasDe = (p) => resolverReglas({ fbe: capas.fbe, nivel: atleta.nivel, perfil: atleta.perfil, atleta: capas.atleta, bloque: capas.bloque,
     ejercicio: fusionar(capas.porEjercicio?.[p.ejercicio_id], capas.porPauta?.[p.id]) });
@@ -113,7 +115,7 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
     let r;
     if (modelo === 'a_mano') r = MODELO.a_mano(l, p);
     else if (modo === 'repetir') {
-      r = { tipo: 'mantener', propuesta: campos(p), orientativa: null, motivo: `Semana a medias (${hechas} de ${total} sesiones): se repite tal cual`, alternativas: [], avisos: [] };
+      r = { tipo: 'mantener', propuesta: desdeLoHecho(l, p, { porSuCuenta }), orientativa: null, motivo: `Semana a medias (${hechas} de ${total} sesiones): se repite tal cual`, alternativas: [], avisos: [] };
       frenos.push({ id: 'semana_a_medias', texto: 'Semana a medias' });
     } else if (modo === 'vuelta') {
       r = { tipo: 'vuelta', propuesta: aplicarVuelta(p, tramo, { nombre, reglas: R }), orientativa: null, motivo: motivoVuelta(dias, tramo), alternativas: [{ id: 'mantener', etiqueta: 'Mantener', propuesta: campos(p) }], avisos: [] };
@@ -122,11 +124,20 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       r = { tipo: 'mantenimiento', propuesta: aplicarMantenimiento(p, { reglas: R }), orientativa: null, motivo: 'Mantenimiento: mismas cargas con menos series', alternativas: [{ id: 'mantener', etiqueta: 'Sin recortar', propuesta: campos(p) }], avisos: [] };
     } else if (retoma && base && generales.descarga.vuelta === 'repetir') {
       // (v0.183) tras la descarga se repite la ultima semana normal tal cual, sin subir
-      r = { tipo: 'mantener', propuesta: campos(pautaBase), orientativa: null, motivo: 'Tras la descarga: repite la última semana normal, sin subir', alternativas: [], avisos: [] };
+      r = { tipo: 'mantener', propuesta: desdeLoHecho(l, pautaBase, { porSuCuenta }), orientativa: null, motivo: 'Tras la descarga: repite la última semana normal, sin subir', alternativas: [], avisos: [] };
       frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga' });
     } else if (retoma && !base) {
       r = { tipo: 'mantener', propuesta: campos(p), orientativa: null, motivo: 'Tras la descarga no hay una semana normal anterior de la que partir: revisa la carga', alternativas: [], avisos: [] };
       frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga, sin semana normal anterior' });
+    } else if (porSuCuenta && l.banderas.raras.length) {
+      // (por su cuenta, freno 2) lo apuntado parece una errata: se le pregunta al atleta antes de proponer; si lo confirma
+      // (la serie llega con `confirmada`), lectura.js ya no la descarta y se propone con ella
+      const raras = (base?.series || []).filter((s) => l.banderas.raras.includes(Number(s.numero))).sort((a, b) => Number(a.numero) - Number(b.numero));
+      const cuales = raras.map((s) => `serie ${s.numero}: ${textoHecho([s])}`).join(' · ');
+      r = { tipo: 'pregunta', propuesta: campos(p), orientativa: null, motivo: `Lo apuntado parece una errata (${cuales}): se pregunta al atleta antes de proponer`, alternativas: [], avisos: [] };
+      frenos.push({ id: 'errata_pregunta', texto: 'Posible errata: se pregunta al atleta' });
+      fila.pregunta = { tipo: 'errata', series: raras.map((s) => ({ numero: Number(s.numero), kg: Number(s.kg) > 0 ? Number(s.kg) : null, reps: Number(s.reps) || null })),
+        texto: `${nombre}: ¿seguro que hiciste ${raras.length > 1 ? `esto (${cuales})` : `${textoHecho(raras)} en la serie ${raras[0]?.numero}`}? Si es así, confírmalo; si no, corrígelo.` };
     } else {
       // Fallos seguidos con la misma carga pautada y bajadas ya hechas (lineal); límites de series (triple)
       let fallosPrevios = 0;
@@ -140,9 +151,11 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       const seriesMin = R.triple.seriesMin ?? (todasLasSeries.length ? Math.min(...todasLasSeries) : null);
       const seriesMax = R.triple.seriesMax ?? (seriesMin != null ? seriesMin + R.triple.seriesExtra : null);
       r = MODELO[modelo](l, pautaBase, { nombre, reglas: R, previa, fallosPrevios, bajadasPrevias, seriesMin, seriesMax, ejercicio: ej, nivel: atleta.nivel ?? null,
-        peaking: pico, topSet: modelo === 'top_set' || (modelo === 'por_serie' && R.topSet.detectar && esBasico(ej)) });
+        peaking: pico, topSet: modelo === 'top_set' || (modelo === 'por_serie' && R.topSet.detectar && esBasico(ej)), ...(porSuCuenta ? { porSuCuenta } : {}) });
       if (retoma) { r = { ...r, motivo: `Tras la descarga, sigue desde la última semana normal. ${r.motivo}` }; frenos.push({ id: 'tras_descarga', texto: 'Tras una descarga' }); }
       if (pendiente) r = { ...r, avisos: [...r.avisos, `El modelo «${NOMBRE_MODELO[pedido]}» aún no está disponible: se usa «${NOMBRE_MODELO[modelo]}»`] };
+      // (por su cuenta) los frenos del modelo que han actuado, a la vista del coach
+      if (r.frenos?.length) frenos.push(...r.frenos);
       const volver = () => r.alternativas.find((a) => a.id === 'mantener')?.propuesta || campos(pautaBase);
       // Freno: con el check-in bajo no se añaden series
       if (r.tipo === 'series' && checkinBajo) {
@@ -161,6 +174,11 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       if (l.banderas.malDia && l.diagnostico === 'por_debajo') frenos.push({ id: 'mal_dia', texto: 'Mal día: no cuenta para bajar' });
       if (l.diagnostico === 'sin_registrar') frenos.push({ id: 'sin_registrar', texto: 'Sin registrar' });
       if (l.diagnostico === 'cambiado') frenos.push({ id: 'cambiado', texto: 'Lo cambió por otro ejercicio' });
+    }
+    // (por su cuenta) red de seguridad, en cualquier tipo de semana y con cualquier modelo: nunca más de un salto sobre lo hecho
+    if (porSuCuenta && !['pregunta', 'sin_tocar'].includes(r.tipo)) {
+      const lim = unSaltoComoMucho(r.propuesta, l, { nombre, reglas: R, sube: r.tipo === 'subir' || r.tipo === 'series' });
+      if (lim) { r = { ...r, propuesta: lim }; frenos.push({ id: 'un_salto', texto: FRENO_POR_SU_CUENTA.un_salto }); }
     }
     const avisos = [...r.avisos.map((texto) => ({ tipo: 'modelo', texto })),
       ...molestias.filter((m) => cargaZona(m.zona, ej)).map((m) => ({ tipo: 'molestia', zona: m.zona, intensidad: Number(m.intensidad), texto: `Molestia ${NIVEL_MOLESTIA[Number(m.intensidad)] || ''} en ${(NOMBRE_ZONA[m.zona] || m.zona).toLowerCase()}`.replace('  ', ' ') }))];
@@ -216,7 +234,9 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
   const conDescarga = () => filas.map((f) => {
     if (f._r.tipo === 'sin_tocar') return cerrar(f, f._r);
     const tipo = f._R.descarga.tipo;
-    return cerrar({ ...f, frenos: [] }, { tipo: 'descarga', propuesta: aplicarDescarga(f._p, { tipo, nombre: f.ejercicio, kgBase: f._l.kgTrabajo, reglas: f._R, nivel: atleta.nivel ?? null }), orientativa: null,
+    // (la descarga sale de los kilos que movió, sin las series raras: no hace falta preguntar)
+    const { pregunta, ...g } = f;
+    return cerrar({ ...g, frenos: [] }, { tipo: 'descarga', propuesta: aplicarDescarga(f._p, { tipo, nombre: f.ejercicio, kgBase: f._l.kgTrabajo, reglas: f._R, nivel: atleta.nivel ?? null }), orientativa: null,
       motivo: motivoDescarga(tipo, f._R, { prioridad: f.prioridad, nivel: atleta.nivel ?? null }), alternativas: [{ id: 'mantener', etiqueta: 'Sin descarga', propuesta: campos(f._p) }], avisos: [] });
   });
   const esDescarga = pedida || programada;
@@ -239,6 +259,8 @@ export function proponerSemana({ pautas = [], sesiones = [], series = {}, ejerci
       ...(pico && !esDescarga ? { peaking: finales.filter((f) => f.fase === 'peaking').length } : {}),
       motivo: esDescarga ? (pedida ? 'La semana está marcada como descarga' : `Toca descarga programada (cada ${d.cadaSemanas} semanas)`)
         : modo === 'vuelta' ? `Parón de ${dias} días` : modo === 'repetir' ? `Hizo ${hechas} de ${total} sesiones` : modo === 'mantenimiento' ? 'Mantenimiento activo' : null,
+      // (por su cuenta) cuántos ejercicios esperan a que el atleta confirme o corrija lo apuntado
+      ...(porSuCuenta ? { porSuCuenta: true, preguntas: finales.filter((f) => f.tipo === 'pregunta').length } : {}),
       resumen: {
         suben: cuenta(finales, ['subir', 'series']), mantienen: cuenta(finales, ['reps', 'mantener', 'tope', 'peaking', 'sin_tocar']), bajan: cuenta(finales, ['bajar', 'menos', 'descarga', 'vuelta', 'mantenimiento']),
         confianza: { alta: finales.filter((f) => f.confianza === 'alta').length, media: finales.filter((f) => f.confianza === 'media').length, baja: finales.filter((f) => f.confianza === 'baja').length },

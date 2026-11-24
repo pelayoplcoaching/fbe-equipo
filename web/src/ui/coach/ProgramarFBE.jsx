@@ -19,6 +19,8 @@ import { ReglasAtleta, ReglaEjercicio } from './ReglasFBE.jsx';
 const TIPO = {
   subir: ['Sube kilos', 'ok'], reps: ['Más repeticiones', 'morado'], series: ['Una serie más', 'morado'], mantener: ['Igual', ''], bajar: ['Baja kilos', 'aviso'],
   tope: ['Al tope', 'aviso'], menos: ['Una repetición menos', 'aviso'], peaking: ['Menos repeticiones', 'morado'], sin_tocar: ['A mano', ''], descarga: ['Descarga', 'aviso'], vuelta: ['Vuelta', 'aviso'], mantenimiento: ['Mantenimiento', ''],
+  // («por su cuenta») posible errata: se pregunta al atleta antes de proponer
+  pregunta: ['Pregunta al atleta', 'aviso'],
 };
 const CONFIANZA = { alta: ['Confianza alta', 'ok'], media: ['Confianza media', 'aviso'], baja: ['Confianza baja', ''] };
 
@@ -85,7 +87,7 @@ export function ProgramarFBE({ d, base, destino, ejercicios, atleta, fijos = new
   const calculo = useMemo(() => {
     if (!contexto.datos) return null;
     const suyas = paraElMotor(guardadas);
-    const leida = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null }, reglas: suyas.reglas,
+    const leida = entradaDesdeBloque({ d, base, destino, ejercicios, atleta: { nivel: atleta?.nivel ?? null, perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null, modalidad: atleta?.modalidad ?? null }, reglas: suyas.reglas,
       checkins: contexto.datos.checkins, molestias: contexto.datos.molestias });
     const foco = leida.contexto.focoSiguiente;
     const entrada = { ...leida, contexto: { ...leida.contexto, focoSiguiente: pico ? (foco === 'descarga' ? foco : 'peaking') : foco === 'peaking' ? null : foco } };

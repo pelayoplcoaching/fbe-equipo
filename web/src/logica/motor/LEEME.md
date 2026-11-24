@@ -94,6 +94,35 @@ pautado, lo que hizo y la propuesta serie a serie (`seriesEnFilas`, `textoSerieF
 (Nota de la v0.182:) «Suma una repetición hasta» de los formularios ya no aplica a la regla
 por RPE (solo a la clásica y al top set).
 
+## «Por su cuenta»: los cuatro frenos (24/11/2026)
+
+Para los atletas sin seguimiento («FBE por tu cuenta»), que no tienen a Pelayo revisando la semana. Solo actúan con
+`atleta.modalidad === 'por_su_cuenta'` en la entrada de `proponerSemana`; con cualquier otra modalidad (o sin ella) la
+propuesta es exactamente la de siempre (comprobado con la copia del 24/11: 119 de 119 semanas idénticas). Aprobados por
+Pelayo el 24/11/2026 tras la revisión de seguridad de la fase 0:
+
+1. **Si movió menos kilos de los pautados, se parte de lo que hizo** (`desdeLoHecho`): el «igual» de la serie a serie, la
+   semana a medias, los demás modelos y la pauta escrita sin serie a serie, bajados a los kilos que movió. Freno
+   `desde_lo_hecho`.
+2. **Si lo apuntado parece una errata, se pregunta antes de proponer**: la fila sale con `tipo: 'pregunta'`, sin cambios,
+   con `pregunta: { tipo: 'errata', series: [{ numero, kg, reps }], texto }`, y la semana dice cuántas
+   (`semana.preguntas`). Si el atleta lo confirma, la serie llega con `confirmada: true` y `lectura.js` ya no la descarta.
+   Freno `errata_pregunta`.
+3. **Nunca por debajo del mínimo del rango**: la serie pesada de un básico ya no baja de él al subir de kilos (si con el
+   salto no llegaría, una repetición más; en el tope sube y vuelve al mínimo) y a RPE 10 no se quita la repetición si eso
+   lo deja por debajo. Freno `minimo_rango`.
+4. **Dos semanas por debajo del rango sin avanzar** (ni más repeticiones ni menos kilos): baja un salto y vuelve al
+   mínimo. Si lo pautado ya iba por debajo del rango a propósito, su mínimo es lo pautado. Sin kilos que bajar, avisa.
+   Freno `baja_rango`.
+
+Y una red de seguridad para cualquier modelo o tipo de semana (`unSaltoComoMucho`): ninguna serie más de un salto por
+encima de lo que movió (freno `un_salto`; con la copia del 24/11 no ha hecho falta). Las molestias siguen avisando sin
+frenar (decisión del 24/11). Los frenos que actúan llegan en `fila.frenos` con su texto (`FRENO_POR_SU_CUENTA`).
+
+Revisión de seguridad repetible con cada copia: `node scripts/seguridad-motor.mjs <copia.json> [--por-su-cuenta]
+[--confirmar]`. Con la copia del 24/11 y los frenos: 0 series con más de un salto, 0 que bajan del mínimo y 0 atascadas
+dos semanas con kilos (antes, 41, 39 y 5).
+
 ## Reglas propias de cada atleta (16/11/2026)
 
 Cada atleta puede llevar, además del perfil, los rangos y el RPE, tres reglas más (se editan en «Reglas de este atleta» y
@@ -280,6 +309,7 @@ repeticiones; antes se quedaba igual, como las series con kilos de intensificaci
 
 ```
 node test/motor.test.mjs
+node test/frenos-por-su-cuenta.test.mjs   (los frenos de «por su cuenta» y que con seguimiento no cambia nada)
 ```
 
 348 comprobaciones, entre ellas mil semanas generadas al azar con semilla fija: ninguna propuesta se sale de lo que admite
