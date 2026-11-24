@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Disco, useApp, Capa } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
 import { pauta, num, mmss, textoSerie, trasSerie, duracionEstimada, NOMBRE_PRIORIDAD, textoObjetivo } from '../../logica/calculos.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
 import { pasoPeso, pideRpe, siguienteCampo, discosCon, tipoCarga } from '../../logica/teclado.js';
 import { enLibras, vista, pesoTxt, nombrePeso, barraVista } from '../../logica/unidades.js';
@@ -24,7 +25,7 @@ function EnfoquePantalla({
   ejercicios, extras = {}, hechas, records, etiquetas, actualDe, ultimasDe, foco, progresionAuto, notas, guardarNota,
   guardar, quitar, descanso, setDescanso, seId, setSeId, inicio, alSalir, alTerminar, ahora = null, teclado = null, sesionId = null, ejDescanso = null,
 }) {
-  const { aviso } = useApp();
+  const { aviso, atleta } = useApp();
   useMarcaPagina('hay-enfoque');
   const e = ejercicios.find((x) => x.id === seId) || ejercicios[0];
   const idx = ejercicios.indexOf(e);
@@ -160,7 +161,7 @@ function EnfoquePantalla({
   const quedanSeries = Object.values(pendientes).reduce((t, n) => t + n, 0);
   const minutos = duracionEstimada(ejercicios, pendientes);
   const siguienteEj = ejercicios.slice(idx + 1).find((x) => pendientes[x.id] > 0) || ejercicios.slice(0, idx).find((x) => pendientes[x.id] > 0);
-  const pa = pauta(e);
+  const pa = pauta(e, { sobran: esPorSuCuenta(atleta) });
   const etq = etiquetas[e.id];
   const record = numero && previa ? records[`${e.id}-${numero}`] : null;
 

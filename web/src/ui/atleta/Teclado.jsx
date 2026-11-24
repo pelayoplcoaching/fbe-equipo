@@ -19,6 +19,7 @@ import { notaRpe } from '../../logica/sonido.js';
 import { num } from '../../logica/calculos.js';
 import { RPE_TECLADO, DISCOS_MINIMOS, pulsarTecla, sumarPaso, anuncioValor, discosCon } from '../../logica/teclado.js';
 import { enLibras, nombrePeso, barraVista, etiquetaPeso } from '../../logica/unidades.js';
+import { etiquetaRpeSobran, sobranDeRpe } from '../../logica/esencial.js';
 
 // ¿Teclado de la app? (el ajuste de este móvil; cambia al momento en todas las filas)
 export function useTecladoApp() {
@@ -54,7 +55,7 @@ let abiertos = 0;
 let ultimoCierre = 0;
 const NOMBRE = { kg: 'Kilos', reps: 'Repeticiones', rpe: 'RPE' };
 // (v0.112: «Libras» si el atleta las tiene puestas)
-const nombreDe = (c) => (c === 'kg' ? nombrePeso(undefined, { mayuscula: true }) : NOMBRE[c]);
+const nombreDe = (c, porTiempo = false) => (c === 'kg' ? nombrePeso(undefined, { mayuscula: true }) : c === 'reps' && porTiempo ? 'Segundos' : NOMBRE[c]);
 
 // campo: 'kg' | 'reps' | 'rpe'; texto: lo escrito en kilos o repeticiones; rpe: el RPE elegido ('' sin él); base: lo que
 // te propone la app (el gris), para −/+ con el campo vacío; paso: el salto de los kilos; serie: «Serie 2», «Top»…;
@@ -70,7 +71,7 @@ export function Teclado(props) {
 }
 
 function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, serie = '', anterior = null, objetivo = null, final = null,
-  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco: alDiscoKg = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '' }) {
+  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco: alDiscoKg = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '', sobran = false, porTiempo = false }) {
   // (v0.112) en libras, los discos son los de libras (el más pequeño, 2,5 lb): sin elegir el disco más pequeño
   const alDisco = enLibras() ? null : alDiscoKg;
   const raiz = useRef(null);
@@ -144,11 +145,11 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
   );
   const nombreLugar = lugar === 'casa' ? 'en casa' : lugar === 'viaje' ? 'de viaje' : 'en el gimnasio';
   return (
-    <div ref={raiz} class={`teclado-serie ${entrada ? 'entra' : ''}`} role="group" aria-label={`Teclado de ${nombreDe(campo).toLowerCase()}, ${serie.toLowerCase()}`}
+    <div ref={raiz} class={`teclado-serie ${entrada ? 'entra' : ''}`} role="group" aria-label={`Teclado de ${nombreDe(campo, porTiempo).toLowerCase()}, ${serie.toLowerCase()}`}
       onPointerDown={sinFoco} onMouseDown={sinFoco} data-campo={campo}>
       <div class="teclado-cab">
-        <span class="teclado-titulo"><strong>{nombreDe(campo)}</strong><span class="terciario"> · {serie}</span>
-          {campo === 'rpe' && objetivo && <span class="teclado-meta"> · objetivo {objetivo.replace(/^RPE /, '')}</span>}
+        <span class="teclado-titulo"><strong>{nombreDe(campo, porTiempo)}</strong><span class="terciario"> · {serie}</span>
+          {campo === 'rpe' && objetivo && <span class="teclado-meta"> · objetivo {sobran ? objetivo.replace(/^Te sobran/, 'te sobran') : objetivo.replace(/^RPE /, '')}</span>}
           {campo !== 'rpe' && anterior && <span class="teclado-meta"> · ant. <span class="num">{anterior}</span></span>}</span>
         {alMovil && <button type="button" tabIndex={-1} class="teclado-icono" aria-label="Usar el teclado del móvil" title="Usar el teclado del móvil" onClick={alMovil}><Icono n="teclado" /></button>}
         <button type="button" tabIndex={-1} class="teclado-icono" aria-label="Ocultar el teclado" onClick={alCerrar}><Icono n="abajo" /></button>
@@ -175,7 +176,7 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
       ) : campo === 'rpe' ? (
         <div class="teclado-rpe" role="group" aria-label="RPE de la serie">
           {RPE_TECLADO.map((v) => (
-            <button key={v} type="button" tabIndex={-1} class="tecla" aria-pressed={Number(rpe) === v && rpe !== '' ? 'true' : 'false'} onClick={() => elegirRpe(v)}>{num(v)}</button>
+            <button key={v} type="button" tabIndex={-1} class="tecla" aria-pressed={Number(rpe) === v && rpe !== '' ? 'true' : 'false'} onClick={() => elegirRpe(v)} aria-label={sobran ? etiquetaRpeSobran(v) : undefined}>{num(v)}{sobran && <small class="tecla-sobran">{sobranDeRpe(v) === '0' ? 'ninguna' : `sobran ${sobranDeRpe(v)}`}</small>}</button>
           ))}
           <button type="button" tabIndex={-1} class="tecla tecla-sin" aria-pressed={rpe === '' ? 'true' : 'false'} onClick={() => { tocar(); alRpe(''); decir('rpe', ''); }}>Sin RPE</button>
         </div>

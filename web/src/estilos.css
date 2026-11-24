@@ -4514,6 +4514,10 @@ video.respuesta-video { display: block; width: 100%; max-width: 280px; max-heigh
 .teclado-rpe .tecla { font-size: var(--letra-20); }
 .teclado-rpe .tecla[aria-pressed="true"] { background: var(--morado); color: var(--sobre-morado); border-color: var(--morado); }
 .teclado-rpe .tecla-sin { font-size: var(--letra-14); font-weight: 700; }
+/* (FBE Esencial) quien va por su cuenta ve, bajo cada RPE, las repeticiones que le sobran (como en la guia) */
+.teclado-rpe .tecla:has(.tecla-sobran) { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--esp-2); line-height: 1.1; }
+.tecla-sobran { font-size: var(--letra-11); font-weight: 600; color: var(--tinta-2); }
+.teclado-rpe .tecla[aria-pressed="true"] .tecla-sobran { color: var(--sobre-morado); }
 .teclado-elige-disco { display: grid; gap: var(--esp-8); }
 .teclado-elige-disco .teclado-rpe { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .teclado-elige-disco .tecla { font-size: var(--letra-16); }

@@ -25,6 +25,7 @@ import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
@@ -1044,6 +1045,8 @@ export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resu
 }
 
 function SiguienteSesion({ sesion, ejercicios, cargando }) {
+  const { atleta } = useApp();
+  const sobran = esPorSuCuenta(atleta);
   const etiquetas = etiquetasSuperserie(ejercicios);
   const cardio = cardioValido(sesion.cardio) ? sesion.cardio : null;
   if (!cargando && !ejercicios.length && !sesion.dinamica && !cardio) return null;
@@ -1056,7 +1059,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
           {cargando ? <Cargando /> : (
             <ul class="lista">
               {ejercicios.map((e) => {
-                const pa = pauta(e);
+                const pa = pauta(e, { sobran });
                 return (
                   <li class="ej-fila" key={e.id}>
                     <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>

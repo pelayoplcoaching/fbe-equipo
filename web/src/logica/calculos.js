@@ -3,6 +3,7 @@ import { diasEntre, lunesDe, sumarDias, hoyISO } from './fechas.js';
 import { cardioHechoDe } from './cardio.js';
 import { pesoTxt, pesoNum, redondearCarga } from './unidades.js';
 import { alertasCierre } from './cierre.js';
+import { textoSobran } from './esencial.js';
 
 // ---------- Formato numérico (es-ES) ----------
 
@@ -200,26 +201,32 @@ export function propuestaBackoff(se, k, hechas, deLaTop, nombre = '') {
 }
 
 // Texto de la pauta: "3 × 6–8", "RIR 2", "60 kg", "2:30"; con top + back-off, "1 × 4–6 + 3 × −10 %"
-export function pauta(se) {
+// (FBE Esencial) Un ejercicio por tiempo (la plancha: `ejercicio.por_tiempo`) lleva segundos: "1 × 20–30 s". Con
+// `sobran` (quien va por su cuenta), el esfuerzo como en la guía del vídeo: "Te sobran 4-5".
+export const esPorTiempo = (se) => !!(se?.por_tiempo ?? se?.ejercicio?.por_tiempo);
+export function pauta(se, { sobran = false } = {}) {
+  const seg = esPorTiempo(se) ? ' s' : '';
   const reps = se.reps_min != null && se.reps_max != null && se.reps_min !== se.reps_max
-    ? `${se.reps_min}–${se.reps_max}`
+    ? `${se.reps_min}–${se.reps_max}${seg}`
     : se.reps_max ?? se.reps_min ?? '';
+  const repsU = seg && reps !== '' && typeof reps !== 'string' ? `${reps}${seg}` : reps;
   const top = esTopBackoff(se);
+  const esf = (t) => (sobran && t ? textoSobran(t) : t);
   if (tieneDetalle(se)) {
-    const repsTxt = se.series_detalle.map((x) => x.reps ?? '–');
+    const repsTxt = se.series_detalle.map((x) => (x.reps == null ? '–' : `${x.reps}${seg}`));
     const iguales = repsTxt.every((r) => r === repsTxt[0]);
     return {
       series: iguales ? `${se.series_detalle.length} × ${repsTxt[0]}` : `${se.series_detalle.length} series: ${repsTxt.join(' · ')}`,
       top: false, detalle: true,
-      esfuerzo: se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : null,
+      esfuerzo: esf(se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : null),
       carga: null,
       descanso: se.descanso_seg ? mmss(se.descanso_seg) : null,
     };
   }
   return {
-    series: top ? `${reps === '' ? 'Top' : `1 × ${reps}`} + ${se.series - 1} × \u2212${num(se.backoff_pct)} %` : `${se.series} × ${reps}`.trim(),
+    series: top ? `${repsU === '' ? 'Top' : `1 × ${repsU}`} + ${se.series - 1} × \u2212${num(se.backoff_pct)} %` : `${se.series} × ${repsU}`.trim(),
     top,
-    esfuerzo: se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : se.rpe_objetivo != null ? `RPE ${num(se.rpe_objetivo)}` : null,
+    esfuerzo: esf(se.rir_objetivo != null ? `RIR ${num(se.rir_objetivo)}` : se.rpe_objetivo != null ? `RPE ${num(se.rpe_objetivo)}` : null),
     carga: se.carga_sugerida_kg != null ? pesoTxt(redondearCarga(se.carga_sugerida_kg), 2) : null,
     descanso: se.descanso_seg ? mmss(se.descanso_seg) : null,
   };

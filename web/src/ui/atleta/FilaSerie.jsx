@@ -21,6 +21,7 @@ import { Placas } from '../Herramientas.jsx';
 import { num } from '../../logica/calculos.js';
 import { nombrePeso, etiquetaPeso } from '../../logica/unidades.js';
 import { RPES, aNumero, problemaSerie } from './sesion-comun.jsx';
+import { etiquetaRpeSobran } from '../../logica/esencial.js';
 import { vibrar } from '../hapticos.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
 import { siguienteCampo, discosCon } from '../../logica/teclado.js';
@@ -30,7 +31,7 @@ const fmt = (v, d) => (v == null ? '' : num(v, d));
 const mismoNum = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(Number(a) - Number(b)) < 1e-9);
 
 export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null, ultima = null,
-  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false }) {
+  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false, sobran = false, porTiempo = false }) {
   const { aviso } = useApp();
   const { kg, reps, rpe } = valores;
   const app = !!teclado?.app;
@@ -257,7 +258,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
               onFocus={alEntrar('kg')} onBlur={alSalir('kg')} onKeyDown={alTecla('kg')} />
             {anterior != null && <span class="peso-anterior" aria-hidden="true" title="Tu peso de la última vez en esta serie"><small>ant.</small> {num(anterior, 2)}</span>}
           </span>
-          <input ref={refs.reps} class={`celda ${campo === 'reps' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'numeric'} enterKeyHint="done" aria-label={`Repeticiones de la serie ${numero}`} value={reps}
+          <input ref={refs.reps} class={`celda ${campo === 'reps' ? 'en-teclado' : ''}`} inputMode={app ? 'none' : 'numeric'} enterKeyHint="done" aria-label={`${porTiempo ? 'Segundos' : 'Repeticiones'} de la serie ${numero}`} value={reps}
             placeholder={fmt(propuesta.reps, 0) || '–'} onInput={(e) => escribir('reps', e.currentTarget.value)} autoComplete="off"
             onFocus={alEntrar('reps')} onBlur={alSalir('reps')} onKeyDown={alTecla('reps')} />
           {app ? (
@@ -273,7 +274,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
               elegirRpe(v);
               if (v !== '') sonarFBE('rpe', { f: notaRpe(v) });   // (sonido 2) el esfuerzo suena
             }}>
-              {RPES.map((r) => <option key={r} value={r}>{r === '' ? pista : num(r)}</option>)}
+              {RPES.map((r) => <option key={r} value={r}>{r === '' ? pista : sobran ? etiquetaRpeSobran(r) : num(r)}</option>)}
             </select>
           )}
           <button class="hecho-btn" onClick={tocarHecho} aria-pressed={hecha ? 'true' : 'false'}
@@ -292,7 +293,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
           paso={paso} serie={serieTxt} anterior={anterior != null ? `${num(anterior, 2)} ${etiquetaPeso()}` : null} objetivo={propuesta.rpe != null ? `RPE ${num(propuesta.rpe)}` : objetivoEsfuerzo}
           final={finalDe(campo)} alTexto={(t) => escribir(campo, t)} alRpe={elegirRpe} alSiguiente={() => siguienteDe(campo)} alCerrar={cerrar}
           ancla={() => fila.current} dentro={dentro} barra={barra} discoMinimo={teclado.discoMinimo} alDisco={teclado.alDisco && conDiscos ? teclado.alDisco : null}
-          lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} />
+          lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} sobran={sobran} porTiempo={porTiempo} />
       )}
     </>
   );

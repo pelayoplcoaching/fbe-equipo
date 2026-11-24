@@ -1,7 +1,12 @@
 // FBE Esencial («por su cuenta»): el atleta sin seguimiento personal, con la app y el motor (frenos de la v0.231).
 // Aquí: quién va por su cuenta, cómo se le dice el esfuerzo («te sobran», como en la guía del vídeo), la plantilla
 // «Primeras 4 semanas» (la misma de la guía; sirve para la demo y para el SQL de la base) y sus marcas de la semana 4.
-import { num } from './calculos.js';
+// (sin importar calculos.js, que usa textoSobran para la pauta: el número, con coma y sin ceros de detrás)
+const num = (v, dec = 1) => {
+  const n = Number(v);
+  if (v == null || v === '' || !Number.isFinite(n)) return '—';
+  return (Number.isInteger(n) ? String(n) : n.toFixed(dec).replace(/\.?0+$/, '')).replace('.', ',');
+};
 
 export const MODALIDAD_POR_SU_CUENTA = 'por_su_cuenta';
 export const esPorSuCuenta = (atleta) => atleta?.modalidad === MODALIDAD_POR_SU_CUENTA;

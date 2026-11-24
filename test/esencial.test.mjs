@@ -1,6 +1,7 @@
 // FBE Esencial, tanda 1 (logica/esencial.js): «te sobran», la plantilla «Primeras 4 semanas» igual que la guía del
 // vídeo y las marcas de la semana 4.
 import { esPorSuCuenta, sobran, sobranDeRpe, textoSobran, etiquetaRpeSobran, PRIMERAS_4, filasPrimeras4, marcasDeSemana } from '../web/src/logica/esencial.js';
+import { pauta, esPorTiempo } from '../web/src/logica/calculos.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -18,6 +19,14 @@ check(textoSobran('RIR 4,5') === 'Te sobran 4-5' && textoSobran('RIR 3') === 'Te
 check(textoSobran('60 kg') === '60 kg' && textoSobran('') === '' && textoSobran(null) === '', 'lo que no es esfuerzo, igual');
 check(etiquetaRpeSobran(8) === '8 · te sobran 2' && etiquetaRpeSobran(10) === '10 · no te sobra ninguna' && etiquetaRpeSobran('') === '',
   'al apuntar el RPE, cada valor con sus «te sobran»');
+
+console.log('\nLa pauta en la sesión');
+const p45 = { series: 1, reps_min: 10, reps_max: 12, rir_objetivo: 4.5 };
+check(pauta(p45, { sobran: true }).esfuerzo === 'Te sobran 4-5' && pauta(p45).esfuerzo === 'RIR 4,5' && pauta({ series: 2, reps_min: 8, reps_max: 10, rpe_objetivo: 8 }, { sobran: true }).esfuerzo === 'Te sobran 2',
+  'quien va por su cuenta lee «Te sobran 4-5» (y del RPE 8, «Te sobran 2»); el resto, «RIR 4,5» como siempre');
+check(pauta({ series: 1, reps_min: 20, reps_max: 30, ejercicio: { por_tiempo: true } }).series === '1 × 20–30 s' && pauta({ series: 3, reps_min: 40, reps_max: 40, por_tiempo: true }).series === '3 × 40 s'
+  && pauta({ series: 1, reps_min: 10, reps_max: 12 }).series === '1 × 10–12' && esPorTiempo({ ejercicio: { por_tiempo: true } }) && !esPorTiempo({}),
+  'la plancha, en segundos: «1 × 20–30 s»; el resto, igual');
 
 console.log('\nLa plantilla «Primeras 4 semanas» (la guía)');
 const f = filasPrimeras4();

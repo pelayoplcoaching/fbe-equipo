@@ -9,6 +9,7 @@ import { LOBO } from '../marca-lobo.js';
 import { ArteSesion } from './ArteSesion.jsx';
 import { resumenPautas } from '../../logica/diseno.js';
 import { pauta, NOMBRE_GRUPO, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_TIPO_SESION } from '../../logica/calculos.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { cardioValido } from '../../logica/cardio.js';
 import { familiaPortada, imagenPortada, imagenEjercicio } from '../../logica/imagenes.js';
 import { Imagen } from '../Imagen.jsx';
@@ -97,7 +98,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           <div class="panel portada-lista">
             <ul class="lista">
               {ejercicios.map((e) => {
-                const pa = pauta(e);
+                const pa = pauta(e, { sobran: esPorSuCuenta(atleta) });
                 return (
                   <li class="ej-fila" key={e.id}>
                     <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>

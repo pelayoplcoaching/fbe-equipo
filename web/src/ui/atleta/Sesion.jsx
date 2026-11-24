@@ -52,6 +52,7 @@ import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
@@ -1007,7 +1008,11 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
-  const pa = pauta(e);
+  // (FBE Esencial) quien va por su cuenta lee el esfuerzo como en la guía («Te sobran 4-5»); la plancha va por tiempo (y si
+  // cambió a una alternativa, cuenta la alternativa)
+  const sobran = esPorSuCuenta(atleta);
+  const porTiempo = !!(actual ? actual.por_tiempo : e.ejercicio?.por_tiempo);
+  const pa = pauta({ ...e, por_tiempo: porTiempo }, { sobran });
   const n = Object.keys(hechas).length;
   // (las series añadidas las lleva la sesión, guardadas en el móvil: no se pierden al plegar la tarjeta ni al recargar)
   // Las series añadidas suman a las pautadas; marcar una añadida no abre otra fila vacía detrás
@@ -1182,7 +1187,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
           {/* v0.63 (3): la primera vez, en el móvil (con el dedo), cómo marcar sin apuntar y cómo abrir el teclado */}
           {siguiente && !completo && tactil() && <Pista id="deslizar-serie" icono="hecho">Desliza una serie a la derecha para marcarla como hecha (lo mismo que ✓: con lo que hayas escrito o, si no, con lo que te propone).{teclado?.app ? ' Mantenla pulsada para abrir el teclado en los kilos.' : ''}</Pista>}
-          <div class="series-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>Reps</span><span>Esfuerzo</span><span /></div>
+          <div class="series-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>{porTiempo ? 'Seg' : 'Reps'}</span><span>Esfuerzo</span><span /></div>
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => {
             const prop = enV(propuesta(k, hechas));
             return (
@@ -1193,7 +1198,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)}
                   valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
-                  teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos}
+                  teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos} sobran={sobran} porTiempo={porTiempo}
                   paso={pasoPeso({ nombre: ej.nombre, valor: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
                 {/* (ajuste en vivo) la serie que toca, corregida porque la anterior se fue del RPE pautado */}
                 {prop?.ajuste && k === activa && !hechas[k] && (() => {
