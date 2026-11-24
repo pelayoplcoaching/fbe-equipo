@@ -72,7 +72,6 @@ import { limpiarResumen, esResumenSesion, ordenEnSesion } from '../logica/sesion
 import { AMPLIAR, ambitoDe, derivar, cubre, esCompleta, idsDe } from './lecturas.js';
 import { TABLAS_COPIA, TABLAS_OPCIONALES } from './copia-tablas.js';
 import { migracionesQueFaltan } from './migracion.js';
-import { marcasDeSemana } from '../logica/esencial.js';
 
 export const VERSION_CONSENTIMIENTO = '2026-10';
 // El texto que se acepta al entrar en la comunidad: como public.comunidad_version() (027; cambió en la 029, v0.47:
@@ -2172,7 +2171,7 @@ export function crearApi(backend, opciones = {}) {
       return {
         semana, bloque: bloques.find((x) => x.id === semana.bloque_id) || null,
         completa: sesiones.length > 0 && sesiones.every((x) => x.completada), hechas: sesiones.filter((x) => x.completada).length, sesiones: sesiones.length,
-        marcas: marcasDeSemana({ pautas, series, ejercicios }),
+        marcas: (await import('../logica/esencial-alta.js')).marcasDeSemana({ pautas, series, ejercicios }),
       };
     },
 
@@ -4860,7 +4859,8 @@ export function crearApi(backend, opciones = {}) {
       // (v0.207) todo lo que no sale de la lista de atletas se pide a la vez que ella (antes, tres esperas más detrás)
       const con040P = api.revision040().catch(() => null);
       const [resumenes, sinLeer, videos, con040, revs, escritosCoach, con082] = await Promise.all([
-        api.resumenes(hoy),
+        // (FBE Esencial) sin quienes van por su cuenta: no tienen revisión semanal del coach
+        api.resumenes(hoy).then((xs) => xs.filter((r) => r.modalidad !== 'por_su_cuenta')),
         b.select('comentarios', { eq: { autor: 'atleta' }, nulo: ['leido_en'], cols: 'atleta_id,eliminado_en' }).then((xs) => xs.filter((c) => !c.eliminado_en)).catch(() => []),
         // (054: antes buscaba el tipo «video», que no existe: los vídeos sin revisar nunca salían en la revisión)
         b.select('archivos', { eq: { tipo: 'video_tecnica' }, nulo: ['revisado_en'], cols: 'atleta_id' }).catch(() => []),
@@ -7294,6 +7294,7 @@ export function crearApi(backend, opciones = {}) {
           habitos: cumplimientoHabitos(habitosPorAtleta[a.id] || [], regsPorHabito, hoy),
           nutricion: a.nutricion === false ? [] : avisosNutricion({ planes: PN[a.id] || [], registros: RN[a.id] || [], ritmoReal: ritmoPeso(tendenciaPeso(P[a.id] || [])) }, hoy),
           cuestionario: avisoCuestionario(Q[a.id]),
+          esencial: a.modalidad === 'por_su_cuenta' ? { cuestionario: Q[a.id] || null } : null,
           abiertas: (abiertas054 || []).filter((x) => x.atleta_id === a.id),
           cambiosReceta: (CR[a.id] || []).length,
           diasNutricion: a.nutricion === false ? null : unicos((RN[a.id] || []).filter((x) => x.fecha > sumarDias(hoy, -7) && x.fecha <= hoy).map((x) => x.fecha)).length,
@@ -7372,6 +7373,12 @@ export function crearApi(backend, opciones = {}) {
       }
       const codigo = await api.crearInvitacion(atleta.id);
       return { atleta: { ...atleta, modalidad: 'por_su_cuenta', esencial_inicio: inicio || null }, codigo };
+    },
+    // Lo de FBE Esencial de su ficha, recién leído (el visto bueno lo confirma el coach con la app del atleta abierta)
+    async estadoEsencial(atletaId) {
+      try {
+        return (await b.select('atletas', { eq: { id: atletaId }, cols: 'id,modalidad,esencial_inicio,visto_bueno_pedido_en,visto_bueno_en' }))[0] || null;
+      } catch (e) { if (falta091(e)) return { falta091: true }; throw e; }
     },
     // Su plan (el atleta, el suyo; el coach, el de cualquiera): la plantilla según su cuestionario, desde su lunes
     async esencialAsignarPlan(atletaId = null) {
@@ -7493,7 +7500,8 @@ export function crearApi(backend, opciones = {}) {
         b.select('archivos', { nulo: ['revisado_en'], neq: { tipo: 'adjunto' }, order: [['creado_en', 'desc']] }).then((xs) => xs.filter((a) => a.tipo !== 'documento' && a.tipo !== 'audio')),
         api.atletas(),
       ]);
-      const A = porId(atletas);
+      // (FBE Esencial) quien va por su cuenta no pasa por Revisar: sus sesiones, check-ins y demás no esperan respuesta
+      const A = porId(atletas.filter((a) => a.modalidad !== 'por_su_cuenta'));
       // (pulido 4) Lo que sale de esa primera tanda se pide a la vez (antes, una consulta detrás de otra: unas quince
       // esperas seguidas; ahora, dos). Lo que se arma con ello es lo mismo.
       const vids = archivos.map((a) => ({ ...a, atleta: A[a.atleta_id] || null })).filter((a) => a.atleta);

@@ -5,6 +5,8 @@ import { hoyISO, sumarDias as sumar, diasEntre as diasEntreIso, lunesDe, fechaMa
 import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
+import { plantillaEsencial } from '../logica/esencial-alta.js';
+import { copiarPlantillaEsencial } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -3974,7 +3976,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return [{ pagado_hasta: r.pagadoHasta, debe: r.debe, debe_desde: debeDesde, estado: r.estado === 'sin_datos' ? 'al_dia' : r.estado }];
       }
       // (090) el resultado de una carrera: el atleta, de las suyas que ya han sido (hasta 60 días); el coach, de cualquiera
-      // (091) FBE Esencial: su plan (en la demo, el que ya tiene; si no tiene, lo dice como la base) y el visto bueno
+      // (091) FBE Esencial: su plan (la plantilla según su cuestionario, copiada desde su lunes, como en la base) y el visto bueno
       if (nombre === 'esencial_asignar_plan') {
         const id = args?.p_atleta || miAtletaId();
         if (!id) throw new Error('No hay atleta');
@@ -3988,7 +3990,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const c = tabla('cuestionarios').find((x) => x.atleta_id === id);
         if (!c?.completado_en || !c.resultado) throw new Error('Antes, el cuestionario (con la parte de salud)');
         if (c.resultado !== 'sin_valoracion' && !a.visto_bueno_en) throw new Error('Antes de empezar, el visto bueno médico');
-        throw new Error('Función no disponible en la demo: esencial_asignar_plan');
+        const plantillas = tabla('bloques').filter((x) => x.es_plantilla).sort((x, y) => String(x.creado_en || '').localeCompare(String(y.creado_en || '')));
+        const elegida = plantillaEsencial(c);
+        const pl = plantillas.find((x) => x.nombre === elegida) || plantillas.find((x) => x.nombre === 'Primeras 4 semanas');
+        if (!pl) throw new Error('No está la plantilla «Primeras 4 semanas»');
+        // Su lunes: el de su tanda si es esta semana o después; si ya pasó, el de esta semana; sin tanda, el próximo lunes
+        const hoyM = fechaMadrid(), lunesM = lunesDe(hoyM);
+        const inicio = !a.esencial_inicio ? (hoyM === lunesM ? hoyM : sumar(lunesM, 7)) : a.esencial_inicio >= lunesM ? a.esencial_inicio : lunesM;
+        const nuevo = copiarPlantillaEsencial(tabla, { plantilla: pl, atletaId: id, inicio, uuid, ahoraISO: new Date().toISOString() });
+        persistirYa();
+        return { bloque: nuevo.id, nuevo: true, plantilla: pl.nombre, inicio };
       }
       if (nombre === 'esencial_pedir_visto_bueno') {
         const a = tabla('atletas').find((x) => x.id === miAtletaId());

@@ -3,7 +3,7 @@ import { diasEntre, lunesDe, sumarDias, hoyISO } from './fechas.js';
 import { cardioHechoDe } from './cardio.js';
 import { pesoTxt, pesoNum, redondearCarga } from './unidades.js';
 import { alertasCierre } from './cierre.js';
-import { textoSobran } from './esencial.js';
+import { textoSobran, esPorSuCuenta } from './esencial.js';
 
 // ---------- Formato numérico (es-ES) ----------
 
@@ -918,8 +918,22 @@ export function resumenAtleta(d, hoy = hoyISO()) {
   }
   // Solo nutrición (v0.26): nada de avisos de entrenamiento
   const entrena = atleta.entrenamiento !== false;
+  // (FBE Esencial) quien va por su cuenta: sin revisión ni programación del coach. Sus avisos: dónde está antes de empezar
+  // (en lugar de «Sin bloque activo»), sin entrenar 10 días (no 5), dolor en el check-in y lo de salud del cuestionario
+  // una vez empezado. Nada de cumplimiento, check-in, carga, hábitos, cierre ni «programa la semana»: lo lleva la app.
+  const suyo = esPorSuCuenta(atleta);
+  if (atleta.estado === 'activo' && suyo && !bloque && entrena) {
+    const c = d.esencial?.cuestionario || null;
+    const al = !c?.completado_en ? ['esencial_cuestionario', 'info', 'FBE Esencial: aún no ha enviado el cuestionario']
+      : !c.resultado ? ['esencial_salud', 'info', 'FBE Esencial: le falta la parte de salud del cuestionario']
+        : c.resultado !== 'sin_valoracion' && !atleta.visto_bueno_en
+          ? (atleta.visto_bueno_pedido_en ? ['esencial_visto_bueno', 'aviso', 'FBE Esencial: dice que tiene el visto bueno médico; confírmalo']
+            : ['esencial_espera', c.resultado === 'parar_y_valorar' ? 'alerta' : 'info', `FBE Esencial: esperando su visto bueno médico${c.resultado === 'parar_y_valorar' ? ' (contó síntomas)' : ''}`])
+          : ['esencial_sin_plan', 'aviso', 'FBE Esencial: listo para empezar y sin plan'];
+    alertas.push({ tipo: al[0], nivel: al[1], texto: al[2] });
+  }
   if (atleta.estado === 'activo') {
-    if (entrena && !bloque) alertas.push({ tipo: 'sin_bloque', nivel: 'aviso', texto: 'Sin bloque activo' });
+    if (entrena && !bloque && !suyo) alertas.push({ tipo: 'sin_bloque', nivel: 'aviso', texto: 'Sin bloque activo' });
 
     const diasSinEntrenar = d.ultimaSerie ? diasEntre(d.ultimaSerie, hoy) : null;
     // Días desde que empezó el bloque (negativo si aún no ha empezado): un bloque que empieza el lunes
@@ -927,7 +941,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     const diasBloque = bloque?.fecha_inicio ? diasEntre(bloque.fecha_inicio, hoy) : null;
     const empezado = diasBloque === null || diasBloque >= 0;
     const parado = diasBloque === null ? diasSinEntrenar : Math.min(diasSinEntrenar ?? Infinity, diasBloque);
-    if (entrena && bloque && empezado && (parado === null || parado >= 5)) {
+    if (entrena && bloque && empezado && (parado === null || parado >= (suyo ? 10 : 5))) {
       alertas.push({
         tipo: 'sin_entrenar', nivel: 'aviso',
         texto: diasSinEntrenar === null ? 'Todavía no ha registrado ninguna serie' : `${diasSinEntrenar} días sin registrar series`,
@@ -941,34 +955,34 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     }
     const semanaPasada = sumarDias(lunesHoy, -7);
     const tieneReciente = checkins.some((c) => c.semana_inicio >= semanaPasada);
-    if (!tieneReciente) alertas.push({ tipo: 'sin_checkin', nivel: 'info', texto: 'Sin check-in la semana pasada' });
+    if (!tieneReciente && !suyo) alertas.push({ tipo: 'sin_checkin', nivel: 'info', texto: 'Sin check-in la semana pasada' });
 
     // Carga de la semana pasada muy por encima o por debajo de su media (descriptivo: es para mirarlo, no un diagnóstico)
-    const cc = entrena && d.sesionesRecientes ? cambioCarga(cargaSemanal(d.sesionesRecientes, hoy, 6)) : null;
+    const cc = entrena && !suyo && d.sesionesRecientes ? cambioCarga(cargaSemanal(d.sesionesRecientes, hoy, 6)) : null;
     if (cc && cc.ratio >= 1.5) alertas.push({ tipo: 'carga', nivel: 'info', texto: `Carga de la semana pasada: ${num(cc.ratio)} veces su media` });
     // Cumplimiento de las 4 últimas semanas acabadas
-    const cu = entrena ? d.cumplimiento : null;
+    const cu = entrena && !suyo ? d.cumplimiento : null;
     if (cu && cu.series.pautadas >= 12 && cu.series.pct < 80) alertas.push({ tipo: 'cumplimiento', nivel: 'aviso', texto: `Solo el ${cu.series.pct} % de lo pautado (4 sem.)` });
     if (cu && cu.esfuerzo.conEsfuerzo >= 20 && cu.esfuerzo.pctEncima >= 40) alertas.push({ tipo: 'esfuerzo', nivel: 'info', texto: `Se pasa del RPE en el ${cu.esfuerzo.pctEncima} % de las series` });
     // Hábitos de la última semana (solo los que llevan al menos una semana puestos)
-    if (d.habitos && d.habitos.pct < 50) alertas.push({ tipo: 'habitos', nivel: 'info', texto: `Hábitos: ${d.habitos.pct} % la última semana` });
+    if (d.habitos && d.habitos.pct < 50 && !suyo) alertas.push({ tipo: 'habitos', nivel: 'info', texto: `Hábitos: ${d.habitos.pct} % la última semana` });
     // Nutrición: registra poco o el peso se aleja del ritmo del plan
     for (const x of d.nutricion || []) alertas.push({ tipo: x.tipo, nivel: 'info', texto: x.texto });
     // Cuestionario: lo de salud que aún no ha revisado
-    if (d.cuestionario) alertas.push({ tipo: d.cuestionario.tipo, nivel: d.cuestionario.nivel, texto: d.cuestionario.texto });
+    if (d.cuestionario && !(suyo && !bloque)) alertas.push({ tipo: d.cuestionario.tipo, nivel: d.cuestionario.nivel, texto: d.cuestionario.texto });
     // Recetas que pide cambiar (v0.26)
     if (d.cambiosReceta) alertas.push({ tipo: 'receta', nivel: 'aviso', texto: d.cambiosReceta === 1 ? 'Pide cambiar una receta' : `Pide cambiar ${d.cambiosReceta} recetas` });
     // (054) una sesión empezada sin terminar (desde ayer) y el peso sin apuntar 10 días
-    if (entrena) for (const al of alertasCierre({ abiertas: d.abiertas || [], pesos, salud: pesos.length > 0 }, hoy)) alertas.push(al);
+    if (entrena && !suyo) for (const al of alertasCierre({ abiertas: d.abiertas || [], pesos, salud: pesos.length > 0 }, hoy)) alertas.push(al);
     // Bloque en marcha sin ninguna semana publicada: el atleta abre la app y no ve nada
-    if (entrena && bloque && empezado && !semana) {
+    if (entrena && !suyo && bloque && empezado && !semana) {
       const borrador = semanas.filter((s) => s.programacion !== 'programada').sort((a, b) => a.numero - b.numero)[0];
       alertas.push({
         tipo: 'publicar', nivel: 'aviso',
         texto: borrador ? `Publica la semana ${borrador.numero}: aún no ve nada` : 'El bloque no tiene semanas',
       });
     }
-    if (entrena && bloque && semana) {
+    if (entrena && !suyo && bloque && semana) {
       const ultimaProgramada = semanas.filter((s) => s.programacion === 'programada').sort((a, b) => b.numero - a.numero)[0];
       const esUltimaDelBloque = semana.numero === Math.max(...semanas.map((s) => s.numero));
       const diasDentro = semana.fecha_inicio ? diasEntre(semana.fecha_inicio, hoy) : 0;
@@ -992,6 +1006,7 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     estado: atleta.estado,
     servicio: !entrena ? 'nutricion' : atleta.nutricion === false ? 'entrenamiento' : 'completo',
     nivel: atleta.nivel || null,   // (v0.198) para ordenar, filtrar y agrupar la lista de Atletas
+    modalidad: atleta.modalidad || null,   // (FBE Esencial) 'por_su_cuenta': fuera de Revisar, la revisión semanal y «A quién escribir»
     carrera: !!atleta.carrera,
     diasNutricion: d.diasNutricion ?? null,
     bloque: bloque ? { id: bloque.id, numero: bloque.numero, nombre: bloque.nombre, foco: bloque.foco } : null,

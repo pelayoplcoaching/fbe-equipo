@@ -21,8 +21,10 @@ import { readFileSync } from 'node:fs';
 // (v0.209: los estilos, de 1068 a unos 920 KB, 189 a 165 comprimido: los que solo usa el coach van aparte, scripts/css-coach.mjs)
 // (v0.210: unos 875 KB, 155 comprimido: los de cada pantalla que no sale al abrir van con su trozo, y ni esos ni los del coach
 // cambian quién gana un empate de la cascada: las reglas que podrían hacerlo se quedan en el común o llevan copias detrás)
+// (v0.232: 1790 KB crudo con FBE Esencial; lo de antes de empezar, sus pantallas y las marcas ya van en su trozo; el
+// comprimido, igual)
 const PRESUPUESTO = {
-  js: { crudo: 1780, gz: 610 },
+  js: { crudo: 1790, gz: 610 },
   css: { crudo: 900, gz: 160 },
 };
 

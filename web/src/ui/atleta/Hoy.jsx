@@ -80,6 +80,7 @@ import { perezoso } from '../perezoso.jsx';
 // (FBE Esencial) lo de quien va por su cuenta, en su propio trozo: el resto de atletas no lo descarga
 const TarjetaMarcas = perezoso(() => import('./Esencial.jsx'), 'TarjetaMarcas', { mientras: null });
 const BienvenidaEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaEsencial', { mientras: null });
+const HeroEsencial = perezoso(() => import('./Esencial.jsx'), 'HeroEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -135,7 +136,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     { id: 'cuestionario', texto: 'Rellena tu cuestionario inicial', hecho: hechos.datos.cuestionario, etiqueta: 'Empezar', accion: () => setVerCuestionario(true) },
     { id: 'instalar', texto: 'Ponla en tu pantalla de inicio', hecho: esApp || instalada, etiqueta: 'Ya la tengo', accion: () => setInstalada(true),
       ayuda: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio».' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación».' },
-    ...(entrena ? [{ id: 'sesion', texto: 'Haz tu primera sesión', hecho: hechos.datos.sesion, etiqueta: 'Empezar', accion: siguienteId ? () => abrirSesion(siguienteId) : null }] : []),
+    // (FBE Esencial: antes de su lunes, la sesión no se empieza desde aquí)
+    ...(entrena ? [{ id: 'sesion', texto: 'Haz tu primera sesión', hecho: hechos.datos.sesion, etiqueta: 'Empezar', accion: siguienteId && !(porSuCuenta && p?.bloque?.fecha_inicio > hoyISO()) ? () => abrirSesion(siguienteId) : null }] : []),
     ...(salud ? [
       { id: 'peso', texto: 'Apunta tu peso', hecho: hechos.datos.peso, etiqueta: 'Apuntar', accion: () => { abrirPlegableHoy('peso'); const el = document.querySelector('.peso-hoy button'); el?.scrollIntoView({ block: 'center' }); el?.click(); } },
       { id: 'checkin', texto: 'Envía tu primer check-in', hecho: hechos.datos.checkin, etiqueta: 'Ir', accion: () => irA('checkin') },
@@ -194,6 +196,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       ) : cargando && !p ? <Siluetas forma="hoy" texto="Cargando tu programa" /> : p && (
         <Contenido p={p} atleta={atleta} abrirSesion={abrirSesion} irA={irA} checkinSemana={checkinSemana} salud={salud} noLeidos={noLeidos} recargar={() => recargar(true)}
           sinBienvenida={propio || !hechos.datos || verBienvenida}
+          esencial={porSuCuenta && !propio && atleta.estado !== 'baja' ? { cuestionario: cuestionario.datos, abrirCuestionario: (desde = null) => setVerCuestionario(desde || true) } : null}
           entre={(
             <>
               {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
@@ -216,6 +219,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     {verBienvenida && <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />}
     {verCuestionario && (
       <HojaCuestionario inicial={cuestionario.datos} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }}
+        desde={verCuestionario === 'salud' ? 'salud' : null}
         alCerrar={() => setVerCuestionario(false)} alGuardar={() => { cuestionario.recargar(true); hechos.recargar(true); }} />
     )}
     <AvisoLogros salud={salud} irA={irA} pausado={!hechos.datos || verBienvenida} />
@@ -457,7 +461,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
   );
 }
 
-function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null, sinBienvenida = false }) {
+function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null, sinBienvenida = false, esencial = null }) {
   const { api, propio, cola } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p], { recuerdo: `constancia:${atleta.id}` });
   // v0.68: la bienvenida del día (la primera vez que abre la app hoy; nunca con una sesión a medias ni en el modo atleta del coach)
@@ -515,10 +519,14 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     const t = setTimeout(() => lanzarConfeti({ vibracion: 'anillo', momento: 'semana', sonido: ['hito', { tipo: 'semana' }] }), 420);
     return () => clearTimeout(t);
   }, [claveSemana]);
-  if (e.tipo === 'sin_semana') {
+  // (FBE Esencial) quien va por su cuenta, sin plan o antes de su lunes: la tarjeta de antes de empezar (cuestionario,
+  // visto bueno y la fecha); sin la sesión de hoy ni la lista de la semana (la ve en Semana)
+  const esperaEsencial = !!esencial && !!p.bloque?.fecha_inicio && p.bloque.fecha_inicio > hoy;
+  if (e.tipo === 'sin_semana' || esperaEsencial) {
     return (
       <>
-        <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />
+        {esencial ? <HeroEsencial p={p} cuestionario={esencial.cuestionario} abrirCuestionario={esencial.abrirCuestionario} recargarPrograma={recargar} irA={irA} />
+          : <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />}
         {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
         {!propio && <DirectoHoy />}
         {entre}

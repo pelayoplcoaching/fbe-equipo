@@ -104,6 +104,9 @@ export const MARCAS = [
   ['pausa', 'En pausa'],
   ['carrera', 'Con carrera'],
   ['fijados', 'Fijados'],
+  // (FBE Esencial) quienes van por su cuenta, o solo los que llevan seguimiento
+  ['esencial', 'De FBE Esencial'],
+  ['seguimiento', 'Con seguimiento (sin FBE Esencial)'],
 ];
 export const NOMBRE_MARCA = Object.fromEntries(MARCAS);
 // Los contadores de arriba (los que más ahorran): los cinco primeros
@@ -117,6 +120,8 @@ export function cumpleMarca(k, r, extra, hoy) {
   if (k === 'pausa') return r.estado === 'pausado';
   if (k === 'carrera') return !!r.carrera;
   if (k === 'fijados') return fijado(r, extra);
+  if (k === 'esencial') return r.modalidad === 'por_su_cuenta';
+  if (k === 'seguimiento') return r.modalidad !== 'por_su_cuenta';
   if (k === 'paraHoy') return recordatorioParaHoy(r, extra, hoy);
   if (k === 'hoyToca') return !!extra.hoy?.[r.atleta_id];
   if (k === 'novedades') return (extra.novedades?.[r.atleta_id] || []).length > 0;

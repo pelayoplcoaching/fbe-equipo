@@ -29,7 +29,7 @@ import { pendienteHecho, contactoDeAtleta } from '../../datos/radar.js';
 import { HabitosCoach } from './HabitosCoach.jsx';
 import { SuplementosCoach } from './SuplementosCoach.jsx';
 import { PausaCoach } from '../Pausas.jsx';
-import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa } from './CuestionarioCoach.jsx';
+import { CuestionarioCoach, CheckinAMedida, ParaProgramar, LoQueUsa, EsencialCoach } from './CuestionarioCoach.jsx';
 import { respuestasDe } from '../../logica/preguntas.js';
 import { NIVELES, NOMBRE_NIVEL, AYUDA_NIVEL, conNutricion, conEntrenamiento, SERVICIOS, servicioDe, CAMPOS_SERVICIO } from '../../logica/nivel.js';
 import { DIAS_SEMANA, diasSemanaValido, textoDiasSemana } from '../../logica/semana-natural.js';
@@ -744,6 +744,8 @@ function Datos({ atleta, recargar, alBorrar, invitar, alCambiar }) {
   const base = atleta.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
   return (
     <div class="pila">
+      {/* (FBE Esencial) quien va por su cuenta: su cuestionario, su visto bueno y su plan */}
+      {atleta.modalidad === 'por_su_cuenta' && <EsencialCoach atleta={atleta} alCambiar={() => { recargar(); alCambiar?.(); }} />}
       <ServicioYNivel atleta={atleta} recargar={recargar} />
       {/* (v0.175, 078) pausar la asesoría: sin recordatorios ni alertas, y la racha no se rompe */}
       <PausaCoach atleta={atleta} alCambiar={() => { recargar(); alCambiar?.(); }} />

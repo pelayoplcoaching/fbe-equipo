@@ -153,7 +153,8 @@ async function extraOtros(backend, resumenes) {
 // (v0.202) Los mensajes de las 8 últimas semanas (para la gráfica de tu contacto)
 export const DIAS_GRAFICA = 56;
 export async function datosRadar({ api, backend }, { hoy = fechaMadrid() } = {}) {
-  const resumenes = await api.resumenes(hoy);
+  // (FBE Esencial) sin quienes van por su cuenta: el coach no les escribe uno a uno
+  const resumenes = (await api.resumenes(hoy)).filter((r) => r.modalidad !== 'por_su_cuenta');
   const activos = resumenes.filter((r) => r.estado === 'activo').map((r) => r.atleta_id);
   const [comentarios, sesiones, cks, otros] = await Promise.all([
     comentariosRecientes(backend, sumarDias(hoy, -DIAS_GRAFICA)),

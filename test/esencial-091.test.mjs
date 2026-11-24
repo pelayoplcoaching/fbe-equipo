@@ -6,7 +6,7 @@ import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
 import { crearApi } from '../web/src/datos/api.js';
 import { hoyISO, sumarDias, lunesDe, fechaMadrid } from '../web/src/logica/fechas.js';
 import { filasPrimeras4 } from '../web/src/logica/esencial-plantilla.js';
-import { plantillaEsencial } from '../web/src/logica/esencial.js';
+import { plantillaEsencial } from '../web/src/logica/esencial-alta.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };

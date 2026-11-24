@@ -1,6 +1,15 @@
-// FBE Esencial, tanda 1 (logica/esencial.js): «te sobran», la plantilla «Primeras 4 semanas» igual que la guía del
-// vídeo y las marcas de la semana 4.
-import { esPorSuCuenta, sobran, sobranDeRpe, textoSobran, etiquetaRpeSobran, marcasDeSemana } from '../web/src/logica/esencial.js';
+// FBE Esencial (logica/esencial.js y esencial-alta.js): «te sobran», la plantilla «Primeras 4 semanas» igual que la guía
+// del vídeo, las marcas de la semana 4 y, desde la tanda 2, lo de antes de empezar (su lunes, el cribado sin coach, en qué
+// punto está), los avisos del coach y la demo (cuestionario → plan; visto bueno → plan; fuera de Revisar).
+import { esPorSuCuenta, sobran, sobranDeRpe, textoSobran, etiquetaRpeSobran } from '../web/src/logica/esencial.js';
+import { marcasDeSemana, inicioEsencial, fechaLarga, esLunes, estadoEsencial, MENSAJE_ESENCIAL, TANDA_ESENCIAL } from '../web/src/logica/esencial-alta.js';
+import { MENSAJE_ATLETA } from '../web/src/logica/cuestionario.js';
+import { resumenAtleta } from '../web/src/logica/calculos.js';
+import { cumpleMarca } from '../web/src/logica/panel-atletas.js';
+import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
+import { semillaDemo } from '../web/src/datos/semilla-demo.js';
+import { crearApi } from '../web/src/datos/api.js';
+import { hoyISO, lunesDe, sumarDias, fechaMadrid } from '../web/src/logica/fechas.js';
 import { PRIMERAS_4, filasPrimeras4 } from '../web/src/logica/esencial-plantilla.js';
 import { pauta, esPorTiempo } from '../web/src/logica/calculos.js';
 
@@ -62,6 +71,80 @@ check(m.length === 3 && m[0].texto === '65 kg × 11' && m[1].texto === '35 kg ×
 const m2 = marcasDeSemana({ pautas, series: [{ sesion_ejercicio_id: 'p1', numero: 1, kg: null, reps: 12, sustituto_id: 'd' }], ejercicios: E });
 check(/16\u00a0kg \u00d7\u00a012/.test(marcasDeSemana({ pautas, series: [{ sesion_ejercicio_id: 'p1', numero: 1, kg: 16, reps: 12 }], ejercicios: E })[0].texto), 'la cifra no se parte en dos líneas (espacios que no parten)');
 check(m2.length === 1 && m2[0].nombre === 'Sentadilla a un banco' && m2[0].texto === '12 repeticiones', 'si hizo la alternativa, la marca es de la alternativa');
+
+console.log('\nSu lunes de inicio');
+check(TANDA_ESENCIAL === '2027-01-11' && inicioEsencial('2026-12-14') === '2027-01-11' && inicioEsencial('2027-01-11') === '2027-01-11',
+  'hasta el 11 de enero, todos empiezan ese lunes (la primera tanda)');
+check(inicioEsencial('2027-01-12') === '2027-01-18' && inicioEsencial('2027-01-17') === '2027-01-18' && inicioEsencial('2027-01-18') === '2027-01-18' && inicioEsencial('x') === TANDA_ESENCIAL,
+  'después, el lunes siguiente (o el mismo día, si es lunes)');
+check(fechaLarga('2027-01-11') === 'lunes 11 de enero' && fechaLarga('2026-12-02') === 'miércoles 2 de diciembre' && fechaLarga('') === '' && esLunes('2027-01-11') && !esLunes('2027-01-12'),
+  '«lunes 11 de enero» (y solo un lunes vale como inicio)');
+
+console.log('\nAntes de empezar: en qué punto está');
+const hoyT = '2026-12-20';
+const E0 = (x) => estadoEsencial({ hoy: hoyT, ...x });
+check(E0({}).tipo === 'cuestionario' && !E0({}).empezado && E0({ cuestionario: { objetivo: 'salud' } }).empezado, 'sin cuestionario enviado: «Rellena tu cuestionario» (o «Termina…» si lo empezó)');
+check(E0({ cuestionario: { completado_en: 'x', resultado: null } }).tipo === 'salud', 'enviado sin la parte de salud: sin plan hasta completarla');
+check(E0({ cuestionario: { completado_en: 'x', resultado: 'valorar_antes' } }).tipo === 'visto_bueno' && E0({ cuestionario: { completado_en: 'x', resultado: 'valorar_antes_vigoroso' } }).tipo === 'visto_bueno',
+  'cualquier resultado que no sea «sin valoración» frena el plan hasta el visto bueno (también «antes de intensidad vigorosa»)');
+check(E0({ cuestionario: { completado_en: 'x', resultado: 'parar_y_valorar' }, ficha: { visto_bueno_pedido_en: 't' } }).tipo === 'revision'
+  && E0({ cuestionario: { completado_en: 'x', resultado: 'parar_y_valorar' }, ficha: { visto_bueno_pedido_en: 't', visto_bueno_en: 't' } }).tipo === 'preparando',
+  'marcado por el atleta: «Pelayo lo está revisando»; confirmado por Pelayo: la app le prepara el plan');
+check(E0({ cuestionario: { completado_en: 'x', resultado: 'sin_valoracion' } }).tipo === 'preparando', 'con el cribado limpio, el plan sin esperar a nadie');
+check(E0({ bloque: { fecha_inicio: '2027-01-11' } }).tipo === 'espera' && E0({ bloque: { fecha_inicio: '2027-01-11' } }).faltan === 22 && E0({ bloque: { fecha_inicio: '2026-12-14' } }) === null,
+  'con su plan, antes de su lunes: «Empiezas el lunes 11 de enero» (faltan 22 días); ya empezado, nada');
+check(Object.keys(MENSAJE_ATLETA).every((k) => MENSAJE_ESENCIAL[k]) && Object.values(MENSAJE_ESENCIAL).every((t) => !/coach/i.test(t)) && /112/.test(MENSAJE_ESENCIAL.parar_y_valorar),
+  'el mensaje del cribado de quien va por su cuenta: uno por resultado, sin «tu coach lo verá» (y con el 112 si cuenta síntomas)');
+
+console.log('\nLos avisos del coach');
+const at = (x = {}) => ({ id: 'z', nombre: 'Z', estado: 'activo', modalidad: 'por_su_cuenta', ...x });
+const tipos = (d) => resumenAtleta({ semanas: [], sesiones: [], pesos: [], checkins: [], molestias: [], ...d }, hoyT).alertas.map((x) => x.tipo);
+check(tipos({ atleta: at(), esencial: { cuestionario: null } }).join() === 'esencial_cuestionario' && tipos({ atleta: at({ modalidad: null }) }).includes('sin_bloque'),
+  'sin plan: dónde está antes de empezar (no «Sin bloque activo»); a quien lleva seguimiento, como siempre');
+check(tipos({ atleta: at({ visto_bueno_pedido_en: 't' }), esencial: { cuestionario: { completado_en: 'x', resultado: 'valorar_antes' } } })[0] === 'esencial_visto_bueno'
+  && tipos({ atleta: at(), esencial: { cuestionario: { completado_en: 'x', resultado: 'sin_valoracion' } } })[0] === 'esencial_sin_plan',
+  '«confirma su visto bueno» cuando lo marca; «listo y sin plan» si la app no ha podido asignarlo');
+const conBloque = { bloque: { id: 'b1', fecha_inicio: '2026-11-30' }, semana: { id: 's', numero: 3, fecha_inicio: '2026-12-14' }, semanas: [{ id: 's', numero: 3, programacion: 'programada' }] };
+const tz = tipos({ atleta: at(), ...conBloque, ultimaSerie: '2026-12-13' });
+check(!tz.includes('sin_entrenar') && !tz.includes('sin_checkin') && !tz.includes('programar') && tipos({ atleta: at(), ...conBloque, ultimaSerie: '2026-12-09' }).includes('sin_entrenar'),
+  'ya empezado: «sin entrenar» a los 10 días (no a los 5); sin «sin check-in» ni «programa la semana»');
+check(tipos({ atleta: at({ modalidad: null }), ...conBloque, ultimaSerie: '2026-12-13' }).includes('sin_entrenar'), '(a quien lleva seguimiento, a los 5 días como siempre)');
+check(cumpleMarca('esencial', { modalidad: 'por_su_cuenta' }) && !cumpleMarca('esencial', {}) && cumpleMarca('seguimiento', {}) && !cumpleMarca('seguimiento', { modalidad: 'por_su_cuenta' }),
+  'en la lista, filtrar a los de FBE Esencial o a los de seguimiento');
+
+console.log('\nLa demo (?demo=esencial)');
+const bd = crearBackendMemoria({ semilla: () => semillaDemo(hoyISO(), { esencial: true }), persistir: false });
+const apiD = crearApi(bd);
+await bd.auth.entrar('pelayo@fbe.demo', 'demo');
+const resD = await apiD.resumenes();
+const esD = resD.filter((r) => r.modalidad === 'por_su_cuenta').map((r) => r.nombre).sort();
+check(esD.join() === 'Clara Prieto,Marina Ortega,Tomás Rey', 'tres atletas de FBE Esencial: Marina, Tomás y Clara');
+const bjD = await apiD.bandeja();
+check(![...bjD.sesiones, ...bjD.checkins, ...bjD.comentarios].some((x) => x.atleta?.modalidad === 'por_su_cuenta') && bjD.sesiones.length > 0,
+  'fuera de Revisar (las sesiones de Tomás no esperan respuesta; las de los demás, sí)');
+const rsD = await apiD.revisionSemanal();
+check(!JSON.stringify(rsD).includes('Tomás Rey') && JSON.stringify(rsD).includes('Ana'), 'fuera de la revisión semanal');
+const marinaD = (await bd.select('atletas', { eq: { email: 'marina@fbe.demo' } }))[0];
+const claraD = (await bd.select('atletas', { eq: { email: 'clara@fbe.demo' } }))[0];
+await bd.auth.entrar('marina@fbe.demo', 'demo');
+check(!(await apiD.programa(marinaD.id)).bloque, 'Marina, sin plan hasta su cuestionario');
+await apiD.guardarCuestionario(marinaD.id, { objetivos: ['salud'], experiencia: 'ninguna', dias_semana: 2, minutos_sesion: 45, otros_deportes: null }, {});
+await apiD.guardarCuestionario(marinaD.id, { lugar: 'gimnasio', material: ['maquinas'] }, {});
+await apiD.guardarCuestionario(marinaD.id, { activo: false, enfermedad: false, enfermedad_detalle: null, sintomas: [], otras: [], medicacion_detalle: null }, {});
+await apiD.guardarCuestionario(marinaD.id, { lesiones: [], alergias: null }, { completar: true });
+const asig = await apiD.esencialAsignarPlan();
+const pM = await apiD.programa(marinaD.id);
+check(asig?.nuevo && asig.plantilla === 'Primeras 4 semanas' && pM.bloque?.fecha_inicio === lunesDe(fechaMadrid()) && pM.semanas.length === 4 && pM.semanas.every((w) => w.programacion === 'programada'),
+  'con el cuestionario limpio, la app le pone «Primeras 4 semanas» desde este lunes (su tanda, en la demo), con las cuatro semanas publicadas');
+check((pM.sesiones[pM.actual.id] || []).length === 2 && (await apiD.esencialAsignarPlan()).nuevo === false, 'la semana 1 con sus dos días; pedirlo otra vez no hace otro');
+await bd.auth.entrar('clara@fbe.demo', 'demo');
+check(/visto bueno/.test(await apiD.esencialAsignarPlan().then(() => '', (e) => e.message)), 'Clara (cribado que pide valoración), sin plan hasta que Pelayo confirme su visto bueno');
+await bd.auth.entrar('pelayo@fbe.demo', 'demo');
+const confD = await apiD.esencialConfirmarVistoBueno(claraD.id);
+await bd.auth.entrar('clara@fbe.demo', 'demo');
+const pC = await apiD.programa(claraD.id);
+check(confD?.nuevo && pC.bloque?.fecha_inicio === sumarDias(lunesDe(fechaMadrid()), 7) && estadoEsencial({ bloque: pC.bloque, hoy: fechaMadrid() })?.tipo === 'espera',
+  'Pelayo lo confirma y la app le prepara el plan, desde su lunes (el que viene): «Empiezas el lunes…»');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

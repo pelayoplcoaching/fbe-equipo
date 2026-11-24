@@ -4,6 +4,7 @@ import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO, NOMBRE_NIVEL } from '../../logica/nivel.js';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
+import { inicioEsencial, fechaLarga, esLunes } from '../../logica/esencial-alta.js';
 import { BandaDemo } from '../App.jsx';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -257,7 +258,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
                       <button class="tarjeta-atleta" data-atleta={r.atleta_id} data-estado={estadoAtleta(r)} onPointerDown={(e) => adelantar(r.atleta_id, e)} onPointerMove={moverAdelanto} onPointerCancel={soltarAdelanto} onClick={(e) => (enLateral ? setSel(r.atleta_id) : abrir(r.atleta_id, undefined, e.currentTarget.querySelector('.avatar')))} aria-pressed={enLateral ? (sel === r.atleta_id ? 'true' : 'false') : undefined}>
                         <div class="cab">
                           <span class="avatar-env"><ConAro hechas={r.sesiones?.completadas} total={r.estado === 'activo' && r.servicio !== 'nutricion' ? r.sesiones?.total : 0}><Avatar nombre={r.nombre} foto={r.foto} /></ConAro>{(extra.novedades[r.atleta_id] || []).length > 0 && <span class="punto-nuevo" title={extra.novedades[r.atleta_id].join(', ')}><span class="sr">Novedades: {extra.novedades[r.atleta_id].join(', ')}</span></span>}</span>
-                          <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
+                          <span><strong>{r.nombre}</strong>{fijadoDe(r, extra) && <Icono n="chincheta" class="ico-fijado" titulo="Fijado arriba" />}{sinLeerDe(r, extra) > 0 && <span class="cuenta-sin-leer num">{sinLeerDe(r, extra)}<span class="sr"> sin leer</span></span>}{r.estado === 'pausado' && <span class="chip aviso mini chip-pausa"> En pausa</span>}{r.modalidad === 'por_su_cuenta' && <span class="chip mini"> Esencial</span>}<span class="sr">. {r.estado === 'pausado' ? 'En pausa' : NOMBRE_ESTADO[estadoAtleta(r)]}.</span>{r.servicio === 'nutricion' && r.estado === 'activo' ? <span class="mini terciario">Solo nutrición</span> : r.semana ? <span class="mini terciario">Semana {r.semana.numero} de {r.semana.total}{r.semana.foco ? `, ${NOMBRE_FOCO[r.semana.foco].toLowerCase()}` : r.bloque?.nombre ? `, ${r.bloque.nombre}` : ''}</span> : r.estado === 'invitado' ? <span class="mini terciario">Sin activar</span> : r.estado === 'baja' ? <span class="mini terciario">De baja</span> : null}</span>
                           {r.semana && <span class="peq secundario num semana-pill" style={{ '--f': Math.min(1, r.semana.numero / (r.semana.total || 1)) }}>S{r.semana.numero}/{r.semana.total}</span>}
                         </div>
                         {(etiquetasDe(r, extra).length > 0 || pc.panel[r.atleta_id]?.nota || recordatorioDe(r, extra) || extra.hitos[r.atleta_id]) && <div class="tuyo-tarjeta"><Etiquetas etiquetas={etiquetasDe(r, extra)} colores={colores} />{pc.panel[r.atleta_id]?.nota && <span class="nota-linea mini">{pc.panel[r.atleta_id].nota}</span>}<ExtrasNombre r={r} extra={extra} hoy={hoy} /></div>}
@@ -696,19 +697,27 @@ function CobroPanel({ c, enLinea = false }) {
 
 function NuevoAtleta({ alCerrar }) {
   const { api } = useApp();
-  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null, carrera: false });
+  const [f, setF] = useState({ nombre: '', email: '', objetivo: '', notion_url: '', servicio: 'completo', nivel: null, carrera: false, modalidad: 'seguimiento', esencialNutri: false, inicio: inicioEsencial(hoyISO()) });
   const con056 = useCarga(() => api.carrera056().catch(() => null), []);   // (v0.133) la carrera, solo con la 056
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
   const [ocupado, una] = useUnaVez();
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
-  if (creado) return <Invitacion atleta={creado} alCerrar={() => alCerrar(creado.id)} />;
+  if (creado) return <Invitacion atleta={creado.atleta || creado} codigoDado={creado.codigo || null} esencial={!!creado.codigo} alCerrar={() => alCerrar((creado.atleta || creado).id)} />;
+  const esencial = f.modalidad === 'por_su_cuenta';
   return (
     <Hoja titulo="Añadir atleta" alCerrar={() => alCerrar(null)}>
       <form class="pila" onSubmit={(e) => {
         e.preventDefault();
         una(async () => {
           try {
+            // (FBE Esencial) quien va por su cuenta: su ficha, su lunes de inicio y su código (con la 091)
+            if (esencial) {
+              const r = await api.crearAtletaEsencial({ nombre: f.nombre, email: f.email.trim() || null, nutricion: f.esencialNutri, inicio: f.inicio });
+              if (r?.falta091) { setError('Para FBE Esencial falta ejecutar la migración 091 en Supabase (supabase/migraciones/091_esencial_alta.sql).'); return; }
+              setCreado(r);
+              return;
+            }
             const a = await api.crearAtleta({ nombre: f.nombre.trim(), email: f.email.trim() || null, objetivo: f.objetivo.trim() || null, notion_url: f.notion_url.trim() || null, ...CAMPOS_SERVICIO[f.servicio], nivel: f.servicio === 'nutricion' ? null : f.nivel, carrera: f.servicio !== 'nutricion' && con056.datos === true && f.carrera });
             setCreado(a);
           } catch (err) { setError(err.message); }
@@ -717,7 +726,18 @@ function NuevoAtleta({ alCerrar }) {
         {error && <div class="error" role="alert">{error}</div>}
         <div class="campo"><label for="na-nombre">Nombre y apellidos</label><input id="na-nombre" class="entrada" required value={f.nombre} onInput={cambiar('nombre')} /></div>
         <div class="campo"><label for="na-email">Email</label><input id="na-email" class="entrada" type="email" value={f.email} onInput={cambiar('email')} /><span class="ayuda">Solo para tu referencia; el atleta crea su cuenta con el email que quiera.</span></div>
-        <div class="campo"><span class="etq">Servicio</span>
+        <div class="campo"><span class="etq">Modalidad</span>
+          <Segmentos etiqueta="Modalidad" valor={f.modalidad} opciones={[['seguimiento', 'Con seguimiento'], ['por_su_cuenta', 'FBE Esencial']]}
+            alCambiar={(v) => v && setF({ ...f, modalidad: v })} />
+          {esencial && <span class="ayuda">Va por su cuenta: la app le asigna el plan según su cuestionario y le prepara cada semana. Sin chat ni revisión.</span>}</div>
+        {esencial && <>
+          <div class="campo"><span class="etq">Nivel de FBE Esencial</span>
+            <Segmentos etiqueta="Nivel de FBE Esencial" valor={f.esencialNutri ? 'nutri' : 'entreno'} opciones={[['entreno', 'Entrenamiento'], ['nutri', 'Entrenamiento y nutrición']]}
+              alCambiar={(v) => v && setF({ ...f, esencialNutri: v === 'nutri' })} /></div>
+          <div class="campo"><label for="na-inicio">Empieza el lunes</label><input id="na-inicio" class="entrada" type="date" required value={f.inicio} onInput={cambiar('inicio')} />
+            <span class="ayuda">El de su tanda (la primera, el 11 de enero). Antes, entra a rellenar el cuestionario y ver su semana 1.</span></div>
+        </>}
+        {!esencial && <><div class="campo"><span class="etq">Servicio</span>
           <Segmentos etiqueta="Servicio" clase="segmentos-servicio" valor={f.servicio} opciones={SERVICIOS}
             alCambiar={(v) => v && setF({ ...f, servicio: v })} /></div>
         {f.servicio !== 'nutricion' && <div class="campo"><span class="etq">Nivel</span>
@@ -729,21 +749,24 @@ function NuevoAtleta({ alCerrar }) {
         </label>}
         <div class="campo"><label for="na-obj">Objetivo</label><input id="na-obj" class="entrada" value={f.objetivo} onInput={cambiar('objetivo')} placeholder="Ganar fuerza y bajar 3 kg" /></div>
         <div class="campo"><label for="na-notion">Su página de Notion</label><input id="na-notion" class="entrada" type="url" value={f.notion_url} onInput={cambiar('notion_url')} placeholder="https://notion.so/…" /><span class="ayuda">La verá en su perfil para la alimentación y los recursos hasta que pasen a la app.</span></div>
+        </>}
         <button class="btn btn-primario btn-grande" disabled={ocupado}>{ocupado ? 'Creando…' : 'Crear y generar código'}</button>
       </form>
     </Hoja>
   );
 }
 
-export function Invitacion({ atleta, alCerrar }) {
+export function Invitacion({ atleta, alCerrar, codigoDado = null, esencial = false }) {
   const { api, aviso, modo } = useApp();
-  const codigo = useCarga(() => api.crearInvitacion(atleta.id), [atleta.id], { tirar: false });   // (no es una consulta: crea el código)
+  // (FBE Esencial) el código que ya trae el alta: no se crea otro (lo invalidaría)
+  const codigo = useCarga(() => (codigoDado ? Promise.resolve(codigoDado) : api.crearInvitacion(atleta.id)), [atleta.id, codigoDado], { tirar: false });   // (no es una consulta: crea el código)
   const contactos = useContactos([atleta.id]);   // (v0.105) con su teléfono, el WhatsApp va directo a él
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
-  const mensaje = codigo.datos
-    ? `Hola, ${nombre}. Ya tienes tu acceso a la app de FBE Coaching. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos}. Caduca en 14 días y solo vale una vez.`
-    : '';
+  const inicio = esencial && atleta.esencial_inicio ? fmtConDia(atleta.esencial_inicio).toLowerCase() : null;
+  const mensaje = !codigo.datos ? '' : esencial
+    ? `Hola, ${nombre}. Ya tienes tu plaza en FBE Esencial. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos} (caduca en 14 días y solo vale una vez). Lo primero, tu cuestionario: con él, la app te prepara tu plan${inicio ? `, que empieza el ${inicio}` : ''}.`
+    : `Hola, ${nombre}. Ya tienes tu acceso a la app de FBE Coaching. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo.datos}. Caduca en 14 días y solo vale una vez.`;
   return (
     <Hoja titulo={`Invitación para ${nombre}`} alCerrar={alCerrar}>
       {codigo.cargando ? <Cargando /> : codigo.error ? <ErrorCaja error={codigo.error} /> : (

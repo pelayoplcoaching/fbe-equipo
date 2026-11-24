@@ -4,6 +4,8 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+import { MENSAJE_ESENCIAL } from '../../logica/esencial-alta.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenPasoCuestionario, imagenObjetivo } from '../../logica/imagenes.js';
 
@@ -50,9 +52,13 @@ function Marcar({ id, opciones, valor, alCambiar }) {
   );
 }
 
-export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, alGuardar }) {
+// desde: el paso por el que se abre (FBE Esencial: «Completar la parte de salud» abre en Tu salud)
+export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, alGuardar, desde = null }) {
   const { api, atleta } = useApp();
-  const [paso, setPaso] = useState(0);
+  const [paso, setPaso] = useState(() => Math.max(0, PASOS.findIndex(([k]) => k === desde)));
+  // (FBE Esencial) quien va por su cuenta: sin coach que lo lea; con él, la app le prepara su plan
+  const suyo = esPorSuCuenta(atleta);
+  const mensaje = (r) => (suyo ? MENSAJE_ESENCIAL : MENSAJE_ATLETA)[r];
   const [f, setF] = useState(() => ({ material: [], ...(inicial || {}), objetivos: objetivosDe(inicial) }));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -99,12 +105,14 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
           {final.resultado ? (
             <div class={`resultado-cribado ${NIVEL[final.resultado]}`} role="status">
               <Icono n={final.resultado === 'sin_valoracion' ? 'hecho' : 'alerta'} />
-              <p>{MENSAJE_ATLETA[final.resultado]}</p>
+              <p>{mensaje(final.resultado)}</p>
             </div>
           ) : (
-            <p>Tu coach ya tiene tus respuestas. Te falta la parte de salud: cuando des el consentimiento de datos de salud, complétala desde Perfil.</p>
+            <p>{suyo ? 'Te falta la parte de salud: sin ella, la app no puede prepararte tu plan. Cuando des el consentimiento de datos de salud, complétala desde Hoy o desde Perfil.'
+              : 'Tu coach ya tiene tus respuestas. Te falta la parte de salud: cuando des el consentimiento de datos de salud, complétala desde Perfil.'}</p>
           )}
-          <p class="peq secundario">Si algo cambia (una lesión, una medicación nueva, un embarazo…), actualízalo desde Perfil: tu coach lo verá.</p>
+          {suyo && final.resultado && final.resultado !== 'sin_valoracion' && <p class="peq secundario">Cuando tengas su visto bueno (o si haces una Puesta a punto con Pelayo), márcalo en Hoy: Pelayo lo confirma y la app te prepara tu plan.</p>}
+          <p class="peq secundario">Si algo cambia (una lesión, una medicación nueva, un embarazo…), actualízalo desde Perfil{suyo ? '.' : ': tu coach lo verá.'}</p>
           <button class="btn btn-primario btn-grande" onClick={alCerrar}>Hecho</button>
         </div>
       </Hoja>
@@ -167,7 +175,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
                     onClick={() => set('material')(f.material?.includes(v) ? f.material.filter((x) => x !== v) : [...(f.material || []), v])}>{t}</button>
                 ))}
               </div>
-              <span class="ayuda">Marca todo lo que puedas usar. Así tu coach elige ejercicios que puedas hacer.</span></div>
+              <span class="ayuda">Marca todo lo que puedas usar. Así {suyo ? 'tu plan lleva' : 'tu coach elige'} ejercicios que puedas hacer.</span></div>
           </>
         )}
 
@@ -176,7 +184,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
             <p>Esta parte es sobre tu salud: para responderla hace falta tu consentimiento de datos de salud.</p>
             <p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p>
             <button type="button" class="btn btn-primario" disabled={dando} onClick={async () => { setDando(true); try { await darConsentimiento(); } catch (err) { setError(err.message); } finally { setDando(false); } }}>Dar consentimiento</button>
-            <span class="peq terciario">O sigue sin responderla: tu coach verá el resto.</span>
+            <span class="peq terciario">{suyo ? 'Sin esta parte, la app no puede prepararte tu plan.' : 'O sigue sin responderla: tu coach verá el resto.'}</span>
           </div>
         )}
 
@@ -208,12 +216,12 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
         )}
 
         {clave === 'lesiones' && tras && (
-          <div class={`resultado-cribado ${NIVEL[tras]}`} role="status"><Icono n="alerta" /><p>{MENSAJE_ATLETA[tras]}</p></div>
+          <div class={`resultado-cribado ${NIVEL[tras]}`} role="status"><Icono n="alerta" /><p>{mensaje(tras)}</p></div>
         )}
 
         {clave === 'lesiones' && salud && (
           <>
-            <div class="campo"><span class="etq">¿Tienes alguna lesión o molestia que tu coach deba conocer?</span>
+            <div class="campo"><span class="etq">{suyo ? '¿Tienes alguna lesión o molestia?' : '¿Tienes alguna lesión o molestia que tu coach deba conocer?'}</span>
               {!(f.lesiones || []).length && <span class="peq terciario">Ninguna. Si tienes alguna, añádela.</span>}
               <div class="pila-s">
                 {(f.lesiones || []).map((l, i) => {
@@ -245,7 +253,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
         {error && <div class="error" role="alert">{error}</div>}
         <div class="fila-botones">
           {paso > 0 && <button type="button" class="btn" onClick={() => { setError(null); setPaso(paso - 1); }}><Icono n="atras" /> Atrás</button>}
-          <button class="btn btn-primario btn-grande" disabled={guardando}>{guardando ? 'Guardando…' : ultimo ? 'Enviar a tu coach' : 'Siguiente'}</button>
+          <button class="btn btn-primario btn-grande" disabled={guardando}>{guardando ? 'Guardando…' : ultimo ? (suyo ? 'Enviar' : 'Enviar a tu coach') : 'Siguiente'}</button>
         </div>
       </form>
     </Hoja>

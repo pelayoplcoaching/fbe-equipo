@@ -1,10 +1,12 @@
-// FBE Esencial: lo de quien va por su cuenta en Hoy: la bienvenida (en lugar del mensaje del coach, que promete respuesta)
-// y sus marcas de la semana 4 (la tarjeta y la pantalla).
+// FBE Esencial: lo de quien va por su cuenta en Hoy: la bienvenida (en lugar del mensaje del coach, que promete respuesta),
+// la tarjeta grande de antes de empezar (cuestionario, visto bueno y su lunes) y sus marcas de la semana 4.
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
-import { useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
 import { esPorSuCuenta, NOMBRE_PRIMERAS_4 } from '../../logica/esencial.js';
-import { hoyISO, sumarDias } from '../../logica/fechas.js';
+import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga } from '../../logica/esencial-alta.js';
+import { hoyISO, sumarDias, hace } from '../../logica/fechas.js';
+import { Ilustracion } from '../Ilustraciones.jsx';
 
 // La tarjeta sale cuando ha terminado su semana de marcas y durante las tres semanas siguientes
 export function TarjetaMarcas() {
@@ -62,4 +64,76 @@ export function BienvenidaEsencial({ bloque = null }) {
       </div>
     </section>
   );
+}
+
+// ---------- Antes de empezar: el cuestionario, el visto bueno y su lunes ----------
+// La tarjeta grande de Hoy (en lugar de «Tu semana está en camino», que habla de su coach) mientras no tiene plan o aún
+// no ha llegado su lunes. Con el cuestionario enviado y el cribado limpio (o el visto bueno confirmado), pide su plan una
+// vez (lo asigna la base: esencial_asignar_plan, migración 091) y recarga el programa.
+export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarPrograma, irA }) {
+  const { api, atleta } = useApp();
+  const ficha = useCarga(() => api.estadoEsencial(atleta.id), [atleta.id, cuestionario?.completado_en, cuestionario?.resultado], { recuerdo: `estado-esencial:${atleta.id}` });
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  const pedido = useRef(false);
+  const hoy = hoyISO();
+  const bloque = p?.bloque || null;
+  const e = estadoEsencial({ bloque, cuestionario, ficha: ficha.datos, hoy });
+  // (sin la ficha aún, el visto bueno no se sabe: se espera a ella salvo con el cribado limpio)
+  const listoParaPlan = e?.tipo === 'preparando' && (cuestionario?.resultado === 'sin_valoracion' || !!ficha.datos);
+  useEffect(() => {
+    if (!listoParaPlan || pedido.current) return;
+    pedido.current = true;
+    setError(null);
+    api.esencialAsignarPlan()
+      .then((r) => { if (r?.bloque) recargarPrograma?.(); else setError('Tu plan aún no está listo: vuelve a intentarlo en un rato.'); })
+      .catch((err) => setError(err.message || 'No se ha podido preparar tu plan.'));
+  }, [listoParaPlan]);
+  if (!e || ficha.datos?.falta091) return null;
+  const marco = (contexto, icono, chip, titulo, texto, acciones = null, extra = null) => (
+    <section class="hero-dia hero-espera" aria-label={titulo}>
+      <Ilustracion n="espera" clase="hero-ilu" />
+      <div class="titular">
+        {contexto && <div class="contexto"><span>{contexto}</span></div>}
+        <span class="chip toca-hoy descanso"><Icono n={icono} />{chip}</span>
+        <h2>{titulo}</h2>
+        <p class="peq secundario">{texto}</p>
+        {extra}
+        {error && <p class="error" role="alert">{error}</p>}
+      </div>
+      {acciones && <span class="hero-acciones">{acciones}</span>}
+    </section>
+  );
+  if (e.tipo === 'cuestionario') {
+    return marco(null, 'pregunta', 'Antes de empezar', e.empezado ? 'Termina tu cuestionario' : 'Rellena tu cuestionario',
+      'Son unos minutos: tu experiencia, los días que puedes entrenar, dónde y con qué, y unas preguntas de salud. Con tus respuestas, la app te prepara tu plan.',
+      <button class="btn btn-grande btn-hero" onClick={() => abrirCuestionario()}><Icono n="editar" /> {e.empezado ? 'Seguir' : 'Empezar'}</button>);
+  }
+  if (e.tipo === 'salud') {
+    return marco(null, 'alerta', 'Te falta una parte', 'Completa la parte de salud',
+      'Sin las preguntas de salud, la app no puede prepararte tu plan: son las que dicen si conviene que te vea un médico antes de empezar.',
+      <button class="btn btn-grande btn-hero" onClick={() => abrirCuestionario('salud')}><Icono n="editar" /> Completar</button>);
+  }
+  if (e.tipo === 'visto_bueno') {
+    return marco(null, 'alerta', 'Antes de empezar', 'El visto bueno de tu médico', MENSAJE_ESENCIAL[e.resultado] || MENSAJE_ESENCIAL.valorar_antes,
+      <button class="btn btn-grande btn-hero" disabled={ocupado} onClick={() => una(async () => {
+        setError(null);
+        try { await api.esencialPedirVistoBueno(); ficha.recargar(true); } catch (err) { setError(err.message); }
+      })}><Icono n="hecho" /> Ya tengo el visto bueno</button>,
+      <p class="peq secundario">Cuando te lo dé (o si haces una Puesta a punto con Pelayo), márcalo aquí. Pelayo lo confirma y la app te prepara tu plan.</p>);
+  }
+  if (e.tipo === 'revision') {
+    return marco(null, 'reloj', 'En revisión', 'Pelayo está revisando tu visto bueno',
+      `Lo marcaste ${hace(String(e.desde).slice(0, 10), hoy)}. En cuanto lo confirme, aquí verás tu plan.`);
+  }
+  if (e.tipo === 'preparando') {
+    return marco(null, 'reloj', 'Un momento', 'Preparando tu plan', 'Con tus respuestas, la app elige tu plan y lo deja listo desde tu lunes.',
+      error ? <button class="btn btn-grande btn-hero" onClick={() => { pedido.current = false; setError(null); ficha.recargar(true); recargarPrograma?.(); }}><Icono n="reiniciar" /> Reintentar</button> : null);
+  }
+  // espera: con su plan, antes de su lunes
+  return marco(`Tu plan: ${bloque.nombre}`, 'calendario', e.faltan === 1 ? 'Mañana' : `Faltan ${e.faltan} días`, `Empiezas el ${fechaLarga(e.inicio)}`,
+    bloque.nombre === NOMBRE_PRIMERAS_4
+      ? 'Tus cuatro primeras semanas son las de la guía. Mientras llega el día, mira tu semana 1 y piensa qué dos días te vienen mejor.'
+      : 'Tu plan ya está listo. Mientras llega el día, mira tu semana 1 y piensa qué días te vienen mejor.',
+    <button class="btn btn-grande btn-hero" onClick={() => irA?.('semana')}><Icono n="semana" /> Ver tu semana 1</button>);
 }

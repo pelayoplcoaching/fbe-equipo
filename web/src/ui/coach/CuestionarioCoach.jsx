@@ -1,9 +1,10 @@
 // Coach: el cuestionario inicial del atleta (en Datos) y su check-in a medida (en Seguimiento)
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, Segmentos, Grafica } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Hoja, Icono, Segmentos, Grafica } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, RESULTADO_COACH, nombre, resumenCuestionario, conSalud, objetivosDe, textoObjetivos } from '../../logica/cuestionario.js';
 import { APARTADOS_CHECKIN, TIPOS_PREGUNTA, serieRespuestas } from '../../logica/preguntas.js';
 import { fechaCuando, pendiente } from '../atleta/Cuestionario.jsx';
+import { fechaLarga } from '../../logica/esencial-alta.js';
 
 const lista = (opciones, valores) => (valores || []).map((v) => nombre(opciones, v));
 // «Barra y discos, banco, mancuernas»
@@ -57,6 +58,55 @@ export function CuestionarioCoach({ atleta, alCambiar }) {
         )}
       </div>
       {(hecho || empezado) && <DatosCuestionario d={d} />}
+    </section>
+  );
+}
+
+// (FBE Esencial) Quien va por su cuenta: en qué punto está (cuestionario, visto bueno médico y su plan) y, si su cribado
+// pide valoración médica, el botón para confirmar su visto bueno (con él, la app le asigna su plan).
+export function EsencialCoach({ atleta, alCambiar }) {
+  const { api, aviso } = useApp();
+  const c = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id, atleta.visto_bueno_en]);
+  const bl = useCarga(() => api.bloquesDe(atleta.id).catch(() => []), [atleta.id, atleta.visto_bueno_en]);
+  const [ocupado, una] = useUnaVez();
+  const [error, setError] = useState(null);
+  const q = c.datos;
+  const bloque = (bl.datos || []).find((x) => ['activo', 'ajustado', 'planificado'].includes(x.estado)) || null;
+  const limpio = q?.resultado === 'sin_valoracion';
+  const necesita = !!q?.resultado && !limpio;
+  const cuest = !q?.completado_en ? (q ? 'Empezado, sin enviar' : 'Sin rellenar') : !q.resultado ? 'Enviado, sin la parte de salud' : RESULTADO_COACH[q.resultado][0];
+  const visto = !q?.resultado ? '—' : limpio ? 'No le hace falta' : atleta.visto_bueno_en ? `Confirmado ${fechaCuando(atleta.visto_bueno_en)}`
+    : atleta.visto_bueno_pedido_en ? `Dice que lo tiene (lo marcó ${fechaCuando(atleta.visto_bueno_pedido_en)})` : 'Aún no lo tiene';
+  async function confirmar() {
+    setError(null);
+    try {
+      const r = await api.esencialConfirmarVistoBueno(atleta.id);
+      if (r?.falta091) { setError('Falta ejecutar la migración 091 en Supabase.'); return; }
+      if (r?.error) { setError(`Visto bueno guardado, pero sin plan: ${r.error}`); alCambiar?.(); return; }
+      aviso(r?.bloque ? `Visto bueno confirmado: ${primero(atleta.nombre)} ya tiene su plan` : 'Visto bueno confirmado');
+      alCambiar?.();
+    } catch (e) { setError(e.message); }
+  }
+  return (
+    <section class="panel" aria-labelledby="esencial-coach">
+      <div class="panel-pad pila-xs">
+        <h2 id="esencial-coach" class="h-panel">FBE Esencial</h2>
+        <span class="peq terciario">Va por su cuenta: la app le asigna el plan según su cuestionario y le prepara cada semana. No sale en Revisar, en la revisión semanal ni en «A quién escribir».</span>
+      </div>
+      <dl class="datos-cuest" style="border-top:1px solid var(--linea)">
+        <div><dt>Empieza</dt><dd>{atleta.esencial_inicio ? `El ${fechaLarga(atleta.esencial_inicio)}` : 'El lunes siguiente a su cuestionario'}</dd></div>
+        <div><dt>Cuestionario</dt><dd>{c.cargando && !q ? 'Cargando…' : cuest}</dd></div>
+        <div><dt>Visto bueno médico</dt><dd>{visto}</dd></div>
+        <div><dt>Su plan</dt><dd>{bl.cargando && !bl.datos ? 'Cargando…' : bloque ? `${bloque.nombre}${bloque.fecha_inicio ? `, desde el ${fechaLarga(bloque.fecha_inicio)}` : ''}` : 'Aún no tiene'}</dd></div>
+      </dl>
+      {necesita && !atleta.visto_bueno_en && (
+        <div class="panel-pad pila-s" style="border-top:1px solid var(--linea)">
+          <span class="peq">{atleta.visto_bueno_pedido_en ? 'Dice que ya tiene el visto bueno de su médico (o ha hecho la Puesta a punto). Si es así, confírmalo y la app le prepara su plan.'
+            : 'Su cribado pide valoración médica antes de empezar. Si ya la tiene (o ha hecho la Puesta a punto contigo), puedes confirmarlo tú.'}</span>
+          {error && <span class="error" role="alert">{error}</span>}
+          <button type="button" class="btn btn-primario" style="justify-self:start" disabled={ocupado} onClick={() => una(confirmar)}><Icono n="hecho" /> Confirmar visto bueno</button>
+        </div>
+      )}
     </section>
   );
 }
