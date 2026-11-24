@@ -1,6 +1,10 @@
 // FBE Esencial, tanda 3 (logica/esencial-semana.js): qué toca preparar al abrir la app y desde qué lunes.
 import { siguientePaso } from '../web/src/logica/esencial-semana.js';
 import { NOVATO_2, filasPrimeras4, NOMBRE_NOVATO_2 } from '../web/src/logica/esencial-plantilla.js';
+import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
+import { semillaDemo } from '../web/src/datos/semilla-demo.js';
+import { crearApi } from '../web/src/datos/api.js';
+import { hoyISO, lunesDe, fechaMadrid } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -30,6 +34,21 @@ check(s1?.tipo === 'siguiente' && s1.inicio === '2027-02-15', 'después, cada se
 check(siguientePaso({ bloque: NV, semanas: [...semNV, { id: 'v2', bloque_id: 'b2', numero: 2, fecha_inicio: '2027-02-15', programacion: 'programada' }], sesiones: { v1: [{ completada: true }] }, hoy: '2027-02-13' }) === null,
   'si la siguiente ya está, nada');
 check(siguientePaso({ bloque: null, semanas: [], hoy: '2027-02-13' }) === null, 'sin plan, nada (eso es de antes de empezar)');
+
+console.log('\nEn la demo: Tomás, tras sus cuatro semanas');
+const bd = crearBackendMemoria({ semilla: () => semillaDemo(hoyISO(), { esencial: true }), persistir: false });
+const apiD = crearApi(bd);
+await bd.auth.entrar('tomas@fbe.demo', 'demo');
+const tomas = (await bd.select('atletas', { eq: { email: 'tomas@fbe.demo' } }))[0];
+const r = await apiD.prepararSemanaEsencial(tomas.id);
+const pT = await apiD.programa(tomas.id);
+check(r?.tipo === 'novato' && pT.bloque?.nombre === NOMBRE_NOVATO_2 && pT.bloque.fecha_inicio === lunesDe(fechaMadrid()) && pT.actual?.numero === 1,
+  'al abrir la app, su plan desde la semana 5: «Novato 2 días · FBE Esencial», desde este lunes');
+const sesT = await apiD.sesion(pT.sesiones[pT.actual.id][0].id, tomas.id);
+const kg = Object.fromEntries(sesT.ejercicios.map((e) => [e.ejercicio.nombre, Number(e.carga_sugerida_kg) || null]));
+check(kg['Prensa de piernas'] === 85 && kg['Jalón al pecho'] === 40 && kg['Plancha abdominal'] === null && sesT.ejercicios.map((e) => e.series).join() === '3,3,3,3,2',
+  'con los kilos de sus marcas (prensa 85, jalón 40) y la plantilla (3-3-3-3-2)');
+check((await apiD.prepararSemanaEsencial(tomas.id)) === null, 'otra vez, nada');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
