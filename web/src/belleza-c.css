@@ -24,3 +24,11 @@ input[type="checkbox"].marcar-atleta:not(.interruptor), .rev-tabla td > input[ty
    centradas (el texto de un boton se centra) y la segunda empezaba por el punto. Ahora, a la izquierda, junto a su
    reloj, y el punto se queda al final de la primera linea (va unido a "ocupada" con un espacio que no parte). */
 .btn-luego { text-align: start; }
+
+/* -- C5 - El video corregido (en el chat y en Progreso): las marcas de la linea de tiempo (comentarios y dibujos del
+   coach, 22 x 18; repeticiones, 24 x 20) y los minutos que se tocan dentro del texto ("0:01,5", 22 de alto) se quedaban
+   por debajo de los 24 px de toque. Una zona de toque invisible alrededor, sin moverlas ni cambiar como se ven. */
+.rep-marca::after, .rep-rep::after { content: ""; position: absolute; inset: -3px -1px; }
+.rep-rep::after { inset: -2px 0; }
+.marca-tiempo { position: relative; }
+.marca-tiempo::after { content: ""; position: absolute; inset: -1px 0; }

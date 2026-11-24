@@ -578,6 +578,7 @@ marca: belleza.css diseno.css estilos.css
 marca-cumple: diseno.css estilos.css
 marca-dia: diseno.css estilos.css
 marca-fila: diseno.css estilos.css
+marca-tiempo: belleza-c.css estilos.css
 marcador: estilos.css visual.css
 marcador-equipos: comunidad-viva.css diseno.css estilos.css
 marcar-atleta: atletas-lista.css belleza-c.css
@@ -816,13 +817,13 @@ rep-jog: diseno.css estilos.css
 rep-jog-centro: diseno.css estilos.css
 rep-jog-rayas: diseno.css estilos.css
 rep-jog-texto: diseno.css estilos.css
-rep-marca: diseno.css estilos.css
+rep-marca: belleza-c.css diseno.css estilos.css
 rep-marca-dibujo: diseno.css estilos.css
 rep-marca-punto: diseno.css estilos.css
 rep-marca-voz: diseno.css estilos.css
 rep-marco: diseno.css estilos.css
 rep-reloj: diseno.css estilos.css
-rep-rep: diseno.css estilos.css
+rep-rep: belleza-c.css diseno.css estilos.css
 rep-reps-cual: diseno.css estilos.css
 rep-reps-mando: diseno.css estilos.css
 rep-serie: diseno.css estilos.css
