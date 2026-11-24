@@ -26,3 +26,26 @@ export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy 
   if (primeras && !base.marcas) return null;   // (las cuatro semanas de la guía ya están publicadas: hasta la de marcas, nada)
   return { tipo: primeras ? 'novato' : 'siguiente', base, inicio };
 }
+
+// ---------- De la propuesta del motor a la semana que se guarda ----------
+// Los campos que cambia el motor (los de motor/modelos.js: series, repeticiones, esfuerzo, kilos y el detalle por serie)
+const DEL_MOTOR = ['series', 'reps_min', 'reps_max', 'rir_objetivo', 'rpe_objetivo', 'carga_sugerida_kg', 'backoff_pct', 'series_detalle'];
+// Lo que se copia de cada pauta tal cual (el resto de su prescripción)
+const DE_LA_PAUTA = ['ejercicio_id', 'orden', 'superserie', 'prioridad', 'descanso_seg', 'tempo', 'notas_coach', 'variante'];
+
+// La semana siguiente: las sesiones y pautas de `molde` (la semana hecha o la plantilla de novato), con lo que propone el
+// motor para cada una. pares: { id de la pauta del molde: fila del motor } (las filas «pregunta» y «sin_tocar» no cambian
+// nada). soloKilos: en la semana 5 se respeta la plantilla (series, repeticiones y esfuerzo) y solo se toman los kilos.
+// Devuelve [{ orden, nombre, tipo, pautas: [...] }] para la función de la base.
+export function semanaDesdePropuesta({ sesiones = [], pautas = {}, pares = {}, soloKilos = false }) {
+  return [...sesiones].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((s) => ({
+    orden: s.orden, nombre: s.nombre, tipo: s.tipo || 'fuerza',
+    pautas: [...(pautas[s.id] || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((p) => {
+      const base = Object.fromEntries([...DE_LA_PAUTA, ...DEL_MOTOR].map((c) => [c, p[c] ?? null]));
+      const f = pares[p.id];
+      if (!f || ['pregunta', 'sin_tocar'].includes(f.tipo) || !f.propuesta) return base;
+      if (soloKilos) return { ...base, carga_sugerida_kg: f.propuesta.carga_sugerida_kg ?? base.carga_sugerida_kg };
+      return { ...base, ...Object.fromEntries(DEL_MOTOR.map((c) => [c, f.propuesta[c] ?? null])) };
+    }),
+  }));
+}
