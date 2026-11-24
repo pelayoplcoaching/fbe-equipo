@@ -132,7 +132,10 @@ const DEFECTOS = {
   comunidad_plantillas: () => ({ creado_en: ahora() }),
   comunidad_retos: () => ({ descripcion: null, modo: 'individual', medida: 'sesiones', equipos: null, creado_en: ahora() }),
   // Como la 056: la carrera de cada atleta, sus carreras, las semanas del plan, las revisiones y la biblioteca del coach
-  carrera_atleta: () => ({ lthr: null, fc_max: null, fc_reposo: null, test_fecha: null, test_tipo: null, zonas: null, umbral: null, plan_nombre: null, plan_inicio: null, fases: null, ventanas: null, nota: null, actualizado_en: ahora() }),
+  carrera_atleta: () => ({ lthr: null, fc_max: null, fc_reposo: null, test_fecha: null, test_tipo: null, zonas: null, umbral: null, plan_nombre: null, plan_inicio: null, fases: null, ventanas: null, nota: null,
+    salud_riesgo: null, salud_visto_bueno: null, farmaco_pulso: null, farmaco_cambio: null, prudente: null, actualizado_en: ahora() }),
+  // (089) la mañana siguiente
+  carrera_mananas: () => ({ sesion_id: null, donde: null, hueso: null, salto: null, creado_en: ahora() }),
   carrera_eventos: () => ({ distancia_km: null, desnivel_m: null, prioridad: 'B', decision: 'va', objetivo_seg: null, objetivo_ritmo: null, nota: null, resultado_seg: null, resultado_nota: null, creado_en: ahora() }),
   carrera_semanas: () => ({ etiqueta: null, km_min: null, km_max: null, ab: null, clave: null, nota: null, sesiones: [], actualizado_en: ahora() }),
   carrera_revisiones: () => ({ criterio: null, decision: null, estado: 'pendiente', creado_en: ahora() }),
@@ -154,7 +157,7 @@ const CASCADA = {
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
     ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id'],
-    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['reloj', 'atleta_id']],
+    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['carrera_mananas', 'atleta_id'], ['reloj', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   guias: [['fichas_ejercicio', 'guia_id']],
@@ -392,6 +395,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     radar_ajustes: (x) => esCoach() && x.usuario_id === sesion?.user.id,
     // Como la 056: lo de carrera, el coach y su atleta (la biblioteca de recetas, solo el coach)
     carrera_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    carrera_mananas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_eventos: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
@@ -667,8 +671,23 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   };
 
   // Lo que en Supabase hacen los triggers
+  // Como la 089: la ficha de salud para correr, solo con el consentimiento de salud del atleta (la escriba quien la escriba)
+  const SALUD_CARRERA = ['salud_riesgo', 'salud_visto_bueno', 'farmaco_pulso', 'farmaco_cambio', 'prudente'];
+  function saludCarreraDemo(f, atletaId) {
+    if (SALUD_CARRERA.some((k) => f[k] != null) && !consentimientoDe(atletaId)) for (const k of SALUD_CARRERA) if (k in f) f[k] = null;
+  }
+  // Como la 089: la mañana siguiente, la del propio atleta, con su consentimiento, de esa semana y de una salida suya
+  function prepararMananaDemo(f, antes = null) {
+    if (esCoach() || !miAtletaId() || f.atleta_id !== miAtletaId() || (antes && antes.atleta_id !== miAtletaId())) throw sinPermiso();
+    if (!consentimientoDe(f.atleta_id)) throw new Error('Para apuntar cómo te levantas hace falta el consentimiento de datos de salud');
+    const hoy = hoyISO();
+    if (f.fecha > sumar(hoy, 1) || f.fecha < sumar(hoy, -7)) throw new Error('La mañana siguiente se apunta esa semana');
+    if (!antes && tabla('carrera_mananas').some((x) => x.atleta_id === f.atleta_id && x.fecha === f.fecha)) throw new Error('duplicate key value violates unique constraint "carrera_mananas_atleta_id_fecha_key"');
+  }
   function antesDeInsertar(t, f, { interno = false } = {}) {
     comprobarAlta(t);
+    if (t === 'carrera_atleta') saludCarreraDemo(f, f.atleta_id);
+    if (t === 'carrera_mananas') prepararMananaDemo(f);
     if (t === 'comunidad_posts') prepararPost(f);
     if (t === 'comunidad_comentarios') prepararComentarioComunidad(f);
     // (044) los eventos y las plantillas (como mucho 30)
@@ -916,9 +935,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       if (fila && !fila[col]) fila[col] = ahora();
     }
   }
-  function antesDeActualizar(t, cambios) {
+  function antesDeActualizar(t, cambios, fila = null) {
     const c = { ...cambios };
     if (t !== 'comentarios') comprobarAlta(t);
+    // (089) la ficha de salud para correr, con el consentimiento; la mañana siguiente, la suya
+    if (fila && t === 'carrera_atleta') saludCarreraDemo(c, fila.atleta_id);
+    if (fila && t === 'carrera_mananas') prepararMananaDemo({ ...fila, ...c }, fila);
     if (t === 'archivos' && 'subido_por' in c) throw new Error('No se cambia quién subió un archivo');
     if (t === 'archivos' && 'derivado_de' in c) throw new Error('No se cambia de qué vídeo sale un fotograma');
     if (t === 'notas_ejercicio') c.actualizado_en = ahora();
@@ -1213,6 +1235,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && (f.km_min == null || f.km_max == null || n(f.km_max) >= n(f.km_min)),
     carrera_revisiones: (f) => !!f.fecha && !!String(f.titulo || '').trim() && ['pendiente', 'verde', 'ambar', 'rojo'].includes(f.estado),
     carrera_recetas: (f) => !!String(f.nombre || '').trim() && pautaValida(f.pauta, true) && Array.isArray(f.pauta?.partes),
+    // Como la 089
+    carrera_mananas: (f) => !!f.fecha && Number.isInteger(n(f.dolor)) && entre(n(f.dolor), 0, 10) && ['mejor', 'igual', 'peor'].includes(f.como)
+      && (f.donde == null || (String(f.donde).length >= 1 && String(f.donde).length <= 40)),
     // Como la migración 014: tipos, miniatura en su carpeta y duración
     archivos: (f) => (f.pose == null || (f.tipo === 'foto_progreso' && ['frente', 'perfil', 'espalda'].includes(f.pose)))
       && ['video_tecnica', 'foto_progreso', 'adjunto', 'documento', 'audio'].includes(f.tipo)
@@ -3613,6 +3638,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const filas = tabla(t).filter((fila) => cumple(fila, f) && (esCoach() || !VISIBLE[t] || VISIBLE[t](fila)));
       const porFilaFecha = new Map();
       if (t === 'sesiones' && 'preparacion' in c) for (const fila of filas) comprobarPreparacion(fila, c.preparacion);
+      // (089) la ficha de salud para correr, con el consentimiento; la mañana siguiente, la suya
+      if (t === 'carrera_atleta') for (const fila of filas) saludCarreraDemo(c, fila.atleta_id);
+      if (t === 'carrera_mananas') for (const fila of filas) prepararMananaDemo({ ...fila, ...c }, fila);
       // Como la 056: la FC, el dolor y el semáforo, solo con el consentimiento de datos de salud del atleta (escriba quien escriba)
       if (t === 'sesiones' && c.cardio_hecho && typeof c.cardio_hecho === 'object' && ['fc_media', 'fc_max', 'dolor', 'semaforo'].some((k) => k in c.cardio_hecho)
         && filas.some((fila) => !consentimientoDe(atletaDeSesion(fila.id)))) {
@@ -3816,7 +3844,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       const res = lista.map((f) => {
         const existente = tabla(t).find((x) => cols.every((c) => x[c] === f[c]));
         if (existente) {
-          const c = copia(antesDeActualizar(t, f));
+          const c = copia(antesDeActualizar(t, f, existente));
           if (t === 'registros_habito') prepararRegistroHabito(Object.assign(c, { habito_id: existente.habito_id, fecha: existente.fecha }));
           if (t === 'registros_nutricion') { const m = { ...existente, ...c }; prepararRegistroNutricion(m); c.actualizado_en = m.actualizado_en; }
           if (t === 'checkins' && 'respuestas' in c) validarRespuestas({ ...existente, ...c }, existente);

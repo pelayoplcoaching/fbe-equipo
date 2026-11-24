@@ -56,8 +56,34 @@ export function zonasFC(perfil) {
   const r = ritmosZonas(perfil);
   return ZONAS.map((x, i) => ({ ...x, min: i === 0 ? null : lim[i - 1], max: i === 4 ? null : lim[i] - 1, ritmo: r ? r[i] : null }));
 }
-// (v0.219) Para enseñar: las zonas de pulso o, sin ellas, las de ritmo (quien corre sin pulsómetro): sin FC, sinFC: true
+// (v0.228, R44) Su ficha de salud para correr (migración 089), con lo que cambia:
+//   · riesgo (a): enfermedad cardiovascular, metabólica o renal conocida, o síntomas; sin el visto bueno médico
+//     (bloqueado), nada de test de 30 minutos, de Z5 ni de carreras.
+//   · farmaco (b): un fármaco que cambia el pulso. Las zonas de pulso (y el ritmo umbral) solo valen si el test se hizo
+//     con el mismo fármaco y dosis (después del último cambio); la FC máxima por la edad (R2) y la eficiencia (R29), no.
+//   · prudente (c): más de 60 años o vuelve de una lesión.
+export function saludCarrera(perfil) {
+  const p = perfil || {};
+  const riesgo = p.salud_riesgo === true;
+  const farmaco = p.farmaco_pulso === true;
+  const conTest = !!(p.test_fecha && p.farmaco_cambio && p.test_fecha >= p.farmaco_cambio && p.test_tipo && p.test_tipo !== 'estimado');
+  return {
+    riesgo, vistoBueno: riesgo ? p.salud_visto_bueno || null : null, bloqueado: riesgo && !p.salud_visto_bueno,
+    farmaco, farmacoCambio: farmaco ? p.farmaco_cambio || null : null, pulsoValido: !farmaco || conTest, prudente: p.prudente === true,
+  };
+}
+// (v0.228, R44) Las zonas por esfuerzo (0-10, aproximado) y el test del habla de cada una (los de ZONAS.siente)
+export const ZONAS_ESFUERZO = [[2, 3], [3, 4], [5, 6], [7, 7], [8, 9]];
+export const textoEsfuerzo = (e) => (e ? (e[0] === e[1] ? `${e[0]}` : `${e[0]}-${e[1]}`) : '');
+// (v0.219) Para enseñar: las zonas de pulso o, sin ellas, las de ritmo (quien corre sin pulsómetro): sin FC, sinFC: true.
+// (v0.228, R44) Con un fármaco que cambia el pulso, si su test no se hizo con ese fármaco y dosis (o las zonas salen de la
+// FC máxima): por esfuerzo y el test del habla (esfuerzo: [desde, hasta]), sin pulso; el ritmo, solo con ese test.
 export function zonasDe(perfil) {
+  const s = saludCarrera(perfil);
+  if (s.farmaco && (!s.pulsoValido || fuenteZonas(perfil) === 'reserva' || !limitesZonas(perfil))) {
+    const r = s.pulsoValido ? ritmosZonas(perfil) : null;
+    return ZONAS.map((x, i) => ({ ...x, min: null, max: null, sinFC: true, esfuerzo: ZONAS_ESFUERZO[i], ritmo: r ? r[i] : null }));
+  }
   const fc = zonasFC(perfil);
   if (fc) return fc;
   const r = ritmosZonas(perfil);
@@ -79,7 +105,9 @@ export function textoZona(z, zh = null, zonas = null) {
   if (!a || !b) return nombre;
   const fc = a.sinFC ? '' : textoRangoZona({ min: a.min, max: b.max });
   const ritmo = a.ritmo && b.ritmo ? textoRitmoZona({ rapido: b.ritmo.rapido, lento: a.ritmo.lento }) : '';
-  const dentro = [fc, ritmo].filter(Boolean).join(' · ');
+  // (v0.228, R44) por esfuerzo: «esfuerzo 2-4»
+  const esf = a.esfuerzo && b.esfuerzo ? `esfuerzo ${textoEsfuerzo([a.esfuerzo[0], b.esfuerzo[1]])}` : '';
+  const dentro = [fc, esf, ritmo].filter(Boolean).join(' · ');
   return dentro ? `${nombre} (${dentro})` : nombre;
 }
 

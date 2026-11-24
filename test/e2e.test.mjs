@@ -6682,6 +6682,14 @@ if (parte('v0.224: carrera, el modo guiado de series')) try {
   fallos++;
   console.log('  ✗ el guiado de la v0.224:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.228: carrera, la salud para correr y la mañana siguiente (migración 089)
+if (parte('v0.228: carrera, la salud para correr y la mañana siguiente')) try {
+  const { probarCarrera228 } = await import('./e2e-carrera-228.mjs');
+  await probarCarrera228({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la salud para correr de la v0.228:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

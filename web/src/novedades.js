@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.228': {
+    atleta: [
+      'Tras una salida dura o con dolor, Hoy te pregunta cómo te has levantado: así tu coach ajusta la semana.',
+      'Si tomas un fármaco que cambia el pulso, tus zonas van por esfuerzo y el test del habla.',
+    ],
+    coach: [
+      '«Salud para correr» en la ficha: enfermedad o síntomas con su visto bueno, fármacos que cambian el pulso y más de 60 o lesión.',
+      'La mañana siguiente de cada corredor, en sus avisos y en el ajuste: el dolor de hueso no entra en el límite de 5/10.',
+      'Rehacer el plan con la vuelta según la lesión: tendón, hueso de bajo riesgo o de alto riesgo (esa la pauta su médico).',
+    ],
+  },
   '0.227': {
     atleta: [
       'Tu carrera: las señales para parar y ver al médico, más completas, y cómo volver a correr después de una fiebre.',

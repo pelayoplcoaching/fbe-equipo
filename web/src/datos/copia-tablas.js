@@ -13,8 +13,8 @@ const TABLAS_COMUNIDAD = ['comunidad_ajustes', 'comunidad_miembros', 'comunidad_
   'comunidad_duelos', 'comunidad_intenciones', 'comunidad_padrinos', 'comunidad_votos_semana',
   // (v0.209, 043) las publicaciones guardadas (las tuyas: las de cada atleta solo las ve él)
   'comunidad_guardados'];
-// (v0.133, 056) lo de carrera
-const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas'];
+// (v0.133, 056) lo de carrera; (v0.228, 089) y la mañana siguiente
+const TABLAS_CARRERA = ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'carrera_mananas'];
 // (059) lo de YouTube: el canal del coach y lo que ve cada atleta
 const TABLAS_YOUTUBE = ['youtube_canal', 'videos_vistos'];
 // (060) los descansos: la novedad de la semana, la travesía y los apuntes vistos

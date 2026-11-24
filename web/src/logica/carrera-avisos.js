@@ -23,6 +23,10 @@
 //   · Las carreras (las sesiones de tipo carrera) no cuentan en los km de la semana: se planifican sin ellas (R18).
 import { sumarDias, lunesDe, diasEntre, desdeISO } from './fechas.js';
 import { progresarSemana, LARGA_PCT_MAX, PICO_SALIDA } from './carrera-plan.js';
+import { avisosMananas, mananasDeSemana, esHueso } from './carrera-salud.js';
+// (v0.228, R45 y R22) Con las mañanas siguientes (migración 089): los avisos de la mañana (dolor de hueso, 6/10 o más, peor
+// dos mañanas seguidas) van primero; en el ajuste, una mañana peor o un dolor de 3 a 5/10 → no se sube (repetir), y el
+// dolor de hueso desde 3/10 o dos mañanas peor → bajar. Pregunta 6 de la revisión: una sola escala del dolor.
 
 const DURAS = ['calidad', 'larga', 'carrera', 'test'];
 const r1 = (x) => Math.round(x * 10) / 10;
@@ -87,14 +91,15 @@ function seguidas(dias) {
 
 // Los avisos de un corredor, mirando la última semana terminada (y la que va, para el semáforo) y el plan de la que viene.
 // → [{ id, nivel: 'rojo' | 'ambar' | 'info', titulo, texto, propuesta: { tipo: 'parar' | 'bajar' | 'tope' | 'rehacer' | 'mover', pct, lunes, km } }]
-export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
+export function avisosCarrera({ semanas = [], hechas = [], hoy, mananas = [] }) {
   if (!hoy) return [];
   const esta = lunesDe(hoy);
   const pasada = sumarDias(esta, -7);
   const [w3, w2, w1, w0] = resumenSemanas(hechas, esta, 4); // w0, la que va; w1, la pasada
   const plan = Object.fromEntries((semanas || []).map((s) => [s.lunes, s]));
   const fecha = (l) => l.slice(8, 10).replace(/^0/, '') + '/' + l.slice(5, 7).replace(/^0/, '');
-  const avisos = [];
+  // (R45, R22) Lo de la mañana siguiente, primero
+  const avisos = avisosMananas(mananas, hoy);
   // (R42) Una salida más de un 10 % por encima de la más larga de los 30 días anteriores (sin contar carreras), la pasada o esta
   const salidas = (hechas || []).map((x) => ({ f: String(x?.fecha_realizada || '').slice(0, 10), km: Number(x?.cardio_hecho?.km) || 0, vale: x?.cardio_hecho?.modalidad === 'carrera' && x?.cardio?.tipo !== 'carrera' }))
     .filter((x) => x.vale && x.f && x.km > 0);
@@ -122,7 +127,7 @@ export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
   // Dolor: fuera del modelo
   const dolorW = [w1, w0].filter((w) => w.dolorMax != null);
   const peor = dolorW.length ? Math.max(...dolorW.map((w) => w.dolorMax)) : null;
-  if (peor != null && peor >= 6) {
+  if (peor != null && peor >= 6 && !avisos.some((a) => a.id === 'manana-alto' || a.id === 'manana-hueso')) {
     avisos.push({ id: 'dolor-alto', nivel: 'rojo', titulo: `Dolor de ${peor}/10`,
       texto: 'Con 6/10 o más (o si cambia su forma de correr), mejor parar y valorarlo antes de seguir.', propuesta: { tipo: 'parar', texto: 'Parar y valorar' } });
   } else if (w1.dolorMax != null && w2.dolorMax != null && w1.dolorMax > w2.dolorMax && w2.dolorMax > 0 && w1.dolorMax >= 3) {
@@ -167,7 +172,7 @@ export function avisosCarrera({ semanas = [], hechas = [], hoy }) {
 
 // El ajuste de la semana siguiente con lo que hizo en una (por defecto, la pasada): 'seguir', 'repetir' o 'bajar'
 // → { decision, motivo, lunes (la semana que se ajusta), nueva (la semana ajustada, si cambia algo) }
-export function ajusteSiguiente({ semanas = [], hechas = [], hoy, lunes = null }) {
+export function ajusteSiguiente({ semanas = [], hechas = [], hoy, lunes = null, mananas = [] }) {
   const evaluada = lunesDe(lunes || sumarDias(lunesDe(hoy), -7));
   const siguienteL = sumarDias(evaluada, 7);
   const plan = Object.fromEntries((semanas || []).map((s) => [s.lunes, s]));
@@ -178,12 +183,19 @@ export function ajusteSiguiente({ semanas = [], hechas = [], hoy, lunes = null }
   // (R28) Lo que hizo de lo previsto, por km o (si apunta solo minutos) por minutos; null si no se sabe: deciden el semáforo y el dolor
   const pct = cumplimientoSemana(w, plan[evaluada]);
   const fuera = (w.dolorMax ?? 0) >= 6 || (w.dolorMax != null && w2.dolorMax != null && w.dolorMax > w2.dolorMax && w2.dolorMax > 0 && w.dolorMax >= 3);
+  // (R45, R22) Las mañanas de esa semana: el hueso desde 3/10, 6/10 o más o dos peor, fuera; una peor, no sube
+  const ms = mananasDeSemana(mananas, evaluada).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  const mHueso = ms.some((m) => esHueso(m) && m.dolor >= 3);
+  const mFuera = mHueso || ms.some((m) => m.dolor >= 6) || ms.some((m, i) => i && m.como === 'peor' && ms[i - 1].como === 'peor');
+  const mPeor = ms.some((m) => m.como === 'peor' || (esHueso(m) && m.dolor >= 1));
   const deLo = (p) => `Hizo el ${Math.round(p * 100)} % de lo previsto`;
   let decision, motivo;
-  if (w.rojo || fuera) { decision = 'bajar'; motivo = w.rojo ? 'Algún semáforo en rojo' : 'Dolor fuera de lo que se acepta'; }
+  if (w.rojo || fuera || mFuera) { decision = 'bajar'; motivo = w.rojo ? 'Algún semáforo en rojo' : mHueso ? 'Dolor de hueso a la mañana siguiente' : 'Dolor fuera de lo que se acepta'; }
   else if (pct != null && pct < 0.7) { decision = 'bajar'; motivo = w.salidas ? deLo(pct) : 'No apuntó ninguna carrera'; }
   else if (pct != null && pct > 1.15) { decision = 'repetir'; motivo = `${deLo(pct)}: más de lo previsto, mejor no subir`; }
   else if (w.ambar) { decision = 'repetir'; motivo = 'Algún semáforo en ámbar'; }
+  else if (mPeor) { decision = 'repetir'; motivo = 'Alguna mañana, peor que antes de salir'; }
+  else if ((w.dolorMax ?? 0) >= 3) { decision = 'repetir'; motivo = `Dolor de hasta ${w.dolorMax}/10: se acepta, pero sin subir`; }
   else if (pct == null) { decision = 'seguir'; motivo = 'Todo en verde (sin datos para comparar con lo previsto)'; }
   else if (pct < 0.9) { decision = 'repetir'; motivo = deLo(pct); }
   else { decision = 'seguir'; motivo = `Todo en verde y el ${Math.round(pct * 100)} % de lo previsto`; }
@@ -250,12 +262,12 @@ export function esPiernaPesada(ejercicios = []) {
 
 // El resumen de un corredor para el panel del coach: los km de esta semana frente al plan, sus semáforos, la próxima
 // carrera y sus avisos
-export function resumenCorredor({ semanas = [], hechas = [], eventos = [], hoy }) {
+export function resumenCorredor({ semanas = [], hechas = [], eventos = [], hoy, mananas = [] }) {
   const esta = lunesDe(hoy);
   const [, w0] = resumenSemanas(hechas, esta, 2);
   const plan = (semanas || []).find((s) => s.lunes === esta) || null;
   const proxima = (eventos || []).filter((e) => e.fecha >= hoy && e.decision !== 'no').sort((a, b) => (a.fecha < b.fecha ? -1 : 1))[0] || null;
-  const avisos = avisosCarrera({ semanas, hechas, hoy });
+  const avisos = avisosCarrera({ semanas, hechas, hoy, mananas });
   return {
     km: w0.km, salidas: w0.salidas, plan: plan ? { km_min: plan.km_min, km_max: plan.km_max, sesiones: (plan.sesiones || []).filter((x) => x.tipo !== 'descanso').length } : null,
     semaforos: { verde: w0.verde, ambar: w0.ambar, rojo: w0.rojo }, proxima, dias: proxima ? diasEntre(hoy, proxima.fecha) : null,

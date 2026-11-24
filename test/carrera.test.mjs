@@ -189,7 +189,7 @@ await como(bea);
 check((await q(`select count(*)::int n from public.carrera_atleta`))[0].n === 0 && (await q(`select count(*)::int n from public.carrera_eventos`))[0].n === 0, 'otro atleta no ve lo de carrera de nadie más');
 await su();
 check((await q(`select count(*)::int n from information_schema.role_table_grants where table_name like 'carrera_%' and grantee in ('anon', 'PUBLIC')`))[0].n === 0
-  && (await q(`select count(*)::int n from pg_class where relname like 'carrera_%' and relkind = 'r' and relrowsecurity`))[0].n === 5, 'las 5 tablas, con permisos por fila y nada para anon');
+  && (await q(`select count(*)::int n from pg_class where relname like 'carrera_%' and relkind = 'r' and relrowsecurity`))[0].n === 6, 'las 6 tablas (con la mañana siguiente, 089), con permisos por fila y nada para anon');
 await q(`delete from public.atletas where id = $1`, [atletaA]);
 check((await q(`select (select count(*) from public.carrera_atleta) + (select count(*) from public.carrera_eventos) + (select count(*) from public.carrera_semanas) + (select count(*) from public.carrera_revisiones) as n`))[0].n == 0, 'y se borra con la ficha');
 

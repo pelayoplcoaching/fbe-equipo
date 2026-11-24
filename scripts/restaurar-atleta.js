@@ -18,7 +18,7 @@
 //   de la salud: se vuelven a vincular) ni lo de la comunidad (es de todos, no solo suyo).
 (function (raiz) {
   // (v0.209) Las de las versiones nuevas que vuelven (en orden: los suplementos antes que sus tomas)
-  const NUEVAS = ['revisiones_semanales', 'pausas', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones',
+  const NUEVAS = ['revisiones_semanales', 'pausas', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas',
     'recordatorios_tecnica', 'recetas_favoritas', 'personal_atleta', 'contacto_atleta', 'salud_diaria', 'salud_copias', 'agenda_vida',
     'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'musica_sesion', 'travesia_perfil', 'travesia_dia'];
   // Su clave, si no es «id» (para no repetir y para contar cuántas filas de la copia hay en la base)

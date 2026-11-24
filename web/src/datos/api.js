@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -57,6 +57,7 @@ import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, M
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo, esCarrera, carrerasDeLaSemana } from '../logica/semana-natural.js';
 import { resumenCorredor } from '../logica/carrera-avisos.js';
+import { limpiarManana } from '../logica/carrera-salud.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 import { paraGuardarPropio, imagenValida, CLAVES_HUECO } from '../logica/a-medida.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
@@ -1458,12 +1459,45 @@ export function crearApi(backend, opciones = {}) {
       } catch { hechas = []; }
       // (v0.218) si su carrera va por calendario (microciclos): el editor lo dice en lugar de «Añadir las sesiones de carrera»
       const { carril } = await ritmoDe(atletaId).catch(() => ({ carril: false }));
-      return { perfil, eventos, semanas, revisiones, hechas, carril };
+      // (v0.228, 089) sus mañanas siguientes de las 8 últimas semanas (sin la 089, ninguna; falta089 lo dice)
+      const v089 = await api.carrera089().catch(() => null);
+      const mananas = v089 ? await b.select('carrera_mananas', { eq: { atleta_id: atletaId }, gte: { fecha: sumarDias(hoy, -56) }, order: [['fecha', 'desc']] }).catch(() => []) : [];
+      return { perfil, eventos, semanas, revisiones, hechas, carril, mananas, falta089: v089 === false };
     },
     async guardarCarreraPerfil(atletaId, datos) {
       const { perfil, error } = limpiarPerfilCarrera(datos);
       if (error) throw new Error(error);
       return (await b.upsert('carrera_atleta', [{ ...perfil, atleta_id: atletaId }], 'atleta_id').catch(falta056))[0];
+    },
+    // (v0.228, 089) ¿Está la 089 (la ficha de salud para correr y la mañana siguiente)?
+    async carrera089() {
+      if (!api._v089) {
+        const pr = b.select('carrera_mananas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01/i.test(m) ? false : null;
+        });
+        api._v089 = pr;
+        pr.then((x) => { if (x == null && api._v089 === pr) api._v089 = null; });
+      }
+      return api._v089;
+    },
+    // (v0.228, R44) La ficha de salud para correr (solo la cambia el coach). Sin el consentimiento de salud del atleta, la base
+    // no la guarda: { fila, sinConsentimiento }
+    async guardarCarreraSalud(atletaId, datos = {}) {
+      if ((await api.carrera089().catch(() => null)) === false) throw new Error('Falta la migración 089 en la base: pídesela a quien la lleva.');
+      const fecha = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) ? x : null);
+      const fila = { atleta_id: atletaId, salud_riesgo: datos.salud_riesgo === true, salud_visto_bueno: datos.salud_riesgo === true ? fecha(datos.salud_visto_bueno) : null,
+        farmaco_pulso: datos.farmaco_pulso === true, farmaco_cambio: datos.farmaco_pulso === true ? fecha(datos.farmaco_cambio) : null, prudente: datos.prudente === true };
+      const r = (await b.upsert('carrera_atleta', [fila], 'atleta_id'))[0] || null;
+      const sinConsentimiento = !!r && (fila.salud_riesgo || fila.farmaco_pulso || fila.prudente) && r.salud_riesgo == null && r.farmaco_pulso == null && r.prudente == null;
+      return { fila: r, sinConsentimiento };
+    },
+    // (v0.228, R45) La mañana siguiente, la del propio atleta (una por mañana: si ya la tiene, se cambia)
+    async guardarManana(atletaId, datos = {}) {
+      const { manana, error } = limpiarManana(datos);
+      if (error) throw new Error(error);
+      return (await b.upsert('carrera_mananas', [{ ...manana, atleta_id: atletaId }], 'atleta_id,fecha'))[0] || null;
     },
     async guardarCarreraEvento(atletaId, datos, id = null) {
       const { evento, error } = limpiarEventoCarrera(datos);
@@ -1512,10 +1546,12 @@ export function crearApi(backend, opciones = {}) {
       const ids = atletas.map((a) => a.id);
       const hoy = hoyISO();
       const desde = sumarDias(lunesDe(hoy), -21);
-      const [semanas, eventos, bloques] = await Promise.all([
+      const [semanas, eventos, bloques, mananas] = await Promise.all([
         b.select('carrera_semanas', { in: { atleta_id: ids }, gte: { lunes: desde } }).catch(() => []),
         b.select('carrera_eventos', { in: { atleta_id: ids }, gte: { fecha: hoy } }).catch(() => []),
         b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: 'id,atleta_id' }).catch(() => []),
+        // (v0.228, 089) las mañanas siguientes de las dos últimas semanas (para sus avisos)
+        api.carrera089().catch(() => null).then((v) => (v ? b.select('carrera_mananas', { in: { atleta_id: ids }, gte: { fecha: sumarDias(hoy, -14) } }).catch(() => []) : [])),
       ]);
       const ws = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id' }).catch(() => []) : [];
       const ses = ws.length ? await b.select('sesiones', { in: { semana_id: ws.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: desde }, cols: 'id,semana_id,fecha_realizada,completada,cardio,cardio_hecho' }).catch(() => []) : [];
@@ -1523,7 +1559,7 @@ export function crearApi(backend, opciones = {}) {
       const deSemana = new Map(ws.map((w) => [w.id, deBloque.get(w.bloque_id)]));
       return atletas.map((a) => ({
         atleta: { id: a.id, nombre: a.nombre },
-        ...resumenCorredor({ semanas: semanas.filter((s) => s.atleta_id === a.id), eventos: eventos.filter((e) => e.atleta_id === a.id), hoy,
+        ...resumenCorredor({ semanas: semanas.filter((s) => s.atleta_id === a.id), eventos: eventos.filter((e) => e.atleta_id === a.id), hoy, mananas: mananas.filter((m) => m.atleta_id === a.id),
           hechas: ses.filter((s) => deSemana.get(s.semana_id) === a.id && cardioHechoValido(s.cardio_hecho) && s.cardio_hecho.modalidad === 'carrera') }),
       }));
     },
@@ -1945,7 +1981,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.174) la foto del plato y comer fuera (079): con la 078 pero sin la 079, la 2026-12.36
       if ((await api.platosDisponibles().catch(() => null)) !== true) return VERSION_LEGAL_SIN_079;
       // (v0.176) «A su medida» (080): con la 079 pero sin la 080, la 2026-12.37
-      return (await api.aMedida080().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_080;
+      if ((await api.aMedida080().catch(() => null)) !== true) return VERSION_LEGAL_SIN_080;
+      // (v0.228) la carrera con tu salud (089): con la 080 pero sin la 089, la 2026-12.38
+      return (await api.carrera089().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_089;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -6955,8 +6993,9 @@ export function crearApi(backend, opciones = {}) {
       if (perfilId && perfilId === uid()) { out.animo_fijados = (await api.animoMios?.().catch(() => null)) || []; out.portada = (await b.rpc('portada_de', {}).catch(() => null)) || null; }
       out.musica_de_sesiones_y_meses = (await b.rpc('musica_mia', { p_atleta: perfilId && perfilId === uid() ? null : atletaId }).catch(() => null)) || null;
       out.listas_companeros = perfilId && perfilId === uid() ? (await b.rpc('comunidad_listas_companeros').catch(() => [])) || [] : [];
-      // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones
-      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones; (v0.228, 089) y
+      // sus mañanas siguientes
+      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
       // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
       out.personal = perfilId && perfilId === uid()

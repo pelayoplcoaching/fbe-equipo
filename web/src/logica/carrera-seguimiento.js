@@ -15,6 +15,7 @@
 //   · R32 La revisión toma el peor de los tres (la eficiencia, como mucho ámbar).
 import { sumarDias, lunesDe } from './fechas.js';
 import { minutosPlan } from './carrera-avisos.js';
+import { saludCarrera } from './carrera.js';
 
 const SUAVES = ['facil', 'recuperacion', 'larga'];
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -62,12 +63,13 @@ function cambioEficiencia(hechas, desde, hasta, antesDesde) {
 
 // La revisión de las dos semanas antes de `fecha` (por defecto, las dos últimas terminadas): los tres datos con su color,
 // el peor de los tres y un texto para la decisión. → { estado, partes: [{ k, titulo, color, texto }], texto } o null
-export function revisionAuto({ semanas = [], hechas = [], fecha, hoy }) {
+export function revisionAuto({ semanas = [], hechas = [], fecha, hoy, perfil = null }) {
   const fin = lunesDe(fecha || hoy);
   const ini = sumarDias(fin, -14);
   const partes = [];
-  // (R29) Eficiencia aeróbica: estable o mejor, verde; un 5 % peor o más, ámbar (nunca rojo por sí sola)
-  const ef = cambioEficiencia(hechas, ini, fin, sumarDias(ini, -28));
+  // (R29) Eficiencia aeróbica: estable o mejor, verde; un 5 % peor o más, ámbar (nunca rojo por sí sola). (v0.228, R44) Con un
+  // fármaco que cambia el pulso, no se mira
+  const ef = saludCarrera(perfil).farmaco ? null : cambioEficiencia(hechas, ini, fin, sumarDias(ini, -28));
   if (ef != null) {
     const color = ef <= -EF_CORTE ? 'ambar' : 'verde';
     const como = ef >= EF_CORTE ? 'mejora' : ef > -EF_CORTE ? 'estable (el ±5 % es ruido del día a día)' : 'empeora';

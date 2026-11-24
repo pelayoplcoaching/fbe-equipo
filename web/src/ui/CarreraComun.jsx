@@ -1,26 +1,30 @@
 // Lo de carrera que ven el coach y el atleta (v0.133): la tabla de zonas, la barra del macrociclo y las partes de una sesión
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
-import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE, ritmo5k } from '../logica/carrera.js';
+import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE, ritmo5k, saludCarrera, textoEsfuerzo } from '../logica/carrera.js';
 import { serieEficiencia } from '../logica/carrera-seguimiento.js';
 
 // (v0.219) Con ritmo umbral, una columna con el ritmo de cada zona; sin pulsómetro (zonas de ritmo), sin la de FC
 export function TablaZonas({ zonas, umbral = null }) {
   const conFC = !zonas.some((z) => z.sinFC);
   const conRitmo = zonas.some((z) => z.ritmo);
+  // (v0.228, R44) por esfuerzo y el test del habla (con un fármaco que cambia el pulso)
+  const conEsfuerzo = zonas.some((z) => z.esfuerzo);
   const r5k = conRitmo && umbral ? ritmo5k({ umbral }) : null;
   // (v0.227, R1 y R4) Cuándo no fiarse del pulso ni del ritmo
-  const notas = [conFC && 'En series de menos de 4 minutos el pulso llega tarde: manda el ritmo o el esfuerzo.',
+  const notas = [conEsfuerzo && 'Con un fármaco que cambia el pulso, el pulso no vale para las zonas: manda el esfuerzo y el test del habla.',
+    conFC && 'En series de menos de 4 minutos el pulso llega tarde: manda el ritmo o el esfuerzo.',
     conRitmo && 'En cuestas, tierra, viento o con calor (20 °C o más), manda el esfuerzo, no el ritmo.'].filter(Boolean).join(' ');
   return (
     <div class="tabla-zonas-env">
       <table class="tabla-zonas">
-        <caption class="sr">{conFC ? 'Zonas de frecuencia cardiaca' : 'Zonas de ritmo'}</caption>
-        <thead><tr><th scope="col">Zona y cómo se siente</th>{conFC && <th scope="col">FC</th>}{conRitmo && <th scope="col">Ritmo</th>}</tr></thead>
+        <caption class="sr">{conFC ? 'Zonas de frecuencia cardiaca' : conEsfuerzo ? 'Zonas por esfuerzo' : 'Zonas de ritmo'}</caption>
+        <thead><tr><th scope="col">Zona y cómo se siente</th>{conFC && <th scope="col">FC</th>}{conEsfuerzo && <th scope="col">Esfuerzo (0-10)</th>}{conRitmo && <th scope="col">Ritmo</th>}</tr></thead>
         <tbody>
           {zonas.map((z) => (
             <tr key={z.z} data-zona={z.z}>
               <th scope="row"><span class="zona-pastilla" data-zona={z.z}>Z{z.z}</span> {z.nombre}<span class="zona-siente mini secundario">{z.siente}</span></th>
               {conFC && <td class="num">{textoRangoZona(z)}{!conRitmo && z.z === 4 && umbral ? <span class="zona-umbral mini secundario">{textoRitmo(umbral)}</span> : null}</td>}
+              {conEsfuerzo && <td class="num">{textoEsfuerzo(z.esfuerzo)}</td>}
               {conRitmo && <td class="num zona-ritmo"><CeldaRitmo r={z.ritmo} /></td>}
             </tr>
           ))}
@@ -80,9 +84,10 @@ export function ListaPartes({ partes = [], zonas = null, ambar = false }) {
 
 // (v0.223) Su forma aeróbica: los metros que avanza con cada latido en los rodajes suaves con pulso (la media de 4 en 4).
 // Si sube, corre más rápido con el mismo pulso. tu: el texto para el atleta (tú) o para el coach.
-export function GraficaForma({ hechas = [], tu = false }) {
+export function GraficaForma({ hechas = [], tu = false, perfil = null }) {
   const serie = serieEficiencia(hechas);
-  if (serie.length < 3) return null;
+  // (v0.228, R44) con un fármaco que cambia el pulso, los metros por latido no dicen nada
+  if (serie.length < 3 || saludCarrera(perfil).farmaco) return null;
   const W = 320, H = 110, PX = 6, PY = 10;
   const vals = serie.map((x) => x.media);
   const lo = Math.min(...vals), hi = Math.max(...vals);

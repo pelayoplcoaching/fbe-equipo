@@ -311,3 +311,19 @@
 .gser-abrir { justify-self: start; }
 @media (prefers-reduced-motion: reduce) { .gser-barra span { transition: none; } }
 @media (forced-colors: active) { .gser-barra span { background: Highlight; } }
+
+/* (v0.228) La salud para correr (R44) y la manana siguiente (R45) */
+.cs-pista, .cs-bloqueo { display: flex; align-items: flex-start; gap: var(--esp-6); margin: 0; padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); color: var(--tinta); }
+.cs-pista { background: var(--info-suave); }
+.cs-pista svg { flex: none; margin-top: var(--esp-2); color: var(--info); }
+.cs-bloqueo { background: var(--alerta-suave); }
+.cs-bloqueo svg { flex: none; margin-top: var(--esp-2); color: var(--alerta); }
+.cs-fecha { max-width: 18rem; }
+.ch-manana { color: var(--tinta-2); }
+.ch-manana[data-nivel="ambar"] { color: var(--aviso); }
+.ch-manana[data-nivel="rojo"] { color: var(--alerta); }
+.cm-titulo { display: grid; gap: var(--esp-2); margin: 0; }
+.cm-dolor { width: 100%; }
+.cm-manana[data-nivel] { border-left: var(--filo-fuerte) solid var(--ok); }
+.cm-manana[data-nivel="ambar"] { border-left-color: var(--aviso); }
+.cm-manana[data-nivel="rojo"] { border-left-color: var(--alerta); }

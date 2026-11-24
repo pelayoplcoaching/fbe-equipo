@@ -1,7 +1,7 @@
 // La carrera del atleta (v0.133, migración 056): la sesión de carrera por partes con sus zonas y el semáforo antes de
 // entrenar; en Hoy, su carrera con la cuenta atrás; y «Tu carrera»: zonas, carreras, plan por semanas y revisiones.
 import { useMemo, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, IcoIos, descargar as descargarArchivo } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Segmentos, Icono, Hoja, Siluetas, ErrorCaja, IcoIos, descargar as descargarArchivo } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
 import { TablaZonas, Macrociclo, ListaPartes, GraficaForma } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
@@ -15,9 +15,10 @@ import { calendarioICS } from '../../logica/plan.js';
 import {
   zonasDe, textoZona, textoRitmo, NOMBRE_TIPO, NOMBRE_TEST, SEMAFORO, ALARMA, pautaAmbar, minutosPauta, semanasConPlan, semanaDelPlan, faseDe,
   macrociclo, carreraObjetivo, proximaCarrera, textoCuentaAtras, textoObjetivoCarrera, textoResultado, textoKm, carreraHechaPorSemana, estadoKm,
-  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera, predecirTiempo, ultimaConResultado, fmtTiempo, fuenteZonas, umbralCaducado,
+  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera, predecirTiempo, ultimaConResultado, fmtTiempo, fuenteZonas, umbralCaducado, saludCarrera,
 } from '../../logica/carrera.js';
 import { kmMedio } from '../../logica/carrera-avisos.js';
+import { mananaPendiente, limpiarManana, respuestaManana, DONDE_MANANA, PIERNA_MANANA, COMO_MANANA } from '../../logica/carrera-salud.js';
 
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 // ¿Es una pauta de carrera con estructura (tipo, zona o partes)?
@@ -90,20 +91,65 @@ export function DetalleCarreraSesion({ pauta, sesionId, completada = false, hech
   );
 }
 
+// ---------- en Hoy: la mañana siguiente (v0.228, R45) ----------
+// Tras una salida con dolor de 3/10 o más, o de calidad, tirada larga, carrera o test: cómo se ha levantado (el dolor de 0 a 10,
+// mejor, igual o peor que antes de salir, dónde y, en la pierna, si duele en un punto del hueso o al saltar). Una vez por mañana.
+function MananaCarrera({ d, alGuardar }) {
+  const { api, atleta } = useApp();
+  const hoy = hoyISO();
+  const pend = d.falta089 ? null : mananaPendiente({ hechas: d.hechas || [], mananas: d.mananas || [], hoy });
+  const [f, setF] = useState({ dolor: 0, como: '', donde: '', hueso: false, salto: false });
+  const [hecho, setHecho] = useState(null);
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  if (hecho) return <div class="panel panel-pad pila-xs cm-manana" data-nivel={hecho.nivel} role="status"><strong class="peq">Apuntado</strong><span class="mini">{hecho.texto}</span></div>;
+  if (!pend) return null;
+  const pierna = PIERNA_MANANA.includes(f.donde);
+  const guardar = () => una(async () => {
+    try {
+      const m = { fecha: hoy, sesion_id: pend.id, ...f, donde: f.donde || null };
+      await api.guardarManana(atleta.id, m);
+      setHecho(respuestaManana(limpiarManana(m).manana, (d.mananas || [])[0] || null));
+      setError(null);
+      alGuardar?.();
+    } catch (e) { setError(e.message); }
+  });
+  return (
+    <section class="panel panel-pad pila-s cm-manana" aria-labelledby="cm-titulo">
+      <h3 id="cm-titulo" class="peq cm-titulo"><strong>¿Cómo te has levantado?</strong><span class="mini secundario">Tras «{pend.nombre || 'tu carrera'}» de ayer</span></h3>
+      {error && <div class="error" role="alert">{error}</div>}
+      <label class="campo"><span class="etq">Dolor ahora: <strong class="num">{f.dolor}/10</strong></span>
+        <input class="cm-dolor" type="range" min="0" max="10" step="1" value={f.dolor} aria-valuetext={`${f.dolor} de 10`} onInput={(e) => setF({ ...f, dolor: Number(e.currentTarget.value) })} /></label>
+      <div class="campo"><span class="etq">Comparado con antes de salir</span>
+        <Segmentos etiqueta="Comparado con antes de salir" valor={f.como} opciones={COMO_MANANA} alCambiar={(x) => setF({ ...f, como: x || '' })} /></div>
+      {f.dolor > 0 && <label class="campo"><span class="etq">¿Dónde?</span>
+        <select class="selector" value={f.donde} onChange={(e) => setF({ ...f, donde: e.currentTarget.value })}><option value="">Elige</option>{DONDE_MANANA.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select></label>}
+      {f.dolor > 0 && pierna && <>
+        <label class="campo campo-check"><input type="checkbox" checked={f.hueso} onChange={(e) => setF({ ...f, hueso: e.currentTarget.checked })} /><span class="peq">Duele en un punto concreto del hueso, al apretar</span></label>
+        <label class="campo campo-check"><input type="checkbox" checked={f.salto} onChange={(e) => setF({ ...f, salto: e.currentTarget.checked })} /><span class="peq">Duele al saltar a la pata coja</span></label>
+      </>}
+      <button type="button" class="btn btn-primario" style="justify-self:start" disabled={!f.como || ocupado} onClick={guardar}>{ocupado ? 'Guardando…' : 'Guardar'}</button>
+    </section>
+  );
+}
+
 // ---------- en Hoy: su carrera ----------
 export function CarreraHoy({ abrir }) {
   const carrera = useCarreraMia();
   const d = carrera.datos;
   const hoy = hoyISO();
   if (!d || d.falta056) return null;
+  const manana = <MananaCarrera d={d} alGuardar={() => carrera.recargar(true)} />;
   const obj = carreraObjetivo(d.eventos, hoy) || proximaCarrera(d.eventos, hoy);
   const n = semanaDelPlan(d.perfil, hoy);
   const fase = faseDe(d.perfil, hoy);
   const total = macrociclo(d.perfil).reduce((a, f) => a + f.semanas, 0);
   const semana = (d.semanas || []).find((s) => s.lunes === lunesDe(hoy));
   const hecho = carreraHechaPorSemana(d.hechas || [])[lunesDe(hoy)];
-  if (!obj && !fase && !semana && !d.perfil) return null;
+  if (!obj && !fase && !semana && !d.perfil) return manana;
   return (
+    <>
+    {manana}
     <button type="button" class="panel tarjeta-carrera-hoy" onClick={abrir}>
       <IcoIos n="pasos" />
       <span class="pila-xs" style="min-width:0;flex:1">
@@ -113,6 +159,7 @@ export function CarreraHoy({ abrir }) {
       </span>
       <Icono n="derecha" />
     </button>
+    </>
   );
 }
 
@@ -216,10 +263,10 @@ function ContenidoCarrera({ d }) {
         </section>
       )}
 
-      {serieEficiencia(d.hechas || []).length >= 3 && (
+      {serieEficiencia(d.hechas || []).length >= 3 && !saludCarrera(d.perfil).farmaco && (
         <section class="panel panel-pad pila-s" aria-labelledby="tc-forma">
           <h3 id="tc-forma" class="h-panel">Tu forma aeróbica</h3>
-          <GraficaForma hechas={d.hechas} tu />
+          <GraficaForma hechas={d.hechas} perfil={d.perfil} tu />
         </section>
       )}
 

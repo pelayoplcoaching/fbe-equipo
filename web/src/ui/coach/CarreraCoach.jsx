@@ -12,10 +12,12 @@ import {
   zonasFC, textoRangoZona, textoZona, textoParte, limpiarParte, parteAEditor, fmtRitmo, textoRitmo, fmtTiempo, leerRitmo, leerTiempo, macrociclo, semanasConPlan,
   semanaDelPlan, faseDe, textoCuentaAtras, textoObjetivoCarrera, textoResultado, proximaCarrera, carreraObjetivo, textoKm, carreraHechaPorSemana,
   estadoKm, minutosPauta, pautaDeReceta, SEMAFORO, semanasPlan, zonasDe as zonasVer, fuenteZonas, umbralDesdeCarrera, rangoUmbral, leerRangoRitmo, predecirTiempo, ultimaConResultado,
-  ritmoUmbral, umbralCaducado, fcMaxTanaka,
+  ritmoUmbral, umbralCaducado, fcMaxTanaka, saludCarrera,
 } from '../../logica/carrera.js';
+import { textoManana, respuestaManana } from '../../logica/carrera-salud.js';
+import { resultadoCribado, RESULTADO_COACH } from '../../logica/cuestionario.js';
 import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
-import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN } from '../../logica/carrera-plan.js';
+import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN, TIPOS_VUELTA, AVISO_HUESO } from '../../logica/carrera-plan.js';
 import { avisosCarrera, ajusteSiguiente, aplicarPropuesta, choquesFuerza, kmMedio } from '../../logica/carrera-avisos.js';
 import { revisionAuto, NOMBRE_COLOR } from '../../logica/carrera-seguimiento.js';
 
@@ -39,6 +41,7 @@ export function CarreraFicha({ atleta }) {
     <div class="pila carrera-ficha">
       <ResumenCarrera d={d} />
       <AvisosCoach atleta={atleta} d={d} alGuardar={recargar} />
+      <SaludCoach atleta={atleta} d={d} alGuardar={recargar} />
       <ZonasCoach atleta={atleta} perfil={d.perfil} alGuardar={recargar} />
       <PlanCoach atleta={atleta} perfil={d.perfil} d={d} alGuardar={recargar} />
       <SemanasCoach atleta={atleta} d={d} alGuardar={recargar} />
@@ -47,6 +50,59 @@ export function CarreraFicha({ atleta }) {
       <HechoCarrera d={d} />
       <BibliotecaCarrera />
     </div>
+  );
+}
+
+// (v0.228, R44) La ficha de salud para correr (migración 089): tres casillas que marca el coach, con sus fechas. Son datos de
+// salud: sin su consentimiento, la base no las guarda. Lo que dice su cuestionario de salud, como pista.
+function SaludCoach({ atleta, d, alGuardar }) {
+  const { api, aviso } = useApp();
+  const p = d.perfil || {};
+  const inicial = () => ({ salud_riesgo: p.salud_riesgo === true, salud_visto_bueno: p.salud_visto_bueno || '', farmaco_pulso: p.farmaco_pulso === true, farmaco_cambio: p.farmaco_cambio || '', prudente: p.prudente === true });
+  const [f, setF] = useState(inicial);
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  useEffect(() => setF(inicial()), [p.actualizado_en]);
+  const cuest = useCarga(() => (d.falta089 ? Promise.resolve(null) : api.cuestionario(atleta.id).catch(() => null)), [atleta.id, d.falta089]);
+  const c = cuest.datos;
+  const cribado = c ? resultadoCribado({ activo: c.activo, enfermedad: c.enfermedad, sintomas: c.sintomas || [] }) : null;
+  const medicacion = c && (c.otras || []).includes('medicacion');
+  const s = saludCarrera({ ...p, ...f, salud_visto_bueno: f.salud_visto_bueno || null, farmaco_cambio: f.farmaco_cambio || null });
+  const marca = (k) => (e) => setF({ ...f, [k]: e.currentTarget.checked });
+  const fecha = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
+  const guardar = (e) => {
+    e.preventDefault();
+    una(async () => {
+      try {
+        const r = await api.guardarCarreraSalud(atleta.id, f);
+        if (r.sinConsentimiento) { setError('No se ha guardado: falta su consentimiento de datos de salud (lo da desde su perfil).'); return; }
+        setError(null); aviso('Salud para correr guardada'); alGuardar();
+      } catch (err) { setError(err.message); }
+    });
+  };
+  return (
+    <section class="panel panel-pad pila carrera-salud" aria-labelledby="cs-titulo">
+      <h2 id="cs-titulo" class="h-panel">Salud para correr</h2>
+      {d.falta089 ? <p class="peq secundario">Para marcar su salud para correr, ejecuta en Supabase supabase/migraciones/089_carrera_salud.sql.</p> : <form class="pila-s" onSubmit={guardar}>
+        {error && <div class="error" role="alert">{error}</div>}
+        {cribado && cribado !== 'sin_valoracion' && <p class="mini cs-pista"><Icono n="alerta" width="14" height="14" /> Su cuestionario de salud: {RESULTADO_COACH[cribado][0].toLowerCase()}.</p>}
+        {medicacion && <p class="mini cs-pista"><Icono n="pregunta" width="14" height="14" /> Toma medicación a diario{c.medicacion_detalle ? ` (${c.medicacion_detalle})` : ''}: mira si alguna cambia el pulso.</p>}
+        <label class="campo campo-check"><input type="checkbox" checked={f.salud_riesgo} onChange={marca('salud_riesgo')} />
+          <span class="peq">Enfermedad del corazón, metabólica o renal conocida, o síntomas de alarma</span></label>
+        {f.salud_riesgo && <label class="campo cs-fecha"><span class="etq">Visto bueno médico para correr</span><input class="entrada" type="date" value={f.salud_visto_bueno} onInput={fecha('salud_visto_bueno')} /></label>}
+        {s.bloqueado && <p class="mini cs-bloqueo" role="status"><Icono n="alerta" width="14" height="14" /> Sin el visto bueno médico: nada de test de 30 minutos, de Z5 ni de carreras.</p>}
+        <label class="campo campo-check"><input type="checkbox" checked={f.farmaco_pulso} onChange={marca('farmaco_pulso')} />
+          <span class="peq">Toma un fármaco que cambia el pulso <span class="mini terciario">(betabloqueantes, verapamilo, diltiazem, ivabradina, digoxina, amiodarona)</span></span></label>
+        {f.farmaco_pulso && <label class="campo cs-fecha"><span class="etq">Último cambio de dosis</span><input class="entrada" type="date" value={f.farmaco_cambio} onInput={fecha('farmaco_cambio')} /></label>}
+        {s.farmaco && <p class="mini terciario">{s.pulsoValido ? 'Su test es de después del último cambio de dosis: sus zonas de pulso valen.' : 'Sus zonas van por esfuerzo y el test del habla, no por el pulso (hasta un test hecho ya con esta dosis). Tampoco se usan la FC máxima por la edad ni la eficiencia aeróbica.'}</p>}
+        <label class="campo campo-check"><input type="checkbox" checked={f.prudente} onChange={marca('prudente')} />
+          <span class="peq">Más de 60 años o vuelve de una lesión <span class="mini terciario">(plan más prudente y 48 horas entre la pierna pesada y la calidad)</span></span></label>
+        <div class="fila-envolver">
+          <button class="btn btn-primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar'}</button>
+          <span class="mini terciario">Son datos de salud: solo se guardan con su consentimiento.</span>
+        </div>
+      </form>}
+    </section>
   );
 }
 
@@ -84,7 +140,9 @@ function ZonasCoach({ atleta, perfil, alGuardar }) {
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   // (v0.219) la vista previa con todo lo escrito: FC umbral o, sin ella, FC máxima y de reposo; y el ritmo umbral, para los ritmos
   const previa = { lthr: Number(f.lthr) || null, fc_max: f.fc_max === '' ? null : Number(f.fc_max), fc_reposo: f.fc_reposo === '' ? null : Number(f.fc_reposo),
-    zonas: [f.z2, f.z3, f.z4, f.z5].every((x) => x !== '') ? [f.z2, f.z3, f.z4, f.z5].map(Number) : null, umbral: leerRangoRitmo(f.umbral) || null };
+    zonas: [f.z2, f.z3, f.z4, f.z5].every((x) => x !== '') ? [f.z2, f.z3, f.z4, f.z5].map(Number) : null, umbral: leerRangoRitmo(f.umbral) || null,
+    // (v0.228, R44) con un fármaco que cambia el pulso, como las verá él
+    test_fecha: f.test_fecha || null, test_tipo: f.test_tipo || null, farmaco_pulso: p.farmaco_pulso, farmaco_cambio: p.farmaco_cambio };
   const zonas = zonasVer(previa);
   const fuente = fuenteZonas(previa);
   const guardar = (e) => {
@@ -118,7 +176,8 @@ function ZonasCoach({ atleta, perfil, alGuardar }) {
         </details>
         <div class="fila-envolver cz-calcs">
           <UmbralDesdeCarrera alCalcular={(r) => setF({ ...f, umbral: rangoUmbral(r).map(fmtRitmo).join('-') })} />
-          <FcMaxEdad alUsar={(fc) => setF({ ...f, fc_max: String(fc), test_tipo: f.test_tipo || 'estimado' })} />
+          {/* (v0.228, R44) con un fármaco que cambia el pulso, la FC máxima por la edad no vale */}
+          {!saludCarrera(p).farmaco && <FcMaxEdad alUsar={(fc) => setF({ ...f, fc_max: String(fc), test_tipo: f.test_tipo || 'estimado' })} />}
         </div>
         {zonas ? <TablaZonas zonas={zonas} umbral={previa.umbral} /> : <p class="mini terciario">Con la FC umbral (por ejemplo, la FC media de los últimos 20 minutos de un test de 30) salen sus cinco zonas; sin ella, con la FC máxima y la de reposo. Con el ritmo umbral, también el ritmo de cada zona.</p>}
         {fuente === 'reserva' && <p class="mini terciario">Zonas por la FC de reserva (Karvonen: 60, 70, 80 y 90 %){f.test_tipo === 'estimado' ? ', con la FC máxima estimada: son aproximadas' : ''}. Con su FC umbral serían más precisas.</p>}
@@ -251,8 +310,8 @@ const NOMBRE_DECISION_AJ = { seguir: 'Seguir el plan', repetir: 'Repetir el volu
 function AvisosCoach({ atleta, d, alGuardar }) {
   const { api, aviso } = useApp();
   const hoy = hoyISO();
-  const avisos = useMemo(() => avisosCarrera({ semanas: d.semanas, hechas: d.hechas, hoy }), [d.semanas, d.hechas]);
-  const ajuste = useMemo(() => ajusteSiguiente({ semanas: d.semanas, hechas: d.hechas, hoy }), [d.semanas, d.hechas]);
+  const avisos = useMemo(() => avisosCarrera({ semanas: d.semanas, hechas: d.hechas, hoy, mananas: d.mananas || [] }), [d.semanas, d.hechas, d.mananas]);
+  const ajuste = useMemo(() => ajusteSiguiente({ semanas: d.semanas, hechas: d.hechas, hoy, mananas: d.mananas || [] }), [d.semanas, d.hechas, d.mananas]);
   const [aplicado, setAplicado] = useState(leerAplicado);
   const [rehacer, setRehacer] = useState(false);
   const [semana, setSemana] = useState(null);
@@ -361,17 +420,21 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
     dias: String(Math.max(2, Math.min(6, Number(p.ventanas) || 3))),
     kmAhora: recientes ? String(Math.round(recientes.media)) : '', larga: recientes ? num(recientes.larga, recientes.larga % 1 ? 1 : 0) : '',
     // (v0.227, R8) El nivel lo propone la app: «Empieza» con menos de 15 km por semana; lo confirma el coach
-    nivel: recientes && recientes.media >= 15 ? 'intermedio' : 'empieza', conVuelta: false, prudente: false, pierna: false,
+    nivel: recientes && recientes.media >= 15 ? 'intermedio' : 'empieza', conVuelta: false, tipoVuelta: 'tendon', prudente: saludCarrera(p).prudente, pierna: false,
   }));
+  // (v0.228, R44) sin el visto bueno médico, el plan va sin Z5
+  const salud = saludCarrera(p);
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const ev = f.evento === 'otra' ? { nombre: f.nombre.trim() || 'La carrera', distancia_km: Number(f.km), fecha: f.fecha } : futuras.find((e) => e.id === f.evento) || null;
   // (v0.227) Su ritmo suave (un 20 % más lento que el umbral), para los topes de tiempo de la tirada larga (R16)
   const ru = ritmoUmbral(p);
   const datos = { evento: ev, dias: Number(f.dias), kmAhora: leerNumero(f.kmAhora) ?? 0, largaAhora: leerNumero(f.larga), nivel: f.nivel, hoy,
-    prudente: f.prudente, pierna: f.pierna, ritmoSuave: ru ? Math.round(ru * 1.2) : null };
-  const clave = JSON.stringify([datos, f.conVuelta, modo]);
-  const res = useMemo(() => (rehacer ? rehacerDesde(p, { ...datos, desde: lunesDe(hoy), conVuelta: f.conVuelta }) : { plan: proponerPlan(datos) }), [clave]);
+    prudente: f.prudente, pierna: f.pierna, ritmoSuave: ru ? Math.round(ru * 1.2) : null, sinZ5: salud.bloqueado };
+  // (v0.228, R20) la vuelta, según la lesión: tendón, músculo o rodilla; hueso de bajo riesgo; hueso de alto riesgo
+  const conVuelta = f.conVuelta ? f.tipoVuelta : false;
+  const clave = JSON.stringify([datos, conVuelta, modo]);
+  const res = useMemo(() => (rehacer ? rehacerDesde(p, { ...datos, desde: lunesDe(hoy), conVuelta }) : { plan: proponerPlan(datos) }), [clave]);
   const plan = res.plan;
   const ok = plan && !plan.error;
   const fases = ok ? (rehacer ? res.fases : plan.fases) : [];
@@ -429,6 +492,10 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
           <span class="peq">Hace pierna pesada 3 días o más a la semana <span class="mini terciario">(un pico de kilómetros más bajo)</span></span></label>
         {rehacer && <label class="campo campo-check"><input type="checkbox" checked={f.conVuelta} onChange={(e) => setF({ ...f, conVuelta: e.currentTarget.checked })} />
           <span class="peq">Empezar con la vuelta a correr tras una molestia (de andar 30 minutos a 20-30 minutos seguidos, sin dolor)</span></label>}
+        {rehacer && f.conVuelta && <div class="campo"><label class="etq" for="asis-lesion">La lesión</label>
+          <select id="asis-lesion" class="selector" value={f.tipoVuelta} onChange={(e) => setF({ ...f, tipoVuelta: e.currentTarget.value })}>{TIPOS_VUELTA.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+          <span class="ayuda">{f.tipoVuelta === 'tendon' ? 'Con dolor controlado: 3/10 como mucho y la mañana siguiente igual.' : f.tipoVuelta === 'hueso' ? 'Cara posteromedial de la tibia, metatarsianos centrales o peroné: en días alternos y sin ningún dolor, tras 5 días seguidos sin dolor en la vida diaria y con el visto bueno de su médico.' : 'Cuello del fémur, cara anterior de la tibia, escafoides del pie o base del 5.º metatarsiano: la vuelta la pauta su médico.'}</span>
+          {f.tipoVuelta !== 'tendon' && <span class="mini aviso-texto">{AVISO_HUESO}</span>}</div>}
         <section class="asis-res panel-sub pila-s" aria-live="polite" aria-label="El plan que propone">
           {!ok ? <p class="peq secundario">{plan?.error || 'Elige la carrera.'}</p> : <>
             <p class="peq"><strong>{plan.semanas.length} {plan.semanas.length === 1 ? 'semana' : 'semanas'}</strong>, del {fmtCorta(desde)} a la de la carrera ({fmtConDia(ev.fecha)}){antes ? `, después de las ${antes} que ya lleva` : ''}.</p>
@@ -856,7 +923,7 @@ function HojaRevision({ atleta, revision, d = null, alCerrar }) {
   const [ocupado, una] = useUnaVez();
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   // (v0.223) Lo que dicen los datos de las dos semanas antes de la revisión: eficiencia, cumplimiento y semáforos con dolor
-  const auto = useMemo(() => (d ? revisionAuto({ semanas: d.semanas, hechas: d.hechas, fecha: f.fecha, hoy: hoyISO() }) : null), [d, f.fecha]);
+  const auto = useMemo(() => (d ? revisionAuto({ semanas: d.semanas, hechas: d.hechas, fecha: f.fecha, hoy: hoyISO(), perfil: d.perfil }) : null), [d, f.fecha]);
   return (
     <Hoja titulo={r0.id ? `Revisión del ${fmtCorta(r0.fecha)}` : 'Nueva revisión'} alCerrar={() => alCerrar(false)}>
       <form class="pila" onSubmit={(e) => {
@@ -893,12 +960,13 @@ function HojaRevision({ atleta, revision, d = null, alCerrar }) {
 // ---------------------------------------------------------------- lo que ha hecho (con su FC, dolor y semáforo)
 function HechoCarrera({ d }) {
   const zonas = zonasFC(d.perfil);
+  const manana = (s) => (d.mananas || []).find((m) => m.sesion_id === s.id) || null;
   const lista = (d.hechas || []).slice(0, 12);
   if (!lista.length) return null;
   return (
     <section class="panel panel-pad pila carrera-hecho" aria-labelledby="ch-titulo">
       <h2 id="ch-titulo" class="h-panel">Lo último que ha corrido</h2>
-      <GraficaForma hechas={d.hechas} />
+      <GraficaForma hechas={d.hechas} perfil={d.perfil} />
       <ul class="lista-hecho-carrera">
         {lista.map((s) => {
           const h = s.cardio_hecho;
@@ -908,6 +976,8 @@ function HechoCarrera({ d }) {
               <span class="mini num">{textoCardioHecho(h)}{s.rpe_sesion ? ` · esfuerzo ${num(s.rpe_sesion)}` : ''}</span>
               {textoSaludCardio(h) && <span class={`mini num ${h.dolor >= 4 ? 'aviso-texto' : 'terciario'}`}>{textoSaludCardio(h)}{h.fc_media && zonas ? ` (Z${zonaDe(h.fc_media, zonas)} de media)` : ''}</span>}
               {s.nota_atleta && <span class="mini secundario">«{s.nota_atleta}»</span>}
+              {/* (v0.228, R45) cómo se levantó a la mañana siguiente */}
+              {manana(s) && <span class="mini ch-manana" data-nivel={respuestaManana(manana(s))?.nivel}>A la mañana siguiente: {textoManana(manana(s)).replace(/^./, (x) => x.toLowerCase())}</span>}
             </li>
           );
         })}
@@ -993,7 +1063,8 @@ export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, 
   const ya = new Set(sesiones.filter((x) => x.tipo === 'cardio').map((x) => x.nombre));
   const faltan = items.filter((x) => !ya.has((x.titulo || `Carrera ${NOMBRE_TIPO[x.tipo].toLowerCase()}`).slice(0, 60)));
   // (v0.222) La calidad o la tirada larga pegada a un día de pierna pesada: moverla a un día libre
-  const choques = s && atletaId ? choquesFuerza({ fuerza, carreras: items }) : [];
+  // (v0.228, R27) con «más de 60 o vuelve de una lesión» (su ficha de salud), 48 horas entre la pierna pesada y la calidad
+  const choques = s && atletaId ? choquesFuerza({ fuerza, carreras: items, margen: saludCarrera(carrera.perfil).prudente ? 2 : 1 }) : [];
   const mover = (c) => una(async () => {
     try {
       await api.guardarCarreraSemana(atletaId, { ...s, sesiones: (s.sesiones || []).map((x) => (x === c.carrera ? { ...x, dia: c.propuesta } : x)) });

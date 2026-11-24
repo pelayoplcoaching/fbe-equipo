@@ -165,9 +165,10 @@ function sesionDeBiblioteca(id, extra = {}) {
   const { modalidad, ...pauta } = JSON.parse(JSON.stringify(r.pauta));
   return { ...pauta, titulo: r.nombre.slice(0, 60), ...extra };
 }
-// La de afinado: poca y a ritmo de carrera (5 km en Z5, 10 km en Z4-Z5, media en Z4, maratón en Z3)
-function calidadAfinado(t) {
-  const z = { '5k': [5, 5], '10k': [4, 5], media: [4, 4], maraton: [3, 3] }[t];
+// La de afinado: poca y a ritmo de carrera (5 km en Z5, 10 km en Z4-Z5, media en Z4, maratón en Z3). (v0.228, R44) sinZ5:
+// como mucho Z4 (sin el visto bueno médico)
+function calidadAfinado(t, sinZ5 = false) {
+  const z = { '5k': [5, 5], '10k': [4, 5], media: [4, 4], maraton: [3, 3] }[t].map((x) => (sinZ5 ? Math.min(4, x) : x));
   const seg = { '5k': 120, '10k': 240, media: 480, maraton: 600 }[t];
   const bloque = { fase: 'bloque', reps: 3, seg, zona: z[0], ...(z[1] > z[0] ? { zona_hasta: z[1] } : {}), rec_seg: 120, rec: 'trote suave', nota: 'A ritmo de carrera, sin pasarte' };
   return { tipo: 'calidad', titulo: 'Ritmo de carrera, corto', zona: z[0], ...(z[1] > z[0] ? { zona_hasta: z[1] } : {}),
@@ -195,7 +196,10 @@ const kmCalidad = (s, cal) => (s?.km ? Number(s.km) : s?.minutos ? Math.min(cal,
 //     larga de los 30 días anteriores (ref).
 //   · Las demás, como mucho la marca (ref) y nunca más que la tirada larga.
 //   · La calidad, la de la fase (R17: con soloRectas, las rectas de la base).
-function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase, ref = 0, topeKm = Infinity, prudente = false, soloRectas = false, suave = false }) {
+// (v0.228, R44) La zona más alta de una sesión (la de la sesión o la de sus partes)
+const zonaMax = (s) => Math.max(Number(s?.zona_hasta || s?.zona) || 0, ...(s?.partes || []).map((p) => Number(p.zona_hasta || p.zona) || 0));
+const sinZonaCinco = (ids) => ids.filter((id) => zonaMax(deBiblioteca(id)?.pauta) < 5);
+function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase, ref = 0, topeKm = Infinity, prudente = false, soloRectas = false, suave = false, sinZ5 = false }) {
   const huecos = huecosSemana(dias, nivel, n, prudente);
   const d = huecos.length;
   const conLarga = huecos.some((h) => h.tipo === 'larga');
@@ -208,12 +212,14 @@ function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase, ref = 0, top
   const deseada = suave ? Math.min(kmSemana * pct, marca * 0.75) : Math.max(kmSemana * pct, Math.min(ref, kmSemana * LARGA_PCT_MAX[d]));
   const larga = conLarga ? Math.min(LARGA_MAX[t], deseada, kmSemana * LARGA_PCT_MAX[d], marca * PICO_SALIDA, topeKm) : 0;
   const cal = Math.min(Math.max(5, kmSemana * (d === 2 ? 0.45 : 0.18)), marca);
-  const rota = fase === 'base' ? (soloRectas ? ['rodaje-rectas'] : ROTA.base) : fase === 'construccion' ? ROTA.construccion : fase === 'especifico' ? ROTA[t] : null;
+  let rota = fase === 'base' ? (soloRectas ? ['rodaje-rectas'] : ROTA.base) : fase === 'construccion' ? ROTA.construccion : fase === 'especifico' ? ROTA[t] : null;
+  // (R44) sin el visto bueno médico, nada de Z5: las de la fase sin Z5 o, si no queda ninguna, las de la construcción
+  if (rota && sinZ5) rota = sinZonaCinco(rota).length ? sinZonaCinco(rota) : sinZonaCinco(ROTA.construccion);
   const calidades = [];
   let k = 0;
   for (let i = 0; i < nCal; i++) {
     const id = rota ? rota[(iFase + k++) % rota.length] : null;
-    let s = fase === 'afinado' ? calidadAfinado(t) : id ? sesionDeBiblioteca(id) : null;
+    let s = fase === 'afinado' ? calidadAfinado(t, sinZ5) : id ? sesionDeBiblioteca(id) : null;
     // a unos 6 min/km: si la de la biblioteca pasa mucho de lo que le toca a la calidad esta semana, más corta
     const kmEst = s?.minutos ? s.minutos / 6 : null;
     if (s && kmEst && kmEst > cal * 1.3) s = escalarSesion(s, Math.max(0.5, cal / kmEst));
@@ -300,6 +306,7 @@ export function proponerPlan(datos = {}) {
   const dias = diasDe(datos.dias);
   const prudente = !!datos.prudente;
   const pierna = !!datos.pierna;
+  const sinZ5 = !!datos.sinZ5;
   const kmAhora = Math.max(0, Number(datos.kmAhora) || 0);
   const ritmo = ritmoSuaveDe(datos.ritmoSuave, nivel);
   const lunesCarrera = lunesDe(fecha);
@@ -366,7 +373,7 @@ export function proponerPlan(datos = {}) {
           const previas = hechas.slice(-2).map((x) => x.km);
           objetivo = Math.min(pico, ultima * (1 + sube), (previas.reduce((a, x) => a + x, 0) / previas.length) * 1.3);
         }
-        const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: clave, t, n: nn, iFase: i, ref, topeKm, prudente, suave, soloRectas: (nivel === 'empieza' || prudente) && nn <= 4 });
+        const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: clave, t, n: nn, iFase: i, ref, topeKm, prudente, suave, sinZ5, soloRectas: (nivel === 'empieza' || prudente) && nn <= 4 });
         sesiones = r.sesiones; kmS = r.km;
         hechas.push({ km: r.km, max: r.max, suave });
       } else {
@@ -381,7 +388,7 @@ export function proponerPlan(datos = {}) {
           kmS = r1(sesiones.filter((s) => s.tipo !== 'carrera').reduce((a, s) => a + (Number(s.km) || 0), 0));
           hechas.push({ km: kmS, max: Math.max(0, ...sesiones.filter((s) => s.tipo !== 'carrera').map((s) => Number(s.km) || 0)), suave: true });
         } else {
-          const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: 'afinado', t, n: n + 1, iFase: i, ref, topeKm, prudente });
+          const r = sesionesSemana({ kmSemana: objetivo, dias, nivel, fase: 'afinado', t, n: n + 1, iFase: i, ref, topeKm, prudente, sinZ5 });
           sesiones = r.sesiones; kmS = r.km;
           hechas.push({ km: r.km, max: r.max, suave: true });
         }
@@ -395,7 +402,9 @@ export function proponerPlan(datos = {}) {
   }
   const nec = semanasNecesarias({ km, largaAhora: datos.largaAhora, kmAhora, dias, nivel, prudente, ritmoSuave: datos.ritmoSuave });
   const viable = viabilidad({ t, total, nec, semanas, km, dias });
-  return { inicio, total, fases, semanas, avisos, viable, tramo: t, nivel, dias, km, fecha, prudente, pierna };
+  // (R44) Sin el visto bueno médico: el plan va sin Z5, y la carrera, pendiente de ese visto bueno
+  if (sinZ5) avisos.unshift('Sin el visto bueno médico: el plan va sin Z5 ni test, y la carrera queda pendiente de ese visto bueno.');
+  return { inicio, total, fases, semanas, avisos, viable, tramo: t, nivel, dias, km, fecha, prudente, pierna, sinZ5 };
 }
 
 // (R43) ¿Llega a la carrera? Con las semanas que hacen falta (semanasNecesarias) y, en maratón, 30 km por semana o más de
@@ -429,12 +438,15 @@ export function planValido(plan) {
 // lo nuevo) para guardarlo en el perfil. conVuelta: empieza con la vuelta a correr tras una molestia.
 export function rehacerDesde(perfil, datos = {}) {
   const desde = lunesDe(datos.desde || datos.hoy);
+  // (v0.228, R20) conVuelta: true o 'tendon' (tendón, músculo o rodilla), 'hueso' (de bajo riesgo) o 'hueso-alto'
+  const tipoVuelta = datos.conVuelta === true ? 'tendon' : datos.conVuelta || null;
+  if (tipoVuelta === 'hueso-alto') return { plan: { error: 'En una fractura por estrés de alto riesgo (cuello del fémur, cara anterior de la tibia, escafoides del pie o base del 5.º metatarsiano), la vuelta a correr la pauta su médico.' } };
   const plan = proponerPlan({ ...datos, inicio: desde });
   if (plan.error) return { plan };
   let semanas = plan.semanas;
   let fasesNuevas = plan.fases;
-  if (datos.conVuelta) {
-    const v = vueltaACorrer({ dias: plan.dias, desde });
+  if (tipoVuelta) {
+    const v = vueltaACorrer({ dias: plan.dias, desde, tipo: tipoVuelta });
     const nv = v.length;
     if (nv < plan.total - 1) {
       // Las de la vuelta sustituyen a las primeras; el resto del plan sigue con km desde la mitad de lo que hacía
@@ -442,7 +454,7 @@ export function rehacerDesde(perfil, datos = {}) {
       const resto = proponerPlan({ ...datos, inicio: sumarDias(desde, 7 * nv), kmAhora: Math.max(plan.dias * 3, (Number(datos.kmAhora) || 0) / 2), largaAhora: 5, sinEmpezar: true });
       if (!resto.error) {
         semanas = [...v, ...resto.semanas];
-        fasesNuevas = [{ nombre: 'Vuelta a correr', semanas: nv, nota: 'De andar a correr, sin dolor (3/10 como mucho)' }, ...resto.fases];
+        fasesNuevas = [{ nombre: 'Vuelta a correr', semanas: nv, nota: tipoVuelta === 'hueso' ? 'De andar a correr, sin ningún dolor' : 'De andar a correr, sin dolor (3/10 como mucho)' }, ...resto.fases];
       }
     }
   }
@@ -471,15 +483,34 @@ export const PASOS_VUELTA = [
   { titulo: 'Correr 5 y andar 1, × 5', tipo: 'facil', minutos: 30, partes: [{ fase: 'bloque', reps: 5, seg: 300, zona: 2, rec_seg: 60, rec: 'andando' }], nota: 'Dolor de 3/10 como mucho y sin empeorar a la mañana siguiente.' },
   { titulo: '20-30 min seguidos', tipo: 'facil', minutos: 20, minutos_max: 30, zona: 2, nota: 'Suave y seguido. Si todo va bien, a partir de aquí sigue el plan.' },
 ];
-export function vueltaACorrer({ dias = 3, desde }) {
-  const d = Math.max(2, Math.min(6, Number(dias) || 3));
+// (v0.228, R20) Tras una lesión de hueso de bajo riesgo (cara posteromedial de la tibia, metatarsianos centrales, peroné):
+// empieza tras 5 días seguidos sin dolor en la vida diaria y con el visto bueno médico; correr y andar en días alternos y
+// sin dolor (0/10) durante, después ni al día siguiente; primero el volumen y después el ritmo (Warden 2021)
+const SIN_DOLOR = 'Sin dolor (0/10) durante, después ni al día siguiente; si duele, un paso atrás.';
+export const PASOS_VUELTA_HUESO = [
+  { titulo: 'Andar 30 min sin dolor', tipo: 'recuperacion', minutos: 30, nota: 'Tras 5 días seguidos sin dolor en la vida diaria y con el visto bueno de su médico. Sin dolor durante, después ni al día siguiente.' },
+  { titulo: 'Correr 1 y andar 1, × 10', tipo: 'facil', minutos: 20, partes: [{ fase: 'bloque', reps: 10, seg: 60, zona: 1, zona_hasta: 2, rec_seg: 60, rec: 'andando' }], nota: SIN_DOLOR },
+  { titulo: 'Correr 2 y andar 1, × 8', tipo: 'facil', minutos: 24, partes: [{ fase: 'bloque', reps: 8, seg: 120, zona: 1, zona_hasta: 2, rec_seg: 60, rec: 'andando' }], nota: SIN_DOLOR },
+  { titulo: 'Correr 5 y andar 1, × 5', tipo: 'facil', minutos: 30, partes: [{ fase: 'bloque', reps: 5, seg: 300, zona: 2, rec_seg: 60, rec: 'andando' }], nota: SIN_DOLOR },
+  { titulo: '20-30 min seguidos', tipo: 'facil', minutos: 20, minutos_max: 30, zona: 2, nota: 'Sin dolor y suave: primero más tiempo; el ritmo, después.' },
+];
+// Los tipos de lesión para la vuelta (R20): tendón, músculo o rodilla (con dolor controlado, 3/10 como mucho); hueso de
+// bajo riesgo (sin dolor); hueso de alto riesgo (cuello del fémur, cara anterior de la tibia, escafoides del pie o base del
+// 5.º metatarsiano): la app no propone la vuelta, la pauta su médico
+export const TIPOS_VUELTA = [['tendon', 'Tendón, músculo o rodilla'], ['hueso', 'Hueso, de bajo riesgo'], ['hueso-alto', 'Hueso, de alto riesgo']];
+export const AVISO_HUESO = 'Tras una fractura por estrés, conviene revisar la energía que come, la menstruación en las mujeres, la vitamina D y, con más de 60 años, la salud del hueso.';
+export function vueltaACorrer({ dias = 3, desde, tipo = 'tendon' }) {
+  const hueso = tipo === 'hueso';
+  // (en hueso, en días alternos: 2 o 3 a la semana)
+  const d = Math.max(2, Math.min(hueso ? 3 : 6, Number(dias) || 3));
   const porPaso = d >= 4 ? 3 : 2;
-  const lista = PASOS_VUELTA.flatMap((p) => Array.from({ length: porPaso }, () => ({ ...JSON.parse(JSON.stringify(p)) })));
+  const lista = (hueso ? PASOS_VUELTA_HUESO : PASOS_VUELTA).flatMap((p) => Array.from({ length: porPaso }, () => ({ ...JSON.parse(JSON.stringify(p)) })));
   const dias7 = huecosSemana(d, 'intermedio', 1).map((h) => h.dia);
   const semanas = [];
   for (let i = 0; i < lista.length; i += d) {
     const lunes = sumarDias(lunesDe(desde), 7 * semanas.length);
-    semanas.push({ lunes, etiqueta: 'Vuelta a correr', km_min: null, km_max: null, clave: 'De menos a más y sin dolor: si molesta más de 3/10, un paso atrás.',
+    semanas.push({ lunes, etiqueta: 'Vuelta a correr', km_min: null, km_max: null,
+      clave: hueso ? 'Sin dolor: ni durante, ni después ni al día siguiente. Si duele, un paso atrás.' : 'De menos a más y sin dolor: si molesta más de 3/10, un paso atrás.',
       sesiones: lista.slice(i, i + d).map((s, j) => ({ ...s, dia: dias7[j] })), fase: 'Vuelta a correr' });
   }
   return semanas;
