@@ -111,6 +111,26 @@ const prensa6 = (await q(`select p.carga_sugerida_kg kg, p.series from sesion_ej
 check(w6?.numero === 2 && w6.bloque_id === nuevo.id && Number(prensa6?.kg) <= 87.5 + 0.01, `300 kg en la prensa se sale de los topes: se queda lo de la semana anterior (${prensa6?.kg} kg)`);
 check((await q('select fecha_fin from bloques where id = $1', [nuevo.id]))[0].fecha_fin === sumarDias(lunesDe(hoy), 13), 'el bloque crece una semana');
 
+console.log('\nLa plancha: hasta 60 s y, con peso, 5 kg más como mucho sobre lo que ha hecho');
+const planchaDe = (semana) => q(`select s.orden sesion, p.reps_min, p.reps_max, p.carga_sugerida_kg kg from sesion_ejercicios p join sesiones s on s.id = p.sesion_id
+  join ejercicios e on e.id = p.ejercicio_id where s.semana_id = $1 and e.nombre = 'Plancha abdominal' order by s.orden`, [semana]);
+const idPl = ids['Plancha abdominal'];
+const pl6a = await planchaDe(mucho);
+check(pl6a.length === 2 && pl6a.every((x) => x.reps_min === 40 && x.reps_max === 50 && x.kg == null), 'sin nada de la app para la plancha, la del molde (40-50 s, sin peso)');
+// (otra vez la semana 6, ahora con la plancha: se borra la de antes)
+const otraSemana6 = async (pautasPlancha) => {
+  await db.exec('reset role;');
+  await db.query('delete from semanas where bloque_id = $1 and numero = 2', [nuevo.id]);
+  await b.auth.entrar('elena@test', 'clave-elena@test');
+  const id = await b.rpc('esencial_semana_siguiente', { p: { base: w5.id, inicio: sumarDias(lunesDe(hoy), 7), sesiones: pautasPlancha.map((x, i) => ({ orden: i + 1, pautas: [{ ejercicio_id: idPl, orden: 5, series: 2, ...x }] })) } });
+  return planchaDe(id);
+};
+const pl6b = await otraSemana6([{ reps_min: 35, reps_max: 45, carga_sugerida_kg: 5 }, { reps_min: 35, reps_max: 45, carga_sugerida_kg: 6 }]);
+check(Number(pl6b[0]?.kg) === 5 && pl6b[0].reps_min === 35 && pl6b[0].reps_max === 45, 'con 5 kg y 35-45 s (su primer peso), sí');
+check(pl6b[1]?.kg == null && pl6b[1].reps_max === 50, 'con 6 kg (más de 5 sobre lo que ha hecho, que fue sin peso), no: la del molde');
+const pl6c = await otraSemana6([{ reps_min: 50, reps_max: 60 }, { reps_min: 51, reps_max: 61 }]);
+check(pl6c[0]?.reps_max === 60 && pl6c[1]?.reps_max === 50 && pl6c[1].reps_min === 40, 'hasta 60 s, sí; 61, no (la del molde)');
+
 console.log('\nSolo la suya');
 const rosa = await entrar('rosa@test', otra.codigo);
 check(/no es tuya|42501/.test((await falla(() => b.rpc('esencial_semana_siguiente', { p: { base: w5.id, inicio: sumarDias(lunesDe(hoy), 14), sesiones: [] } })))?.message || ''), 'Rosa no prepara la semana de Elena');

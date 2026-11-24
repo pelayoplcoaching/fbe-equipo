@@ -10,6 +10,7 @@
 --     ejercicios de su molde (la semana que acaba de hacer o, tras «Primeras 4 semanas», la plantilla de novato en un
 --     bloque nuevo) y, de lo que manda la app, solo lo que cambia el motor (series, repeticiones, esfuerzo, kilos y el
 --     detalle por serie), dentro de unos topes. El resto (ejercicio, orden, prioridad, descanso, notas) sale del molde.
+--     La plancha va en segundos (hasta 60) y, pasados los 50, con peso: 5 kg más como mucho sobre lo que ha hecho.
 --     Solo el propio atleta (o el coach), solo si va por su cuenta, solo una por semana: si ya está, devuelve esa.
 --   Para quien lleva seguimiento no cambia nada.
 --
@@ -170,7 +171,8 @@ begin
       v_kg := q.carga_sugerida_kg; v_bo := q.backoff_pct; v_det := q.series_detalle;
       if v_jp is not null then
         v_tiempo := q.tiempo;
-        -- Lo más que se puede proponer en kilos: lo más que ha movido en ese ejercicio en sus dos últimas semanas, +10 % y un salto
+        -- Lo más que se puede proponer en kilos: lo más que ha movido en ese ejercicio en sus dos últimas semanas, +10 % y un
+        -- salto; en la plancha (por tiempo, hasta 60 s), 5 kg más como mucho (el primer peso o un salto de 2,5)
         select max(sr.kg) into v_tope from public.series sr join public.sesion_ejercicios x on x.id = sr.sesion_ejercicio_id
           join public.sesiones ss on ss.id = x.sesion_id join public.semanas ww on ww.id = ss.semana_id join public.bloques bb on bb.id = ww.bloque_id
           where bb.atleta_id = v_id and ww.fecha_inicio >= v_base.fecha_inicio - 7 and coalesce(sr.sustituto_id, x.ejercicio_id) = q.ejercicio_id;
@@ -186,13 +188,14 @@ begin
         end if;
         v_kg := (v_jp ->> 'carga_sugerida_kg')::numeric;
         if v_series not between 1 and 6
-           or (v_rmin is not null and v_rmin not between 1 and case when v_tiempo then 180 else 60 end)
-           or (v_rmax is not null and v_rmax not between 1 and case when v_tiempo then 180 else 60 end)
+           or (v_rmin is not null and v_rmin not between 1 and 60)
+           or (v_rmax is not null and v_rmax not between 1 and 60)
            or (v_rmin is not null and v_rmax is not null and v_rmin > v_rmax)
            or (v_rir is not null and v_rir not between 0 and 5)
            or (v_rpe is not null and v_rpe not between 5 and 10)
            or (v_bo is not null and v_bo not between 0 and 50)
-           or (v_kg is not null and (v_kg < 0 or v_tiempo or v_tope is null or v_kg > v_tope * 1.1 + 2.5))
+           or (v_kg is not null and (v_kg < 0 or (v_tiempo and v_kg > coalesce(v_tope, 0) + 5)
+                                     or (not v_tiempo and (v_tope is null or v_kg > v_tope * 1.1 + 2.5))))
            or not public.series_detalle_valido(v_det, v_series) or (v_det is not null and v_bo is not null)
            or exists (select 1 from jsonb_array_elements(coalesce(v_det, '[]'::jsonb)) d
                       where jsonb_typeof(d -> 'kg') = 'number' and (v_tope is null or (d ->> 'kg')::numeric > v_tope * 1.1 + 2.5)) then

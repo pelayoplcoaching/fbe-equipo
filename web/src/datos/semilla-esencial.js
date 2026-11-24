@@ -100,11 +100,13 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
   const semana = { id: uuid(), bloque_id: bloqueId, numero, foco, fecha_inicio: inicio, nota_coach: nota, programacion: 'programada', marcas: false };
   t('semanas').push(semana);
   // Lo más que puede proponer en kilos: lo más que ha movido en ese ejercicio en sus dos últimas semanas, +10 % y un salto
+  // (en la plancha, que va por tiempo y hasta 60 s, 5 kg más como mucho)
   const semanasRecientes = new Set(t('semanas').filter((w) => suyos.has(w.bloque_id) && w.fecha_inicio >= sumarDias(base.fecha_inicio, -7)).map((w) => w.id));
   const pautaDe = Object.fromEntries(t('sesion_ejercicios').map((x) => [x.id, x]));
   const sesionDe = Object.fromEntries(t('sesiones').map((x) => [x.id, x]));
   const tope = (ejercicioId) => {
-    const kgs = t('series').filter((sr) => { const x = pautaDe[sr.sesion_ejercicio_id]; return x && semanasRecientes.has(sesionDe[x.sesion_id]?.semana_id) && (sr.sustituto_id || x.ejercicio_id) === ejercicioId && Number(sr.kg) > 0; }).map((sr) => Number(sr.kg));
+    // (como max(kg) en la base: cuenta también una serie con 0 kg; las que no llevan kilos, no)
+    const kgs = t('series').filter((sr) => { const x = pautaDe[sr.sesion_ejercicio_id]; return x && semanasRecientes.has(sesionDe[x.sesion_id]?.semana_id) && (sr.sustituto_id || x.ejercicio_id) === ejercicioId && sr.kg != null && sr.kg !== '' && Number.isFinite(Number(sr.kg)); }).map((sr) => Number(sr.kg));
     return kgs.length ? Math.max(...kgs) : null;
   };
   const porTiempo = (id) => !!t('ejercicios').find((e) => e.id === id)?.por_tiempo;
@@ -121,12 +123,12 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
         if (!p.novato) for (const c of CAMPOS_MOTOR) v[c] = jp[c] ?? null;
         if (v.series == null) v.series = q.series;
         v.carga_sugerida_kg = jp.carga_sugerida_kg ?? null;
-        const tiempo = porTiempo(q.ejercicio_id), max = tiempo ? 180 : 60, tp = tope(q.ejercicio_id);
+        const tiempo = porTiempo(q.ejercicio_id), max = 60, tp = tope(q.ejercicio_id);
         const det = Array.isArray(v.series_detalle) && v.series_detalle.length ? v.series_detalle : null;
         const mal = !(v.series >= 1 && v.series <= 6) || (v.reps_min != null && !(v.reps_min >= 1 && v.reps_min <= max)) || (v.reps_max != null && !(v.reps_max >= 1 && v.reps_max <= max))
           || (v.reps_min != null && v.reps_max != null && v.reps_min > v.reps_max) || (v.rir_objetivo != null && !(v.rir_objetivo >= 0 && v.rir_objetivo <= 5))
           || (v.rpe_objetivo != null && !(v.rpe_objetivo >= 5 && v.rpe_objetivo <= 10)) || (v.backoff_pct != null && !(v.backoff_pct >= 0 && v.backoff_pct <= 50))
-          || (v.carga_sugerida_kg != null && (v.carga_sugerida_kg < 0 || tiempo || tp == null || v.carga_sugerida_kg > tp * 1.1 + 2.5))
+          || (v.carga_sugerida_kg != null && (v.carga_sugerida_kg < 0 || (tiempo && v.carga_sugerida_kg > (tp ?? 0) + 5) || (!tiempo && (tp == null || v.carga_sugerida_kg > tp * 1.1 + 2.5))))
           || (det && (det.length !== v.series || v.backoff_pct != null || det.some((x) => x?.kg != null && (tp == null || x.kg > tp * 1.1 + 2.5))));
         if (!mal) Object.assign(nueva, v, { series_detalle: det });
       }

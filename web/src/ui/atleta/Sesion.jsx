@@ -1013,6 +1013,8 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
   const sobran = esPorSuCuenta(atleta);
   const porTiempo = !!(actual ? actual.por_tiempo : e.ejercicio?.por_tiempo);
   const pa = pauta({ ...e, por_tiempo: porTiempo }, { sobran });
+  // (FBE Esencial) la plancha, pasados los 50 s, sube con peso: cómo ponérselo (o la versión difícil, apuntando 0 kg)
+  const planchaConPeso = sobran && porTiempo && !actual && Number(e.carga_sugerida_kg) > 0;
   const n = Object.keys(hechas).length;
   // (las series añadidas las lleva la sesión, guardadas en el móvil: no se pierden al plegar la tarjeta ni al recargar)
   // Las series añadidas suman a las pautadas; marcar una añadida no abre otra fila vacía detrás
@@ -1167,9 +1169,10 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
           {coach?.lista?.length > 0 && <LoQueTeDijo coach={coach} nombre={ej.nombre} />}
-          {(e.notas_coach || e.prioridad === 'muy_baja') && (
+          {(e.notas_coach || e.prioridad === 'muy_baja' || planchaConPeso) && (
             <div class="ejercicio-extra">
               {e.notas_coach && <p><strong>Nota: </strong><TextoConEnlaces texto={e.notas_coach} como="span" /></p>}
+              {planchaConPeso && <p><strong>Con peso: </strong>un disco en la parte alta de la espalda (que te lo coloque alguien) o un chaleco con lastre. Si no puedes, hazla más difícil, con los codos más adelantados o un pie en el aire, y apunta 0 kg.</p>}
               {e.prioridad === 'muy_baja' && <p>Si vas justo de tiempo, este es el que puedes saltarte.</p>}
             </div>
           )}
