@@ -3,7 +3,7 @@
 // las sesiones del plan de la semana que se edita.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, ErrorCaja, Hoja, Vacio, Siluetas, Segmentos } from '../comunes.jsx';
-import { TablaZonas, Macrociclo } from '../CarreraComun.jsx';
+import { TablaZonas, Macrociclo, GraficaForma } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias, diasEntre } from '../../logica/fechas.js';
 import { num, leerNumero } from '../../logica/calculos.js';
 import { textoCardio, textoCardioHecho, textoSaludCardio } from '../../logica/cardio.js';
@@ -16,6 +16,7 @@ import {
 import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
 import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN } from '../../logica/carrera-plan.js';
 import { avisosCarrera, ajusteSiguiente, aplicarPropuesta, choquesFuerza } from '../../logica/carrera-avisos.js';
+import { revisionAuto, NOMBRE_COLOR } from '../../logica/carrera-seguimiento.js';
 
 const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [7, 'Domingo']];
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
@@ -40,7 +41,7 @@ export function CarreraFicha({ atleta }) {
       <PlanCoach atleta={atleta} perfil={d.perfil} d={d} alGuardar={recargar} />
       <SemanasCoach atleta={atleta} d={d} alGuardar={recargar} />
       <CarrerasCoach atleta={atleta} eventos={d.eventos} alGuardar={recargar} />
-      <RevisionesCoach atleta={atleta} revisiones={d.revisiones} alGuardar={recargar} />
+      <RevisionesCoach atleta={atleta} revisiones={d.revisiones} d={d} alGuardar={recargar} />
       <HechoCarrera d={d} />
       <BibliotecaCarrera />
     </div>
@@ -296,10 +297,10 @@ export function CorredoresPanel({ abrir }) {
       <ul class="corr-lista">
         {lista.map((c) => (
           <li key={c.atleta.id}>
-            <button type="button" class="corr-fila" data-nivel={c.nivel} onClick={() => abrir(c.atleta.id, 'carrera')} aria-label={`${c.atleta.nombre}: abrir su carrera`}>
+            <button type="button" class="corr-fila" data-nivel={c.nivel} onClick={() => abrir(c.atleta.id, 'carrera')}>
               <span class="corr-nombre peq">{c.atleta.nombre}</span>
               <span class="mini num corr-km">{num(c.km, c.km % 1 ? 1 : 0)} km{c.plan && textoKm(c.plan.km_min, c.plan.km_max) ? ` de ${textoKm(c.plan.km_min, c.plan.km_max)}` : ''}</span>
-              <span class="corr-sem" aria-label={`Semáforos: ${c.semaforos.verde} en verde, ${c.semaforos.ambar} en ámbar, ${c.semaforos.rojo} en rojo`}>
+              <span class="corr-sem" role="img" aria-label={`Semáforos de esta semana: ${c.semaforos.verde} en verde, ${c.semaforos.ambar} en ámbar, ${c.semaforos.rojo} en rojo`}>
                 {['verde', 'ambar', 'rojo'].flatMap((k) => Array.from({ length: c.semaforos[k] }, (_, i) => <i key={`${k}${i}`} data-s={k} />))}
               </span>
               <span class="mini terciario corr-prox">{c.proxima ? `${c.proxima.nombre}: ${textoCuentaAtras(c.proxima.fecha, hoyISO()).toLowerCase()}` : 'Sin carrera a la vista'}</span>
@@ -765,7 +766,7 @@ function Prevision({ eventos, salvo, km, alUsar }) {
 }
 
 // ---------------------------------------------------------------- las revisiones
-function RevisionesCoach({ atleta, revisiones, alGuardar }) {
+function RevisionesCoach({ atleta, revisiones, d = null, alGuardar }) {
   const [editar, setEditar] = useState(null);
   const hoy = hoyISO();
   return (
@@ -791,18 +792,20 @@ function RevisionesCoach({ atleta, revisiones, alGuardar }) {
           ))}
         </ul>
       )}
-      {editar && <HojaRevision atleta={atleta} revision={editar} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
+      {editar && <HojaRevision atleta={atleta} revision={editar} d={d} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
     </section>
   );
 }
 
-function HojaRevision({ atleta, revision, alCerrar }) {
+function HojaRevision({ atleta, revision, d = null, alCerrar }) {
   const { api, aviso } = useApp();
   const r0 = revision || {};
   const [f, setF] = useState({ fecha: r0.fecha || hoyISO(), titulo: r0.titulo || '', criterio: r0.criterio || '', decision: r0.decision || '', estado: r0.estado || 'pendiente' });
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
+  // (v0.223) Lo que dicen los datos de las dos semanas antes de la revisión: eficiencia, cumplimiento y semáforos con dolor
+  const auto = useMemo(() => (d ? revisionAuto({ semanas: d.semanas, hechas: d.hechas, fecha: f.fecha, hoy: hoyISO() }) : null), [d, f.fecha]);
   return (
     <Hoja titulo={r0.id ? `Revisión del ${fmtCorta(r0.fecha)}` : 'Nueva revisión'} alCerrar={() => alCerrar(false)}>
       <form class="pila" onSubmit={(e) => {
@@ -815,6 +818,16 @@ function HojaRevision({ atleta, revision, alCerrar }) {
           <label class="campo"><span class="etq">Qué se revisa</span><input class="entrada" required maxLength={80} placeholder="Tolerancia a la primera calidad" value={f.titulo} onInput={cambiar('titulo')} /></label>
         </div>
         <label class="campo"><span class="etq">Criterio para seguir en verde</span><input class="entrada" maxLength={300} placeholder="Sin dolor al día siguiente y la fuerza estable" value={f.criterio} onInput={cambiar('criterio')} /></label>
+        {auto && (
+          <section class="rev-auto panel-sub pila-xs" aria-label="Lo que dicen los datos">
+            <span class="peq"><strong>Lo que dicen los datos</strong> <span class="mini terciario">(del {fmtCorta(auto.desde)} al {fmtCorta(auto.hasta)})</span></span>
+            <ul class="rev-auto-lista">
+              {auto.partes.map((x) => <li key={x.k} data-color={x.color}><i aria-hidden="true" /><span class="mini"><strong>{x.titulo}:</strong> {x.texto} ({NOMBRE_COLOR[x.color]})</span></li>)}
+            </ul>
+            <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => setF({ ...f, estado: auto.estado, decision: f.decision.trim() ? f.decision : auto.texto.slice(0, 500) })}>
+              Usar esto: {NOMBRE_COLOR[auto.estado]}{f.decision.trim() ? '' : ' y el texto'}</button>
+          </section>
+        )}
         <div class="campo"><span class="etq">Cómo salió</span><Segmentos etiqueta="Cómo salió" valor={f.estado} opciones={ESTADOS_REVISION} alCambiar={(x) => x && setF({ ...f, estado: x })} /></div>
         <label class="campo"><span class="etq">Decisión</span><textarea class="area" maxLength={500} placeholder="Se mantiene el plan / se quita una sesión de calidad…" value={f.decision} onInput={cambiar('decision')} /></label>
         <div class="fila-envolver">
@@ -834,6 +847,7 @@ function HechoCarrera({ d }) {
   return (
     <section class="panel panel-pad pila carrera-hecho" aria-labelledby="ch-titulo">
       <h2 id="ch-titulo" class="h-panel">Lo último que ha corrido</h2>
+      <GraficaForma hechas={d.hechas} />
       <ul class="lista-hecho-carrera">
         {lista.map((s) => {
           const h = s.cardio_hecho;

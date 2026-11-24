@@ -1,6 +1,7 @@
 // Lo de carrera que ven el coach y el atleta (v0.133): la tabla de zonas, la barra del macrociclo y las partes de una sesión
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE } from '../logica/carrera.js';
+import { serieEficiencia } from '../logica/carrera-seguimiento.js';
 
 // (v0.219) Con ritmo umbral, una columna con el ritmo de cada zona; sin pulsómetro (zonas de ritmo), sin la de FC
 export function TablaZonas({ zonas, umbral = null }) {
@@ -71,3 +72,32 @@ export function ListaPartes({ partes = [], zonas = null, ambar = false }) {
     </ol>
   );
 }
+
+// (v0.223) Su forma aeróbica: los metros que avanza con cada latido en los rodajes suaves con pulso (la media de 4 en 4).
+// Si sube, corre más rápido con el mismo pulso. tu: el texto para el atleta (tú) o para el coach.
+export function GraficaForma({ hechas = [], tu = false }) {
+  const serie = serieEficiencia(hechas);
+  if (serie.length < 3) return null;
+  const W = 320, H = 110, PX = 6, PY = 10;
+  const vals = serie.map((x) => x.media);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const rango = Math.max(0.04, hi - lo);
+  const x = (i) => PX + (i * (W - 2 * PX)) / Math.max(1, serie.length - 1);
+  const y = (v) => H - PY - ((v - (lo - rango * 0.15)) * (H - 2 * PY)) / (rango * 1.3);
+  const puntos = serie.map((p, i) => `${x(i).toFixed(1)},${y(p.media).toFixed(1)}`).join(' ');
+  const ini = serie[0].media, fin = serie[serie.length - 1].media;
+  const cambio = Math.round((fin / ini - 1) * 1000) / 10;
+  const f = (v) => v.toFixed(2).replace('.', ',');
+  const que = cambio >= 2 ? (tu ? 'corres más rápido con el mismo pulso' : 'corre más rápido con el mismo pulso') : cambio <= -3 ? (tu ? 'te cuesta algo más que antes' : 'le cuesta algo más que antes') : 'se mantiene';
+  return (
+    <figure class="forma-aerobica pila-xs">
+      <svg class="forma-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
+        aria-label={`Metros por latido en ${tu ? 'tus' : 'sus'} rodajes suaves: de ${f(ini)} a ${f(fin)} en ${serie.length} salidas (${cambio > 0 ? '+' : cambio < 0 ? '\u2212' : ''}${String(Math.abs(cambio)).replace('.', ',')} %)`}>
+        <polyline class="forma-linea" points={puntos} />
+        {serie.map((p, i) => <circle key={i} class="forma-punto" cx={x(i).toFixed(1)} cy={y(p.ef).toFixed(1)} r="2.5" />)}
+      </svg>
+      <figcaption class="mini secundario">De {f(ini)} a {f(fin)} metros por latido ({cambio > 0 ? '+' : cambio < 0 ? '\u2212' : ''}{String(Math.abs(cambio)).replace('.', ',')} %): {que}. Cuenta {tu ? 'tus' : 'sus'} rodajes suaves con pulso; si sube, {tu ? 'vas' : 'va'} más rápido con las mismas pulsaciones.</figcaption>
+    </figure>
+  );
+}
+

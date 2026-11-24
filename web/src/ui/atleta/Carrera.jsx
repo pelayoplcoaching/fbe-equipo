@@ -1,13 +1,17 @@
 // La carrera del atleta (v0.133, migración 056): la sesión de carrera por partes con sus zonas y el semáforo antes de
 // entrenar; en Hoy, su carrera con la cuenta atrás; y «Tu carrera»: zonas, carreras, plan por semanas y revisiones.
 import { useMemo, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, IcoIos } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Siluetas, ErrorCaja, IcoIos, descargar as descargarArchivo } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
-import { TablaZonas, Macrociclo, ListaPartes } from '../CarreraComun.jsx';
+import { TablaZonas, Macrociclo, ListaPartes, GraficaForma } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { textoCardio } from '../../logica/cardio.js';
 import { porqueDe } from '../../logica/carrera-biblioteca.js';
+import { eventosCalendarioCarrera, serieEficiencia } from '../../logica/carrera-seguimiento.js';
+import { tramosGuiados } from '../../logica/carrera-guiada.js';
+import { GuiaCarrera } from './GuiaCarrera.jsx';
+import { calendarioICS } from '../../logica/plan.js';
 import {
   zonasDe, textoZona, textoRitmo, NOMBRE_TIPO, NOMBRE_TEST, SEMAFORO, ALARMA, pautaAmbar, minutosPauta, semanasConPlan, semanaDelPlan, faseDe,
   macrociclo, carreraObjetivo, proximaCarrera, textoCuentaAtras, textoObjetivoCarrera, textoResultado, textoKm, carreraHechaPorSemana, estadoKm,
@@ -49,6 +53,9 @@ export function DetalleCarreraSesion({ pauta, sesionId, completada = false, hech
   const [semaforo, setSemaforo] = useState(() => (hecho?.semaforo || leerSemaforo(sesionId)));
   const ambar = semaforo === 'ambar';
   const elegir = (v) => { const n = v === semaforo ? null : v; setSemaforo(n); guardarSemaforo(sesionId, n); };
+  // (v0.224) el modo guiado: tramo a tramo, con la voz y el cronómetro (no en ámbar: hoy va suave y sin series)
+  const [guia, setGuia] = useState(false);
+  const guiable = !completada && !ambar && tramosGuiados(pauta).length > 1;
   return (
     <div class="detalle-carrera pila-s">
       <div class="fila-envolver">
@@ -60,6 +67,8 @@ export function DetalleCarreraSesion({ pauta, sesionId, completada = false, hech
       {porque && <p class="peq secundario carrera-porque">{porque}</p>}
       {pauta.ritmo && <p class="peq num">Ritmo: {textoRitmo(pauta.ritmo)}</p>}
       <ListaPartes partes={pauta.partes || []} zonas={zonas} ambar={ambar && !completada} />
+      {guiable && <button type="button" class="btn btn-peq gser-abrir" onClick={() => setGuia(true)} aria-haspopup="dialog"><Icono n="intervalos" /> Guiarme por las partes</button>}
+      {guia && <GuiaCarrera pauta={pauta} titulo={NOMBRE_TIPO[pauta.tipo] ? `${NOMBRE_TIPO[pauta.tipo]}${pauta.zona ? ` · ${textoZona(pauta.zona, pauta.zona_hasta, null)}` : ''}` : 'Tu sesión'} alCerrar={() => setGuia(false)} />}
       {!completada && !hecho && (
         <div class="semaforo-carrera pila-s" role="group" aria-labelledby={`sem-${sesionId}`}>
           <span class="peq" id={`sem-${sesionId}`}><strong>Antes de salir: ¿cómo llegas hoy?</strong></span>
@@ -132,6 +141,9 @@ function ContenidoCarrera({ d }) {
   const base = obj?.distancia_km ? ultimaConResultado(d.eventos, obj.id) : null;
   const previsto = base ? predecirTiempo(base.resultado_seg, base.distancia_km, obj.distancia_km) : null;
   const prevision = previsto ? { base, p: previsto } : null;
+  // (v0.223) Sus carreras y las sesiones clave de su plan, al calendario del móvil (con aviso la víspera de cada carrera)
+  const aCalendario = eventosCalendarioCarrera({ eventos: d.eventos, semanas: d.semanas, hoy });
+  const alCalendario = () => descargarArchivo('mi-carrera.ics', calendarioICS(aCalendario, { nombre: 'Mi carrera (FBE)' }), 'text/calendar;charset=utf-8');
   return (
     <div class="pila tu-carrera">
       {obj && (
@@ -164,6 +176,11 @@ function ContenidoCarrera({ d }) {
       {d.eventos.length > 0 && (
         <section class="panel panel-pad pila-s" aria-labelledby="tc-carreras">
           <h3 id="tc-carreras" class="h-panel"><Imagen id="carrera-dorsal" clase="ico-ilu" tamanos="44px" />Tus carreras</h3>
+          {aCalendario.length > 0 && (
+            <button type="button" class="btn btn-peq tc-calendario" onClick={alCalendario}>
+              <Icono n="calendario" /> Al calendario del móvil
+            </button>
+          )}
           <ul class="lista-eventos">
             {d.eventos.map((e) => (
               <li key={e.id} class={`evento-carrera${e.fecha < hoy ? ' pasada' : ''}`} data-decision={e.decision}>
@@ -192,6 +209,13 @@ function ContenidoCarrera({ d }) {
         <section class="panel panel-pad pila-s" aria-labelledby="tc-km">
           <h3 id="tc-km" class="h-panel">Tus kilómetros</h3>
           <KmSemanas semanas={semanas.filter((s) => s.lunes <= lunesHoy)} hecho={hecho} />
+        </section>
+      )}
+
+      {serieEficiencia(d.hechas || []).length >= 3 && (
+        <section class="panel panel-pad pila-s" aria-labelledby="tc-forma">
+          <h3 id="tc-forma" class="h-panel">Tu forma aeróbica</h3>
+          <GraficaForma hechas={d.hechas} tu />
         </section>
       )}
 

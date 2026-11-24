@@ -6,6 +6,20 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.224': {
+    atleta: [
+      'En tus sesiones de series, «Guiarme por las partes»: un cronómetro que te va diciendo cada tramo, también en voz alta.',
+    ],
+    coach: [],
+  },
+  '0.223': {
+    atleta: [
+      'En «Tu carrera»: tu forma aeróbica (si con el mismo pulso vas más rápido) y tus carreras al calendario del móvil.',
+    ],
+    coach: [
+      'Carrera: las revisiones se rellenan solas con los datos de las dos semanas, y la gráfica de su forma aeróbica.',
+    ],
+  },
   '0.222': {
     atleta: [],
     coach: [

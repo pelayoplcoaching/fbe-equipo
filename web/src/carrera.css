@@ -258,3 +258,44 @@
 .corr-avisos { grid-column: 1 / -1; color: var(--tinta-2); }
 @media (max-width: 640px) { .corr-fila { grid-template-columns: minmax(0, 1fr) auto; } .corr-prox, .corr-km { grid-column: 1 / -1; } }
 @media (forced-colors: active) { .corr-sem i { background: CanvasText; } }
+
+/* v0.223: la forma aerobica, la revision que se rellena sola y la carrera al calendario. Solo ASCII; todo con tokens. */
+.forma-aerobica { margin: 0; }
+.forma-svg { display: block; width: 100%; height: 7rem; border-radius: var(--r-10); background: var(--hoja-2); }
+.forma-linea { fill: none; stroke: var(--morado); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.forma-punto { fill: var(--hoja); stroke: var(--morado); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.rev-auto { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.rev-auto-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); }
+.rev-auto-lista li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); }
+.rev-auto-lista i { width: 10px; height: 10px; margin-top: var(--esp-4); border-radius: 50%; background: var(--ok); }
+.rev-auto-lista li[data-color="ambar"] i { background: var(--aviso); }
+.rev-auto-lista li[data-color="rojo"] i { background: var(--alerta); }
+.tc-calendario { justify-self: start; }
+.tc-calendario svg { width: var(--ico-16); height: var(--ico-16); }
+@media (forced-colors: active) { .forma-linea, .forma-punto { stroke: CanvasText; } .rev-auto-lista i { background: CanvasText; } }
+
+/* v0.224: el modo guiado de series. Solo ASCII; todo con tokens (las cifras grandes, con las clases del temporizador). */
+.gser { position: fixed; inset: 0; z-index: var(--capa-pantalla); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: var(--tiza); color: var(--tinta); }
+.gser[data-k="trabajo"] { background: var(--morado-suave); }
+.gser[data-k="recupera"] { background: var(--ok-suave); }
+.gser[data-k="rectas"] { background: var(--aviso-suave); }
+.gser-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); padding: var(--esp-6) var(--esp-12); }
+.gser-titulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-weight: 650; }
+.gser-voz svg, .gser-abrir svg { width: var(--ico-16); height: var(--ico-16); }
+.gser-barra { height: 4px; margin: 0 var(--esp-12); border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
+.gser-barra span { display: block; height: 100%; width: calc(var(--p, 0) * 100%); background: var(--morado); transition: width var(--mov-rapido) linear; }
+.gser-cuerpo { display: grid; overflow-y: auto; overscroll-behavior: contain; padding: var(--esp-16); }
+.gser-centro { align-self: center; justify-items: center; width: 100%; max-width: 34rem; margin: 0 auto; text-align: center; }
+.gser-que, .gser-detalle, .gser-reloj { margin: 0; }
+.gser-detalle { font-weight: 650; color: var(--tinta-2); }
+.gser-amano { font-weight: 750; color: var(--tinta-2); }
+.gser-lista { list-style: none; width: 100%; max-height: 40dvh; margin: 0; padding: 0; display: grid; gap: var(--esp-4); overflow-y: auto; text-align: left; }
+.gser-lista li { padding: var(--esp-6) var(--esp-10); border-radius: var(--r-10); border-left: var(--filo-marca) solid var(--linea); background: var(--hoja); }
+.gser-lista li[data-k="trabajo"] { border-left-color: var(--morado); }
+.gser-lista li[data-k="recupera"] { border-left-color: var(--ok); }
+.gser-lista li[data-k="rectas"] { border-left-color: var(--aviso); }
+.gser-pie { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-top: var(--filo-fino) solid var(--linea); background: var(--hoja); }
+.gser-pausa { justify-self: center; min-width: 10rem; }
+.gser-abrir { justify-self: start; }
+@media (prefers-reduced-motion: reduce) { .gser-barra span { transition: none; } }
+@media (forced-colors: active) { .gser-barra span { background: Highlight; } }

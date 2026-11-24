@@ -6666,6 +6666,22 @@ if (parte('v0.222: carrera, avisos y corredores')) try {
   fallos++;
   console.log('  ✗ la carrera de la v0.222:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.223: carrera, tanda 5 (revisiones que se rellenan solas, la forma aeróbica y la carrera al calendario)
+if (parte('v0.223: carrera, revisiones, forma aeróbica y calendario')) try {
+  const { probarCarrera223 } = await import('./e2e-carrera-223.mjs');
+  await probarCarrera223({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera de la v0.223:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+// v0.224: carrera, el modo guiado de series (mejora 13)
+if (parte('v0.224: carrera, el modo guiado de series')) try {
+  const { probarCarrera224 } = await import('./e2e-carrera-224.mjs');
+  await probarCarrera224({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el guiado de la v0.224:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();
