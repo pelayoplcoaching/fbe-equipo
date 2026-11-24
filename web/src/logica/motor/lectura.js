@@ -9,7 +9,7 @@
 //   a_medias      hizo menos series de las pautadas
 //   cambiado      lo sustituyó por otro ejercicio
 //   sin_registrar no hay series
-//   dato_raro     todo lo que hay parece una errata
+//   dato_raro     todo lo que hay parece una errata (salvo las series que el atleta haya confirmado: `confirmada`)
 //   sin_rango     la pauta no tiene repeticiones con las que comparar
 //
 // Además, banderas que no cambian el diagnóstico pero sí la confianza: sin esfuerzo apuntado, trabajó con otra
@@ -98,7 +98,8 @@ export function leerEjercicio({ pauta, series = [], nombre = '', reglas = REGLAS
   if (!propias.length) return vacia(todas.some((s) => s.sustituto_id) ? 'cambiado' : 'sin_registrar', comun);
 
   const pautado = pauta.carga_sugerida_kg != null ? Number(pauta.carga_sugerida_kg) : null;
-  const raras = propias.filter((s) => esRara(s, { pautado, ultima: ultimaVez, repsMax, nombre, reglas }));
+  // (por su cuenta, freno 2) una serie que el atleta ha confirmado ya no se trata como errata
+  const raras = propias.filter((s) => !s.confirmada && esRara(s, { pautado, ultima: ultimaVez, repsMax, nombre, reglas }));
   const hechas = propias.filter((s) => !raras.includes(s));
   const banderas = { sinEsfuerzo: false, otraCarga: 0, raras: raras.map((s) => Number(s.numero)), malDia: !!malDia };
   if (!hechas.length) return vacia('dato_raro', { ...comun, banderas, texto: textoHecho(propias) });
@@ -144,7 +145,7 @@ function leerDetalle({ pauta, series, nombre, reglas, malDia, ultimaVez }) {
   const propias = todas.filter((s) => !s.sustituto_id && repsDe(s) > 0);
   if (!propias.length) return vacia(todas.some((s) => s.sustituto_id) ? 'cambiado' : 'sin_registrar', comun);
   const objetivoDe = (s) => d[Number(s.numero) - 1] || null;
-  const raras = propias.filter((s) => { const o = objetivoDe(s); return esRara(s, { pautado: o?.kg ?? null, ultima: ultimaVez, repsMax: o?.reps ?? comun.repsMax, nombre, reglas }); });
+  const raras = propias.filter((s) => { const o = objetivoDe(s); return !s.confirmada && esRara(s, { pautado: o?.kg ?? null, ultima: ultimaVez, repsMax: o?.reps ?? comun.repsMax, nombre, reglas }); });
   const hechas = propias.filter((s) => !raras.includes(s));
   const banderas = { sinEsfuerzo: false, otraCarga: 0, raras: raras.map((s) => Number(s.numero)), malDia: !!malDia };
   if (!hechas.length) return vacia('dato_raro', { ...comun, banderas, texto: textoHecho(propias) });

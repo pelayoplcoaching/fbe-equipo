@@ -15,7 +15,7 @@ import { tieneRegla } from './guardadas.js';
 export const VERSION_REGISTRO = 1;
 export const MAX_FILAS_REGISTRO = 80;
 export const DECISIONES = ['aplicada', 'alternativa', 'no', 'igual', 'fuera'];
-const TIPOS = ['subir', 'reps', 'series', 'mantener', 'bajar', 'tope', 'peaking', 'sin_tocar', 'descarga', 'vuelta', 'mantenimiento', 'menos'];
+const TIPOS = ['subir', 'reps', 'series', 'mantener', 'bajar', 'tope', 'peaking', 'sin_tocar', 'descarga', 'vuelta', 'mantenimiento', 'menos', 'pregunta'];
 const CONFIANZAS = ['alta', 'media', 'baja'];
 const SEMANAS = ['normal', 'descarga', 'vuelta', 'repetir', 'mantenimiento'];
 
@@ -126,7 +126,7 @@ export function acuerdoDeCopia(copia) {
 }
 
 const NOMBRE_TIPO = { subir: 'Sube kilos', reps: 'Más repeticiones', series: 'Una serie más', mantener: 'Igual', bajar: 'Baja kilos', tope: 'Al tope', peaking: 'Menos repeticiones', sin_tocar: 'A mano',
-  descarga: 'Descarga', vuelta: 'Vuelta', mantenimiento: 'Mantenimiento' };
+  descarga: 'Descarga', vuelta: 'Vuelta', mantenimiento: 'Mantenimiento', pregunta: 'Pregunta al atleta' };
 const NOMBRE_CONFIANZA = { alta: 'Confianza alta', media: 'Confianza media', baja: 'Confianza baja' };
 
 // El acuerdo real en texto, para el informe de la línea de órdenes (sin nombres salvo que se pasen)

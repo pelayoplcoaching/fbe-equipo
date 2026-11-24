@@ -123,7 +123,7 @@ export function sombraDeCopia(copia, { reglas = {}, soloAtletas = null, ejemplos
         // Se mira como se habría visto al programar: solo lo anterior a la semana de destino, y «hoy» es su lunes
         const antes = { ...d, semanas: d.semanas.filter((w) => w.numero <= base.numero) };
         const hoy = destino.fecha_inicio || (base.fecha_inicio ? sumarDias(base.fecha_inicio, 7) : undefined);
-        const entrada = entradaDesdeBloque({ d: antes, base, destino, ejercicios, atleta: { nivel: at.nivel ?? null, perfil: g.perfil, volumen_objetivo: at.volumen_objetivo ?? null }, reglas: suyas,
+        const entrada = entradaDesdeBloque({ d: antes, base, destino, ejercicios, atleta: { nivel: at.nivel ?? null, perfil: g.perfil, volumen_objetivo: at.volumen_objetivo ?? null, modalidad: at.modalidad ?? null }, reglas: suyas,
           checkins: checkins[at.id] || [], molestias: molestias[at.id] || [], ...(hoy ? { hoy } : {}) });
         const r = proponerSemana(entrada);
         pares.tipos[r.semana.tipo] = (pares.tipos[r.semana.tipo] || 0) + 1;
