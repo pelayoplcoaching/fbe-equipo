@@ -7418,7 +7418,8 @@ export function crearApi(backend, opciones = {}) {
         checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
       if (r.preguntas.length && hoy < paso.inicio) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
       try {
-        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', nota: r.nota, descarga: r.descarga, sesiones: r.sesiones } });
+        // (con su id: así también la puede preparar el coach desde su ficha; la base comprueba que el atleta es quien llama)
+        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', nota: r.nota, descarga: r.descarga, sesiones: r.sesiones }, p_atleta: atletaId });
         return { semana, tipo: paso.tipo, inicio: paso.inicio };
       } catch (e) { if (falta092(e)) return { falta092: true }; throw e; }
     },
