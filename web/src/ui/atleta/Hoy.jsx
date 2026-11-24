@@ -73,7 +73,7 @@ import { leerPanel, seccionesHoy, alternarSeccion } from '../../logica/hoy-panel
 import { deFuera } from '../../logica/tiempo.js';
 import { useTiempo, TiempoHoy, resumenParaHoy } from './Tiempo.jsx';
 import { AvisoViaje } from './Viaje.jsx';
-import { semanasObjetivo, semanaEnCurso, cardioDelCalendario } from '../../logica/semana-natural.js';
+import { semanasObjetivo, semanaEnCurso, cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { perezoso } from '../perezoso.jsx';
 
@@ -121,7 +121,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   const [instalada, setInstalada] = usePreferencia('fbe-instalada', false);
   const [faqVista, setFaqVista] = usePreferencia('fbe-faq-vista', false);
   const esApp = typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone);
-  const siguienteId = p?.actual ? (p.sesiones[p.actual.id] || []).find((x) => !x.completada)?.id : null;
+  const siguienteId = p?.actual ? (p.sesiones[p.actual.id] || []).find((x) => !x.completada && !(p.carril && esCarrera(x)))?.id : null;
   const ios = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
   const { personal: persHoy } = useTrato();
   const pasos = hechos.datos ? [
@@ -469,7 +469,11 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   // Detalle de la siguiente sesión (ejercicios, duración): lo usan la tarjeta del día y la lista de debajo
   const hoy = hoyISO();
   const semana = p.actual;
-  const sesiones = semana ? (p.sesiones[semana.id] || []) : [];
+  // (v0.218) «la carrera va por calendario» (microciclos y plan de carrera): la semana del microciclo, con su fuerza; las
+  // carreras, las de esta semana de calendario, aparte (de la semana del programa en que estén)
+  const carril = !!p.carril;
+  const sesiones = semana ? (p.sesiones[semana.id] || []).filter((s) => !(carril && esCarrera(s))) : [];
+  const carreras = carril ? carrerasDeLaSemana(p, hoy) : [];
   const toca = semana ? queToca(sesiones, semana, hoy) : { siguiente: null };
   const siguiente = toca.siguiente;
   // (v0.65) con lo apuntado sin conexión encima («Continuar sesión» y las series hechas, también sin cobertura)
@@ -520,7 +524,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const descanso = e.tipo === 'descanso';
   const previsto = siguiente && diaPrevistoValido(siguiente, semana);
   const hechas = sesiones.filter((s) => s.completada).length;
-  const cardioCal = cardioDelCalendario(p, hoy);
+  const cardioCal = carril ? null : cardioDelCalendario(p, hoy);
+  const proximaCarrera = carreras.find((x) => !x.sesion.completada && x.sesion.dia_previsto === hoy) || carreras.find((x) => !x.sesion.completada && (!x.sesion.dia_previsto || x.sesion.dia_previsto >= hoy)) || null;
   const checkinHecho = !!checkinSemana.datos?.checkin;
   const conMensajes = new Set(noLeidos.map((c) => c.sesion_id).filter(Boolean));
 
@@ -566,6 +571,15 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         <div class="semana-dias">
           {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} actual={e.tipo === 'entreno' && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
         </div>
+        {/* v0.218: la carrera por calendario, la de esta semana (la fuerza, arriba, la de su microciclo) */}
+        {carreras.length > 0 && (
+          <>
+            <p class="peq secundario cardio-cal">Tu carrera de esta semana</p>
+            <div class="semana-dias">
+              {carreras.map(({ sesion: s, semana: w }) => <DiaSesion key={s.id} sesion={s} semana={w} actual={false} carrera mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+            </div>
+          </>
+        )}
         {/* v0.175: con microciclos, el cardio de la semana del calendario aunque quede fuerza de la anterior */}
         {cardioCal && (
           <>
@@ -582,11 +596,24 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     tiempo: (e.tipo === 'entreno' && deFuera(siguiente?.cardio)) || (conCarrera(atleta) && !propio)
       ? <SeccionTiempo modalidad={e.tipo === 'entreno' && deFuera(siguiente?.cardio) ? siguiente.cardio.modalidad : 'carrera'} ocultar={() => fijarPanel(alternarSeccion(panel, 'tiempo'))} />
       : null,
-    carrera: conCarrera(atleta) && !propio ? <CarreraHoy abrir={() => setCarreraAbierta(true)} /> : null,
+    // (v0.218) con la carrera por calendario, debajo, la próxima de esta semana (la de hoy, si toca), para abrirla de un toque
+    carrera: conCarrera(atleta) && !propio ? (
+      <>
+        <CarreraHoy abrir={() => setCarreraAbierta(true)} />
+        {proximaCarrera && (
+          <div class="carrera-proxima">
+            <p class="peq secundario cardio-cal">{proximaCarrera.sesion.dia_previsto === hoy ? 'Hoy toca correr' : 'Tu próxima carrera'}</p>
+            <div class="semana-dias">
+              <DiaSesion sesion={proximaCarrera.sesion} semana={proximaCarrera.semana} actual={proximaCarrera.sesion.dia_previsto === hoy} carrera mensajes={conMensajes.has(proximaCarrera.sesion.id)} abrir={() => abrirSesion(proximaCarrera.sesion.id)} />
+            </div>
+          </div>
+        )}
+      </>
+    ) : null,
     menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Márcalo o hazle una foto a tu plato"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
       <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
-        <NutricionHoy entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))} />
+        <NutricionHoy entrenaHoy={(enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))) || carreras.some(({ sesion: s }) => (s.completada ? s.fecha_realizada : s.dia_previsto) === hoy)} />
       </Plegable>
     ) : null,
     habitos: salud ? <Plegable id="habitos" titulo="Tus hábitos" icono="llama" detalle="Márcalos según los vas haciendo"><HabitosHoy /><ApunteAlPaso guia="sueno" /></Plegable> : null,
@@ -981,8 +1008,10 @@ function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = nul
 }
 
 // resumen (v0.50, en Semana): los músculos que más trabaja, los minutos estimados y los pictogramas de sus ejercicios
-export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resumen = null, llegando = null }) {
+// carrera (v0.218, la carrera por calendario): en lugar de su número en la semana, la zapatilla, y su pauta en palabras
+export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resumen = null, llegando = null, carrera = false }) {
   const hecha = sesion.completada;
+  const pautaCarrera = carrera && !hecha && cardioValido(sesion.cardio) ? textoCardio(sesion.cardio) : null;
   const previsto = !hecha && semana ? diaPrevistoValido(sesion, semana) : null;
   const conResumen = resumen && resumen.ejercicios > 0;
   const cuerpoResumen = conResumen && (
@@ -996,13 +1025,14 @@ export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resu
   );
   return (
     <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''} ${conResumen ? 'con-resumen' : ''}`} onClick={abrir}>
-      <span class="marca-dia">{hecha ? <Icono n="hecho" /> : sesion.orden}</span>
+      <span class="marca-dia">{hecha ? <Icono n="hecho" /> : carrera ? <Icono n="pasos" /> : sesion.orden}</span>
       <span class="dia-cuerpo">
         <span class="nombre">{sesion.nombre}</span>
         <span class="detalle">
           {hecha ? `Hecha el ${fmtConDia(sesion.fecha_realizada)}${cardioHechoValido(sesion.cardio_hecho) ? `, ${textoCardioHecho(sesion.cardio_hecho)}` : ''}${sesion.rpe_sesion ? `, esfuerzo ${sesion.rpe_sesion}/10` : ''}`
             : previsto ? `${actual ? 'Siguiente, prevista' : 'Prevista'} ${cuandoDia(previsto)}`
-            : actual ? 'Siguiente' : sesion.tipo && sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Pendiente'}
+            : actual ? 'Siguiente' : pautaCarrera ? '' : sesion.tipo && sesion.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[sesion.tipo] : NOMBRE_INTENCION[sesion.intencion] || 'Pendiente'}
+          {pautaCarrera && <>{previsto || actual ? ' · ' : ''}{pautaCarrera}</>}
         </span>
         {/* (pulido 2.3) lo que trae la sesión llega después (en Semana; llegando dice si aún se espera): su sitio ya
             está, por el puesto de la sesión en la semana, y los días de debajo no bajan */}

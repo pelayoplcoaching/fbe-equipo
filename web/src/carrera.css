@@ -135,6 +135,8 @@
 .campos-carrera { padding-top: var(--esp-6); border-top: var(--filo-fino) dashed var(--linea); }
 .plan-carrera-semana { background: color-mix(in srgb, var(--morado) 4%, var(--hoja)); box-shadow: var(--sombra-tarjeta), inset 3px 0 0 var(--morado); }
 .plan-carrera-semana .chip { margin-left: var(--esp-6); }
+/* (v0.218) el dibujo de las zapatillas del titulo, de su tamano (sin medida ocupaba media pantalla del editor) */
+.plan-carrera-semana > .peq > svg { width: var(--ico-16); height: var(--ico-16); vertical-align: -3px; color: var(--morado); }
 .plan-carrera-items { gap: var(--esp-2); }
 
 /* ---------- la sesion de carrera del atleta ---------- */
@@ -166,6 +168,9 @@
 .tarjeta-carrera-hoy { width: 100%; display: flex; align-items: center; gap: var(--esp-12); padding: var(--esp-12) var(--esp-14); text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer;
   background: linear-gradient(var(--oklab,) 120deg, color-mix(in srgb, var(--z2) 12%, var(--hoja)), var(--hoja) 65%); box-shadow: var(--sombra-tarjeta); }
 .tarjeta-carrera-hoy .ios-ico { background: var(--z2); color: var(--hoja); }
+/* (v0.218) la flecha de la derecha, de su tamano: sin medida, el dibujo crecia hasta casi el ancho de la tarjeta y el texto
+   se quedaba en una columna de una palabra por linea */
+.tarjeta-carrera-hoy > svg:last-child { width: var(--ico-18); height: var(--ico-18); flex: none; color: var(--tinta-3); }
 .tarjeta-carrera-hoy strong { text-wrap: balance; }
 .carrera-objetivo { display: grid; gap: var(--esp-2); padding: var(--esp-18) var(--esp-16); border-radius: var(--r); color: var(--sobre-morado);
   background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--z4) 55%, var(--morado)), var(--morado) 60%); box-shadow: var(--sombra-flotante); }

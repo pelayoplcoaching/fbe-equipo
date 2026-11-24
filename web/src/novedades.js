@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.218': {
+    atleta: [
+      'Si entrenas por microciclos y tienes plan de carrera, te salen las carreras de esta semana, vayas como vayas con la fuerza.',
+      'La tarjeta «Tu carrera» de Hoy vuelve a verse bien y debajo tienes tu próxima carrera, para abrirla de un toque.',
+    ],
+    coach: [
+      'La carrera de quien va por microciclos va sola por calendario: cada semana se le ponen las de su plan en el microciclo que lleve.',
+      'Al duplicar su semana ya no se copian las carreras, y el recuadro Carrera del editor se ve bien (el dibujo salía enorme).',
+    ],
+  },
   '0.217': {
     // (solo detalles: una luna de más en la entrada, «Te quedan» en tableta y casillas del coach; no merece hoja propia)
     atleta: [],

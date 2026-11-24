@@ -4,7 +4,7 @@ import { PorQueEntrenasAsi, GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
-import { cardioDelCalendario } from '../../logica/semana-natural.js';
+import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
@@ -27,7 +27,11 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   const [dir, setDir] = useState(0);
   useEffect(() => { if (p?.actual && !elegida) setElegida(p.actual.id); }, [p]);
   const semana = p?.semanas.find((s) => s.id === elegida) || p?.actual || null;
-  const sesiones = semana ? p.sesiones[semana.id] || [] : [];
+  // (v0.218) «la carrera va por calendario»: en la semana del microciclo en curso, su fuerza (las carreras de esta semana,
+  // aparte, de la semana del programa en que estén); en las demás, todo, como siempre
+  const carril = !!p?.carril;
+  const sinCarreras = (ss) => (carril ? ss.filter((x) => !esCarrera(x)) : ss);
+  const sesiones = semana ? (semana.id === p.actual?.id ? sinCarreras(p.sesiones[semana.id] || []) : p.sesiones[semana.id] || []) : [];
   // Lo que trae cada sesión (músculos, minutos, pictogramas): solo de la semana que se ve
   const ids = sesiones.map((s) => s.id).join(',');
   const pautas = useCarga(() => (ids ? api.pautasSemana(ids.split(',')).catch(() => ({})) : Promise.resolve({})), [ids], { recuerdo: ids ? `pautas:${ids}` : null });
@@ -39,7 +43,8 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
   if (cargando && !p) return <div class="contenido"><Siluetas forma="lista" n={4} texto="Cargando tu programa" /></div>;
   const siguiente = sesiones.find((s) => !s.completada);
   // El plan, para la semana en curso o una que aún no ha empezado
-  const cardioCal = p ? cardioDelCalendario(p, hoyISO()) : null;
+  const cardioCal = p && !carril ? cardioDelCalendario(p, hoyISO()) : null;
+  const carreras = p && carril ? carrerasDeLaSemana(p, hoyISO()) : [];
   const planificable = semana?.fecha_inicio && sumarDias(semana.fecha_inicio, 6) >= hoyISO() && sesiones.some((s) => !s.completada);
   const conMensajes = new Set(noLeidos.map((c) => c.sesion_id).filter(Boolean));
   const hechasSemana = sesiones.filter((x) => x.completada).length;
@@ -63,7 +68,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
         <>
           <div class="semanas-tabs" role="group" aria-label="Semanas del bloque">
             {p.semanas.map((s, i) => {
-              const ss = p.sesiones[s.id] || [];
+              const ss = s.id === p.actual?.id ? sinCarreras(p.sesiones[s.id] || []) : p.sesiones[s.id] || [];
               const hechas = ss.filter((x) => x.completada).length;
               return (
                 <button key={s.id} aria-pressed={s.id === semana?.id ? 'true' : 'false'} class={hechas === ss.length && ss.length ? 'programada' : ''} style={{ '--f': ss.length ? hechas / ss.length : 0 }} onClick={() => { setDir(i > idx ? 1 : -1); setElegida(s.id); }}>
@@ -112,6 +117,15 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               <div class="semana-dias">
                 {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>
+              {/* v0.218: la carrera por calendario, la de esta semana */}
+              {semana.id === p.actual?.id && carreras.length > 0 && (
+                <>
+                  <p class="peq secundario cardio-cal">Tu carrera de esta semana</p>
+                  <div class="semana-dias">
+                    {carreras.map(({ sesion: s, semana: w }) => <DiaSesion key={s.id} sesion={s} semana={w} resumen={null} actual={false} carrera mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
+                  </div>
+                </>
+              )}
               {/* v0.175: con microciclos, el cardio de la semana del calendario aunque quede fuerza de esta */}
               {semana.id === p.actual?.id && cardioCal && (
                 <>

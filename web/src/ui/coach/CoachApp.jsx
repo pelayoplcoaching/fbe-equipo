@@ -67,6 +67,9 @@ export function CoachApp() {
   useEffect(() => { if (pedidoCoach) consumirPedidoCoach(); }, []);
   // v0.54 (revisión): al abrir, lo que quedó en la cola de Storage (fotos y vídeos ya quitados de la tabla) se borra
   useEffect(() => { Promise.resolve(api.limpiarAlmacenamiento?.()).catch(() => {}); }, []);
+  // (v0.218) a quien le va la carrera por calendario (microciclos y plan de carrera), las carreras de esta semana de su plan
+  // en el microciclo que esté haciendo (el atleta no puede crear sesiones: lo hace la app del coach, al abrir)
+  useEffect(() => { Promise.resolve(api.carrerasAlDia?.()).catch(() => {}); }, []);
   const bandeja = useCarga(() => api.bandeja(), []);
   // (pulido 4, rendimiento) la app del coach ha arrancado cuando sabe lo que hay por revisar (lo pide siempre, se abra
   // por la pestaña que se abra): de abrir la página a aquí, «arranque»

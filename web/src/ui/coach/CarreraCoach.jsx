@@ -581,9 +581,11 @@ function BibliotecaCarrera() {
 
 // ---------------------------------------------------------------- en el editor: lo del plan para la semana que se edita
 // Lo que el plan de carrera prevé para la semana (por su lunes), con el botón que pasa sus sesiones a la semana de entreno
-export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura }) {
+// (v0.218) A quien va por microciclos, su carrera va por calendario: el recuadro lo dice y enseña la de esta semana
+export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, atletaId = null }) {
   const { api } = useApp();
   if (!carrera || carrera.falta056 || !semana?.fecha_inicio) return null;
+  if (carrera.carril) return <PlanCarreraCalendario carrera={carrera} atletaId={atletaId} estructura={estructura} />;
   const lunes = lunesDe(semana.fecha_inicio);
   const s = (carrera.semanas || []).find((x) => x.lunes === lunes);
   const n = semanaDelPlan(carrera.perfil, lunes);
@@ -602,6 +604,40 @@ export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura }
       {faltan.length > 0 ? <button class="btn btn-peq" style="justify-self:start" onClick={() => estructura(() => api.anadirCarreraASemana(semana.id, faltan), faltan.length === 1 ? 'Sesión de carrera añadida a la semana' : `${faltan.length} sesiones de carrera añadidas a la semana`)}>
         <Icono n="mas" /> {faltan.length === items.length ? `Añadir ${faltan.length === 1 ? 'la sesión' : `las ${faltan.length} sesiones`} de carrera` : `Añadir las ${faltan.length} que faltan`}</button>
         : items.length > 0 ? <span class="mini terciario"><Icono n="hecho" width="14" height="14" /> Ya están en la semana.</span> : <span class="mini terciario">Sin sesiones de carrera previstas: prepáralas en la ficha, pestaña Carrera.</span>}
+    </section>
+  );
+}
+
+// (v0.218) «La carrera va por calendario»: lo de esta semana de calendario de su plan (no lo de la fecha de la semana que
+// se edita) y un botón para comprobar que ya lo tiene en su microciclo (la app del coach lo hace sola al abrir y al publicar)
+export function textoCarreraAlDia(r) {
+  if (!r) return 'No se ha podido comprobar';
+  if (r.motivo === 'sin-publicar') return 'Aún no tiene ninguna semana publicada';
+  if (r.motivo === 'sin-bloque') return 'No tiene ningún bloque';
+  if (r.motivo) return 'Su carrera no va por calendario';
+  if (!r.puestas) return 'Ya tiene las carreras de esta semana';
+  return `${r.puestas === 1 ? 'Puesta 1 carrera' : `Puestas ${r.puestas} carreras`} en su semana ${r.semana}${r.movida ? ' (con las fechas de esta semana)' : ''}`;
+}
+function PlanCarreraCalendario({ carrera, atletaId, estructura }) {
+  const { api, aviso } = useApp();
+  const lunes = lunesDe(hoyISO());
+  const s = (carrera.semanas || []).find((x) => x.lunes === lunes);
+  const n = semanaDelPlan(carrera.perfil, lunes);
+  const fase = faseDe(carrera.perfil, lunes);
+  const total = macrociclo(carrera.perfil).reduce((a, f) => a + f.semanas, 0);
+  const items = (s?.sesiones || []).filter((x) => x.tipo !== 'descanso');
+  return (
+    <section class="panel panel-pad pila-s plan-carrera-semana" aria-label="Su carrera de esta semana">
+      <div class="peq"><Icono n="pasos" /> <strong>Carrera, por calendario</strong>{n >= 1 && n <= total ? ` · esta semana, la ${n} de ${total}` : ''}{fase && n >= 1 && n <= total ? ` · ${fase.nombre}` : ''}
+        {s?.etiqueta ? <span class="chip etiqueta-carrera">{s.etiqueta}</span> : null}{textoKm(s?.km_min, s?.km_max) ? <span class="chip num">{textoKm(s.km_min, s.km_max)}</span> : null}</div>
+      <p class="mini secundario">Va por microciclos, así que su carrera no va con esta semana del programa sino con la de calendario: cada semana le salen solas las carreras de esa semana de su plan, dentro del microciclo que esté haciendo. No hace falta añadirlas aquí.</p>
+      {items.length > 0 ? <ul class="mini terciario plan-carrera-items">{items.map((x, i) => <li key={i}>{x.dia ? `${DIA_CORTO[x.dia]} · ` : ''}<strong>{x.titulo || NOMBRE_TIPO[x.tipo]}</strong>{x.minutos || x.km || x.partes ? ` — ${textoCardio({ modalidad: 'carrera', ...Object.fromEntries(Object.entries(x).filter(([k]) => !['titulo', 'dia'].includes(k))) })}` : ''}</li>)}</ul>
+        : <span class="mini terciario">Su plan no tiene carreras esta semana.</span>}
+      {items.length > 0 && atletaId && (
+        <button class="btn btn-peq" style="justify-self:start" onClick={() => estructura(async () => { const r = await api.carreraAlDia(atletaId); aviso(textoCarreraAlDia(r)); return r; }, null)}>
+          <Icono n="hecho" /> Comprobar que las tiene
+        </button>
+      )}
     </section>
   );
 }

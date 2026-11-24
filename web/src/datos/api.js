@@ -55,7 +55,7 @@ import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida, limiteVoz, LIMI
 import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, MAX_MENCIONES, RETO_MAX, limpiarEncuesta, resultadosEncuesta, retoConseguido, nuevosParaBienvenida, retoMaximo, insigniasDe, MAX_FOTOS, fotosDe, busquedaValida,
   eventoValido, programadoValido, MAX_PLANTILLAS, MAX_MOTIVO_DESTACADO, palabrasDeTexto, MAX_PALABRAS } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
-import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo } from '../logica/semana-natural.js';
+import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo, esCarrera, carrerasDeLaSemana } from '../logica/semana-natural.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 import { paraGuardarPropio, imagenValida, CLAVES_HUECO } from '../logica/a-medida.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
@@ -786,6 +786,12 @@ export function crearApi(backend, opciones = {}) {
     const [a] = await b.select('atletas', { eq: { id: atletaId }, limit: 1 }).catch(() => []);
     return diasSemanaValido(a?.dias_semana);
   }
+  // (v0.218) El objetivo de días y si su carrera va por calendario (microciclos y plan de carrera): { diasSemana, carril }
+  async function ritmoDe(atletaId) {
+    const [a] = await b.select('atletas', { eq: { id: atletaId }, limit: 1 }).catch(() => []);
+    const diasSemana = diasSemanaValido(a?.dias_semana);
+    return { diasSemana, carril: !!diasSemana && !!a?.carrera && a?.entrenamiento !== false };
+  }
 
   // v0.53: para el panel, lo semanal de los atletas con objetivo de días por semana: { [atleta_id]: { diasSemana, actual,
   // chispa (6 semanas), cumplimiento (4 últimas acabadas) } }. Solo consulta las sesiones de esos atletas.
@@ -1444,7 +1450,9 @@ export function crearApi(backend, opciones = {}) {
           .filter((x) => cardioHechoValido(x.cardio_hecho) && x.cardio_hecho.modalidad === 'carrera')
           .sort((x, y) => (x.fecha_realizada < y.fecha_realizada ? 1 : -1)) : [];
       } catch { hechas = []; }
-      return { perfil, eventos, semanas, revisiones, hechas };
+      // (v0.218) si su carrera va por calendario (microciclos): el editor lo dice en lugar de «Añadir las sesiones de carrera»
+      const { carril } = await ritmoDe(atletaId).catch(() => ({ carril: false }));
+      return { perfil, eventos, semanas, revisiones, hechas, carril };
     },
     async guardarCarreraPerfil(atletaId, datos) {
       const { perfil, error } = limpiarPerfilCarrera(datos);
@@ -1458,12 +1466,19 @@ export function crearApi(backend, opciones = {}) {
       return (await b.insert('carrera_eventos', [{ ...evento, atleta_id: atletaId }]).catch(falta056))[0];
     },
     async borrarCarreraEvento(id) { return b.delete('carrera_eventos', { eq: { id } }).catch(falta056); },
+    // (v0.218) si es la semana en curso y su carrera va por calendario, lo que tiene puesto se pone al día con el plan
     async guardarCarreraSemana(atletaId, datos) {
       const { semana, error } = limpiarSemanaCarrera(datos);
       if (error) throw new Error(error);
-      return (await b.upsert('carrera_semanas', [{ ...semana, atleta_id: atletaId }], 'atleta_id,lunes').catch(falta056))[0];
+      const r = (await b.upsert('carrera_semanas', [{ ...semana, atleta_id: atletaId }], 'atleta_id,lunes').catch(falta056))[0];
+      if (semana.lunes === lunesDe(hoyISO())) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
+      return r;
     },
-    async borrarCarreraSemana(atletaId, lunes) { return b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta056); },
+    async borrarCarreraSemana(atletaId, lunes) {
+      const r = await b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta056);
+      if (lunes === lunesDe(hoyISO())) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
+      return r;
+    },
     async guardarCarreraRevision(atletaId, datos, id = null) {
       const { revision, error } = limpiarRevisionCarrera(datos);
       if (error) throw new Error(error);
@@ -1509,6 +1524,114 @@ export function crearApi(backend, opciones = {}) {
       }
       if (filas.length) await b.insert('sesiones', filas).catch(falta056);
       return filas.length;
+    },
+    // v0.218: «la carrera va por calendario» (quien va por microciclos y tiene plan de carrera). Pone las carreras de esta
+    // semana de su plan dentro del microciclo que está haciendo. Si ese microciclo tiene la fecha de una semana anterior,
+    // antes le quita las carreras de semanas pasadas que no hizo (en su plan queda que no las hizo), a las hechas les quita
+    // el día previsto (para que no se muevan con la semana: siguen contando por el día que las hizo) y pasa el microciclo a
+    // esta semana, y las semanas que vienen detrás, a las siguientes. Si va por delante del calendario, van a la semana
+    // publicada con la fecha de esta. Lo que ya esté puesto esta semana (en cualquier semana publicada) no se repite.
+    // refrescar: el plan de esta semana ha cambiado: se quitan las pendientes de esta semana y se ponen las del plan (las
+    // hechas no se tocan). Lo llama la app del coach (al abrir, al guardar la semana del plan y al publicar): el atleta no
+    // puede crear sesiones. Devuelve { puestas, quitadas, movida, semana } o { motivo } si no hace nada.
+    async carreraAlDia(atletaId, { hoy = hoyISO(), refrescar = false } = {}) {
+      const { carril } = await ritmoDe(atletaId);
+      if (!carril) return { motivo: 'no-aplica' };
+      const lunes = lunesDe(hoy);
+      const [plan] = await b.select('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(() => []);
+      const items = (plan?.sesiones || []).map((it) => { const s = sesionDesdePlan(it); return s ? { ...s, fecha: s.dia ? sumarDias(lunes, s.dia - 1) : null } : null; }).filter(Boolean);
+      const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, order: [['fecha_inicio', 'desc'], ['numero', 'desc']] });
+      const bloque = bloqueActual(bloques) || bloques[0] || null;
+      if (!bloque) return { motivo: 'sin-bloque' };
+      const semanas = await b.select('semanas', { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']] });
+      const publicadas = semanas.filter((w) => w.programacion === 'programada');
+      if (!publicadas.length) return { motivo: 'sin-publicar' };
+      const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: publicadas.map((w) => w.id) }, order: [['orden', 'asc']] }), 'semana_id');
+      // El microciclo en curso: el primero publicado con fuerza pendiente; si no queda, el último publicado
+      const actual = semanaDelMicrociclo(publicadas, sesiones, publicadas[publicadas.length - 1], { sinCarrera: true });
+      let destino = actual, quitadas = 0, movida = false;
+      if (!actual.fecha_inicio || lunesDe(actual.fecha_inicio) < lunes) {
+        const suyas = sesiones[actual.id] || [];
+        // (en una semana con fecha anterior no puede haber carreras de esta: su día previsto tiene que caer dentro)
+        const viejas = suyas.filter((s) => esCarrera(s) && !s.completada);
+        if (viejas.length) {
+          // A la semana publicada de antes (por número), sin día: desde Semana se pueden apuntar aún y no se mueven con esta
+          // (y sus mensajes, si los hay, siguen ahí). Sin ninguna antes, se quitan las que no tengan mensajes.
+          const previa = publicadas.filter((w) => (w.numero ?? 0) < (actual.numero ?? 0)).pop() || null;
+          if (previa) {
+            let o = Math.max(0, ...(sesiones[previa.id] || []).map((s) => s.orden || 0));
+            for (const s of viejas) await b.update('sesiones', { semana_id: previa.id, orden: ++o, dia_previsto: null }, { eq: { id: s.id } });
+            sesiones[previa.id] = [...(sesiones[previa.id] || []), ...viejas.map((s) => ({ ...s, semana_id: previa.id, dia_previsto: null }))];
+          } else {
+            const conMensajes = new Set((await b.select('comentarios', { in: { sesion_id: viejas.map((s) => s.id) }, cols: 'sesion_id' }).catch(() => [])).map((c) => c.sesion_id));
+            const sin = viejas.filter((s) => !conMensajes.has(s.id));
+            if (sin.length) await b.delete('sesiones', { in: { id: sin.map((s) => s.id) } });
+          }
+          quitadas = viejas.length;
+        }
+        const hechas = suyas.filter((s) => esCarrera(s) && s.completada && s.dia_previsto);
+        if (hechas.length) await b.update('sesiones', { dia_previsto: null }, { in: { id: hechas.map((s) => s.id) } });
+        sesiones[actual.id] = suyas.filter((s) => !viejas.includes(s)).map((s) => (hechas.includes(s) ? { ...s, dia_previsto: null } : s));
+        await b.update('semanas', { fecha_inicio: lunes }, { eq: { id: actual.id } });
+        actual.fecha_inicio = lunes;
+        movida = true;
+        // Las de detrás, a las semanas siguientes (solo hacia delante: nunca a una fecha anterior a la que tienen)
+        for (const w of semanas.filter((x) => (x.numero ?? 0) > (actual.numero ?? 0))) {
+          const f = sumarDias(lunes, 7 * ((w.numero ?? 0) - (actual.numero ?? 0)));
+          if (!w.fecha_inicio || w.fecha_inicio < f) { await b.update('semanas', { fecha_inicio: f }, { eq: { id: w.id } }); w.fecha_inicio = f; }
+        }
+      } else if (lunesDe(actual.fecha_inicio) > lunes) {
+        // Va por delante del calendario (se publicó el siguiente con la fecha de la semana que viene): a la publicada con
+        // la fecha de esta; si no hay ninguna, el microciclo en curso pasa a esta semana (hacia atrás, solo él)
+        destino = publicadas.find((w) => w.fecha_inicio && lunesDe(w.fecha_inicio) === lunes) || null;
+        if (!destino) {
+          await b.update('semanas', { fecha_inicio: lunes }, { eq: { id: actual.id } });
+          actual.fecha_inicio = lunes;
+          movida = true;
+          destino = actual;
+        }
+      }
+      // Lo que ya está puesto esta semana: las pendientes, por su fecha; las hechas, por el día que las hizo
+      const deEsta = carrerasDeLaSemana({ semanas: publicadas, sesiones }, hoy).map((x) => x.sesion);
+      let fuera = [];
+      if (refrescar) {
+        // (las que tienen mensajes se quedan: borrar la sesión se llevaría sus mensajes del chat)
+        const pendientes = deEsta.filter((s) => !s.completada);
+        const conMensajes = pendientes.length ? new Set((await b.select('comentarios', { in: { sesion_id: pendientes.map((s) => s.id) }, cols: 'sesion_id' }).catch(() => [])).map((c) => c.sesion_id)) : new Set();
+        fuera = pendientes.filter((s) => !conMensajes.has(s.id));
+        if (fuera.length) {
+          await b.delete('sesiones', { in: { id: fuera.map((s) => s.id) } });
+          quitadas += fuera.length;
+          for (const w of publicadas) sesiones[w.id] = (sesiones[w.id] || []).filter((s) => !fuera.includes(s));
+        }
+      }
+      // Cada carrera del plan, con su pareja ya puesta (mismo nombre y día; si no, mismo nombre), una vez cada una
+      const libres = deEsta.filter((s) => !fuera.includes(s));
+      const pareja = (it) => {
+        const i = libres.findIndex((s) => s.nombre === it.nombre && (it.fecha ? String(s.dia_previsto || s.fecha_realizada || '').slice(0, 10) === it.fecha : true));
+        const j = i >= 0 ? i : libres.findIndex((s) => s.nombre === it.nombre);
+        if (j < 0) return false;
+        libres.splice(j, 1);
+        return true;
+      };
+      const faltan = items.filter((it) => !pareja(it));
+      if (!faltan.length) return { puestas: 0, quitadas, movida, semana: destino.numero ?? null };
+      const enDestino = sesiones[destino.id] || [];
+      let orden = Math.max(0, ...enDestino.map((s) => s.orden || 0));
+      const dentro = (f) => !!f && !!destino.fecha_inicio && f >= destino.fecha_inicio && f <= sumarDias(destino.fecha_inicio, 6);
+      const filas = faltan.map((it) => ({ semana_id: destino.id, orden: ++orden, nombre: it.nombre, tipo: 'cardio', cardio: it.cardio,
+        ...(it.dinamica ? { dinamica: it.dinamica } : {}), ...(dentro(it.fecha) ? { dia_previsto: it.fecha } : {}) }));
+      await b.insert('sesiones', filas).catch(falta056);
+      return { puestas: filas.length, quitadas, movida, semana: destino.numero ?? null };
+    },
+    // Lo mismo para todos los atletas a los que les va la carrera por calendario (la app del coach, al abrir)
+    async carrerasAlDia({ hoy = hoyISO() } = {}) {
+      const atletas = (await b.select('atletas', { eq: { carrera: true } }).catch(() => [])).filter((a) => diasSemanaValido(a.dias_semana));
+      const out = {};
+      for (const a of atletas) {
+        try { out[a.id] = await api.carreraAlDia(a.id, { hoy }); } catch (e) { out[a.id] = { motivo: 'error', error: String(e?.message || e) }; }
+      }
+      return out;
     },
 
     // ------------------------------------------------------------ el cierre de la sesión y lo que el coach necesita (tanda «cierre», migración 054)
@@ -1852,20 +1975,21 @@ export function crearApi(backend, opciones = {}) {
     // Bloque actual con sus semanas visibles y sus sesiones. soloProgramadas=false para el coach.
     // v0.53: a quien va por microciclos (objetivo de días por semana), la semana «actual» es la del microciclo que le toca
     // (la primera publicada con algo pendiente, aunque por fechas ya hubiera pasado): sigue el orden del programa
+    // (v0.218) carril: su carrera va por calendario (microciclos y plan de carrera): el microciclo se acaba con la fuerza
     async programa(atletaId, { soloProgramadas = true, bloqueId = null } = {}) {
-      const [bloques, diasSemana] = await Promise.all([
+      const [bloques, { diasSemana, carril }] = await Promise.all([
         b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, order: [['fecha_inicio', 'desc'], ['numero', 'desc']] }),
-        diasSemanaDe(atletaId),
+        ritmoDe(atletaId),
       ]);
       const bloque = bloqueId ? bloques.find((x) => x.id === bloqueId) : bloqueActual(bloques) || bloques[0] || null;
-      if (!bloque) return { bloques, bloque: null, semanas: [], sesiones: {}, actual: null, diasSemana };
+      if (!bloque) return { bloques, bloque: null, semanas: [], sesiones: {}, actual: null, diasSemana, carril };
       const filtroSemanas = { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']] };
       if (soloProgramadas) filtroSemanas.eq.programacion = 'programada';
       const semanas = await b.select('semanas', filtroSemanas);
       const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: semanas.map((s) => s.id) }, order: [['orden', 'asc']] }), 'semana_id');
       const porFecha = semanaActual(semanas);
-      const actual = diasSemana ? semanaDelMicrociclo(semanas.filter((w) => w.programacion === 'programada'), sesiones, porFecha) : porFecha;
-      return { bloques, bloque, semanas, sesiones, actual, diasSemana };
+      const actual = diasSemana ? semanaDelMicrociclo(semanas.filter((w) => w.programacion === 'programada'), sesiones, porFecha, { sinCarrera: carril }) : porFecha;
+      return { bloques, bloque, semanas, sesiones, actual, diasSemana, carril };
     },
 
     // v0.50: las cifras de la cabecera del perfil, sin el historial de entrenamientos entero: cuántas sesiones ha
@@ -7416,7 +7540,8 @@ export function crearApi(backend, opciones = {}) {
     // Copia una semana (sesiones y prescripción) a un bloque, con progresión opcional.
     // conNota: al copiar un bloque entero (plantillas) la nota de cada semana va con ella; al duplicar una semana, no
     // destinoId: copiar dentro de una semana que ya existe (vacía) en lugar de crear otra
-    async copiarSemana(semanaId, { bloque_id, numero, fecha_inicio = null, progresion = {}, programacion = 'en_programacion', conNota = false, destinoId = null }) {
+    // sinCarrera (v0.218): sin las carreras (a quien le va la carrera por calendario: le llegan de su plan)
+    async copiarSemana(semanaId, { bloque_id, numero, fecha_inicio = null, progresion = {}, programacion = 'en_programacion', conNota = false, destinoId = null, sinCarrera = false }) {
       const [origen] = await b.select('semanas', { eq: { id: semanaId } });
       let nueva;
       if (destinoId) {
@@ -7439,6 +7564,7 @@ export function crearApi(backend, opciones = {}) {
       const nombres = ids.length ? Object.fromEntries((await b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre' })).map((e) => [e.id, e.nombre])) : {};
       const paresMusica = [];  // (072) la música de cada sesión, con ella
       for (const s of sesiones) {
+        if (sinCarrera && esCarrera(s)) continue;
         const [copiaSesion] = await b.insert('sesiones', [{ semana_id: nueva.id, orden: s.orden, nombre: s.nombre, tipo: s.tipo, intencion: s.intencion, dinamica: s.dinamica, cardio: s.cardio ?? null, ...(s.video_url ? { video_url: s.video_url, video_titulo: s.video_titulo ?? null } : {}) }]);  // (059) y su vídeo
         paresMusica.push([s.id, copiaSesion.id]);
         const pautas = await b.select('sesion_ejercicios', { eq: { sesion_id: s.id }, order: [['orden', 'asc']] });
@@ -7457,18 +7583,27 @@ export function crearApi(backend, opciones = {}) {
     },
     // Duplica una semana con progresión: en la siguiente si está vacía (los bloques nacen con sus semanas creadas),
     // y si no, en una semana nueva al final
+    // (v0.218) A quien le va la carrera por calendario, las carreras no se copian (le llegan de su plan, cada semana), y la
+    // siguiente cuenta como vacía si solo tiene carreras sin hacer de antes (se quitan: en borrador, el atleta no las veía)
     async duplicarSemana(semanaId, progresion = {}) {
       const [origen] = await b.select('semanas', { eq: { id: semanaId } });
       const hermanas = await b.select('semanas', { eq: { bloque_id: origen.bloque_id } });
+      const [bl] = await b.select('bloques', { eq: { id: origen.bloque_id }, cols: 'id,atleta_id,es_plantilla' }).catch(() => []);
+      const sinCarrera = !!bl?.atleta_id && !bl.es_plantilla && (await ritmoDe(bl.atleta_id)).carril;
       const siguiente = hermanas.find((w) => w.numero === origen.numero + 1);
-      if (siguiente && !(await b.select('sesiones', { eq: { semana_id: siguiente.id }, cols: 'id', limit: 1 })).length) {
-        return api.copiarSemana(semanaId, { bloque_id: origen.bloque_id, numero: siguiente.numero, progresion, destinoId: siguiente.id });
+      if (siguiente) {
+        const ya = await b.select('sesiones', { eq: { semana_id: siguiente.id }, cols: 'id,tipo,cardio,completada' });
+        const carreras = sinCarrera && siguiente.programacion !== 'programada' ? ya.filter((x) => esCarrera(x) && !x.completada) : [];
+        if (ya.length === carreras.length) {
+          if (carreras.length) await b.delete('sesiones', { in: { id: carreras.map((x) => x.id) } });
+          return api.copiarSemana(semanaId, { bloque_id: origen.bloque_id, numero: siguiente.numero, progresion, destinoId: siguiente.id, sinCarrera });
+        }
       }
       const numero = Math.max(...hermanas.map((s) => s.numero)) + 1;
       const ultima = hermanas.sort((x, y) => y.numero - x.numero)[0];
       return api.copiarSemana(semanaId, {
         bloque_id: origen.bloque_id, numero, progresion,
-        fecha_inicio: ultima.fecha_inicio ? sumarDias(ultima.fecha_inicio, 7) : null,
+        fecha_inicio: ultima.fecha_inicio ? sumarDias(ultima.fecha_inicio, 7) : null, sinCarrera,
       });
     },
     // Preparar varias semanas de un golpe (el mes): cada una sale de la anterior con su progresión, en borrador.
@@ -7484,8 +7619,15 @@ export function crearApi(backend, opciones = {}) {
       }
       return nuevas;
     },
+    // (v0.218) al publicar a quien le va la carrera por calendario, sus carreras de esta semana, al día (si se acaba de
+    // publicar el microciclo siguiente, las que aún no tenga)
     async publicarSemana(semanaId, publicar = true) {
-      return (await b.update('semanas', { programacion: publicar ? 'programada' : 'en_programacion' }, { eq: { id: semanaId } }))[0];
+      const r = (await b.update('semanas', { programacion: publicar ? 'programada' : 'en_programacion' }, { eq: { id: semanaId } }))[0];
+      if (publicar && r?.bloque_id) {
+        const [bl] = await b.select('bloques', { eq: { id: r.bloque_id }, cols: 'id,atleta_id,es_plantilla' }).catch(() => []);
+        if (bl?.atleta_id && !bl.es_plantilla) await api.carreraAlDia(bl.atleta_id).catch(() => null);
+      }
+      return r;
     },
     // Copia un bloque entero: para un atleta (desde plantilla o bloque anterior) o como plantilla nueva.
     async copiarBloque(origenId, { atleta_id = null, fecha_inicio = null, numero = null, nombre = null }) {
@@ -7503,12 +7645,14 @@ export function crearApi(backend, opciones = {}) {
         fecha_inicio: esPlantilla ? null : fecha_inicio, estado: 'planificado',
       }]);
       const semanas = await b.select('semanas', { eq: { bloque_id: origenId }, order: [['numero', 'asc']] });
+      // (v0.218) a quien le va la carrera por calendario, sin las carreras: le llegan de su plan
+      const sinCarrera = !esPlantilla && !!atleta_id && (await ritmoDe(atleta_id)).carril;
       for (const s of semanas) {
         await api.copiarSemana(s.id, {
           bloque_id: nuevo.id, numero: s.numero,
           fecha_inicio: !esPlantilla && fecha_inicio ? sumarDias(fecha_inicio, (s.numero - 1) * 7) : null,
           programacion: esPlantilla ? 'no_iniciada' : 'en_programacion',
-          conNota: true,
+          conNota: true, sinCarrera,
         });
       }
       await api.copiarMusica([], origenId, nuevo.id);  // (072) y la del bloque

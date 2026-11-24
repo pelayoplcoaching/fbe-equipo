@@ -90,9 +90,38 @@ export const semanaEnCurso = (lista = [], hoy = hoyISO()) => (lista || []).find(
 
 // La semana del programa que enseña Hoy a quien va por microciclos: la primera (por su número) con algo pendiente, aunque
 // por fechas ya hubiera pasado (va a su ritmo, no al del calendario); si lo tiene todo hecho, la de siempre (actual).
-export function semanaDelMicrociclo(semanas = [], sesionesPorSemana = {}, actual = null) {
+// (v0.218) Con «la carrera por calendario» (sinCarrera), las carreras pendientes no cuentan: el microciclo se acaba con la
+// fuerza.
+export function semanaDelMicrociclo(semanas = [], sesionesPorSemana = {}, actual = null, { sinCarrera = false } = {}) {
   const orden = [...(semanas || [])].sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
-  return orden.find((w) => (sesionesPorSemana?.[w.id] || []).some((s) => !s.completada)) || actual;
+  const pendiente = (s) => !s.completada && !(sinCarrera && esCarrera(s));
+  return orden.find((w) => (sesionesPorSemana?.[w.id] || []).some(pendiente)) || actual;
+}
+
+// v0.218: «la carrera va por calendario». A quien va por microciclos y tiene plan de carrera, la fuerza le sigue el orden
+// del programa y la carrera, la semana de lunes a domingo: cada semana se le ponen las carreras de esa semana de su plan
+// dentro del microciclo que esté haciendo (api.carreraAlDia, desde la app del coach) y Hoy y Semana las enseñan por su
+// fecha, estén en la semana del programa que estén.
+// Una carrera: una sesión de cardio de carrera, o sin pauta (las del plan que solo traen título y nota).
+export const esCarrera = (s) => !!s && s.tipo === 'cardio' && (!s.cardio || s.cardio.modalidad === 'carrera');
+// El lunes de la semana de calendario de una carrera: la hecha, el del día que la hizo; la pendiente, el de su día previsto
+// o, sin él, el de su semana del programa
+export function lunesDeCarrera(s, semana) {
+  if (s?.completada && s.fecha_realizada) return lunesDe(String(s.fecha_realizada).slice(0, 10));
+  if (s?.dia_previsto) return lunesDe(String(s.dia_previsto).slice(0, 10));
+  return semana?.fecha_inicio ? lunesDe(semana.fecha_inicio) : null;
+}
+// Las carreras de la semana de calendario de hoy, de cualquier semana publicada: [{ sesion, semana }], por su día (las
+// que no tienen, detrás) y su orden. Las de otras semanas (pasadas o que vienen) no salen.
+export function carrerasDeLaSemana({ semanas = [], sesiones = {} } = {}, hoy = hoyISO()) {
+  const l = lunesDe(hoy);
+  const out = [];
+  for (const w of semanas || []) {
+    if (!w || (w.programacion && w.programacion !== 'programada')) continue;
+    for (const s of sesiones?.[w.id] || []) if (esCarrera(s) && lunesDeCarrera(s, w) === l) out.push({ sesion: s, semana: w });
+  }
+  const dia = (x) => (x.sesion.dia_previsto ? String(x.sesion.dia_previsto).slice(0, 10) : '9');
+  return out.sort((a, b) => (dia(a) !== dia(b) ? (dia(a) < dia(b) ? -1 : 1) : ((a.semana.numero ?? 0) - (b.semana.numero ?? 0)) || ((a.sesion.orden ?? 0) - (b.sesion.orden ?? 0))));
 }
 
 // v0.175: con microciclos la fuerza va por el orden del programa, pero el cardio va por calendario. Si la semana del

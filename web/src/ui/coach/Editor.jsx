@@ -518,7 +518,7 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </div>
       )}
 
-      {semana && carreraDe && !bloque.es_plantilla && <PlanCarreraSemana carrera={carrera.datos} semana={semana} sesiones={sesiones} estructura={estructura} />}
+      {semana && carreraDe && !bloque.es_plantilla && <PlanCarreraSemana carrera={carrera.datos} semana={semana} sesiones={sesiones} estructura={estructura} atletaId={carreraDe} />}
       {semana && <VolumenSemana pautas={sesiones.flatMap((s) => d.pautas[s.id] || [])} ejercicios={ejercicios} objetivo={bloque.es_plantilla ? null : volumenObjetivo} />}
       {semana && anterior && !bloque.es_plantilla && <CambiosSemana anterior={anterior} cambios={cambiosDeSemana({ actuales: sesiones.flatMap((x) => d.pautas[x.id] || []), previas, anteriores: sesionesAnt.flatMap((x) => d.pautas[x.id] || []), nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])) })} />}
       {semana && nivel && !bloque.es_plantilla && (

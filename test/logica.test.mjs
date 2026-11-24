@@ -2313,6 +2313,35 @@ console.log('\nv0.53: días de entreno por semana (microciclos que no caben en u
       check(N.cardioDelCalendario(base, '2026-11-30') === null, 'si hoy no cae en ninguna semana publicada, nada');
       check(N.cardioDelCalendario({ ...base, sesiones: { ...ss, w2: [ss.w2[0]] } }, '2026-11-16') === null, 'si la semana de hoy no trae cardio, nada');
     }
+    // v0.218: «la carrera va por calendario» (microciclos y plan de carrera)
+    {
+      const run = (id, extra = {}) => ({ id, tipo: 'cardio', cardio: { modalidad: 'carrera', minutos: 40 }, completada: false, orden: 9, ...extra });
+      check(N.esCarrera(run('x')) && N.esCarrera({ tipo: 'cardio', cardio: null }) && !N.esCarrera({ tipo: 'cardio', cardio: { modalidad: 'bici', minutos: 30 } }) && !N.esCarrera({ tipo: 'fuerza' }) && !N.esCarrera(null),
+        'una carrera: cardio de carrera o sin pauta (no la bici, no la fuerza)');
+      const w9 = { id: 'w9', numero: 9, fecha_inicio: '2026-11-23', programacion: 'programada' };
+      check(N.lunesDeCarrera(run('a', { dia_previsto: '2026-11-26' }), w9) === '2026-11-23' && N.lunesDeCarrera(run('b'), w9) === '2026-11-23'
+        && N.lunesDeCarrera(run('c', { completada: true, fecha_realizada: '2026-11-19', dia_previsto: '2026-11-26' }), w9) === '2026-11-16',
+        'la semana de una carrera: la de su día previsto, sin él la de su semana; la hecha, la del día que la hizo');
+      // El microciclo 8 (de la semana pasada) sigue en curso con fuerza pendiente; el 9, publicado, trae las de esta semana
+      const w8 = { id: 'w8', numero: 8, fecha_inicio: '2026-11-16', programacion: 'programada' };
+      const w10 = { id: 'w10', numero: 10, fecha_inicio: '2026-11-30', programacion: 'en_programacion' };
+      const ss = {
+        w8: [{ id: 'f1', tipo: 'fuerza', completada: true }, { id: 'f2', tipo: 'fuerza', completada: false }, run('r-vieja', { dia_previsto: '2026-11-18' }), run('r-hecha', { completada: true, fecha_realizada: '2026-11-17', dia_previsto: '2026-11-17' })],
+        w9: [{ id: 'f3', tipo: 'fuerza', completada: false }, run('r-jue', { dia_previsto: '2026-11-26', orden: 3 }), run('r-mar', { dia_previsto: '2026-11-24', orden: 2 }), run('r-sin', { orden: 1 })],
+        w10: [run('r-borrador', { dia_previsto: '2026-11-30' })],
+      };
+      const p = { semanas: [w8, w9, w10], sesiones: ss };
+      check(N.carrerasDeLaSemana(p, '2026-11-25').map((x) => x.sesion.id).join() === 'r-mar,r-jue,r-sin' && N.carrerasDeLaSemana(p, '2026-11-25')[0].semana === w9,
+        'las carreras de esta semana: por su día (las que no tienen, detrás), con su semana del programa; ni las de la pasada ni las de un borrador');
+      check(N.carrerasDeLaSemana(p, '2026-11-19').map((x) => x.sesion.id).join() === 'r-hecha,r-vieja', 'la semana pasada, las suyas (la hecha, por el día que la hizo)');
+      check(N.carrerasDeLaSemana({ semanas: [w8], sesiones: { w8: [run('m', { dia_previsto: '2026-11-18' })] } }, '2026-11-25').length === 0, 'una pendiente de otra semana no sale en esta');
+      // El microciclo se acaba con la fuerza: con la fuerza hecha y una carrera pendiente, sigue al siguiente
+      const sem = [w8, w9];
+      const soloCarrera = { w8: ss.w8.map((x) => (x.tipo === 'fuerza' ? { ...x, completada: true } : x)), w9: ss.w9 };
+      check(N.semanaDelMicrociclo(sem, soloCarrera, w9) === w8 && N.semanaDelMicrociclo(sem, soloCarrera, w9, { sinCarrera: true }) === w9,
+        'con la carrera por calendario, una carrera pendiente no frena el microciclo (sin ella, sí: lo de siempre)');
+      check(N.semanaDelMicrociclo(sem, ss, w9, { sinCarrera: true }) === w8, 'con fuerza pendiente, sigue en su microciclo');
+    }
   }
   {
     // Lunes y domingo: el domingo cuenta en su semana; el lunes siguiente, en la siguiente
