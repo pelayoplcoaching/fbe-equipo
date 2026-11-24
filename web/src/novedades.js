@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.233': {
+    // (FBE Esencial, tanda 3: la semana 5 en adelante, sola; para los atletas de ahora no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial: desde la semana 5, la app prepara sola cada semana de quien va por su cuenta, con tus reglas (necesita la migración 092).',
+      'La plancha sube 5 s por semana hasta 50; después, con peso (5 kg y luego 2,5 más), otra vez desde 35-45 s.',
+    ],
+  },
   '0.232': {
     // (FBE Esencial, tandas 1 y 2: para los atletas de ahora no cambia nada; lo nuevo es del coach y de quien va por su cuenta)
     atleta: [],
