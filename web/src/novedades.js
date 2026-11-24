@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.219': {
+    atleta: [
+      'Si tu coach te pone tu ritmo umbral, cada zona de tus carreras te dice también a qué ritmo ir, en minutos por kilómetro.',
+      'En cada sesión de carrera, una línea con para qué sirve. Y en «Tu carrera», tu tiempo previsto con tu última carrera.',
+    ],
+    coach: [
+      'Ritmo umbral desde una carrera reciente en un toque (Zonas y test), y los ritmos de cada zona. Sin FC umbral, zonas por FC de reserva.',
+      'La biblioteca FBE: 26 sesiones de carrera listas en «Desde la biblioteca». Y al preparar una carrera, el tiempo objetivo previsto.',
+    ],
+  },
   '0.218': {
     atleta: [
       'Si entrenas por microciclos y tienes plan de carrera, te salen las carreras de esta semana, vayas como vayas con la fuerza.',

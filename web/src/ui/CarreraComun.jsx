@@ -1,24 +1,38 @@
 // Lo de carrera que ven el coach y el atleta (v0.133): la tabla de zonas, la barra del macrociclo y las partes de una sesión
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
-import { textoRangoZona, textoRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE } from '../logica/carrera.js';
+import { textoRangoZona, textoRitmo, fmtRitmo, macrociclo, semanaDelPlan, textoParte, NOMBRE_FASE } from '../logica/carrera.js';
 
+// (v0.219) Con ritmo umbral, una columna con el ritmo de cada zona; sin pulsómetro (zonas de ritmo), sin la de FC
 export function TablaZonas({ zonas, umbral = null }) {
+  const conFC = !zonas.some((z) => z.sinFC);
+  const conRitmo = zonas.some((z) => z.ritmo);
   return (
     <div class="tabla-zonas-env">
       <table class="tabla-zonas">
-        <caption class="sr">Zonas de frecuencia cardiaca</caption>
-        <thead><tr><th scope="col">Zona y cómo se siente</th><th scope="col">FC</th></tr></thead>
+        <caption class="sr">{conFC ? 'Zonas de frecuencia cardiaca' : 'Zonas de ritmo'}</caption>
+        <thead><tr><th scope="col">Zona y cómo se siente</th>{conFC && <th scope="col">FC</th>}{conRitmo && <th scope="col">Ritmo</th>}</tr></thead>
         <tbody>
           {zonas.map((z) => (
             <tr key={z.z} data-zona={z.z}>
               <th scope="row"><span class="zona-pastilla" data-zona={z.z}>Z{z.z}</span> {z.nombre}<span class="zona-siente mini secundario">{z.siente}</span></th>
-              <td class="num">{textoRangoZona(z)}{z.z === 4 && umbral ? <span class="zona-umbral mini secundario">{textoRitmo(umbral)}</span> : null}</td>
+              {conFC && <td class="num">{textoRangoZona(z)}{!conRitmo && z.z === 4 && umbral ? <span class="zona-umbral mini secundario">{textoRitmo(umbral)}</span> : null}</td>}
+              {conRitmo && <td class="num zona-ritmo"><CeldaRitmo r={z.ritmo} /></td>}
             </tr>
           ))}
         </tbody>
       </table>
+      {conRitmo && <p class="mini terciario">Ritmos en minutos por kilómetro, a partir del ritmo umbral.</p>}
     </div>
   );
+}
+
+// El ritmo de una zona en la tabla: los tramos abiertos («más lento de», «más rápido de») en una línea pequeña encima,
+// para que la columna quepa a 360 px
+function CeldaRitmo({ r }) {
+  if (!r || (r.rapido == null && r.lento == null)) return null;
+  if (r.rapido == null) return <><span class="zona-ritmo-mas mini secundario">más rápido de</span> {fmtRitmo(r.lento)}</>;
+  if (r.lento == null) return <><span class="zona-ritmo-mas mini secundario">más lento de</span> {fmtRitmo(r.rapido)}</>;
+  return `${fmtRitmo(r.rapido)}–${fmtRitmo(r.lento)}`;
 }
 
 // La barra del macrociclo: cada fase con su ancho por semanas, y la semana de hoy marcada

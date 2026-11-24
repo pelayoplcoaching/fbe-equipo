@@ -30,11 +30,15 @@
 .tabla-zonas tbody th { border-radius: var(--r-10) 0 0 var(--r-10); font-weight: 650; color: var(--tinta); }
 .tabla-zonas td.num { white-space: nowrap; text-align: right; }
 .zona-siente, .zona-umbral { display: block; font-weight: 450; margin-top: var(--esp-2); }
+/* v0.219: el tramo abierto del ritmo (mas lento de / mas rapido de), en una linea pequena encima de la cifra */
+.zona-ritmo-mas { display: block; }
 .tabla-zonas thead th:last-child { text-align: right; }
 .tabla-zonas tbody td:last-child { border-radius: 0 var(--r-10) var(--r-10) 0; }
 .zona-pastilla { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 var(--esp-6); border-radius: var(--r-pildora);
   background: var(--zt); color: var(--hoja); font-size: var(--letra-12-5); font-weight: 800; letter-spacing: .02em; margin-right: var(--esp-4); }
 .zona-chip { color: var(--zt); background: color-mix(in srgb, var(--zc) var(--z-suave), var(--hoja)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--zc) 35%, transparent); }
+/* (v0.219) con el ritmo, la zona no cabe en una linea de movil: el chip parte (sin salirse de su caja) */
+.zona-chip { white-space: normal; max-width: 100%; text-wrap-style: balance; }
 
 /* ---------- el macrociclo ---------- */
 .macrociclo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-4); } /* (visual) la barra encoge con su hueco: con muchas fases, cada una se recorta */
@@ -175,6 +179,10 @@
 .carrera-objetivo { display: grid; gap: var(--esp-2); padding: var(--esp-18) var(--esp-16); border-radius: var(--r); color: var(--sobre-morado);
   background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--z4) 55%, var(--morado)), var(--morado) 60%); box-shadow: var(--sombra-flotante); }
 .carrera-objetivo .peq { color: inherit; opacity: 1; }
+/* (v0.219) el tiempo previsto, sobre el morado de la tarjeta de su carrera */
+.carrera-objetivo .carrera-prevision { color: inherit; opacity: 1; }
+/* (v0.219) en la ficha del coach: el calculo del ritmo umbral desde una carrera y la prevision de tiempo */
+.umbral-carrera, .prevision-carrera { padding: var(--esp-10) var(--esp-12); border-radius: var(--r-s); background: var(--hoja-2); }
 .carrera-objetivo-nombre { font-size: var(--letra-21); line-height: 1.15; text-wrap: balance; }
 .carrera-cuenta { font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: var(--esp-4) 0 var(--esp-2); }
 .semana-carrera-at { padding: var(--esp-10); border-radius: var(--r-s); background: var(--hoja-2); }

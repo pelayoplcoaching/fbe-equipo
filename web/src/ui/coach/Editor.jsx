@@ -21,7 +21,7 @@ import { asa } from './arrastre.js';
 import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
-import { zonasFC } from '../../logica/carrera.js';
+import { zonasDe } from '../../logica/carrera.js';
 import { mapaEvitados, textoMotivo } from '../../logica/perfil-mas.js';
 
 const DESCANSOS = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
@@ -36,7 +36,8 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
   const carga = useCarga(() => api.bloqueCompleto(bloqueId), [bloqueId]);
   // (v0.133) Con la carrera encendida: sus zonas (para las partes) y el plan de la semana que se edita
   const carrera = useCarga(() => (carreraDe ? api.carrera(carreraDe).catch(() => null) : Promise.resolve(null)), [carreraDe]);
-  const zonasCarrera = useMemo(() => (carrera.datos?.perfil ? zonasFC(carrera.datos.perfil) : null), [carrera.datos]);
+  // (v0.219) con su ritmo umbral, también el ritmo de cada zona (y sin pulsómetro, las zonas de ritmo)
+  const zonasCarrera = useMemo(() => (carrera.datos?.perfil ? zonasDe(carrera.datos.perfil) : null), [carrera.datos]);
   const biblioteca = useCarga(() => api.biblioteca(), []);
   const [d, setD] = useState(null);
   const [semanaId, setSemanaId] = useState(null);

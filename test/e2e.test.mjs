@@ -6633,6 +6633,15 @@ if (parte('v0.218: la carrera por calendario')) try {
   fallos++;
   console.log('  ✗ la carrera por calendario (v0.218):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+
+// v0.219: carrera, tanda 1 (zonas con ritmos, umbral desde una carrera, biblioteca FBE, previsión y porqué)
+if (parte('v0.219: carrera, zonas, ritmos y biblioteca')) try {
+  const { probarCarrera219 } = await import('./e2e-carrera-219.mjs');
+  await probarCarrera219({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera de la v0.219:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

@@ -28,27 +28,48 @@ export const ZONAS = [
   { z: 4, nombre: 'Umbral', siente: 'Duro pero sostenido: palabras sueltas' },
   { z: 5, nombre: 'Por encima del umbral', siente: 'Muy duro: no puedes hablar' },
 ];
-// Dónde empieza cada zona (Z2 a Z5), en ppm: las que puso el coach o, si no, 85, 90, 95 y 100 % de la FC umbral
+// Dónde empieza cada zona (Z2 a Z5), en ppm: las que puso el coach o, si no, 85, 90, 95 y 100 % de la FC umbral.
+// (v0.219) Sin FC umbral, con la FC máxima y la de reposo: por la FC de reserva (Karvonen), 60, 70, 80 y 90 %.
 export function limitesZonas(perfil) {
   const z = perfil?.zonas;
   if (Array.isArray(z) && z.length === 4 && z.every((x, i) => Number.isInteger(x) && (i === 0 || x > z[i - 1]))) return z.map(Number);
   const l = Number(perfil?.lthr);
-  if (!Number.isFinite(l) || l < 100) return null;
-  return [Math.ceil(l * 0.85), Math.ceil(l * 0.9), Math.ceil(l * 0.95), Math.round(l)];
+  if (Number.isFinite(l) && l >= 100) return [Math.ceil(l * 0.85), Math.ceil(l * 0.9), Math.ceil(l * 0.95), Math.round(l)];
+  const max = Number(perfil?.fc_max), rep = Number(perfil?.fc_reposo);
+  if (perfil?.fc_max != null && perfil?.fc_reposo != null && Number.isFinite(max) && Number.isFinite(rep) && max >= 120 && rep >= 30 && max - rep >= 40) {
+    return [0.6, 0.7, 0.8, 0.9].map((f) => Math.round(rep + f * (max - rep)));
+  }
+  return null;
 }
-// [{ z, nombre, siente, min, max }]: min null en Z1, max null en Z5
+// De dónde salen sus zonas de pulso: 'mano' (las puso el coach), 'umbral' (FC umbral), 'reserva' (Karvonen) o null
+export function fuenteZonas(perfil) {
+  const z = perfil?.zonas;
+  if (Array.isArray(z) && z.length === 4 && z.every((x, i) => Number.isInteger(x) && (i === 0 || x > z[i - 1]))) return 'mano';
+  const l = Number(perfil?.lthr);
+  if (Number.isFinite(l) && l >= 100) return 'umbral';
+  return limitesZonas(perfil) ? 'reserva' : null;
+}
+// [{ z, nombre, siente, min, max, ritmo }]: min null en Z1, max null en Z5; ritmo, el de esa zona si hay ritmo umbral
 export function zonasFC(perfil) {
   const lim = limitesZonas(perfil);
   if (!lim) return null;
-  return ZONAS.map((x, i) => ({ ...x, min: i === 0 ? null : lim[i - 1], max: i === 4 ? null : lim[i] - 1 }));
+  const r = ritmosZonas(perfil);
+  return ZONAS.map((x, i) => ({ ...x, min: i === 0 ? null : lim[i - 1], max: i === 4 ? null : lim[i] - 1, ritmo: r ? r[i] : null }));
+}
+// (v0.219) Para enseñar: las zonas de pulso o, sin ellas, las de ritmo (quien corre sin pulsómetro): sin FC, sinFC: true
+export function zonasDe(perfil) {
+  const fc = zonasFC(perfil);
+  if (fc) return fc;
+  const r = ritmosZonas(perfil);
+  return r ? ZONAS.map((x, i) => ({ ...x, min: null, max: null, sinFC: true, ritmo: r[i] })) : null;
 }
 export function textoRangoZona(zona) {
-  if (!zona) return '';
+  if (!zona || zona.sinFC || (zona.min == null && zona.max == null)) return '';
   if (zona.min == null) return `≤${zona.max} ppm`;
   if (zona.max == null) return `≥${zona.min} ppm`;
   return `${zona.min}–${zona.max} ppm`;
 }
-// «Z4 (172–180 ppm)», «Z1–Z2 (≤162 ppm)»
+// «Z4 (172–180 ppm)», «Z1–Z2 (≤162 ppm)»; (v0.219) con ritmo umbral, también el ritmo: «Z2 (140–150 ppm · 6:10–7:00 min/km)»
 export function textoZona(z, zh = null, zonas = null) {
   if (!z) return '';
   const hasta = zh && zh !== z ? zh : null;
@@ -56,11 +77,60 @@ export function textoZona(z, zh = null, zonas = null) {
   if (!zonas) return nombre;
   const a = zonas[z - 1], b = zonas[(hasta || z) - 1];
   if (!a || !b) return nombre;
-  return `${nombre} (${textoRangoZona({ min: a.min, max: b.max })})`;
+  const fc = a.sinFC ? '' : textoRangoZona({ min: a.min, max: b.max });
+  const ritmo = a.ritmo && b.ritmo ? textoRitmoZona({ rapido: b.ritmo.rapido, lento: a.ritmo.lento }) : '';
+  const dentro = [fc, ritmo].filter(Boolean).join(' · ');
+  return dentro ? `${nombre} (${dentro})` : nombre;
+}
+
+// ---------- (v0.219) ritmos de cada zona, el umbral desde una carrera y la previsión de tiempos ----------
+// El ritmo umbral (s/km): el punto medio de su rango
+export function ritmoUmbral(perfil) {
+  const u = Array.isArray(perfil?.umbral) ? perfil.umbral.map(Number).filter((x) => Number.isFinite(x) && x > 0) : [];
+  return u.length ? Math.round(u.reduce((a, x) => a + x, 0) / u.length) : null;
+}
+// Los ritmos de cada zona (Friel, en % del ritmo umbral, en tiempo por km): Z1 más lento que el 129 %, Z2 114-129 %,
+// Z3 106-113 %, Z4 99-105 %, Z5 más rápido que el 99 %. [{ z, rapido, lento }] en s/km (rapido, el número menor; null
+// donde no hay tope)
+export const PCT_RITMO_ZONAS = [[1.29, null], [1.14, 1.29], [1.06, 1.13], [0.99, 1.05], [null, 0.99]];
+export function ritmosZonas(perfil) {
+  const u = ritmoUmbral(perfil);
+  if (!u) return null;
+  return PCT_RITMO_ZONAS.map(([a, b], i) => ({ z: i + 1, rapido: a == null ? null : Math.round(u * a), lento: b == null ? null : Math.round(u * b) }));
+}
+// «6:42–7:42 min/km», «más lento de 7:42 min/km», «más rápido de 5:07 min/km»
+export function textoRitmoZona(r) {
+  if (!r || (r.rapido == null && r.lento == null)) return '';
+  if (r.rapido == null) return `más rápido de ${fmtRitmo(r.lento)} min/km`;
+  if (r.lento == null) return `más lento de ${fmtRitmo(r.rapido)} min/km`;
+  return `${fmtRitmo(r.rapido)}–${fmtRitmo(r.lento)} min/km`;
+}
+// El ritmo umbral desde una carrera reciente: el que podría aguantar unos 60 minutos (Riegel, exponente 1,06), en s/km
+export function umbralDesdeCarrera(seg, km) {
+  const t = Number(seg), d = Number(km);
+  if (!(t > 0 && d > 0)) return null;
+  const d60 = d * (3600 / t) ** (1 / 1.06);
+  const r = Math.round(3600 / d60);
+  return r >= 120 && r <= 900 ? r : null;
+}
+// El rango que se guarda como ritmo umbral (5 s a cada lado): 295 → [290, 300]
+export const rangoUmbral = (r) => (r ? [r - 5, r + 5] : null);
+// Riegel: el tiempo en otra distancia; en maratón (40 km o más), una horquilla hasta un 5 % más lento (Riegel se queda
+// corto en populares). { seg, hasta } o null
+export function predecirTiempo(seg, km, km2) {
+  const t = Number(seg), d = Number(km), d2 = Number(km2);
+  if (!(t > 0 && d > 0 && d2 > 0)) return null;
+  const p = t * (d2 / d) ** 1.06;
+  return { seg: Math.round(p), hasta: d2 >= 40 ? Math.round(p * 1.05) : null };
+}
+// La última carrera con resultado (para la previsión): la más reciente con tiempo y distancia, sin contar la que se edita
+export function ultimaConResultado(eventos = [], salvo = null) {
+  return [...(eventos || [])].filter((e) => e && e.id !== salvo && Number(e.resultado_seg) > 0 && Number(e.distancia_km) > 0)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0] || null;
 }
 // En qué zona cae una FC
 export function zonaDeFC(fc, zonas) {
-  if (!zonas || !Number.isFinite(Number(fc))) return null;
+  if (!zonas || zonas[0]?.sinFC || !Number.isFinite(Number(fc))) return null;
   const f = Number(fc);
   return zonas.find((z) => (z.min == null || f >= z.min) && (z.max == null || f <= z.max))?.z ?? null;
 }

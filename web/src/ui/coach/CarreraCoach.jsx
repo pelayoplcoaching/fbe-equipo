@@ -9,10 +9,11 @@ import { num } from '../../logica/calculos.js';
 import { textoCardio, textoCardioHecho, textoSaludCardio } from '../../logica/cardio.js';
 import {
   TIPOS_CARRERA, NOMBRE_TIPO, FASES, TESTS, NOMBRE_TEST, PRIORIDADES, DECISIONES, NOMBRE_DECISION, ESTADOS_REVISION, NOMBRE_ESTADO_REVISION,
-  zonasFC, textoRangoZona, textoZona, textoParte, limpiarParte, parteAEditor, fmtRitmo, textoRitmo, fmtTiempo, macrociclo, semanasConPlan,
+  zonasFC, textoRangoZona, textoZona, textoParte, limpiarParte, parteAEditor, fmtRitmo, textoRitmo, fmtTiempo, leerRitmo, leerTiempo, macrociclo, semanasConPlan,
   semanaDelPlan, faseDe, textoCuentaAtras, textoObjetivoCarrera, textoResultado, proximaCarrera, carreraObjetivo, textoKm, carreraHechaPorSemana,
-  estadoKm, minutosPauta, pautaDeReceta, SEMAFORO,
+  estadoKm, minutosPauta, pautaDeReceta, SEMAFORO, zonasDe as zonasVer, fuenteZonas, umbralDesdeCarrera, rangoUmbral, leerRangoRitmo, predecirTiempo, ultimaConResultado,
 } from '../../logica/carrera.js';
+import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
 
 const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [7, 'Domingo']];
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
@@ -75,7 +76,11 @@ function ZonasCoach({ atleta, perfil, alGuardar }) {
   const [ocupado, una] = useUnaVez();
   useEffect(() => setF(inicial()), [perfil?.actualizado_en]);
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
-  const zonas = zonasFC({ lthr: Number(f.lthr) || null, zonas: [f.z2, f.z3, f.z4, f.z5].every((x) => x !== '') ? [f.z2, f.z3, f.z4, f.z5].map(Number) : null });
+  // (v0.219) la vista previa con todo lo escrito: FC umbral o, sin ella, FC máxima y de reposo; y el ritmo umbral, para los ritmos
+  const previa = { lthr: Number(f.lthr) || null, fc_max: f.fc_max === '' ? null : Number(f.fc_max), fc_reposo: f.fc_reposo === '' ? null : Number(f.fc_reposo),
+    zonas: [f.z2, f.z3, f.z4, f.z5].every((x) => x !== '') ? [f.z2, f.z3, f.z4, f.z5].map(Number) : null, umbral: leerRangoRitmo(f.umbral) || null };
+  const zonas = zonasVer(previa);
+  const fuente = fuenteZonas(previa);
   const guardar = (e) => {
     e.preventDefault();
     una(async () => {
@@ -105,11 +110,38 @@ function ZonasCoach({ atleta, perfil, alGuardar }) {
             {['z2', 'z3', 'z4', 'z5'].map((k) => <label key={k} class="campo"><span class="etq">Empieza {k.toUpperCase()}</span><input class="entrada num" inputMode="numeric" value={f[k]} onInput={cambiar(k)} /></label>)}
           </div>
         </details>
-        {zonas ? <TablaZonas zonas={zonas} umbral={p.umbral} /> : <p class="mini terciario">Con la FC umbral (por ejemplo, la FC media de los últimos 20 minutos de un test de 30) salen sus cinco zonas.</p>}
+        <UmbralDesdeCarrera alCalcular={(r) => setF({ ...f, umbral: rangoUmbral(r).map(fmtRitmo).join('-') })} />
+        {zonas ? <TablaZonas zonas={zonas} umbral={previa.umbral} /> : <p class="mini terciario">Con la FC umbral (por ejemplo, la FC media de los últimos 20 minutos de un test de 30) salen sus cinco zonas; sin ella, con la FC máxima y la de reposo. Con el ritmo umbral, también el ritmo de cada zona.</p>}
+        {fuente === 'reserva' && <p class="mini terciario">Zonas por la FC de reserva (Karvonen: 60, 70, 80 y 90 %). Con su FC umbral serían más precisas.</p>}
         <button class="btn btn-primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar zonas'}</button>
       </form>
       {p.test_fecha && <p class="mini terciario">Test del {fmtConDia(p.test_fecha)}{p.test_tipo ? ` (${NOMBRE_TEST[p.test_tipo].toLowerCase()})` : ''}.</p>}
     </section>
+  );
+}
+// (v0.219) El ritmo umbral desde una carrera reciente (o el test de 30 minutos): el que aguantaría unos 60 minutos
+const DISTANCIAS_UMBRAL = [['5', '5 km'], ['10', '10 km'], ['21.0975', 'Media maratón'], ['42.195', 'Maratón'], ['test', 'Test de 30 min (ritmo de los últimos 20)']];
+function UmbralDesdeCarrera({ alCalcular }) {
+  const [abierta, setAbierta] = useState(false);
+  const [d, setD] = useState('10');
+  const [t, setT] = useState('');
+  const seg = d === 'test' ? leerRitmo(t) : leerTiempo(t);
+  const r = d === 'test' ? seg : seg ? umbralDesdeCarrera(seg, Number(d)) : null;
+  if (!abierta) return <button type="button" class="btn-texto mini" style="justify-self:start" onClick={() => setAbierta(true)}><Icono n="calculadora" width="14" height="14" /> Calcular el ritmo umbral desde una carrera</button>;
+  return (
+    <div class="umbral-carrera panel-sub pila-s">
+      <div class="rejilla-campos rejilla-carrera">
+        <label class="campo"><span class="etq">Carrera reciente</span>
+          <select class="selector" value={d} onChange={(e) => { setD(e.currentTarget.value); setT(''); }}>{DISTANCIAS_UMBRAL.map(([k, x]) => <option key={k} value={k}>{x}</option>)}</select></label>
+        <label class="campo"><span class="etq">{d === 'test' ? 'Ritmo (min/km)' : 'Tiempo'}</span><input class="entrada num" placeholder={d === 'test' ? '5:05' : '48:30'} value={t} onInput={(e) => setT(e.currentTarget.value)} /></label>
+      </div>
+      {t && !r ? <span class="mini aviso-texto">{d === 'test' ? 'Escribe el ritmo como 5:05.' : 'Escribe el tiempo como 48:30 o 1:45:00.'}</span>
+        : r ? <span class="mini">Ritmo umbral de unos <strong class="num">{fmtRitmo(r)} min/km</strong>{d === 'test' ? '' : ' (lo que aguantaría unos 60 minutos, por la fórmula de Riegel)'}.</span> : null}
+      <div class="fila-envolver">
+        <button type="button" class="btn btn-peq" disabled={!r} onClick={() => { alCalcular(r); setAbierta(false); }}>Usarlo</button>
+        <button type="button" class="btn btn-peq plano" onClick={() => setAbierta(false)}>Cancelar</button>
+      </div>
+    </div>
   );
 }
 // El plan, tal cual está, para no pisarlo al guardar las zonas (y al revés)
@@ -218,7 +250,7 @@ function HojaSemana({ atleta, semana, perfil, alCerrar }) {
   const sesiones = filas.map((x) => x.s);
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
-  const zonas = zonasFC(perfil);
+  const zonas = zonasVer(perfil);
   const existe = !!semana.actualizado_en;
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   return (
@@ -372,9 +404,11 @@ export function PartesEditor({ partes = [], zonas = null, alCambiar, alReceta = 
       <div class="fila-envolver">
         {filas.length < 12 && <button type="button" class="btn btn-peq" onClick={() => setFilas([...filas, parteAEditor({ fase: filas.length ? 'bloque' : 'calentar' })])}><Icono n="mas" /> Parte</button>}
         {alReceta && <label class="campo campo-en-linea"><span class="sr">Desde la biblioteca</span>
-          <select class="selector" value="" onFocus={cargarRecetas} onPointerDown={cargarRecetas} onChange={(e) => { const r = (recetas || []).find((x) => x.id === e.currentTarget.value); if (r) alReceta(r); }}>
+          <select class="selector" value="" onFocus={cargarRecetas} onPointerDown={cargarRecetas} onChange={(e) => { const id = e.currentTarget.value; const r = (recetas || []).find((x) => x.id === id) || BIBLIOTECA_FBE.find((x) => x.id === id); if (r) alReceta(r); }}>
             <option value="">Desde la biblioteca…</option>
-            {(recetas || []).map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+            {(recetas || []).length > 0 && <optgroup label="Las tuyas">{recetas.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}</optgroup>}
+            {/* (v0.219) la biblioteca FBE, lista para usar */}
+            <optgroup label="Biblioteca FBE">{BIBLIOTECA_FBE.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}</optgroup>
           </select></label>}
         {alGuardarReceta && partes.length > 0 && <button type="button" class="btn btn-peq plano" onClick={alGuardarReceta}><Icono n="guardar" /> Guardar en la biblioteca</button>}
       </div>
@@ -410,12 +444,12 @@ function CarrerasCoach({ atleta, eventos, alGuardar }) {
           ))}
         </ul>
       )}
-      {editar && <HojaEvento atleta={atleta} evento={editar} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
+      {editar && <HojaEvento atleta={atleta} evento={editar} eventos={eventos} alCerrar={(c) => { setEditar(null); if (c) alGuardar(); }} />}
     </section>
   );
 }
 
-function HojaEvento({ atleta, evento, alCerrar }) {
+function HojaEvento({ atleta, evento, eventos = [], alCerrar }) {
   const { api, aviso } = useApp();
   const e0 = evento || {};
   const [f, setF] = useState({ nombre: e0.nombre || '', fecha: e0.fecha || '', distancia_km: v(e0.distancia_km), desnivel_m: v(e0.desnivel_m), prioridad: e0.prioridad || 'B', decision: e0.decision || 'va',
@@ -444,6 +478,7 @@ function HojaEvento({ atleta, evento, alCerrar }) {
           <label class="campo"><span class="etq">Tiempo objetivo</span><input class="entrada num" placeholder="1:59:00" value={f.objetivo} onInput={cambiar('objetivo')} /></label>
           <label class="campo"><span class="etq">Ritmo objetivo (min/km)</span><input class="entrada num" placeholder="5:38" value={f.objetivo_ritmo} onInput={cambiar('objetivo_ritmo')} /></label>
         </div>
+        <Prevision eventos={eventos} salvo={e0.id || null} km={f.distancia_km} alUsar={(seg, ritmo) => setF({ ...f, objetivo: fmtTiempo(seg), objetivo_ritmo: fmtRitmo(ritmo) })} />
         <label class="campo"><span class="etq">Nota (el porqué, la estrategia)</span><textarea class="area" maxLength={500} value={f.nota} onInput={cambiar('nota')} /></label>
         {e0.id && <div class="rejilla-campos">
           <label class="campo"><span class="etq">Resultado</span><input class="entrada num" placeholder="1:58:43" value={f.resultado} onInput={cambiar('resultado')} /></label>
@@ -455,6 +490,23 @@ function HojaEvento({ atleta, evento, alCerrar }) {
         </div>
       </form>
     </Hoja>
+  );
+}
+
+// (v0.219) La previsión con su última carrera con resultado (Riegel; en maratón, una horquilla hasta un 5 % más lenta)
+function Prevision({ eventos, salvo, km, alUsar }) {
+  const base = ultimaConResultado(eventos, salvo);
+  const d = Number(String(km ?? '').replace(',', '.'));
+  if (!base || !(d > 0)) return null;
+  const p = predecirTiempo(base.resultado_seg, base.distancia_km, d);
+  if (!p) return null;
+  const objetivo = p.hasta || p.seg;
+  return (
+    <div class="prevision-carrera panel-sub pila-xs">
+      <span class="mini">Con su {base.nombre} ({num(Number(base.distancia_km), Number(base.distancia_km) % 1 ? 1 : 0)} km en {fmtTiempo(base.resultado_seg)}), la previsión para {num(d, d % 1 ? 1 : 0)} km: <strong class="num">{fmtTiempo(p.seg)}{p.hasta ? `–${fmtTiempo(p.hasta)}` : ''}</strong> ({fmtRitmo(Math.round(objetivo / d))} min/km).</span>
+      {p.hasta && <span class="mini terciario">En maratón, la fórmula de Riegel suele quedarse corta en corredores populares: mejor apuntar al tiempo más lento.</span>}
+      <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => alUsar(objetivo, Math.round(objetivo / d))}>Usarlo como objetivo</button>
+    </div>
   );
 }
 
@@ -558,7 +610,8 @@ function BibliotecaCarrera() {
         <h2 id="cb-titulo" class="h-panel">Tu biblioteca de sesiones</h2>
         <button class="btn btn-peq plano" aria-expanded={abierta ? 'true' : 'false'} onClick={() => setAbierta(!abierta)}>{abierta ? 'Ocultar' : `Ver (${recetas.datos?.length ?? '…'})`}</button>
       </div>
-      <p class="mini terciario">Las usas desde el editor y desde las semanas del plan con «Desde la biblioteca». Para añadir una, prepárala en una sesión y toca «Guardar en la biblioteca». Solo la ves tú.</p>
+      <p class="mini terciario">Las usas desde el editor y desde las semanas del plan con «Desde la biblioteca». Para añadir una, prepárala en una sesión y toca «Guardar en la biblioteca». Solo la ves tú. Además tienes la biblioteca FBE, lista para usar.</p>
+      <BibliotecaFbe />
       {abierta && (recetas.error ? <ErrorCaja error={recetas.error} reintentar={recetas.recargar} /> : !recetas.datos ? <Siluetas n={3} /> : (
         <ul class="lista-recetas-carrera">
           {recetas.datos.map((r) => (
@@ -576,6 +629,30 @@ function BibliotecaCarrera() {
         </ul>
       ))}
     </section>
+  );
+}
+
+// (v0.219) Las sesiones de la biblioteca FBE, con su porqué: se usan igual que las tuyas, con «Desde la biblioteca…»
+function BibliotecaFbe() {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <div class="biblioteca-fbe pila-s">
+      <button type="button" class="btn-texto peq" style="justify-self:start" aria-expanded={abierta ? 'true' : 'false'} onClick={() => setAbierta(!abierta)}>
+        <Icono n={abierta ? 'arriba' : 'abajo'} width="14" height="14" /> Biblioteca FBE ({BIBLIOTECA_FBE.length} sesiones listas para usar)
+      </button>
+      {abierta && (
+        <ul class="lista-recetas-carrera">
+          {BIBLIOTECA_FBE.map((r) => (
+            <li key={r.id} class="pila-xs">
+              <strong class="peq">{r.nombre}</strong>
+              <span class="mini secundario">{r.porque}</span>
+              <span class="mini terciario">{textoCardio(r.pauta)}{minutosPauta(r.pauta) && !r.pauta.minutos ? ` · unos ${minutosPauta(r.pauta)} min` : ''}</span>
+              <ol class="partes-lista mini">{r.pauta.partes.map((p, i) => <li key={i}><span class="fase-nombre">{FASES.find(([k]) => k === p.fase)?.[1]}</span> {textoParte(p)}{p.nota ? ` · ${p.nota}` : ''}</li>)}</ol>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

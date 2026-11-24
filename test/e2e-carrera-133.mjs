@@ -184,8 +184,8 @@ export async function probarCarrera133({ navegador, check, base = 'http://localh
     }
     const det = p.locator('.sesion-vista .detalle-carrera');
     await det.waitFor();
-    check(await det.locator('.lista-partes .parte').count() === 4 && /Z4 \(168–175 ppm\)/.test(await det.textContent()) && /2 × 6 min/.test(await det.textContent()),
-      'la sesión de calidad, por partes: calentar, strides, 2 × 6 min en Z4 con sus pulsaciones y enfriar');
+    check(await det.locator('.lista-partes .parte').count() === 4 && /Z4 \(168–175 ppm · \d:\d\d–\d:\d\d min\/km\)/.test(await det.textContent()) && /2 × 6 min/.test(await det.textContent()),
+      'la sesión de calidad, por partes: calentar, strides, 2 × 6 min en Z4 con sus pulsaciones (y, desde la v0.219, su ritmo) y enfriar');
     await det.getByRole('button', { name: 'Regular' }).click();
     check(/min suaves en Z1–Z2, sin series/.test(await det.locator('.semaforo-texto').textContent()) && await det.locator('.lista-partes.en-ambar').count() === 1, 'el semáforo en ámbar: le dice qué hacer hoy y tacha las series');
     await p.waitForTimeout(1200);

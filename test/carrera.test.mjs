@@ -28,6 +28,36 @@ check(lp.error === null && JSON.stringify(lp.parte) === JSON.stringify({ fase: '
 check(JSON.stringify(C.limpiarParte(C.parteAEditor(parte)).parte) === JSON.stringify(parte), 'y de la parte al editor y vuelta, igual');
 check(C.minutosPauta({ partes: [{ fase: 'calentar', seg: 900 }, parte, { fase: 'enfriar', seg: 600 }] }) === 39 && C.minutosPauta({ minutos: 30 }) === 30, 'los minutos de una pauta: los suyos o la suma de sus partes');
 
+console.log('\nv0.219: Karvonen, los ritmos de cada zona, el umbral desde una carrera, la previsión y la biblioteca FBE');
+const zk = C.zonasFC({ fc_max: 190, fc_reposo: 50 });
+check(C.fuenteZonas({ fc_max: 190, fc_reposo: 50 }) === 'reserva' && zk.map((x) => x.min).slice(1).join() === '134,148,162,176' && C.fuenteZonas({ lthr: 181 }) === 'umbral'
+  && C.fuenteZonas({ lthr: 181, zonas: [150, 160, 170, 180] }) === 'mano' && C.zonasFC({ fc_max: 190 }) === null && C.zonasFC({ fc_max: 150, fc_reposo: 120 }) === null && C.fuenteZonas({}) === null,
+  'sin FC umbral, con la FC máxima y la de reposo: por la FC de reserva (60, 70, 80 y 90 %); con solo una de las dos, ninguna');
+const zr = C.ritmosZonas({ umbral: [290, 300] });
+check(C.ritmoUmbral({ umbral: [290, 300] }) === 295 && zr.map((x) => `${x.rapido ?? '-'}/${x.lento ?? '-'}`).join(' ') === '381/- 336/381 313/333 292/310 -/292' && C.ritmosZonas({}) === null,
+  'los ritmos de cada zona, en % del ritmo umbral (Friel): Z2 del 114 al 129 %, Z4 del 99 al 105 %…');
+check(C.textoRitmoZona(zr[1]) === '5:36–6:21 min/km' && C.textoRitmoZona(zr[0]) === 'más lento de 6:21 min/km' && C.textoRitmoZona(zr[4]) === 'más rápido de 4:52 min/km', 'los ritmos de una zona, en palabras');
+const zfr = C.zonasFC({ lthr: 181, umbral: [290, 300] });
+check(C.textoZona(2, null, zfr) === 'Z2 (154–162 ppm · 5:36–6:21 min/km)' && C.textoZona(1, 2, zfr) === 'Z1–Z2 (≤162 ppm · más lento de 5:36 min/km)' && C.textoZona(4, null, z) === 'Z4 (172–180 ppm)',
+  'con ritmo umbral, la zona dice su pulso y su ritmo (sin él, como siempre)');
+const zsin = C.zonasDe({ umbral: [290, 300] });
+check(C.zonasFC({ umbral: [290, 300] }) === null && zsin.length === 5 && zsin.every((x) => x.sinFC) && C.textoZona(4, null, zsin) === 'Z4 (4:52–5:10 min/km)' && C.zonaDeFC(150, zsin) === null
+  && C.textoRangoZona(zsin[1]) === '' && C.zonasDe({}) === null && C.zonasDe({ lthr: 181 })[1].min === 154, 'sin pulsómetro pero con ritmo umbral: zonas de ritmo (sin pulsaciones, y una FC no cae en ninguna)');
+check(C.umbralDesdeCarrera(2910, 10) === 295 && C.umbralDesdeCarrera(1500, 5) === 315 && C.umbralDesdeCarrera(6420, 21.0975) === 294 && C.umbralDesdeCarrera(0, 10) === null
+  && JSON.stringify(C.rangoUmbral(295)) === '[290,300]', 'el ritmo umbral desde una carrera: lo que aguantaría unos 60 minutos (Riegel); 10 km en 48:30 → 4:55; y su rango');
+const pm = C.predecirTiempo(2910, 10, 42.195);
+check(JSON.stringify(C.predecirTiempo(2910, 10, 21.0975)) === '{"seg":6421,"hasta":null}' && pm.seg === 13387 && pm.hasta === 14056 && C.fmtTiempo(pm.seg) === '3:43:07' && C.predecirTiempo(0, 10, 21) === null,
+  'la previsión de Riegel (10 km en 48:30 → media en 1:47:01) y, en maratón, una horquilla hasta un 5 % más lenta (3:43:07–3:54:16)');
+const evs = [{ id: 'a', fecha: '2026-10-04', distancia_km: 10, resultado_seg: 2910 }, { id: 'b', fecha: '2026-11-01', distancia_km: 21.1, resultado_seg: 6500 }, { id: 'c', fecha: '2026-11-15', distancia_km: 5, resultado_seg: null }];
+check(C.ultimaConResultado(evs)?.id === 'b' && C.ultimaConResultado(evs, 'b')?.id === 'a' && C.ultimaConResultado([]) === null, 'la última carrera con resultado (sin contar la que se edita)');
+const { BIBLIOTECA_FBE, porqueDe, PORQUE_TIPO } = await import('../web/src/logica/carrera-biblioteca.js');
+check(BIBLIOTECA_FBE.length >= 25 && BIBLIOTECA_FBE.every((r) => pautaValida(r.pauta, true) && r.nombre.length <= 60 && r.porque && r.id.startsWith('fbe-'))
+  && new Set(BIBLIOTECA_FBE.map((r) => r.id)).size === BIBLIOTECA_FBE.length && new Set(BIBLIOTECA_FBE.map((r) => r.nombre)).size === BIBLIOTECA_FBE.length,
+  `la biblioteca FBE: ${BIBLIOTECA_FBE.length} sesiones, todas con la forma que acepta la base, con su porqué y sin repetir`);
+check(C.TIPOS_CARRERA.every(([k]) => PORQUE_TIPO[k]) && porqueDe({ modalidad: 'carrera', tipo: 'facil', partes: [{ fase: 'strides', reps: 4, seg: 20 }] }).includes('rectas')
+  && porqueDe({ modalidad: 'carrera', tipo: 'tecnica', partes: [{ fase: 'strides', reps: 4, seg: 20 }] }) === PORQUE_TIPO.tecnica && porqueDe({ modalidad: 'bici', tipo: 'facil' }) === null && porqueDe({ modalidad: 'carrera' }) === null,
+  'el porqué de cada tipo de sesión (y el de las rectas, si las lleva)');
+
 console.log('\nLa pauta y lo hecho (cardio.js, como la 056)');
 const pauta = { modalidad: 'carrera', tipo: 'facil', minutos: 35, minutos_max: 45, zona: 2 };
 check(cardioValido(pauta) && textoCardio(pauta) === '35–45 min de carrera fácil en Z2' && textoCardio({ modalidad: 'carrera', minutos: 30, esfuerzo: 6 }) === '30 min de correr a esfuerzo 6', 'la pauta con tipo, rango y zona (y la de antes, igual)');

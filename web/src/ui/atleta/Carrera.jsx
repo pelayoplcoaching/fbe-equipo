@@ -7,10 +7,11 @@ import { TablaZonas, Macrociclo, ListaPartes } from '../CarreraComun.jsx';
 import { fmtConDia, fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { textoCardio } from '../../logica/cardio.js';
+import { porqueDe } from '../../logica/carrera-biblioteca.js';
 import {
-  zonasFC, textoZona, textoRitmo, NOMBRE_TIPO, NOMBRE_TEST, SEMAFORO, ALARMA, pautaAmbar, minutosPauta, semanasConPlan, semanaDelPlan, faseDe,
+  zonasDe, textoZona, textoRitmo, NOMBRE_TIPO, NOMBRE_TEST, SEMAFORO, ALARMA, pautaAmbar, minutosPauta, semanasConPlan, semanaDelPlan, faseDe,
   macrociclo, carreraObjetivo, proximaCarrera, textoCuentaAtras, textoObjetivoCarrera, textoResultado, textoKm, carreraHechaPorSemana, estadoKm,
-  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera,
+  NOMBRE_DECISION, NOMBRE_ESTADO_REVISION, conCarrera, predecirTiempo, ultimaConResultado, fmtTiempo,
 } from '../../logica/carrera.js';
 
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
@@ -42,7 +43,9 @@ function useCarreraMia() {
 // ---------- dentro de la sesión ----------
 export function DetalleCarreraSesion({ pauta, sesionId, completada = false, hecho = null }) {
   const carrera = useCarreraMia();
-  const zonas = carrera.datos?.perfil ? zonasFC(carrera.datos.perfil) : null;
+  // (v0.219) con su ritmo umbral, cada zona dice también su ritmo; sin pulsómetro, las zonas de ritmo
+  const zonas = carrera.datos?.perfil ? zonasDe(carrera.datos.perfil) : null;
+  const porque = porqueDe(pauta);
   const [semaforo, setSemaforo] = useState(() => (hecho?.semaforo || leerSemaforo(sesionId)));
   const ambar = semaforo === 'ambar';
   const elegir = (v) => { const n = v === semaforo ? null : v; setSemaforo(n); guardarSemaforo(sesionId, n); };
@@ -54,6 +57,7 @@ export function DetalleCarreraSesion({ pauta, sesionId, completada = false, hech
         {pauta.opcional && <span class="chip">Opcional</span>}
         {!pauta.minutos && minutosPauta(pauta) ? <span class="chip num">Unos {minutosPauta(pauta)} min</span> : null}
       </div>
+      {porque && <p class="peq secundario carrera-porque">{porque}</p>}
       {pauta.ritmo && <p class="peq num">Ritmo: {textoRitmo(pauta.ritmo)}</p>}
       <ListaPartes partes={pauta.partes || []} zonas={zonas} ambar={ambar && !completada} />
       {!completada && !hecho && (
@@ -118,12 +122,16 @@ function ContenidoCarrera({ d }) {
   const hoy = hoyISO();
   const lunesHoy = lunesDe(hoy);
   const obj = carreraObjetivo(d.eventos, hoy) || proximaCarrera(d.eventos, hoy);
-  const zonas = zonasFC(d.perfil);
+  const zonas = zonasDe(d.perfil);
   const hecho = useMemo(() => carreraHechaPorSemana(d.hechas || []), [d.hechas]);
   const semanas = semanasConPlan(d.perfil, d.semanas);
   const actual = semanas.find((s) => s.lunes === lunesHoy);
   const vienen = semanas.filter((s) => s.lunes > lunesHoy).slice(0, 3);
   const p = d.perfil || {};
+  // (v0.219) su tiempo previsto, con su última carrera con resultado (Riegel; en maratón, una horquilla)
+  const base = obj?.distancia_km ? ultimaConResultado(d.eventos, obj.id) : null;
+  const previsto = base ? predecirTiempo(base.resultado_seg, base.distancia_km, obj.distancia_km) : null;
+  const prevision = previsto ? { base, p: previsto } : null;
   return (
     <div class="pila tu-carrera">
       {obj && (
@@ -132,6 +140,7 @@ function ContenidoCarrera({ d }) {
           <strong class="carrera-objetivo-nombre">{obj.nombre}</strong>
           <span class="carrera-cuenta num">{textoCuentaAtras(obj.fecha, hoy)}</span>
           <span class="peq">{fmtConDia(obj.fecha)}{textoObjetivoCarrera(obj) ? ` · ${textoObjetivoCarrera(obj)}` : ''}</span>
+          {prevision && <span class="mini carrera-prevision">Con tu {prevision.base.nombre}, tu tiempo previsto es {fmtTiempo(prevision.p.seg)}{prevision.p.hasta ? `–${fmtTiempo(prevision.p.hasta)}` : ''}</span>}
         </section>
       )}
       {macrociclo(p).length > 0 && <section class="pila-s" aria-labelledby="tc-plan"><h3 id="tc-plan" class="h-panel">{p.plan_nombre || 'Tu plan'}</h3><Macrociclo perfil={p} /></section>}
