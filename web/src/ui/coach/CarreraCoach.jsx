@@ -398,7 +398,7 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
             {plan.avisos.map((a) => <p key={a} class="asis-aviso peq"><Icono n="alerta" /> {a}</p>)}
             <details class="asis-semanas">
               <summary class="peq">Ver las {plan.semanas.length} semanas</summary>
-              <ol class="asis-lista">
+              <ol class="asis-lista" tabIndex={0} aria-label="Las semanas del plan propuesto">
                 {plan.semanas.map((s, i) => (
                   <li key={s.lunes}>
                     <span class="num asis-n">S{antes + i + 1}</span>

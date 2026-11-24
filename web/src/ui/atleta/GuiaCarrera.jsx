@@ -91,7 +91,7 @@ function Pantalla({ pauta, titulo = 'Tu sesión', alCerrar }) {
           <div class="gser-centro pila-s">
             <p class="gser-que intervalos-fase">{tramos.length} tramos</p>
             <p class="peq secundario">{total.seg ? `Unos ${Math.round(total.seg / 60)} minutos cronometrados` : ''}{total.aMano ? `${total.seg ? '; ' : ''}${total.aMano === 1 ? 'un tramo' : `${total.aMano} tramos`} por distancia, que pasas con «Hecho»` : ''}.</p>
-            <ol class="gser-lista mini">{tramos.map((t, k) => <li key={k} data-k={t.k}><strong>{t.titulo}</strong> {t.detalle}</li>)}</ol>
+            <ol class="gser-lista mini" tabIndex={0} aria-label="Los tramos de la sesión">{tramos.map((t, k) => <li key={k} data-k={t.k}><strong>{t.titulo}</strong> {t.detalle}</li>)}</ol>
             <button type="button" class="btn btn-primario gser-empezar" onClick={empezar}><Icono n="play" /> Empezar</button>
           </div>
         ) : actual ? (
