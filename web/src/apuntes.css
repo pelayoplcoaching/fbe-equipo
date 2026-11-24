@@ -492,7 +492,9 @@
 .liga-filas li.yo { background: color-mix(in srgb, var(--morado) 16%, var(--hoja)); font-weight: 650; }
 .liga-puesto { color: var(--tinta-2); text-align: center; }
 .liga-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-10); padding: var(--esp-8) 0; border-bottom: var(--filo-fino) solid var(--linea); }
+/* (v0.217) solo los duelos de Apuntes: sin .prog-duelos delante, esta regla pisaba la fila de los duelos de Equipo
+   (personal.css, una rejilla) y, con nombres largos, «Acepto» y «Retirar» se salian de la pantalla */
+.prog-duelos .duelo-fila { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-10); padding: var(--esp-8) 0; border-bottom: var(--filo-fino) solid var(--linea); }
 .duelo-ganado { color: var(--ok); font-weight: 650; }
 .duelo-perdido, .duelo-caducado { color: var(--tinta-2); }
 .duelo-gente { display: flex; flex-wrap: wrap; gap: var(--esp-6); align-items: center; }
