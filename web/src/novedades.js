@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.216': {
+    atleta: [
+      'En tableta y ordenador la app aprovecha mejor la pantalla: Equipo va a dos columnas y Progreso y tu perfil quedan mejor repartidos.',
+      'Con la letra grande o muy grande, las filas de tu perfil ya no parten palabras: el valor va debajo del título.',
+    ],
+    coach: [],
+  },
   '0.215': {
     atleta: [
       'En un móvil pequeño o con la letra grande, el nombre de la sesión cabe en la cabecera: el reloj va junto a los tramos.',
