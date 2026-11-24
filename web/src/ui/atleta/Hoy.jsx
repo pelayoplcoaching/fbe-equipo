@@ -26,7 +26,6 @@ import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
-import { TarjetaMarcas } from './Esencial.jsx';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
@@ -78,6 +77,9 @@ import { AvisoViaje } from './Viaje.jsx';
 import { semanasObjetivo, semanaEnCurso, cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { perezoso } from '../perezoso.jsx';
+// (FBE Esencial) lo de quien va por su cuenta, en su propio trozo: el resto de atletas no lo descarga
+const TarjetaMarcas = perezoso(() => import('./Esencial.jsx'), 'TarjetaMarcas', { mientras: null });
+const BienvenidaEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -109,6 +111,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   };
   // Solo nutrición (v0.26): sin nada de entrenamiento
   const entrena = conEntrenamiento(atleta);
+  // (FBE Esencial) quien va por su cuenta: sin coach que conteste ni cuestionario de objetivos para él
+  const porSuCuenta = esPorSuCuenta(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
   const hechos = useCarga(() => api.primerosPasos(atleta.id).catch(() => null), [atleta.id, p, checkinSemana.datos], { recuerdo: `pasos:${atleta.id}` });
   // Cuestionario inicial: un paso de los primeros pasos y, si el coach lo pide, una tarjeta
@@ -170,7 +174,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       {atleta.estado === 'baja' && (
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
-      {verPasos && <MensajeCoach momento="bienvenida" clase="bienvenida-coach" />}
+      {verPasos && (porSuCuenta ? <BienvenidaEsencial bloque={p?.bloque} /> : <MensajeCoach momento="bienvenida" clase="bienvenida-coach" />)}
       {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
       {!propio && (verPasos || (!p && !cargando) || !entrena) && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
       {!entrena ? (
@@ -182,7 +186,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {!propio && <Reserva id="hoy-mes"><TarjetaMes salud={salud} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {!verPasos && !propio && !verBienvenida && <TarjetaSuplementos estado={suplementos} />}
-              {!verPasos && !propio && !verBienvenida && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
+              {!verPasos && !propio && !verBienvenida && !porSuCuenta && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && <TarjetaNotificaciones />}
             </>
@@ -194,14 +198,14 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
             <>
               {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
               {/* (FBE Esencial) quien va por su cuenta: sus marcas de la semana 4, en cuanto termina esa semana */}
-              {!propio && <TarjetaMarcas />}
+              {!propio && porSuCuenta && <TarjetaMarcas />}
               {!verPasos && !propio && <CuentaMeta />}
               {!verPasos && !propio && <RetoDelMes />}
               {!verPasos && !propio && <TarjetaVida sesiones={p.actual ? (p.sesiones[p.actual.id] || []) : []} />}
               {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {!verPasos && !propio && !verBienvenida && <TarjetaSuplementos estado={suplementos} />}
-              {!verPasos && !propio && !verBienvenida && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
+              {!verPasos && !propio && !verBienvenida && !porSuCuenta && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
               {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
             </>
@@ -558,7 +562,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const tarjetaMito = <Reserva id="hoy-mito"><MitoDeLaSemana /></Reserva>;
   const bloquesHoy = {
     sesion: e.tipo === 'entreno' && siguiente ? (
-      <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
+      <Plegable id="sesion" titulo="Lo que vas a hacer" icono="hoy" abiertaDeSerie={esPorSuCuenta(atleta)} detalle={ejercicios.length ? `${ejercicios.length} ${ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}, uno a uno` : 'La sesión que te toca'}>
         <SiguienteSesion sesion={siguiente} ejercicios={ejercicios} cargando={det.cargando && !det.datos} />
       </Plegable>
     ) : null,
@@ -773,8 +777,8 @@ function SeccionTiempo({ modalidad, ocultar }) {
   return <Plegable id="tiempo" titulo="El tiempo para salir" icono={icono} detalle={detalle}><TiempoHoy t={t} modalidad={modalidad} ocultar={ocultar} /></Plegable>;
 }
 
-function Plegable({ id, titulo, icono, detalle = null, children }) {
-  const [abierta, setAbierta] = usePreferencia(`fbe-hoy-abierta-${id}`, false);
+function Plegable({ id, titulo, icono, detalle = null, abiertaDeSerie = false, children }) {
+  const [abierta, setAbierta] = usePreferencia(`fbe-hoy-abierta-${id}`, abiertaDeSerie);
   const cuerpo = useRef(null);
   const [vacia, setVacia] = useState(true);
   useLayoutEffect(() => {

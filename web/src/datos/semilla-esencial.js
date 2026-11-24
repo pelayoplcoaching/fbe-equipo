@@ -5,7 +5,8 @@
 // almacenamiento), para no cambiar nada de lo que miran las pruebas.
 //   · Marina Ortega: empieza esta semana; aún no ha rellenado el cuestionario (le sale el de salud).
 //   · Tomás Rey: ha terminado las cuatro semanas; sus marcas de la semana 4 están para verlas.
-import { filasPrimeras4, PRIMERAS_4, MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
+import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
+import { filasPrimeras4, PRIMERAS_4 } from '../logica/esencial-plantilla.js';
 import { sumarDias } from '../logica/fechas.js';
 
 // Los ejercicios de la guía con su nombre de la guía (la demo los añade si no están): grupos, tipo y si van por tiempo

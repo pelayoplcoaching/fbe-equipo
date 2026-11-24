@@ -12,6 +12,7 @@ import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { diasSemanaValido } from '../../logica/semana-natural.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
@@ -63,7 +64,8 @@ const TODAS = [
 ];
 // (055) «Recetas»: el recetario del equipo, para quien no tiene Comidas (ahí va dentro) y solo si hay recetas
 // (057) «Aprende»: las guías del coach, solo si hay alguna (también para quien solo lleva la nutrición: hay guías de comer)
-export const pestanasAtleta = (atleta, { equipo = false, recetas = false, aprende = false } = {}) => TODAS.filter(([t]) => (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
+// (FBE Esencial) quien va por su cuenta no tiene chat con el coach: sin «Mensajes»
+export const pestanasAtleta = (atleta, { equipo = false, recetas = false, aprende = false } = {}) => TODAS.filter(([t]) => (t !== 'mensajes' || !esPorSuCuenta(atleta)) && (t !== 'semana' || conEntrenamiento(atleta)) && (t !== 'comidas' || conNutricion(atleta))
   && (t !== 'recetas' || (recetas && !conNutricion(atleta))) && (t !== 'aprende' || aprende)
   && (t !== 'equipo' || (equipo && atleta?.estado !== 'baja')));
 // Modo atleta del coach (v0.37): solo el entrenamiento (sin check-in, mensajes, perfil ni nutrición, que son cosas

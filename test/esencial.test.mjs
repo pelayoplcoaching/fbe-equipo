@@ -1,6 +1,7 @@
 // FBE Esencial, tanda 1 (logica/esencial.js): «te sobran», la plantilla «Primeras 4 semanas» igual que la guía del
 // vídeo y las marcas de la semana 4.
-import { esPorSuCuenta, sobran, sobranDeRpe, textoSobran, etiquetaRpeSobran, PRIMERAS_4, filasPrimeras4, marcasDeSemana } from '../web/src/logica/esencial.js';
+import { esPorSuCuenta, sobran, sobranDeRpe, textoSobran, etiquetaRpeSobran, marcasDeSemana } from '../web/src/logica/esencial.js';
+import { PRIMERAS_4, filasPrimeras4 } from '../web/src/logica/esencial-plantilla.js';
 import { pauta, esPorTiempo } from '../web/src/logica/calculos.js';
 
 let ok = 0, fallos = 0;

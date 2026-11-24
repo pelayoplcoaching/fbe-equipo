@@ -914,7 +914,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         <button class="btn btn-ancho" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la sesión</button>
       )}
 
-      {!propio && (
+      {!propio && !esPorSuCuenta(atleta) && (
         <section class="seccion">
           <h2 class="h2-con-lobo"><img class="h2-lobo" src={LOBO} alt="" />Comentarios con tu coach</h2>
           <div class="panel panel-pad">
@@ -1230,7 +1230,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
             {quitable && <button class="btn-texto btn-quitar-serie" onClick={() => { setExtra(Math.max(0, quitable - 1 - e.series)); setBorr((b) => { const n = { ...b }; delete n[quitable]; return n; }); }} aria-label={`Quitar la serie ${quitable}, la añadida`}><Icono n="menos" /> Quitar serie {quitable}</button>}
           </div>
           <div class="acciones-ej">
-            {!propio && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo}
+            {!propio && !sobran && <SubirArchivo atletaId={atleta.id} sesionEjercicioId={e.id} ejercicioId={ej.id} titulo={`Vídeo: ${ej.nombre}`} etiqueta={videos + videosPendientes > 0 ? 'Enviar otro vídeo' : undefined} alSubir={alSubirVideo}
               ejercicio={ej} series={Array.from({ length: filas }, (_, i) => i + 1).map((k) => ({ numero: k, texto: hechas[k] ? textoSerieVideo(hechas[k]) : null, rpe: hechas[k]?.rpe != null && Number(hechas[k].rpe) > 0 ? Number(hechas[k].rpe) : null }))}
               serieInicial={Math.max(0, ...Object.keys(hechas).map(Number).filter((k) => hechas[k])) || null} />}
             <BotonModelo ejercicio={ej} modelos={modelos} clase="btn-texto" />
@@ -1387,7 +1387,7 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
     <Hoja titulo="Cambiar ejercicio" alCerrar={alCerrar}>
       <div class="intro-ilu">
         <Imagen id="alternativas" clase="intro-ilu-img" tamanos="64px" />
-        <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas y tu coach verá el cambio.</p>
+        <p class="peq secundario">Si la máquina está ocupada o algo no te sienta bien, cámbialo. Las series que registres quedarán a nombre del ejercicio que hagas{esPorSuCuenta(atleta) ? '' : ' y tu coach verá el cambio'}.</p>
       </div>
       <div class="lista-elegir">
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
@@ -1400,7 +1400,7 @@ function Cambiar({ e, actual, alCerrar, alElegir: elegir }) {
         principal && <button class="btn-texto" onClick={() => setOtros(true)}><Icono n="buscar" /> Ver otros de {NOMBRE_GRUPO[principal]?.toLowerCase()}</button>
       ) : biblioteca.cargando ? <Cargando /> : delGrupo.length > 0 && (
         <div class="pila-s">
-          <span class="peq secundario">Otros ejercicios de {NOMBRE_GRUPO[principal]?.toLowerCase()} (coméntaselo a tu coach)</span>
+          <span class="peq secundario">Otros ejercicios de {NOMBRE_GRUPO[principal]?.toLowerCase()} {esPorSuCuenta(atleta) ? '' : '(coméntaselo a tu coach)'}</span>
           <div class="lista-elegir">{delGrupo.map((x) => <Opcion x={x} key={x.id} />)}</div>
         </div>
       )}
@@ -1419,7 +1419,8 @@ export { TarjetaCardio };
 
 // ---------- terminar ----------
 function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSeries = null, conEjercicios = false, alCerrar, alGuardar, salud = false }) {
-  const { propio } = useApp();
+  const { propio, atleta } = useApp();
+  const suyo = propio || esPorSuCuenta(atleta);   // (FBE Esencial) sin coach que lo lea: la nota es suya
   // (054) la duración sale de las series guardadas (de la primera a la última): vale aunque la app se haya recargado o
   // se termine otro día; si no hay series, del cronómetro de la sesión; si no, lo de siempre
   const estimado = minutosSugeridos || duracionSeries || (inicio ? Math.max(5, Math.round((Date.now() - inicio) / 60000) + 5) : sesion.cardio?.minutos || (sesion.tipo !== 'fuerza' ? 40 : null));
@@ -1499,7 +1500,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
                   <select id="t-dolor" class="selector" value={dolor == null ? '' : String(dolor)} onChange={(e) => setDolor(e.currentTarget.value === '' ? null : Number(e.currentTarget.value))}>
                     <option value="">—</option>{Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
                   </select></label>
-                <span class="ayuda">Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.</span>
+                <span class="ayuda">{esPorSuCuenta(atleta) ? 'Si el dolor pasa de 3, apunta dónde en la nota: le llega a Pelayo como aviso.' : 'Lo ve solo tu coach. Si el dolor pasa de 3, cuéntale dónde en la nota.'}</span>
               </> : <span class="ayuda">Para apuntar cómo llegaste, las pulsaciones y el dolor hace falta tu consentimiento de datos de salud (en tu perfil).</span>}
               <div class="fila-campos"><span class="peq secundario" style="align-self:center">Desnivel positivo (m)</span><Paso id="t-desnivel" valor={desnivel} paso={10} min={0} max={10000} dec={0} etiqueta="metros de desnivel" alCambiar={setDesnivel} /></div>
             </div>
@@ -1522,7 +1523,7 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
         <Paso id="t-min" valor={min} paso={conCardio && !cardioAparte ? 1 : 5} max={conCardio && !cardioAparte ? 600 : 300} dec={0} etiqueta={conCardio && !cardioAparte ? 'minutos de cardio' : 'minutos de sesión'} alCambiar={setMin} />
       </div>
       <div class="campo">
-        <div class="separa"><label for="t-nota">{propio ? 'Nota' : 'Nota para tu coach'}</label><Dictar alTexto={(t) => setNota((n) => (n ? `${n.trimEnd()} ${t}` : t))} etiqueta="Dictar la nota" /></div>
+        <div class="separa"><label for="t-nota">{suyo ? 'Nota' : 'Nota para tu coach'}</label><Dictar alTexto={(t) => setNota((n) => (n ? `${n.trimEnd()} ${t}` : t))} etiqueta="Dictar la nota" /></div>
         <textarea id="t-nota" class="area" placeholder="Cómo te has sentido, molestias, cambios que hayas hecho…" value={nota} onInput={(e) => setNota(e.currentTarget.value)} />
         {duracionSeries && !sesion.completada && <span class="ayuda">La duración la hemos sacado de tus series (de la primera a la última). Cámbiala si no cuadra.</span>}
       </div>
