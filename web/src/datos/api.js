@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
@@ -398,6 +398,7 @@ const falta056 = (e) => {
 // (091) FBE Esencial: sin la migración, ni las columnas ni las funciones
 const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (FBE Esencial, tanda 3) ¿Falta la función de la 092 (la semana siguiente de quien va por su cuenta)?
+const falta093 = (e) => /esencial_(plan|ajuste)_comida/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
 const falta088 = (e) => {
@@ -1487,6 +1488,19 @@ export function crearApi(backend, opciones = {}) {
       }
       return api._v091;
     },
+    // (v0.234) ¿Está la 093 (la comida de FBE Esencial)? La columna tca de cuestionarios (el atleta ve el suyo; el coach, todos)
+    async esencial093() {
+      if (!api._v093) {
+        const pr = b.select('cuestionarios', { cols: 'atleta_id,tca', limit: 1 }).then(() => true).catch((e) => {
+          const m = `${e?.message || ''} ${e?.code || ''}`;
+          if (/permission|permiso|42501/i.test(m)) return null;
+          return /tca|schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42703/i.test(m) ? false : null;
+        });
+        api._v093 = pr;
+        pr.then((x) => { if (x == null && api._v093 === pr) api._v093 = null; });
+      }
+      return api._v093;
+    },
     async carrera089() {
       if (!api._v089) {
         const pr = b.select('carrera_mananas', { cols: 'id', limit: 1 }).then(() => true).catch((e) => {
@@ -2016,7 +2030,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.228) la carrera con tu salud (089): con la 080 pero sin la 089, la 2026-12.38
       if ((await api.carrera089().catch(() => null)) !== true) return VERSION_LEGAL_SIN_089;
       // (v0.232) FBE Esencial (091): con la 089 pero sin la 091, la 2026-12.39
-      return (await api.esencial091().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_091;
+      if ((await api.esencial091().catch(() => null)) !== true) return VERSION_LEGAL_SIN_091;
+      // (v0.234) la comida de FBE Esencial (093): con la 091 pero sin la 093, la 2026-12.40
+      return (await api.esencial093().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_093;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -7422,6 +7438,28 @@ export function crearApi(backend, opciones = {}) {
         const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', nota: r.nota, descarga: r.descarga, sesiones: r.sesiones }, p_atleta: atletaId });
         return { semana, tipo: paso.tipo, inicio: paso.inicio };
       } catch (e) { if (falta092(e)) return { falta092: true }; throw e; }
+    },
+    // (093) FBE Esencial con nutrición: el plan de partida lo calcula la base (como planInicial) con sus datos; devuelve
+    // el plan. datos: { sexo, edad, altura, peso, actividad, objetivo, tca }.
+    async esencialPlanComida(datos, atletaId = null) {
+      const num = (v) => (v == null || v === '' ? null : Number(String(v).replace(',', '.')));
+      const p = { sexo: datos.sexo, edad: num(datos.edad), altura: num(datos.altura), peso: num(datos.peso), actividad: num(datos.actividad), objetivo: datos.objetivo, tca: datos.tca === true };
+      try {
+        return await b.rpc('esencial_plan_comida', { p, ...(atletaId ? { p_atleta: atletaId } : {}) });
+      } catch (e) { if (falta093(e)) throw new Error('Falta la migración 093 en la base: díselo a tu coach.'); throw e; }
+    },
+    // (093) El ajuste de la semana, si toca (lo calcula el móvil con ajusteComidaEsencial; la base pone los topes). Devuelve
+    // el id del plan nuevo, null si aún no toca o { falta093: true }.
+    async esencialAjusteComida(ajuste, atletaId = null) {
+      const p = { kcal: ajuste.kcal, proteina_g: ajuste.proteina_g, carbos_g: ajuste.carbos_g, grasa_g: ajuste.grasa_g, motivo: ajuste.motivo };
+      try {
+        return await b.rpc('esencial_ajuste_comida', { p, ...(atletaId ? { p_atleta: atletaId } : {}) });
+      } catch (e) { if (falta093(e)) return { falta093: true }; throw e; }
+    },
+    // (093) Si dijo que tiene o ha tenido un trastorno de la conducta alimentaria (con TCA, el plan no baja solo)
+    async esencialTca(atletaId) {
+      const [c] = await b.select('cuestionarios', { eq: { atleta_id: atletaId }, cols: 'atleta_id,tca' }).catch(() => []);
+      return c?.tca ?? null;
     },
     // (091) La tarjeta de posible errata: «Sí, es correcto» marca esas series como confirmadas (el motor ya no las descarta)
     async esencialConfirmarSeries(pautaId, numeros = []) {

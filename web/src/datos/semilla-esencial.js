@@ -8,9 +8,12 @@
 //   · Tomás Rey: ha terminado las cuatro semanas; sus marcas de la semana 4 están para verlas.
 //   · Clara Prieto: su cribado pide valoración médica y ha marcado que ya tiene el visto bueno. Pelayo lo confirma en su
 //     ficha (Datos) y la app le prepara su plan, desde el lunes que viene.
+//   · Inés Gil (093): el nivel con nutrición. Empieza esta semana con «Primeras 4 semanas» y aún no tiene plan de comida:
+//     en Hoy, «Tu plan de comida» le hace las preguntas y la app se lo calcula.
 import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
 import { filasPrimeras4, PRIMERAS_4, NOVATO_2 } from '../logica/esencial-plantilla.js';
 import { sumarDias, lunesDe } from '../logica/fechas.js';
+import { datosComidaValidos, planComidaEsencial } from '../logica/esencial-nutricion.js';
 
 // Los ejercicios de la guía con su nombre de la guía (la demo los añade si no están): grupos, tipo y si van por tiempo
 const EJERCICIOS_GUIA = [
@@ -138,6 +141,51 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
   return semana.id;
 }
 
+// (093) La comida de quien va por su cuenta, como esencial_plan_comida() y esencial_ajuste_comida() de la base (la demo y
+// sus pruebas): mismas comprobaciones, mismo cálculo (planComidaEsencial, que es planInicial, como la base) y mismos topes.
+function quienComida(t, atletaId) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  if (a.nutricion === false) throw new Error('Su plan no lleva nutrición');
+  return a;
+}
+export function planComidaEsencialDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
+  quienComida(t, atletaId);
+  const datos = { sexo: p.sexo, edad: p.edad, altura: p.altura, peso: p.peso, actividad: p.actividad, objetivo: p.objetivo, tca: p.tca };
+  if (datosComidaValidos(datos)) throw new Error('Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg), cuánto te mueves, tu objetivo y la pregunta de salud');
+  const c = t('cuestionarios').find((x) => x.atleta_id === atletaId);
+  if (!c) throw new Error('Antes, el cuestionario');
+  c.tca = p.tca;
+  const plan = planComidaEsencial(datos);
+  const fila = { atleta_id: atletaId, desde: hoy, modo: 'macros', fase: plan.fase, ritmo_pct: plan.ritmo_pct, kcal: plan.kcal, proteina_g: plan.proteina_g,
+    carbos_g: plan.carbos_g, grasa_g: plan.grasa_g, fibra_g: null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: null, motivo: plan.motivo };
+  const ya = t('planes_nutricion').find((x) => x.atleta_id === atletaId && x.desde === hoy);
+  if (ya) Object.assign(ya, fila); else t('planes_nutricion').push({ id: uuid(), ...fila, creado_en: ahoraISO });
+  if (!t('pesos').some((x) => x.atleta_id === atletaId && x.fecha === hoy)) t('pesos').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, kg: Math.round(Number(p.peso) * 100) / 100, notas: null });
+  const id = (ya || t('planes_nutricion').find((x) => x.atleta_id === atletaId && x.desde === hoy)).id;
+  return { ...plan, id, desde: hoy };
+}
+export function ajusteComidaEsencialDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
+  quienComida(t, atletaId);
+  const ult = t('planes_nutricion').filter((x) => x.atleta_id === atletaId && x.desde <= hoy).sort((x, y) => (x.desde < y.desde ? 1 : -1))[0];
+  if (!ult) throw new Error('Antes, tu plan de partida');
+  if (ult.desde > sumarDias(hoy, -7)) return null;
+  if (ult.modo !== 'macros' || ult.kcal == null || ult.kcal_descanso != null) throw new Error('Este plan no se ajusta solo');
+  const [kcal, prot, carb, grasa] = ['kcal', 'proteina_g', 'carbos_g', 'grasa_g'].map((c) => (Number.isInteger(Number(p[c])) && p[c] !== '' && p[c] != null ? Number(p[c]) : null));
+  const tca = !!t('cuestionarios').find((x) => x.atleta_id === atletaId)?.tca;
+  if (kcal == null || prot == null || carb == null || grasa == null || kcal < 1190 || Math.abs(kcal - Number(ult.kcal)) > 320 || prot !== Number(ult.proteina_g)
+    || grasa < 10 || grasa > Number(ult.grasa_g) || carb < 0 || Math.abs(kcal - (4 * prot + 4 * carb + 9 * grasa)) > 5 || (tca && kcal < Number(ult.kcal))) {
+    throw new Error('Ese ajuste se sale de los topes');
+  }
+  const motivo = String(p.motivo || '').trim().slice(0, 280) || 'Ajuste de la semana';
+  const nuevo = { id: uuid(), atleta_id: atletaId, desde: hoy, modo: 'macros', fase: ult.fase, ritmo_pct: ult.ritmo_pct, kcal, proteina_g: prot, carbos_g: carb, grasa_g: grasa,
+    fibra_g: ult.fibra_g ?? null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: ult.pautas ?? null, motivo, creado_en: ahoraISO };
+  t('planes_nutricion').push(nuevo);
+  return nuevo.id;
+}
+
 export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, versionLegal }) {
   const t = (nombre) => (db[nombre] ||= []);
   // Los ejercicios (con sus alternativas, por id, como en Supabase)
@@ -244,5 +292,12 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   const clara = atleta({ email: 'clara@fbe.demo', nombre: 'Clara Prieto', alta: sumarDias(lunesHoy, -6), objetivo: 'FBE Esencial · Entrenamiento', inicio: sumarDias(lunesHoy, 7),
     extra: { visto_bueno_pedido_en: `${sumarDias(hoy, -1)}T19:30:00.000Z` } });
   cuestionario(clara, 5, { objetivo_detalle: 'Mi médico me ha dicho que me venía bien hacer fuerza.', enfermedad: true, enfermedad_detalle: 'Diabetes tipo 2', resultado: 'valorar_antes' });
-  return { marina, tomas, clara, plantilla };
+
+  // Inés (093): con nutrición; su cuestionario, limpio; «Primeras 4 semanas» desde este lunes; sin plan de comida todavía
+  const ines = atleta({ email: 'ines@fbe.demo', nombre: 'Inés Gil', alta: sumarDias(lunesHoy, -4), objetivo: 'FBE Esencial · Entrenamiento y nutrición', inicio: lunesHoy,
+    extra: { nutricion: true } });
+  cuestionario(ines, 3, { objetivo_detalle: 'Quiero ponerme fuerte y comer con orden.' });
+  copiarPlantillaEsencial(t, { plantilla, atletaId: ines.id, inicio: lunesHoy, uuid, ahoraISO });
+  db.pesos.push({ id: uuid(), atleta_id: ines.id, fecha: sumarDias(hoy, -2), kg: 68.4, notas: null });
+  return { marina, tomas, clara, ines, plantilla };
 }

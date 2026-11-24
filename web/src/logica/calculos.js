@@ -966,8 +966,8 @@ export function resumenAtleta(d, hoy = hoyISO()) {
     if (cu && cu.esfuerzo.conEsfuerzo >= 20 && cu.esfuerzo.pctEncima >= 40) alertas.push({ tipo: 'esfuerzo', nivel: 'info', texto: `Se pasa del RPE en el ${cu.esfuerzo.pctEncima} % de las series` });
     // Hábitos de la última semana (solo los que llevan al menos una semana puestos)
     if (d.habitos && d.habitos.pct < 50 && !suyo) alertas.push({ tipo: 'habitos', nivel: 'info', texto: `Hábitos: ${d.habitos.pct} % la última semana` });
-    // Nutrición: registra poco o el peso se aleja del ritmo del plan
-    for (const x of d.nutricion || []) alertas.push({ tipo: x.tipo, nivel: 'info', texto: x.texto });
+    // Nutrición: registra poco o el peso se aleja del ritmo del plan (FBE Esencial, no: su plan lo ajusta la app cada semana)
+    if (!suyo) for (const x of d.nutricion || []) alertas.push({ tipo: x.tipo, nivel: 'info', texto: x.texto });
     // Cuestionario: lo de salud que aún no ha revisado
     if (d.cuestionario && !(suyo && !bloque)) alertas.push({ tipo: d.cuestionario.tipo, nivel: d.cuestionario.nivel, texto: d.cuestionario.texto });
     // Recetas que pide cambiar (v0.26)

@@ -10,9 +10,14 @@ import { hoyISO, sumarDias, fmtConDia, lunesDe, diasEntre } from '../../logica/f
 import { LETRAS_DIA } from '../../logica/plan.js';
 import { num, signo } from '../../logica/calculos.js';
 import { perezoso } from '../perezoso.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+import { conNutricion } from '../../logica/nivel.js';
 // (v0.208, rendimiento) Las hojas de apuntar la nutrición y de tu plan (con el escáner de productos), al abrirlas
 const HojaNutricion = perezoso(() => import('./NutricionHojas.jsx'), 'HojaNutricion', { mientras: null });
 const HojaTuPlan = perezoso(() => import('./NutricionHojas.jsx'), 'HojaTuPlan', { mientras: null });
+// (FBE Esencial, 093) quien va por su cuenta y lleva nutrición: su plan de comida lo calcula y lo ajusta la app (su trozo)
+const PlanComidaEsencial = perezoso(() => import('./EsencialComida.jsx'), 'PlanComidaEsencial', { mientras: null });
+const AjusteComidaEsencial = perezoso(() => import('./EsencialComida.jsx'), 'AjusteComidaEsencial', { mientras: null });
 
 // Anillo de las kcal del día (se llena hasta el objetivo; pasado el 110 %, en aviso)
 // En Hoy: la tarjeta del día. entrenaHoy: si hoy hay sesión (prevista o hecha), cuenta como día de entreno; con
@@ -25,6 +30,8 @@ export function NutricionHoy({ entrenaHoy = false }) {
   const res = useCarga(() => api.resumenNutricion(atleta.id, hoy, { entrenaHoy: entrena }).catch(() => null), [atleta.id, entrena], { recuerdo: `nutricion-hoy:${atleta.id}:${hoy}:${entrena}` });
   const [hoja, setHoja] = useState(null); // null | 'apuntar' | 'plan'
   const r = res.datos;
+  // (FBE Esencial) sin plan, la tarjeta para prepararlo va arriba en Hoy (ComidaEsencialPendiente); aquí, nada
+  const suyo = esPorSuCuenta(atleta) && conNutricion(atleta);
   if (!r || (!r.plan && !r.siguiente)) return null;
   const plan = r.plan;
   const obj = r.objetivoHoy;
@@ -65,10 +72,23 @@ export function NutricionHoy({ entrenaHoy = false }) {
           </button>
         </div>
       )}
+      {suyo && plan && <AjusteComidaEsencial r={r} alCambiar={recargar} />}
       {hoja === 'apuntar' && <HojaNutricion r={r} alCerrar={() => setHoja(null)} alGuardar={recargar} />}
-      {hoja === 'plan' && <HojaTuPlan r={r} alCerrar={() => setHoja(null)} />}
+      {hoja === 'plan' && <HojaTuPlan r={r} alCerrar={() => setHoja(null)} alCambiar={recargar} />}
     </section>
   );
+}
+
+// (FBE Esencial, 093) En Hoy, arriba: quien va por su cuenta y lleva nutrición, mientras no tenga plan de comida, la tarjeta
+// para prepararlo (al guardarlo, se recarga lo de Hoy y aparece «Nutrición de hoy»)
+export function ComidaEsencialPendiente() {
+  const { api, atleta } = useApp();
+  const hoy = hoyISO();
+  const res = useCarga(() => api.resumenNutricion(atleta.id, hoy, { entrenaHoy: false }).catch(() => null), [atleta.id], { recuerdo: `nutricion-hoy:${atleta.id}:${hoy}:false` });
+  const r = res.datos;
+  if (!r || r.plan || r.siguiente) return null;
+  const listo = () => { window.dispatchEvent(new CustomEvent('fbe-recargar', { detail: { esperas: [] } })); res.recargar(true); };
+  return <PlanComidaEsencial pesoKg={r.pesoKg} alGuardar={listo} />;
 }
 
 export function SiCasiNo({ valor, alElegir, ocupado = false }) {
@@ -129,7 +149,7 @@ export function NutricionProgreso() {
         {conCifras && (r.gasto.kcal != null ? (
           <div class="gasto-atleta pila-xs">
             <span class="peq"><strong>Tu gasto estimado: unas {fmtKcal(r.gasto.kcal)} kcal al día</strong> <span class="terciario">(±{r.gasto.margen})</span></span>
-            <span class="mini terciario">Sale de lo que has comido ({fmtKcal(r.gasto.ingesta)} kcal de media) y de cómo ha cambiado tu peso ({signo(r.gasto.kgSemana, 2)} kg a la semana) en 4 semanas. Tu coach ajusta el plan con esto.</span>
+            <span class="mini terciario">Sale de lo que has comido ({fmtKcal(r.gasto.ingesta)} kcal de media) y de cómo ha cambiado tu peso ({signo(r.gasto.kgSemana, 2)} kg a la semana) en 4 semanas. {esPorSuCuenta(atleta) ? 'La app ajusta tu plan con esto cada semana.' : 'Tu coach ajusta el plan con esto.'}</span>
           </div>
         ) : <p class="mini terciario">Tu gasto estimado aparecerá con unas semanas de registro: necesita {r.gasto.falta}.</p>)}
       </div>

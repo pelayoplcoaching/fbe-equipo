@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -4007,6 +4007,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!id) throw new Error('No hay atleta');
         if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes preparar tu propia semana');
         const r = semanaSiguienteEsencial(tabla, { p: args?.p || {}, atletaId: id, hoy: fechaMadrid(), uuid, ahoraISO: new Date().toISOString() });
+        persistirYa();
+        return r;
+      }
+      // (093) FBE Esencial con nutrición: su plan de partida y el ajuste de la semana (como en la base)
+      if (nombre === 'esencial_plan_comida' || nombre === 'esencial_ajuste_comida') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes tocar tu propio plan');
+        const f = nombre === 'esencial_plan_comida' ? planComidaEsencialDemo : ajusteComidaEsencialDemo;
+        const r = f(tabla, { p: args?.p || {}, atletaId: id, hoy: fechaMadrid(), uuid, ahoraISO: new Date().toISOString() });
         persistirYa();
         return r;
       }

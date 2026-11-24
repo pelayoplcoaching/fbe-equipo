@@ -11,6 +11,10 @@ import { num, signo } from '../../logica/calculos.js';
 import { SumarProducto } from './Productos.jsx';
 import { sumarAlDia, totalSumado, textoSumado } from '../../logica/alimentos.js';
 import { SiCasiNo } from './Nutricion.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+import { perezoso } from '../perezoso.jsx';
+// (FBE Esencial, 093) rehacer el plan de comida (su trozo)
+const HojaPlanComida = perezoso(() => import('./EsencialComida.jsx'), 'HojaPlanComida', { mientras: null });
 
 // Apuntar un día (hoy o uno de esta semana): los totales, o sí/casi/no si va sin contar
 export function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
@@ -139,20 +143,26 @@ export function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
   );
 }
 
-// Su plan: cifras, pautas y por qué cambió
-export function HojaTuPlan({ r, alCerrar }) {
+// Su plan: cifras, pautas y por qué cambió. (FBE Esencial, 093) quien va por su cuenta lo puede rehacer (otro objetivo o
+// sus datos corregidos): la app lo vuelve a calcular.
+export function HojaTuPlan({ r, alCerrar, alCambiar = null }) {
+  const { atleta } = useApp();
+  const suyo = esPorSuCuenta(atleta);
+  const [rehacer, setRehacer] = useState(false);
   const plan = r.plan || r.siguiente;
+  if (rehacer) return <HojaPlanComida pesoKg={r.pesoKg} alCerrar={() => setRehacer(false)} alGuardar={() => { setRehacer(false); alCambiar?.(); alCerrar(); }} />;
   return (
     <Hoja titulo="Tu plan de nutrición" alCerrar={alCerrar}>
       <TarjetaPlan plan={r.plan} siguiente={r.siguiente} diasEntreno={r.diasEntreno} />
       {plan?.pautas && (
         <section class="pila-s">
           <Imagen id="nutricion-pautas" clase="franja-ilu franja-hoja franja-pautas" tamanos="(min-width: 640px) 560px, 92vw" />
-          <h3 class="etq">Pautas de tu coach</h3>
+          <h3 class="etq">{suyo ? 'Pautas' : 'Pautas de tu coach'}</h3>
           <div class="pautas">{plan.pautas.split('\n').filter((l) => l.trim()).map((l, i) => <p key={i}>{l}</p>)}</div>
         </section>
       )}
-      {plan && plan.modo !== 'sin_contar' && <p class="mini terciario">Apunta los totales del día de la app que uses (MyFitnessPal, Fitia, Yazio…) o suma lo que comas escaneando su código de barras. Si un día se te olvida algo, márcalo: así tu coach calcula bien tu gasto.</p>}
+      {plan && plan.modo !== 'sin_contar' && <p class="mini terciario">Apunta los totales del día de la app que uses (MyFitnessPal, Fitia, Yazio…) o suma lo que comas escaneando su código de barras. Si un día se te olvida algo, márcalo: así {suyo ? 'la app calcula' : 'tu coach calcula'} bien tu gasto.</p>}
+      {suyo && r.plan && <button class="btn plano" onClick={() => setRehacer(true)}><Icono n="editar" /> Cambiar mi objetivo o mis datos</button>}
     </Hoja>
   );
 }

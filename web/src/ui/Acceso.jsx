@@ -18,6 +18,7 @@ const PERSONAS_ESENCIAL = [
   ['marina@fbe.demo', 'Marina Ortega', 'FBE Esencial: acaba de entrar (su cuestionario y su semana 1)', 'M'],
   ['tomas@fbe.demo', 'Tomás Rey', 'FBE Esencial: ha terminado las cuatro semanas; sus marcas', 'T'],
   ['clara@fbe.demo', 'Clara Prieto', 'FBE Esencial: espera que Pelayo confirme su visto bueno médico', 'C'],
+  ['ines@fbe.demo', 'Inés Gil', 'FBE Esencial con nutrición: prepara su plan de comida', 'I'],
   ['pelayo@fbe.demo', 'Pelayo', 'Coach: panel de atletas', 'P'],
 ];
 

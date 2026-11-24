@@ -2,6 +2,7 @@
 //   · Marina (390 px): la bienvenida sin «Habla con tu coach»; en Hoy, «Rellena tu cuestionario»; lo rellena (cribado
 //     limpio) y la app le pone «Primeras 4 semanas»: su sesión con «Te sobran 4-5» y la plancha en segundos; apunta una serie.
 //   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4 y (tanda 3) su plan desde la semana 5, solo.
+//   · Inés (tanda 4, con nutrición): en Hoy, «Tu plan de comida»; contesta, ve su plan y lo guarda: «Nutrición de hoy».
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
 //     sin la pestaña Mensajes; «Añadir atleta» de FBE Esencial con su mensaje de invitación.
 //   Sin errores ni desbordes.
@@ -141,6 +142,35 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- Inés (tanda 4): su plan de comida
+  {
+    const { ctx, p } = await movil();
+    await entrar(p, /Inés/);
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await cerrar(p);
+    const tarjeta = p.locator('section.seccion-nutricion').filter({ hasText: 'Tu plan de comida' });
+    const sale = await tarjeta.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(sale, 'Inés (con nutrición y sin plan de comida): en Hoy, «Tu plan de comida»');
+    if (sale) {
+      await tarjeta.getByRole('button', { name: 'Preparar mi plan' }).click();
+      const h = p.locator('[aria-modal="true"]').last();
+      await h.getByRole('button', { name: 'Mujer' }).click();
+      await h.locator('#ec-edad').fill('36');
+      await h.locator('#ec-altura').fill('168');
+      await h.locator('#ec-peso').fill('68,4');
+      await h.getByRole('button', { name: /^Activo/ }).first().click();
+      await h.getByRole('button', { name: 'Perder grasa' }).click();
+      await h.getByRole('button', { name: 'No', exact: true }).click();
+      check(/Tu plan: 1795 kcal al día/.test((await h.locator('.nota').textContent().catch(() => '')).replace(/\u00a0/g, ' ')) && /unos 340 g/.test(await h.locator('.nota').textContent().catch(() => '')),
+        'contesta y ve su plan antes de guardarlo (1795 kcal; bajar un 0,5 % a la semana, unos 340 g)');
+      await desborda(p, 'la hoja del plan de comida');
+      await h.getByRole('button', { name: 'Guardar mi plan' }).click();
+      const lista = await p.waitForFunction(() => { const d = document.querySelector('details[data-plegable="nutricion"]'); return !!d && !d.hidden && d.open && /1795/.test(d.textContent); }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+      check(lista && !(await tarjeta.count()), 'guardado: «Nutrición de hoy», abierta y con su objetivo (1795 kcal); la tarjeta ya no sale');
+    }
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- El coach
   {
     const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES', bypassCSP: true, reducedMotion: 'reduce' });
@@ -151,7 +181,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
     await p.waitForTimeout(1200);
     await cerrar(p);
-    check((await p.getByText('Esencial', { exact: true }).count()) >= 3, 'en la lista, el chip «Esencial» en los tres');
+    check((await p.getByText('Esencial', { exact: true }).count()) >= 4, 'en la lista, el chip «Esencial» en los cuatro');
     await p.getByText('Clara Prieto').first().click();
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
     const sec = p.locator('section[aria-labelledby="esencial-coach"]');

@@ -35,7 +35,7 @@ import { queToca, diaPrevistoValido, cuandoDia } from '../../logica/plan.js';
 import { PlanSemana } from './Plan.jsx';
 import { HabitosHoy } from './Habitos.jsx';
 import { TarjetaNotificaciones } from '../Notificaciones.jsx';
-import { NutricionHoy } from './Nutricion.jsx';
+import { NutricionHoy, ComidaEsencialPendiente } from './Nutricion.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { conCarrera } from '../../logica/carrera.js';
 import { tonoDia } from '../../logica/paleta.js';
@@ -205,6 +205,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
                   siguiente, que prepara la app (con la pregunta si hay una posible errata) */}
               {!propio && porSuCuenta && <TarjetaMarcas />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaEsencial recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
+              {/* (FBE Esencial con nutrición, 093) mientras no tenga plan de comida, la tarjeta para prepararlo */}
+              {!propio && porSuCuenta && salud && conNutricion(atleta) && atleta.estado !== 'baja' && <ComidaEsencialPendiente />}
               {!verPasos && !propio && <CuentaMeta />}
               {!verPasos && !propio && <RetoDelMes />}
               {!verPasos && !propio && <TarjetaVida sesiones={p.actual ? (p.sesiones[p.actual.id] || []) : []} />}
@@ -631,7 +633,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     ) : null,
     menu: salud && conNutricion(atleta) ? <Plegable id="menu" titulo="Tu menú de hoy" icono="receta" detalle="Márcalo o hazle una foto a tu plato"><MenuHoy irA={irA} salud={salud} compacto /><ApunteAlPaso guia="dieta-flexible" /></Plegable> : null,
     nutricion: salud && conNutricion(atleta) ? (
-      <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" detalle="Apunta lo que has comido">
+      <Plegable id="nutricion" titulo="Nutrición de hoy" icono="nutricion" abiertaDeSerie={esPorSuCuenta(atleta)} detalle="Apunta lo que has comido">
         <NutricionHoy entrenaHoy={(enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))) || carreras.some(({ sesion: s }) => (s.completada ? s.fecha_realizada : s.dia_previsto) === hoy)} />
       </Plegable>
     ) : null,
