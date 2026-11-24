@@ -33,6 +33,26 @@ export const PRIMERAS_4 = {
   reps: [10, 12],
 };
 
+// ---------- Desde la semana 5: «Novato 2 días · FBE Esencial» (propuesta del 24/11, pendiente de Pelayo) ----------
+// Los mismos cinco ejercicios con sus alternativas y los dos días iguales, como en la guía. Una semana: la app la repite y
+// la hace progresar cada semana con el motor por su cuenta (los cuatro frenos), con los kilos de partida de sus marcas de
+// la semana 4. Tres series en los cuatro primeros, te sobran 2 y descanso de 90 s; la plancha, 2 × 40-50 s (la semana 4
+// acabó en 35-45). Foco de adaptación, como la full body de dos días de máquinas y mancuernas (la B).
+export const NOMBRE_NOVATO_2 = 'Novato 2 días · FBE Esencial';
+export const NOVATO_2 = {
+  nombre: NOMBRE_NOVATO_2,
+  objetivo: 'Ganar fuerza con los cinco ejercicios',
+  descripcion: 'Desde la semana 5: los mismos cinco ejercicios, dos días por semana que no vayan seguidos. Cada semana, la app te prepara la siguiente a partir de lo que apuntas, con las reglas de progresión de Pelayo.',
+  foco: 'adaptacion',
+  sesiones: PRIMERAS_4.sesiones,
+  ejercicios: PRIMERAS_4.ejercicios,
+  semanas: [
+    { numero: 1, series: [3, 3, 3, 3, 2], rir: 2, descanso: 90, plancha: [40, 50],
+      nota: 'Tu plan desde ahora: los mismos cinco ejercicios, tres series en los cuatro primeros. Empiezas con los kilos de tus marcas; cada semana, la app te prepara la siguiente con lo que apuntas.' },
+  ],
+  reps: [10, 12],
+};
+
 // Las filas de la plantilla, sin ids: [{ semana, nota, sesiones: [{ orden, nombre, ejercicios: [{ orden, nombre,
 // series, reps_min, reps_max, rir_objetivo, descanso_seg, por_tiempo, notas_coach }] }] }]
 export function filasPrimeras4(p = PRIMERAS_4) {
