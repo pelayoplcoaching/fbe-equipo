@@ -81,8 +81,8 @@ function SaludCoach({ atleta, d, alGuardar }) {
     });
   };
   return (
-    <section class="panel panel-pad pila carrera-salud" aria-labelledby="cs-titulo">
-      <h2 id="cs-titulo" class="h-panel">Salud para correr</h2>
+    <section class="panel panel-pad pila carrera-salud" aria-labelledby="csa-titulo">
+      <h2 id="csa-titulo" class="h-panel">Salud para correr</h2>
       {d.falta089 ? <p class="peq secundario">Para marcar su salud para correr, ejecuta en Supabase supabase/migraciones/089_carrera_salud.sql.</p> : <form class="pila-s" onSubmit={guardar}>
         {error && <div class="error" role="alert">{error}</div>}
         {cribado && cribado !== 'sin_valoracion' && <p class="mini cs-pista"><Icono n="alerta" width="14" height="14" /> Su cuestionario de salud: {RESULTADO_COACH[cribado][0].toLowerCase()}.</p>}
