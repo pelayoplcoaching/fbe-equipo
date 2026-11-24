@@ -56,6 +56,7 @@ import { limpiarNombre, recordsDeEquipo, MAX_POST, MAX_COMENTARIO, MAX_MOTIVO, M
   eventoValido, programadoValido, MAX_PLANTILLAS, MAX_MOTIVO_DESTACADO, palabrasDeTexto, MAX_PALABRAS } from '../logica/comunidad.js';
 import { compartieronHoy } from '../logica/tablero.js';
 import { semanasObjetivo, paraRacha, semanaEnCurso, diasSemanaValido, semanaDelMicrociclo, esCarrera, carrerasDeLaSemana } from '../logica/semana-natural.js';
+import { resumenCorredor } from '../logica/carrera-avisos.js';
 import { REACCIONES_CHAT, siguienteReaccion, medioDe } from '../logica/mensajes.js';
 import { paraGuardarPropio, imagenValida, CLAVES_HUECO } from '../logica/a-medida.js';
 import { planDifusion, planReenvio, nombreSeguroPdf, PDF_MAX_MB, hastaFijado, fijadoVigente, hastaSilencio, silenciado } from '../logica/chat.js';
@@ -1495,6 +1496,31 @@ export function crearApi(backend, opciones = {}) {
       const esta = lunesDe(hoyISO());
       if (lunesNuevos.has(esta) || (borrarDesde && lunesDe(borrarDesde) <= esta)) await api.carreraAlDia(atletaId, { refrescar: true }).catch(() => null);
       return r;
+    },
+    // (v0.222) El panel de corredores: de cada atleta con la carrera encendida, lo de esta semana frente a su plan, sus
+    // semáforos, su próxima carrera y sus avisos (logica/carrera-avisos.js). Todo de una vez, con lo de las 4 últimas semanas.
+    async panelCorredores() {
+      if ((await api.carrera056().catch(() => null)) === false) return [];
+      const yo = uid();
+      const atletas = (await b.select('atletas', { eq: { carrera: true }, order: [['nombre', 'asc']] })).filter((a) => a.entrenamiento !== false && (!yo || a.perfil_id !== yo));
+      if (!atletas.length) return [];
+      const ids = atletas.map((a) => a.id);
+      const hoy = hoyISO();
+      const desde = sumarDias(lunesDe(hoy), -21);
+      const [semanas, eventos, bloques] = await Promise.all([
+        b.select('carrera_semanas', { in: { atleta_id: ids }, gte: { lunes: desde } }).catch(() => []),
+        b.select('carrera_eventos', { in: { atleta_id: ids }, gte: { fecha: hoy } }).catch(() => []),
+        b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: 'id,atleta_id' }).catch(() => []),
+      ]);
+      const ws = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id' }).catch(() => []) : [];
+      const ses = ws.length ? await b.select('sesiones', { in: { semana_id: ws.map((x) => x.id) }, eq: { completada: true }, gte: { fecha_realizada: desde }, cols: 'id,semana_id,fecha_realizada,completada,cardio,cardio_hecho' }).catch(() => []) : [];
+      const deBloque = new Map(bloques.map((x) => [x.id, x.atleta_id]));
+      const deSemana = new Map(ws.map((w) => [w.id, deBloque.get(w.bloque_id)]));
+      return atletas.map((a) => ({
+        atleta: { id: a.id, nombre: a.nombre },
+        ...resumenCorredor({ semanas: semanas.filter((s) => s.atleta_id === a.id), eventos: eventos.filter((e) => e.atleta_id === a.id), hoy,
+          hechas: ses.filter((s) => deSemana.get(s.semana_id) === a.id && cardioHechoValido(s.cardio_hecho) && s.cardio_hecho.modalidad === 'carrera') }),
+      }));
     },
     async borrarCarreraSemana(atletaId, lunes) {
       const r = await b.delete('carrera_semanas', { eq: { atleta_id: atletaId, lunes } }).catch(falta056);

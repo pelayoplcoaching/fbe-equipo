@@ -119,6 +119,17 @@ const ROTA = {
   maraton: ['ritmo-maraton', 'tempo-20', 'umbral-2x15'],
 };
 const deBiblioteca = (id) => BIBLIOTECA_FBE.find((x) => x.id === `fbe-${id}`) || null;
+// Una sesión de la biblioteca, más corta si la semana tiene pocos km: los minutos y el calentamiento, el enfriamiento y los
+// bloques continuos, en proporción (las series con repeticiones se quedan; nunca menos de 20 min ni de 5 min de calentar)
+export function escalarSesion(s, f) {
+  if (!s || !(f > 0) || f >= 1) return s;
+  const n = JSON.parse(JSON.stringify(s));
+  if (n.minutos) n.minutos = Math.max(20, Math.round(n.minutos * f));
+  if (n.minutos_max) n.minutos_max = Math.max(n.minutos + 1, Math.round(n.minutos_max * f));
+  if (Array.isArray(n.partes)) n.partes = n.partes.map((p) => (p.seg && !p.reps && ['calentar', 'enfriar', 'bloque'].includes(p.fase)
+    ? { ...p, seg: Math.max(p.fase === 'bloque' ? 120 : 300, Math.round((p.seg * f) / 60) * 60) } : p));
+  return n;
+}
 function sesionDeBiblioteca(id, extra = {}) {
   const r = deBiblioteca(id);
   if (!r) return null;
@@ -164,7 +175,10 @@ function sesionesSemana({ kmSemana, dias, nivel, fase, t, n, iFase }) {
     }
     if (h.tipo === 'calidad') {
       const id = rota ? rota[(iFase + k++) % rota.length] : null;
-      const s = fase === 'afinado' ? calidadAfinado(t) : id ? sesionDeBiblioteca(id) : null;
+      let s = fase === 'afinado' ? calidadAfinado(t) : id ? sesionDeBiblioteca(id) : null;
+      // a unos 6 min/km: si la de la biblioteca pasa mucho de lo que le toca a la calidad esta semana, más corta
+      const kmEst = s?.minutos ? s.minutos / 6 : null;
+      if (s && kmEst && kmEst > cal * 1.3) s = escalarSesion(s, Math.max(0.5, cal / kmEst));
       return s ? { ...s, dia: h.dia } : { tipo: 'facil', titulo: 'Rodaje suave', dia: h.dia, km: kmSesion(cal), zona: 2 };
     }
     return { tipo: 'facil', titulo: 'Rodaje suave', dia: h.dia, km: kmSesion(facil), zona: 2 };
@@ -219,6 +233,10 @@ export function proponerPlan(datos = {}) {
     avisos.push(`La carrera está lejos: el plan empieza el lunes ${inicio}, ${MAX_SEMANAS_PLAN} semanas antes; hasta entonces, que siga con lo que hace.`);
   }
   if (total < SEMANAS_MIN[t]) avisos.push(`Quedan ${total} ${total === 1 ? 'semana' : 'semanas'} y para una ${NOMBRE_TRAMO[t]} con calma harían falta ${SEMANAS_MIN[t]}: el plan se comprime (menos base) y conviene un objetivo prudente.`);
+  const kms0 = Math.max(nivel === 'empieza' ? 8 : 12, Math.min(kmAhora, picoKm(km, nivel, kmAhora)));
+  if (kmAhora < kms0 * 0.6) avisos.push(kmAhora > 0
+    ? `Ahora corre unos ${Math.round(kmAhora)} km por semana y el plan empieza en ${kms0}: si viene de correr poco, mejor marcar «Empieza» o empezar con la vuelta a correr.`
+    : `Sin km apuntados las últimas semanas: el plan empieza en ${kms0} km por semana. Si viene de no correr, márcalo como «Empieza».`);
   if (datos.largaAhora && t === 'maraton' && Number(datos.largaAhora) < 12) avisos.push('Su salida más larga reciente es corta para un maratón: las tiradas largas suben poco a poco y conviene un objetivo prudente.');
   const fases = fasesPara(total, km);
   const kms = kmPorSemana({ total, km, nivel, kmAhora });

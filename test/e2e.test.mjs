@@ -6658,6 +6658,14 @@ if (parte('v0.221: carrera, el asistente de plan')) try {
   fallos++;
   console.log('  ✗ la carrera de la v0.221:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.222: carrera, tanda 3 (avisos y ajuste, choques con la fuerza y el panel de corredores)
+if (parte('v0.222: carrera, avisos y corredores')) try {
+  const { probarCarrera222 } = await import('./e2e-carrera-222.mjs');
+  await probarCarrera222({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera de la v0.222:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

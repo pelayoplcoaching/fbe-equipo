@@ -21,6 +21,7 @@ import { asa } from './arrastre.js';
 import { VideoDeSesionCoach } from '../YouTube.jsx';
 import { CampoMusica } from './PersonalCoach.jsx';
 import { PlanCarreraSemana, CamposCarreraPauta } from './CarreraCoach.jsx';
+import { esPiernaPesada, diaDeFecha } from '../../logica/carrera-avisos.js';
 import { zonasDe } from '../../logica/carrera.js';
 import { mapaEvitados, textoMotivo } from '../../logica/perfil-mas.js';
 
@@ -519,7 +520,10 @@ export function EditorBloque({ bloqueId, alBorrar, alCrearPlantilla, alCambiarBl
         </div>
       )}
 
-      {semana && carreraDe && !bloque.es_plantilla && <PlanCarreraSemana carrera={carrera.datos} semana={semana} sesiones={sesiones} estructura={estructura} atletaId={carreraDe} />}
+      {semana && carreraDe && !bloque.es_plantilla && <PlanCarreraSemana carrera={carrera.datos} semana={semana} sesiones={sesiones} estructura={estructura} atletaId={carreraDe}
+        alCambiarPlan={() => carrera.recargar(true)}
+        fuerza={sesiones.filter((x) => x.tipo !== 'cardio' && x.dia_previsto).map((x) => ({ dia: diaDeFecha(x.dia_previsto), nombre: x.nombre,
+          pierna: esPiernaPesada((d.pautas[x.id] || []).map((p) => ({ series: p.series, grupos_musculares: ejercicios[p.ejercicio_id]?.grupos_musculares || [] }))) }))} />}
       {semana && <VolumenSemana pautas={sesiones.flatMap((s) => d.pautas[s.id] || [])} ejercicios={ejercicios} objetivo={bloque.es_plantilla ? null : volumenObjetivo} />}
       {semana && anterior && !bloque.es_plantilla && <CambiosSemana anterior={anterior} cambios={cambiosDeSemana({ actuales: sesiones.flatMap((x) => d.pautas[x.id] || []), previas, anteriores: sesionesAnt.flatMap((x) => d.pautas[x.id] || []), nombres: Object.fromEntries(Object.values(ejercicios).map((e) => [e.id, e.nombre])) })} />}
       {semana && nivel && !bloque.es_plantilla && (

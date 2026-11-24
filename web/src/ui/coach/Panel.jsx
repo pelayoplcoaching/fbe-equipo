@@ -24,6 +24,7 @@ import { enlaceWhatsApp } from '../../logica/integraciones.js';
 import { usePanelCoach, useExtrasPanel, Etiquetas, DetalleAtleta, AccionesRapidas, HojaColumnas, HojaFiltros, HojaVistas, HojaVarios, HojaColores, HojaTeclasPanel,
   HojaChatRapido, HojaVozAtleta, HojaUmbrales, HojaTarjeta } from './PanelLista.jsx';
 import { ChatRapido } from './RevisionTodo.jsx';
+import { CorredoresPanel } from './CarreraCoach.jsx';
 import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
   etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar,
   conUmbrales, novedadesDe, recordatorioDe, recordatorioParaHoy, textoRecordatorio, limpiarRecordatorio, textoContacto, textoHito, resumenColumna, csvLista, moverManual,
@@ -388,6 +389,8 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
           </ul>
         </section>
       )}
+      {/* (v0.222) los que corren, de un vistazo (al final: llega después de la lista y así no la empuja) */}
+      {!cargando && <CorredoresPanel abrir={abrir} />}
       {pedir && <HojaPedir r={pedir.r} alerta={pedir.alerta} alCerrar={() => setPedir(null)} />}
 
       {cargando ? <Siluetas forma="lista" n={4} texto="Cargando tus atletas" /> : !vista.length ? (

@@ -15,6 +15,7 @@ import {
 } from '../../logica/carrera.js';
 import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
 import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN } from '../../logica/carrera-plan.js';
+import { avisosCarrera, ajusteSiguiente, aplicarPropuesta, choquesFuerza } from '../../logica/carrera-avisos.js';
 
 const DIAS = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [7, 'Domingo']];
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
@@ -34,6 +35,7 @@ export function CarreraFicha({ atleta }) {
   return (
     <div class="pila carrera-ficha">
       <ResumenCarrera d={d} />
+      <AvisosCoach atleta={atleta} d={d} alGuardar={recargar} />
       <ZonasCoach atleta={atleta} perfil={d.perfil} alGuardar={recargar} />
       <PlanCoach atleta={atleta} perfil={d.perfil} d={d} alGuardar={recargar} />
       <SemanasCoach atleta={atleta} d={d} alGuardar={recargar} />
@@ -210,6 +212,106 @@ function PlanCoach({ atleta, perfil, d, alGuardar }) {
   );
 }
 
+// ---------------------------------------------------------------- avisos y ajuste (v0.222)
+// Los avisos de riesgo (subida brusca, dolor, semáforo, cumplimiento, tirada larga, días duros seguidos) y el ajuste
+// propuesto de la semana siguiente, cada uno con su propuesta: un toque para aplicarla a la semana del plan que toca.
+// Lo aplicado se recuerda en este dispositivo (para no aplicarlo dos veces).
+const CLAVE_APLICADO = 'fbe-carrera-aplicado';
+const leerAplicado = () => { try { return JSON.parse(localStorage.getItem(CLAVE_APLICADO) || '{}') || {}; } catch { return {}; } };
+const NOMBRE_DECISION_AJ = { seguir: 'Seguir el plan', repetir: 'Repetir el volumen', bajar: 'Bajar un 25 %' };
+function AvisosCoach({ atleta, d, alGuardar }) {
+  const { api, aviso } = useApp();
+  const hoy = hoyISO();
+  const avisos = useMemo(() => avisosCarrera({ semanas: d.semanas, hechas: d.hechas, hoy }), [d.semanas, d.hechas]);
+  const ajuste = useMemo(() => ajusteSiguiente({ semanas: d.semanas, hechas: d.hechas, hoy }), [d.semanas, d.hechas]);
+  const [aplicado, setAplicado] = useState(leerAplicado);
+  const [rehacer, setRehacer] = useState(false);
+  const [semana, setSemana] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  if (!avisos.length && !ajuste) return null;
+  const marca = (k) => `${atleta.id}:${k}`;
+  const recordar = (k) => { const n = { ...leerAplicado(), [marca(k)]: hoy }; try { localStorage.setItem(CLAVE_APLICADO, JSON.stringify(n)); } catch { /* sin almacenamiento */ } setAplicado(n); };
+  const delPlan = (lunes) => (d.semanas || []).find((x) => x.lunes === lunes) || null;
+  const aplicar = (k, nueva, texto) => una(async () => {
+    try { await api.guardarCarreraSemana(atleta.id, nueva); recordar(k); aviso(texto); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
+  });
+  const lista = semanasConPlan(d.perfil, d.semanas);
+  return (
+    <section class="panel panel-pad pila-s carrera-avisos" aria-labelledby="cav-titulo">
+      <h2 id="cav-titulo" class="h-panel">Avisos y ajuste</h2>
+      {avisos.length > 0 && (
+        <ul class="cav-lista">
+          {avisos.map((a) => {
+            const p = a.propuesta;
+            const k = `${a.id}:${p?.lunes || ''}`;
+            const objetivo = p?.lunes ? delPlan(p.lunes) : null;
+            const nueva = objetivo && (p.tipo === 'bajar' || p.tipo === 'tope') ? aplicarPropuesta(p, objetivo) : null;
+            return (
+              <li key={a.id} class="cav-aviso" data-nivel={a.nivel}>
+                <Icono n="alerta" />
+                <span class="pila-xs" style="min-width:0">
+                  <strong class="peq">{a.titulo}</strong>
+                  <span class="mini secundario">{a.texto}</span>
+                  {p && <span class="fila-envolver cav-prop">
+                    {aplicado[marca(k)] ? <span class="mini terciario"><Icono n="hecho" width="14" height="14" /> Aplicado: {p.texto}</span>
+                      : nueva ? <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => aplicar(k, nueva, `Aplicado: ${p.texto}`)}>{p.texto}</button>
+                        : p.tipo === 'rehacer' ? <button type="button" class="btn btn-peq" onClick={() => setRehacer(true)} aria-haspopup="dialog"><Icono n="rehacer" /> {p.texto}</button>
+                          : p.tipo === 'mover' && objetivo ? <button type="button" class="btn btn-peq" onClick={() => setSemana({ ...objetivo, ...(lista.find((x) => x.lunes === objetivo.lunes) || {}) })} aria-haspopup="dialog">Abrir la semana para separarlas</button>
+                            : <span class="mini"><strong>{p.texto}</strong></span>}
+                  </span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {ajuste && (
+        <div class="cav-ajuste panel-sub pila-xs" data-decision={ajuste.decision}>
+          <span class="peq"><strong>La semana del {fmtCorta(ajuste.lunes)}: {NOMBRE_DECISION_AJ[ajuste.decision]}</strong></span>
+          <span class="mini secundario">Con lo de la semana del {fmtCorta(ajuste.evaluada)}: {ajuste.motivo.charAt(0).toLowerCase() + ajuste.motivo.slice(1)}.</span>
+          {(ajuste.nueva || aplicado[marca(`ajuste:${ajuste.lunes}`)]) && (aplicado[marca(`ajuste:${ajuste.lunes}`)]
+            ? <span class="mini terciario"><Icono n="hecho" width="14" height="14" /> Aplicado</span>
+            : <button type="button" class="btn btn-peq" style="justify-self:start" disabled={ocupado} onClick={() => aplicar(`ajuste:${ajuste.lunes}`, ajuste.nueva, `Semana del ${fmtCorta(ajuste.lunes)}: ${NOMBRE_DECISION_AJ[ajuste.decision].toLowerCase()}`)}>
+              Aplicar ({textoKm(ajuste.nueva.km_min, ajuste.nueva.km_max) || 'sus sesiones'})</button>)}
+        </div>
+      )}
+      {rehacer && <HojaAsistente atleta={atleta} d={d} modo="rehacer" alCerrar={(cambio) => { setRehacer(false); if (cambio) { recordar(`cumplimiento:`); alGuardar(); } }} />}
+      {semana && <HojaSemana atleta={atleta} semana={semana} perfil={d.perfil} lista={lista} alCerrar={(cambio) => { setSemana(null); if (cambio) alGuardar(); }} />}
+    </section>
+  );
+}
+
+// El panel de corredores (v0.222, mejora 12): en Atletas, todos los que corren de un vistazo (lo de esta semana frente al
+// plan, los semáforos, la próxima carrera y los avisos). Un toque abre su pestaña Carrera.
+export function CorredoresPanel({ abrir }) {
+  const { api } = useApp();
+  const datos = useCarga(() => api.panelCorredores().catch(() => []), []);
+  const lista = datos.datos || [];
+  if (!lista.length) return null;
+  const conAvisos = lista.filter((c) => c.avisos.length).length;
+  return (
+    <details class="panel panel-pad corr-panel" open={conAvisos > 0}>
+      <summary class="corr-cab"><Icono n="pasos" /> <strong>Corredores</strong> <span class="mini terciario num">{lista.length}</span>
+        {conAvisos > 0 && <span class="chip corr-chip">{conAvisos === 1 ? '1 con avisos' : `${conAvisos} con avisos`}</span>}</summary>
+      <ul class="corr-lista">
+        {lista.map((c) => (
+          <li key={c.atleta.id}>
+            <button type="button" class="corr-fila" data-nivel={c.nivel} onClick={() => abrir(c.atleta.id, 'carrera')} aria-label={`${c.atleta.nombre}: abrir su carrera`}>
+              <span class="corr-nombre peq">{c.atleta.nombre}</span>
+              <span class="mini num corr-km">{num(c.km, c.km % 1 ? 1 : 0)} km{c.plan && textoKm(c.plan.km_min, c.plan.km_max) ? ` de ${textoKm(c.plan.km_min, c.plan.km_max)}` : ''}</span>
+              <span class="corr-sem" aria-label={`Semáforos: ${c.semaforos.verde} en verde, ${c.semaforos.ambar} en ámbar, ${c.semaforos.rojo} en rojo`}>
+                {['verde', 'ambar', 'rojo'].flatMap((k) => Array.from({ length: c.semaforos[k] }, (_, i) => <i key={`${k}${i}`} data-s={k} />))}
+              </span>
+              <span class="mini terciario corr-prox">{c.proxima ? `${c.proxima.nombre}: ${textoCuentaAtras(c.proxima.fecha, hoyISO()).toLowerCase()}` : 'Sin carrera a la vista'}</span>
+              {c.avisos.length > 0 && <span class="mini corr-avisos">{c.avisos.map((a) => a.titulo).join(' · ')}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 // ---------------------------------------------------------------- el asistente de plan (v0.221)
 // La carrera, los días que puede correr, lo que corre ahora y su nivel → todas las semanas con sus km y sus sesiones, con
 // las reglas aprobadas por Pelayo (logica/carrera-plan.js). En modo «rehacer», desde esta semana y sin tocar las de antes,
@@ -276,10 +378,12 @@ function HojaAsistente({ atleta, d, modo = 'nuevo', alCerrar }) {
         </div>
         <div class="campo"><span class="etq">Días que puede correr</span>
           <Segmentos etiqueta="Días que puede correr" valor={f.dias} opciones={['2', '3', '4', '5', '6'].map((x) => [x, x])} alCambiar={(x) => x && setF({ ...f, dias: x })} /></div>
-        <div class="rejilla-campos">
-          <label class="campo"><span class="etq">Km por semana ahora</span><input class="entrada num" inputMode="decimal" placeholder="20" value={f.kmAhora} onInput={cambiar('kmAhora')} />
-            <span class="ayuda">{recientes ? `Lo que ha apuntado las 4 últimas semanas: ${num(recientes.media, recientes.media % 1 ? 1 : 0)} km de media.` : 'Sin carreras apuntadas en las 4 últimas semanas: pon lo que te diga.'}</span></label>
-          <label class="campo"><span class="etq">Su salida más larga reciente (km)</span><input class="entrada num" inputMode="decimal" placeholder="12" value={f.larga} onInput={cambiar('larga')} /></label>
+        <div class="pila-xs">
+          <div class="rejilla-campos">
+            <label class="campo"><span class="etq">Km por semana ahora</span><input class="entrada num" inputMode="decimal" placeholder="20" value={f.kmAhora} onInput={cambiar('kmAhora')} aria-describedby="asis-km-ayuda" /></label>
+            <label class="campo"><span class="etq">Su salida más larga reciente (km)</span><input class="entrada num" inputMode="decimal" placeholder="12" value={f.larga} onInput={cambiar('larga')} /></label>
+          </div>
+          <span class="ayuda" id="asis-km-ayuda">{recientes ? `Lo que ha apuntado las 4 últimas semanas: ${num(recientes.media, recientes.media % 1 ? 1 : 0)} km de media.` : 'Sin carreras apuntadas en las 4 últimas semanas: pon lo que te diga.'}</span>
         </div>
         <div class="campo"><span class="etq">Su nivel</span>
           <Segmentos etiqueta="Su nivel" valor={f.nivel} opciones={NIVELES_PLAN} alCambiar={(x) => x && setF({ ...f, nivel: x })} />
@@ -809,8 +913,9 @@ function BibliotecaFbe() {
 // ---------------------------------------------------------------- en el editor: lo del plan para la semana que se edita
 // Lo que el plan de carrera prevé para la semana (por su lunes), con el botón que pasa sus sesiones a la semana de entreno
 // (v0.218) A quien va por microciclos, su carrera va por calendario: el recuadro lo dice y enseña la de esta semana
-export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, atletaId = null }) {
-  const { api } = useApp();
+export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, atletaId = null, fuerza = [], alCambiarPlan = null }) {
+  const { api, aviso } = useApp();
+  const [moviendo, una] = useUnaVez();
   if (!carrera || carrera.falta056 || !semana?.fecha_inicio) return null;
   if (carrera.carril) return <PlanCarreraCalendario carrera={carrera} atletaId={atletaId} estructura={estructura} />;
   const lunes = lunesDe(semana.fecha_inicio);
@@ -822,11 +927,26 @@ export function PlanCarreraSemana({ carrera, semana, sesiones = [], estructura, 
   const items = (s?.sesiones || []).filter((x) => x.tipo !== 'descanso');
   const ya = new Set(sesiones.filter((x) => x.tipo === 'cardio').map((x) => x.nombre));
   const faltan = items.filter((x) => !ya.has((x.titulo || `Carrera ${NOMBRE_TIPO[x.tipo].toLowerCase()}`).slice(0, 60)));
+  // (v0.222) La calidad o la tirada larga pegada a un día de pierna pesada: moverla a un día libre
+  const choques = s && atletaId ? choquesFuerza({ fuerza, carreras: items }) : [];
+  const mover = (c) => una(async () => {
+    try {
+      await api.guardarCarreraSemana(atletaId, { ...s, sesiones: (s.sesiones || []).map((x) => (x === c.carrera ? { ...x, dia: c.propuesta } : x)) });
+      aviso(`${c.carrera.titulo || NOMBRE_TIPO[c.carrera.tipo]}: al ${DIAS.find(([n]) => n === c.propuesta)[1].toLowerCase()}`);
+      alCambiarPlan?.();
+    } catch (err) { aviso(err.message, 'error'); }
+  });
   return (
     <section class="panel panel-pad pila-s plan-carrera-semana" aria-label="Carrera de esta semana">
       <div class="peq"><Icono n="pasos" /> <strong>Carrera</strong>{n >= 1 && n <= total ? ` · semana ${n} de ${total}` : ''}{fase && n >= 1 && n <= total ? ` · ${fase.nombre}` : ''}
         {s?.etiqueta ? <span class="chip etiqueta-carrera">{s.etiqueta}</span> : null}{s?.ab ? <span class="chip">Fuerza {s.ab}</span> : null}{textoKm(s?.km_min, s?.km_max) ? <span class="chip num">{textoKm(s.km_min, s.km_max)}</span> : null}</div>
       {s?.clave && <p class="mini secundario">{s.clave}</p>}
+      {choques.map((c, i) => (
+        <p key={i} class="cav-choque mini" role="status"><Icono n="alerta" />
+          <span>Choque con la fuerza: <strong>{c.carrera.titulo || NOMBRE_TIPO[c.carrera.tipo]}</strong> el {DIAS.find(([n]) => n === c.carrera.dia)[1].toLowerCase()}, pegada a «{c.fuerza.nombre || 'pierna'}» ({DIAS.find(([n]) => n === c.fuerza.dia)[1].toLowerCase()}).
+            {c.propuesta ? <> <button type="button" class="btn-texto mini" disabled={moviendo} onClick={() => mover(c)}>Moverla al {DIAS.find(([n]) => n === c.propuesta)[1].toLowerCase()}</button></> : ' Sepáralas un día si puedes.'}</span>
+        </p>
+      ))}
       {items.length > 0 && <ul class="mini terciario plan-carrera-items">{items.map((x, i) => <li key={i}>{x.dia ? `${DIA_CORTO[x.dia]} · ` : ''}<strong>{x.titulo || NOMBRE_TIPO[x.tipo]}</strong>{x.minutos || x.km || x.partes ? ` — ${textoCardio({ modalidad: 'carrera', ...Object.fromEntries(Object.entries(x).filter(([k]) => !['titulo', 'dia'].includes(k))) })}` : ''}</li>)}</ul>}
       {faltan.length > 0 ? <button class="btn btn-peq" style="justify-self:start" onClick={() => estructura(() => api.anadirCarreraASemana(semana.id, faltan), faltan.length === 1 ? 'Sesión de carrera añadida a la semana' : `${faltan.length} sesiones de carrera añadidas a la semana`)}>
         <Icono n="mas" /> {faltan.length === items.length ? `Añadir ${faltan.length === 1 ? 'la sesión' : `las ${faltan.length} sesiones`} de carrera` : `Añadir las ${faltan.length} que faltan`}</button>

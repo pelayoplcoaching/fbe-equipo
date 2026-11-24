@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.222': {
+    atleta: [],
+    coach: [
+      'Carrera: avisos de riesgo (subida brusca, dolor, semáforos, días duros seguidos) y el ajuste de la semana, en un toque.',
+      'En Atletas, tus corredores de un vistazo. Y en el editor, si una calidad cae pegada a la pierna, te propone moverla.',
+    ],
+  },
   '0.221': {
     atleta: [],
     coach: [

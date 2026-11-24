@@ -1,7 +1,7 @@
 // v0.221: carrera, tanda 2. El asistente de plan (proponerPlan), las descargas y el afinado, «Rehacer desde aquí» con la
 // vuelta a correr y copiar una semana con progresión (logica/carrera-plan.js), con las reglas aprobadas por Pelayo.
 import { proponerPlan, planValido, fasesPara, kmPorSemana, picoKm, tramoDistancia, kmRecientes, rehacerDesde, vueltaACorrer,
-  progresarSemana, huecosSemana, textoSemanaPlan, PASOS_VUELTA, SEMANAS_MIN, MAX_SEMANAS_PLAN } from '../web/src/logica/carrera-plan.js';
+  progresarSemana, huecosSemana, textoSemanaPlan, escalarSesion, PASOS_VUELTA, SEMANAS_MIN, MAX_SEMANAS_PLAN } from '../web/src/logica/carrera-plan.js';
 import { sumarDias, lunesDe, desdeISO } from '../web/src/logica/fechas.js';
 import { sesionDesdePlan } from '../web/src/logica/carrera.js';
 
@@ -78,6 +78,15 @@ const pl = proponerPlan({ evento: { nombre: 'Maratón', distancia_km: 42.195, fe
 check(pl.total === MAX_SEMANAS_PLAN && pl.inicio === sumarDias(lunesDe(sumarDias(HOY, 7 * 40)), -7 * (MAX_SEMANAS_PLAN - 1)) && pl.avisos.some((a) => /está lejos/.test(a)), `la carrera muy lejos: el plan, de ${MAX_SEMANAS_PLAN} semanas, empieza más tarde`);
 check(proponerPlan({ evento: { distancia_km: 10, fecha: HOY }, hoy: HOY }).error && proponerPlan({ hoy: HOY }).error, 'sin carrera, o con la carrera hoy, no propone nada (y lo dice)');
 check(proponerPlan({ evento: ev, dias: 3, hoy: '2026-11-26' }).inicio === '2026-11-30', 'si hoy es jueves, empieza el lunes que viene');
+
+console.log('Si corre poco ahora');
+const poco = proponerPlan({ evento: ev, dias: 3, kmAhora: 2, nivel: 'intermedio', hoy: HOY });
+check(poco.avisos.some((a) => /corre unos 2 km por semana y el plan empieza en 12/.test(a)), `avisa si el plan empieza muy por encima de lo que corre («${poco.avisos.find((a) => /corre unos/.test(a))}»)`);
+check(proponerPlan({ evento: ev, dias: 3, kmAhora: 0, nivel: 'empieza', hoy: HOY }).avisos.some((a) => /Sin km apuntados/.test(a)), 'sin km apuntados, también lo dice');
+const cal1 = poco.semanas.find((s) => s.fase === 'Base' && !s.etiqueta).sesiones.find((x) => x.dia === 2);
+check(cal1.minutos < 45 && cal1.minutos >= 20, `con pocos km, la sesión de la biblioteca, más corta (${cal1.titulo}: ${cal1.minutos} min en lugar de 45)`);
+const esc = escalarSesion({ minutos: 50, partes: [{ fase: 'calentar', seg: 900 }, { fase: 'bloque', reps: 6, seg: 120, rec_seg: 90 }, { fase: 'enfriar', seg: 600 }] }, 0.5);
+check(esc.minutos === 25 && esc.partes[0].seg === 480 && esc.partes[1].seg === 120 && esc.partes[1].reps === 6 && esc.partes[2].seg === 300, 'escalar: los minutos, calentar y enfriar en proporción (5 min como poco); las series se quedan');
 
 console.log('Muchas combinaciones, todas válidas');
 let validas = 0, total = 0;
