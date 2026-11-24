@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.232': {
+    // (FBE Esencial, tandas 1 y 2: para los atletas de ahora no cambia nada; lo nuevo es del coach y de quien va por su cuenta)
+    atleta: [],
+    coach: [
+      'FBE Esencial: en «Añadir atleta», la modalidad FBE Esencial con su lunes de inicio y su mensaje de invitación (necesita la migración 091).',
+      'Quien va por su cuenta no sale en Revisar ni en la revisión semanal. En su ficha (Datos): su cuestionario, su visto bueno médico y su plan.',
+    ],
+  },
   '0.231': {
     // (los frenos del motor para quien vaya por su cuenta: hoy no hay nadie así y con seguimiento no cambia nada; sin hoja)
     atleta: [],
