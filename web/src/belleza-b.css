@@ -58,3 +58,14 @@
   .app:not(.coach) .contenido.equipo > .eq-centro { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 1; min-width: 0; }
   .app:not(.coach) .contenido.equipo > .eq-lado { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-14); grid-column: 2; min-width: 0; }
 }
+
+/* -- B9 - Perfil con la letra grande o muy grande en un movil: en las filas con un valor a la derecha ("Como te
+   hablamos" / "Sin marcar - Cercano"), el valor baja debajo del titulo, como en los ajustes del iPhone con la letra
+   grande. Antes el titulo se quedaba en 50 px y partia palabras ("hablamo" / "s"). */
+@media (max-width: 440px) {
+  :root[data-letra] .fila-ios-nav:has(> .fila-ios-valor) { row-gap: var(--esp-2); }
+  :root[data-letra] .fila-ios-nav:has(> .fila-ios-valor) > .ios-ico { grid-row: 1 / span 2; }
+  :root[data-letra] .fila-ios-nav:has(> .fila-ios-valor) .fila-ios-titulo { grid-column: 2 / 4; }
+  :root[data-letra] .fila-ios.fila-ios-nav > .fila-ios-valor { grid-column: 2 / 4; grid-row: 2; justify-self: start; max-width: none; text-align: start; }
+  :root[data-letra] .fila-ios-nav:has(> .fila-ios-valor) > .fila-ios-chevron { grid-column: 4; grid-row: 1 / span 2; }
+}

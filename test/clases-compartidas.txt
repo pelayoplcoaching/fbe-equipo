@@ -416,13 +416,14 @@ fila-dia: diseno.css estilos.css pulido.css
 fila-entre: estilos.css personal.css
 fila-envolver: color-capa.css diseno.css estilos.css personal.css radar.css sonido.css
 fila-foto: diseno.css estilos.css
-fila-ios: diseno.css estilos.css estrecho.css personal.css
+fila-ios: belleza-b.css diseno.css estilos.css estrecho.css personal.css
 fila-ios-bloque: estilos.css estrecho.css
+fila-ios-chevron: belleza-b.css estilos.css
 fila-ios-izq: estilos.css estrecho.css
-fila-ios-nav: diseno.css estilos.css
+fila-ios-nav: belleza-b.css diseno.css estilos.css
 fila-ios-texto: diseno.css estilos.css estrecho.css personal.css visual.css
-fila-ios-titulo: diseno.css estilos.css estrecho.css visual.css
-fila-ios-valor: diseno.css estilos.css estrecho.css
+fila-ios-titulo: belleza-b.css diseno.css estilos.css estrecho.css visual.css
+fila-ios-valor: belleza-b.css diseno.css estilos.css estrecho.css
 fila-plantilla: diseno.css estilos.css
 fila-progreso: comunidad-viva.css diseno.css estilos.css
 fila-ranking: comunidad-viva.css diseno.css equipo-belleza.css estilos.css
@@ -528,7 +529,7 @@ intervalos-cuenta: diseno.css estilos.css
 intervalos-fase: diseno.css estilos.css
 intervalos-marcha: diseno.css estilos.css
 intervalos-reloj: diseno.css estilos.css
-ios-ico: carrera.css color-capa.css diseno.css estilos.css imagenes.css visual.css
+ios-ico: belleza-b.css carrera.css color-capa.css diseno.css estilos.css imagenes.css visual.css
 izq: estilos.css progreso-visual.css
 izquierda: apuntes.css revision.css
 justo: progreso-visual-2.css registro-actividad.css
