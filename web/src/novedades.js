@@ -6,6 +6,12 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.225': {
+    atleta: [],
+    coach: [
+      'Con la migración 088, a quien va por microciclos y corre se le coloca sola la carrera de la semana, aunque no abras la app.',
+    ],
+  },
   '0.224': {
     atleta: [
       'En tus sesiones de series, «Guiarme por las partes»: un cronómetro que te va diciendo cada tramo, también en voz alta.',

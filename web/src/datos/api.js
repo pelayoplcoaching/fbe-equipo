@@ -394,6 +394,11 @@ const falta056 = (e) => {
   if (/carrera/.test(m) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42P01|42703/i.test(m)) throw new Error(`${AVISO_056} Detalle: ${e?.message || e}`);
   throw e;
 };
+// (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
+const falta088 = (e) => {
+  const m = `${e?.message || ''} ${e?.code || ''} ${e?.codigo || ''}`;
+  return /carrera_al_dia/.test(m) && /schema cache|does not exist|no existe|could not find|no disponible|PGRST20[0-9]|42883/i.test(m);
+};
 // (059) Lo de YouTube sin la migración 059
 // (060) Lo de los descansos sin la migración 060
 const AVISO_060 = 'Para esto falta ejecutar la migración 060 en Supabase (supabase/migraciones/060_descansos.sql).';
@@ -1582,7 +1587,20 @@ export function crearApi(backend, opciones = {}) {
     // refrescar: el plan de esta semana ha cambiado: se quitan las pendientes de esta semana y se ponen las del plan (las
     // hechas no se tocan). Lo llama la app del coach (al abrir, al guardar la semana del plan y al publicar): el atleta no
     // puede crear sesiones. Devuelve { puestas, quitadas, movida, semana } o { motivo } si no hace nada.
-    async carreraAlDia(atletaId, { hoy = hoyISO(), refrescar = false } = {}) {
+    // (v0.225, 088) Con la migración 088 lo hace la base (carrera_al_dia), la misma función que llama el móvil del atleta al
+    // abrirse: así su semana se coloca aunque el coach no abra la app, y las dos no se pisan. Sin ella (o con otro día que el
+    // de hoy de Madrid, o con «local», en las pruebas), aquí, como desde la v0.218.
+    async carreraAlDia(atletaId, { hoy = hoyISO(), refrescar = false, local = false } = {}) {
+      if (!local && hoy === hoyISO() && hoy === fechaMadrid() && api._v088 !== false) {
+        try {
+          const r = await b.rpc('carrera_al_dia', { p_atleta: atletaId, p_refrescar: !!refrescar });
+          api._v088 = true;
+          return r;
+        } catch (e) {
+          if (!falta088(e)) throw e;
+          api._v088 = false;
+        }
+      }
       const { carril } = await ritmoDe(atletaId);
       if (!carril) return { motivo: 'no-aplica' };
       const lunes = lunesDe(hoy);
@@ -1594,7 +1612,7 @@ export function crearApi(backend, opciones = {}) {
       const semanas = await b.select('semanas', { eq: { bloque_id: bloque.id }, order: [['numero', 'asc']] });
       const publicadas = semanas.filter((w) => w.programacion === 'programada');
       if (!publicadas.length) return { motivo: 'sin-publicar' };
-      const sesiones = agrupar(await b.select('sesiones', { in: { semana_id: publicadas.map((w) => w.id) }, order: [['orden', 'asc']] }), 'semana_id');
+      let sesiones = agrupar(await b.select('sesiones', { in: { semana_id: publicadas.map((w) => w.id) }, order: [['orden', 'asc']] }), 'semana_id');
       // El microciclo en curso: el primero publicado con fuerza pendiente; si no queda, el último publicado
       const actual = semanaDelMicrociclo(publicadas, sesiones, publicadas[publicadas.length - 1], { sinCarrera: true });
       let destino = actual, quitadas = 0, movida = false;
@@ -1648,6 +1666,9 @@ export function crearApi(backend, opciones = {}) {
           destino = actual;
         }
       }
+      // (v0.225) Si se ha movido el microciclo, lo que hay ahora en la base: los triggers mueven con su semana el día previsto
+      // de lo que va en ella, y una pendiente con mensajes se queda donde estaba; así no se repite ni choca nada (como la 088)
+      if (movida) sesiones = agrupar(await b.select('sesiones', { in: { semana_id: publicadas.map((w) => w.id) }, order: [['orden', 'asc']] }), 'semana_id');
       // Lo que ya está puesto esta semana: las pendientes, por su fecha; las hechas, por el día que las hizo
       const deEsta = carrerasDeLaSemana({ semanas: publicadas, sesiones }, hoy).map((x) => x.sesion);
       let fuera = [];
@@ -1680,6 +1701,20 @@ export function crearApi(backend, opciones = {}) {
         ...(it.dinamica ? { dinamica: it.dinamica } : {}), ...(dentro(it.fecha) ? { dia_previsto: it.fecha } : {}) }));
       await b.insert('sesiones', filas).catch(falta056);
       return { puestas: filas.length, quitadas, movida, semana: destino.numero ?? null };
+    },
+    // (v0.225, 088) El móvil del atleta, al abrirse: su carrera de esta semana, si le va por calendario (lo decide la base).
+    // Sin la 088, null (lo sigue haciendo la app del coach al abrirla).
+    async miCarreraAlDia() {
+      if (api._v088 === false) return null;
+      try {
+        const r = await b.rpc('carrera_al_dia', {});
+        api._v088 = true;
+        return r;
+      } catch (e) {
+        if (!falta088(e)) throw e;
+        api._v088 = false;
+        return null;
+      }
     },
     // Lo mismo para todos los atletas a los que les va la carrera por calendario (la app del coach, al abrir)
     async carrerasAlDia({ hoy = hoyISO() } = {}) {

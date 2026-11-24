@@ -1,7 +1,7 @@
 // (v0.209) La última migración de supabase/migraciones que necesita esta versión de la app. Cuenta avisa al coach si su
 // base va por una anterior (la base lo dice con migracion_actual(), desde la 087). test/copia.test.mjs comprueba que
 // este número es el de la última migración del repositorio: al añadir una, súbelo.
-export const MIGRACION_ULTIMA = 87;
+export const MIGRACION_ULTIMA = 88;
 // Números que no existen (la 052 se renumeró como 058 antes de publicarse)
 export const HUECOS_MIGRACIONES = [52];
 

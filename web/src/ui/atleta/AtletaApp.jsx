@@ -12,6 +12,7 @@ import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conEntrenamiento, conNutricion } from '../../logica/nivel.js';
+import { diasSemanaValido } from '../../logica/semana-natural.js';
 import { TextoPrivacidad } from '../Acceso.jsx';
 import { AvisoPrivacidad } from '../AvisoPrivacidad.jsx';
 import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
@@ -158,6 +159,14 @@ export function AtletaApp() {
   const programa = useCarga(() => api.programa(atleta.id).then(conCola), [atleta.id, dia], { copia: CLAVES_COPIA.programa(atleta.id), transformar: conCola });
   // (pulido 4, rendimiento) la app ha arrancado cuando el programa está: de abrir la página a aquí, «arranque»
   useEffect(() => { if (!programa.cargando) hitoArranque(); }, [programa.cargando]);
+  // (v0.225, 088) a quien le va la carrera por calendario (microciclos y plan de carrera), su móvil le pone al abrir la
+  // carrera de esta semana de su plan (también si el coach no abre la app); si pone o mueve algo, se vuelve a leer el programa
+  useEffect(() => {
+    if (propio || !atleta?.carrera || !diasSemanaValido(atleta.dias_semana) || atleta.entrenamiento === false || atleta.estado === 'baja') return undefined;
+    let vivo = true;
+    Promise.resolve(api.miCarreraAlDia?.()).then((r) => { if (vivo && r && (r.puestas || r.quitadas || r.movida)) programa.recargar(true); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [atleta.id, dia]);
   const checkinSemana = useCarga(() => (propio ? Promise.resolve(null) : api.checkin(atleta.id, semanaCheckin(hoyISO()))), [atleta.id, dia]);
   const noLeidos = useCarga(() => (propio ? Promise.resolve([]) : api.noLeidos(atleta.id).catch(() => [])), [atleta.id, dia]);
   // v0.48: las tareas del coach que ya tocan (para el número del icono de la app)

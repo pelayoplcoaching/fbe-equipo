@@ -111,12 +111,17 @@ const pend = await api.migracionesPendientes();
 check(pend && pend.base === MIGRACION_ULTIMA && !pend.faltan.length && !pend.alMenos, `Cuenta no avisa de nada con la base al día (va por la ${pend?.base})`);
 await b.sql(`delete from fbe_migraciones where numero > 85`);
 const pend85 = await api.migracionesPendientes();
-check(JSON.stringify(pend85?.faltan) === JSON.stringify(['086', '087']), `con la base en la 085, avisa de la 086 y la 087 (${JSON.stringify(pend85?.faltan)})`);
+// (de la 086 a la última del repositorio)
+const tres = (n) => String(n).padStart(3, '0');
+const desde86 = Array.from({ length: MIGRACION_ULTIMA - 85 }, (_, i) => 86 + i).filter((n) => !HUECOS_MIGRACIONES.includes(n)).map(tres);
+check(JSON.stringify(pend85?.faltan) === JSON.stringify(desde86), `con la base en la 085, avisa de la 086 a la ${tres(MIGRACION_ULTIMA)} (${JSON.stringify(pend85?.faltan)})`);
 await b.sql(`insert into fbe_migraciones (numero) values (86), (87)`);
 await b.sql(`drop function public.migracion_actual()`);
 const sin87 = await api.migracionesPendientes();
-check(sin87?.alMenos === '087' && !sin87.faltan.length, 'sin la 087 (la base no lo sabe decir), avisa de que falta al menos la 087');
+check(sin87?.alMenos === tres(MIGRACION_ULTIMA) && !sin87.faltan.length, `sin la 087 (la base no lo sabe decir), avisa de que falta al menos la ${tres(MIGRACION_ULTIMA)}`);
 await b.guion(lee('supabase/migraciones/087_migraciones_pendientes.sql'));
+// (y las de después de la 087, otra vez: así se comprueba también que se pueden repetir)
+for (const f of MIG.filter((x) => Number(x.slice(0, 3)) > 87)) await b.guion(lee(`supabase/migraciones/${f}`));
 await b.auth.registrar('ana@fbe.test', 'contraseña-ana-1', 'Ana');
 const apiAna = crearApi(b, { cubrir: false });
 check(await apiAna.migracionesPendientes() === null, 'a un atleta no le dice nada (la función es solo del coach)');
