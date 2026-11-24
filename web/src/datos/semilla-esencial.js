@@ -19,7 +19,7 @@ const EJERCICIOS_GUIA = [
   ['Jalón al pecho', ['espalda', 'biceps'], ['multiarticular']],
   ['Remo en máquina', ['espalda', 'biceps'], ['multiarticular']],
   ['Plancha abdominal', ['abdominales'], ['aislamiento'], true],
-  ['Curl de bíceps', ['biceps'], ['aislamiento']],
+  ['Curl de bíceps con mancuernas', ['biceps'], ['aislamiento']],
 ];
 
 // Lo que hizo Tomás cada semana (kilos de la mejor serie; la plancha, segundos): sube como dice la guía

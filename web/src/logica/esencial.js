@@ -55,7 +55,8 @@ export const PRIMERAS_4 = {
     { nombre: 'Peso muerto rumano con mancuernas', alternativa: 'Puente de glúteo', nota: 'O, en su lugar, puente de glúteo, con las mismas series y repeticiones.' },
     { nombre: 'Press de pecho en máquina', alternativa: 'Flexiones', nota: 'O flexiones, con más o menos inclinación según tu nivel.' },
     { nombre: 'Jalón al pecho', alternativa: 'Remo en máquina', nota: 'O, en su lugar, remo en máquina, con las mismas series y repeticiones.' },
-    { nombre: 'Plancha abdominal', alternativa: 'Curl de bíceps', porTiempo: true, nota: 'O curl de bíceps: las mismas series, de 10 a 12 repeticiones.' },
+    // (el curl conserva «con mancuernas»: sin esa palabra, la app le pondría discos de barra y saltos de 2,5 kg a todos)
+    { nombre: 'Plancha abdominal', alternativa: 'Curl de bíceps con mancuernas', porTiempo: true, nota: 'O curl de bíceps: las mismas series, de 10 a 12 repeticiones.' },
   ],
   semanas: [
     { numero: 1, series: [1, 1, 1, 1, 1], rir: 4.5, descanso: null, plancha: [20, 30],

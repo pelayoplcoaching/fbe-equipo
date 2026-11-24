@@ -33,7 +33,7 @@ const f = filasPrimeras4();
 const ej = (w, k) => f[w].sesiones[0].ejercicios[k];
 check(f.length === 4 && f.every((w) => w.sesiones.length === 2) && f.every((w) => w.sesiones.every((s) => s.ejercicios.length === 5)),
   '4 semanas, 2 sesiones iguales, 5 ejercicios');
-check(PRIMERAS_4.ejercicios.map((e) => `${e.nombre}|${e.alternativa}`).join(';') === 'Prensa de piernas|Sentadilla a un banco;Peso muerto rumano con mancuernas|Puente de glúteo;Press de pecho en máquina|Flexiones;Jalón al pecho|Remo en máquina;Plancha abdominal|Curl de bíceps',
+check(PRIMERAS_4.ejercicios.map((e) => `${e.nombre}|${e.alternativa}`).join(';') === 'Prensa de piernas|Sentadilla a un banco;Peso muerto rumano con mancuernas|Puente de glúteo;Press de pecho en máquina|Flexiones;Jalón al pecho|Remo en máquina;Plancha abdominal|Curl de bíceps con mancuernas',
   'los cinco ejercicios de la guía, cada uno con su alternativa');
 check(f[0].sesiones[0].ejercicios.slice(0, 4).every((e) => e.series === 1 && e.reps_min === 10 && e.reps_max === 12 && e.rir_objetivo === 4.5),
   'semana 1: 1 serie de 10-12, te sobran 4-5');
