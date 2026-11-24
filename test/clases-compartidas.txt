@@ -1,6 +1,7 @@
 # Clases con estilos en varios archivos a propósito (test/clases.test.mjs). Una por línea: «clase: archivos».
 acceso: diseno.css estilos.css imagenes.css
 acceso-caja: diseno.css estilos.css imagenes.css
+acceso-cielo: belleza-c.css belleza.css
 acceso-paso: diseno.css imagenes.css
 accion-fila: diseno.css estilos.css pulido.css
 acento: diseno.css estilos.css perfil.css
@@ -45,7 +46,7 @@ aniversario: estilos.css imagenes.css personal.css
 antes-de-empezar: apuntes.css imagenes.css
 ap-historia: apuntes.css imagenes.css
 apagada: diseno.css estilos.css
-app: belleza-b.css belleza.css diseno.css estilos.css imagenes.css visual.css
+app: belleza-b.css belleza-c.css belleza.css diseno.css estilos.css imagenes.css visual.css
 apuntado: diseno.css estilos.css
 apunte-ondas: apuntes.css belleza.css
 apunte-texto: apuntes.css visual.css
@@ -195,6 +196,7 @@ chip-frase: diseno.css estilos.css
 chip-serie: diseno.css estilos.css
 chispa: atletas-lista.css diseno.css estilos.css revision.css
 chispa-peso: diseno.css estilos.css
+cielo-luna: belleza-c.css belleza.css
 cifra: diseno.css estilos.css progreso-visual-2.css visual.css
 cifras: belleza-b.css diseno.css estilos.css progreso-visual-2.css visual.css
 cifras-plan: diseno.css estilos.css
@@ -476,7 +478,7 @@ hecho-btn: diseno.css estilos.css
 hero-acciones: diseno.css estilos.css
 hero-cifras: diseno.css estilos.css
 hero-descanso: diseno.css estilos.css
-hero-dia: belleza-a.css belleza.css color-capa.css diseno.css estilos.css imagenes.css
+hero-dia: belleza-a.css belleza-c.css belleza.css color-capa.css diseno.css estilos.css imagenes.css
 hero-entreno: color-capa.css diseno.css estilos.css
 hero-foto: imagenes.css visual.css
 hero-hecha: diseno.css estilos.css
@@ -703,6 +705,7 @@ pestanas-progreso: diseno.css progreso-visual-2.css progreso-visual.css
 pestanas-sub: diseno.css estilos.css
 picto: diseno.css estilos.css imagenes.css
 picto-grande: diseno.css estilos.css
+pila: belleza-c.css estilos.css
 pila-s: diseno.css estilos.css personal.css
 pila-xs: belleza-a.css carrera.css diseno.css equipo-belleza.css estilos.css perfil.css personal.css viaje.css
 pildora-descanso: diseno.css estilos.css
@@ -890,7 +893,7 @@ selector-peq: diseno.css estilos.css
 sello-semana: progreso-visual.css visual.css
 semana-habito: diseno.css estilos.css
 semana-mini: estilos.css progreso-visual.css
-semana-resumen: diseno.css estilos.css
+semana-resumen: belleza-c.css diseno.css estilos.css
 semanas-tabs: diseno.css estilos.css pulido.css
 separa: comunidad-viva.css diseno.css equipo-belleza.css estilos.css estrecho.css personal.css recetario-equipo.css
 serie: diseno.css estilos.css

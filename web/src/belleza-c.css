@@ -1,0 +1,16 @@
+/* =====================================================================================================================
+   Tanda de belleza C (v0.217, con el tiempo que sobra): detalles de la entrada, del heroe de Hoy en pantallas anchas y
+   de lo que no habian visto las tandas A y B. Solo ASCII. Colores y medidas, de los tokens; cada color con su version
+   oscura; nada se mueve con "reducir movimiento". Va despues de belleza-b.css y antes de color-capa.css.
+   ===================================================================================================================== */
+
+/* -- C1 - La entrada: de noche salian dos lunas, la del dibujo (el lobo aullando) y la del cielo de la hora. Aqui la
+   luna ya esta en el dibujo: el cielo deja las estrellas y la luz, sin su luna. */
+.app > .acceso-cielo .cielo-luna { display: none; }
+
+/* -- C2 - Hoy desde 560 px, el dia de descanso y el de la sesion ya hecha: "Te quedan 4 sesiones" se iba a la mitad
+   derecha, con su raya a la izquierda y nada al otro lado (los dos botones van a todo el ancho). Ahi va a todo el ancho,
+   con la raya arriba, como en el movil. Con la sesion por hacer (un boton a la izquierda) sigue al lado del boton. */
+@media (min-width: 560px) {
+  .hero-dia > .pila + .semana-resumen { grid-column: 1 / -1; align-self: stretch; padding: var(--esp-12) 0 0; border-left: 0; border-top: var(--filo-fino) solid color-mix(in srgb, var(--blanco) 12%, transparent); }
+}
