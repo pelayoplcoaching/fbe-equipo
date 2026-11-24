@@ -126,6 +126,11 @@ check((await api.carreraAlDia(leo.id)).motivo === 'sin-bloque', 'sin bloque, nad
 const bl2 = await api.nuevoBloque(leo.id, { nombre: 'Base', foco: 'adaptacion', fecha_inicio: L, semanas: 2, sesionesPorSemana: 2 });
 await api.activarBloque(bl2.id, leo.id);
 check((await api.carreraAlDia(leo.id)).motivo === 'sin-publicar', 'sin semanas publicadas, nada');
+const [lw1] = (await api.bloqueCompleto(bl2.id)).semanas;
+await api.publicarSemana(lw1.id);
+const lw1b = (await api.bloqueCompleto(bl2.id)).semanas[0];
+check((await api.carreraAlDia(leo.id, { hoy: sumarDias(L, 7) })).motivo === 'sin-carreras' && lw1b.fecha_inicio === L
+  && (await api.bloqueCompleto(bl2.id)).semanas[0].fecha_inicio === L, 'sin carreras en su plan esa semana, nada se mueve (ni la fecha de su microciclo)');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

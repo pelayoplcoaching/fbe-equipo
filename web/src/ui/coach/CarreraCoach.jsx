@@ -614,6 +614,7 @@ export function textoCarreraAlDia(r) {
   if (!r) return 'No se ha podido comprobar';
   if (r.motivo === 'sin-publicar') return 'Aún no tiene ninguna semana publicada';
   if (r.motivo === 'sin-bloque') return 'No tiene ningún bloque';
+  if (r.motivo === 'sin-carreras') return 'Su plan no tiene carreras esta semana';
   if (r.motivo) return 'Su carrera no va por calendario';
   if (!r.puestas) return 'Ya tiene las carreras de esta semana';
   return `${r.puestas === 1 ? 'Puesta 1 carrera' : `Puestas ${r.puestas} carreras`} en su semana ${r.semana}${r.movida ? ' (con las fechas de esta semana)' : ''}`;

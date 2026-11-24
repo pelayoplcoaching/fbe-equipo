@@ -1550,6 +1550,15 @@ export function crearApi(backend, opciones = {}) {
       // El microciclo en curso: el primero publicado con fuerza pendiente; si no queda, el último publicado
       const actual = semanaDelMicrociclo(publicadas, sesiones, publicadas[publicadas.length - 1], { sinCarrera: true });
       let destino = actual, quitadas = 0, movida = false;
+      // Sin carreras en su plan esta semana, nada se mueve (al refrescar, solo se quitan las pendientes de esta semana)
+      if (!items.length) {
+        if (!refrescar) return { motivo: 'sin-carreras' };
+        const pendientes = carrerasDeLaSemana({ semanas: publicadas, sesiones }, hoy).map((x) => x.sesion).filter((s) => !s.completada);
+        const conMensajes = pendientes.length ? new Set((await b.select('comentarios', { in: { sesion_id: pendientes.map((s) => s.id) }, cols: 'sesion_id' }).catch(() => [])).map((c) => c.sesion_id)) : new Set();
+        const fuera = pendientes.filter((s) => !conMensajes.has(s.id));
+        if (fuera.length) await b.delete('sesiones', { in: { id: fuera.map((s) => s.id) } });
+        return { puestas: 0, quitadas: fuera.length, movida: false, semana: null };
+      }
       if (!actual.fecha_inicio || lunesDe(actual.fecha_inicio) < lunes) {
         const suyas = sesiones[actual.id] || [];
         // (en una semana con fecha anterior no puede haber carreras de esta: su día previsto tiene que caer dentro)

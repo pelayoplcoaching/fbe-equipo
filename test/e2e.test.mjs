@@ -6624,6 +6624,15 @@ if (parte('Recuperar un atleta (scripts/restaurar-atleta.html)')) try {
   check(await pr.locator('#estado-archivo', { hasText: 'No se puede leer' }).waitFor({ timeout: 5000 }).then(() => true, () => false) && await pr.locator('#paso-sql').isHidden(), 'con un archivo que no es la copia, lo dice (y no deja SQL a medias)');
   await pr.context().close();
 } catch (e) { fallos++; console.log('  ✗ la página de recuperar no funciona:', e.message.split('\n')[0]); }
+
+// v0.218: la carrera va por calendario para quien va por microciclos (test/e2e-carrera-calendario.mjs)
+if (parte('v0.218: la carrera por calendario')) try {
+  const { probarCarreraCalendario } = await import('./e2e-carrera-calendario.mjs');
+  await probarCarreraCalendario({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la carrera por calendario (v0.218):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();
