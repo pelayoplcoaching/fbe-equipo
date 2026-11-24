@@ -15,6 +15,7 @@ import {
   ritmoUmbral, umbralCaducado, fcMaxTanaka, saludCarrera,
 } from '../../logica/carrera.js';
 import { textoManana, respuestaManana } from '../../logica/carrera-salud.js';
+import { planDiaCarrera, esSemanaDeCarrera, recuperacion, semanasRecuperacion, trasLaCarrera } from '../../logica/carrera-dia.js';
 import { resultadoCribado, RESULTADO_COACH } from '../../logica/cuestionario.js';
 import { BIBLIOTECA_FBE } from '../../logica/carrera-biblioteca.js';
 import { proponerPlan, rehacerDesde, kmRecientes, progresarSemana, textoSemanaPlan, DISTANCIAS_PLAN, NIVELES_PLAN, TIPOS_VUELTA, AVISO_HUESO } from '../../logica/carrera-plan.js';
@@ -42,6 +43,7 @@ export function CarreraFicha({ atleta }) {
       <ResumenCarrera d={d} />
       <AvisosCoach atleta={atleta} d={d} alGuardar={recargar} />
       <SaludCoach atleta={atleta} d={d} alGuardar={recargar} />
+      <DiaCarreraCoach atleta={atleta} d={d} alGuardar={recargar} />
       <ZonasCoach atleta={atleta} perfil={d.perfil} alGuardar={recargar} />
       <PlanCoach atleta={atleta} perfil={d.perfil} d={d} alGuardar={recargar} />
       <SemanasCoach atleta={atleta} d={d} alGuardar={recargar} />
@@ -102,6 +104,54 @@ function SaludCoach({ atleta, d, alGuardar }) {
           <span class="mini terciario">Son datos de salud: solo se guardan con su consentimiento.</span>
         </div>
       </form>}
+    </section>
+  );
+}
+
+// (v0.229, mejoras 16 y 17) La semana de la carrera: lo que verá el día (su plan); después de la carrera (21 días): su
+// resultado frente a lo previsto, el ritmo umbral que sale de él (R41) y la recuperación propuesta para su plan (R40)
+function DiaCarreraCoach({ atleta, d, alGuardar }) {
+  const { api, aviso } = useApp();
+  const hoy = hoyISO();
+  const [ocupado, una] = useUnaVez();
+  const p = d.perfil || {};
+  const kmSemana = useMemo(() => kmMedio(d.hechas || [], hoy), [d.hechas]);
+  const prox = (d.eventos || []).filter((e) => e.decision !== 'no' && e.fecha >= hoy).sort((a, b) => (a.fecha < b.fecha ? -1 : 1))[0] || null;
+  const hecha = (d.eventos || []).filter((e) => e.decision === 'va' && e.fecha < hoy && e.fecha >= sumarDias(hoy, -21) && Number(e.distancia_km) > 0)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0] || null;
+  const dia = prox && esSemanaDeCarrera(prox, hoy) ? planDiaCarrera({ evento: prox, eventos: d.eventos, kmSemana }) : null;
+  if (!dia && !hecha) return null;
+  const tras = hecha ? trasLaCarrera({ evento: hecha, eventos: d.eventos, kmSemana }) : null;
+  const primero = hecha ? Number(hecha.distancia_km) >= 40 && !(d.eventos || []).some((e) => e.id !== hecha.id && e.fecha < hecha.fecha && Number(e.distancia_km) >= 40 && Number(e.resultado_seg) > 0) : false;
+  const rec = hecha ? recuperacion({ km: hecha.distancia_km, prudente: saludCarrera(p).prudente, primero }) : null;
+  const semRec = hecha ? semanasRecuperacion({ fecha: hecha.fecha, km: hecha.distancia_km, dias: Number(p.ventanas) || 3, kmAntes: kmSemana || 20, prudente: saludCarrera(p).prudente, primero }) : [];
+  const yaPuesta = semRec.length > 0 && semRec.every((w) => (d.semanas || []).some((x) => x.lunes === w.lunes && x.etiqueta === 'Recuperación'));
+  const pisa = semRec.filter((w) => (d.semanas || []).some((x) => x.lunes === w.lunes && x.etiqueta !== 'Recuperación')).length;
+  const ponerUmbral = () => una(async () => {
+    try { await api.guardarCarreraPerfil(atleta.id, { ...zonasDe(p), ...planDe(p), umbral: rangoUmbral(tras.umbral).map(fmtRitmo).join('-') }); aviso('Ritmo umbral actualizado'); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
+  });
+  const ponerRec = () => una(async () => {
+    try { await api.guardarSemanasCarrera(atleta.id, semRec); aviso('Recuperación puesta en su plan'); alGuardar(); } catch (err) { aviso(err.message, 'error'); }
+  });
+  return (
+    <section class="panel panel-pad pila-s carrera-dia" aria-labelledby="cd-titulo">
+      <h2 id="cd-titulo" class="h-panel">{dia ? `Su carrera: ${prox.nombre}` : `Después de ${hecha.nombre}`}</h2>
+      {dia && <>
+        <p class="peq secundario">La semana de la carrera ve en «Tu carrera» su plan para el día{dia.objetivo ? `: a ${fmtRitmo(dia.ritmo)} min/km, para ${fmtTiempo(dia.objetivo)}` : ''}.</p>
+        {dia.avisos.map((a) => <p key={a} class="mini pd-aviso"><Icono n="alerta" width="14" height="14" /> {a}</p>)}
+        <details class="pd-pasos"><summary class="mini">Lo que verá</summary>
+          <ul class="mini pd-lineas">{dia.secciones.map((x) => <li key={x.id}><strong>{x.titulo}:</strong> {x.lineas.join(' ')}</li>)}</ul></details>
+      </>}
+      {hecha && <>
+        {dia && <h3 class="peq cd-tras"><strong>Después de {hecha.nombre}</strong> <span class="terciario">({fmtCorta(hecha.fecha)})</span></h3>}
+        <p class="peq">{hecha.resultado_seg ? <>Hizo <strong class="num">{fmtTiempo(hecha.resultado_seg)}</strong>{tras?.previsto ? <> (previsto {fmtTiempo(tras.previsto)}: {tras.ratio <= 1 ? `un ${Math.round((1 - tras.ratio) * 100)} % más rápido` : `un ${Math.round((tras.ratio - 1) * 100)} % más lento`})</> : ''}.</> : 'Apunta su resultado en la carrera (abajo, en Carreras) para comparar con lo previsto.'}</p>
+        {tras?.umbral && <div class="fila-envolver"><span class="mini">Con este resultado, su ritmo umbral sería de unos <strong class="num">{fmtRitmo(tras.umbral)} min/km</strong>.</span>
+          <button type="button" class="btn btn-peq" disabled={ocupado} onClick={ponerUmbral}>Actualizar su ritmo umbral</button></div>}
+        <p class="mini"><strong>Recuperación:</strong> {rec.texto} Las agujetas (difusas, en las dos piernas, que mejoran cada día) son normales 2-4 días; un dolor en un punto, de más de 3/10 o que no mejora en 72 horas, no.</p>
+        {semRec.length > 0 && (yaPuesta ? <span class="mini terciario"><Icono n="hecho" width="14" height="14" /> La recuperación ya está en su plan.</span>
+          : <div class="fila-envolver"><button type="button" class="btn btn-peq" disabled={ocupado} onClick={ponerRec}>Poner la recuperación en su plan</button>
+            {pisa > 0 && <span class="mini terciario">Cambia {pisa === 1 ? 'una semana que ya tenía' : `${pisa} semanas que ya tenía`}.</span>}</div>)}
+      </>}
     </section>
   );
 }

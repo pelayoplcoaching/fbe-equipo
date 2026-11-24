@@ -6690,6 +6690,14 @@ if (parte('v0.228: carrera, la salud para correr y la mañana siguiente')) try {
   fallos++;
   console.log('  ✗ la salud para correr de la v0.228:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.229: carrera, el día de la carrera y después (mejoras 16 y 17)
+if (parte('v0.229: carrera, el día de la carrera y después')) try {
+  const { probarCarrera229 } = await import('./e2e-carrera-229.mjs');
+  await probarCarrera229({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el día de la carrera de la v0.229:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

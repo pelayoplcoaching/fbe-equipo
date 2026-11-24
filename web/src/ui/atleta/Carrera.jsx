@@ -19,6 +19,7 @@ import {
 } from '../../logica/carrera.js';
 import { kmMedio } from '../../logica/carrera-avisos.js';
 import { mananaPendiente, limpiarManana, respuestaManana, DONDE_MANANA, PIERNA_MANANA, COMO_MANANA } from '../../logica/carrera-salud.js';
+import { planDiaCarrera, esSemanaDeCarrera } from '../../logica/carrera-dia.js';
 
 const DIA_CORTO = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 7: 'D' };
 // ¿Es una pauta de carrera con estructura (tipo, zona o partes)?
@@ -175,6 +176,44 @@ export function TuCarrera({ alCerrar }) {
   );
 }
 
+// (v0.229, mejora 16 con R33-R39 y R46) Tu plan para el día de la carrera, la semana de la carrera: calentar, el ritmo y sus
+// pasos, comer antes y durante, la cafeína, los analgésicos y qué hacer si va mal. La temperatura prevista a la hora de
+// salida la escribes tú y se queda en este móvil; tu último peso (para los gramos), si lo apuntas.
+const CLAVE_TEMP = (id) => `fbe-carrera-temp-${id}`;
+function PlanDia({ evento, d }) {
+  const { api, atleta } = useApp();
+  const hoy = hoyISO();
+  const [temp, setTemp] = useState(() => { try { return localStorage.getItem(CLAVE_TEMP(evento.id)) || ''; } catch { return ''; } });
+  const peso = useCarga(() => api.pesos(atleta.id, 60).then((l) => (l.length ? Number(l[l.length - 1].kg) : null)).catch(() => null), [atleta.id], { recuerdo: `peso-carrera:${atleta.id}` });
+  const plan = useMemo(() => planDiaCarrera({ evento, eventos: d.eventos, pesoKg: peso.datos, temperatura: temp === '' ? null : Number(temp), kmSemana: kmMedio(d.hechas || [], hoy) }), [evento, d.eventos, peso.datos, temp]);
+  if (!plan) return null;
+  const cambiarTemp = (e) => {
+    const v = e.currentTarget.value.replace(/[^0-9-]/g, '').slice(0, 3);
+    setTemp(v);
+    try { if (v) localStorage.setItem(CLAVE_TEMP(evento.id), v); else localStorage.removeItem(CLAVE_TEMP(evento.id)); } catch { /* sin almacenamiento: solo en pantalla */ }
+  };
+  return (
+    <section class="panel panel-pad pila-s plan-dia" aria-labelledby="pd-titulo">
+      <h3 id="pd-titulo" class="h-panel">Tu plan para el día</h3>
+      <label class="campo pd-temp"><span class="etq">Temperatura prevista a la hora de salir (°C)</span>
+        <input class="entrada num" inputMode="numeric" placeholder="15" value={temp} onInput={cambiarTemp} /></label>
+      {plan.avisos.map((a) => <p key={a} class="mini pd-aviso"><Icono n="alerta" width="14" height="14" /> {a}</p>)}
+      {plan.secciones.map((sec) => (
+        <div key={sec.id} class="pila-xs pd-sec" data-sec={sec.id}>
+          <strong class="peq">{sec.titulo}</strong>
+          <ul class="mini pd-lineas">{sec.lineas.map((l) => <li key={l}>{l}</li>)}</ul>
+          {sec.id === 'ritmo' && plan.pasos.length > 1 && (
+            <details class="pd-pasos">
+              <summary class="mini">{plan.km >= 20 ? 'Tus pasos, cada 5 km' : 'Tus pasos, km a km'}</summary>
+              <ol class="mini num pd-tabla">{plan.pasos.map((x) => <li key={x.km}><span>km {String(x.km).replace('.', ',')}</span><span>{fmtTiempo(x.seg)}</span></li>)}</ol>
+            </details>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function ContenidoCarrera({ d }) {
   const hoy = hoyISO();
   const lunesHoy = lunesDe(hoy);
@@ -204,6 +243,7 @@ function ContenidoCarrera({ d }) {
           {prevision && <span class="mini carrera-prevision">Con tu {prevision.base.nombre}, tu tiempo previsto es {fmtTiempo(prevision.p.seg)}{prevision.p.desde ? ` (entre ${fmtTiempo(prevision.p.desde)} y ${fmtTiempo(prevision.p.hasta)})` : ''}</span>}
         </section>
       )}
+      {obj && esSemanaDeCarrera(obj, hoy) && <PlanDia evento={obj} d={d} />}
       {macrociclo(p).length > 0 && <section class="pila-s" aria-labelledby="tc-plan"><h3 id="tc-plan" class="h-panel">{p.plan_nombre || 'Tu plan'}</h3><Macrociclo perfil={p} /></section>}
 
       {actual && (
