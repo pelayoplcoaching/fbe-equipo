@@ -3,6 +3,7 @@
 // salud), cómo está hoy (consejo, la pauta es la del coach) y sus momentos buenos.
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono } from '../comunes.jsx';
+import { sinTuCoach, esPorSuCuenta } from '../../logica/esencial.js';
 import { useTrato } from '../trato.js';
 import { fraseUltimaVez, propuestaDescanso, avisoZona, hoyPorComoEstas, mejorMomento, momentoZona, ZONAS_AVISO } from '../../logica/conocerte.js';
 import { mensajeDe } from '../../logica/personal.js';
@@ -63,7 +64,7 @@ export function HoyComoEstas({ salud, prep }) {
   const sueno = (s.datos?.dias || []).find((x) => x.fecha === hoy)?.sueno_min ?? null;
   const c = hoyPorComoEstas({ suenoMin: sueno, prep: prep || null }, trato);
   if (!c) return null;
-  return <p class={`hoy-como-estas nivel-${c.nivel}`}><Imagen id="como-estas" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="sueno" />} /><span><strong>Hoy, por cómo estás. </strong>{c.texto}</span></p>;
+  return <p class={`hoy-como-estas nivel-${c.nivel}`}><Imagen id="como-estas" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="sueno" />} /><span><strong>Hoy, por cómo estás. </strong>{sinTuCoach(c.texto, atleta)}</span></p>;
 }
 
 // En el perfil: sus momentos buenos, y proponérselo a su coach (con un mensaje, si quiere)
@@ -78,7 +79,7 @@ export function MejorMomento({ entrenos, hoy }) {
   return (
     <section class="panel panel-pad mejor-momento" aria-label="Tu mejor momento">
       <p><Imagen id="mejor-momento" clase="mejor-momento-img" tamanos="56px" alternativa={<Icono n="rayo" />} /><span>{m.texto}</span></p>
-      {!propio && (enviado ? <span class="mini secundario">Se lo has propuesto a tu coach.</span>
+      {!propio && !esPorSuCuenta(atleta) && (enviado ? <span class="mini secundario">Se lo has propuesto a tu coach.</span>
         : <button type="button" class="btn btn-peq" onClick={proponer}>Proponer a mi coach poner ahí la sesión más dura</button>)}
     </section>
   );

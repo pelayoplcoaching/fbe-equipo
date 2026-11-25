@@ -1,7 +1,7 @@
 // (personalización 2, tanda 4) Que sea suyo: su foto de motivación (se queda en este móvil: no se sube) y su retrato de
 // atleta, «Tu ADN FBE» (solo de su entrenamiento).
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { reducirFoto } from '../FotoPerfil.jsx';
 import { useTrato } from '../trato.js';
 import { adnFbe } from '../../logica/retrato.js';
@@ -24,6 +24,7 @@ const aDataUrl = (blob) => new Promise((ok, mal) => { const r = new FileReader()
 
 export function HojaFotoMotivacion({ alCerrar }) {
   const { atleta, aviso } = useApp();
+  const sinCoach = useSinCoach();
   const [foto, setFoto] = useState(() => leerFotoMotivacion(atleta.id));
   const [cargando, setCargando] = useState(false);
   const elegir = async (e) => {
@@ -40,7 +41,7 @@ export function HojaFotoMotivacion({ alCerrar }) {
   return (
     <Hoja titulo="Tu foto de motivación" alCerrar={alCerrar}>
       <div class="pila foto-motivacion-hoja">
-        <p class="peq secundario">Tu meta, tu gente, tu perro… La verás en la portada de cada sesión y al terminarla. <strong>Se queda en este móvil: no se sube</strong> (ni la ve tu coach).</p>
+        <p class="peq secundario">Tu meta, tu gente, tu perro… La verás en la portada de cada sesión y al terminarla. <strong>Se queda en este móvil: no se sube</strong> {sinCoach ? '(no la ve nadie más).' : '(ni la ve tu coach).'}</p>
         {foto ? <img class="foto-motivacion-vista" src={foto} alt="Tu foto de motivación" />
           : <Imagen id="foto-motivacion-vacia" clase="foto-motivacion-vacia" tamanos="200px" />}
         <label class="btn btn-primario foto-motivacion-elegir">

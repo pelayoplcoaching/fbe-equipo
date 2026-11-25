@@ -14,12 +14,13 @@ export function useLoQueFunciona(atletaId, entrenos) {
   return entrenos && m.datos ? loQueLeFunciona({ entrenos, mensajes: m.datos, hoy: hoyISO() }) : null;
 }
 export function LoQueLeFunciona({ atletaId, entrenos, paraAtleta = false }) {
+  const { atleta } = useApp();
   const r = useLoQueFunciona(atletaId, entrenos);
   if (!r) return null;
   return (
     <div class={`lo-que-funciona pila-xs${paraAtleta ? ' panel panel-pad' : ''}${hayImagen('vuelve') ? ' con-ilu' : ''}`}>
       <Imagen id="vuelve" clase="ico-ilu lo-que-funciona-img" tamanos="44px" />
-      <span class="t-sobre">{paraAtleta ? 'Lo que te hace volver (lo ve tu coach)' : 'Lo que le hace volver'}</span>
+      <span class="t-sobre">{paraAtleta ? `Lo que te hace volver (lo ve ${atleta?.modalidad === 'por_su_cuenta' ? 'Pelayo' : 'tu coach'})` : 'Lo que le hace volver'}</span>
       {!paraAtleta && <p class="peq"><strong>{r.resumen}</strong></p>}
       {r.lineas.map((l) => <p key={l.clave} class="peq">{paraAtleta ? l.texto.replace('vuelve a entrenar', 'vuelves a entrenar').replace('vuelve en', 'vuelves en') : l.texto}</p>)}
       {paraAtleta && <p class="mini secundario">Sale solo de cuándo entrenas en la app: nada de cómo eres.</p>}

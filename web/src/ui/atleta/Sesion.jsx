@@ -759,14 +759,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       for (const [seId, alt] of Object.entries(r.cambios)) { s[seId] = alt.id; cambios[seId] = alt.id; if (!ejerciciosPorId[alt.id]) cargarExtra([alt.id], [alt]); }
       sin = r.sinAlternativa;
       aviso(textoAdaptacion(r, nuevo));
-    } else if (lugar !== 'gimnasio') aviso('En el gimnasio: la sesión tal y como la pautó tu coach');
+    } else if (lugar !== 'gimnasio') aviso(esPorSuCuenta(atleta) ? 'En el gimnasio: la sesión tal y como está en tu plan' : 'En el gimnasio: la sesión tal y como la pautó tu coach');
     setSustitutos(s); setPorLugar(cambios); setSinAlternativa(sin); setLugar(nuevo);
   }
   const deshacerLugar = (seId) => {
     setSustitutos({ ...sustitutos, [seId]: null });
     const { [seId]: _, ...resto } = porLugar;
     setPorLugar(resto);
-    aviso('Vuelve el ejercicio que pautó tu coach');
+    aviso(esPorSuCuenta(atleta) ? 'Vuelve el ejercicio de tu plan' : 'Vuelve el ejercicio que pautó tu coach');
   };
   const ultimaHecha = todas.sort((a, b) => (a.registrada_en < b.registrada_en ? 1 : -1))[0];
   // Intervalos escritos por el coach en la sesión («8 × 30 s / 90 s», «EMOM 12»…)
@@ -858,7 +858,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {!ejercicios.length && !cardioValido(sesion.cardio) && (
         <div class="panel panel-pad pila-s">
           <strong>{sesion.tipo === 'cardio' ? 'Sesión de cardio' : sesion.tipo === 'movilidad' ? 'Sesión de movilidad' : 'Sesión sin ejercicios'}</strong>
-          <p class="secundario peq">Haz lo que indica tu coach arriba. Al terminar, apunta cuánto ha durado y cuánto te ha costado.</p>
+          <p class="secundario peq">{esPorSuCuenta(atleta) ? 'Haz lo que indica la nota de arriba.' : 'Haz lo que indica tu coach arriba.'} Al terminar, apunta cuánto ha durado y cuánto te ha costado.</p>
           {/* (filosofía) en una sesión de cardio, cómo se combina con la fuerza */}
           {sesion.tipo === 'cardio' && !delCoach && <GuiaSugerida ocasion="cardio" />}
           {!delCoach && !sesion.completada && <button class="btn btn-peq" style="justify-self:start" onClick={() => setIntervalos({ inicial: null })}><Icono n="intervalos" /> Temporizador de intervalos</button>}
@@ -1099,11 +1099,11 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
   // v0.52.2: el descanso: el del coach se ve y no se cambia aquí (en el temporizador, sí, con ±15 s y ±1 min);
   // sin él, el que eliges tú para este ejercicio (o el de por defecto)
   const delCoach = descanso.origen === 'coach';
-  const detalleDescanso = delCoach ? `Te lo ha puesto tu coach: ${textoDescanso(descanso.seg, { delCoach: true })}`
+  const detalleDescanso = delCoach ? `${sobran ? 'El de tu plan' : 'Te lo ha puesto tu coach'}: ${textoDescanso(descanso.seg, { delCoach: true })}`
     : descanso.origen === 'propio' ? `Tuyo: ${textoDescanso(descanso.seg)}` : `Por defecto: ${textoDescanso(descanso.seg)}`;
   const herramientas = [
     // v0.64 (4): dejarlo para luego y cambiar el orden de lo que queda (solo hoy: la pauta de tu coach no cambia)
-    luego && !completo && { id: 'luego', ico: 'reloj', texto: 'Máquina ocupada · hacerlo luego', detalle: etiqueta ? 'La superserie entera pasa detrás de lo que te queda' : 'Pasa detrás de lo que te queda; tu coach verá el orden en que lo hiciste' },
+    luego && !completo && { id: 'luego', ico: 'reloj', texto: 'Máquina ocupada · hacerlo luego', detalle: etiqueta ? 'La superserie entera pasa detrás de lo que te queda' : sobran ? 'Pasa detrás de lo que te queda' : 'Pasa detrás de lo que te queda; tu coach verá el orden en que lo hiciste' },
     ordenar && { id: 'orden', ico: 'ordenar', texto: 'Cambiar el orden', detalle: 'De lo que te queda de la sesión, solo hoy' },
     { id: 'cambiar', ico: 'intercambiar', texto: 'Cambiar', detalle: 'Por una alternativa, si la máquina está ocupada o algo no te sienta bien' },
     { id: 'historial', ico: 'historial', texto: 'Historial', detalle: 'Tus series, gráficas y récords de este ejercicio' },
@@ -1181,7 +1181,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {/* (alta, 42) FBE Esencial: la primera vez, sin kilos pautados, «¿Qué peso pongo?» (el texto de la guía) */}
           {sobran && !propio && !porTiempo && e.carga_sugerida_kg == null && !ultimas && !completo && <QuePesoPongo rir={e.rir_objetivo} />}
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
-          {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
+          {sinMaterial && <p class="cambio-lugar"><span>{sobran ? 'No hay una alternativa marcada que puedas hacer con tu material. Hazlo como puedas o cámbialo tú.' : 'Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.'}</span></p>}
           {coach?.lista?.length > 0 && <LoQueTeDijo coach={coach} nombre={ej.nombre} />}
           {(e.notas_coach || e.prioridad === 'muy_baja' || planchaConPeso) && (
             <div class="ejercicio-extra">
@@ -1305,7 +1305,7 @@ function VideoDeSesion({ sesion }) {
   return (
     <section class={`panel panel-pad pila-s video-sesion ${visto ? 'hecho' : ''}`} aria-labelledby={`video-sesion-${sesion.id}`}>
       <button type="button" class="separa video-sesion-cab" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}>
-        <span class="pila-xs"><span class="mini terciario">Tu coach te pone este vídeo</span><strong id={`video-sesion-${sesion.id}`}>{titulo}</strong></span>
+        <span class="pila-xs"><span class="mini terciario">{esPorSuCuenta(atleta) ? 'El vídeo de esta sesión' : 'Tu coach te pone este vídeo'}</span><strong id={`video-sesion-${sesion.id}`}>{titulo}</strong></span>
         {visto ? <span class="chip ok"><Icono n="hecho" />Hecho</span> : <Icono n={abierto ? 'arriba' : 'play'} />}
       </button>
       {abierto && <VideoYoutube url={sesion.video_url} titulo={`${sesion.nombre}: ${titulo}`} abierto alTerminar={() => setHecho(true)} />}
@@ -1356,6 +1356,7 @@ function Tecnica({ ej, alCerrar }) {
 // v0.52.2: el descanso de un ejercicio en el que el coach no ha puesto uno (se guarda en este móvil, para ese
 // ejercicio en todas las sesiones). Elegir uno lo guarda y cierra, como «Cambiar».
 function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
+  const { atleta } = useApp();
   const tuyo = DESCANSOS_ATLETA.includes(propio) ? propio : null;
   const Opcion = ({ valor, texto, nota = null }) => {
     const elegida = valor === tuyo;
@@ -1369,7 +1370,7 @@ function ElegirDescanso({ nombre, propio, defecto, alElegir, alCerrar }) {
   return (
     <Hoja titulo="Descanso" alCerrar={alCerrar}>
       <Imagen id="descanso" clase="franja-ilu franja-hoja franja-descanso" tamanos="(min-width: 640px) 560px, 92vw" />
-      <p class="peq secundario">Tu coach no te ha puesto descanso en {nombre}. El que elijas arranca solo al marcar cada serie, en todas tus sesiones, y se guarda en este móvil.</p>
+      <p class="peq secundario">{esPorSuCuenta(atleta) ? `${nombre} no lleva descanso pautado.` : `Tu coach no te ha puesto descanso en ${nombre}.`} El que elijas arranca solo al marcar cada serie, en todas tus sesiones, y se guarda en este móvil.</p>
       <div class="lista-elegir lista-descansos" role="group" aria-label={`Descanso de ${nombre}`}>
         <Opcion valor={null} texto="Usar el de por defecto" nota={`Ahora, ${textoDescanso(defecto)}. Se cambia en Perfil, en «Sonido y vibración».`} />
         {DESCANSOS_ATLETA.map((s) => <Opcion key={s} valor={s} texto={s ? mmss(s) : 'Sin descanso automático'} />)}
@@ -1437,7 +1438,7 @@ function Cambiar({ e, actual, sesionId = null, alCerrar, alElegir: elegir }) {
         <Opcion x={e.ejercicio} nota="El que tienes pautado" />
         {/* (personalización 3, tanda 5) la que eligió la última vez, delante */}
         {alternativas.quedan.map((x) => <Opcion x={x} key={x.id} nota={x.id === elegidaAntes ? 'La que elegiste la última vez' : null} />)}
-        {!e.alternativas.length && <div class="panel-pad peq secundario">Tu coach no ha marcado alternativas para este ejercicio.</div>}
+        {!e.alternativas.length && <div class="panel-pad peq secundario">{suyo ? 'Este ejercicio no tiene alternativas marcadas.' : 'Tu coach no ha marcado alternativas para este ejercicio.'}</div>}
       </div>
       {alternativas.apartados.length > 0 && <p class="mini terciario alternativas-evitadas">Sin {alternativas.apartados.map((x) => `${x.nombre} (${textoMotivo(x.motivo).toLowerCase()})`).join(', ')}: lo prefieres evitar. Se cambia en tu perfil.</p>}
       {!otros ? (

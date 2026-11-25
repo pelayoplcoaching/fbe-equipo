@@ -2,12 +2,13 @@
 // (cada cambio se ve detrás de la hoja). Las secciones con «Subir» / «Bajar» (como «Cambiar el orden» de la sesión);
 // el cambio se anuncia. La tarjeta del día, los avisos de tu coach y «Tu día» no se mueven ni se quitan.
 import { useRef, useState } from 'preact/hooks';
-import { Hoja, Icono } from '../comunes.jsx';
+import { Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { Interruptor } from '../Interruptor.jsx';
 import { ARRIBA_HOY, DIALES_HOY, leerPanel, moverSeccion, alternarSeccion, alternarDial, panelPorDefecto, nombreSeccion } from '../../logica/hoy-panel.js';
 
 // pref / fijar: lo guardado (usePreferencia); disponibles: las secciones que hoy tienen algo; diales: los que puede tener
 export function OrdenarHoy({ pref, fijar, disponibles, arriba = [], diales = [], alCerrar }) {
+  const sinCoach = useSinCoach();
   const p = leerPanel(pref);
   const lista = useRef(null);
   const [anuncio, setAnuncio] = useState('');
@@ -29,7 +30,7 @@ export function OrdenarHoy({ pref, fijar, disponibles, arriba = [], diales = [],
   const verDiales = DIALES_HOY.filter((d) => diales.includes(d.id));
   return (
     <Hoja titulo="Ordenar Hoy" alCerrar={alCerrar}>
-      <p class="peq secundario">Solo en este móvil. La tarjeta de tu sesión, los avisos de tu coach y «Tu día» se quedan siempre arriba. Lo que quites no se pierde: queda plegado al final, en «Lo que has ocultado».</p>
+      <p class="peq secundario">Solo en este móvil. La tarjeta de tu sesión, {sinCoach ? 'los avisos de Pelayo' : 'los avisos de tu coach'} y «Tu día» se quedan siempre arriba. Lo que quites no se pierde: queda plegado al final, en «Lo que has ocultado».</p>
       {verDiales.length > 0 && (
         <section class="pila-s">
           <h3 class="ordenar-hoy-tit">De un vistazo</h3>

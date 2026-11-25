@@ -6,6 +6,7 @@ import { TIEMPOS, siVasJusto, textoVasJusto, calentamiento, haceUnAno } from '..
 import { textoSerie } from '../../logica/calculos.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
+import { esPorSuCuenta, sinTuCoach } from '../../logica/esencial.js';
 import { Imagen } from '../Imagen.jsx';
 
 export function TiempoHoy({ ejercicios }) {
@@ -19,7 +20,7 @@ export function TiempoHoy({ ejercicios }) {
       </div>
       {r && (
         <div class="pila-xs tiempo-hoy-r" aria-live="polite">
-          <p class="peq">{textoVasJusto(r, min)}</p>
+          <p class="peq">{sinTuCoach(textoVasJusto(r, min), atleta)}</p>
           {r.quitar.length > 0 && <ul class="tiempo-hoy-lista">{r.quitar.map((x) => <li key={`${x.id}-${x.que}`}><strong>{x.nombre}</strong>: {x.que}</li>)}</ul>}
           <p class="mini secundario">Es un consejo: tu sesión no cambia. Lo obligatorio, siempre.</p>
         </div>
@@ -29,6 +30,7 @@ export function TiempoHoy({ ejercicios }) {
 }
 
 export function Calentamiento({ ejercicios, zonas = [] }) {
+  const { atleta } = useApp();
   const pasos = calentamiento(ejercicios, zonas);
   if (!pasos.length) return null;
   return (
@@ -36,7 +38,7 @@ export function Calentamiento({ ejercicios, zonas = [] }) {
       <summary><Icono n="movilidad" /> Tu calentamiento (unos 5 min)<Icono n="abajo" class="plegable-flecha" /></summary>
       <Imagen id="calentamiento" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
       <ol class="calentamiento-lista">{pasos.map((p) => <li key={p}>{p}</li>)}</ol>
-      <p class="mini secundario">Un consejo para llegar listo; si tu coach te ha puesto el suyo, manda el suyo.</p>
+      <p class="mini secundario">{esPorSuCuenta(atleta) ? 'Un consejo para llegar listo.' : 'Un consejo para llegar listo; si tu coach te ha puesto el suyo, manda el suyo.'}</p>
     </details>
   );
 }

@@ -1,5 +1,5 @@
 import { NOMBRE_ESTADO_OBJETIVO, num, signo } from '../logica/calculos.js';
-import { Icono } from './comunes.jsx';
+import { Icono, useSinCoach } from './comunes.jsx';
 import { textoMarca } from '../logica/objetivos.js';
 import { tipoDeObjetivo, ritmoCarrera } from '../logica/objetivos-atleta.js';
 import { fmtCorta, hoyISO, diasEntre } from '../logica/fechas.js';
@@ -10,6 +10,7 @@ const ICONO_TIPO = { fuerza: 'hoy', peso: 'bascula', carrera: 'pasos', libre: 'd
 
 // Un objetivo en Progreso (atleta) o en la ficha (coach). Si está enlazado a un ejercicio, el progreso es automático.
 export function TarjetaObjetivo({ o, esCoach = false }) {
+  const sinCoach = useSinCoach();
   const a = o.auto;
   // (v0.173) los de peso corporal (su progreso sale de su tendencia) y los de carrera
   const w = !a ? o.autoPeso || null : null;
@@ -48,7 +49,7 @@ export function TarjetaObjetivo({ o, esCoach = false }) {
             {a.inicio != null && a.actual != null && a.meta ? ` (empezó en ${pesoNum(a.inicio, 1)})` : ''}
           </span>
           {a.conseguido && <span class="mini ok-t">{esCoach ? 'Lo hizo' : 'Lo hiciste'}: {pesoTxt(Number(a.conseguido.serie.kg), 2)} × {a.conseguido.serie.reps}{a.conseguido.serie.rpe ? ` @${num(Number(a.conseguido.serie.rpe))}` : ''}.</span>}
-          {a.yaLoPermite && <span class="mini ok-t">{esCoach ? 'Su 1RM estimado ya lo permite: ponle el día para intentarlo.' : 'Tu 1RM estimado ya lo permite: tu coach te dirá el día para intentarlo.'}</span>}
+          {a.yaLoPermite && <span class="mini ok-t">{esCoach ? 'Su 1RM estimado ya lo permite: ponle el día para intentarlo.' : sinCoach ? 'Tu 1RM estimado ya lo permite.' : 'Tu 1RM estimado ya lo permite: tu coach te dirá el día para intentarlo.'}</span>}
           {a.prevision && (
             <span class={`mini ${a.prevision.aTiempo === false ? 'aviso-t' : 'terciario'}`}>
               A este ritmo ({signo(difVista(a.prevision.ritmo), 1)} {etiquetaPeso()} por semana), hacia el {fmtCorta(a.prevision.fecha)}{a.prevision.aTiempo === true ? ': a tiempo' : a.prevision.aTiempo === false ? ': más tarde de la fecha' : ''}.
@@ -68,7 +69,7 @@ export function TarjetaObjetivo({ o, esCoach = false }) {
               A este ritmo ({signo(w.prevision.ritmo, 2)} kg por semana), hacia el {fmtCorta(w.prevision.fecha)}{w.prevision.aTiempo === true ? ': a tiempo' : w.prevision.aTiempo === false ? ': más tarde de la fecha' : ''}.
             </span>
           )}
-          {w.alejandose && <span class="mini terciario">{esCoach ? 'Ahora mismo su tendencia va en el otro sentido.' : 'Ahora mismo tu tendencia va en el otro sentido: háblalo con tu coach.'}</span>}
+          {w.alejandose && <span class="mini terciario">{esCoach ? 'Ahora mismo su tendencia va en el otro sentido.' : sinCoach ? 'Ahora mismo tu tendencia va en el otro sentido.' : 'Ahora mismo tu tendencia va en el otro sentido: háblalo con tu coach.'}</span>}
           {plazo && <span class="mini terciario">Objetivo {plazo}.</span>}
         </div>
       ) : (

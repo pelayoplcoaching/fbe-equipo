@@ -62,7 +62,7 @@ export function ahoraToca({ ejercicios = [], hechas = {}, proxima = null, comple
   const carga = kg != null ? `${pesoTxt(kg, 2)}${reps != null ? ` × ${reps}` : ''}` : reps != null ? `${reps} repeticiones` : null;
   // Lo que lee el lector de pantalla (la tarjeta es un botón: «Ahora toca: …. Toca para ir a esa serie»)
   const texto = [`${otro ? 'Siguiente ejercicio, ' : ''}${etiqueta ? `${etiqueta} ` : ''}${nombre}, ${serie.charAt(0).toLowerCase()}${serie.slice(1)}`,
-    carga, esfuerzo, anterior ? `La última vez, ${anterior}` : null, nota ? `${recs.length ? 'Recuerda' : 'Nota de tu coach'}: ${nota}` : null].filter(Boolean).join('. ');
+    carga, esfuerzo, anterior ? `La última vez, ${anterior}` : null, nota ? `${recs.length ? 'Recuerda' : 'Nota'}: ${nota}` : null].filter(Boolean).join('. ');
   return {
     id: se.id, numero: sig.numero, nombre, etiqueta, serie, otroEjercicio: otro, kg, reps, carga, esfuerzo, anterior,
     nota, notaRecuerda: recs.length > 0 && !!recs[0]?.texto, discos: !!barraDe(se) && kg != null && vista(kg) > barraVista(), texto,

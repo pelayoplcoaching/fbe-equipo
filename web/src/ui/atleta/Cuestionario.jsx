@@ -231,7 +231,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
         {deSalud && !salud && (
           <div class="panel panel-pad pila-s">
             <p>Esta parte es sobre tu salud: para responderla hace falta tu consentimiento de datos de salud.</p>
-            <p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p>
+            <p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}{suyo ? ' En FBE Esencial, «mi coach» es Pelayo Fernández Cidón (FBE), que responde de tus datos.' : ''}</p>
             <button type="button" class="btn btn-primario" disabled={dando} onClick={async () => { setDando(true); try { await darConsentimiento(); } catch (err) { setError(err.message); } finally { setDando(false); } }}>Dar consentimiento</button>
             <span class="peq terciario">{suyo ? 'Sin esta parte, la app no puede prepararte tu plan.' : 'O sigue sin responderla: tu coach verá el resto.'}</span>
           </div>
@@ -338,13 +338,13 @@ export function FilaCuestionario({ salud, recargarConsentimientos }) {
     <li class="panel-pad pila-s">
       <div class="separa">
         <div class="fila-ios-izq"><IcoIos n="pregunta" tono={!d?.completado_en || pendiente(d) ? 'aviso' : ''} /><div><div>Tu cuestionario inicial</div>
-          <div class="peq terciario">{d?.completado_en ? `Enviado ${fechaCuando(d.completado_en)}${pendiente(d) ? '. Tu coach te pide que lo actualices' : ''}` : d ? 'Empezado, sin enviar' : 'Sin rellenar'}</div></div></div>
+          <div class="peq terciario">{d?.completado_en ? `Enviado ${fechaCuando(d.completado_en)}${pendiente(d) ? (esPorSuCuenta(atleta) ? '. Toca actualizarlo' : '. Tu coach te pide que lo actualices') : ''}` : d ? 'Empezado, sin enviar' : 'Sin rellenar'}</div></div></div>
         <button class={`btn btn-peq ${!d?.completado_en || pendiente(d) ? 'btn-primario' : ''}`} disabled={c.cargando && !d} onClick={() => setAbierto(true)}>{d?.completado_en ? 'Revisar' : d ? 'Seguir' : 'Rellenar'}</button>
       </div>
       {/* Sin consentimiento de salud (por ejemplo, tras retirarlo), lo de salud que ya estaba se puede borrar */}
       {!salud && conSalud(d) && (!borrar
         ? <button class="btn-texto peq" style="justify-self:start" onClick={() => setBorrar(true)}>Borrar mis respuestas de salud</button>
-        : <div class="nota pila-s"><span>Se borra lo que contaste de tu salud, lesiones y alergias. Tu coach dejará de verlo.</span>
+        : <div class="nota pila-s"><span>Se borra lo que contaste de tu salud, lesiones y alergias.{esPorSuCuenta(atleta) ? ' La app dejará de tenerlo en cuenta.' : ' Tu coach dejará de verlo.'}</span>
             <span class="fila"><button class="btn btn-peq" onClick={() => setBorrar(false)}>Cancelar</button>
               <button class="btn btn-peq btn-peligro" onClick={async () => { try { await api.borrarSaludCuestionario(atleta.id); setBorrar(false); c.recargar(true); aviso('Respuestas de salud borradas'); } catch (e) { aviso(e.message, 'error'); } }}>Borrar</button></span></div>)}
       {abierto && (

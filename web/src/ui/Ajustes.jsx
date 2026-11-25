@@ -44,7 +44,9 @@ function detalleLigero(a) {
 }
 
 export function AjustesDispositivo({ coach = false, antes = null }) {
-  const { modo } = useApp() || {};
+  const { modo, atleta } = useApp() || {};
+  // (FBE Esencial) quien va por su cuenta no tiene coach: lo suyo lo puede ver Pelayo
+  const suyo = !coach && atleta?.modalidad === 'por_su_cuenta';
   const [a, setA] = useState(leerAjustes);
   const [sonido, setSonido] = useState(false);
   const cambiar = (k, v) => { const n = { ...a, [k]: v }; setA(n); guardarAjustes(n); };
@@ -121,7 +123,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
           {/* v0.63 (1): el teclado de la app al apuntar las series (apagado, el del móvil, como antes) */}
           <Interruptor id="aj-teclado" icono="teclado" texto="Teclado de la app al apuntar las series" ayuda="Teclas grandes, −/+ con el salto de cada ejercicio y «Siguiente» de los kilos a las repeticiones, al RPE y a marcar la serie. Apagado, sale el teclado del móvil" valor={a.tecladoApp !== false} alCambiar={(v) => cambiar('tecladoApp', v)} />
           {/* v0.112: kilos o libras para las cargas del entreno (en este móvil; la base y tu coach, en kilos) */}
-          <FilaIos icono="disco" titulo="Unidad de las cargas" detalle={a.unidadPeso === 'lb' ? 'En libras: lo que apuntas se guarda en kilos (tu coach lo ve en kilos). Tu peso corporal sigue en kilos.' : 'Si tus discos y mancuernas van en libras, cámbialo aquí. Tu coach lo seguirá viendo en kilos.'}
+          <FilaIos icono="disco" titulo="Unidad de las cargas" detalle={a.unidadPeso === 'lb' ? `En libras: lo que apuntas se guarda en kilos${suyo ? '' : ' (tu coach lo ve en kilos)'}. Tu peso corporal sigue en kilos.` : `Si tus discos y mancuernas van en libras, cámbialo aquí.${suyo ? '' : ' Tu coach lo seguirá viendo en kilos.'}`}
             bloque={<Segmentos opciones={[['kg', 'Kilos (kg)'], ['lb', 'Libras (lb)']]} valor={a.unidadPeso === 'lb' ? 'lb' : 'kg'} etiqueta="Unidad de las cargas" alCambiar={(v) => cambiar('unidadPeso', v || 'kg')} />} />
           {/* v0.60 (13): «Difuminar la cara» encendido de serie al enviar un vídeo (en este móvil) */}
           {puedeDifuminar(modo === 'demo') && <Interruptor id="aj-difuminar" icono="cara" texto="Difuminar la cara al enviar un vídeo" ayuda="Encendido de serie en la hoja de enviar (puedes apagarlo en cada vídeo). Se hace en el móvil: el original no sale de él" valor={!!a.difuminarCara} alCambiar={(v) => cambiar('difuminarCara', v)} />}
@@ -140,7 +142,8 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
 // Sonido, voz y vibración del descanso (v0.50: en su hoja, para que el perfil se lea de un vistazo). v0.52.2: y el
 // descanso que arranca solo si el coach no ha puesto uno
 function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
-  const { aviso } = useApp();
+  const { aviso, atleta } = useApp();
+  const suyo = atleta?.modalidad === 'por_su_cuenta';
   // (sonido, tanda 1) «Escuchar todos»: la familia entera, en orden, con el nombre de lo que suena
   const [oyendo, setOyendo] = useState(null);
   const pararTanda = useRef(null);
@@ -183,12 +186,12 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
           <li class="panel-pad pila-s">
-            <label for="aj-descanso-defecto">Descanso si tu coach no lo pone</label>
+            <label for="aj-descanso-defecto">{suyo ? 'Descanso si el ejercicio no lo lleva' : 'Descanso si tu coach no lo pone'}</label>
             <select id="aj-descanso-defecto" class="selector" aria-describedby="aj-descanso-defecto-ayuda" value={String(a.descansoDefecto)}
               onChange={(e) => { const v = Number(e.currentTarget.value); cambiar('descansoDefecto', v); }}>
               {DESCANSOS_ATLETA.map((v) => <option key={v} value={String(v)}>{v ? mmss(v) : 'Sin descanso automático'}</option>)}
             </select>
-            <span class="peq terciario" id="aj-descanso-defecto-ayuda">Arranca solo al marcar una serie de un ejercicio en el que tu coach no te ha puesto descanso. Para un ejercicio en concreto, elige otro en su «Más», en «Descanso».</span>
+            <span class="peq terciario" id="aj-descanso-defecto-ayuda">Arranca solo al marcar una serie de un ejercicio {suyo ? 'sin descanso pautado' : 'en el que tu coach no te ha puesto descanso'}. Para un ejercicio en concreto, elige otro en su «Más», en «Descanso».</span>
           </li>
           <Interruptor id="aj-sonido" icono="altavoz" texto="Sonido al acabar el descanso" ayuda="Y al batir un récord o ganar un disco" valor={a.sonido} alCambiar={(v) => cambiar('sonido', v)} />
           {/* pulido 7 */}
@@ -267,7 +270,7 @@ function HojaSonido({ a, cambiar, cambiarVarios, alCerrar }) {
           )}
           {hayVoz() && <Interruptor id="aj-contar" icono="mensaje" texto="Contar las repeticiones con el metrónomo" ayuda="Con el metrónomo de tempo, la voz dice cada repetición al empezarla" valor={!!a.contarReps} alCambiar={(v) => cambiar('contarReps', v)} />}
           {/* (sonido, tanda 3) las frases que grabe el coach, con su voz */}
-          <Interruptor id="aj-voz-coach" icono="micro" texto="Frases de tu coach, con su voz" ayuda="Si tu coach las ha grabado: «¡Vamos!», «Última serie», «¡Récord!»… en su momento de la sesión" valor={a.vozCoach !== false} alCambiar={(v) => cambiar('vozCoach', v)} />
+          <Interruptor id="aj-voz-coach" icono="micro" texto={suyo ? 'Frases de Pelayo, con su voz' : 'Frases de tu coach, con su voz'} ayuda={`Si ${suyo ? 'Pelayo' : 'tu coach'} las ha grabado: «¡Vamos!», «Última serie», «¡Récord!»… en su momento de la sesión`} valor={a.vozCoach !== false} alCambiar={(v) => cambiar('vozCoach', v)} />
           {/* v0.62: el aviso con el móvil bloqueado (la pista del descanso). Solo donde puede funcionar: iPhone con Safari 16.4 o
               más (la app de inicio o Safari) y Android; en el ordenador no sale. Apagado de serie: pausa la música de otras apps */}
           {a.sonido && plataforma && (

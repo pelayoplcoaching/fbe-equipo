@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icono, Capa, useApp, useCarga } from '../comunes.jsx';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, sinTuCoach } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { guiasConTexto, fichaDeEjercicio } from '../../datos/guias.js';
 import { FAQ } from '../../datos/faq.js';
@@ -338,18 +338,18 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
           <div class={`apunte vacio-apuntes${modo === 'curso' && curso && prCurso?.hecho ? ' diploma' : ''}`}>
             {modo === 'curso' && curso && prCurso?.hecho ? <><DibujoDiploma /><span class="diploma-curso">{curso.titulo}</span></> : <DibujoCuaderno />}
             <strong>{modo === 'curso' ? (curso ? (prCurso?.hecho ? '¡Curso terminado!' : pasados.current.length ? 'Lección hecha' : 'Curso al día') : cursos.length ? 'Has terminado todos los cursos' : 'Aún no hay cursos') : modo === 'examen' ? 'Aún no hay examen' : modo === 'repaso' ? (pasados.current.length ? 'Repaso hecho' : 'Nada que repasar todavía') : modo === 'guardados' ? (pasados.current.length ? 'No hay más guardados' : 'Aún no has guardado ninguno') : pasados.current.length ? 'Has visto todos por ahora' : 'Aún no hay apuntes'}</strong>
-            <p>{modo === 'curso' ? (curso ? (prCurso?.hecho ? 'Has acabado este curso. La semana que viene, otro (o cámbialo ahora).' : 'No quedan lecciones por leer hoy.') : cursos.length ? 'Cuando tu coach publique más guías, habrá más.' : 'Cuando tu coach publique sus guías, aquí tendrás un curso cada semana: una guía, lección a lección.')
+            <p>{modo === 'curso' ? (curso ? (prCurso?.hecho ? 'Has acabado este curso. La semana que viene, otro (o cámbialo ahora).' : 'No quedan lecciones por leer hoy.') : cursos.length ? (esPorSuCuenta(atleta) ? 'Cuando haya más guías, habrá más.' : 'Cuando tu coach publique más guías, habrá más.') : esPorSuCuenta(atleta) ? 'Cuando haya guías, aquí tendrás un curso cada semana: una guía, lección a lección.' : 'Cuando tu coach publique sus guías, aquí tendrás un curso cada semana: una guía, lección a lección.')
               : modo === 'examen' ? 'Cuando hayas visto más apuntes en tus descansos, aquí tendrás tu examen.'
               : modo === 'repaso' ? (pasados.current.length ? 'Los que no sabías volverán a salir otro día.' : 'Cuando veas apuntes en tus descansos, aquí podrás repasarlos.')
               : modo === 'guardados' ? 'Toca «Guardar» en cualquier apunte para tenerlo aquí.'
-              : pasados.current.length ? 'Mañana habrá más: los que no sabías vuelven a salir.' : 'Cuando tu coach publique sus guías y las fichas de técnica, saldrán aquí.'}</p>
+              : pasados.current.length ? 'Mañana habrá más: los que no sabías vuelven a salir.' : esPorSuCuenta(atleta) ? 'Cuando haya guías y fichas de técnica, saldrán aquí.' : 'Cuando tu coach publique sus guías y las fichas de técnica, saldrán aquí.'}</p>
           </div>
         )}
         {listo && actual && (
           <div class="apunte-mazo" data-mazo={enCola ? Math.min(2, cola.current?.length || 0) : 2}>
           {saliente && (
             <div class={`apunte-saliente tono-${arteDe(saliente.a.tipo).tono} va-${saliente.dir}`} key={`s${saliente.n}`} aria-hidden="true">
-              <p class="saliente-etq"><Sello tipo={saliente.a.tipo} /><span>{saliente.a.etiqueta}</span></p>
+              <p class="saliente-etq"><Sello tipo={saliente.a.tipo} /><span>{sinTuCoach(saliente.a.etiqueta, atleta)}</span></p>
               {saliente.a.titulo && <strong class="saliente-titulo">{saliente.a.titulo}</strong>}
               {saliente.marca !== 'otro' && <span class={`apunte-marca marca-${['bien', 'facil'].includes(saliente.marca) ? 'sabia' : saliente.marca === 'otra' ? 'no' : saliente.marca}`}>{{ sabia: '¡Lo sabías!', no: 'Vuelve en unos días', hecho: '¡Bien hecho!', pasa: 'La próxima', bien: '¡Bien!', facil: '¡Fácil!', otra: 'Mañana otra vez' }[saliente.marca]}</span>}
             </div>
@@ -362,7 +362,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
             {dedo?.activo && (
               <span class={`apunte-deslizar ${dedo.dx > 0 ? 'derecha' : 'izquierda'}${actual.vuelta || actual.tipo === 'reto' || recordar ? (dedo.dx > 0 ? ' si' : ' no') : ''}`} style={{ opacity: arrastre(dedo.dx, caja.current?.clientWidth).etiqueta }} aria-hidden="true">{queHara(dedo.dx > 0 ? 'derecha' : 'izquierda')}</span>
             )}
-            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{actual.etiqueta}</span>{conNota ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
+            <p class="apunte-etq"><Sello tipo={actual.tipo} /><span class="chip">{sinTuCoach(actual.etiqueta, atleta)}</span>{conNota ? <span class="apunte-de">Pregunta {pasados.current.length} de {examen.current.total}</span> : actual.de && <span class="apunte-de">{actual.de}</span>}</p>
             {imagen && <Imagen id={imagen} clase="apunte-img" tamanos="(min-width: 600px) 520px, 90vw" />}
             {tapado && <h2 class="apunte-pregunta-recordar">{recordar}</h2>}
             {tapado && actual.tipo === 'idea' && actual.titulo && <p class="apunte-recordar-de">{actual.titulo}</p>}

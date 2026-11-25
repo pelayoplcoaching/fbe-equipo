@@ -59,7 +59,7 @@ export function HojaPlanComida({ pesoKg = null, alCerrar, alGuardar }) {
         <div class="campo"><span class="etq">Tu objetivo</span><Segmentos etiqueta="Tu objetivo" valor={d.objetivo} opciones={OBJETIVOS_COMIDA} alCambiar={(v) => v && cambiar({ objetivo: v })} /></div>
         <div class="campo"><span class="etq">¿Tienes o has tenido un trastorno de la conducta alimentaria?</span>
           <Segmentos etiqueta="Trastorno de la conducta alimentaria" valor={d.tca == null ? null : d.tca ? 'si' : 'no'} opciones={[['no', 'No'], ['si', 'Sí']]} alCambiar={(v) => v && cambiar({ tca: v === 'si' })} />
-          <span class="ayuda">Anorexia, bulimia, atracones u otro. Si es que sí, tu plan será para mantener tu peso y nunca bajará solo: háblalo con tu médico. Es un dato de salud: solo lo veis tú y tu coach.</span></div>
+          <span class="ayuda">Anorexia, bulimia, atracones u otro. Si es que sí, tu plan será para mantener tu peso y nunca bajará solo: háblalo con tu médico. Es un dato de salud: solo lo veis tú y Pelayo.</span></div>
         {plan && (
           <div class="nota pila-xs" aria-live="polite">
             <span>Tu plan: <b class="num">{fmtKcal(plan.kcal)} kcal</b> al día, con <b class="num">{plan.proteina_g} g</b> de proteína, <b class="num">{plan.carbos_g} g</b> de hidratos y <b class="num">{plan.grasa_g} g</b> de grasa.</span>

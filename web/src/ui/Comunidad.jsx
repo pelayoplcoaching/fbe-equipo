@@ -16,7 +16,7 @@
 import { AfinesCompanero } from './atleta/Compania.jsx';
 import { createContext, Fragment } from 'preact';
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando, Capa, useAtraparFoco } from './comunes.jsx';
+import { CabeceraGrande, useApp, useCarga, useUnaVez, Icono, Avatar, Hoja, Siluetas, Vacio, ErrorCaja, Pestanas, Cargando, cuando, Capa, useAtraparFoco, useSinCoach } from './comunes.jsx';
 import { Interruptor } from './Ajustes.jsx';
 import { usePestanasDeslizables } from './deslizar.js';
 import { sinMovimiento } from './transiciones.js';
@@ -227,22 +227,28 @@ function DentroDelEquipo({ m, alCambiar }) {
   );
 }
 
+// (FBE Esencial) quien va por su cuenta no tiene «tu coach»: en el equipo, quien lo lleva es Pelayo. → ['tu coach' | 'Pelayo', 'Tu coach' | 'Pelayo']
+const useTuCoach = () => { const { atleta } = useApp(); return atleta?.modalidad === 'por_su_cuenta' ? ['Pelayo', 'Pelayo'] : ['tu coach', 'Tu coach']; };
+
 // Qué se comparte y con quién (la entrada y los ajustes)
 function QueSeComparte() {
+  // (FBE Esencial) quien va por su cuenta no tiene coach ni chat: las encuestas son de Pelayo
+  const { atleta } = useApp();
+  const suyo = atleta?.modalidad === 'por_su_cuenta';
   return (
     <>
       <div class="pila-s qsc qsc-ven">
         <strong><span class="qsc-ico" aria-hidden="true"><Icono n="equipo" /></span>Qué ven los demás</strong>
         <ul class="puntos secundario">
           <li>Tu nombre en el equipo y tu foto de perfil.</li>
-          <li>Lo que publiques, comentes o compartas, tus reacciones, tus votos en las encuestas del coach, los ánimos que mandas y a quién mencionas.</li>
+          <li>Lo que publiques, comentes o compartas, tus reacciones, tus votos en las encuestas {suyo ? 'de Pelayo' : 'del coach'}, los ánimos que mandas y a quién mencionas.</li>
           <li>Cuántas sesiones llevas en los retos y en el ranking de la semana, tu racha de semanas completas y, si juegas a La travesía, los metros de tu lobo en la semana (puedes no salir).</li>
           <li>Tu perfil del equipo: desde cuándo estás, tu racha, cuántos retos has conseguido (y cuáles) y cuántos entrenos has compartido.</li>
         </ul>
       </div>
       <div class="pila-s qsc qsc-nunca">
         <strong><span class="qsc-ico" aria-hidden="true"><Icono n="candado" /></span>Lo que nunca se comparte</strong>
-        <p class="secundario">Tu peso, tus medidas, la nutrición, los check-ins, las molestias, los vídeos de técnica ni lo que hablas con tu coach. Los kilos de un entreno, solo si tú lo eliges al compartirlo.</p>
+        <p class="secundario">{suyo ? 'Tu peso, tus medidas, la nutrición, los check-ins ni las molestias.' : 'Tu peso, tus medidas, la nutrición, los check-ins, las molestias, los vídeos de técnica ni lo que hablas con tu coach.'} Los kilos de un entreno, solo si tú lo eliges al compartirlo.</p>
       </div>
     </>
   );
@@ -250,10 +256,11 @@ function QueSeComparte() {
 
 // El coach le ha sacado de la comunidad: no ve nada ni puede volver a entrar hasta que le readmita
 function FueraDeLaComunidad() {
+  const [, Tc] = useTuCoach();
   return (
     <div class="contenido">
       <CabeceraGrande><div class="titulo"><h1>Equipo</h1></div></CabeceraGrande>
-      <Vacio icono="equipo" imagen="vacio-comunidad" ancha titulo="No estás en la comunidad">Tu coach te ha sacado de la comunidad del equipo. Si quieres volver, habla con él.</Vacio>
+      <Vacio icono="equipo" imagen="vacio-comunidad" ancha titulo="No estás en la comunidad">{Tc} te ha sacado de la comunidad del equipo. Si quieres volver, {Tc === 'Pelayo' ? 'escríbele' : 'habla con él'}.</Vacio>
     </div>
   );
 }
@@ -271,11 +278,14 @@ export function HojaNormas({ alCerrar, alLeer = null }) {
   );
 }
 export function ListaNormas() {
+  // (sin coach) quien va por su cuenta no tiene un coach que le lleve la salud: la misma norma, dicha para él
+  const sinCoach = useSinCoach();
+  const para = (t) => (sinCoach ? t.replace('eso lo lleva tu coach. Si alguien pregunta, que se lo pregunte a él.', 'eso es cosa de su médico o de un profesional que le conozca.') : t);
   return (
     <div class="pila normas">
       <p>{NORMAS_COMUNIDAD.intro}</p>
       <ol class="lista-normas">
-        {NORMAS_COMUNIDAD.puntos.map(([principal, detalle]) => <li key={principal}><strong>{principal}</strong> {detalle}</li>)}
+        {NORMAS_COMUNIDAD.puntos.map(([principal, detalle]) => <li key={principal}><strong>{principal}</strong> {para(detalle)}</li>)}
       </ol>
       <p class="peq secundario">{NORMAS_COMUNIDAD.cierre}</p>
     </div>
@@ -284,6 +294,7 @@ export function ListaNormas() {
 
 function EntrarComunidad({ antes, cambio = null, alEntrar }) {
   const { api, atleta, aviso } = useApp();
+  const [tc] = useTuCoach();
   const [nombre, setNombre] = useState(antes?.nombre || nombreEquipo(atleta?.nombre));
   const [ocupado, una] = useUnaVez();
   const [error, setError] = useState(null);
@@ -309,7 +320,7 @@ function EntrarComunidad({ antes, cambio = null, alEntrar }) {
         <h2>{cambio === 'texto' ? 'Hemos cambiado lo que se comparte' : cambio === 'normas' ? 'Hemos actualizado las normas' : antes ? '¿Vuelves al equipo?' : 'Antes de entrar'}</h2>
         {cambio === 'texto' && <p class="nota peq">Para seguir en el equipo, lee lo que se comparte ahora (tu racha, tu perfil del equipo, tus votos, los ánimos y las menciones) y acéptalo. Mientras tanto, lo tuyo no se ve.</p>}
         {cambio === 'normas' && <p class="nota peq">Para seguir en el equipo, lee las normas y márcalas como leídas. Mientras tanto, lo tuyo no se ve.</p>}
-        <p>Es voluntario. Dentro, los atletas de FBE que han entrado y tu coach os veis entre vosotros: os podéis animar, compartir un entreno y apuntaros a los retos.</p>
+        <p>Es voluntario. Dentro, los atletas de FBE que han entrado y {tc} os veis entre vosotros: os podéis animar, compartir un entreno y apuntaros a los retos.</p>
         <QueSeComparte />
         <p class="peq secundario">Puedes salir cuando quieras desde los ajustes del equipo: lo tuyo deja de verse para los demás.{antes ? ' Si vuelves, lo que dejaste vuelve a verse.' : ''}</p>
         <div class="panel-pad normas-entrada pila-s">
@@ -611,6 +622,7 @@ function CompanerosRacha({ cambios = 0 }) {
 // Elegir a quién invitar: los del equipo (ni uno mismo, ni el coach, ni con quien ya hay pareja o invitación)
 function HojaInvitarCompanero({ ya = [], alCerrar, alInvitar }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const personas = useCarga(() => api.personasComunidad(), []);
   const [ocupado, una] = useUnaVez();
   const lista = Object.entries(personas.datos || {}).map(([perfil_id, p]) => ({ perfil_id, ...p }))
@@ -622,7 +634,7 @@ function HojaInvitarCompanero({ ya = [], alCerrar, alInvitar }) {
   return (
     <Hoja titulo="Invitar a un compañero de racha" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">Si acepta, cada semana que los dos completéis la vuestra sumáis racha juntos. La pareja la veis los dos, tu coach y el equipo (salvo si uno de los dos no sale en el ranking). Cualquiera la puede terminar.</p>
+        <p class="peq secundario">Si acepta, cada semana que los dos completéis la vuestra sumáis racha juntos. La pareja la veis los dos, {tc} y el equipo (salvo si uno de los dos no sale en el ranking). Cualquiera la puede terminar.</p>
         {/* (personalización 3, tanda 8) quien entrena como tú, primero (si buscáis los dos) */}
         <AfinesCompanero ya={ya} invitar={invitar} ocupado={ocupado} />
         {personas.cargando && !personas.datos ? <Cargando texto="Cargando el equipo" /> : !lista.length ? <p class="secundario">No hay nadie más a quien invitar ahora mismo.</p> : (
@@ -781,6 +793,7 @@ function TextoConMenciones({ texto, mencionados = [], clase = 'post-texto', como
 // v0.72 (044): el coach, «Publicar ahora» o «Programar» (día y hora de Madrid) y sus plantillas de avisos
 function Compositor({ coach, personas = {}, con043 = false, con044 = false, con053 = false, alPublicar }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const [programar, setProgramar] = useState(false);
   const [plantillas, setPlantillas] = useState(false);
   const [modo, setModo] = useState('aviso'); // el coach: aviso o encuesta (v0.47)
@@ -827,7 +840,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, con0
         } else {
           const post = await api.publicarEnComunidad({ texto, fotos: fotos.map((f) => f.blob), tema: con043 ? tema : null, fijada, menciones: mencionesDeTexto(texto, elegidas), publicarEn });
           setTexto(''); setFotos([]); setFijada(false); setElegidas([]);
-          aviso(publicarEn ? `Aviso programado${cuando}` : post?.retenida ? 'Tu publicación está pendiente de revisión' : coach ? 'Aviso publicado en el muro' : tema === 'pregunta' && con043 ? 'Pregunta publicada: tu coach te contesta en los comentarios' : 'Publicado en el equipo');
+          aviso(publicarEn ? `Aviso programado${cuando}` : post?.retenida ? 'Tu publicación está pendiente de revisión' : coach ? 'Aviso publicado en el muro' : tema === 'pregunta' && con043 ? `Pregunta publicada: ${tc} te contesta en los comentarios` : 'Publicado en el equipo');
           setTema(temaPorDefecto(coach));
         }
         setProgramar(false);
@@ -871,7 +884,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, con0
       ) : (
         <AreaConMenciones id="eq-texto" etiqueta={coach ? 'Aviso para el equipo' : esPregunta ? 'Tu pregunta para el coach' : 'Tu publicación'} valor={texto} alCambiar={setTexto} personas={personas}
           alMencionar={(p) => setElegidas((l) => [...l.filter((x) => x.perfil_id !== p.perfil_id), p])} maxLength={MAX_POST} rows={plegado ? 1 : 2}
-          placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? '¿Qué le quieres preguntar a tu coach?' : plegado ? '¿Qué tal tu semana?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
+          placeholder={coach ? 'Un aviso para todo el equipo…' : esPregunta ? `¿Qué le quieres preguntar a ${tc}?` : plegado ? '¿Qué tal tu semana?' : '¿Qué tal tu semana? Anima al equipo… (@ para mencionar)'} />
       )}
       {coach && con044 && !encuesta && (
         <div class="fila-envolver compositor-plantillas">
@@ -889,7 +902,7 @@ function Compositor({ coach, personas = {}, con043 = false, con044 = false, con0
       )}
       {!encuesta && con043 && !coach && (
         <p class="mini terciario compositor-nota">{esPregunta
-          ? 'Te contesta tu coach en los comentarios: aquí van las dudas de salud, lesiones, fármacos, suplementos o dieta.'
+          ? `Te contesta ${tc} en los comentarios: aquí van las dudas de salud, lesiones, fármacos, suplementos o dieta.`
           : 'Dudas de salud, lesiones, fármacos, suplementos o dieta: al coach, con el tema «Pregunta para el coach».'}</p>
       )}
       {!encuesta && fotos.length > 0 && (
@@ -933,6 +946,7 @@ const TIPOS_POST = { aviso: 'Aviso del coach', entreno: 'Entreno compartido', lo
 
 function TarjetaPost({ post, coach, personas = {}, alCambiar, llega = false }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const [hoja, setHoja] = useState(null); // 'comentarios' | 'opciones' | 'quien' | 'avisar' | 'votos'
   const [ocupado, una] = useUnaVez();
   // Doble toque en la publicación: 💪 (si aún no lo tiene), con un pequeño salto (v0.47)
@@ -983,7 +997,7 @@ function TarjetaPost({ post, coach, personas = {}, alCambiar, llega = false }) {
       {post.retenida && (coach
         ? <p class="nota peq fila-envolver retenida-linea"><span>Pendiente de revisión (lleva una palabra filtrada): los atletas no la ven.</span>
             <button type="button" class="btn btn-peq btn-primario" disabled={ocupado} onClick={() => una(async () => { try { await api.aprobarComunidad({ postId: post.id }); aviso('Aprobada: ya se ve'); alCambiar(); } catch (e) { aviso(e.message, 'error'); } })}><Icono n="hecho" /> Aprobar</button></p>
-        : post.mio && <p class="nota peq retenida-linea" role="status">Tu publicación está pendiente de revisión: la verá el equipo cuando tu coach la apruebe.</p>)}
+        : post.mio && <p class="nota peq retenida-linea" role="status">Tu publicación está pendiente de revisión: la verá el equipo cuando {tc} la apruebe.</p>)}
       {post.tema === 'pregunta' && post.respondidaCoach && <p class="post-pregunta mini"><span class="chip chip-mini ok"><Icono n="hecho" />Respondida por el coach</span></p>}
       {post.tipo === 'encuesta' ? <EncuestaPost post={post} coach={coach} alCambiar={alCambiar} alVerVotos={() => setHoja('votos')} /> : (
         <div class="post-cuerpo" onClick={tocar}>
@@ -1332,6 +1346,7 @@ function HojaSilenciarDe({ perfilId, nombre, alCerrar, alCambiar = null }) {
 
 function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenciar = null, alFuera = null, alCitar = null }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const [borrar, setBorrar] = useState(false);
   const [ocupado, una] = useUnaVez();
   const hacer = (fn, texto) => una(async () => {
@@ -1358,7 +1373,7 @@ function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenc
           {/* (social, 053) citar la de otro en una publicación mía */}
           {!coach && !post.mio && post.con053 && post.tipo !== 'momento' && alCitar && <button class="btn" onClick={alCitar}><Icono n="mensaje" /> Citar en el muro</button>}
           {(coach || post.mio) && <button class="btn btn-peligro" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar</button>}
-          {!coach && post.mio && <p class="mini terciario">Lo ven los del equipo y tu coach mientras sigas en la comunidad.</p>}
+          {!coach && post.mio && <p class="mini terciario">Lo ven los del equipo y {tc} mientras sigas en la comunidad.</p>}
         </div>
       )}
     </Hoja>
@@ -1367,6 +1382,7 @@ function HojaOpcionesPost({ post, coach, alCerrar, alCambiar, alAvisar, alSilenc
 
 function HojaAvisar({ postId = null, comentarioId = null, alCerrar }) {
   const { api, aviso } = useApp();
+  const [tc, Tc] = useTuCoach();
   const [motivo, setMotivo] = useState('');
   const [ocupado, una] = useUnaVez();
   return (
@@ -1374,10 +1390,10 @@ function HojaAvisar({ postId = null, comentarioId = null, alCerrar }) {
       <form class="pila" onSubmit={(e) => {
         e.preventDefault();
         una(async () => {
-          try { await api.avisarAlCoach({ postId, comentarioId, motivo }); aviso('Hecho: tu coach lo mirará'); alCerrar(); } catch (err) { aviso(err.message, 'error'); }
+          try { await api.avisarAlCoach({ postId, comentarioId, motivo }); aviso(`Hecho: ${tc} lo mirará`); alCerrar(); } catch (err) { aviso(err.message, 'error'); }
         });
       }}>
-        <p class="secundario">Tu coach lo verá en Revisar y decidirá. A quien lo ha escrito no se le dice quién ha avisado.</p>
+        <p class="secundario">{Tc} lo verá{Tc === 'Pelayo' ? '' : ' en Revisar'} y decidirá. A quien lo ha escrito no se le dice quién ha avisado.</p>
         <div class="campo">
           <label for="eq-motivo">Por qué (si quieres)</label>
           <textarea id="eq-motivo" class="area" maxLength={MAX_MOTIVO} value={motivo} onInput={(e) => setMotivo(e.currentTarget.value)} />
@@ -1392,6 +1408,7 @@ function HojaAvisar({ postId = null, comentarioId = null, alCerrar }) {
 // nivel: responder a una respuesta cuelga del mismo comentario). Sin la 041, como antes.
 function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const lista = useCarga(() => api.comentariosComunidad(post.id), [post.id]);
   const [texto, setTexto] = useState('');
   const [elegidas, setElegidas] = useState([]);
@@ -1441,7 +1458,7 @@ function HojaComentarios({ post, coach, personas = {}, alCerrar, alCambiar }) {
         {c.pegatina ? <Pegatina k={c.pegatina} clase="pegatina-comentario" /> : <TextoConMenciones texto={c.texto} mencionados={c.mencionados} clase="post-texto peq" como="span" />}
         {c.oculto && <span class="mini terciario">Oculto: los atletas no lo ven.</span>}
         {c.retenido && (coach ? <span class="mini terciario">Pendiente de revisión: los atletas no lo ven.</span>
-          : c.mio && <span class="mini terciario retenida-linea">Tu comentario está pendiente de revisión: lo verán cuando tu coach lo apruebe.</span>)}
+          : c.mio && <span class="mini terciario retenida-linea">Tu comentario está pendiente de revisión: lo verán cuando {tc} lo apruebe.</span>)}
         <span class="fila-envolver comentario-acciones">
           {c.con041 && !c.oculto && (
             <button type="button" class="btn-texto mini fuerza-comentario" aria-pressed={c.miFuerza ? 'true' : 'false'} disabled={ocupado}
@@ -1552,6 +1569,7 @@ function HojaPreguntaFrecuente({ post, comentario, alCerrar, alGuardar }) {
 // Sin la 043, el coach ve «Disponible tras la migración 043» (al atleta no le sale la pestaña).
 export function PreguntasEquipo({ coach = false }) {
   const { api, aviso } = useApp();
+  const [tc] = useTuCoach();
   const [vuelta, setVuelta] = useState(0);
   const lista = useCarga(() => api.preguntasEquipo(), [vuelta]);
   const [ocupado, una] = useUnaVez();
@@ -1567,10 +1585,10 @@ export function PreguntasEquipo({ coach = false }) {
         <h2 id="eq-preguntas-t" class="preguntas-t">Preguntas del equipo</h2>
         <p class="peq secundario">{coach
           ? 'Las preguntas del muro que has contestado y guardado. Las ven todos los del equipo, sin el nombre de quien preguntó.'
-          : 'Lo que tu coach ha contestado en el muro, a mano para todos. ¿Tienes otra? Publícala en el muro con el tema «Pregunta para el coach».'}</p>
+          : `Lo que ${tc} ha contestado en el muro, a mano para todos. ¿Tienes otra? Publícala en el muro con el tema «Pregunta para el coach».`}</p>
       </div>
       {!filas.length ? (
-        <Vacio ilustracion="preguntas" icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : 'Cuando tu coach conteste y guarde alguna, saldrá aquí.'}</Vacio>
+        <Vacio ilustracion="preguntas" icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : `Cuando ${tc} conteste y guarde alguna, saldrá aquí.`}</Vacio>
       ) : (
         <ul class="lista preguntas-lista">
           {filas.map((q) => (
@@ -1604,6 +1622,7 @@ function BotonFoto({ c }) {
 // ---------------------------------------------------------------- retos
 export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirLogro = null }) {
   const { api } = useApp();
+  const [tc] = useTuCoach();
   const [vuelta, setVuelta] = useState(0);
   const retos = useCarga(() => api.retosComunidad(), [cambios, vuelta]);
   const con042 = useCarga(() => api.comunidad042().catch(() => null), []);
@@ -1621,7 +1640,7 @@ export function Retos({ coach = false, miembro = null, cambios = 0, alCompartirL
       {coach && <RetoTravesia />}
       <ErrorCaja error={retos.error} reintentar={() => retos.recargar()} />
       {retos.cargando && !retos.datos ? <Siluetas forma="tarjetas" n={2} texto="Cargando los retos" />
-        : !ordenados.length ? <Vacio icono="diana" imagen="vacio-retos" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : 'Cuando tu coach proponga uno, lo verás aquí.'}</Vacio>
+        : !ordenados.length ? <Vacio icono="diana" imagen="vacio-retos" titulo="Aún no hay retos">{coach ? 'Crea uno: sesiones, minutos de cardio o semanas completas entre dos fechas, para cada uno, entre todo el equipo o por equipos.' : `Cuando ${tc} proponga uno, lo verás aquí.`}</Vacio>
           : ordenados.map((r, i) => <TarjetaReto key={r.id} ilu={i === 0} r={r} hoy={hoy} coach={coach} miembro={miembro} alEditar={() => setEditar(r)} alCompartirLogro={alCompartirLogro} cardioYa={cardioYa} alContarCardio={() => { setCardioYa(true); setVuelta((v) => v + 1); }} />)}
       {editar && <HojaReto reto={editar.id ? editar : null} con042={con042.datos === true} alCerrar={() => setEditar(null)} alGuardar={() => { setEditar(null); retos.recargar(true); }} />}
     </div>
@@ -2213,6 +2232,7 @@ function HojaAjustesComunidad({ miembro, alCerrar, alCambiar }) {
 // de la vista previa, con la misma regla que la base (recordsParaEquipo): así la tarjeta sale igual.
 export function HojaCompartirEquipo({ datos, alCerrar, alCompartir }) {
   const { api, aviso, atleta } = useApp();
+  const [tc] = useTuCoach();
   const [texto, setTexto] = useState(() => String(datos.textoInicial || '').slice(0, MAX_POST));   // (descansos, tanda 3) la etapa de La travesía, ya escrita
   const [kilos, setKilos] = useState(false);
   const [ocupado, una] = useUnaVez();
@@ -2242,7 +2262,7 @@ export function HojaCompartirEquipo({ datos, alCerrar, alCompartir }) {
           <span class="mini terciario">Así lo verá el equipo:</span>
           <div class="post post-entreno ee-previa"><TarjetaEntreno r={previa} /></div>
         </div>
-        <p class="mini terciario">Lo ven los del equipo y tu coach. Nunca va tu peso corporal ni datos de salud.</p>
+        <p class="mini terciario">Lo ven los del equipo y {tc}. Nunca va tu peso corporal ni datos de salud.</p>
         <button class="btn btn-primario btn-grande" disabled={ocupado}><Icono n="equipo" /> {ocupado ? 'Compartiendo…' : 'Compartir con el equipo'}</button>
       </form>
     </Hoja>

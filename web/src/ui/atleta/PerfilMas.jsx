@@ -14,6 +14,7 @@ import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { pesoNum, etiquetaPeso } from '../../logica/unidades.js';
 import { textoManual } from '../../logica/respeto.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
+import { esPorSuCuenta, quienLee } from '../../logica/esencial.js';
 import { diaUnoYHoy, marcasPorReps, ejerciciosConMarcas, correccionesPorEjercicio, completarPerfil, historiaBloques, palmares, logrosSecretos, equivalenciaDelDia, delAnio, resumenTrimestre, MOTIVOS_EVITAR, textoMotivo, alternarEvitado, materialDe, TIPOS_GUARDADO, guardadosJuntos, descansoYPasos, textoHoras, ATAJOS_PERFIL, atajosValidos, alternarAtajo, privacidadDeUnVistazo, aCSV, CSV_SESIONES, CSV_SERIES, CSV_PESOS, CSV_MEDIDAS } from '../../logica/perfil-mas.js';
 import { descargar } from '../comunes.jsx';
 import { sumarDias } from '../../logica/fechas.js';
@@ -154,7 +155,7 @@ export function CompletaPerfil() {
   const [todos, setTodos] = useState(false);
   if (propio || luego || !personal.datos) return null;
   const p = personal.datos;
-  const r = completarPerfil(p, { foto: perfil?.foto || perfil?.foto_grande || null, entrena: conEntrenamiento(atleta), manualEscrito: !!textoManual(p) });
+  const r = completarPerfil(p, { foto: perfil?.foto || perfil?.foto_grande || null, entrena: conEntrenamiento(atleta), manualEscrito: !!textoManual(p), sinCoach: esPorSuCuenta(atleta) });
   if (!r.faltan.length) return null;
   const ahoraNo = () => { try { localStorage.setItem(CLAVE_LUEGO(atleta.id), String(Date.now() + 14 * 864e5)); } catch { /* */ } setLuego(true); };
   const radio = 22, c = 2 * Math.PI * radio;
@@ -367,18 +368,20 @@ export function Trimestre({ entrenos = [], historial = [] }) {
 // =====================================================================
 const normalT = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export function FilaEvitados() {
+  const { atleta } = useApp();
   const personal = usePersonal();
   const [abierta, setAbierta] = useState(false);
   const n = (personal.datos?.evitados || []).length;
   return (
     <>
-      <FilaIos icono="alerta" titulo="Lo que prefieres evitar" detalle={n ? `${n} ${n === 1 ? 'ejercicio' : 'ejercicios'}: tu coach lo ve` : 'Ejercicios que no te gustan o te molestan'} alTocar={() => setAbierta(true)} etiqueta="Lo que prefieres evitar" />
+      <FilaIos icono="alerta" titulo="Lo que prefieres evitar" detalle={n ? `${n} ${n === 1 ? 'ejercicio' : 'ejercicios'}${esPorSuCuenta(atleta) ? '' : ': tu coach lo ve'}` : 'Ejercicios que no te gustan o te molestan'} alTocar={() => setAbierta(true)} etiqueta="Lo que prefieres evitar" />
       {abierta && <HojaEvitados inicial={personal.datos?.evitados || []} alCerrar={() => setAbierta(false)} alGuardar={() => personal.recargar?.(true)} />}
     </>
   );
 }
 function HojaEvitados({ inicial, alCerrar, alGuardar }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta } = useApp();
+  const suyo = esPorSuCuenta(atleta);
   const biblioteca = useCarga(() => api.biblioteca().catch(() => []), []);
   const [lista, setLista] = useState(inicial);
   const [q, setQ] = useState('');
@@ -389,13 +392,13 @@ function HojaEvitados({ inicial, alCerrar, alGuardar }) {
   const resultados = q.trim().length < 2 ? [] : (biblioteca.datos || []).filter((e) => e.activo !== false && !ya.has(e.id) && normalT(e.nombre).includes(normalT(q.trim()))).slice(0, 8);
   const guardar = async () => {
     setOcupado(true);
-    try { await api.guardarPerfil4({ evitados: lista }); aviso('Guardado: tu coach lo verá'); alGuardar?.(); alCerrar(); } catch (e) { aviso(e.message, 'error'); }
+    try { await api.guardarPerfil4({ evitados: lista }); aviso(suyo ? 'Guardado' : 'Guardado: tu coach lo verá'); alGuardar?.(); alCerrar(); } catch (e) { aviso(e.message, 'error'); }
     setOcupado(false);
   };
   return (
     <Hoja titulo="Lo que prefieres evitar" alCerrar={alCerrar}>
       <div class="pila evitados-hoja">
-        <p class="peq secundario">Tu coach lo verá en tu ficha y con un aviso si te lo pone. Tu programación no cambia; al cambiar un ejercicio en la sesión, estos no saldrán entre las alternativas.</p>
+        <p class="peq secundario">{suyo ? 'Tu plan no cambia; al cambiar un ejercicio en la sesión, estos no saldrán entre las alternativas.' : 'Tu coach lo verá en tu ficha y con un aviso si te lo pone. Tu programación no cambia; al cambiar un ejercicio en la sesión, estos no saldrán entre las alternativas.'}</p>
         {lista.length > 0 ? (
           <ul class="lista evitados-lista">
             {lista.map((x) => (
@@ -461,14 +464,14 @@ function HojaMaterial({ inicial, alCerrar, alGuardar }) {
       await api.guardarPerfil4({ material: { ...m, mancuernas_kg: n } });
       // (lo de este móvil, igual: «¿Dónde entrenas hoy?» lo usa al momento)
       guardarPreferencia(`fbe-material-${atleta.id}`, { casa: m.casa, viaje: m.viaje });
-      aviso('Guardado: tu coach lo verá'); alGuardar?.(); alCerrar();
+      aviso(esPorSuCuenta(atleta) ? 'Guardado' : 'Guardado: tu coach lo verá'); alGuardar?.(); alCerrar();
     } catch (e) { aviso(e.message, 'error'); }
     setOcupado(false);
   };
   return (
     <Hoja titulo="Tu material" alCerrar={alCerrar}>
       <div class="pila material-hoja">
-        <p class="peq secundario">Con esto, «¿Dónde entrenas hoy?» cambia lo que no puedas hacer por las alternativas de tu coach. Tu coach lo ve, para tenerlo en cuenta.</p>
+        <p class="peq secundario">{esPorSuCuenta(atleta) ? 'Con esto, «¿Dónde entrenas hoy?» cambia lo que no puedas hacer por sus alternativas.' : 'Con esto, «¿Dónde entrenas hoy?» cambia lo que no puedas hacer por las alternativas de tu coach. Tu coach lo ve, para tenerlo en cuenta.'}</p>
         {[['casa', 'En casa'], ['viaje', 'De viaje']].map(([l, t]) => (
           <fieldset key={l} class="pila-s material-perfil">
             <legend class="peq"><strong>{t}</strong></legend>
@@ -548,7 +551,7 @@ function HojaGuardados({ irA, alCerrar }) {
 // (T3) 11. Tu rincón de ánimo (solo lo ves tú)
 // =====================================================================
 export function RinconAnimo() {
-  const { api, aviso, propio } = useApp();
+  const { api, aviso, propio, atleta } = useApp();
   const d = useCarga(() => (propio ? Promise.resolve(null) : api.animoMios ? api.animoMios().catch(() => null) : Promise.resolve(null)), []);
   const [todos, setTodos] = useState(false);
   if (!Array.isArray(d.datos)) return null;
@@ -560,7 +563,7 @@ export function RinconAnimo() {
     <section class="seccion perfil-sec rincon-animo" aria-labelledby="rincon-animo-t">
       <div class="seccion-cab"><h2 id="rincon-animo-t">Tu rincón de ánimo</h2><span class="peq secundario"><Icono n="candado" />Solo lo ves tú</span></div>
       {!d.datos.length ? (
-        <p class="panel panel-pad peq terciario rincon-vacio">Para los días malos: guarda aquí mensajes de tu coach (en el chat, mantén pulsado uno y «A tu rincón de ánimo») o comentarios de tus compañeros en tus publicaciones.</p>
+        <p class="panel panel-pad peq terciario rincon-vacio">{esPorSuCuenta(atleta) ? 'Para los días malos: guarda aquí los comentarios de tus compañeros en tus publicaciones (en el comentario, «A tu rincón de ánimo»).' : 'Para los días malos: guarda aquí mensajes de tu coach (en el chat, mantén pulsado uno y «A tu rincón de ánimo») o comentarios de tus compañeros en tus publicaciones.'}</p>
       ) : (
         <ul class="rincon-lista">
           {lista.map((x) => (
@@ -631,7 +634,7 @@ export function DescansoPasos({ salud = false }) {
           </div>
         )}
       </div>
-      <p class="mini terciario">De Salud del iPhone. Lo ves tú y tu coach, como siempre.</p>
+      <p class="mini terciario">De Salud del iPhone. Lo ves tú y {quienLee(atleta)}, como siempre.</p>
     </section>
   );
 }
@@ -683,10 +686,11 @@ export function AtajosPerfil({ irA }) {
 // (T4) 17. Tu privacidad, de un vistazo (y «Así te ve tu coach»)
 // =====================================================================
 export function FilaPrivacidad({ salud = false }) {
+  const { atleta } = useApp();
   const [abierta, setAbierta] = useState(false);
   return (
     <>
-      <FilaIos icono="ojo" titulo="Tu privacidad, de un vistazo" detalle="Qué ve tu coach, qué ve el equipo y qué se queda en tu móvil" alTocar={() => setAbierta(true)} etiqueta="Tu privacidad, de un vistazo" />
+      <FilaIos icono="ojo" titulo="Tu privacidad, de un vistazo" detalle={`Qué ve ${quienLee(atleta)}, qué ve el equipo y qué se queda en tu móvil`} alTocar={() => setAbierta(true)} etiqueta="Tu privacidad, de un vistazo" />
       {abierta && <HojaPrivacidad salud={salud} alCerrar={() => setAbierta(false)} />}
     </>
   );
@@ -705,15 +709,16 @@ function HojaPrivacidad({ salud, alCerrar }) {
     return { personal, conectada: !!integ?.salud, comunidad: !!(miembro && !miembro.salido_en), portada: !!portada };
   }, [atleta.id]);
   const p = d.datos?.personal;
-  const v = privacidadDeUnVistazo({ salud, saludConectada: d.datos?.conectada, comunidad: d.datos?.comunidad, portada: d.datos?.portada, evitados: (p?.evitados || []).length, material: materialDe(p).deLaBase });
+  const quien = quienLee(atleta);
+  const v = privacidadDeUnVistazo({ suyo: esPorSuCuenta(atleta), salud, saludConectada: d.datos?.conectada, comunidad: d.datos?.comunidad, portada: d.datos?.portada, evitados: (p?.evitados || []).length, material: materialDe(p).deLaBase });
   const Lista = ({ l }) => <ul class="lista privacidad-lista">{l.map((t) => <li key={t} class="peq"><Icono n="hecho" />{t}</li>)}</ul>;
   return (
     <Hoja titulo="Tu privacidad" alCerrar={alCerrar}>
       <div class="pila privacidad-hoja">
         {d.cargando && !d.datos ? <p class="peq terciario" role="status">Cargando…</p> : (
           <>
-            <section class="pila-s" aria-labelledby="priv-coach"><h3 id="priv-coach" class="peq"><Icono n="perfil" /> Lo que ve tu coach</h3><Lista l={v.coach} />
-              <button type="button" class="btn btn-peq" onClick={() => setComoCoach(true)}><Icono n="ojo" /> Así te ve tu coach</button></section>
+            <section class="pila-s" aria-labelledby="priv-coach"><h3 id="priv-coach" class="peq"><Icono n="perfil" /> Lo que ve {quien}</h3><Lista l={v.coach} />
+              <button type="button" class="btn btn-peq" onClick={() => setComoCoach(true)}><Icono n="ojo" /> Así te ve {quien}</button></section>
             <section class="pila-s" aria-labelledby="priv-equipo"><h3 id="priv-equipo" class="peq"><Icono n="equipo" /> Lo que ve el equipo</h3>
               {v.equipo.length ? <Lista l={v.equipo} /> : <p class="peq terciario">Nada: no estás en la comunidad del equipo.</p>}</section>
             <section class="pila-s" aria-labelledby="priv-movil"><h3 id="priv-movil" class="peq"><Icono n="movil" /> Lo que se queda en tu móvil</h3><Lista l={v.movil} /></section>
@@ -728,7 +733,7 @@ function HojaPrivacidad({ salud, alCerrar }) {
         )}
       </div>
       {comoCoach && (
-        <Hoja titulo="Así te ve tu coach" alCerrar={() => setComoCoach(false)}>
+        <Hoja titulo={`Así te ve ${quien}`} alCerrar={() => setComoCoach(false)}>
           <div class="pila asi-coach">
             <p class="peq secundario">Lo suyo de ti, en su ficha (lo demás, tus sesiones y registros, lo ve en sus pantallas de siempre).</p>
             <div class="panel panel-pad pila-s">
@@ -742,7 +747,7 @@ function HojaPrivacidad({ salud, alCerrar }) {
                 {(p?.evitados || []).length > 0 && <><dt>Prefiere evitar</dt><dd>{p.evitados.length} {p.evitados.length === 1 ? 'ejercicio' : 'ejercicios'}, con su motivo</dd></>}
                 {materialDe(p).deLaBase && <><dt>Su material</dt><dd>{[...new Set([...materialDe(p).casa, ...materialDe(p).viaje])].map((k) => NOMBRE_MATERIAL[k] || k).join(', ') || 'Nada marcado'}</dd></>}
               </dl>
-              {!p?.porque && !p?.apodo && !p?.meta_nombre && <p class="mini terciario">Aún no has rellenado «Lo tuyo»: tu coach solo ve tu nombre y tus registros.</p>}
+              {!p?.porque && !p?.apodo && !p?.meta_nombre && <p class="mini terciario">Aún no has rellenado «Lo tuyo»: {quien} solo ve tu nombre y tus registros.</p>}
             </div>
             <p class="mini terciario">Tu rincón de ánimo no lo ve.</p>
           </div>

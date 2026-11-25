@@ -6,12 +6,12 @@ import { useApp, useCarga, Icono, Hoja, Cargando, FilaIos } from './comunes.jsx'
 import { Interruptor } from './Interruptor.jsx';
 import { conNutricion } from '../logica/nivel.js';
 import { esPorSuCuenta } from '../logica/esencial.js';
-import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
+import { tiposAtleta, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
 import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail, EVENTO_PUSH } from '../datos/push.js';
 
-const textoEstado = (coach) => ({
+const textoEstado = (coach, suyo = false) => ({
   demo: 'En la demo no se envían a ningún móvil: aquí ves cómo se eligen.',
-  sin_configurar: coach ? 'Falta ponerlas en marcha en Supabase: está en el README, «Notificaciones al móvil».' : 'Tu coach aún no las ha puesto en marcha.',
+  sin_configurar: coach ? 'Falta ponerlas en marcha en Supabase: está en el README, «Notificaciones al móvil».' : suyo ? 'Aún no están en marcha.' : 'Tu coach aún no las ha puesto en marcha.',
   ios_instalar: 'En iPhone y iPad solo llegan a la app instalada: en Safari, toca Compartir y «Añadir a pantalla de inicio», ábrela desde ahí y vuelve a esta pantalla.',
   no_soportado: 'Este navegador no permite notificaciones. Prueba con Chrome, Edge, Firefox o Safari al día.',
   bloqueado: 'Las has bloqueado para esta web. Permítelas en los ajustes del navegador (el candado junto a la dirección) o del móvil, y vuelve aquí.',
@@ -19,7 +19,7 @@ const textoEstado = (coach) => ({
 
 // Los tipos que puede elegir: a quien solo le llevas el entrenamiento, sin el de nutrición
 // (y el del equipo, solo con la comunidad abierta: v0.43)
-const tiposDe = (coach, atleta, equipo = false) => (coach ? TIPOS_COACH : TIPOS_ATLETA.filter(([t]) => t !== 'nutricion' || conNutricion(atleta)))
+const tiposDe = (coach, atleta, equipo = false) => (coach ? TIPOS_COACH : tiposAtleta(esPorSuCuenta(atleta)).filter(([t]) => t !== 'nutricion' || conNutricion(atleta)))
   .filter(([t]) => t !== 'comunidad' || equipo);
 
 // «Respuestas, semana y 3 recordatorios»
@@ -178,10 +178,10 @@ export function HojaNotificaciones({ coach = false, equipo = false, alCerrar, al
             </>
           ) : (
             <>
-              <p class="peq secundario">Te llegan aunque tengas la app cerrada. Solo dicen quién y dónde («{coach ? 'Ana te ha escrito · En Pierna A' : 'Pelayo te ha respondido · En Pierna A'}»): nunca el texto de los mensajes ni datos de salud.</p>
+              <p class="peq secundario">Te llegan aunque tengas la app cerrada. Solo dicen {!coach && esPorSuCuenta(atleta) ? 'qué' : 'quién'} y dónde («{coach ? 'Ana te ha escrito · En Pierna A' : esPorSuCuenta(atleta) ? 'Hoy toca entrenar · Día 1' : 'Pelayo te ha respondido · En Pierna A'}»): nunca el texto de los mensajes ni datos de salud.</p>
               <button class="btn btn-primario" style="justify-self:start" onClick={activar} disabled={ocupado}><Icono n="campana" /> Activar en este {disp}</button>
             </>
-          )) : <p class="fila-icono peq secundario"><Icono n="campana" /><span>{textoEstado(coach)[estado]}</span></p>}
+          )) : <p class="fila-icono peq secundario"><Icono n="campana" /><span>{textoEstado(coach, esPorSuCuenta(atleta))[estado]}</span></p>}
         </div>
 
         {!p ? <Cargando /> : (

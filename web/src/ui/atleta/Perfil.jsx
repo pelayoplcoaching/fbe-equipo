@@ -50,7 +50,9 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const p = programa.datos;
   const consSalud = (consentimientos.datos || []).find((c) => c.tipo === 'datos_salud' && !c.revocado_en);
   const recursos = useCarga(() => api.recursos().catch(() => []), []);
-  const lista = recursos.datos || [];
+  // (FBE Esencial) quien va por su cuenta no ve las guías ni las preguntas frecuentes que hablan de «tu coach» (Pelayo, 25/11)
+  const suyo = esPorSuCuenta(atleta);
+  const lista = (recursos.datos || []).filter((x) => !suyo || !/coach/i.test(`${x.titulo || ''} ${x.descripcion || ''}`));
   const guias = lista.filter((x) => x.categoria !== 'faq');
   const faq = lista.filter((x) => x.categoria === 'faq');
 
@@ -79,17 +81,18 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       {conEntrenamiento(atleta) && <PerfilSecciones salud={salud} irA={irA} />}
       <EnElEquipo />
 
-      <GrupoIos titulo="Tu asesoría" id="grupo-asesoria">
+      <GrupoIos titulo={suyo ? 'Tu plan' : 'Tu asesoría'} id="grupo-asesoria">
         <FilaFoto nombre={atleta.nombre} />
         {atleta.objetivo && <FilaIos icono="diana" titulo="Objetivo" detalle={atleta.objetivo} />}
         {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${p.bloque.nombre}`} />}
         <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
         {/* (v0.174, 077) sus suplementos: verlos, añadir el primero y poner su aviso */}
         <FilaSuplementos />
-        <FilaCobro />
-        {conEntrenamiento(atleta) && <FilaCorrecciones />}
+        {/* (FBE Esencial) su cuota va por Stripe (está en sus preguntas frecuentes): sin el control de pagos del coach */}
+        {!suyo && <FilaCobro />}
+        {conEntrenamiento(atleta) && !suyo && <FilaCorrecciones />}
         {/* (alta, 53) quien va por su cuenta no tiene Mensajes: su contacto va en «FBE Esencial: preguntas frecuentes» (Ajustes) */}
-        {!esPorSuCuenta(atleta) && <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />}
+        {!suyo && <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />}
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
       </GrupoIos>
 
@@ -114,11 +117,12 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <GrupoReloj />
 
       <AjustesDispositivo antes={<SeccionNotificaciones fila />} />
-      <AjustesMensajes />
+      {/* (FBE Esencial) sin chat, sin los ajustes de los mensajes */}
+      {!suyo && <AjustesMensajes />}
 
       {guias.length > 0 && <Recursos titulo="Guías y recursos" id="grupo-guias" lista={guias} />}
       {faq.length > 0 && <Recursos titulo="Preguntas frecuentes" id="grupo-faq" lista={faq} />}
-      {esPorSuCuenta(atleta) && <FaqEsencial />}
+      {suyo && <FaqEsencial />}
 
       <GrupoIos titulo="Cuenta" id="grupo-cuenta" pie={`FBE Equipo, versión ${VERSION_APP}. Hola, ${perfil?.nombre || atleta.nombre}.`}>
         <FilaIos icono="privacidad" titulo="Política de privacidad" detalle="Aceptada" alTocar={() => setVerPrivacidad(true)} etiqueta="Política de privacidad: leerla" />
@@ -155,7 +159,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       </>}
       </div>
 
-      {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)} medio><TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}
+      {verPrivacidad && <Hoja titulo="Política de privacidad" alCerrar={() => setVerPrivacidad(false)} medio>{suyo && <p class="aviso-suave peq">En este texto, «tu coach» (y «mi coach» en el consentimiento) es Pelayo Fernández Cidón (FBE): en FBE Esencial nadie te hace un seguimiento personal, y es él quien responde de tus datos.</p>}<TextoPrivacidad /><p class="peq secundario">{TEXTO_CONSENTIMIENTO_SALUD}</p></Hoja>}
       {exportado && <HojaExportar titulo="Tus datos" nombre={`mis-datos-fbe-${hoyISO()}.json`} contenido={exportado} tipo="application/json" alCerrar={() => setExportado(null)} />}
       {cambiarPass && <CambiarPassword alCerrar={() => setCambiarPass(false)} />}
     </div>

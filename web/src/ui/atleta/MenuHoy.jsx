@@ -59,7 +59,7 @@ export function MenuHoy({ irA, salud, darConsentimiento, compacto = false }) {
       {!deHoy.length ? (
         <button class="panel panel-pad menu-hoy-vacio" onClick={() => irA('comidas')}>
           <Icono n="receta" />
-          <span class="pila-xs"><strong>Organiza lo que vas a comer</strong><span class="peq secundario">{recetario.datos?.asignaciones.length ? 'Elige de tus recetas para cada comida del día.' : 'Cuando tu coach te ponga recetas, las elegirás de aquí. También puedes escribirlo.'}</span></span>
+          <span class="pila-xs"><strong>Organiza lo que vas a comer</strong><span class="peq secundario">{recetario.datos?.asignaciones.length ? 'Elige de tus recetas para cada comida del día.' : atleta?.modalidad === 'por_su_cuenta' ? 'Elige del recetario o escríbelo tú.' : 'Cuando tu coach te ponga recetas, las elegirás de aquí. También puedes escribirlo.'}</span></span>
           <Icono n="derecha" />
         </button>
       ) : (

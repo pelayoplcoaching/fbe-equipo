@@ -127,7 +127,7 @@ export function RecibirCompartido({ programa }) {
     limpiarDireccion(['compartido']);
     if (propio || atleta.estado === 'baja') { borrarCompartido(); if (ok) aviso(atleta.estado === 'baja' ? 'Tu cuenta está de baja: no se puede enviar el vídeo' : 'En el modo atleta no se envían vídeos'); return; }
     // (FBE Esencial) quien va por su cuenta no envía vídeos ni tiene chat con su coach
-    if (atleta.modalidad === 'por_su_cuenta') { borrarCompartido(); if (ok) aviso('En FBE Esencial no se envían vídeos ni archivos al coach'); return; }
+    if (atleta.modalidad === 'por_su_cuenta') { borrarCompartido(); if (ok) aviso('En FBE Esencial no se envían vídeos ni archivos'); return; }
     // (v0.56) un vídeo solo: elegir si va como vídeo de técnica o por el chat; lo demás (fotos, PDF, varios), al chat
     leerCompartidos().then((fs) => {
       setMirado(true);

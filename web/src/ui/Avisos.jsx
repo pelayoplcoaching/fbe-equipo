@@ -21,14 +21,16 @@ export function AvisosCoach() {
   const res = useCarga(() => api.avisos(atleta.id, hoyISO(), { esencial: atleta.modalidad === 'por_su_cuenta' }).catch(() => []), [atleta.id], { recuerdo: `avisos:${atleta.id}` });
   const [cerrados, setCerrados] = usePreferencia(`fbe-avisos-cerrados-${atleta.id}`, []);
   const lista = (res.datos || []).filter((a) => !cerrados.includes(a.id));
+  // (FBE Esencial) quien va por su cuenta no tiene coach: sus avisos son de Pelayo
+  const de = atleta.modalidad === 'por_su_cuenta' ? 'Pelayo' : 'tu coach';
   if (!lista.length) return null;
   return (
     <div class="pila-s">
       {lista.map((a) => (
-        <section key={a.id} class="aviso-coach" aria-label="Aviso de tu coach">
+        <section key={a.id} class="aviso-coach" aria-label={`Aviso de ${de}`}>
           <img class="aviso-lobo" src={LOBO} alt="" width="36" height="36" aria-hidden="true" />
           <div class="pila-xs">
-            <span class="mini aviso-de">De tu coach{a.atleta_id ? ', para ti' : ''}</span>
+            <span class="mini aviso-de">De {de}{a.atleta_id ? ', para ti' : ''}</span>
             <TextoConEnlaces texto={a.texto} />
             {a.hasta && <span class="mini terciario">{textoVigencia(a)}</span>}
           </div>

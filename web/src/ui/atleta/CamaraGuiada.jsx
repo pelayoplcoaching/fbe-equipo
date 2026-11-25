@@ -52,7 +52,7 @@ export function NuevaFoto({ fotos, alCerrar, alSubir }) {
       {archivo ? (
         <>
           {vista && <img class="medio" src={vista} alt={`Vista previa: ${NOMBRE_POSE[pose].toLowerCase()}`} />}
-          <p class="mini terciario">Se guarda en tu carpeta privada: solo la veis tú y tu coach.</p>
+          <p class="mini terciario">Se guarda en tu carpeta privada: solo la veis tú y {atleta?.modalidad === 'por_su_cuenta' ? 'Pelayo' : 'tu coach'}.</p>
           <div class="fila-envolver">
             <button class="btn btn-primario btn-grande" disabled={subiendo} onClick={subir}>{subiendo ? 'Subiendo…' : 'Guardar foto'}</button>
             <button class="btn" disabled={subiendo} onClick={() => setArchivo(null)}>Repetir</button>

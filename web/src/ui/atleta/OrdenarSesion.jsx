@@ -3,7 +3,7 @@
 // o con «Subir» / «Bajar» (con el teclado o el lector de pantalla): el cambio vale al momento y se anuncia («Remo con barra:
 // ahora el 1.º de 4»). Lo ya hecho no sale (no se mueve).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Hoja, Icono } from '../comunes.jsx';
+import { Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { bloquesPendientes } from '../../logica/orden-sesion.js';
 
 const quieto = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -11,6 +11,7 @@ const quieto = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-r
 // ejercicios, hechas: los de la sesión (en el orden de ahora); nombreDe(se): el que se hace (con la alternativa);
 // reordenar(claves) → orden | null; subir(seId, ±1) → orden | null; alMover(orden): lo guarda
 export function OrdenarSesion({ ejercicios, hechas, etiquetas = {}, nombreDe, reordenar, subir, alMover, alCerrar }) {
+  const sinCoach = useSinCoach();
   const pend = bloquesPendientes(ejercicios, hechas);
   const porId = Object.fromEntries(ejercicios.map((e) => [e.id, e]));
   const nombreBloque = (b) => (b.letra ? `Superserie ${b.letra}: ${b.ids.map((x) => nombreDe(porId[x])).join(' y ')}` : nombreDe(porId[b.ids[0]]));
@@ -85,7 +86,7 @@ export function OrdenarSesion({ ejercicios, hechas, etiquetas = {}, nombreDe, re
 
   return (
     <Hoja titulo="Cambiar el orden" alCerrar={alCerrar}>
-      <p class="peq secundario">Lo que te queda de hoy. Arrastra por el asa o usa las flechas. Solo cambia esta sesión: la pauta de tu coach se queda como está y verá el orden en que lo hiciste.</p>
+      <p class="peq secundario">Lo que te queda de hoy. Arrastra por el asa o usa las flechas. Solo cambia esta sesión: {sinCoach ? 'tu plan se queda como está.' : 'la pauta de tu coach se queda como está y verá el orden en que lo hiciste.'}</p>
       {pend.length < 2 ? <p class="peq">No queda nada que reordenar.</p> : (
         <ol class={`lista ord-lista ${arr ? 'arrastrando' : ''}`} ref={lista} aria-label="Lo que te queda, en orden">
           {pend.map((b, i) => {

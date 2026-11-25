@@ -25,7 +25,7 @@ import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO } from '../../logica/esencial.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
@@ -201,11 +201,11 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       <ErrorCaja error={error} reintentar={recargar} />
       {/* v0.73: el día de su aniversario en FBE (1 mes, 6 meses, 1 año…), con su confeti */}
       {!verBienvenida && <TarjetaAniversario />}
-      {atleta.estado !== 'baja' && !propio && <AvisoCobro irA={irA} />}
+      {atleta.estado !== 'baja' && !propio && !porSuCuenta && <AvisoCobro irA={irA} />}
       {/* (v0.175, 078) su asesoría está en pausa: hasta cuándo y el mensaje de su coach */}
       {!propio && !verBienvenida && <AvisoPausa />}
       {atleta.estado === 'baja' && (
-        <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
+        <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. {porSuCuenta ? `Si quieres volver, escribe a ${CORREO_CONTACTO}.` : 'Si quieres volver, escribe a tu coach.'}</div></div>
       )}
       {verPasos && (porSuCuenta ? <BienvenidaEsencial bloque={p?.bloque} /> : <MensajeCoach momento="bienvenida" clase="bienvenida-coach" />)}
       {verPasos ? <PrimerosPasos pasos={misPasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
@@ -347,7 +347,7 @@ function TuDia({ p, salud, checkinSemana, abrirSesion, irA, abrirCuestionario, v
           <li key={x.id}>
             <button class={`fila-dia ${x.estado}${Date.now() - (recien.current[x.id] || 0) < 1500 ? ' recien' : ''}`} data-tipo={x.accion === 'tarea' ? 'tarea' : x.id} onClick={() => ir(x)}>
               <span class={`dia-marca${x.estado !== 'hecho' && hayImagen(imagenIcono(x.icono || ICONO_DIA[x.id] || 'hoy')) ? ' con-img' : ''}`} aria-hidden="true">{x.estado === 'hecho' ? <Icono n="hecho" /> : <><Icono n={x.icono || ICONO_DIA[x.id] || 'hoy'} /><CapaIcono n={x.icono || ICONO_DIA[x.id] || 'hoy'} /></>}</span>
-              <span class="pila-xs"><span class={x.estado === 'hecho' ? 'tachado' : ''}>{x.texto}</span><span class="mini terciario">{x.detalle}</span></span>
+              <span class="pila-xs"><span class={x.estado === 'hecho' ? 'tachado' : ''}>{x.texto}</span><span class="mini terciario">{sinTuCoach(x.detalle, atleta)}</span></span>
               <span class="sr">{x.estado === 'hecho' ? 'hecho' : x.estado === 'toca' ? 'pendiente' : ''}</span>
               {x.estado === 'toca' && <span class="punto-dia" aria-hidden="true" />}
               <Icono n="derecha" />
@@ -491,6 +491,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
   const panelDia = conPanel && paraDia.datos ? panelNutricion({
     menu: (paraDia.datos[0] || []).filter((e) => e.fecha === hoy), objetivo: paraDia.datos[1]?.objetivoHoy || null, semana: paraDia.datos[1]?.semana || null,
   }) : null;
+  if (panelDia) panelDia.animo = sinTuCoach(panelDia.animo, atleta);
   return (
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={{ estado: 'nutricion' }} panel={panelDia} alCerrar={cerrarDia} />}
@@ -940,7 +941,7 @@ function PesoHoy({ irA }) {
           ) : (
             <div class={`peso-estado ${e.tono}`}>
               <span class="peso-marca" aria-hidden="true"><Icono n={e.tono === 'ok' ? 'diana' : e.tono === 'aviso' ? 'alerta' : 'progreso'} /></span>
-              <span class="pila-xs"><strong>{e.titulo}</strong><span class="mini secundario">{e.detalle}</span></span>
+              <span class="pila-xs"><strong>{e.titulo}</strong><span class="mini secundario">{sinTuCoach(e.detalle, atleta)}</span></span>
             </div>
           )}
         {deHoy ? <button class="chip ok" onClick={() => setAbierto(true)} aria-label={conCifra ? `Hoy ${num(deHoy.kg)} kilos. Cambiarlo` : 'Peso de hoy apuntado. Cambiarlo'}><Icono n="hecho" />{conCifra ? `Hoy ${num(deHoy.kg)}` : 'Apuntado'}</button>

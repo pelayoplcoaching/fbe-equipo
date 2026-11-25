@@ -61,7 +61,7 @@ export function RecordAlAlcance({ ejercicios = [] }) {
             </li>
           ))}
         </ul>
-        <span class="mini terciario">Sale de lo que has hecho estas semanas. Si el día no acompaña, no pasa nada: manda tu coach.</span>
+        <span class="mini terciario">Sale de lo que has hecho estas semanas. Si el día no acompaña, no pasa nada: manda {esPorSuCuenta(atleta) ? 'tu plan' : 'tu coach'}.</span>
       </div>
     </section>
   );

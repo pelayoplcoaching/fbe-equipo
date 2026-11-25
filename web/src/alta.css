@@ -110,3 +110,13 @@
 .alta-checkin { margin: 0; }
 /* (alta, 58) los titulos del panel de FBE Esencial van como h2 (tras el h1 Atletas): el tamano que tenian como h3 */
 .alta-embudo > h2, .alta-sin h2 { font-size: var(--letra-19); }
+/* (sin coach, 16 y 17) tras el check-in de quien va por su cuenta: que pasa con el y, con una molestia, que hacer */
+.sinco-tras li[data-linea="molestia"] svg { color: var(--aviso); }
+.sinco-dolor { margin: 0; padding: var(--esp-12); border-radius: var(--r-s); background: var(--aviso-suave); border-left: var(--filo-marca) solid var(--aviso); color: var(--tinta); }
+.sinco-dolor.grave { background: var(--alerta-suave); border-left-color: var(--alerta); }
+.sinco-dolor > p { margin: 0; }
+.sinco-dolor > p > svg { color: var(--aviso); }
+.sinco-dolor.grave > p > svg { color: var(--alerta); }
+.sinco-dolor-pasos { margin: 0; padding-left: var(--esp-18); display: grid; gap: var(--esp-6); }
+.sinco-dolor a { color: var(--morado); font-weight: 650; }
+.sinco-tras .sinco-dolor { margin-top: var(--esp-10); }

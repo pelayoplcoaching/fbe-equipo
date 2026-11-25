@@ -1,7 +1,7 @@
 // (personalización 2) En «Lo tuyo»: cómo te hablamos (en qué género y con qué tono) y qué celebrar y cómo. El género y
 // el tono van a la base (los ve su coach); lo de celebrar, a este móvil.
 import { useState } from 'preact/hooks';
-import { Hoja, useApp } from '../comunes.jsx';
+import { Hoja, useApp, useSinCoach } from '../comunes.jsx';
 import { GENEROS, TONOS, MOMENTOS_CELEBRAR, MODOS_CELEBRAR, limpiarCelebrar, tratoDe, titularResumen } from '../../logica/trato.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
@@ -75,6 +75,7 @@ export const textoCelebrar = (c) => {
 // ---------- (personalización 2, tanda 2) Su meta con fecha ----------
 export function HojaMeta({ actual, alCerrar, alGuardar }) {
   const { api, aviso } = useApp();
+  const sinCoach = useSinCoach();
   const [nombre, setNombre] = useState(actual?.meta_nombre || '');
   const [fecha, setFecha] = useState(actual?.meta_fecha || '');
   const [cifra, setCifra] = useState(actual?.meta_cifra != null ? String(actual.meta_cifra).replace('.', ',') : '');
@@ -91,7 +92,7 @@ export function HojaMeta({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tu meta" alCerrar={alCerrar}>
       <div class="pila meta-hoja">
-        <p class="peq secundario">Algo con nombre y, si quieres, con día y con cifra: una competición, una carrera, tu primera dominada… Tu coach la verá. No pongas aquí datos de salud ni tu peso corporal: para eso está el check-in.</p>
+        <p class="peq secundario">Algo con nombre y, si quieres, con día y con cifra: una competición, una carrera, tu primera dominada… {sinCoach ? 'La ve Pelayo; nadie más.' : 'Tu coach la verá.'} No pongas aquí datos de salud ni tu peso corporal: para eso está el check-in.</p>
         <div class="campo"><label for="meta-nombre">Tu meta</label>
           <input id="meta-nombre" class="entrada" maxLength={60} value={nombre} placeholder="Mi primera competición" onInput={(e) => setNombre(e.currentTarget.value)} /></div>
         <div class="campo"><label for="meta-fecha">El día <span class="secundario">(opcional)</span></label>

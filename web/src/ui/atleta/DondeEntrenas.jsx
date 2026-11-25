@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import { Hoja, Icono, Segmentos, usePreferencia, useApp } from '../comunes.jsx';
+import { Hoja, Icono, Segmentos, usePreferencia, useApp, useSinCoach } from '../comunes.jsx';
 import { usePersonal } from './Personal.jsx';
 import { materialDe, mismoMaterial } from '../../logica/perfil-mas.js';
 import { LUGARES_ENTRENO, MATERIAL_PERFIL, PERFILES_DEFECTO, textoAdaptacion } from '../../logica/material.js';
@@ -37,6 +37,7 @@ function FranjaLugar({ id }) {
 
 // «¿Dónde entrenas hoy?» (v0.48): Gimnasio (lo de siempre), Casa o Viaje, cada uno con su material (en este móvil)
 export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = [], alElegir }) {
+  const sinCoach = useSinCoach();
   const [perfiles, setPerfiles] = usePreferencia(`fbe-material-${atletaId}`, PERFILES_DEFECTO);
   const [editar, setEditar] = useState(null);
   const nombre = Object.fromEntries(LUGARES_ENTRENO);
@@ -67,12 +68,12 @@ export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = 
         <button type="button" class="btn-texto viaje-material" onClick={() => alElegir('viaje', perfiles)}><Icono n="ubicacion" /> Estás de viaje: entrenar con tu material de viaje</button>
       )}
       {lugar === 'gimnasio'
-        ? <span class="mini terciario">Fuera del gimnasio, la app cambia lo que no puedas hacer con tu material por las alternativas que ha marcado tu coach.</span>
-        : <span class="mini terciario">{textoAdaptacion({ cambios, sinAlternativa }, lugar)}. Solo por las alternativas de tu coach; él verá el cambio en tu registro.</span>}
+        ? <span class="mini terciario">Fuera del gimnasio, la app cambia lo que no puedas hacer con tu material por {sinCoach ? 'su alternativa' : 'las alternativas que ha marcado tu coach'}.</span>
+        : <span class="mini terciario">{textoAdaptacion({ cambios, sinAlternativa }, lugar)}. {sinCoach ? 'Solo por las alternativas de cada ejercicio.' : 'Solo por las alternativas de tu coach; él verá el cambio en tu registro.'}</span>}
       {editar && (
         <Hoja titulo={`Tu material ${editar === 'casa' ? 'en casa' : 'de viaje'}`} alCerrar={() => setEditar(null)}>
           <fieldset class="pila-s material-perfil">
-            <legend class="peq secundario">Marca lo que tienes. Se guarda en tu perfil (tu coach lo ve).</legend>
+            <legend class="peq secundario">Marca lo que tienes. Se guarda en tu perfil{sinCoach ? '' : ' (tu coach lo ve)'}.</legend>
             {MATERIAL_PERFIL.map(([k, t]) => (
               <label class="casilla" key={k}>
                 <input type="checkbox" checked={(perfiles[editar] || []).includes(k)}
@@ -86,7 +87,7 @@ export function DondeEntrenas({ atletaId, lugar, cambios = {}, sinAlternativa = 
             ))}
           </fieldset>
           <button class="btn btn-primario btn-grande" onClick={() => { const l = editar; setEditar(null); guardarEnPerfil(); alElegir(l, perfiles, { rehacer: true }); }}>Listo: adaptar la sesión</button>
-          <p class="mini terciario">{nombre[editar]}: lo que no se pueda hacer con esto se cambia por una alternativa que tu coach haya marcado; si no hay ninguna, se queda y te lo dice.</p>
+          <p class="mini terciario">{nombre[editar]}: lo que no se pueda hacer con esto se cambia por {sinCoach ? 'su alternativa' : 'una alternativa que tu coach haya marcado'}; si no hay ninguna, se queda y te lo dice.</p>
         </Hoja>
       )}
     </section>

@@ -12,7 +12,7 @@ import { useApp, useCarga, Icono, Hoja, Vacio, Siluetas, ErrorCaja, CabeceraGran
 import { hoyISO } from '../logica/fechas.js';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { imagenGuia, IMAGEN_MITO, imagenPortadaGuia, tiraGuia } from '../logica/imagenes.js';
-import { trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
+import { GUIAS_CON_COACH, trozos, guiaParaLeer, fichaParaLeer, ordenarGuias, buscarFichas, cuantosEjercicios, fichasParecidas, erroresDeFicha, resumenTabla, avisosMolestia, NOMBRE_ZONA, tipoDeRutina, fichaConContenido, porEstantes, estanteDe, buscarEnGuias, mitosDeGuia, mitoDeLaSemana, numeroDeSemana, OCASIONES } from '../logica/guias.js';
 import { apuntesDeGuias, apuntesDeGlosario, apuntesDeNovedades, apuntesDeFicha, preguntasDeFicha, masFallados, mensajeDeApunte } from '../logica/apuntes.js';
 import { dominioEquipo, nombreTema } from '../logica/apuntes-camino.js';
 import { FAQ } from '../datos/faq.js';
@@ -54,6 +54,7 @@ export function Bloques({ bloques }) {
 
 // La ficha de técnica de un ejercicio. ficha: la fila (o su «ficha»); guia: { clave, titulo } para el enlace a su guía
 export function FichaFBE({ ficha, guia = null, alAbrirGuia = null }) {
+  const { atleta } = useApp();
   const f = fichaParaLeer(ficha);
   return (
     <div class="pila ficha-fbe">
@@ -85,7 +86,7 @@ export function FichaFBE({ ficha, guia = null, alAbrirGuia = null }) {
       )}
       {(f.si || f.no) && (
         <section class="pila-s">
-          <h3 class="etq">Cuándo lo prescribe tu coach</h3>
+          <h3 class="etq">{atleta?.modalidad === 'por_su_cuenta' ? 'Cuándo te conviene' : 'Cuándo lo prescribe tu coach'}</h3>
           {f.si && <div class="guia-caja tono-clave"><p class="guia-caja-titulo"><Icono n="hecho" />Sí, cuando</p><p><Rico x={f.si} /></p></div>}
           {f.no && <div class="guia-caja tono-ojo"><p class="guia-caja-titulo"><Icono n="cerrar" />No, cuando</p><p><Rico x={f.no} /></p></div>}
         </section>
@@ -206,7 +207,7 @@ export function HojaGuia({ guia, alCerrar, soloSeccion = null, titulo = null }) 
 
 // (2) Antes de enviar un vídeo de técnica: los errores típicos de ese ejercicio, para repasarse. Plegado; sin ficha, nada.
 export function RepasoErrores({ ejercicioId }) {
-  const { backend, perfil } = useApp();
+  const { backend, perfil, atleta } = useApp();
   const fbe = useCarga(() => (perfil?.rol === 'coach' ? Promise.resolve(null) : fichaDeEjercicio({ backend }, ejercicioId).catch(() => null)), [ejercicioId], { recuerdo: `ficha-fbe:${ejercicioId}` });
   const [abierto, setAbierto] = useState(false);
   const errores = fbe.datos ? erroresDeFicha(fbe.datos.ficha) : [];
@@ -219,7 +220,7 @@ export function RepasoErrores({ ejercicioId }) {
       {abierto && (
         <>
           <ul class="errores-guia">{errores.map((e, i) => <li key={i}><Icono n="alerta" /><span><strong>{e.titulo}</strong>{e.x ? `${e.seguido ? ' ' : ': '}${e.x}` : ''}</span></li>)}</ul>
-          <p class="mini terciario">Míralos en tu vídeo. Si ves alguno, cuéntaselo a tu coach en la nota o graba otra.</p>
+          <p class="mini terciario">{atleta?.modalidad === 'por_su_cuenta' ? 'Míralos en tu vídeo. Si ves alguno, baja un poco el peso y repite la serie cuidando ese punto.' : 'Míralos en tu vídeo. Si ves alguno, cuéntaselo a tu coach en la nota o graba otra.'}</p>
         </>
       )}
     </div>
@@ -302,7 +303,10 @@ function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca' }) {
 // Todas las guías, por estanterías, y un buscador: de ejercicios (sus fichas) y dentro del texto de las guías.
 // alAbrir(guia, seccion?) abre una (en esa sección, si viene del buscador)
 export function ListaGuias({ alAbrir, esCoach = false }) {
-  const { backend, api } = useApp();
+  const { backend, api, atleta } = useApp();
+  // (FBE Esencial) quien va por su cuenta, sin las guías que explican la asesoría con coach
+  const suyo = !esCoach && atleta?.modalidad === 'por_su_cuenta';
+  const paraEl = (g) => !(suyo && GUIAS_CON_COACH.includes(g?.clave));
   const guias = useCarga(() => listaGuias({ backend }), [], { recuerdo: `guias:${api.uid()}` });
   const fichas = useCarga(() => todasLasFichas({ backend }, { conFicha: true }).catch(() => []), [], { recuerdo: `fichas-guias:${api.uid()}` });
   const [q, setQ] = useState('');
@@ -310,12 +314,12 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
   // el texto de las guías solo se pide al empezar a buscar
   const textos = useCarga(() => (buscando ? guiasConTexto({ backend }).catch(() => []) : Promise.resolve(null)), [buscando], { recuerdo: buscando ? `guias-texto:${api.uid()}` : null });
   const [ficha, setFicha] = useState(null);
-  const gs = ordenarGuias(guias.datos || []).filter((g) => esCoach || g.publicada);
+  const gs = ordenarGuias(guias.datos || []).filter((g) => (esCoach || g.publicada) && paraEl(g));
   const estantes = useMemo(() => porEstantes(gs), [guias.datos, esCoach]);
   const halladas = buscando ? buscarFichas(fichas.datos || [], q) : [];
-  const enTexto = useMemo(() => (buscando && textos.datos ? buscarEnGuias(textos.datos.filter((g) => esCoach || g.publicada), q) : []), [buscando, q, textos.datos, esCoach]);
+  const enTexto = useMemo(() => (buscando && textos.datos ? buscarEnGuias(textos.datos.filter((g) => (esCoach || g.publicada) && paraEl(g)), q) : []), [buscando, q, textos.datos, esCoach]);
   if (!guias.datos) return guias.error ? <ErrorCaja error={guias.error} reintentar={() => guias.recargar(true)} /> : <Siluetas forma="tarjetas" n={4} texto="Cargando las guías" />;
-  if (!gs.length) return <div class="panel"><Vacio ilustracion="biblioteca" icono="biblioteca" titulo="Aún no hay guías">{esCoach ? 'Cuando cargues tus guías, tus atletas las leerán en «Aprende» y cada ejercicio enlazado enseñará su ficha de técnica.' : 'Cuando tu coach publique sus guías, las leerás aquí.'}</Vacio></div>;
+  if (!gs.length) return <div class="panel"><Vacio ilustracion="biblioteca" icono="biblioteca" titulo="Aún no hay guías">{esCoach ? 'Cuando cargues tus guías, tus atletas las leerán en «Aprende» y cada ejercicio enlazado enseñará su ficha de técnica.' : suyo ? 'Cuando haya guías publicadas, las leerás aquí.' : 'Cuando tu coach publique sus guías, las leerás aquí.'}</Vacio></div>;
   const abrirHallazgo = (h) => alAbrir(gs.find((g) => g.id === h.guia.id) || h.guia, h.seccion);
   return (
     <div class="pila aprende">
@@ -343,7 +347,7 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
       ) : estantes.length > 1 ? (
         estantes.map((e) => (
           <section class="pila-s estante" key={e.id} data-estante={e.id}>
-            <div class="estante-cab"><h2>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{e.detalle}</span>}</div>
+            <div class="estante-cab"><h2>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{suyo && e.id === 'empieza' ? 'Lo básico para arrancar' : e.detalle}</span>}</div>
             <div class="rejilla-guias">{e.guias.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} icono={e.icono} />)}</div>
           </section>
         ))
@@ -691,6 +695,7 @@ export function ElegirFicha({ ejercicio }) {
 
 // La pantalla «Aprende» del atleta: las guías y, al abrir una, su lector (con «volver»)
 export function Aprende() {
+  const { atleta } = useApp();
   const [abierta, setAbierta] = useState(null);
   const volver = () => { setAbierta(null); window.scrollTo?.(0, 0); };
   return (
@@ -698,7 +703,7 @@ export function Aprende() {
       <CabeceraGrande>
         {abierta ? (
           <div class="titulo"><h1>{abierta.titulo}</h1>{abierta.subtitulo && <div class="sub">{abierta.subtitulo}</div>}</div>
-        ) : <div class="titulo"><h1>Aprende</h1><div class="sub">Las guías de tu coach, para leer y para buscar</div></div>}
+        ) : <div class="titulo"><h1>Aprende</h1><div class="sub">{atleta?.modalidad === 'por_su_cuenta' ? 'Las guías de FBE, para leer y para buscar' : 'Las guías de tu coach, para leer y para buscar'}</div></div>}
       </CabeceraGrande>
       {/* «volver», arriba y al final de la guía (la cabecera se encoge al bajar y una guía es larga) */}
       {abierta ? (

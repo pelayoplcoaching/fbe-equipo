@@ -16,6 +16,7 @@ import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos } from '../comunes.jsx
 import { LIMITES, limpiarPersonal, urlMusica, cumpleValido } from '../../logica/personal.js';
 import { MESES_LARGOS } from '../../logica/mes.js';
 import { conEntrenamiento } from '../../logica/nivel.js';
+import { esPorSuCuenta, quienLee } from '../../logica/esencial.js';
 import { esCancion } from '../../logica/musica.js';
 import { FichaPrevia, useNombreLista, HojaListasMusica, HojaHimnos } from './Musica.jsx';
 
@@ -34,7 +35,7 @@ export function LoTuyo({ salud = false }) {
   const entrena = conEntrenamiento(atleta);
   const nFav = p.favoritos?.length || 0;
   return (
-    <GrupoIos titulo="Lo tuyo" id="grupo-lo-tuyo" pie="Todo es opcional. Lo ve tu coach; nadie más.">
+    <GrupoIos titulo="Lo tuyo" id="grupo-lo-tuyo" pie={`Todo es opcional. Lo ve ${quienLee(atleta)}; nadie más.`}>
       <FilaIos icono="perfil" titulo="Cómo quieres que te llamemos" valor={p.apodo || 'Tu nombre'} alTocar={() => setEditar('apodo')} etiqueta="Cambiar cómo quieres que te llamemos" />
       <FilaIos icono="diana" titulo="Tu porqué" detalle={p.porque ? `«${p.porque}»` : 'Una frase tuya para los días que cuestan'} alTocar={() => setEditar('porque')} etiqueta="Escribir tu porqué" />
       {entrena && <FilaIos icono="estrella" titulo="Tus tres ejercicios" valor={nFav ? `${nFav} de 3` : 'Elegir'} alTocar={() => setEditar('favoritos')} etiqueta="Elegir tus tres ejercicios" />}
@@ -49,7 +50,8 @@ export function LoTuyo({ salud = false }) {
       <FilaIos icono="bandera" titulo="Tu meta" valor={p.meta_nombre ? (cuentaMeta(p, hoyISO())?.texto || p.meta_nombre) : 'Añadir'} alTocar={() => setEditar('meta')} etiqueta="Poner tu meta" />
       <FilaIos icono="calendario" titulo="Lo que viene en tu vida" valor="Exámenes, viajes…" alTocar={() => setEditar('agenda')} etiqueta="Apuntar lo que viene en tu vida" />
       <FilaIos icono="reloj" titulo="Tus guardias o turnos" valor="Añadir" alTocar={() => setEditar('guardias')} etiqueta="Apuntar tus guardias o turnos" />
-      <FilaIos icono="documento" titulo="Cómo me gusta que me entrenen" valor={textoManual(p) ? 'Escrito' : 'Añadir'} alTocar={() => setEditar('manual')} etiqueta="Escribir cómo te gusta que te entrenen" />
+      {/* (FBE Esencial) su manual solo le sirve a un coach: quien va por su cuenta no lo tiene */}
+      {!esPorSuCuenta(atleta) && <FilaIos icono="documento" titulo="Cómo me gusta que me entrenen" valor={textoManual(p) ? 'Escrito' : 'Añadir'} alTocar={() => setEditar('manual')} etiqueta="Escribir cómo te gusta que te entrenen" />}
       <FilaIos icono="ojo" titulo="Lo que no quieres ver" valor={textoOcultar(leerAjustes().ocultar)} alTocar={() => setEditar('ocultar')} etiqueta="Elegir lo que no quieres ver" />
       {salud && <FilaIos icono="calendario" titulo="Tu ciclo (opcional)" valor={leerCiclo(atleta.id).length ? 'En este móvil' : 'Añadir'} alTocar={() => setEditar('ciclo')} etiqueta="Apuntar tu ciclo" />}
       <FilaIos icono="camara" titulo="Tu foto de motivación" valor={leerFotoMotivacion(atleta.id) ? 'En este móvil' : 'Añadir'} alTocar={() => setEditar('foto')} etiqueta="Elegir tu foto de motivación" />
@@ -162,7 +164,7 @@ function HojaLoTuyo({ campo, actual, alCerrar, alGuardar }) {
                 </select>
               </div>
             </div>
-            <span class={cumpleMal ? 'error-campo' : 'ayuda'}>{cumpleMal ? 'Elige un día que exista en ese mes.' : 'Sin el año: ese día la app te felicita y tu coach lo sabe.'}</span>
+            <span class={cumpleMal ? 'error-campo' : 'ayuda'}>{cumpleMal ? 'Elige un día que exista en ese mes.' : esPorSuCuenta(atleta) ? 'Sin el año: ese día la app te felicita.' : 'Sin el año: ese día la app te felicita y tu coach lo sabe.'}</span>
           </div>
         )}
         {error && <p class="error" role="alert">{error}</p>}

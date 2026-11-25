@@ -2,7 +2,7 @@
 // en el perfil: instalar el atajo, copiar la clave personal (se enseña una vez), ponerlo en la esfera y cómo se usa;
 // kilos o libras; crear otra clave y quitarlo. Sin la 058 (o sin entrenamiento), no sale nada.
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos, Segmentos, copiar } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, GrupoIos, FilaIos, Segmentos, copiar, useSinCoach } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
 import { ATAJO_RELOJ, OPCION } from '../../logica/reloj.js';
 import { haceDias } from '../../logica/integraciones.js';
@@ -37,6 +37,7 @@ function Paso({ n, titulo, children, hecho = false }) {
 
 export function HojaReloj({ estado, alCerrar }) {
   const { api, aviso, modo } = useApp();
+  const sinCoach = useSinCoach();
   const [clave, setClave] = useState(null);
   const [activo, setActivo] = useState(!!estado.activo);
   const [unidad, setUnidad] = useState(estado.activo ? estado.unidad : unidadPeso());
@@ -64,7 +65,7 @@ export function HojaReloj({ estado, alCerrar }) {
         <ol class="conexion-pasos">
           <Paso n={1} titulo={`Instala el atajo «${ATAJO_RELOJ}» en el iPhone`}>
             {estado.atajo ? <a class="btn" href={estado.atajo} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar el atajo</a>
-              : <span class="peq secundario">Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.</span>}
+              : <span class="peq secundario">{sinCoach ? 'Aún no está preparado.' : 'Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.'}</span>}
             <span class="mini terciario">Al instalarlo te pedirá tu clave personal (la del paso 2).</span>
           </Paso>
           <Paso n={2} titulo="Copia tu clave personal" hecho={activo && !clave}>
@@ -99,7 +100,7 @@ export function HojaReloj({ estado, alCerrar }) {
             <li><strong>{OPCION.saltar}</strong>, <strong>{OPCION.terminar}</strong> (con tu esfuerzo) u <strong>{OPCION.otra}</strong> de la semana.</li>
             <li>Al acabar, abre la app cuando quieras para ver el resumen. Si abres la sesión en el móvil, lo apuntado desde el reloj ya está ahí.</li>
           </ul>
-          <p class="mini terciario">En el reloj, el orden es el que pautó tu coach y el descanso, el suyo (o 2 minutos). Cada toque tarda unos segundos: va por internet, a través del iPhone o de la red del reloj.</p>
+          <p class="mini terciario">En el reloj, el orden es {sinCoach ? 'el de tu plan' : 'el que pautó tu coach'} y el descanso, el suyo (o 2 minutos). Cada toque tarda unos segundos: va por internet, a través del iPhone o de la red del reloj.</p>
         </section>
         <div class="campo"><span class="etq">Cargas en el reloj</span><Segmentos etiqueta="Cargas en el reloj" valor={unidad} alCambiar={cambiarUnidad} opciones={[['kg', 'Kilos (kg)'], ['lb', 'Libras (lb)']]} /></div>
         {activo && (confirmar === 'quitar' ? (

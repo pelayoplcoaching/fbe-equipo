@@ -45,7 +45,7 @@ export function NutricionHoy({ entrenaHoy = false }) {
         <button class="btn-texto" aria-label="Tu plan de nutrición" onClick={() => setHoja('plan')}><Icono n="nutricion" /> Tu plan</button>
       </div>
       {!plan ? (
-        <div class="panel panel-pad"><p class="peq secundario">Tu coach te ha preparado un plan que empieza el {fmtConDia(r.siguiente.desde)}.</p></div>
+        <div class="panel panel-pad"><p class="peq secundario">{esPorSuCuenta(atleta) ? 'Tu plan empieza' : 'Tu coach te ha preparado un plan que empieza'} el {fmtConDia(r.siguiente.desde)}.</p></div>
       ) : sinContar ? (
         <div class="panel panel-pad pila-s">
           <p class="peq">¿Has seguido tu plan hoy?</p>

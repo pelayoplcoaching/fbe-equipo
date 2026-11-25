@@ -26,7 +26,9 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 // tendencia de su peso de ese día y, en «Antes y después», el cambio de peso y de medidas entre las dos
 // (v0.205) abrirInicial: el id de un vídeo o foto que abrir al llegar (desde la Actividad del coach)
 export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, salud = true, alCambiar, cuerpo = null, abrirInicial = null, alUsarFoco = null }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
+  // (FBE Esencial) quien va por su cuenta no sube vídeos de técnica (nadie se los corrige): su diario es el de sus fotos
+  const sinVideos = !esCoach && yo?.modalidad === 'por_su_cuenta';
   // (pulido 4) al volver, el diario que ya se cargó se enseña al momento y se pone al día por detrás
   const datos = useCarga(() => api.diario(atletaId), [atletaId], { recuerdo: `diario:${api.uid()}:${atletaId}` });
   const [filtro, setFiltro] = useState('todo'); // todo | videos | fotos | destacados | <ejercicioId>
@@ -62,10 +64,10 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
     <section class="seccion diario" aria-label="Diario de entrenamiento">
       <div class="seccion-cab">
         <h2>{esCoach ? 'Su diario' : 'Tu diario'}</h2>
-        <span class="peq terciario num">{videos.length} {videos.length === 1 ? 'vídeo' : 'vídeos'}{fotos.length ? `, ${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}` : ''}</span>
+        <span class="peq terciario num">{sinVideos && !videos.length ? `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}` : `${videos.length} ${videos.length === 1 ? 'vídeo' : 'vídeos'}${fotos.length ? `, ${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}` : ''}`}</span>
       </div>
       <div class="diario-acciones">
-        {!esCoach && <button class="btn btn-primario btn-peq" onClick={() => setSubir(true)}><Icono n="video" /> Subir vídeo</button>}
+        {!esCoach && !sinVideos && <button class="btn btn-primario btn-peq" onClick={() => setSubir(true)}><Icono n="video" /> Subir vídeo</button>}
         {!esCoach && salud && <button class="btn btn-peq" onClick={() => setNuevaFoto(true)}><Icono n="camara" /> Foto de progreso</button>}
         {videos.length >= 2 && <button class="btn btn-peq" onClick={() => setComparar('videos')}><Icono n="duplicar" /> Comparar dos</button>}
         {fotos.length >= 2 && (esCoach || salud) && <button class="btn btn-peq" onClick={() => setComparar('fotos')}><Icono n="imagen" /> Antes y después</button>}
@@ -90,8 +92,10 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
       )}
       {datos.cargando && !datos.datos ? <Siluetas forma="galeria" n={6} texto="Cargando el diario" /> : !lista.length ? (
         <div class="panel"><Vacio ilustracion="diario" titulo={esCoach ? 'Su diario está vacío' : 'Tu diario está vacío'}
-          accion={!esCoach ? <button class="btn btn-peq btn-primario" onClick={() => setSubir(true)}><Icono n="video" /> Subir un vídeo</button> : null}>
+          accion={esCoach || sinVideos ? null
+            : <button class="btn btn-peq btn-primario" onClick={() => setSubir(true)}><Icono n="video" /> Subir un vídeo</button>}>
           {esCoach ? 'Cuando suba un vídeo (desde una sesión, el chat o su diario) o una foto de progreso, aparecerá aquí.'
+            : sinVideos ? 'Tus fotos de progreso se quedan aquí, privadas. Con dos podrás verlas en «Antes y después».'
             : 'Graba una serie y súbela: se queda aquí, privada, y tu coach te la corrige encima.'}
         </Vacio></div>
       ) : !visibles.length ? <p class="peq secundario">Nada con ese filtro.</p> : meses.map((m) => (
@@ -102,7 +106,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
           </div>
         </div>
       ))}
-      {!esCoach && !!lista.length && <p class="mini terciario">Solo lo veis tú y tu coach. Para que el diario no pese, graba solo la serie (unos 30 segundos).</p>}
+      {!esCoach && !!lista.length && <p class="mini terciario">{sinVideos ? 'Solo lo veis tú y Pelayo.' : 'Solo lo veis tú y tu coach. Para que el diario no pese, graba solo la serie (unos 30 segundos).'}</p>}
 
       {subir && (
         <Hoja titulo="Subir un vídeo" alCerrar={() => setSubir(false)}>

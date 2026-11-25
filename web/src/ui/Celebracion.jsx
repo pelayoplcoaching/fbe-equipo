@@ -9,7 +9,7 @@
 //   · TiraMomentos: los momentos de 24 horas en círculos, arriba de Equipo, con «Tu momento» y su hoja.
 // Sin la 045, lo que la necesita no sale (las tres reacciones de siempre, sin pegatinas, momentos ni hitos).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, cuando } from './comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, cuando, useSinCoach } from './comunes.jsx';
 import { HojaCompartir } from './compartir-perezoso.jsx';
 import { reducirFoto } from './FotoPerfil.jsx';
 import { lanzarConfeti } from './confeti.js';
@@ -391,6 +391,7 @@ function HojaNuevoMomento({ alCerrar, alPublicar }) {
 }
 
 function HojaMomento({ m, coach, alCerrar, alCambiar }) {
+  const sinCoach = useSinCoach();
   const { api, aviso } = useApp();
   const [ocupado, una] = useUnaVez();
   const [avisar, setAvisar] = useState(false);
@@ -406,11 +407,11 @@ function HojaMomento({ m, coach, alCerrar, alCambiar }) {
         <FotoMomento ruta={m.foto_ruta} alt={`Foto del momento de ${quien}${m.texto ? `: ${m.texto}` : ''}`} clase="vm-foto" />
         {m.texto && <p class="post-texto">{m.texto}</p>}
         <p class="mini terciario">{cuando(m.creado_en)} · {textoQueda(m)}</p>
-        {m.retenida && <p class="nota peq retenida-linea" role="status">{coach ? 'Pendiente de revisión (lleva una palabra filtrada): los atletas no lo ven.' : 'Tu momento está pendiente de revisión: lo verá el equipo cuando tu coach lo apruebe.'}</p>}
+        {m.retenida && <p class="nota peq retenida-linea" role="status">{coach ? 'Pendiente de revisión (lleva una palabra filtrada): los atletas no lo ven.' : `Tu momento está pendiente de revisión: lo verá el equipo cuando ${sinCoach ? 'Pelayo' : 'tu coach'} lo apruebe.`}</p>}
         <ReaccionesPost post={m} con045 ocupado={ocupado} alReaccionar={(k) => hacer(() => api.reaccionar(m.id, k))} />
         <p class="mini terciario">Los momentos no llevan comentarios: reacciona.</p>
         {avisar ? (
-          <form class="pila-s" onSubmit={(e) => { e.preventDefault(); hacer(() => api.avisarAlCoach({ postId: m.id, motivo }), 'Hecho: tu coach lo mirará', true); }}>
+          <form class="pila-s" onSubmit={(e) => { e.preventDefault(); hacer(() => api.avisarAlCoach({ postId: m.id, motivo }), `Hecho: ${sinCoach ? 'Pelayo' : 'tu coach'} lo mirará`, true); }}>
             <div class="campo"><label for="eq-momento-motivo">Por qué (si quieres)</label>
               <textarea id="eq-momento-motivo" class="area" rows={2} maxLength={300} value={motivo} onInput={(e) => setMotivo(e.currentTarget.value)} /></div>
             <button class="btn btn-primario" disabled={ocupado}><Icono n="bandera" /> Avisar al coach</button>

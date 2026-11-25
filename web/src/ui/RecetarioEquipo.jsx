@@ -48,7 +48,7 @@ function Bloque({ capitulo, bloque, recetas, favoritas, alAbrir, reinicio, ajust
 }
 
 export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = false, ajuste = null }) {
-  const { backend, api } = useApp();
+  const { backend, api, atleta: yo } = useApp();
   const datos = useRecetarioEquipo(atletaId);
   // Las miniaturas, aparte y solo aquí (al abrir el recetario); mientras llegan, cada receta sale con su dibujo
   const fotos = useCarga(() => fotosRecetarioEquipo({ backend }), [], { recuerdo: `fotos-recetario-equipo:${api.uid()}` });
@@ -67,7 +67,7 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
   const reinicio = `${elFiltro}|${capitulo || ''}|${texto}`;
   if (!datos.datos) return datos.error ? <ErrorCaja error={datos.error} reintentar={() => datos.recargar(true)} /> : <Siluetas forma="tarjetas" n={4} texto="Cargando el recetario" />;
   if (!recetas.length) {
-    return <div class="panel"><Vacio ilustracion="recetas" titulo="El recetario está vacío">{esCoach ? 'Marca una receta como «Para todo el equipo» y la verán aquí todos tus atletas.' : 'Cuando tu coach añada recetas para todo el equipo, las verás aquí.'}</Vacio></div>;
+    return <div class="panel"><Vacio ilustracion="recetas" titulo="El recetario está vacío">{esCoach ? 'Marca una receta como «Para todo el equipo» y la verán aquí todos tus atletas.' : yo?.modalidad === 'por_su_cuenta' ? 'Cuando haya recetas para todo el equipo, las verás aquí.' : 'Cuando tu coach añada recetas para todo el equipo, las verás aquí.'}</Vacio></div>;
   }
   const marcar = (r, si) => datos.alMomento(
     (d) => ({ ...d, favoritas: si ? [...new Set([...d.favoritas, r.id])] : d.favoritas.filter((id) => id !== r.id) }),
@@ -114,7 +114,7 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
 // ajuste ({ factor, toma, kcalToma } o, desde el menú, { factor, desdeMenu }): la ración a la medida del atleta, que
 // puede ver también la original. alAnadir(raciones, factor).
 export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, alCerrar, alMarcar = null, alAnadir = null, ajuste = null }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
   // La foto grande (si la tiene) llega aparte; lo demás ya está
   const completa = useCarga(() => (breve.foto_mini ? api.receta(breve.id).catch(() => null) : Promise.resolve(null)), [breve.id]);
   const r = completa.datos ? { ...breve, foto: completa.datos.foto } : breve;
@@ -174,7 +174,7 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
           </section>
         )}
         {l.encaje && <section class="pila-s"><h3 class="etq etq-con-ilu"><Imagen id="receta-encaja" clase="ico-ilu" tamanos="44px" />Cómo encaja en tu día</h3><p class="peq">{l.encaje}</p></section>}
-        {l.nota && <div class="nota-coach"><Icono n="mensaje" /><div><strong>{esCoach ? 'Tu nota: ' : 'Nota de tu coach: '}</strong>{l.nota}</div></div>}
+        {l.nota && <div class="nota-coach"><Icono n="mensaje" /><div><strong>{esCoach ? 'Tu nota: ' : yo?.modalidad === 'por_su_cuenta' ? 'Nota: ' : 'Nota de tu coach: '}</strong>{l.nota}</div></div>}
         {!esCoach && (alAnadir || alMarcar) && (
           <div class="pila-s">
             {alAnadir && <button class="btn btn-primario btn-grande" onClick={() => alAnadir(1, f)}><Icono n="calendario" /> Añadir a tu menú{f !== 1 ? ' (a tu medida)' : ''}</button>}

@@ -33,7 +33,7 @@ export function BotonesPlato({ alFoto = null, alFuera = null, clase = '' }) {
 
 // La foto de una comida: de una del menú (entrada) o de una nueva en esa fecha (y la comida que elija, si hay varias)
 export function HojaFotoPlato({ atletaId, fecha, toma = null, tomas = [], entrada = null, alCerrar, alGuardado }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
   const camara = useRef(null), galeria = useRef(null);
   const [plato, setPlato] = useState(null);       // { foto, mini }
   const [preparando, setPreparando] = useState(false);
@@ -78,7 +78,7 @@ export function HojaFotoPlato({ atletaId, fecha, toma = null, tomas = [], entrad
           </>
         )}
         <button type="button" class="btn btn-primario" disabled={!plato || preparando || ocupado} onClick={guardar}><Icono n="hecho" /> Guardar y marcar como hecha</button>
-        <p class="mini terciario">La veis tu coach y tú. Se guarda {DIAS_FOTO} días y después se borra sola. Va sin la ubicación ni los datos de la cámara.</p>
+        <p class="mini terciario">La veis {yo?.modalidad === 'por_su_cuenta' ? 'Pelayo' : 'tu coach'} y tú. Se guarda {DIAS_FOTO} días y después se borra sola. Va sin la ubicación ni los datos de la cámara.</p>
       </div>
     </Hoja>
   );
@@ -97,7 +97,7 @@ export function PautaFuera({ toma, plan = null, tomas = [] }) {
 
 // Comer fuera: la pauta y el botón de apuntarla (cuenta como hecha)
 export function HojaFuera({ atletaId, fecha, toma = null, tomas = [], plan = null, alCerrar, alGuardado }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
   const opciones = ordenarTomas(tomas.length ? tomas : [toma || 'comida']);
   const [laToma, setLaToma] = useState(opciones.includes(toma) ? toma : opciones[0]);
   const [texto, setTexto] = useState('');
@@ -119,7 +119,7 @@ export function HojaFuera({ atletaId, fecha, toma = null, tomas = [], plan = nul
         <label class="campo"><span class="etq">Dónde o qué <span class="terciario">(si quieres)</span></span>
           <input class="entrada" maxLength={120} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} placeholder="Cena con amigos, menú del día, boda…" /></label>
         <button type="button" class="btn btn-primario" disabled={ocupado} onClick={guardar}><Icono n="hecho" /> {futura ? 'Apuntarla en el menú' : 'Apuntarla como hecha'}</button>
-        <p class="mini terciario">{futura ? 'Ese día la marcas y cuenta como una comida hecha.' : 'Cuenta como una comida hecha de tu día.'} Tu coach verá que es fuera de casa.</p>
+        <p class="mini terciario">{futura ? 'Ese día la marcas y cuenta como una comida hecha.' : 'Cuenta como una comida hecha de tu día.'}{yo?.modalidad === 'por_su_cuenta' ? '' : ' Tu coach verá que es fuera de casa.'}</p>
       </div>
     </Hoja>
   );

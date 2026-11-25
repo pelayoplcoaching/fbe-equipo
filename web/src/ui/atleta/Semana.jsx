@@ -64,7 +64,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
       <ErrorCaja error={error} reintentar={recargar} />
       {p?.semanas.length > 0 && <Pista id="semana" icono="semana">Aquí está tu bloque entero: cada semana con sus sesiones. Desliza los días a los lados para cambiar de semana. Para entrenar, vuelve a Hoy y toca «Empezar»; aquí puedes ver lo que viene y lo que ya hiciste.</Pista>}
       {!p?.semanas.length ? (
-        <div class="panel"><Vacio ilustracion="espera" titulo="Sin semanas publicadas" accion={null}>Cuando tu coach publique una semana, aparecerá aquí.</Vacio></div>
+        <div class="panel"><Vacio ilustracion="espera" titulo={esPorSuCuenta(atleta) ? 'Aún sin semana' : 'Sin semanas publicadas'} accion={null}>{esPorSuCuenta(atleta) ? 'Cuando la app te prepare tu semana, aparecerá aquí.' : 'Cuando tu coach publique una semana, aparecerá aquí.'}</Vacio></div>
       ) : (
         <>
           <div class="semanas-tabs" role="group" aria-label="Semanas del bloque">
@@ -97,7 +97,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               </div>
               {/* v0.53.2: la semana que toca ya pasó en el calendario (el coach la publicó con fechas de la anterior) */}
               {semana.id === p.actual?.id && !planificable && semana.fecha_inicio && sumarDias(semana.fecha_inicio, 6) < hoyISO() && sesiones.some((s) => !s.completada) && (
-                <p class="aviso-suave peq">Las fechas de esta semana ya han pasado. Puedes hacer sus sesiones igual (al terminar, la app te pregunta qué día fue); para colocarlas por días, pídele a tu coach que mueva la semana a estas fechas.</p>
+                <p class="aviso-suave peq">Las fechas de esta semana ya han pasado. Puedes hacer sus sesiones igual (al terminar, la app te pregunta qué día fue){esPorSuCuenta(atleta) ? '.' : '; para colocarlas por días, pídele a tu coach que mueva la semana a estas fechas.'}</p>
               )}
               {(semana.foco || semana.nota_coach) && (
                 <div class="pila-s">

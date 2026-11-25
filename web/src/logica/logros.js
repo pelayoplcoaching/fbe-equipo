@@ -19,7 +19,8 @@ export const LOGROS = [
   { id: 'racha', titulo: 'Semanas completas', icono: 'llama', umbrales: [2, 4, 8, 12], texto: (u) => `${u} semanas completas seguidas` },
   { id: 'toneladas', titulo: 'Toneladas', icono: 'disco', umbrales: [10, 50, 100, 250], texto: (u) => `${num(u, 0)} toneladas movidas` },
   { id: 'records', titulo: 'Récords', icono: 'trofeo', umbrales: [1, 10, 25, 50], texto: (u) => plural(u, 'récord', 'récords') },
-  { id: 'videos', titulo: 'Técnica', icono: 'video', umbrales: [1, 5, 15, 30], texto: (u) => plural(u, 'vídeo enviado a tu coach', 'vídeos enviados a tu coach') },
+  // (coach: true) depende de un coach que corrija: quien va por su cuenta (FBE Esencial) no la tiene
+  { id: 'videos', titulo: 'Técnica', icono: 'video', umbrales: [1, 5, 15, 30], texto: (u) => plural(u, 'vídeo enviado a tu coach', 'vídeos enviados a tu coach'), coach: true },
   { id: 'checkins', titulo: 'Check-ins', icono: 'checkin', umbrales: [1, 4, 12, 26], texto: (u) => plural(u, 'check-in', 'check-ins'), salud: true },
   { id: 'peso', titulo: 'Báscula', icono: 'bascula', umbrales: [7, 30, 90, 180], texto: (u) => plural(u, 'día apuntando tu peso', 'días apuntando tu peso'), salud: true },
 ];
@@ -46,9 +47,10 @@ export function rachaMaxima(semanas, hoy) {
   return max;
 }
 
-// cuentas: { sesiones, racha, toneladas, records, videos, checkins, peso }; salud: consentimiento de datos de salud
-export function calcularLogros(cuentas, { salud = true } = {}) {
-  return LOGROS.filter((l) => salud || !l.salud).map((l) => {
+// cuentas: { sesiones, racha, toneladas, records, videos, checkins, peso }; salud: consentimiento de datos de salud;
+// sinCoach: va por su cuenta (sin las medallas que dependen de un coach)
+export function calcularLogros(cuentas, { salud = true, sinCoach = false } = {}) {
+  return LOGROS.filter((l) => (salud || !l.salud) && !(sinCoach && l.coach)).map((l) => {
     const valor = Number(cuentas[l.id]) || 0;
     const nivel = l.umbrales.filter((u) => valor >= u).length;
     const siguiente = l.umbrales[nivel] ?? null;

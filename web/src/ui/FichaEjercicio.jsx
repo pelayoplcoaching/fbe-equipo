@@ -1,6 +1,6 @@
 import { PictoEjercicio } from './Pictograma.jsx';
 import { useState } from 'preact/hooks';
-import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, Vacio } from './comunes.jsx';
+import { Pestanas, Siluetas, useApp, useCarga, Icono, Hoja, Segmentos, Grafica, Vacio, useSinCoach } from './comunes.jsx';
 import { textoSerie, num, NOMBRE_GRUPO } from '../logica/calculos.js';
 import { serieSemanal, recortarRango, metricasDe, tablaRecords, RANGOS } from '../logica/ejercicio.js';
 import { sonarMelodia } from './sonido.js';
@@ -21,6 +21,7 @@ import { esYoutube } from '../logica/youtube.js';
 // Ficha de un ejercicio (como en Strong o Hevy): gráficas por semana con rango, récords de 1 a 12
 // repeticiones (real frente a estimado), historial completo y la técnica si la hay.
 export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'graficas', compartir = false }) {
+  const sinCoach = useSinCoach();
   const { api, backend } = useApp();
   const h = useCarga(() => api.historialEjercicio(atletaId, ejercicio.id), [atletaId, ejercicio.id]);
   // (057) su ficha de técnica, si el coach se la ha puesto (de sus guías)
@@ -58,7 +59,7 @@ export function FichaEjercicio({ atletaId, ejercicio, alCerrar, inicial = 'grafi
       {grande && imgEj && (
         <Hoja titulo={ejercicio.nombre} alCerrar={() => setGrande(false)} ancho={560}>
           <Imagen id={imgEj} clase="ficha-ej-grande" tamanos="(min-width: 600px) 512px, 92vw" prioridad />
-          <p class="mini secundario">La posición clave del ejercicio. Para la técnica completa, el vídeo{ejercicio.video_url ? ' de la pestaña Técnica' : ' de tu coach'}.</p>
+          <p class="mini secundario">La posición clave del ejercicio. Para la técnica completa, el vídeo{ejercicio.video_url ? ' de la pestaña Técnica' : sinCoach ? ' del ejercicio' : ' de tu coach'}.</p>
         </Hoja>
       )}
       <Pestanas opciones={pestanas} valor={vista} alCambiar={setVista} etiqueta="Ficha del ejercicio" clase="pestanas-ficha" idBase="fej" />
@@ -156,6 +157,7 @@ function Historial({ d }) {
 }
 
 function Tecnica({ ejercicio: e, modelos = [], fbe = null }) {
+  const sinCoach = useSinCoach();
   const [guia, setGuia] = useState(null);
   const yt = !!e.video_url && esYoutube(e.video_url);
   const parrafos = (t) => t.split(/\n{2,}/).map((p, i) => <p key={i} class="secundario" style="white-space:pre-line">{p}</p>);
@@ -173,7 +175,7 @@ function Tecnica({ ejercicio: e, modelos = [], fbe = null }) {
       {fbe && <FichaFBE ficha={fbe.ficha} guia={fbe.guia} alAbrirGuia={setGuia} />}
       {guia && <HojaGuia guia={guia} alCerrar={() => setGuia(null)} />}
       {e.rango_reps && !fbe && <p class="peq"><span class="terciario">Rango recomendado: </span>{e.rango_reps}</p>}
-      {e.instrucciones && <section class="pila-s"><h3 class="peq">{fbe ? 'Notas de tu coach' : 'Claves'}</h3>{parrafos(e.instrucciones)}</section>}
+      {e.instrucciones && <section class="pila-s"><h3 class="peq">{fbe ? (sinCoach ? 'Notas de Pelayo' : 'Notas de tu coach') : 'Claves'}</h3>{parrafos(e.instrucciones)}</section>}
       {e.errores && <section class="pila-s"><h3 class="peq">Errores comunes</h3>{parrafos(e.errores)}</section>}
       {!fbe && modelos.length > 0 && <div><BotonModelo ejercicio={e} modelos={modelos} clase="btn" /></div>}
       {!fbe && e.video_url && !yt && <a class="btn" href={e.video_url} target="_blank" rel="noopener" style="justify-self:start"><Icono n="video" /> Ver el vídeo de técnica</a>}

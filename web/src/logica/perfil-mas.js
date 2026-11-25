@@ -97,7 +97,8 @@ export const HUECOS_PERFIL = [
   { clave: 'favoritos', titulo: 'Tus tres ejercicios', para: 'Tus marcas de siempre, arriba en Progreso.', fila: 'Elegir tus tres ejercicios', entreno: true },
   { clave: 'musica', titulo: 'Tu música', para: 'A un toque al empezar cada sesión.', fila: 'Poner el enlace a tu música', entreno: true },
   { clave: 'cumple', titulo: 'Tu cumpleaños', para: 'Para felicitarte ese día.', fila: 'Poner tu cumpleaños' },
-  { clave: 'manual', titulo: 'Cómo te gusta que te entrenen', para: 'Tu coach sabe cómo hablarte y qué evitar.', fila: 'Escribir cómo te gusta que te entrenen' },
+  // (coach: true) solo le sirve a un coach: quien va por su cuenta (FBE Esencial) no lo tiene
+  { clave: 'manual', titulo: 'Cómo te gusta que te entrenen', para: 'Tu coach sabe cómo hablarte y qué evitar.', fila: 'Escribir cómo te gusta que te entrenen', coach: true },
 ];
 const tiene = {
   foto: (p, x) => !!x.foto,
@@ -108,8 +109,9 @@ const tiene = {
   cumple: (p) => !!(p.cumple_mes && p.cumple_dia),
   manual: (p) => !!plano(p.manual_texto || p.manual?.texto || '') || !!(Array.isArray(p.manual) ? p.manual.length : p.manual && Object.keys(p.manual).length),
 };
-export function completarPerfil(p = {}, { foto = null, entrena = true, manualEscrito = null } = {}) {
-  const huecos = HUECOS_PERFIL.filter((h) => entrena || !h.entreno);
+export function completarPerfil(p = {}, { foto = null, entrena = true, manualEscrito = null, sinCoach = false } = {}) {
+  const huecos = HUECOS_PERFIL.filter((h) => (entrena || !h.entreno) && !(sinCoach && h.coach))
+    .map((h) => (sinCoach && h.clave === 'foto' ? { ...h, para: 'El equipo te reconoce al momento.' } : h));
   const hecho = (h) => (h.clave === 'manual' && manualEscrito != null ? manualEscrito : tiene[h.clave](p || {}, { foto }));
   const faltan = huecos.filter((h) => !hecho(h));
   return { pct: Math.round(((huecos.length - faltan.length) / huecos.length) * 100), faltan, total: huecos.length };
@@ -338,8 +340,10 @@ export function alternarAtajo(lista, clave) {
 }
 
 // 17. Qué ve cada uno, de un vistazo (solo lo que de verdad pasa con lo suyo)
-export function privacidadDeUnVistazo({ salud = false, saludConectada = false, comunidad = false, portada = false, evitados = 0, material = false } = {}) {
-  const coach = ['Tus sesiones, series y notas', 'Tus mensajes y los vídeos y fotos que le envías', 'Lo tuyo: tu porqué, tu meta, tu manual y tu música'];
+// suyo: va por su cuenta (FBE Esencial): sin mensajes, vídeos ni manual, y quien lo ve es Pelayo
+export function privacidadDeUnVistazo({ salud = false, saludConectada = false, comunidad = false, portada = false, evitados = 0, material = false, suyo = false } = {}) {
+  const coach = suyo ? ['Tus sesiones, series y notas', 'Tus fotos de progreso', 'Lo tuyo: tu porqué, tu meta y tu música']
+    : ['Tus sesiones, series y notas', 'Tus mensajes y los vídeos y fotos que le envías', 'Lo tuyo: tu porqué, tu meta, tu manual y tu música'];
   if (salud) coach.push('Tu peso, tus medidas, tus check-ins y cómo llegas a cada sesión');
   if (saludConectada) coach.push('Lo que llega de Salud del iPhone (pasos, sueño, pulso)');
   if (evitados || material) coach.push('Lo que prefieres evitar y tu material');
@@ -347,7 +351,7 @@ export function privacidadDeUnVistazo({ salud = false, saludConectada = false, c
   const equipo = comunidad
     ? ['Tu nombre en el equipo, tu foto y tu racha', 'Lo que publicas y comentas', ...(portada ? ['Tu foto de portada'] : [])]
     : [];
-  const movil = ['Los colores de tu portada y tus atajos', 'Tus ajustes de sonido, vibración y pantalla', 'Lo que has compartido desde este móvil', 'Tu rincón de ánimo solo lo ves tú (está en tu cuenta, pero ni tu coach lo ve)'];
+  const movil = ['Los colores de tu portada y tus atajos', 'Tus ajustes de sonido, vibración y pantalla', 'Lo que has compartido desde este móvil', `Tu rincón de ánimo solo lo ves tú (está en tu cuenta, pero ni ${suyo ? 'Pelayo' : 'tu coach'} lo ve)`];
   return { coach, equipo, movil };
 }
 

@@ -118,7 +118,7 @@ export function HojaSuplementos({ estado, alCerrar }) {
                 <li key={s.id} class="panel-pad pila-s">
                   <div class="separa">
                     <span class="fila supl-con-img"><Dibujo s={s} /><span class="pila-xs"><strong>{s.nombre}</strong>
-                      <span class="mini secundario">{[detalleSuplemento(s), s.origen === 'coach' ? 'Te lo ha pautado tu coach' : null].filter(Boolean).join('. ')}</span>
+                      <span class="mini secundario">{[detalleSuplemento(s), s.origen === 'coach' ? (esPorSuCuenta(atleta) ? 'Te lo ha puesto Pelayo' : 'Te lo ha pautado tu coach') : null].filter(Boolean).join('. ')}</span>
                       {c.de > 0 && <span class="mini terciario num">{c.tomados} de {c.de} días{c.racha > 1 ? `, ${c.racha} seguidos` : ''}</span>}</span></span>
                     {s.origen === 'atleta' && (
                       <span class="fila">
@@ -152,7 +152,7 @@ export function HojaSuplementos({ estado, alCerrar }) {
               ))}
             </div>
             <button class="btn btn-peq" style="justify-self:start" onClick={() => { setError(null); setF({ ...NUEVO }); }}><Icono n="mas" /> Añadir otro</button>
-            <p class="mini terciario">Las dosis son las habituales en adultos sanos: tu coach te dirá la tuya. Solo suplementos, no medicación.</p>
+            <p class="mini terciario">{esPorSuCuenta(atleta) ? 'Las dosis son las habituales en adultos sanos: ante la duda, consúltalo con tu médico o tu farmacéutico.' : 'Las dosis son las habituales en adultos sanos: tu coach te dirá la tuya.'} Solo suplementos, no medicación.</p>
           </div>
         )}
       </div>

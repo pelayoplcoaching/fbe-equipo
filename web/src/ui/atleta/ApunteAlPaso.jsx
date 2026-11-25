@@ -30,7 +30,7 @@ export function ApunteAlPaso({ guia }) {
   const a = ideas.length ? ideas[dia % ideas.length] : null;
   if (!a) return <span ref={marca} class="apunte-al-paso-marca" aria-hidden="true" />;
   return (
-    <aside class="apunte-al-paso" aria-label="Un apunte de tu coach">
+    <aside class="apunte-al-paso" aria-label="Un apunte de la guía">
       <Icono n="biblioteca" />
       <p><strong>{a.titulo}</strong>{a.titulo && a.texto ? ' ' : ''}{a.texto}</p>
       <button type="button" class="btn-texto" onClick={() => setAbierta(true)}>Leer la guía</button>

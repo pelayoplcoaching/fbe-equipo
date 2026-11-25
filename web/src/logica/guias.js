@@ -162,6 +162,8 @@ export function tipoDeRutina(sesiones = []) {
 // ------------------------------------------------------------ las estanterías de «Aprende»
 // Cada guía, en su estantería: por su clave (las de la filosofía del coach), por llevar fichas o grupo muscular
 // («Músculo a músculo») o, si no se conoce, en «Más guías». Con una sola estantería no hace falta rotularla.
+// (FBE Esencial) las guías que explican la asesoría con coach: quien va por su cuenta no las ve
+export const GUIAS_CON_COACH = ['bienvenida', 'manual'];
 export const ESTANTES = [
   { id: 'empieza', icono: 'bandera', nombre: 'Empieza aquí', detalle: 'Cómo funciona tu asesoría', claves: ['bienvenida', 'manual', 'introduccion', 'medidas', 'primeros-dias'] },
   { id: 'entrenar', icono: 'disco', nombre: 'Entrenar', detalle: 'Cómo se monta, se descarga y se retoma', claves: ['rutinas', 'deload', 'estancamiento', 'volver', 'cardio', 'rodilla', 'baremos', 'volver-40', 'calentamiento', 'material', 'viaje', 'diccionario', 'dolor', 'seguridad'] },
@@ -261,9 +263,9 @@ export const OCASIONES = {
   sueno: { clave: 'sueno', seccion: 'higiene', cuando: 'Si quieres dormir mejor', titulo: 'Higiene del sueño que sí funciona', detalle: 'Lo que mueve la aguja y lo que es marketing' },
   motivacion: { clave: 'motivacion', seccion: 'que-hacer', cuando: 'Para las semanas con pocas ganas', titulo: 'Qué hacer cuando no apetece', detalle: 'Estrategias según lo que te pase' },
   vuelta: { clave: 'volver', seccion: 'reglas-de-oro', cuando: 'De vuelta tras un parón', titulo: 'Antes de volver: las dos reglas de oro', detalle: 'Ante la duda, quédate corto' },
-  perder: { clave: 'composicion', seccion: 'definicion', cuando: 'Tu fase: perder grasa', titulo: 'Definición: pequeño y sostenido', detalle: 'Cómo la plantea tu coach' },
-  mantener: { clave: 'composicion', seccion: 'mantenimiento', cuando: 'Tu fase: mantenimiento', titulo: 'Mantenimiento: la fase olvidada', detalle: 'Cómo la plantea tu coach' },
-  ganar: { clave: 'composicion', seccion: 'volumen', cuando: 'Tu fase: ganar músculo', titulo: 'Volumen: el largo plazo', detalle: 'Cómo lo plantea tu coach' },
+  perder: { clave: 'composicion', seccion: 'definicion', cuando: 'Tu fase: perder grasa', titulo: 'Definición: pequeño y sostenido', detalle: 'Cómo se plantea en FBE' },
+  mantener: { clave: 'composicion', seccion: 'mantenimiento', cuando: 'Tu fase: mantenimiento', titulo: 'Mantenimiento: la fase olvidada', detalle: 'Cómo se plantea en FBE' },
+  ganar: { clave: 'composicion', seccion: 'volumen', cuando: 'Tu fase: ganar músculo', titulo: 'Volumen: el largo plazo', detalle: 'Cómo se plantea en FBE' },
   cardio: { clave: 'cardio', seccion: 'combinar', cuando: 'Cardio y fuerza', titulo: 'Cómo combinarlos sin que se estorben', detalle: 'Prioridades, separación y orden' },
 };
 // Tras enviar el check-in: lo que el atleta acaba de contestar -> las ocasiones que vienen a cuento

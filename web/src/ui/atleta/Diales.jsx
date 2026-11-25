@@ -4,7 +4,7 @@
 // llegas» es dato de salud y solo sale con su consentimiento.
 import { leerAjustes } from '../ajustes.js';
 import { useEffect, useId, useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, DegradadoAro } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, DegradadoAro, useSinCoach } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
 import { Preparacion } from './Preparacion.jsx';
 import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
@@ -173,6 +173,7 @@ function HojaComida({ m, objetivo, alCerrar }) {
 // (v0.141) Tu reloj de un vistazo: lo de hoy (o anoche) frente a tu media de 14 días; solo lo que llega de Salud
 const FILAS_RELOJ = { pasos: ['Pasos hoy', (v) => num(v, 0)], sueno_min: ['Sueño anoche', (v) => `${horasMin(v)} h`], fc_reposo: ['Pulso en reposo', (v) => `${num(v, 0)} lpm`], hrv: ['HRV', (v) => `${num(v, 0)} ms`] };
 function HojaReloj({ filas, ultimo, alCerrar }) {
+  const sinCoach = useSinCoach();
   return (
     <Hoja titulo="Tu reloj, de un vistazo" alCerrar={alCerrar}>
       <p class="secundario">Lo que llega de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}, frente a tu media de los últimos 14 días. No son objetivos: sirven para ver si hoy es un día normal para ti.</p>
@@ -184,18 +185,19 @@ function HojaReloj({ filas, ultimo, alCerrar }) {
           ))}
         </tbody>
       </table>
-      <p class="peq terciario">La media sale con 3 días al menos de las dos últimas semanas. Solo lo ves tú (y tu coach, como el resto de lo que llega de Salud).</p>
+      <p class="peq terciario">La media sale con 3 días al menos de las dos últimas semanas. Solo lo ves tú (y {sinCoach ? 'Pelayo' : 'tu coach'}, como el resto de lo que llega de Salud).</p>
     </Hoja>
   );
 }
 
 function HojaConstancia({ c, sesiones, semana, alCerrar, natural = null }) {
+  const sinCoach = useSinCoach();
   const rango = semana?.fecha_inicio ? ` (del ${fmtCorta(semana.fecha_inicio)} al ${fmtCorta(sumarDias(semana.fecha_inicio, 6))})` : '';
   return (
     <Hoja titulo="Constancia" alCerrar={alCerrar}>
       {natural
         ? <p class="secundario">Tu coach te programa por microciclos: tu semana se cuenta de lunes a domingo{rango}, con un objetivo de {textoDiasSemana(natural.dias)}{c.total && c.total < natural.dias ? ` (esta semana, ${c.total}: no tienes más publicadas)` : ''}. Al llegar a él, sumas una semana a tu racha. Las sesiones van en el orden de tu programa.</p>
-        : <p class="secundario">Las sesiones que has hecho de las que tu coach ha publicado esta semana{rango}. Al completarlas todas, sumas una semana a tu racha.</p>}
+        : <p class="secundario">Las sesiones que has hecho de las {sinCoach ? 'de tu plan' : 'que tu coach ha publicado'} esta semana{rango}. Al completarlas todas, sumas una semana a tu racha.</p>}
       <dl class="dial-hoja-cifras">
         <div><dt>Hechas</dt><dd class="marcador">{c.hechas}</dd></div>
         <div><dt>{natural ? 'Tu objetivo' : 'De la semana'}</dt><dd class="marcador">{c.total}</dd></div>
@@ -216,6 +218,7 @@ function HojaConstancia({ c, sesiones, semana, alCerrar, natural = null }) {
 }
 
 function HojaCarga({ k, datos, hoy, alCerrar }) {
+  const sinCoach = useSinCoach();
   const lunes = lunesDe(hoy);
   const semanas = cargaSemanal(datos || [], hoy, 5);
   const max = Math.max(1, ...semanas.map((w) => w.carga));
@@ -231,7 +234,7 @@ function HojaCarga({ k, datos, hoy, alCerrar }) {
             <div><dt>Lo habitual a estas alturas</dt><dd class="marcador">{num(k.esperado, 0)}</dd></div>
             <div><dt>Resultado</dt><dd class="marcador">{Math.round(k.ratio * 100)}<span class="peq"> %</span></dd></div>
           </dl>
-          <p class="peq"><strong>{k.etiqueta}.</strong> «En tu media» va del {num(BANDA_CARGA[0] * 100, 0)} al {num(BANDA_CARGA[1] * 100, 0)} % de lo habitual (la media de {k.semanas} {k.semanas === 1 ? 'semana' : 'semanas'}). Es para mirarlo, no una nota: lo que manda es lo que te pauta tu coach.</p>
+          <p class="peq"><strong>{k.etiqueta}.</strong> «En tu media» va del {num(BANDA_CARGA[0] * 100, 0)} al {num(BANDA_CARGA[1] * 100, 0)} % de lo habitual (la media de {k.semanas} {k.semanas === 1 ? 'semana' : 'semanas'}). Es para mirarlo, no una nota: lo que manda es {sinCoach ? 'tu plan' : 'lo que te pauta tu coach'}.</p>
         </>
       )}
       {semanas.some((w) => w.carga > 0) && (
@@ -277,7 +280,7 @@ function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
           {consejo && <div class={`consejo-dia ${consejo.nivel}`}><Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} /><div class="pila-xs"><strong>{consejo.titulo}</strong><span class="peq">{textoConsejo(consejo, esPorSuCuenta(atleta))}</span></div></div>}
         </>
       )}
-      <p class="mini terciario">Es una ayuda para regular el día, no un diagnóstico. Solo lo ves tú aquí; tu coach lo ve con la sesión.</p>
+      <p class="mini terciario">Es una ayuda para regular el día, no un diagnóstico. {esPorSuCuenta(atleta) ? 'Solo lo ves tú aquí.' : 'Solo lo ves tú aquí; tu coach lo ve con la sesión.'}</p>
     </Hoja>
   );
 }

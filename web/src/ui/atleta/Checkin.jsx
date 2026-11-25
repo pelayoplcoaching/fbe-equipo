@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SeguimientoCheckin } from './Vida.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
+import { trasElCheckin, queHacerConMolestia, URL_SEMAFORO } from '../../logica/esencial-checkin.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
@@ -65,6 +66,19 @@ function FranjaPaso({ id, sentido }) {
   const [rota, setRota] = useState(null);
   if (rota === id) return null;
   return <span class="ck-ilu ck-ilu-marco" data-sentido={sentido} aria-hidden="true"><Imagen id={id} clase="ck-ilu-img" tamanos="(min-width: 720px) 640px, 100vw" alFallar={setRota} /></span>;
+}
+
+// (sin coach, 17) Con una molestia moderada o grave y sin coach a quien contárselo: qué hacer, con las reglas del
+// «Semáforo del dolor» de la web y cuándo consultar
+function QueHacerMolestia({ m }) {
+  return (
+    <div class={`sinco-dolor pila-s${m.grave ? ' grave' : ''}`} role="note" aria-label="Qué hacer con esa molestia">
+      <p class="fila-icono"><Icono n="alerta" /><strong>{m.titulo}</strong></p>
+      <ul class="sinco-dolor-pasos peq">{m.pasos.map((t) => <li key={t}>{t}</li>)}</ul>
+      <p class="peq secundario">{m.consulta}</p>
+      <p class="peq"><a href={URL_SEMAFORO} target="_blank" rel="noopener">Abrir el semáforo del dolor</a>: apuntas cuánto duele durante, después y a la mañana siguiente, y te dice si seguir, mantener o bajar la carga.</p>
+    </div>
+  );
 }
 
 export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer }) {
@@ -219,7 +233,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         <CabeceraGrande><div class="titulo"><h1>Check-in semanal</h1></div></CabeceraGrande>
         <div class="panel panel-pad pila">
           <p>Para registrar tu peso, sueño, energía y molestias hace falta tu consentimiento para tratar datos de salud.</p>
-          <p class="secundario peq">{TEXTO_CONSENTIMIENTO_SALUD}</p>
+          <p class="secundario peq">{TEXTO_CONSENTIMIENTO_SALUD}{suyo ? ' En FBE Esencial, «mi coach» es Pelayo Fernández Cidón (FBE), que responde de tus datos.' : ''}</p>
           <button class="btn btn-primario btn-grande" onClick={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos(); }}>Dar consentimiento</button>
         </div>
       </div>
@@ -319,7 +333,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
                 opciones={ESCALAS.molestia.slice(1).map((t, i) => [i + 1, ['Leve', 'Moderada', 'Grave'][i], t])} />
             </div>
           ))}
-          <p class="peq secundario">{suyo ? 'Si un dolor es agudo o no mejora, para y consulta con tu médico o tu fisioterapeuta.' : 'Si un dolor es agudo o no mejora, avisa a tu coach directamente.'}</p>
+          {suyo && queHacerConMolestia(molestias) ? <QueHacerMolestia m={queHacerConMolestia(molestias)} />
+            : <p class="peq secundario">{suyo ? 'Si un dolor es agudo o no mejora, para y consulta con tu médico o tu fisioterapeuta.' : 'Si un dolor es agudo o no mejora, avisa a tu coach directamente.'}</p>}
         </div>
       ),
     },
@@ -470,7 +485,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       {enviado && (
         <div class="ck-enviado" role="status">
           <span class="ck-enviado-ico" aria-hidden="true"><Icono n="hecho" /></span>
-          <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : suyo ? '¡Check-in enviado!' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">{suyo ? 'Queda en tu progreso. Si marcas una molestia moderada o grave, a Pelayo le sale como aviso.' : 'Lo revisa y te contesta aquí abajo si hace falta.'}</span></span>
+          <span class="pila-xs"><strong>{enviado === 'actualizado' ? 'Check-in actualizado' : suyo ? '¡Check-in enviado!' : '¡Enviado a tu coach!'}</strong><span class="peq secundario">{suyo ? 'Abajo tienes lo que la app hace con él.' : 'Lo revisa y te contesta aquí abajo si hace falta.'}</span></span>
           {/* (diseño, tanda 45) el check-in vuela hasta el lobo de tu coach */}
           <span class="ck-enviado-vuelo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" /></svg></span>
           <span class="ck-enviado-lobo" aria-hidden="true"><svg viewBox={LOBO_CAJA}><path fill-rule="evenodd" d={LOBO_D} /></svg></span>
@@ -482,7 +497,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       {!enRevision ? (
         <section class="ck-paso panel panel-pad pila" key={actual.id} aria-labelledby="ck-titulo">
           {hayImagen(imagenPasoCheckin(actual.id)) && <FranjaPaso id={imagenPasoCheckin(actual.id)} sentido={sentido} />}
-          {actual.deCoach && <span class="mini terciario ck-de-coach"><Icono n="mensaje" /> Pregunta de tu coach</span>}
+          {actual.deCoach && <span class="mini terciario ck-de-coach"><Icono n="mensaje" /> {suyo ? 'Pregunta de Pelayo' : 'Pregunta de tu coach'}</span>}
           <h2 id="ck-titulo" tabIndex={-1} ref={tituloRef}>{actual.titulo}</h2>
           {/* (personalización 3, tanda 6) lo que contestó la semana pasada, para preguntarle cómo sigue */}
           <SeguimientoCheckin id={actual.id} anterior={datos.datos?.anterior} molestias={datos.datos?.molestiasAnterior || []} />
@@ -521,6 +536,16 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         )}
       </div>
     </form>
+      {/* (sin coach, 16 y 17) quien va por su cuenta: qué pasa ahora con su check-in y, con una molestia, qué hacer */}
+      {yaEnviado && suyo && (
+        <section class="seccion sinco-tras" aria-labelledby="sinco-tras-t">
+          <div class="seccion-cab"><h2 id="sinco-tras-t">Qué pasa ahora con tu check-in</h2></div>
+          <div class="panel"><ul class="lista">
+            {trasElCheckin({ f, molestias }).map((l) => <li key={l.id} class="panel-pad fila-icono peq" data-linea={l.id}><Icono n={l.icono} /><span>{l.texto}</span></li>)}
+          </ul></div>
+          {queHacerConMolestia(molestias) && <QueHacerMolestia m={queHacerConMolestia(molestias)} />}
+        </section>
+      )}
       {yaEnviado && !suyo && (
         <section class="seccion">
           <div class="seccion-cab"><h2>Comentarios con tu coach</h2>{datos.datos.checkin.revisado_en && <span class="chip ok"><Icono n="hecho" />Revisado</span>}</div>

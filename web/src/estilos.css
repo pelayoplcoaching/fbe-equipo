@@ -541,6 +541,8 @@ html.hay-descanso .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px))
 .zonas button { min-height: 40px; padding: 0 var(--esp-14); border-radius: var(--r-pildora); border: var(--filo-fino) solid var(--linea); background: var(--hoja); font-weight: 600; font-size: var(--letra-14-5); color: var(--tinta-2); }
 .zonas button[aria-pressed="true"] { border-color: var(--aviso); background: var(--aviso-suave); color: var(--tinta); }
 .zona-intensidad { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--esp-10); align-items: center; }
+/* (v0.241) a 320 px, "Leve, Moderada, Grave" no cabia al lado del nombre de la zona (la pagina se desbordaba): debajo */
+@media (max-width: 359px) { .zona-intensidad { grid-template-columns: minmax(0, 1fr); gap: var(--esp-4); } }
 
 /* Discos por lado (colores de los discos de competición) */
 .discos-ayuda { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--esp-6); font-size: var(--letra-13); font-variant-numeric: tabular-nums; }

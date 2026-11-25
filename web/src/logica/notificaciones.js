@@ -19,6 +19,16 @@ export const TIPOS_ATLETA = [
   ['descanso', 'Descansos terminados', 'Al acabar tu descanso, si no tienes la app delante (música, otra app, pantalla bloqueada)'],
   ['comunidad', 'Equipo', 'Reacciones y comentarios en lo que publicas, menciones, ánimos y los avisos y encuestas del coach en el muro'],
 ];
+// (sin coach, 15) Quien va por su cuenta (FBE Esencial): sin lo que solo llega de un coach (sus respuestas y sus tareas),
+// y lo demás, dicho como es: la semana se la prepara la app y los avisos son los de Pelayo para todos
+const SIN_COACH = {
+  semana: ['Semana nueva', 'Cuando la app te prepara tu semana'],
+  aviso: ['Avisos de Pelayo', 'Los que publique para todos'],
+  cuestionario: ['Tu cuestionario', 'Si hace falta que lo rellenes o lo actualices'],
+  comunidad: ['Equipo', 'Reacciones y comentarios en lo que publicas, menciones, ánimos y los avisos y encuestas de Pelayo en el muro'],
+};
+export const tiposAtleta = (sinCoach = false) => (!sinCoach ? TIPOS_ATLETA
+  : TIPOS_ATLETA.filter(([t]) => t !== 'respuesta' && t !== 'tarea').map(([t, n, a]) => [t, ...(SIN_COACH[t] || [n, a])]));
 export const TIPOS_COACH = [
   ['mensaje', 'Mensajes de tus atletas', 'Cuando te escriben en una sesión, un check-in o un vídeo'],
   ['checkin_recibido', 'Check-ins', 'Cuando alguien envía el suyo'],

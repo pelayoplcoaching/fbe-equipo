@@ -1,7 +1,7 @@
 // (personalización 3, tanda 8) Que le acompañe más allá de la app: la voz de su coach en sus mensajes, el reto del mes
 // hecho para él, su compañero afín y su álbum de hitos.
 import { useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, Avatar } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, Avatar, useSinCoach } from '../comunes.jsx';
 import { retoDelMes, ordenarAfines, textoAfin, albumHitos, textoAlbum } from '../../logica/compania.js';
 import { hoyISO, fmtCorta } from '../../logica/fechas.js';
 import { useAgenda } from './Vida.jsx';
@@ -48,7 +48,7 @@ export function RetoDelMes() {
       <div class="reto-mes-cab">
         <Imagen id="reto-mes" clase="reto-mes-img" tamanos="64px" />
         <span class="pila-xs">
-          <span class="t-sobre">Tu reto de {r.mes}{r.tipo === 'coach' ? ' · de tu coach' : ''}</span>
+          <span class="t-sobre">Tu reto de {r.mes}{r.tipo === 'coach' ? (atleta?.modalidad === 'por_su_cuenta' ? ' · de Pelayo' : ' · de tu coach') : ''}</span>
           <strong class="reto-mes-t">{r.titulo}</strong>
         </span>
       </div>
@@ -58,7 +58,7 @@ export function RetoDelMes() {
           <span class="mini secundario num">{r.hechos} de {r.objetivo}{r.hechos >= r.objetivo ? ' · ¡conseguido!' : ''}</span>
         </>
       ) : null}
-      {r.tipo === 'dia' && <span class="mini secundario">Es un reto, no un cambio en tu plan: si tu sesión de ese día no cuadra, habla con tu coach.</span>}
+      {r.tipo === 'dia' && <span class="mini secundario">Es un reto, no un cambio en tu plan: si tu sesión de ese día no cuadra, {atleta?.modalidad === 'por_su_cuenta' ? 'déjalo pasar' : 'habla con tu coach'}.</span>}
     </section>
   );
 }
@@ -135,6 +135,7 @@ function ConMusica({ url }) {
   return nombre ? <span class="mini secundario album-con-musica">Con «{nombre}»</span> : null;
 }
 function HojaHito({ alCerrar }) {
+  const sinCoach = useSinCoach();
   const { api, aviso } = useApp();
   const [titulo, setTitulo] = useState('');
   const [fecha, setFecha] = useState(hoyISO());
@@ -144,7 +145,7 @@ function HojaHito({ alCerrar }) {
   return (
     <Hoja titulo="Un hito tuyo" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">La carrera que terminaste, tu boda, volver tras una lesión… Lo verá también tu coach.</p>
+        <p class="peq secundario">La carrera que terminaste, tu boda, volver tras una lesión…{sinCoach ? '' : ' Lo verá también tu coach.'}</p>
         <div class="campo"><label for="hito-titulo">Qué</label><input id="hito-titulo" class="entrada" maxLength={80} placeholder="Mi primera media maratón" value={titulo} onInput={(e) => setTitulo(e.currentTarget.value)} /></div>
         <div class="campo"><label for="hito-fecha">Cuándo</label><input id="hito-fecha" class="entrada" type="date" max={hoyISO()} value={fecha} onInput={(e) => setFecha(e.currentTarget.value)} /></div>
         <button type="button" class="btn btn-primario" disabled={!titulo.trim() || !fecha} onClick={guardar}>Añadir</button>

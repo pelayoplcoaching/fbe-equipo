@@ -79,7 +79,7 @@ export async function reducirFoto(archivo, { lado = 1280, max = 500 * 1024 } = {
 
 // La fila de Perfil (atleta) y Cuenta (coach): la foto actual y «Cambiar» / «Quitar»
 export function FilaFoto({ nombre, coach = false }) {
-  const { api, perfil, fijarPerfil, aviso } = useApp();
+  const { api, perfil, fijarPerfil, aviso, atleta } = useApp();
   const input = useRef(null);
   const [guardando, setGuardando] = useState(false);
   const foto = perfil?.foto || null;
@@ -106,7 +106,7 @@ export function FilaFoto({ nombre, coach = false }) {
     <li class="panel-pad separa fila-foto">
       <div class="fila-foto-izq">
         <Avatar nombre={nombre} foto={foto} ampliable perfilId={perfil?.id} />
-        <div><div>Foto de perfil</div><div class="peq terciario">{foto ? (coach ? 'La ven tus atletas' : 'La ve tu coach') : 'Ahora, tus iniciales'}</div></div>
+        <div><div>Foto de perfil</div><div class="peq terciario">{foto ? (coach ? 'La ven tus atletas' : atleta?.modalidad === 'por_su_cuenta' ? 'La ven Pelayo y el equipo' : 'La ve tu coach') : 'Ahora, tus iniciales'}</div></div>
       </div>
       <div class="fila-acciones">
         <input ref={input} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Foto de perfil nueva" onChange={elegida} />

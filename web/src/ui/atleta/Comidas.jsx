@@ -25,10 +25,13 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
   // (055) el recetario del equipo, si lo hay: una vista más, y sus recetas cuentan para la lista de la compra
   const equipo = useRecetarioEquipo(atleta.id);
   const hayEquipo = (equipo.datos?.recetas.length || 0) > 0;
-  const VISTAS = hayEquipo ? VISTAS_CON_EQUIPO : VISTAS_COMIDAS;
+  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
+  // (FBE Esencial) a quien va por su cuenta nadie le pone recetas: sin ninguna suya y con recetario del equipo, sin «Tus recetas»
+  const suyo = atleta?.modalidad === 'por_su_cuenta';
+  const sinSuyas = suyo && hayEquipo && !!recetario.datos && !recetario.datos.recetas.length;
+  const VISTAS = sinSuyas ? VISTAS_CON_EQUIPO.filter(([v]) => v !== 'recetas') : hayEquipo ? VISTAS_CON_EQUIPO : VISTAS_COMIDAS;
   const vista = VISTAS.some(([v]) => v === vistaGuardada) ? vistaGuardada : 'menu';
   const desliz = usePestanasDeslizables(VISTAS, vista, setVista);
-  const recetario = useCarga(() => api.recetario(atleta.id), [atleta.id], { recuerdo: `recetario:${api.uid()}:${atleta.id}` });
   const planes = useCarga(() => api.planesNutricion(atleta.id).catch(() => []), [atleta.id], { recuerdo: `planes-comidas:${atleta.id}` });
   const [receta, setReceta] = useState(null); // asignación abierta
   const [anadir, setAnadir] = useState(null); // { a, raciones }
@@ -44,7 +47,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
   return (
     <div class="contenido">
       <CabeceraGrande>
-        <div class="titulo"><h1>Comidas</h1><div class="sub">{SUB_COMIDAS[vista]}</div></div>
+        <div class="titulo"><h1>Comidas</h1><div class="sub">{suyo && vista === 'recetas' ? 'Tus recetas para cada comida' : SUB_COMIDAS[vista]}</div></div>
         {r ? <button class="btn btn-peq plano" onClick={() => setComidas(true)} aria-label={`Tus comidas del día: ${r.tomas.length}`}><Icono n="ajustes" /> {r.tomas.length} al día</button>
           /* (pulido 2.3) mientras carga, su sitio ya está: la cabecera no cambia de alto al llegar */
           : !recetario.error && <span class="btn btn-peq plano" style="visibility:hidden" aria-hidden="true"><Icono n="ajustes" /> 4 al día</span>}
@@ -64,7 +67,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           <RecetarioEquipo atletaId={atleta.id} ajuste={salud ? ajusteEquipo : null} alAnadir={salud ? (receta, raciones, factor = 1) => setAnadir({ a: { ...comoAsignacion(receta, r.tomas), factor }, raciones }) : null} />
         ) : (
           <VistaRecetario recetario={r} alAbrir={setReceta} vacio={(
-            <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.</Vacio></div>
+            <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">{suyo ? 'En «Tu semana» puedes escribir lo que vas a comer cada día y ver cómo cuadra con tu plan.' : 'Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.'}</Vacio></div>
           )} />
         )}
       </div>

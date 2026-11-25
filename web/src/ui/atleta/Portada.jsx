@@ -87,10 +87,11 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       {!sesion.completada && r.ejercicios > 0 && <Calentamiento ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
       {nota && (
         <figure class="cita-coach">
-          {foto.datos ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}
+          {foto.datos && !suyo ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}
           <div>
             <blockquote>{nota}</blockquote>
-            <figcaption>Tu coach</figcaption>
+            {/* (FBE Esencial) la nota de la semana la escribe la app: sin la firma de un coach */}
+            <figcaption>{suyo ? 'Esta semana' : 'Tu coach'}</figcaption>
           </div>
         </figure>
       )}

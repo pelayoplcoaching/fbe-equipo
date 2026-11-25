@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.241': {
+    // (FBE Esencial sin coach, tanda 1 de 3: lo que ve quien va por su cuenta, sin «tu coach»; sin migración)
+    atleta: [],
+    coach: [
+      'FBE Esencial sin coach (tanda 1 de 3): en lo que ve quien va por su cuenta ya no sale «tu coach» en ninguna pantalla.',
+      'No suben vídeos de técnica ni ven lo que depende de un coach: mensajes, correcciones, tareas, su medalla y esas guías.',
+      'Su check-in les dice qué hace la app con él y, con una molestia moderada o grave, qué hacer y cuándo consultar.',
+    ],
+  },
   '0.240': {
     // (el alta de FBE Esencial, tandas 2 y 3 de 3: del cuestionario a su plan y su primera semana; sin migración)
     atleta: [],

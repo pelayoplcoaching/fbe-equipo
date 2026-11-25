@@ -2,7 +2,7 @@
 // reglas de la comunidad: solo dentro, con el nombre de allí, y quien no quiere salir no sale), las historias a pantalla
 // completa y las audio-píldoras del coach. La lógica, en logica/apuntes-camino.js.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Icono, Capa, useApp, useCarga } from '../comunes.jsx';
+import { Icono, Capa, useApp, useCarga, useSinCoach } from '../comunes.jsx';
 import { estadoDuelo } from '../../logica/apuntes-camino.js';
 import { sinMovimiento } from '../transiciones.js';
 import { vibrar } from '../hapticos.js';
@@ -115,6 +115,7 @@ export function Historia({ diapositivas = [], alAcabar, alCerrar, tono = 'morado
 const mmss = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 export function AudioPildora({ audio }) {
   const { api, aviso } = useApp();
+  const de = useSinCoach() ? 'Pelayo' : 'tu coach';
   const ref = useRef(null);
   const [url, setUrl] = useState(null);
   const [sonando, setSonando] = useState(false);
@@ -130,9 +131,9 @@ export function AudioPildora({ audio }) {
   return (
     <div class={`audio-pildora${hayImagen('apuntes-audio') ? ' con-ilu' : ''}`}>
       <Imagen id="apuntes-audio" clase="audio-ilu" tamanos="44px" />
-      <button type="button" class="btn audio-play" aria-label={sonando ? 'Pausar el audio de tu coach' : 'Escuchar el audio de tu coach'} onClick={tocar}><Icono n={sonando ? 'pausa' : 'play'} /></button>
+      <button type="button" class="btn audio-play" aria-label={`${sonando ? 'Pausar' : 'Escuchar'} el audio de ${de}`} onClick={tocar}><Icono n={sonando ? 'pausa' : 'play'} /></button>
       <span class="audio-info">
-        <strong>Audio de tu coach</strong>
+        <strong>Audio de {de}</strong>
         <span class="audio-barra" aria-hidden="true"><i style={{ width: `${Math.min(100, (t / Math.max(1, audio.segundos)) * 100)}%` }} /></span>
         <span class="mini secundario num">{mmss(t)} / {mmss(audio.segundos)}</span>
       </span>

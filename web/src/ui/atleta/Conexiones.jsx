@@ -16,6 +16,7 @@ import { esIOS } from '../pulido.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { num } from '../../logica/calculos.js';
 import { miles } from '../../logica/celebracion.js';
+import { esPorSuCuenta, quienLee } from '../../logica/esencial.js';
 
 export const PREF_ATAJO_ENTRENO = 'fbe-atajo-entreno';
 
@@ -34,7 +35,7 @@ export function Conexiones({ salud }) {
   const entrena = conEntrenamiento(atleta);
   const cerrar = () => { setAbrir(null); datos.recargar(true); };
   return (
-    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : 'Tus datos solo van de tu móvil a la app y los ve tu coach. Lo puedes quitar cuando quieras.'}>
+    <GrupoIos titulo="Conexiones" id="grupo-conexiones" pie={propio ? 'Tu ficha de atleta: lo que llegue de tu iPhone va a tus hábitos y tu progreso. Sirve también para probar tus atajos antes de compartirlos.' : `Tus datos solo van de tu móvil a la app y los ve ${quienLee(atleta)}. Lo puedes quitar cuando quieras.`}>
       <FilaIos icono="pasos" tono={i.salud?.activa ? 'ok' : ''} clase={`conexion-salud ${i.salud?.activa ? 'conectada' : ''}`} titulo="Salud del iPhone"
         detalle={i.salud?.activa ? (i.salud.ultimo ? `Conectada · último envío ${haceDias(i.salud.ultimo)}` : 'Conectada · aún no ha llegado nada') : 'Pasos, sueño, pulso y HRV, sin apuntarlos'}
         alTocar={() => setAbrir('salud')} etiqueta="Salud del iPhone: conectar o ver" />
@@ -94,7 +95,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
     <Hoja titulo="Salud del iPhone" alCerrar={alCerrar}>
       <div class="pila conexiones">
         <Imagen id="salud-conexion" clase="franja-ilu franja-hoja franja-salud" tamanos="(min-width: 640px) 560px, 92vw" />
-        <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong> y tu <strong>variabilidad (HRV)</strong>. {propio ? 'Así tus pasos y tu sueño se apuntan solos en tu ficha.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
+        <p class="peq secundario salud-intro">Tu iPhone le pasa a la app, una vez al día, tus <strong>pasos</strong>, cuánto has <strong>dormido</strong>, tu <strong>pulso en reposo</strong> y tu <strong>variabilidad (HRV)</strong>. {propio ? 'Así tus pasos y tu sueño se apuntan solos en tu ficha.' : esPorSuCuenta(atleta) ? 'Así el check-in viene relleno y tus pasos se apuntan solos en tus hábitos.' : 'Así el check-in viene relleno, tus pasos se apuntan solos en tus hábitos y tu coach ve cómo descansas sin preguntarte.'} Se hace con la app Atajos, que ya viene en el iPhone.</p>
         {!ios && <p class="nota peq">Esto es para iPhone: Apple lo deja hacer con Atajos. En Android, una web no puede leer los datos de salud del móvil.</p>}
         {!salud ? (
           <p class="nota peq">Para traer datos de Salud hace falta tu consentimiento de datos de salud (en tu perfil, en Cuenta → Datos de salud).</p>
@@ -102,7 +103,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
           <ol class="conexion-pasos">
             <Paso n={1} titulo={`Instala el atajo «${ATAJO_SALUD}»`}>
               {atajoSalud ? <a class="btn" href={atajoSalud} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar el atajo</a>
-                : <span class="peq secundario">{propio ? 'Mientras lo montas, sáltate este paso: crea tu clave (paso 2) y pégala en el atajo de tu iPhone para probarlo. Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : 'Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.'}</span>}
+                : <span class="peq secundario">{propio ? 'Mientras lo montas, sáltate este paso: crea tu clave (paso 2) y pégala en el atajo de tu iPhone para probarlo. Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : esPorSuCuenta(atleta) ? 'Aún no está preparado.' : 'Tu coach aún no lo ha preparado. Pídeselo y vuelve aquí.'}</span>}
               <span class="mini terciario">Al instalarlo te pedirá tu clave personal (la del paso 2) y permiso para leer Salud: deja marcados los datos que quieras compartir.</span>
             </Paso>
             <Paso n={2} titulo="Copia tu clave personal" hecho={activa && !enlace}>
@@ -138,7 +139,7 @@ export function HojaSalud({ estado, salud, alCerrar }) {
             <h3 class="peq">Tus entrenos, en Salud</h3>
             <p class="peq secundario">Con el atajo «{ATAJO_ENTRENO}», al terminar una sesión tocas «Apuntar en Salud» y queda como entreno de fuerza (o de cardio) en Salud, con su duración. Cuenta para los anillos del Apple Watch.</p>
             {atajoEnt ? <a class="btn" href={atajoEnt} target="_blank" rel="noopener"><Icono n="descargar" /> Instalar «{ATAJO_ENTRENO}»</a>
-              : <span class="peq secundario">{propio ? 'Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : 'Tu coach aún no lo ha preparado.'}</span>}
+              : <span class="peq secundario">{propio ? 'Cuando lo compartas, pon el enlace en Cuenta → Atajos del iPhone.' : esPorSuCuenta(atleta) ? 'Aún no está preparado.' : 'Tu coach aún no lo ha preparado.'}</span>}
             <label class="fila conexion-check">
               <input type="checkbox" checked={!!atajoEntreno} onChange={(e) => setAtajoEntreno(e.currentTarget.checked)} />
               <span class="peq">Ya lo tengo: enséñame «Apuntar en Salud» al terminar cada sesión (en este móvil)</span>
@@ -185,7 +186,8 @@ const DURACIONES = [[45, '45 min'], [60, '1 h'], [75, '1 h 15'], [90, '1 h 30']]
 const AVISOS = [[15, '15 min antes'], [30, '30 min'], [60, '1 h'], [120, '2 h']];
 
 export function HojaSuscripcion({ estado, alCerrar }) {
-  const { api, aviso, modo } = useApp();
+  const { api, aviso, modo, atleta } = useApp();
+  const suyo = esPorSuCuenta(atleta);
   const cal = estado.calendario || {};
   const [hora, setHora] = useState(cal.hora || '18:00');
   const [minutos, setMinutos] = useState(cal.minutos || 75);
@@ -215,7 +217,7 @@ export function HojaSuscripcion({ estado, alCerrar }) {
   return (
     <Hoja titulo="Tus entrenos en tu calendario" alCerrar={alCerrar}>
       <div class="pila conexiones">
-        <p class="peq secundario">Tu calendario (el del iPhone, Google Calendar…) se suscribe a una dirección tuya y cada sesión con día sale como un evento, con su aviso. Cuando cambias el día de una sesión o tu coach publica la semana, el calendario cambia solo la próxima vez que lo revise (suele ser cada pocas horas).</p>
+        <p class="peq secundario">Tu calendario (el del iPhone, Google Calendar…) se suscribe a una dirección tuya y cada sesión con día sale como un evento, con su aviso. Cuando cambias el día de una sesión o {suyo ? 'la app prepara tu semana' : 'tu coach publica la semana'}, el calendario cambia solo la próxima vez que lo revise (suele ser cada pocas horas).</p>
         <div class="campo">
           <label for="sus-hora">Hora a la que sueles entrenar</label>
           <input id="sus-hora" class="entrada" type="time" value={hora} onInput={(e) => setHora(e.currentTarget.value || '18:00')} />
@@ -223,7 +225,7 @@ export function HojaSuscripcion({ estado, alCerrar }) {
         <div class="campo"><span class="etq">Duración</span><Segmentos etiqueta="Duración" valor={minutos} alCambiar={(v) => setMinutos(v ?? 75)} opciones={DURACIONES} /></div>
         <div class="campo"><span class="etq">Aviso</span><Segmentos etiqueta="Aviso" valor={avisoMin} alCambiar={(v) => setAvisoMin(v ?? 30)} opciones={AVISOS} /></div>
         {/* (revisión) las indicaciones del coach, solo si las quiere: las guarda su calendario (Apple, Google…) */}
-        <label class="fila conexion-check"><input type="checkbox" checked={detalle} onChange={(e) => setDetalle(e.currentTarget.checked)} /><span class="peq">Incluir las indicaciones de tu coach en cada evento<span class="mini terciario" style="display:block">Si lo marcas, tu calendario (Apple, Google…) guardará también lo que tu coach escribe en cada sesión. Si no, solo el nombre y la hora.</span></span></label>
+        <label class="fila conexion-check"><input type="checkbox" checked={detalle} onChange={(e) => setDetalle(e.currentTarget.checked)} /><span class="peq">{suyo ? 'Incluir las indicaciones de cada sesión en su evento' : 'Incluir las indicaciones de tu coach en cada evento'}<span class="mini terciario" style="display:block">{suyo ? 'Si lo marcas, tu calendario (Apple, Google…) guardará también la nota de cada sesión. Si no, solo el nombre y la hora.' : 'Si lo marcas, tu calendario (Apple, Google…) guardará también lo que tu coach escribe en cada sesión. Si no, solo el nombre y la hora.'}</span></span></label>
 
         {urls ? (
           <div class="pila-s">

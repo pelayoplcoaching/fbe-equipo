@@ -20,6 +20,8 @@ import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
 export const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
+// (FBE Esencial) ¿quien mira va por su cuenta? (no tiene coach: lo que le hable de «tu coach» se le dice de otra forma)
+export const useSinCoach = () => useContext(Ctx)?.atleta?.modalidad === 'por_su_cuenta';
 
 // ---------------------------------------------------------------- iconos (24×24, trazo)
 export const P = {

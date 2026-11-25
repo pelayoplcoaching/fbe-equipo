@@ -4,7 +4,7 @@
 // mientras viaja). Al volver, las deja como estaban. Lo del viaje, en este móvil (fbe-viaje:<uid>); las notificaciones son
 // sus preferencias de siempre.
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { useApp, useCarga, usePreferencia, Icono } from '../comunes.jsx';
+import { useApp, useCarga, usePreferencia, Icono, useSinCoach } from '../comunes.jsx';
 import { Imagen } from '../Imagen.jsx';
 import { leerPreferencia } from '../preferencias.js';
 import { estadoViaje, textoDesfase, horaAqui, horaBonita, ajusteDeViaje, ajusteAplicado, previoDeViaje, deshacerViaje, prefsDeCasa } from '../../logica/viaje.js';
@@ -20,6 +20,7 @@ export function useDeViaje() {
 
 export function AvisoViaje() {
   const { api, aviso } = useApp();
+  const sinCoach = useSinCoach();
   const [g, setG] = usePreferencia(claveViaje(api.uid()), {});
   const guardado = g && typeof g === 'object' ? g : {};
   const casa = Array.isArray(guardado.casa) ? guardado.casa : [];
@@ -84,7 +85,7 @@ export function AvisoViaje() {
         <span class="ios-ico" aria-hidden="true"><Icono n="ubicacion" /></span>
         <span class="pila-xs">
           <h2 id="viaje-tit">De viaje: en {est.nombre} son las {horaBonita(est.aqui)}</h2>
-          <span class="peq secundario">{textoDesfase(est.desfase).replace(/^./, (c) => c.toUpperCase())} (allí, las {horaBonita(est.espana)}). Lo que hagas cuenta en tu día de aquí; tu coach y la comunidad siguen la hora de España.</span>
+          <span class="peq secundario">{textoDesfase(est.desfase).replace(/^./, (c) => c.toUpperCase())} (allí, las {horaBonita(est.espana)}). Lo que hagas cuenta en tu día de aquí; {sinCoach ? 'la comunidad sigue' : 'tu coach y la comunidad siguen'} la hora de España.</span>
         </span>
       </div>
       {conAvisos && (aplicado ? (

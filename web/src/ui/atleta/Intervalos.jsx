@@ -55,7 +55,7 @@ function IntervalosPantalla({ inicial = null, alCerrar, alTerminar = null }) {
             <h2>Temporizador de intervalos</h2>
           </div>
           <Imagen id={imagenHerramienta('intervalos')} clase="franja-ilu franja-herr" tamanos="(min-width: 640px) 560px, 92vw" />
-          {inicial && <p class="peq secundario">Configurado con lo que pone tu coach: <strong>{textoIntervalos(inicial)}</strong>.</p>}
+          {inicial && <p class="peq secundario">Configurado con lo que pone tu sesión: <strong>{textoIntervalos(inicial)}</strong>.</p>}
           <Segmentos etiqueta="Tipo" valor={modo} opciones={MODOS_INTERVALOS} alCambiar={(v) => v && setConfig(normalizar({ ...POR_DEFECTO[v], preparar: config.preparar }))} />
           <div class="intervalos-campos">
             {(modo === 'intervalos' || modo === 'tabata') && (

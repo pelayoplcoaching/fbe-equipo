@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Hoja, Icono, Anillo, PortadaHistoria, CifraSube } from './comunes.jsx';
+import { Hoja, Icono, Anillo, PortadaHistoria, CifraSube, useSinCoach } from './comunes.jsx';
 import { MapaMuscular } from './MapaMuscular.jsx';
 import { HojaCompartir } from './compartir-perezoso.jsx';
 import { rangoLargo } from './atleta/TuSemana.jsx';
@@ -94,6 +94,7 @@ function Semanas({ semanas }) {
 }
 
 export function InformeBloque({ informe: r, salud = false, coach = false, alCerrar }) {
+  const sinCoach = useSinCoach();
   const [compartir, setCompartir] = useState(false);
   const c = r.cumplimiento;
   const tu = coach ? 'sus' : 'tus';
@@ -161,7 +162,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
             <span class="leyenda-esfuerzo mini terciario" aria-hidden="true"><span><i class="encima" />Por encima</span><span><i class="justo" />En su sitio</span><span><i class="suave" />Más suave</span></span>
             <p class="peq secundario">{coach
               ? `${c.esfuerzo.pctEncima} % de las series con RPE fueron más de medio punto por encima de lo pautado (${c.esfuerzo.encima} de ${c.esfuerzo.conEsfuerzo}).`
-              : `El ${100 - c.esfuerzo.pctEncima} % de tus series fueron al esfuerzo pautado o más suaves; el ${c.esfuerzo.pctEncima} %, por encima. Pasarse a menudo acumula fatiga: si te pasa, cuéntaselo a tu coach.`}</p>
+              : `El ${100 - c.esfuerzo.pctEncima} % de tus series fueron al esfuerzo pautado o más suaves; el ${c.esfuerzo.pctEncima} %, por encima. Pasarse a menudo acumula fatiga: ${sinCoach ? 'quédate en el esfuerzo que marca tu plan' : 'si te pasa, cuéntaselo a tu coach'}.`}</p>
           </section>
         )}
 

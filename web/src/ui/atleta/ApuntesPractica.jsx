@@ -2,7 +2,7 @@
 // microlecciones (tu 1RM, RIR ↔ RPE) y «Grábate y compáralo» (tu vídeo al lado del de la técnica; no sale del móvil).
 // La lógica, en logica/apuntes-practica.js. Cada ejercicio avisa al acabar con alAcabar({ bien, resumen }).
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Icono, Hoja } from '../comunes.jsx';
+import { Icono, Hoja, useSinCoach } from '../comunes.jsx';
 import { barajar, notaEmparejar, ordenBueno, cuentas1rm, filaRirpe, RIR_RPE } from '../../logica/apuntes-practica.js';
 import { VideoYoutube } from '../YouTube.jsx';
 import { vibrar } from '../hapticos.js';
@@ -187,6 +187,7 @@ function Rirpe({ a }) {
 
 // --- Grábate y compáralo: tu vídeo (del móvil, no se sube) al lado del de la técnica, con la clave encima ---
 export function GrabarYComparar({ video = null, nombre = '', clave = '', alCerrar }) {
+  const sinCoach = useSinCoach();
   const [mio, setMio] = useState(null);
   const [lento, setLento] = useState(false);
   const yo = useRef(null);
@@ -212,7 +213,7 @@ export function GrabarYComparar({ video = null, nombre = '', clave = '', alCerra
             )}
           </div>
           {mio && <label class="btn-texto comparar-otro"><Icono n="camara" />Grabar otra<input type="file" accept="video/*" capture="environment" onChange={elegir} /></label>}
-          <p class="mini secundario">Tu vídeo se queda en este móvil: no se guarda ni se envía. Si quieres que lo vea tu coach, mándaselo desde la serie.</p>
+          <p class="mini secundario">Tu vídeo se queda en este móvil: no se guarda ni se envía.{sinCoach ? '' : ' Si quieres que lo vea tu coach, mándaselo desde la serie.'}</p>
         </div>
     </Hoja>
   );

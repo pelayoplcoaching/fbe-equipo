@@ -7,6 +7,8 @@
 //     «Semana 1 hecha»; en Perfil, sin «Mensajes con tu coach» y con sus preguntas frecuentes; la nota de su check-in.
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
 //     sin la pestaña Mensajes; «Añadir atleta» de FBE Esencial con su mensaje de invitación.
+//   · Tomás (sin coach, 20): recorre la app entera abriendo cada fila y cada hoja: ni rastro de «tu coach»; sus avisos al
+//     móvil, el check-in con una molestia («Qué pasa ahora con tu check-in» y qué hacer) y «Más» en la sesión.
 //   Sin errores ni desbordes.
 import { devices } from 'playwright';
 
@@ -500,6 +502,161 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('.alta-existe').getByRole('button', { name: 'Entrar' }).click();
     check(await p.locator('#acc-email').inputValue().catch(() => '') === 'marina@fbe.demo', 'y al tocar «Entrar», su email ya escrito');
     await desborda(p, 'La entrada');
+    await ctx.close();
+  }
+  // ---------- (sin coach, 20) Ni rastro de «tu coach» ----------
+  // Tomás (semana 5, la app entera) recorre sus pestañas, abre una a una las filas de Perfil y de Ajustes y las hojas de
+  // Hoy, mira sus avisos al móvil, hace el check-in con una molestia moderada y abre «Más» en la sesión. En nada de lo
+  // que ve puede salir «tu coach» ni «mi coach». No cuenta la política de privacidad (texto legal con versión: lleva su
+  // aclaración arriba) ni, en Equipo, «el coach» como papel de quien modera.
+  {
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await entrar(p, /Tomás/);
+    await cerrar(p);
+    const hallado = new Set();
+    let pantallas = 0;
+    const mirar = async (donde) => {
+      pantallas++;
+      const ts = await p.evaluate(() => {
+        const r = [], RE = /\b(tu|mi) coach\b/i;
+        const visible = (el) => { const s = getComputedStyle(el); return s.display !== 'none' && s.visibility !== 'hidden'; };
+        const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let n;
+        while ((n = w.nextNode())) {
+          const el = n.parentElement;
+          if (!RE.test(n.nodeValue) || !el || ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(el.tagName) || !visible(el)) continue;
+          r.push(n.nodeValue.replace(/\s+/g, ' ').trim().slice(0, 120));
+        }
+        for (const el of document.querySelectorAll('[aria-label], [placeholder], [title], [alt]')) {
+          for (const a of ['aria-label', 'placeholder', 'title', 'alt']) { const v = el.getAttribute(a); if (v && RE.test(v)) r.push(`(${a}) ${v.slice(0, 120)}`); }
+        }
+        return r;
+      });
+      for (const t of ts) hallado.add(`${donde}: ${t}`);
+    };
+    const cerrarHojas = async () => {
+      for (let i = 0; i < 4; i++) {
+        if (!(await p.locator('[aria-modal="true"]').count())) break;
+        await p.keyboard.press('Escape').catch(() => {});
+        await p.waitForTimeout(250);
+        const b = p.locator('[aria-modal="true"] .hoja-cerrar, [aria-modal="true"] button:has-text("Cerrar"), [aria-modal="true"] button:has-text("Cancelar"), [aria-modal="true"] button:has-text("Ahora no")').first();
+        if (await b.isVisible().catch(() => false)) { await b.click({ timeout: 1500 }).catch(() => {}); await p.waitForTimeout(250); }
+      }
+    };
+    const ir = async (t) => {
+      await p.evaluate((h) => { if (location.hash !== `#${h}`) location.hash = `#${h}`; }, t);
+      await p.waitForTimeout(800);
+      await cerrarHojas();
+      await p.evaluate(async () => {
+        for (const d of document.querySelectorAll('details')) d.open = true;
+        for (let y = 0; y < document.documentElement.scrollHeight; y += 800) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 30)); }
+        window.scrollTo(0, 0);
+      });
+      await p.waitForTimeout(300);
+    };
+    // (lo que no se abre: salir, borrar, compartir o descargar algo, y la política de privacidad)
+    const NO = /reiniciar|demo|cambiar de cuenta|cerrar sesi|salir|borrar|eliminar|quitar|baja|descargar|exportar|instalar|activar|conectar|enviar|publicar|subir|compartir|copiar|calendario|imprimir|pdf|privacidad/i;
+    const FILAS = 'main button.fila-ios-nav:not(.peligro), main [aria-haspopup="dialog"]';
+    let hojas = 0;
+    for (const t of ['hoy', 'semana', 'progreso', 'equipo', 'aprende', 'perfil', 'ajustes']) {
+      await ir(t);
+      await mirar(t);
+      if (!['perfil', 'ajustes', 'hoy'].includes(t)) continue;
+      const n = Math.min(await p.locator(FILAS).count(), 45);
+      for (let i = 0; i < n; i++) {
+        const b = p.locator(FILAS).nth(i);
+        const txt = `${(await b.textContent().catch(() => '')) || ''} ${(await b.getAttribute('aria-label').catch(() => '')) || ''}`.replace(/\s+/g, ' ').trim().slice(0, 60);
+        if (NO.test(txt) || !(await b.isVisible().catch(() => false))) continue;
+        await b.click({ timeout: 1500 }).catch(() => {});
+        await p.waitForTimeout(350);
+        if (await p.locator('[aria-modal="true"]').count()) hojas++;
+        await mirar(`${t} › ${txt}`);
+        await cerrarHojas();
+        if (!(await p.evaluate((h) => location.hash === `#${h}`, t))) await ir(t);
+      }
+    }
+    // Sus avisos al móvil: sin las respuestas ni las tareas de un coach; la semana se la prepara la app
+    await ir('ajustes');
+    await p.locator('.fila-notificaciones button').first().click({ timeout: 5000 }).catch(() => {});
+    const hn = p.locator('[aria-modal="true"]').last();
+    const conTipos = await hn.locator('#nt-semana').waitFor({ state: 'attached', timeout: 10000 }).then(() => true).catch(() => false);
+    const tn = conTipos ? await hn.textContent() : '';
+    check(conTipos && /Semana nueva/.test(tn) && /Cuando la app te prepara tu semana/.test(tn) && /Avisos de Pelayo/.test(tn) && (await hn.locator('#nt-respuesta, #nt-tarea').count()) === 0,
+      'sus avisos al móvil: «Semana nueva» (se la prepara la app) y «Avisos de Pelayo»; sin respuestas ni tareas de un coach');
+    await mirar('Notificaciones');
+    await cerrarHojas();
+    // La política de privacidad: arriba, quién es «tu coach» para quien va por su cuenta
+    await ir('ajustes');
+    await p.locator('main button.fila-ios-nav', { hasText: 'Política de privacidad' }).first().click({ timeout: 5000 }).catch(() => {});
+    check(await p.locator('[aria-modal="true"]').last().getByText(/«tu coach» \(y «mi coach» en el consentimiento\) es Pelayo Fernández Cidón/).waitFor({ timeout: 8000 }).then(() => true).catch(() => false),
+      'la política de privacidad: arriba, quién es «tu coach» para quien va por su cuenta');
+    await cerrarHojas();
+    // El check-in, con una molestia moderada: en el paso, qué hacer; al enviarlo, lo que la app hace con él
+    await ir('checkin');
+    let dolorEnPaso = false, enviado = false;
+    // (si su check-in de la semana ya está enviado, se abre en el repaso: desde ahí, a la pregunta de las molestias)
+    let marcada = false;
+    for (let i = 0; i < 30; i++) {
+      await mirar(`check-in, paso ${i + 1}`);
+      const zonas = p.locator('.zonas');
+      if (!marcada && await zonas.isVisible().catch(() => false)) {
+        const z = zonas.locator('button', { hasText: 'Zona lumbar' }).first();
+        if ((await z.getAttribute('aria-pressed').catch(() => null)) !== 'true') await z.click().catch(() => {});
+        await p.locator('.segmentos.dolor button', { hasText: 'Moderada' }).first().click({ timeout: 3000 }).catch(() => {});
+        marcada = true;
+        dolorEnPaso = await p.locator('.sinco-dolor').getByText(/5 sobre 10/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+        await mirar('check-in, molestia moderada');
+      }
+      const enviar = p.getByRole('button', { name: /^Enviar$|Actualizar check-in/ });
+      if (await enviar.isVisible().catch(() => false)) {
+        const fila = p.locator('button.ck-repaso-fila[aria-label^="Cambiar: ¿Te ha molestado algo?"]');
+        if (!marcada && await fila.count()) { await fila.first().click().catch(() => {}); await p.waitForTimeout(450); continue; }
+        await enviar.click().catch(() => {});
+        enviado = true;
+        break;
+      }
+      const sig = p.getByRole('button', { name: /^(Siguiente|Repasar|Volver al repaso)/ }).first();
+      if (await sig.isVisible().catch(() => false)) await sig.click().catch(() => {}); else break;
+      await p.waitForTimeout(350);
+    }
+    const tras = p.locator('section.sinco-tras');
+    const conTras = enviado && await tras.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    const tt = conTras ? await tras.textContent() : '';
+    check(dolorEnPaso, 'el check-in, con una molestia moderada: en el mismo paso, qué hacer (la regla del 5 sobre 10 y cuándo consultar)');
+    check(conTras && /Qué pasa ahora con tu check-in/.test(tt) && /Queda en tu progreso/.test(tt) && /molestia moderada en zona lumbar/.test(tt) && /Nadie te lo contesta uno a uno/.test(tt)
+      && (await tras.locator('.sinco-dolor a[href*="semaforo-dolor"]').count()) === 1,
+      'enviado: «Qué pasa ahora con tu check-in» (dónde queda, que la app lo usa, su molestia y que nadie lo contesta) y el semáforo del dolor');
+    await mirar('check-in enviado');
+    await desborda(p, 'El check-in enviado de Tomás');
+    // La sesión: «Más» en el primer ejercicio (y Hoy, con el check-in ya enviado: «Tu día»)
+    await ir('hoy');
+    await mirar('hoy, con el check-in enviado');
+    const emp = p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first();
+    if (await emp.count()) {
+      await emp.click().catch(() => {});
+      const portada = p.locator('.portada-vista');
+      if (await portada.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)) { await mirar('portada de la sesión'); await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click().catch(() => {}); }
+      await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 12000 }).catch(() => {});
+      await p.waitForTimeout(600);
+      await mirar('sesión');
+      await p.locator('article.ejercicio').first().getByRole('button', { name: /Más/ }).first().click({ timeout: 3000 }).catch(() => {});
+      await p.waitForTimeout(500);
+      await mirar('sesión › Más');
+      // (cada herramienta de «Más», en su hoja: el orden, las alternativas, el historial y el descanso)
+      for (const h of [/^Cambiar el orden/, /^Cambiar(?! el orden)/, /^Historial/, /^Descanso/]) {
+        if (!(await p.locator('[aria-modal="true"]').count())) { await p.locator('article.ejercicio').first().getByRole('button', { name: /Más/ }).first().click({ timeout: 3000 }).catch(() => {}); await p.waitForTimeout(400); }
+        const b = p.locator('[aria-modal="true"]').last().getByRole('button', { name: h }).first();
+        if (!(await b.count())) continue;
+        await b.click({ timeout: 3000 }).catch(() => {});
+        await p.waitForTimeout(500);
+        if (await p.locator('[aria-modal="true"]').count()) hojas++;
+        await mirar(`sesión › ${h.source}`);
+        await cerrarHojas();
+      }
+    }
+    check(pantallas >= 30 && hojas >= 12, `recorrido de Tomás: ${pantallas} pantallas y hojas (${hojas} hojas abiertas una a una)`);
+    check(hallado.size === 0, `ni rastro de «tu coach» en lo que ve quien va por su cuenta${hallado.size ? `: ${[...hallado].slice(0, 5).join(' | ')}` : ''}`);
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);

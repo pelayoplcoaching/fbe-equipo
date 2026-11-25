@@ -1,4 +1,4 @@
-import { useApp, useCarga, Icono, Hoja, Siluetas, Vacio, ErrorCaja, useAncho } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Siluetas, Vacio, ErrorCaja, useAncho, useSinCoach } from '../comunes.jsx';
 import { NOMBRE_FOCO, num } from '../../logica/calculos.js';
 import { rangoSemana } from '../../logica/fechas.js';
 import { pesoTxt } from '../../logica/unidades.js';
@@ -7,6 +7,7 @@ const ESTADO = { hecha: 'Hecha', pasada: 'Pasada', actual: 'Esta semana', siguie
 
 // «Tu bloque» (v0.48): el bloque entero, semana a semana. De las que tu coach aún no ha publicado, solo que vienen.
 export function HojaBloque({ alCerrar, abrirSesion, atletaId = null, titulo = 'Tu bloque' }) {
+  const sinCoach = useSinCoach();
   const { api, atleta } = useApp();
   const id = atletaId || atleta.id;
   const d = useCarga(() => api.tuBloque(id), [id]);
@@ -15,12 +16,12 @@ export function HojaBloque({ alCerrar, abrirSesion, atletaId = null, titulo = 'T
     <Hoja titulo={v?.bloque ? `${titulo}: ${v.bloque.nombre}` : titulo} alCerrar={alCerrar} ancho={720} medio>
       <ErrorCaja error={d.error} reintentar={d.recargar} />
       {d.cargando && !v ? <Siluetas forma="filas" n={4} texto="Cargando tu bloque" /> : !v ? (
-        <Vacio ilustracion="espera" titulo="Tu bloque aún no está publicado">Cuando tu coach publique tu primera semana, aquí verás el bloque entero.</Vacio>
+        <Vacio ilustracion="espera" titulo={sinCoach ? 'Aún no tienes tu plan' : 'Tu bloque aún no está publicado'}>{sinCoach ? 'Cuando la app te prepare tu primera semana, aquí verás el bloque entero.' : 'Cuando tu coach publique tu primera semana, aquí verás el bloque entero.'}</Vacio>
       ) : (
         <div class="pila">
           <p class="peq secundario">
             Bloque {v.bloque.numero}{v.bloque.foco ? `, ${NOMBRE_FOCO[v.bloque.foco]?.toLowerCase() || ''}` : ''}: {v.semanas.length} {v.semanas.length === 1 ? 'semana' : 'semanas'}
-            {v.total ? `, ${v.hechas} de ${v.total} sesiones hechas` : ''}{v.porPublicar ? `. ${v.porPublicar === 1 ? 'Una semana está' : `${v.porPublicar} semanas están`} por publicar: tu coach la${v.porPublicar === 1 ? '' : 's'} prepara con lo que vas haciendo.` : '.'}
+            {v.total ? `, ${v.hechas} de ${v.total} sesiones hechas` : ''}{v.porPublicar ? `. ${v.porPublicar === 1 ? 'Una semana está' : `${v.porPublicar} semanas están`} por publicar: ${sinCoach ? 'la app' : 'tu coach'} la${v.porPublicar === 1 ? '' : 's'} prepara con lo que vas haciendo.` : '.'}
           </p>
           <ol class="bloque-semanas">
             {v.semanas.map((w) => (
@@ -42,7 +43,7 @@ export function HojaBloque({ alCerrar, abrirSesion, atletaId = null, titulo = 'T
                       {!w.sesiones.length && <span class="mini terciario">Sin sesiones</span>}
                     </div>
                   </>
-                ) : <span class="mini terciario">Tu coach aún no la ha publicado.</span>}
+                ) : <span class="mini terciario">{sinCoach ? 'La app la prepara cuando llegue.' : 'Tu coach aún no la ha publicado.'}</span>}
               </li>
             ))}
           </ol>

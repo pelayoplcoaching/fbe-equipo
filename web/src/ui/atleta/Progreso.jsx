@@ -154,7 +154,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
 
   return (
     <>
-      {(objActivos.length > 0 || (!esCoach && !modoAtletaCoach)) && (
+      {(objActivos.length > 0 || (!esCoach && !modoAtletaCoach && !esPorSuCuenta(atleta))) && (
         <section class="seccion seccion-objetivos" data-grupo="logros">
           <h2>{esCoach ? 'Objetivos' : 'Tus objetivos'}</h2>
           {objActivos.length > 0 && <div class="panel"><ul class="lista">
@@ -321,7 +321,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
               })}
             </div>
           )}
-          <p class="mini terciario">La franja es {objetivoVol ? 'el rango de series semanales que te ha marcado tu coach' : 'un rango orientativo de 10 a 20 series semanales por músculo'}{esCoach && !llamada ? ' (se ajusta abajo, en «Volumen objetivo»)' : ''}.{volPasada ? '' : ' Mientras la semana no acaba, lo que aún no llega va rayado (en curso), no en gris. La marca vertical, la semana pasada.'} El músculo principal de cada ejercicio cuenta 1 serie y los secundarios, media.</p>
+          <p class="mini terciario">La franja es {objetivoVol ? (esPorSuCuenta(atleta) ? 'el rango de series semanales de tu plan' : 'el rango de series semanales que te ha marcado tu coach') : 'un rango orientativo de 10 a 20 series semanales por músculo'}{esCoach && !llamada ? ' (se ajusta abajo, en «Volumen objetivo»)' : ''}.{volPasada ? '' : ' Mientras la semana no acaba, lo que aún no llega va rayado (en curso), no en gris. La marca vertical, la semana pasada.'} El músculo principal de cada ejercicio cuenta 1 serie y los secundarios, media.</p>
         </div>
       </section>
 

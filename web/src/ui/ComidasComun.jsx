@@ -57,6 +57,8 @@ export function TarjetaReceta({ a, alAbrir, mostrarFactor = false, opcional = nu
 
 // El recetario de un atleta, por toma (sus comidas del día y las tomas en las que tenga recetas)
 export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = null }) {
+  // (FBE Esencial) a quien va por su cuenta nadie le pone recetas
+  const suyo = useApp()?.atleta?.modalidad === 'por_su_cuenta';
   const op = recetario.opcional;
   // Con una comida opcional y recetas para cada tipo de día, se puede ver solo lo de un tipo de día (v0.27)
   const conVariantes = !!op && recetario.asignaciones.some((a) => a.variante);
@@ -86,7 +88,7 @@ export function VistaRecetario({ recetario, alAbrir, esCoach = false, vacio = nu
             ) : <div class="seccion-cab"><h2 id={`toma-${t}`}>{NOMBRE_TOMA[t]}</h2><span class="mini terciario">{xs.length === 1 ? '1 opción' : `${xs.length} opciones`}{!recetario.tomas.includes(t) ? ' · no está entre sus comidas' : ''}</span></div>}
             {xs.length ? (
               <RejillaRecetas xs={xs} toma={t} filtro={filtro} alAbrir={alAbrir} esCoach={esCoach} opcional={op} />
-            ) : <p class="peq terciario">{esCoach ? 'Sin recetas para esta comida.' : `Tu coach aún no te ha puesto opciones para ${NOMBRE_TOMA[t].toLowerCase()}.`}</p>}
+            ) : <p class="peq terciario">{esCoach ? 'Sin recetas para esta comida.' : suyo ? `Aún no tienes recetas para ${NOMBRE_TOMA[t].toLowerCase()}.` : `Tu coach aún no te ha puesto opciones para ${NOMBRE_TOMA[t].toLowerCase()}.`}</p>}
           </section>
         );
       })}
@@ -348,7 +350,8 @@ export function MenuSemana({ atletaId, recetario, planes = [], esCoach = false, 
 
 // Añadir a una toma: una receta de su recetario (primero las de esa comida) o lo que escriba
 function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, alGuardado, alFoto = null, alFuera = null }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
+  const suyo = yo?.modalidad === 'por_su_cuenta';   // (FBE Esencial) nadie le pone recetas
   // Solo las que valen para ese día (con o sin su comida opcional), si las hay de los dos tipos (v0.27)
   const delDia = (xs) => paraElDia(xs, !!recetario.opcional && sin);
   const propias = delDia(recetario.porToma[toma] || []);
@@ -403,7 +406,7 @@ function HojaAnadir({ atletaId, fecha, toma, recetario, sin = false, alCerrar, a
         </div>
         <button class="btn" disabled={ocupado || !texto.trim()}>Añadir lo escrito</button>
       </form>
-      {!propias.length && !otras.length && !delEquipo.length && <p class="mini terciario">Cuando tu coach te ponga recetas, las elegirás de aquí.</p>}
+      {!propias.length && !otras.length && !delEquipo.length && <p class="mini terciario">{suyo ? 'Aún no hay recetas: escribe lo que vas a comer.' : 'Cuando tu coach te ponga recetas, las elegirás de aquí.'}</p>}
     </Hoja>
   );
 }
@@ -537,7 +540,8 @@ function HojaCopiar({ atletaId, lunes, entradas, alCerrar, alCambiar }) {
 
 // Cuántas comidas hace al día (y cuáles)
 export function HojaTusComidas({ atletaId, tomas, opcional = null, esCoach = false, alCerrar, alGuardado }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta: yo } = useApp();
+  const suyo = yo?.modalidad === 'por_su_cuenta';
   const [elegidas, setElegidas] = useState(tomas);
   const [op, setOp] = useState(opcional);
   const opValida = op && elegidas.includes(op) && elegidas.length >= 2 ? op : null;
@@ -545,7 +549,7 @@ export function HojaTusComidas({ atletaId, tomas, opcional = null, esCoach = fal
   const alternar = (t) => setElegidas(elegidas.includes(t) ? elegidas.filter((x) => x !== t) : ordenarTomas([...elegidas, t]));
   return (
     <Hoja titulo={esCoach ? 'Sus comidas del día' : 'Tus comidas del día'} alCerrar={alCerrar}>
-      <p class="peq secundario">{esCoach ? 'Las que verá en su menú. Él también las puede cambiar.' : 'Las que verás cada día en tu menú. Tu coach te pone recetas para cada una.'}</p>
+      <p class="peq secundario">{esCoach ? 'Las que verá en su menú. Él también las puede cambiar.' : suyo ? 'Las que verás cada día en tu menú.' : 'Las que verás cada día en tu menú. Tu coach te pone recetas para cada una.'}</p>
       <div class="pila-xs">
         {TOMAS.map(([t, nombre]) => (
           <label class="casilla" key={t}><input type="checkbox" checked={elegidas.includes(t)} onChange={() => alternar(t)} /><span>{nombre}</span></label>

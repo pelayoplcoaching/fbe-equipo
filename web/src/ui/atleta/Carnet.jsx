@@ -19,7 +19,10 @@ export function Carnet({ bloque }) {
   const { atleta } = useApp();
   const d = datosCarnet({ atleta, bloque });
   // (la imagen para compartir no lleva el bloque: su nombre lo pone el coach y podría decir algo de salud)
-  const imagen = datosImagenCarnet(d);
+  // (FBE Esencial) quien va por su cuenta lleva el carné de FBE Esencial
+  const suyo = atleta?.modalidad === 'por_su_cuenta';
+  const marca = suyo ? 'FBE Esencial' : 'FBE Coaching';
+  const imagen = { ...datosImagenCarnet(d), marca };
   const ref = useRef(null);
   const [compartir, setCompartir] = useState(false);
   // (a medida, 080) la imagen que le ha puesto su coach, al fondo de su carné (la tarjeta para compartir no la lleva)
@@ -89,7 +92,7 @@ export function Carnet({ bloque }) {
           </div>
           <div class="carnet-cab">
             <svg class="carnet-lobo" viewBox={LOBO_CAJA} width="36" height="36" aria-hidden="true" focusable="false"><path d={LOBO_D} fill-rule="evenodd" /></svg>
-            <span class="carnet-marca">FBE Coaching</span>
+            <span class="carnet-marca">{marca}</span>
             <span class="carnet-numero num">{d.numero}</span>
           </div>
           <figcaption class="carnet-cuerpo">
@@ -105,9 +108,9 @@ export function Carnet({ bloque }) {
       </div>
       <button type="button" class="btn btn-peq carnet-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir o guardar el carné</button>
       {compartir && (
-        <HojaCompartir titulo="Tu carné" datos={{ ...imagen, fecha: hoyISO() }} dibujar={() => dibujarCarnet(imagen)} nombreArchivo="carne-fbe-coaching.png"
-          alt={`Carné de atleta de FBE Coaching: ${imagen.nombre}${imagen.nivel ? `, nivel ${imagen.nivel.toLowerCase()}` : ''}${imagen.desde ? `, desde ${imagen.desde}` : ''}`}
-          nota="Solo lleva tu nombre, tu nivel y desde cuándo entrenas con tu coach: ni el bloque, ni peso, salud o nutrición."
+        <HojaCompartir titulo="Tu carné" datos={{ ...imagen, fecha: hoyISO() }} dibujar={() => dibujarCarnet(imagen)} nombreArchivo={suyo ? 'carne-fbe-esencial.png' : 'carne-fbe-coaching.png'}
+          alt={`Carné de atleta de ${marca}: ${imagen.nombre}${imagen.nivel ? `, nivel ${imagen.nivel.toLowerCase()}` : ''}${imagen.desde ? `, desde ${imagen.desde}` : ''}`}
+          nota={suyo ? 'Solo lleva tu nombre, tu nivel y desde cuándo entrenas con FBE: ni el bloque, ni peso, salud o nutrición.' : 'Solo lleva tu nombre, tu nivel y desde cuándo entrenas con tu coach: ni el bloque, ni peso, salud o nutrición.'}
           alCerrar={() => setCompartir(false)} />
       )}
     </section>
@@ -142,7 +145,7 @@ export async function dibujarCarnet(d) {
   for (const [o, c] of [[0, 'rgba(255,255,255,0)'], [0.42, 'rgba(120,220,255,.16)'], [0.5, 'rgba(255,170,240,.22)'], [0.58, 'rgba(255,230,140,.16)'], [1, 'rgba(255,255,255,0)']]) h.addColorStop(o, c);
   x.fillStyle = h; x.fillRect(0, 0, W, H);
   const wLobo = dibujarLobo(x, 72, 60, 92);
-  x.fillStyle = '#F7F5FF'; letra(800, 46, 'expanded'); x.fillText('FBE Coaching', 72 + wLobo + 24, 126);
+  x.fillStyle = '#F7F5FF'; letra(800, 46, 'expanded'); x.fillText(d.marca || 'FBE Coaching', 72 + wLobo + 24, 126);
   x.fillStyle = '#FADA99'; letra(650, 30, 'condensed'); x.textAlign = 'right'; x.fillText(d.numero, W - 72, 122); x.textAlign = 'left';
   x.fillStyle = '#DDD9FF'; letra(700, 26); x.fillText('ATLETA', 72, 392);
   x.fillStyle = '#FFFFFF'; letra(820, 84, 'expanded');

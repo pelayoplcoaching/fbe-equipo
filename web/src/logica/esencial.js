@@ -11,6 +11,21 @@ const num = (v, dec = 1) => {
 
 export const MODALIDAD_POR_SU_CUENTA = 'por_su_cuenta';
 export const esPorSuCuenta = (atleta) => atleta?.modalidad === MODALIDAD_POR_SU_CUENTA;
+// Quién ve lo del atleta además de él: «tu coach» o, para quien va por su cuenta (no tiene coach), Pelayo
+export const quienLee = (atleta) => (esPorSuCuenta(atleta) ? 'Pelayo' : 'tu coach');
+// (sin coach, 19) Los textos de la lógica común (Tu día, tu peso, «Hoy, por cómo estás», «Voy justo», los apuntes) que
+// nombran al coach, dichos para quien va por su cuenta. Cada frase de la izquierda tiene que seguir existiendo en la
+// lógica (lo comprueba test/esencial-sin-coach.test.mjs).
+export const SIN_TU_COACH = [
+  ['Coméntalo con tu coach para ajustar tu plan', 'Mejor más despacio: dale unas semanas'],
+  [' y cuéntaselo a tu coach', ''],
+  ['Cada comida que marcas le dice a tu coach cómo vas.', 'Cada comida que marcas cuenta para tu semana.'],
+  ['Tu coach te lo pide: son unos minutos', 'Son unos minutos'],
+  ['Enviado a tu coach', 'Enviado'],
+  ['Pregunta de tu coach', 'Pregunta de Pelayo'],
+  ['De tu coach', 'De Pelayo'],
+];
+export const sinTuCoach = (texto, atleta) => (esPorSuCuenta(atleta) && typeof texto === 'string' ? SIN_TU_COACH.reduce((t, [a, b]) => t.replace(a, b), texto) : texto);
 // ---------- «Te sobran» ----------
 // Las repeticiones que podría haber hecho de más al acabar la serie. Un medio se lee como tramo, como en la guía
 // (RIR 4,5 → «4-5»). Del RPE: te sobran 10 − RPE.

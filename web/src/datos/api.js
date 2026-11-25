@@ -3408,6 +3408,8 @@ export function crearApi(backend, opciones = {}) {
       const videosP = callar(b.select('archivos', { eq: { atleta_id: atletaId, tipo: 'video_tecnica' }, cols: 'id' }));
       const checkinsP = salud ? b.select('checkins', { eq: { atleta_id: atletaId }, cols: 'id' }).catch(() => []) : [];
       const pesosP = salud ? b.select('pesos', { eq: { atleta_id: atletaId }, cols: 'fecha' }).catch(() => []) : [];
+      // (FBE Esencial) quien va por su cuenta, sin las medallas que dependen de un coach (sin la 091, nadie va por su cuenta)
+      const sinCoachP = b.select('atletas', { eq: { id: atletaId }, cols: 'id,modalidad' }).then((x) => x[0]?.modalidad === 'por_su_cuenta').catch(() => false);
       const [bloques, diasSemana] = await Promise.all([
         b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: COLS_BLOQUE }),
         diasSemanaDe(atletaId),
@@ -3430,7 +3432,7 @@ export function crearApi(backend, opciones = {}) {
         checkins: checkins.length,
         peso: new Set(pesos.map((p) => p.fecha)).size,
       };
-      return { cuentas, lista: calcularLogros(cuentas, { salud }) };
+      return { cuentas, lista: calcularLogros(cuentas, { salud, sinCoach: await sinCoachP }) };
     },
     // Carga de entrenamiento (RPE de sesión × minutos) de las últimas semanas, en todos sus bloques
     async carga(atletaId, semanas = 8, hoy = hoyISO()) {

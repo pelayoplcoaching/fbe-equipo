@@ -2,7 +2,7 @@
 // ver (en el móvil), su ciclo (opcional, con el consentimiento de salud y solo en el móvil) y su informe para el médico
 // o el fisio (se genera aquí y no sale hasta que lo comparte).
 import { useState, useEffect } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono } from '../comunes.jsx';
+import { useApp, useCarga, Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { FEEDBACK, MOTIVA, OCULTABLES, limpiarOcultar, patronCiclo, informeSalud } from '../../logica/respeto.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { hoyISO, sumarDias, fmtCorta, lunesDe } from '../../logica/fechas.js';
@@ -46,6 +46,7 @@ export function HojaManual({ actual, alCerrar, alGuardar }) {
 
 // ---------- Lo que no quiere ver ----------
 export function HojaOcultar({ alCerrar }) {
+  const { atleta: yo } = useApp();
   const [o, setO] = useState(() => limpiarOcultar(leerAjustes().ocultar));
   const cambiar = (k, v) => { const n = { ...o, [k]: v }; setO(n); guardarAjustes({ ...leerAjustes(), ocultar: n }); vibrar('elegir'); };
   return (
@@ -53,7 +54,7 @@ export function HojaOcultar({ alCerrar }) {
       <div class="pila">
         <div class="intro-ilu">
           <Imagen id="sin-bascula" clase="intro-ilu-img" tamanos="64px" />
-          <p class="peq secundario">Si una cifra te hace más mal que bien, la escondemos en este móvil. Tu coach sigue viendo lo que apuntes.</p>
+          <p class="peq secundario">Si una cifra te hace más mal que bien, la escondemos en este móvil.{yo?.modalidad === 'por_su_cuenta' ? '' : ' Tu coach sigue viendo lo que apuntes.'}</p>
         </div>
         {OCULTABLES.map(([k, n, d]) => (
           <label key={k} class="fila-ocultar"><span class="pila-xs"><strong>{n}</strong><span class="peq secundario">{d}</span></span>
@@ -75,6 +76,7 @@ const CAMBIO_CICLO = 'fbe-ciclo-cambio';
 function avisarCiclo() { try { window.dispatchEvent(new Event(CAMBIO_CICLO)); } catch { /* */ } }
 export function HojaCiclo({ alCerrar }) {
   const { atleta } = useApp();
+  const sinCoach = useSinCoach();
   const [lista, setLista] = useState(() => leerCiclo(atleta.id));
   const [fecha, setFecha] = useState('');
   const poner = (l) => { guardarCiclo(atleta.id, l); setLista(leerCiclo(atleta.id)); avisarCiclo(); };
@@ -83,7 +85,7 @@ export function HojaCiclo({ alCerrar }) {
       <div class="pila">
         <div class="intro-ilu">
           <Imagen id="ciclo" clase="intro-ilu-img" tamanos="64px" />
-          <p class="peq secundario">Opcional. Apunta el día en que empieza cada regla y, con unos meses, verás <strong>tu propio</strong> patrón de rendimiento por fase (sin generalidades: solo lo que dicen tus datos). <strong>Se queda en este móvil</strong>: no se sube ni lo ve tu coach.</p>
+          <p class="peq secundario">Opcional. Apunta el día en que empieza cada regla y, con unos meses, verás <strong>tu propio</strong> patrón de rendimiento por fase (sin generalidades: solo lo que dicen tus datos). <strong>Se queda en este móvil</strong>: {sinCoach ? 'no se sube ni lo ve nadie más.' : 'no se sube ni lo ve tu coach.'}</p>
         </div>
         {lista.length > 0 ? <div class="guardias-dias">{[...lista].reverse().map((d) => (
           <span key={d} class="chip-guardia">{fmtCorta(d)}<button type="button" class="btn btn-icono plano" aria-label={`Quitar el ${fmtCorta(d)}`} onClick={() => poner(lista.filter((x) => x !== d))}><Icono n="cerrar" /></button></span>

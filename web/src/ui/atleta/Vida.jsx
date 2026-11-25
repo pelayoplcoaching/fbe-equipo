@@ -8,6 +8,7 @@ import { eventoDeHoy, preguntaPendiente, proximos, RESPUESTAS, semanaDificil, mi
 import { hoyISO, lunesDe, fmtCorta } from '../../logica/fechas.js';
 import { vibrar } from '../hapticos.js';
 import { Imagen } from '../Imagen.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 
 // La agenda (la suya, o la de un atleta si es el coach); se vuelve a leer al cambiar (api avisa con «fbe-agenda»)
 export function useAgenda(atletaId = null, { activa = true } = {}) {
@@ -40,7 +41,7 @@ export function TarjetaVida({ sesiones = [] }) {
   if (!agenda.datos || (!evHoy && !preg && !dificil && !choques.length)) return null;
   const minimo = dificil ? minimoDeSemana(sesiones.map((s) => ({ ...s, ejercicios: (obl.datos || []).filter((x) => x.sesion_id === s.id).map((x) => ({ nombre: x.nombre, prioridad: 'alta' })) }))) : [];
   const responder = async (r) => {
-    try { await api.responderAgenda(preg.id, r, nota.trim() || null); vibrar('hecho'); aviso('Gracias: tu coach lo verá'); setEligiendo(null); setNota(''); } catch (e) { aviso(e.message, 'error'); }
+    try { await api.responderAgenda(preg.id, r, nota.trim() || null); vibrar('hecho'); aviso(esPorSuCuenta(atleta) ? 'Gracias: apuntado' : 'Gracias: tu coach lo verá'); setEligiendo(null); setNota(''); } catch (e) { aviso(e.message, 'error'); }
   };
   return (
     <section class="panel panel-pad tarjeta-vida pila-s" aria-label="Tu vida">
@@ -54,7 +55,7 @@ export function TarjetaVida({ sesiones = [] }) {
           {eligiendo && (
             <>
               <label class="sr" for="vida-nota">Si quieres, cuéntalo</label>
-              <input id="vida-nota" class="entrada" maxLength={300} placeholder="Si quieres, cuéntalo (lo verá tu coach)" value={nota} onInput={(e) => setNota(e.currentTarget.value)} />
+              <input id="vida-nota" class="entrada" maxLength={300} placeholder={esPorSuCuenta(atleta) ? 'Si quieres, cuéntalo' : 'Si quieres, cuéntalo (lo verá tu coach)'} value={nota} onInput={(e) => setNota(e.currentTarget.value)} />
               <button type="button" class="btn btn-primario btn-peq" onClick={() => responder(eligiendo)}>Contestar</button>
             </>
           )}
@@ -87,24 +88,26 @@ export function BotonSemanaDificil() {
 function HojaSemanaDificil({ alCerrar }) {
   const { api, atleta, aviso } = useApp();
   const [motivo, setMotivo] = useState('');
-  const [avisar, setAvisar] = useState(true);
+  // (FBE Esencial) quien va por su cuenta no tiene chat: se apunta y ya
+  const suyo = esPorSuCuenta(atleta);
+  const [avisar, setAvisar] = useState(!suyo);
   const [guardando, setGuardando] = useState(false);
   const guardar = async () => {
     setGuardando(true);
     try {
       await api.guardarAgenda(null, { tipo: 'dificil', fecha: lunesDe(hoyISO()), nota: motivo.trim() || null });
-      if (avisar) await api.enviarMensaje(atleta.id, { autor: 'atleta', texto: mensajeSemanaDificil(motivo) }).catch(() => {});
-      vibrar('hecho'); aviso(avisar ? 'Apuntado, y avisado tu coach' : 'Apuntado'); alCerrar();
+      if (avisar && !suyo) await api.enviarMensaje(atleta.id, { autor: 'atleta', texto: mensajeSemanaDificil(motivo) }).catch(() => {});
+      vibrar('hecho'); aviso(avisar && !suyo ? 'Apuntado, y avisado tu coach' : 'Apuntado'); alCerrar();
     } catch (e) { aviso(e.message, 'error'); } finally { setGuardando(false); }
   };
   return (
     <Hoja titulo="Una semana difícil" alCerrar={alCerrar}>
       <div class="pila">
         <Imagen id="semana-dificil" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
-        <p class="peq secundario">Pasa. Esta semana, si solo te da para lo obligatorio de cada sesión, con eso vale: te lo dejamos a mano en Hoy. Tu programación no cambia.</p>
+        <p class="peq secundario">Pasa. Esta semana, si solo te da para lo obligatorio de cada sesión, con eso vale: te lo dejamos a mano en Hoy. {suyo ? 'Tu plan no cambia.' : 'Tu programación no cambia.'}</p>
         <div class="campo"><label for="dificil-motivo">¿Por qué? <span class="secundario">(opcional)</span></label>
           <input id="dificil-motivo" class="entrada" maxLength={120} placeholder="Exámenes, guardias, un viaje…" value={motivo} onInput={(e) => setMotivo(e.currentTarget.value)} /></div>
-        <label class="fila-s"><input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.currentTarget.checked)} /> Avisar a mi coach con un mensaje</label>
+        {!suyo && <label class="fila-s"><input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.currentTarget.checked)} /> Avisar a mi coach con un mensaje</label>}
         <button type="button" class="btn btn-primario" disabled={guardando} onClick={guardar}>Apuntarlo</button>
       </div>
     </Hoja>
@@ -113,7 +116,7 @@ function HojaSemanaDificil({ alCerrar }) {
 
 // ---------- En «Lo tuyo»: lo que viene en tu vida ----------
 export function HojaAgenda({ alCerrar }) {
-  const { api, aviso } = useApp();
+  const { api, aviso, atleta } = useApp();
   const agenda = useAgenda();
   const hoy = hoyISO();
   const [titulo, setTitulo] = useState('');
@@ -128,7 +131,7 @@ export function HojaAgenda({ alCerrar }) {
     <Hoja titulo="Lo que viene en tu vida" alCerrar={alCerrar}>
       <div class="pila agenda-hoja">
         <Imagen id="vida-agenda" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
-        <p class="peq secundario">Exámenes, una boda, una mudanza, un viaje… La app lo tiene en cuenta (te anima ese día y luego te pregunta qué tal) y tu coach lo verá. Tu programación no cambia.</p>
+        <p class="peq secundario">Exámenes, una boda, una mudanza, un viaje… La app lo tiene en cuenta (te anima ese día y luego te pregunta qué tal){esPorSuCuenta(atleta) ? '. Tu plan no cambia.' : ' y tu coach lo verá. Tu programación no cambia.'}</p>
         {lista.length > 0 ? (
           <ul class="lista agenda-lista">
             {lista.map((x) => (

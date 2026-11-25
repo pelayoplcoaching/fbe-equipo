@@ -203,7 +203,7 @@ function EnfoquePantalla({
         </div>
 
         <NotaFijada nota={notas[actual.id]} alGuardar={(t) => guardarNota(actual.id, t)} editando={editandoNota} alEditar={setEditandoNota} />
-        {e.notas_coach && <p class="peq"><strong>Nota de tu coach: </strong>{e.notas_coach}</p>}
+        {e.notas_coach && <p class="peq"><strong>Nota: </strong>{e.notas_coach}</p>}
 
         <div class="enfoque-series" role="group" aria-label="Series">
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => (

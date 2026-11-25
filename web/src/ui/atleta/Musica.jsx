@@ -10,7 +10,7 @@
 //   · (v0.129) FichaPrevia (lo que se ve al pegar un enlace), NombreLista (el nombre de una lista en una fila),
 //     BotonMusica (la música a mano durante la sesión) y la invitación a poner la tuya
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, useSinCoach } from '../comunes.jsx';
 import { spotify, urlIncrustar, altoIncrustado, tieneLista, tipoMusica, esEnlaceCorto, busquedaRitmo, fichaVigente, musicaDeLaSesion, etiquetaOrigen, cadenciaDe, ajustarCadencia, bpmDeToques, encajaRitmo, TOQUE_REINICIO_MS, normalizarTramos, tramoCadencia, duracionTramos, uriSpotify, esSesionTest, vuelveDeParon, musicaDeFase, ETIQUETAS_LISTA, urlIncrustarOtro, altoIncrustadoOtro, portadaYoutube } from '../../logica/musica.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { apuntarReproductor } from './musica-control.js';
@@ -312,7 +312,7 @@ export function Cadencia({ modalidad, tramos: delCoach = null }) {
         </div>
       ) : (
         <div class="pila-xs cadencia-tramos">
-          {delCoach && <span class="mini secundario">Con los tramos de tu coach: {delCoach.rondas} × {mmss(delCoach.trabajo)}, recuperación {mmss(delCoach.descanso)}.</span>}
+          {delCoach && <span class="mini secundario">Con los tramos de tu sesión: {delCoach.rondas} × {mmss(delCoach.trabajo)}, recuperación {mmss(delCoach.descanso)}.</span>}
           <div class="cadencia-tramos-rejilla">
             <Paso k="trabajo" nombre="Trabajo" txt={mmss(t.trabajo)} />
             <Paso k="alta" nombre={`${c.unidad}/min`} txt={t.alta} />
@@ -464,6 +464,7 @@ function HojaMiLista({ api, alCerrar, alGuardar }) {
 // ---------- (música 3) En «Lo tuyo»: sus listas con etiqueta y sus himnos ----------
 // Hasta 12 listas, cada una con su momento (un tipo de sesión, cómo llega o una fase). La portada elige la que encaja
 export function HojaListasMusica({ actual, alCerrar, alGuardar }) {
+  const sinCoach = useSinCoach();
   const { api, aviso } = useApp();
   const [listas, setListas] = useState(() => (Array.isArray(actual?.musica_listas) ? actual.musica_listas : []).map((l) => ({ ...l })));
   const [u, setU] = useState('');
@@ -480,7 +481,7 @@ export function HojaListasMusica({ actual, alCerrar, alGuardar }) {
     <Hoja titulo="Tus listas por momento" alCerrar={alCerrar}>
       <div class="pila listas-musica-hoja">
         <Imagen id="musica-listas" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
-        <p class="peq secundario">Una lista para pierna, otra para los días flojos, otra para calentar… En la portada de cada sesión sale la que encaja (por el tipo de sesión, por cómo llegas o por la fase). Lo ve tu coach.</p>
+        <p class="peq secundario">Una lista para pierna, otra para los días flojos, otra para calentar… En la portada de cada sesión sale la que encaja (por el tipo de sesión, por cómo llegas o por la fase).{sinCoach ? '' : ' Lo ve tu coach.'}</p>
         {listas.length > 0 ? (
           <ul class="lista listas-musica">
             {listas.map((l, i) => (
@@ -517,6 +518,7 @@ export function HojaListasMusica({ actual, alCerrar, alGuardar }) {
 // Sus himnos: el de la última serie (en el último ejercicio, a una serie del final) y el de vuelta (tras 7 días o más
 // sin entrenar, el primero en la portada). El del récord es su canción de récord, de siempre
 export function HojaHimnos({ actual, alCerrar, alGuardar }) {
+  const sinCoach = useSinCoach();
   const { api, aviso } = useApp();
   const [ultima, setUltima] = useState(actual?.himno_ultima_url || '');
   const [vuelta, setVuelta] = useState(actual?.himno_vuelta_url || '');
@@ -530,7 +532,7 @@ export function HojaHimnos({ actual, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tus himnos" alCerrar={alCerrar}>
       <div class="pila">
-        <div class="fila-musica-ilu"><Imagen id="musica-himnos" clase="ico-ilu" tamanos="44px" /><p class="peq secundario">Una canción para cada momento grande. La del récord es tu canción de récord (en «Lo tuyo»). Lo ve tu coach.</p></div>
+        <div class="fila-musica-ilu"><Imagen id="musica-himnos" clase="ico-ilu" tamanos="44px" /><p class="peq secundario">Una canción para cada momento grande. La del récord es tu canción de récord (en «Lo tuyo»).{sinCoach ? '' : ' Lo ve tu coach.'}</p></div>
         <div class="campo">
           <label for="hm-ultima">Para la última serie</label>
           <input id="hm-ultima" class="entrada" type="url" inputMode="url" value={ultima} onInput={(e) => setUltima(e.currentTarget.value)} placeholder="https://open.spotify.com/track/…" aria-invalid={malU ? 'true' : undefined} />
