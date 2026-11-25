@@ -20,7 +20,7 @@
 .alta-primera {
   display: grid; gap: var(--esp-8); padding: var(--esp-14) var(--esp-16);
   border-radius: var(--r-s); background: var(--morado-suave); color: var(--tinta);
-  border: var(--filo-fino) solid color-mix(in srgb, var(--morado) 28%, transparent);
+  border: var(--filo-fino) solid var(--acento-a22);
 }
 .alta-primera strong { font-size: var(--letra-17); }
 
