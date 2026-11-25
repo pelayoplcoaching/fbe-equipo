@@ -622,5 +622,173 @@
       "1080": "imagenes/rutina/rutina-4d-esp-pierna-1080.efc7890c.webp"
     },
     "color": "#42316c"
+  },
+  "rutina-5d-density-a": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-density-a-240.1c648ac2.webp",
+      "720": "imagenes/rutina/rutina-5d-density-a-720.8bcc20b3.webp",
+      "1080": "imagenes/rutina/rutina-5d-density-a-1080.23d892b9.webp"
+    },
+    "color": "#3e2d66"
+  },
+  "rutina-5d-density-b": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-density-b-240.372d8958.webp",
+      "720": "imagenes/rutina/rutina-5d-density-b-720.0cc46295.webp",
+      "1080": "imagenes/rutina/rutina-5d-density-b-1080.329d5d19.webp"
+    },
+    "color": "#473371"
+  },
+  "rutina-5d-density-c": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-density-c-240.f34be304.webp",
+      "720": "imagenes/rutina/rutina-5d-density-c-720.ad813458.webp",
+      "1080": "imagenes/rutina/rutina-5d-density-c-1080.37b9a5e2.webp"
+    },
+    "color": "#442f71"
+  },
+  "rutina-5d-phat-a": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-phat-a-240.70304f2f.webp",
+      "720": "imagenes/rutina/rutina-5d-phat-a-720.db267196.webp",
+      "1080": "imagenes/rutina/rutina-5d-phat-a-1080.7b54c2d2.webp"
+    },
+    "color": "#3b2b63"
+  },
+  "rutina-5d-phat-b": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-phat-b-240.ce375c10.webp",
+      "720": "imagenes/rutina/rutina-5d-phat-b-720.44fe8e2f.webp",
+      "1080": "imagenes/rutina/rutina-5d-phat-b-1080.8c9a07d0.webp"
+    },
+    "color": "#3f2f67"
+  },
+  "rutina-5d-phat-c": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-phat-c-240.ce944df1.webp",
+      "720": "imagenes/rutina/rutina-5d-phat-c-720.3325eef5.webp",
+      "1080": "imagenes/rutina/rutina-5d-phat-c-1080.6f22f18a.webp"
+    },
+    "color": "#3e2e65"
+  },
+  "rutina-5d-ppl-tp-a": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-ppl-tp-a-240.f6e8edee.webp",
+      "720": "imagenes/rutina/rutina-5d-ppl-tp-a-720.9c1efdbb.webp",
+      "1080": "imagenes/rutina/rutina-5d-ppl-tp-a-1080.154aaa9f.webp"
+    },
+    "color": "#352a56"
+  },
+  "rutina-5d-ppl-tp-b": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-ppl-tp-b-240.e6e27d2c.webp",
+      "720": "imagenes/rutina/rutina-5d-ppl-tp-b-720.988f032a.webp",
+      "1080": "imagenes/rutina/rutina-5d-ppl-tp-b-1080.5eec20f4.webp"
+    },
+    "color": "#3c2c5f"
+  },
+  "rutina-5d-ppl-tp-c": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-ppl-tp-c-240.6c0119de.webp",
+      "720": "imagenes/rutina/rutina-5d-ppl-tp-c-720.4f4f1780.webp",
+      "1080": "imagenes/rutina/rutina-5d-ppl-tp-c-1080.fdad8072.webp"
+    },
+    "color": "#3f2d64"
+  },
+  "rutina-5d-tp-fullbody": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-5d-tp-fullbody-240.82fc723c.webp",
+      "720": "imagenes/rutina/rutina-5d-tp-fullbody-720.e3be3201.webp",
+      "1080": "imagenes/rutina/rutina-5d-tp-fullbody-1080.1bdd24ac.webp"
+    },
+    "color": "#453172"
+  },
+  "rutina-6d-arnold": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-6d-arnold-240.9db02aa1.webp",
+      "720": "imagenes/rutina/rutina-6d-arnold-720.5fd9e7ca.webp",
+      "1080": "imagenes/rutina/rutina-6d-arnold-1080.6bba8785.webp"
+    },
+    "color": "#47345f"
+  },
+  "rutina-6d-ppl2-a": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-6d-ppl2-a-240.5c12d2d6.webp",
+      "720": "imagenes/rutina/rutina-6d-ppl2-a-720.cd598c7a.webp",
+      "1080": "imagenes/rutina/rutina-6d-ppl2-a-1080.a244eee7.webp"
+    },
+    "color": "#392b62"
+  },
+  "rutina-6d-ppl2-b": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-6d-ppl2-b-240.bae55ac0.webp",
+      "720": "imagenes/rutina/rutina-6d-ppl2-b-720.5c4d53a1.webp",
+      "1080": "imagenes/rutina/rutina-6d-ppl2-b-1080.4147fc3d.webp"
+    },
+    "color": "#3c2d64"
+  },
+  "rutina-6d-ppl2-c": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-6d-ppl2-c-240.e8d1dc05.webp",
+      "720": "imagenes/rutina/rutina-6d-ppl2-c-720.bd0e6cd9.webp",
+      "1080": "imagenes/rutina/rutina-6d-ppl2-c-1080.9a883a65.webp"
+    },
+    "color": "#3e2e67"
   }
 }

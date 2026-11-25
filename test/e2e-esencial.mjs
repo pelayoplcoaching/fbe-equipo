@@ -868,8 +868,14 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
   // Marina, con menos de un año y más de tres meses parada: la criba la manda a «Primeras 4 semanas», y la hoja se lo
   // explica antes de cerrarse (antes se cerraba sola al guardar sus gustos, sin decirle por qué no elegía rutina)
   {
+    // (un viernes, como arriba: así su plan empieza el lunes siguiente, sea cual sea el día en que se pasa la prueba)
+    const hoyM = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+    const dM = new Date(`${hoyM}T12:00:00Z`);
+    const viernes = new Date(dM.getTime() + (4 - ((dM.getUTCDay() + 6) % 7)) * 864e5).toISOString().slice(0, 10);
+    const alas10 = [1, 2].map((o) => new Date(`${viernes}T10:00:00+0${o}:00`)).find((d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(d) === '10:00');
     const { ctx, p } = await movil();
     await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await ctx.clock.setFixedTime(alas10);
     await entrar(p, /Marina/);
     await cerrar(p);
     const hero = p.locator('section.hero-espera');
