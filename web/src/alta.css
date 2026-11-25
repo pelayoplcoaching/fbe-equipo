@@ -92,3 +92,18 @@
   padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2);
 }
 .alta-ejercicios li > span { min-width: 0; flex: 1 1 12rem; }
+
+/* Tanda 3: la primera semana */
+.alta-guia { border-left: var(--filo-marca) solid var(--morado); }
+.alta-guia-pasos { margin: 0; padding-left: var(--esp-22); display: grid; gap: var(--esp-6); color: var(--tinta-2); }
+.alta-guia-pasos strong { color: var(--tinta); }
+.alta-que-peso { display: grid; justify-items: start; gap: var(--esp-4); }
+.alta-fin-primera { border-left: var(--filo-marca) solid var(--ok); }
+.alta-fin-primera strong { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.alta-faq-p summary { cursor: pointer; font-weight: 650; color: var(--tinta); padding-block: var(--esp-6); }
+.alta-faq-p p { margin: 0 0 var(--esp-8); }
+.alta-faq-p a, .alta-contacto a { color: var(--morado); font-weight: 650; }
+.alta-contacto { display: flex; align-items: flex-start; gap: var(--esp-6); margin: var(--esp-6) 0 0; color: var(--tinta-2); }
+.alta-contacto svg { flex: none; width: var(--esp-18); height: var(--esp-18); }
+.alta-contacto > span { min-width: 0; overflow-wrap: anywhere; }
+.alta-checkin { margin: 0; }

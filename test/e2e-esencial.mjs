@@ -3,6 +3,8 @@
 //     limpio) y la app le pone «Primeras 4 semanas»: su sesión con «Te sobran 4-5» y la plancha en segundos; apunta una serie.
 //   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4 y (tanda 3) su plan desde la semana 5, solo.
 //   · Inés (tanda 4, con nutrición): en Hoy, «Tu plan de comida»; contesta, ve su plan y lo guarda: «Nutrición de hoy».
+//   · Inés (alta, tanda 3): su primera semana: la guía de la primera sesión, «¿Qué peso pongo?», «Tu primera sesión, hecha»,
+//     «Semana 1 hecha»; en Perfil, sin «Mensajes con tu coach» y con sus preguntas frecuentes; la nota de su check-in.
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
 //     sin la pestaña Mensajes; «Añadir atleta» de FBE Esencial con su mensaje de invitación.
 //   Sin errores ni desbordes.
@@ -209,6 +211,77 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const lista = await p.waitForFunction(() => { const d = document.querySelector('details[data-plegable="nutricion"]'); return !!d && !d.hidden && d.open && /1795/.test(d.textContent); }, null, { timeout: 15000 }).then(() => true).catch(() => false);
       check(lista && !(await tarjeta.count()), 'guardado: «Nutrición de hoy», abierta y con su objetivo (1795 kcal); la tarjeta ya no sale');
     }
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------- (alta, tanda 3) La primera semana, con Inés (empezó este lunes)
+  {
+    const { ctx, p } = await movil();
+    await entrar(p, /Inés/);
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await cerrar(p);
+    await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+    const empezarSesion = async () => {
+      await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+      const portada = p.locator('.portada-vista');
+      if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+      await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 15000 });
+    };
+    const terminar = async () => {
+      await p.getByRole('button', { name: 'Terminar sesión' }).click();
+      await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).first().click();
+      await p.getByRole('button', { name: 'Guardar y terminar' }).click();
+      await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor({ timeout: 15000 });
+    };
+    await empezarSesion();
+    const guia = p.locator('.alta-guia');
+    check(/Tu primera sesión, en tres cosas/.test(await guia.textContent().catch(() => '')) && /ajuste las máquinas/.test(await guia.textContent().catch(() => '')),
+      'su primera sesión: la guía corta (cómo se apunta, «te sobran», el ✓ y que le ajusten las máquinas)');
+    await guia.getByRole('button', { name: 'Entendido' }).click();
+    check(await p.locator('.alta-guia').count() === 0, '«Entendido» la quita');
+    const qp = p.locator('.alta-que-peso').first();
+    await qp.getByRole('button', { name: /Qué peso pongo/ }).click();
+    check(/El primer día no lo sabe nadie/.test(await qp.textContent()) && /cuatro o cinco/.test(await qp.textContent()), '«¿Qué peso pongo?», junto al ejercicio sin kilos: el texto de la guía (que te sobren cuatro o cinco)');
+    await desborda(p, 'la primera sesión de Inés');
+    await terminar();
+    const fin = p.locator('.alta-fin-primera');
+    const tFin1 = await fin.textContent({ timeout: 10000 }).catch(() => '');
+    check(/Tu primera sesión, hecha/.test(tFin1) && /La siguiente, «Día 2»/.test(tFin1) && /agujetas/.test(tFin1), 'al terminarla: «Tu primera sesión, hecha», cuándo es la siguiente («Día 2») y las agujetas');
+    await p.getByRole('button', { name: 'Volver a hoy' }).click();
+    await p.locator('nav.tabs').waitFor();
+    await p.waitForTimeout(600);
+    await cerrar(p);
+    await p.waitForFunction(() => /Día 2/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+    await empezarSesion();
+    check(await p.locator('.alta-guia').count() === 0, 'en la segunda, ya sin la guía');
+    await terminar();
+    check(await p.locator('.alta-fin-primera').count() === 0, 'y sin la celebración de la primera');
+    await p.getByRole('button', { name: 'Volver a hoy' }).click();
+    await p.locator('nav.tabs').waitFor();
+    await p.waitForTimeout(600);
+    await cerrar(p);
+    const hecha = p.locator('.alta-semana-hecha');
+    const conHecha = await hecha.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conHecha && /Semana 1 hecha: tus 2 sesiones/.test(await hecha.textContent()) && /La semana que viene, dos series/.test(await hecha.textContent()),
+      'con las dos hechas: «Semana 1 hecha» y lo de la semana que viene (dos series)');
+    await desborda(p, 'Hoy de Inés con la semana 1 hecha');
+    // Su perfil: sin «Mensajes con tu coach» (no tiene chat); en Ajustes, sus preguntas frecuentes y a quién escribir
+    await p.goto(`${base}/?demo=esencial#perfil`);
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await cerrar(p);
+    const aAjustes = p.getByRole('button', { name: /Ajustes, guías y cuenta/ });
+    await aAjustes.waitFor({ timeout: 15000 }).catch(() => {});
+    check(!(await p.getByText('Mensajes con tu coach').count()), 'en su perfil, sin «Mensajes con tu coach» (no tiene chat)');
+    await aAjustes.click().catch(() => {});
+    const faq = p.locator('.alta-faq');
+    const conFaq = await faq.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conFaq && /preguntas frecuentes/.test(await faq.textContent()) && /pelayofbe@fuerzabasadaenevidencia\.com/.test(await faq.textContent()) && (await faq.locator('details').count()) >= 6,
+      'en Perfil, las preguntas frecuentes de FBE Esencial y el correo para lo que falle en la app o en el cobro');
+    // Su check-in: para qué es (nadie lo contesta uno a uno)
+    await p.goto(`${base}/?demo=esencial#checkin`);
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await cerrar(p);
+    check(/Pelayo no lo contesta uno a uno/.test(await p.locator('.alta-checkin').textContent({ timeout: 10000 }).catch(() => '')), 'su check-in: para qué es y que Pelayo no lo contesta uno a uno');
     await ctx.close();
   }
 

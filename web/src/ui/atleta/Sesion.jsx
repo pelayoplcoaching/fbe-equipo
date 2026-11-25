@@ -53,6 +53,7 @@ import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
+import { consejoPeso } from '../../logica/esencial-primera.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
@@ -105,6 +106,10 @@ import { useMarcaPagina } from '../marca-pagina.js';
 
 // (pulido 2.10) «Compartir con el equipo», al terminar: es de la pantalla Equipo, que se carga cuando hace falta
 const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaCompartirEquipo', { mientras: null });
+// (alta, tanda 3) lo de la primera semana de quien va por su cuenta, en su trozo
+const GuiaPrimeraSesion = perezoso(() => import('./EsencialSesion.jsx'), 'GuiaPrimeraSesion', { mientras: null });
+const QuePesoPongo = perezoso(() => import('./EsencialSesion.jsx'), 'QuePesoPongo', { mientras: null });
+const FinPrimeraSesion = perezoso(() => import('./EsencialSesion.jsx'), 'FinPrimeraSesion', { mientras: null });
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -594,6 +599,12 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
     // (a medida, 080) muy por encima del RPE pautado, o una serie de más: lo que su coach le dejó escrito para eso (si
     // la serie es récord, manda el récord). También al corregir el RPE de una serie ya hecha.
     if (!recordAhora) { const g = fraseGamberrada({ pauta: e, numero, rpe: valores.rpe }); if (g) setTimeout(() => aviso(g, 'ok'), 350); }
+    // (alta, 43) FBE Esencial: tras la primera serie de un ejercicio sin kilos, la regla de la guía (si le sobraban muchas,
+    // que suba; si ninguna, que baje)
+    if (!previa && !recordAhora && numero === 1 && esPorSuCuenta(atleta) && e.carga_sugerida_kg == null && !actualDe(e).por_tiempo) {
+      const c = consejoPeso(valores.rpe);
+      if (c) setTimeout(() => aviso(c, 'ok'), 450);
+    }
     if (!previa) {
       // Qué toca ahora: en una superserie se pasa al siguiente ejercicio de la ronda sin descanso
       const cuenta = Object.fromEntries(ejercicios.map((x) => [x.id, Object.keys(hechas[x.id] || {}).length]));
@@ -805,7 +816,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       ); })()}
       {/* (YouTube) «sigue este vídeo»: el que pone el coach a la sesión (un calentamiento, movilidad, un cardio) */}
       {sesion.video_url && <VideoDeSesion sesion={sesion} />}
-      {!sesion.completada && ejercicios.length > 0 && <Pista id="sesion" icono="hoy">Cada ejercicio trae lo que te toca (series, repeticiones y esfuerzo). Apunta los kilos y las repeticiones de cada serie y márcala como hecha: el descanso arranca solo. El esfuerzo (RPE) va del 6 al 10: 10 es que no podías hacer ni una más; 8, que te quedaban dos.</Pista>}
+      {!sesion.completada && ejercicios.length > 0 && (esPorSuCuenta(atleta) && !propio ? <GuiaPrimeraSesion />
+        : <Pista id="sesion" icono="hoy">Cada ejercicio trae lo que te toca (series, repeticiones y esfuerzo). Apunta los kilos y las repeticiones de cada serie y márcala como hecha: el descanso arranca solo. El esfuerzo (RPE) va del 6 al 10: 10 es que no podías hacer ni una más; 8, que te quedaban dos.</Pista>)}
       <BandaConexion />
       {/* (sonido 2, tanda 4) «¿Se oye bien?», una vez */}
       {!sesion.completada && !propio && ejercicios.length > 0 && todas.length === 0 && <AvisoPruebaSonido />}
@@ -1166,6 +1178,8 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {/* (música 3, tanda 2) en el último ejercicio, a una serie del final: su himno de la última serie */}
           {esUltimo && Object.keys(hechas).length > 0 && Object.keys(hechas).length === e.series - 1 && <PonTuCancion sesionId={sesionId} himno="ultima" />}
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
+          {/* (alta, 42) FBE Esencial: la primera vez, sin kilos pautados, «¿Qué peso pongo?» (el texto de la guía) */}
+          {sobran && !propio && !porTiempo && e.carga_sugerida_kg == null && !ultimas && !completo && <QuePesoPongo rir={e.rir_objetivo} />}
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.</span></p>}
           {coach?.lista?.length > 0 && <LoQueTeDijo coach={coach} nombre={ej.nombre} />}
@@ -1743,6 +1757,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
               : <><Icono n="estrella" /><span>La primera vez que haces esta sesión: la próxima te dirá cómo vas.</span></>}
         </p>
       )}
+      {/* (alta, 46 y 49) FBE Esencial: su primera sesión, cuándo es la siguiente y las agujetas */}
+      {esPorSuCuenta(atleta) && !propio && !cardio && <FinPrimeraSesion sesion={sesion} />}
       {/* «La travesía»: lo que ha corrido su lobo en los descansos de esta sesión (si ha jugado) */}
       {travesia?.metros > 0 && (
         <div class="resumen-travesia" style={{ '--i': 5 }}>
@@ -1784,7 +1800,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
           <div class="panel panel-pad"><MapaMuscular series={resumen.musculos} etiqueta="Series por músculo de hoy" /></div>
         </section>
       )}
-      {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.</div>}
+      {resumen.enCola && <div class="banda-conexion"><Icono n="sinred" />{esPorSuCuenta(atleta) ? 'Guardado en el móvil. Se enviará cuando vuelva la conexión.' : 'Guardado en el móvil. Se enviará a tu coach cuando vuelva la conexión.'}</div>}
       <div class="resumen-acciones pila" style={{ '--i': 8 }}>
         {(resumen.series > 0 || cardio) && resumen.tarjeta && <button class="btn btn-grande btn-compartir-sesion" onClick={() => setCompartir(true)}><MiniTarjeta datos={resumen.tarjeta} /><Icono n="compartir" /> Compartir la sesión</button>}
         {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>

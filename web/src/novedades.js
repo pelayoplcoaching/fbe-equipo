@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.240': {
+    // (el alta de FBE Esencial, tandas 2 y 3 de 3: del cuestionario a su plan y su primera semana; sin migración)
+    atleta: [],
+    coach: [
+      'FBE Esencial, el alta (tandas 2 y 3): su cuestionario, más corto y con por qué se pregunta cada cosa, sigue donde lo dejó.',
+      'Antes de su lunes ven su camino, un consejo al día y su semana 1 con «Cómo se hace»; eligen sus días y cada sesión va a su día.',
+      'Su primera semana, guiada: la primera sesión, «¿Qué peso pongo?», si pierden una, «Semana 1 hecha» y sus preguntas frecuentes.',
+    ],
+  },
   '0.239': {
     // (el alta de FBE Esencial, tanda 1 de 3: de la invitación a la cuenta activa)
     atleta: [],

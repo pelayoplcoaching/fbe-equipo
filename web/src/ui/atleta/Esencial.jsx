@@ -3,7 +3,7 @@
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
-import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE } from '../../logica/esencial.js';
+import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../../logica/esencial.js';
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
@@ -527,6 +527,111 @@ export function DiasEsencial({ p }) {
           </div>
         </Hoja>
       )}
+    </section>
+  );
+}
+
+// ---------- (alta, tanda 3) La primera semana, en Hoy ----------
+// (47) Una sesión que tenía día y ese día pasó sin hacerla: la frase de la guía (no se recupera doblando: se sigue donde
+// tocaba) y pasarla a otro día de esta semana (de hoy al domingo, sin otro día con sesión)
+export function SesionPerdida({ p, recargarPrograma }) {
+  const { api, aviso } = useApp();
+  const [ocupado, una] = useUnaVez();
+  const hoy = hoyISO();
+  const w = p?.actual;
+  const ss = w ? (p.sesiones?.[w.id] || []) : [];
+  const perdida = ss.filter((s) => !s.completada && s.dia_previsto && String(s.dia_previsto).slice(0, 10) < hoy)
+    .sort((a, b) => String(a.dia_previsto).localeCompare(String(b.dia_previsto)))[0];
+  if (!perdida || !w?.fecha_inicio) return null;
+  const ocupados = new Set(ss.filter((s) => s.id !== perdida.id && s.dia_previsto).map((s) => String(s.dia_previsto).slice(0, 10)));
+  const libres = Array.from({ length: 7 }, (_, i) => sumarDias(w.fecha_inicio, i)).filter((d) => d >= hoy && !ocupados.has(d));
+  const mover = (d) => una(async () => {
+    try { await api.planificarSesion(perdida.id, d); aviso(`«${perdida.nombre}», el ${fechaLarga(d)}`); recargarPrograma?.(); } catch (e) { aviso(e.message, 'error'); }
+  });
+  return (
+    <section class="nota-coach alta-perdida" aria-label="Una sesión que no pudiste hacer">
+      <Icono n="calendario" />
+      <div class="pila-s">
+        <strong>El {fechaLarga(String(perdida.dia_previsto).slice(0, 10))} no pudiste hacer «{perdida.nombre}»</strong>
+        <span class="peq">No la recuperes doblando: sigue donde tocaba. {libres.length ? '¿La pasas a otro día de esta semana?' : 'Esta semana ya no quedan días libres: la semana que viene, sigues.'}</span>
+        {libres.length > 0 && (
+          <div class="fila-envolver">
+            {libres.map((d) => <button type="button" key={d} class="btn btn-peq" disabled={ocupado} onClick={() => mover(d)}>{d === hoy ? 'Hoy' : fechaLarga(d).split(' ')[0].replace(/^./, (c) => c.toUpperCase())}</button>)}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// (48) Semana 1 hecha (todas sus sesiones, aún en esa semana): el resumen y lo de la semana que viene (la lección 2)
+export function SemanaHecha({ p }) {
+  const n = semanaDelPlan(p?.bloques, p?.actual?.fecha_inicio);
+  const ss = p?.actual ? (p.sesiones?.[p.actual.id] || []) : [];
+  if (n !== 1 || !ss.length || ss.some((s) => !s.completada)) return null;
+  const l = leccionDe(2);
+  return (
+    <section class="nota-coach alta-semana-hecha" aria-labelledby="alta-sh-t">
+      <Icono n="hecho" />
+      <div class="pila-s">
+        <strong id="alta-sh-t">Semana 1 hecha: {ss.length === 1 ? 'tu sesión' : `tus ${ss.length} sesiones`}</strong>
+        {l && <span class="peq"><strong>La semana que viene, {l.titulo.charAt(0).toLowerCase()}{l.titulo.slice(1)}:</strong> {l.texto}</span>}
+      </div>
+    </section>
+  );
+}
+
+// (51) En sus dos primeras semanas, la invitación a presentarse en Equipo (si está dentro de la comunidad). «Ahora no» la
+// quita en este móvil.
+export function PresentateEquipo({ p, irA }) {
+  const { api, atleta } = useApp();
+  const n = semanaDelPlan(p?.bloques, p?.actual?.fecha_inicio);
+  const clave = `fbe-esencial-equipo:${atleta.id}`;
+  const [fuera, setFuera] = useState(() => { try { return localStorage.getItem(clave) === '1'; } catch { return false; } });
+  const dentro = useCarga(async () => {
+    if (fuera || !(n >= 1 && n <= 2)) return false;
+    const [c, m] = await Promise.all([api.comunidad(), api.miembroComunidad()]);
+    return !!c?.activa && api.dentroDeComunidad(m);
+  }, [n, fuera], { recuerdo: `esencial-equipo:${atleta.id}:${n}` });
+  if (fuera || dentro.datos !== true) return null;
+  const quitar = () => { try { localStorage.setItem(clave, '1'); } catch { /* */ } setFuera(true); };
+  return (
+    <section class="nota-coach alta-equipo" aria-label="Preséntate en Equipo">
+      <Icono n="equipo" />
+      <div class="pila-s">
+        <span class="peq"><strong>¿Te presentas en Equipo?</strong> Di quién eres y qué te ha traído: hay más gente empezando esta semana.</span>
+        <span class="fila-envolver">
+          <button type="button" class="btn btn-peq btn-primario" onClick={() => { quitar(); irA?.('equipo'); }}>Ir a Equipo</button>
+          <button type="button" class="btn btn-peq" onClick={quitar}>Ahora no</button>
+        </span>
+      </div>
+    </section>
+  );
+}
+
+// (52 y 53) Las preguntas frecuentes de FBE Esencial (las de la web, para quien ya está dentro) y a quién escribir si algo
+// falla en la app o en el cobro
+const PORTAL_ESENCIAL = 'https://billing.stripe.com/p/login/9B6bJ0ccQ4exeMxcsKbV601';
+export function FaqEsencial() {
+  const { atleta } = useApp();
+  const inicio = atleta?.esencial_inicio || null;
+  const enlace = (ruta, texto) => <a href={`${WEB_FBE}/${ruta}`} target="_blank" rel="noopener">{texto}</a>;
+  const faq = [
+    ['¿Hablo con Pelayo?', <>No hay chat ni revisión de tu semana: eso lo llevan los {enlace('programas.html', 'programas con seguimiento')}. Sí hay un directo al mes para resolver dudas y la comunidad de la app.</>],
+    ['¿Cuántos días a la semana?', 'Si empiezas de cero, dos: las cuatro semanas de la guía y, desde la quinta, una plantilla de dos días (desde Hoy puedes pasar a tres). Si ya entrenas, los que pusiste en el cuestionario.'],
+    ['¿Qué material necesito?', 'Tu plantilla se elige con el material que pusiste en el cuestionario. Las cuatro semanas de la guía son de gimnasio, y cada ejercicio trae su alternativa.'],
+    ['¿Y si tengo una enfermedad o tomo medicación?', <>Antes de empezar contestas unas preguntas de salud. Si sale que conviene consultar, no empiezas sin el visto bueno de tu médico o una {enlace('puesta-a-punto.html', 'Puesta a punto')} con Pelayo.</>],
+    ['¿Y si me duele algo?', <>La app no valora el dolor. Si con el esfuerzo notas dolor u opresión en el pecho, falta de aire que no cuadra con lo que estás haciendo, mareos o palpitaciones, para y habla con tu médico. Para las molestias al entrenar tienes el {enlace('semaforo-dolor.html', 'semáforo del dolor')}.</>],
+    ['¿Cuándo se me cobra?', `Al reservar dejaste tu tarjeta, sin cobrar nada. La primera cuota se cobra ${inicio ? `el ${fechaLarga(inicio)}` : 'el día en que empieza tu tanda'} y, desde ahí, cada mes o cada año, según lo que elegiste, con el mismo precio de fundador.`],
+    ['¿Puedo darme de baja?', <>Sí, cuando quieras, desde <a href={PORTAL_ESENCIAL} target="_blank" rel="noopener">tu suscripción</a>, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</>],
+  ];
+  return (
+    <section class="seccion alta-faq" aria-labelledby="alta-faq-t">
+      <h2 id="alta-faq-t">FBE Esencial: preguntas frecuentes</h2>
+      <div class="panel panel-pad pila-s">
+        {faq.map(([q, r]) => <details key={q} class="alta-faq-p"><summary>{q}</summary><p class="peq secundario">{r}</p></details>)}
+        <p class="peq alta-contacto"><Icono n="mensaje" /> <span>¿Algún problema con la app o con el cobro? Escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a> y Pelayo te contesta por correo.</span></p>
+      </div>
     </section>
   );
 }

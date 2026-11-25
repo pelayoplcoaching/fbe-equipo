@@ -1,5 +1,6 @@
 // FBE Esencial, el alta (tandas 2 y 3, lógica pura): sus días de entreno (logica/esencial-dias.js) y lo de la primera semana.
 import { nombreDias, seguidos, PROPUESTA_DIAS, diaDeSemana, diasDeSemana, planDias, leerDias, guardarDias } from '../web/src/logica/esencial-dias.js';
+import { textoQuePeso, consejoPeso, textoSiguiente, TEXTO_AGUJETAS } from '../web/src/logica/esencial-primera.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -38,6 +39,21 @@ globalThis.localStorage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) 
 check(leerDias('a') === null, 'sin elegir, nada');
 guardarDias('a', [4, 1, 4]);
 check(JSON.stringify(leerDias('a')) === '[1,4]' && leerDias('b') === null, 'se guarda ordenado y sin repetir, por atleta');
+
+console.log('\nSu primera semana (tanda 3)');
+check(/El primer día no lo sabe nadie/.test(textoQuePeso(4.5)) && /te sobren cuatro o cinco\.$/.test(textoQuePeso(4.5)) && /te sobren tres\.$/.test(textoQuePeso(3)),
+  '«¿Qué peso pongo?»: lo que le tienen que sobrar, en letra (4,5 → «cuatro o cinco»; 3 → «tres»)');
+check(/cuatro o cinco\.$/.test(textoQuePeso(null)) && /cuatro o cinco\.$/.test(textoQuePeso(7)), 'sin dato (o uno raro), lo de la guía: cuatro o cinco');
+check(/sube/.test(consejoPeso(1)) && /sube/.test(consejoPeso(2)) && consejoPeso(3) === null && consejoPeso(6) === null && consejoPeso(9) === null && /baja/.test(consejoPeso(10)),
+  'tras su primera serie: le sobraban 8 o más → que suba; ninguna → que baje; si no, nada');
+check(consejoPeso(null) === null && consejoPeso('') === null && consejoPeso('x') === null, 'sin esfuerzo apuntado, nada');
+const fl = (x) => `[${x}]`;
+check(textoSiguiente({ nombre: 'Día 2', dia_previsto: '2027-01-14' }, '2027-01-11', fl) === 'La siguiente, «Día 2», el [2027-01-14].', 'la siguiente con día: «el jueves 14 de enero»');
+check(/cuando te venga bien esta semana/.test(textoSiguiente({ nombre: 'Día 2' }, '2027-01-11', fl)) && /cuando te venga bien/.test(textoSiguiente({ nombre: 'Día 2', dia_previsto: '2027-01-11' }, '2027-01-11', fl)),
+  'sin día (o con uno que ya llegó): «cuando te venga bien esta semana», dejando un día entre una y otra');
+check(/«Día 2», cuando puedas, dejando un día/.test(textoSiguiente({ nombre: 'Día 2' }, '2027-01-16', fl)) && /cuando puedas/.test(textoSiguiente({ nombre: 'Día 2' }, '2027-01-17', fl)),
+  'en sábado o domingo, sin «esta semana»: «cuando puedas»');
+check(textoSiguiente(null, '2027-01-11') === null && /agujetas/.test(TEXTO_AGUJETAS), 'sin siguiente, nada; y lo de las agujetas');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

@@ -89,6 +89,9 @@ const AntesDeEmpezar = perezoso(() => import('./Esencial.jsx'), 'AntesDeEmpezar'
 const AplicarDias = perezoso(() => import('./Esencial.jsx'), 'AplicarDias', { mientras: null });
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const HojaAvisosEsencial = perezoso(() => import('./Esencial.jsx'), 'HojaAvisosEsencial', { mientras: null });
+const SesionPerdida = perezoso(() => import('./Esencial.jsx'), 'SesionPerdida', { mientras: null });
+const SemanaHecha = perezoso(() => import('./Esencial.jsx'), 'SemanaHecha', { mientras: null });
+const PresentateEquipo = perezoso(() => import('./Esencial.jsx'), 'PresentateEquipo', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -234,6 +237,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
               {!propio && porSuCuenta && atleta.estado !== 'baja' && <AntesDeEmpezar p={p} cuestionario={cuestionario.datos} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <AplicarDias p={p} recargarPrograma={() => recargar(true)} />}
+              {/* (alta, 47, 48 y 51) la primera semana: una sesión que no pudo hacer, la semana 1 hecha y presentarse en Equipo */}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SesionPerdida p={p} recargarPrograma={() => recargar(true)} />}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaHecha p={p} />}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <PresentateEquipo p={p} irA={irA} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaEsencial recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
               {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <LeccionSemana p={p} />}
@@ -924,7 +931,7 @@ function PesoHoy({ irA }) {
       <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => { pedirSubProgreso('cuerpo'); irA('progreso'); }}>Ver la gráfica</button>}</div>
       <div class="panel panel-pad peso-hoy">
         {pesos.datos == null || planes.datos == null ? <span class="peso-cargando" aria-hidden="true" />
-          : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.</p>
+          : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.{esPorSuCuenta(atleta) ? (nutri ? ' Con tu peso, la app ajusta tu plan de comida cada semana.' : ' Es opcional: si no quieres, no lo apuntes.') : ''}</p>
           : conCifra ? (
             <div class="pila-xs">
               <div class="cifra"><span class="v num">{num(ult.tendencia)}</span><span class="u">kg de tendencia</span></div>

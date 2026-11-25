@@ -27,6 +27,10 @@ import { PORTADAS, portadaValida } from '../../logica/perfil.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
 import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada, AtajosPerfil, FilaPrivacidad, FilasCuentaSegura, FilaHojaCalculo } from './PerfilMas.jsx';
+import { perezoso } from '../perezoso.jsx';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+// (alta, 52 y 53) las preguntas frecuentes de FBE Esencial y el correo para lo que falle en la app o en el cobro
+const FaqEsencial = perezoso(() => import('./Esencial.jsx'), 'FaqEsencial', { mientras: null });
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -84,7 +88,8 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
         <FilaSuplementos />
         <FilaCobro />
         {conEntrenamiento(atleta) && <FilaCorrecciones />}
-        <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />
+        {/* (alta, 53) quien va por su cuenta no tiene Mensajes: su contacto va en «FBE Esencial: preguntas frecuentes» (Ajustes) */}
+        {!esPorSuCuenta(atleta) && <FilaIos icono="mensaje" titulo="Mensajes con tu coach" detalle="Para lo que no es de una sesión concreta" alTocar={() => irA?.('mensajes')} />}
         {urlSegura(atleta.notion_url) && <FilaIos icono="enlace" titulo="Tu página de Notion" detalle="Lo de antes de la app" href={urlSegura(atleta.notion_url)} etiqueta="Tu página de Notion (se abre aparte)" />}
       </GrupoIos>
 
@@ -113,6 +118,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
 
       {guias.length > 0 && <Recursos titulo="Guías y recursos" id="grupo-guias" lista={guias} />}
       {faq.length > 0 && <Recursos titulo="Preguntas frecuentes" id="grupo-faq" lista={faq} />}
+      {esPorSuCuenta(atleta) && <FaqEsencial />}
 
       <GrupoIos titulo="Cuenta" id="grupo-cuenta" pie={`FBE Equipo, versión ${VERSION_APP}. Hola, ${perfil?.nombre || atleta.nombre}.`}>
         <FilaIos icono="privacidad" titulo="Política de privacidad" detalle="Aceptada" alTocar={() => setVerPrivacidad(true)} etiqueta="Política de privacidad: leerla" />

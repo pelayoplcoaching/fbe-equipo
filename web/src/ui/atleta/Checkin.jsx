@@ -438,6 +438,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         </button>
       </CabeceraGrande>
       <Pista id="checkin" icono="checkin">Una vez a la semana, un minuto: una pregunta por pantalla. Las de una sola respuesta pasan solas a la siguiente; al final repasas todo y lo envías. No hace falta rellenarlo todo.</Pista>
+      {/* (alta, 50) quien va por su cuenta: para qué es su check-in (nadie lo contesta uno a uno) */}
+      {suyo && !yaEnviado && <p class="peq secundario alta-checkin">Tu check-in queda en tu progreso: así ves cómo duermes, cómo llegas y cómo vas de una semana a otra. Pelayo no lo contesta uno a uno; si marcas una molestia moderada o grave, le sale como aviso.</p>}
       {/* (054) su semana de un vistazo, para que conteste con los datos delante */}
       {!yaEnviado && lineasSemanaCheckin(resumen).length > 0 && (
         <section class="panel panel-pad ck-vistazo" aria-label="Tu semana de un vistazo">
