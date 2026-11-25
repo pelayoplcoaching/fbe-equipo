@@ -25,6 +25,9 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
   const alta = useCarga(() => (todos ? api.esencialAltaEstado().catch(() => null) : Promise.resolve(null)), [todos], { recuerdo: `alta-esencial:${todos}` });
   // (sin coach, 38; 098) cómo han cerrado la semana: quién repite, quién está en pausa y a quién se le pasó sola
   const cierres = useCarga(() => (todos && api.esencialCierres ? api.esencialCierres(sumarDias(hoyISO(), -13)).catch(() => []) : Promise.resolve([])), [todos], { recuerdo: `cierres-esencial:${todos}` });
+  // (sin coach, 53 y 58; 099) la rutina de cada uno: cuál lleva, desde cuándo, si es de las recomendadas y sus cambios
+  const rutinas = useCarga(() => (todos && api.esencialRutinas ? api.esencialRutinas().catch(() => []) : Promise.resolve([])), [todos], { recuerdo: `rutinas-esencial:${todos}` });
+  const [verRutinas, setVerRutinas] = useState(false);
   const [hoja, setHoja] = useState(false);
   const [reenvio, setReenvio] = useState(false);
   const invitados = lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado === 'invitado');
@@ -99,6 +102,30 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
           </ul>
         </section>
       )}
+      {(rutinas.datos || []).length > 0 && (() => {
+        const fuera = rutinas.datos.filter((x) => x.recomendada === false);
+        const ver = verRutinas ? rutinas.datos : fuera;
+        return (
+          <section class="pila-s alta-sin" aria-labelledby="rutinas-panel-t">
+            <div class="separa">
+              <h2 id="rutinas-panel-t" class="etq">Sus rutinas{fuera.length ? ` (${fuera.length} fuera de lo recomendado)` : ''}</h2>
+              <button type="button" class="btn-texto peq" aria-expanded={verRutinas ? 'true' : 'false'} onClick={() => setVerRutinas(!verRutinas)}>{verRutinas ? 'Solo las de fuera' : `Ver todas (${rutinas.datos.length})`}</button>
+            </div>
+            {!ver.length && <p class="mini terciario">Todos llevan una rutina de las que la app les recomienda (o la de novato).</p>}
+            {ver.length > 0 && (
+              <ul class="corr-lista">
+                {ver.map((x) => (
+                  <li key={x.atleta_id} class="alta-fila" data-nivel={x.recomendada === false ? 'ambar' : 'ok'}>
+                    <button type="button" class="btn-texto peq" onClick={() => abrir(x.atleta_id)}>{x.nombre}</button>
+                    <span class="mini terciario">{x.titulo}{x.recomendada === false ? ' · no es de sus recomendadas' : ''} · {x.inicio && x.inicio > hoy ? `empieza el ${fechaLarga(x.inicio).replace(/^\S+ /, '')}` : x.semanas === 1 ? 'semana 1' : `semana ${x.semanas}`}
+                      {x.cambios > 0 ? ` · ${x.cambios === 1 ? 'un cambio de rutina' : `${x.cambios} cambios de rutina`}` : ''}{x.despuesTitulo ? ` · después: ${x.despuesTitulo}` : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })()}
       {filas.length > 0 && <ul class="corr-lista">
         {filas.map((r) => {
           const f = filaPiloto(r, hoy, altaDe.get(r.atleta_id));

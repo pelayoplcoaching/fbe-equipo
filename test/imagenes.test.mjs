@@ -129,7 +129,8 @@ console.log('\nLos archivos que se sirven');
 
 console.log('\nLa lista y la carpeta');
 {
-  const lista = JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8'));
+  // (con las de las rutinas de FBE Esencial, que llevan su propia lista: datos/imagenes-rutinas.json)
+  const lista = { ...JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes.json'), 'utf8')), ...JSON.parse(readFileSync(join(raiz, 'web/src/datos/imagenes-rutinas.json'), 'utf8')) };
   const enLista = Object.values(lista).flatMap((x) => Object.values(x.archivos));
   const listar = (d) => (existsSync(d) ? readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? listar(join(d, f)) : [join(d, f)])) : []);
   const enCarpeta = listar(join(raiz, 'web/imagenes')).map((f) => f.slice(join(raiz, 'web').length + 1));

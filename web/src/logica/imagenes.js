@@ -8,6 +8,8 @@
 const LISTA = {};
 const EJERCICIOS_IMG = { porId: {}, porNombre: {} };
 let cargando = null;
+// (las de un trozo que trae su propia lista, como las de las rutinas de FBE Esencial)
+export const anadirImagenes = (extra) => { Object.assign(LISTA, extra); };
 export function cargarListaImagenes() {
   cargando ||= import('../datos/lista-imagenes.js').then((m) => {
     Object.assign(LISTA, m.LISTA);

@@ -7469,6 +7469,8 @@ export function crearApi(backend, opciones = {}) {
     async esencialCatalogo() { return (await import('./api-esencial.js')).catalogo(b); },
     async esencialElegirRutina(nombre, atletaId = null) { return (await import('./api-esencial.js')).elegirRutina(b, nombre, atletaId); },
     async esencialRutina(atletaId, opciones = {}) { return (await import('./api-esencial.js')).rutina(api, b, atletaId, opciones); },
+    async esencialRutinas() { return (await import('./api-esencial.js')).rutinas(b); },
+    async esencialPlantillaEnCatalogo(id, valor) { return (await import('./api-esencial.js')).plantillaEnCatalogo(b, id, valor); },
     // (093) FBE Esencial con nutrición: el plan de partida lo calcula la base (como planInicial) con sus datos; devuelve
     // el plan. datos: { sexo, edad, altura, peso, actividad, objetivo, tca }.
     async esencialPlanComida(datos, atletaId = null) {

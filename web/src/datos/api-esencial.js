@@ -93,3 +93,43 @@ export async function rutina(api, b, atletaId, { bloqueId = null, historia = fal
   }
   return { con099: !!at && 'esencial_plantilla' in at, elegida: at?.esencial_plantilla ?? null, elegidaEn: at?.esencial_plantilla_en ?? null, anterior, estancados };
 }
+
+// (099, el coach) Una plantilla entra o sale del catálogo de FBE Esencial
+export async function plantillaEnCatalogo(b, id, valor) {
+  return (await b.update('bloques', { esencial_catalogo: !!valor }, { eq: { id } }))[0] || null;
+}
+
+// (099, el panel del coach) La rutina de cada uno de los que van por su cuenta: la que lleva (su bloque en marcha), desde
+// cuándo, la que ha elegido para después y si está entre las que la app le recomienda con su cuestionario.
+// → [{ atleta_id, nombre, rutina, titulo, inicio, semanas, despues, recomendada: true | false | null, cambios }]
+export async function rutinas(b, { hoy = fechaMadrid() } = {}) {
+  try {
+    const atletas = await b.select('atletas', { eq: { modalidad: 'por_su_cuenta' } });
+    const suyos = atletas.filter((a) => a.estado === 'activo' && 'esencial_plantilla' in a);
+    if (!suyos.length) return [];
+    const ids = suyos.map((a) => a.id);
+    const [bloques, cuestionarios, { rutinaDe, recomendar }] = await Promise.all([
+      b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: 'id,atleta_id,nombre,numero,estado,fecha_inicio' }),
+      b.select('cuestionarios', { in: { atleta_id: ids } }).catch(() => []),
+      import('../logica/esencial-catalogo.js'),
+    ]);
+    const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion' }) : [];
+    const out = [];
+    for (const a of suyos) {
+      const mios = bloques.filter((x) => x.atleta_id === a.id && x.estado !== 'cancelado').sort((x, y) => (y.numero || 0) - (x.numero || 0));
+      const actual = mios.find((x) => ['activo', 'ajustado', 'planificado'].includes(x.estado)) || null;
+      if (!actual) continue;
+      const r = rutinaDe(actual.nombre);
+      const c = cuestionarios.find((x) => x.atleta_id === a.id) || null;
+      const hechas = semanas.filter((w) => w.bloque_id === actual.id && w.programacion === 'programada' && w.fecha_inicio && String(w.fecha_inicio).slice(0, 10) <= hoy).length;
+      // (las de FBE Esencial, «Primeras 4 semanas» y las de novato, son su camino de serie: no se miran)
+      const deSerie = !r || ['primeras', 'novato'].includes(r.familia);
+      const recomendada = deSerie || !c ? null : recomendar({ cuestionario: c, gustos: c.gustos || {} }).some((x) => x.rutina.nombre === actual.nombre);
+      const despues = a.esencial_plantilla && a.esencial_plantilla !== actual.nombre ? a.esencial_plantilla : null;
+      out.push({ atleta_id: a.id, nombre: a.nombre, rutina: actual.nombre, titulo: r?.titulo || actual.nombre, inicio: String(actual.fecha_inicio || '').slice(0, 10) || null,
+        semanas: hechas, despues, despuesTitulo: despues ? rutinaDe(despues)?.titulo || despues : null, recomendada,
+        cambios: Math.max(0, mios.filter((x) => rutinaDe(x.nombre) && x.nombre !== 'Primeras 4 semanas').length - 1) });
+    }
+    return out.sort((x, y) => (x.recomendada === false ? 0 : 1) - (y.recomendada === false ? 0 : 1) || x.nombre.localeCompare(y.nombre));
+  } catch (e) { if (/esencial_plantilla|esencial_catalogo/.test(`${e?.message || ''}`)) return []; throw e; }
+}

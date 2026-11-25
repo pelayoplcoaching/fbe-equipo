@@ -17,6 +17,9 @@ import { DIAS_SEMANA, nombreDias, seguidos, PROPUESTA_DIAS, diasDeSemana, planDi
 import { perezoso } from '../perezoso.jsx';
 
 const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEjercicio', { mientras: null });
+// (099) «Tu rutina» (elegirla, sus recomendadas, el catálogo): en su trozo, con el catálogo entero
+const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
+const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { mientras: null });
 
 // ---------- (alta, 28-32) Antes de empezar ----------
 // Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
@@ -100,7 +103,9 @@ export function AplicarDias({ p, recargarPrograma }) {
       try { for (const c of cambios) await api.planificarSesion(c.id, c.dia); recargarPrograma?.(); } catch { /* lo intenta la próxima vez */ }
     })();
   }, [p?.bloque?.id, p?.actual?.id, (p?.semanas || []).length]);
-  return null;
+  // (099) y, en Hoy, «Tu rutina» cuando hay algo que decir (su plan por empezar, elegir tras sus cuatro primeras semanas,
+  // un cambio pendiente, estancamiento o una de temporada)
+  return p?.bloque ? <TuRutina p={p} recargarPrograma={recargarPrograma} enHoy /> : null;
 }
 
 // (alta, 28 y 30) Su semana 1, ejercicio a ejercicio: cómo se hace cada uno (su ficha, con el vídeo) y su alternativa. Con
@@ -175,7 +180,7 @@ export function AntesDeEmpezar({ p, cuestionario }) {
   const { api, atleta } = useApp();
   const hoy = hoyISO();
   const ficha = useCarga(() => api.estadoEsencial(atleta.id), [atleta.id, cuestionario?.completado_en, cuestionario?.resultado], { recuerdo: `estado-esencial:${atleta.id}` });
-  const e = estadoEsencial({ bloque: p?.bloque || null, cuestionario, ficha: ficha.datos, hoy });
+  const e = estadoEsencial({ bloque: p?.bloque || null, cuestionario, ficha: ficha.datos, hoy, rutina: atleta.esencial_plantilla ?? null, con099: 'esencial_plantilla' in atleta, inicio: atleta.esencial_inicio });
   if (!e || ficha.datos?.falta091) return null;
   if (e.tipo === 'visto_bueno' || e.tipo === 'revision') return <SemanaUnoEsencial cuestionario={cuestionario} mientras />;
   if (e.tipo !== 'espera') return null;
@@ -346,7 +351,14 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
   const [intento, setIntento] = useState(0);
   const hoy = hoyISO();
   const bloque = p?.bloque || null;
-  const e = estadoEsencial({ bloque, cuestionario, ficha: ficha.datos, hoy });
+  // (099) con la base al día, quien tiene experiencia contesta «Tus gustos» y elige su rutina antes de que la app le prepare
+  // el plan. Lo que guarda la hoja (sus gustos, la rutina) se ve aquí al momento, sin esperar a recargar.
+  const [mio, setMio] = useState(null);
+  const [rutina, setRutina] = useState(atleta.esencial_plantilla ?? null);
+  const [verRutinas, setVerRutinas] = useState(false);
+  useEffect(() => { setMio(null); }, [cuestionario]);
+  const cuest = mio || cuestionario;
+  const e = estadoEsencial({ bloque, cuestionario: cuest, ficha: ficha.datos, hoy, rutina, con099: 'esencial_plantilla' in atleta, inicio: atleta.esencial_inicio });
   // (sin la ficha aún, el visto bueno no se sabe: se espera a ella salvo con el cribado limpio)
   const listoParaPlan = e?.tipo === 'preparando' && (cuestionario?.resultado === 'sin_valoracion' || !!ficha.datos);
   useEffect(() => {
@@ -381,6 +393,18 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
     return marco(null, 'alerta', 'Te falta una parte', 'Completa la parte de salud',
       'Sin las preguntas de salud, la app no puede prepararte tu plan: son las que dicen si conviene que te vea un médico antes de empezar.',
       <button class="btn btn-grande btn-hero" onClick={() => abrirCuestionario('salud')}><Icono n="editar" /> Completar</button>);
+  }
+  if (e.tipo === 'rutina') {
+    return (
+      <>
+        {marco(null, 'pregunta', 'Un paso más', 'Elige tu rutina',
+          e.gustos ? 'Tus rutinas recomendadas ya están listas: elige con cuál empiezas.'
+            : 'Unas preguntas cortas sobre cómo entrenas y qué te apetece, y la app te recomienda dos o tres rutinas.',
+          <button class="btn btn-grande btn-hero" onClick={() => setVerRutinas(true)}><Icono n="editar" /> {e.gustos ? 'Ver mis rutinas' : 'Empezar'}</button>)}
+        {verRutinas && <HojaRutinas p={p} cuestionario={cuest} alCerrar={() => setVerRutinas(false)}
+          alCambiar={(x) => { if (x.cuestionario) setMio(x.cuestionario); if (x.rutina) setRutina(x.rutina); }} />}
+      </>
+    );
   }
   if (e.tipo === 'visto_bueno') {
     return marco(null, 'alerta', 'Antes de empezar', 'El visto bueno de tu médico', MENSAJE_ESENCIAL[e.resultado] || MENSAJE_ESENCIAL.valorar_antes,

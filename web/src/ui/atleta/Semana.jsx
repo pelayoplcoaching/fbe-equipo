@@ -9,12 +9,16 @@ import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
+import { perezoso } from '../perezoso.jsx';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { useDeslizar } from '../deslizar.js';
 import { LOBO } from '../marca-lobo.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenFoco, FRASE_FOCO } from '../../logica/imagenes.js';
+
+// (FBE Esencial, 099) «Tu rutina»: cuál lleva, desde cuándo y cambiarla (en su trozo)
+const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { mientras: null });
 
 // (diseño, tanda 26) El día de la semana en la hoja de calendario de «Tus entrenamientos»
 const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -141,6 +145,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
           )}
         </>
       )}
+      {esPorSuCuenta(atleta) && p?.bloque && <TuRutina p={p} recargarPrograma={() => recargar(true)} />}
       <Entrenamientos abrirSesion={abrirSesion} />
       {/* «La travesía»: el juego de los descansos, con sus marcas y un minuto de práctica */}
       {/* «Apuntes»: lo que lleva vistos y un repaso (los que no sabía y los de esta semana) */}

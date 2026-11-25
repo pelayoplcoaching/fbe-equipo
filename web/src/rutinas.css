@@ -1,0 +1,111 @@
+/* FBE Esencial (sin coach, tanda 3): "Tu rutina". Las recomendadas, la ficha, el catalogo y la tarjeta de Semana, Perfil y
+   Hoy. Solo clases rut-*, y siempre en el elemento al que se aplica la regla (nada de ".rut-x svg" ni ".rut-x p"): asi van
+   enteras con el trozo de EsencialRutinas y no empatan con las reglas de otros trozos (scripts/css-coach.mjs). */
+
+/* La imagen de cada rutina (16:9). Sin imagen todavia: el numero de dias sobre el degradado de la casa */
+.rut-marco { display: block; overflow: hidden; border-radius: var(--r-14); background: var(--noche-2); }
+.rut-marco-mini { flex: none; width: 7rem; border-radius: var(--r-10); }
+.rut-marco-ficha { border-radius: var(--r-16); }
+/* (la cabecera de cada paso: la imagen, de 16:9, centrada en una franja mas baja) */
+.rut-marco-franja { display: grid; align-items: center; aspect-ratio: 5 / 2; }
+.rut-img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.rut-sin-img { display: grid; place-content: center; justify-items: center; background: var(--grad-noche); color: var(--sobre-hero); line-height: 1; }
+.rut-sin-n { font-size: var(--letra-24); }
+.rut-sin-t { font-size: var(--letra-12); }
+.rut-etiquetas { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+
+/* Los iconos sueltos (fuera de botones y chips) van en un span: no se encogen y llevan su color (el tamano, en el svg) */
+.rut-i { flex: none; display: inline-flex; margin-top: var(--esp-2); }
+.rut-i-ok { color: var(--ok); }
+.rut-i-av { color: var(--aviso); }
+.rut-i-mo { color: var(--morado); }
+.rut-i-gris { margin-top: 0; color: var(--tinta-3); }
+
+/* Tus gustos: cada pregunta, con sus opciones */
+.rut-pregunta { min-width: 0; margin: 0; padding: 0; border: 0; display: grid; gap: var(--esp-8); }
+.rut-leyenda { margin-bottom: var(--esp-8); padding: 0; font-weight: 650; color: var(--tinta); }
+.rut-material { display: grid; gap: var(--esp-10); }
+/* Sus dias: las siete teclas */
+.rut-teclas { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--esp-6); }
+.rut-tecla {
+  min-height: var(--esp-48); border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; font-weight: 700; cursor: pointer;
+}
+.rut-tecla[aria-pressed="true"] { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.rut-tecla:disabled { cursor: default; color: var(--tinta-3); }
+.rut-tecla:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* Tus recomendadas: una tarjeta por rutina; la primera, marcada */
+.rut-tarjeta { overflow: hidden; border-radius: var(--r-16); background: var(--hoja); box-shadow: var(--anillo); }
+.rut-tarjeta[data-primera] { box-shadow: var(--anillo-acento); }
+.rut-tarjeta-img { position: relative; }
+.rut-sello {
+  position: absolute; left: var(--esp-10); top: var(--esp-10); display: inline-flex; align-items: center; gap: var(--esp-6);
+  padding: var(--esp-4) var(--esp-10); border-radius: var(--r-pildora); background: var(--morado); color: var(--sobre-morado);
+  font-size: var(--letra-12); font-weight: 700;
+}
+.rut-tarjeta-cuerpo { display: grid; gap: var(--esp-10); padding: var(--esp-14); }
+.rut-h { font-size: var(--letra-17); overflow-wrap: anywhere; }
+.rut-h-op { display: block; font-size: var(--letra-14); font-weight: 500; color: var(--tinta-2); }
+.rut-porque { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-4); font-size: var(--letra-14); }
+.rut-porque-l { display: flex; align-items: flex-start; gap: var(--esp-6); }
+.rut-nota { display: flex; align-items: flex-start; gap: var(--esp-6); }
+.rut-acciones { display: flex; flex-wrap: wrap; gap: var(--esp-8); }
+.rut-pie { display: grid; gap: var(--esp-8); }
+.rut-temporada { display: grid; gap: var(--esp-8); }
+
+/* El catalogo: filtros y una fila por rutina (se toca para ver su ficha) */
+.rut-filtros { display: grid; gap: var(--esp-8); }
+.rut-filtro { max-width: 100%; overflow-x: auto; }
+.rut-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.rut-fila {
+  display: flex; align-items: center; gap: var(--esp-12); width: 100%; padding: var(--esp-8); border: 0; border-radius: var(--r-14);
+  background: var(--hoja-2); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.rut-fila:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.rut-fila[data-actual] { box-shadow: var(--anillo-acento-fino); }
+.rut-fila-texto { min-width: 0; flex: 1 1 auto; display: grid; gap: var(--esp-4); }
+.rut-nombre { overflow-wrap: anywhere; }
+.rut-aviso { display: flex; align-items: flex-start; gap: var(--esp-4); color: var(--aviso); }
+.rut-aviso-caja { display: flex; align-items: flex-start; gap: var(--esp-8); background: var(--aviso-suave); }
+
+/* La ficha: para quien es, cuanto dura, que hace falta y sus dias con sus ejercicios */
+.rut-datos { margin: 0; display: grid; gap: var(--esp-8); }
+.rut-dato { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--esp-10); }
+.rut-dato-t { color: var(--tinta-2); font-size: var(--letra-14); }
+.rut-dato-v { margin: 0; font-weight: 600; }
+.rut-dias { display: grid; gap: var(--esp-8); }
+.rut-dia { border-radius: var(--r-14); background: var(--hoja-2); }
+.rut-dia-cab { display: flex; align-items: center; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); list-style: none; cursor: pointer; font-weight: 650; }
+.rut-dia-cab::-webkit-details-marker { display: none; }
+.rut-dia-cab:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); border-radius: var(--r-14); }
+.rut-dia-nombre { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.rut-dia-cuantos { flex: none; font-weight: 400; }
+.rut-dia-flecha { transition: transform var(--mov-breve) ease; }
+.rut-dia[open] > .rut-dia-cab > .rut-dia-flecha { transform: rotate(180deg); }
+.rut-dia-n {
+  flex: none; display: grid; place-content: center; width: var(--esp-28); height: var(--esp-28); border-radius: 50%;
+  background: var(--morado); color: var(--sobre-morado); font-size: var(--letra-13);
+}
+.rut-ejercicios { list-style: none; margin: 0; padding: 0 var(--esp-12) var(--esp-12); display: grid; gap: var(--esp-6); }
+.rut-ej { display: flex; justify-content: space-between; gap: var(--esp-12); padding-top: var(--esp-6); border-top: var(--filo-fino) solid var(--linea); font-size: var(--letra-14); }
+.rut-ej-n { min-width: 0; overflow-wrap: anywhere; }
+.rut-ej-p { flex: none; }
+
+/* Confirmar y "Tu rutina" (Semana, Perfil y Hoy) */
+.rut-resumen { display: flex; align-items: center; gap: var(--esp-12); }
+.rut-cuando { display: flex; align-items: flex-start; gap: var(--esp-8); }
+.rut-tuya { display: grid; gap: var(--esp-10); }
+.rut-despues { display: flex; align-items: flex-start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); }
+.rut-despues-t { min-width: 0; }
+
+/* El coach, en Plantillas: la estrella que mete o saca cada plantilla del catalogo de FBE Esencial */
+.rutc-nota { padding: var(--esp-10) var(--esp-14) 0; }
+.rutc-cat { color: var(--tinta-3); }
+.rutc-cat[aria-pressed="true"] { color: var(--morado); box-shadow: var(--anillo-acento-fino); }
+
+@media (max-width: 359px) {
+  .rut-marco-mini { width: 5.5rem; }
+  .rut-dato { grid-template-columns: minmax(0, 1fr); gap: var(--esp-2); }
+}
+@media (prefers-reduced-motion: reduce) { .rut-dia-flecha { transition: none; } }

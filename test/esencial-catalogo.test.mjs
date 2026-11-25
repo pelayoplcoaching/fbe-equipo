@@ -6,6 +6,9 @@ import { plantillaEsencial } from '../web/src/logica/esencial-alta.js';
 import { NOVATOS } from '../web/src/logica/esencial-semana.js';
 import { NOMBRE_PRIMERAS_4 } from '../web/src/logica/esencial.js';
 import { EXPERIENCIA, MATERIAL } from '../web/src/logica/cuestionario.js';
+import { estadoEsencial } from '../web/src/logica/esencial-alta.js';
+import { buenMomento } from '../web/src/logica/esencial-catalogo.js';
+import { readFileSync } from 'node:fs';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -90,6 +93,56 @@ check(av('3 días · Full body con gomas') === null && /de gimnasio/.test(av('6 
 check(catalogoPara({ cuestionario: { experiencia: '1_3', lugar: 'gimnasio' }, gustos: g0, disponibles: pocas }).length === 4, 'y solo las que Pelayo tiene en el catálogo');
 check(SEMANAS_RUTINA === 12 && /al menos 12/.test(consejoCambio({ semanas: 3 })) && /una semana/.test(consejoCambio({ semanas: 1 })) && /ya puedes cambiar/.test(consejoCambio({ semanas: 12 }))
   && /descarga/.test(consejoCambio({ semanas: 5, estancado: true })) && /temporada/.test(consejoCambio({ temporada: true })), 'mantenerla al menos 12 semanas; antes, solo si se estanca (Pelayo, 25/11)');
+
+check(/buen momento/.test(consejoCambio({ semanas: 6, estancados: 2 })) && /3 ejercicios/.test(consejoCambio({ semanas: 6, estancados: 3 })) && /descarga/.test(consejoCambio({ semanas: 6, descarga: true }))
+  && /al menos 12/.test(consejoCambio({ semanas: 2, descarga: true })) && /al menos 12/.test(consejoCambio({ semanas: 6, estancados: 1 })), 'con dos ejercicios o más tres semanas sin subir, o en su semana de descarga (desde la cuarta), se lo propone');
+check(buenMomento({ semanas: 12 }) && buenMomento({ semanas: 5, estancados: 2 }) && buenMomento({ semanas: 5, descarga: true }) && buenMomento({ temporada: true }) && !buenMomento({ semanas: 5 }) && !buenMomento({ semanas: 5, estancados: 1 }),
+  'fuera de eso, cambiar pide confirmarlo («Cambiar de todos modos»)');
+
+console.log('\nTras «Primeras 4 semanas» y lo que no se recomienda');
+{
+  const c0 = { experiencia: 'ninguna', dias_semana: 2, lugar: 'gimnasio', material: [] }, gg = { prioridad: 'equilibrado', otro: 'no', mayor: 'no' };
+  const tras = recomendar({ cuestionario: c0, gustos: gg, trasPrimeras: true, actual: NOMBRE_PRIMERAS_4 });
+  const tras3 = recomendar({ cuestionario: { ...c0, dias_semana: 3 }, gustos: gg, trasPrimeras: true, actual: NOMBRE_PRIMERAS_4 });
+  check(tras.length === 3 && tras[0].rutina.nombre === NOVATOS[2] && tras3[0].rutina.nombre === NOVATOS[3] && /continuación/.test(tras[0].porque[0]) && tras.slice(1).every((x) => x.rutina.familia !== 'novato'),
+    'al acabar sus cuatro primeras semanas: la de novato de sus días, la primera («la continuación»), y otras dos');
+  let mal = 0, n = 0;
+  for (const [exp] of EXPERIENCIA) for (const dias of [2, 3, 4, 5, 6]) for (const lugar of ['gimnasio', 'casa']) for (const otro of ['no', 'correr', 'deporte']) {
+    const r = recomendar({ cuestionario: { experiencia: exp, dias_semana: dias, lugar, material: ['mancuernas', 'banco', 'gomas', 'dominadas', 'barra'] }, gustos: { ahora: 'si', tecnica: 'si', barra: 'si', prioridad: 'equilibrado', otro, mayor: 'no' } });
+    n++;
+    if (r.some((x) => x.rutina.familia === 'novato' || (x.rutina.para.includes('correr') && otro !== 'correr') || (x.rutina.para.includes('deporte') && otro !== 'deporte'))) mal++;
+  }
+  check(mal === 0, `sin haberlas hecho no se recomienda la de novato; la de corredores y la de otro deporte, solo a quien corre o lo hace (${n} casos)`);
+  check(/continuación/.test(catalogoPara({ cuestionario: { experiencia: '1_3', lugar: 'gimnasio' }, gustos: g0 }).find((x) => x.rutina.familia === 'novato').aviso)
+    && catalogoPara({ cuestionario: c0, gustos: gg, trasPrimeras: true }).find((x) => x.rutina.nombre === NOVATOS[2]).aviso === null, 'en el catálogo, la de novato lleva su aviso para quien no viene de «Primeras 4 semanas»');
+}
+
+console.log('\nAntes de empezar: «Elige tu rutina»');
+{
+  const hoy = '2026-12-20', inicio = '2027-01-11';
+  const base = { completado_en: '2026-12-16T10:00:00Z', resultado: 'sin_valoracion', dias_semana: 3, lugar: 'gimnasio' };
+  const gOk = { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' };
+  const e = (c, mas = {}) => estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.tipo + (estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.gustos === true ? ':elegir' : estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.gustos === false ? ':gustos' : '');
+  check(e({ ...base, experiencia: 'ninguna' }) === 'preparando', 'quien nunca ha entrenado no pasa por ahí: la app le prepara «Primeras 4 semanas»');
+  check(e({ ...base, experiencia: '1_3' }) === 'rutina:gustos' && e({ ...base, experiencia: '1_3', gustos: gOk }) === 'rutina:elegir' && e({ ...base, experiencia: '1_3', gustos: gOk }, { rutina: '3 días · Full body · B · Máquinas y mancuernas' }) === 'preparando',
+    'con experiencia: primero «Tus gustos», después elegir y, con la rutina elegida, la app le prepara el plan');
+  check(e({ ...base, experiencia: 'menos_1', gustos: { ...gOk, ahora: 'parado' } }) === 'preparando', 'si la criba le manda a «Primeras 4 semanas», no elige: la app se las prepara');
+  check(e({ ...base, experiencia: '1_3', resultado: 'valorar_antes', gustos: gOk }) === 'rutina:elegir' && e({ ...base, experiencia: '1_3', resultado: 'valorar_antes', gustos: gOk }, { rutina: 'x' }) === 'visto_bueno', 'elegir va antes del visto bueno (mientras lo consigue, ya tiene su rutina)');
+  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy, con099: false, inicio })?.tipo === 'preparando', 'sin la migración 099, como antes: la app le prepara la de su cuestionario');
+  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-10', con099: true, inicio })?.tipo === 'preparando' && estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-09', con099: true, inicio })?.tipo === 'rutina',
+    'si llega la víspera de su lunes sin elegir, ya no se espera: la app le prepara la de su cuestionario');
+}
+
+console.log('\nLas ilustraciones de las rutinas');
+{
+  const lista = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes-rutinas.json', import.meta.url), 'utf8'));
+  const general = JSON.parse(readFileSync(new URL('../web/src/datos/imagenes.json', import.meta.url), 'utf8'));
+  const validas = new Set([...RUTINAS.map((r) => r.imagen), 'rutinas-gustos', 'rutinas-recomendadas', 'rutinas-catalogo']);
+  const ids = Object.keys(lista);
+  check(ids.length > 0 && ids.every((id) => validas.has(id)), `cada una es de una rutina del catálogo o una de las tres cabeceras (${ids.length} de ${validas.size})`);
+  check(ids.every((id) => lista[id].proporcion.join(':') === '16:9' && /^#[0-9a-f]{6}$/.test(lista[id].color) && ['240', '720', '1080'].every((a) => lista[id].archivos[a]?.startsWith(`imagenes/rutina/${id}-${a}.`))), 'apaisadas, con su color y en tres anchos');
+  check(!ids.some((id) => general[id]) && !Object.keys(general).some((id) => /^rutinas?-/.test(id)), 'van en su propia lista (con su trozo), no en la que se descarga al abrir la app');
+}
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

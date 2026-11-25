@@ -49,7 +49,8 @@ export const MENSAJE_ESENCIAL = {
 //  · cuestionario: aún no lo ha enviado (empezado: true si ya guardó algo)
 //  · salud: lo envió sin la parte de salud (sin ella no hay plan)
 //  · rutina (099): con experiencia, le falta «Tus gustos» (gustos: false) o, si la criba no le manda a «Primeras 4
-//    semanas», elegir su rutina (gustos: true). Solo con la migración 099 (con099) y sin plan todavía.
+//    semanas», elegir su rutina (gustos: true). Solo con la migración 099 (con099) y sin plan todavía. Si llega la
+//    víspera de su lunes (inicio) sin elegir, ya no se espera: la app le prepara la rutina de su cuestionario.
 //  · visto_bueno: el cribado pide valoración médica y aún no ha dicho que la tiene
 //  · revision: dice que la tiene; falta que Pelayo lo confirme
 //  · preparando: todo listo y aún sin plan (la app se lo pide a la base)
@@ -57,7 +58,7 @@ export const MENSAJE_ESENCIAL = {
 //  · null: ya ha empezado (o no va por su cuenta)
 // bloque: el de su programa (o null); cuestionario: su fila; ficha: { visto_bueno_pedido_en, visto_bueno_en } de atletas;
 // rutina: la que ha elegido (atletas.esencial_plantilla).
-export function estadoEsencial({ bloque = null, cuestionario = null, ficha = null, hoy, rutina = null, con099 = false }) {
+export function estadoEsencial({ bloque = null, cuestionario = null, ficha = null, hoy, rutina = null, con099 = false, inicio = null }) {
   if (bloque) {
     if (bloque.fecha_inicio && bloque.fecha_inicio > hoy) {
       const faltan = Math.round((Date.parse(`${bloque.fecha_inicio}T12:00:00Z`) - Date.parse(`${hoy}T12:00:00Z`)) / 864e5);
@@ -68,7 +69,8 @@ export function estadoEsencial({ bloque = null, cuestionario = null, ficha = nul
   const c = cuestionario;
   if (!c?.completado_en) return { tipo: 'cuestionario', empezado: !!c };
   if (!c.resultado) return { tipo: 'salud' };
-  if (con099 && nivelDe(c.experiencia) > 0) {
+  const vispera = /^\d{4}-\d{2}-\d{2}/.test(inicio || '') ? new Date(Date.parse(`${String(inicio).slice(0, 10)}T12:00:00Z`) - 864e5).toISOString().slice(0, 10) : null;
+  if (con099 && nivelDe(c.experiencia) > 0 && !(vispera && hoy >= vispera)) {
     if (!gustosCompletos(c.gustos, c)) return { tipo: 'rutina', gustos: false };
     if (!rutina && !necesitaPrimeras({ experiencia: c.experiencia, gustos: c.gustos })) return { tipo: 'rutina', gustos: true };
   }

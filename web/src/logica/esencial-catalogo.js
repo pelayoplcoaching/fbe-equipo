@@ -129,7 +129,7 @@ export const NOMBRE_NIVEL = ['Para empezar', 'Desde unos meses entrenando', 'Con
 
 // Cada rutina, con su título y su texto en llano (sin «PHAT» ni «PPL» sin explicar)
 export const RUTINAS = FILAS.map(([nombre, imagen, dias, familia, opcion, donde, material, nivel, para]) => {
-  const [titulo, texto] = SUELTAS[nombre.replace(/^\d días · /, '')] || FAMILIAS[familia];
+  const [titulo, texto] = SUELTAS[nombre.replace(/^\d d\u00edas \u00b7 /, '')] || FAMILIAS[familia];
   return {
     nombre, imagen, dias, familia, opcion, donde, material, nivel, para,
     titulo: opcion ? `${titulo} · ${OPCIONES[opcion][0]}` : familia === 'novato' ? `Novato, ${dias} días` : titulo,

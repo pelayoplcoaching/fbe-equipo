@@ -12,6 +12,16 @@ export function Plantillas({ peticion = null } = {}) {
   const [abierta, setAbierta] = useState(null);
   const [nueva, setNueva] = useState(false);
   const [asignar, setAsignar] = useState(null); // plantilla que se asigna a varios atletas
+  // (099) el catálogo de rutinas de FBE Esencial: cada plantilla entra o sale con un toque (solo con la migración 099)
+  const conCatalogo = (lista.datos || []).some((p) => 'esencial_catalogo' in p);
+  const enCatalogo = (lista.datos || []).filter((p) => p.esencial_catalogo).length;
+  const alCatalogo = async (p) => {
+    try {
+      await api.esencialPlantillaEnCatalogo(p.id, !p.esencial_catalogo);
+      aviso(p.esencial_catalogo ? 'Fuera del catálogo de FBE Esencial' : 'En el catálogo de FBE Esencial');
+      lista.recargar(true);
+    } catch (e) { aviso(e.message, 'error'); }
+  };
   useEffect(() => { if (peticion?.nueva) { setAbierta(null); setNueva(true); } else if (peticion?.plantillaId) setAbierta(peticion.plantillaId); }, [peticion?.id]);
   // Pulido 3: en el móvil, «atrás» con una plantilla abierta vuelve a la lista
   useAtras(!!abierta, () => { setAbierta(null); lista.recargar(true); }, 2);
@@ -41,7 +51,9 @@ export function Plantillas({ peticion = null } = {}) {
           También puedes guardar como plantilla cualquier bloque desde la ficha de un atleta.
         </Vacio></div>
       ) : (
-        <div class="panel"><ul class="lista">
+        <div class="panel">
+          {conCatalogo && <p class="peq secundario rutc-nota">En el catálogo de FBE Esencial: {enCatalogo} de {lista.datos.length}. Las del catálogo son las que pueden elegir quienes van por su cuenta; con la estrella entran y salen.</p>}
+          <ul class="lista">
           {lista.datos.map((p) => (
             <li key={p.id} class="fila-plantilla">
               <button class="dia" style="background:none;border-radius:0" onClick={() => setAbierta(p.id)}>
@@ -49,10 +61,13 @@ export function Plantillas({ peticion = null } = {}) {
                 <span><span class="nombre">{p.nombre}</span><br /><span class="detalle">{p.foco ? NOMBRE_FOCO[p.foco] : 'Sin foco'}</span></span>
                 <Icono n="derecha" width="20" height="20" />
               </button>
+              {conCatalogo && <button type="button" class="btn btn-peq btn-icono rutc-cat" aria-pressed={p.esencial_catalogo ? 'true' : 'false'} onClick={() => alCatalogo(p)}
+                aria-label={`${p.nombre}: ${p.esencial_catalogo ? 'en el catálogo de FBE Esencial (quitar)' : 'fuera del catálogo de FBE Esencial (añadir)'}`} title={p.esencial_catalogo ? 'En el catálogo de FBE Esencial' : 'Fuera del catálogo de FBE Esencial'}><Icono n="estrella" /></button>}
               <button class="btn btn-peq" onClick={() => setAsignar(p)} aria-label={`Asignar ${p.nombre} a atletas`}><Icono n="atletas" /><span class="oculto-estrecho">Asignar</span></button>
             </li>
           ))}
-        </ul></div>
+          </ul>
+        </div>
       )}
       {asignar && <AsignarPlantilla plantilla={asignar} alCerrar={() => setAsignar(null)} />}
       {nueva && <NuevaPlantilla alCerrar={async (datos) => {

@@ -31,6 +31,8 @@ import { perezoso } from '../perezoso.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 // (alta, 52 y 53) las preguntas frecuentes de FBE Esencial y el correo para lo que falle en la app o en el cobro
 const FaqEsencial = perezoso(() => import('./Esencial.jsx'), 'FaqEsencial', { mientras: null });
+// (099) «Tu rutina»: cuál lleva y cambiarla
+const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { mientras: null });
 
 export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
   const { api, atleta, perfil, backend, salir, aviso, modo } = useApp();
@@ -81,6 +83,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       {conEntrenamiento(atleta) && <PerfilSecciones salud={salud} irA={irA} />}
       <EnElEquipo />
 
+      {suyo && p?.bloque && <TuRutina p={p} recargarPrograma={() => programa.recargar?.(true)} />}
       <GrupoIos titulo={suyo ? 'Tu plan' : 'Tu asesoría'} id="grupo-asesoria">
         <FilaFoto nombre={atleta.nombre} />
         {atleta.objetivo && <FilaIos icono="diana" titulo="Objetivo" detalle={atleta.objetivo} />}
