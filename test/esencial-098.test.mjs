@@ -63,6 +63,14 @@ const entrar = async (n, codigo, esencial = true) => {
 };
 for (const n of ['rosa', 'elena', 'dani', 'berta']) await entrar(n, alta[n].codigo);
 await entrar('lucas', codLucas, false);
+// (de jueves a domingo, la base pone su plan desde el lunes que viene: la 097, «desde el jueves, el siguiente». La prueba lo
+// trae a este lunes, como si se hubiera dado de alta a principios de semana; si no, de jueves a domingo fallaba)
+await db.exec(superusuario);
+for (const n of ['rosa', 'elena', 'dani', 'berta']) {
+  await db.query(`update sesiones s set dia_previsto = null from semanas w join bloques b on b.id = w.bloque_id where w.id = s.semana_id and b.atleta_id = $1 and not b.es_plantilla`, [id[n]]);
+  await db.query(`update semanas w set fecha_inicio = $1::date + (w.numero - 1) * 7 from bloques b where b.id = w.bloque_id and b.atleta_id = $2 and not b.es_plantilla`, [lunes, id[n]]);
+  await db.query(`update bloques set fecha_inicio = $1::date, fecha_fin = $1::date + 27 where atleta_id = $2 and not es_plantilla`, [lunes, id[n]]);
+}
 const semanas = async (n) => { await db.exec(superusuario); return (await db.query(`select w.id, w.numero, to_char(w.fecha_inicio, 'YYYY-MM-DD') inicio, w.esencial_cierre cierre, to_char(w.esencial_cierre_lunes, 'YYYY-MM-DD') cl, w.esencial_repetida rep,
   to_char(b.fecha_inicio, 'YYYY-MM-DD') bi, to_char(b.fecha_fin, 'YYYY-MM-DD') bf from semanas w join bloques b on b.id = w.bloque_id where b.atleta_id = $1 and not b.es_plantilla order by w.numero`, [id[n]])).rows; };
 const como = (n) => b.auth.entrar(`${n}@test`, `clave-${n}@test`);

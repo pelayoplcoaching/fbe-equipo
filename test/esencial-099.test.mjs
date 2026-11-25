@@ -266,7 +266,10 @@ console.log('\nNadie se queda sin plan por no elegir: los avisos y el plan de la
   await db.exec(superusuario);
   const perfil = async (n) => (await db.query('select perfil_id from atletas where id = $1', [id[n]])).rows[0].perfil_id;
   for (const n of ['gema', 'iris', 'julia', 'kike', 'lola']) await db.query(`insert into preferencias_notificaciones (usuario_id, email, silencio_desde, silencio_hasta) values ($1, true, null, null) on conflict (usuario_id) do update set email = true, silencio_desde = null, silencio_hasta = null`, [await perfil(n)]);
+  // (sin el disparador de la 093, que le pondría la hora de ahora: así, de jueves a domingo, «lo envió ayer» sigue siendo verdad)
+  await db.exec('set session_replication_role = replica;');
   await db.query(`update cuestionarios set completado_en = $1::date + time '10:00' where atleta_id = any($2::uuid[])`, [antes, ['gema', 'hugo', 'iris', 'julia', 'kike', 'lola'].map((n) => id[n])]);
+  await db.exec('set session_replication_role = default;');
   const servidor = `${superusuario} set role service_role;`;
   const llamar = async (dia, h) => { await db.exec(servidor); await db.query('select public.crear_recordatorios($1::timestamptz)', [`${dia} ${h}:00 Europe/Madrid`]); await db.exec(superusuario); };
   const avisos = async (pref) => (await db.query(`select n.titulo, n.cuerpo, n.tipo, n.url, n.usuario_id from notificaciones n where n.clave like $1`, [`${pref}%`])).rows;
