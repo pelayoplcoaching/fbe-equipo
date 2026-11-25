@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.244': {
+    // (FBE Esencial: las ilustraciones de sus tarjetas; sin migración)
+    atleta: [],
+    coach: [
+      'FBE Esencial, con ilustraciones propias: la tarjeta de antes de empezar, la bienvenida, la lección de cada semana y sus tarjetas.',
+    ],
+  },
   '0.243': {
     // (FBE Esencial sin coach, tanda 3 de 3: su rutina; migración 099)
     atleta: [],

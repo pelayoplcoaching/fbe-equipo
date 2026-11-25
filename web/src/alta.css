@@ -25,9 +25,10 @@
 .alta-primera strong { font-size: var(--letra-17); }
 
 /* La bienvenida de FBE Esencial */
-.alta-tres { margin: 0; padding-left: var(--esp-22); display: grid; gap: var(--esp-8); text-align: left; color: var(--tinta-2); }
-.alta-tres li::marker { color: var(--morado); font-weight: 800; }
-.alta-tres strong { color: var(--tinta); }
+/* (v0.244) va sobre el fondo de noche de la bienvenida, tambien con el tema claro: con la tinta del tema no se leia */
+.alta-tres { margin: 0; padding-left: var(--esp-22); display: grid; gap: var(--esp-8); text-align: left; color: var(--sobre-hero-2); }
+.alta-tres li::marker { color: var(--acento-200); font-weight: 800; }
+.alta-tres strong { color: var(--sobre-hero); }
 .alta-avisos { justify-items: center; }
 .alta-hecho { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--ok); font-weight: 650; }
 .alta-hecho svg { width: var(--esp-18); height: var(--esp-18); }

@@ -36,6 +36,7 @@ import './belleza-b.css';
 import './belleza-c.css';
 import './alta.css';
 import './rutinas.css';
+import './esencial-arte.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

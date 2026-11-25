@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SeguimientoCheckin } from './Vida.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
+import { perezoso } from '../perezoso.jsx';
 import { trasElCheckin, queHacerConMolestia, URL_SEMAFORO } from '../../logica/esencial-checkin.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
@@ -19,6 +20,8 @@ import { semanaSalud } from '../../logica/integraciones.js';
 import { leerBorradorCheckin, guardarBorradorCheckin, borrarBorradorCheckin, respuestasSemanaPasada, lineasSemanaCheckin } from '../../logica/cierre.js';
 
 // v0.49: las respuestas de una sola opción, en filas grandes (número y frase), fáciles de tocar con el pulgar
+// (v0.244) la ilustración de lo de quien va por su cuenta, con su lista, en su trozo
+const Arte = perezoso(() => import('./EsencialArte.jsx'), 'Arte', { mientras: null });
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
   return (
     <div class="opciones-grandes" role="group" aria-label={etiqueta}>
@@ -73,6 +76,7 @@ function FranjaPaso({ id, sentido }) {
 function QueHacerMolestia({ m }) {
   return (
     <div class={`sinco-dolor pila-s${m.grave ? ' grave' : ''}`} role="note" aria-label="Qué hacer con esa molestia">
+      <Arte id="esencial-molestia" />
       <p class="fila-icono"><Icono n="alerta" /><strong>{m.titulo}</strong></p>
       <ul class="sinco-dolor-pasos peq">{m.pasos.map((t) => <li key={t}>{t}</li>)}</ul>
       <p class="peq secundario">{m.consulta}</p>
@@ -540,6 +544,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       {yaEnviado && suyo && (
         <section class="seccion sinco-tras" aria-labelledby="sinco-tras-t">
           <div class="seccion-cab"><h2 id="sinco-tras-t">Qué pasa ahora con tu check-in</h2></div>
+          <Arte id="esencial-checkin-enviado" />
           <div class="panel"><ul class="lista">
             {trasElCheckin({ f, molestias }).map((l) => <li key={l.id} class="panel-pad fila-icono peq" data-linea={l.id}><Icono n={l.icono} /><span>{l.texto}</span></li>)}
           </ul></div>

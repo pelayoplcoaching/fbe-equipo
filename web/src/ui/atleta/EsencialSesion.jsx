@@ -5,6 +5,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono } from '../comunes.jsx';
 import { textoQuePeso, textoSiguiente, TEXTO_AGUJETAS } from '../../logica/esencial-primera.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
+import { Arte, ArteDuo } from './EsencialArte.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 
 const clave = (id) => `fbe-esencial-guia:${id}`;
@@ -19,12 +20,14 @@ export function GuiaPrimeraSesion() {
   const quitar = () => { try { localStorage.setItem(clave(atleta.id), '1'); } catch { /* */ } setFuera(true); };
   return (
     <section class="panel panel-pad pila-s alta-guia" aria-labelledby="alta-guia-t">
+      <Arte id="esencial-primera-sesion" />
       <strong id="alta-guia-t">Tu primera sesión, en tres cosas</strong>
       <ol class="alta-guia-pasos">
         <li><strong>Apunta cada serie:</strong> los kilos y las repeticiones que has hecho.</li>
         <li><strong>«Te sobran 4-5»</strong> son las repeticiones que podrías haber hecho de más al acabar la serie: no se va al límite.</li>
         <li><strong>Si haces justo lo que te propone la app,</strong> basta con tocar ✓.</li>
       </ol>
+      <ArteDuo ids={['esencial-te-sobran', 'esencial-ajustar-maquina']} />
       <p class="peq secundario">Y el primer día, pide a alguien de sala que te ajuste las máquinas: son cinco minutos y te ahorran un mes de dudas.</p>
       <button type="button" class="btn btn-peq" style="justify-self:start" onClick={quitar}>Entendido</button>
     </section>
@@ -37,6 +40,7 @@ export function QuePesoPongo({ rir }) {
   return (
     <div class="alta-que-peso">
       <button type="button" class="btn-texto" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}><Icono n="pregunta" /> ¿Qué peso pongo?</button>
+      {abierto && <Arte id="esencial-que-peso" />}
       {abierto && <p class="peq">{textoQuePeso(rir)}</p>}
     </div>
   );
@@ -61,6 +65,7 @@ export function FinPrimeraSesion({ sesion }) {
   const sig = textoSiguiente(d.datos.siguiente, hoyISO(), fechaLarga);
   return (
     <section class="panel panel-pad pila-s alta-fin-primera" aria-labelledby="alta-fin-t">
+      <Arte id="esencial-fin-primera" />
       <strong id="alta-fin-t"><Icono n="estrella" /> Tu primera sesión, hecha</strong>
       <span class="peq">Lo más difícil era empezar. {sig}</span>
       <span class="peq secundario">{TEXTO_AGUJETAS}</span>

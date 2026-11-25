@@ -130,8 +130,9 @@ ${marcadoPortada}
 
   // (imágenes) Las ilustraciones (web/imagenes/<bloque>/<id>-<ancho>.<huella>.webp, las de datos/imagenes.json): se copian
   // tal cual. No se precargan: el service worker guarda cada una la primera vez que se ve (caché fbe-imagenes)
-  // (y las de las rutinas de FBE Esencial, datos/imagenes-rutinas.json: su lista va con su trozo, no con el arranque)
-  const listaImagenes = ['imagenes.json', 'imagenes-rutinas.json'].flatMap((n) => Object.values(JSON.parse(readFileSync(join(raiz, 'web/src/datos', n), 'utf8'))).flatMap((x) => Object.values(x.archivos)));
+  // (y las de las rutinas de FBE Esencial, datos/imagenes-rutinas.json, y las de sus tarjetas, datos/imagenes-esencial.json:
+  // cada lista va con su trozo, no con el arranque)
+  const listaImagenes = ['imagenes.json', 'imagenes-rutinas.json', 'imagenes-esencial.json'].flatMap((n) => Object.values(JSON.parse(readFileSync(join(raiz, 'web/src/datos', n), 'utf8'))).flatMap((x) => Object.values(x.archivos)));
   for (const f of listaImagenes) {
     if (!/^imagenes\/[a-z0-9-]+\/[a-z0-9-]+-\d+\.[0-9a-f]{8}\.webp$/.test(f)) throw new Error(`Imagen con un nombre que no toca: ${f}`);
     mkdirSync(join(salida, f, '..'), { recursive: true });

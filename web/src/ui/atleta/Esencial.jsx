@@ -10,6 +10,9 @@ import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUTO_098 } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
+import { Imagen } from '../Imagen.jsx';
+import { Arte, hayArte } from './EsencialArte.jsx';
+import { ARTE_HERO, ARTE_CIERRE, arteLeccion, arteSemanaHecha } from '../../logica/esencial-arte.js';
 import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
 import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
 import { PRIMERAS_4 } from '../../logica/esencial-plantilla.js';
@@ -214,18 +217,20 @@ export function BienvenidaInicioEsencial({ nombre, alTerminar }) {
   const inicio = atleta?.esencial_inicio || null;
   const antes = !!inicio && inicio > hoy;
   const ios = esIosNavegador();
+  // (v0.244) con su ilustración si ha llegado; si no, el dibujo de siempre
+  const foto = (id, sin) => (hayArte(id) ? <Imagen id={id} clase="bienvenida-foto" tamanos="(min-width: 500px) 460px, 92vw" prioridad /> : sin);
   const pantallas = [
-    { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tendrás tu plan. Así funciona FBE Esencial:', extra: (
+    { dibujo: foto('esencial-bienvenida-plan', 'programa'), titulo: `Hola, ${nombre}`, texto: 'Aquí tendrás tu plan. Así funciona FBE Esencial:', extra: (
       <ol class="alta-tres">
         <li><strong>Tu cuestionario.</strong> Unos minutos: tu experiencia, tus días, dónde entrenas y unas preguntas de salud.</li>
         <li><strong>Tu plan.</strong> Con tus respuestas, la app te lo prepara.</li>
         <li><strong>{antes ? `Empiezas el ${fechaLarga(inicio)}.` : 'Empiezas.'}</strong> Cada semana, la app te prepara la siguiente con lo que apuntas.</li>
       </ol>
     ) },
-    ...(antes ? [{ dibujo: <DibujoCalendario />, titulo: 'Hasta tu lunes',
+    ...(antes ? [{ dibujo: foto('esencial-bienvenida-lunes', <DibujoCalendario />), titulo: 'Hasta tu lunes',
       texto: `Hasta el ${fechaLarga(inicio)}, rellena tu cuestionario y, en cuanto tengas tu plan, mira tu semana 1 y los vídeos de sus ejercicios. Las sesiones se abren ese día.` }] : []),
-    { dibujo: 'serie', titulo: 'Apunta cada serie', texto: 'Kilos, repeticiones y cuántas te sobraban. Si haces justo lo que te propone la app, basta con tocar ✓. Funciona aunque el gimnasio no tenga cobertura.' },
-    { dibujo: <DibujoAvisos />, titulo: 'Los avisos',
+    { dibujo: foto('esencial-bienvenida-serie', 'serie'), titulo: 'Apunta cada serie', texto: 'Kilos, repeticiones y cuántas te sobraban. Si haces justo lo que te propone la app, basta con tocar ✓. Funciona aunque el gimnasio no tenga cobertura.' },
+    { dibujo: foto('esencial-bienvenida-avisos', <DibujoAvisos />), titulo: 'Los avisos',
       texto: 'Te avisamos si te falta el cuestionario, la víspera y el día en que empiezas y si llevas días sin entrenar. Sin avisos activados, no te llega ninguno.', extra: <PasoAvisos /> },
     ...(esAppInstalada() ? [] : [{ dibujo: 'instalar', instalar: true, titulo: 'Tenla a mano',
       texto: ios ? 'En Safari, toca Compartir (el cuadrado con la flecha hacia arriba) y luego «Añadir a pantalla de inicio». Se abrirá como una app y te podrán llegar los avisos.'
@@ -290,6 +295,7 @@ export function TarjetaMarcas() {
   return (
     <>
       <section class="nota-coach tarjeta-marcas" aria-label="Tus marcas">
+        <Arte id="esencial-marcas" />
         <Icono n="trofeo" />
         <div class="pila-s">
           <strong>Ya tienes tus marcas de la semana {d.semana.numero}</strong>
@@ -327,6 +333,7 @@ export function BienvenidaEsencial({ bloque = null }) {
   const primeras = bloque?.nombre === NOMBRE_PRIMERAS_4;
   return (
     <section class="nota-coach bienvenida-esencial" aria-label="Bienvenida a FBE Esencial">
+      <Arte id="esencial-hoy-empiezas" />
       <Icono n="diana" />
       <div class="pila-s">
         <strong>Te damos la bienvenida a FBE Esencial</strong>
@@ -372,7 +379,9 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
   if (!e || ficha.datos?.falta091) return null;
   const marco = (contexto, icono, chip, titulo, texto, acciones = null, extra = null) => (
     <section class="hero-dia hero-espera" aria-label={titulo}>
-      <Ilustracion n="espera" clase="hero-ilu" />
+      {/* (v0.244) cada estado, con su ilustración arriba de la tarjeta (de fondo no se veía, tapada por el texto); sin ella,
+          el dibujo de siempre */}
+      {hayArte(ARTE_HERO[e?.tipo]) ? <Arte key={ARTE_HERO[e.tipo]} id={ARTE_HERO[e.tipo]} /> : <Ilustracion n="espera" clase="hero-ilu" />}
       <div class="titular">
         {contexto && <div class="contexto"><span>{contexto}</span></div>}
         <span class="chip toca-hoy descanso"><Icono n={icono} />{chip}</span>
@@ -523,6 +532,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
   const nota = (e.tipo === 'lista' || e.tipo === 'pasada') && e.siguiente?.nota_coach ? e.siguiente.nota_coach : null;
   return (
     <section class="nota-coach cierre-semana" data-cierre={e.tipo} aria-label="Tu semana">
+      <Arte id={ARTE_CIERRE[e.tipo]} />
       <Icono n={e.tipo === 'pregunta' ? 'pregunta' : e.tipo === 'pausa' ? 'reloj' : e.tipo === 'repite' ? 'reiniciar' : 'calendario'} />
       <div class="pila-s">
         <strong>{t.titulo}</strong>
@@ -563,6 +573,7 @@ export function LeccionSemana({ p }) {
   if (!l) return null;
   return (
     <section class="nota-coach leccion-esencial" aria-labelledby="leccion-t">
+      <Arte id={arteLeccion(n)} />
       <Icono n="biblioteca" />
       <div class="pila-s">
         <span class="mini terciario">Lo de esta semana · semana {n}</span>
@@ -652,6 +663,7 @@ export function SesionPerdida({ p, recargarPrograma }) {
   });
   return (
     <section class="nota-coach alta-perdida" aria-label="Una sesión que no pudiste hacer">
+      <Arte id="esencial-sesion-perdida" />
       <Icono n="calendario" />
       <div class="pila-s">
         <strong>El {fechaLarga(String(perdida.dia_previsto).slice(0, 10))} no pudiste hacer «{perdida.nombre}»</strong>
@@ -680,6 +692,7 @@ function HoyNoPuedo({ sesion, semana, sesiones, recargarPrograma }) {
   if (!abierto) return <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}>Hoy no puedo</button></p>;
   return (
     <section class="nota-coach alta-perdida" aria-label="Pasar la sesión de hoy a otro día">
+      <Arte id="esencial-otro-dia" />
       <Icono n="calendario" />
       <div class="pila-s">
         <span class="peq"><strong>¿Hoy no puedes?</strong> Pasa «{sesion.nombre}» a otro día de esta semana (mejor sin otra sesión el día de antes ni el de después).</span>
@@ -700,6 +713,7 @@ export function SemanaHecha({ p }) {
   if (n >= 4 && n % 4 === 0) {
     return (
       <section class="nota-coach alta-semana-hecha" aria-label="Cuatro semanas más">
+        <Arte id={arteSemanaHecha(n)} />
         <Icono n="progreso" />
         <div class="pila-s">
           <strong>Semana {n} hecha: ya llevas {n} semanas</strong>
@@ -712,6 +726,7 @@ export function SemanaHecha({ p }) {
   const l = leccionDe(2);
   return (
     <section class="nota-coach alta-semana-hecha" aria-labelledby="alta-sh-t">
+      <Arte id={arteSemanaHecha(1)} />
       <Icono n="hecho" />
       <div class="pila-s">
         <strong id="alta-sh-t">Semana 1 hecha: {ss.length === 1 ? 'tu sesión' : `tus ${ss.length} sesiones`}</strong>
@@ -737,6 +752,7 @@ export function PresentateEquipo({ p, irA }) {
   const quitar = () => { try { localStorage.setItem(clave, '1'); } catch { /* */ } setFuera(true); };
   return (
     <section class="nota-coach alta-equipo" aria-label="Preséntate en Equipo">
+      <Arte id="esencial-equipo" />
       <Icono n="equipo" />
       <div class="pila-s">
         <span class="peq"><strong>¿Te presentas en Equipo?</strong> Di quién eres y qué te ha traído: hay más gente empezando esta semana.</span>
@@ -769,6 +785,7 @@ export function FaqEsencial() {
     <section class="seccion alta-faq" aria-labelledby="alta-faq-t">
       <h2 id="alta-faq-t">FBE Esencial: preguntas frecuentes</h2>
       <div class="panel panel-pad pila-s">
+        <Arte id="esencial-preguntas" />
         {faq.map(([q, r]) => <details key={q} class="alta-faq-p"><summary>{q}</summary><p class="peq secundario">{r}</p></details>)}
         <p class="peq alta-contacto"><Icono n="mensaje" /> <span>¿Algún problema con la app o con el cobro? Escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a> y Pelayo te contesta por correo.</span></p>
       </div>

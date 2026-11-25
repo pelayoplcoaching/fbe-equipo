@@ -15,6 +15,7 @@ import { DIAS_SEMANA, nombreDias, seguidos, PROPUESTA_DIAS, leerDias, guardarDia
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { anadirImagenes } from '../../logica/imagenes.js';
 import IMAGENES_RUTINAS from '../../datos/imagenes-rutinas.json';
+import { Arte } from './EsencialArte.jsx';
 
 // Las ilustraciones de las rutinas: su lista llega con este trozo (no con lo que se descarga al abrir la app)
 anadirImagenes(IMAGENES_RUTINAS);
@@ -457,6 +458,8 @@ export function TuRutina({ p, cuestionario: dado = undefined, recargarPrograma =
       : consejoCambio({ semanas: s.semanas, estancados, descarga: s.descarga, temporada });
   return (
     <section class="panel panel-pad rut-tuya" aria-label="Tu rutina" data-modo={s.modo}>
+      {/* (v0.244) en su semana de descarga (desde la cuarta) o con dos ejercicios o más sin subir: su ilustración */}
+      {s.modo === 'cambio' && <Arte id={s.descarga && s.semanas >= 4 ? 'esencial-descarga' : estancados >= 2 ? 'esencial-estancado' : null} />}
       <div class="rut-resumen">
         {actual ? <Mini r={actual} /> : null}
         <span class="rut-fila-texto">

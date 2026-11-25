@@ -1,0 +1,6 @@
+/* FBE Esencial (v0.244): la ilustracion de cada tarjeta propia de quien va por su cuenta. Solo clases esa-*, y siempre en
+   el elemento al que se aplica la regla (EsencialArte.jsx): asi van enteras con su trozo y no con los estilos comunes. */
+.esa-franja { grid-column: 1 / -1; display: block; overflow: hidden; border-radius: var(--r-10); background: var(--noche-2); aspect-ratio: 5 / 2; }
+.esa-franja-alta { aspect-ratio: 16 / 9; }
+.esa-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.esa-duo { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); }
