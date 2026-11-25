@@ -74,6 +74,10 @@ const PESTANAS_PROPIO = [['hoy', 'Hoy', 'hoy'], ['semana', 'Semana', 'semana'], 
 
 function tabInicial(tabs) {
   const h = (typeof location !== 'undefined' ? location.hash : '').slice(1);
+  // (v0.246) «#hoy/<clave>»: el aviso de FBE Esencial que abrió la app. Se guarda para la ayuda de Hoy, que carga después
+  // de que la dirección ya se haya puesto en «#hoy»
+  const k = /^hoy\/([a-z_]{2,20})$/.exec(h);
+  if (k) { try { sessionStorage.setItem('fbe-hoy-aviso', k[1]); } catch { /* sin almacenamiento */ } }
   // (v0.57) el vídeo de un aviso (#videos/<id>@<s>) se abre sobre Progreso
   if (leerEnlaceVideo(`#${h}`) && tabs.some(([t]) => t === 'progreso')) return 'progreso';
   // (visual 3) #ajustes: Perfil, en su vista de ajustes

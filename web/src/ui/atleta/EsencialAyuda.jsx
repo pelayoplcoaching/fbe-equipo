@@ -457,9 +457,11 @@ export function TrasLaSesion({ sesion, enCola = false }) {
 // ---------- (7 y 14) «¿Qué necesitas?» en Hoy, y lo que abre cada aviso ----------
 // Y si la app se abre desde un aviso (#hoy/<clave>, migración 100), se abre lo que anuncia.
 const claveAviso = () => { try { return /^#hoy\/([a-z_]{2,20})$/.exec(location.hash)?.[1] || null; } catch { return null; } };
+// (v0.246) si la app se abrió en frío desde el aviso, la clave la guardó AtletaApp (la dirección ya es «#hoy»): se usa una vez
+const avisoGuardado = () => { try { const k = sessionStorage.getItem('fbe-hoy-aviso'); sessionStorage.removeItem('fbe-hoy-aviso'); return /^[a-z_]{2,20}$/.test(k || '') ? k : null; } catch { return null; } };
 export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const { backend, atleta } = useApp();
-  const [abrir, setAbrir] = useState(claveAviso);
+  const [abrir, setAbrir] = useState(() => { const g = avisoGuardado(); return claveAviso() || g; });
   useEffect(() => {
     const oir = () => { const k = claveAviso(); if (k) setAbrir(k); };
     window.addEventListener('hashchange', oir);

@@ -64,7 +64,7 @@ await llamar(viernes, '07:00');
 check((await avisos()).length === 0, 'el viernes de antes, a las siete, nada (va a su hora de la mañana, las 8:30)');
 await llamar(viernes, '09:00');
 const r = await avisos();
-check(r.length === 1 && r[0].atleta === ana.id && r[0].titulo === 'Te falta tu cuestionario' && r[0].tipo === 'cuestionario' && r[0].url === '#hoy' && /Empiezas el lunes/.test(r[0].cuerpo),
+check(r.length === 1 && r[0].atleta === ana.id && r[0].titulo === 'Te falta tu cuestionario' && r[0].tipo === 'cuestionario' && r[0].url === '#hoy/cuestionario' && /Empiezas el lunes/.test(r[0].cuerpo),
   'a su hora, a Ana (cuenta activa, sin cuestionario): «Te falta tu cuestionario», a Hoy');
 check(!r.some((x) => [berta.id, carmen.id, eva.id].includes(x.atleta)), 'a Berta (ya lo envió), a Carmen (empieza dentro de dos semanas) y a Eva (los tiene apagados), no; Dani no ha activado su cuenta');
 await llamar(sumarDias(viernes, 1), '09:00');

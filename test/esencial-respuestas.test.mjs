@@ -84,6 +84,16 @@ for (const [archivo, pieza] of [['web/src/ui/atleta/Sesion.jsx', 'AyudaEjercicio
 }
 check(/suyo && !propio && !sesion\.completada && r\.ejercicios > 0 && <LoDeHoy/.test(lee('web/src/ui/atleta/Portada.jsx')) && /sobran && !propio && sesionId && !completo && <AyudaEjercicio/.test(lee('web/src/ui/atleta/Sesion.jsx')), 'y solo para quien va por su cuenta');
 check(/\/\^#hoy\\\/\[a-z_\]\{2,20\}\$\//.test(lee('web/src/main.jsx')) && /h\.startsWith\('hoy\/'\)/.test(lee('web/src/ui/atleta/AtletaApp.jsx')), 'un aviso puede llevar a «#hoy/<clave>»: la app va a Hoy y la ayuda abre lo que anuncia');
+{
+  // (v0.246) y el service worker no lo tira al llegar el aviso al móvil: la misma forma que admite la base (migración 100)
+  const sw = lee('web/sw.js');
+  const patron = '/^#hoy\\/[a-z_]{2,20}$/';
+  const reglas = [...sw.matchAll(/\/\^#[^\n]*?\$\/(?=\.test\(d\.url\))/g)].map((m) => new RegExp(m[0].slice(1, -1)));
+  const pasa = (u) => reglas.some((r) => r.test(u));
+  check(sw.includes(`${patron}.test(d.url)`) && lee('web/src/main.jsx').includes(`${patron}.test(h)`) && reglas.length === 3, 'el service worker y la app admiten la misma forma de «#hoy/<clave>»');
+  check(Object.keys(AVISO_ABRE).every((k) => pasa(`#hoy/${k}`)) && pasa('#hoy') && pasa('#mensajes') && !pasa('#hoy/Lunes') && !pasa('#hoy/a') && !pasa('#hoy/../x') && !pasa('#hoy/lunes?x=1') && !pasa('https://x.es/#hoy/lunes'),
+    'cada clave de aviso pasa por el service worker; lo que no tiene esa forma, no');
+}
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

@@ -1040,6 +1040,17 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const abierta = await p.locator('[aria-modal="true"] .ayu-revision').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check(abierta && (await p.evaluate(() => location.hash)) === '#hoy', 'un aviso que lleva a «#hoy/lunes» abre su revisión de la semana (y el enlace vuelve a «#hoy»)');
     if (abierta) await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();
+    // …y con la app cerrada (se abre en frío desde el aviso: la dirección pasa a «#hoy» antes de que cargue la ayuda)
+    {
+      await p.waitForTimeout(600);
+      const p2 = await ctx.newPage();
+      vigilar(p2);
+      await p2.goto(`${base}/?demo=esencial#hoy/lunes`);
+      await p2.locator('nav.tabs').waitFor({ timeout: 30000 });
+      const enFrio = await p2.locator('[aria-modal="true"] .ayu-revision').waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+      check(enFrio && (await p2.evaluate(() => location.hash)) === '#hoy', 'y con la app cerrada, al abrirla desde el aviso, también');
+      await p2.close();
+    }
     // La sesión: «Lo de hoy» en la portada y, en cada ejercicio, «¿Por qué esto?» y «Dudas»
     await p.evaluate(() => window.scrollTo(0, 0));
     await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión/ }).first().click();
