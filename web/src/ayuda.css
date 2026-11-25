@@ -1,0 +1,154 @@
+/* FBE Esencial (acompanamiento, tanda 4): "Respuestas: todo explicado". La revision de la semana, el porque de cada
+   ejercicio, el centro de respuestas, "Que necesitas", "Tu plan, explicado" y la pregunta para el directo. Solo clases
+   ayu-*, y siempre en el elemento al que se aplica la regla (nada de ".ayu-x svg" ni ".ayu-x p"): asi van enteras con el
+   trozo de EsencialAyuda y no empatan con las reglas de otros trozos (scripts/css-coach.mjs). */
+
+/* Las palabras (y las opciones de un toque): pastillas que se marcan */
+.ayu-palabras { display: grid; gap: var(--esp-6); }
+.ayu-palabras-f { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.ayu-palabra {
+  min-height: var(--esp-28); padding: var(--esp-4) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; font-size: var(--letra-13); cursor: pointer;
+}
+.ayu-palabra[aria-pressed="true"] { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.ayu-palabra:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-def { margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); }
+
+/* El centro de respuestas */
+.ayu-centro { min-width: 0; }
+.ayu-buscar { display: grid; gap: var(--esp-4); }
+.ayu-buscar-t { font-weight: 650; }
+.ayu-buscar-c {
+  width: 100%; min-height: var(--esp-48); padding: var(--esp-8) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit;
+}
+.ayu-buscar-c:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-cats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); }
+.ayu-cat {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); width: 100%; min-height: var(--esp-48);
+  padding: var(--esp-10) var(--esp-12); border: 0; border-radius: var(--r-14); background: var(--hoja-2); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.ayu-cat:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-cat-i { display: inline-flex; color: var(--morado); }
+.ayu-cat-n { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ayu-cat-c { color: var(--tinta-3); }
+.ayu-volver { justify-self: start; }
+.ayu-lista { display: grid; gap: var(--esp-8); }
+.ayu-p { border-radius: var(--r-14); background: var(--hoja-2); }
+.ayu-p-q { padding: var(--esp-12) var(--esp-14); font-weight: 650; cursor: pointer; overflow-wrap: anywhere; }
+.ayu-p-q:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); border-radius: var(--r-14); }
+.ayu-p-r { display: grid; gap: var(--esp-8); padding: 0 var(--esp-14) var(--esp-14); }
+.ayu-pendiente { margin: 0; color: var(--aviso); }
+.ayu-pie { display: flex; align-items: flex-start; gap: var(--esp-8); margin: 0; }
+.ayu-pie-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--tinta-3); }
+.ayu-dudas { justify-self: start; }
+.ayu-todas { justify-self: start; }
+
+/* La pregunta para el directo */
+.ayu-directo { min-width: 0; }
+.ayu-area {
+  width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical;
+}
+.ayu-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-mias { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.ayu-mia { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); overflow-wrap: anywhere; }
+.ayu-mia-r { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--morado-suave); }
+
+/* Tu plan, explicado, y tu camino */
+.ayu-plan { min-width: 0; }
+.ayu-sesiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.ayu-sesion { display: flex; justify-content: space-between; align-items: baseline; gap: var(--esp-12); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.ayu-sesion-n { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ayu-reglas { margin: 0; display: grid; gap: var(--esp-10); }
+.ayu-regla { display: grid; gap: var(--esp-2); }
+.ayu-regla-t { font-weight: 650; }
+.ayu-regla-x { margin: 0; color: var(--tinta-2); }
+.ayu-camino { list-style: none; margin: 0; padding: 0; display: grid; }
+.ayu-paso { display: grid; grid-template-columns: var(--esp-28) minmax(0, 1fr); gap: var(--esp-10); padding-bottom: var(--esp-14); }
+.ayu-paso-m {
+  display: grid; place-content: center; width: var(--esp-28); height: var(--esp-28); border-radius: 50%;
+  border: var(--filo-fino) solid var(--linea); background: var(--hoja); color: var(--sobre-morado);
+}
+.ayu-paso-m[data-estado="hecho"] { border-color: var(--ok); background: var(--ok); }
+.ayu-paso-m[data-estado="ahora"] { border-color: var(--morado); background: var(--morado); }
+.ayu-paso-c { display: grid; gap: var(--esp-2); min-width: 0; }
+
+/* Tu revision de la semana */
+.ayu-revision { min-width: 0; }
+.ayu-rev-cab { display: grid; gap: var(--esp-4); }
+.ayu-rev-t { margin: 0; font-size: var(--letra-24); line-height: 1.15; text-wrap: balance; overflow-wrap: anywhere; }
+.ayu-momento { display: grid; gap: var(--esp-4); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--morado-suave); }
+.ayu-grupo { display: grid; gap: var(--esp-8); }
+.ayu-grupo-t { display: flex; align-items: center; gap: var(--esp-8); margin: 0; font-size: var(--letra-14); font-weight: 700; color: var(--tinta-2); }
+.ayu-grupo-i { display: inline-flex; color: var(--tinta-3); }
+.ayu-grupo-i[data-g="sube"] { color: var(--ok); }
+.ayu-grupo-i[data-g="baja"] { color: var(--aviso); }
+.ayu-filas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.ayu-fila { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.ayu-fila-n { min-width: 0; font-weight: 650; overflow-wrap: anywhere; }
+.ayu-fila-q { color: var(--morado); font-weight: 600; }
+.ayu-fila-x { min-width: 0; }
+.ayu-foco { display: flex; align-items: flex-start; gap: var(--esp-10); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--anillo-acento); }
+.ayu-foco-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--morado); }
+.ayu-peso { display: flex; align-items: flex-start; gap: var(--esp-10); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja-2); }
+.ayu-peso-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--tinta-3); }
+.ayu-otras { display: flex; align-items: center; flex-wrap: wrap; gap: var(--esp-8); }
+.ayu-otras-c { min-height: var(--esp-28); padding: var(--esp-4) var(--esp-8); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); color: var(--tinta); font: inherit; }
+.ayu-rev-tarjeta { min-width: 0; }
+.ayu-rev-linea { margin: 0; }
+
+/* En cada ejercicio de la sesion: "Por que esto" y "Dudas" */
+.ayu-ej { display: grid; gap: var(--esp-6); }
+.ayu-ej-b { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); }
+.ayu-ej-d { display: grid; gap: var(--esp-6); }
+.ayu-ej-x { margin: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); }
+
+/* Lo de hoy, en 20 segundos (la portada de la sesion) */
+.ayu-hoy { display: grid; gap: var(--esp-8); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--anillo); }
+.ayu-hoy-l { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6); }
+.ayu-hoy-f { display: flex; align-items: flex-start; gap: var(--esp-8); }
+.ayu-hoy-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--morado); }
+
+/* Al terminar: "Como ha ido" y "Tu sesion, en claro" */
+.ayu-tras { min-width: 0; }
+.ayu-claro { border-top: var(--filo-fino) solid var(--linea); padding-top: var(--esp-8); }
+.ayu-claro-t { cursor: pointer; }
+.ayu-claro-t:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-claro-l { list-style: none; margin: var(--esp-8) 0 0; padding: 0; display: grid; gap: var(--esp-8); }
+.ayu-claro-f { display: flex; align-items: flex-start; gap: var(--esp-8); }
+.ayu-claro-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--tinta-3); }
+.ayu-claro-i[data-estado="arriba"] { color: var(--ok); }
+.ayu-claro-i[data-estado="corta"], .ayu-claro-i[data-estado="de_mas"], .ayu-claro-i[data-estado="falta"] { color: var(--aviso); }
+
+/* El check-in contesta (apagado hasta que Pelayo lo vea) */
+.ayu-checkin { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.ayu-checkin-f { display: flex; align-items: flex-start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); }
+.ayu-checkin-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--morado); }
+
+/* Que necesitas (en Hoy) */
+.ayu-necesitas { min-width: 0; }
+.ayu-nec-f { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--esp-8); }
+.ayu-nec {
+  display: flex; align-items: center; gap: var(--esp-8); min-height: var(--esp-48); padding: var(--esp-8) var(--esp-12); border: 0; border-radius: var(--r-14);
+  background: var(--hoja-2); color: inherit; font: inherit; font-size: var(--letra-14); text-align: left; cursor: pointer;
+}
+.ayu-nec:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-nec-i { flex: none; display: inline-flex; color: var(--morado); }
+.ayu-nec-t { min-width: 0; overflow-wrap: anywhere; }
+
+/* El coach, en su panel de FBE Esencial: las preguntas para el directo (ui/coach/EsencialPreguntas.jsx) */
+.ecp-caja { display: grid; gap: var(--esp-8); margin-top: var(--esp-12); }
+.ecp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.ecp-fila { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); overflow-wrap: anywhere; }
+.ecp-resp { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--morado-suave); }
+.ecp-area, .ecp-campo {
+  width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit;
+}
+.ecp-area { resize: vertical; }
+.ecp-area:focus-visible, .ecp-campo:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+@media (max-width: 359px) {
+  .ayu-cats { grid-template-columns: minmax(0, 1fr); }
+}

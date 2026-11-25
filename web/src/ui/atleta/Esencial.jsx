@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
 import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../../logica/esencial.js';
-import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial } from '../../logica/esencial-alta.js';
+import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
@@ -23,6 +23,9 @@ const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEje
 // (099) «Tu rutina» (elegirla, sus recomendadas, el catálogo): en su trozo, con el catálogo entero
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
 const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { mientras: null });
+// (v0.245) cada tarjeta, con su «¿Dudas?», y en Perfil, todas las respuestas (en el trozo de la ayuda)
+const Dudas = perezoso(() => import('./EsencialAyuda.jsx'), 'Dudas', { mientras: null });
+const TodasLasRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'TodasLasRespuestas', { mientras: null });
 
 // ---------- (alta, 28-32) Antes de empezar ----------
 // Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
@@ -301,6 +304,7 @@ export function TarjetaMarcas() {
           <strong>Ya tienes tus marcas de la semana {d.semana.numero}</strong>
           <span class="peq">El peso y las repeticiones de tu mejor serie en cada ejercicio: el punto de partida para todo lo que venga.</span>
           <button type="button" class="btn btn-primario btn-peq" style="justify-self:start" onClick={() => setAbierta(true)}>Ver tus marcas</button>
+          <Dudas de="marcas" />
         </div>
       </section>
       {abierta && <HojaMarcas datos={d} alCerrar={() => setAbierta(false)} />}
@@ -549,6 +553,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
               {e.puedeRepetir && <li><strong>Repetir: </strong>{t.repetir}</li>}
             </ul>
             <span class="mini terciario">{t.plazo}</span>
+            <Dudas de="cierre" />
           </>
         )}
         {e.tipo === 'lista' && e.puedeAdelantar && (
@@ -582,6 +587,7 @@ export function LeccionSemana({ p }) {
         {l.mas && (abierta
           ? <><strong class="peq">{l.mas.titulo}</strong><span class="peq">{l.mas.texto}</span></>
           : <button type="button" class="btn-texto" style="justify-self:start" onClick={() => setAbierta(true)}>Leer más: {l.mas.titulo.charAt(0).toLowerCase()}{l.mas.titulo.slice(1)}</button>)}
+        {n >= 5 && <Dudas de="leccion" texto="¿Cómo decide la app?" />}
       </div>
     </section>
   );
@@ -623,6 +629,7 @@ export function DiasEsencial({ p }) {
             : <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}>{otro === 3 ? 'Pasar a tres días' : 'Volver a dos días'}</button>}
         </div>
         {error && !hoja && <p class="error" role="alert">{error}</p>}
+        <Dudas de="dias" texto="¿Me conviene?" />
       </div>
       {hoja && (
         <Hoja titulo={otro === 3 ? 'Pasar a tres días' : 'Volver a dos días'} alCerrar={() => setHoja(false)}>
@@ -668,6 +675,7 @@ export function SesionPerdida({ p, recargarPrograma }) {
       <div class="pila-s">
         <strong>El {fechaLarga(String(perdida.dia_previsto).slice(0, 10))} no pudiste hacer «{perdida.nombre}»</strong>
         <span class="peq">No la recuperes doblando: sigue donde tocaba. {libres.length ? '¿La pasas a otro día de esta semana?' : 'Esta semana ya no quedan días libres: la semana que viene, sigues.'}</span>
+        <Dudas de="perdida" />
         {libres.length > 0 && (
           <div class="fila-envolver">
             {libres.map((d) => <button type="button" key={d} class="btn btn-peq" disabled={ocupado} onClick={() => mover(d)}>{d === hoy ? 'Hoy' : fechaLarga(d).split(' ')[0].replace(/^./, (c) => c.toUpperCase())}</button>)}
@@ -767,7 +775,6 @@ export function PresentateEquipo({ p, irA }) {
 
 // (52 y 53) Las preguntas frecuentes de FBE Esencial (las de la web, para quien ya está dentro) y a quién escribir si algo
 // falla en la app o en el cobro
-const PORTAL_ESENCIAL = 'https://billing.stripe.com/p/login/9B6bJ0ccQ4exeMxcsKbV601';
 export function FaqEsencial() {
   const { atleta } = useApp();
   const inicio = atleta?.esencial_inicio || null;
@@ -787,8 +794,43 @@ export function FaqEsencial() {
       <div class="panel panel-pad pila-s">
         <Arte id="esencial-preguntas" />
         {faq.map(([q, r]) => <details key={q} class="alta-faq-p"><summary>{q}</summary><p class="peq secundario">{r}</p></details>)}
+        <TodasLasRespuestas />
         <p class="peq alta-contacto"><Icono n="mensaje" /> <span>¿Algún problema con la app o con el cobro? Escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a> y Pelayo te contesta por correo.</span></p>
       </div>
     </section>
+  );
+}
+
+// ---------- (v0.245) Todo lo suyo de Hoy, en una pieza ----------
+// Sus tarjetas de Hoy, en su orden. Van juntas aquí (y no una a una en Hoy.jsx) para que lo que se le añada a quien va por
+// su cuenta no pese al abrir la app a los demás. recargar: vuelve a pedir su programa.
+const TarjetaRevision = perezoso(() => import('./EsencialAyuda.jsx'), 'TarjetaRevision', { mientras: null });
+const QueNecesitas = perezoso(() => import('./EsencialAyuda.jsx'), 'QueNecesitas', { mientras: null });
+export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA }) {
+  const { atleta } = useApp();
+  if (atleta.estado === 'baja') return <TarjetaMarcas />;
+  const conPlan = !!p?.bloque;
+  return (
+    <>
+      {/* sus marcas de la semana 4, en cuanto termina esa semana */}
+      <TarjetaMarcas />
+      {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
+      <AntesDeEmpezar p={p} cuestionario={cuestionario} />
+      {conPlan && <AplicarDias p={p} recargarPrograma={recargar} />}
+      {/* (098) el cierre de la semana y (v0.245) su revisión: lo que cambia y por qué */}
+      {conPlan && <CierreSemana p={p} recargarPrograma={recargar} abrirSesion={abrirSesion} />}
+      {conPlan && <TarjetaRevision p={p} />}
+      {/* (alta, 47, 48 y 51) una sesión que no pudo hacer, la semana hecha y presentarse en Equipo */}
+      {conPlan && <SesionPerdida p={p} recargarPrograma={recargar} />}
+      {conPlan && <SemanaHecha p={p} />}
+      {conPlan && <PresentateEquipo p={p} irA={irA} />}
+      {/* la semana siguiente, que prepara la app (con la pregunta si hay una posible errata) */}
+      {conPlan && <SemanaEsencial recargarPrograma={recargar} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
+      {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
+      {conPlan && <LeccionSemana p={p} />}
+      {conPlan && <DiasEsencial p={p} />}
+      {/* (v0.245) «¿Qué necesitas?»: lo que más se pregunta, a un toque, y lo que abre cada aviso */}
+      <QueNecesitas p={p} cuestionario={cuestionario} recargarPrograma={recargar} />
+    </>
   );
 }

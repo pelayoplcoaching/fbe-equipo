@@ -110,6 +110,9 @@ const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaComp
 const GuiaPrimeraSesion = perezoso(() => import('./EsencialSesion.jsx'), 'GuiaPrimeraSesion', { mientras: null });
 const QuePesoPongo = perezoso(() => import('./EsencialSesion.jsx'), 'QuePesoPongo', { mientras: null });
 const FinPrimeraSesion = perezoso(() => import('./EsencialSesion.jsx'), 'FinPrimeraSesion', { mientras: null });
+// (v0.245) FBE Esencial: el «¿Por qué?» y las dudas de cada ejercicio, y al terminar, «¿Cómo ha ido?» y «Tu sesión, en claro»
+const AyudaEjercicio = perezoso(() => import('./EsencialAyuda.jsx'), 'AyudaEjercicio', { mientras: null });
+const TrasLaSesion = perezoso(() => import('./EsencialAyuda.jsx'), 'TrasLaSesion', { mientras: null });
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -1180,6 +1183,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {/* (alta, 42) FBE Esencial: la primera vez, sin kilos pautados, «¿Qué peso pongo?» (el texto de la guía) */}
           {sobran && !propio && !porTiempo && e.carga_sugerida_kg == null && !ultimas && !completo && <QuePesoPongo rir={e.rir_objetivo} />}
+          {sobran && !propio && sesionId && !completo && <AyudaEjercicio pauta={e} sesionId={sesionId} />}
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>{sobran ? 'No hay una alternativa marcada que puedas hacer con tu material. Hazlo como puedas o cámbialo tú.' : 'Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.'}</span></p>}
           {coach?.lista?.length > 0 && <LoQueTeDijo coach={coach} nombre={ej.nombre} />}
@@ -1760,6 +1764,7 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       )}
       {/* (alta, 46 y 49) FBE Esencial: su primera sesión, cuándo es la siguiente y las agujetas */}
       {esPorSuCuenta(atleta) && !propio && !cardio && <FinPrimeraSesion sesion={sesion} />}
+      {esPorSuCuenta(atleta) && !propio && !cardio && <TrasLaSesion sesion={sesion} enCola={!!resumen.enCola} />}
       {/* «La travesía»: lo que ha corrido su lobo en los descansos de esta sesión (si ha jugado) */}
       {travesia?.metros > 0 && (
         <div class="resumen-travesia" style={{ '--i': 5 }}>

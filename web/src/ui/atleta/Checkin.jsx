@@ -22,6 +22,8 @@ import { leerBorradorCheckin, guardarBorradorCheckin, borrarBorradorCheckin, res
 // v0.49: las respuestas de una sola opción, en filas grandes (número y frase), fáciles de tocar con el pulgar
 // (v0.244) la ilustración de lo de quien va por su cuenta, con su lista, en su trozo
 const Arte = perezoso(() => import('./EsencialArte.jsx'), 'Arte', { mientras: null });
+// (v0.245) FBE Esencial: el check-in contesta a cada cosa que marca (apagado hasta el visto bueno de Pelayo)
+const CheckinResponde = perezoso(() => import('./EsencialAyuda.jsx'), 'CheckinResponde', { mientras: null });
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
   return (
     <div class="opciones-grandes" role="group" aria-label={etiqueta}>
@@ -548,6 +550,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <div class="panel"><ul class="lista">
             {trasElCheckin({ f, molestias }).map((l) => <li key={l.id} class="panel-pad fila-icono peq" data-linea={l.id}><Icono n={l.icono} /><span>{l.texto}</span></li>)}
           </ul></div>
+          <CheckinResponde f={f} />
           {queHacerConMolestia(molestias) && <QueHacerMolestia m={queHacerConMolestia(molestias)} />}
         </section>
       )}

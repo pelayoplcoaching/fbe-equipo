@@ -24,6 +24,10 @@ import { HoyComoEstas } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
 import { TiempoHoy, Calentamiento } from './SesionTuya.jsx';
 import { useMarcaPagina } from '../marca-pagina.js';
+import { perezoso } from '../perezoso.jsx';
+
+// (v0.245) FBE Esencial: «Lo de hoy, en 20 segundos», antes de empezar
+const LoDeHoy = perezoso(() => import('./EsencialAyuda.jsx'), 'LoDeHoy', { mientras: null });
 
 // El dibujo de la sesión, en su propio archivo (ArteSesion.jsx); se sigue exportando desde aquí
 export { ArteSesion };
@@ -83,6 +87,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
           : 'Cuando veas «RIR 2», significa que acabes la serie cuando aún podrías hacer 2 repeticiones más. Te lo explicamos en cada ejercicio.'}</p>
       )}
       {/* (personalización 3, tanda 5) con el tiempo que tiene y su calentamiento: consejo, la sesión no cambia */}
+      {suyo && !propio && !sesion.completada && r.ejercicios > 0 && <LoDeHoy sesion={sesion} ejercicios={ejercicios} />}
       {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} />}
       {!sesion.completada && r.ejercicios > 0 && <Calentamiento ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
       {nota && (

@@ -78,7 +78,7 @@ function tabInicial(tabs) {
   if (leerEnlaceVideo(`#${h}`) && tabs.some(([t]) => t === 'progreso')) return 'progreso';
   // (visual 3) #ajustes: Perfil, en su vista de ajustes
   if (h === 'ajustes' && tabs.some(([t]) => t === 'perfil')) { pedirVistaPerfil('ajustes'); return 'perfil'; }
-  return tabs.some(([t]) => t === h) ? h : 'hoy';
+  return tabs.some(([t]) => t === h) ? h : 'hoy';   // (también «#hoy/<aviso>», v0.245: lo lee FBE Esencial en Hoy)
 }
 
 export function AtletaApp() {
@@ -222,6 +222,7 @@ export function AtletaApp() {
       if (v && !propio) { if (tabsRef.current.some(([t]) => t === 'progreso')) setTab('progreso'); setVideoEnlace(v); noLeidos.recargar(true); return; }
       if (h === 'ajustes' && tabsRef.current.some(([t]) => t === 'perfil')) { pedirVistaPerfil('ajustes'); setTab('perfil'); return; }
       if (tabsRef.current.some(([t]) => t === h)) { setTab(h); noLeidos.recargar(true); }
+      else if (h.startsWith('hoy/')) setTab('hoy');
     };
     const llega = () => { noLeidos.recargar(true); programa.recargar(true); };
     window.addEventListener('hashchange', ir);

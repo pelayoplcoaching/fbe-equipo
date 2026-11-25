@@ -76,17 +76,37 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
       });
     });
   }
+  // (v0.245) Los hechos de cada ejercicio, para «Tu revisión de la semana» y el «¿Por qué?» (logica/esencial-porque.js los
+  // pone en palabras): lo que hizo, lo que tenía pautado, lo que le queda para la semana nueva y qué leyó el motor.
+  const bajado = new Set(bajadas.map((x) => x.p.id));
+  const semanaTipo = descarga ? 'descarga' : r.semana?.tipo || 'normal';
+  const porque = [];
+  [...sesiones].sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0)).forEach((ses, i) => {
+    [...(porSesion[ses.id] || [])].sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0)).forEach((p, j) => {
+      const f = pares[p.id] || null;
+      const nueva = semana[i]?.pautas?.[j] || null;
+      const ej = ejercicios[p.ejercicio_id] || {};
+      const campos = (x) => ({ kg: x.carga_sugerida_kg != null ? Number(x.carga_sugerida_kg) : null, min: x.reps_min ?? null, max: x.reps_max ?? null, series: x.series ?? null });
+      porque.push({
+        sesion: i, sesion_nombre: ses.nombre || '', ejercicio_id: p.ejercicio_id, nuevo_id: nueva?.ejercicio_id ?? null, nombre: ej.nombre || '', por_tiempo: !!ej.por_tiempo,
+        tipo: f?.tipo || null, diagnostico: f?.diagnostico || null, frenos: (f?.frenos || []).map((x) => x.id), mal_dia: !!f?.banderas?.malDia,
+        molestia: (f?.avisos || []).some((x) => x.tipo === 'molestia'), semana: semanaTipo, novato: soloKilos, estancado: bajado.has(p.id),
+        hecho: [...(hechas[p.id] || [])].filter((x) => Number(x.reps) > 0 && !x.sustituto_id).sort((x, y) => (Number(x.numero) || 0) - (Number(y.numero) || 0))
+          .map((x) => ({ kg: Number(x.kg) > 0 ? Number(x.kg) : null, reps: Number(x.reps), rpe: x.rpe != null ? Number(x.rpe) : null })),
+        antes: campos(p), despues: nueva ? campos(nueva) : null,
+      });
+    });
+  });
   const preguntas = (r.filas || []).filter((f) => f.tipo === 'pregunta' && f.pregunta)
     .map((f) => ({ pauta_id: f.pauta_id, sesion_id: f.sesion_id, ejercicio_id: f.ejercicio_id, texto: f.pregunta.texto, series: f.pregunta.series }));
   // La nota de la semana: lo que cambia (la de la plantilla de novato ya la pone la base si no hay nada que contar). Lo
   // que el motor diga de la plancha no vale (cuenta repeticiones): de ella se cuenta lo que hace su regla.
-  if (soloKilos) return { sesiones: semana, nota: null, descarga, preguntas };
+  if (soloKilos) return { sesiones: semana, nota: null, descarga, preguntas, porque, semana: semanaTipo };
   const tiempo = (id) => !!ejercicios[id]?.por_tiempo;
   const nombre = (p) => ejercicios[p.ejercicio_id]?.nombre || p.ejercicio_id;
   // (094) lo que pasa a su alternativa para siempre no se cuenta como si siguiera (es otro ejercicio, sin kilos)
   const alts = atleta?.esencial_alternativas || {};
   const cambiado = (id) => !!alts[id] && alts[id] !== id && !!ejercicios[alts[id]] && tiempo(alts[id]) === tiempo(id);
-  const bajado = new Set(bajadas.map((x) => x.p.id));
   const filasNota = (r.filas || []).filter((f) => !['pregunta', 'sin_tocar'].includes(f.tipo) && !tiempo(f.ejercicio_id) && !cambiado(f.ejercicio_id) && !bajado.has(f.pauta_id))
     .map((f) => ({ ejercicio: f.ejercicio, clase: claseParaNota({ fila: f, propuesta: f.propuesta, hechas: entrada.series[f.pauta_id] }) })).filter((x) => x.clase);
   const sesionDe = Object.fromEntries(sesiones.map((s) => [s.id, s]));
@@ -96,7 +116,6 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   });
   const cambian = planchas.filter((x) => x.frase);
   const nombres = (ps) => new Set(ps.map(nombre)).size;
-  const semanaTipo = descarga ? 'descarga' : r.semana?.tipo || 'normal';
   // (cuántos ejercicios distintos hay: los dos días son iguales; sin la plancha si se cuenta aparte)
   const total = nombres(pautas.filter((p) => !(cambian.length && tiempo(p.ejercicio_id)) && !cambiado(p.ejercicio_id)));
   let nota = notaDeSemana({ semana: semanaTipo, descarga: r.descarga?.tipo, total, filas: filasNota }) || null;
@@ -130,5 +149,5 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
     else if (nota.endsWith(RESTO)) nota = `${nota.slice(0, -RESTO.length)}${extra.join(' ')} ${RESTO}`;
     else nota = `${nota} ${extra.join(' ')}`;
   }
-  return { sesiones: semana, nota, descarga, preguntas };
+  return { sesiones: semana, nota, descarga, preguntas, porque, semana: semanaTipo };
 }

@@ -37,6 +37,7 @@ import './belleza-c.css';
 import './alta.css';
 import './rutinas.css';
 import './esencial-arte.css';
+import './ayuda.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';
@@ -140,7 +141,7 @@ async function arrancar() {
       if (d.tipo === 'abrir' && typeof d.url === 'string') {
         const h = new URL(d.url, location.href).hash;
         // (v0.55) también «#mensajes/<atleta>»: la conversación de esa notificación; (v0.57) y «#videos/<vídeo>@<segundos>»
-        if ((/^#[a-z]+(\/[0-9a-f-]{36})?$/.test(h) || /^#videos\/[0-9a-f-]{36}(@[0-9]{1,4}(\.[0-9])?)?$/.test(h)) && h !== location.hash) location.hash = h;
+        if ((/^#[a-z]+(\/[0-9a-f-]{36})?$/.test(h) || /^#hoy\/[a-z_]{2,20}$/.test(h) || /^#videos\/[0-9a-f-]{36}(@[0-9]{1,4}(\.[0-9])?)?$/.test(h)) && h !== location.hash) location.hash = h;
         else window.dispatchEvent(new Event('fbe-notificacion'));
       }
       if (d.tipo === 'notificacion') window.dispatchEvent(new Event('fbe-notificacion'));

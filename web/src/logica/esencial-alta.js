@@ -124,3 +124,6 @@ export function marcasDeSemana({ pautas = [], series = [], ejercicios = {} }) {
     // (con espacios que no parten: «16 kg × 12» no se corta en dos líneas)
     .map(({ orden: _o, ...m }) => ({ ...m, texto: m.porTiempo ? `${m.reps} s` : m.kg != null ? `${num(m.kg, 2)} kg × ${m.reps}` : `${m.reps} repeticiones` }));
 }
+
+// (alta, 53) Donde gestiona su suscripción (el portal de Stripe): lo enlazan sus preguntas frecuentes y el centro de respuestas
+export const PORTAL_ESENCIAL = 'https://billing.stripe.com/p/login/9B6bJ0ccQ4exeMxcsKbV601';

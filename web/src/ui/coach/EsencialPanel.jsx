@@ -10,6 +10,10 @@ import { cifrasPiloto, filaPiloto, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_
 import { diasInvitacion } from '../../logica/esencial.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { Invitaciones } from './EsencialAltas.jsx';
+import { perezoso } from '../perezoso.jsx';
+
+// (v0.245, migración 100) las preguntas para el directo de quienes van por su cuenta
+const PreguntasDirecto = perezoso(() => import('./EsencialPreguntas.jsx'), 'PreguntasDirecto', { mientras: null });
 
 const CIERRE = { pasar: 'pasó a la siguiente', auto: 'no eligió: se le pasó a la siguiente', repetir: 'repite la semana', pausa: 'semana en pausa' };
 const RESULTADO = { valorar_antes_vigoroso: 'su cribado: valorar antes de lo vigoroso', valorar_antes: 'su cribado: valorar antes de empezar', parar_y_valorar: 'su cribado: parar y valorar' };
@@ -148,6 +152,7 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       {filas.length > 0 && <div class="fila-envolver" style="margin-top:var(--esp-10)">
         <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}><Icono n="mensaje" /> {c.encuesta.mandadas ? 'Las encuestas y sus respuestas' : 'Mandar la encuesta'}</button>
       </div>}
+      {suyos.length > 0 && <PreguntasDirecto />}
       {hoja && <HojaEncuesta suyos={filas.filter((r) => r.estado !== 'baja')} tareas={enc.datos || []} alCerrar={() => setHoja(false)} alCambiar={() => enc.recargar(true)} />}
       {reenvio && <HojaReenvio sin={sin} alCerrar={() => { setReenvio(false); alta.recargar(true); }} />}
     </details>

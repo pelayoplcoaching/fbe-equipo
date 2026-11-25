@@ -78,21 +78,13 @@ import { semanasObjetivo, semanaEnCurso, cardioDelCalendario, esCarrera, carrera
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { perezoso } from '../perezoso.jsx';
 // (FBE Esencial) lo de quien va por su cuenta, en su propio trozo: el resto de atletas no lo descarga
-const TarjetaMarcas = perezoso(() => import('./Esencial.jsx'), 'TarjetaMarcas', { mientras: null });
 const BienvenidaEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaEsencial', { mientras: null });
 const HeroEsencial = perezoso(() => import('./Esencial.jsx'), 'HeroEsencial', { mientras: null });
-const SemanaEsencial = perezoso(() => import('./Esencial.jsx'), 'SemanaEsencial', { mientras: null });
-const LeccionSemana = perezoso(() => import('./Esencial.jsx'), 'LeccionSemana', { mientras: null });
-const DiasEsencial = perezoso(() => import('./Esencial.jsx'), 'DiasEsencial', { mientras: null });
 const BienvenidaInicioEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaInicioEsencial', { mientras: null });
-const AntesDeEmpezar = perezoso(() => import('./Esencial.jsx'), 'AntesDeEmpezar', { mientras: null });
-const AplicarDias = perezoso(() => import('./Esencial.jsx'), 'AplicarDias', { mientras: null });
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const HojaAvisosEsencial = perezoso(() => import('./Esencial.jsx'), 'HojaAvisosEsencial', { mientras: null });
-const SesionPerdida = perezoso(() => import('./Esencial.jsx'), 'SesionPerdida', { mientras: null });
-const CierreSemana = perezoso(() => import('./Esencial.jsx'), 'CierreSemana', { mientras: null });
-const SemanaHecha = perezoso(() => import('./Esencial.jsx'), 'SemanaHecha', { mientras: null });
-const PresentateEquipo = perezoso(() => import('./Esencial.jsx'), 'PresentateEquipo', { mientras: null });
+// (v0.245) todo lo suyo de Hoy (sus tarjetas, en su orden), en una pieza: lo que se le añada no pesa al abrir la app
+const HoyEsencial = perezoso(() => import('./Esencial.jsx'), 'HoyEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -232,21 +224,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
           entre={(
             <>
               {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
-              {/* (FBE Esencial) quien va por su cuenta: sus marcas de la semana 4, en cuanto termina esa semana, y su semana
-                  siguiente, que prepara la app (con la pregunta si hay una posible errata) */}
-              {!propio && porSuCuenta && <TarjetaMarcas />}
-              {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
-              {!propio && porSuCuenta && atleta.estado !== 'baja' && <AntesDeEmpezar p={p} cuestionario={cuestionario.datos} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <AplicarDias p={p} recargarPrograma={() => recargar(true)} />}
-              {/* (alta, 47, 48 y 51) la primera semana: una sesión que no pudo hacer, la semana 1 hecha y presentarse en Equipo */}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <CierreSemana p={p} recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SesionPerdida p={p} recargarPrograma={() => recargar(true)} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaHecha p={p} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <PresentateEquipo p={p} irA={irA} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaEsencial recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
-              {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <LeccionSemana p={p} />}
-              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <DiasEsencial p={p} />}
+              {/* (FBE Esencial) quien va por su cuenta: sus tarjetas (marcas, antes de empezar, sus días, el cierre de la semana, su
+                  revisión, la sesión que no pudo hacer, la semana hecha, Equipo, la semana siguiente, la lección, sus días y
+                  «¿Qué necesitas?»), en ui/atleta/Esencial.jsx (HoyEsencial) */}
+              {!propio && porSuCuenta && <HoyEsencial p={p} cuestionario={cuestionario.datos} recargar={() => recargar(true)} abrirSesion={abrirSesion} irA={irA} />}
               {/* (FBE Esencial con nutrición, 093) mientras no tenga plan de comida, la tarjeta para prepararlo */}
               {!propio && porSuCuenta && salud && conNutricion(atleta) && atleta.estado !== 'baja' && <ComidaEsencialPendiente />}
               {!verPasos && !propio && <CuentaMeta />}

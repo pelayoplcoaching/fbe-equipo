@@ -133,3 +133,116 @@ export async function rutinas(b, { hoy = fechaMadrid() } = {}) {
     return out.sort((x, y) => (x.recomendada === false ? 0 : 1) - (y.recomendada === false ? 0 : 1) || x.nombre.localeCompare(y.nombre));
   } catch (e) { if (/esencial_plantilla|esencial_catalogo/.test(`${e?.message || ''}`)) return []; throw e; }
 }
+
+// ---------- (v0.245, acompañamiento, tanda 4) El porqué de cada semana ----------
+// Lo que el motor dice de una semana hecha (base), como al prepararle la siguiente: sus «hechos» (propuestaEsencial().porque)
+async function proponer(api, atletaId, atleta, d, base, tipo, hoy) {
+  const [{ propuestaEsencial }, esta, previa] = await Promise.all([
+    import('../logica/esencial-motor.js'),
+    api.checkin(atletaId, base.fecha_inicio).catch(() => null),
+    api.checkin(atletaId, sumarDias(base.fecha_inicio, -7)).catch(() => null),
+  ]);
+  const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
+  const ejercicios = porId(await api.ejerciciosPorIds(ids));
+  const r = propuestaEsencial({ d, base, tipo, ejercicios, atleta, hoy,
+    checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: base.fecha_inicio })) });
+  return { r, ejercicios };
+}
+const camposDe = (x) => ({ kg: x.carga_sugerida_kg != null ? Number(x.carga_sugerida_kg) : null, min: x.reps_min ?? null, max: x.reps_max ?? null, series: x.series ?? null });
+const programadas = (d, bloqueId) => (d.semanas || []).filter((w) => w.bloque_id === bloqueId && w.programacion === 'programada' && w.fecha_inicio).sort((x, y) => x.numero - y.numero);
+
+// «Tu revisión de la semana» y el «¿Por qué?» de cada ejercicio: la semana `semanaId` (o la de hoy) de su bloque, con lo
+// que el motor leyó de la anterior, ya casado con lo que tiene delante (por si corrigió algo después: entonces se cuenta
+// solo lo que se ve). No guarda nada: se vuelve a calcular con lo que hay apuntado.
+// → null (sin plan) | { tipo: 'primera' | 'novato' | 'siguiente', semana, numero, id, inicio, nota, hechas, total,
+//     porque: [{ …hecho, pauta_id, sin_motivo? } | { nuevo: true, … }], anteriores: [{ id, numero }] }
+export async function revision(api, b, atletaId, { semanaId = null, sesionId = null, hoy = fechaMadrid() } = {}) {
+  const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
+  if (!prog?.bloque) return null;
+  const [{ pautasDeSemana }, { hechoDe, casa }, { NOMBRE_PRIMERAS_4 }, { semanaDelPlan }, d] = await Promise.all([
+    import('../logica/motor/index.js'), import('../logica/esencial-porque.js'), import('../logica/esencial.js'), import('../logica/esencial-lecciones.js'),
+    api.bloqueCompleto(prog.bloque.id),
+  ]);
+  const propias = programadas(d, prog.bloque.id);
+  if (sesionId) semanaId = (d.semanas || []).find((w) => (d.sesiones?.[w.id] || []).some((s) => s.id === sesionId))?.id || 'ninguna';
+  const nueva = semanaId ? propias.find((w) => w.id === semanaId) : propias.filter((w) => String(w.fecha_inicio).slice(0, 10) <= hoy).pop() || propias[0];
+  if (!nueva) return null;
+  const inicio = String(nueva.fecha_inicio).slice(0, 10);
+  const numero = semanaDelPlan(prog.bloques, inicio) || nueva.numero;
+  const comun = { id: nueva.id, inicio, numero, nota: nueva.nota_coach || null,
+    anteriores: propias.filter((w) => String(w.fecha_inicio).slice(0, 10) <= hoy).map((w) => ({ id: w.id, numero: semanaDelPlan(prog.bloques, String(w.fecha_inicio).slice(0, 10)) || w.numero })).reverse() };
+  // La semana de la que sale: la anterior de su bloque o, si es la primera de un bloque de novato, su semana de marcas
+  let base = propias.filter((w) => w.numero < nueva.numero).pop() || null, dBase = d, tipo = 'siguiente';
+  if (!base) {
+    const previo = [...(prog.bloques || [])].filter((x) => x.id !== prog.bloque.id && x.nombre === NOMBRE_PRIMERAS_4 && x.estado !== 'cancelado' && String(x.fecha_inicio || '') < inicio)
+      .sort((x, y) => String(y.fecha_inicio).localeCompare(String(x.fecha_inicio)))[0];
+    if (!previo || !/^Novato \d/.test(prog.bloque.nombre || '')) return { ...comun, tipo: 'primera', semana: 'normal', hechas: 0, total: 0, porque: [] };
+    dBase = await api.bloqueCompleto(previo.id);
+    base = programadas(dBase, previo.id).pop() || null;
+    if (!base) return { ...comun, tipo: 'primera', semana: 'normal', hechas: 0, total: 0, porque: [] };
+    tipo = 'novato';
+  }
+  // (como cuando se la preparó: con la fecha de su lunes, o la de hoy si aún no ha llegado)
+  const { r, ejercicios } = await proponer(api, atletaId, atleta, dBase, base, tipo, hoy < inicio ? hoy : inicio);
+  const suyas = pautasDeSemana(d, nueva);
+  const faltan = suyas.pautas.map((p) => p.ejercicio_id).filter((id) => !ejercicios[id]);
+  if (faltan.length) Object.assign(ejercicios, porId(await api.ejerciciosPorIds(unicos(faltan))));
+  const porque = [];
+  suyas.sesiones.forEach((ses, i) => {
+    suyas.pautas.filter((p) => p.sesion_id === ses.id).forEach((p) => {
+      const h = hechoDe(r.porque, { sesion: i, ejercicioId: p.ejercicio_id });
+      const ej = ejercicios[p.ejercicio_id] || {};
+      const lugar = { sesion: i, sesion_nombre: ses.nombre || '', pauta_id: p.id, nombre: ej.nombre || h?.nombre || '', por_tiempo: !!ej.por_tiempo };
+      if (!h) porque.push({ ...lugar, nuevo: true, ejercicio_id: p.ejercicio_id, nuevo_id: p.ejercicio_id, hecho: [], antes: {}, despues: camposDe(p), frenos: [], semana: r.semana });
+      else porque.push({ ...h, ...lugar, despues: camposDe(p), ...(casa(h, p) ? {} : { sin_motivo: true }) });
+    });
+  });
+  const ss = dBase.sesiones?.[base.id] || [];
+  return { ...comun, tipo, semana: r.semana, hechas: ss.filter((s) => s.completada).length, total: ss.length, porque };
+}
+
+// «Tu sesión, en claro»: lo que el motor lee de cada ejercicio de esa sesión (los hechos de su semana, solo los suyos).
+// → null | { guia: true si es de «Primeras 4 semanas» (la app aún no mueve nada), filas: [hecho] }
+export async function sesionEnClaro(api, b, atletaId, sesionId, { hoy = fechaMadrid() } = {}) {
+  const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
+  if (!prog?.bloque) return null;
+  const [{ pautasDeSemana }, { NOMBRE_PRIMERAS_4 }, d] = await Promise.all([import('../logica/motor/index.js'), import('../logica/esencial.js'), api.bloqueCompleto(prog.bloque.id)]);
+  const base = (d.semanas || []).find((w) => (d.sesiones?.[w.id] || []).some((s) => s.id === sesionId));
+  if (!base) return null;
+  const i = pautasDeSemana(d, base).sesiones.findIndex((s) => s.id === sesionId);
+  if (i < 0) return null;
+  const { r } = await proponer(api, atletaId, atleta, d, base, 'siguiente', hoy);
+  return { guia: prog.bloque.nombre === NOMBRE_PRIMERAS_4, filas: (r.porque || []).filter((h) => h.sesion === i) };
+}
+
+// ---------- (v0.245; migración 100) Lo que le cuenta a la app: preguntas para el directo ----------
+// esencial_notas: una fila por cosa (tipo: 'pregunta_directo'…). Sin la 100: { falta100: true } o [].
+const falta100 = falta(/esencial_notas|esencial_respuestas_publicas/, '|42P01');
+export async function notas(b, atletaId, tipo) {
+  try { return await b.select('esencial_notas', { eq: { atleta_id: atletaId, tipo }, order: [['creada_en', 'desc']] }); } catch (e) { if (falta100(e)) return null; throw e; }
+}
+export async function anotar(b, atletaId, tipo, { texto = null, datos = {}, desde = null, hasta = null } = {}) {
+  try { return (await b.insert('esencial_notas', [{ atleta_id: atletaId, tipo, texto: texto ? String(texto).trim() : null, datos, desde, hasta }]))[0] || null; } catch (e) { if (falta100(e)) return { falta100: true }; throw e; }
+}
+export async function quitarNota(b, id) {
+  try { await b.delete('esencial_notas', { eq: { id } }); return true; } catch (e) { if (falta100(e)) return false; throw e; }
+}
+// Las dudas del directo que Pelayo ha contestado y hecho públicas (sin quién preguntó): [{ id, pregunta, respuesta, respondida_en }]
+export async function respuestasPublicas(b) {
+  try { return (await b.rpc('esencial_respuestas_publicas', {})) || []; } catch (e) { if (falta100(e)) return []; throw e; }
+}
+// (el panel del coach) Las preguntas para el directo, con su nombre: las de los últimos 90 días o sin contestar
+export async function preguntasDirecto(b, { hoy = fechaMadrid() } = {}) {
+  try {
+    const filas = await b.select('esencial_notas', { eq: { tipo: 'pregunta_directo' }, order: [['creada_en', 'desc']] });
+    if (!filas.length) return [];
+    const at = porId(await b.select('atletas', { in: { id: unicos(filas.map((f) => f.atleta_id)) }, cols: 'id,nombre' }));
+    const desde = sumarDias(hoy, -90);
+    return filas.filter((f) => !f.respondida_en || String(f.creada_en).slice(0, 10) >= desde).map((f) => ({ ...f, nombre: at[f.atleta_id]?.nombre || '' }));
+  } catch (e) { if (falta100(e)) return null; throw e; }
+}
+export async function responderPregunta(b, id, { respuesta, pregunta_publica = null, publica = false }) {
+  const r = String(respuesta || '').trim();
+  return (await b.update('esencial_notas', { respuesta: r || null, respondida_en: r ? new Date().toISOString() : null, pregunta_publica: publica && r ? String(pregunta_publica || '').trim() || null : null,
+    publica: !!(publica && r && String(pregunta_publica || '').trim()) }, { eq: { id } }))[0] || null;
+}

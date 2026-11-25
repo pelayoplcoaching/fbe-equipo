@@ -142,6 +142,8 @@ const DEFECTOS = {
   carrera_semanas: () => ({ etiqueta: null, km_min: null, km_max: null, ab: null, clave: null, nota: null, sesiones: [], actualizado_en: ahora() }),
   carrera_revisiones: () => ({ criterio: null, decision: null, estado: 'pendiente', creado_en: ahora() }),
   carrera_recetas: () => ({ orden: 0, creado_en: ahora() }),
+  // (migración 100) FBE Esencial: lo que le cuenta a la app (las preguntas para el directo…)
+  esencial_notas: () => ({ texto: null, datos: {}, desde: null, hasta: null, creada_en: ahora(), respuesta: null, pregunta_publica: null, respondida_en: null, publica: false }),
 };
 
 // Borrados en cascada, como en el esquema SQL.
@@ -159,7 +161,7 @@ const CASCADA = {
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
     ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id'],
-    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['carrera_mananas', 'atleta_id'], ['reloj', 'atleta_id']],
+    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['carrera_mananas', 'atleta_id'], ['reloj', 'atleta_id'], ['esencial_notas', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   guias: [['fichas_ejercicio', 'guia_id']],
@@ -405,6 +407,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     carrera_semanas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_recetas: () => esCoach(),
+    esencial_notas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -4028,6 +4031,14 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // (094) FBE Esencial: la alternativa para siempre (como en la base)
       // (099) FBE Esencial: el catálogo de rutinas y elegir una, como en la base
+      // (migración 100) las dudas del directo que Pelayo ha contestado y hecho públicas, sin quién preguntó
+      if (nombre === 'esencial_respuestas_publicas') {
+        const yo = tabla('atletas').find((x) => x.id === miAtletaId());
+        if (!esCoach() && yo?.modalidad !== 'por_su_cuenta') return [];
+        return tabla('esencial_notas').filter((x) => x.tipo === 'pregunta_directo' && x.publica && x.respuesta && x.pregunta_publica)
+          .sort((a, b) => String(b.respondida_en || '').localeCompare(String(a.respondida_en || '')))
+          .map((x) => ({ id: x.id, pregunta: x.pregunta_publica, respuesta: x.respuesta, respondida_en: x.respondida_en }));
+      }
       if (nombre === 'esencial_catalogo') {
         const yo = tabla('atletas').find((x) => x.id === miAtletaId());
         return esCoach() || yo?.modalidad === 'por_su_cuenta' ? catalogoEsencialDemo(tabla) : [];
