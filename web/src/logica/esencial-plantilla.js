@@ -53,6 +53,53 @@ export const NOVATO_2 = {
   reps: [10, 12],
 };
 
+// ---------- Si lo pide desde la semana 5: «Novato 3 días · FBE Esencial» (Pelayo, 25/11: «crea la plantilla de novato de
+// 3 días») ----------
+// Tres días que no vayan seguidos: los días 1 y 3, los cinco ejercicios de siempre (como «Novato 2 días»); el día 2, sus
+// alternativas (las de la guía), para que cada zona tenga dos ejercicios distintos y no dependa de una sola máquina (su
+// guía de los dos días). 3 × 10-12, te sobran 2 y 90 s; la plancha y el curl, 2 series. La app la repite y la hace progresar
+// cada semana; al cambiar, la base pone los kilos que llevaba en cada ejercicio (el día de alternativas, sin kilos: busca
+// el peso con el que te sobren 2).
+export const NOMBRE_NOVATO_3 = 'Novato 3 días · FBE Esencial';
+export const NOVATO_3 = {
+  nombre: NOMBRE_NOVATO_3,
+  objetivo: 'Ganar fuerza con tres días por semana',
+  descripcion: 'Desde la semana 5, si quieres un tercer día: tres días por semana que no vayan seguidos. Los días 1 y 3, los cinco ejercicios de siempre; el día 2, sus alternativas. Cada semana, la app te prepara la siguiente a partir de lo que apuntas, con las reglas de progresión de Pelayo.',
+  foco: 'adaptacion',
+  nota: 'Tu plan pasa a tres días: los días 1 y 3, la sesión de siempre, con los kilos que llevabas; el día 2, sus alternativas: busca el peso con el que te sobren 2. Que no vayan seguidos.',
+  sesiones: [
+    { nombre: 'Día 1', ejercicios: PRIMERAS_4.ejercicios.map((e) => ({ nombre: e.nombre, porTiempo: !!e.porTiempo, nota: e.nota })) },
+    { nombre: 'Día 2', ejercicios: [
+      { nombre: 'Sentadilla a un banco', nota: 'El día 2, en lugar de la prensa.' },
+      { nombre: 'Puente de glúteo', nota: 'El día 2, en lugar del peso muerto rumano.' },
+      { nombre: 'Flexiones', nota: 'El día 2, en lugar del press. Con más o menos inclinación según tu nivel.' },
+      { nombre: 'Remo en máquina', nota: 'El día 2, en lugar del jalón.' },
+      { nombre: 'Curl de bíceps con mancuernas', nota: 'El día 2, en lugar de la plancha.' },
+    ] },
+    { nombre: 'Día 3', ejercicios: PRIMERAS_4.ejercicios.map((e) => ({ nombre: e.nombre, porTiempo: !!e.porTiempo, nota: e.nota })) },
+  ],
+  series: [3, 3, 3, 3, 2], rir: 2, descanso: 90, plancha: [40, 50], reps: [10, 12],
+};
+// Sus filas, como las de filasPrimeras4 (una semana)
+export function filasNovato3(p = NOVATO_3) {
+  return [{
+    numero: 1, nota: p.nota, marcas: false,
+    sesiones: p.sesiones.map((ses, i) => ({
+      orden: i + 1, nombre: ses.nombre,
+      ejercicios: ses.ejercicios.map((e, k) => ({
+        orden: k + 1, nombre: e.nombre, alternativa: null, por_tiempo: !!e.porTiempo,
+        series: p.series[k],
+        reps_min: e.porTiempo ? p.plancha[0] : p.reps[0],
+        reps_max: e.porTiempo ? p.plancha[1] : p.reps[1],
+        rir_objetivo: e.porTiempo ? null : p.rir,
+        descanso_seg: p.descanso,
+        prioridad: k < 2 ? 'alta' : 'media',
+        notas_coach: e.nota,
+      })),
+    })),
+  }];
+}
+
 // Las filas de la plantilla, sin ids: [{ semana, nota, sesiones: [{ orden, nombre, ejercicios: [{ orden, nombre,
 // series, reps_min, reps_max, rir_objetivo, descanso_seg, por_tiempo, notas_coach }] }] }]
 export function filasPrimeras4(p = PRIMERAS_4) {

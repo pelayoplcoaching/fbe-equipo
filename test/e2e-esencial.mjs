@@ -139,6 +139,21 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const listo = await p.waitForFunction(() => /Novato 2 días · FBE Esencial/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
     check(listo, 'Tomás, tras sus cuatro semanas: la app le prepara «Novato 2 días · FBE Esencial» (la semana 5)');
     if (listo) check(/Tu plan desde ahora/.test(await p.locator('.hero-dia').first().textContent()), 'con la nota de la plantilla');
+    // (25/11) lo de esta semana (la 5) y sus días: pide tres
+    const leccion = p.locator('.leccion-esencial');
+    const conLeccion = await leccion.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conLeccion && /semana 5/.test(await leccion.textContent()) && /Desde aquí, la app/.test(await leccion.textContent()), 'en Hoy, «Lo de esta semana · semana 5»: «Desde aquí, la app»');
+    const dias = p.locator('.dias-esencial');
+    const conDias = await dias.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conDias && /Entrenas 2 días a la semana/.test(await dias.textContent()), 'y sus días: «Entrenas 2 días a la semana»');
+    if (conDias) {
+      await dias.getByRole('button', { name: 'Pasar a tres días' }).click();
+      const hd = p.locator('[aria-modal="true"]').last();
+      await hd.getByRole('button', { name: 'Pasar a tres días' }).click();
+      const pedido = await p.waitForFunction(() => /Desde la semana que viene, tres/.test(document.querySelector('.dias-esencial')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      check(pedido, 'pide tres días: «Desde la semana que viene, tres»');
+      await desborda(p, 'lo de esta semana y sus días');
+    }
     await ctx.close();
   }
 

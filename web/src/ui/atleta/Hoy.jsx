@@ -82,6 +82,8 @@ const TarjetaMarcas = perezoso(() => import('./Esencial.jsx'), 'TarjetaMarcas', 
 const BienvenidaEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaEsencial', { mientras: null });
 const HeroEsencial = perezoso(() => import('./Esencial.jsx'), 'HeroEsencial', { mientras: null });
 const SemanaEsencial = perezoso(() => import('./Esencial.jsx'), 'SemanaEsencial', { mientras: null });
+const LeccionSemana = perezoso(() => import('./Esencial.jsx'), 'LeccionSemana', { mientras: null });
+const DiasEsencial = perezoso(() => import('./Esencial.jsx'), 'DiasEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -205,6 +207,9 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
                   siguiente, que prepara la app (con la pregunta si hay una posible errata) */}
               {!propio && porSuCuenta && <TarjetaMarcas />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaEsencial recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
+              {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <LeccionSemana p={p} />}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <DiasEsencial p={p} />}
               {/* (FBE Esencial con nutrición, 093) mientras no tenga plan de comida, la tarjeta para prepararlo */}
               {!propio && porSuCuenta && salud && conNutricion(atleta) && atleta.estado !== 'baja' && <ComidaEsencialPendiente />}
               {!verPasos && !propio && <CuentaMeta />}

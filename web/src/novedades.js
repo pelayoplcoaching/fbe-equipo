@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.238': {
+    // (FBE Esencial: lo que aprobó Pelayo el 25/11; para los atletas de ahora no cambia nada)
+    atleta: [],
+    coach: [
+      'FBE Esencial: desde la semana 5 pueden pasar a tres días (el día 2, las alternativas) o volver a dos (migración 096).',
+      'Si se estancan tres semanas, la app baja un 10 % para volver a subir; la plancha, como mucho 20 kg.',
+      'Y en Hoy, «Lo de esta semana»: una lección de tus guías cada semana, de la 1 a la 8.',
+    ],
+  },
   '0.237': {
     // (FBE Esencial: el aviso del cuestionario y dos cifras más en el panel; para los atletas de ahora no cambia nada)
     atleta: [],

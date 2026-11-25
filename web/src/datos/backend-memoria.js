@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -4016,6 +4016,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!id) throw new Error('No hay atleta');
         if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes cambiar tu propio plan');
         const r = alternativaEsencialDemo(tabla, { ejercicio: args?.p_ejercicio, alternativa: args?.p_alternativa || null, excepto: args?.p_excepto || null, atletaId: id });
+        persistirYa();
+        return r;
+      }
+      // (096) FBE Esencial: tres días (o volver a dos) desde la semana siguiente (como en la base)
+      if (nombre === 'esencial_cambiar_dias') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes cambiar tus propios días');
+        const r = cambiarDiasEsencialDemo(tabla, { dias: args?.p_dias, atletaId: id });
         persistirYa();
         return r;
       }

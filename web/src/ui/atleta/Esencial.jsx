@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
 import { esPorSuCuenta, NOMBRE_PRIMERAS_4 } from '../../logica/esencial.js';
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga } from '../../logica/esencial-alta.js';
-import { hoyISO, sumarDias, hace } from '../../logica/fechas.js';
+import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
+import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
+import { NOVATOS } from '../../logica/esencial-semana.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
 
 // La tarjeta sale cuando ha terminado su semana de marcas y durante las tres semanas siguientes
@@ -159,7 +161,11 @@ export function SemanaEsencial({ recargarPrograma, abrirSesion, hechas = 0 }) {
       const r = await api.prepararSemanaEsencial(atleta.id);
       if (r?.preguntas?.length) { setPreguntas(r.preguntas); return; }
       setPreguntas(null);
-      if (r?.semana) { aviso(r.tipo === 'novato' ? 'Tu plan desde la semana 5 ya está listo, con los kilos de tus marcas' : 'Tu semana siguiente ya está lista'); recargarPrograma?.(); }
+      if (r?.semana) {
+        aviso(r.tipo === 'novato' ? 'Tu plan desde la semana 5 ya está listo, con los kilos de tus marcas'
+          : r.tipo === 'cambio' ? (r.plantilla === NOVATOS[3] ? 'Tu plan de tres días ya está listo' : 'Tu plan de dos días ya está listo') : 'Tu semana siguiente ya está lista');
+        recargarPrograma?.();
+      }
     } catch { /* (si falla, lo intenta mañana: nada que enseñar) */ }
   };
   useEffect(() => { preparar(); }, [atleta.id, hoy, hechas]);
@@ -177,6 +183,82 @@ export function SemanaEsencial({ recargarPrograma, abrirSesion, hechas = 0 }) {
           {q.sesion_id && <button type="button" class="btn btn-peq" onClick={() => abrirSesion?.(q.sesion_id)}>Corregirlo</button>}
         </div>
       </div>
+    </section>
+  );
+}
+
+// ---------- Lo de esta semana (Pelayo, 25/11) ----------
+// De la semana 1 a la 8 de quien empezó con «Primeras 4 semanas»: una lección corta de sus guías, con «Leer más» si la tiene
+export function LeccionSemana({ p }) {
+  const [abierta, setAbierta] = useState(false);
+  const n = semanaDelPlan(p?.bloques, p?.actual?.fecha_inicio);
+  const l = leccionDe(n);
+  if (!l) return null;
+  return (
+    <section class="nota-coach leccion-esencial" aria-labelledby="leccion-t">
+      <Icono n="biblioteca" />
+      <div class="pila-s">
+        <span class="mini terciario">Lo de esta semana · semana {n}</span>
+        <strong id="leccion-t">{l.titulo}</strong>
+        <span class="peq">{l.texto}</span>
+        {l.mas && (abierta
+          ? <><strong class="peq">{l.mas.titulo}</strong><span class="peq">{l.mas.texto}</span></>
+          : <button type="button" class="btn-texto" style="justify-self:start" onClick={() => setAbierta(true)}>Leer más: {l.mas.titulo.charAt(0).toLowerCase()}{l.mas.titulo.slice(1)}</button>)}
+      </div>
+    </section>
+  );
+}
+
+// ---------- Tus días: pasar a 3 (o volver a 2) desde la semana siguiente (096) ----------
+// Solo con una plantilla de novato (desde la semana 5). Lo pide aquí y la app le prepara la semana siguiente con la otra.
+export function DiasEsencial({ p }) {
+  const { api, atleta, aviso } = useApp();
+  const tiene = Number(Object.keys(NOVATOS).find((k) => NOVATOS[k] === p?.bloque?.nombre)) || null;
+  const [pedido, setPedido] = useState(atleta?.esencial_dias ?? null);
+  const [hoja, setHoja] = useState(false);
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  if (!tiene) return null;
+  const pendiente = pedido && Number(pedido) !== tiene ? Number(pedido) : null;
+  const otro = tiene === 2 ? 3 : 2;
+  const lunes = sumarDias(lunesDe(hoyISO()), 7);
+  const pedir = (dias) => una(async () => {
+    setError(null);
+    try {
+      const r = await api.esencialCambiarDias(dias);
+      if (r?.falta096) { setError('Para cambiar de días falta una actualización en la base: díselo a Pelayo.'); return; }
+      setPedido(dias);
+      setHoja(false);
+      aviso(dias === tiene ? 'Sigues con tus días de ahora' : dias === 3 ? 'Desde la semana que viene, tres días' : 'Desde la semana que viene, dos días');
+    } catch (e) { setError(e.message); }
+  });
+  return (
+    <section class="nota-coach dias-esencial" aria-label="Tus días de entreno">
+      <Icono n="calendario" />
+      <div class="pila-s">
+        <span class="peq">{pendiente
+          ? `Entrenas ${tiene} días a la semana. Desde la semana que viene, ${pendiente === 3 ? 'tres' : 'dos'}.`
+          : `Entrenas ${tiene} días a la semana.`}</span>
+        <div class="fila-envolver">
+          {pendiente
+            ? <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => pedir(tiene)}>Seguir con {tiene === 3 ? 'tres' : 'dos'}</button>
+            : <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}>{otro === 3 ? 'Pasar a tres días' : 'Volver a dos días'}</button>}
+        </div>
+        {error && !hoja && <p class="error" role="alert">{error}</p>}
+      </div>
+      {hoja && (
+        <Hoja titulo={otro === 3 ? 'Pasar a tres días' : 'Volver a dos días'} alCerrar={() => setHoja(false)}>
+          <div class="pila">
+            {otro === 3 ? <>
+              <p>Los días 1 y 3, la sesión de siempre, con los kilos que llevas; el día 2, sus alternativas (sentadilla a un banco, puente de glúteo, flexiones, remo en máquina y curl): busca el peso con el que te sobren 2. Que no vayan seguidos.</p>
+              <p class="peq secundario">Antes de pedirlo, mira tu registro: si las series acaban con cuatro o cinco repeticiones de margen, no te faltan días, te falta apretar.</p>
+            </> : <p>La sesión de siempre, dos días por semana que no vayan seguidos, con los kilos que llevas.</p>}
+            <p class="peq secundario">Empieza con la próxima semana que te prepare la app: normalmente, la del lunes {fechaLarga(lunes).replace(/^lunes /, '')}.</p>
+            {error && <p class="error" role="alert">{error}</p>}
+            <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => pedir(otro)}>{otro === 3 ? 'Pasar a tres días' : 'Volver a dos días'}</button>
+          </div>
+        </Hoja>
+      )}
     </section>
   );
 }

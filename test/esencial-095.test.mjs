@@ -21,7 +21,7 @@ const f094 = de(SQL('094_esencial_piloto.sql')), f095 = de(SQL('095_esencial_cue
 const corte = f094.lastIndexOf('  return v_n;');
 check(f095.startsWith(f094.slice(0, corte)) && f095.endsWith('  return v_n;') && /esencial_cuestionario/.test(f095.slice(corte)) && f095.length > f094.length,
   'empieza exactamente como la de la 094 y añade su bloque al final, a prueba de fallos');
-check((await q('select max(numero) n from fbe_migraciones'))[0].n === 95, 'la base de prueba va por la 095');
+check((await q('select max(numero) n from fbe_migraciones'))[0].n >= 95, 'la base de prueba tiene la 095');
 
 // El coach da de alta a seis de FBE Esencial que empiezan el lunes que viene (y una, dentro de dos semanas)
 const inicio = sumarDias(lunesDe(hoyISO()), 7);

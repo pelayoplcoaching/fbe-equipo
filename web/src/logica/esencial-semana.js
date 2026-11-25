@@ -7,12 +7,18 @@ const DIA = 864e5;
 const sumar = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * DIA).toISOString().slice(0, 10);
 const lunesDe = (iso) => { const d = new Date(`${iso}T12:00:00Z`).getUTCDay(); return sumar(iso, -((d + 6) % 7)); };
 
-// bloque: el actual (o null); semanas: las suyas publicadas de ese bloque; sesiones: { semana_id: [{ completada }] }.
-// Devuelve null (nada que preparar) o { tipo: 'novato' | 'siguiente', base, inicio }:
+// Las plantillas de novato (desde la semana 5): la de 2 días y, si lo pide (096), la de 3
+export const NOVATOS = { 2: 'Novato 2 días · FBE Esencial', 3: 'Novato 3 días · FBE Esencial' };
+const diasDeNovato = (nombre) => Number(Object.keys(NOVATOS).find((k) => NOVATOS[k] === nombre)) || null;
+
+// bloque: el actual (o null); semanas: las suyas publicadas de ese bloque; sesiones: { semana_id: [{ completada }] };
+// dias (096): los días que ha pedido (2 o 3; null, los de su plantilla).
+// Devuelve null (nada que preparar) o { tipo: 'novato' | 'siguiente' | 'cambio', base, inicio, plantilla? }:
 //  · la última semana del bloque (base) está hecha entera, o ya ha llegado el lunes siguiente;
-//  · tras «Primeras 4 semanas» (su última semana, la de marcas): el bloque de novato desde ese lunes;
+//  · tras «Primeras 4 semanas» (su última semana, la de marcas): el bloque de novato desde ese lunes (el de sus días);
+//  · en un bloque de novato, si ha pedido otros días: el bloque de esa plantilla desde ese lunes («cambio»);
 //  · si lleva más de una semana sin abrir la app, desde el lunes de esta semana (no se rellenan las que se ha saltado).
-export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy }) {
+export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy, dias = null }) {
   if (!bloque || !hoy) return null;
   const propias = semanas.filter((w) => w.bloque_id === bloque.id && w.fecha_inicio && w.programacion === 'programada').sort((a, b) => a.numero - b.numero);
   const base = propias[propias.length - 1];
@@ -24,7 +30,11 @@ export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy 
   if (hoy > sumar(inicio, 6)) inicio = lunesDe(hoy);
   const primeras = bloque.nombre === NOMBRE_PRIMERAS_4;
   if (primeras && !base.marcas) return null;   // (las cuatro semanas de la guía ya están publicadas: hasta la de marcas, nada)
-  return { tipo: primeras ? 'novato' : 'siguiente', base, inicio };
+  const quiere = NOVATOS[dias] ? Number(dias) : 2;
+  if (primeras) return { tipo: 'novato', base, inicio, plantilla: NOVATOS[quiere] };
+  const tiene = diasDeNovato(bloque.nombre);
+  if (tiene && NOVATOS[dias] && Number(dias) !== tiene) return { tipo: 'cambio', base, inicio, plantilla: NOVATOS[dias] };
+  return { tipo: 'siguiente', base, inicio };
 }
 
 // ---------- La plancha (los ejercicios por tiempo) ----------
@@ -34,7 +44,9 @@ export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy 
 //  · con 50 s en todas: peso (5 kg la primera vez, luego 2,5 más) y vuelta a 35-45 s, para subir otra vez de 5 en 5;
 //  · no sube en una semana que no sea normal (descarga, a medias o tras un parón), con una molestia en su zona, si hizo
 //    la alternativa (el curl) o si la hizo con menos peso del pautado (por ejemplo, la versión difícil sin disco).
-export const PLANCHA = { paso: 5, techo: 50, vuelta: [35, 45], primerPeso: 5, salto: 2.5 };
+//  · el peso, como mucho 20 kg (Pelayo, 25/11): con 20 kg y 50 s en todas, se queda igual (y la nota propone la versión
+//    difícil).
+export const PLANCHA = { paso: 5, techo: 50, vuelta: [35, 45], primerPeso: 5, salto: 2.5, topePeso: 20 };
 
 // p: la pauta de la semana hecha; hechas: sus series apuntadas. Devuelve { reps_min, reps_max, carga_sugerida_kg } o
 // null (se queda igual).
@@ -50,7 +62,46 @@ export function planchaSiguiente(p, hechas = [], { normal = true } = {}) {
     const ancho = min > 0 && min <= max ? max - min : 10;
     return { reps_min: Math.max(1, nuevoMax - ancho), reps_max: nuevoMax, carga_sugerida_kg: kg > 0 ? kg : null };
   }
-  return { reps_min: PLANCHA.vuelta[0], reps_max: PLANCHA.vuelta[1], carga_sugerida_kg: kg > 0 ? kg + PLANCHA.salto : PLANCHA.primerPeso };
+  if (kg >= PLANCHA.topePeso) return null;
+  return { reps_min: PLANCHA.vuelta[0], reps_max: PLANCHA.vuelta[1], carga_sugerida_kg: Math.min(PLANCHA.topePeso, kg > 0 ? kg + PLANCHA.salto : PLANCHA.primerPeso) };
+}
+
+// ¿Ha llegado al tope? Con el peso máximo (20 kg) y 50 s en todas sus series (para proponerle la versión difícil)
+export function planchaEnTope(p, hechas = []) {
+  const kg = Number(p?.carga_sugerida_kg) || 0, n = Math.max(1, Number(p?.series) || 1);
+  if (kg < PLANCHA.topePeso || Number(p?.reps_max) < PLANCHA.techo) return false;
+  const series = [...(hechas || [])].filter((s) => Number(s.reps) > 0 && !s.sustituto_id).slice(0, n);
+  return series.length >= n && series.every((s) => Number(s.reps) >= PLANCHA.techo && (Number(s.kg) || 0) >= kg);
+}
+
+// ---------- Si se estanca (Pelayo, 25/11) ----------
+// Tres semanas seguidas con la misma pauta en un ejercicio (mismos kilos y mismas repeticiones, sin conseguir subir) y el
+// motor vuelve a proponer lo mismo: la semana siguiente, un 10 % menos de peso (redondeado al salto del ejercicio, como
+// poco un salto) para volver a subir. En la plancha, sin peso, 5 s menos (como poco 20-30 s); con peso, 2,5 kg menos.
+// historia: sus pautas de ese ejercicio en las semanas anteriores del bloque, de la más antigua a la semana hecha.
+export const ESTANCADO = { semanas: 3, bajada: 0.1 };
+const mismaPauta = (a, b) => a && b && Number(a.carga_sugerida_kg || 0) === Number(b.carga_sugerida_kg || 0)
+  && Number(a.reps_min) === Number(b.reps_min) && Number(a.reps_max) === Number(b.reps_max) && Number(a.series) === Number(b.series);
+export function estancado(historia = [], propuesta = null) {
+  const ult = historia.slice(-ESTANCADO.semanas);
+  if (ult.length < ESTANCADO.semanas || !ult.every((x) => mismaPauta(x, ult[0]))) return false;
+  return !propuesta || mismaPauta(propuesta, ult[ult.length - 1]);
+}
+// Los kilos de la bajada: un 10 % menos, al salto del ejercicio (como poco un salto)
+export function kilosBajada(kg, salto = 2.5) {
+  const k = Number(kg), inc = Number(salto) > 0 ? Number(salto) : 2.5;
+  if (!(k > 0)) return null;
+  const pasos = Math.max(1, Math.round((k * ESTANCADO.bajada) / inc - 1e-9));   // (en un empate, la bajada menor)
+  const nuevo = Math.round((k - pasos * inc) * 100) / 100;
+  return nuevo > 0 ? nuevo : null;
+}
+export function planchaBajada(p) {
+  const kg = Number(p?.carga_sugerida_kg) || 0;
+  if (kg > 0) return { carga_sugerida_kg: kg - PLANCHA.salto > 0 ? kg - PLANCHA.salto : null };
+  const max = Number(p?.reps_max), min = Number(p?.reps_min);
+  if (!(max > 30)) return null;
+  const ancho = min > 0 && min <= max ? max - min : 10;
+  return { reps_min: Math.max(1, max - PLANCHA.paso - ancho), reps_max: max - PLANCHA.paso };
 }
 
 // La de una pauta de la semana hecha, con lo que dice el motor de ella (fila): en la semana 5 manda la plantilla, y con

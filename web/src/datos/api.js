@@ -398,6 +398,7 @@ const falta056 = (e) => {
 // (091) FBE Esencial: sin la migración, ni las columnas ni las funciones
 const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (FBE Esencial, tanda 3) ¿Falta la función de la 092 (la semana siguiente de quien va por su cuenta)?
+const falta096 = (e) => /esencial_cambiar_dias|esencial_dias/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta094 = (e) => /esencial_alternativa/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta093 = (e) => /esencial_(plan|ajuste)_comida/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
@@ -7426,13 +7427,20 @@ export function crearApi(backend, opciones = {}) {
     // solo entonces. → null (nada que hacer) | { semana } | { preguntas, base, inicio } | { falta092: true }
     async prepararSemanaEsencial(atletaId, { hoy = fechaMadrid() } = {}) {
       const { siguientePaso } = await import('../logica/esencial-semana.js');
-      const prog = await api.programa(atletaId);
-      const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy });
+      const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
+      // (096) con los días que ha pedido (3 o 2): desde el lunes siguiente, la otra plantilla de novato
+      const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy, dias: atleta?.esencial_dias ?? null });
       if (!paso) return null;
-      const [{ propuestaEsencial }, d, atleta, esta, previa] = await Promise.all([
+      if (paso.tipo === 'cambio') {
+        // (los kilos de ahora, los pone la base: la de cada ejercicio en la semana hecha; el día de alternativas, sin kilos)
+        try {
+          const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, cambio: true, plantilla: paso.plantilla, sesiones: [] }, p_atleta: atletaId });
+          return { semana, tipo: 'cambio', inicio: paso.inicio, plantilla: paso.plantilla };
+        } catch (e) { if (falta096(e)) return { falta096: true }; throw e; }
+      }
+      const [{ propuestaEsencial }, d, esta, previa] = await Promise.all([
         import('../logica/esencial-motor.js'),
         api.bloqueCompleto(prog.bloque.id),
-        b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null),
         api.checkin(atletaId, paso.base.fecha_inicio).catch(() => null),
         api.checkin(atletaId, sumarDias(paso.base.fecha_inicio, -7)).catch(() => null),
       ]);
@@ -7444,7 +7452,7 @@ export function crearApi(backend, opciones = {}) {
       if (r.preguntas.length && hoy < paso.inicio) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
       try {
         // (con su id: así también la puede preparar el coach desde su ficha; la base comprueba que el atleta es quien llama)
-        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', nota: r.nota, descarga: r.descarga, sesiones: r.sesiones }, p_atleta: atletaId });
+        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', ...(paso.plantilla && paso.plantilla !== 'Novato 2 días · FBE Esencial' ? { plantilla: paso.plantilla } : {}), nota: r.nota, descarga: r.descarga, sesiones: r.sesiones }, p_atleta: atletaId });
         return { semana, tipo: paso.tipo, inicio: paso.inicio };
       } catch (e) { if (falta092(e)) return { falta092: true }; throw e; }
     },
@@ -7464,6 +7472,11 @@ export function crearApi(backend, opciones = {}) {
       try {
         return await b.rpc('esencial_ajuste_comida', { p, ...(atletaId ? { p_atleta: atletaId } : {}) });
       } catch (e) { if (falta093(e)) return { falta093: true }; throw e; }
+    },
+    // (096) FBE Esencial: entrenar 3 días (o volver a 2) desde el lunes siguiente (solo en las plantillas de novato, desde la
+    // semana 5). Devuelve los días pedidos o { falta096: true }.
+    async esencialCambiarDias(dias, atletaId = null) {
+      try { return await b.rpc('esencial_cambiar_dias', { p_dias: Number(dias), ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta096(e)) return { falta096: true }; throw e; }
     },
     // (094) FBE Esencial: «en mi gimnasio, siempre esta». Cambia sus sesiones sin hacer (menos la que tiene abierta,
     // `excepto`) y las semanas que le prepare la app. alternativaId vacío: vuelve al de la guía. Devuelve cuántos cambió.

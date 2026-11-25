@@ -11,7 +11,7 @@
 //   · Inés Gil (093): el nivel con nutrición. Empieza esta semana con «Primeras 4 semanas» y aún no tiene plan de comida:
 //     en Hoy, «Tu plan de comida» le hace las preguntas y la app se lo calcula.
 import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
-import { filasPrimeras4, PRIMERAS_4, NOVATO_2 } from '../logica/esencial-plantilla.js';
+import { filasPrimeras4, PRIMERAS_4, NOVATO_2, NOVATO_3, filasNovato3 } from '../logica/esencial-plantilla.js';
 import { sumarDias, lunesDe } from '../logica/fechas.js';
 import { datosComidaValidos, planComidaEsencial } from '../logica/esencial-nutricion.js';
 
@@ -83,11 +83,23 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
   const ya = t('semanas').find((w) => suyos.has(w.bloque_id) && w.fecha_inicio === inicio && w.programacion === 'programada');
   if (ya) return ya.id;
   let molde, bloqueId, numero;
-  if (p.novato) {
-    if (bloque.nombre !== PRIMERAS_4.nombre || !base.marcas) throw new Error('El bloque de novato va después de la semana de marcas');
-    const pl = t('bloques').filter((b) => b.es_plantilla && b.nombre === NOVATO_2.nombre).sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)))[0];
+  // (096) cambiar de días: desde una plantilla de novato a la otra (la de los días que ha pedido), con sus kilos de ahora
+  const NOVATOS = { 2: NOVATO_2.nombre, 3: NOVATO_3.nombre };
+  const cambio = !!p.cambio && !p.novato;
+  if (p.novato || cambio) {
+    let destino;
+    if (p.novato) {
+      if (bloque.nombre !== PRIMERAS_4.nombre || !base.marcas) throw new Error('El bloque de novato va después de la semana de marcas');
+      destino = NOVATOS[a.esencial_dias] || NOVATO_2.nombre;
+    } else {
+      if (!Object.values(NOVATOS).includes(bloque.nombre)) throw new Error('Solo se cambia de días desde una plantilla de novato');
+      destino = NOVATOS[a.esencial_dias];
+      if (!destino || destino === bloque.nombre) throw new Error('Ya entrenas esos días');
+    }
+    if (p.plantilla && p.plantilla !== destino) throw new Error('Esa plantilla no es la de tus días');
+    const pl = t('bloques').filter((b) => b.es_plantilla && b.nombre === destino).sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)))[0];
     molde = pl && t('semanas').filter((w) => w.bloque_id === pl.id).sort((x, y) => x.numero - y.numero)[0];
-    if (!molde) throw new Error(`No está la plantilla «${NOVATO_2.nombre}»`);
+    if (!molde) throw new Error(`No está la plantilla «${destino}»`);
     if (['activo', 'ajustado'].includes(bloque.estado)) bloque.estado = 'finalizado';
     const nb = { id: uuid(), atleta_id: atletaId, es_plantilla: false, numero: Math.max(0, ...t('bloques').filter((b) => b.atleta_id === atletaId).map((b) => b.numero || 0)) + 1,
       nombre: pl.nombre, foco: pl.foco ?? null, objetivo: pl.objetivo ?? null, descripcion: pl.descripcion ?? null, fecha_inicio: inicio, fecha_fin: sumarDias(inicio, 6), estado: 'activo', creado_en: ahoraISO, objetivo_logrado: null };
@@ -98,7 +110,7 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     numero = Math.max(0, ...t('semanas').filter((w) => w.bloque_id === bloqueId).map((w) => w.numero || 0)) + 1;
     bloque.fecha_fin = !bloque.fecha_fin || bloque.fecha_fin < sumarDias(inicio, 6) ? sumarDias(inicio, 6) : bloque.fecha_fin;
   }
-  const nota = String(p.nota || '').trim().slice(0, 600) || (p.novato ? molde.nota_coach ?? null : null);
+  const nota = String(p.nota || '').trim().slice(0, 600) || (p.novato || cambio ? molde.nota_coach ?? null : null);
   const foco = p.descarga ? 'descarga' : (molde.foco && molde.foco !== 'descarga' ? molde.foco : t('bloques').find((b) => b.id === bloqueId)?.foco ?? null);
   const semana = { id: uuid(), bloque_id: bloqueId, numero, foco, fecha_inicio: inicio, nota_coach: nota, programacion: 'programada', marcas: false };
   t('semanas').push(semana);
@@ -113,6 +125,10 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     return kgs.length ? Math.max(...kgs) : null;
   };
   const porTiempo = (id) => !!t('ejercicios').find((e) => e.id === id)?.por_tiempo;
+  // (096) al cambiar de días: los kilos que llevaba en cada ejercicio en la semana hecha (y, en la plancha, sus segundos)
+  const sesBase = new Set(t('sesiones').filter((x) => x.semana_id === base.id).map((x) => x.id));
+  const deAntes = (ejercicioId) => t('sesion_ejercicios').filter((x) => sesBase.has(x.sesion_id) && x.ejercicio_id === ejercicioId)
+    .sort((x, y) => (Number(y.carga_sugerida_kg) || 0) - (Number(x.carga_sugerida_kg) || 0))[0] || null;
   for (const s of t('sesiones').filter((x) => x.semana_id === molde.id).sort((x, y) => x.orden - y.orden)) {
     const ns = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: s.tipo, intencion: s.intencion ?? null, dinamica: s.dinamica ?? null,
       fecha_realizada: null, completada: false, nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null };
@@ -124,7 +140,13 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
       const ej = alt && t('ejercicios').some((e) => e.id === alt) && porTiempo(alt) === porTiempo(q.ejercicio_id) ? alt : q.ejercicio_id;
       const nueva = { ...q, id: uuid(), sesion_id: ns.id, ejercicio_id: ej };
       if (ej !== q.ejercicio_id) Object.assign(nueva, { carga_sugerida_kg: null, series_detalle: null });
-      const jp = js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === ej);
+      if (cambio) {
+        const antes = deAntes(ej);
+        nueva.carga_sugerida_kg = antes?.carga_sugerida_kg ?? null;
+        if (antes && porTiempo(ej)) Object.assign(nueva, { reps_min: antes.reps_min, reps_max: antes.reps_max });
+        if (porTiempo(ej) && Number(nueva.carga_sugerida_kg) > 20) nueva.carga_sugerida_kg = 20;
+      }
+      const jp = !cambio && js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === ej);
       if (jp) {
         const v = { ...nueva };
         if (!p.novato) for (const c of CAMPOS_MOTOR) v[c] = jp[c] ?? null;
@@ -135,7 +157,7 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
         const mal = !(v.series >= 1 && v.series <= 6) || (v.reps_min != null && !(v.reps_min >= 1 && v.reps_min <= max)) || (v.reps_max != null && !(v.reps_max >= 1 && v.reps_max <= max))
           || (v.reps_min != null && v.reps_max != null && v.reps_min > v.reps_max) || (v.rir_objetivo != null && !(v.rir_objetivo >= 0 && v.rir_objetivo <= 5))
           || (v.rpe_objetivo != null && !(v.rpe_objetivo >= 5 && v.rpe_objetivo <= 10)) || (v.backoff_pct != null && !(v.backoff_pct >= 0 && v.backoff_pct <= 50))
-          || (v.carga_sugerida_kg != null && (v.carga_sugerida_kg < 0 || (tiempo && v.carga_sugerida_kg > (tp ?? 0) + 5) || (!tiempo && (tp == null || v.carga_sugerida_kg > tp * 1.1 + 2.5))))
+          || (v.carga_sugerida_kg != null && (v.carga_sugerida_kg < 0 || (tiempo && (v.carga_sugerida_kg > (tp ?? 0) + 5 || v.carga_sugerida_kg > 20)) || (!tiempo && (tp == null || v.carga_sugerida_kg > tp * 1.1 + 2.5))))
           || (det && (det.length !== v.series || v.backoff_pct != null || det.some((x) => x?.kg != null && (tp == null || x.kg > tp * 1.1 + 2.5))));
         if (!mal) Object.assign(nueva, v, { series_detalle: det });
       }
@@ -143,6 +165,21 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     }
   }
   return semana.id;
+}
+
+// (096) Tres días (o volver a dos) desde la semana siguiente, como esencial_cambiar_dias() de la base: solo con una
+// plantilla de novato. Devuelve los días.
+export function cambiarDiasEsencialDemo(t, { dias, atletaId }) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  if (![2, 3].includes(Number(dias))) throw new Error('Son 2 o 3 días');
+  const actual = t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla && ['activo', 'ajustado'].includes(b.estado))
+    .sort((x, y) => String(y.fecha_inicio).localeCompare(String(x.fecha_inicio)))[0];
+  if (![NOVATO_2.nombre, NOVATO_3.nombre].includes(actual?.nombre)) throw new Error('Puedes cambiar de días desde la semana 5');
+  a.esencial_dias = Number(dias);
+  return Number(dias);
 }
 
 // (094) La alternativa para siempre, como esencial_alternativa() de la base: solo entre las alternativas del ejercicio de la
@@ -262,6 +299,25 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   t('bloques').push(novato);
   for (const w of filasPrimeras4(NOVATO_2)) {
     const semana = { id: uuid(), bloque_id: novato.id, numero: w.numero, foco: NOVATO_2.foco, fecha_inicio: null, nota_coach: w.nota, programacion: 'no_iniciada', marcas: false };
+    t('semanas').push(semana);
+    for (const s of w.sesiones) {
+      const sesion = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: 'fuerza', intencion: null, dinamica: null, fecha_realizada: null, completada: false,
+        nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null };
+      t('sesiones').push(sesion);
+      for (const e of s.ejercicios) {
+        t('sesion_ejercicios').push({ id: uuid(), sesion_id: sesion.id, ejercicio_id: ej[e.nombre].id, orden: e.orden, superserie: null, prioridad: e.prioridad, series: e.series,
+          reps_min: e.reps_min, reps_max: e.reps_max, rir_objetivo: e.rir_objetivo, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: e.descanso_seg,
+          tempo: null, notas_coach: e.notas_coach, variante: null });
+      }
+    }
+  }
+
+  // (096) La de tres días, como la crea la 096
+  const novato3 = { id: uuid(), atleta_id: null, es_plantilla: true, numero: null, nombre: NOVATO_3.nombre, foco: NOVATO_3.foco, objetivo: NOVATO_3.objetivo,
+    descripcion: NOVATO_3.descripcion, fecha_inicio: null, fecha_fin: null, estado: 'planificado', creado_en: ahoraISO, objetivo_logrado: null };
+  t('bloques').push(novato3);
+  for (const w of filasNovato3()) {
+    const semana = { id: uuid(), bloque_id: novato3.id, numero: w.numero, foco: NOVATO_3.foco, fecha_inicio: null, nota_coach: w.nota, programacion: 'no_iniciada', marcas: false };
     t('semanas').push(semana);
     for (const s of w.sesiones) {
       const sesion = { id: uuid(), semana_id: semana.id, orden: s.orden, nombre: s.nombre, tipo: 'fuerza', intencion: null, dinamica: null, fecha_realizada: null, completada: false,

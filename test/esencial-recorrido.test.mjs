@@ -1,6 +1,7 @@
 // FBE Esencial, el recorrido entero en la demo (con un reloj que adelanta las semanas): Marina envía su cuestionario,
 // la app le pone «Primeras 4 semanas», las hace todas (apuntando cada serie), saca sus marcas en la semana 4 y desde la
-// 5 la app le prepara cada semana sola hasta la 12. Que nada se rompa por el camino y que todo tenga sentido.
+// 5 la app le prepara cada semana sola; acabada la 8 pide tres días (096) y sigue hasta la 14. Que nada se rompa por el
+// camino y que todo tenga sentido.
 const RealDate = Date;
 let desfase = 0;
 class Falsa extends RealDate {
@@ -37,7 +38,10 @@ const inicial = { 'Prensa de piernas': 40, 'Peso muerto rumano con mancuernas': 
 const usado = {};
 const semanas = [];
 let error = null, marcas = null;
-for (let k = 0; k < 12 && !error; k++) {
+let cambioDias = null;
+for (let k = 0; k < 14 && !error; k++) {
+  // (096) acabada la semana 8, pide tres días: desde la 9, «Novato 3 días»
+  if (k === 8) cambioDias = await api.esencialCambiarDias(3).catch((e) => ({ error: e.message }));
   let r = null;
   try { r = await api.prepararSemanaEsencial(yo.id); } catch (e) { error = `semana ${k + 1}: ${e.message}`; break; }
   const p = await api.programa(yo.id);
@@ -53,6 +57,8 @@ for (let k = 0; k < 12 && !error; k++) {
       if (!pl && fila.bloque === 'Primeras 4 semanas' && w.numero === 3 && s.orden === 1) kg += 2.5;
       if (!pl) usado[e.ejercicio.nombre] = kg;
       if (s.orden === 1) fila.ej[e.ejercicio.nombre] = { series: e.series, min: e.reps_min, max: e.reps_max, kg, tiempo: pl };
+      if (s.orden === 2) (fila.dia2 ||= {})[e.ejercicio.nombre] = { series: e.series, min: e.reps_min, max: e.reps_max, kg: e.carga_sugerida_kg == null ? null : Number(e.carga_sugerida_kg) };
+      fila.sesiones = (p.sesiones[w.id] || []).length;
       for (let n = 1; n <= e.series; n++) await api.guardarSerie({ sesion_ejercicio_id: e.id, numero: n, kg: pl ? (kg || null) : kg, reps: e.reps_max, rpe: pl ? null : 8 }, yo.id);
     }
     await api.marcarSesion(s.id, { completada: true, fecha_realizada: hoyISO() });
@@ -61,7 +67,7 @@ for (let k = 0; k < 12 && !error; k++) {
   if (fila.bloque === 'Primeras 4 semanas' && w.numero === 4) marcas = (await api.marcasEsencial(yo.id))?.marcas || null;
   desfase += 7 * 864e5;
 }
-check(!error && semanas.length === 12, `doce semanas seguidas sin un solo error${error ? ` (${error})` : ''}`);
+check(!error && semanas.length === 14, `catorce semanas seguidas sin un solo error${error ? ` (${error})` : ''}`);
 const plancha = (f) => f.ej['Plancha abdominal'];
 check(semanas.slice(0, 4).map((f) => `${plancha(f).series}x${plancha(f).min}-${plancha(f).max}`).join(' ') === '1x20-30 2x25-35 2x30-40 2x35-45', 'la plancha de la guía: 20-30, 25-35, 30-40 y 35-45 s');
 const txt = (m) => (m?.texto || '').replace(/\s/g, ' ');   // (con espacios que no parten)
@@ -72,14 +78,28 @@ const s5 = semanas[4];
 check(s5?.bloque === 'Novato 2 días · FBE Esencial' && s5.prep === 'novato' && s5.numero === 1 && s5.inicio === sumarDias(semanas[3].inicio, 7), 'la semana 5, «Novato 2 días · FBE Esencial», justo el lunes siguiente');
 check(s5?.ej['Prensa de piernas']?.kg >= 42.5 && s5.ej['Prensa de piernas'].series === 3 && s5.ej['Prensa de piernas'].max === 12 && plancha(s5).min === 40 && plancha(s5).max === 50,
   'con los kilos de sus marcas (prensa desde 42,5) y la plantilla: 3 series de 10-12 y la plancha 40-50 s');
-const resto = semanas.slice(5);
-check(resto.length === 7 && resto.every((f) => f.bloque === 'Novato 2 días · FBE Esencial' && f.prep === 'siguiente' && f.nota), 'de la 6 a la 12, cada lunes la prepara la app, con su nota');
-check(resto.every((f, i) => f.inicio === sumarDias(semanas[4 + i].inicio, 7)), 'sin huecos: una detrás de otra');
-const prensa = semanas.slice(4).map((f) => f.ej['Prensa de piernas'].kg);
+const resto = semanas.slice(5, 8);
+check(resto.length === 3 && resto.every((f) => f.bloque === 'Novato 2 días · FBE Esencial' && f.prep === 'siguiente' && f.nota), 'de la 6 a la 8, cada lunes la prepara la app, con su nota');
+check(semanas.slice(5).every((f, i) => f.inicio === sumarDias(semanas[4 + i].inicio, 7)), 'sin huecos: una detrás de otra');
+const prensa = semanas.slice(4, 8).map((f) => f.ej['Prensa de piernas'].kg);
 check(prensa.every((kg, i) => i === 0 || (kg >= prensa[i - 1] && kg - prensa[i - 1] <= 2.5)) && prensa[prensa.length - 1] > prensa[0], `la prensa sube poco a poco y nunca baja haciéndolo todo (${prensa.join(' → ')} kg)`);
-const pl = semanas.slice(4).map(plancha);
+const pl = semanas.slice(4, 8).map(plancha);
 check(pl.every((x) => x.max <= 50) && pl.some((x) => (x.kg || 0) >= 5), `la plancha nunca pasa de 50 s y, al llegar arriba, lleva peso (${pl.map((x) => `${x.min}-${x.max}${x.kg ? `+${x.kg}` : ''}`).join(' ')})`);
 check(semanas.slice(4).every((f) => Object.values(f.ej).every((e) => e.series >= 2 && e.series <= 3)), 'siempre 2 o 3 series por ejercicio');
+
+console.log('\nTres días desde la semana 9 (096)');
+const s8 = semanas[7], s9 = semanas[8];
+check(cambioDias === 3, 'acabada la semana 8, pide tres días');
+check(s9?.bloque === 'Novato 3 días · FBE Esencial' && s9.prep === 'cambio' && s9.numero === 1 && s9.sesiones === 3, 'la semana 9, «Novato 3 días · FBE Esencial»: tres sesiones, en un bloque nuevo');
+check(s9?.ej['Prensa de piernas']?.kg === s8?.ej['Prensa de piernas']?.kg && s9.ej['Prensa de piernas'].series === 3 && s9.ej['Prensa de piernas'].min === 10 && s9.ej['Prensa de piernas'].max === 12,
+  `el día 1, con los kilos que llevaba (prensa ${s9?.ej['Prensa de piernas']?.kg} kg) y la plantilla: 3 × 10-12`);
+check(plancha(s9)?.kg === plancha(s8)?.kg && plancha(s9)?.max === plancha(s8)?.max, `la plancha sigue donde iba (${plancha(s9)?.min}-${plancha(s9)?.max} s${plancha(s9)?.kg ? ` +${plancha(s9).kg} kg` : ''})`);
+check(Object.keys(s9?.dia2 || {}).join(', ') === 'Sentadilla a un banco, Puente de glúteo, Flexiones, Remo en máquina, Curl de bíceps con mancuernas' && Object.values(s9.dia2).every((e) => e.kg == null),
+  'el día 2, sus alternativas, sin kilos (busca el peso con el que te sobren 2)');
+check(/tres días/.test(s9?.nota || ''), 'con la nota de la plantilla');
+const s10 = semanas[9];
+check(s10?.bloque === 'Novato 3 días · FBE Esencial' && s10.prep === 'siguiente' && s10.sesiones === 3 && s10.ej['Prensa de piernas'].kg >= s9.ej['Prensa de piernas'].kg, 'y después, cada semana, la de tres días progresa como la de dos');
+check(semanas.slice(8).every((f) => plancha(f).kg == null || plancha(f).kg <= 20), 'la plancha, nunca con más de 20 kg');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);
