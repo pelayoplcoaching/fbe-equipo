@@ -1,6 +1,7 @@
 // FBE Esencial, altas en grupo (logica/esencial-altas.js y la demo): leer la lista que pega el coach (a mano o copiada
 // de Stripe), el mensaje de la invitación, el enlace de correo y crear varias fichas seguidas en la demo.
-import { leerAltas, mensajeInvitacion, enlaceCorreo, listaCodigos, ASUNTO_ESENCIAL, MAX_ALTAS } from '../web/src/logica/esencial-altas.js';
+import { leerAltas, mensajeInvitacion, enlaceCorreo, listaCodigos, ASUNTO_ESENCIAL, MAX_ALTAS, enlaceInvitacion } from '../web/src/logica/esencial-altas.js';
+import { diasInvitacion } from '../web/src/logica/esencial.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
 import { crearApi } from '../web/src/datos/api.js';
@@ -39,7 +40,15 @@ console.log('\nEl mensaje y el correo');
 const m = mensajeInvitacion({ nombre: 'Ana López', codigo: 'K7P2QX', url: 'https://atletas.fuerzabasadaenevidencia.com/', esencial: true, inicio: '2027-01-11' });
 check(/^Hola, Ana\. Ya tienes tu plaza en FBE Esencial/.test(m) && m.includes('K7P2QX') && m.endsWith('que empieza el lunes 11 de enero.'), 'FBE Esencial: su nombre, su código y «que empieza el lunes 11 de enero»');
 check(mensajeInvitacion({ nombre: 'Ana', codigo: 'K7P2QX', url: 'u', esencial: true }).endsWith('la app te prepara tu plan.') && mensajeInvitacion({ nombre: 'Ana', codigo: null, url: 'u' }) === '', 'sin lunes, sin la fecha; sin código, nada');
-check(mensajeInvitacion({ nombre: 'Ana', codigo: 'X', url: 'u' }) === 'Hola, Ana. Ya tienes tu acceso a la app de FBE Coaching. Entra en u, toca «Activa tu cuenta» y escribe este código: X. Caduca en 14 días y solo vale una vez.', 'con seguimiento, el mensaje de siempre');
+check(mensajeInvitacion({ nombre: 'Ana', codigo: 'FBE-AB2CD-EF3GH', url: 'https://app.test/' }) === 'Hola, Ana. Ya tienes tu acceso a la app de FBE Coaching. Para activar tu cuenta, abre este enlace, que ya lleva tu código: https://app.test/?codigo=FBE-AB2CD-EF3GH (o entra en https://app.test/, toca «Activa tu cuenta» y escribe FBE-AB2CD-EF3GH). Caduca en 14 días y solo sirve una vez.',
+  'con seguimiento: el enlace con el código puesto y, por si acaso, el código para escribirlo (14 días)');
+check(m.includes('https://atletas.fuerzabasadaenevidencia.com/?codigo=K7P2QX&plan=esencial') && !m.includes('caduca en 14'), 'FBE Esencial: el enlace lleva el código y que es de FBE Esencial');
+const mc = mensajeInvitacion({ nombre: 'Ana', codigo: 'K7P2QX', url: 'u', esencial: true, inicio: '2027-01-11', caduca: '2027-01-18' });
+check(mc.includes('Sirve una sola vez, hasta el lunes 18 de enero.') && mc.endsWith('que empieza el lunes 11 de enero.'), 'y hasta cuándo vale su código: «hasta el lunes 18 de enero»');
+check(enlaceInvitacion('https://app.test/?demo=1#hoy', 'FBE-A B') === 'https://app.test/?codigo=FBE-A%20B' && enlaceInvitacion('u', null) === '', 'el enlace: sin lo que llevara detrás la dirección y con el código escapado; sin código, nada');
+check(diasInvitacion({ esencial: true, inicio: '2027-01-11', hoy: '2026-12-15' }) === 34 && diasInvitacion({ esencial: true, inicio: '2027-01-11', hoy: '2027-01-08' }) === 14
+  && diasInvitacion({ esencial: true, inicio: '2027-04-05', hoy: '2026-12-15' }) === 60 && diasInvitacion({ esencial: false, inicio: '2027-01-11', hoy: '2026-12-15' }) === 14 && diasInvitacion({ esencial: true, hoy: '2026-12-15' }) === 14,
+  'cuánto vale el código: en FBE Esencial, hasta una semana después de su lunes (el 15/12 para el 11/1, 34 días; como poco 14 y como mucho 60); con seguimiento o sin lunes, 14');
 const l = enlaceCorreo('ana@correo.com', ASUNTO_ESENCIAL, m);
 check(l.startsWith('mailto:ana@correo.com?subject=') && !/\s/.test(l) && decodeURIComponent(l.split('&body=')[1]) === m && enlaceCorreo('no es un correo', 'a', 'b') === null, 'el correo ya escrito (asunto y mensaje, sin espacios en el enlace); sin correo válido, nada');
 check(listaCodigos([{ nombre: 'Ana López', email: 'ana@correo.com', nutricion: true, codigo: 'K7P2QX' }, { nombre: 'X', email: 'x@y.es', codigo: null }]) === 'Ana López\tana@correo.com\tCon nutrición\tK7P2QX', 'la lista de códigos, para pegarla en una hoja (sin quien no se creó)');
@@ -56,6 +65,10 @@ const despues = await apiD.atletas();
 const nuevos = despues.filter((x) => ['nuria@correo.com', 'diego@correo.com', 'raul@correo.com'].includes(x.email));
 check(nuevos.length === 3 && nuevos.every((x) => x.modalidad === 'por_su_cuenta' && x.esencial_inicio === '2027-01-11') && hechos.every((h) => /^[A-Z0-9-]{6,}$/.test(h.codigo || '')),
   'tres fichas de FBE Esencial que empiezan el 11 de enero, cada una con su código');
+const inv = (await bd.select('invitaciones', {})).filter((i) => nuevos.some((x) => x.id === i.atleta_id));
+const hasta = hoyISO() < '2027-01-11' ? diasInvitacion({ esencial: true, inicio: '2027-01-11', hoy: hoyISO() }) : 14;
+check(inv.length === 3 && inv.every((i) => Math.abs((Date.parse(i.caduca_en) - Date.now()) / 864e5 - hasta) < 0.01) && hechos.every((h) => !!h.caduca),
+  `y sus códigos valen hasta una semana después de su lunes (${hasta} días desde hoy), no los 14 de siempre`);
 check(nuevos.find((x) => x.email === 'diego@correo.com')?.nutricion === true && nuevos.find((x) => x.email === 'nuria@correo.com')?.nutricion === false, 'Diego, con nutrición; Nuria, solo entrenamiento');
 check(leerAltas('Nuria Sanz, nuria@correo.com', despues).filas[0].error === 'Ya tiene ficha (Nuria Sanz)', 'pegar la misma lista otra vez no los duplica');
 

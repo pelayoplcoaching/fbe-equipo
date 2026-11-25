@@ -56,17 +56,27 @@ const DIBUJOS = {
 
 // v0.50: en su capa (en <body>), como las hojas
 export function Bienvenida(props) { return <Capa><BienvenidaPantalla {...props} /></Capa>; }
-// (FBE Esencial) suyo: va por su cuenta: sin conversación con su coach; su plan lo prepara la app
+export const esIosNavegador = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+export const esAppInstalada = () => typeof window !== 'undefined' && !!(window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone);
+// (FBE Esencial) suyo: va por su cuenta: sin conversación con su coach; su plan lo prepara la app (su bienvenida propia,
+// con su lunes y los avisos, va en Esencial.jsx y usa estas mismas pantallas)
 function BienvenidaPantalla({ nombre, alTerminar, suyo = false }) {
-  const ios = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ios = esIosNavegador();
   const pantallas = [
     suyo ? { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tendrás tu plan: cada sesión con sus ejercicios y sus series. Lo primero, tu cuestionario: con él, la app te lo prepara.' }
       : { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tienes tu programa: cada sesión con sus ejercicios, series y cargas. El disco de color marca la prioridad de cada ejercicio.' },
     { dibujo: 'serie', titulo: 'Apunta cada serie', texto: 'Kilos, repeticiones y cuánto te ha costado. Si haces justo lo que te propone la app, basta con tocar ✓. Funciona aunque el gimnasio no tenga cobertura.' },
     suyo ? { dibujo: 'coach', titulo: 'Cada semana, la siguiente', texto: 'Con lo que apuntas, la app te prepara la semana siguiente con las reglas de progresión de Pelayo. Y una vez por semana, tu check-in: cómo vas y si algo te molesta.' }
       : { dibujo: 'coach', titulo: 'Habla con tu coach', texto: 'Cada sesión y cada check-in tienen su conversación. Cuéntale cambios, dudas o molestias, o mándale un vídeo para que te corrija la técnica.' },
-    { dibujo: 'instalar', titulo: 'Tenla a mano', texto: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio». Se abrirá como una app.' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación». Se abrirá como una app.' },
+    { dibujo: 'instalar', instalar: true, titulo: 'Tenla a mano', texto: ios ? 'En Safari, toca Compartir y luego «Añadir a pantalla de inicio». Se abrirá como una app.' : 'En Chrome, toca el menú ⋮ y luego «Instalar aplicación». Se abrirá como una app.' },
   ];
+  return <Pantallas pantallas={pantallas} alTerminar={alTerminar} />;
+}
+
+// Las pantallas de una bienvenida: { dibujo (el nombre de uno de DIBUJOS o el propio dibujo), titulo, texto, extra (lo que
+// va debajo del texto), instalar (en esa pantalla, el botón «Instalar» si el navegador lo ofrece) }
+export function Pantallas({ pantallas, alTerminar, etiqueta = 'Bienvenida a FBE Equipo' }) {
+  const ios = esIosNavegador();
   const [i, setI] = useState(0);
   const ultima = i === pantallas.length - 1;
   const caja = useRef(null);
@@ -78,22 +88,24 @@ function BienvenidaPantalla({ nombre, alTerminar, suyo = false }) {
   }, []);
   const p = pantallas[i];
   const prompt = typeof window !== 'undefined' ? window.__fbeInstalar : null;
+  const clave = typeof p.dibujo === 'string' ? p.dibujo : null;
   return (
-    <div class="bienvenida" role="dialog" aria-modal="true" aria-label="Bienvenida a FBE Equipo" tabIndex={-1} ref={caja}>
+    <div class="bienvenida" role="dialog" aria-modal="true" aria-label={etiqueta} tabIndex={-1} ref={caja}>
       <button class="btn-texto bienvenida-saltar" onClick={alTerminar}>Saltar</button>
       <div class="bienvenida-cuerpo" key={i}>
         {/* (imágenes) el programa, la puerta del gimnasio y la mesa del check-in; la de instalar, con su dibujo */}
-        <div class={`bienvenida-dibujo ${hayImagen(imagenPrimerosPasos(p.dibujo)) ? 'con-foto' : ''}`}>
-          <Imagen id={imagenPrimerosPasos(p.dibujo)} clase="bienvenida-foto" tamanos="(min-width: 500px) 460px, 92vw" prioridad alternativa={DIBUJOS[p.dibujo]} />
+        <div class={`bienvenida-dibujo ${clave && hayImagen(imagenPrimerosPasos(clave)) ? 'con-foto' : ''}`}>
+          {clave ? <Imagen id={imagenPrimerosPasos(clave)} clase="bienvenida-foto" tamanos="(min-width: 500px) 460px, 92vw" prioridad alternativa={DIBUJOS[clave]} /> : p.dibujo}
         </div>
         <h2>{p.titulo}</h2>
-        <p>{p.texto}</p>
+        {p.texto && <p>{p.texto}</p>}
+        {p.extra}
       </div>
       <div class="bienvenida-pie">
         <div class="bienvenida-puntos" role="img" aria-label={`Pantalla ${i + 1} de ${pantallas.length}`}>
           {pantallas.map((_, k) => <span key={k} class={k === i ? 'actual' : ''} />)}
         </div>
-        {ultima && prompt && !ios && (
+        {p.instalar && prompt && !ios && (
           <button class="btn btn-grande" onClick={async () => { try { await prompt.prompt(); } catch { /* */ } window.__fbeInstalar = null; }}><Icono n="movil" /> Instalar</button>
         )}
         <button class="btn btn-primario btn-grande" onClick={() => (ultima ? alTerminar() : setI(i + 1))}>{ultima ? 'Empezar' : 'Siguiente'}</button>

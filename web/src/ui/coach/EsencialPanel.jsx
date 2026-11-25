@@ -1,38 +1,92 @@
 // FBE Esencial, el piloto: en Atletas, debajo de la lista (como «Corredores»), quienes van por su cuenta de un vistazo
 // (su semana, lo de esta semana, la última sesión y sus avisos), las cifras del listón para abrirlo a todos y las
 // encuestas de las semanas 6 y 12 (una tarea de texto a cada uno, que Pelayo manda cuando quiere y cuyas respuestas lee
-// aquí). Sale de los resúmenes que ya tiene la lista: no pide nada más a la base salvo las encuestas.
+// aquí). Sale de los resúmenes que ya tiene la lista: no pide nada más a la base salvo las encuestas y, con la 097, el
+// alta de cada uno (su invitación, su cuenta, sus avisos, su cuestionario, el visto bueno, su plan y su primera sesión).
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, useUnaVez, cuando, Segmentos } from '../comunes.jsx';
-import { hoyISO } from '../../logica/fechas.js';
-import { cifrasPiloto, filaPiloto, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_ESENCIAL } from '../../logica/esencial-piloto.js';
+import { hoyISO, sumarDias } from '../../logica/fechas.js';
+import { cifrasPiloto, filaPiloto, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_ESENCIAL, embudoAlta, sinActivarAlta } from '../../logica/esencial-piloto.js';
+import { diasInvitacion } from '../../logica/esencial.js';
+import { fechaLarga } from '../../logica/esencial-alta.js';
+import { Invitaciones } from './EsencialAltas.jsx';
 
-export function EsencialPanel({ lista = [], abrir }) {
+const RESULTADO = { valorar_antes_vigoroso: 'su cribado: valorar antes de lo vigoroso', valorar_antes: 'su cribado: valorar antes de empezar', parar_y_valorar: 'su cribado: parar y valorar' };
+
+export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
   const { api } = useApp();
   const hoy = hoyISO();
   const suyos = lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado !== 'invitado');
   const ids = suyos.map((r) => r.atleta_id);
+  const todos = lista.filter((r) => r.modalidad === 'por_su_cuenta').map((r) => `${r.atleta_id}:${r.estado}`).join();
   const enc = useCarga(() => api.encuestaEsencial(ids, TITULOS_ENCUESTA).catch(() => []), [ids.join()], { recuerdo: `encuesta-esencial:${ids.join()}` });
+  // (alta, 097) el alta de cada uno; sin la 097, null (se ve lo de antes)
+  const alta = useCarga(() => (todos ? api.esencialAltaEstado().catch(() => null) : Promise.resolve(null)), [todos], { recuerdo: `alta-esencial:${todos}` });
   const [hoja, setHoja] = useState(false);
+  const [reenvio, setReenvio] = useState(false);
   const invitados = lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado === 'invitado');
   if (!suyos.length && !invitados.length) return null;
-  const c = cifrasPiloto(lista, hoy, enc.datos || []);   // (con todos: cuenta también a quien aún no ha activado su cuenta)
+  const altas = alta.datos || null;
+  const altaDe = new Map((altas || []).map((a) => [a.atleta_id, a]));
+  const c = cifrasPiloto(lista, hoy, enc.datos || [], altas);   // (con todos: cuenta también a quien aún no ha activado su cuenta)
+  const e = altas ? embudoAlta(altas, lista) : null;
+  const sin = sinActivarAlta(altas, lista, hoy);
   const filas = [...suyos].sort((a, b) => (a.estado === 'baja') - (b.estado === 'baja') || a.nombre.localeCompare(b.nombre, 'es'));
+  const urgentes = sin.filter((s) => s.urgente).length;
   return (
-    <details class="panel panel-pad corr-panel" open={c.conAvisos > 0}>
+    <details class="panel panel-pad corr-panel" open={c.conAvisos > 0 || urgentes > 0 || (e?.porConfirmar.length || 0) > 0}>
       <summary class="corr-cab"><Icono n="diana" /> <strong>FBE Esencial</strong> <span class="mini terciario num">{c.siguen}</span>
-        {c.conAvisos > 0 && <span class="chip corr-chip">{c.conAvisos === 1 ? '1 con avisos' : `${c.conAvisos} con avisos`}</span>}</summary>
+        {c.conAvisos > 0 && <span class="chip corr-chip">{c.conAvisos === 1 ? '1 con avisos' : `${c.conAvisos} con avisos`}</span>}
+        {urgentes > 0 && <span class="chip corr-chip">{urgentes === 1 ? '1 sin activar' : `${urgentes} sin activar`}</span>}</summary>
       <p class="peq secundario">
         {c.conPlan ? `Esta semana han entrenado ${c.entrenaron} de ${c.conPlan}. ` : ''}
         {c.sesiones4.pct != null ? `Sesiones apuntadas en sus 4 últimas semanas: ${c.sesiones4.hechas} de ${c.sesiones4.total} (${c.sesiones4.pct} %; el listón, ${LISTON_ESENCIAL.sesiones} %). ` : ''}
         {c.series4.pct != null ? `Series pautadas hechas: ${c.series4.pct} %. ` : ''}
-        {c.sinActivar.length ? `Sin activar su cuenta: ${c.sinActivar.length} (${c.sinActivar.slice(0, 6).join(', ')}${c.sinActivar.length > 6 ? ` y ${c.sinActivar.length - 6} más` : ''}). ` : ''}
+        {!altas && c.sinActivar.length ? `Sin activar su cuenta: ${c.sinActivar.length} (${c.sinActivar.slice(0, 6).join(', ')}${c.sinActivar.length > 6 ? ` y ${c.sinActivar.length - 6} más` : ''}). ` : ''}
         {c.bajas ? `De baja: ${c.bajas}. ` : ''}
-        {c.encuestas.filter((e) => e.mandadas).map((e) => `Encuesta (${e.nombre.toLowerCase()}): ${e.contestadas} de ${e.mandadas} contestadas. `).join('')}
+        {c.encuestas.filter((x) => x.mandadas).map((x) => `Encuesta (${x.nombre.toLowerCase()}): ${x.contestadas} de ${x.mandadas} contestadas. `).join('')}
       </p>
+      {/* (alta, 38) el embudo del alta y lo que tarda la mitad en hacer su primera sesión */}
+      {e && e.pasos[0].n > 0 && (
+        <section class="alta-embudo" aria-labelledby="alta-embudo-t">
+          <h3 id="alta-embudo-t" class="etq">El alta</h3>
+          <ol class="alta-pasos">
+            {e.pasos.map((x) => <li key={x.id}><strong class="num">{x.n}</strong><span class="mini">{x.nombre}</span></li>)}
+          </ol>
+          {(e.mediana != null || e.sinAvisos.length > 0) && <p class="mini terciario">
+            {e.mediana != null ? `De la invitación a la primera sesión, la mitad tarda ${e.mediana === 1 ? '1 día' : `${e.mediana} días`} o menos. ` : ''}
+            {e.sinAvisos.length ? `Con la cuenta activa y sin ningún aviso (no les llegará ninguno): ${e.sinAvisos.join(', ')}.` : ''}
+          </p>}
+        </section>
+      )}
+      {/* (alta, 27) los vistos buenos por confirmar, con «Confirmar» aquí mismo */}
+      {e && e.porConfirmar.length > 0 && <PorConfirmar filas={e.porConfirmar} alCambiar={() => alta.recargar(true)} />}
+      {/* (alta, 16-18) quién no ha activado su cuenta: su lunes, su código y «Mandar otra vez» (uno o todos) */}
+      {altas && sin.length > 0 && (
+        <section class="pila-s alta-sin" aria-labelledby="alta-sin-t">
+          <div class="separa">
+            <h3 id="alta-sin-t" class="etq">Sin activar su cuenta ({sin.length})</h3>
+            {sin.length > 1 && <button type="button" class="btn btn-peq" onClick={() => setReenvio(true)}><Icono n="enviar" /> Mandar otra vez a los {sin.length}</button>}
+          </div>
+          <ul class="corr-lista">
+            {sin.map((s) => (
+              <li key={s.atleta_id} class="alta-fila" data-nivel={s.urgente ? 'ambar' : 'ok'}>
+                <span class="pila-xs">
+                  <strong class="peq">{s.nombre}</strong>
+                  <span class="mini terciario">{[s.inicio ? (s.faltan > 0 ? `Empieza en ${s.faltan === 1 ? '1 día' : `${s.faltan} días`}` : s.faltan === 0 ? 'Empieza hoy' : `Su lunes fue el ${fechaLarga(s.inicio)}`) : null,
+                    s.invitado_en ? `invitación del ${fechaLarga(String(s.invitado_en).slice(0, 10)).replace(/^\S+ /, '')}` : null,
+                    s.caduca_en ? (s.caducado ? 'su código ya no vale' : `vale hasta el ${fechaLarga(String(s.caduca_en).slice(0, 10)).replace(/^\S+ /, '')}`) : null].filter(Boolean).join(' · ')}</span>
+                </span>
+                {mandarCodigo && <button type="button" class="btn btn-peq" onClick={() => mandarCodigo({ atleta_id: s.atleta_id, nombre: s.nombre, modalidad: 'por_su_cuenta' })} aria-label={`Mandar otra vez la invitación a ${s.nombre}`}>Mandar otra vez</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {filas.length > 0 && <ul class="corr-lista">
         {filas.map((r) => {
-          const f = filaPiloto(r, hoy);
+          const f = filaPiloto(r, hoy, altaDe.get(r.atleta_id));
+          const a = altaDe.get(r.atleta_id);
           return (
             <li key={r.atleta_id}>
               <button type="button" class="corr-fila" data-nivel={f.nivel} onClick={() => abrir(r.atleta_id)}>
@@ -40,7 +94,9 @@ export function EsencialPanel({ lista = [], abrir }) {
                 <span class="mini corr-km">{f.semana}{f.comida ? ' · con nutrición' : ''}</span>
                 <span class="mini num">{f.sesiones.total ? `${f.sesiones.completadas} de ${f.sesiones.total}` : '—'}</span>
                 <span class="mini terciario corr-prox">{f.ultima}</span>
-                {f.avisos.length > 0 && <span class="mini corr-avisos">{f.avisos.join(' · ')}</span>}
+                {(f.avisos.length > 0 || f.notificaciones) && <span class="mini corr-avisos">{[...f.avisos,
+                  ...(a?.activado_en ? [`Cuenta activa desde el ${fechaLarga(String(a.activado_en).slice(0, 10)).replace(/^\S+ /, '')}`] : []),
+                  ...(f.notificaciones ? [f.notificaciones] : [])].join(' · ')}</span>}
               </button>
             </li>
           );
@@ -50,7 +106,77 @@ export function EsencialPanel({ lista = [], abrir }) {
         <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}><Icono n="mensaje" /> {c.encuesta.mandadas ? 'Las encuestas y sus respuestas' : 'Mandar la encuesta'}</button>
       </div>}
       {hoja && <HojaEncuesta suyos={filas.filter((r) => r.estado !== 'baja')} tareas={enc.datos || []} alCerrar={() => setHoja(false)} alCambiar={() => enc.recargar(true)} />}
+      {reenvio && <HojaReenvio sin={sin} alCerrar={() => { setReenvio(false); alta.recargar(true); }} />}
     </details>
+  );
+}
+
+// (alta, 27) Los vistos buenos por confirmar: quién, desde cuándo, su cribado y «Confirmar» (le asigna su plan si ya tiene
+// el cuestionario, como desde su ficha)
+function PorConfirmar({ filas, alCambiar }) {
+  const { api, aviso } = useApp();
+  const [ocupado, una] = useUnaVez();
+  const hoy = hoyISO();
+  return (
+    <section class="pila-s alta-sin" aria-labelledby="alta-vb-t">
+      <h3 id="alta-vb-t" class="etq">Visto bueno por confirmar ({filas.length})</h3>
+      <ul class="corr-lista">
+        {filas.map((a) => {
+          const d = Math.max(0, Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${String(a.visto_bueno_pedido_en).slice(0, 10)}T12:00:00Z`)) / 864e5));
+          return (
+            <li key={a.atleta_id} class="alta-fila" data-nivel={d >= 3 ? 'ambar' : 'ok'}>
+              <span class="pila-xs">
+                <strong class="peq">{a.nombre}</strong>
+                <span class="mini terciario">Dice que ya lo tiene {d === 0 ? 'desde hoy' : d === 1 ? 'desde ayer' : `desde hace ${d} días`}{RESULTADO[a.resultado] ? ` · ${RESULTADO[a.resultado]}` : ''}</span>
+              </span>
+              <button type="button" class="btn btn-primario btn-peq" disabled={ocupado} aria-label={`Confirmar el visto bueno de ${a.nombre}`}
+                onClick={() => una(async () => {
+                  try {
+                    const r = await api.esencialConfirmarVistoBueno(a.atleta_id);
+                    aviso(r?.bloque ? `Confirmado: ${a.nombre.split(' ')[0]} ya tiene su plan` : `Visto bueno de ${a.nombre.split(' ')[0]} confirmado`);
+                    alCambiar?.();
+                  } catch (err) { aviso(err.message, 'error'); }
+                })}>Confirmar</button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// (alta, 18) «Mandar otra vez» a todos los que no han activado su cuenta: un código nuevo para cada uno (vale hasta una
+// semana después de su lunes) y sus mensajes listos, como en «Varios de FBE Esencial»
+function HojaReenvio({ sin, alCerrar }) {
+  const { api } = useApp();
+  const fichas = useCarga(() => api.atletas().catch(() => []), [], { tirar: false });
+  const [hechos, setHechos] = useState(null);
+  const [va, setVa] = useState(0);
+  const [ocupado, una] = useUnaVez();
+  const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
+  const generar = () => una(async () => {
+    const hoy = hoyISO();
+    const email = new Map((fichas.datos || []).map((f) => [f.id, f.email]));
+    const salen = [];
+    for (const [i, s] of sin.entries()) {
+      setVa(i + 1);
+      const dias = diasInvitacion({ esencial: true, inicio: s.inicio, hoy });
+      try { salen.push({ nombre: s.nombre, email: email.get(s.atleta_id) || '', atleta: { id: s.atleta_id }, inicio: s.inicio, codigo: await api.crearInvitacion(s.atleta_id, dias), caduca: sumarDias(hoy, dias) }); }
+      catch (err) { salen.push({ nombre: s.nombre, fallo: err.message, atleta: { id: s.atleta_id } }); }
+    }
+    setVa(0);
+    setHechos(salen);
+  });
+  if (hechos) return <Invitaciones hechos={hechos} url={url} otraVez alCerrar={alCerrar} />;
+  return (
+    <Hoja titulo="Mandar otra vez la invitación" alCerrar={alCerrar}>
+      <div class="pila">
+        <p class="peq secundario">A {sin.length === 1 ? 'quien no ha' : `los ${sin.length} que no han`} activado su cuenta: un código nuevo para cada uno (el de antes deja de valer), que vale hasta una semana después de su lunes, y su mensaje con el enlace que abre la app con el código puesto.</p>
+        <ul class="lista">{sin.map((s) => <li key={s.atleta_id} class="peq">{s.nombre}{s.urgente ? ' · empieza pronto' : ''}</li>)}</ul>
+        <button type="button" class="btn btn-primario btn-grande" disabled={ocupado || fichas.cargando} onClick={generar}>
+          {ocupado ? `Generando ${va} de ${sin.length}…` : `Generar ${sin.length === 1 ? 'su código nuevo' : `sus ${sin.length} códigos nuevos`}`}</button>
+      </div>
+    </Hoja>
   );
 }
 

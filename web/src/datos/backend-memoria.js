@@ -3225,8 +3225,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       },
       async registrar(email, password, nombre) {
         email = String(email).trim().toLowerCase();
-        if (tabla('auth_users').some((x) => x.email === email)) throw new Error('Ya hay una cuenta con ese email. Entra con tu contraseña.');
-        if (String(password).length < 10) throw new Error('La contraseña es demasiado débil: usa al menos 10 caracteres.');
+        // (alta, 6) como Supabase: el código del error, para ofrecer «Entrar» y «He olvidado mi contraseña»
+        if (tabla('auth_users').some((x) => x.email === email)) throw Object.assign(new Error('Ya hay una cuenta con ese email. Entra con tu contraseña.'), { codigo: 'user_already_exists' });
+        if (String(password).length < 10) throw Object.assign(new Error('Esa contraseña es fácil de adivinar: usa al menos 10 caracteres y mezcla palabras, números o signos.'), { codigo: 'weak_password' });
         const id = uuid();
         tabla('auth_users').push({ id, email, password });
         insertar('perfiles', { id, nombre: nombre || email.split('@')[0] });
@@ -3249,6 +3250,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return { confirmar: false };
       },
       async recuperar() {},
+      async reenviarConfirmacion() {},   // (en la demo no hay correos que confirmar)
       async cambiarPassword(password) {
         const u = usuario();
         if (u) u.password = password;
@@ -4957,6 +4959,39 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         inv.usada_en = ahora();
         persistirYa();
         return atleta.id;
+      }
+      // (alta, 097) Por qué no vale un código, como la base (sin el límite de intentos: en la demo no hace falta)
+      if (nombre === 'invitacion_estado') {
+        if (!uid) throw new Error('Necesitas iniciar sesión');
+        if (perfil?.rol === 'coach' || tabla('atletas').some((a) => a.perfil_id === uid)) return { estado: 'vinculada', esencial: false };
+        const canon = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const inv = tabla('invitaciones').find((i) => canon(i.codigo) === canon(args.p_codigo));
+        if (!inv) return { estado: 'no_existe', esencial: false };
+        const atleta = tabla('atletas').find((a) => a.id === inv.atleta_id);
+        const esencial = atleta?.modalidad === 'por_su_cuenta';
+        const estado = inv.usada_en || atleta?.perfil_id ? 'usado' : inv.caduca_en > ahora() ? 'valido'
+          : tabla('invitaciones').some((i) => i.atleta_id === inv.atleta_id && i !== inv && String(i.creada_en) > String(inv.creada_en)) ? 'reemplazado' : 'caducado';
+        return { estado, esencial };
+      }
+      // (alta, 097) El alta de cada uno de FBE Esencial, para el panel del coach
+      if (nombre === 'esencial_alta_estado') {
+        if (perfil?.rol !== 'coach') throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+        const prefs = (pid) => tabla('preferencias_notificaciones').find((p) => p.usuario_id === pid);
+        return tabla('atletas').filter((a) => a.modalidad === 'por_su_cuenta').sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((a) => {
+          const invs = tabla('invitaciones').filter((i) => i.atleta_id === a.id).sort((x, y) => String(y.creada_en).localeCompare(String(x.creada_en)));
+          const c = tabla('cuestionarios').find((x) => x.atleta_id === a.id);
+          const bloques = tabla('bloques').filter((x) => x.atleta_id === a.id && !x.es_plantilla);
+          const semanas = new Set(tabla('semanas').filter((w) => bloques.some((x) => x.id === w.bloque_id)).map((w) => w.id));
+          const hechas = tabla('sesiones').filter((s) => semanas.has(s.semana_id) && s.completada && s.fecha_realizada).map((s) => s.fecha_realizada).sort();
+          return {
+            atleta_id: a.id, inicio: a.esencial_inicio || null, invitado_en: invs[0]?.creada_en || null, caduca_en: invs[0]?.caduca_en || null,
+            activado_en: invs.filter((i) => i.usada_en).map((i) => i.usada_en).sort()[0] || (a.perfil_id ? a.fecha_alta || null : null),
+            push: !!a.perfil_id && tabla('suscripciones_push').some((s) => s.usuario_id === a.perfil_id), email: !!a.perfil_id && !!prefs(a.perfil_id)?.email,
+            cuestionario_en: c?.completado_en || null, resultado: c?.resultado || null,
+            visto_bueno_pedido_en: a.visto_bueno_pedido_en || null, visto_bueno_en: a.visto_bueno_en || null,
+            plan_inicio: bloques.map((x) => x.fecha_inicio).filter(Boolean).sort()[0] || null, primera_sesion: hechas[0] || null,
+          };
+        });
       }
       // Notificaciones: en la demo no hay móviles a los que enviar
       if (nombre === 'probar_notificacion') {

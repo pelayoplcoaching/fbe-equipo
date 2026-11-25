@@ -2,13 +2,95 @@
 // la tarjeta grande de antes de empezar (cuestionario, visto bueno y su lunes) y sus marcas de la semana 4.
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
 import { esPorSuCuenta, NOMBRE_PRIMERAS_4 } from '../../logica/esencial.js';
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
+import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
+import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
+
+// ---------- (alta, 11-15) La bienvenida de FBE Esencial: cómo funciona, hasta su lunes, los avisos e instalarla ----------
+const DibujoCalendario = () => (
+  <svg viewBox="0 0 200 150" aria-hidden="true">
+    <rect x="44" y="16" width="112" height="120" rx="14" class="b-marco" />
+    <path d="M58 16h84a14 14 0 0 1 14 14v14H44V30a14 14 0 0 1 14-14z" class="b-morado" />
+    {[0, 1, 2, 3, 4, 5, 6].map((c) => <rect key={c} x={55 + c * 13.5} y="54" width="9" height="5" rx="2.5" class="b-linea-suave" />)}
+    {[0, 1, 2, 3].flatMap((f) => [0, 1, 2, 3, 4, 5, 6].map((c) => (
+      <rect key={`${f}${c}`} x={53 + c * 13.5} y={66 + f * 16} width="12" height="11" rx="3" class={f === 1 && c === 0 ? 'b-ok' : 'b-hoja'} />
+    )))}
+    <path d="M55.5 87.5l3 3 5-6" class="b-check" style="stroke-width:2.5" />
+  </svg>
+);
+const DibujoAvisos = () => (
+  <svg viewBox="0 0 200 150" aria-hidden="true">
+    <path d="M100 20c-21 0-35 15-35 37v23l-11 17h92l-11-17V57c0-22-14-37-35-37z" class="b-hoja" />
+    <path d="M87 104a13 13 0 0 0 26 0z" class="b-linea" />
+    <circle cx="130" cy="32" r="12" class="b-morado" />
+    <rect x="62" y="122" width="76" height="7" rx="3.5" class="b-linea-suave" />
+  </svg>
+);
+
+export function BienvenidaInicioEsencial({ nombre, alTerminar }) {
+  const { atleta } = useApp();
+  const hoy = hoyISO();
+  const inicio = atleta?.esencial_inicio || null;
+  const antes = !!inicio && inicio > hoy;
+  const ios = esIosNavegador();
+  const pantallas = [
+    { dibujo: 'programa', titulo: `Hola, ${nombre}`, texto: 'Aquí tendrás tu plan. Así funciona FBE Esencial:', extra: (
+      <ol class="alta-tres">
+        <li><strong>Tu cuestionario.</strong> Unos minutos: tu experiencia, tus días, dónde entrenas y unas preguntas de salud.</li>
+        <li><strong>Tu plan.</strong> Con tus respuestas, la app te lo prepara.</li>
+        <li><strong>{antes ? `Empiezas el ${fechaLarga(inicio)}.` : 'Empiezas.'}</strong> Cada semana, la app te prepara la siguiente con lo que apuntas.</li>
+      </ol>
+    ) },
+    ...(antes ? [{ dibujo: <DibujoCalendario />, titulo: 'Hasta tu lunes',
+      texto: `Hasta el ${fechaLarga(inicio)}, rellena tu cuestionario y, en cuanto tengas tu plan, mira tu semana 1 y los vídeos de sus ejercicios. Las sesiones se abren ese día.` }] : []),
+    { dibujo: 'serie', titulo: 'Apunta cada serie', texto: 'Kilos, repeticiones y cuántas te sobraban. Si haces justo lo que te propone la app, basta con tocar ✓. Funciona aunque el gimnasio no tenga cobertura.' },
+    { dibujo: <DibujoAvisos />, titulo: 'Los avisos',
+      texto: 'Te avisamos si te falta el cuestionario, la víspera y el día en que empiezas y si llevas días sin entrenar. Sin avisos activados, no te llega ninguno.', extra: <PasoAvisos /> },
+    ...(esAppInstalada() ? [] : [{ dibujo: 'instalar', instalar: true, titulo: 'Tenla a mano',
+      texto: ios ? 'En Safari, toca Compartir (el cuadrado con la flecha hacia arriba) y luego «Añadir a pantalla de inicio». Se abrirá como una app y te podrán llegar los avisos.'
+        : 'En Chrome, toca «Instalar» o el menú ⋮ y luego «Instalar aplicación» (o «Añadir a pantalla de inicio»). Se abrirá como una app.' }]),
+  ];
+  return <Capa><Pantallas pantallas={pantallas} alTerminar={alTerminar} etiqueta="Bienvenida a FBE Esencial" /></Capa>;
+}
+
+// (alta, 13 y 14) Activar los avisos durante el alta: en el móvil (el permiso se pide al tocar, nunca solo) o, si no se
+// puede o no quiere, por correo
+export function PasoAvisos() {
+  const { api, modo, aviso } = useApp();
+  const estado = estadoPush(modo);
+  const [hecho, setHecho] = useState(null);   // 'movil' | 'correo'
+  const [bloqueado, setBloqueado] = useState(estado === 'bloqueado');
+  const [ocupado, una] = useUnaVez();
+  useEffect(() => { if (estado === 'ok') suscripcionActual().then((s) => { if (s) setHecho('movil'); }).catch(() => {}); }, []);
+  const movil = () => una(async () => {
+    try {
+      const r = await activarPush(api);
+      if (r === 'activadas') { setHecho('movil'); api.probarNotificacion().catch(() => {}); aviso('Avisos activados: te llegará uno de prueba'); }
+      else if (r === 'bloqueado') setBloqueado(true);
+    } catch (e) { aviso(`No se han podido activar: ${e.message}`, 'error'); }
+  });
+  const correo = () => una(async () => {
+    try { const p = await api.preferenciasNotificaciones(); await api.guardarPreferenciasNotificaciones({ ...p, email: true }); setHecho('correo'); }
+    catch (e) { aviso(e.message, 'error'); }
+  });
+  if (hecho) return <p class="alta-hecho" role="status"><Icono n="hecho" /> {hecho === 'movil' ? 'Activados en este móvil.' : 'Te llegarán por correo, como mucho uno por hora.'}</p>;
+  const empuje = estado === 'ok' && !bloqueado;
+  return (
+    <div class="pila-s alta-avisos">
+      {empuje && <button type="button" class="btn btn-primario" disabled={ocupado} onClick={movil}><Icono n="campana" /> Activar los avisos</button>}
+      {estado === 'ios_instalar' && <p class="peq secundario">En iPhone, los avisos solo llegan a la app instalada: añádela a tu pantalla de inicio, ábrela desde ahí y actívalos en tu perfil.</p>}
+      {bloqueado && <p class="peq secundario">Los tienes bloqueados para esta web: permítelos en los ajustes del navegador o del móvil.</p>}
+      {estado === 'demo' && <p class="peq secundario">En la demo no se envían avisos al móvil.</p>}
+      {(conEmail() || modo === 'demo') && <button type="button" class="btn" disabled={ocupado} onClick={correo}><Icono n="mensaje" /> {empuje ? 'Prefiero por correo' : 'Avisarme por correo'}</button>}
+    </div>
+  );
+}
 
 // La tarjeta sale cuando ha terminado su semana de marcas y durante las tres semanas siguientes
 export function TarjetaMarcas() {

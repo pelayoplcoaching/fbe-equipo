@@ -248,6 +248,105 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await invs.getByRole('button', { name: 'Hecho' }).click();
     const enLista = await p.waitForFunction(() => /Nuria Sanz/.test(document.body.textContent) && /Diego Mora/.test(document.body.textContent), null, { timeout: 10000 }).then(() => true).catch(() => false);
     check(enLista, 'y los dos salen en la lista de Atletas');
+
+    // (alta, v0.239) en el panel, el embudo del alta y quién no ha activado su cuenta, con «Mandar otra vez» (a todos)
+    await p.waitForTimeout(800);
+    const pil = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
+    if ((await pil.getAttribute('open').catch(() => null)) === null) await pil.locator('summary').click().catch(() => {});
+    const sinAct = await pil.getByRole('heading', { name: /Sin activar su cuenta \(3\)/ }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(sinAct && /El alta/.test(await pil.textContent()) && (await pil.getByRole('button', { name: /Mandar otra vez la invitación a Nuria Sanz/ }).count()) === 1,
+      'el panel: «El alta» (el embudo) y «Sin activar su cuenta (3)», cada uno con «Mandar otra vez»');
+    await pil.getByRole('button', { name: /Mandar otra vez a los 3/ }).click();
+    const hr = p.locator('[aria-modal="true"]').last();
+    await hr.getByRole('button', { name: /Generar sus 3 códigos nuevos/ }).click();
+    const nuevos = await hr.getByText(/3 códigos nuevos/).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const cuerpos = (await p.locator('[aria-modal="true"]').last().locator('a[href^="mailto:"]').evaluateAll((as) => as.map((x) => decodeURIComponent(x.getAttribute('href').split('&body=')[1] || ''))));
+    const deNuria = cuerpos.find((x) => /Hola, Nuria/.test(x)) || '';
+    const codigoNuria = (deNuria.match(/codigo=(FBE-[A-Z0-9]{5}-[A-Z0-9]{5})&plan=esencial/) || [])[1];
+    check(nuevos && !!codigoNuria && /Sirve una sola vez, hasta el /.test(deNuria), 'mandar otra vez a los tres: un código nuevo para cada uno y su mensaje, con el enlace que lleva el código (y hasta cuándo vale)');
+    await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Hecho' }).click().catch(() => {});
+
+    // (alta, v0.239) Nuria abre el enlace: «Activa tu cuenta» con su código puesto; sin el consentimiento de salud, se avisa
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.goto(`${base}/?demo=esencial&codigo=${codigoNuria}&plan=esencial`);
+    await p.getByRole('heading', { name: 'Activa tu cuenta' }).waitFor({ timeout: 20000 });
+    check(await p.locator('#act-codigo').inputValue() === codigoNuria && /Ya viene puesto desde tu invitación/.test(await p.locator('form').textContent())
+      && /En FBE Esencial lo necesitas/.test(await p.locator('form').textContent()) && !/codigo=/.test(p.url()),
+      'con el enlace: directamente «Activa tu cuenta», el código ya escrito, por qué necesita el consentimiento de salud, y el código ya no está en la dirección');
+    await p.getByLabel('Tu nombre').fill('Nuria');
+    await p.getByLabel('Email').fill('nuria.app@correo.test');
+    await p.getByLabel('Crea una contraseña').fill('una-contraseña-segura');
+    await p.getByRole('button', { name: 'Mostrar la contraseña' }).click();
+    check(await p.locator('#act-pass').getAttribute('type') === 'text', 'el ojo enseña la contraseña');
+    await p.locator('label.casilla input').nth(0).check();
+    await p.getByRole('button', { name: 'Activar cuenta' }).click();
+    check(/no podrá prepararte el plan de FBE Esencial/.test(await p.locator('.alta-aviso-salud').textContent().catch(() => '')), 'sin el consentimiento de salud, se le avisa antes de seguir');
+    await p.locator('label.casilla input').nth(1).check();
+    await p.getByRole('button', { name: 'Activar cuenta' }).click();
+    const bv = p.getByRole('dialog', { name: 'Bienvenida a FBE Esencial' });
+    const conBienvenida = await bv.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    const t1 = conBienvenida ? await bv.textContent() : '';
+    check(conBienvenida && /Hola, Nuria/.test(t1) && /Tu cuestionario/.test(t1) && /Tu plan/.test(t1) && /Empiezas el lunes/.test(t1), 'su bienvenida de FBE Esencial: los tres pasos (cuestionario, plan y su lunes)');
+    const titulos = [];
+    for (let i = 0; i < 6 && conBienvenida; i++) {
+      titulos.push(await bv.locator('h2').textContent());
+      if (titulos.at(-1) === 'Los avisos') {
+        await bv.getByRole('button', { name: /Avisarme por correo/ }).click();
+        check(await bv.getByText(/Te llegarán por correo/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false), 'los avisos, durante el alta: por correo (en la demo no hay móvil)');
+      }
+      const sig = bv.getByRole('button', { name: 'Siguiente' });
+      if (await sig.count()) await sig.click(); else break;
+      await p.waitForTimeout(200);
+    }
+    check(titulos.join(' · ') === 'Hola, Nuria · Hasta tu lunes · Apunta cada serie · Los avisos · Tenla a mano', `sus pantallas: ${titulos.join(' · ')}`);
+    await bv.getByRole('button', { name: 'Empezar' }).click().catch(() => {});
+    await cerrar(p);
+    const heroN = await p.locator('section.hero-espera').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(heroN && /Rellena tu cuestionario/.test(await p.locator('section.hero-espera').first().textContent()), 'y en Hoy, su cuestionario');
+    await desborda(p, 'Hoy de Nuria');
+
+    // El coach lo ve: su cuenta activa y sus avisos por correo
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.goto(`${base}/?demo=esencial`);
+    await p.getByRole('button', { name: /Coach: panel/ }).first().click();
+    await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1200);
+    await cerrar(p);
+    const pil2 = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
+    if ((await pil2.getAttribute('open').catch(() => null)) === null) await pil2.locator('summary').click().catch(() => {});
+    const filaN = pil2.locator('.corr-fila', { hasText: 'Nuria Sanz' });
+    const tN = await filaN.textContent({ timeout: 10000 }).catch(() => '');
+    check(/Cuenta activa desde el/.test(tN) && /Avisos por correo/.test(tN) && /Sin activar su cuenta \(2\)/.test(await pil2.textContent()), 'en el panel: Nuria, con su cuenta activa y los avisos por correo; quedan 2 sin activar');
+
+    // Un código que no existe: al crear la cuenta, por qué no vale
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.goto(`${base}/?demo=esencial`);
+    await p.getByRole('button', { name: 'Activa tu cuenta' }).click();
+    await p.locator('#act-codigo').fill('FBE-ZZZZZ-ZZZZZ');
+    await p.getByLabel('Tu nombre').fill('Alguien');
+    await p.getByLabel('Email').fill('alguien@correo.test');
+    await p.getByLabel('Crea una contraseña').fill('una-contraseña-segura');
+    await p.locator('label.casilla input').nth(0).check();
+    await p.getByRole('button', { name: 'Activar cuenta' }).click();
+    const noExiste = await p.getByText(/Ese código no existe/).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(noExiste && await p.getByRole('heading', { name: 'Introduce tu código' }).count() === 1, 'con un código que no existe: al crear la cuenta, «Ese código no existe» (y puede escribir el bueno)');
+    await p.getByRole('button', { name: /Cerrar sesión/ }).click().catch(() => {});
+
+    // Un email que ya tiene cuenta: «Entrar» (con su email ya escrito) o «He olvidado mi contraseña»
+    await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor({ timeout: 15000 }).catch(() => {});
+    await p.getByRole('button', { name: 'Activa tu cuenta' }).click();
+    await p.locator('#act-codigo').fill('FBE-YYYYY-YYYYY');
+    await p.getByLabel('Tu nombre').fill('Marina');
+    await p.getByLabel('Email').fill('marina@fbe.demo');
+    await p.getByLabel('Crea una contraseña').fill('otra-contraseña-larga');
+    await p.locator('label.casilla input').nth(0).check();
+    await p.getByRole('button', { name: 'Activar cuenta' }).click();
+    const existe = await p.locator('.alta-existe').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(existe && /Ya hay una cuenta con marina@fbe.demo/.test(await p.locator('.alta-existe').textContent()) && (await p.locator('.alta-existe').getByRole('button', { name: 'He olvidado mi contraseña' }).count()) === 1,
+      'con un email que ya tiene cuenta: lo dice claro, con «Entrar» y «He olvidado mi contraseña»');
+    await p.locator('.alta-existe').getByRole('button', { name: 'Entrar' }).click();
+    check(await p.locator('#acc-email').inputValue().catch(() => '') === 'marina@fbe.demo', 'y al tocar «Entrar», su email ya escrito');
+    await desborda(p, 'La entrada');
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);

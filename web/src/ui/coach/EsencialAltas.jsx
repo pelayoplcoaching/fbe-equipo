@@ -30,7 +30,7 @@ export function HojaAltasEsencial({ inicio: inicio0, alCerrar }) {
       try {
         const r = await api.crearAtletaEsencial({ nombre: f.nombre, email: f.email, nutricion: f.nutricion, inicio });
         if (r?.falta091) { setError(FALTA_091); break; }
-        salen.push({ ...f, atleta: r.atleta, codigo: r.codigo });
+        salen.push({ ...f, atleta: r.atleta, codigo: r.codigo, caduca: r.caduca || null });
       } catch (e) { salen.push({ ...f, fallo: e.message }); }
     }
     setVa(0);
@@ -67,20 +67,23 @@ export function HojaAltasEsencial({ inicio: inicio0, alCerrar }) {
   );
 }
 
-// Las invitaciones: «Correo» abre el mensaje ya escrito en el programa de correo; «Copiar», para mandarlo por otro sitio
-function Invitaciones({ hechos, inicio, url, alCerrar }) {
+// Las invitaciones: «Correo» abre el mensaje ya escrito en el programa de correo; «Copiar», para mandarlo por otro sitio.
+// (alta, 18) También para «Mandar otra vez» desde el panel (otra vez: con su código nuevo; cada uno con su lunes).
+export function Invitaciones({ hechos, inicio = null, url, alCerrar, otraVez = false }) {
   const { aviso } = useApp();
   const [mandados, setMandados] = useState({});
   const bien = hechos.filter((h) => h.codigo);
   const mal = hechos.filter((h) => !h.codigo);
-  const msj = (h) => mensajeInvitacion({ nombre: h.nombre, codigo: h.codigo, url, esencial: true, inicio });
+  const msj = (h) => mensajeInvitacion({ nombre: h.nombre, codigo: h.codigo, url, esencial: true, inicio: h.inicio || inicio, caduca: h.caduca || null });
   const marcar = (h) => setMandados((m) => ({ ...m, [h.atleta.id]: true }));
   const llevan = bien.filter((h) => mandados[h.atleta.id]).length;
   return (
     <Hoja titulo="Sus invitaciones" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="peq secundario">{bien.length === 1 ? 'Creada 1 ficha' : `Creadas ${bien.length} fichas`}; empiezan el {fechaLarga(inicio)}. Manda a cada uno su mensaje: «Correo» lo abre ya escrito. Si cierras esta hoja antes de mandarlos todos, a quien falte le generas otro código desde su ficha.</p>
-        {mal.length > 0 && <div class="error" role="alert">No se han podido crear: {mal.map((h) => `${h.nombre} (${h.fallo})`).join('; ')}.</div>}
+        <p class="peq secundario">{otraVez
+          ? `${bien.length === 1 ? 'Un código nuevo' : `${bien.length} códigos nuevos`} (los de antes ya no valen). Manda a cada uno su mensaje: «Correo» lo abre ya escrito, con el enlace que abre la app con su código.`
+          : `${bien.length === 1 ? 'Creada 1 ficha' : `Creadas ${bien.length} fichas`}; empiezan el ${fechaLarga(inicio)}. Manda a cada uno su mensaje: «Correo» lo abre ya escrito. Si cierras esta hoja antes de mandarlos todos, a quien falte le generas otro código desde su ficha.`}</p>
+        {mal.length > 0 && <div class="error" role="alert">{otraVez ? 'No se ha podido generar su código: ' : 'No se han podido crear: '}{mal.map((h) => `${h.nombre} (${h.fallo})`).join('; ')}.</div>}
         {bien.length > 0 && <>
           <div class="separa">
             <span class="mini terciario num">{llevan} de {bien.length} mandados</span>

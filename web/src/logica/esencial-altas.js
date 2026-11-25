@@ -63,13 +63,23 @@ export function leerAltas(texto = '', existentes = []) {
   return { filas, validas: filas.filter((f) => !f.error), ignoradas };
 }
 
-// El mensaje de la invitación (el mismo del alta de uno en uno). inicio: 'AAAA-MM-DD' o null.
-export function mensajeInvitacion({ nombre = '', codigo, url, esencial = false, inicio = null }) {
+// (alta, 1) El enlace de la invitación lleva el código: al abrirlo, la app enseña «Activa tu cuenta» con el código ya
+// escrito (y, si es de FBE Esencial, lo que hace falta para su plan). url: la dirección de la app.
+export function enlaceInvitacion(url, codigo, esencial = false) {
+  if (!codigo) return '';
+  return `${String(url || '').replace(/[?#].*$/, '')}?codigo=${encodeURIComponent(codigo)}${esencial ? '&plan=esencial' : ''}`;
+}
+
+// El mensaje de la invitación (el mismo del alta de uno en uno). inicio: 'AAAA-MM-DD' o null; caduca: hasta qué día vale
+// el código ('AAAA-MM-DD'; sin él, los 14 días de siempre).
+export function mensajeInvitacion({ nombre = '', codigo, url, esencial = false, inicio = null, caduca = null }) {
   const n = String(nombre).trim().split(/\s+/)[0] || '';
   if (!codigo) return '';
-  if (!esencial) return `Hola, ${n}. Ya tienes tu acceso a la app de FBE Coaching. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo}. Caduca en 14 días y solo vale una vez.`;
+  const enlace = enlaceInvitacion(url, codigo, esencial);
+  const vale = caduca ? `Sirve una sola vez, hasta el ${fechaLarga(caduca)}.` : 'Caduca en 14 días y solo sirve una vez.';
+  if (!esencial) return `Hola, ${n}. Ya tienes tu acceso a la app de FBE Coaching. Para activar tu cuenta, abre este enlace, que ya lleva tu código: ${enlace} (o entra en ${url}, toca «Activa tu cuenta» y escribe ${codigo}). ${vale}`;
   const dia = inicio ? fechaLarga(inicio) : '';
-  return `Hola, ${n}. Ya tienes tu plaza en FBE Esencial. Entra en ${url}, toca «Activa tu cuenta» y escribe este código: ${codigo} (caduca en 14 días y solo vale una vez). Lo primero, tu cuestionario: con él, la app te prepara tu plan${dia ? `, que empieza el ${dia}` : ''}.`;
+  return `Hola, ${n}. Ya tienes tu plaza en FBE Esencial. Para activar tu cuenta, abre este enlace, que ya lleva tu código: ${enlace} (o entra en ${url}, toca «Activa tu cuenta» y escribe ${codigo}). ${vale} Lo primero, tu cuestionario: con él, la app te prepara tu plan${dia ? `, que empieza el ${dia}` : ''}.`;
 }
 
 // El enlace para abrir el correo ya escrito (el programa de correo del coach)

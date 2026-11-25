@@ -42,3 +42,16 @@ export function etiquetaRpeSobran(rpe) {
 
 // La plantilla de la guía está en esencial-plantilla.js (solo la usan la demo y el SQL: no va en lo que se carga al abrir)
 export const NOMBRE_PRIMERAS_4 = 'Primeras 4 semanas';
+
+// (alta, 9) Cuántos días vale el código de la invitación: 14; en FBE Esencial, hasta una semana después de su lunes de
+// inicio (las altas se hacen semanas antes: con 14 días, uno dado el 15/12 ya no valdría el 11/1), como mucho 60
+export function diasInvitacion({ esencial = false, inicio = null, hoy } = {}) {
+  const f = /^\d{4}-\d{2}-\d{2}$/;
+  if (!esencial || !f.test(inicio || '') || !f.test(hoy || '')) return 14;
+  const hasta = Math.round((Date.parse(`${inicio}T12:00:00Z`) - Date.parse(`${hoy}T12:00:00Z`)) / 864e5) + 7;
+  return Math.min(60, Math.max(14, hasta));
+}
+
+// (alta) El correo para escribir a Pelayo cuando no hay chat (FBE Esencial) o algo falla en la app o en el cobro: el
+// público de la web (aprobado por él el 20/11/2026)
+export const CORREO_CONTACTO = 'pelayofbe@fuerzabasadaenevidencia.com';

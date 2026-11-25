@@ -1,6 +1,6 @@
 // FBE Esencial, el piloto (logica/esencial-piloto.js y la demo): las filas y las cifras del panel de Atletas, y las
 // encuestas de las semanas 6 y 12 como tarea de texto (mandarla, contestarla y leer las respuestas).
-import { filaPiloto, cifrasPiloto, ENCUESTA_ESENCIAL, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_ESENCIAL } from '../web/src/logica/esencial-piloto.js';
+import { filaPiloto, cifrasPiloto, ENCUESTA_ESENCIAL, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_ESENCIAL, embudoAlta, sinActivarAlta, semana1SinEmpezar, avisosDe } from '../web/src/logica/esencial-piloto.js';
 import { crearBackendMemoria } from '../web/src/datos/backend-memoria.js';
 import { semillaDemo } from '../web/src/datos/semilla-demo.js';
 import { crearApi } from '../web/src/datos/api.js';
@@ -65,6 +65,32 @@ await bd.auth.entrar('pelayo@fbe.demo', 'demo');
 const despues = cifrasPiloto(res, hoyISO(), await apiD.encuestaEsencial(suyos.map((r) => r.atleta_id), TITULOS_ENCUESTA));
 check(despues.encuesta.mandadas === 4 && despues.encuesta.contestadas === 1, 'Inés contesta: 1 de 4 contestadas, y Pelayo lee su respuesta');
 check(sumarDias(hoy, 0) === hoy, '(fin)');
+
+console.log('\nEl alta (097)');
+{
+  const H = '2027-01-14';   // (un jueves: la semana 1 de quien empezó el lunes 11)
+  const r = (id, nombre, estado = 'activo', extra = {}) => ({ atleta_id: id, nombre, estado, modalidad: 'por_su_cuenta', alertas: [], ...extra });
+  const res = [r('a', 'Ana'), r('b', 'Berta'), r('c', 'Carmen', 'invitado'), r('d', 'Dani', 'invitado'), r('e', 'Eva', 'baja'), { atleta_id: 'x', nombre: 'Xus', estado: 'activo', modalidad: 'seguimiento', alertas: [] }];
+  const altas = [
+    { atleta_id: 'a', inicio: '2027-01-11', invitado_en: '2026-12-15T10:00:00Z', activado_en: '2026-12-16T10:00:00Z', push: true, email: false, cuestionario_en: '2026-12-20T10:00:00Z', resultado: 'sin_valoracion', plan_inicio: '2027-01-11', primera_sesion: '2027-01-12' },
+    { atleta_id: 'b', inicio: '2027-01-11', invitado_en: '2026-12-15T10:00:00Z', activado_en: '2026-12-18T10:00:00Z', push: false, email: false, cuestionario_en: '2026-12-21T10:00:00Z', resultado: 'valorar_antes', visto_bueno_pedido_en: '2027-01-09T10:00:00Z', plan_inicio: null, primera_sesion: null },
+    { atleta_id: 'c', inicio: '2027-01-18', invitado_en: '2026-12-20T10:00:00Z', caduca_en: '2027-01-25T10:00:00Z' },
+    { atleta_id: 'd', inicio: '2027-02-15', invitado_en: '2026-12-20T10:00:00Z', caduca_en: '2027-01-03T10:00:00Z' },
+    { atleta_id: 'e', inicio: '2027-01-11', invitado_en: '2026-12-15T10:00:00Z', activado_en: '2026-12-16T10:00:00Z' },
+  ];
+  const e = embudoAlta(altas, res);
+  check(e.pasos.map((x) => `${x.nombre} ${x.n}`).join(', ') === 'Invitados 4, Cuenta activa 2, Cuestionario 2, Con plan 1, Primera sesión 1', `el embudo, sin los de baja ni los de seguimiento (${e.pasos.map((x) => x.n).join(' → ')})`);
+  check(e.porConfirmar.length === 1 && e.porConfirmar[0].nombre === 'Berta' && e.sinAvisos.join() === 'Berta' && e.mediana === 28, 'el visto bueno de Berta por confirmar; Berta, sin ningún aviso; la mitad tarda 28 días o menos de la invitación a su primera sesión');
+  const s = sinActivarAlta(altas, res, H);
+  check(s.map((x) => x.nombre).join() === 'Carmen,Dani' && s[0].urgente && s[0].faltan === 4 && !s[0].caducado && !s[1].urgente && s[1].caducado, 'sin activar: Carmen primero (empieza en 4 días: urgente) y Dani (empieza en febrero; su código ya no vale)');
+  check(sinActivarAlta(null, res, H).map((x) => x.nombre).join() === 'Carmen,Dani', 'sin la 097, al menos los nombres');
+  check(avisosDe(altas[0]) === 'Avisos en el móvil' && avisosDe({ email: true }) === 'Avisos por correo' && avisosDe(altas[1]) === 'Sin avisos' && avisosDe(null) === null, 'sus avisos, en palabras');
+  const sin1 = { plan_inicio: '2027-01-11', primera_sesion: null };
+  check(semana1SinEmpezar(sin1, { ultimaSesion: null }, H) && !semana1SinEmpezar(sin1, { ultimaSesion: null }, '2027-01-13') && !semana1SinEmpezar(sin1, { ultimaSesion: '2027-01-12' }, H) && !semana1SinEmpezar(sin1, { ultimaSesion: null }, '2027-01-18'),
+    'su semana 1 sin empezar: desde el jueves y hasta el domingo, si no ha hecho ninguna sesión');
+  const f = filaPiloto({ ...r('z', 'Zoe'), bloque: { nombre: 'Primeras 4 semanas' }, semana: { numero: 1 } }, H, sin1);
+  check(f.nivel === 'ambar' && f.avisos[0] === 'Semana 1 sin empezar' && f.notificaciones === 'Sin avisos', 'en su fila: ámbar, «Semana 1 sin empezar» y sus avisos');
+}
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

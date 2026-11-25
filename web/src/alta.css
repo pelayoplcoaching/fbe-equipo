@@ -1,0 +1,53 @@
+/* El alta (v0.239-v0.241, las 60 mejoras del alta de FBE Esencial). Clases propias con el prefijo alta-: la contrasena con
+   su ojo, la tarjeta de la primera vez en la entrada, la bienvenida de FBE Esencial (sus tres pasos y los avisos) y, en el
+   panel del coach, el embudo del alta y quien no ha activado su cuenta. Colores por tokens (con su version oscura). */
+
+/* La contrasena: el ojo dentro del campo, a la derecha */
+.alta-clave { position: relative; display: block; }
+.alta-clave input { width: 100%; padding-right: calc(var(--esp-48) + var(--esp-4)); }
+.alta-ojo {
+  position: absolute; top: 50%; right: var(--esp-4); transform: translateY(-50%);
+  display: grid; place-items: center; width: var(--esp-40); height: var(--esp-40);
+  border: 0; border-radius: var(--r-xs); background: transparent; color: var(--tinta-2); cursor: pointer;
+}
+.alta-ojo:hover { color: var(--tinta); background: var(--hoja-2); }
+.alta-ojo:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.alta-ojo[aria-pressed="true"] { color: var(--morado); }
+.alta-ojo svg { width: var(--esp-20); height: var(--esp-20); }
+.alta-mayus { display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--aviso); font-weight: 600; }
+
+/* La primera vez en este movil: activar la cuenta, arriba y bien visible */
+.alta-primera {
+  display: grid; gap: var(--esp-8); padding: var(--esp-14) var(--esp-16);
+  border-radius: var(--r-s); background: var(--morado-suave); color: var(--tinta);
+  border: var(--filo-fino) solid color-mix(in srgb, var(--morado) 28%, transparent);
+}
+.alta-primera strong { font-size: var(--letra-17); }
+
+/* La bienvenida de FBE Esencial */
+.alta-tres { margin: 0; padding-left: var(--esp-22); display: grid; gap: var(--esp-8); text-align: left; color: var(--tinta-2); }
+.alta-tres li::marker { color: var(--morado); font-weight: 800; }
+.alta-tres strong { color: var(--tinta); }
+.alta-avisos { justify-items: center; }
+.alta-hecho { display: inline-flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--ok); font-weight: 650; }
+.alta-hecho svg { width: var(--esp-18); height: var(--esp-18); }
+
+/* Panel del coach: el embudo del alta y quien falta */
+.alta-embudo { display: grid; gap: var(--esp-8); margin-block: var(--esp-12); }
+.alta-pasos {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-6);
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+}
+.alta-pasos li {
+  display: grid; gap: var(--esp-2); padding: var(--esp-8) var(--esp-10);
+  border-radius: var(--r-xs); background: var(--hoja-2); color: var(--tinta-2);
+}
+.alta-pasos strong { font-size: var(--letra-20); color: var(--tinta); }
+.alta-sin { margin-block: var(--esp-12); }
+.alta-fila {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--esp-10); flex-wrap: wrap;
+  padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2);
+  border-left: var(--filo-marca) solid var(--ok);
+}
+.alta-fila[data-nivel="ambar"] { border-left-color: var(--aviso); }
+.alta-fila > span { min-width: 0; }

@@ -45,9 +45,19 @@ const MENSAJES = {
   '23503': 'Falta un dato relacionado (puede que se haya borrado).',
   'invalid_credentials': 'Email o contraseña incorrectos.',
   'user_already_exists': 'Ya hay una cuenta con ese email. Entra con tu contraseña.',
+  'email_exists': 'Ya hay una cuenta con ese email. Entra con tu contraseña.',
   'email_not_confirmed': 'Confirma tu email con el enlace que te hemos enviado.',
-  'weak_password': 'La contraseña es demasiado débil: usa al menos 10 caracteres.',
+  'weak_password': 'Esa contraseña es fácil de adivinar: usa al menos 10 caracteres y mezcla palabras, números o signos.',
   'over_email_send_rate_limit': 'Demasiados correos seguidos. Prueba dentro de unos minutos.',
+  // (alta, 10) los del alta, en lenguaje llano
+  'email_address_invalid': 'Ese email no parece válido: revísalo.',
+  'email_address_not_authorized': 'No podemos mandar correos a ese email. Prueba con otro.',
+  'validation_failed': 'Revisa los datos: alguno no es válido.',
+  'over_request_rate_limit': 'Demasiados intentos seguidos. Prueba dentro de unos minutos.',
+  'signup_disabled': 'Ahora mismo no se pueden crear cuentas. Prueba más tarde.',
+  'otp_expired': 'El enlace ha caducado o ya se usó. Pide otro.',
+  'same_password': 'La contraseña nueva tiene que ser distinta de la que tenías.',
+  'user_banned': 'Esta cuenta está bloqueada. Escribe a tu coach.',
   'mfa_verification_failed': 'Código incorrecto o caducado. Escribe el que muestra ahora tu app.',
   'mfa_challenge_expired': 'El código ha caducado. Escribe el que muestra ahora tu app.',
   'insufficient_aal': 'Primero tienes que verificar tu código de dos pasos.',
@@ -481,8 +491,16 @@ export function crearBackendSupabase({ url, anonKey }) {
           email, password, options: { data: { nombre }, emailRedirectTo: location.origin + location.pathname },
         });
         if (error) throw traducir(error);
+        // (alta, 6) Con la confirmación por correo activada, Supabase no dice que el correo ya tiene cuenta (para no
+        // descubrir quién está dado de alta): devuelve un usuario sin identidades. Se dice claro, con «Entrar».
+        if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw traducir({ code: 'user_already_exists', message: 'User already registered' });
         sesion = data.session; // null si el proyecto pide confirmar el email
         return { confirmarEmail: !data.session };
+      },
+      // (alta, 7) «Reenviar el enlace» de «Revisa tu correo»
+      async reenviarConfirmacion(email) {
+        const { error } = await sb.auth.resend({ type: 'signup', email: String(email || '').trim(), options: { emailRedirectTo: location.origin + location.pathname } });
+        if (error) throw traducir(error);
       },
       // (v0.65, revisión) sin red y con el permiso caducado, signOut no consigue renovarlo y se va sin borrar la sesión guardada: al
       // volver a abrir sin red (o al volver la red) entraba otra vez la cuenta que había salido (un móvil compartido). Se borra en

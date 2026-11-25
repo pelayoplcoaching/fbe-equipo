@@ -84,6 +84,7 @@ const HeroEsencial = perezoso(() => import('./Esencial.jsx'), 'HeroEsencial', { 
 const SemanaEsencial = perezoso(() => import('./Esencial.jsx'), 'SemanaEsencial', { mientras: null });
 const LeccionSemana = perezoso(() => import('./Esencial.jsx'), 'LeccionSemana', { mientras: null });
 const DiasEsencial = perezoso(() => import('./Esencial.jsx'), 'DiasEsencial', { mientras: null });
+const BienvenidaInicioEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaInicioEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -226,7 +227,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       )}
       {p && <FinDePagina texto="Eso es todo por hoy." />}
     </div>
-    {verBienvenida && <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} suyo={porSuCuenta} alTerminar={() => setBienvenidaVista(true)} />}
+    {/* (alta, 11) quien va por su cuenta, su bienvenida propia: cómo funciona, hasta su lunes, los avisos e instalarla */}
+    {verBienvenida && (porSuCuenta
+      ? <BienvenidaInicioEsencial nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />
+      : <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />)}
     {verCuestionario && (
       <HojaCuestionario inicial={cuestionario.datos} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }}
         desde={verCuestionario === 'salud' ? 'salud' : null}

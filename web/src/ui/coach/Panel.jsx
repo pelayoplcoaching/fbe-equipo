@@ -4,7 +4,7 @@ import { useEstrecha } from '../BarraMas.jsx';
 import { CabeceraGrande, useUnaVez, Siluetas, Reserva, useApp, useCarga, Icono, Cargando, ErrorCaja, Hoja, Vacio, copiar, Avatar, Segmentos, DegradadoAro } from '../comunes.jsx';
 import { NIVELES, AYUDA_NIVEL, SERVICIOS, CAMPOS_SERVICIO, NOMBRE_NIVEL } from '../../logica/nivel.js';
 import { mensajeParaAlerta } from '../../logica/cierre.js';
-import { inicioEsencial, esLunes } from '../../logica/esencial-alta.js';
+import { inicioEsencial, esLunes, fechaLarga } from '../../logica/esencial-alta.js';
 import { BandaDemo } from '../App.jsx';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { num, signo, NOMBRE_FOCO, ESCALAS } from '../../logica/calculos.js';
@@ -12,7 +12,7 @@ import { hace, fmtCorta } from '../../logica/fechas.js';
 import { fmtEuros } from '../../logica/cobros.js';
 import { estadoAtleta, NOMBRE_ESTADO, chispaSuave } from '../../logica/visual.js';
 import { equipoHoy, arcoDial } from '../../logica/tablero.js';
-import { hoyISO, fmtConDia } from '../../logica/fechas.js';
+import { hoyISO, fmtConDia, sumarDias } from '../../logica/fechas.js';
 import { horaMadrid } from '../../logica/perfil.js';
 import { CabCoach } from './CabCoach.jsx';
 import { ConAro } from '../Aro.jsx';
@@ -29,7 +29,7 @@ import { CorredoresPanel } from './CarreraCoach.jsx';
 import { EsencialPanel } from './EsencialPanel.jsx';
 import { HojaAltasEsencial } from './EsencialAltas.jsx';
 import { mensajeInvitacion } from '../../logica/esencial-altas.js';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, diasInvitacion } from '../../logica/esencial.js';
 import { TITULO_COLUMNA, ORDENES, AGRUPAR, CONTADORES, NOMBRE_MARCA, FILTROS_VACIOS, limpiarFiltros, cumpleEstado, cumpleFiltros, coincide, contar, ordenar, agrupar, dirInicial,
   etiquetasUsadas, etiquetasDe, fijado as fijadoDe, sinLeerDe, textoFiltros, conEtiqueta, proximaDe, TEXTO_PROXIMA_CORTO, checkinAlDia, diasSinEntrenar,
   conUmbrales, novedadesDe, recordatorioDe, recordatorioParaHoy, textoRecordatorio, limpiarRecordatorio, textoContacto, textoHito, resumenColumna, csvLista, moverManual,
@@ -458,7 +458,7 @@ export function Panel({ abrir: abrirFicha, pendientes = {}, porRevisar = null, i
       {/* (v0.222) los que corren, de un vistazo: debajo de la lista (llega después y así no la empuja) */}
       {!cargando && <CorredoresPanel abrir={abrir} />}
       {/* (piloto de FBE Esencial) quienes van por su cuenta, las cifras del listón y la encuesta */}
-      {!cargando && <EsencialPanel lista={lista} abrir={abrir} />}
+      {!cargando && <EsencialPanel lista={lista} abrir={abrir} mandarCodigo={(r) => setPara({ tipo: 'codigo', r })} />}
       {hoja === 'columnas' && <HojaColumnas columnas={aj.columnas} conCobros={conCobros} alCambiar={(c) => ponerAjustes({ columnas: c })} alCerrar={() => setHoja(null)} />}
       {hoja === 'filtros' && <HojaFiltros filtros={filtros} usadas={usadas} alCambiar={setFiltros} alCerrar={() => setHoja(null)} />}
       {hoja === 'vistas' && <HojaVistas ajustes={aj} actual={actual} alCambiar={(a) => pc.guardarAjustes(a)} alCerrar={() => setHoja(null)} />}
@@ -711,7 +711,7 @@ function NuevoAtleta({ alCerrar }) {
   const [ocupado, una] = useUnaVez();
   const cambiar = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   if (varios) return <HojaAltasEsencial inicio={f.inicio} alCerrar={(hecho) => (hecho ? alCerrar(null) : setVarios(false))} />;
-  if (creado) return <Invitacion atleta={creado.atleta || creado} codigoDado={creado.codigo || null} esencial={!!creado.codigo} alCerrar={() => alCerrar((creado.atleta || creado).id)} />;
+  if (creado) return <Invitacion atleta={creado.atleta || creado} codigoDado={creado.codigo || null} caducaDada={creado.caduca || null} esencial={!!creado.codigo} alCerrar={() => alCerrar((creado.atleta || creado).id)} />;
   const esencial = f.modalidad === 'por_su_cuenta';
   return (
     <Hoja titulo="Añadir atleta" alCerrar={() => alCerrar(null)}>
@@ -766,23 +766,30 @@ function NuevoAtleta({ alCerrar }) {
   );
 }
 
-export function Invitacion({ atleta, alCerrar, codigoDado = null, esencial = false }) {
+export function Invitacion({ atleta, alCerrar, codigoDado = null, caducaDada = null, esencial = false }) {
   const { api, aviso, modo } = useApp();
-  // (FBE Esencial) el código que ya trae el alta: no se crea otro (lo invalidaría)
-  const codigo = useCarga(() => (codigoDado ? Promise.resolve(codigoDado) : api.crearInvitacion(atleta.id)), [atleta.id, codigoDado], { tirar: false });   // (no es una consulta: crea el código)
   const contactos = useContactos([atleta.id]);   // (v0.105) con su teléfono, el WhatsApp va directo a él
   const url = typeof location !== 'undefined' ? location.origin + location.pathname : '';
   const nombre = atleta.nombre.split(' ')[0];
   // (FBE Esencial) también al generar otro código desde la lista o su ficha: su mensaje, con su lunes de inicio
   const esEs = esencial || esPorSuCuenta(atleta);
-  const est = useCarga(() => (esEs && !atleta.esencial_inicio ? api.estadoEsencial(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id, esEs], { tirar: false });
-  const mensaje = mensajeInvitacion({ nombre: atleta.nombre, codigo: codigo.datos, url, esencial: esEs, inicio: atleta.esencial_inicio || est.datos?.esencial_inicio || null });
+  // (FBE Esencial) el código que ya trae el alta: no se crea otro (lo invalidaría). (alta, 9) Si no, el nuevo vale hasta
+  // una semana después de su lunes (los de siempre, 14 días): primero su lunes, después el código.
+  const codigo = useCarga(async () => {
+    const inicio = esEs ? (atleta.esencial_inicio || (await api.estadoEsencial(atleta.id).catch(() => null))?.esencial_inicio || null) : null;
+    if (codigoDado) return { codigo: codigoDado, inicio, caduca: caducaDada };
+    const hoy = hoyISO();
+    const dias = diasInvitacion({ esencial: esEs, inicio, hoy });
+    return { codigo: await api.crearInvitacion(atleta.id, dias), inicio, caduca: sumarDias(hoy, dias) };
+  }, [atleta.id, codigoDado], { tirar: false });   // (no es una consulta: crea el código)
+  const d = codigo.datos;
+  const mensaje = d ? mensajeInvitacion({ nombre: atleta.nombre, codigo: d.codigo, url, esencial: esEs, inicio: d.inicio, caduca: esEs ? d.caduca : null }) : '';
   return (
     <Hoja titulo={`Invitación para ${nombre}`} alCerrar={alCerrar}>
       {codigo.cargando ? <Cargando /> : codigo.error ? <ErrorCaja error={codigo.error} /> : (
         <div class="pila">
-          <div class="codigo-grande num">{codigo.datos}</div>
-          <p class="peq secundario">El código caduca en 14 días y solo sirve una vez. Si generas otro, este deja de valer.</p>
+          <div class="codigo-grande num">{d.codigo}</div>
+          <p class="peq secundario">{esEs && d.caduca ? `El código vale hasta el ${fechaLarga(d.caduca)} y solo sirve una vez.` : 'El código caduca en 14 días y solo sirve una vez.'} Si generas otro, este deja de valer. El mensaje lleva un enlace que abre la app con el código ya puesto.</p>
           <div class="campo"><span class="etq">Mensaje para enviarle</span><div class="nota" style="user-select:all">{mensaje}</div></div>
           <div class="fila-envolver">
             <button class="btn btn-primario" onClick={async () => aviso((await copiar(mensaje)) ? 'Mensaje copiado' : 'Selecciona el texto y cópialo')}><Icono n="copiar" /> Copiar mensaje</button>

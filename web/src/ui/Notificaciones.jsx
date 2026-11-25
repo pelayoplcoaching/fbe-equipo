@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Cargando, FilaIos } from './comunes.jsx';
 import { Interruptor } from './Interruptor.jsx';
 import { conNutricion } from '../logica/nivel.js';
+import { esPorSuCuenta } from '../logica/esencial.js';
 import { TIPOS_ATLETA, TIPOS_COACH, DIAS_CHECKIN, ESTADO_NOTIFICACION, RECORDATORIOS, momentoNotificacion } from '../logica/notificaciones.js';
 import { estadoPush, activarPush, desactivarPush, suscripcionActual, conEmail, EVENTO_PUSH } from '../datos/push.js';
 
@@ -283,7 +284,9 @@ export function HojaNotificaciones({ coach = false, equipo = false, alCerrar, al
 const CLAVE_TARJETA = 'fbe-notificaciones-tarjeta';
 const descartadaHace = () => { try { return Date.now() - Number(localStorage.getItem(CLAVE_TARJETA) || 0); } catch { return Infinity; } };
 export function TarjetaNotificaciones() {
-  const { api, modo, aviso } = useApp();
+  const { api, modo, aviso, atleta } = useApp();
+  // (alta) quien va por su cuenta no tiene coach que le responda: sus avisos son los de entrenar
+  const suyo = esPorSuCuenta(atleta);
   const [visible, setVisible] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   useEffect(() => {
@@ -294,8 +297,8 @@ export function TarjetaNotificaciones() {
   const ocultar = () => { try { localStorage.setItem(CLAVE_TARJETA, String(Date.now())); } catch { /* */ } setVisible(false); };
   return (
     <section class="panel panel-pad pila-s tarjeta-notificaciones" aria-label="Notificaciones">
-      <p class="fila-icono"><Icono n="campana" /><strong>¿Te aviso cuando tu coach te responda?</strong></p>
-      <p class="peq secundario">Y cuando publique tu semana, o si se te pasa apuntar algo. Tú eliges qué te llega y a qué hora.</p>
+      <p class="fila-icono"><Icono n="campana" /><strong>{suyo ? '¿Te aviso cuando toque entrenar?' : '¿Te aviso cuando tu coach te responda?'}</strong></p>
+      <p class="peq secundario">{suyo ? 'Y si llevas días sin entrenar o se te pasa apuntar algo. Tú eliges qué te llega y a qué hora.' : 'Y cuando publique tu semana, o si se te pasa apuntar algo. Tú eliges qué te llega y a qué hora.'}</p>
       <span class="fila">
         <button class="btn btn-primario btn-peq" disabled={ocupado} onClick={async () => {
           setOcupado(true);

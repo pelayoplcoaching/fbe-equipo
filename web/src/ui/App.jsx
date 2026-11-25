@@ -17,7 +17,7 @@ import { Ctx, Cargando, Icono, olvidarRecuerdos } from './comunes.jsx';
 import { recargarPorTrozo, reintentarCarga } from './recarga-trozo.js';
 import { vibrar } from './hapticos.js';
 import { aligerarFotos } from './fotos-ligeras.js';
-import { Acceso, Vincular, NuevaPassword, SegundoPaso } from './Acceso.jsx';
+import { Acceso, Vincular, NuevaPassword, SegundoPaso, olvidarEnlace, CLAVE_ALGUNA_VEZ } from './Acceso.jsx';
 import { AtletaApp } from './atleta/AtletaApp.jsx';
 import { quitarPortada } from './portada.js';
 import { desactivarPush, desactivarPushLocal, sincronizarPush } from '../datos/push.js';
@@ -139,6 +139,8 @@ export function App({ backend, api, cola }) {
     copia().podar().catch(() => {});
     // (v0.59) los «Entendido» de otros días ya no valen
     podarEntendidos();
+    // (alta, 19) en este móvil ya ha entrado alguien: «Activa tu cuenta» deja de salir arriba
+    try { localStorage.setItem(CLAVE_ALGUNA_VEZ, '1'); } catch { /* */ }
     if (backend.auth.enRecuperacion?.()) { setEstado({ fase: 'nueva-password' }); return; }
     try {
       // Con la verificación en dos pasos activada, primero el código
@@ -164,10 +166,16 @@ export function App({ backend, api, cola }) {
       const pendiente = leerActivacionPendiente();
       let codigoFallido = false;
       if (!atleta && pendiente?.codigo) {
-        const id = await api.canjearCodigo(pendiente.codigo).catch(() => null);
-        if (id) atleta = await api.miAtleta();
-        else { codigoFallido = true; borrarActivacionPendiente(); }
+        // (alta, 4) antes de canjearlo, por qué no valdría (097): así se le dice exactamente qué pasa. Sin la 097, a ciegas.
+        const est = await api.estadoInvitacion(pendiente.codigo).catch(() => null);
+        if (est && est.estado !== 'valido') { codigoFallido = est; borrarActivacionPendiente(); }
+        else {
+          const id = await api.canjearCodigo(pendiente.codigo).catch(() => null);
+          if (id) atleta = await api.miAtleta();
+          else { codigoFallido = true; borrarActivacionPendiente(); }
+        }
       }
+      if (atleta) olvidarEnlace();
       if (atleta && pendiente) {
         const tipos = [...(pendiente.privacidad ? ['privacidad'] : []), ...(pendiente.salud ? ['datos_salud'] : [])];
         const dados = await api.consentimientos();
@@ -183,6 +191,8 @@ export function App({ backend, api, cola }) {
   }
 
   useEffect(() => {
+    // (alta) sin sesión, las pantallas de entrada (su trozo) se piden ya, mientras arranca lo demás
+    if (!backend.auth.sesion()) Acceso.precargar?.();
     resolver(true);
     const quitar = backend.auth.alCambiar(() => resolver());
     const quitarCola = cola.alCambiar(setPendientes);

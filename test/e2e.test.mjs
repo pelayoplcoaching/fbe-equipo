@@ -1573,7 +1573,7 @@ if (parte(PRINCIPAL)) try {
   await p.getByRole('button', { name: 'Volver a atletas' }).click();
   await p.getByRole('button', { name: 'Cambiar de cuenta' }).click();
   await p.getByLabel('Email').fill('lucia@correo.test');
-  await p.getByLabel('Contraseña').fill('una-contraseña-segura');
+  await p.getByLabel('Contraseña', { exact: true }).fill('una-contraseña-segura');
   await p.getByRole('button', { name: 'Entrar', exact: true }).click();
   await p.getByText('Tu coach te ha respondido').waitFor();
   check(true, 'en Hoy le avisa de la respuesta del coach');

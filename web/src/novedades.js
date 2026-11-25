@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.239': {
+    // (el alta de FBE Esencial, tanda 1 de 3: de la invitación a la cuenta activa)
+    atleta: [],
+    coach: [
+      'La invitación lleva un enlace que abre «Activa tu cuenta» con el código puesto; los de FBE Esencial valen hasta su lunes + 7 días.',
+      'En el panel de FBE Esencial: el embudo del alta, quién no ha activado su cuenta (con «Mandar otra vez») y sus avisos.',
+      'Y cada uno ve por qué no vale su código, su bienvenida con su lunes y cómo activar los avisos (migración 097).',
+    ],
+  },
   '0.238': {
     // (FBE Esencial: lo que aprobó Pelayo el 25/11; para los atletas de ahora no cambia nada)
     atleta: [],

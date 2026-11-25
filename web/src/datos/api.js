@@ -49,6 +49,7 @@ import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
 import { VERSION_LEGAL, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
+import { diasInvitacion } from '../logica/esencial.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
 import { limpiarEncuesta as limpiarEncuestaChat } from '../logica/encuestas.js';
 import { tipoAudio, MAX_VOZ_BYTES, duracionGuardada, ondaValida, limiteVoz, LIMITE_VOZ_SIN_081 } from '../logica/notasVoz.js';
@@ -399,6 +400,7 @@ const falta056 = (e) => {
 const falta091 = (e) => /esencial_|modalidad|esencial_inicio|visto_bueno/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (FBE Esencial, tanda 3) ¿Falta la función de la 092 (la semana siguiente de quien va por su cuenta)?
 const falta096 = (e) => /esencial_cambiar_dias|esencial_dias/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883|42703/i.test(`${e?.message || ''} ${e?.code || ''}`);
+const falta097 = (e) => /invitacion_estado|esencial_alta_estado/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta094 = (e) => /esencial_alternativa/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta093 = (e) => /esencial_(plan|ajuste)_comida/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
@@ -7379,8 +7381,19 @@ export function crearApi(backend, opciones = {}) {
     async exigirDosPasos(valor) {
       return b.update('perfiles', { exige_2fa: !!valor }, { eq: { id: uid() } });
     },
-    async crearInvitacion(atletaId) {
-      return b.rpc('crear_invitacion', { p_atleta: atletaId });
+    // dias: cuánto vale el código (de serie, 14; los de FBE Esencial, hasta una semana después de su lunes: diasInvitacion)
+    async crearInvitacion(atletaId, dias = null) {
+      return b.rpc('crear_invitacion', dias ? { p_atleta: atletaId, p_dias: dias } : { p_atleta: atletaId });
+    },
+    // (alta, 097) Quien acaba de crear su cuenta: por qué no vale su código (valido, no_existe, caducado, usado,
+    // reemplazado, demasiados o vinculada) y si es de FBE Esencial. Sin la 097: null (se canjea a ciegas, como antes).
+    async estadoInvitacion(codigo) {
+      try { return await b.rpc('invitacion_estado', { p_codigo: String(codigo || '') }); } catch (e) { if (falta097(e)) return null; throw e; }
+    },
+    // (alta, 097) El coach: el alta de cada uno de FBE Esencial (invitación, cuenta, avisos, cuestionario, visto bueno, plan
+    // y primera sesión). Sin la 097: null.
+    async esencialAltaEstado() {
+      try { return await b.rpc('esencial_alta_estado', {}); } catch (e) { if (falta097(e)) return null; throw e; }
     },
     // ------------------------------------------------------------ FBE Esencial (migración 091)
     // Sin la 091: { falta091: true } (la app lo dice sin romperse)
@@ -7398,8 +7411,10 @@ export function crearApi(backend, opciones = {}) {
         if (falta091(e)) return { falta091: true };
         throw e;
       }
-      const codigo = await api.crearInvitacion(atleta.id);
-      return { atleta: { ...atleta, modalidad: 'por_su_cuenta', esencial_inicio: inicio || null }, codigo };
+      // (alta, 9) su código vale hasta una semana después de su lunes (las altas se hacen semanas antes)
+      const dias = diasInvitacion({ esencial: true, inicio, hoy: fechaMadrid() });
+      const codigo = await api.crearInvitacion(atleta.id, dias);
+      return { atleta: { ...atleta, modalidad: 'por_su_cuenta', esencial_inicio: inicio || null }, codigo, caduca: sumarDias(fechaMadrid(), dias) };
     },
     // Lo de FBE Esencial de su ficha, recién leído (el visto bueno lo confirma el coach con la app del atleta abierta)
     async estadoEsencial(atletaId) {
