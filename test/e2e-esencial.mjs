@@ -231,7 +231,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
     const sec = p.locator('section[aria-labelledby="esencial-coach"]');
     await sec.waitFor({ timeout: 15000 });
-    check(/Dice que lo tiene/.test(await sec.textContent()), 'su ficha (Datos): FBE Esencial, «Dice que lo tiene»');
+    // (su cuestionario llega después de la sección: hasta entonces, «—»)
+    const dice = await p.waitForFunction(() => /Dice que lo tiene/.test(document.querySelector('section[aria-labelledby="esencial-coach"]')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check(dice, 'su ficha (Datos): FBE Esencial, «Dice que lo tiene»');
     check(!(await p.getByRole('tab', { name: 'Mensajes' }).count()), 'sin la pestaña Mensajes en su ficha');
     await sec.getByRole('button', { name: /Confirmar visto bueno/ }).click();
     const conPlan = await p.waitForFunction(() => /Primeras 4 semanas/.test(document.querySelector('section[aria-labelledby="esencial-coach"]')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
