@@ -156,6 +156,14 @@ console.log('\nCambiar de rutina desde la semana siguiente');
 await entrar('rosa', alta.rosa.codigo);
 await api.guardarCuestionario(id.rosa, { ...base, experiencia: 'ninguna', dias_semana: 2, gustos: { prioridad: 'salud', otro: 'no', mayor: 'no' } }, { completar: true });
 await api.esencialAsignarPlan();
+// (su semana 1, este lunes: de jueves a domingo la base se la pone el lunes que viene, y aquí hace falta que ya haya empezado)
+const alLunes = async (n, desde) => {
+  await db.exec(superusuario);
+  await db.query(`update semanas w set fecha_inicio = $2::date + (w.numero - 1) * 7 from bloques b where b.id = w.bloque_id and b.atleta_id = $1 and not b.es_plantilla and b.estado <> 'finalizado'`, [id[n], desde]);
+  await db.query(`update bloques set fecha_inicio = $2 where atleta_id = $1 and not es_plantilla and estado <> 'finalizado'`, [id[n], desde]);
+  await como(n);
+};
+await alLunes('rosa', lunes);
 await api.esencialElegirRutina(BIB);
 const prog = await api.programa(id.rosa);
 const w1 = prog.semanas[0];
@@ -182,6 +190,54 @@ check(/Esa plantilla no es/.test((await falla(() => b.rpc('esencial_semana_sigui
 r = await api.esencialElegirRutina(null);
 await db.exec(superusuario);
 check(r.rutina === null && (await db.query('select esencial_plantilla p from atletas where id = $1', [id.rosa])).rows[0].p === null, 'puede quitar lo elegido (sigue con la que lleva)');
+
+console.log('\nLo preparado que aún no ha empezado se rehace con la rutina elegida');
+{
+  const NOV2 = 'Novato 2 días · FBE Esencial';
+  const bloques = async () => { await db.exec(superusuario); const x = (await db.query(`select b.id, b.nombre, b.estado, to_char(b.fecha_inicio, 'YYYY-MM-DD') inicio, to_char(b.fecha_fin, 'YYYY-MM-DD') fin, (select count(*) from semanas w where w.bloque_id = b.id)::int semanas from bloques b where b.atleta_id = $1 and not b.es_plantilla order by b.numero`, [id.rosa])).rows; await como('rosa'); return x; };
+  // Rosa acabó «Primeras 4 semanas» y la app ya le preparó la rutina elegida para el lunes que viene; cambia de idea
+  await como('rosa');
+  const r6 = await api.esencialElegirRutina(NOV2);
+  let bs = await bloques();
+  check(r6.rehecho === true && r6.preparar === true && bs.length === 1 && bs[0].nombre === 'Primeras 4 semanas' && bs[0].estado === 'activo',
+    'el plan nuevo aún no había empezado: se quita, vuelve al anterior y la app lo prepara otra vez (así empieza el lunes con la que elige ahora)');
+  const nov = await b.rpc('esencial_semana_siguiente', { p: { base: w1.id, inicio: proximo, novato: true, sesiones: [] } });
+  bs = await bloques();
+  check(bs.length === 2 && bs[1].nombre === NOV2 && bs[1].inicio === proximo && bs[0].estado === 'finalizado', 'y al prepararlo otra vez: el de novato, desde ese mismo lunes');
+  // Pasa una semana: va por su semana 1 de novato y la app ya le ha preparado la 2 (acabó pronto). Elige otra rutina
+  await db.exec(superusuario);
+  await db.query(`update semanas w set fecha_inicio = w.fecha_inicio - 7 from bloques b where b.id = w.bloque_id and b.atleta_id = $1`, [id.rosa]);
+  await db.query(`update bloques set fecha_inicio = fecha_inicio - 7, fecha_fin = fecha_fin - 7 where atleta_id = $1 and not es_plantilla`, [id.rosa]);
+  await db.query(`update sesiones set completada = true, fecha_realizada = $2 where semana_id = $1`, [nov, hoy]);
+  await como('rosa');
+  const w2 = await b.rpc('esencial_semana_siguiente', { p: { base: nov, inicio: proximo, sesiones: [] } });
+  bs = await bloques();
+  check(bs[1].semanas === 2 && bs[1].fin === sumarDias(proximo, 6), '(la semana 2, preparada con antelación)');
+  // en pausa, no se toca
+  await db.exec(superusuario);
+  await db.query(`update semanas set esencial_cierre = 'pausa', esencial_cierre_lunes = $2 where id = $1`, [w2, lunes]);
+  await como('rosa');
+  const r7 = await api.esencialElegirRutina(BIB);
+  bs = await bloques();
+  check(!r7.rehecho && bs[1].semanas === 2, 'una semana en pausa no se toca: el cambio entra después');
+  await db.exec(superusuario);
+  await db.query(`update semanas set esencial_cierre = null, esencial_cierre_lunes = null where id = $1`, [w2]);
+  await como('rosa');
+  const r8 = await api.esencialElegirRutina(BIB);
+  bs = await bloques();
+  check(r8.rehecho === true && r8.preparar === true && bs.length === 2 && bs[1].semanas === 1 && bs[1].estado === 'activo' && bs[1].fin === sumarDias(lunes, 6),
+    'la semana que viene, ya preparada y sin empezar, se quita (su plan vuelve a acabar este domingo)');
+  const cambio = await b.rpc('esencial_semana_siguiente', { p: { base: nov, inicio: proximo, cambio: true, plantilla: BIB, sesiones: [] } });
+  bs = await bloques();
+  check(!!cambio && bs.length === 3 && bs[2].nombre === BIB && bs[2].inicio === proximo && bs[1].estado === 'finalizado', 'y la app la prepara con la rutina elegida: empieza con ella el lunes, no una semana después');
+  // con algo hecho en la semana que viene (adelantó su primera sesión), ya no se quita
+  await db.exec(superusuario);
+  await db.query(`update sesiones set completada = true, fecha_realizada = $2 where id = (select id from sesiones where semana_id = $1 order by orden limit 1)`, [cambio, hoy]);
+  await como('rosa');
+  const r9 = await api.esencialElegirRutina(NOV2);
+  bs = await bloques();
+  check(!r9.rehecho && bs.length === 3 && bs[2].nombre === BIB, 'si ya adelantó una sesión de la semana que viene, no se rehace: el cambio entra con la siguiente');
+}
 await db.exec('reset role;');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

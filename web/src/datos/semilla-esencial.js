@@ -187,23 +187,44 @@ export function elegirRutinaEsencialDemo(t, { nombre, atletaId }) {
   if (nombre === NOVATO_3.nombre) a.esencial_dias = 3; else if (nombre === NOVATO_2.nombre) a.esencial_dias = 2;
   return { rutina: nombre };
 }
-// Como en la base: con el plan aún sin empezar (su lunes no ha llegado, es su único plan y no hay nada hecho ni apuntado),
-// se quita para rehacerlo con la rutina elegida (no «Primeras 4 semanas»). Devuelve true si lo ha quitado.
-export function quitarPlanSinEmpezarDemo(t, { atletaId, nombre, hoy }) {
+// Como en la base: lo que la app ya le había preparado y aún no ha empezado se quita para rehacerlo con la rutina elegida
+// (de su plan en marcha, las semanas que empiezan después de hoy sin nada hecho ni apuntado y sin pausa ni repetición; no
+// «Primeras 4 semanas»). Devuelve 'plan' (era su primer plan, entero por empezar: hay que asignarlo otra vez), 'preparar'
+// (la app tiene que preparar la semana otra vez) o null (nada que rehacer).
+export function rehacerSinEmpezarDemo(t, { atletaId, nombre, hoy }) {
   const suyos = t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla);
-  const b = suyos.find((x) => ['activo', 'ajustado', 'planificado'].includes(x.estado));
-  if (!b || suyos.length !== 1 || !(String(b.fecha_inicio || '') > hoy) || b.nombre === PRIMERAS_4.nombre || b.nombre === nombre) return false;
-  const semanas = new Set(t('semanas').filter((w) => w.bloque_id === b.id).map((w) => w.id));
-  const sesiones = t('sesiones').filter((s) => semanas.has(s.semana_id));
-  const ids = new Set(sesiones.map((s) => s.id));
-  const pautas = new Set(t('sesion_ejercicios').filter((x) => ids.has(x.sesion_id)).map((x) => x.id));
-  if (sesiones.some((s) => s.completada || s.fecha_realizada) || t('series').some((r) => pautas.has(r.sesion_ejercicio_id))) return false;
+  const b = suyos.filter((x) => ['activo', 'ajustado', 'planificado'].includes(x.estado)).sort((x, y) => (y.numero || 0) - (x.numero || 0))[0];
+  if (!b || b.nombre === PRIMERAS_4.nombre || b.nombre === nombre) return null;
+  const semanas = t('semanas').filter((w) => w.bloque_id === b.id);
+  const sesionesDe = (w) => t('sesiones').filter((s) => s.semana_id === w.id);
+  const limpia = (w) => {
+    const ss = sesionesDe(w), ids = new Set(ss.map((s) => s.id));
+    const pautas = new Set(t('sesion_ejercicios').filter((x) => ids.has(x.sesion_id)).map((x) => x.id));
+    return String(w.fecha_inicio || '') > hoy && !w.esencial_cierre && !ss.some((s) => s.completada || s.fecha_realizada) && !t('series').some((r) => pautas.has(r.sesion_ejercicio_id));
+  };
+  const futuras = semanas.filter(limpia);
+  if (!futuras.length) return null;
   const quitar = (tabla, f) => { const filas = t(tabla); for (let i = filas.length - 1; i >= 0; i--) if (f(filas[i])) filas.splice(i, 1); };
-  quitar('sesion_ejercicios', (x) => ids.has(x.sesion_id));
-  quitar('sesiones', (s) => semanas.has(s.semana_id));
-  quitar('semanas', (w) => w.bloque_id === b.id);
-  quitar('bloques', (x) => x.id === b.id);
-  return true;
+  const quitarSemanas = (ws) => {
+    const idW = new Set(ws.map((w) => w.id)), idS = new Set(t('sesiones').filter((s) => idW.has(s.semana_id)).map((s) => s.id));
+    quitar('sesion_ejercicios', (x) => idS.has(x.sesion_id));
+    quitar('sesiones', (s) => idW.has(s.semana_id));
+    quitar('semanas', (w) => idW.has(w.id));
+  };
+  if (futuras.length === semanas.length) {
+    const previo = suyos.filter((x) => x.id !== b.id && x.estado === 'finalizado' && t('semanas').some((w) => w.bloque_id === x.id && String(w.fecha_inicio || '').slice(0, 10) === sumarDias(String(b.fecha_inicio).slice(0, 10), -7)))
+      .sort((x, y) => (y.numero || 0) - (x.numero || 0))[0] || null;
+    if (!previo && suyos.length !== 1) return null;
+    quitarSemanas(semanas);
+    quitar('bloques', (x) => x.id === b.id);
+    if (!previo) return 'plan';
+    previo.estado = 'activo';
+    return 'preparar';
+  }
+  quitarSemanas(futuras);
+  const ultima = t('semanas').filter((w) => w.bloque_id === b.id).map((w) => String(w.fecha_inicio).slice(0, 10)).sort().pop();
+  if (ultima) b.fecha_fin = sumarDias(ultima, 6);
+  return 'preparar';
 }
 export function catalogoEsencialDemo(t) {
   const vistos = new Set();
@@ -214,7 +235,7 @@ export function catalogoEsencialDemo(t) {
       return { nombre: b.nombre, dias: sesiones.length, sesiones: sesiones.map((s) => ({ orden: s.orden, nombre: s.nombre,
         ejercicios: t('sesion_ejercicios').filter((x) => x.sesion_id === s.id).sort((x, y) => x.orden - y.orden).map((x) => {
           const e = t('ejercicios').find((y) => y.id === x.ejercicio_id) || {};
-          return { nombre: e.nombre || '', series: x.series, reps_min: x.reps_min, reps_max: x.reps_max, por_tiempo: !!e.por_tiempo };
+          return { nombre: e.nombre || '', series: x.series, reps_min: x.reps_min, reps_max: x.reps_max, por_tiempo: !!e.por_tiempo, descanso_seg: x.descanso_seg ?? null, superserie: x.superserie ?? null };
         }) })) };
     }).sort((x, y) => x.nombre.localeCompare(y.nombre));
 }
@@ -430,10 +451,12 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
     }
   }
 
-  // (099) El catálogo de rutinas de la demo: las tres de FBE Esencial y tres de muestra de la biblioteca (con los ejercicios
+  // (099) El catálogo de rutinas de la demo: las tres de FBE Esencial y diez de muestra de la biblioteca (con los ejercicios
   // de la demo y sin esfuerzo pautado, como las de verdad: las de Pelayo solo están en su base)
   const dias3 = filasNovato3()[0].sesiones;
-  for (const [nombre, orden] of [['2 días · Full body · B · Máquinas y mancuernas', [0, 1]], ['3 días · Full body · B · Máquinas y mancuernas', [0, 1, 2]], ['4 días · Torso-pierna · B · Máquinas y mancuernas', [0, 1, 2, 0]]]) {
+  for (const [nombre, orden] of [['2 días · Full body · B · Máquinas y mancuernas', [0, 1]], ['3 días · Full body · B · Máquinas y mancuernas', [0, 1, 2]], ['4 días · Torso-pierna · B · Máquinas y mancuernas', [0, 1, 2, 0]],
+    ['2 días · Full body · C · Énfasis glúteo y pierna', [1, 0]], ['3 días · Full body A y B + torso · B · Máquinas y mancuernas', [0, 2, 1]], ['3 días · Pierna, torso y full body · B · Máquinas y mancuernas', [1, 2, 0]],
+    ['3 días · Full body en casa, sin material', [2, 1, 0]], ['2 días · De viaje (hotel, 25–30 minutos)', [1, 1]], ['2 días · Mantenimiento mínimo (40 minutos)', [0, 2]], ['3 días · Salud y mayores de 60', [1, 0, 1]]]) {
     const pl = { id: uuid(), atleta_id: null, es_plantilla: true, numero: null, nombre, foco: NOVATO_3.foco, objetivo: null, descripcion: null, fecha_inicio: null, fecha_fin: null,
       estado: 'planificado', creado_en: ahoraISO, objetivo_logrado: null };
     t('bloques').push(pl);
@@ -454,7 +477,7 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   const atleta = ({ email, nombre, alta, objetivo, inicio, extra = {} }) => {
     const perfil = usuario(email, nombre.split(' ')[0], 'atleta');
     const a = { id: uuid(), perfil_id: perfil, nombre, email, estado: 'activo', fecha_alta: alta, objetivo, notion_url: null, progresion_auto: true, volumen_objetivo: null,
-      creado_en: ahoraISO, nivel: 'novato', nutricion: false, modalidad: MODALIDAD_POR_SU_CUENTA, esencial_inicio: inicio, visto_bueno_pedido_en: null, visto_bueno_en: null, ...extra };
+      creado_en: ahoraISO, nivel: 'novato', nutricion: false, modalidad: MODALIDAD_POR_SU_CUENTA, esencial_inicio: inicio, visto_bueno_pedido_en: null, visto_bueno_en: null, esencial_plantilla: null, esencial_plantilla_en: null, ...extra };
     db.atletas.push(a);
     for (const tipo of ['privacidad', 'datos_salud']) db.consentimientos.push({ id: uuid(), perfil_id: perfil, tipo, version: '2026-10', aceptado_en: ahoraISO, revocado_en: null });
     t('privacidad_vista').push({ usuario_id: perfil, version: versionLegal, vista_en: ahoraISO });

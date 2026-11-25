@@ -146,9 +146,10 @@ export const textoMaterial = (r) => (r.donde === 'g' ? (r.opcion === 'A' || r.ma
 
 // ---------- El algoritmo: dos o tres rutinas recomendadas, cada una con su porqué ----------
 // cuestionario: { experiencia, dias_semana, minutos_sesion, lugar, material, objetivos }; gustos: los de arriba;
-// disponibles: los nombres que hay en el catálogo (null: todos); actual: la que lleva ahora (no se recomienda otra vez).
+// disponibles: los nombres que hay en el catálogo (null: todos); actual: la que lleva ahora (no se recomienda otra vez);
+// trasPrimeras: acaba «Primeras 4 semanas» (la de novato de sus días va la primera: es su continuación).
 // Devuelve [{ rutina, porque: [frases], nota }] (la primera, la recomendada) y nunca menos de dos.
-export function recomendar({ cuestionario: c = {}, gustos: g = {}, disponibles = null, actual = null } = {}) {
+export function recomendar({ cuestionario: c = {}, gustos: g = {}, disponibles = null, actual = null, trasPrimeras = false } = {}) {
   const n = nivelDe(c.experiencia);
   const gym = enGimnasio(c);
   const mat = Array.isArray(c.material) ? c.material : [];
@@ -160,7 +161,10 @@ export function recomendar({ cuestionario: c = {}, gustos: g = {}, disponibles =
   const pedidos = Math.min(Math.max(Math.round(Number(c.dias_semana)) || 3, 2), 6);
   const dias = Math.min(pedidos, tope);
   const conBarra = gym && g.barra === 'si' && n >= 2 && (!mat.length || mat.includes('barra'));
+  // (las de novato son la continuación de «Primeras 4 semanas»: van aparte; las de corredores y de otro deporte, solo a
+  // quien corre o lo hace)
   const puede = (r) => hay(r) && !NO_ELEGIBLES.includes(r.familia) && !DE_TEMPORADA.includes(r.familia) && r.nombre !== actual
+    && r.familia !== 'novato' && (!r.para.includes('correr') || g.otro === 'correr') && (!r.para.includes('deporte') || g.otro === 'deporte')
     && r.nivel <= nEfectivo && (r.donde === 'g' ? gym && (!r.material.includes('barra') || conBarra) : !gym && r.material.every((m) => mat.includes(m)));
   const DE_SERIE = { 2: 'fullbody', 3: 'fullbody', 4: 'torso_pierna', 5: 'ppl_tp', 6: 'ppl2' };
   const opcion = g.prioridad === 'gluteo' ? 'C' : conBarra && (g.prioridad === 'fuerza' || n >= 3) ? 'A' : 'B';
@@ -169,6 +173,7 @@ export function recomendar({ cuestionario: c = {}, gustos: g = {}, disponibles =
     let p = 0;
     if (r.dias === dias) { p += 6; porque.push(dias === pedidos ? `Son los ${dias} días que tienes` : `Con tu experiencia, mejor ${dias} días que ${pedidos}`); } else p -= 3 * Math.abs(r.dias - dias);
     if (r.opcion && r.opcion === opcion) { p += 3; porque.push(opcion === 'C' ? 'Da prioridad a glúteo y pierna, como pides' : opcion === 'A' ? 'Dominas los básicos con barra' : 'Con máquinas y mancuernas: fácil de progresar'); }
+    else if (r.opcion) porque.push(r.opcion === 'C' ? 'Con más trabajo de glúteo y pierna' : r.opcion === 'A' ? 'Con barra: sentadilla, press banca y peso muerto' : 'Con máquinas y mancuernas');
     if (r.familia === DE_SERIE[r.dias]) p += 2;
     // (lo suyo va primero aunque no sea de sus días: quien corre, quien hace otro deporte y quien tiene 60 o más)
     if (g.otro === 'correr' && r.para.includes('correr')) { p += 16; porque.unshift('Pensada para quien corre'); }
@@ -193,25 +198,31 @@ export function recomendar({ cuestionario: c = {}, gustos: g = {}, disponibles =
   for (const x of todas) {
     if (out.length >= 3) break;
     const misma = out.filter((y) => y.rutina.familia === x.rutina.familia).length;
-    if (misma >= (out.length < 2 ? 1 : 2) && todas.some((z) => !out.includes(z) && z.rutina.familia !== x.rutina.familia && z.p > -8)) continue;
+    if (misma >= (out.length < 2 ? 1 : 2) && todas.some((z) => !out.includes(z) && z.rutina.familia !== x.rutina.familia && (z.rutina.dias === dias || out.length >= 2) && z.p > -8)) continue;
     out.push(x);
   }
   // Nunca menos de dos: si no hay más que encajen, las de siempre de su sitio (aunque no sean de sus días)
   if (out.length < 2) {
     const reserva = RUTINAS.filter((r) => hay(r) && r.nombre !== actual && !out.some((y) => y.rutina === r) && !NO_ELEGIBLES.includes(r.familia) && !DE_TEMPORADA.includes(r.familia)
+      && r.familia !== 'novato' && !r.para.includes('correr') && !r.para.includes('deporte')
       && (gym ? r.donde === 'g' && !r.material.length && r.nivel <= Math.max(1, nEfectivo) : r.donde === 'c' && !r.material.length))
       .sort((a, b) => Math.abs(a.dias - dias) - Math.abs(b.dias - dias) || a.nivel - b.nivel);
     for (const r of reserva) { if (out.length >= 2) break; out.push({ rutina: r, p: -99, porque: [gym ? 'Una opción segura para tu nivel' : 'Sin material: en casa o donde estés'] }); }
   }
-  return out.map(({ rutina, porque }) => ({ rutina, porque: porque.slice(0, 2), nota: rutina.dias !== pedidos ? `Es de ${rutina.dias} días: al elegirla, tus días pasan a ser ${rutina.dias}.` : null }));
+  const lista = out.map(({ rutina, porque }) => ({ rutina, porque: porque.slice(0, 2), nota: rutina.dias !== pedidos ? `Es de ${rutina.dias} días: al elegirla, tus días pasan a ser ${rutina.dias}.` : null }));
+  if (!trasPrimeras) return lista;
+  // Tras «Primeras 4 semanas»: la de novato de sus días (2 o 3), la primera; después, dos de las de arriba
+  const novato = RUTINAS.find((r) => r.familia === 'novato' && r.dias === (pedidos >= 3 ? 3 : 2) && hay(r) && r.nombre !== actual);
+  return novato ? [{ rutina: novato, porque: ['La continuación de tus primeras semanas', 'Empiezas con los kilos de tus marcas'], nota: null }, ...lista.slice(0, 2)] : lista;
 }
 
 // ---------- Todo el catálogo: cada rutina con su aviso, si no es para él ----------
 // → [{ rutina, aviso }] (aviso null: le encaja). Sin «Primeras 4 semanas» (a esa se llega por la criba).
-export function catalogoPara({ cuestionario: c = {}, gustos: g = {}, disponibles = null } = {}) {
+export function catalogoPara({ cuestionario: c = {}, gustos: g = {}, disponibles = null, trasPrimeras = false } = {}) {
   const n = nivelDe(c.experiencia), gym = enGimnasio(c), mat = Array.isArray(c.material) ? c.material : [];
   return RUTINAS.filter((r) => (!disponibles || disponibles.includes(r.nombre)) && !NO_ELEGIBLES.includes(r.familia)).map((r) => {
     const avisos = [];
+    if (r.familia === 'novato' && !trasPrimeras) avisos.push('Es la continuación de «Primeras 4 semanas»: sin haberlas hecho, mejor una de tus recomendadas.');
     if (r.nivel > Math.max(1, n)) avisos.push(`${NOMBRE_NIVEL[r.nivel]}: con menos, mejor una de las recomendadas.`);
     if (r.donde === 'g' && !gym) avisos.push('Es de gimnasio, y dijiste que entrenas en casa.');
     if (r.donde === 'c' && r.material.some((m) => !mat.includes(m)) && !gym) avisos.push(`Pide ${textoMaterial(r).toLowerCase()}.`);

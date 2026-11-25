@@ -7468,6 +7468,7 @@ export function crearApi(backend, opciones = {}) {
     // (099) El catálogo de rutinas de quien va por su cuenta (con sus días y sus ejercicios) y elegir una (o ninguna)
     async esencialCatalogo() { return (await import('./api-esencial.js')).catalogo(b); },
     async esencialElegirRutina(nombre, atletaId = null) { return (await import('./api-esencial.js')).elegirRutina(b, nombre, atletaId); },
+    async esencialRutina(atletaId, opciones = {}) { return (await import('./api-esencial.js')).rutina(api, b, atletaId, opciones); },
     // (093) FBE Esencial con nutrición: el plan de partida lo calcula la base (como planInicial) con sus datos; devuelve
     // el plan. datos: { sexo, edad, altura, peso, actividad, objetivo, tca }.
     async esencialPlanComida(datos, atletaId = null) {

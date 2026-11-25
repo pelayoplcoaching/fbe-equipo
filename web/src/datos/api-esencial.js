@@ -71,3 +71,25 @@ export async function catalogo(b) {
 export async function elegirRutina(b, nombre, atletaId = null) {
   try { return await b.rpc('esencial_elegir_rutina', { p_nombre: nombre, ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta099(e)) return { falta099: true }; throw e; }
 }
+
+// (099) Su rutina, para «Tu rutina»: la que ha elegido (puede ser para después), cuándo, la última que llevó que no era de
+// temporada (para volver a ella) y cuántos ejercicios lleva tres semanas sin subir (con historia: true y tres semanas o
+// más en su bloque). → { con099, elegida, elegidaEn, anterior, estancados }
+export async function rutina(api, b, atletaId, { bloqueId = null, historia = false } = {}) {
+  const [at, bloques] = await Promise.all([
+    b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null),
+    b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id,nombre,numero,estado' }).catch(() => []),
+  ]);
+  const { DE_TEMPORADA, rutinaDe } = await import('../logica/esencial-catalogo.js');
+  const deTemporada = (n) => DE_TEMPORADA.includes(rutinaDe(n)?.familia);
+  const anterior = [...bloques].sort((x, y) => (y.numero || 0) - (x.numero || 0)).find((x) => x.id !== bloqueId && x.estado !== 'cancelado' && rutinaDe(x.nombre) && !deTemporada(x.nombre) && x.nombre !== 'Primeras 4 semanas')?.nombre || null;
+  let estancados = 0;
+  if (historia && bloqueId) {
+    try {
+      const [{ estancadosDe }, d] = await Promise.all([import('../logica/esencial-motor.js'), api.bloqueCompleto(bloqueId)]);
+      const base = [...(d.semanas || [])].filter((w) => w.bloque_id === bloqueId && w.programacion === 'programada').sort((x, y) => y.numero - x.numero)[0];
+      estancados = estancadosDe(d, base);
+    } catch { estancados = 0; }
+  }
+  return { con099: !!at && 'esencial_plantilla' in at, elegida: at?.esencial_plantilla ?? null, elegidaEn: at?.esencial_plantilla_en ?? null, anterior, estancados };
+}
