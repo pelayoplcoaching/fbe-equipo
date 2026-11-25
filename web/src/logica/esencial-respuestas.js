@@ -135,7 +135,11 @@ export const PENDIENTES = [
     r: 'Si te encuentras bien, sí, con normalidad. Si ese día el cuerpo no acompaña, haz la sesión más suave o pásala a otro día: no pierdes nada.' },
 ];
 
-export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia']);
+export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia',
+  // (v0.247, tanda 6) salud: estoy enfermo, el seguimiento de una molestia, repasar la salud cada seis meses y la señal de
+  // alarma; reglas nuevas de progresión: con una molestia en la zona no sube, la semana suave, dos sesiones duras
+  // seguidas y la variante de un ejercicio atascado
+  'enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante']);
 // previa: en la demo, con «?previa=1», se ve lo apagado (para que Pelayo lo revise en su sitio)
 export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(clave);
 export const respuestas = ({ previa = false, publicas = [] } = {}) => [
@@ -181,23 +185,38 @@ export const DUDAS_EJERCICIO = [
 
 // ---------- (7) «¿Qué necesitas?» en Hoy ----------
 // [id, etiqueta, icono, qué hace: 'accion:<nombre>' (lo resuelve la app) o 'respuesta:<id>']
+// [id, etiqueta, icono, qué abre, (v0.247) lo que necesita: 'notas' (la migración 100), 'plan' (su plan en marcha) o la
+// clave con la que está apagado]. Sin la migración 100, «Me voy de viaje» abre su respuesta de siempre (SIN_NOTAS).
 export const NECESITAS = [
-  ['falle', 'He faltado', 'calendario', 'respuesta:falle'],
-  ['viaje', 'Me voy de viaje', 'reloj', 'respuesta:viaje'],
-  ['duele', 'Me duele algo', 'alerta', 'respuesta:dolor'],
-  ['tiempo', 'Hoy tengo poco tiempo', 'reloj', 'respuesta:poco-tiempo'],
-  ['dias', 'Cambiar mis días', 'calendario', 'accion:dias'],
-  ['rutina', 'Cambiar de rutina', 'plantillas', 'accion:rutina'],
-  ['plan', 'Entender mi plan', 'biblioteca', 'accion:plan'],
-  ['directo', 'Preguntar a Pelayo', 'mensaje', 'accion:directo'],
+  ['falle', 'He faltado', 'calendario', 'respuesta:falle', 'plan'],
+  ['viaje', 'Me voy de viaje', 'reloj', 'accion:viaje'],
+  ['duele', 'Me duele algo', 'alerta', 'accion:molestia'],
+  ['enfermo', 'Estoy enfermo', 'alerta', 'accion:enfermo', 'enfermo'],
+  ['tiempo', 'Hoy tengo poco tiempo', 'reloj', 'respuesta:poco-tiempo', 'plan'],
+  ['sitio', 'Entreno en otro sitio', 'ubicacion', 'accion:sitio', 'plan'],
+  ['ejercicio', 'Cambiar un ejercicio', 'reiniciar', 'accion:ejercicios', 'plan'],
+  ['dias', 'Cambiar mis días', 'calendario', 'accion:dias', 'plan'],
+  ['rutina', 'Cambiar de rutina', 'plantillas', 'accion:rutina', 'plan'],
+  ['suave', 'Necesito una semana suave', 'pausa', 'accion:suave', 'suave'],
+  ['objetivo', 'Ponerme un objetivo', 'diana', 'accion:objetivo', 'notas'],
+  ['plan', 'Entender mi plan', 'biblioteca', 'accion:plan', 'plan'],
+  ['directo', 'Preguntar a Pelayo', 'mensaje', 'accion:directo', 'notas'],
 ];
+export const SIN_NOTAS = { viaje: 'respuesta:viaje' };
+// Las opciones que le salen: con100 (¿está la tabla de notas?), conPlan (¿tiene su plan en marcha?), previa (lo apagado)
+export function necesitasPara({ con100 = false, conPlan = false, previa = false } = {}) {
+  return NECESITAS.filter(([, , , , pide]) => !pide || (pide === 'notas' ? con100 : pide === 'plan' ? conPlan : encendido(pide, previa) && conPlan && (pide !== 'suave' || con100)))
+    .map(([id, t, icono, que]) => [id, t, icono, !con100 && SIN_NOTAS[id] ? SIN_NOTAS[id] : que]);
+}
 
 // ---------- (19) Cada pantalla, con su «¿Dudas?» ----------
 export const DUDAS_PANTALLA = { cierre: 'domingo', perdida: 'falle', marcas: 'marcas', leccion: 'como-sube', dias: 'tercer-dia', rutina: 'cambiar-rutina', revision: 'como-sube', checkin: 'check-in', antes: 'primer-dia', sesion: 'sobran' };
 
 // ---------- (14) Cada aviso lleva a su explicación ----------
 // El final del enlace del aviso (#hoy/<clave>, migración 100) → qué se abre en Hoy
-export const AVISO_ABRE = { manana: 'plan', hoy: 'plan', empezamos: 'plan', domingo: 'cierre', auto: 'revision', lunes: 'revision', rutina: 'rutina', elige: 'rutina', plan_auto: 'plan', agujetas: 'agujetas', retomar: 'vuelta' };
+export const AVISO_ABRE = { manana: 'plan', hoy: 'plan', empezamos: 'plan', domingo: 'cierre', auto: 'revision', lunes: 'revision', rutina: 'rutina', elige: 'rutina', plan_auto: 'plan', agujetas: 'agujetas', retomar: 'vuelta',
+  // (v0.247, migración 101) el aviso de la vuelta de un viaje lleva a su tarjeta
+  viaje: 'viajando' };
 
 // ---------- (10) «Tu plan, explicado» y (11) «Tu camino» ----------
 // Los hitos de su camino según la semana de su plan (n) y si empezó por «Primeras 4 semanas»

@@ -809,6 +809,8 @@ const QueNecesitas = perezoso(() => import('./EsencialAyuda.jsx'), 'QueNecesitas
 // (v0.246) «que no entrenen solos»: arriba, el saludo del día y lo que toca atender; abajo, el reto, su trimestre y el diario
 const CercaArriba = perezoso(() => import('./EsencialCerca.jsx'), 'CercaArriba', { mientras: null });
 const CercaAbajo = perezoso(() => import('./EsencialCerca.jsx'), 'CercaAbajo', { mientras: null });
+// (v0.247) la vida real: de viaje, sus días de verdad, pasar a tres días, su objetivo… (ui/atleta/EsencialVida.jsx)
+const VidaArriba = perezoso(() => import('./EsencialVida.jsx'), 'VidaArriba', { mientras: null });
 export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA }) {
   const { atleta } = useApp();
   if (atleta.estado === 'baja') return <TarjetaMarcas />;
@@ -817,6 +819,8 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
     <>
       {/* (v0.246) el saludo del día y, si toca, las agujetas, la vuelta tras unos días sin entrenar o un plan más corto */}
       {conPlan && <CercaArriba p={p} cuestionario={cuestionario} recargar={recargar} abrirSesion={abrirSesion} />}
+      {/* (v0.247) lo que la app le ha organizado: su viaje, sus días de verdad, pasar a tres días, su objetivo… */}
+      <VidaArriba p={p} cuestionario={cuestionario} recargar={recargar} irA={irA} />
       {/* sus marcas de la semana 4, en cuanto termina esa semana */}
       <TarjetaMarcas />
       {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}

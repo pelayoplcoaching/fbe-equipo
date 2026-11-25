@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CATEGORIAS, RESPUESTAS, PENDIENTES, APAGADO, encendido, respuestas, respuestaDe, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, NECESITAS, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO,
+import { CATEGORIAS, RESPUESTAS, PENDIENTES, APAGADO, encendido, respuestas, respuestaDe, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, NECESITAS, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO,
   LECCIONES_MOMENTO, momentoDe, checkinResponde } from '../web/src/logica/esencial-respuestas.js';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +30,8 @@ check(JSON.stringify(salud) === JSON.stringify(['agujetas', 'dolor', 'enfermedad
 check(/para y habla con tu médico/.test(respuestaDe('dolor').r) && /La app no valora el dolor/.test(respuestaDe('dolor').r), 'y «¿Y si me duele algo?» conserva las señales para parar y que la app no valora el dolor');
 
 console.log('\nLo apagado hasta que Pelayo lo vea');
-check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.has('checkin_responde') && !encendido('salud_nueva') && encendido('salud_nueva', true) && encendido('otra_cosa') && APAGADO.size === 5, 'lo apagado (cinco cosas); la vista previa lo enciende');
+check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.has('checkin_responde') && !encendido('salud_nueva') && encendido('salud_nueva', true) && encendido('otra_cosa') && APAGADO.size === 13
+  && ['enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante'].every((k) => APAGADO.has(k)), 'lo apagado (trece cosas: las cinco de antes y las ocho de la tanda 6); la vista previa lo enciende');
 check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && !respuestas().some((x) => PENDIENTES.some((p) => p.id === x.id)) && respuestas({ previa: true }).filter((x) => x.pendiente).length === PENDIENTES.length,
   `las ${PENDIENTES.length} respuestas de salud nuevas no salen; en la vista previa, marcadas como pendientes`);
 check(respuestaDe('resfriado') === null && respuestaDe('resfriado', { previa: true })?.pendiente === true, 'ni se llega a ellas por su clave');
@@ -45,8 +46,19 @@ console.log('\nNada apunta a una respuesta que no existe');
 const ids = new Set(RESPUESTAS.map((x) => x.id));
 check(DUDAS_EJERCICIO.length === 5 && DUDAS_EJERCICIO.every(([t, id]) => t && ids.has(id)), 'las cinco dudas de cada ejercicio');
 check(Object.values(DUDAS_PANTALLA).every((id) => ids.has(id)) && ['cierre', 'perdida', 'marcas', 'leccion', 'dias'].every((k) => DUDAS_PANTALLA[k]), 'el «¿Dudas?» de cada pantalla');
-check(NECESITAS.length === 8 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))), '«¿Qué necesitas?»: ocho cosas, cada una con su respuesta o con lo que abre');
-const ABRE = new Set(['plan', 'cierre', 'revision', 'rutina', 'agujetas', 'vuelta']);
+check(NECESITAS.length === 13 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo|viaje|molestia|sitio|ejercicios|objetivo|enfermo|suave)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))),
+  '«¿Qué necesitas?»: trece cosas (v0.247), cada una con su respuesta o con lo que abre');
+{
+  // (v0.247) lo que le sale a cada uno: sin plan, sin la tabla de notas, con todo y con la vista previa
+  const de = (o) => necesitasPara(o).map((x) => x[0]).join();
+  check(de({}) === 'viaje,duele' && necesitasPara({})[0][3] === 'respuesta:viaje' && ids.has('viaje'), 'sin plan y sin la migración 100: «Me voy de viaje» (su respuesta de siempre) y «Me duele algo»');
+  check(de({ con100: true }) === 'viaje,duele,objetivo,directo' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo y la pregunta para el directo; el viaje, con fechas');
+  check(de({ conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,plan', 'con plan y sin la 100: lo que no guarda notas');
+  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,directo', 'con todo: once (lo apagado no sale)');
+  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
+    'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100)');
+}
+const ABRE = new Set(['plan', 'cierre', 'revision', 'rutina', 'agujetas', 'vuelta', 'viajando']);
 check(Object.values(AVISO_ABRE).every((a) => ABRE.has(a)) && ['manana', 'hoy', 'empezamos', 'domingo', 'auto', 'lunes', 'rutina', 'elige', 'plan_auto'].every((k) => AVISO_ABRE[k]), 'cada aviso de FBE Esencial tiene qué abrir');
 const iconos = lee('web/src/ui/comunes.jsx');
 check([...CATEGORIAS.map((c) => c[2]), ...NECESITAS.map((n) => n[2])].every((i) => new RegExp(`\\n  ${i}: `).test(iconos) || new RegExp(`\\n  '${i}': `).test(iconos)), 'los iconos existen');

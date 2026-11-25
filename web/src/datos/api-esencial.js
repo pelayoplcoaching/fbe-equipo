@@ -34,7 +34,7 @@ export async function prepararSemana(api, b, atletaId, { hoy = fechaMadrid() } =
   // (094) con sus alternativas para siempre (por si van por tiempo)
   const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
   const ejercicios = porId(await api.ejerciciosPorIds(ids));
-  const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy,
+  const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, paso.base),
     checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
   // (098) si ya ha elegido pasar a la siguiente, no se espera a la duda de una posible errata (como al llegar el lunes)
   if (r.preguntas.length && hoy < paso.inicio && !paso.adelantada) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
@@ -136,7 +136,28 @@ export async function rutinas(b, { hoy = fechaMadrid() } = {}) {
 
 // ---------- (v0.245, acompañamiento, tanda 4) El porqué de cada semana ----------
 // Lo que el motor dice de una semana hecha (base), como al prepararle la siguiente: sus «hechos» (propuestaEsencial().porque)
-async function proponer(api, atletaId, atleta, d, base, tipo, hoy) {
+// (v0.247, P: APAGADO) Lo que cambiaría cómo se progresa, hasta que Pelayo lo encienda (logica/esencial-respuestas.js):
+// con una molestia moderada o grave en la zona, no sube; tras una semana que pidió suave, o con sus dos últimas sesiones a
+// 9 o más, la semana siguiente repite la carga. Con todo apagado no lee nada y devuelve null.
+async function extrasDe(b, atletaId, d, base) {
+  const { APAGADO } = await import('../logica/esencial-respuestas.js');
+  const on = (k) => !APAGADO.has(k);
+  if (!on('molestia_frena') && !on('suave') && !on('dos_duras')) return null;
+  const extras = {};
+  if (on('molestia_frena')) extras.molestiaFrena = true;
+  const lunes = String(base?.fecha_inicio || '').slice(0, 10);
+  if (on('suave')) {
+    const ns = await b.select('esencial_notas', { eq: { atleta_id: atletaId, tipo: 'suave' } }).catch(() => []);
+    if ((ns || []).some((n) => String(n.desde || '').slice(0, 10) === lunes)) extras.conservar = 'suave';
+  }
+  if (!extras.conservar && on('dos_duras')) {
+    const { dosDuras } = await import('../logica/esencial-vida.js');
+    const hechas = (d.sesiones?.[base.id] || []).filter((x) => x.completada).sort((x, y) => String(x.fecha_realizada || '').localeCompare(String(y.fecha_realizada || '')) || (x.orden ?? 0) - (y.orden ?? 0));
+    if (dosDuras(hechas.map((x) => ({ rpe: x.rpe_sesion })))) extras.conservar = 'duras';
+  }
+  return extras;
+}
+async function proponer(api, b, atletaId, atleta, d, base, tipo, hoy) {
   const [{ propuestaEsencial }, esta, previa] = await Promise.all([
     import('../logica/esencial-motor.js'),
     api.checkin(atletaId, base.fecha_inicio).catch(() => null),
@@ -144,7 +165,7 @@ async function proponer(api, atletaId, atleta, d, base, tipo, hoy) {
   ]);
   const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
   const ejercicios = porId(await api.ejerciciosPorIds(ids));
-  const r = propuestaEsencial({ d, base, tipo, ejercicios, atleta, hoy,
+  const r = propuestaEsencial({ d, base, tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, base),
     checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: base.fecha_inicio })) });
   return { r, ejercicios };
 }
@@ -183,7 +204,7 @@ export async function revision(api, b, atletaId, { semanaId = null, sesionId = n
     tipo = 'novato';
   }
   // (como cuando se la preparó: con la fecha de su lunes, o la de hoy si aún no ha llegado)
-  const { r, ejercicios } = await proponer(api, atletaId, atleta, dBase, base, tipo, hoy < inicio ? hoy : inicio);
+  const { r, ejercicios } = await proponer(api, b, atletaId, atleta, dBase, base, tipo, hoy < inicio ? hoy : inicio);
   const suyas = pautasDeSemana(d, nueva);
   const faltan = suyas.pautas.map((p) => p.ejercicio_id).filter((id) => !ejercicios[id]);
   if (faltan.length) Object.assign(ejercicios, porId(await api.ejerciciosPorIds(unicos(faltan))));
@@ -211,7 +232,7 @@ export async function sesionEnClaro(api, b, atletaId, sesionId, { hoy = fechaMad
   if (!base) return null;
   const i = pautasDeSemana(d, base).sesiones.findIndex((s) => s.id === sesionId);
   if (i < 0) return null;
-  const { r } = await proponer(api, atletaId, atleta, d, base, 'siguiente', hoy);
+  const { r } = await proponer(api, b, atletaId, atleta, d, base, 'siguiente', hoy);
   return { guia: prog.bloque.nombre === NOMBRE_PRIMERAS_4, filas: (r.porque || []).filter((h) => h.sesion === i) };
 }
 
@@ -314,4 +335,123 @@ export async function comoVamos(b) {
     const at = porId(await b.select('atletas', { in: { id: unicos(filas.map((f) => f.atleta_id)) }, cols: 'id,nombre' }));
     return filas.map((f) => ({ ...f, nombre: at[f.atleta_id]?.nombre || '' }));
   } catch (e) { if (falta100(e)) return null; throw e; }
+}
+
+// ---------- (v0.247, acompañamiento, tanda 6) Automatizaciones: la vida real ----------
+// (41) «Me voy de viaje»: uno cada vez. Quita los que tuviera por delante y apunta este (las fechas y qué va a hacer; con la
+// migración 101, la base calla sus avisos de entreno esos días). → la nota | { falta100: true }
+export async function apuntarViaje(b, atletaId, { desde, hasta, modo }, { hoy = fechaMadrid() } = {}) {
+  const ya = await notas(b, atletaId, 'viaje');
+  if (ya === null) return { falta100: true };
+  // (primero se apunta el nuevo: si no entra, el que tenía se queda)
+  const nueva = await anotar(b, atletaId, 'viaje', { datos: { modo }, desde, hasta });
+  if (nueva?.id) for (const n of ya) if (String(n.hasta || '').slice(0, 10) >= hoy) await quitarNota(b, n.id);
+  return nueva;
+}
+// Lo suyo de la vida real, de una vez: sus viajes, su objetivo y sus semanas suaves. → null (sin la migración 100) |
+// { viaje: [], objetivo: [], suave: [] }
+export async function notasVida(b, atletaId) {
+  try {
+    const filas = await b.select('esencial_notas', { eq: { atleta_id: atletaId }, in: { tipo: ['viaje', 'objetivo', 'suave'] }, order: [['creada_en', 'desc']] });
+    const de = (t) => filas.filter((f) => f.tipo === t);
+    return { viaje: de('viaje'), objetivo: de('objetivo'), suave: de('suave') };
+  } catch (e) { if (falta100(e)) return null; throw e; }
+}
+// (50) Su objetivo con fecha: uno cada vez. → la nota | { falta100: true }
+export async function apuntarObjetivo(b, atletaId, { texto, fecha }) {
+  const ya = await notas(b, atletaId, 'objetivo');
+  if (ya === null) return { falta100: true };
+  const nueva = await anotar(b, atletaId, 'objetivo', { texto, hasta: fecha });
+  if (nueva?.id) for (const n of ya) await quitarNota(b, n.id);
+  return nueva;
+}
+// (52, P: apagado) «Esta semana la necesito suave»: se apunta su lunes (nada más)
+export async function pedirSuave(b, atletaId, { hoy = fechaMadrid() } = {}) {
+  const d = new Date(`${hoy}T12:00:00Z`);
+  return anotar(b, atletaId, 'suave', { desde: sumarDias(hoy, -((d.getUTCDay() + 6) % 7)) });
+}
+// (48, y 47) Los ejercicios de su semana, cada uno con las alternativas por las que lo puede cambiar para siempre
+// (api.esencialAlternativa, migración 094) y, con tres semanas o más en su bloque, cuáles llevan tres semanas igual.
+// → null (sin plan) | [{ id, nombre, por_tiempo, guia, opciones: [{ id, nombre }], estancado }]
+export async function ejerciciosDeRutina(api, b, atletaId) {
+  const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
+  if (!prog?.bloque || !prog.actual) return null;
+  const [{ pautasDeSemana }, { ejerciciosCambiables }, d] = await Promise.all([import('../logica/motor/index.js'), import('../logica/esencial-vida.js'), api.bloqueCompleto(prog.bloque.id)]);
+  const base = (d.semanas || []).find((w) => w.id === prog.actual.id) || null;
+  if (!base) return null;
+  const { pautas } = pautasDeSemana(d, base);
+  const puestas = atleta?.esencial_alternativas || {};
+  const primeros = porId(await api.ejerciciosPorIds(unicos([...pautas.map((x) => x.ejercicio_id), ...Object.keys(puestas)])));
+  const faltan = unicos(Object.values(primeros).flatMap((e) => e.alternativas || [])).filter((id) => !primeros[id]);
+  const ejercicios = { ...primeros, ...porId(faltan.length ? await api.ejerciciosPorIds(faltan) : []) };
+  let estancados = [];
+  try {
+    const { estancadosIds } = await import('../logica/esencial-motor.js');
+    estancados = estancadosIds(d, base);
+  } catch { estancados = []; }
+  return ejerciciosCambiables({ pautas, ejercicios, puestas, estancados });
+}
+// (51) Sus marcas de la primera semana de marcas y lo mejor de sus dos últimas semanas, ejercicio a ejercicio.
+// → null (sin marcas todavía, o sin nada después) | { desde (la semana de sus marcas), filas, suben }
+export async function marcasAntesYAhora(api, b, atletaId, { hoy = fechaMadrid() } = {}) {
+  const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id,nombre,estado' });
+  if (!bloques.length) return null;
+  const semanas = (await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) } })).filter((w) => w.fecha_inicio && w.programacion === 'programada');
+  const primera = semanas.filter((w) => w.marcas === true).sort((x, y) => String(x.fecha_inicio).localeCompare(String(y.fecha_inicio)))[0];
+  if (!primera) return null;
+  const desde = sumarDias(hoy, -14);
+  const recientes = semanas.filter((w) => String(w.fecha_inicio).slice(0, 10) > String(primera.fecha_inicio).slice(0, 10) && String(w.fecha_inicio).slice(0, 10) >= sumarDias(desde, -6) && String(w.fecha_inicio).slice(0, 10) <= hoy);
+  if (!recientes.length) return null;
+  const de = async (ws) => {
+    const sesiones = await b.select('sesiones', { in: { semana_id: ws.map((w) => w.id) } });
+    const pautas = sesiones.length ? await b.select('sesion_ejercicios', { in: { sesion_id: sesiones.map((x) => x.id) } }) : [];
+    const series = pautas.length ? await b.select('series', { in: { sesion_ejercicio_id: pautas.map((x) => x.id) } }) : [];
+    return { pautas, series };
+  };
+  const [a, n] = await Promise.all([de([primera]), de(recientes)]);
+  if (!a.series.length || !n.series.length) return null;
+  const ids = unicos([...a.pautas, ...n.pautas].map((x) => x.ejercicio_id).concat([...a.series, ...n.series].map((x) => x.sustituto_id).filter(Boolean)));
+  const ejercicios = porId(await b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre,por_tiempo' }).catch(() => b.select('ejercicios', { in: { id: ids }, cols: 'id,nombre' })));
+  const [{ marcasDeSemana }, { compararMarcas }] = await Promise.all([import('../logica/esencial-alta.js'), import('../logica/esencial-vida.js')]);
+  const r = compararMarcas(marcasDeSemana({ ...a, ejercicios }), marcasDeSemana({ ...n, ejercicios }));
+  return r.filas.length ? { desde: primera.numero, ...r } : null;
+}
+// (57) En cuántas de sus últimas seis semanas ha apuntado una molestia moderada o grave en su check-in (0 si no se puede leer)
+export async function semanasConMolestia(b, atletaId, { hoy = fechaMadrid() } = {}) {
+  try {
+    const filas = await b.select('molestias', { eq: { atleta_id: atletaId } });
+    const desde = sumarDias(hoy, -42);
+    return new Set(filas.filter((m) => Number(m.intensidad) >= 2 && String(m.semana_inicio || '').slice(0, 10) >= desde).map((m) => String(m.semana_inicio).slice(0, 10))).size;
+  } catch { return 0; }
+}
+// (59, el panel del coach) La semana de FBE Esencial: una fila por atleta con plan → logica/esencial-vida.js: resumenCoach
+export async function semanaDeTodos(b, { hoy = fechaMadrid() } = {}) {
+  const atletas = (await b.select('atletas', { eq: { modalidad: 'por_su_cuenta' }, cols: 'id,nombre,estado' })).filter((a) => a.estado === 'activo');
+  if (!atletas.length) return { filas: [], preguntas: 0, notas: [] };
+  const ids = atletas.map((a) => a.id);
+  const d = new Date(`${hoy}T12:00:00Z`);
+  const lunes = sumarDias(hoy, -((d.getUTCDay() + 6) % 7));
+  const bloques = (await b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: 'id,atleta_id,estado' })).filter((x) => ['activo', 'ajustado'].includes(x.estado));
+  const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,esencial_cierre,esencial_cierre_lunes' }).catch(() => []) : [];
+  const propias = semanas.filter((w) => w.programacion === 'programada' && w.fecha_inicio);
+  const sesiones = propias.length ? await b.select('sesiones', { in: { semana_id: propias.map((w) => w.id) }, cols: 'id,semana_id,completada,fecha_realizada' }) : [];
+  const [viajes, preguntas, vamos] = await Promise.all([
+    b.select('esencial_notas', { eq: { tipo: 'viaje' } }).catch(() => []),
+    b.select('esencial_notas', { eq: { tipo: 'pregunta_directo' } }).catch(() => []),
+    b.select('esencial_notas', { eq: { tipo: 'como_vamos' } }).catch(() => []),
+  ]);
+  const filas = atletas.map((a) => {
+    const suyos = bloques.filter((x) => x.atleta_id === a.id).map((x) => x.id);
+    const ws = propias.filter((w) => suyos.includes(w.bloque_id));
+    const esta = ws.find((w) => String(w.fecha_inicio).slice(0, 10) === lunes) || null;
+    const ss = esta ? sesiones.filter((s) => s.semana_id === esta.id) : [];
+    const pausa = ws.some((w) => w.esencial_cierre === 'pausa' && String(w.esencial_cierre_lunes || '').slice(0, 10) === lunes);
+    const fechas = sesiones.filter((s) => ws.some((w) => w.id === s.semana_id) && s.completada && s.fecha_realizada).map((s) => String(s.fecha_realizada).slice(0, 10)).sort();
+    const ultima = fechas[fechas.length - 1] || null;
+    const viaje = (viajes || []).some((v) => v.atleta_id === a.id && v?.datos?.modo !== 'igual' && String(v.desde || '').slice(0, 10) <= hoy && String(v.hasta || '').slice(0, 10) >= hoy);
+    return { atleta_id: a.id, nombre: a.nombre, total: ss.length || (pausa || ws.length ? 1 : 0), hechas: ss.filter((s) => s.completada).length, pausa, viaje,
+      dias: ultima ? Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${ultima}T12:00:00Z`)) / 864e5) : null, sinSemana: !esta };
+  });
+  const desde = sumarDias(hoy, -30);
+  return { filas, preguntas: (preguntas || []).filter((x) => !x.respondida_en).length, notas: (vamos || []).filter((x) => String(x.creada_en || '').slice(0, 10) >= desde) };
 }

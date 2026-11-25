@@ -59,6 +59,9 @@ export function explicar(h) {
     if (h.por_tiempo || !(a.kg > 0) || d.kg == null) return con('baja', 'Baja un poco', 'Baja un poco: llevabas tres semanas igual. Con algo menos vuelves a sumar y a subir.');
     return con('baja', `Baja a ${kilos(d.kg)}`, `Bajas de ${kilos(a.kg)} a ${kilos(d.kg)}: llevabas tres semanas con el mismo peso y las mismas repeticiones. Con un poco menos vuelves a sumar repeticiones y a subir.`);
   }
+  // (v0.247, P: apagado) pidió la semana suave, o venía de dos sesiones muy duras: se repite la carga
+  if (h.frenos?.includes('suave')) return con('igual', 'Se repite', 'La semana pasada la pediste suave: esta repites la carga de antes, sin subir ni bajar.');
+  if (h.frenos?.includes('dos_duras')) return con('igual', 'Se repite', 'Tus dos últimas sesiones fueron muy duras (9 o 10): esta semana repites la carga, sin subir, para recuperarte.');
   if (h.tipo === 'pregunta' || h.frenos?.includes('dato_raro') || h.diagnostico === 'dato_raro') {
     return con('igual', 'Se queda igual', 'Se queda igual: algo de lo que apuntaste parecía una errata y la app no lo ha usado para decidir.');
   }

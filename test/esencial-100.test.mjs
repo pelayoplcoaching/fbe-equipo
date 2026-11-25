@@ -22,6 +22,9 @@ const superusuario = `reset role; select set_config('request.jwt.claim.sub', '',
 const servidor = `${superusuario} set role service_role;`;
 const hoy = hoyISO(), lunes = lunesDe(hoy);
 await db.exec('reset role;');
+// (la base de prueba ya va por delante: para repetir la 100 se quita lo de después, como dice su aviso; así crear_recordatorios
+// vuelve a ser la suya)
+await db.exec('delete from public.fbe_migraciones where numero > 100;');
 await db.exec(SQL('100_esencial_acompanado.sql'));
 await db.exec(SQL('100_esencial_acompanado.sql'));   // (se puede repetir)
 

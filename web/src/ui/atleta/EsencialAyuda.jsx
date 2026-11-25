@@ -11,7 +11,7 @@ import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
-import { CATEGORIAS, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, NECESITAS, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
+import { CATEGORIAS, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
@@ -415,6 +415,7 @@ export function LoDeHoy({ sesion, ejercicios = [] }) {
 
 // ---------- (3 y 4) Al terminar: «Tu sesión, en claro» y «¿Cómo ha ido?» ----------
 export function TrasLaSesion({ sesion, enCola = false }) {
+  const previaAlarma = usePrevia();
   const { api, backend, atleta } = useApp();
   const claro = useCarga(() => (enCola || !sesion?.id ? Promise.resolve(null) : datos.sesionEnClaro(api, backend, atleta.id, sesion.id).catch(() => null)), [sesion?.id, enCola]);
   // (v0.246, 28) sus hitos: la sesión 10, la 25, la 50 y la 100
@@ -436,6 +437,8 @@ export function TrasLaSesion({ sesion, enCola = false }) {
         {COMO_HA_IDO.map(([id, t]) => <button type="button" key={id} class="ayu-palabra" aria-pressed={como === id ? 'true' : 'false'} onClick={() => elegir(id)}>{t}</button>)}
       </div>
       {como && <p class="ayu-def peq" role="status">{respuestaComoHaIdo(como)}{como === 'molestia' && <> <button type="button" class="btn-texto mini" onClick={() => setCentro('dolor')}>¿Y si me duele algo?</button></>}</p>}
+      {/* (v0.247, apagado) la señal de alarma: «para y consulta» */}
+      {encendido('alarma', previaAlarma) && <Alarma />}
       {filas.length > 0 && (
         <details class="ayu-claro">
           <summary class="ayu-claro-t"><strong class="peq">Tu sesión, en claro</strong><span class="peq secundario"> · {resumenEnClaro(filas.map((f) => f.x))}</span></summary>
@@ -454,6 +457,16 @@ export function TrasLaSesion({ sesion, enCola = false }) {
   );
 }
 
+// (v0.247) Las hojas de la vida real (ui/atleta/EsencialVida.jsx), que se abren desde «¿Qué necesitas?»
+const AbrirViaje = perezoso(() => import('./EsencialVida.jsx'), 'AbrirViaje', { mientras: null });
+const AbrirObjetivo = perezoso(() => import('./EsencialVida.jsx'), 'AbrirObjetivo', { mientras: null });
+const AbrirSuave = perezoso(() => import('./EsencialVida.jsx'), 'AbrirSuave', { mientras: null });
+const HojaMolestia = perezoso(() => import('./EsencialVida.jsx'), 'HojaMolestia', { mientras: null });
+const HojaSitio = perezoso(() => import('./EsencialVida.jsx'), 'HojaSitio', { mientras: null });
+const HojaEjercicios = perezoso(() => import('./EsencialVida.jsx'), 'HojaEjercicios', { mientras: null });
+const HojaEnfermo = perezoso(() => import('./EsencialVida.jsx'), 'HojaEnfermo', { mientras: null });
+const Alarma = perezoso(() => import('./EsencialVida.jsx'), 'Alarma', { mientras: null });
+
 // ---------- (7 y 14) «¿Qué necesitas?» en Hoy, y lo que abre cada aviso ----------
 // Y si la app se abre desde un aviso (#hoy/<clave>, migración 100), se abre lo que anuncia.
 const claveAviso = () => { try { return /^#hoy\/([a-z_]{2,20})$/.exec(location.hash)?.[1] || null; } catch { return null; } };
@@ -467,12 +480,18 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
     window.addEventListener('hashchange', oir);
     return () => window.removeEventListener('hashchange', oir);
   }, []);
-  const [hoja, setHoja] = useState(null);   // { tipo: 'respuestas' | 'plan' | 'dias' | 'rutina' | 'directo' | 'revision', id? }
+  const previa = usePrevia();
+  // { tipo: 'respuestas' | 'plan' | 'dias' | 'rutina' | 'directo' | 'revision' | (v0.247) 'viaje' | 'molestia' | 'sitio' | 'ejercicios' | 'objetivo' | 'enfermo' | 'suave', id? }
+  const [hoja, setHoja] = useState(null);
   const hay100 = useCarga(() => datos.notas(backend, atleta.id, 'pregunta_directo').then((x) => x !== null).catch(() => false), [atleta.id], { recuerdo: `esencial-100:${atleta.id}` });
   const accion = (a) => {
     if (a === 'pausa' || a === 'cierre') { setHoja(null); try { document.querySelector('[data-cierre]')?.scrollIntoView({ block: 'center' }); } catch { /* */ } return; }
     // (v0.246) los avisos de las agujetas y de los días sin entrenar llevan a su tarjeta, arriba en Hoy
-    if (a === 'agujetas' || a === 'vuelta') { setHoja(null); try { document.querySelector(a === 'agujetas' ? '[data-cerca="agujetas"]' : '[data-cerca="vuelta"]')?.scrollIntoView({ block: 'center' }); } catch { /* */ } return; }
+    if (a === 'agujetas' || a === 'vuelta' || a === 'viajando') {
+      setHoja(null);
+      try { document.querySelector(a === 'agujetas' ? '[data-cerca="agujetas"]' : a === 'vuelta' ? '[data-cerca="vuelta"]' : '[data-vida="viaje"]')?.scrollIntoView({ block: 'center' }); } catch { /* */ }
+      return;
+    }
     setHoja({ tipo: a });
   };
   useEffect(() => {
@@ -484,7 +503,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   }, [abrir, !!p?.bloque]);
   const tocar = (que) => { const [tipo, id] = que.split(':'); if (tipo === 'respuesta') setHoja({ tipo: 'respuestas', id }); else accion(id); };
   const conPlan = !!p?.bloque;
-  const opciones = NECESITAS.filter(([id]) => (id !== 'directo' || hay100.datos === true) && (conPlan || !['dias', 'rutina', 'plan', 'falle', 'tiempo'].includes(id)));
+  const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa });
   const cerrar = () => setHoja(null);
   return (
     <section class="panel panel-pad pila-s ayu-necesitas" aria-labelledby="ayu-nec-t">
@@ -499,6 +518,13 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
       {hoja?.tipo === 'rutina' && <HojaRutinas p={p} cuestionario={cuestionario} alCerrar={cerrar} alCambiar={() => recargarPrograma?.()} />}
       {hoja?.tipo === 'directo' && <HojaDirecto alCerrar={cerrar} />}
       {hoja?.tipo === 'revision' && <HojaRevision alCerrar={cerrar} />}
+      {hoja?.tipo === 'viaje' && <AbrirViaje alCerrar={cerrar} />}
+      {hoja?.tipo === 'molestia' && <HojaMolestia alCerrar={cerrar} alAccion={accion} />}
+      {hoja?.tipo === 'sitio' && <HojaSitio alCerrar={cerrar} alAccion={accion} />}
+      {hoja?.tipo === 'ejercicios' && <HojaEjercicios alCerrar={cerrar} alCambiar={() => recargarPrograma?.()} />}
+      {hoja?.tipo === 'objetivo' && <AbrirObjetivo alCerrar={cerrar} />}
+      {hoja?.tipo === 'enfermo' && <HojaEnfermo alCerrar={cerrar} alAccion={accion} />}
+      {hoja?.tipo === 'suave' && <AbrirSuave alCerrar={cerrar} />}
     </section>
   );
 }

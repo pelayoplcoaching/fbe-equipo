@@ -1,0 +1,73 @@
+/* FBE Esencial (acompanamiento, tanda 6): "automatizaciones: la vida real". Me voy de viaje, me duele algo, entreno en otro
+   sitio, cambiar un ejercicio, mi objetivo, mis marcas de antes y de ahora. Solo clases vid-*, cada regla en su propio
+   elemento (una sola clase: los estados, con su propia clase y no con un atributo), sin tocar margenes ni tamanos de letra
+   (eso lo ponen las clases comunes en el JSX): asi van enteras con el trozo de EsencialVida y no hacen volver al comun
+   reglas de otros trozos (scripts/css-coach.mjs). */
+
+/* Las hojas */
+.vid-viaje { min-width: 0; }
+.vid-fechas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-10); }
+.vid-modos { display: grid; gap: var(--esp-8); }
+.vid-modo {
+  display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit; text-align: start; cursor: pointer;
+}
+.vid-modo-si { border-color: var(--morado); box-shadow: var(--anillo-acento); }
+.vid-modo:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.vid-modo-x { color: var(--tinta-2); }
+.vid-op {
+  min-height: var(--esp-28); padding: var(--esp-4) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+}
+.vid-op-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.vid-op:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.vid-que { display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2); }
+.vid-pasos { display: grid; gap: var(--esp-4); }
+.vid-paso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-8); }
+.vid-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
+.vid-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.vid-molestia { min-width: 0; }
+.vid-sitio { min-width: 0; }
+.vid-enfermo { min-width: 0; }
+.vid-suave-h { min-width: 0; }
+.vid-objetivo-h { min-width: 0; }
+
+/* Los ejercicios de su rutina y sus marcas */
+.vid-ejercicios { min-width: 0; }
+.vid-marcas { min-width: 0; }
+.vid-lista { display: grid; gap: var(--esp-6); }
+.vid-fila { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.vid-fila-c { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); }
+.vid-atascado { color: var(--aviso); }
+.vid-alts { display: grid; gap: var(--esp-6); }
+.vid-alt {
+  display: flex; align-items: center; gap: var(--esp-6); min-height: var(--esp-40); padding: var(--esp-6) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit; text-align: start; cursor: pointer;
+}
+.vid-alt:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.vid-marca { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.vid-marca-n { min-width: 0; overflow-wrap: anywhere; }
+.vid-marca-a { color: var(--tinta-2); }
+.vid-marca-s { color: var(--ok); }
+
+/* Las tarjetas de Hoy */
+.vid-viaje-t { min-width: 0; }
+.vid-suave { min-width: 0; }
+.vid-sigue { min-width: 0; }
+.vid-salud { min-width: 0; }
+.vid-fin { min-width: 0; }
+.vid-dias { min-width: 0; }
+.vid-sube { min-width: 0; }
+.vid-basta { min-width: 0; }
+.vid-mudo { min-width: 0; }
+.vid-objetivo { min-width: 0; }
+.vid-objetivo-t { min-width: 0; overflow-wrap: anywhere; }
+.vid-barra { display: block; block-size: var(--esp-6); border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
+.vid-barra-v { display: block; block-size: 100%; border-radius: var(--r-pildora); background: var(--morado); }
+.vid-alarma { min-width: 0; }
+.vid-alarma-c { box-shadow: var(--anillo); }
+
+@media (max-width: 359px) {
+  .vid-fechas { grid-template-columns: minmax(0, 1fr); }
+  .vid-marca { grid-template-columns: minmax(0, 1fr) auto; }
+}

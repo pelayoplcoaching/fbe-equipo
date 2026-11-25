@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.247': {
+    // (FBE Esencial acompañado, tanda 6 de 6: automatizaciones, la vida real; migración 101)
+    atleta: [],
+    coach: [
+      'FBE Esencial, la vida real: «Me voy de viaje» con fechas (sin avisos esos días), «Me duele algo», cambiar un ejercicio y un objetivo.',
+      'En tu panel de FBE Esencial, la semana de un vistazo: cuántos han entrenado, cuántos la tienen completa y quién está de viaje.',
+    ],
+  },
   '0.246': {
     // (FBE Esencial acompañado, tanda 5 de 6: que no entrenen solos; migración 100)
     atleta: [],

@@ -1004,12 +1004,22 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     // «¿Qué necesitas?»: el centro de respuestas (en su respuesta), el buscador, su plan y la pregunta para el directo
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
-    check((await nec.locator('.ayu-nec').count()) === 9 && /Me voy de viaje/.test(await nec.textContent()) && /Preguntar a Pelayo/.test(await nec.textContent()), 'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque');
+    check((await nec.locator('.ayu-nec').count()) === 12 && /Me voy de viaje/.test(await nec.textContent()) && /Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
+      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque (lo apagado no sale)');
+    // (v0.247) «Me duele algo»: dónde y cuánto → qué hacer con su plan mientras tanto (los textos de su check-in); y de ahí, a su respuesta
     await nec.getByRole('button', { name: 'Me duele algo' }).click();
+    const hMol = p.locator('[aria-modal="true"]').last();
+    await hMol.locator('.vid-molestia').waitFor({ timeout: 15000 }).catch(() => {});
+    await hMol.getByRole('button', { name: 'Zona lumbar' }).click();
+    await hMol.getByRole('button', { name: 'Moderada' }).click();
+    check(/Con una molestia moderada: baja la carga, no pares del todo/.test(await hMol.locator('.vid-que').textContent().catch(() => '')) && /hasta 5 sobre 10/.test(await hMol.textContent()) && /Nada de esto se guarda/.test(await hMol.textContent()),
+      '«Me duele algo»: con la zona y la intensidad, qué hacer con su plan mientras tanto (sin guardar nada)');
+    await desborda(p, '«Me duele algo»');
+    await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
     let hoja = p.locator('[aria-modal="true"]').last();
     await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
     check(/La app no valora el dolor/.test(await hoja.locator('.ayu-p[open]').textContent().catch(() => '')) && (await hoja.locator('.ayu-p').count()) === 4 && (await hoja.locator('.ayu-pendiente').count()) === 0,
-      '«Me duele algo» abre «Respuestas» en su respuesta; de salud, solo las cuatro ya aprobadas');
+      'y de ahí, «Respuestas» en su respuesta; de salud, solo las cuatro ya aprobadas');
     await hoja.locator('.ayu-buscar-c').fill('maquina ocupada');
     check(/La máquina está ocupada/.test(await hoja.locator('.ayu-p').first().textContent().catch(() => '')), 'el buscador encuentra sin tildes («maquina ocupada»)');
     await hoja.locator('.ayu-buscar-c').fill('');
@@ -1017,6 +1027,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check((await hoja.locator('.ayu-cat').count()) === 8, 'y sus ocho temas');
     await desborda(p, 'el centro de respuestas');
     await hoja.locator('.cerrar-hoja').click();
+    await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();   // (y «Me duele algo», que estaba debajo)
     await nec.getByRole('button', { name: 'Entender mi plan' }).click();
     hoja = p.locator('[aria-modal="true"]').last();
     await hoja.locator('.ayu-camino').waitFor({ timeout: 10000 }).catch(() => {});
@@ -1088,6 +1099,11 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const caja = piloto.locator('.ecp-caja[data-ecp="directo"]');
     const conCaja = await caja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check(conCaja && /1 sin contestar/.test(await caja.textContent()) && /Tomás Rey/.test(await caja.textContent()) && /noto más la espalda/.test(await caja.textContent()), 'Pelayo, en su panel de FBE Esencial: «Preguntas para el directo · 1 sin contestar», con quién pregunta');
+    // (tanda 6) la semana de FBE Esencial, en cifras
+    const rs = piloto.locator('.ecp-caja[data-ecp="semana"]');
+    const conRs = await rs.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conRs && /Esta semana, en FBE Esencial/.test(await rs.textContent()) && /con semana en marcha/.test(await rs.textContent()) && (await rs.locator('.ecp-cifra').count()) >= 3 && /pregunta para el directo sin contestar/.test(await rs.textContent()),
+      'y el resumen de la semana: cuántos han entrenado, cuántos la tienen completa y lo que hay por contestar');
     // (tanda 5) y lo que Tomás contestó a «¿Cómo vamos?»; y a quién escribir, con el mensaje preparado
     const cv = piloto.locator('.ecp-caja[data-ecp="vamos"]');
     const conCv = await cv.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
@@ -1128,6 +1144,69 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     }
     await ctx.close();
   }
+  // (acompañamiento, tanda 6; v0.247) La vida real: entreno en otro sitio, cambiar un ejercicio y un objetivo con fecha
+  {
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await entrar(p, /Tomás/);
+    await cerrar(p);
+    await p.waitForTimeout(1500);
+    await cerrar(p);
+    const nec = p.locator('.ayu-necesitas');
+    const conNec = await nec.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    if (conNec) {
+      const modal = () => p.locator('[aria-modal="true"]').last();
+      await nec.scrollIntoViewIfNeeded().catch(() => {});
+      await nec.getByRole('button', { name: 'Entreno en otro sitio' }).click();
+      await modal().locator('.vid-sitio').waitFor({ timeout: 15000 }).catch(() => {});
+      await modal().getByRole('button', { name: 'Solo hoy entreno en otro sitio' }).click();
+      check(/«¿Dónde entrenas hoy\?» cambia lo que allí no puedas hacer/.test(await modal().locator('.vid-que').textContent().catch(() => '')), '«Entreno en otro sitio», solo hoy: lo arregla la sesión («¿Dónde entrenas hoy?»)');
+      await modal().getByRole('button', { name: 'He cambiado de gimnasio' }).click();
+      await modal().getByRole('button', { name: 'Ver mis ejercicios' }).click();
+      const filas = p.locator('.vid-ejercicios .vid-fila');
+      const conFilas = await filas.first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(conFilas && (await filas.count()) === 5 && /Va por tiempo: se cambia en cada sesión/.test(await p.locator('.vid-ejercicios').textContent()), 'he cambiado de gimnasio: los cinco ejercicios de su semana (la plancha, que va por tiempo, se cambia en la sesión)');
+      if (conFilas) {
+        const fila = filas.filter({ hasText: 'Peso muerto rumano' });
+        await fila.getByRole('button', { name: 'Cambiar' }).click();
+        await desborda(p, '«Cambiar un ejercicio»');
+        await fila.locator('.vid-alt').first().click();
+        const cambiada = p.locator('.vid-ejercicios .vid-fila', { hasText: 'En lugar de Peso muerto rumano' });
+        check(await cambiada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false), 'lo cambia por su alternativa para siempre: su semana ya la lleva («En lugar de Peso muerto rumano…»)');
+        await cambiada.getByRole('button', { name: 'Cambiar' }).click().catch(() => {});
+        await cambiada.getByRole('button', { name: /Volver a Peso muerto rumano/ }).click().catch(() => {});
+        check(await p.locator('.vid-ejercicios .vid-fila', { hasText: 'En lugar de' }).first().waitFor({ state: 'detached', timeout: 10000 }).then(() => true).catch(() => false), 'y puede volver al de su rutina');
+      }
+      await modal().locator('.cerrar-hoja').click();
+      // su objetivo
+      await nec.getByRole('button', { name: 'Ponerme un objetivo' }).click();
+      await modal().locator('.vid-objetivo-h').waitFor({ timeout: 15000 }).catch(() => {});
+      await modal().getByRole('button', { name: 'Apuntar mi objetivo' }).click();
+      check(/Escribe qué quieres conseguir/.test(await modal().locator('.error').textContent().catch(() => '')), 'un objetivo: sin texto no se guarda');
+      await modal().locator('.vid-area').fill('No faltar ninguna semana hasta el verano');
+      const en = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+      await p.locator('#vid-obj-f').fill(en(100));
+      await modal().getByRole('button', { name: 'Apuntar mi objetivo' }).click();
+      const obj = p.locator('.vid-objetivo');
+      const conObj = await obj.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(conObj && /No faltar ninguna semana hasta el verano/.test(await obj.textContent()) && /Quedan 1[45] semanas/.test(await obj.textContent()) && (await obj.locator('.vid-barra').count()) === 1, 'apuntado: arriba en Hoy, su objetivo, con lo que queda');
+      await desborda(p, 'Hoy con su objetivo');
+      if (conObj) {
+        await obj.getByRole('button', { name: 'Cambiar' }).click();
+        await modal().getByRole('button', { name: 'Quitar mi objetivo' }).click();
+        check(await p.locator('.vid-objetivo').waitFor({ state: 'detached', timeout: 10000 }).then(() => true).catch(() => false), 'y lo puede quitar');
+      }
+      // sin avisos en el móvil ni por correo: se lo dice y le deja el correo a un toque
+      const mudo = p.locator('.vid-mudo');
+      const conMudo = await mudo.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conMudo && /No te está llegando ningún aviso/.test(await mudo.textContent()), 'sin avisos de ningún tipo: «No te está llegando ningún aviso»');
+      if (conMudo) {
+        await mudo.getByRole('button', { name: 'Avisarme por correo' }).click();
+        check(await mudo.locator('.alta-hecho').waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && /Te llegarán por correo/.test(await mudo.textContent()), 'y los activa por correo de un toque');
+      }
+    } else check(false, 'la vida real: «¿Qué necesitas?» de Tomás');
+    await ctx.close();
+  }
   // (tanda 5) «¿Te vas?»: con el reloj en el 15 de diciembre, a Tomás le sale antes de Navidad
   {
     const anio = new Date().getFullYear();
@@ -1147,11 +1226,35 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     if (conVa) {
       await va.getByRole('button', { name: 'Sí: ver qué hago' }).click();
       const h = p.locator('[aria-modal="true"]').last();
-      await h.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
-      check(/Me voy de viaje/.test(await h.locator('.ayu-p[open]').textContent().catch(() => '')) && /Esta semana no puedo/.test(await h.locator('.ayu-p[open]').textContent().catch(() => '')), '«Sí» le lleva a qué puede hacer: pausa o rutina de viaje');
-      await h.locator('.cerrar-hoja').click();
-      await va.getByRole('button', { name: 'No, sigo igual' }).click();
-      check((await p.locator('.cer-va').count()) === 0, '«No, sigo igual» la quita');
+      const conViaje = await h.locator('.vid-viaje').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(conViaje && (await h.locator('.vid-modo').count()) === 3 && /No voy a entrenar/.test(await h.textContent()) && /Solo se guardan las fechas/.test(await h.textContent()), '(tanda 6) «Sí» abre «Me voy de viaje»: las fechas y tres maneras de irse');
+      if (conViaje) {
+        await h.getByRole('button', { name: 'Apuntar el viaje' }).click();
+        check(/Pon el día que te vas/.test(await h.locator('.error').textContent().catch(() => '')), 'sin fechas no se guarda, y dice qué falta');
+        await p.locator('#vid-desde').fill(`${anio}-12-20`);
+        await p.locator('#vid-hasta').fill(`${anio + 1}-01-02`);
+        await desborda(p, '«Me voy de viaje»');
+        await h.getByRole('button', { name: 'Apuntar el viaje' }).click();
+        const tarjeta = p.locator('[data-vida="viaje"]');
+        const conTarjeta = await tarjeta.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+        check(conTarjeta && /Te vas el \S+ 20 de diciembre/.test(await tarjeta.textContent()) && /no te manda avisos de entreno/.test(await tarjeta.textContent()) && (await p.locator('.cer-va').count()) === 0,
+          'apuntado: la pregunta se va y arriba en Hoy sale su viaje («Te vas el… 20 de diciembre»: esos días, sin avisos de entreno)');
+        // …y el día 22, ya fuera
+        await p.waitForTimeout(700);
+        await ctx.clock.setFixedTime(new Date(dic.getTime() + 7 * 864e5));
+        await p.reload();
+        await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+        await cerrar(p);
+        const fuera = p.locator('[data-vida="viaje"]');
+        const conFuera = await fuera.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+        check(conFuera && /De viaje hasta el \S+ 2 de enero/.test(await fuera.textContent()) && /nada que recuperar/.test(await fuera.textContent()), 'una semana después, fuera: «De viaje hasta el… 2 de enero», sin nada que recuperar');
+        if (conFuera) {
+          await fuera.getByRole('button', { name: 'Cambiar' }).click();
+          const h2 = p.locator('[aria-modal="true"]').last();
+          await h2.getByRole('button', { name: 'Al final no me voy: quitarlo' }).click();
+          check(await p.locator('[data-vida="viaje"]').waitFor({ state: 'detached', timeout: 10000 }).then(() => true).catch(() => false), '«Al final no me voy» lo quita, y todo sigue como siempre');
+        }
+      }
     }
     await ctx.close();
   }
@@ -1214,11 +1317,31 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const conNec = await nec.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     if (conNec) {
       await nec.getByRole('button', { name: 'Me duele algo' }).click();
+      const hMol = p.locator('[aria-modal="true"]').last();
+      await hMol.locator('.vid-molestia').waitFor({ timeout: 15000 }).catch(() => {});
+      await hMol.getByRole('button', { name: 'Hombros' }).click();
+      await hMol.getByRole('button', { name: 'Leve' }).click();
+      check(/Con una molestia leve: puedes seguir/.test(await hMol.locator('.vid-que').textContent().catch(() => '')), 'una molestia leve: puede seguir, con la regla del semáforo');
+      await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
       const hoja = p.locator('[aria-modal="true"]').last();
       await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
       check((await hoja.locator('.ayu-p').count()) === 8 && (await hoja.locator('.ayu-pendiente').count()) === 4 && /Pendiente del visto bueno de Pelayo/.test(await hoja.textContent()),
         'con «?previa=1» en la demo se ve lo apagado: las cuatro respuestas de salud nuevas, marcadas como pendientes');
       await hoja.locator('.cerrar-hoja').click();
+      await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();
+      // (tanda 6) y, en «¿Qué necesitas?», «Estoy enfermo» y «Necesito una semana suave», como borradores
+      check(/Estoy enfermo/.test(await nec.textContent()) && /Necesito una semana suave/.test(await nec.textContent()), 'con la vista previa salen también «Estoy enfermo» y «Necesito una semana suave»');
+      await nec.getByRole('button', { name: 'Estoy enfermo' }).click();
+      const hEnf = p.locator('[aria-modal="true"]').last();
+      await hEnf.locator('.vid-enfermo').waitFor({ timeout: 15000 }).catch(() => {});
+      check(/lo primero es recuperarte/.test(await hEnf.textContent()) && (await hEnf.locator('.vid-paso').count()) === 4 && /Borrador, pendiente del visto bueno de Pelayo/.test(await hEnf.textContent()), '«Estoy enfermo»: qué hacer, marcado como borrador (no guarda nada)');
+      await hEnf.locator('.cerrar-hoja').click();
+      await nec.getByRole('button', { name: 'Necesito una semana suave' }).click();
+      const hSu = p.locator('[aria-modal="true"]').last();
+      await hSu.locator('.vid-suave-h').waitFor({ timeout: 15000 }).catch(() => {});
+      await hSu.getByRole('button', { name: 'Esta semana, suave' }).click();
+      const suave = p.locator('.vid-suave');
+      check(await suave.waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && /Quita una serie de cada ejercicio/.test(await suave.textContent().catch(() => '')), '«Necesito una semana suave»: al pedirla, arriba en Hoy sale qué hacer esta semana');
       check(/borrador, pendiente de su visto bueno/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana, como borrador (sin la vista previa no sale)');
     } else check(false, 'la vista previa de lo apagado');
     await ctx.close();

@@ -6,6 +6,7 @@ import { useApp, useCarga, useUnaVez } from '../comunes.jsx';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { hoyISO, diasEntre } from '../../logica/fechas.js';
 import { aQuienEscribir, comoVamosResumen } from '../../logica/esencial-cerca.js';
+import { resumenCoach } from '../../logica/esencial-vida.js';
 import * as datos from '../../datos/api-esencial.js';
 
 // (para el panel del coach) Las preguntas para el directo: verlas juntas, contestarlas y, si quiere, hacerlas públicas
@@ -104,6 +105,36 @@ export function ComoVamosCoach() {
         <ul class="ecp-lista">
           {r.textos.map((t, i) => <li key={i} class="ecp-fila"><span class="peq"><strong>{t.nombre || 'Sin nombre'}</strong> <span class="mini terciario">· {t.nota} de 10</span></span><span class="peq">{t.texto}</span></li>)}
         </ul>
+      )}
+    </section>
+  );
+}
+
+// ---------- (59; v0.247) La semana de FBE Esencial, de un vistazo ----------
+// Cuántos tienen la semana en marcha, cuántos han entrenado, cuántos la tienen completa, quién está en pausa o de viaje y
+// lo que hay por contestar. Sin nombres: para eso están «A quién escribir» y la lista de abajo.
+export function ResumenSemana() {
+  const { backend } = useApp();
+  const d = useCarga(() => datos.semanaDeTodos(backend).catch(() => null), []);
+  if (!d.datos) return null;
+  const r = resumenCoach(d.datos);
+  if (!r.total) return null;
+  const cifras = [
+    [r.entrenando, 'han entrenado'], [r.completas, 'semana completa'], [r.sinEmpezar, 'sin empezarla'],
+    ...(r.pausa ? [[r.pausa, 'en pausa']] : []), ...(r.viaje ? [[r.viaje, 'de viaje']] : []), ...(r.parados ? [[r.parados, 'diez días o más sin entrenar']] : []),
+  ];
+  return (
+    <section class="ecp-caja" data-ecp="semana" aria-labelledby="ecp-semana-t">
+      <h2 id="ecp-semana-t" class="etq">Esta semana, en FBE Esencial</h2>
+      <p class="peq">{r.frase}</p>
+      <ul class="ecp-cifras" aria-label="La semana, en cifras">
+        {cifras.map(([n, t]) => <li key={t} class="ecp-cifra"><strong class="num">{n}</strong><span class="mini terciario">{t}</span></li>)}
+      </ul>
+      {(r.preguntas > 0 || r.nota != null) && (
+        <p class="mini terciario">
+          {r.preguntas > 0 ? `${r.preguntas === 1 ? 'Una pregunta' : `${r.preguntas} preguntas`} para el directo sin contestar. ` : ''}
+          {r.nota != null ? `«¿Cómo vamos?», este mes: ${String(r.nota).replace('.', ',')} de 10 (${r.notas === 1 ? 'una respuesta' : `${r.notas} respuestas`}).` : ''}
+        </p>
       )}
     </section>
   );

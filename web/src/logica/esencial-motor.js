@@ -35,13 +35,33 @@ export function estancadosDe(d, base) {
   const h = historiaDe(d, base, sesiones, pautas);
   return pautas.filter((p) => estancado(h[p.id])).length;
 }
+// (v0.247) …y cuáles son (sus ids, sin repetir)
+export function estancadosIds(d, base) {
+  if (!d || !base) return [];
+  const { sesiones, pautas } = pautasDeSemana(d, base);
+  const h = historiaDe(d, base, sesiones, pautas);
+  return [...new Set(pautas.filter((p) => estancado(h[p.id])).map((p) => p.ejercicio_id))];
+}
 
 // d: api.bloqueCompleto del bloque de la semana hecha; base: esa semana; tipo: 'novato' (tras «Primeras 4 semanas») o
 // 'siguiente'; ejercicios: { id: ejercicio }; atleta: su fila (nivel, volumen_objetivo, reglas_motor); checkins y
 // molestias: las suyas.
 // Devuelve { sesiones, nota, descarga, preguntas: [{ pauta_id, ejercicio_id, texto, series: [{ numero, kg, reps }] }] }.
-export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}, atleta = {}, checkins = [], molestias = [], hoy }) {
-  const suyas = paraElMotor(leerGuardadas(atleta?.reglas_motor ?? null));
+// (v0.247, P: APAGADO hasta que Pelayo lo decida; sin `extras` no cambia nada) extras.molestiaFrena: con una molestia
+// moderada o grave en la zona, los ejercicios que la cargan no suben de peso ni suman series (la regla `molestias` del
+// motor, que de serie solo avisa; sumar repeticiones con el mismo peso, sí); extras.conservar ('suave' | 'duras'): tras una semana que pidió suave, o con sus dos últimas sesiones a 9 o
+// más, la semana siguiente repite la carga tal cual (ni sube ni baja). Solo en una semana normal, fuera de las cuatro
+// primeras.
+export const NOTA_CONSERVAR = {
+  suave: 'La semana pasada la pediste suave: esta repites la carga de antes, sin subir ni bajar nada.',
+  duras: 'Tus dos últimas sesiones fueron muy duras: esta semana repites la carga, sin subir, para recuperarte.',
+};
+export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}, atleta = {}, checkins = [], molestias = [], hoy, extras = null }) {
+  const guardadas = paraElMotor(leerGuardadas(atleta?.reglas_motor ?? null));
+  // (las reglas van por capas: la del atleta manda sobre las de FBE; si Pelayo ya le hubiera puesto la suya, se respeta)
+  const suyas = extras?.molestiaFrena
+    ? { ...guardadas, reglas: { ...guardadas.reglas, atleta: { ...(guardadas.reglas?.atleta || {}), molestias: guardadas.reglas?.atleta?.molestias ?? 'moderada' } } }
+    : guardadas;
   const entrada = entradaDesdeBloque({
     d, base, destino: null, ejercicios, hoy, checkins, molestias, reglas: suyas.reglas,
     atleta: { nivel: atleta?.nivel ?? 'novato', perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null, modalidad: 'por_su_cuenta' },
@@ -56,6 +76,26 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   const normal = !descarga && (r.semana?.tipo || 'normal') === 'normal';
   const hechas = entrada.series || {};
   const soloKilos = tipo === 'novato';
+  if (NOTA_CONSERVAR[extras?.conservar] && !soloKilos && normal) {
+    const freno = extras.conservar === 'suave' ? 'suave' : 'dos_duras';
+    const igual = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares: {}, soloKilos, ejercicios, hechas, normal: false, alternativas: atleta?.esencial_alternativas || {} });
+    const campos = (x) => ({ kg: x.carga_sugerida_kg != null ? Number(x.carga_sugerida_kg) : null, min: x.reps_min ?? null, max: x.reps_max ?? null, series: x.series ?? null });
+    const porque = [];
+    [...sesiones].sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0)).forEach((ses, i) => {
+      [...(porSesion[ses.id] || [])].sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0)).forEach((p, j) => {
+        const nueva = igual[i]?.pautas?.[j] || null;
+        const ej = ejercicios[p.ejercicio_id] || {};
+        porque.push({
+          sesion: i, sesion_nombre: ses.nombre || '', ejercicio_id: p.ejercicio_id, nuevo_id: nueva?.ejercicio_id ?? null, nombre: ej.nombre || '', por_tiempo: !!ej.por_tiempo,
+          tipo: 'mantener', diagnostico: pares[p.id]?.diagnostico || null, frenos: [freno], mal_dia: false, molestia: false, semana: 'normal', novato: false, estancado: false,
+          hecho: [...(hechas[p.id] || [])].filter((x) => Number(x.reps) > 0 && !x.sustituto_id).sort((x, y) => (Number(x.numero) || 0) - (Number(y.numero) || 0))
+            .map((x) => ({ kg: Number(x.kg) > 0 ? Number(x.kg) : null, reps: Number(x.reps), rpe: x.rpe != null ? Number(x.rpe) : null })),
+          antes: campos(p), despues: nueva ? campos(nueva) : null,
+        });
+      });
+    });
+    return { sesiones: igual, nota: NOTA_CONSERVAR[extras.conservar], descarga: false, preguntas: [], porque, semana: 'normal', conservada: extras.conservar };
+  }
   const semana = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares, soloKilos, ejercicios, hechas, normal, alternativas: atleta?.esencial_alternativas || {} });
   // (Pelayo, 25/11) Si un ejercicio lleva tres semanas igual y el motor vuelve a proponer lo mismo: un 10 % menos para
   // volver a subir (solo en una semana normal y sin una posible errata por confirmar)

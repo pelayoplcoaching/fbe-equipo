@@ -144,6 +144,8 @@
 .ecp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
 .ecp-fila { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); overflow-wrap: anywhere; }
 .ecp-resp { padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--morado-suave); }
+.ecp-cifras { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-8); }
+.ecp-cifra { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
 .ecp-area, .ecp-campo {
   width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
   background: var(--hoja); color: var(--tinta); font: inherit;

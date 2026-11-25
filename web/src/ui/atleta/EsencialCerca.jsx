@@ -16,6 +16,9 @@ import { perezoso } from '../perezoso.jsx';
 
 const CentroRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'CentroRespuestas', { mientras: null });
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
+// (v0.247) «Me voy de viaje», con fechas, y sus marcas de antes y de ahora (ui/atleta/EsencialVida.jsx)
+const AbrirViaje = perezoso(() => import('./EsencialVida.jsx'), 'AbrirViaje', { mientras: null });
+const HojaMarcasAhora = perezoso(() => import('./EsencialVida.jsx'), 'HojaMarcasAhora', { mientras: null });
 
 function usePrevia() {
   const { modo } = useApp();
@@ -239,7 +242,7 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
   const equipo = useCarga(() => (empezada ? datos.equipoSemana(backend).catch(() => null) : Promise.resolve(null)), [atleta.id, empezada, ss.filter((s) => s.completada).length], { recuerdo: `equipo-esencial:${atleta.id}` });
   const n = semanaDelPlan(p?.bloques, w?.fecha_inicio) || w?.numero || null;
   const notas = useCarga(() => (n >= 4 ? datos.notas(backend, atleta.id, 'como_vamos').catch(() => null) : Promise.resolve(null)), [atleta.id, n >= 4]);
-  const [hoja, setHoja] = useState(null);   // 'trimestre' | 'diario' | 'viaje'
+  const [hoja, setHoja] = useState(null);   // 'trimestre' | 'diario' | 'viaje' | 'marcas'
   const va = seVa(hoy);
   const kVa = `fbe-esencial-va:${atleta.id}:${va?.id}`;
   const [vaFuera, setVaFuera] = useState(false);
@@ -286,10 +289,12 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
       <div class="cer-pie">
         <button type="button" class="btn-texto mini" onClick={() => setHoja('diario')}><Icono n="historial" /> Lo que la app ha hecho por ti</button>
         {!trimestre && n >= 3 && <button type="button" class="btn-texto mini" onClick={() => setHoja('trimestre')}><Icono n="progreso" /> Lo que llevas</button>}
+        {n >= 6 && <button type="button" class="btn-texto mini" onClick={() => setHoja('marcas')}><Icono n="trofeo" /> Tus marcas, antes y ahora</button>}
       </div>
       {hoja === 'trimestre' && <HojaTrimestre p={p} cuestionario={cuestionario} recargar={recargar} alCerrar={() => setHoja(null)} />}
       {hoja === 'diario' && <HojaDiario p={p} alCerrar={() => setHoja(null)} />}
-      {hoja === 'viaje' && <CentroRespuestas inicial="viaje" alCerrar={() => setHoja(null)} />}
+      {hoja === 'viaje' && <AbrirViaje alCerrar={() => setHoja(null)} alGuardar={() => { guardar(kVa, '1'); setVaFuera(true); }} />}
+      {hoja === 'marcas' && <HojaMarcasAhora alCerrar={() => setHoja(null)} />}
     </>
   );
 }
