@@ -382,5 +382,113 @@
       "1080": "imagenes/esencial/esencial-rutina-1080.31a6ed4d.webp"
     },
     "color": "#523578"
+  },
+  "esencial-ajustar-maquina": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-ajustar-maquina-240.92984a08.webp",
+      "720": "imagenes/esencial/esencial-ajustar-maquina-720.bd9e2bca.webp",
+      "1080": "imagenes/esencial/esencial-ajustar-maquina-1080.2c934389.webp"
+    },
+    "color": "#44306c"
+  },
+  "esencial-checkin-enviado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-checkin-enviado-240.4094d85a.webp",
+      "720": "imagenes/esencial/esencial-checkin-enviado-720.7e977040.webp",
+      "1080": "imagenes/esencial/esencial-checkin-enviado-1080.b26b8f18.webp"
+    },
+    "color": "#533973"
+  },
+  "esencial-equipo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-equipo-240.fb664bd3.webp",
+      "720": "imagenes/esencial/esencial-equipo-720.19279e99.webp",
+      "1080": "imagenes/esencial/esencial-equipo-1080.3abbf8e2.webp"
+    },
+    "color": "#513673"
+  },
+  "esencial-fin-primera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-fin-primera-240.eadd6379.webp",
+      "720": "imagenes/esencial/esencial-fin-primera-720.ceed36e9.webp",
+      "1080": "imagenes/esencial/esencial-fin-primera-1080.189518d8.webp"
+    },
+    "color": "#42356c"
+  },
+  "esencial-molestia": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-molestia-240.0009cab1.webp",
+      "720": "imagenes/esencial/esencial-molestia-720.5f1beb41.webp",
+      "1080": "imagenes/esencial/esencial-molestia-1080.5dac51b0.webp"
+    },
+    "color": "#45336f"
+  },
+  "esencial-preguntas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-preguntas-240.5f8b9e75.webp",
+      "720": "imagenes/esencial/esencial-preguntas-720.b2eb8767.webp",
+      "1080": "imagenes/esencial/esencial-preguntas-1080.2edd1e92.webp"
+    },
+    "color": "#503a6e"
+  },
+  "esencial-primera-sesion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-primera-sesion-240.f0a0c592.webp",
+      "720": "imagenes/esencial/esencial-primera-sesion-720.cb5d662a.webp",
+      "1080": "imagenes/esencial/esencial-primera-sesion-1080.b31edd9a.webp"
+    },
+    "color": "#3f2f6c"
+  },
+  "esencial-que-peso": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-que-peso-240.9c6d715e.webp",
+      "720": "imagenes/esencial/esencial-que-peso-720.28d850df.webp",
+      "1080": "imagenes/esencial/esencial-que-peso-1080.9850c1f7.webp"
+    },
+    "color": "#362863"
+  },
+  "esencial-te-sobran": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-te-sobran-240.c0f6fd9a.webp",
+      "720": "imagenes/esencial/esencial-te-sobran-720.7fc952ac.webp",
+      "1080": "imagenes/esencial/esencial-te-sobran-1080.4ddfbf88.webp"
+    },
+    "color": "#372965"
   }
 }
