@@ -251,7 +251,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       'su primera sesión: la guía corta (cómo se apunta, «te sobran», el ✓ y que le ajusten las máquinas)');
     await guia.getByRole('button', { name: 'Entendido' }).click();
     check(await p.locator('.alta-guia').count() === 0, '«Entendido» la quita');
-    check(!(await p.locator('.mensaje-coach').count()) && /en un día flojo, la app te propone los pesos de la última vez/.test(await p.locator('.preparacion').first().textContent().catch(() => '')),
+    check(!(await p.locator('.mensaje-coach').count()) && /Tres toques: te da un consejo para hoy/.test(await p.locator('.preparacion').first().textContent().catch(() => '')),
       'sin mensajes de «Tu coach» («Primera vez con…, luego me cuentas») y «¿Cómo llegas hoy?» sin «Tu coach lo verá»');
     const qp = p.locator('.alta-que-peso').first();
     await qp.getByRole('button', { name: /Qué peso pongo/ }).click();

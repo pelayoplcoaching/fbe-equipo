@@ -36,7 +36,7 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
       <div class="separa">
         <div class="prep-cab-ilu"><Imagen id="preparacion" clase="ico-ilu" tamanos="44px" /><div class="pila-xs">
           <strong id="prep-titulo">¿Cómo llegas hoy?</strong>
-          <span class="mini secundario">{esPorSuCuenta(atleta) ? 'Tres toques: en un día flojo, la app te propone los pesos de la última vez.' : 'Tres toques. Tu coach lo verá con la sesión.'}</span>
+          <span class="mini secundario">{esPorSuCuenta(atleta) ? 'Tres toques: te da un consejo para hoy.' : 'Tres toques. Tu coach lo verá con la sesión.'}</span>
         </div></div>
         {alSaltar && <button class="btn-texto" onClick={alSaltar}>Ahora no</button>}
       </div>
