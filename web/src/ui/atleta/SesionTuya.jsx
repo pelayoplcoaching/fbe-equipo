@@ -10,6 +10,7 @@ import { esPorSuCuenta, sinTuCoach } from '../../logica/esencial.js';
 import { Imagen } from '../Imagen.jsx';
 
 export function TiempoHoy({ ejercicios }) {
+  const { atleta } = useApp();
   const [min, setMin] = useState(null);
   const r = min ? siVasJusto(ejercicios, min) : null;
   return (
