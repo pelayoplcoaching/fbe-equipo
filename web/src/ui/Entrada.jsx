@@ -64,6 +64,8 @@ const PERSONAS_ESENCIAL = [
   ['tomas@fbe.demo', 'Tomás Rey', 'FBE Esencial: ha terminado las cuatro semanas; sus marcas', 'T'],
   ['clara@fbe.demo', 'Clara Prieto', 'FBE Esencial: espera que Pelayo confirme su visto bueno médico', 'C'],
   ['ines@fbe.demo', 'Inés Gil', 'FBE Esencial con nutrición: prepara su plan de comida', 'I'],
+  ['luciav@fbe.demo', 'Lucía Vidal', 'FBE Esencial: empieza de cero dentro de dos lunes (la espera)', 'L'],
+  ['andresm@fbe.demo', 'Andrés Mora', 'FBE Esencial: ya entrena y empieza el lunes que viene', 'A'],
   ['pelayo@fbe.demo', 'Pelayo', 'Coach: panel de atletas', 'P'],
 ];
 

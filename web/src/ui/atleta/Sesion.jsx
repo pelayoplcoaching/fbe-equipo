@@ -1182,7 +1182,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {esUltimo && Object.keys(hechas).length > 0 && Object.keys(hechas).length === e.series - 1 && <PonTuCancion sesionId={sesionId} himno="ultima" />}
           <NotaFijada nota={nota} alGuardar={guardarNota} editando={editandoNota} alEditar={setEditandoNota} />
           {/* (alta, 42) FBE Esencial: la primera vez, sin kilos pautados, «¿Qué peso pongo?» (el texto de la guía) */}
-          {sobran && !propio && !porTiempo && e.carga_sugerida_kg == null && !ultimas && !completo && <QuePesoPongo rir={e.rir_objetivo} />}
+          {sobran && !propio && !porTiempo && e.carga_sugerida_kg == null && !ultimas && !completo && <QuePesoPongo rir={e.rir_objetivo} ejercicioId={ej?.id || null} />}
           {sobran && !propio && sesionId && !completo && <AyudaEjercicio pauta={e} sesionId={sesionId} />}
           {lugar && <p class="cambio-lugar"><span>Cambiado por tu material. Lo que apuntes queda como {ej.nombre}.</span><button class="btn-texto" onClick={deshacerLugar}><Icono n="reiniciar" /> Deshacer</button></p>}
           {sinMaterial && <p class="cambio-lugar"><span>{sobran ? 'No hay una alternativa marcada que puedas hacer con tu material. Hazlo como puedas o cámbialo tú.' : 'Tu coach no ha marcado una alternativa que puedas hacer con tu material. Hazlo como puedas, cámbialo tú o coméntaselo.'}</span></p>}

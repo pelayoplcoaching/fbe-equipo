@@ -5058,8 +5058,24 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             cuestionario_en: c?.completado_en || null, resultado: c?.resultado || null,
             visto_bueno_pedido_en: a.visto_bueno_pedido_en || null, visto_bueno_en: a.visto_bueno_en || null,
             plan_inicio: bloques.map((x) => x.fecha_inicio).filter(Boolean).sort()[0] || null, primera_sesion: hechas[0] || null,
+            // (102) sus días (las sesiones de su primera semana, todas con día), su gimnasio y su primera semana
+            ...(() => {
+              const pi = bloques.map((x) => x.fecha_inicio).filter(Boolean).sort()[0] || null;
+              const w1 = new Set(tabla('semanas').filter((w) => bloques.some((x) => x.id === w.bloque_id) && w.programacion === 'programada' && w.fecha_inicio === pi).map((w) => w.id));
+              const ss = tabla('sesiones').filter((s) => w1.has(s.semana_id));
+              return { dias: ss.length ? ss.every((s) => s.dia_previsto) : null,
+                gimnasio: tabla('esencial_notas').some((n) => n.atleta_id === a.id && n.tipo === 'gimnasio') || Object.keys(a.esencial_alternativas || {}).length > 0,
+                primera_semana: pi };
+            })(),
           };
         });
+      }
+      // (102) Cuántos empiezan su mismo lunes (solo el número; con menos de tres, null)
+      if (nombre === 'esencial_companeros') {
+        const yo = tabla('atletas').find((a) => a.perfil_id === uid && a.modalidad === 'por_su_cuenta' && a.estado !== 'baja');
+        if (!yo?.esencial_inicio) return null;
+        const n = tabla('atletas').filter((a) => a.modalidad === 'por_su_cuenta' && a.estado !== 'baja' && a.esencial_inicio === yo.esencial_inicio).length;
+        return n >= 3 ? n : null;
       }
       // Notificaciones: en la demo no hay móviles a los que enviar
       if (nombre === 'probar_notificacion') {

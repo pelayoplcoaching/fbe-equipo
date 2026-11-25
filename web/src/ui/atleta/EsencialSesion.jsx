@@ -7,6 +7,10 @@ import { textoQuePeso, textoSiguiente, TEXTO_AGUJETAS } from '../../logica/esenc
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { Arte, ArteDuo } from './EsencialArte.jsx';
 import { hoyISO } from '../../logica/fechas.js';
+import { perezoso } from '../perezoso.jsx';
+
+// (v0.248, apagado) sus kilos de partida (quien ya entrena), dentro de «¿Qué peso pongo?»
+const KilosPartidaPista = perezoso(() => import('./EsencialEspera.jsx'), 'KilosPartidaPista', { mientras: null });
 
 const clave = (id) => `fbe-esencial-guia:${id}`;
 const vista = (id) => { try { return localStorage.getItem(clave(id)) === '1'; } catch { return false; } };
@@ -35,13 +39,14 @@ export function GuiaPrimeraSesion() {
 }
 
 // (42) Junto a un ejercicio sin kilos, la primera vez que lo hace
-export function QuePesoPongo({ rir }) {
+export function QuePesoPongo({ rir, ejercicioId = null }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <div class="alta-que-peso">
       <button type="button" class="btn-texto" aria-expanded={abierto ? 'true' : 'false'} onClick={() => setAbierto(!abierto)}><Icono n="pregunta" /> ¿Qué peso pongo?</button>
       {abierto && <Arte id="esencial-que-peso" />}
       {abierto && <p class="peq">{textoQuePeso(rir)}</p>}
+      {abierto && ejercicioId && <KilosPartidaPista ejercicioId={ejercicioId} />}
     </div>
   );
 }

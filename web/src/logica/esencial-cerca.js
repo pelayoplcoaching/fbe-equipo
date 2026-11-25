@@ -118,7 +118,7 @@ export const hitoDe = (n) => HITOS[Number(n)] || null;
 
 // ---------- (29) «Tu trimestre», a las doce semanas ----------
 // filas: [{ nombre, por_tiempo, antes: { kg, max }, ahora: { kg, max } }] (api-esencial: trimestre) → cada una con su frase
-export function trimestreDe({ filas = [], sesiones = 0, semanas = 0 } = {}) {
+export function trimestreDe({ filas = [], sesiones = 0, semanas = 0, cuerpo = null } = {}) {
   const u = (f) => (f.por_tiempo ? 'segundos' : 'kg');
   const lineas = filas.filter((f) => f.ahora && f.antes).map((f) => {
     const a = f.por_tiempo ? Number(f.antes.max) : Number(f.antes.kg), b = f.por_tiempo ? Number(f.ahora.max) : Number(f.ahora.kg);
@@ -127,7 +127,10 @@ export function trimestreDe({ filas = [], sesiones = 0, semanas = 0 } = {}) {
     return { nombre: f.nombre, sube: dif > 0, texto: dif === 0 ? `${num(b)} ${u(f)}, como al empezar` : `de ${num(a)} a ${num(b)} ${u(f)} (${dif > 0 ? '+' : '−'}${num(Math.abs(dif))})` };
   });
   const suben = lineas.filter((l) => l.sube).length;
-  return { lineas, suben,
+  // (v0.248, 68) su punto de partida: el peso y la cintura de antes de empezar y los de ahora, si los apuntó
+  const medida = (nombre, x, ud) => (x ? { nombre, texto: x.antes === x.ahora ? `${num(x.ahora)} ${ud}, como al empezar` : `de ${num(x.antes)} a ${num(x.ahora)} ${ud}` } : null);
+  const cuerpoL = [medida('Tu peso', cuerpo?.peso, 'kg'), medida('Tu cintura', cuerpo?.cintura, 'cm')].filter(Boolean);
+  return { lineas, suben, cuerpo: cuerpoL,
     titulo: semanas >= 12 ? `${semanas} semanas: tu trimestre` : `Lo que llevas: ${cuantas(semanas, 'una semana', '% semanas')}`,
     resumen: `${cuantas(sesiones, 'Una sesión hecha', '% sesiones hechas')}${lineas.length ? ` y más carga en ${suben} de ${lineas.length} ejercicios` : ''}.` };
 }

@@ -16,7 +16,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 console.log('Las respuestas');
 const cats = CATEGORIAS.map((c) => c[0]);
 check(RESPUESTAS.length >= 40 && new Set(RESPUESTAS.map((x) => x.id)).size === RESPUESTAS.length && RESPUESTAS.every((x) => /^[a-z0-9-]+$/.test(x.id)), `${RESPUESTAS.length} respuestas, cada una con su clave, sin repetir`);
-check(CATEGORIAS.length === 8 && RESPUESTAS.every((x) => cats.includes(x.cat)) && cats.every((c) => RESPUESTAS.filter((x) => x.cat === c).length >= 4), 'ocho temas, y en cada uno al menos cuatro respuestas');
+check(CATEGORIAS.length === 9 && RESPUESTAS.every((x) => cats.includes(x.cat)) && cats.every((c) => RESPUESTAS.filter((x) => x.cat === c).length >= 4), 'nueve temas (con «Antes de empezar», v0.248), y en cada uno al menos cuatro respuestas');
 check(RESPUESTAS.every((x) => x.q.length >= 8 && x.q.length <= 60 && x.r.length >= 60 && x.r.length <= 430), 'preguntas cortas y respuestas de un párrafo');
 check(/tu tendencia, que es lo que importa/.test(respuestaDe('peso').r), 'el peso de un día no dice nada: la tendencia');
 const todo = [...RESPUESTAS, ...PENDIENTES].map((x) => `${x.q} ${x.r}`).join(' ');
@@ -30,8 +30,8 @@ check(JSON.stringify(salud) === JSON.stringify(['agujetas', 'dolor', 'enfermedad
 check(/para y habla con tu médico/.test(respuestaDe('dolor').r) && /La app no valora el dolor/.test(respuestaDe('dolor').r), 'y «¿Y si me duele algo?» conserva las señales para parar y que la app no valora el dolor');
 
 console.log('\nLo apagado hasta que Pelayo lo vea');
-check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.has('checkin_responde') && !encendido('salud_nueva') && encendido('salud_nueva', true) && encendido('otra_cosa') && APAGADO.size === 13
-  && ['enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante'].every((k) => APAGADO.has(k)), 'lo apagado (trece cosas: las cinco de antes y las ocho de la tanda 6); la vista previa lo enciende');
+check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.has('checkin_responde') && !encendido('salud_nueva') && encendido('salud_nueva', true) && encendido('otra_cosa') && APAGADO.size === 15
+  && ['enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante'].every((k) => APAGADO.has(k)), 'lo apagado (quince cosas: las cinco de antes, las ocho de la tanda 6 y las dos de la tanda 7); la vista previa lo enciende');
 check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && !respuestas().some((x) => PENDIENTES.some((p) => p.id === x.id)) && respuestas({ previa: true }).filter((x) => x.pendiente).length === PENDIENTES.length,
   `las ${PENDIENTES.length} respuestas de salud nuevas no salen; en la vista previa, marcadas como pendientes`);
 check(respuestaDe('resfriado') === null && respuestaDe('resfriado', { previa: true })?.pendiente === true, 'ni se llega a ellas por su clave');

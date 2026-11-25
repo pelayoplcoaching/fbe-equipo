@@ -1,0 +1,87 @@
+/* FBE Esencial (tanda 7): "la espera", de la reserva a su lunes. La cuenta atras de Hoy (lo que le falta y lo de cada
+   dia) y sus hojas: el gimnasio, el aviso de prueba, su porque, su punto de partida, ensayar una serie, el primer dia, sus
+   kilos de partida y lo de su medico. Solo clases lun-*, cada regla en su propio elemento (una sola clase: los estados,
+   con su propia clase y no con un atributo), sin tocar margenes ni tamanos de letra (eso lo ponen las clases comunes en
+   el JSX): asi van enteras con el trozo de EsencialEspera (scripts/css-coach.mjs). */
+
+/* La tarjeta de Hoy */
+.lun-tarjeta { min-width: 0; }
+.lun-cab { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-12); }
+.lun-cuenta {
+  display: grid; place-items: center; min-width: var(--esp-48); min-height: var(--esp-48); padding: var(--esp-4) var(--esp-8);
+  border-radius: var(--r-10); background: var(--morado); color: var(--sobre-morado);
+}
+.lun-lista { display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2); }
+.lun-lista-t { min-width: 0; }
+.lun-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); min-height: var(--esp-32); }
+.lun-item-si { color: var(--tinta-2); }
+.lun-item-t { min-width: 0; overflow-wrap: anywhere; }
+.lun-marca {
+  display: grid; place-items: center; width: var(--esp-22); height: var(--esp-22); flex: none;
+  border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora); background: var(--hoja); color: var(--sobre-morado);
+}
+.lun-marca-si { border-color: var(--morado); background: var(--morado); }
+.lun-hoy { display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); }
+.lun-hoy-et { color: var(--morado); }
+.lun-extra { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.lun-demo { display: grid; gap: var(--esp-6); padding-top: var(--esp-8); border-top: var(--filo-fino) dashed var(--linea); }
+.lun-demo-t { color: var(--tinta-2); }
+.lun-rango { width: 100%; accent-color: var(--morado); }
+.lun-vuelve { min-width: 0; }
+
+/* Listas numeradas y lo hecho */
+.lun-cosas { display: grid; gap: var(--esp-6); }
+.lun-cosa { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); }
+.lun-num {
+  display: grid; place-items: center; width: var(--esp-22); height: var(--esp-22); border-radius: var(--r-pildora);
+  background: var(--hoja-2); color: var(--morado);
+}
+.lun-hecho { display: inline-flex; align-items: center; gap: var(--esp-6); color: var(--ok); }
+.lun-pasos { display: grid; gap: var(--esp-10); }
+.lun-p { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+
+/* Las hojas */
+.lun-avisos { min-width: 0; }
+.lun-gimnasio { min-width: 0; }
+.lun-porque { min-width: 0; }
+.lun-partida { min-width: 0; }
+.lun-ensayo { min-width: 0; }
+.lun-primero { min-width: 0; }
+.lun-kilos { min-width: 0; }
+.lun-medico { min-width: 0; }
+.lun-filas { display: grid; gap: var(--esp-6); }
+.lun-fila { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.lun-fila-c { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); }
+.lun-alts { display: grid; gap: var(--esp-6); }
+.lun-alt {
+  display: flex; align-items: center; gap: var(--esp-6); min-height: var(--esp-40); padding: var(--esp-6) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit; text-align: start; cursor: pointer;
+}
+.lun-alt:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.lun-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
+.lun-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.lun-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-10); }
+.lun-kg { width: calc(var(--esp-48) * 2); }
+.lun-cita { padding: var(--esp-12) var(--esp-14); border-inline-start: var(--filo-marca) solid var(--morado); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta); }
+
+/* La serie de mentira */
+.lun-serie { display: grid; gap: var(--esp-10); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); }
+.lun-paso { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-6); }
+.lun-tecla {
+  display: grid; place-items: center; width: var(--esp-40); height: var(--esp-40); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja-2); color: var(--tinta); cursor: pointer;
+}
+.lun-tecla:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.lun-valor { text-align: center; }
+.lun-sobran { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.lun-op {
+  min-height: var(--esp-32); padding: var(--esp-4) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+}
+.lun-op-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.lun-op:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+@media (max-width: 359px) {
+  .lun-dos { grid-template-columns: minmax(0, 1fr); }
+  .lun-extra { grid-template-columns: minmax(0, 1fr); }
+}

@@ -4,6 +4,8 @@
 // Pelayo va en PENDIENTES y no sale (APAGADO) hasta que dé su visto bueno.
 //   { id, cat, q, r, enlace?: [texto, ruta de la web], ir?: accion de «¿Qué necesitas?» que lo resuelve }
 export const CATEGORIAS = [
+  // (v0.248, tanda 7) lo de antes de su lunes (con «¿Cuándo se me cobra?» y «¿Puedo darme de baja?», que van en su suscripción)
+  ['antes', 'Antes de empezar', 'calendario'],
   ['empezar', 'Empezar', 'diana'],
   ['sesion', 'La sesión', 'hoy'],
   ['semana', 'La semana', 'calendario'],
@@ -15,6 +17,15 @@ export const CATEGORIAS = [
 ];
 
 export const RESPUESTAS = [
+  // ---- (v0.248) Antes de empezar (de lo que ya dicen la guía, la bienvenida y las preguntas de siempre)
+  { id: 'nunca', cat: 'antes', q: 'Nunca he entrenado',
+    r: 'Para eso es «Primeras 4 semanas», las de la guía: dos días y cinco ejercicios. La primera semana es una serie de cada uno, de diez a doce repeticiones: aprender el gesto y salir con ganas de volver. Media hora y a casa.' },
+  { id: 'primer-no', cat: 'antes', q: 'El día que empiezo no puedo',
+    r: 'No pasa nada: en «Tus días» eliges los que te vengan bien esa semana (mejor que no vayan seguidos) y la sesión pasa a ese día. Las sesiones se abren el lunes en que empieza tu tanda.' },
+  { id: 'antes-ya', cat: 'antes', q: '¿Puedo empezar antes?',
+    r: 'Las sesiones se abren el lunes en que empieza tu tanda, el mismo día para todos. Hasta entonces, mira tus ejercicios y sus vídeos, prepara tu gimnasio y elige tus días: llegarás con todo hecho.' },
+  { id: 'llevar', cat: 'antes', q: '¿Qué llevo el primer día?',
+    r: 'Ropa cómoda, agua y el móvil con la app: ahí tienes tu sesión y ahí apuntas cada serie. Funciona aunque el gimnasio no tenga cobertura.' },
   // ---- Empezar
   { id: 'plan', cat: 'empezar', q: '¿Cómo se elige mi plan?',
     r: 'Con tu cuestionario. Si nunca has entrenado, o llevas menos de un año y ahora estás parado, empiezas por «Primeras 4 semanas», las de la guía: dos días, cinco ejercicios y una semana final de marcas. Si ya entrenas, la app te recomienda dos o tres rutinas según tus días, tu material y lo que te apetece, y eliges tú.' },
@@ -41,7 +52,7 @@ export const RESPUESTAS = [
     r: 'Apúntalo tal cual: es lo que le dice a la app que toca subir. Si te sobraban muchísimas (ocho o más), sube un poco el peso en la serie siguiente.' },
   { id: 'descanso', cat: 'sesion', q: '¿Cuánto descanso entre series?',
     r: 'Lo que necesites para repetir la serie bien: uno o dos minutos. El reloj de descanso arranca solo al marcar la serie.' },
-  { id: 'maquina', cat: 'sesion', q: 'La máquina está ocupada',
+  { id: 'maquina', cat: 'sesion', tambien: ['antes'], q: 'La máquina está ocupada',
     r: 'Abre el ejercicio y toca «Cambiar»: verás sus alternativas. Lo que apuntes queda a nombre de la alternativa, así tus marcas no se mezclan.' },
   { id: 'tecnica', cat: 'sesion', q: 'No sé si lo hago bien',
     r: 'Mira el vídeo en «Cómo se hace» y quédate con un peso que controles en todo el recorrido. Si puedes, pide a alguien de sala que te mire una serie. Y si la duda sigue, mándala para el directo del mes.', ir: 'directo' },
@@ -113,9 +124,9 @@ export const RESPUESTAS = [
   { id: 'datos', cat: 'app', q: '¿Quién ve mis datos?',
     r: 'Además de ti, Pelayo, que es el responsable de la app: no revisa tu día a día ni te contesta uno a uno, pero ve tu ficha. En Perfil tienes «Privacidad de un vistazo», con lo que ve y lo que no, y la descarga de todos tus datos.' },
   // ---- Tu suscripción
-  { id: 'cobro', cat: 'suscripcion', q: '¿Cuándo se me cobra?',
+  { id: 'cobro', cat: 'suscripcion', tambien: ['antes'], q: '¿Cuándo se me cobra?',
     r: 'Al reservar dejaste tu tarjeta, sin cobrar nada. La primera cuota se cobra el día en que empieza tu tanda y, desde ahí, cada mes o cada año, según lo que elegiste, con el mismo precio de fundador.' },
-  { id: 'baja', cat: 'suscripcion', q: '¿Puedo darme de baja?',
+  { id: 'baja', cat: 'suscripcion', tambien: ['antes'], q: '¿Puedo darme de baja?',
     r: 'Sí, cuando quieras, desde tu suscripción, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.', portal: true },
   { id: 'problema', cat: 'suscripcion', q: 'Algo falla en la app o en el cobro',
     r: 'Escribe al correo de contacto y Pelayo te contesta por correo.', correo: true },
@@ -139,7 +150,11 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   // (v0.247, tanda 6) salud: estoy enfermo, el seguimiento de una molestia, repasar la salud cada seis meses y la señal de
   // alarma; reglas nuevas de progresión: con una molestia en la zona no sube, la semana suave, dos sesiones duras
   // seguidas y la variante de un ejercicio atascado
-  'enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante']);
+  'enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante',
+  // (v0.248, tanda 7) sus kilos de partida en la semana 1 (cambia de dónde sale su primer peso) y la hoja para su médico (salud)
+  'kilos_partida', 'medico']);
+// (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
+export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // previa: en la demo, con «?previa=1», se ve lo apagado (para que Pelayo lo revise en su sitio)
 export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(clave);
 export const respuestas = ({ previa = false, publicas = [] } = {}) => [

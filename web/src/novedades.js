@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.248': {
+    // (FBE Esencial, tanda 7: la espera, de la reserva a su lunes; migración 102)
+    atleta: [],
+    coach: [
+      'FBE Esencial, la espera: hasta su lunes, cada día una cosa pequeña (su gimnasio, un ejercicio, el aviso de prueba, su primer día…).',
+      'En tu panel de FBE Esencial, «Listos para el lunes»: de los que empiezan, qué le falta a cada uno.',
+    ],
+  },
   '0.247': {
     // (FBE Esencial acompañado, tanda 6 de 6: automatizaciones, la vida real; migración 101)
     atleta: [],

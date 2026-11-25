@@ -10,6 +10,8 @@
 //     ficha (Datos) y la app le prepara su plan, desde el lunes que viene.
 //   · Inés Gil (093): el nivel con nutrición. Empieza esta semana con «Primeras 4 semanas» y aún no tiene plan de comida:
 //     en Hoy, «Tu plan de comida» le hace las preguntas y la app se lo calcula.
+//   · Lucía Vidal y Andrés Mora (v0.248): la espera. Lucía empieza de cero dentro de dos lunes; Andrés ya entrena, eligió
+//     su rutina y empieza el lunes que viene. En Hoy, la cuenta atrás, lo que les falta y una cosa pequeña cada día.
 import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
 import { filasPrimeras4, PRIMERAS_4, NOVATO_2, NOVATO_3, filasNovato3 } from '../logica/esencial-plantilla.js';
 import { sumarDias, lunesDe } from '../logica/fechas.js';
@@ -536,5 +538,21 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   cuestionario(ines, 3, { objetivo_detalle: 'Quiero ponerme fuerte y comer con orden.' });
   copiarPlantillaEsencial(t, { plantilla, atletaId: ines.id, inicio: lunesHoy, uuid, ahoraISO });
   db.pesos.push({ id: uuid(), atleta_id: ines.id, fecha: sumarDias(hoy, -2), kg: 68.4, notas: null });
-  return { marina, tomas, clara, ines, plantilla };
+
+  // (v0.248, tanda 7) Lucía: la espera de quien empieza de cero. Reservó hace unos días, su cuestionario está limpio y su
+  // plan («Primeras 4 semanas») empieza dentro de dos lunes: en Hoy, la cuenta atrás, lo que le falta y lo de cada día
+  const lucia = atleta({ email: 'luciav@fbe.demo', nombre: 'Lucía Vidal', alta: sumarDias(hoy, -5), objetivo: 'FBE Esencial · Entrenamiento', inicio: sumarDias(lunesHoy, 14) });
+  cuestionario(lucia, 4, { objetivo_detalle: 'Quiero empezar a cuidarme y no sé por dónde.' });
+  copiarPlantillaEsencial(t, { plantilla, atletaId: lucia.id, inicio: sumarDias(lunesHoy, 14), uuid, ahoraISO });
+
+  // (v0.248) Andrés: la espera de quien ya entrena. Entrena desde hace un par de años, eligió su rutina y empieza el lunes
+  // que viene
+  const rutinaAndres = '2 días · Full body · B · Máquinas y mancuernas';
+  const andres = atleta({ email: 'andresm@fbe.demo', nombre: 'Andrés Mora', alta: sumarDias(hoy, -9), objetivo: 'FBE Esencial · Entrenamiento', inicio: sumarDias(lunesHoy, 7),
+    extra: { esencial_plantilla: rutinaAndres, esencial_plantilla_en: `${sumarDias(hoy, -8)}T20:00:00.000Z` } });
+  cuestionario(andres, 8, { objetivo_detalle: 'Llevo un par de años entrenando por mi cuenta y quiero orden.', experiencia: '1_3',
+    gustos: { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' } });
+  const plA = t('bloques').find((x) => x.es_plantilla && x.nombre === rutinaAndres);
+  if (plA) copiarPlantillaEsencial(t, { plantilla: plA, atletaId: andres.id, inicio: sumarDias(lunesHoy, 7), uuid, ahoraISO });
+  return { marina, tomas, clara, ines, lucia, andres, plantilla };
 }

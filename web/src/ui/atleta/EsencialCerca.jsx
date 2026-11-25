@@ -165,7 +165,9 @@ function HojaTrimestre({ p, cuestionario, alCerrar, recargar }) {
   const { api, backend, atleta } = useApp();
   const d = useCarga(() => datos.trimestre(api, backend, atleta.id), [atleta.id]);
   const [rutinas, setRutinas] = useState(false);
-  const t = d.datos ? trimestreDe(d.datos) : null;
+  // (v0.248) con antecedente de un trastorno de la conducta alimentaria, sin el peso de antes y de ahora
+  const tca = useCarga(() => (api.esencialTca ? api.esencialTca(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id]);
+  const t = d.datos ? trimestreDe({ ...d.datos, cuerpo: !tca.cargando && tca.datos !== true ? d.datos.cuerpo : null }) : null;
   return (
     <Hoja titulo="Tu trimestre" alCerrar={alCerrar}>
       <div class="pila cer-trimestre" aria-busy={d.cargando ? 'true' : 'false'}>
@@ -186,6 +188,16 @@ function HojaTrimestre({ p, cuestionario, alCerrar, recargar }) {
               ))}
             </ul>
             <p class="mini terciario">Los kilos, de tu primera semana con esta rutina a la de ahora.</p>
+            {t.cuerpo.length > 0 && (
+              <ul class="cer-tri-l" aria-label="Tu punto de partida y cómo vas">
+                {t.cuerpo.map((l) => (
+                  <li key={l.nombre} class="cer-tri-f">
+                    <span class="cer-tri-n">{l.nombre}</span>
+                    <span class="cer-tri-x num peq">{l.texto}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <section class="pila-s" aria-labelledby="cer-sigue-t">
               <strong id="cer-sigue-t">Y ahora, ¿qué?</strong>
               {TRIMESTRE_SIGUE.map(([id, titulo, texto]) => (

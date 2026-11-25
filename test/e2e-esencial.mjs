@@ -338,9 +338,15 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(/Tomás Rey/.test(await piloto.textContent().catch(() => '')) && /han entrenado/.test(await piloto.textContent().catch(() => '')), 'en Atletas, el panel «FBE Esencial»: cada uno y quién ha entrenado esta semana');
     await piloto.getByRole('button', { name: /encuesta/ }).click();
     const he = p.locator('[aria-modal="true"]').last();
-    await he.getByRole('button', { name: /Mandarla a 4 atletas/ }).click();
+    await he.getByRole('button', { name: /Mandarla a 6 atletas/ }).click();
     const mandada = await he.getByRole('button', { name: 'Ya la tienen todos' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-    check(mandada && /Sin contestar: /.test(await he.textContent().catch(() => '')), 'la encuesta de la semana 6, mandada a los cuatro (y quién no ha contestado)');
+    check(mandada && /Sin contestar: /.test(await he.textContent().catch(() => '')), 'la encuesta de la semana 6, mandada a los seis (y quién no ha contestado)');
+    // (v0.248, 77) «Listos para el lunes»: Clara (su visto bueno, por confirmar) y Andrés empiezan el lunes que viene
+    const listos = piloto.locator('#lun-coach-t');
+    const conListos = await listos.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    const tListos = conListos ? (await listos.locator('xpath=..').textContent()) || '' : '';
+    check(conListos && /Listos para el lunes \d+ de \w+: 0 de 2/.test(tListos) && /Andrés Mora/.test(tListos) && /Clara Prieto/.test(tListos) && /confirmar visto bueno/.test(tListos) && /días · avisos · gimnasio|avisos · gimnasio/.test(tListos),
+      `en el panel, «Listos para el lunes»: 0 de 2, con lo que le falta a cada uno (${tListos.replace(/\s+/g, ' ').slice(0, 160)})`);
     await he.getByRole('button', { name: /^Cerrar/ }).first().click().catch(() => {});
     await p.getByText('Clara Prieto').first().click();
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
@@ -1030,7 +1036,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(/La máquina está ocupada/.test(await hoja.locator('.ayu-p').first().textContent().catch(() => '')), 'el buscador encuentra sin tildes («maquina ocupada»)');
     await hoja.locator('.ayu-buscar-c').fill('');
     await hoja.getByRole('button', { name: 'Todos los temas' }).click();
-    check((await hoja.locator('.ayu-cat').count()) === 8, 'y sus ocho temas');
+    check((await hoja.locator('.ayu-cat').count()) === 9, 'y sus nueve temas (con «Antes de empezar», v0.248)');
     await desborda(p, 'el centro de respuestas');
     await hoja.locator('.cerrar-hoja').click();
     await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();   // (y «Me duele algo», que estaba debajo)
@@ -1350,6 +1356,103 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(await suave.waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && /Quita una serie de cada ejercicio/.test(await suave.textContent().catch(() => '')), '«Necesito una semana suave»: al pedirla, arriba en Hoy sale qué hacer esta semana');
       check(/borrador, pendiente de su visto bueno/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana, como borrador (sin la vista previa no sale)');
     } else check(false, 'la vista previa de lo apagado');
+    await ctx.close();
+  }
+  // ---------- (la espera, tanda 7; v0.248) Lucía empieza de cero dentro de dos lunes; Andrés ya entrena y empieza el lunes ----------
+  {
+    const { ctx, p } = await movil();
+    await entrar(p, /Lucía/);
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(800);
+    await cerrar(p);
+    const t = p.locator('.lun-tarjeta');
+    const conT = await t.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const faltan = conT ? Number(await t.getAttribute('data-faltan')) : 0;
+    check(conT && faltan >= 8 && faltan <= 14 && /Hasta tu lunes/.test(await t.textContent()), `Lucía (empieza dentro de dos lunes): en Hoy, «Hasta tu lunes» (faltan ${faltan})`);
+    check(/Te quedan 3 cosas para estar listo/.test(await t.locator('.lun-lista').textContent().catch(() => '')) && (await t.locator('.lun-item-si').count()) === 1,
+      'lo que le falta para estar listo: sus días, los avisos y su gimnasio (el cuestionario, hecho)');
+    check((await t.locator('.lun-hoy').count()) === 1 && (await t.locator('.lun-extra').count()) === 0, 'una sola cosa para hoy, y sin lo apagado (sus kilos de partida, lo de su médico)');
+    // la espera día a día (solo en la demo): cada día, lo suyo
+    const dia = async (f) => {
+      await t.locator('#lun-dia').evaluate((el, v) => { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); }, f);
+      await p.waitForTimeout(300);
+      return (await t.locator('.lun-hoy').textContent().catch(() => '')) || '';
+    };
+    const mal = [];
+    for (const [f, re] of [[27, /Tu porqué/], [23, /Prepara tu gimnasio/], [20, /Un ejercicio al día/], [15, /Tu punto de partida/], [12, /calendario/], [9, /Ensaya una serie/], [4, /¿Te llegan los avisos\?/], [2, /Tu primer día/], [1, /Mañana, tu primera sesión/]]) {
+      if (!re.test(await dia(f))) mal.push(f);
+    }
+    check(!mal.length, `la espera día a día: su porqué, su gimnasio, un ejercicio, su punto de partida, el calendario, ensayar, los avisos, el primer día y la víspera${mal.length ? ` (mal: ${mal.join(', ')})` : ''}`);
+    check(/Unos \d+ minutos: 5 ejercicios/.test(await dia(1)) && /Lo importante: Prensa de piernas/.test(await dia(1)), 'la víspera: su primera sesión, cuánto dura y lo importante');
+    // el ejercicio del día: dos cosas y «Visto»
+    await dia(20);
+    check((await t.locator('.lun-hoy .lun-cosa').count()) === 2, 'el ejercicio del día, con dos cosas en las que fijarse');
+    await t.getByRole('button', { name: 'Visto', exact: true }).click();
+    check(/Visto\. Mañana, el siguiente/.test(await t.locator('.lun-hoy').textContent()), '«Visto»: mañana, el siguiente');
+    // su gimnasio: «No está» → su alternativa → «Todo listo»
+    await dia(23);
+    await t.locator('.lun-hoy').getByRole('button', { name: 'Mirar mi gimnasio' }).click();
+    const hg = p.locator('[aria-modal="true"]').last();
+    await hg.locator('.lun-fila').first().waitFor({ timeout: 15000 }).catch(() => {});
+    check((await hg.locator('.lun-fila').count()) === 5, 'su gimnasio: los cinco ejercicios de su semana 1');
+    await hg.locator('.lun-fila').first().getByRole('button', { name: 'No está' }).click();
+    await hg.locator('.lun-alt').first().click();
+    check(await hg.getByText(/En lugar de Prensa de piernas/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false), 'la prensa no está en su gimnasio: deja puesta su alternativa');
+    await hg.getByRole('button', { name: /Todo listo en mi gimnasio/ }).click();
+    await p.waitForTimeout(800);
+    check(/Te quedan 2 cosas/.test(await t.locator('.lun-lista').textContent().catch(() => '')), '«Todo listo en mi gimnasio»: una cosa menos en su lista');
+    // ensayar una serie (no se guarda nada)
+    await dia(9);
+    await t.locator('.lun-hoy').getByRole('button', { name: 'Ensayar' }).click();
+    const he = p.locator('[aria-modal="true"]').last();
+    await he.locator('.lun-serie').waitFor({ timeout: 10000 }).catch(() => {});
+    await he.getByRole('button', { name: 'Más peso' }).click();
+    await he.locator('.lun-op', { hasText: '3' }).click();
+    await he.getByRole('button', { name: /Apuntar la serie/ }).click();
+    check(/Apuntada: 22,5 kg × 12, te sobraban 3/.test(await he.textContent()), 'ensaya una serie: «Apuntada: 22,5 kg × 12, te sobraban 3» (y no se guarda)');
+    await desborda(p, 'ensayar una serie');
+    await he.locator('.cerrar-hoja').click();
+    // el aviso de prueba (en la demo no hay móvil: sin avisos activados, lo dice)
+    await dia(4);
+    await t.locator('.lun-hoy').getByRole('button', { name: 'Probar' }).click();
+    const ha = p.locator('[aria-modal="true"]').last();
+    await ha.getByRole('button', { name: /aviso de prueba/ }).click();
+    check(await ha.getByText(/no tienes los avisos activados/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false), 'el aviso de prueba: sin avisos activados, se lo dice y le deja activarlos');
+    await ha.locator('.cerrar-hoja').click();
+    // su primer día, paso a paso
+    await dia(2);
+    await t.locator('.lun-hoy').getByRole('button', { name: 'Verlo' }).click();
+    const hp = p.locator('[aria-modal="true"]').last();
+    await hp.locator('.lun-p').first().waitFor({ timeout: 10000 }).catch(() => {});
+    check((await hp.locator('.lun-p').count()) === 5 && /media hora y a casa/.test(await hp.textContent()), 'su primer día, en cinco pasos');
+    await hp.locator('.cerrar-hoja').click();
+    await t.getByRole('button', { name: 'Volver a hoy' }).click();
+    await desborda(p, 'la espera de Lucía');
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Andrés/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(800);
+    await cerrar(p);
+    const t = p.locator('.lun-tarjeta');
+    const conT = await t.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(conT && Number(await t.getAttribute('data-faltan')) <= 7 && (await t.locator('.lun-extra').count()) === 1 && /Apunta con cuántos kilos vas ahora/.test(await t.textContent()),
+      'Andrés (ya entrena, empieza el lunes que viene), con la vista previa: «Mis kilos», en borrador');
+    if (conT) {
+      await t.getByRole('button', { name: 'Mis kilos' }).click();
+      const hk = p.locator('[aria-modal="true"]').last();
+      const conK = await hk.locator('.lun-kg').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      if (conK) {
+        await hk.locator('.lun-kg').first().fill('40');
+        await hk.getByRole('button', { name: /Guardar/ }).click();
+      }
+      check(conK && await p.getByText('Tus kilos de partida, guardados').waitFor({ timeout: 8000 }).then(() => true).catch(() => false), 'apunta sus kilos de partida y se guardan');
+    }
+    await desborda(p, 'la espera de Andrés');
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);

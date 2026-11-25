@@ -291,7 +291,10 @@ export async function trimestre(api, b, atletaId, { hoy = fechaMadrid() } = {}) 
       ahora: { kg: p.carga_sugerida_kg != null ? Number(p.carga_sugerida_kg) : movido(p), max: p.reps_max ?? null } });
   }
   const ultimoLunes = String(propias[propias.length - 1].fecha_inicio).slice(0, 10);
-  return { semanas: semanaDelPlan(prog.bloques, ultimoLunes) || propias[propias.length - 1].numero, sesiones: (await hechas(b, atletaId)).length, filas };
+  // (v0.248, 68) su peso y su cintura de antes de empezar y los de ahora, si los apuntó
+  const inicioPlan = (prog.bloques || []).map((x) => String(x.fecha_inicio || '').slice(0, 10)).filter(Boolean).sort()[0] || null;
+  const cuerpo = await cuerpoAntesYAhora(api, atletaId, inicioPlan).catch(() => null);
+  return { semanas: semanaDelPlan(prog.bloques, ultimoLunes) || propias[propias.length - 1].numero, sesiones: (await hechas(b, atletaId)).length, filas, cuerpo };
 }
 // Sus sesiones hechas, de todos sus bloques: [{ id, fecha, rpe }], de la más antigua a la última
 export async function hechas(b, atletaId) {
@@ -454,4 +457,52 @@ export async function semanaDeTodos(b, { hoy = fechaMadrid() } = {}) {
   });
   const desde = sumarDias(hoy, -30);
   return { filas, preguntas: (preguntas || []).filter((x) => !x.respondida_en).length, notas: (vamos || []).filter((x) => String(x.creada_en || '').slice(0, 10) >= desde) };
+}
+
+// ---------- (v0.248, tanda 7) La espera: de la reserva a su lunes ----------
+const falta102 = falta(/esencial_companeros|esencial_notas_validas|partida/, '|23514');
+// (71) Cuántos empiezan su mismo lunes (solo el número; null con menos de tres o sin la migración 102)
+export async function companeros(b) {
+  try { const n = await b.rpc('esencial_companeros', {}); return Number.isFinite(Number(n)) && n != null ? Number(n) : null; } catch (e) { if (falta102(e)) return null; throw e; }
+}
+// (63 y 65) Los ejercicios de su primera semana (con su vídeo y las notas de Pelayo), sin repetir: [{ ejercicio, nota }]
+export async function ejerciciosSemana1(api, atletaId, p) {
+  const w = [...(p?.semanas || [])].sort((a, b) => a.numero - b.numero)[0];
+  if (!w) return [];
+  const vistos = new Map();
+  for (const s of (p.sesiones?.[w.id] || [])) {
+    const d = await api.sesion(s.id, atletaId);
+    for (const x of d?.ejercicios || []) if (x.ejercicio && !vistos.has(x.ejercicio.id)) vistos.set(x.ejercicio.id, { ejercicio: x.ejercicio, nota: x.notas_coach || null });
+  }
+  return [...vistos.values()];
+}
+// (63) Su gimnasio, mirado: una nota de tipo 'gimnasio' (sin nada más). → true | false | null (sin la 100)
+export async function gimnasioMirado(b, atletaId) {
+  const n = await notas(b, atletaId, 'gimnasio');
+  return n == null ? null : n.length > 0;
+}
+export async function marcarGimnasio(b, atletaId, faltan = []) {
+  const ya = await notas(b, atletaId, 'gimnasio');
+  if (ya?.length) return ya[0];
+  return anotar(b, atletaId, 'gimnasio', { datos: { listo: true, faltan: unicos(faltan).slice(0, 20) } });
+}
+// (70) Sus kilos de partida (quien ya entrena): los últimos que apuntó. → { ejercicioId: kg } | null
+export async function kilosPartida(b, atletaId) {
+  try { const n = await notas(b, atletaId, 'partida'); return n?.[0]?.datos?.kilos || null; } catch { return null; }
+}
+export async function apuntarKilosPartida(b, atletaId, kilos) {
+  try {
+    const previas = (await notas(b, atletaId, 'partida')) || [];
+    const r = await anotar(b, atletaId, 'partida', { datos: { kilos } });
+    for (const x of previas) await quitarNota(b, x.id).catch(() => {});
+    return r;
+  } catch (e) { if (falta102(e)) return { falta102: true }; throw e; }
+}
+// (68) Su punto de partida, en «Tu trimestre»: el peso y la cintura de antes de empezar y los de ahora
+export async function cuerpoAntesYAhora(api, atletaId, inicio) {
+  const { antesYAhora } = await import('../logica/esencial-espera.js');
+  const [pesos, medidas] = await Promise.all([api.pesos(atletaId, 400).catch(() => []), api.medidas(atletaId).catch(() => [])]);
+  const peso = antesYAhora((pesos || []).map((x) => ({ fecha: x.fecha, valor: x.kg })), inicio);
+  const cintura = antesYAhora((medidas || []).filter((x) => x.cintura_cm != null).map((x) => ({ fecha: x.fecha, valor: x.cintura_cm })), inicio);
+  return peso || cintura ? { peso, cintura } : null;
 }

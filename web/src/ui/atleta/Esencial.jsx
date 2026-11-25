@@ -26,6 +26,9 @@ const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { m
 // (v0.245) cada tarjeta, con su «¿Dudas?», y en Perfil, todas las respuestas (en el trozo de la ayuda)
 const Dudas = perezoso(() => import('./EsencialAyuda.jsx'), 'Dudas', { mientras: null });
 const TodasLasRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'TodasLasRespuestas', { mientras: null });
+// (v0.248, tanda 7) la espera: la cuenta atrás con lo que le falta y lo de cada día; y, ya empezado, su porqué de vuelta
+const EsperaArriba = perezoso(() => import('./EsencialEspera.jsx'), 'EsperaArriba', { mientras: null });
+const PorqueVuelve = perezoso(() => import('./EsencialEspera.jsx'), 'PorqueVuelve', { mientras: null });
 
 // ---------- (alta, 28-32) Antes de empezar ----------
 // Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
@@ -819,10 +822,14 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
     <>
       {/* (v0.246) el saludo del día y, si toca, las agujetas, la vuelta tras unos días sin entrenar o un plan más corto */}
       {conPlan && <CercaArriba p={p} cuestionario={cuestionario} recargar={recargar} abrirSesion={abrirSesion} />}
+      {/* (v0.248) la primera semana que se le tuerce, su porqué (el que escribió antes de empezar) */}
+      {conPlan && <PorqueVuelve p={p} />}
       {/* (v0.247) lo que la app le ha organizado: su viaje, sus días de verdad, pasar a tres días, su objetivo… */}
       <VidaArriba p={p} cuestionario={cuestionario} recargar={recargar} irA={irA} />
       {/* sus marcas de la semana 4, en cuanto termina esa semana */}
       <TarjetaMarcas />
+      {/* (v0.248) hasta su lunes: lo que le falta para estar listo y una cosa pequeña cada día */}
+      <EsperaArriba p={p} cuestionario={cuestionario} irA={irA} />
       {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
       <AntesDeEmpezar p={p} cuestionario={cuestionario} />
       {conPlan && <AplicarDias p={p} recargarPrograma={recargar} />}

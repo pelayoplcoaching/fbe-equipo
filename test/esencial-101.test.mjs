@@ -23,6 +23,7 @@ const superusuario = `reset role; select set_config('request.jwt.claim.sub', '',
 const servidor = `${superusuario} set role service_role;`;
 const hoy = hoyISO(), lunes = lunesDe(hoy);
 await db.exec('reset role;');
+await db.exec('delete from fbe_migraciones where numero > 101;');
 await db.exec(SQL('101_esencial_viaje.sql'));
 await db.exec(SQL('101_esencial_viaje.sql'));   // (se puede repetir)
 

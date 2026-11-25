@@ -11,7 +11,7 @@ import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
-import { CATEGORIAS, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
+import { CATEGORIAS, enTema, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
@@ -82,7 +82,7 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
   const ref = useRef(null);
   useEffect(() => { if (inicial) ref.current?.querySelector('details[open]')?.scrollIntoView?.({ block: 'center' }); }, []);
   const buscando = q.trim().length >= 3;
-  const lista = buscando ? buscarRespuestas(q, todas) : cat ? todas.filter((x) => x.cat === cat) : null;
+  const lista = buscando ? buscarRespuestas(q, todas) : cat ? todas.filter((x) => enTema(x, cat)) : null;
   const cats = [...CATEGORIAS, ...(todas.some((x) => x.directo) ? [['directo', 'Del directo del mes', 'mensaje']] : [])];
   return (
     <Hoja titulo="Respuestas" alCerrar={alCerrar}>
@@ -98,7 +98,7 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
                 <button type="button" class="ayu-cat" onClick={() => setCat(id)}>
                   <span class="ayu-cat-i"><Icono n={icono} width="18" height="18" /></span>
                   <span class="ayu-cat-n">{nombre}</span>
-                  <span class="ayu-cat-c mini">{todas.filter((x) => x.cat === id).length}</span>
+                  <span class="ayu-cat-c mini">{todas.filter((x) => enTema(x, id)).length}</span>
                 </button>
               </li>
             ))}

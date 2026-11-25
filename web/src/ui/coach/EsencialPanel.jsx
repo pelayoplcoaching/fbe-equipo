@@ -9,6 +9,7 @@ import { hoyISO, sumarDias } from '../../logica/fechas.js';
 import { cifrasPiloto, filaPiloto, ENCUESTAS_ESENCIAL, TITULOS_ENCUESTA, LISTON_ESENCIAL, embudoAlta, sinActivarAlta } from '../../logica/esencial-piloto.js';
 import { diasInvitacion } from '../../logica/esencial.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
+import { listosLunes } from '../../logica/esencial-espera.js';
 import { Invitaciones } from './EsencialAltas.jsx';
 import { perezoso } from '../perezoso.jsx';
 
@@ -73,6 +74,8 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
           </p>}
         </section>
       )}
+      {/* (v0.248, 77) listos para el lunes: de los que empiezan el próximo lunes, qué le falta a cada uno */}
+      {altas && <ListosLunes altas={altas} lista={lista} hoy={hoy} abrir={abrir} />}
       {/* (alta, 27) los vistos buenos por confirmar, con «Confirmar» aquí mismo */}
       {e && e.porConfirmar.length > 0 && <PorConfirmar filas={e.porConfirmar} alCambiar={() => alta.recargar(true)} />}
       {/* (alta, 16-18) quién no ha activado su cuenta: su lunes, su código y «Mandar otra vez» (uno o todos) */}
@@ -168,6 +171,35 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
 
 // (alta, 27) Los vistos buenos por confirmar: quién, desde cuándo, su cribado y «Confirmar» (le asigna su plan si ya tiene
 // el cuestionario, como desde su ficha)
+// (v0.248, 77) Listos para el lunes: los que empiezan el próximo lunes de FBE Esencial (en los próximos 28 días), cuántos lo
+// tienen todo y, de los demás, qué les falta (la cuenta, el cuestionario, el visto bueno, el plan, los días, los avisos y,
+// con la migración 102, el gimnasio)
+function ListosLunes({ altas, lista, hoy, abrir }) {
+  const vivos = new Map(lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado !== 'baja').map((r) => [r.atleta_id, r.nombre]));
+  const l = listosLunes(altas, vivos, hoy);
+  if (!l) return null;
+  const faltan = l.lista.filter((x) => x.falta.length);
+  return (
+    <section class="pila-s alta-sin" aria-labelledby="lun-coach-t">
+      <h2 id="lun-coach-t" class="etq">{`Listos para el ${fechaLarga(l.proximo)}: ${l.listos} de ${l.total}`}</h2>
+      <p class="mini terciario">{l.faltan === 1 ? 'Empiezan mañana.' : `Faltan ${l.faltan} días.`}{faltan.length ? ' A los demás les falta:' : ' Lo tienen todo.'}</p>
+      {faltan.length > 0 && (
+        <ul class="corr-lista">
+          {faltan.map((x) => (
+            <li key={x.atleta_id} class="alta-fila" data-nivel={x.falta.length > 2 || l.faltan <= 3 ? 'ambar' : 'ok'}>
+              <span class="pila-xs">
+                <strong class="peq">{x.nombre}</strong>
+                <span class="mini terciario">{x.falta.join(' · ')}</span>
+              </span>
+              {abrir && <button type="button" class="btn btn-peq" onClick={() => abrir(x.atleta_id)} aria-label={`Abrir la ficha de ${x.nombre}`}>Ficha</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function PorConfirmar({ filas, alCambiar }) {
   const { api, aviso } = useApp();
   const [ocupado, una] = useUnaVez();
