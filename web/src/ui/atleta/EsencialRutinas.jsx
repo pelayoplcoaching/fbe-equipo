@@ -107,6 +107,8 @@ export function HojaRutinas({ p, cuestionario, elegida = null, estancados = 0, a
   const ir = (x) => { setError(null); setPaso(x); };
   // Al cambiar de paso: arriba del todo, y el foco en la hoja (el botón que se pulsó ya no está)
   const cima = useRef(null);
+  // (lo que hay que decirle a Hoy al cerrar el paso de «Primeras 4 semanas»)
+  const alCerrarPrimeras = useRef(null);
   const clavePaso = typeof paso === 'string' ? paso : `${paso.ficha ? 'ficha' : 'confirmar'}:${paso.ficha || paso.confirmar}`;
   const primero = useRef(true);
   useEffect(() => {
@@ -128,9 +130,12 @@ export function HojaRutinas({ p, cuestionario, elegida = null, estancados = 0, a
     try {
       const datos = { gustos: limpiarGustos(g, c), ...(cambio ? { experiencia: c.experiencia, dias_semana: c.dias_semana, lugar: c.lugar, material: c.material } : {}) };
       const fila = await api.guardarCuestionario(atleta.id, datos);
-      alCambiar?.({ cuestionario: fila });
       // (la criba: con menos de un año y parado o sin soltura, antes de empezar: «Primeras 4 semanas»)
-      ir(s.modo === 'sin_plan' && necesitaPrimeras({ experiencia: c.experiencia, gustos: g }) ? 'primeras' : 'recomendadas');
+      const aPrimeras = s.modo === 'sin_plan' && necesitaPrimeras({ experiencia: c.experiencia, gustos: g });
+      // (a Hoy se le dice al cerrar: con sus gustos ya no le queda nada por elegir, y si se enterase ahora quitaría esta
+      // hoja antes de explicarle por qué empieza por ahí)
+      if (aPrimeras) alCerrarPrimeras.current = { cuestionario: fila }; else alCambiar?.({ cuestionario: fila });
+      ir(aPrimeras ? 'primeras' : 'recomendadas');
     } catch (e) { setError(e.message); }
   });
 
@@ -190,13 +195,14 @@ export function HojaRutinas({ p, cuestionario, elegida = null, estancados = 0, a
 
   if (paso === 'primeras') {
     const r = rutinaDe(NOMBRE_PRIMERAS_4);
+    const cerrarPrimeras = () => { if (alCerrarPrimeras.current) alCambiar?.(alCerrarPrimeras.current); alCerrarPrimeras.current = null; alCerrar(); };
     return (
-      <Hoja titulo="Empiezas por las primeras 4 semanas" alCerrar={alCerrar}>
+      <Hoja titulo="Empiezas por las primeras 4 semanas" alCerrar={cerrarPrimeras}>
         <div class="pila" ref={cima}>
           <span class="rut-marco rut-marco-ficha"><ImagenRutina r={r} /></span>
           <p>Con lo que nos cuentas, lo mejor es empezar por las cuatro semanas de la guía: dos días, cinco ejercicios y una semana final de marcas. Así coges la técnica y el hábito sin prisa.</p>
           <p class="secundario">Al llegar a la semana 4 eliges con qué rutina sigues: la app te recomendará dos o tres.</p>
-          <button type="button" class="btn btn-primario btn-grande" onClick={alCerrar}>De acuerdo</button>
+          <button type="button" class="btn btn-primario btn-grande" onClick={cerrarPrimeras}>De acuerdo</button>
         </div>
       </Hoja>
     );

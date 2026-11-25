@@ -18,7 +18,7 @@ const diasDeNovato = (nombre) => Number(Object.keys(NOVATOS).find((k) => NOVATOS
 //  · tras «Primeras 4 semanas» (su última semana, la de marcas): el bloque de novato desde ese lunes (el de sus días);
 //  · en un bloque de novato, si ha pedido otros días: el bloque de esa plantilla desde ese lunes («cambio»);
 //  · si lleva más de una semana sin abrir la app, desde el lunes de esta semana (no se rellenan las que se ha saltado).
-//  · (098) el domingo, con la semana sin acabar: si ha elegido pasar a la siguiente (o se pasó sola a las 23:30:
+//  · (098) el domingo, con la semana sin acabar: si ha elegido pasar a la siguiente (o se pasó sola a las 22:00:
 //    base.esencial_cierre 'pasar' | 'auto' de esta semana), se prepara ya, sin esperar al lunes (adelantada: true).
 //  · (099) rutina: la que ha elegido de su catálogo (atletas.esencial_plantilla). Si no es la que lleva: «cambio» a esa
 //    plantilla desde ese lunes (tras «Primeras 4 semanas», solo desde su semana de marcas).

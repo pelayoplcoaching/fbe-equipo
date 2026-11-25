@@ -586,5 +586,41 @@
       "1080": "imagenes/rutina/rutina-4d-phul-1080.7257b680.webp"
     },
     "color": "#342760"
+  },
+  "rutina-4d-anterior-posterior": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-4d-anterior-posterior-240.bac4738e.webp",
+      "720": "imagenes/rutina/rutina-4d-anterior-posterior-720.cc228407.webp",
+      "1080": "imagenes/rutina/rutina-4d-anterior-posterior-1080.bc6262c8.webp"
+    },
+    "color": "#3a2d64"
+  },
+  "rutina-4d-esp-hombro-brazos": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-4d-esp-hombro-brazos-240.0bd12c05.webp",
+      "720": "imagenes/rutina/rutina-4d-esp-hombro-brazos-720.821197d3.webp",
+      "1080": "imagenes/rutina/rutina-4d-esp-hombro-brazos-1080.aa5964ff.webp"
+    },
+    "color": "#36285c"
+  },
+  "rutina-4d-esp-pierna": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/rutina/rutina-4d-esp-pierna-240.b880969c.webp",
+      "720": "imagenes/rutina/rutina-4d-esp-pierna-720.57d039d5.webp",
+      "1080": "imagenes/rutina/rutina-4d-esp-pierna-1080.efc7890c.webp"
+    },
+    "color": "#42316c"
   }
 }

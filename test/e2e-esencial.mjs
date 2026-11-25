@@ -702,7 +702,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const { ctx, p } = await tomasEl('21:30');
       const hay = await tarjeta(p, 'pregunta').waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
       const t = hay ? await tarjeta(p, 'pregunta').textContent() : '';
-      check(hay && /Tu semana acaba hoy y te quedan 2 sesiones/.test(t) && /Pasar: /.test(t) && /Repetir: /.test(t) && /antes de las 23:30, pasamos a la siguiente/.test(t),
+      check(hay && /Tu semana acaba hoy y te quedan 2 sesiones/.test(t) && /Pasar: /.test(t) && /Repetir: /.test(t) && /antes de las 22:00, pasamos a la siguiente/.test(t),
         'el domingo a las 21:30: «Tu semana acaba hoy y te quedan 2 sesiones», qué hace cada opción y hasta cuándo');
       await desborda(p, 'Hoy de Tomás, con la pregunta del domingo');
       await tarjeta(p, 'pregunta').getByRole('button', { name: 'Repetir esta semana' }).click();
@@ -863,6 +863,56 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const b2 = await nombres();
     check(b2.length === 1 && b2[0] !== b1[0] && otra.length > 0, `su plan se rehace con la nueva («${b2[0] || ''}») y sigue teniendo uno solo`);
     await desborda(p, 'Hoy de Marina, con su rutina elegida');
+    await ctx.close();
+  }
+  // Marina, con menos de un año y más de tres meses parada: la criba la manda a «Primeras 4 semanas», y la hoja se lo
+  // explica antes de cerrarse (antes se cerraba sola al guardar sus gustos, sin decirle por qué no elegía rutina)
+  {
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await entrar(p, /Marina/);
+    await cerrar(p);
+    const hero = p.locator('section.hero-espera');
+    await hero.first().waitFor({ timeout: 15000 }).catch(() => {});
+    await hero.getByRole('button', { name: /Empezar|Seguir/ }).click();
+    let hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.getByRole('button', { name: 'Siguiente' }).waitFor();
+    await hoja.locator('.opciones button, [role="group"] button').first().click();
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    const g2 = hoja.locator('[role="group"]');
+    for (let i = 0; i < await g2.count(); i++) await g2.nth(i).locator('button').first().click().catch(() => {});
+    await hoja.getByRole('button', { name: 'Menos de un año' }).click();
+    await hoja.getByRole('group', { name: 'Días a la semana' }).getByRole('button', { name: '3', exact: true }).click();
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    await hoja.locator('[role="group"]').first().locator('button').first().click().catch(() => {});
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    const g4 = hoja.locator('[role="group"]');
+    for (let i = 0; i < await g4.count(); i++) {
+      const g = g4.nth(i);
+      if (await g.getByRole('button', { name: /^No$/ }).count()) await g.getByRole('button', { name: /^No$/ }).click();
+      if (await g.locator('label.ninguna input').count()) await g.locator('label.ninguna input').check();
+    }
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(400);
+    await hoja.getByRole('button', { name: 'Enviar', exact: true }).click();
+    await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Hecho' }).click({ timeout: 15000 });
+    await cerrar(p);
+    await p.waitForFunction(() => /Elige tu rutina/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+    await hero.getByRole('button', { name: 'Empezar' }).click();
+    hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.locator('.rut-gustos').waitFor();
+    const qs = await hoja.locator('.rut-pregunta').all();
+    for (const [i, q] of qs.entries()) await (i === 0 ? q.getByRole('button', { name: 'Llevo más de tres meses sin entrenar' }) : q.locator('button').first()).click();
+    await hoja.getByRole('button', { name: 'Ver mis rutinas recomendadas' }).click();
+    const explica = await p.getByRole('heading', { name: 'Empiezas por las primeras 4 semanas' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    hoja = p.locator('[aria-modal="true"]').last();
+    const txt = explica ? await hoja.textContent() : '';
+    check(explica && /Con lo que nos cuentas, lo mejor es empezar por las cuatro semanas/.test(txt) && /Al llegar a la semana 4 eliges con qué rutina sigues/.test(txt) && (await hoja.locator('.rut-tarjeta').count()) === 0,
+      'la criba: menos de un año y más de tres meses parada → la hoja le explica que empieza por «Primeras 4 semanas» (sin ofrecerle otras)');
+    await desborda(p, '«Empiezas por las primeras 4 semanas»');
+    await hoja.getByRole('button', { name: 'De acuerdo' }).click();
+    const conPlan = await p.waitForFunction(() => /Empiezas el lunes/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
+    const suyos = await p.evaluate(() => { const d = JSON.parse(localStorage.getItem('fbe-demo-esencial-v2') || '{}'); const a = (d.atletas || []).find((x) => x.email === 'marina@fbe.demo'); return (d.bloques || []).filter((b) => !b.es_plantilla && b.atleta_id === a?.id).map((b) => b.nombre); });
+    check(conPlan && suyos.length === 1 && suyos[0] === 'Primeras 4 semanas', `y al cerrarla la app le prepara su plan: «${suyos[0] || ''}»`);
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);

@@ -8,7 +8,7 @@ import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial } from 
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
-import { estadoCierre, textoCierre, puedePausar, horaMadrid } from '../../logica/esencial-cierre.js';
+import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUTO_098 } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
 import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
@@ -482,7 +482,7 @@ export function SemanaEsencial({ recargarPrograma, abrirSesion, hechas = 0 }) {
 
 // ---------- (sin coach, tanda 2; migración 098) El cierre de la semana ----------
 // En Hoy de quien va por su cuenta: la pregunta del domingo desde las 21:00 (pasar a la siguiente o repetir esta; a las
-// 23:30 sin elegir, la base la pasa y avisa), lo elegido, la semana que viene ya lista (con adelantar su primera sesión,
+// 22:00 sin elegir, la base la pasa y avisa; con la base sin la 099, a las 23:30), lo elegido, la semana que viene ya lista (con adelantar su primera sesión,
 // nunca dos el mismo día) y la pausa («Esta semana no puedo», con «Volver ya»).
 export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
   const { api, atleta, aviso } = useApp();
@@ -493,7 +493,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
   // (con la app abierta el domingo por la tarde, a las 21:00 sale la pregunta sin recargar)
   useEffect(() => { const t = setInterval(() => setHora(horaMadrid()), 60000); return () => clearInterval(t); }, []);
   const datos = { semanas: p?.semanas || [], sesiones: p?.sesiones || {}, hoy };
-  const e = estadoCierre({ ...datos, hora });
+  const e = estadoCierre({ ...datos, hora, horaAuto: 'esencial_plantilla' in atleta ? HORA_AUTO : HORA_AUTO_098 });
   const t = textoCierre(e, { fechaLarga });
   const pausable = (!e || e.tipo === 'repite') && puedePausar(datos);
   const cerrar = (decision, hecho) => una(async () => {

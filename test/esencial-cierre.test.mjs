@@ -2,7 +2,7 @@
 // del domingo, pasar o repetir, la semana que viene ya lista (y adelantar su primera sesión), la pausa y sus textos
 // (logica/esencial-cierre.js); que «pasar» prepare la siguiente sin esperar al lunes (siguientePaso) y, en memoria, lo
 // mismo que hace la base (cerrarSemanaEsencialDemo, como esencial_cerrar_semana de la 098).
-import { estadoCierre, textoCierre, puedePausar, cierreDe, horaMadrid, HORA_PREGUNTA, HORA_AUTO, MAX_REPETIR } from '../web/src/logica/esencial-cierre.js';
+import { estadoCierre, textoCierre, puedePausar, cierreDe, horaMadrid, HORA_PREGUNTA, HORA_AUTO, HORA_AUTO_098, MAX_REPETIR } from '../web/src/logica/esencial-cierre.js';
 import { siguientePaso } from '../web/src/logica/esencial-semana.js';
 import { cerrarSemanaEsencialDemo } from '../web/src/datos/semilla-esencial.js';
 
@@ -17,7 +17,7 @@ const w6 = { id: 'w6', bloque_id: 'b', numero: 6, fecha_inicio: L2, programacion
 const ses = (hechas, total = 2, extra = {}) => Array.from({ length: total }, (_, i) => ({ id: `s${i + 1}`, orden: i + 1, nombre: `Día ${i + 1}`, completada: i < hechas, fecha_realizada: i < hechas ? '2027-01-12' : null, ...extra }));
 
 console.log('La pregunta del domingo');
-check(HORA_PREGUNTA === '21:00' && HORA_AUTO === '23:30' && MAX_REPETIR === 2, 'a las 21:00 se pregunta; a las 23:30, se pasa; repetir, como mucho dos veces');
+check(HORA_PREGUNTA === '21:00' && HORA_AUTO === '22:00' && HORA_AUTO_098 === '23:30' && MAX_REPETIR === 2, 'a las 21:00 se pregunta; a las 22:00, se pasa (a las 23:30 con la base sin la 099); repetir, como mucho dos veces');
 const preg = estadoCierre({ semanas: [w5], sesiones: { w5: ses(1) }, hoy: D, hora: '21:00' });
 check(preg?.tipo === 'pregunta' && preg.faltan === 1 && preg.total === 2 && preg.puedeRepetir, 'domingo a las 21:00 con una sesión sin hacer: se pregunta');
 check(estadoCierre({ semanas: [w5], sesiones: { w5: ses(1) }, hoy: D, hora: '20:59' }) === null && estadoCierre({ semanas: [w5], sesiones: { w5: ses(1) }, hoy: '2027-01-16', hora: '22:00' }) === null,
@@ -26,12 +26,13 @@ check(estadoCierre({ semanas: [w5], sesiones: { w5: ses(2) }, hoy: D, hora: '22:
 check(estadoCierre({ semanas: [{ ...w5, esencial_repetida: 2, esencial_cierre: 'repetir', esencial_cierre_lunes: '2027-01-04' }], sesiones: { w5: ses(1) }, hoy: D, hora: '22:00' })?.puedeRepetir === false,
   'repetida ya dos veces: solo queda pasar');
 const tp = textoCierre(preg);
-check(/te queda una sesión/.test(tp.titulo) && /23:30/.test(tp.plazo) && /no se recupera doblando/.test(tp.pasar) && /lo hecho se queda hecho/.test(tp.repetir), 'sus textos: qué queda, qué hace cada opción y hasta cuándo');
+check(/te queda una sesión/.test(tp.titulo) && /antes de las 22:00/.test(tp.plazo) && /no se recupera doblando/.test(tp.pasar) && /lo hecho se queda hecho/.test(tp.repetir), 'sus textos: qué queda, qué hace cada opción y hasta cuándo (las 22:00)');
+check(/antes de las 23:30/.test(textoCierre(estadoCierre({ semanas: [w5], sesiones: { w5: ses(1) }, hoy: D, hora: '21:10', horaAuto: HORA_AUTO_098 })).plazo), 'con la base sin la 099, el texto dice las 23:30 (que es cuando lo hace ella)');
 check(/te quedan 2 sesiones/.test(textoCierre(estadoCierre({ semanas: [w5], sesiones: { w5: ses(0) }, hoy: D, hora: '23:00' })).titulo), 'con dos sin hacer, en plural');
 
 console.log('\nLo elegido');
 const pasada = (c) => estadoCierre({ semanas: [{ ...w5, esencial_cierre: c, esencial_cierre_lunes: L }], sesiones: { w5: ses(1) }, hoy: D, hora: '23:45' });
-check(pasada('pasar')?.tipo === 'pasada' && !pasada('pasar').auto && pasada('auto')?.auto === true, 'pasar (o pasada sola a las 23:30): ya no se pregunta');
+check(pasada('pasar')?.tipo === 'pasada' && !pasada('pasar').auto && pasada('auto')?.auto === true, 'pasar (o pasada sola a las 22:00): ya no se pregunta');
 check(/Como no elegiste/.test(textoCierre(pasada('auto')).texto) && /empieza el lunes/.test(textoCierre(pasada('pasar')).texto), 'y se dice cómo fue');
 check(cierreDe({ esencial_cierre: 'repetir', esencial_cierre_lunes: '2027-01-04' }, L) === null && cierreDe({ esencial_cierre: 'pasar', esencial_cierre_lunes: `${L}T00:00:00` }, L) === 'pasar',
   'lo elegido otra semana no vale para esta (una repetida se vuelve a preguntar)');
@@ -59,7 +60,7 @@ const bloque = { id: 'b', nombre: 'Novato 2 días · FBE Esencial' };
 check(siguientePaso({ bloque, semanas: [w5], sesiones: { w5: ses(1) }, hoy: D }) === null, 'el domingo, con la semana a medias y sin elegir: nada');
 const paso = siguientePaso({ bloque, semanas: [{ ...w5, esencial_cierre: 'pasar', esencial_cierre_lunes: L }], sesiones: { w5: ses(1) }, hoy: D });
 check(paso?.tipo === 'siguiente' && paso.inicio === L2 && paso.adelantada === true, 'con «pasar»: la del lunes, ya (adelantada, para no esperar a una duda)');
-check(siguientePaso({ bloque, semanas: [{ ...w5, esencial_cierre: 'auto', esencial_cierre_lunes: L }], sesiones: { w5: ses(0) }, hoy: D })?.inicio === L2, 'y con la que se pasó sola a las 23:30');
+check(siguientePaso({ bloque, semanas: [{ ...w5, esencial_cierre: 'auto', esencial_cierre_lunes: L }], sesiones: { w5: ses(0) }, hoy: D })?.inicio === L2, 'y con la que se pasó sola a las 22:00');
 check(siguientePaso({ bloque, semanas: [{ ...w5, fecha_inicio: L2, esencial_cierre: 'repetir', esencial_cierre_lunes: L, esencial_repetida: 1 }], sesiones: { w5: ses(1) }, hoy: L2 }) === null,
   'repetida (corrida al lunes): esa semana no se prepara otra');
 const hecha = siguientePaso({ bloque, semanas: [w5], sesiones: { w5: ses(2) }, hoy: '2027-01-15' });

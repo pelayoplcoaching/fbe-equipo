@@ -11,7 +11,7 @@ export const NOVEDADES = {
     atleta: [],
     coach: [
       'FBE Esencial, su rutina: quien tiene experiencia contesta «Tus gustos» y elige entre dos o tres recomendadas de tu catálogo.',
-      'Quien empieza de cero sigue por «Primeras 4 semanas» y elige al acabarlas. Cambiar de rutina: lo recomendable, a las 12 semanas.',
+      'Si no elige, la víspera de su lunes a las 22:00 se le deja preparada la de su cuestionario. El cierre del domingo pasa a las 22:00.',
       'En Plantillas, la estrella mete o saca cada plantilla del catálogo. En su panel, «Sus rutinas»: quién se sale de lo recomendado.',
     ],
   },

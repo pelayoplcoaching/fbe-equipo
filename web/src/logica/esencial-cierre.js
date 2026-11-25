@@ -8,7 +8,9 @@ const lunesDe = (iso) => { const d = new Date(`${iso}T12:00:00Z`).getUTCDay(); r
 const dia = (v) => (v ? String(v).slice(0, 10) : null);
 
 export const HORA_PREGUNTA = '21:00';   // el domingo, desde esa hora, se pregunta (hora de Madrid)
-export const HORA_AUTO = '23:30';       // sin respuesta a esa hora, se pasa a la siguiente (lo hace la base y avisa)
+export const HORA_AUTO = '22:00';       // sin respuesta a esa hora, se pasa a la siguiente (lo hace la base y avisa). Con la 099:
+// Pelayo (25/11) la adelanta para que el aviso llegue antes del «no molestar» de serie (22:30)
+export const HORA_AUTO_098 = '23:30';   // la de la base que aún no tiene la 099
 export const MAX_REPETIR = 2;           // la misma semana, como mucho dos veces (como en la base)
 
 // «21:37» en Madrid (para saber si ya toca preguntar)
@@ -24,15 +26,15 @@ export function horaMadrid(d = new Date()) {
 export const cierreDe = (w, lunes) => (w && w.esencial_cierre && dia(w.esencial_cierre_lunes) === lunes ? w.esencial_cierre : null);
 
 // semanas: las suyas publicadas (las del bloque en marcha); sesiones: { semana_id: [{ completada, fecha_realizada, orden }] }
-// hoy: 'AAAA-MM-DD' (Madrid); hora: 'HH:MM' (Madrid).
+// hoy: 'AAAA-MM-DD' (Madrid); hora: 'HH:MM' (Madrid); horaAuto: hasta cuándo puede elegir (lo dice el texto).
 // Devuelve { tipo, … }:
 //  · 'pausa':     su semana está en pausa (corrida al lunes que viene esta misma semana): vuelve, o «Volver ya»
 //  · 'pregunta':  domingo desde las 21:00, con sesiones sin hacer y sin elegir: pasar o repetir (puedeRepetir)
-//  · 'pasada':    ya eligió pasar (o se pasó a las 23:30): la siguiente, mañana
+//  · 'pasada':    ya eligió pasar (o se pasó sola a las 22:00): la siguiente, mañana
 //  · 'lista':     semana completa y la siguiente ya preparada: se puede adelantar su primera sesión (si hoy no ha hecho otra)
 //  · 'repite':    esta semana es una repetida: lo que le queda
 //  · null:        nada que decir
-export function estadoCierre({ semanas = [], sesiones = {}, hoy, hora = '00:00' } = {}) {
+export function estadoCierre({ semanas = [], sesiones = {}, hoy, hora = '00:00', horaAuto = HORA_AUTO } = {}) {
   if (!hoy) return null;
   const lunes = lunesDe(hoy), domingo = sumar(lunes, 6), proximo = sumar(lunes, 7);
   const propias = semanas.filter((w) => w.fecha_inicio && (w.programacion || 'programada') === 'programada');
@@ -53,7 +55,7 @@ export function estadoCierre({ semanas = [], sesiones = {}, hoy, hora = '00:00' 
   const elegido = cierreDe(w, lunes);
   if (elegido === 'pasar' || elegido === 'auto') return { tipo: 'pasada', semana: w, faltan, total, auto: elegido === 'auto', siguiente };
   if (hoy === domingo && hora >= HORA_PREGUNTA) {
-    return { tipo: 'pregunta', semana: w, faltan, total, puedeRepetir: (Number(w.esencial_repetida) || 0) < MAX_REPETIR, hastaLas: HORA_AUTO };
+    return { tipo: 'pregunta', semana: w, faltan, total, puedeRepetir: (Number(w.esencial_repetida) || 0) < MAX_REPETIR, hastaLas: horaAuto };
   }
   if ((Number(w.esencial_repetida) || 0) > 0 && w.esencial_cierre === 'repetir') return { tipo: 'repite', semana: w, faltan, total, veces: Number(w.esencial_repetida) };
   return null;

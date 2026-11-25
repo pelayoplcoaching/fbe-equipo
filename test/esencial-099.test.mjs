@@ -60,6 +60,9 @@ for (const n of ['ana', 'berta', 'dani', 'rosa']) alta[n] = await api.crearAtlet
 // (Eva y Fede empiezan dentro de dos semanas: su plan aún no ha empezado)
 const enDos = sumarDias(lunes, 14);
 for (const n of ['eva', 'fede']) alta[n] = await api.crearAtletaEsencial({ nombre: `${n} Prueba`, email: `${n}@test`, inicio: enDos });
+// (para los avisos de elegir rutina: los que empiezan el lunes que viene, y Kike, dentro de dos semanas)
+for (const n of ['gema', 'hugo', 'iris', 'julia', 'lola']) alta[n] = await api.crearAtletaEsencial({ nombre: `${n} Prueba`, email: `${n}@test`, inicio: proximo });
+alta.kike = await api.crearAtletaEsencial({ nombre: 'kike Prueba', email: 'kike@test', inicio: enDos });
 const lucas = await api.crearAtleta({ nombre: 'Lucas Prueba', email: 'lucas@test', nivel: 'novato' });
 const codLucas = await api.crearInvitacion(lucas.id);
 const base = { objetivo: 'salud', dias_semana: 3, minutos_sesion: 45, lugar: 'gimnasio', material: ['maquinas'], activo: false, enfermedad: false, sintomas: [], otras: [], lesiones: [] };
@@ -237,6 +240,91 @@ console.log('\nLo preparado que aún no ha empezado se rehace con la rutina eleg
   const r9 = await api.esencialElegirRutina(NOV2);
   bs = await bloques();
   check(!r9.rehecho && bs.length === 3 && bs[2].nombre === BIB, 'si ya adelantó una sesión de la semana que viene, no se rehace: el cambio entra con la siguiente');
+}
+console.log('\nNadie se queda sin plan por no elegir: los avisos y el plan de la víspera');
+{
+  // (la de dentro no se puede llamar desde fuera, y la de fuera sigue siendo de cada uno)
+  await db.exec(superusuario);
+  const pv = (await db.query(`select has_function_privilege('authenticated', 'fbe_privado.esencial_asignar(uuid, date)', 'execute') u, has_function_privilege('anon', 'public.esencial_asignar_plan(uuid)', 'execute') a`)).rows[0];
+  check(pv.u === false && pv.a === false, 'asignar el plan, por dentro: nadie la llama desde fuera (y la de fuera, sin sesión, tampoco)');
+  const de = (txt) => { const i = txt.lastIndexOf('create or replace function public.crear_recordatorios(p_ahora'); return txt.slice(i, txt.indexOf('\nend $$;', i)); };
+  // (la de la 098, con dos variables más, el cierre a las 22:00 en lugar de a las 23:30 y la nota que lo dice)
+  const f98 = de(SQL('098_esencial_cierre.sql')).replace('  v_cuerpo text;\n', '  v_cuerpo text;\n  v_r record;\n  v_plan jsonb;\n').replaceAll('23:30', '22:00');
+  const f99 = de(SQL('099_esencial_rutinas.sql')).replace(/  -- \(099\) El cierre es a las 22:00[^\n]*\n  -- a las 22:30 \(Pelayo, 25\/11\)\.\n/, '');
+  check(f99.startsWith(f98.slice(0, f98.lastIndexOf('  return v_n;'))) && !/23:30/.test(f99) && f99.length > f98.length + 3000,
+    'crear_recordatorios es la de la 098 con el cierre del domingo a las 22:00 (antes, a las 23:30) y tres bloques más al final');
+  const NOV2 = 'Novato 2 días · FBE Esencial';
+  const domingo = sumarDias(lunes, 6), antes = sumarDias(lunes, -3);
+  const gustos = { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' };
+  // Gema: menos de un año, sin contestar «Tus gustos» ni elegir, con avisos. Hugo: igual, sin avisos. Iris: nunca ha entrenado y la app no llegó a
+  // pedir su plan. Julia: con una enfermedad, le falta el visto bueno. Kike: empieza dentro de dos semanas. Lola: eligió, y no llegó a tener plan.
+  for (const n of ['gema', 'hugo', 'iris', 'julia', 'kike', 'lola']) {
+    await entrar(n, alta[n].codigo);
+    if (n === 'lola') await api.esencialElegirRutina(NOV2);
+    await api.guardarCuestionario(id[n], { ...base, experiencia: n === 'iris' ? 'ninguna' : n === 'gema' ? 'menos_1' : '1_3', ...(n === 'iris' || n === 'gema' ? {} : { gustos }), ...(n === 'julia' ? { enfermedad: true } : {}) }, { completar: true });
+  }
+  await db.exec(superusuario);
+  const perfil = async (n) => (await db.query('select perfil_id from atletas where id = $1', [id[n]])).rows[0].perfil_id;
+  for (const n of ['gema', 'iris', 'julia', 'kike', 'lola']) await db.query(`insert into preferencias_notificaciones (usuario_id, email, silencio_desde, silencio_hasta) values ($1, true, null, null) on conflict (usuario_id) do update set email = true, silencio_desde = null, silencio_hasta = null`, [await perfil(n)]);
+  await db.query(`update cuestionarios set completado_en = $1::date + time '10:00' where atleta_id = any($2::uuid[])`, [antes, ['gema', 'hugo', 'iris', 'julia', 'kike', 'lola'].map((n) => id[n])]);
+  const servidor = `${superusuario} set role service_role;`;
+  const llamar = async (dia, h) => { await db.exec(servidor); await db.query('select public.crear_recordatorios($1::timestamptz)', [`${dia} ${h}:00 Europe/Madrid`]); await db.exec(superusuario); };
+  const avisos = async (pref) => (await db.query(`select n.titulo, n.cuerpo, n.tipo, n.url, n.usuario_id from notificaciones n where n.clave like $1`, [`${pref}%`])).rows;
+  const planes = async (n) => (await db.query(`select b.nombre, to_char(b.fecha_inicio, 'YYYY-MM-DD') inicio from bloques b where b.atleta_id = $1 and not b.es_plantilla`, [id[n]])).rows;
+  check((await db.query(`select resultado from cuestionarios where atleta_id = $1`, [id.julia])).rows[0].resultado === 'valorar_antes' && (await planes('gema')).length === 0, '(seis sin plan con su cuestionario enviado; a Julia le falta el visto bueno)');
+
+  // un miércoles, a su hora de la tarde (de serie, las 21:00)
+  await llamar(sumarDias(lunes, 2), '20:30');
+  check((await avisos('esencial_rutina:')).length === 0, 'antes de su hora de la tarde, nada');
+  await llamar(sumarDias(lunes, 2), '21:05');
+  await llamar(sumarDias(lunes, 3), '21:05');
+  let a = await avisos('esencial_rutina:');
+  const quienes = new Set(a.map((x) => x.usuario_id));
+  check(a.length === 3 && quienes.has(await perfil('gema')) && quienes.has(await perfil('julia')) && quienes.has(await perfil('kike')) && a.every((x) => x.tipo === 'cuestionario' && x.url === '#hoy' && x.titulo === 'Te falta elegir tu rutina'),
+    '«Te falta elegir tu rutina»: a quien tiene experiencia y no ha elegido (Gema, Julia y Kike), una sola vez; ni a Iris (nunca ha entrenado), ni a Lola (ya eligió), ni a Hugo (sin avisos)');
+  check((await planes('gema')).length === 0, 'y entre semana no se le prepara nada: se le sigue preguntando');
+
+  // la víspera de su lunes
+  await llamar(domingo, '20:30');
+  check((await avisos('esencial_elige:')).length === 0, 'el domingo antes de las 21:00, nada');
+  await llamar(domingo, '21:05');
+  await llamar(domingo, '21:06');
+  a = await avisos('esencial_elige:');
+  check(a.length === 1 && a[0].usuario_id === await perfil('gema') && /Mañana empiezas/.test(a[0].titulo) && /antes de las 22:00/.test(a[0].cuerpo) && (await avisos('esencial_rutina:')).length === 3,
+    'la víspera, a las 21:00: «Mañana empiezas: elige tu rutina», solo a Gema (Julia no tiene el visto bueno; Kike empieza más adelante), una vez');
+  check((await planes('gema')).length === 0 && (await avisos('esencial_plan_auto:')).length === 0, 'y aún no se le ha preparado nada');
+  await llamar(domingo, '22:01');
+  await llamar(domingo, '22:20');
+  a = await avisos('esencial_plan_auto:');
+  const pg = await planes('gema'), ph = await planes('hugo'), pi = await planes('iris'), plo = await planes('lola');
+  check(pg.length === 1 && pg[0].nombre === BIB && pg[0].inicio === proximo, `a las 22:00 sin elegir: la app le deja preparada la de su cuestionario («${pg[0]?.nombre || ''}») para su lunes, una sola`);
+  check(ph.length === 1 && ph[0].nombre === BIB && ph[0].inicio === proximo, 'también a quien no tiene los avisos activados (sin el aviso)');
+  check(pi.length === 1 && pi[0].nombre === 'Primeras 4 semanas' && pi[0].inicio === proximo, 'a quien nunca ha entrenado y seguía sin plan: «Primeras 4 semanas»');
+  check(plo.length === 1 && plo[0].nombre === NOV2 && plo[0].inicio === proximo, 'a quien había elegido y seguía sin plan: con la rutina que eligió');
+  check((await planes('julia')).length === 0 && (await planes('kike')).length === 0, 'ni a quien le falta el visto bueno ni a quien empieza más adelante');
+  const pfs = {}; for (const n of ['gema', 'iris', 'lola']) pfs[n] = await perfil(n);
+  const ag = a.find((x) => x.usuario_id === pfs.gema), ai = a.find((x) => x.usuario_id === pfs.iris), al = a.find((x) => x.usuario_id === pfs.lola);
+  check(a.length === 3 && a.every((x) => x.tipo === 'semana' && x.url === '#hoy' && x.titulo === 'Tu plan, preparado')
+    && /^Como no has elegido rutina, te hemos dejado preparada «3 días · Full body · B · Máquinas y mancuernas»\. Empiezas este lunes; puedes cambiarla\.$/.test(ag?.cuerpo || '')
+    && /^Te hemos dejado preparado tu plan: «Primeras 4 semanas»\. Empiezas este lunes\.$/.test(ai?.cuerpo || '') && /^Te hemos dejado preparado tu plan: «Novato 2 días · FBE Esencial»\. Empiezas este lunes\.$/.test(al?.cuerpo || ''),
+    'y se les dice, una vez: «Como no has elegido rutina, te hemos dejado preparada…» a quien no eligió; a los demás, que su plan está preparado');
+  // El cierre del domingo, a las 22:00 (en la 098, a las 23:30). Lola, con su semana 1 en curso (se le adelanta una semana)
+  // y sus sesiones sin hacer
+  await db.query(`update semanas set fecha_inicio = fecha_inicio - 7 where bloque_id in (select id from bloques where atleta_id = $1 and not es_plantilla)`, [id.lola]);
+  await db.query(`update bloques set fecha_inicio = fecha_inicio - 7, fecha_fin = fecha_fin - 7 where atleta_id = $1 and not es_plantilla`, [id.lola]);
+  const semLola = async () => (await db.query(`select w.esencial_cierre c, to_char(w.fecha_inicio, 'YYYY-MM-DD') i from semanas w join bloques b on b.id = w.bloque_id where b.atleta_id = $1 and not b.es_plantilla order by w.numero limit 1`, [id.lola])).rows[0];
+  await llamar(domingo, '21:30');
+  let ad = (await avisos('esencial_domingo:')).filter((x) => x.usuario_id === pfs.lola);
+  check((await semLola()).i === lunes && ad.length === 1 && /Si no eliges antes de las 22:00, pasamos\./.test(ad[0].cuerpo) && (await semLola()).c === null, 'la pregunta del domingo, de 21:00 a 22:00: «Si no eliges antes de las 22:00, pasamos»');
+  await llamar(domingo, '22:05');
+  await llamar(domingo, '22:30');
+  ad = (await avisos('esencial_auto:')).filter((x) => x.usuario_id === pfs.lola);
+  check((await semLola()).c === 'auto' && ad.length === 1 && /Como no has contestado, te hemos dejado programada tu siguiente semana/.test(ad[0].cuerpo), 'y a las 22:00 sin elegir se pasa a la siguiente y se le dice (antes del «no molestar» de serie, que empieza a las 22:30)');
+  // con su plan ya preparado y sin empezar, aún puede elegir otra: se rehace
+  await como('gema');
+  const rg = await api.esencialElegirRutina(NOV2);
+  const pg2 = await planes('gema');
+  check(rg.rehecho === true && pg2.length === 1 && pg2[0].nombre === NOV2, 'y si después prefiere otra antes de empezar, su plan se rehace con ella (como cualquier otro)');
 }
 await db.exec('reset role;');
 
