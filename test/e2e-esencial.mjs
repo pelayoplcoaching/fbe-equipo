@@ -971,10 +971,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(leida && (await p.locator('.ayu-rev-tarjeta').count()) === 0, 'leída, la tarjeta se queda en una línea para releerla');
     }
     // (acompañamiento, tanda 5; v0.246) Que no entrenen solos: el saludo del día, el reto de la semana, el diario y «¿Cómo vamos?»
+    // (de jueves a domingo, su última sesión, la del jueves pasado, queda a siete días o más: en lugar del saludo sale «Llevas
+    // N días sin entrenar», que es lo que toca; la prueba vale los dos)
     const saludo = p.locator('.cer-saludo');
-    const conSaludo = await saludo.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    const vuelta = p.locator('.cer-vuelta');
+    const conSaludo = await saludo.or(vuelta).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    const enVuelta = conSaludo && !(await saludo.count()) && (await vuelta.count()) > 0;
+    const tSaludo = conSaludo ? ((enVuelta ? await vuelta.textContent() : await saludo.textContent()) || '') : '';
     check((await p.locator('.cer-nota').count()) === 0 && (await p.locator('.cer-dia').count()) === 0, 'sin la nota de Pelayo ni el día a día (apagados hasta que los vea)');
-    check(conSaludo && /Hoy toca|Mañana toca|te quedan? |Hoy descansas|Ayer entrenaste|Semana hecha/.test(await saludo.textContent()) && !/coach/i.test(await saludo.textContent()), `arriba en Hoy, el saludo del día («${conSaludo ? (await saludo.locator('.cer-saludo-t').textContent()).slice(0, 60) : ''}…»)`);
+    check(conSaludo && (enVuelta ? /Llevas \d+ días sin entrenar/.test(tSaludo) : /Hoy toca|Mañana toca|te quedan? |Hoy descansas|Ayer entrenaste|Semana hecha/.test(tSaludo)) && !/coach/i.test(tSaludo),
+      `arriba en Hoy, el saludo del día (o, desde el jueves, «Llevas N días sin entrenar») («${tSaludo.replace(/\s+/g, ' ').trim().slice(0, 60)}…»)`);
     const reto = p.locator('.cer-reto');
     await reto.scrollIntoViewIfNeeded().catch(() => {});
     check(/Reto de la semana: tus 2 sesiones\. Llevas 0\./.test(await reto.textContent().catch(() => '')) && /0\/2/.test(await reto.textContent().catch(() => '')), 'el reto de la semana: sus dos sesiones (con menos de cinco personas, sin cifras de los demás)');
