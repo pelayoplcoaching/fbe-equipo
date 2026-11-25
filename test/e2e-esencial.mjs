@@ -917,6 +917,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await desborda(p, '«Empiezas por las primeras 4 semanas»');
     await hoja.getByRole('button', { name: 'De acuerdo' }).click();
     const conPlan = await p.waitForFunction(() => /Empiezas el lunes/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
+    // (la demo guarda su copia un instante después de pintar: como arriba, se le da ese margen antes de leerla)
+    await p.waitForTimeout(600);
     const suyos = await p.evaluate(() => { const d = JSON.parse(localStorage.getItem('fbe-demo-esencial-v2') || '{}'); const a = (d.atletas || []).find((x) => x.email === 'marina@fbe.demo'); return (d.bloques || []).filter((b) => !b.es_plantilla && b.atleta_id === a?.id).map((b) => b.nombre); });
     check(conPlan && suyos.length === 1 && suyos[0] === 'Primeras 4 semanas', `y al cerrarla la app le prepara su plan: «${suyos[0] || ''}»`);
     await ctx.close();
