@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, catalogoEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -3993,7 +3993,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!c?.completado_en || !c.resultado) throw new Error('Antes, el cuestionario (con la parte de salud)');
         if (c.resultado !== 'sin_valoracion' && !a.visto_bueno_en) throw new Error('Antes de empezar, el visto bueno médico');
         const plantillas = tabla('bloques').filter((x) => x.es_plantilla).sort((x, y) => String(x.creado_en || '').localeCompare(String(y.creado_en || '')));
-        const elegida = plantillaEsencial(c);
+        // (099) la criba y la rutina que ha elegido de su catálogo (si no, la de su cuestionario)
+        const primeras = (c.experiencia || 'ninguna') === 'ninguna' || (c.experiencia === 'menos_1' && (c.gustos?.ahora === 'parado' || c.gustos?.tecnica === 'no'));
+        const suya = !primeras && a.esencial_plantilla && a.esencial_plantilla !== 'Primeras 4 semanas' && plantillas.find((x) => x.esencial_catalogo && x.nombre === a.esencial_plantilla);
+        const elegida = primeras ? 'Primeras 4 semanas' : suya ? suya.nombre : plantillaEsencial(c);
         const pl = plantillas.find((x) => x.nombre === elegida) || plantillas.find((x) => x.nombre === 'Primeras 4 semanas');
         if (!pl) throw new Error('No está la plantilla «Primeras 4 semanas»');
         // Su lunes: el de su tanda si aún no ha llegado; si ya llegó (esta semana) o pasó, este lunes hasta el miércoles y,
@@ -4002,6 +4005,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const tarde = Math.round((Date.parse(`${hoyM}T12:00:00Z`) - Date.parse(`${lunesM}T12:00:00Z`)) / 864e5) > 2;
         const inicio = !a.esencial_inicio ? (hoyM === lunesM ? hoyM : sumar(lunesM, 7)) : a.esencial_inicio > lunesM ? a.esencial_inicio : tarde ? sumar(lunesM, 7) : lunesM;
         const nuevo = copiarPlantillaEsencial(tabla, { plantilla: pl, atletaId: id, inicio, uuid, ahoraISO: new Date().toISOString() });
+        // (099) las plantillas de la biblioteca no llevan esfuerzo: de partida, «te sobran 2-3» (menos en lo que va por tiempo)
+        const susSemanas = new Set(tabla('semanas').filter((w) => w.bloque_id === nuevo.id).map((w) => w.id));
+        const susSesiones = new Set(tabla('sesiones').filter((s) => susSemanas.has(s.semana_id)).map((s) => s.id));
+        for (const x of tabla('sesion_ejercicios')) {
+          if (susSesiones.has(x.sesion_id) && x.rir_objetivo == null && x.rpe_objetivo == null && !tabla('ejercicios').find((e) => e.id === x.ejercicio_id)?.por_tiempo) x.rir_objetivo = 2.5;
+        }
         persistirYa();
         return { bloque: nuevo.id, nuevo: true, plantilla: pl.nombre, inicio };
       }
@@ -4015,6 +4024,19 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return r;
       }
       // (094) FBE Esencial: la alternativa para siempre (como en la base)
+      // (099) FBE Esencial: el catálogo de rutinas y elegir una, como en la base
+      if (nombre === 'esencial_catalogo') {
+        const yo = tabla('atletas').find((x) => x.id === miAtletaId());
+        return esCoach() || yo?.modalidad === 'por_su_cuenta' ? catalogoEsencialDemo(tabla) : [];
+      }
+      if (nombre === 'esencial_elegir_rutina') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes elegir tu propia rutina');
+        const r = elegirRutinaEsencialDemo(tabla, { nombre: args?.p_nombre ?? null, atletaId: id });
+        persistirYa();
+        return r;
+      }
       // (098) FBE Esencial: cerrar la semana (pasar, repetir, pausa o reanudar), como en la base
       if (nombre === 'esencial_cerrar_semana') {
         const id = args?.p_atleta || miAtletaId();

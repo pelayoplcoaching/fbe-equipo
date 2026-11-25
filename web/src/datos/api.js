@@ -2872,6 +2872,8 @@ export function crearApi(backend, opciones = {}) {
         return (await b.upsert('cuestionarios', [fila], 'atleta_id'))[0];
       } catch (e) {
         // Una base sin la migración 016 aún no tiene «objetivos»: se guarda el principal, como antes
+        // (y una sin la 099, «gustos»: se guarda lo demás)
+        if ('gustos' in fila && /gustos/.test(String(e?.message || ''))) { const { gustos, ...sin } = fila; return (await b.upsert('cuestionarios', [sin], 'atleta_id'))[0]; }
         if (!('objetivos' in fila) || !/objetivos/.test(String(e?.message || ''))) throw e;
         const { objetivos, ...sinLista } = fila;
         return (await b.upsert('cuestionarios', [sinLista], 'atleta_id'))[0];
@@ -7463,6 +7465,9 @@ export function crearApi(backend, opciones = {}) {
     // (098, el panel del coach) Las semanas de quienes van por su cuenta con algo elegido al cerrarlas desde ese lunes:
     // [{ atleta_id, nombre, numero, bloque, cierre, lunes, repetida }]
     async esencialCierres(desde) { return (await import('./api-esencial.js')).cierres(b, desde); },
+    // (099) El catálogo de rutinas de quien va por su cuenta (con sus días y sus ejercicios) y elegir una (o ninguna)
+    async esencialCatalogo() { return (await import('./api-esencial.js')).catalogo(b); },
+    async esencialElegirRutina(nombre, atletaId = null) { return (await import('./api-esencial.js')).elegirRutina(b, nombre, atletaId); },
     // (093) FBE Esencial con nutrición: el plan de partida lo calcula la base (como planInicial) con sus datos; devuelve
     // el plan. datos: { sexo, edad, altura, peso, actividad, objetivo, tca }.
     async esencialPlanComida(datos, atletaId = null) {

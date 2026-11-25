@@ -91,6 +91,10 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
     if (p.novato) {
       if (bloque.nombre !== PRIMERAS_4.nombre || !base.marcas) throw new Error('El bloque de novato va después de la semana de marcas');
       destino = NOVATOS[a.esencial_dias] || NOVATO_2.nombre;
+    } else if (a.esencial_plantilla && a.esencial_plantilla !== bloque.nombre && t('bloques').some((b) => b.es_plantilla && b.esencial_catalogo && b.nombre === a.esencial_plantilla)) {
+      // (099) la rutina que ha elegido de su catálogo: desde cualquier plan, pero no a mitad de «Primeras 4 semanas»
+      if (bloque.nombre === PRIMERAS_4.nombre && !base.marcas) throw new Error('Hasta acabar tus cuatro primeras semanas no se cambia de rutina');
+      destino = a.esencial_plantilla;
     } else {
       if (!Object.values(NOVATOS).includes(bloque.nombre)) throw new Error('Solo se cambia de días desde una plantilla de novato');
       destino = NOVATOS[a.esencial_dias];
@@ -145,6 +149,8 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
         nueva.carga_sugerida_kg = antes?.carga_sugerida_kg ?? null;
         if (antes && porTiempo(ej)) Object.assign(nueva, { reps_min: antes.reps_min, reps_max: antes.reps_max });
         if (porTiempo(ej) && Number(nueva.carga_sugerida_kg) > 20) nueva.carga_sugerida_kg = 20;
+        // (099) las plantillas de la biblioteca no llevan esfuerzo: de partida, «te sobran 2-3»
+        if (nueva.rir_objetivo == null && nueva.rpe_objetivo == null && !porTiempo(ej)) nueva.rir_objetivo = 2.5;
       }
       const jp = !cambio && js && (js.pautas || []).find((x) => Number(x.orden) === q.orden && x.ejercicio_id === ej);
       if (jp) {
@@ -169,6 +175,32 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
 
 // (096) Tres días (o volver a dos) desde la semana siguiente, como esencial_cambiar_dias() de la base: solo con una
 // plantilla de novato. Devuelve los días.
+// (099) Elegir rutina y el catálogo, como esencial_elegir_rutina() y esencial_catalogo() de la base
+export function elegirRutinaEsencialDemo(t, { nombre, atletaId }) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  if (nombre == null || String(nombre).trim() === '') { a.esencial_plantilla = null; a.esencial_plantilla_en = null; return { rutina: null }; }
+  if (nombre === PRIMERAS_4.nombre || !t('bloques').some((b) => b.es_plantilla && b.esencial_catalogo && b.nombre === nombre)) throw new Error('Esa rutina no está en el catálogo');
+  a.esencial_plantilla = nombre; a.esencial_plantilla_en = new Date().toISOString();
+  if (nombre === NOVATO_3.nombre) a.esencial_dias = 3; else if (nombre === NOVATO_2.nombre) a.esencial_dias = 2;
+  return { rutina: nombre };
+}
+export function catalogoEsencialDemo(t) {
+  const vistos = new Set();
+  return t('bloques').filter((b) => b.es_plantilla && b.esencial_catalogo).sort((x, y) => String(x.creado_en || '').localeCompare(String(y.creado_en || '')))
+    .filter((b) => !vistos.has(b.nombre) && vistos.add(b.nombre)).map((b) => {
+      const w = t('semanas').filter((x) => x.bloque_id === b.id).sort((x, y) => x.numero - y.numero)[0];
+      const sesiones = w ? t('sesiones').filter((s) => s.semana_id === w.id).sort((x, y) => x.orden - y.orden) : [];
+      return { nombre: b.nombre, dias: sesiones.length, sesiones: sesiones.map((s) => ({ orden: s.orden, nombre: s.nombre,
+        ejercicios: t('sesion_ejercicios').filter((x) => x.sesion_id === s.id).sort((x, y) => x.orden - y.orden).map((x) => {
+          const e = t('ejercicios').find((y) => y.id === x.ejercicio_id) || {};
+          return { nombre: e.nombre || '', series: x.series, reps_min: x.reps_min, reps_max: x.reps_max, por_tiempo: !!e.por_tiempo };
+        }) })) };
+    }).sort((x, y) => x.nombre.localeCompare(y.nombre));
+}
+
 // (098) Cerrar la semana, como esencial_cerrar_semana() de la base (la demo y sus pruebas). Lanza los mismos errores.
 function correrEsencial(t, w, dias) {
   const antes = w.fecha_inicio;
@@ -379,6 +411,27 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
       }
     }
   }
+
+  // (099) El catálogo de rutinas de la demo: las tres de FBE Esencial y tres de muestra de la biblioteca (con los ejercicios
+  // de la demo y sin esfuerzo pautado, como las de verdad: las de Pelayo solo están en su base)
+  const dias3 = filasNovato3()[0].sesiones;
+  for (const [nombre, orden] of [['2 días · Full body · B · Máquinas y mancuernas', [0, 1]], ['3 días · Full body · B · Máquinas y mancuernas', [0, 1, 2]], ['4 días · Torso-pierna · B · Máquinas y mancuernas', [0, 1, 2, 0]]]) {
+    const pl = { id: uuid(), atleta_id: null, es_plantilla: true, numero: null, nombre, foco: NOVATO_3.foco, objetivo: null, descripcion: null, fecha_inicio: null, fecha_fin: null,
+      estado: 'planificado', creado_en: ahoraISO, objetivo_logrado: null };
+    t('bloques').push(pl);
+    const semana = { id: uuid(), bloque_id: pl.id, numero: 1, foco: NOVATO_3.foco, fecha_inicio: null, nota_coach: null, programacion: 'no_iniciada', marcas: false };
+    t('semanas').push(semana);
+    orden.forEach((k, i) => {
+      const sesion = { id: uuid(), semana_id: semana.id, orden: i + 1, nombre: `Día ${i + 1}`, tipo: 'fuerza', intencion: null, dinamica: null, fecha_realizada: null, completada: false,
+        nota_atleta: null, duracion_min: null, rpe_sesion: null, revisada_en: null };
+      t('sesiones').push(sesion);
+      for (const e of dias3[k].ejercicios) {
+        t('sesion_ejercicios').push({ id: uuid(), sesion_id: sesion.id, ejercicio_id: ej[e.nombre].id, orden: e.orden, superserie: null, prioridad: e.prioridad, series: e.series,
+          reps_min: e.reps_min, reps_max: e.reps_max, rir_objetivo: null, rpe_objetivo: null, carga_sugerida_kg: null, descanso_seg: e.descanso_seg, tempo: null, notas_coach: null, variante: null });
+      }
+    });
+  }
+  for (const b of t('bloques')) if (b.es_plantilla) b.esencial_catalogo = true;
 
   const atleta = ({ email, nombre, alta, objetivo, inicio, extra = {} }) => {
     const perfil = usuario(email, nombre.split(' ')[0], 'atleta');

@@ -134,6 +134,8 @@ export function limpiarCuestionario(d) {
   if ('lugar' in d) out.lugar = d.lugar || null;
   if ('material' in d) out.material = [...new Set(d.material || [])];
   if ('otros_deportes' in d) out.otros_deportes = t(d.otros_deportes, 200);
+  // (099) «Tus gustos» (FBE Esencial): respuestas cortas de una lista (las valida la pantalla con sus opciones)
+  if ('gustos' in d) out.gustos = d.gustos && typeof d.gustos === 'object' ? Object.fromEntries(Object.entries(d.gustos).filter(([k, v]) => /^[a-z_]{1,20}$/.test(k) && typeof v === 'string' && v.length <= 20).slice(0, 12)) : null;
   if ('activo' in d) out.activo = d.activo == null ? null : !!d.activo;
   if ('enfermedad' in d) out.enfermedad = d.enfermedad == null ? null : !!d.enfermedad;
   if ('enfermedad_detalle' in d) out.enfermedad_detalle = d.enfermedad ? t(d.enfermedad_detalle, 300) : null;

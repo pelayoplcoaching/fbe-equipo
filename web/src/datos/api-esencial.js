@@ -16,7 +16,7 @@ export async function prepararSemana(api, b, atletaId, { hoy = fechaMadrid() } =
   const { siguientePaso } = await import('../logica/esencial-semana.js');
   const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
   // (096) con los días que ha pedido (3 o 2): desde el lunes siguiente, la otra plantilla de novato
-  const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy, dias: atleta?.esencial_dias ?? null });
+  const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy, dias: atleta?.esencial_dias ?? null, rutina: atleta?.esencial_plantilla ?? null });
   if (!paso) return null;
   if (paso.tipo === 'cambio') {
     // (los kilos de ahora, los pone la base: la de cada ejercicio en la semana hecha; el día de alternativas, sin kilos)
@@ -60,4 +60,14 @@ export async function cierres(b, desde) {
       cierre: w.esencial_cierre, lunes: String(w.esencial_cierre_lunes).slice(0, 10), repetida: Number(w.esencial_repetida) || 0 }))
       .sort((x, y) => y.lunes.localeCompare(x.lunes) || x.nombre.localeCompare(y.nombre));
   } catch (e) { if (/esencial_cierre/.test(`${e?.message || ''}`)) return []; throw e; }
+}
+
+// (099) El catálogo de rutinas (las plantillas que Pelayo tiene en él), con sus días y sus ejercicios: [] sin la 099
+const falta099 = falta(/esencial_catalogo|esencial_elegir_rutina/);
+export async function catalogo(b) {
+  try { return (await b.rpc('esencial_catalogo', {})) || []; } catch (e) { if (falta099(e)) return []; throw e; }
+}
+// Elegir rutina (null: ninguna). → { rutina } | { falta099: true }
+export async function elegirRutina(b, nombre, atletaId = null) {
+  try { return await b.rpc('esencial_elegir_rutina', { p_nombre: nombre, ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta099(e)) return { falta099: true }; throw e; }
 }

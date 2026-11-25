@@ -20,7 +20,9 @@ const diasDeNovato = (nombre) => Number(Object.keys(NOVATOS).find((k) => NOVATOS
 //  · si lleva más de una semana sin abrir la app, desde el lunes de esta semana (no se rellenan las que se ha saltado).
 //  · (098) el domingo, con la semana sin acabar: si ha elegido pasar a la siguiente (o se pasó sola a las 23:30:
 //    base.esencial_cierre 'pasar' | 'auto' de esta semana), se prepara ya, sin esperar al lunes (adelantada: true).
-export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy, dias = null }) {
+//  · (099) rutina: la que ha elegido de su catálogo (atletas.esencial_plantilla). Si no es la que lleva: «cambio» a esa
+//    plantilla desde ese lunes (tras «Primeras 4 semanas», solo desde su semana de marcas).
+export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy, dias = null, rutina = null }) {
   if (!bloque || !hoy) return null;
   const propias = semanas.filter((w) => w.bloque_id === bloque.id && w.fecha_inicio && w.programacion === 'programada').sort((a, b) => a.numero - b.numero);
   const base = propias[propias.length - 1];
@@ -35,6 +37,9 @@ export function siguientePaso({ bloque = null, semanas = [], sesiones = {}, hoy,
   const primeras = bloque.nombre === NOMBRE_PRIMERAS_4;
   if (primeras && !base.marcas) return null;   // (las cuatro semanas de la guía ya están publicadas: hasta la de marcas, nada)
   const quiere = NOVATOS[dias] ? Number(dias) : 2;
+  const mas = adelantada ? { adelantada } : {};
+  const elegida = rutina && rutina !== bloque.nombre && rutina !== NOMBRE_PRIMERAS_4 && !(diasDeNovato(rutina) && (primeras || diasDeNovato(bloque.nombre))) ? rutina : null;
+  if (elegida) return { tipo: 'cambio', base, inicio, plantilla: elegida, ...mas };
   if (primeras) return { tipo: 'novato', base, inicio, plantilla: NOVATOS[quiere], ...(adelantada ? { adelantada } : {}) };
   const tiene = diasDeNovato(bloque.nombre);
   if (tiene && NOVATOS[dias] && Number(dias) !== tiene) return { tipo: 'cambio', base, inicio, plantilla: NOVATOS[dias], ...(adelantada ? { adelantada } : {}) };
