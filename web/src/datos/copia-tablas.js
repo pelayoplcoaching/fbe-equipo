@@ -28,8 +28,9 @@ const TABLAS_SONIDO = ['voces_coach'];
 const TABLAS_209 = ['conversacion_fijado', 'chat_silencios', 'listas_difusion', 'listas_difusion_miembros', 'encuestas_chat', 'encuesta_votos',
   'privacidad_vista', 'preferencias_notificaciones', 'umbrales_velocidad', 'atletas_imagenes', 'revision_ajustes', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes'];
 
-// (100) FBE Esencial: lo que quien va por su cuenta le cuenta a la app (su pregunta para el directo, «¿Cómo vamos?»)
-const TABLAS_ESENCIAL = ['esencial_notas'];
+// (100) FBE Esencial: lo que quien va por su cuenta le cuenta a la app (su pregunta para el directo, «¿Cómo vamos?»); (103) lo
+// que enciendes o escribes en tu panel (con su registro), a quién has escrito, por qué se van y lo que más se consulta
+const TABLAS_ESENCIAL = ['esencial_notas', 'esencial_ajustes', 'esencial_ajustes_registro', 'esencial_contactos', 'esencial_bajas', 'esencial_consultas'];
 
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los
 // vídeos, 035; la revisión semanal, 040…): sin ellas, la copia sale igual

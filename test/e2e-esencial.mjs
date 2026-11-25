@@ -1125,8 +1125,68 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await esc.getByRole('button', { name: 'Ver el mensaje preparado' }).first().click();
       const msg = await esc.locator('.ecp-area').first().inputValue().catch(() => '');
       check(/^Hola, [^:]+:/.test(msg) && /Pelayo$/.test(msg) && /La app no envía nada/.test(await esc.textContent()), '«A quién escribir»: con el mensaje preparado para copiar (lo manda él: la app no envía nada)');
-      await esc.getByRole('button', { name: 'Cerrar' }).first().click();
+      // (v0.249, 90) «Ya le he escrito»: sale de la lista una semana y queda apuntado abajo
+      const cuantos = async () => Number(((await esc.locator('#ecp-escribir-t').textContent()) || '').match(/\((\d+)\)/)?.[1] || -1);
+      const antes = await cuantos();
+      const quien = ((await esc.locator('.ecp-fila').first().locator('button.btn-texto').first().textContent()) || '').trim();
+      await esc.getByRole('button', { name: 'Ya le he escrito' }).first().click();
+      const apuntado = await p.waitForFunction(() => /Ya les has escrito esta semana/.test(document.querySelector('.ecp-caja[data-ecp="escribir"]')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const despues = await cuantos();
+      check(apuntado && despues === antes - 1 && ((await esc.textContent()) || '').includes(`Ya les has escrito esta semana: ${quien}`), `«Ya le he escrito» (v0.249): ${quien} sale de la lista y queda apuntado abajo (${antes} → ${despues})`);
     }
+    // (v0.249, tanda 8) «Por revisar y el piloto»: lo apagado con su interruptor, sus textos, el registro con «Deshacer»…
+    const prv = piloto.locator('details.prv-caja');
+    const conPrv = await prv.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    if (conPrv) {
+      await prv.locator('summary').click();
+      const items = prv.locator('.prv-item');
+      await items.first().waitFor({ timeout: 10000 }).catch(() => {});
+      // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
+      const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
+      check(nItems === 15 && /15 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 15 cosas apagadas, cada una con su interruptor (${nItems})`);
+      const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
+      await enfermo.locator('input[role="switch"]').check();
+      const encendida = await p.waitForFunction(() => /14 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
+      const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 14 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      if (conReg) {
+        await reg.getByRole('button', { name: /Deshacer/ }).click();
+        const deshecho = await p.waitForFunction(() => /15 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
+      }
+      // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app
+      await items.filter({ hasText: 'Tu nota de cada lunes' }).getByRole('button', { name: /Sus textos/ }).click();
+      const ht = p.locator('[aria-modal="true"]').last();
+      const conHt = await ht.locator('.prv-area').first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      if (conHt) {
+        check(/Escritos por ti: 0 de 8/.test(await ht.textContent()), 'sus textos: las ocho notas de los lunes (semanas 1 a 6, 8 y 12), ninguna escrita aún');
+        await ht.locator('.prv-area').first().fill('Semana 1: lo único que cuenta es venir. Nos vemos dentro.');
+        await ht.getByRole('button', { name: /Guardar/ }).first().click();
+        const escrita = await p.waitForFunction(() => /Escritos por ti: 1 de 8/.test(document.body.textContent), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(escrita && /Semana 1 · el tuyo/.test(await ht.textContent()), 'escribe la de la semana 1: «Escritos por ti: 1 de 8» y «el tuyo»');
+        await ht.getByRole('button', { name: /El de la app/ }).first().click();
+        await ht.getByRole('button', { name: /Guardar/ }).first().click();
+        const vuelta = await p.waitForFunction(() => /Escritos por ti: 0 de 8/.test(document.body.textContent), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(vuelta, 'y «El de la app» + «Guardar» la devuelve a la de la app');
+        await ht.locator('.cerrar-hoja').click().catch(() => {});
+      } else check(false, 'sus textos: la hoja para escribir las notas de los lunes');
+      // el piloto: «tal cual», la curva y el repaso de seguridad del motor, en el navegador
+      await prv.getByRole('tab', { name: 'El piloto' }).click();
+      const tc = await prv.locator('#prv-panel').filter({ hasText: '«Tal cual»' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(tc && /semanas terminadas/.test(await prv.locator('#prv-panel').textContent()) && /La curva/.test(await prv.locator('#prv-panel').textContent()), 'el piloto: «Tal cual» (semanas hechas como las propuso la app) y la curva');
+      await prv.getByRole('button', { name: /Hacer el repaso/ }).click();
+      const repaso = await p.waitForFunction(() => /propuestas en \d+ semanas?: ninguna fuera de regla/.test(document.querySelector('#prv-panel')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
+      check(repaso, 'el repaso de seguridad del motor, desde el panel: «ninguna fuera de regla»');
+      // herramientas: Stripe frente a la app
+      await prv.getByRole('tab', { name: 'Herramientas' }).click();
+      await prv.locator('#prv-panel textarea').first().fill('sub_1,marina@fbe.demo,active\nsub_2,tomas@fbe.demo,canceled\nnadie@x.com active');
+      await prv.getByRole('button', { name: 'Comparar' }).click();
+      const cmp = await p.waitForFunction(() => /3 suscripciones leídas/.test(document.querySelector('#prv-panel')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const tCmp = (await prv.locator('#prv-panel').textContent()) || '';
+      check(cmp && /nadie@x\.com: no tiene ficha en la app/.test(tCmp) && /De baja en Stripe y activos en la app \(1\)/.test(tCmp) && /Tomás Rey/.test(tCmp), 'Stripe frente a la app: quién ha pagado y no tiene acceso y quién se dio de baja y sigue activo');
+      await prv.locator('summary').click();
+    } else check(false, 'en el panel de FBE Esencial, «Por revisar y el piloto»');
     if (conCaja) {
       await caja.getByRole('button', { name: 'Contestar' }).click();
       await caja.locator('.ecp-area').fill('Baja el peso, saca cadera hacia atrás y para cuando la espalda empiece a redondearse.');
@@ -1152,6 +1212,28 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
         const tD = conDirecto ? await h2.textContent() : '';
         check(conDirecto && /noto más la espalda que la pierna/.test(tD) && !/Tomás/.test(tD), 'y ve la duda del directo en «Respuestas», en «Del directo del mes», sin el nombre de quien preguntó');
         if (conDirecto) { await h2.locator('.ayu-p').first().locator('summary').click(); check(/saca cadera hacia atrás/.test(await h2.locator('.ayu-p').first().textContent()), 'con la respuesta de Pelayo'); }
+        // (v0.249, 92) «¿Puedo darme de baja?» → «Tu suscripción»: antes del portal, «¿nos dices por qué?» (opcional)
+        const catSus = h2.locator('.ayu-cat', { hasText: 'Tu suscripción' });
+        if (await catSus.count()) {
+          await catSus.first().click();
+          const pBaja = h2.locator('.ayu-p[data-id="baja"]');
+          const conBaja = await pBaja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+          if (conBaja) {
+            await pBaja.locator('summary').click();
+            await pBaja.getByRole('button', { name: /Tu suscripción/ }).click();
+            const hb = p.locator('[aria-modal="true"]').filter({ hasText: '¿nos dices por qué?' }).last();
+            const conHb = await hb.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+            const nOps = conHb ? await hb.locator('.ayu-baja-op').count() : 0;
+            check(conHb && nOps === 6 && (await hb.getByRole('link', { name: /Ir a mi suscripción/ }).count()) === 1, `«¿Puedo darme de baja?» → «Tu suscripción»: el porqué, opcional (${nOps} motivos), y el enlace a su suscripción`);
+            if (conHb) {
+              await hb.getByRole('button', { name: 'Es caro para mí' }).click();
+              await hb.getByRole('button', { name: 'Enviarlo' }).click();
+              const gracias = await hb.getByText('Gracias por decírnoslo.').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+              check(gracias, 'elige «Es caro para mí» y lo envía: «Gracias por decírnoslo» (a Pelayo le sale en su panel)');
+              await hb.locator('.cerrar-hoja').click().catch(() => {});
+            }
+          } else check(false, 'en «Tu suscripción», «¿Puedo darme de baja?»');
+        }
       }
     }
     await ctx.close();

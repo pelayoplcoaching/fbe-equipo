@@ -102,6 +102,8 @@ export function Acceso() {
     setError(null);
     try { await backend.auth.entrar(email, 'demo'); } catch (e) { setError(e.message); }
   }
+  // (v0.249) «Ver como…» del panel de FBE Esencial: en la demo, «?como=tomas» entra directamente con esa persona
+  useEffect(() => { if (modo === 'demo') { const m = /[?&]como=([a-z]{2,12})(&|$)/.exec(location.search); if (m) comoDemo(`${m[1]}@fbe.demo`); } }, []);
 
   return (
     <div class="app">

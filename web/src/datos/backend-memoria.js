@@ -144,6 +144,9 @@ const DEFECTOS = {
   carrera_recetas: () => ({ orden: 0, creado_en: ahora() }),
   // (migración 100) FBE Esencial: lo que le cuenta a la app (las preguntas para el directo…)
   esencial_notas: () => ({ texto: null, datos: {}, desde: null, hasta: null, creada_en: ahora(), respuesta: null, pregunta_publica: null, respondida_en: null, publica: false }),
+  // (migración 103) FBE Esencial: «A quién escribir» con memoria y «¿Por qué te vas?»
+  esencial_contactos: () => ({ escrito_en: ahora() }),
+  esencial_bajas: () => ({ texto: null, creada_en: ahora() }),
 };
 
 // Borrados en cascada, como en el esquema SQL.
@@ -408,6 +411,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     carrera_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     carrera_recetas: () => esCoach(),
     esencial_notas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (103) lo del panel de FBE Esencial, solo el coach; el motivo de baja, también su atleta
+    esencial_ajustes: () => esCoach(),
+    esencial_ajustes_registro: () => esCoach(),
+    esencial_contactos: () => esCoach(),
+    esencial_consultas: () => esCoach(),
+    esencial_bajas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -1417,7 +1426,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -1696,8 +1705,27 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     gastarCupoChat(t === 'comentario_reacciones' ? 'reaccion' : 'destacar');
     f.creado_en = ahora();
   }
+  // (103) cada cambio de los ajustes de FBE Esencial, en su registro (como el disparador)
+  const sinHoraAjuste = (x) => { const { actualizado_en, actualizado_por, ...resto } = x; return copia(resto); };
+  const registrarAjuste = (antes, despues) => {
+    const r = tabla('esencial_ajustes_registro');
+    r.push({ id: r.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1, clave: (despues || antes).clave, antes: antes ? sinHoraAjuste(antes) : null, despues: despues ? sinHoraAjuste(despues) : null, en: ahora(), por: sesion?.user.id || null });
+  };
   function insertar(t, fila, opciones = {}) {
     soloCoach(t);
+    if (['esencial_ajustes_registro', 'esencial_consultas'].includes(t)) throw sinPermiso();
+    if (t === 'esencial_ajustes') {
+      const x = { encendido: false, texto: null, solo_atleta: null, valor: null, ...copia(fila), actualizado_en: ahora(), actualizado_por: sesion?.user.id || null };
+      if (!/^[a-z0-9_]+(:[a-z0-9_-]+)?$/.test(x.clave || '') || String(x.clave).length > 80) throw new Error('new row violates check constraint "esencial_ajustes_validos"');
+      if (tabla(t).some((y) => y.clave === x.clave)) throw new Error('duplicate key value violates unique constraint "esencial_ajustes_pkey"');
+      tabla(t).push(x);
+      registrarAjuste(null, x);
+      return x;
+    }
+    if (t === 'esencial_bajas') {
+      if (esCoach()) { /* el coach, todo */ } else if (fila.atleta_id !== miAtletaId() || !tabla('atletas').some((a) => a.id === fila.atleta_id && a.modalidad === 'por_su_cuenta')) throw new Error('new row violates row-level security policy');
+      if (!['tiempo', 'precio', 'seguimiento', 'app', 'resultados', 'otro'].includes(fila.motivo)) throw new Error('new row violates check constraint "esencial_bajas_validas"');
+    }
     // (060) la travesía y los apuntes vistos, solo con sumar_travesia() y apuntar_apunte(); los envíos, nadie
     if (['presencia', 'chat_cupos', 'encuestas_chat', 'encuesta_votos', 'personal_atleta', 'mensajes_coach', 'musica_coach', 'integraciones', 'salud_diaria', 'atajos_coach', 'contacto_atleta', 'reloj', 'travesia_semanas', 'apuntes_vistos', 'travesia_envios', 'travesia_perfil', 'travesia_dia', 'travesia_aullidos', 'travesia_liga', 'travesia_reto_equipo', 'travesia_fiesta', 'voces_coach', 'apuntes_semanas', 'apuntes_duelos', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'musica_sesion', 'musica_aperturas_lista', 'musica_biblioteca', 'musica_retos', 'animo_fijados', 'portadas'].includes(t)) throw sinPermisoTabla(t);
     // Como la 027: entrar, reaccionar y avisar al coach van por sus funciones; los retos, solo el coach
@@ -3517,6 +3545,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async update(t, cambios, f) {
       sinRedDemo();
+      if (t === 'esencial_ajustes') {
+        if (!esCoach()) return [];
+        const res = tabla(t).filter((x) => cumple(x, f)).map((x) => { const antes = { ...x }; Object.assign(x, copia(cambios), { actualizado_en: ahora(), actualizado_por: sesion?.user.id || null }); registrarAjuste(antes, x); return x; });
+        persistirYa();
+        return copia(res);
+      }
       if (t === 'pausas' && !esCoach()) return [];   // (078) las pausas, solo el coach
       if (t === 'menu_fotos' || t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (079, 080)
       if (t === 'recetas_favoritas') throw sinPermisoTabla(t);   // (055) se pone o se quita, no se cambia
@@ -3871,6 +3905,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     },
     async delete(t, f) {
       sinRedDemo();
+      if (t === 'esencial_ajustes') {
+        if (!esCoach()) return [];
+        for (const x of tabla(t).filter((y) => cumple(y, f))) registrarAjuste({ ...x }, null);
+        db[t] = tabla(t).filter((x) => !cumple(x, f));
+        persistirYa();
+        return [];
+      }
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
       if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_quitar
       // (078) las pausas las quita el coach
@@ -5069,6 +5110,42 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             })(),
           };
         });
+      }
+      // (103) Lo de su panel, para cada atleta de FBE Esencial: si está encendido para él, su texto y su número
+      if (nombre === 'esencial_ajustes_mios') {
+        const yo = miAtletaId();
+        const a = yo && tabla('atletas').find((x) => x.id === yo);
+        if (!esCoach() && !(a && a.modalidad === 'por_su_cuenta' && a.estado !== 'baja')) return [];
+        return tabla('esencial_ajustes').slice().sort((x, y) => x.clave.localeCompare(y.clave)).map((x) => ({ clave: x.clave, encendido: !!x.encendido || (!!yo && x.solo_atleta === yo), texto: copia(x.texto ?? null), valor: x.valor ?? null }));
+      }
+      if (nombre === 'esencial_contar_consulta') {
+        const clave = String(args?.p_clave || '');
+        const a = tabla('atletas').find((x) => x.id === miAtletaId());
+        if (!/^[a-z0-9_-]{1,60}$/.test(clave) || !a || a.modalidad !== 'por_su_cuenta' || a.estado === 'baja') return null;
+        const semana = lunesDe(fechaMadrid());
+        const c = tabla('esencial_consultas').find((x) => x.clave === clave && x.semana === semana);
+        if (c) c.n += 1; else tabla('esencial_consultas').push({ clave, semana, n: 1 });
+        persistirYa();
+        return null;
+      }
+      if (nombre === 'esencial_semanas_piloto') {
+        if (!esCoach()) throw Object.assign(new Error('Solo el coach'), { code: '42501' });
+        const suyos = new Set(tabla('atletas').filter((a) => a.modalidad === 'por_su_cuenta').map((a) => a.id));
+        const bloques = tabla('bloques').filter((b) => !b.es_plantilla && suyos.has(b.atleta_id));
+        const bDe = new Map(bloques.map((b) => [b.id, b]));
+        const ws = tabla('semanas').filter((w) => bDe.has(w.bloque_id) && w.programacion === 'programada' && w.fecha_inicio);
+        const pautasDe = (w) => { const ss = new Set(tabla('sesiones').filter((s) => s.semana_id === w.id).map((s) => s.id)); return tabla('sesion_ejercicios').filter((p) => ss.has(p.sesion_id)); };
+        return ws.map((w) => {
+          const b = bDe.get(w.bloque_id);
+          const ss = tabla('sesiones').filter((s) => s.semana_id === w.id);
+          const ps = pautasDe(w);
+          const previa = ws.find((x) => bDe.get(x.bloque_id).atleta_id === b.atleta_id && x.fecha_inicio === sumar(w.fecha_inicio, -7));
+          const psPrevia = previa ? pautasDe(previa) : [];
+          return { atleta_id: b.atleta_id, semana_id: w.id, inicio: w.fecha_inicio, numero: w.numero, bloque: b.nombre, marcas: !!w.marcas, cierre: w.esencial_cierre || null,
+            total: ss.length, hechas: ss.filter((s) => s.completada).length,
+            cambios: new Set(tabla('series').filter((r) => r.sustituto_id && ps.some((p) => p.id === r.sesion_ejercicio_id)).map((r) => r.sesion_ejercicio_id)).size,
+            sube: ps.filter((p) => p.carga_sugerida_kg != null && psPrevia.some((q) => q.ejercicio_id === p.ejercicio_id && q.carga_sugerida_kg != null && Number(p.carga_sugerida_kg) > Number(q.carga_sugerida_kg))).length };
+        }).sort((x, y) => String(x.atleta_id).localeCompare(String(y.atleta_id)) || String(x.inicio).localeCompare(String(y.inicio)));
       }
       // (102) Cuántos empiezan su mismo lunes (solo el número; con menos de tres, null)
       if (nombre === 'esencial_companeros') {

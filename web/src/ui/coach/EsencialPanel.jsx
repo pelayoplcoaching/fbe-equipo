@@ -19,6 +19,8 @@ const PreguntasDirecto = perezoso(() => import('./EsencialPreguntas.jsx'), 'Preg
 const AQuienEscribir = perezoso(() => import('./EsencialPreguntas.jsx'), 'AQuienEscribir', { mientras: null });
 const ComoVamosCoach = perezoso(() => import('./EsencialPreguntas.jsx'), 'ComoVamosCoach', { mientras: null });
 const ResumenSemana = perezoso(() => import('./EsencialPreguntas.jsx'), 'ResumenSemana', { mientras: null });
+// (v0.249, tanda 8) «Por revisar y el piloto»: lo apagado con su interruptor, las respuestas, el piloto y las herramientas
+const PanelRevisar = perezoso(() => import('./EsencialRevisar.jsx'), 'PanelRevisar', { mientras: null });
 
 const CIERRE = { pasar: 'pasó a la siguiente', auto: 'no eligió: se le pasó a la siguiente', repetir: 'repite la semana', pausa: 'semana en pausa' };
 const RESULTADO = { valorar_antes_vigoroso: 'su cribado: valorar antes de lo vigoroso', valorar_antes: 'su cribado: valorar antes de empezar', parar_y_valorar: 'su cribado: parar y valorar' };
@@ -163,6 +165,8 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       {suyos.length > 0 && <AQuienEscribir lista={suyos} abrir={abrir} />}
       {suyos.length > 0 && <PreguntasDirecto />}
       {suyos.length > 0 && <ComoVamosCoach />}
+      {/* (v0.249, tanda 8) lo apagado, en tu mano, y el piloto de un vistazo */}
+      {suyos.length > 0 && <PanelRevisar lista={lista} abrir={abrir} />}
       {hoja && <HojaEncuesta suyos={filas.filter((r) => r.estado !== 'baja')} tareas={enc.datos || []} alCerrar={() => setHoja(false)} alCambiar={() => enc.recargar(true)} />}
       {reenvio && <HojaReenvio sin={sin} alCerrar={() => { setReenvio(false); alta.recargar(true); }} />}
     </details>

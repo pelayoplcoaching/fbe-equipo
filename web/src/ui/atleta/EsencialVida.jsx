@@ -563,7 +563,9 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
           <div class="pila-s">
             <span class="peq">{basta.texto}</span>
             <div class="fila-envolver">
-              <a class="btn btn-peq" href={`${WEB_FBE}/${basta.motivo === 'molestia' ? 'puesta-a-punto.html' : 'programas.html'}`} target="_blank" rel="noopener">{basta.motivo === 'molestia' ? 'Ver la Puesta a punto' : 'Ver los programas'}</a>
+              {/* (v0.249, 93) que lo ha mirado queda apuntado (una nota 'hablar', nada de salud): en el panel de Pelayo sale entre los candidatos */}
+              <a class="btn btn-peq" href={`${WEB_FBE}/${basta.motivo === 'molestia' ? 'puesta-a-punto.html' : 'programas.html'}`} target="_blank" rel="noopener"
+                onClick={() => { datos.anotar(backend, atleta.id, 'hablar', { datos: { motivo: basta.motivo } }).catch(() => {}); }}>{basta.motivo === 'molestia' ? 'Ver la Puesta a punto' : 'Ver los programas'}</a>
               <button type="button" class="btn-texto" onClick={aparcarBasta}>Ahora no</button>
             </div>
             <span class="mini terciario">Sin prisa: FBE Esencial sigue aquí.</span>

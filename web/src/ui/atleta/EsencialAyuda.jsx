@@ -11,7 +11,7 @@ import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
-import { CATEGORIAS, enTema, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
+import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
@@ -52,10 +52,19 @@ export function CheckinResponde({ f }) {
 }
 
 // ---------- (6) El centro de respuestas ----------
+// (v0.249, 94) cada respuesta que se abre suma una consulta (solo el recuento; una vez por respuesta y por visita)
+const contadas = new Set();
 function Respuesta({ x, abierta, alAccion }) {
+  const { backend } = useApp();
+  const [baja, setBaja] = useState(false);
   const etiqueta = { directo: 'Preguntar para el directo', pausa: 'Ir a tu semana', dias: 'Cambiar mis días', revision: 'Ver mi revisión', rutina: 'Ver «Tu rutina»' }[x.ir];
+  const contar = (ev) => {
+    if (!ev.currentTarget.open || contadas.has(x.id) || x.directo) return;
+    contadas.add(x.id);
+    datos.contarConsulta(backend, x.id).catch(() => {});
+  };
   return (
-    <details class="ayu-p" open={abierta} data-id={x.id}>
+    <details class="ayu-p" open={abierta} data-id={x.id} onToggle={contar}>
       <summary class="ayu-p-q">{x.q}</summary>
       <div class="ayu-p-r">
         <p class="peq">{x.r}</p>
@@ -63,11 +72,12 @@ function Respuesta({ x, abierta, alAccion }) {
         {x.directo && <p class="mini terciario">Del directo del mes: lo contesta Pelayo.</p>}
         <div class="fila-envolver">
           {x.enlace && <a class="btn btn-peq" href={`${WEB_FBE}/${x.enlace[1]}`} target="_blank" rel="noopener"><Icono n="enlace" /> {x.enlace[0]}</a>}
-          {x.portal && <a class="btn btn-peq" href={PORTAL_ESENCIAL} target="_blank" rel="noopener"><Icono n="enlace" /> Tu suscripción</a>}
+          {x.portal && <button type="button" class="btn btn-peq" onClick={() => setBaja(true)}><Icono n="enlace" /> Tu suscripción</button>}
           {x.correo && <a class="btn btn-peq" href={`mailto:${CORREO_CONTACTO}`}><Icono n="mensaje" /> {CORREO_CONTACTO}</a>}
           {x.ir && etiqueta && alAccion && <button type="button" class="btn btn-peq" onClick={() => alAccion(x.ir)}>{etiqueta}</button>}
         </div>
       </div>
+      {baja && <HojaBaja alCerrar={() => setBaja(false)} />}
     </details>
   );
 }
@@ -269,7 +279,7 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
   const peso = pesoEnContexto(pesos.datos || [], hoyISO());
   useEffect(() => { if (r?.id) guardar(claveLeida(atleta.id, r.id), '1'); }, [r?.id]);
   const v = r ? revisionDe(r) : null;
-  const momento = r && encendido('lecciones_momento', previa) ? LECCIONES_MOMENTO[momentoDe(r)] : null;
+  const momento = r && encendido('lecciones_momento', previa) ? leccionMomento(momentoDe(r)) : null;
   return (
     <Hoja titulo={r?.numero ? `Tu revisión · semana ${r.numero}` : 'Tu revisión de la semana'} alCerrar={alCerrar}>
       <div class="pila ayu-revision" aria-busy={d.cargando ? 'true' : 'false'}>
@@ -526,5 +536,37 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
       {hoja?.tipo === 'enfermo' && <HojaEnfermo alCerrar={cerrar} alAccion={accion} />}
       {hoja?.tipo === 'suave' && <AbrirSuave alCerrar={cerrar} />}
     </section>
+  );
+}
+
+// ---------- (v0.249, 92) «¿Por qué te vas?»: antes de ir a su suscripción, si quiere, el motivo (opcional) ----------
+export function HojaBaja({ alCerrar }) {
+  const { backend, atleta, aviso } = useApp();
+  const [motivo, setMotivo] = useState(null);
+  const [texto, setTexto] = useState('');
+  const [dicho, setDicho] = useState(false);
+  const [ocupado, una] = useUnaVez();
+  const decir = () => una(async () => {
+    try { const r = await datos.apuntarBaja(backend, atleta.id, { motivo, texto: motivo === 'otro' ? texto : null }); if (r) { setDicho(true); aviso('Gracias: Pelayo lo leerá'); } }
+    catch { setDicho(true); }
+  });
+  return (
+    <Hoja titulo="Tu suscripción" alCerrar={alCerrar}>
+      <div class="pila ayu-baja">
+        <p class="secundario">Desde tu suscripción puedes cambiar la tarjeta o darte de baja, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</p>
+        {!dicho && (
+          <>
+            <strong class="peq">Si te vas, ¿nos dices por qué? Es opcional y ayuda a mejorar.</strong>
+            <div class="ayu-baja-ops" role="group" aria-label="El motivo">
+              {MOTIVOS_BAJA.map(([k, t]) => <button type="button" key={k} class={motivo === k ? 'ayu-baja-op ayu-baja-op-si' : 'ayu-baja-op'} aria-pressed={motivo === k ? 'true' : 'false'} onClick={() => setMotivo(k)}>{t}</button>)}
+            </div>
+            {motivo === 'otro' && <textarea class="ayu-baja-area" rows={3} maxLength={300} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} placeholder="Cuéntanoslo en una frase (sin datos de salud)" aria-label="El motivo, en una frase" />}
+            {motivo && <div class="fila-envolver"><button type="button" class="btn btn-peq" disabled={ocupado} onClick={decir}>Enviarlo</button></div>}
+          </>
+        )}
+        {dicho && <p class="peq" role="status">Gracias por decírnoslo.</p>}
+        <a class="btn btn-primario" href={PORTAL_ESENCIAL} target="_blank" rel="noopener"><Icono n="enlace" /> Ir a mi suscripción</a>
+      </div>
+    </Hoja>
   );
 }

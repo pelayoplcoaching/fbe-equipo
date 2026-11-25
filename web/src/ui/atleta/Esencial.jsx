@@ -7,6 +7,7 @@ import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../.
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
+import { fijarAjustes } from '../../logica/esencial-respuestas.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUTO_098 } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
@@ -29,6 +30,8 @@ const TodasLasRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'TodasL
 // (v0.248, tanda 7) la espera: la cuenta atrás con lo que le falta y lo de cada día; y, ya empezado, su porqué de vuelta
 const EsperaArriba = perezoso(() => import('./EsencialEspera.jsx'), 'EsperaArriba', { mientras: null });
 const PorqueVuelve = perezoso(() => import('./EsencialEspera.jsx'), 'PorqueVuelve', { mientras: null });
+// (v0.249, tanda 8) «¿Por qué te vas?» antes de su suscripción (en el trozo de la ayuda)
+const HojaBaja = perezoso(() => import('./EsencialAyuda.jsx'), 'HojaBaja', { mientras: null });
 
 // ---------- (alta, 28-32) Antes de empezar ----------
 // Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
@@ -780,6 +783,7 @@ export function PresentateEquipo({ p, irA }) {
 // falla en la app o en el cobro
 export function FaqEsencial() {
   const { atleta } = useApp();
+  const [baja, setBaja] = useState(false);
   const inicio = atleta?.esencial_inicio || null;
   const enlace = (ruta, texto) => <a href={`${WEB_FBE}/${ruta}`} target="_blank" rel="noopener">{texto}</a>;
   const faq = [
@@ -789,7 +793,8 @@ export function FaqEsencial() {
     ['¿Y si tengo una enfermedad o tomo medicación?', <>Antes de empezar contestas unas preguntas de salud. Si sale que conviene consultar, no empiezas sin el visto bueno de tu médico o una {enlace('puesta-a-punto.html', 'Puesta a punto')} con Pelayo.</>],
     ['¿Y si me duele algo?', <>La app no valora el dolor. Si con el esfuerzo notas dolor u opresión en el pecho, falta de aire que no cuadra con lo que estás haciendo, mareos o palpitaciones, para y habla con tu médico. Para las molestias al entrenar tienes el {enlace('semaforo-dolor.html', 'semáforo del dolor')}.</>],
     ['¿Cuándo se me cobra?', `Al reservar dejaste tu tarjeta, sin cobrar nada. La primera cuota se cobra ${inicio ? `el ${fechaLarga(inicio)}` : 'el día en que empieza tu tanda'} y, desde ahí, cada mes o cada año, según lo que elegiste, con el mismo precio de fundador.`],
-    ['¿Puedo darme de baja?', <>Sí, cuando quieras, desde <a href={PORTAL_ESENCIAL} target="_blank" rel="noopener">tu suscripción</a>, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</>],
+    // (v0.249, 92) «tu suscripción» abre antes la hoja de «¿Por qué te vas?» (opcional), y de ahí al portal
+    ['¿Puedo darme de baja?', <>Sí, cuando quieras, desde <button type="button" class="btn-texto" onClick={() => setBaja(true)}>tu suscripción</button>, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</>],
   ];
   return (
     <section class="seccion alta-faq" aria-labelledby="alta-faq-t">
@@ -798,6 +803,7 @@ export function FaqEsencial() {
         <Arte id="esencial-preguntas" />
         {faq.map(([q, r]) => <details key={q} class="alta-faq-p"><summary>{q}</summary><p class="peq secundario">{r}</p></details>)}
         <TodasLasRespuestas />
+        {baja && <HojaBaja alCerrar={() => setBaja(false)} />}
         <p class="peq alta-contacto"><Icono n="mensaje" /> <span>¿Algún problema con la app o con el cobro? Escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a> y Pelayo te contesta por correo.</span></p>
       </div>
     </section>
@@ -815,7 +821,11 @@ const CercaAbajo = perezoso(() => import('./EsencialCerca.jsx'), 'CercaAbajo', {
 // (v0.247) la vida real: de viaje, sus días de verdad, pasar a tres días, su objetivo… (ui/atleta/EsencialVida.jsx)
 const VidaArriba = perezoso(() => import('./EsencialVida.jsx'), 'VidaArriba', { mientras: null });
 export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA }) {
-  const { atleta } = useApp();
+  const { atleta, backend } = useApp();
+  // (v0.249, tanda 8; migración 103) lo que Pelayo ha encendido o escrito en su panel: se lee al abrir Hoy y lo usan todas
+  // las tarjetas (encendido(), textoAjuste()); sin la 103, nada cambia
+  const ajustes = useCarga(() => import('../../datos/api-esencial.js').then((d) => d.ajustesMios(backend)).catch(() => []), [atleta.id], { recuerdo: `esencial-ajustes:${atleta.id}` });
+  if (ajustes.datos) fijarAjustes(ajustes.datos);
   if (atleta.estado === 'baja') return <TarjetaMarcas />;
   const conPlan = !!p?.bloque;
   return (

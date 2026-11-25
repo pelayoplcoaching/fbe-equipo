@@ -34,7 +34,9 @@ export const CLAVE_TABLA = { menu_fotos: 'entrada_id', atletas_imagenes: 'atleta
   // v0.72 (migración 044): quién va a cada evento
   comunidad_evento_asistentes: 'evento_id,perfil_id',
   // v0.133 (migración 056): lo de carrera de cada atleta y las semanas del plan
-  carrera_atleta: 'atleta_id', carrera_semanas: 'atleta_id,lunes' };
+  carrera_atleta: 'atleta_id', carrera_semanas: 'atleta_id,lunes',
+  // v0.249 (migración 103): lo que Pelayo enciende o escribe en su panel y el recuento de consultas de cada semana
+  esencial_ajustes: 'clave', esencial_consultas: 'clave,semana' };
 import { createClient } from '@supabase/supabase-js';
 import { Upload } from 'tus-js-client';
 

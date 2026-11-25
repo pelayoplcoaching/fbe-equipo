@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.249': {
+    // (FBE Esencial, tanda 8: tu panel, lo apagado en tu mano; migración 103)
+    atleta: [],
+    coach: [
+      'FBE Esencial, «Por revisar»: lo apagado, con un interruptor, una cuenta para probarlo antes y sus textos para corregirlos tú.',
+      'En el mismo panel, el piloto: semanas «tal cual», la curva, el repaso de seguridad del motor y la hoja para Excel.',
+      'Y, en Herramientas, Stripe frente a la app y por qué se van los que se dan de baja (si lo cuentan).',
+    ],
+  },
   '0.248': {
     // (FBE Esencial, tanda 7: la espera, de la reserva a su lunes; migración 102)
     atleta: [],

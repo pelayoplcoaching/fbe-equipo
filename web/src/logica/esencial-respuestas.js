@@ -155,11 +155,34 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   'kilos_partida', 'medico']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
+// (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)
+export const MOTIVOS_BAJA = [
+  ['tiempo', 'No tengo tiempo'], ['precio', 'Es caro para mí'], ['seguimiento', 'Prefiero que alguien me lleve'],
+  ['app', 'No me ha convencido la app'], ['resultados', 'No he notado lo que esperaba'], ['otro', 'Otro motivo'],
+];
+// (v0.249, tanda 8) Lo que Pelayo enciende y escribe en su panel (esencial_ajustes, migración 103): cada clave, si está
+// encendida para este atleta (para todos, o solo para él si la está probando en su cuenta), su versión de los textos y un
+// número. Lo pone la app al abrir Hoy (fijarAjustes) y lo leen encendido() y textoAjuste(). Sin la 103, vacío.
+let REMOTO = new Map();
+export function fijarAjustes(filas = []) {
+  REMOTO = new Map((Array.isArray(filas) ? filas : []).filter((f) => f && typeof f.clave === 'string').map((f) => [f.clave, f]));
+}
+export const ajuste = (clave) => REMOTO.get(clave) || null;
+// su texto para ese campo, si lo ha escrito; si no, el de la app
+export const textoAjuste = (clave, campo, porDefecto = null) => {
+  const t = REMOTO.get(clave)?.texto?.[campo];
+  return typeof t === 'string' && t.trim() ? t : porDefecto;
+};
 // previa: en la demo, con «?previa=1», se ve lo apagado (para que Pelayo lo revise en su sitio)
-export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(clave);
+export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(clave) || REMOTO.get(clave)?.encendido === true;
+// (86) cada respuesta, con su versión si la ha corregido; y las que ha añadido él (respuesta_nueva:<id>)
+const conSuTexto = (x) => ({ ...x, q: textoAjuste(`respuesta:${x.id}`, 'q', x.q), r: textoAjuste(`respuesta:${x.id}`, 'r', x.r) });
+export const respuestasNuevas = () => [...REMOTO.values()].filter((f) => /^respuesta_nueva:[a-z0-9_-]+$/.test(f.clave) && f.texto?.q && f.texto?.r)
+  .map((f) => ({ id: f.clave.split(':')[1], cat: CATEGORIAS.some((c) => c[0] === f.texto.cat) ? f.texto.cat : 'app', q: String(f.texto.q), r: String(f.texto.r), suya: true }));
 export const respuestas = ({ previa = false, publicas = [] } = {}) => [
-  ...RESPUESTAS,
-  ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...x, pendiente: true })) : []),
+  ...RESPUESTAS.map(conSuTexto),
+  ...respuestasNuevas(),
+  ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !REMOTO.get('salud_nueva')?.encendido })) : []),
   // (18) las dudas del directo que Pelayo ha contestado y hecho públicas
   ...(publicas || []).filter((x) => x?.pregunta && x?.respuesta).map((x) => ({ id: `directo-${x.id}`, cat: 'directo', q: x.pregunta, r: x.respuesta, directo: true })),
 ];
@@ -270,6 +293,8 @@ export const LECCIONES_MOMENTO = {
   vuelta: ['Volver después de un parón', 'Lo que tenías no se ha perdido: vuelve rápido. Esta semana va más suave a propósito; en dos o tres estás donde lo dejaste.'],
   rutina: ['Rutina nueva', 'Las dos primeras semanas con una rutina nueva son para encontrar tus pesos, no para batir marcas. Apunta bien y deja margen.'],
 };
+// (v0.249) con su versión, si la ha escrito en su panel (momento:<id>) → [título, texto] o null
+export const leccionMomento = (id) => (LECCIONES_MOMENTO[id] ? [textoAjuste(`momento:${id}`, 'titulo', LECCIONES_MOMENTO[id][0]), textoAjuste(`momento:${id}`, 'texto', LECCIONES_MOMENTO[id][1])] : null);
 // El momento de una revisión (api.esencialRevision) → clave de LECCIONES_MOMENTO o null
 export function momentoDe(rev) {
   if (!rev) return null;

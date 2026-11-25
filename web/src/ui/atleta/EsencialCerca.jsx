@@ -10,7 +10,7 @@ import { hoyISO } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { encendido } from '../../logica/esencial-respuestas.js';
-import { saludoDe, AGUJETAS, agujetasDe, vueltaDe, ritmoDe, trimestreDe, TRIMESTRE_SIGUE, retoSemana, seVa, comoVamosToca, diarioDe, notaDelLunes, VOZ_PELAYO, DIA_A_DIA, diaDelPlan } from '../../logica/esencial-cerca.js';
+import { saludoDe, AGUJETAS, agujetasDe, vueltaDe, ritmoDe, trimestreDe, TRIMESTRE_SIGUE, retoSemana, seVa, comoVamosToca, diarioDe, notaDelLunes, VOZ_PELAYO, DIA_A_DIA, diaADia, diaDelPlan } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
 
@@ -59,7 +59,7 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
   const n = semanaDelPlan(p?.bloques, w?.fecha_inicio);
   const nota = encendido('notas_lunes', previa) ? notaDelLunes(n) : null;
   const voz = nota ? VOZ_PELAYO[n] || null : null;
-  const dia = encendido('dia_a_dia', previa) && (p?.bloques || []).some((b) => b.nombre === NOMBRE_PRIMERAS_4) ? DIA_A_DIA[diaDelPlan({ hoy, inicio })] || null : null;
+  const dia = encendido('dia_a_dia', previa) && (p?.bloques || []).some((b) => b.nombre === NOMBRE_PRIMERAS_4) ? diaADia(diaDelPlan({ hoy, inicio })) : null;
   if (!w || !p?.bloque) return null;
   const verAg = ag && !agFuera && (como || leer(kAg) !== '1');
   return (

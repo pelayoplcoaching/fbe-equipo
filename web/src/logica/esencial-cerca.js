@@ -5,6 +5,7 @@
 // Sale todo de lo que ya hay (su programa y lo que apunta). Lo que va con la voz de Pelayo (sus notas de los lunes y el día a
 // día de las dos primeras semanas) está escrito como borrador y APAGADO (logica/esencial-respuestas.js) hasta que lo vea.
 import { num } from './calculos.js';
+import { textoAjuste } from './esencial-respuestas.js';
 
 const DIA = 864e5;
 const d10 = (x) => (x ? String(x).slice(0, 10) : null);
@@ -236,7 +237,9 @@ export const NOTAS_LUNES = {
 };
 // Su voz (un audio corto grabado una vez): la ruta del archivo cuando lo haya. Sin archivo, no sale nada.
 export const VOZ_PELAYO = { 1: null, 4: null, 12: null };
-export const notaDelLunes = (n) => NOTAS_LUNES[Number(n)] || null;
+export const notaDelLunes = (n) => textoAjuste(`nota_lunes:${Number(n)}`, 'texto', NOTAS_LUNES[Number(n)] || null);
+// (v0.249) el día a día, con su versión si la ha escrito en su panel (dia:<n>)
+export const diaADia = (n) => textoAjuste(`dia:${Number(n)}`, 'texto', DIA_A_DIA[Number(n)] || null);
 
 // ---------- (24, P: APAGADO) Sus dos primeras semanas, día a día ----------
 // El día de su plan (1 = su primer lunes) → lo de hoy. Borradores con frases de la guía.

@@ -1,0 +1,44 @@
+/* FBE Esencial (tanda 8): "tu panel". La caja de "Por revisar y el piloto" del panel del coach: lo apagado con su
+   interruptor, sus textos, el registro, las respuestas, el piloto (la curva) y las herramientas. Y, para el atleta, la hoja
+   de "Por que te vas?". Solo clases prv-* (y ayu-baja-* para la hoja del atleta), cada regla en su propio elemento, sin
+   margenes ni tamanos de letra: asi van enteras con su trozo (scripts/css-coach.mjs). */
+
+.prv-caja { display: grid; gap: var(--esp-12); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); }
+.prv-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); cursor: pointer; }
+.prv-lista { display: grid; gap: var(--esp-6); }
+.prv-item { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); }
+.prv-item-si { border-color: var(--morado); box-shadow: var(--anillo-acento); }
+.prv-item-c { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--esp-10); }
+.prv-int { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.prv-prueba { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6); }
+.prv-sel { min-width: 0; max-width: 100%; }
+.prv-num { width: calc(var(--esp-48) + var(--esp-24)); }
+.prv-reg { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--esp-8); padding: var(--esp-6) 0; border-bottom: var(--filo-fino) solid var(--linea); }
+.prv-cat { display: grid; gap: var(--esp-6); }
+.prv-texto { display: grid; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.prv-textos { min-width: 0; }
+.prv-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
+.prv-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.prv-curva { display: grid; gap: var(--esp-6); }
+.prv-barra-f { display: grid; grid-template-columns: calc(var(--esp-48) + var(--esp-32)) minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); }
+.prv-barra { display: block; block-size: var(--esp-8); border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
+.prv-barra-v { display: block; block-size: 100%; border-radius: var(--r-pildora); background: var(--aviso); }
+.prv-barra-ok { background: var(--ok); }
+.prv-ok { color: var(--ok); }
+.prv-aviso { color: var(--aviso); }
+
+/* La hoja del atleta: "Tu suscripcion" con "Por que te vas?" */
+.ayu-baja { min-width: 0; }
+.ayu-baja-ops { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.ayu-baja-op {
+  min-height: var(--esp-32); padding: var(--esp-4) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+}
+.ayu-baja-op-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.ayu-baja-op:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.ayu-baja-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
+
+@media (max-width: 559px) {
+  .prv-barra-f { grid-template-columns: minmax(0, 1fr) auto; }
+  .prv-barra { grid-column: 1 / -1; }
+}

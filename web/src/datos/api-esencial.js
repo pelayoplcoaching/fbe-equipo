@@ -506,3 +506,98 @@ export async function cuerpoAntesYAhora(api, atletaId, inicio) {
   const cintura = antesYAhora((medidas || []).filter((x) => x.cintura_cm != null).map((x) => ({ fecha: x.fecha, valor: x.cintura_cm })), inicio);
   return peso || cintura ? { peso, cintura } : null;
 }
+
+// ---------- (v0.249, tanda 8) Tu panel: lo apagado, en tu mano, y el piloto de un vistazo ----------
+const falta103 = falta(/esencial_ajustes|esencial_contactos|esencial_bajas|esencial_consultas|esencial_semanas_piloto|esencial_contar_consulta/, '|42P01');
+// (81-83) Lo que Pelayo enciende, prueba o escribe: las filas de esencial_ajustes (solo el coach). null sin la 103
+export async function ajustes(b) {
+  try { return await b.select('esencial_ajustes', { order: [['clave', 'asc']] }); } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// Pone (o cambia) una clave: { encendido?, solo_atleta?, texto?, valor? }; lo que no se pasa se queda como estaba
+export async function ponerAjuste(b, clave, campos = {}) {
+  const [ya] = await b.select('esencial_ajustes', { eq: { clave } });
+  const fila = { clave, encendido: ya?.encendido ?? false, solo_atleta: ya?.solo_atleta ?? null, texto: ya?.texto ?? null, valor: ya?.valor ?? null, ...campos };
+  if (ya) return (await b.update('esencial_ajustes', fila, { eq: { clave } }))[0] || null;
+  return (await b.insert('esencial_ajustes', [fila]))[0] || null;
+}
+export async function quitarAjuste(b, clave) { await b.delete('esencial_ajustes', { eq: { clave } }); return true; }
+// (87) Lo que ha cambiado, lo último arriba (los 60 últimos)
+export async function registroAjustes(b) {
+  try { return await b.select('esencial_ajustes_registro', { order: [['en', 'desc'], ['id', 'desc']], limit: 60 }); } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// «Deshacer»: vuelve a lo de antes de ese cambio (si antes no había nada, lo quita)
+export async function deshacerAjuste(b, fila) {
+  if (!fila?.clave) return null;
+  if (!fila.antes) return quitarAjuste(b, fila.clave);
+  const { encendido = false, solo_atleta = null, texto = null, valor = null } = fila.antes;
+  return ponerAjuste(b, fila.clave, { encendido, solo_atleta, texto, valor });
+}
+// Lo suyo, para el atleta (y para el coach): [{ clave, encendido, texto, valor }]; [] sin la 103
+export async function ajustesMios(b) {
+  try { return (await b.rpc('esencial_ajustes_mios', {})) || []; } catch (e) { if (falta103(e)) return []; throw e; }
+}
+// (90) «A quién escribir», con memoria
+export async function apuntarContacto(b, atletaId, motivo) {
+  return (await b.insert('esencial_contactos', [{ atleta_id: atletaId, motivo: String(motivo || 'mensaje').slice(0, 60) }]))[0] || null;
+}
+export async function contactos(b, { dias = 30 } = {}) {
+  try { return await b.select('esencial_contactos', { gte: { escrito_en: new Date(Date.now() - dias * 864e5).toISOString() }, order: [['escrito_en', 'desc']] }); } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// (92) «¿Por qué te vas?»
+export async function apuntarBaja(b, atletaId, { motivo, texto = null }) {
+  return (await b.insert('esencial_bajas', [{ atleta_id: atletaId, motivo, texto: texto && String(texto).trim() ? String(texto).trim().slice(0, 300) : null }]))[0] || null;
+}
+export async function bajas(b) {
+  try {
+    const filas = await b.select('esencial_bajas', { order: [['creada_en', 'desc']], limit: 100 });
+    if (!filas.length) return [];
+    const at = porId(await b.select('atletas', { in: { id: unicos(filas.map((f) => f.atleta_id)) }, cols: 'id,nombre' }));
+    return filas.map((f) => ({ ...f, nombre: at[f.atleta_id]?.nombre || '' }));
+  } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// (94) Una consulta más a esa respuesta (nunca falla hacia fuera) y el recuento, para el coach
+export async function contarConsulta(b, clave) {
+  try { await b.rpc('esencial_contar_consulta', { p_clave: String(clave || '').slice(0, 60) }); return true; } catch { return false; }
+}
+export async function consultas(b, { semanas = 8 } = {}) {
+  try {
+    const desde = sumarDias(fechaMadrid(), -7 * semanas);
+    const filas = await b.select('esencial_consultas', { gte: { semana: desde } });
+    const por = new Map();
+    for (const f of filas) por.set(f.clave, (por.get(f.clave) || 0) + Number(f.n || 0));
+    return [...por.entries()].map(([clave, n]) => ({ clave, n })).sort((a, z) => z.n - a.n);
+  } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// (93) Quién ha mirado «hablar con Pelayo» (las notas 'hablar', sin repetir atleta)
+export async function hablaron(b) {
+  try {
+    const filas = await b.select('esencial_notas', { eq: { tipo: 'hablar' }, order: [['creada_en', 'desc']] });
+    const vistos = new Set();
+    return filas.filter((f) => !vistos.has(f.atleta_id) && vistos.add(f.atleta_id)).map((f) => ({ atleta_id: f.atleta_id, creada_en: f.creada_en, motivo: f.datos?.motivo || null }));
+  } catch (e) { if (falta100(e) || falta103(e)) return []; throw e; }
+}
+// (88, 89, 93, 95 y 99) El piloto, semana a semana (solo el coach): las filas de esencial_semanas_piloto()
+export async function semanasPiloto(b) {
+  try { return (await b.rpc('esencial_semanas_piloto', {})) || []; } catch (e) { if (falta103(e)) return null; throw e; }
+}
+// (96) Lo que necesita el repaso de seguridad del motor, solo de quienes van por su cuenta (como la copia completa). Las
+// listas largas, de cien en cien (una dirección con miles de ids no cabe en una petición)
+const enTrozos = async (b, tabla, col, ids) => {
+  const out = [];
+  const xs = unicos(ids);
+  for (let i = 0; i < xs.length; i += 100) out.push(...(await b.select(tabla, { in: { [col]: xs.slice(i, i + 100) } })));
+  return out;
+};
+export async function copiaEsencial(b) {
+  const atletas = await b.select('atletas', { eq: { modalidad: 'por_su_cuenta' } });
+  const ids = atletas.map((a) => a.id);
+  if (!ids.length) return { atletas: [], bloques: [], semanas: [], sesiones: [], sesion_ejercicios: [], series: [], ejercicios: [], checkins: [], molestias: [] };
+  const bloques = (await enTrozos(b, 'bloques', 'atleta_id', ids)).filter((x) => !x.es_plantilla);
+  const semanas = await enTrozos(b, 'semanas', 'bloque_id', bloques.map((x) => x.id));
+  const sesiones = await enTrozos(b, 'sesiones', 'semana_id', semanas.map((x) => x.id));
+  const pautas = await enTrozos(b, 'sesion_ejercicios', 'sesion_id', sesiones.map((x) => x.id));
+  const series = await enTrozos(b, 'series', 'sesion_ejercicio_id', pautas.map((x) => x.id));
+  const ejercicios = await enTrozos(b, 'ejercicios', 'id', pautas.map((x) => x.ejercicio_id));
+  const [checkins, molestias] = await Promise.all([enTrozos(b, 'checkins', 'atleta_id', ids).catch(() => []), enTrozos(b, 'molestias', 'atleta_id', ids).catch(() => [])]);
+  return { atletas, bloques, semanas, sesiones, sesion_ejercicios: pautas, series, ejercicios, checkins, molestias };
+}

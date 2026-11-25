@@ -2,9 +2,9 @@
 // mandan para el directo del mes. Verlas juntas, apuntar lo que contestó y, si quiere, sacarla en «Respuestas» para todos
 // (sin el nombre de quien preguntó y con la pregunta escrita por él). Estilos: ayuda.css (clases ecp-*).
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono } from '../comunes.jsx';
 import { fechaLarga } from '../../logica/esencial-alta.js';
-import { hoyISO, diasEntre } from '../../logica/fechas.js';
+import { hoyISO, diasEntre, fechaMadrid } from '../../logica/fechas.js';
 import { aQuienEscribir, comoVamosResumen } from '../../logica/esencial-cerca.js';
 import { resumenCoach } from '../../logica/esencial-vida.js';
 import * as datos from '../../datos/api-esencial.js';
@@ -57,19 +57,33 @@ export function AQuienEscribir({ lista = [], abrir }) {
   const ids = lista.filter((r) => r.estado !== 'baja' && r.estado !== 'invitado').map((r) => r.atleta_id);
   const mas = useCarga(() => (ids.length ? datos.paraEscribir(backend, ids).catch(() => ({ flojos: {}, correos: {} })) : Promise.resolve({ flojos: {}, correos: {} })), [ids.join()], { recuerdo: `escribir-esencial:${ids.join()}` });
   const [abierto, setAbierto] = useState(null);
+  // (v0.249, 90; migración 103) con memoria: a quien ya ha escrito en los últimos siete días no le vuelve a salir (sale
+  // abajo, «Escrito el…»); sin la 103, como antes
+  const escritos = useCarga(() => datos.contactos(backend, { dias: 7 }).catch(() => null), [ids.join()], { recuerdo: `contactos-esencial:${ids.join()}` });
+  const [marcando, setMarcando] = useState(null);
   if (!mas.datos) return null;
-  const filas = aQuienEscribir(lista.filter((r) => ids.includes(r.atleta_id)).map((r) => ({
+  const ultimo = new Map();
+  for (const c of escritos.datos || []) if (!ultimo.has(c.atleta_id)) ultimo.set(c.atleta_id, c);
+  const marcar = async (f) => {
+    setMarcando(f.atleta_id);
+    try { await datos.apuntarContacto(backend, f.atleta_id, f.motivo); aviso(`Apuntado: le has escrito a ${f.nombre}`); setAbierto(null); escritos.recargar(true); }
+    catch (e) { aviso(e.message, 'error'); } finally { setMarcando(null); }
+  };
+  const todas = aQuienEscribir(lista.filter((r) => ids.includes(r.atleta_id)).map((r) => ({
     atleta_id: r.atleta_id, nombre: r.nombre, estado: r.estado, email: mas.datos.correos[r.atleta_id] || null,
     dias: r.ultimaSesion ? diasEntre(r.ultimaSesion, hoy) : null,
     grave: (r.alertas || []).some((a) => a.tipo === 'molestia' && a.nivel === 'alerta'),
     semanasFalladas: mas.datos.flojos[r.atleta_id] ? 2 : 0,
     sinEmpezar: !r.ultimaSesion && !!r.bloque && (r.semana?.numero || 0) >= 1,
   })));
-  if (!filas.length) return null;
+  const filas = todas.filter((f) => !ultimo.has(f.atleta_id));
+  const ya = todas.filter((f) => ultimo.has(f.atleta_id));
+  if (!filas.length && !ya.length) return null;
   const copiar = async (f) => { try { await navigator.clipboard.writeText(f.cuerpo); aviso('Mensaje copiado: pégalo en tu correo'); } catch { aviso('No se ha podido copiar: selecciónalo a mano', 'error'); } };
   return (
     <section class="ecp-caja" data-ecp="escribir" aria-labelledby="ecp-escribir-t">
       <h2 id="ecp-escribir-t" class="etq">A quién escribir ({filas.length})</h2>
+      {!filas.length && <p class="peq secundario">A todos los de la lista les has escrito ya esta semana.</p>}
       <ul class="ecp-lista">
         {filas.map((f) => (
           <li key={f.atleta_id} class="ecp-fila">
@@ -81,13 +95,15 @@ export function AQuienEscribir({ lista = [], abrir }) {
                   <button type="button" class="btn btn-primario btn-peq" onClick={() => copiar(f)}>Copiar el mensaje</button>
                   <a class="btn btn-peq" href={`mailto:${f.email}?subject=${encodeURIComponent(f.asunto)}`}>Abrir mi correo</a>
                   <button type="button" class="btn btn-peq" onClick={() => setAbierto(null)}>Cerrar</button>
+                  {escritos.datos && <button type="button" class="btn btn-peq" disabled={marcando === f.atleta_id} onClick={() => marcar(f)}><Icono n="hecho" /> Ya le he escrito</button>}
                 </div>
-                <span class="mini terciario">Es un borrador: cámbialo a tu gusto antes de mandarlo. La app no envía nada.</span>
+                <span class="mini terciario">Es un borrador: cámbialo a tu gusto antes de mandarlo. La app no envía nada.{escritos.datos ? ' Al marcar «Ya le he escrito», no te vuelve a salir en una semana.' : ''}</span>
               </div>
             ) : <button type="button" class="btn-texto mini" style="justify-self:start" onClick={() => setAbierto(f.atleta_id)}>Ver el mensaje preparado</button>}
           </li>
         ))}
       </ul>
+      {ya.length > 0 && <p class="mini terciario">Ya les has escrito esta semana: {ya.map((f) => { const d = fechaMadrid(new Date(ultimo.get(f.atleta_id).escrito_en)); return `${f.nombre} (el ${d.slice(8, 10)}/${d.slice(5, 7)})`; }).join(', ')}.</p>}
     </section>
   );
 }
