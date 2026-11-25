@@ -5,6 +5,9 @@
 // aquí: los da la base (esencial_catalogo). Va en su trozo: solo lo cargan las pantallas que lo usan.
 // (este bloque de datos lo escribe un guion a partir de la lista de plantillas de Pelayo del 25/11/2026)
 
+import { nivelDe, enGimnasio } from './esencial-gustos.js';
+export { nivelDe, GUSTOS, preguntasGustos, limpiarGustos, gustosCompletos, necesitaPrimeras } from './esencial-gustos.js';
+
 // [nombre, imagen, días, familia, opción, dónde ('g' gimnasio · 'c' casa), material que pide, nivel mínimo (0-4), para quién]
 const FILAS = [
   ["Primeras 4 semanas", "rutina-primeras-4-semanas", 2, "primeras", null, "g", [], 0, ["iniciacion"]],
@@ -122,10 +125,7 @@ const OPCIONES = {
   C: ['Énfasis glúteo y pierna', 'Con más series de glúteo y pierna que de torso: hip thrust, búlgara y abducciones.'],
 };
 
-const NIVELES = ['ninguna', 'menos_1', '1_3', '3_5', 'mas_5'];
-export const nivelDe = (experiencia) => Math.max(0, NIVELES.indexOf(experiencia || 'ninguna'));
 export const NOMBRE_NIVEL = ['Para empezar', 'Desde unos meses entrenando', 'Con un año o más entrenando', 'Con tres años o más entrenando', 'Con cinco años o más entrenando'];
-const enGimnasio = (c) => ['gimnasio', 'gimnasio_basico'].includes(c?.lugar || 'gimnasio');
 
 // Cada rutina, con su título y su texto en llano (sin «PHAT» ni «PPL» sin explicar)
 export const RUTINAS = FILAS.map(([nombre, imagen, dias, familia, opcion, donde, material, nivel, para]) => {
@@ -143,34 +143,6 @@ const NO_ELEGIBLES = ['primeras'];
 export const textoDias = (d) => `${d} días a la semana`;
 export const textoMaterial = (r) => (r.donde === 'g' ? (r.opcion === 'A' || r.material.includes('barra') ? 'Gimnasio con barra y rack' : 'Gimnasio')
   : r.material.includes('dominadas') ? 'Barra de dominadas y paralelas' : r.material.includes('mancuernas') ? 'Mancuernas y banco' : r.material.includes('gomas') ? 'Gomas' : 'Sin material');
-
-// ---------- «Tus gustos»: lo que se pregunta además del cuestionario, para elegir rutina ----------
-// si(c): la pregunta solo se hace con ese cuestionario (a quien nunca ha entrenado no se le pregunta por la barra)
-export const GUSTOS = [
-  { id: 'ahora', titulo: '¿Entrenas fuerza ahora mismo?', opciones: [['si', 'Sí, con regularidad'], ['poco', 'Lo dejé hace menos de tres meses'], ['parado', 'Llevo más de tres meses sin entrenar']], si: (c) => nivelDe(c?.experiencia) > 0 },
-  { id: 'tecnica', titulo: '¿Te manejas con la sentadilla o la prensa, los empujes y los remos?', opciones: [['si', 'Sí, sin problema'], ['algunos', 'Con algunos'], ['no', 'No mucho']], si: (c) => nivelDe(c?.experiencia) > 0 },
-  { id: 'barra', titulo: '¿Haces sentadilla, press banca y peso muerto con barra, con buena técnica?', opciones: [['si', 'Sí'], ['no', 'No, o no los hago']], si: (c) => nivelDe(c?.experiencia) > 0 && enGimnasio(c) },
-  { id: 'prioridad', titulo: '¿Qué quieres priorizar?', opciones: [['equilibrado', 'Todo por igual'], ['gluteo', 'Glúteo y pierna'], ['torso', 'Torso: pecho, espalda y brazos'], ['fuerza', 'Subir mis marcas en los básicos'], ['salud', 'Salud y encontrarme bien']] },
-  { id: 'otro', titulo: '¿Haces otro deporte?', opciones: [['no', 'No'], ['correr', 'Corro'], ['deporte', 'Pádel, fútbol u otro de equipo o de raqueta']] },
-  { id: 'mayor', titulo: '¿Tienes 60 años o más?', opciones: [['no', 'No'], ['si', 'Sí']] },
-];
-export const preguntasGustos = (c = {}) => GUSTOS.filter((p) => !p.si || p.si(c));
-// Solo lo que vale (cada respuesta, una de sus opciones; lo demás se quita)
-export function limpiarGustos(g, c = {}) {
-  const out = {};
-  for (const p of preguntasGustos(c)) { const v = g?.[p.id]; if (p.opciones.some(([k]) => k === v)) out[p.id] = v; }
-  return out;
-}
-export const gustosCompletos = (g, c = {}) => preguntasGustos(c).every((p) => g?.[p.id] != null);
-
-// ---------- La criba: ¿necesita «Primeras 4 semanas»? ----------
-// Quien nunca ha entrenado fuerza, sí. Y quien lleva menos de un año y lleva más de tres meses parado o no se maneja con
-// los movimientos básicos. Los demás van directos a elegir entre sus rutinas recomendadas.
-export function necesitaPrimeras({ experiencia = null, gustos = {} } = {}) {
-  const n = nivelDe(experiencia);
-  if (n === 0) return true;
-  return n === 1 && (gustos?.ahora === 'parado' || gustos?.tecnica === 'no');
-}
 
 // ---------- El algoritmo: dos o tres rutinas recomendadas, cada una con su porqué ----------
 // cuestionario: { experiencia, dias_semana, minutos_sesion, lugar, material, objetivos }; gustos: los de arriba;
@@ -253,9 +225,14 @@ export function catalogoPara({ cuestionario: c = {}, gustos: g = {}, disponibles
 // (Pelayo, 25/11) La misma rutina, al menos 12 semanas; antes, solo si se estanca (tres semanas sin subir: la app le pone
 // la descarga y le ofrece elegir la siguiente). semanas: las que lleva con ella.
 export const SEMANAS_RUTINA = 12;
-export function consejoCambio({ semanas = 0, estancado = false, temporada = false } = {}) {
+export const ESTANCADOS_PARA_CAMBIAR = 2;   // con dos ejercicios o más tres semanas sin subir, la app propone cambiar
+// estancados: cuántos ejercicios llevan tres semanas con la misma pauta; descarga: esta semana es de descarga.
+// puedeCambiar(…): ¿es buen momento? (para pedir o no la confirmación de «cambiar de todos modos»)
+export const buenMomento = ({ semanas = 0, estancados = 0, descarga = false, temporada = false } = {}) => temporada || descarga || estancados >= ESTANCADOS_PARA_CAMBIAR || semanas >= SEMANAS_RUTINA;
+export function consejoCambio({ semanas = 0, estancado = false, estancados = 0, descarga = false, temporada = false } = {}) {
   if (temporada) return 'Es una rutina de temporada: cuando acabe el viaje o la mala racha, vuelve a la tuya.';
-  if (estancado) return 'Llevas tres semanas sin subir en varios ejercicios: buen momento para una semana de descarga y cambiar de rutina.';
+  if (estancado || estancados >= ESTANCADOS_PARA_CAMBIAR) return `Llevas tres semanas sin subir en ${estancados >= ESTANCADOS_PARA_CAMBIAR ? `${estancados} ejercicios` : 'varios ejercicios'}: buen momento para cambiar de rutina. La primera semana de la nueva hace de descarga: empiezas con margen.`;
+  if (descarga && semanas >= 4) return 'Esta semana es de descarga: si quieres cambiar de rutina, es el mejor momento.';
   if (semanas >= SEMANAS_RUTINA) return `Llevas ${semanas} semanas con esta rutina: ya puedes cambiar si te apetece.`;
   return `Llevas ${semanas === 1 ? 'una semana' : `${semanas} semanas`} con esta rutina. Lo recomendable es mantenerla al menos ${SEMANAS_RUTINA}: los cambios frecuentes frenan el progreso.`;
 }

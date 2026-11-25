@@ -11,7 +11,8 @@
 --   * esencial_catalogo(): las rutinas del catálogo con sus días y sus ejercicios (para la ficha de cada una). Solo quien
 --     va por su cuenta o el coach.
 --   * esencial_elegir_rutina(p_nombre, p_atleta): apunta la que elige (o ninguna). Se aplica al asignarle el plan o, si ya
---     tiene uno, desde la semana siguiente que le prepare la app; nunca a mitad de «Primeras 4 semanas».
+--     tiene uno, desde la semana siguiente que le prepare la app; nunca a mitad de «Primeras 4 semanas». Con el plan aún
+--     sin empezar (su lunes no ha llegado y no hay nada hecho ni apuntado), el plan se rehace en el momento con ella.
 --   * esencial_asignar_plan: la de la 097 con la criba (quien nunca ha entrenado, o lleva menos de un año y está parado o
 --     no se maneja con los movimientos, empieza por «Primeras 4 semanas»; los demás, con la rutina elegida o la de su
 --     cuestionario) y, en las plantillas de la biblioteca (que no llevan esfuerzo), «te sobran 2-3» de partida.
@@ -155,6 +156,9 @@ returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_id uuid := coalesce(p_atleta, public.mi_atleta_id());
   v_at public.atletas;
+  v_hoy date := (now() at time zone 'Europe/Madrid')::date;
+  v_bloque uuid;
+  v_plan jsonb;
 begin
   if v_id is null then raise exception 'No hay atleta' using errcode = 'P0002'; end if;
   if not public.es_coach() and public.mi_atleta_id() is distinct from v_id then
@@ -174,6 +178,23 @@ begin
   update public.atletas set esencial_plantilla = p_nombre, esencial_plantilla_en = now(),
     esencial_dias = case p_nombre when 'Novato 3 días · FBE Esencial' then 3 when 'Novato 2 días · FBE Esencial' then 2 else esencial_dias end
   where id = v_id;
+  -- Con el plan aún sin empezar (su lunes no ha llegado, es su único plan y no hay nada hecho ni apuntado), se rehace con
+  -- la rutina elegida. No «Primeras 4 semanas»: a esa se llega por la criba y no se cambia hasta acabarla.
+  select b.id into v_bloque from public.bloques b
+  where b.atleta_id = v_id and not b.es_plantilla and b.estado in ('activo', 'ajustado', 'planificado')
+    and b.fecha_inicio > v_hoy and b.nombre <> 'Primeras 4 semanas' and b.nombre <> p_nombre
+    and (select count(*) from public.bloques b2 where b2.atleta_id = v_id and not b2.es_plantilla) = 1
+    and not exists (select 1 from public.sesiones s join public.semanas w on w.id = s.semana_id
+                    where w.bloque_id = b.id and (s.completada or s.fecha_realizada is not null))
+    and not exists (select 1 from public.series r join public.sesion_ejercicios x on x.id = r.sesion_ejercicio_id
+                    join public.sesiones s on s.id = x.sesion_id join public.semanas w on w.id = s.semana_id where w.bloque_id = b.id);
+  if v_bloque is not null then
+    delete from public.notificaciones n where n.estado = 'pendiente'
+      and n.clave in (select 'semana:' || w.id from public.semanas w where w.bloque_id = v_bloque);
+    delete from public.bloques where id = v_bloque;
+    v_plan := public.esencial_asignar_plan(v_id);
+    return jsonb_build_object('rutina', p_nombre, 'rehecho', true, 'bloque', v_plan -> 'bloque');
+  end if;
   return jsonb_build_object('rutina', p_nombre);
 end $$;
 

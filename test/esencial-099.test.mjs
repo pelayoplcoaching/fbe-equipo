@@ -57,6 +57,9 @@ await b.auth.registrar('coach@fbe.test', 'contraseña-coach', 'Coach');
 await q(`update perfiles set rol = 'coach' where id = $1`, [b.auth.sesion().user.id]);
 const alta = {};
 for (const n of ['ana', 'berta', 'dani', 'rosa']) alta[n] = await api.crearAtletaEsencial({ nombre: `${n} Prueba`, email: `${n}@test`, inicio: lunes });
+// (Eva y Fede empiezan dentro de dos semanas: su plan aún no ha empezado)
+const enDos = sumarDias(lunes, 14);
+for (const n of ['eva', 'fede']) alta[n] = await api.crearAtletaEsencial({ nombre: `${n} Prueba`, email: `${n}@test`, inicio: enDos });
 const lucas = await api.crearAtleta({ nombre: 'Lucas Prueba', email: 'lucas@test', nivel: 'novato' });
 const codLucas = await api.crearInvitacion(lucas.id);
 const base = { objetivo: 'salud', dias_semana: 3, minutos_sesion: 45, lugar: 'gimnasio', material: ['maquinas'], activo: false, enfermedad: false, sintomas: [], otras: [], lesiones: [] };
@@ -112,6 +115,41 @@ await entrar('dani', alta.dani.codigo);
 await api.guardarCuestionario(id.dani, { ...base, experiencia: 'menos_1', gustos: { ahora: 'si', tecnica: 'si', prioridad: 'equilibrado', otro: 'no', mayor: 'no' } }, { completar: true });
 await api.esencialAsignarPlan();
 check((await suBloque('dani')).nombre === BIB, 'menos de un año, entrena y se maneja, sin elegir: no pasa por «Primeras 4 semanas»; la de su cuestionario');
+
+console.log('\nAntes de empezar: si cambia de idea, su plan se rehace');
+{
+  const NOV2 = 'Novato 2 días · FBE Esencial';
+  await entrar('eva', alta.eva.codigo);
+  await api.esencialElegirRutina(BIB);
+  await api.guardarCuestionario(id.eva, { ...base, experiencia: '1_3', gustos: { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' } }, { completar: true });
+  await api.esencialAsignarPlan();
+  const antes = await suBloque('eva');
+  await como('eva');
+  const r2 = await api.esencialElegirRutina(NOV2);
+  const despues = await suBloque('eva');
+  const cuantos = Number((await db.query('select count(*) n from bloques where atleta_id = $1 and not es_plantilla', [id.eva])).rows[0].n);
+  check(antes.nombre === BIB && antes.inicio === enDos && r2.rehecho === true && r2.bloque === despues.id && despues.nombre === NOV2 && despues.inicio === enDos && despues.id !== antes.id && cuantos === 1,
+    'su lunes no ha llegado y elige otra: el plan se rehace en el momento con ella, desde su mismo lunes (y solo tiene un plan)');
+  const sueltas = Number((await db.query(`select count(*) n from notificaciones n where n.clave like 'semana:%' and n.estado = 'pendiente' and not exists (select 1 from semanas w where 'semana:' || w.id = n.clave)`)).rows[0].n);
+  check(sueltas === 0, 'y no quedan avisos pendientes de las semanas del plan anterior');
+  await como('eva');
+  const r3 = await api.esencialElegirRutina(NOV2);
+  check(!r3.rehecho && (await suBloque('eva')).id === despues.id, 'elegir la que ya lleva no rehace nada');
+  // con algo ya apuntado, no se rehace: el cambio entra con la semana siguiente
+  await db.exec(superusuario);
+  await db.query(`update sesiones set completada = true, fecha_realizada = $2 where id = (select s.id from sesiones s join semanas w on w.id = s.semana_id where w.bloque_id = $1 order by w.numero, s.orden limit 1)`, [despues.id, hoy]);
+  await como('eva');
+  const r4 = await api.esencialElegirRutina(BIB);
+  check(r4.rutina === BIB && !r4.rehecho && (await suBloque('eva')).id === despues.id, 'con una sesión ya hecha no se rehace: el cambio entra con la semana siguiente');
+  // quien empieza por «Primeras 4 semanas» no las cambia aunque aún no haya empezado
+  await entrar('fede', alta.fede.codigo);
+  await api.guardarCuestionario(id.fede, { ...base, experiencia: 'ninguna' }, { completar: true });
+  await api.esencialAsignarPlan();
+  const p4 = await suBloque('fede');
+  await como('fede');
+  const r5 = await api.esencialElegirRutina(BIB);
+  check(p4.nombre === 'Primeras 4 semanas' && !r5.rehecho && (await suBloque('fede')).id === p4.id, 'quien empieza por «Primeras 4 semanas» no las cambia, aunque elija otra antes de su lunes (le queda apuntada para después)');
+}
 
 console.log('\nCambiar de rutina desde la semana siguiente');
 // Rosa empieza de cero: «Primeras 4 semanas». A mitad, no se cambia; tras su semana de marcas, sí

@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, catalogoEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, quitarPlanSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -4034,6 +4034,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!id) throw new Error('No hay atleta');
         if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes elegir tu propia rutina');
         const r = elegirRutinaEsencialDemo(tabla, { nombre: args?.p_nombre ?? null, atletaId: id });
+        // (antes de su lunes y sin nada apuntado, el plan se rehace con la elegida, como en la base)
+        if (r.rutina && quitarPlanSinEmpezarDemo(tabla, { atletaId: id, nombre: r.rutina, hoy: fechaMadrid() })) {
+          const plan = await this.rpc('esencial_asignar_plan', { p_atleta: id });
+          return { ...r, rehecho: true, bloque: plan.bloque };
+        }
         persistirYa();
         return r;
       }

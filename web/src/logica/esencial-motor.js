@@ -27,6 +27,15 @@ function historiaDe(d, base, sesiones, pautas, n = ESTANCADO.semanas) {
   return h;
 }
 
+// (099) Cuántos ejercicios de esa semana llevan tres semanas con la misma pauta (sin conseguir subir): con dos o más, la
+// app propone cambiar de rutina (Pelayo, 25/11: «salvo que se produzca un estancamiento durante 3 semanas»)
+export function estancadosDe(d, base) {
+  if (!d || !base) return 0;
+  const { sesiones, pautas } = pautasDeSemana(d, base);
+  const h = historiaDe(d, base, sesiones, pautas);
+  return pautas.filter((p) => estancado(h[p.id])).length;
+}
+
 // d: api.bloqueCompleto del bloque de la semana hecha; base: esa semana; tipo: 'novato' (tras «Primeras 4 semanas») o
 // 'siguiente'; ejercicios: { id: ejercicio }; atleta: su fila (nivel, volumen_objetivo, reglas_motor); checkins y
 // molestias: las suyas.

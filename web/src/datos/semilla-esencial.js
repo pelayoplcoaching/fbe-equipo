@@ -187,6 +187,24 @@ export function elegirRutinaEsencialDemo(t, { nombre, atletaId }) {
   if (nombre === NOVATO_3.nombre) a.esencial_dias = 3; else if (nombre === NOVATO_2.nombre) a.esencial_dias = 2;
   return { rutina: nombre };
 }
+// Como en la base: con el plan aún sin empezar (su lunes no ha llegado, es su único plan y no hay nada hecho ni apuntado),
+// se quita para rehacerlo con la rutina elegida (no «Primeras 4 semanas»). Devuelve true si lo ha quitado.
+export function quitarPlanSinEmpezarDemo(t, { atletaId, nombre, hoy }) {
+  const suyos = t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla);
+  const b = suyos.find((x) => ['activo', 'ajustado', 'planificado'].includes(x.estado));
+  if (!b || suyos.length !== 1 || !(String(b.fecha_inicio || '') > hoy) || b.nombre === PRIMERAS_4.nombre || b.nombre === nombre) return false;
+  const semanas = new Set(t('semanas').filter((w) => w.bloque_id === b.id).map((w) => w.id));
+  const sesiones = t('sesiones').filter((s) => semanas.has(s.semana_id));
+  const ids = new Set(sesiones.map((s) => s.id));
+  const pautas = new Set(t('sesion_ejercicios').filter((x) => ids.has(x.sesion_id)).map((x) => x.id));
+  if (sesiones.some((s) => s.completada || s.fecha_realizada) || t('series').some((r) => pautas.has(r.sesion_ejercicio_id))) return false;
+  const quitar = (tabla, f) => { const filas = t(tabla); for (let i = filas.length - 1; i >= 0; i--) if (f(filas[i])) filas.splice(i, 1); };
+  quitar('sesion_ejercicios', (x) => ids.has(x.sesion_id));
+  quitar('sesiones', (s) => semanas.has(s.semana_id));
+  quitar('semanas', (w) => w.bloque_id === b.id);
+  quitar('bloques', (x) => x.id === b.id);
+  return true;
+}
 export function catalogoEsencialDemo(t) {
   const vistos = new Set();
   return t('bloques').filter((b) => b.es_plantilla && b.esencial_catalogo).sort((x, y) => String(x.creado_en || '').localeCompare(String(y.creado_en || '')))

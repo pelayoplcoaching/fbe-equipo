@@ -3,6 +3,7 @@
 // Aparte de esencial.js (que va en lo que se carga al abrir la app): esto solo lo usan pantallas que se cargan después
 // (Hoy de quien va por su cuenta, su cuestionario y el alta del coach) y las pruebas.
 import { NOMBRE_PRIMERAS_4 } from './esencial.js';
+import { nivelDe, gustosCompletos, necesitaPrimeras } from './esencial-gustos.js';
 
 // (el número con coma y sin ceros de detrás)
 const num = (v, dec = 1) => {
@@ -47,13 +48,16 @@ export const MENSAJE_ESENCIAL = {
 // En qué punto está quien va por su cuenta antes de entrenar (la tarjeta grande de Hoy):
 //  · cuestionario: aún no lo ha enviado (empezado: true si ya guardó algo)
 //  · salud: lo envió sin la parte de salud (sin ella no hay plan)
+//  · rutina (099): con experiencia, le falta «Tus gustos» (gustos: false) o, si la criba no le manda a «Primeras 4
+//    semanas», elegir su rutina (gustos: true). Solo con la migración 099 (con099) y sin plan todavía.
 //  · visto_bueno: el cribado pide valoración médica y aún no ha dicho que la tiene
 //  · revision: dice que la tiene; falta que Pelayo lo confirme
 //  · preparando: todo listo y aún sin plan (la app se lo pide a la base)
 //  · espera: con su plan, antes de su lunes (faltan: días)
 //  · null: ya ha empezado (o no va por su cuenta)
-// bloque: el de su programa (o null); cuestionario: su fila; ficha: { visto_bueno_pedido_en, visto_bueno_en } de atletas.
-export function estadoEsencial({ bloque = null, cuestionario = null, ficha = null, hoy }) {
+// bloque: el de su programa (o null); cuestionario: su fila; ficha: { visto_bueno_pedido_en, visto_bueno_en } de atletas;
+// rutina: la que ha elegido (atletas.esencial_plantilla).
+export function estadoEsencial({ bloque = null, cuestionario = null, ficha = null, hoy, rutina = null, con099 = false }) {
   if (bloque) {
     if (bloque.fecha_inicio && bloque.fecha_inicio > hoy) {
       const faltan = Math.round((Date.parse(`${bloque.fecha_inicio}T12:00:00Z`) - Date.parse(`${hoy}T12:00:00Z`)) / 864e5);
@@ -64,6 +68,10 @@ export function estadoEsencial({ bloque = null, cuestionario = null, ficha = nul
   const c = cuestionario;
   if (!c?.completado_en) return { tipo: 'cuestionario', empezado: !!c };
   if (!c.resultado) return { tipo: 'salud' };
+  if (con099 && nivelDe(c.experiencia) > 0) {
+    if (!gustosCompletos(c.gustos, c)) return { tipo: 'rutina', gustos: false };
+    if (!rutina && !necesitaPrimeras({ experiencia: c.experiencia, gustos: c.gustos })) return { tipo: 'rutina', gustos: true };
+  }
   if (c.resultado !== 'sin_valoracion' && !ficha?.visto_bueno_en) {
     return ficha?.visto_bueno_pedido_en ? { tipo: 'revision', desde: ficha.visto_bueno_pedido_en } : { tipo: 'visto_bueno', resultado: c.resultado };
   }

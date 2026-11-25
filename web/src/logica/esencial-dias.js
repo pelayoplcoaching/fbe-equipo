@@ -17,7 +17,7 @@ export function seguidos(dias = []) {
 }
 
 // Una propuesta que no va seguida, según cuántas sesiones tenga por semana
-export const PROPUESTA_DIAS = { 1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 5, 6] };
+export const PROPUESTA_DIAS = { 1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 5, 6], 6: [1, 2, 3, 4, 5, 6] };
 
 // El día de la semana de una fecha (1 lunes … 7 domingo)
 export const diaDeSemana = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay() || 7;
