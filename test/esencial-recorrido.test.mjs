@@ -32,6 +32,8 @@ await api.guardarCuestionario(yo.id, { lesiones: [], alergias: null }, { complet
 const asig = await api.esencialAsignarPlan();
 console.log('Las cuatro primeras semanas');
 check(asig?.plantilla === 'Primeras 4 semanas', 'con el cuestionario, «Primeras 4 semanas»');
+// (097) desde el jueves, su plan empieza el lunes siguiente: el reloj salta a ese lunes
+if (asig?.inicio && asig.inicio > hoyISO()) desfase += Math.round((Date.parse(`${asig.inicio}T12:00:00Z`) - Date.parse(`${hoyISO()}T12:00:00Z`)) / 864e5) * 864e5;
 
 // Ella elige el peso las primeras semanas (y sube «un poco» en la 3); hace siempre lo de arriba del rango, con te sobran 2
 const inicial = { 'Prensa de piernas': 40, 'Peso muerto rumano con mancuernas': 8, 'Press de pecho en máquina': 20, 'Jalón al pecho': 25 };

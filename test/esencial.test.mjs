@@ -134,9 +134,13 @@ await apiD.guardarCuestionario(marinaD.id, { activo: false, enfermedad: false, e
 await apiD.guardarCuestionario(marinaD.id, { lesiones: [], alergias: null }, { completar: true });
 const asig = await apiD.esencialAsignarPlan();
 const pM = await apiD.programa(marinaD.id);
-check(asig?.nuevo && asig.plantilla === 'Primeras 4 semanas' && pM.bloque?.fecha_inicio === lunesDe(fechaMadrid()) && pM.semanas.length === 4 && pM.semanas.every((w) => w.programacion === 'programada'),
-  'con el cuestionario limpio, la app le pone «Primeras 4 semanas» desde este lunes (su tanda, en la demo), con las cuatro semanas publicadas');
-check((pM.sesiones[pM.actual.id] || []).length === 2 && (await apiD.esencialAsignarPlan()).nuevo === false, 'la semana 1 con sus dos días; pedirlo otra vez no hace otro');
+// (097) su tanda es este lunes: de lunes a miércoles empieza este lunes; desde el jueves, el siguiente (sin semana 1 perdida)
+const tardeD = Math.round((Date.parse(`${fechaMadrid()}T12:00:00Z`) - Date.parse(`${lunesDe(fechaMadrid())}T12:00:00Z`)) / 864e5) > 2;
+const inicioD = tardeD ? sumarDias(lunesDe(fechaMadrid()), 7) : lunesDe(fechaMadrid());
+check(asig?.nuevo && asig.plantilla === 'Primeras 4 semanas' && pM.bloque?.fecha_inicio === inicioD && pM.semanas.length === 4 && pM.semanas.every((w) => w.programacion === 'programada'),
+  `con el cuestionario limpio, la app le pone «Primeras 4 semanas» desde su lunes (este, de lunes a miércoles; si no, el siguiente: ${inicioD}), con las cuatro semanas publicadas`);
+const s1D = [...pM.semanas].sort((x, y) => x.numero - y.numero)[0];
+check((pM.sesiones[s1D.id] || []).length === 2 && (await apiD.esencialAsignarPlan()).nuevo === false, 'la semana 1 con sus dos días; pedirlo otra vez no hace otro');
 await bd.auth.entrar('clara@fbe.demo', 'demo');
 check(/visto bueno/.test(await apiD.esencialAsignarPlan().then(() => '', (e) => e.message)), 'Clara (cribado que pide valoración), sin plan hasta que Pelayo confirme su visto bueno');
 await bd.auth.entrar('pelayo@fbe.demo', 'demo');

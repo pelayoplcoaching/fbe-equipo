@@ -29178,8 +29178,9 @@ insert into public.fbe_migraciones (numero) values (96)  -- (3) número de esta 
 --   * esencial_alta_estado(): solo el coach. De cada uno de FBE Esencial: cuándo se le invitó y hasta cuándo vale su código,
 --     cuándo activó su cuenta, si tiene los avisos activados (en algún móvil o por correo: sí o no, nada más), su
 --     cuestionario, el visto bueno, su plan y su primera sesión. Es lo que enseña el panel «FBE Esencial».
---   * esencial_asignar_plan: si envía el cuestionario después de su lunes, su plan empieza este lunes si aún es de lunes a
---     miércoles y, si no, el lunes siguiente (antes, siempre este lunes: un domingo, su semana 1 ya estaba perdida).
+--   * esencial_asignar_plan: si envía el cuestionario cuando su lunes ya ha llegado (o pasó), su plan empieza este lunes si
+--     aún es de lunes a miércoles y, si no, el lunes siguiente (antes, siempre este lunes: un domingo, su semana 1 ya estaba
+--     perdida).
 --   * crear_recordatorios: la de la 095 con cuatro avisos más, solo para quien va por su cuenta y solo con su primer plan:
 --     «Mañana empiezas» (la víspera, a su hora de la tarde), «Hoy empiezas» (ese lunes, a su hora de la mañana, si no le
 --     llega ya «Hoy toca»), «¿Empezamos?» (el jueves de su semana 1 sin ninguna sesión hecha) y, al coach, por la mañana,
@@ -29329,12 +29330,13 @@ begin
     select id into v_pl from public.bloques where es_plantilla and nombre = 'Primeras 4 semanas' order by creado_en limit 1;
   end if;
   if v_pl is null then raise exception 'No está la plantilla «Primeras 4 semanas»' using errcode = 'P0002'; end if;
-  -- Su lunes: el de su tanda si es esta semana o después; si ya pasó, este lunes (de lunes a miércoles) o el siguiente; sin
-  -- tanda, el próximo lunes
+  -- Su lunes: el de su tanda si aún no ha llegado; si ya llegó (esta semana) o pasó, este lunes (de lunes a miércoles) o el
+  -- siguiente; sin tanda, el próximo lunes
   v_lunes := fbe_privado.lunes_de(v_hoy);
   v_inicio := case when v_at.esencial_inicio is null then case when v_hoy = v_lunes then v_hoy else v_lunes + 7 end
-                   when v_at.esencial_inicio >= v_lunes then v_at.esencial_inicio
-                   -- (097) si llega tarde: este lunes hasta el miércoles; desde el jueves, el siguiente (sin una semana 1 perdida)
+                   when v_at.esencial_inicio > v_lunes then v_at.esencial_inicio
+                   -- (097) su lunes ya ha llegado (esta semana) o pasó: este lunes hasta el miércoles; desde el jueves, el
+                   -- siguiente (sin una semana 1 perdida)
                    when v_hoy - v_lunes <= 2 then v_lunes
                    else v_lunes + 7 end;
   v_bloque := fbe_privado.esencial_copiar_plantilla(v_pl, v_id, v_inicio);

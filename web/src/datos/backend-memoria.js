@@ -3996,9 +3996,11 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const elegida = plantillaEsencial(c);
         const pl = plantillas.find((x) => x.nombre === elegida) || plantillas.find((x) => x.nombre === 'Primeras 4 semanas');
         if (!pl) throw new Error('No está la plantilla «Primeras 4 semanas»');
-        // Su lunes: el de su tanda si es esta semana o después; si ya pasó, el de esta semana; sin tanda, el próximo lunes
+        // Su lunes: el de su tanda si aún no ha llegado; si ya llegó (esta semana) o pasó, este lunes hasta el miércoles y,
+        // desde el jueves, el siguiente (097); sin tanda, el próximo lunes
         const hoyM = fechaMadrid(), lunesM = lunesDe(hoyM);
-        const inicio = !a.esencial_inicio ? (hoyM === lunesM ? hoyM : sumar(lunesM, 7)) : a.esencial_inicio >= lunesM ? a.esencial_inicio : lunesM;
+        const tarde = Math.round((Date.parse(`${hoyM}T12:00:00Z`) - Date.parse(`${lunesM}T12:00:00Z`)) / 864e5) > 2;
+        const inicio = !a.esencial_inicio ? (hoyM === lunesM ? hoyM : sumar(lunesM, 7)) : a.esencial_inicio > lunesM ? a.esencial_inicio : tarde ? sumar(lunesM, 7) : lunesM;
         const nuevo = copiarPlantillaEsencial(tabla, { plantilla: pl, atletaId: id, inicio, uuid, ahoraISO: new Date().toISOString() });
         persistirYa();
         return { bloque: nuevo.id, nuevo: true, plantilla: pl.nombre, inicio };

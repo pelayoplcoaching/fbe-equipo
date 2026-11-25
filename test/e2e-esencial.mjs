@@ -35,6 +35,27 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('nav.tabs').waitFor({ timeout: 30000 });
     await p.waitForTimeout(800);
   };
+  // La sesión de la semana 1 de «Primeras 4 semanas», desde Hoy: «te sobran» en la portada y en los ejercicios, la plancha
+  // en segundos y sin la conversación con el coach
+  const probarSesion = async (p, quien) => {
+    check(/Esta semana:/.test(await p.locator('.hero-dia').first().textContent().catch(() => '')), 'la nota de la semana, «Esta semana:» (no «Tu coach:»)');
+    await p.getByRole('button', { name: /Empezar sesión/ }).first().click();
+    // La portada de la sesión: el esfuerzo explicado con «te sobran» (no «RIR 2»)
+    const portada = p.locator('.portada-vista');
+    if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) {
+      const tPor = await portada.textContent();
+      check(!/«RIR 2»/.test(tPor) && !/las pesadas/.test(tPor), 'la portada de la sesión, sin «RIR 2» ni «las pesadas» (semana de aprender)');
+      await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+    }
+    await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 15000 }).catch(async (e) => {
+      if (process.env.FBE_CAPTURAS) await p.screenshot({ path: `${process.env.FBE_CAPTURAS}/esencial-sesion.png` });
+      throw e;
+    });
+    const tSes = await p.locator('main').first().textContent();
+    check(/Te sobran 4-5/.test(tSes) && /20–30 s/.test(tSes), `la sesión (${quien}): «Te sobran 4-5» y la plancha en segundos`);
+    check(!/Comentarios con tu coach/.test(tSes), 'sin «Comentarios con tu coach»');
+    await desborda(p, `la sesión de ${quien}`);
+  };
 
   // ---------------------------------------------------------------- Marina: del cuestionario a su semana 1
   {
@@ -82,28 +103,27 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       'al enviarlo: el resultado del cribado y «la app te prepara tu plan», sin «tu coach lo verá»');
     await fin.getByRole('button', { name: 'Hecho' }).click();
     await cerrar(p);
-    const dia = p.locator('.hero-dia h2, .hero-dia .titular').first();
-    const conPlan = await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
-    check(conPlan, 'y en Hoy, su plan: «Primeras 4 semanas», Día 1');
-    check(/Esta semana:/.test(await p.locator('.hero-dia').first().textContent().catch(() => '')), 'la nota de la semana, «Esta semana:» (no «Tu coach:»)');
-    await dia.isVisible().catch(() => false);
-    await p.getByRole('button', { name: /Empezar sesión/ }).first().click();
-    // La portada de la sesión: el esfuerzo explicado con «te sobran» (no «RIR 2»)
-    const portada = p.locator('.portada-vista');
-    if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) {
-      const tPor = await portada.textContent();
-      check(!/«RIR 2»/.test(tPor) && !/las pesadas/.test(tPor), 'la portada de la sesión, sin «RIR 2» ni «las pesadas» (semana de aprender)');
-      await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+    // (097) su tanda es este lunes: de lunes a miércoles empieza este lunes (Día 1 en Hoy); desde el jueves, el siguiente
+    const tardeE = ['Thu', 'Fri', 'Sat', 'Sun'].includes(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short' }).format(new Date()));
+    if (!tardeE) {
+      const conPlan = await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+      check(conPlan, 'y en Hoy, su plan: «Primeras 4 semanas», Día 1');
+      await probarSesion(p, 'Marina');
+    } else {
+      const espera = await p.waitForFunction(() => /Empiezas el lunes/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+      check(espera, 'y en Hoy (de jueves a domingo, su semana 1 sería ya media semana): «Empiezas el lunes…», el siguiente');
     }
-    await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 15000 }).catch(async (e) => {
-      if (process.env.FBE_CAPTURAS) await p.screenshot({ path: `${process.env.FBE_CAPTURAS}/esencial-sesion.png` });
-      throw e;
-    });
-    const tSes = await p.locator('main').first().textContent();
-    check(/Te sobran 4-5/.test(tSes) && /20–30 s/.test(tSes), 'la sesión: «Te sobran 4-5» y la plancha en segundos');
-    check(!/Comentarios con tu coach/.test(tSes), 'sin «Comentarios con tu coach»');
-    await desborda(p, 'la sesión de Marina');
     await ctx.close();
+    // (de jueves a domingo, la sesión de la semana 1 se mira con Inés, que empezó este lunes)
+    if (tardeE) {
+      const { ctx: ctx2, p: p2 } = await movil();
+      await entrar(p2, /Inés/);
+      await p2.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+      await cerrar(p2);
+      await p2.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+      await probarSesion(p2, 'Inés');
+      await ctx2.close();
+    }
   }
 
   // ---------------------------------------------------------------- Clara: su visto bueno, en revisión

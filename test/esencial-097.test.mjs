@@ -112,6 +112,13 @@ const planE = await api.esencialAsignarPlan();
 const dow = new Date(`${hoy}T12:00:00Z`).getUTCDay() || 7;
 const esperado = dow <= 3 ? lunesDe(hoy) : sumarDias(lunesDe(hoy), 7);
 check(planE?.inicio === esperado, `pasado su lunes: este lunes de lunes a miércoles y, desde el jueves, el siguiente (hoy, ${esperado})`);
+// Flor: su tanda es este mismo lunes (ya ha llegado)
+await b.auth.entrar('coach@fbe.test', 'contraseña-coach');
+const altaF = await api.crearAtletaEsencial({ nombre: 'Flor Prueba', email: 'flor@test', inicio: lunesDe(hoy) });
+await b.auth.registrar('flor@test', 'clave-flor@test', 'Flor'); await api.canjearCodigo(altaF.codigo); await api.darConsentimientos();
+const flor = (await q(`select id from atletas where email = 'flor@test'`))[0];
+await api.guardarCuestionario(flor.id, limpio, { completar: true });
+check((await api.esencialAsignarPlan())?.inicio === esperado, `con su lunes esta semana, igual: este lunes hasta el miércoles; desde el jueves, el siguiente (${esperado})`);
 
 console.log('\nLos avisos de empezar');
 await db.exec('reset role;');
