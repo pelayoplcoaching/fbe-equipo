@@ -970,6 +970,37 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const leida = await p.locator('.ayu-rev-linea').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
       check(leida && (await p.locator('.ayu-rev-tarjeta').count()) === 0, 'leída, la tarjeta se queda en una línea para releerla');
     }
+    // (acompañamiento, tanda 5; v0.246) Que no entrenen solos: el saludo del día, el reto de la semana, el diario y «¿Cómo vamos?»
+    const saludo = p.locator('.cer-saludo');
+    const conSaludo = await saludo.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check((await p.locator('.cer-nota').count()) === 0 && (await p.locator('.cer-dia').count()) === 0, 'sin la nota de Pelayo ni el día a día (apagados hasta que los vea)');
+    check(conSaludo && /Hoy toca|Mañana toca|te quedan? |Hoy descansas|Ayer entrenaste|Semana hecha/.test(await saludo.textContent()) && !/coach/i.test(await saludo.textContent()), `arriba en Hoy, el saludo del día («${conSaludo ? (await saludo.locator('.cer-saludo-t').textContent()).slice(0, 60) : ''}…»)`);
+    const reto = p.locator('.cer-reto');
+    await reto.scrollIntoViewIfNeeded().catch(() => {});
+    check(/Reto de la semana: tus 2 sesiones\. Llevas 0\./.test(await reto.textContent().catch(() => '')) && /0\/2/.test(await reto.textContent().catch(() => '')), 'el reto de la semana: sus dos sesiones (con menos de cinco personas, sin cifras de los demás)');
+    const vamos = p.locator('.cer-vamos');
+    const conVamos = await vamos.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conVamos && /Un mes ya\. ¿Cómo vamos\?/.test(await vamos.textContent()) && (await vamos.locator('.cer-n').count()) === 10, 'en su semana 5, «Un mes ya. ¿Cómo vamos?», del 1 al 10');
+    if (conVamos) {
+      await vamos.getByRole('button', { name: '9', exact: true }).click();
+      await vamos.locator('.cer-area').fill('Me gustaría ver mis vídeos de técnica');
+      await desborda(p, 'Hoy con «¿Cómo vamos?»');
+      await vamos.getByRole('button', { name: 'Enviar' }).click();
+      const fuera = await p.waitForFunction(() => !document.querySelector('.cer-vamos'), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      check(fuera, 'pone un 9, cuenta qué echa de menos y, enviada, la tarjeta se va');
+    }
+    await p.locator('.cer-pie').getByRole('button', { name: /Lo que la app ha hecho por ti/ }).click();
+    let hojaC = p.locator('[aria-modal="true"]').last();
+    await hojaC.locator('.cer-diario').waitFor({ timeout: 10000 }).catch(() => {});
+    check((await hojaC.locator('.cer-diario-f').count()) >= 2 && /Te preparó tu plan: «Novato 2 días · FBE Esencial»/.test(await hojaC.textContent()) && /«Primeras 4 semanas»/.test(await hojaC.textContent()),
+      '«Lo que la app ha hecho por ti»: cada decisión con su porqué (sus dos planes)');
+    await desborda(p, 'el diario de la app');
+    await hojaC.locator('.cerrar-hoja').click();
+    await p.locator('.cer-pie').getByRole('button', { name: /Lo que llevas/ }).click();
+    hojaC = p.locator('[aria-modal="true"]').last();
+    const conTri = await p.waitForFunction(() => /Aún no hay bastante que comparar|semanas?: tu trimestre|Lo que llevas:/.test(document.querySelector('.cer-trimestre')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check(conTri, '«Lo que llevas»: con una sola semana de su rutina nueva, aún no hay con qué comparar (y lo dice)');
+    await hojaC.locator('.cerrar-hoja').click();
     // «¿Qué necesitas?»: el centro de respuestas (en su respuesta), el buscador, su plan y la pregunta para el directo
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
@@ -1043,16 +1074,27 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await cerrar(p);
     const piloto = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
     if ((await piloto.getAttribute('open').catch(() => null)) === null) await piloto.locator('summary').click().catch(() => {});
-    const caja = piloto.locator('.ecp-caja');
+    const caja = piloto.locator('.ecp-caja[data-ecp="directo"]');
     const conCaja = await caja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check(conCaja && /1 sin contestar/.test(await caja.textContent()) && /Tomás Rey/.test(await caja.textContent()) && /noto más la espalda/.test(await caja.textContent()), 'Pelayo, en su panel de FBE Esencial: «Preguntas para el directo · 1 sin contestar», con quién pregunta');
+    // (tanda 5) y lo que Tomás contestó a «¿Cómo vamos?»; y a quién escribir, con el mensaje preparado
+    const cv = piloto.locator('.ecp-caja[data-ecp="vamos"]');
+    const conCv = await cv.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conCv && /«¿Cómo vamos\?»: 9 de 10 \(una respuesta\)/.test(await cv.textContent()) && /ver mis vídeos de técnica/.test(await cv.textContent()), 'y «¿Cómo vamos?»: 9 de 10, con lo que echa de menos');
+    const esc = piloto.locator('.ecp-caja[data-ecp="escribir"]');
+    if (await esc.count()) {
+      await esc.getByRole('button', { name: 'Ver el mensaje preparado' }).first().click();
+      const msg = await esc.locator('.ecp-area').first().inputValue().catch(() => '');
+      check(/^Hola, [^:]+:/.test(msg) && /Pelayo$/.test(msg) && /La app no envía nada/.test(await esc.textContent()), '«A quién escribir»: con el mensaje preparado para copiar (lo manda él: la app no envía nada)');
+      await esc.getByRole('button', { name: 'Cerrar' }).first().click();
+    }
     if (conCaja) {
       await caja.getByRole('button', { name: 'Contestar' }).click();
       await caja.locator('.ecp-area').fill('Baja el peso, saca cadera hacia atrás y para cuando la espalda empiece a redondearse.');
       await caja.getByRole('checkbox').check();
       await caja.locator('.ecp-campo').fill('En el peso muerto rumano noto más la espalda que la pierna');
       await caja.getByRole('button', { name: 'Guardar' }).click();
-      const guardada = await p.waitForFunction(() => /Tu respuesta \(pública\)/.test(document.querySelector('.ecp-caja')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const guardada = await p.waitForFunction(() => /Tu respuesta \(pública\)/.test(document.querySelector('.ecp-caja[data-ecp="directo"]')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       check(guardada && !/sin contestar/.test(await caja.textContent()), 'la contesta y la hace pública (con la pregunta escrita por él, sin el nombre de nadie)');
       // …y Marina (otra persona) la ve en «Respuestas», en «Del directo del mes», sin saber de quién era
       await salirDeLaCuenta(p, 'saca cadera');
@@ -1075,6 +1117,77 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     }
     await ctx.close();
   }
+  // (tanda 5) «¿Te vas?»: con el reloj en el 15 de diciembre, a Tomás le sale antes de Navidad
+  {
+    const anio = new Date().getFullYear();
+    const dic = [1, 2].map((o) => new Date(`${anio}-12-15T10:00:00+0${o}:00`)).find((d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(d) === '10:00');
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await ctx.clock.setFixedTime(dic);
+    await entrar(p, /Tomás/);
+    await cerrar(p);
+    await p.waitForTimeout(1500);
+    await cerrar(p);
+    const seguir = p.getByRole('button', { name: 'Seguir', exact: true }).first();
+    if (await seguir.isVisible().catch(() => false)) { await seguir.click(); await p.waitForTimeout(400); }
+    const va = p.locator('.cer-va');
+    const conVa = await va.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    check(conVa && /¿Te vas estas navidades\?/.test(await va.textContent()), 'dos semanas antes de Navidad: «¿Te vas estas navidades?»');
+    if (conVa) {
+      await va.getByRole('button', { name: 'Sí: ver qué hago' }).click();
+      const h = p.locator('[aria-modal="true"]').last();
+      await h.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
+      check(/Me voy de viaje/.test(await h.locator('.ayu-p[open]').textContent().catch(() => '')) && /Esta semana no puedo/.test(await h.locator('.ayu-p[open]').textContent().catch(() => '')), '«Sí» le lleva a qué puede hacer: pausa o rutina de viaje');
+      await h.locator('.cerrar-hoja').click();
+      await va.getByRole('button', { name: 'No, sigo igual' }).click();
+      check((await p.locator('.cer-va').count()) === 0, '«No, sigo igual» la quita');
+    }
+    await ctx.close();
+  }
+  // (tanda 5) Las agujetas: Inés hace su primera sesión un martes y, el miércoles, la app le pregunta
+  {
+    const hoyM = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+    const dM = new Date(`${hoyM}T12:00:00Z`);
+    const dia = (n) => new Date(dM.getTime() + (n - ((dM.getUTCDay() + 6) % 7)) * 864e5).toISOString().slice(0, 10);
+    const alas10 = (iso) => [1, 2].map((o) => new Date(`${iso}T10:00:00+0${o}:00`)).find((d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(d) === '10:00');
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await ctx.clock.setFixedTime(alas10(dia(1)));
+    await entrar(p, /Inés/);
+    await cerrar(p);
+    await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+    check((await p.locator('.cer-agujetas').count()) === 0, 'antes de su primera sesión, nadie le pregunta por las agujetas');
+    await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+    const portada = p.locator('.portada-vista');
+    if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+    await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 15000 });
+    await p.getByRole('button', { name: 'Terminar sesión' }).click();
+    await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).first().click();
+    await p.getByRole('button', { name: 'Guardar y terminar' }).click();
+    await p.getByRole('heading', { name: 'Sesión terminada' }).waitFor({ timeout: 15000 });
+    check((await p.locator('.ayu-hito').count()) === 0, 'al terminar la primera, sin hito repetido (ya tiene «Tu primera sesión, hecha»)');
+    await p.waitForTimeout(700);
+    // …y al día siguiente
+    await ctx.clock.setFixedTime(alas10(dia(2)));
+    // (cambiar solo la almohadilla no recarga la página, y con la sesión abierta no se sale de ella: se abre de nuevo,
+    // como quien toca el aviso con la app cerrada)
+    await p.goto(`${base}/?demo=esencial#hoy/agujetas`);
+    await p.reload();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await cerrar(p);
+    const ag = p.locator('.cer-agujetas');
+    const conAg = await ag.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    check(conAg && /Ayer, tu primera sesión\. ¿Qué tal las agujetas\?/.test(await ag.textContent()) && (await ag.locator('.cer-op').count()) === 3, 'el día después de su primera sesión: «¿Qué tal las agujetas?», con tres respuestas de un toque');
+    check(/Ayer entrenaste: hoy toca descansar/.test(await p.locator('.cer-saludo').textContent().catch(() => '')), 'y el saludo del día después: «Ayer entrenaste: hoy toca descansar…»');
+    if (conAg) {
+      await ag.getByRole('button', { name: 'Muchas' }).click();
+      check(/eso no son agujetas/.test(await ag.textContent()) && (await ag.getByRole('button', { name: '¿Y si me duele algo?' }).count()) === 1, '«Muchas»: lo normal y cuándo «eso no son agujetas», con «¿Y si me duele algo?» a un toque');
+      await desborda(p, 'Hoy con las agujetas');
+      await ag.getByRole('button', { name: 'Vale' }).click();
+      check((await p.locator('.cer-agujetas').count()) === 0, '«Vale» la quita');
+    }
+    await ctx.close();
+  }
   // (la vista previa de lo apagado, para Pelayo: «?previa=1» en la demo)
   {
     const { ctx, p } = await movil();
@@ -1094,6 +1207,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
       check((await hoja.locator('.ayu-p').count()) === 8 && (await hoja.locator('.ayu-pendiente').count()) === 4 && /Pendiente del visto bueno de Pelayo/.test(await hoja.textContent()),
         'con «?previa=1» en la demo se ve lo apagado: las cuatro respuestas de salud nuevas, marcadas como pendientes');
+      await hoja.locator('.cerrar-hoja').click();
+      check(/borrador, pendiente de su visto bueno/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana, como borrador (sin la vista previa no sale)');
     } else check(false, 'la vista previa de lo apagado');
     await ctx.close();
   }

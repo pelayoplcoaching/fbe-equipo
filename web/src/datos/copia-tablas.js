@@ -28,11 +28,14 @@ const TABLAS_SONIDO = ['voces_coach'];
 const TABLAS_209 = ['conversacion_fijado', 'chat_silencios', 'listas_difusion', 'listas_difusion_miembros', 'encuestas_chat', 'encuesta_votos',
   'privacidad_vista', 'preferencias_notificaciones', 'umbrales_velocidad', 'atletas_imagenes', 'revision_ajustes', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes'];
 
+// (100) FBE Esencial: lo que quien va por su cuenta le cuenta a la app (su pregunta para el directo, «¿Cómo vamos?»)
+const TABLAS_ESENCIAL = ['esencial_notas'];
+
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los
 // vídeos, 035; la revisión semanal, 040…): sin ellas, la copia sale igual
 export const TABLAS_OPCIONALES = ['cobros_atletas', 'pagos', 'recetas', 'recetas_atleta', 'comidas_atleta', 'menu_comidas', 'menu_dias', 'recetas_favoritas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', ...TABLAS_COMUNIDAD, 'tareas', 'tareas_plantillas',
   'comentario_reacciones', 'comentario_destacados', 'conversacion_estado', 'video_revisiones', 'tecnica_plantillas',
-  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS, ...TABLAS_SONIDO, ...TABLAS_209];
+  'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'video_autoevaluacion', 'revisiones_semanales', ...TABLAS_CARRERA, ...TABLAS_YOUTUBE, ...TABLAS_DESCANSOS, ...TABLAS_SONIDO, ...TABLAS_209, ...TABLAS_ESENCIAL];
 
 // Tablas de una copia completa (todo lo que el coach puede leer, menos lo de FUERA_DE_COPIA)
 export const TABLAS_COPIA = ['perfiles', 'atletas', 'invitaciones', 'consentimientos', 'ejercicios', 'bloques', 'semanas', 'sesiones',

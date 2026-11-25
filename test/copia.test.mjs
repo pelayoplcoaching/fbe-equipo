@@ -83,6 +83,7 @@ const NUEVAS = [
   [`insert into carrera_eventos (atleta_id, nombre, fecha) values ($1, 'Media de prueba', '2026-12-13')`, [ana.id]],
   [`insert into carrera_semanas (atleta_id, lunes, km_min, km_max) values ($1, '2026-09-07', 20, 30)`, [ana.id]],
   [`insert into carrera_revisiones (atleta_id, fecha, titulo) values ($1, '2026-09-20', 'Test de 30 min')`, [ana.id]],
+  [`insert into esencial_notas (atleta_id, tipo, texto) values ($1, 'pregunta_directo', 'Una pregunta para el directo, de prueba')`, [ana.id]],
   [`insert into recordatorios_tecnica (atleta_id, ejercicio_id, texto) values ($1, $2, 'Rodillas fuera')`, [ana.id, ej.id]],
   [`insert into recetas_favoritas (atleta_id, receta_id) values ($1, $2)`, [ana.id, rec.id]],
   [`insert into personal_atleta (atleta_id, apodo) values ($1, 'Anita')`, [ana.id]],
@@ -130,7 +131,7 @@ await b.auth.entrar('coach@fbe.test', 'contraseña-coach');
 console.log('\nRecuperar un atleta: también lo de las versiones nuevas');
 await import('../scripts/restaurar-atleta.js');
 const R = globalThis.FBERestaurar;
-const TABLAS = ['revisiones_semanales', 'pausas', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'recordatorios_tecnica', 'recetas_favoritas',
+const TABLAS = ['revisiones_semanales', 'pausas', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'esencial_notas', 'recordatorios_tecnica', 'recetas_favoritas',
   'personal_atleta', 'contacto_atleta', 'salud_diaria', 'salud_copias', 'agenda_vida', 'objetivos_propuestos', 'objetivos_rondas', 'suplementos', 'suplementos_tomas', 'musica_sesion',
   'travesia_perfil', 'travesia_dia', 'habitos', 'objetivos', 'bloques'];
 const cuenta = async () => Object.fromEntries(await Promise.all(TABLAS.map(async (t) => [t, (await b.sql(`select count(*)::int n from ${t} where atleta_id = $1`, [ana.id]))[0].n])));

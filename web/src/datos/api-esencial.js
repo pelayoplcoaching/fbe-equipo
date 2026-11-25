@@ -246,3 +246,72 @@ export async function responderPregunta(b, id, { respuesta, pregunta_publica = n
   return (await b.update('esencial_notas', { respuesta: r || null, respondida_en: r ? new Date().toISOString() : null, pregunta_publica: publica && r ? String(pregunta_publica || '').trim() || null : null,
     publica: !!(publica && r && String(pregunta_publica || '').trim()) }, { eq: { id } }))[0] || null;
 }
+
+// ---------- (v0.246, acompañamiento, tanda 5) Que no entrenen solos ----------
+// «Tu trimestre»: de su bloque, cada ejercicio de su última semana con lo que tenía en la primera (los kilos pautados o, si
+// no había, los que movió) y lo que tiene ahora; y cuántas sesiones lleva hechas en total.
+// → null | { semanas, sesiones, filas: [{ nombre, por_tiempo, antes: { kg, max }, ahora: { kg, max } }] }
+export async function trimestre(api, b, atletaId, { hoy = fechaMadrid() } = {}) {
+  const prog = await api.programa(atletaId);
+  if (!prog?.bloque) return null;
+  const [{ pautasDeSemana }, { semanaDelPlan }, d] = await Promise.all([import('../logica/motor/index.js'), import('../logica/esencial-lecciones.js'), api.bloqueCompleto(prog.bloque.id)]);
+  const propias = programadas(d, prog.bloque.id).filter((w) => String(w.fecha_inicio).slice(0, 10) <= hoy);
+  if (propias.length < 2) return null;
+  const primera = pautasDeSemana(d, propias[0]), ultima = pautasDeSemana(d, propias[propias.length - 1]);
+  const ejercicios = porId(await api.ejerciciosPorIds(unicos(ultima.pautas.map((p) => p.ejercicio_id))));
+  const movido = (p) => Math.max(0, ...((d.series?.[p.id] || []).map((x) => Number(x.kg) || 0))) || null;
+  const filas = [];
+  for (const p of ultima.pautas) {
+    if (filas.some((f) => f.id === p.ejercicio_id)) continue;
+    const a = primera.pautas.find((x) => x.ejercicio_id === p.ejercicio_id) || null;
+    const ej = ejercicios[p.ejercicio_id] || {};
+    filas.push({ id: p.ejercicio_id, nombre: ej.nombre || '', por_tiempo: !!ej.por_tiempo,
+      antes: a ? { kg: a.carga_sugerida_kg != null ? Number(a.carga_sugerida_kg) : movido(a), max: a.reps_max ?? null } : null,
+      ahora: { kg: p.carga_sugerida_kg != null ? Number(p.carga_sugerida_kg) : movido(p), max: p.reps_max ?? null } });
+  }
+  const ultimoLunes = String(propias[propias.length - 1].fecha_inicio).slice(0, 10);
+  return { semanas: semanaDelPlan(prog.bloques, ultimoLunes) || propias[propias.length - 1].numero, sesiones: (await hechas(b, atletaId)).length, filas };
+}
+// Sus sesiones hechas, de todos sus bloques: [{ id, fecha, rpe }], de la más antigua a la última
+export async function hechas(b, atletaId) {
+  const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' });
+  const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id' }) : [];
+  if (!semanas.length) return [];
+  const ss = await b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, eq: { completada: true }, cols: 'id,fecha_realizada,rpe_sesion' });
+  return ss.filter((x) => x.fecha_realizada).map((x) => ({ id: x.id, fecha: String(x.fecha_realizada).slice(0, 10), rpe: x.rpe_sesion ?? null })).sort((x, y) => x.fecha.localeCompare(y.fecha));
+}
+// (el panel del coach) Quiénes llevan dos semanas seguidas con menos de la mitad de sus sesiones: { atleta_id: true }; y el
+// correo de cada uno (para escribirle): { atleta_id: correo }
+export async function paraEscribir(b, ids = [], { hoy = fechaMadrid() } = {}) {
+  if (!ids.length) return { flojos: {}, correos: {} };
+  const [atletas, bloques] = await Promise.all([
+    b.select('atletas', { in: { id: ids }, cols: 'id,email' }),
+    b.select('bloques', { in: { atleta_id: ids }, eq: { es_plantilla: false }, cols: 'id,atleta_id,estado' }),
+  ]);
+  const activos = bloques.filter((x) => ['activo', 'ajustado'].includes(x.estado));
+  const semanas = activos.length ? await b.select('semanas', { in: { bloque_id: activos.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,esencial_cierre' }).catch(() => []) : [];
+  const lunes = (iso) => { const d = new Date(`${iso}T12:00:00Z`); return sumarDias(iso, -((d.getUTCDay() + 6) % 7)); };
+  const pasadas = semanas.filter((w) => w.programacion === 'programada' && w.fecha_inicio && String(w.fecha_inicio).slice(0, 10) < lunes(hoy) && w.esencial_cierre !== 'pausa');
+  const ss = pasadas.length ? await b.select('sesiones', { in: { semana_id: pasadas.map((w) => w.id) }, cols: 'id,semana_id,completada' }) : [];
+  const flojos = {};
+  for (const bl of activos) {
+    const suyas = pasadas.filter((w) => w.bloque_id === bl.id).sort((x, y) => String(y.fecha_inicio).localeCompare(String(x.fecha_inicio))).slice(0, 2);
+    if (suyas.length < 2) continue;
+    const floja = (w) => { const xs = ss.filter((s) => s.semana_id === w.id); return xs.length >= 2 && xs.filter((s) => s.completada).length * 2 < xs.length; };
+    if (suyas.every(floja)) flojos[bl.atleta_id] = true;
+  }
+  return { flojos, correos: Object.fromEntries(atletas.map((a) => [a.id, a.email || null])) };
+}
+// El reto de la semana: las cifras de FBE Esencial (sin la 100, o con menos de cinco, null)
+export async function equipoSemana(b) {
+  try { return (await b.rpc('esencial_equipo_semana', {})) || null; } catch (e) { if (falta(/esencial_equipo_semana/)(e)) return null; throw e; }
+}
+// (el panel del coach) Las notas de «¿Cómo vamos?», con su nombre
+export async function comoVamos(b) {
+  try {
+    const filas = await b.select('esencial_notas', { eq: { tipo: 'como_vamos' }, order: [['creada_en', 'desc']] });
+    if (!filas.length) return [];
+    const at = porId(await b.select('atletas', { in: { id: unicos(filas.map((f) => f.atleta_id)) }, cols: 'id,nombre' }));
+    return filas.map((f) => ({ ...f, nombre: at[f.atleta_id]?.nombre || '' }));
+  } catch (e) { if (falta100(e)) return null; throw e; }
+}

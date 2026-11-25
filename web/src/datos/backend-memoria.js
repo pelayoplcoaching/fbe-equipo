@@ -4039,6 +4039,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           .sort((a, b) => String(b.respondida_en || '').localeCompare(String(a.respondida_en || '')))
           .map((x) => ({ id: x.id, pregunta: x.pregunta_publica, respuesta: x.respuesta, respondida_en: x.respondida_en }));
       }
+      // (migración 100) el reto de la semana: cuántos de FBE Esencial tienen semana, han entrenado y la han completado
+      if (nombre === 'esencial_equipo_semana') {
+        const yo = tabla('atletas').find((x) => x.id === miAtletaId());
+        if (!esCoach() && yo?.modalidad !== 'por_su_cuenta') return null;
+        const lunesHoy = lunesDe(fechaMadrid());
+        const filas = tabla('atletas').filter((a) => a.modalidad === 'por_su_cuenta' && a.estado === 'activo').map((a) => {
+          const bs = tabla('bloques').filter((x) => x.atleta_id === a.id && !x.es_plantilla && ['activo', 'ajustado'].includes(x.estado)).map((x) => x.id);
+          const ws = tabla('semanas').filter((w) => bs.includes(w.bloque_id) && w.fecha_inicio === lunesHoy && w.programacion === 'programada').map((w) => w.id);
+          const ss = tabla('sesiones').filter((s) => ws.includes(s.semana_id));
+          return { total: ss.length, hechas: ss.filter((s) => s.completada).length };
+        }).filter((t) => t.total > 0);
+        if (filas.length < 5) return null;
+        return { lunes: lunesHoy, con: filas.length, completas: filas.filter((t) => t.hechas >= t.total).length, entrenando: filas.filter((t) => t.hechas > 0).length };
+      }
       if (nombre === 'esencial_catalogo') {
         const yo = tabla('atletas').find((x) => x.id === miAtletaId());
         return esCoach() || yo?.modalidad === 'por_su_cuenta' ? catalogoEsencialDemo(tabla) : [];

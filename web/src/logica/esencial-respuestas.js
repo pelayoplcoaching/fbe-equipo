@@ -135,7 +135,7 @@ export const PENDIENTES = [
     r: 'Si te encuentras bien, sí, con normalidad. Si ese día el cuerpo no acompaña, haz la sesión más suave o pásala a otro día: no pierdes nada.' },
 ];
 
-export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_responde']);
+export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia']);
 // previa: en la demo, con «?previa=1», se ve lo apagado (para que Pelayo lo revise en su sitio)
 export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(clave);
 export const respuestas = ({ previa = false, publicas = [] } = {}) => [
@@ -197,7 +197,7 @@ export const DUDAS_PANTALLA = { cierre: 'domingo', perdida: 'falle', marcas: 'ma
 
 // ---------- (14) Cada aviso lleva a su explicación ----------
 // El final del enlace del aviso (#hoy/<clave>, migración 100) → qué se abre en Hoy
-export const AVISO_ABRE = { manana: 'plan', hoy: 'plan', empezamos: 'plan', domingo: 'cierre', auto: 'revision', lunes: 'revision', rutina: 'rutina', elige: 'rutina', plan_auto: 'plan' };
+export const AVISO_ABRE = { manana: 'plan', hoy: 'plan', empezamos: 'plan', domingo: 'cierre', auto: 'revision', lunes: 'revision', rutina: 'rutina', elige: 'rutina', plan_auto: 'plan', agujetas: 'agujetas', retomar: 'vuelta' };
 
 // ---------- (10) «Tu plan, explicado» y (11) «Tu camino» ----------
 // Los hitos de su camino según la semana de su plan (n) y si empezó por «Primeras 4 semanas»

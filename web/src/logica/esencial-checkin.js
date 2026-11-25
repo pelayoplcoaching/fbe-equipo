@@ -6,6 +6,9 @@ import { WEB_FBE } from './esencial.js';
 import { NOMBRE_ZONA } from './calculos.js';
 
 export const URL_SEMAFORO = `${WEB_FBE}/semaforo-dolor.html`;
+// (v0.246, 33) El check-in de quien va por su cuenta, más corto: lo que la app usa (su peso, el descanso y las molestias; y la
+// alimentación, si lleva nutrición). Sin las medidas ni los datos del reloj, que no lee nadie.
+export const APARTADOS_SUYO = ['peso', 'descanso', 'molestias', 'alimentacion'];
 const NIVEL = ['', 'leve', 'moderada', 'grave'];
 const bajo = (v) => Number(v) >= 1 && Number(v) <= 2;
 const unir = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);

@@ -1,0 +1,62 @@
+/* FBE Esencial (acompanamiento, tanda 5): "que no entrenen solos". El saludo del dia, las agujetas, la vuelta, el ritmo, el
+   reto de la semana, "Te vas", "Como vamos", el trimestre y el diario. Solo clases cer-*, cada regla en su propio elemento
+   (una sola clase: los estados, con su propia clase y no con un atributo), sin tocar margenes ni tamanos de letra (eso lo ponen las clases comunes en el JSX): asi
+   van enteras con el trozo de EsencialCerca y no hacen volver al comun reglas de otros trozos (scripts/css-coach.mjs). */
+
+/* El saludo del dia y, apagados, la nota de Pelayo y el dia a dia */
+.cer-saludo { display: grid; gap: var(--esp-4); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--morado-suave); }
+.cer-saludo-t { min-width: 0; overflow-wrap: anywhere; }
+.cer-saludo-x { min-width: 0; }
+.cer-nota { display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--anillo); }
+.cer-nota-t { min-width: 0; overflow-wrap: anywhere; }
+.cer-nota-a { width: 100%; }
+.cer-dia { display: flex; align-items: flex-start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.cer-dia-i { flex: none; display: inline-flex; }
+
+/* Las opciones de un toque (las agujetas) y la nota del 1 al 10 */
+.cer-op {
+  min-height: var(--esp-28); padding: var(--esp-4) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+}
+.cer-op-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.cer-op:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.cer-agujetas { min-width: 0; }
+.cer-vuelta { min-width: 0; }
+.cer-ritmo { min-width: 0; }
+.cer-va { min-width: 0; }
+.cer-tri { min-width: 0; }
+.cer-vamos { min-width: 0; }
+.cer-notas { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: var(--esp-4); }
+.cer-n { min-height: var(--esp-28); padding: 0; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-s); background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer; }
+.cer-n-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.cer-n:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.cer-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
+.cer-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* El reto de la semana */
+.cer-reto { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--anillo); }
+.cer-reto-ok { box-shadow: var(--anillo-acento); }
+.cer-reto-i { display: inline-flex; color: var(--morado); }
+.cer-reto-n { color: var(--tinta-2); }
+.cer-pie { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-14); }
+
+/* Tu trimestre */
+.cer-trimestre { min-width: 0; }
+.cer-tri-t { display: block; overflow-wrap: anywhere; }
+.cer-tri-l { list-style: none; padding: 0; display: grid; gap: var(--esp-6); }
+.cer-tri-f { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.cer-tri-n { min-width: 0; overflow-wrap: anywhere; }
+.cer-tri-x { color: var(--tinta-2); }
+.cer-tri-sube { color: var(--ok); }
+.cer-sigue { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+
+/* Lo que la app ha hecho por ti */
+.cer-diario { min-width: 0; }
+.cer-diario-l { list-style: none; padding: 0; display: grid; gap: var(--esp-12); }
+.cer-diario-f { display: flex; align-items: flex-start; gap: var(--esp-10); }
+.cer-diario-i { flex: none; display: inline-flex; color: var(--morado); }
+
+@media (max-width: 359px) {
+  .cer-notas { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .cer-sigue { grid-template-columns: minmax(0, 1fr); }
+}

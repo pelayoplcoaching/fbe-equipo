@@ -38,6 +38,7 @@ import './alta.css';
 import './rutinas.css';
 import './esencial-arte.css';
 import './ayuda.css';
+import './cerca.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

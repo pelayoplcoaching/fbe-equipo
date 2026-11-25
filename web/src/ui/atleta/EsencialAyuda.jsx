@@ -12,6 +12,7 @@ import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
 import { CATEGORIAS, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, NECESITAS, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
+import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
 
@@ -416,6 +417,9 @@ export function LoDeHoy({ sesion, ejercicios = [] }) {
 export function TrasLaSesion({ sesion, enCola = false }) {
   const { api, backend, atleta } = useApp();
   const claro = useCarga(() => (enCola || !sesion?.id ? Promise.resolve(null) : datos.sesionEnClaro(api, backend, atleta.id, sesion.id).catch(() => null)), [sesion?.id, enCola]);
+  // (v0.246, 28) sus hitos: la sesión 10, la 25, la 50 y la 100
+  const cuantas = useCarga(() => (enCola || !sesion?.id ? Promise.resolve(null) : datos.hechas(backend, atleta.id).then((x) => x.length).catch(() => null)), [sesion?.id, enCola]);
+  const hito = hitoDe(cuantas.datos);
   const k = `fbe-esencial-como:${sesion?.id}`;
   const [como, setComo] = useState(() => leer(k));
   const [centro, setCentro] = useState(null);
@@ -426,6 +430,7 @@ export function TrasLaSesion({ sesion, enCola = false }) {
   const texto = (x) => (guia ? x.hecho : x.texto);
   return (
     <section class="panel panel-pad pila-s ayu-tras" aria-labelledby="ayu-tras-t">
+      {hito && <div class="ayu-hito" role="status"><span class="ayu-hito-i"><Icono n="trofeo" width="18" height="18" /></span><span class="peq">{hito}</span></div>}
       <strong id="ayu-tras-t">¿Cómo ha ido?</strong>
       <div class="fila-envolver" role="group" aria-label="Cómo ha ido la sesión">
         {COMO_HA_IDO.map(([id, t]) => <button type="button" key={id} class="ayu-palabra" aria-pressed={como === id ? 'true' : 'false'} onClick={() => elegir(id)}>{t}</button>)}
@@ -464,6 +469,8 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const hay100 = useCarga(() => datos.notas(backend, atleta.id, 'pregunta_directo').then((x) => x !== null).catch(() => false), [atleta.id], { recuerdo: `esencial-100:${atleta.id}` });
   const accion = (a) => {
     if (a === 'pausa' || a === 'cierre') { setHoja(null); try { document.querySelector('[data-cierre]')?.scrollIntoView({ block: 'center' }); } catch { /* */ } return; }
+    // (v0.246) los avisos de las agujetas y de los días sin entrenar llevan a su tarjeta, arriba en Hoy
+    if (a === 'agujetas' || a === 'vuelta') { setHoja(null); try { document.querySelector(a === 'agujetas' ? '[data-cerca="agujetas"]' : '[data-cerca="vuelta"]')?.scrollIntoView({ block: 'center' }); } catch { /* */ } return; }
     setHoja({ tipo: a });
   };
   useEffect(() => {

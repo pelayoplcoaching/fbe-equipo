@@ -14,6 +14,9 @@ import { perezoso } from '../perezoso.jsx';
 
 // (v0.245, migración 100) las preguntas para el directo de quienes van por su cuenta
 const PreguntasDirecto = perezoso(() => import('./EsencialPreguntas.jsx'), 'PreguntasDirecto', { mientras: null });
+// (v0.246) a quién escribir (con el mensaje preparado) y lo que contestan a «¿Cómo vamos?»
+const AQuienEscribir = perezoso(() => import('./EsencialPreguntas.jsx'), 'AQuienEscribir', { mientras: null });
+const ComoVamosCoach = perezoso(() => import('./EsencialPreguntas.jsx'), 'ComoVamosCoach', { mientras: null });
 
 const CIERRE = { pasar: 'pasó a la siguiente', auto: 'no eligió: se le pasó a la siguiente', repetir: 'repite la semana', pausa: 'semana en pausa' };
 const RESULTADO = { valorar_antes_vigoroso: 'su cribado: valorar antes de lo vigoroso', valorar_antes: 'su cribado: valorar antes de empezar', parar_y_valorar: 'su cribado: parar y valorar' };
@@ -152,7 +155,9 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       {filas.length > 0 && <div class="fila-envolver" style="margin-top:var(--esp-10)">
         <button type="button" class="btn btn-peq" onClick={() => setHoja(true)}><Icono n="mensaje" /> {c.encuesta.mandadas ? 'Las encuestas y sus respuestas' : 'Mandar la encuesta'}</button>
       </div>}
+      {suyos.length > 0 && <AQuienEscribir lista={suyos} abrir={abrir} />}
       {suyos.length > 0 && <PreguntasDirecto />}
+      {suyos.length > 0 && <ComoVamosCoach />}
       {hoja && <HojaEncuesta suyos={filas.filter((r) => r.estado !== 'baja')} tareas={enc.datos || []} alCerrar={() => setHoja(false)} alCambiar={() => enc.recargar(true)} />}
       {reenvio && <HojaReenvio sin={sin} alCerrar={() => { setReenvio(false); alta.recargar(true); }} />}
     </details>

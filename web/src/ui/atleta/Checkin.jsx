@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SeguimientoCheckin } from './Vida.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { perezoso } from '../perezoso.jsx';
-import { trasElCheckin, queHacerConMolestia, URL_SEMAFORO } from '../../logica/esencial-checkin.js';
+import { trasElCheckin, queHacerConMolestia, URL_SEMAFORO, APARTADOS_SUYO } from '../../logica/esencial-checkin.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
@@ -139,7 +139,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   // Lo que le pregunta su coach (sin elegir nada, todo)
   // A quien solo le lleva el entrenamiento, nada de alimentación (aunque el apartado esté elegido)
   const conNut = conNutricion(atleta) && datos.datos?.nutricion !== false;
-  const ver = (k) => (k !== 'alimentacion' || conNut) && pregunta({ checkin_apartados: datos.datos?.apartados ?? null }, k);
+  const ver = (k) => (k !== 'alimentacion' || conNut) && pregunta({ checkin_apartados: datos.datos?.apartados ?? (suyo ? APARTADOS_SUYO : null) }, k);
 
   useEffect(() => {
     if (!datos.datos) return;

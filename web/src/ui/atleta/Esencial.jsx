@@ -806,12 +806,17 @@ export function FaqEsencial() {
 // su cuenta no pese al abrir la app a los demás. recargar: vuelve a pedir su programa.
 const TarjetaRevision = perezoso(() => import('./EsencialAyuda.jsx'), 'TarjetaRevision', { mientras: null });
 const QueNecesitas = perezoso(() => import('./EsencialAyuda.jsx'), 'QueNecesitas', { mientras: null });
+// (v0.246) «que no entrenen solos»: arriba, el saludo del día y lo que toca atender; abajo, el reto, su trimestre y el diario
+const CercaArriba = perezoso(() => import('./EsencialCerca.jsx'), 'CercaArriba', { mientras: null });
+const CercaAbajo = perezoso(() => import('./EsencialCerca.jsx'), 'CercaAbajo', { mientras: null });
 export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA }) {
   const { atleta } = useApp();
   if (atleta.estado === 'baja') return <TarjetaMarcas />;
   const conPlan = !!p?.bloque;
   return (
     <>
+      {/* (v0.246) el saludo del día y, si toca, las agujetas, la vuelta tras unos días sin entrenar o un plan más corto */}
+      {conPlan && <CercaArriba p={p} cuestionario={cuestionario} recargar={recargar} abrirSesion={abrirSesion} />}
       {/* sus marcas de la semana 4, en cuanto termina esa semana */}
       <TarjetaMarcas />
       {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
@@ -829,6 +834,8 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
       {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
       {conPlan && <LeccionSemana p={p} />}
       {conPlan && <DiasEsencial p={p} />}
+      {/* (v0.246) el reto de la semana, «¿Te vas?», «¿Cómo vamos?», su trimestre y lo que la app ha hecho por él */}
+      {conPlan && <CercaAbajo p={p} cuestionario={cuestionario} recargar={recargar} />}
       {/* (v0.245) «¿Qué necesitas?»: lo que más se pregunta, a un toque, y lo que abre cada aviso */}
       <QueNecesitas p={p} cuestionario={cuestionario} recargarPrograma={recargar} />
     </>

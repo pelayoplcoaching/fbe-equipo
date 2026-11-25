@@ -110,8 +110,10 @@
 .ayu-hoy-f { display: flex; align-items: flex-start; gap: var(--esp-8); }
 .ayu-hoy-i { flex: none; display: inline-flex; margin-top: var(--esp-2); color: var(--morado); }
 
-/* Al terminar: "Como ha ido" y "Tu sesion, en claro" */
+/* Al terminar: sus hitos, "Como ha ido" y "Tu sesion, en claro" */
 .ayu-tras { min-width: 0; }
+.ayu-hito { display: flex; align-items: flex-start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); }
+.ayu-hito-i { flex: none; display: inline-flex; color: var(--morado); }
 .ayu-claro { border-top: var(--filo-fino) solid var(--linea); padding-top: var(--esp-8); }
 .ayu-claro-t { cursor: pointer; }
 .ayu-claro-t:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
