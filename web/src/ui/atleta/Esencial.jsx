@@ -180,7 +180,7 @@ export function AntesDeEmpezar({ p, cuestionario }) {
   const { api, atleta } = useApp();
   const hoy = hoyISO();
   const ficha = useCarga(() => api.estadoEsencial(atleta.id), [atleta.id, cuestionario?.completado_en, cuestionario?.resultado], { recuerdo: `estado-esencial:${atleta.id}` });
-  const e = estadoEsencial({ bloque: p?.bloque || null, cuestionario, ficha: ficha.datos, hoy, rutina: atleta.esencial_plantilla ?? null, con099: 'esencial_plantilla' in atleta, inicio: atleta.esencial_inicio });
+  const e = estadoEsencial({ bloque: p?.bloque || null, cuestionario, ficha: ficha.datos, hoy, rutina: atleta.esencial_plantilla ?? null, con099: 'esencial_plantilla' in atleta });
   if (!e || ficha.datos?.falta091) return null;
   if (e.tipo === 'visto_bueno' || e.tipo === 'revision') return <SemanaUnoEsencial cuestionario={cuestionario} mientras />;
   if (e.tipo !== 'espera') return null;
@@ -358,7 +358,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
   const [verRutinas, setVerRutinas] = useState(false);
   useEffect(() => { setMio(null); }, [cuestionario]);
   const cuest = mio || cuestionario;
-  const e = estadoEsencial({ bloque, cuestionario: cuest, ficha: ficha.datos, hoy, rutina, con099: 'esencial_plantilla' in atleta, inicio: atleta.esencial_inicio });
+  const e = estadoEsencial({ bloque, cuestionario: cuest, ficha: ficha.datos, hoy, rutina, con099: 'esencial_plantilla' in atleta });
   // (sin la ficha aún, el visto bueno no se sabe: se espera a ella salvo con el cribado limpio)
   const listoParaPlan = e?.tipo === 'preparando' && (cuestionario?.resultado === 'sin_valoracion' || !!ficha.datos);
   useEffect(() => {

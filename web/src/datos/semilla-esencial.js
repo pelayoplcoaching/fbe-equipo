@@ -472,7 +472,10 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
       }
     });
   }
-  for (const b of t('bloques')) if (b.es_plantilla) b.esencial_catalogo = true;
+  // En el catálogo: las de FBE Esencial y las de muestra de arriba (como en la base, donde entran las de la biblioteca; las
+  // demás plantillas de la demo, fuera, y Pelayo las mete o las saca en Plantillas)
+  const delCatalogo = new Set([PRIMERAS_4.nombre, NOVATO_2.nombre, NOVATO_3.nombre]);
+  for (const b of t('bloques')) if (b.es_plantilla) b.esencial_catalogo = delCatalogo.has(b.nombre) || /^\d d\u00edas \u00b7 /.test(b.nombre);
 
   const atleta = ({ email, nombre, alta, objetivo, inicio, extra = {} }) => {
     const perfil = usuario(email, nombre.split(' ')[0], 'atleta');

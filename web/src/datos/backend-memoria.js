@@ -236,6 +236,9 @@ function sinRedDemo() {
 }
 
 export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir = true } = {}) {
+  // (la demo de FBE Esencial cambia de versión cuando su semilla trae algo que la copia guardada no tiene, como el catálogo
+  // de rutinas de la 099: la copia de la versión anterior se tira)
+  if (persistir && clave === 'fbe-demo-esencial-v2') { try { localStorage.removeItem('fbe-demo-esencial-v1'); localStorage.removeItem('fbe-demo-esencial-v1-sesion'); } catch { /* sin almacenamiento */ } }
   let db = (persistir && leerLocal(clave)) || semilla();
   let sesion = (persistir && leerLocal(clave + '-sesion')) || null;
   const oyentes = new Set();

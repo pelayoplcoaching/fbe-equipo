@@ -78,7 +78,7 @@ async function arrancar() {
     const [{ crearBackendMemoria }, { semillaDemo }] = await Promise.all([import('./datos/backend-memoria.js'), import('./datos/semilla-demo.js')]);
     // (FBE Esencial) ?demo=esencial: la demo de quien va por su cuenta, con su propia copia en el almacenamiento
     const esencial = new URLSearchParams(location.search).get('demo') === 'esencial';
-    backend = crearBackendMemoria({ semilla: () => semillaDemo(undefined, { esencial }), ...(esencial ? { clave: 'fbe-demo-esencial-v1' } : {}) });
+    backend = crearBackendMemoria({ semilla: () => semillaDemo(undefined, { esencial }), ...(esencial ? { clave: 'fbe-demo-esencial-v2' } : {}) });
     if (esencial) backend.variante = 'esencial';
     // (solo en la demo, para las pruebas: lo que haría el coach desde el SQL Editor, como pasar un vídeo a otro atleta)
     globalThis.__fbeDemo = backend;

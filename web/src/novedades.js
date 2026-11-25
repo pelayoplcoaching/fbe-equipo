@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.243': {
+    // (FBE Esencial sin coach, tanda 3 de 3: su rutina; migración 099)
+    atleta: [],
+    coach: [
+      'FBE Esencial, su rutina: quien tiene experiencia contesta «Tus gustos» y elige entre dos o tres recomendadas de tu catálogo.',
+      'Quien empieza de cero sigue por «Primeras 4 semanas» y elige al acabarlas. Cambiar de rutina: lo recomendable, a las 12 semanas.',
+      'En Plantillas, la estrella mete o saca cada plantilla del catálogo. En su panel, «Sus rutinas»: quién se sale de lo recomendado.',
+    ],
+  },
   '0.242': {
     // (FBE Esencial sin coach, tanda 2 de 3: el cierre de la semana; migración 098)
     atleta: [],

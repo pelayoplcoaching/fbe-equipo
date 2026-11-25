@@ -328,7 +328,7 @@ export function HojaRutinas({ p, cuestionario, elegida = null, estancados = 0, a
               </details>
             ))}
           </section>
-          <p class="mini secundario">El peso de cada ejercicio lo pone la app semana a semana con lo que apuntas. La primera semana, en los ejercicios nuevos, buscas el peso con el que te sobren 2-3 repeticiones.</p>
+          <p class="mini secundario">El peso de cada ejercicio lo pone la app semana a semana con lo que apuntas. La primera semana, en los ejercicios nuevos, buscas el peso con el que te sobren 2 o 3 repeticiones.</p>
           {!esLaSuya && s.modo !== 'primeras' && <button type="button" class="btn btn-primario btn-grande" onClick={() => ir({ confirmar: nombre, desde: paso.desde })}>Elegir esta rutina</button>}
           {!esLaSuya && s.modo === 'primeras' && s.marcas && <button type="button" class="btn btn-primario btn-grande" onClick={() => ir({ confirmar: nombre, desde: paso.desde })}>Elegirla para después de mis 4 semanas</button>}
           {paso.desde && <button type="button" class="btn plano ancho" onClick={volver}><Icono n="atras" /> Volver</button>}
@@ -378,7 +378,7 @@ function Confirmar({ r, av, s, c, p, cima, estancados, temporada, volver, alCerr
           <span class="rut-fila-texto"><strong class="rut-nombre"><Titulo r={r} /></strong><Etiquetas r={r} /></span>
         </div>
         <p class="rut-cuando"><span class="rut-i rut-i-mo">{ico('calendario', 18)}</span><span class="rut-despues-t">{cuando}</span></p>
-        {cambio && <p class="peq secundario">En los ejercicios que repites sigues con tus kilos. En los nuevos, la primera semana buscas el peso con el que te sobren 2-3 repeticiones.</p>}
+        {cambio && <p class="peq secundario">En los ejercicios que repites sigues con tus kilos. En los nuevos, la primera semana buscas el peso con el que te sobren 2 o 3 repeticiones.</p>}
         {av && <p class="aviso-suave peq rut-aviso-caja"><span class="rut-i rut-i-av">{ico('alerta', 18)}</span>{av}</p>}
         {temporada && <p class="peq secundario">Es para unas semanas. Cuando acabe el viaje o la mala racha, vuelve a la tuya desde «Tu rutina».</p>}
         {!bueno && <p class="aviso-suave peq rut-aviso-caja"><span class="rut-i rut-i-av">{ico('reloj', 18)}</span>{consejoCambio({ semanas: s.semanas })}</p>}

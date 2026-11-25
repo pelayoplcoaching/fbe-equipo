@@ -119,18 +119,18 @@ console.log('\nTras «Primeras 4 semanas» y lo que no se recomienda');
 
 console.log('\nAntes de empezar: «Elige tu rutina»');
 {
-  const hoy = '2026-12-20', inicio = '2027-01-11';
+  const hoy = '2026-12-20';
   const base = { completado_en: '2026-12-16T10:00:00Z', resultado: 'sin_valoracion', dias_semana: 3, lugar: 'gimnasio' };
   const gOk = { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' };
-  const e = (c, mas = {}) => estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.tipo + (estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.gustos === true ? ':elegir' : estadoEsencial({ cuestionario: c, hoy, con099: true, inicio, ...mas })?.gustos === false ? ':gustos' : '');
+  const e = (c, mas = {}) => estadoEsencial({ cuestionario: c, hoy, con099: true, ...mas })?.tipo + (estadoEsencial({ cuestionario: c, hoy, con099: true, ...mas })?.gustos === true ? ':elegir' : estadoEsencial({ cuestionario: c, hoy, con099: true, ...mas })?.gustos === false ? ':gustos' : '');
   check(e({ ...base, experiencia: 'ninguna' }) === 'preparando', 'quien nunca ha entrenado no pasa por ahí: la app le prepara «Primeras 4 semanas»');
   check(e({ ...base, experiencia: '1_3' }) === 'rutina:gustos' && e({ ...base, experiencia: '1_3', gustos: gOk }) === 'rutina:elegir' && e({ ...base, experiencia: '1_3', gustos: gOk }, { rutina: '3 días · Full body · B · Máquinas y mancuernas' }) === 'preparando',
     'con experiencia: primero «Tus gustos», después elegir y, con la rutina elegida, la app le prepara el plan');
   check(e({ ...base, experiencia: 'menos_1', gustos: { ...gOk, ahora: 'parado' } }) === 'preparando', 'si la criba le manda a «Primeras 4 semanas», no elige: la app se las prepara');
   check(e({ ...base, experiencia: '1_3', resultado: 'valorar_antes', gustos: gOk }) === 'rutina:elegir' && e({ ...base, experiencia: '1_3', resultado: 'valorar_antes', gustos: gOk }, { rutina: 'x' }) === 'visto_bueno', 'elegir va antes del visto bueno (mientras lo consigue, ya tiene su rutina)');
-  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy, con099: false, inicio })?.tipo === 'preparando', 'sin la migración 099, como antes: la app le prepara la de su cuestionario');
-  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-10', con099: true, inicio })?.tipo === 'preparando' && estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-09', con099: true, inicio })?.tipo === 'rutina',
-    'si llega la víspera de su lunes sin elegir, ya no se espera: la app le prepara la de su cuestionario');
+  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy, con099: false })?.tipo === 'preparando', 'sin la migración 099, como antes: la app le prepara la de su cuestionario');
+  check(estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-10', con099: true })?.tipo === 'rutina' && estadoEsencial({ cuestionario: { ...base, experiencia: '1_3' }, hoy: '2027-01-20', con099: true })?.tipo === 'rutina',
+    'sea el día que sea (la víspera de su lunes o con su lunes ya pasado), si no ha elegido se le pregunta: no se le pone un plan sin preguntarle');
 }
 
 console.log('\nLas ilustraciones de las rutinas');

@@ -30,9 +30,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
   // (la demo guarda su base 150 ms después del último cambio: antes de cambiar de cuenta, se espera a que esté guardada; si
   // se pasa lo que tiene que estar, como el código recién creado, hasta que esté)
   const salirDeLaCuenta = async (p, debeIncluir = null) => {
-    if (debeIncluir) await p.waitForFunction((c) => (localStorage.getItem('fbe-demo-esencial-v1') || '').includes(c), debeIncluir, { timeout: 5000 }).catch(() => {});
+    if (debeIncluir) await p.waitForFunction((c) => (localStorage.getItem('fbe-demo-esencial-v2') || '').includes(c), debeIncluir, { timeout: 5000 }).catch(() => {});
     await p.waitForTimeout(400);
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v2-sesion'); });
   };
   const desborda = async (p, paso) => { const w = p.viewportSize()?.width || 390; const a = await p.evaluate(() => document.documentElement.scrollWidth); if (a > w) errores.push(`${paso}: la página se desborda (${a} > ${w})`); };
   const movil = async () => {
@@ -707,7 +707,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await desborda(p, 'Hoy de Tomás, con la pregunta del domingo');
       await tarjeta(p, 'pregunta').getByRole('button', { name: 'Repetir esta semana' }).click();
       const fuera = await tarjeta(p, 'pregunta').waitFor({ state: 'detached', timeout: 15000 }).then(() => true).catch(() => false);
-      const guardado = await p.waitForFunction(() => /"esencial_repetida":1/.test(localStorage.getItem('fbe-demo-esencial-v1') || ''), null, { timeout: 5000 }).then(() => true).catch(() => false);
+      const guardado = await p.waitForFunction(() => /"esencial_repetida":1/.test(localStorage.getItem('fbe-demo-esencial-v2') || ''), null, { timeout: 5000 }).then(() => true).catch(() => false);
       check(fuera && guardado, 'repetir: la pregunta se va y su semana queda apuntada como repetida (pasa al lunes)');
       await ctx.close();
     }
@@ -721,6 +721,149 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await desborda(p, 'Hoy de Tomás, tras pasar a la siguiente');
       await ctx.close();
     }
+  }
+  // ---------- (sin coach, tanda 3; 099) Tu rutina: recomendadas, ficha, catálogo y cambio ----------
+  // Tomás lleva su plan de novato: en Semana ve «Tu rutina» y la cambia (el cuestionario corto, sus recomendadas, la ficha
+  // de una, todo el catálogo y confirmar: le avisa de las 12 semanas). Después, «Seguir con la mía».
+  {
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await entrar(p, /Tomás/);
+    await cerrar(p);
+    await p.locator('nav.tabs').getByRole('button', { name: /Semana/ }).click();
+    const tuya = p.locator('.rut-tuya');
+    const hay = await tuya.waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
+    const t0 = hay ? await tuya.textContent() : '';
+    check(hay && /Tu rutina/.test(t0) && /Novato/.test(t0) && /al menos 12/.test(t0), 'en Semana, «Tu rutina»: cuál lleva, desde cuándo y «lo recomendable es mantenerla al menos 12»');
+    await tuya.scrollIntoViewIfNeeded().catch(() => {});
+    await tuya.getByRole('button', { name: 'Cambiar de rutina' }).click();
+    const hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.locator('.rut-gustos').waitFor();
+    const tg = await hoja.textContent();
+    check(/Cuánto llevas entrenando fuerza/.test(tg) && /Cuántos días puedes entrenar/.test(tg) && /Dónde entrenas/.test(tg) && /Qué quieres priorizar/.test(tg) && /60 años o más/.test(tg),
+      'antes de cambiar: un cuestionario corto (experiencia, días y sitio) y «Tus gustos»');
+    for (const q of await hoja.locator('.rut-pregunta').all()) {
+      if (!(await q.locator('button[aria-pressed="true"]').count()) && !(await q.locator('input').count())) await q.locator('button').first().click();
+    }
+    await hoja.getByRole('button', { name: 'Ver mis rutinas recomendadas' }).click();
+    await hoja.locator('.rut-recomendadas').waitFor();
+    const n = await hoja.locator('.rut-tarjeta').count();
+    check(n >= 2 && n <= 3 && (await hoja.locator('.rut-tarjeta[data-primera] .rut-sello').count()) === 1 && (await hoja.locator('.rut-porque-l').count()) >= n,
+      `sus recomendadas: ${n}, la primera marcada («La que mejor te encaja») y cada una con su porqué`);
+    check((await hoja.locator('.rut-tarjeta img.rut-img').count()) >= 1 && (await hoja.locator('.rut-temporada .rut-fila').count()) >= 1, 'con su ilustración; y aparte, las de temporada (de viaje, mantenimiento)');
+    await desborda(p, 'las rutinas recomendadas');
+    await hoja.locator('.rut-tarjeta').first().getByRole('button', { name: 'Ver sus días' }).click();
+    await hoja.locator('.rut-ficha').waitFor();
+    const tf = await hoja.textContent();
+    check(/Para quién/.test(tf) && /Cuánto dura/.test(tf) && /Qué hace falta/.test(tf) && (await hoja.locator('.rut-dia').count()) >= 2 && (await hoja.locator('.rut-dia[open] .rut-ej').count()) >= 3,
+      'la ficha: para quién, cuánto dura, qué hace falta y sus días con sus ejercicios');
+    await desborda(p, 'la ficha de una rutina');
+    await hoja.getByRole('button', { name: 'Volver' }).click();
+    await hoja.getByRole('button', { name: /Ver todo el catálogo/ }).click();
+    await hoja.locator('.rut-catalogo').waitFor();
+    const total = await hoja.locator('.rut-fila').count();
+    const laTuya = await hoja.locator('.rut-fila[data-actual]').count();
+    await hoja.locator('.rut-filtro').first().getByRole('button', { name: '3 días' }).click();
+    const tres = await hoja.locator('.rut-fila').count();
+    check(total >= 8 && laTuya === 1 && tres > 0 && tres < total && /ceñirte a tus recomendadas/.test(await hoja.textContent()), `todo el catálogo (${total}), con la suya marcada, el filtro por días (${tres} de 3 días) y el consejo de ceñirse a las recomendadas`);
+    await desborda(p, 'el catálogo de rutinas');
+    await hoja.getByRole('button', { name: 'Volver a mis recomendadas' }).click();
+    await hoja.locator('.rut-tarjeta').nth(1).getByRole('button', { name: 'Elegir esta' }).click();
+    await hoja.locator('.rut-confirmar').waitFor();
+    const tc = await hoja.textContent();
+    check(/Empiezas con ella el lunes/.test(tc) && /sigues con tus kilos/.test(tc) && /al menos 12/.test(tc) && (await hoja.getByRole('button', { name: 'Cambiar de todos modos' }).count()) === 1,
+      'al confirmar: desde qué lunes, sus kilos y, con una semana en la suya, el aviso de las 12 semanas («Cambiar de todos modos»)');
+    if (await hoja.locator('.rut-tecla').count()) check((await hoja.locator('.rut-tecla[aria-pressed="true"]').count()) >= 2, '(y sus días, si aún no los había elegido)');
+    await hoja.getByRole('button', { name: 'Cambiar de todos modos' }).click();
+    const despues = await tuya.locator('.rut-despues').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(despues && /Desde el lunes/.test(await tuya.locator('.rut-despues').textContent()), 'elegida: «Tu rutina» dice desde qué lunes y cuál');
+    await p.locator('nav.tabs').getByRole('button', { name: /Hoy/ }).click();
+    const enHoy = await p.locator('.rut-tuya .rut-despues').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(enHoy, 'y en Hoy también, mientras esté pendiente');
+    await desborda(p, 'Hoy de Tomás, con un cambio de rutina pendiente');
+    await p.locator('.rut-tuya').getByRole('button', { name: 'Seguir con la mía' }).click();
+    const fuera = await p.locator('.rut-tuya .rut-despues').waitFor({ state: 'detached', timeout: 15000 }).then(() => true).catch(() => false);
+    check(fuera, '«Seguir con la mía»: el cambio se quita');
+    await ctx.close();
+  }
+  // Marina, con experiencia, un viernes: tras su cuestionario, «Elige tu rutina» («Tus gustos», sus recomendadas y elegir);
+  // la app le prepara el plan con esa rutina y, antes de su lunes, la cambia: el plan se rehace.
+  {
+    const hoyM = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+    const dM = new Date(`${hoyM}T12:00:00Z`);
+    const viernes = new Date(dM.getTime() + (4 - ((dM.getUTCDay() + 6) % 7)) * 864e5).toISOString().slice(0, 10);
+    const alas10 = [1, 2].map((o) => new Date(`${viernes}T10:00:00+0${o}:00`)).find((d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(d) === '10:00');
+    const { ctx, p } = await movil();
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    await ctx.clock.setFixedTime(alas10);
+    await entrar(p, /Marina/);
+    await cerrar(p);
+    const hero = p.locator('section.hero-espera');
+    await hero.first().waitFor({ timeout: 15000 }).catch(() => {});
+    await hero.getByRole('button', { name: /Empezar|Seguir/ }).click();
+    let hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.getByRole('button', { name: 'Siguiente' }).waitFor();
+    await hoja.locator('.opciones button, [role="group"] button').first().click();
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    const g2 = hoja.locator('[role="group"]');
+    for (let i = 0; i < await g2.count(); i++) await g2.nth(i).locator('button').first().click().catch(() => {});
+    await hoja.getByRole('button', { name: 'De 1 a 3 años' }).click();
+    await hoja.getByRole('group', { name: 'Días a la semana' }).getByRole('button', { name: '3', exact: true }).click();
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    await hoja.locator('[role="group"]').first().locator('button').first().click().catch(() => {});
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    const g4 = hoja.locator('[role="group"]');
+    for (let i = 0; i < await g4.count(); i++) {
+      const g = g4.nth(i);
+      if (await g.getByRole('button', { name: /^No$/ }).count()) await g.getByRole('button', { name: /^No$/ }).click();
+      if (await g.locator('label.ninguna input').count()) await g.locator('label.ninguna input').check();
+    }
+    await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(400);
+    await hoja.getByRole('button', { name: 'Enviar', exact: true }).click();
+    await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Hecho' }).click({ timeout: 15000 });
+    await cerrar(p);
+    const elige = await p.waitForFunction(() => /Elige tu rutina/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check(elige, 'con experiencia, tras el cuestionario: «Elige tu rutina» (la app no le pone un plan sin preguntarle)');
+    await hero.getByRole('button', { name: 'Empezar' }).click();
+    hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.locator('.rut-gustos').waitFor();
+    const preguntas = await hoja.locator('.rut-leyenda').allTextContents();
+    check(preguntas.length === 6 && /Entrenas fuerza ahora mismo/.test(preguntas[0]) && /Te manejas con/.test(preguntas[1]) && /con barra/.test(preguntas[2]) && !/Cuántos días/.test(preguntas.join()),
+      `«Tus gustos»: seis preguntas cortas (las tres primeras deciden si le hacen falta las cuatro primeras semanas)`);
+    await desborda(p, '«Tus gustos»');
+    for (const q of await hoja.locator('.rut-pregunta').all()) await q.locator('button').first().click();
+    await hoja.getByRole('button', { name: 'Ver mis rutinas recomendadas' }).click();
+    await hoja.locator('.rut-recomendadas').waitFor();
+    const elegida = (await hoja.locator('.rut-tarjeta').first().locator('.rut-h').textContent()).trim();
+    const otra = (await hoja.locator('.rut-tarjeta').nth(1).locator('.rut-h').textContent()).trim();
+    await hoja.locator('.rut-tarjeta').first().getByRole('button', { name: 'Elegir esta' }).click();
+    await hoja.locator('.rut-confirmar').waitFor();
+    check(/La app te prepara tu plan con ella/.test(await hoja.textContent()) && (await hoja.locator('.rut-tecla').count()) === 7 && (await hoja.locator('.rut-tecla[aria-pressed="true"]').count()) === 3,
+      'al confirmar: «La app te prepara tu plan con ella» y elige sus tres días');
+    await hoja.getByRole('button', { name: 'Elegir esta rutina' }).click();
+    const conPlan = await p.waitForFunction(() => /Empiezas el lunes/.test(document.querySelector('section.hero-espera')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
+    const nombres = () => p.evaluate(() => { const d = JSON.parse(localStorage.getItem('fbe-demo-esencial-v2') || '{}'); const a = (d.atletas || []).find((x) => x.email === 'marina@fbe.demo'); return (d.bloques || []).filter((b) => !b.es_plantilla && b.atleta_id === a?.id).map((b) => b.nombre); });
+    await p.waitForTimeout(600);
+    const b1 = await nombres();
+    check(conPlan && b1.length === 1 && /Full body/.test(b1[0]) && elegida.length > 0, `y la app le prepara su plan con esa rutina («${b1[0] || ''}»), desde su lunes`);
+    // antes de su lunes: «Tu rutina» en Hoy, y la cambia
+    const tuya = p.locator('.rut-tuya');
+    const hayTuya = await tuya.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(hayTuya && /Empiezas el lunes/.test(await tuya.textContent()) && /tu plan se rehace/.test(await tuya.textContent()), 'en Hoy, antes de su lunes: «Tu rutina», y que aún puede cambiarla');
+    await tuya.scrollIntoViewIfNeeded().catch(() => {});
+    await tuya.getByRole('button', { name: 'Cambiar de rutina' }).click();
+    hoja = p.locator('[aria-modal="true"]').last();
+    await hoja.locator('.rut-recomendadas').waitFor();
+    await hoja.locator('.rut-tarjeta').first().getByRole('button', { name: 'Elegir esta' }).click();
+    await hoja.locator('.rut-confirmar').waitFor();
+    check(/Tu plan empieza con ella el lunes/.test(await hoja.textContent()), 'al cambiarla antes de empezar: «Tu plan empieza con ella el lunes…»');
+    await hoja.getByRole('button', { name: 'Elegir esta rutina' }).click();
+    await hoja.waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+    await p.waitForTimeout(900);
+    const b2 = await nombres();
+    check(b2.length === 1 && b2[0] !== b1[0] && otra.length > 0, `su plan se rehace con la nueva («${b2[0] || ''}») y sigue teniendo uno solo`);
+    await desborda(p, 'Hoy de Marina, con su rutina elegida');
+    await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);
 }
