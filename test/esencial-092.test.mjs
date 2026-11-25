@@ -74,7 +74,9 @@ for (const p of pautasE) {
     await db.query(`insert into series (sesion_ejercicio_id, atleta_id, numero, kg, reps, rpe) values ($1, $2, $3, $4, $5, $6)`, [p.id, elena, n, kg, kg == null ? 40 : 12, kg == null ? null : 7.5]);
   }
 }
-await db.query(`update sesiones set completada = true, fecha_realizada = w.fecha_inicio from semanas w where w.id = sesiones.semana_id and w.bloque_id = $1`, [r1.bloque]);
+// (cada semana, el jueves y el domingo: así, entre el último entreno y cualquier día de esta semana hay menos de diez días y
+// el motor no lo trata como una vuelta tras un parón; con todo el lunes, de jueves a domingo la prueba fallaba)
+await db.query(`update sesiones set completada = true, fecha_realizada = w.fecha_inicio + case when sesiones.orden = 1 then 3 else 6 end from semanas w where w.id = sesiones.semana_id and w.bloque_id = $1`, [r1.bloque]);
 await b.auth.entrar('elena@test', 'clave-elena@test');
 
 console.log('\nTras la semana de marcas: el bloque de novato');
