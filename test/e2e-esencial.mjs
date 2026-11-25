@@ -21,6 +21,13 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await p.waitForTimeout(400); } else break;
     }
   };
+  // (la demo guarda su base 150 ms después del último cambio: antes de cambiar de cuenta, se espera a que esté guardada; si
+  // se pasa lo que tiene que estar, como el código recién creado, hasta que esté)
+  const salirDeLaCuenta = async (p, debeIncluir = null) => {
+    if (debeIncluir) await p.waitForFunction((c) => (localStorage.getItem('fbe-demo-esencial-v1') || '').includes(c), debeIncluir, { timeout: 5000 }).catch(() => {});
+    await p.waitForTimeout(400);
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+  };
   const desborda = async (p, paso) => { const w = p.viewportSize()?.width || 390; const a = await p.evaluate(() => document.documentElement.scrollWidth); if (a > w) errores.push(`${paso}: la página se desborda (${a} > ${w})`); };
   const movil = async () => {
     const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, locale: 'es-ES', bypassCSP: true, reducedMotion: 'reduce' });
@@ -289,7 +296,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Hecho' }).click().catch(() => {});
 
     // (alta, v0.239) Nuria abre el enlace: «Activa tu cuenta» con su código puesto; sin el consentimiento de salud, se avisa
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await salirDeLaCuenta(p, codigoNuria);
     await p.goto(`${base}/?demo=esencial&codigo=${codigoNuria}&plan=esencial`);
     await p.getByRole('heading', { name: 'Activa tu cuenta' }).waitFor({ timeout: 20000 });
     check(await p.locator('#act-codigo').inputValue() === codigoNuria && /Ya viene puesto desde tu invitación/.test(await p.locator('form').textContent())
@@ -328,7 +335,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await desborda(p, 'Hoy de Nuria');
 
     // El coach lo ve: su cuenta activa y sus avisos por correo
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await salirDeLaCuenta(p);
     await p.goto(`${base}/?demo=esencial`);
     await p.getByRole('button', { name: /Coach: panel/ }).first().click();
     await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
@@ -341,7 +348,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(/Cuenta activa desde el/.test(tN) && /Avisos por correo/.test(tN) && /Sin activar su cuenta \(2\)/.test(await pil2.textContent()), 'en el panel: Nuria, con su cuenta activa y los avisos por correo; quedan 2 sin activar');
 
     // Un código que no existe: al crear la cuenta, por qué no vale
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await salirDeLaCuenta(p);
     await p.goto(`${base}/?demo=esencial`);
     await p.getByRole('button', { name: 'Activa tu cuenta' }).click();
     await p.locator('#act-codigo').fill('FBE-ZZZZZ-ZZZZZ');
