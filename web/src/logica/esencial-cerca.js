@@ -197,7 +197,12 @@ export function diarioDe({ bloques = [], semanas = [], sesiones = {}, hoy } = {}
   for (const w of semanas) (porBloque[w.bloque_id] ||= []).push(w);
   for (const b of bloques || []) {
     if (b.estado === 'cancelado' || !b.fecha_inicio) continue;
-    out.push({ fecha: d10(b.fecha_inicio), icono: 'plantillas', titulo: `Te preparó tu plan: «${b.nombre}»`, texto: 'Con tus respuestas del cuestionario y la rutina que elegiste.' });
+    // (v0.247) de dónde sale cada plan: las cuatro primeras, de su cuestionario; la de novato que viene después, de sus marcas
+    const tras = (bloques || []).some((x) => x.nombre === 'Primeras 4 semanas' && x.fecha_inicio && d10(x.fecha_inicio) < d10(b.fecha_inicio));
+    const texto = b.nombre === 'Primeras 4 semanas' ? 'Con tus respuestas del cuestionario: las cuatro semanas de la guía, para empezar.'
+      : /^Novato \d d.as/.test(b.nombre) && tras ? 'Al acabar tus cuatro primeras semanas, con tus marcas.'
+        : 'Con tus respuestas del cuestionario y la rutina que elegiste.';
+    out.push({ fecha: d10(b.fecha_inicio), icono: 'plantillas', titulo: `Te preparó tu plan: «${b.nombre}»`, texto });
   }
   for (const w of semanas) {
     if (!w.fecha_inicio || w.programacion !== 'programada' || (hoy && d10(w.fecha_inicio) > sumar(hoy, 7))) continue;

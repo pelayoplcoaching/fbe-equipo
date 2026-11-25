@@ -427,7 +427,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
   const mirar = nPlan >= 16 && !bastaFuera && !!p?.bloque;
   const senales = useCarga(() => (mirar
     ? Promise.all([datos.rutina(api, backend, atleta.id, { bloqueId: p.bloque.id, historia: true }).catch(() => null), datos.semanasConMolestia(backend, atleta.id)]).then(([r, m]) => ({ estancados: r?.estancados || 0, molestias: m }))
-    : Promise.resolve(null)), [atleta.id, mirar, p?.bloque?.id]);
+    : Promise.resolve(null)), [atleta.id, mirar, p?.bloque?.id], { recuerdo: `basta-esencial:${atleta.id}`, frescoMs: 6 * 3600e3 });
   const basta = senales.datos ? noBasta({ ...senales.datos, cambios, semanas: nPlan, objetivo: !!obj }) : null;
   // (58) sin avisos de ningún tipo
   // («Prefiero sin avisos» es una decisión: no se le vuelve a preguntar en este móvil)
@@ -435,7 +435,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
   const mirarAvisos = nPlan >= 2 && !avisosFuera && !!p?.bloque;
   const canales = useCarga(() => (mirarAvisos
     ? Promise.all([api.preferenciasNotificaciones(), api.suscripcionesPush().catch(() => [])]).then(([prefs, subs]) => ({ email: !!prefs?.email, suscripciones: (subs || []).length })).catch(() => null)
-    : Promise.resolve(null)), [atleta.id, mirarAvisos], { recuerdo: `canales-esencial:${atleta.id}` });
+    : Promise.resolve(null)), [atleta.id, mirarAvisos], { recuerdo: `canales-esencial:${atleta.id}`, frescoMs: 600e3 });
   const mudo = canales.datos ? sinAvisos({ ...canales.datos, semana: nPlan }) : false;
   // (apagados) la semana suave en marcha, el seguimiento de una molestia y repasar la salud
   const suave = encendido('suave', previa) ? suaveDe(notas.datos?.suave || [], hoy) : null;
