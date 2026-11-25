@@ -56,6 +56,8 @@ jobs:
   e2e:
     needs: pruebas
     runs-on: ubuntu-24.04
+    # Lo normal son unos 22 minutos (el doble si un trozo se repite entero): con tope, una máquina atascada no ocupa 6 horas
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -84,6 +86,18 @@ jobs:
           set -o pipefail
           anotar() { grep -v '  ✓' "$1" | tail -40 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g'; }
           if FBE_INFORME=e2e-partes.json npm run e2e 2>&1 | tee e2e.log; then exit 0; fi
+          # Si se quedó colgada (el vigía de e2e.test.mjs la corta a los 8 minutos sin una comprobación), lo que venía
+          # detrás no ha llegado a pasar: se repite el trozo entero una vez
+          colgada=$(node -e "try { const c = require('./e2e-partes.json').colgada; console.log(c == null ? '' : c) } catch {}")
+          if [ -n "$colgada" ]; then
+            echo "Se quedó colgada en la parte $colgada: se repite el trozo entero una vez"
+            if FBE_INFORME=e2e-partes-2.json npm run e2e 2>&1 | tee e2e-2.log; then
+              echo "::warning title=Prueba colgada (trozo ${{ matrix.trozo }})::Se quedó colgada en la parte $colgada a la primera y pasó entera a la segunda: $(grep -A6 'COLGADA' e2e.log | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')"
+              exit 0
+            fi
+            echo "::error title=Prueba de punta a punta (trozo ${{ matrix.trozo }})::$(anotar e2e-2.log)"
+            exit 1
+          fi
           fallidas=$(node -e "try { console.log(require('./e2e-partes.json').fallidas.join(',')) } catch {}")
           if [ -z "$fallidas" ]; then
             echo "::error title=Prueba de punta a punta (trozo ${{ matrix.trozo }})::$(anotar e2e.log)"
@@ -104,7 +118,7 @@ jobs:
           path: |
             e2e*.log
             e2e-partes*.json
-            test/e2e-fallo.png
+            test/e2e-fallo*.png
           retention-days: 7
 
   publicar:

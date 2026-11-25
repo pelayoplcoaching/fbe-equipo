@@ -1,7 +1,7 @@
 node_modules
 dist/
 dist-demo/
-test/e2e-fallo.png
+test/e2e-fallo*.png
 test/e2e-fallo-059.png
 test/e2e-fallo-060.png
 test/e2e-fallo-061.png

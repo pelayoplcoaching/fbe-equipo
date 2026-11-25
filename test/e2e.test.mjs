@@ -6,21 +6,28 @@ import { chromium } from 'playwright';
 import { servir } from './servidor.mjs';
 import { irASeccion, haySeccion, esperarSinSeccion, subProgreso, abrirEnHoy } from './secciones.mjs';
 import { createRequire } from 'node:module';
-import { readFileSync as leerArchivo, readdirSync } from 'node:fs';
+import { readFileSync as leerArchivo, readdirSync, writeFileSync as escribirArchivo } from 'node:fs';
 import { VERSION_LEGAL } from '../web/src/legal.js';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
 const CHROME = process.env.CHROME_PATH || '/opt/google/chrome/chrome';
 let ok = 0, fallos = 0;
-const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
+// (v0.248) El vigía. Cada comprobación es una señal de vida: si pasan FBE_VIGIA_MIN minutos (8) sin ninguna, la prueba
+// está colgada en una espera sin tope (una página que ha dejado de responder). En vez de ocupar la máquina hasta que
+// GitHub la corte a las 6 horas, dice en qué parte estaba, qué páginas había abiertas y si respondían, deja una captura
+// y sale con error; el informe lleva «colgada» y publicar.yml repite el trozo entero una vez. (Lo normal entre dos
+// comprobaciones es menos de un minuto.)
+let ultimaSenal = Date.now();
+const senal = () => { ultimaSenal = Date.now(); };
+const check = (c, m) => { senal(); if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
 // Flujos que a veces se cortan solo en la pasada completa (y solos pasan): se prueban con sus resultados guardados; si
 // alguno falla, se avisa (⚠, con lo que pasó) y el flujo se repite una vez entero, y cuenta lo de la segunda. Así una
 // suelta no obliga a relanzar los 40 minutos, y queda a la vista en el resumen del final.
 const repetidas = [];
 async function conUnaRepeticion(nombre, fn) {
   const guardados = [];
-  const guarda = (c, m) => { guardados.push([!!c, m]); };
+  const guarda = (c, m) => { senal(); guardados.push([!!c, m]); };
   let roto = null;
   try { await fn(guarda); } catch (e) { roto = e; }
   const malos = guardados.filter(([c]) => !c);
@@ -57,12 +64,17 @@ function cerrarParte() {
   if (fallos > parteActual.fallos) { informe.fallidas.push(parteActual.n); informe.nombres.push(parteActual.titulo); }
   parteActual = null;
 }
+function escribirInforme() {
+  if (!process.env.FBE_INFORME) return;
+  try { escribirArchivo(process.env.FBE_INFORME, JSON.stringify(informe, null, 1)); } catch (e) { console.log('  (no se ha podido escribir el informe:', e.message, ')'); }
+}
 function parte(titulo) {
   cerrarParte();
   parteN++;
   const suTrozo = reparto.get(titulo) ?? (TROZOS > 1 ? 2 + (parteN % (TROZOS - 1)) : 1);
   if (SOLO_PARTES ? !SOLO_PARTES.has(parteN) : TROZOS > 1 && suTrozo !== TROZO) return false;
   parteActual = { n: parteN, titulo, t0: Date.now(), fallos };
+  senal();
   if (titulo === PRINCIPAL) corrioPrincipal = true;
   console.log(`\n${titulo}`);
   return true;
@@ -72,6 +84,30 @@ const srv = await servir(new URL('../dist', import.meta.url).pathname, 4174);
 // Cámara de mentira (Chrome la simula con un patrón) para probar las fotos guiadas
 const navegador = await chromium.launch({ executablePath: CHROME, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', bypassCSP: true });
+// (v0.248) El vigía (ver arriba, junto a «check»)
+const VIGIA_MS = (Number(process.env.FBE_VIGIA_MIN) || 8) * 60000;
+const conTope = (pr, ms) => Promise.race([pr, new Promise((r) => setTimeout(() => r('(no responde)'), ms))]).catch((e) => `(error: ${String(e?.message).split('\n')[0]})`);
+const vigia = setInterval(async () => {
+  if (Date.now() - ultimaSenal < VIGIA_MS) return;
+  clearInterval(vigia);
+  const seg = Math.round((Date.now() - ultimaSenal) / 1000);
+  console.log(`\n  ✗ COLGADA: ${seg >= 120 ? `${Math.round(seg / 60)} min` : `${seg} s`} sin una sola comprobación${parteActual ? ` en «${parteActual.titulo}» (parte ${parteActual.n})` : ''}. Páginas abiertas:`);
+  let i = 0;
+  for (const c of navegador.contexts()) for (const q of c.pages()) {
+    i++;
+    const estado = await conTope(q.evaluate(() => `«${document.title}» · alto ${document.documentElement.scrollHeight} px · ${document.querySelectorAll('[aria-modal="true"]').length} hojas · ${document.visibilityState}`), 4000);
+    console.log(`      ${i}. ${q.url().slice(0, 140)} → ${estado}`);
+    await conTope(q.screenshot({ path: new URL(`../test/e2e-fallo${i > 1 ? `-${i}` : ''}.png`, import.meta.url).pathname, timeout: 5000 }), 6000);
+  }
+  if (!i) console.log('      (ninguna)');
+  fallos++;
+  informe.colgada = parteActual?.n ?? -1;
+  cerrarParte();
+  escribirInforme();
+  console.log(`\n${ok} correctas, ${fallos} fallidas (colgada)`);
+  process.exit(1);
+}, 15000);
+vigia.unref?.();
 await ctx.grantPermissions(['clipboard-read', 'clipboard-write', 'camera', 'microphone']);
 const p = await ctx.newPage();
 // Cuenta con espera: en una máquina lenta (GitHub) la lista puede tardar un poco en pintarse tras un clic
@@ -6717,7 +6753,7 @@ if (parte('v0.232: FBE Esencial, el alta y antes de empezar')) try {
 cerrarParte();
 await navegador.close();
 srv.close();
-if (process.env.FBE_INFORME) { try { (await import('node:fs')).writeFileSync(process.env.FBE_INFORME, JSON.stringify(informe, null, 1)); } catch (e) { console.log('  (no se ha podido escribir el informe:', e.message, ')'); } }
+escribirInforme();
 if (informe.fallidas.length) console.log(`\nPartes que han fallado: ${informe.fallidas.join(',')} (para repetirlas: FBE_PARTES=${informe.fallidas.join(',')})`);
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (repetidas.length) console.log(`⚠ repetidas por fallar a la primera: ${repetidas.join(', ')} (cuenta la segunda vez)`);
