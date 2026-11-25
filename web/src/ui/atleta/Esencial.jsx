@@ -3,14 +3,183 @@
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
-import { esPorSuCuenta, NOMBRE_PRIMERAS_4 } from '../../logica/esencial.js';
-import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga } from '../../logica/esencial-alta.js';
+import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE } from '../../logica/esencial.js';
+import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
 import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
+import { PRIMERAS_4 } from '../../logica/esencial-plantilla.js';
+import { DIAS_SEMANA, nombreDias, seguidos, PROPUESTA_DIAS, diasDeSemana, planDias, leerDias, guardarDias } from '../../logica/esencial-dias.js';
+import { perezoso } from '../perezoso.jsx';
+
+const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEjercicio', { mientras: null });
+
+// ---------- (alta, 28-32) Antes de empezar ----------
+// Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
+export const CONSEJOS_ANTES = [
+  'El primer día, pide a alguien de sala que te ajuste las máquinas: son cinco minutos y te ahorran un mes de dudas.',
+  'El primer día no lo sabe nadie: empieza con poco peso, haz doce repeticiones y pregúntate cuántas más habrías podido hacer.',
+  'Elige dos días que no vayan seguidos: así descansas entre uno y otro.',
+  'Las agujetas de las dos primeras semanas son normales: luego bajan, y no dicen si entrenaste bien o mal.',
+  'Si fallas una sesión, no la recuperes doblando al día siguiente: sigue donde tocaba.',
+  'El objetivo de enero es llegar a febrero.',
+  'Mira los vídeos de tus ejercicios antes del primer día: irás con el gesto en la cabeza.',
+];
+export const consejoDe = (faltan) => CONSEJOS_ANTES[Math.abs(Number(faltan) || 0) % CONSEJOS_ANTES.length];
+
+// (alta, 29) El camino del piloto, de un vistazo
+function CaminoEsencial() {
+  return (
+    <ol class="alta-camino" aria-label="Tu camino">
+      <li><strong>Semanas 1 a 4</strong><span class="mini">las de la guía</span></li>
+      <li><strong>Semana 4</strong><span class="mini">tus marcas</span></li>
+      <li><strong>Desde la 5</strong><span class="mini">la app te prepara cada semana</span></li>
+    </ol>
+  );
+}
+
+// Cuántas sesiones por semana: las de su semana 1 (con plan) o, sin plan, las de su plantilla (la guía, dos)
+function sesionesPorSemana(p, cuestionario) {
+  const w = [...(p?.semanas || [])].sort((a, b) => a.numero - b.numero)[0];
+  if (w) return (p.sesiones?.[w.id] || []).length || 2;
+  return !cuestionario || (cuestionario.experiencia || 'ninguna') === 'ninguna' ? 2 : Math.min(5, Math.max(2, Number(cuestionario.dias_semana) || 2));
+}
+
+// (alta, 31) Elige tus días: que no vayan seguidos. Pone cada sesión de sus semanas en su día (lo usa el aviso «Hoy toca»)
+// y se recuerda en este móvil para las semanas que prepare la app después.
+export function HojaTusDias({ p, cuestionario = null, alCerrar, alGuardar }) {
+  const { api, atleta, aviso } = useApp();
+  const n = sesionesPorSemana(p, cuestionario);
+  const w1 = [...(p?.semanas || [])].sort((a, b) => a.numero - b.numero).find((w) => w.fecha_inicio >= lunesDe(hoyISO())) || null;
+  const [dias, setDias] = useState(() => leerDias(atleta.id) || (w1 && diasDeSemana(p.sesiones?.[w1.id] || [])) || PROPUESTA_DIAS[n] || PROPUESTA_DIAS[2]);
+  const [error, setError] = useState(null);
+  const [ocupado, una] = useUnaVez();
+  const cambiar = (d) => setDias((x) => (x.includes(d) ? x.filter((y) => y !== d) : x.length >= n ? x : [...x, d].sort((a, b) => a - b)));
+  const guardar = () => una(async () => {
+    setError(null);
+    if (dias.length !== n) { setError(n === 1 ? 'Elige un día.' : `Elige ${n} días.`); return; }
+    try {
+      guardarDias(atleta.id, dias);
+      const cambios = p?.bloque ? planDias({ semanas: p.semanas, sesiones: p.sesiones, dias, hoy: hoyISO() }) : [];
+      for (const c of cambios) await api.planificarSesion(c.id, c.dia);
+      aviso(`Tus días: ${nombreDias(dias)}`);
+      alGuardar?.(dias, cambios.length);
+      alCerrar();
+    } catch (e) { setError(e.message); }
+  });
+  return (
+    <Hoja titulo="Elige tus días" alCerrar={alCerrar}>
+      <div class="pila">
+        <p class="secundario">{n === 2 ? 'Dos días a la semana' : `${n} días a la semana`}, mejor que no vayan seguidos: así descansas entre uno y otro. La app pone cada sesión en su día y, por la mañana, te avisa de que hoy toca.</p>
+        <div class="alta-dias" role="group" aria-label="Tus días">
+          {DIAS_SEMANA.map(([d, corto, largo]) => (
+            <button type="button" key={d} aria-pressed={dias.includes(d) ? 'true' : 'false'} aria-label={largo} disabled={!dias.includes(d) && dias.length >= n} onClick={() => cambiar(d)}>{corto}</button>
+          ))}
+        </div>
+        <p class="peq" role="status">{dias.length ? `Entrenas ${nombreDias(dias)}.` : 'Aún no has elegido ninguno.'}{dias.length === n && seguidos(dias) ? ' Van seguidos: si puedes, deja un día entre uno y otro.' : ''}</p>
+        {error && <p class="error" role="alert">{error}</p>}
+        <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={guardar}>Guardar mis días</button>
+      </div>
+    </Hoja>
+  );
+}
+
+// Sus días puestos en las semanas que aún no los tienen (las que prepara la app cada semana), con lo elegido en este móvil
+export function AplicarDias({ p, recargarPrograma }) {
+  const { api, atleta } = useApp();
+  useEffect(() => {
+    const dias = leerDias(atleta.id);
+    if (!dias || !p?.bloque) return;
+    const cambios = planDias({ semanas: p.semanas, sesiones: p.sesiones, dias, hoy: hoyISO(), soloSinDia: true });
+    if (!cambios.length) return;
+    (async () => {
+      try { for (const c of cambios) await api.planificarSesion(c.id, c.dia); recargarPrograma?.(); } catch { /* lo intenta la próxima vez */ }
+    })();
+  }, [p?.bloque?.id, p?.actual?.id, (p?.semanas || []).length]);
+  return null;
+}
+
+// (alta, 28 y 30) Su semana 1, ejercicio a ejercicio: cómo se hace cada uno (su ficha, con el vídeo) y su alternativa. Con
+// plan, la de su plan; sin plan (esperando el visto bueno), la de la guía si es la suya.
+export function SemanaUnoEsencial({ p = null, cuestionario = null, mientras = false }) {
+  const { api, atleta } = useApp();
+  const [ficha, setFicha] = useState(null);
+  const conPlan = !!p?.bloque;
+  const lista = useCarga(async () => {
+    if (conPlan) {
+      const w = [...(p.semanas || [])].sort((a, b) => a.numero - b.numero)[0];
+      const vistos = new Map();
+      for (const s of (w ? (p.sesiones?.[w.id] || []) : [])) {
+        const d = await api.sesion(s.id, atleta.id);
+        for (const x of d?.ejercicios || []) if (x.ejercicio && !vistos.has(x.ejercicio.id)) vistos.set(x.ejercicio.id, { ejercicio: x.ejercicio, nota: x.notas_coach || null });
+      }
+      return [...vistos.values()];
+    }
+    if (plantillaEsencial(cuestionario || {}) !== NOMBRE_PRIMERAS_4) return [];
+    const ej = await api.ejerciciosPorNombre(PRIMERAS_4.ejercicios.map((e) => e.nombre));
+    const por = new Map((ej || []).map((x) => [x.nombre, x]));
+    return PRIMERAS_4.ejercicios.map((e) => ({ ejercicio: por.get(e.nombre) || { nombre: e.nombre }, nota: e.nota }));
+  }, [conPlan ? p.bloque.id : `sin:${cuestionario?.experiencia}`], { recuerdo: `semana1-esencial:${atleta.id}:${conPlan ? p.bloque.id : 'guia'}` });
+  const xs = lista.datos || [];
+  if (!xs.length) return null;
+  return (
+    <section class="panel panel-pad pila-s alta-semana1" aria-labelledby="alta-s1-t">
+      <strong id="alta-s1-t">Tu semana 1, ejercicio a ejercicio</strong>
+      <span class="peq secundario">{mientras
+        ? 'Mientras esperas el visto bueno, ve conociendo tus ejercicios: cómo se hace cada uno y qué hacer si no hay máquina.'
+        : 'Para verlos en casa antes de tu primer día: cómo se hace cada uno y qué hacer si no hay máquina.'}</span>
+      <ul class="alta-ejercicios">
+        {xs.map(({ ejercicio, nota }) => (
+          <li key={ejercicio.id || ejercicio.nombre}>
+            <span class="pila-xs">
+              <strong class="peq">{ejercicio.nombre}</strong>
+              {nota && <span class="mini terciario">{nota}</span>}
+            </span>
+            {ejercicio.id && (ejercicio.video_url || ejercicio.instrucciones) && (
+              <button type="button" class="btn btn-peq" aria-label={`Cómo se hace: ${ejercicio.nombre}`} onClick={() => setFicha(ejercicio)}><Icono n="video" /> Cómo se hace</button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {ficha && <FichaEjercicio atletaId={atleta.id} ejercicio={ficha} inicial="tecnica" alCerrar={() => setFicha(null)} />}
+    </section>
+  );
+}
+
+// (alta, 31) La tarjeta de sus días antes de empezar: los que eligió o «Elige tus días»
+export function TusDiasTarjeta({ p, cuestionario = null }) {
+  const { atleta } = useApp();
+  const [hoja, setHoja] = useState(false);
+  const [dias, setDias] = useState(() => leerDias(atleta.id));
+  const w = [...(p?.semanas || [])].sort((a, b) => a.numero - b.numero)[0];
+  const puestos = dias || (w && diasDeSemana(p.sesiones?.[w.id] || []));
+  return (
+    <section class="nota-coach alta-tus-dias" aria-label="Tus días">
+      <Icono n="calendario" />
+      <div class="pila-s">
+        <span class="peq">{puestos ? `Entrenas ${nombreDias(puestos)}. Cada sesión ya está en su día y esa mañana te avisamos.` : 'Elige qué días vas a entrenar (mejor que no vayan seguidos): la app pone cada sesión en su día y esa mañana te avisa.'}</span>
+        <button type="button" class={`btn btn-peq ${puestos ? '' : 'btn-primario'}`} style="justify-self:start" onClick={() => setHoja(true)}>{puestos ? 'Cambiar mis días' : 'Elegir mis días'}</button>
+      </div>
+      {hoja && <HojaTusDias p={p} cuestionario={cuestionario} alCerrar={() => setHoja(false)} alGuardar={(d) => setDias(d)} />}
+    </section>
+  );
+}
+
+// Lo de antes de empezar, debajo de la tarjeta grande: esperando el visto bueno, su semana 1 de la guía; con su plan y antes
+// de su lunes, sus días y su semana 1 con sus vídeos
+export function AntesDeEmpezar({ p, cuestionario }) {
+  const { api, atleta } = useApp();
+  const hoy = hoyISO();
+  const ficha = useCarga(() => api.estadoEsencial(atleta.id), [atleta.id, cuestionario?.completado_en, cuestionario?.resultado], { recuerdo: `estado-esencial:${atleta.id}` });
+  const e = estadoEsencial({ bloque: p?.bloque || null, cuestionario, ficha: ficha.datos, hoy });
+  if (!e || ficha.datos?.falta091) return null;
+  if (e.tipo === 'visto_bueno' || e.tipo === 'revision') return <SemanaUnoEsencial cuestionario={cuestionario} mientras />;
+  if (e.tipo !== 'espera') return null;
+  return <><TusDiasTarjeta p={p} cuestionario={cuestionario} /><SemanaUnoEsencial p={p} /></>;
+}
 
 // ---------- (alta, 11-15) La bienvenida de FBE Esencial: cómo funciona, hasta su lunes, los avisos e instalarla ----------
 const DibujoCalendario = () => (
@@ -57,6 +226,19 @@ export function BienvenidaInicioEsencial({ nombre, alTerminar }) {
         : 'En Chrome, toca «Instalar» o el menú ⋮ y luego «Instalar aplicación» (o «Añadir a pantalla de inicio»). Se abrirá como una app.' }]),
   ];
   return <Capa><Pantallas pantallas={pantallas} alTerminar={alTerminar} etiqueta="Bienvenida a FBE Esencial" /></Capa>;
+}
+
+// (alta, 37) Los avisos, desde sus primeros pasos: para qué son y cómo activarlos
+export function HojaAvisosEsencial({ alCerrar }) {
+  return (
+    <Hoja titulo="Los avisos" alCerrar={alCerrar}>
+      <div class="pila">
+        <p class="secundario">Te avisamos si te falta el cuestionario, la víspera y el día en que empiezas, el día que toca entrenar y si llevas días sin entrenar. Sin avisos activados, no te llega ninguno.</p>
+        <PasoAvisos />
+        <p class="peq terciario">Qué te llega y a qué hora, lo eliges en Perfil, en «Notificaciones».</p>
+      </div>
+    </Hoja>
+  );
 }
 
 // (alta, 13 y 14) Activar los avisos durante el alta: en el móvil (el permiso se pide al tocar, nunca solo) o, si no se
@@ -205,7 +387,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
         setError(null);
         try { await api.esencialPedirVistoBueno(); ficha.recargar(true); } catch (err) { setError(err.message); }
       })}><Icono n="hecho" /> Ya tengo el visto bueno</button>,
-      <p class="peq secundario">Cuando te lo dé (o si haces una Puesta a punto con Pelayo), márcalo aquí. Pelayo lo confirma y la app te prepara tu plan.</p>);
+      <p class="peq secundario">Pide cita con tu médico de cabecera o haz una <a href={`${WEB_FBE}/puesta-a-punto.html`} target="_blank" rel="noopener">Puesta a punto con Pelayo</a>. Cuando lo tengas, márcalo aquí: Pelayo lo confirma y la app te prepara tu plan.</p>);
   }
   if (e.tipo === 'revision') {
     return marco(null, 'reloj', 'En revisión', 'Pelayo está revisando tu visto bueno',
@@ -215,12 +397,16 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
     return marco(null, 'reloj', 'Un momento', 'Preparando tu plan', 'Con tus respuestas, la app elige tu plan y lo deja listo desde tu lunes.',
       error ? <button class="btn btn-grande btn-hero" onClick={() => { pedido.current = false; setError(null); setIntento((n) => n + 1); }}><Icono n="reiniciar" /> Reintentar</button> : null);
   }
-  // espera: con su plan, antes de su lunes
+  // espera: con su plan, antes de su lunes. (alta, 29 y 32) Su camino de un vistazo y un consejo de la guía cada día
   return marco(`Tu plan: ${bloque.nombre}`, 'calendario', e.faltan === 1 ? 'Mañana' : `Faltan ${e.faltan} días`, `Empiezas el ${fechaLarga(e.inicio)}`,
     bloque.nombre === NOMBRE_PRIMERAS_4
-      ? 'Tus cuatro primeras semanas son las de la guía. Mientras llega el día, mira tu semana 1 y piensa qué dos días te vienen mejor.'
-      : 'Tu plan ya está listo. Mientras llega el día, mira tu semana 1 y piensa qué días te vienen mejor.',
-    <button class="btn btn-grande btn-hero" onClick={() => irA?.('semana')}><Icono n="semana" /> Ver tu semana 1</button>);
+      ? 'Tu plan ya está listo: tus cuatro primeras semanas son las de la guía. Mientras llega el día, elige tus días y mira tus ejercicios.'
+      : 'Tu plan ya está listo. Mientras llega el día, elige tus días y mira tus ejercicios.',
+    <button class="btn btn-grande btn-hero" onClick={() => irA?.('semana')}><Icono n="semana" /> Ver tu semana 1</button>,
+    <>
+      {bloque.nombre === NOMBRE_PRIMERAS_4 && <CaminoEsencial />}
+      <p class="peq alta-consejo"><strong>Para hoy:</strong> {consejoDe(e.faltan)}</p>
+    </>);
 }
 
 // ---------- La semana siguiente, sola (tanda 3, migración 092) ----------

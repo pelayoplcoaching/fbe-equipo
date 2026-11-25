@@ -4,7 +4,8 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, Segmentos, cuando, IcoIos } from '../comunes.jsx';
 import { OBJETIVOS, EXPERIENCIA, LUGARES, MATERIAL, SINTOMAS, OTRAS, ZONAS_LESION, LIMITA, MINUTOS, MENSAJE_ATLETA, conSalud, pendiente, objetivosDe } from '../../logica/cuestionario.js';
 import { TEXTO_CONSENTIMIENTO_SALUD } from '../../legal-version.js';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, WEB_FBE } from '../../logica/esencial.js';
+import { conNutricion } from '../../logica/nivel.js';
 import { MENSAJE_ESENCIAL } from '../../logica/esencial-alta.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenPasoCuestionario, imagenObjetivo } from '../../logica/imagenes.js';
@@ -17,6 +18,41 @@ const PASOS = [
   ['lesiones', 'Lesiones y alergias', ['lesiones', 'alergias']],
 ];
 const SI_NO = [[true, 'Sí'], [false, 'No']];
+
+// (alta, 24) El material, con un dibujo para quien no sabe los nombres
+const DIBUJO_MATERIAL = {
+  barra: 'M2 12h20M5 8v8M8 6v12M16 6v12M19 8v8',
+  rack: 'M5 3v18M19 3v18M5 9h14M5 15h14M3 21h4M17 21h4',
+  banco: 'M3 11h18M6 11v7M18 11v7M8 8h8',
+  mancuernas: 'M6 8v8M18 8v8M3.5 10v4M20.5 10v4M6 12h12',
+  kettlebells: 'M9 8.5a3 3 0 0 1 6 0M7.5 9h9M12 21a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z',
+  poleas: 'M5 3h14M12 3v3M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 10v8M9 18h6',
+  maquinas: 'M5 21V4h4v17M9 8h7l3 4M9 15h8M3 21h18',
+  gomas: 'M7 6c-3 3-3 9 0 12M17 6c3 3 3 9 0 12M7 6c3-2 7-2 10 0M7 18c3 2 7 2 10 0',
+  dominadas: 'M3 4h18M7 4v4M17 4v4M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 12v5M9 21l3-4 3 4',
+  cardio: 'M6 17.5a3 3 0 1 0 0 .01M18 17.5a3 3 0 1 0 0 .01M6 17.5 9.5 11h5l3.5 6.5M9.5 11l-1-3H6.5M14.5 11l1.5-3h2',
+};
+const DibujoMaterial = ({ v }) => (DIBUJO_MATERIAL[v]
+  ? <svg class="alta-mat" viewBox="0 0 24 24" aria-hidden="true"><path d={DIBUJO_MATERIAL[v]} /></svg> : null);
+
+// (alta, 23) Por qué se pregunta cada cosa (a quien va por su cuenta: aquí no hay un coach que lo lea)
+const POR_QUE = {
+  objetivo: 'Para saber qué buscas. Tu plan del primer mes es el mismo; lo que quieras conseguir te ayuda a medir cómo vas.',
+  tiempo: 'Con tu experiencia y tus días, la app elige tu plan: si nunca has entrenado fuerza, empiezas con las cuatro semanas de la guía.',
+  lugar: 'Para que tu plan lleve ejercicios que puedas hacer donde entrenas y con lo que tienes a mano.',
+  salud: 'Son las que dicen si conviene que te vea un médico antes de empezar. Solo las usa la app para eso.',
+  lesiones: 'Para tenerlo en cuenta desde el principio. Si algo te molesta al entrenar, apúntalo también en la sesión.',
+};
+
+// (alta, 22) El primer paso que le falta (para seguir donde lo dejó)
+function pasoPendiente(c, salud) {
+  if (!c || c.completado_en) return 0;
+  if (!objetivosDe(c).length) return 0;
+  if (!c.experiencia || !c.dias_semana || !c.minutos_sesion) return 1;
+  if (!c.lugar) return 2;
+  if (salud && (c.activo == null || c.enfermedad == null || c.sintomas == null || c.otras == null)) return 3;
+  return 4;
+}
 const NIVEL = { sin_valoracion: 'ok', valorar_antes_vigoroso: 'aviso', valorar_antes: 'aviso', parar_y_valorar: 'alerta' };
 
 // «hoy, 9:30», «ayer, 9:30» o «el 3 sep»
@@ -55,9 +91,15 @@ function Marcar({ id, opciones, valor, alCambiar }) {
 // desde: el paso por el que se abre (FBE Esencial: «Completar la parte de salud» abre en Tu salud)
 export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, alGuardar, desde = null }) {
   const { api, atleta } = useApp();
-  const [paso, setPaso] = useState(() => Math.max(0, PASOS.findIndex(([k]) => k === desde)));
-  // (FBE Esencial) quien va por su cuenta: sin coach que lo lea; con él, la app le prepara su plan
+  // (alta, 22) si lo dejó a medias, sigue donde lo dejó
+  const [paso, setPaso] = useState(() => (desde ? Math.max(0, PASOS.findIndex(([k]) => k === desde)) : pasoPendiente(inicial, salud)));
+  const retoma = !desde && !!inicial && !inicial.completado_en && pasoPendiente(inicial, salud) > 0;
+  const [guardado, setGuardado] = useState(false);
+  // (FBE Esencial) quien va por su cuenta: sin coach que lo lea; con él, la app le prepara su plan. (alta, 21) Y más corto:
+  // sin lo que solo lee un coach (cuéntalo con tus palabras, otro deporte, la nota de cada lesión, y las alergias si no
+  // lleva nutrición)
   const suyo = esPorSuCuenta(atleta);
+  const conAlergias = !suyo || conNutricion(atleta);
   const mensaje = (r) => (suyo ? MENSAJE_ESENCIAL : MENSAJE_ATLETA)[r];
   const [f, setF] = useState(() => ({ material: [], ...(inicial || {}), objetivos: objetivosDe(inicial) }));
   const [guardando, setGuardando] = useState(false);
@@ -94,6 +136,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
       const fila = await api.guardarCuestionario(atleta.id, datos, { completar: ultimo });
       alGuardar?.(fila);  // lo de fuera se pone al día en cada paso (si cierra a medias, al volver ve lo guardado)
       if (clave === 'salud') setTras(fila.resultado && fila.resultado !== 'sin_valoracion' ? fila.resultado : null);
+      setGuardado(true);
       if (ultimo) setFinal(fila); else setPaso(paso + 1);
     } catch (err) { setError(err.message); } finally { setGuardando(false); }
   }
@@ -112,7 +155,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
               : 'Tu coach ya tiene tus respuestas. Te falta la parte de salud: cuando des el consentimiento de datos de salud, complétala desde Perfil.'}</p>
           )}
           {suyo && final.resultado === 'sin_valoracion' && <p>Con tus respuestas, la app te prepara tu plan: lo verás en Hoy.</p>}
-          {suyo && final.resultado && final.resultado !== 'sin_valoracion' && <p class="peq secundario">Cuando tengas su visto bueno (o si haces una Puesta a punto con Pelayo), márcalo en Hoy: Pelayo lo confirma y la app te prepara tu plan.</p>}
+          {suyo && final.resultado && final.resultado !== 'sin_valoracion' && <QueHacerVistoBueno />}
           <p class="peq secundario">Si algo cambia (una lesión, una medicación nueva, un embarazo…), actualízalo desde Perfil{suyo ? '.' : ': tu coach lo verá.'}</p>
           <button class="btn btn-primario btn-grande" onClick={alCerrar}>Hecho</button>
         </div>
@@ -125,8 +168,10 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
       <form class="pila cuestionario" onSubmit={siguiente} noValidate>
         {hayImagen(imagenPasoCuestionario(clave)) && <Imagen id={imagenPasoCuestionario(clave)} clase="franja-ilu cuestionario-ilu" tamanos="(min-width: 720px) 640px, 100vw" />}
         <div class="pila-s">
-          <div class="separa"><strong>{titulo}</strong><span class="peq secundario num">Paso {paso + 1} de {PASOS.length}</span></div>
+          <div class="separa"><strong>{clave === 'lesiones' && !conAlergias ? 'Lesiones' : titulo}</strong><span class="peq secundario num">Paso {paso + 1} de {PASOS.length}</span></div>
           <div class="progreso-barra" role="img" aria-label={`Paso ${paso + 1} de ${PASOS.length}`}><span style={{ width: `${((paso + 1) / PASOS.length) * 100}%` }} /></div>
+          {(guardado || retoma) && <span class="peq alta-guardado" role="status"><Icono n="hecho" width="14" height="14" /> {guardado ? 'Guardado. Si lo cierras, sigues aquí la próxima vez.' : 'Sigues donde lo dejaste: lo de antes ya está guardado.'}</span>}
+          {suyo && POR_QUE[clave] && <p class="peq secundario alta-porque">{POR_QUE[clave]}</p>}
         </div>
 
         {clave === 'objetivo' && (
@@ -145,9 +190,9 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
                 })}
               </div>
               <span class="ayuda">Marca todos los que quieras. El primero que marques es el principal.</span></div>
-            <div class="campo"><label for="cu-obj-det">Cuéntalo con tus palabras (si quieres)</label>
+            {!suyo && <div class="campo"><label for="cu-obj-det">Cuéntalo con tus palabras (si quieres)</label>
               <textarea id="cu-obj-det" class="area" maxLength={600} value={f.objetivo_detalle || ''} onInput={(e) => set('objetivo_detalle')(e.currentTarget.value)}
-                placeholder="Una marca, una fecha, una prueba, cómo te quieres sentir…" /></div>
+                placeholder="Una marca, una fecha, una prueba, cómo te quieres sentir…" /></div>}
           </>
         )}
 
@@ -156,12 +201,15 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
             <div class="campo"><span class="etq">¿Cuánto tiempo llevas entrenando fuerza?</span>
               <Opciones etiqueta="Experiencia entrenando fuerza" opciones={EXPERIENCIA} valor={f.experiencia ?? null} alCambiar={set('experiencia')} /></div>
             <div class="campo"><span class="etq">¿Cuántos días a la semana puedes entrenar?</span>
-              <Segmentos etiqueta="Días a la semana" opciones={[1, 2, 3, 4, 5, 6, 7].map((n) => [n, String(n)])} valor={f.dias_semana ?? null} alCambiar={set('dias_semana')} /></div>
+              <Segmentos etiqueta="Días a la semana" opciones={[1, 2, 3, 4, 5, 6, 7].map((n) => [n, String(n)])} valor={f.dias_semana ?? null} alCambiar={set('dias_semana')} />
+              {suyo && f.experiencia === 'ninguna' && f.dias_semana > 2 && (
+                <span class="nota alta-dos-dias" role="note">Empiezas con dos días, como en la guía: es lo que mejor funciona el primer mes. Desde la semana 5 puedes pasar a tres desde Hoy.</span>
+              )}</div>
             <div class="campo"><span class="etq">¿Cuántos minutos por sesión?</span>
               <Segmentos etiqueta="Minutos por sesión" opciones={MINUTOS.map((n) => [n, String(n), `${n} minutos`])} valor={f.minutos_sesion ?? null} alCambiar={set('minutos_sesion')} />
               <span class="ayuda">Con el calentamiento incluido.</span></div>
-            <div class="campo"><label for="cu-dep">¿Haces otro deporte? (si quieres)</label>
-              <input id="cu-dep" class="entrada" maxLength={200} value={f.otros_deportes || ''} onInput={(e) => set('otros_deportes')(e.currentTarget.value)} placeholder="Pádel los domingos, corro 2 días…" /></div>
+            {!suyo && <div class="campo"><label for="cu-dep">¿Haces otro deporte? (si quieres)</label>
+              <input id="cu-dep" class="entrada" maxLength={200} value={f.otros_deportes || ''} onInput={(e) => set('otros_deportes')(e.currentTarget.value)} placeholder="Pádel los domingos, corro 2 días…" /></div>}
           </>
         )}
 
@@ -172,8 +220,8 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
             <div class="campo"><span class="etq" id="cu-mat">¿Qué material tienes a mano?</span>
               <div class="zonas elegir" role="group" aria-labelledby="cu-mat">
                 {MATERIAL.map(([v, t]) => (
-                  <button type="button" key={v} aria-pressed={f.material?.includes(v) ? 'true' : 'false'}
-                    onClick={() => set('material')(f.material?.includes(v) ? f.material.filter((x) => x !== v) : [...(f.material || []), v])}>{t}</button>
+                  <button type="button" key={v} class="alta-mat-b" aria-pressed={f.material?.includes(v) ? 'true' : 'false'}
+                    onClick={() => set('material')(f.material?.includes(v) ? f.material.filter((x) => x !== v) : [...(f.material || []), v])}><DibujoMaterial v={v} />{t}</button>
                 ))}
               </div>
               <span class="ayuda">Marca todo lo que puedas usar. Así {suyo ? 'tu plan lleva' : 'tu coach elige'} ejercicios que puedas hacer.</span></div>
@@ -237,7 +285,7 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
                         <button type="button" class="btn btn-icono plano" aria-label={`Quitar la lesión ${i + 1}`} onClick={() => set('lesiones')(f.lesiones.filter((_, j) => j !== i))}><Icono n="basura" /></button>
                       </div>
                       <Segmentos etiqueta={`Cuánto te limita la lesión ${i + 1}`} opciones={LIMITA.map((t, k) => [k, t])} valor={l.limita ?? 0} alCambiar={(v) => cambiar('limita', v ?? 0)} />
-                      <input class="entrada" aria-label={`Nota de la lesión ${i + 1}`} maxLength={200} value={l.nota || ''} onInput={(e) => cambiar('nota', e.currentTarget.value)} placeholder="Qué pasó, qué movimientos te molestan…" />
+                      {!suyo && <input class="entrada" aria-label={`Nota de la lesión ${i + 1}`} maxLength={200} value={l.nota || ''} onInput={(e) => cambiar('nota', e.currentTarget.value)} placeholder="Qué pasó, qué movimientos te molestan…" />}
                     </div>
                   );
                 })}
@@ -246,8 +294,8 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
                 <button type="button" class="btn btn-peq" style="justify-self:start" onClick={() => set('lesiones')([...(f.lesiones || []), { zona: null, limita: 0, nota: '' }])}><Icono n="mas" /> Añadir una lesión o molestia</button>
               )}
             </div>
-            <div class="campo"><label for="cu-ale">Alergias o intolerancias alimentarias (si tienes)</label>
-              <input id="cu-ale" class="entrada" maxLength={300} value={f.alergias || ''} onInput={(e) => set('alergias')(e.currentTarget.value)} placeholder="Lactosa, frutos secos…" /></div>
+            {conAlergias && <div class="campo"><label for="cu-ale">Alergias o intolerancias alimentarias (si tienes)</label>
+              <input id="cu-ale" class="entrada" maxLength={300} value={f.alergias || ''} onInput={(e) => set('alergias')(e.currentTarget.value)} placeholder="Lactosa, frutos secos…" /></div>}
           </>
         )}
 
@@ -258,6 +306,21 @@ export function HojaCuestionario({ inicial, salud, darConsentimiento, alCerrar, 
         </div>
       </form>
     </Hoja>
+  );
+}
+
+// (alta, 26) Tras un cribado que pide valoración: con calma y qué hacer exactamente
+export function QueHacerVistoBueno() {
+  return (
+    <div class="pila-s alta-que-hacer">
+      <p class="peq secundario">No es un diagnóstico: es la prudencia que recomienda el American College of Sports Medicine antes de empezar a entrenar.</p>
+      <strong>Qué hacer ahora</strong>
+      <ol class="alta-pasos-vb">
+        <li>Pide cita con tu médico de cabecera y cuéntale que vas a empezar a entrenar fuerza dos días a la semana.</li>
+        <li>O haz una <a href={`${WEB_FBE}/puesta-a-punto.html`} target="_blank" rel="noopener">Puesta a punto con Pelayo</a>, médico internista.</li>
+        <li>Cuando tengas el visto bueno, márcalo en Hoy: Pelayo lo confirma y la app te prepara tu plan.</li>
+      </ol>
+    </div>
   );
 }
 

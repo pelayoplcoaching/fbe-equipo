@@ -85,6 +85,10 @@ const SemanaEsencial = perezoso(() => import('./Esencial.jsx'), 'SemanaEsencial'
 const LeccionSemana = perezoso(() => import('./Esencial.jsx'), 'LeccionSemana', { mientras: null });
 const DiasEsencial = perezoso(() => import('./Esencial.jsx'), 'DiasEsencial', { mientras: null });
 const BienvenidaInicioEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaInicioEsencial', { mientras: null });
+const AntesDeEmpezar = perezoso(() => import('./Esencial.jsx'), 'AntesDeEmpezar', { mientras: null });
+const AplicarDias = perezoso(() => import('./Esencial.jsx'), 'AplicarDias', { mientras: null });
+const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
+const HojaAvisosEsencial = perezoso(() => import('./Esencial.jsx'), 'HojaAvisosEsencial', { mientras: null });
 
 // (v0.208, rendimiento) Lo que solo sale al tocar algo (el hilo de un mensaje del coach, una tarea, tu bloque, «Ordenar
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
@@ -119,7 +123,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
   // (FBE Esencial) quien va por su cuenta: sin coach que conteste ni cuestionario de objetivos para él
   const porSuCuenta = esPorSuCuenta(atleta);
   // Atleta nuevo: bienvenida (una vez) y primeros pasos hasta completarlos u ocultarlos
-  const hechos = useCarga(() => api.primerosPasos(atleta.id).catch(() => null), [atleta.id, p, checkinSemana.datos], { recuerdo: `pasos:${atleta.id}` });
+  const hechos = useCarga(() => api.primerosPasos(atleta.id, { esencial: porSuCuenta }).catch(() => null), [atleta.id, p, checkinSemana.datos], { recuerdo: `pasos:${atleta.id}` });
+  // (alta, 37) sus avisos y sus días, desde sus primeros pasos
+  const [verAvisos, setVerAvisos] = useState(false);
+  const [verDias, setVerDias] = useState(false);
   // Cuestionario inicial: un paso de los primeros pasos y, si el coach lo pide, una tarjeta
   const cuestionario = useCarga(() => api.cuestionario(atleta.id).catch(() => null), [atleta.id], { recuerdo: `cuestionario:${atleta.id}` });
   const [verCuestionario, setVerCuestionario] = useState(false);
@@ -152,10 +159,27 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     { id: 'meta', texto: 'Ponte una meta (si quieres)', hecho: !!persHoy?.meta_nombre, etiqueta: 'Ponerla', accion: () => irA('perfil') },
     { id: 'faq', texto: 'Echa un vistazo a las preguntas frecuentes', hecho: faqVista, etiqueta: 'Ver', accion: () => { setFaqVista(true); pedirVistaPerfil('ajustes'); irA('perfil'); } },
   ] : null;
+  // (alta, 37) Quien va por su cuenta: sus pasos propios (cuestionario, avisos, instalarla, sus días, su plan de comida si lo
+  // lleva y su primera sesión), sin los que hablan de su coach
+  const sesSem1 = p?.actual ? (p.sesiones[p.actual.id] || []) : [];
+  const diasOk = (() => { try { if (JSON.parse(localStorage.getItem(`fbe-esencial-dias:${atleta.id}`) || 'null')?.dias?.length) return true; } catch { /* */ } return sesSem1.length > 0 && sesSem1.every((s) => s.dia_previsto || s.completada); })();
+  const pasosEsencial = porSuCuenta && hechos.datos ? [
+    { id: 'cuenta', texto: 'Activa tu cuenta', hecho: true },
+    { id: 'cuestionario', texto: 'Rellena tu cuestionario', hecho: hechos.datos.cuestionario, etiqueta: 'Empezar', accion: () => setVerCuestionario(true) },
+    { id: 'avisos', texto: 'Activa los avisos', hecho: !!hechos.datos.avisos, etiqueta: 'Activar', accion: () => setVerAvisos(true) },
+    pasos.find((x) => x.id === 'instalar'),
+    { id: 'dias', texto: 'Elige tus días', hecho: diasOk, etiqueta: 'Elegir', accion: () => setVerDias(true) },
+    ...(salud && conNutricion(atleta) ? [{ id: 'comida', texto: 'Prepara tu plan de comida', hecho: !!hechos.datos.comida, etiqueta: 'Preparar', accion: () => {
+      const b = [...document.querySelectorAll('section.seccion-nutricion button')].find((x) => /Preparar mi plan/.test(x.textContent || ''));
+      b?.scrollIntoView({ block: 'center' }); b?.click();
+    } }] : []),
+    ...(entrena ? [pasos.find((x) => x.id === 'sesion')].filter(Boolean) : []),
+  ] : null;
+  const misPasos = pasosEsencial || pasos;
   // Solo para quien acaba de llegar (su primer mes): a quien ya lleva tiempo no se le enseña
   const nuevo = !atleta.fecha_alta || diasEntre(atleta.fecha_alta, hoyISO()) <= 30;
   // En el modo atleta del coach no hay bienvenida, primeros pasos, avisos, cuestionario ni respuestas: es él
-  const verPasos = !propio && pasos && nuevo && !pasosOcultos && pasos.some((x) => !x.hecho);
+  const verPasos = !propio && misPasos && nuevo && !pasosOcultos && misPasos.some((x) => !x.hecho);
   const verBienvenida = !propio && hechos.datos && (!entrena || !hechos.datos.sesion) && !bienvenidaVista;
 
   return (
@@ -181,7 +205,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <div class="nota-coach"><Icono n="alerta" /><div>Tu cuenta está de baja: puedes ver tu historial y descargar tus datos desde Perfil, pero ya no se guarda nada nuevo. Si quieres volver, escribe a tu coach.</div></div>
       )}
       {verPasos && (porSuCuenta ? <BienvenidaEsencial bloque={p?.bloque} /> : <MensajeCoach momento="bienvenida" clase="bienvenida-coach" />)}
-      {verPasos ? <PrimerosPasos pasos={pasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
+      {verPasos ? <PrimerosPasos pasos={misPasos} alOcultar={() => setPasosOcultos(true)} /> : !propio && <AvisoInstalar />}
       {!propio && (verPasos || (!p && !cargando) || !entrena) && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
       {!entrena ? (
         <ContenidoNutricion irA={irA} checkinSemana={checkinSemana} salud={salud} recargarConsentimientos={recargarConsentimientos}
@@ -207,6 +231,9 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {/* (FBE Esencial) quien va por su cuenta: sus marcas de la semana 4, en cuanto termina esa semana, y su semana
                   siguiente, que prepara la app (con la pregunta si hay una posible errata) */}
               {!propio && porSuCuenta && <TarjetaMarcas />}
+              {/* (alta, 28-31) antes de empezar: sus días y su semana 1, ejercicio a ejercicio (o la de la guía, esperando el visto bueno) */}
+              {!propio && porSuCuenta && atleta.estado !== 'baja' && <AntesDeEmpezar p={p} cuestionario={cuestionario.datos} />}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <AplicarDias p={p} recargarPrograma={() => recargar(true)} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaEsencial recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} hechas={(p.actual ? (p.sesiones[p.actual.id] || []) : []).filter((s) => s.completada).length} />}
               {/* (25/11) lo de esta semana (de la 1 a la 8) y, desde la semana 5, sus días (pasar a tres o volver a dos) */}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <LeccionSemana p={p} />}
@@ -231,6 +258,8 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
     {verBienvenida && (porSuCuenta
       ? <BienvenidaInicioEsencial nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />
       : <Bienvenida nombre={(perfil?.nombre || atleta.nombre || '').split(' ')[0]} alTerminar={() => setBienvenidaVista(true)} />)}
+    {verAvisos && <HojaAvisosEsencial alCerrar={() => { setVerAvisos(false); hechos.recargar(true); }} />}
+    {verDias && <HojaTusDias p={p} cuestionario={cuestionario.datos} alCerrar={() => setVerDias(false)} alGuardar={() => { hechos.recargar(true); recargar(true); }} />}
     {verCuestionario && (
       <HojaCuestionario inicial={cuestionario.datos} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }}
         desde={verCuestionario === 'salud' ? 'salud' : null}

@@ -55,3 +55,5 @@ export function diasInvitacion({ esencial = false, inicio = null, hoy } = {}) {
 // (alta) El correo para escribir a Pelayo cuando no hay chat (FBE Esencial) o algo falla en la app o en el cobro: el
 // público de la web (aprobado por él el 20/11/2026)
 export const CORREO_CONTACTO = 'pelayofbe@fuerzabasadaenevidencia.com';
+// La web (para enlazar la Puesta a punto y las guías)
+export const WEB_FBE = 'https://fuerzabasadaenevidencia.com';

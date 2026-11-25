@@ -51,3 +51,44 @@
 }
 .alta-fila[data-nivel="ambar"] { border-left-color: var(--aviso); }
 .alta-fila > span { min-width: 0; }
+
+/* Tanda 2: del cuestionario a su plan */
+.alta-guardado { display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--ok); font-weight: 600; }
+.alta-porque { margin: 0; }
+.alta-dos-dias { display: block; margin-top: var(--esp-8); }
+.alta-mat-b { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.alta-mat { width: var(--esp-20); height: var(--esp-20); flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.alta-que-hacer strong { color: var(--tinta); }
+.alta-pasos-vb { margin: 0; padding-left: var(--esp-22); display: grid; gap: var(--esp-6); color: var(--tinta-2); }
+.alta-pasos-vb a { color: var(--morado); font-weight: 650; }
+
+/* El camino del piloto, de un vistazo: tres tramos en fila */
+.alta-camino {
+  list-style: none; margin: var(--esp-10) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-6);
+}
+.alta-camino li {
+  display: grid; gap: var(--esp-2); padding: var(--esp-8); border-radius: var(--r-xs);
+  background: var(--hoja-2); border-top: var(--filo-marca) solid var(--morado); color: var(--tinta-2);
+}
+.alta-camino strong { color: var(--tinta); font-size: var(--letra-13); }
+.alta-consejo { margin: var(--esp-10) 0 0; color: var(--tinta-2); }
+.alta-consejo strong { color: var(--tinta); }
+
+/* Sus dias: las siete teclas */
+.alta-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--esp-6); }
+.alta-dias button {
+  min-height: var(--esp-48); border-radius: var(--r-s); border: var(--filo-fino) solid var(--linea);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; font-weight: 700; cursor: pointer;
+}
+.alta-dias button[aria-pressed="true"] { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.alta-dias button:disabled { cursor: default; color: var(--tinta-3); }
+.alta-dias button:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* Su semana 1, ejercicio a ejercicio */
+.alta-ejercicios { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-8); }
+.alta-ejercicios li {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--esp-10); flex-wrap: wrap;
+  padding: var(--esp-8) var(--esp-10); border-radius: var(--r-10); background: var(--hoja-2);
+}
+.alta-ejercicios li > span { min-width: 0; flex: 1 1 12rem; }

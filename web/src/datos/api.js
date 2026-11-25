@@ -3076,16 +3076,26 @@ export function crearApi(backend, opciones = {}) {
       }, hoy);
     },
     // Primeros pasos de un atleta nuevo: ¿ha hecho ya una sesión, apuntado su peso, enviado un check-in?
-    async primerosPasos(atletaId) {
+    // esencial: (alta, 37) también si tiene los avisos activados (en algún móvil o por correo) y su plan de comida
+    async primerosPasos(atletaId, { esencial = false } = {}) {
       const bloques = await b.select('bloques', { eq: { atleta_id: atletaId, es_plantilla: false }, cols: 'id' });
       const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id' }) : [];
-      const [ses, pes, ck, cu] = await Promise.all([
+      const [ses, pes, ck, cu, subs, prefs, comida] = await Promise.all([
         semanas.length ? b.select('sesiones', { in: { semana_id: semanas.map((x) => x.id) }, eq: { completada: true }, cols: 'id', limit: 1 }) : [],
         b.select('pesos', { eq: { atleta_id: atletaId }, cols: 'id', limit: 1 }),
         b.select('checkins', { eq: { atleta_id: atletaId }, cols: 'id', limit: 1 }),
         b.select('cuestionarios', { eq: { atleta_id: atletaId }, cols: 'id,completado_en', limit: 1 }).catch(() => []),
+        esencial ? b.select('suscripciones_push', { eq: { usuario_id: uid() }, cols: 'id', limit: 1 }).catch(() => []) : [],
+        esencial ? b.select('preferencias_notificaciones', { eq: { usuario_id: uid() }, cols: 'email', limit: 1 }).catch(() => []) : [],
+        esencial ? b.select('planes_nutricion', { eq: { atleta_id: atletaId }, cols: 'id', limit: 1 }).catch(() => []) : [],
       ]);
-      return { sesion: ses.length > 0, peso: pes.length > 0, checkin: ck.length > 0, cuestionario: !!cu[0]?.completado_en };
+      return { sesion: ses.length > 0, peso: pes.length > 0, checkin: ck.length > 0, cuestionario: !!cu[0]?.completado_en,
+        ...(esencial ? { avisos: subs.length > 0 || !!prefs[0]?.email, comida: comida.length > 0 } : {}) };
+    },
+    // (alta, 28) Ejercicios de la biblioteca por su nombre (la semana 1 de la guía antes de tener plan: su vídeo y su técnica)
+    async ejerciciosPorNombre(nombres = []) {
+      const n = unicos(nombres.filter(Boolean));
+      return n.length ? b.select('ejercicios', { in: { nombre: n } }) : [];
     },
     // v0.49: sesiones hechas, ligeras (sin el historial entero): desde una fecha (el calendario de 16 semanas) o las de
     // un nombre (la última vez que hizo esa sesión, para el resumen), de la más reciente a la más antigua y con sus

@@ -77,12 +77,18 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await hero.getByRole('button', { name: /Empezar|Seguir/ }).click();
     const hoja = p.locator('[aria-modal="true"]').last();
     await hoja.getByRole('button', { name: 'Siguiente' }).waitFor();
+    check(!/Cuéntalo con tus palabras/.test(await hoja.textContent()) && /Para saber qué buscas/.test(await hoja.textContent()), 'su cuestionario, más corto (sin «Cuéntalo con tus palabras») y con por qué se pregunta');
     await hoja.locator('.opciones button, [role="group"] button').first().click();   // un objetivo
     await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
-    // Experiencia, días y minutos: la primera opción de cada grupo (nunca ha entrenado, 2 días…)
+    check(/Guardado/.test(await hoja.locator('.alta-guardado').textContent().catch(() => '')) && /la app elige tu plan/.test(await hoja.textContent()) && !/otro deporte/.test(await hoja.textContent()),
+      'cada paso, «Guardado»; sin «¿Haces otro deporte?»');
+    // Experiencia, días y minutos: la primera opción de cada grupo (nunca ha entrenado, 1 día…) y, después, 3 días
     const grupos2 = hoja.locator('[role="group"]');
     for (let i = 0; i < await grupos2.count(); i++) await grupos2.nth(i).locator('button').first().click().catch(() => {});
+    await hoja.getByRole('group', { name: 'Días a la semana' }).getByRole('button', { name: '3', exact: true }).click();
+    check(/Empiezas con dos días/.test(await hoja.locator('.alta-dos-dias').textContent().catch(() => '')), 'nunca ha entrenado y marca 3 días: «Empiezas con dos días, como en la guía…»');
     await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
+    check((await hoja.locator('.alta-mat-b svg.alta-mat').count()) === 10, 'el material, con un dibujo cada uno');
     await hoja.locator('[role="group"]').first().locator('button').first().click().catch(() => {});   // el lugar
     await hoja.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(300);
     // Salud: «No» a las dos y «Ninguna de estas» en las listas
@@ -231,11 +237,48 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
     const sec = p.locator('section[aria-labelledby="esencial-coach"]');
     await sec.waitFor({ timeout: 15000 });
-    check(/Dice que lo tiene/.test(await sec.textContent()), 'su ficha (Datos): FBE Esencial, «Dice que lo tiene»');
+    // (su cuestionario llega después de la sección: hasta entonces, «—»)
+    const dice = await p.waitForFunction(() => /Dice que lo tiene/.test(document.querySelector('section[aria-labelledby="esencial-coach"]')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check(dice, 'su ficha (Datos): FBE Esencial, «Dice que lo tiene»');
     check(!(await p.getByRole('tab', { name: 'Mensajes' }).count()), 'sin la pestaña Mensajes en su ficha');
     await sec.getByRole('button', { name: /Confirmar visto bueno/ }).click();
     const conPlan = await p.waitForFunction(() => /Primeras 4 semanas/.test(document.querySelector('section[aria-labelledby="esencial-coach"]')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
     check(conPlan, 'al confirmar su visto bueno, la app le prepara su plan («Primeras 4 semanas»)');
+
+    // (alta, tanda 2) Clara, con su plan desde el lunes que viene: su camino, un consejo, sus días y su semana 1
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.goto(`${base}/?demo=esencial`);
+    await p.getByRole('button', { name: /Clara/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click({ timeout: 8000 }).catch(() => {});
+    await cerrar(p);
+    const heroC = p.locator('section.hero-espera').first();
+    await heroC.waitFor({ timeout: 15000 }).catch(() => {});
+    const tHero = await heroC.textContent().catch(() => '');
+    check(/Empiezas el lunes/.test(tHero) && /Semanas 1 a 4/.test(tHero) && /Desde la 5/.test(tHero) && /Para hoy:/.test(tHero), 'Clara, antes de su lunes: «Empiezas el lunes…», su camino (semanas 1 a 4, marcas, desde la 5) y un consejo para hoy');
+    const pasosC = await p.locator('.primeros-pasos').textContent().catch(() => '');
+    check(/Activa los avisos/.test(pasosC) && /Elige tus días/.test(pasosC) && !/Escribe tu porqué/.test(pasosC), 'sus primeros pasos, los de FBE Esencial (avisos, sus días…), sin los de siempre');
+    await p.locator('.alta-tus-dias').getByRole('button', { name: 'Elegir mis días' }).click();
+    const hd2 = p.locator('[aria-modal="true"]').last();
+    check(/Entrenas lunes y jueves/.test(await hd2.textContent()), 'elegir sus días: de entrada, lunes y jueves (no van seguidos)');
+    await hd2.getByRole('button', { name: 'jueves' }).click();
+    await hd2.getByRole('button', { name: 'martes' }).click();
+    check(/Van seguidos/.test(await hd2.textContent()), 'lunes y martes: «Van seguidos»');
+    await hd2.getByRole('button', { name: 'martes' }).click();
+    await hd2.getByRole('button', { name: 'viernes' }).click();
+    await hd2.getByRole('button', { name: 'Guardar mis días' }).click();
+    const conDias = await p.waitForFunction(() => /Entrenas lunes y viernes/.test(document.querySelector('.alta-tus-dias')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+    check(conDias, 'guardados: «Entrenas lunes y viernes» (y cada sesión, en su día)');
+    const s1 = p.locator('.alta-semana1');
+    const conS1 = await s1.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conS1 && (await s1.locator('li').count()) === 5 && /Prensa de piernas/.test(await s1.textContent()), 'su semana 1, ejercicio a ejercicio (los cinco, con qué hacer si no hay máquina)');
+    await desborda(p, 'Hoy de Clara antes de su lunes');
+    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await p.goto(`${base}/?demo=esencial`);
+    await p.getByRole('button', { name: /Coach: panel/ }).first().click();
+    await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1000);
+    await cerrar(p);
     // Añadir atleta de FBE Esencial
     await p.getByRole('button', { name: /Atletas/ }).first().click().catch(() => {});
     await p.waitForTimeout(800);
