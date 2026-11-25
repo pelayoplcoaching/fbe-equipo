@@ -228,8 +228,13 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
     await cerrar(p);
     await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
-    const empezarSesion = async () => {
-      await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+    const empezarSesion = async (nombre = null) => {
+      // (la segunda, el mismo día: desde la lista de la semana, porque Hoy ya no ofrece «Adelantar»)
+      if (nombre) {
+        const b = p.locator('button.dia', { hasText: nombre }).first();
+        await b.evaluate((el) => { const d = el.closest('details'); if (d) d.open = true; });   // (va en «Tu semana», plegada)
+        await b.click();
+      } else await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
       const portada = p.locator('.portada-vista');
       if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
       await p.locator('article.ejercicio, .enfoque').first().waitFor({ timeout: 15000 });
@@ -258,8 +263,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('nav.tabs').waitFor();
     await p.waitForTimeout(600);
     await cerrar(p);
-    await p.waitForFunction(() => /Día 2/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
-    await empezarSesion();
+    const conOtroDia = await p.waitForFunction(() => /Lo siguiente: Día 2, otro día: deja uno entre una y otra/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check(conOtroDia && !(await p.locator('.hero-dia').getByRole('button', { name: /Adelantar/ }).count()), 'en Hoy, tras la primera: «Lo siguiente: Día 2, otro día…», sin «Adelantar» (dos el mismo día, no)');
+    await empezarSesion('Día 2');
     check(await p.locator('.alta-guia').count() === 0, 'en la segunda, ya sin la guía');
     await terminar();
     check(await p.locator('.alta-fin-primera').count() === 0, 'y sin la celebración de la primera');
@@ -326,7 +332,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(conPlan, 'al confirmar su visto bueno, la app le prepara su plan («Primeras 4 semanas»)');
 
     // (alta, tanda 2) Clara, con su plan desde el lunes que viene: su camino, un consejo, sus días y su semana 1
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await salirDeLaCuenta(p);
     await p.goto(`${base}/?demo=esencial`);
     await p.getByRole('button', { name: /Clara/ }).first().click();
     await p.locator('nav.tabs').waitFor({ timeout: 30000 });
@@ -353,7 +359,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const conS1 = await s1.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check(conS1 && (await s1.locator('li').count()) === 5 && /Prensa de piernas/.test(await s1.textContent()), 'su semana 1, ejercicio a ejercicio (los cinco, con qué hacer si no hay máquina)');
     await desborda(p, 'Hoy de Clara antes de su lunes');
-    await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v1-sesion'); });
+    await salirDeLaCuenta(p);
     await p.goto(`${base}/?demo=esencial`);
     await p.getByRole('button', { name: /Coach: panel/ }).first().click();
     await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
@@ -411,6 +417,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
 
     // (alta, v0.239) Nuria abre el enlace: «Activa tu cuenta» con su código puesto; sin el consentimiento de salud, se avisa
     await salirDeLaCuenta(p, codigoNuria);
+    // (Nuria, en su móvil: sin lo que dejó Clara en este, como su bienvenida ya vista)
+    await p.evaluate(() => { localStorage.removeItem('fbe-bienvenida-vista'); });
     await p.goto(`${base}/?demo=esencial&codigo=${codigoNuria}&plan=esencial`);
     await p.getByRole('heading', { name: 'Activa tu cuenta' }).waitFor({ timeout: 20000 });
     check(await p.locator('#act-codigo').inputValue() === codigoNuria && /Ya viene puesto desde tu invitación/.test(await p.locator('form').textContent())

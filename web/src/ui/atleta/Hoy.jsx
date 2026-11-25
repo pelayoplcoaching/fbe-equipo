@@ -1000,6 +1000,9 @@ function HeroDescanso({ proxima, hoy, abrirSesion, abrirPlan }) {
 // resumen» y lo que viene (o lo que se quedó atrás)
 function HeroHecha({ sesion, proxima, hoy, abrirSesion }) {
   const { api, atleta } = useApp();
+  // (alta, FBE Esencial) quien va por su cuenta no hace dos el mismo día (la guía: dos días que no vayan seguidos): sin
+  // «Adelantar» y, si la siguiente no tiene día, «otro día» en lugar de «cuando quieras»
+  const suyo = esPorSuCuenta(atleta);
   const res = useCarga(() => api.sesionesHechas(atleta.id, { desde: hoy }).then((l) => l.find((x) => x.id === sesion.id) || null).catch(() => null), [atleta.id, sesion.id]);
   const r = res.datos;
   const cifras = r ? [
@@ -1017,10 +1020,10 @@ function HeroHecha({ sesion, proxima, hoy, abrirSesion }) {
       )}
       {proxima && (proxima.atrasada
         ? <p class="hero-siguiente peq">Te queda pendiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? ` (la tenías prevista ${cuandoDia(proxima.dia, hoy)})` : ''}.</p>
-        : <p class="hero-siguiente peq">Lo siguiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? `, ${cuandoDia(proxima.dia, hoy)}` : ', cuando quieras'}.</p>)}
+        : <p class="hero-siguiente peq">Lo siguiente: <strong>{proxima.sesion.nombre}</strong>{proxima.dia ? `, ${cuandoDia(proxima.dia, hoy)}` : suyo ? ', otro día: deja uno entre una y otra' : ', cuando quieras'}.</p>)}
       <span class="hero-acciones">
         <button class="btn btn-grande btn-hero" onClick={() => abrirSesion(sesion.id)}><Icono n="hecho" /> Ver resumen</button>
-        {proxima && <button class="btn btn-sobre-hero" onClick={() => abrirSesion(proxima.sesion.id)}><Icono n="play" /> Adelantar {proxima.sesion.nombre}</button>}
+        {proxima && !suyo && <button class="btn btn-sobre-hero" onClick={() => abrirSesion(proxima.sesion.id)}><Icono n="play" /> Adelantar {proxima.sesion.nombre}</button>}
       </span>
     </div>
   );
