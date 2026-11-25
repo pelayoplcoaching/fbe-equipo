@@ -1,6 +1,7 @@
 // FBE Esencial, el alta (tandas 2 y 3, lógica pura): sus días de entreno (logica/esencial-dias.js) y lo de la primera semana.
 import { nombreDias, seguidos, PROPUESTA_DIAS, diaDeSemana, diasDeSemana, planDias, leerDias, guardarDias } from '../web/src/logica/esencial-dias.js';
-import { textoQuePeso, consejoPeso, textoSiguiente, TEXTO_AGUJETAS } from '../web/src/logica/esencial-primera.js';
+import { textoQuePeso, consejoPeso, textoSiguiente, textoConsejo, TEXTO_AGUJETAS } from '../web/src/logica/esencial-primera.js';
+import { consejoPreparacion } from '../web/src/logica/preparacion.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -54,6 +55,12 @@ check(/cuando te venga bien esta semana/.test(textoSiguiente({ nombre: 'Día 2' 
 check(/«Día 2», cuando puedas, dejando un día/.test(textoSiguiente({ nombre: 'Día 2' }, '2027-01-16', fl)) && /cuando puedas/.test(textoSiguiente({ nombre: 'Día 2' }, '2027-01-17', fl)),
   'en sábado o domingo, sin «esta semana»: «cuando puedas»');
 check(textoSiguiente(null, '2027-01-11') === null && /agujetas/.test(TEXTO_AGUJETAS), 'sin siguiente, nada; y lo de las agujetas');
+
+const malo = consejoPreparacion({ sueno: 1, energia: 1, molestias: 1 }), flojo = consejoPreparacion({ sueno: 2, energia: 2, molestias: 2 }), bien = consejoPreparacion({ sueno: 3, energia: 3, molestias: 3 });
+check(malo.nivel === 'malo' && /tu coach/.test(textoConsejo(malo)) && !/coach/.test(textoConsejo(malo, true)) && /médico/.test(textoConsejo(malo, true))
+  && /RPE/.test(textoConsejo(flojo)) && !/RPE/.test(textoConsejo(flojo, true)) && /te tiene que sobrar/.test(textoConsejo(flojo, true))
+  && textoConsejo(bien, true) === bien.texto && textoConsejo(null, true) === '',
+  '«¿Cómo llegas hoy?» de quien va por su cuenta: sin «tu coach» ni el RPE (el día bueno, igual)');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

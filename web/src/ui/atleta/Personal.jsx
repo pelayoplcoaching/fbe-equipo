@@ -10,6 +10,7 @@ import { textoMensajeCoach, mensajeDe, nombreSaludo, recordAlAlcance, recuerdoPr
 import { OBJETIVOS } from '../../logica/cuestionario.js';
 import { num } from '../../logica/calculos.js';
 import { hoyISO } from '../../logica/fechas.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
 import { pesoTxt, pesoNum, etiquetaPeso, difVista } from '../../logica/unidades.js';
 
 // Lo del atleta y los mensajes del coach (los dos se recuerdan un minuto en la api)
@@ -20,12 +21,14 @@ export function usePersonal() {
 
 export function MensajeCoach({ momento, ejercicio = '', semanas = '', tiempo = '', meta = '', clase = '' }) {
   const { api, atleta, propio } = useApp();
-  const mensajes = useCarga(() => (propio ? Promise.resolve([]) : api.mensajesCoach().catch(() => [])), [momento]);
+  // (FBE Esencial) quien va por su cuenta no tiene coach: sin sus mensajes («Luego me cuentas», «aquí me tienes»…)
+  const nadie = propio || esPorSuCuenta(atleta);
+  const mensajes = useCarga(() => (nadie ? Promise.resolve([]) : api.mensajesCoach().catch(() => [])), [momento]);
   const personal = usePersonal();
-  const foto = useCarga(() => (propio ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
+  const foto = useCarga(() => (nadie ? Promise.resolve(null) : api.fotoCoach().catch(() => null)), []);
   const texto = textoMensajeCoach(mensajeDe(mensajes.datos, momento), { nombre: nombreSaludo(personal.datos, atleta?.nombre), ejercicio, semanas, tiempo, meta });
   const conAudio = (Array.isArray(mensajes.datos) ? mensajes.datos : []).find((m) => m?.momento === momento) || null;
-  if (!texto) return null;
+  if (!texto || nadie) return null;
   return (
     <figure class={`cita-coach mensaje-coach ${clase}`} data-momento={momento}>
       {foto.datos ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}

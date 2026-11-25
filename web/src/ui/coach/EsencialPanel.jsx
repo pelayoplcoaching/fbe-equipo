@@ -49,7 +49,7 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       {/* (alta, 38) el embudo del alta y lo que tarda la mitad en hacer su primera sesión */}
       {e && e.pasos[0].n > 0 && (
         <section class="alta-embudo" aria-labelledby="alta-embudo-t">
-          <h3 id="alta-embudo-t" class="etq">El alta</h3>
+          <h2 id="alta-embudo-t" class="etq">El alta</h2>
           <ol class="alta-pasos">
             {e.pasos.map((x) => <li key={x.id}><strong class="num">{x.n}</strong><span class="mini">{x.nombre}</span></li>)}
           </ol>
@@ -65,7 +65,7 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       {altas && sin.length > 0 && (
         <section class="pila-s alta-sin" aria-labelledby="alta-sin-t">
           <div class="separa">
-            <h3 id="alta-sin-t" class="etq">Sin activar su cuenta ({sin.length})</h3>
+            <h2 id="alta-sin-t" class="etq">Sin activar su cuenta ({sin.length})</h2>
             {sin.length > 1 && <button type="button" class="btn btn-peq" onClick={() => setReenvio(true)}><Icono n="enviar" /> Mandar otra vez a los {sin.length}</button>}
           </div>
           <ul class="corr-lista">
@@ -119,7 +119,7 @@ function PorConfirmar({ filas, alCambiar }) {
   const hoy = hoyISO();
   return (
     <section class="pila-s alta-sin" aria-labelledby="alta-vb-t">
-      <h3 id="alta-vb-t" class="etq">Visto bueno por confirmar ({filas.length})</h3>
+      <h2 id="alta-vb-t" class="etq">Visto bueno por confirmar ({filas.length})</h2>
       <ul class="corr-lista">
         {filas.map((a) => {
           const d = Math.max(0, Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${String(a.visto_bueno_pedido_en).slice(0, 10)}T12:00:00Z`)) / 864e5));

@@ -100,6 +100,7 @@
 .alta-que-peso { display: grid; justify-items: start; gap: var(--esp-4); }
 .alta-fin-primera { border-left: var(--filo-marca) solid var(--ok); }
 .alta-fin-primera strong { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.alta-fin-primera strong svg { flex: none; width: var(--ico-20); height: var(--ico-20); color: var(--ok); }
 .alta-faq-p summary { cursor: pointer; font-weight: 650; color: var(--tinta); padding-block: var(--esp-6); }
 .alta-faq-p p { margin: 0 0 var(--esp-8); }
 .alta-faq-p a, .alta-contacto a { color: var(--morado); font-weight: 650; }
@@ -107,3 +108,5 @@
 .alta-contacto svg { flex: none; width: var(--esp-18); height: var(--esp-18); }
 .alta-contacto > span { min-width: 0; overflow-wrap: anywhere; }
 .alta-checkin { margin: 0; }
+/* (alta, 58) los titulos del panel de FBE Esencial van como h2 (tras el h1 Atletas): el tamano que tenian como h3 */
+.alta-embudo > h2, .alta-sin h2 { font-size: var(--letra-19); }

@@ -1,8 +1,10 @@
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenDia } from '../../logica/imagenes.js';
 import { useState } from 'preact/hooks';
-import { Icono, Segmentos } from '../comunes.jsx';
+import { useApp, Icono, Segmentos } from '../comunes.jsx';
 import { PREGUNTAS, completa, consejoPreparacion, textoPreparacion } from '../../logica/preparacion.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+import { textoConsejo } from '../../logica/esencial-primera.js';
 
 // «¿Cómo llegas hoy?» antes de la primera serie: tres toques; al contestar la tercera se guarda sola.
 const CORTO = { sueno: 'Sueño', energia: 'Energía', molestias: 'Molestias' };
@@ -11,6 +13,7 @@ const CORTO = { sueno: 'Sueño', energia: 'Energía', molestias: 'Molestias' };
 // contestadas quedan arriba en una línea y se pueden tocar para cambiarlas. Así ocupa un tercio y el primer ejercicio
 // queda a la vista. Al corregir lo de antes (llega ya completo), las tres a la vez, como siempre.
 export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
+  const { atleta } = useApp();
   const [p, setP] = useState(inicial || {});
   const [guardando, setGuardando] = useState(false);
   const enteras = completa(inicial);
@@ -33,7 +36,7 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
       <div class="separa">
         <div class="prep-cab-ilu"><Imagen id="preparacion" clase="ico-ilu" tamanos="44px" /><div class="pila-xs">
           <strong id="prep-titulo">¿Cómo llegas hoy?</strong>
-          <span class="mini secundario">Tres toques. Tu coach lo verá con la sesión.</span>
+          <span class="mini secundario">{esPorSuCuenta(atleta) ? 'Tres toques: en un día flojo, la app te propone los pesos de la última vez.' : 'Tres toques. Tu coach lo verá con la sesión.'}</span>
         </div></div>
         {alSaltar && <button class="btn-texto" onClick={alSaltar}>Ahora no</button>}
       </div>
@@ -59,13 +62,14 @@ export function Preparacion({ inicial = null, alGuardar, alSaltar }) {
 // El consejo del día, arriba de la sesión
 // En un día flojo o malo, el atleta elige si hoy sube la carga o va con los pesos de la última vez (v0.32)
 export function ConsejoDia({ consejo, alCambiar, alQuitar, eleccion = null, alElegir, prep = null }) {
+  const { atleta } = useApp();
   const dia = consejo.frenar ? imagenDia(prep) : null; // (imágenes, tanda 11) el dibujo del día flojo o difícil
   return (
     <div class={`consejo-dia ${consejo.nivel}`} role="status">
       {dia && hayImagen(dia) ? <Imagen id={dia} clase="ico-ilu" tamanos="44px" alternativa={<Icono n="alerta" />} /> : <Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} />}
       <div class="pila-xs">
         <strong>{consejo.titulo}</strong>
-        <span class="peq">{consejo.texto}</span>
+        <span class="peq">{textoConsejo(consejo, esPorSuCuenta(atleta))}</span>
         {consejo.frenar && alElegir && (
           <div class="pila-xs consejo-eleccion">
             <span class="peq"><b>¿Con qué pesos vas hoy?</b></span>

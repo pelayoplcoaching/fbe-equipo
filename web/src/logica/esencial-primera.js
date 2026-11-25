@@ -31,4 +31,11 @@ export function textoSiguiente(siguiente, hoy, fechaLarga = (x) => x) {
   if (dia === 0 || dia === 6) return `La siguiente, «${siguiente.nombre}», cuando puedas, dejando un día entre una y otra.`;
   return `La siguiente, «${siguiente.nombre}», cuando te venga bien esta semana, mejor sin que vaya seguida de esta: deja un día entre una y otra.`;
 }
+// El consejo de «¿Cómo llegas hoy?» (logica/preparacion.js) para quien va por su cuenta: el mismo nivel y lo mismo que
+// hacer, sin «cuéntaselo a tu coach» ni el RPE. c: lo de consejoPreparacion
+const CONSEJO_SUYO = {
+  malo: 'Haz la sesión sin apretar más de lo que toca y, si hace falta, quita una serie en los accesorios. Si una molestia cambia cómo te mueves o va a más, para ese ejercicio y, si no mejora, consúltalo con tu médico.',
+  flojo: 'Guíate por lo que te tiene que sobrar: si las series pesan más de lo normal, quédate en la parte baja del rango.',
+};
+export const textoConsejo = (c, suyo = false) => (suyo && CONSEJO_SUYO[c?.nivel]) || c?.texto || '';
 export const TEXTO_AGUJETAS = 'Mañana o pasado puede que notes agujetas: son normales las dos primeras semanas. Luego bajan, y no dicen si entrenaste bien o mal.';

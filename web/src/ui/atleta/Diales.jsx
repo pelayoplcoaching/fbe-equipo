@@ -12,6 +12,8 @@ import { objetivoDelDia, planVigente } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { consejoPreparacion } from '../../logica/preparacion.js';
+import { esPorSuCuenta } from '../../logica/esencial.js';
+import { textoConsejo } from '../../logica/esencial-primera.js';
 import { num, cargaSemanal } from '../../logica/calculos.js';
 import { fmtConDia, fmtCorta, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { sesionesDeLaSemana, textoDiasSemana } from '../../logica/semana-natural.js';
@@ -249,6 +251,7 @@ function HojaCarga({ k, datos, hoy, alCerrar }) {
 }
 
 function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
+  const { atleta } = useApp();
   const [hecho, setHecho] = useState(null);
   const consejo = consejoPreparacion(hecho || prep);
   return (
@@ -271,7 +274,7 @@ function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
               </li>
             ))}
           </ul>
-          {consejo && <div class={`consejo-dia ${consejo.nivel}`}><Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} /><div class="pila-xs"><strong>{consejo.titulo}</strong><span class="peq">{consejo.texto}</span></div></div>}
+          {consejo && <div class={`consejo-dia ${consejo.nivel}`}><Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} /><div class="pila-xs"><strong>{consejo.titulo}</strong><span class="peq">{textoConsejo(consejo, esPorSuCuenta(atleta))}</span></div></div>}
         </>
       )}
       <p class="mini terciario">Es una ayuda para regular el día, no un diagnóstico. Solo lo ves tú aquí; tu coach lo ve con la sesión.</p>
