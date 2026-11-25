@@ -169,6 +169,55 @@ export function semanaSiguienteEsencial(t, { p = {}, atletaId, hoy, uuid, ahoraI
 
 // (096) Tres días (o volver a dos) desde la semana siguiente, como esencial_cambiar_dias() de la base: solo con una
 // plantilla de novato. Devuelve los días.
+// (098) Cerrar la semana, como esencial_cerrar_semana() de la base (la demo y sus pruebas). Lanza los mismos errores.
+function correrEsencial(t, w, dias) {
+  const antes = w.fecha_inicio;
+  const corridas = t('semanas').filter((x) => x.bloque_id === w.bloque_id && x.fecha_inicio && x.fecha_inicio >= antes);
+  for (const x of corridas) x.fecha_inicio = sumarDias(x.fecha_inicio, dias);
+  const ids = new Set(corridas.map((x) => x.id));
+  for (const s of t('sesiones')) {
+    if (!ids.has(s.semana_id) || !s.dia_previsto) continue;
+    // (como en la base: lo pendiente se mueve con su semana; a lo ya hecho se le quita el día)
+    s.dia_previsto = s.completada ? null : sumarDias(String(s.dia_previsto).slice(0, 10), dias);
+  }
+  const b = t('bloques').find((x) => x.id === w.bloque_id);
+  if (b?.fecha_fin) b.fecha_fin = sumarDias(b.fecha_fin, dias);
+  if (b?.fecha_inicio === antes) b.fecha_inicio = sumarDias(antes, dias);   // (la primera semana del plan: el plan empieza con ella)
+}
+export function cerrarSemanaEsencialDemo(t, { decision, atletaId, hoy, coach = false }) {
+  const a = t('atletas').find((x) => x.id === atletaId);
+  if (!a) throw new Error('Ese atleta no existe');
+  if (a.modalidad !== 'por_su_cuenta') throw new Error('Solo para quien va por su cuenta (FBE Esencial)');
+  if (a.estado !== 'activo') throw new Error('Su cuenta no está activa');
+  if (!['pasar', 'repetir', 'pausa', 'reanudar'].includes(decision)) throw new Error('Elige pasar, repetir, pausa o reanudar');
+  const lunes = lunesDe(hoy);
+  const suyos = t('bloques').filter((b) => b.atleta_id === atletaId && !b.es_plantilla);
+  const faltanDe = (w) => t('sesiones').filter((s) => s.semana_id === w.id && !s.completada).length;
+  if (decision === 'reanudar') {
+    const w = t('semanas').filter((x) => suyos.some((b) => b.id === x.bloque_id) && x.programacion === 'programada' && x.esencial_cierre === 'pausa'
+      && x.esencial_cierre_lunes === lunes && x.fecha_inicio === sumarDias(lunes, 7)).sort((x, y) => x.numero - y.numero)[0];
+    if (!w) throw new Error('No tienes la semana en pausa');
+    correrEsencial(t, w, -7);
+    w.esencial_cierre = null; w.esencial_cierre_lunes = null;
+    return { decision, semana: w.id, inicio: lunes, faltan: faltanDe(w) };
+  }
+  const enMarcha = suyos.filter((b) => ['activo', 'ajustado'].includes(b.estado)).sort((x, y) => String(y.fecha_inicio || '').localeCompare(String(x.fecha_inicio || '')));
+  const w = enMarcha.map((b) => t('semanas').filter((x) => x.bloque_id === b.id && x.programacion === 'programada' && x.fecha_inicio === lunes).sort((x, y) => y.numero - x.numero)[0]).find(Boolean);
+  if (!w) throw new Error('No tienes una semana en curso');
+  const faltan = faltanDe(w);
+  if (!faltan) throw new Error('Tu semana ya está completa');
+  if (['pasar', 'repetir'].includes(decision) && !coach && hoy !== sumarDias(lunes, 6)) throw new Error('Eso se elige el domingo');
+  if (decision === 'pasar') { w.esencial_cierre = 'pasar'; w.esencial_cierre_lunes = lunes; return { decision, semana: w.id, inicio: lunes, faltan }; }
+  const bloque = suyos.find((b) => b.id === w.bloque_id);
+  if (bloque.nombre !== PRIMERAS_4.nombre && t('semanas').some((x) => x.bloque_id === w.bloque_id && x.numero > w.numero)) throw new Error('Tu semana siguiente ya está preparada');
+  if (t('semanas').some((x) => x.bloque_id !== w.bloque_id && suyos.some((b) => b.id === x.bloque_id) && x.programacion === 'programada' && x.fecha_inicio > lunes)) throw new Error('Tu semana siguiente ya está preparada');
+  if (decision === 'repetir' && (Number(w.esencial_repetida) || 0) >= 2) throw new Error('Ya has repetido esta semana dos veces: toca pasar a la siguiente');
+  correrEsencial(t, w, 7);
+  w.esencial_cierre = decision; w.esencial_cierre_lunes = lunes;
+  w.esencial_repetida = (Number(w.esencial_repetida) || 0) + (decision === 'repetir' ? 1 : 0);
+  return { decision, semana: w.id, inicio: sumarDias(lunes, 7), faltan };
+}
+
 export function cambiarDiasEsencialDemo(t, { dias, atletaId }) {
   const a = t('atletas').find((x) => x.id === atletaId);
   if (!a) throw new Error('Ese atleta no existe');

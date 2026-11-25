@@ -8,6 +8,7 @@ import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial } from 
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
+import { estadoCierre, textoCierre, puedePausar, horaMadrid } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
 import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
@@ -455,6 +456,80 @@ export function SemanaEsencial({ recargarPrograma, abrirSesion, hechas = 0 }) {
   );
 }
 
+// ---------- (sin coach, tanda 2; migración 098) El cierre de la semana ----------
+// En Hoy de quien va por su cuenta: la pregunta del domingo desde las 21:00 (pasar a la siguiente o repetir esta; a las
+// 23:30 sin elegir, la base la pasa y avisa), lo elegido, la semana que viene ya lista (con adelantar su primera sesión,
+// nunca dos el mismo día) y la pausa («Esta semana no puedo», con «Volver ya»).
+export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
+  const { api, atleta, aviso } = useApp();
+  const [ocupado, una] = useUnaVez();
+  const [hoja, setHoja] = useState(false);
+  const [hora, setHora] = useState(() => horaMadrid());
+  const hoy = hoyISO();
+  // (con la app abierta el domingo por la tarde, a las 21:00 sale la pregunta sin recargar)
+  useEffect(() => { const t = setInterval(() => setHora(horaMadrid()), 60000); return () => clearInterval(t); }, []);
+  const datos = { semanas: p?.semanas || [], sesiones: p?.sesiones || {}, hoy };
+  const e = estadoCierre({ ...datos, hora });
+  const t = textoCierre(e, { fechaLarga });
+  const pausable = (!e || e.tipo === 'repite') && puedePausar(datos);
+  const cerrar = (decision, hecho) => una(async () => {
+    try {
+      const r = await api.esencialCerrarSemana(decision, atleta.id);
+      if (r?.falta098) { aviso('Falta una actualización en la base: díselo a Pelayo.', 'error'); return; }
+      setHoja(false);
+      // (pasar: la semana nueva, ya; el motor se carga solo entonces)
+      if (decision === 'pasar') await api.prepararSemanaEsencial(atleta.id).catch(() => null);
+      aviso(hecho);
+      recargarPrograma?.();
+    } catch (err) { aviso(err.message, 'error'); }
+  });
+  const vuelve = sumarDias(lunesDe(hoy), 7);
+  const hojaPausa = hoja && (
+    <Hoja titulo="Esta semana no puedo" alCerrar={() => setHoja(false)}>
+      <div class="pila">
+        <p>Un viaje, una gripe, una semana imposible: pon la semana en pausa. Tu plan se corre una semana y lo que te queda lo haces desde el {fechaLarga(vuelve)}. Mientras, no te llegan los avisos de tus sesiones.</p>
+        <p class="peq secundario">Lo que ya has hecho se queda hecho. Si cambias de idea esta misma semana, «Volver ya».</p>
+        <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => cerrar('pausa', `Semana en pausa: vuelves el ${fechaLarga(vuelve)}`)}>Poner la semana en pausa</button>
+      </div>
+    </Hoja>
+  );
+  if (!e || !t) {
+    return pausable ? <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}>Esta semana no puedo</button>{hojaPausa}</p> : null;
+  }
+  const nota = (e.tipo === 'lista' || e.tipo === 'pasada') && e.siguiente?.nota_coach ? e.siguiente.nota_coach : null;
+  return (
+    <section class="nota-coach cierre-semana" data-cierre={e.tipo} aria-label="Tu semana">
+      <Icono n={e.tipo === 'pregunta' ? 'pregunta' : e.tipo === 'pausa' ? 'reloj' : e.tipo === 'repite' ? 'reiniciar' : 'calendario'} />
+      <div class="pila-s">
+        <strong>{t.titulo}</strong>
+        <span class="peq">{t.texto}</span>
+        {nota && <span class="peq"><strong>Lo que cambia: </strong>{nota}</span>}
+        {e.tipo === 'pregunta' && (
+          <>
+            <div class="fila-envolver">
+              <button type="button" class="btn btn-primario btn-peq" disabled={ocupado} onClick={() => cerrar('pasar', 'Pasas a la siguiente: ya la tienes lista')}>Pasar a la siguiente</button>
+              {e.puedeRepetir && <button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => cerrar('repetir', 'Repites esta semana: lo que te falta, desde mañana')}>Repetir esta semana</button>}
+            </div>
+            <ul class="cierre-que peq">
+              <li><strong>Pasar: </strong>{t.pasar}</li>
+              {e.puedeRepetir && <li><strong>Repetir: </strong>{t.repetir}</li>}
+            </ul>
+            <span class="mini terciario">{t.plazo}</span>
+          </>
+        )}
+        {e.tipo === 'lista' && e.puedeAdelantar && (
+          <div class="fila-envolver"><button type="button" class="btn btn-peq" onClick={() => abrirSesion?.(e.primera.id)}><Icono n="play" /> Adelantar {e.primera.nombre}</button></div>
+        )}
+        {e.tipo === 'pausa' && (
+          <div class="fila-envolver"><button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => cerrar('reanudar', 'De vuelta: tu semana sigue donde estaba')}>Volver ya</button></div>
+        )}
+        {pausable && <button type="button" class="btn-texto mini cierre-pausa" onClick={() => setHoja(true)}>Esta semana no puedo</button>}
+      </div>
+      {hojaPausa}
+    </section>
+  );
+}
+
 // ---------- Lo de esta semana (Pelayo, 25/11) ----------
 // De la semana 1 a la 8 de quien empezó con «Primeras 4 semanas»: una lección corta de sus guías, con «Leer más» si la tiene
 export function LeccionSemana({ p }) {
@@ -542,6 +617,9 @@ export function SesionPerdida({ p, recargarPrograma }) {
   const ss = w ? (p.sesiones?.[w.id] || []) : [];
   const perdida = ss.filter((s) => !s.completada && s.dia_previsto && String(s.dia_previsto).slice(0, 10) < hoy)
     .sort((a, b) => String(a.dia_previsto).localeCompare(String(b.dia_previsto)))[0];
+  // (sin coach, 29) «Hoy no puedo»: la que toca hoy, a otro día de esta semana, de un toque
+  const deHoy = !perdida && ss.find((s) => !s.completada && s.dia_previsto && String(s.dia_previsto).slice(0, 10) === hoy);
+  if (deHoy && w?.fecha_inicio) return <HoyNoPuedo sesion={deHoy} semana={w} sesiones={ss} recargarPrograma={recargarPrograma} />;
   if (!perdida || !w?.fecha_inicio) return null;
   const ocupados = new Set(ss.filter((s) => s.id !== perdida.id && s.dia_previsto).map((s) => String(s.dia_previsto).slice(0, 10)));
   const libres = Array.from({ length: 7 }, (_, i) => sumarDias(w.fecha_inicio, i)).filter((d) => d >= hoy && !ocupados.has(d));
@@ -564,11 +642,49 @@ export function SesionPerdida({ p, recargarPrograma }) {
   );
 }
 
-// (48) Semana 1 hecha (todas sus sesiones, aún en esa semana): el resumen y lo de la semana que viene (la lección 2)
+function HoyNoPuedo({ sesion, semana, sesiones, recargarPrograma }) {
+  const { api, aviso } = useApp();
+  const [ocupado, una] = useUnaVez();
+  const [abierto, setAbierto] = useState(false);
+  const hoy = hoyISO();
+  const ocupados = new Set(sesiones.filter((s) => s.id !== sesion.id && s.dia_previsto).map((s) => String(s.dia_previsto).slice(0, 10)));
+  const libres = Array.from({ length: 7 }, (_, i) => sumarDias(semana.fecha_inicio, i)).filter((d) => d > hoy && !ocupados.has(d));
+  if (!libres.length) return null;
+  const mover = (d) => una(async () => {
+    try { await api.planificarSesion(sesion.id, d); aviso(`«${sesion.nombre}», el ${fechaLarga(d)}`); recargarPrograma?.(); } catch (e) { aviso(e.message, 'error'); }
+  });
+  if (!abierto) return <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}>Hoy no puedo</button></p>;
+  return (
+    <section class="nota-coach alta-perdida" aria-label="Pasar la sesión de hoy a otro día">
+      <Icono n="calendario" />
+      <div class="pila-s">
+        <span class="peq"><strong>¿Hoy no puedes?</strong> Pasa «{sesion.nombre}» a otro día de esta semana (mejor sin otra sesión el día de antes ni el de después).</span>
+        <div class="fila-envolver">
+          {libres.map((d) => <button type="button" key={d} class="btn btn-peq" disabled={ocupado} onClick={() => mover(d)}>{fechaLarga(d).split(' ')[0].replace(/^./, (c) => c.toUpperCase())}</button>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// (48) Semana 1 hecha (todas sus sesiones, aún en esa semana): el resumen y lo de la semana que viene (la lección 2).
+// (sin coach, 33) Y cada cuatro semanas, con la semana hecha: lo que lleva y dónde verlo
 export function SemanaHecha({ p }) {
   const n = semanaDelPlan(p?.bloques, p?.actual?.fecha_inicio);
   const ss = p?.actual ? (p.sesiones?.[p.actual.id] || []) : [];
-  if (n !== 1 || !ss.length || ss.some((s) => !s.completada)) return null;
+  if (!ss.length || ss.some((s) => !s.completada)) return null;
+  if (n >= 4 && n % 4 === 0) {
+    return (
+      <section class="nota-coach alta-semana-hecha" aria-label="Cuatro semanas más">
+        <Icono n="progreso" />
+        <div class="pila-s">
+          <strong>Semana {n} hecha: ya llevas {n} semanas</strong>
+          <span class="peq">En Progreso tienes lo que has subido en cada ejercicio estas cuatro semanas y tu constancia.</span>
+        </div>
+      </section>
+    );
+  }
+  if (n !== 1) return null;
   const l = leccionDe(2);
   return (
     <section class="nota-coach alta-semana-hecha" aria-labelledby="alta-sh-t">

@@ -11,6 +11,7 @@ import { diasInvitacion } from '../../logica/esencial.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { Invitaciones } from './EsencialAltas.jsx';
 
+const CIERRE = { pasar: 'pasó a la siguiente', auto: 'no eligió: se le pasó a la siguiente', repetir: 'repite la semana', pausa: 'semana en pausa' };
 const RESULTADO = { valorar_antes_vigoroso: 'su cribado: valorar antes de lo vigoroso', valorar_antes: 'su cribado: valorar antes de empezar', parar_y_valorar: 'su cribado: parar y valorar' };
 
 export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
@@ -22,6 +23,8 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
   const enc = useCarga(() => api.encuestaEsencial(ids, TITULOS_ENCUESTA).catch(() => []), [ids.join()], { recuerdo: `encuesta-esencial:${ids.join()}` });
   // (alta, 097) el alta de cada uno; sin la 097, null (se ve lo de antes)
   const alta = useCarga(() => (todos ? api.esencialAltaEstado().catch(() => null) : Promise.resolve(null)), [todos], { recuerdo: `alta-esencial:${todos}` });
+  // (sin coach, 38; 098) cómo han cerrado la semana: quién repite, quién está en pausa y a quién se le pasó sola
+  const cierres = useCarga(() => (todos && api.esencialCierres ? api.esencialCierres(sumarDias(hoyISO(), -13)).catch(() => []) : Promise.resolve([])), [todos], { recuerdo: `cierres-esencial:${todos}` });
   const [hoja, setHoja] = useState(false);
   const [reenvio, setReenvio] = useState(false);
   const invitados = lista.filter((r) => r.modalidad === 'por_su_cuenta' && r.estado === 'invitado');
@@ -78,6 +81,19 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
                     s.caduca_en ? (s.caducado ? 'su código ya no vale' : `vale hasta el ${fechaLarga(String(s.caduca_en).slice(0, 10)).replace(/^\S+ /, '')}`) : null].filter(Boolean).join(' · ')}</span>
                 </span>
                 {mandarCodigo && <button type="button" class="btn btn-peq" onClick={() => mandarCodigo({ atleta_id: s.atleta_id, nombre: s.nombre, modalidad: 'por_su_cuenta' })} aria-label={`Mandar otra vez la invitación a ${s.nombre}`}>Mandar otra vez</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {(cierres.datos || []).length > 0 && (
+        <section class="pila-s alta-sin" aria-labelledby="cierre-panel-t">
+          <h2 id="cierre-panel-t" class="etq">Su semana, sin acabar ({cierres.datos.length})</h2>
+          <ul class="corr-lista">
+            {cierres.datos.map((c) => (
+              <li key={`${c.atleta_id}:${c.lunes}`} class="alta-fila" data-nivel={c.cierre === 'pasar' ? 'ok' : 'ambar'}>
+                <button type="button" class="btn-texto peq" onClick={() => abrir(c.atleta_id)}>{c.nombre}</button>
+                <span class="mini terciario">{CIERRE[c.cierre] || c.cierre}{c.repetida > 1 ? ` (${c.repetida} veces)` : ''} · semana {c.numero} · la del {fechaLarga(c.lunes).replace(/^\S+ /, '')}</span>
               </li>
             ))}
           </ul>

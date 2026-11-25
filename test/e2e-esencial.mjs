@@ -9,6 +9,8 @@
 //     sin la pestaña Mensajes; «Añadir atleta» de FBE Esencial con su mensaje de invitación.
 //   · Tomás (sin coach, 20): recorre la app entera abriendo cada fila y cada hoja: ni rastro de «tu coach»; sus avisos al
 //     móvil, el check-in con una molestia («Qué pasa ahora con tu check-in» y qué hacer) y «Más» en la sesión.
+//   · Tomás (sin coach, tanda 2; 098), con el reloj en el domingo: la pausa («Esta semana no puedo» y «Volver ya») y, desde
+//     las 21:00, la pregunta: repetir esta semana o pasar a la siguiente.
 //   Sin errores ni desbordes.
 import { devices } from 'playwright';
 
@@ -658,6 +660,67 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(pantallas >= 30 && hojas >= 12, `recorrido de Tomás: ${pantallas} pantallas y hojas (${hojas} hojas abiertas una a una)`);
     check(hallado.size === 0, `ni rastro de «tu coach» en lo que ve quien va por su cuenta${hallado.size ? `: ${[...hallado].slice(0, 5).join(' | ')}` : ''}`);
     await ctx.close();
+  }
+  // ---------- (sin coach, tanda 2; 098) El cierre de la semana, con el reloj en el domingo ----------
+  // Tomás acaba de pasar a su plan de la semana 5 y llega al domingo sin hacer sus dos sesiones. A las 20:30 aún no se le
+  // pregunta (y puede poner la semana en pausa y volver); a las 21:30 elige: repetir esta o pasar a la siguiente.
+  {
+    const hoyM = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+    const dM = new Date(`${hoyM}T12:00:00Z`);
+    const domingo = new Date(dM.getTime() + (6 - ((dM.getUTCDay() + 6) % 7)) * 864e5).toISOString().slice(0, 10);
+    const enMadrid = (hhmm) => [1, 2].map((o) => new Date(`${domingo}T${hhmm}:00+0${o}:00`))
+      .find((d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(d) === hhmm);
+    const tomasEl = async (hhmm) => {
+      const { ctx, p } = await movil();
+      await ctx.addInitScript(() => { try { localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+      await ctx.clock.setFixedTime(enMadrid(hhmm));
+      await entrar(p, /Tomás/);
+      await cerrar(p);
+      return { ctx, p };
+    };
+    const tarjeta = (p, tipo) => p.locator(`.cierre-semana[data-cierre="${tipo}"]`);
+    // A las 20:30: sin pregunta; «Esta semana no puedo» → en pausa → «Volver ya»
+    {
+      const { ctx, p } = await tomasEl('20:30');
+      const enlace = p.getByRole('button', { name: 'Esta semana no puedo' });
+      const hay = await enlace.first().waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
+      check(hay && (await tarjeta(p, 'pregunta').count()) === 0, 'el domingo a las 20:30, con la semana sin hacer: aún no se pregunta; sí puede decir «Esta semana no puedo»');
+      await enlace.first().click();
+      const hp = p.locator('[aria-modal="true"]').last();
+      check(/Tu plan se corre una semana/.test(await hp.textContent().catch(() => '')), 'la hoja lo explica: el plan se corre una semana y no llegan avisos de sus sesiones');
+      await hp.getByRole('button', { name: 'Poner la semana en pausa' }).click();
+      const pausa = await tarjeta(p, 'pausa').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(pausa && /Tu semana está en pausa/.test(await tarjeta(p, 'pausa').textContent()) && /Vuelves el lunes/.test(await tarjeta(p, 'pausa').textContent()), 'en pausa: lo dice en Hoy, con el lunes en que vuelve');
+      await desborda(p, 'Hoy de Tomás, con la semana en pausa');
+      await tarjeta(p, 'pausa').getByRole('button', { name: 'Volver ya' }).click();
+      const vuelta = await p.getByRole('button', { name: 'Esta semana no puedo' }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(vuelta && (await tarjeta(p, 'pausa').count()) === 0, '«Volver ya»: su semana, donde estaba');
+      await ctx.close();
+    }
+    // A las 21:30: la pregunta; «Repetir esta semana»
+    {
+      const { ctx, p } = await tomasEl('21:30');
+      const hay = await tarjeta(p, 'pregunta').waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
+      const t = hay ? await tarjeta(p, 'pregunta').textContent() : '';
+      check(hay && /Tu semana acaba hoy y te quedan 2 sesiones/.test(t) && /Pasar: /.test(t) && /Repetir: /.test(t) && /antes de las 23:30, pasamos a la siguiente/.test(t),
+        'el domingo a las 21:30: «Tu semana acaba hoy y te quedan 2 sesiones», qué hace cada opción y hasta cuándo');
+      await desborda(p, 'Hoy de Tomás, con la pregunta del domingo');
+      await tarjeta(p, 'pregunta').getByRole('button', { name: 'Repetir esta semana' }).click();
+      const fuera = await tarjeta(p, 'pregunta').waitFor({ state: 'detached', timeout: 15000 }).then(() => true).catch(() => false);
+      const guardado = await p.waitForFunction(() => /"esencial_repetida":1/.test(localStorage.getItem('fbe-demo-esencial-v1') || ''), null, { timeout: 5000 }).then(() => true).catch(() => false);
+      check(fuera && guardado, 'repetir: la pregunta se va y su semana queda apuntada como repetida (pasa al lunes)');
+      await ctx.close();
+    }
+    // A las 21:30: «Pasar a la siguiente» (la app la prepara en el momento)
+    {
+      const { ctx, p } = await tomasEl('21:30');
+      await tarjeta(p, 'pregunta').waitFor({ timeout: 25000 }).catch(() => {});
+      await tarjeta(p, 'pregunta').getByRole('button', { name: 'Pasar a la siguiente' }).click().catch(() => {});
+      const lista = await tarjeta(p, 'pasada').waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
+      check(lista && /Tu semana siguiente ya está lista/.test(await tarjeta(p, 'pasada').textContent()), 'pasar: «Tu semana siguiente ya está lista» (preparada al momento, sin esperar al lunes)');
+      await desborda(p, 'Hoy de Tomás, tras pasar a la siguiente');
+      await ctx.close();
+    }
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);
 }

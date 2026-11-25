@@ -403,7 +403,7 @@ const falta096 = (e) => /esencial_cambiar_dias|esencial_dias/.test(`${e?.message
 const falta097 = (e) => /invitacion_estado|esencial_alta_estado/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta094 = (e) => /esencial_alternativa/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 const falta093 = (e) => /esencial_(plan|ajuste)_comida/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
-const falta092 = (e) => /esencial_semana_siguiente/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
+const falta098 = (e) => /esencial_cerrar_semana/.test(`${e?.message || ''}`) && /schema cache|does not exist|no existe|could not find|PGRST20[0-9]|42883/i.test(`${e?.message || ''} ${e?.code || ''}`);
 // (v0.225) ¿Falta la función de la 088 (la carrera de la semana desde la base)? En la demo tampoco está: lo hace la app
 const falta088 = (e) => {
   const m = `${e?.message || ''} ${e?.code || ''} ${e?.codigo || ''}`;
@@ -7452,37 +7452,17 @@ export function crearApi(backend, opciones = {}) {
     // hecha o ya es su lunes siguiente), el motor la prepara aquí, en su móvil, y la base la guarda (y lo comprueba todo).
     // Con una posible errata antes de su lunes, no se prepara: devuelve las preguntas para la tarjeta. El motor se carga
     // solo entonces. → null (nada que hacer) | { semana } | { preguntas, base, inicio } | { falta092: true }
-    async prepararSemanaEsencial(atletaId, { hoy = fechaMadrid() } = {}) {
-      const { siguientePaso } = await import('../logica/esencial-semana.js');
-      const [prog, atleta] = await Promise.all([api.programa(atletaId), b.select('atletas', { eq: { id: atletaId } }).then((x) => x[0] || null)]);
-      // (096) con los días que ha pedido (3 o 2): desde el lunes siguiente, la otra plantilla de novato
-      const paso = siguientePaso({ bloque: prog.bloque, semanas: prog.semanas, sesiones: prog.sesiones, hoy, dias: atleta?.esencial_dias ?? null });
-      if (!paso) return null;
-      if (paso.tipo === 'cambio') {
-        // (los kilos de ahora, los pone la base: la de cada ejercicio en la semana hecha; el día de alternativas, sin kilos)
-        try {
-          const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, cambio: true, plantilla: paso.plantilla, sesiones: [] }, p_atleta: atletaId });
-          return { semana, tipo: 'cambio', inicio: paso.inicio, plantilla: paso.plantilla };
-        } catch (e) { if (falta096(e)) return { falta096: true }; throw e; }
-      }
-      const [{ propuestaEsencial }, d, esta, previa] = await Promise.all([
-        import('../logica/esencial-motor.js'),
-        api.bloqueCompleto(prog.bloque.id),
-        api.checkin(atletaId, paso.base.fecha_inicio).catch(() => null),
-        api.checkin(atletaId, sumarDias(paso.base.fecha_inicio, -7)).catch(() => null),
-      ]);
-      // (094) con sus alternativas para siempre (por si van por tiempo)
-      const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
-      const ejercicios = porId(await api.ejerciciosPorIds(ids));
-      const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy,
-        checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
-      if (r.preguntas.length && hoy < paso.inicio) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
+    async prepararSemanaEsencial(atletaId, opciones = {}) { return (await import('./api-esencial.js')).prepararSemana(api, b, atletaId, opciones); },
+    // (098) El cierre de la semana de quien va por su cuenta: 'pasar' | 'repetir' (el domingo) | 'pausa' | 'reanudar'. La base
+    // lo comprueba todo y corre el plan si toca. → { decision, semana, inicio, faltan } | { falta098: true }
+    async esencialCerrarSemana(decision, atletaId = null) {
       try {
-        // (con su id: así también la puede preparar el coach desde su ficha; la base comprueba que el atleta es quien llama)
-        const semana = await b.rpc('esencial_semana_siguiente', { p: { base: paso.base.id, inicio: paso.inicio, novato: paso.tipo === 'novato', ...(paso.plantilla && paso.plantilla !== 'Novato 2 días · FBE Esencial' ? { plantilla: paso.plantilla } : {}), nota: r.nota, descarga: r.descarga, sesiones: r.sesiones }, p_atleta: atletaId });
-        return { semana, tipo: paso.tipo, inicio: paso.inicio };
-      } catch (e) { if (falta092(e)) return { falta092: true }; throw e; }
+        return await b.rpc('esencial_cerrar_semana', { p_decision: decision, ...(atletaId ? { p_atleta: atletaId } : {}) });
+      } catch (e) { if (falta098(e)) return { falta098: true }; throw e; }
     },
+    // (098, el panel del coach) Las semanas de quienes van por su cuenta con algo elegido al cerrarlas desde ese lunes:
+    // [{ atleta_id, nombre, numero, bloque, cierre, lunes, repetida }]
+    async esencialCierres(desde) { return (await import('./api-esencial.js')).cierres(b, desde); },
     // (093) FBE Esencial con nutrición: el plan de partida lo calcula la base (como planInicial) con sus datos; devuelve
     // el plan. datos: { sexo, edad, altura, peso, actividad, objetivo, tca }.
     async esencialPlanComida(datos, atletaId = null) {

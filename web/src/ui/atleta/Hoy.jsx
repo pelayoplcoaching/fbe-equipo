@@ -90,6 +90,7 @@ const AplicarDias = perezoso(() => import('./Esencial.jsx'), 'AplicarDias', { mi
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const HojaAvisosEsencial = perezoso(() => import('./Esencial.jsx'), 'HojaAvisosEsencial', { mientras: null });
 const SesionPerdida = perezoso(() => import('./Esencial.jsx'), 'SesionPerdida', { mientras: null });
+const CierreSemana = perezoso(() => import('./Esencial.jsx'), 'CierreSemana', { mientras: null });
 const SemanaHecha = perezoso(() => import('./Esencial.jsx'), 'SemanaHecha', { mientras: null });
 const PresentateEquipo = perezoso(() => import('./Esencial.jsx'), 'PresentateEquipo', { mientras: null });
 
@@ -238,6 +239,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {!propio && porSuCuenta && atleta.estado !== 'baja' && <AntesDeEmpezar p={p} cuestionario={cuestionario.datos} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <AplicarDias p={p} recargarPrograma={() => recargar(true)} />}
               {/* (alta, 47, 48 y 51) la primera semana: una sesión que no pudo hacer, la semana 1 hecha y presentarse en Equipo */}
+              {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <CierreSemana p={p} recargarPrograma={() => recargar(true)} abrirSesion={abrirSesion} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SesionPerdida p={p} recargarPrograma={() => recargar(true)} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <SemanaHecha p={p} />}
               {!propio && porSuCuenta && p?.bloque && atleta.estado !== 'baja' && <PresentateEquipo p={p} irA={irA} />}

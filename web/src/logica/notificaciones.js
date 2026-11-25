@@ -22,7 +22,7 @@ export const TIPOS_ATLETA = [
 // (sin coach, 15) Quien va por su cuenta (FBE Esencial): sin lo que solo llega de un coach (sus respuestas y sus tareas),
 // y lo demás, dicho como es: la semana se la prepara la app y los avisos son los de Pelayo para todos
 const SIN_COACH = {
-  semana: ['Semana nueva', 'Cuando la app te prepara tu semana'],
+  semana: ['Semana nueva', 'Cuando la app te prepara tu semana y, el domingo, si no la has acabado'],
   aviso: ['Avisos de Pelayo', 'Los que publique para todos'],
   cuestionario: ['Tu cuestionario', 'Si hace falta que lo rellenes o lo actualices'],
   comunidad: ['Equipo', 'Reacciones y comentarios en lo que publicas, menciones, ánimos y los avisos y encuestas de Pelayo en el muro'],

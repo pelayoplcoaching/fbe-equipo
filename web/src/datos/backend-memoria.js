@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -4015,6 +4015,15 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         return r;
       }
       // (094) FBE Esencial: la alternativa para siempre (como en la base)
+      // (098) FBE Esencial: cerrar la semana (pasar, repetir, pausa o reanudar), como en la base
+      if (nombre === 'esencial_cerrar_semana') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes cerrar tu propia semana');
+        const r = cerrarSemanaEsencialDemo(tabla, { decision: args?.p_decision, atletaId: id, hoy: fechaMadrid(), coach: esCoach() });
+        persistirYa();
+        return r;
+      }
       if (nombre === 'esencial_alternativa') {
         const id = args?.p_atleta || miAtletaId();
         if (!id) throw new Error('No hay atleta');

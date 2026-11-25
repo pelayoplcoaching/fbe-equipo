@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.242': {
+    // (FBE Esencial sin coach, tanda 2 de 3: el cierre de la semana; migración 098)
+    atleta: [],
+    coach: [
+      'FBE Esencial, su semana sola: el domingo a las 21:00, si no la han acabado, eligen pasar a la siguiente o repetirla.',
+      'Si a las 23:30 no han elegido, se les pasa a la siguiente y se les avisa. También pueden poner una semana en pausa.',
+      'Con la semana hecha pueden adelantar la primera sesión de la siguiente. En su panel ves quién repite o está en pausa.',
+    ],
+  },
   '0.241': {
     // (FBE Esencial sin coach, tanda 1 de 3: lo que ve quien va por su cuenta, sin «tu coach»; sin migración)
     atleta: [],

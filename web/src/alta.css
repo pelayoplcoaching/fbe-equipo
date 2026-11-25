@@ -120,3 +120,6 @@
 .sinco-dolor-pasos { margin: 0; padding-left: var(--esp-18); display: grid; gap: var(--esp-6); }
 .sinco-dolor a { color: var(--morado); font-weight: 650; }
 .sinco-tras .sinco-dolor { margin-top: var(--esp-10); }
+/* (sin coach, tanda 2) el cierre de la semana en Hoy: que hace cada opcion y "Esta semana no puedo" */
+.cierre-que { margin: 0; padding-left: var(--esp-18); display: grid; gap: var(--esp-4); color: var(--tinta-2); }
+.cierre-pausa { margin: 0; justify-self: start; }
