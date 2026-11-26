@@ -96,7 +96,7 @@ function PorRevisar({ filas, suyos, alCambiar }) {
         ))}
       </div>
       {enApp.length > 0 && (
-        <details class="pila-xs">
+        <details class="pila-xs prv-enapp">
           <summary class="peq"><strong>{`Encendido en la app (${enApp.length})`}</strong></summary>
           <p class="peq secundario">Lo que encendiste el 26/11 en el formulario: va para todos los de FBE Esencial. Sus textos los puedes seguir corrigiendo aquí.</p>
           <div class="prv-lista" role="list" aria-label="Encendido en la app">

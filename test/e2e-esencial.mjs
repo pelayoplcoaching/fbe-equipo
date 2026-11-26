@@ -246,14 +246,22 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const pasoT = async () => (await h.locator('#nm-titulo').textContent().catch(() => '')).trim();
       const sig = () => h.getByRole('button', { name: 'Siguiente' }).click();
       await h.locator('#nm-titulo').waitFor({ timeout: 10000 });
-      check(await pasoT() === 'Tú' && /Paso 1 de 7/.test(await h.textContent()) && (await h.locator('#nm-peso').inputValue()) === '68,4',
-        'Inés: el cuestionario de nutrición, en siete pasos; su último peso, ya puesto (68,4)');
+      // (v0.259) con las preguntas de salud nuevas encendidas («salud_comida»), un paso más: «Tú y la comida» (el SCOFF)
+      check(await pasoT() === 'Tú' && /Paso 1 de 8/.test(await h.textContent()) && (await h.locator('#nm-peso').inputValue()) === '68,4',
+        'Inés: el cuestionario de nutrición, en ocho pasos; su último peso, ya puesto (68,4)');
       await h.getByRole('button', { name: 'Mujer' }).click();
       await h.locator('#nm-edad').fill('36');
       await h.locator('#nm-altura').fill('168');
       await sig();
       await h.getByRole('button', { name: 'No', exact: true }).click();
-      check(await pasoT() === 'Tu salud' && !(await h.getByText('¿Te pasa algo de esto?').count()), '«Tu salud»: la pregunta de TCA de siempre (las preguntas de salud nuevas, apagadas)');
+      check(await pasoT() === 'Tu salud' && (await h.getByText('¿Te pasa algo de esto?').count()) === 1, '«Tu salud»: la pregunta de TCA y (v0.259, encendidas) las de salud nuevas');
+      await sig();
+      check(/Marca lo que te pase o «Ninguna de estas»/.test(await h.locator('.error').textContent().catch(() => '')), 'sin contestar las nuevas no sigue');
+      await h.getByRole('button', { name: 'Ninguna de estas' }).click();
+      await sig();
+      check(await pasoT() === 'Tú y la comida' && (await h.locator('.nm-scoff-f').count()) === 5, '«Tú y la comida»: las cinco preguntas del SCOFF');
+      const nos = h.locator('.nm-scoff').getByRole('button', { name: 'No', exact: true });
+      for (let i = 0; i < 5; i++) await nos.nth(i).click();
       await sig();
       check(await pasoT() === 'Tus medidas' && /en ayunas y después de orinar/.test(await h.textContent()), '«Tus medidas»: cómo medirse, con su dibujo');
       await sig();
@@ -365,8 +373,10 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       'su primera sesión: la guía corta (cómo se apunta, «te sobran», el ✓ y que le ajusten las máquinas)');
     await guia.getByRole('button', { name: 'Entendido' }).click();
     check(await p.locator('.alta-guia').count() === 0, '«Entendido» la quita');
-    check(!(await p.locator('.mensaje-coach').count()) && /Tres toques: te da un consejo para hoy/.test(await p.locator('.preparacion').first().textContent().catch(() => '')),
-      'sin mensajes de «Tu coach» («Primera vez con…, luego me cuentas») y «¿Cómo llegas hoy?» sin «Tu coach lo verá»');
+    // (v0.259) «¿Cómo llegas hoy?» de un toque, encendido (con la 110; en la demo, siempre)
+    check(!(await p.locator('.mensaje-coach').count()) && /Un toque\. La app te propone cómo hacer la sesión de hoy/.test(await p.locator('.cll-caja').first().textContent().catch(() => ''))
+      && !/Tu coach lo verá/.test(await p.locator('.cll-caja').first().textContent().catch(() => '')),
+      'sin mensajes de «Tu coach» («Primera vez con…, luego me cuentas») y «¿Cómo llegas hoy?» de un toque, sin «Tu coach lo verá»');
     const qp = p.locator('.alta-que-peso').first();
     await qp.getByRole('button', { name: /Qué peso pongo/ }).click();
     check(/El primer día no lo sabe nadie/.test(await qp.textContent()) && /cuatro o cinco/.test(await qp.textContent()), '«¿Qué peso pongo?», junto al ejercicio sin kilos: el texto de la guía (que te sobren cuatro o cinco)');
@@ -1088,7 +1098,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const t = lista ? await hoja.textContent() : '';
       check(lista && /Tu plan desde hoy sale de tus marcas/.test(t) && /Empiezas con 85 kg: sale de lo que moviste en tu semana de marcas/.test(t) && /hiciste tus 2 sesiones/.test(t) && (await hoja.locator('.ayu-fila').count()) >= 5,
         'la revisión: lo que hizo, con qué empieza cada ejercicio (85 kg en la prensa: de sus marcas) y por qué');
-      check(/Esta semana, una sola cosa/.test(t) && /No la ha leído nadie/.test(t) && (await hoja.locator('.ayu-momento').count()) === 0, 'con una sola cosa en la que fijarse, dicho que no la ha leído nadie, y sin lo que está apagado');
+      check(/Esta semana, una sola cosa/.test(t) && /No la ha leído nadie/.test(t) && (await hoja.locator('.ayu-momento').count()) === 0, 'con una sola cosa en la que fijarse, dicho que no la ha leído nadie (v0.259: las lecciones del momento, encendidas, no tocan en la semana de sus marcas)');
       await hoja.locator('.ayu-palabra', { hasText: 'Te sobran' }).click();
       check(/dos más/.test(await hoja.locator('.ayu-def').textContent().catch(() => '')), 'las palabras se explican al tocarlas («Te sobran»)');
       await desborda(p, 'la revisión de la semana');
@@ -1104,7 +1114,10 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const conSaludo = await saludo.or(vuelta).first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     const enVuelta = conSaludo && !(await saludo.count()) && (await vuelta.count()) > 0;
     const tSaludo = conSaludo ? ((enVuelta ? await vuelta.textContent() : await saludo.textContent()) || '') : '';
-    check((await p.locator('.cer-nota').count()) === 0 && (await p.locator('.cer-dia').count()) === 0, 'sin la nota de Pelayo ni el día a día (apagados hasta que los vea)');
+    // (v0.259) la nota de Pelayo de su semana, encendida (sin «borrador»); el día a día solo sale en las cuatro primeras semanas
+    const tNota = (await p.locator('.cer-nota').first().textContent().catch(() => '')) || '';
+    check((await p.locator('.cer-nota').count()) === 1 && /Pelayo · semana \d+/.test(tNota) && !/borrador/.test(tNota) && (await p.locator('.cer-dia').count()) === 0,
+      'la nota de Pelayo de su semana (encendida, sin «borrador»), y sin el día a día (es de sus cuatro primeras semanas)');
     check(conSaludo && (enVuelta ? /Llevas \d+ días sin entrenar/.test(tSaludo) : /Hoy toca|Mañana toca|te quedan? |Hoy descansas|Ayer entrenaste|Semana hecha/.test(tSaludo)) && !/coach/i.test(tSaludo),
       `arriba en Hoy, el saludo del día (o, desde el jueves, «Llevas N días sin entrenar») («${tSaludo.replace(/\s+/g, ' ').trim().slice(0, 60)}…»)`);
     const reto = p.locator('.cer-reto');
@@ -1137,8 +1150,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     // directo, que está oculto (FBE Esencial no tiene directos) hasta que Pelayo lo encienda en su panel
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
-    check((await nec.locator('.ayu-nec').count()) === 13 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && /Mis pruebas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
-      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, (v0.254) «Más herramientas» y (v0.255) «Mis pruebas» (ni lo apagado, ni el directo, que está oculto, ni su medicación: no toma)');
+    check((await nec.locator('.ayu-nec').count()) === 15 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && /Mis pruebas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && /Estoy enfermo/.test(await nec.textContent()) && /Necesito una semana suave/.test(await nec.textContent()),
+      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, (v0.254) «Más herramientas», (v0.255) «Mis pruebas» y (v0.259, encendidos) «Estoy enfermo» y «Necesito una semana suave» (ni el directo, que está oculto, ni su medicación: no toma)');
     // (v0.256) «Me duele algo», con el motor de molestias: dónde (las zonas del cuestionario de lesiones) y cuánto, de 0 a 10 con
     // el semáforo → qué hacer con su plan; las señales para parar y consultar; apuntarla (la demo tiene la 109) y sus molestias
     // abiertas; y de ahí, a su respuesta
@@ -1162,8 +1175,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
     let hoja = p.locator('[aria-modal="true"]').last();
     await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
-    check(/La app no valora el dolor/.test(await hoja.locator('.ayu-p[open]').textContent().catch(() => '')) && (await hoja.locator('.ayu-p').count()) === 4 && (await hoja.locator('.ayu-pendiente').count()) === 0,
-      'y de ahí, «Respuestas» en su respuesta; de salud, solo las cuatro ya aprobadas');
+    check(/La app no valora el dolor/.test(await hoja.locator('.ayu-p[open]').textContent().catch(() => '')) && (await hoja.locator('.ayu-p').count()) === 8 && (await hoja.locator('.ayu-pendiente').count()) === 0,
+      'y de ahí, «Respuestas» en su respuesta; de salud, las ocho (v0.259: con las cuatro nuevas, encendidas y sin «pendiente»)');
     await hoja.locator('.ayu-buscar-c').fill('maquina ocupada');
     check(/La máquina está ocupada/.test(await hoja.locator('.ayu-p').first().textContent().catch(() => '')), 'el buscador encuentra sin tildes («maquina ocupada»)');
     await hoja.locator('.ayu-buscar-c').fill('');
@@ -1319,25 +1332,31 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const prv = piloto.locator('details.prv-caja');
     const conPrv = await prv.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     if (conPrv) {
-      await prv.locator('summary').click();
+      await prv.locator('summary.prv-cab').click();
       const items = prv.locator('.prv-item');
       await items.first().waitFor({ timeout: 10000 }).catch(() => {});
-      // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
-      const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
-      check(nItems === 27 && /27 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 27 cosas apagadas (v0.258: con «¿Cómo llegas hoy?» de un toque), cada una con su interruptor (${nItems})`);
-      const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
-      await enfermo.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /26 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      // (v0.259) lo apagado, con su interruptor (5: las dos de molestias que sustituye el motor y las tres reglas nuevas del
+      // día a día); lo que Pelayo encendió el 26/11, aparte, en «Encendido en la app» (25, sin interruptor, con sus textos)
+      const apagadas = prv.getByRole('list', { name: 'Lo apagado' }).locator('.prv-item');
+      const enApp = prv.locator('details.prv-enapp .prv-item');   // (plegado: por CSS, que cuenta también lo que no se ve)
+      const nApagadas = await apagadas.filter({ has: p.locator('input[role="switch"]') }).count();
+      const nEnApp = await enApp.count();
+      check(nApagadas === 5 && /5 cosas apagadas/.test(await prv.locator('summary.prv-cab').textContent()) && nEnApp === 25 && !(await enApp.locator('input[role="switch"]').count()),
+        `«Por revisar»: las 5 cosas apagadas, cada una con su interruptor (${nApagadas}), y las 25 encendidas en la app, aparte y sin interruptor (${nEnApp})`);
+      const sigue = apagadas.filter({ hasText: 'El seguimiento de una molestia' });
+      await sigue.locator('input[role="switch"]').check();
+      const encendida = await p.waitForFunction(() => /4 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 26 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      check(encendida && conReg && /Encendiste El seguimiento de una molestia/.test(await reg.textContent()), 'al encender «El seguimiento de una molestia»: 4 apagadas y, en «Lo que has cambiado», «Encendiste El seguimiento de una molestia»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /27 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
-        check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
+        const deshecho = await p.waitForFunction(() => /5 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(deshecho && !(await sigue.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de El seguimiento de una molestia/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
-      // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app
-      await items.filter({ hasText: 'Tu nota de cada lunes' }).getByRole('button', { name: /Sus textos/ }).click();
+      // sus textos: escribe la nota del lunes de la semana 1 (encendida en la app: la verían todos) y vuelve a la de la app
+      await prv.locator('details.prv-enapp > summary').click();
+      await enApp.filter({ hasText: 'Tu nota de cada lunes' }).getByRole('button', { name: /Sus textos/ }).click();
       const ht = p.locator('[aria-modal="true"]').last();
       const conHt = await ht.locator('.prv-area').first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
       if (conHt) {
@@ -1379,7 +1398,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const cmp = await p.waitForFunction(() => /3 suscripciones leídas/.test(document.querySelector('#prv-panel')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const tCmp = (await prv.locator('#prv-panel').textContent()) || '';
       check(cmp && /nadie@x\.com: no tiene ficha en la app/.test(tCmp) && /De baja en Stripe y activos en la app \(1\)/.test(tCmp) && /Tomás Rey/.test(tCmp), 'Stripe frente a la app: quién ha pagado y no tiene acceso y quién se dio de baja y sigue activo');
-      await prv.locator('summary').click();
+      await prv.locator('summary.prv-cab').click();
     } else check(false, 'en el panel de FBE Esencial, «Por revisar y el piloto»');
     // (v0.251) con el directo encendido, Marina (aún sin plan) ve «Preguntar a Pelayo» y manda su duda
     await salirDeLaCuenta(p, '"clave":"directo"');
@@ -1631,16 +1650,17 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
       const hoja = p.locator('[aria-modal="true"]').last();
       await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});
-      check((await hoja.locator('.ayu-p').count()) === 8 && (await hoja.locator('.ayu-pendiente').count()) === 4 && /Pendiente del visto bueno de Pelayo/.test(await hoja.textContent()),
-        'con «?previa=1» en la demo se ve lo apagado: las cuatro respuestas de salud nuevas, marcadas como pendientes');
+      // (v0.259) las cuatro respuestas de salud nuevas, encendidas: ya no van marcadas como pendientes
+      check((await hoja.locator('.ayu-p').count()) === 8 && (await hoja.locator('.ayu-pendiente').count()) === 0 && !/Pendiente del visto bueno de Pelayo/.test(await hoja.textContent()),
+        '«¿Cuándo preocuparse?»: las ocho respuestas, con las cuatro de salud nuevas encendidas (sin «pendiente»)');
       await hoja.locator('.cerrar-hoja').click();
       await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();
-      // (tanda 6) y, en «¿Qué necesitas?», «Estoy enfermo» y «Necesito una semana suave», como borradores
-      check(/Estoy enfermo/.test(await nec.textContent()) && /Necesito una semana suave/.test(await nec.textContent()), 'con la vista previa salen también «Estoy enfermo» y «Necesito una semana suave»');
+      // (tanda 6; v0.259, encendidos) en «¿Qué necesitas?», «Estoy enfermo» y «Necesito una semana suave»
+      check(/Estoy enfermo/.test(await nec.textContent()) && /Necesito una semana suave/.test(await nec.textContent()), 'salen «Estoy enfermo» y «Necesito una semana suave»');
       await nec.getByRole('button', { name: 'Estoy enfermo' }).click();
       const hEnf = p.locator('[aria-modal="true"]').last();
       await hEnf.locator('.vid-enfermo').waitFor({ timeout: 15000 }).catch(() => {});
-      check(/lo primero es recuperarte/.test(await hEnf.textContent()) && (await hEnf.locator('.vid-paso').count()) === 4 && /Borrador, pendiente del visto bueno de Pelayo/.test(await hEnf.textContent()), '«Estoy enfermo»: qué hacer, marcado como borrador (no guarda nada)');
+      check(/lo primero es recuperarte/.test(await hEnf.textContent()) && (await hEnf.locator('.vid-paso').count()) === 4 && !/Borrador/.test(await hEnf.textContent()), '«Estoy enfermo»: qué hacer (encendido: sin «Borrador»; no guarda nada)');
       await hEnf.locator('.cerrar-hoja').click();
       await nec.getByRole('button', { name: 'Necesito una semana suave' }).click();
       const hSu = p.locator('[aria-modal="true"]').last();
@@ -1648,7 +1668,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await hSu.getByRole('button', { name: 'Esta semana, suave' }).click();
       const suave = p.locator('.vid-suave');
       check(await suave.waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && /Quita una serie de cada ejercicio/.test(await suave.textContent().catch(() => '')), '«Necesito una semana suave»: al pedirla, arriba en Hoy sale qué hacer esta semana');
-      check(/borrador, pendiente de su visto bueno/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana, como borrador (sin la vista previa no sale)');
+      check(/Pelayo · semana \d+/.test(await p.locator('.cer-nota').textContent().catch(() => '')) && !/borrador/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana (encendida: sin «borrador»)');
     } else check(false, 'la vista previa de lo apagado');
     await ctx.close();
   }
@@ -1783,7 +1803,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(conT && faltan >= 8 && faltan <= 14 && /Hasta tu lunes/.test(await t.textContent()), `Lucía (empieza dentro de dos lunes): en Hoy, «Hasta tu lunes» (faltan ${faltan})`);
     check(/Te quedan 3 cosas para estar listo/.test(await t.locator('.lun-lista').textContent().catch(() => '')) && (await t.locator('.lun-item-si').count()) === 1,
       'lo que le falta para estar listo: sus días, los avisos y su gimnasio (el cuestionario, hecho)');
-    check((await t.locator('.lun-hoy').count()) === 1 && (await t.locator('.lun-extra').count()) === 0, 'una sola cosa para hoy, y sin lo apagado (sus kilos de partida, lo de su médico)');
+    check((await t.locator('.lun-hoy').count()) === 1 && (await t.locator('.lun-extra').count()) === 0, 'una sola cosa para hoy, sin extras (sus kilos de partida son para quien ya entrena; lo de su médico, para quien lo necesita)');
     // la espera día a día (solo en la demo): cada día, lo suyo
     const dia = async (f) => {
       await t.locator('#lun-dia').evaluate((el, v) => { el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); }, f);
@@ -1844,16 +1864,15 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
   }
   {
     const { ctx, p } = await movil();
-    await p.goto(`${base}/?demo=esencial&previa=1`);
-    await p.getByRole('button', { name: /Andrés/ }).first().click();
-    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    // (v0.259) encendido: sin la vista previa
+    await entrar(p, /Andrés/);
     await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
     await p.waitForTimeout(800);
     await cerrar(p);
     const t = p.locator('.lun-tarjeta');
     const conT = await t.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-    check(conT && Number(await t.getAttribute('data-faltan')) <= 7 && (await t.locator('.lun-extra').count()) === 1 && /Apunta con cuántos kilos vas ahora/.test(await t.textContent()),
-      'Andrés (ya entrena, empieza el lunes que viene), con la vista previa: «Mis kilos», en borrador');
+    check(conT && Number(await t.getAttribute('data-faltan')) <= 7 && (await t.locator('.lun-extra').count()) === 1 && /Apunta con cuántos kilos vas ahora/.test(await t.textContent()) && !/\(borrador\)/.test(await t.textContent()),
+      'Andrés (ya entrena, empieza el lunes que viene): «Mis kilos» (encendido: sin la vista previa y sin «borrador»)');
     if (conT) {
       await t.getByRole('button', { name: 'Mis kilos' }).click();
       const hk = p.locator('[aria-modal="true"]').last();
@@ -1898,7 +1917,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await nec.locator('[data-comida="pasado"]').click();
       const hpa = p.locator('[aria-modal="true"]').last();
       const conPa = await hpa.locator('.cmd-lineas').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(conPa && /Un día no cambia nada/.test(await hpa.textContent()) && /Pendiente del visto bueno de Pelayo/.test(await hpa.textContent()), '«Me he pasado» (vista previa): sin compensar, y marcada como pendiente de Pelayo');
+      check(conPa && /Un día no cambia nada/.test(await hpa.textContent()) && !/Pendiente del visto bueno de Pelayo/.test(await hpa.textContent()), '«Me he pasado»: sin compensar (v0.259, encendida: ya sin «pendiente de Pelayo»)');
       await hpa.locator('.cerrar-hoja').click();
       await nec.locator('[data-comida="celebracion"]').click();
       const hc = p.locator('[aria-modal="true"]').last();
