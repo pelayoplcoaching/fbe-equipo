@@ -1233,10 +1233,11 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
         if (conBaja) {
           await pBaja.locator('summary').click();
           await pBaja.getByRole('button', { name: /Tu suscripción/ }).click();
-          const hb = p.locator('[aria-modal="true"]').filter({ hasText: '¿nos dices por qué?' }).last();
+          // (la hoja se busca por su enlace: al enviar el motivo, la pregunta «¿nos dices por qué?» deja de estar)
+          const hb = p.locator('[aria-modal="true"]').filter({ has: p.getByRole('link', { name: /Ir a mi suscripción/ }) }).last();
           const conHb = await hb.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
           const nOps = conHb ? await hb.locator('.ayu-baja-op').count() : 0;
-          check(conHb && nOps === 6 && (await hb.getByRole('link', { name: /Ir a mi suscripción/ }).count()) === 1, `«¿Puedo darme de baja?» → «Tu suscripción»: el porqué, opcional (${nOps} motivos), y el enlace a su suscripción`);
+          check(conHb && nOps === 6 && /¿nos dices por qué\?/.test(await hb.textContent()), `«¿Puedo darme de baja?» → «Tu suscripción»: el porqué, opcional (${nOps} motivos), y el enlace a su suscripción`);
           if (conHb) {
             await hb.getByRole('button', { name: 'Es caro para mí' }).click();
             await hb.getByRole('button', { name: 'Enviarlo' }).click();
