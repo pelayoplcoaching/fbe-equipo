@@ -22,6 +22,8 @@ import { useIntegraciones, HojaSuscripcion } from './Conexiones.jsx';
 import * as datos from '../../datos/api-esencial.js';
 import { loDeHoy } from '../../logica/esencial-porque.js';
 import { perezoso } from '../perezoso.jsx';
+// (v0.253) sus ilustraciones (F4): una arriba de cada hoja de antes de tu lunes
+import { Arte } from './EsencialArte.jsx';
 
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
@@ -264,6 +266,7 @@ export function HojaAvisosPrueba({ alCerrar, alLlego = null }) {
   return (
     <Hoja titulo="¿Te llegan los avisos?" alCerrar={alCerrar}>
       <div class="pila lun-avisos">
+        <Arte id="esencial-avisos-prueba" />
         <p class="secundario">Te avisamos la víspera y el día en que empiezas y el día que toca entrenar. Mándate uno de prueba para saber que te llegan.</p>
         {r !== 'llego' && <button type="button" class="btn btn-primario" disabled={ocupado} onClick={probar}><Icono n="campana" /> {r ? 'Probar otra vez' : 'Mandarme un aviso de prueba'}</button>}
         {r && PRUEBA_AVISO[r] && <p class="peq" role="status">{PRUEBA_AVISO[r]}</p>}
@@ -316,6 +319,7 @@ export function HojaGimnasio({ alCerrar, alListo = null }) {
   return (
     <Hoja titulo="Prepara tu gimnasio" alCerrar={alCerrar}>
       <div class="pila lun-gimnasio">
+        <Arte id="esencial-prepara-gimnasio" />
         <p class="secundario">Mira si en tu gimnasio está cada máquina de tu semana 1. Si falta alguna, elige su alternativa: tus sesiones ya vendrán con ella. Como es otro ejercicio, empieza sin kilos puestos.</p>
         {lista.cargando && !lista.datos && <p class="peq secundario" role="status">Mirando tu semana 1…</p>}
         {!lista.cargando && !filas.length && <p class="peq secundario">Cuando tengas tu plan, aquí salen sus ejercicios.</p>}
@@ -366,6 +370,7 @@ export function HojaPorque({ alCerrar, alGuardar = null }) {
   return (
     <Hoja titulo="Tu porqué" alCerrar={alCerrar}>
       <div class="pila lun-porque">
+        <Arte id="esencial-porque" />
         <p class="secundario">Una frase tuya para los días que cuestan: por qué empiezas. Te la devolvemos la primera semana que se te tuerza. También la tienes en tu perfil.</p>
         <label class="etq" for="lun-porque-t">Tu porqué</label>
         <textarea id="lun-porque-t" class="lun-area" rows={3} maxLength={LIMITES.porque} value={t} onInput={(ev) => setT(ev.currentTarget.value)} placeholder="Por mí, para llegar con fuerza a los 60…" />
@@ -397,6 +402,7 @@ export function HojaPartida({ alCerrar, alHecho = null }) {
   return (
     <Hoja titulo="Tu punto de partida" alCerrar={alCerrar}>
       <div class="pila lun-partida">
+        <Arte id="esencial-partida" />
         <p class="secundario">Si quieres, apunta hoy tu peso y tu cintura (a la altura del ombligo, sin apretar). A las doce semanas, en «Tu trimestre», verás cómo han cambiado. Es opcional: puedes apuntar solo uno.</p>
         <div class="lun-dos">
           <label class="pila-xs"><span class="etq">Peso (kg)</span><input class="entrada num" inputMode="decimal" value={f.peso} onInput={(ev) => setF({ ...f, peso: ev.currentTarget.value })} placeholder="70" /></label>
@@ -424,6 +430,7 @@ export function HojaEnsayo({ lista = [], primeras = true, alCerrar, alHecho = nu
   return (
     <Hoja titulo="Ensaya una serie" alCerrar={alCerrar}>
       <div class="pila lun-ensayo">
+        <Arte id="esencial-ensayo" />
         <p class="secundario">Así se apunta una serie. Prueba los botones: no se guarda nada.</p>
         <div class="lun-serie" aria-label="Una serie de mentira">
           <span class="pila-xs"><strong class="peq">{nombre}</strong><span class="mini terciario">{primeras ? 'Serie 1 · de 10 a 12 repeticiones · te sobran 4-5' : 'Serie 1'}</span></span>
@@ -463,6 +470,7 @@ export function HojaPrimerDia({ primeras = true, alCerrar }) {
   return (
     <Hoja titulo="Tu primer día" alCerrar={alCerrar}>
       <div class="pila lun-primero">
+        <Arte id="esencial-primer-dia" />
         <div class="lun-pasos" role="list" aria-label="Tu primer día, paso a paso">
           {pasos.map((x, i) => (
             <div key={x.id} role="listitem" class="lun-p">
@@ -497,6 +505,7 @@ export function HojaKilos({ lista = [], alCerrar }) {
   return (
     <Hoja titulo="Tus kilos de partida" alCerrar={alCerrar}>
       <div class="pila lun-kilos">
+        <Arte id="esencial-kilos-partida" />
         <p class="secundario">Con cuántos kilos haces ahora cada ejercicio, para una serie de unas diez repeticiones. En la semana 1, «¿Qué peso pongo?» te lo recordará. Deja en blanco los que no hagas.</p>
         <div class="lun-filas" role="list">
           {filas.map((x) => (
@@ -530,6 +539,7 @@ export function HojaMedico({ dias = 2, minutos = 45, alCerrar }) {
   return (
     <Hoja titulo="Qué pedirle a tu médico" alCerrar={alCerrar}>
       <div class="pila lun-medico">
+        <Arte id="esencial-visto-bueno" />
         <p class="secundario">Enséñale esto en la consulta (o léeselo):</p>
         <blockquote class="peq lun-cita">{t}</blockquote>
         <button type="button" class="btn btn-peq" style="justify-self:start" onClick={copiar}><Icono n="copiar" /> Copiar</button>

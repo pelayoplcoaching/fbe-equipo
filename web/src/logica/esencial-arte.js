@@ -52,4 +52,7 @@ export const ARTE = [
   // rutina» son las que ya había)
   'esencial-necesitas', 'esencial-respuestas', 'esencial-poco-tiempo', 'esencial-plan-explicado', 'esencial-suscripcion', 'esencial-viaje',
   'esencial-enfermo', 'esencial-otro-sitio', 'esencial-cambiar-ejercicio', 'esencial-objetivo', 'esencial-marcas-ahora', 'esencial-suave',
+  // (v0.253) F4 · Antes de tu lunes: una arriba de cada hoja de lo que puede ir haciendo mientras espera (la de «Qué pedirle a
+  // tu médico» es la del visto bueno)
+  'esencial-avisos-prueba', 'esencial-prepara-gimnasio', 'esencial-porque', 'esencial-partida', 'esencial-ensayo', 'esencial-primer-dia', 'esencial-kilos-partida',
 ];

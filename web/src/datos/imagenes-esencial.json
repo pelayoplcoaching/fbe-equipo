@@ -850,5 +850,89 @@
       "1080": "imagenes/esencial/esencial-viaje-1080.203fa945.webp"
     },
     "color": "#47316f"
+  },
+  "esencial-avisos-prueba": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-avisos-prueba-240.5f394b70.webp",
+      "720": "imagenes/esencial/esencial-avisos-prueba-720.8d65cfe2.webp",
+      "1080": "imagenes/esencial/esencial-avisos-prueba-1080.8090ae21.webp"
+    },
+    "color": "#392c61"
+  },
+  "esencial-ensayo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-ensayo-240.f868e162.webp",
+      "720": "imagenes/esencial/esencial-ensayo-720.261153ef.webp",
+      "1080": "imagenes/esencial/esencial-ensayo-1080.aeae5d2d.webp"
+    },
+    "color": "#3b2d66"
+  },
+  "esencial-kilos-partida": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-kilos-partida-240.95804964.webp",
+      "720": "imagenes/esencial/esencial-kilos-partida-720.f872e23b.webp",
+      "1080": "imagenes/esencial/esencial-kilos-partida-1080.d0c8d051.webp"
+    },
+    "color": "#413065"
+  },
+  "esencial-partida": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-partida-240.1fc30500.webp",
+      "720": "imagenes/esencial/esencial-partida-720.809e5c1d.webp",
+      "1080": "imagenes/esencial/esencial-partida-1080.3c4d0e10.webp"
+    },
+    "color": "#402f61"
+  },
+  "esencial-porque": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-porque-240.679c4641.webp",
+      "720": "imagenes/esencial/esencial-porque-720.d343c3b2.webp",
+      "1080": "imagenes/esencial/esencial-porque-1080.a226fc8e.webp"
+    },
+    "color": "#382b56"
+  },
+  "esencial-prepara-gimnasio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-prepara-gimnasio-240.f5be3740.webp",
+      "720": "imagenes/esencial/esencial-prepara-gimnasio-720.d73fee9b.webp",
+      "1080": "imagenes/esencial/esencial-prepara-gimnasio-1080.171f6d8d.webp"
+    },
+    "color": "#3a2c69"
+  },
+  "esencial-primer-dia": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-primer-dia-240.5247f29a.webp",
+      "720": "imagenes/esencial/esencial-primer-dia-720.18a27ffb.webp",
+      "1080": "imagenes/esencial/esencial-primer-dia-1080.7021ea6b.webp"
+    },
+    "color": "#3a2e65"
   }
 }

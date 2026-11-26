@@ -15,7 +15,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const lee = (r) => readFileSync(join(raiz, r), 'utf8');
 
 console.log('El catálogo');
-check(new Set(ARTE).size === ARTE.length && ARTE.length === 75 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `75 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, y (v0.253) las 10 del plan de comida, 4 de la revisión de 4 semanas, las 8 de la comida acompañada y las 12 de «¿Qué necesitas?»): ${ARTE.length}`);
+check(new Set(ARTE).size === ARTE.length && ARTE.length === 82 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `82 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, y (v0.253) las 10 del plan de comida, 4 de la revisión de 4 semanas, las 8 de la comida acompañada, las 12 de «¿Qué necesitas?» y las 7 de antes de tu lunes): ${ARTE.length}`);
 // los estados de antes de empezar que pintan la tarjeta grande
 const c0 = { completado_en: '2027-01-02', resultado: 'sin_valoracion', experiencia: 'ninguna' };
 const estados = [
@@ -38,7 +38,7 @@ check(arteSemanaHecha(1) === 'esencial-semana-1-hecha' && arteSemanaHecha(4) ===
 
 console.log('\nLo que usan las pantallas');
 const usados = new Set();
-for (const f of ['Esencial.jsx', 'EsencialSesion.jsx', 'EsencialRutinas.jsx', 'Checkin.jsx', 'EsencialNutricionMotor.jsx', 'NutricionRevision.jsx', 'EsencialComidaMas.jsx', 'EsencialAyuda.jsx', 'EsencialVida.jsx']) {
+for (const f of ['Esencial.jsx', 'EsencialSesion.jsx', 'EsencialRutinas.jsx', 'Checkin.jsx', 'EsencialNutricionMotor.jsx', 'NutricionRevision.jsx', 'EsencialComidaMas.jsx', 'EsencialAyuda.jsx', 'EsencialVida.jsx', 'EsencialEspera.jsx']) {
   // (solo las líneas que pintan una ilustración: <Arte …>, <ArteDuo …> o foto(…) de la bienvenida)
   for (const linea of lee(`web/src/ui/atleta/${f}`).split('\n').filter((l) => /<Arte|foto\('/.test(l))) {
     for (const m of linea.matchAll(/'(esencial-[a-z0-9-]+)'|"(esencial-[a-z0-9-]+)"/g)) usados.add(m[1] || m[2]);
