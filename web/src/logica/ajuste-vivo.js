@@ -72,6 +72,33 @@ export function ajusteEnVivo({ previa, objetivo = {}, reps = null, nombre = '', 
   return { kg: nuevo, reps: r, de: kg, rpeHecho, rpeObjetivo: obj, pauta, sentido: nuevo < kg ? 'bajar' : 'subir' };
 }
 
+// (FBE Esencial, v0.259, D6 de «claude/motores-siguientes-reglas.md», Zourdos 2016; P: 'primera_serie') Con lo que le sobró
+// en la primera serie, para el resto de series de ese ejercicio: con 2 o más repeticiones en reserva de más que las
+// pautadas, sube un poco (un salto del ejercicio); con menos de las pautadas, baja un poco (un 2,5-5 %, al menos un salto).
+// Con lo justo o 1 de más, como está. Solo con el esfuerzo pautado (RPE o RIR) y el de la primera serie apuntado, con kilos.
+// primera: { kg, reps, rpe }; objetivo: { rpe, rir }; reps: las que se proponen para la siguiente.
+// Devuelve null (como está) o { kg, reps, de, rpeHecho, rpeObjetivo, pauta, sentido, primera: true }.
+export const PRIMERA_SERIE = { subeDesde: 2, bajaMin: 0.025, bajaMax: 0.05 };
+export function ajustePrimeraSerie({ primera, objetivo = {}, reps = null, nombre = '' } = {}) {
+  const kg = numero(primera?.kg), rpeHecho = numero(primera?.rpe);
+  const obj = rpeObjetivo(objetivo);
+  if (!(kg > 0) || rpeHecho == null || rpeHecho < 5 || obj == null) return null;
+  const sobran = obj - rpeHecho;   // repeticiones en reserva de más (+) o de menos (-) frente a lo pautado
+  const paso = incrementoCarga(nombre, kg);
+  let nuevo;
+  if (sobran >= PRIMERA_SERIE.subeDesde) nuevo = kg + paso;
+  else if (sobran < 0) {
+    // un 2,5 % redondeado a saltos, al menos uno; si un salto pasa del 5 %, uno solo
+    const saltos = Math.max(1, Math.ceil((kg * PRIMERA_SERIE.bajaMin) / paso - 1e-9));
+    nuevo = kg - (saltos * paso > kg * PRIMERA_SERIE.bajaMax + 1e-9 ? paso : saltos * paso);
+  } else return null;
+  nuevo = Math.round(nuevo * 100) / 100;
+  if (!(nuevo > 0) || Math.abs(nuevo - kg) < 1e-9) return null;
+  const r = Math.round(numero(reps) ?? numero(primera.reps) ?? 0) || null;
+  const pauta = numero(objetivo.rpe) != null ? `RPE ${coma(obj)}` : `RIR ${coma(numero(objetivo.rir))}`;
+  return { kg: nuevo, reps: r, de: kg, rpeHecho, rpeObjetivo: obj, pauta, sentido: nuevo < kg ? 'bajar' : 'subir', primera: true };
+}
+
 // Las repeticiones que se proponen para la serie siguiente: las de la anterior, dentro del rango pautado
 export function repsSiguiente(previaReps, { reps_min = null, reps_max = null } = {}) {
   const r = numero(previaReps);
@@ -86,5 +113,10 @@ export function repsSiguiente(previaReps, { reps_min = null, reps_max = null } =
 export function textoAjuste(a, carga = null) {
   if (!a) return '';
   const destino = carga ?? `${coma(a.kg)} kg`;
+  // (D6) la de la primera serie: cuántas le sobraron frente a lo pautado
+  if (a.primera) {
+    const dif = Math.round((a.rpeObjetivo - a.rpeHecho) * 10) / 10;
+    return `En tu primera serie te ${dif > 0 ? `sobraron ${coma(dif)} repeticiones más` : 'sobraron menos repeticiones'} de las pautadas (${a.pauta || `RPE ${coma(a.rpeObjetivo)}`}): ${a.sentido === 'bajar' ? 'baja' : 'sube'} a ${destino} el resto de series`;
+  }
   return `Tu serie anterior fue RPE ${coma(a.rpeHecho)} (pautado ${a.pauta || `RPE ${coma(a.rpeObjetivo)}`}): ${a.sentido === 'bajar' ? 'baja' : 'sube'} a ${destino}`;
 }

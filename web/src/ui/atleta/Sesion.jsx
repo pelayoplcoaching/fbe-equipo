@@ -28,7 +28,8 @@ import { sonarFBE } from '../sonido.js';
 import { tocaSeguimos } from '../../logica/sonido.js';
 import { ponerAccionSerie } from '../pista-descanso.js';
 import { AvisoPruebaSonido } from '../PruebaSonido.jsx';
-import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada } from './sesion-comun.jsx';
+import { prepararAudio, celebrar, sonarSerie, sonarFinSesion, usePantallaEncendida, useAhora, problemaSerie, Temporizador, prepararEjercicio, NotaFijada, fijarPrimeraSerie } from './sesion-comun.jsx';
+import { encendido } from '../../logica/esencial-respuestas.js';
 import { FilaSerie } from './FilaSerie.jsx';
 import { TarjetaCardio } from './TarjetaCardio.jsx';
 import { useTecladoApp } from './Teclado.jsx';
@@ -51,6 +52,7 @@ import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga, caraDe } from '../../logica/preparacion.js';
 import { propuestaDelDia, aplicarPropuesta } from '../../logica/como-llegas.js';
+import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
@@ -126,7 +128,7 @@ const ComoLlegas = perezoso(() => import('./ComoLlegas.jsx'), 'ComoLlegas', { mi
 const conAjusteDolor = (xs, aj) => (aj && Object.keys(aj).length ? xs.map((e) => (aj[e.id] ? { ...e, ...aj[e.id] } : e)) : xs);
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
-  const { api, atleta, cola, aviso, propio } = useApp();
+  const { api, atleta, cola, aviso, propio, modo } = useApp();
   // (personalización 2) cómo le hablamos: su nombre en el récord, la última serie y el final (también por voz)
   const trato = useTrato();
   // (v0.65) sin cobertura, de la copia del móvil; y en los dos casos, con lo que espera en la cola encima (lo apuntado sin
@@ -316,6 +318,13 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [prepAntigua, setPrepAntigua] = useState(false);
   const [editandoPrep, setEditandoPrep] = useState(false);
   const unToque = useUnToque();   // (v0.258) de un toque, en FBE Esencial
+  // (v0.259, D6, P: 'primera_serie') en FBE Esencial, la segunda serie de cada ejercicio sale de cómo fue la primera
+  let previaDemo = false;
+  try { previaDemo = modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { /* sin location */ }
+  fijarPrimeraSerie(esPorSuCuenta(atleta) && !propio && encendido('primera_serie', previaDemo));
+  // (v0.259, D10, P: 'sesion_corta') con 20-30 minutos, «Hacerlo así»: los multiarticulares primero y el resto en superserie
+  const cortaOn = esPorSuCuenta(atleta) && !propio && encendido('sesion_corta', previaDemo);
+  const [corta, setCorta] = usePreferencia(`fbe-corta-${id}`, null);
   // En un día flojo o malo, si sube la carga o va con los pesos de la última vez (lo elige el atleta; se recuerda en el móvil)
   const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
   // v0.51: la portada antes de empezar; al tocar «Empezar» (o con alguna serie hecha) se pasa a la sesión de siempre
@@ -415,7 +424,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // v0.64 (4): todo lo de la sesión sale de esta lista, en el orden de hoy (la serie que toca, «Ahora toca», la píldora, la
   // pantalla de bloqueo, los tramos y el modo enfoque)
   // (v0.258) con «Hacerlo así» de un día regular o malo, la sesión ajustada (lo ya hecho no desaparece)
-  const enOrdenHoy = aplicarOrden(det.datos.ejercicios, ordenSes);
+  const enOrdenHoy = aplicarCorta(aplicarOrden(det.datos.ejercicios, ordenSes), cortaOn && !sesion.completada ? corta : null);
   const propDia = unToque && !sesion.completada && prep?.asi === true ? propuestaDelDia(prep, enOrdenHoy) : null;
   const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
@@ -452,6 +461,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   if (!sesion.completada && !empezada && todas.length === 0 && atleta.estado !== 'baja') {
     return (
       <Portada sesion={sesion} semana={semana} ejercicios={ejercicios} etiquetas={etiquetas} alCerrar={alCerrar} salud={salud} prep={prep}
+        corta={cortaOn ? corta : null} alCorta={cortaOn ? setCorta : null}
         alEmpezar={() => {
           // (diseño, tanda 45) la escena de empezar: la noche se abre desde el botón pulsado (si se empieza desde él)
           lanzarEscenaInicio(document.activeElement?.closest?.('.portada-empezar .btn') || document.querySelector('.portada-empezar .btn'));

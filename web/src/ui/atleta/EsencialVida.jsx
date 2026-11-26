@@ -265,7 +265,7 @@ export function HojaEnfermo({ alCerrar, alAccion = null }) {
         <strong>{ENFERMO.titulo}</strong>
         <Pasos lista={ENFERMO.pasos} />
         {alAccion && <button type="button" class="btn btn-primario" onClick={() => alAccion('pausa')}>Poner mi semana en pausa</button>}
-        <p class="mini terciario">La app no guarda que estás enfermo ni de qué. Borrador, pendiente del visto bueno de Pelayo.</p>
+        <p class="mini terciario">La app no guarda que estás enfermo ni de qué.{encendido('enfermo') ? '' : ' Borrador, pendiente del visto bueno de Pelayo.'}</p>
       </div>
     </Hoja>
   );
@@ -292,7 +292,7 @@ export function HojaSuave({ notas = [], alCerrar, alGuardar }) {
         {s.esta ? <p class="peq" role="status">Ya la tienes pedida para esta semana.</p>
           : s.puede ? <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={pedir}>Esta semana, suave</button>
             : <p class="peq" role="status">Ya has tenido una hace menos de cuatro semanas. Si lo necesitas otra vez tan pronto, puede que el plan sea demasiado: mira «Cambiar de rutina».</p>}
-        <p class="mini terciario">Borrador, pendiente del visto bueno de Pelayo.</p>
+        {!encendido('suave') && <p class="mini terciario">Borrador, pendiente del visto bueno de Pelayo.</p>}
       </div>
     </Hoja>
   );
@@ -563,7 +563,7 @@ export function Alarma() {
         <div class="vid-que vid-alarma-c" role="alert">
           <strong>{ALARMA.titulo}</strong>
           <span class="peq">{ALARMA.texto}</span>
-          <span class="mini terciario">{ALARMA.despues} Borrador, pendiente del visto bueno de Pelayo.</span>
+          <span class="mini terciario">{ALARMA.despues}{encendido('alarma') ? '' : ' Borrador, pendiente del visto bueno de Pelayo.'}</span>
         </div>
       )}
     </div>

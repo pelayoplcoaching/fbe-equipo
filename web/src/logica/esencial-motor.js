@@ -6,6 +6,29 @@ import { num } from './calculos.js';
 import { estadoZonas } from './dolor.js';
 import { frenosSemana, notaFrenos, zonasAjustadas, textoFreno, textoVuelta, USO } from './dolor-sesion.js';
 import { cargaDe } from './zonas-ejercicio.js';
+import { consejoPreparacion } from './preparacion.js';
+
+// ---------- (v0.259, D9, P: 'descarga_senales') Una descarga por señales, si llega antes que la de su plantilla ----------
+// Dos semanas seguidas (la que acaba y la anterior) con la mitad o más de sus sesiones contestadas en «regular» o «mal» (o
+// día flojo o difícil de las tres preguntas) y las marcas cayendo: dos o más de sus ejercicios principales (los básicos, los
+// multiarticulares o lo obligatorio) con la tendencia a la baja. (Qué es «las marcas cayendo», criterio de Claude.)
+// → null o { bajan: [nombres] }
+const d10 = (x) => String(x || '').slice(0, 10);
+const restaDias = (iso, n) => { const t = new Date(`${iso}T12:00:00Z`); t.setUTCDate(t.getUTCDate() - n); return t.toISOString().slice(0, 10); };
+export function descargaPorSenales({ d, base, filas = [], ejercicios = {} }) {
+  if (!base?.fecha_inicio || base.foco === 'descarga') return null;
+  const antes = (d.semanas || []).find((w) => d10(w.fecha_inicio) === restaDias(d10(base.fecha_inicio), 7));
+  if (!antes || antes.foco === 'descarga') return null;
+  const flojas = (w) => {
+    const xs = (d.sesiones?.[w.id] || []).filter((s) => s.completada && consejoPreparacion(s.preparacion));
+    return xs.length > 0 && xs.filter((s) => consejoPreparacion(s.preparacion).nivel !== 'bien').length / xs.length >= 0.5;
+  };
+  if (!flojas(base) || !flojas(antes)) return null;
+  const principal = (f) => { const t = ejercicios[f.ejercicio_id]?.tipo || []; return f.prioridad === 'alta' || t.includes('basico') || t.includes('multiarticular'); };
+  const bajan = [...new Set((filas || []).filter((f) => principal(f) && f.tendencia === 'bajando').map((f) => f.ejercicio || ejercicios[f.ejercicio_id]?.nombre || ''))].filter(Boolean);
+  return bajan.length >= 2 ? { bajan } : null;
+}
+export const notaDescargaSenales = (ds) => `Llevas dos semanas llegando regular o mal a tus sesiones y tus marcas bajan (${ds.bajan.map((n) => n.toLowerCase()).join(', ')}): esta semana toca descarga, antes de la que venía en tu plan.`;
 
 // Lo que cambia en la plancha, para la nota: «5 segundos más: de 40 a 50» o «con peso: 5 kg encima y otra vez de 35 a 45
 // segundos».
@@ -72,7 +95,13 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
     d, base, destino: null, ejercicios, hoy, checkins, molestias, reglas: suyas.reglas,
     atleta: { nivel: atleta?.nivel ?? 'novato', perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null, modalidad: 'por_su_cuenta' },
   });
-  const r = proponerSemana(entrada);
+  let r = proponerSemana(entrada);
+  // (v0.259, D9) dos semanas llegando regular o mal y las marcas cayendo: esta semana, descarga (como si la semana viniera
+  // marcada como descarga: la hace el motor con sus reglas de siempre)
+  const ds = extras?.descargaSenales && tipo !== 'novato' && (r.semana?.tipo || 'normal') === 'normal'
+    ? descargaPorSenales({ d, base, filas: r.filas || [], ejercicios }) : null;
+  if (ds) r = proponerSemana(entradaDesdeBloque({ d, base, destino: { foco: 'descarga' }, ejercicios, hoy, checkins, molestias, reglas: suyas.reglas,
+    atleta: { nivel: atleta?.nivel ?? 'novato', perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null, modalidad: 'por_su_cuenta' } }));
   const descarga = r.semana?.tipo === 'descarga';
   const pares = Object.fromEntries((r.filas || []).map((f) => [f.pauta_id, f]));
   const { sesiones, pautas } = pautasDeSemana(d, base);
@@ -224,6 +253,7 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   // (v0.257) lo que no sube por una zona (lo del ajuste de un día no se cuenta: vuelve a lo de antes sin más)
   const porZona = Object.fromEntries(pautas.filter((p) => frenosZona[p.id] && frenosZona[p.id].motivo !== 'manana').map((p) => [p.ejercicio_id, frenosZona[p.id]]));
   if (Object.keys(porZona).length) extra.push(notaFrenos(porZona, ejercicios));
+  if (ds && descarga) extra.unshift(notaDescargaSenales(ds));
   if (pautas.some((p) => tiempo(p.ejercicio_id) && !bajado.has(p.id) && planchaEnTope(p, hechas[p.id]))) {
     extra.push('En la plancha ya llevas el peso máximo (20 kg): para que siga costando, prueba su versión difícil (codos más adelantados o un pie en el aire).');
   }

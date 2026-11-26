@@ -23,7 +23,11 @@ import { discosCon } from '../../logica/teclado.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
 import { Apuntes } from './ApuntesTarjeta.jsx';
 import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
-import { ajusteEnVivo, repsSiguiente } from '../../logica/ajuste-vivo.js';
+import { ajusteEnVivo, ajustePrimeraSerie, repsSiguiente } from '../../logica/ajuste-vivo.js';
+// (v0.259, D6, P: 'primera_serie') FBE Esencial: la segunda serie sale de cómo fue la primera (ajustePrimeraSerie). Lo pone
+// la sesión al pintarse (quien va por su cuenta, con la clave encendida); vale para todo lo de esa sesión (tarjetas y enfoque).
+let PRIMERA = false;
+export const fijarPrimeraSerie = (v) => { PRIMERA = !!v; };
 
 // Piezas compartidas por la sesión (lista) y el modo enfoque
 
@@ -396,13 +400,19 @@ export function prepararEjercicio(e, actual, ultimas, foco, progresionAuto) {
       // Lo de esa serie; lo que el coach no puso, como siempre (la anterior de hoy o su última vez)
       const base = previa ? { kg: previa.kg, reps: previa.reps } : propuestaSerie(prescripcion, ultimas?.series, k, { pautaAnterior: ultimas?.pauta });
       // (ajuste en vivo) sin kilos del coach en esa serie, con su RPE objetivo: según cómo fue la anterior
-      const aj = previa && o.kg == null ? ajusteEnVivo({ previa, objetivo: { rpe: o.rpe ?? prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo }, reps: o.reps ?? previa.reps, nombre: ej.nombre, subir: !!progresionAuto }) : null;
+      const obj = { rpe: o.rpe ?? prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo };
+      const a1 = PRIMERA && k === 2 && previa && o.kg == null ? ajustePrimeraSerie({ primera: previa, objetivo: obj, reps: o.reps ?? previa.reps, nombre: ej.nombre }) : null;
+      const aj = (a1 && (a1.sentido === 'bajar' || progresionAuto) ? a1 : null)
+        || (previa && o.kg == null && !(PRIMERA && k === 2) ? ajusteEnVivo({ previa, objetivo: obj, reps: o.reps ?? previa.reps, nombre: ej.nombre, subir: !!progresionAuto }) : null);
       return { kg: aj ? aj.kg : o.kg ?? base.kg, reps: o.reps ?? base.reps, rpe: o.rpe ?? null, objetivo: o, ...(aj ? { ajuste: aj } : {}) };
     }
     if (previa) {
       // (ajuste en vivo) a RPE o RIR y sin carga pautada: si la anterior se fue del esfuerzo, la carga se corrige
       const reps = repsSiguiente(previa.reps, prescripcion);
-      const aj = ajusteEnVivo({ previa, objetivo: { rpe: prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo }, reps, nombre: ej.nombre, kgFijado: prescripcion.carga_sugerida_kg != null, subir: !!progresionAuto });
+      const obj = { rpe: prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo };
+      const a1 = PRIMERA && k === 2 ? ajustePrimeraSerie({ primera: previa, objetivo: obj, reps, nombre: ej.nombre }) : null;
+      const aj = (a1 && (a1.sentido === 'bajar' || progresionAuto) ? a1 : null)
+        || (PRIMERA && k === 2 ? null : ajusteEnVivo({ previa, objetivo: obj, reps, nombre: ej.nombre, kgFijado: prescripcion.carga_sugerida_kg != null, subir: !!progresionAuto }));
       return aj ? { kg: aj.kg, reps: aj.reps, ajuste: aj } : { kg: previa.kg, reps: previa.reps };
     }
     return propuestaSerie(prescripcion, ultimas?.series, k, { sugerencia, pautaAnterior: ultimas?.pauta });

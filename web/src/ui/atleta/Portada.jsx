@@ -32,7 +32,7 @@ const LoDeHoy = perezoso(() => import('./EsencialAyuda.jsx'), 'LoDeHoy', { mient
 // El dibujo de la sesión, en su propio archivo (ArteSesion.jsx); se sigue exportando desde aquí
 export { ArteSesion };
 
-export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar, salud = false, prep = null }) {
+export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, alEmpezar, salud = false, prep = null, corta = null, alCorta = null }) {
   // (personalización 2) «Ana, hoy toca»: con su nombre (o su apodo), encima del nombre de la sesión
   useMarcaPagina('hay-portada-sesion');
   const trato = useTrato();
@@ -88,7 +88,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       )}
       {/* (personalización 3, tanda 5) con el tiempo que tiene y su calentamiento: consejo, la sesión no cambia */}
       {suyo && !propio && !sesion.completada && r.ejercicios > 0 && <LoDeHoy sesion={sesion} ejercicios={ejercicios} />}
-      {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} />}
+      {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} corta={corta} alCorta={alCorta} />}
       {!sesion.completada && r.ejercicios > 0 && <Calentamiento ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
       {nota && (
         <figure class="cita-coach">

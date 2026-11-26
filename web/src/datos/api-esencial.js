@@ -144,9 +144,10 @@ export async function rutinas(b, { hoy = fechaMadrid() } = {}) {
 async function extrasDe(b, atletaId, d, base, hoy = fechaMadrid()) {
   const { APAGADO } = await import('../logica/esencial-respuestas.js');
   const on = (k) => !APAGADO.has(k);
-  if (!on('molestia_frena') && !on('suave') && !on('dos_duras') && !on('molestias_zona')) return null;
+  if (!on('molestia_frena') && !on('suave') && !on('dos_duras') && !on('molestias_zona') && !on('descarga_senales')) return null;
   const extras = {};
   if (on('molestia_frena')) extras.molestiaFrena = true;
+  if (on('descarga_senales')) extras.descargaSenales = true;   // (v0.259, D9)
   const lunes = String(base?.fecha_inicio || '').slice(0, 10);
   if (on('molestias_zona') && lunes) {
     const A = await import('./api-dolor.js');
