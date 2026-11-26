@@ -2394,7 +2394,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (migración 037)');
     check(!PV.debeAvisarPrivacidad((await api.privacidadVista()).version, await api.versionLegal()) && (await api.privacidadVista()).version === '2026-12.44', 'y ya no vuelve a salir (en ningún móvil)');
     check(await api.marcarPrivacidadVista('2026-12.9') === true && await enBase() === '2026-12.44' && await api.marcarPrivacidadVista('2026-12') === true && await enBase() === '2026-12.44', 'nunca hacia atrás (la base, comparando por partes: ni a la 2026-12.9 ni a la 2026-12)');
     await b.auth.entrar('pelayo@fbe.test', 'contraseña-coach');
-    check(/vigente \(2026-12\.43\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
+    check(/vigente \(2026-12\.44\)/.test(PV.textoPrivacidadVista(await api.privacidadVistaDe(anaUid), await api.versionLegal())), 'el coach lo ve en la ficha');
     globalThis.localStorage = previo;
   }
   await b.sql(`delete from recordatorios_tecnica`); await b.sql(`delete from frases_correccion`); await b.sql(`delete from chat_cupos`);

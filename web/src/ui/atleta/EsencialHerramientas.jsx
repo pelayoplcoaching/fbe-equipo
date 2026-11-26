@@ -74,7 +74,7 @@ export function HojaMedicacion({ cuestionario = null, alCerrar }) {
                   const sale = fuera.has(x.pid);
                   return (
                     <FilaIos key={x.pid} icono={sale ? 'cerrar' : 'hecho'} tono={sale ? 'aviso' : 'ok'} titulo={x.nombre}
-                      detalle={sale ? 'Fuera de tu lista' : [x.familia, dosisTexto(x)].filter(Boolean).join(' · ')}>
+                      detalle={sale ? 'Fuera de tu lista' : [x.familia && x.familia !== x.nombre ? x.familia : null, dosisTexto(x)].filter(Boolean).join(' · ')}>
                       <button type="button" class="btn-texto mini" aria-pressed={sale ? 'true' : 'false'} aria-label={`${sale ? 'Volver a poner' : 'Quitar'} ${x.nombre}`} onClick={() => quitar(x.pid)}>{sale ? 'Volver a poner' : 'Quitar'}</button>
                     </FilaIos>
                   );

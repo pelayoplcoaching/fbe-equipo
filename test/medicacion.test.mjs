@@ -60,5 +60,17 @@ check(M.tomaMedicacion({ otras: ['medicacion'] }) && !M.tomaMedicacion({ otras: 
 check(!/[^\x00-\x7F]/.test(readFileSync(new URL('../web/src/logica/medicacion.js', import.meta.url), 'utf8').split('\n').filter((x) => /\/[^/]*\[[^\]]*\]/.test(x) && /\.(test|exec|replace)\(|= \//.test(x)).map((x) => (x.match(/\/(?:\\.|[^/\n])+\/[gimsuy]*/g) || []).join('')).join('')),
   'sus expresiones regulares, solo ASCII (las tildes, con \\u)');
 
+console.log('\nLa privacidad (2026-12.44, solo con la 107)');
+const legal = await import('../web/src/legal.js');
+const PN = await import('../web/src/logica/privacidad-novedades.js');
+const sec = legal.PRIVACIDAD.find((x) => x[0] === 'Tu medicación y el ejercicio')?.[1] || '';
+check(legal.VERSION_LEGAL === '2026-12.44' && legal.VERSION_LEGAL_SIN_107 === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.44' && PN.NOVEDADES_PRIVACIDAD[0][2].length <= 260
+  && PN.novedadesDesde('2026-12.43', '2026-12.44').length === 1, 'la versión 2026-12.44 (sin la 107, la 2026-12.43) y su novedad, corta');
+check(/Pauta Activa/.test(sec) && /consentimiento de datos de salud/.test(sec) && /tu coach/.test(sec) && /sin tu nombre/.test(sec) && /borra/.test(sec) && /dosis/.test(sec),
+  'su sección cuenta qué se guarda (con el consentimiento), quién lo ve, cómo se borra y que el enlace va sin nombre');
+const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
+check(/VERSION_LEGAL_SIN_107/.test(apiSrc) && /hay107/.test(apiSrc) && /'medicacion_atleta'\]\) out\[t\]/.test(apiSrc) && /medicacion_atleta/.test(apiSrc.slice(apiSrc.indexOf('async borrarSaludCuestionario'), apiSrc.indexOf('async borrarSaludCuestionario') + 600)),
+  'la versión, según esté la 107; su lista, en «Descargar mis datos»; y se borra con sus respuestas de salud');
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);
