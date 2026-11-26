@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATEGORIAS, RESPUESTAS, PENDIENTES, APAGADO, encendido, respuestas, respuestaDe, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, NECESITAS, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO,
-  LECCIONES_MOMENTO, momentoDe, checkinResponde } from '../web/src/logica/esencial-respuestas.js';
+  LECCIONES_MOMENTO, momentoDe, checkinResponde, fijarAjustes, conDirecto } from '../web/src/logica/esencial-respuestas.js';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lee = (r) => readFileSync(join(raiz, r), 'utf8');
@@ -35,8 +35,12 @@ check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.
 check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && !respuestas().some((x) => PENDIENTES.some((p) => p.id === x.id)) && respuestas({ previa: true }).filter((x) => x.pendiente).length === PENDIENTES.length,
   `las ${PENDIENTES.length} respuestas de salud nuevas no salen; en la vista previa, marcadas como pendientes`);
 check(respuestaDe('resfriado') === null && respuestaDe('resfriado', { previa: true })?.pendiente === true, 'ni se llega a ellas por su clave');
-const pub = respuestas({ publicas: [{ id: 'x1', pregunta: '¿Cuánto tardo en notar el peso muerto?', respuesta: 'Unas semanas.' }, { id: 'x2', pregunta: '', respuesta: 'sin pregunta' }] });
-check(pub.filter((x) => x.directo).length === 1 && pub.find((x) => x.directo).cat === 'directo', 'las dudas del directo que Pelayo hace públicas entran en su tema (y las que no tienen pregunta escrita, no)');
+const PUB = [{ id: 'x1', pregunta: '¿Cuánto tardo en notar el peso muerto?', respuesta: 'Unas semanas.' }, { id: 'x2', pregunta: '', respuesta: 'sin pregunta' }];
+check(!respuestas({ publicas: PUB }).some((x) => x.directo), '(v0.251) con el directo oculto, las dudas del directo hechas públicas no entran');
+fijarAjustes([{ clave: 'directo', encendido: true }]);
+const pub = respuestas({ publicas: PUB });
+check(pub.filter((x) => x.directo).length === 1 && pub.find((x) => x.directo).cat === 'directo', 'con «El directo de dudas» encendido, entran en su tema (y las que no tienen pregunta escrita, no)');
+fijarAjustes([]);
 check(Object.keys(LECCIONES_MOMENTO).length === 5 && momentoDe({ semana: 'descarga' }) === 'descarga' && momentoDe({ semana: 'normal', porque: [{ estancado: true }] }) === 'estancado' && momentoDe({ tipo: 'primera', semana: 'normal' }) === 'rutina'
   && momentoDe({ semana: 'normal', porque: [] }) === null && Object.values(LECCIONES_MOMENTO).every(([t, x]) => t && x.length <= 240), 'las cinco lecciones que saltan cuando toca, escritas y con su momento');
 check(checkinResponde({ horas_sueno: '5-6', motivacion: 4 }).length === 1 && checkinResponde({ horas_sueno: '7-8', motivacion: 3, energia: 1 }).length === 0 && checkinResponde({ horas_sueno: '<5', motivacion: 1 }).length === 2 && checkinResponde().length === 0,
@@ -52,11 +56,26 @@ check(NECESITAS.length === 13 && NECESITAS.every(([id, t, icono, que]) => id && 
   // (v0.247) lo que le sale a cada uno: sin plan, sin la tabla de notas, con todo y con la vista previa
   const de = (o) => necesitasPara(o).map((x) => x[0]).join();
   check(de({}) === 'viaje,duele' && necesitasPara({})[0][3] === 'respuesta:viaje' && ids.has('viaje'), 'sin plan y sin la migración 100: «Me voy de viaje» (su respuesta de siempre) y «Me duele algo»');
-  check(de({ con100: true }) === 'viaje,duele,objetivo,directo' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo y la pregunta para el directo; el viaje, con fechas');
+  check(de({ con100: true }) === 'viaje,duele,objetivo' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo (el viaje, con fechas); la pregunta para el directo, oculta (v0.251)');
   check(de({ conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,plan', 'con plan y sin la 100: lo que no guarda notas');
-  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,directo', 'con todo: once (lo apagado no sale)');
-  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
-    'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100)');
+  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan', 'con todo: diez (ni lo apagado ni el directo, que está oculto)');
+  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
+    'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100); el directo, tampoco ahí: no espera visto bueno');
+}
+
+console.log('\n(v0.251) El directo de dudas, oculto (FBE Esencial no tiene directos), pero en el código');
+{
+  const de = (o) => necesitasPara(o).map((x) => x[0]).join();
+  const pel = respuestaDe('pelayo'), tec = respuestaDe('tecnica');
+  check(!conDirecto() && !/directo/i.test(`${pel.r} ${tec.r}`) && !pel.ir && !tec.ir && /respuestas, con buscador, y la comunidad de la app/.test(pel.r) && !APAGADO.has('directo'),
+    'de serie, apagado: «¿Hablo con Pelayo?» y «No sé si lo hago bien» no lo nombran ni llevan a él (y no es de lo que espera su visto bueno)');
+  fijarAjustes([{ clave: 'directo', encendido: true }]);
+  const pel2 = respuestaDe('pelayo'), tec2 = respuestaDe('tecnica');
+  check(conDirecto() && de({ con100: true }) === 'viaje,duele,objetivo,directo' && !de({}).includes('directo') && pel2.ir === 'directo' && /un directo al mes/.test(pel2.r) && tec2.ir === 'directo' && /directo del mes/.test(tec2.r),
+    'si Pelayo lo enciende en su panel: vuelve «Preguntar a Pelayo» (con la tabla de notas) y los textos de antes, que llevan a la pregunta');
+  fijarAjustes([{ clave: 'directo', encendido: false }]);
+  check(!conDirecto() && !de({ con100: true, conPlan: true }).includes('directo'), 'y apagado otra vez, se oculta');
+  fijarAjustes([]);
 }
 // (v0.250) y «pesarme»: el aviso para pesarse abre «¿Cuándo me peso?» (lo resuelve QueNecesitas)
 const ABRE = new Set(['plan', 'cierre', 'revision', 'rutina', 'agujetas', 'vuelta', 'viajando', 'pesarme']);

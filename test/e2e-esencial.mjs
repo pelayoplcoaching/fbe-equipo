@@ -1013,11 +1013,12 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const conTri = await p.waitForFunction(() => /Aún no hay bastante que comparar|semanas?: tu trimestre|Lo que llevas:/.test(document.querySelector('.cer-trimestre')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
     check(conTri, '«Lo que llevas»: con una sola semana de su rutina nueva, aún no hay con qué comparar (y lo dice)');
     await hojaC.locator('.cerrar-hoja').click();
-    // «¿Qué necesitas?»: el centro de respuestas (en su respuesta), el buscador, su plan y la pregunta para el directo
+    // «¿Qué necesitas?»: el centro de respuestas (en su respuesta), el buscador y su plan; (v0.251) sin la pregunta para el
+    // directo, que está oculto (FBE Esencial no tiene directos) hasta que Pelayo lo encienda en su panel
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
-    check((await nec.locator('.ayu-nec').count()) === 12 && /Me voy de viaje/.test(await nec.textContent()) && /Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
-      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque (lo apagado no sale)');
+    check((await nec.locator('.ayu-nec').count()) === 11 && /Me voy de viaje/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
+      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque (ni lo apagado ni el directo, que está oculto)');
     // (v0.247) «Me duele algo»: dónde y cuánto → qué hacer con su plan mientras tanto (los textos de su check-in); y de ahí, a su respuesta
     await nec.getByRole('button', { name: 'Me duele algo' }).click();
     const hMol = p.locator('[aria-modal="true"]').last();
@@ -1037,6 +1038,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await hoja.locator('.ayu-buscar-c').fill('');
     await hoja.getByRole('button', { name: 'Todos los temas' }).click();
     check((await hoja.locator('.ayu-cat').count()) === 9, 'y sus nueve temas (con «Antes de empezar», v0.248)');
+    const conEquipo = await hoja.locator('.ayu-pie', { hasText: 'Pregúntala en Equipo' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conEquipo && /¿No está tu duda\? Pregúntala en Equipo, la comunidad de la app/.test(await hoja.locator('.ayu-pie').textContent()) && !/directo/i.test(await hoja.textContent()),
+      '(v0.251) sin el directo: si la duda no está, «Pregúntala en Equipo» (la comunidad, abierta en la demo); del directo, nada');
     await desborda(p, 'el centro de respuestas');
     await hoja.locator('.cerrar-hoja').click();
     await p.locator('[aria-modal="true"]').last().locator('.cerrar-hoja').click();   // (y «Me duele algo», que estaba debajo)
@@ -1050,13 +1054,6 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(/estás aquí/.test(await hoja.locator('.ayu-paso[aria-current="step"]').textContent().catch(() => '')) && /La app te prepara cada semana/.test(await hoja.locator('.ayu-paso[aria-current="step"]').textContent().catch(() => '')) && (await hoja.locator('.ayu-paso[data-estado="hecho"]').count()) === 3,
       'y «Tu camino»: está en «La app te prepara cada semana», con sus tres tramos anteriores hechos');
     await desborda(p, 'tu plan, explicado');
-    await hoja.locator('.cerrar-hoja').click();
-    await nec.getByRole('button', { name: 'Preguntar a Pelayo' }).click();
-    hoja = p.locator('[aria-modal="true"]').last();
-    await hoja.locator('.ayu-area').fill('En el peso muerto rumano noto más la espalda que la pierna, ¿qué miro?');
-    await hoja.getByRole('button', { name: 'Enviar' }).click();
-    const enviada = await hoja.locator('.ayu-mia').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-    check(enviada && /noto más la espalda/.test(await hoja.locator('.ayu-mia').textContent()) && /No es un chat/.test(await hoja.textContent()), 'manda su pregunta para el directo del mes (dicho que no es un chat) y le queda en «Tus preguntas»');
     await hoja.locator('.cerrar-hoja').click();
     // Un aviso que lleva a su explicación: «#hoy/lunes» abre la revisión
     await p.evaluate(() => { location.hash = '#hoy/lunes'; });
@@ -1098,24 +1095,27 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(/Apunta las que hagas, sin maquillarlas/.test(await ej.locator('.ayu-ej-x').textContent().catch(() => '')), 'con su respuesta en el sitio («No llego a las repeticiones»)');
       await desborda(p, 'el ejercicio con su «¿Por qué?» y sus dudas');
     } else check(false, 'en el ejercicio, «¿Por qué esto?» y «Dudas»');
-    // Pelayo, en su panel: la pregunta para el directo; la contesta y la saca en «Respuestas» para todos
-    await salirDeLaCuenta(p, 'noto más la espalda');
+    // Pelayo, en su panel de FBE Esencial: (v0.251) con el directo oculto, ni sus preguntas ni su recuento
+    await salirDeLaCuenta(p);
     await p.setViewportSize({ width: 1280, height: 900 });
-    await p.goto(`${base}/?demo=esencial`);
-    await p.getByRole('button', { name: /Coach: panel/ }).first().click();
-    await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
-    await p.waitForTimeout(1200);
-    await cerrar(p);
-    const piloto = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
-    if ((await piloto.getAttribute('open').catch(() => null)) === null) await piloto.locator('summary').click().catch(() => {});
-    const caja = piloto.locator('.ecp-caja[data-ecp="directo"]');
-    const conCaja = await caja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-    check(conCaja && /1 sin contestar/.test(await caja.textContent()) && /Tomás Rey/.test(await caja.textContent()) && /noto más la espalda/.test(await caja.textContent()), 'Pelayo, en su panel de FBE Esencial: «Preguntas para el directo · 1 sin contestar», con quién pregunta');
+    const alPanel = async () => {
+      await p.goto(`${base}/?demo=esencial`);
+      await p.getByRole('button', { name: /Coach: panel/ }).first().click();
+      await p.getByRole('heading', { name: 'Atletas' }).first().waitFor({ timeout: 30000 });
+      await p.waitForTimeout(1200);
+      await cerrar(p);
+      const pl = p.locator('details.corr-panel').filter({ hasText: 'FBE Esencial' });
+      if ((await pl.getAttribute('open').catch(() => null)) === null) await pl.locator('summary').click().catch(() => {});
+      return pl;
+    };
+    const piloto = await alPanel();
+    let directoEncendido = false;
     // (tanda 6) la semana de FBE Esencial, en cifras
     const rs = piloto.locator('.ecp-caja[data-ecp="semana"]');
     const conRs = await rs.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-    check(conRs && /Esta semana, en FBE Esencial/.test(await rs.textContent()) && /con semana en marcha/.test(await rs.textContent()) && (await rs.locator('.ecp-cifra').count()) >= 3 && /pregunta para el directo sin contestar/.test(await rs.textContent()),
-      'y el resumen de la semana: cuántos han entrenado, cuántos la tienen completa y lo que hay por contestar');
+    check(conRs && /Esta semana, en FBE Esencial/.test(await rs.textContent()) && /con semana en marcha/.test(await rs.textContent()) && (await rs.locator('.ecp-cifra').count()) >= 3 && !/directo/.test(await rs.textContent()),
+      'y el resumen de la semana: cuántos han entrenado y cuántos la tienen completa (del directo, oculto, nada)');
+    check(!(await piloto.locator('.ecp-caja[data-ecp="directo"]').count()), '(v0.251) con el directo oculto, en su panel no sale «Preguntas para el directo»');
     // (tanda 5) y lo que Tomás contestó a «¿Cómo vamos?»; y a quién escribir, con el mensaje preparado
     const cv = piloto.locator('.ecp-caja[data-ecp="vamos"]');
     const conCv = await cv.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
@@ -1171,6 +1171,14 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
         check(vuelta, 'y «El de la app» + «Guardar» la devuelve a la de la app');
         await ht.locator('.cerrar-hoja').click().catch(() => {});
       } else check(false, 'sus textos: la hoja para escribir las notas de los lunes');
+      // (v0.251) «El directo de dudas», en «Los avisos, tu lunes y el directo»: apagado de serie; lo enciende (y abajo, Marina
+      // ve la pregunta para el directo y la manda, y a él le sale en su panel)
+      const dir = items.filter({ hasText: 'El directo de dudas' });
+      check((await dir.count()) === 1 && !(await dir.locator('input[role="switch"]').isChecked()) && /Apagado: FBE Esencial no tiene directos/.test(await dir.textContent()) && /Los avisos, tu lunes y el directo/.test(await prv.textContent()),
+        '(v0.251) «El directo de dudas», con su interruptor en «Los avisos, tu lunes y el directo»: apagado de serie');
+      await dir.locator('input[role="switch"]').check();
+      directoEncendido = await p.waitForFunction(() => /Encendiste El directo de dudas/.test(document.querySelector('[aria-labelledby="prv-reg-t"]')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      check(directoEncendido, 'lo enciende y queda en «Lo que has cambiado»');
       // el piloto: «tal cual», la curva y el repaso de seguridad del motor, en el navegador
       await prv.getByRole('tab', { name: 'El piloto' }).click();
       const tc = await prv.locator('#prv-panel').filter({ hasText: '«Tal cual»' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
@@ -1192,53 +1200,69 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(cmp && /nadie@x\.com: no tiene ficha en la app/.test(tCmp) && /De baja en Stripe y activos en la app \(1\)/.test(tCmp) && /Tomás Rey/.test(tCmp), 'Stripe frente a la app: quién ha pagado y no tiene acceso y quién se dio de baja y sigue activo');
       await prv.locator('summary').click();
     } else check(false, 'en el panel de FBE Esencial, «Por revisar y el piloto»');
-    if (conCaja) {
-      await caja.getByRole('button', { name: 'Contestar' }).click();
-      await caja.locator('.ecp-area').fill('Baja el peso, saca cadera hacia atrás y para cuando la espalda empiece a redondearse.');
-      await caja.getByRole('checkbox').check();
-      await caja.locator('.ecp-campo').fill('En el peso muerto rumano noto más la espalda que la pierna');
-      await caja.getByRole('button', { name: 'Guardar' }).click();
-      const guardada = await p.waitForFunction(() => /Tu respuesta \(pública\)/.test(document.querySelector('.ecp-caja[data-ecp="directo"]')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
-      check(guardada && !/sin contestar/.test(await caja.textContent()), 'la contesta y la hace pública (con la pregunta escrita por él, sin el nombre de nadie)');
-      // …y Marina (otra persona) la ve en «Respuestas», en «Del directo del mes», sin saber de quién era
-      await salirDeLaCuenta(p, 'saca cadera');
-      await p.setViewportSize({ width: 390, height: 844 });
-      await entrar(p, /Marina/);
-      await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
-      await cerrar(p);
-      const nec2 = p.locator('.ayu-necesitas');
-      const conNec = await nec2.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-      check(conNec && !/Cambiar de rutina|Entender mi plan/.test(await nec2.textContent()), 'Marina, aún sin plan: «¿Qué necesitas?» sin lo que pide tener plan');
-      if (conNec) {
-        await nec2.getByRole('button', { name: 'Otra cosa' }).click();
-        const h2 = p.locator('[aria-modal="true"]').last();
-        const conDirecto = await h2.locator('.ayu-cat', { hasText: 'Del directo del mes' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-        if (conDirecto) await h2.locator('.ayu-cat', { hasText: 'Del directo del mes' }).click();
-        const tD = conDirecto ? await h2.textContent() : '';
-        check(conDirecto && /noto más la espalda que la pierna/.test(tD) && !/Tomás/.test(tD), 'y ve la duda del directo en «Respuestas», en «Del directo del mes», sin el nombre de quien preguntó');
-        if (conDirecto) { await h2.locator('.ayu-p').first().locator('summary').click(); check(/saca cadera hacia atrás/.test(await h2.locator('.ayu-p').first().textContent()), 'con la respuesta de Pelayo'); }
-        // (v0.249, 92) «¿Puedo darme de baja?» → «Tu suscripción»: antes del portal, «¿nos dices por qué?» (opcional)
-        const catSus = h2.locator('.ayu-cat', { hasText: 'Tu suscripción' });
-        if (await catSus.count()) {
-          await catSus.first().click();
-          const pBaja = h2.locator('.ayu-p[data-id="baja"]');
-          const conBaja = await pBaja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-          if (conBaja) {
-            await pBaja.locator('summary').click();
-            await pBaja.getByRole('button', { name: /Tu suscripción/ }).click();
-            const hb = p.locator('[aria-modal="true"]').filter({ hasText: '¿nos dices por qué?' }).last();
-            const conHb = await hb.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-            const nOps = conHb ? await hb.locator('.ayu-baja-op').count() : 0;
-            check(conHb && nOps === 6 && (await hb.getByRole('link', { name: /Ir a mi suscripción/ }).count()) === 1, `«¿Puedo darme de baja?» → «Tu suscripción»: el porqué, opcional (${nOps} motivos), y el enlace a su suscripción`);
-            if (conHb) {
-              await hb.getByRole('button', { name: 'Es caro para mí' }).click();
-              await hb.getByRole('button', { name: 'Enviarlo' }).click();
-              const gracias = await hb.getByText('Gracias por decírnoslo.').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-              check(gracias, 'elige «Es caro para mí» y lo envía: «Gracias por decírnoslo» (a Pelayo le sale en su panel)');
-              await hb.locator('.cerrar-hoja').click().catch(() => {});
-            }
-          } else check(false, 'en «Tu suscripción», «¿Puedo darme de baja?»');
-        }
+    // (v0.251) con el directo encendido, Marina (aún sin plan) ve «Preguntar a Pelayo» y manda su duda
+    await salirDeLaCuenta(p, '"clave":"directo"');
+    await p.setViewportSize({ width: 390, height: 844 });
+    await entrar(p, /Marina/);
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await cerrar(p);
+    const nec2 = p.locator('.ayu-necesitas');
+    const conNec = await nec2.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(conNec && !/Cambiar de rutina|Entender mi plan/.test(await nec2.textContent()), 'Marina, aún sin plan: «¿Qué necesitas?» sin lo que pide tener plan');
+    if (conNec) {
+      const preg = nec2.getByRole('button', { name: 'Preguntar a Pelayo' });
+      const conPreg = directoEncendido && await preg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conPreg, '(v0.251) con «El directo de dudas» encendido, vuelve «Preguntar a Pelayo» en «¿Qué necesitas?»');
+      if (conPreg) {
+        await preg.click();
+        const hp = p.locator('[aria-modal="true"]').last();
+        await hp.locator('.ayu-area').fill('En el peso muerto rumano noto más la espalda que la pierna, ¿qué miro?');
+        await hp.getByRole('button', { name: 'Enviar' }).click();
+        const enviada = await hp.locator('.ayu-mia').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        check(enviada && /noto más la espalda/.test(await hp.locator('.ayu-mia').textContent()) && /No es un chat/.test(await hp.textContent()), 'manda su pregunta para el directo del mes (dicho que no es un chat) y le queda en «Tus preguntas»');
+        await hp.locator('.cerrar-hoja').click();
+      }
+      await nec2.getByRole('button', { name: 'Otra cosa' }).click();
+      const h2 = p.locator('[aria-modal="true"]').last();
+      // (v0.249, 92) «¿Puedo darme de baja?» → «Tu suscripción»: antes del portal, «¿nos dices por qué?» (opcional)
+      const catSus = h2.locator('.ayu-cat', { hasText: 'Tu suscripción' });
+      if (await catSus.count()) {
+        await catSus.first().click();
+        const pBaja = h2.locator('.ayu-p[data-id="baja"]');
+        const conBaja = await pBaja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        if (conBaja) {
+          await pBaja.locator('summary').click();
+          await pBaja.getByRole('button', { name: /Tu suscripción/ }).click();
+          const hb = p.locator('[aria-modal="true"]').filter({ hasText: '¿nos dices por qué?' }).last();
+          const conHb = await hb.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+          const nOps = conHb ? await hb.locator('.ayu-baja-op').count() : 0;
+          check(conHb && nOps === 6 && (await hb.getByRole('link', { name: /Ir a mi suscripción/ }).count()) === 1, `«¿Puedo darme de baja?» → «Tu suscripción»: el porqué, opcional (${nOps} motivos), y el enlace a su suscripción`);
+          if (conHb) {
+            await hb.getByRole('button', { name: 'Es caro para mí' }).click();
+            await hb.getByRole('button', { name: 'Enviarlo' }).click();
+            const gracias = await hb.getByText('Gracias por decírnoslo.').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+            check(gracias, 'elige «Es caro para mí» y lo envía: «Gracias por decírnoslo» (a Pelayo le sale en su panel)');
+            await hb.locator('.cerrar-hoja').click().catch(() => {});
+          }
+        } else check(false, 'en «Tu suscripción», «¿Puedo darme de baja?»');
+      }
+      await h2.locator('.cerrar-hoja').click().catch(() => {});
+    }
+    // …y a Pelayo le sale en su panel: la contesta y la saca en «Respuestas» para todos
+    if (directoEncendido) {
+      await salirDeLaCuenta(p, 'noto más la espalda');
+      await p.setViewportSize({ width: 1280, height: 900 });
+      const caja = (await alPanel()).locator('.ecp-caja[data-ecp="directo"]');
+      const conCaja = await caja.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conCaja && /1 sin contestar/.test(await caja.textContent()) && /Marina/.test(await caja.textContent()) && /noto más la espalda/.test(await caja.textContent()), 'Pelayo, en su panel de FBE Esencial: «Preguntas para el directo · 1 sin contestar», con quién pregunta');
+      if (conCaja) {
+        await caja.getByRole('button', { name: 'Contestar' }).click();
+        await caja.locator('.ecp-area').fill('Baja el peso, saca cadera hacia atrás y para cuando la espalda empiece a redondearse.');
+        await caja.getByRole('checkbox').check();
+        await caja.locator('.ecp-campo').fill('En el peso muerto rumano noto más la espalda que la pierna');
+        await caja.getByRole('button', { name: 'Guardar' }).click();
+        const guardada = await p.waitForFunction(() => /Tu respuesta \(pública\)/.test(document.querySelector('.ecp-caja[data-ecp="directo"]')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(guardada && !/sin contestar/.test(await caja.textContent()), 'la contesta y la hace pública (con la pregunta escrita por él, sin el nombre de nadie)');
       }
     }
     await ctx.close();

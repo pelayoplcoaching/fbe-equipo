@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.251': {
+    // (FBE Esencial sin directos: lo del directo de dudas, oculto; sin migración)
+    atleta: [],
+    coach: [
+      'FBE Esencial sin directos: «Preguntar a Pelayo» y sus preguntas quedan ocultas. Lo enciendes en tu panel, en «El directo de dudas».',
+    ],
+  },
   '0.250': {
     // (FBE Esencial, tanda 9: la comida, acompañada; migración 104)
     atleta: [

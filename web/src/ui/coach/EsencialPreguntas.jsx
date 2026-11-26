@@ -1,6 +1,7 @@
 // FBE Esencial (acompañamiento, tanda 4; migración 100): en el panel del coach, las preguntas que quienes van por su cuenta
 // mandan para el directo del mes. Verlas juntas, apuntar lo que contestó y, si quiere, sacarla en «Respuestas» para todos
-// (sin el nombre de quien preguntó y con la pregunta escrita por él). Estilos: ayuda.css (clases ecp-*).
+// (sin el nombre de quien preguntó y con la pregunta escrita por él). (v0.251) Oculto salvo que encienda «El directo de
+// dudas» en su panel: FBE Esencial no tiene directos. Estilos: ayuda.css (clases ecp-*).
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono } from '../comunes.jsx';
 import { fechaLarga } from '../../logica/esencial-alta.js';
@@ -12,7 +13,7 @@ import * as datos from '../../datos/api-esencial.js';
 // (para el panel del coach) Las preguntas para el directo: verlas juntas, contestarlas y, si quiere, hacerlas públicas
 export function PreguntasDirecto() {
   const { backend, aviso } = useApp();
-  const d = useCarga(() => datos.preguntasDirecto(backend), []);
+  const d = useCarga(() => datos.directoEncendido(backend).then((si) => (si ? datos.preguntasDirecto(backend) : [])), []);
   const [edita, setEdita] = useState(null);   // { id, respuesta, pregunta_publica, publica }
   const [ocupado, una] = useUnaVez();
   if (!d.datos?.length) return null;

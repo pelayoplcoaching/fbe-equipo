@@ -7,7 +7,7 @@ import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../.
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
-import { fijarAjustes } from '../../logica/esencial-respuestas.js';
+import { fijarAjustes, conDirecto } from '../../logica/esencial-respuestas.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUTO_098 } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
@@ -790,7 +790,10 @@ export function FaqEsencial() {
   const inicio = atleta?.esencial_inicio || null;
   const enlace = (ruta, texto) => <a href={`${WEB_FBE}/${ruta}`} target="_blank" rel="noopener">{texto}</a>;
   const faq = [
-    ['¿Hablo con Pelayo?', <>No hay chat ni revisión de tu semana: eso lo llevan los {enlace('programas.html', 'programas con seguimiento')}. Sí hay un directo al mes para resolver dudas y la comunidad de la app.</>],
+    // (v0.251) el directo de dudas está oculto (FBE Esencial no tiene directos) salvo que Pelayo lo encienda en su panel
+    ['¿Hablo con Pelayo?', conDirecto()
+      ? <>No hay chat ni revisión de tu semana: eso lo llevan los {enlace('programas.html', 'programas con seguimiento')}. Sí hay un directo al mes para resolver dudas y la comunidad de la app.</>
+      : <>No hay chat ni revisión de tu semana: eso lo llevan los {enlace('programas.html', 'programas con seguimiento')}. Para las dudas tienes las respuestas de la app, con buscador, y la comunidad.</>],
     ['¿Cuántos días a la semana?', 'Si empiezas de cero, dos: las cuatro semanas de la guía y, desde la quinta, una plantilla de dos días (desde Hoy puedes pasar a tres). Si ya entrenas, los que pusiste en el cuestionario.'],
     ['¿Qué material necesito?', 'Tu plantilla se elige con el material que pusiste en el cuestionario. Las cuatro semanas de la guía son de gimnasio, y cada ejercicio trae su alternativa.'],
     ['¿Y si tengo una enfermedad o tomo medicación?', <>Antes de empezar contestas unas preguntas de salud. Si sale que conviene consultar, no empiezas sin el visto bueno de tu médico o una {enlace('puesta-a-punto.html', 'Puesta a punto')} con Pelayo.</>],

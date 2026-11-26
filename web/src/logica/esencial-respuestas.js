@@ -34,7 +34,8 @@ export const RESPUESTAS = [
   { id: 'material', cat: 'empezar', q: '¿Qué material necesito?',
     r: 'Tu rutina se elige con el material que pusiste en el cuestionario. Las cuatro semanas de la guía son de gimnasio, y cada ejercicio trae su alternativa.' },
   { id: 'pelayo', cat: 'empezar', q: '¿Hablo con Pelayo?',
-    r: 'No hay chat ni revisión de tu semana: eso lo llevan los programas con seguimiento. Sí hay un directo al mes para resolver dudas, al que puedes mandar tu pregunta desde aquí, y la comunidad de la app.', enlace: ['Programas con seguimiento', 'programas.html'], ir: 'directo' },
+    // (v0.251) sin el directo de dudas, que está oculto; con él encendido, su texto de antes (CON_DIRECTO)
+    r: 'No hay chat ni revisión de tu semana: eso lo llevan los programas con seguimiento. Para las dudas tienes estas respuestas, con buscador, y la comunidad de la app.', enlace: ['Programas con seguimiento', 'programas.html'] },
   { id: 'primer-dia', cat: 'empezar', q: '¿Qué hago el primer día?',
     r: 'Pide a alguien de sala que te ajuste las máquinas: son cinco minutos y te ahorran un mes de dudas. Empieza con poco peso, apunta cada serie y no vayas al límite. El objetivo de enero es llegar a febrero.' },
   { id: 'que-peso', cat: 'empezar', q: '¿Qué peso pongo?',
@@ -55,7 +56,7 @@ export const RESPUESTAS = [
   { id: 'maquina', cat: 'sesion', tambien: ['antes'], q: 'La máquina está ocupada',
     r: 'Abre el ejercicio y toca «Cambiar»: verás sus alternativas. Lo que apuntes queda a nombre de la alternativa, así tus marcas no se mezclan.' },
   { id: 'tecnica', cat: 'sesion', q: 'No sé si lo hago bien',
-    r: 'Mira el vídeo en «Cómo se hace» y quédate con un peso que controles en todo el recorrido. Si puedes, pide a alguien de sala que te mire una serie. Y si la duda sigue, mándala para el directo del mes.', ir: 'directo' },
+    r: 'Mira el vídeo en «Cómo se hace» y quédate con un peso que controles en todo el recorrido. Si puedes, pide a alguien de sala que te mire una serie.' },
   { id: 'poco-tiempo', cat: 'sesion', q: 'Hoy tengo poco tiempo',
     r: 'Al abrir la sesión, «¿Cuánto tiempo tienes hoy?» la deja en lo importante. Mejor una sesión corta que ninguna.' },
   { id: 'cobertura', cat: 'sesion', q: 'No tengo cobertura en el gimnasio',
@@ -185,14 +186,26 @@ export const respuestasNuevas = () => [...REMOTO.values()].filter((f) => /^respu
   .map((f) => ({ id: f.clave.split(':')[1], cat: CATEGORIAS.some((c) => c[0] === f.texto.cat) ? f.texto.cat : 'app', q: String(f.texto.q), r: String(f.texto.r), suya: true }));
 // comida (v0.250): las respuestas de comida que le tocan (respuestasComida de esencial-comida.js, con o sin antecedente de
 // TCA), solo para quien lleva nutrición; salen con «respuestas_comida» encendida (o en la vista previa)
-export const respuestas = ({ previa = false, publicas = [], comida = null } = {}) => [
-  ...RESPUESTAS.map(conSuTexto),
-  ...respuestasNuevas(),
-  ...(comida && encendido('respuestas_comida', previa) ? comida.map((x) => ({ ...conSuTexto(x), cat: 'comida', pendiente: !REMOTO.get('respuestas_comida')?.encendido })) : []),
-  ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !REMOTO.get('salud_nueva')?.encendido })) : []),
-  // (18) las dudas del directo que Pelayo ha contestado y hecho públicas
-  ...(publicas || []).filter((x) => x?.pregunta && x?.respuesta).map((x) => ({ id: `directo-${x.id}`, cat: 'directo', q: x.pregunta, r: x.respuesta, directo: true })),
-];
+// (v0.251) El directo de dudas, oculto (decisión de Pelayo, 26/11/2026: FBE Esencial no tiene directos). Todo lo suyo sigue
+// en el código y vuelve si Pelayo enciende «El directo de dudas» en su panel (esencial_ajustes, clave 'directo'): la
+// pregunta en «¿Qué necesitas?», estos textos de antes y las dudas que hace públicas; y, en su panel, las preguntas. No
+// sale en la vista previa de lo apagado: no espera su visto bueno, está oculto a propósito.
+export const conDirecto = () => REMOTO.get('directo')?.encendido === true;
+const CON_DIRECTO = {
+  pelayo: { r: 'No hay chat ni revisión de tu semana: eso lo llevan los programas con seguimiento. Sí hay un directo al mes para resolver dudas, al que puedes mandar tu pregunta desde aquí, y la comunidad de la app.', ir: 'directo' },
+  tecnica: { r: 'Mira el vídeo en «Cómo se hace» y quédate con un peso que controles en todo el recorrido. Si puedes, pide a alguien de sala que te mire una serie. Y si la duda sigue, mándala para el directo del mes.', ir: 'directo' },
+};
+export const respuestas = ({ previa = false, publicas = [], comida = null } = {}) => {
+  const directo = conDirecto();
+  return [
+    ...RESPUESTAS.map((x) => (directo && CON_DIRECTO[x.id] ? { ...x, ...CON_DIRECTO[x.id] } : x)).map(conSuTexto),
+    ...respuestasNuevas(),
+    ...(comida && encendido('respuestas_comida', previa) ? comida.map((x) => ({ ...conSuTexto(x), cat: 'comida', pendiente: !REMOTO.get('respuestas_comida')?.encendido })) : []),
+    ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !REMOTO.get('salud_nueva')?.encendido })) : []),
+    // (18) las dudas del directo que Pelayo ha contestado y hecho públicas (solo con el directo encendido)
+    ...(directo ? (publicas || []).filter((x) => x?.pregunta && x?.respuesta).map((x) => ({ id: `directo-${x.id}`, cat: 'directo', q: x.pregunta, r: x.respuesta, directo: true })) : []),
+  ];
+};
 export const respuestaDe = (id, opciones = {}) => respuestas(opciones).find((x) => x.id === id) || null;
 
 // El buscador: sin tildes ni mayúsculas, todas las palabras (de tres letras o más) en la pregunta o en la respuesta
@@ -245,12 +258,16 @@ export const NECESITAS = [
   ['suave', 'Necesito una semana suave', 'pausa', 'accion:suave', 'suave'],
   ['objetivo', 'Ponerme un objetivo', 'diana', 'accion:objetivo', 'notas'],
   ['plan', 'Entender mi plan', 'biblioteca', 'accion:plan', 'plan'],
-  ['directo', 'Preguntar a Pelayo', 'mensaje', 'accion:directo', 'notas'],
+  // (v0.251) la pregunta para el directo: oculta salvo que Pelayo encienda «El directo de dudas» (conDirecto)
+  ['directo', 'Preguntar a Pelayo', 'mensaje', 'accion:directo', 'directo'],
 ];
 export const SIN_NOTAS = { viaje: 'respuesta:viaje' };
 // Las opciones que le salen: con100 (¿está la tabla de notas?), conPlan (¿tiene su plan en marcha?), previa (lo apagado)
 export function necesitasPara({ con100 = false, conPlan = false, previa = false } = {}) {
-  return NECESITAS.filter(([, , , , pide]) => !pide || (pide === 'notas' ? con100 : pide === 'plan' ? conPlan : encendido(pide, previa) && conPlan && (pide !== 'suave' || con100)))
+  const sale = (pide) => !pide || (pide === 'notas' ? con100 : pide === 'plan' ? conPlan
+    : pide === 'directo' ? con100 && conDirecto()
+      : encendido(pide, previa) && conPlan && (pide !== 'suave' || con100));
+  return NECESITAS.filter(([, , , , pide]) => sale(pide))
     .map(([id, t, icono, que]) => [id, t, icono, !con100 && SIN_NOTAS[id] ? SIN_NOTAS[id] : que]);
 }
 

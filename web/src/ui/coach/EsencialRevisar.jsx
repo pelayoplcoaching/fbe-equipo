@@ -92,7 +92,7 @@ function PorRevisar({ filas, suyos, alCambiar }) {
           </div>
         ))}
       </div>
-      <strong class="peq">Los avisos y tu lunes</strong>
+      <strong class="peq">Los avisos, tu lunes y el directo</strong>
       <div class="prv-lista" role="list" aria-label="Ajustes">
         {AJUSTES.map((x) => {
           const f = fila(x.clave);

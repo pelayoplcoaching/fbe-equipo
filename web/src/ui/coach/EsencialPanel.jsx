@@ -13,7 +13,8 @@ import { listosLunes } from '../../logica/esencial-espera.js';
 import { Invitaciones } from './EsencialAltas.jsx';
 import { perezoso } from '../perezoso.jsx';
 
-// (v0.245, migración 100) las preguntas para el directo de quienes van por su cuenta
+// (v0.245, migración 100) las preguntas para el directo de quienes van por su cuenta ((v0.251) ocultas salvo que encienda
+// «El directo de dudas»: si no, no sale nada)
 const PreguntasDirecto = perezoso(() => import('./EsencialPreguntas.jsx'), 'PreguntasDirecto', { mientras: null });
 // (v0.246) a quién escribir (con el mensaje preparado) y lo que contestan a «¿Cómo vamos?»
 const AQuienEscribir = perezoso(() => import('./EsencialPreguntas.jsx'), 'AQuienEscribir', { mientras: null });

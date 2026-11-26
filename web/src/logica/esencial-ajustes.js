@@ -53,11 +53,13 @@ export const REVISAR = [
     textos: Object.entries(LECCIONES_COMIDA).map(([id, [t, x]]) => ({ clave: `leccion_comida:${id}`, nombre: t, campos: { titulo: t, texto: x } })) },
 ];
 export const REVISAR_POR = Object.fromEntries(REVISAR.map((x) => [x.clave, x]));
-// (97 y 98) Los ajustes que no son textos: el tope de avisos y tu resumen de los lunes
+// (97 y 98) Los ajustes que no son textos: el tope de avisos, tu resumen de los lunes y (v0.251) el directo de dudas
 export const AJUSTES = [
   { clave: 'tope_dia', titulo: 'Como mucho un aviso al día', que: 'De los avisos automáticos de FBE Esencial, como mucho uno al día por atleta (el primero que toque).' },
   { clave: 'tope_semana', titulo: 'Como mucho N avisos a la semana', que: 'De los avisos automáticos de FBE Esencial, como mucho este número por atleta y semana (de lunes a domingo).', numero: [3, 14, 7] },
   { clave: 'resumen_lunes', titulo: 'Tu resumen de los lunes', que: 'Cada lunes por la mañana, un aviso a ti con cuántos entrenaron la semana pasada, quién lleva siete días sin entrenar y las preguntas nuevas para el directo. Te llega como el resto de tus avisos: al móvil o por correo.' },
+  // (v0.251) oculto de serie (decisión de Pelayo, 26/11/2026); lo lee conDirecto() en la app de cada atleta y, aquí, directoEncendido()
+  { clave: 'directo', titulo: 'El directo de dudas', que: 'Apagado: FBE Esencial no tiene directos y no sale nada de ellos. Si lo enciendes, vuelve lo de antes: «Preguntar a Pelayo» en «¿Qué necesitas?» (para el directo del mes, cinco preguntas al mes como mucho) y, aquí en tu panel, sus preguntas para contestarlas y sacarlas en «Respuestas».' },
 ];
 export const TODAS_LAS_CLAVES = [...REVISAR.map((x) => x.clave), ...AJUSTES.map((x) => x.clave)];
 // que las claves de lo apagado y las de REVISAR coincidan (lo comprueban las pruebas)

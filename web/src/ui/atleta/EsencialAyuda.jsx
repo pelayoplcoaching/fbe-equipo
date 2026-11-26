@@ -2,6 +2,8 @@
 // su cuenta): «Tu revisión de la semana» y el «¿Por qué?» de cada ejercicio (lo que decide el motor, en palabras:
 // logica/esencial-porque.js), «Tu sesión, en claro» y «¿Cómo ha ido?» al terminar, «Lo de hoy» antes de empezar, el centro
 // de respuestas con buscador, «¿Qué necesitas?» en Hoy, «Tu plan, explicado» con su camino y la pregunta para el directo.
+// (v0.251) El directo está oculto (FBE Esencial no tiene directos) salvo que Pelayo lo encienda en su panel (conDirecto):
+// mientras, si la duda no está, se pregunta en Equipo (con la comunidad abierta).
 // Estilos: ayuda.css (clases ayu-*, escritas tal cual en el elemento al que se aplican, para que vayan con este trozo).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
@@ -11,7 +13,7 @@ import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
-import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde } from '../../logica/esencial-respuestas.js';
+import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde, conDirecto } from '../../logica/esencial-respuestas.js';
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
@@ -100,11 +102,16 @@ function Respuesta({ x, abierta, alAccion }) {
 }
 
 export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) {
-  const { backend, atleta } = useApp();
+  const { api, backend, atleta } = useApp();
   const previa = usePrevia();
-  const publicas = useCarga(() => datos.respuestasPublicas(backend).catch(() => []), [], { recuerdo: `esencial-publicas:${atleta.id}` });
+  // (v0.251) las dudas del directo hechas públicas, solo con el directo encendido (oculto de serie)
+  const directo = conDirecto();
+  const publicas = useCarga(() => (directo ? datos.respuestasPublicas(backend).catch(() => []) : Promise.resolve([])), [directo], { recuerdo: directo ? `esencial-publicas:${atleta.id}` : null });
   const comida = useComidaEsencial();
   const todas = respuestas({ previa, publicas: publicas.datos || [], comida: comida?.plan ? respuestasComida({ tca: comida.tca }) : null });
+  // (v0.251) sin el directo, si la duda no está: Equipo, la comunidad de la app (solo si Pelayo la tiene abierta)
+  const equipo = useCarga(() => (directo ? Promise.resolve(false) : api.comunidad().then((c) => !!c?.activa).catch(() => false)), [directo], { recuerdo: directo ? null : 'esencial-equipo-abierto' });
+  const aEquipo = () => { alCerrar?.(); try { location.hash = '#equipo'; } catch { /* */ } };
   const [q, setQ] = useState('');
   const [cat, setCat] = useState(() => todas.find((x) => x.id === inicial)?.cat || null);
   const ref = useRef(null);
@@ -135,10 +142,15 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
         {lista && !buscando && <button type="button" class="btn-texto ayu-volver" onClick={() => setCat(null)}><Icono n="atras" /> Todos los temas</button>}
         {lista && (lista.length
           ? <div class="ayu-lista" role="list" aria-label={buscando ? 'Resultados' : cats.find((c) => c[0] === cat)?.[1]}>{lista.map((x) => <Respuesta key={x.id} x={x} abierta={x.id === inicial || (buscando && lista.length === 1)} alAccion={alAccion} />)}</div>
-          : <p class="peq secundario" role="status">No hay ninguna respuesta con esas palabras. Prueba con otra o mándala para el directo del mes.</p>)}
+          : <p class="peq secundario" role="status">{directo ? 'No hay ninguna respuesta con esas palabras. Prueba con otra o mándala para el directo del mes.' : 'No hay ninguna respuesta con esas palabras. Prueba con otras.'}</p>)}
         <p class="peq ayu-pie">
           <span class="ayu-pie-i"><Icono n="mensaje" width="18" height="18" /></span>
-          <span>{alAccion ? <>¿No está tu duda? <button type="button" class="btn-texto" onClick={() => alAccion('directo')}>Mándala para el directo del mes</button></> : '¿No está tu duda? Mándala para el directo del mes desde Hoy, en «¿Qué necesitas?».'}<br />Si algo falla en la app o en el cobro, escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a>.</span>
+          <span>
+            {directo
+              ? <>{alAccion ? <>¿No está tu duda? <button type="button" class="btn-texto" onClick={() => alAccion('directo')}>Mándala para el directo del mes</button></> : '¿No está tu duda? Mándala para el directo del mes desde Hoy, en «¿Qué necesitas?».'}<br /></>
+              : equipo.datos === true && <>¿No está tu duda? <button type="button" class="btn-texto" onClick={aEquipo}>Pregúntala en Equipo</button>, la comunidad de la app.<br /></>}
+            Si algo falla en la app o en el cobro, escribe a <a href={`mailto:${CORREO_CONTACTO}`}>{CORREO_CONTACTO}</a>.
+          </span>
         </p>
       </div>
     </Hoja>

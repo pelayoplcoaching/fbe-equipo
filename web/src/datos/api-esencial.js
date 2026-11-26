@@ -252,6 +252,11 @@ export async function quitarNota(b, id) {
 export async function respuestasPublicas(b) {
   try { return (await b.rpc('esencial_respuestas_publicas', {})) || []; } catch (e) { if (falta100(e)) return []; throw e; }
 }
+// (v0.251, el panel del coach) ¿Está encendido «El directo de dudas»? Oculto de serie: FBE Esencial no tiene directos
+// (decisión de Pelayo, 26/11/2026); lo enciende él en su panel (esencial_ajustes, clave 'directo'). Sin la 103, no.
+export async function directoEncendido(b) {
+  try { const [f] = await b.select('esencial_ajustes', { eq: { clave: 'directo' } }); return f?.encendido === true; } catch { return false; }
+}
 // (el panel del coach) Las preguntas para el directo, con su nombre: las de los últimos 90 días o sin contestar
 export async function preguntasDirecto(b, { hoy = fechaMadrid() } = {}) {
   try {
@@ -438,9 +443,10 @@ export async function semanaDeTodos(b, { hoy = fechaMadrid() } = {}) {
   const semanas = bloques.length ? await b.select('semanas', { in: { bloque_id: bloques.map((x) => x.id) }, cols: 'id,bloque_id,fecha_inicio,programacion,esencial_cierre,esencial_cierre_lunes' }).catch(() => []) : [];
   const propias = semanas.filter((w) => w.programacion === 'programada' && w.fecha_inicio);
   const sesiones = propias.length ? await b.select('sesiones', { in: { semana_id: propias.map((w) => w.id) }, cols: 'id,semana_id,completada,fecha_realizada' }) : [];
+  // (v0.251) las preguntas para el directo, solo con «El directo de dudas» encendido (oculto de serie)
   const [viajes, preguntas, vamos] = await Promise.all([
     b.select('esencial_notas', { eq: { tipo: 'viaje' } }).catch(() => []),
-    b.select('esencial_notas', { eq: { tipo: 'pregunta_directo' } }).catch(() => []),
+    directoEncendido(b).then((si) => (si ? b.select('esencial_notas', { eq: { tipo: 'pregunta_directo' } }) : [])).catch(() => []),
     b.select('esencial_notas', { eq: { tipo: 'como_vamos' } }).catch(() => []),
   ]);
   const filas = atletas.map((a) => {
