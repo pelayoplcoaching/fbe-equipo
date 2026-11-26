@@ -15,7 +15,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const lee = (r) => readFileSync(join(raiz, r), 'utf8');
 
 console.log('El catálogo');
-check(new Set(ARTE).size === ARTE.length && ARTE.length === 108 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `108 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, y (v0.253) las 10 del plan de comida, 4 de la revisión de 4 semanas, las 8 de la comida acompañada, las 12 de «¿Qué necesitas?», las 7 de antes de tu lunes, las 3 de tu revisión y tu trimestre y, v0.254, las agujetas, la vuelta, más herramientas y tu medicación, v0.255, las 13 de «Tus pruebas», v0.256, 3 del dolor, y v0.257, 3 más del dolor): ${ARTE.length}`);
+check(new Set(ARTE).size === ARTE.length && ARTE.length === 111 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `111 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, y (v0.253) las 10 del plan de comida, 4 de la revisión de 4 semanas, las 8 de la comida acompañada, las 12 de «¿Qué necesitas?», las 7 de antes de tu lunes, las 3 de tu revisión y tu trimestre y, v0.254, las agujetas, la vuelta, más herramientas y tu medicación, v0.255, las 13 de «Tus pruebas», v0.256, 3 del dolor, y v0.257, 3 más del dolor y 3 de tu medicación): ${ARTE.length}`);
 // los estados de antes de empezar que pintan la tarjeta grande
 const c0 = { completado_en: '2027-01-02', resultado: 'sin_valoracion', experiencia: 'ninguna' };
 const estados = [

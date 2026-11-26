@@ -64,7 +64,9 @@ export function HojaMedicacion({ cuestionario = null, alCerrar }) {
   return (
     <Hoja titulo="Tu medicación y el ejercicio" alCerrar={alCerrar}>
       <div class="pila" aria-busy={base.cargando ? 'true' : 'false'}>
-        <Arte id="esencial-medicacion" />
+        {/* (v0.257) la ilustración, según cómo va: sin escribirla, Pauta Activa; con su lista por confirmar; ya guardada
+            (mientras carga, la de siempre: así cambia una vez como mucho) */}
+        <Arte id={!texto ? 'esencial-med-pauta-activa' : fila ? 'esencial-med-revisa' : rec && !med.cargando ? 'esencial-med-lista' : 'esencial-medicacion'} />
         {texto ? (
           <>
             <p class="secundario">En tus preguntas de salud escribiste: «{texto}». Esto es lo que reconocemos con los nombres de Pauta Activa. Quita lo que no esté bien.</p>

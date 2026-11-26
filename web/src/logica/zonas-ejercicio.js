@@ -3,8 +3,9 @@
 // en rojo, qué sesiones cargan esa zona (las preguntas de antes y de la mañana siguiente) y en qué orden se ofrecen las
 // alternativas (de la que menos carga esa zona a la que más).
 // Sale del nombre (el patrón de movimiento, de lo más concreto a lo más general) y, si el nombre no dice nada, de sus
-// grupos musculares. Propuesta de Claude para que la revise Pelayo: hasta su visto bueno no manda en nada (el motor de
-// progresión sigue con las zonas musculares de siempre).
+// grupos musculares. Propuesta de Claude, confirmada por Pelayo el 26/11/2026 en el formulario de las zonas (los 53 patrones
+// y la postura, «Vale así»). Manda cuando enciende «El motor de molestias» en su panel (clave 'molestias_zona'); hasta
+// entonces, el motor de progresión sigue con las zonas musculares de siempre.
 import { ZONA_DOLOR_IDS } from './dolor.js';
 
 const plano = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();

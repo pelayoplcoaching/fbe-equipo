@@ -1294,5 +1294,41 @@
       "1080": "imagenes/esencial/esencial-semaforo-dolor-1080.0ae76d92.webp"
     },
     "color": "#35285c"
+  },
+  "esencial-med-lista": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-med-lista-240.5adac463.webp",
+      "720": "imagenes/esencial/esencial-med-lista-720.fcdc9338.webp",
+      "1080": "imagenes/esencial/esencial-med-lista-1080.b2fb2419.webp"
+    },
+    "color": "#554173"
+  },
+  "esencial-med-pauta-activa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-med-pauta-activa-240.8061c812.webp",
+      "720": "imagenes/esencial/esencial-med-pauta-activa-720.63c82218.webp",
+      "1080": "imagenes/esencial/esencial-med-pauta-activa-1080.3c5f2f21.webp"
+    },
+    "color": "#563f7b"
+  },
+  "esencial-med-revisa": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-med-revisa-240.3b0099e5.webp",
+      "720": "imagenes/esencial/esencial-med-revisa-720.b9ca6c6e.webp",
+      "1080": "imagenes/esencial/esencial-med-revisa-1080.976fd5e7.webp"
+    },
+    "color": "#4a3970"
   }
 }

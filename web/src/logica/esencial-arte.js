@@ -72,4 +72,7 @@ export const ARTE = [
   // (v0.257) G4 · y el motor de molestias en la sesión y en Hoy (EsencialDolorSesion.jsx): los tres momentos (antes de la
   // sesión), la escala (al terminar) y el semáforo (la mañana siguiente y el seguimiento)
   'esencial-dolor-momentos', 'esencial-dolor-escala', 'esencial-semaforo-dolor',
+  // (v0.257) G3 · «Tu medicación y el ejercicio», según cómo va: sin escribirla (Pauta Activa), su lista por confirmar y ya
+  // guardada (EsencialHerramientas.jsx)
+  'esencial-med-pauta-activa', 'esencial-med-lista', 'esencial-med-revisa',
 ];

@@ -14,8 +14,8 @@
 import { semaforo, lecturas, NOMBRE_ZONA_DOLOR } from './dolor.js';
 import { cargaDe, ordenarAlternativas } from './zonas-ejercicio.js';
 
-// Las decisiones del formulario de las zonas (https://claude.ai/artifact/Cmx3MdzE86nPtGFqXhKToi), con la ★ de Claude hasta
-// que conteste Pelayo: desde qué carga (1, algo; 2, mucho) no sube en ámbar, pasa a su alternativa en rojo y cuenta como
+// Las decisiones del formulario de las zonas (https://claude.ai/artifact/Cmx3MdzE86nPtGFqXhKToi), confirmadas por Pelayo el
+// 26/11/2026 (las 59 preguntas con la ★, sin comentarios): desde qué carga (1, algo; 2, mucho) no sube en ámbar, pasa a su alternativa en rojo y cuenta como
 // «sesión que carga esa zona» (la pregunta de antes y el ajuste de la mañana siguiente); y desde cuántos puntos va a más
 // durante la sesión o está peor a la mañana siguiente (2: el cambio mínimo que se nota, Farrar 2001).
 export const USO = { ambarDesde: 1, rojoCambiaDesde: 2, preguntaDesde: 2, subida: 2, peor: 2 };
