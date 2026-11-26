@@ -1186,5 +1186,17 @@
       "1080": "imagenes/esencial/esencial-pruebas-1080.bb7cc1a9.webp"
     },
     "color": "#382c66"
+  },
+  "esencial-prueba-marcha": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-prueba-marcha-240.79f4cb51.webp",
+      "720": "imagenes/esencial/esencial-prueba-marcha-720.9d3e541a.webp",
+      "1080": "imagenes/esencial/esencial-prueba-marcha-1080.291d87e4.webp"
+    },
+    "color": "#473577"
   }
 }
