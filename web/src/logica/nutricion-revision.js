@@ -111,7 +111,8 @@ export function textoRevision(rev, plan = null) {
   if (rev.dias_cumplidos != null) cifras.push(`${rev.dias_cumplidos} de ${ADHERENCIA.ventana} días con tu plan`);
   if (rev.ritmo_real != null) {
     const prev = n(rev.ritmo_previsto);
-    cifras.push(`Tu peso: ${pct(n(rev.ritmo_real))} a la semana${prev == null ? '' : prev === 0 ? ' (buscábamos mantenerlo)' : ` (buscábamos ${pct(prev)})`}`);
+    const quieto = Math.abs(n(rev.ritmo_real)) < 0.005;
+    cifras.push(`Tu peso: ${quieto ? 'sin cambios' : `${pct(n(rev.ritmo_real))} a la semana`}${prev == null ? '' : prev === 0 ? ' (buscábamos mantenerlo)' : ` (buscábamos ${pct(prev)}${quieto ? ' a la semana' : ''})`}`);
   }
   if (rev.cintura_cambio != null) cifras.push(`Tu cintura: ${n(rev.cintura_cambio) === 0 ? 'igual' : `${signo(n(rev.cintura_cambio), 1)} cm`} en 4 semanas`);
   if (cambio) cifras.push(`Antes, ${fmtKcal(rev.kcal_antes)} kcal; la proteína no cambia`);

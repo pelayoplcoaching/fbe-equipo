@@ -106,7 +106,7 @@ function ProximaRevision({ r, toca, medidas, alMedir }) {
   };
   return (
     <div class="nm-prox">
-      <span class="mini secundario">Tu próxima revisión, el {fmtConDia(toca)}. Esta semana te has pesado {pesadas === 1 ? 'una vez' : `${pesadas} veces`} (cuentan tres).</span>
+      <span class="mini secundario">Tu próxima revisión, el {fmtConDia(toca)}. Esta semana llevas {Math.min(pesadas, 3)} de 3 pesadas.</span>
       {tocaCintura(medidas, hoy) && (
         <form class="nm-prox-cint" onSubmit={guardar} noValidate>
           <label class="mini" for="nm-rev-cintura">Toca medirte la cintura (cada 2 semanas): por la mañana, en ayunas, a la altura del ombligo.</label>

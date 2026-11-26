@@ -121,6 +121,9 @@ const tSimp = R.textoRevision({ id: 'x', fecha: hoy, tipo: 'simplificar', kcal_a
 check(tSimp.titulo === 'No tocamos tus kcal' && tSimp.tono === 'aviso' && tSimp.cifras.length === 1 && tSimp.siguiente === 'lun 16 mar', '«simplificar»: sin tocar las kcal, y la siguiente en 2 semanas');
 check(R.textoRevision({ tipo: 'bien', ritmo_real: 0.02, ritmo_previsto: 0 }).cifras[0] === 'Tu peso: +0,02 % a la semana (buscábamos mantenerlo)' && R.textoRevision({ tipo: 'recomposicion' }).tono === 'ok',
   'manteniendo: «buscábamos mantenerlo»');
+check(R.textoRevision({ tipo: 'baja', kcal_antes: 1803, kcal_despues: 1623, ritmo_real: 0, ritmo_previsto: -0.5 }).cifras[0] === 'Tu peso: sin cambios (buscábamos −0,5 % a la semana)'
+  && /\(tu peso no se mueve; buscábamos bajar un 0,5 % a la semana\)/.test(M.revisionNutricion({ ...e, pesos: pesar(75, 0) })?.porque || ''),
+  'con el peso quieto: «sin cambios» y «tu peso no se mueve» (no «subes un 0 %»)');
 check(R.lineaRevision({ ...rev3, fecha: '2026-03-30' }) === `lun 30 mar: Tu plan baja a ${baja.kcal} kcal (24 de 28 días)`, 'su línea en «Tus revisiones»');
 const vistas = new Set(['b']);
 const revs = [{ id: 'a', fecha: sumarDias(hoy, -20), tipo: 'bien' }, { id: 'b', fecha: sumarDias(hoy, -2), tipo: 'baja' }];

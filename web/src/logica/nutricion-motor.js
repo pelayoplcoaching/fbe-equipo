@@ -353,21 +353,24 @@ export function revisionNutricion(e) {
     if (k >= kcal) return { ...base, tipo: 'suelo', delta: 0, porque: 'Ya estás en tu mínimo de kcal: no bajamos más. Para seguir avanzando, la vía es moverte más (más pasos al día).' };
     return { ...base, tipo: 'baja', delta: k - kcal, nuevo: nuevoCon(k), porque };
   };
-  const txt = `${real < 0 ? 'bajas' : 'subes'} un ${pct(real)} a la semana`;
+  // (v0.253) con el peso quieto, «tu peso no se mueve» (no «subes un 0 %»); lo previsto, con su verbo
+  const quieto = Math.abs(real) < 0.005;
+  const txt = quieto ? 'tu peso no se mueve' : `${real < 0 ? 'bajas' : 'subes'} un ${pct(real)} a la semana`;
+  const buscado = `${previsto < 0 ? 'bajar' : 'subir'} un ${pct(previsto)} a la semana`;
   if (perdiendo) {
     if (real <= -1 || real <= 2 * previsto) return sube(delta5a10(kcal, true), `Vas muy deprisa (${txt}): perder tan rápido cuesta músculo. Subimos un poco.`);
     if (e.fuerzaCae) return real <= previsto ? sube(100, `Tus marcas caen desde hace tres semanas y vas a buen ritmo (${txt}): subimos un poco para que no pierdas fuerza.`)
       : { ...base, tipo: 'bien', delta: 0, porque: 'Tus marcas caen desde hace tres semanas: no bajamos más tus kcal.' };
     if (real > previsto / 2) {
-      if (cintura != null && cintura <= -1) return { ...base, tipo: 'recomposicion', delta: 0, porque: `Tu peso apenas se mueve (${txt}), pero tu cintura ha bajado ${coma(Math.abs(cintura))} cm: estás perdiendo grasa y ganando músculo. No tocamos nada.` };
-      return baja(delta5a10(kcal, real > previsto / 4), `Has seguido el plan y vas más despacio de lo previsto (${txt}; buscábamos un ${pct(previsto)}) y tu cintura no ha bajado: bajamos un poco, de hidratos y grasa (la proteína no se toca).`);
+      if (cintura != null && cintura <= -1) return { ...base, tipo: 'recomposicion', delta: 0, porque: `${quieto ? 'Tu peso no se mueve' : `Tu peso apenas se mueve (${txt})`}, pero tu cintura ha bajado ${coma(Math.abs(cintura))} cm: estás perdiendo grasa y ganando músculo. No tocamos nada.` };
+      return baja(delta5a10(kcal, real > previsto / 4), `Has seguido el plan y vas más despacio de lo previsto (${txt}; buscábamos ${buscado}) y tu cintura no ha bajado: bajamos un poco, de hidratos y grasa (la proteína no se toca).`);
     }
     return { ...base, tipo: 'bien', delta: 0, porque: `Vas a buen ritmo (${txt}). Seguimos igual.` };
   }
   if (plan.objetivo === 'ganar' || (plan.objetivo == null && previsto > 0)) {
     const d = Math.min(150, Math.max(100, r10(0.05 * kcal)));
     if (real > 2 * previsto || (cintura != null && cintura > 2)) return baja(d, `Subes más deprisa de lo previsto (${txt}${cintura != null && cintura > 2 ? `; tu cintura ha crecido ${coma(cintura)} cm` : ''}): bajamos un poco para ganar menos grasa.`);
-    if (real < previsto / 2) return sube(d, `Has seguido el plan y subes menos de lo previsto (${txt}; buscábamos un ${pct(previsto)}): subimos un poco.`);
+    if (real < previsto / 2) return sube(d, `Has seguido el plan y subes menos de lo previsto (${txt}; buscábamos ${buscado}): subimos un poco.`);
     return { ...base, tipo: 'bien', delta: 0, porque: `Vas a buen ritmo (${txt}). Seguimos igual.` };
   }
   // Mantener (criterio): si se aleja más de un 0,25 % a la semana, ±100 kcal hacia su peso
