@@ -554,5 +554,28 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
     gustos: { ahora: 'si', tecnica: 'si', barra: 'no', prioridad: 'equilibrado', otro: 'no', mayor: 'no' } });
   const plA = t('bloques').find((x) => x.es_plantilla && x.nombre === rutinaAndres);
   if (plA) copiarPlantillaEsencial(t, { plantilla: plA, atletaId: andres.id, inicio: sumarDias(lunesHoy, 7), uuid, ahoraISO });
-  return { marina, tomas, clara, ines, lucia, andres, plantilla };
+  // (v0.250, tanda 9) Carmen: entrenamiento y nutrición. Su plan de comida (perder grasa) es de hace cinco semanas y la app
+  // se lo ajustó hace tres días; apunta la comida casi todos los días y se pesa cinco de cada siete. Hoy lleva 80 g de
+  // proteína. Entrena con «Primeras 4 semanas» desde este lunes, como Inés.
+  const carmen = atleta({ email: 'carmen@fbe.demo', nombre: 'Carmen Soto', alta: sumarDias(lunesHoy, -37), objetivo: 'FBE Esencial · Entrenamiento y nutrición', inicio: lunesHoy,
+    extra: { nutricion: true } });
+  cuestionario(carmen, 36, { objetivo_detalle: 'Perder algo de grasa sin dejar de comer bien.', tca: false });
+  copiarPlantillaEsencial(t, { plantilla, atletaId: carmen.id, inicio: lunesHoy, uuid, ahoraISO });
+  const inicioComida = sumarDias(lunesHoy, -35), ajusteComida = sumarDias(hoy, -3);
+  const planComida = (desde, kcal, carbos, motivo) => ({ id: uuid(), atleta_id: carmen.id, desde, modo: 'macros', fase: 'perder', ritmo_pct: -0.5, kcal, proteina_g: 130, carbos_g: carbos, grasa_g: 62,
+    fibra_g: null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: null, motivo, creado_en: `${desde}T20:00:00.000Z` });
+  t('planes_nutricion').push(planComida(inicioComida, 1838, 190, 'Plan de partida, con tus datos.'),
+    planComida(ajusteComida, 1690, 153, 'Ajuste de la semana: gastas unas 2040 kcal al día y, para bajar un 0,5 % del peso a la semana, te tocan unas 1690: bajas 148 kcal.'));
+  for (let d = 0; sumarDias(inicioComida, d) <= hoy; d++) {
+    const f = sumarDias(inicioComida, d), dow = d % 7;
+    if (f < hoy && dow !== 6) {
+      const base = f >= ajusteComida ? 1700 : 1820;
+      t('registros_nutricion').push({ id: uuid(), atleta_id: carmen.id, fecha: f, kcal: base + ((d * 53) % 9 - 4) * 15, proteina_g: 118 + (d * 7) % 11, carbos_g: null, grasa_g: null, fibra_g: null,
+        completo: true, cumplido: null, nota: null, actualizado_en: `${f}T21:00:00.000Z` });
+    }
+    if (dow !== 2 && dow !== 5) db.pesos.push({ id: uuid(), atleta_id: carmen.id, fecha: f, kg: Math.round((72.4 - 0.3 * (d / 7) + (((d * 37) % 7) - 3) * 0.08) * 10) / 10, notas: null });
+  }
+  t('registros_nutricion').push({ id: uuid(), atleta_id: carmen.id, fecha: hoy, kcal: 1100, proteina_g: 80, carbos_g: null, grasa_g: null, fibra_g: null, completo: false, cumplido: null, nota: null,
+    actualizado_en: `${hoy}T14:00:00.000Z` });
+  return { marina, tomas, clara, ines, lucia, andres, carmen, plantilla };
 }

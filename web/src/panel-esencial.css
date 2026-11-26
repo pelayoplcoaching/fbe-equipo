@@ -42,3 +42,7 @@
   .prv-barra-f { grid-template-columns: minmax(0, 1fr) auto; }
   .prv-barra { grid-column: 1 / -1; }
 }
+
+/* (v0.250, tanda 9) La comida, en tu panel */
+.prv-com-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--esp-48) * 2), 1fr)); gap: var(--esp-8); }
+.prv-com-cifra { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }

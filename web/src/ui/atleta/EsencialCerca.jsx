@@ -13,6 +13,9 @@ import { encendido } from '../../logica/esencial-respuestas.js';
 import { saludoDe, AGUJETAS, agujetasDe, vueltaDe, ritmoDe, trimestreDe, TRIMESTRE_SIGUE, retoSemana, seVa, comoVamosToca, diarioDe, notaDelLunes, VOZ_PELAYO, DIA_A_DIA, diaADia, diaDelPlan } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
+// (v0.250, 117) «Tu trimestre», con la comida: el ritmo real del peso frente al previsto (quien lleva nutrición)
+import { ritmoDelTrimestre } from '../../logica/esencial-comida.js';
+import { planVigente } from '../../logica/nutricion.js';
 
 const CentroRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'CentroRespuestas', { mientras: null });
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
@@ -168,6 +171,10 @@ function HojaTrimestre({ p, cuestionario, alCerrar, recargar }) {
   // (v0.248) con antecedente de un trastorno de la conducta alimentaria, sin el peso de antes y de ahora
   const tca = useCarga(() => (api.esencialTca ? api.esencialTca(atleta.id).catch(() => null) : Promise.resolve(null)), [atleta.id]);
   const t = d.datos ? trimestreDe({ ...d.datos, cuerpo: !tca.cargando && tca.datos !== true ? d.datos.cuerpo : null }) : null;
+  const conComida = atleta?.nutricion !== false;
+  const planes = useCarga(() => (conComida ? api.planesNutricion(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id, conComida]);
+  const ritmo = t && conComida && !tca.cargando && tca.datos !== true ? ritmoDelTrimestre(d.datos.cuerpo?.peso || null, planVigente(planes.datos || [], hoyISO())) : null;
+  if (t && ritmo) t.cuerpo = [...t.cuerpo, ritmo];
   return (
     <Hoja titulo="Tu trimestre" alCerrar={alCerrar}>
       <div class="pila cer-trimestre" aria-busy={d.cargando ? 'true' : 'false'}>

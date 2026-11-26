@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.250': {
+    // (FBE Esencial, tanda 9: la comida, acompañada; migración 104)
+    atleta: [
+      'Si llevas nutrición: en Hoy, «¿Por qué no cambia tu plan?», y en tu revisión de la semana, tu comida y lo que ha cambiado.',
+      'Y en «¿Qué necesitas?», «No llego a la proteína» (con tres recetas) y «¿Cuándo me peso?».',
+    ],
+    coach: [
+      'FBE Esencial con nutrición: en tu panel, «La comida» (quién no se pesa, quién no apunta y los ajustes de la app).',
+      'Y en «Por revisar», nueve cosas de comida apagadas hasta que las veas (respuestas, hojas, reglas de viaje y celebraciones).',
+    ],
+  },
   '0.249': {
     // (FBE Esencial, tanda 8: tu panel, lo apagado en tu mano; migración 103)
     atleta: [],

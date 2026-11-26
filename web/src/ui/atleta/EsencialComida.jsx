@@ -5,6 +5,14 @@ import { useApp, Icono, Hoja, Paso, Segmentos } from '../comunes.jsx';
 import { planComidaEsencial, datosComidaValidos, ajusteComidaEsencial, NIVELES_ACTIVIDAD, OBJETIVOS_COMIDA } from '../../logica/esencial-nutricion.js';
 import { fmtKcal } from '../../logica/nutricion.js';
 import { hoyISO } from '../../logica/fechas.js';
+// (v0.250, tanda 9) el ajuste con sus dos reglas nuevas (apagadas: viaje y celebraciones) y qué cambia al cambiar de objetivo
+import { ajusteConReglas, momentoViaje, cambioDeObjetivo } from '../../logica/esencial-comida.js';
+import { encendido } from '../../logica/esencial-respuestas.js';
+import * as datosEsencial from '../../datos/api-esencial.js';
+// (102 y 109) lo de Hoy debajo de «Nutrición de hoy» (su propio trozo)
+import { perezoso } from '../perezoso.jsx';
+const ComidaHoyEsencial = perezoso(() => import('./EsencialComidaMas.jsx'), 'ComidaHoyEsencial', { mientras: null });
+const previaDemo = (modo) => { try { return modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { return false; } };
 
 // Lo que es el ritmo en gramos a la semana (de 10 en 10): 68,4 kg al −0,5 % → unos 340 g
 const gramosSemana = (peso, ritmo) => Math.round((Number(String(peso).replace(',', '.')) * Math.abs(Number(ritmo)) * 10) / 10) * 10;
@@ -25,7 +33,7 @@ export function PlanComidaEsencial({ pesoKg = null, alGuardar }) {
 }
 
 // Las preguntas, lo que sale y «Guardar mi plan» (la base lo vuelve a calcular igual). También para rehacerlo.
-export function HojaPlanComida({ pesoKg = null, alCerrar, alGuardar }) {
+export function HojaPlanComida({ pesoKg = null, actual = null, alCerrar, alGuardar }) {
   const { api, aviso } = useApp();
   const [d, setD] = useState({ sexo: null, edad: null, altura: null, peso: pesoKg ? Math.round(Number(pesoKg) * 10) / 10 : null, actividad: 1.4, objetivo: null, tca: null });
   const [ocupado, setOcupado] = useState(false);
@@ -63,6 +71,7 @@ export function HojaPlanComida({ pesoKg = null, alCerrar, alGuardar }) {
         {plan && (
           <div class="nota pila-xs" aria-live="polite">
             <span>Tu plan: <b class="num">{fmtKcal(plan.kcal)} kcal</b> al día, con <b class="num">{plan.proteina_g} g</b> de proteína, <b class="num">{plan.carbos_g} g</b> de hidratos y <b class="num">{plan.grasa_g} g</b> de grasa.</span>
+            {actual && cambioDeObjetivo(actual, plan) && <span class="mini">{cambioDeObjetivo(actual, plan)}</span>}
             <span class="mini secundario">{plan.fase === 'mantener' ? 'Para mantener tu peso' : `Para ${plan.fase === 'perder' ? 'bajar un 0,5' : 'subir un 0,25'} % de tu peso a la semana (unos ${gramosSemana(d.peso, plan.ritmo_pct)} g)`}; tu gasto de partida, unas {fmtKcal(plan.mantenimiento)} kcal. Con unas semanas apuntando lo que comes y tu peso, la app lo afina sola.</span>
           </div>
         )}
@@ -75,16 +84,22 @@ export function HojaPlanComida({ pesoKg = null, alCerrar, alGuardar }) {
 
 // Con plan: el ajuste de la semana, una vez al día como mucho (si toca y cabe en los topes, lo guarda y lo cuenta)
 export function AjusteComidaEsencial({ r, alCambiar }) {
-  const { api, atleta, aviso } = useApp();
+  const { api, backend, atleta, aviso, modo } = useApp();
   const hoy = hoyISO();
   useEffect(() => {
     if (!r?.plan || !atleta?.id) return;
+    const previa = previaDemo(modo);
     const clave = `fbe-esencial-comida:${atleta.id}:${hoy}`;
     try { if (sessionStorage.getItem(clave)) return; sessionStorage.setItem(clave, '1'); } catch { /* sin almacenamiento: se intenta igual */ }
     let vivo = true;
     (async () => {
       const tca = await api.esencialTca(atleta.id).catch(() => null);
-      const a = ajusteComidaEsencial({ plan: r.plan, gasto: r.gasto, pesoKg: r.pesoKg, diasEntreno: r.diasEntreno ?? 2, tca: tca === true, hoy });
+      // (v0.250, P) de viaje y la semana de la vuelta, no ajusta; y el peso de una celebración y de los dos días siguientes
+      // no cuenta. Las dos reglas, apagadas hasta que Pelayo las vea (sin ellas, el ajuste de siempre)
+      const viaje = encendido('comida_viaje', previa) ? ((await datosEsencial.notas(backend, atleta.id, 'viaje').catch(() => null)) || []).map((n) => momentoViaje(n, hoy)).find(Boolean) || null : null;
+      const celebraciones = encendido('celebracion', previa) ? ((await datosEsencial.notas(backend, atleta.id, 'celebracion').catch(() => null)) || []).map((n) => n.desde).filter(Boolean) : [];
+      const a = viaje || celebraciones.length ? ajusteConReglas(r, { hoy, tca: tca === true, viaje, celebraciones })
+        : ajusteComidaEsencial({ plan: r.plan, gasto: r.gasto, pesoKg: r.pesoKg, diasEntreno: r.diasEntreno ?? 2, tca: tca === true, hoy });
       if (!a || !vivo) return;
       const id = await api.esencialAjusteComida(a).catch(() => null);
       if (id && typeof id === 'string' && vivo) {
@@ -94,5 +109,6 @@ export function AjusteComidaEsencial({ r, alCambiar }) {
     })();
     return () => { vivo = false; };
   }, [r?.plan?.id, atleta?.id]);
-  return null;
+  // (v0.250) y, debajo, por qué no cambia su plan y la comida de viaje
+  return <ComidaHoyEsencial r={r} />;
 }

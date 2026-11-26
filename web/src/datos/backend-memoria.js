@@ -5147,6 +5147,20 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
             sube: ps.filter((p) => p.carga_sugerida_kg != null && psPrevia.some((q) => q.ejercicio_id === p.ejercicio_id && q.carga_sugerida_kg != null && Number(p.carga_sugerida_kg) > Number(q.carga_sugerida_kg))).length };
         }).sort((x, y) => String(x.atleta_id).localeCompare(String(y.atleta_id)) || String(x.inicio).localeCompare(String(y.inicio)));
       }
+      // (104) La comida de FBE Esencial, en recuentos (solo el coach): plan, TCA, pesadas en 14 días, días apuntados en 7 y ajustes
+      if (nombre === 'esencial_comida_panel') {
+        if (!esCoach()) return [];
+        const hoyM = fechaMadrid();
+        return tabla('atletas').filter((a) => a.modalidad === 'por_su_cuenta' && a.estado !== 'baja' && a.nutricion !== false).map((a) => {
+          const planes = tabla('planes_nutricion').filter((x) => x.atleta_id === a.id);
+          const ajustes = planes.filter((x) => String(x.motivo || '').startsWith('Ajuste de la semana'));
+          const c = tabla('cuestionarios').find((x) => x.atleta_id === a.id);
+          return { atleta_id: a.id, plan: planes.length > 0, tca: c?.tca === true,
+            pesadas_14: new Set(tabla('pesos').filter((x) => x.atleta_id === a.id && x.fecha > sumar(hoyM, -14) && x.fecha <= hoyM).map((x) => x.fecha)).size,
+            dias_7: tabla('registros_nutricion').filter((x) => x.atleta_id === a.id && x.fecha > sumar(hoyM, -7) && x.fecha <= hoyM && (x.kcal != null || x.cumplido != null)).length,
+            ajustes: ajustes.length, ajustes_7: ajustes.filter((x) => x.desde > sumar(hoyM, -7)).length };
+        }).sort((x, y) => String(x.atleta_id).localeCompare(String(y.atleta_id)));
+      }
       // (102) Cuántos empiezan su mismo lunes (solo el número; con menos de tres, null)
       if (nombre === 'esencial_companeros') {
         const yo = tabla('atletas').find((a) => a.perfil_id === uid && a.modalidad === 'por_su_cuenta' && a.estado !== 'baja');

@@ -338,7 +338,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(/Tomás Rey/.test(await piloto.textContent().catch(() => '')) && /han entrenado/.test(await piloto.textContent().catch(() => '')), 'en Atletas, el panel «FBE Esencial»: cada uno y quién ha entrenado esta semana');
     await piloto.getByRole('button', { name: /encuesta/ }).click();
     const he = p.locator('[aria-modal="true"]').last();
-    await he.getByRole('button', { name: /Mandarla a 6 atletas/ }).click();
+    await he.getByRole('button', { name: /Mandarla a 7 atletas/ }).click();
     const mandada = await he.getByRole('button', { name: 'Ya la tienen todos' }).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     check(mandada && /Sin contestar: /.test(await he.textContent().catch(() => '')), 'la encuesta de la semana 6, mandada a los seis (y quién no ha contestado)');
     // (v0.248, 77) «Listos para el lunes»: Clara (su visto bueno, por confirmar) y Andrés empiezan el lunes que viene
@@ -1143,16 +1143,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await items.first().waitFor({ timeout: 10000 }).catch(() => {});
       // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
       const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
-      check(nItems === 15 && /15 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 15 cosas apagadas, cada una con su interruptor (${nItems})`);
+      check(nItems === 24 && /24 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 24 cosas apagadas, cada una con su interruptor (${nItems})`);
       const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
       await enfermo.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /14 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const encendida = await p.waitForFunction(() => /23 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 14 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 23 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /15 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        const deshecho = await p.waitForFunction(() => /24 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
       // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app
@@ -1178,6 +1178,11 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await prv.getByRole('button', { name: /Hacer el repaso/ }).click();
       const repaso = await p.waitForFunction(() => /propuestas en \d+ semanas?: ninguna fuera de regla/.test(document.querySelector('#prv-panel')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
       check(repaso, 'el repaso de seguridad del motor, desde el panel: «ninguna fuera de regla»');
+      // (v0.250, 118) la comida: quién lleva nutrición, quién no tiene aún su plan de comida, quién no se pesa…
+      await prv.getByRole('tab', { name: 'La comida' }).click();
+      const com = await p.waitForFunction(() => /La comida de FBE Esencial/.test(document.querySelector('#prv-panel')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const tCom = (await prv.locator('#prv-panel').textContent()) || '';
+      check(com && /Sin plan de comida todavía: Inés Gil/.test(tCom) && /con su plan de comida/.test(tCom) && /Solo recuentos/.test(tCom), 'la comida (v0.250): quién lleva nutrición y quién no tiene aún su plan de comida (Inés), solo en recuentos');
       // herramientas: Stripe frente a la app
       await prv.getByRole('tab', { name: 'Herramientas' }).click();
       await prv.locator('#prv-panel textarea').first().fill('sub_1,marina@fbe.demo,active\nsub_2,tomas@fbe.demo,canceled\nnadie@x.com active');
@@ -1535,6 +1540,61 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(conK && await p.getByText('Tus kilos de partida, guardados').waitFor({ timeout: 8000 }).then(() => true).catch(() => false), 'apunta sus kilos de partida y se guardan');
     }
     await desborda(p, 'la espera de Andrés');
+    await ctx.close();
+  }
+  // (v0.250, tanda 9) La comida, acompañada: Carmen (con nutrición; la app le ajustó el plan hace tres días). Con la vista
+  // previa, también lo apagado
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Carmen/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(800);
+    await cerrar(p);
+    const porque = p.locator('details.cmd-porque');
+    const conPorque = await porque.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    if (conPorque) await porque.locator('summary').click();
+    check(conPorque && /Tu plan cambió hace 3 días: la app no vuelve a tocarlo hasta que pase una semana/.test(await porque.textContent()),
+      'Carmen, en Hoy: «¿Por qué no cambia tu plan?» (cambió hace tres días; hasta que pase una semana, no lo toca)');
+    const nec = p.locator('.ayu-necesitas');
+    await nec.waitFor({ timeout: 15000 });
+    await nec.locator('[data-comida]').first().waitFor({ timeout: 15000 }).catch(() => {});
+    const deComida = await nec.locator('[data-comida]').evaluateAll((xs) => xs.map((x) => x.getAttribute('data-comida')));
+    check(deComida.join() === 'proteina,fuera,hambre,pasado,celebracion,pesarme', `«¿Qué necesitas?», con las seis de comida (vista previa: ${deComida.join()})`);
+    if (deComida.length) {
+      await nec.locator('[data-comida="proteina"]').click();
+      const hp = p.locator('[aria-modal="true"]').last();
+      const prot = await hp.locator('.cmd-prot').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      await hp.locator('.cmd-idea').first().waitFor({ timeout: 10000 }).catch(() => {});
+      check(prot && /Hoy llevas 80 de 130 g de proteína: te faltan 50 g\./.test(await hp.locator('.cmd-prot').textContent()) && (await hp.locator('.cmd-idea').count()) === 3,
+        '«No llego a la proteína»: lo que lleva hoy (80 de 130 g) y tres recetas del recetario');
+      await hp.locator('.cerrar-hoja').click();
+      await nec.locator('[data-comida="pasado"]').click();
+      const hpa = p.locator('[aria-modal="true"]').last();
+      const conPa = await hpa.locator('.cmd-lineas').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conPa && /Un día no cambia nada/.test(await hpa.textContent()) && /Pendiente del visto bueno de Pelayo/.test(await hpa.textContent()), '«Me he pasado» (vista previa): sin compensar, y marcada como pendiente de Pelayo');
+      await hpa.locator('.cerrar-hoja').click();
+      await nec.locator('[data-comida="celebracion"]').click();
+      const hc = p.locator('[aria-modal="true"]').last();
+      const conFecha = await hc.locator('.cmd-fecha').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      if (conFecha) await hc.getByRole('button', { name: /Apuntarla/ }).click();
+      check(conFecha && await hc.locator('.cmd-celebra-f').first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false), '«Tengo una celebración»: apunta el día y sale en su lista');
+      await hc.locator('.cerrar-hoja').click();
+      await nec.getByRole('button', { name: 'Otra cosa' }).click();
+      const hr = p.locator('[aria-modal="true"]').last();
+      const catCom = hr.locator('.ayu-cat', { hasText: 'La comida' });
+      const conCat = await catCom.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conCat && /15/.test(await catCom.textContent()), 'en «Respuestas», el tema «La comida», con sus quince respuestas (vista previa)');
+      await hr.locator('.cerrar-hoja').click();
+    }
+    // su revisión de la semana (la abre el aviso de los lunes): la comida, con lo que cambió y su porqué
+    await p.evaluate(() => { location.hash = '#hoy/lunes'; });
+    const cs = p.locator('.cmd-semana');
+    const conCs = await cs.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    check(conCs && /Tu plan: 1690 kcal al día, con 130 g de proteína\./.test(await cs.textContent()) && /Esta semana baja 148 kcal\. Gastas unas 2040 kcal al día/.test(await cs.textContent()),
+      'en su revisión de la semana, «Tu comida esta semana»: su plan y lo que ha cambiado, con su porqué');
+    await desborda(p, 'la comida de Carmen');
     await ctx.close();
   }
   check(errores.length === 0, `FBE Esencial sin errores ni desbordes${errores.length ? `: ${errores.slice(0, 4).join(' | ')}` : ''}`);

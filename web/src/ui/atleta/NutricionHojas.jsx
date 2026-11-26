@@ -150,7 +150,7 @@ export function HojaTuPlan({ r, alCerrar, alCambiar = null }) {
   const suyo = esPorSuCuenta(atleta);
   const [rehacer, setRehacer] = useState(false);
   const plan = r.plan || r.siguiente;
-  if (rehacer) return <HojaPlanComida pesoKg={r.pesoKg} alCerrar={() => setRehacer(false)} alGuardar={() => { setRehacer(false); alCambiar?.(); alCerrar(); }} />;
+  if (rehacer) return <HojaPlanComida pesoKg={r.pesoKg} actual={r.plan} alCerrar={() => setRehacer(false)} alGuardar={() => { setRehacer(false); alCambiar?.(); alCerrar(); }} />;
   return (
     <Hoja titulo="Tu plan de nutrición" alCerrar={alCerrar}>
       <TarjetaPlan plan={r.plan} siguiente={r.siguiente} diasEntreno={r.diasEntreno} />

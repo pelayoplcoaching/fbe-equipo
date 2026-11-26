@@ -601,3 +601,11 @@ export async function copiaEsencial(b) {
   const [checkins, molestias] = await Promise.all([enTrozos(b, 'checkins', 'atleta_id', ids).catch(() => []), enTrozos(b, 'molestias', 'atleta_id', ids).catch(() => [])]);
   return { atletas, bloques, semanas, sesiones, sesion_ejercicios: pautas, series, ejercicios, checkins, molestias };
 }
+
+// ---------- (v0.250, tanda 9; migración 104) La comida ----------
+const falta104 = (e) => /esencial_comida_panel|could not find the function/i.test(`${e?.message || ''}`) || e?.code === 'PGRST202' || e?.code === '42883';
+// (118) Tu panel: la comida de cada uno con nutrición, en recuentos; null sin la 104
+export async function comidaPanel(b) {
+  try { return (await b.rpc('esencial_comida_panel', {})) || []; } catch (e) { if (falta104(e)) return null; throw e; }
+}
+

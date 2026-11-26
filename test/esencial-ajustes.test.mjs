@@ -20,7 +20,8 @@ check(REVISAR.every((x) => x.titulo && x.que && ['texto', 'regla', 'salud'].incl
 check(['molestia_frena', 'suave', 'dos_duras', 'variante', 'kilos_partida'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'regla') && ['enfermo', 'alarma', 'medico', 'salud_nueva'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'salud'),
   'las reglas nuevas, como reglas; lo de salud, como salud');
 const conTextos = REVISAR.filter((x) => x.textos?.length);
-check(conTextos.map((x) => x.clave).sort().join() === 'dia_a_dia,lecciones_momento,notas_lunes,salud_nueva', 'con textos para corregir: las notas de los lunes, las respuestas de salud, las lecciones y el día a día');
+check(conTextos.map((x) => x.clave).sort().join() === 'aviso_peso,celebracion,comida_fuera,dia_a_dia,hambre,lecciones_comida,lecciones_momento,me_he_pasado,notas_lunes,respuestas_comida,salud_nueva',
+  'con textos para corregir: las notas de los lunes, las respuestas de salud, las lecciones y el día a día; y, de la comida (v0.250), sus respuestas, sus cuatro hojas, los avisos del peso y sus lecciones');
 check(REVISAR.find((x) => x.clave === 'notas_lunes').textos.length === Object.keys(NOTAS_LUNES).length && REVISAR.find((x) => x.clave === 'dia_a_dia').textos.length === Object.keys(DIA_A_DIA).length, 'una por cada nota y cada día');
 check(AJUSTES.map((x) => x.clave).join() === 'tope_dia,tope_semana,resumen_lunes' && AJUSTES[1].numero.join() === '3,14,7', 'y los tres ajustes: un aviso al día, N a la semana (de 3 a 14, 7 de partida) y tu lunes');
 const est = estadoDe([{ clave: 'enfermo', encendido: true }, { clave: 'medico', solo_atleta: 'x' }, { clave: 'nota_lunes:3', texto: { texto: 'Mía' } }]);

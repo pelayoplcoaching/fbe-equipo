@@ -14,6 +14,8 @@ import { fechaLarga } from '../../logica/esencial-alta.js';
 import { CATEGORIAS, RESPUESTAS, PENDIENTES } from '../../logica/esencial-respuestas.js';
 import { estadoDe, AJUSTES, textoNuevo, respuestaNueva, textoRegistro, talCualDe, curvaPiloto, candidatos, loQueHizo, csvPiloto, stripeFrenteApp, MOTIVOS_BAJA } from '../../logica/esencial-ajustes.js';
 import * as datos from '../../datos/api-esencial.js';
+// (v0.250, 118) la comida de quienes llevan nutrición, en recuentos
+import { panelComida } from '../../logica/esencial-comida.js';
 
 const TIPO = { texto: 'Texto', regla: 'Regla', salud: 'Salud' };
 const ESTADO = { apagado: 'Apagado', probando: 'Probando en una cuenta', encendido: 'Encendido' };
@@ -30,11 +32,12 @@ export function PanelRevisar({ lista = [], abrir = null }) {
         {filas.datos && <span class="mini terciario">{`${estadoDe(filas.datos).filter((x) => x.estado === 'apagado').length} cosas apagadas`}</span>}</summary>
       {!filas.datos ? <p class="peq secundario">Para esto falta la actualización 103 en la base (la migración de la tanda 8).</p> : (
         <div class="pila">
-          <Pestanas opciones={[['revisar', 'Por revisar'], ['respuestas', 'Respuestas'], ['piloto', 'El piloto'], ['herramientas', 'Herramientas']]} valor={pest} alCambiar={setPest} etiqueta="Tu panel de FBE Esencial" idBase="prv" />
+          <Pestanas opciones={[['revisar', 'Por revisar'], ['respuestas', 'Respuestas'], ['piloto', 'El piloto'], ['comida', 'La comida'], ['herramientas', 'Herramientas']]} valor={pest} alCambiar={setPest} etiqueta="Tu panel de FBE Esencial" idBase="prv" />
           <div id="prv-panel" role="tabpanel" aria-labelledby={`prv-${pest}`} class="pila">
             {pest === 'revisar' && <PorRevisar filas={filas.datos} suyos={suyos} alCambiar={() => filas.recargar(true)} />}
             {pest === 'respuestas' && <Respuestas filas={filas.datos} alCambiar={() => filas.recargar(true)} />}
             {pest === 'piloto' && <Piloto lista={lista} abrir={abrir} />}
+            {pest === 'comida' && <LaComida lista={lista} abrir={abrir} />}
             {pest === 'herramientas' && <Herramientas lista={lista} abrir={abrir} />}
           </div>
         </div>
@@ -333,6 +336,33 @@ function Piloto({ lista, abrir }) {
 }
 
 // ---------- (91 y 92) Herramientas: Stripe frente a la app y los motivos de baja ----------
+// (v0.250, 118) La comida: quién no se pesa, quién no apunta y cuántos ajustes ha hecho la app (solo recuentos)
+function LaComida({ lista, abrir }) {
+  const { backend } = useApp();
+  const d = useCarga(() => datos.comidaPanel(backend).catch(() => null), []);
+  if (d.cargando && !d.datos) return <p class="peq secundario" role="status">Mirando la comida…</p>;
+  if (d.datos === null) return <p class="peq secundario">Para esto falta la actualización 104 en la base (la migración de la tanda 9).</p>;
+  const nombres = Object.fromEntries(lista.map((r) => [r.atleta_id, r.nombre]));
+  const x = panelComida(d.datos, nombres);
+  if (!x) return <p class="peq secundario">Nadie de FBE Esencial lleva nutrición todavía.</p>;
+  const ids = Object.fromEntries(lista.map((r) => [r.nombre, r.atleta_id]));
+  const Nombres = ({ xs }) => (xs.length ? xs.map((n, i) => <span key={n}>{i ? ', ' : ''}<button type="button" class="btn-texto peq" onClick={() => abrir?.(ids[n])}>{n}</button></span>) : 'nadie');
+  return (
+    <section class="pila-s" aria-labelledby="prv-com-t">
+      <strong id="prv-com-t" class="peq">La comida de FBE Esencial</strong>
+      <div class="prv-com-cifras" role="list">
+        {[[x.total, 'con nutrición'], [x.conPlan, 'con su plan de comida'], [x.ajustes7, 'ajustes de la app esta semana'], [x.ajustes, 'ajustes en total']].map(([n, t]) => (
+          <div role="listitem" class="prv-com-cifra" key={t}><strong class="num">{n}</strong><span class="mini terciario">{t}</span></div>
+        ))}
+      </div>
+      {x.sinPlan.length > 0 && <p class="peq"><strong>Sin plan de comida todavía: </strong><Nombres xs={x.sinPlan} /></p>}
+      <p class="peq"><strong>Sin pesarse en dos semanas: </strong><Nombres xs={x.sinPesar} /></p>
+      <p class="peq"><strong>Sin apuntar la comida en una semana: </strong><Nombres xs={x.sinApuntar} /></p>
+      <p class="mini terciario">Solo recuentos: ni pesos ni lo que come cada uno. Quien tiene antecedente de TCA no sale en «sin pesarse».</p>
+    </section>
+  );
+}
+
 function Herramientas({ lista, abrir }) {
   const { backend } = useApp();
   const [texto, setTexto] = useState('');

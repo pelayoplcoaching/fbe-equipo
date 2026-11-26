@@ -32,6 +32,8 @@ const EsperaArriba = perezoso(() => import('./EsencialEspera.jsx'), 'EsperaArrib
 const PorqueVuelve = perezoso(() => import('./EsencialEspera.jsx'), 'PorqueVuelve', { mientras: null });
 // (v0.249, tanda 8) «¿Por qué te vas?» antes de su suscripción (en el trozo de la ayuda)
 const HojaBaja = perezoso(() => import('./EsencialAyuda.jsx'), 'HojaBaja', { mientras: null });
+// (v0.250, 115) el domingo, la comida de la semana a un toque (quien lleva nutrición)
+const ComidaDomingo = perezoso(() => import('./EsencialComidaMas.jsx'), 'ComidaDomingo', { mientras: null });
 
 // ---------- (alta, 28-32) Antes de empezar ----------
 // Un consejo de las guías cada día de la cuenta atrás (textos de las lecciones aprobadas por Pelayo y de la guía)
@@ -568,6 +570,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
         {e.tipo === 'pausa' && (
           <div class="fila-envolver"><button type="button" class="btn btn-peq" disabled={ocupado} onClick={() => cerrar('reanudar', 'De vuelta: tu semana sigue donde estaba')}>Volver ya</button></div>
         )}
+        {(e.tipo === 'pregunta' || e.tipo === 'lista') && atleta?.nutricion !== false && new Date(`${hoy}T12:00:00Z`).getUTCDay() === 0 && <ComidaDomingo />}
         {pausable && <button type="button" class="btn-texto mini cierre-pausa" onClick={() => setHoja(true)}>Esta semana no puedo</button>}
       </div>
       {hojaPausa}

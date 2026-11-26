@@ -5,6 +5,7 @@
 import { APAGADO, PENDIENTES, RESPUESTAS, LECCIONES_MOMENTO, CATEGORIAS, MOTIVOS_BAJA } from './esencial-respuestas.js';
 import { NOTAS_LUNES, DIA_A_DIA } from './esencial-cerca.js';
 import { LISTON_ESENCIAL } from './esencial-piloto.js';
+import { RESPUESTAS_COMIDA, HOJAS_COMIDA, LECCIONES_COMIDA, AVISOS_PESO } from './esencial-comida.js';
 
 const diasEntre = (a, b) => Math.round((Date.parse(`${String(b).slice(0, 10)}T12:00:00Z`) - Date.parse(`${String(a).slice(0, 10)}T12:00:00Z`)) / 864e5);
 const sumar = (iso, n) => new Date(Date.parse(`${String(iso).slice(0, 10)}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
@@ -14,6 +15,9 @@ const lunesDe = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00
 // tipo: 'texto' (palabras suyas o de salud: se pueden corregir), 'regla' (cambia cómo progresa o qué hace la app) o 'salud'
 // ver: en qué persona de la demo se ve (para «Ver como…»); textos: las claves de sus textos editables
 const N = (o) => Object.keys(o).map(Number).sort((a, b) => a - b);
+const hojaTexto = (k, nombre) => ({ clave: `hoja:${k}`, nombre, campos: { texto: HOJAS_COMIDA[k].lineas.join('\n') } });
+const HOJA_FUERA = hojaTexto('fuera', 'Hoy como fuera'), HOJA_HAMBRE = hojaTexto('hambre', 'Tengo mucha hambre');
+const HOJA_PASADO = hojaTexto('pasado', 'Me he pasado'), HOJA_CELEBRACION = hojaTexto('celebracion', 'Tengo una celebración');
 export const REVISAR = [
   { clave: 'notas_lunes', titulo: 'Tu nota de cada lunes', tipo: 'texto', que: 'Arriba en Hoy, cada lunes, una nota tuya de esa semana del plan (de la 1 a la 12).', ver: ['tomas', 'semana 5'],
     textos: N(NOTAS_LUNES).map((n) => ({ clave: `nota_lunes:${n}`, nombre: `Semana ${n}`, campos: { texto: NOTAS_LUNES[n] } })) },
@@ -34,6 +38,19 @@ export const REVISAR = [
   { clave: 'variante', titulo: 'Una variante para un ejercicio atascado', tipo: 'regla', que: 'Si un ejercicio lleva tres semanas igual, le propone una variante.', ver: ['tomas', 'Cambiar un ejercicio'] },
   { clave: 'kilos_partida', titulo: 'Sus kilos de partida', tipo: 'regla', que: 'Quien ya entrena apunta antes de empezar con cuántos kilos va; en la semana 1, «¿Qué peso pongo?» se los recuerda.', ver: ['andresm', 'Hoy, antes de su lunes'] },
   { clave: 'medico', titulo: 'Qué pedirle a su médico', tipo: 'salud', que: 'Si su cribado pide valoración médica: un texto para enseñar en la consulta y qué pasa mientras.', ver: ['clara', 'Hoy'] },
+  // (v0.250, tanda 9) la comida (solo para quien lleva nutrición; en la demo, Carmen). En las hojas, cada línea es un párrafo
+  { clave: 'respuestas_comida', titulo: 'Quince respuestas de comida', tipo: 'salud', que: 'En el centro de respuestas, un tema nuevo, «La comida». Con antecedente de TCA no salen las que hablan de perder, de bajar el plan o de pesarse.', ver: ['carmen', 'Respuestas › La comida'],
+    textos: RESPUESTAS_COMIDA.map((x) => ({ clave: `respuesta:${x.id}`, nombre: x.q, campos: { q: x.q, r: x.r } })) },
+  { clave: 'comida_fuera', titulo: '«Hoy como fuera»', tipo: 'texto', que: 'En «¿Qué necesitas?»: cómo elegir sin apuntar gramos.', ver: ['carmen', '¿Qué necesitas?'], textos: [HOJA_FUERA] },
+  { clave: 'hambre', titulo: '«Tengo mucha hambre»', tipo: 'salud', que: 'En «¿Qué necesitas?»: qué hacer si tiene hambre a menudo.', ver: ['carmen', '¿Qué necesitas?'], textos: [HOJA_HAMBRE] },
+  { clave: 'me_he_pasado', titulo: '«Me he pasado»', tipo: 'texto', que: 'En «¿Qué necesitas?»: sin castigo ni compensar; qué hace la app (nada) y por qué. Nunca con antecedente de TCA.', ver: ['carmen', '¿Qué necesitas?'], textos: [HOJA_PASADO] },
+  { clave: 'celebracion', titulo: 'Las celebraciones', tipo: 'regla', que: 'En «¿Qué necesitas?», «Tengo una celebración»: apunta el día y la app no usa el peso de ese día ni de los dos siguientes para ajustar su plan.', ver: ['carmen', '¿Qué necesitas?'], textos: [HOJA_CELEBRACION] },
+  { clave: 'comida_viaje', titulo: 'La comida, de viaje', tipo: 'regla', que: 'Mientras está de viaje y la semana de la vuelta, la app no ajusta su plan de comida; en Hoy le dice que coma para mantener, con la cifra.', ver: ['carmen', 'Hoy, de viaje'] },
+  { clave: 'aviso_peso', titulo: 'Si baja muy deprisa o se para', tipo: 'salud', que: 'En su revisión: si baja más de un 1 % a la semana, o su peso lleva tres semanas parado, qué pasa y qué hacer. Solo si busca perder.', ver: ['carmen', 'su revisión de la semana'],
+    textos: [['deprisa', 'Baja muy deprisa'], ['parado', 'Tres semanas parado']].map(([k, nombre]) => ({ clave: `aviso_peso:${k}`, nombre, campos: { titulo: AVISOS_PESO[k][0], texto: AVISOS_PESO[k][1] } })) },
+  { clave: 'checkin_comida', titulo: 'El check-in contesta al hambre y a la energía', tipo: 'salud', que: 'Con mucha hambre, o con poca energía comiendo para perder, una línea de qué hacer.', ver: ['carmen', 'el check-in'] },
+  { clave: 'lecciones_comida', titulo: 'Cuatro lecciones de comida', tipo: 'texto', que: 'En su revisión, una vez cada una: su primer ajuste, una semana sin bajar, su primer fin de semana y su primera comida fuera.', ver: ['carmen', 'su revisión de la semana'],
+    textos: Object.entries(LECCIONES_COMIDA).map(([id, [t, x]]) => ({ clave: `leccion_comida:${id}`, nombre: t, campos: { titulo: t, texto: x } })) },
 ];
 export const REVISAR_POR = Object.fromEntries(REVISAR.map((x) => [x.clave, x]));
 // (97 y 98) Los ajustes que no son textos: el tope de avisos y tu resumen de los lunes

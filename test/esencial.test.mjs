@@ -118,7 +118,7 @@ const apiD = crearApi(bd);
 await bd.auth.entrar('pelayo@fbe.demo', 'demo');
 const resD = await apiD.resumenes();
 const esD = resD.filter((r) => r.modalidad === 'por_su_cuenta').map((r) => r.nombre).sort();
-check(esD.join() === 'Andrés Mora,Clara Prieto,Inés Gil,Lucía Vidal,Marina Ortega,Tomás Rey', 'seis atletas de FBE Esencial: Marina, Tomás, Clara, Inés (con nutrición, desde la tanda 4) y, en la espera (v0.248), Lucía y Andrés');
+check(esD.join() === 'Andrés Mora,Carmen Soto,Clara Prieto,Inés Gil,Lucía Vidal,Marina Ortega,Tomás Rey', 'siete atletas de FBE Esencial: Marina, Tomás, Clara, Inés (con nutrición, desde la tanda 4), en la espera (v0.248) Lucía y Andrés y, con su plan de comida (v0.250), Carmen');
 const bjD = await apiD.bandeja();
 check(![...bjD.sesiones, ...bjD.checkins, ...bjD.comentarios].some((x) => x.atleta?.modalidad === 'por_su_cuenta') && bjD.sesiones.length > 0,
   'fuera de Revisar (las sesiones de Tomás no esperan respuesta; las de los demás, sí)');

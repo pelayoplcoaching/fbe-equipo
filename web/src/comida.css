@@ -1,0 +1,52 @@
+/* FBE Esencial (tanda 9): "la comida, acompanada". La comida en "Tu revision de la semana" (con por que no cambia, los
+   avisos del peso y las lecciones), lo de Hoy (por que no cambia tu plan y la comida de viaje), las hojas de comida de
+   "Que necesitas?" y el cierre del domingo. Solo clases cmd-*, cada regla en su propio elemento (una sola clase), sin
+   tocar margenes ni tamanos de letra (eso lo ponen las clases comunes en el JSX): asi van enteras con el trozo de
+   EsencialComidaMas (scripts/css-coach.mjs). */
+
+/* En la revision de la semana */
+.cmd-semana {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-10);
+  padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2);
+}
+.cmd-semana-i {
+  display: grid; place-items: center; width: var(--esp-32); height: var(--esp-32); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--morado);
+}
+.cmd-linea { min-width: 0; overflow-wrap: anywhere; }
+.cmd-aviso {
+  display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--aviso); border-radius: var(--r-10); background: var(--hoja);
+}
+.cmd-leccion {
+  display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--morado); border-radius: var(--r-10); background: var(--hoja);
+}
+.cmd-pendiente { color: var(--tinta-2); }
+
+/* En Hoy */
+.cmd-hoy { min-width: 0; padding-top: var(--esp-8); }
+.cmd-viaje { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); color: var(--tinta); }
+.cmd-porque { min-width: 0; }
+.cmd-porque-s { cursor: pointer; color: var(--morado); }
+
+/* Las hojas */
+.cmd-hoja { min-width: 0; }
+.cmd-lineas { display: grid; gap: var(--esp-8); padding-inline-start: var(--esp-18); }
+.cmd-prot { min-width: 0; }
+.cmd-barra { height: var(--esp-8); border-radius: var(--r-pildora); background: var(--hoja-2); overflow: hidden; }
+.cmd-barra-l { display: block; height: 100%; border-radius: var(--r-pildora); background: var(--morado); }
+.cmd-ideas { display: grid; gap: var(--esp-6); }
+.cmd-idea { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.cmd-idea-n { min-width: 0; overflow-wrap: anywhere; }
+.cmd-celebra { padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.cmd-fecha {
+  min-height: var(--esp-40); padding: var(--esp-6) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit;
+}
+.cmd-fecha:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.cmd-lista { display: grid; gap: var(--esp-6); }
+.cmd-celebra-f { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+
+/* El cierre del domingo */
+.cmd-domingo { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); }

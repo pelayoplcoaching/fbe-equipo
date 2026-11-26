@@ -152,7 +152,11 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   // seguidas y la variante de un ejercicio atascado
   'enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante',
   // (v0.248, tanda 7) sus kilos de partida en la semana 1 (cambia de dónde sale su primer peso) y la hoja para su médico (salud)
-  'kilos_partida', 'medico']);
+  'kilos_partida', 'medico',
+  // (v0.250, tanda 9: la comida) quince respuestas de comida, «Hoy como fuera», «Tengo mucha hambre», «Me he pasado» y
+  // «Tengo una celebración» (con su regla: esos pesos no cuentan), la comida de viaje (no ajusta y pasa a mantener), los
+  // avisos del peso (baja deprisa o parado), lo que contesta el check-in al hambre y a la energía, y cuatro lecciones
+  'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)
@@ -179,9 +183,12 @@ export const encendido = (clave, previa = false) => !!previa || !APAGADO.has(cla
 const conSuTexto = (x) => ({ ...x, q: textoAjuste(`respuesta:${x.id}`, 'q', x.q), r: textoAjuste(`respuesta:${x.id}`, 'r', x.r) });
 export const respuestasNuevas = () => [...REMOTO.values()].filter((f) => /^respuesta_nueva:[a-z0-9_-]+$/.test(f.clave) && f.texto?.q && f.texto?.r)
   .map((f) => ({ id: f.clave.split(':')[1], cat: CATEGORIAS.some((c) => c[0] === f.texto.cat) ? f.texto.cat : 'app', q: String(f.texto.q), r: String(f.texto.r), suya: true }));
-export const respuestas = ({ previa = false, publicas = [] } = {}) => [
+// comida (v0.250): las respuestas de comida que le tocan (respuestasComida de esencial-comida.js, con o sin antecedente de
+// TCA), solo para quien lleva nutrición; salen con «respuestas_comida» encendida (o en la vista previa)
+export const respuestas = ({ previa = false, publicas = [], comida = null } = {}) => [
   ...RESPUESTAS.map(conSuTexto),
   ...respuestasNuevas(),
+  ...(comida && encendido('respuestas_comida', previa) ? comida.map((x) => ({ ...conSuTexto(x), cat: 'comida', pendiente: !REMOTO.get('respuestas_comida')?.encendido })) : []),
   ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !REMOTO.get('salud_nueva')?.encendido })) : []),
   // (18) las dudas del directo que Pelayo ha contestado y hecho públicas
   ...(publicas || []).filter((x) => x?.pregunta && x?.respuesta).map((x) => ({ id: `directo-${x.id}`, cat: 'directo', q: x.pregunta, r: x.respuesta, directo: true })),
@@ -254,7 +261,9 @@ export const DUDAS_PANTALLA = { cierre: 'domingo', perdida: 'falle', marcas: 'ma
 // El final del enlace del aviso (#hoy/<clave>, migración 100) → qué se abre en Hoy
 export const AVISO_ABRE = { manana: 'plan', hoy: 'plan', empezamos: 'plan', domingo: 'cierre', auto: 'revision', lunes: 'revision', rutina: 'rutina', elige: 'rutina', plan_auto: 'plan', agujetas: 'agujetas', retomar: 'vuelta',
   // (v0.247, migración 101) el aviso de la vuelta de un viaje lleva a su tarjeta
-  viaje: 'viajando' };
+  viaje: 'viajando',
+  // (v0.250, migración 104) «¿Te pesas esta semana?» abre «¿Cuándo me peso?»
+  pesarme: 'pesarme' };
 
 // ---------- (10) «Tu plan, explicado» y (11) «Tu camino» ----------
 // Los hitos de su camino según la semana de su plan (n) y si empezó por «Primeras 4 semanas»

@@ -15,9 +15,15 @@ import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRes
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
+// (v0.250, tanda 9) la comida: lo que necesita saber esta parte (si tiene plan de comida y si tiene antecedente de TCA)
+import { conNutricion } from '../../logica/nivel.js';
+import { planVigente } from '../../logica/nutricion.js';
+import { necesitasComida, respuestasComida, checkinComida } from '../../logica/esencial-comida.js';
 
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
+const ComidaRevision = perezoso(() => import('./EsencialComidaMas.jsx'), 'ComidaRevision', { mientras: null });
+const HojaComida = perezoso(() => import('./EsencialComidaMas.jsx'), 'HojaComida', { mientras: null });
 
 // Lo apagado hasta que Pelayo lo vea (logica/esencial-respuestas.js: APAGADO) se enseña en la demo con «?previa=1»
 function usePrevia() {
@@ -26,6 +32,14 @@ function usePrevia() {
 }
 const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
+// (v0.250) Quien lleva nutrición: si tiene plan de comida en marcha, su plan y si tiene antecedente de TCA (null: sin nutrición)
+function useComidaEsencial() {
+  const { api, atleta } = useApp();
+  const con = conNutricion(atleta);
+  const r = useCarga(() => (con ? Promise.all([api.planesNutricion(atleta.id).catch(() => []), api.esencialTca ? api.esencialTca(atleta.id).catch(() => null) : null])
+    .then(([planes, tca]) => ({ plan: planVigente(planes || [], hoyISO()) || null, tca: tca === true })) : Promise.resolve(null)), [atleta.id, con], { recuerdo: `esencial-comida:${atleta.id}` });
+  return r.datos;
+}
 
 // ---------- (8) Las palabras, explicadas al tocarlas ----------
 export function Palabras({ claves = ['sobran', 'serie', 'rango', 'descarga', 'marcas', 'progresion'] }) {
@@ -46,7 +60,10 @@ export function Palabras({ claves = ['sobran', 'serie', 'rango', 'descarga', 'ma
 // ---------- (15, P: apagado) El check-in contesta a cada cosa que marca ----------
 export function CheckinResponde({ f }) {
   const previa = usePrevia();
-  const xs = encendido('checkin_responde', previa) ? checkinResponde(f || {}) : [];
+  const comida = useComidaEsencial();
+  const xs = [...(encendido('checkin_responde', previa) ? checkinResponde(f || {}) : []),
+    // (v0.250, 113, P) al hambre y a la energía, si lleva nutrición
+    ...(comida?.plan && encendido('checkin_comida', previa) ? checkinComida(f || {}, { plan: comida.plan, tca: comida.tca }) : [])];
   if (!xs.length) return null;
   return <ul class="ayu-checkin">{xs.map((t) => <li key={t} class="ayu-checkin-f peq"><span class="ayu-checkin-i"><Icono n="mensaje" width="18" height="18" /></span><span>{t}</span></li>)}</ul>;
 }
@@ -86,14 +103,15 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
   const { backend, atleta } = useApp();
   const previa = usePrevia();
   const publicas = useCarga(() => datos.respuestasPublicas(backend).catch(() => []), [], { recuerdo: `esencial-publicas:${atleta.id}` });
-  const todas = respuestas({ previa, publicas: publicas.datos || [] });
+  const comida = useComidaEsencial();
+  const todas = respuestas({ previa, publicas: publicas.datos || [], comida: comida?.plan ? respuestasComida({ tca: comida.tca }) : null });
   const [q, setQ] = useState('');
   const [cat, setCat] = useState(() => todas.find((x) => x.id === inicial)?.cat || null);
   const ref = useRef(null);
   useEffect(() => { if (inicial) ref.current?.querySelector('details[open]')?.scrollIntoView?.({ block: 'center' }); }, []);
   const buscando = q.trim().length >= 3;
   const lista = buscando ? buscarRespuestas(q, todas) : cat ? todas.filter((x) => enTema(x, cat)) : null;
-  const cats = [...CATEGORIAS, ...(todas.some((x) => x.directo) ? [['directo', 'Del directo del mes', 'mensaje']] : [])];
+  const cats = [...CATEGORIAS, ...(todas.some((x) => x.cat === 'comida') ? [['comida', 'La comida', 'nutricion']] : []), ...(todas.some((x) => x.directo) ? [['directo', 'Del directo del mes', 'mensaje']] : [])];
   return (
     <Hoja titulo="Respuestas" alCerrar={alCerrar}>
       <div class="pila ayu-centro" ref={ref}>
@@ -314,6 +332,7 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
               <span class="pila-xs"><strong class="peq">Esta semana, una sola cosa</strong><span class="peq">{v.foco}</span></span>
             </aside>
             {peso && <aside class="ayu-peso" aria-label="Tu peso, en contexto"><span class="ayu-peso-i"><Icono n="bascula" width="18" height="18" /></span><span class="pila-xs"><strong class="peq">Tu peso, en contexto</strong><span class="peq secundario">{peso.texto}</span></span></aside>}
+            {conNutricion(atleta) && <ComidaRevision />}
             <p class="mini terciario">Esta revisión la escribe la app con lo que apuntaste y las reglas de progresión de Pelayo. No la ha leído nadie: FBE Esencial va sin seguimiento personal.</p>
             <Palabras claves={r.semana === 'descarga' ? ['descarga', 'sobran', 'serie', 'rango'] : ['sobran', 'serie', 'rango', 'progresion', 'descarga']} />
             {(r.anteriores || []).length > 1 && (
@@ -326,6 +345,8 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
             )}
           </>
         )}
+        {/* (v0.250, 101) la comida de la semana: debajo de su peso o, sin revisión de entreno todavía, aquí */}
+        {!v && conNutricion(atleta) && !d.cargando && <ComidaRevision />}
       </div>
     </Hoja>
   );
@@ -497,6 +518,8 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const accion = (a) => {
     if (a === 'pausa' || a === 'cierre') { setHoja(null); try { document.querySelector('[data-cierre]')?.scrollIntoView({ block: 'center' }); } catch { /* */ } return; }
     // (v0.246) los avisos de las agujetas y de los días sin entrenar llevan a su tarjeta, arriba en Hoy
+    // (v0.250) el aviso «¿Te pesas esta semana?» abre «¿Cuándo me peso?»
+    if (a === 'pesarme') { setHoja({ tipo: 'comida', id: 'pesarme' }); return; }
     if (a === 'agujetas' || a === 'vuelta' || a === 'viajando') {
       setHoja(null);
       try { document.querySelector(a === 'agujetas' ? '[data-cerca="agujetas"]' : a === 'vuelta' ? '[data-cerca="vuelta"]' : '[data-vida="viaje"]')?.scrollIntoView({ block: 'center' }); } catch { /* */ }
@@ -506,7 +529,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   };
   useEffect(() => {
     const a = abrir && AVISO_ABRE[abrir];
-    if (!a || !(p?.bloque || a === 'rutina')) return;
+    if (!a || !(p?.bloque || a === 'rutina' || a === 'pesarme')) return;
     accion(a);
     setAbrir(null);
     try { history.replaceState(history.state, '', '#hoy'); } catch { /* */ }
@@ -514,12 +537,16 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const tocar = (que) => { const [tipo, id] = que.split(':'); if (tipo === 'respuesta') setHoja({ tipo: 'respuestas', id }); else accion(id); };
   const conPlan = !!p?.bloque;
   const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa });
+  // (v0.250, 103) las de comida, a quien tiene su plan de comida (lo apagado, solo en la vista previa)
+  const comida = useComidaEsencial();
+  const deComida = necesitasComida({ conPlan: !!comida?.plan, tca: !!comida?.tca, encendido: (k) => encendido(k, previa) });
   const cerrar = () => setHoja(null);
   return (
     <section class="panel panel-pad pila-s ayu-necesitas" aria-labelledby="ayu-nec-t">
       <strong id="ayu-nec-t">¿Qué necesitas?</strong>
       <div class="ayu-nec-f">
         {opciones.map(([id, t, icono, que]) => <button type="button" key={id} class="ayu-nec" onClick={() => tocar(que)}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
+        {deComida.map(([id, t, icono]) => <button type="button" key={`c-${id}`} class="ayu-nec" data-comida={id} onClick={() => setHoja({ tipo: 'comida', id })}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
         <button type="button" class="ayu-nec" onClick={() => setHoja({ tipo: 'respuestas' })}><span class="ayu-nec-i"><Icono n="buscar" width="18" height="18" /></span><span class="ayu-nec-t">Otra cosa</span></button>
       </div>
       {hoja?.tipo === 'respuestas' && <CentroRespuestas inicial={hoja.id || null} alCerrar={cerrar} alAccion={accion} />}
@@ -535,6 +562,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
       {hoja?.tipo === 'objetivo' && <AbrirObjetivo alCerrar={cerrar} />}
       {hoja?.tipo === 'enfermo' && <HojaEnfermo alCerrar={cerrar} alAccion={accion} />}
       {hoja?.tipo === 'suave' && <AbrirSuave alCerrar={cerrar} />}
+      {hoja?.tipo === 'comida' && <HojaComida que={hoja.id} alCerrar={cerrar} />}
     </section>
   );
 }
