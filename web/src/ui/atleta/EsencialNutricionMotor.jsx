@@ -52,7 +52,7 @@ export function TarjetaNutricionMotor({ pesoKg = null, alGuardar }) {
       <div class="seccion-cab"><h2>Tu plan de comida</h2></div>
       {motivo ? (
         <div class="nm-excl" role="status">
-          <strong class="peq"><Icono n="alerta" /> En tu caso, la app no calcula tu plan de comida</strong>
+          <strong class="peq nm-excl-t"><Icono n="alerta" width="18" height="18" /><span>En tu caso, la app no calcula tu plan de comida</span></strong>
           <span class="peq">{EXCLUSIONES.find(([k]) => k === motivo)?.[1]} Lo que te conviene comer tiene que pautarlo un profesional: tu médico o un dietista-nutricionista.</span>
           <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="editar" /> Volver a contestar</button>
         </div>
@@ -132,7 +132,7 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
       <Hoja titulo="Tu plan de comida" alCerrar={alCerrar}>
         <div class="pila">
           <div class="nm-excl" role="status">
-            <strong class="peq"><Icono n="alerta" /> En tu caso, la app no calcula tu plan de comida</strong>
+            <strong class="peq nm-excl-t"><Icono n="alerta" width="18" height="18" /><span>En tu caso, la app no calcula tu plan de comida</span></strong>
             <span class="peq">{EXCLUSIONES.find(([k]) => k === fin.motivo)?.[1]} Lo que te conviene comer tiene que pautarlo un profesional: tu médico o un dietista-nutricionista.</span>
             {fin.motivo === 'embarazo' && otras && <span class="mini secundario">Si ya no estás embarazada, cámbialo en tu cuestionario (en Perfil) y vuelve a contestar.</span>}
           </div>
@@ -203,20 +203,20 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
             <div class="nm-como">
               <svg class="nm-dib" viewBox="0 0 60 82" role="img" aria-label="Dónde medir: la cintura, a la altura del ombligo; la cadera, por la parte más ancha de los glúteos">
                 <path class="nm-dib-cuerpo" stroke-width="1.5" d="M14 4 Q30 0 46 4 L44 30 Q41 42 42 50 Q48 62 47 78 L13 78 Q12 62 18 50 Q19 42 16 30 Z" />
-                <circle class="nm-dib-cadera" cx="30" cy="50" r="1.2" stroke-width="1.5" />
+                <circle class="nm-dib-cintura" cx="30" cy="46" r="1.4" stroke-width="1.5" />
                 <line class="nm-dib-cintura" x1="4" y1="46" x2="56" y2="46" stroke-width="2" stroke-dasharray="4 3" />
                 <line class="nm-dib-cadera" x1="4" y1="64" x2="56" y2="64" stroke-width="2" stroke-dasharray="4 3" />
               </svg>
-              <ul class="nm-como-l">
-                <li class="peq">Por la mañana, en ayunas y después de orinar.</li>
-                <li class="peq">De pie y relajado, con la cinta horizontal, ceñida sin apretar.</li>
-                <li class="peq"><span class="nm-como-c">La cintura</span>, a la altura del ombligo, al final de soltar el aire.</li>
-                <li class="peq">La cadera, por la parte más ancha de los glúteos.</li>
-              </ul>
+              <div class="nm-como-l" role="list">
+                <span role="listitem" class="peq nm-como-i">Por la mañana, en ayunas y después de orinar.</span>
+                <span role="listitem" class="peq nm-como-i">De pie y relajado, con la cinta horizontal, ceñida sin apretar.</span>
+                <span role="listitem" class="peq nm-como-i"><span class="nm-como-c">La cintura</span>, a la altura del ombligo, al final de soltar el aire.</span>
+                <span role="listitem" class="peq nm-como-i"><span class="nm-como-k">La cadera</span>, por la parte más ancha de los glúteos.</span>
+              </div>
             </div>
             <div class="rejilla-campos">
               <div class="campo"><label for="nm-cintura">Cintura (cm)</label><Paso id="nm-cintura" valor={d.cintura} paso={0.5} min={45} max={200} dec={1} etiqueta="centímetros" alCambiar={(v) => cambiar({ cintura: v })} /></div>
-              <div class="campo"><label for="nm-cadera">Cadera (cm) <span class="terciario">(opcional)</span></label><Paso id="nm-cadera" valor={d.cadera} paso={0.5} min={50} max={200} dec={1} etiqueta="centímetros" alCambiar={(v) => cambiar({ cadera: v })} /></div>
+              <div class="campo"><label for="nm-cadera">Cadera (cm, opcional)</label><Paso id="nm-cadera" valor={d.cadera} paso={0.5} min={50} max={200} dec={1} etiqueta="centímetros" alCambiar={(v) => cambiar({ cadera: v })} /></div>
             </div>
             <span class="ayuda">Con tu cintura, la app sabe si pierdes grasa aunque tu peso no se mueva.</span>
             <details class="nm-grasa" open={!!d.composicionMetodo}>
@@ -334,10 +334,10 @@ function TuPlan({ plan, d, actual, hoy }) {
       {cambio && <p class="peq nota">{cambio}</p>}
       <section class="pila-s" aria-labelledby="nm-porque-t">
         <strong id="nm-porque-t" class="peq">Por qué</strong>
-        <ul class="nm-porque">{plan.porque.map((x) => <li key={x} class="peq nm-porque-l">{x}</li>)}</ul>
+        <div class="nm-porque" role="list">{plan.porque.map((x) => <span key={x} role="listitem" class="peq nm-porque-l">{x}</span>)}</div>
         {grasa != null && <p class="mini secundario">Tu grasa corporal estimada con tu cintura y tu altura (RFM, una estimación): un {String(grasa).replace('.', ',')} %.</p>}
       </section>
-      {tm && <p class={m?.aviso ? 'peq nm-meta-aviso' : 'peq nm-meta'}><Icono n={m?.aviso ? 'alerta' : 'diana'} /> <span>{tm}</span></p>}
+      {tm && <p class={m?.aviso ? 'peq nm-meta-aviso' : 'peq nm-meta'}><Icono n={m?.aviso ? 'alerta' : 'diana'} width="18" height="18" /><span>{tm}</span></p>}
       <div class="nm-sigue">
         <strong class="peq">Lo que viene</strong>
         <span class="peq">Cada día, en Hoy, un toque: «¿Has seguido tu plan?» (sí, casi o no). Si quieres, apunta también lo que comes.</span>

@@ -7,12 +7,14 @@
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-12);
   padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2);
 }
-.nm-dib { display: block; width: var(--esp-48); height: auto; overflow: visible; }
+.nm-dib { display: block; width: calc(var(--esp-32) * 2); height: auto; overflow: visible; }
 .nm-dib-cuerpo { fill: var(--hoja); stroke: var(--tinta-3); }
 .nm-dib-cintura { stroke: var(--morado); }
 .nm-dib-cadera { stroke: var(--tinta-2); }
-.nm-como-l { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-18); min-width: 0; }
+.nm-como-l { display: grid; gap: var(--esp-8); min-width: 0; }
+.nm-como-i { padding-inline-start: var(--esp-10); border-left: var(--filo-fino) solid var(--linea); }
 .nm-como-c { color: var(--morado); }
+.nm-como-k { color: var(--tinta-2); }
 
 /* Las preguntas del SCOFF: la pregunta y su si o no */
 .nm-scoff { display: grid; gap: var(--esp-10); }
@@ -27,8 +29,8 @@
 .nm-grasa-s { cursor: pointer; color: var(--morado); }
 
 /* Su plan: por que, la meta y lo que viene */
-.nm-porque { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-18); min-width: 0; }
-.nm-porque-l { min-width: 0; overflow-wrap: anywhere; }
+.nm-porque { display: grid; gap: var(--esp-8); min-width: 0; }
+.nm-porque-l { min-width: 0; overflow-wrap: anywhere; padding-inline-start: var(--esp-10); border-left: var(--filo-marca) solid var(--morado-suave); }
 .nm-meta {
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8);
   padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); color: var(--tinta);
@@ -43,6 +45,7 @@
 }
 
 /* Sin plan automatico */
+.nm-excl-t { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); color: var(--tinta); }
 .nm-excl {
   display: grid; gap: var(--esp-8); padding: var(--esp-14); border: var(--filo-fino) solid var(--linea);
   border-left: var(--filo-marca) solid var(--aviso); border-radius: var(--r-10); background: var(--hoja);
