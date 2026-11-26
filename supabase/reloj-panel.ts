@@ -338,9 +338,20 @@ var PREGUNTAS = [
   { id: "energia", texto: "¿Cómo tienes la energía?", opciones: [[1, "Baja"], [2, "Normal"], [3, "Alta"]] },
   { id: "molestias", texto: "¿Agujetas o molestias?", opciones: [[1, "Bastantes"], [2, "Algunas"], [3, "Ninguna"]] }
 ];
-var NOMBRE = Object.fromEntries(PREGUNTAS.map((p) => [p.id, Object.fromEntries(p.opciones)]));
 var completa = (p) => !!p && PREGUNTAS.every((q) => [1, 2, 3].includes(p[q.id]));
+var esUnToque = (p) => ["bien", "regular", "mal"].includes(p?.cara);
+var caraDe = (p) => esUnToque(p) ? p.cara === "bien" && p.horas > 0 && p.horas < 6 ? "regular" : p.cara : null;
 function consejoPreparacion(p) {
+  const c = caraDe(p);
+  if (c) {
+    return {
+      nivel: c === "mal" ? "malo" : c === "regular" ? "flojo" : "bien",
+      frenar: p.asi === true && (c !== "bien" || !!p.agujetas),
+      unToque: true,
+      titulo: c === "mal" ? "Día difícil" : c === "regular" ? "Día flojo" : "Buen día",
+      texto: c === "mal" ? "En tu sesión, la app te propone una sesión mínima (lo principal, con menos series) o pasarla a otro día." : c === "regular" ? "En tu sesión, la app te propone los kilos de la última vez y una serie menos en los accesorios." : p.agujetas ? "En tu sesión, la app te propone un calentamiento más largo y no subir la carga hoy." : "Sigue tu plan tal cual."
+    };
+  }
   if (!completa(p)) return null;
   const total = p.sueno + p.energia + p.molestias;
   if (p.molestias === 1 || total <= 4) {
