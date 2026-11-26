@@ -113,6 +113,13 @@ const FinPrimeraSesion = perezoso(() => import('./EsencialSesion.jsx'), 'FinPrim
 // (v0.245) FBE Esencial: el «¿Por qué?» y las dudas de cada ejercicio, y al terminar, «¿Cómo ha ido?» y «Tu sesión, en claro»
 const AyudaEjercicio = perezoso(() => import('./EsencialAyuda.jsx'), 'AyudaEjercicio', { mientras: null });
 const TrasLaSesion = perezoso(() => import('./EsencialAyuda.jsx'), 'TrasLaSesion', { mientras: null });
+// (v0.257, P: 'molestias_zona') FBE Esencial, el motor de molestias en la sesión: antes de empezar, durante, al terminar, el
+// ajuste de la mañana siguiente (M5) y la alternativa en rojo (M7)
+const DolorEnSesion = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorEnSesion', { mientras: null });
+const DolorDurante = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorDurante', { mientras: null });
+const DolorDespues = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorDespues', { mientras: null });
+// (M5) el ajuste de la mañana siguiente, solo en la sesión de hoy: { pauta: { series, carga_sugerida_kg, series_detalle } }
+const conAjusteDolor = (xs, aj) => (aj && Object.keys(aj).length ? xs.map((e) => (aj[e.id] ? { ...e, ...aj[e.id] } : e)) : xs);
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { api, atleta, cola, aviso, propio } = useApp();
@@ -188,6 +195,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const [seFoco, setSeFoco] = useState(null);
   // Ejercicio con el que se está haciendo cada pauta, si se cambió por una alternativa (se recuerda en el móvil)
   const [sustitutos, setSustitutos] = usePreferencia(`fbe-sustitutos-${id}`, {});
+  // (v0.257) lo que dice el motor de molestias de esta sesión: { ajustes (M5), zonas (tras qué ejercicios preguntar, M4),
+  // antes (cómo estaba cada zona al empezar) }
+  const [dolorSes, setDolorSes] = useState(null);
   // v0.48: dónde entrena hoy (gimnasio, casa o viaje) y lo que se cambió por su material (para poder deshacerlo)
   const [lugar, setLugar] = usePreferencia(`fbe-lugar-${id}`, 'gimnasio');
   const [porLugar, setPorLugar] = usePreferencia(`fbe-lugar-cambios-${id}`, {});
@@ -399,10 +409,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { sesion, semana, progresionAuto } = det.datos;
   // v0.64 (4): todo lo de la sesión sale de esta lista, en el orden de hoy (la serie que toca, «Ahora toca», la píldora, la
   // pantalla de bloqueo, los tramos y el modo enfoque)
-  const ejercicios = aplicarOrden(det.datos.ejercicios, ordenSes);
+  const ejercicios = conAjusteDolor(aplicarOrden(det.datos.ejercicios, ordenSes), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
+  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -838,6 +848,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} prep={prep} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
+      {/* (v0.257, P: 'molestias_zona') con una molestia abierta en lo que carga hoy: antes de empezar, el ajuste y el rojo */}
+      {esPorSuCuenta(atleta) && !propio && !sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
+        <DolorEnSesion sesion={sesion} semana={semana} pautas={det.datos.ejercicios} ejerciciosPorId={ejerciciosPorId} sustitutos={sustitutos} hechas={hechas} alEstado={setDolorSes}
+          alCambiarVarios={(mapa, nuevos = []) => {
+            setSustitutos({ ...sustitutos, ...mapa });
+            const faltan = nuevos.filter((x) => x && !ejerciciosPorId[x.id]);
+            if (faltan.length) cargarExtra(faltan.map((x) => x.id), faltan);
+          }} />
+      )}
       {/* (v0.129) la música de la portada, a mano durante la sesión */}
       {!sesion.completada && (
         <BotonMusica sesion={sesion} semana={semana} cardio={cardioValido(sesion.cardio) ? sesion.cardio : null} prep={prep} fase={faseMusica}
@@ -872,7 +891,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         const tarjetas = g.items.map((e) => {
           const actual = actualDe(e);
           const cambiado = actual.id !== e.ejercicio.id;
-          return (
+          const zonaDur = !sesion.completada && dolorSes?.zonas?.[e.id];
+          const durante = zonaDur && Object.keys(hechas[e.id] || {}).length > 0 ? <DolorDurante key={'durante' + e.id} zona={zonaDur} sesionId={sesion.id} pautaId={e.id} inicio={dolorSes?.antes?.[zonaDur] ?? null} /> : null;
+          const tarjeta = (
             <Ejercicio key={e.id} sesionId={sesion.id} esUltimo={e.id === ultimoEj} recienHecho={!!recienTramo && tramos.some((t) => t.id === recienTramo && t.ids.includes(e.id))} e={e} actual={cambiado ? actual : null} ultimas={cambiado ? ultimas[actual.id] || null : e.ultimas}
               foco={semana?.foco} progresionAuto={progresionAuto && !cambiado && !frenar} etiqueta={etiquetas[e.id]} records={records}
               nota={notas[actual.id]} guardarNota={(t) => guardarNota(actual.id, t)}
@@ -893,6 +914,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
                 if (ej.id !== e.ejercicio.id && !ejerciciosPorId[ej.id]) cargarExtra([ej.id], [ej]);
               }} />
           );
+          return durante ? [tarjeta, durante] : tarjeta;
         });
         const conReloj = descanso && !verEnfoque && g.items.some((e) => e.id === descanso.tras);
         const reloj = conReloj && <Temporizador key={`reloj-${descanso.tras}`} {...descanso} alCambiar={cambiarDescanso} toca={ahora} alToca={irASerie} discoMinimo={discoMinimo} sesionId={id} ejercicio={ejDescanso} />;
@@ -1661,7 +1683,7 @@ function MiniTarjeta({ datos }) {
   return url ? <img class="resumen-mini" src={url} alt="" aria-hidden="true" width="36" height="45" /> : null;
 }
 
-function Resumen({ resumen, sesion, familia, alCerrar }) {
+function Resumen({ resumen, sesion, pautas = [], familia, alCerrar }) {
   // (música 3) la imagen del récord lleva su canción (el nombre de su ficha), si la tiene
   const personalR = usePersonal();
   // (música 3, tanda 2) «Lo batiste con…»: la última música que abrió en esta sesión; si no abrió ninguna, su canción
@@ -1765,6 +1787,8 @@ function Resumen({ resumen, sesion, familia, alCerrar }) {
       {/* (alta, 46 y 49) FBE Esencial: su primera sesión, cuándo es la siguiente y las agujetas */}
       {esPorSuCuenta(atleta) && !propio && !cardio && <FinPrimeraSesion sesion={sesion} />}
       {esPorSuCuenta(atleta) && !propio && !cardio && <TrasLaSesion sesion={sesion} enCola={!!resumen.enCola} />}
+      {/* (v0.257, P: 'molestias_zona') «¿Cómo ha quedado tu rodilla?» */}
+      {esPorSuCuenta(atleta) && !propio && !cardio && !resumen.enCola && <DolorDespues sesion={sesion} pautas={pautas} />}
       {/* «La travesía»: lo que ha corrido su lobo en los descansos de esta sesión (si ha jugado) */}
       {travesia?.metros > 0 && (
         <div class="resumen-travesia" style={{ '--i': 5 }}>

@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.257': {
+    // (el motor de molestias en la sesión y en la semana, con la tabla de zonas de cada ejercicio; apagado hasta su visto bueno)
+    atleta: [],
+    coach: [
+      'FBE Esencial: la tabla de zonas de cada ejercicio y el motor de molestias en la sesión y en la semana, apagados: en «Por revisar».',
+    ],
+  },
   '0.256': {
     // (el motor de molestias de FBE Esencial, la base: de 0 a 10 con el semáforo y las zonas del cuestionario de lesiones; migración 109)
     atleta: [

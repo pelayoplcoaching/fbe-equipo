@@ -1324,16 +1324,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await items.first().waitFor({ timeout: 10000 }).catch(() => {});
       // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
       const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
-      check(nItems === 25 && /25 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 25 cosas apagadas, cada una con su interruptor (${nItems})`);
+      check(nItems === 26 && /26 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 26 cosas apagadas (v0.257: con el motor de molestias), cada una con su interruptor (${nItems})`);
       const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
       await enfermo.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /24 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const encendida = await p.waitForFunction(() => /25 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 24 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 25 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /25 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        const deshecho = await p.waitForFunction(() => /26 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
       // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app
@@ -1650,6 +1650,66 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(await suave.waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && /Quita una serie de cada ejercicio/.test(await suave.textContent().catch(() => '')), '«Necesito una semana suave»: al pedirla, arriba en Hoy sale qué hacer esta semana');
       check(/borrador, pendiente de su visto bueno/.test(await p.locator('.cer-nota').textContent().catch(() => '')), 'y la nota de Pelayo de su semana, como borrador (sin la vista previa no sale)');
     } else check(false, 'la vista previa de lo apagado');
+    await ctx.close();
+  }
+  // (v0.257, vista previa) El motor de molestias en la sesión, con la tabla de zonas: Tomás apunta la rodilla a 4 y el hombro
+  // a 7; en su sesión, «¿Cómo está ahora?» por las dos, el jalón pasa a su alternativa que menos carga el hombro (el press de
+  // pecho no tiene ninguna que lo cargue menos) y, tras la primera serie de la prensa, la regla de durante
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Tomás/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(1500);
+    await cerrar(p);
+    const seguir = p.getByRole('button', { name: 'Seguir', exact: true }).first();
+    if (await seguir.isVisible().catch(() => false)) { await seguir.click(); await p.waitForTimeout(400); }
+    const apunta = async (zona, valor) => {
+      const nec = p.locator('.ayu-necesitas');
+      await nec.waitFor({ timeout: 15000 });
+      await nec.getByRole('button', { name: 'Me duele algo' }).click();
+      const h = p.locator('[aria-modal="true"]').last();
+      await h.locator('.dol-hoja').waitFor({ timeout: 15000 });
+      await h.locator('.dol-zonas').getByRole('button', { name: zona }).click();
+      await h.getByRole('button', { name: `${valor} de 10` }).click();
+      await h.getByRole('button', { name: 'Apuntarla' }).click();
+      await h.locator('.dol-tuyas').waitFor({ timeout: 10000 }).catch(() => {});
+      await h.locator('.cerrar-hoja').click();
+      await p.waitForTimeout(400);
+    };
+    await apunta('Rodilla', 4);
+    await apunta('Hombro', 7);
+    await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+    const portada = p.locator('.portada-vista');
+    if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+    await cerrar(p);
+    const card = p.locator('.dse-sesion');
+    const conCard = await card.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const tCard = conCard ? (await card.textContent()).replace(/\s+/g, ' ') : '';
+    check(conCard && /Hoy cargas tus molestias/.test(tCard) && /Tu hombro está en rojo \(7 de 10\)\. Hoy la cargan: press de pecho en máquina y jalón al pecho\./.test(tCard)
+      && /Tu rodilla está en ámbar \(4 de 10\)\. Hoy la cargan: prensa de piernas\./.test(tCard) && (await card.locator('.dol-escala').count()) === 2,
+      '(v0.257) en su sesión, por las zonas que carga (la tabla de zonas): el hombro en rojo (press de pecho y jalón) y la rodilla en ámbar (prensa), con «¿Cómo está ahora?»');
+    check(/Jalón al pecho: hoy, remo en máquina, que la carga menos/.test(tCard) && /Press de pecho en máquina: ninguna de sus alternativas la carga menos/.test(tCard) && (await card.getByRole('button', { name: 'Volver al de tu plan' }).count()) === 1,
+      'en rojo (M7), el jalón ya va con su alternativa que menos carga el hombro, con «Volver al de tu plan»; el press de pecho, sin subir');
+    if (conCard) {
+      await desborda(p, 'la sesión con el motor de molestias');
+      await card.getByRole('button', { name: '3 de 10' }).last().click();
+      check(await card.getByText(/^Apuntado\. Te pregunto también/).first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false), 'apunta la rodilla antes de empezar (3)');
+      await card.getByRole('button', { name: 'Volver al de tu plan' }).click();
+      check(await card.getByRole('button', { name: 'Ponerla' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false), '«Volver al de tu plan» deja el jalón de su plan (y «Ponerla» la vuelve a poner)');
+      const art = p.locator('article', { hasText: 'Prensa de piernas' }).first();
+      await art.scrollIntoViewIfNeeded().catch(() => {});
+      await art.getByRole('button', { name: /Marcar la serie 1 como hecha/ }).first().click().catch(() => {});
+      const dur = p.locator('.dse-durante').first();
+      const conDur = await dur.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      if (conDur) await dur.getByRole('button', { name: '6 de 10' }).click();
+      check(conDur && /¿Cómo va tu rodilla con este ejercicio\?/.test(await dur.textContent()) && await dur.getByText(/Baja la carga o cámbialo/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false),
+        'tras la primera serie de la prensa (M4): «¿Cómo va tu rodilla?»; con 6, baja la carga o cámbialo');
+      if (conDur) await dur.getByRole('button', { name: '4 de 10' }).click();
+      check(conDur && await dur.getByText(/Sigue, sin subir/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false), 'y con 4 justo, sigue sin subir');
+      await desborda(p, 'la regla de durante');
+    }
     await ctx.close();
   }
   // ---------- (la espera, tanda 7; v0.248) Lucía empieza de cero dentro de dos lunes; Andrés ya entrena y empieza el lunes ----------

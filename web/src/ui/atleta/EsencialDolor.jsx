@@ -13,6 +13,7 @@ import { encendido } from '../../logica/esencial-respuestas.js';
 import { hoyISO, sumarDias, lunesDe } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { perezoso } from '../perezoso.jsx';
+import { useDolor } from './dolor-datos.js';
 
 const CentroRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'CentroRespuestas', { mientras: null });
 function usePrevia() {
@@ -37,7 +38,7 @@ export function EscalaDolor({ valor = null, alCambiar, etiqueta }) {
   );
 }
 // La leyenda: 0-2 verde, 3-5 ámbar, 6 o más rojo
-function Leyenda() {
+export function Leyenda() {
   return (
     <span class="dol-leyenda mini">
       <span class="dol-ley"><span class="dol-punto dol-punto-verde" aria-hidden="true" />0 a 2, verde</span>
@@ -84,20 +85,7 @@ export function MolestiasDolor({ valores = {}, alCambiar }) {
 }
 
 // ---------- Sus molestias: las abiertas, con su color y su tendencia; y si toca ver a un profesional ----------
-function useDolor(vuelta = 0) {
-  const { backend, atleta } = useApp();
-  return useCarga(async () => {
-    const m = await import('../../datos/api-dolor.js');
-    const hay = await m.hay109(backend).catch(() => false);
-    if (!hay) return { m, hay };
-    const hoy = hoyISO();
-    const [registros, checkins] = await Promise.all([
-      m.registros(backend, atleta.id, sumarDias(hoy, -42)).catch(() => []),
-      m.molestiasCheckin(backend, atleta.id, sumarDias(lunesDe(hoy), -42)).catch(() => []),
-    ]);
-    return { m, hay, registros, checkins };
-  }, [atleta.id, vuelta]);
-}
+export { useDolor };
 export function TusMolestias({ d, senal = false }) {
   if (!d?.hay) return null;
   const hoy = hoyISO();

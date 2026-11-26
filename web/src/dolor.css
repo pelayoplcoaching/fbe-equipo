@@ -82,6 +82,25 @@
 }
 .dol-quitar { justify-self: start; }
 
+/* (v0.257) El motor de molestias en la sesion y en Hoy (EsencialDolorSesion.jsx): antes de empezar, durante, al terminar,
+   el ajuste de la manana siguiente, la alternativa en rojo y el seguimiento */
+.dse-sesion { min-width: 0; }
+.dse-despues { min-width: 0; }
+.dse-hoy { min-width: 0; }
+.dse-zona { display: grid; gap: var(--esp-8); min-width: 0; }
+.dse-ajuste {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10);
+  background: var(--hoja-2); color: var(--tinta);
+}
+.dse-rojo { padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--alerta-borde); border-radius: var(--r-10); background: var(--alerta-suave); color: var(--tinta); }
+.dse-lista { display: grid; gap: var(--esp-6); }
+.dse-durante { min-width: 0; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja-2); }
+.dse-regla { padding: var(--esp-8) var(--esp-10); border-left: var(--filo-marca) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); }
+.dse-regla-sigue { border-left-color: var(--ok-solido); background: var(--ok-suave); }
+.dse-regla-igual { border-left-color: var(--aviso-solido); background: var(--aviso-suave); }
+.dse-regla-baja { border-left-color: var(--alerta-solido); background: var(--alerta-suave); }
+.dse-vale { justify-self: start; }
+
 @media (prefers-reduced-motion: reduce) {
   .dol-zona { transition: none; }
   .dol-n { transition: none; }

@@ -67,6 +67,9 @@ export const ARTE = [
   'esencial-prueba-tandem', 'esencial-prueba-marcha', 'esencial-pruebas-resultado', 'esencial-pruebas-mejora', 'esencial-pruebas-otra-vez',
   'esencial-pruebas-consulta', 'esencial-informe-medico',
   // (v0.256) G4 · El dolor, con su semáforo: «Me duele algo» (dónde), tus molestias de semana en semana y las señales para
-  // parar y consultar (EsencialDolor.jsx; sin imagen todavía). La escala, el semáforo y los tres momentos llegan con la v0.257
+  // parar y consultar (EsencialDolor.jsx)
   'esencial-dolor-zona', 'esencial-dolor-semana', 'esencial-consulta-ya',
+  // (v0.257) G4 · y el motor de molestias en la sesión y en Hoy (EsencialDolorSesion.jsx): los tres momentos (antes de la
+  // sesión), la escala (al terminar) y el semáforo (la mañana siguiente y el seguimiento)
+  'esencial-dolor-momentos', 'esencial-dolor-escala', 'esencial-semaforo-dolor',
 ];

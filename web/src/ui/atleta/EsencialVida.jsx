@@ -21,6 +21,8 @@ import { Arte } from './EsencialArte.jsx';
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
 const CentroRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'CentroRespuestas', { mientras: null });
+// (v0.257, P: 'molestias_zona') la mañana siguiente y el seguimiento de una molestia, con el motor de molestias
+const DolorEnHoy = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorEnHoy', { mientras: null });
 
 function usePrevia() {
   const { modo } = useApp();
@@ -398,7 +400,9 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
   const suave = encendido('suave', previa) ? suaveDe(notas.datos?.suave || [], hoy) : null;
   const kMol = `fbe-esencial-molestia:${atleta.id}`;
   const [mol, setMol] = useState(() => { try { return JSON.parse(leer(kMol) || 'null'); } catch { return null; } });
-  const tocaMol = encendido('molestia_sigue', previa) && mol ? molestiaToca({ ...mol, hoy }) : null;
+  // (v0.257) con el motor de molestias encendido, el seguimiento va por zonas y con su lectura de 0 a 10 (DolorEnHoy)
+  const conMotorDolor = encendido('molestias_zona', previa);
+  const tocaMol = encendido('molestia_sigue', previa) && !conMotorDolor && mol ? molestiaToca({ ...mol, hoy }) : null;
   const [molDicho, setMolDicho] = useState(null);
   const responderMol = (id) => { setMolDicho(id); const nuevo = { ...mol, respondido: [...(mol.respondido || []), tocaMol] }; guardar(kMol, JSON.stringify(nuevo)); };
   const [saludFuera, aparcarSalud] = useAparcar(`fbe-esencial-salud:${atleta.id}`, 26);
@@ -434,6 +438,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
           <div class="pila-s"><strong>{SUAVE.titulo}{previa ? ' (borrador)' : ''}</strong><span class="peq">{SUAVE.texto}</span></div>
         </section>
       )}
+      {conMotorDolor && <DolorEnHoy />}
       {tocaMol && (
         <section class="nota-coach vid-sigue" aria-label="¿Cómo va esa molestia?">
           <Icono n="pregunta" />

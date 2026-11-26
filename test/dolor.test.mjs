@@ -95,8 +95,8 @@ check(!/hasta 5 sobre 10/.test(jsx + fuente('logica/esencial-checkin.js').replac
 check(/EsencialDolor\.jsx'\), 'HojaMolestia'/.test(fuente('ui/atleta/EsencialAyuda.jsx')) && !/export function HojaMolestia/.test(fuente('ui/atleta/EsencialVida.jsx')),
   '«Me duele algo» es la nueva (la de antes, fuera)');
 const css = fuente('dolor.css');
-check(/^[\x00-\x7F]*$/.test(css) && !/margin|font-size|font-weight|\[/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')) && (css.match(/^\.([a-z0-9-]+)/gm) || []).every((x) => /^\.dol-/.test(x))
-  && /prefers-reduced-motion/.test(css) && /import '\.\/dolor\.css'/.test(fuente('main.jsx')), 'dolor.css: ASCII, sin márgenes ni tamaños de letra ni atributos, solo clases dol-* y con «reducir movimiento»');
+check(/^[\x00-\x7F]*$/.test(css) && !/margin|font-size|font-weight|\[/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')) && (css.match(/^\.([a-z0-9-]+)/gm) || []).every((x) => /^\.(dol|dse)-/.test(x))
+  && /prefers-reduced-motion/.test(css) && /import '\.\/dolor\.css'/.test(fuente('main.jsx')), 'dolor.css: ASCII, sin márgenes ni tamaños de letra ni atributos, solo clases dol-* (y, v0.257, dse-* de la sesión) y con «reducir movimiento»');
 {
   const enClase = [...jsx.matchAll(/class=(?:"([^"]*)"|\{([^}]*)\})/g)].map((m) => m[1] || m[2]).join(' ');
   const usadas = new Set([...enClase.matchAll(/\bdol-[a-z0-9-]+/g)].map((m) => m[0]).filter((c) => !c.endsWith('-')));

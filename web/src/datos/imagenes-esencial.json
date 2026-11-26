@@ -1258,5 +1258,41 @@
       "1080": "imagenes/esencial/esencial-medicacion-1080.1af723a2.webp"
     },
     "color": "#433369"
+  },
+  "esencial-dolor-escala": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-dolor-escala-240.1586ae6e.webp",
+      "720": "imagenes/esencial/esencial-dolor-escala-720.5890c580.webp",
+      "1080": "imagenes/esencial/esencial-dolor-escala-1080.9ec11c05.webp"
+    },
+    "color": "#493465"
+  },
+  "esencial-dolor-momentos": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-dolor-momentos-240.6633036a.webp",
+      "720": "imagenes/esencial/esencial-dolor-momentos-720.8b514d57.webp",
+      "1080": "imagenes/esencial/esencial-dolor-momentos-1080.f375afda.webp"
+    },
+    "color": "#4c3a70"
+  },
+  "esencial-semaforo-dolor": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-semaforo-dolor-240.4dcbad37.webp",
+      "720": "imagenes/esencial/esencial-semaforo-dolor-720.9304b8db.webp",
+      "1080": "imagenes/esencial/esencial-semaforo-dolor-1080.0ae76d92.webp"
+    },
+    "color": "#35285c"
   }
 }
