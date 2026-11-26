@@ -139,7 +139,7 @@ const ui = readFileSync(new URL('../web/src/ui/atleta/NutricionRevision.jsx', im
 check(/sinRevision\(/.test(ui) && /sessionStorage/.test(ui) && /puesta-a-punto\.html/.test(ui) && !/margin|font-size/.test(ui), 'la pantalla: sin revisión con TCA o SCOFF, una vez al día, la Puesta a punto si lo tiene que mirar un profesional');
 const copia = readFileSync(new URL('../web/src/datos/copia-tablas.js', import.meta.url), 'utf8');
 const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
-check(/'nutricion_perfiles', 'nutricion_revisiones'\]/.test(copia) && /'nutricion_perfiles', 'nutricion_revisiones'\]\) out\[t\]/.test(apiSrc), 'sus revisiones, en la copia completa y en «Descargar mis datos»');
+check(/'nutricion_perfiles', 'nutricion_revisiones',/.test(copia) && /'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta'\]\) out\[t\]/.test(apiSrc), 'sus revisiones, en la copia completa y en «Descargar mis datos» (v0.254: con la medicación detrás)');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

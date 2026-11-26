@@ -32,7 +32,9 @@ const TABLAS_209 = ['conversacion_fijado', 'chat_silencios', 'listas_difusion', 
 // que enciendes o escribes en tu panel (con su registro), a quién has escrito, por qué se van y lo que más se consulta
 const TABLAS_ESENCIAL = ['esencial_notas', 'esencial_ajustes', 'esencial_ajustes_registro', 'esencial_contactos', 'esencial_bajas', 'esencial_consultas',
   // (105) el perfil del cuestionario de nutrición; (106) el historial de sus revisiones de cada 4 semanas
-  'nutricion_perfiles', 'nutricion_revisiones'];
+  'nutricion_perfiles', 'nutricion_revisiones',
+  // (107) la lista de medicación que confirma cada atleta (para Pauta Activa; dato de salud)
+  'medicacion_atleta'];
 
 // Las que puede no tener aún una base (cobros, 020; comidas, 022; comunidad, 027; tareas, 030; el chat, 032; los
 // vídeos, 035; la revisión semanal, 040…): sin ellas, la copia sale igual

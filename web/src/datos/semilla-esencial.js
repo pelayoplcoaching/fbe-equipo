@@ -635,7 +635,9 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   // el visto bueno de su médico: le falta que Pelayo lo confirme. Su tanda empieza el lunes que viene.
   const clara = atleta({ email: 'clara@fbe.demo', nombre: 'Clara Prieto', alta: sumarDias(lunesHoy, -6), objetivo: 'FBE Esencial · Entrenamiento', inicio: sumarDias(lunesHoy, 7),
     extra: { visto_bueno_pedido_en: `${sumarDias(hoy, -1)}T19:30:00.000Z` } });
-  cuestionario(clara, 5, { objetivo_detalle: 'Mi médico me ha dicho que me venía bien hacer fuerza.', enfermedad: true, enfermedad_detalle: 'Diabetes tipo 2', resultado: 'valorar_antes' });
+  // (v0.254) y toma metformina: «Mi medicación y el ejercicio» la reconoce con los nombres de Pauta Activa
+  cuestionario(clara, 5, { objetivo_detalle: 'Mi médico me ha dicho que me venía bien hacer fuerza.', enfermedad: true, enfermedad_detalle: 'Diabetes tipo 2', resultado: 'valorar_antes',
+    otras: ['medicacion'], medicacion_detalle: 'Metformina 850 mg 1-0-1' });
 
   // Inés (093): con nutrición; su cuestionario, limpio; «Primeras 4 semanas» desde este lunes; sin plan de comida todavía
   const ines = atleta({ email: 'ines@fbe.demo', nombre: 'Inés Gil', alta: sumarDias(lunesHoy, -4), objetivo: 'FBE Esencial · Entrenamiento y nutrición', inicio: lunesHoy,

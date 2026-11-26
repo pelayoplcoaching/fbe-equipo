@@ -85,6 +85,7 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
       {dia && <div class="cer-dia peq" role="note"><span class="cer-dia-i"><Icono n="calendario" width="18" height="18" /></span><span>{dia}{previa ? ' (borrador)' : ''}</span></div>}
       {verAg && (
         <section class="nota-coach cer-agujetas" data-cerca="agujetas" aria-label="¿Qué tal las agujetas?">
+          <Arte id="esencial-agujetas" />
           <Icono n="pregunta" />
           <div class="pila-s">
             <strong>{ag.motivo === 'primera' ? 'Ayer, tu primera sesión. ¿Qué tal las agujetas?' : 'Ayer fue una sesión dura. ¿Qué tal las agujetas?'}</strong>
@@ -99,6 +100,7 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
       )}
       {vuelta && (
         <section class="nota-coach cer-vuelta" data-cerca="vuelta" aria-label="Volvemos cuando quieras">
+          <Arte id="esencial-vuelta" />
           <Icono n="reiniciar" />
           <div class="pila-s">
             <strong>{vuelta.nunca ? 'Tu plan te está esperando' : `Llevas ${vuelta.dias} días sin entrenar`}</strong>

@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.254': {
+    // (herramientas de la web y Pauta Activa en FBE Esencial, lo pequeño: «Más herramientas» y «Mi medicación y el ejercicio»; migración 107)
+    atleta: [
+      'En «¿Qué necesitas?», «Más herramientas»: las de la web de FBE que no están en la app, a un toque.',
+      'Si tomas medicación, «Mi medicación y el ejercicio»: la app la reconoce y la abre en Pauta Activa con tu lista.',
+    ],
+    coach: [
+      'Más herramientas de la web y la medicación de cada uno, para Pauta Activa: en su cuestionario, su lista confirmada. Pide la 107.',
+    ],
+  },
   '0.253': {
     // (motor de nutrición, N4: la revisión de cada 4 semanas en la app, con su historial; migración 106)
     atleta: [

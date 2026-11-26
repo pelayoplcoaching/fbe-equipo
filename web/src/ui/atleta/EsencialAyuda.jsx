@@ -513,6 +513,9 @@ const HojaMolestia = perezoso(() => import('./EsencialVida.jsx'), 'HojaMolestia'
 const HojaSitio = perezoso(() => import('./EsencialVida.jsx'), 'HojaSitio', { mientras: null });
 const HojaEjercicios = perezoso(() => import('./EsencialVida.jsx'), 'HojaEjercicios', { mientras: null });
 const HojaEnfermo = perezoso(() => import('./EsencialVida.jsx'), 'HojaEnfermo', { mientras: null });
+// (v0.254) «Más herramientas» (las de la web) y «Mi medicación y el ejercicio» (con los nombres de Pauta Activa)
+const HojaHerramientas = perezoso(() => import('./EsencialHerramientas.jsx'), 'HojaHerramientas', { mientras: null });
+const HojaMedicacion = perezoso(() => import('./EsencialHerramientas.jsx'), 'HojaMedicacion', { mientras: null });
 const Alarma = perezoso(() => import('./EsencialVida.jsx'), 'Alarma', { mientras: null });
 
 // ---------- (7 y 14) «¿Qué necesitas?» en Hoy, y lo que abre cada aviso ----------
@@ -529,7 +532,8 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
     return () => window.removeEventListener('hashchange', oir);
   }, []);
   const previa = usePrevia();
-  // { tipo: 'respuestas' | 'plan' | 'dias' | 'rutina' | 'directo' | 'revision' | (v0.247) 'viaje' | 'molestia' | 'sitio' | 'ejercicios' | 'objetivo' | 'enfermo' | 'suave', id? }
+  // { tipo: 'respuestas' | 'plan' | 'dias' | 'rutina' | 'directo' | 'revision' | (v0.247) 'viaje' | 'molestia' | 'sitio' | 'ejercicios' | 'objetivo' | 'enfermo' | 'suave'
+  //   | (v0.254) 'herramientas' | 'medicacion', id? }
   const [hoja, setHoja] = useState(null);
   const hay100 = useCarga(() => datos.notas(backend, atleta.id, 'pregunta_directo').then((x) => x !== null).catch(() => false), [atleta.id], { recuerdo: `esencial-100:${atleta.id}` });
   const accion = (a) => {
@@ -553,7 +557,9 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   }, [abrir, !!p?.bloque]);
   const tocar = (que) => { const [tipo, id] = que.split(':'); if (tipo === 'respuesta') setHoja({ tipo: 'respuestas', id }); else accion(id); };
   const conPlan = !!p?.bloque;
-  const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa });
+  // (v0.254) «Mi medicación y el ejercicio», a quien dijo en sus preguntas de salud que toma medicación a diario
+  const conMedicacion = Array.isArray(cuestionario?.otras) && cuestionario.otras.includes('medicacion');
+  const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa, conMedicacion });
   // (v0.250, 103) las de comida, a quien tiene su plan de comida (lo apagado, solo en la vista previa)
   const comida = useComidaEsencial();
   const deComida = necesitasComida({ conPlan: !!comida?.plan, tca: !!comida?.tca, encendido: (k) => encendido(k, previa) });
@@ -581,6 +587,8 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
       {hoja?.tipo === 'enfermo' && <HojaEnfermo alCerrar={cerrar} alAccion={accion} />}
       {hoja?.tipo === 'suave' && <AbrirSuave alCerrar={cerrar} />}
       {hoja?.tipo === 'comida' && <HojaComida que={hoja.id} alCerrar={cerrar} />}
+      {hoja?.tipo === 'herramientas' && <HojaHerramientas cuestionario={cuestionario} alCerrar={cerrar} alMedicacion={() => setHoja({ tipo: 'medicacion' })} />}
+      {hoja?.tipo === 'medicacion' && <HojaMedicacion cuestionario={cuestionario} alCerrar={cerrar} />}
     </section>
   );
 }

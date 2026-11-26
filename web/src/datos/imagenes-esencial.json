@@ -1018,5 +1018,29 @@
       "1080": "imagenes/esencial/esencial-trimestre-1080.524260e2.webp"
     },
     "color": "#523a74"
+  },
+  "esencial-agujetas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-agujetas-240.db938aa5.webp",
+      "720": "imagenes/esencial/esencial-agujetas-720.c4b65841.webp",
+      "1080": "imagenes/esencial/esencial-agujetas-1080.357bf9b8.webp"
+    },
+    "color": "#3f2f64"
+  },
+  "esencial-vuelta": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-vuelta-240.2bab3664.webp",
+      "720": "imagenes/esencial/esencial-vuelta-720.cacd2574.webp",
+      "1080": "imagenes/esencial/esencial-vuelta-1080.31df1b11.webp"
+    },
+    "color": "#513b70"
   }
 }

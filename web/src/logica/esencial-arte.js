@@ -57,4 +57,8 @@ export const ARTE = [
   'esencial-avisos-prueba', 'esencial-prepara-gimnasio', 'esencial-porque', 'esencial-partida', 'esencial-ensayo', 'esencial-primer-dia', 'esencial-kilos-partida',
   // F5 · Tu revisión de la semana, lo que la app ha hecho por ti y tu trimestre
   'esencial-revision-semana', 'esencial-app-hizo', 'esencial-trimestre',
+  // (v0.254) F7 · las agujetas del día siguiente y la vuelta tras unos días sin entrenar (EsencialCerca.jsx)
+  'esencial-agujetas', 'esencial-vuelta',
+  // (v0.254) G · «Más herramientas» y «Mi medicación y el ejercicio» (EsencialHerramientas.jsx; sin imagen todavía)
+  'esencial-herramientas', 'esencial-medicacion',
 ];

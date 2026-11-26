@@ -157,6 +157,38 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await hero.first().waitFor({ timeout: 15000 }).catch(() => {});
     check(/Pelayo está revisando tu visto bueno/.test(await hero.first().textContent().catch(() => '')), 'Clara (cribado con valoración médica): «Pelayo está revisando tu visto bueno»');
     check(!(await p.locator('nav.tabs').getByText('Mensajes').count()), 'sin la pestaña Mensajes');
+    // (v0.254) Clara toma metformina: «Mi medicación y el ejercicio» la reconoce con los nombres de Pauta Activa, abre Pauta
+    // Activa con su lista (en el fragmento del enlace, sin su nombre) y, con la 107, la guarda en su ficha; y «Más herramientas»
+    const nec = p.locator('.ayu-necesitas');
+    const conNec = await nec.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    await nec.scrollIntoViewIfNeeded().catch(() => {});
+    check(conNec && /Mi medicación y el ejercicio/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()),
+      '(v0.254) Clara, que toma medicación: «Mi medicación y el ejercicio» y «Más herramientas» en «¿Qué necesitas?»');
+    if (conNec) {
+      await nec.getByRole('button', { name: 'Mi medicación y el ejercicio' }).click();
+      const hm = p.locator('[aria-modal="true"]').last();
+      const conRec = await hm.getByText('Metformina', { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      const href = (await hm.getByRole('link', { name: /Ver mi medicación en Pauta Activa/ }).getAttribute('href').catch(() => '')) || '';
+      let est = null;
+      try { est = JSON.parse(Buffer.from(/#lista=([A-Za-z0-9_-]+)/.exec(href)[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')); } catch { est = null; }
+      check(conRec && /850 mg, 2 al día/.test(await hm.textContent()) && href.startsWith('https://medicacionyejercicio.fuerzabasadaenevidencia.com/#lista=')
+        && JSON.stringify(est) === JSON.stringify({ m: [['metformina', 850, 2, null, 0, '']] }), 'reconoce «Metformina 850 mg 1-0-1» y el enlace abre Pauta Activa con su lista, sin su nombre');
+      await hm.getByRole('button', { name: 'Guardar mi lista' }).click();
+      const guardada = await hm.getByText(/Tu lista está guardada en tu ficha/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(guardada, 'y la guarda en su ficha (la 107)');
+      await desborda(p, '«Mi medicación y el ejercicio»');
+      await hm.locator('.cerrar-hoja').click();
+      await nec.getByRole('button', { name: 'Más herramientas' }).click();
+      const hh = p.locator('[aria-modal="true"]').last();
+      await hh.locator('a.fila-ios').first().waitFor({ timeout: 15000 }).catch(() => {});
+      const hrefs = await hh.locator('a.fila-ios').evaluateAll((xs) => xs.map((x) => x.getAttribute('href')));
+      check(hrefs.length === 11 && hrefs.includes('https://fuerzabasadaenevidencia.com/tension.html') && hrefs.includes('https://fuerzabasadaenevidencia.com/mitos.html')
+        && hrefs.includes('https://medicacionyejercicio.fuerzabasadaenevidencia.com/') && hrefs.every((h) => /^https:\/\//.test(h || '')),
+        `«Más herramientas»: las seis de la web, Pauta Activa y cuatro para aprender, como enlaces (${hrefs.length})`);
+      check(await hh.getByRole('button', { name: /Pauta Activa con mi medicación/ }).count() === 1, 'y, para ella, «Pauta Activa con mi medicación»');
+      await desborda(p, '«Más herramientas»');
+      await hh.locator('.cerrar-hoja').click();
+    }
     await ctx.close();
   }
 
@@ -1087,8 +1119,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     // directo, que está oculto (FBE Esencial no tiene directos) hasta que Pelayo lo encienda en su panel
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
-    check((await nec.locator('.ayu-nec').count()) === 11 && /Me voy de viaje/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
-      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque (ni lo apagado ni el directo, que está oculto)');
+    check((await nec.locator('.ayu-nec').count()) === 12 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
+      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, y (v0.254) «Más herramientas» (ni lo apagado, ni el directo, que está oculto, ni su medicación: no toma)');
     // (v0.247) «Me duele algo»: dónde y cuánto → qué hacer con su plan mientras tanto (los textos de su check-in); y de ahí, a su respuesta
     await nec.getByRole('button', { name: 'Me duele algo' }).click();
     const hMol = p.locator('[aria-modal="true"]').last();

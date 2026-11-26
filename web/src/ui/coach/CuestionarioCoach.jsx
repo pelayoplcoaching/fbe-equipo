@@ -167,6 +167,27 @@ export function ParaProgramar({ atleta }) {
   );
 }
 
+// (v0.254, 107) La lista de medicación que confirmó el atleta en «Mi medicación y el ejercicio» (reconocida con los nombres de
+// Pauta Activa en lo que escribió aquí), con el enlace que abre Pauta Activa con ella. Sin la 107 o sin lista, nada.
+function MedicacionConfirmada({ atletaId }) {
+  const { backend } = useApp();
+  const m = useCarga(async () => {
+    const [api, M, F] = await Promise.all([import('../../datos/api-medicacion.js'), import('../../logica/medicacion.js'), import('../../logica/fechas.js')]);
+    const fila = await api.medicacion(backend, atletaId).catch(() => null);
+    return fila ? { fila, M, F } : null;
+  }, [atletaId]);
+  if (!m.datos) return null;
+  const { fila, M, F } = m.datos;
+  const lista = Array.isArray(fila.lista) ? fila.lista : [];
+  return (
+    <p class="peq">
+      Su lista confirmada{lista.length ? `: ${lista.map((x) => `${x.nombre} (${M.dosisTexto(x)})`).join(', ')}` : ': ninguno de los que reconoce la app'}.
+      {fila.confirmado_en ? ` Confirmada el ${fechaLarga(F.fechaMadrid(new Date(fila.confirmado_en)))}.` : ''}{' '}
+      <a href={M.enlacePautaActiva(lista)} target="_blank" rel="noopener">Verla en Pauta Activa</a>
+    </p>
+  );
+}
+
 function DatosCuestionario({ d }) {
   const filas = [
     [objetivosDe(d).length > 1 ? 'Objetivos' : 'Objetivo', textoObjetivos(d) || null, objetivosDe(d).length > 1 ? `Principal: ${nombre(OBJETIVOS, objetivosDe(d)[0]).toLowerCase()}${d.objetivo_detalle ? `. ${d.objetivo_detalle}` : ''}` : d.objetivo_detalle],
@@ -198,6 +219,7 @@ function DatosCuestionario({ d }) {
               <div key={t} class={marca ? 'marcado' : ''}><dt>{t}</dt><dd>{v}{extra && <span class="cita-corta">{extra}</span>}</dd></div>
             ))}
           </dl>
+          {d.otras?.includes('medicacion') && d.atleta_id && <MedicacionConfirmada atletaId={d.atleta_id} />}
         </>
       )}
       {(d.lesiones != null || d.alergias) && (

@@ -421,6 +421,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     nutricion_perfiles: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // (106) el historial de sus revisiones de cada 4 semanas: lo ve él (y el coach); solo lo escribe la revisión
     nutricion_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (107) su lista de medicación: la ve él (la escribe guardar_medicacion) y el coach
+    medicacion_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -1430,7 +1432,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -3918,6 +3920,12 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
       if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_quitar
+      // (107) su lista de medicación: la borra él (al borrar sus respuestas de salud) o el coach
+      if (t === 'medicacion_atleta') {
+        db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()))));
+        persistirYa();
+        return [];
+      }
       // (078) las pausas las quita el coach
       if (t === 'pausas') {
         if (!esCoach()) return [];
@@ -4142,6 +4150,35 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         const r = cambiarDiasEsencialDemo(tabla, { dias: args?.p_dias, atletaId: id });
         persistirYa();
         return r;
+      }
+      // (107) su lista de medicación (como en la base: quién puede, su consentimiento de salud y los límites de cada uno)
+      if (nombre === 'guardar_medicacion') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes guardar tu propia medicación');
+        if (!buscar('atletas', id)) throw new Error('Ese atleta no existe');
+        if (!consentimientoDe(id)) throw new Error('Hace falta tu consentimiento de salud');
+        const l = args?.p_lista;
+        const noVale = () => new Error('Esa lista no vale');
+        if (!Array.isArray(l) || l.length > 30) throw noVale();
+        const limpia = [], pids = new Set();
+        const nulo = (v) => v === undefined || v === null;
+        for (const x of l) {
+          if (!x || typeof x !== 'object' || Array.isArray(x)) throw noVale();
+          const pid = x.pid, nombre2 = String(x.nombre ?? '').replace(/\s+/g, ' ').trim(), texto = String(x.texto ?? '').replace(/\s+/g, ' ').trim();
+          if (typeof pid !== 'string' || !/^[a-z0-9_]{2,60}$/.test(pid) || pids.has(pid) || !nombre2 || nombre2.length > 80 || texto.length > 80) throw noVale();
+          if (!(nulo(x.dosis) || typeof x.dosis === 'number') || !(nulo(x.tomas) || typeof x.tomas === 'number')) throw noVale();
+          if ((!nulo(x.dosis) && (x.dosis <= 0 || x.dosis > 100000)) || (!nulo(x.tomas) && (x.tomas < 1 || x.tomas > 12 || !Number.isInteger(x.tomas)))) throw noVale();
+          pids.add(pid);
+          limpia.push({ pid, nombre: nombre2, dosis: nulo(x.dosis) ? null : x.dosis, tomas: nulo(x.tomas) ? null : x.tomas, texto: texto || null });
+        }
+        const version = String(args?.p_version ?? '').trim().slice(0, 20) || null;
+        const t = tabla('medicacion_atleta');
+        let fila = t.find((x) => x.atleta_id === id);
+        if (fila) Object.assign(fila, { lista: limpia, version_base: version, confirmado_en: new Date().toISOString() });
+        else { fila = { atleta_id: id, lista: limpia, version_base: version, confirmado_en: new Date().toISOString() }; t.push(fila); }
+        persistirYa();
+        return copia(fila);
       }
       // (105) el motor de nutrición: el plan con el cuestionario de nutrición y la revisión de cada 4 semanas (como en la base)
       if (nombre === 'nutricion_plan_motor' || nombre === 'nutricion_revision') {

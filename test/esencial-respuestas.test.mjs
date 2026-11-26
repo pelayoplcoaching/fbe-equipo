@@ -50,16 +50,18 @@ console.log('\nNada apunta a una respuesta que no existe');
 const ids = new Set(RESPUESTAS.map((x) => x.id));
 check(DUDAS_EJERCICIO.length === 5 && DUDAS_EJERCICIO.every(([t, id]) => t && ids.has(id)), 'las cinco dudas de cada ejercicio');
 check(Object.values(DUDAS_PANTALLA).every((id) => ids.has(id)) && ['cierre', 'perdida', 'marcas', 'leccion', 'dias'].every((k) => DUDAS_PANTALLA[k]), 'el «¿Dudas?» de cada pantalla');
-check(NECESITAS.length === 13 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo|viaje|molestia|sitio|ejercicios|objetivo|enfermo|suave)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))),
-  '«¿Qué necesitas?»: trece cosas (v0.247), cada una con su respuesta o con lo que abre');
+check(NECESITAS.length === 15 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo|viaje|molestia|sitio|ejercicios|objetivo|enfermo|suave|medicacion|herramientas)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))),
+  '«¿Qué necesitas?»: quince cosas (v0.247 y, v0.254, su medicación y más herramientas), cada una con su respuesta o con lo que abre');
 {
   // (v0.247) lo que le sale a cada uno: sin plan, sin la tabla de notas, con todo y con la vista previa
   const de = (o) => necesitasPara(o).map((x) => x[0]).join();
-  check(de({}) === 'viaje,duele' && necesitasPara({})[0][3] === 'respuesta:viaje' && ids.has('viaje'), 'sin plan y sin la migración 100: «Me voy de viaje» (su respuesta de siempre) y «Me duele algo»');
-  check(de({ con100: true }) === 'viaje,duele,objetivo' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo (el viaje, con fechas); la pregunta para el directo, oculta (v0.251)');
-  check(de({ conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,plan', 'con plan y sin la 100: lo que no guarda notas');
-  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan', 'con todo: diez (ni lo apagado ni el directo, que está oculto)');
-  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
+  check(de({}) === 'viaje,duele,herramientas' && necesitasPara({})[0][3] === 'respuesta:viaje' && ids.has('viaje'), 'sin plan y sin la migración 100: «Me voy de viaje» (su respuesta de siempre), «Me duele algo» y (v0.254) «Más herramientas»');
+  check(de({ con100: true }) === 'viaje,duele,objetivo,herramientas' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo (el viaje, con fechas); la pregunta para el directo, oculta (v0.251)');
+  check(de({ conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,plan,herramientas', 'con plan y sin la 100: lo que no guarda notas');
+  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,herramientas', 'con todo: once (ni lo apagado ni el directo, que está oculto)');
+  check(de({ con100: true, conPlan: true, conMedicacion: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,medicacion,herramientas' && de({ conMedicacion: true }) === 'viaje,duele,medicacion,herramientas',
+    '(v0.254) «Mi medicación y el ejercicio», solo a quien dijo que toma medicación a diario (con plan o sin él)');
+  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo' && id !== 'medicacion').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
     'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100); el directo, tampoco ahí: no espera visto bueno');
 }
 
@@ -71,7 +73,7 @@ console.log('\n(v0.251) El directo de dudas, oculto (FBE Esencial no tiene direc
     'de serie, apagado: «¿Hablo con Pelayo?» y «No sé si lo hago bien» no lo nombran ni llevan a él (y no es de lo que espera su visto bueno)');
   fijarAjustes([{ clave: 'directo', encendido: true }]);
   const pel2 = respuestaDe('pelayo'), tec2 = respuestaDe('tecnica');
-  check(conDirecto() && de({ con100: true }) === 'viaje,duele,objetivo,directo' && !de({}).includes('directo') && pel2.ir === 'directo' && /un directo al mes/.test(pel2.r) && tec2.ir === 'directo' && /directo del mes/.test(tec2.r),
+  check(conDirecto() && de({ con100: true }) === 'viaje,duele,objetivo,herramientas,directo' && !de({}).includes('directo') && pel2.ir === 'directo' && /un directo al mes/.test(pel2.r) && tec2.ir === 'directo' && /directo del mes/.test(tec2.r),
     'si Pelayo lo enciende en su panel: vuelve «Preguntar a Pelayo» (con la tabla de notas) y los textos de antes, que llevan a la pregunta');
   fijarAjustes([{ clave: 'directo', encendido: false }]);
   check(!conDirecto() && !de({ con100: true, conPlan: true }).includes('directo'), 'y apagado otra vez, se oculta');

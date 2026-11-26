@@ -1,7 +1,8 @@
 // (v0.208, rendimiento) La versión de la política (y la que toca sin cada migración) y el texto del consentimiento de salud.
 // Lo demás de lo legal (el texto de la política, que pesa unos 50 KB) está en legal.js y solo se carga al leerla. La historia
 // de cada versión, en los comentarios de legal.js.
-export const VERSION_LEGAL = '2026-12.43';
+export const VERSION_LEGAL = '2026-12.44';
+export const VERSION_LEGAL_SIN_107 = '2026-12.43';
 export const VERSION_LEGAL_SIN_105 = '2026-12.42';
 export const VERSION_LEGAL_SIN_094 = '2026-12.41';
 export const VERSION_LEGAL_SIN_093 = '2026-12.40';
