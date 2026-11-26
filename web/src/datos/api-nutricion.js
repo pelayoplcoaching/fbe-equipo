@@ -30,9 +30,26 @@ export async function planMotor(b, d, atletaId = null) {
   };
   try { return await b.rpc('nutricion_plan_motor', { p, ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta105(e)) return { falta105: true }; throw e; }
 }
-// El cambio de la revisión de cada 4 semanas (lo calcula el móvil con revisionNutricion; la base pone los topes): el id
-// del plan nuevo, null si aún no toca o { falta105: true }
-export async function revision(b, cambio, atletaId = null) {
-  const p = { kcal: cambio.kcal, proteina_g: cambio.proteina_g, carbos_g: cambio.carbos_g, grasa_g: cambio.grasa_g, alcohol_kcal: cambio.alcohol_kcal ?? 0, motivo: cambio.motivo };
-  try { return await b.rpc('nutricion_revision', { p, ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta105(e)) return { falta105: true }; throw e; }
+// (v0.253, 106) ¿Está la 106? (el historial de las revisiones; se mira una vez por sesión, para cada base)
+const falta106 = (e) => /nutricion_revisiones|PGRST205|42P01/.test(`${e?.message || ''} ${e?.code || ''}`);
+const hay6 = new WeakMap();
+export async function hay106(b) {
+  if (hay6.has(b)) return hay6.get(b);
+  let si;
+  try { await b.select('nutricion_revisiones', { cols: 'id', limit: 1 }); si = true; } catch (e) { si = !falta106(e); }
+  hay6.set(b, si);
+  return si;
+}
+// Sus revisiones (la más reciente primero); sin la 106, ninguna
+export async function revisiones(b, atletaId) {
+  try { return await b.select('nutricion_revisiones', { eq: { atleta_id: atletaId }, order: [['fecha', 'desc'], ['creado_en', 'desc']] }); } catch (e) { if (falta106(e)) return []; throw e; }
+}
+// La revisión de cada 4 semanas (la calcula el móvil con revisionNutricion; la base mira cuándo toca, pone los topes y la
+// guarda en el historial). res: lo que devuelve revisionNutricion. El id de la revisión, null si aún no toca o
+// { falta106: true }
+export async function revision(b, res, atletaId = null) {
+  const x = res.nuevo;
+  const p = { tipo: res.tipo, motivo: res.porque || null, ritmo_real: res.ritmoReal ?? null, cintura_cambio: res.cintura ?? null,
+    ...((res.tipo === 'baja' || res.tipo === 'sube') && x ? { kcal: x.kcal, proteina_g: x.proteina_g, carbos_g: x.carbos_g, grasa_g: x.grasa_g, alcohol_kcal: x.alcohol_kcal ?? 0 } : {}) };
+  try { return await b.rpc('nutricion_revision', { p, ...(atletaId ? { p_atleta: atletaId } : {}) }); } catch (e) { if (falta106(e)) return { falta106: true }; throw e; }
 }

@@ -490,5 +490,125 @@
       "1080": "imagenes/esencial/esencial-te-sobran-1080.4ddfbf88.webp"
     },
     "color": "#372965"
+  },
+  "esencial-nutri-comer": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-comer-240.d2b8f97e.webp",
+      "720": "imagenes/esencial/esencial-nutri-comer-720.d7d91551.webp",
+      "1080": "imagenes/esencial/esencial-nutri-comer-1080.1df6ba27.webp"
+    },
+    "color": "#593e70"
+  },
+  "esencial-nutri-dia": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-dia-240.d008aafb.webp",
+      "720": "imagenes/esencial/esencial-nutri-dia-720.2cbccf28.webp",
+      "1080": "imagenes/esencial/esencial-nutri-dia-1080.40db4532.webp"
+    },
+    "color": "#503972"
+  },
+  "esencial-nutri-excluido": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-excluido-240.8027b334.webp",
+      "720": "imagenes/esencial/esencial-nutri-excluido-720.2731e4d6.webp",
+      "1080": "imagenes/esencial/esencial-nutri-excluido-1080.bf2bf4ba.webp"
+    },
+    "color": "#664476"
+  },
+  "esencial-nutri-medidas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-medidas-240.bf212f7a.webp",
+      "720": "imagenes/esencial/esencial-nutri-medidas-720.83f18f59.webp",
+      "1080": "imagenes/esencial/esencial-nutri-medidas-1080.0d9bf96b.webp"
+    },
+    "color": "#62477d"
+  },
+  "esencial-nutri-objetivo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-objetivo-240.abd1e315.webp",
+      "720": "imagenes/esencial/esencial-nutri-objetivo-720.2b11a4ac.webp",
+      "1080": "imagenes/esencial/esencial-nutri-objetivo-1080.6fa14e37.webp"
+    },
+    "color": "#4a346c"
+  },
+  "esencial-nutri-plan": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-plan-240.73f67805.webp",
+      "720": "imagenes/esencial/esencial-nutri-plan-720.c58b55da.webp",
+      "1080": "imagenes/esencial/esencial-nutri-plan-1080.8ed5490f.webp"
+    },
+    "color": "#5e426f"
+  },
+  "esencial-nutri-preparar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-preparar-240.be4df1ed.webp",
+      "720": "imagenes/esencial/esencial-nutri-preparar-720.c70054bc.webp",
+      "1080": "imagenes/esencial/esencial-nutri-preparar-1080.7bbf768e.webp"
+    },
+    "color": "#4b3d79"
+  },
+  "esencial-nutri-salud": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-salud-240.451fe6b6.webp",
+      "720": "imagenes/esencial/esencial-nutri-salud-720.48be8dba.webp",
+      "1080": "imagenes/esencial/esencial-nutri-salud-1080.ce173219.webp"
+    },
+    "color": "#443469"
+  },
+  "esencial-nutri-scoff": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-scoff-240.bb1bb3c1.webp",
+      "720": "imagenes/esencial/esencial-nutri-scoff-720.b69bdf96.webp",
+      "1080": "imagenes/esencial/esencial-nutri-scoff-1080.93e81b75.webp"
+    },
+    "color": "#5b4471"
+  },
+  "esencial-nutri-tu": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-tu-240.d394cb7b.webp",
+      "720": "imagenes/esencial/esencial-nutri-tu-720.bad4de1b.webp",
+      "1080": "imagenes/esencial/esencial-nutri-tu-1080.3a4f260e.webp"
+    },
+    "color": "#382c5d"
   }
 }

@@ -14,6 +14,9 @@ import { fmtKcal } from '../../logica/nutricion.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { encendido } from '../../logica/esencial-respuestas.js';
 import * as nut from '../../datos/api-nutricion.js';
+// (v0.253) sus ilustraciones (F1): la tarjeta de Hoy, cada paso y cuando la app no calcula el plan
+import { Arte } from './EsencialArte.jsx';
+import { ARTE_NUTRI } from '../../logica/esencial-arte.js';
 
 const previaDemo = (modo) => { try { return modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { return false; } };
 const coma = (x, d = 2) => String(Math.round(Math.abs(x) * 10 ** d) / 10 ** d).replace('.', ',');
@@ -52,12 +55,14 @@ export function TarjetaNutricionMotor({ pesoKg = null, alGuardar }) {
       <div class="seccion-cab"><h2>Tu plan de comida</h2></div>
       {motivo ? (
         <div class="nm-excl" role="status">
+          <Arte id="esencial-nutri-excluido" />
           <strong class="peq nm-excl-t"><Icono n="alerta" width="18" height="18" /><span>En tu caso, la app no calcula tu plan de comida</span></strong>
           <span class="peq">{EXCLUSIONES.find(([k]) => k === motivo)?.[1]} Lo que te conviene comer tiene que pautarlo un profesional: tu médico o un dietista-nutricionista.</span>
           <button class="btn btn-peq" onClick={() => setAbierta(true)}><Icono n="editar" /> Volver a contestar</button>
         </div>
       ) : (
         <div class="panel panel-pad pila-s">
+          <Arte id="esencial-nutri-preparar" />
           <p class="peq">Contesta unas preguntas (unos tres minutos) y la app te calcula tus calorías, tu proteína, tus hidratos y tu grasa. Cada 4 semanas lo revisa con lo que lo hayas seguido, tu peso y tu cintura.</p>
           <button class="btn btn-primario" onClick={() => setAbierta(true)}><Icono n="nutricion" /> Preparar mi plan</button>
         </div>
@@ -131,6 +136,7 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
     return (
       <Hoja titulo="Tu plan de comida" alCerrar={alCerrar}>
         <div class="pila">
+          <Arte id="esencial-nutri-excluido" />
           <div class="nm-excl" role="status">
             <strong class="peq nm-excl-t"><Icono n="alerta" width="18" height="18" /><span>En tu caso, la app no calcula tu plan de comida</span></strong>
             <span class="peq">{EXCLUSIONES.find(([k]) => k === fin.motivo)?.[1]} Lo que te conviene comer tiene que pautarlo un profesional: tu médico o un dietista-nutricionista.</span>
@@ -145,6 +151,7 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
   return (
     <Hoja titulo="Tu plan de comida" alCerrar={alCerrar}>
       <form class="pila" onSubmit={siguiente} noValidate>
+        <Arte id={ARTE_NUTRI[clave]} />
         <div class="pila-s">
           <div class="separa"><strong id="nm-titulo" tabIndex={-1}>{titulo}</strong><span class="peq secundario num">Paso {paso + 1} de {pasos.length}</span></div>
           <div class="progreso-barra" role="img" aria-label={`Paso ${paso + 1} de ${pasos.length}`}><span style={{ width: `${((paso + 1) / pasos.length) * 100}%` }} /></div>

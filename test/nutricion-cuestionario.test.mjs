@@ -129,7 +129,7 @@ const priv = readFileSync(new URL('../web/src/logica/privacidad.js', import.meta
 check(/import\('\.\.\/logica\/privacidad-novedades\.js'\)/.test(aviso) && !/NOVEDADES_PRIVACIDAD = \[/.test(priv) && !/from '\.\/privacidad-novedades\.js'/.test(priv),
   'la lista de novedades, fuera de lo que se carga al abrir: la pide el aviso cuando sale (privacidad.js no la importa)');
 const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
-check(/'esencial_notas', 'nutricion_perfiles'\]\) out\[t\]/.test(apiSrc) && /VERSION_LEGAL_SIN_105/.test(apiSrc), 'su perfil de nutrición va en «Descargar mis datos»; la versión, según esté la 105');
+check(/'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones'\]\) out\[t\]/.test(apiSrc) && /VERSION_LEGAL_SIN_105/.test(apiSrc), 'su perfil de nutrición va en «Descargar mis datos»; la versión, según esté la 105');
 
 console.log('\nLos estilos');
 const css = readFileSync(new URL('../web/src/nutricion-motor.css', import.meta.url), 'utf8');

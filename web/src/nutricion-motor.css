@@ -54,3 +54,27 @@
 /* En Hoy, con un plan del motor: el toque de cada dia */
 .nm-toque { display: grid; gap: var(--esp-8); min-width: 0; padding-top: var(--esp-8); }
 .nm-toque-ayer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); }
+
+/* (v0.253, 106) La revision de cada 4 semanas (NutricionRevision.jsx): la tarjeta en Hoy, con el color de lo que salio */
+.nm-rev {
+  display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--morado); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta);
+}
+.nm-rev-ok { border-left-color: var(--ok-solido); }
+.nm-rev-cambio { border-left-color: var(--morado); }
+.nm-rev-aviso { border-left-color: var(--aviso-solido); }
+.nm-rev-cab { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-10); color: var(--morado); }
+.nm-rev-tit { display: grid; gap: var(--esp-2); min-width: 0; color: var(--tinta); }
+.nm-rev-cifras { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.nm-rev-cifra { padding: var(--esp-4) var(--esp-8); border-radius: var(--r-10); background: var(--hoja-2); color: var(--tinta-2); overflow-wrap: anywhere; }
+.nm-rev-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-8); }
+
+/* Mientras no toca: cuando es la siguiente y, cada 2 semanas, la cintura */
+.nm-prox { display: grid; gap: var(--esp-8); min-width: 0; padding-top: var(--esp-4); }
+.nm-prox-cint { display: grid; gap: var(--esp-6); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.nm-prox-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); }
+
+/* En Tu plan: sus revisiones */
+.nm-hist { display: grid; gap: var(--esp-6); }
+.nm-hist-i { padding: var(--esp-8) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); }
+.nm-hist-s { cursor: pointer; overflow-wrap: anywhere; }

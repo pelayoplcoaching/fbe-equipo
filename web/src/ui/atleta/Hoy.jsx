@@ -915,7 +915,7 @@ function PesoHoy({ irA }) {
       <div class="seccion-cab"><h2>Tu peso</h2>{serie.length > 1 && <button class="btn-texto" onClick={() => { pedirSubProgreso('cuerpo'); irA('progreso'); }}>Ver la gráfica</button>}</div>
       <div class="panel panel-pad peso-hoy">
         {pesos.datos == null || planes.datos == null ? <span class="peso-cargando" aria-hidden="true" />
-          : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.{esPorSuCuenta(atleta) ? (nutri ? ' Con tu peso, la app ajusta tu plan de comida cada semana.' : ' Es opcional: si no quieres, no lo apuntes.') : ''}</p>
+          : !ult ? <p class="peq secundario">Pésate por la mañana, en ayunas, y apúntalo aquí. Con unos días verás tu tendencia, que es lo que importa.{esPorSuCuenta(atleta) ? (nutri ? ` Con tu peso, la app ${planVigente(planes.datos, hoy)?.mantenimiento != null ? 'revisa tu plan de comida cada 4 semanas' : 'ajusta tu plan de comida cada semana'}.` : ' Es opcional: si no quieres, no lo apuntes.') : ''}</p>
           : conCifra ? (
             <div class="pila-xs">
               <div class="cifra"><span class="v num">{num(ult.tendencia)}</span><span class="u">kg de tendencia</span></div>

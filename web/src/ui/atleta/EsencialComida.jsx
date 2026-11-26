@@ -16,6 +16,8 @@ const ComidaHoyEsencial = perezoso(() => import('./EsencialComidaMas.jsx'), 'Com
 import * as nut from '../../datos/api-nutricion.js';
 const TarjetaNutricionMotor = perezoso(() => import('./EsencialNutricionMotor.jsx'), 'TarjetaNutricionMotor', { mientras: null });
 const HojaNutricionMotor = perezoso(() => import('./EsencialNutricionMotor.jsx'), 'HojaNutricionMotor', { mientras: null });
+// (v0.253, 106) la revisión de cada 4 semanas (su propio trozo; sin la 106, nada)
+const RevisionNutricion = perezoso(() => import('./NutricionRevision.jsx'), 'RevisionNutricion', { mientras: null });
 // Un plan del motor (tiene su mantenimiento): no cambia cada semana, se revisa cada 4 (R2)
 const delMotor = (plan) => plan?.mantenimiento != null;
 const previaDemo = (modo) => { try { return modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { return false; } };
@@ -130,8 +132,9 @@ export function AjusteComidaEsencial({ r, alCambiar }) {
     })();
     return () => { vivo = false; };
   }, [r?.plan?.id, atleta?.id]);
-  // (v0.250) y, debajo, por qué no cambia su plan y la comida de viaje
-  return <>{motor && <ToqueComida r={r} />}<ComidaHoyEsencial r={r} /></>;
+  // (v0.250) y, debajo, por qué no cambia su plan y la comida de viaje. (v0.253) Con un plan del motor, bajo el toque, su
+  // revisión de cada 4 semanas
+  return <>{motor && <ToqueComida r={r} />}{motor && <RevisionNutricion r={r} alCambiar={alCambiar} />}<ComidaHoyEsencial r={r} /></>;
 }
 
 // (v0.252, R26) El toque de cada día de un plan del motor: «¿Has seguido tu plan hoy?» y, si ayer quedó sin marcar, ayer

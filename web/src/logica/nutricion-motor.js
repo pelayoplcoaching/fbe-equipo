@@ -312,17 +312,26 @@ export function gastoReal({ registros = [], pesos = [], plan }, hoy) {
 // ---------- R28 a R33: la revisión de cada 4 semanas ----------
 // e: { plan: { kcal, proteina_g, desde, objetivo, ritmo_pct, mantenimiento? }, sexo, pesoRef, mant (su gasto: el real si lo hay),
 //      registros, pesos, cinturas, fuerzaCae (sus marcas caen 3 semanas seguidas), bajadasSeguidas, pocosHidratos?,
-//      bebidasSemana?, hoy }
+//      bebidasSemana?, ultima? (su última revisión: { fecha, tipo }), hoy }
 // Devuelve { tipo, delta, nuevo?, porque, ... }. tipo: 'esperar' (aún no toca), 'simplificar' (sin buena adherencia: no se
 // tocan las kcal), 'bien', 'recomposicion', 'baja', 'sube', 'suelo' (tocaría bajar y ya está en su suelo), 'profesional'
 // (tres bajadas seguidas sin avanzar), 'datos' (le faltan pesadas para calcular su ritmo)
 const delta5a10 = (kcal, lejos) => Math.min(200, Math.max(100, r10((lejos ? 0.1 : 0.05) * kcal)));
+// (v0.253, 106) El día de la revisión siguiente, como la base: 28 días desde el último cambio o la última revisión; 14 si
+// la última, ya con este plan, dijo «simplificar» o «faltan datos» (R29). ultima: { fecha, tipo } de su última revisión
+export function proximaRevision(plan, ultima = null) {
+  if (!plan?.desde) return null;
+  const f = ultima?.fecha || null;
+  const corta = f && f >= plan.desde && (ultima.tipo === 'simplificar' || ultima.tipo === 'datos');
+  return sumarDias(f && f > plan.desde ? f : plan.desde, corta ? REVISAR_EN_SIN_ADHERENCIA : REVISION_DIAS);
+}
 export function revisionNutricion(e) {
   const { plan, sexo, hoy } = e;
   const desde = plan?.desde;
   if (!plan || !(num(plan.kcal) > 0) || !desde) return null;
-  const dias = diasEntre(desde, hoy);
-  if (dias < REVISION_DIAS) return { tipo: 'esperar', dias: REVISION_DIAS - dias, delta: 0 };
+  // (e.ultima: su última revisión, si la hay; sin ella, 28 días desde el plan)
+  const toca = proximaRevision(plan, e.ultima);
+  if (hoy < toca) return { tipo: 'esperar', dias: diasEntre(hoy, toca), delta: 0, toca };
   const hasta = sumarDias(hoy, -1);
   const ad = adherencia(e, hasta);
   if (!ad.buena) return { tipo: 'simplificar', delta: 0, revisarEn: REVISAR_EN_SIN_ADHERENCIA, adherencia: ad,

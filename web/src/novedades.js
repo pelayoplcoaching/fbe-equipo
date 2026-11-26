@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.253': {
+    // (motor de nutrición, N4: la revisión de cada 4 semanas en la app, con su historial; migración 106)
+    atleta: [
+      'Si llevas nutrición en FBE Esencial: cada 4 semanas, la app revisa tu plan sola y te cuenta qué cambia y por qué.',
+      'En «Tu plan», tus revisiones; y en Hoy, cuándo es la siguiente y, cada 2 semanas, tu cintura.',
+    ],
+    coach: [
+      'Motor de nutrición: la revisión de cada 4 semanas (con tus topes) y su historial. Pide la 106.',
+    ],
+  },
   '0.252': {
     // (motor de nutrición, N1 y N2: el cuestionario de nutrición, el plan con las reglas de Pelayo y el toque de cada día; migración 105)
     atleta: [

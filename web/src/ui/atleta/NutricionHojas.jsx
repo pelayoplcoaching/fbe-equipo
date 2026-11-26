@@ -16,6 +16,8 @@ import { perezoso } from '../perezoso.jsx';
 // (FBE Esencial, 093) rehacer el plan de comida (su trozo)
 // (v0.252) rehacerlo: con la 105, el cuestionario de nutrición; sin ella, la hoja de la 093 (EsencialComida.jsx decide)
 const HojaRehacerComida = perezoso(() => import('./EsencialComida.jsx'), 'HojaRehacerComida', { mientras: null });
+// (v0.253, 106) «Tus revisiones», las de cada 4 semanas de un plan del motor de nutrición (su propio trozo)
+const HistorialRevisiones = perezoso(() => import('./NutricionRevision.jsx'), 'HistorialRevisiones', { mientras: null });
 
 // Apuntar un día (hoy o uno de esta semana): los totales, o sí/casi/no si va sin contar
 export function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
@@ -163,6 +165,7 @@ export function HojaTuPlan({ r, alCerrar, alCambiar = null }) {
         </section>
       )}
       {plan && plan.modo !== 'sin_contar' && <p class="mini terciario">Apunta los totales del día de la app que uses (MyFitnessPal, Fitia, Yazio…) o suma lo que comas escaneando su código de barras. Si un día se te olvida algo, márcalo: así {suyo ? 'la app calcula' : 'tu coach calcula'} bien tu gasto.</p>}
+      {suyo && r.plan?.mantenimiento != null && <HistorialRevisiones r={r} />}
       {suyo && r.plan && <button class="btn plano" onClick={() => setRehacer(true)}><Icono n="editar" /> Cambiar mi objetivo o mis datos</button>}
     </Hoja>
   );

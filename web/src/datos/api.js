@@ -7094,7 +7094,7 @@ export function crearApi(backend, opciones = {}) {
       out.listas_companeros = perfilId && perfilId === uid() ? (await b.rpc('comunidad_listas_companeros').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones; (v0.228, 089) y
       // sus mañanas siguientes
-      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas', 'nutricion_perfiles']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
       // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
       out.personal = perfilId && perfilId === uid()

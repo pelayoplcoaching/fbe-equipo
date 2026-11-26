@@ -3,7 +3,8 @@
 //     limpio) y la app le pone «Primeras 4 semanas»: su sesión con «Te sobran 4-5» y la plancha en segundos; apunta una serie.
 //   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4 y (tanda 3) su plan desde la semana 5, solo.
 //   · Inés (tanda 4, con nutrición; v0.252, con el cuestionario de nutrición del motor): en Hoy, «Tu plan de comida»;
-//     contesta los siete pasos, ve su plan y lo guarda: «Nutrición de hoy» y el toque de cada día.
+//     contesta los siete pasos, ve su plan y lo guarda: «Nutrición de hoy» y el toque de cada día; (v0.253) cuatro semanas
+//     después, la revisión: baja su plan y lo cuenta, y sale en «Tus revisiones».
 //   · Inés (alta, tanda 3): su primera semana: la guía de la primera sesión, «¿Qué peso pongo?», «Tu primera sesión, hecha»,
 //     «Semana 1 hecha»; en Perfil, sin «Mensajes con tu coach» y con sus preguntas frecuentes; la nota de su check-in.
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
@@ -251,6 +252,44 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
         const marcado = await p.waitForFunction(() => document.querySelector('.nm-toque .elegido-2')?.getAttribute('aria-pressed') === 'true', null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(marcado, 'marca «Sí» de un toque');
         await desborda(p, 'Hoy con el plan del motor y su toque');
+        // (v0.253, 106) cuatro semanas después: su plan, de hace 28 días; 24 días en «Sí», tres pesadas cada semana con el
+        // peso quieto y la cintura igual. Al abrir, la app hace la revisión sola: baja su plan y lo cuenta
+        check(/Tu próxima revisión, el/.test(await p.locator('.nm-prox').textContent({ timeout: 10000 }).catch(() => '')), 'mientras no toca: cuándo es su próxima revisión');
+        await p.waitForTimeout(600);
+        await p.evaluate(() => {
+          const d = JSON.parse(localStorage.getItem('fbe-demo-esencial-v2') || '{}');
+          const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date());
+          const menos = (n) => new Date(Date.parse(`${hoy}T12:00:00Z`) - n * 86400000).toISOString().slice(0, 10);
+          const a = (d.atletas || []).find((x) => /Inés/.test(x.nombre));
+          const plan = (d.planes_nutricion || []).find((x) => x.atleta_id === a.id && x.desde === hoy);
+          plan.desde = menos(28);
+          const reg = (d.registros_nutricion || []).find((x) => x.atleta_id === a.id && x.fecha === hoy);
+          for (let i = 1; i <= 24; i++) d.registros_nutricion.push({ ...reg, id: `e2e-reg-${i}`, fecha: menos(i) });
+          for (let i = 1; i <= 28; i++) if ((i % 2 === 0 || i % 7 === 1) && !d.pesos.some((x) => x.atleta_id === a.id && x.fecha === menos(i))) d.pesos.push({ id: `e2e-peso-${i}`, atleta_id: a.id, fecha: menos(i), kg: 68.4, notas: null });
+          const med = (d.medidas || []).find((x) => x.atleta_id === a.id && x.fecha === hoy);
+          d.medidas.push({ ...med, id: 'e2e-med-1', fecha: menos(2), cintura_cm: 80.5 });
+          med.fecha = menos(28);
+          localStorage.setItem('fbe-demo-esencial-v2', JSON.stringify(d));
+        });
+        await p.reload();
+        await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+        await cerrar(p);
+        const rev = p.locator('.nm-rev');
+        const conRev = await rev.waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+        const tRev = conRev ? (await rev.textContent()).replace(/ /g, ' ') : '';
+        check(conRev && /La revisión de tus 4 semanas/.test(tRev) && /Tu plan baja a 16\d\d kcal/.test(tRev) && /24 de 28 días con tu plan/.test(tRev) && /más despacio de lo previsto/.test(tRev) && /Antes, 1803 kcal/.test(tRev),
+          `cuatro semanas después, su revisión: «${(tRev.match(/Tu plan baja a 16\d\d kcal/) || ['?'])[0]}», con su porqué y sus cifras`);
+        if (conRev) {
+          await desborda(p, 'la revisión de las 4 semanas');
+          await rev.getByRole('button', { name: 'Entendido' }).click();
+          const prox = await p.waitForFunction(() => !document.querySelector('.nm-rev') && /Tu próxima revisión, el/.test(document.querySelector('.nm-prox')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+          check(prox, '«Entendido»: la tarjeta se va y queda cuándo es la siguiente');
+          await p.getByRole('button', { name: 'Tu plan de nutrición' }).click();
+          const hp = p.locator('[aria-modal="true"]').last();
+          const hist = await hp.getByText('Tus revisiones').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+          check(hist && /Tu plan baja a 16\d\d kcal \(24 de 28 días\)/.test((await hp.textContent()).replace(/ /g, ' ')), 'en «Tu plan», «Tus revisiones», con la suya');
+          await desborda(p, 'Tu plan con sus revisiones');
+        }
       }
     }
     await ctx.close();
