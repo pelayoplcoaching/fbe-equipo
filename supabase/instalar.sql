@@ -35601,6 +35601,8 @@ insert into public.fbe_migraciones (numero) values (105)  -- (3) número de esta
 --     tras «simplificar» o «faltan datos», R29), con o sin cambio de plan. Los cambios (baja y sube), con los topes de
 --     siempre (adherencia, 250 kcal, la misma proteína, la grasa entre el 20 y el 35 %, los suelos y, con antecedente de TCA
 --     o el SCOFF positivo, sin bajar). Devuelve el id de la revisión, o null si aún no toca.
+--   * esencial_comida_panel (la de la 104): en «La comida» de tu panel, los ajustes cuentan también los cambios de la revisión
+--     de cada 4 semanas, y quien tiene el SCOFF positivo no sale en «sin pesarse» (como quien tiene antecedente de TCA).
 --   * crear_recordatorios (la de la 104): «¿Te pesas esta semana?» tampoco a quien tiene el SCOFF positivo (R36: sin
 --     pedirle que se pese), y «Tu lunes de FBE Esencial» ya no cuenta las preguntas para el directo salvo con «El directo de
 --     dudas» encendido (v0.251).
@@ -35756,7 +35758,35 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 3. Los avisos: crear_recordatorios, la de la 104 con «¿Te pesas?» sin el SCOFF positivo y «Tu lunes» sin el directo apagado
+-- 3. La comida en tu panel (la de la 104): los ajustes cuentan también los cambios de la revisión de cada 4 semanas, y quien
+--    tiene el SCOFF positivo cuenta como con antecedente (no se le pide que se pese)
+-- ---------------------------------------------------------------------
+create or replace function public.esencial_comida_panel()
+returns table (atleta_id uuid, plan boolean, tca boolean, pesadas_14 integer, dias_7 integer, ajustes integer, ajustes_7 integer)
+language sql stable security definer set search_path = '' as $$
+  with hoy as (select (now() at time zone 'Europe/Madrid')::date as d)
+  select a.id,
+    exists (select 1 from public.planes_nutricion pn where pn.atleta_id = a.id),
+    -- (106) con el SCOFF positivo, como con antecedente: no se le pide que se pese (no sale en «sin pesarse»)
+    coalesce(c.tca, false) or (select count(*) from jsonb_each(coalesce(c.nutricion_salud -> 'scoff', '{}'::jsonb)) s where s.value = 'true'::jsonb) >= 2,
+    (select count(distinct p.fecha)::integer from public.pesos p where p.atleta_id = a.id and p.fecha > hoy.d - 14 and p.fecha <= hoy.d),
+    (select count(*)::integer from public.registros_nutricion r where r.atleta_id = a.id and r.fecha > hoy.d - 7 and r.fecha <= hoy.d
+       and (r.kcal is not null or r.cumplido is not null)),
+    (select count(*)::integer from public.planes_nutricion pn where pn.atleta_id = a.id and pn.motivo like 'Ajuste de la semana%')
+      -- (106) y los cambios de la revisión de cada 4 semanas
+      + (select count(*)::integer from public.nutricion_revisiones r where r.atleta_id = a.id and r.tipo in ('baja', 'sube')),
+    (select count(*)::integer from public.planes_nutricion pn where pn.atleta_id = a.id and pn.motivo like 'Ajuste de la semana%' and pn.desde > hoy.d - 7)
+      + (select count(*)::integer from public.nutricion_revisiones r where r.atleta_id = a.id and r.tipo in ('baja', 'sube') and r.fecha > hoy.d - 7)
+  from public.atletas a
+  cross join hoy
+  left join public.cuestionarios c on c.atleta_id = a.id
+  where public.es_coach() and a.modalidad = 'por_su_cuenta' and a.estado <> 'baja' and a.nutricion is not false
+  order by a.id
+$$;
+comment on function public.esencial_comida_panel() is 'FBE Esencial: la comida de cada uno con nutrición, en recuentos (solo el coach).';
+
+-- ---------------------------------------------------------------------
+-- 4. Los avisos: crear_recordatorios, la de la 104 con «¿Te pesas?» sin el SCOFF positivo y «Tu lunes» sin el directo apagado
 -- ---------------------------------------------------------------------
 create or replace function public.crear_recordatorios(p_ahora timestamptz default now()) returns integer
 language plpgsql security definer set search_path = '' as $$
@@ -36473,7 +36503,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 4. Permisos (como al final de 003 a 105)
+-- 5. Permisos (como al final de 003 a 105)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;

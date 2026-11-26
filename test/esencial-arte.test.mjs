@@ -3,7 +3,8 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ARTE, ARTE_HERO, ARTE_CIERRE, ARTE_NUTRI, ARTE_REVISION, arteLeccion, arteSemanaHecha } from '../web/src/logica/esencial-arte.js';
+import { ARTE, ARTE_HERO, ARTE_CIERRE, ARTE_NUTRI, ARTE_REVISION, ARTE_COMIDA, arteLeccion, arteSemanaHecha } from '../web/src/logica/esencial-arte.js';
+import { NECESITAS_COMIDA } from '../web/src/logica/esencial-comida.js';
 import { pasosNutricion } from '../web/src/logica/nutricion-cuestionario.js';
 import { estadoEsencial } from '../web/src/logica/esencial-alta.js';
 import { leccionDe } from '../web/src/logica/esencial-lecciones.js';
@@ -14,7 +15,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const lee = (r) => readFileSync(join(raiz, r), 'utf8');
 
 console.log('El catálogo');
-check(new Set(ARTE).size === ARTE.length && ARTE.length === 55 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `55 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, (v0.253) las 10 del plan de comida y 4 de la revisión de 4 semanas): ${ARTE.length}`);
+check(new Set(ARTE).size === ARTE.length && ARTE.length === 75 && ARTE.every((id) => /^esencial-[a-z0-9-]+$/.test(id)), `75 huecos, sin repetir (40 ilustraciones, la de «Elige tu rutina», que es la del poste de señales de sus rutinas, y (v0.253) las 10 del plan de comida, 4 de la revisión de 4 semanas, las 8 de la comida acompañada y las 12 de «¿Qué necesitas?»): ${ARTE.length}`);
 // los estados de antes de empezar que pintan la tarjeta grande
 const c0 = { completado_en: '2027-01-02', resultado: 'sin_valoracion', experiencia: 'ninguna' };
 const estados = [
@@ -31,12 +32,13 @@ check([1, 2, 3, 4, 5, 6, 7, 8].every((n) => leccionDe(n) && ARTE.includes(arteLe
 check(['pregunta', 'pasada', 'lista', 'pausa', 'repite'].every((t) => ARTE.includes(ARTE_CIERRE[t])), 'el cierre de la semana: la pregunta, lista, en pausa y repetida');
 check(pasosNutricion(true).every(([k]) => ARTE.includes(ARTE_NUTRI[k])) && Object.keys(ARTE_NUTRI).length === pasosNutricion(true).length, '(v0.253) cada paso del cuestionario de nutrición tiene la suya');
 check(['bien', 'recomposicion', 'baja', 'sube', 'suelo', 'profesional', 'simplificar', 'datos'].every((t) => ARTE.includes(ARTE_REVISION[t])), '(v0.253) y cada tipo de revisión de 4 semanas');
+check(NECESITAS_COMIDA.every(([id]) => ARTE.includes(ARTE_COMIDA[id])) && Object.keys(ARTE_COMIDA).length === NECESITAS_COMIDA.length, '(v0.253) y cada hoja de comida de «¿Qué necesitas?»');
 check(arteSemanaHecha(1) === 'esencial-semana-1-hecha' && arteSemanaHecha(4) === 'esencial-cuatro-semanas' && arteSemanaHecha(8) === 'esencial-cuatro-semanas' && arteSemanaHecha(12) === 'esencial-doce-semanas'
   && arteSemanaHecha(24) === 'esencial-doce-semanas' && arteSemanaHecha(2) === null && arteSemanaHecha(0) === null, '«Semana N hecha»: la primera, cada cuatro y cada doce');
 
 console.log('\nLo que usan las pantallas');
 const usados = new Set();
-for (const f of ['Esencial.jsx', 'EsencialSesion.jsx', 'EsencialRutinas.jsx', 'Checkin.jsx', 'EsencialNutricionMotor.jsx', 'NutricionRevision.jsx']) {
+for (const f of ['Esencial.jsx', 'EsencialSesion.jsx', 'EsencialRutinas.jsx', 'Checkin.jsx', 'EsencialNutricionMotor.jsx', 'NutricionRevision.jsx', 'EsencialComidaMas.jsx', 'EsencialAyuda.jsx', 'EsencialVida.jsx']) {
   // (solo las líneas que pintan una ilustración: <Arte …>, <ArteDuo …> o foto(…) de la bienvenida)
   for (const linea of lee(`web/src/ui/atleta/${f}`).split('\n').filter((l) => /<Arte|foto\('/.test(l))) {
     for (const m of linea.matchAll(/'(esencial-[a-z0-9-]+)'|"(esencial-[a-z0-9-]+)"/g)) usados.add(m[1] || m[2]);
@@ -44,7 +46,7 @@ for (const f of ['Esencial.jsx', 'EsencialSesion.jsx', 'EsencialRutinas.jsx', 'C
 }
 const deFuera = [...usados].filter((id) => !ARTE.includes(id));
 check(deFuera.length === 0 && usados.size >= 15, `cada ilustración escrita en una pantalla está en el catálogo (${usados.size} escritas tal cual)${deFuera.length ? `: sobran ${deFuera.join(', ')}` : ''}`);
-const porMapa = [...Object.values(ARTE_HERO), ...Object.values(ARTE_CIERRE), ...Object.values(ARTE_NUTRI), ...Object.values(ARTE_REVISION), ...[1, 2, 3, 4, 5, 6, 7, 8].map(arteLeccion), ...[1, 4, 12].map(arteSemanaHecha)];
+const porMapa = [...Object.values(ARTE_HERO), ...Object.values(ARTE_CIERRE), ...Object.values(ARTE_NUTRI), ...Object.values(ARTE_REVISION), ...Object.values(ARTE_COMIDA), ...[1, 2, 3, 4, 5, 6, 7, 8].map(arteLeccion), ...[1, 4, 12].map(arteSemanaHecha)];
 const sinSitio = ARTE.filter((id) => !usados.has(id) && !porMapa.includes(id));
 check(sinSitio.length === 0, `y cada ilustración del catálogo tiene su sitio en la app${sinSitio.length ? `: sin sitio, ${sinSitio.join(', ')}` : ''}`);
 

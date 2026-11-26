@@ -28,6 +28,14 @@ export const ARTE_REVISION = {
   simplificar: 'esencial-nutri-simplificar', profesional: 'esencial-nutri-excluido', suelo: 'esencial-nutri-revision', datos: 'esencial-nutri-revision',
 };
 
+// (v0.253) F2 · La comida, acompañada: las hojas de comida de «¿Qué necesitas?» (sus claves, las de NECESITAS_COMIDA de
+// esencial-comida.js); tu comida en la revisión de la semana es 'esencial-comida-semana' y la comida de viaje en Hoy,
+// 'esencial-comida-viaje'
+export const ARTE_COMIDA = {
+  proteina: 'esencial-comida-proteina', fuera: 'esencial-comida-fuera', hambre: 'esencial-comida-hambre', pasado: 'esencial-comida-pasado',
+  celebracion: 'esencial-comida-celebracion', pesarme: 'esencial-comida-pesarme',
+};
+
 // Todas (para comprobar que lo que se usa existe y que la lista de archivos no trae nada de más)
 export const ARTE = [
   ...Object.values(ARTE_HERO), 'esencial-hoy-empiezas',
@@ -39,4 +47,9 @@ export const ARTE = [
   'esencial-preguntas', 'esencial-molestia', 'esencial-checkin-enviado', 'esencial-equipo',
   'esencial-nutri-preparar', ...Object.values(ARTE_NUTRI), 'esencial-nutri-excluido',
   'esencial-nutri-va-bien', 'esencial-nutri-ajuste', 'esencial-nutri-simplificar', 'esencial-nutri-revision',
+  'esencial-comida-semana', ...Object.values(ARTE_COMIDA), 'esencial-comida-viaje',
+  // (v0.253) F3 · «¿Qué necesitas?», Respuestas y las hojas que abren (las de «Me duele algo», «He faltado» y «Cambiar de
+  // rutina» son las que ya había)
+  'esencial-necesitas', 'esencial-respuestas', 'esencial-poco-tiempo', 'esencial-plan-explicado', 'esencial-suscripcion', 'esencial-viaje',
+  'esencial-enfermo', 'esencial-otro-sitio', 'esencial-cambiar-ejercicio', 'esencial-objetivo', 'esencial-marcas-ahora', 'esencial-suave',
 ];

@@ -5169,10 +5169,13 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
           const planes = tabla('planes_nutricion').filter((x) => x.atleta_id === a.id);
           const ajustes = planes.filter((x) => String(x.motivo || '').startsWith('Ajuste de la semana'));
           const c = tabla('cuestionarios').find((x) => x.atleta_id === a.id);
-          return { atleta_id: a.id, plan: planes.length > 0, tca: c?.tca === true,
+          // (106) los cambios de la revisión de cada 4 semanas cuentan como ajustes; con el SCOFF positivo, como con antecedente
+          const revs = tabla('nutricion_revisiones').filter((x) => x.atleta_id === a.id && (x.tipo === 'baja' || x.tipo === 'sube'));
+          const scoff = Object.values(c?.nutricion_salud?.scoff || {}).filter((v) => v === true).length >= 2;
+          return { atleta_id: a.id, plan: planes.length > 0, tca: c?.tca === true || scoff,
             pesadas_14: new Set(tabla('pesos').filter((x) => x.atleta_id === a.id && x.fecha > sumar(hoyM, -14) && x.fecha <= hoyM).map((x) => x.fecha)).size,
             dias_7: tabla('registros_nutricion').filter((x) => x.atleta_id === a.id && x.fecha > sumar(hoyM, -7) && x.fecha <= hoyM && (x.kcal != null || x.cumplido != null)).length,
-            ajustes: ajustes.length, ajustes_7: ajustes.filter((x) => x.desde > sumar(hoyM, -7)).length };
+            ajustes: ajustes.length + revs.length, ajustes_7: ajustes.filter((x) => x.desde > sumar(hoyM, -7)).length + revs.filter((x) => x.fecha > sumar(hoyM, -7)).length };
         }).sort((x, y) => String(x.atleta_id).localeCompare(String(y.atleta_id)));
       }
       // (102) Cuántos empiezan su mismo lunes (solo el número; con menos de tres, null)

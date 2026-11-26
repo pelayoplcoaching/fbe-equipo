@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { crearPglite, crearBackendPglite } from './backend-pglite.mjs';
 import { crearApi } from '../web/src/datos/api.js';
 import * as M from '../web/src/logica/nutricion-motor.js';
+import * as datos from '../web/src/datos/api-esencial.js';
 import { hoyISO, sumarDias, lunesDe, fechaMadrid } from '../web/src/logica/fechas.js';
 
 let ok = 0, fallos = 0;
@@ -184,6 +185,13 @@ await db.query(`insert into esencial_ajustes (clave, encendido) values ('directo
 await llamar(lunes, '08:30');
 const s2 = await resumen();
 check(s2.length === 1 && /\. Preguntas nuevas para el directo: 0\.$/.test(s2[0].cuerpo), `con el directo encendido, como antes: «${s2[0]?.cuerpo}»`);
+
+console.log('\nLa comida en tu panel (106: los cambios de la revisión cuentan como ajustes; el SCOFF positivo, como antecedente)');
+await como('coach');
+const panel = await datos.comidaPanel(b);
+const pa = panel.find((f) => f.atleta_id === id.ana), pb = panel.find((f) => f.atleta_id === id.berta), pd = panel.find((f) => f.atleta_id === id.dora);
+check(pa?.ajustes === 1 && pa.ajustes_7 === 1, `Ana: su bajada de la revisión, un ajuste (y esta semana) (${JSON.stringify(pa && { a: pa.ajustes, a7: pa.ajustes_7 })})`);
+check(pb?.tca === true && pd?.tca === false, 'Berta, con el SCOFF positivo, como con antecedente (no sale en «sin pesarse»); Dora, no');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

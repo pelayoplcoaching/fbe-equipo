@@ -17,6 +17,8 @@ import { MODOS_VIAJE, validarViaje, viajeDe, proximoViaje, textoViaje, fechaCort
   ENFERMO, MOLESTIA_SIGUE, molestiaToca, SUAVE, suaveDe, saludAlDia, SALUD_AL_DIA, ALARMA } from '../../logica/esencial-vida.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
+// (v0.253) sus ilustraciones (F3): una arriba de cada hoja de «¿Qué necesitas?»
+import { Arte } from './EsencialArte.jsx';
 
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
@@ -86,6 +88,7 @@ export function HojaViaje({ viaje = null, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Me voy de viaje" alCerrar={alCerrar}>
       <div class="pila vid-viaje">
+        <Arte id="esencial-viaje" />
         <p class="secundario">Dime cuándo te vas y qué vas a hacer: la app lo deja organizado y, esos días, no te manda avisos que no tocan.</p>
         <div class="vid-fechas">
           <div class="campo"><label for="vid-desde">Me voy el</label><input id="vid-desde" class="entrada" type="date" min={sumar(hoy, -30)} max={sumar(hoy, 180)} value={desde} onInput={(e) => setDesde(e.currentTarget.value)} /></div>
@@ -162,6 +165,7 @@ export function HojaSitio({ alCerrar, alAccion = null }) {
   return (
     <Hoja titulo="Entreno en otro sitio" alCerrar={alCerrar}>
       <div class="pila vid-sitio">
+        <Arte id="esencial-otro-sitio" />
         <div class="vid-modos" role="group" aria-label="Qué ha cambiado">
           {SITIOS.map(([id, t]) => <Opcion key={id} id={id} valor={cual} alElegir={setCual} titulo={t} />)}
         </div>
@@ -196,6 +200,7 @@ export function HojaEjercicios({ alCerrar, alCambiar }) {
   return (
     <Hoja titulo="Cambiar un ejercicio" alCerrar={alCerrar}>
       <div class="pila vid-ejercicios">
+        <Arte id="esencial-cambiar-ejercicio" />
         <p class="secundario">Si en tu gimnasio no está, no te sienta bien o no te gusta, cámbialo por una de sus alternativas: tus próximas sesiones ya vendrán con ella. Como es otro ejercicio, empieza sin kilos puestos: busca tu peso como el primer día.</p>
         {lista.cargando && !lista.datos && <p class="peq secundario" role="status">Mirando tu rutina…</p>}
         {!lista.cargando && !filas.length && <p class="peq secundario">Cuando tengas tu semana en marcha, aquí salen sus ejercicios.</p>}
@@ -253,6 +258,7 @@ export function HojaObjetivo({ nota = null, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Tu objetivo" alCerrar={alCerrar}>
       <div class="pila vid-objetivo-h">
+        <Arte id="esencial-objetivo" />
         <p class="secundario">Una sola cosa, con fecha. La app te recuerda cuánto falta y, a mitad de camino, te pregunta cómo vas.</p>
         <label class="pila-xs">
           <span class="peq"><strong>¿Qué quieres conseguir?</strong></span>
@@ -276,6 +282,7 @@ export function HojaMarcasAhora({ alCerrar }) {
   return (
     <Hoja titulo="Tus marcas, antes y ahora" alCerrar={alCerrar}>
       <div class="pila vid-marcas">
+        <Arte id="esencial-marcas-ahora" />
         {d.cargando && !m && <p class="peq secundario" role="status">Buscando tus marcas…</p>}
         {!d.cargando && !m && <p class="peq secundario">Todavía no hay con qué comparar: tus marcas salen en la cuarta semana, y aquí las verás junto a lo mejor de tus dos últimas semanas.</p>}
         {m && (
@@ -304,6 +311,7 @@ export function HojaEnfermo({ alCerrar, alAccion = null }) {
   return (
     <Hoja titulo="Estoy enfermo" alCerrar={alCerrar}>
       <div class="pila vid-enfermo">
+        <Arte id="esencial-enfermo" />
         <strong>{ENFERMO.titulo}</strong>
         <Pasos lista={ENFERMO.pasos} />
         {alAccion && <button type="button" class="btn btn-primario" onClick={() => alAccion('pausa')}>Poner mi semana en pausa</button>}
@@ -327,6 +335,7 @@ export function HojaSuave({ notas = [], alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Una semana suave" alCerrar={alCerrar}>
       <div class="pila vid-suave-h">
+        <Arte id="esencial-suave" />
         <p class="secundario">{SUAVE.pedir}</p>
         <div class="vid-que"><strong>{SUAVE.titulo}</strong><span class="peq">{SUAVE.texto}</span></div>
         {error && <p class="error" role="alert">{error}</p>}

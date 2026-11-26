@@ -610,5 +610,245 @@
       "1080": "imagenes/esencial/esencial-nutri-tu-1080.3a4f260e.webp"
     },
     "color": "#382c5d"
+  },
+  "esencial-comida-celebracion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-celebracion-240.98f07466.webp",
+      "720": "imagenes/esencial/esencial-comida-celebracion-720.766c5d63.webp",
+      "1080": "imagenes/esencial/esencial-comida-celebracion-1080.00727ea3.webp"
+    },
+    "color": "#563a5b"
+  },
+  "esencial-comida-fuera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-fuera-240.b90c55aa.webp",
+      "720": "imagenes/esencial/esencial-comida-fuera-720.c6cbae4d.webp",
+      "1080": "imagenes/esencial/esencial-comida-fuera-1080.cb98e37d.webp"
+    },
+    "color": "#493665"
+  },
+  "esencial-comida-hambre": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-hambre-240.8057f4b1.webp",
+      "720": "imagenes/esencial/esencial-comida-hambre-720.5b371ccb.webp",
+      "1080": "imagenes/esencial/esencial-comida-hambre-1080.6e1e72c4.webp"
+    },
+    "color": "#47345b"
+  },
+  "esencial-comida-pasado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-pasado-240.ba214577.webp",
+      "720": "imagenes/esencial/esencial-comida-pasado-720.34f3abeb.webp",
+      "1080": "imagenes/esencial/esencial-comida-pasado-1080.f9bc5c28.webp"
+    },
+    "color": "#4f3a67"
+  },
+  "esencial-comida-pesarme": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-pesarme-240.64c511be.webp",
+      "720": "imagenes/esencial/esencial-comida-pesarme-720.f4a0dbe5.webp",
+      "1080": "imagenes/esencial/esencial-comida-pesarme-1080.ca65fb39.webp"
+    },
+    "color": "#5f4471"
+  },
+  "esencial-comida-proteina": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-proteina-240.155903b7.webp",
+      "720": "imagenes/esencial/esencial-comida-proteina-720.50cf2d22.webp",
+      "1080": "imagenes/esencial/esencial-comida-proteina-1080.bba04bd3.webp"
+    },
+    "color": "#553c60"
+  },
+  "esencial-comida-semana": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-semana-240.8fe82540.webp",
+      "720": "imagenes/esencial/esencial-comida-semana-720.483ad9bf.webp",
+      "1080": "imagenes/esencial/esencial-comida-semana-1080.dc226af3.webp"
+    },
+    "color": "#403259"
+  },
+  "esencial-comida-viaje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-comida-viaje-240.c18d6654.webp",
+      "720": "imagenes/esencial/esencial-comida-viaje-720.1194b80c.webp",
+      "1080": "imagenes/esencial/esencial-comida-viaje-1080.72bff851.webp"
+    },
+    "color": "#5d4278"
+  },
+  "esencial-cambiar-ejercicio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-cambiar-ejercicio-240.d56c0a1b.webp",
+      "720": "imagenes/esencial/esencial-cambiar-ejercicio-720.67158458.webp",
+      "1080": "imagenes/esencial/esencial-cambiar-ejercicio-1080.9d5e0512.webp"
+    },
+    "color": "#503476"
+  },
+  "esencial-enfermo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-enfermo-240.d07902b0.webp",
+      "720": "imagenes/esencial/esencial-enfermo-720.ec35678c.webp",
+      "1080": "imagenes/esencial/esencial-enfermo-1080.bf19db7c.webp"
+    },
+    "color": "#4f3570"
+  },
+  "esencial-marcas-ahora": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-marcas-ahora-240.c6fced05.webp",
+      "720": "imagenes/esencial/esencial-marcas-ahora-720.003c21c4.webp",
+      "1080": "imagenes/esencial/esencial-marcas-ahora-1080.c5d9b7c3.webp"
+    },
+    "color": "#4c3364"
+  },
+  "esencial-necesitas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-necesitas-240.58ea772a.webp",
+      "720": "imagenes/esencial/esencial-necesitas-720.8da72691.webp",
+      "1080": "imagenes/esencial/esencial-necesitas-1080.228aeae2.webp"
+    },
+    "color": "#3f2d63"
+  },
+  "esencial-objetivo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-objetivo-240.241f2ff2.webp",
+      "720": "imagenes/esencial/esencial-objetivo-720.49b12cdf.webp",
+      "1080": "imagenes/esencial/esencial-objetivo-1080.f190dc6c.webp"
+    },
+    "color": "#4f3168"
+  },
+  "esencial-otro-sitio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-otro-sitio-240.bb8d1880.webp",
+      "720": "imagenes/esencial/esencial-otro-sitio-720.9936826c.webp",
+      "1080": "imagenes/esencial/esencial-otro-sitio-1080.139316e5.webp"
+    },
+    "color": "#513977"
+  },
+  "esencial-plan-explicado": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-plan-explicado-240.997e3241.webp",
+      "720": "imagenes/esencial/esencial-plan-explicado-720.abb82349.webp",
+      "1080": "imagenes/esencial/esencial-plan-explicado-1080.b5b91f59.webp"
+    },
+    "color": "#554172"
+  },
+  "esencial-poco-tiempo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-poco-tiempo-240.86fd8c7b.webp",
+      "720": "imagenes/esencial/esencial-poco-tiempo-720.0f093e9b.webp",
+      "1080": "imagenes/esencial/esencial-poco-tiempo-1080.900ac836.webp"
+    },
+    "color": "#543773"
+  },
+  "esencial-respuestas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-respuestas-240.4742a8df.webp",
+      "720": "imagenes/esencial/esencial-respuestas-720.0cc68414.webp",
+      "1080": "imagenes/esencial/esencial-respuestas-1080.1316e7b1.webp"
+    },
+    "color": "#4e386a"
+  },
+  "esencial-suave": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-suave-240.fa77f6a2.webp",
+      "720": "imagenes/esencial/esencial-suave-720.619122d7.webp",
+      "1080": "imagenes/esencial/esencial-suave-1080.599fa1d6.webp"
+    },
+    "color": "#654673"
+  },
+  "esencial-suscripcion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-suscripcion-240.d1a260bb.webp",
+      "720": "imagenes/esencial/esencial-suscripcion-720.318b1750.webp",
+      "1080": "imagenes/esencial/esencial-suscripcion-1080.8e3b35d5.webp"
+    },
+    "color": "#563f81"
+  },
+  "esencial-viaje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-viaje-240.cbcb8a46.webp",
+      "720": "imagenes/esencial/esencial-viaje-720.60d2f996.webp",
+      "1080": "imagenes/esencial/esencial-viaje-1080.203fa945.webp"
+    },
+    "color": "#47316f"
   }
 }

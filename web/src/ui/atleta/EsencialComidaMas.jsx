@@ -11,6 +11,9 @@ import { encendido, textoAjuste } from '../../logica/esencial-respuestas.js';
 import { comidaDeLaSemana, porQueNoCambia, proteinaDeHoy, momentoViaje, mantenimientoDe, avisoDelPeso, AVISOS_PESO, leccionComida, LECCIONES_COMIDA, HOJAS_COMIDA } from '../../logica/esencial-comida.js';
 import { fmtKcal } from '../../logica/nutricion.js';
 import * as datos from '../../datos/api-esencial.js';
+// (v0.253) sus ilustraciones (F2): las hojas de comida, tu comida de la semana y la comida de viaje
+import { Arte } from './EsencialArte.jsx';
+import { ARTE_COMIDA } from '../../logica/esencial-arte.js';
 
 function usePrevia() {
   const { modo } = useApp();
@@ -52,6 +55,7 @@ export function ComidaRevision() {
   const l = leccion ? [textoAjuste(`leccion_comida:${leccion}`, 'titulo', LECCIONES_COMIDA[leccion][0]), textoAjuste(`leccion_comida:${leccion}`, 'texto', LECCIONES_COMIDA[leccion][1])] : null;
   return (
     <>
+      <Arte id="esencial-comida-semana" />
       <aside class="cmd-semana" aria-labelledby="cmd-semana-t">
         <span class="cmd-semana-i"><Icono n="nutricion" width="18" height="18" /></span>
         <span class="pila-xs">
@@ -92,6 +96,7 @@ export function ComidaHoyEsencial({ r }) {
   if (!p && !mant) return null;
   return (
     <div class="cmd-hoy pila-xs">
+      {mant && <Arte id="esencial-comida-viaje" />}
       {mant && (
         <p class="peq cmd-viaje"><Icono n="reloj" width="16" height="16" /> <span><strong>De viaje: come para mantener, unas {fmtKcal(mant)} kcal al día.</strong> La app no toca tu plan hasta una semana después de volver.{pendiente('comida_viaje', previa) ? ' (Vista previa: pendiente del visto bueno de Pelayo.)' : ''}</span></p>
       )}
@@ -119,6 +124,7 @@ export function HojaComida({ que, alCerrar }) {
   return (
     <Hoja titulo={h.titulo} alCerrar={alCerrar}>
       <div class="pila cmd-hoja" data-que={que}>
+        <Arte id={ARTE_COMIDA[que]} />
         <ul class="cmd-lineas">{lineas.map((x) => <li key={x} class="peq">{x}</li>)}</ul>
         {que === 'celebracion' && <Celebraciones />}
         {clave && pendiente(clave, previa) && <Pendiente />}
@@ -139,6 +145,7 @@ function HojaProteina({ alCerrar }) {
   return (
     <Hoja titulo="No llego a la proteína" alCerrar={alCerrar}>
       <div class="pila cmd-hoja" data-que="proteina" aria-busy={r.cargando ? 'true' : 'false'}>
+        <Arte id="esencial-comida-proteina" />
         {r.cargando && !x && <p class="peq secundario" role="status">Mirando lo de hoy…</p>}
         {!r.cargando && !x && <p class="peq secundario">Cuando tengas tu plan de comida, aquí verás lo que llevas de proteína cada día.</p>}
         {x && (

@@ -17,6 +17,8 @@ import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRes
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
+// (v0.253) sus ilustraciones (F3): «¿Qué necesitas?», Respuestas, «Tu plan, explicado» y «Tu suscripción»
+import { Arte } from './EsencialArte.jsx';
 // (v0.250, tanda 9) la comida: lo que necesita saber esta parte (si tiene plan de comida y si tiene antecedente de TCA)
 import { conNutricion } from '../../logica/nivel.js';
 import { planVigente } from '../../logica/nutricion.js';
@@ -122,6 +124,7 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
   return (
     <Hoja titulo="Respuestas" alCerrar={alCerrar}>
       <div class="pila ayu-centro" ref={ref}>
+        <Arte id={inicial === 'poco-tiempo' ? 'esencial-poco-tiempo' : 'esencial-respuestas'} />
         <label class="ayu-buscar">
           <span class="ayu-buscar-t peq">Busca tu duda</span>
           <input type="search" class="ayu-buscar-c" value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder="agujetas, descanso, viaje…" enterkeyhint="search" autocomplete="off" />
@@ -255,6 +258,7 @@ export function HojaPlan({ p, alCerrar, alAccion = null }) {
   return (
     <Hoja titulo="Tu plan, explicado" alCerrar={alCerrar}>
       <div class="pila ayu-plan">
+        <Arte id="esencial-plan-explicado" />
         <section class="pila-s" aria-labelledby="ayu-plan-t">
           <strong id="ayu-plan-t">{p?.bloque?.nombre || 'Tu plan'}{n ? ` · semana ${n}` : ''}</strong>
           <p class="peq secundario">{ss.length === 1 ? 'Una sesión a la semana' : `${ss.length} sesiones a la semana`}{dias?.length ? `: ${nombreDias(dias)}` : ''}.</p>
@@ -555,6 +559,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const cerrar = () => setHoja(null);
   return (
     <section class="panel panel-pad pila-s ayu-necesitas" aria-labelledby="ayu-nec-t">
+      <Arte id="esencial-necesitas" />
       <strong id="ayu-nec-t">¿Qué necesitas?</strong>
       <div class="ayu-nec-f">
         {opciones.map(([id, t, icono, que]) => <button type="button" key={id} class="ayu-nec" onClick={() => tocar(que)}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
@@ -593,6 +598,7 @@ export function HojaBaja({ alCerrar }) {
   return (
     <Hoja titulo="Tu suscripción" alCerrar={alCerrar}>
       <div class="pila ayu-baja">
+        <Arte id="esencial-suscripcion" />
         <p class="secundario">Desde tu suscripción puedes cambiar la tarjeta o darte de baja, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</p>
         {!dicho && (
           <>
