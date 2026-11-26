@@ -2835,8 +2835,8 @@ console.log('\nv0.73: la comunidad, quinta tanda (migración 045), con la capa d
   // (v0.104) Sin la 050: la política se queda en la 2026-12.13 (no describe lo que esa base no guarda)
   const sin050 = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), select: b.select.bind(b),
     rpc: async (n, a) => { if (['personal_mio', 'personal_guardar', 'personal_atletas', 'mensajes_coach', 'mensaje_coach_guardar'].includes(n)) throw new Error(`Could not find the function public.${n} in the schema cache`); return b.rpc(n, a); } });
-  check(await sin050.personal050() === false && await sin050.versionLegal() === '2026-12.13' && await api.personal050() === true && await api.versionLegal() === '2026-12.45',
-    'sin la 050: la política sigue en la 2026-12.13; con todo, la 2026-12.16');
+  check(await sin050.personal050() === false && await sin050.versionLegal() === '2026-12.13' && await api.personal050() === true && await api.versionLegal() === '2026-12.46',
+    'sin la 050: la política sigue en la 2026-12.13; con todo, la vigente');
   // (v0.107) Con la 050 de la v0.104 pero sin ampliar (sin la música): la 2026-12.14
   const sinMusica = crearApi({ ...b, auth: b.auth, storage: b.storage, insert: b.insert.bind(b), update: b.update.bind(b), delete: b.delete.bind(b), upsert: b.upsert.bind(b), select: b.select.bind(b),
     rpc: async (n, a) => { if (['musica_para', 'musica_coach_lista', 'musica_coach_guardar', 'personal_musica_abierta'].includes(n)) throw new Error(`Could not find the function public.${n} in the schema cache`); return b.rpc(n, a); } });

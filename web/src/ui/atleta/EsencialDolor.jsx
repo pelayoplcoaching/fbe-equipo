@@ -54,7 +54,7 @@ function QueHacer({ valor }) {
   return (
     <div class={`dol-que dol-que-${s}`} role="status">
       <strong>{q.titulo}</strong>
-      <ul class="dol-pasos">{q.pasos.map((t) => <li key={t} class="peq">{t}</li>)}</ul>
+      <ul class="lista-puntos dol-pasos">{q.pasos.map((t) => <li key={t} class="peq">{t}</li>)}</ul>
     </div>
   );
 }
@@ -112,7 +112,7 @@ export function TusMolestias({ d, senal = false }) {
       <Arte id="esencial-dolor-semana" />
       <strong id="dol-tuyas-t">{abiertas.length ? 'Tus molestias abiertas' : 'Tus molestias'}</strong>
       {abiertas.length > 0 && (
-        <ul class="dol-lista">
+        <ul class="lista-puntos dol-lista">
           {abiertas.map((z) => (
             <li key={z.zona} class="dol-item">
               <span class={`dol-badge dol-badge-${z.semaforo} num`} aria-hidden="true">{z.valor}</span>

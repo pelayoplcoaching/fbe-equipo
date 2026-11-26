@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.256': {
+    // (el motor de molestias de FBE Esencial, la base: de 0 a 10 con el semáforo y las zonas del cuestionario de lesiones; migración 109)
+    atleta: [
+      '«Me duele algo», con el semáforo: di dónde y cuánto, de 0 a 10, y la app te dice qué hacer con tu plan.',
+      'Con las señales para parar y consultar ya. Si la apuntas, ves tus molestias abiertas y cómo van de semana en semana.',
+      'En tu check-in, tus molestias también de 0 a 10. El margen de Pelayo: durante y después, hasta 3 sobre 10.',
+    ],
+    coach: [
+      'FBE Esencial: molestias de 0 a 10 (semáforo y zonas del cuestionario de lesiones); en su ficha, sus molestias abiertas. Pide la 109.',
+    ],
+  },
   '0.255': {
     // («Tus pruebas» de FBE Esencial: silla, equilibrio, cintura y altura, prensión y SPPB; migración 108)
     atleta: [

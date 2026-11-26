@@ -46,7 +46,7 @@
 .dol-que-verde { border-left-color: var(--ok-solido); background: var(--ok-suave); }
 .dol-que-ambar { border-left-color: var(--aviso-solido); background: var(--aviso-suave); }
 .dol-que-rojo { border-left-color: var(--alerta-solido); background: var(--alerta-suave); }
-.dol-pasos { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-20); }
+.dol-pasos { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-20); list-style: disc; }
 
 /* Las senales para parar y consultar */
 .dol-senales { display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); }

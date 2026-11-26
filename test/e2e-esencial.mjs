@@ -735,21 +735,23 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(await p.locator('[aria-modal="true"]').last().getByText(/«tu coach» \(y «mi coach» en el consentimiento\) es Pelayo Fernández Cidón/).waitFor({ timeout: 8000 }).then(() => true).catch(() => false),
       'la política de privacidad: arriba, quién es «tu coach» para quien va por su cuenta');
     await cerrarHojas();
-    // El check-in, con una molestia moderada: en el paso, qué hacer; al enviarlo, lo que la app hace con él
+    // El check-in, con una molestia en ámbar (v0.256: de 0 a 10, con las zonas del cuestionario de lesiones): en el paso, qué
+    // hacer; al enviarlo, lo que la app hace con él
     await ir('checkin');
     let dolorEnPaso = false, enviado = false;
     // (si su check-in de la semana ya está enviado, se abre en el repaso: desde ahí, a la pregunta de las molestias)
     let marcada = false;
     for (let i = 0; i < 30; i++) {
       await mirar(`check-in, paso ${i + 1}`);
-      const zonas = p.locator('.zonas');
+      const zonas = p.locator('.dol-zonas');
       if (!marcada && await zonas.isVisible().catch(() => false)) {
-        const z = zonas.locator('button', { hasText: 'Zona lumbar' }).first();
+        const z = zonas.locator('button', { hasText: 'Rodilla' }).first();
         if ((await z.getAttribute('aria-pressed').catch(() => null)) !== 'true') await z.click().catch(() => {});
-        await p.locator('.segmentos.dolor button', { hasText: 'Moderada' }).first().click({ timeout: 3000 }).catch(() => {});
+        await p.locator('.dol-fila').first().getByRole('button', { name: '4 de 10' }).click({ timeout: 3000 }).catch(() => {});
         marcada = true;
-        dolorEnPaso = await p.locator('.sinco-dolor').getByText(/5 sobre 10/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-        await mirar('check-in, molestia moderada');
+        dolorEnPaso = await p.locator('.sinco-dolor').getByText(/hasta 3 sobre 10/).first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false)
+          && (await p.locator('.dol-n').count()) === 11;
+        await mirar('check-in, molestia en ámbar');
       }
       const enviar = p.getByRole('button', { name: /^Enviar$|Actualizar check-in/ });
       if (await enviar.isVisible().catch(() => false)) {
@@ -766,8 +768,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const tras = p.locator('section.sinco-tras');
     const conTras = enviado && await tras.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
     const tt = conTras ? await tras.textContent() : '';
-    check(dolorEnPaso, 'el check-in, con una molestia moderada: en el mismo paso, qué hacer (la regla del 5 sobre 10 y cuándo consultar)');
-    check(conTras && /Qué pasa ahora con tu check-in/.test(tt) && /Queda en tu progreso/.test(tt) && /molestia moderada en zona lumbar/.test(tt) && /Nadie te lo contesta uno a uno/.test(tt)
+    check(dolorEnPaso, 'el check-in (v0.256), con la rodilla a 4 de 10: en el mismo paso, qué hacer en ámbar (con el margen de Pelayo, hasta 3) y cuándo consultar');
+    check(conTras && /Qué pasa ahora con tu check-in/.test(tt) && /Queda en tu progreso/.test(tt) && /una molestia de 4 sobre 10 en rodilla/.test(tt) && /Nadie te lo contesta uno a uno/.test(tt)
       && (await tras.locator('.sinco-dolor a[href*="semaforo-dolor"]').count()) === 1,
       'enviado: «Qué pasa ahora con tu check-in» (dónde queda, que la app lo usa, su molestia y que nadie lo contesta) y el semáforo del dolor');
     await mirar('check-in enviado');
@@ -1137,14 +1139,25 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await nec.scrollIntoViewIfNeeded().catch(() => {});
     check((await nec.locator('.ayu-nec').count()) === 13 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && /Mis pruebas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
       'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, (v0.254) «Más herramientas» y (v0.255) «Mis pruebas» (ni lo apagado, ni el directo, que está oculto, ni su medicación: no toma)');
-    // (v0.247) «Me duele algo»: dónde y cuánto → qué hacer con su plan mientras tanto (los textos de su check-in); y de ahí, a su respuesta
+    // (v0.256) «Me duele algo», con el motor de molestias: dónde (las zonas del cuestionario de lesiones) y cuánto, de 0 a 10 con
+    // el semáforo → qué hacer con su plan; las señales para parar y consultar; apuntarla (la demo tiene la 109) y sus molestias
+    // abiertas; y de ahí, a su respuesta
     await nec.getByRole('button', { name: 'Me duele algo' }).click();
     const hMol = p.locator('[aria-modal="true"]').last();
-    await hMol.locator('.vid-molestia').waitFor({ timeout: 15000 }).catch(() => {});
-    await hMol.getByRole('button', { name: 'Zona lumbar' }).click();
-    await hMol.getByRole('button', { name: 'Moderada' }).click();
-    check(/Con una molestia moderada: baja la carga, no pares del todo/.test(await hMol.locator('.vid-que').textContent().catch(() => '')) && /hasta 5 sobre 10/.test(await hMol.textContent()) && /Nada de esto se guarda/.test(await hMol.textContent()),
-      '«Me duele algo»: con la zona y la intensidad, qué hacer con su plan mientras tanto (sin guardar nada)');
+    await hMol.locator('.dol-hoja').waitFor({ timeout: 15000 }).catch(() => {});
+    await hMol.locator('.dol-zonas').getByRole('button', { name: 'Rodilla' }).click();
+    await hMol.getByRole('button', { name: '4 de 10' }).click();
+    const queMol = await hMol.locator('.dol-que').textContent().catch(() => '');
+    check(/Ámbar: sigue, con margen/.test(queMol) && /hasta 3 sobre 10/.test(queMol) && !/hasta 5 sobre 10/.test(await hMol.textContent()) && (await hMol.locator('.dol-n').count()) === 11,
+      '«Me duele algo» (v0.256): con la zona y de 0 a 10, qué hacer con su plan según el semáforo (en ámbar, con el margen de Pelayo: hasta 3)');
+    const hinchazon = hMol.locator('.dol-check', { hasText: 'Mucha hinchazón' }).locator('input');
+    await hinchazon.check().catch(() => {});
+    check(/Para y consulta ya, sin esperar/.test(await hMol.locator('.dol-para').textContent().catch(() => '')), 'con una señal para parar (mucha hinchazón): «Para y consulta ya»');
+    await hinchazon.uncheck().catch(() => {});
+    await hMol.getByRole('button', { name: 'Apuntarla' }).click();
+    const conTuyas = await hMol.locator('.dol-tuyas').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check(conTuyas && /Rodilla: 4 de 10, ámbar/.test(await hMol.locator('.dol-tuyas').textContent().catch(() => '')) && /Apuntada/.test(await hMol.textContent()),
+      'apuntada: en «Tus molestias abiertas», la rodilla a 4 (ámbar)');
     await desborda(p, '«Me duele algo»');
     await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
     let hoja = p.locator('[aria-modal="true"]').last();
@@ -1598,10 +1611,11 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     if (conNec) {
       await nec.getByRole('button', { name: 'Me duele algo' }).click();
       const hMol = p.locator('[aria-modal="true"]').last();
-      await hMol.locator('.vid-molestia').waitFor({ timeout: 15000 }).catch(() => {});
-      await hMol.getByRole('button', { name: 'Hombros' }).click();
-      await hMol.getByRole('button', { name: 'Leve' }).click();
-      check(/Con una molestia leve: puedes seguir/.test(await hMol.locator('.vid-que').textContent().catch(() => '')), 'una molestia leve: puede seguir, con la regla del semáforo');
+      await hMol.locator('.dol-hoja').waitFor({ timeout: 15000 }).catch(() => {});
+      await hMol.locator('.dol-zonas').getByRole('button', { name: 'Hombro' }).click();
+      await hMol.getByRole('button', { name: '1 de 10' }).click();
+      check(/Verde: puedes seguir con tu plan/.test(await hMol.locator('.dol-que').textContent().catch(() => '')) && /hasta 3 sobre 10/.test(await hMol.locator('.dol-que').textContent().catch(() => '')),
+        '(v0.256) una molestia en verde: puede seguir, con la regla del semáforo (y el margen de Pelayo)');
       await hMol.getByRole('button', { name: '¿Cuándo preocuparse?' }).click();
       const hoja = p.locator('[aria-modal="true"]').last();
       await hoja.locator('.ayu-p[open]').waitFor({ timeout: 10000 }).catch(() => {});

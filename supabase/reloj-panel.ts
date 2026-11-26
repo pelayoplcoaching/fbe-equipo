@@ -242,7 +242,7 @@ var ZONAS = [
   ["aductor", "Aductor"],
   ["otra", "Otra zona"]
 ];
-var NOMBRE_ZONA = Object.fromEntries(ZONAS);
+var NOMBRE_ZONA = Object.fromEntries([["cuello", "Cuello"], ["hombro", "Hombro"], ["codo", "Codo"], ["muneca_mano", "Muñeca o mano"], ["cadera", "Cadera"], ["rodilla", "Rodilla"], ["tobillo_pie", "Tobillo o pie"], ...ZONAS]);
 var GRUPOS = [
   ["pectoral", "Pectoral"],
   ["espalda", "Espalda"],
