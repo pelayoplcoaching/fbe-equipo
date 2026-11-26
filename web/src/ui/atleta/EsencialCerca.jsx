@@ -116,7 +116,8 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
           </div>
         </section>
       )}
-      {ritmo && !ritmoFuera && (
+      {/* (v0.260) con el plan mínimo encendido, lo ofrece la constancia (EsencialConstancia.jsx) en lugar de esta tarjeta */}
+      {ritmo && !ritmoFuera && !encendido('plan_minimo', previa) && (
         <section class="nota-coach cer-ritmo" aria-label="¿Lo ajustamos?">
           <Icono n="calendario" />
           <div class="pila-s">

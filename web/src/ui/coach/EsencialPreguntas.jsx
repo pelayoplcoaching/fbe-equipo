@@ -8,6 +8,7 @@ import { fechaLarga } from '../../logica/esencial-alta.js';
 import { hoyISO, diasEntre, fechaMadrid } from '../../logica/fechas.js';
 import { aQuienEscribir, comoVamosResumen } from '../../logica/esencial-cerca.js';
 import { resumenCoach } from '../../logica/esencial-vida.js';
+import { nivelDeResumen, ordenRiesgo, NOMBRE_NIVEL } from '../../logica/constancia.js';
 import * as datos from '../../datos/api-esencial.js';
 
 // (para el panel del coach) Las preguntas para el directo: verlas juntas, contestarlas y, si quiere, hacerlas públicas
@@ -105,6 +106,36 @@ export function AQuienEscribir({ lista = [], abrir }) {
         ))}
       </ul>
       {ya.length > 0 && <p class="mini terciario">Ya les has escrito esta semana: {ya.map((f) => { const d = fechaMadrid(new Date(ultimo.get(f.atleta_id).escrito_en)); return `${f.nombre} (el ${d.slice(8, 10)}/${d.slice(5, 7)})`; }).join(', ')}.</p>}
+    </section>
+  );
+}
+
+// ---------- (v0.260, C11) La constancia esta semana: tus dos grupos, de más a menos riesgo, con su motivo ----------
+// (FBE Esencial: diez días sin entrenar, dos semanas flojas o el aviso de «sin entrenar»; con seguimiento, lo mismo con el
+// cumplimiento del panel en lugar de las semanas flojas). No envía nada: es para mirar.
+export function ConstanciaRiesgo({ lista = [], abrir }) {
+  const { backend } = useApp();
+  const hoy = hoyISO();
+  const activos = lista.filter((r) => r.estado !== 'baja' && r.estado !== 'invitado');
+  const ids = activos.filter((r) => r.modalidad === 'por_su_cuenta').map((r) => r.atleta_id);
+  const mas = useCarga(() => (ids.length ? datos.paraEscribir(backend, ids).catch(() => ({ flojos: {}, correos: {} })) : Promise.resolve({ flojos: {}, correos: {} })), [ids.join()], { recuerdo: `escribir-esencial:${ids.join()}` });
+  if (!mas.datos) return null;
+  const filas = ordenRiesgo(activos.map((r) => ({ atleta_id: r.atleta_id, nombre: r.nombre, modalidad: r.modalidad,
+    ...nivelDeResumen(r, hoy, { flojas: r.modalidad === 'por_su_cuenta' && mas.datos.flojos[r.atleta_id] ? 2 : 0 }) })));
+  return (
+    <section class="ecp-caja" data-ecp="constancia" aria-labelledby="ecp-cons-t">
+      <h2 id="ecp-cons-t" class="etq">La constancia esta semana ({filas.length})</h2>
+      {!filas.length ? <p class="peq secundario">Nadie se está torciendo esta semana.</p> : (
+        <ul class="ecp-lista">
+          {filas.map((f) => (
+            <li key={f.atleta_id} class="ecp-fila">
+              <span class="peq"><button type="button" class="btn-texto peq" onClick={() => abrir?.(f.atleta_id)}>{f.nombre}</button> <span class="mini terciario">· {f.motivo}</span></span>
+              <span class="mini secundario">{`Nivel ${f.nivel}, ${NOMBRE_NIVEL[f.nivel].toLowerCase()} · ${f.modalidad === 'por_su_cuenta' ? 'FBE Esencial' : 'con seguimiento'}`}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p class="mini terciario">De más a menos riesgo. Nivel 3: diez días o más sin entrenar (te toca escribirle; en FBE Esencial, el mensaje está en «A quién escribir»). Nivel 2: dos semanas flojas (la app le ofrece el plan mínimo). Nivel 1: unos días sin entrenar (la app le da un aviso suave).</p>
     </section>
   );
 }

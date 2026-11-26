@@ -28,6 +28,8 @@ import { Arte } from './EsencialArte.jsx';
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
 const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEjercicio', { mientras: null });
+// (v0.260, C5) su plan B (ui/atleta/EsencialConstancia.jsx)
+const PlanB = perezoso(() => import('./EsencialConstancia.jsx'), 'PlanB', { mientras: null });
 // (v0.255) «Tus pruebas», desde su punto de partida (con la 108)
 const HojaPruebas = perezoso(() => import('./EsencialPruebas.jsx'), 'HojaPruebas', { mientras: null });
 
@@ -159,6 +161,8 @@ function EsperaTarjeta({ p, cuestionario = null, irA = null, inicio }) {
           <button type="button" class="btn btn-peq" onClick={() => abrir('medico')}>Verlo</button>
         </div>
       )}
+      {/* (v0.260, C5; apagado) su plan B: a qué hora suele entrenar y qué hace si un día no puede */}
+      {conPlan && encendido('plan_b', previa) && <PlanB />}
       {/* (78) solo en la demo: la espera, día a día */}
       {modo === 'demo' && (
         <div class="lun-demo">

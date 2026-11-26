@@ -1,6 +1,7 @@
 // FBE Esencial (tanda 3): la propuesta del motor para la semana siguiente de quien va por su cuenta, lista para guardar.
 // Lógica pura (sin base de datos); se carga solo cuando hace falta (con el motor entero). La usa api.prepararSemanaEsencial.
 import { proponerSemana, entradaDesdeBloque, pautasDeSemana, paraElMotor, leerGuardadas, notaDeSemana, claseParaNota, emparejar, saltoDe } from './motor/index.js';
+import { reglasVueltaEsencial, segundaSemanaVuelta } from './constancia.js';
 import { semanaDesdePropuesta, planchaDeLaSemana, planchaEnTope, estancado, kilosBajada, planchaBajada, ESTANCADO } from './esencial-semana.js';
 import { num } from './calculos.js';
 import { estadoZonas } from './dolor.js';
@@ -84,13 +85,19 @@ export function estancadosIds(d, base) {
 export const NOTA_CONSERVAR = {
   suave: 'La semana pasada la pediste suave: esta repites la carga de antes, sin subir ni bajar nada.',
   duras: 'Tus dos últimas sesiones fueron muy duras: esta semana repites la carga, sin subir, para recuperarte.',
+  // (v0.260, C2, P: 'vuelta_esencial') después de más de 4 semanas parado, la vuelta dura dos semanas: la segunda repite la carga
+  vuelta2: 'Segunda semana de tu vuelta: repites la carga de la semana pasada, sin subir. La que viene, la app vuelve a subir.',
 };
+const FRENO_CONSERVAR = { suave: 'suave', duras: 'dos_duras', vuelta2: 'vuelta_dos' };
 export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}, atleta = {}, checkins = [], molestias = [], hoy, extras = null }) {
   const guardadas = paraElMotor(leerGuardadas(atleta?.reglas_motor ?? null));
   // (las reglas van por capas: la del atleta manda sobre las de FBE; si Pelayo ya le hubiera puesto la suya, se respeta)
-  const suyas = extras?.molestiaFrena
+  let suyas = extras?.molestiaFrena
     ? { ...guardadas, reglas: { ...guardadas.reglas, atleta: { ...(guardadas.reglas?.atleta || {}), molestias: guardadas.reglas?.atleta?.molestias ?? 'moderada' } } }
     : guardadas;
+  // (v0.260, C2, P: 'vuelta_esencial') la vuelta tras un parón con la escala de Pelayo: desde 2 semanas parado, una serie menos
+  // y un 10 % menos; desde más de 4, un 20 % menos (y la semana siguiente, otra de vuelta: repite la carga)
+  if (extras?.vueltaEsencial) suyas = { ...suyas, reglas: reglasVueltaEsencial(suyas.reglas || {}) };
   const entrada = entradaDesdeBloque({
     d, base, destino: null, ejercicios, hoy, checkins, molestias, reglas: suyas.reglas,
     atleta: { nivel: atleta?.nivel ?? 'novato', perfil: suyas.perfil, volumen_objetivo: atleta?.volumen_objetivo ?? null, modalidad: 'por_su_cuenta' },
@@ -111,8 +118,9 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   const normal = !descarga && (r.semana?.tipo || 'normal') === 'normal';
   const hechas = entrada.series || {};
   const soloKilos = tipo === 'novato';
-  if (NOTA_CONSERVAR[extras?.conservar] && !soloKilos && normal) {
-    const freno = extras.conservar === 'suave' ? 'suave' : 'dos_duras';
+  const conservar = extras?.conservar || (extras?.vueltaEsencial && !soloKilos && normal && segundaSemanaVuelta({ d, base }) ? 'vuelta2' : null);
+  if (NOTA_CONSERVAR[conservar] && !soloKilos && normal) {
+    const freno = FRENO_CONSERVAR[conservar] || 'dos_duras';
     const igual = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares: {}, soloKilos, ejercicios, hechas, normal: false, alternativas: atleta?.esencial_alternativas || {} });
     const campos = (x) => ({ kg: x.carga_sugerida_kg != null ? Number(x.carga_sugerida_kg) : null, min: x.reps_min ?? null, max: x.reps_max ?? null, series: x.series ?? null });
     const porque = [];
@@ -129,7 +137,7 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
         });
       });
     });
-    return { sesiones: igual, nota: NOTA_CONSERVAR[extras.conservar], descarga: false, preguntas: [], porque, semana: 'normal', conservada: extras.conservar };
+    return { sesiones: igual, nota: NOTA_CONSERVAR[conservar], descarga: false, preguntas: [], porque, semana: 'normal', conservada: conservar };
   }
   const semana = semanaDesdePropuesta({ sesiones, pautas: porSesion, pares, soloKilos, ejercicios, hechas, normal, alternativas: atleta?.esencial_alternativas || {} });
   // (Pelayo, 25/11) Si un ejercicio lleva tres semanas igual y el motor vuelve a proponer lo mismo: un 10 % menos para

@@ -15,7 +15,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const sumar = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 console.log('Lo apagado, en el panel (81)');
-check(revisarCompleto() && REVISAR.length === 30 && APAGADO.size === 5, `cada cosa apagada tiene su ficha en el panel, y las encendidas el 26/11 también, para sus textos (${REVISAR.length})`);
+check(revisarCompleto() && REVISAR.length === 37 && APAGADO.size === 12, `cada cosa apagada tiene su ficha en el panel, y las encendidas el 26/11 también, para sus textos (${REVISAR.length})`);
 check(REVISAR.every((x) => x.titulo && x.que && ['texto', 'regla', 'salud'].includes(x.tipo) && Array.isArray(x.ver) && x.ver.length === 2), 'con su título, qué hace, de qué tipo es y dónde verla en la demo');
 check(['molestia_frena', 'suave', 'dos_duras', 'variante', 'kilos_partida'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'regla') && ['enfermo', 'alarma', 'medico', 'salud_nueva'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'salud'),
   'las reglas nuevas, como reglas; lo de salud, como salud');

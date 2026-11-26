@@ -4197,6 +4197,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       // (110) no hace nada: dice que la base admite «¿Cómo llegas hoy?» de un toque
       if (nombre === 'preparacion_un_toque') return true;
+      // (111) no hace nada: dice que la base guarda lo de la constancia (el plan B y el plan mínimo)
+      if (nombre === 'constancia_111') return true;
       // (109) una molestia fuera del check-in (como en la base: quién puede, su consentimiento de salud, que valga y, si va
       // con una sesión, que sea suya); una por zona, día, momento y sesión: si ya estaba, se cambia su valor
       if (nombre === 'apuntar_dolor') {

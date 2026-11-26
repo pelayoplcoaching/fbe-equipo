@@ -27,6 +27,8 @@ import { necesitasComida, respuestasComida, checkinComida } from '../../logica/e
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
 const ComidaRevision = perezoso(() => import('./EsencialComidaMas.jsx'), 'ComidaRevision', { mientras: null });
+// (v0.260, C9) en «Tu suscripción», lo que puede hacer antes de irse (ui/atleta/EsencialConstancia.jsx)
+const AntesDeLaBaja = perezoso(() => import('./EsencialConstancia.jsx'), 'AntesDeLaBaja', { mientras: null });
 const HojaComida = perezoso(() => import('./EsencialComidaMas.jsx'), 'HojaComida', { mientras: null });
 
 // Lo apagado hasta que Pelayo lo vea (logica/esencial-respuestas.js: APAGADO) se enseña en la demo con «?previa=1»
@@ -602,6 +604,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
 // ---------- (v0.249, 92) «¿Por qué te vas?»: antes de ir a su suscripción, si quiere, el motivo (opcional) ----------
 export function HojaBaja({ alCerrar }) {
   const { backend, atleta, aviso } = useApp();
+  const previaBaja = usePrevia();
   const [motivo, setMotivo] = useState(null);
   const [texto, setTexto] = useState('');
   const [dicho, setDicho] = useState(false);
@@ -615,6 +618,8 @@ export function HojaBaja({ alCerrar }) {
       <div class="pila ayu-baja">
         <Arte id="esencial-suscripcion" />
         <p class="secundario">Desde tu suscripción puedes cambiar la tarjeta o darte de baja, con el correo con el que reservaste. Sigues dentro hasta el final del periodo pagado.</p>
+        {/* (v0.260, C9) antes de irse: una pausa, el plan mínimo o una rutina que encaje mejor */}
+        {encendido('antes_baja', previaBaja) && <AntesDeLaBaja alCerrar={alCerrar} />}
         {!dicho && (
           <>
             <strong class="peq">Si te vas, ¿nos dices por qué? Es opcional y ayuda a mejorar.</strong>

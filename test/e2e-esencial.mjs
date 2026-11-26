@@ -1341,17 +1341,17 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       const enApp = prv.locator('details.prv-enapp .prv-item');   // (plegado: por CSS, que cuenta también lo que no se ve)
       const nApagadas = await apagadas.filter({ has: p.locator('input[role="switch"]') }).count();
       const nEnApp = await enApp.count();
-      check(nApagadas === 5 && /5 cosas apagadas/.test(await prv.locator('summary.prv-cab').textContent()) && nEnApp === 25 && !(await enApp.locator('input[role="switch"]').count()),
-        `«Por revisar»: las 5 cosas apagadas, cada una con su interruptor (${nApagadas}), y las 25 encendidas en la app, aparte y sin interruptor (${nEnApp})`);
+      check(nApagadas === 12 && /12 cosas apagadas/.test(await prv.locator('summary.prv-cab').textContent()) && nEnApp === 25 && !(await enApp.locator('input[role="switch"]').count()),
+        `«Por revisar»: las 12 cosas apagadas (v0.260: con las siete de la constancia), cada una con su interruptor (${nApagadas}), y las 25 encendidas en la app, aparte y sin interruptor (${nEnApp})`);
       const sigue = apagadas.filter({ hasText: 'El seguimiento de una molestia' });
       await sigue.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /4 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const encendida = await p.waitForFunction(() => /11 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste El seguimiento de una molestia/.test(await reg.textContent()), 'al encender «El seguimiento de una molestia»: 4 apagadas y, en «Lo que has cambiado», «Encendiste El seguimiento de una molestia»');
+      check(encendida && conReg && /Encendiste El seguimiento de una molestia/.test(await reg.textContent()), 'al encender «El seguimiento de una molestia»: 11 apagadas y, en «Lo que has cambiado», «Encendiste El seguimiento de una molestia»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /5 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        const deshecho = await p.waitForFunction(() => /12 cosas apagadas/.test(document.querySelector('details.prv-caja > summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(deshecho && !(await sigue.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de El seguimiento de una molestia/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
       // sus textos: escribe la nota del lunes de la semana 1 (encendida en la app: la verían todos) y vuelve a la de la app
@@ -1884,6 +1884,87 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(conK && await p.getByText('Tus kilos de partida, guardados').waitFor({ timeout: 8000 }).then(() => true).catch(() => false), 'apunta sus kilos de partida y se guardan');
     }
     await desborda(p, 'la espera de Andrés');
+    await ctx.close();
+  }
+  // (v0.260, C5, vista previa) Lucía, antes de su lunes: su plan B
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Lucía/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(800);
+    await cerrar(p);
+    const pb = p.locator('[data-cns="planb"]');
+    const conPb = await pb.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(conPb && /Tu plan para cuando se tuerza/.test(await pb.textContent()), '(v0.260, vista previa) Lucía, antes de su lunes: «Tu plan para cuando se tuerza»');
+    if (conPb) {
+      await pb.getByRole('button', { name: 'Por la tarde' }).click();
+      await pb.getByRole('button', { name: 'Hago la sesión mínima' }).click();
+      await pb.getByRole('button', { name: 'Guardar mi plan B' }).click();
+      const hecho = p.locator('[data-cns="planb-hecho"]');
+      const conHecho = await hecho.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conHecho && /Tu plan B: Por la tarde\. Si un día vas justo, haces la sesión mínima/.test(await hecho.textContent()), 'elige su hora y qué hace si un día no puede, y queda guardado');
+    }
+    await desborda(p, 'el plan B de Lucía');
+    await ctx.close();
+  }
+  // (v0.260, C9 y C3, vista previa) Tomás, en «Tu suscripción»: antes del portal, una pausa, el plan mínimo o una rutina que
+  // encaje mejor; elige el plan mínimo y, en Hoy y en su sesión, lo principal con 2 series
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Tomás/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(1500);
+    await cerrar(p);
+    const seguir = p.getByRole('button', { name: 'Seguir', exact: true }).first();
+    if (await seguir.isVisible().catch(() => false)) { await seguir.click(); await p.waitForTimeout(400); }
+    const nec = p.locator('.ayu-necesitas');
+    const conNec = await nec.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    let elegido = false;
+    if (conNec) {
+      await nec.getByRole('button', { name: 'Otra cosa' }).click();
+      const h2 = p.locator('[aria-modal="true"]').last();
+      await h2.locator('.ayu-cat', { hasText: 'Tu suscripción' }).first().click();
+      const pBaja = h2.locator('.ayu-p[data-id="baja"]');
+      await pBaja.waitFor({ timeout: 10000 }).catch(() => {});
+      await pBaja.locator('summary').click();
+      await pBaja.getByRole('button', { name: /Tu suscripción/ }).click();
+      const hb = p.locator('[aria-modal="true"]').filter({ has: p.getByRole('link', { name: /Ir a mi suscripción/ }) }).last();
+      const antes = hb.locator('[data-cns="antes-de-irte"]');
+      const conAntes = await antes.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      await p.waitForFunction(() => document.querySelectorAll('[data-cns="antes-de-irte"] .cns-op').length === 3, null, { timeout: 10000 }).catch(() => {});
+      check(conAntes && (await antes.locator('.cns-op').count()) === 3 && /Antes de irte: ¿te lo ponemos más fácil\?/.test(await antes.textContent()),
+        '(v0.260, vista previa) en «Tu suscripción», antes del portal: una pausa, el plan mínimo o una rutina que encaje mejor');
+      if (conAntes) {
+        await antes.getByRole('button', { name: /Dos semanas con el plan mínimo/ }).click();
+        elegido = await antes.getByText(/Listo: estas dos semanas/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        check(elegido, 'elige el plan mínimo: dos semanas, y su suscripción sigue igual');
+        await desborda(p, 'antes de la baja');
+      }
+    } else check(false, '(v0.260) Tomás, con la vista previa: «¿Qué necesitas?»');
+    if (elegido) {
+      await p.reload();
+      await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+      await cerrar(p);
+      const pmHoy = p.locator('[data-cns="minimo-en-curso"]');
+      const conPm = await pmHoy.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      check(conPm && /Tu plan mínimo · semana 1 de 2/.test(await pmHoy.textContent()), 'en Hoy: «Tu plan mínimo · semana 1 de 2»');
+      await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+      const portada = p.locator('.portada-vista');
+      if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+      const linea = p.locator('[data-cns="sesion"]');
+      const conLinea = await linea.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+      const nEj = await p.locator('article.ejercicio').count();
+      check(conLinea && /Tu plan mínimo: lo principal/.test(await linea.textContent()) && nEj >= 2 && nEj <= 3, `y en su sesión, lo principal con 2 series (${nEj} ejercicios)`);
+      if (conLinea) {
+        await linea.getByRole('button', { name: 'Entrenar normal' }).click();
+        await p.waitForFunction(() => document.querySelectorAll('article.ejercicio').length >= 4, null, { timeout: 10000 }).catch(() => {});
+        check((await p.locator('article.ejercicio').count()) >= 4 && /Hoy entrenas con tu plan de siempre/.test(await linea.textContent()), '«Entrenar normal»: ese día, su sesión entera');
+      }
+    }
     await ctx.close();
   }
   // (v0.250, tanda 9) La comida, acompañada: Carmen (con nutrición; la app le ajustó el plan hace tres días). Con la vista

@@ -7,7 +7,7 @@ import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../.
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
-import { fijarAjustes, conDirecto } from '../../logica/esencial-respuestas.js';
+import { fijarAjustes, conDirecto, encendido } from '../../logica/esencial-respuestas.js';
 import { NOVATOS } from '../../logica/esencial-semana.js';
 import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUTO_098 } from '../../logica/esencial-cierre.js';
 import { Ilustracion } from '../Ilustraciones.jsx';
@@ -827,8 +827,14 @@ const CercaArriba = perezoso(() => import('./EsencialCerca.jsx'), 'CercaArriba',
 const CercaAbajo = perezoso(() => import('./EsencialCerca.jsx'), 'CercaAbajo', { mientras: null });
 // (v0.247) la vida real: de viaje, sus días de verdad, pasar a tres días, su objetivo… (ui/atleta/EsencialVida.jsx)
 const VidaArriba = perezoso(() => import('./EsencialVida.jsx'), 'VidaArriba', { mientras: null });
+// (v0.260) la constancia: el aviso suave, el plan mínimo, antes de la baja y la semana 6 (ui/atleta/EsencialConstancia.jsx;
+// solo se descarga con alguna de sus claves encendida)
+const ConstanciaArriba = perezoso(() => import('./EsencialConstancia.jsx'), 'ConstanciaArriba', { mientras: null });
+const CLAVES_CONSTANCIA = ['constancia_aviso', 'plan_minimo', 'antes_baja', 'revision_6'];
 export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA }) {
-  const { atleta, backend } = useApp();
+  const { atleta, backend, modo } = useApp();
+  let previaHoy = false;
+  try { previaHoy = modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { /* */ }
   // (v0.249, tanda 8; migración 103) lo que Pelayo ha encendido o escrito en su panel: se lee al abrir Hoy y lo usan todas
   // las tarjetas (encendido(), textoAjuste()); sin la 103, nada cambia
   const ajustes = useCarga(() => import('../../datos/api-esencial.js').then((d) => d.ajustesMios(backend)).catch(() => []), [atleta.id], { recuerdo: `esencial-ajustes:${atleta.id}` });
@@ -839,6 +845,8 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
     <>
       {/* (v0.246) el saludo del día y, si toca, las agujetas, la vuelta tras unos días sin entrenar o un plan más corto */}
       {conPlan && <CercaArriba p={p} cuestionario={cuestionario} recargar={recargar} abrirSesion={abrirSesion} />}
+      {/* (v0.260) cuando se tuerce: el aviso suave, el plan mínimo, «¿Te lo ponemos más fácil?» y la semana 6 */}
+      {conPlan && CLAVES_CONSTANCIA.some((k) => encendido(k, previaHoy)) && <ConstanciaArriba p={p} cuestionario={cuestionario} recargar={recargar} />}
       {/* (v0.248) la primera semana que se le tuerce, su porqué (el que escribió antes de empezar) */}
       {conPlan && <PorqueVuelve p={p} />}
       {/* (v0.247) lo que la app le ha organizado: su viaje, sus días de verdad, pasar a tres días, su objetivo… */}

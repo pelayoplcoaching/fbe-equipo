@@ -140,7 +140,7 @@ check(/La semana pasada la pediste suave/.test(explicar({ frenos: ['suave'], tip
   const vida = lee('web/src/ui/atleta/EsencialVida.jsx'), ayuda = lee('web/src/ui/atleta/EsencialAyuda.jsx');
   check(/encendido\('suave', previa\) \? suaveDe/.test(vida) && /encendido\('molestia_sigue', previa\) && !conMotorDolor && mol/.test(vida) && /encendido\('salud_al_dia', previa\)/.test(vida) && /encendido\('variante', previa\)/.test(vida)
     && /if \(!encendido\('alarma', previa\)\) return null/.test(vida) && /encendido\('alarma', previaAlarma\) && <Alarma/.test(ayuda), 'en la app, cada una sale solo si está encendida (v0.257: el seguimiento de una molestia, el de siempre solo sin el motor de molestias)');
-  check(/if \(!on\('molestia_frena'\) && !on\('suave'\) && !on\('dos_duras'\) && !on\('molestias_zona'\) && !on\('descarga_senales'\)\) return null;/.test(lee('web/src/datos/api-esencial.js')), 'y, con las cuatro reglas apagadas (v0.257: y el motor de molestias), al motor no le llega nada');
+  check(/if \(!on\('molestia_frena'\) && !on\('suave'\) && !on\('dos_duras'\) && !on\('molestias_zona'\) && !on\('descarga_senales'\) && !on\('vuelta_esencial'\)\) return null;/.test(lee('web/src/datos/api-esencial.js')), 'y, con las cuatro reglas apagadas (v0.257: y el motor de molestias), al motor no le llega nada');
 }
 
 console.log('\nEn la demo: Tomás, de la semana 5 a la 7');

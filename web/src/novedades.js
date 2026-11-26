@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.260': {
+    // (la constancia de FBE Esencial, C1 a C11, con la migración 111; apagada hasta su visto bueno)
+    atleta: [],
+    coach: [
+      'FBE Esencial: la constancia, apagada en «Por revisar»: aviso suave, plan mínimo, plan B, semana 6, antes de la baja y tu escala de vuelta.',
+      'En tu panel, «La constancia esta semana»: tus dos grupos de más a menos riesgo, con su motivo. Los avisos al móvil, con la migración 111.',
+    ],
+  },
   '0.259': {
     // (lo apagado de FBE Esencial, encendido salvo dos; y tres reglas del día a día, D6, D9 y D10, apagadas hasta su visto bueno)
     atleta: [],

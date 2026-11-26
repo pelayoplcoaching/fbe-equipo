@@ -159,7 +159,11 @@ export const APAGADO = new Set([
   'molestia_sigue', 'molestia_frena',
   // (v0.259, el día a día) la segunda serie de cada ejercicio sale de cómo fue la primera (D6), una descarga por señales si
   // llega antes que la de su plantilla (D9) y, con 20-30 minutos, la sesión corta con superseries (D10)
-  'primera_serie', 'descarga_senales', 'sesion_corta']);
+  'primera_serie', 'descarga_senales', 'sesion_corta',
+  // (v0.260, la constancia) el aviso suave cuando se le pasan dos sesiones (C1), la vuelta con la escala de Pelayo (C2), el
+  // plan mínimo (C3), los avisos de constancia del móvil (C4, con la migración 111), su plan B (C5), la revisión de la
+  // semana 6 (C7) y lo de antes de la baja (C9)
+  'constancia_aviso', 'vuelta_esencial', 'plan_minimo', 'avisos_constancia', 'plan_b', 'revision_6', 'antes_baja']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)

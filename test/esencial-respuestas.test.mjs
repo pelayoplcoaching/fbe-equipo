@@ -30,10 +30,10 @@ check(JSON.stringify(salud) === JSON.stringify(['agujetas', 'dolor', 'enfermedad
 check(/para y habla con tu médico/.test(respuestaDe('dolor').r) && /La app no valora el dolor/.test(respuestaDe('dolor').r), 'y «¿Y si me duele algo?» conserva las señales para parar y que la app no valora el dolor');
 
 console.log('\nLo apagado hasta que Pelayo lo vea');
-check(APAGADO.size === 5 && ['molestia_sigue', 'molestia_frena', 'primera_serie', 'descarga_senales', 'sesion_corta'].every((k) => APAGADO.has(k) && !encendido(k) && encendido(k, true))
+check(APAGADO.size === 12 && ['molestia_sigue', 'molestia_frena', 'primera_serie', 'descarga_senales', 'sesion_corta', 'constancia_aviso', 'vuelta_esencial', 'plan_minimo', 'avisos_constancia', 'plan_b', 'revision_6', 'antes_baja'].every((k) => APAGADO.has(k) && !encendido(k) && encendido(k, true))
   && ['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia', 'enfermo', 'salud_al_dia', 'alarma', 'suave', 'dos_duras', 'variante', 'kilos_partida', 'medico',
     'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida', 'salud_comida', 'molestias_zona', 'como_llegas'].every((k) => !APAGADO.has(k) && encendido(k))
-  && encendido('otra_cosa'), 'lo apagado (26/11: Pelayo encendió 25; quedan cinco: las dos que sustituye el motor de molestias y las tres reglas nuevas del día a día); la vista previa lo enciende');
+  && encendido('otra_cosa'), 'lo apagado (26/11: Pelayo encendió 25; quedan las dos que sustituye el motor de molestias, las tres reglas nuevas del día a día y, v0.260, las siete de la constancia); la vista previa lo enciende');
 check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && PENDIENTES.every((p) => respuestas().some((x) => x.id === p.id && !x.pendiente)),
   `las ${PENDIENTES.length} respuestas de salud nuevas salen (encendidas el 26/11), sin la marca de pendiente`);
 check(respuestaDe('resfriado')?.pendiente === false, 'y se llega a ellas por su clave');

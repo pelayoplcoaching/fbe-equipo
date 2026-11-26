@@ -1,0 +1,45 @@
+/* FBE Esencial (v0.260): la constancia (EsencialConstancia.jsx). El aviso suave, el plan minimo, "Te lo ponemos mas facil?",
+   la revision de la semana 6, el plan B y lo de antes de irse. Solo clases cns-*, cada regla en su propio elemento (una sola
+   clase; los estados, con su propia clase), sin tocar margenes ni tamanos de letra (eso lo ponen las clases comunes). */
+
+.cns-caja { min-width: 0; }
+.cns-sigo { justify-self: start; }
+
+/* Las opciones (antes de la baja): una tarjeta por opcion, con su frase */
+.cns-ops { display: flex; flex-wrap: wrap; gap: var(--esp-8); }
+.cns-op {
+  display: grid; gap: var(--esp-2); flex: 1 1 var(--esp-48); min-width: min(100%, 13rem); padding: var(--esp-10) var(--esp-12); text-align: left;
+  border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta);
+  font: inherit; cursor: pointer;
+  transition: border-color var(--mov-breve) ease, box-shadow var(--mov-breve) ease;
+}
+.cns-op:hover { border-color: var(--morado); }
+.cns-op:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.cns-op:disabled { cursor: progress; }
+
+/* Los botones de un toque (el plan B) */
+.cns-chip {
+  min-height: var(--esp-32); padding: var(--esp-4) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+}
+.cns-chip-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.cns-chip:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* El plan B y lo de antes de irse */
+.cns-planb { display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja-2); }
+
+/* La revision de la semana 6 */
+.cns-rev { min-width: 0; }
+.cns-cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); }
+.cns-cifra { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); font-variant-numeric: tabular-nums; }
+
+/* El plan minimo, en la sesion */
+.cns-linea {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-10); min-width: 0; padding: var(--esp-10) var(--esp-12);
+  border-left: var(--filo-marca) solid var(--morado); border-radius: var(--r-10); background: var(--morado-suave); color: var(--tinta);
+}
+.cns-linea-normal { border-left-color: var(--linea); background: var(--hoja-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cns-op { transition: none; }
+}

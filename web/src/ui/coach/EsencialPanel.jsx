@@ -18,6 +18,7 @@ import { perezoso } from '../perezoso.jsx';
 const PreguntasDirecto = perezoso(() => import('./EsencialPreguntas.jsx'), 'PreguntasDirecto', { mientras: null });
 // (v0.246) a quién escribir (con el mensaje preparado) y lo que contestan a «¿Cómo vamos?»
 const AQuienEscribir = perezoso(() => import('./EsencialPreguntas.jsx'), 'AQuienEscribir', { mientras: null });
+const ConstanciaRiesgo = perezoso(() => import('./EsencialPreguntas.jsx'), 'ConstanciaRiesgo', { mientras: null });
 const ComoVamosCoach = perezoso(() => import('./EsencialPreguntas.jsx'), 'ComoVamosCoach', { mientras: null });
 const ResumenSemana = perezoso(() => import('./EsencialPreguntas.jsx'), 'ResumenSemana', { mientras: null });
 // (v0.249, tanda 8) «Por revisar y el piloto»: lo apagado con su interruptor, las respuestas, el piloto y las herramientas
@@ -164,6 +165,8 @@ export function EsencialPanel({ lista = [], abrir, mandarCodigo }) {
       </div>}
       {suyos.length > 0 && <ResumenSemana />}
       {suyos.length > 0 && <AQuienEscribir lista={suyos} abrir={abrir} />}
+      {/* (v0.260, C11) la constancia de tus dos grupos, de más a menos riesgo */}
+      {suyos.length > 0 && <ConstanciaRiesgo lista={lista} abrir={abrir} />}
       {suyos.length > 0 && <PreguntasDirecto />}
       {suyos.length > 0 && <ComoVamosCoach />}
       {/* (v0.249, tanda 8) lo apagado, en tu mano, y el piloto de un vistazo */}

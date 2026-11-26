@@ -62,6 +62,8 @@ export function explicar(h) {
   // (v0.247, P: apagado) pidió la semana suave, o venía de dos sesiones muy duras: se repite la carga
   if (h.frenos?.includes('suave')) return con('igual', 'Se repite', 'La semana pasada la pediste suave: esta repites la carga de antes, sin subir ni bajar.');
   if (h.frenos?.includes('dos_duras')) return con('igual', 'Se repite', 'Tus dos últimas sesiones fueron muy duras (9 o 10): esta semana repites la carga, sin subir, para recuperarte.');
+  // (v0.260, C2) la segunda semana de una vuelta tras más de 4 semanas parado
+  if (h.frenos?.includes('vuelta_dos')) return con('vuelta', 'Vuelta, segunda semana', 'Segunda semana de tu vuelta: repites la carga de la semana pasada, sin subir. La que viene, la app vuelve a subir.');
   if (h.tipo === 'pregunta' || h.frenos?.includes('dato_raro') || h.diagnostico === 'dato_raro') {
     return con('igual', 'Se queda igual', 'Se queda igual: algo de lo que apuntaste parecía una errata y la app no lo ha usado para decidir.');
   }

@@ -52,6 +52,7 @@ import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga, caraDe } from '../../logica/preparacion.js';
 import { propuestaDelDia, aplicarPropuesta } from '../../logica/como-llegas.js';
+import { planMinimoDe, propuestaPlanMinimo } from '../../logica/constancia.js';
 import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
@@ -128,7 +129,7 @@ const ComoLlegas = perezoso(() => import('./ComoLlegas.jsx'), 'ComoLlegas', { mi
 const conAjusteDolor = (xs, aj) => (aj && Object.keys(aj).length ? xs.map((e) => (aj[e.id] ? { ...e, ...aj[e.id] } : e)) : xs);
 
 export function Sesion({ id, alCerrar, alLeer, salud = false }) {
-  const { api, atleta, cola, aviso, propio, modo } = useApp();
+  const { api, atleta, cola, aviso, propio, modo, backend } = useApp();
   // (personalización 2) cómo le hablamos: su nombre en el récord, la última serie y el final (también por voz)
   const trato = useTrato();
   // (v0.65) sin cobertura, de la copia del móvil; y en los dos casos, con lo que espera en la cola encima (lo apuntado sin
@@ -325,6 +326,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // (v0.259, D10, P: 'sesion_corta') con 20-30 minutos, «Hacerlo así»: los multiarticulares primero y el resto en superserie
   const cortaOn = esPorSuCuenta(atleta) && !propio && encendido('sesion_corta', previaDemo);
   const [corta, setCorta] = usePreferencia(`fbe-corta-${id}`, null);
+  // (v0.260, C3, P: 'plan_minimo') con el plan mínimo en marcha: lo principal, con 2 series (o, ese día, «Entrenar normal»)
+  const pmOn = esPorSuCuenta(atleta) && !propio && encendido('plan_minimo', previaDemo);
+  const notasPm = useCarga(() => (pmOn ? import('../../datos/api-constancia.js').then((m) => m.notasConstancia(backend, atleta.id)).catch(() => null) : Promise.resolve(null)), [atleta.id, pmOn], { recuerdo: `constancia-notas:${atleta.id}` });
+  const [pmNormal, setPmNormal] = usePreferencia(`fbe-pm-normal-${id}`, false);
   // En un día flojo o malo, si sube la carga o va con los pesos de la última vez (lo elige el atleta; se recuerda en el móvil)
   const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
   // v0.51: la portada antes de empezar; al tocar «Empezar» (o con alguna serie hecha) se pasa a la sesión de siempre
@@ -426,7 +431,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // (v0.258) con «Hacerlo así» de un día regular o malo, la sesión ajustada (lo ya hecho no desaparece)
   const enOrdenHoy = aplicarCorta(aplicarOrden(det.datos.ejercicios, ordenSes), cortaOn && !sesion.completada ? corta : null);
   const propDia = unToque && !sesion.completada && prep?.asi === true ? propuestaDelDia(prep, enOrdenHoy) : null;
-  const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
+  const planMin = pmOn ? planMinimoDe({ notas: notasPm.datos?.planMinimo || [], hoy: hoyISO() }) : null;
+  const propPm = planMin && !pmNormal && !sesion.completada ? propuestaPlanMinimo(enOrdenHoy) : null;
+  const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propPm || propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
   if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
@@ -869,6 +876,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       ) : preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} prep={prep} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
+      {/* (v0.260, C3) el plan mínimo en marcha: lo principal, con 2 series, o «Entrenar normal» ese día */}
+      {planMin && !sesion.completada && ejercicios.length > 0 && (
+        <div class={propPm ? 'cns-linea' : 'cns-linea cns-linea-normal'} role="status" data-cns="sesion">
+          <Icono n="pausa" />
+          <span class="peq">{propPm ? propPm.texto : 'Hoy entrenas con tu plan de siempre.'}</span>
+          <button type="button" class="btn-texto mini" onClick={() => setPmNormal(!pmNormal)}>{propPm ? 'Entrenar normal' : 'Volver al plan mínimo'}</button>
+        </div>
+      )}
       {/* (v0.257, P: 'molestias_zona') con una molestia abierta en lo que carga hoy: antes de empezar, el ajuste y el rojo */}
       {esPorSuCuenta(atleta) && !propio && !sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (
         <DolorEnSesion sesion={sesion} semana={semana} pautas={det.datos.ejercicios} ejerciciosPorId={ejerciciosPorId} sustitutos={sustitutos} hechas={hechas} alEstado={setDolorSes}
