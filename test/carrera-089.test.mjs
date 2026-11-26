@@ -34,7 +34,7 @@ const [ses] = await q(`insert into sesiones (semana_id, orden, nombre, tipo, car
   [w.id, JSON.stringify({ modalidad: 'carrera', tipo: 'larga', minutos: 60 }), sumarDias(hoy, -1), JSON.stringify({ modalidad: 'carrera', minutos: 62, km: 10 })]);
 
 console.log('La ficha de salud para correr (R44)');
-check(await api.carrera089() === true && await api.versionLegal() === VERSION_LEGAL && VERSION_LEGAL === '2026-12.42', 'con la 089 (y las 091, 093 y 094 de después): la app la ve y la política es la vigente, la 2026-12.42');
+check(await api.carrera089() === true && await api.versionLegal() === VERSION_LEGAL && VERSION_LEGAL === '2026-12.43', 'con la 089 (y las 091, 093, 094 y 105 de después): la app la ve y la política es la vigente, la 2026-12.42');
 const sinC = await api.guardarCarreraSalud(ana.id, { salud_riesgo: true, farmaco_pulso: true, farmaco_cambio: sumarDias(hoy, -20), prudente: true });
 const fila0 = (await q(`select * from carrera_atleta where atleta_id = $1`, [ana.id]))[0];
 check(sinC.sinConsentimiento && fila0 && fila0.salud_riesgo === null && fila0.farmaco_pulso === null && fila0.prudente === null,
