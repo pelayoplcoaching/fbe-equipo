@@ -113,7 +113,17 @@ const ex2 = await rpc({ ...D, salud: { embarazo: false } });
 await db.exec(superusuario);
 await db.query('update cuestionarios set otras = null where atleta_id = $1', [id.ana]);
 check(ex2.automatico === false && ex2.motivo === 'embarazo', 'embarazada en su cuestionario de entreno: tampoco');
+// (con una exclusión basta lo básico: el cuestionario para ahí, sin pedirle la cintura, el trabajo ni el objetivo)
 await como('ana');
+const ex3 = await rpc({ sexo: 'mujer', edad: 45, altura: 165, peso: 75, tca: false, salud: { lactancia: true } });
+await db.exec(superusuario);
+const s3 = (await db.query('select nutricion_salud from cuestionarios where atleta_id = $1', [id.ana])).rows[0];
+const per3 = (await db.query('select trabajo, objetivo from nutricion_perfiles where atleta_id = $1', [id.ana])).rows[0];
+check(ex3.automatico === false && ex3.motivo === 'lactancia' && s3.nutricion_salud.lactancia === true && per3.trabajo === 'sentado' && per3.objetivo === 'perder',
+  'con una exclusión y solo lo básico: sin plan, guarda su salud y no toca su perfil');
+await como('ana');
+// (salud null, como la manda la app con las preguntas de salud nuevas apagadas)
+check(/cintura/.test((await falla(() => rpc({ sexo: 'mujer', edad: 45, altura: 165, peso: 75, tca: false, salud: null })))?.message || ''), 'sin exclusión y sin cintura (y la salud a null): «Revisa tus datos: cintura…»');
 const sm = await rpc({ ...D, salud: { scoff: { control: true, domina: true } } });
 check(sm.automatico && sm.objetivo === 'mantener' && sm.ritmo_pct === 0 && sm.solo_mantener === true, 'SCOFF con 2 «sí»: solo mantener');
 const tc = await rpc({ ...D, tca: true });

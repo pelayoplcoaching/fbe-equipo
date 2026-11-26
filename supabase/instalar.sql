@@ -35337,13 +35337,14 @@ end $$;
 --      meta_peso?, meta_cintura?, composicion_metodo?, composicion_grasa?, masa_magra?, bebidas_semana?, forma_comer?,
 --      tomas?, cocina?, come_fuera?, pocos_hidratos?, alimentos_si?, alimentos_no?, tca (sí o no), salud? { embarazo,
 --      lactancia, renal, insulina, bariatrica, scoff: { vomito, control, perdida, gordura, domina } } }
--- Devuelve el plan (con su id, objetivo y desde) o { automatico: false, motivo } sin plan.
+-- Devuelve el plan (con su id, objetivo y desde) o { automatico: false, motivo } sin plan. Con una exclusión basta lo
+-- básico (sexo, edad, altura, peso, tca y salud): guarda su salud y su peso de hoy, sin perfil ni medidas.
 create or replace function public.nutricion_plan_motor(p jsonb, p_atleta uuid default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_id uuid := fbe_privado.esencial_comida_quien(p_atleta);
   v_hoy date := (now() at time zone 'Europe/Madrid')::date;
-  v_salud jsonb := p -> 'salud';
+  v_salud jsonb := nullif(p -> 'salud', 'null'::jsonb);   -- (un null de JSON es «sin salud»)
   v_tca boolean;
   v_edad double precision; v_altura double precision; v_peso double precision; v_cintura double precision; v_cadera double precision;
   v_imc double precision;
@@ -35362,12 +35363,11 @@ begin
   exception when others then
     raise exception 'Revisa tus datos' using errcode = '22023';
   end;
+  -- Lo básico, también para una exclusión (el cuestionario para ahí, sin pedirle lo demás): sexo, edad, altura, peso y la salud
   if coalesce(p ->> 'sexo', '') not in ('hombre', 'mujer') or v_edad is null or v_edad not between 18 and 90
      or v_altura is null or v_altura not between 130 and 220 or v_peso is null or v_peso not between 35 and 250
-     or v_cintura is null or v_cintura not between 45 and 200 or (v_cadera is not null and v_cadera not between 50 and 200)
-     or coalesce(p ->> 'trabajo', '') not in ('sentado', 'de_pie', 'fisico') or coalesce(p ->> 'objetivo', '') not in ('perder', 'mantener', 'ganar')
      or v_tca is null or not public.nutricion_salud_valida(v_salud) then
-    raise exception 'Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg), cintura (45 a 200 cm), tu trabajo, tu objetivo y la pregunta de salud' using errcode = '22023';
+    raise exception 'Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg) y la pregunta de salud' using errcode = '22023';
   end if;
   -- R35: sin plan automático
   v_imc := v_peso / ((v_altura / 100) * (v_altura / 100));
@@ -35385,6 +35385,16 @@ begin
   -- Lo de salud, en su cuestionario (y el antecedente, donde ya estaba)
   update public.cuestionarios set tca = v_tca, nutricion_salud = v_salud where atleta_id = v_id;
   if not found then raise exception 'Antes, el cuestionario' using errcode = '22023'; end if;
+  -- Con una exclusión, hasta aquí: su peso de hoy y, sin plan, el motivo
+  if v_motivo is not null then
+    insert into public.pesos (atleta_id, fecha, kg) values (v_id, v_hoy, round(v_peso::numeric, 2)) on conflict (atleta_id, fecha) do nothing;
+    return jsonb_build_object('automatico', false, 'motivo', v_motivo);
+  end if;
+  -- El resto, para calcular el plan: su cintura, su trabajo y su objetivo
+  if v_cintura is null or v_cintura not between 45 and 200 or (v_cadera is not null and v_cadera not between 50 and 200)
+     or coalesce(p ->> 'trabajo', '') not in ('sentado', 'de_pie', 'fisico') or coalesce(p ->> 'objetivo', '') not in ('perder', 'mantener', 'ganar') then
+    raise exception 'Revisa tus datos: cintura (45 a 200 cm), tu trabajo y tu objetivo' using errcode = '22023';
+  end if;
   -- El perfil (lo que no es de salud)
   begin
     insert into public.nutricion_perfiles (atleta_id, sexo, anio_nacimiento, altura, trabajo, pasos, dias_entreno, objetivo, ritmo_pct, experiencia,
@@ -35410,9 +35420,6 @@ begin
   insert into public.pesos (atleta_id, fecha, kg) values (v_id, v_hoy, round(v_peso::numeric, 2)) on conflict (atleta_id, fecha) do nothing;
   insert into public.medidas (atleta_id, fecha, cintura_cm, cadera_cm) values (v_id, v_hoy, round(v_cintura::numeric, 1), round(v_cadera::numeric, 1))
     on conflict (atleta_id, fecha) do update set cintura_cm = excluded.cintura_cm, cadera_cm = coalesce(excluded.cadera_cm, public.medidas.cadera_cm);
-  if v_motivo is not null then
-    return jsonb_build_object('automatico', false, 'motivo', v_motivo);
-  end if;
   v_plan := fbe_privado.nutricion_plan_calcular(p || jsonb_build_object('solo_mantener', v_solo, 'masa_magra', case when p ->> 'composicion_metodo' = 'dexa' then p -> 'masa_magra' end));
   insert into public.planes_nutricion (atleta_id, desde, modo, fase, ritmo_pct, kcal, proteina_g, carbos_g, grasa_g, fibra_g, mantenimiento, motivo)
   values (v_id, v_hoy, 'macros', v_plan ->> 'objetivo', (v_plan ->> 'ritmo_pct')::numeric, (v_plan ->> 'kcal')::int, (v_plan ->> 'proteina_g')::int,

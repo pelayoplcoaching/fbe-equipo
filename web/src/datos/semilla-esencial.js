@@ -16,7 +16,7 @@ import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
 import { filasPrimeras4, PRIMERAS_4, NOVATO_2, NOVATO_3, filasNovato3 } from '../logica/esencial-plantilla.js';
 import { sumarDias, lunesDe } from '../logica/fechas.js';
 import { datosComidaValidos, planComidaEsencial } from '../logica/esencial-nutricion.js';
-import { planMotor, datosMotorValidos, adherencia, scoffPositivo } from '../logica/nutricion-motor.js';
+import { planMotor, datosMotorValidos, seguridadNutricion, adherencia, scoffPositivo } from '../logica/nutricion-motor.js';
 
 // Los ejercicios de la guía con su nombre de la guía (la demo los añade si no están): grupos, tipo y si van por tiempo
 const EJERCICIOS_GUIA = [
@@ -394,12 +394,19 @@ export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
   const n = (v) => (v == null || v === '' ? null : Number(v));
   const salud = p.salud ?? null;
   const d = { sexo: p.sexo, edad: n(p.edad), altura: n(p.altura), peso: n(p.peso), cintura: n(p.cintura), trabajo: p.trabajo, objetivo: p.objetivo };
-  if (datosMotorValidos(d) || (p.cadera != null && p.cadera !== '' && !(n(p.cadera) >= 50 && n(p.cadera) <= 200)) || typeof p.tca !== 'boolean' || !saludValida(salud)) {
-    throw new Error('Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg), cintura (45 a 200 cm), tu trabajo, tu objetivo y la pregunta de salud');
+  // lo básico, también para una exclusión (como en la base)
+  if (datosMotorValidos({ ...d, cintura: 80, trabajo: 'sentado', objetivo: 'mantener' }) || typeof p.tca !== 'boolean' || !saludValida(salud)) {
+    throw new Error('Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg) y la pregunta de salud');
   }
   const c = t('cuestionarios').find((x) => x.atleta_id === atletaId);
   if (!c) throw new Error('Antes, el cuestionario');
   Object.assign(c, { tca: p.tca, nutricion_salud: salud });
+  // (el embarazo, también si lo marcó en su cuestionario de entreno)
+  const embarazo = !!salud?.embarazo || (p.sexo === 'mujer' && (c.otras || []).includes('embarazo'));
+  const seg = seguridadNutricion({ ...d, embarazo, lactancia: !!salud?.lactancia, renal: !!salud?.renal, insulina: !!salud?.insulina, bariatrica: !!salud?.bariatrica });
+  const pesoHoy = () => { if (!t('pesos').some((x) => x.atleta_id === atletaId && x.fecha === hoy)) t('pesos').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, kg: Math.round(d.peso * 100) / 100, notas: null }); };
+  if (!seg.automatico) { pesoHoy(); return { automatico: false, motivo: seg.motivo }; }
+  if (datosMotorValidos(d) || (p.cadera != null && p.cadera !== '' && !(n(p.cadera) >= 50 && n(p.cadera) <= 200))) throw new Error('Revisa tus datos: cintura (45 a 200 cm), tu trabajo y tu objetivo');
   const dexa = p.composicion_metodo === 'dexa' ? n(p.masa_magra) : null;
   const perfil = { atleta_id: atletaId, sexo: p.sexo, anio_nacimiento: Number(hoy.slice(0, 4)) - Math.floor(d.edad), altura: d.altura, trabajo: p.trabajo,
     pasos: tramoPasos(p.pasos), dias_entreno: Math.min(7, Math.max(0, Math.round(n(p.dias_entreno) || 0))), objetivo: p.objetivo, ritmo_pct: n(p.ritmo_pct), experiencia: p.experiencia || null,
@@ -408,13 +415,11 @@ export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
     pocos_hidratos: !!p.pocos_hidratos, alimentos_si: [...(p.alimentos_si || [])], alimentos_no: [...(p.alimentos_no || [])], actualizado_en: ahoraISO };
   const ya = t('nutricion_perfiles').find((x) => x.atleta_id === atletaId);
   if (ya) Object.assign(ya, perfil); else t('nutricion_perfiles').push(perfil);
-  if (!t('pesos').some((x) => x.atleta_id === atletaId && x.fecha === hoy)) t('pesos').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, kg: Math.round(d.peso * 100) / 100, notas: null });
+  pesoHoy();
   const med = t('medidas').find((x) => x.atleta_id === atletaId && x.fecha === hoy);
   const cad = n(p.cadera) != null ? Math.round(n(p.cadera) * 10) / 10 : null;
   if (med) Object.assign(med, { cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad ?? med.cadera_cm ?? null });
   else t('medidas').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad, pecho_cm: null, brazo_cm: null, muslo_cm: null, pantorrilla_cm: null, notas: null });
-  // (el embarazo, también si lo marcó en su cuestionario de entreno)
-  const embarazo = !!salud?.embarazo || (p.sexo === 'mujer' && (c.otras || []).includes('embarazo'));
   const plan = planMotor({ ...d, ritmo: n(p.ritmo_pct), experiencia: p.experiencia, diasEntreno: n(p.dias_entreno), pasos: n(p.pasos), pocosHidratos: !!p.pocos_hidratos,
     bebidasSemana: n(p.bebidas_semana), tomas: n(p.tomas), masaMagraDexa: dexa, tca: p.tca, scoff: salud?.scoff, embarazo, lactancia: !!salud?.lactancia,
     renal: !!salud?.renal, insulina: !!salud?.insulina, bariatrica: !!salud?.bariatrica });
