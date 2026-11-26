@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.255': {
+    // («Tus pruebas» de FBE Esencial: silla, equilibrio, cintura y altura, prensión y SPPB; migración 108)
+    atleta: [
+      'Tus pruebas: la silla, el equilibrio y tu cintura, en tu punto de partida y cada 12 semanas, con el antes y el ahora.',
+      'Con los rangos de las herramientas de la web y un informe para tu médico. En «¿Qué necesitas?», «Mis pruebas».',
+    ],
+    coach: [
+      'FBE Esencial: «Tus pruebas» (silla, equilibrio, cintura/altura, prensión y SPPB) y, en su ficha, sus resultados. Pide la 108.',
+    ],
+  },
   '0.254': {
     // (herramientas de la web y Pauta Activa en FBE Esencial, lo pequeño: «Más herramientas» y «Mi medicación y el ejercicio»; migración 107)
     atleta: [

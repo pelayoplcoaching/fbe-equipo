@@ -24,6 +24,9 @@ const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas
 // (v0.247) «Me voy de viaje», con fechas, y sus marcas de antes y de ahora (ui/atleta/EsencialVida.jsx)
 const AbrirViaje = perezoso(() => import('./EsencialVida.jsx'), 'AbrirViaje', { mientras: null });
 const HojaMarcasAhora = perezoso(() => import('./EsencialVida.jsx'), 'HojaMarcasAhora', { mientras: null });
+// (v0.255) «Tus pruebas»: la tarjeta cuando toca y su trozo en «Tu trimestre» (con la 108)
+const TarjetaPruebas = perezoso(() => import('./EsencialPruebas.jsx'), 'TarjetaPruebas', { mientras: null });
+const PruebasTrimestre = perezoso(() => import('./EsencialPruebas.jsx'), 'PruebasTrimestre', { mientras: null });
 
 function usePrevia() {
   const { modo } = useApp();
@@ -210,6 +213,7 @@ function HojaTrimestre({ p, cuestionario, alCerrar, recargar }) {
                 ))}
               </ul>
             )}
+            <PruebasTrimestre p={p} />
             <section class="pila-s" aria-labelledby="cer-sigue-t">
               <strong id="cer-sigue-t">Y ahora, ¿qué?</strong>
               {TRIMESTRE_SIGUE.map(([id, titulo, texto]) => (
@@ -301,6 +305,7 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
         </section>
       )}
       {toca && <ComoVamos momento={toca} n={n} alEnviar={() => notas.recargar(true)} />}
+      <TarjetaPruebas p={p} n={n} />
       {trimestre && (
         <section class="nota-coach cer-tri" aria-label="Tu trimestre">
           <Icono n="progreso" />

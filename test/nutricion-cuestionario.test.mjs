@@ -120,7 +120,7 @@ console.log('\nLa privacidad (2026-12.43, solo con la 105)');
 const legal = await import('../web/src/legal.js');
 const PN = await import('../web/src/logica/privacidad-novedades.js');
 const sec = legal.PRIVACIDAD.find((x) => x[0] === 'FBE Esencial con nutrición: tu cuestionario de nutrición')?.[1] || '';
-check(legal.VERSION_LEGAL_SIN_107 === '2026-12.43' && legal.VERSION_LEGAL_SIN_105 === '2026-12.42' && PN.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[1][2].length <= 260
+check(legal.VERSION_LEGAL_SIN_107 === '2026-12.43' && legal.VERSION_LEGAL_SIN_105 === '2026-12.42' && PN.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[2][2].length <= 260
   && PN.novedadesDesde('2026-12.42', '2026-12.43').length === 1, 'la versión 2026-12.43 (sin la 105, la 2026-12.42; v0.254: la de antes de la 107) y su novedad, corta');
 check(/tu cintura/.test(sec) && /año de nacimiento/.test(sec) && /cada 4 semanas/.test(sec) && /1\.500 kcal en mujeres/.test(sec) && /25 %/.test(sec) && /consentimiento/.test(sec)
   && /cinco preguntas/.test(sec) && /Descargar mis datos/.test(sec), 'su sección cuenta lo que se guarda, la revisión de cada 4 semanas con sus límites y las preguntas de salud (con el consentimiento)');
@@ -129,7 +129,7 @@ const priv = readFileSync(new URL('../web/src/logica/privacidad.js', import.meta
 check(/import\('\.\.\/logica\/privacidad-novedades\.js'\)/.test(aviso) && !/NOVEDADES_PRIVACIDAD = \[/.test(priv) && !/from '\.\/privacidad-novedades\.js'/.test(priv),
   'la lista de novedades, fuera de lo que se carga al abrir: la pide el aviso cuando sale (privacidad.js no la importa)');
 const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
-check(/'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta'\]\) out\[t\]/.test(apiSrc) && /VERSION_LEGAL_SIN_105/.test(apiSrc), 'su perfil de nutrición va en «Descargar mis datos»; la versión, según esté la 105');
+check(/'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas'\]\) out\[t\]/.test(apiSrc) && /VERSION_LEGAL_SIN_105/.test(apiSrc), 'su perfil de nutrición va en «Descargar mis datos»; la versión, según esté la 105');
 
 console.log('\nLos estilos');
 const css = readFileSync(new URL('../web/src/nutricion-motor.css', import.meta.url), 'utf8');

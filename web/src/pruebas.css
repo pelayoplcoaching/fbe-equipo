@@ -1,0 +1,109 @@
+/* FBE Esencial (v0.255): "Tus pruebas" (EsencialPruebas.jsx). La hoja (tu edad y tu sexo, la lista, cada prueba con su
+   cronometro y su resultado, y el informe para tu medico), la tarjeta de Hoy cuando toca y su trozo en "Tu trimestre".
+   Solo clases prb-*, cada regla en su propio elemento (una sola clase: los estados, con su propia clase y no con un
+   atributo), sin tocar margenes ni tamanos de letra (eso lo ponen las clases comunes en el JSX). */
+
+/* La hoja */
+.prb-hoja { min-width: 0; }
+.prb-volver { justify-self: start; }
+.prb-yo {
+  display: grid; gap: var(--esp-10); min-width: 0; padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2);
+}
+.prb-yo-f { display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr); align-items: end; gap: var(--esp-12); }
+.prb-edad { width: 100%; }
+.prb-check { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-8); min-width: 0; }
+.prb-borrar {
+  display: grid; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--aviso-borde); border-radius: var(--r-10);
+  background: var(--aviso-suave); color: var(--tinta);
+}
+.prb-fuentes { display: grid; gap: var(--esp-8); min-width: 0; padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); overflow-wrap: anywhere; }
+
+/* Como se hace */
+.prb-como { display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.prb-pasos { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-20); }
+.prb-aviso { padding-inline-start: var(--esp-10); border-left: var(--filo-marca) solid var(--aviso); color: var(--tinta-2); }
+
+/* El cronometro */
+.prb-reloj {
+  display: grid; place-items: center; align-content: center; gap: var(--esp-2); justify-self: center;
+  width: calc(var(--esp-48) * 3); aspect-ratio: 1; max-width: 100%; border: var(--filo-fuerte) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta);
+  transition: border-color var(--mov-breve) ease, background-color var(--mov-breve) ease;
+}
+.prb-fase-listo { border-color: var(--linea); }
+.prb-fase-prep { border-color: var(--oro); background: var(--oro-suave); }
+.prb-fase-corre { border-color: var(--morado); background: var(--morado-suave); }
+.prb-fase-fin { border-color: var(--ok-borde); background: var(--ok-suave); }
+.prb-reloj-n { line-height: 1; }
+.prb-botones { justify-content: center; }
+.prb-mas {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-12); width: 100%; min-height: calc(var(--esp-48) + var(--esp-16));
+  padding: var(--esp-12) var(--esp-20); border: 0; border-radius: var(--r-16); background: var(--morado); color: var(--sobre-morado); cursor: pointer;
+  box-shadow: var(--sombra-accion); text-align: start;
+  transition: transform var(--mov-instante) ease, opacity var(--mov-breve) ease;
+}
+.prb-mas:active { transform: scale(0.98); }
+.prb-mas:disabled { background: var(--hoja-3); color: var(--tinta-2); box-shadow: none; cursor: default; }
+.prb-campo { width: 100%; }
+.prb-apoyo { min-height: var(--esp-48); }
+
+/* Los intentos del equilibrio */
+.prb-dots { display: flex; justify-content: center; gap: var(--esp-8); }
+.prb-dot { width: var(--esp-12); height: var(--esp-12); border: var(--filo-medio) solid var(--linea); border-radius: var(--r-pildora); background: var(--hoja); }
+.prb-dot-ya { width: var(--esp-12); height: var(--esp-12); border: var(--filo-medio) solid var(--morado); border-radius: var(--r-pildora); background: var(--morado-suave); }
+.prb-dot-ok { width: var(--esp-12); height: var(--esp-12); border: var(--filo-medio) solid var(--ok); border-radius: var(--r-pildora); background: var(--ok); }
+.prb-dot-mal { width: var(--esp-12); height: var(--esp-12); border: var(--filo-medio) solid var(--aviso); border-radius: var(--r-pildora); background: var(--aviso-suave); }
+
+/* Campos en fila */
+.prb-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-12); }
+.prb-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-10); }
+
+/* El SPPB: sus tres pasos y lo que llevas */
+.prb-paso {
+  display: grid; gap: var(--esp-10); min-width: 0; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja);
+}
+.prb-partes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-8); }
+.prb-parte {
+  display: grid; justify-items: center; gap: var(--esp-2); padding: var(--esp-8); border: var(--filo-fino) dashed var(--linea); border-radius: var(--r-10);
+  color: var(--tinta-2);
+}
+.prb-parte-ya {
+  display: grid; justify-items: center; gap: var(--esp-2); padding: var(--esp-8); border: var(--filo-fino) solid var(--morado); border-radius: var(--r-10);
+  background: var(--morado-suave); color: var(--tinta);
+}
+
+/* El resultado, con el color de lo que salio */
+.prb-res {
+  display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta);
+}
+.prb-tono-alto { border-left-color: var(--ok); background: var(--ok-suave); }
+.prb-tono-medio { border-left-color: var(--morado); background: var(--morado-suave); }
+.prb-tono-bajo { border-left-color: var(--aviso); background: var(--aviso-suave); }
+.prb-tono-sin { border-left-color: var(--linea); background: var(--hoja-2); }
+.prb-cifra { line-height: 1; }
+.prb-antes { padding-top: var(--esp-6); border-top: var(--filo-fino) solid var(--linea); }
+.prb-guardar { justify-self: start; }
+
+/* El informe para tu medico */
+.prb-inf {
+  min-width: 0; max-height: 40vh; overflow: auto; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja-2); color: var(--tinta); white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit;
+}
+
+/* En "Tu trimestre": como su lista de ejercicios (cer-tri-*, que se queda en su trozo) */
+.prb-tri-l { list-style: none; padding: 0; display: grid; gap: var(--esp-6); }
+.prb-tri-f { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.prb-tri-n { min-width: 0; overflow-wrap: anywhere; }
+.prb-tri-x { color: var(--tinta-2); }
+.prb-tri-sube { color: var(--ok); }
+
+/* En Hoy */
+.prb-tarjeta { min-width: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .prb-reloj { transition: none; }
+  .prb-mas { transition: none; }
+  .prb-mas:active { transform: none; }
+}

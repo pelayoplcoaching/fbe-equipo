@@ -44,6 +44,7 @@ import './espera.css';
 import './panel-esencial.css';
 import './comida.css';
 import './nutricion-motor.css';
+import './pruebas.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

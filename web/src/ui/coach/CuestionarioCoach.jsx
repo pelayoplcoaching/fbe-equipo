@@ -102,6 +102,7 @@ export function EsencialCoach({ atleta, alCambiar }) {
         <div><dt>Cuestionario</dt><dd>{c.cargando && !q ? 'Cargando…' : cuest}</dd></div>
         <div><dt>Visto bueno médico</dt><dd>{visto}</dd></div>
         <div><dt>Su plan</dt><dd>{bl.cargando && !bl.datos ? 'Cargando…' : bloque ? `${bloque.nombre}${bloque.fecha_inicio ? `, desde el ${fechaLarga(bloque.fecha_inicio)}` : ''}` : 'Aún no tiene'}</dd></div>
+        <PruebasCoach atletaId={atleta.id} />
         {alts.length > 0 && <div><dt>Su gimnasio</dt><dd>{alts.map(([g, a]) => `${nombreEj[g] || '…'} → ${nombreEj[a] || '…'}`).join('; ')} <span class="terciario">(lo eligió para siempre)</span></dd></div>}
         {/* (093) con nutrición: su plan de comida lo calcula y lo ajusta la app; si dice tener o haber tenido un TCA, mantener */}
         {atleta.nutricion !== false && <div><dt>Comida</dt><dd>{q?.tca === true
@@ -164,6 +165,25 @@ export function ParaProgramar({ atleta }) {
         {d.resultado && d.resultado !== 'sin_valoracion' && <span class="texto-aviso">{RESULTADO_COACH[d.resultado][0]}.</span>}
       </div>
     </div>
+  );
+}
+
+// (v0.255, 108) Sus pruebas de FBE Esencial (silla, equilibrio, cintura/altura, prensión y SPPB): la última de cada una y la
+// anterior. Sin la 108 o sin pruebas, nada.
+function PruebasCoach({ atletaId }) {
+  const { backend } = useApp();
+  const d = useCarga(async () => {
+    const [api, P] = await Promise.all([import('../../datos/api-pruebas.js'), import('../../logica/esencial-pruebas.js')]);
+    const filas = (await api.hay108(backend).catch(() => false)) ? await api.pruebas(backend, atletaId).catch(() => []) : [];
+    return filas.length ? { filas, P } : null;
+  }, [atletaId]);
+  if (!d.datos) return null;
+  const { filas, P } = d.datos;
+  const u = P.ultimasPruebas(filas);
+  const xs = P.PRUEBAS.filter((k) => u[k]?.ultima);
+  return (
+    <div><dt>Sus pruebas</dt><dd>{xs.map((k) => `${P.NOMBRE_CORTO[k]}: ${P.valorTexto(k, u[k].ultima.valor)}${u[k].anterior ? ` (antes, ${P.valorTexto(k, u[k].anterior.valor)})` : ''}`).join('; ')}
+      <span class="terciario"> · las últimas, del {fechaLarga(String(filas[0].fecha).slice(0, 10))}</span></dd></div>
   );
 }
 

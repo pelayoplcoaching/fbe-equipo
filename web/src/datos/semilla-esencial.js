@@ -389,6 +389,38 @@ const SCOFF_CLAVES = ['vomito', 'control', 'perdida', 'gordura', 'domina'];
 const saludValida = (j) => j == null || (typeof j === 'object' && !Array.isArray(j) && Object.keys(j).every((k) => SALUD_CLAVES.includes(k))
   && Object.entries(j).every(([k, v]) => (k === 'scoff' ? v == null || (typeof v === 'object' && Object.entries(v).every(([k2, v2]) => SCOFF_CLAVES.includes(k2) && typeof v2 === 'boolean')) : typeof v === 'boolean')));
 const tramoPasos = (v) => { const x = Number(v) || 0; return x >= 10000 ? 10000 : x >= 7500 ? 7500 : x >= 5000 ? 5000 : 0; };
+// (v0.255, 108) «Tus pruebas»: una prueba como la deja guardar guardar_prueba() (sus límites y que el detalle cuadre con el
+// valor). Devuelve { prueba, valor, detalle, edad, sexo } o null si no vale
+export function pruebaDemo(p = {}) {
+  const PR = ['silla', 'equilibrio', 'cintura', 'prension', 'sppb'];
+  const esNum = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!p || typeof p !== 'object' || !PR.includes(p.prueba) || !esNum(p.valor)) return null;
+  const edad = p.edad == null ? null : p.edad, sexo = p.sexo || null;
+  if (edad != null && (!esNum(edad) || edad < 18 || edad > 110 || !Number.isInteger(edad))) return null;
+  if (sexo != null && !['hombre', 'mujer'].includes(sexo)) return null;
+  const d = p.detalle && typeof p.detalle === 'object' && !Array.isArray(p.detalle) ? p.detalle : null;
+  let valor = p.valor, detalle = null;
+  if (p.prueba === 'silla') { if (valor < 0 || valor > 60 || !Number.isInteger(valor)) return null; }
+  else if (p.prueba === 'equilibrio' || p.prueba === 'prension') {
+    const xs = d?.intentos;
+    if (!Array.isArray(xs) || xs.length < 1 || xs.length > 3 || !xs.every(esNum)) return null;
+    if (p.prueba === 'equilibrio' && (xs.some((x) => x < 0 || x > 10) || (xs.some((x) => x >= 10) ? valor !== 10 : xs.length !== 3 || valor !== Math.max(...xs)))) return null;
+    if (p.prueba === 'prension' && (xs.some((x) => x <= 0 || x >= 200) || valor !== Math.max(...xs))) return null;
+    detalle = { intentos: xs };
+  } else if (p.prueba === 'cintura') {
+    const c = d?.cintura, h = d?.altura;
+    if (!esNum(c) || !esNum(h) || c < 30 || c > 250 || h < 100 || h > 250 || Math.abs(valor - c / h) > 0.01) return null;
+    valor = Math.round((c / h) * 100) / 100;
+    detalle = { cintura: c, altura: h };
+  } else {
+    const x = d?.partes;
+    const ok = (v) => [0, 1, 2, 3, 4].includes(v);
+    if (!x || !ok(x.equilibrio) || !ok(x.marcha) || !ok(x.silla) || valor !== x.equilibrio + x.marcha + x.silla) return null;
+    detalle = { partes: { equilibrio: x.equilibrio, marcha: x.marcha, silla: x.silla } };
+  }
+  return { prueba: p.prueba, valor, detalle, edad, sexo };
+}
+
 export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
   quienComida(t, atletaId);
   const n = (v) => (v == null || v === '' ? null : Number(v));
@@ -630,6 +662,12 @@ export function sembrarEsencial(db, { hoy, lunesHoy, ahoraISO, uuid, usuario, ve
   }
   // Su peso, una vez por semana
   for (let k = 4; k >= 0; k--) db.pesos.push({ id: uuid(), atleta_id: tomas.id, fecha: k === 0 ? hoy : sumarDias(lunesHoy, -7 * k), kg: Math.round((86.4 - (4 - k) * 0.3) * 10) / 10, notas: null });
+  // (v0.255, 108) y sus pruebas de partida, la víspera de su lunes: «la vez anterior» cuando las repita
+  const partida = sumarDias(lunesHoy, -29);
+  t('pruebas_fisicas').push(
+    { id: uuid(), atleta_id: tomas.id, fecha: partida, prueba: 'silla', valor: 14, detalle: null, edad: 52, sexo: 'hombre', creado_en: `${partida}T19:00:00.000Z` },
+    { id: uuid(), atleta_id: tomas.id, fecha: partida, prueba: 'equilibrio', valor: 10, detalle: { intentos: [6.5, 10] }, edad: 52, sexo: 'hombre', creado_en: `${partida}T19:05:00.000Z` },
+    { id: uuid(), atleta_id: tomas.id, fecha: partida, prueba: 'cintura', valor: 0.54, detalle: { cintura: 96, altura: 178 }, edad: 52, sexo: 'hombre', creado_en: `${partida}T19:10:00.000Z` });
 
   // Clara: su cribado pide valoración médica (una enfermedad diagnosticada, sin hacer ejercicio) y ayer marcó que ya tiene
   // el visto bueno de su médico: le falta que Pelayo lo confirme. Su tanda empieza el lunes que viene.

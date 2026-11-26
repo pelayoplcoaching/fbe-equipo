@@ -50,8 +50,8 @@ console.log('\nNada apunta a una respuesta que no existe');
 const ids = new Set(RESPUESTAS.map((x) => x.id));
 check(DUDAS_EJERCICIO.length === 5 && DUDAS_EJERCICIO.every(([t, id]) => t && ids.has(id)), 'las cinco dudas de cada ejercicio');
 check(Object.values(DUDAS_PANTALLA).every((id) => ids.has(id)) && ['cierre', 'perdida', 'marcas', 'leccion', 'dias'].every((k) => DUDAS_PANTALLA[k]), 'el «¿Dudas?» de cada pantalla');
-check(NECESITAS.length === 15 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo|viaje|molestia|sitio|ejercicios|objetivo|enfermo|suave|medicacion|herramientas)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))),
-  '«¿Qué necesitas?»: quince cosas (v0.247 y, v0.254, su medicación y más herramientas), cada una con su respuesta o con lo que abre');
+check(NECESITAS.length === 16 && NECESITAS.every(([id, t, icono, que]) => id && t && icono && (/^accion:(dias|rutina|plan|directo|viaje|molestia|sitio|ejercicios|objetivo|enfermo|suave|medicacion|herramientas|pruebas)$/.test(que) || (que.startsWith('respuesta:') && ids.has(que.slice(10))))),
+  '«¿Qué necesitas?»: dieciséis cosas (v0.247; v0.254, su medicación y más herramientas; v0.255, sus pruebas), cada una con su respuesta o con lo que abre');
 {
   // (v0.247) lo que le sale a cada uno: sin plan, sin la tabla de notas, con todo y con la vista previa
   const de = (o) => necesitasPara(o).map((x) => x[0]).join();
@@ -61,7 +61,9 @@ check(NECESITAS.length === 15 && NECESITAS.every(([id, t, icono, que]) => id && 
   check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,herramientas', 'con todo: once (ni lo apagado ni el directo, que está oculto)');
   check(de({ con100: true, conPlan: true, conMedicacion: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,medicacion,herramientas' && de({ conMedicacion: true }) === 'viaje,duele,medicacion,herramientas',
     '(v0.254) «Mi medicación y el ejercicio», solo a quien dijo que toma medicación a diario (con plan o sin él)');
-  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo' && id !== 'medicacion').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
+  check(de({ con108: true }) === 'viaje,duele,pruebas,herramientas' && de({ con100: true, conPlan: true, con108: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,pruebas,herramientas',
+    '(v0.255) «Mis pruebas», solo con la 108 (donde se guardan; con plan o sin él)');
+  check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo' && id !== 'medicacion' && id !== 'pruebas').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
     'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100); el directo, tampoco ahí: no espera visto bueno');
 }
 

@@ -28,6 +28,8 @@ import { Arte } from './EsencialArte.jsx';
 const HojaTusDias = perezoso(() => import('./Esencial.jsx'), 'HojaTusDias', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
 const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEjercicio', { mientras: null });
+// (v0.255) «Tus pruebas», desde su punto de partida (con la 108)
+const HojaPruebas = perezoso(() => import('./EsencialPruebas.jsx'), 'HojaPruebas', { mientras: null });
 
 function usePrevia() {
   const { modo } = useApp();
@@ -384,8 +386,11 @@ export function HojaPorque({ alCerrar, alGuardar = null }) {
 
 // ---------- (68) Tu punto de partida ----------
 export function HojaPartida({ alCerrar, alHecho = null }) {
-  const { api, atleta, aviso } = useApp();
+  const { api, backend, atleta, aviso } = useApp();
   const [f, setF] = useState({ peso: '', cintura: '' });
+  // (v0.255) y sus pruebas, con la 108
+  const hay108 = useCarga(() => import('../../datos/api-pruebas.js').then((m) => m.hay108(backend)).catch(() => false), [atleta.id], { recuerdo: `esencial-108:${atleta.id}` });
+  const [pruebas, setPruebas] = useState(false);
   const [error, setError] = useState(null);
   const [ocupado, una] = useUnaVez();
   const guardarlo = () => una(async () => {
@@ -408,12 +413,19 @@ export function HojaPartida({ alCerrar, alHecho = null }) {
           <label class="pila-xs"><span class="etq">Peso (kg)</span><input class="entrada num" inputMode="decimal" value={f.peso} onInput={(ev) => setF({ ...f, peso: ev.currentTarget.value })} placeholder="70" /></label>
           <label class="pila-xs"><span class="etq">Cintura (cm)</span><input class="entrada num" inputMode="decimal" value={f.cintura} onInput={(ev) => setF({ ...f, cintura: ev.currentTarget.value })} placeholder="85" /></label>
         </div>
+        {hay108.datos === true && (
+          <div class="lun-extra" data-pruebas="partida">
+            <span class="peq">Y tus pruebas: levantarte de la silla, el equilibrio y tu cintura con tu altura. En «Tu trimestre» verás el antes y el ahora.</span>
+            <button type="button" class="btn btn-peq" onClick={() => setPruebas(true)}>Mis pruebas</button>
+          </div>
+        )}
         {error && <p class="error" role="alert">{error}</p>}
         <span class="fila-envolver">
           <button type="button" class="btn btn-primario" disabled={ocupado} onClick={guardarlo}><Icono n="bascula" /> Guardar</button>
           <button type="button" class="btn" onClick={() => { alHecho?.(); alCerrar(); }}>Prefiero no</button>
         </span>
       </div>
+      {pruebas && <HojaPruebas alCerrar={() => setPruebas(false)} alGuardada={() => alHecho?.()} />}
     </Hoja>
   );
 }

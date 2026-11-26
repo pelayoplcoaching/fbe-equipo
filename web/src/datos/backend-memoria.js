@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, planMotorDemo, revisionNutricionDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, planMotorDemo, revisionNutricionDemo, pruebaDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -423,6 +423,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     nutricion_revisiones: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // (107) su lista de medicación: la ve él (la escribe guardar_medicacion) y el coach
     medicacion_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (108) sus pruebas: las ve él (las escribe guardar_prueba) y el coach
+    pruebas_fisicas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -1432,7 +1434,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -3920,8 +3922,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
       if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_quitar
-      // (107) su lista de medicación: la borra él (al borrar sus respuestas de salud) o el coach
-      if (t === 'medicacion_atleta') {
+      // (107) su lista de medicación: la borra él (al borrar sus respuestas de salud) o el coach. (108) Sus pruebas, igual
+      if (t === 'medicacion_atleta' || t === 'pruebas_fisicas') {
         db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()))));
         persistirYa();
         return [];
@@ -4177,6 +4179,24 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         let fila = t.find((x) => x.atleta_id === id);
         if (fila) Object.assign(fila, { lista: limpia, version_base: version, confirmado_en: new Date().toISOString() });
         else { fila = { atleta_id: id, lista: limpia, version_base: version, confirmado_en: new Date().toISOString() }; t.push(fila); }
+        persistirYa();
+        return copia(fila);
+      }
+      // (108) una de sus pruebas (como en la base: quién puede, su consentimiento de salud y los límites de cada prueba)
+      if (nombre === 'guardar_prueba') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes guardar tus propias pruebas');
+        if (!buscar('atletas', id)) throw new Error('Ese atleta no existe');
+        if (!consentimientoDe(id)) throw new Error('Hace falta tu consentimiento de salud');
+        const r = pruebaDemo(args?.p);
+        if (!r) throw new Error('Esa prueba no vale');
+        const t = tabla('pruebas_fisicas');
+        const fecha = fechaMadrid();
+        let fila = t.find((x) => x.atleta_id === id && x.prueba === r.prueba && x.fecha === fecha);
+        const ahora = new Date().toISOString();
+        if (fila) Object.assign(fila, { valor: r.valor, detalle: r.detalle, edad: r.edad, sexo: r.sexo, creado_en: ahora });
+        else { fila = { id: uuid(), atleta_id: id, fecha, ...r, creado_en: ahora }; t.push(fila); }
         persistirYa();
         return copia(fila);
       }

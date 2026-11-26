@@ -260,6 +260,8 @@ export const NECESITAS = [
   ['suave', 'Necesito una semana suave', 'pausa', 'accion:suave', 'suave'],
   ['objetivo', 'Ponerme un objetivo', 'diana', 'accion:objetivo', 'notas'],
   ['plan', 'Entender mi plan', 'biblioteca', 'accion:plan', 'plan'],
+  // (v0.255) sus pruebas (silla, equilibrio, cintura y altura…): solo con la 108, que es donde se guardan
+  ['pruebas', 'Mis pruebas', 'progreso', 'accion:pruebas', 'pruebas'],
   // (v0.254) su medicación con los nombres de Pauta Activa (solo a quien dijo que toma medicación a diario) y las
   // herramientas de la web que no están en la app (a todos)
   ['medicacion', 'Mi medicación y el ejercicio', 'escudo', 'accion:medicacion', 'medicacion'],
@@ -269,9 +271,10 @@ export const NECESITAS = [
 ];
 export const SIN_NOTAS = { viaje: 'respuesta:viaje' };
 // Las opciones que le salen: con100 (¿está la tabla de notas?), conPlan (¿tiene su plan en marcha?), previa (lo apagado),
-// (v0.254) conMedicacion (¿dijo en sus preguntas de salud que toma medicación a diario?)
-export function necesitasPara({ con100 = false, conPlan = false, previa = false, conMedicacion = false } = {}) {
-  const sale = (pide) => !pide || (pide === 'notas' ? con100 : pide === 'plan' ? conPlan : pide === 'medicacion' ? conMedicacion
+// (v0.254) conMedicacion (¿dijo en sus preguntas de salud que toma medicación a diario?), (v0.255) con108 (¿está la tabla de
+// sus pruebas?)
+export function necesitasPara({ con100 = false, conPlan = false, previa = false, conMedicacion = false, con108 = false } = {}) {
+  const sale = (pide) => !pide || (pide === 'notas' ? con100 : pide === 'plan' ? conPlan : pide === 'medicacion' ? conMedicacion : pide === 'pruebas' ? con108
     : pide === 'directo' ? con100 && conDirecto()
       : encendido(pide, previa) && conPlan && (pide !== 'suave' || con100));
   return NECESITAS.filter(([, , , , pide]) => sale(pide))

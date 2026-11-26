@@ -516,6 +516,8 @@ const HojaEnfermo = perezoso(() => import('./EsencialVida.jsx'), 'HojaEnfermo', 
 // (v0.254) «Más herramientas» (las de la web) y «Mi medicación y el ejercicio» (con los nombres de Pauta Activa)
 const HojaHerramientas = perezoso(() => import('./EsencialHerramientas.jsx'), 'HojaHerramientas', { mientras: null });
 const HojaMedicacion = perezoso(() => import('./EsencialHerramientas.jsx'), 'HojaMedicacion', { mientras: null });
+// (v0.255) «Mis pruebas» (con la 108)
+const HojaPruebas = perezoso(() => import('./EsencialPruebas.jsx'), 'HojaPruebas', { mientras: null });
 const Alarma = perezoso(() => import('./EsencialVida.jsx'), 'Alarma', { mientras: null });
 
 // ---------- (7 y 14) «¿Qué necesitas?» en Hoy, y lo que abre cada aviso ----------
@@ -533,7 +535,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   }, []);
   const previa = usePrevia();
   // { tipo: 'respuestas' | 'plan' | 'dias' | 'rutina' | 'directo' | 'revision' | (v0.247) 'viaje' | 'molestia' | 'sitio' | 'ejercicios' | 'objetivo' | 'enfermo' | 'suave'
-  //   | (v0.254) 'herramientas' | 'medicacion', id? }
+  //   | (v0.254) 'herramientas' | 'medicacion' | (v0.255) 'pruebas', id? }
   const [hoja, setHoja] = useState(null);
   const hay100 = useCarga(() => datos.notas(backend, atleta.id, 'pregunta_directo').then((x) => x !== null).catch(() => false), [atleta.id], { recuerdo: `esencial-100:${atleta.id}` });
   const accion = (a) => {
@@ -559,7 +561,9 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const conPlan = !!p?.bloque;
   // (v0.254) «Mi medicación y el ejercicio», a quien dijo en sus preguntas de salud que toma medicación a diario
   const conMedicacion = Array.isArray(cuestionario?.otras) && cuestionario.otras.includes('medicacion');
-  const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa, conMedicacion });
+  // (v0.255) «Mis pruebas», con la 108 (donde se guardan)
+  const hay108 = useCarga(() => import('../../datos/api-pruebas.js').then((m) => m.hay108(backend)).catch(() => false), [atleta.id], { recuerdo: `esencial-108:${atleta.id}` });
+  const opciones = necesitasPara({ con100: hay100.datos === true, conPlan, previa, conMedicacion, con108: hay108.datos === true });
   // (v0.250, 103) las de comida, a quien tiene su plan de comida (lo apagado, solo en la vista previa)
   const comida = useComidaEsencial();
   const deComida = necesitasComida({ conPlan: !!comida?.plan, tca: !!comida?.tca, encendido: (k) => encendido(k, previa) });
@@ -589,6 +593,7 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
       {hoja?.tipo === 'comida' && <HojaComida que={hoja.id} alCerrar={cerrar} />}
       {hoja?.tipo === 'herramientas' && <HojaHerramientas cuestionario={cuestionario} alCerrar={cerrar} alMedicacion={() => setHoja({ tipo: 'medicacion' })} />}
       {hoja?.tipo === 'medicacion' && <HojaMedicacion cuestionario={cuestionario} alCerrar={cerrar} />}
+      {hoja?.tipo === 'pruebas' && <HojaPruebas p={p} alCerrar={cerrar} />}
     </section>
   );
 }

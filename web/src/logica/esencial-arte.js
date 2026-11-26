@@ -61,4 +61,9 @@ export const ARTE = [
   'esencial-agujetas', 'esencial-vuelta',
   // (v0.254) G · «Más herramientas» y «Mi medicación y el ejercicio» (EsencialHerramientas.jsx; sin imagen todavía)
   'esencial-herramientas', 'esencial-medicacion',
+  // (v0.255) G1 · «Tus pruebas»: la hoja y su tarjeta, cada prueba, el resultado y el informe para tu médico (EsencialPruebas.jsx;
+  // sin imagen todavía)
+  'esencial-pruebas', 'esencial-prueba-silla', 'esencial-prueba-equilibrio', 'esencial-prueba-prension', 'esencial-prueba-cintura', 'esencial-prueba-sppb',
+  'esencial-prueba-tandem', 'esencial-prueba-marcha', 'esencial-pruebas-resultado', 'esencial-pruebas-mejora', 'esencial-pruebas-otra-vez',
+  'esencial-pruebas-consulta', 'esencial-informe-medico',
 ];

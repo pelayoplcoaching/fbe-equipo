@@ -334,6 +334,14 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
     await cerrar(p);
     await p.waitForFunction(() => /Día 1/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
+    // (v0.255) en su primera semana, sin pruebas: «Tus pruebas de partida»; «Ahora no» la quita
+    const tarPr = p.locator('.prb-tarjeta');
+    const conTarPr = await tarPr.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    check(conTarPr && /Tus pruebas de partida/.test(await tarPr.textContent()) && (await tarPr.getAttribute('data-pruebas')) === 'partida', '(v0.255) Inés, en su primera semana y sin pruebas: «Tus pruebas de partida» en Hoy');
+    if (conTarPr) {
+      await tarPr.getByRole('button', { name: 'Ahora no' }).click();
+      check(await p.locator('.prb-tarjeta').count() === 0, 'y «Ahora no» la quita');
+    }
     const empezarSesion = async (nombre = null) => {
       // (la segunda, el mismo día: desde la lista de la semana, porque Hoy ya no ofrece «Adelantar»)
       if (nombre) {
@@ -450,6 +458,14 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(conListos && /Listos para el lunes \d+ de \w+: 0 de 2/.test(tListos) && /Andrés Mora/.test(tListos) && /Clara Prieto/.test(tListos) && /confirmar visto bueno/.test(tListos) && /días · avisos · gimnasio|avisos · gimnasio/.test(tListos),
       `en el panel, «Listos para el lunes»: 0 de 2, con lo que le falta a cada uno (${tListos.replace(/\s+/g, ' ').slice(0, 160)})`);
     await he.getByRole('button', { name: /^Cerrar/ }).first().click().catch(() => {});
+    // (v0.255) en la ficha de Tomás (Datos), sus pruebas de partida
+    await p.getByText('Tomás Rey').first().click();
+    await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
+    const conPrC = await p.waitForFunction(() => /Sus pruebas/.test(document.querySelector('section[aria-labelledby="esencial-coach"]')?.textContent || ''), null, { timeout: 15000 }).then(() => true).catch(() => false);
+    const tPrC = conPrC ? (await p.locator('section[aria-labelledby="esencial-coach"]').textContent()) || '' : '';
+    check(conPrC && /Silla: 14 veces; Equilibrio: 10 s; Cintura\/altura: 0,54/.test(tPrC), '(v0.255) en la ficha de Tomás (Datos): sus pruebas de partida');
+    await p.getByRole('button', { name: /Atletas/ }).first().click().catch(() => {});
+    await p.waitForTimeout(800);
     await p.getByText('Clara Prieto').first().click();
     await p.getByRole('tab', { name: 'Datos' }).click().catch(async () => { await p.getByRole('button', { name: 'Datos' }).first().click(); });
     const sec = p.locator('section[aria-labelledby="esencial-coach"]');
@@ -1119,8 +1135,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     // directo, que está oculto (FBE Esencial no tiene directos) hasta que Pelayo lo encienda en su panel
     const nec = p.locator('.ayu-necesitas');
     await nec.scrollIntoViewIfNeeded().catch(() => {});
-    check((await nec.locator('.ayu-nec').count()) === 12 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
-      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, y (v0.254) «Más herramientas» (ni lo apagado, ni el directo, que está oculto, ni su medicación: no toma)');
+    check((await nec.locator('.ayu-nec').count()) === 13 && /Me voy de viaje/.test(await nec.textContent()) && /Más herramientas/.test(await nec.textContent()) && /Mis pruebas/.test(await nec.textContent()) && !/Mi medicación/.test(await nec.textContent()) && !/Preguntar a Pelayo/.test(await nec.textContent()) && !/Estoy enfermo|semana suave/.test(await nec.textContent()),
+      'en Hoy, «¿Qué necesitas?»: lo que más se pregunta, a un toque, (v0.254) «Más herramientas» y (v0.255) «Mis pruebas» (ni lo apagado, ni el directo, que está oculto, ni su medicación: no toma)');
     // (v0.247) «Me duele algo»: dónde y cuánto → qué hacer con su plan mientras tanto (los textos de su check-in); y de ahí, a su respuesta
     await nec.getByRole('button', { name: 'Me duele algo' }).click();
     const hMol = p.locator('[aria-modal="true"]').last();
@@ -1157,6 +1173,44 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       'y «Tu camino»: está en «La app te prepara cada semana», con sus tres tramos anteriores hechos');
     await desborda(p, 'tu plan, explicado');
     await hoja.locator('.cerrar-hoja').click();
+    // (v0.255) «Mis pruebas»: las de su punto de partida; repetir la cintura (con su altura ya puesta y la vez anterior) y
+    // guardarla; la silla con su cuenta atrás y «+1 de pie»; y el informe para su médico
+    await nec.getByRole('button', { name: 'Mis pruebas' }).click();
+    const hPr = p.locator('[aria-modal="true"]').last();
+    const conPr = await hPr.getByText('Levantarte de la silla en 30 segundos').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const tPr = conPr ? await hPr.textContent() : '';
+    const filasPr = conPr ? await hPr.locator('.grupo-ios .fila-ios-titulo').allTextContents() : [];
+    check(conPr && /14 veces, el/.test(tPr) && /0,54, el/.test(tPr) && (await hPr.locator('input.prb-edad').inputValue()) === '52' && /La próxima vez, el/.test(tPr)
+      && filasPr.join() === 'Levantarte de la silla en 30 segundos,10 segundos sobre una pierna,Cintura y altura',
+      '(v0.255) «Mis pruebas»: las de su punto de partida (14 veces en la silla, 0,54 de cintura/altura), con su edad y su sexo y cuándo toca repetirlas (sin el SPPB, que es desde los 65, ni la prensión, sin dinamómetro)');
+    if (conPr) {
+      await desborda(p, '«Mis pruebas»');
+      await hPr.getByRole('button', { name: /^Cintura y altura/ }).click();
+      await hPr.locator('input.prb-campo').first().fill('92');
+      const res = hPr.locator('.prb-res');
+      await res.waitFor({ timeout: 5000 }).catch(() => {});
+      const tRes = await res.textContent().catch(() => '');
+      check(/0,52/.test(tRes) && /Aumentada \(0,5 a 0,59\)/.test(tRes) && /Grasa abdominal aumentada/.test(tRes) && /por debajo de 89 cm/.test(tRes) && /La vez anterior, el .*: 0,54, mejor que entonces/.test(tRes)
+        && (await hPr.locator('input.prb-campo').nth(1).inputValue()) === '178', 'la cintura, con su altura ya puesta: 0,52, «Grasa abdominal aumentada» (los textos de la web) y «mejor que entonces»');
+      await desborda(p, 'una prueba con su resultado');
+      await res.getByRole('button', { name: 'Guardar' }).click();
+      const guardada = await hPr.getByText(/^0,52, el/).waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(guardada, 'la guarda y vuelve a la lista, con la de hoy');
+      await hPr.getByRole('button', { name: /^Levantarte de la silla/ }).click();
+      await hPr.getByRole('button', { name: /Empezar/ }).click();
+      await p.waitForTimeout(3500);
+      for (let i = 0; i < 3; i++) await hPr.locator('.prb-mas').click();
+      check((await hPr.locator('input.prb-campo').inputValue()) === '3' && /segundos/.test(await hPr.locator('.prb-reloj').textContent()), 'la silla: tras la cuenta atrás de 3, «+1 de pie» cuenta cada vez que se levanta');
+      await hPr.getByRole('button', { name: /Parar/ }).click().catch(() => {});
+      await hPr.getByRole('button', { name: /Tus pruebas/ }).first().click();
+      await hPr.getByRole('button', { name: /Informe para tu médico/ }).click();
+      await p.waitForFunction(() => /Mi entreno/.test(document.querySelector('pre.prb-inf')?.textContent || ''), null, { timeout: 10000 }).catch(() => {});
+      const inf = await hPr.locator('pre.prb-inf').textContent().catch(() => '');
+      check(/^Resultados de mis pruebas físicas/.test(inf) && /Índice cintura\/altura \(NICE\): 0,52 \(cintura 92 cm, altura 178 cm\)/.test(inf) && /Anterior: 0,54/.test(inf) && /Mi entreno: fuerza con FBE Esencial desde el .*; [1-9]\d* sesiones? en las últimas 4 semanas/.test(inf)
+        && /Fuentes:/.test(inf) && !/Pelayo/.test(inf), 'y el informe para su médico: sus pruebas, la vez anterior, su entreno y las fuentes, sin el nombre de Pelayo');
+      await desborda(p, 'el informe para su médico');
+      await hPr.locator('.cerrar-hoja').click();
+    }
     // Un aviso que lleva a su explicación: «#hoy/lunes» abre la revisión
     await p.evaluate(() => { location.hash = '#hoy/lunes'; });
     const abierta = await p.locator('[aria-modal="true"] .ayu-revision').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
