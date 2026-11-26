@@ -116,6 +116,21 @@ check(porQueNoCambia({ plan: pm }, { hoy, tca: true }).clave === 'tca' && porQue
   'con antecedente de TCA, que no baja nunca; un plan de la 093, lo de siempre (cada semana)');
 check(comidaDeLaSemana({ plan: pm, planes: [pm] }, { hoy }).lineas.some((x) => x.k === 'motor'), 'y lo mismo en «Tu comida esta semana»');
 
+console.log('\nLa privacidad (2026-12.43, solo con la 105)');
+const legal = await import('../web/src/legal.js');
+const PN = await import('../web/src/logica/privacidad-novedades.js');
+const sec = legal.PRIVACIDAD.find((x) => x[0] === 'FBE Esencial con nutrición: tu cuestionario de nutrición')?.[1] || '';
+check(legal.VERSION_LEGAL === '2026-12.43' && legal.VERSION_LEGAL_SIN_105 === '2026-12.42' && PN.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[0][2].length <= 260
+  && PN.novedadesDesde('2026-12.42', '2026-12.43').length === 1, 'la versión 2026-12.43 (sin la 105, la 2026-12.42) y su novedad, corta');
+check(/tu cintura/.test(sec) && /año de nacimiento/.test(sec) && /cada 4 semanas/.test(sec) && /1\.500 kcal en mujeres/.test(sec) && /25 %/.test(sec) && /consentimiento/.test(sec)
+  && /cinco preguntas/.test(sec) && /Descargar mis datos/.test(sec), 'su sección cuenta lo que se guarda, la revisión de cada 4 semanas con sus límites y las preguntas de salud (con el consentimiento)');
+const aviso = readFileSync(new URL('../web/src/ui/AvisoPrivacidad.jsx', import.meta.url), 'utf8');
+const priv = readFileSync(new URL('../web/src/logica/privacidad.js', import.meta.url), 'utf8');
+check(/import\('\.\.\/logica\/privacidad-novedades\.js'\)/.test(aviso) && !/NOVEDADES_PRIVACIDAD = \[/.test(priv) && !/from '\.\/privacidad-novedades\.js'/.test(priv),
+  'la lista de novedades, fuera de lo que se carga al abrir: la pide el aviso cuando sale (privacidad.js no la importa)');
+const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
+check(/'esencial_notas', 'nutricion_perfiles'\]\) out\[t\]/.test(apiSrc) && /VERSION_LEGAL_SIN_105/.test(apiSrc), 'su perfil de nutrición va en «Descargar mis datos»; la versión, según esté la 105');
+
 console.log('\nLos estilos');
 const css = readFileSync(new URL('../web/src/nutricion-motor.css', import.meta.url), 'utf8');
 check(/^[\x00-\x7F]*$/.test(css) && !/margin|font-size|font-weight/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')) && (css.match(/^\.([a-z0-9-]+)/gm) || []).every((x) => /^\.nm-/.test(x)),
