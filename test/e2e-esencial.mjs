@@ -1191,11 +1191,23 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await nec.getByRole('button', { name: 'Mis pruebas' }).click();
     const hPr = p.locator('[aria-modal="true"]').last();
     const conPr = await hPr.getByText('Levantarte de la silla en 30 segundos').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    // Los títulos salen al momento; sus pruebas y su edad llegan después (en el Chrome de CI, más tarde): se esperan antes de leer
+    if (conPr) {
+      await p.waitForFunction(() => {
+        const h = [...document.querySelectorAll('[aria-modal="true"]')].pop();
+        return /14 veces, el/.test(h?.textContent || '') && /La próxima vez, el/.test(h?.textContent || '') && h?.querySelector('input.prb-edad')?.value === '52';
+      }, null, { timeout: 15000 }).catch(() => {});
+    }
     const tPr = conPr ? await hPr.textContent() : '';
     const filasPr = conPr ? await hPr.locator('.grupo-ios .fila-ios-titulo').allTextContents() : [];
-    check(conPr && /14 veces, el/.test(tPr) && /0,54, el/.test(tPr) && (await hPr.locator('input.prb-edad').inputValue()) === '52' && /La próxima vez, el/.test(tPr)
-      && filasPr.join() === 'Levantarte de la silla en 30 segundos,10 segundos sobre una pierna,Cintura y altura',
-      '(v0.255) «Mis pruebas»: las de su punto de partida (14 veces en la silla, 0,54 de cintura/altura), con su edad y su sexo y cuándo toca repetirlas (sin el SPPB, que es desde los 65, ni la prensión, sin dinamómetro)');
+    const edadPr = conPr ? await hPr.locator('input.prb-edad').inputValue().catch(() => '?') : '';
+    const okPr = conPr && /14 veces, el/.test(tPr) && /0,54, el/.test(tPr) && edadPr === '52' && /La próxima vez, el/.test(tPr)
+      && filasPr.join() === 'Levantarte de la silla en 30 segundos,10 segundos sobre una pierna,Cintura y altura';
+    if (!okPr) {
+      console.log('      · «Mis pruebas»:', JSON.stringify({ conPr, silla: /14 veces, el/.test(tPr), cintura: /0,54, el/.test(tPr), edad: edadPr, proxima: /La próxima vez, el/.test(tPr),
+        ocupada: await hPr.locator('.prb-hoja').getAttribute('aria-busy').catch(() => '?'), filas: filasPr, texto: tPr.replace(/\s+/g, ' ').slice(0, 700) }));
+    }
+    check(okPr, '(v0.255) «Mis pruebas»: las de su punto de partida (14 veces en la silla, 0,54 de cintura/altura), con su edad y su sexo y cuándo toca repetirlas (sin el SPPB, que es desde los 65, ni la prensión, sin dinamómetro)');
     if (conPr) {
       await desborda(p, '«Mis pruebas»');
       await hPr.getByRole('button', { name: /^Cintura y altura/ }).click();
