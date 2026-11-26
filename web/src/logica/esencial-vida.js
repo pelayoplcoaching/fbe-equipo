@@ -258,7 +258,7 @@ export const ENFERMO = {
 // ---------- (43, P: 'molestia_sigue') El seguimiento de una molestia, a los tres y a los siete días ----------
 // En este móvil solo se guarda la fecha en que lo dijo (ni la zona ni la intensidad).
 export const MOLESTIA_SIGUE = [
-  ['mejor', 'Mejor', 'Buena señal. Vuelve poco a poco a la carga de antes, sin prisa: que siga sin pasar de 5 sobre 10 y sin ir a más al día siguiente.'],
+  ['mejor', 'Mejor', 'Buena señal. Vuelve poco a poco a la carga de antes, sin prisa: que siga sin pasar de 3 sobre 10 y sin ir a más al día siguiente.'],
   ['igual', 'Igual', 'Sigue con la carga baja o con la alternativa una semana más. Si a las dos semanas no ha mejorado, que te la vean.'],
   ['peor', 'Peor', 'Para ese ejercicio y los que carguen esa zona, y consulta con un fisioterapeuta o con tu médico antes de seguir.'],
 ];

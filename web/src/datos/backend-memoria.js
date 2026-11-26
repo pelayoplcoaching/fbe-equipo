@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, planMotorDemo, revisionNutricionDemo, pruebaDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, planMotorDemo, revisionNutricionDemo, pruebaDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo, dolorDemo, molestiaValidaDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -164,7 +164,7 @@ const CASCADA = {
     ['conversacion_fijado', 'atleta_id'], ['chat_silencios', 'atleta_id'], ['listas_difusion_miembros', 'atleta_id'], ['encuestas_chat', 'atleta_id'], ['encuesta_votos', 'atleta_id'], ['video_revisiones', 'atleta_id'],
     ['recordatorios_tecnica', 'atleta_id'], ['video_autoevaluacion', 'atleta_id'], ['revisiones_semanales', 'atleta_id'],
     ['integraciones', 'atleta_id'], ['salud_diaria', 'atleta_id'], ['contacto_atleta', 'atleta_id'], ['salud_copias', 'atleta_id'],
-    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['carrera_mananas', 'atleta_id'], ['reloj', 'atleta_id'], ['esencial_notas', 'atleta_id']],
+    ['carrera_atleta', 'atleta_id'], ['carrera_eventos', 'atleta_id'], ['carrera_semanas', 'atleta_id'], ['carrera_revisiones', 'atleta_id'], ['carrera_mananas', 'atleta_id'], ['reloj', 'atleta_id'], ['esencial_notas', 'atleta_id'], ['medicacion_atleta', 'atleta_id'], ['pruebas_fisicas', 'atleta_id'], ['dolor_registros', 'atleta_id']],
   // Como la 035: la corrección se va con su vídeo; la lista de puntos clave, con su ejercicio
   archivos: [['video_revisiones', 'archivo_id'], ['video_autoevaluacion', 'archivo_id']],
   guias: [['fichas_ejercicio', 'guia_id']],
@@ -191,7 +191,7 @@ const CASCADA = {
   sesion_ejercicios: [['series', 'sesion_ejercicio_id']],
 };
 // Al borrar estas filas, los comentarios se quedan sin el enlace (on delete set null)
-const ANULAR = { objetivos: [['objetivos_propuestos', 'objetivo_id']], comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['objetivos_propuestos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id'], ['novedades', 'ejercicio_id']] };
+const ANULAR = { objetivos: [['objetivos_propuestos', 'objetivo_id']], comentarios: [['comentarios', 'responde_a']], comunidad_retos: [['comunidad_posts', 'reto_id']], sesiones: [['comunidad_posts', 'sesion_id'], ['dolor_registros', 'sesion_id']], comunidad_posts: [['comunidad_reportes', 'post_id']], comunidad_comentarios: [['comunidad_reportes', 'comentario_id'], ['comunidad_comentarios', 'responde_a'], ['comunidad_posts', 'mejor_comentario'], ['comunidad_preguntas', 'comentario_id']], recetas: [['menu_comidas', 'receta_id']], checkins: [['comentarios', 'checkin_id']], archivos: [['comentarios', 'archivo_id'], ['tareas', 'archivo_id'], ['archivos', 'repite_de'], ['video_revisiones', 'voz_archivo_id'], ['recordatorios_tecnica', 'archivo_id'], ['comentarios', 'video_respuesta_id'], ['archivos', 'angulo_de']], ejercicios: [['objetivos', 'ejercicio_id'], ['objetivos_propuestos', 'ejercicio_id'], ['tareas', 'ejercicio_id'], ['tareas_plantillas', 'ejercicio_id']], sesion_ejercicios: [['archivos', 'sesion_ejercicio_id'], ['novedades', 'ejercicio_id']] };
 
 const cumple = (fila, f = {}) => {
   for (const [k, v] of Object.entries(f.eq || {})) if ((fila[k] ?? null) !== v) return false;
@@ -425,6 +425,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     medicacion_atleta: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // (108) sus pruebas: las ve él (las escribe guardar_prueba) y el coach
     pruebas_fisicas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (109) sus molestias fuera del check-in: las ve él (las escribe apuntar_dolor) y el coach
+    dolor_registros: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -1401,6 +1403,10 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       && entre(n(f.fibra_g), 0, 300) && (f.cumplido == null || [0, 1, 2].includes(Number(f.cumplido))) && (f.nota == null || (String(f.nota).length <= 280 && textoVisible(f.nota)))
       && (n(f.kcal) !== null || n(f.proteina_g) !== null || f.cumplido != null),
   };
+  // (109) la tabla de molestias del check-in (las zonas y, con valor, que la intensidad vaya con él) y las de fuera del
+  // check-in que escribe el coach directamente (como dolor_registros_validos)
+  CHECKS.molestias = (f) => molestiaValidaDemo(f);
+  CHECKS.dolor_registros = (f) => !!dolorDemo({ zona: f.zona, valor: Number(f.valor), momento: f.momento, sesion_id: f.sesion_id ?? null }) && fechaValida(f.fecha);
   function comprobarChecks(t, fila) {
     if (CHECKS[t] && !CHECKS[t](fila)) throw new Error('Algún valor está fuera de rango.');
   }
@@ -1434,7 +1440,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas', 'dolor_registros', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -3922,8 +3928,9 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
       }
       if (t === 'menu_fotos') throw sinPermisoTabla(t);   // (079) solo con plato_foto_quitar
       if (t === 'atletas_imagenes') throw sinPermisoTabla(t);   // (080) solo con a_medida_imagen_quitar
-      // (107) su lista de medicación: la borra él (al borrar sus respuestas de salud) o el coach. (108) Sus pruebas, igual
-      if (t === 'medicacion_atleta' || t === 'pruebas_fisicas') {
+      // (107) su lista de medicación: la borra él (al borrar sus respuestas de salud) o el coach. (108) Sus pruebas, igual.
+      // (109) Y sus molestias de fuera del check-in
+      if (t === 'medicacion_atleta' || t === 'pruebas_fisicas' || t === 'dolor_registros') {
         db[t] = tabla(t).filter((x) => !(cumple(x, f) && (esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()))));
         persistirYa();
         return [];
@@ -4179,6 +4186,29 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         let fila = t.find((x) => x.atleta_id === id);
         if (fila) Object.assign(fila, { lista: limpia, version_base: version, confirmado_en: new Date().toISOString() });
         else { fila = { atleta_id: id, lista: limpia, version_base: version, confirmado_en: new Date().toISOString() }; t.push(fila); }
+        persistirYa();
+        return copia(fila);
+      }
+      // (109) una molestia fuera del check-in (como en la base: quién puede, su consentimiento de salud, que valga y, si va
+      // con una sesión, que sea suya); una por zona, día, momento y sesión: si ya estaba, se cambia su valor
+      if (nombre === 'apuntar_dolor') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes apuntar tus propias molestias');
+        if (!buscar('atletas', id)) throw new Error('Ese atleta no existe');
+        if (!consentimientoDe(id)) throw new Error('Hace falta tu consentimiento de salud');
+        const r = dolorDemo(args?.p);
+        if (!r) throw new Error('Esa molestia no vale');
+        if (r.sesion_id) {
+          const s = buscar('sesiones', r.sesion_id), w = s && buscar('semanas', s.semana_id), bl = w && buscar('bloques', w.bloque_id);
+          if (!bl || bl.atleta_id !== id) throw new Error('Esa sesión no es tuya');
+        }
+        const t = tabla('dolor_registros');
+        const fecha = fechaMadrid();
+        const ahora = new Date().toISOString();
+        let fila = t.find((x) => x.atleta_id === id && x.zona === r.zona && x.fecha === fecha && x.momento === r.momento && (x.sesion_id ?? null) === r.sesion_id);
+        if (fila) Object.assign(fila, { valor: r.valor, creado_en: ahora });
+        else { fila = { id: uuid(), atleta_id: id, fecha, ...r, creado_en: ahora }; t.push(fila); }
         persistirYa();
         return copia(fila);
       }

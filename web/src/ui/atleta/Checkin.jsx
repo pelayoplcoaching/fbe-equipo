@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SeguimientoCheckin } from './Vida.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { perezoso } from '../perezoso.jsx';
-import { trasElCheckin, queHacerConMolestia, URL_SEMAFORO, APARTADOS_SUYO } from '../../logica/esencial-checkin.js';
+import { trasElCheckin, queHacerConMolestia, queHacerDolor, URL_SEMAFORO, APARTADOS_SUYO } from '../../logica/esencial-checkin.js';
+// (v0.256) el motor de molestias: quien va por su cuenta, con la 109, apunta las suyas de 0 a 10 con las zonas del cuestionario de lesiones
+import { ZONAS_DOLOR, intensidadDe } from '../../logica/dolor.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
@@ -24,6 +26,8 @@ import { leerBorradorCheckin, guardarBorradorCheckin, borrarBorradorCheckin, res
 const Arte = perezoso(() => import('./EsencialArte.jsx'), 'Arte', { mientras: null });
 // (v0.245) FBE Esencial: el check-in contesta a cada cosa que marca (apagado hasta el visto bueno de Pelayo)
 const CheckinResponde = perezoso(() => import('./EsencialAyuda.jsx'), 'CheckinResponde', { mientras: null });
+// (v0.256) las zonas y la escala de 0 a 10, en el trozo del motor de molestias
+const MolestiasDolor = perezoso(() => import('./EsencialDolor.jsx'), 'MolestiasDolor', { mientras: null });
 function OpcionesGrandes({ etiqueta, opciones, valor, alCambiar }) {
   return (
     <div class="opciones-grandes" role="group" aria-label={etiqueta}>
@@ -88,9 +92,17 @@ function QueHacerMolestia({ m }) {
 }
 
 export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer }) {
-  const { api, atleta, aviso } = useApp();
+  const { api, backend, atleta, aviso } = useApp();
   // (FBE Esencial) quien va por su cuenta: su check-in no espera respuesta (lo usan la app y su plan); sin conversación
   const suyo = esPorSuCuenta(atleta);
+  // (v0.256) ¿la base tiene la 109? (el motor de molestias: de 0 a 10)
+  const [con109, setCon109] = useState(false);
+  useEffect(() => {
+    if (!suyo || !backend) return undefined;
+    let vivo = true;
+    import('../../datos/api-dolor.js').then((m) => m.hay109(backend)).then((h) => { if (vivo) setCon109(!!h); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [suyo, backend]);
   const estaSemana = lunesDe(hoyISO());
   // El lunes se abre la semana que acaba de terminar (es la que toca contar)
   const [lunes, setLunes] = useState(() => semanaCheckin(hoyISO()));
@@ -100,6 +112,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   lunesActual.current = lunes;
   const [f, setF] = useState(null);
   const [molestias, setMolestias] = useState({});
+  const [dolor10, setDolor10] = useState({});        // (v0.256) { zona: 0-10 }, con las zonas del cuestionario de lesiones
   const [peso, setPeso] = useState(null);
   const [medidas, setMedidas] = useState({});
   const [verMedidas, setVerMedidas] = useState(false);
@@ -156,6 +169,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
     // Las respuestas, como se escriben (los números con coma)
     setResp(Object.fromEntries(Object.entries(c.respuestas || {}).map(([k, v]) => [k, typeof v === 'number' && datos.datos.preguntas?.find((q) => q.id === k)?.tipo === 'numero' ? num(v, 2) : v])));
     setMolestias(Object.fromEntries(ZONAS.map(([z]) => [z, bor?.molestias?.[z] ?? datos.datos.molestias.find((m) => m.zona === z)?.intensidad ?? 0])));
+    setDolor10(Object.fromEntries(ZONAS_DOLOR.map(([z]) => [z, bor?.molestias10?.[z] ?? datos.datos.molestias.find((m) => m.zona === z && m.valor != null)?.valor ?? 0])));
     if (bor?.resp && Object.keys(bor.resp).length) setResp((r) => ({ ...r, ...bor.resp }));
     setPeso(bor?.peso ?? null);
     // (054) su semana de un vistazo, si la base ya tiene la 054
@@ -230,8 +244,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   // (054) cada cambio se queda en este móvil hasta que se envía (si cierra la app a medias, no se pierde)
   useEffect(() => {
     if (!f || !datos.datos || datos.datos.checkin) return;
-    guardarBorradorCheckin(atleta.id, lunes, { f, molestias, resp, peso });
-  }, [f, molestias, resp, peso]);
+    guardarBorradorCheckin(atleta.id, lunes, { f, molestias, molestias10: dolor10, resp, peso });
+  }, [f, molestias, dolor10, resp, peso]);
 
   if (!salud) {
     return (
@@ -253,6 +267,10 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
   const ultimasMedidas = datos.datos.medidas?.[0] || null;
   const yaEnviado = !!datos.datos.checkin;
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
+  // (v0.256) de 0 a 10: quien va por su cuenta, con la 109 y si esa semana no tiene ya molestias de las de antes (de 0 a 3)
+  const escala10 = suyo && con109 && !(datos.datos.molestias || []).some((m) => m.valor == null);
+  const intens10 = Object.fromEntries(Object.entries(dolor10).map(([z, v]) => [z, intensidadDe(v) ?? 0]));
+  const queHacer = escala10 ? queHacerDolor(dolor10) : queHacerConMolestia(molestias);
 
   async function guardar(e) {
     e.preventDefault();
@@ -277,7 +295,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         const otras = Object.fromEntries(Object.entries(datos.datos.checkin?.respuestas || {}).filter(([k]) => !actuales.has(k)));
         enviar = { ...f, respuestas: { ...otras, ...(limpiarRespuestas(preguntas, resp) || {}) } };
       }
-      await api.guardarCheckin(atleta.id, lunes, enviar, ver('molestias') ? molestias : {}, null);
+      await api.guardarCheckin(atleta.id, lunes, enviar, ver('molestias') ? (escala10 ? dolor10 : molestias) : {}, null, { escala10 });
       borrarBorradorCheckin(atleta.id, lunes); setBorrador(null);
       if (peso && ver('peso')) await api.guardarPeso(atleta.id, fechaDato, peso);
       if (ver('medidas') && Object.values(medidas).some((v) => v != null)) await api.guardarMedidas(atleta.id, fechaDato, medidas);
@@ -321,8 +339,14 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       cuerpo: (avanzar) => <OpcionesGrandes etiqueta="Motivación" valor={f.motivacion ?? null} opciones={escala(ESCALAS.motivacion)} alCambiar={(v, ev, t) => { set('motivacion')(v); avanzar(v, ev, t); }} /> },
     ver('molestias') && {
       id: 'molestias', titulo: '¿Te ha molestado algo?',
-      resumen: ZONAS.filter(([z]) => molestias[z] > 0).map(([z, nombre]) => `${nombre} (${['', 'leve', 'moderada', 'grave'][molestias[z]]})`).join(', ') || 'Sin molestias',
-      cuerpo: () => (
+      resumen: (escala10 ? ZONAS_DOLOR.filter(([z]) => dolor10[z] > 0).map(([z, nombre]) => `${nombre} (${dolor10[z]} de 10)`)
+        : ZONAS.filter(([z]) => molestias[z] > 0).map(([z, nombre]) => `${nombre} (${['', 'leve', 'moderada', 'grave'][molestias[z]]})`)).join(', ') || 'Sin molestias',
+      cuerpo: () => (escala10 ? (
+        <div class="pila">
+          <MolestiasDolor valores={dolor10} alCambiar={setDolor10} />
+          {queHacer ? <QueHacerMolestia m={queHacer} /> : <p class="peq secundario">Si un dolor es agudo o no mejora, para y consulta con tu médico o tu fisioterapeuta.</p>}
+        </div>
+      ) : (
         <div class="pila">
           <span class="peq secundario" id="ck-zonas">Toca las zonas donde hayas notado molestias esta semana.</span>
           <div class="zonas" role="group" aria-labelledby="ck-zonas">
@@ -339,10 +363,10 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
                 opciones={ESCALAS.molestia.slice(1).map((t, i) => [i + 1, ['Leve', 'Moderada', 'Grave'][i], t])} />
             </div>
           ))}
-          {suyo && queHacerConMolestia(molestias) ? <QueHacerMolestia m={queHacerConMolestia(molestias)} />
+          {suyo && queHacer ? <QueHacerMolestia m={queHacer} />
             : <p class="peq secundario">{suyo ? 'Si un dolor es agudo o no mejora, para y consulta con tu médico o tu fisioterapeuta.' : 'Si un dolor es agudo o no mejora, avisa a tu coach directamente.'}</p>}
         </div>
-      ),
+      )),
     },
     ver('alimentacion') && {
       id: 'adherencia', titulo: 'Alimentación',
@@ -460,7 +484,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       </CabeceraGrande>
       <Pista id="checkin" icono="checkin">Una vez a la semana, un minuto: una pregunta por pantalla. Las de una sola respuesta pasan solas a la siguiente; al final repasas todo y lo envías. No hace falta rellenarlo todo.</Pista>
       {/* (alta, 50) quien va por su cuenta: para qué es su check-in (nadie lo contesta uno a uno) */}
-      {suyo && !yaEnviado && <p class="peq secundario alta-checkin">Tu check-in queda en tu progreso: así ves cómo duermes, cómo llegas y cómo vas de una semana a otra. Pelayo no lo contesta uno a uno; si marcas una molestia moderada o grave, le sale como aviso.</p>}
+      {suyo && !yaEnviado && <p class="peq secundario alta-checkin">Tu check-in queda en tu progreso: así ves cómo duermes, cómo llegas y cómo vas de una semana a otra. Pelayo no lo contesta uno a uno; {escala10 ? 'si marcas una molestia de 3 o más sobre 10' : 'si marcas una molestia moderada o grave'}, le sale como aviso.</p>}
       {/* (054) su semana de un vistazo, para que conteste con los datos delante */}
       {!yaEnviado && lineasSemanaCheckin(resumen).length > 0 && (
         <section class="panel panel-pad ck-vistazo" aria-label="Tu semana de un vistazo">
@@ -548,10 +572,10 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
           <div class="seccion-cab"><h2 id="sinco-tras-t">Qué pasa ahora con tu check-in</h2></div>
           <Arte id="esencial-checkin-enviado" />
           <div class="panel"><ul class="lista">
-            {trasElCheckin({ f, molestias }).map((l) => <li key={l.id} class="panel-pad fila-icono peq" data-linea={l.id}><Icono n={l.icono} /><span>{l.texto}</span></li>)}
+            {trasElCheckin(escala10 ? { f, molestias: intens10, valores: dolor10 } : { f, molestias }).map((l) => <li key={l.id} class="panel-pad fila-icono peq" data-linea={l.id}><Icono n={l.icono} /><span>{l.texto}</span></li>)}
           </ul></div>
           <CheckinResponde f={f} />
-          {queHacerConMolestia(molestias) && <QueHacerMolestia m={queHacerConMolestia(molestias)} />}
+          {queHacer && <QueHacerMolestia m={queHacer} />}
         </section>
       )}
       {yaEnviado && !suyo && (

@@ -9,9 +9,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
 import { WEB_FBE } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
-import { ZONAS } from '../../logica/calculos.js';
 import { encendido } from '../../logica/esencial-respuestas.js';
-import { queHacerConMolestia, URL_SEMAFORO } from '../../logica/esencial-checkin.js';
 import { leerDias, guardarDias, planDias, nombreDias } from '../../logica/esencial-dias.js';
 import { MODOS_VIAJE, validarViaje, viajeDe, proximoViaje, textoViaje, fechaCorta, SITIOS, diasReales, subirNivel, validarObjetivo, objetivoDe, textoObjetivo, OBJETIVO_MAX, finPrimeras, noBasta, sinAvisos,
   ENFERMO, MOLESTIA_SIGUE, molestiaToca, SUAVE, suaveDe, saludAlDia, SALUD_AL_DIA, ALARMA } from '../../logica/esencial-vida.js';
@@ -106,57 +104,7 @@ export function HojaViaje({ viaje = null, alCerrar, alGuardar }) {
   );
 }
 
-// ---------- (43) «Me duele algo»: zona e intensidad → qué hacer (los textos del check-in, sin esperar al domingo) ----------
-const NIVELES = [[1, 'Leve'], [2, 'Moderada'], [3, 'Grave']];
-export function HojaMolestia({ alCerrar, alAccion = null }) {
-  const { atleta } = useApp();
-  const previa = usePrevia();
-  const [zona, setZona] = useState(null);
-  const [nivel, setNivel] = useState(null);
-  const [centro, setCentro] = useState(false);
-  const que = zona && nivel >= 2 ? queHacerConMolestia({ [zona]: nivel }) : null;
-  // (apagado) a los tres y a los siete días, la app pregunta cómo va: en este móvil se guarda solo la fecha
-  useEffect(() => { if (zona && nivel >= 2 && encendido('molestia_sigue', previa)) guardar(`fbe-esencial-molestia:${atleta.id}`, JSON.stringify({ dicho: hoyISO(), respondido: [] })); }, [zona, nivel]);
-  return (
-    <Hoja titulo="Me duele algo" alCerrar={alCerrar}>
-      <div class="pila vid-molestia">
-        <p class="secundario">La app no valora el dolor: te dice qué hacer con tu plan mientras tanto. Nada de esto se guarda.</p>
-        <div class="pila-s"><strong class="peq">¿Dónde?</strong>
-          <div class="fila-envolver" role="group" aria-label="Dónde te molesta">
-            {ZONAS.map(([id, t]) => <button type="button" key={id} class={zona === id ? 'vid-op vid-op-si' : 'vid-op'} aria-pressed={zona === id ? 'true' : 'false'} onClick={() => setZona(id)}>{t}</button>)}
-          </div>
-        </div>
-        <div class="pila-s"><strong class="peq">¿Cuánto?</strong>
-          <div class="fila-envolver" role="group" aria-label="Cuánto te molesta">
-            {NIVELES.map(([n, t]) => <button type="button" key={n} class={nivel === n ? 'vid-op vid-op-si' : 'vid-op'} aria-pressed={nivel === n ? 'true' : 'false'} onClick={() => setNivel(n)}>{t}</button>)}
-          </div>
-        </div>
-        {zona && nivel === 1 && (
-          <div class="vid-que" role="status">
-            <strong>Con una molestia leve: puedes seguir</strong>
-            <span class="peq">La regla para seguir: hasta 5 sobre 10 durante y después del ejercicio, que a la mañana siguiente estés como antes de entrenar y que no vaya a más de una semana a otra.</span>
-          </div>
-        )}
-        {que && (
-          <div class="vid-que" role="status">
-            <strong>{que.titulo}</strong>
-            <Pasos lista={que.pasos} />
-            <span class="mini terciario">{que.consulta}</span>
-          </div>
-        )}
-        {zona && nivel && (
-          <div class="fila-envolver">
-            {alAccion && <button type="button" class="btn btn-peq" onClick={() => alAccion('ejercicios')}><Icono n="reiniciar" /> Cambiar un ejercicio</button>}
-            <a class="btn btn-peq" href={URL_SEMAFORO} target="_blank" rel="noopener">El semáforo del dolor</a>
-            <button type="button" class="btn-texto" onClick={() => setCentro(true)}>¿Cuándo preocuparse?</button>
-          </div>
-        )}
-        {zona && nivel >= 2 && <p class="mini terciario">Si quieres que la app lo tenga en cuenta, apúntala también en tu check-in de la semana.</p>}
-      </div>
-      {centro && <CentroRespuestas inicial="dolor" alCerrar={() => setCentro(false)} />}
-    </Hoja>
-  );
-}
+// (43) «Me duele algo»: desde la v0.256, con el motor de molestias, en EsencialDolor.jsx
 
 // ---------- (44 y 45) «Entreno en otro sitio» ----------
 export function HojaSitio({ alCerrar, alAccion = null }) {

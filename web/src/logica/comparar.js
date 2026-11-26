@@ -43,7 +43,7 @@ export function compararCheckins(a, b, d = {}) {
   fila('adherencia', 'Adherencia a la alimentación', ma ? ESCALAS.adherencia[Math.round(ma) - 1] : null, mb ? ESCALAS.adherencia[Math.round(mb) - 1] : null, { delta: false });
   fila('pasos', 'Pasos (media)', ca.pasos_media ?? null, cb.pasos_media ?? null, { dec: 0 });
   fila('fc', 'FC en reposo', ca.fc_reposo ?? null, cb.fc_reposo ?? null, { unidad: 'ppm', dec: 0 });
-  const mol = (x) => (x.molestias.length ? x.molestias.map((m) => `${NOMBRE_ZONA[m.zona] || m.zona} ${m.intensidad}`).join(', ') : null);
+  const mol = (x) => (x.molestias.length ? x.molestias.map((m) => `${NOMBRE_ZONA[m.zona] || m.zona} ${m.valor != null ? `${m.valor}/10` : m.intensidad}`).join(', ') : null);
   fila('molestias', 'Molestias', mol(A), mol(B), { delta: false });
   // Las preguntas del coach, en el orden de las del check-in más reciente
   const ra = respuestasDe(ca, d.preguntas || {}), rb = respuestasDe(cb, d.preguntas || {});

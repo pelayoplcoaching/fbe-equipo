@@ -91,7 +91,7 @@ export function DetalleRevision({ f, lunes, abrirAtleta, alCambiar = null, alCit
                 </div>
               ))}
             </dl>
-            {molestias.length > 0 && <p class="peq rev-molestias"><strong>Molestias:</strong> {molestias.map((m) => `${NOMBRE_ZONA[m.zona] || m.zona} ${m.intensidad}/3${m.notas ? ` (${m.notas})` : ''}`).join(' · ')}</p>}
+            {molestias.length > 0 && <p class="peq rev-molestias"><strong>Molestias:</strong> {molestias.map((m) => `${NOMBRE_ZONA[m.zona] || m.zona} ${m.valor != null ? `${m.valor}/10` : `${m.intensidad}/3`}${m.notas ? ` (${m.notas})` : ''}`).join(' · ')}</p>}
             {String(x.checkin.notas || '').trim() && <p class="cita">«{String(x.checkin.notas).trim()}»</p>}
             {!compacto && (
               <div class="fila-envolver rev-mini-acciones">

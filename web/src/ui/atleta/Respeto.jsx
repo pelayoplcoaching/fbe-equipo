@@ -6,7 +6,7 @@ import { useApp, useCarga, Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { FEEDBACK, MOTIVA, OCULTABLES, limpiarOcultar, patronCiclo, informeSalud } from '../../logica/respeto.js';
 import { leerAjustes, guardarAjustes } from '../ajustes.js';
 import { hoyISO, sumarDias, fmtCorta, lunesDe } from '../../logica/fechas.js';
-import { ZONAS } from '../../logica/calculos.js';
+import { NOMBRE_ZONA } from '../../logica/calculos.js';
 import { vibrar } from '../hapticos.js';
 import { Imagen } from '../Imagen.jsx';
 
@@ -146,7 +146,7 @@ function HojaInforme({ salud, alCerrar }) {
   if (!d.datos) return <Hoja titulo="Tu informe" alCerrar={alCerrar}><p class="peq secundario">Preparándolo…</p></Hoja>;
   const [entrenos, molestias, sueno] = d.datos;
   const r = informeSalud({ entrenos, molestias, sueno, hoy, nombre: atleta.nombre });
-  const nombreZona = (z) => ZONAS.find(([k]) => k === z)?.[1] || z;
+  const nombreZona = (z) => NOMBRE_ZONA[z] || z;
   const imprimir = () => {
     document.documentElement.setAttribute('data-imprimir-informe', '');
     const fin = () => { document.documentElement.removeAttribute('data-imprimir-informe'); window.removeEventListener('afterprint', fin); };

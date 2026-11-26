@@ -509,7 +509,8 @@ export function TrasLaSesion({ sesion, enCola = false }) {
 const AbrirViaje = perezoso(() => import('./EsencialVida.jsx'), 'AbrirViaje', { mientras: null });
 const AbrirObjetivo = perezoso(() => import('./EsencialVida.jsx'), 'AbrirObjetivo', { mientras: null });
 const AbrirSuave = perezoso(() => import('./EsencialVida.jsx'), 'AbrirSuave', { mientras: null });
-const HojaMolestia = perezoso(() => import('./EsencialVida.jsx'), 'HojaMolestia', { mientras: null });
+// (v0.256) «Me duele algo», con el motor de molestias: de 0 a 10 con el semáforo y las zonas del cuestionario de lesiones
+const HojaMolestia = perezoso(() => import('./EsencialDolor.jsx'), 'HojaMolestia', { mientras: null });
 const HojaSitio = perezoso(() => import('./EsencialVida.jsx'), 'HojaSitio', { mientras: null });
 const HojaEjercicios = perezoso(() => import('./EsencialVida.jsx'), 'HojaEjercicios', { mientras: null });
 const HojaEnfermo = perezoso(() => import('./EsencialVida.jsx'), 'HojaEnfermo', { mientras: null });

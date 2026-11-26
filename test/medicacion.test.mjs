@@ -64,12 +64,12 @@ console.log('\nLa privacidad (2026-12.44, solo con la 107)');
 const legal = await import('../web/src/legal.js');
 const PN = await import('../web/src/logica/privacidad-novedades.js');
 const sec = legal.PRIVACIDAD.find((x) => x[0] === 'Tu medicación y el ejercicio')?.[1] || '';
-check(legal.VERSION_LEGAL_SIN_108 === '2026-12.44' && legal.VERSION_LEGAL_SIN_107 === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.44' && PN.NOVEDADES_PRIVACIDAD[1][2].length <= 260
+check(legal.VERSION_LEGAL_SIN_108 === '2026-12.44' && legal.VERSION_LEGAL_SIN_107 === '2026-12.43' && PN.NOVEDADES_PRIVACIDAD[2][3] === '2026-12.44' && PN.NOVEDADES_PRIVACIDAD[2][2].length <= 260
   && PN.novedadesDesde('2026-12.43', '2026-12.44').length === 1, 'la versión 2026-12.44 (sin la 107, la 2026-12.43; v0.255: la de antes de la 108) y su novedad, corta');
 check(/Pauta Activa/.test(sec) && /consentimiento de datos de salud/.test(sec) && /tu coach/.test(sec) && /sin tu nombre/.test(sec) && /borra/.test(sec) && /dosis/.test(sec),
   'su sección cuenta qué se guarda (con el consentimiento), quién lo ve, cómo se borra y que el enlace va sin nombre');
 const apiSrc = readFileSync(new URL('../web/src/datos/api.js', import.meta.url), 'utf8');
-check(/VERSION_LEGAL_SIN_107/.test(apiSrc) && /hay107/.test(apiSrc) && /'medicacion_atleta', 'pruebas_fisicas'\]\) out\[t\]/.test(apiSrc) && /medicacion_atleta/.test(apiSrc.slice(apiSrc.indexOf('async borrarSaludCuestionario'), apiSrc.indexOf('async borrarSaludCuestionario') + 600)),
+check(/VERSION_LEGAL_SIN_107/.test(apiSrc) && /hay107/.test(apiSrc) && /'medicacion_atleta', 'pruebas_fisicas', 'dolor_registros'\]\) out\[t\]/.test(apiSrc) && /medicacion_atleta/.test(apiSrc.slice(apiSrc.indexOf('async borrarSaludCuestionario'), apiSrc.indexOf('async borrarSaludCuestionario') + 600)),
   'la versión, según esté la 107; su lista, en «Descargar mis datos»; y se borra con sus respuestas de salud');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);

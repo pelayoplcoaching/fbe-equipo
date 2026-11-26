@@ -26,7 +26,6 @@
 .vid-paso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--esp-8); }
 .vid-area { width: 100%; padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta); font: inherit; resize: vertical; }
 .vid-area:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
-.vid-molestia { min-width: 0; }
 .vid-sitio { min-width: 0; }
 .vid-enfermo { min-width: 0; }
 .vid-suave-h { min-width: 0; }

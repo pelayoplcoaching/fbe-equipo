@@ -81,8 +81,9 @@ check(queHacerConMolestia({}) === null && queHacerConMolestia() === null && queH
 const mod = queHacerConMolestia({ cuadriceps: 2, hombros: 1 }), grave = queHacerConMolestia({ cuadriceps: 2, zona_lumbar: 3 });
 check(mod && !mod.grave && mod.nivel === 'moderada' && mod.zonas === 'cuádriceps', 'moderada: solo las zonas de 2 o más, en minúsculas');
 check(grave && grave.grave && grave.nivel === 'grave' && grave.zonas === 'cuádriceps y zona lumbar', 'grave si alguna lo es; las zonas, unidas con «y»');
-check(mod.pasos.some((t) => t.includes('5 sobre 10') && t.includes('mañana siguiente') && t.includes('semana')) && mod.pasos.some((t) => t.includes('«Cambiar»')), 'moderada: la regla del semáforo (5 sobre 10, la mañana siguiente, de semana en semana) y cambiar el ejercicio');
-check(grave.pasos[0].includes('médico o un fisioterapeuta') && !grave.pasos.some((t) => t.includes('5 sobre 10')), 'grave: que te la vean antes de seguir (sin la regla del 5)');
+check(mod.pasos.some((t) => t.includes('hasta 3 sobre 10') && t.includes('admite hasta 5') && t.includes('mañana siguiente') && t.includes('semana')) && mod.pasos.some((t) => t.includes('«Cambiar»')),
+  'moderada: la regla del semáforo con el margen de Pelayo (v0.256: hasta 3 sobre 10, el semáforo admite hasta 5; la mañana siguiente, de semana en semana) y cambiar el ejercicio');
+check(grave.pasos[0].includes('médico o un fisioterapeuta') && !grave.pasos.some((t) => t.includes('sobre 10')), 'grave: que te la vean antes de seguir (sin la regla del semáforo)');
 check([mod, grave].every((m) => m.consulta.includes('noche') && m.consulta.includes('hinchazón') && m.consulta.includes('hormigueo')) && sinCoach([mod, grave]), 'en las dos, las señales para consultar; sin «coach»');
 check(queHacerConMolestia({ zona_rara: 2 }).zonas === 'zona_rara' && queHacerConMolestia({ otra: 2 }).zonas === 'otra zona', 'una zona sin nombre no rompe nada; «Otra zona», tal cual');
 check(/^https:\/\/fuerzabasadaenevidencia\.com\/semaforo-dolor\.html$/.test(URL_SEMAFORO), 'el enlace al semáforo del dolor de la web');

@@ -160,14 +160,16 @@ const CAMPOS_BORRADOR = ['horas_sueno', 'energia', 'recuperacion', 'motivacion',
 export function leerBorradorCheckin(atletaId, lunes) {
   try { const x = JSON.parse(localStorage.getItem(CLAVE_BORRADOR(atletaId, lunes)) || 'null'); return x && typeof x === 'object' ? x : null; } catch { return null; }
 }
-// Se guarda solo lo que responde (los campos del check-in, las molestias y las respuestas al coach); vacío, se borra
-export function guardarBorradorCheckin(atletaId, lunes, { f = {}, molestias = {}, resp = {}, peso = null } = {}) {
+// Se guarda solo lo que responde (los campos del check-in, las molestias y las respuestas al coach); vacío, se borra.
+// (v0.256) molestias10: las de 0 a 10 de quien va por su cuenta ({ zona: valor })
+export function guardarBorradorCheckin(atletaId, lunes, { f = {}, molestias = {}, molestias10 = {}, resp = {}, peso = null } = {}) {
   const campos = Object.fromEntries(Object.entries(f || {}).filter(([k, v]) => CAMPOS_BORRADOR.includes(k) && v != null && v !== ''));
   const mol = Object.fromEntries(Object.entries(molestias || {}).filter(([, v]) => Number(v) > 0));
+  const mol10 = Object.fromEntries(Object.entries(molestias10 || {}).filter(([, v]) => Number.isInteger(Number(v)) && Number(v) > 0 && Number(v) <= 10).map(([z, v]) => [z, Number(v)]));
   const r = Object.fromEntries(Object.entries(resp || {}).filter(([, v]) => v != null && v !== ''));
-  const hay = Object.keys(campos).length || Object.keys(mol).length || Object.keys(r).length || peso != null;
+  const hay = Object.keys(campos).length || Object.keys(mol).length || Object.keys(mol10).length || Object.keys(r).length || peso != null;
   try {
-    if (hay) localStorage.setItem(CLAVE_BORRADOR(atletaId, lunes), JSON.stringify({ f: campos, molestias: mol, resp: r, peso: peso ?? null, en: new Date().toISOString() }));
+    if (hay) localStorage.setItem(CLAVE_BORRADOR(atletaId, lunes), JSON.stringify({ f: campos, molestias: mol, ...(Object.keys(mol10).length ? { molestias10: mol10 } : {}), resp: r, peso: peso ?? null, en: new Date().toISOString() }));
     else localStorage.removeItem(CLAVE_BORRADOR(atletaId, lunes));
   } catch { /* sin almacenamiento */ }
   return !!hay;

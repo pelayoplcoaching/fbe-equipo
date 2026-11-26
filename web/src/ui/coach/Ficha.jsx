@@ -419,7 +419,7 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha, checkinInicial =
                       <td class={nv('motivacion', c.motivacion)} data-etq="Motivación">{c.motivacion ? ESCALAS.motivacion[c.motivacion - 1] : '—'}</td>
                       <td class={nv('adherencia', adherenciaMedia(c))} data-etq="Adherencia">{m ? ESCALAS.adherencia[Math.round(m) - 1] : '—'}</td>
                       <td class={nv('pasos', c.pasos_media)} data-etq="Pasos">{c.pasos_media ? num(c.pasos_media, 0) : '—'}</td>
-                      <td class={nv('molestias', mol.length ? Math.max(...mol.map((x) => x.intensidad)) : null)} data-etq="Molestias">{mol.length ? mol.map((x) => `${NOMBRE_ZONA[x.zona]} ${x.intensidad}`).join(', ') : '—'}</td>
+                      <td class={nv('molestias', mol.length ? Math.max(...mol.map((x) => x.intensidad)) : null)} data-etq="Molestias">{mol.length ? mol.map((x) => `${NOMBRE_ZONA[x.zona] || x.zona} ${x.valor != null ? `${x.valor}/10` : x.intensidad}`).join(', ') : '—'}</td>
                       <td class="ck-estado">{c.revisado_en ? <Icono n="hecho" width="18" height="18" titulo="Revisado" /> : <span class="chip morado">Pendiente</span>}</td>
                     </tr>
                   );

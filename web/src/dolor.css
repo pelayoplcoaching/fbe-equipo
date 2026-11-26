@@ -1,0 +1,92 @@
+/* FBE Esencial (v0.256): el motor de molestias, la base (EsencialDolor.jsx). "Me duele algo" con las diez zonas del
+   cuestionario de lesiones y de 0 a 10 con el semaforo del dolor, que hacer segun el color, las senales para parar y
+   consultar, tus molestias abiertas y, en su check-in, las mismas zonas de 0 a 10. Solo clases dol-*, cada regla en su
+   propio elemento (una sola clase: los estados y los colores, con su propia clase y no con un atributo), sin tocar
+   margenes ni tamanos de letra (eso lo ponen las clases comunes en el JSX). */
+
+/* La hoja */
+.dol-hoja { min-width: 0; }
+
+/* Las zonas */
+.dol-zonas { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.dol-zona {
+  min-height: var(--esp-32); padding: var(--esp-4) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora);
+  background: var(--hoja); color: var(--tinta-2); font: inherit; cursor: pointer;
+  transition: background-color var(--mov-breve) ease, border-color var(--mov-breve) ease, color var(--mov-breve) ease;
+}
+.dol-zona-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.dol-zona:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* De 0 a 10, con el color del semaforo (en el movil estrecho, en dos filas: de 0 a 5 y de 6 a 10) */
+.dol-escala { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: var(--esp-4); }
+.dol-n {
+  min-width: 0; min-height: var(--esp-40); padding: 0; border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja); color: var(--tinta); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: border-color var(--mov-breve) ease, box-shadow var(--mov-breve) ease;
+}
+.dol-n-verde { background: var(--ok-suave); }
+.dol-n-ambar { background: var(--aviso-suave); }
+.dol-n-rojo { background: var(--alerta-suave); }
+.dol-n-si { border-color: var(--morado); box-shadow: var(--anillo-acento); }
+.dol-n:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.dol-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-6) var(--esp-12); color: var(--tinta-2); }
+.dol-ley { display: inline-flex; align-items: center; gap: var(--esp-4); }
+.dol-punto { display: inline-block; width: var(--esp-8); height: var(--esp-8); border-radius: var(--r-pildora); background: var(--linea); }
+.dol-punto-verde { background: var(--ok-solido); }
+.dol-punto-ambar { background: var(--aviso-solido); }
+.dol-punto-rojo { background: var(--alerta-solido); }
+.dol-fila { display: grid; gap: var(--esp-6); min-width: 0; padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.dol-fila-t { min-width: 0; }
+
+/* Que hacer, con el color de su valor */
+.dol-que {
+  display: grid; gap: var(--esp-6); min-width: 0; padding: var(--esp-12) var(--esp-14); border-left: var(--filo-marca) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja-2); color: var(--tinta);
+}
+.dol-que-verde { border-left-color: var(--ok-solido); background: var(--ok-suave); }
+.dol-que-ambar { border-left-color: var(--aviso-solido); background: var(--aviso-suave); }
+.dol-que-rojo { border-left-color: var(--alerta-solido); background: var(--alerta-suave); }
+.dol-pasos { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-20); }
+
+/* Las senales para parar y consultar */
+.dol-senales { display: grid; gap: var(--esp-8); min-width: 0; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); }
+.dol-check { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); min-width: 0; }
+.dol-para {
+  display: grid; gap: var(--esp-6); min-width: 0; padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--alerta-borde); border-radius: var(--r-10);
+  background: var(--alerta-suave); color: var(--tinta);
+}
+.dol-acciones { min-width: 0; }
+.dol-hecho { display: inline-flex; align-items: center; gap: var(--esp-4); color: var(--ok); }
+
+/* Tus molestias */
+.dol-tuyas { display: grid; gap: var(--esp-8); min-width: 0; padding-top: var(--esp-12); border-top: var(--filo-fino) solid var(--linea); }
+.dol-lista { display: grid; gap: var(--esp-6); }
+.dol-item {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-10); min-width: 0; padding: var(--esp-10) var(--esp-12);
+  border-radius: var(--r-10); background: var(--hoja-2);
+}
+.dol-badge {
+  display: grid; place-items: center; width: var(--esp-32); height: var(--esp-32); border-radius: var(--r-pildora); background: var(--hoja); color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+.dol-badge-verde { background: var(--ok-suave); color: var(--ok); }
+.dol-badge-ambar { background: var(--aviso-suave); color: var(--aviso); }
+.dol-badge-rojo { background: var(--alerta-suave); color: var(--alerta); }
+.dol-pro {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10);
+  background: var(--aviso-suave); color: var(--tinta);
+}
+.dol-borrar {
+  display: grid; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--aviso-borde); border-radius: var(--r-10);
+  background: var(--aviso-suave); color: var(--tinta);
+}
+.dol-quitar { justify-self: start; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dol-zona { transition: none; }
+  .dol-n { transition: none; }
+}
+
+@media (max-width: 419px) {
+  .dol-escala { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}

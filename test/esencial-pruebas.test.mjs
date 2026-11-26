@@ -107,13 +107,13 @@ console.log('\nLa privacidad (2026-12.45, solo con la 108), lo que se descarga y
 const legal = await import('../web/src/legal.js');
 const PN = await import('../web/src/logica/privacidad-novedades.js');
 const sec = legal.PRIVACIDAD.find((x) => x[0] === 'Tus pruebas físicas')?.[1] || '';
-check(legal.VERSION_LEGAL === '2026-12.45' && legal.VERSION_LEGAL_SIN_108 === '2026-12.44' && PN.NOVEDADES_PRIVACIDAD[0][3] === '2026-12.45' && PN.NOVEDADES_PRIVACIDAD[0][2].length <= 260
+check(legal.VERSION_LEGAL_SIN_109 === '2026-12.45' && legal.VERSION_LEGAL_SIN_108 === '2026-12.44' && PN.NOVEDADES_PRIVACIDAD[1][3] === '2026-12.45' && PN.NOVEDADES_PRIVACIDAD[1][2].length <= 260
   && PN.novedadesDesde('2026-12.44', '2026-12.45').length === 1, 'la versión 2026-12.45 (sin la 108, la 2026-12.44) y su novedad, corta');
 check(/consentimiento de datos de salud/.test(sec) && /tu edad y tu sexo/.test(sec) && /tu coach/.test(sec) && /borrar/.test(sec) && /informe para tu médico/.test(sec) && /no se guarda/.test(sec) && /Descargar mis datos/.test(sec),
   'su sección cuenta qué se guarda (con el consentimiento), quién lo ve, cómo se borra y que el informe se hace en el móvil');
 const fuente = (r) => readFileSync(new URL(`../web/src/${r}`, import.meta.url), 'utf8');
 const apiSrc = fuente('datos/api.js');
-check(/VERSION_LEGAL_SIN_108/.test(apiSrc) && /hay108/.test(apiSrc) && /'pruebas_fisicas'\]\) out\[t\]/.test(apiSrc) && /'pruebas_fisicas'/.test(fuente('datos/copia-tablas.js')),
+check(/VERSION_LEGAL_SIN_108/.test(apiSrc) && /hay108/.test(apiSrc) && /'pruebas_fisicas', 'dolor_registros'\]\) out\[t\]/.test(apiSrc) && /'pruebas_fisicas'/.test(fuente('datos/copia-tablas.js')),
   'la versión, según esté la 108; sus pruebas, en «Descargar mis datos» y en la copia');
 const css = fuente('pruebas.css');
 check(/^[\x00-\x7F]*$/.test(css) && !/margin|font-size|font-weight|\[/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')) && (css.match(/^\.([a-z0-9-]+)/gm) || []).every((x) => /^\.prb-/.test(x))

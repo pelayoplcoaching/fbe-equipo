@@ -103,6 +103,7 @@ export function EsencialCoach({ atleta, alCambiar }) {
         <div><dt>Visto bueno médico</dt><dd>{visto}</dd></div>
         <div><dt>Su plan</dt><dd>{bl.cargando && !bl.datos ? 'Cargando…' : bloque ? `${bloque.nombre}${bloque.fecha_inicio ? `, desde el ${fechaLarga(bloque.fecha_inicio)}` : ''}` : 'Aún no tiene'}</dd></div>
         <PruebasCoach atletaId={atleta.id} />
+        <MolestiasCoach atletaId={atleta.id} />
         {alts.length > 0 && <div><dt>Su gimnasio</dt><dd>{alts.map(([g, a]) => `${nombreEj[g] || '…'} → ${nombreEj[a] || '…'}`).join('; ')} <span class="terciario">(lo eligió para siempre)</span></dd></div>}
         {/* (093) con nutrición: su plan de comida lo calcula y lo ajusta la app; si dice tener o haber tenido un TCA, mantener */}
         {atleta.nutricion !== false && <div><dt>Comida</dt><dd>{q?.tca === true
@@ -184,6 +185,31 @@ function PruebasCoach({ atletaId }) {
   return (
     <div><dt>Sus pruebas</dt><dd>{xs.map((k) => `${P.NOMBRE_CORTO[k]}: ${P.valorTexto(k, u[k].ultima.valor)}${u[k].anterior ? ` (antes, ${P.valorTexto(k, u[k].anterior.valor)})` : ''}`).join('; ')}
       <span class="terciario"> · las últimas, del {fechaLarga(String(filas[0].fecha).slice(0, 10))}</span></dd></div>
+  );
+}
+
+// (v0.256, 109) Sus molestias abiertas (de 0 a 10, con las zonas del cuestionario de lesiones: lo que apunta en «Me duele
+// algo» y en su check-in de las últimas seis semanas), con su color y su tendencia, y si toca que le vea un profesional
+// (M10). Sin la 109 o sin ninguna abierta, nada.
+function MolestiasCoach({ atletaId }) {
+  const { backend } = useApp();
+  const d = useCarga(async () => {
+    const [api, D, F] = await Promise.all([import('../../datos/api-dolor.js'), import('../../logica/dolor.js'), import('../../logica/fechas.js')]);
+    if (!(await api.hay109(backend).catch(() => false))) return null;
+    const hoy = F.hoyISO();
+    const [registros, checkins] = await Promise.all([api.registros(backend, atletaId, F.sumarDias(hoy, -42)).catch(() => []), api.molestiasCheckin(backend, atletaId, F.sumarDias(F.lunesDe(hoy), -42)).catch(() => [])]);
+    const estado = D.estadoZonas({ registros, checkins, hoy });
+    const abiertas = estado.filter((z) => z.abierta);
+    const semanas = checkins.filter((c) => String(c.semana_inicio).slice(0, 10) >= F.sumarDias(F.lunesDe(hoy), -35));
+    const pro = D.profesional({ semanas, estado, hoy });
+    return abiertas.length || pro ? { abiertas, pro, D } : null;
+  }, [atletaId]);
+  if (!d.datos) return null;
+  const { abiertas, pro, D } = d.datos;
+  const TEND = { mejor: 'mejor', igual: 'igual', peor: 'peor' };
+  return (
+    <div><dt>Sus molestias</dt><dd>{abiertas.length ? abiertas.map((z) => `${z.nombre}: ${z.valor}/10 (${D.NOMBRE_SEMAFORO[z.semaforo].toLowerCase()}, desde el ${fechaLarga(z.desde)}${z.tendencia ? `; ${TEND[z.tendencia]} que la semana anterior` : ''})`).join('; ') : 'Ninguna abierta'}
+      {pro && <span class="texto-aviso"> · Toca que le vea un profesional{pro.motivo === 'semanas' ? ' (varias semanas con una molestia)' : pro.motivo === 'dos_semanas' ? ' (dos semanas sin mejorar)' : ''}.</span>}</dd></div>
   );
 }
 

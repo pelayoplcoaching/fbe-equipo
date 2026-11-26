@@ -3,7 +3,9 @@
 // Lógica pura.
 import { diasEntre, sumarDias, lunesDe } from './fechas.js';
 import { segunTono } from './trato.js';
-const CON_ARTICULO = { hombros: 'los hombros', pectoral: 'el pectoral', triceps: 'el tríceps', espalda_alta: 'la espalda alta', zona_lumbar: 'la zona lumbar', femoral_gluteo: 'el femoral y el glúteo', cuadriceps: 'el cuádriceps', aductor: 'el aductor', otra: 'otra zona' };
+const CON_ARTICULO = { hombros: 'los hombros', pectoral: 'el pectoral', triceps: 'el tríceps', espalda_alta: 'la espalda alta', zona_lumbar: 'la zona lumbar', femoral_gluteo: 'el femoral y el glúteo', cuadriceps: 'el cuádriceps', aductor: 'el aductor', otra: 'otra zona',
+  // (v0.256) las del cuestionario de lesiones, con las que apunta sus molestias quien va por su cuenta
+  cuello: 'el cuello', hombro: 'el hombro', codo: 'el codo', muneca_mano: 'la muñeca o la mano', cadera: 'la cadera', rodilla: 'la rodilla', tobillo_pie: 'el tobillo o el pie' };
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const diaSemana = (f) => DIAS[(new Date(`${f}T12:00:00Z`).getUTCDay() + 6) % 7];

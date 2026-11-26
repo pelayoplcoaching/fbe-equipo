@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_108, VERSION_LEGAL_SIN_107, VERSION_LEGAL_SIN_105, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_109, VERSION_LEGAL_SIN_108, VERSION_LEGAL_SIN_107, VERSION_LEGAL_SIN_105, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { diasInvitacion } from '../logica/esencial.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
@@ -2044,7 +2044,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.254) tu medicación confirmada (107, en su trozo): con la 105 pero sin la 107, la 2026-12.43
       if (!(await import('./api-medicacion.js').then((m) => m.hay107(b)).catch(() => false))) return VERSION_LEGAL_SIN_107;
       // (v0.255) tus pruebas (108, en su trozo): con la 107 pero sin la 108, la 2026-12.44
-      return (await import('./api-pruebas.js').then((m) => m.hay108(b)).catch(() => false)) ? VERSION_LEGAL : VERSION_LEGAL_SIN_108;
+      if (!(await import('./api-pruebas.js').then((m) => m.hay108(b)).catch(() => false))) return VERSION_LEGAL_SIN_108;
+      // (v0.256) tus molestias (109, en su trozo): con la 108 pero sin la 109, la 2026-12.45
+      return (await import('./api-dolor.js').then((m) => m.hay109(b)).catch(() => false)) ? VERSION_LEGAL : VERSION_LEGAL_SIN_109;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -2786,7 +2788,9 @@ export function crearApi(backend, opciones = {}) {
       ]);
       return { checkin: checkin || null, molestias, pesos, medidas, apartados: atleta?.checkin_apartados ?? null, nutricion: atleta?.nutricion !== false, preguntas, anterior, molestiasAnterior };
     },
-    async guardarCheckin(atletaId, lunes, datos, molestias = {}, pesoKg = null) {
+    // (v0.256, 109) escala10: quien va por su cuenta apunta sus molestias de 0 a 10, con las zonas del cuestionario de
+    // lesiones; se guarda el valor y, con él, la intensidad de siempre (0, 1-2 leve, 3-5 moderada, 6-10 grave)
+    async guardarCheckin(atletaId, lunes, datos, molestias = {}, pesoKg = null, { escala10 = false } = {}) {
       const campos = ['horas_sueno', 'energia', 'recuperacion', 'motivacion', 'fc_reposo', 'hrv', 'adherencia_desayuno',
         'adherencia_comida', 'adherencia_merienda', 'adherencia_cena', 'calorias_media', 'pasos_media', 'saciedad',
         'satisfaccion_dieta', 'notas'];
@@ -2797,8 +2801,9 @@ export function crearApi(backend, opciones = {}) {
       const [guardado] = await b.upsert('checkins', [fila], 'atleta_id,semana_inicio');
       const conDolor = Object.entries(molestias).filter(([, v]) => Number(v) > 0);
       if (conDolor.length) {
-        await b.upsert('molestias', conDolor.map(([zona, intensidad]) => ({ atleta_id: atletaId, semana_inicio: lunes, zona, intensidad: Number(intensidad) })),
-          'atleta_id,semana_inicio,zona');
+        const i10 = (v) => (v <= 2 ? 1 : v <= 5 ? 2 : 3);
+        await b.upsert('molestias', conDolor.map(([zona, v]) => (escala10 ? { atleta_id: atletaId, semana_inicio: lunes, zona, valor: Number(v), intensidad: i10(Number(v)) }
+          : { atleta_id: atletaId, semana_inicio: lunes, zona, intensidad: Number(v) })), 'atleta_id,semana_inicio,zona');
       }
       const sinDolor = Object.entries(molestias).filter(([, v]) => Number(v) === 0).map(([z]) => z);
       if (sinDolor.length) await b.delete('molestias', { eq: { atleta_id: atletaId, semana_inicio: lunes }, in: { zona: sinDolor } });
@@ -7102,7 +7107,7 @@ export function crearApi(backend, opciones = {}) {
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones; (v0.228, 089) y
       // sus mañanas siguientes
       // (v0.254, 107) y su lista de medicación confirmada
-      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas', 'nutricion_perfiles', 'nutricion_revisiones', 'medicacion_atleta', 'pruebas_fisicas', 'dolor_registros']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
       // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
       out.personal = perfilId && perfilId === uid()

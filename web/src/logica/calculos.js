@@ -791,7 +791,9 @@ export const ZONAS = [
   ['zona_lumbar', 'Zona lumbar'], ['femoral_gluteo', 'Femoral y glúteo'], ['cuadriceps', 'Cuádriceps'],
   ['aductor', 'Aductor'], ['otra', 'Otra zona'],
 ];
-export const NOMBRE_ZONA = Object.fromEntries(ZONAS);
+// (v0.256, 109) y los nombres de las zonas del cuestionario de lesiones, con las que apunta sus molestias quien va por su
+// cuenta (el panel y la ficha del coach las nombran igual)
+export const NOMBRE_ZONA = Object.fromEntries([['cuello', 'Cuello'], ['hombro', 'Hombro'], ['codo', 'Codo'], ['muneca_mano', 'Muñeca o mano'], ['cadera', 'Cadera'], ['rodilla', 'Rodilla'], ['tobillo_pie', 'Tobillo o pie'], ...ZONAS]);
 
 export const GRUPOS = [
   ['pectoral', 'Pectoral'], ['espalda', 'Espalda'], ['deltoides', 'Deltoides'], ['cuadriceps', 'Cuádriceps'],

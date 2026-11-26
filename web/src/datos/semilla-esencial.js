@@ -421,6 +421,28 @@ export function pruebaDemo(p = {}) {
   return { prueba: p.prueba, valor, detalle, edad, sexo };
 }
 
+// (v0.256, 109) El motor de molestias: las zonas del cuestionario de lesiones, los momentos y una molestia como la deja
+// apuntar apuntar_dolor() → { zona, valor, momento, sesion_id } o null si no vale
+export const ZONAS_DOLOR_DEMO = ['cuello', 'hombro', 'codo', 'muneca_mano', 'espalda_alta', 'zona_lumbar', 'cadera', 'rodilla', 'tobillo_pie', 'otra'];
+export const MOMENTOS_DOLOR_DEMO = ['ahora', 'antes', 'durante', 'despues', 'manana', 'seguimiento'];
+export function dolorDemo(p = {}) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+  if (!ZONAS_DOLOR_DEMO.includes(p.zona) || !MOMENTOS_DOLOR_DEMO.includes(p.momento)) return null;
+  if (typeof p.valor !== 'number' || !Number.isInteger(p.valor) || p.valor < 0 || p.valor > 10) return null;
+  if (p.sesion_id != null && (typeof p.sesion_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(p.sesion_id))) return null;
+  return { zona: p.zona, valor: p.valor, momento: p.momento, sesion_id: p.sesion_id ?? null };
+}
+// (109) una fila de la tabla de molestias del check-in: las zonas de siempre y las del cuestionario de lesiones; con valor
+// (de 0 a 10), la intensidad va con él
+const ZONAS_CHECKIN_DEMO = ['hombros', 'pectoral', 'triceps', 'espalda_alta', 'zona_lumbar', 'femoral_gluteo', 'cuadriceps', 'aductor', 'otra', 'cuello', 'hombro', 'codo', 'muneca_mano', 'cadera', 'rodilla', 'tobillo_pie'];
+export function molestiaValidaDemo(f = {}) {
+  const i = Number(f.intensidad);
+  if (!ZONAS_CHECKIN_DEMO.includes(f.zona) || !Number.isInteger(i) || i < 0 || i > 3) return false;
+  if (f.valor == null) return true;
+  const v = Number(f.valor);
+  return Number.isInteger(v) && v >= 0 && v <= 10 && i === (v === 0 ? 0 : v <= 2 ? 1 : v <= 5 ? 2 : 3);
+}
+
 export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
   quienComida(t, atletaId);
   const n = (v) => (v == null || v === '' ? null : Number(v));
