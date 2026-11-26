@@ -3,6 +3,9 @@
 import { proponerSemana, entradaDesdeBloque, pautasDeSemana, paraElMotor, leerGuardadas, notaDeSemana, claseParaNota, emparejar, saltoDe } from './motor/index.js';
 import { semanaDesdePropuesta, planchaDeLaSemana, planchaEnTope, estancado, kilosBajada, planchaBajada, ESTANCADO } from './esencial-semana.js';
 import { num } from './calculos.js';
+import { estadoZonas } from './dolor.js';
+import { frenosSemana, notaFrenos, zonasAjustadas, textoFreno, textoVuelta, USO } from './dolor-sesion.js';
+import { cargaDe } from './zonas-ejercicio.js';
 
 // Lo que cambia en la plancha, para la nota: «5 segundos más: de 40 a 50» o «con peso: 5 kg encima y otra vez de 35 a 45
 // segundos».
@@ -52,6 +55,9 @@ export function estancadosIds(d, base) {
 // motor, que de serie solo avisa; sumar repeticiones con el mismo peso, sí); extras.conservar ('suave' | 'duras'): tras una semana que pidió suave, o con sus dos últimas sesiones a 9 o
 // más, la semana siguiente repite la carga tal cual (ni sube ni baja). Solo en una semana normal, fuera de las cuatro
 // primeras.
+// (v0.257, P: 'molestias_zona') extras.zonasDolor ({ registros, checkins, hoy }): el motor de molestias en la semana (M6 y el
+// ámbar de M7, con la tabla de zonas de M8): con una zona en ámbar o rojo, o que va a peor, los ejercicios que la cargan no
+// suben de carga ni de series; y lo que bajó por el ajuste de la mañana siguiente (M5) vuelve a lo de antes.
 export const NOTA_CONSERVAR = {
   suave: 'La semana pasada la pediste suave: esta repites la carga de antes, sin subir ni bajar nada.',
   duras: 'Tus dos últimas sesiones fueron muy duras: esta semana repites la carga, sin subir, para recuperarte.',
@@ -116,9 +122,44 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
       });
     });
   }
+  const bajado = new Set(bajadas.map((x) => x.p.id));
+  // (v0.257, P: 'molestias_zona') El motor de molestias en la semana: lo que no sube por una zona (M6 y el ámbar de M7) y lo
+  // que vuelve a lo de antes tras el ajuste de un día (M5). La alternativa en rojo va en la sesión: la semana no la cambia.
+  const frenosZona = {};
+  const zd = extras?.zonasDolor;
+  if (zd?.hoy) {
+    const estado = estadoZonas({ registros: zd.registros || [], checkins: zd.checkins || [], hoy: zd.hoy });
+    const fz = frenosSemana({ estado, registros: zd.registros || [], checkins: zd.checkins || [], ejercicios, ids: [...new Set(pautas.map((p) => p.ejercicio_id))], hoy: zd.hoy });
+    const hechasSemana = sesiones.filter((x) => x.completada && x.fecha_realizada).map((x) => ({ id: x.id, fecha: String(x.fecha_realizada).slice(0, 10), pautas: porSesion[x.id] || [] }));
+    const ajustadas = [...zonasAjustadas({ registros: zd.registros || [], checkins: zd.checkins || [], sesiones: hechasSemana, ejercicios, hoy: zd.hoy })];
+    const n = (x) => (x == null || x === '' ? null : Number(x));
+    [...sesiones].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).forEach((ses, i) => {
+      [...(porSesion[ses.id] || [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).forEach((p, j) => {
+        const nueva = semana[i]?.pautas?.[j];
+        if (!nueva || nueva.ejercicio_id !== p.ejercicio_id) return;
+        const ej = ejercicios[p.ejercicio_id] || {};
+        const f = fz[p.ejercicio_id] || null;
+        const m5 = !bajado.has(p.id) ? ajustadas.find((z) => cargaDe(z, ej) >= USO.preguntaDesde) || null : null;
+        if (!f && !m5) return;
+        if (f) {
+          if (n(p.carga_sugerida_kg) != null && n(nueva.carga_sugerida_kg) > n(p.carga_sugerida_kg)) nueva.carga_sugerida_kg = p.carga_sugerida_kg;
+          if (!soloKilos && n(p.series) != null && n(nueva.series) > n(p.series)) nueva.series = p.series;
+          if (ej.por_tiempo && n(p.reps_max) != null && n(nueva.reps_max) > n(p.reps_max)) { nueva.reps_min = p.reps_min; nueva.reps_max = p.reps_max; }
+          if (Array.isArray(nueva.series_detalle) && Array.isArray(p.series_detalle)) {
+            nueva.series_detalle = nueva.series_detalle.slice(0, soloKilos ? nueva.series_detalle.length : p.series_detalle.length)
+              .map((x, k) => (n(p.series_detalle[k]?.kg) != null && n(x.kg) > n(p.series_detalle[k].kg) ? { ...x, kg: p.series_detalle[k].kg } : x));
+          }
+        }
+        if (m5) {
+          if (n(p.carga_sugerida_kg) != null && n(nueva.carga_sugerida_kg) != null && n(nueva.carga_sugerida_kg) < n(p.carga_sugerida_kg)) nueva.carga_sugerida_kg = p.carga_sugerida_kg;
+          if (!soloKilos && n(p.series) != null && n(nueva.series) < n(p.series)) nueva.series = p.series;
+        }
+        frenosZona[p.id] = f || { zona: m5, motivo: 'manana' };
+      });
+    });
+  }
   // (v0.245) Los hechos de cada ejercicio, para «Tu revisión de la semana» y el «¿Por qué?» (logica/esencial-porque.js los
   // pone en palabras): lo que hizo, lo que tenía pautado, lo que le queda para la semana nueva y qué leyó el motor.
-  const bajado = new Set(bajadas.map((x) => x.p.id));
   const semanaTipo = descarga ? 'descarga' : r.semana?.tipo || 'normal';
   const porque = [];
   [...sesiones].sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0)).forEach((ses, i) => {
@@ -129,8 +170,9 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
       const campos = (x) => ({ kg: x.carga_sugerida_kg != null ? Number(x.carga_sugerida_kg) : null, min: x.reps_min ?? null, max: x.reps_max ?? null, series: x.series ?? null });
       porque.push({
         sesion: i, sesion_nombre: ses.nombre || '', ejercicio_id: p.ejercicio_id, nuevo_id: nueva?.ejercicio_id ?? null, nombre: ej.nombre || '', por_tiempo: !!ej.por_tiempo,
-        tipo: f?.tipo || null, diagnostico: f?.diagnostico || null, frenos: (f?.frenos || []).map((x) => x.id), mal_dia: !!f?.banderas?.malDia,
-        molestia: (f?.avisos || []).some((x) => x.tipo === 'molestia'), semana: semanaTipo, novato: soloKilos, estancado: bajado.has(p.id),
+        tipo: f?.tipo || null, diagnostico: f?.diagnostico || null, frenos: [...(f?.frenos || []).map((x) => x.id), ...(frenosZona[p.id] ? ['molestia_zona'] : [])], mal_dia: !!f?.banderas?.malDia,
+        molestia: (f?.avisos || []).some((x) => x.tipo === 'molestia') || !!frenosZona[p.id], semana: semanaTipo, novato: soloKilos, estancado: bajado.has(p.id),
+        ...(frenosZona[p.id] ? { zona_dolor: { ...frenosZona[p.id], texto: frenosZona[p.id].motivo === 'manana' ? textoVuelta(frenosZona[p.id].zona) : textoFreno(frenosZona[p.id]) } } : {}),
         hecho: [...(hechas[p.id] || [])].filter((x) => Number(x.reps) > 0 && !x.sustituto_id).sort((x, y) => (Number(x.numero) || 0) - (Number(y.numero) || 0))
           .map((x) => ({ kg: Number(x.kg) > 0 ? Number(x.kg) : null, reps: Number(x.reps), rpe: x.rpe != null ? Number(x.rpe) : null })),
         antes: campos(p), despues: nueva ? campos(nueva) : null,
@@ -147,10 +189,10 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
   // (094) lo que pasa a su alternativa para siempre no se cuenta como si siguiera (es otro ejercicio, sin kilos)
   const alts = atleta?.esencial_alternativas || {};
   const cambiado = (id) => !!alts[id] && alts[id] !== id && !!ejercicios[alts[id]] && tiempo(alts[id]) === tiempo(id);
-  const filasNota = (r.filas || []).filter((f) => !['pregunta', 'sin_tocar'].includes(f.tipo) && !tiempo(f.ejercicio_id) && !cambiado(f.ejercicio_id) && !bajado.has(f.pauta_id))
+  const filasNota = (r.filas || []).filter((f) => !['pregunta', 'sin_tocar'].includes(f.tipo) && !tiempo(f.ejercicio_id) && !cambiado(f.ejercicio_id) && !bajado.has(f.pauta_id) && !frenosZona[f.pauta_id])
     .map((f) => ({ ejercicio: f.ejercicio, clase: claseParaNota({ fila: f, propuesta: f.propuesta, hechas: entrada.series[f.pauta_id] }) })).filter((x) => x.clase);
   const sesionDe = Object.fromEntries(sesiones.map((s) => [s.id, s]));
-  const planchas = pautas.filter((p) => tiempo(p.ejercicio_id) && !bajado.has(p.id)).map((p) => {
+  const planchas = pautas.filter((p) => tiempo(p.ejercicio_id) && !bajado.has(p.id) && !frenosZona[p.id]).map((p) => {
     const nueva = planchaDeLaSemana({ p, fila: pares[p.id], hechas: hechas[p.id], soloKilos, normal });
     return { p, frase: nueva ? frasePlancha(p, nueva) : null };
   });
@@ -179,6 +221,9 @@ export function propuestaEsencial({ d, base, tipo = 'siguiente', ejercicios = {}
     if (kilos.length) extra.push(`En ${unir(kilos.map((x) => `${x.nombre.toLowerCase()} (de ${num(x.p.carga_sugerida_kg)} a ${num(x.nueva.carga_sugerida_kg)} kg)`))} bajas un poco el peso para volver a subir: llevabas tres semanas igual.`);
     if (otros.length) extra.push(`En ${unir(otros.map((x) => x.nombre.toLowerCase()))} bajas un poco para volver a subir: llevabas tres semanas igual.`);
   }
+  // (v0.257) lo que no sube por una zona (lo del ajuste de un día no se cuenta: vuelve a lo de antes sin más)
+  const porZona = Object.fromEntries(pautas.filter((p) => frenosZona[p.id] && frenosZona[p.id].motivo !== 'manana').map((p) => [p.ejercicio_id, frenosZona[p.id]]));
+  if (Object.keys(porZona).length) extra.push(notaFrenos(porZona, ejercicios));
   if (pautas.some((p) => tiempo(p.ejercicio_id) && !bajado.has(p.id) && planchaEnTope(p, hechas[p.id]))) {
     extra.push('En la plancha ya llevas el peso máximo (20 kg): para que siga costando, prueba su versión difícil (codos más adelantados o un pie en el aire).');
   }

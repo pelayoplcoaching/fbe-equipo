@@ -140,7 +140,7 @@ check(/La semana pasada la pediste suave/.test(explicar({ frenos: ['suave'], tip
   const vida = lee('web/src/ui/atleta/EsencialVida.jsx'), ayuda = lee('web/src/ui/atleta/EsencialAyuda.jsx');
   check(/encendido\('suave', previa\) \? suaveDe/.test(vida) && /encendido\('molestia_sigue', previa\) && mol/.test(vida) && /encendido\('salud_al_dia', previa\)/.test(vida) && /encendido\('variante', previa\)/.test(vida)
     && /if \(!encendido\('alarma', previa\)\) return null/.test(vida) && /encendido\('alarma', previaAlarma\) && <Alarma/.test(ayuda), 'en la app, cada una sale solo si está encendida');
-  check(/if \(!on\('molestia_frena'\) && !on\('suave'\) && !on\('dos_duras'\)\) return null;/.test(lee('web/src/datos/api-esencial.js')), 'y, con las tres reglas apagadas, al motor no le llega nada');
+  check(/if \(!on\('molestia_frena'\) && !on\('suave'\) && !on\('dos_duras'\) && !on\('molestias_zona'\)\) return null;/.test(lee('web/src/datos/api-esencial.js')), 'y, con las cuatro reglas apagadas (v0.257: y el motor de molestias), al motor no le llega nada');
 }
 
 console.log('\nEn la demo: Tomás, de la semana 5 a la 7');

@@ -68,6 +68,9 @@ export function explicar(h) {
   if (h.semana === 'repetir' || h.frenos?.includes('semana_a_medias')) {
     return con('igual', 'Se repite', 'La semana pasada quedó a medias, así que se repite tal cual: mismos kilos y mismas repeticiones.');
   }
+  // (v0.257, P: 'molestias_zona') Por una zona en ámbar o rojo, o que va a peor, no sube; y lo que bajó por el ajuste de la
+  // mañana siguiente vuelve a lo de antes (el texto lo pone esencial-motor.js; si el motor la bajó, se explica abajo)
+  if (h.zona_dolor?.texto && !(d.kg != null && a.kg != null && Number(d.kg) < Number(a.kg))) return con('igual', h.zona_dolor.motivo === 'manana' ? 'Vuelve a lo de antes' : 'Se queda igual', h.zona_dolor.texto);
   // La plancha (por tiempo), con su regla: 5 segundos más cuando aguanta arriba en todas; con 50, peso
   if (h.por_tiempo) {
     if (Number(d.kg || 0) > Number(a.kg || 0)) return con('sube', a.kg > 0 ? `Sube a ${kilos(d.kg)}` : `Con ${kilos(d.kg)}`, `Aguantaste ${a.max} segundos en todas tus series: ahora ${a.kg > 0 ? 'con algo más de peso' : 'con peso'} (${kilos(d.kg)}) y otra vez de ${rango(d)} segundos.`);

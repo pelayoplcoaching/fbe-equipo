@@ -159,7 +159,11 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   // avisos del peso (baja deprisa o parado), lo que contesta el check-in al hambre y a la energía, y cuatro lecciones
   'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida',
   // (v0.252, motor de nutrición) las preguntas de salud nuevas del cuestionario de nutrición: las exclusiones y el SCOFF
-  'salud_comida']);
+  'salud_comida',
+  // (v0.257, motor de molestias) la tabla de zonas de cada ejercicio (M8, hasta que Pelayo dé el visto bueno) y lo que hace
+  // con ella: preguntar antes de la sesión, durante, después y a la mañana siguiente, el ajuste de la mañana siguiente, lo
+  // que no sube con una zona en ámbar o que va a peor, la alternativa en rojo y el seguimiento a los 3 y 7 días
+  'molestias_zona']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)

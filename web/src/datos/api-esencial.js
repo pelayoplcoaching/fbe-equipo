@@ -34,7 +34,7 @@ export async function prepararSemana(api, b, atletaId, { hoy = fechaMadrid() } =
   // (094) con sus alternativas para siempre (por si van por tiempo)
   const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
   const ejercicios = porId(await api.ejerciciosPorIds(ids));
-  const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, paso.base),
+  const r = propuestaEsencial({ d, base: paso.base, tipo: paso.tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, paso.base, hoy),
     checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: paso.base.fecha_inicio })) });
   // (098) si ya ha elegido pasar a la siguiente, no se espera a la duda de una posible errata (como al llegar el lunes)
   if (r.preguntas.length && hoy < paso.inicio && !paso.adelantada) return { preguntas: r.preguntas, base: paso.base, inicio: paso.inicio };
@@ -139,13 +139,24 @@ export async function rutinas(b, { hoy = fechaMadrid() } = {}) {
 // (v0.247, P: APAGADO) Lo que cambiaría cómo se progresa, hasta que Pelayo lo encienda (logica/esencial-respuestas.js):
 // con una molestia moderada o grave en la zona, no sube; tras una semana que pidió suave, o con sus dos últimas sesiones a
 // 9 o más, la semana siguiente repite la carga. Con todo apagado no lee nada y devuelve null.
-async function extrasDe(b, atletaId, d, base) {
+// (v0.257, P: 'molestias_zona') el motor de molestias en la semana: sus lecturas de dolor (de 0 a 10, con la 109) hasta el
+// lunes siguiente a esa semana (o hasta hoy), para lo que no sube por una zona y lo que vuelve tras el ajuste de un día.
+async function extrasDe(b, atletaId, d, base, hoy = fechaMadrid()) {
   const { APAGADO } = await import('../logica/esencial-respuestas.js');
   const on = (k) => !APAGADO.has(k);
-  if (!on('molestia_frena') && !on('suave') && !on('dos_duras')) return null;
+  if (!on('molestia_frena') && !on('suave') && !on('dos_duras') && !on('molestias_zona')) return null;
   const extras = {};
   if (on('molestia_frena')) extras.molestiaFrena = true;
   const lunes = String(base?.fecha_inicio || '').slice(0, 10);
+  if (on('molestias_zona') && lunes) {
+    const A = await import('./api-dolor.js');
+    if (await A.hay109(b)) {
+      const fin = sumarDias(lunes, 7);
+      const zhoy = hoy < fin ? hoy : fin;
+      const [registros, checkins] = await Promise.all([A.registros(b, atletaId, sumarDias(zhoy, -21)).catch(() => []), A.molestiasCheckin(b, atletaId, sumarDias(lunes, -28)).catch(() => [])]);
+      extras.zonasDolor = { registros: registros.filter((x) => String(x.fecha).slice(0, 10) <= zhoy), checkins: checkins.filter((x) => String(x.semana_inicio).slice(0, 10) <= lunes), hoy: zhoy };
+    }
+  }
   if (on('suave')) {
     const ns = await b.select('esencial_notas', { eq: { atleta_id: atletaId, tipo: 'suave' } }).catch(() => []);
     if ((ns || []).some((n) => String(n.desde || '').slice(0, 10) === lunes)) extras.conservar = 'suave';
@@ -165,7 +176,7 @@ async function proponer(api, b, atletaId, atleta, d, base, tipo, hoy) {
   ]);
   const ids = unicos([...Object.values(d.pautas || {}).flat().map((x) => x.ejercicio_id), ...Object.values(atleta?.esencial_alternativas || {})]);
   const ejercicios = porId(await api.ejerciciosPorIds(ids));
-  const r = propuestaEsencial({ d, base, tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, base),
+  const r = propuestaEsencial({ d, base, tipo, ejercicios, atleta, hoy, extras: await extrasDe(b, atletaId, d, base, hoy),
     checkins: [previa?.checkin, esta?.checkin].filter(Boolean), molestias: (esta?.molestias || []).map((m) => ({ ...m, semana_inicio: base.fecha_inicio })) });
   return { r, ejercicios };
 }
