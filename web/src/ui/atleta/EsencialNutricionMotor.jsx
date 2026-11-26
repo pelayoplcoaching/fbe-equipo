@@ -208,7 +208,7 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
         {clave === 'medidas' && (
           <>
             <div class="nm-como">
-              <svg class="nm-dib" viewBox="0 0 60 82" role="img" aria-label="Dónde medir: la cintura, a la altura del ombligo; la cadera, por la parte más ancha de los glúteos">
+              <svg class="nm-dib" viewBox="0 0 60 82" role="img" aria-label="Dónde medir: la cintura, a medio camino entre la última costilla y el hueso de la cadera; la cadera, por la parte más ancha de los glúteos">
                 <path class="nm-dib-cuerpo" stroke-width="1.5" d="M14 4 Q30 0 46 4 L44 30 Q41 42 42 50 Q48 62 47 78 L13 78 Q12 62 18 50 Q19 42 16 30 Z" />
                 <circle class="nm-dib-cintura" cx="30" cy="46" r="1.4" stroke-width="1.5" />
                 <line class="nm-dib-cintura" x1="4" y1="46" x2="56" y2="46" stroke-width="2" stroke-dasharray="4 3" />
@@ -217,7 +217,7 @@ function Cuestionario({ datos, conSalud, pesoKg, actual, alCerrar, alGuardar }) 
               <div class="nm-como-l" role="list">
                 <span role="listitem" class="peq nm-como-i">Por la mañana, en ayunas y después de orinar.</span>
                 <span role="listitem" class="peq nm-como-i">De pie y relajado, con la cinta horizontal, ceñida sin apretar.</span>
-                <span role="listitem" class="peq nm-como-i"><span class="nm-como-c">La cintura</span>, a la altura del ombligo, al final de soltar el aire.</span>
+                <span role="listitem" class="peq nm-como-i"><span class="nm-como-c">La cintura</span>, a medio camino entre la última costilla y la parte de arriba del hueso de la cadera, al final de soltar el aire.</span>
                 <span role="listitem" class="peq nm-como-i"><span class="nm-como-k">La cadera</span>, por la parte más ancha de los glúteos.</span>
               </div>
             </div>

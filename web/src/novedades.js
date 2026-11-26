@@ -11,6 +11,7 @@ export const NOVEDADES = {
     atleta: [
       'Tus pruebas: la silla, el equilibrio y tu cintura, en tu punto de partida y cada 12 semanas, con el antes y el ahora.',
       'Con los rangos de las herramientas de la web y un informe para tu médico. En «¿Qué necesitas?», «Mis pruebas».',
+      'La cintura, siempre igual: a medio camino entre la última costilla y el hueso de la cadera.',
     ],
     coach: [
       'FBE Esencial: «Tus pruebas» (silla, equilibrio, cintura/altura, prensión y SPPB) y, en su ficha, sus resultados. Pide la 108.',

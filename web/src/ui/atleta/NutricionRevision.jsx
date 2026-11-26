@@ -109,7 +109,7 @@ function ProximaRevision({ r, toca, medidas, alMedir }) {
       <span class="mini secundario">Tu próxima revisión, el {fmtConDia(toca)}. Esta semana llevas {Math.min(pesadas, 3)} de 3 pesadas.</span>
       {tocaCintura(medidas, hoy) && (
         <form class="nm-prox-cint" onSubmit={guardar} noValidate>
-          <label class="mini" for="nm-rev-cintura">Toca medirte la cintura (cada 2 semanas): por la mañana, en ayunas, a la altura del ombligo.</label>
+          <label class="mini" for="nm-rev-cintura">Toca medirte la cintura (cada 2 semanas): por la mañana, en ayunas, a medio camino entre la última costilla y el hueso de la cadera.</label>
           <div class="nm-prox-fila">
             <Paso id="nm-rev-cintura" valor={cm} paso={0.5} min={45} max={200} dec={1} etiqueta="cintura en centímetros" alCambiar={setCm} />
             <button class="btn btn-peq" disabled={ocupado || cm == null}>Guardar</button>

@@ -408,7 +408,7 @@ export function HojaPartida({ alCerrar, alHecho = null }) {
     <Hoja titulo="Tu punto de partida" alCerrar={alCerrar}>
       <div class="pila lun-partida">
         <Arte id="esencial-partida" />
-        <p class="secundario">Si quieres, apunta hoy tu peso y tu cintura (a la altura del ombligo, sin apretar). A las doce semanas, en «Tu trimestre», verás cómo han cambiado. Es opcional: puedes apuntar solo uno.</p>
+        <p class="secundario">Si quieres, apunta hoy tu peso y tu cintura (a medio camino entre la última costilla y la parte de arriba del hueso de la cadera, después de soltar el aire y sin apretar). A las doce semanas, en «Tu trimestre», verás cómo han cambiado. Es opcional: puedes apuntar solo uno.</p>
         <div class="lun-dos">
           <label class="pila-xs"><span class="etq">Peso (kg)</span><input class="entrada num" inputMode="decimal" value={f.peso} onInput={(ev) => setF({ ...f, peso: ev.currentTarget.value })} placeholder="70" /></label>
           <label class="pila-xs"><span class="etq">Cintura (cm)</span><input class="entrada num" inputMode="decimal" value={f.cintura} onInput={(ev) => setF({ ...f, cintura: ev.currentTarget.value })} placeholder="85" /></label>

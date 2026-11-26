@@ -122,5 +122,9 @@ const jsx = fuente('ui/atleta/EsencialPruebas.jsx');
 check(!/Pelayo/.test(jsx.slice(jsx.indexOf('function InformeMedico'))) && /usePantallaEncendida\(\)/.test(jsx) && /He apoyado el pie/.test(jsx) && /\+1 de pie/.test(jsx),
   'la hoja: el informe sin el nombre de Pelayo, la pantalla encendida y los botones de la web («+1 de pie», «He apoyado el pie»)');
 
+const esencialesCintura = ['ui/atleta/EsencialEspera.jsx', 'ui/atleta/EsencialNutricionMotor.jsx', 'ui/atleta/NutricionRevision.jsx'].map(fuente);
+check(esencialesCintura.every((x) => !/ombligo/.test(x) && /a medio camino entre la última costilla/.test(x)) && /medio camino entre los dos puntos/.test(P.COMO_PRUEBA.cintura[0])
+  && /cinturaHoy/.test(jsx), '(Pelayo, 26/11) en FBE Esencial, la cintura siempre como NICE (punto de partida, cuestionario de nutrición y revisión), y la prueba usa la de hoy');
+
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

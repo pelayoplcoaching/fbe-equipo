@@ -57,10 +57,12 @@ function useCuenta() {
 
 // ---------- La hoja: la lista, cada prueba y el informe ----------
 export function HojaPruebas({ p = null, alCerrar, inicial = null, alGuardada = null }) {
-  const { backend, atleta, aviso } = useApp();
+  const { api, backend, atleta, aviso } = useApp();
   const [vuelta, setVuelta] = useState(0);
   const d = usePruebas(vuelta);
   const nut = useCarga(() => import('../../datos/api-nutricion.js').then((n) => n.perfil(backend, atleta.id)).catch(() => null), [atleta.id]);
+  // (Pelayo, 26/11/2026: en FBE Esencial la cintura se mide siempre como NICE) la que apuntó hoy, ya puesta en la prueba
+  const med = useCarga(() => (api.medidas ? api.medidas(atleta.id).catch(() => []) : Promise.resolve([])), [atleta.id]);
   const [vista, setVista] = useState(inicial);
   const [yo, setYo] = useState({});
   const [dina, setDina] = useState(() => leer(claveDina(atleta.id)) === '1');
@@ -79,6 +81,7 @@ export function HojaPruebas({ p = null, alCerrar, inicial = null, alGuardada = n
   const sexo = yo.sexo !== undefined ? yo.sexo : (ult?.sexo || n?.sexo || null);
   const listo = edadOk && !!sexo;
   const altura = filas.find((f) => f.prueba === 'cintura')?.detalle?.altura ?? n?.altura ?? null;
+  const cinturaHoy = (med.datos || []).find((m) => String(m.fecha).slice(0, 10) === hoy && Number(m.cintura_cm) > 0)?.cintura_cm ?? null;
   const conDina = dina || filas.some((f) => f.prueba === 'prension');
   const lista = P.pruebasDe({ edad: edadOk ? edad : null, dinamometro: conDina });
   const u = P.ultimasPruebas(filas);
@@ -112,7 +115,7 @@ export function HojaPruebas({ p = null, alCerrar, inicial = null, alGuardada = n
         {vista && <button type="button" class="btn-texto peq prb-volver" onClick={volver}><Icono n="atras" /> Tus pruebas</button>}
         {vista === 'silla' && <PruebaSilla {...comun} anterior={u.silla?.ultima || null} />}
         {vista === 'equilibrio' && <PruebaEquilibrio {...comun} anterior={u.equilibrio?.ultima || null} />}
-        {vista === 'cintura' && <PruebaCintura {...comun} altura={altura} anterior={u.cintura?.ultima || null} />}
+        {vista === 'cintura' && <PruebaCintura {...comun} altura={altura} cintura={cinturaHoy} anterior={u.cintura?.ultima || null} />}
         {vista === 'prension' && <PruebaPrension {...comun} anterior={u.prension?.ultima || null} />}
         {vista === 'sppb' && <PruebaSPPB {...comun} anterior={u.sppb?.ultima || null} />}
         {vista === 'informe' && <InformeMedico filas={filas} p={p} />}
@@ -312,8 +315,8 @@ function PruebaEquilibrio({ edad, anterior, ...g }) {
 }
 
 // ---------- Cintura y altura ----------
-function PruebaCintura({ altura = null, anterior, ...g }) {
-  const [f, setF] = useState({ cintura: '', altura: altura != null ? String(altura).replace('.', ',') : '' });
+function PruebaCintura({ altura = null, cintura = null, anterior, ...g }) {
+  const [f, setF] = useState({ cintura: cintura != null ? String(cintura).replace('.', ',') : '', altura: altura != null ? String(altura).replace('.', ',') : '' });
   const c = numero(f.cintura), h = numero(f.altura);
   const r = c != null && h != null ? P.resultadoCintura({ cintura: c, altura: h }) : null;
   return (
