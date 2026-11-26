@@ -317,6 +317,7 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
   return (
     <Hoja titulo={r?.numero ? `Tu revisión · semana ${r.numero}` : 'Tu revisión de la semana'} alCerrar={alCerrar}>
       <div class="pila ayu-revision" aria-busy={d.cargando ? 'true' : 'false'}>
+        <Arte id="esencial-revision-semana" />
         {d.cargando && !r && <p class="peq secundario" role="status">Repasando tu semana…</p>}
         {d.error && <p class="error" role="alert">No se ha podido preparar tu revisión: {String(d.error.message || d.error)}</p>}
         {!d.cargando && !d.error && !r && <p class="peq secundario">Aún no hay nada que revisar: en cuanto tengas tu primera semana hecha, aquí verás qué cambia y por qué.</p>}

@@ -13,6 +13,8 @@ import { encendido } from '../../logica/esencial-respuestas.js';
 import { saludoDe, AGUJETAS, agujetasDe, vueltaDe, ritmoDe, trimestreDe, TRIMESTRE_SIGUE, retoSemana, seVa, comoVamosToca, diarioDe, notaDelLunes, VOZ_PELAYO, DIA_A_DIA, diaADia, diaDelPlan } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
+// (F5) sus ilustraciones: «Tu trimestre» y «Lo que la app ha hecho por ti»
+import { Arte } from './EsencialArte.jsx';
 // (v0.250, 117) «Tu trimestre», con la comida: el ritmo real del peso frente al previsto (quien lleva nutrición)
 import { ritmoDelTrimestre } from '../../logica/esencial-comida.js';
 import { planVigente } from '../../logica/nutricion.js';
@@ -178,6 +180,7 @@ function HojaTrimestre({ p, cuestionario, alCerrar, recargar }) {
   return (
     <Hoja titulo="Tu trimestre" alCerrar={alCerrar}>
       <div class="pila cer-trimestre" aria-busy={d.cargando ? 'true' : 'false'}>
+        <Arte id="esencial-trimestre" />
         {d.cargando && !t && <p class="peq secundario" role="status">Sumando tus semanas…</p>}
         {!d.cargando && !t && <p class="peq secundario">Aún no hay bastante que comparar: vuelve cuando lleves un par de semanas con tu rutina.</p>}
         {t && (
@@ -230,6 +233,7 @@ export function HojaDiario({ p, alCerrar }) {
   return (
     <Hoja titulo="Lo que la app ha hecho por ti" alCerrar={alCerrar}>
       <div class="pila cer-diario">
+        <Arte id="esencial-app-hizo" />
         <p class="secundario">Cada decisión que la app ha tomado con tu plan, y por qué. La más reciente, primero.</p>
         {filas.length ? (
           <ol class="cer-diario-l">

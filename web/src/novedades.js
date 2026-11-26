@@ -11,7 +11,7 @@ export const NOVEDADES = {
     atleta: [
       'Si llevas nutrición en FBE Esencial: cada 4 semanas, la app revisa tu plan sola y te cuenta qué cambia y por qué.',
       'En «Tu plan», tus revisiones; y en Hoy, cuándo es la siguiente y, cada 2 semanas, tu cintura.',
-      'Y dibujos nuevos en «¿Qué necesitas?», en tu plan de comida y en lo de antes de tu lunes.',
+      'Y dibujos nuevos en «¿Qué necesitas?», en tu plan de comida, en tu revisión y en lo de antes de tu lunes.',
     ],
     coach: [
       'Motor de nutrición: la revisión de cada 4 semanas (con tus topes) y su historial. Pide la 106.',

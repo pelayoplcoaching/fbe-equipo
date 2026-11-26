@@ -934,5 +934,89 @@
       "1080": "imagenes/esencial/esencial-primer-dia-1080.7021ea6b.webp"
     },
     "color": "#3a2e65"
+  },
+  "esencial-nutri-ajuste": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-ajuste-240.ebb4cab8.webp",
+      "720": "imagenes/esencial/esencial-nutri-ajuste-720.0619c3c8.webp",
+      "1080": "imagenes/esencial/esencial-nutri-ajuste-1080.8bc5fd75.webp"
+    },
+    "color": "#4f2e66"
+  },
+  "esencial-nutri-revision": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-revision-240.c5e7cd24.webp",
+      "720": "imagenes/esencial/esencial-nutri-revision-720.f3a8a6b6.webp",
+      "1080": "imagenes/esencial/esencial-nutri-revision-1080.a2f67623.webp"
+    },
+    "color": "#775567"
+  },
+  "esencial-nutri-simplificar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-simplificar-240.bf5ba22a.webp",
+      "720": "imagenes/esencial/esencial-nutri-simplificar-720.5361c176.webp",
+      "1080": "imagenes/esencial/esencial-nutri-simplificar-1080.24e7a11d.webp"
+    },
+    "color": "#613c61"
+  },
+  "esencial-nutri-va-bien": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-nutri-va-bien-240.b1f2a354.webp",
+      "720": "imagenes/esencial/esencial-nutri-va-bien-720.3c48d474.webp",
+      "1080": "imagenes/esencial/esencial-nutri-va-bien-1080.80872244.webp"
+    },
+    "color": "#503665"
+  },
+  "esencial-app-hizo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-app-hizo-240.f47741f8.webp",
+      "720": "imagenes/esencial/esencial-app-hizo-720.a19db350.webp",
+      "1080": "imagenes/esencial/esencial-app-hizo-1080.5e15f709.webp"
+    },
+    "color": "#422c6a"
+  },
+  "esencial-revision-semana": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-revision-semana-240.37c04657.webp",
+      "720": "imagenes/esencial/esencial-revision-semana-720.16ad2aad.webp",
+      "1080": "imagenes/esencial/esencial-revision-semana-1080.d8b12db5.webp"
+    },
+    "color": "#483669"
+  },
+  "esencial-trimestre": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-trimestre-240.be07079d.webp",
+      "720": "imagenes/esencial/esencial-trimestre-720.fe4436c1.webp",
+      "1080": "imagenes/esencial/esencial-trimestre-1080.524260e2.webp"
+    },
+    "color": "#523a74"
   }
 }

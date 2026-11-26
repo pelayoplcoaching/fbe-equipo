@@ -55,4 +55,6 @@ export const ARTE = [
   // (v0.253) F4 · Antes de tu lunes: una arriba de cada hoja de lo que puede ir haciendo mientras espera (la de «Qué pedirle a
   // tu médico» es la del visto bueno)
   'esencial-avisos-prueba', 'esencial-prepara-gimnasio', 'esencial-porque', 'esencial-partida', 'esencial-ensayo', 'esencial-primer-dia', 'esencial-kilos-partida',
+  // F5 · Tu revisión de la semana, lo que la app ha hecho por ti y tu trimestre
+  'esencial-revision-semana', 'esencial-app-hizo', 'esencial-trimestre',
 ];
