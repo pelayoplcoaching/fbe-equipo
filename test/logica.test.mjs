@@ -458,7 +458,8 @@ console.log('\nCumplimiento e informe del bloque');
 
 console.log('\n¿Cómo llegas hoy?');
 {
-  const { consejoPreparacion, completa, textoPreparacion, subeCarga } = await import('../web/src/logica/preparacion.js');
+  const { consejoPreparacion, completa, subeCarga } = await import('../web/src/logica/preparacion.js');
+  const { textoPreparacion } = await import('../web/src/logica/preparacion-texto.js');
   const flojo = consejoPreparacion({ sueno: 1, energia: 2, molestias: 3 });
   check(!subeCarga(flojo, null) && !subeCarga(flojo, 'igual') && subeCarga(flojo, 'subir') && subeCarga(consejoPreparacion({ sueno: 3, energia: 3, molestias: 3 }), null) && subeCarga(null, null),
     'día flojo: sube la carga solo si el atleta lo elige (sin elegir, los pesos de la última vez); un buen día, como siempre');

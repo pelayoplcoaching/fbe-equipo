@@ -24,9 +24,12 @@ import { readFileSync } from 'node:fs';
 // (v0.232: 1790 KB crudo con FBE Esencial; lo de antes de empezar, sus pantallas y las marcas ya van en su trozo; el
 // comprimido, igual)
 // (v0.252: 606 KB comprimido; la lista de novedades de la política, al abrir el aviso: se baja a 607)
+// (v0.258: estilos a 902 KB: la v0.257 se quedó a 19 bytes de los 900 y el reparto deja en el común una regla de la gráfica
+// del perfil, .perfil-punto.atipico, en cuanto una palabra del arranque —«mal», la cara de «¿Cómo llegas hoy?»— coincide con
+// una clase que podría pisarla; lo nuevo de cada pantalla sigue yendo con su trozo)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 607 },
-  css: { crudo: 900, gz: 160 },
+  css: { crudo: 902, gz: 160 },
 };
 
 let ok = 0, fallos = 0;

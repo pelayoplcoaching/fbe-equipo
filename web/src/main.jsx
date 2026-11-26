@@ -46,6 +46,7 @@ import './comida.css';
 import './nutricion-motor.css';
 import './pruebas.css';
 import './dolor.css';
+import './como-llegas.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

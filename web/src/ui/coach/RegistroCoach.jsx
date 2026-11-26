@@ -7,7 +7,7 @@ import { Fragment } from 'preact';
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Siluetas, Vacio, Icono, Segmentos, Hoja, HojaExportar, copiar } from '../comunes.jsx';
 import { MiniLinea } from '../atleta/ProgresoPiezas.jsx';
-import { ChipLlegada } from '../atleta/Preparacion.jsx';
+import { ChipLlegada } from './ChipLlegada.jsx';
 import { Hilo } from '../Hilo.jsx';
 import { DetalleArchivo } from '../Diario.jsx';
 import { HistorialEjercicio } from '../Herramientas.jsx';

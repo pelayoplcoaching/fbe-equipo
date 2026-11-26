@@ -7,6 +7,7 @@ import { contactosPorAtleta, programadosPorAtleta, radar, textoResumenRadar, tex
   limpiarAjustesRadar, objetivoDe, juntarLocal, conHablado, conPospuesto, conEnvio, tonoQueContesta, horaHabitual,
   historiaContacto, cumplimientoContacto, NOMBRE_CANAL, NOMBRE_SITUACION } from '../../logica/radar/index.js';
 import { datosRadar, recordsRecientes, abrirRadar } from '../../datos/radar.js';
+import { comoLlegan, textoLlegan } from '../../logica/radar/llegan.js';
 import { Borrador, BorradorOtro, HojaEstilo } from './RadarBorrador.jsx';
 
 const almacen = () => { try { return window.localStorage; } catch { return null; } };
@@ -207,6 +208,8 @@ export function RadarContacto({ abrirAtleta }) {
       </CabeceraGrande>
       {/* (imágenes, bloque S) el faro: que nadie se quede sin noticias tuyas */}
       <CabCoach id="coach-radar" titulo="Que nadie se quede a oscuras"><span class="peq">Primero, quien lleva más días sin saber de ti. Un mensaje corto basta.</span></CabCoach>
+      {/* (v0.258, D11) cómo llegan a sus sesiones (lo que contestaron en «¿Cómo llegas hoy?», últimos 7 días) */}
+      {datos && <ComoLlegan c={comoLlegan(datos.sesiones, datos.resumenes)} abrirAtleta={abrirAtleta} />}
       {res.cargando && !datos ? <Siluetas forma="lista" n={6} texto="Cargando el contacto con tus atletas" /> : res.error ? (
         <ErrorCaja error={res.error} reintentar={() => res.recargar()} />
       ) : !filas.length && !otros.invitado.length && !otros.pausado.length ? (
@@ -411,5 +414,22 @@ function FilaOtro({ f, hoy, abierta, cursor, alAbrir, estilo, alEnviar, alYaEscr
       </div>
       {abierta && <BorradorOtro id={idPanel} f={f} hoy={hoy} estilo={estilo} alEnviar={alEnviar} alYaEscrito={alYaEscrito} />}
     </li>
+  );
+}
+
+// (v0.258, D11) Cómo llegan tus atletas a sus sesiones (últimos 7 días) y quién lleva varias seguidas en día difícil
+function ComoLlegan({ c, abrirAtleta }) {
+  const t = textoLlegan(c);
+  if (!t) return null;
+  return (
+    <section class="panel panel-pad pila-xs" aria-labelledby="rad-llegan-t">
+      <strong id="rad-llegan-t">Cómo llegan a sus sesiones (últimos 7 días)</strong>
+      <span class="peq">{t}</span>
+      {c.seguidas.length > 0 && (
+        <span class="peq">Varias seguidas en día difícil:{' '}
+          {c.seguidas.map((x, i) => <span key={x.atleta_id}>{i > 0 ? ', ' : ''}<button type="button" class="btn-texto" onClick={() => abrirAtleta?.(x.atleta_id)}>{x.nombre} ({x.n})</button></span>)}
+        </span>
+      )}
+    </section>
   );
 }

@@ -163,7 +163,11 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   // (v0.257, motor de molestias) la tabla de zonas de cada ejercicio (M8, hasta que Pelayo dé el visto bueno) y lo que hace
   // con ella: preguntar antes de la sesión, durante, después y a la mañana siguiente, el ajuste de la mañana siguiente, lo
   // que no sube con una zona en ámbar o que va a peor, la alternativa en rojo y el seguimiento a los 3 y 7 días
-  'molestias_zona']);
+  'molestias_zona',
+  // (v0.258, el día a día) «¿Cómo llegas hoy?» de un toque (con la 110) y lo que propone la app: un día regular o con
+  // menos de 6 horas de sueño, los kilos de la última vez y una serie menos en los accesorios; un día malo, la sesión
+  // mínima o pasarla a otro día; con agujetas fuertes, un calentamiento más largo y no sube
+  'como_llegas']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)

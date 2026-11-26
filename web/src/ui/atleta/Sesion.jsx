@@ -49,7 +49,9 @@ import { leerIntervalos, textoIntervalos } from '../../logica/intervalos.js';
 import { tempoDe } from '../../logica/tempo.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
-import { consejoPreparacion, subeCarga } from '../../logica/preparacion.js';
+import { consejoPreparacion, subeCarga, caraDe } from '../../logica/preparacion.js';
+import { propuestaDelDia, aplicarPropuesta } from '../../logica/como-llegas.js';
+import { useUnToque } from './como-llegas-on.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
@@ -93,7 +95,7 @@ import { mapaEvitados, apartarEvitados, textoMotivo } from '../../logica/perfil-
 import { useConocerte, AvisoZona, FraseUltimaVez, CostumbreDescanso, vueltaDeViaje } from './Conocerte.jsx';
 import { FotoMotivacion } from './Suyo.jsx';
 import { useAlternativaElegida, apuntarAlternativa, HaceUnAno } from './SesionTuya.jsx';
-import { ordenarAlternativas, hastaHaceUnAno } from '../../logica/sesion-tuya.js';
+import { ordenarAlternativas, hastaHaceUnAno, calentamiento } from '../../logica/sesion-tuya.js';
 import { Cadencia, CancionRecord, BotonMusica, PonTuCancion, useFicha } from './Musica.jsx';
 import { tramosDeCarrera, faseDeSesion } from '../../logica/musica.js';
 import { AnadirASalud } from './Conexiones.jsx';
@@ -118,6 +120,8 @@ const TrasLaSesion = perezoso(() => import('./EsencialAyuda.jsx'), 'TrasLaSesion
 const DolorEnSesion = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorEnSesion', { mientras: null });
 const DolorDurante = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorDurante', { mientras: null });
 const DolorDespues = perezoso(() => import('./EsencialDolorSesion.jsx'), 'DolorDespues', { mientras: null });
+// (v0.258, P: 'como_llegas') FBE Esencial: «¿Cómo llegas hoy?» de un toque y lo que propone la app (con la 110)
+const ComoLlegas = perezoso(() => import('./ComoLlegas.jsx'), 'ComoLlegas', { mientras: null });
 // (M5) el ajuste de la mañana siguiente, solo en la sesión de hoy: { pauta: { series, carga_sugerida_kg, series_detalle } }
 const conAjusteDolor = (xs, aj) => (aj && Object.keys(aj).length ? xs.map((e) => (aj[e.id] ? { ...e, ...aj[e.id] } : e)) : xs);
 
@@ -311,6 +315,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // borra al saltar la pregunta o al marcar la primera serie (el coach no lo verá como de esta sesión)
   const [prepAntigua, setPrepAntigua] = useState(false);
   const [editandoPrep, setEditandoPrep] = useState(false);
+  const unToque = useUnToque();   // (v0.258) de un toque, en FBE Esencial
   // En un día flojo o malo, si sube la carga o va con los pesos de la última vez (lo elige el atleta; se recuerda en el móvil)
   const [eleccionCarga, setEleccionCarga] = usePreferencia(`fbe-carga-dia-${id}`, null);
   // v0.51: la portada antes de empezar; al tocar «Empezar» (o con alguna serie hecha) se pasa a la sesión de siempre
@@ -409,7 +414,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const { sesion, semana, progresionAuto } = det.datos;
   // v0.64 (4): todo lo de la sesión sale de esta lista, en el orden de hoy (la serie que toca, «Ahora toca», la píldora, la
   // pantalla de bloqueo, los tramos y el modo enfoque)
-  const ejercicios = conAjusteDolor(aplicarOrden(det.datos.ejercicios, ordenSes), sesion.completada ? null : dolorSes?.ajustes);
+  // (v0.258) con «Hacerlo así» de un día regular o malo, la sesión ajustada (lo ya hecho no desaparece)
+  const enOrdenHoy = aplicarOrden(det.datos.ejercicios, ordenSes);
+  const propDia = unToque && !sesion.completada && prep?.asi === true ? propuestaDelDia(prep, enOrdenHoy) : null;
+  const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
   if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
@@ -845,7 +853,10 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         </div>
       )}
 
-      {preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
+      {unToque && salud && !sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (preguntarPrep || caraDe(prep)) ? (
+        <ComoLlegas prep={prep} pautas={enOrdenHoy} calent={prep?.agujetas ? calentamiento(enOrdenHoy) : []} sesion={sesion} alGuardar={guardarPrep} editando={editandoPrep} alEditar={setEditandoPrep} alCerrar={alCerrar}
+          alSaltar={() => { setPrepSaltada(true); quitarPrepAntigua(); }} />
+      ) : preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} prep={prep} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}
 
       {/* (v0.257, P: 'molestias_zona') con una molestia abierta en lo que carga hoy: antes de empezar, el ajuste y el rojo */}

@@ -1324,16 +1324,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await items.first().waitFor({ timeout: 10000 }).catch(() => {});
       // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
       const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
-      check(nItems === 26 && /26 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 26 cosas apagadas (v0.257: con el motor de molestias), cada una con su interruptor (${nItems})`);
+      check(nItems === 27 && /27 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 27 cosas apagadas (v0.258: con «¿Cómo llegas hoy?» de un toque), cada una con su interruptor (${nItems})`);
       const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
       await enfermo.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /25 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const encendida = await p.waitForFunction(() => /26 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 25 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 26 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /26 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        const deshecho = await p.waitForFunction(() => /27 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
       // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app
@@ -1709,6 +1709,64 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       if (conDur) await dur.getByRole('button', { name: '4 de 10' }).click();
       check(conDur && await dur.getByText(/Sigue, sin subir/).waitFor({ timeout: 5000 }).then(() => true).catch(() => false), 'y con 4 justo, sigue sin subir');
       await desborda(p, 'la regla de durante');
+    }
+    await ctx.close();
+  }
+  // (v0.258, vista previa) «¿Cómo llegas hoy?» de un toque: Tomás dice «Bien» con 5,5 horas de sueño (cuenta como regular:
+  // la sesión ajustada), luego «Mal» (la sesión mínima, solo lo principal) y al final elige entrenar normal
+  {
+    const { ctx, p } = await movil();
+    await p.goto(`${base}/?demo=esencial&previa=1`);
+    await p.getByRole('button', { name: /Tomás/ }).first().click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
+    await p.waitForTimeout(800);
+    await cerrar(p);
+    await p.locator('.hero-dia').getByRole('button', { name: /Empezar sesión|Continuar sesión/ }).first().click();
+    const portada = p.locator('.portada-vista');
+    if (await portada.waitFor({ timeout: 10000 }).then(() => true).catch(() => false)) await portada.getByRole('button', { name: /^\s*Empezar\s*$/ }).last().click();
+    await cerrar(p);
+    const caja = p.locator('.cll-caja');
+    const conCaja = await caja.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const series = async () => p.evaluate(() => [...document.querySelectorAll('article.ejercicio')].map((a) => a.getAttribute('data-se')));
+    const todos = conCaja ? await series() : [];
+    check(conCaja && (await caja.locator('.cll-cara').count()) === 3 && !(await p.locator('.preparacion').count()) && todos.length >= 3,
+      `Tomás, en su sesión (vista previa): «¿Cómo llegas hoy?» de un toque, con tres caras, en lugar de las tres preguntas (${todos.length} ejercicios)`);
+    if (conCaja) {
+      await caja.getByRole('button', { name: /Añadir las horas/ }).click();
+      for (let i = 0; i < 3; i++) await caja.getByRole('button', { name: 'Media hora menos' }).click();
+      check(/5,5 h/.test(await caja.locator('.cll-horas-n').textContent()) && /Con menos de 6 horas/.test(await caja.textContent()), 'las horas que ha dormido, de media en media (con menos de 6, lo avisa)');
+      await caja.getByRole('button', { name: 'Bien', exact: true }).click();
+      const prop = p.locator('.cll-prop');
+      const conProp = await prop.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      const tProp = conProp ? (await prop.textContent()).replace(/\s+/g, ' ') : '';
+      check(conProp && /Día flojo \(5,5 h de sueño\)/.test(tProp) && /Los kilos de la última vez/.test(tProp) && (await prop.getByRole('button', { name: 'Entrenar normal' }).count()) === 1,
+        `«Bien» con 5,5 horas cuenta como regular: la app propone y espera («${tProp.slice(0, 160)}»)`);
+      if (conProp) {
+        await prop.getByRole('button', { name: 'Hacerlo así' }).click();
+        const linea = p.locator('.cll-linea-ajustada');
+        const conLinea = await linea.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        check(conLinea && /Hoy, la sesión ajustada/.test(await linea.textContent()) && (await series()).length === todos.length, '«Hacerlo así»: la sesión ajustada (los mismos ejercicios)');
+        if (conLinea) {
+          await linea.getByRole('button', { name: 'Cambiar cómo llego' }).click();
+          await p.locator('.cll-caja').getByRole('button', { name: 'Mal', exact: true }).click();
+          const prop2 = p.locator('.cll-prop');
+          const conProp2 = await prop2.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+          const t2 = conProp2 ? (await prop2.textContent()).replace(/\s+/g, ' ') : '';
+          check(conProp2 && /Día difícil/.test(t2) && /Hoy, solo lo principal/.test(t2) && (await prop2.getByRole('button', { name: 'Pasarla a otro día' }).count()) === 1,
+            `«Mal»: la sesión mínima o pasarla a otro día («${t2.slice(0, 160)}»)`);
+          if (conProp2) {
+            await prop2.getByRole('button', { name: 'Hacer la sesión mínima' }).click();
+            await p.waitForFunction((n) => document.querySelectorAll('article.ejercicio').length < n, todos.length, { timeout: 10000 }).catch(() => {});
+            const minima = await series();
+            check(minima.length >= 2 && minima.length <= 3 && minima.every((x) => todos.includes(x)) && /Hoy, la sesión mínima/.test(await p.locator('.cll-linea-ajustada').textContent()),
+              `la sesión mínima: solo lo principal (${minima.length} de ${todos.length} ejercicios)`);
+            await p.locator('.cll-linea-ajustada').getByRole('button', { name: 'Entrenar normal' }).click();
+            await p.waitForFunction((n) => document.querySelectorAll('article.ejercicio').length === n, todos.length, { timeout: 10000 }).catch(() => {});
+            check((await series()).length === todos.length && /Hoy entrenas normal/.test(await p.locator('.cll-linea').first().textContent()), '«Entrenar normal»: vuelve toda su sesión');
+          }
+        }
+      }
     }
     await ctx.close();
   }

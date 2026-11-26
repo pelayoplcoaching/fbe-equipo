@@ -1139,11 +1139,17 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   }
 
   // Como la migración 005: forma exacta y consentimiento de salud del atleta dueño de la sesión
-  // (si cambia el valor; vaciarla se puede siempre)
+  // (si cambia el valor; vaciarla se puede siempre). (110) O la de un toque: la cara y, si quiere, las horas (de 2 a 14,
+  // de media en media hora), las agujetas y lo que eligió
   function comprobarPreparacion(fila, p) {
     if (p == null) return;
-    const ok = typeof p === 'object' && !Array.isArray(p) && Object.keys(p).length === 3
+    const tres = typeof p === 'object' && !Array.isArray(p) && Object.keys(p).length === 3
       && ['sueno', 'energia', 'molestias'].every((k) => [1, 2, 3].includes(p[k]));
+    const toque = typeof p === 'object' && !Array.isArray(p) && ['bien', 'regular', 'mal'].includes(p.cara)
+      && Object.keys(p).every((k) => ['cara', 'horas', 'agujetas', 'asi'].includes(k))
+      && (p.horas == null || (typeof p.horas === 'number' && p.horas >= 2 && p.horas <= 14 && Number.isInteger(p.horas * 2)))
+      && (!('agujetas' in p) || typeof p.agujetas === 'boolean') && (p.asi == null || typeof p.asi === 'boolean');
+    const ok = tres || toque;
     if (!ok) throw new Error('new row for relation "sesiones" violates check constraint "sesiones_preparacion_valida"');
     if (JSON.stringify(p) === JSON.stringify(fila.preparacion ?? null)) return;
     const atleta = buscar('atletas', atletaDeSesion(fila.id));
@@ -4189,6 +4195,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         persistirYa();
         return copia(fila);
       }
+      // (110) no hace nada: dice que la base admite «¿Cómo llegas hoy?» de un toque
+      if (nombre === 'preparacion_un_toque') return true;
       // (109) una molestia fuera del check-in (como en la base: quién puede, su consentimiento de salud, que valga y, si va
       // con una sesión, que sea suya); una por zona, día, momento y sesión: si ya estaba, se cambia su valor
       if (nombre === 'apuntar_dolor') {

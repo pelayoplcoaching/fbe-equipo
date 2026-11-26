@@ -2,7 +2,7 @@ import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenDia } from '../../logica/imagenes.js';
 import { useState } from 'preact/hooks';
 import { useApp, Icono, Segmentos } from '../comunes.jsx';
-import { PREGUNTAS, completa, consejoPreparacion, textoPreparacion } from '../../logica/preparacion.js';
+import { PREGUNTAS, completa } from '../../logica/preparacion.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { textoConsejo } from '../../logica/esencial-primera.js';
 
@@ -87,12 +87,4 @@ export function ConsejoDia({ consejo, alCambiar, alQuitar, eleccion = null, alEl
   );
 }
 
-// Para el coach: cómo llegó el atleta a la sesión
-export function ChipLlegada({ preparacion, soloAvisos = false }) {
-  const c = consejoPreparacion(preparacion);
-  if (!c || (soloAvisos && c.nivel === 'bien')) return null;
-  return (
-    <span class="llegada"><span class={`chip ${c.nivel}`}>Llegó: {c.nivel === 'bien' ? 'bien' : c.nivel === 'flojo' ? 'día flojo' : 'día difícil'}</span>
-      <span class="mini secundario">{textoPreparacion(preparacion)}</span></span>
-  );
-}
+// (lo que ve el coach, ChipLlegada, está en ui/coach/ChipLlegada.jsx)

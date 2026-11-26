@@ -1,0 +1,38 @@
+/* FBE Esencial (v0.258): el dia a dia, "Como llegas hoy?" de un toque (ComoLlegas.jsx). Tres caras, las horas de sueno y
+   las agujetas, y lo que propone la app con "Hacerlo asi" o "Entrenar normal". Solo clases cll-*, cada regla en su propio
+   elemento (una sola clase; los estados, con su propia clase), sin tocar margenes ni tamanos de letra. */
+
+.cll-caja { display: grid; gap: var(--esp-12); min-width: 0; }
+
+/* Las tres caras */
+.cll-caras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-8); }
+.cll-cara {
+  display: grid; justify-items: center; gap: var(--esp-4); min-width: 0; min-height: var(--esp-48); padding: var(--esp-10) var(--esp-6);
+  border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10); background: var(--hoja); color: var(--tinta-2);
+  font: inherit; cursor: pointer;
+  transition: border-color var(--mov-breve) ease, box-shadow var(--mov-breve) ease, background-color var(--mov-breve) ease, color var(--mov-breve) ease;
+}
+.cll-cara-si { border-color: var(--morado); background: var(--hoja-2); color: var(--tinta); box-shadow: var(--anillo-acento); }
+.cll-cara:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.cll-cara:disabled { cursor: progress; }
+.cll-cara-ico { width: var(--esp-32); height: var(--esp-32); }
+
+/* Las horas y las agujetas */
+.cll-extra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-8); }
+.cll-chip { display: inline-flex; align-items: center; gap: var(--esp-6); }
+.cll-chip-si { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+.cll-horas {
+  display: inline-flex; align-items: center; gap: var(--esp-6); padding: var(--esp-2) var(--esp-6) var(--esp-2) var(--esp-10);
+  border: var(--filo-fino) solid var(--linea); border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2);
+}
+.cll-horas-n { min-width: var(--esp-48); text-align: center; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.cll-paso { min-width: var(--esp-32); min-height: var(--esp-32); }
+
+/* Lo que propone la app */
+.cll-prop { display: grid; gap: var(--esp-10); min-width: 0; border-left: var(--filo-marca) solid var(--aviso-solido); }
+.cll-prop-mal { border-left-color: var(--alerta-solido); }
+.cll-linea {
+  display: flex; align-items: flex-start; gap: var(--esp-10); min-width: 0; padding: var(--esp-10) var(--esp-12);
+  border-left: var(--filo-marca) solid var(--ok-solido); border-radius: var(--r-10); background: var(--ok-suave); color: var(--tinta);
+}
+.cll-linea-ajustada { border-left-color: var(--aviso-solido); background: var(--aviso-suave); }

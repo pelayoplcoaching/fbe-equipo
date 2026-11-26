@@ -3,7 +3,7 @@
 // medalla, la barra por ejercicios de la sesión, la franja «Hoy en tu equipo» del coach y quién ha compartido un
 // entreno hoy en la comunidad.
 import { lunesDe, sumarDias, diasEntre, fechaMadrid } from './fechas.js';
-import { completa, consejoPreparacion, PREGUNTAS } from './preparacion.js';
+import { completa, consejoPreparacion, PREGUNTAS, caraDe } from './preparacion.js';
 import { gruposSuperserie } from './calculos.js';
 import { seriesPautadasHechas } from './visual.js';
 
@@ -61,7 +61,7 @@ export function dialCarga(sesiones = [], hoy, semanas = 4) {
 // Si no, la sesión vuelve a preguntar (y lo de otro día no se le enseña al coach como de hoy).
 // marcadas: los id de las sesiones contestadas hoy en este móvil; seriesHoy: los id de las que tienen series de hoy.
 export function prepDeHoy(sesion, hoy, { marcadas = [], seriesHoy = [] } = {}) {
-  if (!sesion || !completa(sesion.preparacion)) return false;
+  if (!sesion || !(completa(sesion.preparacion) || caraDe(sesion.preparacion))) return false;   // (v0.258) o de un toque
   if (sesion.completada) return sesion.fecha_realizada === hoy;
   return (seriesHoy || []).includes(sesion.id) || (marcadas || []).includes(sesion.id);
 }
@@ -81,6 +81,9 @@ export function sesionParaContestar({ previstaHoy = null, siguiente = null, seri
 // ¿Alguna serie de hoy? (hora de Madrid, como la base)
 export const conSeriesDeHoy = (hechas = [], hoyMadrid = fechaMadrid()) => (hechas || []).some((s) => s?.registrada_en && fechaMadrid(new Date(s.registrada_en)) === hoyMadrid);
 export function dialComoLlegas(prep) {
+  // (v0.258) de un toque: su cara (con D4), sin respuestas sueltas
+  const cara = caraDe(prep);
+  if (cara) return { id: 'llegas', estado: consejoPreparacion(prep).nivel, valor: cara === 'bien' ? 1 : cara === 'regular' ? 0.5 : 0.15, etiqueta: consejoPreparacion(prep).titulo, respuestas: [] };
   if (!completa(prep)) return { id: 'llegas', estado: 'sin_respuesta', valor: 0, etiqueta: 'Sin contestar', respuestas: [] };
   const c = consejoPreparacion(prep);
   const total = prep.sueno + prep.energia + prep.molestias;

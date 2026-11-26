@@ -6,6 +6,13 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.258': {
+    // (el día a día: «¿Cómo llegas hoy?» de un toque en FBE Esencial, con la migración 110; apagado hasta su visto bueno)
+    atleta: [],
+    coach: [
+      'FBE Esencial: «¿Cómo llegas hoy?» de un toque y lo que propone la app según cómo llega, apagado: en «Por revisar» (con la migración 110).',
+    ],
+  },
   '0.257': {
     // (el motor de molestias en la sesión y en la semana, con la tabla de zonas de cada ejercicio; apagado hasta su visto bueno)
     atleta: [],

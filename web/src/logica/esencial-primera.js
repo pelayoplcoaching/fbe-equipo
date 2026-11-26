@@ -37,5 +37,5 @@ const CONSEJO_SUYO = {
   malo: 'Haz la sesión sin apretar más de lo que toca y, si hace falta, quita una serie en los accesorios. Si una molestia cambia cómo te mueves o va a más, para ese ejercicio y, si no mejora, consúltalo con tu médico.',
   flojo: 'Guíate por lo que te tiene que sobrar: si las series pesan más de lo normal, quédate en la parte baja del rango.',
 };
-export const textoConsejo = (c, suyo = false) => (suyo && CONSEJO_SUYO[c?.nivel]) || c?.texto || '';
+export const textoConsejo = (c, suyo = false) => (c?.unToque && c.texto) || (suyo && CONSEJO_SUYO[c?.nivel]) || c?.texto || '';   // (v0.258) el de un toque, el suyo
 export const TEXTO_AGUJETAS = 'Mañana o pasado puede que notes agujetas: son normales las dos primeras semanas. Luego bajan, y no dicen si entrenaste bien o mal.';

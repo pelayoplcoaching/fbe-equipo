@@ -1,6 +1,6 @@
 import { createContext } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
-import { ChipLlegada } from '../atleta/Preparacion.jsx';
+import { ChipLlegada } from './ChipLlegada.jsx';
 import { CabeceraGrande, Siluetas, Reserva, useApp, useCarga, Icono, ErrorCaja, cuando, Avatar, Hoja, usePreferencia, Vacio } from '../comunes.jsx';
 import { agruparPorAtleta, textoTipos, esDeslizar, duracionCorta } from '../../logica/diseno.js';
 import { vibrar } from '../hapticos.js';
