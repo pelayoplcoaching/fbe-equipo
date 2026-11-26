@@ -16,6 +16,7 @@ import { MODALIDAD_POR_SU_CUENTA } from '../logica/esencial.js';
 import { filasPrimeras4, PRIMERAS_4, NOVATO_2, NOVATO_3, filasNovato3 } from '../logica/esencial-plantilla.js';
 import { sumarDias, lunesDe } from '../logica/fechas.js';
 import { datosComidaValidos, planComidaEsencial } from '../logica/esencial-nutricion.js';
+import { planMotor, datosMotorValidos, adherencia, scoffPositivo } from '../logica/nutricion-motor.js';
 
 // Los ejercicios de la guía con su nombre de la guía (la demo los añade si no están): grupos, tipo y si van por tiempo
 const EJERCICIOS_GUIA = [
@@ -376,6 +377,77 @@ export function ajusteComidaEsencialDemo(t, { p = {}, atletaId, hoy, uuid, ahora
   const motivo = String(p.motivo || '').trim().slice(0, 280) || 'Ajuste de la semana';
   const nuevo = { id: uuid(), atleta_id: atletaId, desde: hoy, modo: 'macros', fase: ult.fase, ritmo_pct: ult.ritmo_pct, kcal, proteina_g: prot, carbos_g: carb, grasa_g: grasa,
     fibra_g: ult.fibra_g ?? null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: ult.pautas ?? null, motivo, creado_en: ahoraISO };
+  t('planes_nutricion').push(nuevo);
+  return nuevo.id;
+}
+
+// (105) El motor de nutrición en la demo, como nutricion_plan_motor() y nutricion_revision() de la base: mismas
+// comprobaciones, el mismo cálculo (planMotor) y los mismos topes
+const SALUD_CLAVES = ['embarazo', 'lactancia', 'renal', 'insulina', 'bariatrica', 'scoff'];
+const SCOFF_CLAVES = ['vomito', 'control', 'perdida', 'gordura', 'domina'];
+const saludValida = (j) => j == null || (typeof j === 'object' && !Array.isArray(j) && Object.keys(j).every((k) => SALUD_CLAVES.includes(k))
+  && Object.entries(j).every(([k, v]) => (k === 'scoff' ? v == null || (typeof v === 'object' && Object.entries(v).every(([k2, v2]) => SCOFF_CLAVES.includes(k2) && typeof v2 === 'boolean')) : typeof v === 'boolean')));
+const tramoPasos = (v) => { const x = Number(v) || 0; return x >= 10000 ? 10000 : x >= 7500 ? 7500 : x >= 5000 ? 5000 : 0; };
+export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
+  quienComida(t, atletaId);
+  const n = (v) => (v == null || v === '' ? null : Number(v));
+  const salud = p.salud ?? null;
+  const d = { sexo: p.sexo, edad: n(p.edad), altura: n(p.altura), peso: n(p.peso), cintura: n(p.cintura), trabajo: p.trabajo, objetivo: p.objetivo };
+  if (datosMotorValidos(d) || (p.cadera != null && p.cadera !== '' && !(n(p.cadera) >= 50 && n(p.cadera) <= 200)) || typeof p.tca !== 'boolean' || !saludValida(salud)) {
+    throw new Error('Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg), cintura (45 a 200 cm), tu trabajo, tu objetivo y la pregunta de salud');
+  }
+  const c = t('cuestionarios').find((x) => x.atleta_id === atletaId);
+  if (!c) throw new Error('Antes, el cuestionario');
+  Object.assign(c, { tca: p.tca, nutricion_salud: salud });
+  const dexa = p.composicion_metodo === 'dexa' ? n(p.masa_magra) : null;
+  const perfil = { atleta_id: atletaId, sexo: p.sexo, anio_nacimiento: Number(hoy.slice(0, 4)) - Math.floor(d.edad), altura: d.altura, trabajo: p.trabajo,
+    pasos: tramoPasos(p.pasos), dias_entreno: Math.min(7, Math.max(0, Math.round(n(p.dias_entreno) || 0))), objetivo: p.objetivo, ritmo_pct: n(p.ritmo_pct), experiencia: p.experiencia || null,
+    meta_peso: n(p.meta_peso), meta_cintura: n(p.meta_cintura), composicion_metodo: p.composicion_metodo || null, composicion_grasa: n(p.composicion_grasa), masa_magra: dexa,
+    bebidas_semana: n(p.bebidas_semana) || 0, forma_comer: p.forma_comer || 'omnivora', tomas: n(p.tomas) || 4, cocina: p.cocina || null, come_fuera: p.come_fuera || null,
+    pocos_hidratos: !!p.pocos_hidratos, alimentos_si: [...(p.alimentos_si || [])], alimentos_no: [...(p.alimentos_no || [])], actualizado_en: ahoraISO };
+  const ya = t('nutricion_perfiles').find((x) => x.atleta_id === atletaId);
+  if (ya) Object.assign(ya, perfil); else t('nutricion_perfiles').push(perfil);
+  if (!t('pesos').some((x) => x.atleta_id === atletaId && x.fecha === hoy)) t('pesos').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, kg: Math.round(d.peso * 100) / 100, notas: null });
+  const med = t('medidas').find((x) => x.atleta_id === atletaId && x.fecha === hoy);
+  const cad = n(p.cadera) != null ? Math.round(n(p.cadera) * 10) / 10 : null;
+  if (med) Object.assign(med, { cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad ?? med.cadera_cm ?? null });
+  else t('medidas').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad, pecho_cm: null, brazo_cm: null, muslo_cm: null, pantorrilla_cm: null, notas: null });
+  const plan = planMotor({ ...d, ritmo: n(p.ritmo_pct), experiencia: p.experiencia, diasEntreno: n(p.dias_entreno), pasos: n(p.pasos), pocosHidratos: !!p.pocos_hidratos,
+    bebidasSemana: n(p.bebidas_semana), tomas: n(p.tomas), masaMagraDexa: dexa, tca: p.tca, scoff: salud?.scoff, embarazo: !!salud?.embarazo, lactancia: !!salud?.lactancia,
+    renal: !!salud?.renal, insulina: !!salud?.insulina, bariatrica: !!salud?.bariatrica });
+  if (!plan.automatico) return { automatico: false, motivo: plan.motivo };
+  const fila = { atleta_id: atletaId, desde: hoy, modo: 'macros', fase: plan.objetivo, ritmo_pct: plan.ritmo_pct, kcal: plan.kcal, proteina_g: plan.proteina_g, carbos_g: plan.carbos_g,
+    grasa_g: plan.grasa_g, fibra_g: 25, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: null, mantenimiento: plan.mantenimiento,
+    motivo: plan.soloMantener ? 'Plan de partida para mantener tu peso (sin déficit).' : 'Plan de partida, con tu cuestionario de nutrición.' };
+  const yaPlan = t('planes_nutricion').find((x) => x.atleta_id === atletaId && x.desde === hoy);
+  if (yaPlan) Object.assign(yaPlan, fila); else t('planes_nutricion').push({ id: uuid(), ...fila, creado_en: ahoraISO });
+  const idPlan = (yaPlan || t('planes_nutricion').find((x) => x.atleta_id === atletaId && x.desde === hoy)).id;
+  return { objetivo: plan.objetivo, ritmo_pct: plan.ritmo_pct, reposo: plan.reposo, formula: plan.formula, factor: plan.factor, mantenimiento: plan.mantenimiento, limite: plan.limite,
+    peso_referencia: plan.pesoReferencia ?? d.peso, kcal: plan.kcal, proteina_g: plan.proteina_g, grasa_g: plan.grasa_g, carbos_g: plan.carbos_g, alcohol_kcal: plan.alcohol_kcal,
+    fibra_g: 25, tomas: plan.tomas, proteina_toma_g: plan.proteinaToma_g, automatico: true, id: idPlan, desde: hoy, solo_mantener: plan.soloMantener };
+}
+export function revisionNutricionDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
+  quienComida(t, atletaId);
+  const ult = t('planes_nutricion').filter((x) => x.atleta_id === atletaId && x.desde <= hoy).sort((x, y) => (x.desde < y.desde ? 1 : -1))[0];
+  if (!ult) throw new Error('Antes, tu plan de partida');
+  if (ult.desde > sumarDias(hoy, -28)) return null;
+  if (ult.modo !== 'macros' || ult.kcal == null || ult.kcal_descanso != null) throw new Error('Este plan no se ajusta solo');
+  const [kcal, prot, carb, grasa] = ['kcal', 'proteina_g', 'carbos_g', 'grasa_g'].map((k) => (Number.isInteger(Number(p[k])) && p[k] !== '' && p[k] != null ? Number(p[k]) : null));
+  const alc = p.alcohol_kcal == null ? 0 : Number(p.alcohol_kcal);
+  const ad = adherencia({ registros: t('registros_nutricion').filter((x) => x.atleta_id === atletaId), pesos: t('pesos').filter((x) => x.atleta_id === atletaId) }, sumarDias(hoy, -1));
+  if (!ad.buena) throw new Error('Sin buena adherencia no se tocan las kcal');
+  const sexo = t('nutricion_perfiles').find((x) => x.atleta_id === atletaId)?.sexo;
+  const c = t('cuestionarios').find((x) => x.atleta_id === atletaId);
+  const tca = !!c?.tca || scoffPositivo(c?.nutricion_salud?.scoff || {});
+  const piso = Math.max(sexo === 'mujer' ? 1500 : 1800, ult.mantenimiento ? Math.ceil((0.75 * ult.mantenimiento) / 10) * 10 : 0);
+  if (kcal == null || prot == null || carb == null || grasa == null || !(alc >= 0 && alc <= 1000) || Math.abs(kcal - Number(ult.kcal)) > 255 || kcal === Number(ult.kcal)
+    || prot !== Number(ult.proteina_g) || carb < 0 || grasa * 9 < 0.2 * kcal - 45 || grasa * 9 > 0.35 * kcal + 45 || Math.abs(kcal - (4 * prot + 4 * carb + 9 * grasa + alc)) > 5
+    || (kcal < Number(ult.kcal) && kcal < piso - 5) || (tca && kcal < Number(ult.kcal))) {
+    throw new Error('Ese cambio se sale de los topes');
+  }
+  const nuevo = { id: uuid(), atleta_id: atletaId, desde: hoy, modo: 'macros', fase: ult.fase, ritmo_pct: ult.ritmo_pct, kcal, proteina_g: prot, carbos_g: carb, grasa_g: grasa,
+    fibra_g: ult.fibra_g ?? null, kcal_descanso: null, carbos_descanso_g: null, grasa_descanso_g: null, pautas: ult.pautas ?? null, mantenimiento: ult.mantenimiento ?? null,
+    motivo: String(p.motivo || '').trim().slice(0, 280) || 'Revisión de las 4 semanas', creado_en: ahoraISO };
   t('planes_nutricion').push(nuevo);
   return nuevo.id;
 }

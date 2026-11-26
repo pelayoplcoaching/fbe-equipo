@@ -6,7 +6,7 @@ import { textoVisible } from '../logica/texto.js';
 import { resumenCobros } from '../logica/cobros.js';
 import { resultadoCribado } from '../logica/cuestionario.js';
 import { plantillaEsencial } from '../logica/esencial-alta.js';
-import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
+import { copiarPlantillaEsencial, semanaSiguienteEsencial, planComidaEsencialDemo, ajusteComidaEsencialDemo, planMotorDemo, revisionNutricionDemo, alternativaEsencialDemo, cambiarDiasEsencialDemo, cerrarSemanaEsencialDemo, elegirRutinaEsencialDemo, rehacerSinEmpezarDemo, catalogoEsencialDemo } from './semilla-esencial.js';
 import { respuestaValida } from '../logica/preguntas.js';
 import { dibujoValido } from '../logica/dibujo.js';
 import { cardioValido, cardioHechoValido, pautaValida } from '../logica/cardio.js';
@@ -417,6 +417,8 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
     esencial_contactos: () => esCoach(),
     esencial_consultas: () => esCoach(),
     esencial_bajas: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
+    // (105) el perfil del cuestionario de nutrición: él lo ve (lo escribe nutricion_plan_motor); el coach, todo
+    nutricion_perfiles: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     video_autoevaluacion: (x) => esCoach() || (!!miAtletaId() && x.atleta_id === miAtletaId()),
     // Como la 057: las guías publicadas, sus fichas y sus enlaces los ven los atletas; el coach, todo
     guias: (x) => esCoach() || (!!miAtletaId() && x.publicada),
@@ -1426,7 +1428,7 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
   const libroValido = (l) => l == null || (typeof l === 'object' && !Array.isArray(l) && Object.entries(l).every(([k, v]) => CLAVES_LIBRO.includes(k)
     && (k === 'medidas' ? Array.isArray(v) && v.length <= 40 && v.every((m) => m === null || (typeof m === 'string' && m.trim().length >= 1 && m.length <= 60))
       : typeof v === 'string' && v.trim().length >= 1 && v.length <= (['descripcion', 'nota', 'encaje'].includes(k) ? 1200 : 80))));
-  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
+  const soloCoach = (t) => { if (['esencial_ajustes', 'esencial_contactos', 'nutricion_perfiles', 'revisar_apartados', 'atletas_panel', 'panel_ajustes', 'radar_ajustes', 'pausas', 'novedades', 'cobros_atletas', 'pagos', 'recetas', 'guias', 'fichas_ejercicio', 'ejercicios_fichas', 'tareas', 'tareas_plantillas', 'conversacion_estado', 'conversacion_fijado', 'listas_difusion', 'listas_difusion_miembros', 'video_revisiones', 'tecnica_plantillas', 'recordatorios_tecnica', 'frases_correccion', 'videos_modelo', 'umbrales_velocidad', 'revisiones_semanales', 'revision_ajustes', 'carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_recetas', 'youtube_canal', 'videos_vistos'].includes(t) && !esCoach()) throw new Error('new row violates row-level security policy'); };
   // Como la 035 (archivo_enlaces): la serie, de un ejercicio de una sesión de ese atleta; la repetición, de un vídeo suyo
   // (si el coach lo pasa a otro atleta, la serie y la repetición que no son de ese atleta se quitan)
   function comprobarEnlaces(f, antes = null) {
@@ -4136,6 +4138,16 @@ export function crearBackendMemoria({ semilla, clave = 'fbe-demo-v2', persistir 
         if (!id) throw new Error('No hay atleta');
         if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes cambiar tus propios días');
         const r = cambiarDiasEsencialDemo(tabla, { dias: args?.p_dias, atletaId: id });
+        persistirYa();
+        return r;
+      }
+      // (105) el motor de nutrición: el plan con el cuestionario de nutrición y la revisión de cada 4 semanas (como en la base)
+      if (nombre === 'nutricion_plan_motor' || nombre === 'nutricion_revision') {
+        const id = args?.p_atleta || miAtletaId();
+        if (!id) throw new Error('No hay atleta');
+        if (!esCoach() && id !== miAtletaId()) throw new Error('Solo puedes tocar tu propio plan');
+        const f = nombre === 'nutricion_plan_motor' ? planMotorDemo : revisionNutricionDemo;
+        const r = f(tabla, { p: args?.p || {}, atletaId: id, hoy: fechaMadrid(), uuid, ahoraISO: new Date().toISOString() });
         persistirYa();
         return r;
       }
