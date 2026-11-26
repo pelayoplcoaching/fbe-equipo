@@ -14,6 +14,7 @@ export function AvisoPrivacidad({ alTerminar = null }) {
   // (v0.59) La vigente para esta base: 2026-12.1 con la 037; sin ella, 2026-12 (api.versionLegal)
   const [actual, setActual] = useState(null);
   const [completa, setCompleta] = useState(false);
+  const [nov, setNov] = useState(null);   // (v0.252) la lista de novedades (logica/privacidad-novedades.js)
   const hecho = useRef(false);
   useEffect(() => {
     let vivo = true;
@@ -21,15 +22,16 @@ export function AvisoPrivacidad({ alTerminar = null }) {
       if (!vivo) return;
       // (v0.65) sin conexión y sin saber qué vio (la base no contesta y en este móvil no hay nada), no se avisa: ya se sabrá
       const sinSaber = !v?.enBase && !v?.version && typeof navigator !== 'undefined' && navigator.onLine === false;
-      if (!sinSaber && debeAvisarPrivacidad(v?.version, a)) { setActual(a); setVista(v?.version || null); setVer(true); } else alTerminar?.();
+      if (!sinSaber && debeAvisarPrivacidad(v?.version, a)) {
+        // (v0.252, peso al abrir) la lista de novedades, en su trozo: se trae antes de enseñar el aviso (si no llega, sale sin ella)
+        const ensenar = (m) => { if (!vivo) return; setNov(m); setActual(a); setVista(v?.version || null); setVer(true); };
+        import('../logica/privacidad-novedades.js').then(ensenar).catch(() => ensenar(null));
+      } else alTerminar?.();
     }).catch(() => { if (vivo) alTerminar?.(); });
     return () => { vivo = false; };
   }, []);
   // (v0.209) con el aviso a la vista, el texto entero se va trayendo (por si toca «Leer la política completa»)
   useEffect(() => { if (ver) precargarPrivacidad().catch(() => {}); }, [ver]);
-  // (v0.252, peso al abrir) la lista de novedades, en su trozo: se pide al saber que toca enseñar el aviso
-  const [nov, setNov] = useState(null);
-  useEffect(() => { if (ver && !nov) import('../logica/privacidad-novedades.js').then(setNov).catch(() => {}); }, [ver]);
   if (!ver) return null;
   const cerrar = () => {
     if (hecho.current) return;
