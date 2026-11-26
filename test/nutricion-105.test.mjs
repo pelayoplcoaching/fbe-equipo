@@ -105,6 +105,14 @@ const ex = await rpc({ ...D, salud: { embarazo: true } });
 await db.exec(superusuario);
 const nPlanes = Number((await db.query('select count(*) n from planes_nutricion where atleta_id = $1', [id.ana])).rows[0].n);
 check(ex.automatico === false && ex.motivo === 'embarazo' && nPlanes === 1, 'embarazada: sin plan automático (y su plan no cambia)');
+// (el embarazo, también si lo marcó en su cuestionario de entreno, aunque aquí no lo diga)
+await db.exec(superusuario);
+await db.query(`update cuestionarios set otras = '{embarazo}' where atleta_id = $1`, [id.ana]);
+await como('ana');
+const ex2 = await rpc({ ...D, salud: { embarazo: false } });
+await db.exec(superusuario);
+await db.query('update cuestionarios set otras = null where atleta_id = $1', [id.ana]);
+check(ex2.automatico === false && ex2.motivo === 'embarazo', 'embarazada en su cuestionario de entreno: tampoco');
 await como('ana');
 const sm = await rpc({ ...D, salud: { scoff: { control: true, domina: true } } });
 check(sm.automatico && sm.objetivo === 'mantener' && sm.ritmo_pct === 0 && sm.solo_mantener === true, 'SCOFF con 2 «sí»: solo mantener');
@@ -122,6 +130,12 @@ await db.exec(superusuario);
 await db.query('update planes_nutricion set desde = $2 where atleta_id = $1', [id.ana, sumarDias(hoy, -30)]);
 await como('ana');
 check(/adherencia/.test((await falla(() => rev(cambio)))?.message || ''), 'sin buena adherencia (nada apuntado): no se tocan las kcal');
+// (R2) el ajuste de cada semana de la 093 no toca un plan del motor, aunque tenga más de 7 días
+const semanal = await b.rpc('esencial_ajuste_comida', { p: { ...baja, motivo: 'Ajuste de la semana' } });
+await db.exec(superusuario);
+const nTras = Number((await db.query('select count(*) n from planes_nutricion where atleta_id = $1', [id.ana])).rows[0].n);
+check(semanal === null && nTras === 1, 'el ajuste de cada semana (093) no toca un plan del motor: devuelve null y no crea otro');
+await como('ana');
 await db.exec(superusuario);
 for (let i = 1; i <= 28; i++) {
   const f = sumarDias(hoy, -i);

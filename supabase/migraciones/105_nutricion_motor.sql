@@ -17,8 +17,10 @@
 --   * nutricion_revision(p): el cambio de la revisión de cada 4 semanas (R28-R33), con sus topes: 28 días desde el último
 --     cambio, buena adherencia (20 de 28 días cumplidos y 3 pesadas cada semana), como mucho 250 kcal, la misma proteína,
 --     la grasa entre el 20 y el 35 %, nunca por debajo de los suelos y, con antecedente de TCA, sin bajar.
---   Las funciones de la 093 (esencial_plan_comida y esencial_ajuste_comida) siguen como estaban: la app usa las nuevas
---   cuando esta migración está. Para quien lleva seguimiento no cambia nada.
+--   * esencial_ajuste_comida (la de la 093), igual salvo que ya no toca los planes del motor (los que tienen mantenimiento):
+--     esos no cambian cada semana, se revisan cada 4 (R2). esencial_plan_comida sigue como estaba: la app usa
+--     nutricion_plan_motor cuando esta migración está. Para quien lleva seguimiento no cambia nada.
+--   El embarazo cuenta también si lo marcó en su cuestionario de entreno (cuestionarios.otras).
 --
 -- Se ejecuta en el SQL Editor después de schema.sql y las migraciones 002 a 104 (o con instalar.sql en una base nueva).
 -- Se puede repetir sin romper nada.
@@ -258,7 +260,9 @@ begin
   end if;
   -- R35: sin plan automático
   v_imc := v_peso / ((v_altura / 100) * (v_altura / 100));
-  v_motivo := case when coalesce((v_salud ->> 'embarazo')::boolean, false) then 'embarazo'
+  -- (el embarazo, también si lo marcó en su cuestionario de entreno: no se calcula un déficit con un dato de salud ya dicho)
+  v_motivo := case when coalesce((v_salud ->> 'embarazo')::boolean, false)
+      or (p ->> 'sexo' = 'mujer' and exists (select 1 from public.cuestionarios c where c.atleta_id = v_id and c.otras @> array['embarazo']::text[])) then 'embarazo'
     when coalesce((v_salud ->> 'lactancia')::boolean, false) then 'lactancia'
     when fbe_privado.js_round(v_imc * 10) / 10 < 18.5 then 'imc_bajo'
     when coalesce((v_salud ->> 'renal')::boolean, false) then 'renal'
@@ -376,7 +380,54 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 7. Permisos (como al final de 003 a 104)
+-- 7. El ajuste de cada semana de la 093, sin los planes del motor (R2: un plan del cuestionario de nutrición no cambia cada
+--    semana; se revisa cada 4, con nutricion_revision). Igual que en la 093, más esa línea.
+-- ---------------------------------------------------------------------
+create or replace function public.esencial_ajuste_comida(p jsonb, p_atleta uuid default null)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare
+  v_id uuid := fbe_privado.esencial_comida_quien(p_atleta);
+  v_hoy date := (now() at time zone 'Europe/Madrid')::date;
+  v_ult public.planes_nutricion;
+  v_tca boolean;
+  v_kcal int; v_prot int; v_carb int; v_grasa int;
+  v_motivo text := nullif(left(btrim(coalesce(p ->> 'motivo', '')), 280), '');
+  v_nuevo uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext('fbe-esencial-comida:' || v_id::text));
+  select * into v_ult from public.planes_nutricion where atleta_id = v_id and desde <= v_hoy order by desde desc limit 1;
+  if not found then raise exception 'Antes, tu plan de partida' using errcode = '22023'; end if;
+  if v_ult.mantenimiento is not null then return null; end if;   -- (105) del motor: no toca nunca (se revisa cada 4 semanas)
+  if v_ult.desde > v_hoy - 7 then return null; end if;   -- (una vez por semana: aún no toca)
+  if v_ult.modo <> 'macros' or v_ult.kcal is null or v_ult.kcal_descanso is not null then
+    raise exception 'Este plan no se ajusta solo' using errcode = '22023';
+  end if;
+  begin
+    v_kcal := (p ->> 'kcal')::int; v_prot := (p ->> 'proteina_g')::int; v_carb := (p ->> 'carbos_g')::int; v_grasa := (p ->> 'grasa_g')::int;
+  exception when others then
+    raise exception 'Ese ajuste no vale' using errcode = '22023';
+  end;
+  select coalesce(tca, false) into v_tca from public.cuestionarios where atleta_id = v_id;
+  -- Los topes: ±300 kcal (y lo que mueve redondear los hidratos), nunca por debajo de 1.200 (con ese redondeo), la misma
+  -- proteína, la grasa igual o menos (para que quepan los hidratos), las kcal cuadrando con los macros y, con antecedente
+  -- de trastorno de la conducta alimentaria, sin bajar
+  if v_kcal is null or v_prot is null or v_carb is null or v_grasa is null
+     or v_kcal < 1190 or abs(v_kcal - v_ult.kcal) > 320
+     or v_prot is distinct from v_ult.proteina_g
+     or v_grasa < 10 or v_grasa > v_ult.grasa_g or v_carb < 0
+     or abs(v_kcal - (4 * v_prot + 4 * v_carb + 9 * v_grasa)) > 5
+     or (coalesce(v_tca, false) and v_kcal < v_ult.kcal) then
+    raise exception 'Ese ajuste se sale de los topes' using errcode = '22023';
+  end if;
+  insert into public.planes_nutricion (atleta_id, desde, modo, fase, ritmo_pct, kcal, proteina_g, carbos_g, grasa_g, fibra_g, pautas, motivo)
+  values (v_id, v_hoy, 'macros', v_ult.fase, v_ult.ritmo_pct, v_kcal, v_prot, v_carb, v_grasa, v_ult.fibra_g, v_ult.pautas,
+          coalesce(v_motivo, 'Ajuste de la semana'))
+  returning id into v_nuevo;
+  return v_nuevo;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 8. Permisos (como al final de 003 a 104)
 -- ---------------------------------------------------------------------
 revoke truncate, references, trigger on all tables in schema public from public, anon, authenticated;
 revoke execute on all functions in schema public from public, anon;

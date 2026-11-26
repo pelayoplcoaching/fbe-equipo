@@ -366,6 +366,7 @@ export function ajusteComidaEsencialDemo(t, { p = {}, atletaId, hoy, uuid, ahora
   quienComida(t, atletaId);
   const ult = t('planes_nutricion').filter((x) => x.atleta_id === atletaId && x.desde <= hoy).sort((x, y) => (x.desde < y.desde ? 1 : -1))[0];
   if (!ult) throw new Error('Antes, tu plan de partida');
+  if (ult.mantenimiento != null) return null;   // (105) del motor: se revisa cada 4 semanas, no cada semana
   if (ult.desde > sumarDias(hoy, -7)) return null;
   if (ult.modo !== 'macros' || ult.kcal == null || ult.kcal_descanso != null) throw new Error('Este plan no se ajusta solo');
   const [kcal, prot, carb, grasa] = ['kcal', 'proteina_g', 'carbos_g', 'grasa_g'].map((c) => (Number.isInteger(Number(p[c])) && p[c] !== '' && p[c] != null ? Number(p[c]) : null));
@@ -412,8 +413,10 @@ export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
   const cad = n(p.cadera) != null ? Math.round(n(p.cadera) * 10) / 10 : null;
   if (med) Object.assign(med, { cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad ?? med.cadera_cm ?? null });
   else t('medidas').push({ id: uuid(), atleta_id: atletaId, fecha: hoy, cintura_cm: Math.round(d.cintura * 10) / 10, cadera_cm: cad, pecho_cm: null, brazo_cm: null, muslo_cm: null, pantorrilla_cm: null, notas: null });
+  // (el embarazo, también si lo marcó en su cuestionario de entreno)
+  const embarazo = !!salud?.embarazo || (p.sexo === 'mujer' && (c.otras || []).includes('embarazo'));
   const plan = planMotor({ ...d, ritmo: n(p.ritmo_pct), experiencia: p.experiencia, diasEntreno: n(p.dias_entreno), pasos: n(p.pasos), pocosHidratos: !!p.pocos_hidratos,
-    bebidasSemana: n(p.bebidas_semana), tomas: n(p.tomas), masaMagraDexa: dexa, tca: p.tca, scoff: salud?.scoff, embarazo: !!salud?.embarazo, lactancia: !!salud?.lactancia,
+    bebidasSemana: n(p.bebidas_semana), tomas: n(p.tomas), masaMagraDexa: dexa, tca: p.tca, scoff: salud?.scoff, embarazo, lactancia: !!salud?.lactancia,
     renal: !!salud?.renal, insulina: !!salud?.insulina, bariatrica: !!salud?.bariatrica });
   if (!plan.automatico) return { automatico: false, motivo: plan.motivo };
   const fila = { atleta_id: atletaId, desde: hoy, modo: 'macros', fase: plan.objetivo, ritmo_pct: plan.ritmo_pct, kcal: plan.kcal, proteina_g: plan.proteina_g, carbos_g: plan.carbos_g,
