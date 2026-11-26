@@ -1198,5 +1198,65 @@
       "1080": "imagenes/esencial/esencial-prueba-marcha-1080.291d87e4.webp"
     },
     "color": "#473577"
+  },
+  "esencial-consulta-ya": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-consulta-ya-240.2531fcc6.webp",
+      "720": "imagenes/esencial/esencial-consulta-ya-720.68cc54f3.webp",
+      "1080": "imagenes/esencial/esencial-consulta-ya-1080.80e3dc4e.webp"
+    },
+    "color": "#423066"
+  },
+  "esencial-dolor-semana": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-dolor-semana-240.fdb6db75.webp",
+      "720": "imagenes/esencial/esencial-dolor-semana-720.23a038a1.webp",
+      "1080": "imagenes/esencial/esencial-dolor-semana-1080.6977957f.webp"
+    },
+    "color": "#443662"
+  },
+  "esencial-dolor-zona": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-dolor-zona-240.e281eab7.webp",
+      "720": "imagenes/esencial/esencial-dolor-zona-720.48a65c7a.webp",
+      "1080": "imagenes/esencial/esencial-dolor-zona-1080.379ddbd4.webp"
+    },
+    "color": "#463466"
+  },
+  "esencial-herramientas": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-herramientas-240.c6dad017.webp",
+      "720": "imagenes/esencial/esencial-herramientas-720.400399c0.webp",
+      "1080": "imagenes/esencial/esencial-herramientas-1080.1d1317b1.webp"
+    },
+    "color": "#4e3972"
+  },
+  "esencial-medicacion": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "240": "imagenes/esencial/esencial-medicacion-240.97ed6ff1.webp",
+      "720": "imagenes/esencial/esencial-medicacion-720.90225b29.webp",
+      "1080": "imagenes/esencial/esencial-medicacion-1080.1af723a2.webp"
+    },
+    "color": "#433369"
   }
 }
