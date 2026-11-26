@@ -114,7 +114,7 @@ console.log('\nSu porqué, de vuelta (69)');
 
 console.log('\nApagado hasta que Pelayo lo vea (70 y 74)');
 {
-  check(APAGADO.has('kilos_partida') && APAGADO.has('medico') && !encendido('kilos_partida') && encendido('medico', true), 'sus kilos de partida y lo de su médico, apagados (en la demo, con ?previa=1)');
+  check(!APAGADO.has('kilos_partida') && !APAGADO.has('medico') && encendido('kilos_partida') && encendido('medico'), 'sus kilos de partida y lo de su médico, encendidos (Pelayo, 26/11)');
   check(JSON.stringify(limpiarKilos({ a: '40', b: '42,3', c: '0', d: 'x', e: '600' })) === JSON.stringify({ a: 40, b: 42.5 }), 'los kilos: de 1 a 500, de medio en medio');
   check(/40 kg/.test(textoKilosPartida(40)) && textoKilosPartida(null) === null, 'en la sesión, sus kilos como referencia');
   const m = textoMedico({ dias: 2, minutos: 45 });

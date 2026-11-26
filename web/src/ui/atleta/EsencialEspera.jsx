@@ -148,14 +148,14 @@ function EsperaTarjeta({ p, cuestionario = null, irA = null, inicio }) {
       {/* (70, apagado) sus kilos de partida, quien ya entrena */}
       {conPlan && experto && encendido('kilos_partida', previa) && (
         <div class="lun-extra">
-          <span class="peq">¿Ya entrenas? Apunta con cuántos kilos vas ahora en tus ejercicios: la semana 1 te los recordará.{previa ? ' (borrador)' : ''}</span>
+          <span class="peq">¿Ya entrenas? Apunta con cuántos kilos vas ahora en tus ejercicios: la semana 1 te los recordará.{previa && !encendido('kilos_partida') ? ' (borrador)' : ''}</span>
           <button type="button" class="btn btn-peq" onClick={() => abrir('kilos')}>Mis kilos</button>
         </div>
       )}
       {/* (74, apagado: es de salud) qué pedirle a su médico */}
       {['visto_bueno', 'revision'].includes(tipo) && encendido('medico', previa) && (
         <div class="lun-extra">
-          <span class="peq">¿Qué le digo a mi médico? Un texto corto para enseñárselo, y qué pasa mientras.{previa ? ' (borrador)' : ''}</span>
+          <span class="peq">¿Qué le digo a mi médico? Un texto corto para enseñárselo, y qué pasa mientras.{previa && !encendido('medico') ? ' (borrador)' : ''}</span>
           <button type="button" class="btn btn-peq" onClick={() => abrir('medico')}>Verlo</button>
         </div>
       )}
@@ -540,7 +540,7 @@ export function KilosPartidaPista({ ejercicioId }) {
   const on = encendido('kilos_partida', previa);
   const k = useCarga(() => (on && ejercicioId ? datos.kilosPartida(backend, atleta.id) : Promise.resolve(null)), [ejercicioId, on], { recuerdo: on ? `esencial-kilos:${atleta.id}` : null });
   const t = textoKilosPartida(k.datos?.[ejercicioId]);
-  return t ? <p class="peq secundario">{t}{previa ? ' (borrador)' : ''}</p> : null;
+  return t ? <p class="peq secundario">{t}{previa && !encendido('kilos_partida') ? ' (borrador)' : ''}</p> : null;
 }
 
 // ---------- (74, apagado: es de salud) Qué pedirle a tu médico ----------

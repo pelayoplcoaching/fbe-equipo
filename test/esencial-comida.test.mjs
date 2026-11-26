@@ -187,19 +187,19 @@ console.log('\n«¿Qué necesitas?» de comida (103) y sus quince respuestas (10
   check(necesitasComida({ conPlan: true, encendido: nada }).map((x) => x[0]).join() === 'proteina,pesarme', 'apagadas las de Pelayo: «No llego a la proteína» y «¿Cuándo me peso?»');
   check(necesitasComida({ conPlan: true, encendido: todo }).length === 6, 'encendidas, las seis');
   check(necesitasComida({ conPlan: true, tca: true, encendido: todo }).map((x) => x[0]).join() === 'proteina,fuera,hambre,celebracion', 'con antecedente de TCA, sin «Me he pasado» ni «¿Cuándo me peso?»');
-  check(NECESITAS_COMIDA.every(([, , , que, clave]) => (que === 'proteina' || HOJAS_COMIDA[que]) && (!clave || APAGADO.has(clave))), 'cada una con su hoja y, si es de Pelayo, apagada');
+  check(NECESITAS_COMIDA.every(([, , , que, clave]) => (que === 'proteina' || HOJAS_COMIDA[que]) && (!clave || REVISAR_POR[clave])), 'cada una con su hoja y, si es de Pelayo, con su ficha en «Por revisar» (encendidas el 26/11)');
   check(AVISO_ABRE.pesarme === 'pesarme', 'el aviso «¿Te pesas esta semana?» abre «¿Cuándo me peso?»');
   check(RESPUESTAS_COMIDA.length === 15 && new Set(RESPUESTAS_COMIDA.map((x) => x.id)).size === 15 && !RESPUESTAS_COMIDA.some((x) => RESPUESTAS.some((y) => y.id === x.id)), 'quince respuestas, sin ids repetidos');
   const conTca = respuestasComida({ tca: true });
   check(respuestasComida().length === 15 && conTca.length < 15 && !conTca.some((x) => /perder|bajar tu plan|1\.200|pes(o|arte|arme)/.test(x.r) && x.deficit) && conTca.every((x) => x.cat === 'comida'), `con antecedente de TCA, sin las de perder, bajar el plan o pesarse (${conTca.length})`);
-  check(respuestas({ comida: respuestasComida() }).filter((x) => x.cat === 'comida').length === 0, 'apagadas: no salen');
-  check(respuestas({ previa: true, comida: respuestasComida() }).filter((x) => x.cat === 'comida' && x.pendiente).length === 15, 'en la vista previa, las quince, marcadas «pendiente»');
+  check(respuestas({ comida: respuestasComida() }).filter((x) => x.cat === 'comida' && !x.pendiente).length === 15, 'encendidas (26/11): salen las quince, sin la marca de pendiente');
+  check(respuestas({ previa: true, comida: respuestasComida() }).filter((x) => x.cat === 'comida' && x.pendiente).length === 0, 'y en la vista previa, igual');
   fijarAjustes([{ clave: 'respuestas_comida', encendido: true, texto: null }, { clave: 'respuesta:c-fuera', encendido: false, texto: { r: 'Mi versión de comer fuera.' } }]);
   const enc = respuestas({ comida: respuestasComida() }).filter((x) => x.cat === 'comida');
   check(enc.length === 15 && !enc.some((x) => x.pendiente) && enc.find((x) => x.id === 'c-fuera').r === 'Mi versión de comer fuera.', 'encendidas por Pelayo: salen, y con su versión del texto si la ha corregido');
   fijarAjustes([]);
-  check(!encendido('respuestas_comida') && ['respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida'].every((k) => APAGADO.has(k) && REVISAR_POR[k]),
-    'las nueve de la tanda 9, apagadas y en «Por revisar» del panel');
+  check(encendido('respuestas_comida') && ['respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida'].every((k) => !APAGADO.has(k) && REVISAR_POR[k]),
+    'las nueve de la tanda 9, encendidas (Pelayo, 26/11) y en «Por revisar» del panel, para corregir sus textos');
   check(Object.entries(HOJAS_COMIDA).every(([, h]) => h.titulo && h.lineas.length >= 2 && h.lineas.every((l) => l.length <= 220)), 'las hojas, con su título y frases cortas');
 }
 

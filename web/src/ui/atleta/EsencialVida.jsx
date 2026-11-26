@@ -162,7 +162,7 @@ export function HojaEjercicios({ alCerrar, alCambiar }) {
                   <span class="pila-xs">
                     <strong class="peq">{e.nombre}</strong>
                     {e.guia && <span class="mini terciario">En lugar de {e.guia.nombre}</span>}
-                    {e.estancado && encendido('variante', previa) && <span class="mini vid-atascado">Tres semanas igual: una variante puede desatascarlo{previa ? ' (borrador)' : ''}</span>}
+                    {e.estancado && encendido('variante', previa) && <span class="mini vid-atascado">Tres semanas igual: una variante puede desatascarlo{previa && !encendido('variante') ? ' (borrador)' : ''}</span>}
                   </span>
                   {(e.opciones.length > 0 || e.guia) && <button type="button" class="btn btn-peq" aria-expanded={abierto === e.id ? 'true' : 'false'} onClick={() => setAbierto(abierto === e.id ? null : e.id)}>Cambiar</button>}
                 </div>
@@ -435,7 +435,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
       {suave?.esta && (
         <section class="nota-coach vid-suave" aria-label="Semana suave">
           <Icono n="pausa" />
-          <div class="pila-s"><strong>{SUAVE.titulo}{previa ? ' (borrador)' : ''}</strong><span class="peq">{SUAVE.texto}</span></div>
+          <div class="pila-s"><strong>{SUAVE.titulo}{previa && !encendido('suave') ? ' (borrador)' : ''}</strong><span class="peq">{SUAVE.texto}</span></div>
         </section>
       )}
       {conMotorDolor && <DolorEnHoy />}
@@ -456,7 +456,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
         <section class="nota-coach vid-salud" aria-label="Tu salud, al día">
           <Icono n="alerta" />
           <div class="pila-s">
-            <span class="peq">{SALUD_AL_DIA}{previa ? ' (borrador)' : ''}</span>
+            <span class="peq">{SALUD_AL_DIA}{previa && !encendido('salud_al_dia') ? ' (borrador)' : ''}</span>
             <div class="fila-envolver">
               {irA && <button type="button" class="btn btn-primario btn-peq" onClick={() => irA('perfil')}>Ir a mi perfil</button>}
               <button type="button" class="btn btn-peq" onClick={aparcarSalud}>Nada ha cambiado</button>

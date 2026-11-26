@@ -81,11 +81,11 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
       {nota && (
         <div class="cer-nota" role="note" aria-label="Una nota de Pelayo">
           <span class="cer-nota-t">{nota}</span>
-          <span class="mini terciario">Pelayo · semana {n}{previa ? ' · borrador, pendiente de su visto bueno' : ''}</span>
+          <span class="mini terciario">Pelayo · semana {n}{previa && !encendido('notas_lunes') ? ' · borrador, pendiente de su visto bueno' : ''}</span>
           {voz && <audio class="cer-nota-a" controls preload="none" src={voz} />}
         </div>
       )}
-      {dia && <div class="cer-dia peq" role="note"><span class="cer-dia-i"><Icono n="calendario" width="18" height="18" /></span><span>{dia}{previa ? ' (borrador)' : ''}</span></div>}
+      {dia && <div class="cer-dia peq" role="note"><span class="cer-dia-i"><Icono n="calendario" width="18" height="18" /></span><span>{dia}{previa && !encendido('dia_a_dia') ? ' (borrador)' : ''}</span></div>}
       {verAg && (
         <section class="nota-coach cer-agujetas" data-cerca="agujetas" aria-label="¿Qué tal las agujetas?">
           <Arte id="esencial-agujetas" />

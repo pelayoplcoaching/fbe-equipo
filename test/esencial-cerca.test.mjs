@@ -88,7 +88,7 @@ check(d.length === 5 && d[0].titulo === 'Te preparó la semana 3 de «Novato 2 d
   && d[d.length - 1].titulo.startsWith('Te preparó tu plan') && !d.some((x) => /futuro/.test(x.texto)), 'cada decisión con su porqué, lo último primero (su plan, cada semana, el cierre del domingo, una sesión que cerró por él)');
 
 console.log('\nApagado hasta que Pelayo lo vea');
-check(APAGADO.has('notas_lunes') && APAGADO.has('dia_a_dia') && !encendido('notas_lunes') && encendido('notas_lunes', true), 'su nota de los lunes y el día a día de las dos primeras semanas: apagados (se ven con la vista previa)');
+check(!APAGADO.has('notas_lunes') && !APAGADO.has('dia_a_dia') && encendido('notas_lunes') && encendido('dia_a_dia'), 'su nota de los lunes y el día a día de las dos primeras semanas: encendidos (Pelayo, 26/11)');
 check(Object.keys(NOTAS_LUNES).length >= 8 && notaDelLunes(1) && notaDelLunes(7) === null && Object.values(NOTAS_LUNES).every((x) => x.length <= 160) && Object.values(VOZ_PELAYO).every((x) => x === null), 'sus notas, en borrador; su voz, sin grabar');
 check(diaDelPlan({ hoy: '2027-03-01', inicio: '2027-03-01' }) === 1 && diaDelPlan({ hoy: '2027-03-14', inicio: '2027-03-01' }) === 14 && diaDelPlan({ hoy: '2027-03-15', inicio: '2027-03-01' }) === null && DIA_A_DIA[1] && DIA_A_DIA[14], 'el día a día: del 1 al 14 de su plan');
 check(!/la mitad de la gente|poca gente/i.test(JSON.stringify([HITOS, DIA_A_DIA, NOTAS_LUNES])), 'sin cifras inventadas');

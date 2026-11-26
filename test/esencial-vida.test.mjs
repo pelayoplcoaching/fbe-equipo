@@ -126,7 +126,7 @@ check(rc.total === 5 && rc.entrenando === 2 && rc.completas === 1 && rc.sinEmpez
 check(v.resumenCoach({ filas: [] }).frase === 'Aún no hay nadie con su plan en marcha.' && v.resumenCoach({ filas: [{ total: 2, hechas: 2 }] }).nota === null, 'sin nadie, o sin notas, lo dice');
 
 console.log('\nLo apagado (hasta que Pelayo lo vea)');
-check(['enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante'].every((k) => APAGADO.has(k) && !encendido(k) && encendido(k, true)), 'las ocho claves de la tanda 6 están apagadas; la vista previa las enseña');
+check(['enfermo', 'salud_al_dia', 'alarma', 'suave', 'dos_duras', 'variante'].every((k) => !APAGADO.has(k) && encendido(k)) && ['molestia_sigue', 'molestia_frena'].every((k) => APAGADO.has(k) && !encendido(k) && encendido(k, true)), 'de la tanda 6, seis encendidas por Pelayo (26/11) y dos apagadas (las sustituye el motor de molestias); la vista previa las enseña');
 check(v.ENFERMO.pasos.length === 4 && v.MOLESTIA_SIGUE.length === 3 && v.SUAVE.texto && v.ALARMA.texto && /112/.test(v.ALARMA.texto) && !/no te sube/.test(v.ALARMA.despues), 'los borradores están escritos (y la alarma no promete lo que no está hecho)');
 check(v.molestiaToca({ dicho: '2027-02-07', hoy: HOY }) === 3 && v.molestiaToca({ dicho: '2027-02-03', hoy: HOY }) === 7 && v.molestiaToca({ dicho: '2027-02-09', hoy: HOY }) === null
   && v.molestiaToca({ dicho: '2027-02-07', respondido: [3], hoy: HOY }) === null && v.molestiaToca({ dicho: '2027-01-20', hoy: HOY }) === null && v.molestiaToca({ hoy: HOY }) === null, 'la molestia: pregunta a los tres y a los siete días, una vez cada una');

@@ -57,7 +57,8 @@ check(textoAjuste(null) === '', 'sin ajuste, nada');
 
 console.log('Dónde va');
 const comun = readFileSync(new URL('../web/src/ui/atleta/sesion-comun.jsx', import.meta.url), 'utf8');
-check(comun.includes('ajusteEnVivo({ previa, objetivo: { rpe: prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo }') && comun.includes('kgFijado: prescripcion.carga_sugerida_kg != null'), 'la propuesta de cada serie lo usa (sin tocar la carga pautada del coach)');
+// (v0.259) el objetivo va en `obj` (lo comparte con la regla de la primera serie de FBE Esencial, D6)
+check(comun.includes('const obj = { rpe: prescripcion.rpe_objetivo, rir: prescripcion.rir_objetivo };') && comun.includes('ajusteEnVivo({ previa, objetivo: obj, reps, nombre: ej.nombre, kgFijado: prescripcion.carga_sugerida_kg != null'), 'la propuesta de cada serie lo usa (sin tocar la carga pautada del coach)');
 const ses = readFileSync(new URL('../web/src/ui/atleta/Sesion.jsx', import.meta.url), 'utf8');
 check(ses.includes('ajuste-nota') && ses.includes('textoAjuste('), 'la sesión dice por qué cambia la carga, en la serie que toca');
 

@@ -76,8 +76,8 @@ check(prepDeHoy({ id: 's1', completada: true, fecha_realizada: '2027-01-12', pre
 check(/En tu sesión, la app te propone una sesión mínima/.test(textoConsejo(n({ cara: 'mal' }), true)) && /los kilos de la última vez/.test(textoConsejo(n({ cara: 'bien', horas: 5 }), true))
   && textoConsejo(n({ cara: 'bien' }), true) === 'Sigue tu plan tal cual.' && /calentamiento más largo/.test(textoConsejo(n({ cara: 'bien', agujetas: true }), true)),
   'en el dial de Hoy, lo que le propondrá la app en su sesión (y no el consejo de las tres preguntas)');
-check(APAGADO.has('como_llegas') && !encendido('como_llegas') && encendido('como_llegas', true) && REVISAR_POR.como_llegas?.tipo === 'regla' && /migración 110/.test(REVISAR_POR.como_llegas.que),
-  'apagado hasta el visto bueno de Pelayo (en «Por revisar»; la vista previa lo enciende)');
+check(!APAGADO.has('como_llegas') && encendido('como_llegas') && REVISAR_POR.como_llegas?.tipo === 'regla' && /migración 110/.test(REVISAR_POR.como_llegas.que),
+  'encendido por Pelayo el 26/11 (sigue en «Por revisar», para sus textos)');
 const css = readFileSync(new URL('../web/src/como-llegas.css', import.meta.url), 'utf8');
 check(!/[^\x00-\x7F]/.test(css) && [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/\.([a-z][a-z0-9-]*)/g)].every((m) => m[1].startsWith('cll-')), 'sus estilos: solo ASCII y solo clases cll-*');
 check(MINIMA.series === 2 && MINIMA.ejercicios === 3, 'la sesión mínima: hasta 3 ejercicios, con 2 series');

@@ -6,6 +6,14 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.259': {
+    // (lo apagado de FBE Esencial, encendido salvo dos; y tres reglas del día a día, D6, D9 y D10, apagadas hasta su visto bueno)
+    atleta: [],
+    coach: [
+      'FBE Esencial: encendido lo que aprobaste el 26/11 (25 cosas). Siguen apagados el seguimiento de una molestia y «Con una molestia, no sube».',
+      'En «Por revisar», lo encendido sale aparte con sus textos. Nuevas por revisar: la primera serie, la descarga por señales y la sesión corta.',
+    ],
+  },
   '0.258': {
     // (el día a día: «¿Cómo llegas hoy?» de un toque en FBE Esencial, con la migración 110; apagado hasta su visto bueno)
     atleta: [],

@@ -19,6 +19,7 @@ import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../dato
 import { PRIMERAS_4 } from '../../logica/esencial-plantilla.js';
 import { DIAS_SEMANA, nombreDias, seguidos, PROPUESTA_DIAS, diasDeSemana, planDias, leerDias, guardarDias } from '../../logica/esencial-dias.js';
 import { perezoso } from '../perezoso.jsx';
+import { DirectoHoy } from '../Videos.jsx';
 
 const FichaEjercicio = perezoso(() => import('../FichaEjercicio.jsx'), 'FichaEjercicio', { mientras: null });
 // (099) «Tu rutina» (elegirla, sus recomendadas, el catálogo): en su trozo, con el catálogo entero
@@ -842,6 +843,8 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
       {conPlan && <PorqueVuelve p={p} />}
       {/* (v0.247) lo que la app le ha organizado: su viaje, sus días de verdad, pasar a tres días, su objetivo… */}
       <VidaArriba p={p} cuestionario={cuestionario} recargar={recargar} irA={irA} />
+      {/* (v0.259) un directo de Pelayo, solo si enciende «El directo de dudas» (FBE Esencial no tiene directos, 26/11) */}
+      {conDirecto() && <DirectoHoy />}
       {/* sus marcas de la semana 4, en cuanto termina esa semana */}
       <TarjetaMarcas />
       {/* (v0.248) hasta su lunes: lo que le falta para estar listo y una cosa pequeña cada día */}

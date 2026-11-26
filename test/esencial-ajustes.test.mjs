@@ -15,7 +15,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const sumar = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 console.log('Lo apagado, en el panel (81)');
-check(revisarCompleto() && REVISAR.length === APAGADO.size, `cada cosa apagada tiene su ficha en el panel (${REVISAR.length})`);
+check(revisarCompleto() && REVISAR.length === 30 && APAGADO.size === 5, `cada cosa apagada tiene su ficha en el panel, y las encendidas el 26/11 también, para sus textos (${REVISAR.length})`);
 check(REVISAR.every((x) => x.titulo && x.que && ['texto', 'regla', 'salud'].includes(x.tipo) && Array.isArray(x.ver) && x.ver.length === 2), 'con su título, qué hace, de qué tipo es y dónde verla en la demo');
 check(['molestia_frena', 'suave', 'dos_duras', 'variante', 'kilos_partida'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'regla') && ['enfermo', 'alarma', 'medico', 'salud_nueva'].every((k) => REVISAR.find((x) => x.clave === k).tipo === 'salud'),
   'las reglas nuevas, como reglas; lo de salud, como salud');
@@ -25,9 +25,11 @@ check(conTextos.map((x) => x.clave).sort().join() === 'aviso_peso,celebracion,co
 check(REVISAR.find((x) => x.clave === 'notas_lunes').textos.length === Object.keys(NOTAS_LUNES).length && REVISAR.find((x) => x.clave === 'dia_a_dia').textos.length === Object.keys(DIA_A_DIA).length, 'una por cada nota y cada día');
 check(AJUSTES.map((x) => x.clave).join() === 'tope_dia,tope_semana,resumen_lunes,directo' && AJUSTES[1].numero.join() === '3,14,7', 'y los cuatro ajustes: un aviso al día, N a la semana (de 3 a 14, 7 de partida), tu lunes y (v0.251) el directo de dudas');
 check(/^Apagado: FBE Esencial no tiene directos/.test(AJUSTES[3].que) && !REVISAR.some((x) => x.clave === 'directo'), '(v0.251) el directo de dudas: un interruptor suyo, apagado de serie, que no está entre lo que espera su visto bueno');
-const est = estadoDe([{ clave: 'enfermo', encendido: true }, { clave: 'medico', solo_atleta: 'x' }, { clave: 'nota_lunes:3', texto: { texto: 'Mía' } }]);
-check(est.find((x) => x.clave === 'enfermo').estado === 'encendido' && est.find((x) => x.clave === 'medico').estado === 'probando' && est.find((x) => x.clave === 'alarma').estado === 'apagado' && est.find((x) => x.clave === 'notas_lunes').editados === 1,
+const est = estadoDe([{ clave: 'molestia_sigue', encendido: true }, { clave: 'primera_serie', solo_atleta: 'x' }, { clave: 'nota_lunes:3', texto: { texto: 'Mía' } }]);
+check(est.find((x) => x.clave === 'molestia_sigue').estado === 'encendido' && est.find((x) => x.clave === 'primera_serie').estado === 'probando' && est.find((x) => x.clave === 'molestia_frena').estado === 'apagado' && est.find((x) => x.clave === 'notas_lunes').editados === 1,
   'el estado de cada una: encendida, probándose en una cuenta o apagada, y cuántos textos suyos');
+check(est.filter((x) => x.estado === 'en_la_app').length === 25 && est.find((x) => x.clave === 'enfermo').estado === 'en_la_app' && est.find((x) => x.clave === 'notas_lunes').estado === 'en_la_app',
+  '(26/11) lo que encendió en el formulario: «Encendido en la app» (25), con sus textos');
 
 console.log('\nSus textos (82, 85 y 86)');
 check(textoNuevo({ texto: 'Hola' }, { texto: 'Hola' }) === null && textoNuevo({ texto: 'Hola' }, { texto: '  ' }) === null, 'si lo deja como el de la app (o vacío), no se guarda nada');
@@ -39,16 +41,16 @@ check(respuestaNueva({ q: '¿Cuándo se me cobra?', r: 'El lunes en que empiezas
 
 console.log('\nLo que lee el atleta (81-83 y 86)');
 fijarAjustes([]);
-check(!encendido('enfermo') && encendido('enfermo', true) && encendido('una_cualquiera'), 'sin nada del panel: lo apagado, apagado (en la vista previa, encendido)');
-fijarAjustes([{ clave: 'enfermo', encendido: true }, { clave: 'alarma', encendido: false }, { clave: 'nota_lunes:3', texto: { texto: 'Mi nota.' } }, { clave: 'respuesta:cobro', texto: { r: 'Otra respuesta.' } },
+check(!encendido('molestia_sigue') && encendido('molestia_sigue', true) && encendido('una_cualquiera') && encendido('enfermo'), 'sin nada del panel: lo apagado, apagado (en la vista previa, encendido); lo encendido el 26/11, encendido');
+fijarAjustes([{ clave: 'molestia_sigue', encendido: true }, { clave: 'molestia_frena', encendido: false }, { clave: 'nota_lunes:3', texto: { texto: 'Mi nota.' } }, { clave: 'respuesta:cobro', texto: { r: 'Otra respuesta.' } },
   { clave: 'respuesta_nueva:hijo', texto: { cat: 'antes', q: '¿Con mi hijo?', r: 'Sí.' } }, { clave: 'momento:descarga', texto: { titulo: 'Mi descarga' } }, { clave: 'dia:2', texto: { texto: 'Mi día 2.' } }]);
-check(encendido('enfermo') && !encendido('alarma'), 'lo que Pelayo enciende, encendido; lo demás, igual');
+check(encendido('molestia_sigue') && !encendido('molestia_frena'), 'lo que Pelayo enciende, encendido; lo demás, igual');
 check(notaDelLunes(3) === 'Mi nota.' && notaDelLunes(4) === NOTAS_LUNES[4] && diaADia(2) === 'Mi día 2.' && diaADia(3) === DIA_A_DIA[3], 'sus notas de los lunes y su día a día, con su texto donde lo ha escrito');
 check(leccionMomento('descarga')[0] === 'Mi descarga' && leccionMomento('descarga')[1] === LECCIONES_MOMENTO.descarga[1] && leccionMomento('nada') === null, 'las lecciones de momento, con su título (y el texto de la app si no lo cambió)');
 check(respuestaDe('cobro').r === 'Otra respuesta.' && respuestaDe('hijo')?.suya && respuestas().length === respuestas().filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i).length, 'las respuestas, corregidas y la suya añadida (sin repetir)');
 check(textoAjuste('nota_lunes:9', 'texto', 'por defecto') === 'por defecto', 'sin su texto, el de la app');
 fijarAjustes(null);
-check(!encendido('enfermo') && notaDelLunes(3) === NOTAS_LUNES[3], 'y sin la 103 (o vacío), todo como siempre');
+check(!encendido('molestia_sigue') && notaDelLunes(3) === NOTAS_LUNES[3], 'y sin la 103 (o vacío), todo como siempre');
 
 console.log('\nEl registro (87)');
 check(textoRegistro({ clave: 'enfermo', antes: null, despues: { clave: 'enfermo', encendido: true } }) === 'Encendiste «Estoy enfermo»', '«Encendiste «Estoy enfermo»»');

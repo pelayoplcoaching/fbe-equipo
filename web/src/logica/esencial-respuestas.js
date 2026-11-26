@@ -135,7 +135,7 @@ export const RESPUESTAS = [
     r: 'Eso son los programas con seguimiento: un plan hecho para ti, revisión de cada semana y mensajes. Puedes pedir plaza en la web.', enlace: ['Programas con seguimiento', 'programas.html'] },
 ];
 
-// (P) Lo que toca salud y no ha visto Pelayo: escrito, pero APAGADO hasta su visto bueno
+// (P) Cuatro respuestas de salud (salud_nueva): escritas aparte hasta su visto bueno; encendidas el 26/11/2026
 export const PENDIENTES = [
   { id: 'resfriado', cat: 'salud', q: 'Estoy resfriado, ¿entreno?',
     r: 'Si es de cuello para arriba (mocos, algo de garganta) y te encuentras con fuerzas, puedes hacer la sesión más suave. Con fiebre, malestar general o tos de pecho, descansa: pon la semana en pausa y vuelve cuando lleves un par de días bien.' },
@@ -147,30 +147,18 @@ export const PENDIENTES = [
     r: 'Si te encuentras bien, sí, con normalidad. Si ese día el cuerpo no acompaña, haz la sesión más suave o pásala a otro día: no pierdes nada.' },
 ];
 
-export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia',
-  // (v0.247, tanda 6) salud: estoy enfermo, el seguimiento de una molestia, repasar la salud cada seis meses y la señal de
-  // alarma; reglas nuevas de progresión: con una molestia en la zona no sube, la semana suave, dos sesiones duras
-  // seguidas y la variante de un ejercicio atascado
-  'enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante',
-  // (v0.248, tanda 7) sus kilos de partida en la semana 1 (cambia de dónde sale su primer peso) y la hoja para su médico (salud)
-  'kilos_partida', 'medico',
-  // (v0.250, tanda 9: la comida) quince respuestas de comida, «Hoy como fuera», «Tengo mucha hambre», «Me he pasado» y
-  // «Tengo una celebración» (con su regla: esos pesos no cuentan), la comida de viaje (no ajusta y pasa a mantener), los
-  // avisos del peso (baja deprisa o parado), lo que contesta el check-in al hambre y a la energía, y cuatro lecciones
-  'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida',
-  // (v0.252, motor de nutrición) las preguntas de salud nuevas del cuestionario de nutrición: las exclusiones y el SCOFF
-  'salud_comida',
-  // (v0.257, motor de molestias) la tabla de zonas de cada ejercicio (M8, hasta que Pelayo dé el visto bueno) y lo que hace
-  // con ella: preguntar antes de la sesión, durante, después y a la mañana siguiente, el ajuste de la mañana siguiente, lo
-  // que no sube con una zona en ámbar o que va a peor, la alternativa en rojo y el seguimiento a los 3 y 7 días
-  'molestias_zona',
-  // (v0.258, el día a día) «¿Cómo llegas hoy?» de un toque (con la 110) y lo que propone la app: un día regular o con
-  // menos de 6 horas de sueño, los kilos de la última vez y una serie menos en los accesorios; un día malo, la sesión
-  // mínima o pasarla a otro día; con agujetas fuertes, un calentamiento más largo y no sube
-  'como_llegas',
-  // (v0.259, el día a día) la segunda serie de cada ejercicio sale de cómo fue la primera (D6) y una descarga por señales
-  // si llega antes que la de su plantilla (D9)
-  // y, con 20-30 minutos, la sesión corta con superseries (D10)
+// (26/11/2026, formulario «Lo apagado de FBE Esencial») Pelayo encendió todo lo que estaba apagado salvo dos cosas que
+// sustituye el motor de molestias (el seguimiento de una molestia y «Con una molestia, no sube»). Encendidas desde la
+// v0.259: salud_nueva, lecciones_momento, checkin_responde, notas_lunes, dia_a_dia, enfermo, salud_al_dia, alarma, suave,
+// dos_duras, variante, kilos_partida, medico, respuestas_comida, comida_fuera, hambre, me_he_pasado, celebracion,
+// comida_viaje, aviso_peso, checkin_comida, lecciones_comida, salud_comida, molestias_zona y como_llegas (siguen en
+// «Por revisar», como «Encendido en la app», para corregir sus textos).
+export const APAGADO = new Set([
+  // (v0.247, tanda 6) las sustituye el motor de molestias (v0.257): el seguimiento de una molestia a los 3 y 7 días y, con
+  // una molestia en la zona, no sube (con las zonas del cuestionario de lesiones ya no sabe a qué ejercicios frenar)
+  'molestia_sigue', 'molestia_frena',
+  // (v0.259, el día a día) la segunda serie de cada ejercicio sale de cómo fue la primera (D6), una descarga por señales si
+  // llega antes que la de su plantilla (D9) y, con 20-30 minutos, la sesión corta con superseries (D10)
   'primera_serie', 'descarga_senales', 'sesion_corta']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
@@ -214,8 +202,8 @@ export const respuestas = ({ previa = false, publicas = [], comida = null } = {}
   return [
     ...RESPUESTAS.map((x) => (directo && CON_DIRECTO[x.id] ? { ...x, ...CON_DIRECTO[x.id] } : x)).map(conSuTexto),
     ...respuestasNuevas(),
-    ...(comida && encendido('respuestas_comida', previa) ? comida.map((x) => ({ ...conSuTexto(x), cat: 'comida', pendiente: !REMOTO.get('respuestas_comida')?.encendido })) : []),
-    ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !REMOTO.get('salud_nueva')?.encendido })) : []),
+    ...(comida && encendido('respuestas_comida', previa) ? comida.map((x) => ({ ...conSuTexto(x), cat: 'comida', pendiente: !encendido('respuestas_comida') })) : []),
+    ...(encendido('salud_nueva', previa) ? PENDIENTES.map((x) => ({ ...conSuTexto(x), pendiente: !encendido('salud_nueva') })) : []),
     // (18) las dudas del directo que Pelayo ha contestado y hecho públicas (solo con el directo encendido)
     ...(directo ? (publicas || []).filter((x) => x?.pregunta && x?.respuesta).map((x) => ({ id: `directo-${x.id}`, cat: 'directo', q: x.pregunta, r: x.respuesta, directo: true })) : []),
   ];

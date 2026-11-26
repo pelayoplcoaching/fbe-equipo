@@ -71,7 +71,9 @@ export const AJUSTES = [
 ];
 export const TODAS_LAS_CLAVES = [...REVISAR.map((x) => x.clave), ...AJUSTES.map((x) => x.clave)];
 // que las claves de lo apagado y las de REVISAR coincidan (lo comprueban las pruebas)
-export const revisarCompleto = () => REVISAR.length === APAGADO.size && REVISAR.every((x) => APAGADO.has(x.clave));
+// (cada cosa apagada tiene su ficha; las encendidas en la app, desde el 26/11, también: para corregir sus textos)
+export const revisarCompleto = () => [...APAGADO].every((k) => REVISAR.some((x) => x.clave === k));
+export const enLaApp = (clave) => !APAGADO.has(clave);
 
 // El estado de cada cosa, con las filas de esencial_ajustes: { clave, encendido, solo_atleta, texto, valor } → por clave
 export function estadoDe(filas = []) {
@@ -79,6 +81,8 @@ export function estadoDe(filas = []) {
   return REVISAR.map((x) => {
     const f = por.get(x.clave) || null;
     const editados = (x.textos || []).filter((t) => por.get(t.clave)?.texto).length;
+    // (26/11/2026) lo que Pelayo encendió en el formulario va encendido en la app para todos: «Encendido en la app»
+    if (!APAGADO.has(x.clave)) return { ...x, encendido: true, solo: null, editados, estado: 'en_la_app' };
     return { ...x, encendido: f?.encendido === true, solo: f?.solo_atleta || null, editados, estado: f?.encendido ? 'encendido' : f?.solo_atleta ? 'probando' : 'apagado' };
   });
 }

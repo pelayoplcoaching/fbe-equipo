@@ -30,11 +30,13 @@ check(JSON.stringify(salud) === JSON.stringify(['agujetas', 'dolor', 'enfermedad
 check(/para y habla con tu médico/.test(respuestaDe('dolor').r) && /La app no valora el dolor/.test(respuestaDe('dolor').r), 'y «¿Y si me duele algo?» conserva las señales para parar y que la app no valora el dolor');
 
 console.log('\nLo apagado hasta que Pelayo lo vea');
-check(APAGADO.has('salud_nueva') && APAGADO.has('lecciones_momento') && APAGADO.has('checkin_responde') && !encendido('salud_nueva') && encendido('salud_nueva', true) && encendido('otra_cosa') && APAGADO.size === 27 && APAGADO.has('salud_comida') && APAGADO.has('molestias_zona') && APAGADO.has('como_llegas')
-  && ['enfermo', 'molestia_sigue', 'salud_al_dia', 'alarma', 'molestia_frena', 'suave', 'dos_duras', 'variante'].every((k) => APAGADO.has(k)), 'lo apagado (veintisiete cosas: las cinco de antes, las ocho de la tanda 6, las dos de la tanda 7, las nueve de la comida, de la 9, las preguntas de salud del cuestionario de nutrición, v0.257, el motor de molestias con la tabla de zonas y, v0.258, «¿Cómo llegas hoy?» de un toque); la vista previa lo enciende');
-check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && !respuestas().some((x) => PENDIENTES.some((p) => p.id === x.id)) && respuestas({ previa: true }).filter((x) => x.pendiente).length === PENDIENTES.length,
-  `las ${PENDIENTES.length} respuestas de salud nuevas no salen; en la vista previa, marcadas como pendientes`);
-check(respuestaDe('resfriado') === null && respuestaDe('resfriado', { previa: true })?.pendiente === true, 'ni se llega a ellas por su clave');
+check(APAGADO.size === 5 && ['molestia_sigue', 'molestia_frena', 'primera_serie', 'descarga_senales', 'sesion_corta'].every((k) => APAGADO.has(k) && !encendido(k) && encendido(k, true))
+  && ['salud_nueva', 'lecciones_momento', 'checkin_responde', 'notas_lunes', 'dia_a_dia', 'enfermo', 'salud_al_dia', 'alarma', 'suave', 'dos_duras', 'variante', 'kilos_partida', 'medico',
+    'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida', 'salud_comida', 'molestias_zona', 'como_llegas'].every((k) => !APAGADO.has(k) && encendido(k))
+  && encendido('otra_cosa'), 'lo apagado (26/11: Pelayo encendió 25; quedan cinco: las dos que sustituye el motor de molestias y las tres reglas nuevas del día a día); la vista previa lo enciende');
+check(PENDIENTES.length >= 3 && PENDIENTES.every((x) => x.cat === 'salud') && PENDIENTES.every((p) => respuestas().some((x) => x.id === p.id && !x.pendiente)),
+  `las ${PENDIENTES.length} respuestas de salud nuevas salen (encendidas el 26/11), sin la marca de pendiente`);
+check(respuestaDe('resfriado')?.pendiente === false, 'y se llega a ellas por su clave');
 const PUB = [{ id: 'x1', pregunta: '¿Cuánto tardo en notar el peso muerto?', respuesta: 'Unas semanas.' }, { id: 'x2', pregunta: '', respuesta: 'sin pregunta' }];
 check(!respuestas({ publicas: PUB }).some((x) => x.directo), '(v0.251) con el directo oculto, las dudas del directo hechas públicas no entran');
 fijarAjustes([{ clave: 'directo', encendido: true }]);
@@ -57,11 +59,11 @@ check(NECESITAS.length === 16 && NECESITAS.every(([id, t, icono, que]) => id && 
   const de = (o) => necesitasPara(o).map((x) => x[0]).join();
   check(de({}) === 'viaje,duele,herramientas' && necesitasPara({})[0][3] === 'respuesta:viaje' && ids.has('viaje'), 'sin plan y sin la migración 100: «Me voy de viaje» (su respuesta de siempre), «Me duele algo» y (v0.254) «Más herramientas»');
   check(de({ con100: true }) === 'viaje,duele,objetivo,herramientas' && necesitasPara({ con100: true })[0][3] === 'accion:viaje', 'sin plan, con la 100: además su objetivo (el viaje, con fechas); la pregunta para el directo, oculta (v0.251)');
-  check(de({ conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,plan,herramientas', 'con plan y sin la 100: lo que no guarda notas');
-  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,herramientas', 'con todo: once (ni lo apagado ni el directo, que está oculto)');
-  check(de({ con100: true, conPlan: true, conMedicacion: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,medicacion,herramientas' && de({ conMedicacion: true }) === 'viaje,duele,medicacion,herramientas',
+  check(de({ conPlan: true }) === 'falle,viaje,duele,enfermo,tiempo,sitio,ejercicio,dias,rutina,plan,herramientas', 'con plan y sin la 100: lo que no guarda notas (y, encendido el 26/11, «Estoy enfermo»)');
+  check(de({ con100: true, conPlan: true }) === 'falle,viaje,duele,enfermo,tiempo,sitio,ejercicio,dias,rutina,suave,objetivo,plan,herramientas', 'con todo: trece (con «Estoy enfermo» y la semana suave; ni el directo, que está oculto)');
+  check(de({ con100: true, conPlan: true, conMedicacion: true }) === 'falle,viaje,duele,enfermo,tiempo,sitio,ejercicio,dias,rutina,suave,objetivo,plan,medicacion,herramientas' && de({ conMedicacion: true }) === 'viaje,duele,medicacion,herramientas',
     '(v0.254) «Mi medicación y el ejercicio», solo a quien dijo que toma medicación a diario (con plan o sin él)');
-  check(de({ con108: true }) === 'viaje,duele,pruebas,herramientas' && de({ con100: true, conPlan: true, con108: true }) === 'falle,viaje,duele,tiempo,sitio,ejercicio,dias,rutina,objetivo,plan,pruebas,herramientas',
+  check(de({ con108: true }) === 'viaje,duele,pruebas,herramientas' && de({ con100: true, conPlan: true, con108: true }) === 'falle,viaje,duele,enfermo,tiempo,sitio,ejercicio,dias,rutina,suave,objetivo,plan,pruebas,herramientas',
     '(v0.255) «Mis pruebas», solo con la 108 (donde se guardan; con plan o sin él)');
   check(de({ con100: true, conPlan: true, previa: true }) === NECESITAS.map((x) => x[0]).filter((id) => id !== 'directo' && id !== 'medicacion' && id !== 'pruebas').join() && de({ conPlan: true, previa: true }).includes('enfermo') && !de({ conPlan: true, previa: true }).includes('suave'),
     'con la vista previa, también «Estoy enfermo» y «Necesito una semana suave» (esta, solo con la 100); el directo, tampoco ahí: no espera visto bueno');
@@ -80,6 +82,11 @@ console.log('\n(v0.251) El directo de dudas, oculto (FBE Esencial no tiene direc
   fijarAjustes([{ clave: 'directo', encendido: false }]);
   check(!conDirecto() && !de({ con100: true, conPlan: true }).includes('directo'), 'y apagado otra vez, se oculta');
   fijarAjustes([]);
+  // (v0.259) los directos que Pelayo anuncia para FBE Equipo (recursos con día y hora) tampoco salen en el Hoy de FBE
+  // Esencial: solo con «El directo de dudas» encendido, y entonces los pone HoyEsencial
+  const hoyJsx = lee('web/src/ui/atleta/Hoy.jsx'), esJsx = lee('web/src/ui/atleta/Esencial.jsx');
+  check((hoyJsx.match(/<DirectoHoy \/>/g) || []).length === 3 && (hoyJsx.match(/!propio && !esPorSuCuenta\(atleta\) && <DirectoHoy \/>/g) || []).length === 3
+    && /\{conDirecto\(\) && <DirectoHoy \/>\}/.test(esJsx), 'y el directo de un recurso (el de FBE Equipo), fuera del Hoy de FBE Esencial salvo con el directo encendido');
 }
 // (v0.250) y «pesarme»: el aviso para pesarse abre «¿Cuándo me peso?» (lo resuelve QueNecesitas)
 const ABRE = new Set(['plan', 'cierre', 'revision', 'rutina', 'agujetas', 'vuelta', 'viajando', 'pesarme']);

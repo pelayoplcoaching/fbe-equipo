@@ -18,7 +18,7 @@ import * as datos from '../../datos/api-esencial.js';
 import { panelComida } from '../../logica/esencial-comida.js';
 
 const TIPO = { texto: 'Texto', regla: 'Regla', salud: 'Salud' };
-const ESTADO = { apagado: 'Apagado', probando: 'Probando en una cuenta', encendido: 'Encendido' };
+const ESTADO = { apagado: 'Apagado', probando: 'Probando en una cuenta', encendido: 'Encendido', en_la_app: 'Encendido en la app' };
 
 export function PanelRevisar({ lista = [], abrir = null }) {
   const { backend } = useApp();
@@ -52,7 +52,10 @@ function PorRevisar({ filas, suyos, alCambiar }) {
   const [ocupado, una] = useUnaVez();
   const [editar, setEditar] = useState(null);
   const [registro, setRegistro] = useState(0);
-  const items = estadoDe(filas);
+  const todos = estadoDe(filas);
+  // (26/11/2026) lo encendido en la app, aparte y sin interruptor: sus textos se siguen corrigiendo aquí
+  const items = todos.filter((x) => x.estado !== 'en_la_app');
+  const enApp = todos.filter((x) => x.estado === 'en_la_app');
   const fila = (clave) => filas.find((f) => f.clave === clave) || null;
   const poner = (clave, campos, texto) => una(async () => {
     try { await datos.ponerAjuste(backend, clave, campos); aviso(texto); alCambiar(); setRegistro((n) => n + 1); } catch (e) { aviso(e.message, 'error'); }
@@ -92,6 +95,27 @@ function PorRevisar({ filas, suyos, alCambiar }) {
           </div>
         ))}
       </div>
+      {enApp.length > 0 && (
+        <details class="pila-xs">
+          <summary class="peq"><strong>{`Encendido en la app (${enApp.length})`}</strong></summary>
+          <p class="peq secundario">Lo que encendiste el 26/11 en el formulario: va para todos los de FBE Esencial. Sus textos los puedes seguir corrigiendo aquí.</p>
+          <div class="prv-lista" role="list" aria-label="Encendido en la app">
+            {enApp.map((x) => (
+              <div key={x.clave} role="listitem" class="prv-item prv-item-si">
+                <span class="pila-xs">
+                  <strong class="peq">{x.titulo}</strong>
+                  <span class="mini terciario">{TIPO[x.tipo]} · {ESTADO[x.estado]}{x.editados ? ` · ${x.editados === 1 ? '1 texto tuyo' : `${x.editados} textos tuyos`}` : ''}</span>
+                </span>
+                <span class="peq secundario">{x.que}</span>
+                <div class="fila-envolver">
+                  {x.textos?.length > 0 && <button type="button" class="btn btn-peq" onClick={() => setEditar(x)}><Icono n="editar" /> Sus textos</button>}
+                  <a class="btn btn-peq" href={`${base}?demo=esencial&como=${x.ver[0]}`} target="_blank" rel="noopener"><Icono n="ojo-abierto" /> Ver como en la demo</a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       <strong class="peq">Los avisos, tu lunes y el directo</strong>
       <div class="prv-lista" role="list" aria-label="Ajustes">
         {AJUSTES.map((x) => {

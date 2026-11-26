@@ -479,8 +479,8 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={{ estado: 'nutricion' }} panel={panelDia} alCerrar={cerrarDia} />}
       <Reserva id="hoy-menu"><MenuHoy irA={irA} salud={salud} darConsentimiento={async () => { await api.darConsentimientos(['datos_salud']); recargarConsentimientos?.(); }} /></Reserva>
-      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
-      {!propio && <DirectoHoy />}
+      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
+      {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
       {entre}
       {salud && <Reserva id="hoy-nutricion"><NutricionHoy /></Reserva>}
       {salud && <Reserva id="hoy-habitos"><HabitosHoy /></Reserva>}
@@ -561,8 +561,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       <>
         {esencial ? <HeroEsencial p={p} cuestionario={esencial.cuestionario} abrirCuestionario={esencial.abrirCuestionario} recargarPrograma={recargar} irA={irA} />
           : <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />}
-        {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
-        {!propio && <DirectoHoy />}
+        {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
+        {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
         {entre}
         {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
         {salud && conNutricion(atleta) && <NutricionHoy />}
@@ -755,8 +755,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       {atleta.estado !== 'baja' && <AvisoRitmoPeso salud={salud} />}
       {/* (v0.143) de viaje, en otra zona horaria: qué hora es en cada sitio y las notificaciones de noche */}
       <AvisoViaje />
-      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí */}
-      {!propio && <DirectoHoy />}
+      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
+      {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
       {entre}
       {!propio && !P.ocultas.has('mes') && tarjetaMes}
       {/* (v0.104) en diciembre y enero, tu año en FBE */}

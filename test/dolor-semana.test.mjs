@@ -79,6 +79,6 @@ console.log('\nCon la clave apagada (como hasta que Pelayo dé el visto bueno)')
 const b = await semana(false, true);
 check(!!b && pre(b.despues)?.kg > pre(b.antes)?.kg && !/rodilla/.test(b.nota), `la prensa sube como siempre (${pre(b?.antes)?.kg} → ${pre(b?.despues)?.kg} kg) y la nota no dice nada de la rodilla`);
 
-APAGADO.add('molestias_zona');
+APAGADO.delete('molestias_zona');   // (encendida desde el 26/11)
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 process.exit(fallos ? 1 : 0);

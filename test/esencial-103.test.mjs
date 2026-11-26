@@ -85,7 +85,8 @@ check(deAna.find((f) => f.clave === 'enfermo')?.encendido === true && deAna.find
   'Ana lee lo suyo: «Estoy enfermo», encendido; lo de su médico, encendido solo para ella (sin saber que es una prueba)');
 check(deAna.find((f) => f.clave === 'nota_lunes:3')?.texto?.texto === 'Mi nota de la semana 3.', 'y la nota del lunes 3, con el texto de Pelayo');
 fijarAjustes(deAna);
-check(encendido('enfermo') && encendido('medico') && !encendido('alarma') && textoAjuste('nota_lunes:3', 'texto') === 'Mi nota de la semana 3.', 'la app de Ana: lo encendido, encendido; lo demás, apagado; y la nota de Pelayo');
+// (v0.259) «alarma» ya va encendida en el código (visto bueno de Pelayo, 26/11): lo apagado, con una que sigue apagada
+check(encendido('enfermo') && encendido('medico') && !encendido('molestia_sigue') && textoAjuste('nota_lunes:3', 'texto') === 'Mi nota de la semana 3.', 'la app de Ana: lo encendido, encendido; lo demás, apagado; y la nota de Pelayo');
 fijarAjustes([]);
 check((await b.select('esencial_ajustes', {})).length === 0 && !!(await falla(() => b.insert('esencial_ajustes', [{ clave: 'alarma', encendido: true }]))), 'Ana no ve la tabla ni puede encender nada');
 await como('berta');
