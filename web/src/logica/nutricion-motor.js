@@ -310,7 +310,7 @@ export function gastoReal({ registros = [], pesos = [], plan }, hoy) {
 }
 
 // ---------- R28 a R33: la revisión de cada 4 semanas ----------
-// e: { plan: { kcal, proteina_g, desde, objetivo, ritmo_pct, mantenimiento? }, sexo, pesoRef, proteinaMinG?, mant (su gasto: el real si lo hay),
+// e: { plan: { kcal, proteina_g, desde, objetivo, ritmo_pct, mantenimiento? }, sexo, pesoRef, mant (su gasto: el real si lo hay),
 //      registros, pesos, cinturas, fuerzaCae (sus marcas caen 3 semanas seguidas), bajadasSeguidas, pocosHidratos?,
 //      bebidasSemana?, hoy }
 // Devuelve { tipo, delta, nuevo?, porque, ... }. tipo: 'esperar' (aún no toca), 'simplificar' (sin buena adherencia: no se
@@ -333,7 +333,8 @@ export function revisionNutricion(e) {
   const cintura = cambioCintura(e.cinturas || [], hasta);
   const kcal = num(plan.kcal);
   const base = { ritmoReal: real, previsto, cintura, adherencia: ad };
-  const nuevoCon = (k) => macrosDelPlan({ kcal: k, proteinaG: plan.proteina_g, proteinaMinG: e.proteinaMinG, pesoRef: e.pesoRef, pocosHidratos: e.pocosHidratos, bebidasSemana: e.bebidasSemana });
+  // (R30: la proteína no se toca nunca en una revisión, aunque los hidratos queden por debajo de 130 g)
+  const nuevoCon = (k) => macrosDelPlan({ kcal: k, proteinaG: plan.proteina_g, proteinaMinG: null, pesoRef: e.pesoRef, pocosHidratos: e.pocosHidratos, bebidasSemana: e.bebidasSemana });
   const sube = (d, porque) => { const k = kcal + Math.min(CAMBIO_MAX, d); return { ...base, tipo: 'sube', delta: k - kcal, nuevo: nuevoCon(k), porque }; };
   const perdiendo = plan.objetivo === 'perder' || (plan.objetivo == null && previsto < 0);
   const baja = (d, porque) => {
