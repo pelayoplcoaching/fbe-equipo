@@ -14,7 +14,8 @@ import { SiCasiNo } from './Nutricion.jsx';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { perezoso } from '../perezoso.jsx';
 // (FBE Esencial, 093) rehacer el plan de comida (su trozo)
-const HojaPlanComida = perezoso(() => import('./EsencialComida.jsx'), 'HojaPlanComida', { mientras: null });
+// (v0.252) rehacerlo: con la 105, el cuestionario de nutrición; sin ella, la hoja de la 093 (EsencialComida.jsx decide)
+const HojaRehacerComida = perezoso(() => import('./EsencialComida.jsx'), 'HojaRehacerComida', { mientras: null });
 
 // Apuntar un día (hoy o uno de esta semana): los totales, o sí/casi/no si va sin contar
 export function HojaNutricion({ r, alCerrar, alGuardar, diaInicial = null }) {
@@ -150,7 +151,7 @@ export function HojaTuPlan({ r, alCerrar, alCambiar = null }) {
   const suyo = esPorSuCuenta(atleta);
   const [rehacer, setRehacer] = useState(false);
   const plan = r.plan || r.siguiente;
-  if (rehacer) return <HojaPlanComida pesoKg={r.pesoKg} actual={r.plan} alCerrar={() => setRehacer(false)} alGuardar={() => { setRehacer(false); alCambiar?.(); alCerrar(); }} />;
+  if (rehacer) return <HojaRehacerComida pesoKg={r.pesoKg} actual={r.plan} alCerrar={() => setRehacer(false)} alGuardar={() => { setRehacer(false); alCambiar?.(); alCerrar(); }} />;
   return (
     <Hoja titulo="Tu plan de nutrición" alCerrar={alCerrar}>
       <TarjetaPlan plan={r.plan} siguiente={r.siguiente} diasEntreno={r.diasEntreno} />

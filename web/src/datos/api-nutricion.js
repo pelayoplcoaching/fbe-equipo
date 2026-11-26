@@ -3,12 +3,14 @@
 const falta105 = (e) => /nutricion_plan_motor|nutricion_revision|nutricion_perfiles|PGRST202|42883|42P01/.test(`${e?.message || ''} ${e?.code || ''}`);
 const num = (v) => (v == null || v === '' ? null : Number(String(v).replace(',', '.')));
 
-// ¿Está la 105? (se mira una vez por sesión)
-let hay = null;
+// ¿Está la 105? (se mira una vez por sesión, para cada base)
+const hay = new WeakMap();
 export async function hay105(b) {
-  if (hay !== null) return hay;
-  try { await b.select('nutricion_perfiles', { cols: 'atleta_id', limit: 1 }); hay = true; } catch (e) { hay = falta105(e) ? false : true; }
-  return hay;
+  if (hay.has(b)) return hay.get(b);
+  let si;
+  try { await b.select('nutricion_perfiles', { cols: 'atleta_id', limit: 1 }); si = true; } catch (e) { si = !falta105(e); }
+  hay.set(b, si);
+  return si;
 }
 // Su perfil de nutrición (o null)
 export async function perfil(b, atletaId) {

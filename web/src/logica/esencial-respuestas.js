@@ -157,7 +157,9 @@ export const APAGADO = new Set(['salud_nueva', 'lecciones_momento', 'checkin_res
   // (v0.250, tanda 9: la comida) quince respuestas de comida, «Hoy como fuera», «Tengo mucha hambre», «Me he pasado» y
   // «Tengo una celebración» (con su regla: esos pesos no cuentan), la comida de viaje (no ajusta y pasa a mantener), los
   // avisos del peso (baja deprisa o parado), lo que contesta el check-in al hambre y a la energía, y cuatro lecciones
-  'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida']);
+  'respuestas_comida', 'comida_fuera', 'hambre', 'me_he_pasado', 'celebracion', 'comida_viaje', 'aviso_peso', 'checkin_comida', 'lecciones_comida',
+  // (v0.252, motor de nutrición) las preguntas de salud nuevas del cuestionario de nutrición: las exclusiones y el SCOFF
+  'salud_comida']);
 // (v0.248) una respuesta puede salir también en otro tema («¿Cuándo se me cobra?», en «Antes de empezar»)
 export const enTema = (x, cat) => x.cat === cat || (x.tambien || []).includes(cat);
 // (v0.249, 92) «¿Por qué te vas?»: los motivos (de una lista: así no entra nada de salud; «Otro» deja una frase)

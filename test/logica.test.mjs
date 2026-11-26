@@ -2929,7 +2929,7 @@ console.log('\nv0.56: notas de voz, encuestas, fotos, la copia del chat en el m�
   check(/onversionchange/.test(cacheSrc) && /purgar\(perfil\.id, \{ conservar/.test(convSrc) && /estado !== 'baja'/.test(convSrc), '(revisión) si otra pestaña la cambia, se suelta; el coach purga al cargar sus conversaciones');
 
   // (v0.56) El aviso de privacidad, una vez por versión
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const { VERSION_LEGAL } = await import('../web/src/legal.js');
   check(VERSION_LEGAL === '2026-12.42' && PV.debeAvisarPrivacidad(null, '2026-11') && PV.debeAvisarPrivacidad('2026-10', '2026-11') && !PV.debeAvisarPrivacidad('2026-11', '2026-11') && !PV.debeAvisarPrivacidad('2026-12', '2026-11')
     && PV.debeAvisarPrivacidad('basura', '2026-11') && !PV.debeAvisarPrivacidad(null, 'x'), 'el aviso de privacidad: sale si no ha visto ninguna o una anterior; con la actual (o una más nueva), no');
@@ -3206,7 +3206,7 @@ console.log('\nv0.58: el análisis automático de los vídeos (seguir la barra, 
   // Revisión de seguridad de la v0.58
   // M1: la política cambia (2026-12) y avisa una vez con sus novedades: las de la v0.57 y la v0.58 juntas
   {
-    const PV2 = await import('../web/src/logica/privacidad.js');
+    const PV2 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
     const nueva = PV2.NOVEDADES_PRIVACIDAD.filter((x) => x[3] === '2026-12');
     const t = nueva.map((x) => x[2]).join(' ');
     check(PV2.compararVersiones(legal.VERSION_LEGAL, '2026-12') >= 0 && nueva.length === 1 && /nota de técnica \(de 1 a 5\)/.test(t) && /puntos clave/.test(t) && /tempo/.test(t) && /su voz sobre el vídeo/.test(t) && /solo el día/.test(t)
@@ -3408,7 +3408,7 @@ console.log('\nv0.59: los vídeos de técnica, tanda A (recorte automático, rep
   check(!/preact\/compat/.test(todo59) && (srcV('App.jsx').match(/olvidarAnalisis\(\); olvidarTiras\(\);/g) || []).length === 2, 'sin preact/compat; la tira de miniaturas se olvida al cerrar la sesión (como el análisis)');
   // (revisión de la v0.59) M2: la política 2026-12.1, comparada por partes (nunca como texto)
   {
-    const PV = await import('../web/src/logica/privacidad.js');
+    const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
     const orden = ['2025-12', '2026-01', '2026-11', '2026-12', '2026-12.1', '2026-12.2', '2026-12.9', '2026-12.10', '2027-01', '2027-01.1'];
     let bien = true;
     for (let i = 0; i < orden.length; i++) for (let j = 0; j < orden.length; j++) if (PV.compararVersiones(orden[i], orden[j]) !== Math.sign(i - j)) bien = false;
@@ -3564,7 +3564,7 @@ console.log('\nv0.60: el compositor, difuminar la cara, dos ángulos y la cámar
   check(A.fpsGuardado(119.88) === 120 && A.fpsGuardado(10) === null && A.fpsGuardado(300) === null && A.fpsGuardado('x') === null, 'el ritmo que se guarda (038: de 24 a 240)');
   check(/Cámara lenta/.test(A.textoSinLenta({ ios: true })) && /galería/.test(A.textoSinLenta({ ios: false })), 'y cuando no se puede, se dice (en el iPhone, la cámara lenta del propio móvil)');
   // La política: lo nuevo, en la 2026-12.2
-  const PV2 = await import('../web/src/logica/privacidad.js');
+  const PV2 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const legal3 = await import('../web/src/legal.js');
   const tv3 = legal3.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
   check(PV2.compararVersiones(legal3.VERSION_LEGAL, '2026-12.2') >= 0 && PV2.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.2') && PV2.novedadesDesde('2026-12.1', '2026-12.2').length === 1
@@ -3780,7 +3780,7 @@ console.log('\nv0.61: revisar la sesión, la estela, el perfil carga–velocidad
     && IT.leerTarjetaInforme({ ...tj, texto: 'Tu informe de técnica de octubre de 2026 y más' }) === null && IT.leerTarjetaInforme({ ...tj, texto: 'Tu informe de técnica de brumario de 2026' }) === null,
     'la tarjeta: solo un mensaje del coach en el chat con ese texto exacto (no del atleta, ni en una sesión, ni con archivo, ni eliminado)');
   // La política: lo nuevo, en la 2026-12.3
-  const PV3 = await import('../web/src/logica/privacidad.js');
+  const PV3 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const legal4 = await import('../web/src/legal.js');
   const tv4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Tus vídeos de técnica')[1];
   const mov4 = legal4.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
@@ -3908,7 +3908,7 @@ console.log('\nv0.62: avisar aunque bloquees el móvil (la pista del descanso) y
     '(revisión M2) una pausa de hace más de media hora (o sin su hora) ya no sale en la píldora ni vuelve a la sesión');
   // ---------- la política
   const legal5 = await import('../web/src/legal.js');
-  const PV4 = await import('../web/src/logica/privacidad.js');
+  const PV4 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const mov5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
   const not5 = legal5.PRIVACIDAD.find((x) => x[0] === 'Notificaciones')[1];
   check(PV4.compararVersiones(legal5.VERSION_LEGAL, '2026-12.4') >= 0 && PV4.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.4') && PV4.novedadesDesde('2026-12.3', '2026-12.4').length === 1
@@ -4053,7 +4053,7 @@ console.log('\nv0.63: el teclado de la app, el cambio que pasa a las series sigu
     'saltándose una serie (1 y 3 de 4), la siguiente es la 2 para la tarjeta, la píldora, la pantalla de bloqueo, el aviso y la voz (no la «3» de contar las hechas)');
   // ---------- la política
   const legal6 = await import('../web/src/legal.js');
-  const PV5 = await import('../web/src/logica/privacidad.js');
+  const PV5 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const mov6 = legal6.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
   const nov5 = PV5.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.5');
   check(nov5 && PV5.novedadesDesde('2026-12.4', '2026-12.5').length === 1
@@ -4131,7 +4131,7 @@ console.log('\nv0.64: «Máquina ocupada» y el orden de la sesión');
     'tras reordenar, la serie que tocaba se queda si su bloque sigue el primero (a mitad de una ronda); si se ha dejado para luego, manda el orden nuevo');
   // ---------- la política
   const legal7 = await import('../web/src/legal.js');
-  const PV6 = await import('../web/src/logica/privacidad.js');
+  const PV6 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const mov7 = legal7.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
   check(PV6.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.6') && PV6.novedadesDesde('2026-12.5', '2026-12.6').length === 1 && PV6.formatoVersion('2026-12.6')
     && /orden de los ejercicios de una sesión/.test(mov7) && /la pauta de tu coach no cambia/.test(mov7) && /hora de cada serie/.test(mov7) && /solo en tu móvil/.test(PV6.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.6')[2]),
@@ -4237,7 +4237,7 @@ console.log('\nv0.65: abrir sin cobertura y «Novedades» tras actualizar');
     'desde qué versión se mira: la guardada; quien ya usaba la app, por la política que vio; la primera vez en el móvil o una cuenta nueva, la actual (no sale nada)');
   // ---------- la política 2026-12.7
   const legal8 = await import('../web/src/legal.js');
-  const PV7 = await import('../web/src/logica/privacidad.js');
+  const PV7 = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const mov8 = legal8.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
   check(PV7.NOVEDADES_PRIVACIDAD.some((x) => x[3] === '2026-12.7') && PV7.novedadesDesde('2026-12.6', '2026-12.7').length === 1 && PV7.formatoVersion('2026-12.7')
     && /copia de tu semana/.test(mov8) && /sin cobertura/.test(mov8) && /al cerrar la sesión/.test(mov8) && /última versión de la app/.test(mov8) && /sin cobertura|sin señal|no tengas señal/.test(PV7.NOVEDADES_PRIVACIDAD.find((x) => x[3] === '2026-12.7')[2]),
@@ -4376,7 +4376,7 @@ console.log('\nv0.69: la comunidad, primera tanda (bienvenida, entrenando ahora,
   check(C.hilosComentarios([]).length === 0, 'sin comentarios, nada');
   // La política 2026-12.8 y las novedades de la 0.69
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
   const mov = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')[1];
@@ -4442,7 +4442,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
     && C.retoConseguido({ modo: 'equipo', objetivo: 5, hasta: '2026-11-30' }, { total: 5 }), 'por equipos, conseguido si su equipo llega (sin equipo, no)');
   // La política 2026-12.9 y las novedades de la 0.70
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
   check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.9') > 0 && PV.NOVEDADES_PRIVACIDAD[33][3] === '2026-12.9' && PV.novedadesDesde('2026-12.8', '2026-12.9').length === 1 && PV.formatoVersion('2026-12.9')
@@ -4455,7 +4455,7 @@ console.log('\nv0.70: compañeros de racha, retos por equipos, de cardio y de se
 console.log('\nv0.71: la comunidad, tercera tanda (temas, preguntas, varias fotos, guardar y buscar, la mejor respuesta)');
 {
   const C = await import('../web/src/logica/comunidad.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const legal = await import('../web/src/legal.js');
   const { NOVEDADES } = await import('../web/src/novedades.js');
   check(C.temasPara(false).map((x) => x[0]).join() === 'charla,tecnica,logros,pregunta' && C.temasPara(true).map((x) => x[0]).join() === 'avisos,tecnica,logros,charla'
@@ -4534,7 +4534,7 @@ console.log('\nv0.72: la comunidad, cuarta tanda (eventos, programados, atleta d
     && C.textoFiltrado('Eres un TONTÓ, ¿eh?', ['tonto']) && !C.textoFiltrado('Qué tontería', ['tonto']) && C.textoFiltrado('una mala  palabra', ['mala palabra']) && !C.textoFiltrado('Hola', []) && !C.textoFiltrado(null, ['tonto']),
     'las palabras filtradas, como en la base: normalizadas (sin mayúsculas ni tildes), palabras enteras («tontería» no salta con «tonto»)');
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
   check(legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && legal.VERSION_LEGAL_SIN_044 === '2026-12.10' && PV.NOVEDADES_PRIVACIDAD[31][3] === '2026-12.11' && PV.novedadesDesde('2026-12.10', '2026-12.11').length === 1
@@ -4608,7 +4608,7 @@ console.log('\nv0.73: la comunidad, quinta tanda (aniversarios, el mes en el equ
   check(["'fuerza', 'fuego', 'aplauso', 'corazon', 'risa', 'trofeo'"].every((x) => sql.includes(x)) && M.PEGATINAS.every(([k, t]) => sql.includes(`when '${k}' then '${t}'`)),
     'las reacciones y las pegatinas, las mismas en la base y en la app');
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const { NOVEDADES } = await import('../web/src/novedades.js');
   const com = legal.PRIVACIDAD.find((x) => x[0] === 'La comunidad del equipo')[1];
   check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.12') > 0 && legal.VERSION_LEGAL_SIN_045 === '2026-12.11' && PV.NOVEDADES_PRIVACIDAD[30][3] === '2026-12.12' && PV.novedadesDesde('2026-12.11', '2026-12.12').length === 1
@@ -4774,7 +4774,7 @@ console.log('El perfil, otras 15 (v0.116)');
 console.log('La política 2026-12.17: lo social del equipo (v0.117)');
 {
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const sec = legal.PRIVACIDAD.find((x) => x[0] === 'Lo social del equipo')?.[1] || '';
   check(legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && legal.VERSION_LEGAL_SIN_053 === '2026-12.16' && PV.NOVEDADES_PRIVACIDAD[25][3] === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[25][2].length <= 260
     && PV.novedadesDesde('2026-12.16', '2026-12.17').length === 1 && /nunca el año/.test(sec) && /5 días o más/.test(sec) && /hasta 80/.test(sec) && /Descargar mis datos/.test(sec),
@@ -4805,7 +4805,7 @@ console.log('\nLas series añadidas («Añadir serie»), guardadas en la sesión
 console.log('La política 2026-12.18: el cierre de tus sesiones (v0.119)');
 {
   const legal = await import('../web/src/legal.js');
-  const PV = await import('../web/src/logica/privacidad.js');
+  const PV = ({ ...(await import('../web/src/logica/privacidad.js')), ...(await import('../web/src/logica/privacidad-novedades.js')) });
   const sec = legal.PRIVACIDAD.find((x) => x[0] === 'El cierre de tus sesiones')?.[1] || '';
   const movil = legal.PRIVACIDAD.find((x) => x[0] === 'Lo que se queda en tu móvil')?.[1] || '';
   check(PV.compararVersiones(legal.VERSION_LEGAL, '2026-12.18') > 0 && legal.VERSION_LEGAL_SIN_055 === '2026-12.18' && legal.VERSION_LEGAL_SIN_054 === '2026-12.17' && PV.NOVEDADES_PRIVACIDAD[24][3] === '2026-12.18' && PV.NOVEDADES_PRIVACIDAD[24][2].length <= 260

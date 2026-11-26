@@ -1,10 +1,10 @@
 // FBE Esencial con nutrición (tanda 4, migración 093): el plan de comida de partida, con sus datos, y el ajuste de cada
 // semana, solos. En su propio trozo (Nutricion.jsx lo carga solo para quien va por su cuenta y lleva nutrición).
 import { useState, useEffect } from 'preact/hooks';
-import { useApp, Icono, Hoja, Paso, Segmentos } from '../comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Paso, Segmentos } from '../comunes.jsx';
 import { planComidaEsencial, datosComidaValidos, ajusteComidaEsencial, NIVELES_ACTIVIDAD, OBJETIVOS_COMIDA } from '../../logica/esencial-nutricion.js';
 import { fmtKcal } from '../../logica/nutricion.js';
-import { hoyISO } from '../../logica/fechas.js';
+import { hoyISO, sumarDias } from '../../logica/fechas.js';
 // (v0.250, tanda 9) el ajuste con sus dos reglas nuevas (apagadas: viaje y celebraciones) y qué cambia al cambiar de objetivo
 import { ajusteConReglas, momentoViaje, cambioDeObjetivo } from '../../logica/esencial-comida.js';
 import { encendido } from '../../logica/esencial-respuestas.js';
@@ -12,14 +12,24 @@ import * as datosEsencial from '../../datos/api-esencial.js';
 // (102 y 109) lo de Hoy debajo de «Nutrición de hoy» (su propio trozo)
 import { perezoso } from '../perezoso.jsx';
 const ComidaHoyEsencial = perezoso(() => import('./EsencialComidaMas.jsx'), 'ComidaHoyEsencial', { mientras: null });
+// (v0.252, 105) el cuestionario de nutrición del motor (su propio trozo); sin la 105, lo de la 093
+import * as nut from '../../datos/api-nutricion.js';
+const TarjetaNutricionMotor = perezoso(() => import('./EsencialNutricionMotor.jsx'), 'TarjetaNutricionMotor', { mientras: null });
+const HojaNutricionMotor = perezoso(() => import('./EsencialNutricionMotor.jsx'), 'HojaNutricionMotor', { mientras: null });
+// Un plan del motor (tiene su mantenimiento): no cambia cada semana, se revisa cada 4 (R2)
+const delMotor = (plan) => plan?.mantenimiento != null;
 const previaDemo = (modo) => { try { return modo === 'demo' && /[?&]previa=1(&|$)/.test(location.search); } catch { return false; } };
 
 // Lo que es el ritmo en gramos a la semana (de 10 en 10): 68,4 kg al −0,5 % → unos 340 g
 const gramosSemana = (peso, ritmo) => Math.round((Number(String(peso).replace(',', '.')) * Math.abs(Number(ritmo)) * 10) / 10) * 10;
 
-// En Hoy, sin plan: la tarjeta para prepararlo
+// En Hoy, sin plan: la tarjeta para prepararlo (v0.252: con la 105, la del cuestionario de nutrición)
 export function PlanComidaEsencial({ pesoKg = null, alGuardar }) {
+  const { backend } = useApp();
   const [abierta, setAbierta] = useState(false);
+  const hay = useCarga(() => nut.hay105(backend), []);
+  if (hay.cargando && hay.datos == null) return null;
+  if (hay.datos) return <TarjetaNutricionMotor pesoKg={pesoKg} alGuardar={alGuardar} />;
   return (
     <section class="seccion seccion-nutricion">
       <div class="seccion-cab"><h2>Tu plan de comida</h2></div>
@@ -82,12 +92,23 @@ export function HojaPlanComida({ pesoKg = null, actual = null, alCerrar, alGuard
   );
 }
 
-// Con plan: el ajuste de la semana, una vez al día como mucho (si toca y cabe en los topes, lo guarda y lo cuenta)
+// (v0.252) Rehacerlo desde «Tu plan» (otro objetivo o sus datos corregidos): con la 105, el cuestionario de nutrición
+export function HojaRehacerComida({ pesoKg = null, actual = null, alCerrar, alGuardar }) {
+  const { backend } = useApp();
+  const hay = useCarga(() => nut.hay105(backend), []);
+  if (hay.cargando && hay.datos == null) return null;
+  return hay.datos ? <HojaNutricionMotor pesoKg={pesoKg} actual={actual} alCerrar={alCerrar} alGuardar={alGuardar} />
+    : <HojaPlanComida pesoKg={pesoKg} actual={actual} alCerrar={alCerrar} alGuardar={alGuardar} />;
+}
+
+// Con plan: el ajuste de la semana, una vez al día como mucho (si toca y cabe en los topes, lo guarda y lo cuenta). (v0.252)
+// Un plan del motor no se ajusta cada semana: en su lugar, el toque de cada día («¿Has seguido tu plan?»)
 export function AjusteComidaEsencial({ r, alCambiar }) {
   const { api, backend, atleta, aviso, modo } = useApp();
   const hoy = hoyISO();
+  const motor = delMotor(r?.plan);
   useEffect(() => {
-    if (!r?.plan || !atleta?.id) return;
+    if (!r?.plan || !atleta?.id || motor) return;
     const previa = previaDemo(modo);
     const clave = `fbe-esencial-comida:${atleta.id}:${hoy}`;
     try { if (sessionStorage.getItem(clave)) return; sessionStorage.setItem(clave, '1'); } catch { /* sin almacenamiento: se intenta igual */ }
@@ -110,5 +131,47 @@ export function AjusteComidaEsencial({ r, alCambiar }) {
     return () => { vivo = false; };
   }, [r?.plan?.id, atleta?.id]);
   // (v0.250) y, debajo, por qué no cambia su plan y la comida de viaje
-  return <ComidaHoyEsencial r={r} />;
+  return <>{motor && <ToqueComida r={r} />}<ComidaHoyEsencial r={r} /></>;
+}
+
+// (v0.252, R26) El toque de cada día de un plan del motor: «¿Has seguido tu plan hoy?» y, si ayer quedó sin marcar, ayer
+// (la revisión de cada 4 semanas cuenta los días en «Sí» o «Casi»)
+const TRES = [[2, 'Sí'], [1, 'Casi'], [0, 'No']];
+function TresToques({ valor, alElegir, etiqueta, ocupado }) {
+  return (
+    <div class="si-casi-no" role="group" aria-label={etiqueta}>
+      {TRES.map(([v, t]) => (
+        <button key={v} type="button" class={`btn ${valor != null && Number(valor) === v ? `elegido-${v}` : ''}`} aria-pressed={valor != null && Number(valor) === v ? 'true' : 'false'} disabled={ocupado} onClick={() => alElegir(v)}>{t}</button>
+      ))}
+    </div>
+  );
+}
+function ToqueComida({ r }) {
+  const { api, atleta, aviso } = useApp();
+  const hoy = hoyISO(), ayer = sumarDias(hoy, -1);
+  const regAyer = [r.semana, ...(r.anteriores || [])].flatMap((w) => w?.dias || []).find((x) => x.iso === ayer)?.reg || null;
+  const [v, setV] = useState({ [hoy]: r.hoy?.cumplido ?? null, [ayer]: regAyer?.cumplido ?? null });
+  // (ayer, solo si su plan ya estaba y quedó sin marcar al abrir; marcado, se queda a la vista hasta la próxima vez)
+  const [conAyer] = useState(() => r.plan.desde <= ayer && regAyer?.cumplido == null);
+  const [ocupado, setOcupado] = useState(false);
+  const tca = useCarga(() => api.esencialTca(atleta.id).catch(() => null), [atleta.id]);
+  const apuntar = async (fecha, x) => {
+    const antes = v[fecha];
+    setV((y) => ({ ...y, [fecha]: x }));
+    setOcupado(true);
+    try { await api.apuntarNutricion(atleta.id, fecha, { cumplido: x }); aviso(x === 2 ? '¡Bien!' : 'Apuntado'); } catch (e) { setV((y) => ({ ...y, [fecha]: antes })); aviso(e.message, 'error'); } finally { setOcupado(false); }
+  };
+  return (
+    <div class="nm-toque">
+      <p class="peq">¿Has seguido tu plan hoy?</p>
+      <TresToques valor={v[hoy]} etiqueta="¿Has seguido tu plan hoy?" ocupado={ocupado} alElegir={(x) => apuntar(hoy, x)} />
+      {conAyer && (
+        <div class="nm-toque-ayer">
+          <span class="peq secundario">¿Y ayer?</span>
+          <TresToques valor={v[ayer]} etiqueta="¿Seguiste tu plan ayer?" ocupado={ocupado} alElegir={(x) => apuntar(ayer, x)} />
+        </div>
+      )}
+      <span class="mini terciario">{tca.datos === true ? 'Tu plan es para mantener tu peso: la app no lo baja nunca.' : 'Cada 4 semanas, la app revisa tu plan si lo has seguido al menos 20 días y te has pesado tres veces cada semana.'}</span>
+    </div>
+  );
 }

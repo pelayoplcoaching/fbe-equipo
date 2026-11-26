@@ -35369,6 +35369,8 @@ begin
      or v_tca is null or not public.nutricion_salud_valida(v_salud) then
     raise exception 'Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg) y la pregunta de salud' using errcode = '22023';
   end if;
+  -- Sin salud nueva (en la app, con sus preguntas apagadas), la que ya contestó: así no se pierde un SCOFF o una exclusión
+  if v_salud is null then select c.nutricion_salud into v_salud from public.cuestionarios c where c.atleta_id = v_id; end if;
   -- R35: sin plan automático
   v_imc := v_peso / ((v_altura / 100) * (v_altura / 100));
   -- (el embarazo, también si lo marcó en su cuestionario de entreno: no se calcula un déficit con un dato de salud ya dicho)

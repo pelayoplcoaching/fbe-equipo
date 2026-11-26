@@ -47,7 +47,7 @@ import { copia as copiaDelMovil } from './copia.js';
 import { CLAVES_COPIA, sesionesAPreparar, sesionConCola, menuConCola, registrosHabitoConCola, pesosConCola } from '../logica/sin-red.js';
 import { textoVisible } from '../logica/texto.js';
 import { emojiValido } from '../logica/emojis.js';
-import { VERSION_LEGAL, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
+import { VERSION_LEGAL, VERSION_LEGAL_SIN_105, VERSION_LEGAL_SIN_094, VERSION_LEGAL_SIN_093, VERSION_LEGAL_SIN_091, VERSION_LEGAL_SIN_089, VERSION_LEGAL_SIN_080, VERSION_LEGAL_SIN_079, VERSION_LEGAL_SIN_078, VERSION_LEGAL_SIN_077, VERSION_LEGAL_SIN_076, VERSION_LEGAL_SIN_043, VERSION_LEGAL_SIN_044, VERSION_LEGAL_SIN_045, VERSION_LEGAL_SIN_050, VERSION_LEGAL_SIN_MUSICA, VERSION_LEGAL_SIN_051, VERSION_LEGAL_SIN_053, VERSION_LEGAL_SIN_054, VERSION_LEGAL_SIN_055, VERSION_LEGAL_SIN_056, VERSION_LEGAL_SIN_058, VERSION_LEGAL_SIN_059, VERSION_LEGAL_SIN_060, VERSION_LEGAL_SIN_061, VERSION_LEGAL_SIN_062, VERSION_LEGAL_SIN_063, VERSION_LEGAL_SIN_065, VERSION_LEGAL_SIN_066, VERSION_LEGAL_SIN_070, VERSION_LEGAL_SIN_072, VERSION_LEGAL_SIN_073 } from '../legal-version.js';
 import { limpiarMomento, pegatinaValida, hitosDe, momentoVigente, ordenarMomentos } from '../logica/celebracion.js';
 import { diasInvitacion } from '../logica/esencial.js';
 import { formatoVersion, versionMayor, clavePrivacidadLocal, compararVersiones, versionSinRevision } from '../logica/privacidad.js';
@@ -2038,7 +2038,9 @@ export function crearApi(backend, opciones = {}) {
       // (v0.234) la comida de FBE Esencial (093): con la 091 pero sin la 093, la 2026-12.40
       if ((await api.esencial093().catch(() => null)) !== true) return VERSION_LEGAL_SIN_093;
       // (v0.235) lo del piloto de FBE Esencial (094): con la 093 pero sin la 094, la 2026-12.41
-      return (await api.esencial094().catch(() => null)) === true ? VERSION_LEGAL : VERSION_LEGAL_SIN_094;
+      if ((await api.esencial094().catch(() => null)) !== true) return VERSION_LEGAL_SIN_094;
+      // (v0.252) el cuestionario de nutrición (105, en su trozo): con la 094 pero sin la 105, la 2026-12.42
+      return (await import('./api-nutricion.js').then((m) => m.hay105(b)).catch(() => false)) ? VERSION_LEGAL : VERSION_LEGAL_SIN_105;
     },
     // (v0.110) ¿Está la 051? integraciones_mias() la puede llamar cualquiera con sesión (sin ficha de atleta, null)
     async integraciones051() {
@@ -7092,7 +7094,7 @@ export function crearApi(backend, opciones = {}) {
       out.listas_companeros = perfilId && perfilId === uid() ? (await b.rpc('comunidad_listas_companeros').catch(() => [])) || [] : [];
       // (v0.133, 056) lo de carrera: sus zonas y su plan, sus carreras, las semanas del plan y las revisiones; (v0.228, 089) y
       // sus mañanas siguientes
-      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
+      for (const t of ['carrera_atleta', 'carrera_eventos', 'carrera_semanas', 'carrera_revisiones', 'carrera_mananas', 'esencial_notas', 'nutricion_perfiles']) out[t] = await b.select(t, { eq: { atleta_id: atletaId } }).catch(() => []);
       // (v0.104, 050) lo que eligió para su app (apodo, porqué, ejercicios, música y cumpleaños)
       // (personal() es siempre lo de quien está dentro: solo vale si exporta lo suyo; el coach, con lo de cada atleta)
       out.personal = perfilId && perfilId === uid()

@@ -392,14 +392,15 @@ const tramoPasos = (v) => { const x = Number(v) || 0; return x >= 10000 ? 10000 
 export function planMotorDemo(t, { p = {}, atletaId, hoy, uuid, ahoraISO }) {
   quienComida(t, atletaId);
   const n = (v) => (v == null || v === '' ? null : Number(v));
-  const salud = p.salud ?? null;
   const d = { sexo: p.sexo, edad: n(p.edad), altura: n(p.altura), peso: n(p.peso), cintura: n(p.cintura), trabajo: p.trabajo, objetivo: p.objetivo };
   // lo básico, también para una exclusión (como en la base)
-  if (datosMotorValidos({ ...d, cintura: 80, trabajo: 'sentado', objetivo: 'mantener' }) || typeof p.tca !== 'boolean' || !saludValida(salud)) {
+  if (datosMotorValidos({ ...d, cintura: 80, trabajo: 'sentado', objetivo: 'mantener' }) || typeof p.tca !== 'boolean' || !saludValida(p.salud ?? null)) {
     throw new Error('Revisa tus datos: sexo, edad (18 a 90), altura (130 a 220 cm), peso (35 a 250 kg) y la pregunta de salud');
   }
   const c = t('cuestionarios').find((x) => x.atleta_id === atletaId);
   if (!c) throw new Error('Antes, el cuestionario');
+  // (sin salud nueva —con sus preguntas apagadas—, la que ya contestó)
+  const salud = p.salud ?? c.nutricion_salud ?? null;
   Object.assign(c, { tca: p.tca, nutricion_salud: salud });
   // (el embarazo, también si lo marcó en su cuestionario de entreno)
   const embarazo = !!salud?.embarazo || (p.sexo === 'mujer' && (c.otras || []).includes('embarazo'));

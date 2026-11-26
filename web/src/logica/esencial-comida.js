@@ -15,6 +15,9 @@ const ordenados = (planes = []) => [...(planes || [])].filter((p) => p?.desde).s
 const kcalDe = (plan) => (plan ? Number(kcalMediaPlan(plan, 2) ?? plan.kcal) : null);
 const r50 = (v) => Math.round(v / 50) * 50;
 const fechaCorta = (iso) => { const [, m, d] = String(iso).split('-').map(Number); return `${d}/${m}`; };
+// (v0.252) cada cuántos días se revisa un plan del motor de nutrición (REVISION_DIAS de nutricion-motor.js; aquí aparte para
+// no traer el motor a este módulo)
+const REVISION_MOTOR = 28;
 
 // ---------- (101) El cambio de esta semana: el último ajuste de la app de los últimos siete días ----------
 // → { desde, antes, ahora, delta, motivo } o null
@@ -39,6 +42,13 @@ export function cambioDeLaSemana(planes = [], hoy) {
 export function porQueNoCambia({ plan, gasto = null, ajuste = null } = {}, { hoy, tca = false, viaje = false } = {}) {
   if (!plan || plan.modo !== 'macros') return null;
   const dias = diasEntre(plan.desde, hoy);
+  // (v0.252, R2) un plan del motor de nutrición (con su mantenimiento) no cambia cada semana: se revisa cada 4
+  if (plan.mantenimiento != null) {
+    if (tca) return { clave: 'tca', texto: 'Tu plan es para mantener tu peso: la app no lo baja nunca sola.' };
+    return dias < REVISION_MOTOR
+      ? { clave: 'motor', texto: `La app revisa tu plan cada 4 semanas, no cada semana: la próxima vez, el ${fechaCorta(sumarDias(plan.desde, REVISION_MOTOR))}, con lo que lo hayas seguido, tu peso y tu cintura.` }
+      : { clave: 'motor', texto: 'La app revisa tu plan cada 4 semanas, con lo que lo hayas seguido, tu peso y tu cintura.' };
+  }
   if (dias < 7) {
     const cuando = fechaCorta(sumarDias(plan.desde, 7));
     return esAjuste(plan)

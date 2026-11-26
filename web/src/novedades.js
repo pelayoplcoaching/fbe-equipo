@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.252': {
+    // (motor de nutrición, N1 y N2: el cuestionario de nutrición, el plan con las reglas de Pelayo y el toque de cada día; migración 105)
+    atleta: [
+      'Si llevas nutrición en FBE Esencial: tu plan de comida sale de un cuestionario nuevo, más completo, y se revisa cada 4 semanas.',
+      'Y en Hoy, un toque cada día: «¿Has seguido tu plan?».',
+    ],
+    coach: [
+      'Motor de nutrición: el cuestionario nuevo (medidas, su día, objetivo y cómo come) y tus suelos de 1.500 y 1.800 kcal. Pide la 105.',
+      'En «Por revisar», apagadas: sus preguntas de salud nuevas (embarazo, lactancia, riñón, insulina, bariátrica y el SCOFF).',
+    ],
+  },
   '0.251': {
     // (FBE Esencial sin directos: lo del directo de dudas, oculto; sin migración)
     atleta: [],

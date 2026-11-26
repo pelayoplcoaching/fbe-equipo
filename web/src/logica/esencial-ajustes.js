@@ -51,6 +51,8 @@ export const REVISAR = [
   { clave: 'checkin_comida', titulo: 'El check-in contesta al hambre y a la energía', tipo: 'salud', que: 'Con mucha hambre, o con poca energía comiendo para perder, una línea de qué hacer.', ver: ['carmen', 'el check-in'] },
   { clave: 'lecciones_comida', titulo: 'Cuatro lecciones de comida', tipo: 'texto', que: 'En su revisión, una vez cada una: su primer ajuste, una semana sin bajar, su primer fin de semana y su primera comida fuera.', ver: ['carmen', 'su revisión de la semana'],
     textos: Object.entries(LECCIONES_COMIDA).map(([id, [t, x]]) => ({ clave: `leccion_comida:${id}`, nombre: t, campos: { titulo: t, texto: x } })) },
+  // (v0.252, motor de nutrición) en el cuestionario de nutrición; apagado, la pregunta de TCA de siempre y el embarazo de su cuestionario
+  { clave: 'salud_comida', titulo: 'Las preguntas de salud del cuestionario de nutrición', tipo: 'salud', que: 'Antes de calcular su plan de comida: si está embarazada o da el pecho, una enfermedad renal crónica, insulina o sulfonilureas y una cirugía bariátrica (con cualquiera, la app no calcula su plan y le dice que lo paute su médico o un dietista-nutricionista), y las cinco preguntas del SCOFF sobre cómo se lleva con la comida (con dos «sí», solo mantener y sin pedirle que se pese). Apagado: solo la pregunta de TCA de siempre y el embarazo que marcó en su cuestionario de entreno.', ver: ['ines', 'Tu plan de comida'] },
 ];
 export const REVISAR_POR = Object.fromEntries(REVISAR.map((x) => [x.clave, x]));
 // (97 y 98) Los ajustes que no son textos: el tope de avisos, tu resumen de los lunes y (v0.251) el directo de dudas

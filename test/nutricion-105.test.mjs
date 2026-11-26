@@ -122,7 +122,16 @@ const per3 = (await db.query('select trabajo, objetivo from nutricion_perfiles w
 check(ex3.automatico === false && ex3.motivo === 'lactancia' && s3.nutricion_salud.lactancia === true && per3.trabajo === 'sentado' && per3.objetivo === 'perder',
   'con una exclusión y solo lo básico: sin plan, guarda su salud y no toca su perfil');
 await como('ana');
-// (salud null, como la manda la app con las preguntas de salud nuevas apagadas)
+// (salud null, como la manda la app con las preguntas de salud nuevas apagadas: vale la que ya contestó)
+await db.exec(superusuario);
+await db.query(`update cuestionarios set nutricion_salud = '{"scoff": {"control": true, "domina": true}}' where atleta_id = $1`, [id.ana]);
+await como('ana');
+const conGuardada = await rpc({ ...D, salud: null });
+await db.exec(superusuario);
+const sg = (await db.query('select nutricion_salud from cuestionarios where atleta_id = $1', [id.ana])).rows[0];
+await db.query('update cuestionarios set nutricion_salud = null where atleta_id = $1', [id.ana]);
+check(conGuardada.solo_mantener === true && sg.nutricion_salud?.scoff?.domina === true, 'sin salud nueva, la que ya contestó: su SCOFF de antes sigue contando (y no se borra)');
+await como('ana');
 check(/cintura/.test((await falla(() => rpc({ sexo: 'mujer', edad: 45, altura: 165, peso: 75, tca: false, salud: null })))?.message || ''), 'sin exclusión y sin cintura (y la salud a null): «Revisa tus datos: cintura…»');
 const sm = await rpc({ ...D, salud: { scoff: { control: true, domina: true } } });
 check(sm.automatico && sm.objetivo === 'mantener' && sm.ritmo_pct === 0 && sm.solo_mantener === true, 'SCOFF con 2 «sí»: solo mantener');

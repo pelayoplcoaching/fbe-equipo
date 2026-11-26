@@ -2,7 +2,8 @@
 //   · Marina (390 px): la bienvenida sin «Habla con tu coach»; en Hoy, «Rellena tu cuestionario»; lo rellena (cribado
 //     limpio) y la app le pone «Primeras 4 semanas»: su sesión con «Te sobran 4-5» y la plancha en segundos; apunta una serie.
 //   · Clara: su visto bueno, en revisión. Tomás: sus marcas de la semana 4 y (tanda 3) su plan desde la semana 5, solo.
-//   · Inés (tanda 4, con nutrición): en Hoy, «Tu plan de comida»; contesta, ve su plan y lo guarda: «Nutrición de hoy».
+//   · Inés (tanda 4, con nutrición; v0.252, con el cuestionario de nutrición del motor): en Hoy, «Tu plan de comida»;
+//     contesta los siete pasos, ve su plan y lo guarda: «Nutrición de hoy» y el toque de cada día.
 //   · Inés (alta, tanda 3): su primera semana: la guía de la primera sesión, «¿Qué peso pongo?», «Tu primera sesión, hecha»,
 //     «Semana 1 hecha»; en Perfil, sin «Mensajes con tu coach» y con sus preguntas frecuentes; la nota de su check-in.
 //   · El coach (1280 px): el chip «Esencial» en la lista; en la ficha de Clara (Datos), «Confirmar visto bueno» y su plan;
@@ -206,21 +207,51 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     const sale = await tarjeta.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
     check(sale, 'Inés (con nutrición y sin plan de comida): en Hoy, «Tu plan de comida»');
     if (sale) {
+      // (v0.252) con la 105 (en la demo, siempre): el cuestionario de nutrición por pasos
       await tarjeta.getByRole('button', { name: 'Preparar mi plan' }).click();
       const h = p.locator('[aria-modal="true"]').last();
+      const pasoT = async () => (await h.locator('#nm-titulo').textContent().catch(() => '')).trim();
+      const sig = () => h.getByRole('button', { name: 'Siguiente' }).click();
+      await h.locator('#nm-titulo').waitFor({ timeout: 10000 });
+      check(await pasoT() === 'Tú' && /Paso 1 de 7/.test(await h.textContent()) && (await h.locator('#nm-peso').inputValue()) === '68,4',
+        'Inés: el cuestionario de nutrición, en siete pasos; su último peso, ya puesto (68,4)');
       await h.getByRole('button', { name: 'Mujer' }).click();
-      await h.locator('#ec-edad').fill('36');
-      await h.locator('#ec-altura').fill('168');
-      await h.locator('#ec-peso').fill('68,4');
-      await h.getByRole('button', { name: /^Activo/ }).first().click();
-      await h.getByRole('button', { name: 'Perder grasa' }).click();
+      await h.locator('#nm-edad').fill('36');
+      await h.locator('#nm-altura').fill('168');
+      await sig();
       await h.getByRole('button', { name: 'No', exact: true }).click();
-      check(/Tu plan: 1795 kcal al día/.test((await h.locator('.nota').textContent().catch(() => '')).replace(/\u00a0/g, ' ')) && /unos 340 g/.test(await h.locator('.nota').textContent().catch(() => '')),
-        'contesta y ve su plan antes de guardarlo (1795 kcal; bajar un 0,5 % a la semana, unos 340 g)');
-      await desborda(p, 'la hoja del plan de comida');
+      check(await pasoT() === 'Tu salud' && !(await h.getByText('¿Te pasa algo de esto?').count()), '«Tu salud»: la pregunta de TCA de siempre (las preguntas de salud nuevas, apagadas)');
+      await sig();
+      check(await pasoT() === 'Tus medidas' && /en ayunas y después de orinar/.test(await h.textContent()), '«Tus medidas»: cómo medirse, con su dibujo');
+      await sig();
+      check(/Escribe tu cintura/.test(await h.locator('.error').textContent().catch(() => '')), 'sin cintura no sigue');
+      await h.locator('#nm-cintura').fill('80');
+      await sig();
+      await h.getByRole('button', { name: 'Sentado casi todo el día' }).click();
+      await h.getByRole('button', { name: 'De 5.000 a 7.499' }).click();
+      await h.locator('#nm-dias').fill('3');
+      await sig();
+      await h.getByRole('button', { name: 'Perder grasa' }).click();
+      check(await h.getByRole('button', { name: /0,5 % de tu peso a la semana, unos 340 g \(recomendado\)/ }).getAttribute('aria-pressed') === 'true', '«Tu objetivo»: perder, con el ritmo recomendado ya marcado (0,5 %, unos 340 g)');
+      await sig();
+      check(await pasoT() === 'Cómo comes', '«Cómo comes»');
+      await sig();
+      const tPlan = (await h.textContent()).replace(/\u00a0/g, ' ');
+      check(await pasoT() === 'Tu plan' && /1803/.test(tPlan) && /145 g/.test(tPlan) && /Gastas unas 2160 kcal al día/.test(tPlan) && /¿Has seguido tu plan\?/.test(tPlan),
+        'su plan antes de guardarlo: 1803 kcal y 145 g de proteína, con su porqué (gasta unas 2160) y lo que viene');
+      await desborda(p, 'el cuestionario de nutrición, su plan');
       await h.getByRole('button', { name: 'Guardar mi plan' }).click();
-      const lista = await p.waitForFunction(() => { const d = document.querySelector('details[data-plegable="nutricion"]'); return !!d && !d.hidden && d.open && /1795/.test(d.textContent); }, null, { timeout: 15000 }).then(() => true).catch(() => false);
-      check(lista && !(await tarjeta.count()), 'guardado: «Nutrición de hoy», abierta y con su objetivo (1795 kcal); la tarjeta ya no sale');
+      const lista = await p.waitForFunction(() => { const d = document.querySelector('details[data-plegable="nutricion"]'); return !!d && !d.hidden && d.open && /1803/.test(d.textContent); }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+      check(lista && !(await tarjeta.count()), 'guardado: «Nutrición de hoy», abierta y con su objetivo (1803 kcal); la tarjeta ya no sale');
+      const toque = p.locator('.nm-toque');
+      const conToque = await toque.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+      check(conToque && /cada 4 semanas/i.test(await toque.textContent()), 'y, debajo, el toque de cada día: «¿Has seguido tu plan hoy?» (la revisión, cada 4 semanas)');
+      if (conToque) {
+        await toque.getByRole('group', { name: '¿Has seguido tu plan hoy?' }).getByRole('button', { name: 'Sí' }).click();
+        const marcado = await p.waitForFunction(() => document.querySelector('.nm-toque .elegido-2')?.getAttribute('aria-pressed') === 'true', null, { timeout: 10000 }).then(() => true).catch(() => false);
+        check(marcado, 'marca «Sí» de un toque');
+        await desborda(p, 'Hoy con el plan del motor y su toque');
+      }
     }
     await ctx.close();
   }
@@ -1143,16 +1174,16 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       await items.first().waitFor({ timeout: 10000 }).catch(() => {});
       // (las cosas apagadas; debajo, «Los avisos y tu lunes», con la misma clase pero sin «Ver como en la demo»)
       const nItems = await items.filter({ has: p.getByRole('link', { name: /Ver como en la demo/ }) }).count();
-      check(nItems === 24 && /24 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 24 cosas apagadas, cada una con su interruptor (${nItems})`);
+      check(nItems === 25 && /25 cosas apagadas/.test(await prv.locator('summary').textContent()), `«Por revisar»: las 25 cosas apagadas, cada una con su interruptor (${nItems})`);
       const enfermo = items.filter({ hasText: '«Estoy enfermo»' });
       await enfermo.locator('input[role="switch"]').check();
-      const encendida = await p.waitForFunction(() => /23 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+      const encendida = await p.waitForFunction(() => /24 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
       const reg = prv.locator('[aria-labelledby="prv-reg-t"]');
       const conReg = await reg.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 23 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
+      check(encendida && conReg && /Encendiste «Estoy enfermo»/.test(await reg.textContent()), 'al encender «Estoy enfermo»: 24 apagadas y, en «Lo que has cambiado», «Encendiste «Estoy enfermo»»');
       if (conReg) {
         await reg.getByRole('button', { name: /Deshacer/ }).click();
-        const deshecho = await p.waitForFunction(() => /24 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
+        const deshecho = await p.waitForFunction(() => /25 cosas apagadas/.test(document.querySelector('details.prv-caja summary')?.textContent || ''), null, { timeout: 10000 }).then(() => true).catch(() => false);
         check(deshecho && !(await enfermo.locator('input[role="switch"]').isChecked()) && /Quitaste lo tuyo de «Estoy enfermo»/.test(await reg.textContent()), '«Deshacer»: vuelve a estar apagada (y queda apuntado)');
       }
       // sus textos: escribe la nota del lunes de la semana 1 (apagada: nadie la ve aún) y vuelve a la de la app

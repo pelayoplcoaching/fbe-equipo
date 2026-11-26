@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useApp } from './comunes.jsx';
 import { TextoPrivacidad, precargarPrivacidad } from './Acceso.jsx';
-import { debeAvisarPrivacidad, novedadesDesde } from '../logica/privacidad.js';
+import { debeAvisarPrivacidad } from '../logica/privacidad.js';
 
 // (v0.56) Las novedades de la política, UNA vez por versión (Pelayo: «que lo pregunte una vez, no cada vez que se abre»).
 // Cerrarla de cualquier forma (Entendido, Escape, fuera o la X) cuenta como vista, en todos sus móviles (va a la base).
@@ -27,6 +27,9 @@ export function AvisoPrivacidad({ alTerminar = null }) {
   }, []);
   // (v0.209) con el aviso a la vista, el texto entero se va trayendo (por si toca «Leer la política completa»)
   useEffect(() => { if (ver) precargarPrivacidad().catch(() => {}); }, [ver]);
+  // (v0.252, peso al abrir) la lista de novedades, en su trozo: se pide al saber que toca enseñar el aviso
+  const [nov, setNov] = useState(null);
+  useEffect(() => { if (ver && !nov) import('../logica/privacidad-novedades.js').then(setNov).catch(() => {}); }, [ver]);
   if (!ver) return null;
   const cerrar = () => {
     if (hecho.current) return;
@@ -39,7 +42,7 @@ export function AvisoPrivacidad({ alTerminar = null }) {
     <Hoja titulo="Novedades de privacidad" alCerrar={cerrar} clase="hoja-aviso-privacidad">
       <p class="secundario">Hemos actualizado la política de privacidad. En corto, lo nuevo:</p>
       <ul class="lista-novedades-privacidad">
-        {novedadesDesde(vista, actual).map(([icono, titulo, texto]) => (
+        {(nov ? nov.novedadesDesde(vista, actual) : []).map(([icono, titulo, texto]) => (
           <li key={titulo}><Icono n={icono} /><div><strong>{titulo}</strong><p class="peq secundario">{texto}</p></div></li>
         ))}
       </ul>

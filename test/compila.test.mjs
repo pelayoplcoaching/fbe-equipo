@@ -23,8 +23,9 @@ import { readFileSync } from 'node:fs';
 // cambian quién gana un empate de la cascada: las reglas que podrían hacerlo se quedan en el común o llevan copias detrás)
 // (v0.232: 1790 KB crudo con FBE Esencial; lo de antes de empezar, sus pantallas y las marcas ya van en su trozo; el
 // comprimido, igual)
+// (v0.252: 606 KB comprimido; la lista de novedades de la política, al abrir el aviso: se baja a 607)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 610 },
+  js: { crudo: 1790, gz: 607 },
   css: { crudo: 900, gz: 160 },
 };
 

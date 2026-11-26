@@ -1,0 +1,53 @@
+/* Motor de nutricion (v0.252, N2): el cuestionario de nutricion por pasos (EsencialNutricionMotor.jsx) y, en Hoy, el
+   toque de cada dia ("Has seguido tu plan?") de un plan del motor (EsencialComida.jsx). Solo clases nm-*, cada regla en su
+   propio elemento (una sola clase), sin margenes ni tamanos de letra (los ponen las clases comunes en el JSX). */
+
+/* Como medirse: el dibujo y las instrucciones */
+.nm-como {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--esp-12);
+  padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2);
+}
+.nm-dib { display: block; width: var(--esp-48); height: auto; overflow: visible; }
+.nm-dib-cuerpo { fill: var(--hoja); stroke: var(--tinta-3); }
+.nm-dib-cintura { stroke: var(--morado); }
+.nm-dib-cadera { stroke: var(--tinta-2); }
+.nm-como-l { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-18); min-width: 0; }
+.nm-como-c { color: var(--morado); }
+
+/* Las preguntas del SCOFF: la pregunta y su si o no */
+.nm-scoff { display: grid; gap: var(--esp-10); }
+.nm-scoff-f {
+  display: grid; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
+  background: var(--hoja);
+}
+.nm-scoff-q { min-width: 0; overflow-wrap: anywhere; }
+
+/* La composicion corporal, plegada */
+.nm-grasa { min-width: 0; padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.nm-grasa-s { cursor: pointer; color: var(--morado); }
+
+/* Su plan: por que, la meta y lo que viene */
+.nm-porque { display: grid; gap: var(--esp-6); padding-inline-start: var(--esp-18); min-width: 0; }
+.nm-porque-l { min-width: 0; overflow-wrap: anywhere; }
+.nm-meta {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8);
+  padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--morado-suave); color: var(--tinta);
+}
+.nm-meta-aviso {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--esp-8);
+  padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--aviso-suave); color: var(--tinta);
+}
+.nm-sigue {
+  display: grid; gap: var(--esp-6); padding: var(--esp-12) var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--morado); border-radius: var(--r-10); background: var(--hoja);
+}
+
+/* Sin plan automatico */
+.nm-excl {
+  display: grid; gap: var(--esp-8); padding: var(--esp-14); border: var(--filo-fino) solid var(--linea);
+  border-left: var(--filo-marca) solid var(--aviso); border-radius: var(--r-10); background: var(--hoja);
+}
+
+/* En Hoy, con un plan del motor: el toque de cada dia */
+.nm-toque { display: grid; gap: var(--esp-8); min-width: 0; padding-top: var(--esp-8); }
+.nm-toque-ayer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); }
