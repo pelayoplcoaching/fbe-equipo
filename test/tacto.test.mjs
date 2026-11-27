@@ -117,6 +117,7 @@ check(!/(^|[\s,{}])\.(rg|ct|lb|pst)(?![-\w])/.test(sinCom), 'ninguna clase de do
 check(/@media \(prefers-reduced-motion: no-preference\) \{\s*\.lb-borde \{ opacity: 1; animation: llega 10s linear both; \}/.test(sinCom) && /@media \(prefers-reduced-motion: reduce\) \{ \.lb-borde \{ opacity: \.75; \} \.lb-borde\.lb-fin \{ display: none; \} \}/.test(sinCom),
   'la luz del borde solo crece si se puede; con «reducir movimiento», fija');
 check(/@media \(prefers-contrast: more\) \{ \.lb-borde/.test(sinCom) && /@media \(prefers-contrast: more\) \{ \.rg-caja/.test(sinCom), 'con «más contraste», el borde y la regla, sin difuminados');
+check((sinCom.match(/box-shadow:/g) || []).length - (sinCom.match(/box-shadow: (none|var\(--[\w-]+\));/g) || []).length === 1, 'una sola sombra hecha a mano (el resplandor del borde): lo demás, con las del sistema, filos o contornos');
 check(/@media \(max-height: 680px\) \{ \.rg-raiz:not\(\.rg-peso\) \{ display: none; \} \}/.test(sinCom), 'con poca pantalla, el teclado no crece: la regla no sale');
 check(/linear-gradient\(var\(--oklab,\) 90deg/.test(sinCom) && !/linear-gradient\(\s*(to |\d)/.test(sinCom), 'los degradados con dirección, con su espacio de color');
 check(!/font-size:[^;]*\d(rem|px)/.test(sinCom), 'las letras, por sus nombres (o por lo que mide la pantalla, en el cartel)');

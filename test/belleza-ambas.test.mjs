@@ -40,8 +40,8 @@ const cssB = src('ambas-b.css'), sinComB = cssB.replace(/\/\*[\s\S]*?\*\//g, '')
 check(!/[^\x00-\x7F]/.test(cssB) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComB), 'ambas-b.css: solo ASCII y los colores por su nombre');
 check(main.indexOf("'./ambas-b.css'") > main.indexOf("'./ambas-a.css'") && main.indexOf("'./ambas-b.css'") < main.indexOf("'./color-capa.css'"), 'y se carga detrás de la tanda A, antes de color-capa.css');
 const guia = src('ui/atleta/EsencialSesion.jsx');
-check(/<ol class="alta-guia-pasos amb-fichas">/.test(guia) && (guia.match(/<li class="amb-ficha">/g) || []).length === 3 && /<ArteMini id="esencial-ajustar-maquina" \/>/.test(guia) && !/ArteDuo/.test(guia),
-  'B52: «Tu primera sesión», en tres fichas que se deslizan (y las máquinas, en una fila con su miniatura)');
+check(/<ol class="alta-guia-pasos amb-fichas" tabIndex=\{0\} aria-labelledby="alta-guia-t">/.test(guia) && (guia.match(/<li class="amb-ficha">/g) || []).length === 3 && /<ArteMini id="esencial-ajustar-maquina" \/>/.test(guia) && !/ArteDuo/.test(guia),
+  'B52: «Tu primera sesión», en tres fichas que se deslizan, también con el teclado (y las máquinas, en una fila con su miniatura)');
 check(/export function ArteMini\(/.test(src('ui/atleta/EsencialArte.jsx')) && /\.esa-mini \{/.test(src('esencial-arte.css')), 'la miniatura cuadrada, con su estilo esa-* (va con su trozo)');
 const aros = src('ui/atleta/Anillos.jsx');
 check(/class="amb-aro-salida"/.test(aros) && /a\.frac === 0 &&/.test(aros) && /class="amb-aro-cifra"/.test(aros), 'B90: los aros vacíos, con su marca de salida y las sesiones en el centro');

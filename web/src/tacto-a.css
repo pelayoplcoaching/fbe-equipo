@@ -26,7 +26,7 @@
 .rg-z::before { background: var(--ok); }
 .rg-z .rg-n { color: var(--ok); }
 /* la aguja no se mueve: se mueve la regla */
-.rg-aguja { position: absolute; left: 50%; top: var(--esp-2); width: var(--filo-marca); height: var(--esp-28); margin-left: -1.5px; border-radius: var(--r-pildora); background: var(--morado); box-shadow: 0 0 0 var(--filo-fuerte) var(--hoja); pointer-events: none; }
+.rg-aguja { position: absolute; left: 50%; top: var(--esp-2); width: var(--filo-marca); height: var(--esp-28); margin-left: -1.5px; border-radius: var(--r-pildora); background: var(--morado); outline: var(--filo-fuerte) solid var(--hoja); pointer-events: none; }
 .rg-raiz[data-zona] .rg-aguja { background: var(--ok); }
 /* la cifra, en grande, mientras se mueve (encima, sin ocupar sitio) */
 .rg-burbuja {
@@ -41,7 +41,7 @@
   .rg-burbuja { transition: transform var(--mov-rapido) var(--curva-rebote), visibility 0s linear var(--mov-rapido); }
   .rg-raiz[data-activo] .rg-burbuja { transition-delay: 0s; }
 }
-@media (prefers-contrast: more) { .rg-caja { -webkit-mask-image: none; mask-image: none; box-shadow: 0 0 0 var(--filo-fino) var(--tinta); } .rg-t::before { background: var(--tinta); } }
+@media (prefers-contrast: more) { .rg-caja { -webkit-mask-image: none; mask-image: none; border: var(--filo-fino) solid var(--tinta); } .rg-t::before { background: var(--tinta); } }
 /* con poca pantalla, el teclado no crece: la regla no sale */
 @media (max-height: 680px) { .rg-raiz:not(.rg-peso) { display: none; } }
 /* (203) en "Tu peso" y en el check-in, la cifra ya esta justo encima (el campo): sin burbuja, y con aire */
@@ -72,7 +72,7 @@
   .lb-borde.lb-fin { animation: vt-se-va 1.2s ease-out both; }
 }
 @media (prefers-reduced-motion: reduce) { .lb-borde { opacity: .75; } .lb-borde.lb-fin { display: none; } }
-@media (prefers-contrast: more) { .lb-borde { box-shadow: inset 0 0 0 var(--esp-6) var(--morado); } }
+@media (prefers-contrast: more) { .lb-borde { box-shadow: none; border: var(--esp-6) solid var(--morado); } }
 
 /* --- 207. El modo cartel: la cuenta atras a toda pantalla, para leerla a dos metros --- */
 .ct-abrir { position: absolute; z-index: 1; top: var(--esp-6); right: var(--esp-6); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--sobre-flota); }

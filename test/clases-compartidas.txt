@@ -55,7 +55,7 @@ apuntes: apuntes.css belleza.css
 apuntes-cinta: apuntes.css belleza.css
 apuntes-medalla-dibujo: apuntes.css belleza.css
 apuntes-tarjeta: apuntes.css imagenes.css
-arco: diseno.css estilos.css
+arco: diseno.css estilos.css tacto-a.css
 area: diseno.css estilos.css visual.css
 area-deg: diseno.css estilos.css
 area-menciones: diseno.css estilos.css
@@ -669,7 +669,7 @@ nota-grande: diseno.css estilos.css
 nota-pauta: diseno.css estilos.css
 nueva: comunidad-viva.css estilos.css
 nuevo: estilos.css registro-actividad.css
-num: apuntes.css atletas-lista.css carrera.css comunidad-viva.css diseno.css equipo-belleza.css estilos.css personal.css recetario-equipo.css revision.css visual.css youtube.css
+num: apuntes.css atletas-lista.css carrera.css comunidad-viva.css diseno.css equipo-belleza.css estilos.css personal.css recetario-equipo.css revision.css tacto-a.css visual.css youtube.css
 num-c: diseno.css estilos.css
 objetivo: estilos.css progreso-visual.css
 oculta: atletas-lista.css diseno.css estilos.css panel-hoy.css

@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.271': {
+    // (tacto 201-250, primera vuelta; «claude/belleza-350-propuesta.md»)
+    atleta: [
+      'Al apuntar una serie, una regla sobre el teclado: deslízala para poner los kilos o las repeticiones. También en «Tu peso».',
+      'El descanso se ve de lejos: modo cartel a toda pantalla (o tumbando el móvil) y el borde que se enciende los últimos 10 segundos.',
+      'Las historias, con las manos: mantén pulsado para pararlas, desliza de lado para pasar y hacia abajo para cerrar.',
+    ],
+    coach: [
+      'Tacto, primera vuelta: la regla de kilos, repeticiones y peso, el descanso en modo cartel con su luz y las historias con el dedo.',
+    ],
+  },
   '0.270': {
     // (belleza 151-200, cuarta vuelta, y las últimas 17 imágenes nuevas; «claude/belleza-200-propuesta.md»)
     atleta: [
