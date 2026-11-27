@@ -15,6 +15,7 @@ import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe,
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
 import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
+import { sonarFBE } from './sonido.js';
 import { cronometro } from '../rendimiento.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
 
@@ -609,6 +610,8 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
       alCerrar();
     };
     document.addEventListener('keydown', tecla);
+    // (belleza 319) con «Sonidos de la interfaz», un susurro al abrirse
+    sonarFBE('hoja');
     // El primer control (que no sea «Cerrar»); si no hay otro, el propio diálogo (tabIndex −1)
     const foco = ref.current?.querySelector('input, select, textarea, button:not(.cerrar-hoja)');
     (foco || ref.current)?.focus({ preventScroll: true });

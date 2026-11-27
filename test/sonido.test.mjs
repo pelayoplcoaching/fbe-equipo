@@ -13,7 +13,7 @@ console.log('\nLa familia: la escala y el motivo');
   check(S.nota(0) === 659.25 && S.nota(5) === 1318.5 && Math.abs(S.nota(3) - 987.77) < 0.02 && S.nota(-2) < S.nota(0), 'la escala pentatónica de mi (mi5, si5, mi6… y hacia abajo)');
   check(S.MOTIVO.length === 3 && S.MOTIVO[0] === S.nota(0) && S.MOTIVO[2] === S.nota(5), 'el motivo de FBE: mi, si y mi una octava arriba');
   const todos = Object.entries(S.SONIDOS);
-  check(todos.every(([, s]) => ['entreno', 'chat', 'avisos'].includes(s.apartado) && (s.soplo || s.notas({}).every(([f, d, dura, v]) => f > 200 && f < 5000 && d >= 0 && dura > 0 && dura < 1 && v > 0 && v <= 1))), `los ${todos.length} sonidos, con su apartado y notas razonables (y cortas: menos de un segundo cada una)`);
+  check(todos.every(([, s]) => ['entreno', 'chat', 'avisos'].includes(s.apartado) && (s.soplo || s.susurro || s.notas({}).every(([f, d, dura, v]) => f > 200 && f < 5000 && d >= 0 && dura > 0 && dura < 1 && v > 0 && v <= 1))), `los ${todos.length} sonidos, con su apartado y notas razonables (y cortas: menos de un segundo cada una)`);
   const series = [1, 2, 3, 4].map((n) => S.SONIDOS.serie.notas({ n, total: 4 }));
   check(series[0][0][0] < series[1][0][0] && series[1][0][0] < series[2][0][0] && series[3].length === 2 && series[3][1][0] > series[3][0][0] && series[2].length === 1, 'las series suben de nota y la última resuelve (dos notas, la segunda arriba)');
   const cuenta = [5, 4, 3, 2, 1].map((segundo) => S.SONIDOS.cuenta.notas({ segundo })[0][0]);

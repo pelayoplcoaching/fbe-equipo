@@ -4,7 +4,7 @@
 // Qué suena y cuándo puede sonar, en logica/sonido.js. Si el navegador no deja (sin WebAudio o sin un toque antes), no
 // suena y no pasa nada.
 import { leerAjustes } from './ajustes.js';
-import { SONIDOS, puedeSonar, volumenDe, turno, prioridadDe, duracionDe } from '../logica/sonido.js';
+import { SONIDOS, puedeSonar, volumenDe, turno, prioridadDe, duracionDe, SUSURRO } from '../logica/sonido.js';
 
 let ctx = null;
 // El contexto de audio de la app (lo crea el primer toque: en iPhone, una web solo suena después de uno)
@@ -86,7 +86,7 @@ function campana(c, destino, f, t0, dura, vol, brillo) {
 }
 // El soplo de la respiración: ruido rosa suave, filtrado, que sube o baja durante `dura` segundos
 let ruido = null;
-function soplo(c, destino, sentido, dura, vol) {
+function soplo(c, destino, sentido, dura, vol, [bajo, alto] = [380, 900]) {
   if (!ruido) {
     ruido = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const d = ruido.getChannelData(0); let b0 = 0, b1 = 0, b2 = 0;
@@ -95,7 +95,7 @@ function soplo(c, destino, sentido, dura, vol) {
   const s = c.createBufferSource(); s.buffer = ruido; s.loop = true;
   const filtro = c.createBiquadFilter(); filtro.type = 'bandpass'; filtro.Q.value = 0.8;
   const g = c.createGain(), t0 = c.currentTime + 0.01, sube = sentido === 'sube';
-  filtro.frequency.setValueAtTime(sube ? 380 : 900, t0); filtro.frequency.linearRampToValueAtTime(sube ? 900 : 380, t0 + dura);
+  filtro.frequency.setValueAtTime(sube ? bajo : alto, t0); filtro.frequency.linearRampToValueAtTime(sube ? alto : bajo, t0 + dura);
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.8, dura * 0.35));
   g.gain.linearRampToValueAtTime(vol * 0.6, t0 + dura * 0.8);
@@ -124,6 +124,8 @@ export function sonarFBE(clave, datos = {}, { forzar = false, ajustes = null } =
     const base = (s.soplo ? 0.09 : 0.2) * volumenDe(a, s.apartado) * (gimnasio ? 1.5 : 1);
     if (base <= 0) return false;
     if (s.soplo) { soplo(c, salidaFondo(c), s.soplo, Math.max(1, Math.min(8, datos.dura || 4)), base); return true; }
+    // (belleza 319) el susurro de una hoja: el mismo soplo, corto, más agudo y más bajo
+    if (s.susurro) { soplo(c, destino, 'sube', SUSURRO, base * 0.22, [700, 1700]); ocupar(c, clave, tu.retraso + SUSURRO); return true; }
     const t0 = c.currentTime + 0.01 + tu.retraso;
     for (const [f, d, dura, v] of s.notas(datos)) campana(c, destino, f, t0 + d, dura, base * v, gimnasio);
     ocupar(c, clave, tu.retraso + duracionDe(clave, datos));

@@ -3,6 +3,7 @@
 
 import { instalarAtras } from './atras.js';
 import { vibrar } from './hapticos.js';
+import { sonarFBE } from './sonido.js';
 import { instalarTirar } from './tirar.js';
 
 // Lo que da un toque háptico al tocarlo (además de lo que ya lo daba: las series, el teclado de la app, los récords):
@@ -153,8 +154,15 @@ export function instalarPulido(d = typeof document !== 'undefined' ? document : 
     setTimeout(() => { if (d.activeElement === el && el.value === antes) { try { el.select(); } catch { /* */ } } }, 0);
   });
   // Un toque háptico al tocar los controles de cada día (hapticos.js; con su ajuste)
+  // (belleza 319) y, con «Sonidos de la interfaz», el clic del interruptor (sube al encender, baja al apagar) y el tic de
+  // la pestaña a la que se va (en la que ya estás, nada)
   d.addEventListener('click', (e) => {
     const el = e.target?.closest?.(CON_TOQUE);
-    if (el && !el.disabled && el.getAttribute('aria-disabled') !== 'true') vibrar('toque');
+    if (el && !el.disabled && el.getAttribute('aria-disabled') !== 'true') {
+      vibrar('toque');
+      if (el.matches('input.interruptor, [role="switch"]')) sonarFBE('interruptor', { on: el.tagName === 'INPUT' ? el.checked : el.getAttribute('aria-checked') !== 'true' });
+    }
+    const tab = e.target?.closest?.('nav.tabs .tab');
+    if (tab && tab.getAttribute('aria-current') !== 'page') sonarFBE('pestana');
   }, { passive: true, capture: true });
 }

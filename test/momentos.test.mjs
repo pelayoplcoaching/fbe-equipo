@@ -5,7 +5,7 @@
 //   node test/momentos.test.mjs
 import { readFileSync } from 'node:fs';
 import { melodiaSesion, ordenMusculos, esPrimerRecord, CLAVE_PRIMER_RECORD } from '../web/src/logica/sesion-final.js';
-import { nota, SONIDOS, puedeSonar } from '../web/src/logica/sonido.js';
+import { nota, SONIDOS, puedeSonar, prioridadDe, duracionDe, volumenDe, ESCUCHAR, SUSURRO } from '../web/src/logica/sonido.js';
 import { subidaRecord, resumenSemanal } from '../web/src/logica/calculos.js';
 import { cartaSesion, cartaSemana, cartaMes, cartaAnio, CARTAS } from '../web/src/logica/historia-cartas.js';
 
@@ -127,6 +127,35 @@ console.log('312-315 · Sentir el récord');
   check(await esPrimerRecord(async () => { throw new Error('sin red'); }, 'at5', 'hoy', { almacen: almacen() }) === false && await esPrimerRecord(async () => base, 'at6', 'hoy', { almacen: null }) === false, '(315) si falla, o sin almacén, tampoco');
   const a7 = almacen(); a7.setItem('fbe-probar-primer-record', '1');
   check(await esPrimerRecord(async () => conRecord, 'at7', 'hoy', { almacen: a7 }) === true, '(315) en las pruebas del navegador, fbe-probar-primer-record hace como si lo fuera');
+}
+
+console.log('319-322 · Sonido y tacto, afinados');
+{
+  const hhmm = (min) => { const m = ((min % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+  const ya = new Date(), ahora = ya.getHours() * 60 + ya.getMinutes();
+  const silencio = { silencioActivo: true, silencioDesde: hhmm(ahora - 60), silencioHasta: hhmm(ahora + 60) };
+  const nuevos = ['pestana', 'interruptor', 'hoja'];
+  check(nuevos.every((k) => SONIDOS[k]?.interfaz && SONIDOS[k].apartado === 'avisos' && prioridadDe(k) === 0), '(319) el tic de las pestañas, el clic de los interruptores y el susurro de las hojas, de la interfaz (y nunca por encima de otro sonido)');
+  check(nuevos.every((k) => !puedeSonar({}, k) && puedeSonar({ sonidosInterfaz: true }, k)), '(319) solo con «Sonidos de la interfaz» puesto (de serie, apagado)');
+  const on = SONIDOS.interruptor.notas({ on: true }), off = SONIDOS.interruptor.notas({ on: false });
+  check(on[1][0] > on[0][0] && off[1][0] < off[0][0], '(319) el interruptor sube al encender y baja al apagar');
+  check(duracionDe('hoja') === SUSURRO && SUSURRO < 0.4 && duracionDe('pestana') < 0.05, `(319) cortos: el tic, ${duracionDe('pestana').toFixed(3)} s; el susurro, ${SUSURRO} s`);
+  check(nuevos.every((k) => ESCUCHAR.some(([c]) => c === k)) && ESCUCHAR.some(([c]) => c === 'regla'), '(319, 320) y se pueden escuchar en «Escuchar todos»');
+  check(puedeSonar({ sonidoTeclado: true }, 'regla') && puedeSonar({ sonidosInterfaz: true }, 'regla') && !puedeSonar({}, 'regla') && prioridadDe('regla') === 0
+    && SONIDOS.regla.notas({ mayor: true })[0][3] > SONIDOS.regla.notas({})[0][3], '(320) la regla, un tic por salto (más marcado en sus números), con el sonido del teclado o con los de la interfaz');
+  check(/sonarFBE\('regla', \{ mayor: i % a\.m === 0 \}\)/.test(src('ui/Regla.jsx')) && /sonarFBE\('hoja'\)/.test(src('ui/comunes.jsx')) && /sonarFBE\('pestana'\)/.test(src('ui/pulido.js')) && /sonarFBE\('interruptor'/.test(src('ui/pulido.js')), '(319, 320) suenan donde toca: la regla, las hojas, las pestañas y los interruptores');
+  check(nuevos.every((k) => !puedeSonar({ ...silencio, sonidosInterfaz: true }, k)) && !puedeSonar({ ...silencio, sonidosInterfaz: true }, 'regla') && puedeSonar({ ...silencio, sonidoTeclado: true }, 'regla'),
+    '(322) en el horario sin sonidos, nada de la interfaz (la regla, solo si suena el teclado, que es del entreno)');
+  check(volumenDe({ volumenes: { avisos: 0 } }, SONIDOS.hoja.apartado) === 0 && volumenDe({ volumenes: { entreno: 0.5 } }, SONIDOS.regla.apartado) === 0.5 && volumenDe({ volumenes: { entreno: 0 } }, SONIDOS.clinc.apartado) === 0,
+    '(322) y cada uno con el volumen de su apartado (los de la interfaz, el de «Logros y comunidad»; la regla y el «clinc», el del entreno)');
+}
+
+console.log('323 · Tu color, en todo lo nuevo');
+{
+  const nuevos = ['tacto-a.css', 'tacto-b.css', 'vista-a.css', 'vista-b.css', 'vista-c.css', 'momentos.css'];
+  const fijos = nuevos.filter((f) => /var\(--marca-\d+\)|#593EDE/i.test(src(f)));
+  check(fijos.length === 0, `(323) lo nuevo de las tres tandas toma el acento que elijas, nunca el morado fijo de la marca${fijos.length ? `: ${fijos.join(', ')}` : ''}`);
+  check(/var\(--morado\)/.test(src('tacto-a.css')) && /getPropertyValue\('--morado'\)/.test(src('ui/confeti.js')), '(323) la luz del borde, el cartel y el confeti, con el color de tu acento');
 }
 
 console.log(`\n${ok} bien, ${fallos} mal`);

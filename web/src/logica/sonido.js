@@ -48,6 +48,14 @@ export const SONIDOS = {
   'respira-fuera': { apartado: 'entreno', soplo: 'baja' },
   // Fuera de la sesión
   ui: { apartado: 'avisos', interfaz: true, notas: () => [[nota(8), 0, 0.035, 0.35]] },
+  // (belleza 319) con «Sonidos de la interfaz»: el tic de las pestañas, el clic de los interruptores (sube al encender y baja
+  // al apagar) y el susurro de una hoja al abrirse (un soplo corto, como la respiración)
+  pestana: { apartado: 'avisos', interfaz: true, notas: () => [[nota(12), 0, 0.014, 0.16]] },
+  interruptor: { apartado: 'avisos', interfaz: true, notas: ({ on = true } = {}) => (on ? [[nota(8), 0, 0.016, 0.22], [nota(10), 0.024, 0.02, 0.2]] : [[nota(10), 0, 0.016, 0.22], [nota(8), 0.024, 0.02, 0.2]]) },
+  hoja: { apartado: 'avisos', interfaz: true, susurro: true },
+  // (belleza 320) la regla, un tic muy bajo por salto (algo más marcado en sus números): con el sonido del teclado o, fuera
+  // del horario sin sonidos, con los de la interfaz
+  regla: { apartado: 'entreno', regla: true, notas: ({ mayor = false } = {}) => [[nota(mayor ? 8 : 10), 0, 0.012, mayor ? 0.2 : 0.12]] },
   logro: { apartado: 'avisos', notas: ({ nivel = 0 } = {}) => {
     const n = Math.max(0, Math.min(3, nivel));
     return [...MOTIVO.slice(0, 2 + (n > 0 ? 1 : 0)).map((f, i) => [f, i * 0.12, 0.14, 0.8]), ...(n >= 2 ? [[nota(7), 0.38, 0.14, 0.7]] : []), ...(n >= 3 ? [[nota(10), 0.5, 0.5, 0.75]] : [[MOTIVO[2], 0.36, 0.4, 0.8]])];
@@ -90,6 +98,9 @@ export const ESCUCHAR = [
   // (sonido 2)
   ['aproximacion', 'Una serie de aproximación'], ['superserie', 'Superserie: al siguiente'], ['rpe', 'El esfuerzo (RPE 6 a 10)', [6, 7, 8, 9, 10].map((r) => ({ f: notaRpe(r) }))],
   ['progresion', 'La app propone subir carga'], ['seguimos', '¿Seguimos?'], ['hito', 'Un hito (la racha de semanas)'], ['aviso-coach', 'Un aviso del coach en la comunidad'], ['no', 'Algo no se puede'],
+  // (belleza 319 y 320)
+  ['pestana', 'Cambiar de pestaña'], ['interruptor', 'Un interruptor (encender y apagar)', [{ on: true }, { on: false }]], ['hoja', 'Se abre una hoja'],
+  ['regla', 'La regla, salto a salto', [{}, {}, {}, { mayor: true }]],
 ];
 
 // ---------- Cuándo puede sonar ----------
@@ -111,6 +122,7 @@ export function puedeSonar(a, clave) {
   if ((s.apartado === 'chat' || s.apartado === 'avisos') && enSilencio(a)) return false;
   if (s.apartado === 'chat') return a.sonidosChat !== false;
   if (s.apartado === 'avisos') return s.interfaz ? a.sonidosInterfaz === true : a.sonidosAvisos !== false;
+  if (s.regla) return a.sonidoTeclado === true || (a.sonidosInterfaz === true && !enSilencio(a));
   if (s.tecla) return a.sonidoTeclado === true;
   if (['rpe', 'aproximacion', 'superserie', 'progresion'].includes(clave)) return a.sonidoSerie !== false;
   if (clave === 'seguimos') return a.sonido !== false && a.avisoSeguimos !== false;
@@ -162,7 +174,7 @@ export function prioridadDe(clave) {
   if (PRIORIDAD[clave] != null) return PRIORIDAD[clave];
   const s = SONIDOS[clave];
   if (!s) return 0;
-  if (s.interfaz || clave === 'ui' || clave === 'no' || clave === 'tecla') return 0;
+  if (s.interfaz || s.regla || clave === 'ui' || clave === 'no' || clave === 'tecla') return 0;
   return s.apartado === 'entreno' ? 2 : 1;
 }
 // ¿Suena ya, espera o se omite? estado: { hasta (s, en el reloj del audio), prioridad } de lo que está sonando
@@ -172,11 +184,14 @@ export function turno(estado, clave, ahora) {
   if (p >= 2) return { accion: 'espera', retraso: Math.min(1.5, estado.hasta - ahora) };
   return { accion: 'omite', retraso: 0 };
 }
+// (belleza 319) lo que dura el susurro de una hoja (s)
+export const SUSURRO = 0.24;
 // Cuánto dura un sonido de la familia (s)
 export function duracionDe(clave, datos = {}) {
   const s = SONIDOS[clave];
   if (!s) return 0;
   if (s.soplo) return Math.max(1, Math.min(8, datos.dura || 4));
+  if (s.susurro) return SUSURRO;
   return Math.max(0, ...s.notas(datos).map(([, d, dura]) => d + dura));
 }
 

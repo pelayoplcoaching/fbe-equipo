@@ -75,7 +75,7 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
     st.i = i;
     // (un toque por salto, y un poco más en cada marca grande; lanzada deprisa, no más de uno cada 26 ms)
     const t = performance.now();
-    if (t - st.t > 26) { st.t = t; vibrar(i % a.m === 0 ? PATRONES.serie : PATRONES.toque); sonarFBE('tecla'); }
+    if (t - st.t > 26) { st.t = t; vibrar(i % a.m === 0 ? PATRONES.serie : PATRONES.toque); sonarFBE('regla', { mayor: i % a.m === 0 }); }
     st.emitido = reglaValor(i, a.p);
     a.alCambiar?.(st.emitido);
   };
