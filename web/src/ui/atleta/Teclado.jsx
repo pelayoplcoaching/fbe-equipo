@@ -12,6 +12,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Capa, Icono } from '../comunes.jsx';
 import { Placas } from '../Herramientas.jsx';
+import { Regla } from '../Regla.jsx';
 import { leerAjustes, guardarAjustes, EVENTO_AJUSTES } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
 import { sonarFBE } from '../sonido.js';
@@ -64,14 +65,15 @@ const nombreDe = (c, porTiempo = false) => (c === 'kg' ? nombrePeso(undefined, {
 // serie: la guarda) o null (hay otro campo después);
 // ancla: () => la fila (para subirla sobre el teclado); dentro(el): si el foco o el toque están en los campos de la fila;
 // barra: se carga con barra (discos por lado); discoMinimo, alDisco(d), lugar: el disco más pequeño de ese gimnasio;
-// alCalculadora(kg): abre la calculadora (discos por lado y 1RM). enCapa: en su capa de <body> (en la sesión) o dentro
+// alCalculadora(kg): abre la calculadora (discos por lado y 1RM). zona: [de, a], las repeticiones de tu pauta (en verde en
+// la regla). enCapa: en su capa de <body> (en la sesión) o dentro
 // de quien lo pinta (el modo enfoque, que es un diálogo modal: fuera de él, el lector de pantalla no lo vería).
 export function Teclado(props) {
   return props.enCapa ? <Capa><TecladoDentro {...props} /></Capa> : <TecladoDentro {...props} />;
 }
 
 function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, serie = '', anterior = null, objetivo = null, final = null,
-  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco: alDiscoKg = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '', sobran = false, porTiempo = false }) {
+  alTexto, alRpe, alSiguiente, alCerrar, ancla, dentro, barra = false, discoMinimo = 1.25, alDisco: alDiscoKg = null, lugar = 'gimnasio', alCalculadora = null, alMovil = null, clave = '', sobran = false, porTiempo = false, zona = null }) {
   // (v0.112) en libras, los discos son los de libras (el más pequeño, 2,5 lb): sin elegir el disco más pequeño
   const alDisco = enLibras() ? null : alDiscoKg;
   const raiz = useRef(null);
@@ -135,6 +137,7 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
   // Las teclas no se llevan el foco: el campo sigue enfocado (en el iPhone, sin esto el campo se suelta)
   const sinFoco = (e) => e.preventDefault();
   const delta = campo === 'kg' ? paso : 1;
+  const escrito = Number(String(texto).replace(',', '.'));
   const kgAhora = campo === 'kg' ? (texto !== '' ? Number(String(texto).replace(',', '.')) : Number(base)) : null;
   const sig = final === 'hecha' ? 'Hecha' : final === 'listo' ? 'Listo' : final === 'guardar' ? 'Guardar' : 'Siguiente';
   const etiquetaSig = final === 'hecha' ? `Hecha: marcar la ${serie.toLowerCase()} y empezar el descanso` : final === 'listo' ? 'Listo: cerrar el teclado'
@@ -180,7 +183,12 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
           ))}
           <button type="button" tabIndex={-1} class="tecla tecla-sin" aria-pressed={rpe === '' ? 'true' : 'false'} onClick={() => { tocar(); alRpe(''); decir('rpe', ''); }}>Sin RPE</button>
         </div>
-      ) : (
+      ) : (<>
+        {/* (tacto 201-202) la regla: se desliza con el dedo y da un toque en cada salto; el teclado sigue debajo */}
+        <Regla key={`${clave}-${campo}`} valor={texto !== '' && Number.isFinite(escrito) ? escrito : null} base={base} paso={delta} max={campo === 'kg' ? 1500 : 200} dec={campo === 'kg' ? 2 : 0}
+          zona={campo === 'reps' ? zona : null} unidad={campo === 'kg' ? etiquetaPeso() : porTiempo ? 's' : 'reps'}
+          etiqueta={`Regla de ${nombreDe(campo, porTiempo).toLowerCase()}: desliza para cambiar${campo === 'kg' ? ` de ${num(delta, 2)} en ${num(delta, 2)}` : ''}`}
+          alCambiar={(v) => { const t = campo === 'kg' ? num(v, 2) : String(v); setNuevo(true); if (t !== texto) alTexto(t); }} alSoltar={(v) => decir(campo, campo === 'kg' ? num(v, 2) : String(v))} />
         <div class="teclado-teclas">
           {T({ k: '1', children: '1' })}{T({ k: '2', children: '2' })}{T({ k: '3', children: '3' })}
           <button type="button" tabIndex={-1} class="tecla tecla-paso" onClick={() => sumar(-delta)} aria-label={campo === 'kg' ? `Quitar ${num(delta, 2)} ${nombrePeso()}` : 'Una repetición menos'}>−{num(delta, 2)}</button>
@@ -194,7 +202,7 @@ function TecladoDentro({ campo, texto = '', rpe = '', base = null, paso = 2.5, s
             {(final === 'hecha' || final === 'guardar') && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}
           </button>
         </div>
-      )}
+      </>)}
       {campo === 'rpe' && (
         <button type="button" tabIndex={-1} class={`tecla tecla-siguiente ancha ${final === 'hecha' || final === 'guardar' ? 'es-hecha' : ''}`} aria-label={etiquetaSig} onClick={() => { tocar(); alSiguiente(); }}>
           {(final === 'hecha' || final === 'guardar') && <Icono n="hecho" />}{sig}{!final && <Icono n="derecha" />}

@@ -26,8 +26,8 @@ export function GuiaPrimeraSesion() {
     <section class="panel panel-pad pila-s alta-guia" aria-labelledby="alta-guia-t">
       <strong id="alta-guia-t">Tu primera sesión, en tres cosas</strong>
       {/* (belleza B52) tres fichas que se deslizan, cada una con su dibujo pequeño, su número y su frase (antes, tres dibujos
-          enormes uno debajo de otro) */}
-      <ol class="alta-guia-pasos amb-fichas">
+          enormes uno debajo de otro). (v0.271) La tira se desliza de lado: con el teclado se llega a ella y se mueve con las flechas */}
+      <ol class="alta-guia-pasos amb-fichas" tabIndex={0} aria-labelledby="alta-guia-t">
         <li class="amb-ficha"><Arte id="esencial-primera-sesion" alta tamanos="240px" /><span class="amb-ficha-n" aria-hidden="true">1</span><span class="amb-ficha-t"><strong>Apunta cada serie:</strong> los kilos y las repeticiones que has hecho.</span></li>
         <li class="amb-ficha"><Arte id="esencial-te-sobran" alta tamanos="240px" /><span class="amb-ficha-n" aria-hidden="true">2</span><span class="amb-ficha-t"><strong>«Te sobran 4-5»</strong> son las repeticiones que podrías haber hecho de más al acabar la serie: no se va al límite.</span></li>
         <li class="amb-ficha"><span class="amb-ficha-ico" aria-hidden="true"><Icono n="hecho" /></span><span class="amb-ficha-n" aria-hidden="true">3</span><span class="amb-ficha-t"><strong>Si haces justo lo que te propone la app,</strong> basta con tocar ✓.</span></li>

@@ -3,6 +3,7 @@
 // siempre que toque. Solo entrenamiento: nada de peso, medidas, nutrición, hábitos ni datos de salud.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Capa, PortadaHistoria, usePreferencia } from '../comunes.jsx';
+import { useHistoriaTacto } from '../historia-tacto.js';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../../logica/anio.js';
 import { nombreSaludo } from '../../logica/personal.js';
@@ -151,11 +152,13 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
+  // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir });
   useEffect(() => {
-    if (quieto || ultima || compartir) return undefined;
+    if (quieto || ultima || compartir || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i, compartir]);
+  }, [i, compartir, pausa]);
   useEffect(() => {
     caja.current?.focus();
     const tecla = (e) => {

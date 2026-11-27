@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Anillo, usePreferencia, Capa, PortadaHistoria } from '../comunes.jsx';
+import { useHistoriaTacto } from '../historia-tacto.js';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } from '../../logica/mes.js';
@@ -160,12 +161,13 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
-  const toque = useRef(null);
+  // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta (siguiendo al dedo)
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir });
   useEffect(() => {
-    if (quieto || ultima || compartir) return undefined;
+    if (quieto || ultima || compartir || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i, compartir]);
+  }, [i, compartir, pausa]);
   useEffect(() => {
     caja.current?.focus();
     const tecla = (e) => {
@@ -175,14 +177,6 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
     document.addEventListener('keydown', tecla);
     return () => document.removeEventListener('keydown', tecla);
   }, []);
-  // Deslizar a los lados
-  const alBajar = (e) => { toque.current = { x: e.clientX, y: e.clientY }; };
-  const alSoltar = (e) => {
-    const t = toque.current; toque.current = null;
-    if (!t) return;
-    const dx = e.clientX - t.x, dy = e.clientY - t.y;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { e.preventDefault?.(); ir(dx < 0 ? 1 : -1); toque.current = 'deslizado'; }
-  };
   const datosImagen = () => {
     const c = datosCompartirMes(r);
     return {
@@ -197,7 +191,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
     };
   };
   return (
-    <div class={`historia historia-mes ${hayImagen(imagenMes(mes)) ? 'con-fondo' : ''}`} role="dialog" aria-modal="true" aria-label={tu} ref={caja} tabIndex={-1} onPointerDown={alBajar} onPointerUp={alSoltar}>
+    <div class={`historia historia-mes ${hayImagen(imagenMes(mes)) ? 'con-fondo' : ''}`} role="dialog" aria-modal="true" aria-label={tu} ref={caja} tabIndex={-1}>
       {/* (imágenes) el paisaje de ese mes, de fondo y con un velo, en todas las pantallas */}
       <Imagen key={mes} id={imagenMes(mes)} clase="historia-fondo" tamanos="150vh" prioridad />
       <div class="historia-barras" aria-hidden="true">
@@ -214,8 +208,8 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
           </div>
         )}
       </div>
-      <button class="historia-zona anterior" onClick={() => { if (toque.current === 'deslizado') { toque.current = null; return; } ir(-1); }} disabled={i === 0} aria-label="Pantalla anterior" />
-      <button class="historia-zona siguiente" onClick={() => { if (toque.current === 'deslizado') { toque.current = null; return; } if (ultima) alCerrar(); else ir(1); }} aria-label={ultima ? 'Cerrar el resumen' : 'Pantalla siguiente'} />
+      <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Pantalla anterior" />
+      <button class="historia-zona siguiente" onClick={() => (ultima ? alCerrar() : ir(1))} aria-label={ultima ? 'Cerrar el resumen' : 'Pantalla siguiente'} />
       {compartir && <HojaCompartir tipo="mes" equipo={{ tema: 'logros' }} datos={datosImagen()} titulo={`Compartir tu ${nombreMes(mes)}`} alCerrar={() => setCompartir(false)}
         alt={`Tu ${nombreMes(mes)}: ${r.sesiones.hechas} sesiones, ${r.dias} días entrenando, ${toneladas(r.tonelaje)} toneladas`}
         nota="Solo lleva tus sesiones, los días entrenados, las series, el tonelaje, los récords, tu racha, el cardio y tu calendario: nada de peso, medidas, nutrición, hábitos ni datos de salud." />}

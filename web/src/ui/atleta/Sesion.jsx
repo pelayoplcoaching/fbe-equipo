@@ -34,6 +34,8 @@ import { FilaSerie } from './FilaSerie.jsx';
 import { TarjetaCardio } from './TarjetaCardio.jsx';
 import { useTecladoApp } from './Teclado.jsx';
 import { pasoPeso, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
+import { zonaReps } from '../../logica/regla.js';
+import { escalaArrastrable } from '../arrastrar-escala.js';
 import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
 import { textoAjuste } from '../../logica/ajuste-vivo.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
@@ -1296,7 +1298,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
                   guardar={(v) => guardar(k, v)} quitar={() => quitar(k)}
                   valores={borr[k] || VACIA} cambiar={(c, t) => cambiarBorr(k, c, t)} alComprometer={comprometer}
-                  teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos} sobran={sobran} porTiempo={porTiempo}
+                  teclado={teclado} conRpe={conRpe || prop?.rpe != null} objetivoEsfuerzo={pa.esfuerzo} conDiscos={conDiscos} sobran={sobran} porTiempo={porTiempo} zona={zonaReps(e, prop)}
                   paso={pasoPeso({ nombre: ej.nombre, valor: aNum((borr[k] || VACIA).kg) ?? prop?.kg ?? null, discoMinimo: teclado?.discoMinimo })} />
                 {/* (ajuste en vivo) la serie que toca, corregida porque la anterior se fue del RPE pautado */}
                 {prop?.ajuste && k === activa && !hechas[k] && (() => {
@@ -1633,7 +1635,8 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
           </details>
         </div>
       )}
-      <div class="campo">
+      {/* (tacto 204) la escala también se arrastra: el dedo va eligiendo el número por el que pasa */}
+      <div class="campo" ref={(el) => escalaArrastrable(el?.querySelector('.segmentos'))}>
         <span class="etq" id="t-rpe">¿Cuánto te ha costado la sesión entera? (RPE)</span>
         <Segmentos etiqueta="RPE de la sesión" clase="seg-rpe-sesion" valor={rpe} alCambiar={setRpe} opciones={[5, 6, 7, 8, 9, 10].map((x) => [x, String(x)])} />
         <span class="escala-frase">{rpe == null ? 'Elige un valor del 5 (cómoda) al 10 (máxima).' : ['Cómoda', 'Moderada', 'Exigente', 'Dura', 'Muy dura', 'Máxima'][rpe - 5]}</span>

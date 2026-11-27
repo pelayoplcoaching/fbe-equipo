@@ -7,6 +7,7 @@ import { pauta, num, mmss, textoSerie, trasSerie, duracionEstimada, NOMBRE_PRIOR
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
 import { pasoPeso, pideRpe, siguienteCampo, discosCon, tipoCarga } from '../../logica/teclado.js';
+import { zonaReps } from '../../logica/regla.js';
 import { enLibras, vista, pesoTxt, nombrePeso, barraVista } from '../../logica/unidades.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { aNumero, problemaSerie, prepararEjercicio, NotaFijada, Temporizador, useAhora, prepararAudio } from './sesion-comun.jsx';
@@ -279,7 +280,7 @@ function EnfoquePantalla({
           objetivo={prop?.rpe != null ? `RPE ${num(prop.rpe)}` : pa.esfuerzo} final={siguienteCampo(campoT, { conRpe }) === 'hecho' ? (previa ? 'guardar' : 'hecha') : null}
           alTexto={(t) => (campoT === 'kg' ? setKg(t) : setReps(t))} alRpe={(v) => setRpe(v)} alSiguiente={siguienteT} alCerrar={cerrarT}
           ancla={() => (campoT === 'reps' ? refReps.current : refKg.current)?.closest('.paso-grande')} dentro={dentroT}
-          barra={info.barra} discoMinimo={teclado.discoMinimo} alDisco={tipoCarga(info.ej.nombre) === 'discos' ? teclado.alDisco : null} lugar={teclado.lugar} alCalculadora={info.barra ? teclado.alCalculadora : null} alMovil={movilT} />
+          barra={info.barra} discoMinimo={teclado.discoMinimo} alDisco={tipoCarga(info.ej.nombre) === 'discos' ? teclado.alDisco : null} lugar={teclado.lugar} alCalculadora={info.barra ? teclado.alCalculadora : null} alMovil={movilT} zona={zonaReps(e, prop)} />
       )}
       {metro && tempo && <Metronomo tempo={tempo} nombre={info.ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setMetro(false)} />}
       <footer class="enfoque-pie">

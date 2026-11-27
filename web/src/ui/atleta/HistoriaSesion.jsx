@@ -5,6 +5,7 @@
 // ilustración abajo (historia-hecho, historia-records e historia-musculos, de datos/imagenes-trozos.json) si ha llegado.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Capa, Icono } from '../comunes.jsx';
+import { useHistoriaTacto } from '../historia-tacto.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { num, NOMBRE_GRUPO } from '../../logica/calculos.js';
@@ -58,12 +59,14 @@ function Pantallas({ resumen, nombre = '', alCerrar }) {
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
-  // Avanza sola cada 7 s, como «Tu semana» (no con movimiento reducido ni en la última)
+  // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra (al resumen) y, de lado, pasa de tarjeta
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar });
+  // Avanza sola cada 7 s, como «Tu semana» (no con movimiento reducido, ni en la última, ni en pausa)
   useEffect(() => {
-    if (quieto || ultima) return undefined;
+    if (quieto || ultima || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i]);
+  }, [i, pausa]);
   useEffect(() => {
     const volver = tenirBarra(NOCHE);
     caja.current?.focus();

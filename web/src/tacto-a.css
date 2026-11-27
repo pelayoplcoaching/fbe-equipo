@@ -1,0 +1,112 @@
+/* Tacto (201-250), primera vuelta (v0.271). Lo nuevo lleva prefijos nuevos: rg- (la regla), ct- (el modo cartel),
+   lb- (la luz del borde) y pst- (la forma de la pastilla). Las raices se llaman rg-raiz y ct-raiz: una clase de dos letras
+   coincide con cualquier nombre del codigo ya empaquetado y sus reglas se quedarian en los estilos del arranque. Solo ASCII; los colores y las medidas, por su nombre. Nada se mueve solo: cada movimiento
+   responde al dedo o dura lo que dura el aviso, y con "reducir movimiento" se queda quieto. */
+
+/* --- 201-203. La regla: una tira graduada que se desliza con el dedo --- */
+.rg-raiz { position: relative; display: grid; min-width: 0; }
+.rg-caja {
+  height: 48px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x;
+  border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--raya); cursor: grab;
+  -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--tinta) 14%, var(--tinta) 86%, transparent); mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--tinta) 14%, var(--tinta) 86%, transparent);
+}
+.rg-caja::-webkit-scrollbar { display: none; }
+.rg-caja:active { cursor: grabbing; }
+.rg-caja:focus-visible { outline: var(--filo-fuerte) solid var(--morado); outline-offset: 2px; -webkit-mask-image: none; mask-image: none; }
+.rg-pista { display: flex; width: max-content; height: 100%; padding-inline: calc(50% - var(--esp-6)); }
+.rg-t { position: relative; flex: none; width: var(--esp-12); height: 100%; scroll-snap-align: center; font-style: normal; }
+.rg-t::before { content: ""; position: absolute; left: 50%; top: var(--esp-6); width: var(--filo-fino); height: var(--esp-10); margin-left: -.5px; border-radius: var(--r-2); background: var(--tinta-3); }
+.rg-h::before { height: var(--esp-14); }
+.rg-g::before { width: var(--filo-medio); height: var(--esp-18); margin-left: -.75px; background: var(--tinta-2); }
+.rg-n { position: absolute; left: 50%; bottom: var(--esp-4); transform: translateX(-50%); font-size: var(--letra-11); font-weight: 650; line-height: 1; color: var(--tinta-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* (202) la zona de tu pauta, en verde */
+.rg-z::after { content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: var(--esp-4); height: var(--esp-22); background: var(--ok-suave); }
+.rg-z1::after { left: var(--esp-2); border-top-left-radius: var(--r-6); border-bottom-left-radius: var(--r-6); }
+.rg-z2::after { right: var(--esp-2); border-top-right-radius: var(--r-6); border-bottom-right-radius: var(--r-6); }
+.rg-z::before { background: var(--ok); }
+.rg-z .rg-n { color: var(--ok); }
+/* la aguja no se mueve: se mueve la regla */
+.rg-aguja { position: absolute; left: 50%; top: var(--esp-2); width: var(--filo-marca); height: var(--esp-28); margin-left: -1.5px; border-radius: var(--r-pildora); background: var(--morado); box-shadow: 0 0 0 var(--filo-fuerte) var(--hoja); pointer-events: none; }
+.rg-raiz[data-zona] .rg-aguja { background: var(--ok); }
+/* la cifra, en grande, mientras se mueve (encima, sin ocupar sitio) */
+.rg-burbuja {
+  position: absolute; z-index: 2; left: 50%; bottom: calc(100% + var(--esp-8)); display: inline-flex; align-items: baseline; gap: var(--esp-4); padding: var(--esp-8) var(--esp-16);
+  border-radius: var(--r-16); background: var(--morado); color: var(--sobre-morado); font-size: var(--cifra-m); font-weight: var(--cifra-peso); line-height: 1; letter-spacing: var(--cifra-tr); white-space: nowrap;
+  box-shadow: var(--sombra-flotante); pointer-events: none; visibility: hidden; transform: translateX(-50%) scale(.82); transform-origin: 50% 100%;
+}
+.rg-u { font-size: var(--letra-13); font-weight: 700; letter-spacing: 0; }
+.rg-raiz[data-zona] .rg-burbuja { background: var(--ok); color: var(--hoja); }
+.rg-raiz[data-activo] .rg-burbuja { visibility: visible; transform: translateX(-50%); }
+@media (prefers-reduced-motion: no-preference) {
+  .rg-burbuja { transition: transform var(--mov-rapido) var(--curva-rebote), visibility 0s linear var(--mov-rapido); }
+  .rg-raiz[data-activo] .rg-burbuja { transition-delay: 0s; }
+}
+@media (prefers-contrast: more) { .rg-caja { -webkit-mask-image: none; mask-image: none; box-shadow: 0 0 0 var(--filo-fino) var(--tinta); } .rg-t::before { background: var(--tinta); } }
+/* con poca pantalla, el teclado no crece: la regla no sale */
+@media (max-height: 680px) { .rg-raiz:not(.rg-peso) { display: none; } }
+/* (203) en "Tu peso" y en el check-in, la cifra ya esta justo encima (el campo): sin burbuja, y con aire */
+.rg-peso { margin-top: var(--esp-10); }
+.rg-peso .rg-burbuja { display: none; }
+.rg-peso .rg-caja { height: 56px; background: var(--hoja-2); }
+.rg-peso .rg-aguja { height: var(--esp-32); }
+
+/* --- 209. La pastilla del descanso cambia de forma: "Hecha", lo que queda y, al acabar, lo que toca --- */
+.pst-forma:not(#n) { overflow: hidden; white-space: nowrap; max-width: calc(100vw - var(--esp-32)); }
+.pst-forma:not(#n) .num { min-width: 0; }
+.pst-forma:not(#n) .pst-valor { overflow: hidden; text-overflow: ellipsis; }
+.pst-forma[data-pst="toca"]:not(#n) .num::before { content: "Te toca"; }
+.pst-forma[data-pst="otro"]:not(#n) .num::before { content: "Siguiente"; }
+.pst-forma[data-pst="hecha"]:not(#n) .num::before { content: "Serie"; }
+.pst-forma[data-pst="toca"]:not(#n) .pst-valor, .pst-forma[data-pst="otro"]:not(#n) .pst-valor { font-size: var(--letra-17); font-stretch: 100%; }
+.pst-forma[data-pst="hecha"]:not(#n) .arco { stroke: var(--ok); }
+.pst-visto { fill: none; stroke: var(--ok); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- 208. La luz del borde: en los ultimos 10 segundos del descanso, el contorno de la pantalla se va encendiendo --- */
+.lb-borde {
+  position: fixed; inset: 0; z-index: calc(var(--capa-inmersiva) + 4); pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 var(--filo-marca) var(--morado), inset 0 0 var(--esp-48) var(--esp-6) var(--acento-a55);
+}
+/* (con dos animaciones que ya habia, de 0 a verse y de verse a 0: las @keyframes se quedan en los estilos del arranque) */
+@media (prefers-reduced-motion: no-preference) {
+  .lb-borde { opacity: 1; animation: llega 10s linear both; }
+  .lb-borde.lb-fin { animation: vt-se-va 1.2s ease-out both; }
+}
+@media (prefers-reduced-motion: reduce) { .lb-borde { opacity: .75; } .lb-borde.lb-fin { display: none; } }
+@media (prefers-contrast: more) { .lb-borde { box-shadow: inset 0 0 0 var(--esp-6) var(--morado); } }
+
+/* --- 207. El modo cartel: la cuenta atras a toda pantalla, para leerla a dos metros --- */
+.ct-abrir { position: absolute; z-index: 1; top: var(--esp-6); right: var(--esp-6); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--sobre-flota); }
+.ct-abrir:not(#n) svg { width: var(--ico-20); height: var(--ico-20); }
+.ct-raiz {
+  position: fixed; inset: 0; z-index: calc(var(--capa-inmersiva) + 2); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--esp-14);
+  padding: max(var(--esp-16), env(safe-area-inset-top, 0px)) max(var(--esp-20), env(safe-area-inset-right, 0px)) max(var(--esp-20), env(safe-area-inset-bottom, 0px)) max(var(--esp-20), env(safe-area-inset-left, 0px));
+  background: var(--flota); color: var(--sobre-flota); touch-action: manipulation; -webkit-user-select: none; user-select: none;
+}
+.ct-toca, .ct-fin { background: var(--morado); color: var(--sobre-morado); }
+.ct-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-12); min-height: 48px; }
+.ct-etq { font-size: var(--letra-15); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.ct-cerrar { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; color: inherit; background: color-mix(in srgb, currentColor 14%, transparent); }
+.ct-cerrar:not(#n) svg { width: var(--ico-24); height: var(--ico-24); }
+.ct-centro { display: grid; align-content: center; justify-items: center; gap: var(--esp-10); min-height: 0; min-width: 0; text-align: center; }
+.ct-cifra { font-size: min(38vw, 56vh); font-weight: 800; line-height: .9; letter-spacing: var(--cifra-tr); font-stretch: var(--ancho-marcador, 78%); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ct-carga { font-size: min(17vw, 34vh); }
+.ct-nombre { font-size: min(7vw, 9vh); font-weight: 750; line-height: 1.1; text-wrap: balance; max-width: 22ch; }
+.ct-pie { font-size: min(5vw, 6.5vh); font-weight: 600; line-height: 1.25; text-wrap: balance; max-width: 34ch; }
+.ct-barra { height: var(--esp-8); border-radius: var(--r-pildora); overflow: hidden; background: color-mix(in srgb, currentColor 16%, transparent); }
+.ct-barra span { display: block; height: 100%; border-radius: inherit; background: currentColor; transform-origin: 0 50%; }
+.ct-acc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-10); }
+.ct-acc button { min-height: 56px; border: 0; border-radius: var(--r-16); font-size: var(--letra-18); font-weight: 750; color: inherit; background: color-mix(in srgb, currentColor 14%, transparent); }
+.ct-acc .ct-saltar { background: var(--sobre-flota); color: var(--flota); }
+.ct-raiz button:focus-visible { outline: var(--filo-marca) solid currentColor; outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) { .ct-toca .ct-centro, .ct-fin .ct-centro { animation: cuenta-vamos .42s var(--curva-rebote); } }
+/* tumbado: la cifra a un lado y los botones al otro */
+@media (orientation: landscape) and (max-height: 520px) {
+  .ct-raiz { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--esp-8) var(--esp-20); padding-top: max(var(--esp-8), env(safe-area-inset-top, 0px)); padding-bottom: max(var(--esp-12), env(safe-area-inset-bottom, 0px)); }
+  .ct-cab, .ct-barra { grid-column: 1 / -1; }
+  .ct-barra { grid-row: 3; }
+  .ct-acc { grid-column: 2; grid-row: 2; grid-template-columns: minmax(0, 1fr); align-content: center; min-width: 132px; }
+  .ct-cifra { font-size: min(34vw, 62vh); }
+  .ct-carga { font-size: min(13vw, 40vh); }
+}
+
+.ct-toca .ct-barra, .ct-fin .ct-barra { visibility: hidden; }

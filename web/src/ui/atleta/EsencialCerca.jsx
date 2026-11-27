@@ -5,6 +5,7 @@
 // apagado hasta que lo vea. Estilos: cerca.css (clases cer-*, escritas tal cual en el elemento al que se aplican).
 import { useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { escalaArrastrable } from '../arrastrar-escala.js';
 import { NOMBRE_PRIMERAS_4, WEB_FBE } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
@@ -155,7 +156,7 @@ function ComoVamos({ momento, n, alEnviar }) {
     <section class="panel panel-pad pila-s cer-vamos" aria-labelledby="cer-vamos-t">
       <strong id="cer-vamos-t">{momento === 'mes' ? 'Un mes ya. ¿Cómo vamos?' : 'Tres meses. ¿Cómo vamos?'}</strong>
       <span class="peq secundario">Del 1 al 10, ¿qué nota le pones a FBE Esencial hasta ahora? Lo lee Pelayo, para mejorarlo.</span>
-      <div class="cer-notas" role="group" aria-label="Tu nota, del 1 al 10">
+      <div class="cer-notas" role="group" aria-label="Tu nota, del 1 al 10" ref={escalaArrastrable}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => <button type="button" key={v} class={nota === v ? 'cer-n cer-n-si' : 'cer-n'} aria-pressed={nota === v ? 'true' : 'false'} onClick={() => setNota(v)}>{v}</button>)}
       </div>
       {nota != null && (

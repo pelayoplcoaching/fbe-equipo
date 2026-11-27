@@ -91,6 +91,8 @@ const HoyEsencial = perezoso(() => import('./Esencial.jsx'), 'HoyEsencial', { mi
 // Hoy») se carga entonces, o antes, con la app quieta (precargarHoy): ya no va en lo que se descarga al abrir la app
 const Hilo = perezoso(() => import('../Hilo.jsx'), 'Hilo', { mientras: <Cargando texto="Cargando la conversación" /> });
 const HojaTarea = perezoso(() => import('../Tareas.jsx'), 'HojaTarea', { mientras: null });
+// (tacto 203) la regla de «Tu peso»: llega al abrir la hoja
+const ReglaPeso = perezoso(() => import('../Regla.jsx'), 'Regla', { mientras: null });
 const HojaBloque = perezoso(() => import('./TuBloque.jsx'), 'HojaBloque', { mientras: null });
 const OrdenarHoy = perezoso(() => import('./OrdenarHoy.jsx'), 'OrdenarHoy', { mientras: null });
 const HojaCuestionario = perezoso(() => import('./Cuestionario.jsx'), 'HojaCuestionario', { mientras: null });
@@ -957,6 +959,7 @@ function HojaPeso({ inicial, alCerrar, alGuardar }) {
       <div class="campo">
         <label for="peso-hoy">Kilos, en ayunas</label>
         <Paso id="peso-hoy" valor={kg} paso={0.1} min={25} max={350} dec={1} etiqueta="peso en kilos" alCambiar={setKg} />
+        <ReglaPeso variante="peso" valor={kg} base={inicial ?? 70} paso={0.1} min={25} max={350} dec={1} mayor={10} unidad="kg" etiqueta="Regla del peso: desliza para cambiar de 100 en 100 gramos" alCambiar={setKg} />
         <span class="ayuda">Por la mañana, después de ir al baño y antes de comer o beber. El peso de un día sube y baja con el agua y la sal: mira la tendencia, no la cifra suelta.</span>
       </div>
       <button class="btn btn-primario btn-grande" disabled={!kg || ocupado} onClick={async () => { setOcupado(true); await alGuardar(kg); setOcupado(false); }}>Guardar</button>

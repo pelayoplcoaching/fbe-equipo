@@ -31,7 +31,7 @@ const fmt = (v, d) => (v == null ? '' : num(v, d));
 const mismoNum = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(Number(a) - Number(b)) < 1e-9);
 
 export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null, ultima = null,
-  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false, sobran = false, porTiempo = false }) {
+  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false, sobran = false, porTiempo = false, zona = null }) {
   const { aviso } = useApp();
   const { kg, reps, rpe } = valores;
   const app = !!teclado?.app;
@@ -293,7 +293,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
           paso={paso} serie={serieTxt} anterior={anterior != null ? `${num(anterior, 2)} ${etiquetaPeso()}` : null} objetivo={propuesta.rpe != null ? `RPE ${num(propuesta.rpe)}` : objetivoEsfuerzo}
           final={finalDe(campo)} alTexto={(t) => escribir(campo, t)} alRpe={elegirRpe} alSiguiente={() => siguienteDe(campo)} alCerrar={cerrar}
           ancla={() => fila.current} dentro={dentro} barra={barra} discoMinimo={teclado.discoMinimo} alDisco={teclado.alDisco && conDiscos ? teclado.alDisco : null}
-          lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} sobran={sobran} porTiempo={porTiempo} />
+          lugar={teclado.lugar} alCalculadora={barra && teclado.alCalculadora ? teclado.alCalculadora : null} alMovil={alMovil} sobran={sobran} porTiempo={porTiempo} zona={zona} />
       )}
     </>
   );

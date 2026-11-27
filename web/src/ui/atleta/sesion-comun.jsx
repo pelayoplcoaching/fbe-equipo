@@ -25,6 +25,8 @@ import { Travesia } from './TravesiaTarjeta.jsx';
 import { Apuntes } from './ApuntesTarjeta.jsx';
 import { pesoNum, etiquetaPeso, vista, redondearCarga, enLibras } from '../../logica/unidades.js';
 import { ajusteEnVivo, ajustePrimeraSerie, repsSiguiente } from '../../logica/ajuste-vivo.js';
+import { Cartel, LuzBorde, useTumbado, useForma } from './DescansoGrande.jsx';
+import { formaPastilla } from '../../logica/descanso-vista.js';
 // (v0.259, D6, P: 'primera_serie') FBE Esencial: la segunda serie sale de cómo fue la primera (ajustePrimeraSerie). Lo pone
 // la sesión al pintarse (quien va por su cuenta, con la clave encendida); vale para todo lo de esa sesión (tarjetas y enfoque).
 let PRIMERA = false;
@@ -268,11 +270,26 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
     onPointerCancel: (e) => { dial.current = null; e.currentTarget.classList.remove('girando'); },
   } : {};
   const conPista = quedan > 0 && pistaManda(fin);
+  // (tacto 207) El modo cartel: con el móvil tumbado sale solo (y se va al enderezarlo); con su botón, se queda puesto de un
+  // descanso a otro hasta que se cierra (como «Jugar» y «Aprender»). El juego y los apuntes, que ya llenan la pantalla, mandan
+  const [cartel, setCartel] = useState(() => leerAjustes().cartel === true);
+  const tumbado = useTumbado();
+  const [sinCartel, setSinCartel] = useState(false);
+  useEffect(() => { if (!tumbado) setSinCartel(false); }, [tumbado]);
+  const abrirCartel = () => { setCartel(true); setSinCartel(false); guardarAjustes({ ...leerAjustes(), cartel: true }); vibrar('elegir'); };
+  const cerrarCartel = () => { if (cartel) { setCartel(false); guardarAjustes({ ...leerAjustes(), cartel: false }); } if (tumbado) setSinCartel(true); };
+  const conCartel = (cartel || (tumbado && !sinCartel)) && !juego && !apunte;
+  // (tacto 209) La pastilla cambia de forma: «Hecha» nada más marcar la serie, lo que queda y, al acabar, lo que toca
+  const forma = formaPastilla({ quedan, pausado, desdeInicioMs: ahora - inicioR, toca });
+  const pastilla = useRef(null);
+  useForma(pastilla, conPildora && fuera ? forma.estado : null);
   const color = COLOR_DISCO[prioridad] || 'var(--morado)';
   const r2 = 9, c2 = 2 * Math.PI * r2;
   return (
     <>
     <div ref={caja} class={`temporizador ${clase} ${quedan <= 0 ? 'fin' : ''} ${quedan > 0 && segundo <= 3 && !pausado ? 'ultimos' : ''}`} role="timer" aria-live="off" aria-label="Descanso" style={{ '--c-disco': color }}>
+      {/* (tacto 207) verlo en grande */}
+      {quedan > 0 && !conCartel && <button type="button" class="ct-abrir" onClick={abrirCartel} aria-label="Ver el descanso en grande (modo cartel)" title="Modo cartel: la cuenta atrás a toda pantalla, para verla de lejos"><Icono n="ampliar" /></button>}
       <div class="temporizador-cab">
         <span class="temporizador-etq">{quedan > 0 ? (pausado ? 'Descanso en pausa' : 'Descanso') : 'Descanso terminado'}</span>
         {!(quedan > 0 && toca) && <span class="que">{quedan > 0 ? `Después: ${texto}` : `Ahora: ${texto}`}</span>}
@@ -335,16 +352,20 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
       {juego && atleta?.id && <Travesia atletaId={atleta.id} sesion={sesionId} fin={fin} pausa={pausado ? pausa : null} total={total} despues={texto} empuje={empuje} alCerrar={cerrarJuego} />}
       {/* (fuera de la tarjeta: con su latido al sonar, una «fixed» dentro se movería con ella) */}
       {conPildora && fuera && (
-        <button type="button" class={`pildora-descanso ${quedan <= 0 ? 'fin' : ''}`} onClick={volver} aria-live="off"
+        <button ref={pastilla} type="button" class={`pildora-descanso pst-forma ${quedan <= 0 ? 'fin' : ''}`} data-pst={forma.estado} onClick={volver} aria-live="off"
           aria-label={quedan > 0 ? 'Descanso en curso, toca para volver' : 'Descanso terminado, toca para volver'}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle class="carril" cx="12" cy="12" r={r2} />
             <circle class="arco" cx="12" cy="12" r={r2} stroke-dasharray={c2} stroke-dashoffset={c2 * (1 - frac)} transform="rotate(-90 12 12)" />
+            {forma.estado === 'hecha' && <path class="pst-visto" d="M8.2 12.3l2.6 2.6 5-5.4" />}
           </svg>
-          <span class="num">{quedan > 0 ? mmss(quedan) : '¡Vamos!'}</span>
+          <span class="num"><span class="pst-valor">{forma.valor}</span></span>
           <Icono n="arriba" />
         </button>
       )}
+      {/* (tacto 208) la luz del borde, en los últimos 10 segundos; (207) y el cartel, a toda pantalla */}
+      <LuzBorde quedan={quedan} total={total} pausado={pausado} fin={fin} />
+      {conCartel && <Cartel quedan={quedan} total={total} pausado={pausado} texto={texto} toca={toca} ajustar={ajustar} saltar={() => alCambiar(null)} alCerrar={cerrarCartel} />}
     </>
   );
 }

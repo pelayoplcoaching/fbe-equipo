@@ -8,6 +8,7 @@ import { ZONAS_DOLOR, intensidadDe } from '../../logica/dolor.js';
 import { GuiaSugerida } from '../Guias.jsx';
 import { ocasionesDeCheckin } from '../../logica/guias.js';
 import { CabeceraGrande, Siluetas, useApp, useCarga, ErrorCaja, Paso, Segmentos, Icono, Pista } from '../comunes.jsx';
+import { Regla } from '../Regla.jsx';
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { Hilo } from '../Hilo.jsx';
 import { ESCALAS, HORAS_SUENO, ZONAS, MEDIDAS, num, signo } from '../../logica/calculos.js';
@@ -318,6 +319,8 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         <div class="campo">
           <label for="ck-peso">En ayunas, en kg</label>
           <Paso id="ck-peso" valor={peso ?? (ultimoPeso ? Number(ultimoPeso.kg) : null)} paso={0.1} min={25} max={350} dec={1} etiqueta="peso en kilos" alCambiar={setPeso} />
+          {/* (tacto 203) la misma regla que en la sesión: arranca en tu último peso y va de 100 en 100 g */}
+          <Regla variante="peso" valor={peso} base={ultimoPeso ? Number(ultimoPeso.kg) : 70} paso={0.1} min={25} max={350} dec={1} mayor={10} unidad="kg" etiqueta="Regla del peso: desliza para cambiar de 100 en 100 gramos" alCambiar={setPeso} />
           <span class="ayuda">
             {ultimoPeso ? `Último registro: ${num(ultimoPeso.kg)} kg el ${ultimoPeso.fecha.slice(8, 10)}/${ultimoPeso.fecha.slice(5, 7)}` : 'Aún no hay pesos registrados.'}
             {peso && ultimoPeso ? ` (${signo(peso - ultimoPeso.kg)} kg)` : ''}

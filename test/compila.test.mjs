@@ -102,8 +102,8 @@ const comunCss = cubos(partesTrozos.comun).css, coachCss = cubos(partesCss.coach
 const css = { crudo: Buffer.byteLength(comunCss), gz: gzipSync(Buffer.from(comunCss), { level: 9 }).length };
 const cssCoach = { crudo: Buffer.byteLength(coachCss), gz: gzipSync(Buffer.from(coachCss), { level: 9 }).length };
 check(!!app && arranque.size >= 1 && lista.length === 1 && js.crudo > 0 && css.crudo > 0, `app.js y lo que importa de entrada: ${arranque.size} archivos, y la lista de las ilustraciones aparte`);
-check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz})`);
-check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz})`);
+check(kb(js.crudo) <= PRESUPUESTO.js.crudo && kb(js.gz) <= PRESUPUESTO.js.gz, `código al abrir: ${kb(js.crudo)} KB (${kb(js.gz)} KB comprimido); como mucho ${PRESUPUESTO.js.crudo} (${PRESUPUESTO.js.gz}) · ${js.crudo} y ${js.gz} bytes`);
+check(kb(css.crudo) <= PRESUPUESTO.css.crudo && kb(css.gz) <= PRESUPUESTO.css.gz, `estilos: ${kb(css.crudo)} KB (${kb(css.gz)} KB comprimido); como mucho ${PRESUPUESTO.css.crudo} (${PRESUPUESTO.css.gz}) · ${css.crudo} y ${css.gz} bytes`);
 check(partesCss.reglas > 500 && kb(cssCoach.crudo) >= 100, `los del coach, aparte: ${partesCss.reglas} reglas, ${kb(cssCoach.crudo)} KB (${kb(cssCoach.gz)} comprimido) que el móvil de un atleta no descarga`);
 check(partesTrozos.reglas > 1000 && partesTrozos.porTrozo.size >= 10, `los de cada pantalla, con su trozo: ${partesTrozos.reglas} reglas en ${partesTrozos.porTrozo.size} trozos`);
 // (y si ha bajado mucho, que se baje el presupuesto: así no vuelve a crecer hasta donde estaba)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Anillo, Capa, PortadaHistoria } from '../comunes.jsx';
+import { useHistoriaTacto } from '../historia-tacto.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
@@ -106,12 +107,14 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
-  // Avanza sola cada 7 s (no con movimiento reducido ni en la última)
+  // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar });
+  // Avanza sola cada 7 s (no con movimiento reducido, ni en la última, ni en pausa)
   useEffect(() => {
-    if (quieto || ultima) return undefined;
+    if (quieto || ultima || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i]);
+  }, [i, pausa]);
   useEffect(() => {
     caja.current?.focus();
     const tecla = (e) => { if (e.key === 'Escape') alCerrar(); if (e.key === 'ArrowRight') ir(1); if (e.key === 'ArrowLeft') ir(-1); };

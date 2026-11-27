@@ -6750,6 +6750,14 @@ if (parte('v0.232: FBE Esencial, el alta y antes de empezar')) try {
   fallos++;
   console.log('  ✗ FBE Esencial de la v0.232:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.271: tacto (201-250), primera vuelta: la regla, el descanso de lejos, las historias con las manos (test/e2e-tacto.mjs)
+if (parte('v0.271: tacto, primera vuelta')) try {
+  const { probarTacto } = await import('./e2e-tacto.mjs');
+  await probarTacto({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el tacto de la v0.271:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();
