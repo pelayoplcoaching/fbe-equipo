@@ -119,10 +119,11 @@ export async function probarVisual({ navegador, check, base = 'http://localhost:
     const malTuO = await contraste();
     check(malTuO.length === 0, `«Tú» en oscuro, sin fallos de contraste (axe)${malTuO.length ? `: ${malTuO.join(' | ')}` : ''}`);
     await p.emulateMedia({ colorScheme: 'light' });
-    // (18) los avisos de la barra, con un borde del color de la barra
+    // (18) los avisos de la barra, con un borde del color de la barra (belleza A7, v0.261: la del atleta flota en una
+    // cápsula de --hoja y su aro es --hoja; la que va pegada al borde sigue con --tiza)
     const borde = await p.evaluate(() => { const t = document.querySelector('.tab .punto'); return t ? getComputedStyle(t, '::after').borderTopColor : null; });
-    const tiza = await p.evaluate(() => { const d = document.createElement('div'); d.style.color = 'var(--tiza)'; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
-    check(borde === null || borde === tiza, `(18) el punto de aviso de la barra, con un borde del color del fondo (${borde || 'sin aviso ahora'})`);
+    const fondoBarra = await p.evaluate(() => { const d = document.createElement('div'); d.style.color = document.querySelector('.tabs-flota') ? 'var(--hoja)' : 'var(--tiza)'; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
+    check(borde === null || borde === fondoBarra, `(18) el punto de aviso de la barra, con un borde del color de la barra (${borde || 'sin aviso ahora'})`);
     // (3) #ajustes abre Perfil en «Ajustes»
     await irASeccion(p, 'Hoy');
     await p.waitForTimeout(500);
