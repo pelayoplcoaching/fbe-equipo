@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.266': {
+    // (belleza, cuarta vuelta: lo que quedaba de las tandas B y C; «claude/belleza-150-estado.md»)
+    atleta: [
+      'En Semana, mientras no está la siguiente, una nota te dice quién la prepara.',
+      'En «¿Has seguido tu plan?», cada respuesta lleva su icono.',
+    ],
+    coach: [
+      'Belleza, cuarta vuelta: las marcas en fichas, la semana que viene anunciada y «¿Has seguido tu plan?» con iconos.',
+    ],
+  },
   '0.265': {
     // (belleza, tercera vuelta: letra grande, oscuro e interruptores; «claude/belleza-150-estado.md»)
     atleta: [

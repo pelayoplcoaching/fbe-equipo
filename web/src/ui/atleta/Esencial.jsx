@@ -326,11 +326,12 @@ export function HojaMarcas({ datos, alCerrar }) {
     <Hoja titulo="Tus marcas" alCerrar={alCerrar}>
       <div class="pila">
         <p class="secundario">Semana {datos.semana.numero}{datos.bloque?.nombre ? ` de «${nombreBloque(datos.bloque.nombre)}»` : ''}: tu mejor serie en cada ejercicio.</p>
-        <ul class="lista lista-marcas">
+        {/* (belleza B96) cada marca en su ficha: la cifra grande (sin partirse nunca) y el ejercicio debajo */}
+        <ul class="lista-marcas amb-marcas">
           {datos.marcas.map((m) => (
-            <li key={m.ejercicio_id} class="separa" style="padding: var(--esp-12) 0">
-              <span>{m.nombre}</span>
-              <strong class="num">{m.texto}</strong>
+            <li key={m.ejercicio_id} class="amb-marca">
+              <strong class="num amb-marca-v">{m.texto}</strong>
+              <span class="peq secundario">{m.nombre}</span>
             </li>
           ))}
         </ul>

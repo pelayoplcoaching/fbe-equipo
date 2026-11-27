@@ -1,0 +1,15 @@
+/* Belleza para las dos apps, cuarta vuelta (v0.266): lo que quedaba de las tandas B y C (la lista, en el doc del proyecto
+   "claude/belleza-150-ambas.md"; lo hecho y lo que no se pone, en "claude/belleza-150-estado.md"). Va detras de ambas-e.css
+   y antes de color-capa.css. */
+
+/* -- B96 - Tus marcas de la semana 4, cada una en su ficha: la cifra grande, que no se parte nunca ("16 kg / x 12" en dos
+   lineas), y el ejercicio debajo. De dos en dos; la ultima, si queda sola, a todo el ancho (crece sola: sin grid-column, que
+   obligaba a copiar al arranque reglas de otras rejillas) */
+.amb-marcas { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-8); }
+.amb-marca { flex: 1 1 calc(50% - var(--esp-4)); min-width: 0; display: grid; align-content: start; gap: var(--esp-2); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-10); background: var(--hoja-2); }
+.amb-marca-v { font-size: var(--letra-19); white-space: nowrap; color: var(--tinta); }
+@media (forced-colors: active) { .amb-marca { border: var(--filo-fino) solid CanvasText; } }
+
+/* -- B80 - La semana que viene, en gris mientras no esta: quien la prepara (la app o tu coach) */
+.amb-viene { display: flex; align-items: flex-start; gap: var(--esp-12); padding: var(--esp-14) var(--esp-16); border: var(--filo-medio) dashed var(--linea); border-radius: var(--r); color: var(--tinta-2); }
+.amb-viene > svg { flex: none; width: var(--ico-20); height: var(--ico-20); color: var(--tinta-3); }

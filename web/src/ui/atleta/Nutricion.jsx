@@ -94,8 +94,8 @@ export function ComidaEsencialPendiente() {
 export function SiCasiNo({ valor, alElegir, ocupado = false }) {
   return (
     <div class="si-casi-no" role="group" aria-label="¿Has seguido tu plan?">
-      {[[2, 'Sí'], [1, 'Casi'], [0, 'No']].map(([v, t]) => (
-        <button key={v} type="button" class={`btn ${Number(valor) === v && valor != null ? `elegido-${v}` : ''}`} aria-pressed={valor != null && Number(valor) === v ? 'true' : 'false'} disabled={ocupado} onClick={() => alElegir(v)}>{t}</button>
+      {[[2, 'Sí', 'hecho'], [1, 'Casi', 'menos'], [0, 'No', 'cerrar']].map(([v, t, ico]) => (
+        <button key={v} type="button" class={`btn ${Number(valor) === v && valor != null ? `elegido-${v}` : ''}`} aria-pressed={valor != null && Number(valor) === v ? 'true' : 'false'} disabled={ocupado} onClick={() => alElegir(v)}><Icono n={ico} />{t}</button>
       ))}
     </div>
   );

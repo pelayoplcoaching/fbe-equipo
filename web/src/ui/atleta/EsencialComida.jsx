@@ -139,12 +139,13 @@ export function AjusteComidaEsencial({ r, alCambiar }) {
 
 // (v0.252, R26) El toque de cada día de un plan del motor: «¿Has seguido tu plan hoy?» y, si ayer quedó sin marcar, ayer
 // (la revisión de cada 4 semanas cuenta los días en «Sí» o «Casi»)
-const TRES = [[2, 'Sí'], [1, 'Casi'], [0, 'No']];
+// (belleza B100) cada opción con su icono: la forma, además del color
+const TRES = [[2, 'Sí', 'hecho'], [1, 'Casi', 'menos'], [0, 'No', 'cerrar']];
 function TresToques({ valor, alElegir, etiqueta, ocupado }) {
   return (
     <div class="si-casi-no" role="group" aria-label={etiqueta}>
-      {TRES.map(([v, t]) => (
-        <button key={v} type="button" class={`btn ${valor != null && Number(valor) === v ? `elegido-${v}` : ''}`} aria-pressed={valor != null && Number(valor) === v ? 'true' : 'false'} disabled={ocupado} onClick={() => alElegir(v)}>{t}</button>
+      {TRES.map(([v, t, ico]) => (
+        <button key={v} type="button" class={`btn ${valor != null && Number(valor) === v ? `elegido-${v}` : ''}`} aria-pressed={valor != null && Number(valor) === v ? 'true' : 'false'} disabled={ocupado} onClick={() => alElegir(v)}><Icono n={ico} />{t}</button>
       ))}
     </div>
   );

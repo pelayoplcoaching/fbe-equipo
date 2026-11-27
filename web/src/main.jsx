@@ -53,6 +53,7 @@ import './ambas-b.css';
 import './ambas-c.css';
 import './ambas-d.css';
 import './ambas-e.css';
+import './ambas-f.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

@@ -1462,7 +1462,8 @@ body[data-hojas] .toast { top: calc(16px + env(safe-area-inset-top, 0px)); botto
 .barra-macro .barra { display: block; height: 7px; border-radius: var(--r-4); background: var(--hoja-2); overflow: hidden; }
 .barra-macro .barra i { display: block; height: 100%; border-radius: var(--r-4); background: var(--c); transition: width var(--mov-lento) cubic-bezier(.2, .8, .2, 1); }
 .si-casi-no { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-8); }
-.si-casi-no .btn { min-height: 48px; }
+/* (belleza B100) en capsula, con su icono (la forma, ademas del color) */
+.si-casi-no .btn { min-height: 48px; border-radius: var(--r-pildora); gap: var(--esp-6); }
 .si-casi-no .elegido-2 { background: var(--ok-suave); border-color: var(--ok); color: var(--ok); }
 .si-casi-no .elegido-1 { background: var(--aviso-suave); border-color: var(--aviso); color: var(--aviso); }
 .si-casi-no .elegido-0 { background: var(--alerta-suave); border-color: var(--alerta); color: var(--alerta); }

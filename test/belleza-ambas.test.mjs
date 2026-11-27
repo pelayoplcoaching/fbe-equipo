@@ -105,5 +105,22 @@ check(/\.interruptor\.interruptor \{\s*background-image: radial-gradient\(/.test
 check(/clase="amb-seg-pila"/.test(src('ui/Ajustes.jsx')) && /\.amb-seg-pila > button \{ display: flex; flex-direction: column;/.test(sinComE), 'el tema, cada opción con su icono encima de su nombre');
 check(/\{toast\.tipo !== 'record' && toast\.tipo !== 'error' && <Icono n="hecho" \/>\}/.test(src('ui/App.jsx')), 'C124: los avisos de un momento con su icono (✓; el error y el récord, con el suyo)');
 
+console.log('\nCuarta vuelta (v0.266): lo que quedaba de las tandas B y C');
+const cssF = src('ambas-f.css'), sinComF = cssF.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssF) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComF) && main.indexOf("'./ambas-f.css'") > main.indexOf("'./ambas-e.css'") && main.indexOf("'./ambas-f.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-f.css: solo ASCII, los colores por su nombre y detrás de la tercera vuelta');
+check(/<ul class="lista-marcas amb-marcas">/.test(src('ui/atleta/Esencial.jsx')) && /<strong class="num amb-marca-v">\{m\.texto\}<\/strong>/.test(src('ui/atleta/Esencial.jsx'))
+  && /\.amb-marca-v \{ font-size: var\(--letra-19\); white-space: nowrap;/.test(sinComF) && /\.amb-marca \{ flex: 1 1 calc\(50% - var\(--esp-4\)\); min-width: 0;/.test(sinComF) && !/grid-column/.test(sinComF),
+  'B96: tus marcas, cada una en su ficha con la cifra grande (sin partirse) y el ejercicio debajo');
+const sem = src('ui/atleta/Semana.jsx');
+check(/<div class="amb-viene" role="note">/.test(sem) && /semana\.id === p\.actual\?\.id && !posterior && sesiones\.length > 0 && !propio &&/.test(sem)
+  && /'La prepara la app con lo que apuntes esta semana\.' : 'La prepara tu coach\.'/.test(sem) && /\.amb-viene \{[^}]*border: var\(--filo-medio\) dashed var\(--linea\);/.test(sinComF),
+  'B80: la semana que viene, en gris mientras no está, con quién la prepara (la app o tu coach)');
+const TRES_ICO = "[[2, 'Sí', 'hecho'], [1, 'Casi', 'menos'], [0, 'No', 'cerrar']]";
+check(src('ui/atleta/Nutricion.jsx').includes(TRES_ICO) && src('ui/atleta/EsencialComida.jsx').includes(TRES_ICO)
+  && (src('ui/atleta/Nutricion.jsx') + src('ui/atleta/EsencialComida.jsx')).split('<Icono n={ico} />{t}</button>').length === 3
+  && /\.si-casi-no \.btn \{ min-height: 48px; border-radius: var\(--r-pildora\); gap: var\(--esp-6\); \}/.test(src('estilos.css')),
+  'B100: «¿Has seguido tu plan?», las tres opciones en cápsula y con su icono (la forma además del color), en las dos apps');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

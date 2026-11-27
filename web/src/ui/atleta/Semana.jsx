@@ -24,7 +24,7 @@ const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { m
 const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 export function Semana({ programa, abrirSesion, noLeidos = [] }) {
-  const { api, atleta } = useApp();
+  const { api, atleta, propio } = useApp();
   const { datos: p, cargando, error, recargar } = programa;
   const [elegida, setElegida] = useState(null);
   const [bloque, setBloque] = useState(false);
@@ -122,6 +122,13 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               <div class="semana-dias">
                 {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>
+              {/* (belleza B80) la semana que viene, en gris, mientras no está: quién la prepara */}
+              {semana.id === p.actual?.id && !posterior && sesiones.length > 0 && !propio && (
+                <div class="amb-viene" role="note">
+                  <Icono n="semana" />
+                  <span class="pila-xs"><strong>La semana que viene</strong><span class="peq secundario">{esPorSuCuenta(atleta) ? 'La prepara la app con lo que apuntes esta semana.' : 'La prepara tu coach.'}</span></span>
+                </div>
+              )}
               {/* v0.218: la carrera por calendario, la de esta semana */}
               {semana.id === p.actual?.id && carreras.length > 0 && (
                 <>
