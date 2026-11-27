@@ -18,7 +18,7 @@ const quieto = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-r
 // variante: 'peso' (en «Tu peso»: más alta y sin la cifra flotante, que ya está en el campo de encima)
 export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500, dec = 2, mayor = null, zona = null, etiqueta, unidad = '', alCambiar, alSoltar = null, variante = '' }) {
   const caja = useRef(null);
-  const st = useRef({ activo: false, i: null, t: 0, fin: null, dedo: false, raton: null, destino: null }).current;
+  const st = useRef({ activo: false, i: null, t: 0, fin: null, dedo: false, raton: null, destino: null, emitido: null }).current;
   // El salto, fijo mientras se arrastra (con mancuernas cambia al pasar de 10 kg: la regla no puede saltar bajo el dedo)
   const [p, setP] = useState(paso);
   const lim = { min, max };
@@ -30,7 +30,7 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
   const ahora = valor ?? reglaValor(iValor, p);
   // Lo último pintado, para lo que llega entre dos pintados (el desplazamiento)
   const vivo = useRef(null);
-  vivo.current = { v, p, m, alCambiar, alSoltar };
+  vivo.current = { v, p, m, alCambiar, alSoltar, valor };
 
   // La regla, en su sitio: al abrir, al teclear otro valor o al cambiar el salto. Nunca mientras la mueve la persona
   useLayoutEffect(() => {
@@ -51,7 +51,10 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
     st.activo = false; st.destino = null;
     setActivo(false);
     const a = vivo.current;
-    a.alSoltar?.(reglaValor(st.i, a.p));
+    // (si mientras se paraba el valor cambió desde fuera —un «+» tocado justo al soltar—, gana ese: la regla va a él)
+    const fuera = st.emitido != null && a.valor != null && Math.abs(a.valor - st.emitido) > 1e-9;
+    st.emitido = null;
+    if (!fuera) a.alSoltar?.(reglaValor(st.i, a.p));
   };
   const activar = () => { if (!st.activo) { st.activo = true; setActivo(true); } clearTimeout(st.fin); st.fin = setTimeout(soltar, 400); };
   const alDesplazar = () => {
@@ -65,7 +68,8 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
     // (un toque por salto, y un poco más en cada marca grande; lanzada deprisa, no más de uno cada 26 ms)
     const t = performance.now();
     if (t - st.t > 26) { st.t = t; vibrar(i % a.m === 0 ? PATRONES.serie : PATRONES.toque); sonarFBE('tecla'); }
-    a.alCambiar?.(reglaValor(i, a.p));
+    st.emitido = reglaValor(i, a.p);
+    a.alCambiar?.(st.emitido);
   };
   // El dedo (los toques siguen llegando mientras el móvil desplaza; los punteros, no) y la rueda, sin frenar el desplazamiento
   useEffect(() => {

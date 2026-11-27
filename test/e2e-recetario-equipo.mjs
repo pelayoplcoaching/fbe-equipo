@@ -87,13 +87,15 @@ export async function probarRecetarioEquipo({ navegador, check, base = 'http://l
     // La ficha
     await p.locator('.recetario-equipo .tarjeta-equipo', { hasText: 'Tostadas con huevo y aguacate' }).click();
     await ficha(p).waitFor();
-    const lineas = await ficha(p).locator('.ingredientes li').allTextContents();
+    // (v0.272) las cantidades ruedan (cada cifra es una tira de dígitos, solo de adorno): se lee lo que oye un lector de pantalla
+    const leida = (li) => li.evaluate((el) => { const c = el.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach((x) => x.remove()); return c.textContent.replace(/\s+/g, ' ').trim(); });
+    const lineas = [await leida(ficha(p).locator('.ingredientes li').first())];
     check(lineas[0] === '60 g de pan integral (2 rebanadas)' && await ficha(p).locator('.pasos-receta li').count() === 4 && /Nota de tu coach/.test(await ficha(p).textContent())
       && await ficha(p).locator('.receta-equipo-entrada').count() === 1, 'la ficha: la entrada, los ingredientes con su medida casera, los pasos numerados y la nota');
     check(await ficha(p).getByRole('button', { name: /Añadir a tu menú/ }).count() === 0, 'sin nutrición, no se ofrece el menú');
     await revisar(p, 'ficha');
     await ficha(p).getByRole('button', { name: 'Aumentar raciones que cocinas' }).or(ficha(p).locator('.paso button').last()).first().click();
-    check((await ficha(p).locator('.ingredientes li').first().textContent()) === '120 g de pan integral', 'para dos raciones, el doble (y sin la medida casera)');
+    check(await hay(p, ficha(p).locator('.ingredientes li').first(), 1) && (await leida(ficha(p).locator('.ingredientes li').first())) === '120 g de pan integral', 'para dos raciones, el doble (y sin la medida casera)');
     await ficha(p).getByRole('button', { name: 'Guardar' }).click();
     check(await hay(p, ficha(p).getByRole('button', { name: 'Guardada', pressed: true }), 1), 'se la guarda');
     await p.keyboard.press('Escape');

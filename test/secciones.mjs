@@ -7,7 +7,7 @@ export async function irASeccion(p, nombre) {
   const enBarra = p.locator('nav.tabs .tab', { hasText: nombre }).first();
   if (await enBarra.isVisible().catch(() => false)) return enBarra.click();
   await p.locator('nav.tabs .tab-mas').click();
-  const fila = p.locator('.hoja-mas .mas-fila button', { hasText: nombre }).first();
+  const fila = p.locator('.hoja-mas .mas-fila:not(.mas-buscar) button', { hasText: nombre }).first();   // (v0.273) sin «Buscar en la app», que nombra recetas, guías y ajustes
   await fila.click();
   // A veces, con la máquina cargada, el toque cae mientras la hoja aún sube y no hace nada: si sigue abierta, se repite una vez
   const cerrada = await p.locator('.hoja-mas').waitFor({ state: 'detached', timeout: 6000 }).then(() => true).catch(() => false);
@@ -60,7 +60,7 @@ export async function haySeccion(p, nombre) {
   await mas.click();
   const hoja = p.locator('.hoja-mas');
   await hoja.waitFor();
-  const n = await hoja.locator('.mas-fila button', { hasText: nombre }).count();
+  const n = await hoja.locator('.mas-fila:not(.mas-buscar) button', { hasText: nombre }).count();
   await hoja.getByRole('button', { name: 'Cerrar', exact: true }).first().click();
   await hoja.waitFor({ state: 'detached' });
   return n > 0;

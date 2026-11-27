@@ -343,5 +343,8 @@ check(/\.mnt-boton:not\(#n\)\[data-llena\] \.mnt-fondo \{ transform: scaleX\(1\)
   'el botón que se mantiene se llena en un segundo (con «reducir movimiento», de golpe)');
 check(!/font-size:[^;]*\d(rem|px)/.test(sinComB) && (sinComB.match(/box-shadow:/g) || []).length === (sinComB.match(/box-shadow: var\(--[\w-]+\);/g) || []).length, 'las letras y las sombras, por sus nombres');
 
+// (v0.273) en la CI de main, un «+» tocado justo al soltar la regla se perdía: la regla, al pararse, devolvía su valor
+check(/const fuera = st\.emitido != null && a\.valor != null/.test(src('ui/Regla.jsx')) && /if \(!fuera\) a\.alSoltar/.test(src('ui/Regla.jsx')),
+  'la regla: un «+» o una tecla tocados justo al soltarla ganan (al pararse no devuelve su valor si cambió desde fuera)');
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

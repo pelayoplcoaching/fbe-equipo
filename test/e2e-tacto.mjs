@@ -211,6 +211,9 @@ export async function probarTacto({ navegador, check, base = 'http://localhost:4
     const h = p.locator('.historia');
     await h.waitFor();
     await p.waitForFunction(() => document.querySelector('.historia')?.style.touchAction === 'none', null, { timeout: 8000 });
+    // (v0.272) la tarjeta viaja hasta llenar la pantalla: mientras dura ese viaje la página no atiende al dedo
+    await p.waitForFunction(() => !document.getAnimations().some((x) => String(x.effect?.pseudoElement || '').startsWith('::view-transition')), null, { timeout: 4000 }).catch(() => {});
+    await p.waitForTimeout(120);
     const est = () => p.evaluate(() => { const e = document.querySelector('.historia'); if (!e) return null; const b = e.querySelector('.historia-barras .corre i'); return { vistas: e.querySelectorAll('.historia-barras span.vista').length, barra: b ? getComputedStyle(b).animationPlayState : null, ancho: b ? b.getBoundingClientRect().width : null, barras: getComputedStyle(e.querySelector('.historia-barras')).visibility, tr: e.style.transform, pa: e.querySelector('.historia-pantalla')?.style.transform || '' }; });
     await dedo('touchStart', 250, 500);
     await p.waitForTimeout(520);
