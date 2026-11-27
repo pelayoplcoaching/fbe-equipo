@@ -17,6 +17,7 @@ import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
 // (v0.253) sus ilustraciones (F3): una arriba de cada hoja de «¿Qué necesitas?»
 import { Arte } from './EsencialArte.jsx';
+import { CalendarioCasa } from './CalendarioCasa.jsx';
 
 const HojaRutinas = perezoso(() => import('./EsencialRutinas.jsx'), 'HojaRutinas', { mientras: null });
 const PasoAvisos = perezoso(() => import('./Esencial.jsx'), 'PasoAvisos', { mientras: null });
@@ -57,10 +58,13 @@ const Pasos = ({ lista }) => (
     {lista.map((x) => <div key={x} role="listitem" class="vid-paso peq"><span aria-hidden="true">·</span><span>{x}</span></div>)}
   </div>
 );
+// (vista 278) cada opción, como en «¿Qué necesitas?»: su icono, su texto y, a la derecha, si está elegida
+const ICONO_OPCION = { pausa: 'pausa', viaje: 'ubicacion', igual: 'hoy', hoy: 'reloj', gimnasio: 'intercambiar', casa: 'ubicacion' };
 const Opcion = ({ id, valor, alElegir, titulo, texto }) => (
-  <button type="button" class={valor === id ? 'vid-modo vid-modo-si' : 'vid-modo'} aria-pressed={valor === id ? 'true' : 'false'} onClick={() => alElegir(id)}>
-    <strong class="peq">{titulo}</strong>
-    {texto && <span class="peq vid-modo-x">{texto}</span>}
+  <button type="button" class={valor === id ? 'vid-modo vid-modo-si opc-fila' : 'vid-modo opc-fila'} aria-pressed={valor === id ? 'true' : 'false'} onClick={() => alElegir(id)}>
+    <span class="opc-i" aria-hidden="true"><Icono n={ICONO_OPCION[id] || 'derecha'} class="opc-ico" /></span>
+    <span class="opc-t"><strong class="peq">{titulo}</strong>{texto && <span class="peq vid-modo-x">{texto}</span>}</span>
+    <span class="opc-marca" aria-hidden="true"><Icono n="hecho" class="opc-marca-i" /></span>
   </button>
 );
 
@@ -90,10 +94,12 @@ export function HojaViaje({ viaje = null, alCerrar, alGuardar }) {
       <div class="pila vid-viaje">
         <Arte id="esencial-viaje" />
         <p class="secundario">Dime cuándo te vas y qué vas a hacer: la app lo deja organizado y, esos días, no te manda avisos que no tocan.</p>
-        <div class="vid-fechas">
-          <div class="campo"><label for="vid-desde">Me voy el</label><input id="vid-desde" class="entrada" type="date" min={sumar(hoy, -30)} max={sumar(hoy, 180)} value={desde} onInput={(e) => setDesde(e.currentTarget.value)} /></div>
-          <div class="campo"><label for="vid-hasta">Vuelvo el</label><input id="vid-hasta" class="entrada" type="date" min={desde || hoy} max={sumar(hoy, 240)} value={hasta} onInput={(e) => setHasta(e.currentTarget.value)} /></div>
+        {/* (vista 274) el calendario de la casa: el primer toque es el día que te vas; el segundo, el que vuelves (el viaje se pinta) */}
+        <div class="vid-fechas clc-resumen" aria-live="polite">
+          <span class="clc-fecha" data-on={desde && !hasta ? undefined : ''}><span class="mini terciario">Me voy el</span><strong>{desde ? fechaCorta(desde) : 'Toca el día'}</strong></span>
+          <span class="clc-fecha" data-on={desde && !hasta ? '' : undefined}><span class="mini terciario">Vuelvo el</span><strong>{hasta ? fechaCorta(hasta) : desde ? 'Toca la vuelta' : '—'}</strong></span>
         </div>
+        <CalendarioCasa tramo valor={{ desde, hasta }} alCambiar={(t) => { setDesde(t.desde); setHasta(t.hasta); }} min={sumar(hoy, -30)} max={sumar(hoy, 240)} etiqueta="Las fechas de tu viaje" />
         <div class="vid-modos" role="group" aria-label="Qué vas a hacer esos días">
           {MODOS_VIAJE.map(([id, t, x]) => <Opcion key={id} id={id} valor={modo} alElegir={setModo} titulo={t} texto={x} />)}
         </div>
@@ -215,7 +221,11 @@ export function HojaObjetivo({ nota = null, alCerrar, alGuardar }) {
           <textarea class="vid-area" rows="2" maxlength={OBJETIVO_MAX} value={texto} onInput={(e) => setTexto(e.currentTarget.value)} placeholder="Por ejemplo: no faltar ninguna semana hasta el verano" />
           <span class="mini terciario">{texto.length} de {OBJETIVO_MAX}. Mejor algo que dependa de ti (venir, apuntar, no faltar) que una cifra.</span>
         </label>
-        <div class="campo"><label for="vid-obj-f">¿Para cuándo?</label><input id="vid-obj-f" class="entrada" type="date" min={sumar(hoy, 14)} max={sumar(hoy, 371)} value={fecha} onInput={(e) => setFecha(e.currentTarget.value)} /></div>
+        {/* (vista 274) ¿Para cuándo?, en el calendario de la casa */}
+        <div class="pila-xs">
+          <span class="peq"><strong>¿Para cuándo?</strong>{fecha && <span class="secundario"> {fechaCorta(fecha)}</span>}</span>
+          <CalendarioCasa valor={fecha} alCambiar={setFecha} min={sumar(hoy, 14)} max={sumar(hoy, 371)} etiqueta="¿Para cuándo?" />
+        </div>
         {error && <p class="error" role="alert">{error}</p>}
         <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={enviar}>{nota ? 'Guardar los cambios' : 'Apuntar mi objetivo'}</button>
         {nota && <button type="button" class="btn-texto" disabled={ocupado} onClick={borrar}>Quitar mi objetivo</button>}

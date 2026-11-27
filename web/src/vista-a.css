@@ -51,3 +51,9 @@
 .tres-corta:not(#n):not(#n) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .tres-mas:not(#n):not(#n) { justify-self: start; min-height: var(--esp-28); margin-top: calc(var(--esp-4) * -1); padding: var(--esp-2) var(--esp-8) var(--esp-2) 0; border: 0; background: none; color: var(--morado); font: inherit; font-size: var(--letra-14); font-weight: 650; cursor: pointer; }
 .tres-mas:not(#n):not(#n):focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* --- 281. El apunte de hoy, en el estante: de arriba abajo, con su texto entero y el boton al pie (antes, a media
+   tarjeta y con un hueco grande encima) --- */
+.tramo-fila:not(#n):not(#n) > .apuntes-tarjeta { grid-template-columns: minmax(0, 1fr); align-content: space-between; gap: var(--esp-10); padding: var(--esp-14); }
+.tramo-fila:not(#n):not(#n) > .apuntes-tarjeta .apuntes-tarjeta-texto .peq { white-space: normal; text-wrap: pretty; }
+.tramo-fila:not(#n):not(#n) > .apuntes-tarjeta .apuntes-tarjeta-botones { justify-content: flex-start; }

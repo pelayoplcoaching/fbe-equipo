@@ -16,6 +16,7 @@ import { Imagen, hayImagen } from '../Imagen.jsx';
 import { anadirImagenes } from '../../logica/imagenes.js';
 import IMAGENES_RUTINAS from '../../datos/imagenes-rutinas.json';
 import { Arte } from './EsencialArte.jsx';
+import { CasillaCasa } from './CasillaCasa.jsx';
 
 // Las ilustraciones de las rutinas: su lista llega con este trozo (no con lo que se descarga al abrir la app)
 anadirImagenes(IMAGENES_RUTINAS);
@@ -171,7 +172,7 @@ export function HojaRutinas({ p, cuestionario, elegida = null, estancados = 0, a
                 <div class="rut-material">
                   {EN_CASA.map(([v, t]) => (
                     <label class="casilla" key={v}>
-                      <input type="checkbox" checked={c.material.includes(v)} onChange={(e) => setC({ ...c, material: e.currentTarget.checked ? [...c.material, v] : c.material.filter((x) => x !== v) })} />
+                      <CasillaCasa checked={c.material.includes(v)} onChange={(e) => setC({ ...c, material: e.currentTarget.checked ? [...c.material, v] : c.material.filter((x) => x !== v) })} />
                       <span>{t}</span>
                     </label>
                   ))}

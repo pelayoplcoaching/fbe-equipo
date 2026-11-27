@@ -143,5 +143,5 @@ export function AvisoSupera({ s }) {
     } catch { /* */ }
   }, []);
   const texto = s.por === 'ton' ? `Ya has movido más que la última vez: ${num(Math.round(s.hoy / 100) / 10, 1)} t frente a ${num(Math.round(s.antes / 100) / 10, 1)}` : `Ya llevas más repeticiones que la última vez: ${s.hoy} frente a ${s.antes}`;
-  return <p class="sup-aviso" role="status" ref={caja}><span class="sup-luz" aria-hidden="true" /><Icono n="arriba" />{texto}</p>;
+  return <p class="sup-aviso" role="status" ref={caja}><span class="sup-luz" aria-hidden="true" /><Icono n="arriba" class="sup-i" />{texto}</p>;
 }

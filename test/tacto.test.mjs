@@ -211,8 +211,13 @@ check(/desde: ev\.currentTarget\.querySelector\('\.diario-medio'\)/.test(diario)
   && /<Visor inicio=\{visor\.inicio\} urls0=\{visor\.urls0\} alCerrar=/.test(diario) && !/visor-medio|visor-diapo/.test(diario), '(218) la foto de progreso crece desde su miniatura y, al tocarla, se abre en el visor (sin nombrar sus clases: sus estilos viajan con él)');
 check(/alResponder = null/.test(visor) && /\{alResponder && <button type="button" class="visor-accion"/.test(visor) && /const quien = m\.quien \?\? nombreDe\(c\.autor\);/.test(visor) && /\{m\.cuando \?\? cuandoInfo\(c\.creado_en\)\}/.test(visor)
   && /useState\(urls0 \|\| \{\}\)/.test(visor), 'el visor del chat vale para ellas: sin «Responder», con su fecha y con la foto que ya está cargada');
-check(/const arriba = \(id, estado\) => <span class="dial dial-arriba" data-estado=\{estado\}>\{esf\[id\]\(\)\}<\/span>;/.test(diales) && /hasta: '\.dial-arriba \.dial-esfera'/.test(diales) && (diales.match(/\{arriba\}/g) || []).length === 5
+check(/const arriba = \(id, estado\) => <span class="dial dial-arriba" data-estado=\{estado\}>\{esf\[id\]\(\)\}<\/span>;/.test(diales) && /hasta: '\.dial-arriba \.dial-esfera'/.test(diales) && (src('ui/atleta/DialesHojas.jsx').match(/\{arriba\}/g) || []).length === 5
   && /abierto === 'sueno' && su \? arriba\('sueno', su\.estado\)/.test(diales), '(219) el dial que se toca sube a la cabecera de su hoja (las cinco hojas; el del sueño, con el suyo)');
+// (v0.277) las cinco hojas, en su trozo: se piden al quedarse quieta la app y al bajar el dedo en los diales (así, al
+// abrir una, ya están y el dial puede viajar a su cabecera)
+check((diales.match(/= perezoso\(\(\) => import\('\.\/DialesHojas\.jsx'\), 'Hoja(Comida|Reloj|Constancia|Carga|Llegas)', \{ mientras: null \}\);/g) || []).length === 5
+  && /precargarEnReposo\(\[HojaCarga\]\)/.test(diales) && /onPointerDown=\{\(\) => HojaCarga\.precargar\?\.\(\)\}/.test(diales) && !/import \{[^}]*\} from '\.\.\/\.\.\/logica\/(tablero|semana-natural)\.js'/.test(src('ui/atleta/DialesHojas.jsx')),
+  '(v0.277) las hojas de los diales no se descargan al abrir: llegan antes de tocarlas, y lo que necesitan del arranque se lo pasa Diales');
 const suave = src('ui/actualizar-suave.js');
 check(/import\('\.\/actualizar-suave\.js'\)\.then\(\(m\) => m\.cubrir\(\)\)\.catch\(\(\) => \{\}\)\.then\(\(\) => \{/.test(src('ui/App.jsx')) && /if \(sessionStorage\.getItem\('fbe-vuelta'\)\) import\('\.\/ui\/actualizar-suave\.js'\)\.then\(\(m\) => m\.volver\(\)\)/.test(main)
   && /ahora - v\.t < 30000 && v\.ruta === ruta \? v\.y : 0/.test(suave) && /sessionStorage\.removeItem\(CLAVE\)/.test(suave) && /if \(sinMovimiento\(\) \|\| !d\.animate\) \{ ok\(\); return; \}/.test(suave),

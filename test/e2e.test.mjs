@@ -6816,6 +6816,16 @@ if (parte('v0.276: los primeros días y leer a gusto')) try {
   fallos++;
   console.log('  ✗ los primeros días y leer a gusto (v0.276):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.277: vista, cuarta vuelta: las hojas de FBE Esencial (el calendario de la casa, las opciones, las casillas,
+// «Respuestas», las marcas como vitrina) y la hoja de la carga con su franja; las hojas de los diales, en su trozo
+// (test/e2e-vista-4.mjs)
+if (parte('v0.277: las hojas de FBE Esencial')) try {
+  const { probarVista4 } = await import('./e2e-vista-4.mjs');
+  await probarVista4({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ las hojas de FBE Esencial (v0.277):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

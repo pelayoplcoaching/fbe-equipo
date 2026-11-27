@@ -13,6 +13,7 @@ import { estadoCierre, textoCierre, puedePausar, horaMadrid, HORA_AUTO, HORA_AUT
 import { Ilustracion } from '../Ilustraciones.jsx';
 import { Imagen } from '../Imagen.jsx';
 import { Arte, hayArte } from './EsencialArte.jsx';
+import { PictoEjercicio } from '../Pictograma.jsx';
 import { ARTE_HERO, ARTE_CIERRE, arteLeccion, arteSemanaHecha } from '../../logica/esencial-arte.js';
 import { Pantallas, esIosNavegador, esAppInstalada } from './Bienvenida.jsx';
 import { estadoPush, activarPush, suscripcionActual, conEmail } from '../../datos/push.js';
@@ -92,6 +93,8 @@ export function HojaTusDias({ p, cuestionario = null, alCerrar, alGuardar }) {
   return (
     <Hoja titulo="Elige tus días" alCerrar={alCerrar}>
       <div class="pila">
+        {/* (vista 279) con su ilustración (la del calendario de tu primer lunes) */}
+        <Arte id="esencial-bienvenida-lunes" />
         <p class="secundario">{n === 2 ? 'Dos días a la semana' : `${n} días a la semana`}, mejor que no vayan seguidos: así descansas entre uno y otro. La app pone cada sesión en su día y, por la mañana, te avisa de que hoy toca.</p>
         <div class="alta-dias" role="group" aria-label="Tus días">
           {DIAS_SEMANA.map(([d, corto, largo]) => (
@@ -327,10 +330,13 @@ export function HojaMarcas({ datos, alCerrar }) {
       <div class="pila">
         <p class="secundario">Semana {datos.semana.numero}{datos.bloque?.nombre ? ` de «${nombreBloque(datos.bloque.nombre)}»` : ''}: tu mejor serie en cada ejercicio.</p>
         {/* (belleza B96) cada marca en su ficha: la cifra grande (sin partirse nunca) y el ejercicio debajo */}
-        <ul class="lista-marcas amb-marcas">
+        {/* (vista 277) como una vitrina: el dibujo de cada ejercicio y su cifra de marcador. Es tu punto de partida */}
+        <p class="mrc-titulo"><Icono n="trofeo" class="mrc-titulo-i" /> Tu punto de partida</p>
+        <ul class="lista-marcas amb-marcas mrc-vitrina">
           {datos.marcas.map((m) => (
-            <li key={m.ejercicio_id} class="amb-marca">
-              <strong class="num amb-marca-v">{m.texto}</strong>
+            <li key={m.ejercicio_id} class="amb-marca mrc-ficha">
+              <PictoEjercicio ejercicio={{ nombre: m.nombre, grupos_musculares: m.grupos || [] }} />
+              <strong class="num amb-marca-v mrc-cifra">{m.texto}</strong>
               <span class="peq secundario">{m.nombre}</span>
             </li>
           ))}
@@ -534,6 +540,8 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
   const hojaPausa = hoja && (
     <Hoja titulo="Esta semana no puedo" alCerrar={() => setHoja(false)}>
       <div class="pila">
+        {/* (vista 279) con su ilustración (la de la semana en pausa) */}
+        <Arte id="esencial-pausa" />
         <p>Un viaje, una gripe, una semana imposible: pon la semana en pausa. Tu plan se corre una semana y lo que te queda lo haces desde el {fechaLarga(vuelve)}. Mientras, no te llegan los avisos de tus sesiones.</p>
         <p class="peq secundario">Lo que ya has hecho se queda hecho. Si cambias de idea esta misma semana, «Volver ya».</p>
         <button type="button" class="btn btn-primario btn-grande" disabled={ocupado} onClick={() => cerrar('pausa', `Semana en pausa: vuelves el ${fechaLarga(vuelve)}`)}>Poner la semana en pausa</button>

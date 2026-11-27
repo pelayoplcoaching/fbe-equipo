@@ -217,7 +217,7 @@ function FinGuia({ clave, alSiguiente }) {
   useAlVerse(caja, () => {
     marcarLeida(clave);
     setLeida(true);
-    if (!sinMovimiento()) requestAnimationFrame(() => { try { caja.current?.querySelector('.lec-leida svg')?.animate([{ transform: 'scale(.3) rotate(-25deg)' }, { transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.2, 1.4, .4, 1)' }); } catch { /* */ } });
+    if (!sinMovimiento()) requestAnimationFrame(() => { try { caja.current?.querySelector('.lec-leida-i')?.animate([{ transform: 'scale(.3) rotate(-25deg)' }, { transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.2, 1.4, .4, 1)' }); } catch { /* */ } });
   }, [clave]);
   const guias = useCarga(() => (alSiguiente ? listaGuias({ backend }) : Promise.resolve([])), [!!alSiguiente], { recuerdo: alSiguiente ? `guias:${api.uid()}` : null });
   const suyo = atleta?.modalidad === 'por_su_cuenta';
@@ -225,8 +225,8 @@ function FinGuia({ clave, alSiguiente }) {
   const i = gs.findIndex((g) => g.clave === clave);
   const sig = alSiguiente && i >= 0 ? gs[i + 1] || null : null;
   return (
-    <div class="lec-fin" ref={caja}>
-      <p class="lec-leida" data-si={leida ? '' : undefined} role="status"><Icono n="hecho" />{leida ? 'Guía leída' : 'Final de la guía'}</p>
+    <div class="lec-fin" data-lec-fin ref={caja}>
+      <p class="lec-leida" data-si={leida ? '' : undefined} role="status"><Icono n="hecho" class="lec-leida-i" />{leida ? 'Guía leída' : 'Final de la guía'}</p>
       {sig && <div class="lec-sig pila-xs"><span class="mini terciario">La siguiente</span><TarjetaGuia g={sig} alAbrir={alSiguiente} esCoach={false} /></div>}
     </div>
   );
@@ -327,7 +327,7 @@ function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca', leida = false 
       {/* la estatua de su grupo, su portada o, si no tiene, la ilustración de su estantería; sin imagen, su icono */}
       {hayImagen(imagenGuia(g, estanteDe(g))) ? <Imagen id={imagenGuia(g, estanteDe(g))} clase="tarjeta-guia-img" tamanos="72px" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
       <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
-        <span class="fila-chips">{leida && <span class="chip ok lec-chip"><Icono n="hecho" />Leída</span>}{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
+        <span class="fila-chips">{leida && <span class="chip ok lec-chip"><Icono n="hecho" class="lec-chip-i" />Leída</span>}{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
     </button>
   );
 }

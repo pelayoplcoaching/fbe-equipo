@@ -36,7 +36,7 @@ export function BarraLectura({ raiz, clave = null }) {
       colocar();
       const r = art.getBoundingClientRect();
       // (el texto acaba donde empieza su final: «Guía leída» y la siguiente no cuentan como lectura)
-      const f = art.querySelector('.lec-fin');
+      const f = art.querySelector('[data-lec-fin]');
       const altoTexto = f ? Math.max(1, f.getBoundingClientRect().top - r.top) : r.height;
       const arriba = caja ? caja.getBoundingClientRect().top : 0;
       const alto = caja ? caja.clientHeight : window.innerHeight;

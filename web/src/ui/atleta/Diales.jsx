@@ -5,21 +5,27 @@
 import { leerAjustes } from '../ajustes.js';
 import { conTransicion } from '../transiciones.js';
 import { useEffect, useId, useState } from 'preact/hooks';
-import { useApp, useCarga, Hoja, Icono, DegradadoAro, useSinCoach } from '../comunes.jsx';
+import { useApp, useCarga, Icono, DegradadoAro } from '../comunes.jsx';
+import { perezoso, precargarEnReposo } from '../perezoso.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
-import { Preparacion } from './Preparacion.jsx';
 import { dialConstancia, dialCarga, dialComoLlegas, dialComida, dialPasos, dialSueno, horasMin, relojDeUnVistazo, pasosCortos, preparacionDeHoy, sesionParaContestar, conSeriesDeHoy, arcoDial, BANDA_CARGA } from '../../logica/tablero.js';
 import { objetivoDelDia, planVigente } from '../../logica/nutricion.js';
 import { conNutricion } from '../../logica/nivel.js';
 import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
-import { consejoPreparacion } from '../../logica/preparacion.js';
-import { esPorSuCuenta } from '../../logica/esencial.js';
-import { textoConsejo } from '../../logica/esencial-primera.js';
-import { num, cargaSemanal } from '../../logica/calculos.js';
-import { fmtConDia, fmtCorta, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { lunesDe, sumarDias } from '../../logica/fechas.js';
 import { sesionesDeLaSemana, textoDiasSemana } from '../../logica/semana-natural.js';
 
 // La esfera: un arco de 270° (abierto por abajo); con banda, la zona de «En tu media» y una aguja
+// (vista 276, v0.277) las hojas, aparte (se piden al tocar un dial y, antes, en cuanto la app se queda quieta)
+const HojaComida = perezoso(() => import('./DialesHojas.jsx'), 'HojaComida', { mientras: null });
+const HojaReloj = perezoso(() => import('./DialesHojas.jsx'), 'HojaReloj', { mientras: null });
+const HojaConstancia = perezoso(() => import('./DialesHojas.jsx'), 'HojaConstancia', { mientras: null });
+const HojaCarga = perezoso(() => import('./DialesHojas.jsx'), 'HojaCarga', { mientras: null });
+const HojaLlegas = perezoso(() => import('./DialesHojas.jsx'), 'HojaLlegas', { mientras: null });
+// (lo que las hojas necesitan de dos módulos del arranque: se lo pasa Diales para que no se partan en más archivos)
+const KIT = { horasMin, BANDA_CARGA, dialComoLlegas, textoDiasSemana };
+precargarEnReposo([HojaCarga]);
+
 function Esfera({ frac, banda = null, aguja = false, children }) {
   const T = 64, G = 7;
   const a = arcoDial(frac, T, G);
@@ -100,7 +106,7 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   const arriba = (id, estado) => <span class="dial dial-arriba" data-estado={estado}>{esf[id]()}</span>;
   const abrir = (id, ev) => conTransicion(() => setAbierto(id), 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.querySelector('.dial-esfera'), hasta: '.dial-arriba .dial-esfera' }]);
   return (
-    <section class={`panel diales${n > 4 ? ' diales-dos-filas' : ''}`} style={{ '--n': n > 4 ? 3 : n }} aria-label="Tu día de un vistazo">
+    <section class={`panel diales${n > 4 ? ' diales-dos-filas' : ''}`} style={{ '--n': n > 4 ? 3 : n }} aria-label="Tu día de un vistazo" onPointerDown={() => HojaCarga.precargar?.()}>
       {ver.constancia && <button type="button" class="dial" data-estado={c.estado} onClick={(ev) => abrir('constancia', ev)}
         aria-label={`Constancia: ${c.hechas} de ${c.total} sesiones ${natural ? 'de tu objetivo de esta semana' : 'de esta semana'}. ${c.etiqueta}. Ver de dónde sale`}>
         {esf.constancia()}
@@ -149,13 +155,13 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
         </button>
       )}
       {abierto === 'comida' && m && <HojaComida arriba={arriba('comida', m.estado)} m={m} objetivo={objetivo} alCerrar={() => setAbierto(null)} />}
-      {(abierto === 'pasos' || abierto === 'sueno') && (ps || su) && <HojaReloj arriba={abierto === 'sueno' && su ? arriba('sueno', su.estado) : ps ? arriba('pasos', ps.estado) : null} filas={relojDeUnVistazo(diasSalud, hoy)} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
+      {(abierto === 'pasos' || abierto === 'sueno') && (ps || su) && <HojaReloj kit={KIT} arriba={abierto === 'sueno' && su ? arriba('sueno', su.estado) : ps ? arriba('pasos', ps.estado) : null} filas={relojDeUnVistazo(diasSalud, hoy)} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
       {abierto === 'constancia' && (natural
-        ? <HojaConstancia arriba={arriba('constancia', c.estado)} c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
-        : <HojaConstancia arriba={arriba('constancia', c.estado)} c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
-      {abierto === 'carga' && <HojaCarga arriba={arriba('carga', k ? k.estado : 'cargando')} k={k} datos={carga.datos} hoy={hoy} alCerrar={() => setAbierto(null)} />}
+        ? <HojaConstancia kit={KIT} arriba={arriba('constancia', c.estado)} c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
+        : <HojaConstancia kit={KIT} arriba={arriba('constancia', c.estado)} c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
+      {abierto === 'carga' && <HojaCarga kit={KIT} arriba={arriba('carga', k ? k.estado : 'cargando')} k={k} datos={carga.datos} hoy={hoy} alCerrar={() => setAbierto(null)} />}
       {abierto === 'llegas' && (
-        <HojaLlegas arriba={arriba('llegas', l.estado)} l={l} prep={prep} pendiente={pendiente} baja={atleta.estado === 'baja'} hoy={hoy} alCerrar={() => setAbierto(null)}
+        <HojaLlegas kit={KIT} arriba={arriba('llegas', l.estado)} l={l} prep={prep} pendiente={pendiente} baja={atleta.estado === 'baja'} hoy={hoy} alCerrar={() => setAbierto(null)}
           alGuardar={async (p) => {
             // Como en la sesión: si no se puede guardar (sin conexión, sin el consentimiento), lo dice; el consejo vale igual
             try { await api.guardarPreparacion(pendiente.id, p); marcarPrepHoy(pendiente.id); alContestar?.(); return true; }
@@ -163,141 +169,6 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
           }} />
       )}
     </section>
-  );
-}
-
-// (v0.140) El detalle de los dos diales nuevos
-function HojaComida({ m, objetivo, alCerrar, arriba = null }) {
-  return (
-    <Hoja titulo="Comida de hoy" alCerrar={alCerrar}>
-      {arriba}
-      <p class="secundario">Lo que llevas apuntado hoy frente a las kcal de tu plan para hoy{objetivo?.descanso ? ' (día de descanso)' : ''}. Se apunta en «Nutrición de hoy».</p>
-      <dl class="dial-hoja-cifras">
-        <div><dt>Apuntado</dt><dd class="marcador">{num(m.comido, 0)}<span class="peq"> kcal</span></dd></div>
-        <div><dt>Tu objetivo</dt><dd class="marcador">{num(m.objetivo, 0)}<span class="peq"> kcal</span></dd></div>
-        <div><dt>{m.quedan >= 0 ? 'Te quedan' : 'Por encima'}</dt><dd class="marcador">{num(Math.abs(m.quedan), 0)}<span class="peq"> kcal</span></dd></div>
-      </dl>
-      {m.proteina != null && <p class="peq">{m.proteina > 0 ? <>Proteína: te quedan <strong class="num">{num(m.proteina, 0)} g</strong> para llegar a la de tu plan.</> : <>Proteína: ya has llegado a la de tu plan.</>}</p>}
-      <p class="peq terciario">«En tu objetivo» va desde un 10 % antes de llegar hasta pasarte un 5 %.</p>
-    </Hoja>
-  );
-}
-// (v0.141) Tu reloj de un vistazo: lo de hoy (o anoche) frente a tu media de 14 días; solo lo que llega de Salud
-const FILAS_RELOJ = { pasos: ['Pasos hoy', (v) => num(v, 0)], sueno_min: ['Sueño anoche', (v) => `${horasMin(v)} h`], fc_reposo: ['Pulso en reposo', (v) => `${num(v, 0)} lpm`], hrv: ['HRV', (v) => `${num(v, 0)} ms`] };
-function HojaReloj({ filas, ultimo, alCerrar, arriba = null }) {
-  const sinCoach = useSinCoach();
-  return (
-    <Hoja titulo="Tu reloj, de un vistazo" alCerrar={alCerrar}>
-      {arriba}
-      <p class="secundario">Lo que llega de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}, frente a tu media de los últimos 14 días. No son objetivos: sirven para ver si hoy es un día normal para ti.</p>
-      <table class="tabla-reloj">
-        <thead><tr><th scope="col"><span class="sr">Dato</span></th><th scope="col">Hoy</th><th scope="col">Tu media</th></tr></thead>
-        <tbody>
-          {filas.map((f) => (
-            <tr key={f.clave}><th scope="row">{FILAS_RELOJ[f.clave][0]}</th><td class="num">{f.hoy != null ? FILAS_RELOJ[f.clave][1](f.hoy) : '—'}</td><td class="num secundario">{f.media != null ? FILAS_RELOJ[f.clave][1](f.media) : '—'}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      <p class="peq terciario">La media sale con 3 días al menos de las dos últimas semanas. Solo lo ves tú (y {sinCoach ? 'Pelayo' : 'tu coach'}, como el resto de lo que llega de Salud).</p>
-    </Hoja>
-  );
-}
-
-function HojaConstancia({ c, sesiones, semana, alCerrar, arriba = null, natural = null }) {
-  const sinCoach = useSinCoach();
-  const rango = semana?.fecha_inicio ? ` (del ${fmtCorta(semana.fecha_inicio)} al ${fmtCorta(sumarDias(semana.fecha_inicio, 6))})` : '';
-  return (
-    <Hoja titulo="Constancia" alCerrar={alCerrar}>
-      {arriba}
-      {natural
-        ? <p class="secundario">Tu coach te programa por microciclos: tu semana se cuenta de lunes a domingo{rango}, con un objetivo de {textoDiasSemana(natural.dias)}{c.total && c.total < natural.dias ? ` (esta semana, ${c.total}: no tienes más publicadas)` : ''}. Al llegar a él, sumas una semana a tu racha. Las sesiones van en el orden de tu programa.</p>
-        : <p class="secundario">Las sesiones que has hecho de las {sinCoach ? 'de tu plan' : 'que tu coach ha publicado'} esta semana{rango}. Al completarlas todas, sumas una semana a tu racha.</p>}
-      <dl class="dial-hoja-cifras">
-        <div><dt>Hechas</dt><dd class="marcador">{c.hechas}</dd></div>
-        <div><dt>{natural ? 'Tu objetivo' : 'De la semana'}</dt><dd class="marcador">{c.total}</dd></div>
-      </dl>
-      {sesiones.length > 0 && (
-        <ul class="dial-hoja-lista">
-          {sesiones.map((s) => (
-            <li key={s.id} class={s.completada ? 'hecha' : ''}>
-              <span class="marca-mini" aria-hidden="true">{s.completada ? <Icono n="hecho" /> : s.orden}</span>
-              <span>{s.nombre}</span>
-              <span class="peq secundario">{s.completada ? `Hecha${s.fecha_realizada ? ` el ${fmtConDia(s.fecha_realizada)}` : ''}` : 'Pendiente'}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Hoja>
-  );
-}
-
-function HojaCarga({ k, datos, hoy, alCerrar, arriba = null }) {
-  const sinCoach = useSinCoach();
-  const lunes = lunesDe(hoy);
-  const semanas = cargaSemanal(datos || [], hoy, 5);
-  const max = Math.max(1, ...semanas.map((w) => w.carga));
-  return (
-    <Hoja titulo="Carga de la semana" alCerrar={alCerrar}>
-      {arriba}
-      <p class="secundario">Cada sesión suma su esfuerzo (el RPE que pones al terminar, de 1 a 10) por sus minutos. Se compara con lo que sueles llevar <strong>a estas alturas de la semana</strong>: la media de tus semanas anteriores hasta el mismo día, así un lunes no sale bajo solo porque la semana acaba de empezar.</p>
-      {!k ? <p class="peq secundario">Cargando…</p> : k.estado === 'sin_media' ? (
-        <p class="nota">Aún no hay con qué comparar: hacen falta al menos dos semanas con sesiones terminadas (con su esfuerzo y su duración). Esta semana llevas <strong class="num">{num(k.actual, 0)}</strong>.</p>
-      ) : (
-        <>
-          <dl class="dial-hoja-cifras">
-            <div><dt>Esta semana</dt><dd class="marcador">{num(k.actual, 0)}</dd></div>
-            <div><dt>Lo habitual a estas alturas</dt><dd class="marcador">{num(k.esperado, 0)}</dd></div>
-            <div><dt>Resultado</dt><dd class="marcador">{Math.round(k.ratio * 100)}<span class="peq"> %</span></dd></div>
-          </dl>
-          <p class="peq"><strong>{k.etiqueta}.</strong> «En tu media» va del {num(BANDA_CARGA[0] * 100, 0)} al {num(BANDA_CARGA[1] * 100, 0)} % de lo habitual (la media de {k.semanas} {k.semanas === 1 ? 'semana' : 'semanas'}). Es para mirarlo, no una nota: lo que manda es {sinCoach ? 'tu plan' : 'lo que te pauta tu coach'}.</p>
-        </>
-      )}
-      {semanas.some((w) => w.carga > 0) && (
-        <div class="barras-carga" style={{ '--n': semanas.length }} role="img"
-          aria-label={`Carga por semanas: ${semanas.map((w) => `${w.lunes === lunes ? 'esta semana' : `semana del ${fmtCorta(w.lunes)}`}, ${num(w.carga, 0)}`).join('; ')}`}>
-          {semanas.map((w) => (
-            <div key={w.lunes} class={w.lunes === lunes ? 'actual' : ''}>
-              <span class="b" style={{ height: `${Math.max(3, (w.carga / max) * 100)}%` }} />
-              <span class="k">{w.lunes === lunes ? 'Esta' : fmtCorta(w.lunes)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <p class="mini terciario">Método de la carga por sesión (Foster y cols., 2001). Las sesiones sin esfuerzo o sin duración no suman.</p>
-    </Hoja>
-  );
-}
-
-function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar, arriba = null }) {
-  const { atleta } = useApp();
-  const [hecho, setHecho] = useState(null);
-  const consejo = consejoPreparacion(hecho || prep);
-  return (
-    <Hoja titulo="Cómo llegas hoy" alCerrar={alCerrar}>
-      {arriba}
-      {l.estado === 'sin_respuesta' && !hecho ? (
-        pendiente ? (
-          <>
-            <p class="secundario">Tres toques antes de entrenar: cómo has dormido, la energía y si tienes agujetas o molestias. Se guarda con {pendiente.nombre} y te da un consejo para hoy.</p>
-            <Preparacion alGuardar={async (p) => { await alGuardar(p); setHecho(p); }} />
-          </>
-        ) : baja ? <p class="secundario">Tu cuenta está de baja: ya no se guarda nada nuevo.</p> : <p class="secundario">Hoy no tienes una sesión prevista. El día que entrenes, contesta «¿Cómo llegas hoy?» al empezar la sesión y aquí verás cómo llegas.</p>
-      ) : (
-        <>
-          <ul class="dial-hoja-lista">
-            {dialComoLlegas(hecho || prep).respuestas.map((r) => (
-              <li key={r.id}>
-                <span class="marca-mini" aria-hidden="true">{r.valor}</span>
-                <span>{r.pregunta}</span>
-                <strong class="peq">{r.texto}</strong>
-              </li>
-            ))}
-          </ul>
-          {consejo && <div class={`consejo-dia ${consejo.nivel}`}><Icono n={consejo.nivel === 'bien' ? 'hecho' : 'alerta'} /><div class="pila-xs"><strong>{consejo.titulo}</strong><span class="peq">{textoConsejo(consejo, esPorSuCuenta(atleta))}</span></div></div>}
-        </>
-      )}
-      <p class="mini terciario">Es una ayuda para regular el día, no un diagnóstico. {esPorSuCuenta(atleta) ? 'Solo lo ves tú aquí.' : 'Solo lo ves tú aquí; tu coach lo ve con la sesión.'}</p>
-    </Hoja>
   );
 }
 

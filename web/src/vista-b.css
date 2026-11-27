@@ -58,7 +58,7 @@
 
 /* --- 265. Superar a la ultima: lo dice la cabecera, con un destello, una vez --- */
 .sup-aviso:not(#n) { position: fixed; top: calc(env(safe-area-inset-top, 0px) + var(--esp-48) + var(--esp-16)); left: 50%; z-index: var(--capa-flotante); display: flex; align-items: center; gap: var(--esp-8); width: max-content; max-width: calc(100vw - var(--esp-32)); margin: 0; padding: var(--esp-8) var(--esp-14); overflow: hidden; border-radius: var(--r-pildora); background: var(--tinta-noche); color: var(--blanco); box-shadow: var(--sombra-flotante); font-size: var(--letra-14); font-weight: 600; transform: translateX(-50%); }
-.sup-aviso:not(#n) svg { flex: none; width: var(--ico-18); height: var(--ico-18); color: var(--oro-claro); }
+.sup-i:not(#n):not(#n):not(#n) { flex: none; width: var(--ico-18); height: var(--ico-18); color: var(--oro-claro); }
 .sup-luz:not(#n) { position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(var(--oklab,) 100deg, transparent, color-mix(in srgb, var(--blanco) 22%, transparent), transparent); transform: translateX(-120%); pointer-events: none; }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .sup-luz:not(#n) { display: none; } }
 
@@ -93,7 +93,6 @@
 .vit-hueco:not(#n) { min-height: var(--esp-48); border: var(--filo-medio) dashed var(--linea); background: transparent; box-shadow: none; color: var(--tinta-3); cursor: default; }
 .vit-hueco:not(#n) .trofeo-ico { background: transparent; border: var(--filo-fino) dashed var(--linea); color: var(--tinta-3); }
 .vit-hueco-t:not(#n) { font-size: var(--letra-14); font-weight: 600; }
-.vit-hueco-pie:not(#n) strong { font-size: var(--letra-16); }
 
 /* --- 271. La barra de lectura: una linea fina que avanza con lo leido y los minutos que quedan --- */
 .lec-barra:not(#n) { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--esp-48) + var(--esp-14)); z-index: var(--capa-pegado); display: flex; align-items: center; gap: var(--esp-10); margin: 0; padding: var(--esp-6) 0; background: color-mix(in srgb, var(--tiza) 88%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); }
@@ -114,6 +113,81 @@
 /* --- 273. Al acabar una guia: "Guia leida" y la siguiente asoma debajo --- */
 .lec-fin:not(#n) { display: grid; gap: var(--esp-14); margin-top: var(--esp-10); padding-top: var(--esp-16); border-top: var(--filo-fino) solid var(--linea); }
 .lec-leida:not(#n) { display: inline-flex; align-items: center; gap: var(--esp-8); justify-self: start; margin: 0; padding: var(--esp-6) var(--esp-12); border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2); font-size: var(--letra-14); font-weight: 650; }
-.lec-leida:not(#n) svg { width: var(--ico-18); height: var(--ico-18); }
+.lec-leida-i:not(#n):not(#n):not(#n) { width: var(--ico-18); height: var(--ico-18); }
 .lec-leida[data-si]:not(#n) { background: var(--ok-suave, var(--hoja-2)); color: var(--ok); }
-.lec-chip:not(#n) svg { width: var(--ico-14); height: var(--ico-14); }
+.lec-chip-i:not(#n):not(#n):not(#n) { width: var(--ico-14); height: var(--ico-14); }
+
+/* (v0.277) Vista, cuarta vuelta: las hojas de FBE Esencial (274-281). Prefijos: clc- (el calendario de la casa), rsp-
+   (la flecha de "Respuestas"), bc- (la carga de la semana), mrc- (tus marcas, como vitrina), opc- (las opciones de las
+   hojas) y chk- (las casillas de la casa). Los iconos con clase propia (sup-i, lec-leida-i, opc-ico...) van con tres
+   :not(#n): esa clase se la lleva el componente Icono, el reparto no sabe en que trozo esta y, con el peso de siempre,
+   empataria con reglas de otras pantallas (que acabarian en el CSS de arranque) */
+
+/* --- 274. El calendario de la casa: un mes, con el lunes primero, hoy marcado y el viaje pintado --- */
+.clc-resumen:not(#n) { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-8); }
+.clc-fecha:not(#n) { display: grid; gap: var(--esp-2); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
+.clc-fecha[data-on]:not(#n) { outline: var(--filo-medio) solid var(--morado); outline-offset: calc(var(--filo-medio) * -1); }
+.clc-raiz:not(#n) { display: grid; gap: var(--esp-6); padding: var(--esp-10); border-radius: var(--r-14); background: var(--hoja); box-shadow: var(--anillo); }
+.clc-cab:not(#n) { display: grid; grid-template-columns: auto 1fr auto; align-items: center; }
+.clc-mes:not(#n) { text-align: center; font-size: var(--letra-15); }
+.clc-mes:not(#n)::first-letter { text-transform: uppercase; }
+.clc-sem:not(#n), .clc-dias:not(#n) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.clc-sem:not(#n) > span { padding: var(--esp-4) 0; text-align: center; font-size: var(--letra-11-5); font-weight: 650; color: var(--tinta-3); }
+.clc-dias:not(#n) { row-gap: var(--esp-2); }
+.clc-d:not(#n) { position: relative; display: grid; place-items: center; min-height: var(--esp-40); margin: 0; padding: 0; border: 0; background: none; color: var(--tinta); font: inherit; font-size: var(--letra-15); cursor: pointer; }
+.clc-d:not(#n) > span { display: grid; place-items: center; width: calc(var(--esp-32) + var(--esp-4)); height: calc(var(--esp-32) + var(--esp-4)); border-radius: 50%; }
+.clc-d:not(#n):disabled { color: var(--tinta-3); cursor: default; }
+.clc-d.clc-hoy:not(#n) > span { box-shadow: var(--anillo-acento); font-weight: 750; color: var(--morado); }
+.clc-d.clc-en:not(#n) { background: var(--acento-a12); }
+.clc-d.clc-ini:not(#n) { border-radius: var(--r-pildora) 0 0 var(--r-pildora); }
+.clc-d.clc-fin:not(#n) { border-radius: 0 var(--r-pildora) var(--r-pildora) 0; }
+.clc-d.clc-ini.clc-fin:not(#n) { border-radius: var(--r-pildora); }
+.clc-d.clc-ini:not(#n) > span, .clc-d.clc-fin:not(#n) > span, .clc-d.clc-elegido:not(#n) > span { background: var(--morado); color: var(--sobre-morado); font-weight: 700; box-shadow: none; }
+.clc-d:not(#n):focus-visible { outline: none; }
+.clc-d:not(#n):focus-visible > span { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+@media (forced-colors: active) { .clc-d.clc-ini:not(#n) > span, .clc-d.clc-fin:not(#n) > span, .clc-d.clc-elegido:not(#n) > span { outline: var(--filo-fuerte) solid CanvasText; } }
+
+/* --- 275. "Respuestas", con la flecha de la casa --- */
+.rsp-q:not(#n) { position: relative; display: block; padding-inline-end: var(--esp-40); list-style: none; }
+.rsp-q:not(#n)::-webkit-details-marker { display: none; }
+.rsp-q:not(#n)::after { content: ""; position: absolute; top: 50%; right: var(--esp-14); width: var(--ico-18); height: var(--ico-18); margin-top: calc(var(--ico-18) / -2); background: var(--tinta-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") center / contain no-repeat; }
+.ayu-p[open] > .rsp-q:not(#n)::after { rotate: 180deg; }
+@media (prefers-reduced-motion: no-preference) { .rsp-q:not(#n)::after { transition: rotate var(--mov-breve) ease; } }
+@media (forced-colors: active) { .rsp-q:not(#n)::after { background: CanvasText; } }
+
+/* --- 276. La carga de la semana, como las demas graficas --- */
+.bc-pista:not(#n) { position: relative; display: flex; align-items: flex-end; height: 100%; }
+.bc-pista:not(#n) > .b { position: relative; width: 100%; background: linear-gradient(var(--oklab,) 180deg, var(--acento-a55), var(--acento-a22)); }
+.bc-ahora > .bc-pista:not(#n) > .b { background: linear-gradient(var(--oklab,) 180deg, var(--morado), var(--acento-a55)); }
+.bc-franja:not(#n) { position: absolute; inset-inline: calc(var(--esp-4) * -1); display: block; border-block: var(--filo-fino) dashed var(--ok); background: var(--ok-suave); }
+.bc-ley:not(#n) { display: flex; align-items: center; gap: var(--esp-8); }
+.bc-ley:not(#n) > .bc-franja { position: static; flex: none; width: var(--esp-16); height: var(--esp-10); }
+
+/* --- 277. Tus marcas, como vitrina: el dibujo del ejercicio y la cifra de marcador --- */
+.mrc-titulo:not(#n) { display: flex; align-items: center; gap: var(--esp-8); margin: 0; font-weight: 700; color: var(--oro); }
+.mrc-titulo-i:not(#n):not(#n):not(#n) { width: var(--ico-20); height: var(--ico-20); }
+.mrc-ficha:not(#n) { container-type: inline-size; justify-items: start; gap: var(--esp-6); padding: var(--esp-14); background: var(--hoja); box-shadow: var(--anillo); }
+.mrc-cifra:not(#n) { max-width: 100%; font-size: clamp(var(--letra-20), 13.5cqi, var(--cifra-m)); font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* --- 278. Las opciones de las hojas, todas iguales: su icono, su texto y si esta elegida --- */
+.opc-fila:not(#n) { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-12); min-height: var(--esp-48); }
+.opc-i:not(#n) { display: inline-grid; place-items: center; width: var(--esp-32); height: var(--esp-32); border-radius: 50%; background: var(--acento-a12); color: var(--morado); }
+.opc-ico:not(#n):not(#n):not(#n) { width: var(--ico-18); height: var(--ico-18); }
+.opc-t:not(#n) { display: grid; gap: var(--esp-2); min-width: 0; }
+.opc-marca:not(#n) { display: inline-grid; place-items: center; width: var(--esp-22); height: var(--esp-22); border: var(--filo-fuerte) solid var(--linea); border-radius: 50%; color: transparent; }
+.opc-marca-i:not(#n):not(#n):not(#n) { width: var(--ico-14); height: var(--ico-14); }
+.vid-modo-si > .opc-marca:not(#n) { border-color: var(--morado); background: var(--morado); color: var(--sobre-morado); }
+
+/* --- 280. Las casillas de la casa (en lugar de la cuadrada del navegador) --- */
+.chk-casa:not(#n) { -webkit-appearance: none; appearance: none; display: inline-grid; place-items: center; flex: none; width: var(--esp-22); height: var(--esp-22); margin: 0; border: var(--filo-fuerte) solid var(--tinta-3); border-radius: var(--r-6); background: var(--hoja); cursor: pointer; }
+.chk-casa:not(#n)::after { content: ""; width: var(--esp-14); height: var(--esp-14); background: var(--sobre-morado); transform: scale(0);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+.chk-casa:not(#n):checked { border-color: var(--morado); background: var(--morado); }
+.chk-casa:not(#n):checked::after { transform: scale(1); }
+.chk-casa:not(#n):disabled { cursor: default; opacity: var(--op-deshabilitado); }
+.chk-casa:not(#n):focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+@media (prefers-reduced-motion: no-preference) { .chk-casa:not(#n)::after { transition: transform var(--mov-breve) cubic-bezier(.2, 1.4, .4, 1); } }
+@media (forced-colors: active) { .chk-casa:not(#n) { -webkit-appearance: auto; appearance: auto; } .chk-casa:not(#n)::after { display: none; } }

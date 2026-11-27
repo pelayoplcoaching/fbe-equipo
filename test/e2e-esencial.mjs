@@ -37,6 +37,18 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await p.evaluate(() => { localStorage.removeItem('fbe-demo-esencial-v2-sesion'); });
   };
   const desborda = async (p, paso) => { const w = p.viewportSize()?.width || 390; const a = await p.evaluate(() => document.documentElement.scrollWidth); if (a > w) errores.push(`${paso}: la página se desborda (${a} > ${w})`); };
+  // (v0.277) el calendario de la casa: avanza o retrocede de mes hasta el del día y lo toca
+  const elegirDia = async (dentro, iso) => {
+    const cal = dentro.locator('.clc-raiz').first();
+    await cal.waitFor();
+    for (let k = 0; k < 24; k++) {
+      const d = cal.locator(`[data-dia="${iso}"]`);
+      if (await d.count()) { await d.click(); return; }
+      const primero = await cal.locator('[data-dia]').first().getAttribute('data-dia');
+      await cal.getByRole('button', { name: iso < primero ? /^Mes anterior/ : /^Mes siguiente/ }).click();
+    }
+    throw new Error(`no encuentro el día ${iso} en el calendario`);
+  };
   const movil = async () => {
     const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, locale: 'es-ES', bypassCSP: true, reducedMotion: 'reduce' });
     await ctx.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* sin almacenamiento */ } });
@@ -1513,7 +1525,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       check(/Escribe qué quieres conseguir/.test(await modal().locator('.error').textContent().catch(() => '')), 'un objetivo: sin texto no se guarda');
       await modal().locator('.vid-area').fill('No faltar ninguna semana hasta el verano');
       const en = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
-      await p.locator('#vid-obj-f').fill(en(100));
+      await elegirDia(modal(), en(100));
       await modal().getByRole('button', { name: 'Apuntar mi objetivo' }).click();
       const obj = p.locator('.vid-objetivo');
       const conObj = await obj.waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
@@ -1559,8 +1571,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       if (conViaje) {
         await h.getByRole('button', { name: 'Apuntar el viaje' }).click();
         check(/Pon el día que te vas/.test(await h.locator('.error').textContent().catch(() => '')), 'sin fechas no se guarda, y dice qué falta');
-        await p.locator('#vid-desde').fill(`${anio}-12-20`);
-        await p.locator('#vid-hasta').fill(`${anio + 1}-01-02`);
+        await elegirDia(h, `${anio}-12-20`);
+        await elegirDia(h, `${anio + 1}-01-02`);
         await desborda(p, '«Me voy de viaje»');
         await h.getByRole('button', { name: 'Apuntar el viaje' }).click();
         const tarjeta = p.locator('[data-vida="viaje"]');

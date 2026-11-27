@@ -64,9 +64,9 @@ export async function probarVista3({ navegador, check, base = 'http://localhost:
       check(await hasta(async () => (await semanas.count()) === 1, 6000) && /Cuando acabe tu primera semana/.test(await p.locator('.sfa-txt').textContent()), '(269) en «Tus semanas», su primera semana dibujada y lo que saldrá');
       await subProgreso(p, 'fuerza');
       await p.waitForTimeout(1000);
-      const fuerza = p.locator('section.seccion:has(h2:text-is("Fuerza (1RM estimado)")) .grafica-fantasma');
+      const fuerza = p.locator('section.seccion:has(h2:text-is("Fuerza (1RM estimado)")) .vacio');
       const ton = p.locator('section.seccion:has(h2:text-is("Tonelaje por semana")) .grafica-fantasma');
-      check(await fuerza.count() === 1 && await ton.count() === 1, '(269) la fuerza y el tonelaje, con la silueta de lo que vendrá (la línea de puntos)');
+      check(await fuerza.count() === 1 && /Sin datos todavía/.test(await fuerza.textContent()) && await ton.count() === 1, '(269) el tonelaje, con la silueta de lo que vendrá (la línea de puntos); la fuerza, con la ilustración de su vacío');
       const huecos = p.locator('.vit-huecos .vit-hueco');
       check(await huecos.count() === 2 && /Tu primer récord/.test(await huecos.first().textContent()) && await p.getByRole('button', { name: /Ir a tu sesión de hoy/ }).count() === 1, '(270) la vitrina, con los marcos de sus primeros récords (y el camino a su sesión)');
       await revisar('Progreso de Marina, el primer día');

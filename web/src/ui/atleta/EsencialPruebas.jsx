@@ -15,6 +15,7 @@ import { hoyISO, sumarDias } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { WEB_FBE } from '../../logica/esencial.js';
 import { prepararAudio, tono, vibrarCorto, vibrarAviso, usePantallaEncendida } from './sesion-audio.js';
+import { CasillaCasa } from './CasillaCasa.jsx';
 
 const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const guardarLocal = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
@@ -134,7 +135,7 @@ export function HojaPruebas({ p = null, alCerrar, inicial = null, alGuardada = n
                   <Segmentos etiqueta="Sexo" opciones={[['mujer', 'Mujer'], ['hombre', 'Hombre']]} valor={sexo} alCambiar={(v) => setYo({ ...yo, sexo: v })} /></span>
               </div>
               {edadT !== '' && !edadOk && <span class="mini error">Tu edad, de 18 a 110 años.</span>}
-              <label class="prb-check peq"><input type="checkbox" checked={conDina} disabled={filas.some((f) => f.prueba === 'prension')}
+              <label class="prb-check peq"><CasillaCasa checked={conDina} disabled={filas.some((f) => f.prueba === 'prension')}
                 onChange={(ev) => { setDina(ev.currentTarget.checked); guardarLocal(claveDina(atleta.id), ev.currentTarget.checked ? '1' : null); }} /> Tengo un dinamómetro de mano (para la prensión)</label>
             </section>
             <GrupoIos titulo="Tus pruebas" id="prb-lista-t" pie={edadOk && edad >= P.EDAD_SPPB ? 'El SPPB es opcional: tres pruebas en una, desde los 65 años.' : null}>
@@ -423,7 +424,7 @@ function PruebaSPPB({ anterior, ...g }) {
             ))}
           </div>
         )}
-        <label class="prb-check peq"><input type="checkbox" checked={x.mNo} onChange={(ev) => pon('mNo', ev.currentTarget.checked)} /> No puedo hacerlo</label>
+        <label class="prb-check peq"><CasillaCasa checked={x.mNo} onChange={(ev) => pon('mNo', ev.currentTarget.checked)} /> No puedo hacerlo</label>
       </section>
       <section class="prb-paso" aria-labelledby="prb-sppb-3">
         <span class="pila-xs"><strong class="peq" id="prb-sppb-3">3. {P.SPPB_PARTES.silla[0]}</strong><span class="mini terciario">{P.SPPB_PARTES.silla[1]}</span></span>
@@ -439,7 +440,7 @@ function PruebaSPPB({ anterior, ...g }) {
                 <Cronometro etiqueta="las 5 levantadas" alParar={(v) => pon('s5', String(v).replace('.', ','))} />
               </span>
             )}
-            <label class="prb-check peq"><input type="checkbox" checked={x.sNo} onChange={(ev) => pon('sNo', ev.currentTarget.checked)} /> No completo las 5 o tardo más de 60 segundos</label>
+            <label class="prb-check peq"><CasillaCasa checked={x.sNo} onChange={(ev) => pon('sNo', ev.currentTarget.checked)} /> No completo las 5 o tardo más de 60 segundos</label>
           </>
         )}
       </section>

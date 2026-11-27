@@ -73,7 +73,7 @@ const com = src('ui/comunes.jsx');
 check(/classList\.toggle\('hoja-bajada', e\.currentTarget\.scrollTop > 2\)/.test(com) && /\.hoja-bajada > \.hoja-cab \{ background-color: var\(--hoja\); \}/.test(sinComD) && !/\.hoja-cab \{[^}]*background: var\(--hoja\)/.test(src('visual.css')),
   'C116: la cabecera de las hojas sin banda blanca arriba del todo; con su fondo al bajar');
 check((com.match(/y=\{yCifra\(/g) || []).length === 2 && /const yCifra = \(yUlt, yAnt, suelo\) =>/.test(com), 'B87: la cifra del último punto no se cruza con la línea (debajo si el anterior quedó más alto)');
-check(/\.seg-rango\.seg-rango \{ justify-self: stretch; \}/.test(sinComD) && /class="fila-semana amb-con-sello( amb-sem)?"/.test(prog) && /\.fila-semana\.amb-con-sello \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/.test(sinComD),
+check(/\.seg-rango\.seg-rango \{ justify-self: stretch; \}/.test(sinComD) && /class=("|\{`)fila-semana amb-con-sello( amb-sem)?/.test(prog) && /\.fila-semana\.amb-con-sello \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/.test(sinComD),
   'el rango de las gráficas a todo el ancho y el sello de «Tus semanas» dentro de su tarjeta');
 check(/nombreBloque\(tituloBloque\(b\)\)/.test(src('ui/InformeBloque.jsx')) && /<strong>\{tituloVisto\(r\.bloque, coach\)\}<\/strong>/.test(src('ui/InformeBloque.jsx')), 'A13 (repaso): «Tus bloques» y su informe, sin «· FBE Esencial» para el atleta (el coach lo ve entero)');
 const rut = src('ui/atleta/EsencialRutinas.jsx');
@@ -109,7 +109,7 @@ console.log('\nCuarta vuelta (v0.266): lo que quedaba de las tandas B y C');
 const cssF = src('ambas-f.css'), sinComF = cssF.replace(/\/\*[\s\S]*?\*\//g, '');
 check(!/[^\x00-\x7F]/.test(cssF) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComF) && main.indexOf("'./ambas-f.css'") > main.indexOf("'./ambas-e.css'") && main.indexOf("'./ambas-f.css'") < main.indexOf("'./color-capa.css'"),
   'ambas-f.css: solo ASCII, los colores por su nombre y detrás de la tercera vuelta');
-check(/<ul class="lista-marcas amb-marcas">/.test(src('ui/atleta/Esencial.jsx')) && /<strong class="num amb-marca-v">\{m\.texto\}<\/strong>/.test(src('ui/atleta/Esencial.jsx'))
+check(/<ul class="lista-marcas amb-marcas( mrc-vitrina)?">/.test(src('ui/atleta/Esencial.jsx')) && /<strong class="num amb-marca-v( mrc-cifra)?">\{m\.texto\}<\/strong>/.test(src('ui/atleta/Esencial.jsx'))
   && /\.amb-marca-v \{ font-size: var\(--letra-19\); white-space: nowrap;/.test(sinComF) && /\.amb-marca \{ flex: 1 1 calc\(50% - var\(--esp-4\)\); min-width: 0;/.test(sinComF) && !/grid-column/.test(sinComF),
   'B96: tus marcas, cada una en su ficha con la cifra grande (sin partirse) y el ejercicio debajo');
 const sem = src('ui/atleta/Semana.jsx');
@@ -184,7 +184,7 @@ check(!/[^\x00-\x7F]/.test(cssH) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComH)
   'ambas-h.css: solo ASCII, los colores por su nombre y detrás de la primera vuelta de 151-200');
 check(/\.tu-dia \.fila-dia:not\(#n\) \{ background-image: linear-gradient\(var\(--linea\), var\(--linea\)\);/.test(sinComH) && /\.tu-dia li:first-child > \.fila-dia \{ --hy: 100%; --hh: 50%; \}/.test(sinComH)
   && !/\.tu-dia \.lista > li \+ li::before/.test(src('diseno.css')), '168: «Tu día» como línea de tiempo (los discos unidos por un hilo, sin las rayas entre filas)');
-check(/class="fila-semana amb-con-sello amb-sem" data-c=\{r\.sesiones\.total > 0 && r\.sesiones\.hechas >= r\.sesiones\.total \? 'completa' : r\.sesiones\.hechas > 0 \? 'media' : 'pausa'\}/.test(src('ui/atleta/Progreso.jsx'))
+check(/class=\{`fila-semana amb-con-sello amb-sem\$\{comparando \? ' csm-fila' : ''\}`\} data-c=\{r\.sesiones\.total > 0 && r\.sesiones\.hechas >= r\.sesiones\.total \? 'completa' : r\.sesiones\.hechas > 0 \? 'media' : 'pausa'\}/.test(src('ui/atleta/Progreso.jsx'))
   && /\.amb-sem\[data-c="completa"\] \{ --amb-c: var\(--ok\); \}/.test(sinComH), '179: cada semana con el color de su constancia en el borde (completa, a medias, sin sesiones)');
 const meses = src('ui/atleta/TusMeses.jsx');
 check(/'con-mini amb-mes' : ''/.test(meses) && /<i class="amb-mes-velo" aria-hidden="true" \/>/.test(meses) && !/export function TusMeses/.test(src('ui/atleta/TuMes.jsx'))

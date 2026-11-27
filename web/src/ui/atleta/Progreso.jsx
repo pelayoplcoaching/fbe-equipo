@@ -8,7 +8,7 @@ import { TarjetaObjetivo } from '../Objetivos.jsx';
 import { PropuestasTuyas } from './ObjetivosTuyos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
-import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
+import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros, LineaAncha } from './ProgresoPiezas.jsx';
 import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, PodioRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
 import { periodoAnterior, compararEjercicios, cifrasFrente, serieCifras, escaleraRecords, musculosRecord, diasCheckin } from '../../logica/progreso-visual-2.js';
@@ -271,8 +271,8 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           <h2>Fuerza (1RM estimado)</h2>
           {ejercicios.length > 0 && (comparar || ptsF.length > 1) && <Ampliable titulo={comparar ? 'Comparar ejercicios' : `Fuerza: ${ej.nombre}`}>{(alto) => <>{graficaFuerza(alto)}<SelectorRango valor={rFuerzaV} alCambiar={setRangoFuerza} etiqueta="Rango de la gráfica del 1RM estimado" /></>}</Ampliable>}
         </div>
-        {/* (vista 269) el primer día, la silueta de lo que vendrá (como en el peso y el tonelaje) */}
-        {!ejercicios.length ? <div class="panel panel-pad"><GraficaFantasma texto={esCoach ? 'Cuando registre series, aquí saldrá su 1RM estimado de cada ejercicio, semana a semana.' : 'Cuando registres series, aquí sale tu 1RM estimado de cada ejercicio, semana a semana; con dos semanas, su línea.'} /></div> : (
+        {/* (vista 269) el primer día: aquí se queda la ilustración del vacío de progreso (la silueta, en el tonelaje y en tu primera semana) */}
+        {!ejercicios.length ? <div class="panel"><Vacio ilustracion="progreso" imagen="vacio-progreso" titulo="Sin datos todavía">{esCoach ? 'Cuando registre series, aquí saldrá su 1RM estimado de cada ejercicio, semana a semana.' : 'Cuando registres series, aquí verás tu 1RM estimado semana a semana.'}</Vacio></div> : (
           <div class="panel panel-pad pila">
             {ejercicios.filter((e) => e.puntos.length > 1).length >= 2 && (
               <button type="button" class="btn-texto btn-comparar" aria-pressed={comparar ? 'true' : 'false'} onClick={() => { if (!comparar && !elegidos.length) setElegidos(eleccionInicial()); setComparar(!comparar); }}>
@@ -570,11 +570,10 @@ function Vitrina({ datos, ejercicios = [], esCoach, atletaId, abrirHistorial, ir
         <ul class="vitrina-rejilla vit-huecos" aria-hidden="true">
           {[esCoach ? 'Su primer récord' : 'Tu primer récord', 'El siguiente'].map((t) => <li key={t}><div class="trofeo-tarjeta vit-hueco"><span class="trofeo-ico"><Icono n="trofeo" /></span><span class="vit-hueco-t">{t}</span></div></li>)}
         </ul>
-        <div class="panel panel-pad pila-s vit-hueco-pie">
-          <strong>{esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}</strong>
-          <span class="peq secundario">{esCoach ? 'Con dos sesiones del mismo ejercicio, sus mejores marcas saldrán aquí.' : 'Cuando superes una marca tuya, saldrá aquí como un trofeo.'}</span>
-          {!esCoach && irA && <button class="btn btn-peq" style="justify-self:start" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button>}
-        </div>
+        <div class="panel"><Vacio ilustracion="records" imagen="vacio-records" titulo={esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}
+          accion={!esCoach && irA ? <button class="btn btn-peq" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button> : null}>
+          {esCoach ? 'Con dos sesiones del mismo ejercicio, sus mejores marcas saldrán aquí.' : 'Cuando superes una marca tuya, saldrá aquí como un trofeo.'}
+        </Vacio></div>
       </section>
     );
   }

@@ -15,6 +15,7 @@ import { hoyISO, sumarDias, lunesDe } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { perezoso } from '../perezoso.jsx';
 import { useDolor } from './dolor-datos.js';
+import { CasillaCasa } from './CasillaCasa.jsx';
 
 const CentroRespuestas = perezoso(() => import('./EsencialAyuda.jsx'), 'CentroRespuestas', { mientras: null });
 function usePrevia() {
@@ -174,7 +175,7 @@ export function HojaMolestia({ alCerrar, alAccion = null }) {
           <section class="dol-senales" aria-labelledby="dol-senales-t">
             <strong class="peq" id="dol-senales-t">¿Tienes alguna de estas?</strong>
             {D.SENALES.map(([id, t]) => (
-              <label key={id} class="dol-check peq"><input type="checkbox" checked={senales.has(id)} onChange={() => marcar(id)} /><span>{t}</span></label>
+              <label key={id} class="dol-check peq"><CasillaCasa checked={senales.has(id)} onChange={() => marcar(id)} /><span>{t}</span></label>
             ))}
             <span class="mini terciario">Lo que marques aquí no se guarda.</span>
           </section>

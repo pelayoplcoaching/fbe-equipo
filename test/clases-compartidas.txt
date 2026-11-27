@@ -54,7 +54,9 @@ apunte-texto: apuntes.css visual.css
 apuntes: apuntes.css belleza.css
 apuntes-cinta: apuntes.css belleza.css
 apuntes-medalla-dibujo: apuntes.css belleza.css
-apuntes-tarjeta: apuntes.css imagenes.css
+apuntes-tarjeta: apuntes.css imagenes.css vista-a.css
+apuntes-tarjeta-botones: apuntes.css vista-a.css
+apuntes-tarjeta-texto: apuntes.css vista-a.css
 arco: diseno.css estilos.css tacto-a.css
 area: diseno.css estilos.css visual.css
 area-deg: diseno.css estilos.css tacto-b.css
@@ -94,7 +96,9 @@ ayu-hoy-i: ambas-b.css ayuda.css
 ayu-nec: ambas-a.css ayuda.css
 ayu-nec-i: ambas-a.css ayuda.css
 ayu-nec-t: ambas-a.css ayuda.css
+ayu-p: ayuda.css vista-b.css
 ayuda: diseno.css estilos.css personal.css visual.css
+b: estilos.css vista-b.css
 backoff: diseno.css estilos.css
 backoff-nota: diseno.css estilos.css
 baja: diseno.css estilos.css progreso-visual-2.css progreso-visual.css registro-actividad.css revision.css
@@ -728,7 +732,7 @@ pe-retos: diseno.css estilos.css
 pegatina-comentario: diseno.css estilos.css
 peligro: diseno.css equipo-belleza.css estilos.css personal.css
 pendiente: equipo-belleza.css estilos.css revision.css travesia.css
-peq: ambas-a.css ambas-b.css apuntes.css carrera.css diseno.css estilos.css estrecho.css imagenes.css perfil.css personal.css progreso-visual-2.css visual.css
+peq: ambas-a.css ambas-b.css apuntes.css carrera.css diseno.css estilos.css estrecho.css imagenes.css perfil.css personal.css progreso-visual-2.css vista-a.css visual.css
 perfil-barras: perfil.css visual.css
 perfil-cabeza: diseno.css estilos.css perfil.css
 perfil-cifras: ambas-a.css estilos.css visual.css
@@ -1084,6 +1088,7 @@ variante-tempo: diseno.css estilos.css
 velo: diseno.css estilos.css progreso-visual-2.css pulido.css
 ver: diseno.css estilos.css
 version-plan: diseno.css estilos.css
+vid-modo-si: vida.css vista-b.css
 vida-fila: imagenes.css personal.css
 video-semana-k: ambas-a.css youtube.css
 vista: ambas-a.css apuntes.css diseno.css estilos.css

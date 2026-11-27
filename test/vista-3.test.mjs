@@ -25,13 +25,13 @@ check(/<BarraLectura raiz=\{texto\} clave=\{r\.id\} \/>/.test(ayuda), '(271) y l
 check(/<FinGuia clave=\{clave\} alSiguiente=\{alSiguiente\} \/>/.test(guias) && /Guía leída/.test(guias) && /La siguiente/.test(guias) && /alSiguiente=\{\(g\) => \{ setAbierta/.test(guias), '(273) al acabar: «Guía leída» y, en «Aprende», la siguiente');
 check(/leida=\{leidas\.has\(g\.clave\)\}/.test(guias) && /fbe-guias-leidas/.test(lec), 'y en la lista, las leídas con su «Leída» (en el móvil, solo su clave)');
 check(/requestAnimationFrame/.test(lec) && /passive: true/.test(lec) && !/setInterval/.test(lec), 'la barra sigue al desplazamiento (una vez por imagen y sin frenarlo); nada que se mueva solo');
-check(/GraficaFantasma texto=\{esCoach \?/.test(prog) && /semanasTon\.length <= 1/.test(prog) && /Tu primera semana/.test(prog), '(269) el primer día: la silueta de la fuerza y del tonelaje, y tu primera semana dibujada');
-check(/class="vitrina-rejilla vit-huecos"/.test(prog) && /Tu primer récord/.test(prog), '(270) la vitrina, con los marcos de tus primeros récords');
+check(/<Vacio ilustracion="progreso" imagen="vacio-progreso"/.test(prog) && /semanasTon\.length <= 1/.test(prog) && /Tu primera semana/.test(prog), '(269) el primer día: la silueta del tonelaje y tu primera semana dibujada (en la fuerza se queda la ilustración de su vacío)');
+check(/class="vitrina-rejilla vit-huecos"/.test(prog) && /Tu primer récord/.test(prog) && /<Vacio ilustracion="records" imagen="vacio-records"/.test(prog), '(270) la vitrina, con los marcos de tus primeros récords');
 check(/if \(!lista\.datos \|\| lista\.datos\.length\) return null;/.test(prog), 'la primera semana dibujada, solo a quien aún no ha acabado ninguna (no a quien vuelve de un parón)');
 
 console.log('\nLa hoja de estilos (lo de esta vuelta, en vista-b.css)');
 const css = src('vista-b.css');
-const parte = css.slice(css.indexOf('(v0.276)'));
+const parte = css.slice(css.indexOf('(v0.276)'), css.indexOf('(v0.277)') > 0 ? css.indexOf('(v0.277)') : undefined);
 const sinNotas = parte.replace(/\/\*[\s\S]*?\*\//g, '');
 check(parte.length > 100 && /^[\x00-\x7F]*$/.test(parte), 'solo ASCII');
 check(!/@keyframes|animation:|infinite|transition:/.test(sinNotas), 'nada se mueve solo (la barra va con el desplazamiento)');

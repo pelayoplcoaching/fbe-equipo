@@ -7,6 +7,7 @@
 // Estilos: ayuda.css (clases ayu-*, escritas tal cual en el elemento al que se aplican, para que vayan con este trozo).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { sinMovimiento } from '../transiciones.js';
 import { BarraLectura } from '../lectura.jsx';
 import { NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
@@ -83,13 +84,15 @@ function Respuesta({ x, abierta, alAccion }) {
   const [baja, setBaja] = useState(false);
   const etiqueta = { directo: 'Preguntar para el directo', pausa: 'Ir a tu semana', dias: 'Cambiar mis días', revision: 'Ver mi revisión', rutina: 'Ver «Tu rutina»' }[x.ir];
   const contar = (ev) => {
+    // (vista 275) al abrirse, la respuesta baja desde la pregunta (sin movimiento, tal cual)
+    if (ev.currentTarget.open && !sinMovimiento()) { try { ev.currentTarget.querySelector('.ayu-p-r')?.animate([{ transform: 'translateY(-6px)', clipPath: 'inset(0 0 100% 0)' }, { transform: 'none', clipPath: 'inset(0 0 0 0)' }], { duration: 240, easing: 'cubic-bezier(.2, .8, .2, 1)' }); } catch { /* */ } }
     if (!ev.currentTarget.open || contadas.has(x.id) || x.directo) return;
     contadas.add(x.id);
     datos.contarConsulta(backend, x.id).catch(() => {});
   };
   return (
     <details class="ayu-p" open={abierta} data-id={x.id} onToggle={contar}>
-      <summary class="ayu-p-q">{x.q}</summary>
+      <summary class="ayu-p-q rsp-q">{x.q}</summary>
       <div class="ayu-p-r">
         <p class="peq">{x.r}</p>
         {x.pendiente && <p class="mini ayu-pendiente">Pendiente del visto bueno de Pelayo: solo se ve en esta vista previa.</p>}
