@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { REGLA_ANCHO, REGLA_MEDIA, reglaMayor, reglaTopes, reglaIndice, reglaValor, reglaVentana, reglaAlBorde, zonaReps } from '../web/src/logica/regla.js';
 import { LUZ_SEG, luzBorde, serieCorta, HECHA_MS, formaPastilla, cartelDe, esTumbado } from '../web/src/logica/descanso-vista.js';
 import { PAUSA_MS, decidirGesto, cierraAlBajar, destinoLado, gomaLado } from '../web/src/logica/historia-gesto.js';
+import { cifraIngrediente, trozosDePaso, tiemposDePaso, textoReloj, textoDuracion, tengoDe, tengoCon, quedaDe } from '../web/src/logica/cocina.js';
+import { atajosDe, LARGO_MS } from '../web/src/logica/barra-atajos.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -121,6 +123,83 @@ check((sinCom.match(/box-shadow:/g) || []).length - (sinCom.match(/box-shadow: (
 check(/@media \(max-height: 680px\) \{ \.rg-raiz:not\(\.rg-peso\) \{ display: none; \} \}/.test(sinCom), 'con poca pantalla, el teclado no crece: la regla no sale');
 check(/linear-gradient\(var\(--oklab,\) 90deg/.test(sinCom) && !/linear-gradient\(\s*(to |\d)/.test(sinCom), 'los degradados con dirección, con su espacio de color');
 check(!/font-size:[^;]*\d(rem|px)/.test(sinCom), 'las letras, por sus nombres (o por lo que mide la pantalla, en el cartel)');
+
+// ================================================================ Segunda vuelta (v0.272)
+console.log('\nSegunda vuelta (v0.272). Recetas con las manos (237-241)');
+const tz = trozosDePaso('Cuece el arroz 10 minutos y deja reposar 2-3 min. Hornea de 1 a 2 horas. Añade 200 g de harina y 1 huevo. Saltea 30 segundos.');
+check(tz.filter((x) => x.seg).map((x) => `${x.t}=${x.seg}`).join('|') === '10 minutos=600|2-3 min=120|1 a 2 horas=3600|30 segundos=30' && tz.map((x) => x.t).join('') === 'Cuece el arroz 10 minutos y deja reposar 2-3 min. Hornea de 1 a 2 horas. Añade 200 g de harina y 1 huevo. Saltea 30 segundos.',
+  '(239) los tiempos de un paso («10 minutos», «2-3 min», «1 a 2 horas», «30 segundos»): de un intervalo, lo menos; y el texto queda entero');
+check(tiemposDePaso('Añade 200 g de harina, 1 huevo y 2 hojas de laurel').length === 0 && tiemposDePaso('Bate 2 segundos').length === 0 && tiemposDePaso('Macera 12 horas').length === 0 && tiemposDePaso('Reposa 1 h').length === 1 && tiemposDePaso('').length === 0 && trozosDePaso('Sirve.').length === 1,
+  'ni los gramos ni los huevos son tiempos; tampoco lo de menos de 5 segundos o más de 4 horas');
+check(tiemposDePaso('Cuece 8–10 minutos')[0]?.seg === 480 && tiemposDePaso('Hornea 1,5 horas')[0]?.seg === 5400 && tiemposDePaso('Espera 5 o 6 minutos')[0]?.seg === 300, 'con raya, con coma decimal y con «o»');
+check(textoReloj(599) === '9:59' && textoReloj(3900) === '1:05:00' && textoReloj(0) === '0:00' && textoReloj(59.2) === '1:00' && textoDuracion(600) === '10 minutos' && textoDuracion(60) === '1 minuto' && textoDuracion(3900) === '1 hora y 5 minutos' && textoDuracion(30) === '30 segundos' && textoDuracion(7200) === '2 horas',
+  'lo que queda, para verlo («9:59») y para decirlo («10 minutos», «1 hora y 5 minutos»)');
+check(quedaDe({ fin: 10000 }, 4000) === 6 && quedaDe({ fin: 10000 }, 12000) === 0 && quedaDe(null, 0) === 0, 'y lo que le queda a un temporizador');
+check(JSON.stringify(cifraIngrediente('150 g de arroz')) === '{"cifra":"150","resto":" g de arroz"}' && cifraIngrediente('1,5 cdas. de AOVE').cifra === '1,5' && cifraIngrediente('Sal').cifra === null && cifraIngrediente('Sal').resto === 'Sal' && cifraIngrediente(null).resto === '',
+  '(241) la cifra de un ingrediente, aparte, para que ruede al cambiar las raciones');
+let tg = tengoCon({}, 'r1', '2026-11-27', 2, true); tg = tengoCon(tg, 'r1', '2026-11-27', 0, true);
+check(JSON.stringify(tg) === '{"r1":{"f":"2026-11-27","k":[0,2]}}' && tengoDe(tg, 'r1', '2026-11-27').join() === '0,2' && tengoDe(tg, 'r1', '2026-11-28').length === 0 && tengoDe(tg, 'r2', '2026-11-27').length === 0 && tengoDe(null, 'r1', '2026-11-27').length === 0,
+  '(237) lo que ya tienes, por receta y solo ese día (mañana, la lista limpia)');
+check(JSON.stringify(tengoCon(tg, 'r1', '2026-11-27', 0, false)) === '{"r1":{"f":"2026-11-27","k":[2]}}' && JSON.stringify(tengoCon(tengoCon(tg, 'r1', '2026-11-27', 0, false), 'r1', '2026-11-27', 2, false)) === '{}' && JSON.stringify(tengoCon(tg, 'r2', '2026-11-28', 1, true)) === '{"r2":{"f":"2026-11-28","k":[1]}}',
+  'se destacha, y lo de otros días no se guarda');
+const cocina = src('ui/Cocina.jsx'), recetario = src('ui/RecetarioEquipo.jsx');
+check(/<Ingredientes receta=\{r\.id\} lineas=\{lineas\} \/>/.test(recetario) && /<input type="checkbox" class="coc-casilla" checked=\{si\}/.test(cocina) && /aria-label="Ingredientes: marca los que ya tienes"/.test(cocina) && /\{c\.cifra != null && <Odometro texto=\{c\.cifra\} \/>\}/.test(cocina),
+  'los ingredientes son casillas de verdad (con su nombre para el lector de pantalla) y su cifra rueda');
+check(/<PasoConTiempos texto=\{p\} receta=\{r\.id\} nombre=\{r\.nombre\} \/>/.test(recetario) && /aria-label=\{`\$\{x\.t\}: poner un temporizador de \$\{textoDuracion\(x\.seg\)\}`\}/.test(cocina) && /<PastillaCocina \/>/.test(recetario)
+  && /sonarFBE\('fin-descanso'\)/.test(cocina) && /aria-label="Un minuto más"/.test(cocina), 'cada tiempo es un botón que arranca su temporizador; su pastilla sigue en la receta, con «+1 min», y avisa al acabar');
+check(/if \(!favorita\) \{ estrellaSalta\(estrella\.current\); vibrar\('hecho'\); \}/.test(recetario) && /<FotoGuardable puede=\{!esCoach && !!alMarcar && !favorita && !ocupado\} alGuardar=\{marcar\}>/.test(recetario) && /if \(t - ultimo\.current > 340\)/.test(cocina),
+  '(240) al guardar, la estrella salta con tres chispas y su toque; dos toques seguidos en la foto también guardan (el botón sigue ahí)');
+check(/\{cocina && <ModoCocina receta=\{r\.id\} nombre=\{r\.nombre\} pasos=\{pasos\} lineas=\{lineas\}/.test(recetario) && /role="dialog" aria-modal="true" aria-label=\{`Modo cocina: \$\{nombre\}`\}/.test(cocina) && /navigator\.wakeLock\?\.request\('screen'\)/.test(cocina) && /useAtraparFoco\(raiz\)/.test(cocina)
+  && /destinoLado\(e\.clientX - s\.x, s\.vx, \{ i, n \}\)/.test(cocina) && /aria-label="Salir del modo cocina"/.test(cocina),
+  '(238) el modo cocina: un diálogo a pantalla completa, un paso cada vez (deslizando o con sus botones) y la pantalla encendida');
+
+console.log('\nLo delicado, manteniendo pulsado (206); lo que cambia de sitio se ve (210-211); deshacer (249)');
+const mantener = src('ui/Mantener.jsx');
+check(/setTimeout\(\(\) => \{ hecho\.current = Date\.now\(\); setLlena\(false\); vibrar\('hecho'\); alConfirmar\(\); \}, MANTENER_MS\)/.test(mantener) && /const clic = \(\) => \{ if \(Date\.now\(\) - hecho\.current > 800\) alPreguntar\(\); \};/.test(mantener),
+  'mantenerlo un segundo lo hace sin preguntar; un toque (y el teclado y el lector de pantalla) abre la pregunta de siempre');
+check(/<BotonMantener clase="btn-texto peq" deshabilitado=\{ocupado\} alConfirmar=\{borrarTodas\} alPreguntar=\{\(\) => setBorrar\(true\)\}>/.test(src('ui/atleta/EsencialPruebas.jsx')) && /<BotonMantener clase="btn-texto mini dol-quitar" deshabilitado=\{ocupado\} alConfirmar=\{borrarTodo\} alPreguntar=\{\(\) => setBorrar\(true\)\}>/.test(src('ui/atleta/EsencialDolor.jsx')),
+  'en los dos «Borrar todo» que hay (tus pruebas y lo apuntado de molestias); la pregunta sigue estando');
+const sesion = src('ui/atleta/Sesion.jsx'), viaje = src('ui/atleta/viaje-tarjetas.js');
+check(/const foto = fotoTarjetas\(\);/.test(sesion) && /viajarTarjetas\(foto\);/.test(sesion) && /viajarTarjetas\(foto2\);/.test(sesion) && /if \(!foto\?\.size \|\| sinMovimiento\(\)\) return;/.test(viaje) && /Math\.max\(-tope, Math\.min\(tope, d\)\)/.test(viaje),
+  '(210) al dejar un ejercicio para luego (y al deshacerlo), cada tarjeta viaja de donde estaba a donde queda');
+check(/girarTarjeta\(e\.id\);\s*if \(!siempre\) aviso\(`Ahora: \$\{ej\.nombre\}`, 'ok', \{ texto: 'Deshacer'/.test(sesion) && /elegir\(x, \{ siempre: !!fijo \}\)/.test(sesion) && /rotateY\(-86deg\)/.test(viaje),
+  '(211) al cambiar un ejercicio, su tarjeta gira al nuevo y la pastilla trae «Deshacer» (el cambio «para siempre» lo dice con su aviso)');
+check(/aviso\(`Serie \$\{numero\} quitada`, 'ok', previa && previa\.reps != null \? \{ texto: 'Deshacer'/.test(sesion) && /aviso\('Quitado de tu rincón', 'ok', \{ texto: 'Deshacer'/.test(src('ui/atleta/PerfilMas.jsx'))
+  && /aviso\('Foto quitada', 'ok', \{ texto: 'Deshacer'/.test(src('ui/atleta/Suyo.jsx')) && /aviso\('Descartado', 'ok', \{ texto: 'Deshacer'/.test(hoy) && /const ms = toast\.accion \? 6000/.test(src('ui/App.jsx')),
+  '(249) «Deshacer» en la misma pastilla (6 segundos) al quitar una serie, algo de tu rincón, tu foto o una tarjeta de Hoy');
+
+console.log('\nLa barra de abajo, con el dedo (224-225) y el modo zurdo (205)');
+const SUBS = [['resumen', 'Resumen'], ['fuerza', 'Fuerza'], ['cuerpo', 'Cuerpo'], ['logros', 'Logros']];
+const MAS = [['checkin', 'Check-in', 'checkin'], ['equipo', 'Equipo', 'equipo'], ['perfil', 'Perfil', 'perfil']];
+check(atajosDe('hoy', { tabs: ['hoy', 'semana', 'checkin'], conPeso: true }).map((a) => `${a.que}:${a.texto}`).join('|') === 'empezar:Empezar la sesión|ir:Check-in|peso:Tu peso'
+  && atajosDe('hoy', { tabs: ['hoy'], conPeso: false }).map((a) => a.que).join() === 'empezar', '(224) mantener «Hoy»: «Empezar la sesión», «Check-in» (si lo tiene) y «Tu peso» (si lo apunta)');
+check(atajosDe('progreso', { subs: SUBS }).map((a) => `${a.id}:${a.texto}`).join('|') === 'resumen:Resumen|fuerza:Fuerza|cuerpo:Cuerpo|logros:Logros' && atajosDe('progreso', { subs: SUBS }).every((a) => a.que === 'sub' && a.icono),
+  '«Progreso»: sus cuatro partes');
+check(JSON.stringify(atajosDe('mas', { mas: MAS, ultimo: 'equipo' })) === '[{"que":"ir","id":"equipo","texto":"Equipo","icono":"equipo"}]' && atajosDe('mas', { mas: MAS, ultimo: null }).length === 0 && atajosDe('mas', { mas: MAS, ultimo: 'semana' }).length === 0
+  && atajosDe('semana', {}).length === 0 && atajosDe('hoy').length === 1 && LARGO_MS >= 400, '«Más»: lo último que abriste desde ahí (si lo hay); las demás pestañas no tienen atajos');
+const barra = src('ui/atleta/barra-gestos.jsx'), atletaApp = src('ui/atleta/AtletaApp.jsx');
+check(/import\('\.\/barra-gestos\.jsx'\)\.then\(\(m\) => \{ if \(!fuera\) quitar = m\.instalarBarra\(\(\) => paraBarra\.current\); \}\)/.test(atletaApp) && /<button key=\{id\} data-tab=\{id\} class=/.test(atletaApp),
+  'su código llega con la app ya abierta (en el arranque solo va el gancho y la marca de cada pestaña)');
+check(/role="menu" aria-label=/.test(barra) && /role="menuitem" class="bg-item"/.test(barra) && /document\.addEventListener\('contextmenu', contexto\)/.test(barra) && /if \(e\.key === 'Escape'\)/.test(barra) && /e\.key !== 'ArrowDown' && e\.key !== 'ArrowUp'/.test(barra),
+  'los atajos son un menú (flechas y Escape), y también salen con la tecla o el gesto de menú del sistema');
+check(/if \(Math\.abs\(dx\) < 10 \|\| Math\.abs\(dx\) < Math\.abs\(dy\)\) return;/.test(barra) && /if \(destino && destino !== actual\) \{ aIcono\(s\.cont, destino\); vibrar\('elegir'\); destino\.click\(\); \}/.test(barra) && /if \(!s\.modo\) return;/.test(barra),
+  '(225) deslizar el pulgar por la barra: la píldora sigue al dedo y, al soltar, se va a esa pestaña; un toque normal, lo de siempre');
+check(/data-atajo="empezar"/.test(hoy) && (hoy.match(/data-atajo="peso"/g) || []).length === 2 && /details\[data-plegable="peso"\]/.test(barra) && /o\.aviso\?\.\('Hoy no tienes una sesión por empezar'\)/.test(barra), '«Empezar» y «Tu peso» tocan el botón de Hoy que lleva su marca (y si hoy no hay sesión, lo dice)');
+check(/r\.toggleAttribute\('data-zurdo', a\.zurdo === true\)/.test(src('ui/ajustes.js')) && /<Interruptor id="aj-zurdo" icono="intercambiar" texto="Modo zurdo" valor=\{a\.zurdo === true\}/.test(src('ui/Ajustes.jsx'))
+  && /class=\{`serie zd-fila /.test(src('ui/atleta/FilaSerie.jsx')) && /class="hecho-btn zd-visto"/.test(src('ui/atleta/FilaSerie.jsx')) && /class="series-cab zd-cab"/.test(sesion), '(205) el modo zurdo es un ajuste de este móvil (apagado de serie) y marca la página');
+
+console.log('\nLa hoja de estilos (tacto-b.css)');
+const cssB = src('tacto-b.css'), sinComB = cssB.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssB) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComB) && !/@keyframes/.test(sinComB), 'solo ASCII, los colores por su nombre y sin @keyframes (lo que se mueve una vez lo mueve el código)');
+check(main.indexOf("'./tacto-b.css'") > main.indexOf("'./tacto-a.css'") && main.indexOf("'./tacto-b.css'") < main.indexOf("'./color-capa.css'"), 'se carga detrás de la primera vuelta y antes de color-capa.css');
+const sueltas = sinComB.split('}').map((r) => r.split('{')[0].trim()).filter((sel) => /^[.:]/.test(sel) && sel.split(',').some((x) => !x.includes(':not(#n)') && !/^\s*\.tabs-flota /.test(x)));
+check(sueltas.length === 0, `todas sus reglas llevan :not(#n) (viajan con su trozo sin empatar con las de otros)${sueltas.length ? `: ${sueltas.slice(0, 3).join(' | ')}` : ''}`);
+check(/:root\[data-zurdo\] \.zd-fila:not\(#n\), :root\[data-zurdo\] \.zd-cab:not\(#n\) \{ grid-template-columns: 52px 26px/.test(sinComB) && /:root\[data-zurdo\] \.zd-fila:not\(#n\) > \.zd-visto, :root\[data-zurdo\] \.zd-cab:not\(#n\) > :last-child \{ order: -1; \}/.test(sinComB)
+  && /:root\[data-zurdo\] \.teclado-teclas:not\(#n\) > \.tecla-siguiente \{ grid-area: 4 \/ 1 \/ auto \/ span 2; \}/.test(sinComB) && (sinComB.match(/:root\[data-zurdo\]\[data-gimnasio\]/g) || []).length === 4,
+  'zurdo: el visto, primero en la fila (también en modo gimnasio y en pantallas estrechas); en el teclado, −, + y «Siguiente» a la izquierda');
+check(/\.mnt-boton:not\(#n\)\[data-llena\] \.mnt-fondo \{ transform: scaleX\(1\); transition: transform 1s linear; \}/.test(sinComB) && /@media \(prefers-reduced-motion: reduce\) \{ \.mnt-boton:not\(#n\)\[data-llena\] \.mnt-fondo \{ transition: none; \} \}/.test(sinComB),
+  'el botón que se mantiene se llena en un segundo (con «reducir movimiento», de golpe)');
+check(!/font-size:[^;]*\d(rem|px)/.test(sinComB) && (sinComB.match(/box-shadow:/g) || []).length === (sinComB.match(/box-shadow: var\(--[\w-]+\);/g) || []).length, 'las letras y las sombras, por sus nombres');
 
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

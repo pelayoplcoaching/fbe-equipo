@@ -744,7 +744,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               </div>
             )}
             <div class="hero-acciones">
-              <button class="btn btn-grande btn-hero" onClick={(ev) => { const h = ev.currentTarget.closest('.hero-dia'); abrirSesion(siguiente.id, h?.querySelector('.titular h2'), h?.querySelector('.hero-arte')); }}>
+              <button class="btn btn-grande btn-hero" data-atajo="empezar" onClick={(ev) => { const h = ev.currentTarget.closest('.hero-dia'); abrirSesion(siguiente.id, h?.querySelector('.titular h2'), h?.querySelector('.hero-arte')); }}>
                 <Icono n="play" /> {empezada ? 'Continuar sesión' : 'Empezar sesión'}
               </button>
             </div>
@@ -933,8 +933,8 @@ function PesoHoy({ irA }) {
               <span class="pila-xs"><strong>{e.titulo}</strong><span class="mini secundario">{sinTuCoach(e.detalle, atleta)}</span></span>
             </div>
           )}
-        {deHoy ? <button class="chip ok" onClick={() => setAbierto(true)} aria-label={conCifra ? `Hoy ${num(deHoy.kg)} kilos. Cambiarlo` : 'Peso de hoy apuntado. Cambiarlo'}><Icono n="hecho" />{conCifra ? `Hoy ${num(deHoy.kg)}` : 'Apuntado'}</button>
-          : <button class="btn btn-peq btn-primario" onClick={() => setAbierto(true)}><Icono n="bascula" /> Apuntar el de hoy</button>}
+        {deHoy ? <button class="chip ok" data-atajo="peso" onClick={() => setAbierto(true)} aria-label={conCifra ? `Hoy ${num(deHoy.kg)} kilos. Cambiarlo` : 'Peso de hoy apuntado. Cambiarlo'}><Icono n="hecho" />{conCifra ? `Hoy ${num(deHoy.kg)}` : 'Apuntado'}</button>
+          : <button class="btn btn-peq btn-primario" data-atajo="peso" onClick={() => setAbierto(true)}><Icono n="bascula" /> Apuntar el de hoy</button>}
       </div>
       {abierto && (
         <HojaPeso inicial={deHoy?.kg ?? ult?.kg ?? null} alCerrar={() => setAbierto(false)} alGuardar={async (kg) => {
@@ -1162,6 +1162,7 @@ export { rangoSemana };
 const VISTO_CIERRE = (id) => `fbe-cierre-visto-${id}`;
 const vistoCierre = (id) => { try { return !!localStorage.getItem(VISTO_CIERRE(id)); } catch { return false; } };
 function CerradasPorTi({ sesiones = [], hoy, abrirSesion }) {
+  const { aviso } = useApp();
   const [, setV] = useState(0);
   const xs = sesiones.filter((s) => s.completada && s.cerrada_sola_en && !s.nota_atleta && !vistoCierre(s.id)).map((s) => ({ s, c: textoCierreAuto(s, hoy) })).filter((x) => x.c).slice(0, 2);
   if (!xs.length) return null;
@@ -1172,7 +1173,7 @@ function CerradasPorTi({ sesiones = [], hoy, abrirSesion }) {
         <section key={s.id} class="panel panel-pad cierre-auto pila-xs" aria-label={c.titulo}>
           <div class="separa">
             <p class="peq"><strong>{c.titulo}</strong> · {c.texto}</p>
-            <button type="button" class="btn btn-icono plano" aria-label="Descartar" onClick={() => quitar(s.id)}><Icono n="cerrar" /></button>
+            <button type="button" class="btn btn-icono plano" aria-label="Descartar" onClick={() => { quitar(s.id); aviso('Descartado', 'ok', { texto: 'Deshacer', fn: () => { try { localStorage.removeItem(VISTO_CIERRE(s.id)); } catch { /* nada */ } setV((v) => v + 1); } }); }}><Icono n="cerrar" /></button>
           </div>
           <button type="button" class="btn btn-peq btn-primario" style="justify-self:start" onClick={() => { quitar(s.id); abrirSesion(s.id); }}><Icono n="editar" /> Decir cómo fue</button>
         </section>

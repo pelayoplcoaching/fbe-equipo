@@ -3,9 +3,11 @@
 // lleva la nutrición puede además apuntarlas en su menú (alAnadir) y, si su plan tiene kcal, las ve ajustadas a él
 // (ajuste: receta → { factor, toma, kcalToma } | null). El coach lo ve igual, sin guardar ni apuntar.
 import { Imagen } from './Imagen.jsx';
-import { useState, useMemo } from 'preact/hooks';
+import { useState, useMemo, useRef } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, usePorTramos } from './comunes.jsx';
 import { FotoReceta } from './ComidasComun.jsx';
+import { Ingredientes, PasoConTiempos, PastillaCocina, ModoCocina, FotoGuardable, estrellaSalta } from './Cocina.jsx';
+import { vibrar } from './hapticos.js';
 import { COLOR_MACRO } from './NutricionComun.jsx';
 import { textoMacros, macrosDe, ordenarTomas, NOMBRE_TOMA } from '../logica/comidas.js';
 import { porCapitulos, capitulos, filtrarRecetas, FILTROS, textoTiempo, textoBatch, lineasIngredientes, pasosDe, resumenRecetario, capituloDe, bloqueDe } from '../logica/recetario-equipo.js';
@@ -133,11 +135,19 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
   const tiempo = textoTiempo(r);
   const lineas = lineasIngredientes(r, raciones, f);
   const pasos = pasosDe(r);
-  const marcar = () => una(async () => { try { await alMarcar(!favorita); aviso(favorita ? 'Ya no está guardada' : 'Guardada en tus favoritas'); } catch (e) { aviso(e.message, 'error'); } });
+  // (tacto 240) al guardarla, la estrella salta con tres chispas y su toque
+  const estrella = useRef(null);
+  const marcar = () => una(async () => {
+    if (!favorita) { estrellaSalta(estrella.current); vibrar('hecho'); }
+    try { await alMarcar(!favorita); aviso(favorita ? 'Ya no está guardada' : 'Guardada en tus favoritas'); } catch (e) { aviso(e.message, 'error'); }
+  });
+  // (tacto 238) el modo cocina: un paso por pantalla
+  const [cocina, setCocina] = useState(false);
   return (
     <Hoja titulo={r.nombre} alCerrar={alCerrar} ancho>
       <div class="pila receta-detalle receta-equipo">
-        {(r.foto || r.foto_mini) && <FotoReceta receta={r} grande />}
+        {/* (tacto 240) dos toques en la foto también la guardan */}
+        {(r.foto || r.foto_mini) && <FotoGuardable puede={!esCoach && !!alMarcar && !favorita && !ocupado} alGuardar={marcar}><FotoReceta receta={r} grande /></FotoGuardable>}
         <p class="mini terciario receta-equipo-donde">{[capituloDe(r), bloqueDe(r)].filter(Boolean).join(' · ')}</p>
         {l.descripcion && <p class="receta-equipo-entrada">{l.descripcion}</p>}
         <div class="fila-chips">
@@ -168,13 +178,17 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
               <span class="peq">{raciones === 1 ? 'Para una ración' : `Para ${num(raciones, 0)} raciones`}</span>
               <div style="max-width:150px"><Paso valor={raciones} paso={1} min={1} max={20} dec={0} etiqueta="raciones que cocinas" alCambiar={(v) => v && setRaciones(v)} /></div>
             </div>
-            <ul class="ingredientes">{lineas.map((x, k) => <li key={k}>{x.texto}{x.medida && <span class="terciario"> ({x.medida})</span>}</li>)}</ul>
+            {/* (tacto 237 y 241) se tachan al tocarlos (lo que ya tienes) y sus cantidades ruedan al cambiar las raciones */}
+            <Ingredientes receta={r.id} lineas={lineas} />
+            <p class="mini terciario coc-pista">Toca lo que ya tienes en casa para tacharlo.</p>
           </section>
         )}
         {pasos.length > 0 && (
           <section class="pila-s">
             <h3 class="etq">Preparación</h3>
-            <ol class="pasos-receta">{pasos.map((p, k) => <li key={k}>{p}</li>)}</ol>
+            {/* (tacto 239) los tiempos se tocan: «10 minutos» arranca su temporizador */}
+            <ol class="pasos-receta">{pasos.map((p, k) => <li key={k}><span class="coc-paso-t"><PasoConTiempos texto={p} receta={r.id} nombre={r.nombre} /></span></li>)}</ol>
+            <button type="button" class="btn coc-cocinar" onClick={() => setCocina(true)}><Icono n="ampliar" /> Modo cocina</button>
           </section>
         )}
         {l.encaje && <section class="pila-s"><h3 class="etq etq-con-ilu"><Imagen id="receta-encaja" clase="ico-ilu" tamanos="44px" />Cómo encaja en tu día</h3><p class="peq">{l.encaje}</p></section>}
@@ -183,13 +197,15 @@ export function HojaRecetaEquipo({ r: breve, favorita = false, esCoach = false, 
           <div class="pila-s">
             {alAnadir && <button class="btn btn-primario btn-grande" onClick={() => alAnadir(1, f)}><Icono n="calendario" /> Añadir a tu menú{f !== 1 ? ' (a tu medida)' : ''}</button>}
             {alMarcar && (
-              <button class="btn" aria-pressed={favorita ? 'true' : 'false'} disabled={ocupado} onClick={marcar}>
+              <button ref={estrella} class="btn coc-guardar" aria-pressed={favorita ? 'true' : 'false'} disabled={ocupado} onClick={marcar}>
                 <Icono n="estrella" class={favorita ? 'favorita' : ''} /> {favorita ? 'Guardada' : 'Guardar'}
               </button>
             )}
           </div>
         )}
+        <PastillaCocina />
       </div>
+      {cocina && <ModoCocina receta={r.id} nombre={r.nombre} pasos={pasos} lineas={lineas} alCerrar={() => setCocina(false)} />}
     </Hoja>
   );
 }

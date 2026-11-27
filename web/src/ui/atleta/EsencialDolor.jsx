@@ -6,6 +6,7 @@
 // salud; sin ella, la hoja dice qué hacer igual y no guarda nada. Estilos: dolor.css (clases dol-*, escritas tal cual).
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Hoja, Icono } from '../comunes.jsx';
+import { BotonMantener } from '../Mantener.jsx';
 import { Arte } from './EsencialArte.jsx';
 import * as D from '../../logica/dolor.js';
 import { URL_SEMAFORO } from '../../logica/esencial-checkin.js';
@@ -199,7 +200,7 @@ export function HojaMolestia({ alCerrar, alAccion = null }) {
         {!hay && listo && valor >= D.MARGEN && <p class="mini terciario">Si quieres que la app lo tenga en cuenta, apúntala también en tu check-in de la semana.</p>}
         <TusMolestias d={d.datos} senal={conSenal} />
         {hay && (d.datos.registros || []).length > 0 && !borrar && (
-          <button type="button" class="btn-texto mini dol-quitar" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar lo que he apuntado aquí</button>
+          <BotonMantener clase="btn-texto mini dol-quitar" deshabilitado={ocupado} alConfirmar={borrarTodo} alPreguntar={() => setBorrar(true)}><Icono n="basura" /> Borrar lo que he apuntado aquí</BotonMantener>
         )}
         {borrar && (
           <div class="dol-borrar" role="group" aria-label="Borrar tus molestias apuntadas">

@@ -46,8 +46,11 @@ import { readFileSync } from 'node:fs';
 // (v0.270: estilos a 920, a propósito: los dos avisos que salen al abrir llevan su ilustración (la versión nueva, en el
 // círculo de la píldora, y «Ponla en tu pantalla de inicio», en lugar del icono), unos 400 bytes; comprimido, sigue en 163.
 // Los vacíos del panel de coach van en la lista de los trozos, que viaja con el panel)
+// (v0.272: código a 612 comprimido, a propósito: los gestos de la app (la barra de abajo, las historias, la regla de «Tu
+// peso») viven en sus trozos, pero cada uno deja en el arranque el gancho que lo pide y sus marcas en la barra y en Hoy,
+// unos 900 bytes entre la v0.271 y esta; la v0.271 se quedó a 49 bytes del tope)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 610 },
+  js: { crudo: 1790, gz: 612 },
   css: { crudo: 920, gz: 163 },
 };
 

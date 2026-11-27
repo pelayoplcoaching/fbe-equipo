@@ -297,6 +297,16 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   const enMas = (id) => reparto.mas.some(([t]) => t === id);
   const nuevasEnMas = enMas('equipo') && tab !== 'equipo' ? nuevasEquipo : 0;
   const barra = usePildora(sesionId ? null : `${tab}:${reparto.barra.length}:${reparto.mas.length}`);
+  // (tacto 224 y 225) la barra, con el dedo: deslizar por ella cambia de pestaña y mantener una pulsada abre sus atajos
+  // (su código llega con la app ya abierta)
+  const { aviso } = useApp();
+  const paraBarra = useRef(null);
+  paraBarra.current = { tab, irAPestana, tabs: TABS.map(([t]) => t), mas: reparto.mas, salud, aviso };
+  useEffect(() => {
+    let quitar = null, fuera = false;
+    import('./barra-gestos.jsx').then((m) => { if (!fuera) quitar = m.instalarBarra(() => paraBarra.current); }).catch(() => { /* sin gestos: tocar sigue valiendo */ });
+    return () => { fuera = true; quitar?.(); };
+  }, []);
   // v0.52: «Sesión en curso» (fuera de la sesión, con series hechas y sin terminar): la píldora de arriba
   const enCurso = useEnCurso(atletaId);
   const programa = compartido.programa.datos;
@@ -337,7 +347,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
             <div ref={barra} class={`tabs-in ${reparto.barra.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
               <span class="tabs-pildora" aria-hidden="true" />
               {reparto.barra.map(([id, texto, icono]) => (
-                <button key={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => irAPestana(id)}>
+                <button key={id} data-tab={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => irAPestana(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>
                     <Icono n={icono} class={`ico-${icono}`} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
                     {id === 'equipo' && tab !== 'equipo' && <Insignia n={nuevasEquipo} etiqueta={`${nuevasEquipo} ${nuevasEquipo === 1 ? 'publicación nueva' : 'publicaciones nuevas'} en el equipo`} />}

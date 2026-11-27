@@ -48,7 +48,7 @@ export function HojaFotoMotivacion({ alCerrar }) {
           <Icono n="camara" /> {cargando ? 'Guardando…' : foto ? 'Cambiar la foto' : 'Elegir una foto'}
           <input type="file" accept="image/*" class="sr" aria-label="Elegir tu foto de motivación" onChange={elegir} disabled={cargando} />
         </label>
-        {foto && <button type="button" class="btn-texto peligro" onClick={() => { guardarFotoMotivacion(atleta.id, null); setFoto(null); aviso('Foto quitada'); }}>Quitar la foto</button>}
+        {foto && <button type="button" class="btn-texto peligro" onClick={() => { const antes = foto; guardarFotoMotivacion(atleta.id, null); setFoto(null); aviso('Foto quitada', 'ok', { texto: 'Deshacer', fn: () => { guardarFotoMotivacion(atleta.id, antes); setFoto(antes); } }); }}>Quitar la foto</button>}
       </div>
     </Hoja>
   );

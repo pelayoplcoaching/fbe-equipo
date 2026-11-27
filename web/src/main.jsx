@@ -59,6 +59,7 @@ import './ambas-h.css';
 import './ambas-i.css';
 import './ambas-j.css';
 import './tacto-a.css';
+import './tacto-b.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

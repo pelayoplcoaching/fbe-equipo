@@ -8,6 +8,7 @@
 // cuando toca y su trozo en «Tu trimestre». Estilos: pruebas.css (clases prb-*, escritas tal cual en el elemento).
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Hoja, Icono, GrupoIos, FilaIos, Segmentos } from '../comunes.jsx';
+import { BotonMantener } from '../Mantener.jsx';
 import { Arte } from './EsencialArte.jsx';
 import * as P from '../../logica/esencial-pruebas.js';
 import { hoyISO, sumarDias } from '../../logica/fechas.js';
@@ -150,7 +151,8 @@ export function HojaPruebas({ p = null, alCerrar, inicial = null, alGuardada = n
             {filas.length > 0 && (
               <span class="fila-envolver">
                 <button type="button" class="btn" onClick={() => setVista('informe')}><Icono n="documento" /> Informe para tu médico</button>
-                {!borrar && <button type="button" class="btn-texto peq" onClick={() => setBorrar(true)}><Icono n="basura" /> Borrar mis pruebas</button>}
+                {/* (tacto 206) manteniéndolo pulsado un segundo, las borra sin preguntar; con un toque, la pregunta de siempre */}
+                {!borrar && <BotonMantener clase="btn-texto peq" deshabilitado={ocupado} alConfirmar={borrarTodas} alPreguntar={() => setBorrar(true)}><Icono n="basura" /> Borrar mis pruebas</BotonMantener>}
               </span>
             )}
             {borrar && (

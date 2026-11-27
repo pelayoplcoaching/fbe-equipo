@@ -36,6 +36,7 @@ import { useTecladoApp } from './Teclado.jsx';
 import { pasoPeso, tipoCarga, pideRpe, discoMinimoValido, DISCO_MINIMO_DEFECTO, discosCon } from '../../logica/teclado.js';
 import { zonaReps } from '../../logica/regla.js';
 import { escalaArrastrable } from '../arrastrar-escala.js';
+import { fotoTarjetas, viajarTarjetas, girarTarjeta } from './viaje-tarjetas.js';
 import { enLibras, vista, deVista, pesoTxt } from '../../logica/unidades.js';
 import { textoAjuste } from '../../logica/ajuste-vivo.js';
 import { propagarCambio, aplicarPropagacion, deshacerPropagacion, textoPropagacion } from '../../logica/propagar.js';
@@ -728,10 +729,13 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   // temporizador, la voz, el aviso al móvil y la pantalla de bloqueo) pasa a ser lo del orden nuevo
   function cambiarOrden(nuevoOrden, { texto = null, deshacer = true, foco = false } = {}) {
     const antes = { orden: ordenSes, proxima };
+    // (tacto 210) cada tarjeta viaja de donde estaba a donde queda
+    const foto = fotoTarjetas();
     const lista = aplicarOrden(det.datos.ejercicios, nuevoOrden);
     const prox2 = proximaTrasReordenar(lista, hechas, proxima);
     setOrdenSes(nuevoOrden);
     setProxima(prox2);
+    viajarTarjetas(foto);
     if (descanso && !sesion.completada) {
       const t = textosSiguiente(lista, hechas, prox2, descanso.tras);
       cambiarDescanso({ ...descanso, texto: t.texto, voz: t.voz, aviso: t.aviso });
@@ -751,7 +755,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     }
     if (texto) {
       aviso(texto, 'ok', deshacer ? { texto: 'Deshacer', fn: () => {
+        const foto2 = fotoTarjetas();
         setOrdenSes(antes.orden); setProxima(antes.proxima);
+        viajarTarjetas(foto2);
         // (solo si hay un descanso en marcha ahora: uno saltado o terminado entretanto no vuelve, y uno nuevo se queda)
         const d = descansoRef.current;
         if (d && !sesion.completada) {
@@ -780,7 +786,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     setHechas((h) => { const m = { ...h[e.id] }; delete m[numero]; return { ...h, [e.id]: m }; });
     try {
       await cola.enviar({ tipo: 'borrarSerie', datos: { sesion_ejercicio_id: e.id, numero }, atletaId: atleta.id });
-      aviso(`Serie ${numero} quitada`);
+      // (tacto 249) «Deshacer», en la misma pastilla: vuelve con lo que tenía apuntado
+      aviso(`Serie ${numero} quitada`, 'ok', previa && previa.reps != null ? { texto: 'Deshacer', fn: () => guardar(e, numero, { kg: previa.kg != null && enLibras() ? vista(previa.kg) : previa.kg, reps: previa.reps, rpe: previa.rpe ?? '' }) } : null);
     } catch (err) {
       aviso(err.message, 'error');
       setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: previa } }));
@@ -965,9 +972,15 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
               luego={!sesion.completada && atleta.estado !== 'baja' && puedeDejarLuego(ejercicios, hechas, e.id) ? () => dejarLuego(e) : null}
               ordenar={!sesion.completada && atleta.estado !== 'baja' && bloquesPendientes(ejercicios, hechas).length > 1 ? () => setOrdenando(true) : null}
               alternar={() => alternar(e.id)} guardar={(n, v) => guardar(e, n, v)} quitar={(n) => quitar(e, n)}
-              cambiar={(ej) => {
-                setSustitutos({ ...sustitutos, [e.id]: ej.id === e.ejercicio.id ? null : ej.id });
+              cambiar={(ej, { siempre = false } = {}) => {
+                const antes = sustitutos[e.id] ?? null, nuevo = ej.id === e.ejercicio.id ? null : ej.id;
+                setSustitutos({ ...sustitutos, [e.id]: nuevo });
                 if (ej.id !== e.ejercicio.id && !ejerciciosPorId[ej.id]) cargarExtra([ej.id], [ej]);
+                // (tacto 211) la tarjeta gira al nuevo y, en la misma pastilla, «Deshacer» (el cambio «para siempre» ya lo
+                // ha dicho con su aviso, y ese no se deshace desde aquí)
+                if (nuevo === antes) return;
+                girarTarjeta(e.id);
+                if (!siempre) aviso(`Ahora: ${ej.nombre}`, 'ok', { texto: 'Deshacer', fn: () => { setSustitutos({ ...sustitutos, [e.id]: antes }); girarTarjeta(e.id); } });
               }} />
           );
           return durante ? [tarjeta, durante] : tarjeta;
@@ -1287,7 +1300,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           {sugerencia && n < e.series && <p class={`sugerencia ${sugerencia.tipo}`}><Icono n={sugerencia.tipo === 'subir' ? 'arriba' : 'reiniciar'} />{sugerencia.texto}</p>}
           {/* v0.63 (3): la primera vez, en el móvil (con el dedo), cómo marcar sin apuntar y cómo abrir el teclado */}
           {siguiente && !completo && tactil() && <Pista id="deslizar-serie" icono="hecho">Desliza una serie a la derecha para marcarla como hecha (lo mismo que ✓: con lo que hayas escrito o, si no, con lo que te propone).{teclado?.app ? ' Mantenla pulsada para abrir el teclado en los kilos.' : ''}</Pista>}
-          <div class="series-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>{porTiempo ? 'Seg' : 'Reps'}</span><span>Esfuerzo</span><span /></div>
+          <div class="series-cab zd-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>{porTiempo ? 'Seg' : 'Reps'}</span><span>Esfuerzo</span><span /></div>
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => {
             const prop = enV(propuesta(k, hechas));
             return (
@@ -1360,7 +1373,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
       {hoja === 'tecnica' && <Tecnica ej={ej} alCerrar={() => setHoja(null)} />}
       {hoja === 'descanso' && <ElegirDescanso nombre={ej.nombre} propio={descansoPropio} defecto={descansoDefecto}
         alElegir={(seg) => { elegirDescanso(seg); setHoja(null); }} alCerrar={() => setHoja(null)} />}
-      {hoja === 'cambiar' && <Cambiar e={e} actual={ej} sesionId={sesionId} alCerrar={() => setHoja(null)} alElegir={(x) => { cambiar(x); setHoja(null); }} />}
+      {hoja === 'cambiar' && <Cambiar e={e} actual={ej} sesionId={sesionId} alCerrar={() => setHoja(null)} alElegir={(x, o) => { cambiar(x, o); setHoja(null); }} />}
       {hoja === 'historial' && <HistorialEjercicio atletaId={atleta.id} ejercicio={ej} inicial="historial" alCerrar={() => setHoja(null)} />}
       {hoja === 'tempo' && <Metronomo tempo={tempo} nombre={ej.nombre} reps={e.reps_max ?? e.reps_min ?? 8} alCerrar={() => setHoja(null)} />}
       {hoja === 'aproximacion' && <Aproximacion nombre={ej.nombre} kg={kgTrabajo} reps={e.reps_max ?? e.reps_min ?? 5} conBarra={barra} alCerrar={() => setHoja(null)} />}
@@ -1480,8 +1493,9 @@ function Cambiar({ e, actual, sesionId = null, alCerrar, alElegir: elegir }) {
     } catch (err) { aviso(err.message, 'error'); return false; }
   };
   const alElegir = async (x) => {
-    if (suyo && siempre && x && x.id !== e.ejercicio.id && !x.por_tiempo && e.alternativas.some((a) => a.id === x.id) && !(await paraSiempre(x))) return;
-    apuntarAlternativa(atleta?.id, e.ejercicio.id, x?.id); elegir(x);
+    const fijo = suyo && siempre && x && x.id !== e.ejercicio.id && !x.por_tiempo && e.alternativas.some((a) => a.id === x.id);
+    if (fijo && !(await paraSiempre(x))) return;
+    apuntarAlternativa(atleta?.id, e.ejercicio.id, x?.id); elegir(x, { siempre: !!fijo });
   };
   const [otros, setOtros] = useState(false);
   const biblioteca = useCarga(() => (otros ? api.biblioteca() : Promise.resolve([])), [otros]);
@@ -1514,7 +1528,7 @@ function Cambiar({ e, actual, sesionId = null, alCerrar, alElegir: elegir }) {
         </label>
       )}
       {suyo && guia && deGuia.datos && (
-        <button type="button" class="btn-texto" onClick={async () => { if (await paraSiempre(deGuia.datos, true)) { apuntarAlternativa(atleta?.id, e.ejercicio.id, deGuia.datos.id); elegir(deGuia.datos); } }}>
+        <button type="button" class="btn-texto" onClick={async () => { if (await paraSiempre(deGuia.datos, true)) { apuntarAlternativa(atleta?.id, e.ejercicio.id, deGuia.datos.id); elegir(deGuia.datos, { siempre: true }); } }}>
           <Icono n="reiniciar" /> Volver a {deGuia.datos.nombre} (para siempre)</button>
       )}
       <div class="lista-elegir">

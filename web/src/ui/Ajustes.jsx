@@ -116,6 +116,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
       {/* v0.66: modo gimnasio */}
       {!coach && <Interruptor id="aj-gimnasio" icono="hoy" texto="Modo gimnasio" valor={!!a.gimnasio} alCambiar={(v) => cambiar('gimnasio', v)}
         ayuda="En la sesión: cifras y botones más grandes y más contraste, para leer con poca luz o con el móvil en el banco." />}
+      {/* (tacto 205) modo zurdo */}
+      {!coach && <Interruptor id="aj-zurdo" icono="intercambiar" texto="Modo zurdo" valor={a.zurdo === true} alCambiar={(v) => cambiar('zurdo', v)}
+        ayuda="En la sesión, el ✓ de cada serie y las teclas de acción del teclado («Siguiente», −, +) pasan al lado izquierdo, para llegar con el pulgar." />}
       {!coach && (
         <>
           <FilaIos icono="altavoz" titulo="Sonido y vibración" detalle={resumenSonido} alTocar={() => setSonido(true)} etiqueta={`Sonido y vibración: ${resumenSonido}`} />

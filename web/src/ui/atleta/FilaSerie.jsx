@@ -245,7 +245,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     <>
       <div class={`serie-desliza ${arrastre ? 'arrastrando' : ''} ${arrastre?.pasado ? 'pasado' : ''}`}>
         {arrastre && <div class="serie-fondo" aria-hidden="true"><Icono n="hecho" /><span>Hecha</span></div>}
-        <div ref={fila} data-n={numero} class={`serie ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''} ${campo ? 'editando' : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
+        <div ref={fila} data-n={numero} class={`serie zd-fila ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''} ${campo ? 'editando' : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
           aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}`}
           onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar} onClickCapture={alClicCaptura}
           onMouseDownCapture={(e) => { if (Date.now() < bloquearClic.current) e.preventDefault(); }}
@@ -277,7 +277,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
               {RPES.map((r) => <option key={r} value={r}>{r === '' ? pista : sobran ? etiquetaRpeSobran(r) : num(r)}</option>)}
             </select>
           )}
-          <button class="hecho-btn" onClick={tocarHecho} aria-pressed={hecha ? 'true' : 'false'}
+          <button class="hecho-btn zd-visto" onClick={tocarHecho} aria-pressed={hecha ? 'true' : 'false'}
             aria-label={hecha ? `Quitar la serie ${numero}` : `Marcar la serie ${numero} como hecha`}>
             <Icono n="hecho" />
           </button>

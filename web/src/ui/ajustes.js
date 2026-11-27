@@ -185,6 +185,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (a.letra && a.letra !== 'normal' && LETRAS.includes(a.letra)) r.setAttribute('data-letra', a.letra); else r.removeAttribute('data-letra');
   // v0.66: el modo gimnasio (las reglas, en estilos.css, solo tocan la sesión y el descanso)
   if (a.gimnasio) r.setAttribute('data-gimnasio', ''); else r.removeAttribute('data-gimnasio');
+  // (tacto 205) modo zurdo: el ✓ de las series y las teclas de acción, a la izquierda (tacto-b.css)
+  r.toggleAttribute('data-zurdo', a.zurdo === true);
   // (personalización 3) lo que no quiere ver (las reglas, en personal.css)
   for (const k of ['peso', 'kcal', 'ranking']) { if (a.ocultar?.[k]) r.setAttribute(`data-sin-${k}`, ''); else r.removeAttribute(`data-sin-${k}`); }
   // (color) alto contraste y daltonismo: sus tokens, en color.css (generado desde logica/paleta.js)

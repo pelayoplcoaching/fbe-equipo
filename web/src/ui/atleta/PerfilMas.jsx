@@ -557,7 +557,12 @@ export function RinconAnimo() {
   if (!Array.isArray(d.datos)) return null;
   const lista = todos ? d.datos : d.datos.slice(0, 3);
   const soltar = async (x) => {
-    try { await api.fijarAnimo(x.tipo, x.ref_id, false); aviso('Quitado de tu rincón'); d.recargar(true); } catch (e) { aviso(e.message, 'error'); }
+    // (tacto 249) «Deshacer», en la misma pastilla
+    try {
+      await api.fijarAnimo(x.tipo, x.ref_id, false);
+      aviso('Quitado de tu rincón', 'ok', { texto: 'Deshacer', fn: async () => { try { await api.fijarAnimo(x.tipo, x.ref_id, true); d.recargar(true); } catch (e) { aviso(e.message, 'error'); } } });
+      d.recargar(true);
+    } catch (e) { aviso(e.message, 'error'); }
   };
   return (
     <section class="seccion perfil-sec rincon-animo" aria-labelledby="rincon-animo-t">
