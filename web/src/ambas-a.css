@@ -150,10 +150,14 @@ html.hay-a-mano .contenido { padding-block-end: calc(var(--tabs-hueco) + 3.5rem 
   grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: var(--esp-14); align-items: start;
 }
 .contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach > .esa-franja, .contenido > .cer-vuelta > .esa-franja {
-  grid-column: 1; grid-row: 1; width: 4.5rem; aspect-ratio: 1; border-radius: var(--r-14);
+  grid-column: 1; grid-row: 1 / span 2; width: 4.5rem; aspect-ratio: 1; border-radius: var(--r-14);
 }
 .contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > svg, .contenido > .cer-vuelta:has(> .esa-franja) > svg { display: none; }
-.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > .pila-s, .contenido > .cer-vuelta:has(> .esa-franja) > .pila-s { grid-column: 2; grid-row: 1; }
+/* (repaso, v0.262) el titulo y su frase, junto a la miniatura; los botones y lo demas, debajo a todo el ancho (con la
+   miniatura, los dos botones ya no cabian en fila) */
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > .pila-s, .contenido > .cer-vuelta:has(> .esa-franja) > .pila-s { display: contents; }
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > .pila-s > *, .contenido > .cer-vuelta:has(> .esa-franja) > .pila-s > * { grid-column: 2; }
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > .pila-s > :nth-child(n+3), .contenido > .cer-vuelta:has(> .esa-franja) > .pila-s > :nth-child(n+3) { grid-column: 1 / -1; }
 
 /* -- A42 y A43 - El dibujo grande de una tarjeta blanca, a sangre arriba con la curva de la tarjeta (esquinas concentricas),
    y fundido con ella por un filo de luz muy suave */
