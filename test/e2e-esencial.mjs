@@ -16,6 +16,21 @@
 //   Sin errores ni desbordes.
 import { devices } from 'playwright';
 
+
+// (belleza 306) «Leer mi revisión» abre antes la historia de tres tarjetas, si hay qué contar en ella: se pasa hasta
+// «Leer entera», que abre la hoja de siempre (si no hay historia, la hoja sale directamente y esto no hace nada)
+async function pasarHistoriaRevision(p) {
+  const h = p.locator('.historia-rev');
+  for (let k = 0; k < 20; k++) {
+    if (await p.locator('[aria-modal="true"] .ayu-rev-t').count()) return;
+    if (await h.count()) {
+      const entera = h.getByRole('button', { name: /Leer entera/ });
+      if (await entera.count()) await entera.click().catch(() => {});
+      else if (await h.locator('.historia-pantalla h2').count()) await h.locator('.historia-zona.siguiente').click().catch(() => {});
+    }
+    await p.waitForTimeout(400);
+  }
+}
 export async function probarEsencial({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   const vigilar = (p) => {
@@ -1109,6 +1124,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     check(conTarjeta && /Tu revisión de la semana 5/.test(await tarjeta.textContent()), 'Tomás, en su semana 5: «Tu revisión de la semana 5» en Hoy');
     if (conTarjeta) {
       await tarjeta.getByRole('button', { name: 'Leer mi revisión' }).click();
+      await pasarHistoriaRevision(p);
       let hoja = p.locator('[aria-modal="true"]').last();
       const lista = await hoja.locator('.ayu-rev-t').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
       const t = lista ? await hoja.textContent() : '';

@@ -6,6 +6,18 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.283': {
+    // (momentos 301-326, de la v0.280 a la v0.283; «claude/belleza-350-propuesta.md»)
+    atleta: [
+      'Al terminar, tu sesión suena: un punto por serie con su nota, los récords caen como medallas y cada tarjeta se puede compartir.',
+      'Durante la sesión, la serie que puede ser récord se enciende en dorado. Y tu primer récord tiene su propia celebración.',
+      'Compartir, con brillo: la tarjeta se inclina, se guarda en Fotos, vale como fondo de pantalla y puede llevar tu portada.',
+    ],
+    coach: [
+      'Momentos (301-326): la sesión contada, compartir con brillo, sentir el récord, sonido y tacto a la vez, y la revisión como historia.',
+      'Biblioteca: «Jalón al pecho» vuelve a tener su figura y «Sentadilla a un banco» estrena la suya.',
+    ],
+  },
   '0.279': {
     // (vista 251-300, de la v0.274 a la v0.279: se cierra la tanda E; «claude/belleza-350-propuesta.md»)
     atleta: [

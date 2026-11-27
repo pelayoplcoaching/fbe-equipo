@@ -13,6 +13,21 @@ import { irASeccion, subProgreso } from './secciones.mjs';
 
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 
+
+// (belleza 306) «Leer mi revisión» abre antes la historia de tres tarjetas, si hay qué contar en ella: se pasa hasta
+// «Leer entera», que abre la hoja de siempre (si no hay historia, la hoja sale directamente y esto no hace nada)
+async function pasarHistoriaRevision(p) {
+  const h = p.locator('.historia-rev');
+  for (let k = 0; k < 20; k++) {
+    if (await p.locator('[aria-modal="true"] .ayu-rev-t').count()) return;
+    if (await h.count()) {
+      const entera = h.getByRole('button', { name: /Leer entera/ });
+      if (await entera.count()) await entera.click().catch(() => {});
+      else if (await h.locator('.historia-pantalla h2').count()) await h.locator('.historia-zona.siguiente').click().catch(() => {});
+    }
+    await p.waitForTimeout(400);
+  }
+}
 export async function probarVista3({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
   let p = null;
@@ -126,6 +141,7 @@ export async function probarVista3({ navegador, check, base = 'http://localhost:
       const leer = p.getByRole('button', { name: 'Leer mi revisión' });
       if (await leer.waitFor({ timeout: 15000 }).then(() => true).catch(() => false)) {
         await leer.click();
+        await pasarHistoriaRevision(p);
         const hoja = p.locator('[aria-modal="true"]').last();
         await hoja.locator('.ayu-rev-t').waitFor({ timeout: 15000 });
         const barra = hoja.locator('.lec-barra');

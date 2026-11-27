@@ -150,7 +150,13 @@ console.log('\nLa lista y la carpeta');
   check(['acceso-fondo', 'activar-fondo'].every((id) => lista[id]?.proporcion.join(':') === '2:3') && lista['sin-conexion']?.proporcion.join(':') === '16:9', 'están las tres de la entrada a la app (dos verticales y la de sin conexión)');
   { const EJ = JSON.parse(readFileSync(new URL('../web/src/datos/ejercicios-imagenes.json', import.meta.url), 'utf8'));
     const ids = [...new Set([...Object.values(EJ.porId), ...Object.values(EJ.porNombre)])];
-    check(ids.length >= 13 && ids.every((id) => lista[id]?.proporcion.join(':') === '1:1' && lista[id].archivos['192'] && lista[id].archivos['512']), `están las ${ids.length} figuras de ejercicio, cuadradas, a 192 y 512`); }
+    check(ids.length >= 13 && ids.every((id) => lista[id]?.proporcion.join(':') === '1:1' && lista[id].archivos['192'] && lista[id].archivos['512']), `están las ${ids.length} figuras de ejercicio, cuadradas, a 192 y 512`);
+    // (v0.283) los diez ejercicios de la guía de FBE Esencial, cada uno con su figura también por su nombre de la guía: la
+    // migración 091 renombró cuatro y el jalón, que solo se enlazaba por el nombre, se había quedado sin ella
+    const guia = [...readFileSync(new URL('../web/src/datos/semilla-esencial.js', import.meta.url), 'utf8').matchAll(/^  \['([^']+)', \[/gm)].map((m) => m[1]);
+    const nn = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const sinFigura = guia.filter((n) => !EJ.porNombre[nn(n)]);
+    check(guia.length === 10 && sinFigura.length === 0, `los ${guia.length} ejercicios de la guía de FBE Esencial, con su figura por su nombre${sinFigura.length ? ` (faltan: ${sinFigura.join(', ')})` : ''}`); }
   check(HITOS_IMG.every((h) => IMAGENES.includes(imagenHito(h))) && lista[IMAGEN_ANIVERSARIO]?.proporcion.join(':') === '3:1', 'están los cinco hitos y la franja del aniversario');
   check(MODALIDADES_IMG.every((m) => IMAGENES.includes(imagenPortada('cardio', m)) && lista[imagenPortada('cardio', m)].proporcion.join(':') === '16:9'), 'están las siete portadas de cardio, apaisadas');
   check(FOCOS_IMG.every((f) => IMAGENES.includes(imagenFoco(f)) && lista[imagenFoco(f)].proporcion.join(':') === '16:9'), 'están los ocho focos de la semana, apaisados');

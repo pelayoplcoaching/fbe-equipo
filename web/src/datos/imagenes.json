@@ -2262,6 +2262,17 @@
     },
     "color": "#442f78"
   },
+  "cua-sentadilla-a-un-banco": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/cua-sentadilla-a-un-banco-192.df06b098.webp",
+      "512": "imagenes/ejercicio/cua-sentadilla-a-un-banco-512.3193dde4.webp"
+    },
+    "color": "#321f64"
+  },
   "cua-sentadilla-goma": {
     "proporcion": [
       1,
@@ -3327,6 +3338,17 @@
       "512": "imagenes/ejercicio/esp-jalon-maquina-512.53ef284a.webp"
     },
     "color": "#443469"
+  },
+  "esp-jalon-al-pecho": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "192": "imagenes/ejercicio/esp-jalon-al-pecho-192.5b391143.webp",
+      "512": "imagenes/ejercicio/esp-jalon-al-pecho-512.ea1da8b3.webp"
+    },
+    "color": "#35245f"
   },
   "esp-jalon-neutro": {
     "proporcion": [
