@@ -60,7 +60,7 @@
 @media (forced-colors: active) { .fsr-alcance:not(#n):not(#n):not(#n) { background-image: none; outline: var(--filo-fuerte) solid CanvasText; } }
 
 /* 313 - "La ultima": la serie final de la sesion, en dorado */
-.fsr-ultima:not(#n):not(#n):not(#n) { background-color: var(--oro-suave); }
+.fsr-ultima:not(#n):not(#n):not(#n) { background-color: color-mix(in srgb, var(--oro-suave) 50%, var(--hoja-2)); }
 
 /* 315 - El primer record de tu vida: el aro de oro que se abre desde la luna (lo mueve el codigo, una vez) */
 .ef-aro:not(#n):not(#n):not(#n) { fill: none; stroke: var(--oro-200); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }

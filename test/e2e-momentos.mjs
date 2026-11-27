@@ -321,7 +321,8 @@ export async function probarMomentos3({ navegador, check, base = 'http://localho
       try {
         for (const a of document.getAnimations()) {
           const t = a.effect?.target;
-          if (vistas.has(a) || !t?.matches?.('.sesion-vista .tramo-barra, .sesion-vista .barra-sesion')) continue;
+          // (solo las de animate(): el pulso del último ejercicio, tramo-ultimo, es CSS y ya estaba)
+          if (vistas.has(a) || a instanceof CSSAnimation || a instanceof CSSTransition || !t?.matches?.('.sesion-vista .tramo-barra, .sesion-vista .barra-sesion')) continue;
           vistas.add(a);
           if ((a.effect.getKeyframes?.() || []).some((k) => /scaleY\(2\.2\)/.test(k.transform || ''))) window.__olas.push(Math.round(performance.now()));
         }
@@ -351,7 +352,7 @@ export async function probarMomentos3({ navegador, check, base = 'http://localho
     const fila = p.locator('.sesion-vista .serie.siguiente').first();
     await fila.waitFor();
     const n = await fila.getAttribute('data-n');
-    const ej = p.locator('.ejercicio', { has: fila }).first();
+    const ej = p.locator('.sesion-vista .ejercicio', { has: p.locator('.serie.siguiente') }).first();
     const kg = ej.getByLabel(`Kilos de la serie ${n}`);
     await kg.fill('1');
     await p.keyboard.press('Escape');
@@ -362,13 +363,16 @@ export async function probarMomentos3({ navegador, check, base = 'http://localho
     const borde = await fila.evaluate((e) => getComputedStyle(e).boxShadow);
     check(apagada && dorada && /puede ser récord/.test((await fila.getAttribute('aria-label')) || '') && borde !== 'none',
       '(312) la serie que toca: con 1 kg, como siempre; con 300, se enciende en dorado antes de hacerla (y el lector dice «puede ser récord»)');
-    // Se hace así (será récord) y las demás, hasta que quede una
+    // Se hace así (será récord) y las demás, hasta que quede una en toda la sesión (las de cada ejercicio, en sus tramos de
+    // arriba: «2 de 3 series»; los ejercicios van saliendo según se acaba el de antes)
+    const quedanEnSesion = () => p.evaluate(() => [...document.querySelectorAll('.sesion-vista nav.tramos a')].reduce((t, a) => { const m = (a.getAttribute('aria-label') || '').match(/(\d+) de (\d+) series/); return t + (m ? Math.max(0, Number(m[2]) - Number(m[1])) : 0); }, 0));
+    const alEmpezar = await quedanEnSesion();
     await ej.getByRole('button', { name: `Marcar la serie ${n} como hecha` }).click();
     await p.waitForTimeout(400);
-    for (let k = 0; k < 60; k++) {
-      const quedan = p.locator('button[aria-label^="Marcar la serie"]');
-      if ((await quedan.count()) <= 1) break;
-      const b = quedan.first();
+    for (let k = 0; k < 80; k++) {
+      if ((await quedanEnSesion()) <= 1) break;
+      const b = p.locator('button[aria-label^="Marcar la serie"]').first();
+      if (!(await b.count())) { await p.waitForTimeout(400); continue; }
       await b.scrollIntoViewIfNeeded().catch(() => {});
       await b.click({ timeout: 3000 }).catch(() => {});
       await p.waitForTimeout(160);
@@ -376,13 +380,13 @@ export async function probarMomentos3({ navegador, check, base = 'http://localho
     // (313) la última de la sesión, marcada
     const ultima = p.locator('.sesion-vista .serie.fsr-ultima');
     const marcada = await hasta(async () => (await ultima.count()) === 1, 4000);
-    check(marcada && /la última de la sesión/.test((await ultima.first().getAttribute('aria-label')) || '') && (await p.locator('button[aria-label^="Marcar la serie"]').count()) === 1,
-      '(313) cuando queda una serie en toda la sesión, va marcada (y el lector lo dice)');
+    check(alEmpezar >= 4 && (await quedanEnSesion()) === 1 && marcada && /la última de la sesión/.test((await ultima.first().getAttribute('aria-label')) || ''),
+      `(313) cuando queda una serie en toda la sesión (de ${alEmpezar}), va marcada (y el lector lo dice)`);
     // (314) la ola de la mitad: salió, y una sola vez (todas sus animaciones juntas)
     const olas = await p.evaluate(() => window.__olas.slice());
     check(olas.length >= 1 && olas[olas.length - 1] - olas[0] < 1500, `(314) a mitad de sesión, una ola por la barra de arriba, una sola vez (${olas.length} tramos, en ${olas.length ? olas[olas.length - 1] - olas[0] : 0} ms)`);
     // (315) la última, y a terminar: «Tu primer récord»
-    const ult = p.locator('button[aria-label^="Marcar la serie"]').first();
+    const ult = ultima.first().getByRole('button', { name: /^Marcar la serie/ });
     await ult.scrollIntoViewIfNeeded().catch(() => {});
     await ult.click();
     await p.waitForTimeout(300);
