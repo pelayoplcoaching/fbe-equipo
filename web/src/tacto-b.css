@@ -96,3 +96,28 @@
 :root[data-zurdo] .teclado-teclas:not(#n) > :nth-child(8) { grid-area: 2 / 1; }
 :root[data-zurdo] .teclado-teclas:not(#n) > :nth-child(12) { grid-area: 3 / 1; }
 :root[data-zurdo] .teclado-teclas:not(#n) > .tecla-siguiente { grid-area: 4 / 1 / auto / span 2; }
+
+/* --- 212 a 215, 219. Lo que tocas viaja: la foto de la receta, la medalla, la grafica, la portada de una historia y el dial crecen hasta su pantalla --- */
+::view-transition-group(vt-viaje) { animation-duration: 380ms; animation-timing-function: cubic-bezier(.2, .9, .25, 1); }
+::view-transition-old(vt-viaje), ::view-transition-new(vt-viaje) { animation-duration: 380ms; height: 100%; object-fit: cover; }
+/* 219. el dial, a la cabecera de su hoja */
+.dial-arriba { display: grid; justify-items: center; min-height: 0; padding: 0 0 var(--esp-12); pointer-events: none; zoom: 1.4; }
+
+/* --- 213 y 236. La medalla se coge: en su hoja, en grande, gira con el dedo; detras, como se gano --- */
+.mdl-escena:not(#n) { display: grid; justify-items: center; gap: var(--esp-8); padding-bottom: var(--esp-12); perspective: 720px; }
+.mdl-giro:not(#n) { position: relative; width: 148px; height: 148px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; font: inherit; transform-style: preserve-3d; touch-action: pan-y; cursor: grab; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.mdl-giro:not(#n)[data-cogida] { cursor: grabbing; }
+.mdl-giro:not(#n):focus-visible { outline: var(--filo-fuerte) solid var(--morado); outline-offset: var(--esp-4); }
+.mdl-cara:not(#n) { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.mdl-dorso:not(#n) { transform: rotateY(180deg); color: var(--mdl-tinta, var(--tinta-2)); }
+.mdl-disco:not(#n) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mdl-fantasma:not(#n) { fill: var(--hoja-2); stroke: var(--tinta-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.mdl-grabado:not(#n) { position: relative; display: grid; justify-items: center; gap: var(--esp-2); max-width: 70%; text-align: center; text-wrap: balance; line-height: 1.2; }
+.mdl-nombre:not(#n) { font-size: var(--letra-18); font-weight: 800; font-stretch: var(--ancho-marcador); letter-spacing: .01em; }
+.mdl-como:not(#n) { font-size: var(--letra-12); font-weight: 650; }
+.mdl-luz:not(#n) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: var(--mdl-o, 0); }
+.mdl-haz:not(#n) { transform: translateX(var(--mdl-x, 0)); }
+.mdl-pista:not(#n) { font-size: var(--letra-12); color: var(--tinta-2); }
+@media (prefers-contrast: more) { .mdl-luz:not(#n) { display: none; } }
+/* 214. la grafica que llega a pantalla completa ya esta dibujada: crece, no se vuelve a trazar */
+.grafica-grande:not(#n) .grafica-caja.trazada :is(.linea[pathLength], .area-deg, .punto, .pesada, text.valor) { animation: none; }

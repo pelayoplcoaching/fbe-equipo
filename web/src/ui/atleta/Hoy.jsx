@@ -19,7 +19,7 @@ import { FinDePagina, Siluetas, Reserva, useApp, useCarga, Icono, Disco, Cargand
 import { resumenDia, ordenDia, colocarDia } from '../../logica/dia.js';
 import { BandaConexion, BandaDemo } from '../App.jsx';
 import { VerArchivo } from '../archivos-perezoso.jsx';
-import { TarjetaSemana, HistoriaSemana } from './TuSemana.jsx';
+import { TarjetaSemana, HistoriaSemana, viajeHistoria } from './TuSemana.jsx';
 import { Bienvenida, PrimerosPasos } from './Bienvenida.jsx';
 import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
@@ -894,7 +894,7 @@ function SemanaPasada({ salud }) {
   if (!r || (vista === r.lunes && !abierta)) return null;
   return (
     <>
-      <TarjetaSemana resumen={r} alAbrir={() => setAbierta(true)} alQuitar={() => setVista(r.lunes)} />
+      <TarjetaSemana resumen={r} alAbrir={(ev) => viajeHistoria(() => setAbierta(true), ev.currentTarget)} alQuitar={() => setVista(r.lunes)} />
       {abierta && <HistoriaSemana resumen={r} salud={salud} alCerrar={() => { setAbierta(false); setVista(r.lunes); }} />}
     </>
   );

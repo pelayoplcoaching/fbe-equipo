@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Anillo, Capa, PortadaHistoria } from '../comunes.jsx';
 import { useHistoriaTacto } from '../historia-tacto.js';
+import { conTransicion } from '../transiciones.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
 import { desdeISO } from '../../logica/fechas.js';
@@ -39,6 +40,10 @@ export function TarjetaSemana({ resumen, alAbrir, alQuitar }) {
     </section>
   );
 }
+
+// (tacto 215) La tarjeta de una historia se abre hasta llenar la pantalla: lo que se toca es lo que crece.
+// tarjeta: el botón que se ha tocado. (Al cerrarla no vuelve: su tarjeta se quita al verla.)
+export const viajeHistoria = (cambio, tarjeta) => conTransicion(cambio, 'morph', [{ nombre: 'vt-viaje', desde: tarjeta, hasta: '.historia' }]);
 
 // Historia a pantalla completa: se pasa con toques (o flechas) y avanza sola si no se toca
 // v0.50: en su capa (en <body>), como las hojas

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Capa, PortadaHistoria, usePreferencia } from '../comunes.jsx';
 import { useHistoriaTacto } from '../historia-tacto.js';
+import { viajeHistoria } from './TuSemana.jsx';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../../logica/anio.js';
 import { nombreSaludo } from '../../logica/personal.js';
@@ -35,7 +36,7 @@ export function TarjetaAnio() {
   return (
     <>
       <section class="tarjeta-semana tarjeta-mes tarjeta-anio" aria-label={`Tu ${anio} en FBE`}>
-        <button class="tarjeta-semana-abrir" onClick={() => { setAbierta(true); setVisto(anio); }}>
+        <button class="tarjeta-semana-abrir" onClick={(ev) => viajeHistoria(() => { setAbierta(true); setVisto(anio); }, ev.currentTarget)}>
           <PortadaHistoria tono="mes" />
           <span class="pila-xs">
             <span class="mini">Tu {anio} en FBE</span>

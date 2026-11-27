@@ -394,9 +394,12 @@ function AvisoVersion({ nombre = 'FBE Equipo' }) {
       <button class="btn btn-peq btn-primario" disabled={actualizando} onClick={() => {
         setActualizando(true);
         window.__fbeActualizando = true;
-        try { nueva.postMessage('activar'); } catch { location.reload(); }
-        // Por si el navegador no avisa del cambio: recargar igualmente
-        setTimeout(() => location.reload(), 4000);
+        // (tacto 220) sin pantallazo: la pantalla se funde con la noche de la portada antes de recargar
+        import('./actualizar-suave.js').then((m) => m.cubrir()).catch(() => {}).then(() => {
+          try { nueva.postMessage('activar'); } catch { location.reload(); }
+          // Por si el navegador no avisa del cambio: recargar igualmente
+          setTimeout(() => location.reload(), 4000);
+        });
       }}>{actualizando ? 'Actualizando…' : 'Actualizar'}</button>
       {!actualizando && <button class="btn btn-icono plano aviso-version-cerrar" aria-label="Ahora no" onClick={() => setNueva(null)}><Icono n="cerrar" /></button>}
     </div>

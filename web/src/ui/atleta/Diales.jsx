@@ -3,6 +3,7 @@
 // Tocar uno abre una hoja con lo que lo alimenta y una explicación corta. Solo los ve el atleta (en su Hoy): «Cómo
 // llegas» es dato de salud y solo sale con su consentimiento.
 import { leerAjustes } from '../ajustes.js';
+import { conTransicion } from '../transiciones.js';
 import { useEffect, useId, useState } from 'preact/hooks';
 import { useApp, useCarga, Hoja, Icono, DegradadoAro, useSinCoach } from '../comunes.jsx';
 import { prepMarcadas, marcarPrepHoy } from './prep-hoy.js';
@@ -86,65 +87,75 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
   const n = Object.values(ver).filter(Boolean).length;
   if (!n) return null;
   const pc = ps ? pasosCortos(ps.pasos) : null;
+  // (tacto 219) El dial que se toca sube a la cabecera de su hoja (que antes empezaba solo con texto): la misma esfera,
+  // más grande. Cada esfera se pinta en dos sitios (su botón y su hoja), así que va en una función
+  const esf = {
+    constancia: () => <Esfera frac={c.valor}><span>{c.hechas}<span class="u">/{c.total}</span></span></Esfera>,
+    carga: () => <Esfera frac={k?.valor || 0} banda={k && k.estado !== 'sin_media' ? [BANDA_CARGA[0] / 2, BANDA_CARGA[1] / 2] : null} aguja={!!k && k.estado !== 'sin_media'}> {!k || k.estado === 'sin_media' ? <span>—</span> : <span>{pct}<span class="u">%</span></span>} </Esfera>,
+    llegas: () => <Esfera frac={l.valor}>{l.estado === 'sin_respuesta' ? <Icono n="pregunta" /> : <span>{l.total}<span class="u">/9</span></span>}</Esfera>,
+    comida: () => <Esfera frac={m.valor}><span>{m.quedan < 0 ? `+${-m.quedan}` : m.quedan}<span class="u">kcal</span></span></Esfera>,
+    pasos: () => <Esfera frac={ps.valor}><span>{pc.cifra}{pc.unidad && <span class="u">{pc.unidad}</span>}</span></Esfera>,
+    sueno: () => <Esfera frac={su.valor}><span>{horasMin(su.min)}<span class="u">h</span></span></Esfera>,
+  };
+  const arriba = (id, estado) => <span class="dial dial-arriba" data-estado={estado}>{esf[id]()}</span>;
+  const abrir = (id, ev) => conTransicion(() => setAbierto(id), 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.querySelector('.dial-esfera'), hasta: '.dial-arriba .dial-esfera' }]);
   return (
     <section class={`panel diales${n > 4 ? ' diales-dos-filas' : ''}`} style={{ '--n': n > 4 ? 3 : n }} aria-label="Tu día de un vistazo">
-      {ver.constancia && <button type="button" class="dial" data-estado={c.estado} onClick={() => setAbierto('constancia')}
+      {ver.constancia && <button type="button" class="dial" data-estado={c.estado} onClick={(ev) => abrir('constancia', ev)}
         aria-label={`Constancia: ${c.hechas} de ${c.total} sesiones ${natural ? 'de tu objetivo de esta semana' : 'de esta semana'}. ${c.etiqueta}. Ver de dónde sale`}>
-        <Esfera frac={c.valor}><span>{c.hechas}<span class="u">/{c.total}</span></span></Esfera>
+        {esf.constancia()}
         <span class="dial-nombre">Constancia</span>
         <span class="dial-estado">{c.etiqueta}</span>
       </button>}
-      {ver.carga && <button type="button" class="dial" data-estado={k ? k.estado : 'cargando'} onClick={() => setAbierto('carga')}
+      {ver.carga && <button type="button" class="dial" data-estado={k ? k.estado : 'cargando'} onClick={(ev) => abrir('carga', ev)}
         aria-label={`Carga: ${!k ? 'cargando' : k.estado === 'sin_media' ? 'aún sin media para comparar' : `${pct} % de lo que sueles llevar a estas alturas, ${k.etiqueta.toLowerCase()}`}. Ver de dónde sale`}>
-        <Esfera frac={k?.valor || 0} banda={k && k.estado !== 'sin_media' ? [BANDA_CARGA[0] / 2, BANDA_CARGA[1] / 2] : null} aguja={!!k && k.estado !== 'sin_media'}>
-          {!k || k.estado === 'sin_media' ? <span>—</span> : <span>{pct}<span class="u">%</span></span>}
-        </Esfera>
+        {esf.carga()}
         <span class="dial-nombre">Carga</span>
         <span class="dial-estado">{k ? k.etiqueta : '…'}</span>
       </button>}
       {ver.llegas && (
-        <button type="button" class="dial" data-estado={l.estado} onClick={() => setAbierto('llegas')}
+        <button type="button" class="dial" data-estado={l.estado} onClick={(ev) => abrir('llegas', ev)}
           aria-label={l.estado === 'sin_respuesta' ? `Cómo llegas: sin contestar hoy. ${pendiente ? 'Contestar' : 'Ver qué es'}` : `Cómo llegas: ${l.etiqueta}. Ver tus respuestas`}>
-          <Esfera frac={l.valor}>{l.estado === 'sin_respuesta' ? <Icono n="pregunta" /> : <span>{l.total}<span class="u">/9</span></span>}</Esfera>
+          {esf.llegas()}
           <span class="dial-nombre">Cómo llegas</span>
           <span class="dial-estado">{l.estado === 'sin_respuesta' ? (pendiente ? 'Contestar' : 'Sin contestar') : l.etiqueta}</span>
         </button>
       )}
       {espera.comida && <DialEsperando nombre="Comida" />}
       {ver.comida && m && (
-        <button type="button" class="dial" data-estado={m.estado} onClick={() => setAbierto('comida')}
+        <button type="button" class="dial" data-estado={m.estado} onClick={(ev) => abrir('comida', ev)}
           aria-label={`Comida: ${m.estado === 'sin_apuntar' ? `aún sin apuntar nada hoy, tu objetivo son ${m.objetivo} kcal` : m.quedan >= 0 ? `te quedan ${m.quedan} kcal de ${m.objetivo}` : `${-m.quedan} kcal por encima de ${m.objetivo}`}. Ver el detalle`}>
-          <Esfera frac={m.valor}><span>{m.quedan < 0 ? `+${-m.quedan}` : m.quedan}<span class="u">kcal</span></span></Esfera>
+          {esf.comida()}
           <span class="dial-nombre">Comida</span>
           <span class="dial-estado">{m.etiqueta}</span>
         </button>
       )}
       {espera.pasos && <DialEsperando nombre="Pasos" />}
       {ver.pasos && ps && (
-        <button type="button" class="dial" data-estado={ps.estado} onClick={() => setAbierto('pasos')}
+        <button type="button" class="dial" data-estado={ps.estado} onClick={(ev) => abrir('pasos', ev)}
           aria-label={`Pasos: ${ps.pasos} hoy${ps.media ? `, tu media es de ${ps.media}` : ''}. Ver el detalle`}>
-          <Esfera frac={ps.valor}><span>{pc.cifra}{pc.unidad && <span class="u">{pc.unidad}</span>}</span></Esfera>
+          {esf.pasos()}
           <span class="dial-nombre">Pasos</span>
           <span class="dial-estado">{ps.etiqueta}</span>
         </button>
       )}
       {espera.sueno && <DialEsperando nombre="Sueño" />}
       {ver.sueno && su && (
-        <button type="button" class="dial" data-estado={su.estado} onClick={() => setAbierto('pasos')}
+        <button type="button" class="dial" data-estado={su.estado} onClick={(ev) => abrir('sueno', ev)}
           aria-label={`Sueño: ${horasMin(su.min)} horas anoche${su.media ? `, tu media es de ${horasMin(su.media)}` : ''}. Ver tu reloj de un vistazo`}>
-          <Esfera frac={su.valor}><span>{horasMin(su.min)}<span class="u">h</span></span></Esfera>
+          {esf.sueno()}
           <span class="dial-nombre">Sueño</span>
           <span class="dial-estado">{su.etiqueta}</span>
         </button>
       )}
-      {abierto === 'comida' && m && <HojaComida m={m} objetivo={objetivo} alCerrar={() => setAbierto(null)} />}
-      {abierto === 'pasos' && (ps || su) && <HojaReloj filas={relojDeUnVistazo(diasSalud, hoy)} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
+      {abierto === 'comida' && m && <HojaComida arriba={arriba('comida', m.estado)} m={m} objetivo={objetivo} alCerrar={() => setAbierto(null)} />}
+      {(abierto === 'pasos' || abierto === 'sueno') && (ps || su) && <HojaReloj arriba={abierto === 'sueno' && su ? arriba('sueno', su.estado) : ps ? arriba('pasos', ps.estado) : null} filas={relojDeUnVistazo(diasSalud, hoy)} ultimo={pasosDatos.datos?.ultimo || null} alCerrar={() => setAbierto(null)} />}
       {abierto === 'constancia' && (natural
-        ? <HojaConstancia c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
-        : <HojaConstancia c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
-      {abierto === 'carga' && <HojaCarga k={k} datos={carga.datos} hoy={hoy} alCerrar={() => setAbierto(null)} />}
+        ? <HojaConstancia arriba={arriba('constancia', c.estado)} c={c} natural={natural} sesiones={sesionesDeLaSemana(natural.semanas, natural.sesionesPorSemana, c.total, hoy)} semana={{ fecha_inicio: lunesDe(hoy) }} alCerrar={() => setAbierto(null)} />
+        : <HojaConstancia arriba={arriba('constancia', c.estado)} c={c} sesiones={sesiones} semana={semana} alCerrar={() => setAbierto(null)} />)}
+      {abierto === 'carga' && <HojaCarga arriba={arriba('carga', k ? k.estado : 'cargando')} k={k} datos={carga.datos} hoy={hoy} alCerrar={() => setAbierto(null)} />}
       {abierto === 'llegas' && (
-        <HojaLlegas l={l} prep={prep} pendiente={pendiente} baja={atleta.estado === 'baja'} hoy={hoy} alCerrar={() => setAbierto(null)}
+        <HojaLlegas arriba={arriba('llegas', l.estado)} l={l} prep={prep} pendiente={pendiente} baja={atleta.estado === 'baja'} hoy={hoy} alCerrar={() => setAbierto(null)}
           alGuardar={async (p) => {
             // Como en la sesión: si no se puede guardar (sin conexión, sin el consentimiento), lo dice; el consejo vale igual
             try { await api.guardarPreparacion(pendiente.id, p); marcarPrepHoy(pendiente.id); alContestar?.(); return true; }
@@ -156,9 +167,10 @@ export function Diales({ sesiones = [], semana = null, siguiente = null, previst
 }
 
 // (v0.140) El detalle de los dos diales nuevos
-function HojaComida({ m, objetivo, alCerrar }) {
+function HojaComida({ m, objetivo, alCerrar, arriba = null }) {
   return (
     <Hoja titulo="Comida de hoy" alCerrar={alCerrar}>
+      {arriba}
       <p class="secundario">Lo que llevas apuntado hoy frente a las kcal de tu plan para hoy{objetivo?.descanso ? ' (día de descanso)' : ''}. Se apunta en «Nutrición de hoy».</p>
       <dl class="dial-hoja-cifras">
         <div><dt>Apuntado</dt><dd class="marcador">{num(m.comido, 0)}<span class="peq"> kcal</span></dd></div>
@@ -172,10 +184,11 @@ function HojaComida({ m, objetivo, alCerrar }) {
 }
 // (v0.141) Tu reloj de un vistazo: lo de hoy (o anoche) frente a tu media de 14 días; solo lo que llega de Salud
 const FILAS_RELOJ = { pasos: ['Pasos hoy', (v) => num(v, 0)], sueno_min: ['Sueño anoche', (v) => `${horasMin(v)} h`], fc_reposo: ['Pulso en reposo', (v) => `${num(v, 0)} lpm`], hrv: ['HRV', (v) => `${num(v, 0)} ms`] };
-function HojaReloj({ filas, ultimo, alCerrar }) {
+function HojaReloj({ filas, ultimo, alCerrar, arriba = null }) {
   const sinCoach = useSinCoach();
   return (
     <Hoja titulo="Tu reloj, de un vistazo" alCerrar={alCerrar}>
+      {arriba}
       <p class="secundario">Lo que llega de Salud del iPhone (Perfil → Conexiones){ultimo ? `; lo último, ${fmtConDia(String(ultimo).slice(0, 10))}` : ''}, frente a tu media de los últimos 14 días. No son objetivos: sirven para ver si hoy es un día normal para ti.</p>
       <table class="tabla-reloj">
         <thead><tr><th scope="col"><span class="sr">Dato</span></th><th scope="col">Hoy</th><th scope="col">Tu media</th></tr></thead>
@@ -190,11 +203,12 @@ function HojaReloj({ filas, ultimo, alCerrar }) {
   );
 }
 
-function HojaConstancia({ c, sesiones, semana, alCerrar, natural = null }) {
+function HojaConstancia({ c, sesiones, semana, alCerrar, arriba = null, natural = null }) {
   const sinCoach = useSinCoach();
   const rango = semana?.fecha_inicio ? ` (del ${fmtCorta(semana.fecha_inicio)} al ${fmtCorta(sumarDias(semana.fecha_inicio, 6))})` : '';
   return (
     <Hoja titulo="Constancia" alCerrar={alCerrar}>
+      {arriba}
       {natural
         ? <p class="secundario">Tu coach te programa por microciclos: tu semana se cuenta de lunes a domingo{rango}, con un objetivo de {textoDiasSemana(natural.dias)}{c.total && c.total < natural.dias ? ` (esta semana, ${c.total}: no tienes más publicadas)` : ''}. Al llegar a él, sumas una semana a tu racha. Las sesiones van en el orden de tu programa.</p>
         : <p class="secundario">Las sesiones que has hecho de las {sinCoach ? 'de tu plan' : 'que tu coach ha publicado'} esta semana{rango}. Al completarlas todas, sumas una semana a tu racha.</p>}
@@ -217,13 +231,14 @@ function HojaConstancia({ c, sesiones, semana, alCerrar, natural = null }) {
   );
 }
 
-function HojaCarga({ k, datos, hoy, alCerrar }) {
+function HojaCarga({ k, datos, hoy, alCerrar, arriba = null }) {
   const sinCoach = useSinCoach();
   const lunes = lunesDe(hoy);
   const semanas = cargaSemanal(datos || [], hoy, 5);
   const max = Math.max(1, ...semanas.map((w) => w.carga));
   return (
     <Hoja titulo="Carga de la semana" alCerrar={alCerrar}>
+      {arriba}
       <p class="secundario">Cada sesión suma su esfuerzo (el RPE que pones al terminar, de 1 a 10) por sus minutos. Se compara con lo que sueles llevar <strong>a estas alturas de la semana</strong>: la media de tus semanas anteriores hasta el mismo día, así un lunes no sale bajo solo porque la semana acaba de empezar.</p>
       {!k ? <p class="peq secundario">Cargando…</p> : k.estado === 'sin_media' ? (
         <p class="nota">Aún no hay con qué comparar: hacen falta al menos dos semanas con sesiones terminadas (con su esfuerzo y su duración). Esta semana llevas <strong class="num">{num(k.actual, 0)}</strong>.</p>
@@ -253,12 +268,13 @@ function HojaCarga({ k, datos, hoy, alCerrar }) {
   );
 }
 
-function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar }) {
+function HojaLlegas({ l, prep, pendiente, baja = false, alGuardar, alCerrar, arriba = null }) {
   const { atleta } = useApp();
   const [hecho, setHecho] = useState(null);
   const consejo = consejoPreparacion(hecho || prep);
   return (
     <Hoja titulo="Cómo llegas hoy" alCerrar={alCerrar}>
+      {arriba}
       {l.estado === 'sin_respuesta' && !hecho ? (
         pendiente ? (
           <>

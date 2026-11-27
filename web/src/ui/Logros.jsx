@@ -10,6 +10,11 @@ import { hayImagen } from './Imagen.jsx';
 import { celebrar } from './atleta/sesion-audio.js';
 import { useBienvenidaAbierta } from './Bienvenida.jsx';
 import { useTurnoCelebracion } from './turno-celebracion.js';
+import { perezoso } from './perezoso.jsx';
+import { conTransicion } from './transiciones.js';
+
+// (tacto 213 y 236) La medalla en grande de la hoja de un logro, que se coge y gira: va aparte y se pide al bajar el dedo
+const MedallaHeroe = perezoso(() => import('./MedallaHeroe.jsx'), 'MedallaHeroe', { mientras: null });
 
 // v0.51: medallas de metal. Los cuatro niveles de siempre (los mismos umbrales) son bronce, plata, oro y diamante: la
 // cara con un degradado radial (la luz arriba a la izquierda), el canto con su degradado y su dibujo (liso, perlado,
@@ -133,6 +138,9 @@ export function Logros({ salud }) {
   const medallas = lista.reduce((t, l) => t + l.nivel, 0), total = lista.length * 4;
   // (v0.204) la medalla que tienes más cerca brilla y dice cuánto te falta
   const proxima = proximaMedalla(lista);
+  // (tacto 213) la medalla viaja de su hueco a su hoja (se espera un instante a su trozo, que ya se pidió al bajar el dedo)
+  const abrir = (l, el) => Promise.race([MedallaHeroe.precargar(), new Promise((ok) => { setTimeout(ok, 220); })])
+    .then(() => conTransicion(() => setAbierto(l), 'morph', [{ nombre: 'vt-viaje', desde: el.querySelector('.medalla-metal'), hasta: '[data-llega="medalla"]' }]));
   return (
     <section class="seccion" aria-labelledby="logros-titulo">
       <div class="seccion-cab"><h2 id="logros-titulo">Logros</h2><span class="peq secundario num">{medallas} de {total} medallas</span></div>
@@ -140,7 +148,7 @@ export function Logros({ salud }) {
         <ul class="logros">
           {lista.map((l) => (
             <li key={l.id}>
-              <button class={`logro ${l.id === proxima ? 'proxima' : ''}`} onClick={() => setAbierto(l)}
+              <button class={`logro ${l.id === proxima ? 'proxima' : ''}`} onPointerDown={MedallaHeroe.precargar} onClick={(ev) => abrir(l, ev.currentTarget)}
                 aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}${l.id === proxima ? `. Es la que tienes más cerca: te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}` : ''}`}>
                 <MedallaMetal nivel={l.nivel} logro={l.id} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
                 <span class="logro-metal" aria-hidden="true">{nombreMetal(l.nivel)}</span>
@@ -160,6 +168,7 @@ export function Logros({ salud }) {
 function HojaLogro({ logro: l, alCerrar }) {
   return (
     <Hoja titulo={l.titulo} alCerrar={alCerrar}>
+      <MedallaHeroe logro={l} Metal={MedallaMetal} c={METAL[metalDe(l.nivel)?.id] || null} nombre={nombreMetal(l.nivel)} />
       <p class="secundario">{l.nivel ? `Tienes la ${medallaDe(l.nivel)}: ${l.conseguido}.` : 'Aún no tienes ninguna medalla de este logro.'}
         {l.siguiente ? ` Para la siguiente te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}.` : ' Ya las tienes todas.'}</p>
       <ol class="logro-niveles">

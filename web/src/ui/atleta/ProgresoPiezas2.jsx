@@ -9,7 +9,7 @@ import { diasDeSemana, textoDiasSemana, flechaCifra, trofeosNuevos, trofeosVisto
 import { pesoTxt } from '../../logica/unidades.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { Hoja, Icono, CajaGrafica, useAncho, useRaspado } from '../comunes.jsx';
-import { sinMovimiento } from '../transiciones.js';
+import { sinMovimiento, conTransicion } from '../transiciones.js';
 
 // ---------------------------------------------------------------- a pantalla completa
 // El botón de las cuatro esquinas junto al título de una gráfica; abre la gráfica a toda la pantalla (y en horizontal si
@@ -17,10 +17,22 @@ import { sinMovimiento } from '../transiciones.js';
 const altoGrande = () => (typeof window === 'undefined' ? 320 : Math.round(Math.max(220, Math.min(520, window.innerHeight * 0.58))));
 export function Ampliable({ titulo, children }) {
   const [abierta, setAbierta] = useState(false);
+  // (tacto 214) la gráfica de la tarjeta crece hasta la pantalla completa, y vuelve a su tarjeta al cerrar
+  const origen = useRef(null);
+  const abrir = (ev) => {
+    origen.current = ev.currentTarget.closest('section, .panel, .tarjeta')?.querySelector('.grafica-caja') || null;
+    conTransicion(() => setAbierta(true), 'morph', [{ nombre: 'vt-viaje', desde: origen.current, hasta: '.grafica-grande .grafica-caja' }]);
+  };
+  const cerrar = () => {
+    const o = origen.current;
+    if (o?.isConnected) o.setAttribute('data-vuelve', '');
+    conTransicion(() => setAbierta(false), 'morph', [{ nombre: 'vt-viaje', desde: document.querySelector('.grafica-grande .grafica-caja'), hasta: '[data-vuelve]' }]);
+    setTimeout(() => o?.removeAttribute?.('data-vuelve'), 900);
+  };
   return (
     <>
-      <button type="button" class="btn btn-icono plano btn-ampliar" aria-label={`Ver «${titulo}» a pantalla completa`} onClick={() => setAbierta(true)}><Icono n="ampliar" /></button>
-      {abierta && <PantallaGrafica titulo={titulo} alCerrar={() => setAbierta(false)}>{children}</PantallaGrafica>}
+      <button type="button" class="btn btn-icono plano btn-ampliar" aria-label={`Ver «${titulo}» a pantalla completa`} onClick={abrir}><Icono n="ampliar" /></button>
+      {abierta && <PantallaGrafica titulo={titulo} alCerrar={cerrar}>{children}</PantallaGrafica>}
     </>
   );
 }

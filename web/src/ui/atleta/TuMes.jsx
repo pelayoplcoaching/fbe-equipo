@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Anillo, usePreferencia, Capa, PortadaHistoria } from '../comunes.jsx';
 import { useHistoriaTacto } from '../historia-tacto.js';
+import { viajeHistoria } from './TuSemana.jsx';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { conNutricion, conEntrenamiento } from '../../logica/nivel.js';
 import { nombreMes, mesConAnio, mesAnterior, calendarioMes, datosCompartirMes } from '../../logica/mes.js';
@@ -30,7 +31,7 @@ export function TarjetaMes({ salud }) {
   return (
     <>
       <section class="tarjeta-semana tarjeta-mes" aria-label={`Tu ${nombreMes(mes)}`}>
-        <button class="tarjeta-semana-abrir" onClick={() => { setAbierta(true); setVisto(mes); }}>
+        <button class="tarjeta-semana-abrir" onClick={(ev) => viajeHistoria(() => { setAbierta(true); setVisto(mes); }, ev.currentTarget)}>
           <PortadaHistoria tono="mes" />
           <span class="pila-xs">
             <span class="mini">Tu {nombreMes(mes)}</span>

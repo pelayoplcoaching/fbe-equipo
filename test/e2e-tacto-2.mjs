@@ -43,7 +43,9 @@ export async function probarTacto2({ navegador, check, base = 'http://localhost:
     await p.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* */ } });
     const entrar = async () => {
       await p.goto(`${base}/?demo=esencial`);
-      await p.getByRole('button', { name: /Tomás/ }).first().click();
+      // (la segunda vez la demo puede entrar sola con quien ya estaba)
+      const quien = p.getByRole('button', { name: /Tomás/ }).first();
+      if (await quien.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) await quien.click();
       await p.locator('nav.tabs').waitFor({ timeout: 30000 });
       await p.waitForTimeout(1500);
       await cerrarDialogos();

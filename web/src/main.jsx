@@ -126,6 +126,8 @@ async function arrancar() {
     return;
   }
   await listaImagenes;
+  // (tacto 220) tras «Actualizar», a la altura a la que se estaba
+  try { if (sessionStorage.getItem('fbe-vuelta')) import('./ui/actualizar-suave.js').then((m) => m.volver()).catch(() => {}); } catch { /* sin almacenamiento */ }
   render(<App backend={backend} api={api} cola={cola} />, document.getElementById('app'));
   // (sonido, tanda 2) el audio de la app, listo con el primer toque (sin sonar nada)
   import('./ui/sonido.js').then((m) => m.prepararAlTocar()).catch(() => {});

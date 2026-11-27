@@ -8,6 +8,7 @@ import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorC
 import { FotoReceta } from './ComidasComun.jsx';
 import { Ingredientes, PasoConTiempos, PastillaCocina, ModoCocina, FotoGuardable, estrellaSalta } from './Cocina.jsx';
 import { vibrar } from './hapticos.js';
+import { conTransicion } from './transiciones.js';
 import { COLOR_MACRO } from './NutricionComun.jsx';
 import { textoMacros, macrosDe, ordenarTomas, NOMBRE_TOMA } from '../logica/comidas.js';
 import { porCapitulos, capitulos, filtrarRecetas, FILTROS, textoTiempo, textoBatch, lineasIngredientes, pasosDe, resumenRecetario, capituloDe, bloqueDe } from '../logica/recetario-equipo.js';
@@ -27,7 +28,7 @@ function TarjetaEquipo({ r, favorita, alAbrir, ajuste = null }) {
   const m = macrosDe(r, aj?.factor || 1);
   const conProt = m?.proteina_g != null;
   return (
-    <button type="button" class="tarjeta-receta tarjeta-equipo" onClick={() => alAbrir(r)}>
+    <button type="button" class="tarjeta-receta tarjeta-equipo" data-receta={r.id} onClick={(ev) => alAbrir(r, ev.currentTarget)}>
       <FotoReceta receta={r} toma={ordenarTomas(r.tomas || [])[0] || null} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{favorita && <Icono n="estrella" class="favorita" titulo="Guardada" />}{r.nombre}</span>
@@ -62,6 +63,9 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
   const [filtro, setFiltro] = usePreferencia('fbe-recetario-equipo-filtro', 'todas');
   const [capitulo, setCapitulo] = useState(null);
   const [abierta, setAbierta] = useState(null);
+  // (tacto 212) la foto de la tarjeta crece hasta ser la cabecera de la receta, y vuelve a su sitio al cerrar
+  const abrir = (r, tarjeta) => conTransicion(() => setAbierta(r), 'morph', [{ nombre: 'vt-viaje', desde: tarjeta?.querySelector('.receta-foto'), hasta: '.receta-equipo .receta-foto.grande' }]);
+  const cerrar = () => { const id = abierta?.id; conTransicion(() => setAbierta(null), 'morph', [{ nombre: 'vt-viaje', desde: document.querySelector('.receta-equipo .receta-foto.grande'), hasta: `[data-receta="${id}"] .receta-foto` }]); };
   const F = fotos.datos || null;
   const recetas = useMemo(() => { const xs = datos.datos?.recetas || []; return F ? xs.map((r) => (F[r.id] ? { ...r, foto_mini: F[r.id] } : r)) : xs; }, [datos.datos, F]);
   const favoritas = useMemo(() => new Set(datos.datos?.favoritas || []), [datos.datos]);
@@ -104,11 +108,11 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
         <section class="seccion" key={c.capitulo} aria-labelledby={`cap-${c.capitulo}`}>
           <div class="seccion-cab"><h2 id={`cap-${c.capitulo}`}>{c.capitulo}</h2><span class="mini terciario">{c.n === 1 ? '1 receta' : `${c.n} recetas`}</span></div>
           <div class="pila">
-            {c.bloques.map((b) => <Bloque key={b.bloque} capitulo={c.capitulo} bloque={b.bloque} recetas={b.recetas} favoritas={favoritas} alAbrir={setAbierta} reinicio={reinicio} ajuste={ajuste} />)}
+            {c.bloques.map((b) => <Bloque key={b.bloque} capitulo={c.capitulo} bloque={b.bloque} recetas={b.recetas} favoritas={favoritas} alAbrir={abrir} reinicio={reinicio} ajuste={ajuste} />)}
           </div>
         </section>
       ))}
-      {abierta && <HojaRecetaEquipo r={abierta} favorita={favoritas.has(abierta.id)} esCoach={esCoach} alCerrar={() => setAbierta(null)} ajuste={ajuste ? ajuste(abierta) : null}
+      {abierta && <HojaRecetaEquipo r={abierta} favorita={favoritas.has(abierta.id)} esCoach={esCoach} alCerrar={cerrar} ajuste={ajuste ? ajuste(abierta) : null}
         alMarcar={atletaId && !esCoach ? (si) => marcar(abierta, si) : null}
         alAnadir={alAnadir ? (raciones, factor) => { const r = abierta; setAbierta(null); alAnadir(r, raciones, factor); } : null} />}
     </div>
