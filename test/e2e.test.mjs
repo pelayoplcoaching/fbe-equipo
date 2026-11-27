@@ -642,6 +642,8 @@ if (parte(PRINCIPAL)) try {
   await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const pildoraD = p.locator('.pildora-descanso');
   await pildoraD.waitFor();
+  // (tacto 209, v0.271) nada más marcar la serie dice «Hecha» un momento; enseguida, lo que queda
+  await p.waitForFunction(() => /^\d:\d\d/.test((document.querySelector('.pildora-descanso')?.textContent || '').trim()), null, { timeout: 5000 }).catch(() => {});
   check(/^\d:\d\d/.test((await pildoraD.textContent()).trim()) && (await pildoraD.getAttribute('aria-label')) === 'Descanso en curso, toca para volver' && (await pildoraD.getAttribute('aria-live')) === 'off', `fuera de la vista, una píldora con lo que queda («${(await pildoraD.textContent()).trim()}»)`);
   await revisar('temporizador-pildora');
   await pildoraD.click();
