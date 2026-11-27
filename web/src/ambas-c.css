@@ -1,0 +1,50 @@
+/* Belleza para las dos apps, tanda C (v0.263): acabado y para todos. La lista, en el doc del proyecto
+   "claude/belleza-150-ambas.md" (C101 a C150). Es solo como se ve: textos y cifras, iguales. Las reglas de lo de cada
+   pantalla, con una sola clase (van con su trozo); las del comun, con la clase doble (no obligan a copiar las de los trozos). */
+
+/* -- C110 - La X de cerrar las hojas: el mismo disco de 32 px, pero 44 px de toque (sin mover nada de la cabecera) */
+.cerrar-hoja.cerrar-hoja {
+  width: 2.75rem; min-width: 2.75rem; height: 2.75rem; min-height: 2.75rem; margin: calc(-1 * var(--esp-6));
+  background: radial-gradient(circle, color-mix(in srgb, var(--tinta) 7%, transparent) 0 var(--esp-16), transparent calc(var(--esp-16) + 0.5px));
+}
+@media (forced-colors: active) { .cerrar-hoja.cerrar-hoja { background: none; } }
+
+/* -- C130 - Las tiras de chips que se desplazan (Recetas, Progreso...) se desvanecen en el borde: se ve que hay mas */
+.selector-chips.selector-chips {
+  -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, var(--tinta) calc(100% - var(--esp-24)), transparent);
+  mask-image: linear-gradient(var(--oklab,) 90deg, var(--tinta) calc(100% - var(--esp-24)), transparent);
+}
+@media (forced-colors: active) { .selector-chips.selector-chips { -webkit-mask-image: none; mask-image: none; } }
+
+/* -- C134 - El calendario de Semana, con el fin de semana un punto mas claro */
+.tira-dia.tira-dia:nth-child(n+6):not(.hoy) { background: color-mix(in srgb, var(--hoja-2) 45%, var(--hoja)); }
+
+/* -- C146 - El check-in: "Tu semana de un vistazo", cuatro cifras en fichas con su icono (era una lista de puntos) */
+.ck-vistazo-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); padding: 0; list-style: none; }
+.ck-vl {
+  display: grid; grid-template-columns: var(--ico-18) minmax(0, 1fr); align-items: start; gap: var(--esp-8); padding: var(--esp-10) var(--esp-12);
+  border-radius: var(--r-10); background: var(--hoja-2); font-variant-numeric: tabular-nums; text-wrap: balance;
+}
+.ck-vl::before {
+  content: ""; width: var(--ico-18); height: var(--ico-18); margin-block-start: var(--esp-2); background: var(--morado);
+  -webkit-mask: var(--ico-l) center / contain no-repeat; mask: var(--ico-l) center / contain no-repeat;
+}
+.ck-vl-semana { --ico-l: var(--ico-semana); }
+.ck-vl-rayo { --ico-l: var(--ico-rayo); }
+.ck-vl-gimnasio { --ico-l: var(--ico-gimnasio); }
+.ck-vl-bascula { --ico-l: var(--ico-bascula); }
+@media (forced-colors: active) { .ck-vl { border: var(--filo-fino) solid CanvasText; } .ck-vl::before { background: CanvasText; } }
+
+/* -- C138 - El video de la semana: mientras no hay miniatura, el fondo de la noche de la marca en lugar de la caja negra */
+.yt-fachada.yt-fachada { background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--marca-500) 35%, transparent), transparent 60%), linear-gradient(var(--oklab,) 160deg, var(--noche-2), var(--marca-900)); }
+
+/* -- C144 - Los atajos del perfil, con el icono en un disco de su color (como los iconos de Ajustes) */
+.atajo-k-checkin .atajo-ico { background: color-mix(in srgb, var(--cat-violeta) 16%, var(--hoja)); color: var(--cat-violeta); }
+.atajo-k-progreso .atajo-ico { background: color-mix(in srgb, var(--cat-verde) 16%, var(--hoja)); color: var(--cat-verde); }
+.atajo-k-mensajes .atajo-ico { background: color-mix(in srgb, var(--cat-azul) 16%, var(--hoja)); color: var(--cat-azul); }
+.atajo-k-semana .atajo-ico { background: color-mix(in srgb, var(--cat-turquesa) 16%, var(--hoja)); color: var(--cat-turquesa); }
+.atajo-k-comidas .atajo-ico { background: color-mix(in srgb, var(--cat-naranja) 16%, var(--hoja)); color: var(--cat-naranja); }
+.atajo-k-aprende .atajo-ico { background: color-mix(in srgb, var(--cat-ambar) 16%, var(--hoja)); color: var(--cat-ambar); }
+.atajo-k-equipo .atajo-ico { background: color-mix(in srgb, var(--cat-rojo) 16%, var(--hoja)); color: var(--cat-rojo); }
+.atajo-k-carne .atajo-ico { background: color-mix(in srgb, var(--cat-cielo) 16%, var(--hoja)); color: var(--cat-cielo); }
+.atajo-k-datos .atajo-ico { background: color-mix(in srgb, var(--cat-gris) 16%, var(--hoja)); color: var(--cat-gris); }

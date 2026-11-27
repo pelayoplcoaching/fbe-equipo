@@ -657,7 +657,7 @@ export function AtajosPerfil({ irA }) {
   return (
     <nav class="atajos-perfil" aria-label="Tus atajos">
       {lista.map((k) => (
-        <button key={k} type="button" class="atajo-perfil" onClick={() => ir(D[k][3])}><span class="atajo-ico" aria-hidden="true"><Icono n={D[k][2]} /></span><span class="mini">{D[k][1]}</span></button>
+        <button key={k} type="button" class={`atajo-perfil atajo-k-${k}`} onClick={() => ir(D[k][3])}><span class="atajo-ico" aria-hidden="true"><Icono n={D[k][2]} /></span><span class="mini">{D[k][1]}</span></button>
       ))}
       <button type="button" class="atajo-perfil atajo-editar" onClick={() => setEditar(true)} aria-label="Elegir tus atajos"><span class="atajo-ico" aria-hidden="true"><Icono n="editar" /></span><span class="mini">Cambiar</span></button>
       {editar && (

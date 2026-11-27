@@ -489,7 +489,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
       {!yaEnviado && lineasSemanaCheckin(resumen).length > 0 && (
         <section class="panel panel-pad ck-vistazo" aria-label="Tu semana de un vistazo">
           <span class="mini terciario">Tu semana de un vistazo</span>
-          <ul class="ck-vistazo-lista">{lineasSemanaCheckin(resumen).map((t) => <li key={t} class="peq">{t}</li>)}</ul>
+          <ul class="ck-vistazo-lista">{lineasSemanaCheckin(resumen).map((t) => <li key={t} class={`peq ck-vl ck-vl-${t.startsWith('Esfuerzo') ? 'rayo' : t.includes('toneladas') ? 'gimnasio' : t.startsWith('Último peso') ? 'bascula' : 'semana'}`}>{t}</li>)}</ul>
         </section>
       )}
       {/* (054) lo que dejó a medias en este móvil */}
