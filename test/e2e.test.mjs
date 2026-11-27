@@ -6760,6 +6760,24 @@ if (parte('v0.271: tacto, primera vuelta')) try {
   fallos++;
   console.log('  ✗ el tacto de la v0.271:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.272: tacto, segunda vuelta: la barra con el dedo, las recetas con las manos, la sesión que se ve cambiar y el modo
+// zurdo (test/e2e-tacto-2.mjs)
+if (parte('v0.272: tacto, segunda vuelta')) try {
+  const { probarTacto2 } = await import('./e2e-tacto-2.mjs');
+  await probarTacto2({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el tacto de la v0.272:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+// v0.272: lo que viaja (receta, medalla, gráfica, historias, dial, vídeos y fotos), asomarse al mantener pulsado, la semana
+// que se reparte delante de ti y las gráficas con dos dedos (test/e2e-tacto-3.mjs)
+if (parte('v0.272: lo que viaja, lo que se asoma y los dos dedos')) try {
+  const { probarTacto3 } = await import('./e2e-tacto-3.mjs');
+  await probarTacto3({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los viajes de la v0.272:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

@@ -9,6 +9,10 @@ import { LUZ_SEG, luzBorde, serieCorta, HECHA_MS, formaPastilla, cartelDe, esTum
 import { PAUSA_MS, decidirGesto, cierraAlBajar, destinoLado, gomaLado } from '../web/src/logica/historia-gesto.js';
 import { cifraIngrediente, trozosDePaso, tiemposDePaso, textoReloj, textoDuracion, tengoDe, tengoCon, quedaDe } from '../web/src/logica/cocina.js';
 import { atajosDe, LARGO_MS } from '../web/src/logica/barra-atajos.js';
+import { GRADOS_PX, caraDe, giroDestino, duracionGiro, luzGiro, velocidadGiro } from '../web/src/logica/medalla-giro.js';
+import { ASOMA_MS, ASOMA_QUIETO, ASOMA_ABRE, asomaSesion, asomaEjercicio, asomaRotulo, sitioAsoma } from '../web/src/logica/asomar.js';
+import { PELLIZCO, PELLIZCO_MS, partesPunto, puntoEn, cambioTramo, rangoAlPellizcar } from '../web/src/logica/grafica-dedos.js';
+import { NOMBRES_COMPARTIDOS, paresValidos } from '../web/src/logica/vistas.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -188,12 +192,103 @@ check(/data-atajo="empezar"/.test(hoy) && (hoy.match(/data-atajo="peso"/g) || []
 check(/r\.toggleAttribute\('data-zurdo', a\.zurdo === true\)/.test(src('ui/ajustes.js')) && /<Interruptor id="aj-zurdo" icono="intercambiar" texto="Modo zurdo" valor=\{a\.zurdo === true\}/.test(src('ui/Ajustes.jsx'))
   && /class=\{`serie zd-fila /.test(src('ui/atleta/FilaSerie.jsx')) && /class="hecho-btn zd-visto"/.test(src('ui/atleta/FilaSerie.jsx')) && /class="series-cab zd-cab"/.test(sesion), '(205) el modo zurdo es un ajuste de este móvil (apagado de serie) y marca la página');
 
+console.log('\nLo que tocas viaja (212-220)');
+check(NOMBRES_COMPARTIDOS.includes('vt-viaje') && paresValidos([{ nombre: 'vt-viaje', desde: {}, hasta: '.x' }]).length === 1, 'un nombre compartido para todos los viajes (vt-viaje), en la lista de los que se pueden usar');
+const piezas2 = src('ui/atleta/ProgresoPiezas2.jsx'), tuSemana = src('ui/atleta/TuSemana.jsx'), logrosJsx = src('ui/Logros.jsx'), heroe = src('ui/MedallaHeroe.jsx'), diales = src('ui/atleta/Diales.jsx');
+check(/const abrir = \(r, tarjeta\) => conTransicion\(\(\) => setAbierta\(r\), 'morph', \[\{ nombre: 'vt-viaje', desde: tarjeta\?\.querySelector\('\.receta-foto'\), hasta: '\.receta-equipo \.receta-foto\.grande' \}\]\)/.test(recetario)
+  && /hasta: `\[data-receta="\$\{id\}"\] \.receta-foto` \}\]\); \};/.test(recetario), '(212) la foto de la receta crece hasta la cabecera y vuelve a su tarjeta al cerrar');
+check(/desde: origen\.current, hasta: '\.grafica-grande \.grafica-caja'/.test(piezas2) && /hasta: '\[data-vuelve\]'/.test(piezas2)
+  && /\.grafica-grande:not\(#n\) \.grafica-caja\.trazada :is\(\.linea\[pathLength\], \.area-deg, \.punto, \.pesada, text\.valor\) \{ animation: none; \}/.test(src('tacto-b.css')),
+  '(214) la gráfica crece de su tarjeta a la pantalla completa (y vuelve), ya dibujada: no se vuelve a trazar');
+check(/export const viajeHistoria = \(cambio, tarjeta\) => conTransicion\(cambio, 'morph', \[\{ nombre: 'vt-viaje', desde: tarjeta, hasta: '\.historia' \}\]\);/.test(tuSemana)
+  && /alAbrir=\{\(ev\) => viajeHistoria\(\(\) => setAbierta\(true\), ev\.currentTarget\)\}/.test(hoy) && /viajeHistoria\(\(\) => \{ setAbierta\(true\); setVisto\(mes\); \}, ev\.currentTarget\)/.test(src('ui/atleta/TuMes.jsx'))
+  && /viajeHistoria\(\(\) => \{ setAbierta\(true\); setVisto\(anio\); \}, ev\.currentTarget\)/.test(src('ui/atleta/TuAnio.jsx')), '(215) la tarjeta de «Tu semana», «Tu mes» y «Tu año» se abre hasta llenar la pantalla');
+check(/onClick=\{\(ev\) => conTransicion\(alAbrir, 'morph', \[\{ nombre: 'vt-viaje', desde: ev\.currentTarget\.firstElementChild, hasta: '\.hoja-dialogo \.yt-marco' \}\]\)\}/.test(src('ui/Videos.jsx')), '(217) la miniatura de un vídeo crece hasta su reproductor');
+const diario = src('ui/Diario.jsx'), visor = src('ui/chat/Visor.jsx');
+check(/desde: ev\.currentTarget\.querySelector\('\.diario-medio'\)/.test(diario) && /<button type="button" class="vfp-abrir" aria-label="Ver la foto a pantalla completa" onClick=\{abrirVisor\}>/.test(diario)
+  && /<Visor inicio=\{visor\.inicio\} urls0=\{visor\.urls0\} alCerrar=/.test(diario) && !/visor-medio|visor-diapo/.test(diario), '(218) la foto de progreso crece desde su miniatura y, al tocarla, se abre en el visor (sin nombrar sus clases: sus estilos viajan con él)');
+check(/alResponder = null/.test(visor) && /\{alResponder && <button type="button" class="visor-accion"/.test(visor) && /const quien = m\.quien \?\? nombreDe\(c\.autor\);/.test(visor) && /\{m\.cuando \?\? cuandoInfo\(c\.creado_en\)\}/.test(visor)
+  && /useState\(urls0 \|\| \{\}\)/.test(visor), 'el visor del chat vale para ellas: sin «Responder», con su fecha y con la foto que ya está cargada');
+check(/const arriba = \(id, estado\) => <span class="dial dial-arriba" data-estado=\{estado\}>\{esf\[id\]\(\)\}<\/span>;/.test(diales) && /hasta: '\.dial-arriba \.dial-esfera'/.test(diales) && (diales.match(/\{arriba\}/g) || []).length === 5
+  && /abierto === 'sueno' && su \? arriba\('sueno', su\.estado\)/.test(diales), '(219) el dial que se toca sube a la cabecera de su hoja (las cinco hojas; el del sueño, con el suyo)');
+const suave = src('ui/actualizar-suave.js');
+check(/import\('\.\/actualizar-suave\.js'\)\.then\(\(m\) => m\.cubrir\(\)\)\.catch\(\(\) => \{\}\)\.then\(\(\) => \{/.test(src('ui/App.jsx')) && /if \(sessionStorage\.getItem\('fbe-vuelta'\)\) import\('\.\/ui\/actualizar-suave\.js'\)\.then\(\(m\) => m\.volver\(\)\)/.test(main)
+  && /ahora - v\.t < 30000 && v\.ruta === ruta \? v\.y : 0/.test(suave) && /sessionStorage\.removeItem\(CLAVE\)/.test(suave) && /if \(sinMovimiento\(\) \|\| !d\.animate\) \{ ok\(\); return; \}/.test(suave),
+  '(220) actualizar sin pantallazo: funde a la noche de la portada, apunta por dónde ibas (una vez, medio minuto) y vuelve ahí; su código llega al tocar «Actualizar»');
+
+console.log('\nLa medalla se coge (213 y 236)');
+check(caraDe(0) === 'frente' && caraDe(180) === 'dorso' && caraDe(-180) === 'dorso' && caraDe(360) === 'frente' && caraDe(80) === 'frente' && caraDe(100) === 'dorso', 'de frente o de espaldas, según el ángulo');
+check(giroDestino(70, 0) === 0 && giroDestino(100, 0) === 180 && giroDestino(40, 0.6) === 180 && giroDestino(0, 5) === 540 && giroDestino(0, -5) === -540 && Object.is(giroDestino(-20, 0), 0) && giroDestino(200, -0.9) === 0,
+  'al soltarla sigue con su inercia (como mucho vuelta y media) y se para en la cara más cercana');
+check(duracionGiro(0, 0) === 320 && duracionGiro(0, 180) === 548 && duracionGiro(0, 720) === 1100 && GRADOS_PX > 1 && GRADOS_PX < 2, 'tarda más cuanto más le queda (entre un tercio de segundo y uno y pico)');
+check(JSON.stringify(luzGiro(0)) === '{"x":0,"o":0}' && JSON.stringify(luzGiro(90)) === '{"x":60,"o":1}' && luzGiro(180).o === 0 && JSON.stringify(luzGiro(270)) === '{"x":-60,"o":1}' && velocidadGiro(0, 10, 10) === 0.6 && velocidadGiro(1, 5, 0) === 1,
+  'el brillo la cruza al girar (de frente y de espaldas, nada), y la velocidad se suaviza');
+check(/const MedallaHeroe = perezoso\(\(\) => import\('\.\/MedallaHeroe\.jsx'\), 'MedallaHeroe', \{ mientras: null \}\);/.test(logrosJsx) && /onPointerDown=\{MedallaHeroe\.precargar\}/.test(logrosJsx)
+  && /hasta: '\[data-llega="medalla"\]' \}\]\)\);/.test(logrosJsx) && /<MedallaHeroe logro=\{l\} Metal=\{MedallaMetal\}/.test(logrosJsx), '(213) viaja de su hueco a su hoja; su código se pide al bajar el dedo');
+check(!/from '\.\/Logros\.jsx'|logica\/tablero/.test(heroe) && /aria-pressed=\{dorso\}/.test(heroe) && /if \(e\.button > 0 \|\| st\.g \|\| sinMovimiento\(\)\) return;/.test(heroe) && /if \(sinMovimiento\(\) \|\| desde === hasta\) \{ poner\(hasta\); return; \}/.test(heroe)
+  && /<span class="mdl-como">\{l\.nivel \? l\.conseguido : l\.niveles\[0\]\.texto\}<\/span>/.test(heroe), 'es un botón (un toque o Intro le dan la vuelta), detrás dice cómo se ganó, quieta con «reducir movimiento», y no importa nada del arranque (lo recibe)');
+
+console.log('\nAsomarse (221-223)');
+const ej = (nombre, extra = {}) => ({ series: 3, reps_min: 8, reps_max: 10, descanso_seg: 90, ejercicio: { nombre, grupos_musculares: ['pectoral'] }, ...extra });
+const pend = asomaSesion({ sesion: { nombre: 'Torso B', completada: false }, ejercicios: [ej('Press inclinado'), ej('Dominadas', { reps_min: 6, reps_max: 6 }), ej('Fondos'), ej('Remo'), ej('Face pull'), ej('Extensiones'), ej('Curl')] });
+check(pend.titulo === 'Torso B' && /^7 ejercicios · unos \d+ min$/.test(pend.sub) && pend.lineas.length === 6 && pend.mas === 1 && pend.lineas[0].join('|') === 'Press inclinado|3 × 8–10' && pend.lineas[1][1] === '3 × 6' && pend.pie === '',
+  `una sesión por hacer: sus ejercicios con su pauta (los seis primeros y «y 1 más») y lo que dura («${pend.sub}»)`);
+const hecha = asomaSesion({ sesion: { nombre: 'Torso A', completada: true, fecha_realizada: '2026-11-23', duracion_min: 65, rpe_sesion: 7, nota_atleta: 'Buena sesión' },
+  ejercicios: [ej('Press banca', { hechas: [{ kg: 45, reps: 6, rpe: 8 }, { kg: 47.5, reps: 6, rpe: 8.5 }, { kg: 47.5, reps: 5, rpe: 9 }] }), ej('Plancha', { hechas: [] })] });
+check(hecha.sub === 'Hecha el lun 23 nov · 65 min · esfuerzo 7/10' && hecha.lineas[0].join('|') === 'Press banca|3 × 47,5×6 @8,5' && hecha.lineas[1][1] === 'Sin apuntar' && hecha.pie === '«Buena sesión»' && asomaSesion(null) === null && asomaSesion({}) === null,
+  'una hecha: el día, el tiempo y el esfuerzo, lo que hiciste en cada ejercicio (series y la mejor) y tu nota');
+const sEj = (fecha, sesion_id, numero, kg, reps, rpe) => ({ fecha, sesion_id, numero, kg, reps, rpe });
+const aEj = asomaEjercicio('Press inclinado', [sEj('2026-11-13', 'a', 1, 16, 10, 8.5), sEj('2026-11-20', 'b', 1, 16, 9, 8), sEj('2026-11-20', 'b', 2, 16, 9, 8.5)]);
+check(aEj.sub === '2 veces' && aEj.lineas[0].join('|') === 'Última vez, vie 20 nov|16×9 @8 · 16×9 @8,5' && /^Mejor marca, vie 13 nov\|16×10 @8,5 \(1RM estimado \d+[,.]\d kg\)$/.test(aEj.lineas[1].join('|'))
+  && asomaEjercicio('Dominadas', []).sub === 'Aún no lo has hecho' && asomaEjercicio('Dominadas', [sEj('2026-11-20', 'b', 1, null, 7, 8)]).lineas.length === 1,
+  `un ejercicio: su última vez y su mejor marca («${aEj.lineas[1][1]}»); sin carga, solo la última vez; sin historia, lo dice`);
+const rot = asomaRotulo('Constancia: medalla de plata, 10 sesiones hechas. Siguiente: 50 sesiones hechas. Es la que tienes más cerca: te faltan 39');
+check(rot.titulo === 'Constancia' && rot.sub === 'Medalla de plata, 10 sesiones hechas' && rot.pie === 'Siguiente: 50 sesiones hechas. Es la que tienes más cerca: te faltan 39' && asomaRotulo('') === null && asomaRotulo('Sin dos puntos').titulo === 'Sin dos puntos',
+  'una medalla: lo que ya dice su rótulo (su metal y cuánto falta para la siguiente)');
+const s1 = sitioAsoma({ left: 20, top: 400, bottom: 470, width: 350 }, 200), s2 = sitioAsoma({ left: 20, top: 100, bottom: 170, width: 350 }, 200), s3 = sitioAsoma({ left: 300, top: 700, bottom: 800, width: 80 }, 300, { vw: 390, vh: 844 });
+check(s1.arriba && s1.y === 188 && s1.x === 35 && s1.w === 320 && !s2.arriba && s2.y === 182 && s3.x === 58 && s3.arriba && ASOMA_MS >= 350 && ASOMA_MS <= 500 && ASOMA_QUIETO === 10 && ASOMA_ABRE >= 44,
+  'la tarjeta sale encima de lo que se toca si cabe (si no, debajo), sin salirse por los lados');
+const asomarJsx = src('ui/atleta/asomar.jsx');
+check(/if \(g \|\| e\.button > 0 \|\| e\.pointerType === 'mouse'\) return;/.test(asomarJsx) && /el\.addEventListener\('touchmove', frena, \{ passive: false \}\);/.test(asomarJsx) && /function frena\(e\) \{ if \(g\?\.abierta && e\.cancelable\) e\.preventDefault\(\); \}/.test(asomarJsx)
+  && /if \(!g\.abierta\) \{ if \(Math\.hypot\(dx, dy\) > ASOMA_QUIETO\) \{ soltar\(g\.el\); g = null; \} return; \}/.test(asomarJsx) && /if \(s\.abre && e\.type !== 'pointercancel'\) \{ vibrar\('elegir'\); s\.el\.click\(\); \}/.test(asomarJsx),
+  'solo con el dedo: si se mueve antes, es desplazar la página; con la tarjeta fuera, el dedo ya no la desplaza; subirlo y soltar la abre');
+check(!/entreno-nombre|ss-etq|\.chip/.test(asomarJsx) && /nodo\.setAttribute\('aria-hidden', 'true'\)/.test(asomarJsx) && /const quitarAsomar = instalarAsomar\(leer\);/.test(barra) && /api: apiG, atleta: atletaG \};/.test(atletaApp),
+  'llega con los gestos de la barra (nada en el arranque), no nombra clases de otras pantallas y no estorba al lector de pantalla');
+check(/data-asoma=\{`sesion:\$\{sesion\.id\}`\}/.test(hoy) && /data-asoma=\{`ejercicio:\$\{e\.ejercicio_id\}`\}/.test(hoy) && /data-asoma=\{`ejercicio:\$\{e\.ejercicio_id\}`\}/.test(src('ui/atleta/Portada.jsx'))
+  && /data-asoma=\{`sesion:\$\{e\.id\}`\} data-asoma-t=\{e\.nombre\}/.test(src('ui/atleta/Semana.jsx')) && /data-asoma="rotulo"/.test(logrosJsx) && /data-asoma="suyo" ref=\{\(el\) => \{ if \(el\) el\.__asoma = \(\) => \(\{ titulo: r\.nombre/.test(recetario),
+  'se asoman las sesiones (Semana y «Tus entrenamientos»), los ejercicios de «Lo que vas a hacer», las recetas y las medallas');
+
+console.log('\nLa semana y las gráficas, con las manos (229-235)');
+const plan = src('ui/atleta/Plan.jsx'), vuelo = src('ui/atleta/vuelo-plan.js');
+check(/data-d=\{d\}/.test(plan) && (plan.match(/data-ses=\{s\.id\}/g) || []).length === 3 && /const desde = d \? raiz\.current\?\.querySelector\(`\[data-ses="\$\{s\.id\}"\]`\)\?\.getBoundingClientRect\(\) : null;/.test(plan)
+  && /if \(desde\) import\('\.\/vuelo-plan\.js'\)\.then\(\(m\) => m\.volarAlDia\(raiz\.current, s\.id, d, desde\)\)/.test(plan) && /if \(!raiz \|\| !desde \|\| sinMovimiento\(\)\) return;/.test(vuelo) && /raiz\.querySelector\(`\[data-d="\$\{dia\}"\] \[data-ses="\$\{id\}"\]`\)/.test(vuelo),
+  '(229 y 230) la ficha de una sesión vuela desde donde estaba hasta su día de la tira (una detrás de otra al repartir); quieta con «reducir movimiento»');
+check(/ref=\{\(el\) => \{ if \(el && el\.scrollWidth <= el\.clientWidth \+ 2\) escalaArrastrable\(el\); \}\}/.test(src('ui/atleta/Semana.jsx')), '(231) el bloque como una regla: el dedo pasa de semana al deslizar por S1, S2… (si caben; si no, la tira se desplaza como siempre)');
+const pA = partesPunto('2 nov: 66,9 kg'), pB = partesPunto('23 nov: 76 kg, récord, semana en curso'), pT = partesPunto('26 oct: 62,2 kg (tendencia 62,5)');
+check(pB.cifra === '76' && pB.valor === 76 && pB.unidad === 'kg' && pB.pie === 'kg · 23 nov · récord, semana en curso' && pT.cifra === '62,5' && pT.valor === 62.5 && pT.pie === 'kg de tendencia · 26 oct'
+  && partesPunto('sin fecha') === null && partesPunto('1 ene: sin datos') === null && partesPunto('3 mar: −1.250,5 kcal').valor === -1250.5,
+  '(234) el titular sigue al dedo: la cifra del punto y su fecha (en el peso, la tendencia, como el titular)');
+check(cambioTramo(pA, pB, '2026-11-02', '2026-11-23') === '+9,1 kg en 3 semanas' && cambioTramo(pB, pA, '2026-11-23', '2026-11-02') === '−9,1 kg en 3 semanas' && cambioTramo(pA, pB, '2026-11-02', '2026-11-07') === '+9,1 kg en 5 días'
+  && cambioTramo(pA, pB) === '+9,1 kg del 2 nov al 23 nov' && cambioTramo(pA, pA, '2026-11-02', '2026-11-03') === '±0 kg en 1 día' && cambioTramo(null, pB) === '' && puntoEn([10, 50, 90], 60) === 1 && puntoEn([10, 50, 90], 500) === 2,
+  '(235) dos dedos marcan un tramo: cuánto ha cambiado y en cuánto tiempo («+9,1 kg en 3 semanas»)');
+check(rangoAlPellizcar(4, 1, 1.4) === 0 && rangoAlPellizcar(4, 1, 0.7) === 2 && rangoAlPellizcar(4, 0, 1.4) === null && rangoAlPellizcar(4, 3, 0.7) === null && rangoAlPellizcar(4, 1, 1.1) === null && rangoAlPellizcar(1, 0, 2) === null
+  && rangoAlPellizcar(4, -1, 2) === null && PELLIZCO > 1.2 && PELLIZCO_MS >= 300, '(233) pellizcar cambia el rango: abrir los dedos acerca (más corto) y juntarlos aleja, de uno en uno y sin pasarse');
+const gdd = src('ui/grafica-dedos.js'), comunes = src('ui/comunes.jsx');
+check(/useEffect\(\(\) => \{ if \(caja\.current\) caja\.current\.__graf = \{ W, xs, textoPunto, fechas \}; \}\);/.test(comunes) && /fechas=\{conFechas \? fx : null\}/.test(comunes) && /fechas=\{serie\.map\(\(p\) => p\.fecha\)\}/.test(comunes)
+  && /const quitarGraficas = instalarGraficaDedos\(\);/.test(barra) && /if \(e\.pointerType === 'mouse'\) return;/.test(gdd) && /querySelector\('\[role="group"\]\[aria-label\^="Rango"\]'\)/.test(gdd) && /bs\[sig\]\.click\(\);/.test(gdd),
+  'cada gráfica deja lo suyo en su caja y los gestos llegan aparte; el rango se cambia tocando su botón de siempre (que sigue ahí)');
+
 console.log('\nLa hoja de estilos (tacto-b.css)');
 const cssB = src('tacto-b.css'), sinComB = cssB.replace(/\/\*[\s\S]*?\*\//g, '');
 check(!/[^\x00-\x7F]/.test(cssB) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComB) && !/@keyframes/.test(sinComB), 'solo ASCII, los colores por su nombre y sin @keyframes (lo que se mueve una vez lo mueve el código)');
 check(main.indexOf("'./tacto-b.css'") > main.indexOf("'./tacto-a.css'") && main.indexOf("'./tacto-b.css'") < main.indexOf("'./color-capa.css'"), 'se carga detrás de la primera vuelta y antes de color-capa.css');
-const sueltas = sinComB.split('}').map((r) => r.split('{')[0].trim()).filter((sel) => /^[.:]/.test(sel) && sel.split(',').some((x) => !x.includes(':not(#n)') && !/^\s*\.tabs-flota /.test(x)));
+const sueltas = sinComB.split('}').map((r) => r.split('{')[0].trim()).filter((sel) => /^[.:]/.test(sel) && sel.split(/,(?![^(]*\))/).some((x) => !x.includes(':not(#n)') && !/^\s*(\.tabs-flota |::view-transition-(group|old|new)\(vt-viaje\)|\.dial-arriba$)/.test(x)));
 check(sueltas.length === 0, `todas sus reglas llevan :not(#n) (viajan con su trozo sin empatar con las de otros)${sueltas.length ? `: ${sueltas.slice(0, 3).join(' | ')}` : ''}`);
+check(/::view-transition-group\(vt-viaje\) \{ animation-duration: 380ms; animation-timing-function: cubic-bezier\(\.2, \.9, \.25, 1\); \}/.test(sinComB) && /::view-transition-old\(vt-viaje\), ::view-transition-new\(vt-viaje\) \{ animation-duration: 380ms; height: 100%; object-fit: cover; \}/.test(sinComB)
+  && /\.dial-arriba \{[^}]*pointer-events: none; zoom: 1\.4; \}/.test(sinComB), 'los viajes duran lo que los demás elementos compartidos y recortan la foto a su hueco; el dial de la hoja, más grande y sin toque');
+check((sinComB.match(/^\.gdd-[a-z-]+:not\(#n\):not\(#n\)/gm) || []).length === 5 && /^\.aso-capa\.capa:not\(#n\) \{/m.test(sinComB), 'las reglas que empataban con las de otra pantalla llevan su propio peso (no arrastran estilos al arranque)');
+check(/\.mdl-giro:not\(#n\) \{[^}]*transform-style: preserve-3d;[^}]*touch-action: pan-y;/.test(sinComB) && /\.mdl-cara:not\(#n\) \{[^}]*backface-visibility: hidden;/.test(sinComB) && /\.mdl-dorso:not\(#n\) \{ transform: rotateY\(180deg\);/.test(sinComB)
+  && /@media \(prefers-contrast: more\) \{ \.mdl-luz:not\(#n\) \{ display: none; \} \}/.test(sinComB), 'la medalla tiene dos caras de verdad; con más contraste, sin el brillo');
 check(/:root\[data-zurdo\] \.zd-fila:not\(#n\), :root\[data-zurdo\] \.zd-cab:not\(#n\) \{ grid-template-columns: 52px 26px/.test(sinComB) && /:root\[data-zurdo\] \.zd-fila:not\(#n\) > \.zd-visto, :root\[data-zurdo\] \.zd-cab:not\(#n\) > :last-child \{ order: -1; \}/.test(sinComB)
   && /:root\[data-zurdo\] \.teclado-teclas:not\(#n\) > \.tecla-siguiente \{ grid-area: 4 \/ 1 \/ auto \/ span 2; \}/.test(sinComB) && (sinComB.match(/:root\[data-zurdo\]\[data-gimnasio\]/g) || []).length === 4,
   'zurdo: el visto, primero en la fila (también en modo gimnasio y en pantallas estrechas); en el teclado, −, + y «Siguiente» a la izquierda');

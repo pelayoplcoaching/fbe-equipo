@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.272': {
+    // (tacto 201-250, segunda vuelta; «claude/belleza-350-propuesta.md»)
+    atleta: [
+      'Mantén pulsada una sesión, un ejercicio, una receta o una medalla para asomarte sin entrar: soltar cierra y subir el dedo abre.',
+      'La barra de abajo, con el pulgar: deslízalo para cambiar de pestaña o mantén pulsada una para ver sus atajos.',
+      'Recetas con las manos: tacha lo que ya tienes, toca un tiempo para arrancar su temporizador y cocina en «Modo cocina».',
+    ],
+    coach: [
+      'Tacto, segunda vuelta: asomarse al mantener pulsado, la barra con el dedo, recetas con las manos, gráficas con dos dedos y modo zurdo.',
+    ],
+  },
   '0.271': {
     // (tacto 201-250, primera vuelta; «claude/belleza-350-propuesta.md»)
     atleta: [
