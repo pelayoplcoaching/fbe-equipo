@@ -47,7 +47,7 @@ console.log('\nLa regla, en su sitio');
 const regla = src('ui/Regla.jsx'), teclado = src('ui/atleta/Teclado.jsx'), hoy = src('ui/atleta/Hoy.jsx'), checkin = src('ui/atleta/Checkin.jsx');
 check(/role="slider" tabIndex=\{0\} aria-label=\{etiqueta\} aria-orientation="horizontal"/.test(regla) && /aria-valuenow=\{ahora\} aria-valuetext=/.test(regla) && /e\.key === 'ArrowRight'/.test(regla) && /e\.key === 'PageUp' \? m/.test(regla),
   'es un deslizador para el lector de pantalla y el teclado (flechas, de salto en salto; AvPág y RePág, de número en número)');
-check(/if \(!el \|\| !st\.activo\) return;/.test(regla) && /if \(!el \|\| st\.activo\) return;/.test(regla), 'solo cambia el valor mientras la mueve la persona; si el valor cambia desde fuera, va a su sitio sin tocar nada');
+check(/if \(!el \|\| !st\.activo\) return;/.test(regla) && /if \(!el\) return;/.test(regla) && /if \(st\.activo\) return;/.test(regla), 'solo cambia el valor mientras la mueve la persona; si el valor cambia desde fuera, va a su sitio sin tocar nada (y si aún corría lanzada, deja de correr)');
 check(/const \[p, setP\] = useState\(paso\)/.test(regla) && /if \(paso !== p\) \{ setP\(paso\); return; \}/.test(regla), 'el salto no cambia bajo el dedo (con mancuernas cambia al pasar de 10 kg): se pone al soltar');
 check(/if \(t - st\.t > 26\)/.test(regla) && /vibrar\(i % a\.m === 0 \? PATRONES\.serie : PATRONES\.toque\)/.test(regla) && /passive: true/.test(regla), 'un toque por salto (algo más en cada número), sin frenar el desplazamiento');
 check(/data-sin-deslizar=""/.test(regla), 'y no se confunde con deslizar entre pestañas');
@@ -344,7 +344,8 @@ check(/\.mnt-boton:not\(#n\)\[data-llena\] \.mnt-fondo \{ transform: scaleX\(1\)
 check(!/font-size:[^;]*\d(rem|px)/.test(sinComB) && (sinComB.match(/box-shadow:/g) || []).length === (sinComB.match(/box-shadow: var\(--[\w-]+\);/g) || []).length, 'las letras y las sombras, por sus nombres');
 
 // (v0.273) en la CI de main, un «+» tocado justo al soltar la regla se perdía: la regla, al pararse, devolvía su valor
-check(/const fuera = st\.emitido != null && a\.valor != null/.test(src('ui/Regla.jsx')) && /if \(!fuera\) a\.alSoltar/.test(src('ui/Regla.jsx')),
+check(/const fuera = st\.emitido != null && a\.valor != null/.test(src('ui/Regla.jsx')) && /if \(!fuera\) a\.alSoltar/.test(src('ui/Regla.jsx'))
+  && /if \(st\.activo && !st\.dedo && !st\.raton && st\.emitido != null && valor != null && Math\.abs\(valor - st\.emitido\) > p \/ 2\)/.test(src('ui/Regla.jsx')),
   'la regla: un «+» o una tecla tocados justo al soltarla ganan (al pararse no devuelve su valor si cambió desde fuera)');
 console.log(`\n${ok} correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

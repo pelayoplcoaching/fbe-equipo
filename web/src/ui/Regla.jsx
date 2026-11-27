@@ -32,10 +32,18 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
   const vivo = useRef(null);
   vivo.current = { v, p, m, alCambiar, alSoltar, valor };
 
-  // La regla, en su sitio: al abrir, al teclear otro valor o al cambiar el salto. Nunca mientras la mueve la persona
+  // La regla, en su sitio: al abrir, al teclear otro valor o al cambiar el salto. Nunca mientras la mueve la persona…
   useLayoutEffect(() => {
     const el = caja.current;
-    if (!el || st.activo) return;
+    if (!el) return;
+    // …salvo que el valor cambie desde fuera mientras aún corre lanzada (un «+» tocado antes de que pare): gana ese, la
+    // regla deja de correr y va a él (si no, la inercia seguiría cambiando el valor por encima del «+»)
+    if (st.activo && !st.dedo && !st.raton && st.emitido != null && valor != null && Math.abs(valor - st.emitido) > p / 2) {
+      clearTimeout(st.fin);
+      st.activo = false; st.emitido = null; st.destino = null;
+      setActivo(false);
+    }
+    if (st.activo) return;
     if (paso !== p) { setP(paso); return; }
     if (reglaAlBorde(iValor, v) && centro !== iValor) { setCentro(iValor); return; }
     const left = (iValor - v.a) * REGLA_ANCHO;
@@ -52,7 +60,7 @@ export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500
     setActivo(false);
     const a = vivo.current;
     // (si mientras se paraba el valor cambió desde fuera —un «+» tocado justo al soltar—, gana ese: la regla va a él)
-    const fuera = st.emitido != null && a.valor != null && Math.abs(a.valor - st.emitido) > 1e-9;
+    const fuera = st.emitido != null && a.valor != null && Math.abs(a.valor - st.emitido) > a.p / 2;
     st.emitido = null;
     if (!fuera) a.alSoltar?.(reglaValor(st.i, a.p));
   };

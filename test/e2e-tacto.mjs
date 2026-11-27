@@ -198,7 +198,11 @@ export async function probarTacto({ navegador, check, base = 'http://localhost:4
     const d10 = (a, b) => Math.round((a - b) * 10);
     check(await hasta(async () => { const v = aNum(await campoP.inputValue()); return v < ultimo && d10(ultimo, v) >= 2 && d10(ultimo, v) <= 8 && aNum(await rp.getAttribute('aria-valuenow')) === v; }, 3000),
       `arrastrarla a la derecha lo baja de 100 en 100 g (${ultimo} → ${await campoP.inputValue()}), y el campo la sigue`);
-    const trasArrastrar = aNum(await campoP.inputValue());
+    // (v0.273) antes del «+», que la regla haya parado del todo (sin data-activo y el valor quieto medio segundo): si no,
+    // la cifra que se apunta aquí aún puede cambiar por la inercia y la comparación no vale
+    await p.waitForFunction(() => !document.querySelector('[aria-modal="true"] .rg-peso[data-activo]'), null, { timeout: 4000 }).catch(() => {});
+    let trasArrastrar = aNum(await campoP.inputValue());
+    for (let k = 0; k < 10; k++) { await p.waitForTimeout(250); const v = aNum(await campoP.inputValue()); if (v === trasArrastrar) break; trasArrastrar = v; }
     await hoja.getByRole('button', { name: /Sumar|más|\+/ }).last().click().catch(() => {});
     check(await hasta(async () => d10(aNum(await campoP.inputValue()), trasArrastrar) === 1 && aNum(await rp.getAttribute('aria-valuenow')) === aNum(await campoP.inputValue()), 3000), 'y «+» mueve la regla un salto');
     await p.keyboard.press('Escape');
