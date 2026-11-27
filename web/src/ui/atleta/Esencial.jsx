@@ -540,7 +540,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
     </Hoja>
   );
   if (!e || !t) {
-    return pausable ? <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}>Esta semana no puedo</button>{hojaPausa}</p> : null;
+    return pausable ? <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="pausa" /> Esta semana no puedo</button>{hojaPausa}</p> : null;
   }
   const nota = (e.tipo === 'lista' || e.tipo === 'pasada') && e.siguiente?.nota_coach ? e.siguiente.nota_coach : null;
   return (
@@ -707,7 +707,7 @@ function HoyNoPuedo({ sesion, semana, sesiones, recargarPrograma }) {
   const mover = (d) => una(async () => {
     try { await api.planificarSesion(sesion.id, d); aviso(`«${sesion.nombre}», el ${fechaLarga(d)}`); recargarPrograma?.(); } catch (e) { aviso(e.message, 'error'); }
   });
-  if (!abierto) return <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}>Hoy no puedo</button></p>;
+  if (!abierto) return <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}><Icono n="pausa" /> Hoy no puedo</button></p>;
   return (
     <section class="nota-coach alta-perdida" aria-label="Pasar la sesión de hoy a otro día">
       <Arte id="esencial-otro-dia" />

@@ -209,8 +209,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     }
     // (tanda 3) y, al abrir la app, su plan desde la semana 5, con los kilos de sus marcas
     await cerrar(p);
-    const listo = await p.waitForFunction(() => /Novato 2 días · FBE Esencial/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 20000 }).then(() => true).catch(() => false);
-    check(listo, 'Tomás, tras sus cuatro semanas: la app le prepara «Novato 2 días · FBE Esencial» (la semana 5)');
+    // (v0.261, belleza A13) en Hoy, el nombre de la rutina sin «· FBE Esencial» (ya se sabe que es FBE Esencial)
+    const listo = await p.waitForFunction(() => { const t = document.querySelector('.hero-dia')?.textContent || ''; return /Bloque \d+: Novato 2 días/.test(t) && !/FBE Esencial/.test(t); }, null, { timeout: 20000 }).then(() => true).catch(() => false);
+    check(listo, 'Tomás, tras sus cuatro semanas: la app le prepara «Novato 2 días» (la semana 5), sin «· FBE Esencial» en Hoy');
     if (listo) check(/Tu plan desde ahora/.test(await p.locator('.hero-dia').first().textContent()), 'con la nota de la plantilla');
     // (25/11) lo de esta semana (la 5) y sus días: pide tres
     const leccion = p.locator('.leccion-esencial');
@@ -1082,7 +1083,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await entrar(p, /Tomás/);
     await p.locator('.bienvenida').getByRole('button', { name: /Saltar/ }).click().catch(() => {});
     await cerrar(p);
-    await p.waitForFunction(() => /Novato 2 días · FBE Esencial/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 20000 }).catch(() => {});
+    await p.waitForFunction(() => /Novato 2 días/.test(document.querySelector('.hero-dia')?.textContent || ''), null, { timeout: 20000 }).catch(() => {});
     await p.waitForTimeout(1200);
     await cerrar(p);
     const seguir = p.getByRole('button', { name: 'Seguir', exact: true }).first();
@@ -1193,7 +1194,7 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
     await hoja.locator('.ayu-camino').waitFor({ timeout: 10000 }).catch(() => {});
     await p.waitForFunction(() => /min/.test(document.querySelector('.ayu-sesiones')?.textContent || ''), null, { timeout: 10000 }).catch(() => {});
     const tPlan = await hoja.textContent();
-    check(/Novato 2 días · FBE Esencial · semana 5/.test(tPlan) && (await hoja.locator('.ayu-sesion').count()) === 2 && /unos \d+ min · 5 ejercicios/.test(tPlan) && /Cómo progresa/.test(tPlan) && /Cada doce semanas/.test(tPlan),
+    check(/Novato 2 días · semana 5/.test(tPlan) && !/FBE Esencial · semana/.test(tPlan) && (await hoja.locator('.ayu-sesion').count()) === 2 && /unos \d+ min · 5 ejercicios/.test(tPlan) && /Cómo progresa/.test(tPlan) && /Cada doce semanas/.test(tPlan),
       '«Tu plan, explicado»: sus dos sesiones, lo que duran, cómo progresa y qué pasa cada cuatro y cada doce semanas');
     check(/estás aquí/.test(await hoja.locator('.ayu-paso[aria-current="step"]').textContent().catch(() => '')) && /La app te prepara cada semana/.test(await hoja.locator('.ayu-paso[aria-current="step"]').textContent().catch(() => '')) && (await hoja.locator('.ayu-paso[data-estado="hecho"]').count()) === 3,
       'y «Tu camino»: está en «La app te prepara cada semana», con sus tres tramos anteriores hechos');

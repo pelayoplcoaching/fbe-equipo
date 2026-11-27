@@ -34,7 +34,7 @@ export function AvisosCoach() {
             <TextoConEnlaces texto={a.texto} />
             {a.hasta && <span class="mini terciario">{textoVigencia(a)}</span>}
           </div>
-          <button class="btn btn-icono plano" onClick={() => setCerrados([...cerrados, a.id].slice(-50))} aria-label="Ocultar el aviso"><Icono n="cerrar" /></button>
+          <button class="btn btn-icono plano amb-aviso-x" onClick={() => setCerrados([...cerrados, a.id].slice(-50))} aria-label="Ocultar el aviso"><Icono n="cerrar" /></button>
         </section>
       ))}
     </div>

@@ -48,6 +48,7 @@ import './pruebas.css';
 import './dolor.css';
 import './como-llegas.css';
 import './constancia.css';
+import './ambas-a.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

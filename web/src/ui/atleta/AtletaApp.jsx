@@ -304,6 +304,8 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   const conActividad = !sesionId && !!estadoActividad(enCurso);
   useMarcaPagina('hay-actividad', conActividad);
   useMarcaPagina('hay-tabs', !sesionId);
+  // (belleza A2) la barra de abajo del atleta flota: el hueco del final de cada pantalla y del desplazamiento lo tienen en cuenta
+  useMarcaPagina('barra-flota', !sesionId);
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''} ${conActividad ? 'con-actividad' : ''}`}>

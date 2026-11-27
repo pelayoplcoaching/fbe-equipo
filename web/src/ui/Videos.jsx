@@ -56,7 +56,7 @@ export function VideoSemanaHoy() {
   return (
     <section class="panel panel-pad pila-s video-semana" aria-labelledby="video-semana-t">
       <div class="separa"><h2 id="video-semana-t" class="mini video-semana-k"><Icono n="video" /> El vídeo de la semana</h2></div>
-      <strong>{r.titulo}</strong>
+      <strong class="amb-video-t">{r.titulo}</strong>
       <VideoYoutube url={r.url} titulo={r.titulo} notas={r.descripcion || ''} />
       {r.descripcion && !/\d:\d{2}/.test(r.descripcion) && <p class="peq secundario">{r.descripcion}</p>}
     </section>

@@ -27,9 +27,12 @@ import { readFileSync } from 'node:fs';
 // (v0.258: estilos a 902 KB: la v0.257 se quedó a 19 bytes de los 900 y el reparto deja en el común una regla de la gráfica
 // del perfil, .perfil-punto.atipico, en cuanto una palabra del arranque —«mal», la cara de «¿Cómo llegas hoy?»— coincide con
 // una clase que podría pisarla; lo nuevo de cada pantalla sigue yendo con su trozo)
+// (v0.261: belleza A para las dos apps, a propósito: estilos a 912 KB (162 comprimido) y código a 608 comprimido. Es la
+// carcasa (la barra flotante, «Tu sesión», la cabecera) y Hoy, que salen al abrir: no pueden ir en un trozo. Las reglas de
+// lo de cada pantalla van con su trozo y las del común llevan la clase doble para no obligar a copiar las de los trozos)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 607 },
-  css: { crudo: 902, gz: 160 },
+  js: { crudo: 1790, gz: 608 },
+  css: { crudo: 912, gz: 162 },
 };
 
 let ok = 0, fallos = 0;

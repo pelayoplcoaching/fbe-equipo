@@ -28,6 +28,7 @@ import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, N
 import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
+import { useMarcaPagina } from '../marca-pagina.js';
 import { sinMovimiento } from '../transiciones.js';
 import { LOBO } from '../marca-lobo.js';
 import { diaDeCheckin, fmtConDia, hoyISO, desdeISO, rangoSemana, diasEntre, sumarDias, lunesDe } from '../../logica/fechas.js';
@@ -357,6 +358,8 @@ function BarraEmpezar({ nombre, empezada, abrir }) {
     o.observe(boton);
     return () => o.disconnect();
   }, []);
+  // (belleza A5) mientras se ve, el final de Hoy le deja su hueco (encima de la barra)
+  useMarcaPagina('hay-a-mano', fuera);
   return (
     <>
       {fuera && (
@@ -732,7 +735,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               <div class="hero-meta">
                 {det.cargando && !det.datos && !cardioValido(siguiente.cardio) && <span aria-hidden="true">&nbsp;</span>}
                 {cardioValido(siguiente.cardio) && <span><b>{textoCardio(siguiente.cardio)}</b></span>}
-                {ejercicios.length > 0 && <><span><Icono n="hoy" /><b>{ejercicios.length}</b> ejercicios</span><span><Icono n="reloj" />unos <b>{duracionEstimada(ejercicios)}</b> min</span></>}
+                {ejercicios.length > 0 && <><span><Icono n="hoy" /><span><b>{ejercicios.length}</b> ejercicios</span></span><span><Icono n="reloj" /><span>unos <b>{duracionEstimada(ejercicios)}</b> min</span></span></>}
                 {empezada && <span><b>{ejercicios.reduce((n, x) => n + x.hechas.length, 0)}</b> series ya hechas</span>}
               </div>
             )}

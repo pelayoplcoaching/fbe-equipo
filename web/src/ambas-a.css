@@ -1,0 +1,213 @@
+/* Belleza para las dos apps, tanda A (v0.261): la carcasa y Hoy. La lista, en el doc del proyecto
+   "claude/belleza-150-ambas.md" (A1 a A50). Es solo como se ve: textos y cifras, iguales. Con medidas del sistema; nada se
+   mueve sin parar y, con "reducir movimiento", nada se anima. Va antes de color-capa.css. */
+
+/* -- A2, A3 y A5 - La barra de abajo flota (como en iOS 26): una capsula de cristal separada de los bordes, con el
+   contenido pasando por debajo. Al bajar se encoge un poco (ligado al desplazamiento); arriba del todo, entera. Solo la
+   del atleta (tabs-flota): la del coach sigue igual. */
+:root {
+  --tabs-alto: 3.75rem;
+  --tabs-abajo: max(var(--esp-12), calc(env(safe-area-inset-bottom, 0px) - var(--esp-8)));
+  --tabs-ancho: min(calc(100vw - var(--esp-24) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), 28rem);
+  --tabs-hueco: calc(var(--tabs-abajo) + var(--tabs-alto));
+}
+@media (min-width: 700px) { :root { --tabs-ancho: min(calc(100vw - var(--esp-48)), 42rem); } }
+.tabs-flota.tabs-flota {
+  left: 50%; right: auto; bottom: var(--tabs-abajo); width: var(--tabs-ancho); height: var(--tabs-alto); translate: -50% 0;
+  display: grid; align-content: center; padding: 0 var(--esp-6); border-radius: var(--r-pildora); box-shadow: var(--sombra-alta);
+  transform-origin: 50% 100%;
+}
+.tabs-flota.tabs-flota .tab { padding-block: var(--esp-2) 0; }
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .tabs-flota.tabs-flota { animation: amb-tabs-baja linear both; animation-timeline: scroll(root); animation-range: 0 6rem; }
+  }
+}
+@keyframes amb-tabs-baja { to { scale: .93; } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .tabs-flota.tabs-flota { box-shadow: none !important; outline: var(--filo-fino) solid var(--linea); }
+}
+html.barra-flota .contenido { padding-block-end: calc(var(--tabs-hueco) + var(--esp-24)); }
+html.barra-flota { scroll-padding-bottom: calc(var(--tabs-hueco) + var(--esp-16)); }
+
+/* -- A4 - "Tu sesion", apoyada en la barra: justo encima, del mismo ancho, con la misma curva y el mismo cristal (como el
+   reproductor de Musica sobre las pestanas). Y A5: al final de Hoy, el hueco justo para las dos. */
+.hoy-a-mano.hoy-a-mano {
+  bottom: calc(var(--tabs-hueco) + var(--esp-8)); width: var(--tabs-ancho);
+  background: var(--vidrio); color: var(--tinta); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
+}
+.hoy-a-mano-texto.hoy-a-mano-texto .mini { opacity: 1; color: var(--tinta-2); }
+html.hay-a-mano .contenido { padding-block-end: calc(var(--tabs-hueco) + 3.5rem + var(--esp-32)); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .hoy-a-mano.hoy-a-mano { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* -- A6 - El borde de arriba se difumina: lo que pasa bajo la cabecera se desvanece en lugar de cortarse en seco (solo al
+   bajar; arriba del todo no hay nada debajo) */
+.cabecera.cabecera::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--esp-16); pointer-events: none; opacity: 0;
+  background: linear-gradient(var(--oklab,) 180deg, var(--vidrio-cab), transparent);
+}
+@supports (animation-timeline: scroll()) {
+  .cabecera.cabecera::before { animation: amb-cab-velo linear both; animation-timeline: scroll(root); animation-range: 0 3rem; }
+}
+@keyframes amb-cab-velo { to { opacity: 1; } }
+@media (min-width: 700px) { .cabecera.cabecera::before { content: none; } }
+@media (prefers-contrast: more), (forced-colors: active) { .cabecera.cabecera::before { content: none; } }
+
+/* -- A7 - Los globos de aviso de la barra, recortados con un aro del color de la capsula */
+.tabs-flota .insignia { outline: var(--filo-fuerte) solid var(--hoja); }
+.tabs-flota .tab .punto::after { border-color: var(--hoja); }
+
+/* -- A8 - La cabecera de Hoy, mas limpia: la fecha en tinta suave, sin pastilla */
+.cabecera > .titulo + .sub { padding-inline: 0; background: none; box-shadow: none; font-weight: 600; color: var(--tinta-2); }
+
+/* -- A9 - "Sin conexion", una pastilla bajo la cabecera que se queda a la vista al bajar */
+.vista .banda-conexion {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 4.25rem); z-index: 4; justify-self: center; width: fit-content; max-width: 100%;
+  padding: var(--esp-6) var(--esp-14); border-radius: var(--r-pildora); box-shadow: var(--sombra-alta);
+}
+
+/* -- A10 - Los botones de abajo de las pantallas por pasos (el check-in), sobre cristal: el texto ya no pasa por detras */
+.ck-nav {
+  bottom: calc(var(--tabs-hueco) + var(--esp-8)); padding: var(--esp-6); border-radius: var(--r-pildora);
+  background: var(--vidrio); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro); box-shadow: var(--sombra-alta);
+}
+.ck-nav .btn { border-radius: var(--r-pildora); }
+.ck-nav .btn:not(.btn-primario) { background: var(--hoja); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .ck-nav { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* -- A11 - La luna de la tarjeta grande, entera y en su sitio (salia cortada por el borde derecho y parecia un fallo); la
+   linea del bloque le deja su hueco */
+.hero-dia > .cielo-hora .cielo-luna { top: var(--esp-18); right: var(--esp-20); }
+.hero-dia:has(.cielo-luna) .titular .contexto { padding-inline-end: var(--esp-40); }
+
+/* -- A12 - La linea de arriba, ordenada: el bloque en su linea y, debajo, "Semana 1 . Foco: adaptacion" */
+.hero-dia .titular .contexto { gap: var(--esp-2) var(--esp-6); }
+.hero-dia .titular .contexto > span:first-child { flex-basis: 100%; font-weight: 600; color: var(--sobre-hero); }
+.hero-dia .titular .contexto > span + span + span::before { content: "\B7"; padding-inline-end: var(--esp-6); }
+
+/* -- A14 - "5 ejercicios" y "unos 30 min", en pastillas con icono, como en la portada de la sesion */
+.hero-meta.hero-meta { gap: var(--esp-6); }
+.hero-meta.hero-meta > span {
+  display: inline-flex; align-items: center; gap: var(--esp-6); min-height: var(--esp-32); padding: var(--esp-4) var(--esp-12);
+  border-radius: var(--r-pildora); background: color-mix(in srgb, var(--blanco) 12%, transparent); color: var(--sobre-hero);
+}
+.hero-meta.hero-meta svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; color: var(--acento-200); }
+.hero-meta.hero-meta b { font-stretch: var(--ancho-marcador); font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) { .hero-meta.hero-meta > span { border: var(--filo-fino) solid CanvasText; } }
+
+/* -- A15 - La nota de la semana en tres lineas, con "Leer mas" (en FBE Esencial ocupaba media tarjeta) */
+.amb-nota.amb-nota { display: grid; gap: var(--esp-2); justify-items: start; min-width: 0; }
+.amb-nota-corta.amb-nota-corta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.amb-leer.amb-leer {
+  min-height: 2.75rem; margin-block: calc(-1 * var(--esp-6)) calc(-1 * var(--esp-8)); padding: 0 var(--esp-2); border: 0; background: none; color: var(--acento-200); font: inherit; font-weight: 650;
+  text-decoration: underline; text-underline-offset: var(--esp-4); cursor: pointer; border-radius: var(--r-6);
+}
+.amb-leer.amb-leer:focus-visible { outline: var(--filo-marca) solid var(--blanco); outline-offset: var(--esp-2); }
+
+/* -- A16 - El nombre de la sesion, en una linea: si es largo, la letra se estrecha un punto (eje de anchura de la Archivo) */
+.amb-h2-estrecho.amb-h2-estrecho { font-stretch: 100%; }
+.amb-h2-largo.amb-h2-largo { font-size: var(--tipo-titulo); }
+
+/* -- A17 - La racha del pie, con su llama en un disco y la cifra en numeros de marcador */
+.amb-llama.amb-llama {
+  display: inline-grid; place-items: center; flex: none; width: var(--esp-28); height: var(--esp-28); border-radius: 50%;
+  background: color-mix(in srgb, var(--naranja-400) 22%, transparent); color: var(--ambar-300);
+}
+.amb-llama.amb-llama svg { width: var(--ico-16); height: var(--ico-16); }
+.amb-racha-n.amb-racha-n { font-size: var(--letra-16); font-weight: 800; font-stretch: var(--ancho-marcador); font-variant-numeric: tabular-nums; }
+
+/* -- A18 - El objetivo del bloque: la bandera, alineada con la primera linea de su texto */
+.hero-objetivo.hero-objetivo { align-items: flex-start; }
+.hero-objetivo.hero-objetivo svg { margin-block-start: calc((1lh - var(--ico-16)) / 2); }
+
+/* -- A19 - Tres pesos de tarjeta en Hoy: las que piden algo ahora (con su boton principal) van en blanco y con sombra; las
+   demas notas, con su tinte suave y sin sombra. En FBE Esencial casi todas llevaban el mismo lila. */
+.contenido > .nota-coach:has(.btn-primario) { padding: var(--esp-16); border-radius: var(--r); background: var(--hoja); box-shadow: var(--sombra); }
+
+/* -- A22 - Los iconos de titulo, en un disco del color de su tipo, alineados con la primera linea */
+.contenido > .nota-coach:not(.con-lobo) { grid-template-columns: var(--esp-32) minmax(0, 1fr); column-gap: var(--esp-12); }
+.contenido > .nota-coach:not(.con-lobo) > svg {
+  box-sizing: content-box; width: var(--ico-20); height: var(--ico-20); padding: var(--esp-6); margin-block-start: calc(-1 * var(--esp-4));
+  border-radius: 50%; background: var(--acento-a12);
+}
+@media (forced-colors: active) { .contenido > .nota-coach:not(.con-lobo) > svg { background: none; } }
+
+/* -- A21 - Los titulos de las tarjetas de Hoy, con un tamano y un peso (los de los paneles, como "Tu dia", siguen siendo de seccion) */
+.contenido > .nota-coach > .pila-s > strong:first-child {
+  font-size: var(--tipo-titular); line-height: var(--tipo-titular-lh); font-weight: 700; letter-spacing: var(--tipo-titular-tr); text-wrap: balance;
+}
+
+/* -- A23 - Los botones de tarjeta, en capsula y del mismo alto ("Ver tus marcas", "Leer mi revision"...) */
+.contenido > .nota-coach .btn-peq { min-height: var(--esp-40); padding-inline: var(--esp-16); border-radius: var(--r-pildora); }
+
+/* -- A20 y A28 - Un solo dibujo grande por pantalla: despues del primero, las tarjetas con dibujo pasan a fila compacta,
+   con la miniatura a la izquierda; "Llevas N dias sin entrenar", siempre compacta */
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja), .contenido > .cer-vuelta:has(> .esa-franja) {
+  grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: var(--esp-14); align-items: start;
+}
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach > .esa-franja, .contenido > .cer-vuelta > .esa-franja {
+  grid-column: 1; grid-row: 1; width: 4.5rem; aspect-ratio: 1; border-radius: var(--r-14);
+}
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > svg, .contenido > .cer-vuelta:has(> .esa-franja) > svg { display: none; }
+.contenido > .nota-coach:not(.cer-vuelta):has(> .esa-franja) ~ .nota-coach:has(> .esa-franja) > .pila-s, .contenido > .cer-vuelta:has(> .esa-franja) > .pila-s { grid-column: 2; grid-row: 1; }
+
+/* -- A42 y A43 - El dibujo grande de una tarjeta blanca, a sangre arriba con la curva de la tarjeta (esquinas concentricas),
+   y fundido con ella por un filo de luz muy suave */
+.contenido > .nota-coach:has(.btn-primario):not(.cer-vuelta) > .esa-franja:first-child {
+  width: auto; margin: calc(-1 * var(--esp-16)) calc(-1 * var(--esp-16)) var(--esp-2); border-radius: var(--r) var(--r) 0 0;
+}
+.esa-franja { outline: var(--filo-fino) solid var(--acento-a12); outline-offset: calc(-1 * var(--filo-fino)); }
+
+/* -- A24 - "Esta semana no puedo", como accion con su icono, pegada a la tarjeta de arriba (iba suelta entre dos) */
+.contenido > .cierre-pausa { margin-block-start: calc(-1 * var(--esp-12)); padding-inline-start: var(--esp-14); }
+.cierre-pausa.cierre-pausa > .btn-texto { min-height: 2.75rem; }
+
+/* -- A25 - Un ritmo: el mismo hueco entre tarjetas y el doble antes del grupo de lo plegable ("Lo que vas a hacer"...) */
+.contenido > :not(.reserva-plegable) + .reserva-plegable { margin-block-start: var(--esp-16); }
+
+/* -- A26 - La cita del coach, entera: las comillas grandes se salian por arriba */
+.cita-coach.cita-coach::before { top: var(--esp-6); }
+.cita-coach.cita-coach blockquote { padding-inline-end: var(--esp-28); }
+
+/* -- A27 - Los avisos de Pelayo, sin caja dentro de caja: el lobo y su burbuja sobre el fondo, con la X alineada */
+.aviso-coach.aviso-coach { padding-inline: 0; background: none; box-shadow: none; }
+.amb-aviso-x.amb-aviso-x { margin-block-start: 0; }
+
+/* -- A29 - "Dudas?" y los enlaces de ayuda: el icono alineado con el texto de la tarjeta y 44 px de toque */
+.ayu-dudas { min-height: 2.75rem; margin-inline-start: calc(-1 * var(--esp-4)); }
+
+/* -- A32 - "Que necesitas?": los iconos en disco, el texto en una linea cuando cabe y la ultima opcion sola a lo ancho */
+.ayu-nec-i { display: inline-grid; place-items: center; width: var(--esp-32); height: var(--esp-32); border-radius: 50%; background: var(--acento-a12); }
+.ayu-nec-t { overflow-wrap: break-word; text-wrap: balance; }
+.ayu-nec:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* -- A36, A37, A38 y A40 - La letra: sin palabras sueltas al final, titulos equilibrados, sin cortes con guion en lo corto y
+   comillas que cuelgan fuera del margen */
+.nota-coach strong, .panel strong, .hoja-cab h2, .seccion-cab h2 { text-wrap: balance; }
+.pila-s > .peq, .amb-nota, .cita-coach blockquote, .aviso-coach p { text-wrap: pretty; }
+.segmentos-servicio.segmentos-servicio button { hyphens: manual; overflow-wrap: break-word; }
+.cita-coach blockquote, .nota-coach, .aviso-coach p { hanging-punctuation: first; }
+
+/* -- A34 - "El mito" y "El video de la semana", con la misma cabecera: la etiqueta con su icono del mismo tamano, el titulo
+   como el de las demas tarjetas, y el mito sin su filo lateral cuando lleva su dibujo */
+.mito-semana.mito-semana { border-left: 0; }
+.video-semana-k svg { width: var(--ico-16); height: var(--ico-16); }
+.mito-frase.mito-frase { font-size: var(--tipo-titular); line-height: var(--tipo-titular-lh); font-weight: 700; letter-spacing: var(--tipo-titular-tr); text-wrap: balance; }
+.amb-video-t.amb-video-t { font-size: var(--tipo-titular); line-height: var(--tipo-titular-lh); font-weight: 700; letter-spacing: var(--tipo-titular-tr); text-wrap: balance; }
+
+/* -- A46 - Mientras cargan, los dibujos ponen el color de su escena (la noche morada) en lugar de un hueco plano */
+.esa-franja { background: linear-gradient(var(--oklab,) 160deg, var(--noche-2), var(--marca-900)); }
+
+/* -- A49 - La X de cerrar tarjetas, en un disco del mismo tamano en todas (el toque sigue siendo el del boton) */
+.pista-cerrar.pista-cerrar { background: radial-gradient(circle, var(--hoja-2) 0 var(--esp-16), transparent calc(var(--esp-16) + 0.5px)); }
+.pista-cerrar:hover { background: radial-gradient(circle, var(--linea) 0 var(--esp-16), transparent calc(var(--esp-16) + 0.5px)); }
+.tarjeta-semana-quitar.tarjeta-semana-quitar { background: radial-gradient(circle, var(--hoja-2) 0 var(--esp-16), transparent calc(var(--esp-16) + 0.5px)); }
+.amb-aviso-x.amb-aviso-x { background: radial-gradient(circle, var(--hoja-2) 0 var(--esp-16), transparent calc(var(--esp-16) + 0.5px)); }
+@media (forced-colors: active) { .pista-cerrar { background: none; } .tarjeta-semana-quitar { background: none; } .amb-aviso-x { background: none; } }
+
+/* -- A50 - Las cifras de Perfil, a la misma altura: si una etiqueta ocupa dos lineas, su cifra ya no sube */
+.perfil-cifras.perfil-cifras > div { justify-content: flex-end; }

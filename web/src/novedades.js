@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.261': {
+    // (belleza A para las dos apps: la carcasa y Hoy; «claude/belleza-150-ambas.md», A1 a A50)
+    atleta: [
+      'Un Hoy más claro: la barra de abajo flota y se encoge al bajar, y «Tu sesión» va justo encima, sin tapar nada.',
+      'Las tarjetas que te piden algo destacan en blanco, y la nota de la semana va en tres líneas con «Leer más».',
+    ],
+    coach: [
+      'Belleza para las dos apps (tanda A de 3): la barra flotante, la cabecera con el nombre de cada app y un Hoy más ordenado.',
+    ],
+  },
   '0.260': {
     // (la constancia de FBE Esencial, C1 a C11, con la migración 111; apagada hasta su visto bueno)
     atleta: [],
