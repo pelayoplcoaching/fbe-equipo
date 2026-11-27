@@ -506,7 +506,7 @@ export function Checkin({ salud, recargarConsentimientos, checkinSemana, releer 
         </div>
         <div class="ck-barra" style={{ '--pasos': total }} role="progressbar" aria-label="Progreso del check-in" aria-valuemin="0" aria-valuemax={total} aria-valuenow={Math.min(paso + 1, total)}
           aria-valuetext={enRevision ? 'Repaso de las respuestas' : `${paso + 1} de ${total}`}>
-          <span style={{ width: `${(Math.min(paso + 1, total) / total) * 100}%` }} />
+          <span style={{ width: `${(Math.min(paso + 1, total) / total) * 100}%`, '--verde': `${enRevision ? 100 : (paso / (paso + 1)) * 100}%` }} />
         </div>
         <p class="sr" aria-live="polite">{anuncio}</p>
         <p class="sr" aria-live="polite">{anuncioRespuesta}</p>

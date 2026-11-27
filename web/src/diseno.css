@@ -1966,7 +1966,7 @@ img.post-foto, img.receta-foto, .tira-fotos img, .galeria img, .galeria-pista im
    récords en oro, fuerza en el acento, racha en naranja, tonelaje en azul y constancia en verde. */
 .destacado[data-tipo] { --t: var(--morado); }
 .destacados-lista > .destacado[data-tipo] { position: relative; overflow: hidden; isolation: isolate; }
-.destacado[data-tipo="records"] { --t: var(--oro); }
+.destacado[data-tipo="records"] { --t: var(--oro); --t-barra: var(--oro-400); }
 .destacado[data-tipo="racha"] { --t: var(--t-habitos); }
 .destacado[data-tipo="tonelaje"] { --t: var(--t-tarea); }
 .destacado[data-tipo="bloque"] { --t: var(--t-nutricion); }

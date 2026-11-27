@@ -703,7 +703,8 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
   };
   return (
     <div class="velo" onClick={(e) => { if (e.target === e.currentTarget) alCerrar(); }}>
-      <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}>
+      <div class={`hoja-dialogo${clase ? ` ${clase}` : ''}`} role="dialog" aria-modal="true" aria-label={titulo} ref={ponerRef} tabIndex={-1} style={ancho ? { width: `min(${ancho}px, 100%)` } : undefined}
+        onScroll={(e) => e.currentTarget.classList.toggle('hoja-bajada', e.currentTarget.scrollTop > 2)}>
         <div class="hoja-cab" onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <div class="asa" aria-hidden="true" />
           <div class="separa">
@@ -1442,6 +1443,10 @@ const textoPrevision = (meta, prev) => (prev ? (prev.llega ? `; a este ritmo lle
 //   bloques   los del atleta: sus franjas de fondo (solo si caen al menos dos dentro)
 //   marcas    [{ x, y, texto }] tests y competiciones: un rombo dorado en su día
 // (v0.204) previo: [{ x, y }] el periodo anterior, ya movido debajo del de ahora (en fantasma, detrás); textoPrevio, cuál es
+// (belleza B87) Dónde va la cifra del último punto: encima, salvo que el punto de antes quede más alto (la línea subiría
+// por detrás de la cifra): entonces, debajo, si cabe sobre el eje
+const yCifra = (yUlt, yAnt, suelo) => (yAnt != null && yAnt < yUlt - 4 && yUlt + 20 <= suelo - 2 ? yUlt + 20 : yUlt - 10);
+
 export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null, previo = null, textoPrevio = 'el periodo anterior' }) {
   const [W, ref] = useAncho();
   const id = useId();
@@ -1509,7 +1514,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
         {sel != null && <line class="guia" x1={X(sel)} x2={X(sel)} y1={arr - 6} y2={H - abj} />}
         {marcasV.map((m) => { const mx = xDe(m.x), my = Y(m.y); return <path key={`${m.x}-${m.y}`} class="marca-test" d={`M${mx.toFixed(1)} ${(my - 6.5).toFixed(1)}l6.5 6.5-6.5 6.5-6.5-6.5z`} />; })}
         {puntos.map((p, i) => <circle key={i} class={`punto ${i === n - 1 ? 'ultimo' : ''} ${prs.includes(i) ? 'record' : ''} ${i === sel ? 'elegido' : ''} ${enCursoOk && i === n - 1 ? 'en-curso' : ''}`} cx={X(i)} cy={Y(p.y)} r={i === sel ? 5.5 : prs.includes(i) ? 4.5 : i === n - 1 ? 4.5 : 3} />)}
-        {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={Y(ultimo.y) - 10} text-anchor="end">{conU(ultimo.y)}{enCursoOk ? ' (en curso)' : ''}</text>}
+        {sel == null && <text class="valor" x={Math.min(X(n - 1), W - der)} y={yCifra(Y(ultimo.y), n > 1 ? Y(puntos[n - 2].y) : null, H - abj)} text-anchor="end">{conU(ultimo.y)}{enCursoOk ? ' (en curso)' : ''}</text>}
         {etiquetasX.map((i) => (
           <text key={i} x={X(i)} y={H - 4} text-anchor={i === 0 ? 'start' : i === n - 1 && !prev ? 'end' : 'middle'}>{fmtCorta(puntos[i].x)}</text>
         ))}
@@ -1577,7 +1582,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, b
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}
         <circle class="punto ultimo" cx={X(ult.fecha)} cy={Y(ult.tendencia)} r="4.5" />
         {/* (visual 8) la cifra de la última tendencia, junto a su punto (como en las demás gráficas) */}
-        {sel == null && <text class="valor" x={Math.min(X(ult.fecha), W - der)} y={Y(ult.tendencia) - 10} text-anchor="end">{num(ult.tendencia)} kg</text>}
+        {sel == null && <text class="valor" x={Math.min(X(ult.fecha), W - der)} y={yCifra(Y(ult.tendencia), n > 1 ? Y(serie[n - 2].tendencia) : null, H - abj)} text-anchor="end">{num(ult.tendencia)} kg</text>}
         {[...new Set(fechasX)].map((f, i, arr2) => (
           <text key={f} x={X(f)} y={H - 4} text-anchor={i === 0 ? 'start' : i === arr2.length - 1 && !prev ? 'end' : 'middle'}>{fmtCorta(f)}</text>
         ))}

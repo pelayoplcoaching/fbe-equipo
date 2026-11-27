@@ -78,7 +78,7 @@ img[data-imagen] { background-color: var(--color-imagen, transparent); }
 
 /* (17) En las hojas, la cabecera (título y cerrar) se queda arriba al bajar, y su filo aparece con el desplazamiento */
 .hoja-dialogo { scroll-padding-top: 4.5rem; }
-.hoja-cab { position: sticky; top: calc(-1 * var(--esp-10)); z-index: 3; padding-bottom: var(--esp-8); margin-bottom: calc(-1 * var(--esp-8)); background: var(--hoja); }
+.hoja-cab { position: sticky; top: calc(-1 * var(--esp-10)); z-index: 3; padding-bottom: var(--esp-8); margin-bottom: calc(-1 * var(--esp-8)); }
 .hoja-cab::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--linea); opacity: 0; pointer-events: none; }
 @supports (animation-timeline: scroll()) {
   @media (prefers-reduced-motion: no-preference) { .hoja-cab::after { animation: hoja-cab-filo linear both; animation-timeline: scroll(nearest); animation-range: 0 24px; } }

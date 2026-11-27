@@ -50,8 +50,9 @@
 .ej-fila .nombre > .ss-etq, .ejercicio-cab .nombre > .ss-etq { flex: none; }
 
 /* -- A8 - "Se oye bien el sonido?": en el movil no cabia en una linea y "Ahora no" se quedaba solo abajo a la izquierda.
-   La pregunta arriba y las dos respuestas juntas abajo a la derecha; si hay sitio, todo en una linea, como antes. */
-.aviso-prueba-sonido > span { flex: 1 1 14rem; }
+   La pregunta arriba y las dos respuestas juntas abajo a la derecha; si hay sitio, todo en una linea, como antes.
+   (belleza B54, v0.264) "Ahora no" es ya la X de las pistas: con eso cabe en una linea en casi todos los moviles */
+.aviso-prueba-sonido > span { flex: 1 1 0%; min-width: min(100%, 9.5rem); }
 .aviso-prueba-sonido > .btn-texto:not(.mini) { margin-inline-start: auto; }
 
 /* -- A9 - "La ultima vez (20 nov): 16x9 @8, 16x9 @8,5...": cada serie con su esfuerzo en la misma linea; antes "@8,5"

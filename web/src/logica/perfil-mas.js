@@ -328,13 +328,18 @@ export const ATAJOS_PERFIL = [
   ['equipo', 'Equipo', 'equipo', 'equipo'], ['carne', 'Tu carné', 'escudo', '#carne'], ['datos', 'Tus datos', 'descargar', '#datos'],
 ];
 export const ATAJOS_DEFECTO = ['checkin', 'progreso', 'mensajes'];
-export function atajosValidos(lista) {
-  const ok = new Set(ATAJOS_PERFIL.map(([k]) => k));
+// fuera: los que no tiene a mano (quien va por su cuenta no tiene «Mensajes»): ni se ofrecen ni salen por defecto (en su
+// lugar, «Tu semana»)
+export function atajosValidos(lista, fuera = []) {
+  const ok = new Set(ATAJOS_PERFIL.map(([k]) => k).filter((k) => !fuera.includes(k)));
   const l = [...new Set((Array.isArray(lista) ? lista : []).filter((k) => ok.has(k)))].slice(0, 3);
-  return l.length ? l : [...ATAJOS_DEFECTO];
+  if (l.length) return l;
+  const def = ATAJOS_DEFECTO.filter((k) => ok.has(k));
+  return def.length < ATAJOS_DEFECTO.length && ok.has('semana') && !def.includes('semana') ? [...def, 'semana'] : def;
 }
-export function alternarAtajo(lista, clave) {
-  const l = atajosValidos(lista);
+export function alternarAtajo(lista, clave, fuera = []) {
+  const l = atajosValidos(lista, fuera);
+  if (fuera.includes(clave)) return l;
   if (l.includes(clave)) return l.length > 1 ? l.filter((k) => k !== clave) : l;
   return l.length >= 3 ? l : [...l, clave];
 }

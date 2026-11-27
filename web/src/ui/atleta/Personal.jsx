@@ -93,7 +93,7 @@ export function RecuerdoProgreso({ sesionId }) {
 import { Imagen as ImagenObj, hayImagen as hayImagenObj } from '../Imagen.jsx';
 import { imagenObjetivo } from '../../logica/imagenes.js';
 import { objetivosDe } from '../../logica/cuestionario.js';
-import { metaFuerza, metaPeso, MiniLinea } from './ProgresoPiezas.jsx';
+import { metaFuerza, metaPeso, LineaAncha } from './ProgresoPiezas.jsx';
 const NOMBRE_OBJETIVO = Object.fromEntries(OBJETIVOS);
 // (v0.203) objetivos: los suyos (del coach o propuestos y aceptados): si hay uno de ese ejercicio (o de peso), su
 // camino (de dónde empezó, dónde está y la meta); y siempre, la minilínea de sus últimas semanas
@@ -122,7 +122,8 @@ export function CifraObjetivo({ progreso, constancia, salud, objetivos = [] }) {
       <span class="peq secundario">{c.etiqueta}</span>
       <p class="cifra-objetivo-v"><span class="num">{c.cifra}</span> <small>{c.unidad}</small></p>
       <span class={`chip ${c.sube === true ? 'ok' : c.sube === false ? 'aviso' : 'morado'} cifra-objetivo-cambio`}>{c.sube === true && <Icono n="arriba" />}{c.sube === false && <Icono n="abajo" />}{c.detalle}</span>
-      <MiniLinea valores={c.serie} ancho={120} alto={34} clase="cifra-objetivo-linea" />
+      {/* (belleza B81) a todo el ancho, con su área y el punto de hoy */}
+      <LineaAncha valores={c.serie} clase="mini-linea cifra-objetivo-linea" />
       {(() => { const m = c.peso ? metaPeso(objetivos) : c.ejercicioId ? metaFuerza(objetivos, c.ejercicioId) : null; return m ? <CaminoObjetivo o={m.objetivo} peso={!!c.peso} /> : null; })()}
       {c.otros.length > 0 && <span class="mini terciario">También: {c.otros.map((o) => (NOMBRE_OBJETIVO[o] || o).toLowerCase()).join(', ')}.</span>}
     </section>

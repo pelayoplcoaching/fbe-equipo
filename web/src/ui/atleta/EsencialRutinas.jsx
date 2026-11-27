@@ -451,7 +451,7 @@ export function TuRutina({ p, cuestionario: dado = undefined, recargarPrograma =
     } catch (e) { setError(e.message); }
   });
   const titulo = actual?.titulo || s.bloque.nombre;
-  const desde = s.empezado ? `Desde el ${sinLunes(s.bloque.fecha_inicio)} · ${s.semanas === 1 ? 'semana 1' : `semana ${s.semanas}`}` : `Empiezas el ${fechaLarga(s.bloque.fecha_inicio)}`;
+  const desde = s.empezado ? `Desde el ${sinLunes(s.bloque.fecha_inicio)}\u00a0· ${s.semanas === 1 ? 'semana 1' : `semana ${s.semanas}`}` : `Empiezas el ${fechaLarga(s.bloque.fecha_inicio)}`;
   const texto = s.modo === 'primeras'
     ? (s.marcas ? (despues ? null : 'Estás en tu semana de marcas. Elige ya con qué sigues: si no eliges, la app te prepara la de novato de tus días.') : 'Hasta acabar tus cuatro primeras semanas no se cambia de rutina. En la semana 4 eliges con qué sigues.')
     : s.modo === 'previo' ? 'Si antes de tu lunes prefieres otra, puedes cambiarla: tu plan se rehace con ella.'
@@ -465,7 +465,7 @@ export function TuRutina({ p, cuestionario: dado = undefined, recargarPrograma =
         <span class="rut-fila-texto">
           <span class="mini secundario">Tu rutina</span>
           <strong class="rut-nombre">{actual ? <Titulo r={actual} /> : titulo}</strong>
-          <span class="peq secundario num">{desde}</span>
+          <span class="peq secundario">{desde}</span>
         </span>
       </div>
       {despues && (

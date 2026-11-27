@@ -8,6 +8,7 @@ import { imagenMes, imagenCelebracion } from '../logica/imagenes.js';
 import { MensajeCoach } from './atleta/Personal.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { pesoTxt, pesoNum, difVista, etiquetaPeso } from '../logica/unidades.js';
+import { nombreBloque } from '../logica/esencial.js';
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
 // principales, semana a semana, músculos, récords y (con consentimiento) el peso. Lo ven el atleta y el coach.
@@ -53,6 +54,8 @@ function EsfuerzoSemanas({ semanas }) {
   );
 }
 export const tituloBloque = (b) => (b.numero ? `Bloque ${b.numero}: ${b.nombre}` : b.nombre);
+// (belleza A13) lo que ve el atleta: sin «· FBE Esencial» al final, que ya sabe en qué app está (el coach lo ve entero)
+const tituloVisto = (b, coach = false) => (coach ? tituloBloque(b) : nombreBloque(tituloBloque(b)));
 
 // Línea mínima con los valores de cada semana (los huecos se saltan)
 function Linea({ valores, etiqueta }) {
@@ -101,7 +104,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
   const ant = r.anterior || null;  // (v0.204) el bloque de antes, para comparar
   const datosTarjeta = {
     fondo: 'bloque',   // (imágenes) las montañas
-    nombre: tituloBloque(r.bloque), subtitulo: `${r.semanasTotal} semanas, ${rangoLargo(r.inicio, r.fin)}`, fecha: r.fin,
+    nombre: tituloVisto(r.bloque, coach), subtitulo: `${r.semanasTotal} semanas, ${rangoLargo(r.inicio, r.fin)}`, fecha: r.fin,
     etiquetaFecha: r.terminado ? 'Bloque terminado' : 'Bloque en curso',
     cifras: [[String(r.sesiones.hechas), r.sesiones.hechas === 1 ? 'sesión' : 'sesiones'], [toneladas(r.tonelaje), 'toneladas'], [String(r.records.length), r.records.length === 1 ? 'récord' : 'récords']],
     records: [], tituloMejores: 'Fuerza estimada (1RM)',
@@ -111,7 +114,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
   // (imágenes) terminado, la cumbre; en curso, el paisaje del mes en que acaba
   const ilu = r.terminado ? imagenCelebracion('bloque') : imagenMes(r.fin);
   return (
-    <Hoja titulo={tituloBloque(r.bloque)} alCerrar={alCerrar} ancho={760}>
+    <Hoja titulo={tituloVisto(r.bloque, coach)} alCerrar={alCerrar} ancho={760}>
       <div class="informe">
         {/* (imágenes) arriba, las semanas y las fechas junto a la ilustración */}
         {hayImagen(ilu) ? (
@@ -195,7 +198,7 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
         )}
       </div>
       {compartir && <HojaCompartir tipo="sesion" equipo={{ tema: 'logros' }} datos={datosTarjeta} titulo="Compartir el bloque" alCerrar={() => setCompartir(false)}
-        alt={`Tarjeta del ${tituloBloque(r.bloque)}: ${r.sesiones.hechas} sesiones, ${toneladas(r.tonelaje)} toneladas, ${r.records.length} récords`}
+        alt={`Tarjeta del ${tituloVisto(r.bloque, coach)}: ${r.sesiones.hechas} sesiones, ${toneladas(r.tonelaje)} toneladas, ${r.records.length} récords`}
         nota="Solo lleva el nombre del bloque, las sesiones, las toneladas, los récords y cuánto ha subido tu fuerza estimada: nada de peso corporal ni datos de salud." />}
     </Hoja>
   );
@@ -210,7 +213,7 @@ export function ListaInformes({ informes, alAbrir, coach = false }) {
           <li key={r.bloque.id}>
             <button class="fila-semana" onClick={() => alAbrir(r)}>
               <span class="pila-xs">
-                <strong>{tituloBloque(r.bloque)}</strong>
+                <strong>{tituloVisto(r.bloque, coach)}</strong>
                 <span class="peq secundario">{r.terminado ? 'Terminado' : 'En curso'}, {r.sesiones.hechas} de {r.sesiones.total} sesiones{r.cumplimiento.series.pct != null ? `, ${r.cumplimiento.series.pct} % de las series` : ''}{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</span>
               </span>
               <PortadaHistoria tono="bloque peq" />
@@ -230,7 +233,7 @@ export function TarjetaBloque({ informe: r, alAbrir, alQuitar }) {
       <button class="tarjeta-semana-abrir" onClick={alAbrir}>
         <PortadaHistoria tono="bloque" />
         <span class="pila-xs">
-          <span class="mini">Has terminado el {tituloBloque(r.bloque)}</span>
+          <span class="mini">Has terminado el {tituloVisto(r.bloque)}</span>
           <strong>{r.sesiones.hechas} de {r.sesiones.total} sesiones{r.principales[0]?.cambio != null ? `, ${r.principales[0].nombre.toLowerCase()} ${signo(r.principales[0].cambio, 1)} %` : ''}</strong>
           <span class="mini">Mira tu informe</span>
         </span>

@@ -646,7 +646,9 @@ export function AtajosPerfil({ irA }) {
   const { atleta } = useApp();
   const [guardados, setGuardados] = useState(() => leerPreferencia(`fbe-atajos-perfil-${atleta.id}`, null));
   const [editar, setEditar] = useState(false);
-  const lista = atajosValidos(guardados);
+  // quien va por su cuenta no tiene «Mensajes»: ni se le ofrece ni le sale por defecto
+  const fuera = esPorSuCuenta(atleta) ? ['mensajes'] : [];
+  const lista = atajosValidos(guardados, fuera);
   const fijar = (l) => { setGuardados(l); guardarPreferencia(`fbe-atajos-perfil-${atleta.id}`, l); };
   const ir = (destino) => {
     if (destino === '#carne') { const c = document.querySelector('.carnet'); c?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
@@ -665,10 +667,10 @@ export function AtajosPerfil({ irA }) {
           <div class="pila">
             <p class="peq secundario">Elige hasta tres. Se guardan en este móvil.</p>
             <div class="lista-elegir" role="group" aria-label="Tus atajos">
-              {ATAJOS_PERFIL.map(([k, t, ico]) => {
+              {ATAJOS_PERFIL.filter(([k]) => !fuera.includes(k)).map(([k, t, ico]) => {
                 const si = lista.includes(k), lleno = !si && lista.length >= 3;
                 return (
-                  <button key={k} type="button" aria-pressed={si ? 'true' : 'false'} disabled={lleno} onClick={() => fijar(alternarAtajo(lista, k))} class={si ? 'elegida' : ''}>
+                  <button key={k} type="button" aria-pressed={si ? 'true' : 'false'} disabled={lleno} onClick={() => fijar(alternarAtajo(lista, k, fuera))} class={si ? 'elegida' : ''}>
                     <span class="separa"><span><Icono n={ico} /> {t}</span>{si && <Icono n="hecho" />}</span>
                   </button>
                 );

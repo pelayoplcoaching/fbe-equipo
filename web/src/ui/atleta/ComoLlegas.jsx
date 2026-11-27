@@ -14,7 +14,7 @@ import { fechaLarga } from '../../logica/esencial-alta.js';
 const BOCA = { bien: 'M8 14c1.1 1.4 2.4 2 4 2s2.9-.6 4-2', regular: 'M8.5 15h7', mal: 'M8 16.2c1.1-1.4 2.4-2 4-2s2.9.6 4 2' };
 function Cara({ c }) {
   return (
-    <svg class="cll-cara-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+    <svg class={`cll-cara-ico amb-cara-${c}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <circle cx="9" cy="10" r="0.6" fill="currentColor" />
       <circle cx="15" cy="10" r="0.6" fill="currentColor" />

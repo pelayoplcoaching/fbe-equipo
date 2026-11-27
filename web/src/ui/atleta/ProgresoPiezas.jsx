@@ -4,6 +4,7 @@
 import { num } from '../../logica/calculos.js';
 import { fmtCorta, hoyISO, sumarDias } from '../../logica/fechas.js';
 import { cambiosMedidas, alturasEtiquetas } from '../../logica/progreso-visual.js';
+import { useId } from 'preact/hooks';
 import { Icono } from '../comunes.jsx';
 
 export { metaFuerza, metaPeso, ritmoFrenteMeta } from '../../logica/progreso-visual.js';
@@ -19,6 +20,28 @@ export function MiniLinea({ valores = [], ancho = 96, alto = 28, clase = '' }) {
     <svg class={`mini-linea ${clase}`} viewBox={`0 0 ${ancho} ${alto}`} width={ancho} height={alto} aria-hidden="true" focusable="false">
       <polyline points={pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')} />
       <circle cx={ux} cy={uy} r="2.8" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------- (belleza B81 y B88) la línea a todo el ancho
+// La de tu objetivo y la de un destacado: a todo el ancho de la tarjeta, con el área en degradado debajo y el punto de
+// hoy con su halo. Del color de su tarjeta (--t) si lo tiene; si no, el acento. Decorativa: la cifra ya lo dice.
+export function LineaAncha({ valores = [], clase = '' }) {
+  const id = `la-${useId()}`;
+  const vs = (valores || []).filter(Number.isFinite);
+  if (vs.length < 2) return null;
+  const W = 300, H = 56, arr = 9, abj = 4;
+  const lo = Math.min(...vs), hi = Math.max(...vs), r = hi - lo || 1;
+  const pts = vs.map((v, i) => [7 + (i * (W - 14)) / (vs.length - 1), arr + (1 - (v - lo) / r) * (H - arr - abj)]);
+  const xy = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`);
+  const [ux, uy] = pts[pts.length - 1];
+  return (
+    <svg class={`amb-linea-ancha ${clase}`} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" focusable="false">
+      <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="amb-la-s1" /><stop offset="1" class="amb-la-s2" /></linearGradient></defs>
+      <path class="amb-la-area" style={{ fill: `url(#${id})` }} d={`M${pts[0][0].toFixed(1)},${H} L${xy.join(' L')} L${ux.toFixed(1)},${H} Z`} />
+      <polyline class="amb-la-linea" points={xy.join(' ')} />
+      <circle class="amb-la-punto" cx={ux.toFixed(1)} cy={uy.toFixed(1)} r="3.6" />
     </svg>
   );
 }

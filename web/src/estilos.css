@@ -1083,7 +1083,7 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 .interruptor:checked::after { transform: translateX(20px); }
 .interruptor:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .interruptor, .interruptor::after { transition: none; } }
-.preparacion .separa .btn-texto { white-space: nowrap; }
+.preparacion .separa .btn-texto, .cll-caja > .separa > .btn-texto { flex: none; align-self: flex-start; white-space: nowrap; font-size: var(--letra-14); }
 
 /* ---------- v0.7: revisión de vídeo ---------- */
 .reproductor { display: grid; gap: var(--esp-8); }
@@ -3409,10 +3409,8 @@ html.hay-actividad body::before { height: calc(env(safe-area-inset-top, 0px) + v
 .destacado-ir { justify-self: start; margin-top: -4px; }
 .destacado-ir svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2; }
 .mini-grafica { width: 8.25rem; height: 2.5rem; overflow: visible; display: block; margin-top: var(--esp-2); }
-.mini-grafica polyline { fill: none; stroke: var(--morado); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.mini-grafica circle { fill: var(--morado); stroke: var(--hoja); stroke-width: 2; }
-.mini-grafica rect { fill: color-mix(in srgb, var(--tinta-3) 38%, var(--hoja)); }
-.mini-grafica rect.resaltada { fill: var(--morado); }
+.mini-grafica rect { fill: color-mix(in srgb, var(--t-barra, var(--t, var(--morado))) 24%, var(--hoja)); }
+.mini-grafica rect.resaltada { fill: var(--t-barra, var(--t, var(--morado))); }
 .mini-grafica.pips { display: inline-flex; align-items: center; gap: var(--esp-4); width: auto; }
 .mini-grafica.pips i { width: 0.8125rem; height: 0.8125rem; border-radius: var(--r-4); }
 .mini-grafica.pips .pip-lleno { background: var(--morado); }

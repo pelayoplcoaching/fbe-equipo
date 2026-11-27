@@ -8,7 +8,7 @@ import { PropuestasTuyas } from './ObjetivosTuyos.jsx';
 import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
-import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros } from './ProgresoPiezas.jsx';
+import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros, LineaAncha } from './ProgresoPiezas.jsx';
 import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
 import { periodoAnterior, compararEjercicios, cifrasFrente, escaleraRecords, musculosRecord, diasCheckin } from '../../logica/progreso-visual-2.js';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
@@ -688,7 +688,7 @@ function TusSemanas({ salud, lista }) {
         <ul class="lista">
           {ult.map((r) => (
             <li key={r.lunes}>
-              <button class="fila-semana" onClick={() => setAbierta(r)}>
+              <button class="fila-semana amb-con-sello" onClick={() => setAbierta(r)}>
                 <span class="pila-xs">
                   <strong>Semana {rangoLargo(r.lunes, r.domingo)}</strong>
                   <span class="peq secundario">{r.sesiones.hechas} de {r.sesiones.total} sesiones, {r.series} series{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</span>
@@ -845,6 +845,8 @@ function Destacados({ progreso, constancia, programa }) {
   const nombres = Object.fromEntries((progreso.vitrina?.ejercicios || []).map((e) => [e.id, e.nombre]));
   const lista = calcularDestacados({ dias: progreso.tonelaje || {}, ejercicios: progreso.ejercicios, racha: constancia?.racha, calendario, bloque, recientes: progreso.vitrina?.recientes, nombres }, hoy);
   if (!lista.length) return null;
+  // (belleza B89) las semanas de las barras de los récords: las tres de antes por su lunes y la de ahora
+  const semanasRecords = [3, 2, 1, 0].map((k) => (k ? fmtCorta(sumarDias(lunesDe(hoy), -7 * k)) : 'Esta semana'));
   return (
     <section class="seccion destacados" aria-labelledby="destacados-t">
       <h2 id="destacados-t">Destacados</h2>
@@ -853,7 +855,7 @@ function Destacados({ progreso, constancia, programa }) {
           <li key={d.id} class="destacado panel" data-tipo={d.id} style={{ '--i': i }}>
             <p class="destacado-sobre"><Icono n={d.icono} />{d.sobre}</p>
             <p class="destacado-texto">{unirUnidades(d.texto)}</p>
-            <MiniGrafica g={d.grafica} />
+            <MiniGrafica g={d.grafica} semanas={d.id === 'records' ? semanasRecords : null} />
             {d.id === 'racha' && constancia && <button type="button" class="btn-texto destacado-ir" onClick={() => setVerRacha(true)}>Ver tu racha <Icono n="derecha" /></button>}
           </li>
         ))}
@@ -863,9 +865,11 @@ function Destacados({ progreso, constancia, programa }) {
   );
 }
 
-// La gráfica pequeña de un destacado: una línea, unas barras (la de ahora, resaltada) o las semanas como casillas
-function MiniGrafica({ g }) {
-  const W = 132, H = 40;
+// La gráfica pequeña de un destacado: una línea, unas barras (la de ahora, resaltada) o las semanas como casillas.
+// (belleza B88) A todo el ancho de la tarjeta y del color de lo que cuenta (--t): la línea con su área y el punto de
+// ahora; las barras con la punta redonda y la de ahora en su color. (B89) En los récords, cada barra con su cifra encima
+// y su semana debajo (la de ahora, en dorado).
+function MiniGrafica({ g, semanas = null }) {
   if (!g?.valores?.length) return null;
   const vs = g.valores;
   if (g.tipo === 'pips') {
@@ -876,21 +880,23 @@ function MiniGrafica({ g }) {
     );
   }
   if (g.tipo === 'barras') {
+    const W = 300, Hb = 44, cifras = !!semanas && semanas.length === vs.length, arr = cifras ? 18 : 2, abj = cifras ? 20 : 0, H = arr + Hb + abj;
     const max = g.max || Math.max(1, ...vs);
-    const bw = W / vs.length;
+    const hueco = W / vs.length, bw = Math.min(hueco * 0.58, 40);
     return (
-      <svg class="mini-grafica" viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true" focusable="false">
-        {vs.map((v, i) => { const h = Math.max(3, (v / max) * (H - 4)); return <rect key={i} class={i === g.resaltado ? 'resaltada' : ''} x={i * bw + bw * 0.18} y={H - h} width={bw * 0.64} height={h} rx="3" />; })}
+      <svg class={`mini-grafica amb-mg ${cifras ? 'amb-mg-cifras' : ''}`} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" focusable="false">
+        {vs.map((v, i) => {
+          const h = Math.max(4, (v / max) * Hb), x = i * hueco + (hueco - bw) / 2, y = arr + Hb - h;
+          return (
+            <g key={i}>
+              <rect class={i === g.resaltado ? 'resaltada' : ''} x={x.toFixed(1)} y={y.toFixed(1)} width={bw.toFixed(1)} height={h.toFixed(1)} rx={Math.min(6, bw / 2).toFixed(1)} />
+              {cifras && <text class="amb-mg-n" x={(x + bw / 2).toFixed(1)} y={(y - 5).toFixed(1)} text-anchor="middle">{v}</text>}
+              {cifras && <text class={i === g.resaltado ? 'amb-mg-e amb-mg-e-si' : 'amb-mg-e'} x={(x + bw / 2).toFixed(1)} y={H - 4} text-anchor="middle">{semanas[i]}</text>}
+            </g>
+          );
+        })}
       </svg>
     );
   }
-  const lo = Math.min(...vs), hi = Math.max(...vs), rng = hi - lo || 1;
-  const pts = vs.map((v, i) => [vs.length === 1 ? W / 2 : 4 + (i * (W - 8)) / (vs.length - 1), 6 + (1 - (v - lo) / rng) * (H - 12)]);
-  const [ux, uy] = pts[pts.length - 1];
-  return (
-    <svg class="mini-grafica" viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true" focusable="false">
-      <polyline points={pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')} />
-      <circle cx={ux} cy={uy} r="3.5" />
-    </svg>
-  );
+  return <LineaAncha valores={vs} clase="mini-grafica amb-mg" />;
 }

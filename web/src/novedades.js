@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.264': {
+    // (belleza, segunda vuelta: lo que quedaba de las tandas B y C; «claude/belleza-150-estado.md»)
+    atleta: [
+      'Progreso: la línea de tu objetivo y la de los destacados ocupan todo el ancho, y los récords muestran sus semanas.',
+      'El check-in marca en verde lo que ya has contestado.',
+    ],
+    coach: [
+      'Belleza, segunda vuelta: las gráficas de Progreso a todo el ancho, las hojas sin banda blanca y detalles de la sesión.',
+    ],
+  },
   '0.263': {
     // (belleza C para las dos apps: acabado y para todos; «claude/belleza-150-ambas.md», C101 a C150)
     atleta: [

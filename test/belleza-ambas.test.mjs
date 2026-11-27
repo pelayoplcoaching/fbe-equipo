@@ -59,5 +59,36 @@ check(/ck-vl ck-vl-\$\{/.test(src('ui/atleta/Checkin.jsx')) && /\.ck-vl-bascula 
 check(/atajo-perfil atajo-k-\$\{k\}/.test(src('ui/atleta/PerfilMas.jsx')) && /\.atajo-k-progreso \.atajo-ico/.test(cssC), 'C144: los atajos del perfil, cada uno con su color');
 check(/\.cerrar-hoja\.cerrar-hoja \{[^}]*width: 2\.75rem/.test(sinComC) && /\.bloque-equipo\.bloque-equipo \{[^}]*position: sticky/.test(sinComC), 'C110 y C129: la X de las hojas con 44 px y las etiquetas de Recetas pegadas arriba');
 
+console.log('\nSegunda vuelta (v0.264): lo que quedaba de B y C');
+const cssD = src('ambas-d.css'), sinComD = cssD.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssD) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComD) && main.indexOf("'./ambas-d.css'") > main.indexOf("'./ambas-c.css'") && main.indexOf("'./ambas-d.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-d.css: solo ASCII, los colores por su nombre y detrás de la tanda C');
+const piezas = src('ui/atleta/ProgresoPiezas.jsx'), prog = src('ui/atleta/Progreso.jsx');
+check(/export function LineaAncha\(/.test(piezas) && /<LineaAncha valores=\{c\.serie\} clase="mini-linea cifra-objetivo-linea" \/>/.test(src('ui/atleta/Personal.jsx')) && /return <LineaAncha valores=\{vs\} clase="mini-grafica amb-mg" \/>;/.test(prog)
+  && /\.amb-linea-ancha\.amb-linea-ancha \{[^}]*width: 100%/.test(sinComD), 'B81 y B88: la línea de tu objetivo y la de los destacados, a todo el ancho, con su área y el punto de ahora');
+check(/semanas=\{d\.id === 'records' \? semanasRecords : null\}/.test(prog) && /'Esta semana'/.test(prog) && /class="amb-mg-n"/.test(prog) && /\.destacado\[data-tipo="records"\] \{ --t: var\(--oro\); --t-barra: var\(--oro-400\); \}/.test(src('diseno.css')),
+  'B89: los récords, con la cifra encima de cada barra, su semana debajo y la de ahora en dorado');
+check(/\.mini-grafica rect\.resaltada \{ fill: var\(--t-barra, var\(--t, var\(--morado\)\)\); \}/.test(src('estilos.css')) && !/\.mini-grafica polyline/.test(src('estilos.css')), 'B88: las barras, del color de su tarjeta (y sin la línea vieja de 132 px)');
+const com = src('ui/comunes.jsx');
+check(/classList\.toggle\('hoja-bajada', e\.currentTarget\.scrollTop > 2\)/.test(com) && /\.hoja-bajada > \.hoja-cab \{ background-color: var\(--hoja\); \}/.test(sinComD) && !/\.hoja-cab \{[^}]*background: var\(--hoja\)/.test(src('visual.css')),
+  'C116: la cabecera de las hojas sin banda blanca arriba del todo; con su fondo al bajar');
+check((com.match(/y=\{yCifra\(/g) || []).length === 2 && /const yCifra = \(yUlt, yAnt, suelo\) =>/.test(com), 'B87: la cifra del último punto no se cruza con la línea (debajo si el anterior quedó más alto)');
+check(/\.seg-rango\.seg-rango \{ justify-self: stretch; \}/.test(sinComD) && /class="fila-semana amb-con-sello"/.test(prog) && /\.fila-semana\.amb-con-sello \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/.test(sinComD),
+  'el rango de las gráficas a todo el ancho y el sello de «Tus semanas» dentro de su tarjeta');
+check(/nombreBloque\(tituloBloque\(b\)\)/.test(src('ui/InformeBloque.jsx')) && /<strong>\{tituloVisto\(r\.bloque, coach\)\}<\/strong>/.test(src('ui/InformeBloque.jsx')), 'A13 (repaso): «Tus bloques» y su informe, sin «· FBE Esencial» para el atleta (el coach lo ve entero)');
+const rut = src('ui/atleta/EsencialRutinas.jsx');
+check(/<span class="peq secundario">\{desde\}<\/span>/.test(rut) && /\\u00a0· \$\{s\.semanas === 1/.test(rut), '«Tu rutina»: la fecha como texto (no como marcador) y el punto pegado a lo de antes');
+check(/\.ayu-claro-t::-webkit-details-marker \{ display: none; \}/.test(sinComD) && /\.ayu-claro\[open\] > \.ayu-claro-t::after \{ rotate: 180deg; \}/.test(sinComD), 'C127: «Tu sesión, en claro» con la flecha de la app');
+check(/'--verde': `\$\{enRevision \? 100 : \(paso \/ \(paso \+ 1\)\) \* 100\}%`/.test(src('ui/atleta/Checkin.jsx')) && /\.ck-barra\.ck-barra > span \{ background: linear-gradient\(var\(--oklab,\) 90deg, color-mix\(in srgb, var\(--ok\) 65%, var\(--blanco\)\), var\(--ok\) var\(--verde, 0%\), var\(--morado\) var\(--verde, 0%\)\); \}/.test(sinComD),
+  'C147: el check-in, con las preguntas hechas en verde y la de ahora en morado');
+check(/class="pista-cerrar" aria-label="Ahora no"/.test(src('ui/PruebaSonido.jsx')) && /\.aviso-prueba-sonido > span \{ flex: 1 1 0%; min-width: min\(100%, 9\.5rem\); \}/.test(src('belleza-a.css')), 'B54: «¿Se oye bien el sonido?» en una línea, con la X de las pistas (el lector oye «Ahora no»)');
+check(/\.cll-caja > \.separa > \.btn-texto \{ flex: none; align-self: flex-start; white-space: nowrap; font-size: var\(--letra-14\); \}/.test(src('estilos.css')) && /amb-cara-\$\{c\}/.test(src('ui/atleta/ComoLlegas.jsx')) && /\.amb-cara-mal \{ color: var\(--alerta\); \}/.test(sinComD),
+  'B51 y B55: el «Ahora no» de «¿Cómo llegas hoy?» en una línea y las caras con su color');
+check(/document\.title = nombreApp/.test(app) && /const nombreApp = esPorSuCuenta\(atleta\) \? 'FBE Esencial' : 'FBE Equipo';/.test(app), 'C148 (en parte): la pestaña del navegador con el nombre de su app');
+const { atajosValidos, alternarAtajo } = await import('../web/src/logica/perfil-mas.js');
+check(atajosValidos(null).join() === 'checkin,progreso,mensajes' && atajosValidos(null, ['mensajes']).join() === 'checkin,progreso,semana' && atajosValidos(['mensajes', 'carne'], ['mensajes']).join() === 'carne'
+  && alternarAtajo(['checkin'], 'mensajes', ['mensajes']).join() === 'checkin' && /const fuera = esPorSuCuenta\(atleta\) \? \['mensajes'\] : \[\];/.test(src('ui/atleta/PerfilMas.jsx')),
+  'los atajos del perfil: a quien va por su cuenta no le sale «Mensajes» (en su lugar, «Tu semana»)');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

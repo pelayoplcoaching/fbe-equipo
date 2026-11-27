@@ -306,6 +306,10 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   useMarcaPagina('hay-tabs', !sesionId);
   // (belleza A2) la barra de abajo del atleta flota: el hueco del final de cada pantalla y del desplazamiento lo tienen en cuenta
   useMarcaPagina('barra-flota', !sesionId);
+  // (belleza C148) el nombre de la pestaña y del selector de apps, el de su app (al salir, el de siempre)
+  const { atleta } = useApp();
+  const nombreApp = esPorSuCuenta(atleta) ? 'FBE Esencial' : 'FBE Equipo';
+  useEffect(() => { document.title = nombreApp; return () => { document.title = 'FBE Equipo'; }; }, [nombreApp]);
 
   return (
     <div class={`app ${sesionId ? 'en-sesion' : ''} ${conActividad ? 'con-actividad' : ''}`}>

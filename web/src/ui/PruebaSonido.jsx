@@ -58,7 +58,8 @@ export function AvisoPruebaSonido() {
         <p class="aviso-prueba-sonido peq">
           <Icono n="altavoz" /><span>¿Se oye bien el sonido?</span>
           <button type="button" class="btn-texto" onClick={() => { setAbierta(true); setVer(false); }}>Probar (10 s)</button>
-          <button type="button" class="btn-texto mini" onClick={() => { guardarAjustes({ ...leerAjustes(), pruebaSonido: true }); setVer(false); }}>Ahora no</button>
+          {/* (belleza B54) «Ahora no», con la X de las pistas: la línea cabe en una (el lector sigue oyendo «Ahora no») */}
+          <button type="button" class="pista-cerrar" aria-label="Ahora no" onClick={() => { guardarAjustes({ ...leerAjustes(), pruebaSonido: true }); setVer(false); }}><Icono n="cerrar" /></button>
         </p>
       )}
       {abierta && <PruebaSonido alCerrar={() => setAbierta(false)} />}

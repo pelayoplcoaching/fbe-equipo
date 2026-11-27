@@ -1,0 +1,65 @@
+/* Belleza para las dos apps, segunda vuelta (v0.264): lo que quedaba de las tandas B y C al ver las capturas de la sesion
+   terminada, Semana, Progreso y el check-in de las dos apps. La lista, en el doc del proyecto "claude/belleza-150-ambas.md";
+   lo hecho y lo que no se pone, en "claude/belleza-150-estado.md". Solo como se ve: textos y cifras, iguales. Va detras de
+   ambas-c.css y antes de color-capa.css. */
+
+/* -- B81 y B88 - La linea de tu objetivo y la de los destacados, a todo el ancho de su tarjeta (antes, un tercio): el area
+   en degradado debajo y el punto de ahora con su halo, del color de lo que cuenta (--t, el de cada destacado) o del acento */
+.amb-linea-ancha.amb-linea-ancha { display: block; width: 100%; height: auto; overflow: visible; }
+.amb-linea-ancha .amb-la-s1 { stop-color: var(--t, var(--morado)); stop-opacity: .26; }
+.amb-linea-ancha .amb-la-s2 { stop-color: var(--t, var(--morado)); stop-opacity: 0; }
+.amb-linea-ancha .amb-la-linea { fill: none; stroke: var(--t, var(--morado)); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.amb-linea-ancha .amb-la-punto { fill: var(--t, var(--morado)); stroke: var(--t, var(--morado)); stroke-opacity: .22; stroke-width: 9; paint-order: stroke; }
+
+/* -- B88 y B89 - Las barras de los destacados, a todo el ancho, con la punta redonda y del color de su tarjeta: la de
+   ahora, entera; las de antes, en su tinte (los colores, en estilos.css). En los records (dorados), cada barra con su
+   cifra encima y su semana debajo */
+.mini-grafica.amb-mg { width: 100%; height: auto; }
+.amb-mg .amb-mg-n { font-size: var(--letra-11-5); font-weight: 700; fill: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.amb-mg .amb-mg-e { font-size: var(--letra-10-5); font-weight: 560; fill: var(--tinta-3); }
+.amb-mg .amb-mg-e-si { font-weight: 700; fill: var(--tinta-2); }
+@media (forced-colors: active) {
+  .mini-grafica.amb-mg rect { fill: GrayText; }
+  .mini-grafica.amb-mg rect.resaltada { fill: Highlight; }
+}
+
+/* -- C116 (repaso) - La cabecera de las hojas, del mismo cristal que la hoja: arriba del todo no lleva fondo propio (antes,
+   una banda blanca sobre la hoja translucida; el fondo se quito de visual.css); en cuanto se baja (hoja-bajada,
+   comunes.jsx), con su fondo, para tapar lo que pasa por debajo */
+.hoja-bajada > .hoja-cab { background-color: var(--hoja); }
+@media (prefers-reduced-motion: no-preference) { .hoja-cab.hoja-cab { transition: background-color var(--mov-breve) ease; } }
+
+/* -- B88 - El selector de rango de las graficas (1M, 3M, 6M, Todo), a todo el ancho de su tarjeta, como los otros segmentos */
+.seg-rango.seg-rango { justify-self: stretch; }
+
+/* -- B76 (repaso) - "Tus semanas": el sello de cada semana con su columna entera (antes se salia por la derecha y la medalla
+   de los records asomaba fuera de la tarjeta) */
+.fila-semana.amb-con-sello { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* -- C127 - "Tu sesion, en claro": la flecha de la app en lugar del triangulo del navegador, a la derecha y en tinta suave;
+   abierto, gira */
+.ayu-claro-t.ayu-claro-t { position: relative; display: block; padding-inline-end: var(--esp-28); list-style: none; }
+.ayu-claro-t::-webkit-details-marker { display: none; }
+.ayu-claro-t::after {
+  content: ""; position: absolute; right: 0; top: var(--esp-2); width: var(--ico-18); height: var(--ico-18); background: var(--tinta-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.ayu-claro[open] > .ayu-claro-t::after { rotate: 180deg; }
+@media (prefers-reduced-motion: no-preference) { .ayu-claro-t::after { transition: rotate var(--mov-breve) ease; } }
+@media (forced-colors: active) { .ayu-claro-t::after { background: CanvasText; } }
+
+/* -- C147 - El check-in, paso a paso: las preguntas hechas, en verde (el mismo de los tramos hechos de la sesion, B60); la
+   de ahora, en morado (--verde: hasta donde llegan las hechas, lo pone Checkin.jsx) */
+.ck-barra.ck-barra > span { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok) var(--verde, 0%), var(--morado) var(--verde, 0%)); }
+@media (forced-colors: active) { .ck-barra.ck-barra > span { background: Highlight; } }
+
+/* -- B51 y B54 (en estilos.css, sonido.css y belleza-a.css, donde ya estaban sus reglas): el "Ahora no" de "Como llegas
+   hoy?" en una linea y del tamano de las acciones pequenas, y "Se oye bien el sonido?" en una linea fina */
+
+/* -- B55 - Las caras de "Como llegas hoy?" (la de un toque), cada una con su color, como un semaforo de como llegas: bien
+   en verde, regular en ambar y mal en rojo; la elegida, con su aro (como-llegas.css) */
+.amb-cara-bien { color: var(--ok); }
+.amb-cara-regular { color: var(--aviso); }
+.amb-cara-mal { color: var(--alerta); }
+@media (forced-colors: active) { .amb-cara-bien, .amb-cara-regular, .amb-cara-mal { color: CanvasText; } }
