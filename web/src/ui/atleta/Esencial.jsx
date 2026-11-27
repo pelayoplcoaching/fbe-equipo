@@ -3,7 +3,7 @@
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
-import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../../logica/esencial.js';
+import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
 import { semanaDelPlan, leccionDe } from '../../logica/esencial-lecciones.js';
@@ -325,7 +325,7 @@ export function HojaMarcas({ datos, alCerrar }) {
   return (
     <Hoja titulo="Tus marcas" alCerrar={alCerrar}>
       <div class="pila">
-        <p class="secundario">Semana {datos.semana.numero}{datos.bloque?.nombre ? ` de «${datos.bloque.nombre}»` : ''}: tu mejor serie en cada ejercicio.</p>
+        <p class="secundario">Semana {datos.semana.numero}{datos.bloque?.nombre ? ` de «${nombreBloque(datos.bloque.nombre)}»` : ''}: tu mejor serie en cada ejercicio.</p>
         <ul class="lista lista-marcas">
           {datos.marcas.map((m) => (
             <li key={m.ejercicio_id} class="separa" style="padding: var(--esp-12) 0">
@@ -445,7 +445,7 @@ export function HeroEsencial({ p, cuestionario, abrirCuestionario, recargarProgr
       error ? <button class="btn btn-grande btn-hero" onClick={() => { pedido.current = false; setError(null); setIntento((n) => n + 1); }}><Icono n="reiniciar" /> Reintentar</button> : null);
   }
   // espera: con su plan, antes de su lunes. (alta, 29 y 32) Su camino de un vistazo y un consejo de la guía cada día
-  return marco(`Tu plan: ${bloque.nombre}`, 'calendario', e.faltan === 1 ? 'Mañana' : `Faltan ${e.faltan} días`, `Empiezas el ${fechaLarga(e.inicio)}`,
+  return marco(`Tu plan: ${nombreBloque(bloque.nombre)}`, 'calendario', e.faltan === 1 ? 'Mañana' : `Faltan ${e.faltan} días`, `Empiezas el ${fechaLarga(e.inicio)}`,
     bloque.nombre === NOMBRE_PRIMERAS_4
       ? 'Tu plan ya está listo: tus cuatro primeras semanas son las de la guía. Mientras llega el día, elige tus días y mira tus ejercicios.'
       : 'Tu plan ya está listo. Mientras llega el día, elige tus días y mira tus ejercicios.',

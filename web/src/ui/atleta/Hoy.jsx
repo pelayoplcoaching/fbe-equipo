@@ -25,7 +25,7 @@ import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
-import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO } from '../../logica/esencial.js';
+import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { sinMovimiento } from '../transiciones.js';
@@ -184,7 +184,7 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
       <header class="cabecera">
         <h1 class="sr">Hoy</h1>
         {/* (v0.200) el lobo de arriba aúlla con tres toques seguidos (un guiño; solo adorno) */}
-        <div class={`titulo${aulla ? ' lobo-aulla' : ''}`} onClick={tocarLobo}><Marca /></div>
+        <div class={`titulo${aulla ? ' lobo-aulla' : ''}`} onClick={tocarLobo}><Marca nombre={porSuCuenta ? 'FBE Esencial' : undefined} /></div>
         <span class="sub">{fmtConDia(hoyISO())}</span>
         {/* (v0.200) con el aro de su semana alrededor: lo hecho de lo previsto (las sesiones publicadas de esta semana) */}
         {!propio && <button class="btn-avatar" onClick={() => irA('perfil')} aria-label="Tu perfil"><ConAro hechas={sesSemana.filter((s) => s.completada).length} total={entrena ? sesSemana.length : 0}><Avatar nombre={atleta.nombre} foto={perfil?.foto} /></ConAro></button>}
@@ -688,21 +688,22 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         {e.tipo === 'entreno' && siguiente && det.datos && <ArteSesion nombre={siguiente.nombre} tipo={siguiente.tipo || 'fuerza'} patron={resumenSigue?.patrones?.[0] || null} clase="hero-arte" />}
         <div class="titular">
           <div class="contexto">
-            <span>Bloque {p.bloque.numero}: {p.bloque.nombre}</span>
+            <span>Bloque {p.bloque.numero}: {nombreBloque(p.bloque.nombre)}</span>
             <span>Semana {semana.numero}</span>
             {semana.foco && <span>Foco: {NOMBRE_FOCO[semana.foco]?.toLowerCase()}</span>}
           </div>
           {/* (054) el objetivo del bloque, a la vista cada día */}
           {p.bloque.objetivo && <p class="hero-objetivo"><Icono n="bandera" /> {p.bloque.objetivo}</p>}
           {/* (v0.200) los dos primeros días de un bloque nuevo, su estreno: el nombre se escribe solo */}
-          {estreno && <p class="estreno-bloque"><span class="estreno-sello">Estreno</span><span class="estreno-nombre">{p.bloque.nombre}</span></p>}
+          {estreno && <p class="estreno-bloque"><span class="estreno-sello">Estreno</span><span class="estreno-nombre">{nombreBloque(p.bloque.nombre)}</span></p>}
           {/* (v0.200) Nochevieja y Año Nuevo, con sus fuegos detrás */}
           {fiesta && <span class="chip toca-hoy fiesta"><Icono n="estrella" />{fiesta}</span>}
           {e.tipo === 'entreno' && enSemana && toca.hoy && <span class="chip toca-hoy"><Icono n="calendario" />Hoy toca</span>}
           {e.tipo === 'descanso' && <span class="chip toca-hoy descanso"><Icono n="sueno" />Día de descanso</span>}
           {e.tipo === 'hecha' && <span class="chip toca-hoy hecha"><Icono n="hecho" />Hecha hoy</span>}
           {e.tipo === 'semana' && <span class="chip toca-hoy hecha"><Icono n="llama" />Semana completa</span>}
-          <h2>{e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? '¡Sesión hecha!' : e.tipo === 'semana' ? (dias && natural && !natural.completa ? '¡Todo hecho!' : '¡Semana completa!') : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
+          {/* (belleza A16) un nombre de sesión largo se estrecha un punto (la Archivo tiene eje de anchura) antes de partirse */}
+          <h2 class={e.tipo === 'entreno' && siguiente ? (siguiente.nombre.length > 20 ? 'amb-h2-estrecho amb-h2-largo' : siguiente.nombre.length > 12 ? 'amb-h2-estrecho' : undefined) : undefined}>{e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? '¡Sesión hecha!' : e.tipo === 'semana' ? (dias && natural && !natural.completa ? '¡Todo hecho!' : '¡Semana completa!') : siguiente ? siguiente.nombre : 'Semana completada'}</h2>
           {e.tipo === 'entreno' && !toca.hoy && previsto && <p class="peq secundario">{previsto > hoy ? `Prevista para ${cuandoDia(previsto, hoy)}.` : `La tenías prevista ${cuandoDia(previsto, hoy)}.`}</p>}
           {e.tipo === 'semana' && !dias && <p class="peq secundario">Has hecho las {hechas} sesiones de esta semana.</p>}
           {e.tipo === 'semana' && dias && (
@@ -712,9 +713,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
             </p>
           )}
         </div>
-        {semana.nota_coach && (
-          <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" /><div><strong>{esencial || esPorSuCuenta(atleta) ? 'Esta semana: ' : 'Tu coach: '}</strong><TextoConEnlaces texto={semana.nota_coach} como="span" /></div></div>
-        )}
+        {semana.nota_coach && <NotaHero titulo={esencial || esPorSuCuenta(atleta) ? 'Esta semana: ' : 'Tu coach: '} texto={semana.nota_coach} />}
         {e.tipo === 'descanso' ? (
           <HeroDescanso proxima={e.proxima} hoy={hoy} abrirSesion={abrirSesion} abrirPlan={enSemana && sesiones.some((s) => !s.completada) ? () => setPlanAbierto(true) : null} />
         ) : e.tipo === 'hecha' ? (
@@ -733,7 +732,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
               <div class="hero-meta">
                 {det.cargando && !det.datos && !cardioValido(siguiente.cardio) && <span aria-hidden="true">&nbsp;</span>}
                 {cardioValido(siguiente.cardio) && <span><b>{textoCardio(siguiente.cardio)}</b></span>}
-                {ejercicios.length > 0 && <><span><b>{ejercicios.length}</b> ejercicios</span><span>unos <b>{duracionEstimada(ejercicios)}</b> min</span></>}
+                {ejercicios.length > 0 && <><span><Icono n="hoy" /><b>{ejercicios.length}</b> ejercicios</span><span><Icono n="reloj" />unos <b>{duracionEstimada(ejercicios)}</b> min</span></>}
                 {empezada && <span><b>{ejercicios.reduce((n, x) => n + x.hechas.length, 0)}</b> series ya hechas</span>}
               </div>
             )}
@@ -1019,7 +1018,7 @@ function HeroEspera({ bloque, notion, irA, propio }) {
     <section class="hero-dia hero-espera" aria-label="Tu semana, en camino">
       <Ilustracion n="espera" clase="hero-ilu" />
       <div class="titular">
-        {bloque && <div class="contexto"><span>Bloque {bloque.numero}: {bloque.nombre}</span></div>}
+        {bloque && <div class="contexto"><span>Bloque {bloque.numero}: {nombreBloque(bloque.nombre)}</span></div>}
         <span class="chip toca-hoy descanso"><Icono n="reloj" />En preparación</span>
         <h2>Tu semana está en camino</h2>
         <p class="peq secundario">Tu programa aún no está publicado: tu coach lo publicará aquí.{notion ? ' Mientras tanto, tu plan sigue en tu página de Notion.' : ''}</p>
@@ -1035,6 +1034,20 @@ function HeroEspera({ bloque, notion, irA, propio }) {
 // Lo que queda de la semana y la racha de semanas completas (v0.51: el anillo pasa al dial «Constancia», justo debajo)
 // v0.52: la racha es un botón que abre su pantalla (como en Duolingo)
 // v0.53: objetivo (días por semana, si lo tiene): las que le quedan para llegar a él, de lunes a domingo
+// (belleza A15) la nota de la semana en la tarjeta grande: tres líneas y «Leer más» si es larga (no ocupa media tarjeta)
+function NotaHero({ titulo, texto }) {
+  const [abierta, setAbierta] = useState(false);
+  const larga = String(texto).length > 140;
+  return (
+    <div class="nota-coach con-lobo"><img class="nota-lobo" src={LOBO} alt="" width="24" height="24" aria-hidden="true" />
+      <div class="amb-nota">
+        <div class={larga && !abierta ? 'amb-nota-corta' : undefined}><strong>{titulo}</strong><TextoConEnlaces texto={texto} como="span" /></div>
+        {larga && <button type="button" class="amb-leer" aria-expanded={abierta} onClick={() => setAbierta(!abierta)}>{abierta ? 'Leer menos' : 'Leer más'}</button>}
+      </div>
+    </div>
+  );
+}
+
 function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = null, cargando = false }) {
   const quedan = Math.max(0, total - hechas);
   const empezar = objetivo ? `Llega a ${total} esta semana para empezar una racha de semanas completas.` : 'Termínalas todas para empezar una racha de semanas completas.';
@@ -1047,8 +1060,8 @@ function ResumenSemana({ hechas, total, racha, abrirRacha = null, objetivo = nul
         <Reserva id="hoy-racha" liso cargando={cargando}>
         {racha > 0 ? (
           abrirRacha
-            ? <button type="button" class="racha racha-boton" onClick={abrirRacha} aria-label={`${texto}. Ver tu racha`}><Icono n="llama" />{texto}<Icono n="derecha" class="racha-chevron" /></button>
-            : <span class="racha"><Icono n="llama" />{texto}</span>
+            ? <button type="button" class="racha racha-boton" onClick={abrirRacha} aria-label={`${texto}. Ver tu racha`}><span class="amb-llama"><Icono n="llama" /></span><span><b class="amb-racha-n">{racha}</b>{texto.slice(String(racha).length)}</span><Icono n="derecha" class="racha-chevron" /></button>
+            : <span class="racha"><span class="amb-llama"><Icono n="llama" /></span><span><b class="amb-racha-n">{racha}</b>{texto.slice(String(racha).length)}</span></span>
         ) : racha === 0 && quedan > 0 && (
           abrirRacha
             ? <button type="button" class="racha-boton racha-cero" onClick={abrirRacha}>{empezar}</button>

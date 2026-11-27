@@ -8,7 +8,7 @@ import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica
 import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, nombreBloque } from '../../logica/esencial.js';
 import { perezoso } from '../perezoso.jsx';
 import { NOMBRE_FOCO, NOMBRE_GRUPO, NOMBRE_TIPO_SESION, num } from '../../logica/calculos.js';
 import { rangoSemana, desdeISO, fmtConDia, hoyISO, sumarDias } from '../../logica/fechas.js';
@@ -59,7 +59,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
     <div class="contenido">
       <CabeceraGrande>
         <div class="titulo">
-          <h1>{p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}` : 'Tu programa'}</h1>
+          <h1>{p?.bloque ? `Bloque ${p.bloque.numero}: ${nombreBloque(p.bloque.nombre)}` : 'Tu programa'}</h1>
           {p?.bloque?.objetivo && <div class="sub">{p.bloque.objetivo}</div>}
         </div>
         {p?.bloque && <button class="btn btn-peq" onClick={() => setBloque(true)}><Icono n="semana" /> Tu bloque entero</button>}

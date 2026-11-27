@@ -7,7 +7,7 @@
 // Estilos: ayuda.css (clases ayu-*, escritas tal cual en el elemento al que se aplican, para que vayan con este trozo).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
-import { NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO } from '../../logica/esencial.js';
+import { NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
@@ -262,7 +262,7 @@ export function HojaPlan({ p, alCerrar, alAccion = null }) {
       <div class="pila ayu-plan">
         <Arte id="esencial-plan-explicado" />
         <section class="pila-s" aria-labelledby="ayu-plan-t">
-          <strong id="ayu-plan-t">{p?.bloque?.nombre || 'Tu plan'}{n ? ` · semana ${n}` : ''}</strong>
+          <strong id="ayu-plan-t">{nombreBloque(p?.bloque?.nombre) || 'Tu plan'}{n ? ` · semana ${n}` : ''}</strong>
           <p class="peq secundario">{ss.length === 1 ? 'Una sesión a la semana' : `${ss.length} sesiones a la semana`}{dias?.length ? `: ${nombreDias(dias)}` : ''}.</p>
           <ul class="ayu-sesiones">
             {ss.map((s) => (

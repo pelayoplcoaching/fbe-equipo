@@ -28,7 +28,7 @@ import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
 import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada, AtajosPerfil, FilaPrivacidad, FilasCuentaSegura, FilaHojaCalculo } from './PerfilMas.jsx';
 import { perezoso } from '../perezoso.jsx';
-import { esPorSuCuenta } from '../../logica/esencial.js';
+import { esPorSuCuenta, nombreBloque } from '../../logica/esencial.js';
 // (alta, 52 y 53) las preguntas frecuentes de FBE Esencial y el correo para lo que falle en la app o en el cobro
 const FaqEsencial = perezoso(() => import('./Esencial.jsx'), 'FaqEsencial', { mientras: null });
 // (099) «Tu rutina»: cuál lleva y cambiarla
@@ -87,7 +87,7 @@ export function Perfil({ programa, salud, recargarConsentimientos, irA }) {
       <GrupoIos titulo={suyo ? 'Tu plan' : 'Tu asesoría'} id="grupo-asesoria">
         <FilaFoto nombre={atleta.nombre} />
         {atleta.objetivo && <FilaIos icono="diana" titulo="Objetivo" detalle={atleta.objetivo} />}
-        {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${p.bloque.nombre}`} />}
+        {p?.bloque && <FilaIos icono="semana" titulo="Bloque actual" detalle={`Bloque ${p.bloque.numero}: ${nombreBloque(p.bloque.nombre)}`} />}
         <FilaCuestionario salud={salud} recargarConsentimientos={recargarConsentimientos} />
         {/* (v0.174, 077) sus suplementos: verlos, añadir el primero y poner su aviso */}
         <FilaSuplementos />
@@ -183,7 +183,7 @@ function CabezaPerfil({ p, correo }) {
     ['sesiones', 'Sesiones', sesiones.datos],
     ['records', 'Récords', records.datos],
   ] : [];
-  const bloque = p?.bloque ? `Bloque ${p.bloque.numero}: ${p.bloque.nombre}${p.actual ? ` · Semana ${p.actual.numero}` : ''}` : null;
+  const bloque = p?.bloque ? `Bloque ${p.bloque.numero}: ${nombreBloque(p.bloque.nombre)}${p.actual ? ` · Semana ${p.actual.numero}` : ''}` : null;
   // v0.114: la portada (un dibujo que sale de tu nombre), el aro de tu racha alrededor de la foto y tu porqué
   const personal = usePersonal();
   const porque = personal.datos?.porque?.trim();

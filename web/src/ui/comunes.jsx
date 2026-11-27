@@ -189,11 +189,12 @@ export function Icono({ n, titulo, ...resto }) {
   );
 }
 
-export function Marca() {
+// (belleza A1) cada app con su nombre: «FBE Esencial» para quien va por su cuenta
+export function Marca({ nombre = 'FBE Equipo' }) {
   return (
     <span class="marca">
       <img src={LOBO} alt="" width="28" height="28" aria-hidden="true" />
-      FBE Equipo
+      {nombre}
     </span>
   );
 }

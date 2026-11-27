@@ -327,7 +327,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
             {tab === 'equipo' && <Equipo {...compartido} />}
             {tab === 'perfil' && <Perfil {...compartido} />}
           </main>
-          <nav class="tabs" aria-label="Secciones">
+          <nav class="tabs tabs-flota" aria-label="Secciones">
             <div ref={barra} class={`tabs-in ${reparto.barra.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
               <span class="tabs-pildora" aria-hidden="true" />
               {reparto.barra.map(([id, texto, icono]) => (
@@ -385,7 +385,7 @@ function BandaModoAtleta() {
 }
 
 function Consentimiento({ alTerminar }) {
-  const { api, salir } = useApp();
+  const { api, salir, atleta } = useApp();
   const [privacidad, setPrivacidad] = useState(false);
   const [salud, setSalud] = useState(false);
   const [error, setError] = useState(null);
@@ -396,7 +396,7 @@ function Consentimiento({ alTerminar }) {
   }
   return (
     <div class="app"><div class="acceso"><form class="acceso-caja" onSubmit={aceptar}>
-      <Marca />
+      <Marca nombre={esPorSuCuenta(atleta) ? 'FBE Esencial' : undefined} />
       <h1>Antes de empezar</h1>
       <TextoPrivacidad />
       {error && <div class="error" role="alert">{error}</div>}
