@@ -1042,7 +1042,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
                 <span class="marco-ig-puntos">···</span>
               </div>
             )}
-            <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}`} ref={carta}>
+            <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}`} ref={carta} data-ig={comoInstagram ? '' : undefined}>
               <img class="tarjeta-img" src={img.url} alt={texto} ref={imgEl} draggable={false} />
               <i class="cpt-brillo" aria-hidden="true" />
             </span>

@@ -11,7 +11,7 @@ const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallo
 const lanza = (f) => { try { f(); return false; } catch { return true; } };
 
 console.log('Formatos, plantillas y pegatinas');
-check(FORMATOS.length === 3 && formatoValido('historia') && formatoValido('cuadrado') && tamanoFormato('cuadrado').H === 1080 && !formatoValido('panoramica') && tamanoFormato('historia').H === 1920 && tamanoFormato('nada').H === 1350, 'publicación (4:5) e historia (9:16); lo raro, publicación');
+check(FORMATOS.length === 4 && formatoValido('historia') && formatoValido('cuadrado') && formatoValido('fondo') && tamanoFormato('cuadrado').H === 1080 && tamanoFormato('fondo').H === 2340 && !formatoValido('panoramica') && tamanoFormato('historia').H === 1920 && tamanoFormato('nada').H === 1350, 'publicación (4:5), historia (9:16), cuadrado y (belleza 310) fondo de pantalla; lo raro, publicación');
 check(PLANTILLAS_TARJETA.some(([k]) => k === 'poster') && PALETAS.length === 6 && paletaValida('clara') && !paletaValida('rosa') && paletaDe('bosque').clara === false && paletaDe('clara').clara, 'la plantilla «Póster» y las seis paletas');
 check(PEGATINAS_TARJETA[0][0] === '' && PEGATINAS_TARJETA.length === 7 && pegatinaTarjeta('pr') === 'PR' && pegatinaTarjeta('') === null && pegatinaTarjeta('x') === null, 'las pegatinas del equipo, y ninguna');
 

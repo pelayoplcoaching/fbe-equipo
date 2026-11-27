@@ -38,7 +38,7 @@
 /* 307 - La tarjeta se coge: al arrastrarla se inclina en 3D, siguiendo al dedo (--cpt-rx, --cpt-ry), y le corre un brillo
    (--cpt-x, --cpt-y); las de record, tornasol como el carne. Al soltarla vuelve con un muelle (lo hace el codigo) */
 .cpt-carta:not(#n):not(#n):not(#n) { position: relative; display: block; width: fit-content; max-width: 100%; margin-inline: auto; border-radius: var(--r-14); touch-action: pan-y; }
-.marco-ig .cpt-carta:not(#n):not(#n):not(#n) { width: 100%; border-radius: 0; }
+.cpt-carta[data-ig]:not(#n):not(#n):not(#n) { width: 100%; border-radius: 0; }
 .cpt-carta.cpt-coge:not(#n):not(#n):not(#n) { transform: perspective(900px) rotateX(var(--cpt-rx, 0deg)) rotateY(var(--cpt-ry, 0deg)); }
 .cpt-brillo:not(#n):not(#n):not(#n) { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; mix-blend-mode: soft-light;
   background: radial-gradient(circle at var(--cpt-x, 50%) var(--cpt-y, 30%), var(--marca-50) 0, transparent 58%); transition: opacity var(--mov-breve) ease; }
@@ -51,4 +51,4 @@
 .cpt-viaje:not(#n):not(#n):not(#n) { position: fixed; z-index: var(--capa-pantalla); pointer-events: none; border-radius: var(--r-14); box-shadow: var(--sombra); transform-origin: center; }
 
 /* 310 - Fondo de pantalla: la vista previa, con su forma (alta y estrecha) */
-.previa-fondo .tarjeta-img:not(#n):not(#n):not(#n) { aspect-ratio: 1080 / 2340; max-width: 13.75rem; }
+.cpt-pantalla .cpt-carta img:not(#n):not(#n):not(#n) { aspect-ratio: 1080 / 2340; max-width: 13.75rem; }
