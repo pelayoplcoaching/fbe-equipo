@@ -3,8 +3,8 @@
 // su cifra y hasta tres líneas. Solo las de entreno: las de peso, hábitos, nutrición o música no llevan el botón (aquí
 // devuelven null). Va aparte y se pide al tocar el botón: no pesa en el arranque.
 import { num, textoSerie, NOMBRE_GRUPO } from './calculos.js';
-import { pesoTxt } from './unidades.js';
-import { hoyISO } from './fechas.js';
+import { pesoTxt, pesoNum, etiquetaPeso } from './unidades.js';
+import { hoyISO, fmtCorta, diasEntre } from './fechas.js';
 
 const ton = (kg) => num(Math.round((Number(kg) || 0) / 100) / 10, 1);
 const horas = (min) => (min >= 60 ? `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ''}` : `${min} min`);
@@ -91,6 +91,17 @@ export function cartaAnio(r, id) {
   return null;
 }
 
+// (belleza 311) El día 1 y hoy (Perfil): tu primer 1RM estimado de un ejercicio en la app frente al de ahora, como
+// tarjeta de «Antes y ahora». x: la fila de diaUnoYHoy (logica/perfil-mas.js; antes y ahora en kg)
+export function cartaDiaUno(x = {}, hoy = hoyISO()) {
+  if (!(x?.antes > 0) || !(x?.ahora > 0) || !x.fecha) return null;
+  const meses = Math.max(1, Math.round((x.dias || diasEntre(x.fecha, hoy)) / 30));
+  return {
+    tipo: 'comparativa', etiqueta: 'El día 1 y hoy', nombre: x.nombre || 'Ejercicio', fecha: hoy,
+    comparar: { antes: { v: pesoNum(x.antes, 1), fecha: fmtCorta(x.fecha) }, ahora: { v: pesoNum(x.ahora, 1), fecha: 'Hoy' }, unidad: etiquetaPeso(), metrica: '1RM estimado' },
+    lineas: [`${x.pct >= 0 ? '+' : ''}${x.pct} % en ${meses} ${meses === 1 ? 'mes' : 'meses'}`], subtitulo: null, cifra: null, puntos: null,
+  };
+}
 // Qué tarjetas de cada historia llevan el botón (las de entreno)
 export const CARTAS = {
   sesion: ['hecho', 'records', 'musculos'],

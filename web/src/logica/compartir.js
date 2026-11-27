@@ -17,6 +17,8 @@ export const FORMATOS = [
   ['historia', 'Historia', '9:16, para historias', 1080, 1920],
   // (v0.187) el cuadrado, para el feed y los grupos
   ['cuadrado', 'Cuadrado', '1:1, para el feed y los grupos', 1080, 1080],
+  // (belleza 310) el fondo de pantalla: la tarjeta sobre la noche de tu color, por debajo del reloj
+  ['fondo', 'Fondo de pantalla', 'Para la pantalla de bloqueo, con el hueco del reloj', 1080, 2340],
 ];
 export const formatoValido = (f) => FORMATOS.some(([k]) => k === f);
 export const tamanoFormato = (f) => { const x = FORMATOS.find(([k]) => k === f) || FORMATOS[0]; return { W: x[3], H: x[4] }; };

@@ -6860,6 +6860,15 @@ if (parte('v0.280: la sesión, contada')) try {
   fallos++;
   console.log('  ✗ la sesión, contada (v0.280):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.281: momentos, segunda vuelta: compartir con brillo (la tarjeta que se coge, el viaje al guardar, el cambio de formato
+// que la transforma, el fondo de pantalla y el día 1 y hoy) (test/e2e-momentos.mjs, probarMomentos2)
+if (parte('v0.281: compartir con brillo')) try {
+  const { probarMomentos2 } = await import('./e2e-momentos.mjs');
+  await probarMomentos2({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ compartir con brillo (v0.281):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

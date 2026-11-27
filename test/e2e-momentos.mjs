@@ -192,6 +192,106 @@ export async function probarMomentos({ navegador, check, base = 'http://localhos
   check(errores.length === 0, `la sesión contada, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }
 
+// (v0.281) Compartir con brillo: (307) la tarjeta se coge (se inclina siguiendo al dedo; las de récord, tornasol), (308)
+// «Guardar imagen» con su viaje y su ✓, (309) cambiar de formato la transforma (transición de vista), (310) el fondo de
+// pantalla (1080 × 2340; también el carné) y (311) «El día 1 y hoy» como tarjeta (si sale en la demo)
+export async function probarMomentos2({ navegador, check, base = 'http://localhost:4174' }) {
+  const errores = [];
+  for (const movimiento of ['no-preference', 'reduce']) {
+    const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: movimiento, acceptDownloads: true });
+    await ctx.route(/i\.ytimg\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(10000);
+    p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+    await p.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); localStorage.setItem('fbe-bienvenida-vista', '1'); localStorage.setItem('fbe-nec-todas', '1'); } catch { /* */ } });
+    const quieto = movimiento === 'reduce';
+    const cerrarDialogos = async () => {
+      for (let i = 0; i < 6; i++) {
+        const b = p.locator('[aria-modal="true"] button:has-text("Vale"), [aria-modal="true"] button:has-text("Seguir"), [aria-modal="true"] button:has-text("Ahora no"), [aria-modal="true"] button:has-text("Entendido"), .bienvenida button:has-text("Saltar")').first();
+        if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await p.waitForTimeout(350); } else break;
+      }
+    };
+    try {
+      await p.goto(`${base}/?demo`);
+      const quien = p.getByRole('button', { name: /Ana/ }).first();
+      if (await quien.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await quien.click();
+      await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+      await p.waitForTimeout(1500); await cerrarDialogos();
+      await irASeccion(p, 'Progreso'); await p.waitForTimeout(1000); await cerrarDialogos();
+      await subProgreso(p, 'resumen');
+      const filas = p.locator('button.amb-sem'); await filas.first().waitFor({ timeout: 15000 });
+      const textos = await filas.allTextContents();
+      const k = Math.max(0, textos.findIndex((t) => /\d+ récords?/.test(t)));
+      await filas.nth(k).click();
+      const h = p.locator('[role="dialog"].historia').first(); await h.waitFor({ timeout: 8000 });
+      // la tarjeta de los récords (la tercera)
+      for (let n = 0; n < 6 && !/Récords/.test(await h.locator('.historia-etq').first().textContent().catch(() => '')); n++) { await h.locator('.historia-zona.siguiente').click(); await p.waitForTimeout(300); }
+      await h.locator('.historia-comp').click();
+      const img = p.locator('.tarjeta-img').last(); await img.waitFor({ timeout: 15000 }); await p.waitForTimeout(600);
+      const carta = p.locator('.cpt-carta').last();
+      const bb = await img.boundingBox();
+      const cdp = await ctx.newCDPSession(p);
+      const toque = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      await toque('touchStart', bb.x + bb.width * 0.5, bb.y + bb.height * 0.5);
+      for (let j = 1; j <= 8; j++) await toque('touchMove', bb.x + bb.width * (0.5 + j * 0.04), bb.y + bb.height * (0.5 - j * 0.03));
+      await p.waitForTimeout(100);
+      const cogida = await carta.evaluate((c) => ({ coge: c.classList.contains('cpt-coge'), t: getComputedStyle(c).transform, tornasol: c.classList.contains('cpt-tornasol') }));
+      if (!quieto) check(cogida.coge && cogida.t !== 'none', '(307) la tarjeta se coge: se inclina siguiendo al dedo');
+      else check(!cogida.coge && cogida.t === 'none', '(307, con «reducir movimiento») la tarjeta no se inclina');
+      if (!quieto) check(cogida.tornasol, '(307) y, siendo de récords, con el brillo tornasol del carné');
+      await toque('touchEnd', 0, 0);
+      await p.waitForTimeout(700);
+      if (!quieto) check(await carta.evaluate((c) => !c.classList.contains('cpt-coge') && getComputedStyle(c).transform === 'none'), '(307) al soltarla, vuelve a su sitio');
+      // 308: guardar
+      await p.evaluate(() => { window.__clon = 0; new MutationObserver((ms) => { for (const m of ms) for (const nn of m.addedNodes) if (nn.classList?.contains('cpt-viaje')) window.__clon++; }).observe(document.body, { childList: true }); });
+      await p.getByRole('button', { name: /Guardar imagen/ }).click();
+      await p.waitForTimeout(250);
+      const viaje = await p.evaluate(() => window.__clon), etiqueta = (await p.locator('.cpt-guardada').textContent().catch(() => '')).trim();
+      check(etiqueta === 'Guardada' && (quieto ? viaje === 0 : viaje === 1), quieto ? '(308, con «reducir movimiento») «Guardada», sin el viaje' : '(308) «Guardar imagen»: la tarjeta viaja al botón y dice «Guardada» con su ✓');
+      await p.waitForTimeout(2000);
+      check(/Guardar imagen/.test(await p.getByRole('button', { name: /Guardar imagen|Guardada/ }).first().textContent()), '(308) y a los dos segundos vuelve a «Guardar imagen»');
+      // 309 y 310: el formato
+      await p.evaluate(() => { window.__vt = []; new MutationObserver(() => window.__vt.push(document.documentElement.dataset.vt || '')).observe(document.documentElement, { attributes: true, attributeFilter: ['data-vt'] }); });
+      const pers = p.getByRole('button', { name: /Personalizar/ }); if (await pers.count()) await pers.click();
+      await p.locator('.compartir-opciones button', { hasText: 'Fondo de pantalla' }).click();
+      const alto = await (async () => { for (let j = 0; j < 40; j++) { const n = await p.evaluate(() => { const i = [...document.querySelectorAll('.tarjeta-img')].pop(); return i?.complete ? [i.naturalWidth, i.naturalHeight] : null; }); if (n && n[1] === 2340) return n; await p.waitForTimeout(150); } return null; })();
+      check(!!alto && alto[0] === 1080 && await p.locator('.previa-fondo').count() === 1, `(310) «Fondo de pantalla»: la tarjeta sobre la noche, por debajo del reloj (${alto ? alto.join(' × ') : '—'})`);
+      const vt = await p.evaluate(() => window.__vt);
+      check(quieto ? !vt.includes('morph') : vt.includes('morph'), quieto ? '(309, con «reducir movimiento») el cambio, de golpe' : '(309) cambiar de formato transforma la tarjeta (transición de vista), sin saltar');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      if (!quieto) {
+        // 310: el carné, también como fondo de pantalla
+        await p.goto(`${base}/?demo#perfil`);
+        const q2 = p.getByRole('button', { name: /Ana/ }).first();
+        if (await q2.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await q2.click();
+        await p.locator('nav.tabs').waitFor({ timeout: 30000 }); await p.waitForTimeout(1800); await cerrarDialogos();
+        const comp = p.locator('.carnet-compartir').first();
+        if (await comp.count()) {
+          await comp.scrollIntoViewIfNeeded(); await comp.click();
+          await p.locator('.tarjeta-img').last().waitFor({ timeout: 15000 });
+          const t = p.getByRole('button', { name: 'Como fondo de pantalla' });
+          check(await t.count() === 1, '(310) el carné: «Como fondo de pantalla»');
+          await t.click();
+          const n = await (async () => { for (let j = 0; j < 40; j++) { const x = await p.evaluate(() => { const i = [...document.querySelectorAll('.tarjeta-img')].pop(); return i?.complete ? [i.naturalWidth, i.naturalHeight] : null; }); if (x && x[1] === 2340) return x; await p.waitForTimeout(150); } return null; })();
+          check(!!n, `(310) y sale en 1080 × 2340 (${n ? n.join(' × ') : '—'})`);
+          await p.getByRole('button', { name: 'Volver a la tarjeta' }).click();
+          await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+        } else check(true, '(310) el carné no está a la vista en esta demo');
+        // 311: el día 1 y hoy
+        const dia = p.locator('.dia-uno');
+        if (await dia.count()) {
+          await dia.scrollIntoViewIfNeeded();
+          await dia.getByRole('button', { name: /Compartir el día 1 y hoy/ }).first().click();
+          await p.locator('.tarjeta-img').last().waitFor({ timeout: 15000 });
+          check(/El día 1 y hoy/.test(await p.locator('[aria-modal="true"]').last().textContent()), '(311) «El día 1 y hoy», como tarjeta de antes y ahora');
+        } else check(true, '(311) «El día 1 y hoy» no sale en esta demo (hace falta llevar semanas)');
+      }
+    } finally { await ctx.close(); }
+  }
+  check(errores.length === 0, `compartir con brillo, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
@@ -200,7 +300,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const srv = await servir(new URL('../dist', import.meta.url).pathname, 4201);
   const navegador = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', args: ['--disable-background-networking', '--disable-component-update', '--no-first-run'] });
   console.log('Momentos, primera vuelta: la sesión, contada (v0.280)');
-  try { await probarMomentos({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); }
+  const solo = process.env.SOLO || '';
+  if (!solo || solo === '1') { try { await probarMomentos({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
+  if (!solo || solo === '2') { console.log('Compartir con brillo (v0.281)'); try { await probarMomentos2({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   await navegador.close(); srv.close();
   console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
   if (fallos) process.exit(1);

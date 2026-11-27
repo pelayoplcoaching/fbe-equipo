@@ -32,3 +32,23 @@
 .rvh-lista:not(#n):not(#n):not(#n) li svg { color: var(--marca-200); }
 .rvh-dia:not(#n):not(#n):not(#n) { color: var(--tinta-2); font-weight: 500; }
 .rvh-foco:not(#n):not(#n):not(#n) { font-size: var(--letra-20); color: var(--tinta); max-width: 30ch; text-wrap: pretty; }
+
+/* ===================================================================== (v0.281) Compartir con brillo */
+
+/* 307 - La tarjeta se coge: al arrastrarla se inclina en 3D, siguiendo al dedo (--cpt-rx, --cpt-ry), y le corre un brillo
+   (--cpt-x, --cpt-y); las de record, tornasol como el carne. Al soltarla vuelve con un muelle (lo hace el codigo) */
+.cpt-carta:not(#n):not(#n):not(#n) { position: relative; display: block; width: fit-content; max-width: 100%; margin-inline: auto; border-radius: var(--r-14); touch-action: pan-y; }
+.marco-ig .cpt-carta:not(#n):not(#n):not(#n) { width: 100%; border-radius: 0; }
+.cpt-carta.cpt-coge:not(#n):not(#n):not(#n) { transform: perspective(900px) rotateX(var(--cpt-rx, 0deg)) rotateY(var(--cpt-ry, 0deg)); }
+.cpt-brillo:not(#n):not(#n):not(#n) { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; mix-blend-mode: soft-light;
+  background: radial-gradient(circle at var(--cpt-x, 50%) var(--cpt-y, 30%), var(--marca-50) 0, transparent 58%); transition: opacity var(--mov-breve) ease; }
+.cpt-coge .cpt-brillo:not(#n):not(#n):not(#n) { opacity: .85; }
+.cpt-tornasol .cpt-brillo:not(#n):not(#n):not(#n) { mix-blend-mode: screen; background-size: 240% 240%; background-position: var(--cpt-x, 50%) var(--cpt-y, 50%);
+  background-image: linear-gradient(var(--oklab,) 115deg, transparent 30%, color-mix(in srgb, var(--cielo-300) 30%, transparent) 42%, color-mix(in srgb, var(--purpura-300) 34%, transparent) 50%, color-mix(in srgb, var(--oro-200) 30%, transparent) 58%, transparent 70%); }
+@media (prefers-reduced-transparency: reduce) { .cpt-brillo:not(#n):not(#n):not(#n) { display: none; } }
+
+/* 308 - "Guardar imagen", con su viaje: la copia de la tarjeta que se encoge hacia el boton */
+.cpt-viaje:not(#n):not(#n):not(#n) { position: fixed; z-index: var(--capa-pantalla); pointer-events: none; border-radius: var(--r-14); box-shadow: var(--sombra); transform-origin: center; }
+
+/* 310 - Fondo de pantalla: la vista previa, con su forma (alta y estrecha) */
+.previa-fondo .tarjeta-img:not(#n):not(#n):not(#n) { aspect-ratio: 1080 / 2340; max-width: 13.75rem; }

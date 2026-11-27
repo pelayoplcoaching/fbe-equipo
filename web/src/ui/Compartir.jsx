@@ -13,6 +13,7 @@ import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHan
 import { leerAjustes } from './ajustes.js';
 import { textoMensajeCoach, mensajeDe } from '../logica/personal.js';
 import { lanzarConfeti } from './confeti.js';
+import { conTransicion, sinMovimiento } from './transiciones.js';
 
 // Tarjeta de la sesión para compartir (Instagram, WhatsApp…): 1080 × 1350, sin datos de salud.
 // d: { nombre, subtitulo, fecha (ISO), series, tonelaje (kg), minutos, records: [{ nombre, texto }], mejores: [{ nombre, serie }] }
@@ -721,6 +722,25 @@ async function pintarLogro(d, { formato = 'publicacion', pegatina: peg = '', han
   return aBlob(cv);
 }
 
+// (belleza 310) Fondo de pantalla: la tarjeta ya pintada (la de 4:5, o el carné) sobre la noche de tu color, en 1080 x
+// 2340, por debajo del reloj (el tercio de arriba, libre) y por encima de la barra de abajo, con sus esquinas y su sombra
+function aImagen(blob) {
+  return new Promise((ok, mal) => { const u = URL.createObjectURL(blob); const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); ok(im); }; im.onerror = () => { URL.revokeObjectURL(u); mal(new Error('No se ha podido preparar el fondo.')); }; im.src = u; });
+}
+async function pintarFondoPantalla(blob, paleta = 'noche') {
+  const im = await aImagen(blob);
+  const cv = empezar({ formato: 'fondo', paleta });
+  const x = cv.getContext('2d');
+  fondoNoche(x);
+  dibujarLobo(x, W - 560, H - 760, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.05);
+  const w = 900, h = Math.round((w * im.naturalHeight) / im.naturalWidth);
+  const x0 = (W - w) / 2, y0 = Math.max(Math.round(H * 0.34), Math.round(H - 240 - h));
+  x.save(); x.shadowColor = C.clara ? 'rgba(20, 11, 58, .25)' : 'rgba(0, 0, 0, .5)'; x.shadowBlur = 70; x.shadowOffsetY = 28;
+  x.fillStyle = C.fondo; x.beginPath(); x.roundRect(x0, y0, w, h, 44); x.fill(); x.restore();
+  x.save(); x.beginPath(); x.roundRect(x0, y0, w, h, 44); x.clip(); x.drawImage(im, x0, y0, w, h); x.restore();
+  return aBlob(cv);
+}
+
 // Hoja con la vista previa y los botones para compartir o guardar la imagen. plantillas (v0.51, al compartir una
 // sesión): elegir entre «Cifras», «Mínima», «Con tu foto» y (tanda 2) «Póster» (la foto se elige del móvil y no sale de él).
 // v0.52: dibujar (opcional) pinta otra imagen con el mismo flujo de compartir y guardar (el carné de atleta).
@@ -772,6 +792,14 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   const [, setCompartidos] = usePreferencia(PREF_COMPARTIDOS, []);
   const entrada = useRef(null);
   const personalizable = !dibujar;   // el carné y otras imágenes propias no tienen formato, paleta, pegatina ni @
+  // (belleza 310) el carné y las imágenes propias, también como fondo de pantalla (las demás, con su formato)
+  const [comoFondo, setComoFondo] = usePreferencia('fbe-compartir-pantalla', false);
+  // (belleza 307-309) la tarjeta que se coge, el viaje al guardarla y su ✓
+  const carta = useRef(null);
+  const imgEl = useRef(null);
+  const botonGuardar = useRef(null);
+  const coger = useRef(null);
+  const [guardada, setGuardada] = useState(false);
   const equipoHandle = handleEquipo();
   // «Publicar en el equipo» solo estando dentro de la comunidad (y nunca el coach desde la ficha de un atleta)
   const enEquipo = useCarga(() => (!equipo || propio ? Promise.resolve(false) : Promise.all([api.comunidad(), api.miembroComunidad()]).then(([c, m]) => !!c.activa && api.dentroDeComunidad(m)).catch(() => false)), [!!equipo]);
@@ -794,18 +822,79 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     setPaleta(s.paleta); if (conFondo) setFondo(s.fondo);
   };
   // La imagen que se ve lleva lo con que se pintó: mientras no coincide con lo elegido, se está preparando
-  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${recuadro?.url || ''}:${opciones.formato}:${opciones.pegatina}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}:${opciones.fondo}`;
+  const enPantalla = opciones.formato === 'fondo' || (!personalizable && comoFondo);
+  const clave = `${plantilla}:${plantilla === 'foto' ? foto?.url || '' : ''}:${recuadro?.url || ''}:${opciones.formato}:${opciones.pegatina}:${handle}:${opciones.paleta}:${fraseActiva}:${cita.datos?.texto || ''}:${opciones.fondo}:${enPantalla ? 'pantalla' : ''}`;
   const preparando = !img || img.clave !== clave;
-  const pintar = (d, o) => (dibujar || (logro ? dibujarLogro : dibujarTarjeta))(d, o);
+  // (310) el fondo de pantalla: se pinta la tarjeta de siempre (4:5) y se pone sobre la noche, por debajo del reloj
+  const pintar = (d, o) => {
+    const base = dibujar || (logro ? dibujarLogro : dibujarTarjeta);
+    if (!enPantalla) return base(d, o);
+    return base(d, { ...o, formato: 'publicacion' }).then((b) => enTurno(() => pintarFondoPantalla(b, o.paleta)));
+  };
+  const forma = enPantalla ? 'fondo' : opciones.formato;
   useEffect(() => {
     let vivo = true;
-    pintar(datosConCita, opciones).then((blob) => {
+    pintar(datosConCita, opciones).then(async (blob) => {
       if (!vivo) return;
       const url = URL.createObjectURL(blob);
-      setImg((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { blob, url, clave, plantilla, conFoto: !!opciones.foto, pintada: opciones.plantilla }; });
+      const poner = () => setImg((previa) => { if (previa?.url) URL.revokeObjectURL(previa.url); return { blob, url, clave, plantilla, conFoto: !!opciones.foto, pintada: opciones.plantilla, forma }; });
+      // (309) al cambiar de plantilla o de formato, la tarjeta se transforma en la nueva (cambia de forma y funde), sin
+      // saltar; con la nueva ya decodificada, para que no parpadee
+      const antes = imgRef.current;
+      if (antes?.url && carta.current && (antes.plantilla !== plantilla || antes.forma !== forma) && !sinMovimiento()) {
+        try { const im = new Image(); im.src = url; await im.decode(); } catch { /* sin decodificar: igual */ }
+        if (!vivo) { URL.revokeObjectURL(url); return; }
+        conTransicion(poner, 'morph', [{ nombre: 'vt-viaje', desde: carta.current, hasta: '.cpt-carta' }]);
+      } else poner();
     }).catch((e) => vivo && setError(e.message));
     return () => { vivo = false; };
   }, [clave]);
+  // (307) La tarjeta se coge: al arrastrarla se inclina en 3D, siguiendo al dedo, y le corre un brillo (las de récord,
+  // tornasol, como el carné); al soltarla, vuelve con un muelle. Nunca con «reducir movimiento»
+  const moverCarta = (e) => {
+    const el = carta.current;
+    if (!el || coger.current !== e.pointerId) return;
+    const r = el.getBoundingClientRect();
+    const px = Math.max(0, Math.min(1, (e.clientX - r.left) / Math.max(1, r.width))), py = Math.max(0, Math.min(1, (e.clientY - r.top) / Math.max(1, r.height)));
+    el.style.setProperty('--cpt-ry', `${((px - 0.5) * 18).toFixed(2)}deg`);
+    el.style.setProperty('--cpt-rx', `${((0.5 - py) * 14).toFixed(2)}deg`);
+    el.style.setProperty('--cpt-x', `${(px * 100).toFixed(1)}%`);
+    el.style.setProperty('--cpt-y', `${(py * 100).toFixed(1)}%`);
+  };
+  const cogerCarta = (e) => {
+    if (sinMovimiento() || (e.pointerType === 'mouse' && e.button !== 0) || !carta.current) return;
+    coger.current = e.pointerId;
+    carta.current.classList.add('cpt-coge');
+    moverCarta(e);
+  };
+  const soltarCarta = (e) => {
+    const el = carta.current;
+    if (!el || coger.current !== e.pointerId) return;
+    coger.current = null;
+    const desde = getComputedStyle(el).transform;
+    el.classList.remove('cpt-coge');
+    el.style.removeProperty('--cpt-rx'); el.style.removeProperty('--cpt-ry');
+    if (desde && desde !== 'none') { try { el.animate([{ transform: desde }, { transform: 'none' }], { duration: 460, easing: 'cubic-bezier(.2, 1.3, .4, 1)' }); } catch { /* de golpe */ } }
+  };
+  // (308) «Guardar imagen», con su viaje: la tarjeta se encoge hacia el botón y el botón dice «Guardada» con su ✓
+  const viajeGuardar = () => {
+    setGuardada(true);
+    setTimeout(() => { if (montada.current) setGuardada(false); }, 1800);
+    const a = imgEl.current, b = botonGuardar.current;
+    if (sinMovimiento() || !a || !b) return;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    if (!ra.width || !rb.width) return;
+    const c = a.cloneNode();
+    c.removeAttribute('alt'); c.setAttribute('aria-hidden', 'true'); c.className = 'cpt-viaje';
+    Object.assign(c.style, { left: `${ra.left}px`, top: `${ra.top}px`, width: `${ra.width}px`, height: `${ra.height}px` });
+    document.body.appendChild(c);
+    const dx = rb.left + rb.width / 2 - (ra.left + ra.width / 2), dy = rb.top + rb.height / 2 - (ra.top + ra.height / 2);
+    const k = Math.max(0.06, Math.min(0.22, rb.height / ra.height));
+    try {
+      const an = c.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${k.toFixed(3)})`, opacity: 0.15 }], { duration: 540, easing: 'cubic-bezier(.5, 0, .2, 1)' });
+      an.onfinish = () => c.remove(); an.oncancel = () => c.remove();
+    } catch { c.remove(); }
+  };
   // Al cerrar, fuera las URL de la imagen, de la foto y del vídeo (la foto no se guarda en ningún sitio)
   const imgRef = useRef(null); imgRef.current = img;
   const fotoRef = useRef(null); fotoRef.current = foto;
@@ -846,6 +935,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
     try { await navigator.share({ files: archivos, title: datos.nombre || MARCA_APP, text: pie }); anotar(); } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir: guarda la imagen y súbela tú.', 'error'); }
   };
   const guardar = async () => { if (!(await descargar(nombre, img.blob, 'image/png'))) { aviso('Mantén pulsada la imagen para guardarla.', 'error'); return false; } anotar(); return true; };
+  const guardarConViaje = async () => { if (await guardar()) viajeGuardar(); };
   // Un destino: con la hoja del móvil si admite archivos (WhatsApp e Instagram salen en ella); si no, se guarda la
   // imagen, se copia el texto y se abre la app (Instagram y Facebook no admiten que una web les pase una imagen)
   const aDestino = async (k, url) => {
@@ -942,8 +1032,9 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
       {plantillas && <input ref={entradaRec} type="file" accept="image/*" class="sr" tabIndex={-1} aria-label="Elegir tu foto para el recuadro" onChange={(e) => elegirFoto(e, true)} />}
       {error ? <div class="error" role="alert">{error}</div> : !img ? <Cargando texto="Preparando la imagen" /> : (
         <>
-          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${opciones.formato === 'historia' ? 'previa-historia' : opciones.formato === 'cuadrado' ? 'previa-cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
-            onTouchStart={lasPlantillas ? alTocar : undefined} onTouchEnd={lasPlantillas ? alSoltar : undefined}>
+          <div class={`tarjeta-previa ${preparando ? 'cargando' : ''} ${img.forma === 'fondo' ? 'previa-fondo cpt-pantalla' : opciones.formato === 'historia' ? 'previa-historia' : opciones.formato === 'cuadrado' ? 'previa-cuadrado' : ''} ${comoInstagram ? 'marco-ig' : ''}`} aria-busy={preparando ? 'true' : 'false'}
+            onTouchStart={lasPlantillas ? alTocar : undefined} onTouchEnd={lasPlantillas ? alSoltar : undefined}
+            onPointerDown={cogerCarta} onPointerMove={moverCarta} onPointerUp={soltarCarta} onPointerCancel={soltarCarta} onLostPointerCapture={soltarCarta}>
             {comoInstagram && (
               <div class="marco-ig-cab" aria-hidden="true">
                 <span class="marco-ig-avatar">{(handle || datos.nombre || 'F').slice(0, 1).toUpperCase()}</span>
@@ -951,7 +1042,10 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
                 <span class="marco-ig-puntos">···</span>
               </div>
             )}
-            <img class="tarjeta-img" src={img.url} alt={texto} />
+            <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}`} ref={carta}>
+              <img class="tarjeta-img" src={img.url} alt={texto} ref={imgEl} draggable={false} />
+              <i class="cpt-brillo" aria-hidden="true" />
+            </span>
             {comoInstagram && opciones.formato !== 'historia' && (
               <div class="marco-ig-pie" aria-hidden="true">
                 <span>♡</span><span>◯</span><span>➤</span><span class="marco-ig-guardar">⊟</span>
@@ -962,6 +1056,11 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
               <div class="previa-puntos" aria-hidden="true">{lasPlantillas.map(([k]) => <i key={k} class={k === plantilla ? 'activo' : ''} />)}</div>
             )}
           </div>
+          {!personalizable && (
+            <div class="fila-envolver previa-herramientas">
+              <button type="button" class="btn-texto mini" aria-pressed={comoFondo ? 'true' : 'false'} onClick={() => setComoFondo(!comoFondo)}><Icono n="movil" /> {comoFondo ? 'Volver a la tarjeta' : 'Como fondo de pantalla'}</button>
+            </div>
+          )}
           {personalizable && (
             <div class="fila-envolver previa-herramientas">
               {lasPlantillas && <span class="mini terciario">Desliza la imagen para cambiar de plantilla.</span>}
@@ -970,7 +1069,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
           )}
           <div class="fila-envolver compartir-botones">
             {puedeCompartir && <button class="btn btn-primario" onClick={() => compartirHoja()}><Icono n="compartir" /> Compartir…</button>}
-            <button class={`btn ${puedeCompartir ? '' : 'btn-primario'}`} onClick={guardar}><Icono n="descargar" /> Guardar imagen</button>
+            <button ref={botonGuardar} class={`btn ${puedeCompartir ? '' : 'btn-primario'}${guardada ? ' cpt-guardada' : ''}`} onClick={guardarConViaje}><Icono n={guardada ? 'hecho' : 'descargar'} /> {guardada ? 'Guardada' : 'Guardar imagen'}</button>
             {paginasCarrusel?.length > 1 && <button class="btn" disabled={carruselEstado === 'preparando' || preparando} onClick={compartirCarrusel}><Icono n="imagen" /> {carruselEstado === 'preparando' ? 'Preparando…' : `Carrusel (${paginasCarrusel.length})`}</button>}
           </div>
           {/* (v0.187) publicar en el equipo, a la vista y con una frase si quiere */}

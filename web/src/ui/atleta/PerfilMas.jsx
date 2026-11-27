@@ -26,6 +26,7 @@ import { leerPreferencia, guardarPreferencia } from '../preferencias.js';
 import { leerApuntes } from '../apuntes.js';
 import { InformeBloque, tituloBloque } from '../InformeBloque.jsx';
 import { usePersonal } from './Personal.jsx';
+import { HojaCompartir } from '../compartir-perezoso.jsx';
 
 const kgTxt = (kg) => `${pesoNum(kg, 1)} ${etiquetaPeso()}`;
 export function useHistorial() {
@@ -34,9 +35,11 @@ export function useHistorial() {
 }
 
 // ---------- 1. El día 1 y hoy ----------
+// (belleza 311) cada uno, como tarjeta para compartir («Antes y ahora»: tu primer 1RM estimado y el de ahora)
 export function DiaUnoYHoy({ historial }) {
   const personal = usePersonal();
   const lista = useMemo(() => diaUnoYHoy(historial || [], { favoritos: personal.datos?.favoritos || [], hoy: hoyISO() }), [historial, personal.datos]);
+  const [carta, setCarta] = useState(null);
   if (!lista.length) return null;
   return (
     <section class="seccion perfil-sec dia-uno" aria-labelledby="dia-uno-t">
@@ -52,9 +55,11 @@ export function DiaUnoYHoy({ historial }) {
               <span class="num">{kgTxt(x.ahora)}</span>
               <span class={`mini num ${x.pct > 0 ? 'ok-texto' : 'terciario'}`}>{x.pct > 0 ? `+${x.pct} %` : x.pct === 0 ? 'igual' : `${x.pct} %`}</span>
             </span>
+            <button type="button" class="btn btn-icono plano" aria-label={`Compartir el día 1 y hoy en ${x.nombre}`} onClick={() => import('../../logica/historia-cartas.js').then((m) => { const d = m.cartaDiaUno(x); if (d) setCarta(d); }).catch(() => {})}><Icono n="compartir" /></button>
           </li>
         ))}
       </ul>
+      {carta && <HojaCompartir logro tipo="comparativa" datos={carta} titulo="Compartir el día 1 y hoy" equipo={{ tema: 'logros' }} alCerrar={() => setCarta(null)} />}
       <p class="mini terciario">Tu mejor 1RM estimado de las últimas 6 semanas frente a tu primera sesión de cada ejercicio en la app.</p>
     </section>
   );

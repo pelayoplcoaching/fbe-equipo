@@ -67,6 +67,20 @@ check(cartaMes({ conEntreno: false }, 'portada') === null, 'un mes sin entreno n
 const anio = { anio: 2026, sesiones: 140, dias: 130, minutos: 9000, tonelaje: 300000, series: 2000, mesTop: { mes: 'octubre', sesiones: 15 }, records: 30, ejerciciosConRecord: 9, progreso: { ejercicio: 'Sentadilla', pct: 22.5 }, mejorRacha: 12, semanasCompletas: 30, cardio: { sesiones: 0 } };
 check(CARTAS.anio.filter((id) => id !== 'cardio').every((id) => cartaAnio(anio, id)) && cartaAnio(anio, 'progreso').cifra.v === '+22,5' && cartaAnio(anio, 'musica') === null, 'las de «Tu año» (sin la de música)');
 
+console.log('307-311 · Compartir con brillo');
+const { FORMATOS, tamanoFormato } = await import('../web/src/logica/compartir.js');
+const { cartaDiaUno } = await import('../web/src/logica/historia-cartas.js');
+check(FORMATOS.some(([k]) => k === 'fondo') && tamanoFormato('fondo').W === 1080 && tamanoFormato('fondo').H === 2340, '(310) el formato «Fondo de pantalla»: 1080 × 2340');
+const d1 = cartaDiaUno({ id: 'a', nombre: 'Sentadilla', fecha: '2026-06-01', kg: 60, reps: 8, antes: 74.4, ahora: 101.3, pct: 36, dias: 179 }, '2026-11-27');
+check(d1.tipo === 'comparativa' && d1.etiqueta === 'El día 1 y hoy' && d1.comparar.antes.v === '74,4' && d1.comparar.ahora.v === '101,3' && d1.comparar.ahora.fecha === 'Hoy' && d1.lineas[0] === '+36 % en 6 meses', '(311) «El día 1 y hoy», como tarjeta de antes y ahora (con su unidad)');
+check(cartaDiaUno({ nombre: 'x', antes: 0, ahora: 10, fecha: '2026-01-01' }) === null, '(311) sin las dos cifras, sin tarjeta');
+const cp = src('ui/Compartir.jsx');
+check(/class=\{`cpt-carta\$\{/.test(cp) && /--cpt-ry/.test(cp) && /--cpt-rx/.test(cp) && /if \(sinMovimiento\(\) \|\| \(e\.pointerType === 'mouse' && e\.button !== 0\)/.test(cp) && /cpt-tornasol/.test(cp), '(307) la tarjeta se coge siguiendo al dedo (no con «reducir movimiento»); las de récord, tornasol');
+check(/const viajeGuardar = \(\) =>/.test(cp) && /c\.className = 'cpt-viaje'/.test(cp) && /guardada \? 'Guardada' : 'Guardar imagen'/.test(cp), '(308) «Guardar imagen» con su viaje y su ✓');
+check(/conTransicion\(poner, 'morph', \[\{ nombre: 'vt-viaje', desde: carta\.current, hasta: '\.cpt-carta' \}\]\)/.test(cp) && /antes\.plantilla !== plantilla \|\| antes\.forma !== forma/.test(cp) && /await im\.decode\(\)/.test(cp), '(309) cambiar de plantilla o de formato transforma la tarjeta (con la nueva ya decodificada)');
+check(/async function pintarFondoPantalla\(blob, paleta = 'noche'\)/.test(cp) && /Como fondo de pantalla/.test(cp), '(310) el fondo de pantalla, también para el carné');
+check(/import\('\.\.\/\.\.\/logica\/historia-cartas\.js'\)\.then\(\(m\) => \{ const d = m\.cartaDiaUno\(x\)/.test(src('ui/atleta/PerfilMas.jsx')), '(311) el botón en «El día 1 y hoy» (la tarjeta se prepara al tocar)');
+
 console.log('Cada pieza, en su sitio');
 const hs = src('ui/atleta/HistoriaSesion.jsx');
 check(/function Melodia\(\{ filas \}\)/.test(hs) && /melodiaSesion\(filas, nota\)/.test(hs) && /puedeSonar\(leerAjustes\(\), 'serie'\)/.test(hs) && /sonarFBE\('nota'/.test(hs) && /fill: 'backwards'/.test(hs), '(301) la melodía: cada punto con su nota, solo con los sonidos de la sesión encendidos');
