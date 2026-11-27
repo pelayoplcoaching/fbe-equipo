@@ -218,6 +218,7 @@ cierre-pausa: alta.css ambas-a.css
 cifra: diseno.css estilos.css progreso-visual-2.css visual.css
 cifra-objetivo: ambas-b.css personal.css
 cifra-objetivo-img: ambas-b.css imagenes.css
+cifra-objetivo-v: ambas-e.css personal.css
 cifras: ambas-b.css belleza-b.css diseno.css estilos.css progreso-visual-2.css visual.css
 cifras-plan: diseno.css estilos.css
 cita: diseno.css estilos.css revision.css
@@ -555,7 +556,7 @@ informes-mes: diseno.css estilos.css
 ingredientes: estilos.css recetario-equipo.css
 insignia: ambas-a.css comunidad-viva.css diseno.css equipo-belleza.css estilos.css
 insignia-siguiente: equipo-belleza.css estilos.css
-interruptor: belleza-c.css color-capa.css diseno.css estilos.css
+interruptor: ambas-e.css belleza-c.css color-capa.css diseno.css estilos.css
 interruptor-fila: diseno.css estilos.css estrecho.css pulido.css
 intervalos: diseno.css estilos.css
 intervalos-cuenta: diseno.css estilos.css
@@ -734,7 +735,7 @@ peso-anterior: diseno.css estilos.css
 peso-hoy: estilos.css personal.css
 pestana-panel: diseno.css estilos.css
 pestanas: diseno.css equipo-belleza.css estilos.css pulido.css visual.css
-pestanas-progreso: diseno.css progreso-visual-2.css progreso-visual.css
+pestanas-progreso: ambas-e.css diseno.css progreso-visual-2.css progreso-visual.css
 pestanas-sub: diseno.css estilos.css
 picto: diseno.css estilos.css imagenes.css
 picto-grande: diseno.css estilos.css
@@ -912,6 +913,7 @@ seccion: diseno.css estilos.css progreso-visual-2.css visual.css
 seccion-cab: ambas-a.css diseno.css estilos.css perfil.css progreso-visual-2.css pulido.css visual.css
 secundario: belleza-a.css diseno.css estilos.css
 seg-compacto: estilos.css personal.css
+seg-ico: ambas-e.css diseno.css
 seg-rango: ambas-d.css estilos.css
 segmentos: diseno.css estilos.css personal.css pulido.css radar.css sonido.css visual.css
 segmentos-envolver: estilos.css visual.css

@@ -51,7 +51,7 @@ import { tempoDe } from '../../logica/tempo.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Preparacion, ConsejoDia } from './Preparacion.jsx';
 import { consejoPreparacion, subeCarga, caraDe } from '../../logica/preparacion.js';
-import { propuestaDelDia, aplicarPropuesta } from '../../logica/como-llegas.js';
+import { propuestaDelDia, aplicarPropuesta, esSemanaDeVuelta } from '../../logica/como-llegas.js';
 import { planMinimoDe, propuestaPlanMinimo } from '../../logica/constancia.js';
 import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
@@ -430,7 +430,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // pantalla de bloqueo, los tramos y el modo enfoque)
   // (v0.258) con «Hacerlo así» de un día regular o malo, la sesión ajustada (lo ya hecho no desaparece)
   const enOrdenHoy = aplicarCorta(aplicarOrden(det.datos.ejercicios, ordenSes), cortaOn && !sesion.completada ? corta : null);
-  const propDia = unToque && !sesion.completada && prep?.asi === true ? propuestaDelDia(prep, enOrdenHoy) : null;
+  // (27/11) en una semana de vuelta tras un parón, «Regular» no quita otra serie (la nota de la semana dice si lo es)
+  const deVuelta = esSemanaDeVuelta(semana?.nota_coach);
+  const propDia = unToque && !sesion.completada && prep?.asi === true ? propuestaDelDia(prep, enOrdenHoy, { vuelta: deVuelta }) : null;
   const planMin = pmOn ? planMinimoDe({ notas: notasPm.datos?.planMinimo || [], hoy: hoyISO() }) : null;
   const propPm = planMin && !pmNormal && !sesion.completada ? propuestaPlanMinimo(enOrdenHoy) : null;
   const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propPm || propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
@@ -871,7 +873,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
       )}
 
       {unToque && salud && !sesion.completada && ejercicios.length > 0 && atleta.estado !== 'baja' && (preguntarPrep || caraDe(prep)) ? (
-        <ComoLlegas prep={prep} pautas={enOrdenHoy} calent={prep?.agujetas ? calentamiento(enOrdenHoy) : []} sesion={sesion} alGuardar={guardarPrep} editando={editandoPrep} alEditar={setEditandoPrep} alCerrar={alCerrar}
+        <ComoLlegas prep={prep} pautas={enOrdenHoy} vuelta={deVuelta} calent={prep?.agujetas ? calentamiento(enOrdenHoy) : []} sesion={sesion} alGuardar={guardarPrep} editando={editandoPrep} alEditar={setEditandoPrep} alCerrar={alCerrar}
           alSaltar={() => { setPrepSaltada(true); quitarPrepAntigua(); }} />
       ) : preguntarPrep ? <Preparacion inicial={prep} alGuardar={guardarPrep} alSaltar={editandoPrep ? () => setEditandoPrep(false) : () => { setPrepSaltada(true); quitarPrepAntigua(); }} />
         : consejo && !sesion.completada && <ConsejoDia consejo={consejo} prep={prep} eleccion={eleccionCarga} alElegir={(v) => { setEleccionCarga(v); aviso(v === 'subir' ? 'Hoy vas con la carga que toca' : 'Hoy vas con los pesos de la última vez'); }} alCambiar={() => setEditandoPrep(true)} alQuitar={async () => { await guardarPrep(null); setPrepSaltada(true); }} />}

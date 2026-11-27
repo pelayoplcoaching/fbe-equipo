@@ -1,0 +1,45 @@
+/* Belleza para las dos apps, tercera vuelta (v0.265): letra grande, oscuro e interruptores. La lista, en el doc del
+   proyecto "claude/belleza-150-ambas.md"; lo hecho y lo que no se pone, en "claude/belleza-150-estado.md". Solo como se
+   ve: textos y cifras, iguales (salvo B82, que dice con palabras una cifra que ya estaba). Va detras de ambas-d.css y
+   antes de color-capa.css. */
+
+/* -- C108 - Con la letra grande, las pestanas de Progreso (Resumen, Fuerza, Cuerpo, Logros) no se pisan: se deslizan a lo
+   ancho, cada una con su sitio, y la tira se desvanece en el borde */
+:root[data-letra] .pestanas-progreso {
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: max-content; column-gap: var(--esp-6);
+  overflow-x: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, var(--tinta) calc(100% - var(--esp-24)), transparent);
+  mask-image: linear-gradient(var(--oklab,) 90deg, var(--tinta) calc(100% - var(--esp-24)), transparent);
+}
+:root[data-letra] .pestanas-progreso::-webkit-scrollbar { display: none; }
+@media (forced-colors: active) { :root[data-letra] .pestanas-progreso { -webkit-mask-image: none; mask-image: none; } }
+
+/* -- C108 - La cifra de tu objetivo y su texto, uno al lado del otro: si el texto no cabe en una linea ("semanas completas
+   seguidas"), se parte junto a la cifra en lugar de dejar una palabra sola muy abajo */
+.cifra-objetivo-v.cifra-objetivo-v { display: flex; align-items: baseline; column-gap: var(--esp-8); }
+.cifra-objetivo-v > small { min-width: 0; line-height: 1.2; }
+
+/* -- C106 - En oscuro, las ilustraciones y fotos con un filo de luz de un pixel: las de fondo oscuro ya no se pierden en la
+   tarjeta (el brillo atenuado de visual.css sigue igual) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) img[data-imagen] { outline: var(--filo-fino) solid var(--vidrio-brillo); outline-offset: calc(-1 * var(--filo-fino)); }
+}
+:root[data-theme="dark"] img[data-imagen] { outline: var(--filo-fino) solid var(--vidrio-brillo); outline-offset: calc(-1 * var(--filo-fino)); }
+
+/* -- C132 - Los interruptores dicen su estado tambien con forma (como las etiquetas I/O del iPhone): encendido, una raya en
+   el lado libre; apagado, un aro. Dibujados en el fondo del propio interruptor (sin pseudo-elementos nuevos, que obligarian a
+   copiar reglas de los trozos al arranque) */
+.interruptor.interruptor {
+  background-image: radial-gradient(circle at calc(100% - var(--esp-12)) 50%, transparent 0 var(--esp-4), var(--tinta-2) var(--esp-4) calc(var(--esp-4) + var(--filo-medio)), transparent calc(var(--esp-4) + var(--filo-medio) + .5px));
+  background-repeat: no-repeat;
+}
+.interruptor.interruptor:checked {
+  background-image: linear-gradient(var(--sobre-morado), var(--sobre-morado));
+  background-position: var(--esp-12) 50%; background-size: var(--filo-medio) var(--esp-10);
+}
+@media (forced-colors: active) { .interruptor.interruptor { background-image: none; } }
+
+/* -- C131 (repaso) - El tema (Sistema, Claro, Oscuro, Con el sol): cada opcion con su icono encima de su nombre, todas
+   iguales (antes, "Con el sol" partia su nombre en dos y llevaba el icono al lado) */
+.amb-seg-pila > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--esp-2); line-height: 1.15; }
+.amb-seg-pila .seg-ico { vertical-align: 0; margin-right: 0; }

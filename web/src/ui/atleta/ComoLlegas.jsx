@@ -70,7 +70,7 @@ function Pregunta({ inicial, alGuardar, alSaltar, ocupado }) {
 }
 
 // Lo que propone la app (o, ya elegido, una línea con cómo va hoy)
-export function ComoLlegas({ prep = null, pautas = [], calent = [], sesion = null, alGuardar, alSaltar = null, alCerrar = null, editando = false, alEditar }) {
+export function ComoLlegas({ prep = null, pautas = [], calent = [], sesion = null, vuelta = false, alGuardar, alSaltar = null, alCerrar = null, editando = false, alEditar }) {
   const [ocupado, setOcupado] = useState(false);
   const [otro, setOtro] = useState(false);
   const guardar = async (p) => {
@@ -83,7 +83,7 @@ export function ComoLlegas({ prep = null, pautas = [], calent = [], sesion = nul
       alGuardar={(p) => guardar(p).then(() => alEditar?.(false))} />;
   }
   const consejo = consejoPreparacion(prep);
-  const prop = propuestaDelDia(prep, pautas);
+  const prop = propuestaDelDia(prep, pautas, { vuelta });
   const cara = caraDe(prep);
   const cambiar = <button type="button" class="btn-texto" onClick={() => alEditar?.(true)}>Cambiar cómo llego</button>;
   if (!prop) {

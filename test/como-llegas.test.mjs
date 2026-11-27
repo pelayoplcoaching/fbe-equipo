@@ -4,7 +4,9 @@
 // perder lo ya hecho), lo que ve el coach, el dial de Hoy y que todo va apagado hasta el visto bueno de Pelayo.
 import { esUnToque, caraDe, consejoPreparacion, subeCarga, completa } from '../web/src/logica/preparacion.js';
 import { textoPreparacion } from '../web/src/logica/preparacion-texto.js';
-import { CARAS, HORAS, MINIMA, principalesDe, accesoriosDe, propuestaDelDia, aplicarPropuesta, calentamientoLargo } from '../web/src/logica/como-llegas.js';
+import { CARAS, HORAS, MINIMA, principalesDe, accesoriosDe, propuestaDelDia, aplicarPropuesta, calentamientoLargo, esSemanaDeVuelta, NOTA_VUELTA_INICIO, NOTA_VUELTA_DOS_INICIO } from '../web/src/logica/como-llegas.js';
+import { notaDeSemana } from '../web/src/logica/motor/nota.js';
+import { NOTA_CONSERVAR } from '../web/src/logica/esencial-motor.js';
 import { textoConsejo } from '../web/src/logica/esencial-primera.js';
 import { dialComoLlegas, prepDeHoy } from '../web/src/logica/tablero.js';
 import { esMalDia } from '../web/src/logica/motor/semana.js';
@@ -44,6 +46,7 @@ check(principalesDe(P).map((e) => e.id).join() === 'a,b,d', 'lo principal: el b�
 check(principalesDe([{ ...P[0], prioridad: 'alta' }, P[2], P[4]]).map((e) => e.id).join() === 'a,c' && principalesDe([P[2], P[4]]).map((e) => e.id).join() === 'c,e',
   'al menos 2 (si no hay tantos, los siguientes de la sesión)');
 check(accesoriosDe(P).map((e) => e.id).join() === 'c,e,f' && !accesoriosDe([{ ...P[2], prioridad: 'alta' }]).length, 'los accesorios: los de aislamiento y lo de prioridad baja (lo obligatorio, nunca)');
+const s0 = (xs) => xs.map((e) => `${e.id}:${e.series}`).join(' ');
 const reg = propuestaDelDia({ cara: 'regular' }, P);
 check(reg.tipo === 'regular' && reg.ids.join() === 'c,e' && /Los kilos de la última vez y una serie menos en curl femoral, elevaciones laterales\./.test(reg.texto) && /igual de bien/.test(reg.porque),
   `regular: los kilos de la última vez y una serie menos en los accesorios con 2 o más series («${reg.texto}»)`);
@@ -54,6 +57,17 @@ check(min.tipo === 'minima' && min.ids.join() === 'a,b,d' && /solo lo principal 
 const ag = propuestaDelDia({ cara: 'bien', agujetas: true }, P);
 check(ag.tipo === 'agujetas' && !ag.ids.length && propuestaDelDia({ cara: 'bien' }, P) === null && propuestaDelDia({ sueno: 1, energia: 1, molestias: 1 }, P) === null && propuestaDelDia({ cara: 'mal' }, []) === null,
   'con agujetas fuertes, el calentamiento largo y sin subir; con «bien», nada que proponer (ni con las tres preguntas ni sin ejercicios)');
+
+console.log('\nEn una semana de vuelta tras un parón (27/11/2026, Pelayo)');
+check(notaDeSemana({ semana: 'vuelta' }).startsWith(NOTA_VUELTA_INICIO) && NOTA_CONSERVAR.vuelta2.startsWith(NOTA_VUELTA_DOS_INICIO), 'las notas de la semana de vuelta (la primera y la segunda) siguen empezando como las reconoce la sesión');
+check(esSemanaDeVuelta(notaDeSemana({ semana: 'vuelta' })) && esSemanaDeVuelta(`${notaDeSemana({ semana: 'vuelta' })} En la plancha ya llevas el peso máximo.`) && esSemanaDeVuelta(NOTA_CONSERVAR.vuelta2)
+  && !esSemanaDeVuelta(notaDeSemana({ semana: 'descarga' })) && !esSemanaDeVuelta('Esta semana subes kilos en sentadilla.') && !esSemanaDeVuelta(null), 'la sesión sabe si la semana es de vuelta por su nota (y solo entonces)');
+const regV = propuestaDelDia({ cara: 'regular' }, P, { vuelta: true });
+check(regV.tipo === 'regular' && regV.ids.length === 0 && /^Los kilos de hoy, sin subir\./.test(regV.texto) && !/última vez/.test(regV.texto) && s0(aplicarPropuesta(P, regV)) === s0(P),
+  `«Regular» en una semana de vuelta: no quita otra serie y habla de los kilos de hoy («${regV.texto}»)`);
+const minV = propuestaDelDia({ cara: 'mal' }, P, { vuelta: true }), agV = propuestaDelDia({ cara: 'bien', agujetas: true }, P, { vuelta: true });
+check(/los kilos de hoy\.$/.test(minV.texto) && minV.ids.join() === min.ids.join() && /^Un calentamiento más largo y los kilos de hoy, sin subir\.$/.test(agV.texto),
+  '«Mal» y las agujetas, igual que siempre pero con «los kilos de hoy» en el texto');
 
 console.log('\nLa sesión con la propuesta');
 const s = (xs) => xs.map((e) => `${e.id}:${e.series}`).join(' ');

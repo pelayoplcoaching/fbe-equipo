@@ -90,5 +90,20 @@ check(atajosValidos(null).join() === 'checkin,progreso,mensajes' && atajosValido
   && alternarAtajo(['checkin'], 'mensajes', ['mensajes']).join() === 'checkin' && /const fuera = esPorSuCuenta\(atleta\) \? \['mensajes'\] : \[\];/.test(src('ui/atleta/PerfilMas.jsx')),
   'los atajos del perfil: a quien va por su cuenta no le sale «Mensajes» (en su lugar, «Tu semana»)');
 
+console.log('\nTercera vuelta (v0.265): letra grande, oscuro e interruptores');
+const cssE = src('ambas-e.css'), sinComE = cssE.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssE) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComE) && main.indexOf("'./ambas-e.css'") > main.indexOf("'./ambas-d.css'") && main.indexOf("'./ambas-e.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-e.css: solo ASCII, los colores por su nombre y detrás de la segunda vuelta');
+check(/\.nota-coach \.btn svg \{ color: inherit; margin-top: 0; \}/.test(src('estilos.css')), 'los iconos de los botones dentro de las notas, del color de su botón (antes, morado sobre morado en «Hacer «Día 1»»)');
+check(/:root\[data-letra\] \.pestanas-progreso \{[^}]*grid-auto-flow: column;[^}]*overflow-x: auto;/.test(sinComE) && /\.cifra-objetivo-v\.cifra-objetivo-v \{ display: flex; align-items: baseline;/.test(sinComE),
+  'C108: con la letra grande, las pestañas de Progreso no se pisan y la cifra de tu objetivo lleva su texto al lado');
+check(/Vas por el \{pct\} % del camino/.test(src('ui/atleta/Personal.jsx')), 'B82: el camino a tu meta, dicho con palabras');
+check(/:root\[data-theme="dark"\] img\[data-imagen\] \{ outline: var\(--filo-fino\) solid var\(--vidrio-brillo\);/.test(sinComE) && /prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) img\[data-imagen\]/.test(sinComE),
+  'C106: en oscuro, las ilustraciones con su filo de luz (en el oscuro del sistema y en el elegido)');
+check(/\.interruptor\.interruptor \{\s*background-image: radial-gradient\(/.test(sinComE) && /\.interruptor\.interruptor:checked \{\s*background-image: linear-gradient\(var\(--sobre-morado\), var\(--sobre-morado\)\);/.test(sinComE) && !/\.interruptor[^{]*::before/.test(sinComE),
+  'C132: los interruptores con su forma (aro apagado, raya encendido), en su fondo y sin pseudo-elementos nuevos');
+check(/clase="amb-seg-pila"/.test(src('ui/Ajustes.jsx')) && /\.amb-seg-pila > button \{ display: flex; flex-direction: column;/.test(sinComE), 'el tema, cada opción con su icono encima de su nombre');
+check(/\{toast\.tipo !== 'record' && toast\.tipo !== 'error' && <Icono n="hecho" \/>\}/.test(src('ui/App.jsx')), 'C124: los avisos de un momento con su icono (✓; el error y el récord, con el suyo)');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

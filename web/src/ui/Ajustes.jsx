@@ -80,7 +80,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
     <GrupoIos titulo={`Este ${coach ? 'dispositivo' : 'móvil'}`} id="grupo-este-movil">
       {antes}
       <FilaIos icono="tema" titulo="Tema" detalle={a.tema === 'sol' ? `Con el sol: claro de día y oscuro desde la puesta de sol (hoy, ahora, ${temaConSol() === 'oscuro' ? 'oscuro' : 'claro'}).` : 'Con «Sistema», claro u oscuro según tu móvil u ordenador; con «Con el sol», oscuro desde la puesta de sol.'}
-        bloque={<Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" alCambiar={(v) => cambiarTema(v || 'sistema')} />} />
+        bloque={<Segmentos opciones={TEMAS} valor={a.tema} etiqueta="Tema" clase="amb-seg-pila" alCambiar={(v) => cambiarTema(v || 'sistema')} />} />
       {/* v0.49: negro puro para pantallas OLED, cuando se ve el tema oscuro */}
       {a.tema !== 'claro' && (
         <Interruptor id="aj-oled" icono="sueno" texto="Negro puro (OLED)" valor={!!a.oled} alCambiar={(v) => cambiar('oled', v)}

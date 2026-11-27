@@ -106,6 +106,8 @@ function CaminoObjetivo({ o, peso }) {
     <div class="cifra-camino" role="img" aria-label={`Tu objetivo «${o.titulo}»: empezaste en ${f(x.inicio)}, vas por ${f(x.actual)} y la meta es ${f(x.meta)} (${pct} %)`}>
       <span class="camino-pista" aria-hidden="true"><span class="camino-lleno" style={{ width: `${pct}%` }} /><span class="camino-ahora" style={{ left: `${pct}%` }} /></span>
       <span class="camino-extremos mini num" aria-hidden="true"><span>{f(x.inicio)}</span><span class="camino-meta"><Icono n="bandera" />{f(x.meta)}</span></span>
+      {/* (belleza B82) y dicho con palabras (el lector ya lo oye en la etiqueta de arriba) */}
+      <span class="mini secundario amb-camino-pct" aria-hidden="true">Vas por el {pct} % del camino</span>
     </div>
   );
 }

@@ -10,6 +10,14 @@ export const CARAS = [['bien', 'Bien'], ['regular', 'Regular'], ['mal', 'Mal']];
 export const HORAS = { min: 2, max: 14, paso: 0.5 };
 export const HORAS_POCAS = 6;
 
+// (27/11/2026, Pelayo) En una semana de vuelta tras un parón (la app ya ha quitado una serie y algo de carga), «Regular» no
+// quita otra serie y habla de los kilos de hoy: los «de la última vez» serían los de antes del parón. Lo mismo, solo en el
+// texto, para «Mal» y las agujetas. Se sabe por la nota de la semana, que en FBE Esencial escribe la app (motor/nota.js, la
+// de 'vuelta', y esencial-motor.js, NOTA_CONSERVAR.vuelta2; test/como-llegas.test.mjs comprueba que siguen empezando así).
+export const NOTA_VUELTA_INICIO = 'Vuelves después de unos días sin entrenar';
+export const NOTA_VUELTA_DOS_INICIO = 'Segunda semana de tu vuelta';
+export const esSemanaDeVuelta = (nota) => typeof nota === 'string' && (nota.startsWith(NOTA_VUELTA_INICIO) || nota.startsWith(NOTA_VUELTA_DOS_INICIO));
+
 // (D3) La sesión mínima: los 2 o 3 principales, con 1 o 2 series cada uno (criterio de Claude: hasta 3, con 2 series)
 export const MINIMA = { ejercicios: 3, series: 2 };
 
@@ -41,20 +49,23 @@ export function accesoriosDe(pautas = []) {
 //   'regular' (llega regular o ha dormido menos de 6 horas): los kilos de la última vez y una serie menos en los
 //     accesorios que tienen 2 o más (ids: los que pierden una serie)
 //   'agujetas' (llega bien, pero con agujetas fuertes en lo de hoy): un calentamiento más largo y no sube la carga
-export function propuestaDelDia(p, pautas = []) {
+// vuelta: es una semana de vuelta tras un parón (esSemanaDeVuelta): «Regular» no quita otra serie y los textos dicen «los
+// kilos de hoy»
+export function propuestaDelDia(p, pautas = [], { vuelta = false } = {}) {
   if (!esUnToque(p)) return null;
   const c = caraDe(p);
   const xs = conSeries(pautas);
   if (!xs.length) return null;
   if (c === 'mal') {
     const ps = principalesDe(xs);
-    return { tipo: 'minima', ids: ps.map((e) => e.id), texto: `Hoy, solo lo principal (${ps.map((e) => nombre(e).toLowerCase()).join(', ')}), con ${MINIMA.series} series como mucho y los kilos de la última vez.`, porque: 'Una sola serie por ejercicio ya basta para mantener la fuerza: una sesión mínima mantiene el hábito sin forzar.' };
+    return { tipo: 'minima', ids: ps.map((e) => e.id), texto: `Hoy, solo lo principal (${ps.map((e) => nombre(e).toLowerCase()).join(', ')}), con ${MINIMA.series} series como mucho y los kilos de ${vuelta ? 'hoy' : 'la última vez'}.`, porque: 'Una sola serie por ejercicio ya basta para mantener la fuerza: una sesión mínima mantiene el hábito sin forzar.' };
   }
   if (c === 'regular') {
+    if (vuelta) return { tipo: 'regular', ids: [], texto: 'Los kilos de hoy, sin subir. Lo demás, como está: esta semana ya va más suave por tu vuelta.', porque: 'Ajustar el día a cómo llegas funciona al menos igual de bien que ir siempre con lo pautado, y lo principal se mantiene.' };
     const as = accesoriosDe(xs).filter((e) => Number(e.series) >= 2);
     return { tipo: 'regular', ids: as.map((e) => e.id), texto: as.length ? `Los kilos de la última vez y una serie menos en ${as.map((e) => nombre(e).toLowerCase()).join(', ')}.` : 'Los kilos de la última vez, sin subir. Lo demás, como está.', porque: 'Ajustar el día a cómo llegas funciona al menos igual de bien que ir siempre con lo pautado, y lo principal se mantiene.' };
   }
-  if (p.agujetas) return { tipo: 'agujetas', ids: [], texto: 'Un calentamiento más largo y, hoy, los kilos de la última vez.', porque: 'Con agujetas fuertes, el músculo rinde algo menos unos días: mejor no subir hoy y calentar bien.' };
+  if (p.agujetas) return { tipo: 'agujetas', ids: [], texto: vuelta ? 'Un calentamiento más largo y los kilos de hoy, sin subir.' : 'Un calentamiento más largo y, hoy, los kilos de la última vez.', porque: 'Con agujetas fuertes, el músculo rinde algo menos unos días: mejor no subir hoy y calentar bien.' };
   return null;
 }
 const nombre = (e) => e?.ejercicio?.nombre || e?.nombre || 'Ejercicio';

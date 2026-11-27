@@ -273,6 +273,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .dia .detalle { font-size: var(--letra-13); color: var(--tinta-2); }
 .nota-coach { display: grid; grid-template-columns: 22px 1fr; gap: var(--esp-10); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-s); background: var(--morado-suave); color: var(--tinta); font-size: var(--letra-14-5); }
 .nota-coach svg { width: var(--ico-20); height: var(--ico-20); color: var(--morado); margin-top: 1px; }
+.nota-coach .btn svg { color: inherit; margin-top: 0; }
 
 /* ---------- Sesión en curso ---------- */
 .sesion-cab-num { font-size: var(--letra-13); color: var(--tinta-2); font-variant-numeric: tabular-nums; }

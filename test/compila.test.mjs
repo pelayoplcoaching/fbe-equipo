@@ -33,9 +33,12 @@ import { readFileSync } from 'node:fs';
 // (v0.262: belleza B, estilos a 914 KB: casi todo va con el trozo de su pantalla (la sesión, Progreso, la ayuda); al común
 // solo llegan los retoques de piezas que salen al abrir)
 // (v0.263: belleza C, estilos a 916 KB: la X de las hojas, las tiras de chips y el aro del avatar salen en todas partes)
+// (v0.264: belleza, segunda vuelta, sin subir: lo que retocaba reglas que ya existían se hizo en su sitio)
+// (v0.265: tercera vuelta, estilos a 918 KB (163 comprimido): los interruptores con su forma, el filo de luz de las
+// ilustraciones en oscuro y las pestañas de Progreso con la letra grande salen al abrir; lo demás, con su trozo)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 608 },
-  css: { crudo: 916, gz: 162 },
+  css: { crudo: 918, gz: 163 },
 };
 
 let ok = 0, fallos = 0;

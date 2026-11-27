@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.265': {
+    // (belleza, tercera vuelta: letra grande, oscuro e interruptores; «claude/belleza-150-estado.md»)
+    atleta: [
+      'Tu objetivo dice por qué parte del camino vas, y con la letra grande todo cabe mejor.',
+    ],
+    coach: [
+      'Belleza, tercera vuelta: la letra grande, las ilustraciones en oscuro, los interruptores y los avisos, más claros.',
+    ],
+  },
   '0.264': {
     // (belleza, segunda vuelta: lo que quedaba de las tandas B y C; «claude/belleza-150-estado.md»)
     atleta: [
