@@ -9,6 +9,7 @@ import { Capa, Icono, Odometro, useApp, useAtraparFoco } from './comunes.jsx';
 import { vibrar } from './hapticos.js';
 import { contexto, sonarFBE } from './sonido.js';
 import { sinMovimiento } from './transiciones.js';
+import { soloBotones } from './ajustes.js';
 import { hoyISO } from '../logica/fechas.js';
 import { cifraIngrediente, trozosDePaso, textoReloj, textoDuracion, tengoDe, tengoCon, quedaDe } from '../logica/cocina.js';
 import { decidirGesto, destinoLado } from '../logica/historia-gesto.js';
@@ -182,7 +183,7 @@ function CocinaDentro({ receta, nombre, pasos, lineas = [], alCerrar }) {
   }, [i]);
   // Deslizar de lado: el paso sigue al dedo (de arriba abajo, un paso largo se desplaza como siempre)
   const g = useRef(null);
-  const baja = (e) => { if (e.button > 0 || e.target.closest?.('button, a, input')) return; g.current = { id: e.pointerId, x: e.clientX, y: e.clientY, lado: false, ux: e.clientX, ut: e.timeStamp, vx: 0 }; };
+  const baja = (e) => { if (e.button > 0 || soloBotones() || e.target.closest?.('button, a, input')) return; g.current = { id: e.pointerId, x: e.clientX, y: e.clientY, lado: false, ux: e.clientX, ut: e.timeStamp, vx: 0 }; };
   const mueve = (e) => {
     const s = g.current;
     if (!s || s.id !== e.pointerId) return;

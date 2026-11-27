@@ -9,7 +9,7 @@
 // arriba). (325) En la de récords, el botón de tu canción de récord, si la elegiste (el navegador no deja que suene sola).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Capa, Icono } from '../comunes.jsx';
-import { useHistoriaTacto } from '../historia-tacto.js';
+import { useHistoriaTacto, BotonPausa } from '../historia-tacto.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { num, NOMBRE_GRUPO } from '../../logica/calculos.js';
@@ -118,7 +118,7 @@ function Pantallas({ resumen, nombre = '', alCerrar }) {
   // (304) la tarjeta que se está compartiendo (mientras, la historia se para)
   const [carta, setCarta] = useState(null);
   // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra (al resumen) y, de lado, pasa de tarjeta
-  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: !!carta });
+  const [pausa, alternarPausa] = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: !!carta });
   // Avanza sola cada 7 s, como «Tu semana» (no con movimiento reducido, ni en la última, ni en pausa)
   useEffect(() => {
     if (quieto || ultima || pausa || carta) return undefined;
@@ -155,6 +155,7 @@ function Pantallas({ resumen, nombre = '', alCerrar }) {
         {pantallas.map((x, k) => <span key={x.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre'}` : ''}><i /></span>)}
       </div>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Ir al resumen"><Icono n="cerrar" /></button>
+      {!quieto && <BotonPausa pausa={pausa} alternar={alternarPausa} />}
       {p.comp && <button type="button" class="btn btn-icono plano historia-cerrar historia-comp" onClick={() => abrirCarta(p.id)} aria-label="Compartir esta tarjeta"><Icono n="compartir" /></button>}
       <div class="historia-pantalla" key={p.id} aria-live="polite">
         {p.render()}

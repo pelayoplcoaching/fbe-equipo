@@ -3,6 +3,7 @@
 // («+7,5 kg en 5 semanas»); si los dedos se separan o se juntan, cambia el rango (los botones siguen ahí). Llega con
 // los demás gestos, con la app ya abierta, y lee de cada gráfica lo que ella deja en su caja (__graf, ui/comunes.jsx).
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 import { partesPunto, puntoEn, cambioTramo, rangoAlPellizcar, PELLIZCO_MS } from '../logica/grafica-dedos.js';
 
 export function instalarGraficaDedos() {
@@ -79,6 +80,7 @@ export function instalarGraficaDedos() {
     const tactil = e.target.closest?.('.grafica-tactil');
     if (!tactil) return;
     if (g && g.tactil !== tactil) fin();
+    if (g && soloBotones()) return;   // (belleza 343) sin el segundo dedo
     if (!g) { const caja = tactil.parentElement; g = { tactil, caja, cifra: caja.closest('.panel')?.querySelector('.cifra') || null, dedos: new Map() }; }
     g.dedos.set(e.pointerId, e.clientX);
     if (g.dedos.size === 1) titular(indice(e.clientX));

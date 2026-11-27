@@ -64,3 +64,5 @@
 
 /* 315 - El primer record de tu vida: el aro de oro que se abre desde la luna (lo mueve el codigo, una vez) */
 .ef-aro:not(#n):not(#n):not(#n) { fill: none; stroke: var(--oro-200); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+/* (347) con el modo ligero, la tarjeta se coge sin el brillo que la recorre */
+:root[data-ligero] .cpt-brillo:not(#n):not(#n):not(#n) { display: none; }

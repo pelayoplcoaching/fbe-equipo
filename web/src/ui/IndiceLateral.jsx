@@ -4,6 +4,7 @@
 // son títulos: se salta entre ellos como siempre). Sale si hay tres capítulos o más y la lista pasa de dos pantallas.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 import { conIndice, indiceEn, cortoDe } from '../logica/indice-lateral.js';
 
 // items: [{ id: el del título al que salta, texto: su nombre }]
@@ -30,7 +31,7 @@ export function IndiceLateral({ items }) {
     document.getElementById(items[k].id)?.scrollIntoView({ block: 'start', behavior: 'instant' });
   };
   const baja = (e) => { if (e.button > 0) return; st.id = e.pointerId; st.k = null; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* */ } ir(e.clientY); };
-  const mueve = (e) => { if (e.pointerId === st.id) ir(e.clientY); };
+  const mueve = (e) => { if (e.pointerId === st.id && !soloBotones()) ir(e.clientY); };
   const sube = (e) => { if (e.pointerId !== st.id) return; st.id = null; st.k = null; setActivo(null); };
   return (
     <div class="ind-raiz" ref={raiz} aria-hidden="true" data-sin-deslizar="" data-coge={activo != null ? '' : undefined}

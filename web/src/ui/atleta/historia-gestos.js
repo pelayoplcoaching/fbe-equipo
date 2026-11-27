@@ -5,6 +5,7 @@
 // movimiento» todo sigue al dedo igual, pero al soltar va a su sitio de golpe.
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
+import { soloBotones } from '../ajustes.js';
 import { PAUSA_MS, decidirGesto, cierraAlBajar, destinoLado, gomaLado } from '../../logica/historia-gesto.js';
 
 const CURVA = 'cubic-bezier(.2, .9, .3, 1.1)';
@@ -31,7 +32,7 @@ export function instalarHistoria(el, leer) {
   };
   const esControl = (t) => !!t?.closest?.('button:not(.historia-zona), a, input, select, textarea, [role="slider"]');
   const baja = (e) => {
-    if (e.button > 0 || g || esControl(e.target) || leer().parada) return;
+    if (e.button > 0 || g || esControl(e.target) || leer().parada || soloBotones()) return;
     g = { id: e.pointerId, x: e.clientX, y: e.clientY, modo: null, ux: e.clientX, uy: e.clientY, ut: e.timeStamp, vx: 0, vy: 0 };
     g.tp = setTimeout(() => { if (!g || g.modo) return; g.modo = 'pausa'; pausar(true); adornos('hidden'); vibrar('toque'); }, PAUSA_MS);
   };

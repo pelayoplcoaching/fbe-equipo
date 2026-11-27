@@ -8,13 +8,14 @@ import { LOBO } from './marca-lobo.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
-import { useMarcaPagina } from './marca-pagina.js';
+import { useMarcaPagina, marcarPagina } from './marca-pagina.js';
 import { imagenIcono } from '../logica/imagenes.js';
 import { fmtCorta, aISO, diasEntre, hoyISO } from '../logica/fechas.js';
 import { FRACCION_MEDIA, fotogramasMuelle, MUELLE, arrastreVisible, velocidadDe, destinoHoja } from '../logica/muelle.js';
 import { remuestrear, mezclarPuntos, trazo as trazoDe, area as areaDe, salidaSuave, columnasCifra, seleccionValida } from '../logica/rangos.js';
 import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 import { sonarFBE } from './sonido.js';
 import { cronometro } from '../rendimiento.js';
 import { leerPreferencia, guardarPreferencia } from './preferencias.js';
@@ -128,6 +129,8 @@ export const P = {
   // v0.55: el chat (emojis, adjuntar, documento, reenviar, silenciar, el teclado y seleccionar)
   cara: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8M9 9.5h.01M15 9.5h.01',
   clip: 'M21.4 11.1l-8.5 8.5a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8',
+  // (belleza 343) un dedo que toca: «Gestos» en Ajustes
+  gesto: 'M10 16V6.5a1.5 1.5 0 0 1 3 0v4.5M13 10.5a1.5 1.5 0 0 1 3 0v1M16 11a1.5 1.5 0 0 1 3 0v3.5A6.5 6.5 0 0 1 12.5 21H12a5.5 5.5 0 0 1-4.2-2L5 15.5a1.5 1.5 0 0 1 2.3-1.9L10 16M8 4a4.5 4.5 0 0 1 7 0',
   documento: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6',
   reenviar: 'M15 5l6 6-6 6M21 11H9a6 6 0 0 0-6 6v2',
   silencio: 'M13.7 21a2 2 0 0 1-3.4 0M18.6 13A7.6 7.6 0 0 1 18 9a6 6 0 0 0-9.3-5M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M3 3l18 18',
@@ -438,7 +441,7 @@ export function Paso({ valor, alCambiar, paso = 1, min = 0, max = 9999, dec = 1,
   const arr = useRef(null);
   const arrastre = {
     onPointerDown: (e) => {
-      if (enfocado || e.button > 0) return;
+      if (enfocado || e.button > 0 || soloBotones()) return;
       arr.current = { x: e.clientX, id: e.pointerId, v0: actual.current ?? 0, pasos: 0, activo: false, fuera: false };
       if (e.pointerType === 'mouse') e.preventDefault();   // (el ratón no entra en el campo hasta soltar sin arrastrar)
     },
@@ -561,6 +564,8 @@ class ConContexto extends Component {
   getChildContext() { return this.props.contexto; }
   render({ children }) { return children; }
 }
+// (belleza 330) Con un diálogo dentro (una hoja, una historia, el cartel…), lo de debajo no se ve: «hay-tapa» en <html>, y
+// las animaciones que no paran se paran (marca-pagina.js)
 export class Capa extends Component {
   componentDidMount() {
     this.nodo = document.createElement('div');
@@ -569,8 +574,9 @@ export class Capa extends Component {
     this.pintar();
   }
   componentDidUpdate() { this.pintar(); }
-  componentWillUnmount() { pintarEn(null, this.nodo); this.nodo.remove(); }
-  pintar() { pintarEn(h(ConContexto, { contexto: this.context }, this.props.children), this.nodo); }
+  componentWillUnmount() { if (this.tapa) marcarPagina('hay-tapa', false); pintarEn(null, this.nodo); this.nodo.remove(); }
+  mirarTapa() { if (!this.tapa && this.nodo?.querySelector('[aria-modal="true"]')) { this.tapa = true; marcarPagina('hay-tapa', true); } }
+  pintar() { pintarEn(h(ConContexto, { contexto: this.context }, this.props.children), this.nodo); this.mirarTapa(); }
   render() { return null; }
 }
 
@@ -664,7 +670,7 @@ function HojaDentro({ titulo, alCerrar: alCerrarProp, children, ancho, medio = f
     } catch { fin(); }
   };
   const alBajar = (e) => {
-    if (!movil() || e.button > 0) return;
+    if (!movil() || e.button > 0 || soloBotones()) return;
     if (e.target.closest('button, a, input, select, textarea')) return;
     const hoja = ref.current;
     // Si se coge a medio camino (aún asentándose), se sigue desde donde está

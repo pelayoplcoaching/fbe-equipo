@@ -6887,6 +6887,13 @@ if (parte('v0.283: sonido y tacto afinados')) try {
   fallos++;
   console.log('  ✗ sonido y tacto afinados (v0.283):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+if (parte('v0.284: el remate, segunda vuelta')) try {
+  const { probarMomentos5 } = await import('./e2e-momentos.mjs');
+  await probarMomentos5({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el remate, segunda vuelta (v0.284):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

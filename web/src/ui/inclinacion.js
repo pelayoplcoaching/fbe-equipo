@@ -18,7 +18,9 @@ export function marcarInclinacion() {
   try { sessionStorage.setItem(CLAVE, '1'); } catch { /* sin almacenamiento: solo el carné */ }
   revisar();
 }
-export const puedeInclinar = () => !sinMovimiento() && (sinPermisoInclinacion() || (enMovil() && inclinacionConcedida()));
+// (belleza 347) ni con el modo ligero (un móvil lento no tiene que recalcular brillos con cada giro)
+const ligero = () => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ligero');
+export const puedeInclinar = () => !sinMovimiento() && !ligero() && (sinPermisoInclinacion() || (enMovil() && inclinacionConcedida()));
 
 // x e y (de −1 a 1) respecto a cómo se tenía el móvil al empezar a mirar (25 grados a cada lado llegan al tope)
 export function deInclinacion(beta, gamma, base) {
@@ -35,6 +37,9 @@ function pintar() {
 }
 function alInclinar(e) {
   if (e.beta == null || e.gamma == null) return;
+  // (belleza 330) con una hoja o una ventana encima no se ve: nada que pintar
+  const r = document.documentElement.classList;
+  if (r.contains('hay-velo') || r.contains('hay-tapa')) return;
   base ||= { beta: e.beta, gamma: e.gamma };
   pendiente = deInclinacion(e.beta, e.gamma, base);
   if (!raf) raf = requestAnimationFrame(pintar);

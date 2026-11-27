@@ -543,6 +543,159 @@ export async function probarMomentos4({ navegador, check, base = 'http://localho
   check(errores.length === 0, `sonido y tacto afinados, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }
 
+// (v0.284) Remate, segunda vuelta: con una hoja encima, lo de debajo se para (330); la pausa de las historias, también
+// con un botón y con la barra espaciadora (334); y «Gestos» en Ajustes, con «Solo botones» (343).
+export async function probarMomentos5({ navegador, check, base = 'http://localhost:4174' }) {
+  const errores = [];
+  const abrir = async (url, quien, ajustes = {}) => {
+    const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: 'no-preference' });
+    await ctx.route(/i\.ytimg\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(10000);
+    p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+    await p.addInitScript((aj) => {
+      try {
+        for (const k of ['fbe-escena-200', 'fbe-bienvenida-vista', 'fbe-nec-todas']) localStorage.setItem(k, '1');
+        localStorage.setItem('fbe-ajustes', JSON.stringify({ ...JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'), ...aj }));
+      } catch { /* */ }
+    }, ajustes);
+    await p.goto(`${base}/${url}`);
+    const b = p.getByRole('button', { name: quien }).first();
+    if (await b.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await b.click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1500);
+    for (let i = 0; i < 6; i++) {
+      const c = p.locator('[aria-modal="true"] button:has-text("Vale"), [aria-modal="true"] button:has-text("Seguir"), [aria-modal="true"] button:has-text("Ahora no"), [aria-modal="true"] button:has-text("Entendido")').first();
+      if (await c.isVisible().catch(() => false)) { await c.click().catch(() => {}); await p.waitForTimeout(350); } else break;
+    }
+    const cdp = await ctx.newCDPSession(p);
+    const dedo = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const arrastrar = async (x, y, dx, dy, pasos = 12) => {
+      await dedo('touchStart', x, y);
+      for (let k = 1; k <= pasos; k++) { await dedo('touchMove', x + (dx * k) / pasos, y + (dy * k) / pasos); await p.waitForTimeout(16); }
+      await dedo('touchEnd');
+    };
+    return { ctx, p, arrastrar };
+  };
+  const hasta = async (fn, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await fn().catch(() => false)) return true; await new Promise((r) => setTimeout(r, 120)); } return false; };
+
+  // --- 330: con una hoja encima, el cielo de Hoy deja de moverse (y al cerrarla, sigue)
+  {
+    const { ctx, p } = await abrir('?demo', /Ana/);
+    try {
+      const cielo = p.locator('.cielo-hora').first();
+      const dial = p.locator('.diales .dial').first();
+      if (await cielo.count() && await dial.count()) {
+        await p.evaluate(() => scrollTo(0, 0));
+        await p.waitForTimeout(500);
+        const antes = await cielo.getAttribute('data-pausa');
+        await dial.click();
+        const hoja = p.locator('[aria-modal="true"]').last();
+        await hoja.waitFor();
+        await p.waitForTimeout(400);
+        const tapado = await cielo.getAttribute('data-pausa');
+        await p.keyboard.press('Escape');
+        await hasta(async () => (await p.locator('[aria-modal="true"]').count()) === 0, 4000);
+        await p.waitForTimeout(500);
+        const despues = await cielo.getAttribute('data-pausa');
+        check(antes === null && tapado === '' && despues === null, `(330) con una hoja encima, el cielo de Hoy se para; al cerrarla, sigue (${antes === null ? 'se mueve' : 'parado'} · ${tapado === '' ? 'parado' : 'se mueve'} · ${despues === null ? 'se mueve' : 'parado'})`);
+      } else check(true, '(330) sin cielo o sin diales en Hoy a esta hora');
+    } finally { await ctx.close(); }
+  }
+
+  // --- 334: la pausa de las historias, con su botón y con la barra espaciadora (la de tu revisión, en FBE Esencial)
+  {
+    const { ctx, p } = await abrir('?demo=esencial', /Tomás/);
+    try {
+      const pila = p.locator('.pav-ver[aria-expanded="false"]').first();
+      if (await pila.count()) { await pila.scrollIntoViewIfNeeded().catch(() => {}); await pila.click().catch(() => {}); await p.waitForTimeout(500); }
+      const leer = p.getByRole('button', { name: 'Leer mi revisión' }).first();
+      if (await leer.waitFor({ timeout: 12000 }).then(() => true).catch(() => false)) {
+        await leer.scrollIntoViewIfNeeded();
+        await leer.click();
+        const h = p.locator('.historia-rev');
+        if (await h.waitFor({ timeout: 10000 }).then(() => true).catch(() => false) && await hasta(async () => (await h.locator('.historia-pantalla h2').count()) > 0, 8000)) {
+          const pausar = h.getByRole('button', { name: 'Pausar la historia' });
+          check(await pausar.count() === 1, '(334) la historia, con su botón de pausa arriba');
+          await pausar.click();
+          const seguir = h.getByRole('button', { name: 'Seguir la historia' });
+          const parada = await hasta(async () => (await seguir.getAttribute('aria-pressed')) === 'true', 3000);
+          const barra = await h.locator('.historia-barras .actual i').first().evaluate((el) => getComputedStyle(el).animationPlayState).catch(() => '');
+          check(parada && barra !== 'running', `(334) al tocarlo se para, y su barra también (${barra || 'sin barra'})`);
+          await p.keyboard.press(' ');
+          check(await hasta(async () => (await h.getByRole('button', { name: 'Pausar la historia' }).count()) === 1, 3000), '(334) y con la barra espaciadora sigue');
+        } else check(true, '(334) sin nada que contar en tres tarjetas: se abre la revisión de siempre');
+      } else check(true, '(334) Tomás no tiene revisión pendiente en esta demo');
+    } finally { await ctx.close(); }
+  }
+
+  // --- 343: «Gestos» en Ajustes y «Solo botones»
+  {
+    const { ctx, p, arrastrar } = await abrir('?demo', /Ana/);
+    try {
+      // de serie, la regla del peso está
+      const peso = p.locator('[data-atajo="peso"]').first();
+      let conRegla = null;
+      if (await peso.count()) {
+        await peso.scrollIntoViewIfNeeded().catch(() => {});
+        await peso.click();
+        const ph = p.getByRole('dialog', { name: 'Peso de hoy' });
+        await ph.waitFor();
+        conRegla = await hasta(async () => (await ph.locator('.rg-raiz').count()) === 1, 5000);
+        await ph.locator('.cerrar-hoja').click();
+        await ph.waitFor({ state: 'detached' });
+      }
+      await irAAjustes(p);
+      const fila = p.getByRole('button', { name: /^Gestos/ }).first();
+      await fila.scrollIntoViewIfNeeded();
+      await fila.click();
+      const h = p.getByRole('dialog', { name: 'Gestos' });
+      await h.waitFor();
+      const filas = await h.locator('.lista li').count();
+      check(filas >= 16, `(343) «Gestos»: lo que se hace con el dedo, cada gesto con su botón (${filas - 1} gestos)`);
+      await p.waitForTimeout(500);
+      let c = await h.locator('.hoja-cab').boundingBox();
+      await arrastrar(c.x + c.width / 2, c.y + c.height / 2, 0, 380);
+      check(await h.waitFor({ state: 'detached', timeout: 4000 }).then(() => true).catch(() => false), '(343) de serie, arrastrar la hoja hacia abajo la cierra');
+      await fila.click();
+      await h.waitFor();
+      await h.getByRole('switch', { name: /Solo botones/ }).check();
+      check(await p.evaluate(() => document.documentElement.hasAttribute('data-solo-botones')), '(343) «Solo botones», encendido');
+      await p.waitForTimeout(500);
+      c = await h.locator('.hoja-cab').boundingBox();
+      await arrastrar(c.x + c.width / 2, c.y + c.height / 2, 0, 380);
+      await p.waitForTimeout(900);
+      check(await h.isVisible().catch(() => false), '(343) con «Solo botones», arrastrarla ya no la cierra');
+      await h.locator('.cerrar-hoja').click();
+      check(await h.waitFor({ state: 'detached', timeout: 4000 }).then(() => true).catch(() => false) && /Solo botones/.test(await fila.textContent()), '(343) la ✕ sí la cierra, y la fila dice «Solo botones»');
+      // sin la regla del peso (el − y el + siguen)
+      if (conRegla != null) {
+        await p.locator('nav.tabs .tab[data-tab="hoy"]').first().click();
+        await p.waitForTimeout(800);
+        await peso.scrollIntoViewIfNeeded().catch(() => {});
+        await peso.click();
+        const ph = p.getByRole('dialog', { name: 'Peso de hoy' });
+        await ph.waitFor();
+        await p.waitForTimeout(800);
+        check(conRegla && (await ph.locator('.rg-raiz').count()) === 0 && (await ph.locator('#peso-hoy').count()) === 1, '(343) y en «Peso de hoy», sin la regla: el − y el + siguen (de serie, la regla estaba)');
+        await ph.locator('.cerrar-hoja').click();
+        await ph.waitFor({ state: 'detached' });
+      } else check(true, '(343) sin «Peso de hoy» en esta demo');
+      // en el chat, «Más opciones» se ve en cada mensaje
+      const msj = p.locator('nav.tabs .tab[data-tab="mensajes"]').first();
+      if (await msj.count()) {
+        await msj.click();
+        const mas = p.locator('.burbuja-mas').first();
+        if (await mas.waitFor({ state: 'attached', timeout: 10000 }).then(() => true).catch(() => false)) {
+          const op = await mas.evaluate((el) => getComputedStyle(el).opacity);
+          check(Number(op) === 1, `(343) en el chat, «Más opciones» se ve en cada mensaje (opacidad ${op})`);
+        } else check(true, '(343) sin mensajes con menú en esta demo');
+      } else check(true, '(343) sin chat en esta demo');
+    } finally { await ctx.close(); }
+  }
+  check(errores.length === 0, `el remate, segunda vuelta, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
@@ -556,6 +709,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   if (!solo || solo === '2') { console.log('Compartir con brillo (v0.281)'); try { await probarMomentos2({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '3') { console.log('Sentir el récord (v0.282)'); try { await probarMomentos3({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '4') { console.log('Sonido y tacto afinados (v0.283)'); try { await probarMomentos4({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
+  if (!solo || solo === '5') { console.log('El remate, segunda vuelta (v0.284)'); try { await probarMomentos5({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   await navegador.close(); srv.close();
   console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
   if (fallos) process.exit(1);

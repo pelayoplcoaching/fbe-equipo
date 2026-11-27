@@ -2,6 +2,7 @@
 // 10; la nota del 1 al 10), el dedo va eligiendo el número por el que pasa, con un toque en cada uno. Tocar sigue
 // valiendo, y el teclado y el lector de pantalla no cambian (siguen siendo botones).
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 
 // fila: el grupo de botones. Se puede llamar las veces que haga falta (solo se instala una)
 export function escalaArrastrable(fila) {
@@ -17,7 +18,7 @@ export function escalaArrastrable(fila) {
     return b && fila.contains(b) && !b.disabled ? b : null;
   };
   const elegir = (b) => { if (b && b.getAttribute('aria-pressed') !== 'true') { b.click(); vibrar('toque'); } };
-  fila.addEventListener('pointerdown', (e) => { if (!(e.button > 0)) g = { id: e.pointerId, x: e.clientX, y: e.clientY, activo: false, ultimo: e.target.closest?.('button') || null }; });
+  fila.addEventListener('pointerdown', (e) => { if (!(e.button > 0) && !soloBotones()) g = { id: e.pointerId, x: e.clientX, y: e.clientY, activo: false, ultimo: e.target.closest?.('button') || null }; });
   fila.addEventListener('pointermove', (e) => {
     if (!g || e.pointerId !== g.id) return;
     if (!g.activo) {

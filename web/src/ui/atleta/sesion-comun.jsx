@@ -1,7 +1,7 @@
 import { modoCelebrar } from '../../logica/trato.js';
 import { useMarcaPagina } from '../marca-pagina.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { leerAjustes, guardarAjustes } from '../ajustes.js';
+import { leerAjustes, guardarAjustes, soloBotones } from '../ajustes.js';
 import { faseRespira, retrasoRespira } from '../../logica/respira.js';
 import { sinMovimiento } from '../transiciones.js';
 import { Icono, useApp, DegradadoAro } from '../comunes.jsx';
@@ -244,7 +244,7 @@ export function Temporizador({ fin, total, prioridad, texto, voz = null, aviso =
   const dial = useRef(null);
   const gestoDial = quedan > 0 ? {
     onPointerDown: (e) => {
-      if (e.button > 0 || e.target.closest?.('button')) return;
+      if (e.button > 0 || soloBotones() || e.target.closest?.('button')) return;
       dial.current = { id: e.pointerId, x: e.clientX, y: e.clientY, pasos: 0, activo: false, ultimo: este() };
     },
     onPointerMove: (e) => {

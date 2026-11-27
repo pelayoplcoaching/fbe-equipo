@@ -7,7 +7,7 @@
 import { render } from 'preact';
 import { Icono } from '../comunes.jsx';
 import { vibrar } from '../hapticos.js';
-import { leerAjustes } from '../ajustes.js';
+import { leerAjustes, soloBotones } from '../ajustes.js';
 import { sinMovimiento } from '../transiciones.js';
 import { SUBS_PROGRESO, pedirSubProgreso } from './sub-progreso.js';
 import { atajosDe, ICONO_SUB, LARGO_MS } from '../../logica/barra-atajos.js';
@@ -122,7 +122,7 @@ export function instalarBarra(leer) {
 
   const baja = (e) => {
     const cont = barraDe(e.target), boton = e.target.closest?.('button.tab');
-    if (!cont || !boton || e.button > 0 || g) return;
+    if (!cont || !boton || e.button > 0 || g || soloBotones()) return;
     const o = leer();
     // (lo último que se abrió desde «Más»: se apunta al tocar la barra estando en ello)
     if (o.mas.some(([t]) => t === o.tab)) guardarUltimo(o.tab);

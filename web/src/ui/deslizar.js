@@ -9,6 +9,7 @@
 import { useRef, useLayoutEffect } from 'preact/hooks';
 import { sinMovimiento } from './transiciones.js';
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 
 export const SIN_DESLIZAR = '.grafica-caja, .selector-chips, .semanas-tabs, .filtros-muro, .tira-fotos, .tm-lista, .pestanas, .chat-busqueda-tipos, .dias-deslizar, .galeria-pista, .reloj-descanso, .entrada-menu, .paso, .segmentos, input, textarea, select, video, [data-sin-deslizar], .velo, [aria-modal="true"]';
 
@@ -49,7 +50,7 @@ export function useDeslizar(alPasar, { ignorar = SIN_DESLIZAR, hay = null, nombr
     setTimeout(() => el.parentElement?.classList.remove('recorta-x'), 260);
   };
   return {
-    onPointerDown: (e) => { if (e.button > 0 || (ignorar && e.target.closest?.(ignorar))) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false, pasos: [], listo: false }; },
+    onPointerDown: (e) => { if (e.button > 0 || soloBotones() || (ignorar && e.target.closest?.(ignorar))) return; g.current = { x: e.clientX, y: e.clientY, id: e.pointerId, activo: false, pasos: [], listo: false }; },
     onPointerMove: (e) => {
       const s = g.current;
       if (!s || s.id !== e.pointerId) return;
@@ -134,7 +135,7 @@ let filaEnCurso = null;
 export function deslizarHecho(alHecho) {
   const soltar = (el) => { el.classList.remove('deslizando'); el.style.removeProperty('--dx'); el.style.removeProperty('--f'); el.removeAttribute('data-listo'); };
   return {
-    onPointerDown: (e) => { if (e.button > 0) return; filaEnCurso = { id: e.pointerId, x: e.clientX, y: e.clientY, activo: false, listo: false }; },
+    onPointerDown: (e) => { if (e.button > 0 || soloBotones()) return; filaEnCurso = { id: e.pointerId, x: e.clientX, y: e.clientY, activo: false, listo: false }; },
     onPointerMove: (e) => {
       const g = filaEnCurso;
       if (!g || g.id !== e.pointerId) return;

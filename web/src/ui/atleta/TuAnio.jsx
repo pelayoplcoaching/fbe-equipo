@@ -3,7 +3,7 @@
 // siempre que toque. Solo entrenamiento: nada de peso, medidas, nutrición, hábitos ni datos de salud.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Capa, PortadaHistoria, usePreferencia } from '../comunes.jsx';
-import { useHistoriaTacto } from '../historia-tacto.js';
+import { useHistoriaTacto, BotonPausa } from '../historia-tacto.js';
 import { viajeHistoria } from './TuSemana.jsx';
 import { HojaCompartir } from '../compartir-perezoso.jsx';
 import { anioParaResumen, resumenAnio, datosCompartirAnio } from '../../logica/anio.js';
@@ -156,7 +156,7 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
   // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta
-  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
+  const [pausa, alternarPausa] = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
   useEffect(() => {
     if (quieto || ultima || compartir || carta || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
@@ -181,6 +181,7 @@ function HistoriaAnioPantalla({ resumen: r, alCerrar }) {
       </div>
       <p class="sr" aria-live="polite">Pantalla {i + 1} de {pantallas.length}</p>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar tu año"><Icono n="cerrar" /></button>
+      {!quieto && <BotonPausa pausa={pausa} alternar={alternarPausa} />}
       {pantallas[i].comp && <button type="button" class="btn btn-icono plano historia-cerrar historia-comp" onClick={() => abrirCarta(pantallas[i].id)} aria-label="Compartir esta tarjeta"><Icono n="compartir" /></button>}
       <div class="historia-pantalla" key={pantallas[i].id} aria-live="polite">
         {pantallas[i].render()}

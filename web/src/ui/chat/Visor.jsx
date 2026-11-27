@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Capa, Icono, useApp, useAtraparFoco } from '../comunes.jsx';
 import { TextoChat } from '../Enlaces.jsx';
 import { sinMovimiento } from '../transiciones.js';
+import { soloBotones } from '../ajustes.js';
 import { cuandoInfo, esMarcador } from '../../logica/mensajes.js';
 import { useMarcaPagina } from '../marca-pagina.js';
 
@@ -151,7 +152,7 @@ function VisorDentro({ medios, inicio = 0, nombreDe = () => '', alCerrar, alResp
       aplicarZoom();
       return;
     }
-    if (!a.modo && Math.hypot(dx, dy) > 10) a.modo = Math.abs(dx) > Math.abs(dy) ? 'lado' : dy > 0 ? 'abajo' : 'nada';
+    if (!a.modo && Math.hypot(dx, dy) > 10) a.modo = soloBotones() ? 'nada' : Math.abs(dx) > Math.abs(dy) ? 'lado' : dy > 0 ? 'abajo' : 'nada';
     if (a.modo === 'lado') {
       const fuera = (dx > 0 && i === 0) || (dx < 0 && i === medios.length - 1);
       moverPista(fuera ? dx / 3 : dx);

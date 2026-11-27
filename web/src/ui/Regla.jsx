@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { vibrar, PATRONES } from './hapticos.js';
 import { sonarFBE } from './sonido.js';
+import { soloBotones } from './ajustes.js';
 import { num } from '../logica/calculos.js';
 import { REGLA_ANCHO, reglaMayor, reglaIndice, reglaValor, reglaVentana, reglaAlBorde } from '../logica/regla.js';
 
@@ -16,7 +17,9 @@ const quieto = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-r
 // escribirlo; mayor: cada cuántos saltos va un número (si no, el que caiga en cifra redonda); zona: [de, a], en verde;
 // etiqueta: su nombre para el lector de pantalla; unidad: «kg», «reps»…; alCambiar(v): en cada salto; alSoltar(v): al parar;
 // variante: 'peso' (en «Tu peso»: más alta y sin la cifra flotante, que ya está en el campo de encima)
-export function Regla({ valor = null, base = null, paso = 1, min = 0, max = 1500, dec = 2, mayor = null, zona = null, etiqueta, unidad = '', alCambiar, alSoltar = null, variante = '' }) {
+// (belleza 343) Con «Solo botones», sin regla: al lado siempre están el teclado o el − y el +
+export function Regla(props) { return soloBotones() ? null : <ReglaDentro {...props} />; }
+function ReglaDentro({ valor = null, base = null, paso = 1, min = 0, max = 1500, dec = 2, mayor = null, zona = null, etiqueta, unidad = '', alCambiar, alSoltar = null, variante = '' }) {
   const caja = useRef(null);
   const st = useRef({ activo: false, i: null, t: 0, fin: null, dedo: false, raton: null, destino: null, emitido: null }).current;
   // El salto, fijo mientras se arrastra (con mancuernas cambia al pasar de 10 kg: la regla no puede saltar bajo el dedo)

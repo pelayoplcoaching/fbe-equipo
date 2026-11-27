@@ -385,16 +385,30 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
 const ICONO_GRUPO = { sube: 'arriba', baja: 'abajo', igual: 'reiniciar', otras: 'calendario' };
 // Los gestos de las historias (mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa), como
 // useHistoriaTacto (ui/historia-tacto.js), aquí mismo: importar aquel desde este trozo partiría el arranque en un archivo más
+// (belleza 334) y la pausa, también con el botón de arriba a la izquierda y con la barra espaciadora (como las demás)
+function barraRev(el, si) {
+  const b = el?.querySelector('.historia-barras .corre i');
+  if (!b) return;
+  if (si) { b.style.animationPlayState = 'paused'; return; }
+  b.style.animationPlayState = ''; b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+}
 function useTacto(caja, o) {
   const [pausa, setPausa] = useState(false);
   const vivo = useRef(null);
   vivo.current = { ...o, setPausa };
+  const alternar = () => setPausa((x) => { barraRev(caja.current, !x); return !x; });
   useEffect(() => {
     let quitar = null, fuera = false;
     import('./historia-gestos.js').then((m) => { if (!fuera) quitar = m.instalarHistoria(caja.current, () => vivo.current); }).catch(() => { /* sin gestos: tocar sigue valiendo */ });
-    return () => { fuera = true; quitar?.(); };
+    const tecla = (e) => {
+      if (e.key !== ' ' || document.querySelectorAll('[aria-modal="true"]').length > 1 || e.target?.closest?.('button, a, input, select, textarea')) return;
+      e.preventDefault();
+      setPausa((x) => { barraRev(caja.current, !x); return !x; });
+    };
+    document.addEventListener('keydown', tecla);
+    return () => { fuera = true; quitar?.(); document.removeEventListener('keydown', tecla); };
   }, []);
-  return pausa;
+  return [pausa, alternar];
 }
 export function HistoriaRevision(props) { return <Capa><HistoriaRevisionPantalla {...props} /></Capa>; }
 function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerrar }) {
@@ -440,7 +454,7 @@ function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerra
   const quieto = sinMovimiento();
   const ultima = i === pantallas.length - 1;
   const ir = (k) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + k)));
-  const pausa = useTacto(caja, { i, n: pantallas.length, ir, alCerrar });
+  const [pausa, alternarPausa] = useTacto(caja, { i, n: pantallas.length, ir, alCerrar });
   // Avanza sola cada 9 s (hay que leer), como las demás historias: no con movimiento reducido, ni en la última, ni en pausa
   useEffect(() => {
     if (!pantallas.length || quieto || ultima || pausa) return undefined;
@@ -460,6 +474,7 @@ function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerra
         {pantallas.map((x, k) => <span key={x.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre rvh-corre'}` : ''}><i /></span>)}
       </div>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar tu revisión"><Icono n="cerrar" /></button>
+      {!quieto && p && <button type="button" class="btn btn-icono plano historia-cerrar" style="right:auto;left:max(var(--esp-12),env(safe-area-inset-left,0px))" aria-pressed={pausa ? 'true' : 'false'} aria-label={pausa ? 'Seguir la historia' : 'Pausar la historia'} onClick={alternarPausa}><Icono n={pausa ? 'play' : 'pausa'} /></button>}
       {p ? (
         <div class="historia-pantalla" key={p.id} aria-live="polite">
           {p.render()}

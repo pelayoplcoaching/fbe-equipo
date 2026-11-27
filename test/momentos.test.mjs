@@ -194,5 +194,72 @@ console.log('324 · Tu portada, también en lo que compartes');
   check(/img\.naturalWidth >= img\.naturalHeight \* 2\.4/.test(C) && /H \* 0\.32/.test(C), '(324) la portada, como franja arriba (un tercio de la tarjeta) fundida con la noche: estirada a toda la tarjeta se vería borrosa');
 }
 
+console.log('330 · Nada gasta cuando no se ve');
+{
+  const M = src('ui/marca-pagina.js'), C = src('ui/comunes.jsx');
+  check(/const TAPAN = \['hay-velo', 'hay-tapa'\];/.test(M) && /function repintarPausas\(\)/.test(M) && /el\.toggleAttribute\('data-pausa', tapada\(el\) \|\| fuera\.has\(el\)\)/.test(M),
+    '(330) con una hoja o una ventana encima, lo de debajo que se mueve sin parar se para (como al salir de la pantalla)');
+  check(/!el\?\.closest\?\.\('\.capa'\)/.test(M) && /body > \.temporada-capa/.test(M), '(330) lo de dentro de la propia ventana sigue; la decoración de temporada también se para');
+  check(/mirarTapa\(\) \{ if \(!this\.tapa && this\.nodo\?\.querySelector\('\[aria-modal="true"\]'\)\)/.test(C) && /marcarPagina\('hay-tapa', false\)/.test(C),
+    '(330) cualquier ventana (una historia, el cartel, el modo cocina) avisa, no solo las hojas');
+}
+
+console.log('334 · La pausa de las historias, también con un botón');
+{
+  const T = src('ui/historia-tacto.js');
+  check(/export function BotonPausa\(\{ pausa, alternar \}\)/.test(T) && /'aria-pressed': pausa/.test(T) && /Pausar la historia/.test(T) && /Seguir la historia/.test(T),
+    '(334) un botón de pausa arriba, a la izquierda (dice si está parada)');
+  check(/e\.key !== ' ' \|\| document\.querySelectorAll\('\[aria-modal="true"\]'\)\.length > 1/.test(T), '(334) y con la barra espaciadora (solo en la de arriba, y no si el foco está en un botón)');
+  const n = ['ui/atleta/HistoriaSesion.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuSemana.jsx'].filter((r) => /<BotonPausa pausa=\{pausa\} alternar=\{alternarPausa\} \/>/.test(src(r))).length;
+  check(n === 4 && /aria-label=\{pausa \? 'Seguir la historia' : 'Pausar la historia'\} onClick=\{alternarPausa\}/.test(src('ui/atleta/EsencialAyuda.jsx')), `(334) en las cuatro historias y en la de tu revisión (${n} de 4)`);
+}
+
+console.log('343 · Gestos en Ajustes, y «Solo botones»');
+{
+  const { normalizarAjustes, soloBotones } = await import('../web/src/ui/ajustes.js');
+  check(normalizarAjustes({}).soloBotones === false && normalizarAjustes({ soloBotones: true }).soloBotones === true && normalizarAjustes({ soloBotones: 'sí' }).soloBotones === false,
+    '(343) «Solo botones», apagado de serie (y solo se enciende de verdad)');
+  check(soloBotones() === false && /r\.toggleAttribute\('data-solo-botones', a\.soloBotones === true\)/.test(src('ui/ajustes.js')), '(343) se mira en la raíz (sin pantalla, nunca)');
+  const gestos = [
+    ['ui/deslizar.js', /onPointerDown: \(e\) => \{ if \(e\.button > 0 \|\| soloBotones\(\) \|\| \(ignorar/, 'deslizar entre pestañas y semanas'],
+    ['ui/deslizar.js', /onPointerDown: \(e\) => \{ if \(e\.button > 0 \|\| soloBotones\(\)\) return; filaEnCurso/, 'deslizar una fila para marcarla'],
+    ['ui/atleta/asomar.jsx', /e\.pointerType === 'mouse' \|\| soloBotones\(\)\) return;/, 'asomarse'],
+    ['ui/atleta/barra-gestos.jsx', /e\.button > 0 \|\| g \|\| soloBotones\(\)\) return;/, 'la barra de abajo'],
+    ['ui/atleta/historia-gestos.js', /leer\(\)\.parada \|\| soloBotones\(\)\) return;/, 'las historias'],
+    ['ui/MedallaHeroe.jsx', /sinMovimiento\(\) \|\| soloBotones\(\)\) return;/, 'la medalla'],
+    ['ui/comunes.jsx', /if \(!movil\(\) \|\| e\.button > 0 \|\| soloBotones\(\)\) return;/, 'arrastrar una hoja para cerrarla'],
+    ['ui/comunes.jsx', /if \(enfocado \|\| e\.button > 0 \|\| soloBotones\(\)\) return;/, 'arrastrar sobre una cifra'],
+    ['ui/tacto.js', /const sw = soloBotones\(\) \? null :/, 'arrastrar un interruptor'],
+    ['ui/tacto.js', /const bt = soloBotones\(\) \? null :/, 'arrastrar la pastilla de unas opciones'],
+    ['ui/atleta/sesion-comun.jsx', /if \(e\.button > 0 \|\| soloBotones\(\) \|\| e\.target\.closest\?\.\('button'\)\) return;\s*dial\.current/, 'el reloj del descanso'],
+    ['ui/atleta/FilaSerie.jsx', /gesto\.current \|\| soloBotones\(\)\) return;/, 'la fila de la serie'],
+    ['ui/arrastrar-escala.js', /if \(!\(e\.button > 0\) && !soloBotones\(\)\) g = /, 'recorrer una escala'],
+    ['ui/grafica-dedos.js', /if \(g && soloBotones\(\)\) return;/, 'el segundo dedo en las gráficas'],
+    ['ui/Cocina.jsx', /if \(e\.button > 0 \|\| soloBotones\(\) \|\| e\.target/, 'el modo cocina'],
+    ['ui/atleta/Apuntes.jsx', /quieto \|\| soloBotones\(\) \|\| ev\.button/, 'las fichas de los apuntes'],
+    ['ui/IndiceLateral.jsx', /e\.pointerId === st\.id && !soloBotones\(\)/, 'recorrer el índice'],
+    ['ui/Chat.jsx', /seleccionando \|\| soloBotones\(\)\) return;/, 'deslizar o mantener un mensaje'],
+    ['ui/chat/Visor.jsx', /a\.modo = soloBotones\(\) \? 'nada' :/, 'deslizar una foto'],
+  ];
+  const sin = gestos.filter(([r, re]) => !re.test(src(r))).map(([, , t]) => t);
+  check(sin.length === 0, `(343) con «Solo botones», ningún gesto hace nada (${gestos.length - sin.length} de ${gestos.length}${sin.length ? `; faltan: ${sin.join(', ')}` : ''})`);
+  const C = src('ui/Chat.jsx');
+  check(/style=\{soloBotones\(\) \? 'opacity:1;pointer-events:auto' : undefined\}/.test(C), '(343) a cambio, el «Más opciones» de cada mensaje se ve (en el móvil va escondido: se mantenía pulsado)');
+  const R = src('ui/Regla.jsx');
+  check(/export function Regla\(props\) \{ return soloBotones\(\) \? null : <ReglaDentro \{\.\.\.props\} \/>; \}/.test(R), '(343) sin regla (al lado siguen el teclado o el − y el +)');
+  const A = src('ui/Ajustes.jsx');
+  const filas = (A.match(/^  \['[a-z-]+', '[^']+', '[^']+'\],$/gm) || []).length;
+  check(/function HojaGestos\(/.test(A) && /id="aj-solo-botones"/.test(A) && /cambiar\('soloBotones', v\)/.test(A) && filas >= 15 && /titulo="Gestos"/.test(A),
+    `(343) «Gestos» en Ajustes: la lista de lo que se hace con el dedo (${filas}), con su botón, y el interruptor`);
+  check(/  gesto: 'M10 16V6\.5/.test(src('ui/comunes.jsx')), '(343) con su icono (un dedo que toca)');
+}
+
+console.log('347 · Móviles lentos: lo nuevo, más sencillo');
+{
+  check(/ligero\(\)/.test(src('ui/inclinacion.js')), '(347) con el modo ligero, las tarjetas no se inclinan con el móvil');
+  check(/:root\[data-ligero\] \.lb-borde \{ box-shadow: inset 0 0 0 var\(--filo-marca\) var\(--morado\); \}/.test(src('tacto-a.css')), '(347) la luz del borde, sin el halo (un filo quieto)');
+  check(/:root\[data-ligero\] \.cpt-brillo/.test(src('momentos.css')), '(347) las tarjetas para compartir, sin el brillo que corre');
+}
+
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);

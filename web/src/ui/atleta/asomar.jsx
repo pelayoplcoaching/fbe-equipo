@@ -8,6 +8,7 @@
 import { render } from 'preact';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
+import { soloBotones } from '../ajustes.js';
 import { ASOMA_MS, ASOMA_QUIETO, ASOMA_ABRE, asomaSesion, asomaEjercicio, asomaRotulo, sitioAsoma } from '../../logica/asomar.js';
 
 function Tarjeta({ d, cargando, abre, sePuedeAbrir }) {
@@ -77,7 +78,7 @@ export function instalarAsomar(leer) {
   function frena(e) { if (g?.abierta && e.cancelable) e.preventDefault(); }
 
   const baja = (e) => {
-    if (g || e.button > 0 || e.pointerType === 'mouse') return;
+    if (g || e.button > 0 || e.pointerType === 'mouse' || soloBotones()) return;
     const el = e.target.closest?.('[data-asoma]');
     if (!el || el.disabled) return;
     g = { id: e.pointerId, x: e.clientX, y: e.clientY, el, abre: false, abierta: false };

@@ -13,7 +13,7 @@ import { Imagen, hayImagen } from '../Imagen.jsx';
 import { VideoYoutube, abrirMini } from '../YouTube.jsx';
 import { HojaGuia } from '../Guias.jsx';
 import { hablar, callar, hayVoz } from '../voz.js';
-import { leerAjustes } from '../ajustes.js';
+import { leerAjustes, soloBotones } from '../ajustes.js';
 import { vibrar } from '../hapticos.js';
 import { sinMovimiento } from '../transiciones.js';
 import { arteDe, palabraClave, trozosConTerminos, medallaNueva, deslizar, arrastre, aroDeNota, barraDescanso, puntosDeTanda } from '../../logica/apuntes-arte.js';
@@ -267,7 +267,7 @@ function ApuntesDentro({ atletaId, ejercicio = null, fin = null, pausa = null, m
     return 'Siguiente';
   };
   const dedoAbajo = (ev) => {
-    if (!puedeDeslizar || quieto || ev.button > 0 || ev.target.closest('button, a, input, textarea, audio, iframe, .apunte-terminos, [role="button"]')) return;
+    if (!puedeDeslizar || quieto || soloBotones() || ev.button > 0 || ev.target.closest('button, a, input, textarea, audio, iframe, .apunte-terminos, [role="button"]')) return;
     setDedo({ x0: ev.clientX, y0: ev.clientY, dx: 0, dy: 0, activo: false, id: ev.pointerId });
   };
   const dedoMueve = (ev) => {

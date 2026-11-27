@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icono, Anillo, Capa, PortadaHistoria } from '../comunes.jsx';
-import { useHistoriaTacto } from '../historia-tacto.js';
+import { useHistoriaTacto, BotonPausa } from '../historia-tacto.js';
 import { conTransicion } from '../transiciones.js';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { num, signo, textoSerie, NOMBRE_GRUPO } from '../../logica/calculos.js';
@@ -128,7 +128,7 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const caja = useRef(null);
   const [carta, setCarta] = useState(null);
   // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta
-  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
+  const [pausa, alternarPausa] = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
   // Avanza sola cada 7 s (no con movimiento reducido, ni en la última, ni en pausa)
   useEffect(() => {
     if (quieto || ultima || pausa || compartir || carta) return undefined;
@@ -149,6 +149,7 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
         {pantallas.map((p, k) => <span key={p.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre'}` : ''}><i /></span>)}
       </div>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar el resumen"><Icono n="cerrar" /></button>
+      {!quieto && <BotonPausa pausa={pausa} alternar={alternarPausa} />}
       {pantallas[i].comp && <button type="button" class="btn btn-icono plano historia-cerrar historia-comp" onClick={() => abrirCarta(pantallas[i].id)} aria-label="Compartir esta tarjeta"><Icono n="compartir" /></button>}
       <div class="historia-pantalla" key={pantallas[i].id} aria-live="polite">
         {pantallas[i].render()}

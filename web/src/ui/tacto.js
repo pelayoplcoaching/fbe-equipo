@@ -14,6 +14,7 @@
 //   · Tocar un botón que aún no se puede usar hace un leve «no» de lado (data-no, bloque 72) con su toque.
 // En los dos arrastres, el clic que el navegador manda al soltar no cuenta: lo que vale es dónde se ha soltado.
 import { vibrar } from './hapticos.js';
+import { soloBotones } from './ajustes.js';
 
 const ELEGIR = '.tabs .tab:not([aria-current="page"]), .pestanas [role="tab"]:not([aria-selected="true"]), .semanas-tabs button:not([aria-pressed="true"]):not([aria-current]), .filtros-muro button:not([aria-pressed="true"]), details > summary, .tab-mas';
 
@@ -41,9 +42,9 @@ export function instalarTacto(d = typeof document !== 'undefined' ? document : n
   const alBajar = (e) => {
     if (e.button > 0) return;
     const t = e.target;
-    const sw = t?.closest?.('input.interruptor');
+    const sw = soloBotones() ? null : t?.closest?.('input.interruptor');
     if (sw && !sw.disabled) { g = { tipo: 'sw', el: sw, x: e.clientX, id: e.pointerId, base: sw.checked ? 20 : 0, activo: false, lado: sw.checked }; return; }
-    const bt = t?.closest?.('.segmentos[data-pastilla] > button[aria-pressed="true"]');
+    const bt = soloBotones() ? null : t?.closest?.('.segmentos[data-pastilla] > button[aria-pressed="true"]');
     if (bt && !bt.disabled) {
       const grupo = bt.parentElement, botones = [...grupo.querySelectorAll(':scope > button')];
       if (botones.every((b) => b.offsetTop === bt.offsetTop)) g = { tipo: 'seg', el: bt, grupo, botones, x: e.clientX, id: e.pointerId, x0: bt.offsetLeft, activo: false, cerca: bt };

@@ -88,6 +88,7 @@ export function normalizarAjustes(guardado = {}) {
   if (typeof a.acento !== 'string' || !/^[a-z]{1,20}$/.test(a.acento)) a.acento = AJUSTES_DEFECTO.acento;
   a.oled = a.oled === true;
   a.calida = a.calida === true;   // (vista 282) la luz cálida de noche
+  a.soloBotones = a.soloBotones === true;   // (belleza 343) «Solo botones»: sin gestos
   if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
   a.respira = a.respira === true;
   // «La travesía»: si jugó en el último descanso, el juego se abre solo en el siguiente (hasta que lo cierre a mano)
@@ -145,6 +146,9 @@ export function leerAjustes() {
   return normalizarAjustes({ ...(guardado || {}), ...(enMemoria || {}) });
 }
 export const ajuste = (k) => leerAjustes()[k];
+// (belleza 343) «Solo botones» (Ajustes, «Gestos»): deslizar, arrastrar y mantener pulsado no hacen nada; todo se hace
+// tocando (cada gesto tiene su botón). Se mira en la raíz, que pone aplicarTema, para no leer el almacenamiento en cada toque
+export const soloBotones = () => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-solo-botones');
 
 export function guardarAjustes(a) {
   enMemoria = { ...a };
@@ -186,6 +190,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (a.gimnasio) r.setAttribute('data-gimnasio', ''); else r.removeAttribute('data-gimnasio');
   // (tacto 205) modo zurdo: el ✓ de las series y las teclas de acción, a la izquierda (tacto-b.css)
   r.toggleAttribute('data-zurdo', a.zurdo === true);
+  // (belleza 343) «Solo botones»: lo miran los gestos (soloBotones, abajo) al bajar el dedo
+  r.toggleAttribute('data-solo-botones', a.soloBotones === true);
   // (personalización 3) lo que no quiere ver (las reglas, en personal.css)
   for (const k of ['peso', 'kcal', 'ranking']) { if (a.ocultar?.[k]) r.setAttribute(`data-sin-${k}`, ''); else r.removeAttribute(`data-sin-${k}`); }
   // (color) alto contraste y daltonismo: sus tokens, en color.css (generado desde logica/paleta.js)

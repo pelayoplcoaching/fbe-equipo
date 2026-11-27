@@ -23,6 +23,7 @@ import { nombrePeso, etiquetaPeso } from '../../logica/unidades.js';
 import { RPES, aNumero, problemaSerie } from './sesion-comun.jsx';
 import { etiquetaRpeSobran } from '../../logica/esencial.js';
 import { vibrar } from '../hapticos.js';
+import { soloBotones } from '../ajustes.js';
 import { Teclado, usarTecladoMovil } from './Teclado.jsx';
 import { siguienteCampo, discosCon } from '../../logica/teclado.js';
 import { ejeGesto, estadoDeslizar, cruceUmbral, sigueLarga, LARGA_MS } from '../../logica/deslizar.js';
@@ -177,7 +178,7 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
   useEffect(() => () => soltarGesto(), []);
   const alBajar = (e) => {
     if (bloquearClic.current === Infinity) bloquearClic.current = 0; // (por si no llegó el levantar del dedo de la pulsación larga)
-    if (e.pointerType === 'mouse' || !e.isPrimary || gesto.current) return;
+    if (e.pointerType === 'mouse' || !e.isPrimary || gesto.current || soloBotones()) return;
     const g = { id: e.pointerId, x: e.clientX, y: e.clientY, eje: null, pasado: false, ancho: fila.current?.getBoundingClientRect().width || 320 };
     // (v0.63.1) la pulsación larga se decide en el siguiente fotograma: si el móvil va cargado (justo tras saltar un descanso,
     // p. ej.), el temporizador puede vencer con los movimientos del dedo aún en cola; Chrome los entrega antes del fotograma,

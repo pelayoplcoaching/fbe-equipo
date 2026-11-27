@@ -73,6 +73,8 @@
 }
 @media (prefers-reduced-motion: reduce) { .lb-borde { opacity: .75; } .lb-borde.lb-fin { display: none; } }
 @media (prefers-contrast: more) { .lb-borde { box-shadow: none; border: var(--esp-6) solid var(--morado); } }
+/* (belleza 347) con el modo ligero, solo el filo: sin el resplandor difuminado de toda la pantalla */
+:root[data-ligero] .lb-borde { box-shadow: inset 0 0 0 var(--filo-marca) var(--morado); }
 
 /* --- 207. El modo cartel: la cuenta atras a toda pantalla, para leerla a dos metros --- */
 .ct-abrir { position: absolute; z-index: 1; top: var(--esp-6); right: var(--esp-6); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--sobre-flota); }

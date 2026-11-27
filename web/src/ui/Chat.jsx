@@ -11,7 +11,7 @@ import { TextoChat } from './Enlaces.jsx';
 import { HojaProgramar } from './Programar.jsx';
 import { gruposChat } from '../logica/visual.js';
 import { sinMovimiento } from './transiciones.js';
-import { leerAjustes } from './ajustes.js';
+import { leerAjustes, soloBotones } from './ajustes.js';
 import { vibrar } from './hapticos.js';
 import {
   REACCIONES_CHAT, MAX_FOTOS, extractoCita, separadorNoLeidos, textoNoLeidos, coincidencias, resumenReacciones, puedeEditar, puedeEliminar,
@@ -1410,7 +1410,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
     }
   };
   const bajar = (e) => {
-    if (e.button > 0 || !conMenu || seleccionando) return;
+    if (e.button > 0 || !conMenu || seleccionando || soloBotones()) return;
     if (e.target.closest('a, input, textarea')) return;
     const tipo = e.pointerType || 'mouse';
     gesto.current = { x0: e.clientX, y0: e.clientY, tipo, dx: 0, activo: false, largo: false, umbral: false, id: e.pointerId,
@@ -1494,7 +1494,7 @@ function Burbuja({ c, yo, miId, gr, etq, citado, nombreDe, consulta, actual, res
         ) : null}
       {mesInforme && <TarjetaInformeChat mes={mesInforme} atletaId={c.atleta_id} yo={yo} />}
       <span class={`burbuja-pie ${c.programado ? 'pie-bloque' : ''} ${soloMedio ? 'sobre-medio' : ''}`}>{pieDentro}</span>
-      {conMenu && !seleccionando && <button type="button" class="burbuja-mas" aria-label="Más opciones" aria-haspopup="dialog" onClick={alMenu}><Icono n="abajo" /></button>}
+      {conMenu && !seleccionando && <button type="button" class="burbuja-mas" aria-label="Más opciones" aria-haspopup="dialog" onClick={alMenu} style={soloBotones() ? 'opacity:1;pointer-events:auto' : undefined}><Icono n="abajo" /></button>}
       {reacciones.length > 0 && (
         <button type="button" class="burbuja-reacciones" key={reacciones.map((r) => r.emoji).join('')} onClick={alReacciones}
           aria-label={`Reacciones: ${reacciones.map((r) => `${NOMBRE_EMOJI[r.emoji]} ${r.n}`).join(', ')}. Ver quién ha reaccionado`}>

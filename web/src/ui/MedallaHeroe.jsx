@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { vibrar } from './hapticos.js';
 import { sinMovimiento } from './transiciones.js';
+import { soloBotones } from './ajustes.js';
 import { GRADOS_PX, caraDe, giroDestino, duracionGiro, luzGiro, velocidadGiro } from '../logica/medalla-giro.js';
 
 const suave = (t) => 1 - (1 - t) ** 3;
@@ -64,7 +65,7 @@ export function MedallaHeroe({ logro: l, Metal, c = null, nombre }) {
   useEffect(() => parar, []);
 
   const baja = (e) => {
-    if (e.button > 0 || st.g || sinMovimiento()) return;
+    if (e.button > 0 || st.g || sinMovimiento() || soloBotones()) return;
     st.g = { id: e.pointerId, x: e.clientX, x1: e.clientX, t1: e.timeStamp, a0: null, a: st.a, v: 0, cara: Math.round(st.a / 180) };
   };
   const mueve = (e) => {
