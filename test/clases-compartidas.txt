@@ -496,6 +496,10 @@ grupo-revisar-cab: estilos.css revision.css
 grupo-revisar-items: estilos.css revision.css
 grupo-revisar-n: diseno.css estilos.css
 guardado: equipo-belleza.css estilos.css perfil.css
+guia-cita: guias.css vista-b.css
+guia-h: guias.css vista-b.css
+guia-lista: guias.css vista-b.css
+guia-seccion: guias.css vista-b.css
 h-panel: estilos.css imagenes.css
 habito-coach: estilos.css progreso-visual.css
 habito-coach-cifras: estilos.css progreso-visual.css
@@ -919,7 +923,7 @@ salud-dif: diseno.css personal.css
 salud-movil: diseno.css personal.css
 seccion: diseno.css estilos.css progreso-visual-2.css visual.css
 seccion-cab: ambas-a.css diseno.css estilos.css perfil.css progreso-visual-2.css pulido.css visual.css
-secundario: ambas-h.css belleza-a.css diseno.css estilos.css
+secundario: ambas-h.css belleza-a.css diseno.css estilos.css vista-b.css
 seg-compacto: estilos.css personal.css
 seg-ico: ambas-e.css diseno.css
 seg-rango: ambas-d.css estilos.css
@@ -1057,7 +1061,7 @@ tramo-lleno: ambas-b.css diseno.css estilos.css
 tramos: ambas-b.css belleza-a.css diseno.css estilos.css
 trazada: diseno.css tacto-b.css
 trofeo-detalle: belleza-b.css estilos.css
-trofeo-ico: diseno.css estilos.css
+trofeo-ico: diseno.css estilos.css vista-b.css
 trofeo-nuevo: diseno.css estilos.css
 trofeo-tarjeta: diseno.css estilos.css progreso-visual-2.css progreso-visual.css pulido.css
 trofeo-valor: diseno.css estilos.css

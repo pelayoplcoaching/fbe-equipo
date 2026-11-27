@@ -77,3 +77,43 @@
 .csm-dif:not(#n) { min-width: var(--esp-48); color: var(--tinta-3); }
 .csm-sube:not(#n) .csm-dif { color: var(--ok); }
 .csm-baja:not(#n) .csm-dif { color: var(--aviso); }
+
+/* (v0.276) Vista, tercera vuelta: los primeros dias (269, 270) y leer a gusto (271-273). Prefijos: sfa- (tu primera
+   semana, dibujada), vit- (los huecos de la vitrina) y lec- (la barra de lectura, el modo lectura y el final de la guia) */
+
+/* --- 269. Tu primera semana, dibujada (en "Tus semanas", hasta que acabe la primera) --- */
+.sfa-fila:not(#n) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-12); padding: var(--esp-14) var(--esp-16); color: var(--tinta-3); }
+.sfa-dias:not(#n) { display: flex; gap: var(--esp-4); margin-top: var(--esp-4); }
+.sfa-dias:not(#n) > i { display: inline-grid; place-items: center; width: var(--esp-22); height: var(--esp-22); border: var(--filo-fino) dashed var(--linea); border-radius: 50%; font-size: var(--letra-11); font-style: normal; font-weight: 600; }
+.sfa-aro:not(#n) { width: var(--esp-48); height: var(--esp-48); border: var(--filo-fuerte) dashed var(--linea); border-radius: 50%; }
+.sfa-txt:not(#n) { margin: 0; }
+
+/* --- 270. La vitrina, con los marcos de tus primeros records --- */
+.vit-huecos:not(#n) { margin-bottom: var(--esp-10); }
+.vit-hueco:not(#n) { min-height: var(--esp-48); border: var(--filo-medio) dashed var(--linea); background: transparent; box-shadow: none; color: var(--tinta-3); cursor: default; }
+.vit-hueco:not(#n) .trofeo-ico { background: transparent; border: var(--filo-fino) dashed var(--linea); color: var(--tinta-3); }
+.vit-hueco-t:not(#n) { font-size: var(--letra-14); font-weight: 600; }
+.vit-hueco-pie:not(#n) strong { font-size: var(--letra-16); }
+
+/* --- 271. La barra de lectura: una linea fina que avanza con lo leido y los minutos que quedan --- */
+.lec-barra:not(#n) { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--esp-48) + var(--esp-14)); z-index: var(--capa-pegado); display: flex; align-items: center; gap: var(--esp-10); margin: 0; padding: var(--esp-6) 0; background: color-mix(in srgb, var(--tiza) 88%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); }
+.lec-barra[data-en="hoja"]:not(#n) { top: 0; background: color-mix(in srgb, var(--hoja) 90%, transparent); }
+.lec-pista:not(#n) { flex: 1; height: var(--esp-4); overflow: hidden; border-radius: var(--r-pildora); background: var(--linea); }
+.lec-lleno:not(#n) { display: block; height: 100%; border-radius: inherit; background: var(--morado); transform: scaleX(var(--p, 0)); transform-origin: left center; }
+.lec-min:not(#n) { flex: none; font-size: var(--letra-12-5); font-weight: 600; color: var(--tinta-2); }
+@media (prefers-reduced-transparency: reduce) { .lec-barra:not(#n), .lec-barra[data-en="hoja"]:not(#n) { background: var(--tiza); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-contrast: more) { .lec-pista:not(#n) { outline: var(--filo-fino) solid var(--tinta); } }
+
+/* --- 272. Modo lectura: columna comoda, un punto mas de letra e interlineado amplio --- */
+.lec-modo:not(#n) .guia-seccion { gap: var(--esp-14); scroll-margin-top: calc(var(--esp-48) + var(--esp-48)); }
+.lec-modo:not(#n) .guia-seccion > p, .lec-modo:not(#n) > p.secundario { max-width: 66ch; font-size: var(--letra-17); line-height: 1.68; text-wrap: pretty; }
+.lec-modo:not(#n) .guia-lista { max-width: 66ch; gap: var(--esp-10); font-size: var(--letra-17); line-height: 1.6; }
+.lec-modo:not(#n) .guia-h { margin-top: var(--esp-14); font-size: var(--letra-18); }
+.lec-modo:not(#n) blockquote.guia-cita { max-width: 66ch; font-size: var(--letra-17); line-height: 1.6; }
+
+/* --- 273. Al acabar una guia: "Guia leida" y la siguiente asoma debajo --- */
+.lec-fin:not(#n) { display: grid; gap: var(--esp-14); margin-top: var(--esp-10); padding-top: var(--esp-16); border-top: var(--filo-fino) solid var(--linea); }
+.lec-leida:not(#n) { display: inline-flex; align-items: center; gap: var(--esp-8); justify-self: start; margin: 0; padding: var(--esp-6) var(--esp-12); border-radius: var(--r-pildora); background: var(--hoja-2); color: var(--tinta-2); font-size: var(--letra-14); font-weight: 650; }
+.lec-leida:not(#n) svg { width: var(--ico-18); height: var(--ico-18); }
+.lec-leida[data-si]:not(#n) { background: var(--ok-suave, var(--hoja-2)); color: var(--ok); }
+.lec-chip:not(#n) svg { width: var(--ico-14); height: var(--ico-14); }

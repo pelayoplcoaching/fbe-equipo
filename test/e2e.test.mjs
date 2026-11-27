@@ -6807,6 +6807,15 @@ if (parte('v0.275: datos que se entienden solos')) try {
   fallos++;
   console.log('  ✗ los datos de la v0.275:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.276: vista, tercera vuelta: los primeros días (las siluetas de Progreso y los marcos de la vitrina) y leer a gusto
+// (la barra de lectura, el modo lectura y «Guía leída» con la siguiente) (test/e2e-vista-3.mjs)
+if (parte('v0.276: los primeros días y leer a gusto')) try {
+  const { probarVista3 } = await import('./e2e-vista-3.mjs');
+  await probarVista3({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los primeros días y leer a gusto (v0.276):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

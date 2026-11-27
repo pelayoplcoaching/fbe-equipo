@@ -6,6 +6,8 @@ import { Fragment } from 'preact';
 import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
 import { tomarBusqueda, EVENTO_BUSCA } from './busqueda-pedida.js';
 import { IndiceLateral } from './IndiceLateral.jsx';
+import { BarraLectura, guiasLeidas, marcarLeida, useAlVerse } from './lectura.jsx';
+import { sinMovimiento } from './transiciones.js';
 import { VideoYoutube } from './YouTube.jsx';
 import { videosDeTexto } from '../logica/youtube.js';
 import { VideotecaAprende } from './Videos.jsx';
@@ -132,7 +134,8 @@ function FilaFicha({ f, alAbrir, guia = false }) {
 // Una guía entera para leer: la entrada, un índice de un toque, las secciones con sus fichas y las ideas clave
 // soloSeccion: la clave de una sección; con ella se enseña solo esa (y un botón para ver la guía entera)
 // seccionInicial: el número de la sección a la que se baja al abrir (-1: las ideas clave), desde el buscador
-export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null }) {
+// (vista 271-273) alSiguiente(guia): con él, al final, «Leída ✓» y la siguiente guía asoma debajo
+export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null, alSiguiente = null }) {
   const { backend, api } = useApp();
   const d = useCarga(() => guiaEntera({ backend }, clave), [clave], { recuerdo: `guia:${api.uid()}:${clave}` });
   const [ficha, setFicha] = useState(null);
@@ -160,7 +163,9 @@ export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null })
   const tira = tiraGuia(clave);
   const partes = [...g.secciones.map((s, i) => [i, s.titulo]), ...(g.sueltas.length ? [['sueltas', 'Más ejercicios']] : []), ...(g.ideas.length ? [['ideas', 'Ideas clave']] : [])];
   return (
-    <div class="pila lector-guia" ref={raiz}>
+    <div class="pila lector-guia lec-modo" ref={raiz}>
+      {/* (vista 271) la barra de lectura: lo leído y los minutos que quedan */}
+      <BarraLectura raiz={raiz} clave={clave} />
       {hayImagen(imagenPortadaGuia(clave)) && <Imagen id={imagenPortadaGuia(clave)} clase="franja-ilu portada-guia" tamanos="(min-width: 720px) 640px, 100vw" prioridad />}
       {g.entrada && <p class="secundario">{g.entrada}</p>}
       {g.cita && <blockquote class="guia-cita">{g.cita}</blockquote>}
@@ -197,7 +202,32 @@ export function LectorGuia({ clave, soloSeccion = null, seccionInicial = null })
           <ol class="ideas-guia">{g.ideas.map((x, i) => <li key={i}><span class="num ideas-guia-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><strong>{x.titulo}</strong><span class="peq secundario">{x.x}</span></li>)}</ol>
         </section>
       )}
+      {/* (vista 273) al acabar, «Leída ✓» y la siguiente asoma debajo */}
+      <FinGuia clave={clave} alSiguiente={alSiguiente} />
       {ficha && <HojaFichaGuia ficha={ficha} alCerrar={() => setFicha(null)} />}
+    </div>
+  );
+}
+
+// (vista 273) El final de una guía: al llegar, «Leída ✓» (se apunta su clave en el móvil) y, en «Aprende», la siguiente
+function FinGuia({ clave, alSiguiente }) {
+  const { backend, api, atleta } = useApp();
+  const caja = useRef(null);
+  const [leida, setLeida] = useState(() => guiasLeidas().includes(clave));
+  useAlVerse(caja, () => {
+    marcarLeida(clave);
+    setLeida(true);
+    if (!sinMovimiento()) requestAnimationFrame(() => { try { caja.current?.querySelector('.lec-leida svg')?.animate([{ transform: 'scale(.3) rotate(-25deg)' }, { transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.2, 1.4, .4, 1)' }); } catch { /* */ } });
+  }, [clave]);
+  const guias = useCarga(() => (alSiguiente ? listaGuias({ backend }) : Promise.resolve([])), [!!alSiguiente], { recuerdo: alSiguiente ? `guias:${api.uid()}` : null });
+  const suyo = atleta?.modalidad === 'por_su_cuenta';
+  const gs = ordenarGuias(guias.datos || []).filter((g) => g.publicada && !(suyo && GUIAS_CON_COACH.includes(g.clave)));
+  const i = gs.findIndex((g) => g.clave === clave);
+  const sig = alSiguiente && i >= 0 ? gs[i + 1] || null : null;
+  return (
+    <div class="lec-fin" ref={caja}>
+      <p class="lec-leida" data-si={leida ? '' : undefined} role="status"><Icono n="hecho" />{leida ? 'Guía leída' : 'Final de la guía'}</p>
+      {sig && <div class="lec-sig pila-xs"><span class="mini terciario">La siguiente</span><TarjetaGuia g={sig} alAbrir={alSiguiente} esCoach={false} /></div>}
     </div>
   );
 }
@@ -291,13 +321,13 @@ export function AyudaFicha({ ejercicioId, fichas, enlaces, molestias = [] }) {
   );
 }
 
-function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca' }) {
+function TarjetaGuia({ g, alAbrir, esCoach, icono = 'biblioteca', leida = false }) {
   return (
     <button type="button" class="tarjeta-guia" onClick={() => alAbrir(g)}>
       {/* la estatua de su grupo, su portada o, si no tiene, la ilustración de su estantería; sin imagen, su icono */}
       {hayImagen(imagenGuia(g, estanteDe(g))) ? <Imagen id={imagenGuia(g, estanteDe(g))} clase="tarjeta-guia-img" tamanos="72px" /> : <span class="tarjeta-guia-img vacia" aria-hidden="true"><Icono n={icono} /></span>}
       <span class="pila-xs tarjeta-guia-texto"><strong>{g.titulo}</strong>{g.subtitulo && <span class="mini terciario">{g.subtitulo}</span>}
-        <span class="fila-chips">{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
+        <span class="fila-chips">{leida && <span class="chip ok lec-chip"><Icono n="hecho" />Leída</span>}{g.fichas > 0 && <span class="chip">{cuantosEjercicios(g.fichas)}</span>}{esCoach && !g.publicada && <span class="chip aviso">Sin publicar</span>}</span></span>
     </button>
   );
 }
@@ -318,6 +348,8 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
   // el texto de las guías solo se pide al empezar a buscar
   const textos = useCarga(() => (buscando ? guiasConTexto({ backend }).catch(() => []) : Promise.resolve(null)), [buscando], { recuerdo: buscando ? `guias-texto:${api.uid()}` : null });
   const [ficha, setFicha] = useState(null);
+  // (vista 273) las que ya ha leído, con su «Leída»
+  const leidas = useMemo(() => new Set(esCoach ? [] : guiasLeidas()), [esCoach]);
   const gs = ordenarGuias(guias.datos || []).filter((g) => (esCoach || g.publicada) && paraEl(g));
   const estantes = useMemo(() => porEstantes(gs), [guias.datos, esCoach]);
   const halladas = buscando ? buscarFichas(fichas.datos || [], q) : [];
@@ -352,10 +384,10 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
         estantes.map((e) => (
           <section class="pila-s estante" key={e.id} data-estante={e.id}>
             <div class="estante-cab"><h2 id={`est-${e.id}`}>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{suyo && e.id === 'empieza' ? 'Lo básico para arrancar' : e.detalle}</span>}</div>
-            <div class="rejilla-guias">{e.guias.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} icono={e.icono} />)}</div>
+            <div class="rejilla-guias">{e.guias.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} icono={e.icono} leida={leidas.has(g.clave)} />)}</div>
           </section>
         ))
-      ) : <div class="rejilla-guias">{gs.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} />)}</div>}
+      ) : <div class="rejilla-guias">{gs.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} leida={leidas.has(g.clave)} />)}</div>}
       {/* (tacto 242) el índice lateral de las estanterías */}
       {!esCoach && !buscando && estantes.length >= 3 && <IndiceLateral items={estantes.map((e) => ({ id: `est-${e.id}`, texto: e.nombre }))} />}
       {ficha && <HojaFichaGuia ficha={ficha} alCerrar={() => setFicha(null)} />}
@@ -715,7 +747,7 @@ export function Aprende() {
       {abierta ? (
         <div class="pila">
           <button type="button" class="btn-texto volver-guias" onClick={volver}><Icono n="atras" /> Todas las guías</button>
-          <LectorGuia key={abierta.clave} clave={abierta.clave} seccionInicial={abierta.seccion ?? null} />
+          <LectorGuia key={abierta.clave} clave={abierta.clave} seccionInicial={abierta.seccion ?? null} alSiguiente={(g) => { setAbierta({ ...g, seccion: null }); window.scrollTo?.(0, 0); }} />
           <button type="button" class="btn" style="justify-self:start" onClick={volver}><Icono n="atras" /> Volver a las guías</button>
         </div>
       ) : (

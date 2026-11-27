@@ -7,6 +7,7 @@
 // Estilos: ayuda.css (clases ayu-*, escritas tal cual en el elemento al que se aplican, para que vayan con este trozo).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { BarraLectura } from '../lectura.jsx';
 import { NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
 import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
@@ -316,9 +317,12 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
   useEffect(() => { if (r?.id) guardar(claveLeida(atleta.id, r.id), '1'); }, [r?.id]);
   const v = r ? revisionDe(r) : null;
   const momento = r && encendido('lecciones_momento', previa) ? leccionMomento(momentoDe(r)) : null;
+  const texto = useRef(null);
   return (
     <Hoja titulo={r?.numero ? `Tu revisión · semana ${r.numero}` : 'Tu revisión de la semana'} alCerrar={alCerrar}>
-      <div class="pila ayu-revision" aria-busy={d.cargando ? 'true' : 'false'}>
+      <div class="pila ayu-revision" aria-busy={d.cargando ? 'true' : 'false'} ref={texto}>
+        {/* (vista 271) la barra de lectura: lo leído y los minutos que quedan */}
+        {v && <BarraLectura raiz={texto} clave={r.id} />}
         <Arte id="esencial-revision-semana" />
         {d.cargando && !r && <p class="peq secundario" role="status">Repasando tu semana…</p>}
         {d.error && <p class="error" role="alert">No se ha podido preparar tu revisión: {String(d.error.message || d.error)}</p>}
