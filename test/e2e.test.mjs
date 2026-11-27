@@ -6878,6 +6878,15 @@ if (parte('v0.282: sentir el récord')) try {
   fallos++;
   console.log('  ✗ sentir el récord (v0.282):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.283: momentos, cuarta vuelta: sonido y tacto afinados (los sonidos de la interfaz, el silencio, los momentos a la vez y
+// tu portada al compartir) (test/e2e-momentos.mjs, probarMomentos4)
+if (parte('v0.283: sonido y tacto afinados')) try {
+  const { probarMomentos4 } = await import('./e2e-momentos.mjs');
+  await probarMomentos4({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ sonido y tacto afinados (v0.283):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

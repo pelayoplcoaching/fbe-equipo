@@ -5,10 +5,10 @@
 //     orden.
 //   · (304) En «Tu semana», el mismo botón.
 //   · (306) FBE Esencial: «Leer mi revisión» abre la historia de tres tarjetas, con «Leer entera» al final (si toca).
-//   (v0.282) Sentir el récord (312-315): probarMomentos3.
-//   Suelta:  npm run build && node test/e2e-momentos.mjs  (SOLO=1, 2 o 3 para una sola)
+//   (v0.282) Sentir el récord (312-315): probarMomentos3. (v0.283) Sonido y tacto afinados: probarMomentos4.
+//   Suelta:  npm run build && node test/e2e-momentos.mjs  (SOLO=1, 2, 3 o 4 para una sola)
 import { pathToFileURL } from 'node:url';
-import { irASeccion, subProgreso } from './secciones.mjs';
+import { irASeccion, subProgreso, irAAjustes } from './secciones.mjs';
 
 export async function probarMomentos({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -404,6 +404,145 @@ export async function probarMomentos3({ navegador, check, base = 'http://localho
   check(errores.length === 0, `sentir el récord, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }
 
+// (v0.283) Sonido y tacto afinados (318-326), en el navegador (Ana, 390 px): con «Sonidos de la interfaz», el tic de las
+// pestañas, el susurro de una hoja y el clic de un interruptor (319); en el horario sin sonidos, nada de eso (322); la salida
+// de la sesión y la nota de la serie, con su fotograma (318); y «Tu portada» como fondo de lo que compartes (324)
+export async function probarMomentos4({ navegador, check, base = 'http://localhost:4174' }) {
+  const errores = [];
+  const abrir = async (ajustes = {}) => {
+    const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: 'no-preference' });
+    await ctx.route(/i\.ytimg\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(10000);
+    p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+    await p.addInitScript((aj) => {
+      try {
+        for (const k of ['fbe-escena-200', 'fbe-bienvenida-vista', 'fbe-nec-todas']) localStorage.setItem(k, '1');
+        localStorage.setItem('fbe-portada-perfil', JSON.stringify('perfil-montana'));
+        localStorage.setItem('fbe-ajustes', JSON.stringify({ ...JSON.parse(localStorage.getItem('fbe-ajustes') || '{}'), ...aj }));
+      } catch { /* */ }
+      window.__son = []; window.__vib = [];
+      addEventListener('fbe-sonido', (e) => window.__son.push([e.detail?.tipo, Math.round(performance.now())]));
+      try { Object.defineProperty(navigator, 'vibrate', { configurable: true, value: (x) => { window.__vib.push([JSON.stringify(x), Math.round(performance.now())]); return true; } }); } catch { /* */ }
+    }, ajustes);
+    await p.goto(`${base}/?demo`);
+    const b = p.getByRole('button', { name: /Ana/ }).first();
+    if (await b.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await b.click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1500);
+    for (let i = 0; i < 6; i++) {
+      const c = p.locator('[aria-modal="true"] button:has-text("Vale"), [aria-modal="true"] button:has-text("Seguir"), [aria-modal="true"] button:has-text("Ahora no"), [aria-modal="true"] button:has-text("Entendido")').first();
+      if (await c.isVisible().catch(() => false)) { await c.click().catch(() => {}); await p.waitForTimeout(350); } else break;
+    }
+    // (el audio arranca con un primer toque, como en el móvil)
+    await p.locator('body').click({ position: { x: 5, y: 420 } }).catch(() => {});
+    return { ctx, p };
+  };
+  const oidos = (p) => p.evaluate(() => window.__son.map((x) => x[0]));
+  const limpiar = (p) => p.evaluate(() => { window.__son.length = 0; window.__vib.length = 0; });
+  // --- 319: con los sonidos de la interfaz
+  {
+    const { ctx, p } = await abrir({ sonidosInterfaz: true });
+    try {
+      await limpiar(p);
+      await p.locator('nav.tabs .tab:not([aria-current="page"])').first().click();
+      await p.waitForTimeout(500);
+      check((await oidos(p)).includes('pestana'), `(319) con «Sonidos de la interfaz», el tic al cambiar de pestaña (${(await oidos(p)).join(', ') || 'nada'})`);
+      await p.locator('nav.tabs .tab[data-tab="hoy"]').first().click().catch(() => {});
+      await p.waitForTimeout(800);
+      // una hoja: «Tus marcas» no es de Ana; la de la semana sí (los diales de Hoy abren sus hojas)
+      await limpiar(p);
+      const dial = p.locator('.diales .dial').first();
+      if (await dial.count()) {
+        await dial.click();
+        await p.locator('.hoja-dialogo').first().waitFor({ timeout: 8000 }).catch(() => {});
+        await p.waitForTimeout(400);
+        check((await oidos(p)).includes('hoja'), `(319) y un susurro al abrirse una hoja (${(await oidos(p)).join(', ') || 'nada'})`);
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+      } else check(true, '(319) sin diales en esta demo: el susurro se prueba con la hoja de ajustes');
+      // un interruptor: en Ajustes de este móvil
+      await irAAjustes(p);
+      const aj = p.getByRole('button', { name: /^Sonido y vibración/ }).first();
+      if (await aj.count()) {
+        await aj.scrollIntoViewIfNeeded().catch(() => {});
+        await aj.click();
+        const hoja = p.getByRole('dialog', { name: 'Sonido y vibración' });
+        await hoja.waitFor();
+        await p.waitForTimeout(300);
+        await limpiar(p);
+        await hoja.getByRole('switch', { name: /Clic del teclado/ }).click();
+        await p.waitForTimeout(300);
+        check((await oidos(p)).includes('interruptor'), `(319) y el clic de un interruptor (${(await oidos(p)).join(', ') || 'nada'})`);
+      } else check(false, '(319) Sonido y vibración, en el perfil');
+    } finally { await ctx.close(); }
+  }
+  // --- 322: en el horario sin sonidos, nada de la interfaz
+  {
+    const ya = new Date(), min = ya.getHours() * 60 + ya.getMinutes();
+    const hhmm = (m) => { const x = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
+    const { ctx, p } = await abrir({ sonidosInterfaz: true, silencioActivo: true, silencioDesde: hhmm(min - 60), silencioHasta: hhmm(min + 60) });
+    try {
+      await limpiar(p);
+      await p.locator('nav.tabs .tab:not([aria-current="page"])').first().click();
+      await p.waitForTimeout(600);
+      check(!(await oidos(p)).includes('pestana'), '(322) en el horario sin sonidos, ni el tic de las pestañas');
+    } finally { await ctx.close(); }
+  }
+  // --- 318: la salida y la nota de la serie, con su fotograma
+  {
+    const { ctx, p } = await abrir({});
+    try {
+      await p.locator('[data-atajo="empezar"]').first().click();
+      const portada = p.locator('.portada-empezar .btn').first();
+      if (await portada.waitFor({ timeout: 8000 }).then(() => true).catch(() => false)) {
+        await limpiar(p);
+        await portada.click();
+        await p.waitForTimeout(600);
+        const son = await p.evaluate(() => window.__son.slice()), vib = await p.evaluate(() => window.__vib.slice());
+        const s = son.find((x) => x[0] === 'empezar'), v = vib[0];
+        check(!!s && !!v && Math.abs(s[1] - v[1]) <= 30, `(318) al empezar, la salida suena y vibra a la vez, con la noche que se abre (${s ? 'suena' : 'no suena'}, ${v ? 'vibra' : 'no vibra'}${s && v ? `, ${Math.abs(s[1] - v[1])} ms entre los dos` : ''})`);
+      } else check(true, '(318) sin portada en esta sesión');
+      await p.locator('.sesion-vista').waitFor({ timeout: 15000 });
+      await p.waitForTimeout(1200);
+      for (const b of await p.locator('.pista').getByRole('button', { name: 'Entendido' }).all()) await b.click().catch(() => {});
+      const marcar = p.locator('button[aria-label^="Marcar la serie"]').first();
+      await limpiar(p);
+      const t0 = await p.evaluate(() => Math.round(performance.now()));
+      await marcar.click();
+      await p.waitForTimeout(600);
+      const son = await p.evaluate(() => window.__son.slice()), vib = await p.evaluate(() => window.__vib.slice());
+      const s = son.find((x) => x[0] === 'serie'), v = vib[0];
+      check(!!s && !!v && Math.abs(s[1] - v[1]) <= 30 && s[1] >= t0, `(318) al marcar la serie, la nota y el toque, juntos y con la fila (${s && v ? `${Math.abs(s[1] - v[1])} ms entre los dos` : 'falta uno'})`);
+    } finally { await ctx.close(); }
+  }
+  // --- 324: tu portada, como fondo de lo que compartes
+  {
+    const { ctx, p } = await abrir({});
+    try {
+      await irASeccion(p, 'Progreso');
+      await p.waitForTimeout(800);
+      await subProgreso(p, 'resumen');
+      const filas = p.locator('button.amb-sem');
+      await filas.first().waitFor({ timeout: 15000 });
+      await filas.first().click();
+      const h = p.locator('[role="dialog"].historia').first();
+      await h.waitFor({ timeout: 8000 });
+      await h.locator('.historia-comp').click();
+      const img = p.locator('.tarjeta-img').last();
+      await img.waitFor({ timeout: 15000 });
+      await p.locator('[aria-modal="true"]').last().getByRole('button', { name: 'Personalizar' }).click();
+      const op = p.getByRole('radiogroup', { name: 'Fondo' }).getByRole('radio', { name: 'Tu portada' });
+      const hay = await op.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      const antes = await img.getAttribute('src');
+      if (hay) await op.click();
+      const cambia = hay && await p.waitForFunction((x) => document.querySelectorAll('.tarjeta-img')[document.querySelectorAll('.tarjeta-img').length - 1]?.getAttribute('src') !== x, antes, { timeout: 15000 }).then(() => true).catch(() => false);
+      check(hay && cambia && (await op.getAttribute('aria-checked')) === 'true', '(324) en «Personalizar», «Tu portada» (la de tu perfil) y la tarjeta se vuelve a pintar con ella');
+    } finally { await ctx.close(); }
+  }
+  check(errores.length === 0, `sonido y tacto afinados, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
@@ -416,6 +555,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   if (!solo || solo === '1') { try { await probarMomentos({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '2') { console.log('Compartir con brillo (v0.281)'); try { await probarMomentos2({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '3') { console.log('Sentir el récord (v0.282)'); try { await probarMomentos3({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
+  if (!solo || solo === '4') { console.log('Sonido y tacto afinados (v0.283)'); try { await probarMomentos4({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   await navegador.close(); srv.close();
   console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
   if (fallos) process.exit(1);
