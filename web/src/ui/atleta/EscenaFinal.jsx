@@ -32,9 +32,17 @@ function Lobo({ x, y, alto, clase }) {
 }
 
 // records: cuántos récords ha hecho hoy; semana: { hechas } si con esta sesión completa la semana (o null)
-export function EscenaFinal({ nombre = '', records = 0, semana = null, alSalir, alAcabar }) {
+// (belleza 315) primero: el primer récord de su vida, a lo grande y una sola vez: «Tu primer récord» por título, una
+// segunda lluvia de chispas, un aro de oro que se abre, el toque largo del récord y algo más de tiempo para verlo
+export function EscenaFinal({ nombre = '', records = 0, semana = null, primero = false, alSalir, alAcabar }) {
   const [fuera, setFuera] = useState(false);
   const hecho = useRef(false);
+  const aro = useRef(null);
+  // (315) el aro de oro se abre desde la luna, una vez (a la vez que el aullido)
+  useEffect(() => {
+    if (!primero || !aro.current) return;
+    try { aro.current.animate([{ transform: 'scale(1)', opacity: 0.95 }, { transform: 'scale(2.1)', opacity: 0 }], { duration: 1500, delay: 1600, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'both' }); } catch { /* sin animaciones */ }
+  }, []);
   const fin = useRef({ alSalir, alAcabar });
   fin.current = { alSalir, alAcabar };
   const manada = semana ? Math.max(2, Math.min(7, semana.hechas || 0)) : 0;
@@ -48,16 +56,17 @@ export function EscenaFinal({ nombre = '', records = 0, semana = null, alSalir, 
   useEffect(() => {
     const volver = tenirBarra(NOCHE);
     const aullido = setTimeout(() => vibrar(records ? 'record' : 'anillo'), 1500);
-    const t = setTimeout(salir, records || semana ? 3500 : 2800);
+    const t = setTimeout(salir, primero ? 4600 : records || semana ? 3500 : 2800);
+    const otra = primero ? setTimeout(() => vibrar('record'), 2600) : 0;
     const tecla = (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); salir(); } };
     document.addEventListener('keydown', tecla, true);
-    return () => { clearTimeout(t); clearTimeout(aullido); document.removeEventListener('keydown', tecla, true); volver(); };
+    return () => { clearTimeout(t); clearTimeout(aullido); clearTimeout(otra); document.removeEventListener('keydown', tecla, true); volver(); };
   }, []);
   // La manada, en fila bajo la luna, centrada
   const paso = 50, x0 = 195 - ((manada - 1) * paso) / 2;
   return (
     <Capa>
-      <div class={`escena-final${records ? ' con-record' : ''}${semana ? ' con-semana' : ''}${fuera ? ' fuera' : ''}`} aria-hidden="true" onClick={salir}>
+      <div class={`escena-final${records ? ' con-record' : ''}${semana ? ' con-semana' : ''}${primero ? ' ef-primero' : ''}${fuera ? ' fuera' : ''}`} aria-hidden="true" onClick={salir}>
         <svg class="escena-cielo" viewBox="0 0 390 420" aria-hidden="true" focusable="false">
           <defs>
             <radialGradient id="escena-luna" cx="38%" cy="32%" r="78%">
@@ -89,12 +98,15 @@ export function EscenaFinal({ nombre = '', records = 0, semana = null, alSalir, 
           {records > 0 && (
             <g class="escena-chispas">
               {CHISPAS.map(([x, espera, t, lado], i) => <g key={i} transform={`translate(${x} 0)`}><path d={CHISPA_D} style={{ '--espera': `${espera}s`, '--t': t, '--lado': `${lado}px` }} /></g>)}
+              {/* (315) el primero: una segunda lluvia, más tarde y entre las otras */}
+              {primero && CHISPAS.map(([x, espera, t, lado], i) => <g key={`b${i}`} transform={`translate(${(x + 26) % 390} 0)`}><path d={CHISPA_D} style={{ '--espera': `${(espera + 1.1).toFixed(2)}s`, '--t': t, '--lado': `${-lado}px` }} /></g>)}
             </g>
           )}
+          {primero && <circle class="ef-aro" ref={aro} cx="195" cy="186" r="128" />}
         </svg>
         <div class="escena-texto">
-          <p class="escena-linea escena-titulo"><span>Sesión terminada</span></p>
-          {nombre && <p class="escena-linea escena-sub"><span>{nombre}</span></p>}
+          <p class="escena-linea escena-titulo"><span>{primero ? 'Tu primer récord' : 'Sesión terminada'}</span></p>
+          {(nombre || primero) && <p class="escena-linea escena-sub"><span>{primero ? `Sesión terminada${nombre ? ` · ${nombre}` : ''}` : nombre}</span></p>}
           {(records > 0 || semana) && (
             <p class="escena-linea escena-chips">
               <span>

@@ -31,7 +31,8 @@ const fmt = (v, d) => (v == null ? '' : num(v, d));
 const mismoNum = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(Number(a) - Number(b)) < 1e-9);
 
 export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false, pendiente, guardar, quitar, nombre, barra, record, tipo = null, anterior = null, ultima = null,
-  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false, sobran = false, porTiempo = false, zona = null }) {
+  valores = { kg: '', reps: '', rpe: '' }, cambiar, alComprometer = null, teclado = null, conRpe = false, paso = 2.5, objetivoEsfuerzo = null, conDiscos = false, sobran = false, porTiempo = false, zona = null,
+  alcance = false, ultimaSesion = false }) {
   const { aviso } = useApp();
   const { kg, reps, rpe } = valores;
   const app = !!teclado?.app;
@@ -245,8 +246,8 @@ export function FilaSerie({ numero, hecha, propuesta, activa, siguiente = false,
     <>
       <div class={`serie-desliza ${arrastre ? 'arrastrando' : ''} ${arrastre?.pasado ? 'pasado' : ''}`}>
         {arrastre && <div class="serie-fondo" aria-hidden="true"><Icono n="hecho" /><span>Hecha</span></div>}
-        <div ref={fila} data-n={numero} class={`serie zd-fila ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''} ${campo ? 'editando' : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
-          aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}`}
+        <div ref={fila} data-n={numero} class={`serie zd-fila ${hecha ? 'hecha' : ''} ${activa ? 'activa' : ''} ${siguiente && !hecha ? 'siguiente' : ''} ${recien ? 'recien' : ''} ${record && recien ? 'con-record' : ''} ${tipo ? `serie-${tipo}` : ''} ${campo ? 'editando' : ''}${alcance && !hecha ? ' fsr-alcance' : ''}${ultimaSesion && !hecha ? ' fsr-ultima' : ''}`} role="group" aria-current={siguiente && !hecha ? 'step' : undefined}
+          aria-label={`${nombre}, serie ${numero}${tipo === 'top' ? ' (top)' : tipo === 'backoff' ? ' (back-off)' : ''}${ultimaSesion && !hecha ? ', la última de la sesión' : ''}${alcance && !hecha ? ', puede ser récord' : ''}`}
           onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar} onClickCapture={alClicCaptura}
           onMouseDownCapture={(e) => { if (Date.now() < bloquearClic.current) e.preventDefault(); }}
           onTouchEnd={(e) => { if (Date.now() < bloquearClic.current && e.cancelable) e.preventDefault(); }}

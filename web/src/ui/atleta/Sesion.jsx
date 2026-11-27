@@ -58,7 +58,7 @@ import { propuestaDelDia, aplicarPropuesta, esSemanaDeVuelta } from '../../logic
 import { planMinimoDe, propuestaPlanMinimo } from '../../logica/constancia.js';
 import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
-import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
+import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, eventosRecord, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA, duracionEstimada } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { consejoPeso } from '../../logica/esencial-primera.js';
@@ -457,7 +457,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propPm || propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} programa={programa} />}{historia && !escena && <HistoriaSesion resumen={resumen} nombre={sesion?.nombre} alCerrar={() => setHistoria(false)} />}</>;
+  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} primero={!!escena.primero} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} programa={programa} />}{historia && !escena && <HistoriaSesion resumen={resumen} nombre={sesion?.nombre} alCerrar={() => setHistoria(false)} />}</>;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -536,6 +536,18 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     .sort((a, b) => (a.registrada_en < b.registrada_en ? -1 : a.registrada_en > b.registrada_en ? 1 : a.numero - b.numero));
   const claveSerie = (x) => `${x.sesion_ejercicio_id}-${x.numero}`;
   const records = previas.datos ? recordsDeSesion(enOrden(hechas), previas.datos, claveSerie) : {};
+  // (belleza 312) ¿La serie que toca sería récord con lo que lleva puesto (lo escrito o lo propuesto)? La misma cuenta que al
+  // marcarla (recordsDeSesion, con las marcas de antes y lo de hoy). vv, en la unidad de la app (como llega a guardar)
+  const seriaRecord = (e, numero, vv) => {
+    if (!previas.datos || !vv) return false;
+    const reps = Number(vv.reps);
+    if (!(reps > 0)) return false;
+    const kg = vv.kg == null || vv.kg === '' ? null : (enLibras() ? deVista(Number(vv.kg)) : Number(vv.kg));
+    const local = { sesion_ejercicio_id: e.id, numero, kg, reps, rpe: vv.rpe == null || vv.rpe === '' ? null : Number(vv.rpe), sustituto_id: sustitutos[e.id] || null, registrada_en: '9999-12-31T23:59:59.999Z' };
+    try { return !!recordsDeSesion(enOrden({ ...hechas, [e.id]: { ...hechas[e.id], [numero]: local } }), previas.datos, claveSerie)[`${e.id}-${numero}`]; } catch { return false; }
+  };
+  // (belleza 313) la última serie de toda la sesión: cuando solo queda una de las pautadas
+  const quedanPautadas = ejerciciosConExtras.reduce((n, x) => n + Math.max(0, (x.pautadas ?? x.series ?? 0) - seriesPautadasHechas(x, hechas[x.id] || {})), 0);
   // Ejercicio del modo enfoque: el elegido o el primero con series pendientes
   const seActual = (seFoco && pautaDe[seFoco] ? seFoco : null)
     || (ejercicios.find((x) => Object.keys(hechas[x.id] || {}).length < x.series) || ejercicios[0])?.id;
@@ -638,6 +650,14 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     if (c && Date.now() - c.t < 2000) aviso(`${texto} · ${c.texto}`, tipo, { texto: 'Deshacer', fn: c.fn });
     else aviso(texto, tipo);
   };
+  // (belleza 314) La mitad: cada tramo de la barra de arriba crece un instante, de izquierda a derecha
+  const pulsoMitad = () => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    requestAnimationFrame(() => {
+      const partes = [...document.querySelectorAll('.sesion-vista .tramo-barra, .sesion-vista .barra-sesion')];
+      partes.forEach((el, i) => { try { el.animate([{ transform: 'scaleY(1)', filter: 'brightness(1)' }, { transform: 'scaleY(2.2)', filter: 'brightness(1.4)', offset: 0.4 }, { transform: 'scaleY(1)', filter: 'brightness(1)' }], { duration: 620, delay: Math.min(i, 12) * 45, easing: 'cubic-bezier(.2, .9, .3, 1)' }); } catch { /* sin animaciones */ } });
+    });
+  };
   async function guardar(e, numero, valoresVista) {
     // v0.112: lo de la fila y del modo enfoque llega en la unidad de la app (en libras, si las tiene puestas); la base, en kilos
     const valores = enLibras() && valoresVista.kg != null && valoresVista.kg !== '' ? { ...valoresVista, kg: deVista(valoresVista.kg) } : valoresVista;
@@ -659,6 +679,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     if (!previa) {
       const totalP = ejercicios.reduce((t, x) => t + (x.series || 0), 0), antesN = Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0);
       if (totalP >= 6 && antesN < totalP / 2 && antesN + 1 >= totalP / 2) setTimeout(() => sonarVozCoach('mitad_sesion'), 1300);
+      // (belleza 314) y la barra de la sesión lo marca con un pulso, una vez: una ola que recorre sus tramos
+      if (totalP >= 4 && antesN < totalP / 2 && antesN + 1 >= totalP / 2) pulsoMitad();
     }
     // v0.49: al completar las series pautadas (las de «Añadir serie» no cuentan), la tarjeta se pliega en una línea
     // un momento después, para ver el check
@@ -990,6 +1012,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
               sinMaterial={lugar !== 'gimnasio' && sinAlternativa.includes(e.id) && !cambiado ? lugar : null}
               videos={videos.enviados[e.id] || 0} videosPendientes={videos.pendientes[e.id] || 0} alSubirVideo={() => setRecontarVideos((n) => n + 1)}
               hechas={hechas[e.id] || {}} enCola={enCola} abierto={abiertos?.has(e.id)} siguiente={prox?.id === e.id ? prox.numero : null} teclado={teclado} avisarCambio={avisarCambio}
+              seriaRecord={sesion.completada ? null : (n, vv) => seriaRecord(e, n, vv)} ultimaDeSesion={!sesion.completada && quedanPautadas === 1 && prox?.id === e.id ? prox.numero : null}
               extra={extras[e.id] || 0} setExtra={(n) => cambiarExtra(e.id, n)}
               luego={!sesion.completada && atleta.estado !== 'baja' && puedeDejarLuego(ejercicios, hechas, e.id) ? () => dejarLuego(e) : null}
               ordenar={!sesion.completada && atleta.estado !== 'baja' && bloquesPendientes(ejercicios, hechas).length > 1 ? () => setOrdenando(true) : null}
@@ -1089,7 +1112,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
               console.error('No se pudo preparar el resumen', e);
               res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
-            if (conEscena) { setEscena({ records: res.records?.length || 0, semana: await semanaHecha }); setHistoria(hayHistoriaSesion() && ((res.series || 0) > 0 || !!cardioHechoValido(res.cardio))); }
+            // (belleza 315) ¿el primer récord de su vida? Ninguno antes en todo su historial (una sola vez: se apunta en el móvil)
+            const primero = conEscena && (res.records?.length || 0) > 0 && !propio ? await esPrimerRecord(api, atleta.id, sesion.id) : false;
+            if (conEscena) { setEscena({ records: res.records?.length || 0, semana: await semanaHecha, primero }); setHistoria(hayHistoriaSesion() && ((res.series || 0) > 0 || !!cardioHechoValido(res.cardio))); }
             setResumen(res);
             sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
             setTimeout(() => sonarVozCoach('buen_trabajo', 'fin_sesion'), 1300);   // (sonido, tanda 3) y la frase del coach, si la ha grabado
@@ -1150,7 +1175,7 @@ function serieDeAntes(ultimas, numero) {
 
 function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, actual, ultimas, foco, progresionAuto, etiqueta, records = {}, hechas, enCola, abierto, siguiente = null, alternar, guardar, quitar, cambiar, nota, guardarNota, videos = 0, videosPendientes = 0, alSubirVideo, coach = null, lugar = null, deshacerLugar, sinMaterial = null, recordatorios = [], modelos = [],
   descanso = { seg: null, origen: null }, descansoPropio = null, descansoDefecto = null, elegirDescanso, teclado = null, avisarCambio = null, avisoZona = null, haceAno = null,
-  luego = null, ordenar = null, extra = 0, setExtra = () => {} }) {
+  luego = null, ordenar = null, extra = 0, setExtra = () => {}, seriaRecord = null, ultimaDeSesion = null }) {
   const { atleta, propio, aviso } = useApp();
   const [hoja, setHoja] = useState(null); // tecnica | cambiar | historial | aproximacion
   const [editandoNota, setEditandoNota] = useState(false);
@@ -1344,9 +1369,13 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
           <div class="series-cab zd-cab" aria-hidden="true"><span>Serie</span><span>{enLibras() ? 'Lb' : 'Kg'}</span><span>{porTiempo ? 'Seg' : 'Reps'}</span><span>Esfuerzo</span><span /></div>
           {Array.from({ length: filas }, (_, i) => i + 1).map((k) => {
             const prop = enV(propuesta(k, hechas));
+            // (belleza 312) la que toca, si con lo que lleva puesto sería récord: con su filo dorado antes de hacerla
+            const bk = borr[k] || VACIA;
+            const alcance = k === siguiente && !hechas[k] && !!seriaRecord?.(k, { kg: bk.kg !== '' && bk.kg != null ? bk.kg : prop?.kg, reps: bk.reps !== '' && bk.reps != null ? bk.reps : prop?.reps, rpe: bk.rpe });
             return (
               <Fragment key={k}>
                 <FilaSerie numero={k} hecha={enV(hechas[k])} propuesta={prop} activa={k === activa} siguiente={k === siguiente} barra={barra} record={hechas[k] ? records[`${e.id}-${k}`] : null}
+                  alcance={alcance} ultimaSesion={k === ultimaDeSesion && !hechas[k]}
                   anterior={conAnterior ? (enLibras() ? vista(pesoAnterior(ultimas, k)) : pesoAnterior(ultimas, k)) : null}
                   ultima={serieDeAntes(ultimas, k)}
                   pendiente={enCola[`${e.id}-${k}`]} nombre={ej.nombre} tipo={tipoDe(k)}
@@ -1719,6 +1748,21 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
       }}>{sesion.completada ? 'Guardar' : 'Guardar y terminar'}</button>
     </Hoja>
   );
+}
+
+// (belleza 315) El primer récord de su vida: ninguno en su historial antes de esta sesión (eventosRecord), y no celebrado
+// ya en este móvil. Con un tope de 1,5 s: si el historial tarda, la escena sale la de siempre
+const CLAVE_PRIMER_RECORD = 'fbe-primer-record';
+async function esPrimerRecord(api, atletaId, sesionId) {
+  try {
+    if (localStorage.getItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`)) return false;
+    const historial = await Promise.race([api.historial(atletaId), new Promise((ok) => setTimeout(() => ok(null), 1500))]);
+    if (!Array.isArray(historial)) return false;
+    const antes = eventosRecord(historial.filter((x) => x.sesion_id !== sesionId)).eventos.length;
+    if (antes > 0) { localStorage.setItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`, 'antes'); return false; }
+    localStorage.setItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`, new Date().toISOString().slice(0, 10));
+    return true;
+  } catch { return false; }
 }
 
 async function calcularResumen(api, atletaId, ejercicios, hechas, cambios, enCola, ejerciciosPorId, records = {}, sesion = {}) {
