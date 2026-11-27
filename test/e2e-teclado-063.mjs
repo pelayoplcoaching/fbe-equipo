@@ -87,7 +87,14 @@ export async function probarTeclado063({ navegador, check, base = 'http://localh
   // donde la sube Playwright, puede quedar bajo la cabecera fija de la sesión y el dedo tocaría la cabecera; y en una CPU
   // lenta la página aún puede moverse al cerrarse el teclado o el descanso.)
   async function dedoEn(fila, dx = 12) {
-    await fila.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await fila.evaluate((el) => {
+      el.scrollIntoView({ block: 'center', behavior: 'instant' });
+      // (v0.271) con el teclado de la app abierto (que con su regla tapa más de media pantalla), encima de él: al centro
+      // quedaría debajo. La app la deja ahí al abrirlo (llevarSobreTeclado); aquí, igual
+      const t = document.querySelector('.teclado-serie')?.getBoundingClientRect();
+      const f = el.getBoundingClientRect();
+      if (t && f.bottom > t.top - 12) window.scrollBy({ top: f.bottom - (t.top - 12), behavior: 'instant' });
+    });
     let r = await fila.boundingBox();
     for (let i = 0; i < 40; i++) {
       await p.waitForTimeout(100);

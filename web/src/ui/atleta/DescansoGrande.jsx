@@ -58,8 +58,9 @@ export function LuzBorde({ quedan, total, pausado, fin }) {
 export function Cartel({ quedan, total, pausado, texto, toca, ajustar, saltar, alCerrar }) {
   const raiz = useRef(null);
   const c = cartelDe({ quedan, total, pausado, texto, toca });
-  // El foco entra en él y vuelve a donde estaba al salir; Escape lo cierra (y no cierra lo de debajo)
-  useEffect(() => {
+  // El foco entra en él y vuelve a donde estaba al salir; Escape lo cierra (y no cierra lo de debajo). (En cuanto se
+  // monta, no tras pintar: como las hojas, para que el foco y Escape valgan desde el primer instante)
+  useLayoutEffect(() => {
     const antes = document.activeElement;
     raiz.current?.querySelector('.ct-cerrar')?.focus({ preventScroll: true });
     const tecla = (e) => {

@@ -121,7 +121,7 @@ export async function probarTacto({ navegador, check, base = 'http://localhost:4
     const cartel = p.locator('.ct-raiz');
     await cartel.waitFor();
     const cifra = async () => { const [m, s] = (await cartel.locator('.ct-cifra').textContent()).trim().split(':').map(Number); return m * 60 + s; };
-    check(await cartel.getAttribute('role') === 'dialog' && /^\d:\d\d$/.test((await cartel.locator('.ct-cifra').textContent()).trim()) && /^Después: .+ · Serie 2/.test((await cartel.locator('.ct-pie').textContent()).trim()) && await p.evaluate(() => document.activeElement?.classList.contains('ct-cerrar')),
+    check(await cartel.getAttribute('role') === 'dialog' && /^\d:\d\d$/.test((await cartel.locator('.ct-cifra').textContent()).trim()) && /^Después: .+ · Serie 2/.test((await cartel.locator('.ct-pie').textContent()).trim()) && await hasta(() => p.evaluate(() => document.activeElement?.classList.contains('ct-cerrar')), 2000),
       `(207) el modo cartel: la cuenta atrás a toda pantalla («${(await cartel.locator('.ct-cifra').textContent()).trim()}») y lo que viene después; el foco, en su botón de salir`);
     const tam = await cartel.locator('.ct-cifra').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
     check(tam >= 120, `con cifras para leer de lejos (${Math.round(tam)} px en un móvil de 390)`);
