@@ -2,7 +2,7 @@
 // la tarjeta grande de antes de empezar (cuestionario, visto bueno y su lunes) y sus marcas de la semana 4.
 // Con las piezas de siempre (la tarjeta de aviso de Hoy, la hoja y la lista): sin estilos nuevos.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa, TresLineas } from '../comunes.jsx';
 import { esPorSuCuenta, NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
 import { MENSAJE_ESENCIAL, estadoEsencial, fechaLarga, plantillaEsencial, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { hoyISO, sumarDias, hace, lunesDe } from '../../logica/fechas.js';
@@ -306,7 +306,7 @@ export function TarjetaMarcas() {
   if (!d || !d.completa || !d.marcas.length || sumarDias(d.semana.fecha_inicio, 7 * 4) < hoyISO()) return null;
   return (
     <>
-      <section class="nota-coach tarjeta-marcas" aria-label="Tus marcas">
+      <section class="nota-coach tarjeta-marcas" aria-label="Tus marcas" data-aviso="info" data-aviso-cima="">
         <Arte id="esencial-marcas" />
         <Icono n="trofeo" />
         <div class="pila-s">
@@ -541,7 +541,7 @@ export function CierreSemana({ p, recargarPrograma, abrirSesion }) {
     </Hoja>
   );
   if (!e || !t) {
-    return pausable ? <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="pausa" /> Esta semana no puedo</button>{hojaPausa}</p> : null;
+    return pausable ? <p class="cierre-pausa fac-grupo"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="pausa" /> Esta semana no puedo</button>{hojaPausa}</p> : null;
   }
   const nota = (e.tipo === 'lista' || e.tipo === 'pasada') && e.siguiente?.nota_coach ? e.siguiente.nota_coach : null;
   return (
@@ -588,13 +588,13 @@ export function LeccionSemana({ p }) {
   const l = leccionDe(n);
   if (!l) return null;
   return (
-    <section class="nota-coach leccion-esencial" aria-labelledby="leccion-t">
+    <section class="nota-coach leccion-esencial" aria-labelledby="leccion-t" data-aviso="info" data-aviso-nombre="Lo de esta semana">
       <Arte id={arteLeccion(n)} />
       <Icono n="biblioteca" />
       <div class="pila-s">
         <span class="mini terciario">Lo de esta semana · semana {n}</span>
         <strong id="leccion-t">{l.titulo}</strong>
-        <span class="peq">{l.texto}</span>
+        <TresLineas mas="Seguir leyendo">{l.texto}</TresLineas>
         {l.mas && (abierta
           ? <><strong class="peq">{l.mas.titulo}</strong><span class="peq">{l.mas.texto}</span></>
           : <button type="button" class="btn-texto" style="justify-self:start" onClick={() => setAbierta(true)}>Leer más: {l.mas.titulo.charAt(0).toLowerCase()}{l.mas.titulo.slice(1)}</button>)}
@@ -708,7 +708,7 @@ function HoyNoPuedo({ sesion, semana, sesiones, recargarPrograma }) {
   const mover = (d) => una(async () => {
     try { await api.planificarSesion(sesion.id, d); aviso(`«${sesion.nombre}», el ${fechaLarga(d)}`); recargarPrograma?.(); } catch (e) { aviso(e.message, 'error'); }
   });
-  if (!abierto) return <p class="cierre-pausa"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}><Icono n="pausa" /> Hoy no puedo</button></p>;
+  if (!abierto) return <p class="cierre-pausa fac-grupo"><button type="button" class="btn-texto mini" onClick={() => setAbierto(true)}><Icono n="pausa" /> Hoy no puedo</button></p>;
   return (
     <section class="nota-coach alta-perdida" aria-label="Pasar la sesión de hoy a otro día">
       <Arte id="esencial-otro-dia" />
@@ -744,7 +744,7 @@ export function SemanaHecha({ p }) {
   if (n !== 1) return null;
   const l = leccionDe(2);
   return (
-    <section class="nota-coach alta-semana-hecha" aria-labelledby="alta-sh-t">
+    <section class="nota-coach alta-semana-hecha" aria-labelledby="alta-sh-t" data-aviso="info" data-aviso-nombre="Tu semana 1, hecha">
       <Arte id={arteSemanaHecha(1)} />
       <Icono n="hecho" />
       <div class="pila-s">
@@ -840,10 +840,20 @@ export function HoyEsencial({ p, cuestionario = null, recargar, abrirSesion, irA
   // las tarjetas (encendido(), textoAjuste()); sin la 103, nada cambia
   const ajustes = useCarga(() => import('../../datos/api-esencial.js').then((d) => d.ajustesMios(backend)).catch(() => []), [atleta.id], { recuerdo: `esencial-ajustes:${atleta.id}` });
   if (ajustes.datos) fijarAjustes(ajustes.datos);
+  // (vista 253) la pila de avisos llega aparte, con Hoy ya pintado
+  const pila = useRef(null);
+  useEffect(() => {
+    let quitar = null, vivo = true;
+    if (pila.current) import('./pila-avisos.jsx').then((m) => { const raiz = vivo && pila.current?.closest('.contenido'); if (raiz) quitar = m.instalarPila(raiz); }).catch(() => {});
+    return () => { vivo = false; quitar?.(); };
+  }, [atleta.estado]);
   if (atleta.estado === 'baja') return <TarjetaMarcas />;
   const conPlan = !!p?.bloque;
   return (
     <>
+      {/* (vista 253, v0.274) los avisos que solo cuentan algo, con tres o más, se apilan (uno encima y «Ver los N»): los
+          cuenta ui/atleta/pila-avisos.jsx entre las tarjetas de Hoy; esta marca le dice dónde está Hoy */}
+      <span class="pav-ancla" hidden ref={pila} />
       {/* (v0.246) el saludo del día y, si toca, las agujetas, la vuelta tras unos días sin entrenar o un plan más corto */}
       {conPlan && <CercaArriba p={p} cuestionario={cuestionario} recargar={recargar} abrirSesion={abrirSesion} />}
       {/* (v0.260) cuando se tuerce: el aviso suave, el plan mínimo, «¿Te lo ponemos más fácil?» y la semana 6 */}

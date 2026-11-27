@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, Icono, Hoja, Cargando, usePreferencia } from './comunes.jsx';
+import { useApp, useCarga, Icono, Hoja, Cargando, usePreferencia, TresLineas } from './comunes.jsx';
 import { hoyISO, desdeISO, instanteMadrid, fmtProgramado, sumarDias, fechaMadrid } from '../logica/fechas.js';
 import { TextoConEnlaces } from './Enlaces.jsx';
 import { LOBO } from './marca-lobo.js';
@@ -16,7 +16,8 @@ export function textoVigencia(a, hoy = hoyISO()) {
 const paraQuien = (a, nombre) => (a.atleta_id ? `Para ${nombre[a.atleta_id] || 'un atleta'}` : a.grupo === 'esencial' ? 'Para los de FBE Esencial' : a.grupo === 'seguimiento' ? 'Para los que llevan seguimiento' : 'Para todos');
 
 // Atleta: los avisos en vigor de su coach, fijados arriba en Hoy hasta que los cierra (en este móvil)
-export function AvisosCoach() {
+// enTramo: va bajo el título «De tu coach» de Hoy (vista 255): no lo repite (solo dice «Para ti» si es solo tuyo)
+export function AvisosCoach({ enTramo = false }) {
   const { api, atleta } = useApp();
   const res = useCarga(() => api.avisos(atleta.id, hoyISO(), { esencial: atleta.modalidad === 'por_su_cuenta' }).catch(() => []), [atleta.id], { recuerdo: `avisos:${atleta.id}` });
   const [cerrados, setCerrados] = usePreferencia(`fbe-avisos-cerrados-${atleta.id}`, []);
@@ -30,8 +31,9 @@ export function AvisosCoach() {
         <section key={a.id} class="aviso-coach" aria-label={`Aviso de ${de}`}>
           <img class="aviso-lobo" src={LOBO} alt="" width="36" height="36" aria-hidden="true" />
           <div class="pila-xs">
-            <span class="mini aviso-de">De {de}{a.atleta_id ? ', para ti' : ''}</span>
-            <TextoConEnlaces texto={a.texto} />
+            {enTramo ? a.atleta_id && <span class="mini aviso-de">Para ti</span> : <span class="mini aviso-de">De {de}{a.atleta_id ? ', para ti' : ''}</span>}
+            {/* (vista 257) como mucho tres líneas, con «Leer más» (si lleva un vídeo, entero: el vídeo se ve debajo) */}
+            {/youtu\.?be/i.test(a.texto) ? <TextoConEnlaces texto={a.texto} /> : <TresLineas como="div" clase="aviso-texto"><TextoConEnlaces texto={a.texto} como="span" /></TresLineas>}
             {a.hasta && <span class="mini terciario">{textoVigencia(a)}</span>}
           </div>
           <button class="btn btn-icono plano amb-aviso-x" onClick={() => setCerrados([...cerrados, a.id].slice(-50))} aria-label="Ocultar el aviso"><Icono n="cerrar" /></button>

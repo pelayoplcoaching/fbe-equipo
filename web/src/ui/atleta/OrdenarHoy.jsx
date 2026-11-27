@@ -4,6 +4,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { Hoja, Icono, useSinCoach } from '../comunes.jsx';
 import { Interruptor } from '../Interruptor.jsx';
+import { quiereApilar, fijarApilar } from './pila-pref.js';
 import { ARRIBA_HOY, DIALES_HOY, leerPanel, moverSeccion, alternarSeccion, alternarDial, panelPorDefecto, nombreSeccion } from '../../logica/hoy-panel.js';
 
 // pref / fijar: lo guardado (usePreferencia); disponibles: las secciones que hoy tienen algo; diales: los que puede tener
@@ -12,6 +13,7 @@ export function OrdenarHoy({ pref, fijar, disponibles, arriba = [], diales = [],
   const p = leerPanel(pref);
   const lista = useRef(null);
   const [anuncio, setAnuncio] = useState('');
+  const [apila, setApila] = useState(quiereApilar);
   const secciones = p.orden.filter((id) => disponibles.includes(id));
   const mover = (id, d) => {
     const nuevo = moverSeccion(pref, id, d, disponibles);
@@ -47,6 +49,15 @@ export function OrdenarHoy({ pref, fijar, disponibles, arriba = [], diales = [],
           <h3 class="ordenar-hoy-tit">Tarjetas</h3>
           <div class="panel"><ul class="lista">
             {verArriba.map((s) => <Interruptor key={s.id} id={`oh-${s.id}`} texto={s.nombre} valor={!p.ocultas.has(s.id)} alCambiar={() => fijar(alternarSeccion(pref, s.id))} />)}
+          </ul></div>
+        </section>
+      )}
+      {/* (vista 253) FBE Esencial: los avisos que solo cuentan algo, apilados (uno encima y «Ver los N») o todos enteros */}
+      {sinCoach && (
+        <section class="pila-s">
+          <h3 class="ordenar-hoy-tit">Avisos</h3>
+          <div class="panel"><ul class="lista">
+            <Interruptor id="oh-apilar" texto="Apilar los avisos" valor={apila} alCambiar={() => { fijarApilar(!apila); setApila(!apila); }} ayuda="Con tres o más, uno encima y los demás debajo. Los que te piden algo no se esconden" />
           </ul></div>
         </section>
       )}

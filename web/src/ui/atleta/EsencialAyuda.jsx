@@ -13,7 +13,7 @@ import { fechaLarga, PORTAL_ESENCIAL } from '../../logica/esencial-alta.js';
 import { semanaDelPlan } from '../../logica/esencial-lecciones.js';
 import { nombreDias, diasDeSemana } from '../../logica/esencial-dias.js';
 import { revisionDe, explicar, enClaro, resumenEnClaro, COMO_HA_IDO, respuestaComoHaIdo, loDeHoy, pesoEnContexto } from '../../logica/esencial-porque.js';
-import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde, conDirecto } from '../../logica/esencial-respuestas.js';
+import { CATEGORIAS, MOTIVOS_BAJA, enTema, leccionMomento, respuestas, buscarRespuestas, PALABRAS, DUDAS_EJERCICIO, necesitasPara, DUDAS_PANTALLA, AVISO_ABRE, caminoDe, PLAN_EXPLICADO, LECCIONES_MOMENTO, momentoDe, encendido, checkinResponde, conDirecto, necesitasALaVista, contarUso } from '../../logica/esencial-respuestas.js';
 import { hitoDe } from '../../logica/esencial-cerca.js';
 import * as datos from '../../datos/api-esencial.js';
 import { perezoso } from '../perezoso.jsx';
@@ -388,8 +388,8 @@ export function TarjetaRevision({ p, abrir = false }) {
   const cerrar = () => { setHoja(false); setLeida(true); };
   return (
     <>
-      {leida ? <p class="ayu-rev-linea"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="documento" /> Tu revisión de la semana {n}</button></p> : (
-        <section class="nota-coach ayu-rev-tarjeta" aria-label="Tu revisión de la semana">
+      {leida ? <p class="ayu-rev-linea fac-grupo"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="documento" /> Tu revisión de la semana {n}</button></p> : (
+        <section class="nota-coach ayu-rev-tarjeta" aria-label="Tu revisión de la semana" data-aviso="info" data-aviso-cima="">
           <Icono n="documento" />
           <div class="pila-s">
             <strong>Tu revisión de la semana {n}</strong>
@@ -528,6 +528,8 @@ const Alarma = perezoso(() => import('./EsencialVida.jsx'), 'Alarma', { mientras
 const claveAviso = () => { try { return /^#hoy\/([a-z_]{2,20})$/.exec(location.hash)?.[1] || null; } catch { return null; } };
 // (v0.246) si la app se abrió en frío desde el aviso, la clave la guardó AtletaApp (la dirección ya es «#hoy»): se usa una vez
 const avisoGuardado = () => { try { const k = sessionStorage.getItem('fbe-hoy-aviso'); sessionStorage.removeItem('fbe-hoy-aviso'); return /^[a-z_]{2,20}$/.test(k || '') ? k : null; } catch { return null; } };
+const CLAVE_NEC_TODAS = 'fbe-nec-todas', CLAVE_NEC_USOS = 'fbe-nec-usos';
+const leerUsosNec = () => { try { return JSON.parse(localStorage.getItem(CLAVE_NEC_USOS) || '{}') || {}; } catch { return {}; } };
 export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const { backend, atleta } = useApp();
   const [abrir, setAbrir] = useState(() => { const g = avisoGuardado(); return claveAviso() || g; });
@@ -571,15 +573,27 @@ export function QueNecesitas({ p, cuestionario = null, recargarPrograma }) {
   const comida = useComidaEsencial();
   const deComida = necesitasComida({ conPlan: !!comida?.plan, tca: !!comida?.tca, encendido: (k) => encendido(k, previa) });
   const cerrar = () => setHoja(null);
+  // (vista 259) recogida: cuatro a la vista (las que más usa y, siempre, «Me duele algo») y «Ver todas», que se queda
+  // como lo deje. Las cuentas se miran al abrir Hoy: los botones no cambian de sitio mientras está delante
+  const [todas, setTodas] = useState(() => { try { return localStorage.getItem(CLAVE_NEC_TODAS) === '1'; } catch { return false; } });
+  const usos0 = useRef(null);
+  if (!usos0.current) usos0.current = leerUsosNec();
+  const ids = [...opciones.map(([id]) => id), ...deComida.map(([id]) => `c-${id}`), 'otra'];
+  const vista = todas ? ids : necesitasALaVista(ids, usos0.current);
+  const usar = (id) => { try { localStorage.setItem(CLAVE_NEC_USOS, JSON.stringify(contarUso(leerUsosNec(), id))); } catch { /* sin almacenamiento */ } };
+  const verTodas = (si) => { setTodas(si); try { if (si) localStorage.setItem(CLAVE_NEC_TODAS, '1'); else localStorage.removeItem(CLAVE_NEC_TODAS); } catch { /* */ } };
   return (
     <section class="panel panel-pad pila-s ayu-necesitas" aria-labelledby="ayu-nec-t">
       <Arte id="esencial-necesitas" />
       <strong id="ayu-nec-t">¿Qué necesitas?</strong>
       <div class="ayu-nec-f">
-        {opciones.map(([id, t, icono, que]) => <button type="button" key={id} class="ayu-nec" onClick={() => tocar(que)}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
-        {deComida.map(([id, t, icono]) => <button type="button" key={`c-${id}`} class="ayu-nec" data-comida={id} onClick={() => setHoja({ tipo: 'comida', id })}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
-        <button type="button" class="ayu-nec" onClick={() => setHoja({ tipo: 'respuestas' })}><span class="ayu-nec-i"><Icono n="buscar" width="18" height="18" /></span><span class="ayu-nec-t">Otra cosa</span></button>
+        {opciones.filter(([id]) => vista.includes(id)).map(([id, t, icono, que]) => <button type="button" key={id} class="ayu-nec" onClick={() => { usar(id); tocar(que); }}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
+        {deComida.filter(([id]) => vista.includes(`c-${id}`)).map(([id, t, icono]) => <button type="button" key={`c-${id}`} class="ayu-nec" data-comida={id} onClick={() => setHoja({ tipo: 'comida', id })}><span class="ayu-nec-i"><Icono n={icono} width="18" height="18" /></span><span class="ayu-nec-t">{t}</span></button>)}
+        {vista.includes('otra') && <button type="button" class="ayu-nec" onClick={() => setHoja({ tipo: 'respuestas' })}><span class="ayu-nec-i"><Icono n="buscar" width="18" height="18" /></span><span class="ayu-nec-t">Otra cosa</span></button>}
       </div>
+      {(todas ? necesitasALaVista(ids, usos0.current).length < ids.length : vista.length < ids.length) && (
+        <button type="button" class="btn-texto ayu-nec-ver" aria-expanded={todas ? 'true' : 'false'} onClick={() => verTodas(!todas)}>{todas ? 'Ver menos' : `Ver todas (${ids.length})`}<Icono n="abajo" /></button>
+      )}
       {hoja?.tipo === 'respuestas' && <CentroRespuestas inicial={hoja.id || null} alCerrar={cerrar} alAccion={accion} />}
       {hoja?.tipo === 'plan' && <HojaPlan p={p} alCerrar={cerrar} alAccion={accion} />}
       {hoja?.tipo === 'dias' && <HojaTusDias p={p} cuestionario={cuestionario} alCerrar={cerrar} alGuardar={() => recargarPrograma?.()} />}

@@ -40,6 +40,9 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
   const movil = async () => {
     const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, locale: 'es-ES', bypassCSP: true, reducedMotion: 'reduce' });
     await ctx.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* sin almacenamiento */ } });
+    // (v0.274) aquí se prueba lo que dice cada tarjeta: con los avisos sin apilar y «¿Qué necesitas?» entero (los dos
+    // ajustes del atleta). La pila y la versión recogida, con sus cuentas, se prueban en test/e2e-vista-1.mjs
+    await ctx.addInitScript(() => { try { localStorage.setItem('fbe-avisos-apilados', '0'); localStorage.setItem('fbe-nec-todas', '1'); } catch { /* sin almacenamiento */ } });
     const p = await ctx.newPage();
     vigilar(p);
     return { ctx, p };

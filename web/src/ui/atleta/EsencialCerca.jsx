@@ -4,7 +4,7 @@
 // ha hecho por ti». Lo que va con la voz de Pelayo (su nota de los lunes, el día a día de las dos primeras semanas) está
 // apagado hasta que lo vea. Estilos: cerca.css (clases cer-*, escritas tal cual en el elemento al que se aplican).
 import { useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, TresLineas } from '../comunes.jsx';
 import { escalaArrastrable } from '../arrastrar-escala.js';
 import { NOMBRE_PRIMERAS_4, WEB_FBE } from '../../logica/esencial.js';
 import { hoyISO } from '../../logica/fechas.js';
@@ -80,7 +80,7 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
         </div>
       )}
       {nota && (
-        <div class="cer-nota" role="note" aria-label="Una nota de Pelayo">
+        <div class="cer-nota" role="note" aria-label="Una nota de Pelayo" data-aviso="info">
           <span class="cer-nota-t">{nota}</span>
           <span class="mini terciario">Pelayo · semana {n}{previa && !encendido('notas_lunes') ? ' · borrador, pendiente de su visto bueno' : ''}</span>
           {voz && <audio class="cer-nota-a" controls preload="none" src={voz} />}
@@ -108,8 +108,8 @@ export function CercaArriba({ p, cuestionario = null, recargar, abrirSesion }) {
           <Icono n="reiniciar" />
           <div class="pila-s">
             <strong>{vuelta.nunca ? 'Tu plan te está esperando' : `Llevas ${vuelta.dias} días sin entrenar`}</strong>
-            <span class="peq">{vuelta.nunca ? 'La primera sesión es la más difícil. No hace falta que salga bien: hace falta que salga. Poco peso, apuntar lo que hagas y a casa.'
-              : 'No hay nada que recuperar ni que compensar: se sigue donde tocaba. Haz solo la siguiente, sin prisa; si llevas tiempo parado, la app te prepara la vuelta con algo menos de carga.'}</span>
+            <TresLineas>{vuelta.nunca ? 'La primera sesión es la más difícil. No hace falta que salga bien: hace falta que salga. Poco peso, apuntar lo que hagas y a casa.'
+              : 'No hay nada que recuperar ni que compensar: se sigue donde tocaba. Haz solo la siguiente, sin prisa; si llevas tiempo parado, la app te prepara la vuelta con algo menos de carga.'}</TresLineas>
             <div class="fila-envolver">
               <button type="button" class="btn btn-primario btn-peq" onClick={() => abrirSesion?.(vuelta.sesion.id)}><Icono n="play" /> Hacer «{vuelta.sesion.nombre}»</button>
               <button type="button" class="btn btn-peq" onClick={() => setCentro('pausa')}>Ahora no puedo</button>
@@ -285,7 +285,7 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
   return (
     <>
       {reto && (
-        <section class={reto.hecho ? 'cer-reto cer-reto-ok' : 'cer-reto'} aria-label="El reto de la semana">
+        <section class={reto.hecho ? 'cer-reto cer-reto-ok' : 'cer-reto'} aria-label="El reto de la semana" data-aviso="info">
           <span class="cer-reto-i"><Icono n={reto.hecho ? 'trofeo' : 'bandera'} width="18" height="18" /></span>
           <span class="pila-xs">
             <strong class="peq">{reto.texto}</strong>
@@ -309,7 +309,7 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
       {toca && <ComoVamos momento={toca} n={n} alEnviar={() => notas.recargar(true)} />}
       <TarjetaPruebas p={p} n={n} />
       {trimestre && (
-        <section class="nota-coach cer-tri" aria-label="Tu trimestre">
+        <section class="nota-coach cer-tri" aria-label="Tu trimestre" data-aviso="info">
           <Icono n="progreso" />
           <div class="pila-s">
             <strong>{n} semanas: tu trimestre</strong>
@@ -318,7 +318,7 @@ export function CercaAbajo({ p, cuestionario = null, recargar }) {
           </div>
         </section>
       )}
-      <div class="cer-pie">
+      <div class="cer-pie fac-grupo">
         <button type="button" class="btn-texto mini" onClick={() => setHoja('diario')}><Icono n="historial" /> Lo que la app ha hecho por ti</button>
         {!trimestre && n >= 3 && <button type="button" class="btn-texto mini" onClick={() => setHoja('trimestre')}><Icono n="progreso" /> Lo que llevas</button>}
         {n >= 6 && <button type="button" class="btn-texto mini" onClick={() => setHoja('marcas')}><Icono n="trofeo" /> Tus marcas, antes y ahora</button>}

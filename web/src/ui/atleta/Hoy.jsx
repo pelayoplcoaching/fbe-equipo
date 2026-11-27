@@ -224,9 +224,15 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
         <Contenido p={p} atleta={atleta} abrirSesion={abrirSesion} irA={irA} checkinSemana={checkinSemana} salud={salud} noLeidos={noLeidos} recargar={() => recargar(true)}
           sinBienvenida={propio || !hechos.datos || verBienvenida}
           esencial={porSuCuenta && !propio && atleta.estado !== 'baja' ? { cuestionario: cuestionario.datos, abrirCuestionario: (desde = null) => setVerCuestionario(desde || true) } : null}
+          tuDia={<>{!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}</>}
+          deCoach={(
+            <>
+              {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
+              {!verPasos && !propio && <AvisosCoach enTramo />}
+            </>
+          )}
           entre={(
             <>
-              {!verPasos && !propio && <Reserva id="hoy-avisos"><AvisosCoach /></Reserva>}
               {/* (FBE Esencial) quien va por su cuenta: sus tarjetas (marcas, antes de empezar, sus días, el cierre de la semana, su
                   revisión, la sesión que no pudo hacer, la semana hecha, Equipo, la semana siguiente, la lección, sus días y
                   «¿Qué necesitas?»), en ui/atleta/Esencial.jsx (HoyEsencial) */}
@@ -236,11 +242,10 @@ export function Hoy({ programa, abrirSesion, irA, checkinSemana, salud, noLeidos
               {!verPasos && !propio && <CuentaMeta />}
               {!verPasos && !propio && <RetoDelMes />}
               {!verPasos && !propio && <TarjetaVida sesiones={p.actual ? (p.sesiones[p.actual.id] || []) : []} />}
-              {!verPasos && atleta.estado !== 'baja' && <Reserva id="hoy-tu-dia"><TuDia p={p} salud={salud} checkinSemana={checkinSemana} abrirSesion={abrirSesion} irA={irA} abrirCuestionario={() => setVerCuestionario(true)} version={cuestionario.datos?.actualizado_en} recargarConsentimientos={recargarConsentimientos} /></Reserva>}
+{/* (vista 258) «Tu día» ya no va aquí: sube, justo debajo de los diales (tuDia) */}
               {pendiente(cuestionario.datos) && !(verPasos && !hechos.datos?.cuestionario) && <TarjetaCuestionario cuestionario={cuestionario.datos} abrir={() => setVerCuestionario(true)} />}
               {!verPasos && !propio && !verBienvenida && <TarjetaSuplementos estado={suplementos} />}
               {!verPasos && !propio && !verBienvenida && !porSuCuenta && <TarjetaObjetivos estado={objetivosTuyos} programa={p} salud={salud} />}
-              {noLeidos.some((c) => !api.esMensaje(c)) && <Respuestas noLeidos={noLeidos.filter((c) => !api.esMensaje(c))} programa={p} releer={releer} abrirSesion={abrirSesion} />}
               {!verPasos && !propio && hechos.datos?.sesion && <TarjetaNotificaciones />}
             </>
           )} />
@@ -502,7 +507,7 @@ function ContenidoNutricion({ irA, checkinSemana, salud, recargarConsentimientos
   );
 }
 
-function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre = null, sinBienvenida = false, esencial = null }) {
+function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos, recargar, entre, tuDia = null, deCoach = null, sinBienvenida = false, esencial = null }) {
   const { api, propio, cola } = useApp();
   const constancia = useCarga(() => api.constancia(atleta.id).catch(() => null), [atleta.id, p], { recuerdo: `constancia:${atleta.id}` });
   // v0.68: la bienvenida del día (la primera vez que abre la app hoy; nunca con una sesión a medias ni en el modo atleta del coach)
@@ -568,8 +573,15 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
       <>
         {esencial ? <HeroEsencial p={p} cuestionario={esencial.cuestionario} abrirCuestionario={esencial.abrirCuestionario} recargarPrograma={recargar} irA={irA} />
           : <HeroEspera bloque={p.bloque} notion={urlSegura(atleta.notion_url)} irA={irA} propio={propio} />}
-        {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
-        {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
+        {/* (vista 258) como con semana: «Tu día» y, debajo, lo de tu coach (sus respuestas, sus avisos y su directo) */}
+        {tuDia}
+        <Reserva id="hoy-de-coach">
+          <Tramo titulo={esPorSuCuenta(atleta) ? 'De Pelayo' : 'De tu coach'} apilado>
+            {deCoach}
+            {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
+            {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
+          </Tramo>
+        </Reserva>
         {entre}
         {salud && conNutricion(atleta) && <MenuHoy irA={irA} salud={salud} compacto />}
         {salud && conNutricion(atleta) && <NutricionHoy />}
@@ -683,7 +695,6 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       {/* (a medida, 080) lo que su coach le ha dejado escrito para hoy: el saludo, el día de pierna o la semana completa */}
-      {atleta.estado !== 'baja' && <FraseDeHoy estado={e.tipo} sesion={siguiente} ejercicios={ejercicios} semanaId={semana?.id} />}
       <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {/* (v0.200) el cielo de la hora detrás de todo: amanecer, día, atardecer o noche, con el sol de Madrid de cada mes */}
         <CieloHora clase="hero-cielo" conTiempo />
@@ -757,29 +768,51 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
         ocultos={P.dialesOcultos} entrenaHoy={enSemana && (!!toca.hoy || sesiones.some((s) => s.completada && s.fecha_realizada === hoy))}
         natural={dias ? { semana: natural, dias, semanas: p.semanas || [], sesionesPorSemana: p.sesiones || {} } : null} />
 
+      {/* (vista 258) la tarjeta de hoy, «Empezar» y los diales, lo primero; debajo, «Tu día» (lo que toca hoy) y, después, lo
+          que tu coach te deja escrito para hoy y su directo (antes, la frase iba encima y bajaba la tarjeta 150 px) */}
+      {tuDia}
+      <Reserva id="hoy-de-coach">
+        <Tramo titulo={esPorSuCuenta(atleta) ? 'De Pelayo' : 'De tu coach'} apilado>
+          {deCoach}
+          {atleta.estado !== 'baja' && <FraseDeHoy estado={e.tipo} sesion={siguiente} ejercicios={ejercicios} semanaId={semana?.id} />}
+          {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
+        </Tramo>
+      </Reserva>
       {/* (a medida, 080) su ritmo de peso se sale de los márgenes que le puso su coach (con la tendencia de varias semanas) */}
       {atleta.estado !== 'baja' && <AvisoRitmoPeso salud={salud} />}
       {/* (v0.143) de viaje, en otra zona horaria: qué hora es en cada sitio y las notificaciones de noche */}
       <AvisoViaje />
-      {/* (YouTube) un directo de tu coach: desde el día antes y, a su hora, para verlo aquí (en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
-      {!propio && !esPorSuCuenta(atleta) && <DirectoHoy />}
+      {/* (el directo de tu coach va arriba, con lo suyo; en FBE Esencial, solo con «El directo de dudas» encendido: lo pone HoyEsencial) */}
       {entre}
-      {!propio && !P.ocultas.has('mes') && tarjetaMes}
-      {/* (v0.104) en diciembre y enero, tu año en FBE */}
-      {!propio && <TarjetaAnio />}
       {/* (compartir) «tu récord de ayer merece una historia», una vez y se puede quitar */}
       {!propio && <RecordatorioCompartir />}
-      {/* (filosofía) de vuelta tras un parón, las dos reglas de oro; y el mito de la semana, hasta que se lee */}
+      {/* (filosofía) de vuelta tras un parón, las dos reglas de oro */}
       {!propio && constancia.datos?.algunaVez && !constancia.datos?.ultimoDia && <GuiaSugerida ocasion="vuelta" />}
-      {!propio && !P.ocultas.has('mito') && tarjetaMito}
-      {/* (YouTube) el vídeo de la semana de tu coach */}
-      {!propio && <VideoSemanaHoy />}
       {/* (054) una sesión que la app cerró sola (todas las series hechas, 3 horas sin tocar): pedir cómo fue */}
       <CerradasPorTi sesiones={Object.values(p.sesiones || {}).flat()} hoy={hoy} abrirSesion={abrirSesion} />
-      <Reserva id="hoy-informes"><BloqueTerminado salud={salud} /><SemanaPasada salud={salud} /></Reserva>
+      {/* (vista 252) tus historias, en su fila: tu mes, tu año (en diciembre y enero), el bloque terminado y tu semana, una
+          al lado de otra (antes, cuatro tarjetas repartidas por la pantalla) */}
+      <Reserva id="hoy-informes">
+        <Tramo titulo="Tus historias">
+          {!propio && !P.ocultas.has('mes') && <TarjetaMes salud={salud} />}
+          {!propio && <TarjetaAnio />}
+          <BloqueTerminado salud={salud} />
+          <SemanaPasada salud={salud} />
+        </Tramo>
+      </Reserva>
+      {/* (vista 251) lo de aprender, en un estante que se desliza de lado: el mito de la semana (hasta que se lee), el vídeo
+          de la semana, el apunte de hoy y la travesía (antes, uno debajo de otro: unos 600 px más de pantalla) */}
+      <Reserva id="hoy-aprender">
+        <Tramo titulo="Para aprender">
+          {!propio && !P.ocultas.has('mito') && <MitoDeLaSemana />}
+          {!propio && <VideoSemanaHoy enFila />}
+          <TarjetaApuntes />
+          <TarjetaTravesia compacta />
+        </Tramo>
+      </Reserva>
       {/* (diseño 9) Lo de debajo es detalle: va plegado en filas que se abren al tocarlas (y «Tu día» las abre al ir a ellas).
           (v0.140) en el orden que haya elegido el atleta («Ordenar Hoy»); lo que oculta, plegado al final */}
-      {visibles.map((id) => <Fragment key={id}>{bloquesHoy[id]}</Fragment>)}
+      <Tramo titulo="El detalle de hoy" apilado>{visibles.map((id) => <Fragment key={id}>{bloquesHoy[id]}</Fragment>)}</Tramo>
       {carreraAbierta && <TuCarrera alCerrar={() => setCarreraAbierta(false)} />}
       {verRacha && <PantallaRacha racha={constancia.datos?.racha || 0} semanas={constancia.datos?.semanas || []} diasSemana={constancia.datos?.diasSemana || null} hoy={hoy} alCerrar={() => setVerRacha(false)} />}
       {turnoHito && <HitoRacha hito={hito} alCerrar={hitoVisto} />}
@@ -801,17 +834,29 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           <div class="pila-s">{ocultasHoy.map((id) => <Fragment key={id}>{id === 'mes' ? tarjetaMes : id === 'mito' ? tarjetaMito : bloquesHoy[id]}</Fragment>)}</div>
         </details>
       )}
-      {/* «La travesía»: el juego de los descansos, en una línea (lo que lleva su lobo y un minuto de práctica) */}
-      {/* «Apuntes»: el apunte del día (medio minuto para aprender algo) */}
-      <TarjetaApuntes />
-      <TarjetaTravesia compacta />
-      <div class="ordenar-hoy-pie">
+      <div class="ordenar-hoy-pie fac-grupo">
         <button type="button" class="btn-texto" onClick={() => setOrdenando(true)}><Icono n="ordenar" /> Ordenar Hoy</button>
         <BotonSemanaDificil />
       </div>
       {ordenando && <OrdenarHoy pref={panel} fijar={fijarPanel} disponibles={disponibles} arriba={propio ? [] : ['mes', 'mito']}
         diales={['constancia', 'carga', ...(salud ? ['llegas'] : []), ...(salud && conNutricion(atleta) ? ['comida'] : []), ...(salud ? ['pasos', 'sueno'] : [])]} alCerrar={() => setOrdenando(false)} />}
     </>
+  );
+}
+
+// (vista 251, 252 y 255) Un tramo de Hoy: su título fino (se queda arriba al pasar) y sus piezas en una fila que se
+// desliza de lado. Con una sola pieza, ocupa todo el ancho; sin ninguna, el tramo no sale (lo decide la hoja de estilos:
+// cada pieza sabe sola si tiene algo que enseñar)
+// apilado: sus piezas, una debajo de otra (lo de tu coach, el detalle de hoy)
+function Tramo({ titulo, apilado = false, children }) {
+  if (apilado) return <section class="tramo" aria-label={titulo}><h2 class="tramo-t">{titulo}</h2><div class="tramo-pila">{children}</div></section>;
+  return (
+    <section class="tramo" aria-label={titulo}>
+      <h2 class="tramo-t">{titulo}</h2>
+      {/* (la fila se imanta a cada pieza solo desde que se toca: imantada desde el principio, el navegador sigue a la pieza
+          que tenía delante cuando llega otra por su izquierda y la fila amanece movida) */}
+      <div class="tramo-fila" data-sin-deslizar="" onPointerDown={(ev) => ev.currentTarget.setAttribute('data-suya', '')}>{children}</div>
+    </section>
   );
 }
 

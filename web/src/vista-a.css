@@ -1,0 +1,53 @@
+/* (v0.274) Vista (251-300), primera vuelta: Hoy, mas tranquilo. Prefijos nuevos: tramo- (los tramos de Hoy: su titulo
+   fino y su fila que se desliza de lado) y vs- (el video de la semana en el estante). Salen al abrir la app (son de
+   Hoy): van en los estilos del arranque, a proposito. Sin @keyframes. Cada regla lleva :not(#n):not(#n) en su clase: asi no empata con las reglas de los trozos
+   (que el reparto tendria que traerse al arranque para no cambiar quien gana). */
+
+/* --- 251, 252 y 255. Un tramo: su titulo fino, pegado arriba al pasar, y sus piezas en fila --- */
+.tramo:not(#n):not(#n) { display: grid; gap: var(--esp-8); min-width: 0; }
+.tramo:not(#n):not(#n):not(:has(.tramo-fila > *, .tramo-pila > *)) { display: none; }
+.tramo-pila:not(#n):not(#n) { display: grid; gap: var(--esp-10); min-width: 0; }
+.tramo-pila:not(#n):not(#n) > * { margin: 0; }
+.tramo-t:not(#n):not(#n) { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 54px); z-index: 4; justify-self: start; margin: 0; padding: var(--esp-4) var(--esp-10); border-radius: var(--r-pildora); background: color-mix(in srgb, var(--tiza) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); font-size: var(--letra-13); font-weight: 700; letter-spacing: .01em; color: var(--tinta-2); }
+.tramo-fila:not(#n):not(#n) { display: flex; align-items: stretch; gap: var(--esp-12); min-width: 0; margin-inline: calc(var(--esp-16) * -1); padding: var(--esp-2) var(--esp-16) var(--esp-6); overflow-x: auto; overscroll-behavior-x: contain; scroll-padding-inline: var(--esp-16); scrollbar-width: none; }
+.tramo-fila:not(#n):not(#n)[data-suya] { scroll-snap-type: x mandatory; }
+.tramo-fila:not(#n):not(#n)::-webkit-scrollbar { display: none; }
+.tramo-fila:not(#n):not(#n) > * { flex: 0 0 min(84%, 340px); min-width: 0; margin: 0; scroll-snap-align: start; }
+.tramo-fila:not(#n):not(#n) > :only-child { flex-basis: 100%; }
+@media (prefers-reduced-transparency: reduce) { .tramo-t:not(#n):not(#n) { background: var(--tiza); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-contrast: more) { .tramo-t:not(#n):not(#n) { background: var(--tiza); color: var(--tinta); } }
+
+/* --- 251. El video de la semana, en el estante: su miniatura y su titulo --- */
+.vs-pieza:not(#n):not(#n) { display: grid; align-content: start; gap: var(--esp-6); padding: 0 0 var(--esp-12); border: 0; overflow: hidden; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.vs-pieza:not(#n):not(#n) > :not(.vs-img) { margin-inline: var(--esp-14); }
+.vs-img:not(#n):not(#n) { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 0; margin-bottom: var(--esp-4); }
+
+/* --- 253. Los avisos, apilados (FBE Esencial): el de encima, y debajo el boton con los bordes de los demas asomando --- */
+[data-aviso="info"][data-bajo]:not(#n):not(#n) { display: none; }
+[data-aviso="info"][data-cima]:not(#n):not(#n) { position: relative; z-index: 1; }
+.pav-pie:not(#n):not(#n) { min-width: 0; margin: 0; }
+.pav-pie:not(#n):not(#n)[data-apila="cerrada"] { margin: calc((var(--esp-20) + var(--esp-12)) * -1) var(--esp-10) var(--esp-6); }
+.pav-ver:not(#n):not(#n) { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--esp-8); width: 100%; min-height: var(--esp-48); padding: var(--esp-22) var(--esp-14) var(--esp-10); border: 0; border-radius: 0 0 var(--r-16) var(--r-16); background: var(--hoja-2); box-shadow: var(--anillo); color: var(--tinta); font: inherit; text-align: left; cursor: pointer; }
+.pav-ver:not(#n):not(#n)::before { content: ""; position: absolute; inset: 100% var(--esp-12) auto; height: var(--esp-6); border-radius: 0 0 var(--r-14) var(--r-14); background: color-mix(in srgb, var(--hoja-2) 60%, transparent); box-shadow: var(--anillo); }
+.pav-ver:not(#n):not(#n):focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+.pav-ver-t:not(#n):not(#n) { font-size: var(--letra-14); font-weight: 650; color: var(--morado); }
+.pav-ver-s:not(#n):not(#n) { grid-column: 1; min-width: 0; font-size: var(--letra-12-5); color: var(--tinta-2); text-wrap: pretty; }
+.pav-ver-f:not(#n):not(#n) { grid-column: 2; grid-row: 1 / span 2; width: var(--ico-18); height: var(--ico-18); color: var(--morado); }
+.pav-pie:not(#n):not(#n)[data-apila="abierta"] > .pav-ver { justify-content: center; grid-template-columns: auto auto; padding: var(--esp-10) var(--esp-14); border-radius: var(--r-pildora); background: none; box-shadow: none; }
+.pav-pie:not(#n):not(#n)[data-apila="abierta"] > .pav-ver::before { content: none; }
+.pav-pie:not(#n):not(#n)[data-apila="abierta"] .pav-ver-f { transform: rotate(180deg); }
+
+/* --- 254. Los enlaces sueltos de Hoy, en filas de acciones del mismo tamano (como las de "Que necesitas?") --- */
+.fac-grupo:not(#n):not(#n) { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-8); justify-self: stretch; margin: 0; padding: 0; }
+.fac-grupo:not(#n):not(#n) > .btn-texto { display: flex; align-items: center; justify-content: flex-start; gap: var(--esp-10); width: 100%; min-height: var(--esp-48); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-14); background: var(--hoja-2); color: var(--tinta); font-size: var(--letra-14); font-weight: 560; text-align: left; white-space: normal; }
+.fac-grupo:not(#n):not(#n) > .btn-texto > svg { box-sizing: border-box; flex: none; width: var(--esp-32); height: var(--esp-32); padding: var(--esp-6); border-radius: 50%; background: var(--acento-a12); color: var(--morado); }
+.fac-grupo:not(#n):not(#n) > .btn-texto::before { content: ""; order: 2; flex: none; width: var(--esp-6); height: var(--esp-6); margin-inline: auto var(--esp-4); border: solid var(--tinta-3); border-width: var(--filo-medio) var(--filo-medio) 0 0; transform: rotate(45deg); }
+
+/* --- 256. Un solo boton relleno a la vista: en las tarjetas de Hoy (las dos apps), los botones van con filo (el
+   relleno es el de "Empezar", en la tarjeta grande) --- */
+.contenido:has(> .hero-dia) > .nota-coach .btn-primario.btn-peq:not(#n):not(#n), .contenido:has(> .hero-dia) > .reserva > .nota-coach .btn-primario.btn-peq:not(#n):not(#n) { background: transparent; background-image: none; border-color: var(--acento-a45); color: var(--morado); box-shadow: none; }
+
+/* --- 257. Los textos largos de las tarjetas de Hoy, en tres lineas con "Leer mas" (TresLineas, comunes.jsx) --- */
+.tres-corta:not(#n):not(#n) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.tres-mas:not(#n):not(#n) { justify-self: start; min-height: var(--esp-28); margin-top: calc(var(--esp-4) * -1); padding: var(--esp-2) var(--esp-8) var(--esp-2) 0; border: 0; background: none; color: var(--morado); font: inherit; font-size: var(--letra-14); font-weight: 650; cursor: pointer; }
+.tres-mas:not(#n):not(#n):focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }

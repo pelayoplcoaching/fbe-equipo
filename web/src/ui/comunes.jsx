@@ -1659,38 +1659,54 @@ export function HojaExportar({ titulo, nombre, contenido, tipo, alCerrar }) {
   );
 }
 
-// Una pista corta la primera vez que se ve una pantalla (se cierra con «Entendido» y no vuelve). Para que la app,
-// con todo lo que hace, se entienda sola.
-export function Pista({ id, children, icono = 'pregunta' }) {
-  const [vista, setVista] = usePreferencia(`fbe-pista-${id}`, false);
-  // Como mucho tres líneas; si el texto es más largo, «Leer más» lo abre entero (si solo se pasa por una línea se
-  // enseña entero: «Leer más» ocuparía lo mismo). Se mide con el tamaño real, también cuando la nota aparece después
-  // (dentro de una fila plegada, en otra pestaña). Sin ResizeObserver, entero siempre.
-  const [entera, setEntera] = useState(() => typeof ResizeObserver === 'undefined');
-  const [larga, setLarga] = useState(false);
-  const texto = useRef(null);
-  // (pulido 2.3) se mide antes de pintar: «Leer más» sale a la vez que la nota, sin empujar después lo de debajo
+// Como mucho tres líneas; si el texto es más largo, «Leer más» lo abre entero (si solo se pasa por una línea se
+// enseña entero: «Leer más» ocuparía lo mismo). Se mide con el tamaño real, también cuando el texto aparece después
+// (dentro de una fila plegada, en otra pestaña). Sin ResizeObserver, entero siempre. (pulido 2.3) Se mide antes de
+// pintar: «Leer más» sale a la vez que el texto, sin empujar después lo de debajo. dep: lo que, al cambiar, vuelve a medir
+export function useTresLineas(dep) {
+  // (v0.274) se cuentan las líneas del texto entero (scrollHeight, recortado o no) cada vez que cambia de tamaño: así,
+  // si al principio cabía en menos (una ilustración que llega después y estrecha la columna), se recorta luego. Solo
+  // tocar «Leer más» lo deja abierto para siempre. Oculto (sin alto), no se mide
+  const [abierta, setAbierta] = useState(false);
+  const [lineas, setLineas] = useState(0);
+  const ref = useRef(null);
   useLayoutEffect(() => {
-    const p = texto.current;
-    if (!p || entera) return undefined;
-    const medir = () => {
-      const sobra = p.scrollHeight - p.clientHeight;
-      if (sobra <= 2) setLarga(false);
-      else if (sobra <= (parseFloat(getComputedStyle(p).lineHeight) || 20) + 2) setEntera(true);
-      else setLarga(true);
-    };
+    const p = ref.current;
+    if (!p || abierta || typeof ResizeObserver === 'undefined') return undefined;
+    const medir = () => { if (p.clientHeight) setLineas(Math.round(p.scrollHeight / (parseFloat(getComputedStyle(p).lineHeight) || 20))); };
     medir();
     const ro = new ResizeObserver(medir);
     ro.observe(p);
     return () => ro.disconnect();
-  }, [entera, vista]);
+  }, [abierta, dep]);
+  const corta = !abierta && lineas > 4;
+  return { ref, corta, larga: corta, abrir: () => setAbierta(true) };
+}
+// (vista 257, v0.274) Los textos largos de las tarjetas de Hoy, en tres líneas con «Leer más» (como la nota de la tarjeta
+// grande y las pistas). mas: lo que dice el botón (si la tarjeta ya tiene otro «Leer más», que no se confundan)
+export function TresLineas({ children, como = 'span', clase = 'peq', mas = 'Leer más' }) {
+  const t = useTresLineas();
+  const Etiqueta = como;
+  return (
+    <>
+      <Etiqueta ref={t.ref} class={`${clase}${t.corta ? ' tres-corta' : ''}`}>{children}</Etiqueta>
+      {t.larga && <button type="button" class="tres-mas" onClick={t.abrir}>{mas}</button>}
+    </>
+  );
+}
+
+// Una pista corta la primera vez que se ve una pantalla (se cierra con «Entendido» y no vuelve). Para que la app,
+// con todo lo que hace, se entienda sola.
+export function Pista({ id, children, icono = 'pregunta' }) {
+  const [vista, setVista] = usePreferencia(`fbe-pista-${id}`, false);
+  const t = useTresLineas(vista);
   if (vista) return null;
   return (
     <div class="pista" role="note">
       <Icono n={icono} />
       <div class="pista-texto">
-        <p ref={texto} class={entera ? undefined : 'corta'}>{children}</p>
-        {larga && !entera && <button type="button" class="pista-mas" onClick={() => setEntera(true)}>Leer más</button>}
+        <p ref={t.ref} class={t.corta ? 'corta' : undefined}>{children}</p>
+        {t.larga && <button type="button" class="pista-mas" onClick={t.abrir}>Leer más</button>}
       </div>
       <button type="button" class="pista-cerrar" onClick={() => setVista(true)}><Icono n="cerrar" /><span class="sr">Entendido</span></button>
     </div>

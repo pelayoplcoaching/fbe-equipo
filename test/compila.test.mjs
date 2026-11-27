@@ -49,9 +49,13 @@ import { readFileSync } from 'node:fs';
 // (v0.272: código a 612 comprimido, a propósito: los gestos de la app (la barra de abajo, las historias, la regla de «Tu
 // peso») viven en sus trozos, pero cada uno deja en el arranque el gancho que lo pide y sus marcas en la barra y en Hoy,
 // unos 900 bytes entre la v0.271 y esta; la v0.271 se quedó a 49 bytes del tope)
+// (v0.274: estilos a 924 y 164 comprimido, y código a 613 comprimido, a propósito: Hoy es lo que se ve al abrir la app,
+// y su orden nuevo (los tramos con su título, «Tu día» arriba, las dos filas que se deslizan, el vídeo de la semana en el
+// estante, las filas de acciones y los textos largos en tres líneas con «Leer más») va en el arranque: 25 reglas, 3,4 KB
+// de estilos, y unos 600 bytes de código. La pila de avisos y «¿Qué necesitas?» recogida van con sus trozos)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 612 },
-  css: { crudo: 920, gz: 163 },
+  js: { crudo: 1790, gz: 613 },
+  css: { crudo: 924, gz: 164 },
 };
 
 let ok = 0, fallos = 0;

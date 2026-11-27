@@ -147,11 +147,11 @@ btn-hero: diseno.css estilos.css
 btn-icono: atletas-lista.css diseno.css estilos.css personal.css productos.css pulido.css revision.css youtube.css
 btn-luego: belleza-c.css estilos.css
 btn-peligro: diseno.css equipo-belleza.css estilos.css
-btn-peq: ambas-a.css diseno.css estilos.css pulido.css registro-actividad.css
+btn-peq: ambas-a.css diseno.css estilos.css pulido.css registro-actividad.css vista-a.css
 btn-persona-nombre: estilos.css personal.css
-btn-primario: ambas-a.css color-capa.css diseno.css estilos.css travesia.css
+btn-primario: ambas-a.css color-capa.css diseno.css estilos.css travesia.css vista-a.css
 btn-terminar: ambas-b.css diseno.css
-btn-texto: ambas-a.css ambas-b.css apuntes.css belleza-a.css color-capa.css diseno.css estilos.css guias.css personal.css pulido.css revision.css tiempo.css visual.css
+btn-texto: ambas-a.css ambas-b.css apuntes.css belleza-a.css color-capa.css diseno.css estilos.css guias.css personal.css pulido.css revision.css tiempo.css vista-a.css visual.css
 btn-yo: equipo-belleza.css estilos.css
 burbuja-ctx: estilos.css pulido.css
 burbuja-mas: estilos.css pulido.css
@@ -282,7 +282,7 @@ conexion-pasos: diseno.css personal.css
 conexion-salud: diseno.css imagenes.css
 conexiones: diseno.css personal.css
 consejo-dia: diseno.css estilos.css imagenes.css
-contenido: ambas-a.css belleza-b.css diseno.css equipo-belleza.css estilos.css imagenes.css progreso-visual.css visual.css
+contenido: ambas-a.css belleza-b.css diseno.css equipo-belleza.css estilos.css imagenes.css progreso-visual.css vista-a.css visual.css
 contexto: ambas-a.css belleza-a.css estilos.css
 conv-fila: diseno.css estilos.css
 conv-opciones: diseno.css estilos.css
@@ -511,7 +511,7 @@ hecho-btn: diseno.css estilos.css
 hero-acciones: diseno.css estilos.css
 hero-cifras: diseno.css estilos.css
 hero-descanso: diseno.css estilos.css
-hero-dia: ambas-a.css belleza-a.css belleza-c.css belleza.css color-capa.css diseno.css estilos.css imagenes.css
+hero-dia: ambas-a.css belleza-a.css belleza-c.css belleza.css color-capa.css diseno.css estilos.css imagenes.css vista-a.css
 hero-entreno: color-capa.css diseno.css estilos.css
 hero-foto: imagenes.css visual.css
 hero-hecha: diseno.css estilos.css
@@ -664,7 +664,7 @@ nombre: atletas-lista.css belleza-a.css diseno.css estilos.css
 normas-entrada: diseno.css estilos.css
 normas-leidas: diseno.css estilos.css
 nota: diseno.css estilos.css
-nota-coach: ambas-a.css diseno.css estilos.css
+nota-coach: ambas-a.css diseno.css estilos.css vista-a.css
 nota-fijada: diseno.css estilos.css
 nota-grande: diseno.css estilos.css
 nota-pauta: diseno.css estilos.css
@@ -874,7 +874,7 @@ rep-zoom-nivel: diseno.css estilos.css
 reproductor: diseno.css estilos.css
 reproductor-spotify: diseno.css personal.css
 resaltada: ambas-d.css estilos.css
-reserva: belleza-b.css pulido.css
+reserva: belleza-b.css pulido.css vista-a.css
 reserva-plegable: ambas-a.css pulido.css
 respira-boton: apuntes.css belleza-a.css diseno.css estilos.css travesia.css
 respuesta: diseno.css estilos.css pulido.css

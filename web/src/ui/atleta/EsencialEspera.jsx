@@ -583,7 +583,7 @@ export function PorqueVuelve({ p }) {
   if (!w || diasEntre(sumar(String(w.fecha_inicio).slice(0, 10), 6), hoy) > 7) return null;
   const quitarla = () => { guardar(k, hoy); setFuera(true); };
   return (
-    <section class="nota-coach lun-vuelve" aria-label="Tu porqué">
+    <section class="nota-coach lun-vuelve" aria-label="Tu porqué" data-aviso="info">
       <Icono n="diana" />
       <div class="pila-s">
         <span class="peq">{textoPorque(personal.porque)}</span>

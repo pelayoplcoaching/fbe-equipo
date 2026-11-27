@@ -285,6 +285,23 @@ export function necesitasPara({ con100 = false, conPlan = false, previa = false,
     .map(([id, t, icono, que]) => [id, t, icono, !con100 && SIN_NOTAS[id] ? SIN_NOTAS[id] : que]);
 }
 
+// ---------- (vista 259, v0.274) «¿Qué necesitas?», recogida ----------
+// A la vista, cuatro: las que más usa (al principio, las cuatro primeras) y, siempre, «Me duele algo». El resto, con
+// «Ver todas». De las de salud y las de comida no se apunta ni cuántas veces se abren: solo cuentan estas
+export const NEC_A_LA_VISTA = 4;
+export const NEC_CONTABLES = ['falle', 'viaje', 'tiempo', 'sitio', 'ejercicio', 'dias', 'rutina', 'objetivo', 'plan', 'herramientas', 'directo'];
+// ids: las que le salen, en su orden; usos: { id: veces }. Devuelve las que se ven recogida, en su orden de siempre
+// (con cinco o menos no se esconde nada: no merece un botón)
+export function necesitasALaVista(ids, usos = {}, n = NEC_A_LA_VISTA) {
+  if (!Array.isArray(ids) || ids.length <= n + 1) return (ids || []).slice();
+  const veces = (id) => (NEC_CONTABLES.includes(id) ? Number(usos?.[id]) || 0 : 0);
+  const elegidas = ids.map((id, i) => ({ id, i, u: veces(id) })).sort((a, b) => b.u - a.u || a.i - b.i).slice(0, n).map((x) => x.id);
+  if (ids.includes('duele') && !elegidas.includes('duele')) elegidas[n - 1] = 'duele';
+  return ids.filter((id) => elegidas.includes(id));
+}
+// Una vez más (solo las que cuentan; tope de 999)
+export const contarUso = (usos, id) => (NEC_CONTABLES.includes(id) ? { ...(usos || {}), [id]: Math.min(999, (Number(usos?.[id]) || 0) + 1) } : (usos || {}));
+
 // ---------- (19) Cada pantalla, con su «¿Dudas?» ----------
 export const DUDAS_PANTALLA = { cierre: 'domingo', perdida: 'falle', marcas: 'marcas', leccion: 'como-sube', dias: 'tercer-dia', rutina: 'cambiar-rutina', revision: 'como-sube', checkin: 'check-in', antes: 'primer-dia', sesion: 'sobran' };
 

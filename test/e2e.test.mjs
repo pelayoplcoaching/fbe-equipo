@@ -1621,7 +1621,8 @@ if (parte(PRINCIPAL)) try {
   await disco2.getByRole('button', { name: 'Seguir' }).click();
   await disco2.waitFor({ state: 'detached' });
   const avisoLucia = p.locator('.aviso-coach', { hasText: 'el jueves no hay sala' });
-  check((await avisoLucia.textContent()).includes('De tu coach, para ti'), 'en Hoy ve fijado el aviso que le dejó su coach');
+  // (v0.274) el aviso va bajo el título «De tu coach» de Hoy: ya no lo repite, solo dice que es para ella
+  check((await avisoLucia.textContent()).includes('Para ti') && (await avisoLucia.locator('xpath=ancestor::section[contains(@class,"tramo")]').getAttribute('aria-label')) === 'De tu coach', 'en Hoy ve fijado el aviso que le dejó su coach (bajo «De tu coach», «Para ti»)');
   await avisoLucia.getByRole('button', { name: 'Ocultar el aviso' }).click();
   await avisoLucia.waitFor({ state: 'detached' });
   await p.locator('.respuesta', { hasText: 'Torso A' }).click();
@@ -6786,6 +6787,15 @@ if (parte('v0.273: el buscador único, el índice lateral y lo quieto')) try {
 } catch (e) {
   fallos++;
   console.log('  ✗ el tacto de la v0.273:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
+// v0.274: vista, primera vuelta: Hoy por tramos (los títulos finos, el estante, tus historias), la pila de avisos de FBE
+// Esencial, las filas de acciones, un solo botón relleno, las tres líneas y «¿Qué necesitas?» recogida (test/e2e-vista-1.mjs)
+if (parte('v0.274: Hoy, más tranquilo')) try {
+  const { probarVista1 } = await import('./e2e-vista-1.mjs');
+  await probarVista1({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ Hoy, más tranquilo (v0.274):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
 cerrarParte();
 await navegador.close();

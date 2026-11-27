@@ -51,10 +51,26 @@ function Estanteria({ titulo, sub = null, children, id }) {
 
 // ------------------------------------------------------------ Hoy
 // El vídeo de la semana (el que marca el coach), en su tarjeta
-export function VideoSemanaHoy() {
+// (vista 251) enFila: en el estante de «Para aprender» de Hoy, su miniatura y su título; al tocarlo, su hoja (con el
+// reproductor, las velocidades y sus momentos)
+export function VideoSemanaHoy({ enFila = false }) {
   const recursos = useRecursos();
+  const [abierto, setAbierto] = useState(false);
   const r = videoDeLaSemana(recursos.datos || []);
   if (!r) return null;
+  if (enFila) {
+    const id = videoDe(r.url)?.id;
+    return (
+      <>
+        <button type="button" class="panel video-semana vs-pieza" aria-haspopup="dialog" onClick={(ev) => conTransicion(() => setAbierto(true), 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.firstElementChild, hasta: '.hoja-dialogo .yt-marco' }])}>
+          <span class="tarjeta-video-img vs-img">{!ahorroDatos() && id && miniatura(id) && <img src={miniatura(id)} alt="" loading="lazy" referrerpolicy="no-referrer" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}<span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
+          <span class="mini video-semana-k"><Icono n="video" /> El vídeo de la semana</span>
+          <strong class="amb-video-t">{r.titulo}</strong>
+        </button>
+        {abierto && <HojaVideo titulo={r.titulo} url={r.url} descripcion={r.descripcion || ''} alCerrar={() => setAbierto(false)} />}
+      </>
+    );
+  }
   return (
     <section class="panel panel-pad pila-s video-semana" aria-labelledby="video-semana-t">
       <div class="separa"><h2 id="video-semana-t" class="mini video-semana-k"><Icono n="video" /> El vídeo de la semana</h2></div>

@@ -135,6 +135,9 @@
   display: flex; align-items: center; gap: var(--esp-8); min-height: var(--esp-48); padding: var(--esp-8) var(--esp-12); border: 0; border-radius: var(--r-14);
   background: var(--hoja-2); color: inherit; font: inherit; font-size: var(--letra-14); text-align: left; cursor: pointer;
 }
+/* (vista 259) recogida: "Ver todas" y "Ver menos" */
+.ayu-nec-ver { justify-self: center; min-height: 2.75rem; }
+.ayu-nec-ver[aria-expanded="true"] > svg { transform: rotate(180deg); }
 .ayu-nec:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
 .ayu-nec-i { flex: none; display: inline-flex; color: var(--morado); }
 .ayu-nec-t { min-width: 0; overflow-wrap: anywhere; }

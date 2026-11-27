@@ -433,7 +433,7 @@ export function VidaArriba({ p, cuestionario = null, recargar, irA = null }) {
         </section>
       )}
       {suave?.esta && (
-        <section class="nota-coach vid-suave" aria-label="Semana suave">
+        <section class="nota-coach vid-suave" aria-label="Semana suave" data-aviso="info">
           <Icono n="pausa" />
           <div class="pila-s"><strong>{SUAVE.titulo}{previa && !encendido('suave') ? ' (borrador)' : ''}</strong><span class="peq">{SUAVE.texto}</span></div>
         </section>
