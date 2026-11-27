@@ -76,3 +76,44 @@ html[data-ligero] :is(.tabs-flota.tabs-flota, .tabs-flota .tabs-pildora)::after 
 .hero-dia[data-incl] > .hero-cielo { scale: 1.04; translate: calc(var(--incl-x, 0) * -4px) calc(var(--incl-y, 0) * -3px); }
 .hero-dia[data-incl] .hero-escena-img, .hero-dia[data-incl] > .hero-ilu { translate: calc(var(--incl-x, 0) * 9px) calc(var(--incl-y, 0) * 6px); }
 @media (prefers-reduced-motion: reduce) { .hero-dia[data-incl] > .hero-cielo, .hero-dia[data-incl] .hero-escena-img, .hero-dia[data-incl] > .hero-ilu { translate: none; scale: none; } }
+
+/* (v0.279) Vista (251-300), sexta vuelta: el afinado que se ve, medido pantalla a pantalla (290-300; las medidas, en
+   el doc del proyecto belleza-350-estado). Solo se toca lo que salio mal en las medidas */
+
+/* --- 290. Ningun nombre cortado con puntos suspensivos: dos lineas (y, en la cabecera pegada, letra un punto mas
+   estrecha) --- */
+.cabecera-grande.compacta .titulo h1 { font-stretch: 100%; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-overflow: clip; text-wrap: balance; }
+.enfoque-despues span:last-child { white-space: normal; text-overflow: clip; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-wrap: balance; }
+.apuntes-tarjeta-texto .peq { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+
+/* --- 293. Esquinas concentricas (donde el hueco es corto, hasta 12 px): el arte dentro de la ficha de una marca --- */
+.amb-ficha > .esa-franja { border-radius: calc(var(--r-14) - var(--esp-10)); }
+
+/* --- 294. El mismo hueco entre el titulo de una fila de Hoy y sus tarjetas que en el resto (10 px) --- */
+.tramo:not(#n):not(#n) { gap: var(--esp-10); }
+
+/* --- 295. 44 px de toque en lo que no llegaba: la nota del 0 al 10 de "Cerca", las filas de los musculos y "Leer mas" --- */
+.cer-n { min-height: calc(var(--esp-40) + var(--esp-4)); }
+.mmt-fila:not(#n) { min-height: calc(var(--esp-40) + var(--esp-4)); }
+.tres-mas:not(#n):not(#n) { position: relative; }
+.tres-mas:not(#n):not(#n)::after { content: ""; position: absolute; inset: calc(var(--esp-8) * -1) 0; }
+
+/* --- 296. Cada control con sus cuatro estados: estos no tenian ni pulsado ni apagado (se apagan mientras se guarda) --- */
+.encuesta-opcion:not(:disabled):active { background-color: var(--acento-a8); }
+.encuesta-opcion:disabled { opacity: var(--op-deshabilitado); cursor: progress; }
+.novedad-fila:not(:disabled):active { background-color: var(--acento-a8); }
+.novedad-fila:disabled { opacity: var(--op-deshabilitado); cursor: progress; }
+.lun-alt:not(:disabled):active { background-color: var(--acento-a8); }
+.lun-alt:disabled { opacity: var(--op-deshabilitado); cursor: progress; }
+.vid-alt:not(:disabled):active { background-color: var(--acento-a8); }
+.vid-alt:disabled { opacity: var(--op-deshabilitado); cursor: progress; }
+.fila-boton:not(:disabled):active { background-color: var(--acento-a8); }
+.fila-boton:disabled { opacity: var(--op-deshabilitado); cursor: progress; }
+.mnt-boton:not(#n):disabled { opacity: var(--op-deshabilitado); cursor: not-allowed; }
+
+/* --- 298. Letra "Muy grande" y 360 px: nada se sale de su sitio (la marca de arriba, el titulo de Semana con un nombre
+   largo y los nombres de los musculos) --- */
+html[data-letra="muy-grande"] .cabecera .marca { font-stretch: 112%; }
+.cabecera-grande .titulo h1 { overflow-wrap: break-word; hyphens: auto; }
+@media (max-width: 400px) { html[data-letra] .cabecera-grande .titulo h1 { font-stretch: 100%; } }
+.barra-fila { grid-template-columns: max(96px, 6.9em) minmax(0, 1fr) 36px; }

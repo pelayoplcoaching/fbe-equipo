@@ -6836,6 +6836,15 @@ if (parte('v0.278: luz y materia')) try {
   fallos++;
   console.log('  ✗ luz y materia (v0.278):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.279: vista, sexta vuelta: el afinado que se ve (ningún nombre cortado, 44 px de toque, el mismo hueco y la letra
+// «Muy grande» a 360 px sin que nada se salga) (test/e2e-vista-6.mjs)
+if (parte('v0.279: el afinado que se ve')) try {
+  const { probarVista6 } = await import('./e2e-vista-6.mjs');
+  await probarVista6({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el afinado que se ve (v0.279):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

@@ -57,9 +57,12 @@ import { readFileSync } from 'node:fs';
 // noche (las superficies y el texto en los tres temas), las sombras que siguen a la hora, el reflejo de la barra de abajo,
 // las fotos de los platos en oscuro, los dibujos de línea de los vacíos con la noche de la marca y la tarjeta de Hoy en dos
 // planos: 4,3 KB. Las hojas de los diales de la v0.277 salieron del arranque: 12 KB de código menos)
+// (v0.279: estilos a 929: el afinado medido pantalla a pantalla toca piezas del arranque —la cabecera pegada con el
+// nombre entero, la marca y los títulos con letra «Muy grande», «Leer más» con 44 px de toque y el hueco de las filas de
+// Hoy—: 1 KB)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 613 },
-  css: { crudo: 928, gz: 164 },
+  css: { crudo: 929, gz: 164 },
 };
 
 let ok = 0, fallos = 0;
