@@ -15,6 +15,7 @@ export const NOVEDADES = {
     ],
     coach: [
       'Vista (251-300): Hoy más tranquilo, datos que se explican solos, lectura cómoda, hojas de Esencial, luz cálida de noche y afinado.',
+      'Revisar en el ordenador: el vídeo ya no tiembla en Chrome con las barras de desplazamiento de Windows.',
     ],
   },
   '0.273': {

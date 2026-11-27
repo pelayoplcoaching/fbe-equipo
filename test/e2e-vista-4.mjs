@@ -20,6 +20,11 @@ export async function probarVista4({ navegador, check, base = 'http://localhost:
     const vista = p.viewportSize()?.width || 390;
     const ancho = await p.evaluate(() => document.documentElement.scrollWidth);
     if (ancho > vista) errores.push(`${paso}: la página se desborda en horizontal (${ancho} > ${vista})`);
+    // Con las hojas aún entrando (o el velo a medias), axe mide el color a medio camino: se espera a que acaben
+    await p.evaluate(() => Promise.race([
+      Promise.all(document.getAnimations().filter((a) => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))),
+      new Promise((r) => setTimeout(r, 2500)),
+    ]));
     if (!(await p.evaluate(() => !!window.axe))) await p.addScriptTag({ path: AXE });
     const axe = await p.evaluate(async () => (await window.axe.run(document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },

@@ -50,8 +50,9 @@ export async function probarAMedida({ navegador, check, base = 'http://localhost
     const saludo = p.locator('.a-medida-hoy');
     await saludo.waitFor({ timeout: 10000 });
     const texto1 = await saludo.locator('blockquote').textContent();
-    check(SALUDOS.includes(texto1) && /Tu coach/.test(await saludo.textContent()) && ['saludo', 'varias'].includes(await saludo.getAttribute('data-momento')), `en Hoy, arriba, el saludo que le dejó su coach («${texto1}»)`);
-    check(await p.evaluate(() => { const a = document.querySelector('.a-medida-hoy'), h = document.querySelector('.hero-dia'); return a && h && a.getBoundingClientRect().bottom <= h.getBoundingClientRect().top + 1; }), 'va antes de la tarjeta del día');
+    check(SALUDOS.includes(texto1) && /Tu coach/.test(await saludo.textContent()) && ['saludo', 'varias'].includes(await saludo.getAttribute('data-momento')), `en Hoy, el saludo que le dejó su coach («${texto1}»)`);
+    // (v0.274, vista 258) va bajo la tarjeta del día, con lo de su coach (antes iba encima y bajaba la tarjeta)
+    check(await p.evaluate(() => { const a = document.querySelector('.a-medida-hoy'), h = document.querySelector('.hero-dia'); return !!a && !!h && a.closest('section.tramo')?.getAttribute('aria-label') === 'De tu coach' && a.getBoundingClientRect().top >= h.getBoundingClientRect().bottom - 1; }), 'va bajo la tarjeta del día, en «De tu coach»');
     await axeEn(p, '.a-medida-hoy', errores, 'el saludo de Hoy');
     await foto('a-medida-1-hoy');
     await p.reload();

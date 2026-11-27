@@ -360,14 +360,20 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
 /* La hoja del diario (el coach con un video de tecnica): mas ancha; la columna del video, quieta arriba */
 .revdos-hoja > .revdos { --revdos-video: calc(92dvh - 26rem); }
 @container revdos (min-width: 700px) { .revdos-hoja .revdos-cols > .revdos-in { --revdos-gap: var(--esp-10); } }
+/* v0.279 (lo vio Pelayo en Chrome, con las barras de desplazamiento de siempre): la columna del video temblaba. La zona
+   de toque de 44 px de los botones de abajo (pulido 2.5) asomaba 2 px por debajo de la columna: Chrome sacaba la barra, la
+   columna se estrechaba 10 px, quitaba la barra... y asi en cada fotograma. Ahora lo de escribir deja sitio abajo a esas
+   zonas (8 px; los botones de ahi miden 32) y lo que asoma por los lados no saca barra horizontal. Igual en las columnas
+   de "Revisar seguidos". (Reservar siempre el hueco de la barra tambien lo quitaba, pero estrechaba la columna y las
+   herramientas bajaban a tres filas.) */
 /* v0.226: en columnas, la parte de escribir (el cuadro, el dibujo pendiente, "Guardar como frase" y las herramientas)
    va debajo del video, en su columna (RevisionColumnas.jsx). El video deja sitio para ella. Si la columna no cabe entera
    en la pantalla, baja por su cuenta (asi se llega a todos los mandos) y la parte de escribir se queda pegada abajo,
    siempre a la vista, con el fondo de lo de detras. Las herramientas, mas juntas (tres por fila). */
 @container revdos (min-width: 700px) {
-  .revdos-cols .revdos-ver:has(> .hilo-escribir) { max-height: var(--revdos-ver-alto, none); overflow-y: auto; scrollbar-width: thin; }
+  .revdos-cols .revdos-ver:has(> .hilo-escribir) { max-height: var(--revdos-ver-alto, none); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
   .revdos-cols .revdos-ver:has(> .hilo-escribir) .medio { max-height: max(14rem, calc(var(--revdos-video, calc(100dvh - 26rem)) - 9rem)); }
-  .revdos-cols .hilo-escribir { position: sticky; bottom: 0; z-index: 2; gap: var(--esp-8); padding-block: var(--esp-10) var(--esp-4); border-top: var(--filo-fino) solid var(--linea); background: var(--revdos-fondo, var(--hoja)); }
+  .revdos-cols .hilo-escribir { position: sticky; bottom: 0; z-index: 2; gap: var(--esp-8); padding-block: var(--esp-10) var(--esp-8); border-top: var(--filo-fino) solid var(--linea); background: var(--revdos-fondo, var(--hoja)); }
   .revdos-cols .hilo-escribir .hilo-extras { column-gap: var(--esp-10); }
   .revdos-cols .hilo-escribir .hilo-extras .btn-texto svg { width: var(--ico-24); height: var(--ico-24); padding: var(--esp-4); }
 }
@@ -379,5 +385,5 @@ tr.fila-foco { outline: 2px solid var(--foco); outline-offset: -2px; }
   .seguida-cuerpo:has(> .revdos-cols) { overflow: hidden; padding-bottom: 0; }
   .seguida-tarjeta.revdos-cols { max-width: 110rem; height: 100%; --revdos-video: calc(100dvh - 32rem); }
   .seguida-tarjeta.revdos-cols > .revdos-in { height: 100%; align-items: stretch; }
-  .seguida .revdos-cols :is(.revdos-ver, .revdos-lado, .revdos-corregir, .revdos-hablar) { position: static; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: var(--esp-16); scrollbar-width: thin; }
+  .seguida .revdos-cols :is(.revdos-ver, .revdos-lado, .revdos-corregir, .revdos-hablar) { position: static; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding-bottom: var(--esp-16); scrollbar-width: thin; }
 }

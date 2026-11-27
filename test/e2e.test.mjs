@@ -1621,8 +1621,13 @@ if (parte(PRINCIPAL)) try {
   await disco2.getByRole('button', { name: 'Seguir' }).click();
   await disco2.waitFor({ state: 'detached' });
   const avisoLucia = p.locator('.aviso-coach', { hasText: 'el jueves no hay sala' });
-  // (v0.274) el aviso va bajo el título «De tu coach» de Hoy: ya no lo repite, solo dice que es para ella
-  check((await avisoLucia.textContent()).includes('Para ti') && (await avisoLucia.locator('xpath=ancestor::section[contains(@class,"tramo")]').getAttribute('aria-label')) === 'De tu coach', 'en Hoy ve fijado el aviso que le dejó su coach (bajo «De tu coach», «Para ti»)');
+  // (v0.274) el aviso va bajo el título «De tu coach» de Hoy: ya no lo repite, solo dice que es para ella. Con los primeros
+  // pasos a la vista sigue arriba, como antes («De tu coach, para ti»). Una sola vez en cualquier caso
+  const tramoAviso = avisoLucia.locator('xpath=ancestor::section[contains(concat(" ", @class, " "), " tramo ")]');
+  const avisoEnTramo = (await tramoAviso.count()) > 0;
+  check((await avisoLucia.count()) === 1 && (avisoEnTramo
+    ? (await avisoLucia.textContent()).includes('Para ti') && (await tramoAviso.first().getAttribute('aria-label')) === 'De tu coach'
+    : (await avisoLucia.textContent()).includes('De tu coach, para ti')), `en Hoy ve fijado el aviso que le dejó su coach (${avisoEnTramo ? 'bajo «De tu coach», «Para ti»' : 'arriba, con sus primeros pasos'})`);
   await avisoLucia.getByRole('button', { name: 'Ocultar el aviso' }).click();
   await avisoLucia.waitFor({ state: 'detached' });
   await p.locator('.respuesta', { hasText: 'Torso A' }).click();
@@ -3988,7 +3993,8 @@ if (parte(PRINCIPAL)) try {
   const hitos = [4, 8, 12, 26, 52].filter((h) => h <= rachaNueva);
   if (hitos.length) {
     let hitoP = p.locator('.hito-pantalla');
-    if (!(await hitoP.count())) {
+    // (sale en su turno, tras las otras celebraciones: se le dan unos segundos antes de darlo por visto)
+    if (!(await hitoP.waitFor({ timeout: 3000 }).then(() => true).catch(() => false))) {
       // (ya celebrado en este móvil antes de la prueba: se olvida y se vuelve a Hoy)
       await p.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('fbe-hitos-racha-')) localStorage.removeItem(k); });
       await p.locator('.tab', { hasText: 'Progreso' }).click();

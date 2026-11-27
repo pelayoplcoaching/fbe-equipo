@@ -11,7 +11,12 @@
 // v0.226 (petición de Pelayo: «la parte de escribir y dibujar sobre el vídeo, fijas debajo del mismo»): en columnas, el
 //   cuadro de la respuesta y las herramientas (dibujar sobre el vídeo, comentar el momento…) van debajo del vídeo, en su
 //   columna, siempre a la vista; si la columna no cabe, baja por su cuenta hasta los mandos y lo de escribir se queda abajo.
-import { devices } from 'playwright';
+// v0.279 (lo vio Pelayo en Chrome): con las barras de desplazamiento de siempre (Windows, o el Mac con «Mostrar siempre»),
+//   el vídeo recién llegado, abierto en la bandeja, temblaba: la zona de toque de los botones de abajo asomaba 2 px por
+//   debajo de su columna y la barra salía y se iba en cada fotograma. Se prueba en otro navegador que sí enseña las barras.
+import { chromium, devices } from 'playwright';
+import { readFileSync } from 'node:fs';
+import { subProgreso } from './secciones.mjs';
 
 export async function probarRevisarAncho({ navegador, check, base = 'http://localhost:4174' }) {
   const errores = [];
@@ -104,7 +109,7 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   await p.waitForTimeout(400);
   const v4 = await caja(t.locator('.revdos-ver'));
   const e4 = await caja(t.locator('.revdos-ver .hilo-escribir'));
-  check(v4.y >= 0 && v4.y < 140 && v4.b <= 900 && e4.b <= 900 && e4.y > v4.y, 'al bajar por la corrección, el vídeo se queda a la vista, con lo de escribir debajo');
+  check(v4.y >= 0 && v4.y < 140 && v4.b <= 900 && e4.b <= 900 && e4.y > v4.y, `al bajar por la corrección, el vídeo se queda a la vista, con lo de escribir debajo (columna de ${v4.y} a ${v4.b} px; lo de escribir, de ${e4.y} a ${e4.b})`);
   await desborda(p, 'bandeja a 1440 px');
 
   // 3) La ficha de Ana → Vídeos → el vídeo de hoy: la hoja, ancha y en tres columnas
@@ -137,5 +142,74 @@ export async function probarRevisarAncho({ navegador, check, base = 'http://loca
   check(await s.locator('.seguida-cuerpo').evaluate((e) => getComputedStyle(e).overflowY === 'auto'), 'y se baja todo junto, como antes');
   await desborda(pm, 'seguidos en el móvil');
   await ctxM.close();
+  // 5) (v0.279) Con las barras de desplazamiento de siempre, el vídeo recién llegado no tiembla en la bandeja. El navegador
+  //    de las pruebas las esconde (--hide-scrollbars): este las enseña, como el Chrome de Pelayo
+  const conBarras = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/google/chrome/chrome', ignoreDefaultArgs: ['--hide-scrollbars'] });
+  try {
+    const ctxB = await conBarras.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: 'reduce' });
+    await ctxB.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); localStorage.setItem('fbe-bienvenida-vista', '1'); } catch { /* sin almacenamiento */ } });
+    const pb = await ctxB.newPage();
+    pb.setDefaultTimeout(15000);
+    vigilar(pb);
+    const cerrarB = async () => {
+      for (let i = 0; i < 5; i++) {
+        const d = pb.locator('[role=dialog]').first();
+        if (!(await d.isVisible().catch(() => false))) break;
+        let hecho = false;
+        for (const n of ['Seguir', 'Entendido', 'Cerrar', 'Vale', 'Ahora no']) { const b = d.getByRole('button', { name: n, exact: true }).first(); if (await b.isVisible().catch(() => false)) { await b.click(); hecho = true; break; } }
+        if (!hecho) await pb.keyboard.press('Escape');
+        await pb.waitForTimeout(250);
+      }
+    };
+    const entrarB = async (nombre) => {
+      if (!(await pb.getByRole('heading', { name: 'Entra en tu cuenta' }).isVisible().catch(() => false))) {
+        await cerrarB();
+        const hoy = pb.locator('.tab', { hasText: 'Hoy' });
+        if (await hoy.count()) await hoy.first().click().catch(() => {}); else await pb.locator('.tab', { hasText: 'Atletas' }).click().catch(() => {});
+        await pb.waitForTimeout(800); await cerrarB();
+        await pb.getByRole('button', { name: 'Cambiar de cuenta' }).first().click();
+      }
+      await pb.getByRole('button', { name: new RegExp(nombre) }).first().click();
+      await pb.locator('nav.tabs').waitFor(); await pb.waitForTimeout(800); await cerrarB();
+    };
+    await pb.goto(`${base}/?demo`);
+    await pb.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
+    await pb.waitForFunction(() => !document.getElementById('portada'));
+    // Ana manda un vídeo de sentadilla grabado de pie (como los del móvil)
+    await entrarB('Ana López');
+    await pb.locator('.tab', { hasText: 'Progreso' }).first().click();
+    await subProgreso(pb, 'fuerza');
+    await pb.locator('.diario').getByRole('button', { name: 'Subir vídeo' }).click();
+    const sube = pb.getByRole('dialog', { name: 'Subir un vídeo' });
+    await sube.getByLabel('Ejercicio (opcional)').fill('Sentadilla barra');
+    await sube.locator('.lista-elegir button', { hasText: 'Sentadilla barra alta' }).first().click();
+    await sube.locator('input[type=file]').setInputFiles({ name: 'serie.webm', mimeType: 'video/webm', buffer: readFileSync(new URL('./video-quieto-mueve.webm', import.meta.url)) });
+    const envia = pb.getByRole('dialog', { name: 'Elegir o grabar el vídeo' });
+    await envia.locator('.recorte-auto', { hasText: 'Recortado solo' }).waitFor({ timeout: 20000 });
+    await envia.getByRole('button', { name: 'Sin recortar' }).click();
+    await envia.getByRole('button', { name: 'Enviar a tu coach' }).click();
+    await pb.locator('.toast', { hasText: 'Vídeo enviado a tu coach' }).waitFor();
+    if (await sube.isVisible().catch(() => false)) await sube.getByRole('button', { name: 'Cerrar', exact: true }).click();
+    // Pelayo lo abre en la bandeja
+    await entrarB('Pelayo');
+    await pb.locator('.tab', { hasText: 'Revisar' }).first().click();
+    await pb.getByRole('heading', { name: 'Revisar' }).waitFor();
+    const nueva = pb.locator('.tarjeta-revisar').filter({ hasText: 'Vídeo: Sentadilla barra alta' }).filter({ hasText: /hace menos/ }).first();
+    await nueva.getByRole('button', { name: /Ver y comentar/ }).click();
+    const col = nueva.locator('.revdos-ver');
+    await col.locator('video').first().waitFor();
+    await col.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+    await pb.waitForTimeout(1500);
+    const r = await col.evaluate(async (c) => {
+      const anchos = new Set();
+      for (let i = 0; i < 40; i++) { await new Promise((ok) => requestAnimationFrame(ok)); anchos.add(c.clientWidth); }
+      const caja = c.getBoundingClientRect();
+      const fin = Math.max(...[...c.children].map((h) => h.getBoundingClientRect().bottom));
+      return { anchos: [...anchos], cabe: fin <= caja.bottom + 0.5, sobra: c.scrollHeight - c.clientHeight, ancha: ['hidden', 'clip'].includes(getComputedStyle(c).overflowX) ? 0 : c.scrollWidth - c.clientWidth };
+    });
+    check(r.anchos.length === 1, `con las barras de siempre, el vídeo recién llegado no tiembla en la bandeja (ancho de su columna: ${r.anchos.join(' ↔ ')} px)`);
+    check((!r.cabe || r.sobra <= 1) && r.ancha <= 0, `y si todo cabe, su columna no se baja por unos píxeles ni saca barra de lado (sobraban ${r.sobra} px abajo y ${r.ancha} de lado)`);
+    await ctxB.close();
+  } finally { await conBarras.close(); }
   check(errores.length === 0, `sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }

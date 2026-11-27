@@ -861,9 +861,11 @@ function Tramo({ titulo, apilado = false, children }) {
   return (
     <section class="tramo" aria-label={titulo}>
       <h2 class="tramo-t">{titulo}</h2>
-      {/* (la fila se imanta a cada pieza solo desde que se toca: imantada desde el principio, el navegador sigue a la pieza
-          que tenía delante cuando llega otra por su izquierda y la fila amanece movida) */}
-      <div class="tramo-fila" data-sin-deslizar="" onPointerDown={(ev) => ev.currentTarget.setAttribute('data-suya', '')}>{children}</div>
+      {/* (la fila se imanta a cada pieza solo desde que se desliza: imantada desde el principio, el navegador sigue a la pieza
+          que tenía delante cuando llega otra por su izquierda y la fila amanece movida. Y no al bajar el dedo: si la fila estaba
+          a medio camino, se imantaba en ese momento, se movía bajo el dedo y el toque caía en otra pieza o en ninguna, como
+          «Leer» en el apunte de hoy) */}
+      <div class="tramo-fila" data-sin-deslizar="" onScroll={(ev) => { if (!ev.currentTarget.hasAttribute('data-suya')) ev.currentTarget.setAttribute('data-suya', ''); }}>{children}</div>
     </section>
   );
 }

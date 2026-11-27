@@ -88,7 +88,7 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
       )}
       {/* (vista 282) la luz cálida de noche */}
       <Interruptor id="aj-calida" icono="luna" texto="Luz cálida de noche" valor={a.calida === true} alCambiar={(v) => cambiar('calida', v)}
-        ayuda={a.altoContraste ? 'Con «Alto contraste» no se aplica: los colores se quedan al máximo.' : 'De las 22:00 a las 7:00, los blancos de la app un punto más cálidos, como la luz de una lámpara. Las fotos no cambian.'} />
+        ayuda={a.altoContraste ? 'Con el alto contraste encendido no se aplica: los colores se quedan al máximo.' : 'De las 22:00 a las 7:00, los blancos de la app un punto más cálidos, como la luz de una lámpara. Las fotos no cambian.'} />
       <li class="fila-ios fila-ios-bloque">
         <IcoIos n="paleta" />
         <fieldset class="acentos fila-ios-texto">
