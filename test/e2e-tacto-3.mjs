@@ -215,9 +215,11 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     await p.waitForTimeout(200);
     const cambio = (await tactil.locator('.gdd-cambio').textContent().catch(() => '')).trim();
     check(/^[+−±][\d.,]+ \S+ (en \d+ (semanas|días?)|del .+ al .+)$/.test(cambio) && await tactil.locator('.gdd-tramo').count() === 1 && await panel.locator('.gdd-titular').count() === 0, `(235) dos dedos marcan un tramo y dicen cuánto ha cambiado: «${cambio}»`);
-    for (let k = 1; k <= 10; k++) { await dedos('touchMove', [[X(0.46 + k * 0.015), g.y], [X(0.92 - k * 0.02), g.y]]); await p.waitForTimeout(30); }
+    // (v0.277) juntarlos lo justo para un solo cambio de rango (de 0,46 a 0,30 del ancho: el segundo pediría bajar de
+    // 0,27), aunque la página vaya lenta y los movimientos tarden más que la pausa entre cambios (PELLIZCO_MS)
+    for (let k = 1; k <= 10; k++) { await dedos('touchMove', [[X(0.46 + k * 0.008), g.y], [X(0.92 - k * 0.008), g.y]]); await p.waitForTimeout(30); }
     const alJuntar = await hasta(async () => await rango() !== rango0, 2500) ? await rango() : rango0;
-    for (let k = 1; k <= 24; k++) { await dedos('touchMove', [[X(Math.max(0.05, 0.61 - k * 0.025)), g.y], [X(Math.min(0.97, 0.72 + k * 0.012)), g.y]]); await p.waitForTimeout(40); }
+    for (let k = 1; k <= 24; k++) { await dedos('touchMove', [[X(Math.max(0.05, 0.54 - k * 0.02)), g.y], [X(Math.min(0.97, 0.84 + k * 0.006)), g.y]]); await p.waitForTimeout(40); }
     await p.waitForTimeout(500);
     const alSeparar = await rango();
     await dedos('touchEnd', []);

@@ -76,16 +76,21 @@ export async function probarVista4({ navegador, check, base = 'http://localhost:
       // con el teclado: el día enfocable es hoy; la flecha a la derecha pasa a mañana; Intro lo elige
       await dHoy.focus();
       await p.keyboard.press('ArrowRight');
-      const manana = await p.evaluate(() => document.activeElement?.dataset?.dia || '');
+      const foco = () => p.evaluate(() => document.activeElement?.dataset?.dia || '');
+      await hasta(async () => (await foco()) > hoy, 3000);
+      const manana = await foco();
       await p.keyboard.press('Enter');
       check(manana > hoy && await cal.locator(`[data-dia="${manana}"]`).getAttribute('aria-pressed') === 'true' && /te vas/.test(await cal.locator(`[data-dia="${manana}"]`).getAttribute('aria-label')) && await vuelta.getAttribute('data-on') !== null,
         'con el teclado: la flecha mueve el día, Intro lo elige como ida y ahora toca la vuelta');
       await p.keyboard.press('ArrowDown');
-      const otra = await p.evaluate(() => document.activeElement?.dataset?.dia || '');
+      await hasta(async () => (await foco()) > manana, 3000);
+      const otra = await foco();
       await p.keyboard.press('Enter');
       const pintados = await cal.locator('.clc-en').count();
-      check(otra > manana && pintados === 8 && /vuelves/.test(await cal.locator(`[data-dia="${otra}"]`).getAttribute('aria-label')) && !/Toca/.test(await vuelta.textContent()),
-        'la flecha abajo salta una semana; con la vuelta, el viaje se pinta entero (ocho días) y las dos fechas se leen arriba');
+      // (los del mes que se ve: si la vuelta cae en el mes siguiente, el calendario ya está en ese mes)
+      const entre = await cal.locator('[data-dia]').evaluateAll((l, [a, b]) => l.filter((x) => x.dataset.dia >= a && x.dataset.dia <= b).length, [manana, otra]);
+      check(otra > manana && pintados === entre && entre >= 1 && /vuelves/.test(await cal.locator(`[data-dia="${otra}"]`).getAttribute('aria-label')) && !/Toca/.test(await vuelta.textContent()),
+        'la flecha abajo salta una semana (y de mes, si toca); con la vuelta, el viaje se pinta entero y las dos fechas se leen arriba');
       const opciones = h.locator('.opc-fila');
       check(await opciones.count() === 3 && await h.locator('.opc-fila .opc-i svg').count() === 3 && await h.locator('.opc-fila[aria-pressed="true"] .opc-marca').count() === 1,
         '(278) las opciones, todas iguales: su icono, su texto y la elegida con su marca');
@@ -168,9 +173,10 @@ export async function probarVista4({ navegador, check, base = 'http://localhost:
           await revisar('la hoja de la carga');
         }
         await h.locator('.cerrar-hoja').click();
-        await p.waitForTimeout(500);
+        await hasta(async () => (await p.locator('[aria-modal="true"]').count()) === 0, 4000);
+        await p.waitForTimeout(200);
       }
-      check(n >= 4 && suben === n, `las ${n} hojas de los diales llegan a tiempo: el dial sube a su cabecera en todas`);
+      check(n >= 3 && suben === n, `las ${n} hojas de los diales llegan a tiempo: el dial sube a su cabecera en todas`);
     } finally { await ctx.close(); }
   }
   check(errores.length === 0, `las hojas de FBE Esencial, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);

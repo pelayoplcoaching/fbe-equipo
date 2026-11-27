@@ -150,7 +150,7 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
         )}
         {lista && !buscando && <button type="button" class="btn-texto ayu-volver" onClick={() => setCat(null)}><Icono n="atras" /> Todos los temas</button>}
         {lista && (lista.length
-          ? <div class="ayu-lista" role="list" aria-label={buscando ? 'Resultados' : cats.find((c) => c[0] === cat)?.[1]}>{lista.map((x) => <Respuesta key={x.id} x={x} abierta={x.id === inicial || (buscando && lista.length === 1)} alAccion={alAccion} />)}</div>
+          ? <div class="ayu-lista" role="group" aria-label={buscando ? 'Resultados' : cats.find((c) => c[0] === cat)?.[1]}>{lista.map((x) => <Respuesta key={x.id} x={x} abierta={x.id === inicial || (buscando && lista.length === 1)} alAccion={alAccion} />)}</div>
           : <p class="peq secundario" role="status">{directo ? 'No hay ninguna respuesta con esas palabras. Prueba con otra o mándala para el directo del mes.' : 'No hay ninguna respuesta con esas palabras. Prueba con otras.'}</p>)}
         <p class="peq ayu-pie">
           <span class="ayu-pie-i"><Icono n="mensaje" width="18" height="18" /></span>
