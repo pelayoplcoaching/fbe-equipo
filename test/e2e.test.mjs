@@ -6869,6 +6869,15 @@ if (parte('v0.281: compartir con brillo')) try {
   fallos++;
   console.log('  ✗ compartir con brillo (v0.281):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.282: momentos, tercera vuelta: sentir el récord (la serie que puede serlo, la última de la sesión, la ola de la mitad y el
+// primer récord) (test/e2e-momentos.mjs, probarMomentos3)
+if (parte('v0.282: sentir el récord')) try {
+  const { probarMomentos3 } = await import('./e2e-momentos.mjs');
+  await probarMomentos3({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ sentir el récord (v0.282):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

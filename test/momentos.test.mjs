@@ -1,9 +1,10 @@
 // (v0.280) Momentos (301-350), primera vuelta: la sesión, contada (301-306). Aquí, lo puro (la melodía de la sesión, el
 // orden de los músculos, el mejor momento de la semana y lo que lleva cada tarjeta al compartirla) y que cada pieza está
-// en su sitio; en el navegador, test/e2e-momentos.mjs.
+// en su sitio; en el navegador, test/e2e-momentos.mjs. (v0.282) Sentir el récord (312-315): la serie que puede serlo, la
+// última de la sesión, la ola de la mitad y el primer récord de tu vida.
 //   node test/momentos.test.mjs
 import { readFileSync } from 'node:fs';
-import { melodiaSesion, ordenMusculos } from '../web/src/logica/sesion-final.js';
+import { melodiaSesion, ordenMusculos, esPrimerRecord, CLAVE_PRIMER_RECORD } from '../web/src/logica/sesion-final.js';
 import { nota, SONIDOS, puedeSonar } from '../web/src/logica/sonido.js';
 import { subidaRecord, resumenSemanal } from '../web/src/logica/calculos.js';
 import { cartaSesion, cartaSemana, cartaMes, cartaAnio, CARTAS } from '../web/src/logica/historia-cartas.js';
@@ -101,6 +102,32 @@ const sin = cssM.replace(/\/\*[\s\S]*?\*\//g, '');
 check(!/[^\x00-\x7f]/.test(cssM) && !/#[0-9a-f]{3,8}\b/i.test(sin) && !/rgba?\(/.test(sin) && !/infinite|@keyframes/.test(sin), 'la hoja de la tanda F: solo ASCII, colores por ficha y nada que se mueva sin parar');
 check((sin.match(/\{/g) || []).length === (sin.match(/:not\(#n\):not\(#n\):not\(#n\)/g) || []).length + (sin.match(/@media/g) || []).length, 'cada regla nueva con su especificidad propia (no empata con las de otras pantallas)');
 check(/import '\.\/momentos\.css';/.test(src('main.jsx')), 'y entra detrás de las demás');
+
+console.log('312-315 · Sentir el récord');
+{
+  const S = src('ui/atleta/Sesion.jsx'), F = src('ui/atleta/FilaSerie.jsx'), E = src('ui/atleta/EscenaFinal.jsx'), C = src('momentos.css');
+  check(/seriaRecord/.test(S) && /recordsDeSesion\(enOrden\(\{ \.\.\.hechas, \[e\.id\]/.test(S) && /fsr-alcance/.test(F) && /puede ser récord/.test(F) && /\.fsr-alcance/.test(C),
+    '(312) la serie que toca lleva filo dorado si, con lo puesto, sería récord: la misma cuenta que al marcarla, y el lector lo dice');
+  check(/quedanPautadas === 1/.test(S) && /fsr-ultima/.test(F) && /la última de la sesión/.test(F) && /\.fsr-ultima/.test(C), '(313) la última serie de la sesión, marcada (y dicha)');
+  check(/const pulsoMitad = \(\) => \{\s*if \(window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)\.matches\) return;/.test(S) && /antesN \+ 1 >= totalP \/ 2\) pulsoMitad\(\)/.test(S), '(314) a mitad de sesión, una ola por la barra de arriba, una vez y nunca con «reducir movimiento»');
+  check(/primero \? 'Tu primer récord'/.test(E) && /ef-aro/.test(E) && /\.ef-aro/.test(C) && /esPrimerRecord\(\(x\) => api\.historial\(x\)/.test(S), '(315) el primer récord de tu vida, a lo grande en la escena del final');
+}
+{
+  const almacen = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), m }; };
+  const serie = (id, ses, fecha, kg, reps) => ({ id, sesion_id: ses, fecha, ejercicio_id: 'e1', ejercicio: 'Sentadilla', kg, reps });
+  const base = [serie(1, 'a', '2026-11-02', 60, 8), serie(2, 'a', '2026-11-02', 60, 8)];   // una sesión sola: es la base, no un récord
+  const conRecord = [...base, serie(3, 'b', '2026-11-09', 70, 8)];                        // la segunda bate a la primera
+  const a1 = almacen();
+  check(await esPrimerRecord(async () => base, 'at1', 'hoy', { almacen: a1, hoy: '2026-11-27' }) === true && a1.m.get(`${CLAVE_PRIMER_RECORD}:at1`) === '2026-11-27', '(315) sin récords antes, es el primero (y se apunta el día)');
+  check(await esPrimerRecord(async () => base, 'at1', 'otra', { almacen: a1 }) === false, '(315) una sola vez en el móvil');
+  const a2 = almacen();
+  check(await esPrimerRecord(async () => conRecord, 'at2', 'hoy', { almacen: a2 }) === false && a2.m.get(`${CLAVE_PRIMER_RECORD}:at2`) === 'antes', '(315) con récords de antes, no (y no se vuelve a mirar)');
+  check(await esPrimerRecord(async () => conRecord, 'at3', 'b', { almacen: almacen() }) === true, '(315) los de la sesión de hoy no cuentan como de antes');
+  check(await esPrimerRecord(() => new Promise((ok) => setTimeout(() => ok(base), 120)), 'at4', 'hoy', { almacen: almacen(), espera: 20 }) === false, '(315) si el historial tarda, la escena de siempre');
+  check(await esPrimerRecord(async () => { throw new Error('sin red'); }, 'at5', 'hoy', { almacen: almacen() }) === false && await esPrimerRecord(async () => base, 'at6', 'hoy', { almacen: null }) === false, '(315) si falla, o sin almacén, tampoco');
+  const a7 = almacen(); a7.setItem('fbe-probar-primer-record', '1');
+  check(await esPrimerRecord(async () => conRecord, 'at7', 'hoy', { almacen: a7 }) === true, '(315) en las pruebas del navegador, fbe-probar-primer-record hace como si lo fuera');
+}
 
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);

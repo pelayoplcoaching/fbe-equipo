@@ -3,7 +3,7 @@
 import { pesoTxt } from './unidades.js';
 import { hoyISO } from './fechas.js';
 import { queToca, diaPrevistoValido } from './plan.js';
-import { num } from './calculos.js';
+import { num, eventosRecord } from './calculos.js';
 import { cardioHechoValido, NOMBRE_MODALIDAD } from './cardio.js';
 
 // (belleza 162) Hoy, menos tonelaje que la última vez: lo que has hecho (lo de la última vez va al lado, entre paréntesis),
@@ -78,4 +78,24 @@ export function melodiaSesion(filas = [], nota, { total = 5.6 } = {}) {
 // orden de la sesión, así que su orden es el de la primera vez que salió cada uno), solo los que tienen series
 export function ordenMusculos(musculos = {}) {
   return Object.entries(musculos || {}).filter(([, v]) => Number(v) > 0).map(([g]) => g);
+}
+
+// (belleza 315) El primer récord de su vida: ninguno en su historial antes de esta sesión (eventosRecord) y no celebrado ya
+// en este móvil (se apunta el día, o «antes» si ya los tenía: así se mira una sola vez). Con un tope (1,5 s): si el historial
+// tarda, la escena sale la de siempre. historial: (atletaId) => Promise de sus series. En las pruebas del navegador,
+// fbe-probar-primer-record = '1' hace como si lo fuera (como fbe-probar-historia con la historia del final)
+export const CLAVE_PRIMER_RECORD = 'fbe-primer-record';
+export async function esPrimerRecord(historial, atletaId, sesionId, { almacen = globalThis.localStorage, espera = 1500, hoy = hoyISO() } = {}) {
+  try {
+    if (almacen?.getItem('fbe-probar-primer-record') === '1') return true;
+    const clave = `${CLAVE_PRIMER_RECORD}:${atletaId}`;
+    if (!almacen || almacen.getItem(clave)) return false;
+    let t = 0;
+    const lista = await Promise.race([historial(atletaId), new Promise((ok) => { t = setTimeout(() => ok(null), espera); })]);
+    clearTimeout(t);
+    if (!Array.isArray(lista)) return false;
+    const antes = eventosRecord(lista.filter((x) => x.sesion_id !== sesionId)).eventos.length;
+    almacen.setItem(clave, antes > 0 ? 'antes' : hoy);
+    return antes === 0;
+  } catch { return false; }
 }

@@ -5,7 +5,8 @@
 //     orden.
 //   · (304) En «Tu semana», el mismo botón.
 //   · (306) FBE Esencial: «Leer mi revisión» abre la historia de tres tarjetas, con «Leer entera» al final (si toca).
-//   Suelta:  npm run build && node test/e2e-momentos.mjs
+//   (v0.282) Sentir el récord (312-315): probarMomentos3.
+//   Suelta:  npm run build && node test/e2e-momentos.mjs  (SOLO=1, 2 o 3 para una sola)
 import { pathToFileURL } from 'node:url';
 import { irASeccion, subProgreso } from './secciones.mjs';
 
@@ -292,6 +293,113 @@ export async function probarMomentos2({ navegador, check, base = 'http://localho
   check(errores.length === 0, `compartir con brillo, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
 }
 
+// (v0.282) Sentir el récord (312-315), en el navegador (Ana, FBE Equipo, 390 px): (312) la serie que toca se enciende en
+// dorado si con lo que lleva puesto sería récord (y se apaga si no); (314) a mitad de sesión, una ola por la barra de
+// arriba, una sola vez; (313) la última serie de la sesión, marcada; y (315) al terminar, «Tu primer récord» en la escena
+// (con fbe-probar-primer-record: la demo ya trae récords de antes)
+export async function probarMomentos3({ navegador, check, base = 'http://localhost:4174' }) {
+  const errores = [];
+  let p = null;
+  const hasta = async (fn, ms = 10000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (await fn().catch(() => false)) return true; await p.waitForTimeout(120); } return !!(await fn().catch(() => false)); };
+  const cerrarDialogos = async () => {
+    for (let i = 0; i < 6; i++) {
+      const b = p.locator('[aria-modal="true"] button:has-text("Vale"), [aria-modal="true"] button:has-text("Seguir"), [aria-modal="true"] button:has-text("Ahora no"), [aria-modal="true"] button:has-text("Entendido"), .bienvenida button:has-text("Saltar")').first();
+      if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await p.waitForTimeout(350); } else break;
+    }
+  };
+  const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'es-ES', timezoneId: 'Europe/Madrid', bypassCSP: true, reducedMotion: 'no-preference' });
+  await ctx.route(/i\.ytimg\.com/, (r) => r.abort());
+  p = await ctx.newPage();
+  p.setDefaultTimeout(10000);
+  p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+  await p.addInitScript(() => {
+    try { for (const k of ['fbe-escena-200', 'fbe-bienvenida-vista', 'fbe-nec-todas', 'fbe-probar-primer-record']) localStorage.setItem(k, '1'); } catch { /* */ }
+    // (314) las olas de la barra de arriba, en cuanto empiezan (cada animación, una vez)
+    window.__olas = [];
+    const vistas = new WeakSet();
+    const mirar = () => {
+      try {
+        for (const a of document.getAnimations()) {
+          const t = a.effect?.target;
+          if (vistas.has(a) || !t?.matches?.('.sesion-vista .tramo-barra, .sesion-vista .barra-sesion')) continue;
+          vistas.add(a);
+          if ((a.effect.getKeyframes?.() || []).some((k) => /scaleY\(2\.2\)/.test(k.transform || ''))) window.__olas.push(Math.round(performance.now()));
+        }
+      } catch { /* */ }
+      requestAnimationFrame(mirar);
+    };
+    requestAnimationFrame(mirar);
+  });
+  try {
+    await p.goto(`${base}/?demo`);
+    const quien = p.getByRole('button', { name: /Ana/ }).first();
+    if (await quien.waitFor({ timeout: 6000 }).then(() => true).catch(() => false)) await quien.click();
+    await p.locator('nav.tabs').waitFor({ timeout: 30000 });
+    await p.waitForTimeout(1500);
+    await cerrarDialogos();
+    await p.locator('[data-atajo="empezar"]').first().click();
+    for (let k = 0; k < 4 && !(await p.locator('.sesion-vista').count()); k++) {
+      await p.waitForTimeout(1200);
+      const b = p.getByRole('button', { name: /^Empezar$|Vamos|Saltar/ }).first();
+      if (await b.count()) await b.click().catch(() => {});
+    }
+    await p.locator('.sesion-vista').waitFor({ timeout: 15000 });
+    await p.waitForTimeout(1200);
+    await cerrarDialogos();
+    for (const b of await p.locator('.pista').getByRole('button', { name: 'Entendido' }).all()) await b.click().catch(() => {});
+    // (312) la que toca: con 1 kg, nada; con 300, su filo dorado (y el lector lo dice)
+    const fila = p.locator('.sesion-vista .serie.siguiente').first();
+    await fila.waitFor();
+    const n = await fila.getAttribute('data-n');
+    const ej = p.locator('.ejercicio', { has: fila }).first();
+    const kg = ej.getByLabel(`Kilos de la serie ${n}`);
+    await kg.fill('1');
+    await p.keyboard.press('Escape');
+    const apagada = await hasta(() => fila.evaluate((e) => !e.classList.contains('fsr-alcance')), 3000);
+    await kg.fill('300');
+    await p.keyboard.press('Escape');
+    const dorada = await hasta(() => fila.evaluate((e) => e.classList.contains('fsr-alcance')), 4000);
+    const borde = await fila.evaluate((e) => getComputedStyle(e).boxShadow);
+    check(apagada && dorada && /puede ser récord/.test((await fila.getAttribute('aria-label')) || '') && borde !== 'none',
+      '(312) la serie que toca: con 1 kg, como siempre; con 300, se enciende en dorado antes de hacerla (y el lector dice «puede ser récord»)');
+    // Se hace así (será récord) y las demás, hasta que quede una
+    await ej.getByRole('button', { name: `Marcar la serie ${n} como hecha` }).click();
+    await p.waitForTimeout(400);
+    for (let k = 0; k < 60; k++) {
+      const quedan = p.locator('button[aria-label^="Marcar la serie"]');
+      if ((await quedan.count()) <= 1) break;
+      const b = quedan.first();
+      await b.scrollIntoViewIfNeeded().catch(() => {});
+      await b.click({ timeout: 3000 }).catch(() => {});
+      await p.waitForTimeout(160);
+    }
+    // (313) la última de la sesión, marcada
+    const ultima = p.locator('.sesion-vista .serie.fsr-ultima');
+    const marcada = await hasta(async () => (await ultima.count()) === 1, 4000);
+    check(marcada && /la última de la sesión/.test((await ultima.first().getAttribute('aria-label')) || '') && (await p.locator('button[aria-label^="Marcar la serie"]').count()) === 1,
+      '(313) cuando queda una serie en toda la sesión, va marcada (y el lector lo dice)');
+    // (314) la ola de la mitad: salió, y una sola vez (todas sus animaciones juntas)
+    const olas = await p.evaluate(() => window.__olas.slice());
+    check(olas.length >= 1 && olas[olas.length - 1] - olas[0] < 1500, `(314) a mitad de sesión, una ola por la barra de arriba, una sola vez (${olas.length} tramos, en ${olas.length ? olas[olas.length - 1] - olas[0] : 0} ms)`);
+    // (315) la última, y a terminar: «Tu primer récord»
+    const ult = p.locator('button[aria-label^="Marcar la serie"]').first();
+    await ult.scrollIntoViewIfNeeded().catch(() => {});
+    await ult.click();
+    await p.waitForTimeout(300);
+    await p.getByRole('button', { name: 'Terminar sesión' }).click();
+    await p.locator('.hoja-dialogo .segmentos button', { hasText: '8' }).first().click();
+    await p.getByRole('button', { name: 'Guardar y terminar' }).click();
+    const escena = p.locator('.escena-final');
+    await escena.waitFor({ timeout: 20000 });
+    const primero = await escena.evaluate((e) => e.classList.contains('ef-primero'));
+    const titulo = await escena.locator('.escena-titulo').textContent();
+    const aro = await p.evaluate(() => document.getAnimations().some((a) => a.effect?.target?.classList?.contains('ef-aro')));
+    check(primero && /Tu primer récord/.test(titulo) && aro && /Sesión terminada/.test(await escena.locator('.escena-sub').textContent()),
+      `(315) al terminar, la escena del primer récord: «${(titulo || '').trim()}», con su aro de oro (y «Sesión terminada» debajo)`);
+  } finally { await ctx.close(); }
+  check(errores.length === 0, `sentir el récord, sin errores${errores.length ? `: ${errores.slice(0, 3).join(' | ')}` : ''}`);
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const { chromium } = await import('playwright');
   const { servir } = await import('./servidor.mjs');
@@ -303,6 +411,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const solo = process.env.SOLO || '';
   if (!solo || solo === '1') { try { await probarMomentos({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   if (!solo || solo === '2') { console.log('Compartir con brillo (v0.281)'); try { await probarMomentos2({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
+  if (!solo || solo === '3') { console.log('Sentir el récord (v0.282)'); try { await probarMomentos3({ navegador, check, base: 'http://localhost:4201' }); } catch (e) { fallos++; console.log('  ✗ se ha cortado:', String(e?.message || e).split('\n').slice(0, 5).join(' / ')); } }
   await navegador.close(); srv.close();
   console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
   if (fallos) process.exit(1);

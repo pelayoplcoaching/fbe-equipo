@@ -58,7 +58,7 @@ import { propuestaDelDia, aplicarPropuesta, esSemanaDeVuelta } from '../../logic
 import { planMinimoDe, propuestaPlanMinimo } from '../../logica/constancia.js';
 import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
-import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, eventosRecord, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
+import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
   descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA, duracionEstimada } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { consejoPeso } from '../../logica/esencial-primera.js';
@@ -66,7 +66,7 @@ import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
 import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
 import { cuandoDia } from '../../logica/plan.js';
-import { siguienteTras, imagenCierre, textoComparacionHecho } from '../../logica/sesion-final.js';
+import { siguienteTras, imagenCierre, textoComparacionHecho, esPrimerRecord } from '../../logica/sesion-final.js';
 import { esCarrera as esCarreraCalendario } from '../../logica/semana-natural.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, textoSaludCardio, cardioHechoPublico, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
@@ -1113,7 +1113,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
               res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
             // (belleza 315) ¿el primer récord de su vida? Ninguno antes en todo su historial (una sola vez: se apunta en el móvil)
-            const primero = conEscena && (res.records?.length || 0) > 0 && !propio ? await esPrimerRecord(api, atleta.id, sesion.id) : false;
+            const primero = conEscena && (res.records?.length || 0) > 0 && !propio ? await esPrimerRecord((x) => api.historial(x), atleta.id, sesion.id) : false;
             if (conEscena) { setEscena({ records: res.records?.length || 0, semana: await semanaHecha, primero }); setHistoria(hayHistoriaSesion() && ((res.series || 0) > 0 || !!cardioHechoValido(res.cardio))); }
             setResumen(res);
             sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
@@ -1748,21 +1748,6 @@ function Terminar({ sesion, semana, inicio, minutosSugeridos = null, duracionSer
       }}>{sesion.completada ? 'Guardar' : 'Guardar y terminar'}</button>
     </Hoja>
   );
-}
-
-// (belleza 315) El primer récord de su vida: ninguno en su historial antes de esta sesión (eventosRecord), y no celebrado
-// ya en este móvil. Con un tope de 1,5 s: si el historial tarda, la escena sale la de siempre
-const CLAVE_PRIMER_RECORD = 'fbe-primer-record';
-async function esPrimerRecord(api, atletaId, sesionId) {
-  try {
-    if (localStorage.getItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`)) return false;
-    const historial = await Promise.race([api.historial(atletaId), new Promise((ok) => setTimeout(() => ok(null), 1500))]);
-    if (!Array.isArray(historial)) return false;
-    const antes = eventosRecord(historial.filter((x) => x.sesion_id !== sesionId)).eventos.length;
-    if (antes > 0) { localStorage.setItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`, 'antes'); return false; }
-    localStorage.setItem(`${CLAVE_PRIMER_RECORD}:${atletaId}`, new Date().toISOString().slice(0, 10));
-    return true;
-  } catch { return false; }
 }
 
 async function calcularResumen(api, atletaId, ejercicios, hechas, cambios, enCola, ejerciciosPorId, records = {}, sesion = {}) {
