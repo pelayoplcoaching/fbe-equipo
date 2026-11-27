@@ -634,7 +634,7 @@ async function pintarLogro(d, { formato = 'publicacion', pegatina: peg = '', han
   const acento = dorado ? C.oro : C.morado;
   const icoX = W - M - 80, icoY = 400;
   if (d.tipo === 'record') destellos(x, icoX + 75, icoY + 75, C.oro);
-  icono(d.llama ? 'llama' : d.tipo === 'equipo' ? 'equipo' : d.tipo === 'semana' || d.tipo === 'plan' ? 'calendario' : d.tipo === 'comparativa' ? 'progreso' : d.tipo === 'reto' ? 'bandera' : 'trofeo', icoX, icoY, 150, acento);
+  icono(d.icono && P[d.icono] ? d.icono : d.llama ? 'llama' : d.tipo === 'equipo' ? 'equipo' : d.tipo === 'semana' || d.tipo === 'plan' ? 'calendario' : d.tipo === 'comparativa' ? 'progreso' : d.tipo === 'reto' ? 'bandera' : 'trofeo', icoX, icoY, 150, acento);
   // La etiqueta y el nombre
   let y = 330;
   letra(750, 30); espaciado(4); x.fillStyle = acento; x.fillText(String(d.etiqueta || '').toUpperCase(), M, y); espaciado(0);

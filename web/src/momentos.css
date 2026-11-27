@@ -1,0 +1,33 @@
+/* Belleza 301-350 (tanda F): momentos y remate. Solo ASCII; colores, medidas, radios y tiempos por tokens; nada se
+   mueve sin parar (todo es de una vez: al aparecer, al tocar o al terminar) y, con "reducir movimiento", queda quieto.
+   Las clases son nuevas (hs-mel, hs-musc, hs-medalla, historia-comp, rvh-) y van con su trozo. */
+
+/* ===================================================================== (v0.280) La sesion, contada */
+
+/* 301 - La melodia de tu sesion: una fila de puntos por ejercicio (uno por serie, con el color de su esfuerzo; el
+   record, en dorado), que aparecen uno a uno en el orden de la sesion */
+.hs-mel:not(#n):not(#n):not(#n) { display: grid; gap: var(--esp-8); margin-top: var(--esp-4); }
+.hs-mel-fila:not(#n):not(#n):not(#n) { display: flex; flex-wrap: wrap; gap: var(--esp-6); }
+.hs-mel-p:not(#n):not(#n):not(#n) { display: inline-block; flex: none; width: var(--esp-14); height: var(--esp-14); border-radius: 50%; background: var(--noche-4); }
+.hs-mel-p[data-t="suave"]:not(#n):not(#n):not(#n) { background: var(--acento-a45); }
+.hs-mel-p[data-t="medio"]:not(#n):not(#n):not(#n) { background: var(--acento-a85); }
+.hs-mel-p[data-t="fuerte"]:not(#n):not(#n):not(#n) { background: var(--marca-200); }
+.hs-mel-p[data-t="rec"]:not(#n):not(#n):not(#n) { background: var(--oro-300); box-shadow: 0 0 0 var(--filo-fino) var(--oro-100), 0 0 var(--esp-10) var(--oro-400); }
+@media (prefers-contrast: more) { .hs-mel-p:not(#n):not(#n):not(#n) { outline: var(--filo-fino) solid var(--tinta); } }
+
+/* 302 - Los records caen como medallas: el trofeo de cada fila, dorado, con su sombra al posarse */
+.hs-medalla:not(#n):not(#n):not(#n) { color: var(--oro-300); filter: drop-shadow(0 var(--esp-2) var(--esp-4) var(--oro-700)); }
+.hs-cancion:not(#n):not(#n):not(#n) { display: flex; pointer-events: auto; }
+.hs-cancion:empty:not(#n):not(#n):not(#n) { display: none; }
+
+/* 303 - Los musculos se pintan en orden: cada uno crece un punto desde su centro al pintarse */
+.hs-musc:not(#n):not(#n):not(#n) .musculo { transform-box: fill-box; transform-origin: center; }
+
+/* 304 - Cada tarjeta se comparte tal cual: un boton discreto, como la X (historia-cerrar: se esconde con ella al pausar)
+   y a su izquierda */
+.historia-comp:not(#n):not(#n):not(#n) { right: calc(max(var(--esp-12), env(safe-area-inset-right, 0px)) + var(--esp-48)); }
+
+/* 306 - Tu revision, como historia: cada tarjeta dura un poco mas (hay que leer); la lista con sus iconos de siempre */
+.historia-barras span.actual.corre.rvh-corre:not(#n):not(#n):not(#n) i { animation-duration: 9s; }
+.rvh-lista:not(#n):not(#n):not(#n) li svg { color: var(--marca-200); }
+.rvh-foco:not(#n):not(#n):not(#n) { font-size: var(--letra-20); color: var(--tinta); max-width: 30ch; text-wrap: pretty; }

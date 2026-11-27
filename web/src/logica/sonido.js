@@ -24,6 +24,8 @@ export const SONIDOS = {
   ejercicio: { apartado: 'entreno', notas: () => [[nota(3), 0, 0.08, 0.7], [nota(0), 0.08, 0.08, 0.6], [nota(5), 0.16, 0.2, 0.8]] },
   'record-peso': { apartado: 'entreno', notas: () => [[nota(0), 0, 0.12, 0.8], [nota(2), 0.11, 0.12, 0.8], [nota(3), 0.22, 0.12, 0.85], [nota(5), 0.33, 0.6, 1]] },
   'record-reps': { apartado: 'entreno', notas: () => [[nota(3), 0, 0.08, 0.8], [nota(3), 0.1, 0.08, 0.8], [nota(4), 0.2, 0.1, 0.85], [nota(5), 0.32, 0.55, 1]] },
+  // (belleza 302) el «clinc» de cada récord que cae en la historia del final: una nota alta y corta, como una medalla
+  clinc: { apartado: 'entreno', notas: () => [[nota(12), 0, 0.03, 0.5], [nota(14), 0.03, 0.26, 0.45]] },
   mitad: { apartado: 'entreno', notas: () => [[nota(-2), 0, 0.3, 0.55]] },
   diez: { apartado: 'entreno', notas: () => [[nota(-2), 0, 0.14, 0.6], [nota(0), 0.16, 0.24, 0.65]] },
   // La cuenta atrás que sube: a los 5, 4, 3, 2 y 1 segundos, cada vez más aguda
@@ -112,7 +114,7 @@ export function puedeSonar(a, clave) {
   if (s.tecla) return a.sonidoTeclado === true;
   if (['rpe', 'aproximacion', 'superserie', 'progresion'].includes(clave)) return a.sonidoSerie !== false;
   if (clave === 'seguimos') return a.sonido !== false && a.avisoSeguimos !== false;
-  if (['serie', 'ejercicio', 'fin-sesion'].includes(clave)) return a.sonidoSerie !== false;
+  if (['serie', 'ejercicio', 'fin-sesion', 'clinc'].includes(clave)) return a.sonidoSerie !== false;
   if (clave === 'mitad') return a.sonido !== false && a.avisoMitad === true;
   if (clave === 'diez') return a.sonido !== false && a.avisoDiez === true;
   if (clave === 'cuenta') return a.cuentaAtras !== false;

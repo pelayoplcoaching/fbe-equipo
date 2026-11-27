@@ -45,8 +45,14 @@ export function TarjetaSemana({ resumen, alAbrir, alQuitar }) {
 // tarjeta: el botón que se ha tocado. (Al cerrarla no vuelve: su tarjeta se quita al verla.)
 export const viajeHistoria = (cambio, tarjeta) => conTransicion(cambio, 'morph', [{ nombre: 'vt-viaje', desde: tarjeta, hasta: '.historia' }]);
 
+// (belleza 305) El día de la semana de una fecha («el martes»)
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const elDia = (f) => (f ? `el ${DIAS[desdeISO(f).getDay()]}` : '');
+
 // Historia a pantalla completa: se pasa con toques (o flechas) y avanza sola si no se toca
 // v0.50: en su capa (en <body>), como las hojas
+// (belleza 304) cada tarjeta de entreno, con su botón para compartirla tal cual (comp); (305) «Tu mejor momento», con dos
+// récords o más: el que más subió sobre tu marca anterior
 export function HistoriaSemana(props) { return <Capa><HistoriaSemanaPantalla {...props} /></Capa>; }
 function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const r = resumen;
@@ -62,7 +68,7 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
         <h2>{r.sesiones.completa ? 'Semana completa' : `${r.sesiones.hechas} de ${r.sesiones.total} sesiones`}</h2>
         {r.racha > 0 && <p class="historia-racha"><Icono n="llama" />{r.racha === 1 ? '1 semana completa' : `${r.racha} semanas completas seguidas`}</p>}
       </>
-    ) },
+    ), comp: true },
     { id: 'volumen', render: () => (
       <>
         <span class="historia-etq">Has movido</span>
@@ -70,7 +76,7 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
         <p class="historia-texto">{r.series} series{r.minutos ? ` en ${horas(r.minutos)}` : ''}{r.cardio?.minutos ? `, y ${r.cardio.minutos} min de cardio${r.cardio.km ? ` (${num(r.cardio.km, 1)} km)` : ''}` : ''}</p>
         {r.cambioTonelaje != null && <span class="historia-chip num">{signo(r.cambioTonelaje, 0)} % que la semana anterior</span>}
       </>
-    ) },
+    ), comp: true },
     { id: 'records', render: () => (
       r.records.length ? (
         <>
@@ -88,14 +94,22 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
           <p class="historia-texto">Esta semana no ha habido récords. Los récords llegan de sumar semanas como esta.</p>
         </>
       )
-    ) },
+    ), comp: !!(r.records.length || r.mejor) },
+    ...(r.momento && r.records.length > 1 ? [{ id: 'momento', render: () => (
+      <>
+        <span class="historia-etq">Tu mejor momento</span>
+        <h2>{r.momento.ejercicio}<small>{elDia(r.momento.fecha)}</small></h2>
+        <p class="historia-cifra num">+{num(r.momento.pct, 1)}<small>% sobre tu mejor marca</small></p>
+        <p class="historia-texto">{r.momento.texto}</p>
+      </>
+    ), comp: true }] : []),
     { id: 'musculos', render: () => (
       <>
         <span class="historia-etq">Lo que más has trabajado</span>
         {r.musculoTop && <h2>{NOMBRE_GRUPO[r.musculoTop.grupo]}<small>{num(r.musculoTop.series)} series</small></h2>}
         <MapaMuscular series={r.musculos} etiqueta="Series por músculo de la semana" />
       </>
-    ) },
+    ), comp: !!r.musculoTop },
     ...(salud && r.peso ? [{ id: 'peso', render: () => (
       <>
         <span class="historia-etq">Tu peso (tendencia)</span>
@@ -112,17 +126,20 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
+  const [carta, setCarta] = useState(null);
   // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta
-  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar });
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
   // Avanza sola cada 7 s (no con movimiento reducido, ni en la última, ni en pausa)
   useEffect(() => {
-    if (quieto || ultima || pausa) return undefined;
+    if (quieto || ultima || pausa || compartir || carta) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i, pausa]);
+  }, [i, pausa, compartir, carta]);
+  const abrirCarta = (id) => import('../../logica/historia-cartas.js').then((m) => { const c = m.cartaSemana(r, id, { rango: rangoLargo(r.lunes, r.domingo) }); if (c) setCarta(c); }).catch(() => {});
   useEffect(() => {
     caja.current?.focus();
-    const tecla = (e) => { if (e.key === 'Escape') alCerrar(); if (e.key === 'ArrowRight') ir(1); if (e.key === 'ArrowLeft') ir(-1); };
+    // (304) con la hoja de compartir abierta encima, las teclas son suyas
+    const tecla = (e) => { if (document.querySelectorAll('[aria-modal="true"]').length > 1) return; if (e.key === 'Escape') alCerrar(); if (e.key === 'ArrowRight') ir(1); if (e.key === 'ArrowLeft') ir(-1); };
     document.addEventListener('keydown', tecla);
     return () => document.removeEventListener('keydown', tecla);
   }, []);
@@ -132,12 +149,14 @@ function HistoriaSemanaPantalla({ resumen, salud, alCerrar }) {
         {pantallas.map((p, k) => <span key={p.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre'}` : ''}><i /></span>)}
       </div>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar el resumen"><Icono n="cerrar" /></button>
+      {pantallas[i].comp && <button type="button" class="btn btn-icono plano historia-cerrar historia-comp" onClick={() => abrirCarta(pantallas[i].id)} aria-label="Compartir esta tarjeta"><Icono n="compartir" /></button>}
       <div class="historia-pantalla" key={pantallas[i].id} aria-live="polite">
         {pantallas[i].render()}
         {ultima && <button class="btn btn-grande historia-fin" onClick={alCerrar}>A por la siguiente</button>}
         {ultima && r.sesiones.completa && <button class="btn btn-grande historia-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir la semana</button>}
       </div>
       {compartir && <HojaCompartir logro tipo="semana" titulo="Compartir tu semana" datos={datosSemana()} equipo={{ tema: 'logros' }} alCerrar={() => setCompartir(false)} />}
+      {carta && <HojaCompartir logro tipo={carta.tipo} titulo="Compartir esta tarjeta" datos={carta} equipo={{ tema: 'logros' }} alCerrar={() => setCarta(null)} />}
       <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Pantalla anterior" />
       <button class="historia-zona siguiente" onClick={() => (ultima ? alCerrar() : ir(1))} aria-label={ultima ? 'Cerrar el resumen' : 'Pantalla siguiente'} />
     </div>

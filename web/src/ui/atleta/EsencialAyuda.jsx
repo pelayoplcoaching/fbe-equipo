@@ -6,7 +6,7 @@
 // mientras, si la duda no está, se pregunta en Equipo (con la comunidad abierta).
 // Estilos: ayuda.css (clases ayu-*, escritas tal cual en el elemento al que se aplican, para que vayan con este trozo).
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useApp, useCarga, useUnaVez, Icono, Hoja } from '../comunes.jsx';
+import { useApp, useCarga, useUnaVez, Icono, Hoja, Capa } from '../comunes.jsx';
 import { sinMovimiento } from '../transiciones.js';
 import { BarraLectura } from '../lectura.jsx';
 import { NOMBRE_PRIMERAS_4, WEB_FBE, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
@@ -378,12 +378,108 @@ export function HojaRevision({ semanaId = null, alCerrar }) {
   );
 }
 
+// ---------- (belleza 306) Tu revisión, también como historia ----------
+// Tres tarjetas antes de la hoja entera: lo que hiciste, lo que cambia y en qué fijarte, con «Leer entera» al final. Los
+// textos son los de la revisión (revisionDe), tal cual: aquí solo se reparten. Sin el peso ni la comida (van en la hoja).
+// Si no hay revisión que contar (la primera semana con la rutina, o no carga), se abre la hoja de siempre.
+const ICONO_GRUPO = { sube: 'arriba', baja: 'abajo', igual: 'reiniciar', otras: 'calendario' };
+// Los gestos de las historias (mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa), como
+// useHistoriaTacto (ui/historia-tacto.js), aquí mismo: importar aquel desde este trozo partiría el arranque en un archivo más
+function useTacto(caja, o) {
+  const [pausa, setPausa] = useState(false);
+  const vivo = useRef(null);
+  vivo.current = { ...o, setPausa };
+  useEffect(() => {
+    let quitar = null, fuera = false;
+    import('./historia-gestos.js').then((m) => { if (!fuera) quitar = m.instalarHistoria(caja.current, () => vivo.current); }).catch(() => { /* sin gestos: tocar sigue valiendo */ });
+    return () => { fuera = true; quitar?.(); };
+  }, []);
+  return pausa;
+}
+export function HistoriaRevision(props) { return <Capa><HistoriaRevisionPantalla {...props} /></Capa>; }
+function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerrar }) {
+  const { api, backend, atleta } = useApp();
+  const d = useCarga(() => datos.revision(api, backend, atleta.id, semanaId ? { semanaId } : {}), [atleta.id, semanaId]);
+  const r = d.datos;
+  const v = r && r.tipo !== 'primera' ? revisionDe(r) : null;
+  // sin nada que contar en tres tarjetas, la hoja de siempre
+  useEffect(() => { if (!d.cargando && (d.error || !v)) alEntera(); }, [d.cargando, !!v, !!d.error]);
+  useEffect(() => { if (r?.id) guardar(claveLeida(atleta.id, r.id), '1'); }, [r?.id]);
+  const filas = v ? GRUPOS.flatMap(([g]) => (v[g] || []).map((f) => ({ ...f, g }))) : [];
+  const semana = n || r?.numero;
+  const pantallas = v ? [
+    { id: 'hiciste', render: () => (
+      <>
+        <span class="historia-etq">{semana ? `Tu revisión · semana ${semana}` : 'Tu revisión de la semana'}</span>
+        <h2>Lo que hiciste</h2>
+        <p class="historia-texto">{v.hiciste || 'La semana pasada no apuntaste sesiones: esta semana, lo de tu plan, sin prisa.'}</p>
+      </>
+    ) },
+    { id: 'cambia', render: () => (
+      <>
+        <span class="historia-etq">Lo que cambia</span>
+        <h2>{v.titulo}</h2>
+        {filas.length > 0 && (
+          <ul class="historia-lista rvh-lista">
+            {filas.slice(0, 4).map((f) => <li key={`${f.g}:${f.nombre}:${f.dia || ''}`}><Icono n={ICONO_GRUPO[f.g]} /><span><strong>{f.nombre}</strong><br />{f.texto}</span></li>)}
+          </ul>
+        )}
+        {filas.length > 4 && <p class="historia-texto">y {filas.length - 4} más en la revisión entera</p>}
+      </>
+    ) },
+    { id: 'foco', render: () => (
+      <>
+        <span class="historia-etq">Esta semana, una sola cosa</span>
+        <h2>En qué fijarte</h2>
+        <p class="historia-texto rvh-foco">{v.foco}</p>
+      </>
+    ) },
+  ] : [];
+  const [i, setI] = useState(0);
+  const caja = useRef(null);
+  const quieto = sinMovimiento();
+  const ultima = i === pantallas.length - 1;
+  const ir = (k) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + k)));
+  const pausa = useTacto(caja, { i, n: pantallas.length, ir, alCerrar });
+  // Avanza sola cada 9 s (hay que leer), como las demás historias: no con movimiento reducido, ni en la última, ni en pausa
+  useEffect(() => {
+    if (!pantallas.length || quieto || ultima || pausa) return undefined;
+    const t = setTimeout(() => ir(1), 9000);
+    return () => clearTimeout(t);
+  }, [i, pausa, pantallas.length]);
+  useEffect(() => {
+    caja.current?.focus();
+    const tecla = (e) => { if (document.querySelectorAll('[aria-modal="true"]').length > 1) return; if (e.key === 'Escape') alCerrar(); if (e.key === 'ArrowRight') ir(1); if (e.key === 'ArrowLeft') ir(-1); };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, []);
+  const p = pantallas[i];
+  return (
+    <div class="historia historia-rev" role="dialog" aria-modal="true" aria-label={semana ? `Tu revisión de la semana ${semana}` : 'Tu revisión de la semana'} ref={caja} tabIndex={-1} aria-busy={d.cargando ? 'true' : 'false'}>
+      <div class="historia-barras" aria-hidden="true">
+        {pantallas.map((x, k) => <span key={x.id} class={k < i ? 'vista' : k === i ? `actual ${quieto ? '' : 'corre rvh-corre'}` : ''}><i /></span>)}
+      </div>
+      <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar tu revisión"><Icono n="cerrar" /></button>
+      {p ? (
+        <div class="historia-pantalla" key={p.id} aria-live="polite">
+          {p.render()}
+          {ultima && <button class="btn btn-grande historia-fin" onClick={alEntera}><Icono n="documento" /> Leer entera</button>}
+        </div>
+      ) : <div class="historia-pantalla"><p class="historia-texto" role="status">Repasando tu semana…</p></div>}
+      {p && <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Tarjeta anterior" />}
+      {p && <button class="historia-zona siguiente" onClick={() => (ultima ? alEntera() : ir(1))} aria-label={ultima ? 'Leer la revisión entera' : 'Tarjeta siguiente'} />}
+    </div>
+  );
+}
+
 // La tarjeta de Hoy: desde la segunda semana de su plan (o la primera de su plan de novato), mientras no la haya leído;
 // leída, queda en una línea. abrir: se abre sola (un aviso que lleva a ella).
+// (belleza 306) «Leer mi revisión» la abre primero como historia de tres tarjetas; la línea de «ya leída», la hoja entera.
 export function TarjetaRevision({ p, abrir = false }) {
   const { atleta } = useApp();
   const w = p?.actual || null;
   const [hoja, setHoja] = useState(false);
+  const [historia, setHistoria] = useState(false);
   const [leida, setLeida] = useState(() => !!w && leer(claveLeida(atleta.id, w.id)) === '1');
   useEffect(() => { if (abrir && w) setHoja(true); }, [abrir, w?.id]);
   if (!w || !p?.bloque) return null;
@@ -392,7 +488,7 @@ export function TarjetaRevision({ p, abrir = false }) {
   const previas = (p.semanas || []).some((x) => x.bloque_id === p.bloque.id && x.numero < w.numero) || (/^Novato \d/.test(p.bloque.nombre || '') && (p.bloques || []).some((b) => b.nombre === NOMBRE_PRIMERAS_4));
   if (!empezada || !previas) return hoja ? <HojaRevision semanaId={w.id} alCerrar={() => setHoja(false)} /> : null;
   const n = semanaDelPlan(p.bloques, String(w.fecha_inicio).slice(0, 10)) || w.numero;
-  const cerrar = () => { setHoja(false); setLeida(true); };
+  const cerrar = () => { setHoja(false); setHistoria(false); setLeida(true); };
   return (
     <>
       {leida ? <p class="ayu-rev-linea fac-grupo"><button type="button" class="btn-texto mini" onClick={() => setHoja(true)}><Icono n="documento" /> Tu revisión de la semana {n}</button></p> : (
@@ -401,10 +497,11 @@ export function TarjetaRevision({ p, abrir = false }) {
           <div class="pila-s">
             <strong>Tu revisión de la semana {n}</strong>
             <span class="peq">Lo que hiciste la semana pasada, lo que cambia en esta y por qué, ejercicio a ejercicio. Y una sola cosa en la que fijarte.</span>
-            <button type="button" class="btn btn-primario btn-peq" style="justify-self:start" onClick={() => setHoja(true)}>Leer mi revisión</button>
+            <button type="button" class="btn btn-primario btn-peq" style="justify-self:start" onClick={() => setHistoria(true)}>Leer mi revisión</button>
           </div>
         </section>
       )}
+      {historia && !hoja && <HistoriaRevision semanaId={w.id} n={n} alEntera={() => { setHistoria(false); setHoja(true); }} alCerrar={cerrar} />}
       {hoja && <HojaRevision semanaId={w.id} alCerrar={cerrar} />}
     </>
   );

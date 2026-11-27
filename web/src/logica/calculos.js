@@ -690,6 +690,14 @@ export function vitrina(series, hoy = hoyISO(), dias = 30, previo = null) {
   return { ejercicios, recientes: eventos.filter((e) => e.fecha >= desde).reverse() };
 }
 
+// (belleza 305) Cuánto subió un récord sobre la marca de antes (0,05 = un 5 %): el 1RM estimado, los kilos a esas
+// repeticiones o las repeticiones sin carga. null si no se puede saber
+export function subidaRecord(rec) {
+  const antes = Number(rec?.antes);
+  const ahora = Number(rec?.tipo === 'e1rm' ? rec.valor : rec?.tipo === 'kg' ? rec.kg : rec?.tipo === 'reps' ? rec.reps : NaN);
+  return Number.isFinite(antes) && Number.isFinite(ahora) && antes > 0 && ahora > antes ? (ahora - antes) / antes : null;
+}
+
 // ---------- resumen de una semana (para «Tu semana») ----------
 // d: { series (historial), sesiones (programadas, con semana_lunes, completada, fecha_realizada, duracion_min), pesos }
 export function resumenSemanal(d, lunes, { eventos = null } = {}) {
@@ -704,6 +712,9 @@ export function resumenSemanal(d, lunes, { eventos = null } = {}) {
   // Mejor serie de la semana: la de 1RM estimado más alto
   let mejor = null;
   for (const s of series) { const v = e1rm(s); if (v && (!mejor || v > mejor.e1rm)) mejor = { ejercicio: s.ejercicio, serie: s, e1rm: v }; }
+  // (belleza 305) Tu mejor momento: de los récords de la semana, el que más subió sobre tu marca anterior (en %)
+  let momento = null;
+  for (const e of ev) { const sub = subidaRecord(e.record); if (sub != null && (!momento || sub > momento.subida)) momento = { ejercicio: e.ejercicio, texto: e.record.texto, tipo: e.record.tipo, fecha: e.fecha, subida: sub }; }
   const musculos = seriesPorGrupo(series, lunes);
   const top = Object.entries(musculos).sort((a, b) => b[1] - a[1])[0] || null;
   // Peso: tendencia al acabar la semana frente a la de la semana anterior
@@ -731,6 +742,7 @@ export function resumenSemanal(d, lunes, { eventos = null } = {}) {
     // (v0.204) los días que entrenó (con series o con una sesión hecha), para su calendario en miniatura
     dias: [...new Set([...series.map((s) => s.fecha), ...hechas.map((x) => x.fecha_realizada)].filter(Boolean))].sort(),
     mejor,
+    momento: momento ? { ejercicio: momento.ejercicio, texto: momento.texto, tipo: momento.tipo, fecha: momento.fecha, pct: Math.round(momento.subida * 1000) / 10 } : null,
     musculos,
     musculoTop: top ? { grupo: top[0], series: top[1] } : null,
     peso,

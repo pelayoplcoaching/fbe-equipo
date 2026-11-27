@@ -88,7 +88,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
           </>
         ) : <h2>{capital(mesConAnio(mes))}</h2>}
       </>
-    ) },
+    ), comp: r.conEntreno },
     ...(r.conEntreno ? [
       { id: 'volumen', render: () => (
         <>
@@ -96,7 +96,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
           <p class="historia-cifra num">{toneladas(r.tonelaje)}<small>toneladas</small></p>
           <p class="historia-texto">en {r.series} series</p>
         </>
-      ) },
+      ), comp: true },
       { id: 'records', render: () => (r.records.length ? (
         <>
           <span class="historia-etq">Récords</span>
@@ -110,21 +110,21 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
           <h2>Mes de constancia</h2>
           <p class="historia-texto">Este mes no ha habido récords. Llegan de sumar meses como este.</p>
         </>
-      )) },
+      )), comp: r.records.length > 0 },
       { id: 'racha', render: () => (
         <>
           <span class="historia-etq">Tu mejor racha</span>
           <p class="historia-cifra num">{r.mejorRacha}<small>{r.mejorRacha === 1 ? 'semana completa' : 'semanas completas seguidas'}</small></p>
           <p class="historia-texto">{r.semanasCompletas ? `${r.semanasCompletas} ${r.semanasCompletas === 1 ? 'semana' : 'semanas'} con todo lo previsto hecho.` : 'Termina todas las sesiones de una semana para empezar una racha.'}</p>
         </>
-      ) },
+      ), comp: r.mejorRacha > 0 },
       { id: 'calendario', render: () => (
         <>
           <span class="historia-etq">Tu constancia</span>
           <h2>{r.dias} {r.dias === 1 ? 'día' : 'días'}<small>entrenando en {nombreMes(mes)}</small></h2>
           <CalendarioMes mes={mes} dias={r.diasEntrenados} />
         </>
-      ) },
+      ), comp: true },
     ] : []),
     ...(r.cardio?.sesiones ? [{ id: 'cardio', render: () => (
       <>
@@ -132,7 +132,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
         <p class="historia-cifra num">{r.cardio.minutos}<small>minutos</small></p>
         <p class="historia-texto">{r.cardio.km ? `${num(r.cardio.km, 1)} km en ` : 'En '}{r.cardio.sesiones} {r.cardio.sesiones === 1 ? 'sesión' : 'sesiones'}</p>
       </>
-    ) }] : []),
+    ), comp: true }] : []),
     ...(veces > 0 ? [{ id: 'musica', render: () => (
       <>
         <span class="historia-etq">Tu música</span>
@@ -158,17 +158,20 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
   ];
   const [i, setI] = useState(0);
   const [compartir, setCompartir] = useState(false);
+  // (belleza 304) la tarjeta que se está compartiendo, tal cual (solo el atleta)
+  const [carta, setCarta] = useState(null);
   const quieto = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ultima = i === pantallas.length - 1;
   const ir = (d) => setI((x) => Math.max(0, Math.min(pantallas.length - 1, x + d)));
   const caja = useRef(null);
   // (tacto 226-228) mantener pulsado la para; deslizar hacia abajo la cierra y, de lado, pasa de tarjeta (siguiendo al dedo)
-  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir });
+  const pausa = useHistoriaTacto(caja, { i, n: pantallas.length, ir, alCerrar, parada: compartir || !!carta });
   useEffect(() => {
-    if (quieto || ultima || compartir || pausa) return undefined;
+    if (quieto || ultima || compartir || carta || pausa) return undefined;
     const t = setTimeout(() => ir(1), 7000);
     return () => clearTimeout(t);
-  }, [i, compartir, pausa]);
+  }, [i, compartir, carta, pausa]);
+  const abrirCarta = (id) => import('../../logica/historia-cartas.js').then((m) => { const c = m.cartaMes(r, id, { tu, mes: nombreMes(mes) }); if (c) setCarta(c); }).catch(() => {});
   useEffect(() => {
     caja.current?.focus();
     const tecla = (e) => {
@@ -200,6 +203,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
       </div>
       <p class="sr" aria-live="polite">Pantalla {i + 1} de {pantallas.length}</p>
       <button class="btn btn-icono plano historia-cerrar" onClick={alCerrar} aria-label="Cerrar el resumen del mes"><Icono n="cerrar" /></button>
+      {conCompartir && pantallas[i].comp && <button type="button" class="btn btn-icono plano historia-cerrar historia-comp" onClick={() => abrirCarta(pantallas[i].id)} aria-label="Compartir esta tarjeta"><Icono n="compartir" /></button>}
       <div class="historia-pantalla" key={pantallas[i].id} aria-live="polite">
         {pantallas[i].render()}
         {ultima && (
@@ -211,6 +215,7 @@ function HistoriaMesPantalla({ resumen: r, salud, alCerrar, conCompartir = true,
       </div>
       <button class="historia-zona anterior" onClick={() => ir(-1)} disabled={i === 0} aria-label="Pantalla anterior" />
       <button class="historia-zona siguiente" onClick={() => (ultima ? alCerrar() : ir(1))} aria-label={ultima ? 'Cerrar el resumen' : 'Pantalla siguiente'} />
+      {carta && <HojaCompartir logro tipo={carta.tipo} titulo="Compartir esta tarjeta" datos={carta} equipo={{ tema: 'logros' }} alCerrar={() => setCarta(null)} />}
       {compartir && <HojaCompartir tipo="mes" equipo={{ tema: 'logros' }} datos={datosImagen()} titulo={`Compartir tu ${nombreMes(mes)}`} alCerrar={() => setCompartir(false)}
         alt={`Tu ${nombreMes(mes)}: ${r.sesiones.hechas} sesiones, ${r.dias} días entrenando, ${toneladas(r.tonelaje)} toneladas`}
         nota="Solo lleva tus sesiones, los días entrenados, las series, el tonelaje, los récords, tu racha, el cardio y tu calendario: nada de peso, medidas, nutrición, hábitos ni datos de salud." />}

@@ -51,3 +51,31 @@ export function cifrasHistoriaSesion(r = {}) {
     r?.minutos ? { k: 'minutos', v: num(r.minutos, 0), t: 'minutos' } : null,
   ].filter(Boolean);
 }
+
+// ---------- Belleza 301-350 (tanda F): la sesión, contada ----------
+// (301) Tu sesión en seis segundos: cada serie de la huella (huellaDeResumen), una nota, en el orden de la sesión. La
+// n-ésima serie de un ejercicio sube un escalón, como al marcarla en la sesión; un récord, una octava más arriba y más
+// larga. Entre ejercicio y ejercicio, un respiro. Todo cabe en unos seis segundos (con muchas series, más deprisa: como
+// un arpegio, nunca menos de 0,07 s entre notas; con pocas, como mucho 0,42 s)
+// nota(i): la escala de la casa (logica/sonido.js). [{ fila, k, d (s desde el principio), f, dura, rec }]
+export function melodiaSesion(filas = [], nota, { total = 5.6 } = {}) {
+  const lista = (filas || []).filter((f) => f?.puntos?.length);
+  const n = lista.reduce((t, f) => t + f.puntos.length, 0);
+  if (!n || typeof nota !== 'function') return [];
+  const paso = Math.max(0.07, Math.min(0.42, total / (n + Math.max(0, lista.length - 1) * 0.6)));
+  const out = [];
+  let t = 0;
+  lista.forEach((f, fi) => {
+    if (fi) t += paso * 0.6;
+    f.puntos.forEach((p, k) => {
+      out.push({ fila: fi, k, d: Math.round(t * 1000) / 1000, f: nota(Math.min(7, k) + (p.rec ? 5 : 0)), dura: p.rec ? 0.34 : 0.16, rec: !!p.rec });
+      t += paso;
+    });
+  });
+  return out;
+}
+// (303) Los músculos, en el orden en que los trabajaste: el de musculos (calcularResumen los suma serie a serie, en el
+// orden de la sesión, así que su orden es el de la primera vez que salió cada uno), solo los que tienen series
+export function ordenMusculos(musculos = {}) {
+  return Object.entries(musculos || {}).filter(([, v]) => Number(v) > 0).map(([g]) => g);
+}

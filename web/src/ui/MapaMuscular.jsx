@@ -72,8 +72,10 @@ function Figura({ partes, series, nivel = nivelSeries, unidad = 'series', dg }) 
 }
 
 // (v0.204) tono «oro» (los músculos con récord), con su unidad («récord») y su nivel (cuánto se pinta cada valor)
-export function MapaMuscular({ series = {}, etiqueta = 'Series por músculo', leyenda = true, tono = '', unidad = 'series', nivel = nivelSeries }) {
-  const texto = GRUPOS.filter(([g]) => series[g]).map(([g, n]) => `${n} ${num(series[g])}`).join(', ');
+// todas (belleza 303): lo que dice al lector de pantalla, si el mapa se está pintando poco a poco (series es lo pintado)
+export function MapaMuscular({ series = {}, etiqueta = 'Series por músculo', leyenda = true, tono = '', unidad = 'series', nivel = nivelSeries, todas = null }) {
+  const lee = todas || series;
+  const texto = GRUPOS.filter(([g]) => lee[g]).map(([g, n]) => `${n} ${num(lee[g])}`).join(', ');
   // (belleza 163) los degradados de este mapa (cada mapa los suyos: puede haber dos en la misma pantalla)
   const dg = `mm${useId()}`;   // (useId da «P0-3»: letras, números y guion, valen dentro de url(#…))
   // (su color, en --c; lo claro de arriba lo pone la hoja de estilos, menos en oscuro)
