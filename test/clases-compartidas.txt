@@ -57,7 +57,7 @@ apuntes-medalla-dibujo: apuntes.css belleza.css
 apuntes-tarjeta: apuntes.css imagenes.css
 arco: diseno.css estilos.css tacto-a.css
 area: diseno.css estilos.css visual.css
-area-deg: diseno.css estilos.css
+area-deg: diseno.css estilos.css tacto-b.css
 area-menciones: diseno.css estilos.css
 aro: apuntes.css estilos.css
 aro-hoy: diseno.css estilos.css
@@ -479,10 +479,11 @@ girando: apuntes.css diseno.css pulido.css
 grabando: estilos.css sonido.css
 grabar-revision-camara: diseno.css estilos.css
 grafica: belleza.css diseno.css estilos.css progreso-visual-2.css progreso-visual.css
-grafica-caja: diseno.css estilos.css progreso-visual-2.css
+grafica-caja: diseno.css estilos.css progreso-visual-2.css tacto-b.css
 grafica-cardio: belleza.css diseno.css estilos.css progreso-visual.css
 grafica-carga: belleza.css diseno.css estilos.css progreso-visual.css
 grafica-globo: color-capa.css diseno.css estilos.css progreso-visual.css
+grafica-grande: progreso-visual-2.css tacto-b.css
 grafica-guia: diseno.css progreso-visual.css
 grafica-ingesta: diseno.css estilos.css visual.css
 grafica-negocio: belleza.css diseno.css estilos.css
@@ -580,7 +581,7 @@ le-k: diseno.css equipo-belleza.css estilos.css personal.css
 levantada: diseno.css estilos.css
 leyenda-mapa: belleza-a.css estilos.css
 liga-filas: apuntes.css personal.css
-linea: diseno.css estilos.css progreso-visual.css
+linea: diseno.css estilos.css progreso-visual.css tacto-b.css
 lista: belleza.css diseno.css estilos.css imagenes.css personal.css pulido.css registro-actividad.css
 lista-ejercicios-hoy: diseno.css estilos.css
 lista-elegir: diseno.css estilos.css youtube.css
@@ -737,7 +738,7 @@ perfil-social: perfil.css visual.css
 perfil-tile: perfil.css visual.css
 perfil-tiles: perfil.css visual.css
 perfil-tiles-3: perfil.css visual.css
-pesada: diseno.css estilos.css
+pesada: diseno.css estilos.css tacto-b.css
 peso-anterior: diseno.css estilos.css
 peso-hoy: estilos.css personal.css
 pestana-panel: diseno.css estilos.css
@@ -809,7 +810,7 @@ progreso-equipo: comunidad-viva.css equipo-belleza.css estilos.css
 progreso-panel: belleza-b.css diseno.css progreso-visual-2.css progreso-visual.css visual.css
 progreso-series: diseno.css estilos.css
 pt-valor: perfil.css visual.css
-punto: ambas-a.css diseno.css estilos.css progreso-visual.css revision.css visual.css
+punto: ambas-a.css diseno.css estilos.css progreso-visual.css revision.css tacto-b.css visual.css
 punto-bien: diseno.css estilos.css
 punto-botones: diseno.css estilos.css
 punto-clave: diseno.css estilos.css
@@ -971,7 +972,7 @@ sugerencia: ambas-b.css diseno.css estilos.css
 superserie: diseno.css estilos.css
 suplemento-fila: estilos.css imagenes.css
 t-sobre: ambas-b.css belleza-a.css diseno.css estilos.css personal.css
-tab: ambas-a.css diseno.css estilos.css pulido.css visual.css
+tab: ambas-a.css diseno.css estilos.css pulido.css tacto-b.css visual.css
 tab-cuenta: diseno.css estilos.css
 tab-ico: diseno.css estilos.css revision.css
 tab-perfil: diseno.css estilos.css
@@ -986,6 +987,8 @@ tabla-rpe: diseno.css estilos.css
 tabla-salud: diseno.css personal.css
 tabla-salud-caja: diseno.css personal.css
 tabs: diseno.css estilos.css pulido.css
+tabs-flota: ambas-a.css tacto-b.css
+tabs-in: estilos.css tacto-b.css
 tabs-pildora: diseno.css estilos.css
 tachado: diseno.css estilos.css
 tarjeta-atleta: atletas-lista.css diseno.css estilos.css pulido.css
@@ -1008,11 +1011,11 @@ tarjeta-semana-disco: diseno.css estilos.css
 tarjeta-semana-quitar: ambas-a.css diseno.css estilos.css
 tecla: diseno.css estilos.css
 tecla-paso: diseno.css estilos.css
-tecla-siguiente: diseno.css estilos.css
+tecla-siguiente: diseno.css estilos.css tacto-b.css
 teclado-icono: diseno.css estilos.css
 teclado-rpe: diseno.css estilos.css
 teclado-serie: diseno.css estilos.css
-teclado-teclas: diseno.css estilos.css
+teclado-teclas: diseno.css estilos.css tacto-b.css
 tecnica-elegir: diseno.css estilos.css
 tecnica-estrella: diseno.css estilos.css
 tecnica-item: diseno.css estilos.css
@@ -1052,6 +1055,7 @@ toma-cab: diseno.css estilos.css
 tramo-barra: diseno.css estilos.css
 tramo-lleno: ambas-b.css diseno.css estilos.css
 tramos: ambas-b.css belleza-a.css diseno.css estilos.css
+trazada: diseno.css tacto-b.css
 trofeo-detalle: belleza-b.css estilos.css
 trofeo-ico: diseno.css estilos.css
 trofeo-nuevo: diseno.css estilos.css
@@ -1070,7 +1074,7 @@ v: apuntes.css diseno.css estilos.css progreso-visual-2.css visual.css
 vacia: belleza.css diseno.css estilos.css guias.css visual.css
 vacio: belleza.css diseno.css estilos.css visual.css
 vacio-titulo: estilos.css visual.css
-valor: diseno.css estilos.css
+valor: diseno.css estilos.css tacto-b.css
 variante: diseno.css estilos.css
 variante-tempo: diseno.css estilos.css
 velo: diseno.css estilos.css progreso-visual-2.css pulido.css
