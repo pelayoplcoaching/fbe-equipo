@@ -8,6 +8,7 @@ import { melodiaSesion, ordenMusculos, esPrimerRecord, CLAVE_PRIMER_RECORD } fro
 import { nota, SONIDOS, puedeSonar, prioridadDe, duracionDe, volumenDe, ESCUCHAR, SUSURRO } from '../web/src/logica/sonido.js';
 import { subidaRecord, resumenSemanal } from '../web/src/logica/calculos.js';
 import { cartaSesion, cartaSemana, cartaMes, cartaAnio, CARTAS } from '../web/src/logica/historia-cartas.js';
+import { fondoElegido, fondoValido } from '../web/src/logica/imagenes.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -180,6 +181,17 @@ console.log('318 · Los cinco momentos, a la vez');
   check(/vibrarAlPintar\('hecho'\);\s*alPintar\(\(\) => sonarFBE\('empezar'\)\)/.test(I) && /if \(sinMovimiento\(\)\) \{ vibrar\('hecho'\); sonarFBE\('empezar'\); return false; \}/.test(I),
     '(318) empezar: el toque y la salida con la noche que se abre (y, con «reducir movimiento», sin escena pero con los dos)');
   check(SONIDOS.empezar?.apartado === 'entreno' && puedeSonar({}, 'empezar') && !puedeSonar({ sonidoSerie: false }, 'empezar') && ESCUCHAR.some(([c]) => c === 'empezar'), '(318) la salida suena con el sonido de la sesión (y se apaga con él)');
+}
+
+console.log('324 · Tu portada, también en lo que compartes');
+{
+  const lista = { 'perfil-montana': { archivos: { 960: 'x.webp' } }, 'compartir-luna': { archivos: { 1024: 'y.webp' } } };
+  check(fondoValido('portada') && fondoElegido('portada', 'compartir-luna', lista, 'perfil-montana') === 'perfil-montana', '(324) «Tu portada»: se guarda como «portada» y sale la de ahora (si la cambias, la nueva)');
+  check(fondoElegido('portada', 'compartir-luna', lista, null) === 'compartir-luna' && fondoElegido('portada', 'compartir-luna', lista, 'perfil-mar') === 'compartir-luna', '(324) sin portada ilustrada (colores o tu foto), el fondo de la tarjeta');
+  const C = src('ui/Compartir.jsx');
+  check(/\['portada', 'Tu portada', 'portada'\]/.test(C) && /const miPortada = atleta && !propio \? portadaPerfil\(\) : null;/.test(C) && /anadirImagenes\(LISTA_TROZOS\)/.test(C),
+    '(324) en «Personalizar», «Tu portada» delante de los fondos (solo en tu móvil y si tu portada es de las ilustradas)');
+  check(/img\.naturalWidth >= img\.naturalHeight \* 2\.4/.test(C) && /H \* 0\.32/.test(C), '(324) la portada, como franja arriba (un tercio de la tarjeta) fundida con la noche: estirada a toda la tarjeta se vería borrosa');
 }
 
 console.log(`\n${ok} bien, ${fallos} mal`);

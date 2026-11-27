@@ -218,7 +218,8 @@ export const FONDOS_COMPARTIR = [
   ['compartir-pista', 'Pista', 'cardio'], ['compartir-carretera', 'Carretera', 'cardio'], ['compartir-zapatillas', 'Zapatillas', 'cardio'], ['compartir-bici', 'Bici', 'cardio'],
   ['compartir-manada', 'Manada', 'equipo'], ['compartir-lobo-luna', 'Lobo y luna', 'equipo'], ['compartir-lobos-nieve', 'Lobos en la nieve', 'equipo'], ['compartir-fogata-equipo', 'Fogata', 'equipo'], ['compartir-gimnasio', 'Gimnasio de noche', 'equipo'],
 ];
-export const fondoValido = (id) => id === 'auto' || id === '' || FONDOS_COMPARTIR.some(([k]) => k === id);
+// (belleza 324) 'portada': tu portada del perfil (se guarda así: si la cambias, sale la nueva)
+export const fondoValido = (id) => id === 'auto' || id === '' || id === 'portada' || FONDOS_COMPARTIR.some(([k]) => k === id);
 // Los que tienen imagen (lista: la de imagenes.json), con los del grupo de la tarjeta delante
 export function fondosDisponibles(grupo = null, lista = LISTA) {
   const hay = FONDOS_COMPARTIR.filter(([id]) => Object.prototype.hasOwnProperty.call(lista, id) && lista[id]?.archivos);
@@ -241,8 +242,10 @@ export function grupoFondo(d = {}, tipo = 'sesion') {
   return tipo === 'sesion' ? 'sesion' : 'tiempo';
 }
 // Lo elegido en la hoja: 'auto' (el de la tarjeta), '' (sin dibujo) o uno de la lista (si no existe, el de la tarjeta)
-export function fondoElegido(elegido, porDefecto, lista = LISTA) {
+// portada: el id de tu portada ilustrada de ahora (perfil-…), para 'portada'; sin ella, el de la tarjeta
+export function fondoElegido(elegido, porDefecto, lista = LISTA, portada = null) {
   if (elegido === '') return null;
+  if (elegido === 'portada') return portada && Object.prototype.hasOwnProperty.call(lista, portada) ? portada : porDefecto || null;
   if (elegido && elegido !== 'auto' && Object.prototype.hasOwnProperty.call(lista, elegido) && FONDOS_COMPARTIR.some(([k]) => k === elegido)) return elegido;
   return porDefecto || null;
 }

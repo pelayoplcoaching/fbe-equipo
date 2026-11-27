@@ -7,6 +7,14 @@ import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA 
 import { fondoTarjeta, fondoLogro, fondoElegido, focoFondo, fuenteImagen, fondosDisponibles, grupoFondo } from '../logica/imagenes.js';
 import { fmtCorta, hoyISO } from '../logica/fechas.js';
 import { hayImagen } from './Imagen.jsx';
+// (belleza 324) tu portada ilustrada del perfil, como fondo (su lista viaja con las pantallas que la usan, no con el arranque)
+import LISTA_TROZOS from '../datos/imagenes-trozos.json';
+import { anadirImagenes } from '../logica/imagenes.js';
+import { imagenPortadaPerfil } from '../logica/perfil.js';
+import { leerPreferencia } from './preferencias.js';
+anadirImagenes(LISTA_TROZOS);
+// tu portada ilustrada de ahora (perfil-…), o null (los colores y tu foto no valen de fondo: la foto no se puede pintar en la tarjeta)
+const portadaPerfil = () => imagenPortadaPerfil(leerPreferencia('fbe-portada-perfil', 'noche'));
 import { FORMATOS, tamanoFormato, PEGATINAS_TARJETA, pegatinaTarjeta, limpiarHandle, conArroba, handleEquipo, PREF_HANDLE, pieDeFoto, resumenTexto, nombreArchivo as nombreArchivoDe, cifrasCardio, PREF_RECORDATORIO, recordatorioCompartir,
   PALETAS, paletaDe, PREF_PALETA, limpiarFrase, PREF_FRASE, TONOS, PREF_TONO, textoAlternativo, PREF_COMPARTIDOS, anotarCompartido, textoCompartido,
   PREF_FONDO, PREF_PLANTILLA, PREF_PEGATINA, PREF_PERSONALIZAR, plantillaInicial, sorpresa } from '../logica/compartir.js';
@@ -151,6 +159,27 @@ async function cargarFondo(id) {
 // letras (blancas y lilas) siguen leyéndose sobre el resplandor
 function fondoIlustrado(x, img) {
   fondoNoche(x);
+  // (belleza 324) tu portada, una franja 3:1: arriba, a todo lo ancho, fundida por abajo con la noche (estirada a toda la
+  // tarjeta se vería borrosa); el velo, sobre ella, donde van las letras de arriba
+  if (img.naturalWidth >= img.naturalHeight * 2.4) {
+    // (un tercio de la tarjeta, como mínimo su franja entera: la imagen cubre ese hueco, centrada, sin estirarse de más)
+    const hb = Math.round(Math.max((img.naturalHeight * W) / img.naturalWidth, H * 0.32));
+    const eb = Math.max(W / img.naturalWidth, hb / img.naturalHeight), wb = img.naturalWidth * eb;
+    const tb = document.createElement('canvas');
+    tb.width = W; tb.height = hb;
+    const bx = tb.getContext('2d');
+    bx.drawImage(img, (W - wb) / 2, 0, wb, img.naturalHeight * eb);
+    const fb = bx.createLinearGradient(0, 0, 0, hb);
+    fb.addColorStop(0, 'rgba(0, 0, 0, 1)'); fb.addColorStop(0.55, 'rgba(0, 0, 0, .9)'); fb.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    bx.globalCompositeOperation = 'destination-in'; bx.fillStyle = fb; bx.fillRect(0, 0, W, hb);
+    x.save();
+    if (PAL !== 'noche') x.globalCompositeOperation = 'luminosity';
+    x.drawImage(tb, 0, 0);
+    x.restore();
+    velo(x, 0, H, [[0, 0.38], [0.2, 0.24], [0.36, 0.06], [1, 0.04]]);
+    alPieYHalo(x);
+    return;
+  }
   // (v0.187) las verticales cubren el ancho y se pegan abajo; las apaisadas (cardio) cubren todo. Arriba se funden con
   // la noche (sin corte) y, con otra paleta oscura, solo ponen la luz: el color lo da la paleta.
   const vertical = img.naturalHeight >= img.naturalWidth;
@@ -172,6 +201,10 @@ function fondoIlustrado(x, img) {
   x.restore();
   // El velo: algo mas arriba (donde van las letras) y una franja al pie para la firma; el motivo, casi limpio
   velo(x, 0, H, [[0, 0.34], [0.5, 0.22], [0.8, 0.06], [1, 0.06]]);
+  alPieYHalo(x);
+}
+// La franja al pie para la firma y el halo de las letras (con cualquier dibujo detrás: el de siempre o tu portada)
+function alPieYHalo(x) {
   const pieY = Math.round(oy + (HC - 190) * EC);
   velo(x, pieY, H, [[0, 0], [Math.min(1, (150 * EC) / Math.max(1, H - pieY)), 0.62], [1, 0.62]]);
   // (v0.188) con un dibujo detras, cada letra lleva un halo del color del fondo: se lee tambien encima de lo claro
@@ -331,7 +364,7 @@ async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 
   // (v0.187) fondo: 'auto' (el de la tarjeta), '' (sin dibujo) o el que elija; vale con todas las paletas oscuras
   if (plantilla === 'lista') plantilla = 'clasica';
   if (plantilla === 'record' && !(d.records || []).length) plantilla = 'cifras';
-  const idFondo = fondoElegido(fondo, fondoTarjeta(d));
+  const idFondo = fondoElegido(fondo, fondoTarjeta(d), undefined, portadaPerfil());
   const ilu = (plantilla === 'foto' && foto) || C.clara || !idFondo ? null : await cargarFondo(idFondo);
   if (ilu) ilu.fbeFoco = focoFondo(idFondo);
   if (plantilla !== 'clasica') {
@@ -618,7 +651,7 @@ async function pintarLogro(d, { formato = 'publicacion', pegatina: peg = '', han
   const { letra, cortar, lineas, icono, titulo } = utiles(x);
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
   // (v0.187) con ilustracion de fondo (la del logro o la elegida); sin ella, el lobo en grande y muy tenue
-  const idFondo = fondoElegido(fondo, fondoLogro(d));
+  const idFondo = fondoElegido(fondo, fondoLogro(d), undefined, portadaPerfil());
   const ilu = C.clara || !idFondo ? null : await cargarFondo(idFondo);
   if (ilu) fondoIlustrado(x, ilu);
   else { fondoNoche(x); dibujarLobo(x, W - 560, H - 640, 760, C.clara ? '#140B3A' : '#FFFFFF', C.clara ? 0.04 : 0.055); }
@@ -814,7 +847,9 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   const opciones = { plantilla: plantilla === 'foto' && !foto?.img ? 'minima' : plantilla, foto: plantilla === 'foto' ? foto?.img || null : null, recuadro: plantillas && plantilla !== 'foto' ? recuadro?.img || null : null, formato: personalizable ? formato : 'publicacion',
     pegatina: personalizable ? peg : '', handle, equipo: equipoHandle, paleta: personalizable ? paleta : 'noche', frase: fraseActiva, fondo: personalizable ? fondo : 'auto' };
   // (v0.187) los fondos que hay, con los de esta tarjeta delante
-  const fondos = personalizable && hayImagen('compartir-sesion') ? fondosDisponibles(grupoFondo(datos, logro || !plantillas ? tipo : 'sesion')) : [];
+  // (belleza 324) y, delante, «Tu portada» (la ilustración que has puesto en tu perfil), si es de las ilustradas
+  const miPortada = atleta && !propio ? portadaPerfil() : null;
+  const fondos = personalizable && hayImagen('compartir-sesion') ? [...(miPortada && hayImagen(miPortada) ? [['portada', 'Tu portada', 'portada']] : []), ...fondosDisponibles(grupoFondo(datos, logro || !plantillas ? tipo : 'sesion'))] : [];
   const conFondo = fondos.length > 0 && opciones.paleta !== 'clara' && plantilla !== 'foto';
   const sorprender = () => {
     const s = sorpresa({ plantillas: lasPlantillas ? lasPlantillas.map(([k]) => k) : [], fondos: conFondo ? fondos.map(([k]) => k) : [], ahora: { plantilla, paleta, fondo } });
@@ -1113,7 +1148,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
               <div class="chips-fila fondos-fila" role="radiogroup" aria-label="Fondo">
                 {[['auto', 'Automático'], ['', 'Sin dibujo'], ...fondos].map(([k, t]) => (
                   <button type="button" key={k || 'ninguno'} role="radio" aria-checked={fondo === k ? 'true' : 'false'} class={`fondo-op ${fondo === k ? 'activo' : ''}`} onClick={() => setFondo(k)}>
-                    <span class="fondo-muestra" aria-hidden="true">{k && k !== 'auto' ? <img src={fuenteImagen(k).src} alt="" loading="lazy" /> : <Icono n={k === 'auto' ? 'estrella' : 'cerrar'} />}</span>{t}
+                    <span class="fondo-muestra" aria-hidden="true">{k && k !== 'auto' ? <img src={fuenteImagen(k === 'portada' ? miPortada : k).src} alt="" loading="lazy" /> : <Icono n={k === 'auto' ? 'estrella' : 'cerrar'} />}</span>{t}
                   </button>
                 ))}
               </div>
