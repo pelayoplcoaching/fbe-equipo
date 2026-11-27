@@ -1,6 +1,6 @@
 // Plan de la semana: qué día piensa hacer el atleta cada sesión (como en TrainingPeaks o Future) y
 // «Añadir a mi calendario», que crea los eventos con aviso en el móvil sin necesitar notificaciones.
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { useApp, useCarga, Icono, Hoja, Segmentos, usePreferencia, descargar as descargarArchivo } from '../comunes.jsx';
 import { semanaTipo, repartirComoSiempre, textoDias } from '../../logica/personal.js';
 import { HojaSuscripcion, useIntegraciones } from './Conexiones.jsx';
@@ -36,7 +36,7 @@ export function TiraSemana({ semana, sesiones, hoy = hoyISO(), alTocar }) {
         const delDia = sesiones.filter((s) => (s.completada ? s.fecha_realizada === d : diaPrevistoValido(s, semana) === d));
         const texto = delDia.length ? delDia.map((s) => `${s.nombre}${s.completada ? ' (hecha)' : ''}`).join(', ') : 'descanso';
         return (
-          <div role="listitem" key={d} class={`tira-dia ${d === hoy ? 'hoy' : ''} ${d < hoy ? 'pasado' : ''}`} aria-label={`${NOMBRES_DIA[i]} ${desdeISO(d).getDate()}: ${texto}`}>
+          <div role="listitem" key={d} data-d={d} class={`tira-dia ${d === hoy ? 'hoy' : ''} ${d < hoy ? 'pasado' : ''}`} aria-label={`${NOMBRES_DIA[i]} ${desdeISO(d).getDate()}: ${texto}`}>
             <span class="tira-letra" aria-hidden="true">{LETRAS_DIA[i]}</span>
             <span class="tira-num num" aria-hidden="true">{desdeISO(d).getDate()}</span>
             <span class="tira-ses">
@@ -45,8 +45,8 @@ export function TiraSemana({ semana, sesiones, hoy = hoyISO(), alTocar }) {
                 const sigla = s.completada ? <Icono n="hecho" /> : s.nombre.split(' ').map((p) => p[0]).join('').slice(0, 3);
                 // Las pendientes se pueden tocar (y alcanzar con el teclado) para cambiarles el día
                 return alTocar && !s.completada
-                  ? <button type="button" key={s.id} class="tira-chip" aria-label={`Cambiar el día de ${s.nombre}`} onClick={() => alTocar(s)}>{sigla}</button>
-                  : <span key={s.id} class={`tira-chip ${s.completada ? 'hecha' : ''}`} aria-hidden="true">{sigla}</span>;
+                  ? <button type="button" key={s.id} data-ses={s.id} class="tira-chip" aria-label={`Cambiar el día de ${s.nombre}`} onClick={() => alTocar(s)}>{sigla}</button>
+                  : <span key={s.id} data-ses={s.id} class={`tira-chip ${s.completada ? 'hecha' : ''}`} aria-hidden="true">{sigla}</span>;
               })}
             </span>
           </div>
@@ -63,7 +63,14 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
   // (compartir, tanda 2) la semana como tarjeta, para el grupo o para el equipo
   const [compartirSemana, setCompartirSemana] = useState(false);
   const [calendario, setCalendario] = useState(false);
-  const planificar = usePlanificar(alCambiar);
+  const guardarDia = usePlanificar(alCambiar);
+  // (tacto 229 y 230) la ficha vuela desde donde estaba («Sin día», su fila o su día de antes) hasta su día de la tira
+  const raiz = useRef(null);
+  const planificar = async (s, d) => {
+    const desde = d ? raiz.current?.querySelector(`[data-ses="${s.id}"]`)?.getBoundingClientRect() : null;
+    await guardarDia(s, d);
+    if (desde) import('./vuelo-plan.js').then((m) => m.volarAlDia(raiz.current, s.id, d, desde)).catch(() => { /* sin vuelo: ya está en su día */ });
+  };
   const hoy = hoyISO();
   const pendientes = sesiones.filter((s) => !s.completada);
   const sinDia = pendientes.filter((s) => !diaPrevistoValido(s, semana));
@@ -78,13 +85,13 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
   const comoSiempre = diasTipo.length && semana?.fecha_inicio ? repartirComoSiempre({ sinDia, ocupados, lunes: semana.fecha_inicio, desde: semana.fecha_inicio, hasta: fin, hoy, dias: diasTipo }) : {};
   if (!semana?.fecha_inicio || (fin && fin < hoy)) return null;
   return (
-    <div class="panel panel-pad pila plan-semana">
+    <div class="panel panel-pad pila plan-semana" ref={raiz}>
       <TiraSemana semana={semana} sesiones={sesiones} hoy={hoy} alTocar={(s) => setEligiendo(s)} />
       {soloTira ? (
         sinDia.length > 0 && (
           <div class="plan-sin-dia">
             <span class="peq secundario">Sin día:</span>
-            {sinDia.map((s) => <button key={s.id} class="btn btn-peq plano sin-dia" onClick={() => setEligiendo(s)} aria-label={`Elegir el día de ${s.nombre}`}><Icono n="calendario" />{s.nombre}</button>)}
+            {sinDia.map((s) => <button key={s.id} data-ses={s.id} class="btn btn-peq plano sin-dia" onClick={() => setEligiendo(s)} aria-label={`Elegir el día de ${s.nombre}`}><Icono n="calendario" />{s.nombre}</button>)}
           </div>
         )
       ) : (
@@ -98,7 +105,7 @@ export function PlanSemana({ semana, sesiones, alCambiar, compacto = false, solo
                 <span class="mini terciario">{s.completada ? `Hecha ${cuandoDia(s.fecha_realizada, hoy)}` : s.tipo && s.tipo !== 'fuerza' ? NOMBRE_TIPO_SESION[s.tipo] : NOMBRE_INTENCION[s.intencion] || 'Pendiente'}</span>
               </span>
               {s.completada ? <span class="chip ok"><Icono n="hecho" />Hecha</span> : (
-                <button class={`btn btn-peq ${d ? '' : 'plano sin-dia'}`} onClick={() => setEligiendo(s)} aria-label={d ? `${s.nombre}: prevista ${cuandoDia(d, hoy)}. Cambiar el día` : `Elegir el día de ${s.nombre}`}>
+                <button data-ses={d ? undefined : s.id} class={`btn btn-peq ${d ? '' : 'plano sin-dia'}`} onClick={() => setEligiendo(s)} aria-label={d ? `${s.nombre}: prevista ${cuandoDia(d, hoy)}. Cambiar el día` : `Elegir el día de ${s.nombre}`}>
                   <Icono n="calendario" />{d ? cuandoDia(d, hoy).replace(/^el /, '').replace(/^./, (c) => c.toUpperCase()) : 'Elegir día'}
                 </button>
               )}

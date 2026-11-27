@@ -12,6 +12,7 @@ import { sinMovimiento } from '../transiciones.js';
 import { SUBS_PROGRESO, pedirSubProgreso } from './sub-progreso.js';
 import { atajosDe, ICONO_SUB, LARGO_MS } from '../../logica/barra-atajos.js';
 import { instalarAsomar } from './asomar.jsx';
+import { instalarGraficaDedos } from '../grafica-dedos.js';
 
 const CLAVE = 'fbe-mas-ultimo';
 const leerUltimo = () => { try { return localStorage.getItem(CLAVE); } catch { return null; } };
@@ -174,8 +175,10 @@ export function instalarBarra(leer) {
   document.addEventListener('click', clic, true); document.addEventListener('contextmenu', contexto);
   // (tacto 221-223) y con la barra, asomarse: mantener pulsada una sesión, un ejercicio, una receta o una medalla
   const quitarAsomar = instalarAsomar(leer);
+  // (tacto 233-235) y las gráficas, con los dedos
+  const quitarGraficas = instalarGraficaDedos();
   return () => {
-    quitarAsomar();
+    quitarAsomar(); quitarGraficas();
     clearTimeout(g?.t); g = null; cerrar();
     document.removeEventListener('pointerdown', baja); document.removeEventListener('pointermove', mueve); document.removeEventListener('pointerup', sube); document.removeEventListener('pointercancel', sube);
     document.removeEventListener('click', clic, true); document.removeEventListener('contextmenu', contexto);

@@ -144,3 +144,10 @@
 .aso-pista:not(#n) { margin-top: var(--esp-4); font-size: var(--letra-12); color: var(--tinta-2); text-align: center; }
 .aso-tarjeta:not(#n)[data-abre] { outline: var(--filo-fuerte) solid var(--morado); outline-offset: -2px; }
 .aso-tarjeta:not(#n)[data-abre] .aso-pista { color: var(--morado); font-weight: 700; }
+
+/* --- 233 a 235. Las graficas, con los dedos: el titular sigue al dedo y dos dedos marcan un tramo --- */
+.gdd-oculto:not(#n):not(#n) { visibility: hidden; }
+.gdd-titular:not(#n):not(#n) { position: absolute; left: 0; top: 0; display: flex; align-items: baseline; gap: var(--esp-10); white-space: nowrap; }
+.gdd-tramo:not(#n):not(#n) { position: absolute; top: 0; bottom: 0; border-inline: var(--filo-fuerte) solid var(--morado); background: var(--acento-a12); pointer-events: none; }
+.gdd-cambio:not(#n):not(#n) { position: absolute; top: var(--esp-2); transform: translateX(-50%); padding: var(--esp-4) var(--esp-10); border-radius: var(--r-10); background: var(--flota); color: var(--sobre-flota); font-size: var(--letra-13); font-weight: 700; white-space: nowrap; pointer-events: none; }
+.gdd-dos:not(#n):not(#n) > :not(svg, .gdd-tramo, .gdd-cambio) { visibility: hidden; }

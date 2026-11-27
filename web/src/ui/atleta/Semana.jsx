@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
 import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
+import { escalaArrastrable } from '../arrastrar-escala.js';
 import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
@@ -72,7 +73,9 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
         <div class="panel"><Vacio ilustracion="espera" imagen="vacio-espera" titulo={esPorSuCuenta(atleta) ? 'Aún sin semana' : 'Sin semanas publicadas'} accion={null}>{esPorSuCuenta(atleta) ? 'Cuando la app te prepare tu semana, aparecerá aquí.' : 'Cuando tu coach publique una semana, aparecerá aquí.'}</Vacio></div>
       ) : (
         <>
-          <div class="semanas-tabs" role="group" aria-label="Semanas del bloque">
+          {/* (tacto 231) el bloque como una regla: deslizar el dedo por S1, S2, S3… pasa de semana, con un toque en cada una
+              (si caben todas; con un bloque largo, la tira se desplaza de lado como siempre) */}
+          <div class="semanas-tabs" role="group" aria-label="Semanas del bloque" ref={(el) => { if (el && el.scrollWidth <= el.clientWidth + 2) escalaArrastrable(el); }}>
             {p.semanas.map((s, i) => {
               const ss = s.id === p.actual?.id ? sinCarreras(p.sesiones[s.id] || []) : p.sesiones[s.id] || [];
               const hechas = ss.filter((x) => x.completada).length;

@@ -1286,8 +1286,10 @@ export function useRaspado(n, xs) {
 // (v0.203) destacado(i): si ese punto es un récord, el globo sale en oro y con su trofeo
 // (belleza 181) alAbrir(i): lo que abre el punto elegido (en Progreso, lo que hiciste esa semana), con su botón debajo y con
 // Intro desde el teclado; abrible(i): si ese punto se puede abrir; textoAbrir(i): el texto de su botón
-export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children, destacado = null, alAbrir = null, abrible = null, textoAbrir = null }) {
+export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children, destacado = null, alAbrir = null, abrible = null, textoAbrir = null, fechas = null }) {
   const { sel, eventos, caja } = raspado;
+  // (tacto 233-235) lo que necesitan los gestos de dos dedos y el titular (ui/grafica-dedos.js, que llega aparte)
+  useEffect(() => { if (caja.current) caja.current.__graf = { W, xs, textoPunto, fechas }; });
   // el punto tocado (o con clic) se queda para su botón aunque el ratón salga de la gráfica (pasar por encima no lo fija)
   const [fijo, setFijo] = useState(null);
   useEffect(() => { setFijo(null); }, [n]);
@@ -1508,7 +1510,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
     + `${previoV.length > 1 ? `; en gris, ${textoPrevio} (de ${conU(previoV[0].y)} a ${conU(previoV[previoV.length - 1].y)})` : ''}.`;
   const sel = raspado.sel;
   return (
-    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)} alAbrir={alAbrir} abrible={abrible} textoAbrir={textoAbrir}>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)} alAbrir={alAbrir} abrible={abrible} textoAbrir={textoAbrir} fechas={conFechas ? fx : null}>
       <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient>{mascaraTramos(id, tramos, X, W, H)}</defs>
         <CapaFranjas franjas={franjas} xDe={xDe} arr={arr} base={H - abj} />
@@ -1576,7 +1578,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, b
     + `${previoV.length > 1 ? `; en gris, ${textoPrevio} (de ${num(previoV[0].tendencia)} a ${num(previoV[previoV.length - 1].tendencia)} kg)` : ''}.`;
   const sel = raspado.sel;
   return (
-    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={serie.map((p) => Y(Math.max(p.kg, p.tendencia)))} etiqueta={etiqueta || 'Peso'} textoPunto={textoPunto} resumen={resumen}>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={serie.map((p) => Y(Math.max(p.kg, p.tendencia)))} etiqueta={etiqueta || 'Peso'} textoPunto={textoPunto} resumen={resumen} fechas={serie.map((p) => p.fecha)}>
       <svg class="grafica grafica-peso" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient></defs>
         <CapaFranjas franjas={franjas} xDe={X} arr={arr} base={H - abj} />
