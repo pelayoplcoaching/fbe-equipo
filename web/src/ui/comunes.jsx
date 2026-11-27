@@ -335,7 +335,7 @@ export function Vacio({ icono = 'semana', ilustracion = null, imagen = null, anc
   const conImagen = imagen && hayImagen(imagen);
   return (
     <div class={`vacio${ilustracion || conImagen ? ' con-ilustracion' : ''}${conImagen ? ' con-escena' : ''}`}>
-      {conImagen ? <Imagen id={imagen} clase={ancha ? 'vacio-escena vacio-escena-ancha' : 'vacio-escena'} tamanos={ancha ? '(min-width: 640px) 420px, 80vw' : '112px'} />
+      {conImagen ? <Imagen id={imagen} clase={ancha ? 'vacio-escena vacio-escena-ancha' : 'vacio-escena'} tamanos={ancha ? '(min-width: 640px) 420px, 80vw' : '112px'} alternativa={ilustracion ? <Ilustracion n={ilustracion} /> : null} />
         : ilustracion ? <Ilustracion n={ilustracion} /> : hayImagen(imagenIcono(icono))
         ? <Imagen id={imagenIcono(icono)} clase="vacio-ico-img" tamanos="60px" alternativa={<Icono n={icono} />} />
         : <Icono n={icono} />}
