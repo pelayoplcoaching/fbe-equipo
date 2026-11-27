@@ -48,3 +48,11 @@
 .atajo-k-equipo .atajo-ico { background: color-mix(in srgb, var(--cat-rojo) 16%, var(--hoja)); color: var(--cat-rojo); }
 .atajo-k-carne .atajo-ico { background: color-mix(in srgb, var(--cat-cielo) 16%, var(--hoja)); color: var(--cat-cielo); }
 .atajo-k-datos .atajo-ico { background: color-mix(in srgb, var(--cat-gris) 16%, var(--hoja)); color: var(--cat-gris); }
+
+/* -- C129 - Las etiquetas de grupo de Recetas ("Rapidos", "Sin cocinar") se quedan pegadas arriba al bajar por su grupo,
+   en una pastilla de cristal bajo la cabecera */
+.bloque-equipo.bloque-equipo {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 3.5rem); z-index: 2; justify-self: start; width: fit-content;
+  padding: var(--esp-4) var(--esp-10); border-radius: var(--r-pildora); background: var(--vidrio-cab); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .bloque-equipo.bloque-equipo { background: var(--tiza); backdrop-filter: none; -webkit-backdrop-filter: none; } }
