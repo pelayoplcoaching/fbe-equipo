@@ -25,7 +25,7 @@ import { AvisoLogros } from '../Logros.jsx';
 import { AvisosCoach } from '../Avisos.jsx';
 import { InformeBloque, TarjetaBloque } from '../InformeBloque.jsx';
 import { NOMBRE_GRUPO, pauta, NOMBRE_FOCO, NOMBRE_INTENCION, NOMBRE_PRIORIDAD, NOMBRE_TIPO_SESION, etiquetasSuperserie, duracionEstimada, tendenciaPeso, ritmoPeso, estadoPeso, num, signo } from '../../logica/calculos.js';
-import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO, nombreBloque } from '../../logica/esencial.js';
+import { esPorSuCuenta, sinTuCoach, CORREO_CONTACTO, nombreBloque, NOMBRE_PRIMERAS_4 } from '../../logica/esencial.js';
 import { Bienvenida as BienvenidaDia, useBienvenida } from '../Bienvenida.jsx';
 import { leerEnCurso } from '../en-curso.js';
 import { useMarcaPagina } from '../marca-pagina.js';
@@ -720,6 +720,8 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
           </div>
           {/* (054) el objetivo del bloque, a la vista cada día */}
           {p.bloque.objetivo && <p class="hero-objetivo"><Icono n="bandera" /> {p.bloque.objetivo}</p>}
+          {/* (belleza 326) FBE Esencial, en sus cuatro primeras semanas: cuánto le falta a la app para tener tus marcas */}
+          {!propio && esPorSuCuenta(atleta) && p.bloque.nombre === NOMBRE_PRIMERAS_4 && semana.numero >= 1 && semana.numero <= 4 && <AroConociendo semana={semana.numero} hechas={hechas} total={sesiones.length} />}
           {/* (v0.200) los dos primeros días de un bloque nuevo, su estreno: el nombre se escribe solo */}
           {estreno && <p class="estreno-bloque"><span class="estreno-sello">Estreno</span><span class="estreno-nombre">{nombreBloque(p.bloque.nombre)}</span></p>}
           {/* (v0.200) Nochevieja y Año Nuevo, con sus fuegos detrás */}
@@ -867,6 +869,32 @@ function Tramo({ titulo, apilado = false, children }) {
           «Leer» en el apunte de hoy) */}
       <div class="tramo-fila" data-sin-deslizar="" onScroll={(ev) => { if (!ev.currentTarget.hasAttribute('data-suya')) ev.currentTarget.setAttribute('data-suya', ''); }}>{children}</div>
     </section>
+  );
+}
+
+// (belleza 326) «La app te va conociendo»: en las cuatro primeras semanas de FBE Esencial, un aro fino de cuatro tramos (uno
+// por semana: las pasadas, llenas; la de ahora, con lo que llevas de ella). Con las marcas de la cuarta, la app prepara
+// las siguientes. Quieto: sin animación. Va en la línea del objetivo del bloque (sus estilos) y el aro, con sus atributos
+// (sin estilos nuevos en el arranque, que va justo de peso)
+function AroConociendo({ semana, hechas = 0, total = 0 }) {
+  const n = Math.max(1, Math.min(4, Number(semana) || 1));
+  const parte = total > 0 ? Math.max(0, Math.min(1, hechas / total)) : 0;
+  const r = 9, vuelta = 2 * Math.PI * r, tramo = vuelta / 4 - 2;
+  return (
+    <p class="hero-objetivo" data-conociendo={n}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" focusable="false">
+        {[0, 1, 2, 3].map((k) => {
+          const lleno = k < n - 1 ? 1 : k === n - 1 ? parte : 0;
+          return (
+            <g key={k} transform={`rotate(${k * 90 - 89} 12 12)`}>
+              <circle cx="12" cy="12" r={r} stroke-opacity=".32" stroke-dasharray={`${tramo} ${vuelta}`} />
+              {lleno > 0 && <circle cx="12" cy="12" r={r} data-lleno="" stroke-dasharray={`${tramo * lleno} ${vuelta}`} />}
+            </g>
+          );
+        })}
+      </svg>
+      La app te va conociendo · semana {n} de 4
+    </p>
   );
 }
 

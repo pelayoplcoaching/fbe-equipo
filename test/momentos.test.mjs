@@ -158,5 +158,13 @@ console.log('323 · Tu color, en todo lo nuevo');
   check(/var\(--morado\)/.test(src('tacto-a.css')) && /getPropertyValue\('--morado'\)/.test(src('ui/confeti.js')), '(323) la luz del borde, el cartel y el confeti, con el color de tu acento');
 }
 
+console.log('326 · La app te va conociendo');
+{
+  const H = src('ui/atleta/Hoy.jsx');
+  check(/esPorSuCuenta\(atleta\) && p\.bloque\.nombre === NOMBRE_PRIMERAS_4 && semana\.numero >= 1 && semana\.numero <= 4 && <AroConociendo/.test(H) && /La app te va conociendo · semana \{n\} de 4/.test(H),
+    '(326) FBE Esencial, en sus cuatro primeras semanas: «La app te va conociendo · semana N de 4» en la tarjeta de hoy');
+  check(/const lleno = k < n - 1 \? 1 : k === n - 1 \? parte : 0;/.test(H) && !/\.cnc-/.test(src('momentos.css')), '(326) el aro: las semanas pasadas, llenas; la de ahora, con lo que llevas de ella (con atributos: sin estilos nuevos en el arranque)');
+}
+
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);
