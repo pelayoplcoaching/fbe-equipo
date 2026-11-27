@@ -226,7 +226,7 @@ check(/const VASO = 'M15 8 H49 L44\.5 54 Q44 58 40 58 H24 Q20 58 19\.5 54 Z';/.t
 }
 const carne = src('ui/atleta/Carnet.jsx');
 check(/const conPermisoOrientacion = \(\) => typeof window !== 'undefined' && typeof window\.DeviceOrientationEvent\?\.requestPermission === 'function';/.test(carne)
-  && /requestPermission\(\)\.then\(\(r\) => setConMovil\(r === 'granted'\)\)/.test(carne) && /\{conPermisoOrientacion\(\) && !conMovil && !sinMovimiento\(\) && <button type="button" class="btn-texto mini carnet-movil"/.test(carne)
+  && /requestPermission\(\)\.then\(\(r\) => \{ setConMovil\(r === 'granted'\); if \(r === 'granted'\) marcarInclinacion\(\); \}\)/.test(carne) && /\{conPermisoOrientacion\(\) && !conMovil && !sinMovimiento\(\) && <button type="button" class="btn-texto mini carnet-movil"/.test(carne)
   && /if \(\(sinPermisoOrientacion\(\) \|\| conMovil\) && typeof IntersectionObserver !== 'undefined'\)/.test(carne) && /\}, \[conMovil\]\);/.test(carne),
   '192: en iPhone, el carné se mueve al inclinar el móvil solo si lo pides con su botón (y nunca con «reducir movimiento»)');
 {

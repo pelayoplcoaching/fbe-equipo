@@ -27,19 +27,9 @@ export function momentoDelDia(hora, fecha = null) {
 // La hora del móvil, con sus minutos (para momentoDelDia)
 export const horaDecimal = (d = new Date()) => d.getHours() + d.getMinutes() / 60;
 
-// (vista 283) De dónde viene la luz, para las sombras: de −1 a 1. Al salir el sol, la luz llega por la izquierda (como el
-// sol del cielo de Hoy al amanecer) y las sombras caen a la derecha (1); a mediodía, desde arriba (0); al ponerse, por la
-// derecha (−1). De noche, desde arriba (la luz de casa)
-export function luzX(hora, fecha = null) {
-  const h = Number(hora);
-  if (!Number.isFinite(h)) return 0;
-  const [sale, pone] = SOL_MADRID[(mesDe(fecha) || 3) - 1];
-  if (h < sale || h > pone) return 0;
-  return Math.round((1 - (2 * (h - sale)) / (pone - sale)) * 100) / 100;
-}
 // (vista 282) La luz cálida de noche: de las 22:00 a las 7:00
 export const HORAS_CALIDA = [22, 7];
-export const horaCalida = (hora) => { const h = Number(hora); return Number.isFinite(h) && (h >= HORAS_CALIDA[0] || h < HORAS_CALIDA[1]); };
+export const horaCalida = (hora) => { const h = hora == null || hora === '' ? NaN : Number(hora); return Number.isFinite(h) && (h >= HORAS_CALIDA[0] || h < HORAS_CALIDA[1]); };
 
 // Las estrellas de la noche (en % del ancho y del alto, su tamaño en px y cuándo empiezan a titilar): siempre las mismas
 export const ESTRELLAS_CIELO = [

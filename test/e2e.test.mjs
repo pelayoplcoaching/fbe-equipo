@@ -6826,6 +6826,16 @@ if (parte('v0.277: las hojas de FBE Esencial')) try {
   fallos++;
   console.log('  ✗ las hojas de FBE Esencial (v0.277):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.278: vista, quinta vuelta: luz y materia (la luz cálida de noche, la tarjeta de Hoy con el móvil inclinado, el
+// reflejo de la barra, las fotos de los platos en oscuro, los vídeos sin miniatura y los dibujos de línea de los vacíos)
+// (test/e2e-vista-5.mjs)
+if (parte('v0.278: luz y materia')) try {
+  const { probarVista5 } = await import('./e2e-vista-5.mjs');
+  await probarVista5({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ luz y materia (v0.278):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

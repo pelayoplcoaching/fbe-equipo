@@ -53,9 +53,13 @@ import { readFileSync } from 'node:fs';
 // y su orden nuevo (los tramos con su título, «Tu día» arriba, las dos filas que se deslizan, el vídeo de la semana en el
 // estante, las filas de acciones y los textos largos en tres líneas con «Leer más») va en el arranque: 25 reglas, 3,4 KB
 // de estilos, y unos 600 bytes de código. La pila de avisos y «¿Qué necesitas?» recogida van con sus trozos)
+// (v0.278: estilos a 928, a propósito: la luz y la materia son de toda la app y van en el arranque: la luz cálida de
+// noche (las superficies y el texto en los tres temas), las sombras que siguen a la hora, el reflejo de la barra de abajo,
+// las fotos de los platos en oscuro, los dibujos de línea de los vacíos con la noche de la marca y la tarjeta de Hoy en dos
+// planos: 4,3 KB. Las hojas de los diales de la v0.277 salieron del arranque: 12 KB de código menos)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 613 },
-  css: { crudo: 924, gz: 164 },
+  css: { crudo: 928, gz: 164 },
 };
 
 let ok = 0, fallos = 0;

@@ -9,7 +9,7 @@
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 // v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
 // v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
-import { momentoDelDia, horaDecimal, luzX, horaCalida } from '../logica/cielo.js';
+import { momentoDelDia, horaDecimal, horaCalida } from '../logica/cielo.js';
 import { hoyISO } from '../logica/fechas.js';
 import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
@@ -159,8 +159,8 @@ export const EVENTO_AJUSTES = 'fbe-ajustes';
 let temaPrevio;
 // (v0.200) El tema que toca «con el sol» ahora mismo: oscuro desde media hora después de la puesta hasta el amanecer
 export const temaConSol = (d = new Date()) => (momentoDelDia(horaDecimal(d), hoyISO()) === 'noche' ? 'oscuro' : 'claro');
-// (vista 282 y 283) lo que depende de la hora («con el sol», la luz cálida de noche y la luz de las sombras) se mira cada
-// cinco minutos con la app a la vista, y al volver a ella
+// (vista 282) lo que depende de la hora («con el sol» y la luz cálida de noche) se mira cada cinco minutos con la app a
+// la vista, y al volver a ella
 let relojLuz = null;
 function alVolverLuz() { if (document.visibilityState === 'visible') aplicarTema(); }
 export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) {
@@ -194,10 +194,8 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (!escuchaContraste) { escuchaContraste = true; try { matchMedia('(prefers-contrast: more)').addEventListener?.('change', () => aplicarTema()); } catch { /* */ } }
   if (a.daltonismo) r.setAttribute('data-daltonismo', ''); else r.removeAttribute('data-daltonismo');
   // (vista 282) la luz cálida de noche: de 22:00 a 7:00, los blancos un punto más cálidos (sus fichas, en vista-c.css); con
-  // alto contraste, no. (283) La luz de las sombras, según la hora (--luz-x, de −1 a 1)
-  const ahora = new Date();
-  r.toggleAttribute('data-calida', a.calida === true && !alto && horaCalida(horaDecimal(ahora)));
-  r.style.setProperty('--luz-x', String(luzX(horaDecimal(ahora), hoyISO())));
+  // alto contraste, no
+  r.toggleAttribute('data-calida', a.calida === true && !alto && horaCalida(horaDecimal(new Date())));
   // (v0.209) el modo ligero (las reglas, al final de belleza.css)
   if (conLigero(a)) r.setAttribute('data-ligero', ''); else r.removeAttribute('data-ligero');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)

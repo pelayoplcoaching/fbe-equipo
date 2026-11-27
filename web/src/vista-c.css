@@ -23,14 +23,6 @@
 }
 :root[data-calida][data-theme="dark"] { --tinta: color-mix(in oklab, var(--neutro-100) 88%, var(--ambar-200)); }
 
-/* --- 283. Las sombras siguen a la luz de la hora (--luz-x, de -1 a 1, lo pone ajustes.js): por la manana caen a la
-   derecha y por la tarde a la izquierda, como el sol del cielo de Hoy; de noche, rectas. Son las de diseno.css (bloque
-   31) con su desplazamiento; en oscuro siguen las suyas (alli la profundidad la da el filo de luz) --- */
-:root {
-  --sombra-tarjeta: 0 0 0 1px var(--borde), calc(var(--luz-x, 0) * 1px) 1px 2px color-mix(in srgb, var(--marca-900) 5%, transparent), calc(var(--luz-x, 0) * 4px) 8px 18px -12px color-mix(in srgb, var(--marca-900) 17%, transparent);
-  --sombra-flotante: calc(var(--luz-x, 0) * 2px) 3px 8px -3px color-mix(in srgb, var(--marca-900) 12%, transparent), calc(var(--luz-x, 0) * 6px) 16px 34px -14px color-mix(in srgb, var(--marca-900) 34%, transparent);
-}
-
 /* --- 286. El cristal, con reflejo: el filo de luz de la barra de abajo (y el de su pastilla) corre con lo que pasa por
    debajo. Ligado al desplazamiento de la pagina (sin el, quieto); fuera con reducir movimiento o transparencia --- */
 @media (prefers-reduced-motion: no-preference) and (prefers-reduced-transparency: no-preference) and (prefers-contrast: no-preference) {
@@ -52,14 +44,13 @@ html[data-ligero] :is(.tabs-flota.tabs-flota, .tabs-flota .tabs-pildora)::after 
 }
 :root[data-theme="dark"] :is(.receta-foto:not(.vacia), .coc-foto) { filter: brightness(.88) saturate(.94); outline: var(--filo-fino) solid var(--borde); outline-offset: calc(var(--filo-fino) * -1); }
 
-/* --- 288. Los videos sin miniatura llevan el arte de su tema (en lugar del hueco gris) --- */
-.vtc-arte:not(#n) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.tarjeta-video-img:has(> .vtc-arte) .yt-play { z-index: var(--capa-pegado); }
+/* --- 288. Los videos sin miniatura llevan el arte de su tema (en lugar del hueco gris): es una imagen como la miniatura,
+   asi que la coloca la misma regla (youtube.css, .tarjeta-video-img img) --- */
 
 /* --- 289. Los dibujos de linea que quedan (vacios sin imagen nueva), con el tono de las ilustraciones: sobre la noche
    de la marca, como las escenas, y con el trazo claro --- */
 .vacio.con-ilustracion:not(.con-escena) > svg.ilustracion {
-  box-sizing: border-box; width: 112px; height: 112px; padding: var(--esp-14); border-radius: var(--r-16);
+  box-sizing: border-box; width: 112px; height: 112px; padding: var(--esp-8); border-radius: var(--r-16);
   background: radial-gradient(120% 95% at 28% 18%, color-mix(in srgb, var(--morado) 46%, var(--hero)), var(--hero) 72%);
   box-shadow: var(--sombra-tarjeta);
 }

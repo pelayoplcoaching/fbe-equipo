@@ -554,8 +554,12 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   // (diseño, tanda 47) se vuelve del resumen de la sesión recién terminada («Volver a hoy»): la tarjeta lo celebra una vez
   const recienHecha = useRef(null);
   // (vista 285) con el móvil inclinado (si se puede: inclinacion.js), el cielo y la escena se mueven distinto
-  const heroRef = useRef(null);
-  useEffect(() => seguirInclinacion(heroRef.current, (el, x, y) => { el.style.setProperty('--incl-x', x.toFixed(3)); el.style.setProperty('--incl-y', y.toFixed(3)); }), []);
+  // (con una referencia que avisa: la tarjeta no siempre está en el primer pintado)
+  const quitarIncl = useRef(null);
+  const heroRef = useRef((el) => {
+    quitarIncl.current?.();
+    quitarIncl.current = el ? seguirInclinacion(el, (h, x, y) => { h.style.setProperty('--incl-x', x.toFixed(3)); h.style.setProperty('--incl-y', y.toFixed(3)); }) : null;
+  }).current;
   if (recienHecha.current === null) { try { recienHecha.current = sessionStorage.getItem('fbe-recien-hecha') === '1'; sessionStorage.removeItem('fbe-recien-hecha'); } catch { recienHecha.current = false; } }
   // (con objetivo de días por semana, se espera a la constancia: la clave lleva el lunes de la semana natural)
   // (v0.200) el estreno del bloque (su primera semana, el primer día y el siguiente) y la fiesta de fin de año
