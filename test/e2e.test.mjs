@@ -6778,6 +6778,15 @@ if (parte('v0.272: lo que viaja, lo que se asoma y los dos dedos')) try {
   fallos++;
   console.log('  ✗ los viajes de la v0.272:', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.273: tacto, tercera vuelta: el buscador único de «Más», el índice lateral, volver donde estabas con la fila marcada
+// y lo nuevo de la tanda con «reducir movimiento» (test/e2e-tacto-4.mjs)
+if (parte('v0.273: el buscador único, el índice lateral y lo quieto')) try {
+  const { probarTacto4 } = await import('./e2e-tacto-4.mjs');
+  await probarTacto4({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ el tacto de la v0.273:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

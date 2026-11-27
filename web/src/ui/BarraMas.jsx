@@ -30,11 +30,14 @@ export function BotonMas({ activa = false, abierta = false, n = 0, punto = false
 }
 
 // pestanas: las que van en «Más»; detalles: { id: una línea que dice qué hay }; valores: { id: lo que va a la derecha }
-export function HojaMas({ pestanas, actual, detalles = {}, valores = {}, alElegir, alCerrar }) {
+// (tacto 243) alBuscar: con él, arriba, «Buscar en la app» (el buscador único)
+export function HojaMas({ pestanas, actual, detalles = {}, valores = {}, alElegir, alCerrar, alBuscar = null }) {
   return (
     <Hoja titulo="Más" alCerrar={alCerrar} clase="hoja-mas">
+
       <div class="panel grupo-ios-hoja">
         <ul class="lista">
+          {alBuscar && <FilaIos icono="buscar" titulo="Buscar en la app" detalle="Sesiones, ejercicios, recetas, guías y ajustes" alTocar={alBuscar} clase="mas-fila mas-buscar" />}
           {pestanas.map(([id, texto, icono]) => (
             <FilaIos key={id} icono={icono} titulo={texto} detalle={detalles[id]} valor={valores[id] ?? null} alTocar={() => alElegir(id)} clase={`mas-fila mas-${id} ${id === actual ? 'mas-actual' : ''}`} />
           ))}

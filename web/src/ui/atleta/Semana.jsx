@@ -6,6 +6,7 @@ import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pi
 import { DiaSesion } from './Hoy.jsx';
 import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { escalaArrastrable } from '../arrastrar-escala.js';
+import { IndiceLateral } from '../IndiceLateral.jsx';
 import { PlanSemana, TiraSemana } from './Plan.jsx';
 import { HojaBloque } from './TuBloque.jsx';
 import { TextoConEnlaces } from '../Enlaces.jsx';
@@ -200,7 +201,7 @@ function Entrenamientos({ abrirSesion }) {
       <div class="seccion-cab"><h2>Tus entrenamientos</h2><span class="peq secundario num">{todos.length} en total</span></div>
       {meses.map((m) => (
         <div class="pila-s" key={m.clave}>
-          <span class="mes-etq">{m.clave.charAt(0).toUpperCase() + m.clave.slice(1)}</span>
+          <span class="mes-etq" id={`ent-${m.clave.replace(/ /g, '-')}`}>{m.clave.charAt(0).toUpperCase() + m.clave.slice(1)}</span>
           <div class="panel">
             <ul class="lista">
               {m.items.map((e) => (
@@ -227,6 +228,8 @@ function Entrenamientos({ abrirSesion }) {
         </div>
       ))}
       {todos.length > cuantos && <button class="btn" onClick={() => setCuantos(cuantos + 12)}>Ver más ({todos.length - cuantos})</button>}
+      {/* (tacto 242) con tres meses o más a la vista, el índice lateral por meses */}
+      {meses.length >= 3 && <IndiceLateral items={meses.map((m) => ({ id: `ent-${m.clave.replace(/ /g, '-')}`, texto: m.clave.charAt(0).toUpperCase() + m.clave.slice(1) }))} />}
     </section>
   );
 }

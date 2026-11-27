@@ -43,6 +43,7 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     p.on('pageerror', (e) => errores.push(`error de página: ${String(e.message).slice(0, 200)}`));
+    await p.addInitScript(() => { try { localStorage.setItem('fbe-escena-200', '1'); } catch { /* */ } });
     const cdp = await ctx.newCDPSession(p);
     const dedos = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], id) => ({ x, y, id })) });
     const dedo = (type, x, y) => dedos(type, type === 'touchEnd' ? [] : [[x, y]]);
@@ -64,6 +65,8 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     const viajo = async () => !(await conVT()) || await hasta(() => p.evaluate(() => window.__vt > 0), 2500);
     const tocar = async (loc) => { const c = await centro(loc); await mirarViaje(); await p.touchscreen.tap(c.x, c.y); };
     const tab = (nombre) => p.locator('nav.tabs').getByRole('button', { name: nombre }).first();
+    // (con la máquina cargada, el primer toque puede caer mientras algo se cierra encima: se cierra y se repite)
+    const irATab = async (nombre) => { for (let k = 0; k < 3; k++) { if (await tab(nombre).click({ timeout: 4000 }).then(() => true).catch(() => false)) return; await cerrarDialogos(); await p.waitForTimeout(600); } await tab(nombre).click(); };
 
     // ============================================================ Ana (FBE Equipo)
     await entrar('/?demo', /Ana/);
@@ -90,7 +93,7 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     } else check(true, '(215) hoy no hay tarjeta de historia en Hoy (nada que abrir)');
 
     // ---- Semana
-    await tab(/^Semana/).click();
+    await irATab(/^Semana/);
     await p.locator('.semanas-tabs').waitFor();
     await p.waitForTimeout(700);
     const titulo = () => p.locator('#semana-titulo').textContent().then((t) => t.trim());
@@ -190,7 +193,7 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     } else check(true, '(221 y 222) no queda ninguna sesión por hacer esta semana');
 
     // ---- Progreso: las gráficas con los dedos (233-235) y a pantalla completa (214)
-    await tab(/^Progreso/).click();
+    await irATab(/^Progreso/);
     await p.waitForTimeout(1200);
     await subProgreso(p, 'fuerza');
     const tactil = p.locator('.grafica-tactil:visible').first();
@@ -321,7 +324,7 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
     } else check(true, '(217) la videoteca de la demo no tiene tarjetas de vídeo');
 
     // ---- 220: actualizar sin pantallazo
-    await tab(/^Semana/).click();
+    await irATab(/^Semana/);
     await p.locator('.semanas-tabs').waitFor();
     await p.waitForTimeout(700);
     await p.evaluate(() => window.scrollTo(0, 420));
@@ -336,7 +339,7 @@ export async function probarTacto3({ navegador, check, base = 'http://localhost:
 
     // ============================================================ Tomás (FBE Esencial): la receta viaja y se asoma
     await entrar('/?demo=esencial', /Tomás/);
-    await tab(/^Recetas/).click();
+    await irATab(/^Recetas/);
     const recetas = p.locator('[data-receta]');
     await recetas.nth(1).waitFor();
     await p.waitForTimeout(900);

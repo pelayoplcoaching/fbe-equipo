@@ -151,3 +151,20 @@
 .gdd-tramo:not(#n):not(#n) { position: absolute; top: 0; bottom: 0; border-inline: var(--filo-fuerte) solid var(--morado); background: var(--acento-a12); pointer-events: none; }
 .gdd-cambio:not(#n):not(#n) { position: absolute; top: var(--esp-2); transform: translateX(-50%); padding: var(--esp-4) var(--esp-10); border-radius: var(--r-10); background: var(--flota); color: var(--sobre-flota); font-size: var(--letra-13); font-weight: 700; white-space: nowrap; pointer-events: none; }
 .gdd-dos:not(#n):not(#n) > :not(svg, .gdd-tramo, .gdd-cambio) { visibility: hidden; }
+
+/* --- 243. Un solo buscador, en "Mas": sus filas --- */
+.bus-fila:not(#n):not(#n) { display: flex; align-items: center; gap: var(--esp-12); width: 100%; min-height: 56px; padding: var(--esp-8) var(--esp-14); border: 0; background: none; color: var(--tinta); font: inherit; text-align: left; }
+.bus-fila:not(#n):not(#n):active { background: var(--hoja-2); }
+.bus-fila:not(#n):not(#n):focus-visible { outline: var(--filo-fuerte) solid var(--morado); outline-offset: -2px; }
+.bus-fila:not(#n):not(#n) > svg { flex: none; width: var(--ico-20); height: var(--ico-20); color: var(--tinta-3); }
+.bus-ico:not(#n):not(#n) { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-10); background: var(--morado-suave); color: var(--morado); }
+.bus-ico:not(#n):not(#n) svg { width: var(--ico-20); height: var(--ico-20); }
+.bus-texto:not(#n):not(#n) { flex: 1; min-width: 0; }
+.bus-titulo:not(#n):not(#n) { font-weight: 600; overflow-wrap: anywhere; }
+
+/* --- 242. Indice lateral de las listas largas: una tira fina en el borde derecho --- */
+.ind-raiz:not(#n):not(#n) { position: fixed; z-index: calc(var(--capa-pegado) + 1); right: max(2px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); display: grid; padding: var(--esp-6) var(--esp-4); border-radius: var(--r-14); background: color-mix(in srgb, var(--hoja) 82%, transparent); touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.ind-letra:not(#n):not(#n) { display: grid; place-items: center; min-width: 28px; min-height: 24px; font-size: var(--letra-11); font-weight: 700; color: var(--tinta-2); }
+.ind-activa:not(#n):not(#n) { color: var(--morado); }
+.ind-globo:not(#n):not(#n) { position: absolute; right: calc(100% + var(--esp-10)); transform: translateY(-50%); padding: var(--esp-8) var(--esp-14); border-radius: var(--r-14); background: var(--flota); color: var(--sobre-flota); font-size: var(--letra-16); font-weight: 700; white-space: nowrap; pointer-events: none; }
+@media (prefers-reduced-transparency: reduce) { .ind-raiz:not(#n):not(#n) { background: var(--hoja); } }

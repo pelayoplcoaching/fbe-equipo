@@ -6,7 +6,7 @@ import { conTransicion } from '../transiciones.js';
 import { usePosicion, subirArriba } from '../posiciones.js';
 import { useAtras, ponerRuta } from '../atras.js';
 import { Hoy, precargarHoy } from './Hoy.jsx';
-import { hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
+import { recetarioEquipo, hayRecetarioEquipo } from '../../datos/recetario-equipo.js';
 import { hayGuias } from '../../datos/guias.js';
 import { leerVistoEquipo } from '../comunidad-local.js';
 import { perezoso, precargarEnReposo } from '../perezoso.jsx';
@@ -38,6 +38,8 @@ import { useMarcaPagina } from '../marca-pagina.js';
 
 // (pulido 2.10) Equipo (el muro, los retos, el ranking: lo más grande después del chat) y el check-in de la semana se
 // cargan al abrirlos, y por detrás en cuanto la app se queda quieta: no hacen falta para arrancar
+// (tacto 243) el buscador único de «Más»: se pide al tocarlo
+const BuscadorTodo = perezoso(() => import('./BuscadorTodo.jsx'), 'BuscadorTodo', { mientras: null });
 const Equipo = perezoso(() => import('../Comunidad.jsx'), 'Equipo');
 const Checkin = perezoso(() => import('./Checkin.jsx'), 'Checkin');
 // (v0.207, rendimiento) Al abrir la app solo se carga Hoy: la sesión y el resto de pantallas van en su propio trozo, que
@@ -52,6 +54,10 @@ const Comidas = perezoso(() => import('./Comidas.jsx'), 'Comidas');
 const Recetas = perezoso(() => import('./Comidas.jsx'), 'Recetas');
 const Aprende = perezoso(() => import('../Guias.jsx'), 'Aprende');
 const VideoEnlazado = perezoso(() => import('../tecnica/MiTecnica.jsx'), 'VideoEnlazado', { mientras: null });
+// (tacto 245) Precarga al bajar el dedo: la pantalla que se va a abrir empieza a pedirse al tocar, no al soltar (en reposo
+// ya se piden todas por detrás; esto cubre los primeros segundos y el móvil lento)
+const PANTALLA = { semana: Semana, progreso: Progreso, mensajes: Mensajes, perfil: Perfil, comidas: Comidas, recetas: Recetas, aprende: Aprende, equipo: Equipo, checkin: Checkin };
+const alBajarElDedo = (e) => { if (e.target.closest?.('[data-atajo="empezar"], [data-asoma^="sesion:"]')) Sesion.precargar(); };
 
 // Perfil solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de arriba (como en cualquier app).
 // Comidas (v0.26), a quien le llevas la nutrición; Semana, a quien le llevas el entrenamiento. Equipo (v0.43), solo con
@@ -255,7 +261,12 @@ export function AtletaApp() {
     if (arte) compartidos.push({ nombre: 'vt-arte-sesion', desde: arte, hasta: '.portada-sesion .portada-arte' });
     conTransicion(() => { setSesionId(id); window.scrollTo(0, 0); }, 'abrir', compartidos.length ? compartidos : null);
   };
-  const cerrarSesion = () => { conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true); };
+  // (tacto 244) al volver, además de quedarse donde estaba (ui/posiciones.js), la fila de esa sesión se marca un instante
+  const cerrarSesion = () => {
+    const id = sesionId;
+    conTransicion(() => setSesionId(null), 'cerrar'); programa.recargar(true); noLeidos.recargar(true);
+    import('./barra-gestos.jsx').then((m) => m.marcarVuelta(`[data-asoma="sesion:${id}"]`)).catch(() => { /* sin marca */ });
+  };
   const irAPestana = (id) => {
     if (id === tab) { subirArriba(); return; }   // tocar la pestaña en la que ya se está: arriba
     const orden = TABS.map(([t]) => t);
@@ -293,16 +304,19 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   const estrecha = useEstrecha();
   const reparto = repartirPestanas(TABS, PREFERIDAS_ATLETA, { estrecha });
   const [verMas, setVerMas] = useState(false);
+  // (tacto 243) el buscador único, desde «Más»
+  const [buscando, setBuscando] = useState(false);
   useEffect(() => { if (!estrecha) setVerMas(false); }, [estrecha]);   // al ensanchar la pantalla, «Más» deja de existir
   const enMas = (id) => reparto.mas.some(([t]) => t === id);
   const nuevasEnMas = enMas('equipo') && tab !== 'equipo' ? nuevasEquipo : 0;
   const barra = usePildora(sesionId ? null : `${tab}:${reparto.barra.length}:${reparto.mas.length}`);
   // (tacto 224 y 225) la barra, con el dedo: deslizar por ella cambia de pestaña y mantener una pulsada abre sus atajos
   // (su código llega con la app ya abierta)
-  const { aviso, api: apiG, atleta: atletaG } = useApp();
+  const { aviso, api: apiG, atleta: atletaG, backend: backendG } = useApp();
   const paraBarra = useRef(null);
   // (tacto 221-223: con ella llega «asomarse», que pide la sesión o el ejercicio que se mantiene pulsado)
   paraBarra.current = { tab, irAPestana, tabs: TABS.map(([t]) => t), mas: reparto.mas, salud, aviso, api: apiG, atleta: atletaG };
+  useEffect(() => { document.addEventListener('pointerdown', alBajarElDedo, { passive: true }); return () => document.removeEventListener('pointerdown', alBajarElDedo); }, []);
   useEffect(() => {
     let quitar = null, fuera = false;
     import('./barra-gestos.jsx').then((m) => { if (!fuera) quitar = m.instalarBarra(() => paraBarra.current); }).catch(() => { /* sin gestos: tocar sigue valiendo */ });
@@ -348,7 +362,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
             <div ref={barra} class={`tabs-in ${reparto.barra.filter(([t]) => t !== 'perfil').length >= 7 ? 'tabs-muchas' : ''}`}>
               <span class="tabs-pildora" aria-hidden="true" />
               {reparto.barra.map(([id, texto, icono]) => (
-                <button key={id} data-tab={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => irAPestana(id)}>
+                <button key={id} data-tab={id} class={`tab ${id === 'perfil' ? 'tab-perfil' : ''}`} aria-current={tab === id ? 'page' : undefined} onPointerDown={() => PANTALLA[id]?.precargar()} onClick={() => irAPestana(id)}>
                   <span class={`tab-ico ${(id === 'checkin' && checkinPendiente) || (id === 'hoy' && respuestasSueltas) ? 'punto' : ''}`}>
                     <Icono n={icono} class={`ico-${icono}`} />{id === 'mensajes' && <Insignia n={mensajesSinLeer} etiqueta={`${mensajesSinLeer} mensajes sin leer`} />}
                     {id === 'equipo' && tab !== 'equipo' && <Insignia n={nuevasEquipo} etiqueta={`${nuevasEquipo} ${nuevasEquipo === 1 ? 'publicación nueva' : 'publicaciones nuevas'} en el equipo`} />}
@@ -369,12 +383,14 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
           </nav>
           {verMas && reparto.mas.length > 0 && (
             <HojaMas pestanas={reparto.mas} actual={tab} alCerrar={() => setVerMas(false)} alElegir={(id) => { setVerMas(false); irAPestana(id); }}
+              alBuscar={() => { setVerMas(false); setBuscando(true); }}
               detalles={{ comidas: 'Tu menú de la semana y tus recetas', recetas: 'Recetas para todos, con sus cantidades y sus pasos', aprende: 'Guías por grupo muscular y la técnica de cada ejercicio', checkin: 'Tu repaso de la semana, en un minuto', equipo: 'El muro de los atletas de FBE', perfil: 'Tu cuenta y los ajustes de este móvil' }}
               valores={{
                 checkin: checkinPendiente ? <span class="chip aviso">Pendiente</span> : null,
                 equipo: nuevasEnMas ? <span class="chip morado num">{nuevasEnMas > 99 ? '99+' : nuevasEnMas} {nuevasEnMas === 1 ? 'nueva' : 'nuevas'}</span> : null,
               }} />
           )}
+          {buscando && <BuscadorTodo secciones={TABS} irA={irAPestana} abrirSesion={compartido.abrirSesion} alCerrar={() => setBuscando(false)} leerRecetas={() => recetarioEquipo({ backend: backendG }, atletaId)} />}
         </>
       )}
     </div>

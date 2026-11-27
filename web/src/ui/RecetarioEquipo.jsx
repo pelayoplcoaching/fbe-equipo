@@ -3,7 +3,9 @@
 // lleva la nutrición puede además apuntarlas en su menú (alAnadir) y, si su plan tiene kcal, las ve ajustadas a él
 // (ajuste: receta → { factor, toma, kcalToma } | null). El coach lo ve igual, sin guardar ni apuntar.
 import { Imagen } from './Imagen.jsx';
-import { useState, useMemo, useRef } from 'preact/hooks';
+import { useEffect, useState, useMemo, useRef } from 'preact/hooks';
+import { tomarBusqueda, EVENTO_BUSCA } from './busqueda-pedida.js';
+import { IndiceLateral } from './IndiceLateral.jsx';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio, Paso, Siluetas, ErrorCaja, usePreferencia, usePorTramos } from './comunes.jsx';
 import { FotoReceta } from './ComidasComun.jsx';
 import { Ingredientes, PasoConTiempos, PastillaCocina, ModoCocina, FotoGuardable, estrellaSalta } from './Cocina.jsx';
@@ -62,7 +64,9 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
   const datos = useRecetarioEquipo(atletaId);
   // Las miniaturas, aparte y solo aquí (al abrir el recetario); mientras llegan, cada receta sale con su dibujo
   const fotos = useCarga(() => fotosRecetarioEquipo({ backend }), [], { recuerdo: `fotos-recetario-equipo:${api.uid()}` });
-  const [texto, setTexto] = useState('');
+  // (tacto 243) si llega del buscador de «Más», con ese texto ya puesto
+  const [texto, setTexto] = useState(() => tomarBusqueda('recetas'));
+  useEffect(() => { const al = (e) => { if (e.detail === 'recetas') setTexto(tomarBusqueda('recetas')); }; window.addEventListener(EVENTO_BUSCA, al); return () => window.removeEventListener(EVENTO_BUSCA, al); }, []);
   const [filtro, setFiltro] = usePreferencia('fbe-recetario-equipo-filtro', 'todas');
   const [capitulo, setCapitulo] = useState(null);
   const [abierta, setAbierta] = useState(null);
@@ -115,6 +119,8 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
           </div>
         </section>
       ))}
+      {/* (tacto 242) con la lista entera a la vista, el índice lateral de sus capítulos */}
+      {!esCoach && !abierta && grupos.length >= 3 && <IndiceLateral items={grupos.map((c) => ({ id: `cap-${c.capitulo}`, texto: c.capitulo }))} />}
       {abierta && <HojaRecetaEquipo r={abierta} favorita={favoritas.has(abierta.id)} esCoach={esCoach} alCerrar={cerrar} ajuste={ajuste ? ajuste(abierta) : null}
         alMarcar={atletaId && !esCoach ? (si) => marcar(abierta, si) : null}
         alAnadir={alAnadir ? (raciones, factor) => { const r = abierta; setAbierta(null); alAnadir(r, raciones, factor); } : null} />}

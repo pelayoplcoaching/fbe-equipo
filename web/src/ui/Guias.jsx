@@ -4,6 +4,8 @@
 import { audioParaMicro } from './sonido.js';
 import { Fragment } from 'preact';
 import { useState, useMemo, useRef, useEffect } from 'preact/hooks';
+import { tomarBusqueda, EVENTO_BUSCA } from './busqueda-pedida.js';
+import { IndiceLateral } from './IndiceLateral.jsx';
 import { VideoYoutube } from './YouTube.jsx';
 import { videosDeTexto } from '../logica/youtube.js';
 import { VideotecaAprende } from './Videos.jsx';
@@ -309,7 +311,9 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
   const paraEl = (g) => !(suyo && GUIAS_CON_COACH.includes(g?.clave));
   const guias = useCarga(() => listaGuias({ backend }), [], { recuerdo: `guias:${api.uid()}` });
   const fichas = useCarga(() => todasLasFichas({ backend }, { conFicha: true }).catch(() => []), [], { recuerdo: `fichas-guias:${api.uid()}` });
-  const [q, setQ] = useState('');
+  // (tacto 243) si llega del buscador de «Más», con ese texto ya puesto
+  const [q, setQ] = useState(() => tomarBusqueda('aprende'));
+  useEffect(() => { const al = (e) => { if (e.detail === 'aprende') setQ(tomarBusqueda('aprende')); }; window.addEventListener(EVENTO_BUSCA, al); return () => window.removeEventListener(EVENTO_BUSCA, al); }, []);
   const buscando = q.trim().length >= 2;
   // el texto de las guías solo se pide al empezar a buscar
   const textos = useCarga(() => (buscando ? guiasConTexto({ backend }).catch(() => []) : Promise.resolve(null)), [buscando], { recuerdo: buscando ? `guias-texto:${api.uid()}` : null });
@@ -347,11 +351,13 @@ export function ListaGuias({ alAbrir, esCoach = false }) {
       ) : estantes.length > 1 ? (
         estantes.map((e) => (
           <section class="pila-s estante" key={e.id} data-estante={e.id}>
-            <div class="estante-cab"><h2>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{suyo && e.id === 'empieza' ? 'Lo básico para arrancar' : e.detalle}</span>}</div>
+            <div class="estante-cab"><h2 id={`est-${e.id}`}>{e.nombre}</h2>{e.detalle && <span class="mini terciario">{suyo && e.id === 'empieza' ? 'Lo básico para arrancar' : e.detalle}</span>}</div>
             <div class="rejilla-guias">{e.guias.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} icono={e.icono} />)}</div>
           </section>
         ))
       ) : <div class="rejilla-guias">{gs.map((g) => <TarjetaGuia key={g.id} g={g} alAbrir={alAbrir} esCoach={esCoach} />)}</div>}
+      {/* (tacto 242) el índice lateral de las estanterías */}
+      {!esCoach && !buscando && estantes.length >= 3 && <IndiceLateral items={estantes.map((e) => ({ id: `est-${e.id}`, texto: e.nombre }))} />}
       {ficha && <HojaFichaGuia ficha={ficha} alCerrar={() => setFicha(null)} />}
     </div>
   );

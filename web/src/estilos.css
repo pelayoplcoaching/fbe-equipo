@@ -1221,7 +1221,7 @@ kbd { font: 600 0.6875rem/1 var(--f); font-variant-numeric: tabular-nums; paddin
 @media (prefers-reduced-motion: reduce) { .metro-pantalla { transition: none; } }
 
 /* ---------- v0.9: siluetas de carga ---------- */
-.siluetas { animation: sil-aparece .25s ease-out .12s both; }
+.siluetas { animation: sil-aparece .25s ease-out .2s both; }
 .sil-cuerpo { display: grid; gap: var(--esp-14); }
 .sil-marca { display: flex; align-items: center; gap: var(--esp-10); margin-bottom: var(--esp-14); color: var(--tinta-3); font-size: var(--letra-14); }
 .sil-filas .sil-cuerpo { gap: 0; }

@@ -3,7 +3,7 @@
 // que cambia de forma (207-209) y las historias con las manos (226-228). Lo que se puede comprobar sin pantalla: las
 // cuentas de cada cosa, que cada pieza está puesta en su sitio y que la hoja de estilos sigue las reglas del sistema.
 //   node test/tacto.test.mjs
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { REGLA_ANCHO, REGLA_MEDIA, reglaMayor, reglaTopes, reglaIndice, reglaValor, reglaVentana, reglaAlBorde, zonaReps } from '../web/src/logica/regla.js';
 import { LUZ_SEG, luzBorde, serieCorta, HECHA_MS, formaPastilla, cartelDe, esTumbado } from '../web/src/logica/descanso-vista.js';
 import { PAUSA_MS, decidirGesto, cierraAlBajar, destinoLado, gomaLado } from '../web/src/logica/historia-gesto.js';
@@ -13,6 +13,8 @@ import { GRADOS_PX, caraDe, giroDestino, duracionGiro, luzGiro, velocidadGiro } 
 import { ASOMA_MS, ASOMA_QUIETO, ASOMA_ABRE, asomaSesion, asomaEjercicio, asomaRotulo, sitioAsoma } from '../web/src/logica/asomar.js';
 import { PELLIZCO, PELLIZCO_MS, partesPunto, puntoEn, cambioTramo, rangoAlPellizcar } from '../web/src/logica/grafica-dedos.js';
 import { NOMBRES_COMPARTIDOS, paresValidos } from '../web/src/logica/vistas.js';
+import { llano, puntosDe, buscarTodo, ejerciciosDeHistorial, AJUSTES_BUSCABLES } from '../web/src/logica/buscar-todo.js';
+import { conIndice, indiceEn, cortoDe } from '../web/src/logica/indice-lateral.js';
 
 let ok = 0, fallos = 0;
 const check = (c, m) => { if (c) { ok++; console.log('  ✓', m); } else { fallos++; console.log('  ✗', m); } };
@@ -278,6 +280,46 @@ check(/useEffect\(\(\) => \{ if \(caja\.current\) caja\.current\.__graf = \{ W, 
   && /const quitarGraficas = instalarGraficaDedos\(\);/.test(barra) && /if \(e\.pointerType === 'mouse'\) return;/.test(gdd) && /querySelector\('\[role="group"\]\[aria-label\^="Rango"\]'\)/.test(gdd) && /bs\[sig\]\.click\(\);/.test(gdd),
   'cada gráfica deja lo suyo en su caja y los gestos llegan aparte; el rango se cambia tocando su botón de siempre (que sigue ahí)');
 
+console.log('\nTercera vuelta (v0.273). Un solo buscador (243)');
+check(llano('  Sentadilla BÚLGARA ') === 'sentadilla bulgara' && puntosDe('Press banca', '', 'press') === 3 && puntosDe('Press banca', '', 'banca') === 2 && puntosDe('Superpress', '', 'press') === 1
+  && puntosDe('Press banca', '', 'remo') === 0 && puntosDe('Modo zurdo', 'mano izquierda', 'izquierda') === 1 && puntosDe('Press banca', '', 'press ban') === 3 && puntosDe('Press banca', '', '  ') === 0
+  && puntosDe('«Tu peso» (Hoy)', '', 'tu') === 2, 'compara sin tildes ni mayúsculas; primero lo que empieza por lo buscado, luego la palabra que empieza, luego lo que lo contiene (todas las palabras tienen que estar)');
+const fuentes = { secciones: [['progreso', 'Progreso', 'progreso'], ['perfil', 'Perfil', 'perfil']], sesiones: [{ id: 's1', nombre: 'Torso A', fecha: '2026-11-23' }, { id: 's2', nombre: 'Pierna A', fecha: '2026-11-25' }],
+  ejercicios: [{ id: 'e1', nombre: 'Press banca', veces: 12 }, { id: 'e2', nombre: 'Press militar', veces: 1 }, { id: 'e3', nombre: 'Remo con barra', veces: 9 }], recetas: [{ id: 'r1', nombre: 'Pollo al curry' }], guias: [{ clave: 'pecho', titulo: 'Pecho', subtitulo: 'Press y aperturas', publicada: true }] };
+const bPress = buscarTodo('press', fuentes, { fecha: (f) => `el ${f}` });
+check(bPress.map((g) => `${g.grupo}:${g.items.map((i) => i.titulo).join('/')}`).join('|') === 'Ejercicios:Press banca/Press militar|Guías:Pecho' && bPress[0].items[0].detalle === '12 series apuntadas' && bPress[0].items[1].detalle === '1 serie apuntada'
+  && bPress[0].items[0].dato.id === 'e1' && buscarTodo('p', fuentes).length === 0 && buscarTodo('zzz', fuentes).length === 0, '«press»: sus ejercicios (con cuánto los ha hecho) y la guía que lo nombra; con una letra, nada');
+const bTorso = buscarTodo('torso', fuentes, { fecha: (f) => `el ${f}` }), bZurdo = buscarTodo('zurdo', fuentes), bPro = buscarTodo('pro', fuentes), bIzq = buscarTodo('mano izquierda', fuentes);
+check(bTorso[0].grupo === 'Tus sesiones' && bTorso[0].items[0].detalle === 'el 2026-11-23' && bTorso[0].items[0].tipo === 'sesion' && bZurdo.length === 1 && bZurdo[0].items[0].ancla === 'aj-zurdo' && bPro[0].grupo === 'Secciones' && bPro[0].items[0].id === 'progreso'
+  && bIzq[0]?.items[0]?.titulo === 'Modo zurdo' && buscarTodo('pollo', fuentes)[0].items[0].tipo === 'receta', 'una sesión con su día, una sección, una receta y un ajuste (también por lo que hace: «mano izquierda» → Modo zurdo)');
+const muchos = { ejercicios: Array.from({ length: 9 }, (_, k) => ({ id: `x${k}`, nombre: `Curl ${k}`, veces: 9 - k })) };
+check(buscarTodo('curl', muchos)[0].items.length === 5 && buscarTodo('curl', muchos)[0].total === 9 && buscarTodo('curl', muchos, { tope: 3 })[0].items.length === 3, 'como mucho cinco por grupo, y dice cuántos hay');
+check(JSON.stringify(ejerciciosDeHistorial([{ ejercicio_id: 'a', ejercicio: 'Remo', grupos: ['dorsal'] }, { ejercicio_id: 'b', ejercicio: 'Press' }, { ejercicio_id: 'b', ejercicio: 'Press' }, { ejercicio: 'sin id' }]).map((e) => [e.id, e.veces])) === '[["b",2],["a",1]]'
+  && ejerciciosDeHistorial(null).length === 0, 'tus ejercicios salen de tus series, del más hecho al menos');
+const ajustesJsx = src('ui/Ajustes.jsx');
+check(AJUSTES_BUSCABLES.every(([texto, id]) => (id ? ajustesJsx.includes(`id="${id}"`) : ajustesJsx.includes(`titulo="${texto.split(' (')[0]}"`))) && AJUSTES_BUSCABLES.length >= 12,
+  `los ${AJUSTES_BUSCABLES.length} ajustes que se pueden buscar existen en Ajustes (por su control o por el título de su fila)`);
+const buscador = src('ui/atleta/BuscadorTodo.jsx'), barraMas = src('ui/BarraMas.jsx'), pedida = src('ui/busqueda-pedida.js');
+check(/\{alBuscar && <FilaIos icono="buscar" titulo="Buscar en la app" detalle="Sesiones, ejercicios, recetas, guías y ajustes" alTocar=\{alBuscar\}/.test(barraMas) && /const BuscadorTodo = perezoso\(\(\) => import\('\.\/BuscadorTodo\.jsx'\), 'BuscadorTodo', \{ mientras: null \}\);/.test(atletaApp)
+  && /leerRecetas=\{\(\) => recetarioEquipo\(\{ backend: backendG \}, atletaId\)\}/.test(atletaApp) && !/recetario-equipo/.test(buscador), 'está en «Más», arriba, y su código llega al tocarlo (las recetas se las da la app: importarlas ahí sacaría otro archivo al arranque)');
+check(/if \(it\.tipo === 'ejercicio'\) \{ setEjercicio\(it\.dato\); return; \}/.test(buscador) && /if \(it\.tipo === 'sesion'\) abrirSesion\(it\.id\);/.test(buscador) && /pedirBusqueda\('recetas', it\.titulo\); irA\('recetas'\);/.test(buscador) && /pedirBusqueda\('aprende', it\.titulo\); irA\('aprende'\);/.test(buscador)
+  && /location\.hash = '#ajustes';/.test(buscador) && /<p class="sr" role="status">/.test(buscador), 'cada cosa se abre en su sitio: la sesión, la ficha del ejercicio, la receta o la guía ya buscadas y el ajuste con su fila a la vista; el lector de pantalla oye cuántos resultados hay');
+check(/useState\(\(\) => tomarBusqueda\('aprende'\)\)/.test(src('ui/Guias.jsx')) && /useState\(\(\) => tomarBusqueda\('recetas'\)\)/.test(recetario) && /window\.dispatchEvent\(new CustomEvent\(EVENTO_BUSCA, \{ detail: donde \}\)\)/.test(pedida) && /delete pedidas\[donde\];/.test(pedida),
+  'Recetas y Aprende se abren con el texto ya puesto (una vez), también si ya estaban a la vista');
+
+console.log('\nÍndice lateral (242), volver donde estabas (244) y esperas (245-248)');
+check(conIndice(3, 2000, 844) && !conIndice(2, 5000, 844) && !conIndice(5, 1500, 844) && !conIndice(5, 5000, 0) && indiceEn(0, 100, 4) === 0 && indiceEn(26, 100, 4) === 1 && indiceEn(99, 100, 4) === 3 && indiceEn(-20, 100, 4) === 0 && indiceEn(500, 100, 4) === 3
+  && indiceEn(10, 0, 4) === 0 && cortoDe('Desayunos') === 'Des' && cortoDe('noviembre de 2026') === 'Nov' && cortoDe('') === '', 'el índice sale con tres capítulos o más y más de dos pantallas; el dedo elige el suyo sin salirse; se lee con tres letras');
+const indice = src('ui/IndiceLateral.jsx');
+check(/aria-hidden="true" data-sin-deslizar=""/.test(indice) && /scrollIntoView\(\{ block: 'start', behavior: 'instant' \}\)/.test(indice) && /if \(k === st\.k\) return;/.test(indice) && /vibrar\('toque'\);/.test(indice)
+  && /<IndiceLateral items=\{grupos\.map\(\(c\) => \(\{ id: `cap-\$\{c\.capitulo\}`, texto: c\.capitulo \}\)\)\} \/>/.test(recetario) && /<IndiceLateral items=\{estantes\.map\(\(e\) => \(\{ id: `est-\$\{e\.id\}`, texto: e\.nombre \}\)\)\} \/>/.test(src('ui/Guias.jsx'))
+  && /\{meses\.length >= 3 && <IndiceLateral items=/.test(src('ui/atleta/Semana.jsx')), 'una tira en el borde (de adorno para el lector de pantalla): un toque por capítulo y salta a su título; en Recetas, Aprende y «Tus entrenamientos»');
+check(/import\('\.\/barra-gestos\.jsx'\)\.then\(\(m\) => m\.marcarVuelta\(`\[data-asoma="sesion:\$\{id\}"\]`\)\)/.test(atletaApp) && /export function marcarVuelta\(selector\) \{/.test(barra) && /easing: sinMovimiento\(\) \? 'steps\(1, end\)' : 'ease-out'/.test(barra),
+  '(244) al volver de una sesión, su fila se marca un instante (el sitio ya se guardaba: ui/posiciones.js); con «reducir movimiento», sin fundido');
+check(/const PANTALLA = \{ semana: Semana, progreso: Progreso, mensajes: Mensajes, perfil: Perfil, comidas: Comidas, recetas: Recetas, aprende: Aprende, equipo: Equipo, checkin: Checkin \};/.test(atletaApp) && /onPointerDown=\{\(\) => PANTALLA\[id\]\?\.precargar\(\)\}/.test(atletaApp)
+  && /if \(e\.target\.closest\?\.\('\[data-atajo="empezar"\], \[data-asoma\^="sesion:"\]'\)\) Sesion\.precargar\(\);/.test(atletaApp), '(245) al bajar el dedo sobre una pestaña, «Empezar» o una sesión, su pantalla ya se está pidiendo');
+check(/\.siluetas \{ animation: sil-aparece \.25s ease-out \.2s both; \}/.test(src('estilos.css')), '(246) el esqueleto no sale si los datos llegan en menos de 0,2 s (y entra fundiéndose: no da un destello)');
+
 console.log('\nLa hoja de estilos (tacto-b.css)');
 const cssB = src('tacto-b.css'), sinComB = cssB.replace(/\/\*[\s\S]*?\*\//g, '');
 check(!/[^\x00-\x7F]/.test(cssB) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComB) && !/@keyframes/.test(sinComB), 'solo ASCII, los colores por su nombre y sin @keyframes (lo que se mueve una vez lo mueve el código)');
@@ -287,6 +329,11 @@ check(sueltas.length === 0, `todas sus reglas llevan :not(#n) (viajan con su tro
 check(/::view-transition-group\(vt-viaje\) \{ animation-duration: 380ms; animation-timing-function: cubic-bezier\(\.2, \.9, \.25, 1\); \}/.test(sinComB) && /::view-transition-old\(vt-viaje\), ::view-transition-new\(vt-viaje\) \{ animation-duration: 380ms; height: 100%; object-fit: cover; \}/.test(sinComB)
   && /\.dial-arriba \{[^}]*pointer-events: none; zoom: 1\.4; \}/.test(sinComB), 'los viajes duran lo que los demás elementos compartidos y recortan la foto a su hueco; el dial de la hoja, más grande y sin toque');
 check((sinComB.match(/^\.gdd-[a-z-]+:not\(#n\):not\(#n\)/gm) || []).length === 5 && /^\.aso-capa\.capa:not\(#n\) \{/m.test(sinComB), 'las reglas que empataban con las de otra pantalla llevan su propio peso (no arrastran estilos al arranque)');
+const tokens = new Set([...readdirSync(new URL('../web/src/', import.meta.url)).filter((f) => f.endsWith('.css')).map(src).join('\n').matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)].map((m) => m[1]));
+const sinDefinir = [...new Set([...`${sinCom}\n${sinComB}`.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m) => m[1]))].filter((t) => !tokens.has(t) && !/^--(mdl|rg|ct|lb|pst|coc|mnt|bg|aso|gdd|ind|bus)-/.test(t));
+check(sinDefinir.length === 0, `las dos hojas solo usan medidas y colores que existen${sinDefinir.length ? `: no existe ${sinDefinir.join(', ')}` : ''} (un nombre que no existe no da error: deja la regla sin efecto)`);
+check((sinComB.match(/^\.(ind|bus)-[a-z-]+:not\(#n\):not\(#n\)/gm) || []).length >= 12 && /\.ind-raiz:not\(#n\):not\(#n\) \{[^}]*touch-action: none;/.test(sinComB) && /@media \(prefers-reduced-transparency: reduce\) \{ \.ind-raiz:not\(#n\):not\(#n\) \{ background: var\(--hoja\); \} \}/.test(sinComB),
+  'el índice y el buscador, con su propio peso; el índice no desplaza la página y, con «reducir transparencia», va opaco');
 check(/\.mdl-giro:not\(#n\) \{[^}]*transform-style: preserve-3d;[^}]*touch-action: pan-y;/.test(sinComB) && /\.mdl-cara:not\(#n\) \{[^}]*backface-visibility: hidden;/.test(sinComB) && /\.mdl-dorso:not\(#n\) \{ transform: rotateY\(180deg\);/.test(sinComB)
   && /@media \(prefers-contrast: more\) \{ \.mdl-luz:not\(#n\) \{ display: none; \} \}/.test(sinComB), 'la medalla tiene dos caras de verdad; con más contraste, sin el brillo');
 check(/:root\[data-zurdo\] \.zd-fila:not\(#n\), :root\[data-zurdo\] \.zd-cab:not\(#n\) \{ grid-template-columns: 52px 26px/.test(sinComB) && /:root\[data-zurdo\] \.zd-fila:not\(#n\) > \.zd-visto, :root\[data-zurdo\] \.zd-cab:not\(#n\) > :last-child \{ order: -1; \}/.test(sinComB)

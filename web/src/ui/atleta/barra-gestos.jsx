@@ -32,6 +32,19 @@ function tocarEnHoy(que, o) {
   setTimeout(mirar, 60);
 }
 
+// (tacto 244) Volver te deja donde estabas (eso ya lo hacía ui/posiciones.js) con la fila que abriste marcada un
+// instante: un filo que se apaga solo. Se espera a que la fila esté pintada y a la vista (como mucho, dos segundos)
+export function marcarVuelta(selector) {
+  const fin = Date.now() + 2000;
+  const mirar = () => {
+    const el = document.querySelector(selector);
+    const r = el?.getBoundingClientRect();
+    if (!el || !r.height || r.bottom < 0 || r.top > window.innerHeight) { if (Date.now() < fin) setTimeout(mirar, 120); return; }
+    try { el.animate([{ outline: '2px solid var(--morado)', outlineOffset: '2px' }, { outline: '2px solid transparent', outlineOffset: '2px' }], { duration: 1300, delay: 250, easing: sinMovimiento() ? 'steps(1, end)' : 'ease-out', fill: 'backwards' }); } catch { /* sin marca */ }
+  };
+  setTimeout(mirar, 200);
+}
+
 // leer(): { tab, irAPestana(id), tabs: [ids de todas], mas: [[id, texto, icono]…], salud, aviso }. Devuelve cómo quitarlo
 export function instalarBarra(leer) {
   let g = null, sinClic = -1e9, nodo = null, abierto = null;

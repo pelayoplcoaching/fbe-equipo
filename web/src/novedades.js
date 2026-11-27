@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.273': {
+    // (tacto 201-250, tercera vuelta: se cierra la tanda D; «claude/belleza-350-propuesta.md»)
+    atleta: [
+      'En «Más», «Buscar en la app»: tus sesiones, tus ejercicios, las recetas, las guías y los ajustes, desde el mismo sitio.',
+      'En las listas largas (Recetas, Aprende), un índice en el borde derecho: arrastra el pulgar para saltar de capítulo.',
+      'Al volver de una sesión, la lista se queda donde estaba y su fila se marca un instante.',
+    ],
+    coach: [
+      'Tacto, tercera vuelta: buscador único en «Más», índice lateral en las listas largas y la fila marcada al volver de una sesión.',
+    ],
+  },
   '0.272': {
     // (tacto 201-250, segunda vuelta; «claude/belleza-350-propuesta.md»)
     atleta: [
