@@ -1782,7 +1782,7 @@ body { font-kerning: normal; font-optical-sizing: auto; }
    empieza el texto, no debajo del icono. «Tu día» y las respuestas del coach. */
 .tu-dia .lista > li, .respuestas .lista > li { position: relative; }
 .tu-dia .lista > li + li, .respuestas .lista > li + li { border-top: 0; }
-.tu-dia .lista > li + li::before, .respuestas .lista > li + li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 60px; right: 0; height: 1px; background: var(--linea); pointer-events: none; }
+.respuestas .lista > li + li::before { content: ""; position: absolute; z-index: 1; top: 0; left: 60px; right: 0; height: 1px; background: var(--linea); pointer-events: none; }
 .respuestas .lista > li + li::before { left: 64px; }
 
 /* ── 93 · Fondo con luz (tanda 24) ────────────────────────────────────────────────────────────────────────────────────

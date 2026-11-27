@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.268': {
+    // (belleza 151-200, segunda vuelta: Hoy, Semana y Progreso; «claude/belleza-200-propuesta.md»)
+    atleta: [
+      '«Tu día» va en línea de tiempo, y en Progreso cada semana lleva el color de su constancia.',
+      'Tus meses salen con su paisaje, y cada cifra de Progreso, con sus últimas semanas detrás.',
+      'En las recetas, la proteína va en su pastilla.',
+    ],
+    coach: [
+      'Belleza 151-200, segunda vuelta: «Tu día» en línea de tiempo, Progreso con colores y paisajes y la proteína de las recetas en pastilla.',
+    ],
+  },
   '0.267': {
     // (belleza 151-200, primera vuelta: la sesión y el final; «claude/belleza-200-propuesta.md»)
     atleta: [

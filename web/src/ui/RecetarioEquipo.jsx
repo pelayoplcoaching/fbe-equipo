@@ -21,13 +21,17 @@ export function useRecetarioEquipo(atletaId = null) {
 function TarjetaEquipo({ r, favorita, alAbrir, ajuste = null }) {
   const tiempo = textoTiempo(r);
   const aj = ajuste ? ajuste(r) : null;
+  // (belleza 186 y B99) la proteína, en su pastilla (y fuera de la línea de macros, para no decirla dos veces)
+  const m = macrosDe(r, aj?.factor || 1);
+  const conProt = m?.proteina_g != null;
   return (
     <button type="button" class="tarjeta-receta tarjeta-equipo" onClick={() => alAbrir(r)}>
       <FotoReceta receta={r} toma={ordenarTomas(r.tomas || [])[0] || null} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{favorita && <Icono n="estrella" class="favorita" titulo="Guardada" />}{r.nombre}</span>
-        <span class="mini secundario num">{textoMacros(macrosDe(r, aj?.factor || 1), true) || 'Sin macros'}{aj && aj.factor !== 1 && <span class="terciario"> · para ti</span>}</span>
+        <span class="mini secundario num">{textoMacros(conProt ? { ...m, proteina_g: null } : m, true) || (conProt ? '' : 'Sin macros')}{aj && aj.factor !== 1 && <span class="terciario"> · para ti</span>}</span>
         <span class="fila-chips">
+          {conProt && <span class="chip amb-prot num"><b>{num(m.proteina_g, 0)} g</b>prot.</span>}
           {tiempo && <span class="chip"><Icono n="reloj" />{tiempo}</span>}
           {r.libro?.dificultad && <span class="chip">{r.libro.dificultad}</span>}
         </span>

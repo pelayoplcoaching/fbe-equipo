@@ -28,6 +28,8 @@ export function usePlanificar(alCambiar) {
 export function TiraSemana({ semana, sesiones, hoy = hoyISO(), alTocar }) {
   if (!semana?.fecha_inicio) return null;
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(semana.fecha_inicio, i));
+  // (belleza 183) con todos los días puestos, los de descanso llevan su aro (sin plan, no se sabe cuáles lo son)
+  const planHecho = sesiones.length > 0 && sesiones.every((s) => s.completada || diaPrevistoValido(s, semana));
   return (
     <div class="tira-semana" role="list" aria-label={`Plan de la semana del ${rangoSemana(semana.fecha_inicio)}`}>
       {dias.map((d, i) => {
@@ -38,6 +40,7 @@ export function TiraSemana({ semana, sesiones, hoy = hoyISO(), alTocar }) {
             <span class="tira-letra" aria-hidden="true">{LETRAS_DIA[i]}</span>
             <span class="tira-num num" aria-hidden="true">{desdeISO(d).getDate()}</span>
             <span class="tira-ses">
+              {planHecho && !delDia.length && <i class="tira-descanso" aria-hidden="true" />}
               {delDia.map((s) => {
                 const sigla = s.completada ? <Icono n="hecho" /> : s.nombre.split(' ').map((p) => p[0]).join('').slice(0, 3);
                 // Las pendientes se pueden tocar (y alcanzar con el teclado) para cambiarles el día

@@ -43,8 +43,10 @@ export function TarjetaReceta({ a, alAbrir, mostrarFactor = false, opcional = nu
       <FotoReceta receta={r} toma={a.toma} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{a.favorita && <Icono n="estrella" class="favorita" titulo="Favorita" />}{r.nombre}</span>
-        <span class="mini secundario num">{textoMacros(m, true) || 'Sin macros'}</span>
+        {/* (belleza 186 y B99) la proteína, en su pastilla (y fuera de la línea de macros, para no decirla dos veces) */}
+        <span class="mini secundario num">{(m?.proteina_g != null ? textoMacros({ ...m, proteina_g: null }, true) : textoMacros(m, true)) || (m?.proteina_g != null ? '' : 'Sin macros')}</span>
         <span class="fila-chips">
+          {m?.proteina_g != null && <span class="chip amb-prot num"><b>{num(m.proteina_g, 0)} g</b>prot.</span>}
           {mostrarFactor && Number(a.factor) !== 1 && <span class="chip morado num">×{num(a.factor, 2)}</span>}
           {textoVariante(a.variante, opcional) && <span class="chip">{textoVariante(a.variante, opcional)}</span>}
           {r.minutos ? <span class="chip"><Icono n="reloj" />{r.minutos} min</span> : null}

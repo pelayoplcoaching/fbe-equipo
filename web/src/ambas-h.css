@@ -1,0 +1,47 @@
+/* Belleza 151-200 para las dos apps, segunda vuelta (v0.268): Hoy, Semana y Progreso. La lista, en el doc del proyecto
+   "claude/belleza-200-propuesta.md"; lo hecho y lo que ya estaba, en "claude/belleza-150-estado.md" (apartado 151-200). Va
+   detras de ambas-g.css y antes de color-capa.css. Las reglas llevan :not(#n) (especificidad de id, que no tiene ninguna otra
+   regla de la app): con la misma especificidad que otras de los trozos, el reparto de estilos las arrastraba al arranque. */
+
+/* -- 168 - "Tu dia" como linea de tiempo: los discos de cada fila unidos por un hilo (en lugar de las rayas entre filas). El
+   hilo va en el fondo de cada fila, por el centro del disco: de su centro hacia abajo en la primera y de arriba a su centro
+   en la ultima */
+.tu-dia .fila-dia:not(#n) { background-image: linear-gradient(var(--linea), var(--linea)); background-repeat: no-repeat; background-size: var(--filo-medio) var(--hh, 100%); background-position: calc(var(--esp-32) - var(--filo-medio) / 2) var(--hy, 0); }
+.tu-dia li:first-child > .fila-dia { --hy: 100%; --hh: 50%; }
+.tu-dia li:last-child > .fila-dia { --hh: 50%; }
+.tu-dia li:only-child > .fila-dia { --hh: 0px; }
+
+/* -- 179 - Cada semana con el color de su constancia en el borde: completa en verde, a medias en ambar y sin sesiones en
+   gris (el aro lo dice tambien con numeros) */
+.amb-sem[data-c]:not(#n) { background-image: linear-gradient(var(--amb-c), var(--amb-c)); background-repeat: no-repeat; background-size: var(--esp-4) calc(100% - var(--esp-24)); background-position: 0 50%; }
+.amb-sem[data-c="completa"] { --amb-c: var(--ok); }
+.amb-sem[data-c="media"] { --amb-c: var(--aviso); }
+.amb-sem[data-c="pausa"] { --amb-c: var(--linea); }
+@media (forced-colors: active) { .amb-sem[data-c]:not(#n) { background-image: none; } }
+
+/* -- 180 - "Tus meses" con su paisaje a sangre: la imagen de fondo de toda la fila, un velo a la izquierda para leer y el
+   mes con sus dias encima, en claro (los entrenados, en dorado) */
+.amb-mes:not(#n) { position: relative; isolation: isolate; overflow: hidden; grid-template-columns: minmax(0, 1fr); min-height: calc(var(--esp-48) * 2); padding-block: var(--esp-16); color: var(--sobre-hero); }
+.amb-mes:not(#n) > .mes-mini { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; border-radius: 0; object-fit: cover; object-position: 70% 50%; }
+.amb-mes-velo:not(#n) { position: absolute; inset: 0; z-index: -1; background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--hero) 90%, transparent), color-mix(in srgb, var(--hero) 60%, transparent) 58%, transparent); }
+.amb-mes:not(#n) strong { color: var(--sobre-hero); }
+.amb-mes:not(#n) .secundario { color: var(--sobre-hero-2); }
+.amb-mes:not(#n) .calendario-mini i { background: color-mix(in srgb, var(--sobre-hero) 30%, transparent); }
+.amb-mes:not(#n) .calendario-mini i.si { background: var(--oro-200); }
+.amb-mes:not(#n) .calendario-mini i.fuera { background: transparent; }
+@media (forced-colors: active) { .amb-mes:not(#n) > .mes-mini, .amb-mes-velo:not(#n) { display: none; } .amb-mes:not(#n) { color: CanvasText; } }
+
+/* -- 183 - En la tira de la semana, los dias de descanso con su aro (cuando ya estan puestos todos los dias) */
+.tira-descanso:not(#n) { display: block; width: var(--esp-8); height: var(--esp-8); margin-inline: auto; border-radius: 50%; border: var(--filo-medio) solid var(--tinta-3); }
+
+/* -- 186 y B99 - Recetas: la proteina de cada receta en su pastilla morada, la primera de la fila (la foto ya iba a sangre,
+   con el mismo recorte en todas) */
+.amb-prot:not(#n) { background: var(--morado-suave); color: var(--morado); border-color: transparent; }
+.amb-prot:not(#n) b { font-weight: 750; }
+
+/* -- 178 - Detras de cada cifra de Progreso, sus 8 semanas en barritas, arriba a la derecha y suaves (la ultima, en el
+   color de su cifra) */
+.amb-cifra:not(#n) { position: relative; }
+.amb-mini:not(#n) { position: absolute; top: var(--esp-12); right: var(--esp-12); width: var(--esp-40); height: var(--esp-16); fill: var(--linea); pointer-events: none; }
+.amb-mini:not(#n) rect:last-child { fill: var(--t, var(--morado)); }
+@media (forced-colors: active) { .amb-mini:not(#n) { fill: CanvasText; } }

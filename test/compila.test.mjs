@@ -36,9 +36,12 @@ import { readFileSync } from 'node:fs';
 // (v0.264: belleza, segunda vuelta, sin subir: lo que retocaba reglas que ya existían se hizo en su sitio)
 // (v0.265: tercera vuelta, estilos a 918 KB (163 comprimido): los interruptores con su forma, el filo de luz de las
 // ilustraciones en oscuro y las pestañas de Progreso con la letra grande salen al abrir; lo demás, con su trozo)
+// (v0.268: 151-200, segunda vuelta, estilos a 919 KB: «Tu día» como línea de tiempo y el aro del descanso en la tira de la
+// semana salen al abrir (medio KB); «Tus meses» y «Tus semanas», con su trozo. Las reglas nuevas llevan :not(#n) para que el
+// reparto no arrastre al arranque reglas de los trozos con la misma especificidad)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 608 },
-  css: { crudo: 918, gz: 163 },
+  css: { crudo: 919, gz: 163 },
 };
 
 let ok = 0, fallos = 0;

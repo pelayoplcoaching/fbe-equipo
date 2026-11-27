@@ -49,6 +49,18 @@ export function cifrasFrente(semanas = [], hoy) {
   const antes = (semanas || []).filter((r) => r.lunes >= inicio && r.lunes < corte);
   return { ahora: tramo(ult), antes: antes.length ? tramo(antes) : null, ult };
 }
+// (belleza 178) Las 8 semanas acabadas, de la más antigua a la última, para la minigráfica de detrás de cada cifra (por el
+// icono de su cifra): semanas completas (1 o 0), días entrenados, series y récords de cada semana
+export function serieCifras(semanas = [], hoy) {
+  const lunesHoy = lunesDe(hoy), desde = sumarDias(lunesHoy, -56);
+  const ult = (semanas || []).filter((r) => r.lunes >= desde && r.lunes < lunesHoy).sort((a, b) => (a.lunes < b.lunes ? -1 : a.lunes > b.lunes ? 1 : 0));
+  return {
+    llama: ult.map((r) => (r.sesiones?.total > 0 && r.sesiones.hechas >= r.sesiones.total ? 1 : 0)),
+    calendario: ult.map((r) => r.dias?.length || 0),
+    hoy: ult.map((r) => r.series || 0),
+    trofeo: ult.map((r) => r.records?.length || 0),
+  };
+}
 // La flecha de una cifra: { dir: 'sube' | 'baja' | 'igual', texto: '+12' }
 export function flechaCifra(v, antes) {
   if (antes == null || !Number.isFinite(v)) return null;

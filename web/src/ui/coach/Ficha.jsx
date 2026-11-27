@@ -37,7 +37,7 @@ import { vecinos } from '../../logica/panel-atletas.js';
 import { NutricionFicha } from './ComidasCoach.jsx';
 import { CobrosAtleta } from './Cobros.jsx';
 import { TareasCoach } from '../Tareas.jsx';
-import { TusMeses } from '../atleta/TuMes.jsx';
+import { TusMeses } from '../atleta/TusMeses.jsx';
 import { CompararCheckins } from './CompararCheckins.jsx';
 import { ChispaPeso } from './Panel.jsx';
 import { estadoAtleta, NOMBRE_ESTADO } from '../../logica/visual.js';

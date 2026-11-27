@@ -73,7 +73,7 @@ const com = src('ui/comunes.jsx');
 check(/classList\.toggle\('hoja-bajada', e\.currentTarget\.scrollTop > 2\)/.test(com) && /\.hoja-bajada > \.hoja-cab \{ background-color: var\(--hoja\); \}/.test(sinComD) && !/\.hoja-cab \{[^}]*background: var\(--hoja\)/.test(src('visual.css')),
   'C116: la cabecera de las hojas sin banda blanca arriba del todo; con su fondo al bajar');
 check((com.match(/y=\{yCifra\(/g) || []).length === 2 && /const yCifra = \(yUlt, yAnt, suelo\) =>/.test(com), 'B87: la cifra del último punto no se cruza con la línea (debajo si el anterior quedó más alto)');
-check(/\.seg-rango\.seg-rango \{ justify-self: stretch; \}/.test(sinComD) && /class="fila-semana amb-con-sello"/.test(prog) && /\.fila-semana\.amb-con-sello \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/.test(sinComD),
+check(/\.seg-rango\.seg-rango \{ justify-self: stretch; \}/.test(sinComD) && /class="fila-semana amb-con-sello( amb-sem)?"/.test(prog) && /\.fila-semana\.amb-con-sello \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/.test(sinComD),
   'el rango de las gráficas a todo el ancho y el sello de «Tus semanas» dentro de su tarjeta');
 check(/nombreBloque\(tituloBloque\(b\)\)/.test(src('ui/InformeBloque.jsx')) && /<strong>\{tituloVisto\(r\.bloque, coach\)\}<\/strong>/.test(src('ui/InformeBloque.jsx')), 'A13 (repaso): «Tus bloques» y su informe, sin «· FBE Esencial» para el atleta (el coach lo ve entero)');
 const rut = src('ui/atleta/EsencialRutinas.jsx');
@@ -156,7 +156,7 @@ check(/const fondoFin = hayImagen\(cierre\) \? cierre : imagenPortada\(familia, 
   check(tras?.nombre === 'Día 3' && tras.dia === '2026-11-28' && ultima?.ultima === true && siguienteTras(null, 'b') === null && siguienteTras({ actual: sem, sesiones: { w1: [{ id: 'b' }] } }, 'b') === null
     && siguienteTras(prog, 'b', { hoy: '2026-11-26', excluir: (x) => x.id === 'c' })?.ultima === true,
     '166: tras cerrar una sesión, la siguiente de la semana con su día (sin contar la recién hecha), o que era la última');
-  check(/Lo siguiente: <strong>\{sigue\.nombre\}<\/strong>/.test(ses) && /Era la última de esta semana\./.test(ses) && /programa=\{programa\.datos\}/.test(src('ui/atleta/AtletaApp.jsx')), '166: y sale bajo «Volver a hoy», con el programa que ya tiene la app (sin pedir nada más)');
+  check(/Lo siguiente: <strong>\{sigue\.nombre\}<\/strong>\{sigue\.dia \? `, \$\{cuandoDia\(sigue\.dia\)\}` : ''\}/.test(ses) && /Era la última de esta semana\./.test(ses) && /programa=\{programa\.datos\}/.test(src('ui/atleta/AtletaApp.jsx')), '166: y sale bajo «Volver a hoy» como en Hoy («mañana», «el jueves»), con el programa que ya tiene la app (sin pedir nada más)');
 }
 
 check(/class=\{`ahora-nombre\$\{a\.imagen && hayImagen\(a\.imagen\) \? ' ahora-con-mini' : ''\}`\}/.test(src('ui/atleta/sesion-comun.jsx')) && /imagen: otro \? imagenDe\(se\) \|\| null : null,/.test(src('logica/ahora-toca.js'))
@@ -177,6 +177,33 @@ const appj = src('ui/App.jsx');
 check(/<AvisoVersion nombre=\{estado\.fase === 'atleta' && esPorSuCuenta\(estado\.atleta\) \? 'FBE Esencial' : 'FBE Equipo'\} \/>/.test(appj) && /Hay una versión nueva de \{nombre\}\./.test(appj)
   && /<Imagen id="estado-error" clase="paso-foto"[^>]*alternativa=\{<Ilustracion n="fallo"/.test(appj),
   '193: «Hay una versión nueva» con el nombre de su app, y el hueco de la ilustración del error al abrir');
+
+console.log('\n151-200, segunda vuelta (v0.268): Hoy, Semana y Progreso');
+const cssH = src('ambas-h.css'), sinComH = cssH.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssH) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComH) && main.indexOf("'./ambas-h.css'") > main.indexOf("'./ambas-g.css'") && main.indexOf("'./ambas-h.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-h.css: solo ASCII, los colores por su nombre y detrás de la primera vuelta de 151-200');
+check(/\.tu-dia \.fila-dia:not\(#n\) \{ background-image: linear-gradient\(var\(--linea\), var\(--linea\)\);/.test(sinComH) && /\.tu-dia li:first-child > \.fila-dia \{ --hy: 100%; --hh: 50%; \}/.test(sinComH)
+  && !/\.tu-dia \.lista > li \+ li::before/.test(src('diseno.css')), '168: «Tu día» como línea de tiempo (los discos unidos por un hilo, sin las rayas entre filas)');
+check(/class="fila-semana amb-con-sello amb-sem" data-c=\{r\.sesiones\.total > 0 && r\.sesiones\.hechas >= r\.sesiones\.total \? 'completa' : r\.sesiones\.hechas > 0 \? 'media' : 'pausa'\}/.test(src('ui/atleta/Progreso.jsx'))
+  && /\.amb-sem\[data-c="completa"\] \{ --amb-c: var\(--ok\); \}/.test(sinComH), '179: cada semana con el color de su constancia en el borde (completa, a medias, sin sesiones)');
+const meses = src('ui/atleta/TusMeses.jsx');
+check(/'con-mini amb-mes' : ''/.test(meses) && /<i class="amb-mes-velo" aria-hidden="true" \/>/.test(meses) && !/export function TusMeses/.test(src('ui/atleta/TuMes.jsx'))
+  && /from '\.\/TusMeses\.jsx'/.test(src('ui/atleta/Progreso.jsx')) && /from '\.\.\/atleta\/TusMeses\.jsx'/.test(src('ui/coach/Ficha.jsx')),
+  '180: «Tus meses» con su paisaje a sangre (y aparte de TuMes.jsx, que sale al abrir, para que sus estilos vayan con su trozo)');
+check(/const planHecho = sesiones\.length > 0 && sesiones\.every\(\(s\) => s\.completada \|\| diaPrevistoValido\(s, semana\)\);/.test(src('ui/atleta/Plan.jsx')) && /\{planHecho && !delDia\.length && <i class="tira-descanso" aria-hidden="true" \/>\}/.test(src('ui/atleta/Plan.jsx')),
+  '183: en la tira de la semana, los días de descanso con su aro (solo con todos los días puestos)');
+
+{
+  const { serieCifras } = await import('../web/src/logica/progreso-visual-2.js');
+  const sem = (lunes, hechas, total, series, records, dias) => ({ lunes, sesiones: { hechas, total }, series, records: Array(records).fill({}), dias: Array(dias).fill('x') });
+  const sc = serieCifras([sem('2026-11-16', 2, 2, 24, 3, 2), sem('2026-11-02', 1, 2, 10, 0, 1), sem('2026-11-23', 0, 2, 0, 0, 0), sem('2026-11-09', 2, 2, 20, 1, 2), sem('2026-09-21', 2, 2, 5, 5, 2)], '2026-11-27');
+  check(sc.llama.join() === '0,1,1' && sc.hoy.join() === '10,20,24' && sc.trofeo.join() === '0,1,3' && sc.calendario.join() === '1,2,2',
+    '178: las 8 semanas acabadas de cada cifra, de la más antigua a la última (sin la de ahora ni las de hace más de 8)');
+  check(/<rect key=\{i\} x=\{\(8 - w\.length \+ i\) \* 3\}/.test(src('ui/atleta/Progreso.jsx')) && /\.amb-mini:not\(#n\) rect:last-child \{ fill: var\(--t, var\(--morado\)\); \}/.test(sinComH),
+    '178: detrás de cada cifra, sus barritas (siempre en el sitio de 8, pegadas a la derecha; la última, en su color)');
+}
+check(['ui/RecetarioEquipo.jsx', 'ui/ComidasComun.jsx'].every((f) => /<span class="chip amb-prot num"><b>\{num\(m\.proteina_g, 0\)\} g<\/b>prot\.<\/span>/.test(src(f))),
+  '186 y B99: en las tarjetas de recetas, la proteína en su pastilla (y fuera de la línea de macros)');
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

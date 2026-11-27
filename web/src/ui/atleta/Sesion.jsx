@@ -61,7 +61,8 @@ import { esPorSuCuenta } from '../../logica/esencial.js';
 import { consejoPeso } from '../../logica/esencial-primera.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
-import { fmtCorta, fmtConDia, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { cuandoDia } from '../../logica/plan.js';
 import { siguienteTras, imagenCierre, textoComparacionHecho } from '../../logica/sesion-final.js';
 import { esCarrera as esCarreraCalendario } from '../../logica/semana-natural.js';
 import { pesoAnterior } from '../../logica/nivel.js';
@@ -1893,7 +1894,7 @@ function Resumen({ resumen, sesion, pautas = [], familia, alCerrar, programa = n
         {sigue && (
           <p class="peq secundario resumen-sigue"><Icono n="semana" />
             {sigue.ultima ? <span>Era la última de esta semana.</span>
-              : <span>Lo siguiente: <strong>{sigue.nombre}</strong>{sigue.dia ? (sigue.dia === hoyISO() ? ', hoy' : `, el ${fmtConDia(sigue.dia)}`) : ''}</span>}
+              : <span>Lo siguiente: <strong>{sigue.nombre}</strong>{sigue.dia ? `, ${cuandoDia(sigue.dia)}` : ''}</span>}
           </p>
         )}
       </div>

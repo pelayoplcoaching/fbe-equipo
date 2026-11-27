@@ -10,7 +10,7 @@ import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros, LineaAncha } from './ProgresoPiezas.jsx';
 import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
-import { periodoAnterior, compararEjercicios, cifrasFrente, escaleraRecords, musculosRecord, diasCheckin } from '../../logica/progreso-visual-2.js';
+import { periodoAnterior, compararEjercicios, cifrasFrente, serieCifras, escaleraRecords, musculosRecord, diasCheckin } from '../../logica/progreso-visual-2.js';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { Conexiones } from './Conexiones.jsx';
 import { GrupoReloj } from './Reloj.jsx';
@@ -23,7 +23,7 @@ import { HistorialEjercicio } from '../Herramientas.jsx';
 import { MapaMuscular } from '../MapaMuscular.jsx';
 import { GuiasDeGrupos } from '../Guias.jsx';
 import { HistoriaSemana, rangoLargo } from './TuSemana.jsx';
-import { TusMeses } from './TuMes.jsx';
+import { TusMeses } from './TusMeses.jsx';
 import { VerArchivo, CompararVideos } from '../Archivos.jsx';
 import { Diario } from '../Diario.jsx';
 import { MiTecnica } from '../tecnica/MiTecnica.jsx';
@@ -688,7 +688,8 @@ function TusSemanas({ salud, lista }) {
         <ul class="lista">
           {ult.map((r) => (
             <li key={r.lunes}>
-              <button class="fila-semana amb-con-sello" onClick={() => setAbierta(r)}>
+              {/* (belleza 179) su borde, del color de su constancia: completa, a medias o sin sesiones */}
+              <button class="fila-semana amb-con-sello amb-sem" data-c={r.sesiones.total > 0 && r.sesiones.hechas >= r.sesiones.total ? 'completa' : r.sesiones.hechas > 0 ? 'media' : 'pausa'} onClick={() => setAbierta(r)}>
                 <span class="pila-xs">
                   <strong>Semana {rangoLargo(r.lunes, r.domingo)}</strong>
                   <span class="peq secundario">{r.sesiones.hechas} de {r.sesiones.total} sesiones, {r.series} series{r.records.length ? `, ${r.records.length} ${r.records.length === 1 ? 'récord' : 'récords'}` : ''}</span>
@@ -732,6 +733,17 @@ function TusBloques({ salud }) {
   );
 }
 
+// (belleza 178) Las barritas de una cifra: una por semana, de la más antigua a la última (que va en el color de la cifra),
+// siempre en el sitio de 8 y pegadas a la derecha (con pocas semanas, no se ensanchan)
+function MiniBarras({ v }) {
+  const max = Math.max(1, ...v);
+  return (
+    <svg class="amb-mini" viewBox="0 0 23 12" preserveAspectRatio="none" aria-hidden="true">
+      {v.slice(-8).map((x, i, w) => { const h = Math.max(1, (x / max) * 12); return <rect key={i} x={(8 - w.length + i) * 3} y={12 - h} width="2" height={h} rx="0.6" />; })}
+    </svg>
+  );
+}
+
 // Las cifras de arriba: lo que más dice de la constancia, de un vistazo
 // (v0.204) las de las 4 últimas semanas, con su flecha frente a las 4 de antes (si entonces ya entrenaba)
 function Cifras({ constancia, semanas }) {
@@ -739,6 +751,8 @@ function Cifras({ constancia, semanas }) {
   const { ahora, antes, ult } = cifrasFrente(semanas.datos || [], hoyISO());
   if (!c && !ult.length) return null;
   const { records, series, dias } = ahora;
+  // (belleza 178) detrás de cada cifra, sus 8 semanas en barritas (la última, en su color)
+  const serie = serieCifras(semanas.datos || [], hoyISO());
   const celdas = [
     c && { v: c.racha, k: c.racha === 1 ? 'semana completa seguida' : 'semanas completas seguidas', ico: 'llama', destaca: c.racha > 0 },
     ult.length > 0 ? { v: dias, k: dias === 1 ? 'día entrenado en 4 semanas' : 'días entrenados en 4 semanas', ico: 'calendario', antes: antes?.dias }
@@ -749,8 +763,8 @@ function Cifras({ constancia, semanas }) {
   return (
     <dl class="cifras panel" aria-label="Tus cifras">
       {celdas.map((x) => (
-        <div key={x.k} class={x.destaca ? 'destaca' : ''} data-ico={x.ico}>
-          <dd class="num"><CifraSube texto={x.v} /><FlechaCifra v={x.v} antes={x.antes} /></dd>
+        <div key={x.k} class={`${x.destaca ? 'destaca' : ''}${serie[x.ico]?.length >= 2 ? ' amb-cifra' : ''}`} data-ico={x.ico}>
+          <dd class="num"><CifraSube texto={x.v} /><FlechaCifra v={x.v} antes={x.antes} />{serie[x.ico]?.length >= 2 && <MiniBarras v={serie[x.ico]} />}</dd>
           <dt><Icono n={x.ico} />{x.k}</dt>
         </div>
       ))}
