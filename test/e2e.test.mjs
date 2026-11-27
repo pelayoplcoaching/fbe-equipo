@@ -1440,8 +1440,8 @@ if (parte(PRINCIPAL)) try {
   await p.getByRole('tab', { name: 'Seguimiento' }).click();
   await p.locator('.vacio.con-ilustracion', { hasText: 'Sin tareas todavía' }).waitFor();
   const vaciosSeg = p.locator('.vacio.con-ilustracion');
-  check(await vaciosSeg.count() >= 2 && (await p.locator('.contenido').textContent()).includes('Sin check-ins todavía') && await vaciosSeg.locator('svg.ilustracion[aria-hidden="true"]').count() === await vaciosSeg.count()
-    && await p.getByRole('button', { name: 'Poner la primera' }).count() === 1, 'su seguimiento vacío: cada estado con su dibujo, una frase y lo siguiente («Poner la primera»)');
+  check(await vaciosSeg.count() >= 2 && (await p.locator('.contenido').textContent()).includes('Sin check-ins todavía') && await vaciosSeg.locator(':is(svg.ilustracion, img.vacio-escena)[aria-hidden="true"]').count() === await vaciosSeg.count()
+    && await p.getByRole('button', { name: 'Poner la primera' }).count() === 1, 'su seguimiento vacío: cada estado con su dibujo o su imagen (belleza 195), una frase y lo siguiente («Poner la primera»)');
   await revisar('vacios-seguimiento');
   await p.setViewportSize({ width: 360, height: 780 });
   await p.emulateMedia({ colorScheme: 'dark' });
