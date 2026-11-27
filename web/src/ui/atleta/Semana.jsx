@@ -202,7 +202,7 @@ function Entrenamientos({ abrirSesion }) {
             <ul class="lista">
               {m.items.map((e) => (
                 <li key={e.id}>
-                  <button class="entreno" onClick={() => abrirSesion(e.id)}>
+                  <button class="entreno" data-asoma={`sesion:${e.id}`} data-asoma-t={e.nombre} onClick={() => abrirSesion(e.id)}>
                     <span class="entreno-dia num" aria-hidden="true">{e.fecha && <i>{DIA_CORTO[desdeISO(e.fecha).getDay()]}</i>}<b>{e.fecha ? desdeISO(e.fecha).getDate() : '—'}</b></span>
                     <span class="pila-xs">
                       <span class="entreno-nombre">{e.nombre}{e.records > 0 && <span class="chip morado"><Icono n="trofeo" />{e.records}</span>}</span>

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio } from './comunes.jsx';
 import { VideoYoutube } from './YouTube.jsx';
+import { conTransicion } from './transiciones.js';
 import { CATEGORIAS_RECURSO } from '../logica/calculos.js';
 import { fmtCorta } from '../logica/fechas.js';
 import {
@@ -30,9 +31,10 @@ export function HojaVideo({ titulo, url, descripcion = '', pie = null, alCerrar 
 }
 
 // Una tarjeta de vídeo para una estantería (la miniatura y el título); al tocarla, su hoja
+// (tacto 217) la miniatura crece hasta ser el reproductor de la hoja (que ya se cierra arrastrándola hacia abajo)
 function TarjetaVideo({ id, titulo, detalle = null, alAbrir }) {
   return (
-    <button type="button" class="tarjeta-video" onClick={alAbrir}>
+    <button type="button" class="tarjeta-video" onClick={(ev) => conTransicion(alAbrir, 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.firstElementChild, hasta: '.hoja-dialogo .yt-marco' }])}>
       <span class="tarjeta-video-img">{!ahorroDatos() && miniatura(id) && <img src={miniatura(id)} alt="" loading="lazy" referrerpolicy="no-referrer" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}<span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
       <span class="pila-xs"><span class="tarjeta-video-titulo">{titulo}</span>{detalle && <span class="mini terciario">{detalle}</span>}</span>
     </button>

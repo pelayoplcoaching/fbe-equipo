@@ -121,3 +121,26 @@
 @media (prefers-contrast: more) { .mdl-luz:not(#n) { display: none; } }
 /* 214. la grafica que llega a pantalla completa ya esta dibujada: crece, no se vuelve a trazar */
 .grafica-grande:not(#n) .grafica-caja.trazada :is(.linea[pathLength], .area-deg, .punto, .pesada, text.valor) { animation: none; }
+
+/* --- 218. La foto de progreso se abre en el visor (se amplia pellizcando): toda ella es el boton --- */
+.vfp-abrir:not(#n) { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: var(--r-12); background: none; color: inherit; cursor: zoom-in; }
+.vfp-abrir:not(#n):focus-visible { outline: var(--filo-fuerte) solid var(--morado); outline-offset: var(--esp-2); }
+.vfp-lupa:not(#n) { position: absolute; right: var(--esp-8); bottom: var(--esp-8); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--flota); color: var(--sobre-flota); }
+.vfp-lupa:not(#n) svg { width: var(--ico-20); height: var(--ico-20); }
+
+/* --- 221 a 223. Asomarse: al mantener pulsado, lo de dentro en una tarjeta flotante --- */
+.aso-capa.capa:not(#n) { position: fixed; inset: 0; z-index: calc(var(--capa-aviso) + 1); pointer-events: none; }
+.aso-velo:not(#n) { position: absolute; inset: 0; background: color-mix(in srgb, var(--noche-0) 30%, transparent); }
+.aso-tarjeta:not(#n) { position: absolute; display: grid; gap: var(--esp-4); padding: var(--esp-14) var(--esp-16); border-radius: var(--r-16); background: var(--hoja); color: var(--tinta); box-shadow: var(--sombra-flotante); overflow: hidden; }
+.aso-foto:not(#n) { width: calc(100% + var(--esp-32)); max-width: none; height: 150px; margin: calc(var(--esp-14) * -1) calc(var(--esp-16) * -1) var(--esp-6); object-fit: cover; }
+.aso-t:not(#n) { font-size: var(--letra-18); font-weight: 750; line-height: 1.2; text-wrap: balance; }
+.aso-sub:not(#n) { font-size: var(--letra-13); color: var(--tinta-2); }
+.aso-lineas:not(#n) { list-style: none; margin: var(--esp-4) 0 0; padding: 0; display: grid; }
+.aso-lineas:not(#n) li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-12); padding: var(--esp-6) 0; border-top: var(--filo-fino) solid var(--linea); font-size: var(--letra-14); }
+.aso-a:not(#n) { min-width: 0; }
+.aso-b:not(#n) { flex: 0 1 auto; max-width: 74%; text-align: right; color: var(--tinta-2); }
+.aso-mas:not(#n) { color: var(--tinta-2); }
+.aso-pie:not(#n) { font-size: var(--letra-13); color: var(--tinta-2); }
+.aso-pista:not(#n) { margin-top: var(--esp-4); font-size: var(--letra-12); color: var(--tinta-2); text-align: center; }
+.aso-tarjeta:not(#n)[data-abre] { outline: var(--filo-fuerte) solid var(--morado); outline-offset: -2px; }
+.aso-tarjeta:not(#n)[data-abre] .aso-pista { color: var(--morado); font-weight: 700; }

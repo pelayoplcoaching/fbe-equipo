@@ -299,9 +299,10 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
   const barra = usePildora(sesionId ? null : `${tab}:${reparto.barra.length}:${reparto.mas.length}`);
   // (tacto 224 y 225) la barra, con el dedo: deslizar por ella cambia de pestaña y mantener una pulsada abre sus atajos
   // (su código llega con la app ya abierta)
-  const { aviso } = useApp();
+  const { aviso, api: apiG, atleta: atletaG } = useApp();
   const paraBarra = useRef(null);
-  paraBarra.current = { tab, irAPestana, tabs: TABS.map(([t]) => t), mas: reparto.mas, salud, aviso };
+  // (tacto 221-223: con ella llega «asomarse», que pide la sesión o el ejercicio que se mantiene pulsado)
+  paraBarra.current = { tab, irAPestana, tabs: TABS.map(([t]) => t), mas: reparto.mas, salud, aviso, api: apiG, atleta: atletaG };
   useEffect(() => {
     let quitar = null, fuera = false;
     import('./barra-gestos.jsx').then((m) => { if (!fuera) quitar = m.instalarBarra(() => paraBarra.current); }).catch(() => { /* sin gestos: tocar sigue valiendo */ });

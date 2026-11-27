@@ -11,15 +11,17 @@ import { useMarcaPagina } from '../marca-pagina.js';
 // mensaje) y Responder, Reenviar (el coach), Guardar y Compartir. Con el teclado: ← y → para pasar y Escape para cerrar;
 // el foco se queda dentro. Todo con transform (por el compositor) y, con «reducir movimiento», sin animaciones.
 // medios: [{ mensaje, archivo }] (de lo más antiguo a lo más reciente); inicio: el que se abre.
+// (tacto 218) También para las fotos de progreso del diario: cada medio puede traer su propio «quien», «cuando» y
+// «etiqueta» (no vienen de un mensaje), sin «Responder» (alResponder es opcional) y con los enlaces que ya se tienen (urls0).
 const ZOOM_MAX = 4;
 const ZOOM_DOBLE = 2.5;
 
 export function Visor(props) { return <Capa><VisorDentro {...props} /></Capa>; }
 
-function VisorDentro({ medios, inicio = 0, nombreDe, alCerrar, alResponder, alReenviar = null, puedeReenviar = () => false }) {
+function VisorDentro({ medios, inicio = 0, nombreDe = () => '', alCerrar, alResponder = null, alReenviar = null, puedeReenviar = () => false, urls0 = null }) {
   const { api, aviso } = useApp();
   const [i, setI] = useState(Math.max(0, Math.min(inicio, medios.length - 1)));
-  const [urls, setUrls] = useState({});
+  const [urls, setUrls] = useState(urls0 || {});
   const ref = useRef(null);
   const escena = useRef(null);
   const pista = useRef(null);
@@ -229,7 +231,7 @@ function VisorDentro({ medios, inicio = 0, nombreDe, alCerrar, alResponder, alRe
       await navigator.share({ files: [f] });
     } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir: usa «Guardar»', 'error'); }
   }
-  const quien = nombreDe(c.autor);
+  const quien = m.quien ?? nombreDe(c.autor);
   const tipo = esFoto(m.archivo) ? 'Foto' : 'Vídeo';
   const diapo = (k, clase) => {
     const x = medios[k];
@@ -247,10 +249,10 @@ function VisorDentro({ medios, inicio = 0, nombreDe, alCerrar, alResponder, alRe
     );
   };
   return (
-    <div class="visor" role="dialog" aria-modal="true" aria-label={`${tipo} de ${quien === 'Tú' ? 'ti' : quien}`} ref={ref} tabIndex={-1}>
+    <div class="visor" role="dialog" aria-modal="true" aria-label={m.etiqueta || `${tipo} de ${quien === 'Tú' ? 'ti' : quien}`} ref={ref} tabIndex={-1}>
       <header class="visor-cab">
         <button type="button" class="btn btn-icono visor-cerrar" aria-label="Cerrar" onClick={() => cerrarRef.current?.()}><Icono n="atras" /></button>
-        <div class="visor-quien"><strong>{quien}</strong><span class="mini">{cuandoInfo(c.creado_en)}</span></div>
+        <div class="visor-quien"><strong>{quien}</strong><span class="mini">{m.cuando ?? cuandoInfo(c.creado_en)}</span></div>
         {medios.length > 1 && <span class="visor-n mini num" aria-label={`${i + 1} de ${medios.length}`}>{i + 1} / {medios.length}</span>}
       </header>
       <div class="visor-escena" ref={escena} onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar} onWheel={rueda}>
@@ -263,7 +265,7 @@ function VisorDentro({ medios, inicio = 0, nombreDe, alCerrar, alResponder, alRe
       <footer class="visor-pie-zona">
         {!esMarcador(c) && c.texto && <div class="visor-pie"><TextoChat id={`visor-${c.id}`} texto={c.texto} clase="visor-pie-texto" conVista={false} /></div>}
         <div class="visor-acciones" role="group" aria-label="Acciones">
-          <button type="button" class="visor-accion" onClick={() => { cerrarRef.current?.(); setTimeout(() => alResponder?.(c), 0); }}><Icono n="mensaje" /><span>Responder</span></button>
+          {alResponder && <button type="button" class="visor-accion" onClick={() => { cerrarRef.current?.(); setTimeout(() => alResponder(c), 0); }}><Icono n="mensaje" /><span>Responder</span></button>}
           {alReenviar && puedeReenviar(c) && <button type="button" class="visor-accion" onClick={() => { cerrarRef.current?.(); setTimeout(() => alReenviar(c), 0); }}><Icono n="reenviar" /><span>Reenviar</span></button>}
           <button type="button" class="visor-accion" onClick={guardar}><Icono n="descargar" /><span>Guardar</span></button>
           {puedeCompartir && <button type="button" class="visor-accion" onClick={compartir}><Icono n="compartir" /><span>Compartir</span></button>}

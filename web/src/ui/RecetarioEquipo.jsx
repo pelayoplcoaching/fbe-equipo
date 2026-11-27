@@ -28,7 +28,10 @@ function TarjetaEquipo({ r, favorita, alAbrir, ajuste = null }) {
   const m = macrosDe(r, aj?.factor || 1);
   const conProt = m?.proteina_g != null;
   return (
-    <button type="button" class="tarjeta-receta tarjeta-equipo" data-receta={r.id} onClick={(ev) => alAbrir(r, ev.currentTarget)}>
+    <button type="button" class="tarjeta-receta tarjeta-equipo" data-receta={r.id} onClick={(ev) => alAbrir(r, ev.currentTarget)}
+      // (tacto 223) al mantenerla pulsada se asoma: su foto en grande, lo que es y sus macros
+      data-asoma="suyo" ref={(el) => { if (el) el.__asoma = () => ({ titulo: r.nombre, foto: el.querySelector('img')?.currentSrc || null, sub: [tiempo, r.libro?.dificultad].filter(Boolean).join(' · '),
+        lineas: [m && ['Por ración', textoMacros(m, true)], r.libro?.descripcion && [String(r.libro.descripcion).slice(0, 140), '']].filter(Boolean), mas: 0, pie: '' }); }}>
       <FotoReceta receta={r} toma={ordenarTomas(r.tomas || [])[0] || null} />
       <span class="pila-xs tarjeta-receta-texto">
         <span class="nombre">{favorita && <Icono n="estrella" class="favorita" titulo="Guardada" />}{r.nombre}</span>

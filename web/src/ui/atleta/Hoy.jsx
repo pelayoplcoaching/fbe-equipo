@@ -1098,7 +1098,7 @@ export function DiaSesion({ sesion, semana = null, actual, abrir, mensajes, resu
     </span>
   );
   return (
-    <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''} ${conResumen ? 'con-resumen' : ''}`} onClick={abrir}>
+    <button class={`dia ${hecha ? 'hecha' : ''} ${actual ? 'actual' : ''} ${conResumen ? 'con-resumen' : ''}`} data-asoma={`sesion:${sesion.id}`} onClick={abrir}>
       <span class="marca-dia">{hecha ? <Icono n="hecho" /> : carrera ? <Icono n="pasos" /> : sesion.orden}</span>
       <span class="dia-cuerpo">
         <span class="nombre">{sesion.nombre}</span>
@@ -1134,7 +1134,7 @@ function SiguienteSesion({ sesion, ejercicios, cargando }) {
               {ejercicios.map((e) => {
                 const pa = pauta(e, { sobran });
                 return (
-                  <li class="ej-fila" key={e.id}>
+                  <li class="ej-fila" key={e.id} data-asoma={`ejercicio:${e.ejercicio_id}`}>
                     <span class="ej-marca"><Imagen id={imagenEjercicio(e.ejercicio)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={e.ejercicio} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
                     <div>
                       <div class="nombre">{etiquetas[e.id] && <span class="ss-etq">{etiquetas[e.id]}</span>}{e.ejercicio.nombre}</div>

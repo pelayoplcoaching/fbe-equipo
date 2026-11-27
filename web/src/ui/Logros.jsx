@@ -148,7 +148,7 @@ export function Logros({ salud }) {
         <ul class="logros">
           {lista.map((l) => (
             <li key={l.id}>
-              <button class={`logro ${l.id === proxima ? 'proxima' : ''}`} onPointerDown={MedallaHeroe.precargar} onClick={(ev) => abrir(l, ev.currentTarget)}
+              <button class={`logro ${l.id === proxima ? 'proxima' : ''}`} data-asoma="rotulo" onPointerDown={MedallaHeroe.precargar} onClick={(ev) => abrir(l, ev.currentTarget)}
                 aria-label={`${l.titulo}: ${l.nivel ? `${medallaDe(l.nivel)}, ${l.conseguido}` : 'aún sin medalla'}${l.siguiente ? `. Siguiente: ${l.siguiente.texto}` : '. Todas las medallas'}${l.id === proxima ? `. Es la que tienes más cerca: te ${l.siguiente.falta === 1 ? 'falta' : 'faltan'} ${num(l.siguiente.falta, 0)}` : ''}`}>
                 <MedallaMetal nivel={l.nivel} logro={l.id} cifra={l.nivel ? l.niveles[l.nivel - 1].umbral : l.niveles[0].umbral} progreso={l.siguiente ? l.progreso : null} />
                 <span class="logro-metal" aria-hidden="true">{nombreMetal(l.nivel)}</span>

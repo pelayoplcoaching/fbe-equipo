@@ -4,6 +4,8 @@ import { Hilo } from './Hilo.jsx';
 import { RevisionEnColumnas } from './tecnica/RevisionColumnas.jsx';
 import { VerArchivo, CompararVideos, SubirArchivo } from './Archivos.jsx';
 import { CompararFotos } from './CompararFotos.jsx';
+import { Visor } from './chat/Visor.jsx';
+import { conTransicion } from './transiciones.js';
 import { NuevaFoto, POSES } from './atleta/CamaraGuiada.jsx';
 import { mmssCorto } from './Chat.jsx';
 import { reproductorDe } from './Video.jsx';
@@ -102,7 +104,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         <div class="diario-mes" key={m.clave}>
           <h3 class="mes-etq">{m.titulo}</h3>
           <div class="diario-rejilla">
-            {m.items.map((a) => <Miniatura key={a.id} a={a} nombre={nombreDe(a)} alAbrir={() => setAbierto(a)} kg={cuerpo && a.tipo === 'foto_progreso' ? pesoEnFecha(cuerpo.pesos, a.fecha) : null} />)}
+            {m.items.map((a) => <Miniatura key={a.id} a={a} nombre={nombreDe(a)} alAbrir={(ev) => conTransicion(() => setAbierto(a), 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.querySelector('.diario-medio'), hasta: '.hoja-dialogo .revdos-ver > :first-child:not(.medio-cargando):not(:has(.medio-cargando))' }])} kg={cuerpo && a.tipo === 'foto_progreso' ? pesoEnFecha(cuerpo.pesos, a.fecha) : null} />)}
           </div>
         </div>
       ))}
@@ -175,9 +177,26 @@ export function DetalleArchivo({ a, lista = [], atletaId, nombreAtleta, esCoach,
   const destacar = async () => { try { await api.editarArchivo(a.id, { destacado: !a.destacado }); alCambiar(); } catch (e) { aviso(e.message, 'error'); } };
   const guardarPie = async () => { try { await api.editarArchivo(a.id, { nota_atleta: pie.trim() || null }); setEditar(false); alCambiar(); } catch (e) { aviso(e.message, 'error'); } };
   // (v0.226) Lo de cada columna, para las dos maneras de enseñarlo (en columnas o una cosa debajo de otra)
+  // (tacto 217 y 218) la miniatura crece hasta su hoja; y la foto, al tocarla, se abre en el visor (el del chat): se
+  // amplía pellizcando o con dos toques, se pasa a las demás fotos deslizando y se cierra arrastrándola hacia abajo
+  const [visor, setVisor] = useState(null);
+  const fotosVisor = esFoto ? lista.filter((x) => x.tipo === 'foto_progreso').sort((x, y) => (x.fecha < y.fecha ? -1 : 1)) : [];
+  const abrirVisor = (ev) => {
+    const img = ev.currentTarget.querySelector('img');
+    if (!img) return;
+    const v = { inicio: Math.max(0, fotosVisor.findIndex((x) => x.id === a.id)), urls0: { [a.ruta]: img.currentSrc || img.src } };
+    // (el destino, por su rótulo: nombrar aquí las clases del visor sacaría sus estilos de su trozo)
+    conTransicion(() => setVisor(v), 'morph', [{ nombre: 'vt-viaje', desde: img, hasta: '[aria-label^="Foto de progreso del"] div:not([aria-hidden]) > img' }]);
+  };
   const verDiario = (
     <>
-      <VerArchivo archivo={a} />
+      {esFoto
+        ? <button type="button" class="vfp-abrir" aria-label="Ver la foto a pantalla completa" onClick={abrirVisor}><VerArchivo archivo={a} /><span class="vfp-lupa" aria-hidden="true"><Icono n="ampliar" /></span></button>
+        : <VerArchivo archivo={a} />}
+      {visor && (
+        <Visor inicio={visor.inicio} urls0={visor.urls0} alCerrar={() => setVisor(null)}
+          medios={(fotosVisor.length ? fotosVisor : [a]).map((f) => ({ archivo: f, quien: `Foto de progreso${f.pose && NOMBRE_POSE[f.pose] ? ` · ${NOMBRE_POSE[f.pose]}` : ''}`, cuando: fmtConDia(f.fecha), etiqueta: `Foto de progreso del ${fmtConDia(f.fecha)}`, mensaje: { id: f.id, creado_en: f.fecha, autor: null, texto: f.nota_atleta || '' } }))} />
+      )}
       <div class="fila-envolver">
         <button class={`btn btn-peq ${a.destacado ? 'btn-primario' : ''}`} aria-pressed={a.destacado ? 'true' : 'false'} onClick={destacar}><Icono n="libre" /> {a.destacado ? 'Destacado' : 'Destacar'}</button>
         {!esCoach && <button class="btn btn-peq" onClick={() => setEditar(!editar)}><Icono n="editar" /> {a.nota_atleta ? 'Cambiar el pie' : 'Poner un pie'}</button>}
