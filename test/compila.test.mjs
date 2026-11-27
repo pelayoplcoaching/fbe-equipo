@@ -32,9 +32,10 @@ import { readFileSync } from 'node:fs';
 // lo de cada pantalla van con su trozo y las del común llevan la clase doble para no obligar a copiar las de los trozos)
 // (v0.262: belleza B, estilos a 914 KB: casi todo va con el trozo de su pantalla (la sesión, Progreso, la ayuda); al común
 // solo llegan los retoques de piezas que salen al abrir)
+// (v0.263: belleza C, estilos a 916 KB: la X de las hojas, las tiras de chips y el aro del avatar salen en todas partes)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 608 },
-  css: { crudo: 914, gz: 162 },
+  css: { crudo: 916, gz: 162 },
 };
 
 let ok = 0, fallos = 0;

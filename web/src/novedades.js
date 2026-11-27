@@ -6,6 +6,15 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.263': {
+    // (belleza C para las dos apps: acabado y para todos; «claude/belleza-150-ambas.md», C101 a C150)
+    atleta: [
+      'El check-in empieza con tu semana en cuatro fichas, y la tarjeta para compartir lleva el nombre de tu app.',
+    ],
+    coach: [
+      'Belleza para las dos apps (tanda C de 3): el vistazo del check-in en fichas, Recetas con sus grupos a la vista y más detalles.',
+    ],
+  },
   '0.262': {
     // (belleza B para las dos apps: el entrenamiento y tus datos; «claude/belleza-150-ambas.md», B51 a B100)
     atleta: [

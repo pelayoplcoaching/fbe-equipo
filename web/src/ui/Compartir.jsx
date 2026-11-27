@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { useApp, useCarga, Hoja, Icono, Cargando, descargar, copiar, usePreferencia, Segmentos, P } from './comunes.jsx';
+import { esPorSuCuenta } from '../logica/esencial.js';
 import { num } from '../logica/calculos.js';
 import { arteSesion, cifrasTarjeta, cifraHeroe, encajarFoto, PLANTILLAS_TARJETA } from '../logica/arte.js';
 import { fondoTarjeta, fondoLogro, fondoElegido, focoFondo, fuenteImagen, fondosDisponibles, grupoFondo } from '../logica/imagenes.js';
@@ -209,11 +210,13 @@ export function dibujarLobo(x, px, py, alto, color = '#FFFFFF', opacidad = 1) {
   x.restore();
   return cw * e;
 }
-// La marca arriba a la izquierda (el lobo y «FBE Equipo») y el pie (un filo y la firma)
+// La marca arriba a la izquierda (el lobo y el nombre de su app) y el pie (un filo y la firma)
+// (belleza C140) «FBE Esencial» para quien va por su cuenta; lo pone HojaCompartir al abrirse
+let MARCA_APP = 'FBE Equipo';
 function marca(x, letra) {
   const w = dibujarLobo(x, M, M - 4, 64, C.tinta);
   letra(800, 34, 'expanded'); x.fillStyle = C.tinta; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-  x.fillText('FBE Equipo', M + w + 18, M + 40);
+  x.fillText(MARCA_APP, M + w + 18, M + 40);
 }
 // (compartir) El pie lleva, a la derecha, el @ del atleta si lo puso; y «Entreno con @equipo» si el coach puso el del
 // equipo en config.js
@@ -737,7 +740,8 @@ const aArchivo = (blob, nombre, tipo) => { try { return new File([blob], nombre,
 
 export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión', nota = null, alt = null, plantillas = false, dibujar = null, nombreArchivo = null,
   logro = false, tipo = 'sesion', equipo = null, alPublicado = null, carrusel = null }) {
-  const { aviso, api, propio } = useApp();
+  const { aviso, api, propio, atleta } = useApp();
+  MARCA_APP = !propio && esPorSuCuenta(atleta) ? 'FBE Esencial' : 'FBE Equipo';
   const [img, setImg] = useState(null);
   const [error, setError] = useState(null);
   // (v0.187) «Récord» solo si la sesión tuvo alguno; la plantilla, el fondo y la pegatina se recuerdan en el móvil
@@ -839,7 +843,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
 
   // Compartir con la hoja del móvil (la imagen y el texto; cada app coge lo que admite)
   const compartirHoja = async (archivos = [archivo]) => {
-    try { await navigator.share({ files: archivos, title: datos.nombre || 'FBE Equipo', text: pie }); anotar(); } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir: guarda la imagen y súbela tú.', 'error'); }
+    try { await navigator.share({ files: archivos, title: datos.nombre || MARCA_APP, text: pie }); anotar(); } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir: guarda la imagen y súbela tú.', 'error'); }
   };
   const guardar = async () => { if (!(await descargar(nombre, img.blob, 'image/png'))) { aviso('Mantén pulsada la imagen para guardarla.', 'error'); return false; } anotar(); return true; };
   // Un destino: con la hoja del móvil si admite archivos (WhatsApp e Instagram salen en ella); si no, se guarda la
@@ -893,7 +897,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
   };
   const compartirVideo = async () => {
     const f = aArchivo(video.blob, nombre.replace(/\.png$/, video.tipo.includes('mp4') ? '.mp4' : '.webm'), video.tipo);
-    if (puedeCompartirArchivo(f ? [f] : null)) { try { await navigator.share({ files: [f], title: datos.nombre || 'FBE Equipo', text: pie }); anotar(); } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir el vídeo: guárdalo y súbelo tú.', 'error'); } }
+    if (puedeCompartirArchivo(f ? [f] : null)) { try { await navigator.share({ files: [f], title: datos.nombre || MARCA_APP, text: pie }); anotar(); } catch (e) { if (e?.name !== 'AbortError') aviso('No se ha podido compartir el vídeo: guárdalo y súbelo tú.', 'error'); } }
     else if (await descargar(f?.name || 'fbe.webm', video.blob, video.tipo)) { aviso('Vídeo guardado'); anotar(); }
     else aviso('No se ha podido guardar el vídeo en este navegador.', 'error');
   };

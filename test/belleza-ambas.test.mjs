@@ -48,5 +48,16 @@ check(/class="amb-aro-salida"/.test(aros) && /a\.frac === 0 &&/.test(aros) && /c
 check(/\.cifras\.cifras > div\.destaca dd \{ color: var\(--tinta\); \}/.test(cssB) && /\.cifra-objetivo-img \{ float: none; grid-column: 1;/.test(cssB), 'B92 y B83: las cuatro cifras en tinta y el dibujo de tu objetivo a la izquierda del título');
 check(/\.pista\.pista p \{ hyphens: manual;/.test(cssB), 'las pistas cortas, sin cortes con guion');
 
+console.log('\nTanda C (v0.263): acabado y para todos');
+const cssC = src('ambas-c.css'), sinComC = cssC.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssC) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComC) && main.indexOf("'./ambas-c.css'") > main.indexOf("'./ambas-b.css'") && main.indexOf("'./ambas-c.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-c.css: solo ASCII, los colores por su nombre y detrás de la tanda B');
+const comp = src('ui/Compartir.jsx');
+check(/let MARCA_APP = 'FBE Equipo';/.test(comp) && /MARCA_APP = !propio && esPorSuCuenta\(atleta\) \? 'FBE Esencial' : 'FBE Equipo';/.test(comp) && /x\.fillText\(MARCA_APP, /.test(comp) && !/fillText\('FBE Equipo'/.test(comp),
+  'C140: la tarjeta de compartir lleva la marca de su app (FBE Esencial a quien va por su cuenta)');
+check(/ck-vl ck-vl-\$\{/.test(src('ui/atleta/Checkin.jsx')) && /\.ck-vl-bascula \{ --ico-l: var\(--ico-bascula\); \}/.test(cssC), 'C146: el vistazo del check-in, en fichas con su icono');
+check(/atajo-perfil atajo-k-\$\{k\}/.test(src('ui/atleta/PerfilMas.jsx')) && /\.atajo-k-progreso \.atajo-ico/.test(cssC), 'C144: los atajos del perfil, cada uno con su color');
+check(/\.cerrar-hoja\.cerrar-hoja \{[^}]*width: 2\.75rem/.test(sinComC) && /\.bloque-equipo\.bloque-equipo \{[^}]*position: sticky/.test(sinComC), 'C110 y C129: la X de las hojas con 44 px y las etiquetas de Recetas pegadas arriba');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

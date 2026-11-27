@@ -56,3 +56,11 @@
   padding: var(--esp-4) var(--esp-10); border-radius: var(--r-pildora); background: var(--vidrio-cab); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .bloque-equipo.bloque-equipo { background: var(--tiza); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+/* -- C107 - Sin depender del color: el semaforo de la carrera tambien cambia de forma (verde, circulo; ambar, rombo;
+   rojo, cuadrado) */
+.semaforo-punto[data-estado="ambar"] { border-radius: var(--r-2); rotate: 45deg; scale: .86; }
+.semaforo-punto[data-estado="rojo"] { border-radius: var(--r-2); }
+
+/* -- C133 - El aro de constancia del avatar, mas fino */
+.aro-semana.aro-semana circle { stroke-width: 1.8; }
