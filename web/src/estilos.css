@@ -2627,7 +2627,8 @@ dl.resumen-num { margin: 0; }
 .grafica .deg-a { stop-color: var(--morado); stop-opacity: .26; }
 .grafica .deg-b { stop-color: var(--morado); stop-opacity: 0; }
 .grafica .guia { stroke: var(--tinta-3); stroke-width: 1; stroke-dasharray: 3 3; }
-.grafica .punto.record { fill: var(--morado); stroke: var(--hoja); stroke-width: 2; }
+/* (vista 262) los records, dorados, como las demas medallas de la app */
+.grafica .punto.record { fill: var(--oro-300); stroke: var(--oro); stroke-width: 1.5; }
 .grafica .punto.elegido { fill: var(--morado); stroke: var(--hoja); stroke-width: 2.5; }
 .grafica-globo { position: absolute; transform: translate(-50%, -100%); margin-top: -6px; padding: var(--esp-4) var(--esp-8); border-radius: var(--r-10); background: var(--flota); color: var(--sobre-flota); border: var(--filo-fino) solid var(--borde-flota); font-size: var(--letra-12-5); font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; box-shadow: var(--sombra-alta); z-index: 2; }
 .grafica-globo.a-la-izq { transform: translate(-100%, -100%) translateX(10px); }

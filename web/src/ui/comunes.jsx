@@ -1500,7 +1500,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
   const franjas = conFechas && bloques?.length ? franjasBloques(bloques, ini, fin, fin) : [];
   const prev = conMeta && conFechas && conMeta.hasta ? puntoPrevision({ x: dN, y: ultimo.y }, { x: conMeta.hasta, y: conMeta.y }, fin) : null;
   const conU = (v) => `${num(v, dec)}${unidad ? ` ${unidad}` : ''}`;
-  const textoPunto = (i) => `${fmtCorta(puntos[i].x)}: ${conU(puntos[i].y)}${prs.includes(i) ? ', récord' : ''}${enCursoOk && i === n - 1 ? ', semana en curso' : ''}`;
+  const textoPunto = (i) => `${fmtCorta(puntos[i].x)}: ${conU(puntos[i].y)}${prs.includes(i) ? `, récord${puntos[i].texto ? ` (${puntos[i].texto})` : ''}` : ''}${enCursoOk && i === n - 1 ? ', semana en curso' : ''}`;
   const ys = puntos.map((p) => p.y);
   const iMax = ys.indexOf(Math.max(...ys));
   const resumen = `${etiqueta || 'Evolución'}. ${n} ${n === 1 ? 'punto' : 'puntos'}, del ${fmtCorta(puntos[0].x)} (${conU(puntos[0].y)}) al ${fmtCorta(ultimo.x)} (${conU(ultimo.y)}); el más alto, ${conU(ys[iMax])} el ${fmtCorta(puntos[iMax].x)}${prs.length ? `; ${prs.length} ${prs.length === 1 ? 'récord' : 'récords'}` : ''}`
@@ -1590,7 +1590,7 @@ export function GraficaPeso({ serie, alto = 170, etiqueta, clave, meta = null, b
         <CapaMeta meta={conMeta} prev={prev} xDe={X} Y={Y} izq={izq} der={der} W={W} ultimo={{ x: dN, y: ult.tendencia }} />
         {/* (v0.204) la tira de la báscula: una marca en cada día que se pesó, sobre el eje */}
         <g class="tira-bascula">{[...new Set(serie.map((p) => p.fecha))].map((f) => <line key={f} class="dia-bascula" x1={X(f)} x2={X(f)} y1={H - abj + 2} y2={H - abj + 7} />)}</g>
-        {serie.map((p) => <circle key={p.fecha} class="pesada" cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
+        {serie.map((p) => <circle key={p.fecha} class="pesada" data-f={p.fecha} cx={X(p.fecha)} cy={Y(p.kg)} r="2.6" />)}
         <path class="linea" ref={morph.linea} d={linea} pathLength="1" />
         {sel != null && <line class="guia" x1={xs[sel]} x2={xs[sel]} y1={arr - 6} y2={H - abj} />}
         {sel != null && <circle class="punto elegido" cx={xs[sel]} cy={Y(serie[sel].tendencia)} r="5.5" />}

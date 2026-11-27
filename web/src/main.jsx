@@ -61,6 +61,7 @@ import './ambas-j.css';
 import './tacto-a.css';
 import './tacto-b.css';
 import './vista-a.css';
+import './vista-b.css';
 import './color-capa.css';
 import { App } from './ui/App.jsx';
 import { aplicarTema } from './ui/ajustes.js';

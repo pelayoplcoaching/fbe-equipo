@@ -1,0 +1,79 @@
+/* (v0.275) Vista (251-300), segunda vuelta: datos que se entienden solos (260-268). Prefijos nuevos: mmt- (el mapa y
+   las barras de musculos que se tocan), dmu- (lo que sumo un musculo), hue- (la huella de la sesion), lul- (tu linea
+   en la tarjeta del ejercicio), sup- (superar a la ultima), csm- (dos semanas, lado a lado) y pnu- (el peso que cae en
+   su linea). Van con los trozos de Progreso, la sesion y Semana. Sin @keyframes (lo que se mueve, con animate()). */
+
+/* --- 260. El mapa de musculos se toca: el elegido, encendido; los demas, en segundo plano --- */
+.mmt-raiz:not(#n) .musculo { cursor: pointer; transition: opacity var(--mov-breve) cubic-bezier(.2, .8, .2, 1); }
+.mmt-raiz[data-sel]:not(#n) .musculo:not([data-on]) { opacity: .3; }
+.mmt-raiz:not(#n) .musculo[data-on] { stroke: var(--morado); stroke-width: 1.6; paint-order: stroke; }
+@media (prefers-reduced-motion: reduce) { .mmt-raiz:not(#n) .musculo { transition: none; } }
+
+/* --- 268. Las barras de series por musculo son botones: se tocan y abren sus ejercicios --- */
+.mmt-fila:not(#n) { width: 100%; margin: 0; padding: var(--esp-6) var(--esp-6); border: 0; border-radius: var(--r-10); background: none; color: inherit; font: inherit; font-size: var(--letra-14); text-align: left; cursor: pointer; }
+.mmt-fila:not(#n):active { background: var(--acento-a8); }
+.mmt-fila:not(#n)[aria-expanded="true"] { background: var(--acento-a8); outline: var(--filo-fino) solid var(--acento-a22); outline-offset: calc(var(--filo-fino) * -1); }
+.mmt-fila:not(#n):focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+
+/* --- 260 y 268. Lo que sumo un musculo esa semana --- */
+.dmu-raiz:not(#n) { display: grid; gap: var(--esp-8); padding: var(--esp-12) var(--esp-14); border-radius: var(--r-14); background: var(--hoja-2); box-shadow: var(--anillo); transform-origin: top center; }
+.dmu-cab:not(#n) { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--esp-10); }
+.dmu-x:not(#n) { margin: calc(var(--esp-6) * -1) calc(var(--esp-8) * -1) 0 0; }
+.dmu-lista:not(#n) { display: grid; gap: var(--esp-2); margin: 0; padding: 0; list-style: none; }
+.dmu-fila:not(#n) { display: flex; align-items: baseline; justify-content: space-between; gap: var(--esp-12); padding: var(--esp-6) 0; border-top: var(--filo-fino) solid var(--linea); font-size: var(--letra-14); }
+.dmu-fila:not(#n):first-child { border-top: 0; }
+.dmu-nombre:not(#n) { min-width: 0; overflow-wrap: anywhere; }
+.dmu-v:not(#n) { flex: none; color: var(--tinta-2); font-weight: 600; }
+.dmu-carga:not(#n) { display: block; height: var(--esp-40); border-radius: var(--r-10); background: var(--hoja); }
+
+/* --- 263. La huella de una sesion: una fila de puntos por ejercicio (uno por serie, con el color de su esfuerzo) --- */
+.hue-raiz:not(#n) { display: grid; gap: var(--esp-4); min-width: 0; }
+.hue-mini:not(#n) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4) var(--esp-8); margin-top: var(--esp-4); }
+.hue-mini:not(#n) .hue-fila { display: flex; gap: var(--esp-2); }
+.hue-lista:not(#n) { display: grid; gap: var(--esp-6); margin: 0; padding: 0; list-style: none; }
+.hue-con-nombres:not(#n) .hue-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-12); font-size: var(--letra-14); }
+.hue-nombre:not(#n) { min-width: 0; overflow-wrap: anywhere; }
+.hue-puntos:not(#n) { display: flex; align-items: center; gap: var(--esp-4); }
+.hue-p:not(#n) { display: inline-block; flex: none; width: var(--esp-10); height: var(--esp-10); border-radius: 50%; background: var(--linea); }
+.hue-mini:not(#n) .hue-p { width: var(--esp-6); height: var(--esp-6); }
+.hue-p.hue-suave:not(#n) { background: var(--acento-a30); }
+.hue-p.hue-medio:not(#n) { background: var(--acento-a70); }
+.hue-p.hue-fuerte:not(#n) { background: var(--morado); }
+.hue-p.hue-rec:not(#n) { box-sizing: border-box; border: var(--filo-fino) solid var(--oro); background: var(--oro-300); }
+.hue-mas:not(#n) { margin-left: var(--esp-2); font-size: var(--letra-12); color: var(--tinta-3); }
+.hue-leyenda:not(#n) { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-12); margin: var(--esp-6) 0 0; }
+.hue-leyenda:not(#n) > span { display: inline-flex; align-items: center; gap: var(--esp-4); }
+@media (prefers-contrast: more) { .hue-p:not(#n) { outline: var(--filo-fino) solid var(--tinta); } }
+
+/* --- 264. Tu linea, en la tarjeta del ejercicio: tus ultimas seis veces --- */
+.lul-raiz:not(#n) { display: flex; align-items: center; gap: var(--esp-10); margin: 0; }
+.lul-svg:not(#n) { flex: none; overflow: visible; }
+.lul-linea:not(#n) { fill: none; stroke: var(--acento-a55); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.lul-p:not(#n) { fill: var(--acento-a55); }
+.lul-p.lul-ult:not(#n) { fill: var(--morado); stroke: var(--hoja); stroke-width: 1.2; }
+.lul-sube:not(#n) .lul-linea { stroke: var(--ok); }
+.lul-sube:not(#n) .lul-p.lul-ult { fill: var(--ok); }
+.lul-t:not(#n) { font-size: var(--letra-13); color: var(--tinta-2); }
+.lul-sube:not(#n) .lul-t strong { color: var(--ok); }
+
+/* --- 265. Superar a la ultima: lo dice la cabecera, con un destello, una vez --- */
+.sup-aviso:not(#n) { position: fixed; top: calc(env(safe-area-inset-top, 0px) + var(--esp-48) + var(--esp-16)); left: 50%; z-index: var(--capa-flotante); display: flex; align-items: center; gap: var(--esp-8); width: max-content; max-width: calc(100vw - var(--esp-32)); margin: 0; padding: var(--esp-8) var(--esp-14); overflow: hidden; border-radius: var(--r-pildora); background: var(--tinta-noche); color: var(--blanco); box-shadow: var(--sombra-flotante); font-size: var(--letra-14); font-weight: 600; transform: translateX(-50%); }
+.sup-aviso:not(#n) svg { flex: none; width: var(--ico-18); height: var(--ico-18); color: var(--oro-claro); }
+.sup-luz:not(#n) { position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(var(--oklab,) 100deg, transparent, color-mix(in srgb, var(--blanco) 22%, transparent), transparent); transform: translateX(-120%); pointer-events: none; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .sup-luz:not(#n) { display: none; } }
+
+/* --- 267. Dos semanas, lado a lado --- */
+.csm-boton:not(#n)[aria-pressed="true"] { color: var(--ok); }
+.csm-pista:not(#n) { margin: 0; }
+.csm-fila:not(#n)[aria-pressed="true"] { outline: var(--filo-fuerte) solid var(--morado); outline-offset: calc(var(--filo-fuerte) * -1); background: var(--acento-a8); }
+.csm-raiz:not(#n) { display: grid; gap: var(--esp-10); padding: var(--esp-14); border-radius: var(--r-16); background: var(--hoja); box-shadow: var(--sombra); }
+.csm-cab:not(#n) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: start; gap: var(--esp-10); }
+.csm-sem:not(#n) { display: grid; gap: var(--esp-2); min-width: 0; font-size: var(--letra-14); }
+.csm-x:not(#n) { margin: calc(var(--esp-6) * -1) calc(var(--esp-8) * -1) 0 0; }
+.csm-tabla:not(#n) { width: 100%; border-collapse: collapse; font-size: var(--letra-15); }
+.csm-tabla:not(#n) th { padding: var(--esp-8) 0; font-weight: 500; text-align: left; color: var(--tinta-2); }
+.csm-tabla:not(#n) td { padding: var(--esp-8) 0 var(--esp-8) var(--esp-10); text-align: right; font-weight: 650; }
+.csm-tabla:not(#n) tr + tr > * { border-top: var(--filo-fino) solid var(--linea); }
+.csm-dif:not(#n) { min-width: var(--esp-48); color: var(--tinta-3); }
+.csm-sube:not(#n) .csm-dif { color: var(--ok); }
+.csm-baja:not(#n) .csm-dif { color: var(--aviso); }

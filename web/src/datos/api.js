@@ -3144,8 +3144,8 @@ export function crearApi(backend, opciones = {}) {
       ]);
       const sem = porId(semanas), blo = porId(bloques);
       const porSesion = agrupar(series.filter((x) => x.sesion_id), 'sesion_id');
-      const recordsPorSesion = {};
-      for (const e of eventosDe(series).eventos) if (e.sesion_id) recordsPorSesion[e.sesion_id] = (recordsPorSesion[e.sesion_id] || 0) + 1;
+      const recordsPorSesion = {}, conRecord = new Set();
+      for (const e of eventosDe(series).eventos) { if (e.sesion_id) recordsPorSesion[e.sesion_id] = (recordsPorSesion[e.sesion_id] || 0) + 1; if (e.serie_id != null) conRecord.add(e.serie_id); }
       return sesiones.map((x) => {
         const ss = (porSesion[x.id] || []).filter((s) => Number(s.reps) > 0);
         const musc = {};
@@ -3160,6 +3160,8 @@ export function crearApi(backend, opciones = {}) {
           // v0.116 (el perfil): las series por grupo, la hora de la primera serie y los ejercicios que hizo
           grupos: musc, inicio: ss.reduce((m, s) => (s.registrada_en && (!m || s.registrada_en < m) ? s.registrada_en : m), null),
           ejercicios: [...new Map(ss.filter((s) => s.ejercicio_id).map((s) => [s.ejercicio_id, { id: s.ejercicio_id, nombre: s.ejercicio }])).values()],
+          // (vista 263) su huella: por ejercicio, una cifra por serie (su esfuerzo redondeado, 0 sin él, y 100 más si fue récord)
+          huella: [...ss.reduce((m, s) => m.set(s.ejercicio_id || s.ejercicio, [...(m.get(s.ejercicio_id || s.ejercicio) || []), Math.round(Number(s.rpe) || 0) + (conRecord.has(s.id) ? 100 : 0)]), new Map()).values()],
         };
       }).sort((a, c) => ((a.fecha || '') < (c.fecha || '') ? 1 : -1));
     },

@@ -1,4 +1,6 @@
 import { TarjetaApuntes } from './ApuntesTarjeta.jsx';
+import { Huella } from './datos-vista.jsx';
+import { leerHuella } from '../../logica/datos-vista.js';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { PorQueEntrenasAsi, GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -218,6 +220,8 @@ function Entrenamientos({ abrirSesion }) {
                         {e.series ? `, ${e.series}\u00a0series, ${num(Math.round(e.tonelaje / 100) / 10)}\u00a0t` : ''}
                       </span>
                       {e.musculos.length > 0 && <span class="mini terciario">{e.musculos.map((g) => NOMBRE_GRUPO[g]).join(', ')}</span>}
+                      {/* (vista 263) la sesión de un vistazo: una fila de puntos por ejercicio, uno por serie (su esfuerzo; el récord, dorado) */}
+                      <Huella filas={leerHuella(e.huella)} />
                     </span>
                     {e.rpe_sesion ? <span class="entreno-rpe num" data-rpe={Math.round(e.rpe_sesion)} title="Esfuerzo de la sesión">{e.rpe_sesion}<small>/10</small></span> : <span />}
                   </button>

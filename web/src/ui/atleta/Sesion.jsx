@@ -82,6 +82,8 @@ import { useTrato } from '../trato.js';
 import { avisoRecord, vozRecord, vozUltima, vozFin, titularResumen } from '../../logica/trato.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
 import { vibrar } from '../hapticos.js';
+import { Huella, LineaUltimas, AvisoSupera } from './datos-vista.jsx';
+import { huellaDeResumen, lineaUltimas, superaUltima } from '../../logica/datos-vista.js';
 import { conTransicion } from '../transiciones.js';
 import { seVe } from '../../logica/vistas.js';
 import { guardarEnCurso, borrarEnCurso, cambiarDescansoEnCurso, leerEnCurso } from '../en-curso.js';
@@ -195,6 +197,9 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   const tramosRef = useRef(null);
   const completosAntes = useRef(null);
   const [recienTramo, setRecienTramo] = useState(null);
+  // (vista 265) «Ya has movido más que la última vez»: lo dice la cabecera, una vez por sesión
+  const [supera, setSupera] = useState(null);
+  const superaVista = useRef(null);
   useEffect(() => {
     const ahora = (tramosRef.current || []).filter((t) => t.completo).map((t) => t.id);
     const antes = completosAntes.current;
@@ -541,6 +546,22 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   // La propuesta de una serie (kilos y repeticiones que te propone la app), la misma para la píldora «Sesión en curso», la
   // pantalla de bloqueo (al marcar, en guardar) y la tarjeta «Ahora toca» del descanso
   const ultimasDe = (x) => { const a = actualDe(x); return a.id !== x.ejercicio.id ? ultimas[a.id] || null : x.ultimas; };
+  // (vista 265) superar a la última: lo de hoy frente a la última vez de esos mismos ejercicios (con kilos, en toneladas;
+  // sin ellos, en repeticiones). La primera vez que lo pasa, la cabecera lo dice con un destello (una vez por sesión)
+  if (!sesion.completada && !propio && superaVista.current !== sesion.id && todas.length > 0) {
+    const hoyS = [], antesS = [];
+    for (const pe of ejercicios) {
+      const u = ultimasDe(pe);
+      if (!u?.series?.length) continue;
+      for (const x of u.series) antesS.push({ ejercicio: pe.id, kg: x.kg, reps: x.reps });
+      for (const x of Object.values(hechas[pe.id] || {})) hoyS.push({ ejercicio: pe.id, kg: x.kg, reps: x.reps });
+    }
+    const sup = superaUltima(hoyS, antesS);
+    if (sup.supera) {
+      superaVista.current = sesion.id;
+      if (marcarSupera(sesion.id)) setTimeout(() => { setSupera(sup); vibrar('hecho'); sonarFBE('progresion'); setTimeout(() => setSupera(null), 5200); }, 0);
+    }
+  }
   const propuestaDe = (pe, numero, h = hechas[pe.id] || {}) => {
     const a = actualDe(pe), cambiado = a.id !== pe.ejercicio.id;
     return prepararEjercicio(pe, cambiado ? a : null, ultimasDe(pe), semana?.foco, progresionAuto && !cambiado && !frenar).propuesta(numero, h);
@@ -841,6 +862,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     <>
     <div class={`contenido sesion-vista ${recienEmpezada ? 'sesion-tras-portada' : ''} ${sesion.completada ? 'sesion-hecha' : ''}`} inert={verEnfoque ? '' : undefined} aria-hidden={verEnfoque ? 'true' : undefined}>
       <header class={`cabecera ${tramos.length ? 'con-tramos' : ''}`}>
+        {supera && <AvisoSupera s={supera} />}
         <button class="btn btn-icono plano" onClick={alCerrar} aria-label="Volver"><Icono n="atras" /></button>
         <div class="titulo">
           <h1 tabIndex={-1}>{sesion.nombre}</h1>
@@ -1101,6 +1123,23 @@ function Cronometro({ inicio, minutos, hechas, total, queda = null }) {
 
 // (diseño, tanda 47) La misma serie de la última vez (kilos en la unidad que se ve y repeticiones), para la pastilla
 // «+2,5 kg que la última vez» de FilaSerie; null si ese día no hizo esa serie
+// (vista 264) tus últimas seis veces en un ejercicio (lo de hoy no cuenta): del historial (guardado en el móvil)
+function LineaEjercicio({ ejercicioId }) {
+  const { api, atleta } = useApp();
+  const r = useCarga(() => api.historialEjercicio(atleta.id, ejercicioId).then((x) => lineaUltimas(x?.series || [], { antesDe: hoyISO() })).catch(() => []), [atleta.id, ejercicioId], { recuerdo: `linea-ej:${atleta.id}:${ejercicioId}` });
+  return <LineaUltimas puntos={r.datos} />;
+}
+
+// (vista 265) una vez por sesión (se recuerdan las últimas 30, solo su id): devuelve si es la primera vez
+function marcarSupera(id) {
+  try {
+    const l = JSON.parse(localStorage.getItem('fbe-supera') || '[]');
+    if (Array.isArray(l) && l.includes(id)) return false;
+    localStorage.setItem('fbe-supera', JSON.stringify([id, ...(Array.isArray(l) ? l : [])].slice(0, 30)));
+  } catch { /* sin almacenamiento: vale para esta visita */ }
+  return true;
+}
+
 function serieDeAntes(ultimas, numero) {
   const x = (ultimas?.series || []).find((q) => Number(q.numero) === numero);
   if (!x || x.reps == null) return null;
@@ -1292,6 +1331,8 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
               {ultimas.series.map((s, i) => <span key={i}>{i ? ', ' : ''}<span class="uv-serie"><span class="num">{textoSerie({ ...s, rpe: null })}</span>{s.rpe ? `\u00a0@${num(s.rpe)}` : ''}</span></span>)}
             </p>
           )}
+          {/* (vista 264) y, junto a ella, tu línea: tus últimas seis veces (1RM estimado) */}
+          {ultimas && <LineaEjercicio ejercicioId={ej.id} />}
           {/* (personalización 2, tanda 3) lo de la última vez contado como persona y el descanso que de verdad hizo */}
           {ultimas && <FraseUltimaVez ultimas={ultimas} />}
           {haceAno && <HaceUnAno ultimas={haceAno} />}
@@ -1701,7 +1742,14 @@ async function calcularResumen(api, atletaId, ejercicios, hechas, cambios, enCol
     const grupos = ejerciciosPorId[s.ejercicio_id]?.grupos_musculares || ejercicios.find((e) => e.ejercicio_id === s.ejercicio_id)?.ejercicio.grupos_musculares || [];
     grupos.forEach((g, i) => { musculos[g] = (musculos[g] || 0) + (i === 0 ? 1 : 0.5); });
   }
+  // (vista 263) la sesión de un vistazo: por ejercicio, sus series en orden (su esfuerzo y si fue récord)
+  const huella = huellaDeResumen(ejercicios.map((e) => {
+    const ss = Object.values(hechas[e.id] || {}).sort((a, b) => Number(a.numero) - Number(b.numero));
+    const sus = ss.find((x) => x.sustituto_id)?.sustituto_id;
+    return { nombre: (sus && ejerciciosPorId[sus]?.nombre) || e.ejercicio.nombre, series: ss.map((x) => ({ rpe: x.rpe, record: !!records[`${x.sesion_ejercicio_id}-${x.numero}`] })) };
+  }));
   return {
+    huella,
     series: series.length, tonelaje, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: Object.values(porEjercicio), enCola, musculos,
     // (compartir) la tarjeta de una sesión de cardio lleva lo hecho (minutos, km y ritmo)
     tarjeta: { ...datosTarjeta({ ...sesion, ...cambios }, ejercicios, hechas, records, ejerciciosPorId, cambios.duracion_min), cardio: cardioHechoPublico(cambios.cardio_hecho) },
@@ -1904,6 +1952,13 @@ function Resumen({ resumen, sesion, pautas = [], familia, alCerrar, programa = n
       {!cardio && resumen.series > 0 && !resumen.enCola && <div style={{ '--i': 6 }} class="resumen-recuerdo"><RecuerdoProgreso sesionId={sesion.id} /></div>}
       {/* (v0.105) apuntar el entreno en Salud del iPhone, con su atajo */}
       <AnadirASalud sesion={sesion} resumen={resumen} />
+      {/* (vista 263) la sesión de un vistazo: una fila de puntos por ejercicio, uno por serie */}
+      {resumen.huella?.length > 0 && (
+        <section class="seccion resumen-huella" style={{ '--i': 7 }}>
+          <h2>Serie a serie</h2>
+          <div class="panel panel-pad"><Huella filas={resumen.huella} nombres /></div>
+        </section>
+      )}
       {Object.keys(resumen.musculos || {}).length > 0 && (
         <section class="seccion resumen-musculos" style={{ '--i': 7 }}>
           <h2>Músculos de hoy</h2>

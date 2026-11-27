@@ -648,7 +648,7 @@ mito-semana: ambas-a.css guias.css imagenes.css
 mm-barrido: diseno.css estilos.css
 morado: diseno.css estilos.css
 muro: diseno.css equipo-belleza.css estilos.css
-musculo: diseno.css estilos.css progreso-visual-2.css
+musculo: diseno.css estilos.css progreso-visual-2.css vista-b.css
 musica-coach: diseno.css personal.css
 musica-invitacion-cab: imagenes.css personal.css
 n: diseno.css estilos.css

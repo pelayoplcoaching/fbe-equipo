@@ -85,9 +85,10 @@ export function e1rmPorSemana(series) {
     const v = e1rm(s);
     if (v === null || !s.fecha) continue;
     const sem = lunesDe(s.fecha);
-    if (!porSemana.has(sem) || porSemana.get(sem) < v) porSemana.set(sem, v);
+    if (!porSemana.has(sem) || porSemana.get(sem).v < v) porSemana.set(sem, { v, kg: Number(s.kg) || 0, reps: Number(s.reps) || 0 });
   }
-  return [...porSemana.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([semana, valor]) => ({ semana, valor }));
+  // (vista 262) con la serie que lo dio (kilos y repeticiones), para decir la marca de cada récord
+  return [...porSemana.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([semana, x]) => ({ semana, valor: x.v, kg: x.kg, reps: x.reps }));
 }
 
 // Series semanales por grupo muscular. El primer grupo del ejercicio es el principal y cuenta 1;

@@ -50,7 +50,7 @@ const DETRAS = {
 // dg: el principio de los id de los degradados de ese mapa (los pone MapaMuscular)
 function Figura({ partes, series, nivel = nivelSeries, unidad = 'series', dg }) {
   const musc = (g, d, k) => (
-    <path key={k} class={`musculo m${nivel(series[g])}`} d={d} style={`fill:url(#${dg}-${nivel(series[g])})`}>
+    <path key={k} class={`musculo m${nivel(series[g])}`} data-g={g} d={d} style={`fill:url(#${dg}-${nivel(series[g])})`}>
       <title>{NOMBRE_GRUPO[g]}: {num(series[g] || 0)} {unidad === 'récord' ? (series[g] === 1 ? 'récord' : 'récords') : unidad}</title>
     </path>
   );

@@ -6797,6 +6797,16 @@ if (parte('v0.274: Hoy, más tranquilo')) try {
   fallos++;
   console.log('  ✗ Hoy, más tranquilo (v0.274):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.275: vista, segunda vuelta: datos que se entienden solos (el mapa y las barras que se tocan, la fuerza con el
+// periodo anterior y sus récords dorados, la huella de cada sesión, tu línea, superar a la última, el peso que cae en su
+// línea y dos semanas lado a lado) (test/e2e-vista-2.mjs)
+if (parte('v0.275: datos que se entienden solos')) try {
+  const { probarVista2 } = await import('./e2e-vista-2.mjs');
+  await probarVista2({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ los datos de la v0.275:', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();
