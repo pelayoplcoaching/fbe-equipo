@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.279': {
+    // (vista 251-300, de la v0.274 a la v0.279: se cierra la tanda E; «claude/belleza-350-propuesta.md»)
+    atleta: [
+      'Hoy, más tranquilo: lo de tu día arriba, filas que se deslizan y los textos largos en tres líneas con «Leer más».',
+      'Tus datos se explican solos: toca un músculo para ver qué lo sumó, compara dos semanas y mira tu línea en cada ejercicio.',
+      'En Ajustes, «Luz cálida de noche»: de 22:00 a 7:00, los blancos un punto más cálidos. Y las guías, con barra de lectura.',
+    ],
+    coach: [
+      'Vista (251-300): Hoy más tranquilo, datos que se explican solos, lectura cómoda, hojas de Esencial, luz cálida de noche y afinado.',
+    ],
+  },
   '0.273': {
     // (tacto 201-250, tercera vuelta: se cierra la tanda D; «claude/belleza-350-propuesta.md»)
     atleta: [
