@@ -35,5 +35,18 @@ check(/@media \(prefers-reduced-motion: no-preference\) \{\s*@supports \(animati
 check(/prefers-reduced-transparency: reduce\), \(prefers-contrast: more\) \{\s*\.tabs-flota\.tabs-flota/.test(css) && /prefers-reduced-transparency: reduce\), \(prefers-contrast: more\) \{\s*\.hoy-a-mano/.test(css), 'con «reducir transparencia» o «más contraste», la barra y «Tu sesión» van en sólido');
 check(!/(html|body|:root|\.app)[^{,]*:has\(/.test(sinCom) && /html\.barra-flota \.contenido/.test(sinCom) && /html\.hay-a-mano \.contenido/.test(sinCom), 'sin «:has()» que mire la página entera: el hueco de abajo sale de las marcas de <html>');
 
+console.log('\nTanda B (v0.262): el entrenamiento y tus datos');
+const cssB = src('ambas-b.css'), sinComB = cssB.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssB) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComB), 'ambas-b.css: solo ASCII y los colores por su nombre');
+check(main.indexOf("'./ambas-b.css'") > main.indexOf("'./ambas-a.css'") && main.indexOf("'./ambas-b.css'") < main.indexOf("'./color-capa.css'"), 'y se carga detrás de la tanda A, antes de color-capa.css');
+const guia = src('ui/atleta/EsencialSesion.jsx');
+check(/<ol class="alta-guia-pasos amb-fichas">/.test(guia) && (guia.match(/<li class="amb-ficha">/g) || []).length === 3 && /<ArteMini id="esencial-ajustar-maquina" \/>/.test(guia) && !/ArteDuo/.test(guia),
+  'B52: «Tu primera sesión», en tres fichas que se deslizan (y las máquinas, en una fila con su miniatura)');
+check(/export function ArteMini\(/.test(src('ui/atleta/EsencialArte.jsx')) && /\.esa-mini \{/.test(src('esencial-arte.css')), 'la miniatura cuadrada, con su estilo esa-* (va con su trozo)');
+const aros = src('ui/atleta/Anillos.jsx');
+check(/class="amb-aro-salida"/.test(aros) && /a\.frac === 0 &&/.test(aros) && /class="amb-aro-cifra"/.test(aros), 'B90: los aros vacíos, con su marca de salida y las sesiones en el centro');
+check(/\.cifras\.cifras > div\.destaca dd \{ color: var\(--tinta\); \}/.test(cssB) && /\.cifra-objetivo-img \{ float: none; grid-column: 1;/.test(cssB), 'B92 y B83: las cuatro cifras en tinta y el dibujo de tu objetivo a la izquierda del título');
+check(/\.pista\.pista p \{ hyphens: manual;/.test(cssB), 'las pistas cortas, sin cortes con guion');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

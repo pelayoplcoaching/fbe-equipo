@@ -71,3 +71,13 @@ html.hay-descanso { scroll-padding-bottom: 7.5rem; }
 .amb-aro-salida { fill: var(--c); }
 .amb-aro-cifra { fill: var(--tinta); font-size: var(--letra-20); font-weight: 800; font-stretch: var(--ancho-marcador); font-variant-numeric: tabular-nums; }
 @media (forced-colors: active) { .amb-aro-salida { fill: CanvasText; } .amb-aro-cifra { fill: CanvasText; } }
+
+/* -- B53 - "Donde entrenas hoy?": el dibujo, en miniatura junto al titulo (era una franja ancha encima del segmento) */
+.donde-entrenas.donde-entrenas { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--esp-12); align-items: center; }
+.donde-entrenas.donde-entrenas > * { grid-column: 1 / -1; }
+.donde-entrenas.donde-entrenas > .franja-pegada { grid-column: 1; width: 3.5rem; height: 3.5rem; margin: 0; aspect-ratio: auto; border-radius: var(--r-10); }
+.donde-entrenas.donde-entrenas > .franja-pegada + .separa { grid-column: 2; }
+
+/* -- B61 - La tarjeta del ejercicio, por capas: la ayuda ("Por que esto?", "Dudas"), mas discreta que la pauta y las series */
+.ayu-ej-b.ayu-ej-b .btn-texto { color: var(--tinta-2); font-weight: 600; }
+.ayu-ej-b.ayu-ej-b .btn-texto svg { color: var(--morado); }

@@ -30,9 +30,11 @@ import { readFileSync } from 'node:fs';
 // (v0.261: belleza A para las dos apps, a propósito: estilos a 912 KB (162 comprimido) y código a 608 comprimido. Es la
 // carcasa (la barra flotante, «Tu sesión», la cabecera) y Hoy, que salen al abrir: no pueden ir en un trozo. Las reglas de
 // lo de cada pantalla van con su trozo y las del común llevan la clase doble para no obligar a copiar las de los trozos)
+// (v0.262: belleza B, estilos a 914 KB: casi todo va con el trozo de su pantalla (la sesión, Progreso, la ayuda); al común
+// solo llegan los retoques de piezas que salen al abrir)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 608 },
-  css: { crudo: 912, gz: 162 },
+  css: { crudo: 914, gz: 162 },
 };
 
 let ok = 0, fallos = 0;

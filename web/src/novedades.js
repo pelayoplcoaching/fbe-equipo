@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.262': {
+    // (belleza B para las dos apps: el entrenamiento y tus datos; «claude/belleza-150-ambas.md», B51 a B100)
+    atleta: [
+      'Tu sesión, más clara: la serie que toca lleva un filo de luz y los ejercicios hechos se ponen en verde arriba.',
+      'En Progreso, tu semana se ve aunque no hayas empezado, y tus cuatro cifras van todas en tinta con su icono de color.',
+    ],
+    coach: [
+      'Belleza para las dos apps (tanda B de 3): la sesión, la primera sesión de FBE Esencial en tres fichas y Progreso más ordenado.',
+    ],
+  },
   '0.261': {
     // (belleza A para las dos apps: la carcasa y Hoy; «claude/belleza-150-ambas.md», A1 a A50)
     atleta: [
