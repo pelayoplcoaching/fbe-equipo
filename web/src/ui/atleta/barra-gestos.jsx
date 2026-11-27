@@ -161,7 +161,7 @@ export function instalarBarra(leer) {
     else if (actual) aIcono(s.cont, actual);
   };
   // (el clic que llega al soltar tras un gesto no cuenta; los de código, sí)
-  const clic = (e) => { if (e.isTrusted && e.timeStamp - sinClic < 160 && (barraDe(e.target) || e.target.closest?.('.tabs-flota'))) { e.stopPropagation(); e.preventDefault(); } };
+  const clic = (e) => { if (e.isTrusted && e.timeStamp - sinClic < 60 && (barraDe(e.target) || e.target.closest?.('.tabs-flota'))) { e.stopPropagation(); e.preventDefault(); } };
   // (el menú del sistema al mantener pulsado, o la tecla de menú: sus atajos)
   const contexto = (e) => {
     const boton = barraDe(e.target) && e.target.closest?.('button.tab');
