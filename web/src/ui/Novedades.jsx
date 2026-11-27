@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Hoja, Icono } from './comunes.jsx';
-import { novedadesQueVer, claveVersionVista, versionVistaInicial } from '../logica/novedades-app.js';
+import { Hoja, Icono, IcoIos } from './comunes.jsx';
+import { novedadesQueVer, claveVersionVista, versionVistaInicial, dondeNovedad } from '../logica/novedades-app.js';
 import { clavePrivacidadLocal } from '../logica/privacidad.js';
 
 /* global __APP_VERSION__ */
@@ -47,7 +47,13 @@ export function AvisoNovedades({ uid, rol = 'atleta' }) {
   return (
     <Hoja titulo="Novedades" alCerrar={cerrar} clase="hoja-novedades">
       <ul class="lista-novedades-app">
-        {lista.map((t) => <li key={t}><Icono n="hecho" /><span>{t}</span></li>)}
+        {/* (belleza 341) cada frase, con el icono y el nombre del sitio donde está lo nuevo (si se sabe) */}
+        {lista.map((t) => {
+          const d = dondeNovedad(t);
+          return d ? (
+            <li key={t} style="grid-template-columns:auto 1fr"><IcoIos n={d[0]} /><span class="pila-xs"><span>{t}</span><span class="mini terciario">{d[1]}</span></span></li>
+          ) : <li key={t}><Icono n="hecho" /><span>{t}</span></li>;
+        })}
       </ul>
       <button type="button" class="btn btn-primario btn-grande" onClick={cerrar}>Vale</button>
     </Hoja>

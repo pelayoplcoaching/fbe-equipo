@@ -4,7 +4,7 @@ import { leerHuella } from '../../logica/datos-vista.js';
 import { TarjetaTravesia } from './TravesiaTarjeta.jsx';
 import { PorQueEntrenasAsi, GuiaSugerida } from '../Guias.jsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista } from '../comunes.jsx';
+import { CabeceraGrande, Siluetas, useApp, useCarga, Icono, Vacio, ErrorCaja, Pista, PistaGesto } from '../comunes.jsx';
 import { DiaSesion } from './Hoy.jsx';
 import { cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { escalaArrastrable } from '../arrastrar-escala.js';
@@ -201,6 +201,8 @@ function Entrenamientos({ abrirSesion }) {
   return (
     <section class="seccion">
       <div class="seccion-cab"><h2>Tus entrenamientos</h2><span class="peq secundario num">{todos.length} en total</span></div>
+      {/* (belleza 342) la primera vez, cómo asomarse */}
+      <PistaGesto id="asomar">Mantén pulsada una sesión para asomarte sin entrar.</PistaGesto>
       {meses.map((m) => (
         <div class="pila-s" key={m.clave}>
           <span class="mes-etq" id={`ent-${m.clave.replace(/ /g, '-')}`}>{m.clave.charAt(0).toUpperCase() + m.clave.slice(1)}</span>

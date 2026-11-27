@@ -214,6 +214,35 @@ console.log('334 · La pausa de las historias, también con un botón');
   check(n === 4 && /aria-label=\{pausa \? 'Seguir la historia' : 'Pausar la historia'\} onClick=\{alternarPausa\}/.test(src('ui/atleta/EsencialAyuda.jsx')), `(334) en las cuatro historias y en la de tu revisión (${n} de 4)`);
 }
 
+console.log('341 · Novedades: dónde está lo nuevo');
+{
+  const { dondeNovedad } = await import('../web/src/logica/novedades-app.js');
+  const casos = [
+    ['En Ajustes, «Luz cálida de noche»: de 22:00 a 7:00…', 'En Ajustes'],
+    ['Hoy, más tranquilo: lo de tu día arriba…', 'En Hoy'],
+    ['Al terminar, tu sesión suena: un punto por serie…', 'En la sesión'],
+    ['Durante la sesión, la serie que puede ser récord…', 'En la sesión'],
+    ['Compartir, con brillo: la tarjeta se inclina…', 'Al compartir'],
+    ['Revisar en el ordenador: el vídeo ya no tiembla…', 'En Revisar'],
+    ['En Semana, mientras no está la siguiente…', 'En Semana'],
+    ['Biblioteca: «Jalón al pecho» vuelve a tener su figura…', 'En la biblioteca'],
+  ];
+  const mal = casos.filter(([t, l]) => dondeNovedad(t)?.[1] !== l);
+  check(mal.length === 0, `(341) cada frase dice dónde está lo nuevo, por cómo empieza (${casos.length - mal.length} de ${casos.length}${mal.length ? `; mal: ${mal.map(([t]) => t.slice(0, 20)).join(' | ')}` : ''})`);
+  check(dondeNovedad('Mantén pulsada una sesión, un ejercicio o una receta para asomarte') === null && dondeNovedad('Tus datos se explican solos: toca un músculo') === null,
+    '(341) si no empieza por un sitio, no se inventa (sale la marca de siempre)');
+  check(/const d = dondeNovedad\(t\);/.test(src('ui/Novedades.jsx')) && /<IcoIos n=\{d\[0\]\} \/>/.test(src('ui/Novedades.jsx')), '(341) en la hoja, con el icono del sitio y su nombre debajo de la frase');
+}
+
+console.log('342 · Una pista por gesto nuevo');
+{
+  const C = src('ui/comunes.jsx');
+  check(/export function PistaGesto\(\{ id, children \}\)/.test(C) && /soloBotones\(\) \|\| typeof matchMedia !== 'function' \|\| !matchMedia\('\(pointer: coarse\)'\)\.matches/.test(C) && /vistas\.includes\(id\)/.test(C),
+    '(342) la pista de un gesto sale una vez en el móvil (solo en pantallas táctiles y nunca con «Solo botones»)');
+  check(/<PistaGesto id="asomar">Mantén pulsada una sesión para asomarte sin entrar\.<\/PistaGesto>/.test(src('ui/atleta/Semana.jsx')), '(342) en «Tus entrenamientos»: mantén pulsada una sesión para asomarte');
+  check(/<PistaGesto id="grafica">Desliza el dedo por la gráfica/.test(C), '(342) y en la primera gráfica que ves: leer cada punto y comparar un tramo con dos dedos');
+}
+
 console.log('343 · Gestos en Ajustes, y «Solo botones»');
 {
   const { normalizarAjustes, soloBotones } = await import('../web/src/ui/ajustes.js');

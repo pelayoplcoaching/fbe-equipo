@@ -1331,6 +1331,7 @@ export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resum
           </div>
         )}
       </div>
+      {vista && n > 2 && <PistaGesto id="grafica">Desliza el dedo por la gráfica para leer cada punto; con dos dedos, compara un tramo.</PistaGesto>}
       {/* (el toque en el botón no quita el foco a la gráfica) */}
       {puedeAbrir(fijo) && <button type="button" class="btn-texto mini" onPointerDown={(e) => e.preventDefault()} onClick={() => alAbrir(fijo)}><Icono n="semana" /> {textoAbrir ? textoAbrir(fijo) : 'Ver ese punto'}</button>}
       <p class="sr">{resumen}</p>
@@ -1720,6 +1721,23 @@ export function Pista({ id, children, icono = 'pregunta' }) {
       <button type="button" class="pista-cerrar" onClick={() => setVista(true)}><Icono n="cerrar" /><span class="sr">Entendido</span></button>
     </div>
   );
+}
+
+// (belleza 342) Una pista por gesto nuevo: la primera vez que sale lo que se maneja con un gesto, una línea corta debajo
+// («Mantén pulsada una sesión para asomarte»). Sale una vez en este móvil y no vuelve. Solo en pantallas táctiles (los
+// gestos son del dedo) y nunca con «Solo botones» (no harían nada).
+const CLAVE_PISTAS_GESTO = 'fbe-pistas-gesto';
+export function PistaGesto({ id, children }) {
+  const [ver] = useState(() => {
+    try {
+      if (soloBotones() || typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches) return false;
+      const vistas = JSON.parse(localStorage.getItem(CLAVE_PISTAS_GESTO) || '[]');
+      if (!Array.isArray(vistas) || vistas.includes(id)) return false;
+      localStorage.setItem(CLAVE_PISTAS_GESTO, JSON.stringify([...vistas, id].slice(-30)));
+      return true;
+    } catch { return false; }
+  });
+  return ver ? <p class="mini terciario" role="note" data-pista-gesto={id}><Icono n="gesto" width="14" height="14" style="vertical-align:-2px;margin-right:4px" />{children}</p> : null;
 }
 
 // ---------------------------------------------------------------- listas agrupadas (v0.50, como los Ajustes de iOS)
