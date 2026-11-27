@@ -5,7 +5,7 @@ import { useState } from 'preact/hooks';
 import { useApp, useCarga, Icono } from '../comunes.jsx';
 import { textoQuePeso, textoSiguiente, TEXTO_AGUJETAS } from '../../logica/esencial-primera.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
-import { Arte, ArteDuo } from './EsencialArte.jsx';
+import { Arte, ArteMini } from './EsencialArte.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { perezoso } from '../perezoso.jsx';
 
@@ -24,15 +24,15 @@ export function GuiaPrimeraSesion() {
   const quitar = () => { try { localStorage.setItem(clave(atleta.id), '1'); } catch { /* */ } setFuera(true); };
   return (
     <section class="panel panel-pad pila-s alta-guia" aria-labelledby="alta-guia-t">
-      <Arte id="esencial-primera-sesion" />
       <strong id="alta-guia-t">Tu primera sesión, en tres cosas</strong>
-      <ol class="alta-guia-pasos">
-        <li><strong>Apunta cada serie:</strong> los kilos y las repeticiones que has hecho.</li>
-        <li><strong>«Te sobran 4-5»</strong> son las repeticiones que podrías haber hecho de más al acabar la serie: no se va al límite.</li>
-        <li><strong>Si haces justo lo que te propone la app,</strong> basta con tocar ✓.</li>
+      {/* (belleza B52) tres fichas que se deslizan, cada una con su dibujo pequeño, su número y su frase (antes, tres dibujos
+          enormes uno debajo de otro) */}
+      <ol class="alta-guia-pasos amb-fichas">
+        <li class="amb-ficha"><Arte id="esencial-primera-sesion" alta tamanos="240px" /><span class="amb-ficha-n" aria-hidden="true">1</span><span class="amb-ficha-t"><strong>Apunta cada serie:</strong> los kilos y las repeticiones que has hecho.</span></li>
+        <li class="amb-ficha"><Arte id="esencial-te-sobran" alta tamanos="240px" /><span class="amb-ficha-n" aria-hidden="true">2</span><span class="amb-ficha-t"><strong>«Te sobran 4-5»</strong> son las repeticiones que podrías haber hecho de más al acabar la serie: no se va al límite.</span></li>
+        <li class="amb-ficha"><span class="amb-ficha-ico" aria-hidden="true"><Icono n="hecho" /></span><span class="amb-ficha-n" aria-hidden="true">3</span><span class="amb-ficha-t"><strong>Si haces justo lo que te propone la app,</strong> basta con tocar ✓.</span></li>
       </ol>
-      <ArteDuo ids={['esencial-te-sobran', 'esencial-ajustar-maquina']} />
-      <p class="peq secundario">Y el primer día, pide a alguien de sala que te ajuste las máquinas: son cinco minutos y te ahorran un mes de dudas.</p>
+      <p class="peq secundario amb-guia-maq"><ArteMini id="esencial-ajustar-maquina" /><span>Y el primer día, pide a alguien de sala que te ajuste las máquinas: son cinco minutos y te ahorran un mes de dudas.</span></p>
       <button type="button" class="btn btn-peq" style="justify-self:start" onClick={quitar}>Entendido</button>
     </section>
   );

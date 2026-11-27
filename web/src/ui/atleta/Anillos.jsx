@@ -40,6 +40,7 @@ export function AnillosSemana({ programa, salud, checkinSemana, constancia = nul
   const T = 136, G = 13, H = 3;
   const radio = (i) => T / 2 - G / 2 - i * (G + H);
   const cerrados = anillos.filter((a) => a.cerrado).length;
+  const sesionesAro = (/^(\d+) de (\d+)$/.exec(anillos.find((a) => a.id === 'sesiones')?.texto || '') || []).slice(1).join('/') || null;
   return (
     <section class="seccion" aria-labelledby="anillos-t">
       <div class="seccion-cab"><h2 id="anillos-t">Tu semana</h2>{cerrados > 0 && <span class="peq secundario num">{cerrados} de {anillos.length} cerrados</span>}</div>
@@ -55,9 +56,13 @@ export function AnillosSemana({ programa, salud, checkinSemana, constancia = nul
                 <circle class="pista" cx={T / 2} cy={T / 2} r={r} stroke-width={G} />
                 {a.frac > 0 && <circle class="brillo" cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} />}
                 {a.frac > 0 && <circle class="lleno" style={{ stroke: `url(#aro-semana-${a.id})` }} cx={T / 2} cy={T / 2} r={r} stroke-width={G} stroke-dasharray={`${C} ${C}`} stroke-dashoffset={resto} />}
+                {/* (belleza B90) sin nada aún, su marca de salida arriba: se ve que es un aro por llenar, no uno sin acabar */}
+                {a.frac === 0 && <circle class="amb-aro-salida" cx={T / 2 + r} cy={T / 2} r={G / 2 - 2} />}
               </g>
             );
           })}
+          {/* (belleza B90) y en el centro, cuántas sesiones lleva de las de su semana */}
+          {sesionesAro && <text class="amb-aro-cifra" x={T / 2} y={T / 2} text-anchor="middle" dominant-baseline="central" aria-hidden="true">{sesionesAro}</text>}
         </svg>
         <ul class="anillos-leyenda">
           {anillos.map((a) => (

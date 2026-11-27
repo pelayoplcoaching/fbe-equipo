@@ -1,0 +1,73 @@
+/* Belleza para las dos apps, tanda B (v0.262): el entrenamiento y tus datos. La lista, en el doc del proyecto
+   "claude/belleza-150-ambas.md" (B51 a B100). Es solo como se ve: textos y cifras, iguales. Las reglas de lo de cada
+   pantalla, con una sola clase (van con su trozo); las del comun, con la clase doble (no obligan a copiar las de los trozos). */
+
+/* -- B52 - "Tu primera sesion, en tres cosas": tres fichas que se deslizan, cada una con su dibujo pequeno, su numero y su
+   frase (eran tres dibujos enormes uno debajo de otro) */
+.amb-fichas {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(12.5rem, 78%); gap: var(--esp-10); margin: 0; padding: 0 0 var(--esp-4);
+  list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.amb-ficha {
+  display: grid; grid-template-columns: var(--esp-24) minmax(0, 1fr); align-content: start; gap: var(--esp-10) var(--esp-8);
+  padding: var(--esp-10); border-radius: var(--r-14); background: var(--hoja-2); scroll-snap-align: start;
+}
+.amb-ficha-ico {
+  grid-column: 1 / -1; display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: var(--r-10);
+  background: linear-gradient(var(--oklab,) 160deg, var(--noche-2), var(--marca-900)); color: var(--verde-300);
+}
+.amb-ficha-ico svg { width: var(--ico-32); height: var(--ico-32); stroke-width: 2.4; }
+.amb-ficha-n {
+  display: grid; place-items: center; width: var(--esp-24); height: var(--esp-24); border-radius: 50%;
+  background: var(--morado); color: var(--sobre-morado); font-size: var(--letra-12-5); font-weight: 750; font-variant-numeric: tabular-nums;
+}
+.amb-ficha-t { min-width: 0; font-size: var(--letra-14); line-height: 1.4; text-wrap: pretty; }
+.amb-guia-maq { display: flex; align-items: center; gap: var(--esp-12); }
+@media (prefers-reduced-motion: no-preference) { .amb-fichas { scroll-behavior: smooth; } }
+@media (forced-colors: active) { .amb-ficha { border: var(--filo-fino) solid CanvasText; } }
+
+/* -- B56 - La portada de la sesion: "Por que es para ti" con su icono colgado en un disco, alineado con la primera linea */
+.portada-porque.portada-porque { align-items: flex-start; }
+.portada-porque.portada-porque > svg {
+  box-sizing: content-box; padding: var(--esp-6); margin-block-start: calc(-1 * var(--esp-4)); border-radius: 50%; background: var(--acento-a12);
+}
+
+/* -- B57 - "Lo de hoy, en 20 segundos": los iconos en un disco */
+.ayu-hoy-f { align-items: center; }
+.ayu-hoy-i {
+  display: inline-grid; place-items: center; width: var(--esp-28); height: var(--esp-28); margin-top: 0; border-radius: 50%; background: var(--acento-a12);
+}
+
+/* -- B60 - La barra de tramos de la sesion: los ejercicios hechos, en verde (el de ahora sigue en morado) */
+.tramos.tramos a.completo .tramo-lleno { background: linear-gradient(var(--oklab,) 90deg, color-mix(in srgb, var(--ok) 65%, var(--blanco)), var(--ok)); }
+
+/* -- B64 - La sugerencia de carga, sin negrita entera: se lee como una frase */
+.ejercicio-cuerpo .sugerencia.sugerencia { font-weight: 560; }
+
+/* -- B66 - La serie que toca, con un filo de luz a la izquierda */
+.serie.activa.activa { background-image: linear-gradient(var(--oklab,) 90deg, var(--morado) 0 var(--filo-marca), transparent var(--filo-marca)); }
+@media (forced-colors: active) { .serie.activa.activa { background-image: none; } }
+
+/* -- B67 - El descanso, sin tapar: al bajar a la serie siguiente, queda por encima de la pastilla del descanso */
+html.hay-descanso { scroll-padding-bottom: 7.5rem; }
+
+/* -- B83 - La tarjeta de tu objetivo, ordenada: el dibujo a la izquierda del titulo (flotaba solo, arriba) */
+.cifra-objetivo.cifra-objetivo { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--esp-12); align-items: center; }
+.cifra-objetivo.cifra-objetivo > * { grid-column: 1 / -1; }
+.cifra-objetivo.cifra-objetivo > .cifra-objetivo-img { float: none; grid-column: 1; grid-row: 1 / span 2; margin: 0; }
+.cifra-objetivo.cifra-objetivo > .cifra-objetivo-img + .t-sobre, .cifra-objetivo.cifra-objetivo > .cifra-objetivo-img + .t-sobre + .peq { grid-column: 2; }
+
+/* -- B92 - Las cuatro cifras de Progreso, con la cifra en tinta y el color en su icono (unas iban moradas y otras negras) */
+.cifras.cifras > div.destaca dd { color: var(--tinta); }
+
+/* -- A38 (repaso) - Las pistas cortas, sin cortes con guion ("cam-biar", "relle-nar") */
+.pista.pista p { hyphens: manual; -webkit-hyphens: manual; }
+
+/* -- B70 - "Terminar sesion", en capsula ancha al final del ultimo ejercicio, del estilo de "Empezar" */
+.btn-terminar { border-radius: var(--r-pildora); min-height: 3.5rem; }
+
+/* -- B90 - "Tu semana" sin nada hecho aun: cada aro con su marca de salida arriba y, en el centro, las sesiones que llevas
+   (parecian circulos sin acabar) */
+.amb-aro-salida { fill: var(--c); }
+.amb-aro-cifra { fill: var(--tinta); font-size: var(--letra-20); font-weight: 800; font-stretch: var(--ancho-marcador); font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) { .amb-aro-salida { fill: CanvasText; } .amb-aro-cifra { fill: CanvasText; } }

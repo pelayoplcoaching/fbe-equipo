@@ -29,6 +29,13 @@ export function Arte({ id, alta = false, tamanos = '(min-width: 720px) 640px, 10
   return <span class="esa-franja">{foto}</span>;
 }
 
+// (belleza B52) En miniatura, cuadrada (una fila compacta: el dibujo pequeño a la izquierda y su frase al lado)
+export function ArteMini({ id, tamanos = '112px' }) {
+  const [falla, setFalla] = useState(null);
+  if (!hayArte(id) || falla === id) return null;
+  return <span class="esa-mini"><Foto id={id} tamanos={tamanos} alFallar={() => setFalla(id)} /></span>;
+}
+
 // Dos, lado a lado (las dos se ven o ninguna)
 export function ArteDuo({ ids }) {
   const [falla, setFalla] = useState(false);
