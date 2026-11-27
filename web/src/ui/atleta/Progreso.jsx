@@ -46,6 +46,7 @@ import { enLibras, pesoNum, pesoTxt, etiquetaPeso, difVista, deVista, vista, nom
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { anadirImagenes } from '../../logica/imagenes.js';
 import LISTA_TROZOS from '../../datos/imagenes-trozos.json';
+import { seguirInclinacion } from '../inclinacion.js';
 
 // (belleza 175) las cabeceras ilustradas de las pestañas: su lista viaja con Progreso (datos/imagenes-trozos.json)
 anadirImagenes(LISTA_TROZOS);
@@ -561,6 +562,9 @@ function Vitrina({ datos, ejercicios = [], esCoach, atletaId, abrirHistorial, ir
   const [abierta, setAbierta] = useState(null);
   // (v0.204) el trofeo de un récord nuevo (desde la última vez que lo viste en este móvil) destella una vez
   const { nuevos, rejilla } = useTrofeosNuevos(`fbe-trofeos-vistos:${atletaId}`, datos?.ejercicios || [], !esCoach);
+  // (vista 284) el brillo de los trofeos sigue al móvil (si se puede inclinar: inclinacion.js)
+  const nTrofeos = datos?.ejercicios?.length || 0;
+  useEffect(() => seguirInclinacion(rejilla.current, (el, x) => el.style.setProperty('--mm-x', x.toFixed(2))), [nTrofeos, todas]);
   if (!datos) return null;
   if (!datos.ejercicios.length) {
     return (

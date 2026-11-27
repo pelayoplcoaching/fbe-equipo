@@ -86,6 +86,9 @@ export function AjustesDispositivo({ coach = false, antes = null }) {
         <Interruptor id="aj-oled" icono="sueno" texto="Negro puro (OLED)" valor={!!a.oled} alCambiar={(v) => cambiar('oled', v)}
           ayuda={a.tema === 'oscuro' ? 'El fondo, negro del todo: en pantallas OLED gasta menos batería.' : a.tema === 'sol' ? 'De noche, el fondo será negro del todo (en pantallas OLED gasta menos batería).' : 'Cuando tu móvil esté en oscuro, el fondo será negro del todo (en pantallas OLED gasta menos batería).'} />
       )}
+      {/* (vista 282) la luz cálida de noche */}
+      <Interruptor id="aj-calida" icono="luna" texto="Luz cálida de noche" valor={a.calida === true} alCambiar={(v) => cambiar('calida', v)}
+        ayuda={a.altoContraste ? 'Con «Alto contraste» no se aplica: los colores se quedan al máximo.' : 'De las 22:00 a las 7:00, los blancos de la app un punto más cálidos, como la luz de una lámpara. Las fotos no cambian.'} />
       <li class="fila-ios fila-ios-bloque">
         <IcoIos n="paleta" />
         <fieldset class="acentos fila-ios-texto">

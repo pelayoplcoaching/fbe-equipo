@@ -78,6 +78,7 @@ import { AvisoViaje } from './Viaje.jsx';
 import { semanasObjetivo, semanaEnCurso, cardioDelCalendario, esCarrera, carrerasDeLaSemana } from '../../logica/semana-natural.js';
 import { sesionConCola, CLAVES_COPIA } from '../../logica/sin-red.js';
 import { perezoso } from '../perezoso.jsx';
+import { seguirInclinacion } from '../inclinacion.js';
 // (FBE Esencial) lo de quien va por su cuenta, en su propio trozo: el resto de atletas no lo descarga
 const BienvenidaEsencial = perezoso(() => import('./Esencial.jsx'), 'BienvenidaEsencial', { mientras: null });
 const HeroEsencial = perezoso(() => import('./Esencial.jsx'), 'HeroEsencial', { mientras: null });
@@ -552,6 +553,9 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
   const [semanaCelebrada, setSemanaCelebrada] = usePreferencia('fbe-semana-celebrada', null);
   // (diseño, tanda 47) se vuelve del resumen de la sesión recién terminada («Volver a hoy»): la tarjeta lo celebra una vez
   const recienHecha = useRef(null);
+  // (vista 285) con el móvil inclinado (si se puede: inclinacion.js), el cielo y la escena se mueven distinto
+  const heroRef = useRef(null);
+  useEffect(() => seguirInclinacion(heroRef.current, (el, x, y) => { el.style.setProperty('--incl-x', x.toFixed(3)); el.style.setProperty('--incl-y', y.toFixed(3)); }), []);
   if (recienHecha.current === null) { try { recienHecha.current = sessionStorage.getItem('fbe-recien-hecha') === '1'; sessionStorage.removeItem('fbe-recien-hecha'); } catch { recienHecha.current = false; } }
   // (con objetivo de días por semana, se espera a la constancia: la clave lleva el lunes de la semana natural)
   // (v0.200) el estreno del bloque (su primera semana, el primer día y el siguiente) y la fiesta de fin de año
@@ -695,7 +699,7 @@ function Contenido({ p, atleta, abrirSesion, irA, checkinSemana, salud, noLeidos
     <>
       {verDia && <BienvenidaDia nombre={atleta.nombre} atletaId={atleta.id} datos={datosDia} panel={panelDia} alCerrar={cerrarDia} />}
       {/* (a medida, 080) lo que su coach le ha dejado escrito para hoy: el saludo, el día de pierna o la semana completa */}
-      <section class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
+      <section ref={heroRef} class={`hero-dia hero-${e.tipo}${recienHecha.current ? ' recien-hecha' : ''}`} data-tono={tonoDia({ hero: e.tipo, sesion: siguiente?.tipo, foco: semana?.foco })} aria-label={e.tipo === 'entreno' ? 'Tu sesión de hoy' : e.tipo === 'descanso' ? 'Hoy descansas' : e.tipo === 'hecha' ? 'Sesión de hoy hecha' : 'Semana completa'}>
         {/* (v0.200) el cielo de la hora detrás de todo: amanecer, día, atardecer o noche, con el sol de Madrid de cada mes */}
         <CieloHora clase="hero-cielo" conTiempo />
         {e.tipo !== 'entreno' && !hayImagen(escenaHoy(e.tipo, hoy)) && <Ilustracion n={e.tipo === 'hecha' ? 'hecha' : e.tipo === 'semana' ? 'semana' : 'descanso'} clase="hero-ilu" />}

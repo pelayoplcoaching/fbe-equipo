@@ -90,6 +90,10 @@ export function imagenGrupo(grupo) {
 // rack para entrenar, el plato, la almohada, el corazón y los libros). Las de «Músculo a músculo» sin grupo, el rack.
 const ESTANTES_IMG = { empieza: 'guia-empieza', entrenar: 'guia-entrenar', musculos: 'guia-entrenar', comer: 'guia-comer', cabeza: 'guia-cabeza', salud: 'guia-salud', mas: 'guia-mas' };
 export const imagenEstante = (estante) => ESTANTES_IMG[estante] || 'guia-mas';
+// (vista 288) Un vídeo sin miniatura (sin red para ella, o con el ahorro de datos) lleva el arte de su tema: el rack para
+// entrenar, la técnica, el plato, la almohada y los libros; los del canal (sin tema), el rack
+const TEMAS_VIDEO_IMG = { entrenamiento: 'guia-entrenar', tecnica: 'video-tecnica', alimentacion: 'guia-comer', descanso: 'guia-cabeza', general: 'guia-mas' };
+export const imagenTemaVideo = (categoria) => TEMAS_VIDEO_IMG[categoria] || (categoria ? 'guia-mas' : 'guia-entrenar');
 // La portada de cada guía (la cabecera del lector, 12:5) y su recorte cuadrado (la tarjeta); sin portada, la de su estantería
 export const PORTADAS_GUIA = ['bienvenida', 'manual', 'introduccion', 'rutinas', 'deload', 'estancamiento', 'volver', 'cardio', 'dieta-flexible', 'composicion', 'suplementacion', 'sueno', 'motivacion', 'salud-cardiometabolica', 'dislipidemia', 'mujer', 'mitos', 'proteina', 'medidas', 'primeros-dias', 'rodilla', 'baremos', 'volver-40', 'calentamiento', 'material', 'viaje', 'diccionario', 'dolor', 'seguridad', 'creatina', 'numero-proteina', 'suplementos-12', 'cuatro-formulas', 'bebidas-alcohol', 'definicion', 'comer-fuera', 'hambre', 'guardias', 'estres', 'tension-pesas', 'analitica', 'grasa-visceral', 'despues-de-comer', 'alcohol', 'sarcopenia', 'hospital'];
 export const imagenPortadaGuia = (clave) => (PORTADAS_GUIA.includes(clave) ? `portada-${clave}` : null);

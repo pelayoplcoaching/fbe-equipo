@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'preact/hooks';
 import { useApp, useCarga, useUnaVez, Icono, Hoja, Vacio } from './comunes.jsx';
 import { VideoYoutube } from './YouTube.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
+import { imagenTemaVideo } from '../logica/imagenes.js';
 import { conTransicion } from './transiciones.js';
 import { CATEGORIAS_RECURSO } from '../logica/calculos.js';
 import { fmtCorta } from '../logica/fechas.js';
@@ -30,12 +32,20 @@ export function HojaVideo({ titulo, url, descripcion = '', pie = null, alCerrar 
   );
 }
 
+// (vista 288) La miniatura de un vídeo; si no hay (ahorro de datos o no llega), el arte de su tema en lugar del hueco gris
+function MiniaturaVideo({ id, categoria = null }) {
+  const [falla, setFalla] = useState(false);
+  const url = !ahorroDatos() && id ? miniatura(id) : null;
+  if (url && !falla) return <img src={url} alt="" loading="lazy" referrerpolicy="no-referrer" onError={() => setFalla(true)} />;
+  const arte = imagenTemaVideo(categoria);
+  return hayImagen(arte) ? <Imagen id={arte} clase="vtc-arte" tamanos="200px" /> : null;
+}
 // Una tarjeta de vídeo para una estantería (la miniatura y el título); al tocarla, su hoja
 // (tacto 217) la miniatura crece hasta ser el reproductor de la hoja (que ya se cierra arrastrándola hacia abajo)
-function TarjetaVideo({ id, titulo, detalle = null, alAbrir }) {
+function TarjetaVideo({ id, titulo, detalle = null, categoria = null, alAbrir }) {
   return (
     <button type="button" class="tarjeta-video" onClick={(ev) => conTransicion(alAbrir, 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.firstElementChild, hasta: '.hoja-dialogo .yt-marco' }])}>
-      <span class="tarjeta-video-img">{!ahorroDatos() && miniatura(id) && <img src={miniatura(id)} alt="" loading="lazy" referrerpolicy="no-referrer" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}<span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
+      <span class="tarjeta-video-img"><MiniaturaVideo id={id} categoria={categoria} /><span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
       <span class="pila-xs"><span class="tarjeta-video-titulo">{titulo}</span>{detalle && <span class="mini terciario">{detalle}</span>}</span>
     </button>
   );
@@ -63,7 +73,7 @@ export function VideoSemanaHoy({ enFila = false }) {
     return (
       <>
         <button type="button" class="panel video-semana vs-pieza" aria-haspopup="dialog" onClick={(ev) => conTransicion(() => setAbierto(true), 'morph', [{ nombre: 'vt-viaje', desde: ev.currentTarget.firstElementChild, hasta: '.hoja-dialogo .yt-marco' }])}>
-          <span class="tarjeta-video-img vs-img">{!ahorroDatos() && id && miniatura(id) && <img src={miniatura(id)} alt="" loading="lazy" referrerpolicy="no-referrer" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}<span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
+          <span class="tarjeta-video-img vs-img"><MiniaturaVideo id={id} categoria={r.categoria} /><span class="yt-play" aria-hidden="true"><Icono n="play" /></span></span>
           <span class="mini video-semana-k"><Icono n="video" /> El vídeo de la semana</span>
           <strong class="amb-video-t">{r.titulo}</strong>
         </button>
@@ -136,7 +146,7 @@ export function VideotecaAprende() {
       )}
       {listas.map((l) => (
         <Estanteria key={l.categoria} id={`vids-${l.categoria}`} titulo={`Vídeos: ${l.nombre.toLowerCase()}`} sub={l.videos.length === 1 ? '1 vídeo' : `${l.videos.length} vídeos`}>
-          {l.videos.map((r) => <TarjetaVideo key={r.id} id={videoDe(r.url).id} titulo={r.titulo} detalle={r.directo_en ? `Directo ${textoDirecto(r.directo_en)}` : null}
+          {l.videos.map((r) => <TarjetaVideo key={r.id} id={videoDe(r.url).id} titulo={r.titulo} categoria={r.categoria} detalle={r.directo_en ? `Directo ${textoDirecto(r.directo_en)}` : null}
             alAbrir={() => setAbierto({ titulo: r.titulo, url: r.url, descripcion: r.descripcion || '' })} />)}
         </Estanteria>
       ))}

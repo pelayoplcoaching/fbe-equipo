@@ -9,7 +9,7 @@
 // v0.54: el fondo del chat («Con dibujos», de serie, o «Liso»).
 // v0.62: «Avisar aunque bloquees el móvil», apagado de serie.
 // v0.63: el teclado de la app para apuntar las series (encendido de serie; apagado, el del móvil, como antes).
-import { momentoDelDia, horaDecimal } from '../logica/cielo.js';
+import { momentoDelDia, horaDecimal, luzX, horaCalida } from '../logica/cielo.js';
 import { hoyISO } from '../logica/fechas.js';
 import { limpiarOcultar } from '../logica/respeto.js';
 import { limpiarCelebrar } from '../logica/trato.js';
@@ -22,7 +22,7 @@ import { opcionLigero, lentoVigente, ligeroActivo } from '../logica/ligero.js';
 const CLAVE = 'fbe-ajustes';
 // voz (v0.48): el entrenador por voz, apagado de entrada
 export const AJUSTES_DEFECTO = { tema: 'sistema', sonido: true, sonidoDescanso: 'tres-beeps', volumen: 1, cuentaAtras: true, vibracion: true, pantalla: true, pesoCifra: false, voz: false,
-  acento: ACENTO_DEFECTO, oled: false, hapticos: true, letra: 'normal', respira: false, juegoDescanso: false, apunteDescanso: false, calmaJuego: false, sonidoJuego: false, loboJuego: 'tiza', descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
+  acento: ACENTO_DEFECTO, oled: false, calida: false, hapticos: true, letra: 'normal', respira: false, juegoDescanso: false, apunteDescanso: false, calmaJuego: false, sonidoJuego: false, loboJuego: 'tiza', descansoDefecto: DESCANSO_DEFECTO, fondoChat: 'dibujos',
   // v0.56: los sonidos del chat (al enviar y al recibir, con el chat abierto) y las fotos en HD (más grandes) de serie
   sonidosChat: true, fotosHd: false,
   // (v0.180) notas de voz: escucharlas siempre antes de enviarlas (apagado: al soltar el micro, salen, como en WhatsApp)
@@ -87,6 +87,7 @@ export function normalizarAjustes(guardado = {}) {
   if (!TEMAS.includes(a.tema)) a.tema = AJUSTES_DEFECTO.tema;
   if (typeof a.acento !== 'string' || !/^[a-z]{1,20}$/.test(a.acento)) a.acento = AJUSTES_DEFECTO.acento;
   a.oled = a.oled === true;
+  a.calida = a.calida === true;   // (vista 282) la luz cálida de noche
   if (!LETRAS.includes(a.letra)) a.letra = AJUSTES_DEFECTO.letra;
   a.respira = a.respira === true;
   // «La travesía»: si jugó en el último descanso, el juego se abre solo en el siguiente (hasta que lo cierre a mano)
@@ -158,18 +159,16 @@ export const EVENTO_AJUSTES = 'fbe-ajustes';
 let temaPrevio;
 // (v0.200) El tema que toca «con el sol» ahora mismo: oscuro desde media hora después de la puesta hasta el amanecer
 export const temaConSol = (d = new Date()) => (momentoDelDia(horaDecimal(d), hoyISO()) === 'noche' ? 'oscuro' : 'claro');
-let relojSol = null;
-function alVolverSol() { if (document.visibilityState === 'visible') aplicarTema(); }
+// (vista 282 y 283) lo que depende de la hora («con el sol», la luz cálida de noche y la luz de las sombras) se mira cada
+// cinco minutos con la app a la vista, y al volver a ella
+let relojLuz = null;
+function alVolverLuz() { if (document.visibilityState === 'visible') aplicarTema(); }
 export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) {
   const pedido = TEMAS.includes(temaPedido) ? temaPedido : 'sistema';
   if (typeof document === 'undefined') return;
-  // «con el sol» se mira cada cinco minutos (y al volver a la app) mientras esté elegido
-  if (pedido === 'sol' && !relojSol) {
-    relojSol = setInterval(() => aplicarTema(), 5 * 60 * 1000);
-    document.addEventListener('visibilitychange', alVolverSol);
-  } else if (pedido !== 'sol' && relojSol) {
-    clearInterval(relojSol); relojSol = null;
-    document.removeEventListener('visibilitychange', alVolverSol);
+  if (!relojLuz) {
+    relojLuz = setInterval(() => { if (document.visibilityState === 'visible') aplicarTema(); }, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', alVolverLuz);
   }
   const tema = pedido === 'sol' ? temaConSol() : pedido;
   const r = document.documentElement;
@@ -194,13 +193,18 @@ export function aplicarTema(temaPedido = leerAjustes().tema, a = leerAjustes()) 
   if (alto) r.setAttribute('data-contraste', 'alto'); else r.removeAttribute('data-contraste');
   if (!escuchaContraste) { escuchaContraste = true; try { matchMedia('(prefers-contrast: more)').addEventListener?.('change', () => aplicarTema()); } catch { /* */ } }
   if (a.daltonismo) r.setAttribute('data-daltonismo', ''); else r.removeAttribute('data-daltonismo');
+  // (vista 282) la luz cálida de noche: de 22:00 a 7:00, los blancos un punto más cálidos (sus fichas, en vista-c.css); con
+  // alto contraste, no. (283) La luz de las sombras, según la hora (--luz-x, de −1 a 1)
+  const ahora = new Date();
+  r.toggleAttribute('data-calida', a.calida === true && !alto && horaCalida(horaDecimal(ahora)));
+  r.style.setProperty('--luz-x', String(luzX(horaDecimal(ahora), hoyISO())));
   // (v0.209) el modo ligero (las reglas, al final de belleza.css)
   if (conLigero(a)) r.setAttribute('data-ligero', ''); else r.removeAttribute('data-ligero');
   // El acento: sus variables en una hoja propia al final del <head> (con los mismos selectores que el tema)
   let hoja = document.getElementById('fbe-acento');
   const css = cssAcento(a.acento, { alto });
   if (css && !hoja) { hoja = document.createElement('style'); hoja.id = 'fbe-acento'; document.head.appendChild(hoja); }
-  if (hoja) hoja.textContent = css;
+  if (hoja && hoja.textContent !== css) hoja.textContent = css;   // (cada cinco minutos: sin rehacer los estilos si no cambia)
   const COLOR = coloresBarra(acentoDe(a.acento));
   // Color de la barra del sistema en la app instalada (la de la portada de arranque se queda en morado hasta que se va)
   for (const m of document.querySelectorAll('meta[name="theme-color"]:not(#tc-portada)')) {

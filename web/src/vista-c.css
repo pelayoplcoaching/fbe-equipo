@@ -1,0 +1,87 @@
+/* (v0.278) Vista (251-300), quinta vuelta: luz y materia (282-289). Prefijos nuevos: vtc- (lo de esta vuelta que
+   necesita clase propia). Todo con fichas de color; nada se mueve solo: el reflejo de la barra va ligado al desplazamiento
+   y se apaga con "reducir movimiento" y con "reducir transparencia" */
+
+/* --- 282. Luz calida de noche (el ajuste; de 22:00 a 7:00 ajustes.js pone data-calida en la raiz, nunca con alto
+   contraste): los blancos, un punto mas calidos. En claro son las superficies; en oscuro, el texto. Las fotos no cambian --- */
+@media (prefers-color-scheme: light) {
+  :root[data-calida]:not([data-theme="dark"]) {
+    --hoja: color-mix(in oklab, var(--blanco) 94%, var(--ambar-200));
+    --hoja-2: color-mix(in oklab, var(--neutro-50) 94%, var(--ambar-200));
+    --hoja-3: color-mix(in oklab, var(--neutro-100) 93%, var(--ambar-200));
+    --tiza: color-mix(in oklab, var(--neutro-100) 93%, var(--ambar-200));
+  }
+}
+:root[data-calida][data-theme="light"] {
+  --hoja: color-mix(in oklab, var(--blanco) 94%, var(--ambar-200));
+  --hoja-2: color-mix(in oklab, var(--neutro-50) 94%, var(--ambar-200));
+  --hoja-3: color-mix(in oklab, var(--neutro-100) 93%, var(--ambar-200));
+  --tiza: color-mix(in oklab, var(--neutro-100) 93%, var(--ambar-200));
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-calida]:not([data-theme="light"]) { --tinta: color-mix(in oklab, var(--neutro-100) 88%, var(--ambar-200)); }
+}
+:root[data-calida][data-theme="dark"] { --tinta: color-mix(in oklab, var(--neutro-100) 88%, var(--ambar-200)); }
+
+/* --- 283. Las sombras siguen a la luz de la hora (--luz-x, de -1 a 1, lo pone ajustes.js): por la manana caen a la
+   derecha y por la tarde a la izquierda, como el sol del cielo de Hoy; de noche, rectas. Son las de diseno.css (bloque
+   31) con su desplazamiento; en oscuro siguen las suyas (alli la profundidad la da el filo de luz) --- */
+:root {
+  --sombra-tarjeta: 0 0 0 1px var(--borde), calc(var(--luz-x, 0) * 1px) 1px 2px color-mix(in srgb, var(--marca-900) 5%, transparent), calc(var(--luz-x, 0) * 4px) 8px 18px -12px color-mix(in srgb, var(--marca-900) 17%, transparent);
+  --sombra-flotante: calc(var(--luz-x, 0) * 2px) 3px 8px -3px color-mix(in srgb, var(--marca-900) 12%, transparent), calc(var(--luz-x, 0) * 6px) 16px 34px -14px color-mix(in srgb, var(--marca-900) 34%, transparent);
+}
+
+/* --- 286. El cristal, con reflejo: el filo de luz de la barra de abajo (y el de su pastilla) corre con lo que pasa por
+   debajo. Ligado al desplazamiento de la pagina (sin el, quieto); fuera con reducir movimiento o transparencia --- */
+@media (prefers-reduced-motion: no-preference) and (prefers-reduced-transparency: no-preference) and (prefers-contrast: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .tabs-flota.tabs-flota::after, .tabs-flota .tabs-pildora::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(var(--oklab,) 90deg, transparent, var(--vidrio-brillo) 45%, var(--blanco) 50%, var(--vidrio-brillo) 55%, transparent) top / 38% var(--filo-fino) no-repeat;
+      animation: vtc-reflejo linear both; animation-timeline: scroll(root);
+    }
+    .tabs-flota .tabs-pildora::after { background-size: 70% var(--filo-fino); }
+  }
+}
+@keyframes vtc-reflejo { from { background-position-x: -10%; } to { background-position-x: 110%; } }
+html[data-ligero] :is(.tabs-flota.tabs-flota, .tabs-flota .tabs-pildora)::after { content: none; }
+
+/* --- 287. Recetas en oscuro: las fotos claras de los platos bajan un punto de luz y llevan su filo --- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(.receta-foto:not(.vacia), .coc-foto) { filter: brightness(.88) saturate(.94); outline: var(--filo-fino) solid var(--borde); outline-offset: calc(var(--filo-fino) * -1); }
+}
+:root[data-theme="dark"] :is(.receta-foto:not(.vacia), .coc-foto) { filter: brightness(.88) saturate(.94); outline: var(--filo-fino) solid var(--borde); outline-offset: calc(var(--filo-fino) * -1); }
+
+/* --- 288. Los videos sin miniatura llevan el arte de su tema (en lugar del hueco gris) --- */
+.vtc-arte:not(#n) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tarjeta-video-img:has(> .vtc-arte) .yt-play { z-index: var(--capa-pegado); }
+
+/* --- 289. Los dibujos de linea que quedan (vacios sin imagen nueva), con el tono de las ilustraciones: sobre la noche
+   de la marca, como las escenas, y con el trazo claro --- */
+.vacio.con-ilustracion:not(.con-escena) > svg.ilustracion {
+  box-sizing: border-box; width: 112px; height: 112px; padding: var(--esp-14); border-radius: var(--r-16);
+  background: radial-gradient(120% 95% at 28% 18%, color-mix(in srgb, var(--morado) 46%, var(--hero)), var(--hero) 72%);
+  box-shadow: var(--sombra-tarjeta);
+}
+.vacio.con-ilustracion:not(.con-escena) > svg.ilustracion .ilu-trazo { stroke: var(--sobre-hero); }
+.vacio.con-ilustracion:not(.con-escena) > svg.ilustracion .ilu-tenue { stroke: var(--sobre-hero-2); }
+.vacio.con-ilustracion:not(.con-escena) > svg.ilustracion .ilu-acento { stroke: var(--acento-300); }
+.vacio.con-ilustracion:not(.con-escena) > svg.ilustracion .ilu-relleno { fill: color-mix(in srgb, var(--morado) 40%, var(--hero)); }
+@media (forced-colors: active) { .vacio.con-ilustracion:not(.con-escena) > svg.ilustracion { background: Canvas; } .vacio.con-ilustracion:not(.con-escena) > svg.ilustracion :is(.ilu-trazo, .ilu-tenue, .ilu-acento) { stroke: CanvasText; } }
+
+/* --- 284. El brillo del oro sigue al movil (inclinacion.js pone data-incl y --mm-x mientras se mueve con el): las
+   medallas (su barrido, como al pasar el dedo), las del podio y los trofeos de la vitrina. Sin ese permiso, como siempre --- */
+.medalla-metal[data-incl]:not(.fantasma):not(.tocada) .mm-barrido { opacity: .75; animation: none !important; transform: translateX(calc(27px + var(--mm-x, 0) * 44px)); }
+.amb-podio[data-incl] > li:has(img.amb-podio-med), .vitrina-rejilla[data-incl] .trofeo-tarjeta:not(.vit-hueco) .trofeo-ico { position: relative; }
+.amb-podio[data-incl] > li:has(img.amb-podio-med)::before, .vitrina-rejilla[data-incl] .trofeo-tarjeta:not(.vit-hueco) .trofeo-ico::after {
+  content: ""; position: absolute; top: 0; left: 50%; width: calc(var(--esp-48) + var(--esp-8)); aspect-ratio: 1; translate: -50% 0; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(var(--oklab,) 105deg, transparent 32%, color-mix(in srgb, var(--blanco) 62%, transparent) 50%, transparent 68%) calc(50% - var(--mm-x, 0) * 60%) 0 / 240% 100% no-repeat;
+  mix-blend-mode: soft-light;
+}
+.vitrina-rejilla[data-incl] .trofeo-tarjeta:not(.vit-hueco) .trofeo-ico::after { width: 100%; }
+
+/* --- 285. La tarjeta de Hoy, en dos planos (con el movil inclinado, si se puede): el cielo se mueve poco y la escena,
+   mas --- */
+.hero-dia[data-incl] > .hero-cielo { scale: 1.04; translate: calc(var(--incl-x, 0) * -4px) calc(var(--incl-y, 0) * -3px); }
+.hero-dia[data-incl] .hero-escena-img, .hero-dia[data-incl] > .hero-ilu { translate: calc(var(--incl-x, 0) * 9px) calc(var(--incl-y, 0) * 6px); }
+@media (prefers-reduced-motion: reduce) { .hero-dia[data-incl] > .hero-cielo, .hero-dia[data-incl] .hero-escena-img, .hero-dia[data-incl] > .hero-ilu { translate: none; scale: none; } }

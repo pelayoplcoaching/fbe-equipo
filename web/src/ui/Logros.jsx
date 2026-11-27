@@ -12,6 +12,7 @@ import { useBienvenidaAbierta } from './Bienvenida.jsx';
 import { useTurnoCelebracion } from './turno-celebracion.js';
 import { perezoso } from './perezoso.jsx';
 import { conTransicion } from './transiciones.js';
+import { seguirInclinacion } from './inclinacion.js';
 
 // (tacto 213 y 236) La medalla en grande de la hoja de un logro, que se coge y gira: va aparte y se pide al bajar el dedo
 const MedallaHeroe = perezoso(() => import('./MedallaHeroe.jsx'), 'MedallaHeroe', { mientras: null });
@@ -53,8 +54,11 @@ export function MedallaMetal({ nivel = 0, cifra = null, progreso = null, tam = 7
     el.classList.add('tocada');
   } : undefined;
   const soltar = m ? (e) => e.currentTarget.classList.remove('tocada') : undefined;
+  // (vista 284) y, si el móvil se puede inclinar (inclinacion.js), el reflejo sigue al móvil
+  const svg = useRef(null);
+  useEffect(() => (m ? seguirInclinacion(svg.current, (el, x, y) => { el.style.setProperty('--mm-x', x.toFixed(2)); el.style.setProperty('--mm-y', y.toFixed(2)); }) : undefined), [!!m]);
   return (
-    <svg class={`medalla-metal ${m ? `metal-${m.id}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true"
+    <svg ref={svg} class={`medalla-metal ${m ? `metal-${m.id}` : 'fantasma'} ${clase}`} viewBox="0 0 100 100" width={tam} height={tam} aria-hidden="true"
       onPointerDown={seguir} onPointerMove={seguir} onPointerUp={soltar} onPointerLeave={soltar} onPointerCancel={soltar}>
       {progreso != null && (
         <>

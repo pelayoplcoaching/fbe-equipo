@@ -11,6 +11,7 @@ import { sinMovimiento } from '../transiciones.js';
 import { Imagen } from '../Imagen.jsx';
 import { hoyISO } from '../../logica/fechas.js';
 import { useImagenPropia } from './AMedida.jsx';
+import { marcarInclinacion } from '../inclinacion.js';
 
 const sinPermisoOrientacion = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
   && typeof window.DeviceOrientationEvent.requestPermission !== 'function' && !!window.matchMedia?.('(pointer: coarse)').matches;
@@ -31,7 +32,7 @@ export function Carnet({ bloque }) {
   const imagenSuya = useImagenPropia('perfil');
   const [conMovil, setConMovil] = useState(false);
   const pedirMovil = () => {
-    try { window.DeviceOrientationEvent.requestPermission().then((r) => setConMovil(r === 'granted')).catch(() => {}); } catch { /* sin permiso: con el dedo, como siempre */ }
+    try { window.DeviceOrientationEvent.requestPermission().then((r) => { setConMovil(r === 'granted'); if (r === 'granted') marcarInclinacion(); }).catch(() => {}); } catch { /* sin permiso: con el dedo, como siempre */ }
   };
   // La inclinación: se escribe en variables CSS en el siguiente cuadro (sin volver a pintar el componente)
   useEffect(() => {

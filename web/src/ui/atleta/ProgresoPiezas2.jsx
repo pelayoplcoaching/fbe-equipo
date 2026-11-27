@@ -10,6 +10,7 @@ import { pesoTxt } from '../../logica/unidades.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { Hoja, Icono, CajaGrafica, useAncho, useRaspado } from '../comunes.jsx';
 import { sinMovimiento, conTransicion } from '../transiciones.js';
+import { seguirInclinacion } from '../inclinacion.js';
 
 // ---------------------------------------------------------------- a pantalla completa
 // El botón de las cuatro esquinas junto al título de una gráfica; abre la gráfica a toda la pantalla (y en horizontal si
@@ -149,9 +150,13 @@ const MEDALLA = { oro: 'medalla-records-oro', plata: 'medalla-records-plata', br
 const PUESTO = { oro: 'La mejor', plata: 'La segunda', bronce: 'La tercera' };
 export function PodioRecords({ puntos = [], unidad = 'kg' }) {
   const p = podioRecords(puntos);
-  if (p.length < 2) return null;
+  // (vista 284) el brillo de las medallas sigue al móvil (si se puede inclinar: inclinacion.js)
+  const ol = useRef(null);
+  const hay = p.length >= 2;
+  useEffect(() => (hay ? seguirInclinacion(ol.current, (el, x) => el.style.setProperty('--mm-x', x.toFixed(2))) : undefined), [hay]);
+  if (!hay) return null;
   return (
-    <ol class="amb-podio">
+    <ol class="amb-podio" ref={ol}>
       {p.map((x) => (
         <li key={x.puesto} data-m={x.puesto}>
           {hayImagen(MEDALLA[x.puesto]) ? <Imagen id={MEDALLA[x.puesto]} clase="amb-podio-med" tamanos="56px" /> : <span class="amb-podio-med amb-podio-ico" aria-hidden="true"><Icono n="trofeo" /></span>}
