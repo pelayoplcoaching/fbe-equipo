@@ -81,7 +81,7 @@ import { hablar } from '../voz.js';
 import { useTrato } from '../trato.js';
 import { avisoRecord, vozRecord, vozUltima, vozFin, titularResumen } from '../../logica/trato.js';
 import { TextoConEnlaces } from '../Enlaces.jsx';
-import { vibrar } from '../hapticos.js';
+import { vibrar, alPintar, vibrarAlPintar } from '../hapticos.js';
 import { Huella, LineaUltimas, AvisoSupera } from './datos-vista.jsx';
 import { huellaDeResumen, lineaUltimas, superaUltima } from '../../logica/datos-vista.js';
 import { conTransicion } from '../transiciones.js';
@@ -672,7 +672,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
     const local = { ...datos, id: previa?.id || `local-${e.id}-${numero}` };
     setHechas((h) => ({ ...h, [e.id]: { ...h[e.id], [numero]: local } }));
     // (pulido 7: y un tic suave; sonido, tanda 1: que sube de nota con cada serie del ejercicio y resuelve en la última)
-    if (!previa) { vibrar('serie'); sonarSerie({ n: Object.keys({ ...hechas[e.id], [numero]: local }).length, total: Number(e.series) || 0 }); }
+    // (belleza 318) el toque y la nota, con la fila que se marca (en el fotograma en que se mueve, no antes)
+    if (!previa) { const ds = { n: Object.keys({ ...hechas[e.id], [numero]: local }).length, total: Number(e.series) || 0 }; vibrarAlPintar('serie'); alPintar(() => sonarSerie(ds)); }
     if (!previa) quitarPrepAntigua();
     if (!previa) seguir.current = { fin: null, avisados: 0 };   // (sonido 2) marcada: nada de «¿Seguimos?»
     // (sonido 2, tanda 6) al llegar a la mitad de las series pautadas, la frase del coach (si la ha grabado)
@@ -1116,7 +1117,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
             const primero = conEscena && (res.records?.length || 0) > 0 && !propio ? await esPrimerRecord((x) => api.historial(x), atleta.id, sesion.id) : false;
             if (conEscena) { setEscena({ records: res.records?.length || 0, semana: await semanaHecha, primero }); setHistoria(hayHistoriaSesion() && ((res.series || 0) > 0 || !!cardioHechoValido(res.cardio))); }
             setResumen(res);
-            sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
+            const adorno = (res.records?.length || 0) > 0 || !!(await semanaHecha);
+            alPintar(() => sonarFinSesion(adorno), 2);   // (pulido 7; sonido: con adorno si hay récord o semana completa; 318: con el primer fotograma de la escena)
             setTimeout(() => sonarVozCoach('buen_trabajo', 'fin_sesion'), 1300);   // (sonido, tanda 3) y la frase del coach, si la ha grabado
           }} />
       )}

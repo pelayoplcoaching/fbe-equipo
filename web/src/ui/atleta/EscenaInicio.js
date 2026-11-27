@@ -5,12 +5,16 @@
 // Los estilos, en diseno.css (bloque 338).
 import { LOBO_CAJA, LOBO_D } from '../lobo-trazo.js';
 import { sinMovimiento } from '../transiciones.js';
-import { vibrar } from '../hapticos.js';
+import { vibrar, alPintar, vibrarAlPintar } from '../hapticos.js';
+import { sonarFBE } from '../sonido.js';
 
 let activa = null;
 // desde: el botón que se ha pulsado (la noche se abre desde su centro)
+// (belleza 318) el toque y la salida (sonido), con el primer fotograma de la noche que se abre; con «reducir movimiento»,
+// sin escena pero con los dos (no son movimiento)
 export function lanzarEscenaInicio(desde = null) {
-  if (typeof document === 'undefined' || sinMovimiento() || document.visibilityState === 'hidden') return false;
+  if (typeof document === 'undefined' || document.visibilityState === 'hidden') return false;
+  if (sinMovimiento()) { vibrar('hecho'); sonarFBE('empezar'); return false; }
   activa?.remove();
   const r = desde?.getBoundingClientRect?.();
   const el = document.createElement('div');
@@ -23,7 +27,8 @@ export function lanzarEscenaInicio(desde = null) {
     + '<p class="escena-inicio-texto"><span>A por ello</span></p>';
   document.body.appendChild(el);
   activa = el;
-  vibrar('hecho');
+  vibrarAlPintar('hecho');
+  alPintar(() => sonarFBE('empezar'));
   setTimeout(() => el.classList.add('fuera'), 1000);
   setTimeout(() => { el.remove(); if (activa === el) activa = null; }, 1480);
   return true;

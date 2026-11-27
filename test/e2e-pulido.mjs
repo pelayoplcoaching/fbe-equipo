@@ -473,6 +473,8 @@ export async function probarPulido({ navegador, check, base = 'http://localhost:
         await entrar();
         await p.evaluate(() => { window.__son = []; });
         await marcar(1);
+        // (belleza 318) la nota suena con el fotograma en que se mueve la fila: un instante después del toque
+        await p.waitForFunction(() => window.__son.includes('serie'), null, { timeout: 1500 }).catch(() => {});
         const s1 = await p.evaluate(() => window.__son.slice());
         check(s1.filter((x) => x === 'serie').length === 1, `al marcar una serie suena un tic (${s1.join(', ') || 'nada'})`);
         // Con su interruptor apagado, no

@@ -6,7 +6,7 @@ import { modoCelebrar } from '../../logica/trato.js';
 import { useEffect, useState } from 'preact/hooks';
 import { leerAjustes } from '../ajustes.js';
 import { prepararVoz } from '../voz.js';
-import { vibrar } from '../hapticos.js';
+import { alPintar, vibrarAlPintar } from '../hapticos.js';
 import { contexto, sonarFBE, salida, ocupar } from '../sonido.js';
 import { volumenDe } from '../../logica/sonido.js';
 import { lanzarConfeti } from '../confeti.js';
@@ -140,12 +140,14 @@ export function celebrar(momento = 'record', datos = {}) {
   // (personalización 2) qué celebrar y cómo: con todo, solo vibración o nada
   const modo = modoCelebrar(a, momento);
   if (modo === 'nada') return;
-  vibrar('record');
+  // (belleza 318) el toque y la fanfarria, con el primer fotograma del confeti y de la fila (no antes)
+  vibrarAlPintar('record');
   if (modo === 'vibrar') return;
   // v0.52: y confeti (nunca con «reducir movimiento»; la vibración ya va aquí arriba)
   // (v0.200) en los récords, con discos de pesas entre el papel
   lanzarConfeti({ vibracion: null, discos: momento === 'record' });
-  sonarFBE(datos.sonido || (datos.tipo === 'reps' ? 'record-reps' : 'record-peso'), datos);
+  const clave = datos.sonido || (datos.tipo === 'reps' ? 'record-reps' : 'record-peso');
+  alPintar(() => sonarFBE(clave, datos));
 }
 
 // Mantiene la pantalla encendida mientras la sesión está abierta

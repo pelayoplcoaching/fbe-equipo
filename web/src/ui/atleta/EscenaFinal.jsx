@@ -41,7 +41,7 @@ export function EscenaFinal({ nombre = '', records = 0, semana = null, primero =
   // (315) el aro de oro se abre desde la luna, una vez (a la vez que el aullido)
   useEffect(() => {
     if (!primero || !aro.current) return;
-    try { aro.current.animate([{ transform: 'scale(1)', opacity: 0.95 }, { transform: 'scale(2.1)', opacity: 0 }], { duration: 1500, delay: 1600, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'both' }); } catch { /* sin animaciones */ }
+    try { aro.current.animate([{ transform: 'scale(1)', opacity: 0.95 }, { transform: 'scale(2.1)', opacity: 0 }], { duration: 1500, delay: 1750, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'both' }); } catch { /* sin animaciones */ }
   }, []);
   const fin = useRef({ alSalir, alAcabar });
   fin.current = { alSalir, alAcabar };
@@ -55,7 +55,8 @@ export function EscenaFinal({ nombre = '', records = 0, semana = null, primero =
   };
   useEffect(() => {
     const volver = tenirBarra(NOCHE);
-    const aullido = setTimeout(() => vibrar(records ? 'record' : 'anillo'), 1500);
+    // (belleza 318) con la luna que aúlla (escena-aulla empieza a 1,75 s; antes vibraba a 1,5 s, un cuarto de segundo antes)
+    const aullido = setTimeout(() => vibrar(records ? 'record' : 'anillo'), 1750);
     const t = setTimeout(salir, primero ? 4600 : records || semana ? 3500 : 2800);
     const otra = primero ? setTimeout(() => vibrar('record'), 2600) : 0;
     const tecla = (e) => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); salir(); } };

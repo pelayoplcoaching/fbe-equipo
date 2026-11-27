@@ -166,5 +166,21 @@ console.log('326 · La app te va conociendo');
   check(/const lleno = k < n - 1 \? 1 : k === n - 1 \? parte : 0;/.test(H) && !/\.cnc-/.test(src('momentos.css')), '(326) el aro: las semanas pasadas, llenas; la de ahora, con lo que llevas de ella (con atributos: sin estilos nuevos en el arranque)');
 }
 
+console.log('318 · Los cinco momentos, a la vez');
+{
+  const Hp = src('ui/hapticos.js'), S = src('ui/atleta/Sesion.jsx'), A = src('ui/atleta/sesion-audio.js'), I = src('ui/atleta/EscenaInicio.js'), E = src('ui/atleta/EscenaFinal.jsx'), D = src('diseno.css');
+  check(/export function alPintar\(fn, fotogramas = 1\)/.test(Hp) && /document\.visibilityState === 'hidden'\) \{ ya\(\); return; \}/.test(Hp) && /setTimeout\(una, /.test(Hp) && /export function vibrarAlPintar/.test(Hp),
+    '(318) suena y vibra en el fotograma en que se mueve (y, con la app oculta o sin fotogramas, al momento)');
+  check(/vibrarAlPintar\('serie'\); alPintar\(\(\) => sonarSerie\(ds\)\)/.test(S) && /vibrarAlPintar\('record'\)/.test(A) && /alPintar\(\(\) => sonarFBE\(clave, datos\)\)/.test(A),
+    '(318) la serie hecha y el récord: el toque y la nota con la fila y el confeti');
+  check(/alPintar\(\(\) => sonarFinSesion\(adorno\), 2\)/.test(S), '(318) el final: la fanfarria con el primer fotograma de la escena ya en pantalla');
+  const aulla = Number((D.match(/animation: escena-aulla [^;]*? ([\d.]+)s both/) || [])[1]) * 1000;
+  const vibra = Number((E.match(/vibrar\(records \? 'record' : 'anillo'\), (\d+)\)/) || [])[1]);
+  check(aulla > 0 && vibra === aulla && new RegExp(`delay: ${aulla},`).test(E), `(318) el toque del aullido, con la luna que aúlla (los dos a ${aulla} ms; antes vibraba un cuarto de segundo antes)`);
+  check(/vibrarAlPintar\('hecho'\);\s*alPintar\(\(\) => sonarFBE\('empezar'\)\)/.test(I) && /if \(sinMovimiento\(\)\) \{ vibrar\('hecho'\); sonarFBE\('empezar'\); return false; \}/.test(I),
+    '(318) empezar: el toque y la salida con la noche que se abre (y, con «reducir movimiento», sin escena pero con los dos)');
+  check(SONIDOS.empezar?.apartado === 'entreno' && puedeSonar({}, 'empezar') && !puedeSonar({ sonidoSerie: false }, 'empezar') && ESCUCHAR.some(([c]) => c === 'empezar'), '(318) la salida suena con el sonido de la sesión (y se apaga con él)');
+}
+
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);

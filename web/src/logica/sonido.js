@@ -22,6 +22,8 @@ export const SONIDOS = {
     return n >= total && total > 0 ? [[f, 0, 0.09, 0.8], [nota(Math.max(5, i + 2)), 0.09, 0.32, 0.9]] : [[f, 0, 0.11, 0.8]];
   } },
   ejercicio: { apartado: 'entreno', notas: () => [[nota(3), 0, 0.08, 0.7], [nota(0), 0.08, 0.08, 0.6], [nota(5), 0.16, 0.2, 0.8]] },
+  // (belleza 318) la salida, al empezar la sesión: una campana grave y su octava («A por ello»)
+  empezar: { apartado: 'entreno', notas: () => [[nota(-5), 0, 0.16, 0.6], [nota(0), 0.11, 0.34, 0.75]] },
   'record-peso': { apartado: 'entreno', notas: () => [[nota(0), 0, 0.12, 0.8], [nota(2), 0.11, 0.12, 0.8], [nota(3), 0.22, 0.12, 0.85], [nota(5), 0.33, 0.6, 1]] },
   'record-reps': { apartado: 'entreno', notas: () => [[nota(3), 0, 0.08, 0.8], [nota(3), 0.1, 0.08, 0.8], [nota(4), 0.2, 0.1, 0.85], [nota(5), 0.32, 0.55, 1]] },
   // (belleza 302) el «clinc» de cada récord que cae en la historia del final: una nota alta y corta, como una medalla
@@ -88,7 +90,7 @@ export const SONIDOS = {
 
 // Lo que suena en «Escuchar todos», en orden, con su nombre
 export const ESCUCHAR = [
-  ['serie', 'Las series (de la primera a la última)', [{ n: 1, total: 4 }, { n: 2, total: 4 }, { n: 3, total: 4 }, { n: 4, total: 4 }]],
+  ['serie', 'Las series (de la primera a la última)', [{ n: 1, total: 4 }, { n: 2, total: 4 }, { n: 3, total: 4 }, { n: 4, total: 4 }]], ['empezar', 'Empezar la sesión'],
   ['ejercicio', 'Cambio de ejercicio'], ['record-peso', 'Récord de peso'], ['record-reps', 'Récord de repeticiones'],
   ['mitad', 'Mitad del descanso'], ['diez', 'Quedan diez segundos'],
   ['cuenta', 'La cuenta atrás', [5, 4, 3, 2, 1].map((segundo) => ({ segundo }))],
@@ -126,7 +128,7 @@ export function puedeSonar(a, clave) {
   if (s.tecla) return a.sonidoTeclado === true;
   if (['rpe', 'aproximacion', 'superserie', 'progresion'].includes(clave)) return a.sonidoSerie !== false;
   if (clave === 'seguimos') return a.sonido !== false && a.avisoSeguimos !== false;
-  if (['serie', 'ejercicio', 'fin-sesion', 'clinc'].includes(clave)) return a.sonidoSerie !== false;
+  if (['serie', 'ejercicio', 'fin-sesion', 'clinc', 'empezar'].includes(clave)) return a.sonidoSerie !== false;
   if (clave === 'mitad') return a.sonido !== false && a.avisoMitad === true;
   if (clave === 'diez') return a.sonido !== false && a.avisoDiez === true;
   if (clave === 'cuenta') return a.cuentaAtras !== false;

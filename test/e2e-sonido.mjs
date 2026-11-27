@@ -83,6 +83,8 @@ export async function probarSonido({ navegador, check, base = 'http://localhost:
     await primero.getByRole('button', { name: 'Marcar la serie 1 como hecha' }).click();
     const reloj = p.locator('.temporizador');
     await reloj.waitFor();
+    // (belleza 318) la nota suena con el fotograma en que se mueve la fila: un instante después del toque
+    for (let i = 0; i < 15 && !(await son()).includes('serie'); i++) await p.waitForTimeout(100);
     check((await son()).includes('serie'), 'marcar una serie suena (la familia: «serie»)');
     await reloj.getByRole('button', { name: 'Añadir 15 segundos' }).click();
     check((await son()).includes('mas-15'), '+15 suena (sube)');

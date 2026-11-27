@@ -59,6 +59,21 @@ function toqueIphone() {
   } catch { return false; }
 }
 
+// (belleza 318) Lo que suena y vibra con algo que se ve, en el mismo fotograma en que empieza a moverse: después de pintar
+// lo que cambia (lo que cambia se pinta antes de ese fotograma), no antes. Con la app oculta (o si no llega el fotograma),
+// al momento. La vibración de verdad (Android) espera con el sonido; el truco del iPhone necesita el toque en curso y va al
+// tocar, como un botón de verdad.
+// fotogramas: 2 para lo que pesa en pintarse (la escena del final): suena con el primer fotograma ya en pantalla
+export function alPintar(fn, fotogramas = 1) {
+  const ya = () => { try { fn(); } catch { /* */ } };
+  if (typeof requestAnimationFrame !== 'function' || typeof document === 'undefined' || document.visibilityState === 'hidden') { ya(); return; }
+  let hecho = false;
+  const una = () => { if (!hecho) { hecho = true; ya(); } };
+  requestAnimationFrame(fotogramas > 1 ? () => requestAnimationFrame(una) : una);
+  setTimeout(una, 100 + 60 * fotogramas);
+}
+export function vibrarAlPintar(que, opts) { if (puedeVibrar()) alPintar(() => vibrar(que, opts)); else vibrar(que, opts); }
+
 // (sonido, tanda 1) y, con «Sonidos de la interfaz» puesto, un toque casi imperceptible al marcar algo como hecho (un
 // hábito, el check-in, una tarea, el peso): opts.sonido = false para no sonar (el juego tiene sus sonidos)
 export function vibrar(que, { sonido = true } = {}) {
