@@ -1946,6 +1946,8 @@ export async function probarEsencial({ navegador, check, base = 'http://localhos
       }
     } else check(false, '(v0.260) Tomás, con la vista previa: «¿Qué necesitas?»');
     if (elegido) {
+      // (la demo guarda lo que cambia 150 ms después: si se recarga antes, se pierde)
+      await p.waitForTimeout(700);
       await p.reload();
       await p.locator('nav.tabs').waitFor({ timeout: 30000 });
       await cerrar(p);
