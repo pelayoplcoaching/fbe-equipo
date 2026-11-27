@@ -6851,6 +6851,15 @@ if (parte('v0.279: el afinado que se ve')) try {
   fallos++;
   console.log('  ✗ el afinado que se ve (v0.279):', e.message.split('\n').slice(0, 8).join('\n      '));
 }
+// v0.280: momentos, primera vuelta: la sesión, contada (la melodía de la sesión, los récords que caen como medallas, los
+// músculos que se pintan en orden, compartir cada tarjeta tal cual y tu revisión como historia) (test/e2e-momentos.mjs)
+if (parte('v0.280: la sesión, contada')) try {
+  const { probarMomentos } = await import('./e2e-momentos.mjs');
+  await probarMomentos({ navegador, check });
+} catch (e) {
+  fallos++;
+  console.log('  ✗ la sesión, contada (v0.280):', e.message.split('\n').slice(0, 8).join('\n      '));
+}
 cerrarParte();
 await navegador.close();
 srv.close();

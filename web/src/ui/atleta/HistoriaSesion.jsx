@@ -32,7 +32,8 @@ const FONDO = { hecho: 'historia-hecho', records: 'historia-records', musculos: 
 export function HistoriaSesion(props) { return <Capa><Pantallas {...props} /></Capa>; }
 
 // (301) La melodía de tu sesión: una fila de puntos por ejercicio (uno por serie, con el color de su esfuerzo; el récord,
-// en dorado) que van apareciendo en el orden de la sesión, cada uno con su nota, en unos seis segundos
+// en dorado) que van apareciendo en el orden de la sesión, cada uno con su nota, en unos seis segundos. Cada punto, un
+// escalón más alto que el anterior de su fila (--k), como su nota: las series suben
 function Melodia({ filas }) {
   const caja = useRef(null);
   useEffect(() => {
@@ -50,7 +51,7 @@ function Melodia({ filas }) {
   }, []);
   return (
     <div class="hs-mel" ref={caja} aria-hidden="true">
-      {filas.map((f, i) => <span class="hs-mel-fila" key={i}>{f.puntos.map((p, k) => <i key={k} class="hs-mel-p" data-t={p.rec ? 'rec' : p.t} />)}</span>)}
+      {filas.map((f, i) => <span class="hs-mel-fila" key={i}>{f.puntos.map((p, k) => <i key={k} class="hs-mel-p" data-t={p.rec ? 'rec' : p.t} style={`--k:${Math.min(7, k)}`} />)}</span>)}
     </div>
   );
 }

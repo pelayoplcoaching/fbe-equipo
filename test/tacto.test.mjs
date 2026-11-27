@@ -107,7 +107,7 @@ check(destinoLado(-80, 0, { i: 2, n: 3 }) === 'cerrar' && destinoLado(80, 0, { i
   'hacia delante en la última, cierra (como al tocar); hacia atrás en la primera, cede un poco y vuelve');
 const gestos = src('ui/atleta/historia-gestos.js'), gancho = src('ui/historia-tacto.js');
 check(/import\('\.\/atleta\/historia-gestos\.js'\)/.test(gancho) && !/historia-gestos/.test(src('ui/atleta/TuSemana.jsx')), 'el código de los gestos llega al abrir la primera historia (no pesa al abrir la app)');
-check(['ui/atleta/TuSemana.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/HistoriaSesion.jsx'].every((f) => /const pausa = useHistoriaTacto\(caja, \{ i, n: pantallas\.length, ir, alCerrar/.test(src(f)) && /if \(quieto \|\| ultima \|\| (compartir \|\| )?pausa\) return undefined;/.test(src(f))),
+check(['ui/atleta/TuSemana.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/HistoriaSesion.jsx'].every((f) => /const pausa = useHistoriaTacto\(caja, \{ i, n: pantallas\.length, ir, alCerrar/.test(src(f)) && /if \(quieto \|\| ultima \|\| (compartir \|\| |pausa \|\| )?(carta \|\| )?(compartir \|\| )?pausa( \|\| compartir)?( \|\| carta)?\) return undefined;/.test(src(f))),
   'en las cuatro: la sesión, tu semana, tu mes y tu año; en pausa no avanzan solas');
 check(/b\.style\.animationPlayState = 'paused'/.test(gestos) && /adornos\('hidden'\)/.test(gestos) && /b\.style\.animation = 'none'; void b\.offsetWidth; b\.style\.animation = '';/.test(gestos),
   '(226) en pausa se para la barra y se quitan las barras y la ✕; al soltar, la tarjeta vuelve a tener su tiempo entero');

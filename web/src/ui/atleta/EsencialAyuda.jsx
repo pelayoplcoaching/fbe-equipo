@@ -421,7 +421,7 @@ function HistoriaRevisionPantalla({ semanaId = null, n = null, alEntera, alCerra
         <h2>{v.titulo}</h2>
         {filas.length > 0 && (
           <ul class="historia-lista rvh-lista">
-            {filas.slice(0, 4).map((f) => <li key={`${f.g}:${f.nombre}:${f.dia || ''}`}><Icono n={ICONO_GRUPO[f.g]} /><span><strong>{f.nombre}</strong><br />{f.texto}</span></li>)}
+            {filas.slice(0, 4).map((f) => <li key={`${f.g}:${f.nombre}:${f.dia || ''}`}><Icono n={ICONO_GRUPO[f.g]} /><span><strong>{f.nombre}</strong>{f.dia ? <span class="rvh-dia"> · {f.dia}</span> : null}<br />{f.texto}</span></li>)}
           </ul>
         )}
         {filas.length > 4 && <p class="historia-texto">y {filas.length - 4} más en la revisión entera</p>}
