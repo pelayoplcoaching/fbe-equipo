@@ -18,6 +18,7 @@ import { pistaManda, pistaSono, pistaFinal, prepararPista, pistaActiva } from '.
 import { ajustarDescanso, reanudarDescanso, fraseTrasPista, avisoTrasCambio, esUltima } from '../../logica/pista.js';
 import { sonarVozCoach, vocesListas } from '../voces-coach.js';
 import { Placas } from '../Herramientas.jsx';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 import { num } from '../../logica/calculos.js';
 import { discosCon } from '../../logica/teclado.js';
 import { Travesia } from './TravesiaTarjeta.jsx';
@@ -355,7 +356,8 @@ export function AhoraToca({ ahora, alTocar, discoMinimo = undefined }) {
   return (
     <button type="button" class={`ahora-toca ${a.otroEjercicio ? 'otro' : ''}`} onClick={() => alTocar?.(a.id, a.numero)} aria-label={`Ahora toca: ${a.texto}. Toca para ir a esa serie`}>
       <span class="ahora-cab"><span class="ahora-etq">{a.otroEjercicio ? 'Siguiente ejercicio' : 'Ahora toca'}</span><span class="ahora-serie">{a.serie}</span></span>
-      <span class="ahora-nombre">{a.etiqueta && <span class="ss-etq">{a.etiqueta}</span>}{a.nombre}</span>
+      {/* (belleza 152) «Siguiente ejercicio», con su miniatura al lado del nombre */}
+      <span class={`ahora-nombre${a.imagen && hayImagen(a.imagen) ? ' ahora-con-mini' : ''}`}>{a.imagen && hayImagen(a.imagen) && <Imagen id={a.imagen} clase="miniatura-ej ahora-mini" tamanos="44px" />}<span>{a.etiqueta && <span class="ss-etq">{a.etiqueta}</span>}{a.nombre}</span></span>
       {a.kg != null ? (
         <span class="ahora-carga num">{pesoNum(a.kg, 2)}<small> {etiquetaPeso()}</small>{a.reps != null && <><span class="ahora-por"> × </span>{a.reps}</>}</span>
       ) : a.reps != null && <span class="ahora-carga num">{a.reps}<small> reps</small></span>}

@@ -67,7 +67,7 @@ export function RecetarioEquipo({ atletaId = null, alAnadir = null, esCoach = fa
   const reinicio = `${elFiltro}|${capitulo || ''}|${texto}`;
   if (!datos.datos) return datos.error ? <ErrorCaja error={datos.error} reintentar={() => datos.recargar(true)} /> : <Siluetas forma="tarjetas" n={4} texto="Cargando el recetario" />;
   if (!recetas.length) {
-    return <div class="panel"><Vacio ilustracion="recetas" titulo="El recetario está vacío">{esCoach ? 'Marca una receta como «Para todo el equipo» y la verán aquí todos tus atletas.' : yo?.modalidad === 'por_su_cuenta' ? 'Cuando haya recetas para todo el equipo, las verás aquí.' : 'Cuando tu coach añada recetas para todo el equipo, las verás aquí.'}</Vacio></div>;
+    return <div class="panel"><Vacio ilustracion="recetas" imagen="vacio-recetas" titulo="El recetario está vacío">{esCoach ? 'Marca una receta como «Para todo el equipo» y la verán aquí todos tus atletas.' : yo?.modalidad === 'por_su_cuenta' ? 'Cuando haya recetas para todo el equipo, las verás aquí.' : 'Cuando tu coach añada recetas para todo el equipo, las verás aquí.'}</Vacio></div>;
   }
   const marcar = (r, si) => datos.alMomento(
     (d) => ({ ...d, favoritas: si ? [...new Set([...d.favoritas, r.id])] : d.favoritas.filter((id) => id !== r.id) }),

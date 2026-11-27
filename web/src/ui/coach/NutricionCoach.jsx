@@ -45,7 +45,7 @@ export function NutricionCoach({ atleta }) {
     <div class="pila nutricion-coach">
       {!r.planes.length ? (
         <div class="panel">
-          <Vacio ilustracion="nutricion" icono="nutricion" titulo="Sin plan de nutrición" accion={<button class="btn btn-primario" onClick={() => abrir(null)}><Icono n="mas" /> Crear el plan</button>}>
+          <Vacio ilustracion="nutricion" imagen="coach-nutricion" icono="nutricion" titulo="Sin plan de nutrición" accion={<button class="btn btn-primario" onClick={() => abrir(null)}><Icono n="mas" /> Crear el plan</button>}>
             Kcal y macros (con días de descanso distintos, si quieres), solo kcal y proteína, o «sin contar» con tus pautas. Con la calculadora tienes un punto de partida en un minuto.
           </Vacio>
         </div>

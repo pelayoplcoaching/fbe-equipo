@@ -159,7 +159,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
             </button>
           )}
           {!filas.length ? (
-            <div class="panel"><Vacio ilustracion="mensajes" icono="mensaje" titulo={q ? 'Ningún atleta con ese nombre' : archivadas ? 'Nada archivado' : filtro === 'no-leidos' ? 'Todo leído' : filtro === 'fijados' ? 'Sin conversaciones fijadas' : 'Sin conversaciones'}>
+            <div class="panel"><Vacio ilustracion="mensajes" imagen="vacio-mensajes" icono="mensaje" titulo={q ? 'Ningún atleta con ese nombre' : archivadas ? 'Nada archivado' : filtro === 'no-leidos' ? 'Todo leído' : filtro === 'fijados' ? 'Sin conversaciones fijadas' : 'Sin conversaciones'}>
               {q ? (q.length >= 2 ? 'Mira abajo si sale en algún mensaje.' : 'Escribe al menos dos letras.') : filtro === 'fijados' ? 'Fija hasta 3 desde las opciones de cada conversación.' : !lista.datos?.length ? 'Cuando des de alta a un atleta, su chat aparecerá aquí.' : 'Nada por aquí.'}
             </Vacio></div>
           ) : (
@@ -231,7 +231,7 @@ export function Conversaciones({ abrirAtleta, alCambiar, peticion = null }) {
     <div class="mensajes-dos">
       {pantalla}
       <div class="chat-pagina mensajes-chat">
-        {chat || <div class="mensajes-vacio"><Vacio ilustracion="mensajes" titulo="Elige una conversación">Se abre aquí, con la lista siempre a la vista.</Vacio></div>}
+        {chat || <div class="mensajes-vacio"><Vacio ilustracion="mensajes" imagen="vacio-mensajes" titulo="Elige una conversación">Se abre aquí, con la lista siempre a la vista.</Vacio></div>}
       </div>
     </div>
   );

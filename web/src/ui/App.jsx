@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { Imagen } from './Imagen.jsx';
+import { esPorSuCuenta } from '../logica/esencial.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
@@ -350,7 +351,7 @@ export function App({ backend, api, cola }) {
           salvo que el móvil la guarde), el dibujo de siempre */}
       {estado.error?.sinConexion
         ? <Imagen id="sin-conexion" clase="paso-foto" tamanos="(min-width: 700px) 440px, 90vw" prioridad alternativa={<Ilustracion n="sinred" clase="paso-ilu" />} />
-        : <Ilustracion n="fallo" clase="paso-ilu" />}
+        : <Imagen id="estado-error" clase="paso-foto" tamanos="(min-width: 700px) 440px, 90vw" alternativa={<Ilustracion n="fallo" clase="paso-ilu" />} />}
       <h1 class="peq">{estado.error?.sinConexion ? 'Sin conexión' : 'No hemos podido abrir tu cuenta'}</h1>
       {estado.error?.sinConexion
         ? <div class="nota nota-sin-red" role="status"><Icono n="sinred" /> Sin conexión. Tu cuenta se abrirá en cuanto vuelva la cobertura.</div>
@@ -363,7 +364,8 @@ export function App({ backend, api, cola }) {
   return (
     <Ctx.Provider value={ctx}>
       {estado.fase === 'coach' || estado.fase === 'atleta' ? vista : <main>{vista}</main>}
-      <AvisoVersion />
+      {/* (belleza 193) con el nombre de su app (antes decía siempre «FBE Equipo») */}
+      <AvisoVersion nombre={estado.fase === 'atleta' && esPorSuCuenta(estado.atleta) ? 'FBE Esencial' : 'FBE Equipo'} />
       {toast && <div class={`toast ${toast.tipo === 'error' || toast.tipo === 'record' ? toast.tipo : ''}${toastFuera ? ' saliendo' : ''}`} role="status" key={toast.id}>{toast.tipo === 'record' && <Icono n="trofeo" />}{toast.tipo === 'error' && <Icono n="alerta" />}{toast.tipo !== 'record' && toast.tipo !== 'error' && <Icono n="hecho" />}{toast.texto}
         {toast.accion && <button class="toast-accion" onClick={() => { const a = toast.accion; setToast(null); a.fn(); }}>{toast.accion.texto}</button>}</div>}
     </Ctx.Provider>
@@ -373,7 +375,7 @@ export function App({ backend, api, cola }) {
 // Versión nueva publicada (v0.19): con la app abierta, el service worker la descarga en segundo plano y aquí se
 // ofrece «Actualizar»; al tocarlo, la nueva toma el control y la página se recarga (lo pendiente sin conexión
 // sigue guardado en el móvil). Al abrir la app de cero ya arranca con la última versión, sin aviso.
-function AvisoVersion() {
+function AvisoVersion({ nombre = 'FBE Equipo' }) {
   const [nueva, setNueva] = useState(() => (typeof window !== 'undefined' && window.__fbeVersionNueva) || null);
   const [actualizando, setActualizando] = useState(false);
   useEffect(() => {
@@ -385,7 +387,7 @@ function AvisoVersion() {
   return (
     <div class="aviso-version" role="status">
       <svg class="aviso-version-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>
-      <span>Hay una versión nueva de FBE Equipo.</span>
+      <span>Hay una versión nueva de {nombre}.</span>
       <button class="btn btn-peq btn-primario" disabled={actualizando} onClick={() => {
         setActualizando(true);
         window.__fbeActualizando = true;

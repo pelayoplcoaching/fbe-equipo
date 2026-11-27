@@ -68,7 +68,7 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
       <ErrorCaja error={error} reintentar={recargar} />
       {p?.semanas.length > 0 && <Pista id="semana" icono="semana">Aquí está tu bloque entero: cada semana con sus sesiones. Desliza los días a los lados para cambiar de semana. Para entrenar, vuelve a Hoy y toca «Empezar»; aquí puedes ver lo que viene y lo que ya hiciste.</Pista>}
       {!p?.semanas.length ? (
-        <div class="panel"><Vacio ilustracion="espera" titulo={esPorSuCuenta(atleta) ? 'Aún sin semana' : 'Sin semanas publicadas'} accion={null}>{esPorSuCuenta(atleta) ? 'Cuando la app te prepare tu semana, aparecerá aquí.' : 'Cuando tu coach publique una semana, aparecerá aquí.'}</Vacio></div>
+        <div class="panel"><Vacio ilustracion="espera" imagen="vacio-espera" titulo={esPorSuCuenta(atleta) ? 'Aún sin semana' : 'Sin semanas publicadas'} accion={null}>{esPorSuCuenta(atleta) ? 'Cuando la app te prepare tu semana, aparecerá aquí.' : 'Cuando tu coach publique una semana, aparecerá aquí.'}</Vacio></div>
       ) : (
         <>
           <div class="semanas-tabs" role="group" aria-label="Semanas del bloque">

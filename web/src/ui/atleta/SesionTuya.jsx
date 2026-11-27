@@ -43,15 +43,39 @@ export function TiempoHoy({ ejercicios, corta = null, alCorta = null }) {
   );
 }
 
-export function Calentamiento({ ejercicios, zonas = [] }) {
+// (belleza 159) Cada paso, una casilla; con todos marcados, se pliega solo y dice «Calentamiento hecho». Lo marcado se
+// guarda en esta pestaña y para esta sesión (clave: su id), y solo los números de los pasos, nunca su texto (puede salir de
+// tus zonas de salud)
+const claveCalent = (clave) => (clave ? `fbe-calentamiento:${clave}` : null);
+const leerCalent = (k) => { try { const v = k ? JSON.parse(sessionStorage.getItem(k) || '[]') : []; return Array.isArray(v) ? v.filter(Number.isInteger) : []; } catch { return []; } };
+export function Calentamiento({ ejercicios, zonas = [], clave = null }) {
   const { atleta } = useApp();
   const pasos = calentamiento(ejercicios, zonas);
+  const k = claveCalent(clave);
+  const [hechos, setHechos] = useState(() => leerCalent(k));
+  const [abierto, setAbierto] = useState(false);
   if (!pasos.length) return null;
+  const listo = pasos.every((_, i) => hechos.includes(i));
+  const marcar = (i) => {
+    const nuevos = hechos.includes(i) ? hechos.filter((x) => x !== i) : [...hechos, i];
+    setHechos(nuevos);
+    try { if (k) sessionStorage.setItem(k, JSON.stringify(nuevos)); } catch { /* sin guardar: se queda en pantalla */ }
+    // el último: un instante para ver su ✓ y se pliega
+    if (pasos.every((_, j) => nuevos.includes(j))) setTimeout(() => setAbierto(false), 450);
+  };
   return (
-    <details class="panel panel-pad calentamiento">
-      <summary><Icono n="movilidad" /> Tu calentamiento (unos 5 min)<Icono n="abajo" class="plegable-flecha" /></summary>
+    <details class={`panel panel-pad calentamiento${listo ? ' calent-listo' : ''}`} open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)}>
+      <summary>{listo ? <><Icono n="hecho" /> Calentamiento hecho</> : <><Icono n="movilidad" /> Tu calentamiento (unos 5 min)</>}<Icono n="abajo" class="plegable-flecha" /></summary>
       <Imagen id="calentamiento" clase="franja-ilu franja-hoja" tamanos="(min-width: 640px) 560px, 92vw" />
-      <ol class="calentamiento-lista">{pasos.map((p) => <li key={p}>{p}</li>)}</ol>
+      <ol class="calentamiento-lista calent-casillas">
+        {pasos.map((p, i) => (
+          <li key={p}>
+            <button type="button" class="calent-paso" aria-pressed={hechos.includes(i) ? 'true' : 'false'} onClick={() => marcar(i)}>
+              <span class="calent-caja" aria-hidden="true"><Icono n="hecho" /></span><span>{p}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
       <p class="mini secundario">{esPorSuCuenta(atleta) ? 'Un consejo para llegar listo.' : 'Un consejo para llegar listo; si tu coach te ha puesto el suyo, manda el suyo.'}</p>
     </details>
   );

@@ -122,5 +122,61 @@ check(src('ui/atleta/Nutricion.jsx').includes(TRES_ICO) && src('ui/atleta/Esenci
   && /\.si-casi-no \.btn \{ min-height: 48px; border-radius: var\(--r-pildora\); gap: var\(--esp-6\); \}/.test(src('estilos.css')),
   'B100: «¿Has seguido tu plan?», las tres opciones en cápsula y con su icono (la forma además del color), en las dos apps');
 
+console.log('\n151-200, primera vuelta (v0.267): la sesión y el final');
+const cssG = src('ambas-g.css'), sinComG = cssG.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssG) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComG) && main.indexOf("'./ambas-g.css'") > main.indexOf("'./ambas-f.css'") && main.indexOf("'./ambas-g.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-g.css: solo ASCII, los colores por su nombre y detrás de la cuarta vuelta');
+const ses = src('ui/atleta/Sesion.jsx');
+check(/const quedanMin = !sesion\.completada && quedanSeries > 0 \? Math\.max\(5, duracionEstimada\(ejercicios, pendientesSes\)\) : null;/.test(ses) && /\{queda != null && <div class="queda-min">faltan unos \{queda\} min<\/div>\}/.test(ses),
+  '151: lo que te queda junto al crono, con la misma cuenta que el modo enfoque (y nada si ya no quedan series)');
+const tuya = src('ui/atleta/SesionTuya.jsx');
+check(/class="calent-paso" aria-pressed=\{hechos\.includes\(i\) \? 'true' : 'false'\}/.test(tuya) && /Calentamiento hecho/.test(tuya) && /setTimeout\(\(\) => setAbierto\(false\), 450\)/.test(tuya)
+  && /sessionStorage\.setItem\(k, JSON\.stringify\(nuevos\)\)/.test(tuya) && /<Calentamiento clave=\{sesion\.id\}/.test(src('ui/atleta/Portada.jsx')),
+  '159: el calentamiento, con una casilla por paso; con todos, se pliega y dice «Calentamiento hecho» (en esta pestaña, solo los números de los pasos)');
+const { compararConAnterior: cca, textoComparacion: tc } = await import('../web/src/logica/visual.js');
+const { textoComparacionHecho, imagenCierre, siguienteTras } = await import('../web/src/logica/sesion-final.js');
+const cBaja = cca({ id: 'b', nombre: 'Torso A', fecha: '2026-11-20', tonelaje: 3200, series: 15 }, [{ id: 'a', nombre: 'Torso A', fecha: '2026-11-13', tonelaje: 3450, series: 16 }]);
+check(cBaja?.tonelaje === -250 && cBaja.hoy === 3200 && cBaja.antes === 3450 && textoComparacionHecho(cBaja) === '3200 kg de tonelaje hoy' && tc(cBaja) === '250 kg menos de tonelaje que la última vez',
+  '162: con menos tonelaje que la última vez, lo que has hecho («3200 kg de tonelaje hoy») y las dos cifras para el paréntesis');
+check(/comparacion && comparacion\.tonelaje < 0 \? <><Icono n="hecho" \/>/.test(ses) && !/'abajo'/.test(ses.slice(ses.indexOf('resumen-compara'), ses.indexOf('resumen-compara') + 1600)) && !/resumen-compara\.baja/.test(src('diseno.css')),
+  '162: y sin la flecha azul de bajada (un ✓ y el color de siempre)');
+const cierres = Array.from({ length: 20 }, (_, i) => imagenCierre('pierna', null, `s-${i}`, () => true));
+check(imagenCierre('cardio', 'cuerda') === 'fin-comba' && imagenCierre('cardio', 'carrera') === 'fin-carrera' && imagenCierre('cardio', 'otro') === 'fin-cardio' && imagenCierre('movilidad') === 'fin-movilidad'
+  && imagenCierre(null) === null && imagenCierre('rara') === null && new Set(cierres).size === 2 && cierres.every((x) => /^fin-pierna(-2)?$/.test(x)) && imagenCierre('pierna', null, 's-3', () => true) === imagenCierre('pierna', null, 's-3', () => true)
+  && Array.from({ length: 20 }, (_, i) => imagenCierre('pierna', null, `s-${i}`)).every((x) => x === 'fin-pierna'),
+  '164: el final de cada sesión, por familia (dos en las de fuerza, siempre la misma para cada sesión) y por modalidad de cardio');
+check(/const fondoFin = hayImagen\(cierre\) \? cierre : imagenPortada\(familia, modFin, sesion\?\.id\);/.test(ses) && !/`fin-\$\{|'fin-' \+/.test(src('logica/sesion-final.js')),
+  '164: si el final aún no está, el resumen sigue con la portada (y los nombres van enteros, sin «fin-» armado a trozos)');
+
+{
+  const sem = { id: 'w1', fecha_inicio: '2026-11-23' };
+  const prog = { actual: sem, sesiones: { w1: [{ id: 'a', nombre: 'Día 1', orden: 1, completada: true }, { id: 'b', nombre: 'Día 2', orden: 2, completada: false, dia_previsto: '2026-11-26' }, { id: 'c', nombre: 'Día 3', orden: 3, completada: false, dia_previsto: '2026-11-28' }] } };
+  const tras = siguienteTras(prog, 'b', { hoy: '2026-11-26' });
+  const ultima = siguienteTras({ actual: sem, sesiones: { w1: [{ id: 'a', nombre: 'Día 1', completada: true }, { id: 'b', nombre: 'Día 2', completada: false }] } }, 'b', { hoy: '2026-11-26' });
+  check(tras?.nombre === 'Día 3' && tras.dia === '2026-11-28' && ultima?.ultima === true && siguienteTras(null, 'b') === null && siguienteTras({ actual: sem, sesiones: { w1: [{ id: 'b' }] } }, 'b') === null
+    && siguienteTras(prog, 'b', { hoy: '2026-11-26', excluir: (x) => x.id === 'c' })?.ultima === true,
+    '166: tras cerrar una sesión, la siguiente de la semana con su día (sin contar la recién hecha), o que era la última');
+  check(/Lo siguiente: <strong>\{sigue\.nombre\}<\/strong>/.test(ses) && /Era la última de esta semana\./.test(ses) && /programa=\{programa\.datos\}/.test(src('ui/atleta/AtletaApp.jsx')), '166: y sale bajo «Volver a hoy», con el programa que ya tiene la app (sin pedir nada más)');
+}
+
+check(/class=\{`ahora-nombre\$\{a\.imagen && hayImagen\(a\.imagen\) \? ' ahora-con-mini' : ''\}`\}/.test(src('ui/atleta/sesion-comun.jsx')) && /imagen: otro \? imagenDe\(se\) \|\| null : null,/.test(src('logica/ahora-toca.js'))
+  && /imagenDe: \(x\) => imagenEjercicio\(actualDe\(x\)\)/.test(ses), '152: en el descanso, «Siguiente ejercicio» con su miniatura (la pauta ya iba debajo)');
+{
+  const { ahoraToca } = await import('../web/src/logica/ahora-toca.js');
+  const ejs = [{ id: 'p1', series: 1, ejercicio: { nombre: 'Prensa' } }, { id: 'p2', series: 2, ejercicio: { nombre: 'Remo' } }];
+  const otro = ahoraToca({ ejercicios: ejs, hechas: { p1: { 1: { reps: 10 } } }, tras: 'p1', imagenDe: (x) => `img-${x.id}` });
+  const mismo = ahoraToca({ ejercicios: ejs, hechas: { p1: { 1: { reps: 10 } }, p2: { 1: { reps: 8 } } }, tras: 'p2', imagenDe: (x) => `img-${x.id}` });
+  check(otro?.otroEjercicio && otro.imagen === 'img-p2' && mismo && !mismo.otroEjercicio && mismo.imagen === null, '152: la miniatura solo cuando lo que viene es otro ejercicio');
+}
+const VACIOS = [['ui/Chat.jsx', 'vacio-mensajes'], ['ui/atleta/Comidas.jsx', 'vacio-recetas'], ['ui/Guias.jsx', 'vacio-guias'], ['ui/atleta/Progreso.jsx', 'vacio-progreso'], ['ui/atleta/Progreso.jsx', 'vacio-records'],
+  ['ui/atleta/PerfilSocial.jsx', 'vacio-entrenos'], ['ui/atleta/TuBloque.jsx', 'vacio-espera'], ['ui/atleta/Semana.jsx', 'vacio-espera'], ['ui/Diario.jsx', 'vacio-diario'], ['ui/Tareas.jsx', 'vacio-tareas'],
+  ['ui/Comunidad.jsx', 'vacio-preguntas'], ['ui/coach/Revisar.jsx', 'coach-al-dia'], ['ui/coach/Ficha.jsx', 'coach-checkins'], ['ui/coach/Ficha.jsx', 'coach-objetivos'], ['ui/coach/HabitosCoach.jsx', 'coach-habitos'], ['ui/coach/NutricionCoach.jsx', 'coach-nutricion']];
+check(VACIOS.every(([f, id]) => new RegExp(`<Vacio [^>]*ilustracion="[a-z]+" imagen="${id}"`).test(src(f))),
+  '195 (preparado): los vacíos de las dos apps y los del panel, con el hueco de su imagen nueva (mientras no llega, el dibujo de siempre)');
+const appj = src('ui/App.jsx');
+check(/<AvisoVersion nombre=\{estado\.fase === 'atleta' && esPorSuCuenta\(estado\.atleta\) \? 'FBE Esencial' : 'FBE Equipo'\} \/>/.test(appj) && /Hay una versión nueva de \{nombre\}\./.test(appj)
+  && /<Imagen id="estado-error" clase="paso-foto"[^>]*alternativa=\{<Ilustracion n="fallo"/.test(appj),
+  '193: «Hay una versión nueva» con el nombre de su app, y el hueco de la ilustración del error al abrir');
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

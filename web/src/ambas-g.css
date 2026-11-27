@@ -1,0 +1,25 @@
+/* Belleza 151-200 para las dos apps, primera vuelta (v0.267): la sesion y el final. La lista, en el doc del proyecto
+   "claude/belleza-200-propuesta.md"; lo hecho y lo que ya estaba, en "claude/belleza-150-estado.md" (apartado 151-200). Va
+   detras de ambas-f.css y antes de color-capa.css. */
+
+/* -- 151 - Lo que te queda, bajo el crono y las series: discreto, en la misma columna (sin el prefijo "sesion-", que el
+   reparto de estilos ve en las portadas y dejaria la regla en el arranque) */
+.queda-min.queda-min { font-size: var(--letra-12); color: var(--tinta-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* -- 159 - El calentamiento, cada paso con su casilla (44 px de toque); al marcarlo, su casilla en verde con el mismo trazo
+   que la serie hecha y el texto un punto mas suave. Con todos, se pliega solo y dice "Calentamiento hecho" */
+.calent-casillas.calent-casillas { list-style: none; padding-left: 0; gap: 0; }
+.calent-paso.calent-paso { display: flex; align-items: flex-start; gap: var(--esp-10); width: 100%; min-height: 44px; padding: var(--esp-6) 0; border: 0; background: none; color: inherit; font: inherit; line-height: 1.4; text-align: left; cursor: pointer; }
+.calent-caja.calent-caja { flex: none; display: grid; place-items: center; width: var(--ico-22); height: var(--ico-22); border: var(--filo-medio) solid var(--linea); border-radius: var(--r-6); color: transparent; }
+.calent-caja.calent-caja svg { width: var(--ico-16); height: var(--ico-16); stroke-width: 2.4; }
+.calent-paso[aria-pressed="true"] .calent-caja.calent-caja { background: var(--ok); border-color: var(--ok); color: var(--hoja); }
+.calent-paso.calent-paso[aria-pressed="true"] > span:last-child { color: var(--tinta-2); }
+.calent-listo.calent-listo > summary > svg:first-child { color: var(--ok); }
+@media (forced-colors: active) { .calent-paso[aria-pressed="true"] .calent-caja { background: Highlight; border-color: Highlight; color: HighlightText; } }
+
+/* -- 166 - Bajo "Volver a hoy", lo que viene (la siguiente de la semana y su dia): una linea centrada con su icono */
+.resumen-sigue.resumen-sigue { display: flex; align-items: center; justify-content: center; gap: var(--esp-6); margin: 0; text-align: center; }
+.resumen-sigue.resumen-sigue > svg { flex: none; width: var(--ico-16); height: var(--ico-16); }
+
+/* -- 152 - "Siguiente ejercicio" en el descanso: su miniatura al lado del nombre (la pauta ya iba debajo) */
+.ahora-toca .ahora-nombre.ahora-con-mini { display: flex; align-items: center; gap: var(--esp-10); text-align: left; }

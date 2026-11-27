@@ -89,7 +89,7 @@ export function Portada({ sesion, semana, ejercicios, etiquetas = {}, alCerrar, 
       {/* (personalización 3, tanda 5) con el tiempo que tiene y su calentamiento: consejo, la sesión no cambia */}
       {suyo && !propio && !sesion.completada && r.ejercicios > 0 && <LoDeHoy sesion={sesion} ejercicios={ejercicios} />}
       {!sesion.completada && r.ejercicios > 0 && <TiempoHoy ejercicios={ejercicios} corta={corta} alCorta={alCorta} />}
-      {!sesion.completada && r.ejercicios > 0 && <Calentamiento ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
+      {!sesion.completada && r.ejercicios > 0 && <Calentamiento clave={sesion.id} ejercicios={ejercicios} zonas={salud ? (cuest.datos?.lesiones || []).map((l) => l?.zona).filter(Boolean) : []} />}
       {nota && (
         <figure class="cita-coach">
           {foto.datos && !suyo ? <Avatar nombre="Tu coach" foto={foto.datos} /> : <img class="avatar-coach" src={LOBO} alt="" width="44" height="44" aria-hidden="true" />}

@@ -1202,7 +1202,7 @@ function FotoAvisada({ ruta, n = 0, total = 0 }) {
 function BandejaVacia({ cuenta = null, racha = '', tanda = '' }) {
   return (
     <div class="panel bandeja-vacia">
-      <Vacio ilustracion="todo" titulo="Todo al día">Tus atletas tienen respuesta: aquí saldrá lo nuevo de sus sesiones, check-ins, mensajes y vídeos.</Vacio>
+      <Vacio ilustracion="todo" imagen="coach-al-dia" titulo="Todo al día">Tus atletas tienen respuesta: aquí saldrá lo nuevo de sus sesiones, check-ins, mensajes y vídeos.</Vacio>
       {cuenta > 0 && <p class="peq revisar-cuenta-dia" role="status">{textoCuentaDia(cuenta)}</p>}
       {tanda && <p class="peq revisar-cuenta-dia"><strong>Esta tanda:</strong> {tanda}</p>}
       {racha && <p class="peq revisar-racha"><Icono n="llama" /> {racha}.</p>}

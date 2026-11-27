@@ -1588,7 +1588,7 @@ export function PreguntasEquipo({ coach = false }) {
           : `Lo que ${tc} ha contestado en el muro, a mano para todos. ¿Tienes otra? Publícala en el muro con el tema «Pregunta para el coach».`}</p>
       </div>
       {!filas.length ? (
-        <Vacio ilustracion="preguntas" icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : `Cuando ${tc} conteste y guarde alguna, saldrá aquí.`}</Vacio>
+        <Vacio ilustracion="preguntas" imagen="vacio-preguntas" icono="pregunta" titulo="Aún no hay preguntas guardadas">{coach ? 'En una pregunta del muro, en tu respuesta: «Guardar como pregunta frecuente».' : `Cuando ${tc} conteste y guarde alguna, saldrá aquí.`}</Vacio>
       ) : (
         <ul class="lista preguntas-lista">
           {filas.map((q) => (

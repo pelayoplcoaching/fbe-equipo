@@ -38,9 +38,10 @@ export function nombreSerie(se, numero) {
 // última serie marcada; tras: el ejercicio tras el que se descansa (para saber si lo siguiente es otro ejercicio).
 // propuestaDe(se, numero): { kg, reps, rpe? } (la de la sesión); nombreDe(se): el ejercicio que se está haciendo (con la
 // alternativa, si se cambió); ultimasDe(se): su última vez ({ fecha, series }); recordatoriosDe(se): los «Recuerda» de tu
-// coach para ese ejercicio; barraDe(se): si se carga con barra (para los discos por lado).
+// coach para ese ejercicio; barraDe(se): si se carga con barra (para los discos por lado); imagenDe(se): el id de su
+// miniatura (para «Siguiente ejercicio»).
 export function ahoraToca({ ejercicios = [], hechas = {}, proxima = null, completada = false, tras = null, etiquetas = {},
-  propuestaDe = () => null, nombreDe = (se) => se?.ejercicio?.nombre || '', ultimasDe = () => null, recordatoriosDe = () => [], barraDe = () => false } = {}) {
+  propuestaDe = () => null, nombreDe = (se) => se?.ejercicio?.nombre || '', ultimasDe = () => null, recordatoriosDe = () => [], barraDe = () => false, imagenDe = () => null } = {}) {
   const sig = serieQueToca(ejercicios, hechas, proxima, { completada });
   if (!sig) return null;
   const se = ejercicios.find((x) => x.id === sig.id);
@@ -66,5 +67,7 @@ export function ahoraToca({ ejercicios = [], hechas = {}, proxima = null, comple
   return {
     id: se.id, numero: sig.numero, nombre, etiqueta, serie, otroEjercicio: otro, kg, reps, carga, esfuerzo, anterior,
     nota, notaRecuerda: recs.length > 0 && !!recs[0]?.texto, discos: !!barraDe(se) && kg != null && vista(kg) > barraVista(), texto,
+    // (belleza 152) si lo siguiente es otro ejercicio, su miniatura (el id de su imagen, o null)
+    imagen: otro ? imagenDe(se) || null : null,
   };
 }

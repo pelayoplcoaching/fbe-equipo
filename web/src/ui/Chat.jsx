@@ -1044,7 +1044,7 @@ export function Chat({ atletaId, nombreAtleta = 'Atleta', nombreCoach = 'Tu coac
         )}
         {!datos && (conv.cargando || !conv.error) ? <Cargando texto="Cargando los mensajes" /> : !vista.length ? (
           <div class="chat-vacio">
-            <Vacio ilustracion="mensajes" titulo={yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}
+            <Vacio ilustracion="mensajes" imagen="vacio-mensajes" titulo={yo === 'coach' ? `Tu conversación con ${primerNombre}` : `Tu conversación con ${nombreCoach}`}
               accion={<button type="button" class="btn btn-peq" onClick={() => raiz.current?.querySelector('.chat-area')?.focus()}><Icono n="editar" /> Escribir el primer mensaje</button>}>
               {yo === 'coach'
                 ? 'Para lo que no es de una sesión concreta: le llega al momento, y lo de sus sesiones, check-ins y vídeos también sale aquí.'

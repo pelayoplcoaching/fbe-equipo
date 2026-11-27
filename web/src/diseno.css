@@ -2409,8 +2409,6 @@ nav.tabs .insignia { box-shadow: 0 0 0 var(--filo-fuerte) var(--tiza), 0 3px 8px
    (no rojo: un día más corto no es un fallo); la primera vez, la estrella en un disco suave del acento. */
 .resumen-compara svg { width: var(--ico-32); height: var(--ico-32); padding: var(--esp-8); border-radius: 50%; background: color-mix(in srgb, var(--tinta) 8%, var(--hoja)); color: var(--tinta-2); stroke-width: 2.4; }
 .resumen-compara.sube svg { background: var(--ok); color: var(--hoja); }
-.resumen-compara.baja { background: color-mix(in srgb, var(--t-tarea) 9%, var(--hoja)); box-shadow: none; }
-.resumen-compara.baja svg { background: var(--t-tarea); color: var(--hoja); }
 .resumen-compara.vacia svg { background: var(--morado-suave); color: var(--morado); }
 
 /* ── 169 · Los récords en dorado también en el historial y en «Marcas» (tanda 30) ─────────────────────────────────────

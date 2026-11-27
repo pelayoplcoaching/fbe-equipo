@@ -53,7 +53,7 @@ export function HojaRellenar({ atletaId, lunes, entradas = [], recetario, diasSi
       <p class="peq secundario" style={{ margin: 0 }}>Semana del {rangoSemana(lunes)}. Te propongo lo que falta con las recetas {esCoach ? 'de su recetario' : 'de tu recetario'}; lo que ya está apuntado se queda como está.</p>
       <Segmentos etiqueta="Cómo repartir comidas y cenas" valor={modo} alCambiar={(v) => v && setModo(v)} opciones={MODOS_RELLENO.map((m) => [m, NOMBRE_MODO_RELLENO[m]])} />
       {!r ? <Siluetas forma="lista" n={4} texto="Preparando la propuesta" /> : !lista.length ? (
-        <Vacio ilustracion="recetas" icono="hecho" titulo={!r.dias.length ? 'Esta semana ya ha pasado' : r.huecos ? 'No hay recetas para lo que falta' : propuestas && r.propuestas.length ? 'Has quitado todo' : 'Esta semana ya está completa'}>
+        <Vacio ilustracion="recetas" imagen="vacio-recetas" icono="hecho" titulo={!r.dias.length ? 'Esta semana ya ha pasado' : r.huecos ? 'No hay recetas para lo que falta' : propuestas && r.propuestas.length ? 'Has quitado todo' : 'Esta semana ya está completa'}>
           {!r.dias.length ? 'Pasa a la semana siguiente para rellenarla.' : r.huecos ? 'Los huecos que quedan son de comidas sin recetas en el recetario.' : propuestas && r.propuestas.length ? 'Pide otra propuesta o cierra.' : 'No queda ningún hueco desde hoy.'}
         </Vacio>
       ) : (

@@ -44,6 +44,9 @@ export function compararConAnterior(actual, entrenamientos = []) {
   return {
     fecha: a.fecha || null,
     tonelaje: Math.round((actual.tonelaje || 0) - (a.tonelaje || 0)),
+    // (belleza 162) las dos cifras, para decir lo que has hecho cuando hoy es menos
+    hoy: Math.round(actual.tonelaje || 0),
+    antes: Math.round(a.tonelaje || 0),
     series: (actual.series || 0) - (a.series || 0),
     minutos,
   };

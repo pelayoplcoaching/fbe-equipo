@@ -24,7 +24,7 @@ export function HabitosCoach({ atleta }) {
       </div>
       <div class="panel">
         {!lista.length ? (
-          <Vacio ilustracion="habitos" icono="diana" titulo="Sin hábitos" accion={<button class="btn btn-peq" onClick={() => setEditando('nuevo')}><Icono n="mas" /> Añadir hábito</button>}>
+          <Vacio ilustracion="habitos" imagen="coach-habitos" icono="diana" titulo="Sin hábitos" accion={<button class="btn btn-peq" onClick={() => setEditando('nuevo')}><Icono n="mas" /> Añadir hábito</button>}>
             Pasos, proteína, agua, horas de sueño o uno de sí o no. El atleta los marca cada día en Hoy y tú ves cómo los lleva.
           </Vacio>
         ) : (

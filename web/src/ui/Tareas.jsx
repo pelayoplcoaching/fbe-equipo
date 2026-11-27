@@ -111,7 +111,7 @@ export function TareasCoach({ atleta, alCambiar }) {
       </div>
       <div class="panel">
         {lista.cargando && !lista.datos ? <div class="panel-pad"><Cargando /></div> : !tareas.length ? (
-          <Vacio ilustracion="tareas" titulo="Sin tareas todavía" accion={atleta.estado !== 'baja' ? <button class="btn btn-peq" onClick={() => setNueva({})}><Icono n="mas" /> Poner la primera</button> : null}>Una cosa concreta para un día (una foto, su peso, un vídeo o que te cuente algo): le sale en «Tu día» hasta que la hace.</Vacio>
+          <Vacio ilustracion="tareas" imagen="vacio-tareas" titulo="Sin tareas todavía" accion={atleta.estado !== 'baja' ? <button class="btn btn-peq" onClick={() => setNueva({})}><Icono n="mas" /> Poner la primera</button> : null}>Una cosa concreta para un día (una foto, su peso, un vídeo o que te cuente algo): le sale en «Tu día» hasta que la hace.</Vacio>
         ) : (
           <>
             <p class="panel-pad mini terciario">{[r.pendiente + r.atrasada ? `${r.pendiente + r.atrasada} por hacer` : null, r.hecha ? `${r.hecha} hechas` : null, r.proxima ? `${r.proxima} para más adelante` : null].filter(Boolean).join(' · ')}</p>

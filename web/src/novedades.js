@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.267': {
+    // (belleza 151-200, primera vuelta: la sesión y el final; «claude/belleza-200-propuesta.md»)
+    atleta: [
+      'En la sesión ves cuánto te queda, y al terminar, cuál es la siguiente.',
+      'Tu calentamiento, con una casilla por paso: al acabar se recoge solo.',
+    ],
+    coach: [
+      'Belleza 151-200, primera vuelta: lo que queda junto al crono, el calentamiento con casillas y la siguiente sesión al terminar.',
+    ],
+  },
   '0.266': {
     // (belleza, cuarta vuelta: lo que quedaba de las tandas B y C; «claude/belleza-150-estado.md»)
     atleta: [

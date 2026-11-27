@@ -16,7 +16,7 @@ export function HojaBloque({ alCerrar, abrirSesion, atletaId = null, titulo = 'T
     <Hoja titulo={v?.bloque ? `${titulo}: ${v.bloque.nombre}` : titulo} alCerrar={alCerrar} ancho={720} medio>
       <ErrorCaja error={d.error} reintentar={d.recargar} />
       {d.cargando && !v ? <Siluetas forma="filas" n={4} texto="Cargando tu bloque" /> : !v ? (
-        <Vacio ilustracion="espera" titulo={sinCoach ? 'Aún no tienes tu plan' : 'Tu bloque aún no está publicado'}>{sinCoach ? 'Cuando la app te prepare tu primera semana, aquí verás el bloque entero.' : 'Cuando tu coach publique tu primera semana, aquí verás el bloque entero.'}</Vacio>
+        <Vacio ilustracion="espera" imagen="vacio-espera" titulo={sinCoach ? 'Aún no tienes tu plan' : 'Tu bloque aún no está publicado'}>{sinCoach ? 'Cuando la app te prepare tu primera semana, aquí verás el bloque entero.' : 'Cuando tu coach publique tu primera semana, aquí verás el bloque entero.'}</Vacio>
       ) : (
         <div class="pila">
           <p class="peq secundario">

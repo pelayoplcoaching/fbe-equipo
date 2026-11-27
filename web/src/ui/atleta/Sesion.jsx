@@ -56,12 +56,14 @@ import { planMinimoDe, propuestaPlanMinimo } from '../../logica/constancia.js';
 import { aplicarCorta } from '../../logica/sesion-corta.js';
 import { useUnToque } from './como-llegas-on.js';
 import { esBarra, pauta, textoSerie, num, mmss, e1rm, inicioDeTanda, gruposSuperserie, etiquetasSuperserie, descansoGrupo, trasSerie, recordsDeSesion, NOMBRE_PRIORIDAD, NOMBRE_INTENCION, NOMBRE_GRUPO, NOMBRE_TIPO_SESION,
-  descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA } from '../../logica/calculos.js';
+  descansoEfectivo, resolverDescanso, textoDescanso, DESCANSOS_ATLETA, duracionEstimada } from '../../logica/calculos.js';
 import { esPorSuCuenta } from '../../logica/esencial.js';
 import { consejoPeso } from '../../logica/esencial-primera.js';
 import { leerAjustes } from '../ajustes.js';
 import { leerDescansos, guardarDescanso } from '../descansos.js';
-import { fmtCorta, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { fmtCorta, fmtConDia, hoyISO, lunesDe, sumarDias } from '../../logica/fechas.js';
+import { siguienteTras, imagenCierre, textoComparacionHecho } from '../../logica/sesion-final.js';
+import { esCarrera as esCarreraCalendario } from '../../logica/semana-natural.js';
 import { pesoAnterior } from '../../logica/nivel.js';
 import { MODALIDADES, NOMBRE_MODALIDAD, cardioValido, cardioHechoValido, limpiarCardioHecho, textoCardio, textoCardioHecho, textoSaludCardio, cardioHechoPublico, palabrasEsfuerzo, ritmo } from '../../logica/cardio.js';
 import { DetalleCarreraSesion, pautaDeCarrera, leerSemaforo, olvidarSemaforo } from './Carrera.jsx';
@@ -128,7 +130,7 @@ const ComoLlegas = perezoso(() => import('./ComoLlegas.jsx'), 'ComoLlegas', { mi
 // (M5) el ajuste de la mañana siguiente, solo en la sesión de hoy: { pauta: { series, carga_sugerida_kg, series_detalle } }
 const conAjusteDolor = (xs, aj) => (aj && Object.keys(aj).length ? xs.map((e) => (aj[e.id] ? { ...e, ...aj[e.id] } : e)) : xs);
 
-export function Sesion({ id, alCerrar, alLeer, salud = false }) {
+export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null }) {
   const { api, atleta, cola, aviso, propio, modo, backend } = useApp();
   // (personalización 2) cómo le hablamos: su nombre en el récord, la última serie y el final (también por voz)
   const trato = useTrato();
@@ -438,7 +440,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propPm || propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} />}</>;
+  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} programa={programa} />}</>;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -448,6 +450,11 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   // retomar la sesión horas después, sí)
   const inicio = inicioDeTanda(todas);
   const totalPautadas = ejercicios.reduce((t, e) => t + e.series, 0);
+  // (belleza 151) lo que te queda, recalculado con cada serie: las series que faltan con sus descansos (la misma cuenta que
+  // el modo enfoque y que «unos 30 min» de la portada)
+  const pendientesSes = Object.fromEntries(ejercicios.map((x) => [x.id, Math.max(0, x.series + (extras[x.id] || 0) - Object.keys(hechas[x.id] || {}).length)]));
+  const quedanSeries = Object.values(pendientesSes).reduce((t, n) => t + n, 0);
+  const quedanMin = !sesion.completada && quedanSeries > 0 ? Math.max(5, duracionEstimada(ejercicios, pendientesSes)) : null;
   const actualDe = (e) => (sustitutos[e.id] && ejerciciosPorId[sustitutos[e.id]]) || e.ejercicio;
   // v0.52.2: el descanso que vale para cada pauta: el del coach; si no puso, el que eligió el atleta para el ejercicio
   // que está haciendo; si no, el de por defecto de este móvil (Perfil → Sonido y vibración)
@@ -546,7 +553,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   const ahora = descanso && !sesion.completada ? ahoraToca({
     ejercicios: ejerciciosConExtras, hechas, proxima, completada: sesion.completada, tras: descanso.tras, etiquetas,
     propuestaDe: (pe, k) => propuestaDe(pe, k), nombreDe: (x) => actualDe(x).nombre, ultimasDe,
-    recordatoriosDe: (x) => tecnica037.datos?.recs?.[actualDe(x).id] || [], barraDe: (x) => esBarra(actualDe(x).nombre),
+    recordatoriosDe: (x) => tecnica037.datos?.recs?.[actualDe(x).id] || [], barraDe: (x) => esBarra(actualDe(x).nombre), imagenDe: (x) => imagenEjercicio(actualDe(x)),
   }) : null;
   // (apuntes) el ejercicio del que se está descansando (el que hace de verdad, si lo cambió por una variante), con lo suyo
   // de ahora: lo que le toca y lo que hizo la última vez (si la serie que viene es del mismo ejercicio), su vídeo, sus
@@ -824,7 +831,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
         {ejercicios.length > 0 && !sesion.completada && <button class="btn btn-icono plano" onClick={() => abrirEnfoque()} aria-label="Modo enfoque"><Icono n="enfoque" /></button>}
         {!ejercicios.length && <button class="btn btn-icono plano" onClick={() => setIntervalos({ inicial: delCoach })} aria-label="Temporizador de intervalos"><Icono n="intervalos" /></button>}
         <button class="btn btn-icono plano" onClick={() => setCalculadora(true)} aria-label="Calculadora"><Icono n="calculadora" /></button>
-        {ejercicios.length > 0 && <Cronometro inicio={sesion.completada ? null : inicio} minutos={sesion.completada ? sesion.duracion_min : null} hechas={todas.length} total={totalPautadas} />}
+        {ejercicios.length > 0 && <Cronometro inicio={sesion.completada ? null : inicio} minutos={sesion.completada ? sesion.duracion_min : null} hechas={todas.length} total={totalPautadas} queda={quedanMin} />}
         {tramos.length > 0 ? (
           <nav class="tramos" aria-label="Ejercicios de la sesión">
             <ol>
@@ -1057,12 +1064,13 @@ export function Sesion({ id, alCerrar, alLeer, salud = false }) {
   );
 }
 
-function Cronometro({ inicio, minutos, hechas, total }) {
+function Cronometro({ inicio, minutos, hechas, total, queda = null }) {
   const ahora = useAhora(1000);
   return (
     <div class="crono" style="text-align:right">
       <div class={`num crono-reloj${minutos == null && inicio ? ' corre' : ''}`} style="font-size:1.0625rem">{minutos != null ? `${minutos} min` : inicio ? mmss((ahora - inicio) / 1000) : '0:00'}</div>
       <div class="sesion-cab-num"><Odometro texto={String(hechas)} />/{total} series</div>
+      {queda != null && <div class="queda-min">faltan unos {queda} min</div>}
     </div>
   );
 }
@@ -1721,7 +1729,7 @@ function MiniTarjeta({ datos }) {
   return url ? <img class="resumen-mini" src={url} alt="" aria-hidden="true" width="36" height="45" /> : null;
 }
 
-function Resumen({ resumen, sesion, pautas = [], familia, alCerrar }) {
+function Resumen({ resumen, sesion, pautas = [], familia, alCerrar, programa = null }) {
   // (música 3) la imagen del récord lleva su canción (el nombre de su ficha), si la tiene
   const personalR = usePersonal();
   // (música 3, tanda 2) «Lo batiste con…»: la última música que abrió en esta sesión; si no abrió ninguna, su canción
@@ -1786,12 +1794,18 @@ function Resumen({ resumen, sesion, pautas = [], familia, alCerrar }) {
   // (imágenes) el sello: la copa si hay récord; el farol la primera vez que hace esta sesión (lo mismo que dice abajo)
   const primera = !cardio && resumen.series > 0 && !resumen.enCola && !anteriores.cargando && !!anteriores.datos && !comparacion;
   const sello = selloSesion({ records: nRecords, primera });
+  // (belleza 164) de fondo, el «después» de su tipo de sesión; si aún no está, su portada
+  const modFin = resumen.cardio?.modalidad || sesion?.cardio?.modalidad;
+  const cierre = imagenCierre(familia, modFin, sesion?.id, hayImagen);
+  const fondoFin = hayImagen(cierre) ? cierre : imagenPortada(familia, modFin, sesion?.id);
+  // (belleza 166) bajo «Volver a hoy», lo que viene: la siguiente de la semana y su día (o que esta era la última)
+  const sigue = siguienteTras(programa, sesion?.id, { excluir: programa?.carril ? esCarreraCalendario : null });
   return (
     <div class="contenido resumen-sesion">
       <section class={`resumen-hero ${nRecords ? 'con-record' : ''}`} aria-labelledby="resumen-titulo" style={{ '--i': 0 }}>
         {/* (diseño, tanda 17) el dibujo de la sesión, de fondo, como en la tarjeta de Hoy */}
-        {/* (imágenes) la ilustración de la sesión, la misma de su portada; si no se puede, el dibujo */}
-        {sesion?.nombre && <Imagen key={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad, sesion?.id)} id={imagenPortada(familia, resumen.cardio?.modalidad || sesion?.cardio?.modalidad, sesion?.id)} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
+        {/* (imágenes) la ilustración de la sesión: su «después» o, si aún no está, la de su portada; si no se puede, el dibujo */}
+        {sesion?.nombre && <Imagen key={fondoFin} id={fondoFin} clase="hero-arte hero-foto" tamanos="(min-width: 600px) 420px, 70vw"
           alternativa={<ArteSesion nombre={sesion.nombre} tipo={sesion.tipo || (cardio ? 'cardio' : 'fuerza')} patron={null} clase="hero-arte" />} />}
         {/* (ilustraciones vivas) al levantarse el telón, un barrido de luz cruza la portada del resumen */}
         {sesion?.nombre && <span class="hero-brillo" aria-hidden="true" />}
@@ -1816,9 +1830,11 @@ function Resumen({ resumen, sesion, pautas = [], familia, alCerrar }) {
         ))}
       </dl>
       {!cardio && resumen.series > 0 && !resumen.enCola && (
-        <p class={`resumen-compara ${!comparacion ? 'vacia' : comparacion.tonelaje > 0 ? 'sube' : comparacion.tonelaje < 0 ? 'baja' : ''}`} style={{ '--i': 5 }} aria-live="polite">
+        <p class={`resumen-compara ${!comparacion ? 'vacia' : comparacion.tonelaje > 0 ? 'sube' : ''}`} style={{ '--i': 5 }} aria-live="polite">
           {anteriores.cargando && !anteriores.datos ? <span class="sil" style="width:70%;height:14px" />
-            : comparacion ? <><Icono n={comparacion.tonelaje >= 0 ? 'arriba' : 'abajo'} /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : '\u2212'}${Math.abs(comparacion.series)}\u00a0${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
+            // (belleza 162) hoy, menos que la última vez: lo que has hecho, con un ✓ y sin flecha de bajada
+            : comparacion && comparacion.tonelaje < 0 ? <><Icono n="hecho" /><span><strong class="num">{textoComparacionHecho(comparacion)}</strong><span class="secundario"> (la última vez, {pesoTxt(comparacion.antes, 0)}{comparacion.fecha ? `, el ${fmtCorta(comparacion.fecha)}` : ''})</span></span></>
+            : comparacion ? <><Icono n="arriba" /><span><strong class="num">{textoComparacion(comparacion)}</strong>{comparacion.fecha ? <span class="secundario"> ({fmtCorta(comparacion.fecha)}{comparacion.series ? `, ${comparacion.series > 0 ? '+' : '\u2212'}${Math.abs(comparacion.series)}\u00a0${Math.abs(comparacion.series) === 1 ? 'serie' : 'series'}` : ''})</span> : null}</span></>
               : <><Icono n="estrella" /><span>La primera vez que haces esta sesión: la próxima te dirá cómo vas.</span></>}
         </p>
       )}
@@ -1874,6 +1890,12 @@ function Resumen({ resumen, sesion, pautas = [], familia, alCerrar }) {
         {compartida ? <p class="nota peq compartida-equipo"><Icono n="hecho" /> Compartida con el equipo</p>
           : estadoEquipo.datos === true && <button class="btn btn-grande" onClick={() => setEquipo(true)}><Icono n="equipo" /> Compartir con el equipo</button>}
         <button class="btn btn-primario btn-grande" onClick={() => { try { sessionStorage.setItem('fbe-recien-hecha', '1'); } catch { /* */ } alCerrar(); }}>Volver a hoy</button>
+        {sigue && (
+          <p class="peq secundario resumen-sigue"><Icono n="semana" />
+            {sigue.ultima ? <span>Era la última de esta semana.</span>
+              : <span>Lo siguiente: <strong>{sigue.nombre}</strong>{sigue.dia ? (sigue.dia === hoyISO() ? ', hoy' : `, el ${fmtConDia(sigue.dia)}`) : ''}</span>}
+          </p>
+        )}
       </div>
       {compartir && <HojaCompartir plantillas datos={resumen.tarjeta} alCerrar={() => { setCompartir(false); marcarCompartida(); }} />}
       {compartirRecord && <HojaCompartir logro tipo="record" titulo="Compartir el récord" datos={datosRecordDeSesion(compartirRecord, resumen.tarjeta?.fecha || hoyISO(), { cancion: cancionRecord })} equipo={estadoEquipo.datos === true || compartida ? { tema: 'logros' } : null} alCerrar={() => { setCompartirRecord(null); marcarCompartida(); }} />}

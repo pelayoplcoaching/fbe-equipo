@@ -67,7 +67,7 @@ export function Comidas({ salud, recargarConsentimientos, irA }) {
           <RecetarioEquipo atletaId={atleta.id} ajuste={salud ? ajusteEquipo : null} alAnadir={salud ? (receta, raciones, factor = 1) => setAnadir({ a: { ...comoAsignacion(receta, r.tomas), factor }, raciones }) : null} />
         ) : (
           <VistaRecetario recetario={r} alAbrir={setReceta} vacio={(
-            <div class="panel"><Vacio ilustracion="recetas" titulo="Aún no tienes recetas">{suyo ? 'En «Tu semana» puedes escribir lo que vas a comer cada día y ver cómo cuadra con tu plan.' : 'Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.'}</Vacio></div>
+            <div class="panel"><Vacio ilustracion="recetas" imagen="vacio-recetas" titulo="Aún no tienes recetas">{suyo ? 'En «Tu semana» puedes escribir lo que vas a comer cada día y ver cómo cuadra con tu plan.' : 'Tu coach te pondrá aquí las opciones para cada comida, con sus cantidades y cómo se preparan.'}</Vacio></div>
           )} />
         )}
       </div>

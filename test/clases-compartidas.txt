@@ -23,7 +23,8 @@ actual: carrera.css diseno.css estilos.css imagenes.css perfil.css progreso-visu
 adn-fbe: imagenes.css personal.css
 ahora: apuntes.css imagenes.css youtube.css
 ahora-carga: diseno.css estilos.css
-ahora-toca: diseno.css estilos.css
+ahora-nombre: ambas-g.css estilos.css
+ahora-toca: ambas-g.css diseno.css estilos.css
 ajuste-nutricion: diseno.css estilos.css
 ajustes: diseno.css estilos.css
 album-foto: equipo-belleza.css personal.css

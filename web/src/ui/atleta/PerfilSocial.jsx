@@ -195,7 +195,7 @@ function VitrinaPerfil({ progreso, irA }) {
   return (
     <section class="seccion perfil-sec" aria-labelledby="perfil-vitrina-t">
       <div class="seccion-cab"><h2 id="perfil-vitrina-t">Tu vitrina</h2>{irA && top.length > 0 && <button class="btn-texto" onClick={() => irA('progreso')}>Ver todos</button>}</div>
-      {!top.length ? <div class="panel"><Vacio ilustracion="records" titulo="Aún no tienes récords">Cuando superes una marca tuya, tus tres mejores saldrán aquí.</Vacio></div> : (
+      {!top.length ? <div class="panel"><Vacio ilustracion="records" imagen="vacio-records" titulo="Aún no tienes récords">Cuando superes una marca tuya, tus tres mejores saldrán aquí.</Vacio></div> : (
         <ol class="perfil-vitrina">
           {top.map((x, i) => (
             <li key={x.id} class="perfil-trofeo" data-puesto={i + 1}>
@@ -242,7 +242,7 @@ function ActividadPerfil({ entrenos, cargando, irA }) {
   const [filtro, setFiltro] = useState('todo');
   if (cargando) return <div class="sil" style="height:180px;border-radius:16px" />;
   if (!entrenos.length) {
-    return <div class="panel"><Vacio ilustracion="semana" titulo="Aún no has terminado ningún entreno"
+    return <div class="panel"><Vacio ilustracion="semana" imagen="vacio-entrenos" titulo="Aún no has terminado ningún entreno"
       accion={irA ? <button class="btn btn-peq" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button> : null}>Cuando termines tu primera sesión, saldrá aquí.</Vacio></div>;
   }
   // v0.116: por meses, con un filtro (todo, fuerza o cardio; el filtro solo sale si ha hecho cardio)

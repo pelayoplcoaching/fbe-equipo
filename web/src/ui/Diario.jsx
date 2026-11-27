@@ -91,7 +91,7 @@ export function Diario({ atletaId, nombreAtleta = 'Atleta', esCoach = false, sal
         </div>
       )}
       {datos.cargando && !datos.datos ? <Siluetas forma="galeria" n={6} texto="Cargando el diario" /> : !lista.length ? (
-        <div class="panel"><Vacio ilustracion="diario" titulo={esCoach ? 'Su diario está vacío' : 'Tu diario está vacío'}
+        <div class="panel"><Vacio ilustracion="diario" imagen="vacio-diario" titulo={esCoach ? 'Su diario está vacío' : 'Tu diario está vacío'}
           accion={esCoach || sinVideos ? null
             : <button class="btn btn-peq btn-primario" onClick={() => setSubir(true)}><Icono n="video" /> Subir un vídeo</button>}>
           {esCoach ? 'Cuando suba un vídeo (desde una sesión, el chat o su diario) o una foto de progreso, aparecerá aquí.'

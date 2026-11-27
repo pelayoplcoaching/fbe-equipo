@@ -400,7 +400,7 @@ function Seguimiento({ atleta, ficha, alCambiar, recargarFicha, checkinInicial =
         </div>
         {/* (v0.203) cómo van sus respuestas, de un vistazo: una minilínea de 8 semanas por dato */}
         {lista.length >= 2 && <TendenciasCheckin checkins={lista} />}
-        {!lista.length ? <div class="panel"><Vacio ilustracion="checkins" titulo="Sin check-ins todavía">Cuando envíe el primero, lo verás aquí con su peso, sus respuestas y sus fotos de esas fechas.</Vacio></div> : (
+        {!lista.length ? <div class="panel"><Vacio ilustracion="checkins" imagen="coach-checkins" titulo="Sin check-ins todavía">Cuando envíe el primero, lo verás aquí con su peso, sus respuestas y sus fotos de esas fechas.</Vacio></div> : (
           <div class="panel"><div class="tabla-env" tabIndex={0} role="region" aria-label="Sus check-ins, semana a semana">
             <table class="tabla-simple tabla-clic tabla-checkins">
               <thead><tr><th>Semana</th><th>Sueño</th><th>Energía</th><th>Recup.</th><th>Motivación</th><th>Adherencia</th><th>Pasos</th><th>Molestias</th><th><span class="sr">Estado</span></th></tr></thead>
@@ -464,7 +464,7 @@ function Objetivos({ atleta }) {
       {/* (v0.173, 076) lo que propone el atleta y espera respuesta */}
       <PropuestasDe atleta={atleta} alCambiar={() => lista.recargar(true)} />
       <div class="separa"><p class="peq secundario">Los objetivos los ve el atleta en su progreso, con la barra y los días que quedan.</p><button class="btn btn-primario btn-peq" onClick={() => setEditar({})}><Icono n="mas" /> Nuevo objetivo</button></div>
-      {!(lista.datos || []).length ? <div class="panel"><Vacio ilustracion="objetivos" icono="diana" titulo="Sin objetivos">Por ejemplo: «Press banca 70 kg a una repetición» para el final del bloque.</Vacio></div> : (
+      {!(lista.datos || []).length ? <div class="panel"><Vacio ilustracion="objetivos" imagen="coach-objetivos" icono="diana" titulo="Sin objetivos">Por ejemplo: «Press banca 70 kg a una repetición» para el final del bloque.</Vacio></div> : (
         <div class="panel"><ul class="lista">
           {lista.datos.map((o) => (
             <li key={o.id}>
@@ -726,7 +726,7 @@ function ServicioYNivel({ atleta, recargar }) {
 
 function SinNutricion({ irADatos }) {
   return (
-    <div class="panel"><Vacio ilustracion="nutricion" icono="nutricion" titulo="Solo le llevas el entrenamiento" accion={<button class="btn" onClick={irADatos}>Cambiarlo en Datos</button>}>
+    <div class="panel"><Vacio ilustracion="nutricion" imagen="coach-nutricion" icono="nutricion" titulo="Solo le llevas el entrenamiento" accion={<button class="btn" onClick={irADatos}>Cambiarlo en Datos</button>}>
       No ve nada de nutrición en su app. Si empiezas a llevársela, cámbialo en Datos.
     </Vacio></div>
   );

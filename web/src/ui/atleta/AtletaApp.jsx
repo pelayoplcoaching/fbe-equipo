@@ -317,7 +317,7 @@ function Pantallas({ sesionId, pendientesArchivos, propio, compartido, cerrarSes
       <InsigniaApp n={propio ? 0 : insignia} />
       <PildoraSubida />
       {!propio && <RecibirCompartido programa={compartido.programa} />}
-      {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} /></main> : (
+      {sesionId ? <main><BandaPendientes pendientes={pendientesArchivos} /><Sesion id={sesionId} alCerrar={cerrarSesion} alLeer={releer} salud={salud} programa={programa.datos} /></main> : (
         <>
           <main key={`${tab}:${dia}`} class="vista" data-tirar={TIRAR.includes(tab) ? '' : undefined}>
             <BandaPendientes pendientes={pendientesArchivos} />

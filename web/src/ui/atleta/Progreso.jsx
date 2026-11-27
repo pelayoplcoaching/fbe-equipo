@@ -214,7 +214,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
           <h2>Fuerza (1RM estimado)</h2>
           {ejercicios.length > 0 && (comparar || ptsF.length > 1) && <Ampliable titulo={comparar ? 'Comparar ejercicios' : `Fuerza: ${ej.nombre}`}>{(alto) => <>{graficaFuerza(alto)}<SelectorRango valor={rFuerzaV} alCambiar={setRangoFuerza} etiqueta="Rango de la gráfica del 1RM estimado" /></>}</Ampliable>}
         </div>
-        {!ejercicios.length ? <div class="panel"><Vacio ilustracion="progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
+        {!ejercicios.length ? <div class="panel"><Vacio ilustracion="progreso" imagen="vacio-progreso" titulo="Sin datos todavía">Cuando registres series, aquí verás tu 1RM estimado semana a semana.</Vacio></div> : (
           <div class="panel panel-pad pila">
             {ejercicios.filter((e) => e.puntos.length > 1).length >= 2 && (
               <button type="button" class="btn-texto btn-comparar" aria-pressed={comparar ? 'true' : 'false'} onClick={() => { if (!comparar && !elegidos.length) setElegidos(eleccionInicial()); setComparar(!comparar); }}>
@@ -492,7 +492,7 @@ function Vitrina({ datos, ejercicios = [], esCoach, atletaId, abrirHistorial, ir
     return (
       <section class="seccion" data-grupo="fuerza">
         <h2>Vitrina de récords</h2>
-        <div class="panel"><Vacio ilustracion="records" titulo={esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}
+        <div class="panel"><Vacio ilustracion="records" imagen="vacio-records" titulo={esCoach ? 'Aún no tiene récords' : 'Aún no tienes récords'}
           accion={!esCoach && irA ? <button class="btn btn-peq" onClick={() => irA('hoy')}><Icono n="play" /> Ir a tu sesión de hoy</button> : null}>
           {esCoach ? 'Con dos sesiones del mismo ejercicio, sus mejores marcas saldrán aquí.' : 'Cuando superes una marca tuya, saldrá aquí como un trofeo.'}
         </Vacio></div>
