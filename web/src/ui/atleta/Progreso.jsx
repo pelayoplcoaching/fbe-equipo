@@ -9,7 +9,7 @@ import { InformeBloque, ListaInformes } from '../InformeBloque.jsx';
 import { usePestanasDeslizables } from '../deslizar.js';
 import { FinDePagina, CabeceraGrande, Siluetas, Reserva, useApp, useCarga, ErrorCaja, Grafica, GraficaPeso, GraficaFantasma, Vacio, Icono, Hoja, Paso, Segmentos, Pista, useAncho, Odometro, CifraSube, Pestanas } from '../comunes.jsx';
 import { metaFuerza, metaPeso, ritmoFrenteMeta, CuerpoEnCifras, MiniLinea, BloqueAros, LineaAncha } from './ProgresoPiezas.jsx';
-import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
+import { Ampliable, GraficaComparar, FlechaCifra, DiasSemanaMini, EscaleraRecords, PodioRecords, useTrofeosNuevos } from './ProgresoPiezas2.jsx';
 import { periodoAnterior, compararEjercicios, cifrasFrente, serieCifras, escaleraRecords, musculosRecord, diasCheckin } from '../../logica/progreso-visual-2.js';
 import { SUBS_PROGRESO, EVENTO_SUB_PROGRESO, tomarSubProgreso } from './sub-progreso.js';
 import { Conexiones } from './Conexiones.jsx';
@@ -39,7 +39,12 @@ import { fmtCorta, hoyISO, diasEntre, fmtConDia, lunesDe, sumarDias } from '../.
 import { CifraObjetivo, TusEjercicios } from './Personal.jsx';
 import { FilaTuAnio } from './TuAnio.jsx';
 import { enLibras, pesoNum, pesoTxt, etiquetaPeso, difVista, deVista, vista, nombrePeso } from '../../logica/unidades.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import { anadirImagenes } from '../../logica/imagenes.js';
+import LISTA_TROZOS from '../../datos/imagenes-trozos.json';
 
+// (belleza 175) las cabeceras ilustradas de las pestañas: su lista viaja con Progreso (datos/imagenes-trozos.json)
+anadirImagenes(LISTA_TROZOS);
 
 // La explicación de una gráfica, plegada bajo «Cómo se calcula» (antes, un párrafo fijo debajo de cada una)
 function NotaGrafica({ titulo = 'Cómo se calcula', children }) {
@@ -73,6 +78,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   const cardio = useCarga(() => api.cardioSemanas(atletaId, 8).catch(() => []), [atletaId], rv('cardio'));
   const constanciaTotal = constanciaDada || constanciaPropia;
   const [ejId, setEjId] = useState(null);
+  const [semanaVer, setSemanaVer] = useState(null);  // (belleza 181) el lunes de la semana que se abre desde una gráfica
   const [historial, setHistorial] = useState(null);
   const [medida, setMedida] = useState('cintura_cm');
   // v0.52: el rango de cada gráfica (el de entrada, 3 meses; si no hay dos puntos ahí, el siguiente que los tenga)
@@ -129,7 +135,10 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       etiqueta={`Peso: tendencia ${num(ultPeso.tendencia)} kg${ritmo ? `, ${signo(ritmo.kgSemana, 2)} kg por semana` : ''}`} />
   );
   const previoTon = periodoAnterior(semanasTon, rT, hoy, { clave: 'semana', semanal: true }).map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }));
-  const graficaTon = (alto) => <Grafica records clave={rT} enCurso={tonEnCurso} bloques={largo(rT) ? bloques.datos : null} previo={previoTon} textoPrevio={PREVIO[rT]} alto={alto} puntos={ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }))} unidad="t" etiqueta="Tonelaje por semana" />;
+  // (belleza 181) tocar un punto de una gráfica semanal abre lo que hiciste esa semana (las ya cerradas; el atleta)
+  const abrirSemana = (pts) => (!esCoach && !llamada ? { alAbrir: (i) => setSemanaVer(pts[i].x), abrible: (i) => !!pts[i] && pts[i].x < lunesDe(hoy), textoAbrir: (i) => `Ver la semana del ${fmtCorta(pts[i].x)}` } : {});
+  const ptsTon = ventanaTon.map((w) => ({ x: w.semana, y: Math.round(w.valor / 100) / 10 }));
+  const graficaTon = (alto) => <Grafica records clave={rT} enCurso={tonEnCurso} bloques={largo(rT) ? bloques.datos : null} previo={previoTon} textoPrevio={PREVIO[rT]} alto={alto} puntos={ptsTon} unidad="t" etiqueta="Tonelaje por semana" {...abrirSemana(ptsTon)} />;
   // la fuerza: con su rango, su objetivo dentro de la gráfica (v0.203), sus tests como rombos y, en 6M y Todo, los bloques
   // de fondo; o, al comparar, dos o tres ejercicios en % desde el principio del rango (v0.204)
   const rFuerzaV = ej ? rangoFuerza || rangoConDatos(ej.puntos, '3m', hoy, { clave: 'semana', semanal: true }) : '3m';
@@ -142,7 +151,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
   const graficaFuerza = (alto) => (comparar
     ? (seriesComparar.length ? <GraficaComparar series={seriesComparar} alto={alto} /> : <p class="peq secundario">Elige dos o tres ejercicios con al menos dos semanas de datos en este rango.</p>)
     : <Grafica records clave={`${rFuerzaV}:${ej.id}`} puntos={ptsF.map((p) => ({ x: p.semana, y: difVista(p.valor) }))} unidad={etiquetaPeso()} etiqueta={`1RM estimado en ${ej.nombre}`}
-      meta={metaF} marcas={marcasEj} bloques={largo(rFuerzaV) ? bloques.datos : null} alto={alto} />);
+      meta={metaF} marcas={marcasEj} bloques={largo(rFuerzaV) ? bloques.datos : null} alto={alto} {...abrirSemana(ptsF.map((p) => ({ x: p.semana })))} />);
   const graficaMedida = (alto) => <Grafica puntos={puntosMedida} unidad="cm" alto={alto} etiqueta={`Evolución de ${medidaV.replace('_cm', '')}`} />;
 
   let constancia = null;
@@ -359,6 +368,7 @@ export function VistaProgreso({ atletaId, programa, esCoach = false, constanciaD
       )}
       </>)}
       {historial && <HistorialEjercicio atletaId={atletaId} ejercicio={historial} compartir={!esCoach} alCerrar={() => setHistorial(null)} />}
+      {semanaVer && <HojaSemanaGrafica atletaId={atletaId} lunes={semanaVer} salud={salud} alCerrar={() => setSemanaVer(null)} />}
     </>
   );
 }
@@ -580,6 +590,13 @@ function HojaRecord({ atletaId, x, reciente, alCerrar, abrirHistorial, esCoach =
         <>
           {d.puntos.length > 1 ? <Grafica records puntos={d.unidad === 'kg' ? d.puntos.map((p) => ({ ...p, y: difVista(p.y) })) : d.puntos} unidad={d.unidad === 'kg' ? etiquetaPeso() : d.unidad} etiqueta={`Récord de ${x.nombre}: cómo ha subido`} />
             : <p class="peq secundario">Con una sesión más de este ejercicio verás cómo sube.</p>}
+          {/* (belleza 176) sus tres mejores marcas, en podio (con dos, las dos) */}
+          {d.puntos.length > 1 && (
+            <section class="seccion">
+              <h3 class="sub-seccion">{esCoach ? 'Sus' : 'Tus'} {d.puntos.length > 2 ? 'tres' : 'dos'} mejores marcas</h3>
+              <PodioRecords puntos={d.puntos} unidad={d.unidad} />
+            </section>
+          )}
           <section class="seccion">
             <h3 class="sub-seccion">{d.veces.length === 1 ? 'La vez que lo batiste' : d.veces.length ? `Las ${d.veces.length} veces que lo batiste` : 'Aún no lo has batido'}</h3>
             {/* (v0.204) como escalones que suben, de la primera vez a la última, cada uno con su cifra y su fecha */}
@@ -668,6 +685,35 @@ function NuevaMarca({ atletaId, ejercicios, alCerrar }) {
         <div class="campo"><label for="mr-notas">Nota</label><input id="mr-notas" class="entrada" value={f.notas} onInput={(e) => setF({ ...f, notas: e.currentTarget.value })} placeholder="Con cinturón, en casa, válida…" /></div>
         <button class="btn btn-primario btn-grande" disabled={!f.kg}>Guardar marca</button>
       </form>
+    </Hoja>
+  );
+}
+
+// (belleza 175) Cada pestaña de Progreso con su cabecera ilustrada, si ha llegado su imagen: la escena a la derecha y, a la
+// izquierda, lo que hay en ella (un adorno: lo de la pestaña ya lo dice su nombre). Los id, enteros (no «progreso-» + pestaña:
+// el reparto de estilos creería que cualquier clase «progreso-…» puede salir de aquí)
+const CAB_PROG = { resumen: ['progreso-resumen', 'Tus semanas, tus cifras y tus bloques'], fuerza: ['progreso-fuerza', 'Tu fuerza y tus récords'], cuerpo: ['progreso-cuerpo', 'Tu cuerpo y tus hábitos'], logros: ['progreso-logros', 'Tus medallas y tus objetivos'] };
+function CabeceraProgreso({ sub }) {
+  const [id, texto] = CAB_PROG[sub] || [];
+  if (!id || !hayImagen(id)) return null;
+  return (
+    <div class="amb-cab-prog" aria-hidden="true">
+      <Imagen key={id} id={id} clase="amb-cab-prog-img" tamanos="(min-width: 720px) 680px, 100vw" />
+      <span class="amb-cab-prog-t">{texto}</span>
+    </div>
+  );
+}
+
+// (belleza 181) Lo que hiciste la semana de un punto de una gráfica: su historia, como en «Tus semanas» (si esa semana no
+// tiene nada apuntado, lo dice)
+function HojaSemanaGrafica({ atletaId, lunes, salud, alCerrar }) {
+  const { api } = useApp();
+  const atras = Math.max(1, Math.round(diasEntre(lunes, lunesDe(hoyISO())) / 7));
+  const r = useCarga(() => api.resumenesSemanales(atletaId, atras).then((l) => (l || []).find((x) => x.lunes === lunes) || null).catch(() => null), [atletaId, lunes]);
+  if (r.datos) return <HistoriaSemana resumen={r.datos} salud={salud} alCerrar={alCerrar} />;
+  return (
+    <Hoja titulo={`Semana del ${fmtCorta(lunes)}`} alCerrar={alCerrar} medio>
+      {r.cargando ? <Siluetas forma="lista" n={3} texto="Cargando esa semana" /> : <p class="peq secundario">No hay nada apuntado esa semana.</p>}
     </Hoja>
   );
 }
@@ -802,6 +848,7 @@ export function Progreso({ programa, salud, irA, checkinSemana }) {
           están cargadas): la sub-pestaña solo decide qué grupo se ve (diseno.css). A quien solo se le lleva la nutrición
           le queda una página corta, sin sub-pestañas. */}
       {entrena && <Pestanas opciones={SUBS_PROGRESO} valor={sub} alCambiar={desliz.cambiar} etiqueta="Qué ver de tu progreso" idBase="prog" clase="pestanas-progreso pestanas-justas" />}
+      {entrena && <CabeceraProgreso sub={sub} />}
       {/* (diseño, tanda 21) deslizar el panel a los lados cambia de sub-pestaña (ui/deslizar.js) */}
       <div class={`progreso-panel ${entrena ? 'deslizable' : ''}`} id="prog-panel" role={entrena ? 'tabpanel' : undefined} aria-labelledby={entrena ? `prog-${sub}` : undefined} data-sub={entrena ? sub : undefined} ref={desliz.panel} {...(entrena ? desliz.gesto : {})}>
         <Grupo g="resumen">

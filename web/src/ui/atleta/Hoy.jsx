@@ -444,9 +444,11 @@ function AvisoInstalar() {
   if (modo === 'demo' || cerrado || instalada) return null;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const prompt = window.__fbeInstalar;
+  // (belleza 193) con su ilustración (el móvil en la mesilla), en lugar del icono
+  const conImg = hayImagen('estado-instalar');
   return (
-    <div class="aviso-instalar">
-      <Icono n="movil" />
+    <div class={`aviso-instalar${conImg ? ' amb-con-img' : ''}`}>
+      {conImg ? <Imagen id="estado-instalar" clase="amb-instalar-img" tamanos="72px" alternativa={<Icono n="movil" />} /> : <Icono n="movil" />}
       <div class="pila-s">
         <strong>Ponla en tu pantalla de inicio</strong>
         <span class="peq secundario">Se abre como una app, a pantalla completa, y funciona sin cobertura.</span>

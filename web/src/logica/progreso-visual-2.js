@@ -214,3 +214,10 @@ export function agruparRecords(items = []) {
   }
   return out;
 }
+
+// (belleza 176) Tus tres mejores marcas de un ejercicio, para el podio: de los puntos de su récord (historiaRecords: cada
+// uno supera al anterior), los tres últimos, la mejor primero. [{ puesto: 'oro' | 'plata' | 'bronce', fecha, valor }]
+export function podioRecords(puntos = []) {
+  const ult = (puntos || []).filter((p) => p && p.x && Number.isFinite(Number(p.y))).slice(-3).reverse();
+  return ult.map((p, i) => ({ puesto: ['oro', 'plata', 'bronce'][i], fecha: p.x, valor: Number(p.y) }));
+}

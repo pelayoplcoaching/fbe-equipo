@@ -1279,13 +1279,23 @@ export function useRaspado(n, xs) {
     },
     onBlur: () => { if (!tocando.current) setSel(null); },
   };
-  return { sel: selOk, eventos, caja };
+  return { sel: selOk, eventos, caja, ultimo };
 }
 
 // La caja de una gráfica: el deslizador accesible, la etiqueta flotante del punto elegido y el resumen en texto
 // (v0.203) destacado(i): si ese punto es un récord, el globo sale en oro y con su trofeo
-export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children, destacado = null }) {
+// (belleza 181) alAbrir(i): lo que abre el punto elegido (en Progreso, lo que hiciste esa semana), con su botón debajo y con
+// Intro desde el teclado; abrible(i): si ese punto se puede abrir; textoAbrir(i): el texto de su botón
+export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resumen, children, destacado = null, alAbrir = null, abrible = null, textoAbrir = null }) {
   const { sel, eventos, caja } = raspado;
+  // el punto tocado (o con clic) se queda para su botón aunque el ratón salga de la gráfica (pasar por encima no lo fija)
+  const [fijo, setFijo] = useState(null);
+  useEffect(() => { setFijo(null); }, [n]);
+  const puedeAbrir = (j) => !!alAbrir && j != null && j < n && (!abrible || abrible(j));
+  const teclas = alAbrir ? {
+    onKeyDown: (e) => { if (e.key === 'Enter' && puedeAbrir(sel ?? n - 1)) { e.preventDefault(); alAbrir(sel ?? n - 1); } else eventos.onKeyDown(e); },
+    onPointerUp: (e) => { eventos.onPointerUp(e); setFijo(raspado.ultimo.current); },
+  } : null;
   const i = sel ?? n - 1;
   const izq = sel == null ? 0 : Math.max(0, Math.min(100, (xs[sel] / W) * 100));
   // (diseño, tanda 15) la gráfica se dibuja la primera vez que entra en la pantalla (la clase «trazada»; el dibujo, en diseno.css)
@@ -1300,7 +1310,7 @@ export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resum
   return (
     <div class={`grafica-caja${vista ? ' trazada' : ''}`} ref={caja}>
       <div class="grafica-tactil" role="slider" tabIndex={0} aria-label={etiqueta} aria-valuemin="1" aria-valuemax={n} aria-valuenow={i + 1}
-        aria-valuetext={textoPunto(i)} {...eventos}>
+        aria-valuetext={textoPunto(i)} aria-keyshortcuts={alAbrir ? 'Enter' : undefined} {...eventos} {...teclas}>
         {children}
         {/* (diseño, tanda 18) la guía vertical del punto elegido */}
         {sel != null && <span class="grafica-guia" style={{ left: `${izq}%` }} aria-hidden="true" />}
@@ -1310,6 +1320,8 @@ export function CajaGrafica({ raspado, n, W, xs, ys, etiqueta, textoPunto, resum
           </div>
         )}
       </div>
+      {/* (el toque en el botón no quita el foco a la gráfica) */}
+      {puedeAbrir(fijo) && <button type="button" class="btn-texto mini" onPointerDown={(e) => e.preventDefault()} onClick={() => alAbrir(fijo)}><Icono n="semana" /> {textoAbrir ? textoAbrir(fijo) : 'Ver ese punto'}</button>}
       <p class="sr">{resumen}</p>
     </div>
   );
@@ -1447,7 +1459,7 @@ const textoPrevision = (meta, prev) => (prev ? (prev.llega ? `; a este ritmo lle
 // por detrás de la cifra): entonces, debajo, si cabe sobre el eje
 const yCifra = (yUlt, yAnt, suelo) => (yAnt != null && yAnt < yUlt - 4 && yUlt + 20 <= suelo - 2 ? yUlt + 20 : yUlt - 10);
 
-export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null, previo = null, textoPrevio = 'el periodo anterior' }) {
+export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, rangoMin = null, records = false, clave, enCurso = false, meta = null, bloques = null, marcas = null, previo = null, textoPrevio = 'el periodo anterior', alAbrir = null, abrible = null, textoAbrir = null }) {
   const [W, ref] = useAncho();
   const id = useId();
   const n = puntos?.length || 0;
@@ -1496,7 +1508,7 @@ export function Grafica({ puntos, unidad = '', alto = 150, dec = 1, etiqueta, ra
     + `${previoV.length > 1 ? `; en gris, ${textoPrevio} (de ${conU(previoV[0].y)} a ${conU(previoV[previoV.length - 1].y)})` : ''}.`;
   const sel = raspado.sel;
   return (
-    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)}>
+    <CajaGrafica raspado={raspado} n={n} W={W} xs={xs} ys={puntos.map((p) => Y(p.y))} etiqueta={etiqueta || 'Evolución'} textoPunto={textoPunto} resumen={resumen} destacado={(i) => prs.includes(i)} alAbrir={alAbrir} abrible={abrible} textoAbrir={textoAbrir}>
       <svg class="grafica" ref={ref} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         <defs><linearGradient id={`deg-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="deg-a" /><stop offset="1" class="deg-b" /></linearGradient>{mascaraTramos(id, tramos, X, W, H)}</defs>
         <CapaFranjas franjas={franjas} xDe={xDe} arr={arr} base={H - abj} />

@@ -28,6 +28,12 @@ import { AvisoNovedades, prepararVersionVista } from '../Novedades.jsx';
 import { Escena200, useEscena200 } from '../Escena200.jsx';
 import { fijarUnidadPeso } from '../../logica/unidades.js';
 import { useMarcaPagina } from '../marca-pagina.js';
+import LISTA_TROZOS from '../../datos/imagenes-trozos.json';
+import { anadirImagenes } from '../../logica/imagenes.js';
+
+// (belleza 151-200, bloque 7) los vacíos ilustrados del panel (Revisar, la ficha, nutrición y hábitos): su lista viaja con el
+// panel (datos/imagenes-trozos.json), no con el arranque
+anadirImagenes(LISTA_TROZOS);
 
 // Cuenta solo está en la barra en pantallas anchas; en el móvil se abre desde el avatar de Atletas
 // Modo atleta (v0.37): el coach entrena con la app de atleta, con su propia ficha (solo entrenamiento)

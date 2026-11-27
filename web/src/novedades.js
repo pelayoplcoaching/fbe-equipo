@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.270': {
+    // (belleza 151-200, cuarta vuelta, y las últimas 17 imágenes nuevas; «claude/belleza-200-propuesta.md»)
+    atleta: [
+      'Al terminar una sesión, una historia de tres tarjetas: lo que has hecho, tus récords y tus músculos, y luego el resumen.',
+      'En cada récord, tus tres mejores marcas en un podio con sus medallas; y tocar un punto de las gráficas de Progreso abre esa semana.',
+      'Progreso estrena cabeceras ilustradas, y el resumen de movilidad y de andar ya tiene su propia imagen.',
+    ],
+    coach: [
+      'Belleza 151-200, cuarta vuelta: la historia del final, el podio de cada récord, la semana desde la gráfica y las 52 imágenes en su sitio.',
+    ],
+  },
   '0.269': {
     // (belleza 151-200, tercera vuelta, y las primeras 35 imágenes nuevas; «claude/belleza-200-propuesta.md»)
     atleta: [

@@ -43,9 +43,12 @@ import { readFileSync } from 'node:fs';
 // van en la lista de las ilustraciones, que se espera al abrir (unos 36 bytes comprimidos cada una); las de pantallas que se
 // cargan aparte (portadas del perfil y, cuando lleguen, el final de la sesión, su historia y las cabeceras de Progreso), en
 // datos/imagenes-trozos.json, que viaja con esas pantallas y no cuenta aquí)
+// (v0.270: estilos a 920, a propósito: los dos avisos que salen al abrir llevan su ilustración (la versión nueva, en el
+// círculo de la píldora, y «Ponla en tu pantalla de inicio», en lugar del icono), unos 400 bytes; comprimido, sigue en 163.
+// Los vacíos del panel de coach van en la lista de los trozos, que viaja con el panel)
 const PRESUPUESTO = {
   js: { crudo: 1790, gz: 610 },
-  css: { crudo: 919, gz: 163 },
+  css: { crudo: 920, gz: 163 },
 };
 
 let ok = 0, fallos = 0;

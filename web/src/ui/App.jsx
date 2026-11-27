@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Ilustracion } from './Ilustraciones.jsx';
-import { Imagen } from './Imagen.jsx';
+import { Imagen, hayImagen } from './Imagen.jsx';
 import { esPorSuCuenta } from '../logica/esencial.js';
 import { LOBO_CAJA, LOBO_D } from './lobo-trazo.js';
 import { borrarTodoEnCurso } from './en-curso.js';
@@ -384,9 +384,12 @@ function AvisoVersion({ nombre = 'FBE Equipo' }) {
     return () => window.removeEventListener('fbe-version', llega);
   }, []);
   if (!nueva) return null;
+  // (belleza 193) con su ilustración (unas zapatillas nuevas en su caja), en un círculo a la izquierda; sin ella, el lobo
+  const conImg = hayImagen('estado-version-nueva');
+  const lobo = <svg class="aviso-version-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>;
   return (
-    <div class="aviso-version" role="status">
-      <svg class="aviso-version-lobo" viewBox={LOBO_CAJA} aria-hidden="true"><path fill-rule="evenodd" d={LOBO_D} /></svg>
+    <div class={`aviso-version${conImg ? ' amb-con-img' : ''}`} role="status">
+      {conImg ? <Imagen id="estado-version-nueva" clase="amb-aviso-img" tamanos="36px" alternativa={lobo} /> : lobo}
       <span>Hay una versión nueva de {nombre}.</span>
       <button class="btn btn-peq btn-primario" disabled={actualizando} onClick={() => {
         setActualizando(true);

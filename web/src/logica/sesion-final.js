@@ -3,6 +3,8 @@
 import { pesoTxt } from './unidades.js';
 import { hoyISO } from './fechas.js';
 import { queToca, diaPrevistoValido } from './plan.js';
+import { num } from './calculos.js';
+import { cardioHechoValido, NOMBRE_MODALIDAD } from './cardio.js';
 
 // (belleza 162) Hoy, menos tonelaje que la última vez: lo que has hecho (lo de la última vez va al lado, entre paréntesis),
 // no lo que falta. c: la de compararConAnterior (con hoy y antes)
@@ -36,4 +38,16 @@ export function siguienteTras(programa, sesionId, { hoy = hoyISO(), excluir = nu
   const s = queToca(sesiones, semana, hoy).siguiente;
   if (!s) return { ultima: true };
   return { nombre: s.nombre, dia: diaPrevistoValido(s, semana) };
+}
+
+// (belleza 161) Las cifras de la primera tarjeta de la historia del final, como las del resumen: las de fuerza (series,
+// toneladas y minutos) o, si fue cardio, sus minutos y sus km. [{ k, v, t }]
+export function cifrasHistoriaSesion(r = {}) {
+  const c = r?.cardio && cardioHechoValido(r.cardio) ? r.cardio : null;
+  if (c) return [{ k: 'minutos', v: num(c.minutos, 0), t: `min de ${String(NOMBRE_MODALIDAD[c.modalidad] || 'cardio').toLowerCase()}` }, c.km ? { k: 'km', v: num(c.km, 1), t: 'km' } : null].filter(Boolean);
+  return [
+    { k: 'series', v: num(r?.series || 0, 0), t: r?.series === 1 ? 'serie' : 'series' },
+    r?.tonelaje > 0 ? { k: 'tonelaje', v: num(Math.round(r.tonelaje / 10) / 100, 1), t: 'toneladas' } : null,
+    r?.minutos ? { k: 'minutos', v: num(r.minutos, 0), t: 'minutos' } : null,
+  ].filter(Boolean);
 }

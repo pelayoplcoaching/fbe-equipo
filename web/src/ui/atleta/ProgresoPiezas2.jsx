@@ -5,7 +5,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { num } from '../../logica/calculos.js';
 import { fmtCorta } from '../../logica/fechas.js';
 import { trazoSuave, escalaGrafica } from '../../logica/visual.js';
-import { diasDeSemana, textoDiasSemana, flechaCifra, trofeosNuevos, trofeosVistos } from '../../logica/progreso-visual-2.js';
+import { diasDeSemana, textoDiasSemana, flechaCifra, trofeosNuevos, trofeosVistos, podioRecords } from '../../logica/progreso-visual-2.js';
+import { pesoTxt } from '../../logica/unidades.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
 import { Hoja, Icono, CajaGrafica, useAncho, useRaspado } from '../comunes.jsx';
 import { sinMovimiento } from '../transiciones.js';
 
@@ -125,6 +127,28 @@ export function EscaleraRecords({ escalones = [] }) {
         ))}
       </ol>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- el podio de un récord (belleza 176)
+// Tus tres mejores marcas de un ejercicio en oro, plata y bronce (con las medallas de la app): en la lista, de la mejor a la
+// tercera; a la vista, como un podio (la plata a la izquierda, el oro en medio y más alto, el bronce a la derecha)
+const MEDALLA = { oro: 'medalla-records-oro', plata: 'medalla-records-plata', bronce: 'medalla-records-bronce' };
+const PUESTO = { oro: 'La mejor', plata: 'La segunda', bronce: 'La tercera' };
+export function PodioRecords({ puntos = [], unidad = 'kg' }) {
+  const p = podioRecords(puntos);
+  if (p.length < 2) return null;
+  return (
+    <ol class="amb-podio">
+      {p.map((x) => (
+        <li key={x.puesto} data-m={x.puesto}>
+          {hayImagen(MEDALLA[x.puesto]) ? <Imagen id={MEDALLA[x.puesto]} clase="amb-podio-med" tamanos="56px" /> : <span class="amb-podio-med amb-podio-ico" aria-hidden="true"><Icono n="trofeo" /></span>}
+          <span class="amb-podio-cifra num"><span class="sr">{PUESTO[x.puesto]}: </span>{unidad === 'kg' ? pesoTxt(x.valor, 1) : `${num(x.valor, 0)} rep`}</span>
+          <span class="amb-podio-fecha mini num">{fmtCorta(x.fecha)}</span>
+          <span class="amb-podio-caja" aria-hidden="true" />
+        </li>
+      ))}
+    </ol>
   );
 }
 

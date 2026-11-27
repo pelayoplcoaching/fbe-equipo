@@ -1,0 +1,51 @@
+/* Belleza 151-200 para las dos apps, cuarta vuelta (v0.270). La lista, en el doc del proyecto
+   "claude/belleza-200-propuesta.md"; lo hecho y lo que ya estaba, en "claude/belleza-150-estado.md" (apartado 151-200). Va
+   detras de ambas-i.css y antes de color-capa.css. Las reglas llevan :not(#n) para que el reparto de estilos no arrastre al
+   arranque reglas de los trozos con la misma especificidad. */
+
+/* -- 176 - El podio de un record: tus tres mejores marcas con su medalla (la plata a la izquierda, el oro en medio y mas
+   alto, el bronce a la derecha). En la lista van de la mejor a la tercera; el orden de la vista lo pone order */
+.amb-podio:not(#n) { list-style: none; padding: 0; margin: 0; display: flex; align-items: flex-end; justify-content: center; gap: var(--esp-10); }
+.amb-podio:not(#n) > li { flex: 1 1 0; max-width: 8rem; min-width: 0; display: grid; justify-items: center; gap: var(--esp-4); text-align: center; --c: var(--naranja-600); }
+.amb-podio:not(#n) > li[data-m="oro"] { --c: var(--oro-400); --h: calc(var(--esp-32) * 2); }
+.amb-podio:not(#n) > li[data-m="plata"] { order: -1; --c: var(--tinta-3); --h: calc(var(--esp-22) * 2); }
+/* las medallas de la app llevan el disco en el 94 % de la imagen: el recorte en circulo quita el fondo de la esquina */
+.amb-podio-med:not(#n) { width: 56px; height: 56px; object-fit: cover; clip-path: circle(47% at 50% 50%); }
+.amb-podio-ico:not(#n) { display: grid; place-items: center; border-radius: 50%; background: var(--oro-suave); color: var(--oro-texto); }
+.amb-podio-cifra:not(#n) { font-size: var(--letra-17); font-weight: 750; color: var(--tinta); }
+.amb-podio-fecha:not(#n) { color: var(--tinta-3); }
+.amb-podio-caja:not(#n) { width: 100%; height: var(--h, var(--esp-28)); border-radius: var(--r-10) var(--r-10) 0 0; background: var(--hoja-2); border-top: var(--filo-medio) solid var(--c); }
+@media (forced-colors: active) { .amb-podio-caja:not(#n) { border: var(--filo-fino) solid CanvasText; } }
+
+/* -- 161 - La historia del final de la sesion (HistoriaSesion.jsx, con las clases de "Tu semana"): lo de cada tarjeta, arriba,
+   porque su ilustracion lleva la escena en el tercio de abajo; las cifras de la primera, en fila, y "Ver el resumen" abajo */
+.historia-sesion:not(#n) .historia-fondo { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; pointer-events: none; }
+.historia-sesion:not(#n) .historia-pantalla { justify-content: flex-start; padding-top: calc(var(--esp-48) + var(--esp-24)); }
+.historia-sesion:not(#n) .historia-fin { margin-top: auto; margin-bottom: var(--esp-24); }
+.hs-cifras:not(#n) { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--esp-16) var(--esp-28); }
+.hs-cifras:not(#n) .historia-cifra { font-size: var(--cifra-xl); }
+/* en la de los musculos la luz cae desde arriba, justo donde va el texto: la imagen se funde arriba (asoma a partir del 12 % y
+   esta entera al 34 %, donde empieza el mapa) y el gris de la etiqueta y la linea de debajo se aclara un paso */
+.historia-sesion[data-p="musculos"]:not(#n) { --tinta-2: var(--neutro-200); }
+.historia-sesion[data-p="musculos"]:not(#n) .historia-fondo { -webkit-mask-image: linear-gradient(var(--oklab,) 180deg, transparent 12%, var(--tinta) 34%); mask-image: linear-gradient(var(--oklab,) 180deg, transparent 12%, var(--tinta) 34%); }
+@media (forced-colors: active) { .historia-sesion:not(#n) .historia-fondo { display: none; } }
+
+/* -- 175 - La cabecera ilustrada de cada pestana de Progreso: la escena a la derecha y, a la izquierda, lo que hay en ella */
+.amb-cab-prog:not(#n) { position: relative; overflow: hidden; isolation: isolate; width: 100%; aspect-ratio: 5 / 2; max-height: 9rem; display: flex; align-items: center; padding: var(--esp-16) var(--esp-18); border-radius: var(--r); background: var(--hero); color: var(--sobre-hero); }
+.amb-cab-prog-img:not(#n) { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: 100% 50%; }
+.amb-cab-prog-t:not(#n) { max-width: 55%; font-size: var(--letra-17); font-weight: 750; line-height: 1.2; text-wrap: balance; }
+/* en pantallas anchas la banda se alarga (no pasa de 9rem de alto) y recortarla a lo ancho partiria la escena: alli la imagen
+   va entera, a la altura de la banda y pegada a la derecha, fundida por la izquierda con el fondo, que es del mismo noche */
+@media (min-width: 460px) {
+  .amb-cab-prog-img:not(#n) { left: auto; width: auto; max-width: 100%; -webkit-mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--tinta) 45%); mask-image: linear-gradient(var(--oklab,) 90deg, transparent, var(--tinta) 45%); }
+}
+@media (forced-colors: active) { .amb-cab-prog-img:not(#n) { display: none; } }
+
+/* -- 193 - Los avisos con su ilustracion: la version nueva (las zapatillas en su caja, en un circulo concentrico con el
+   extremo de la pildora: 18 px de radio y 8 de relleno, como la pildora de 52 px de alto) y "Ponla en tu pantalla de
+   inicio" (el movil en la mesilla, en lugar del icono). La pantalla de error al abrir ya tenia su hueco (App.jsx). Salen al
+   abrir (App.jsx y Hoy.jsx), asi que van sin :not(#n): les basta con dos clases para ganar a la de su aviso */
+.aviso-version.amb-con-img { padding-left: var(--esp-8); }
+.amb-aviso-img { width: 36px; height: 36px; flex: none; border-radius: 50%; object-fit: cover; border: var(--filo-fino) solid color-mix(in srgb, var(--blanco) 22%, transparent); }
+.aviso-instalar.amb-con-img { grid-template-columns: 72px minmax(0, 1fr); align-items: start; }
+.amb-instalar-img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-14); }

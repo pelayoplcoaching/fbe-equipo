@@ -9173,5 +9173,39 @@
       "360": "imagenes/vacio/vacio-recetas-360.1c8998b9.webp"
     },
     "color": "#5b456b"
+  },
+  "estado-error": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "480": "imagenes/estado/estado-error-480.e33aebdb.webp",
+      "720": "imagenes/estado/estado-error-720.c55a407f.webp",
+      "1080": "imagenes/estado/estado-error-1080.3dff8e5c.webp"
+    },
+    "color": "#3d2861"
+  },
+  "estado-version-nueva": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/estado/estado-version-nueva-240.8ab4e4e3.webp",
+      "360": "imagenes/estado/estado-version-nueva-360.67ca134d.webp"
+    },
+    "color": "#62468d"
+  },
+  "estado-instalar": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/estado/estado-instalar-240.8208aec0.webp",
+      "360": "imagenes/estado/estado-instalar-360.44bc04f7.webp"
+    },
+    "color": "#7b5182"
   }
 }

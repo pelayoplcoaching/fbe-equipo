@@ -252,13 +252,13 @@ check(/const conPermisoOrientacion = \(\) => typeof window !== 'undefined' && ty
   const { imagenCierre } = await import('../web/src/logica/sesion-final.js');
   const hay = (id) => !!trozos[id];
   const fines = ['empuje', 'tiron', 'pierna', 'core', 'fullbody'].flatMap((f) => [imagenCierre(f, null, 'a', hay), imagenCierre(f, null, 'b', hay), imagenCierre(f, null, 'c', hay)])
-    .concat(['carrera', 'bici', 'eliptica', 'remo', 'nadar', 'cuerda'].map((m) => imagenCierre('cardio', m, 'a', hay)), imagenCierre('cardio', null, 'a', hay));
-  check(Object.keys(trozos).filter((id) => id.startsWith('fin-')).length === 17 && Object.keys(trozos).filter((id) => id.startsWith('fin-')).every((id) => trozos[id].proporcion.join() === '16,9' && Object.keys(trozos[id].archivos).join() === '720,1080,1440')
+    .concat(['carrera', 'andar', 'bici', 'eliptica', 'remo', 'nadar', 'cuerda'].map((m) => imagenCierre('cardio', m, 'a', hay)), imagenCierre('cardio', null, 'a', hay), imagenCierre('movilidad', null, 'a', hay));
+  check(Object.keys(trozos).filter((id) => id.startsWith('fin-')).length === 19 && Object.keys(trozos).filter((id) => id.startsWith('fin-')).every((id) => trozos[id].proporcion.join() === '16,9' && Object.keys(trozos[id].archivos).join() === '720,1080,1440')
     && fines.every(hay) && new Set(fines.filter((id) => /^fin-(empuje|tiron|pierna|core|fullbody)/.test(id))).size === 10,
     '164: los finales de cada tipo de sesión (dos por cada familia de fuerza, que se alternan) y de cada modalidad de cardio, en 16:9 como las portadas');
   check(/import LISTA_TROZOS from '\.\.\/\.\.\/datos\/imagenes-trozos\.json';/.test(src('ui/atleta/Sesion.jsx')) && /^anadirImagenes\(LISTA_TROZOS\);$/m.test(src('ui/atleta/Sesion.jsx'))
     && /const fondoFin = hayImagen\(cierre\) \? cierre : imagenPortada\(familia, modFin, sesion\?\.id\);/.test(src('ui/atleta/Sesion.jsx')),
-    '164: la sesión trae la lista de sus finales (sin ella, el resumen sigue con la portada, como en movilidad y andar, que aún no han llegado)');
+    '164: la sesión trae la lista de sus finales (sin ella, el resumen sigue con la portada)');
 }
 {
   const { cambiosQueViene: cv } = await import('../web/src/logica/semana-viene.js');
@@ -276,6 +276,64 @@ check(/const conPermisoOrientacion = \(\) => typeof window !== 'undefined' && ty
     && /<h3>Este bloque y el anterior<\/h3>/.test(inf) && /<table class="amb-frente">/.test(inf) && /<th scope="col">Este bloque<\/th><th scope="col">\{ant\.numero \? `Bloque \$\{ant\.numero\}` : 'El anterior'\}<\/th>/.test(inf)
     && /<th scope="row">Sesiones<\/th><td class="num">\{r\.sesiones\.hechas\}<\/td><td class="num">\{ant\.sesiones \?\? '—'\}<\/td>/.test(inf) && !/r\.peso|salud/.test(inf.slice(inf.indexOf('<table class="amb-frente">'), inf.indexOf('</table>'))),
     '177: el informe del bloque con este bloque y el anterior en dos columnas (sin el peso corporal)');
+}
+
+console.log('\n151-200, cuarta vuelta (v0.270): el podio de un récord y tocar un punto de una gráfica');
+const cssJ = src('ambas-j.css'), sinComJ = cssJ.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssJ) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComJ) && main.indexOf("'./ambas-j.css'") > main.indexOf("'./ambas-i.css'") && main.indexOf("'./ambas-j.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-j.css: solo ASCII, los colores por su nombre y detrás de la tercera vuelta de 151-200');
+{
+  const { podioRecords } = await import('../web/src/logica/progreso-visual-2.js');
+  const pts = [{ x: '2026-10-01', y: 60 }, { x: '2026-10-08', y: 62.5 }, { x: '2026-10-15', y: 65 }, { x: '2026-10-22', y: 70 }];
+  const pod = podioRecords(pts);
+  check(pod.map((x) => `${x.puesto}:${x.valor}:${x.fecha}`).join() === 'oro:70:2026-10-22,plata:65:2026-10-15,bronce:62.5:2026-10-08' && podioRecords(pts.slice(0, 2)).length === 2 && podioRecords([]).length === 0 && podioRecords(null).length === 0,
+    '176: el podio, con las tres últimas marcas del récord (cada una supera a la anterior), la mejor primero');
+  const piezas = src('ui/atleta/ProgresoPiezas2.jsx');
+  check(/const MEDALLA = \{ oro: 'medalla-records-oro', plata: 'medalla-records-plata', bronce: 'medalla-records-bronce' \};/.test(piezas) && /<li key=\{x\.puesto\} data-m=\{x\.puesto\}>/.test(piezas)
+    && /\.amb-podio:not\(#n\) > li\[data-m="plata"\] \{ order: -1;/.test(sinComJ) && /clip-path: circle\(47% at 50% 50%\)/.test(sinComJ) && /<PodioRecords puntos=\{d\.puntos\} unidad=\{d\.unidad\} \/>/.test(src('ui/atleta/Progreso.jsx')),
+    '176: en la hoja de un récord, el podio con las medallas de la app (en la lista, de la mejor a la tercera; a la vista, la plata a la izquierda)');
+  const com = src('ui/comunes.jsx'), prog = src('ui/atleta/Progreso.jsx');
+  check(/onPointerUp: \(e\) => \{ eventos\.onPointerUp\(e\); setFijo\(raspado\.ultimo\.current\); \}/.test(com) && /\{puedeAbrir\(fijo\) && <button type="button" class="btn-texto mini" onPointerDown=\{\(e\) => e\.preventDefault\(\)\} onClick=\{\(\) => alAbrir\(fijo\)\}>/.test(com)
+    && /if \(e\.key === 'Enter' && puedeAbrir\(sel \?\? n - 1\)\)/.test(com) && /abrible: \(i\) => !!pts\[i\] && pts\[i\]\.x < lunesDe\(hoy\)/.test(prog) && /\{semanaVer && <HojaSemanaGrafica atletaId=\{atletaId\} lunes=\{semanaVer\}/.test(prog),
+    '181: tocar un punto de una gráfica semanal deja su botón «Ver la semana del…» (con Intro desde el teclado) y abre la historia de esa semana');
+  const { cifrasHistoriaSesion } = await import('../web/src/logica/sesion-final.js');
+  check(cifrasHistoriaSesion({ series: 12, tonelaje: 4706, minutos: 52 }).map((c) => `${c.v} ${c.t}`).join(' · ') === '12 series · 4,7 toneladas · 52 minutos'
+    && cifrasHistoriaSesion({ series: 1, tonelaje: 0 }).map((c) => `${c.v} ${c.t}`).join() === '1 serie'
+    && cifrasHistoriaSesion({ series: 0, cardio: { modalidad: 'carrera', minutos: 30, km: 5.2 } }).map((c) => `${c.v} ${c.t}`).join(' · ') === '30 min de carrera · 5,2 km',
+    '161: las cifras de la primera tarjeta de la historia, como las del resumen (fuerza o cardio)');
+  const ses = src('ui/atleta/Sesion.jsx'), hs = src('ui/atleta/HistoriaSesion.jsx');
+  check(/if \(conEscena\) \{ setEscena\(\{ records: res\.records\?\.length \|\| 0, semana: await semanaHecha \}\); setHistoria\(hayHistoriaSesion\(\) && /.test(ses) && /navigator\.webdriver && !leer\('fbe-probar-historia'\)/.test(hs) && /\{historia && !escena && <HistoriaSesion resumen=\{resumen\} nombre=\{sesion\?\.nombre\} alCerrar=\{\(\) => setHistoria\(false\)\} \/>\}/.test(ses)
+    && /const FONDO = \{ hecho: 'historia-hecho', records: 'historia-records', musculos: 'historia-musculos' \};/.test(hs) && /class="historia historia-sesion" role="dialog" aria-modal="true"/.test(hs) && /Ver el resumen/.test(hs),
+    '161: el final como historia de tres tarjetas (lo hecho, los récords si los hay y los músculos), detrás de la escena y solo cuando esta sale; con la ✕ o «Ver el resumen», al resumen');
+}
+
+{
+  // Las últimas 17 de las 52 imágenes de 151-200: la historia, las cabeceras de Progreso, los avisos, el panel y dos finales
+  const { existsSync } = await import('node:fs');
+  const lista = JSON.parse(src('datos/imagenes.json')), trozos = JSON.parse(src('datos/imagenes-trozos.json'));
+  const forma = (l, ids, prop, anchos) => ids.every((id) => l[id]?.proporcion?.join() === prop && Object.keys(l[id].archivos).join() === anchos && /^#[0-9a-f]{6}$/.test(l[id].color)
+    && Object.values(l[id].archivos).every((f) => existsSync(new URL(`../web/${f}`, import.meta.url))));
+  const historia = ['historia-hecho', 'historia-records', 'historia-musculos'], cabs = ['progreso-resumen', 'progreso-fuerza', 'progreso-cuerpo', 'progreso-logros'];
+  const coach = ['coach-al-dia', 'coach-checkins', 'coach-objetivos', 'coach-habitos', 'coach-nutricion'];
+  check(forma(trozos, historia, '2,3', '480,720,1024') && forma(trozos, cabs, '5,2', '720,1080,1440') && forma(trozos, coach, '1,1', '240,360') && forma(trozos, ['fin-movilidad', 'fin-andar'], '16,9', '720,1080,1440')
+    && [...historia, ...cabs, ...coach].every((id) => !lista[id]), '161, 175 y el panel: sus imágenes, en la lista que viaja con sus pantallas (no en la del arranque)');
+  check(forma(lista, ['estado-version-nueva', 'estado-instalar'], '1,1', '240,360') && forma(lista, ['estado-error'], '16,9', '480,720,1080'),
+    '193: las de los avisos, en la lista del arranque (salen nada más abrir); la del error, en 16:9 como la de sin conexión');
+  const cap = src('ui/coach/CoachApp.jsx'), coachSrc = ['Revisar', 'Ficha', 'NutricionCoach', 'HabitosCoach'].map((f) => src(`ui/coach/${f}.jsx`)).join('\n');
+  check(/import LISTA_TROZOS from '\.\.\/\.\.\/datos\/imagenes-trozos\.json';/.test(cap) && /^anadirImagenes\(LISTA_TROZOS\);$/m.test(cap) && coach.every((id) => coachSrc.includes(`imagen="${id}"`)),
+    'el panel de coach trae la lista de sus vacíos ilustrados (Revisar, la ficha, nutrición y hábitos)');
+  const app = src('ui/App.jsx'), hoy = src('ui/atleta/Hoy.jsx'), cssJ2 = src('ambas-j.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  check(/const conImg = hayImagen\('estado-version-nueva'\);/.test(app) && /<Imagen id="estado-version-nueva" clase="amb-aviso-img" tamanos="36px" alternativa=\{lobo\} \/> : lobo\}/.test(app)
+    && /<Imagen id="estado-instalar" clase="amb-instalar-img" tamanos="72px" alternativa=\{<Icono n="movil" \/>\} \/> : <Icono n="movil" \/>\}/.test(hoy)
+    && /\.amb-aviso-img \{ width: 36px; height: 36px; flex: none; border-radius: 50%;/.test(cssJ2) && /\.aviso-instalar\.amb-con-img \{ grid-template-columns: 72px minmax\(0, 1fr\);/.test(cssJ2)
+    && /<Imagen id="estado-error" clase="paso-foto"/.test(app), '193: la versión nueva con sus zapatillas en el círculo de la píldora, «Ponla en tu pantalla de inicio» con el móvil en la mesilla y el error al abrir con su barra');
+  check(/@media \(min-width: 460px\) \{\s*\.amb-cab-prog-img:not\(#n\) \{ left: auto; width: auto; max-width: 100%;/.test(cssJ2)
+    && /\.historia-sesion\[data-p="musculos"\]:not\(#n\) \.historia-fondo \{ -webkit-mask-image: linear-gradient\(var\(--oklab,\) 180deg, transparent 12%, var\(--tinta\) 34%\);/.test(cssJ2)
+    && /\.hs-cifras:not\(#n\) \.historia-cifra \{ font-size: var\(--cifra-xl\); \}/.test(cssJ2),
+    '175 y 161 con sus imágenes: en pantallas anchas la cabecera lleva la escena entera a la derecha; en la tarjeta de los músculos la luz se funde arriba, donde va el texto');
+  const todas = ['entrenos', 'records', 'mensajes', 'progreso', 'guias', 'diario', 'tareas', 'preguntas', 'espera', 'recetas'].map((v) => `vacio-${v}`)
+    .concat(Object.keys(trozos).filter((id) => /^(perfil|fin)-/.test(id)), historia, cabs, coach, ['estado-version-nueva', 'estado-error', 'estado-instalar']);
+  check(todas.length === 52 && new Set(todas).size === 52 && todas.every((id) => lista[id] || trozos[id]), 'las 52 imágenes de 151-200, todas en su sitio');
 }
 
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);

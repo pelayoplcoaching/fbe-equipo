@@ -89,6 +89,7 @@ import { resumenSeries, compararConAnterior, textoComparacion, pautadasHechas, s
 import { tramosSesion, prepDeHoy, conSeriesDeHoy } from '../../logica/tablero.js';
 import { resumenPautas } from '../../logica/diseno.js';
 import { EscenaFinal, hayEscenaFinal } from './EscenaFinal.jsx';
+import { HistoriaSesion, hayHistoriaSesion } from './HistoriaSesion.jsx';
 import { lanzarEscenaInicio } from './EscenaInicio.js';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
@@ -184,6 +185,8 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   // (diseño, tanda 43) la escena del final (la luna y el lobo): null | { records, semana, saliendo }. El resumen se monta
   // cuando la escena empieza a irse (o al momento, si no hay escena)
   const [escena, setEscena] = useState(null);
+  // (belleza 161) la historia de tres tarjetas, detrás de la escena (solo cuando sale la escena)
+  const [historia, setHistoria] = useState(false);
   // (diseño, tanda 47) el ejercicio (o la superserie) que se acaba de completar: su tramo de la barra y su tarjeta lo
   // celebran un momento. Los tramos se calculan más abajo (tras los retornos tempranos): aquí llegan por una referencia.
   const tramosRef = useRef(null);
@@ -446,7 +449,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
   const ejercicios = conAjusteDolor(aplicarPropuesta(enOrdenHoy, propPm || propDia, hechas), sesion.completada ? null : dolorSes?.ajustes);
   const ejerciciosPorId = { ...det.datos.ejerciciosPorId, ...extra.ejercicios };
   const ultimas = { ...det.datos.ultimas, ...extra.ultimas };
-  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} programa={programa} />}</>;
+  if (resumen) return <>{escena && <EscenaFinal key="escena" nombre={sesion?.nombre} records={escena.records} semana={escena.semana} alSalir={() => setEscena((x) => x && { ...x, saliendo: true })} alAcabar={() => setEscena(null)} />}{(!escena || escena.saliendo) && <Resumen key="resumen" resumen={resumen} sesion={sesion} pautas={det.datos.ejercicios} familia={familiaPortada({ tipo: sesion?.tipo || 'fuerza', pautas: ejercicios, cardio: !!cardioHechoValido(resumen.cardio) })} alCerrar={alCerrar} programa={programa} />}{historia && !escena && <HistoriaSesion resumen={resumen} nombre={sesion?.nombre} alCerrar={() => setHistoria(false)} />}</>;
 
 
   const todas = Object.values(hechas).flatMap((m) => Object.values(m));
@@ -1049,7 +1052,7 @@ export function Sesion({ id, alCerrar, alLeer, salud = false, programa = null })
               console.error('No se pudo preparar el resumen', e);
               res = { series: Object.values(hechas).reduce((n, h) => n + Object.keys(h || {}).length, 0), tonelaje: 0, minutos: cambios.duracion_min, rpe: cambios.rpe_sesion, cardio: cardioHechoPublico(cambios.cardio_hecho), records: [], enCola: r.enCola, musculos: {}, tarjeta: null };
             }
-            if (conEscena) setEscena({ records: res.records?.length || 0, semana: await semanaHecha });
+            if (conEscena) { setEscena({ records: res.records?.length || 0, semana: await semanaHecha }); setHistoria(hayHistoriaSesion() && ((res.series || 0) > 0 || !!cardioHechoValido(res.cardio))); }
             setResumen(res);
             sonarFinSesion((res.records?.length || 0) > 0 || !!(await semanaHecha));   // (pulido 7; sonido: con adorno si hay récord o semana completa)
             setTimeout(() => sonarVozCoach('buen_trabajo', 'fin_sesion'), 1300);   // (sonido, tanda 3) y la frase del coach, si la ha grabado
