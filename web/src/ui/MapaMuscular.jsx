@@ -1,3 +1,4 @@
+import { useId } from 'preact/hooks';
 import { num, NOMBRE_GRUPO, GRUPOS } from '../logica/calculos.js';
 
 // Mapa muscular: una figura de frente y otra de espalda con cada grupo coloreado según sus series
@@ -45,22 +46,24 @@ const DETRAS = {
     ['lumbares', 'M44.5 84 L50 88.5 L55.5 84 L57 93 L43 93 Z']],
 };
 
-function Figura({ partes, series, nivel = nivelSeries, unidad = 'series' }) {
+// (belleza 163) relieve: cada músculo y cada parte del cuerpo, con su degradado de arriba (más claro) abajo (su color);
+// dg: el principio de los id de los degradados de ese mapa (los pone MapaMuscular)
+function Figura({ partes, series, nivel = nivelSeries, unidad = 'series', dg }) {
   const musc = (g, d, k) => (
-    <path key={k} class={`musculo m${nivel(series[g])}`} d={d}>
+    <path key={k} class={`musculo m${nivel(series[g])}`} d={d} style={`fill:url(#${dg}-${nivel(series[g])})`}>
       <title>{NOMBRE_GRUPO[g]}: {num(series[g] || 0)} {unidad === 'récord' ? (series[g] === 1 ? 'récord' : 'récords') : unidad}</title>
     </path>
   );
   const mitad = (
     <>
-      {partes.neutro.map((d, i) => <path key={`n${i}`} class="neutro" d={d} />)}
+      {partes.neutro.map((d, i) => <path key={`n${i}`} class="neutro" d={d} style={`fill:url(#${dg}-n)`} />)}
       {partes.musculos.map(([g, d], i) => musc(g, d, `m${i}`))}
     </>
   );
   return (
     <>
-      <circle class="neutro" cx="50" cy="14.5" r="9.5" />
-      <path class="neutro" d={TRONCO} />
+      <circle class="neutro" cx="50" cy="14.5" r="9.5" style={`fill:url(#${dg}-n)`} />
+      <path class="neutro" d={TRONCO} style={`fill:url(#${dg}-n)`} />
       <g>{mitad}</g>
       <g transform="translate(100 0) scale(-1 1)">{mitad}</g>
       {partes.centro.map(([g, d], i) => musc(g, d, `c${i}`))}
@@ -71,11 +74,21 @@ function Figura({ partes, series, nivel = nivelSeries, unidad = 'series' }) {
 // (v0.204) tono «oro» (los músculos con récord), con su unidad («récord») y su nivel (cuánto se pinta cada valor)
 export function MapaMuscular({ series = {}, etiqueta = 'Series por músculo', leyenda = true, tono = '', unidad = 'series', nivel = nivelSeries }) {
   const texto = GRUPOS.filter(([g]) => series[g]).map(([g, n]) => `${n} ${num(series[g])}`).join(', ');
+  // (belleza 163) los degradados de este mapa (cada mapa los suyos: puede haber dos en la misma pantalla)
+  const dg = `mm${useId()}`;   // (useId da «P0-3»: letras, números y guion, valen dentro de url(#…))
+  // (su color, en --c; lo claro de arriba lo pone la hoja de estilos, menos en oscuro)
+  const deg = (k, v) => (
+    <linearGradient key={k} id={`${dg}-${k}`} x1="0" y1="0" x2="0" y2="1" style={`--c:var(${v})`}>
+      <stop offset="0" class="mm-a" />
+      <stop offset="1" class="mm-b" />
+    </linearGradient>
+  );
   return (
     <figure class={`mapa-muscular${tono ? ` mapa-${tono}` : ''}`}>
       <svg viewBox="0 0 220 212" role="img" aria-label={`${etiqueta}: ${texto || 'ninguna'}`}>
-        <g><Figura partes={DELANTE} series={series} nivel={nivel} unidad={unidad} /></g>
-        <g transform="translate(120 0)"><Figura partes={DETRAS} series={series} nivel={nivel} unidad={unidad} /></g>
+        <defs>{deg('n', '--hoja-2')}{[0, 1, 2, 3, 4].map((n) => deg(n, `--mm-${n}`))}</defs>
+        <g><Figura partes={DELANTE} series={series} nivel={nivel} unidad={unidad} dg={dg} /></g>
+        <g transform="translate(120 0)"><Figura partes={DETRAS} series={series} nivel={nivel} unidad={unidad} dg={dg} /></g>
         <text x="50" y="209" text-anchor="middle">Delante</text>
         <text x="170" y="209" text-anchor="middle">Detrás</text>
       </svg>

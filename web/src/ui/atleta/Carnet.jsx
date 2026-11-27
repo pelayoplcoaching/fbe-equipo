@@ -14,6 +14,8 @@ import { useImagenPropia } from './AMedida.jsx';
 
 const sinPermisoOrientacion = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
   && typeof window.DeviceOrientationEvent.requestPermission !== 'function' && !!window.matchMedia?.('(pointer: coarse)').matches;
+// (belleza 192) en iPhone, el móvil hay que pedirlo: solo si la persona lo elige (un toque) y nunca con «reducir movimiento»
+const conPermisoOrientacion = () => typeof window !== 'undefined' && typeof window.DeviceOrientationEvent?.requestPermission === 'function';
 
 export function Carnet({ bloque }) {
   const { atleta } = useApp();
@@ -27,6 +29,10 @@ export function Carnet({ bloque }) {
   const [compartir, setCompartir] = useState(false);
   // (a medida, 080) la imagen que le ha puesto su coach, al fondo de su carné (la tarjeta para compartir no la lleva)
   const imagenSuya = useImagenPropia('perfil');
+  const [conMovil, setConMovil] = useState(false);
+  const pedirMovil = () => {
+    try { window.DeviceOrientationEvent.requestPermission().then((r) => setConMovil(r === 'granted')).catch(() => {}); } catch { /* sin permiso: con el dedo, como siempre */ }
+  };
   // La inclinación: se escribe en variables CSS en el siguiente cuadro (sin volver a pintar el componente)
   useEffect(() => {
     const el = ref.current;
@@ -51,14 +57,14 @@ export function Carnet({ bloque }) {
     el.addEventListener('pointerleave', soltar);
     el.addEventListener('pointercancel', soltar);
     el.addEventListener('pointerup', soltar);
-    // El móvil (solo donde no hay que pedir permiso) y solo mientras el carné se ve
+    // El móvil (donde no hay que pedir permiso o, en iPhone, si la persona lo ha pedido con su botón) y solo mientras el carné se ve
     const orientar = (e) => {
       if (!visible || e.beta == null || e.gamma == null || el.classList.contains('inclinando')) return;
       base ||= { beta: e.beta, gamma: e.gamma };
       pedir(inclinacionMovil(e.beta, e.gamma, base));
     };
     let io = null;
-    if (sinPermisoOrientacion() && typeof IntersectionObserver !== 'undefined') {
+    if ((sinPermisoOrientacion() || conMovil) && typeof IntersectionObserver !== 'undefined') {
       io = new IntersectionObserver(([x]) => { visible = x.isIntersecting; if (!visible) base = null; });
       io.observe(el);
       window.addEventListener('deviceorientation', orientar);
@@ -72,7 +78,7 @@ export function Carnet({ bloque }) {
       window.removeEventListener('deviceorientation', orientar);
       io?.disconnect();
     };
-  }, []);
+  }, [conMovil]);
   return (
     <section class="seccion carnet-seccion" aria-labelledby="carnet-t">
       <h2 id="carnet-t">Tu carné</h2>
@@ -107,6 +113,7 @@ export function Carnet({ bloque }) {
         </figure>
       </div>
       <button type="button" class="btn btn-peq carnet-compartir" onClick={() => setCompartir(true)}><Icono n="compartir" /> Compartir o guardar el carné</button>
+      {conPermisoOrientacion() && !conMovil && !sinMovimiento() && <button type="button" class="btn-texto mini carnet-movil" onClick={pedirMovil}>Que se mueva al inclinar el móvil</button>}
       {compartir && (
         <HojaCompartir titulo="Tu carné" datos={{ ...imagen, fecha: hoyISO() }} dibujar={() => dibujarCarnet(imagen)} nombreArchivo={suyo ? 'carne-fbe-esencial.png' : 'carne-fbe-coaching.png'}
           alt={`Carné de atleta de ${marca}: ${imagen.nombre}${imagen.nivel ? `, nivel ${imagen.nivel.toLowerCase()}` : ''}${imagen.desde ? `, desde ${imagen.desde}` : ''}`}

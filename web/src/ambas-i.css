@@ -1,0 +1,35 @@
+/* Belleza 151-200 para las dos apps, tercera vuelta (v0.269). La lista, en el doc del proyecto
+   "claude/belleza-200-propuesta.md"; lo hecho y lo que ya estaba, en "claude/belleza-150-estado.md" (apartado 151-200). Va
+   detras de ambas-h.css y antes de color-capa.css. Como alli, las reglas llevan :not(#n) para que el reparto de estilos no
+   arrastre al arranque reglas de los trozos con la misma especificidad. */
+
+/* -- 163 - El mapa de musculos con relieve: cada parte con su degradado de arriba (un punto mas clara) abajo (su color). En
+   oscuro, mas suave (los colores ya son claros): --mm-k pasa a 88% en las reglas de oscuro del mapa (belleza-a.css) */
+.mapa-muscular .mm-a:not(#n) { stop-color: color-mix(in srgb, var(--c) var(--mm-k, 72%), var(--blanco)); }
+.mapa-muscular .mm-b:not(#n) { stop-color: var(--c); }
+/* el de los musculos con record (Vitrina de records) sigue en dorado: su color pasa por la variable del degradado */
+.mapa-muscular.mapa-oro:not(#n) { --mm-4: var(--oro-400); }
+
+/* -- 192 - El carne, en iPhone: el boton para que se mueva al inclinar el movil (alli hay que pedir permiso), centrado bajo el
+   de compartir */
+.carnet-movil:not(#n) { justify-self: center; }
+
+/* -- 185 - La semana que viene, ya publicada: la ficha en gris de B80 (ambas-f.css), con lo que cambia, y se toca para verla */
+.amb-viene-ir:not(#n) { width: 100%; background: none; font: inherit; text-align: start; cursor: pointer; }
+.amb-viene-ir:not(#n) > svg:last-child { margin-inline-start: auto; align-self: center; }
+
+/* -- 177 - El informe del bloque: este bloque y el anterior en dos columnas (la de este, en tinta; la del anterior, en gris) */
+.amb-frente:not(#n) { width: 100%; border-collapse: collapse; font-size: var(--letra-15); }
+.amb-frente:not(#n) th, .amb-frente:not(#n) td { padding: var(--esp-8) var(--esp-6); border-bottom: var(--filo-fino) solid var(--linea); text-align: end; }
+.amb-frente:not(#n) th[scope="row"] { text-align: start; font-weight: 500; color: var(--tinta-2); }
+.amb-frente:not(#n) thead th { font-size: var(--letra-13); font-weight: 600; color: var(--tinta-3); white-space: nowrap; }
+.amb-frente:not(#n) td { white-space: nowrap; }
+.amb-frente:not(#n) tbody td:nth-child(2) { font-weight: 700; color: var(--tinta); }
+.amb-frente:not(#n) tbody td:nth-child(3) { color: var(--tinta-3); }
+.amb-frente:not(#n) tbody tr:last-child > * { border-bottom: 0; }
+
+/* -- 189 - Las portadas ilustradas del perfil, en el mismo selector que los colores: debajo, en su fila, de cuatro en cuatro */
+.pp-con-ilus:not(#n) { width: calc(100% - var(--esp-20)); max-width: 26rem; }
+.pp-ilus:not(#n) { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: var(--esp-6); padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
+.pp-ilu:not(#n) { flex: 1 1 calc(25% - var(--esp-6)); min-width: 4rem; padding: var(--esp-4); }
+.pp-ilu-img:not(#n) { width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; border-radius: var(--r-6); }

@@ -16,6 +16,7 @@ import { useDeslizar } from '../deslizar.js';
 import { LOBO } from '../marca-lobo.js';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { imagenFoco, FRASE_FOCO } from '../../logica/imagenes.js';
+import { cambiosQueViene } from '../../logica/semana-viene.js';
 
 // (FBE Esencial, 099) «Tu rutina»: cuál lleva, desde cuándo y cambiarla (en su trozo)
 const TuRutina = perezoso(() => import('./EsencialRutinas.jsx'), 'TuRutina', { mientras: null });
@@ -122,6 +123,15 @@ export function Semana({ programa, abrirSesion, noLeidos = [] }) {
               <div class="semana-dias">
                 {sesiones.map((s) => <DiaSesion key={s.id} sesion={s} semana={semana} resumen={pautas.datos?.[s.id] || null} llegando={pautas.cargando && !pautas.datos} actual={semana.id === p.actual?.id && s.id === siguiente?.id} mensajes={conMensajes.has(s.id)} abrir={() => abrirSesion(s.id)} />)}
               </div>
+              {/* (belleza 185) la semana que viene, ya publicada: la misma ficha en gris, con lo que cambia de un vistazo (se toca para verla) */}
+              {semana.id === p.actual?.id && posterior && (
+                <button type="button" class="amb-viene amb-viene-ir" onClick={() => irA(1)}>
+                  <Icono n="semana" />
+                  <span class="pila-xs"><strong>La semana que viene: semana {posterior.numero}</strong>
+                    <span class="peq secundario">{[posterior.fecha_inicio ? rangoSemana(posterior.fecha_inicio) : null, ...cambiosQueViene({ actual: semana, sesActual: sesiones, siguiente: posterior, sesSiguiente: sinCarreras(p.sesiones[posterior.id] || []) })].filter(Boolean).join(' · ')}</span></span>
+                  <Icono n="derecha" />
+                </button>
+              )}
               {/* (belleza B80) la semana que viene, en gris, mientras no está: quién la prepara */}
               {semana.id === p.actual?.id && !posterior && sesiones.length > 0 && !propio && (
                 <div class="amb-viene" role="note">

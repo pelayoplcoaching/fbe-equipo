@@ -39,8 +39,12 @@ import { readFileSync } from 'node:fs';
 // (v0.268: 151-200, segunda vuelta, estilos a 919 KB: «Tu día» como línea de tiempo y el aro del descanso en la tira de la
 // semana salen al abrir (medio KB); «Tus meses» y «Tus semanas», con su trozo. Las reglas nuevas llevan :not(#n) para que el
 // reparto no arrastre al arranque reglas de los trozos con la misma especificidad)
+// (v0.269: código a 610 comprimido, a propósito: las ilustraciones nuevas de 151-200 de los vacíos, los avisos y el panel
+// van en la lista de las ilustraciones, que se espera al abrir (unos 36 bytes comprimidos cada una); las de pantallas que se
+// cargan aparte (portadas del perfil y, cuando lleguen, el final de la sesión, su historia y las cabeceras de Progreso), en
+// datos/imagenes-trozos.json, que viaja con esas pantallas y no cuenta aquí)
 const PRESUPUESTO = {
-  js: { crudo: 1790, gz: 608 },
+  js: { crudo: 1790, gz: 610 },
   css: { crudo: 919, gz: 163 },
 };
 

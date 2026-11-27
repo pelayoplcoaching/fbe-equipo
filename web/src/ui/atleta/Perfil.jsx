@@ -23,12 +23,18 @@ import { Conexiones } from './Conexiones.jsx';
 import { PortadaPerfil, FotoConAnillo } from '../PerfilVisual.jsx';
 import { PerfilSecciones, EnElEquipo } from './PerfilSocial.jsx';
 import { usePersonal } from './Personal.jsx';
-import { PORTADAS, portadaValida } from '../../logica/perfil.js';
+import { PORTADAS, portadaValida, PORTADAS_IMG, imagenPortadaPerfil } from '../../logica/perfil.js';
+import { Imagen, hayImagen } from '../Imagen.jsx';
+import LISTA_TROZOS from '../../datos/imagenes-trozos.json';
+import { anadirImagenes } from '../../logica/imagenes.js';
 import { LoCompartido } from '../Compartir.jsx';
 import { GrupoReloj } from './Reloj.jsx';
 import { CompletaPerfil, IndicePerfil, FilaCorrecciones, FilaEvitados, FilaMaterial, FilaGuardados, recortarPortada, AtajosPerfil, FilaPrivacidad, FilasCuentaSegura, FilaHojaCalculo } from './PerfilMas.jsx';
 import { perezoso } from '../perezoso.jsx';
 import { esPorSuCuenta, nombreBloque } from '../../logica/esencial.js';
+
+// (belleza 189) las portadas ilustradas: su lista viaja con esta pantalla (datos/imagenes-trozos.json), no con el arranque
+anadirImagenes(LISTA_TROZOS);
 // (alta, 52 y 53) las preguntas frecuentes de FBE Esencial y el correo para lo que falle en la app o en el cobro
 const FaqEsencial = perezoso(() => import('./Esencial.jsx'), 'FaqEsencial', { mientras: null });
 // (099) «Tu rutina»: cuál lleva y cambiarla
@@ -206,17 +212,30 @@ function CabezaPerfil({ p, correo }) {
   const quitarFoto = async () => {
     try { await api.quitarPortadaFoto(); setElegir(false); aviso('Portada quitada'); portadaFoto.recargar(true); } catch (e) { aviso(e.message, 'error'); }
   };
+  // (belleza 189) la portada ilustrada que has elegido (manda sobre la imagen que te puso tu coach; tu foto, sobre las dos)
+  const ilus = PORTADAS_IMG.filter(([id]) => hayImagen(id));
+  const ilu = imagenPortadaPerfil(portada) && hayImagen(portada) ? portada : null;
+  const elegida = ilu ? portada : portadaValida(portada);
   return (
     <section class="perfil-cabeza con-portada" data-portada={portadaValida(portada)} aria-label={`${atleta.nombre}${bloque ? `, ${bloque}` : ''}`}>
-      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || imagenSuya || null} />
-      <button type="button" class="btn-icono perfil-portada-btn" aria-label="Cambiar el color de la portada" aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
+      <PortadaPerfil texto={atleta.nombre} foto={portadaFoto.datos || (ilu ? null : imagenSuya) || null} imagen={portadaFoto.datos ? null : ilu} />
+      <button type="button" class="btn-icono perfil-portada-btn" aria-label={ilus.length ? 'Cambiar la portada' : 'Cambiar el color de la portada'} aria-expanded={elegir ? 'true' : 'false'} onClick={() => setElegir(!elegir)}><Icono n="paleta" /></button>
       {elegir && (
-        <div class="perfil-portadas" role="radiogroup" aria-label="Color de la portada">
+        <div class={`perfil-portadas${ilus.length ? ' pp-con-ilus' : ''}`} role="radiogroup" aria-label={ilus.length ? 'Portada' : 'Color de la portada'}>
           {PORTADAS.map(([k, t]) => (
-            <button key={k} type="button" role="radio" aria-checked={portadaValida(portada) === k ? 'true' : 'false'} data-portada={k} class="pp-muestra" onClick={() => { setPortada(k); setElegir(false); }}>
+            <button key={k} type="button" role="radio" aria-checked={elegida === k ? 'true' : 'false'} data-portada={k} class="pp-muestra" onClick={() => { setPortada(k); setElegir(false); }}>
               <span class="pp-color" aria-hidden="true" /><span class="pp-nombre">{t}</span>
             </button>
           ))}
+          {ilus.length > 0 && (
+            <div class="pp-ilus">
+              {ilus.map(([id, t]) => (
+                <button key={id} type="button" role="radio" aria-checked={elegida === id ? 'true' : 'false'} class="pp-muestra pp-ilu" onClick={() => { setPortada(id); setElegir(false); }}>
+                  <Imagen id={id} clase="pp-ilu-img" tamanos="96px" /><span class="pp-nombre">{t}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {elegir && portadaFoto.datos !== undefined && (

@@ -205,5 +205,78 @@ check(/const planHecho = sesiones\.length > 0 && sesiones\.every\(\(s\) => s\.co
 check(['ui/RecetarioEquipo.jsx', 'ui/ComidasComun.jsx'].every((f) => /<span class="chip amb-prot num"><b>\{num\(m\.proteina_g, 0\)\} g<\/b>prot\.<\/span>/.test(src(f))),
   '186 y B99: en las tarjetas de recetas, la proteína en su pastilla (y fuera de la línea de macros)');
 
+console.log('\n151-200, tercera vuelta (v0.269): el mapa de músculos, el vaso de proteína, el carné y los vacíos con imagen');
+const cssI = src('ambas-i.css'), sinComI = cssI.replace(/\/\*[\s\S]*?\*\//g, '');
+check(!/[^\x00-\x7F]/.test(cssI) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComI) && main.indexOf("'./ambas-i.css'") > main.indexOf("'./ambas-h.css'") && main.indexOf("'./ambas-i.css'") < main.indexOf("'./color-capa.css'"),
+  'ambas-i.css: solo ASCII, los colores por su nombre y detrás de la segunda vuelta de 151-200');
+const mapa = src('ui/MapaMuscular.jsx');
+check(/const dg = `mm\$\{useId\(\)\}`;/.test(mapa) && /<stop offset="0" class="mm-a" \/>/.test(mapa) && /<stop offset="1" class="mm-b" \/>/.test(mapa)
+  && /deg\('n', '--hoja-2'\)\}\{\[0, 1, 2, 3, 4\]\.map\(\(n\) => deg\(n, `--mm-\$\{n\}`\)\)/.test(mapa) && /style=\{`fill:url\(#\$\{dg\}-\$\{nivel\(series\[g\]\)\}\)`\}/.test(mapa)
+  && /\.mapa-muscular \.mm-a:not\(#n\) \{ stop-color: color-mix\(in srgb, var\(--c\) var\(--mm-k, 72%\), var\(--blanco\)\); \}/.test(sinComI) && (src('belleza-a.css').match(/--mm-k: 88%;/g) || []).length === 2
+  && /\.mapa-muscular\.mapa-oro:not\(#n\) \{ --mm-4: var\(--oro-400\); \}/.test(sinComI),
+  '163: el mapa de músculos con relieve (cada parte con su degradado, con ids propios de cada mapa; en oscuro, más suave; el de récords, en dorado)');
+const nutri = src('ui/NutricionComun.jsx');
+check(/const VASO = 'M15 8 H49 L44\.5 54 Q44 58 40 58 H24 Q20 58 19\.5 54 Z';/.test(nutri) && /<svg viewBox="0 0 64 64" aria-hidden="true" class="amb-vaso">/.test(nutri) && /x\.valor != null && f > 0 && <path d=\{liquido\(f\)\}/.test(nutri),
+  '187: la proteína del día como un vaso que se llena (el resto de macros, con su aro)');
+{
+  const m = nutri.match(/const liquido = \(f\) => \{([^\n]*)\};/);
+  const liquido = m && new Function('f', m[1]);
+  const y = (f) => Number(liquido(f).match(/^M[\d.]+ ([\d.-]+)/)[1]);
+  check(!!liquido && y(0) === 58 && y(1) === 8 && y(0.5) === 33 && /^M15 8 H49 /.test(liquido(1)), '187: el nivel del vaso, de abajo (nada) a arriba (el objetivo), con los lados del vaso');
+}
+const carne = src('ui/atleta/Carnet.jsx');
+check(/const conPermisoOrientacion = \(\) => typeof window !== 'undefined' && typeof window\.DeviceOrientationEvent\?\.requestPermission === 'function';/.test(carne)
+  && /requestPermission\(\)\.then\(\(r\) => setConMovil\(r === 'granted'\)\)/.test(carne) && /\{conPermisoOrientacion\(\) && !conMovil && !sinMovimiento\(\) && <button type="button" class="btn-texto mini carnet-movil"/.test(carne)
+  && /if \(\(sinPermisoOrientacion\(\) \|\| conMovil\) && typeof IntersectionObserver !== 'undefined'\)/.test(carne) && /\}, \[conMovil\]\);/.test(carne),
+  '192: en iPhone, el carné se mueve al inclinar el móvil solo si lo pides con su botón (y nunca con «reducir movimiento»)');
+{
+  const { existsSync } = await import('node:fs');
+  const lista = JSON.parse(src('datos/imagenes.json'));
+  const nuevas = ['vacio-entrenos', 'vacio-records', 'vacio-mensajes', 'vacio-progreso', 'vacio-guias', 'vacio-diario', 'vacio-tareas', 'vacio-preguntas', 'vacio-espera'];
+  check(nuevas.every((id) => lista[id]?.proporcion?.join() === '1,1' && Object.keys(lista[id].archivos).join() === '240,360' && /^#[0-9a-f]{6}$/.test(lista[id].color)
+    && Object.values(lista[id].archivos).every((f) => existsSync(new URL(`../web/${f}`, import.meta.url)))),
+    '195: los vacíos con su imagen nueva (cuadrada, en 240 y 360, con su color mientras carga y sus archivos)');
+  const { readdirSync } = await import('node:fs');
+  const todo = readdirSync(new URL('../web/src/ui/', import.meta.url), { recursive: true }).filter((f) => f.endsWith('.jsx')).map((f) => src(`ui/${f}`)).join('\n');
+  check([...nuevas, 'vacio-recetas'].every((id) => todo.includes(`imagen="${id}"`)) && lista['vacio-recetas']?.proporcion?.join() === '1,1', '195: cada imagen nueva, en su vacío (las diez del bloque 1)');
+  const trozos = JSON.parse(src('datos/imagenes-trozos.json'));
+  const { PORTADAS_IMG, imagenPortadaPerfil } = await import('../web/src/logica/perfil.js');
+  check(PORTADAS_IMG.length === 8 && PORTADAS_IMG.every(([id]) => trozos[id]?.proporcion?.join() === '3,1' && Object.keys(trozos[id].archivos).join() === '480,960,1440' && !lista[id])
+    && imagenPortadaPerfil('perfil-mar') === 'perfil-mar' && imagenPortadaPerfil('bosque') === null && imagenPortadaPerfil(undefined) === null
+    && !PORTADAS_IMG.some(([, t]) => /^(Noche|Aurora|Atardecer|Bosque|Océano)$/.test(t)),
+    '189: las ocho portadas ilustradas, en la lista que viaja con el perfil (no en la del arranque), y sin repetir el nombre de un color');
+  const perf = src('ui/atleta/Perfil.jsx');
+  check(/import LISTA_TROZOS from '\.\.\/\.\.\/datos\/imagenes-trozos\.json';/.test(perf) && /^anadirImagenes\(LISTA_TROZOS\);$/m.test(perf)
+    && /foto=\{portadaFoto\.datos \|\| \(ilu \? null : imagenSuya\) \|\| null\} imagen=\{portadaFoto\.datos \? null : ilu\}/.test(perf) && !/perfil-\$\{/.test(perf + src('logica/perfil.js')),
+    '189: tu foto manda; si no, la ilustración elegida (sobre la imagen de tu coach); los id, enteros (sin armar a trozos)');
+  const { imagenCierre } = await import('../web/src/logica/sesion-final.js');
+  const hay = (id) => !!trozos[id];
+  const fines = ['empuje', 'tiron', 'pierna', 'core', 'fullbody'].flatMap((f) => [imagenCierre(f, null, 'a', hay), imagenCierre(f, null, 'b', hay), imagenCierre(f, null, 'c', hay)])
+    .concat(['carrera', 'bici', 'eliptica', 'remo', 'nadar', 'cuerda'].map((m) => imagenCierre('cardio', m, 'a', hay)), imagenCierre('cardio', null, 'a', hay));
+  check(Object.keys(trozos).filter((id) => id.startsWith('fin-')).length === 17 && Object.keys(trozos).filter((id) => id.startsWith('fin-')).every((id) => trozos[id].proporcion.join() === '16,9' && Object.keys(trozos[id].archivos).join() === '720,1080,1440')
+    && fines.every(hay) && new Set(fines.filter((id) => /^fin-(empuje|tiron|pierna|core|fullbody)/.test(id))).size === 10,
+    '164: los finales de cada tipo de sesión (dos por cada familia de fuerza, que se alternan) y de cada modalidad de cardio, en 16:9 como las portadas');
+  check(/import LISTA_TROZOS from '\.\.\/\.\.\/datos\/imagenes-trozos\.json';/.test(src('ui/atleta/Sesion.jsx')) && /^anadirImagenes\(LISTA_TROZOS\);$/m.test(src('ui/atleta/Sesion.jsx'))
+    && /const fondoFin = hayImagen\(cierre\) \? cierre : imagenPortada\(familia, modFin, sesion\?\.id\);/.test(src('ui/atleta/Sesion.jsx')),
+    '164: la sesión trae la lista de sus finales (sin ella, el resumen sigue con la portada, como en movilidad y andar, que aún no han llegado)');
+}
+{
+  const { cambiosQueViene: cv } = await import('../web/src/logica/semana-viene.js');
+  const ss = (...n) => n.map((nombre) => ({ nombre }));
+  check(cv({ actual: { foco: 'volumen' }, sesActual: ss('Torso A', 'Pierna A', 'Torso B'), siguiente: { foco: 'descarga' }, sesSiguiente: ss('Torso A', 'Pierna A') }).join(' · ') === 'Foco: descarga · 2 sesiones (una menos)'
+    && cv({ actual: { foco: 'volumen' }, sesActual: ss('Torso A', 'Pierna A'), siguiente: { foco: 'volumen' }, sesSiguiente: ss('torso a ', 'Pierna A') }).join() === 'Las mismas 2 sesiones'
+    && cv({ actual: {}, sesActual: ss('A'), siguiente: {}, sesSiguiente: ss('A', 'B', 'C', 'D') }).join(' · ') === '4 sesiones (3 más) · Nuevas: B, C y una más'
+    && cv({ actual: {}, sesActual: ss('A'), siguiente: {}, sesSiguiente: [] }).join() === 'Aún sin sesiones' && cv({ siguiente: null }).length === 0,
+    '185: la semana que viene, de un vistazo (el foco si cambia, cuántas sesiones y las nuevas)');
+  const sem = src('ui/atleta/Semana.jsx');
+  check(/\{semana\.id === p\.actual\?\.id && posterior && \(\s*<button type="button" class="amb-viene amb-viene-ir" onClick=\{\(\) => irA\(1\)\}>/.test(sem) && /cambiosQueViene\(\{ actual: semana, sesActual: sesiones, siguiente: posterior, sesSiguiente: sinCarreras\(p\.sesiones\[posterior\.id\] \|\| \[\]\) \}\)/.test(sem)
+    && /\.amb-viene-ir:not\(#n\) \{ width: 100%; background: none; font: inherit; text-align: start; cursor: pointer; \}/.test(sinComI), '185: en Semana, la ficha en gris de la que viene, ya publicada, que se toca para verla');
+  const inf = src('ui/InformeFrente.jsx');
+  check(/const FrenteBloques = perezoso\(\(\) => import\('\.\/InformeFrente\.jsx'\), 'FrenteBloques', \{ mientras: null \}\);/.test(src('ui/InformeBloque.jsx')) && /\{ant && <FrenteBloques r=\{r\} ant=\{ant\} \/>\}/.test(src('ui/InformeBloque.jsx'))
+    && /<h3>Este bloque y el anterior<\/h3>/.test(inf) && /<table class="amb-frente">/.test(inf) && /<th scope="col">Este bloque<\/th><th scope="col">\{ant\.numero \? `Bloque \$\{ant\.numero\}` : 'El anterior'\}<\/th>/.test(inf)
+    && /<th scope="row">Sesiones<\/th><td class="num">\{r\.sesiones\.hechas\}<\/td><td class="num">\{ant\.sesiones \?\? '—'\}<\/td>/.test(inf) && !/r\.peso|salud/.test(inf.slice(inf.indexOf('<table class="amb-frente">'), inf.indexOf('</table>'))),
+    '177: el informe del bloque con este bloque y el anterior en dos columnas (sin el peso corporal)');
+}
+
 console.log(`\n${ok} comprobaciones correctas, ${fallos} fallos`);
 process.exit(fallos ? 1 : 0);

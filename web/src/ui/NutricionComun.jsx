@@ -71,6 +71,10 @@ export function MacrosDia({ reg, obj, titulo = null }) {
   );
 }
 
+// (belleza 187) el vaso de la proteína: un poco más ancho arriba, con el fondo redondeado
+const VASO = 'M15 8 H49 L44.5 54 Q44 58 40 58 H24 Q20 58 19.5 54 Z';
+// el líquido hasta su nivel (f, de 0 a 1), con las paredes del vaso
+const liquido = (f) => { const y = 58 - 50 * f, l = 15 + ((Math.min(54, y) - 8) / 46) * 4.5; return `M${l} ${y} H${64 - l} L44.5 54 Q44 58 40 58 H24 Q20 58 19.5 54 Z`; };
 function AnilloMacro({ x }) {
   const R = 26, C = 2 * Math.PI * R;
   const f = Math.min(1, x.frac);
@@ -78,11 +82,20 @@ function AnilloMacro({ x }) {
   return (
     <li class={`anillo-macro m-${x.id} ${x.estado}`}>
       <span class="anillo-macro-dibujo" role="img" aria-label={`${x.nombre}: ${x.valor == null ? 'sin apuntar' : `${num(x.valor, 0)} de ${num(x.objetivo, 0)} g`}`}>
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <DegradadoAro id={deg} gira />
-          <circle class="carril" cx="32" cy="32" r={R} />
-          {x.valor != null && f > 0 && <circle class="lleno" style={{ stroke: `url(#${deg})` }} cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
-        </svg>
+        {x.id === 'proteina' ? (
+          // (belleza 187) la proteína, como un vaso que se llena: el líquido en un tinte de su color, con su filo (el dibujo
+          // lleva su estilo dentro: en la hoja de estilos pesaría al abrir)
+          <svg viewBox="0 0 64 64" aria-hidden="true" class="amb-vaso">
+            {x.valor != null && f > 0 && <path d={liquido(f)} style="fill:color-mix(in srgb, var(--c) 30%, transparent);stroke:var(--c);stroke-width:2.5" />}
+            <path d={VASO} style="fill:none;stroke:var(--c);stroke-opacity:.45;stroke-width:2.5" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <DegradadoAro id={deg} gira />
+            <circle class="carril" cx="32" cy="32" r={R} />
+            {x.valor != null && f > 0 && <circle class="lleno" style={{ stroke: `url(#${deg})` }} cx="32" cy="32" r={R} stroke-dasharray={C} stroke-dashoffset={C * (1 - f)} transform="rotate(-90 32 32)" />}
+          </svg>
+        )}
         <span class="anillo-macro-v num" aria-hidden="true">{x.valor == null ? '—' : num(x.valor, 0)}</span>
       </span>
       <span class="anillo-macro-nombre" aria-hidden="true">{x.nombre}</span>

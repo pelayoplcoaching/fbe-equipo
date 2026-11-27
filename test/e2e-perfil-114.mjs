@@ -105,10 +105,22 @@ export async function probarPerfil114({ navegador, check, base = 'http://localho
     check(racha > 0 ? /\d+/.test(await cab.locator('.foto-anillo-llama').textContent()) : await cab.locator('.foto-anillo-llama').count() === 0,
       `con racha, la llama con sus semanas en la foto (${racha})`);
     // v0.116: el color de la portada (en este móvil)
-    await cab.getByRole('button', { name: 'Cambiar el color de la portada' }).click();
+    await cab.getByRole('button', { name: /^Cambiar (el color de )?la portada$/ }).click();
     await cab.getByRole('radio', { name: /Bosque/ }).click();
     check(await cab.getAttribute('data-portada') === 'bosque' && await p.evaluate(() => localStorage.getItem('fbe-portada-perfil')) === '"bosque"',
       'v0.116: eliges el color de la portada y se recuerda en el móvil');
+    // (belleza 189) o una portada ilustrada (en el mismo selector), que sustituye al dibujo; y se vuelve al color
+    if (await cab.getByRole('button', { name: 'Cambiar la portada' }).count()) {
+      await cab.getByRole('button', { name: 'Cambiar la portada' }).click();
+      await cab.getByRole('radio', { name: /Montaña/ }).click();
+      await cab.locator('.perfil-portada.con-foto img.portada-propia[data-imagen="perfil-montana"]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(await cab.locator('.perfil-portada.con-foto img.portada-propia[data-imagen="perfil-montana"]').count() === 1 && await p.evaluate(() => localStorage.getItem('fbe-portada-perfil')) === '"perfil-montana"',
+        '189: eliges una portada ilustrada (la montaña) y sale en lugar del dibujo');
+      await cab.getByRole('button', { name: 'Cambiar la portada' }).click();
+      check(await cab.getByRole('radio', { name: /Montaña/ }).getAttribute('aria-checked') === 'true' && await cab.getByRole('radio', { name: /Noche/ }).getAttribute('aria-checked') === 'false',
+        '189: en el selector, marcada la ilustración (no el color de debajo)');
+      await cab.getByRole('radio', { name: /Bosque/ }).click();
+    }
     // Resumen
     const social = p.locator('.perfil-social');
     await social.scrollIntoViewIfNeeded();

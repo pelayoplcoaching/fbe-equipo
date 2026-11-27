@@ -92,7 +92,8 @@ import { EscenaFinal, hayEscenaFinal } from './EscenaFinal.jsx';
 import { lanzarEscenaInicio } from './EscenaInicio.js';
 import { Portada, ArteSesion } from './Portada.jsx';
 import { LOBO } from '../marca-lobo.js';
-import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio } from '../../logica/imagenes.js';
+import { familiaPortada, imagenPortada, selloSesion, imagenCelebracion, imagenEjercicio, anadirImagenes } from '../../logica/imagenes.js';
+import LISTA_TROZOS from '../../datos/imagenes-trozos.json';
 import { Imagen, hayImagen } from '../Imagen.jsx';
 import { MensajeCoach, RecuerdoProgreso, usePersonal } from './Personal.jsx';
 import { FraseAMedida, useGamberrada } from './AMedida.jsx';
@@ -111,6 +112,10 @@ import { sesionConCola, enColaDe } from '../../logica/sin-red.js';
 import { VideoYoutube, MiniGlobal, abrirMini } from '../YouTube.jsx';
 import { esYoutube, videoDe } from '../../logica/youtube.js';
 import { useMarcaPagina } from '../marca-pagina.js';
+
+// (belleza 164) el «después» de cada tipo de sesión para el resumen: su lista viaja con la sesión (datos/imagenes-trozos.json),
+// no con el arranque
+anadirImagenes(LISTA_TROZOS);
 
 // (pulido 2.10) «Compartir con el equipo», al terminar: es de la pantalla Equipo, que se carga cuando hace falta
 const HojaCompartirEquipo = perezoso(() => import('../Comunidad.jsx'), 'HojaCompartirEquipo', { mientras: null });

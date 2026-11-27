@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.269': {
+    // (belleza 151-200, tercera vuelta, y las primeras 35 imágenes nuevas; «claude/belleza-200-propuesta.md»)
+    atleta: [
+      'Al terminar, el resumen lleva su propia ilustración según la sesión, y las pantallas vacías también tienen la suya.',
+      'El mapa de músculos tiene relieve y la proteína del día se llena como un vaso; el informe del bloque te compara con el anterior.',
+      'En tu perfil hay ocho portadas para elegir, en Semana la siguiente se ve de un vistazo y en iPhone el carné se mueve al inclinarlo.',
+    ],
+    coach: [
+      'Belleza 151-200, tercera vuelta: mapa con relieve, vaso de proteína, portadas, semana que viene, bloque frente al anterior y 35 imágenes.',
+    ],
+  },
   '0.268': {
     // (belleza 151-200, segunda vuelta: Hoy, Semana y Progreso; «claude/belleza-200-propuesta.md»)
     atleta: [

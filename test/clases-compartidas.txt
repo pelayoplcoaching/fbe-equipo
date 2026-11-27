@@ -606,7 +606,8 @@ m4: belleza-a.css diseno.css estilos.css progreso-visual-2.css
 mal: apuntes.css diseno.css estilos.css
 malo: diseno.css estilos.css
 mantener: diseno.css estilos.css
-mapa-muscular: belleza-a.css diseno.css estilos.css progreso-visual-2.css
+mapa-muscular: ambas-i.css belleza-a.css diseno.css estilos.css progreso-visual-2.css
+mapa-oro: ambas-i.css progreso-visual-2.css
 marca: belleza.css diseno.css estilos.css
 marca-cumple: diseno.css estilos.css
 marca-dia: diseno.css estilos.css

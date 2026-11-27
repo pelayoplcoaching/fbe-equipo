@@ -9,6 +9,9 @@ import { MensajeCoach } from './atleta/Personal.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { pesoTxt, pesoNum, difVista, etiquetaPeso } from '../logica/unidades.js';
 import { nombreBloque } from '../logica/esencial.js';
+import { perezoso } from './perezoso.jsx';
+
+const FrenteBloques = perezoso(() => import('./InformeFrente.jsx'), 'FrenteBloques', { mientras: null });
 
 // Informe de un bloque: lo que se hizo de lo pautado, cómo subió la fuerza estimada de los ejercicios
 // principales, semana a semana, músculos, récords y (con consentimiento) el peso. Lo ven el atleta y el coach.
@@ -182,6 +185,10 @@ export function InformeBloque({ informe: r, salud = false, coach = false, alCerr
             <p><b class="num">{num(r.peso.inicio)} → {num(r.peso.fin)} kg</b> <span class="chip num">{signo(r.peso.cambio, 1)} kg</span></p>
           </section>
         )}
+
+        {/* (belleza 177) este bloque frente al anterior, en dos columnas (debajo de cada cifra ya va su diferencia). En su
+            trozo: el informe sale al abrir (Hoy lo usa) y así sus estilos no pesan en el arranque */}
+        {ant && <FrenteBloques r={r} ant={ant} />}
 
         {r.records.length > 0 && (
           <section class="pila-s">

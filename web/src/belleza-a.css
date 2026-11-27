@@ -19,9 +19,9 @@
 .mapa-muscular .m3, .mapa-muscular .leyenda-mapa .m3 { fill: var(--mm-3); background: var(--mm-3); }
 .mapa-muscular .m4, .mapa-muscular .leyenda-mapa .m4 { fill: var(--mm-4); background: var(--mm-4); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); }
+  :root:not([data-theme="light"]) .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); --mm-k: 88%; }
 }
-:root[data-theme="dark"] .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); }
+:root[data-theme="dark"] .mapa-muscular { --mm-1: var(--seq-3); --mm-2: var(--seq-4); --mm-3: var(--seq-5); --mm-4: color-mix(in srgb, var(--seq-5) 62%, var(--blanco)); --mm-k: 88%; }
 
 /* -- A3 - Sin viudas: un texto de dos o mas lineas no acaba con una sola palabra en la ultima ("...esfuerzo" / "9/10").
    diseno.css ya lo pide para p, li, dd, label...; faltaban las notas pequenas de las tarjetas, que son span. El navegador

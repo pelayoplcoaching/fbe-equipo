@@ -260,3 +260,8 @@ export function datosPerfilCompartir({ nombre = '', entrenos = [], racha = 0, me
 // La portada que eliges para tu perfil (solo en este móvil)
 export const PORTADAS = [['noche', 'Noche'], ['aurora', 'Aurora'], ['atardecer', 'Atardecer'], ['bosque', 'Bosque'], ['oceano', 'Océano']];
 export const portadaValida = (v) => (PORTADAS.some(([k]) => k === v) ? v : 'noche');
+// (belleza 189) Las portadas ilustradas, para elegir además de los cinco colores del dibujo que sale de tu nombre (también
+// solo en este móvil). Se guarda el id de su imagen (el color de debajo sigue siendo el de la noche). Los id van enteros: uno
+// armado a trozos («perfil-» + clave) hace creer al reparto de estilos que cualquier clase «perfil-…» puede salir de aquí
+export const PORTADAS_IMG = [['perfil-montana', 'Montaña'], ['perfil-pista', 'Pista'], ['perfil-gimnasio', 'Gimnasio'], ['perfil-pinar', 'Pinar'], ['perfil-mar', 'Mar'], ['perfil-ciudad', 'Ciudad'], ['perfil-estrellas', 'Estrellas'], ['perfil-estudio', 'Estudio']];
+export const imagenPortadaPerfil = (v) => (PORTADAS_IMG.some(([id]) => id === v) ? v : null);

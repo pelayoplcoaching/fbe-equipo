@@ -1,0 +1,302 @@
+{
+  "perfil-montana": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-montana-480.f3178d9a.webp",
+      "960": "imagenes/perfil/perfil-montana-960.dcf0e2da.webp",
+      "1440": "imagenes/perfil/perfil-montana-1440.4f71801b.webp"
+    },
+    "color": "#45396e"
+  },
+  "perfil-pista": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-pista-480.d8d28c70.webp",
+      "960": "imagenes/perfil/perfil-pista-960.de3e71a9.webp",
+      "1440": "imagenes/perfil/perfil-pista-1440.33d177de.webp"
+    },
+    "color": "#403468"
+  },
+  "perfil-gimnasio": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-gimnasio-480.c993dc02.webp",
+      "960": "imagenes/perfil/perfil-gimnasio-960.805d4b89.webp",
+      "1440": "imagenes/perfil/perfil-gimnasio-1440.78024610.webp"
+    },
+    "color": "#543f6b"
+  },
+  "perfil-pinar": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-pinar-480.e8c800e0.webp",
+      "960": "imagenes/perfil/perfil-pinar-960.d2848cd2.webp",
+      "1440": "imagenes/perfil/perfil-pinar-1440.d1705976.webp"
+    },
+    "color": "#4e3b72"
+  },
+  "perfil-ciudad": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-ciudad-480.da7b005f.webp",
+      "960": "imagenes/perfil/perfil-ciudad-960.30a97e8d.webp",
+      "1440": "imagenes/perfil/perfil-ciudad-1440.141cc4de.webp"
+    },
+    "color": "#42326c"
+  },
+  "perfil-mar": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-mar-480.d18b7dc3.webp",
+      "960": "imagenes/perfil/perfil-mar-960.65badb96.webp",
+      "1440": "imagenes/perfil/perfil-mar-1440.139a8f9a.webp"
+    },
+    "color": "#45346e"
+  },
+  "perfil-estrellas": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-estrellas-480.5a4eeae2.webp",
+      "960": "imagenes/perfil/perfil-estrellas-960.837dbf03.webp",
+      "1440": "imagenes/perfil/perfil-estrellas-1440.07b3ef1a.webp"
+    },
+    "color": "#3b2f66"
+  },
+  "perfil-estudio": {
+    "proporcion": [
+      3,
+      1
+    ],
+    "archivos": {
+      "480": "imagenes/perfil/perfil-estudio-480.d313d4ae.webp",
+      "960": "imagenes/perfil/perfil-estudio-960.7fdd31e1.webp",
+      "1440": "imagenes/perfil/perfil-estudio-1440.ef54c041.webp"
+    },
+    "color": "#4b356c"
+  },
+  "fin-empuje": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-empuje-720.91055d73.webp",
+      "1080": "imagenes/fin/fin-empuje-1080.42249d6a.webp",
+      "1440": "imagenes/fin/fin-empuje-1440.5a4fe6d2.webp"
+    },
+    "color": "#3f325c"
+  },
+  "fin-empuje-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-empuje-2-720.bde14679.webp",
+      "1080": "imagenes/fin/fin-empuje-2-1080.79970d2a.webp",
+      "1440": "imagenes/fin/fin-empuje-2-1440.304a716f.webp"
+    },
+    "color": "#43345f"
+  },
+  "fin-tiron": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-tiron-720.1324729b.webp",
+      "1080": "imagenes/fin/fin-tiron-1080.eca894ab.webp",
+      "1440": "imagenes/fin/fin-tiron-1440.24c00b17.webp"
+    },
+    "color": "#443462"
+  },
+  "fin-tiron-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-tiron-2-720.813dede3.webp",
+      "1080": "imagenes/fin/fin-tiron-2-1080.c3c6d6fa.webp",
+      "1440": "imagenes/fin/fin-tiron-2-1440.a6337413.webp"
+    },
+    "color": "#47345b"
+  },
+  "fin-pierna": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-pierna-720.7d63adf9.webp",
+      "1080": "imagenes/fin/fin-pierna-1080.6e0d4347.webp",
+      "1440": "imagenes/fin/fin-pierna-1440.11640f28.webp"
+    },
+    "color": "#44315d"
+  },
+  "fin-pierna-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-pierna-2-720.897406c2.webp",
+      "1080": "imagenes/fin/fin-pierna-2-1080.0faea559.webp",
+      "1440": "imagenes/fin/fin-pierna-2-1440.ca43c4b5.webp"
+    },
+    "color": "#47345e"
+  },
+  "fin-core": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-core-720.a07dfa90.webp",
+      "1080": "imagenes/fin/fin-core-1080.8d06962b.webp",
+      "1440": "imagenes/fin/fin-core-1440.c77fb4b9.webp"
+    },
+    "color": "#4a3462"
+  },
+  "fin-core-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-core-2-720.bfd88111.webp",
+      "1080": "imagenes/fin/fin-core-2-1080.14bcb399.webp",
+      "1440": "imagenes/fin/fin-core-2-1440.64a471ba.webp"
+    },
+    "color": "#573f71"
+  },
+  "fin-fullbody": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-fullbody-720.63ae1c29.webp",
+      "1080": "imagenes/fin/fin-fullbody-1080.1984474e.webp",
+      "1440": "imagenes/fin/fin-fullbody-1440.1adbbd3d.webp"
+    },
+    "color": "#3d2d5b"
+  },
+  "fin-fullbody-2": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-fullbody-2-720.34000dad.webp",
+      "1080": "imagenes/fin/fin-fullbody-2-1080.d161eecb.webp",
+      "1440": "imagenes/fin/fin-fullbody-2-1440.5e79f9a1.webp"
+    },
+    "color": "#4d3757"
+  },
+  "fin-cardio": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-cardio-720.f166686e.webp",
+      "1080": "imagenes/fin/fin-cardio-1080.9aff9acf.webp",
+      "1440": "imagenes/fin/fin-cardio-1440.bd855c21.webp"
+    },
+    "color": "#55395c"
+  },
+  "fin-carrera": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-carrera-720.9afefccc.webp",
+      "1080": "imagenes/fin/fin-carrera-1080.9d75e828.webp",
+      "1440": "imagenes/fin/fin-carrera-1440.51ad1252.webp"
+    },
+    "color": "#5e3d5e"
+  },
+  "fin-bici": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-bici-720.52f32df4.webp",
+      "1080": "imagenes/fin/fin-bici-1080.f67186cb.webp",
+      "1440": "imagenes/fin/fin-bici-1440.916817cc.webp"
+    },
+    "color": "#603f5b"
+  },
+  "fin-eliptica": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-eliptica-720.ee4bda63.webp",
+      "1080": "imagenes/fin/fin-eliptica-1080.c7a7c238.webp",
+      "1440": "imagenes/fin/fin-eliptica-1440.f7f919f9.webp"
+    },
+    "color": "#56395c"
+  },
+  "fin-remo": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-remo-720.50783e48.webp",
+      "1080": "imagenes/fin/fin-remo-1080.3232a308.webp",
+      "1440": "imagenes/fin/fin-remo-1440.c5c4bdb3.webp"
+    },
+    "color": "#5a395a"
+  },
+  "fin-nadar": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-nadar-720.6663ccf0.webp",
+      "1080": "imagenes/fin/fin-nadar-1080.3e0bc5e7.webp",
+      "1440": "imagenes/fin/fin-nadar-1440.625f68e0.webp"
+    },
+    "color": "#593c62"
+  },
+  "fin-comba": {
+    "proporcion": [
+      16,
+      9
+    ],
+    "archivos": {
+      "720": "imagenes/fin/fin-comba-720.78b8f5b0.webp",
+      "1080": "imagenes/fin/fin-comba-1080.0ac4e33e.webp",
+      "1440": "imagenes/fin/fin-comba-1440.b89b1721.webp"
+    },
+    "color": "#613c56"
+  }
+}

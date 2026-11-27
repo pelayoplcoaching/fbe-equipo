@@ -9063,5 +9063,115 @@
       "320": "imagenes/coach/vuelve-320.39c7f13f.webp"
     },
     "color": "#403368"
+  },
+  "vacio-entrenos": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-entrenos-240.b72060b4.webp",
+      "360": "imagenes/vacio/vacio-entrenos-360.5ef235f1.webp"
+    },
+    "color": "#40326b"
+  },
+  "vacio-records": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-records-240.61a1166c.webp",
+      "360": "imagenes/vacio/vacio-records-360.6e11768a.webp"
+    },
+    "color": "#3e315a"
+  },
+  "vacio-mensajes": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-mensajes-240.12f961a6.webp",
+      "360": "imagenes/vacio/vacio-mensajes-360.010bab17.webp"
+    },
+    "color": "#493960"
+  },
+  "vacio-progreso": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-progreso-240.aa7e751f.webp",
+      "360": "imagenes/vacio/vacio-progreso-360.b191675c.webp"
+    },
+    "color": "#50416e"
+  },
+  "vacio-guias": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-guias-240.1f101ba2.webp",
+      "360": "imagenes/vacio/vacio-guias-360.3dc61a15.webp"
+    },
+    "color": "#3e2e66"
+  },
+  "vacio-diario": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-diario-240.0f4a6a32.webp",
+      "360": "imagenes/vacio/vacio-diario-360.5e50c5c2.webp"
+    },
+    "color": "#493564"
+  },
+  "vacio-tareas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-tareas-240.09d9b44c.webp",
+      "360": "imagenes/vacio/vacio-tareas-360.c4b69f53.webp"
+    },
+    "color": "#554372"
+  },
+  "vacio-preguntas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-preguntas-240.899f2e54.webp",
+      "360": "imagenes/vacio/vacio-preguntas-360.7b7cab32.webp"
+    },
+    "color": "#47346b"
+  },
+  "vacio-espera": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-espera-240.a20cfef5.webp",
+      "360": "imagenes/vacio/vacio-espera-360.056a128d.webp"
+    },
+    "color": "#553f6c"
+  },
+  "vacio-recetas": {
+    "proporcion": [
+      1,
+      1
+    ],
+    "archivos": {
+      "240": "imagenes/vacio/vacio-recetas-240.35cc1a24.webp",
+      "360": "imagenes/vacio/vacio-recetas-360.1c8998b9.webp"
+    },
+    "color": "#5b456b"
   }
 }
