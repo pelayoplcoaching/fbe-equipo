@@ -31,10 +31,12 @@ const tope = (n, max, que) => check(n <= max, `${que}: ${n} fuera de escala (top
 //   letras: los titulares grandes (de 26 px en adelante), los tamaños en px dentro de las gráficas (SVG) y cuatro raros
 //   pesos: 450 y 850;  tiempos: tres transiciones de 0,25 s
 //   sombras: solo las capas que se repetían pasaron a token; las demás son propias de cada componente
+//   (v0.283: 413, por el brillo de los récords en la melodía de la sesión y el filo dorado de la serie que puede ser récord,
+//   dos sombras propias de su componente, hechas con tokens: los colores del oro y los filos)
 //   tintes: tres porcentajes que no caen en ningún nivel sin notarse
 //   (visual) espacios: los de más de 24 px que no caen en un paso sin notarse (26, 30, 34, 36, 38…) y los medios píxeles
 //   iconos: los de La travesía (su propio dibujo) y los de las gráficas, aros y diales (no son iconos)
-const TOPES = { radios: 26, letras: 90, pesos: 4, capas: 0, tiempos: 3, sombras: 412, filos: 0, tintes: 3, deshabilitado: 0, espacios: 68, iconos: 66 };
+const TOPES = { radios: 26, letras: 90, pesos: 4, capas: 0, tiempos: 3, sombras: 413, filos: 0, tintes: 3, deshabilitado: 0, espacios: 68, iconos: 66 };
 
 console.log('\nsistema.css, generado');
 {

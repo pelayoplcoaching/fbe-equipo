@@ -302,7 +302,7 @@ check(!/[^\x00-\x7F]/.test(cssJ) && !/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(sinComJ)
     && cifrasHistoriaSesion({ series: 0, cardio: { modalidad: 'carrera', minutos: 30, km: 5.2 } }).map((c) => `${c.v} ${c.t}`).join(' · ') === '30 min de carrera · 5,2 km',
     '161: las cifras de la primera tarjeta de la historia, como las del resumen (fuerza o cardio)');
   const ses = src('ui/atleta/Sesion.jsx'), hs = src('ui/atleta/HistoriaSesion.jsx');
-  check(/if \(conEscena\) \{ setEscena\(\{ records: res\.records\?\.length \|\| 0, semana: await semanaHecha \}\); setHistoria\(hayHistoriaSesion\(\) && /.test(ses) && /navigator\.webdriver && !leer\('fbe-probar-historia'\)/.test(hs) && /\{historia && !escena && <HistoriaSesion resumen=\{resumen\} nombre=\{sesion\?\.nombre\} alCerrar=\{\(\) => setHistoria\(false\)\} \/>\}/.test(ses)
+  check(/if \(conEscena\) \{ setEscena\(\{ records: res\.records\?\.length \|\| 0, semana: await semanaHecha(?:, primero)? \}\); setHistoria\(hayHistoriaSesion\(\) && /.test(ses) && /navigator\.webdriver && !leer\('fbe-probar-historia'\)/.test(hs) && /\{historia && !escena && <HistoriaSesion resumen=\{resumen\} nombre=\{sesion\?\.nombre\} alCerrar=\{\(\) => setHistoria\(false\)\} \/>\}/.test(ses)
     && /const FONDO = \{ hecho: 'historia-hecho', records: 'historia-records', musculos: 'historia-musculos' \};/.test(hs) && /class="historia historia-sesion" role="dialog" aria-modal="true"/.test(hs) && /Ver el resumen/.test(hs),
     '161: el final como historia de tres tarjetas (lo hecho, los récords si los hay y los músculos), detrás de la escena y solo cuando esta sale; con la ✕ o «Ver el resumen», al resumen');
 }
