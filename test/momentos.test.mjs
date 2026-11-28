@@ -332,5 +332,33 @@ console.log('v0.285 · El repaso');
     '(206 y 343) con «Solo botones», lo delicado no se hace manteniendo pulsado (ni lo sugiere); y «Gestos» lo cuenta');
 }
 
+console.log('v0.286 · Lo que quedaba de las primeras listas');
+{
+  const { tendenciaFuerza, textoTendencia } = await import('../web/src/logica/tendencia-fuerza.js');
+  const sem = (vals) => vals.map((v, i) => ({ semana: new Date(Date.UTC(2026, 8, 7 + i * 7)).toISOString().slice(0, 10), valor: v }));
+  const t = (vals) => textoTendencia(tendenciaFuerza(sem(vals)));
+  check(t([80, 82, 85, 87]) === 'Sube desde hace 3 semanas' && t([80, 79, 82, 84, 86]) === 'Sube desde hace 3 semanas' && t([80, 80.2, 80.1, 80.3]) === 'Estable desde hace 3 semanas'
+    && t([80, 85, 83]) === '' && t([80, 81]) === '' && t([80, 80.4, 80.6]) === 'Estable desde hace 2 semanas' && textoTendencia(tendenciaFuerza(sem([60, 62, 65])), 'Sentadilla') === 'Sentadilla: sube desde hace 2 semanas',
+    '(B84) la lectura de la gráfica de fuerza: «Sube desde hace N semanas» (tres semanas sin bajar y más de un 1 % en total), «Estable…» (dentro del 1 %) y nada si baja o hay pocas');
+  const PR = src('ui/atleta/Progreso.jsx');
+  check(/const t = tendenciaFuerza\(pts\); return t && <p class=\{`mini lct-linea lct-\$\{t\.tipo\}`\}>/.test(PR), '(B84) encima de la gráfica, en su línea');
+  check(/\.sort\(\(x, y\) => y\[2\] - x\[2\] \|\| y\[3\] - x\[3\]\)/.test(PR), '(B94) las barras de series por músculo, de más a menos');
+  const PL = src('ui/atleta/Plan.jsx');
+  check(/class="btn btn-icono plano pln-ico" onClick=\{\(\) => setCalendario\(true\)\} aria-label="Añadir a mi calendario"/.test(PL) && /aria-label="Compartir mi semana" title="Compartir mi semana"/.test(PL),
+    '(B77) en Semana, «Añadir a mi calendario» y «Compartir mi semana», dos botones redondos con su nombre');
+  check(/<small class="tmp-queda" aria-hidden="true">\{r\.cabe \? `unos \$\{r\.minutos\}` : 'no llega'\}<\/small>/.test(src('ui/atleta/SesionTuya.jsx')), '(B58) debajo del tiempo elegido, en qué se queda la sesión');
+  const EP = src('ui/atleta/EsencialPruebas.jsx');
+  check(/<div class="prb-antes prb-ab">/.test(EP) && /<span class="sr">La vez anterior, el/.test(EP) && /<Icono n="derecha" class="prb-ab-ico" \/>/.test(EP),
+    '(B97) en tus pruebas, el antes y el hoy en dos columnas con su flecha (la frase entera, para el lector)');
+  const M = src('momentos.css');
+  check(/@media \(min-resolution: 2dppx\) \{/.test(M) && /\{ border-top-width: \.5px; \}/.test(M), '(C128) en pantallas de alta densidad, los separadores de las listas, de medio píxel');
+  const A = await import('../web/src/logica/arte.js'), CO = await import('../web/src/logica/compartir.js');
+  const claves = A.PLANTILLAS_TARJETA.map(([k]) => k);
+  const nunca = Array.from({ length: 30 }, (_, i) => CO.sorpresa({ plantillas: claves, ahora: { plantilla: 'cifras' } }, () => (i + 0.5) / 30).plantilla);
+  check(claves.includes('transparente') && CO.plantillaInicial('transparente', claves) === 'cifras' && !nunca.includes('transparente') && !nunca.includes('foto')
+    && /if \(plantilla === 'transparente' && formato !== 'fondo'\) \{ dibujarSinFondo\(x, d, \{ letra, titulo \}\); return aBlob\(cv\); \}/.test(src('ui/Compartir.jsx')),
+    '(C139) «Sin fondo»: una plantilla más (la imagen, transparente); ni se recuerda ni sale en «Sorpréndeme», y en el fondo de pantalla, las cifras de siempre');
+}
+
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);

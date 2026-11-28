@@ -11,7 +11,7 @@ import { useApp, useCarga, useUnaVez, Hoja, Icono, GrupoIos, FilaIos, Segmentos 
 import { BotonMantener } from '../Mantener.jsx';
 import { Arte } from './EsencialArte.jsx';
 import * as P from '../../logica/esencial-pruebas.js';
-import { hoyISO, sumarDias } from '../../logica/fechas.js';
+import { hoyISO, sumarDias, fmtCorta } from '../../logica/fechas.js';
 import { fechaLarga } from '../../logica/esencial-alta.js';
 import { WEB_FBE } from '../../logica/esencial.js';
 import { prepararAudio, tono, vibrarCorto, vibrarAviso, usePantallaEncendida } from './sesion-audio.js';
@@ -200,7 +200,16 @@ function Resultado({ prueba, r, valor, anterior, fila, ocupado, error, alGuardar
       {rotulo && <span class="peq secundario">{rotulo}</span>}
       <strong id="prb-res-t" role="status">{r.titulo}</strong>
       <p class="peq">{r.texto}</p>
-      {anterior && <p class="peq secundario prb-antes">La vez anterior, el {fechaLarga(String(anterior.fecha).slice(0, 10))}: {P.valorTexto(prueba, anterior.valor)}{c ? `, ${COMPARA[c]}` : ''}.</p>}
+      {/* (belleza B97, v0.286) el antes y el hoy, en dos columnas con su flecha (la frase entera, para el lector de pantalla) */}
+      {anterior && (
+        <div class="prb-antes prb-ab">
+          <span class="sr">La vez anterior, el {fechaLarga(String(anterior.fecha).slice(0, 10))}: {P.valorTexto(prueba, anterior.valor)}{c ? `, ${COMPARA[c]}` : ''}.</span>
+          <span class="prb-ab-col" aria-hidden="true"><span class="mini secundario">Antes · {fmtCorta(String(anterior.fecha).slice(0, 10))}</span><strong class="num">{P.valorTexto(prueba, anterior.valor)}</strong></span>
+          <span class="prb-ab-flecha" aria-hidden="true"><Icono n="derecha" class="prb-ab-ico" /></span>
+          <span class="prb-ab-col" aria-hidden="true"><span class="mini secundario">Hoy</span><strong class="num">{P.valorTexto(prueba, valor)}</strong></span>
+          {c && <strong class={`mini prb-ab-${c}`} aria-hidden="true">{COMPARA[c]}</strong>}
+        </div>
+      )}
       {error && <p class="error" role="alert">{error}</p>}
       <button type="button" class="btn btn-primario prb-guardar" disabled={ocupado} onClick={() => alGuardar(fila)}><Icono n="guardar" /> Guardar</button>
     </section>

@@ -84,6 +84,14 @@
 .prb-tono-sin { border-left-color: var(--linea); background: var(--hoja-2); }
 .prb-cifra { line-height: 1; }
 .prb-antes { padding-top: var(--esp-6); border-top: var(--filo-fino) solid var(--linea); }
+/* (belleza B97, v0.286) el antes y el hoy, en dos columnas con su flecha y debajo, si lo hay, si es mejor, igual o peor */
+.prb-ab { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: var(--esp-4) var(--esp-10); text-align: center; }
+.prb-ab-col { display: grid; gap: var(--esp-2); min-width: 0; }
+.prb-ab-flecha { display: grid; place-items: center; padding-bottom: var(--esp-2); color: var(--tinta-3); }
+.prb-ab-ico { width: 20px; height: 20px; }
+.prb-ab-mejor { grid-column: 1 / -1; color: var(--ok); }
+.prb-ab-igual { grid-column: 1 / -1; color: var(--tinta-2); }
+.prb-ab-peor { grid-column: 1 / -1; color: var(--tinta-2); }
 .prb-guardar { justify-self: start; }
 
 /* El informe para tu medico */

@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.286': {
+    // (lo que quedaba de las primeras listas: B58, B77, B84, B94, B97, C128 y C139; «claude/belleza-350-estado.md»)
+    atleta: [
+      'Al compartir una sesión, «Sin fondo»: tus cifras en blanco y sin nada detrás, para ponerlas encima de una foto.',
+      'En Progreso, la fuerza dice cómo va tu línea («Sube desde hace 3 semanas») y las series por músculo, de más a menos.',
+      'En Semana, añadir a tu calendario y compartir tu semana, en dos botones redondos.',
+    ],
+    coach: [
+      'Lo pendiente de las primeras listas: «Sin fondo» al compartir, la lectura de la fuerza, antes y ahora en las pruebas y más.',
+    ],
+  },
   '0.285': {
     // (el repaso: 331-348 y la 173; «claude/belleza-350-estado.md»)
     atleta: [

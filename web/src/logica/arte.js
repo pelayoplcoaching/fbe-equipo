@@ -92,6 +92,8 @@ export const PLANTILLAS_TARJETA = [
   ['cifras', 'Cifras', 'Las cifras en grande'],
   ['minima', 'Mínima', 'El nombre y una cifra'],
   ['foto', 'Con tu foto', 'Elige una foto del móvil'],
+  // (belleza C139, v0.286) tus cifras sin nada detrás (la imagen, transparente): para ponerla sobre una foto en tus historias
+  ['transparente', 'Sin fondo', 'Tus cifras, para ponerlas sobre una foto'],
   // (compartir, tanda 2) el nombre enorme, como un cartel
   ['poster', 'Póster', 'El nombre en grande'],
   // (v0.187) los ejercicios con su mejor serie, y el récord en grande (solo si lo hubo)

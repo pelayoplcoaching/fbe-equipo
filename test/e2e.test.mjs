@@ -959,6 +959,24 @@ if (parte(PRINCIPAL)) try {
   await plantillas.getByRole('radio', { name: 'Mínima' }).click();
   await p.waitForFunction((a) => document.querySelector('.tarjeta-img')?.getAttribute('src') !== a && document.querySelector('.tarjeta-previa')?.getAttribute('aria-busy') === 'false', srcAntes);
   check((await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Mínima)'), '«Mínima» rehace la tarjeta (el nombre y una cifra)');
+  // (belleza C139, v0.286) «Sin fondo»: la imagen sale transparente (una esquina sin nada) y con las cifras en blanco
+  {
+    const srcM = await p.locator('.tarjeta-img').getAttribute('src');
+    await plantillas.getByRole('radio', { name: 'Sin fondo' }).click();
+    await p.waitForFunction((a) => document.querySelector('.tarjeta-img')?.getAttribute('src') !== a && document.querySelector('.tarjeta-previa')?.getAttribute('aria-busy') === 'false', srcM);
+    const sf = await p.locator('.tarjeta-img').evaluate(async (i) => {
+      await i.decode().catch(() => {});
+      const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data; let blancos = 0;
+      for (let k = 0; k < d.length; k += 4 * 97) if (d[k + 3] > 200 && d[k] > 240 && d[k + 1] > 240 && d[k + 2] > 240) blancos++;
+      return { esquina: x.getImageData(4, 4, 1, 1).data[3], blancos, previa: !!i.closest('.cpt-sinfondo') };
+    });
+    check(sf.esquina === 0 && sf.blancos > 50 && sf.previa && (await p.locator('.tarjeta-img').getAttribute('alt')).includes('(Sin fondo)'),
+      `(C139) «Sin fondo»: la imagen sale transparente, con las cifras en blanco (y en la vista previa, sobre la noche) (esquina ${sf.esquina}, ${sf.blancos} puntos blancos)`);
+    const srcS = await p.locator('.tarjeta-img').getAttribute('src');
+    await plantillas.getByRole('radio', { name: 'Mínima' }).click();
+    await p.waitForFunction((a) => document.querySelector('.tarjeta-img')?.getAttribute('src') !== a && document.querySelector('.tarjeta-previa')?.getAttribute('aria-busy') === 'false', srcS);
+  }
   const red = [];
   p.on('request', (r) => { if (!r.url().startsWith('http://localhost:4174') && !r.url().startsWith('blob:') && !r.url().startsWith('data:')) red.push(r.url()); });
   // Una foto de mentira (un PNG de 600 × 800 hecho aquí) elegida «del móvil»

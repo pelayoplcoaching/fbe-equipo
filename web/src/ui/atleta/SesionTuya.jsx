@@ -21,7 +21,8 @@ export function TiempoHoy({ ejercicios, corta = null, alCorta = null }) {
     <section class="panel panel-pad tiempo-hoy" aria-labelledby="tiempo-hoy-t">
       <h2 id="tiempo-hoy-t" class="tiempo-hoy-t"><Imagen id="tiempo-hoy" clase="ico-ilu" tamanos="44px" alternativa={<Icono n="reloj" />} /> ¿Cuánto tiempo tienes hoy?</h2>
       <div class="segmentos" role="group" aria-label="Tiempo que tienes hoy">
-        {TIEMPOS.map((m) => <button key={m} type="button" aria-pressed={min === m ? 'true' : 'false'} onClick={() => setMin(min === m ? null : m)}>{m} min</button>)}
+        {/* (belleza B58, v0.286) debajo de la opción elegida, en qué se te queda la sesión (lo mismo que dice el texto de abajo) */}
+        {TIEMPOS.map((m) => <button key={m} type="button" aria-pressed={min === m ? 'true' : 'false'} onClick={() => setMin(min === m ? null : m)}>{m} min{min === m && r && <small class="tmp-queda" aria-hidden="true">{r.cabe ? `unos ${r.minutos}` : 'no llega'}</small>}</button>)}
       </div>
       {r && (
         <div class="pila-xs tiempo-hoy-r" aria-live="polite">

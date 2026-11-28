@@ -59,9 +59,9 @@ export const PREF_PLANTILLA = 'fbe-compartir-plantilla';
 export const PREF_PEGATINA = 'fbe-compartir-pegatina';
 export const PREF_PERSONALIZAR = 'fbe-compartir-personalizar';
 // La plantilla recordada, si vale para esta tarjeta («Con tu foto» no se recuerda: la foto no se guarda; «Récord», solo
-// si hay récord)
+// si hay récord; (C139) «Sin fondo», tampoco: es para un momento, y en la vista previa de siempre no se leería igual)
 export function plantillaInicial(recordada, claves = [], { records = 0 } = {}) {
-  if (!claves.includes(recordada) || recordada === 'foto') return claves[0] || 'cifras';
+  if (!claves.includes(recordada) || recordada === 'foto' || recordada === 'transparente') return claves[0] || 'cifras';
   if (recordada === 'record' && !records) return claves[0] || 'cifras';
   return recordada;
 }
@@ -69,7 +69,7 @@ export function plantillaInicial(recordada, claves = [], { records = 0 } = {}) {
 export function sorpresa({ plantillas = [], paletas = PALETAS.map(([k]) => k), fondos = [], ahora = {} } = {}, azar = Math.random) {
   const uno = (lista, actual) => { const l = lista.filter((k) => k !== actual); const de = l.length ? l : lista; return de.length ? de[Math.floor(azar() * de.length) % de.length] : actual; };
   return {
-    plantilla: plantillas.length ? uno(plantillas.filter((k) => k !== 'foto'), ahora.plantilla) : ahora.plantilla,
+    plantilla: plantillas.length ? uno(plantillas.filter((k) => k !== 'foto' && k !== 'transparente'), ahora.plantilla) : ahora.plantilla,
     paleta: uno(paletas.filter((k) => k !== 'clara'), ahora.paleta),
     fondo: fondos.length ? uno(fondos, ahora.fondo) : 'auto',
   };

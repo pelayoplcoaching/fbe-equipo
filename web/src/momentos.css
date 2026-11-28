@@ -89,3 +89,18 @@
 .lct-linea:not(#n):not(#n):not(#n) { display: flex; align-items: center; gap: var(--esp-6); margin: 0; color: var(--tinta-2); font-weight: 560; }
 .lct-linea:not(#n):not(#n):not(#n) svg { flex: none; width: 16px; height: 16px; }
 .lct-sube:not(#n):not(#n):not(#n) svg { color: var(--ok); }
+
+/* B58 (v0.286) - "Cuanto tiempo tienes hoy?": debajo de la opcion elegida, en que se te queda la sesion ("unos 28") o
+   "no llega", con el color del boton. (La frase de abajo lo dice entero; esto es para verlo de un vistazo.) */
+.tmp-queda:not(#n):not(#n):not(#n) { display: block; margin-top: var(--esp-2); font-size: var(--letra-11); font-weight: 560; font-variant-numeric: tabular-nums; color: inherit; }
+
+/* C128 (v0.286) - En pantallas de alta densidad (2x y 3x), los separadores de las listas, de medio pixel de CSS: una linea
+   real y fina, como en iOS. Los bordes de botones, campos y tarjetas se quedan como estan. */
+@media (min-resolution: 2dppx) {
+  :is(.lista > li + li, .plan-lista li + li, .lista-records li + li):not(#n):not(#n):not(#n) { border-top-width: .5px; }
+  :is(.grupo-ios .lista > li + li, .grupo-ios-hoja .lista > li + li, .respuestas .lista > li + li):not(#n):not(#n):not(#n)::before { height: .5px; }
+}
+
+/* C139 (v0.286) - "Sin fondo": la imagen sale transparente (las cifras en blanco); en la vista previa, sobre la noche de la
+   marca para que se lea (en claro, el blanco no se veria). */
+.cpt-sinfondo:not(#n):not(#n):not(#n) { background: var(--tinta-noche); }

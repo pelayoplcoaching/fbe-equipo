@@ -359,6 +359,9 @@ async function pintarTarjeta(d, { plantilla = 'clasica', foto = null, formato = 
   FIRMA = { handle, equipo };
   const x = cv.getContext('2d');
   const { letra, cortar, lineas, icono, titulo } = utiles(x);
+  // (belleza C139, v0.286) «Sin fondo»: nada detrás (en el fondo de pantalla no tiene sentido: allí, las cifras de siempre)
+  if (plantilla === 'transparente' && formato !== 'fondo') { dibujarSinFondo(x, d, { letra, titulo }); return aBlob(cv); }
+  if (plantilla === 'transparente') plantilla = 'cifras';
   REC = plantilla === 'foto' ? null : recuadro;
   // (imágenes) la ilustración de fondo, salvo con la foto del atleta (y no en la clara)
   // (v0.187) fondo: 'auto' (el de la tarjeta), '' (sin dibujo) o el que elija; vale con todas las paletas oscuras
@@ -482,6 +485,31 @@ function dibujarArte(x, d, { escala = 2.7, dx = 0, dy = 0, opacidad = 1 } = {}) 
   }
   x.restore();
   x.globalAlpha = 1;
+}
+// (belleza C139, v0.286) «Sin fondo»: el lobo y el nombre de la app, el de la sesión y sus cifras, en blanco y con una sombra
+// que los deja leer sobre cualquier foto; detrás, nada (el PNG sale transparente: una pegatina para tus historias). Solo
+// lo del entreno, como las demás tarjetas (nunca el peso ni nada de salud)
+function dibujarSinFondo(x, d, { letra, titulo }) {
+  const cifras = (d.cardio ? cifrasCardio(d.cardio) : cifrasTarjeta(d)).slice(0, 4);
+  x.save();
+  x.shadowColor = 'rgba(8, 6, 20, .6)'; x.shadowBlur = 24; x.shadowOffsetY = 3;
+  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  const arriba = oy + Math.round(HC * 0.4);
+  const w = dibujarLobo(x, M, arriba, 52, '#FFFFFF');
+  letra(800, 30, 'expanded'); x.fillStyle = '#FFFFFF'; x.fillText(MARCA_APP, M + w + 14, arriba + 38);
+  const tn = titulo(d.nombre, { tams: [92, 78, 64], ancho: W - 2 * M, max: 2 });
+  let y = arriba + 52 + 36 + tn.tam;
+  x.fillStyle = '#FFFFFF';
+  for (const l of tn.ls) { x.fillText(l, M - 4, y); y += tn.tam + 4; }
+  const fila = y + 118;
+  const col = (W - 2 * M) / Math.max(1, cifras.length);
+  cifras.forEach((c, i) => {
+    const cx = M + i * col;
+    letra(800, cifras.length > 3 ? 84 : 96, 'semi-expanded'); x.fillStyle = '#FFFFFF'; x.fillText(c.v, cx, fila);
+    if (c.u) { const wv = x.measureText(c.v).width; letra(700, 34); x.fillText(c.u, cx + wv + 8, fila); }
+    letra(750, 28); x.fillStyle = 'rgba(255, 255, 255, .88)'; x.fillText(c.t.toUpperCase(), cx, fila + 46);
+  });
+  x.restore();
 }
 function dibujarPlantilla({ x, d, plantilla, foto, letra, cortar, lineas, icono, titulo, ilu = null }) {
   const espaciado = (px) => { try { x.letterSpacing = `${px}px`; } catch { /* sin letterSpacing */ } };
@@ -1077,7 +1105,7 @@ export function HojaCompartir({ datos, alCerrar, titulo = 'Compartir la sesión'
                 <span class="marco-ig-puntos">···</span>
               </div>
             )}
-            <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}`} ref={carta} data-ig={comoInstagram ? '' : undefined}>
+            <span class={`cpt-carta${['record', 'logro'].includes(tipo) || ['record', 'logro'].includes(datos?.tipo) || plantilla === 'record' ? ' cpt-tornasol' : ''}${opciones.plantilla === 'transparente' && opciones.formato !== 'fondo' ? ' cpt-sinfondo' : ''}`} ref={carta} data-ig={comoInstagram ? '' : undefined}>
               <img class="tarjeta-img" src={img.url} alt={texto} ref={imgEl} draggable={false} />
               {/* (belleza 347) con el modo ligero, sin el brillo que la recorre */}
               {!(typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ligero')) && <i class="cpt-brillo" aria-hidden="true" />}

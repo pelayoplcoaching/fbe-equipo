@@ -498,7 +498,8 @@ grafica-negocio: belleza.css diseno.css estilos.css
 grafica-peso: diseno.css estilos.css
 grande: apuntes.css diseno.css estilos.css travesia.css
 gris: atletas-lista.css revision.css
-grupo-ios: diseno.css estilos.css visual.css
+grupo-ios: diseno.css estilos.css momentos.css visual.css
+grupo-ios-hoja: estilos.css momentos.css
 grupo-ios-pie: estilos.css visual.css
 grupo-revisar-cab: estilos.css revision.css
 grupo-revisar-items: estilos.css revision.css
@@ -599,12 +600,12 @@ levantada: diseno.css estilos.css
 leyenda-mapa: belleza-a.css estilos.css
 liga-filas: apuntes.css personal.css
 linea: diseno.css estilos.css progreso-visual.css tacto-b.css
-lista: belleza.css diseno.css estilos.css imagenes.css personal.css registro-actividad.css
+lista: belleza.css diseno.css estilos.css imagenes.css momentos.css personal.css registro-actividad.css
 lista-ejercicios-hoy: diseno.css estilos.css
 lista-elegir: diseno.css estilos.css youtube.css
 lista-equipo: diseno.css personal.css
 lista-puntos: diseno.css estilos.css
-lista-records: estilos.css progreso-visual-2.css
+lista-records: estilos.css momentos.css progreso-visual-2.css
 listo: diseno.css estilos.css
 llama: belleza.css estilos.css
 llega: diseno.css radar.css
@@ -779,6 +780,7 @@ pista: ambas-b.css diseno.css estilos.css visual.css
 pista-cerrar: ambas-a.css diseno.css pulido.css
 pista-mas: diseno.css pulido.css
 placa: diseno.css estilos.css
+plan-lista: estilos.css momentos.css
 plano: diseno.css estilos.css pulido.css
 plantilla-mini: estilos.css personal.css
 plegable-eq: diseno.css equipo-belleza.css
@@ -900,7 +902,7 @@ respira-boton: apuntes.css belleza-a.css diseno.css estilos.css travesia.css
 respuesta: diseno.css estilos.css pulido.css
 respuesta-cab: diseno.css estilos.css
 respuesta-coach: diseno.css estilos.css
-respuestas: diseno.css estilos.css
+respuestas: diseno.css estilos.css momentos.css
 resumen-compara: diseno.css estilos.css
 resumen-detalle: diseno.css estilos.css
 resumen-ej: diseno.css estilos.css
