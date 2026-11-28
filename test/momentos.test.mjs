@@ -381,6 +381,10 @@ console.log('v0.287 · Las tres últimas de las primeras listas');
     && /\.ejercicio:not\(\.plegado\) \.ejercicio-cab \.picto \{ width: 3rem; height: 3rem; border-radius: var\(--r-14\); \}/.test(src('diseno.css')) && /\.ejercicio\.plegado \.ejercicio-cab \.picto \{ width: 2\.25rem; height: 2\.25rem; \}/.test(src('diseno.css'))
     && /clase="miniatura-ej ej-mini" tamanos="48px"/.test(src('ui/atleta/Sesion.jsx')),
     '(C136) la foto del ejercicio, con el mismo marco que su dibujo (abierto, 48 px; plegado, 36 px)');
+  const TR = src('ui/transiciones.js');
+  check(/const ligero = \(\) => typeof document !== 'undefined' && !!document\.documentElement\?\.hasAttribute\('data-ligero'\);/.test(TR)
+    && /\|\| d\.visibilityState === 'hidden' \|\| \(tipo === 'morph' && ligero\(\)\)\) \{ cambio\(\); return; \}/.test(TR),
+    '(329) con el modo ligero, el viaje de una tarjeta a su hoja se hace sin la transición (lo que más pesaba al abrir una hoja en un móvil lento)');
 }
 
 console.log(`\n${ok} bien, ${fallos} mal`);

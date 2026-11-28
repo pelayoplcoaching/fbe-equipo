@@ -10,6 +10,10 @@ import { reportarError } from '../registro-errores.js';
 import { paresValidos, seVe } from '../logica/vistas.js';
 
 export const sinMovimiento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+// (belleza 329, v0.287) Con el modo ligero (el móvil lento, solo o elegido en Ajustes), los viajes de una tarjeta a su hoja
+// ('morph') se hacen sin más: la captura de las dos pantallas era lo que más pesaba al abrir una hoja en un móvil lento
+// (medido con el procesador frenado: unos 130 ms de cada apertura). Las pestañas y las pantallas siguen con la suya.
+const ligero = () => typeof document !== 'undefined' && !!document.documentElement?.hasAttribute('data-ligero');
 
 // Cuánto se espera al destino (una pantalla que aún carga sus datos): la pantalla se queda quieta mientras tanto
 const ESPERA_DESTINO = 150;
@@ -30,7 +34,7 @@ let enCurso = null;
 // compartidos (v0.52): [{ nombre, desde: elemento, hasta: selector }]
 export function conTransicion(cambio, tipo = 'adelante', compartidos = null) {
   const d = typeof document !== 'undefined' ? document : null;
-  if (!d?.startViewTransition || sinMovimiento() || d.visibilityState === 'hidden') { cambio(); return; }
+  if (!d?.startViewTransition || sinMovimiento() || d.visibilityState === 'hidden' || (tipo === 'morph' && ligero())) { cambio(); return; }
   // Una a la vez: la anterior salta a su final (su cambio ya está hecho)
   try { enCurso?.skipTransition(); } catch { /* */ }
   const raiz = d.documentElement;
