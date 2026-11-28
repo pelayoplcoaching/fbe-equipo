@@ -171,7 +171,7 @@ c3: apuntes.css estilos.css progreso-visual-2.css
 cab: atletas-lista.css estilos.css
 cab-equipo: equipo-belleza.css estilos.css
 cab-ilu: belleza.css diseno.css imagenes.css
-cabecera: ambas-a.css belleza-a.css belleza-b.css belleza.css diseno.css estilos.css pulido.css vista-c.css
+cabecera: ambas-a.css belleza-a.css belleza-b.css belleza.css diseno.css estilos.css momentos.css pulido.css vista-c.css
 cabecera-grande: belleza-b.css belleza.css diseno.css estilos.css vista-c.css
 cadencia: diseno.css personal.css
 cadencia-v: diseno.css personal.css
@@ -385,7 +385,6 @@ empezar-musica: diseno.css personal.css
 en-curso: belleza.css diseno.css estilos.css progreso-visual.css
 en-enfoque: diseno.css estilos.css
 en-medio: estilos.css pulido.css
-encima: estilos.css progreso-visual-2.css
 encuesta-campo: diseno.css estilos.css
 encuesta-campo-fila: diseno.css estilos.css
 encuesta-opcion: comunidad-viva.css diseno.css equipo-belleza.css estilos.css vista-c.css
@@ -407,8 +406,7 @@ enorme: diseno.css estilos.css
 entra: diseno.css estilos.css
 entrada: atletas-lista.css color-capa.css diseno.css estilos.css perfil.css personal.css recetario-equipo.css registro-actividad.css revision.css tiempo.css visual.css
 entrada-menu: diseno.css estilos.css
-entrar-equipo: diseno.css estilos.css imagenes.css
-entrar-equipo-ico: estilos.css imagenes.css
+entrar-equipo: diseno.css estilos.css
 entrenando-ahora: diseno.css estilos.css
 entreno: diseno.css estilos.css pulido.css
 entreno-dia: diseno.css estilos.css
@@ -485,7 +483,7 @@ galeria-puntos: diseno.css estilos.css
 gana: diseno.css equipo-belleza.css
 ganado: equipo-belleza.css personal.css
 gasto-cifra: diseno.css estilos.css
-girando: apuntes.css diseno.css pulido.css
+girando: apuntes.css diseno.css
 grabando: estilos.css sonido.css
 grabar-revision-camara: diseno.css estilos.css
 grafica: belleza.css diseno.css estilos.css progreso-visual-2.css progreso-visual.css
@@ -601,7 +599,7 @@ levantada: diseno.css estilos.css
 leyenda-mapa: belleza-a.css estilos.css
 liga-filas: apuntes.css personal.css
 linea: diseno.css estilos.css progreso-visual.css tacto-b.css
-lista: belleza.css diseno.css estilos.css imagenes.css personal.css pulido.css registro-actividad.css
+lista: belleza.css diseno.css estilos.css imagenes.css personal.css registro-actividad.css
 lista-ejercicios-hoy: diseno.css estilos.css
 lista-elegir: diseno.css estilos.css youtube.css
 lista-equipo: diseno.css personal.css
@@ -676,7 +674,6 @@ musica-invitacion-cab: imagenes.css personal.css
 n: diseno.css estilos.css
 n1: estilos.css progreso-visual.css
 n2: estilos.css perfil.css progreso-visual.css
-n3: estilos.css perfil.css
 na-t: equipo-belleza.css personal.css
 necesitan-animo: equipo-belleza.css personal.css
 negocio-dos: estilos.css visual.css
@@ -976,7 +973,7 @@ serie-desliza: diseno.css estilos.css
 serie-ficha: progreso-visual-2.css registro-actividad.css
 serie-top: diseno.css estilos.css
 sesion-cab-num: diseno.css estilos.css
-sesion-vista: belleza-a.css diseno.css estilos.css sistema.css
+sesion-vista: belleza-a.css diseno.css estilos.css momentos.css sistema.css
 si: ambas-h.css apuntes.css diseno.css estilos.css personal.css progreso-visual-2.css
 siguiente: diseno.css estilos.css
 sil: belleza.css diseno.css estilos.css pulido.css
@@ -1005,7 +1002,6 @@ tabla-env: estilos.css progreso-visual.css
 tabla-nutricion: diseno.css estilos.css
 tabla-pauta: diseno.css estilos.css
 tabla-pauta-env: diseno.css estilos.css
-tabla-registro: diseno.css estilos.css
 tabla-rpe: diseno.css estilos.css
 tabla-salud: diseno.css personal.css
 tabla-salud-caja: diseno.css personal.css
@@ -1017,7 +1013,6 @@ tachado: diseno.css estilos.css
 tarjeta-atleta: atletas-lista.css diseno.css estilos.css pulido.css
 tarjeta-img: equipo-belleza.css estilos.css personal.css
 tarjeta-intervalos: color-capa.css diseno.css estilos.css pulido.css
-tarjeta-mes: diseno.css estilos.css
 tarjeta-musica: diseno.css personal.css
 tarjeta-musica-botones: diseno.css personal.css
 tarjeta-musica-cab: diseno.css personal.css
@@ -1030,7 +1025,6 @@ tarjeta-receta-texto: diseno.css estilos.css
 tarjeta-revisar: diseno.css estilos.css revision.css
 tarjeta-semana: diseno.css estilos.css
 tarjeta-semana-abrir: diseno.css estilos.css
-tarjeta-semana-disco: diseno.css estilos.css
 tarjeta-semana-quitar: ambas-a.css diseno.css estilos.css
 tecla: diseno.css estilos.css
 tecla-paso: diseno.css estilos.css
@@ -1062,7 +1056,7 @@ tira-momentos: diseno.css equipo-belleza.css estilos.css
 tira-num: diseno.css estilos.css
 tirar: diseno.css pulido.css
 titular: ambas-a.css belleza-a.css diseno.css estilos.css
-titulo: ambas-a.css belleza.css diseno.css estilos.css vista-c.css
+titulo: ambas-a.css belleza.css diseno.css estilos.css momentos.css vista-c.css
 tm-circulo: diseno.css estilos.css
 tm-item: diseno.css estilos.css
 tm-lista: diseno.css equipo-belleza.css estilos.css
@@ -1078,7 +1072,7 @@ toma-cab: diseno.css estilos.css
 tramo: vista-a.css vista-c.css
 tramo-barra: diseno.css estilos.css
 tramo-lleno: ambas-b.css diseno.css estilos.css
-tramos: ambas-b.css belleza-a.css diseno.css estilos.css
+tramos: ambas-b.css belleza-a.css diseno.css estilos.css momentos.css
 trazada: diseno.css tacto-b.css
 tres-mas: vista-a.css vista-c.css
 trofeo-detalle: belleza-b.css estilos.css
@@ -1112,7 +1106,6 @@ video-semana-k: ambas-a.css youtube.css
 vista: ambas-a.css apuntes.css diseno.css estilos.css
 visto: apuntes.css estilos.css
 vit-hueco: vista-b.css vista-c.css
-vitrina-fila: estilos.css pulido.css
 vitrina-rejilla: estilos.css vista-c.css
 vol-alto: estilos.css revision.css
 vol-bajo: estilos.css revision.css
