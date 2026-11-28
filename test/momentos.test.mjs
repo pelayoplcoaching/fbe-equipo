@@ -360,5 +360,26 @@ console.log('v0.286 · Lo que quedaba de las primeras listas');
     '(C139) «Sin fondo»: una plantilla más (la imagen, transparente); ni se recuerda ni sale en «Sorpréndeme», y en el fondo de pantalla, las cifras de siempre');
 }
 
+console.log('v0.287 · Las tres últimas de las primeras listas');
+{
+  const M = src('momentos.css');
+  const pie = /\.hoja-dialogo :is\(\.hoja-pie-fijo, form > \.fila-botones:last-child\):not\(#n\):not\(#n\):not\(#n\) \{\n  --pie-b: calc\(var\(--esp-20\) \+ env\(safe-area-inset-bottom, 0px\)\);/;
+  check(pie.test(M) && /position: sticky; bottom: calc\(-1 \* var\(--pie-b\)\); z-index: var\(--capa-pegado\);/.test(M) && /padding: var\(--esp-12\) var\(--pie-d\) calc\(var\(--esp-12\) \+ env\(safe-area-inset-bottom, 0px\)\) var\(--pie-i\);/.test(M)
+    && /background: var\(--vidrio-hoja\); backdrop-filter: var\(--vidrio-filtro\);/.test(M),
+    '(C117) el botón principal de las hojas largas, fijo abajo, sobre cristal, de borde a borde y con el hueco del sistema (las tres hojas por pasos y las que ya lo llevaban fijo)');
+  check(/@media \(prefers-reduced-transparency: reduce\), \(prefers-contrast: more\) \{\n  \.hoja-dialogo :is\(\.hoja-pie-fijo, form > \.fila-botones:last-child\)[^{]*\{ background: var\(--hoja\); backdrop-filter: none;/.test(M),
+    '(C117) con «reducir transparencia» o «más contraste», sólido');
+  const filas = ['ui/atleta/Cuestionario.jsx', 'ui/atleta/ObjetivosTuyos.jsx', 'ui/atleta/EsencialNutricionMotor.jsx'].filter((f) => /<div class="fila-botones">[\s\S]{0,700}<\/div>\n( {8}\{paso === 0 && <button[^\n]*\n)?\s*<\/form>\n\s*<\/Hoja>/.test(src(f)));
+  check(filas.length === 3, `(C117) en las tres hojas por pasos, «Atrás» y «Siguiente» cierran el formulario (${filas.length} de 3)`);
+  check(/<input type="date" class="entrada cmd-fecha"/.test(src('ui/atleta/EsencialComidaMas.jsx')) && /<input type="search" class="entrada ayu-buscar-c"/.test(src('ui/atleta/EsencialAyuda.jsx'))
+    && /\.cmd-fecha \{ width: auto; flex: 1 1 10em; min-width: 0; \}/.test(src('comida.css')) && !/\.ayu-buscar-c\s*\{/.test(src('ayuda.css').replace(/\/\*[\s\S]*?\*\//g, '')),
+    '(C131) los dos campos de FBE Esencial que iban por libre (el buscador de dudas y el día de la celebración), con el alto, el radio, la letra y el foco de los demás');
+  const IM = src('imagenes.css');
+  check(/\.ejercicio:not\(\.plegado\) \.ejercicio-cab \.ej-marca > \.ej-mini \{ width: 3rem; height: 3rem; border-radius: var\(--r-14\); \}/.test(IM) && /\.ejercicio\.plegado \.ejercicio-cab \.ej-marca > \.ej-mini \{ width: 2\.25rem; height: 2\.25rem; \}/.test(IM)
+    && /\.ejercicio:not\(\.plegado\) \.ejercicio-cab \.picto \{ width: 3rem; height: 3rem; border-radius: var\(--r-14\); \}/.test(src('diseno.css')) && /\.ejercicio\.plegado \.ejercicio-cab \.picto \{ width: 2\.25rem; height: 2\.25rem; \}/.test(src('diseno.css'))
+    && /clase="miniatura-ej ej-mini" tamanos="48px"/.test(src('ui/atleta/Sesion.jsx')),
+    '(C136) la foto del ejercicio, con el mismo marco que su dibujo (abierto, 48 px; plegado, 36 px)');
+}
+
 console.log(`\n${ok} bien, ${fallos} mal`);
 if (fallos) process.exit(1);

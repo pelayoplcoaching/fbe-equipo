@@ -1309,7 +1309,7 @@ function Ejercicio({ sesionId = null, esUltimo = false, recienHecho = false, e, 
     <article id={`ej-${e.id}`} class={`ejercicio ${plegado ? 'plegado' : ''} ${siguiente ? 'en-curso' : ''} ${recienHecho ? 'recien-hecho' : ''}`} data-se={e.id} aria-label={etiqueta ? `${etiqueta}: ${ej.nombre}` : ej.nombre}>
       <button class="ejercicio-cab" onClick={alternar} aria-expanded={abierto ? 'true' : 'false'}>
         {/* v0.50: el pictograma de su patrón de movimiento, con el disco de la prioridad en la esquina */}
-        <span class="ej-marca"><Imagen id={imagenEjercicio(ej)} clase="miniatura-ej ej-mini" tamanos="40px" alternativa={<PictoEjercicio ejercicio={ej} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
+        <span class="ej-marca"><Imagen id={imagenEjercicio(ej)} clase="miniatura-ej ej-mini" tamanos="48px" alternativa={<PictoEjercicio ejercicio={ej} />} /><Disco prioridad={e.prioridad} titulo={NOMBRE_PRIORIDAD[e.prioridad]} /></span>
         <span>
           <span class="nombre">{etiqueta && <span class="ss-etq">{etiqueta}</span>}{ej.nombre}</span>
           {plegado && <span class="resumen-ej num">{resumenSeries(Object.keys(hechas).map(Number).sort((a, b) => a - b).map((k) => hechas[k]))}</span>}

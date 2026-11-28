@@ -195,8 +195,8 @@ function Celebraciones() {
     <section class="pila-s cmd-celebra" aria-labelledby="cmd-celebra-t">
       <strong id="cmd-celebra-t" class="peq">¿Qué día es?</strong>
       <div class="fila-envolver">
-        <input type="date" class="cmd-fecha" value={fecha} min={hoy} max={sumarDias(hoy, 120)} onInput={(e) => setFecha(e.currentTarget.value)} aria-label="El día de la celebración" />
-        <button type="button" class="btn btn-peq btn-primario" disabled={ocupado} onClick={apuntar}><Icono n="calendario" /> Apuntarla</button>
+        <input type="date" class="entrada cmd-fecha" value={fecha} min={hoy} max={sumarDias(hoy, 120)} onInput={(e) => setFecha(e.currentTarget.value)} aria-label="El día de la celebración" />
+        <button type="button" class="btn btn-primario" disabled={ocupado} onClick={apuntar}><Icono n="calendario" /> Apuntarla</button>
       </div>
       {proximas.length > 0 && (
         <div class="cmd-lista" role="list" aria-label="Tus celebraciones">

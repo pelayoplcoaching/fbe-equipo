@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.287': {
+    // (las tres últimas de las primeras listas: C117, C131 y C136; «claude/belleza-350-estado.md»)
+    atleta: [
+      'En la sesión, la foto de cada ejercicio con el mismo marco que su dibujo: más grande en el que estás haciendo.',
+      'En las hojas largas (tu cuestionario, tus objetivos, tu plan de comida), «Siguiente» se queda fijo abajo, sobre cristal.',
+    ],
+    coach: [
+      'Lo último de las primeras listas: el botón fijo de las hojas largas, dos campos de FBE Esencial y el marco de las fotos de ejercicio.',
+    ],
+  },
   '0.286': {
     // (lo que quedaba de las primeras listas: B58, B77, B84, B94, B97, C128 y C139; «claude/belleza-350-estado.md»)
     atleta: [

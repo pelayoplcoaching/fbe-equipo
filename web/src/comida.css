@@ -40,11 +40,9 @@
 .cmd-idea { display: grid; gap: var(--esp-2); padding: var(--esp-10) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
 .cmd-idea-n { min-width: 0; overflow-wrap: anywhere; }
 .cmd-celebra { padding-top: var(--esp-8); border-top: var(--filo-fino) solid var(--linea); }
-.cmd-fecha {
-  min-height: var(--esp-40); padding: var(--esp-6) var(--esp-10); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
-  background: var(--hoja); color: var(--tinta); font: inherit;
-}
-.cmd-fecha:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+/* (belleza C131, v0.287) el dia de la celebracion es un campo de la casa (.entrada: alto, radio, letra y foco), al lado de
+   "Apuntarla" con su mismo alto; aqui solo cuanto ocupa en la fila */
+.cmd-fecha { width: auto; flex: 1 1 10em; min-width: 0; }
 .cmd-lista { display: grid; gap: var(--esp-6); }
 .cmd-celebra-f { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--esp-10); padding: var(--esp-8) var(--esp-12); border-radius: var(--r-10); background: var(--hoja-2); }
 

@@ -18,11 +18,8 @@
 .ayu-centro { min-width: 0; }
 .ayu-buscar { display: grid; gap: var(--esp-4); }
 .ayu-buscar-t { font-weight: 650; }
-.ayu-buscar-c {
-  width: 100%; min-height: var(--esp-48); padding: var(--esp-8) var(--esp-12); border: var(--filo-fino) solid var(--linea); border-radius: var(--r-10);
-  background: var(--hoja); color: var(--tinta); font: inherit;
-}
-.ayu-buscar-c:focus-visible { outline: var(--filo-marca) solid var(--morado); outline-offset: var(--esp-2); }
+/* (belleza C131, v0.287) el campo de buscar es un campo de la casa (.entrada): el mismo alto, radio, letra de 16 px (asi
+   el iPhone no amplia la pagina al tocarlo) y el mismo foco que los demas. Antes llevaba los suyos. */
 .ayu-cats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--esp-8); }
 .ayu-cat {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--esp-8); width: 100%; min-height: var(--esp-48);

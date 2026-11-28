@@ -133,7 +133,7 @@ export function CentroRespuestas({ inicial = null, alCerrar, alAccion = null }) 
         <Arte id={inicial === 'poco-tiempo' ? 'esencial-poco-tiempo' : 'esencial-respuestas'} />
         <label class="ayu-buscar">
           <span class="ayu-buscar-t peq">Busca tu duda</span>
-          <input type="search" class="ayu-buscar-c" value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder="agujetas, descanso, viaje…" enterkeyhint="search" autocomplete="off" />
+          <input type="search" class="entrada ayu-buscar-c" value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder="agujetas, descanso, viaje…" enterkeyhint="search" autocomplete="off" />
         </label>
         {!lista && (
           <ul class="ayu-cats" aria-label="Temas">

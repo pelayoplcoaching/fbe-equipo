@@ -56,6 +56,11 @@ img.portada-foto { object-fit: cover; object-position: 78% 50%; }
 .ficha-ej-foto-btn:focus-visible { outline: 3px solid var(--sobre-hero, var(--blanco)); outline-offset: -3px; border-radius: var(--r); }
 .ficha-ej-grande { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: var(--r); background: var(--tinta-noche); }
 .ej-marca > .ej-mini { width: 2.5rem; height: 2.5rem; border-radius: var(--r-s); }
+/* (belleza C136, v0.287) La foto del ejercicio, con el mismo marco que su dibujo en cada sitio (diseno.css, apartado 16):
+   en el ejercicio abierto de la sesion, 48 px con radio 14; plegado, 36 px. Antes la foto iba siempre a 40 px y, en una
+   misma sesion, un ejercicio con foto y otro con dibujo no casaban (48 frente a 40, o 36 frente a 40). */
+.ejercicio:not(.plegado) .ejercicio-cab .ej-marca > .ej-mini { width: 3rem; height: 3rem; border-radius: var(--r-14); }
+.ejercicio.plegado .ejercicio-cab .ej-marca > .ej-mini { width: 2.25rem; height: 2.25rem; }
 .miniatura-ej { width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--r-10); object-fit: cover; background: var(--tinta-noche); }
 .ficha-ej-ilu > p { display: flex; align-items: center; gap: var(--esp-10); font-size: var(--tipo-pie, .875rem); }
 .ficha-ej-ilu .picto { color: var(--sobre-hero); background: rgba(255, 255, 255, .1); }

@@ -104,3 +104,25 @@
 /* C139 (v0.286) - "Sin fondo": la imagen sale transparente (las cifras en blanco); en la vista previa, sobre la noche de la
    marca para que se lea (en claro, el blanco no se veria). */
 .cpt-sinfondo:not(#n):not(#n):not(#n) { background: var(--tinta-noche); }
+
+/* C117 (v0.287) - El boton principal de las hojas largas, fijo abajo: en las de preguntas por pasos ("Atras" y
+   "Siguiente": tu cuestionario, tus objetivos y tu plan de comida de FBE Esencial) y en las que ya lo llevaban fijo
+   (.hoja-pie-fijo: rellenar la semana, editar la foto, reenviar, la encuesta). Sobre el cristal de la hoja, de borde a
+   borde y con el hueco del sistema debajo: antes, al quedarse fijo, tocaba el borde de abajo (en el iPhone, la barra de
+   inicio caia encima del boton) y el texto que pasaba por detras se cortaba en seco. El desfase de abajo es el relleno de
+   la hoja: con "bottom: 0" se quedaria a esa altura del borde. */
+.hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) {
+  --pie-b: calc(var(--esp-20) + env(safe-area-inset-bottom, 0px));
+  --pie-d: max(var(--esp-18), env(safe-area-inset-right, 0px));
+  --pie-i: max(var(--esp-18), env(safe-area-inset-left, 0px));
+  position: sticky; bottom: calc(-1 * var(--pie-b)); z-index: var(--capa-pegado);
+  margin: 0 calc(-1 * var(--pie-d)) calc(-1 * var(--pie-b)) calc(-1 * var(--pie-i));
+  padding: var(--esp-12) var(--pie-d) calc(var(--esp-12) + env(safe-area-inset-bottom, 0px)) var(--pie-i);
+  background: var(--vidrio-hoja); backdrop-filter: var(--vidrio-filtro); -webkit-backdrop-filter: var(--vidrio-filtro);
+  box-shadow: inset 0 var(--filo-fino) 0 var(--linea);
+}
+@media (min-width: 700px) { .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { --pie-b: var(--esp-22); padding-bottom: var(--esp-16); } }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (forced-colors: active) { .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: Canvas; border-top: 1px solid CanvasText; box-shadow: none; } }
