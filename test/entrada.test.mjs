@@ -103,14 +103,14 @@ console.log('364 a 366 · La barra de carga dice la verdad y el lobo termina su 
   check(/INSTANTE_MS = 150/.test(p) && /REMATE_MS = 300/.test(p) && p.includes("if (t < INSTANTE_MS) { quitarYa({ sinSalida: true }); return; }"), 'si todo estaba listo antes de 150 ms, sin portada');
 }
 // el lobo acaba su gesto: animaciones de mentira
-const anim = (nombre, fin, ahora, estado = 'running') => ({ animationName: nombre, playState: estado, currentTime: ahora, effect: { getComputedTiming: () => ({ endTime: fin }) }, ritmo: 1, updatePlaybackRate(r) { this.ritmo = r; } });
+const anim = (nombre, fin, ahora, estado = 'running') => ({ animationName: nombre, playState: estado, currentTime: ahora, effect: { getComputedTiming: () => ({ endTime: fin }) }, ritmo: 1, updatePlaybackRate(r) { this.ritmo = r; }, finish() { this.playState = 'finished'; } });
 {
   const a = [anim('portada-traza', 850, 250), anim('portada-rellena', 950, 250), anim('portada-estrellas', Infinity, 100), anim('portada-carga', 2600, 100)];
   const el = { getAnimations: () => a };
   const t0 = Date.now();
   const espera = await rematarLobo(el);
   const tardo = Date.now() - t0;
-  check(espera === 300 && tardo >= 280 && tardo < 600 && Math.abs(a[0].ritmo - 700 / 300) < 0.01 && a[1].ritmo === a[0].ritmo && a[2].ritmo === 1 && a[3].ritmo === 1, `a mitad del dibujo, el trazo se acelera y acaba en 300 ms como mucho (${tardo} ms; ni las estrellas ni la barra se tocan)`);
+  check(espera === 300 && tardo >= 280 && tardo < 600 && Math.abs(a[0].ritmo - 700 / 300) < 0.01 && a[1].ritmo === a[0].ritmo && a[2].ritmo === 1 && a[3].ritmo === 1 && a[0].playState === 'finished' && a[1].playState === 'finished' && a[2].playState === 'running', `a mitad del dibujo, el trazo se acelera y acaba en 300 ms como mucho (${tardo} ms; ni las estrellas ni la barra se tocan)`);
   const b = [anim('portada-traza', 850, 700), anim('portada-rellena', 950, 800)];
   const t1 = Date.now(); const e2 = await rematarLobo({ getAnimations: () => b });
   check(e2 === 150 && Date.now() - t1 < 400 && b[0].ritmo === 1, 'si le falta menos, a su paso');

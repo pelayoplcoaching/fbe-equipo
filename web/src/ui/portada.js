@@ -48,7 +48,8 @@ export function rematarLobo(el, tope = REMATE_MS) {
     if (!(falta > 0)) return Promise.resolve(0);
     if (falta > tope) for (const a of anims) { try { a.updatePlaybackRate(falta / tope); } catch { /* sigue a su paso */ } }
     const espera = Math.min(falta, tope);
-    return new Promise((listo) => { setTimeout(() => listo(espera), espera); });
+    // (al cumplirse el plazo, el gesto se da por acabado: el reloj y la animación pueden no coincidir por un fotograma)
+    return new Promise((listo) => { setTimeout(() => { for (const a of anims) { try { if (a.playState !== 'finished') a.finish(); } catch { /* ya no está */ } } listo(espera); }, espera); });
   } catch { return Promise.resolve(0); }
 }
 

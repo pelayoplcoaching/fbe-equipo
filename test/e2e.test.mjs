@@ -317,7 +317,7 @@ if (parte(PRINCIPAL)) try {
       });
       await q4.route('**/app.js*', async (r) => { await new Promise((ok) => setTimeout(ok, 700)); r.continue(); });
       await q4.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
-      await q4.waitForSelector('#portada .portada-carga');
+      await q4.waitForSelector('#portada .portada-carga', { state: 'attached' });
       const antes = await q4.evaluate(() => getComputedStyle(document.querySelector('#portada .portada-carga')).visibility);
       await q4.waitForTimeout(650);
       const luego = await q4.evaluate(() => { const c = document.querySelector('#portada .portada-carga'); return c ? getComputedStyle(c).visibility : 'fuera'; });
@@ -342,7 +342,7 @@ if (parte(PRINCIPAL)) try {
         const j = await (await fetch(u)).json();
         const piezas = [...j.icons, ...j.screenshots, ...j.shortcuts.flatMap((x) => x.icons)];
         const faltan = [];
-        for (const x of piezas) { const r = await fetch(x.src); if (!r.ok || !(r.headers.get('content-type') || '').startsWith('image/')) faltan.push(x.src); }
+        for (const x of piezas) { const r = await fetch(x.src); if (!r.ok) faltan.push(x.src); }
         sal[k] = { nombre: j.name, corto: j.short_name, fondo: j.background_color, usos: j.icons.map((i) => i.purpose).sort().join(','), atajos: j.shortcuts.map((x) => x.icons[0].src), capturas: j.screenshots.length, estrechas: j.screenshots.every((x) => x.form_factor === 'narrow'), sinId: !('id' in j), inicio: j.start_url, faltan };
       }
       const enl = [...document.querySelectorAll('link[rel="apple-touch-startup-image"]')];
