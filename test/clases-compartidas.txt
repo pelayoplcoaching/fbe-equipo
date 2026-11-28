@@ -374,8 +374,8 @@ eh-cifra: diseno.css estilos.css
 ej-fila: belleza-a.css diseno.css estilos.css
 ej-marca: estilos.css imagenes.css
 eje: diseno.css estilos.css
-ejercicio: diseno.css estilos.css
-ejercicio-cab: belleza-a.css diseno.css estilos.css
+ejercicio: diseno.css estilos.css imagenes.css
+ejercicio-cab: belleza-a.css diseno.css estilos.css imagenes.css
 ejercicio-cuerpo: ambas-b.css belleza-a.css diseno.css estilos.css
 elegida: atletas-lista.css diseno.css estilos.css progreso-visual-2.css progreso-visual.css revision.css visual.css
 elegido: apuntes.css carrera.css diseno.css estilos.css personal.css radar.css
@@ -452,6 +452,7 @@ fijada: diseno.css equipo-belleza.css estilos.css
 fila: diseno.css equipo-belleza.css estilos.css personal.css visual.css
 fila-biblioteca: diseno.css estilos.css
 fila-boton: diseno.css equipo-belleza.css estilos.css personal.css vista-c.css
+fila-botones: estilos.css momentos.css
 fila-dia: ambas-h.css diseno.css estilos.css pulido.css
 fila-entre: estilos.css personal.css
 fila-envolver: color-capa.css diseno.css estilos.css personal.css radar.css sonido.css
@@ -554,8 +555,9 @@ hitos-lista: diseno.css equipo-belleza.css estilos.css
 hoja: apuntes.css diseno.css
 hoja-acciones: diseno.css estilos.css
 hoja-cab: ambas-a.css ambas-d.css diseno.css estilos.css progreso-visual-2.css pulido.css visual.css
-hoja-dialogo: color.css diseno.css estilos.css progreso-visual-2.css pulido.css revision.css sistema.css visual.css
+hoja-dialogo: color.css diseno.css estilos.css momentos.css progreso-visual-2.css pulido.css revision.css sistema.css visual.css
 hoja-mas: diseno.css imagenes.css
+hoja-pie-fijo: estilos.css momentos.css
 hoy: ambas-c.css apuntes.css diseno.css estilos.css registro-actividad.css travesia.css
 hoy-a-mano: ambas-a.css diseno.css
 hoy-a-mano-texto: ambas-a.css diseno.css
@@ -790,7 +792,7 @@ plegable-eq-n: diseno.css equipo-belleza.css
 plegable-eq-t: diseno.css equipo-belleza.css
 plegable-flecha: diseno.css panel-hoy.css personal.css
 plegable-hoy: diseno.css pulido.css
-plegado: diseno.css estilos.css
+plegado: diseno.css estilos.css imagenes.css
 podio-1: diseno.css estilos.css
 podio-2: diseno.css estilos.css
 podio-medalla: diseno.css estilos.css

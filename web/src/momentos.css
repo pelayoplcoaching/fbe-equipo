@@ -122,6 +122,8 @@
   box-shadow: inset 0 var(--filo-fino) 0 var(--linea);
 }
 @media (min-width: 700px) { .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { --pie-b: var(--esp-22); padding-bottom: var(--esp-16); } }
+/* (y lo que se enfoca o se lleva a la vista dentro de la hoja no se queda debajo del pie: el teclado, el lector, Tab) */
+.hoja-dialogo:has(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { scroll-padding-bottom: calc(var(--esp-48) * 2 + env(safe-area-inset-bottom, 0px)); }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .hoja-dialogo :is(.hoja-pie-fijo, form > .fila-botones:last-child):not(#n):not(#n):not(#n) { background: var(--hoja); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }

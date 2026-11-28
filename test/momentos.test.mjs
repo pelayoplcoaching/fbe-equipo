@@ -369,6 +369,8 @@ console.log('v0.287 · Las tres últimas de las primeras listas');
     '(C117) el botón principal de las hojas largas, fijo abajo, sobre cristal, de borde a borde y con el hueco del sistema (las tres hojas por pasos y las que ya lo llevaban fijo)');
   check(/@media \(prefers-reduced-transparency: reduce\), \(prefers-contrast: more\) \{\n  \.hoja-dialogo :is\(\.hoja-pie-fijo, form > \.fila-botones:last-child\)[^{]*\{ background: var\(--hoja\); backdrop-filter: none;/.test(M),
     '(C117) con «reducir transparencia» o «más contraste», sólido');
+  check(/\.hoja-dialogo:has\(\.hoja-pie-fijo, form > \.fila-botones:last-child\):not\(#n\):not\(#n\):not\(#n\) \{ scroll-padding-bottom: calc\(var\(--esp-48\) \* 2 \+ env\(safe-area-inset-bottom, 0px\)\); \}/.test(M),
+    '(C117) y lo que se enfoca dentro de la hoja no se queda debajo del pie');
   const filas = ['ui/atleta/Cuestionario.jsx', 'ui/atleta/ObjetivosTuyos.jsx', 'ui/atleta/EsencialNutricionMotor.jsx'].filter((f) => /<div class="fila-botones">[\s\S]{0,700}<\/div>\n( {8}\{paso === 0 && <button[^\n]*\n)?\s*<\/form>\n\s*<\/Hoja>/.test(src(f)));
   check(filas.length === 3, `(C117) en las tres hojas por pasos, «Atrás» y «Siguiente» cierran el formulario (${filas.length} de 3)`);
   check(/<input type="date" class="entrada cmd-fecha"/.test(src('ui/atleta/EsencialComidaMas.jsx')) && /<input type="search" class="entrada ayu-buscar-c"/.test(src('ui/atleta/EsencialAyuda.jsx'))
