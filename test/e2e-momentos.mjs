@@ -633,8 +633,8 @@ export async function probarMomentos5({ navegador, check, base = 'http://localho
   {
     const { ctx, p, arrastrar } = await abrir('?demo', /Ana/);
     try {
-      // de serie, la regla del peso está
-      const peso = p.locator('[data-atajo="peso"]').first();
+      // de serie, la regla del peso está (el atajo que se ve: según la hora y lo apuntado, Hoy lo lleva en un sitio u otro)
+      const peso = p.locator('[data-atajo="peso"]:visible').first();
       let conRegla = null;
       if (await peso.count()) {
         await peso.scrollIntoViewIfNeeded().catch(() => {});
