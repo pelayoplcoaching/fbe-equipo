@@ -74,15 +74,23 @@ import { instalarTacto } from './ui/tacto.js';
 import { instalarPantalla } from './ui/pantalla.js';
 import { instalarBelleza } from './ui/belleza.js';
 import { instalarLigero } from './ui/ligero.js';
+import { estilosApp } from './ui/estilos-app.js';
+import { avanzarPortada } from './ui/portada.js';
 
+// (belleza 364, v0.288) la barra de la portada avanza por tramos de verdad: aquí, el código de la app ya ha llegado
+avanzarPortada(0.45);
 aplicarTema();
-instalarPulido();
-instalarLlegada();
-instalarPastilla();
-instalarTacto();
-instalarPantalla();
-instalarBelleza();
-instalarLigero();
+// (belleza 361, v0.288) los estilos ya no frenan el primer pintado (web/arranque.js): lo que mira o mide la página se
+// instala cuando están puestos, y siempre antes de montar la app (que también los espera, abajo)
+estilosApp().then(() => {
+  instalarPulido();
+  instalarLlegada();
+  instalarPastilla();
+  instalarTacto();
+  instalarPantalla();
+  instalarBelleza();
+  instalarLigero();
+});
 import { crearApi } from './datos/api.js';
 import { cargarListaImagenes } from './logica/imagenes.js';
 import { crearCola } from './datos/cola.js';
@@ -114,6 +122,7 @@ async function arrancar() {
     globalThis.__fbeRendimiento = enviarRendimiento;
   }
   await backend.iniciar();
+  avanzarPortada(0.65);
   const api = crearApi(backend);
   // Los errores que se escapen se apuntan en la base (Cuenta → Errores de la app); en la demo, no
   instalarRegistro((d) => api.registrarError(d), String(__APP_VERSION__));
@@ -122,6 +131,8 @@ async function arrancar() {
   const cola = crearCola(api);
   // (pulido 3.9) lo apuntado sin conexión se ve encima de lo que diga la base hasta que se envía
   api.usarCola(() => cola.operaciones());
+  // (belleza 361, v0.288) nada se monta sin sus estilos
+  await estilosApp();
   // (color, mejora 20) «Paleta»: solo en la demo (?demo&paleta), para revisar el color de un vistazo
   if (!conSupabase && new URLSearchParams(location.search).has('paleta')) {
     const { PaletaDemo } = await import('./ui/PaletaDemo.jsx');

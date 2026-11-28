@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Ilustracion } from './Ilustraciones.jsx';
 import { Imagen, hayImagen } from './Imagen.jsx';
 import { esPorSuCuenta } from '../logica/esencial.js';
+import { apuntarApp, appDe } from './app-movil.js';
 import { LOBO_CAJA, loboD } from './lobo-trazo.js';
 import { borrarTodoEnCurso } from './en-curso.js';
 import { borrarBorradores } from '../logica/mensajes.js';
@@ -315,6 +316,11 @@ export function App({ backend, api, cola }) {
   const ctxAtleta = enModoAtleta ? { ...ctx, atleta: estado.propio, propio: true } : ctx;
 
   useEffect(() => { if (estado.fase === 'atleta') { try { localStorage.setItem(CLAVE_ROL, 'atleta'); } catch { /* */ } } }, [estado.fase]);
+  // (belleza 357 y 362, v0.288) qué app es en este móvil, para que la próxima vez la portada y el nombre al instalarla sean los suyos
+  useEffect(() => {
+    if (estado.fase !== 'atleta' && estado.fase !== 'coach') return;
+    apuntarApp(appDe(estado.fase === 'atleta' && esPorSuCuenta(estado.atleta)), { recordar: backend.modo !== 'demo' });
+  }, [estado.fase, estado.atleta?.id]);
   // (pulido 2.1) Las fotos de perfil que aún van enteras se aligeran una vez, en segundo plano (el coach, las de todos;
   // un atleta, la suya). Sin la migración 047 no hace nada. Si aligera alguna, el perfil propio se vuelve a leer
   useEffect(() => {

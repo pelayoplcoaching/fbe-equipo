@@ -7,6 +7,12 @@
 // en ASCII (tildes como entidades): la demo es un HTML sin charset.
 // (diseño, tanda 44) Con la noche de la escena del final: estrellas que titilan (dos capas de fondo) y la luna, tenue,
 // que sube detrás del lobo (blanco, delante). Nada de eso alarga la entrada: dura lo que tarde la app.
+// (belleza 351-400, tanda G; v0.288) El primer fotograma: la portada ya no espera a los estilos de la app (web/arranque.js
+// los pone sin frenar), así que lleva aquí todo lo suyo, también su letra (`fuente`). Cada app con su nombre (los dos van
+// escritos y <html data-app="esencial"> elige: lo pone web/arranque.js antes de pintar). El lobo se dibuja con el trazado
+// que va una sola vez en la página (<use>). La barra de carga avanza por tramos de verdad (--carga, que mueve
+// web/src/ui/portada.js; antes de que llegue el código, sola y despacio hasta un tercio) y solo se ve si la carga pasa de
+// medio segundo.
 import { LOBO_CAJA, LOBO_D } from '../web/src/ui/lobo-trazo.js';
 
 export const MORADO_PORTADA = '#5438D8';
@@ -16,7 +22,8 @@ const LETRA = `'Archivo Variable','Archivo',system-ui,-apple-system,'Segoe UI',R
 
 // El lobo mide 256 px de ancho (lo pidió Pelayo: el doble del primer boceto), menos en pantallas pequeñas o apaisadas.
 // El texto entra un instante después que el lobo: para entonces la letra de la app (precargada) ya suele estar.
-export const estiloPortada = () => `<style>
+export const estiloPortada = ({ fuente = '' } = {}) => `<style>
+${fuente}html.hay-portada{background:${FONDO_PORTADA}}
 #portada{position:fixed;inset:0;z-index:2147483000;overflow:hidden;display:grid;grid-template-rows:1fr auto;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 24px) 24px calc(env(safe-area-inset-bottom,0px) + 30px);background:radial-gradient(64% 44% at 50% 40%,rgba(96,68,228,.5),transparent 72%) ${FONDO_PORTADA};color:#fff;font-family:${LETRA};text-align:center;transition:opacity .34s ease}
 #portada .portada-centro{align-self:center;display:grid;justify-items:center;margin-top:-4vh;transition:transform .38s cubic-bezier(.3,0,.2,1)}
 #portada .portada-lobo{display:block;width:min(256px,68vw,34vh);height:auto;fill:#fff;filter:drop-shadow(0 18px 40px rgba(10,6,40,.55));animation:portada-lobo .5s cubic-bezier(.2,.8,.2,1) both}
@@ -35,8 +42,11 @@ export const estiloPortada = () => `<style>
 #portada .portada-filo{width:34px;height:2px;border-radius:2px;background:${ORO};margin:18px 0 16px}
 #portada .portada-lema{font-size:11.5px;line-height:1.3;font-weight:650;letter-spacing:.24em;text-transform:uppercase;color:${ORO};white-space:nowrap}
 #portada .portada-pie{display:grid;justify-items:center;gap:5px}
-#portada .portada-carga{width:120px;height:3px;border-radius:2px;background:rgba(255,255,255,.18);margin-bottom:20px;overflow:hidden}
-#portada .portada-carga span{display:block;width:40%;height:100%;border-radius:2px;background:${ORO};animation:portada-carga 1.15s ease-in-out infinite}
+#portada .portada-carga{width:120px;height:3px;border-radius:2px;background:rgba(255,255,255,.18);margin-bottom:20px;overflow:hidden;visibility:hidden;animation:portada-ver 0s .5s forwards}
+#portada .portada-carga span{display:block;width:100%;height:100%;border-radius:2px;background:${ORO};transform-origin:0 50%;transform:scaleX(var(--carga,.3));transition:transform .45s cubic-bezier(.2,.7,.2,1);animation:portada-carga 2.6s cubic-bezier(.1,.6,.3,1) both}
+#portada[data-carga] .portada-carga span{animation:none}
+#portada .pn-esencial,html[data-app=esencial] #portada .pn-equipo{display:none}
+html[data-app=esencial] #portada .pn-esencial{display:revert}
 #portada .portada-firma{font-size:13px;line-height:1.3;font-weight:600;color:rgba(255,255,255,.82)}
 #portada .portada-firma-2{font-size:10.5px;line-height:1.3;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 #portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:portada-texto .5s .16s cubic-bezier(.2,.8,.2,1) both}
@@ -49,23 +59,26 @@ export const estiloPortada = () => `<style>
 @keyframes portada-traza{to{stroke-dashoffset:0}}
 @keyframes portada-rellena{from{opacity:0}}
 @keyframes portada-texto{from{opacity:0;transform:translateY(8px)}}
-@keyframes portada-carga{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@keyframes portada-carga{from{transform:scaleX(.04)}to{transform:scaleX(.3)}}
+@keyframes portada-ver{to{visibility:visible}}
 @keyframes portada-lento{to{visibility:visible}}
 @media (max-width:380px){#portada .portada-lema{letter-spacing:.2em}}@media (max-width:340px){#portada .portada-lema{letter-spacing:.13em}}
 @media (max-height:520px){#portada .portada-centro{margin-top:0}#portada .portada-nombre{margin-top:14px;font-size:21px}#portada .portada-filo{margin:10px 0 9px}#portada .portada-carga{margin-bottom:10px}}
-@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada::before,#portada::after,#portada .portada-luna{animation:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;width:100%;opacity:.55}}
+@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada::before,#portada::after,#portada .portada-luna{animation:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;transition:none}}
 </style>`;
 
 // (belleza 339, v0.285) El trazado del lobo, una vez y escondido, fuera de la portada (que se quita al abrir): la app lo
 // lee de aquí (loboD() en web/src/ui/lobo-trazo.js) en vez de llevarlo en su código de arranque. (Escondido con su estilo:
 // el atributo «hidden» no esconde un <svg>.)
-export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" d="${LOBO_D}"/></svg>`;
+// (belleza 367, v0.288) y la portada también lo toma de aquí (<use>): antes lo llevaba escrito otras dos veces. Su largo, a 1
+// (pathLength), para poder dibujarlo con el trazo de la portada; a la app le da igual (solo lee su «d»).
+export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" pathLength="1" d="${LOBO_D}"/></svg>`;
 
 export const marcadoPortada = `${spriteLobo}
-<div id="portada" role="status" aria-label="Abriendo FBE Equipo">
+<div id="portada" role="status">
 <div class="portada-centro" aria-hidden="true">
-<div class="portada-noche"><span class="portada-luna"></span><svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><path class="portada-lobo-trazo" pathLength="1" fill="none" d="${LOBO_D}"/><path class="portada-lobo-relleno" fill-rule="evenodd" d="${LOBO_D}"/></svg></div>
-<div class="portada-nombre">FBE Equipo</div>
+<div class="portada-noche"><span class="portada-luna"></span><svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><use class="portada-lobo-trazo" href="#fbe-lobo" fill="none"/><use class="portada-lobo-relleno" href="#fbe-lobo" fill-rule="evenodd"/></svg></div>
+<div class="portada-nombre"><span class="pn-equipo">FBE Equipo</span><span class="pn-esencial">FBE Esencial</span></div>
 <div class="portada-filo"></div>
 <div class="portada-lema">Confianza &middot; Esfuerzo &middot; Compromiso</div>
 </div>
@@ -74,6 +87,7 @@ export const marcadoPortada = `${spriteLobo}
 <div class="portada-firma">By Pelayo Fern&aacute;ndez Cid&oacute;n</div>
 <div class="portada-firma-2">CEO de Fuerza Basada en Evidencia</div>
 </div>
-<p class="solo-lector">FBE Equipo. Confianza, esfuerzo, compromiso. By Pelayo Fern&aacute;ndez Cid&oacute;n, CEO de Fuerza Basada en Evidencia.</p>
+<p class="solo-lector pn-equipo">Abriendo FBE Equipo. Confianza, esfuerzo, compromiso. By Pelayo Fern&aacute;ndez Cid&oacute;n, CEO de Fuerza Basada en Evidencia.</p>
+<p class="solo-lector pn-esencial">Abriendo FBE Esencial. Confianza, esfuerzo, compromiso. By Pelayo Fern&aacute;ndez Cid&oacute;n, CEO de Fuerza Basada en Evidencia.</p>
 <p class="portada-lento">Est&aacute; tardando m&aacute;s de lo normal. <a href="">Volver a cargar</a></p>
 </div>`;

@@ -168,6 +168,9 @@ ${marcadoPortada}
   // config.js y sw.js no pasan por esbuild: lo que no sea ASCII (tildes de los comentarios) se escribe como \\u…
   const aAscii = (t) => t.replace(/[^\x00-\x7f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
   writeFileSync(join(salida, 'config.js'), aAscii(readFileSync(join(raiz, 'web/config.js'), 'utf8')));
+  // (belleza 361 y 362, v0.288) lo que corre antes de pintar: los estilos sin frenar y el nombre de cada app (web/arranque.js)
+  // (sin sus comentarios de línea entera: se pide antes que nada y cuanto menos pese, mejor)
+  writeFileSync(join(salida, 'arranque.js'), aAscii(readFileSync(join(raiz, 'web/arranque.js'), 'utf8').replace(/^\s*\/\/.*\n/gm, '')));
 
   const listar = (d) => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? listar(join(d, f)) : [join(d, f)]));
   const archivos = listar(salida).map((f) => relative(salida, f)).filter((f) => !f.endsWith('.map'));
@@ -181,9 +184,9 @@ ${marcadoPortada}
   const precargas = [...alArrancar].map((f) => `  <link rel="modulepreload" href="${relative(salida, join(process.cwd(), f))}">\n`).join('');
   writeFileSync(join(salida, 'index.html'), readFileSync(join(raiz, 'web/index.html'), 'utf8').replaceAll('__VERSION__', version)
     .replace('  <script type="module" src="app.js', () => `${precargas}  <script type="module" src="app.js`)
-    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada()).replace('<!--PORTADA-->', () => marcadoPortada)
+    .replace('<!--PORTADA-ESTILO-->', () => estiloPortada({ fuente: fontFace('fonts/archivo-latin.woff2').replace('font-display:swap', 'font-display:block') })).replace('<!--PORTADA-->', () => marcadoPortada)
     // (v0.209) dónde están los estilos del coach (los pide ui/App.jsx al cargar su app; un atleta, nunca)
-    .replace('  <link rel="stylesheet" href="app.css', () => `  <meta name="fbe-coach-css" content="${cssCoach}">\n  <link rel="stylesheet" href="app.css`)
+    .replace('  <link rel="preload" href="app.css', () => `  <meta name="fbe-coach-css" content="${cssCoach}">\n  <link rel="preload" href="app.css`)
     // (v0.209) la marca de la portada en <html> (el fondo de la raíz, morado mientras está): la quita ui/portada.js con ella
     .replace('<html lang="es">', '<html lang="es" class="hay-portada">'));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
@@ -204,7 +207,7 @@ ${marcadoPortada}
   writeFileSync(join(salida, 'sw.js'), aAscii(readFileSync(join(raiz, 'web/sw.js'), 'utf8').replace('__VERSION__', version).replace('__ARCHIVOS__', JSON.stringify(precache))
     .replaceAll('__HUELLAS__', JSON.stringify(huellas)).replaceAll('__DEMO_ARCHIVOS__', JSON.stringify(archivos.filter(deLaDemo))).replaceAll('__COACH_ARCHIVOS__', JSON.stringify(coachArchivos))
     .replaceAll('__IMAGENES_ARCHIVOS__', JSON.stringify(listaImagenes)).replaceAll('__MODELOS__', JSON.stringify(`fbe-modelos-pose-${POSE_VERSION}`)).replaceAll('__MODELO_DIR__', JSON.stringify(POSE_DIR)).replaceAll('__MODELO_ARCHIVOS__', JSON.stringify(POSE_ARCHIVOS))));
-  for (const f of ['sw.js', 'config.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
+  for (const f of ['sw.js', 'config.js', 'arranque.js']) soloAscii(readFileSync(join(salida, f), 'utf8'), f);
   writeFileSync(join(salida, '.nojekyll'), '');
 
   const tam = (f) => (statSync(join(salida, f)).size / 1024).toFixed(0);
