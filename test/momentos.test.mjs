@@ -311,7 +311,7 @@ console.log('v0.285 · El repaso');
     const conConst = lista('').filter((r) => r !== 'ui/lobo-trazo.js' && /\bLOBO_D\b/.test(src(r)));
     const L = src('ui/lobo-trazo.js'), PO = readFileSync(new URL('../scripts/portada.mjs', import.meta.url), 'utf8');
     check(conConst.length === 0 && /export function loboD\(\)/.test(L) && /document\.getElementById\('fbe-lobo'\)\?\.getAttribute\('d'\)/.test(L)
-      && /export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" d="\$\{LOBO_D\}"\/><\/svg>`;/.test(PO) && /export const marcadoPortada = `\$\{spriteLobo\}/.test(PO),
+      && /export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden="true" focusable="false"><path id="fbe-lobo" pathLength="1" d="\$\{LOBO_D\}"\/><\/svg>`;/.test(PO) && /export const marcadoPortada = `\$\{spriteLobo\}/.test(PO),
       `(339) el trazado del lobo ya no va en el código: se lee del index.html, donde va una vez escondido (fuera de la portada, que se quita)${conConst.length ? `; aún lo importan: ${conConst.join(', ')}` : ''}`);
   }
   {

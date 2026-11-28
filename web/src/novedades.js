@@ -6,6 +6,16 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.288': {
+    // (belleza 351-500, tanda G, primera parte: el primer fotograma; «claude/belleza-500-propuesta.md»)
+    atleta: [
+      'Al abrir la app, la portada sale al instante y con el nombre de tu app; y el lobo siempre termina de dibujarse antes de entrar.',
+      'Al instalar FBE Esencial, lleva su nombre y su icono. Y cada atajo del icono (mantenlo pulsado) tiene su dibujo.',
+    ],
+    coach: [
+      'La carga, 1.ª parte: la portada no espera a los estilos, la barra avanza de verdad y FBE Esencial se instala con su nombre e icono.',
+    ],
+  },
   '0.287': {
     // (las tres últimas de las primeras listas: C117, C131 y C136; «claude/belleza-350-estado.md»)
     atleta: [

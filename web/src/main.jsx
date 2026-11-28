@@ -76,6 +76,7 @@ import { instalarBelleza } from './ui/belleza.js';
 import { instalarLigero } from './ui/ligero.js';
 import { estilosApp } from './ui/estilos-app.js';
 import { avanzarPortada } from './ui/portada.js';
+import { adelantarBienvenida } from './ui/adelanto.js';
 
 // (belleza 364, v0.288) la barra de la portada avanza por tramos de verdad: aquí, el código de la app ya ha llegado
 avanzarPortada(0.45);
@@ -104,6 +105,8 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); wind
 async function arrancar() {
   // (v0.207) la lista de las ilustraciones, en su propio trozo: se pide ya, a la vez que lo demás, y se espera antes de pintar
   const listaImagenes = cargarListaImagenes().catch(() => {});
+  // (belleza 363, v0.288) y, con ella, el fondo de la bienvenida de esta hora: mientras se ve la portada
+  listaImagenes.then(() => { adelantarBienvenida(); });
   const cfg = window.FBE_CONFIG || {};
   const conSupabase = !__DEMO__ && cfg.supabaseUrl && cfg.supabaseAnonKey && !new URLSearchParams(location.search).has('demo');
   let backend;

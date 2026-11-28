@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSy
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import { estiloPortada, marcadoPortada, FONDO_PORTADA } from './portada.mjs';
+import { PANTALLAS_IOS, pngLiso } from './arranque-ios.mjs';
 import { opcionesApp, opcionesWorker, soloAscii, PRODUCCION, archivosDeArranque, trozosSoloCoach } from './opciones-build.mjs';
 import { cssDelCoach, separarCssPorTrozos, duenosDeCodigo } from './css-coach.mjs';
 import { cubos } from './css-cubos.mjs';
@@ -142,27 +143,63 @@ ${marcadoPortada}
 
   // Iconos de la app (disco morado sobre tiza), en web/iconos/
   for (const n of ['icono.svg', 'icono-180.png', 'icono-192.png', 'icono-512.png', 'insignia-96.png']) copyFileSync(join(raiz, 'web/iconos', n), join(salida, n));
+  // (belleza 353-357, v0.288) y lo que pide el móvil al instalar: el icono con su zona segura (para los redondos de Android),
+  // el de un solo color, uno por atajo, y los de FBE Esencial (el mismo lobo sobre la noche). No se guardan para usar sin
+  // conexión (NO_GUARDAR, abajo): los pide el sistema al instalar, no la app.
+  const ICONOS_EXTRA = ['icono-maskable-512.png', 'lobo-mono-512.png', 'esencial.svg', 'esencial-180.png', 'esencial-192.png', 'esencial-512.png', 'esencial-maskable-512.png',
+    'atajo-sesion-192.png', 'atajo-checkin-192.png', 'atajo-mensajes-192.png', 'atajo-revisar-192.png', 'atajo-e-sesion-192.png', 'atajo-e-semana-192.png', 'atajo-e-progreso-192.png'];
+  for (const n of ICONOS_EXTRA) copyFileSync(join(raiz, 'web/iconos', n), join(salida, n));
+  // (belleza 356) las capturas de la ficha de instalar de Android (web/instalar/, hechas con la demo: sin datos de nadie)
+  mkdirSync(join(salida, 'instalar'), { recursive: true });
+  const CAPTURAS = { equipo: ['equipo-hoy.webp', 'equipo-sesion.webp', 'equipo-progreso.webp'], esencial: ['esencial-hoy.webp', 'esencial-sesion.webp', 'esencial-progreso.webp'] };
+  for (const n of Object.values(CAPTURAS).flat()) copyFileSync(join(raiz, 'web/instalar', n), join(salida, 'instalar', n));
+  // (belleza 351) iPhone y iPad con la app instalada: la noche desde el toque en el icono. Una imagen lisa por tamaño de
+  // pantalla, hecha aquí (un PNG de un solo color pesa menos de 4 KB): sin ellas, iOS deja un instante en blanco antes de la
+  // portada. Lisa y sin el lobo a propósito: el lobo se dibuja en la portada, y uno ya pintado que desaparece para volver a
+  // dibujarse sería un salto.
+  mkdirSync(join(salida, 'arranque'), { recursive: true });
+  const enlacesArranque = PANTALLAS_IOS.flatMap(([w, h, dpr, apaisada]) => [[w * dpr, h * dpr, 'portrait'], ...(apaisada ? [[h * dpr, w * dpr, 'landscape']] : [])].map(([an, al, giro]) => {
+    const n = `arranque/${an}x${al}.png`;
+    writeFileSync(join(salida, n), pngLiso(an, al, FONDO_PORTADA));
+    return `  <link rel="apple-touch-startup-image" media="(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: ${giro})" href="${n}">\n`;
+  })).join('');
 
+  // (belleza 357) Dos manifiestos, uno por app: la página enlaza el de FBE Equipo y web/arranque.js lo cambia por el de FBE
+  // Esencial antes de pintar (y ui/app-movil.js al entrar). Los dos sin «id» (vale la dirección de inicio, la misma): es la
+  // misma app instalada, con el nombre y el icono de quien la usa.
+  const icono = (src, sizes, purpose) => ({ src, sizes, type: src.endsWith('.svg') ? 'image/svg+xml' : 'image/png', ...(purpose ? { purpose } : {}) });
+  const atajo = (name, short_name, url, ico) => ({ name, short_name, url, icons: [icono(ico, '192x192')] });
+  const capturas = (lista) => lista.map((n) => ({ src: `instalar/${n}`, sizes: '780x1688', type: 'image/webp', form_factor: 'narrow' }));
+  const deLasDos = { lang: 'es', start_url: './', scope: './', display: 'standalone', background_color: FONDO_PORTADA, theme_color: FONDO_PORTADA }; // (color, mejora 19) la barra, en la tinta noche de la portada (la misma del arranque)
   writeFileSync(join(salida, 'manifest.webmanifest'), JSON.stringify({
-    name: 'FBE Equipo', short_name: 'FBE Equipo', lang: 'es', start_url: './', scope: './', display: 'standalone',
-    background_color: FONDO_PORTADA, theme_color: FONDO_PORTADA,  // (color, mejora 19) la barra, en la tinta noche de la portada (la misma del arranque)
+    name: 'FBE Equipo', short_name: 'FBE Equipo', ...deLasDos,
     description: 'Tu programa de FBE Coaching y el registro de cada serie.',
-    icons: [
-      { src: 'icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      { src: 'icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-      { src: 'icono.svg', sizes: 'any', type: 'image/svg+xml' },
-    ],
+    icons: [icono('icono-192.png', '192x192', 'any'), icono('icono-512.png', '512x512', 'any'), icono('icono.svg', 'any', 'any'), icono('icono-maskable-512.png', '512x512', 'maskable'), icono('lobo-mono-512.png', '512x512', 'monochrome')],
+    screenshots: capturas(CAPTURAS.equipo),
     // v0.48: accesos directos (mantener pulsado el icono) y «Compartir → FBE Equipo» un vídeo de la galería
     // (Android con Chrome; el service worker lo recibe y la app lo ofrece como vídeo de técnica). En iPhone no hay
     // ninguna de las dos cosas para una app web: no salen y no pasa nada.
+    // (belleza 355) cada atajo, con su dibujo
     shortcuts: [
-      { name: 'Empezar la sesión de hoy', short_name: 'Sesión de hoy', url: './?accion=sesion#hoy', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
-      { name: 'Check-in', short_name: 'Check-in', url: './#checkin', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
-      { name: 'Mensajes', short_name: 'Mensajes', url: './#mensajes', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
-      { name: 'Revisar (coach)', short_name: 'Revisar', url: './#revisar', icons: [{ src: 'icono-192.png', sizes: '192x192', type: 'image/png' }] },
+      atajo('Empezar la sesión de hoy', 'Sesión de hoy', './?accion=sesion#hoy', 'atajo-sesion-192.png'),
+      atajo('Check-in', 'Check-in', './#checkin', 'atajo-checkin-192.png'),
+      atajo('Mensajes', 'Mensajes', './#mensajes', 'atajo-mensajes-192.png'),
+      atajo('Revisar (coach)', 'Revisar', './#revisar', 'atajo-revisar-192.png'),
     ],
     // v0.56: fotos, vídeos y PDF (hasta 10) para el chat; un vídeo solo, también como vídeo de técnica (el atleta)
     share_target: { action: './compartir', method: 'POST', enctype: 'multipart/form-data', params: { title: 'titulo', text: 'texto', files: [{ name: 'archivos', accept: ['image/*', 'video/*', 'application/pdf', '.pdf'] }] } },
+  }, null, 2));
+  // (sin «description» todavía: es una frase nueva y pasa antes por Pelayo; sin «share_target»: quien va por su cuenta no
+  // tiene chat ni vídeos de técnica a los que mandar nada)
+  writeFileSync(join(salida, 'manifest-esencial.webmanifest'), JSON.stringify({
+    name: 'FBE Esencial', short_name: 'FBE Esencial', ...deLasDos,
+    icons: [icono('esencial-192.png', '192x192', 'any'), icono('esencial-512.png', '512x512', 'any'), icono('esencial.svg', 'any', 'any'), icono('esencial-maskable-512.png', '512x512', 'maskable'), icono('lobo-mono-512.png', '512x512', 'monochrome')],
+    screenshots: capturas(CAPTURAS.esencial),
+    shortcuts: [
+      atajo('Empezar la sesión de hoy', 'Sesión de hoy', './?accion=sesion#hoy', 'atajo-e-sesion-192.png'),
+      atajo('Semana', 'Semana', './#semana', 'atajo-e-semana-192.png'),
+      atajo('Progreso', 'Progreso', './#progreso', 'atajo-e-progreso-192.png'),
+    ],
   }, null, 2));
 
   // config.js y sw.js no pasan por esbuild: lo que no sea ASCII (tildes de los comentarios) se escribe como \\u…
@@ -188,7 +225,9 @@ ${marcadoPortada}
     // (v0.209) dónde están los estilos del coach (los pide ui/App.jsx al cargar su app; un atleta, nunca)
     .replace('  <link rel="preload" href="app.css', () => `  <meta name="fbe-coach-css" content="${cssCoach}">\n  <link rel="preload" href="app.css`)
     // (v0.209) la marca de la portada en <html> (el fondo de la raíz, morado mientras está): la quita ui/portada.js con ella
-    .replace('<html lang="es">', '<html lang="es" class="hay-portada">'));
+    .replace('<html lang="es">', '<html lang="es" class="hay-portada">')
+    // (belleza 351) las imagenes de arranque de iOS, detras del icono de la pantalla de inicio
+    .replace(/(  <link rel="apple-touch-icon"[^\n]*\n)/, (m) => `${m}${enlacesArranque}`));
   // (v0.58) los modelos, no: se guardan en su propia caché la primera vez que se usan
   // (revisión de seguridad v0.58) ni los vídeos de ejemplo de la demo (solo los pide la demo, al verlos)
   const soloDemo = (f) => /^chunks\/video(-barra)?-demo-[A-Z0-9]+\.js$/.test(f);
@@ -200,7 +239,12 @@ ${marcadoPortada}
   // del coach, la primera vez que entra (mensaje «guardar-coach»)
   // (calculados arriba, junto a sus estilos)
   const soloCoach = (f) => soloCoachRutas.has(f) || f === cssCoach;
-  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f) && !soloCoach(f)).map((f) => (f === 'app.css' || f === 'app.js' ? `${f}?v=${version}` : f))];
+  // (belleza 351-357, v0.288) ni lo que solo pide el sistema al instalar (imágenes de arranque de iOS, capturas de la ficha de
+  // Android, iconos de atajos y de FBE Esencial); el icono pequeño de FBE Esencial sí (es el de la pestaña)
+  const NO_GUARDAR = new Set(ICONOS_EXTRA.filter((n) => n !== 'esencial.svg'));
+  const soloInstalar = (f) => f.startsWith('arranque/') || f.startsWith('instalar/') || NO_GUARDAR.has(f);
+  // (arranque.js, con su versión: así lo pide la página, y así tiene que estar guardado para abrir sin cobertura)
+  const precache = ['./', ...archivos.filter((f) => f !== 'index.html' && !f.startsWith('modelos/') && (!f.startsWith('imagenes/') || f.startsWith('imagenes/acceso/sin-conexion-')) && !soloDemo(f) && !deLaDemo(f) && !soloCoach(f) && !soloInstalar(f)).map((f) => (f === 'app.css' || f === 'app.js' || f === 'arranque.js' ? `${f}?v=${version}` : f))];
   // (pulido 3.7) y la huella de cada archivo, para que al actualizar no se vuelva a descargar lo que no ha cambiado
   const coachArchivos = archivos.filter(soloCoach);
   const huellas = Object.fromEntries([...precache, ...coachArchivos].filter((u) => u !== 'config.js').map((u) => [u, createHash('sha256').update(readFileSync(join(salida, u === './' ? 'index.html' : u.split('?')[0]))).digest('hex')]));

@@ -253,7 +253,10 @@ if (parte(PRINCIPAL)) try {
         carga: getComputedStyle(el.querySelector('.portada-carga span')).animationName === 'portada-carga',
         lema: /Confianza, esfuerzo, compromiso/.test(t) && /Confianza . Esfuerzo . Compromiso/.test(el.querySelector('.portada-lema').textContent),
         firma: t.includes('By Pelayo Fern\u00e1ndez Cid\u00f3n') && t.includes('CEO de Fuerza Basada en Evidencia'),
-        nombre: el.getAttribute('aria-label') === 'Abriendo FBE Equipo', rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content,
+        // (v0.288) el nombre de la app, una sola vez a la vista y otra para el lector (antes, en aria-label)
+        nombre: [...el.querySelectorAll('.portada-nombre span')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.textContent).join('|') === 'FBE Equipo'
+          && [...el.querySelectorAll('.solo-lector')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.textContent.slice(0, 20)).join('|') === 'Abriendo FBE Equipo.' && !el.hasAttribute('aria-label'),
+        rol: el.getAttribute('role'), color: document.querySelector('meta[name=theme-color]').content,
       };
     });
     check(portada.tapa && portada.lobo && portada.sinImagen && portada.carga && portada.lema && portada.firma && portada.nombre && portada.rol === 'status' && portada.color === '#1E1548',
@@ -264,7 +267,8 @@ if (parte(PRINCIPAL)) try {
     await q2.addInitScript(() => {
       try { localStorage.setItem('fbe-ajustes', JSON.stringify({ tema: 'oscuro' })); } catch { /* */ }
       window.__tc = [];
-      new MutationObserver((ms) => { for (const m of ms) if (m.target.id === 'tc-portada') window.__tc.push(m.target.content); })
+      // (v0.288) mientras la portada no ha empezado a irse: al salir, la barra pasa al color de la app en unos pasos (belleza 358)
+      new MutationObserver((ms) => { for (const m of ms) if (m.target.id === 'tc-portada' && !document.getElementById('portada')?.hasAttribute('data-sale')) window.__tc.push(m.target.content); })
         .observe(document, { subtree: true, attributes: true, attributeFilter: ['content'] });
     });
     await q2.goto('http://localhost:4174/?demo');
@@ -272,12 +276,87 @@ if (parte(PRINCIPAL)) try {
     check((await q2.evaluate(() => window.__tc)).length === 0, 'con el tema oscuro elegido, la barra del sistema no pierde el color de la portada');
     await q2.evaluate(() => localStorage.removeItem('fbe-ajustes'));
     await q2.close();
+    // (belleza 361, 362 y 368; v0.288) La portada no espera a los estilos de la app: con ellos parados, se pinta igual, con su
+    // letra y con el nombre de su app; el primer fotograma es la noche lisa y la luz de detrás del lobo llega encima
+    for (const [dir, nombre, manifiesto] of [['?demo', 'FBE Equipo', 'manifest.webmanifest'], ['?demo=esencial', 'FBE Esencial', 'manifest-esencial.webmanifest']]) {
+      const q3 = await ctx.newPage();
+      await q3.route('**/app.js*', () => {});
+      await q3.route('**/app.css*', () => {});
+      await q3.goto(`http://localhost:4174/${dir}`, { waitUntil: 'commit' });
+      await q3.waitForSelector('#portada .portada-lobo');
+      await q3.waitForFunction(() => performance.getEntriesByType('paint').some((x) => x.name === 'first-contentful-paint'), null, { timeout: 5000 }).catch(() => {});
+      const d = await q3.evaluate(() => {
+        const el = document.getElementById('portada'); const halo = el.querySelector('.portada-halo');
+        return {
+          pintada: performance.getEntriesByType('paint').some((x) => x.name === 'first-contentful-paint'),
+          nombre: [...el.querySelectorAll('.portada-nombre span')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.textContent).join('|'),
+          lector: [...el.querySelectorAll('.solo-lector')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.textContent.split('.')[0]).join('|'),
+          titulo: document.title, manifiesto: document.querySelector('link[rel=manifest]').getAttribute('href'), app: document.documentElement.dataset.app || '',
+          instalar: document.querySelector('meta[name="apple-mobile-web-app-title"]').content,
+          fondo: getComputedStyle(el).backgroundColor, raiz: getComputedStyle(document.documentElement).backgroundColor, halo: !!halo && getComputedStyle(halo).animationName === 'portada-halo',
+          letra: getComputedStyle(el.querySelector('.portada-nombre')).fontFamily.includes('Archivo'), sinFrenar: !document.querySelector('link[rel=stylesheet][href^="app.css"]:not([media=print])'),
+          lobos: document.querySelectorAll('path[d]').length === 1 && el.querySelectorAll('use[href="#fbe-lobo"]').length === 2,
+        };
+      });
+      check(d.pintada && d.nombre === nombre && d.lector === `Abriendo ${nombre}` && d.titulo === nombre && d.instalar === nombre && d.manifiesto === manifiesto && (d.app === 'esencial') === (nombre === 'FBE Esencial')
+        && d.fondo === 'rgb(30, 21, 72)' && d.raiz === 'rgb(30, 21, 72)' && d.halo && d.letra && d.sinFrenar && d.lobos,
+        `la portada de ${nombre} se pinta sin esperar a los estilos de la app, con su nombre (también para el lector, la pestaña y al instalar), sobre la noche lisa y con el lobo escrito una sola vez ${JSON.stringify(d)}`);
+      await q3.close();
+    }
+    // (belleza 364 a 366) La barra de carga avanza por tramos y solo se ve si la carga pasa de medio segundo; al entrar, el lobo
+    // ya ha acabado de dibujarse (nunca se corta a medias)
+    {
+      const q4 = await ctx.newPage();
+      await q4.addInitScript(() => {
+        window.__tramos = [];
+        new MutationObserver(() => {
+          const el = document.getElementById('portada'); if (!el) return;
+          const v = el.style.getPropertyValue('--carga'); if (v && window.__tramos.at(-1) !== v) window.__tramos.push(v);
+          if (el.hasAttribute('data-sale') && window.__alSalir == null) window.__alSalir = (el.getAnimations({ subtree: true }) || []).filter((a) => /^portada-(traza|rellena)$/.test(a.animationName || '') && a.playState === 'running').length;
+        }).observe(document, { subtree: true, attributes: true, attributeFilter: ['style', 'data-sale', 'data-carga'] });
+      });
+      await q4.route('**/app.js*', async (r) => { await new Promise((ok) => setTimeout(ok, 700)); r.continue(); });
+      await q4.goto('http://localhost:4174/?demo', { waitUntil: 'commit' });
+      await q4.waitForSelector('#portada .portada-carga');
+      const antes = await q4.evaluate(() => getComputedStyle(document.querySelector('#portada .portada-carga')).visibility);
+      await q4.waitForTimeout(650);
+      const luego = await q4.evaluate(() => { const c = document.querySelector('#portada .portada-carga'); return c ? getComputedStyle(c).visibility : 'fuera'; });
+      await q4.waitForFunction(() => !document.getElementById('portada'), null, { timeout: 20000 });
+      const t = await q4.evaluate(() => ({ tramos: window.__tramos.map(Number), alSalir: window.__alSalir }));
+      check(antes === 'hidden' && luego === 'visible' && t.tramos.length >= 3 && t.tramos.every((v, i) => i === 0 || v > t.tramos[i - 1]) && t.tramos.at(-1) === 1 && t.alSalir === 0,
+        `la barra de la portada no se ve antes de medio segundo (${antes} → ${luego}), avanza por tramos hasta llenarse (${t.tramos.join(', ')}) y el lobo ha acabado de dibujarse al salir (${t.alSalir} trazos a medias)`);
+      await q4.close();
+    }
   }
   await p.goto('http://localhost:4174/?demo');
   await p.getByRole('heading', { name: 'Entra en tu cuenta' }).waitFor();
   await p.waitForFunction(() => !document.getElementById('portada') && !document.getElementById('tc-portada'));
   check(true, 'la portada se va sola en cuanto se puede entrar');
   check(JSON.parse(await (await fetch('http://localhost:4174/manifest.webmanifest')).text()).background_color === '#1E1548', 'el manifiesto arranca en el fondo de la portada (Android la enlaza sin salto)');
+  // (belleza 351 y 353 a 357; v0.288) Lo que pide el móvil al instalar: cada app con su manifiesto (nombre, icono con zona
+  // segura, icono de un color, un dibujo por atajo y capturas para la ficha de Android), y en iOS una imagen de arranque por pantalla
+  {
+    const m = await p.evaluate(async () => {
+      const sal = {};
+      for (const [k, u] of [['equipo', 'manifest.webmanifest'], ['esencial', 'manifest-esencial.webmanifest']]) {
+        const j = await (await fetch(u)).json();
+        const piezas = [...j.icons, ...j.screenshots, ...j.shortcuts.flatMap((x) => x.icons)];
+        const faltan = [];
+        for (const x of piezas) { const r = await fetch(x.src); if (!r.ok || !(r.headers.get('content-type') || '').startsWith('image/')) faltan.push(x.src); }
+        sal[k] = { nombre: j.name, corto: j.short_name, fondo: j.background_color, usos: j.icons.map((i) => i.purpose).sort().join(','), atajos: j.shortcuts.map((x) => x.icons[0].src), capturas: j.screenshots.length, estrechas: j.screenshots.every((x) => x.form_factor === 'narrow'), sinId: !('id' in j), inicio: j.start_url, faltan };
+      }
+      const enl = [...document.querySelectorAll('link[rel="apple-touch-startup-image"]')];
+      const una = enl.find((l) => /device-width: 390px\) and \(device-height: 844px\) and \(-webkit-device-pixel-ratio: 3\) and \(orientation: portrait\)/.test(l.media));
+      const img = una ? await new Promise((ok) => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = 4; c.height = 4; const x = c.getContext('2d'); x.drawImage(i, 0, 0, 4, 4); ok({ w: i.naturalWidth, h: i.naturalHeight, color: [...x.getImageData(1, 1, 1, 1).data].join(',') }); }; i.onerror = () => ok(null); i.src = una.getAttribute('href'); }) : null;
+      return { ...sal, arranques: enl.length, distintas: new Set(enl.map((l) => l.media)).size, img };
+    });
+    check(m.equipo.nombre === 'FBE Equipo' && m.esencial.nombre === 'FBE Esencial' && m.esencial.corto === 'FBE Esencial' && m.esencial.fondo === '#1E1548'
+      && [m.equipo, m.esencial].every((x) => x.usos === 'any,any,any,maskable,monochrome' && x.capturas === 3 && x.estrechas && x.sinId && x.inicio === './' && !x.faltan.length && new Set(x.atajos).size === x.atajos.length)
+      && m.equipo.atajos.length === 4 && m.esencial.atajos.length === 3,
+      `cada app con su manifiesto: nombre, icono con zona segura y de un color, un dibujo por atajo y tres capturas para la ficha de instalar ${JSON.stringify(m.equipo)} ${JSON.stringify(m.esencial)}`);
+    check(m.arranques >= 19 && m.distintas === m.arranques && m.img?.w === 1170 && m.img?.h === 2532 && m.img?.color === '30,21,72,255',
+      `en iPhone y iPad con la app instalada, la noche desde el toque: ${m.arranques} imágenes de arranque, una por pantalla, del color de la portada ${JSON.stringify(m.img)}`);
+  }
   await revisar('acceso');
 
   console.log('Coach: alta, bloque y publicación');

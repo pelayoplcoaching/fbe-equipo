@@ -12,7 +12,8 @@
 // escritos y <html data-app="esencial"> elige: lo pone web/arranque.js antes de pintar). El lobo se dibuja con el trazado
 // que va una sola vez en la página (<use>). La barra de carga avanza por tramos de verdad (--carga, que mueve
 // web/src/ui/portada.js; antes de que llegue el código, sola y despacio hasta un tercio) y solo se ve si la carga pasa de
-// medio segundo.
+// medio segundo. El primer fotograma es la noche lisa (la misma del fondo de la raíz y de la imagen de arranque de iOS,
+// scripts/arranque-ios.mjs) y la luz de detrás del lobo llega encima (.portada-halo): del icono a la portada, sin salto.
 import { LOBO_CAJA, LOBO_D } from '../web/src/ui/lobo-trazo.js';
 
 export const MORADO_PORTADA = '#5438D8';
@@ -24,7 +25,7 @@ const LETRA = `'Archivo Variable','Archivo',system-ui,-apple-system,'Segoe UI',R
 // El texto entra un instante después que el lobo: para entonces la letra de la app (precargada) ya suele estar.
 export const estiloPortada = ({ fuente = '' } = {}) => `<style>
 ${fuente}html.hay-portada{background:${FONDO_PORTADA}}
-#portada{position:fixed;inset:0;z-index:2147483000;overflow:hidden;display:grid;grid-template-rows:1fr auto;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 24px) 24px calc(env(safe-area-inset-bottom,0px) + 30px);background:radial-gradient(64% 44% at 50% 40%,rgba(96,68,228,.5),transparent 72%) ${FONDO_PORTADA};color:#fff;font-family:${LETRA};text-align:center;transition:opacity .34s ease}
+#portada{position:fixed;inset:0;z-index:2147483000;overflow:hidden;display:grid;grid-template-rows:1fr auto;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 24px) 24px calc(env(safe-area-inset-bottom,0px) + 30px);background:${FONDO_PORTADA};color:#fff;font-family:${LETRA};text-align:center;transition:opacity .34s ease}
 #portada .portada-centro{align-self:center;display:grid;justify-items:center;margin-top:-4vh;transition:transform .38s cubic-bezier(.3,0,.2,1)}
 #portada .portada-lobo{display:block;width:min(256px,68vw,34vh);height:auto;fill:#fff;filter:drop-shadow(0 18px 40px rgba(10,6,40,.55));animation:portada-lobo .5s cubic-bezier(.2,.8,.2,1) both}
 #portada .portada-lobo-trazo{stroke:#fff;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:portada-traza .8s cubic-bezier(.3,.1,.2,1) .05s both}
@@ -32,12 +33,14 @@ ${fuente}html.hay-portada{background:${FONDO_PORTADA}}
 #portada::before,#portada::after{content:"";position:absolute;inset:0;pointer-events:none;animation:portada-estrellas 1.7s ease-in-out infinite alternate}
 #portada::before{background:radial-gradient(2.3px 2.3px at 44% 13%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 86% 7%,#fff 60%,transparent 62%),radial-gradient(1.8px 1.8px at 71% 10%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 77% 7%,#fff 60%,transparent 62%),radial-gradient(2.3px 2.3px at 7% 9%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 56% 8%,#fff 60%,transparent 62%),radial-gradient(2.3px 2.3px at 14% 39%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 10% 56%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 31% 44%,#fff 60%,transparent 62%),radial-gradient(2.3px 2.3px at 76% 41%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 9% 18%,#fff 60%,transparent 62%)}
 #portada::after{background:radial-gradient(1.5px 1.5px at 74% 58%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 40% 30%,#fff 60%,transparent 62%),radial-gradient(1.8px 1.8px at 72% 11%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 74% 56%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 16% 41%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 50% 10%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 75% 7%,#fff 60%,transparent 62%),radial-gradient(2.3px 2.3px at 66% 47%,#fff 60%,transparent 62%),radial-gradient(2.3px 2.3px at 43% 33%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 49% 23%,#fff 60%,transparent 62%);animation-delay:-1.1s;animation-duration:2.3s}
+#portada .portada-halo{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(64% 44% at 50% 40%,rgba(96,68,228,.5),transparent 72%);animation:portada-halo .5s ease-out both}
 #portada .portada-centro,#portada .portada-pie{position:relative;z-index:1}
 #portada .portada-noche{position:relative;display:grid;place-items:center}
 #portada .portada-luna{position:absolute;left:50%;top:50%;width:122%;aspect-ratio:1;margin:-61% 0 0 -61%;border-radius:50%;background:radial-gradient(circle at 36% 28%,rgba(222,214,255,.40),rgba(140,116,244,.30) 58%,rgba(104,78,232,.20));box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.20),0 0 80px rgba(150,128,255,.42);animation:portada-luna 1s cubic-bezier(.16,1,.3,1) both}
 #portada .portada-lobo{position:relative}
 @keyframes portada-estrellas{from{opacity:.25}to{opacity:.95}}
 @keyframes portada-luna{from{opacity:0;transform:translateY(22%) scale(.9)}}
+@keyframes portada-halo{from{opacity:0}}
 #portada .portada-nombre{margin-top:26px;font-size:25px;line-height:1.1;font-weight:820;font-stretch:125%;letter-spacing:.01em}
 #portada .portada-filo{width:34px;height:2px;border-radius:2px;background:${ORO};margin:18px 0 16px}
 #portada .portada-lema{font-size:11.5px;line-height:1.3;font-weight:650;letter-spacing:.24em;text-transform:uppercase;color:${ORO};white-space:nowrap}
@@ -64,7 +67,7 @@ html[data-app=esencial] #portada .pn-esencial{display:revert}
 @keyframes portada-lento{to{visibility:visible}}
 @media (max-width:380px){#portada .portada-lema{letter-spacing:.2em}}@media (max-width:340px){#portada .portada-lema{letter-spacing:.13em}}
 @media (max-height:520px){#portada .portada-centro{margin-top:0}#portada .portada-nombre{margin-top:14px;font-size:21px}#portada .portada-filo{margin:10px 0 9px}#portada .portada-carga{margin-bottom:10px}}
-@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada::before,#portada::after,#portada .portada-luna{animation:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;transition:none}}
+@media (prefers-reduced-motion:reduce){#portada,#portada .portada-centro{transition:none}#portada::before,#portada::after,#portada .portada-luna,#portada .portada-halo{animation:none}#portada .portada-lobo,#portada .portada-lobo-relleno,#portada .portada-nombre,#portada .portada-filo,#portada .portada-lema,#portada .portada-firma,#portada .portada-firma-2{animation:none}#portada .portada-lobo-trazo{display:none}#portada .portada-carga span{animation:none;transition:none}}
 </style>`;
 
 // (belleza 339, v0.285) El trazado del lobo, una vez y escondido, fuera de la portada (que se quita al abrir): la app lo
@@ -76,6 +79,7 @@ export const spriteLobo = `<svg id="fbe-sprite" style="display:none" aria-hidden
 
 export const marcadoPortada = `${spriteLobo}
 <div id="portada" role="status">
+<span class="portada-halo" aria-hidden="true"></span>
 <div class="portada-centro" aria-hidden="true">
 <div class="portada-noche"><span class="portada-luna"></span><svg class="portada-lobo" viewBox="${LOBO_CAJA}" focusable="false"><use class="portada-lobo-trazo" href="#fbe-lobo" fill="none"/><use class="portada-lobo-relleno" href="#fbe-lobo" fill-rule="evenodd"/></svg></div>
 <div class="portada-nombre"><span class="pn-equipo">FBE Equipo</span><span class="pn-esencial">FBE Esencial</span></div>
