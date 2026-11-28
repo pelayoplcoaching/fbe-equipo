@@ -297,7 +297,7 @@ console.log('v0.285 · El repaso');
   const T = src('ui/tirar.js'), D = src('diseno.css'), PU = src('pulido.css');
   check(/import \{ LOBO_CAJA, loboD \} from '\.\/lobo-trazo\.js';/.test(T) && /class="tirar-lobo-lleno" fill-rule="evenodd"/.test(T) && /class="tirar-lobo-trazo" pathLength="1"/.test(T) && !/tirar-rueda/.test(T),
     '(173) al tirar para actualizar, en la rueda va el lobo (relleno y trazo), no la luna');
-  check(/\.tirar-lobo-trazo \{[^}]*stroke-dasharray: 1; stroke-dashoffset: calc\(1 - var\(--lleno, 0\)\)/.test(D) && /body > \.tirar\.lista \.tirar-lobo-lleno \{ fill-opacity: 1; \}/.test(D),
+  check(/\.tirar-lobo-trazo \{[^}]*stroke-dasharray: 1; stroke-dashoffset: calc\(\(1 - var\(--lleno, 0\)\) \* 1px\)/.test(D) && /body > \.tirar\.lista \.tirar-lobo-lleno \{ fill-opacity: 1; \}/.test(D),
     '(173) su trazo sigue al dedo (--lleno) y, pasado el umbral, se rellena');
   check(/\n  body > \.tirar\.girando \.tirar-lobo-trazo \{ stroke: var\(--blanco\); stroke-dasharray: \.16 \.84; animation: tirar-luz 1\.6s linear infinite; \}\n\}/.test(D) && /@media \(prefers-reduced-motion: reduce\) \{ body > \.tirar\.girando \.tirar-lobo-trazo \{ stroke-dashoffset: 0; \} \}/.test(D),
     '(173) mientras llega todo, una luz recorre su trazo; con «reducir movimiento», quieto y entero');

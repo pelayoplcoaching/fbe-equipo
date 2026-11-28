@@ -745,13 +745,14 @@ export async function probarMomentos6({ navegador, check, base = 'http://localho
       for (let k = 1; k <= 8; k++) { await dedo('touchMove', x, y0 + (100 * k) / 8); await p.waitForTimeout(16); }
       const medio = await leer();
       check(!!medio && medio.oculto === 'true' && medio.lleno > 0.5 && medio.lleno < 0.9 && Math.abs(medio.off - (1 - medio.lleno)) < 0.05 && medio.relleno === 0 && !medio.lista,
-        `(173) al tirar, el lobo se dibuja con el dedo: su trazo va por el ${medio ? Math.round(medio.lleno * 100) : '?'} % y aún sin rellenar`);
+        `(173) al tirar, el lobo se dibuja con el dedo: su trazo va por el ${medio ? Math.round(medio.lleno * 100) : '?'} % y aún sin rellenar${medio ? ` ${JSON.stringify(medio)}` : ''}`);
       for (let k = 1; k <= 6; k++) { await dedo('touchMove', x, y0 + 100 + (130 * k) / 6); await p.waitForTimeout(16); }
       await p.waitForTimeout(400);
       const lleno = await leer();
       check(!!lleno && lleno.lista && lleno.lleno === 1 && lleno.off < 0.01 && lleno.relleno === 1, '(173) pasado el umbral, el lobo entero y relleno (y la rueda se enciende)');
       await dedo('touchEnd');
       const gira = await hasta(async () => (await leer())?.girando === true, 2000);
+      await p.waitForTimeout(450);   // (el relleno baja con su transición)
       const enGiro = await leer();
       check(gira && !!enGiro && enGiro.relleno < 0.5, `(173) al soltar, mientras llega todo, el lobo en sombra y una luz por su trazo (relleno ${enGiro ? enGiro.relleno : '?'})`);
       check(await hasta(async () => !(await leer())?.girando, 10000), '(173) y al llegar, la rueda se va');

@@ -4270,7 +4270,7 @@ section.panel:has(#lo-que-usa) > dl.datos-cuest > div { grid-template-columns: m
    el lobo en sombra (sin movimiento: quieto y entero). */
 body > .tirar { background: var(--tinta-noche); box-shadow: var(--sombra-flotante), inset 0 0 0 1px rgba(255, 255, 255, .14); }
 .tirar-lobo { width: 24px; height: 24px; overflow: visible; }
-.tirar-lobo-trazo { fill: none; stroke: var(--acento-200); stroke-width: 40; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--lleno, 0)); }
+.tirar-lobo-trazo { fill: none; stroke: var(--acento-200); stroke-width: 40; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc((1 - var(--lleno, 0)) * 1px); }
 .tirar-lobo-lleno { fill: var(--blanco); fill-opacity: 0; transition: fill-opacity var(--mov-breve) ease-out; }
 body > .tirar.lista .tirar-lobo-lleno { fill-opacity: 1; }
 body > .tirar.girando .tirar-lobo-lleno { fill-opacity: .3; }
