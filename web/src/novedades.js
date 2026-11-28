@@ -6,6 +6,17 @@
 // · No sale nunca la primera vez que se abre la app en un móvil ni a una cuenta nueva, ni en mitad de una sesión (espera a
 //   la próxima vez que se abre Hoy).
 export const NOVEDADES = {
+  '0.284': {
+    // (remate 330-347, segunda vuelta; «claude/belleza-350-estado.md»)
+    atleta: [
+      'En Ajustes, «Gestos»: todo lo que puedes hacer con el dedo y, si lo prefieres, «Solo botones» para hacerlo todo tocando.',
+      'Las historias tienen un botón de pausa arriba, además de mantener pulsado (en el ordenador, la barra espaciadora).',
+      '«Novedades» te dice dónde está cada cosa nueva. Y la primera vez que te cruzas con un gesto nuevo, una pista corta.',
+    ],
+    coach: [
+      'Remate (330-347): nada gasta cuando no se ve, pausa con botón, «Gestos» y «Solo botones», novedades con su sitio y limpieza.',
+    ],
+  },
   '0.283': {
     // (momentos 301-326, de la v0.280 a la v0.283; «claude/belleza-350-propuesta.md»)
     atleta: [

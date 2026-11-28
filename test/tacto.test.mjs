@@ -92,7 +92,7 @@ check(/const conCartel = \(cartel \|\| \(tumbado && !sinCartel\)\) && !juego && 
   'el cartel sale con el móvil tumbado o con su botón (y se queda puesto de un descanso a otro); el juego y los apuntes mandan');
 check(/role="dialog" aria-modal="true" aria-label="El descanso, en grande"/.test(grande) && /if \(e\.key === 'Escape'\) \{ e\.preventDefault\(\); e\.stopImmediatePropagation\(\); alCerrar\(\); return; \}/.test(grande) && /aria-label="Salir del modo cartel"/.test(grande),
   'es un diálogo: el foco entra, Escape lo cierra (solo a él) y tiene su botón de salir');
-check(/<LuzBorde quedan=\{quedan\} total=\{total\} pausado=\{pausado\} fin=\{fin\} \/>/.test(comun) && /class=\{`lb-borde\$\{final \? ' lb-fin' : ''\}`\} aria-hidden="true"/.test(grande) && /el\.style\.animationDelay = `\$\{-\(luz \* LUZ_SEG\)\.toFixed\(2\)\}s`/.test(grande),
+check(/<LuzBorde quedan=\{quedan\} total=\{total\} pausado=\{pausado\} fin=\{fin\} \/>/.test(comun) && /class=\{`lb-borde\$\{final \? ' lb-fin' : ''\}`\}(?: style=\{ligero \? '[^']*' : undefined\})? aria-hidden="true"/.test(grande) && /el\.style\.animationDelay = `\$\{-\(luz \* LUZ_SEG\)\.toFixed\(2\)\}s`/.test(grande),
   'la luz es de adorno (no se anuncia) y es una sola animación que arranca por donde va la cuenta');
 check(/class=\{`pildora-descanso pst-forma \$\{quedan <= 0 \? 'fin' : ''\}`\} data-pst=\{forma\.estado\}/.test(comun) && /useForma\(pastilla, conPildora && fuera \? forma\.estado : null\)/.test(comun)
   && /aria-label=\{quedan > 0 \? 'Descanso en curso, toca para volver' : 'Descanso terminado, toca para volver'\}/.test(comun), 'la pastilla es la misma (no desaparece y vuelve) y su nombre para el lector de pantalla no cambia');
@@ -107,7 +107,7 @@ check(destinoLado(-80, 0, { i: 2, n: 3 }) === 'cerrar' && destinoLado(80, 0, { i
   'hacia delante en la última, cierra (como al tocar); hacia atrás en la primera, cede un poco y vuelve');
 const gestos = src('ui/atleta/historia-gestos.js'), gancho = src('ui/historia-tacto.js');
 check(/import\('\.\/atleta\/historia-gestos\.js'\)/.test(gancho) && !/historia-gestos/.test(src('ui/atleta/TuSemana.jsx')), 'el código de los gestos llega al abrir la primera historia (no pesa al abrir la app)');
-check(['ui/atleta/TuSemana.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/HistoriaSesion.jsx'].every((f) => /const pausa = useHistoriaTacto\(caja, \{ i, n: pantallas\.length, ir, alCerrar/.test(src(f)) && /if \(quieto \|\| ultima \|\| (compartir \|\| |pausa \|\| )?(carta \|\| )?(compartir \|\| )?pausa( \|\| compartir)?( \|\| carta)?\) return undefined;/.test(src(f))),
+check(['ui/atleta/TuSemana.jsx', 'ui/atleta/TuMes.jsx', 'ui/atleta/TuAnio.jsx', 'ui/atleta/HistoriaSesion.jsx'].every((f) => /const (?:pausa|\[pausa, alternarPausa\]) = useHistoriaTacto\(caja, \{ i, n: pantallas\.length, ir, alCerrar/.test(src(f)) && /if \(quieto \|\| ultima \|\| (compartir \|\| |pausa \|\| )?(carta \|\| )?(compartir \|\| )?pausa( \|\| compartir)?( \|\| carta)?\) return undefined;/.test(src(f))),
   'en las cuatro: la sesión, tu semana, tu mes y tu año; en pausa no avanzan solas');
 check(/b\.style\.animationPlayState = 'paused'/.test(gestos) && /adornos\('hidden'\)/.test(gestos) && /b\.style\.animation = 'none'; void b\.offsetWidth; b\.style\.animation = '';/.test(gestos),
   '(226) en pausa se para la barra y se quitan las barras y la ✕; al soltar, la tarjeta vuelve a tener su tiempo entero');
@@ -232,7 +232,7 @@ check(JSON.stringify(luzGiro(0)) === '{"x":0,"o":0}' && JSON.stringify(luzGiro(9
   'el brillo la cruza al girar (de frente y de espaldas, nada), y la velocidad se suaviza');
 check(/const MedallaHeroe = perezoso\(\(\) => import\('\.\/MedallaHeroe\.jsx'\), 'MedallaHeroe', \{ mientras: null \}\);/.test(logrosJsx) && /onPointerDown=\{MedallaHeroe\.precargar\}/.test(logrosJsx)
   && /hasta: '\[data-llega="medalla"\]' \}\]\)\);/.test(logrosJsx) && /<MedallaHeroe logro=\{l\} Metal=\{MedallaMetal\}/.test(logrosJsx), '(213) viaja de su hueco a su hoja; su código se pide al bajar el dedo');
-check(!/from '\.\/Logros\.jsx'|logica\/tablero/.test(heroe) && /aria-pressed=\{dorso\}/.test(heroe) && /if \(e\.button > 0 \|\| st\.g \|\| sinMovimiento\(\)\) return;/.test(heroe) && /if \(sinMovimiento\(\) \|\| desde === hasta\) \{ poner\(hasta\); return; \}/.test(heroe)
+check(!/from '\.\/Logros\.jsx'|logica\/tablero/.test(heroe) && /aria-pressed=\{dorso\}/.test(heroe) && /if \(e\.button > 0 \|\| st\.g \|\| sinMovimiento\(\)(?: \|\| soloBotones\(\))?\) return;/.test(heroe) && /if \(sinMovimiento\(\) \|\| desde === hasta\) \{ poner\(hasta\); return; \}/.test(heroe)
   && /<span class="mdl-como">\{l\.nivel \? l\.conseguido : l\.niveles\[0\]\.texto\}<\/span>/.test(heroe), 'es un botón (un toque o Intro le dan la vuelta), detrás dice cómo se ganó, quieta con «reducir movimiento», y no importa nada del arranque (lo recibe)');
 
 console.log('\nAsomarse (221-223)');
@@ -256,7 +256,7 @@ const s1 = sitioAsoma({ left: 20, top: 400, bottom: 470, width: 350 }, 200), s2 
 check(s1.arriba && s1.y === 188 && s1.x === 35 && s1.w === 320 && !s2.arriba && s2.y === 182 && s3.x === 58 && s3.arriba && ASOMA_MS >= 350 && ASOMA_MS <= 500 && ASOMA_QUIETO === 10 && ASOMA_ABRE >= 44,
   'la tarjeta sale encima de lo que se toca si cabe (si no, debajo), sin salirse por los lados');
 const asomarJsx = src('ui/atleta/asomar.jsx');
-check(/if \(g \|\| e\.button > 0 \|\| e\.pointerType === 'mouse'\) return;/.test(asomarJsx) && /el\.addEventListener\('touchmove', frena, \{ passive: false \}\);/.test(asomarJsx) && /function frena\(e\) \{ if \(g\?\.abierta && e\.cancelable\) e\.preventDefault\(\); \}/.test(asomarJsx)
+check(/if \(g \|\| e\.button > 0 \|\| e\.pointerType === 'mouse'(?: \|\| soloBotones\(\))?\) return;/.test(asomarJsx) && /el\.addEventListener\('touchmove', frena, \{ passive: false \}\);/.test(asomarJsx) && /function frena\(e\) \{ if \(g\?\.abierta && e\.cancelable\) e\.preventDefault\(\); \}/.test(asomarJsx)
   && /if \(!g\.abierta\) \{ if \(Math\.hypot\(dx, dy\) > ASOMA_QUIETO\) \{ soltar\(g\.el\); g = null; \} return; \}/.test(asomarJsx) && /if \(s\.abre && e\.type !== 'pointercancel'\) \{ vibrar\('elegir'\); s\.el\.click\(\); \}/.test(asomarJsx),
   'solo con el dedo: si se mueve antes, es desplazar la página; con la tarjeta fuera, el dedo ya no la desplaza; subirlo y soltar la abre');
 check(!/entreno-nombre|ss-etq|\.chip/.test(asomarJsx) && /nodo\.setAttribute\('aria-hidden', 'true'\)/.test(asomarJsx) && /const quitarAsomar = instalarAsomar\(leer\);/.test(barra) && /api: apiG, atleta: atletaG \};/.test(atletaApp),
